@@ -368,6 +368,75 @@ def prepare(workspace, selection):
     return inspect(workspace, key)
 
 
+def prepare_retained(workspace, selection, case_runs, *, provenance):
+    """Adopt exact completed native selections into an ordinary Parameter study.
+
+    Each original run must match the explicitly selected parameter case. The
+    retained roster is part of this study's identity; no profile or run is made.
+    """
+    selection, baseline, profile = _selection(workspace, selection)
+    active = run_models(baseline)
+    definitions = [{"id": "baseline", "label": "Baseline", "overrides": {},
+                    "axis_values": []}, *list(_cases(selection, profile))]
+    if len(definitions) < 2 or len({row["id"] for row in definitions}) != len(definitions):
+        raise ValueError("Select a distinct retained reference and parameter cases")
+    if not isinstance(case_runs, dict) or set(case_runs) != {row["id"] for row in definitions}:
+        raise ValueError("Bind every original parameter case exactly once")
+    if (not isinstance(provenance, dict) or not isinstance(provenance.get("files"), list)
+            or not provenance["files"] or not isinstance(provenance.get("identity"), dict)):
+        raise ValueError("Retain the original source identity and its exact source files")
+    originals = []
+    for descriptor in provenance["files"]:
+        originals.append((verify_file(workspace.root, descriptor), deepcopy(descriptor)))
+    cases = []
+    for definition in definitions:
+        run = workspace.inspect_run(identifier(case_runs[definition["id"]]))
+        current_profile = workspace._get("profiles", run["selection"]["profile_id"])
+        expected = _apply(profile, definition["overrides"], models=active)
+        if (run.get("state") != "complete" or run_models(run) != active
+                or any(run["selection"][name] != baseline["selection"][name]
+                       for name in ("grid_id", "scenario_id"))
+                or _profile_signature(current_profile, models=active) !=
+                   _profile_signature(expected, models=active)):
+            raise ValueError("The retained native run differs from its original parameter case")
+        validate_completed_run(run)
+        comparison_versions([baseline, run], active)
+        if definition["id"] == "baseline" and run["id"] != baseline["id"]:
+            raise ValueError("Retain the exact original baseline run")
+        cases.append({**definition, "profile_id": current_profile["id"],
+                      "run_id": run["id"], "state": "complete", "profile_reused": True,
+                      "run_selection": deepcopy(run["selection"])})
+    if len({case["run_id"] for case in cases}) != len(cases):
+        raise ValueError("A native run cannot represent two distinct parameter cases")
+    selection = {**selection, "retained_native_cases": [
+        {name: deepcopy(case[name]) for name in ("id", "run_id", "profile_id", "run_selection")}
+        for case in cases], "retained_source": deepcopy(provenance)}
+    with held(workspace.root / ".workspace.lock", blocking=False):
+        spec = workspace._save("experiment-specs", selection)
+        key = spec["id"]
+        directory = workspace.root / "experiments" / key
+        directory.mkdir(parents=True, exist_ok=True)
+        atomic_json(directory / "selection.json", selection, immutable=True)
+    with held(directory / ".experiment.lock", blocking=False):
+        state_path = directory / "experiment.json"
+        if state_path.exists():
+            return inspect(workspace, key)
+        retained = []
+        for index, (_, descriptor) in enumerate(originals):
+            retained.append(copy_verified(workspace.root, descriptor, directory,
+                path="retained-originals/" + str(index) + "-" + Path(descriptor["path"]).name))
+        state = {"schema": SCHEMA, "id": key, "workspace_id": workspace.project["id"],
+                 "selection": selection, "state": "prepared", "created_at": now(),
+                 "updated_at": now(), "invest_version": baseline["selection"].get("invest_version"),
+                 "invest_version_basis": "baseline_requested_declaration", **_baseline_versions(baseline),
+                 "baseline_selection": deepcopy(baseline["selection"]), "cases": cases,
+                 "models": list(active), "pollutants": list(required_outputs(active)),
+                 "progress": {"total": len(cases), "completed": len(cases), "failed": 0},
+                 "retained_source_files": retained, "artifacts": {}}
+        atomic_json(state_path, state)
+    return inspect(workspace, key)
+
+
 def _read(workspace, key):
     key = identifier(key)
     spec = workspace._get("experiment-specs", key)
@@ -381,6 +450,12 @@ def _bind_state(workspace, key, spec, state):
     actual = {k: v for k, v in state["selection"].items() if k != "schema"}
     if state.get("id") != key or expected != actual or state.get("workspace_id") != workspace.project["id"]:
         raise ValueError("The retained experiment differs from its original project selection")
+    retained = state["selection"].get("retained_native_cases")
+    if retained is not None and "cases" in state:
+        actual_cases = [{name: deepcopy(case[name]) for name in (
+            "id", "run_id", "profile_id", "run_selection")} for case in state["cases"]]
+        if actual_cases != retained:
+            raise ValueError("The retained study changed its original adopted native roster")
     active = selected(state["baseline_selection"])
     state["models"] = list(active)
     state["pollutants"] = list(required_outputs(active))
@@ -887,6 +962,9 @@ def _exports(workspace, state):
             files.append(pair_path.relative_to(directory).as_posix())
             files.extend(_aggregation_adoption_files(directory, read_json(pair_path)))
     descriptors = [describe_file(directory, directory / name) for name in files]
+    for descriptor in state.get("retained_source_files", []):
+        verify_file(directory, descriptor)
+        descriptors.append(deepcopy(descriptor))
     descriptors.extend(map_files.values())
     for case in state["cases"]:
         run = workspace.inspect_run(case["run_id"])
