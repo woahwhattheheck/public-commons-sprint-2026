@@ -1,9 +1,11 @@
+import {createWaterDesk} from './receiving-water-chemistry.mjs';
 import * as reportSourceSelection from './source_report_editions.mjs';
 /** Original-operator reach chemistry. No second app, queue, auth or workspace. */
 const esc = x => String(x ?? '').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const pretty = x => JSON.stringify(x,null,2);
 const valueText = x => typeof x==='number'&&!Number.isInteger(x)?x.toPrecision(7):typeof x==='object'?JSON.stringify(x):x;
 const button = (action,label,id='') => `<button type="button" data-action="chemistry-${action}" data-id="${esc(id)}">${esc(label)}</button>`;
+function sampleDays(text){const days=text.split(/[,\s]+/).filter(Boolean).map(Number);if(!days.length||days.some(v=>!Number.isFinite(v)||v<0))throw Error('Choose finite, nonnegative sample days.');return days;}
 const parse = (element,label) => {try{return JSON.parse(element.value)}catch(e){throw new Error(`${label}: ${e.message}`)}};
 function table(rows,columns){
  if(!rows?.length)return '<p class="chemistry-muted">No records in this selection.</p>';
@@ -119,6 +121,7 @@ export function attachChemistry(host){
   if(latest[signature]===operationId){delete latest[signature];sessionStorage.setItem(storageKey,JSON.stringify(latest));}
   if(currentContext(context))await showTask(task.id);return task;
  };
+ const water=createWaterDesk({api,endpoint,perform,captureContext,currentContext,original,fileList,openCase:id=>editor(null,id)});
  function report(error){if(error?.chemistryStale)return;if(root){let n=root.querySelector('[data-chemistry-status]');if(!n){n=document.createElement('p');n.dataset.chemistryStatus='';root.append(n);const retry=document.createElement('button');retry.type='button';retry.dataset.action='chemistry-refresh';retry.textContent='Retry opening chemistry';root.append(retry)}n.textContent=error.message||String(error);n.setAttribute('role','alert')}else toast(error.message||String(error));}
  async function reload(){
   sourceGeneration++;reportGeneration++;runGeneration++;editorGeneration++;
@@ -137,10 +140,13 @@ export function attachChemistry(host){
    <div class="chemistry-actions">${button('from-source','Import chemical project')}${button('receive','Receive editable ZIP')}</div>
    <p class="chemistry-muted">Use the original Sources intake for project JSON, observation files and editable ZIPs. Original file identities remain attached to the scenario.</p></section>
    <section><h2>Retained analyses</h2><div data-chemistry-runs>${catalog.runs.map(r=>`<div class="chemistry-run">${button('run-open',`${r.mode} · ${r.state} · ${r.id.slice(0,10)}`,r.id)}<span>${esc(r.title)}</span></div>`).join('')||'<p>No analysis yet.</p>'}</div></section></div>
+   <section data-water-desk></section>
    <section><h2>Saved scientific reports</h2><div data-chemistry-reports>${reportList()}</div></section>
    <section><h2>Sources for scientific reports</h2><p>Open only the retained Chemistry source, or deliberately add it to the current ordered scientific report.</p><div data-chemistry-report-sources>${sourceList()}</div></section>
    <section data-chemistry-editor hidden></section><section data-chemistry-result hidden></section></section>`;
   root.querySelector('[data-case]').addEventListener('change',e=>{selectedCase=e.target.value});
+  water.mount(root.querySelector('[data-water-desk]'),catalog);
+  water.restore().catch(report);
  }
  function reportList(){
   return (catalog.reports||[]).map(r=>`<div class="chemistry-run">${button('report-open',r.summary?.mode+' · '+r.id.slice(0,10),r.id)}<span>${esc(r.title)} · ${esc(r.edition)}</span></div>`).join('')||'<p>No scientific report saved yet. Open a completed analysis to prepare one.</p>';
@@ -205,14 +211,14 @@ export function attachChemistry(host){
   <label>Reason for this scenario or edit<input data-reason value="${esc(saved?.reason||'')}"></label>
   <div class="chemistry-actions">${button('save','Save immutable scenario edition')}</div>
   <h3>Run request</h3><label>Analysis<select data-mode>${['simulate','attribute','sensitivity','calibrate','monitoring','uncertainty'].map(m=>`<option>${m}</option>`).join('')}</select></label>
-  <label>Complete analysis request<textarea data-request rows="12" spellcheck="false">${esc(pretty({mode:'simulate',sample_days:[0,...(project?.phases||[]).map(p=>p.until_day)]}))}</textarea></label>
+  <label>Sample days from the scenario origin (comma separated)<input data-sample-days value="${esc([0,...(project?.phases||[]).map(p=>p.until_day)].join(', '))}"></label><details data-request-detail><summary>Complete analysis request and advanced inference settings</summary><label>Complete analysis request<textarea data-request rows="12" spellcheck="false">${esc(pretty({mode:'simulate',sample_days:[0,...(project?.phases||[]).map(p=>p.until_day)]}))}</textarea></label></details>
   <details><summary>Import observation CSV</summary><p>Every row uses id, reach, day and positive sigma_mg_l. Supply species for a single pool, or measurement, basis and components for a weighted measurement. Components is a quoted JSON array of unique {species, weight} objects; all pools must share the exact conserved basis.</p><p>Use qualifier equal or below with mg_l, or interval with lower_mg_l, upper_mg_l, lower_closed and upper_closed. Interval endpoints require explicit true/false; leave mg_l empty. Optional role is fit or holdout.</p><p>Weights define the measurement operator; they do not convert mass bases. A total-N measurement must use nonoverlapping modeled pools so a component already included in TKN is not counted twice.</p><label>Observation source reference<input data-observation-reference></label><input type="file" data-observation-file accept=".csv,text/csv"></details><details><summary>Review measurement definitions and limits</summary><div data-observation-review></div></details>
   <div class="chemistry-actions">${button('execute','Run selected analysis')}</div>
   <p class="chemistry-muted">Calibration saves a child scenario. Holdout observations remain outside fitting. Uncertainty requires explicit distributions, draw count and seed. Monitoring design requires a prior precision matrix and candidate errors.</p>`;
   function physical(){
    let value;try{value=JSON.parse(area.querySelector('[data-project]').value)}catch{return}
    const groups=[['reaches','Reach storage',['volume_m3','temperature_c']],['flows','Water transport',['m3_day']],['loads','External chemical loading',['kg_day']],['reactions','First-order transformation',['rate_day','theta','reference_temperature_c']]];
-   area.querySelector('[data-physical]').innerHTML=groups.map(([group,label,fields])=>`<details open><summary>${esc(label)}</summary><div class="chemistry-scroll"><table><thead><tr><th>Original ID / connection</th>${fields.map(f=>`<th>${esc(f)}</th>`).join('')}<th>Source reference</th></tr></thead><tbody>${(value[group]||[]).map((r,i)=>`<tr><td>${esc(r.id)}<br><small>${esc([r.source,r.target,r.reach,r.species].filter(Boolean).join(' → '))}</small></td>${fields.map(f=>`<td><input aria-label="${esc(r.id+' '+f)}" type="number" step="any" data-physical-group="${group}" data-row="${i}" data-field="${f}" value="${esc(r[f]??'')}"></td>`).join('')}<td>${esc(r.provenance?.reference||'')}</td></tr>`).join('')}</tbody></table></div></details>`).join('');
+   area.querySelector('[data-physical]').innerHTML=`<label>Stored water model<select data-hydrology><option value="fixed-volume" ${value.hydrology?.mode!=='variable-storage'?'selected':''}>Fixed volume with balanced water flows</option><option value="variable-storage" ${value.hydrology?.mode==='variable-storage'?'selected':''}>Variable storage from flow balance</option></select></label>${value.source_period_support?'<p>Flow base rates use the retained source-period multipliers. Source observations and preparation remain attached; any physical edit becomes a separate scientific scenario when saved.</p>':''}`+groups.map(([group,label,fields])=>`<details open><summary>${esc(label)}</summary><div class="chemistry-scroll"><table><thead><tr><th>Original ID / connection</th>${fields.map(f=>`<th>${esc(f)}</th>`).join('')}${group==='flows'?'<th>Solute transport</th>':group==='reactions'?'<th>Volume scaling</th>':''}<th>Source reference</th></tr></thead><tbody>${(value[group]||[]).map((r,i)=>`<tr><td>${esc(r.id)}<br><small>${esc([r.source,r.target,r.reach,r.species].filter(Boolean).join(' → '))}</small></td>${fields.map(f=>`<td><input aria-label="${esc(r.id+' '+f)}" type="number" step="any" data-physical-group="${group}" data-row="${i}" data-field="${f}" value="${esc(r[f]??'')}"></td>`).join('')}${group==='flows'?`<td><select data-physical-group="flows" data-row="${i}" data-field="solute_transport" aria-label="${esc(r.id)} solute transport"><option value="true" ${r.solute_transport!==false?'selected':''}>Water and solute</option><option value="false" ${r.solute_transport===false?'selected':''}>Water only (external outflow)</option></select></td>`:group==='reactions'?`<td><select data-physical-group="reactions" data-row="${i}" data-field="volume_scaling" aria-label="${esc(r.id)} volume scaling"><option value="constant" ${r.volume_scaling!=='inverse'?'selected':''}>Constant rate</option><option value="inverse" ${r.volume_scaling==='inverse'?'selected':''}>Initial volume / current volume</option></select></td>`:''}<td>${esc(r.provenance?.reference||'')}</td></tr>`).join('')}</tbody></table></div></details>`).join('');
   }
   function observations(){
    const target=area.querySelector('[data-observation-review]');
@@ -220,12 +226,16 @@ export function attachChemistry(host){
     target.innerHTML=table(rows.map(observationView),['id','measurement','operator','basis','reach','day','role','qualifier','reference_or_limits','error_scale','source']);
    }catch(error){target.textContent=error.message;}
   }
-  observations();area.querySelector('[data-request]').addEventListener('change',observations);
+  observations();area.querySelector('[data-request]').addEventListener('change',()=>{observations();try{const request=parse(area.querySelector('[data-request]'),'Analysis request');if(Array.isArray(request.sample_days)&&request.sample_days.every(x=>typeof x==='number'&&Number.isFinite(x)&&x>=0))area.querySelector('[data-sample-days]').value=request.sample_days.join(', ');}catch(error){report(error)}});
   physical();
   area.querySelector('[data-physical]').addEventListener('change',e=>{
-   const target=e.target;if(!target.dataset.physicalGroup)return;
+   const target=e.target;
+   if(target.hasAttribute('data-hydrology')){try{const value=parse(area.querySelector('[data-project]'),'Chemical project');value.hydrology={mode:target.value};area.querySelector('[data-project]').value=pretty(value);}catch(error){report(error)}return;}
+   if(!target.dataset.physicalGroup)return;
    try{let value=parse(area.querySelector('[data-project]'),'Chemical project');const r=value[target.dataset.physicalGroup][Number(target.dataset.row)];const field=target.dataset.field;
-    if(target.value==='')delete r[field];else{const v=Number(target.value);if(!Number.isFinite(v))throw new Error('Enter a finite physical value.');r[field]=v;}
+    if(field==='solute_transport')r[field]=target.value==='true';
+    else if(field==='volume_scaling')r[field]=target.value;
+    else if(target.value==='')delete r[field];else{const v=Number(target.value);if(!Number.isFinite(v))throw new Error('Enter a finite physical value.');r[field]=v;}
     area.querySelector('[data-project]').value=pretty(value);
    }catch(error){report(error)}
   });
@@ -244,7 +254,8 @@ export function attachChemistry(host){
     area.querySelector('[data-project]').value=pretty(project);physical();
    }catch(error){if(request===projectRead&&sameEditor(context))report(error);}
   });
-  area.querySelector('[data-mode]').addEventListener('change',e=>{try{let request=parse(area.querySelector('[data-request]'),'Analysis request');request.mode=e.target.value;area.querySelector('[data-request]').value=pretty(request);}catch(e){report(e)}});
+  area.querySelector('[data-sample-days]').addEventListener('change',e=>{try{const days=sampleDays(e.target.value);const request=parse(area.querySelector('[data-request]'),'Analysis request');request.sample_days=days;area.querySelector('[data-request]').value=pretty(request);}catch(error){report(error)}});
+  area.querySelector('[data-mode]').addEventListener('change',e=>{try{let request=parse(area.querySelector('[data-request]'),'Analysis request');request.mode=e.target.value;area.querySelector('[data-request]').value=pretty(request);area.querySelector('[data-request-detail]').open=e.target.value!=='simulate';}catch(e){report(e)}});
   area.querySelector('[data-observation-file]').addEventListener('change',async event=>{
    const file=event.target.files[0],request=++observationRead,context=captureContext();
    const beforeRequest=area.querySelector('[data-request]').value,beforeProject=area.querySelector('[data-project]').value;
@@ -267,7 +278,7 @@ export function attachChemistry(host){
   selectedRun=id;page=offset;const run=await original('run',{run_id:id},context,id);if(!root||current!==runGeneration)return;
   const target=root.querySelector('[data-chemistry-result]');target.hidden=false;
   target.innerHTML=`<h2>${esc(run.mode)} / ${esc(run.state)}</h2><p class="chemistry-mono">${esc(id)}</p>${run.error?`<p role="alert">${esc(run.error.message)}</p>`:''}<pre>${esc(pretty(run.progress||{}))}</pre><div class="chemistry-actions">${run.state==='complete'?'':button('resume','Resume same analysis',id)}${run.state==='running'?button('cancel','Cancel after current integration step',id):''}${run.calibrated_case_id?button('case-open','Open calibrated scenario',run.calibrated_case_id):''}${run.state==='complete'?button('report-prepare','Prepare scientific report',id):''}</div>${fileList(run._downloads||[])}
-  <label>Result collection<select data-result-field>${['final','samples','budgets','reactions','observations','scores','interval_scores','parameters','rows','selected','summaries','sources'].map(f=>`<option ${f===field?'selected':''}>${f}</option>`).join('')}</select></label><div data-result-table></div><div class="chemistry-actions">${button('previous','Previous page')}${button('next','Next page')}</div>`;
+  <label>Result collection<select data-result-field>${['final','samples','budgets','storage','storage_budgets','reactions','observations','scores','interval_scores','parameters','rows','selected','summaries','sources'].map(f=>`<option ${f===field?'selected':''}>${f}</option>`).join('')}</select></label><div data-result-table></div><div class="chemistry-actions">${button('previous','Previous page')}${button('next','Next page')}</div>`;
   target.querySelector('[data-result-field]').addEventListener('change',e=>openRun(id,e.target.value,0).catch(report));
   if(run.state==='complete'){
    const result=await original('page',{run_id:id,field,offset,limit:100},context,id,'run_id');if(selectedRun!==id||!root||current!==runGeneration)return;
@@ -284,6 +295,7 @@ export function attachChemistry(host){
    requireContext(context);
    if(element.dataset.workspace&&element.dataset.workspace!==context.key)throw Error('This Chemistry action belongs to another workspace.');
    const action=element.dataset.action.slice(10),id=element.dataset.id;
+   if(action.startsWith('water-'))return await water.dispatch(action.slice(6),id);
    if(action==='refresh')return await reload();
    if(action==='new')return await editor();
    if(action==='open'||action==='case-open'){const key=id||root.querySelector('[data-case]').value;if(!key)throw new Error('Choose a saved scenario.');return await editor(null,key);}
@@ -305,10 +317,12 @@ export function attachChemistry(host){
    if(action==='execute'){
     const parent=editorCase,revision=editorGeneration,area=root.querySelector('[data-chemistry-editor]');
     if(!parent)throw Error('Save and open the scenario before calculating.');
-    const requestText=area.querySelector('[data-request]').value,projectText=area.querySelector('[data-project]').value;
+    const requestText=area.querySelector('[data-request]').value,projectText=area.querySelector('[data-project]').value,sampleText=area.querySelector('[data-sample-days]').value;
     const request=parse(area.querySelector('[data-request]'),'Analysis request'),draft=parse(area.querySelector('[data-project]'),'Chemical project');
+    const visibleDays=sampleDays(sampleText);
+    if(JSON.stringify(request.sample_days)!==JSON.stringify(visibleDays))throw Error('Sample days differ between the visible control and advanced request. Apply the current sample-days field or reopen the advanced request before running.');
     const saved=await original('case',{case_id:parent},context,parent);
-    if(editorGeneration!==revision||editorCase!==parent||root.querySelector('[data-chemistry-editor]')!==area||area.querySelector('[data-request]').value!==requestText||area.querySelector('[data-project]').value!==projectText)throw Error('The scenario or request changed before submission. Run the current selection again.');
+    if(editorGeneration!==revision||editorCase!==parent||root.querySelector('[data-chemistry-editor]')!==area||area.querySelector('[data-request]').value!==requestText||area.querySelector('[data-project]').value!==projectText||area.querySelector('[data-sample-days]').value!==sampleText)throw Error('The scenario or request changed before submission. Run the current selection again.');
     if(JSON.stringify(saved.project)!==JSON.stringify(draft))throw Error('Save the edited scenario before calculating.');
     return await perform('run',{case_id:parent,request},context);
    }
@@ -324,6 +338,7 @@ export function attachChemistry(host){
   if(current!==generation||!root||workspace()!==key)return;
   recordIdentity(result,key);
   catalog=result;
+  water.update(catalog);
   const selection=root.querySelector('[data-case]');
   if(selection){
    selection.innerHTML='<option value="">Choose a scenario</option>'+catalog.cases.map(c=>`<option value="${esc(c.id)}">${esc(c.title)} — ${esc(c.id.slice(0,10))}</option>`).join('');
@@ -342,11 +357,11 @@ export function attachChemistry(host){
   const runs=root.querySelector('[data-chemistry-runs]');
   if(runs)runs.innerHTML=catalog.runs.map(r=>`<div class="chemistry-run">${button('run-open',`${r.mode} · ${r.state} · ${r.id.slice(0,10)}`,r.id)}<span>${esc(r.title)}</span></div>`).join('')||'<p>No analysis yet.</p>';
  }
- return {update,mount(element){if(root===element)return;lifetime++;root=element;root.innerHTML='<p role="status">Opening retained chemical scenarios…</p>';return reload().catch(report)},detach(){lifetime++;generation++;editorGeneration++;runGeneration++;reportGeneration++;sourceGeneration++;root=null},dispatch,
+ return {update,mount(element){if(root===element)return;lifetime++;root=element;root.innerHTML='<p role="status">Opening retained chemical scenarios…</p>';return reload().catch(report)},detach(){water.detach();lifetime++;generation++;editorGeneration++;runGeneration++;reportGeneration++;sourceGeneration++;root=null},dispatch,
  taskActions(task){
   const r=task.result||{},key=workspace();if(task.state!=='complete'||!task.action?.startsWith('chemistry.')||(task.workspace&&task.workspace!==key))return '';
   const isSource=['chemistry.report.source.prepare','chemistry.report.source.get'].includes(task.action);
-  const control=isSource&&r.id&&r.source_collection_id&&r.source_id?button('source-compose','Open this report only',r.id)+button('source-append','Add to current report',r.id)+button('source-open','Inspect retained source',r.id):r.schema==='upstate.chemistry-run/v1'?button('run-open','Open chemical results',r.id):r.schema==='upstate.chemistry-scientific-report/v1'?button('report-open','Open scientific report',r.id):'';
+  const control=task.action==='chemistry.water.prepare'&&r.case_id?button('water-open','Open source-period preparation',r.id)+button('case-open','Open prepared scenario',r.case_id):isSource&&r.id&&r.source_collection_id&&r.source_id?button('source-compose','Open this report only',r.id)+button('source-append','Add to current report',r.id)+button('source-open','Inspect retained source',r.id):r.schema==='upstate.chemistry-run/v1'?button('run-open','Open chemical results',r.id):r.schema==='upstate.chemistry-scientific-report/v1'?button('report-open','Open scientific report',r.id):'';
   return control.replaceAll('data-id=',`data-workspace="${esc(key)}" data-id=`);
  }};
 }

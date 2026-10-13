@@ -2,11 +2,11 @@
 from __future__ import annotations
 from copy import deepcopy
 import html
-from model import chemistry_reports, chemistry_report_source
+from model import chemistry_reports, chemistry_report_source, receiving_water_chemistry
 from model.common import verify_file
 from model.chemistry import Chemistry, ACTIONS, invoke
 from model.common import digest
-READS = {'catalog', 'case', 'run', 'page', 'report', 'report-source'}
+READS = {'catalog', 'case', 'run', 'page', 'report', 'report-source', 'water-source', 'water-preparation'}
 
 class ChemistryOperations:
     def __init__(self, operator, fault):
@@ -45,6 +45,7 @@ class ChemistryOperations:
             value = m.catalog()
             value['reports'] = chemistry_reports.catalog(m.ws)
             value['report_sources'] = chemistry_report_source.list_saved(m.ws)
+            value['water_preparations'] = receiving_water_chemistry.catalog(m.ws)
             # Compact operator state intentionally omits full source entries.
             value['sources'] = [
                 {'id': collection['id'], 'title': collection['title'],
@@ -71,6 +72,10 @@ class ChemistryOperations:
                      'scientific_report_selection': {
                          'workspace_key': workspace, 'sources': [choice],
                          'title': value['title']}}
+        elif operation == 'water-source':
+            value = receiving_water_chemistry.source_preview(m.ws, payload)
+        elif operation == 'water-preparation':
+            value = receiving_water_chemistry.get(m.ws, payload['preparation_id'])
         elif operation == 'case': value = m.get_case(payload['case_id'])
         elif operation == 'run': value = m.get_run(payload['run_id'])
         elif operation == 'page':
@@ -78,6 +83,9 @@ class ChemistryOperations:
                                   'limit':int(payload.get('limit') or 200)})
         else: raise self.Fault('CHEMISTRY_VIEW', 'Choose a chemical-analysis view.', 404)
         return {'workspace_key':workspace, **self._decorate(workspace, value)}
+    def water_preview(self, workspace, payload):
+        value = receiving_water_chemistry.preview(self.operator.ws(workspace), payload['selection'])
+        return {'workspace_key': workspace, **value}
     def cancel(self, workspace, payload):
         # This signal must bypass the serial worker that is executing the run.
         return self.manager(workspace).request_cancel(payload['run_id'])
@@ -100,6 +108,8 @@ class ChemistryOperations:
                 from model.chemistry import ENGINE_VERSION
                 key=digest({'case_id':case['id'],'project_sha256':case['project_sha256'],
                             'request':task['payload'].get('request',{}),'engine_version':ENGINE_VERSION})
+                if task.get('state') == 'complete' and isinstance(task.get('result'), dict):
+                    key = task['result'].get('id', key)
                 native=manager.get_run(key)
                 result['chemistry_run_id']=key
                 result['chemistry_progress']=native.get('progress',{})

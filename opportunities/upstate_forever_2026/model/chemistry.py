@@ -20,13 +20,13 @@ from .reach_chemistry.service import execute
 from .reach_chemistry.solver import Cancelled
 from .reach_chemistry.io import write_outputs
 
-ENGINE_VERSION = '0.3.0'
+ENGINE_VERSION = '0.4.0'
 ACTIONS = {'chemistry.case.save', 'chemistry.case.get', 'chemistry.catalog',
            'chemistry.run', 'chemistry.run.get', 'chemistry.result.page',
            'chemistry.case.from-source', 'chemistry.export', 'chemistry.receive',
            'chemistry.report.prepare', 'chemistry.report.get', 'chemistry.report.list',
            'chemistry.report.source.prepare', 'chemistry.report.source.get',
-           'chemistry.report.source.list'}
+           'chemistry.report.source.list', 'chemistry.water.prepare', 'chemistry.water.get'}
 
 class Chemistry:
     def __init__(self, workspace):
@@ -177,7 +177,8 @@ class Chemistry:
         # Explicit collections, not arbitrary paths or arbitrary attribute reads.
         field=value.get('field') or 'final'
         allowed={'final','samples','budgets','reactions','boundary_export_by_state',
-                 'observations','scores','interval_scores','parameters','rows','selected','summaries','sources'}
+                 'observations','scores','interval_scores','parameters','rows','selected','summaries','sources',
+                 'storage','storage_budgets'}
         if field not in allowed: raise ModelError('Choose a documented chemistry result collection')
         source=result.get('baseline',result)
         rows=result.get(field,source.get(field,[]))
@@ -353,6 +354,11 @@ class Chemistry:
 
 def invoke(workspace,action,value, *, progress_hook=None):
     service=Chemistry(workspace)
+    if action in {'chemistry.water.prepare', 'chemistry.water.get'}:
+        from . import receiving_water_chemistry
+        if action == 'chemistry.water.prepare':
+            return receiving_water_chemistry.prepare(workspace, value['selection'])
+        return receiving_water_chemistry.get(workspace, value['preparation_id'])
     if action=='chemistry.case.save': return service.save_case(value)
     if action=='chemistry.case.from-source': return service.from_source(value)
     if action=='chemistry.case.get': return service.get_case(value['case_id'])
