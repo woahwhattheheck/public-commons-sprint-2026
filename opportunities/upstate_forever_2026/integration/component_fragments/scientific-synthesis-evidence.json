@@ -1,0 +1,23 @@
+{
+  "schema": "upstate.application-component-fragment/v1",
+  "id": "scientific-synthesis-evidence",
+  "extend_components": {
+    "scientific-report-editions": {
+      "paths": [
+        "operator/web/scientific_synthesis.mjs",
+        "operator/web/scientific_synthesis_core.mjs",
+        "operator/web/scientific_synthesis.css",
+        "operator/web/scientific_synthesis_evidence.mjs",
+        "operator/SCIENTIFIC_SYNTHESIS_EVIDENCE.md",
+        "integration/component_fragments/scientific-synthesis-evidence.json",
+        "operator/extensions/source-reports.json",
+        "model/scientific_synthesis.py",
+        "model/scientific_synthesis_catalog.py",
+        "operator/scientific_synthesis.py"
+      ]
+    }
+  },
+  "required_components": [
+    "scientific-report-editions"
+  ]
+}

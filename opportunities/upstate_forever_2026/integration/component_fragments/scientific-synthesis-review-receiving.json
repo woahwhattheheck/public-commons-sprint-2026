@@ -1,0 +1,21 @@
+{
+  "schema": "upstate.application-component-fragment/v1",
+  "id": "scientific-synthesis-review-receiving",
+  "extend_components": {
+    "scientific-report-editions": {
+      "paths": [
+        "operator/scientific_synthesis_review_receiving.py",
+        "operator/scientific_synthesis_review_receiving.mjs",
+        "operator/receiving.py",
+        "operator/receiving.mjs",
+        "operator/SCIENTIFIC_SYNTHESIS_REVIEW_RECEIVING.md",
+        "integration/component_fragments/scientific-synthesis-review-receiving.json",
+        "operator/scientific_synthesis_receiving.py",
+        "operator/scientific_synthesis_receiving.mjs"
+      ]
+    }
+  },
+  "required_components": [
+    "scientific-report-editions"
+  ]
+}
