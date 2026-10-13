@@ -50,7 +50,7 @@ REQUIREMENTS = (
 def _text(value, label, *, required=False, limit=40000):
     if value is None:
         value = ""
-    if not isinstance(value, str) or len(value) > limit:
+    if not isinstance(value, str) or "\0" in value or len(value) > limit:
         raise ValueError(label + " must be a text value within its declared limit")
     value = value.strip()
     if required and not value:
@@ -81,7 +81,7 @@ def normalize(value):
     out = {"schema": SELECTION_SCHEMA}
     for field in ("title", "question", "domain_rationale"):
         out[field] = _text(value.get(field), field.replace("_", " "), required=True,
-                           limit=300 if field == "title" else 40000)
+                           limit=300 if field == "title" else (20000 if field == "question" else 40000))
     for field in ("grid_id", "profile_id", "baseline_scenario_id"):
         out[field] = identifier(value.get(field))
     for field in ("alternative_scenario_ids", "source_collection_ids", "observation_ids"):
@@ -117,7 +117,7 @@ def normalize(value):
     notes = value.get("notes", [])
     if not isinstance(notes, list):
         raise ValueError("Setup notes must be a list")
-    out["notes"] = [_text(item, "setup note") for item in notes]
+    out["notes"] = [_text(item, "setup note", limit=20000) for item in notes]
     return out
 
 

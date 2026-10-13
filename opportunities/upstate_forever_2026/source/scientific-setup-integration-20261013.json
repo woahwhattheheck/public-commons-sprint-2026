@@ -1,6 +1,6 @@
 {
   "schema": "upstate.scientific-setup-integration/v1",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "application": "opportunities/upstate_forever_2026",
   "repository": "woahwhattheheck/public-commons-sprint-2026",
   "source_commit": "e0ebf7f2611b7b4f5672923e8eb3c5330db20f4f",
@@ -9,8 +9,8 @@
   "files": [
     {
       "path": "model/setup_review.py",
-      "bytes": 42751,
-      "sha256": "0adae0c0b8537269a3abda6477ded9a143156a8cad5b3c1f868c3144f17c6aae",
+      "bytes": 42817,
+      "sha256": "6b2929e8a2df5d91a34ab1aa85b901e92da5dcec5f52a49eb0c90ae160cfdf60",
       "operation": "add"
     },
     {
@@ -27,14 +27,14 @@
     },
     {
       "path": "model/SCIENTIFIC_SETUP.md",
-      "bytes": 11331,
-      "sha256": "4c2727fb54409f83e4a6a7c921f4582a4b99886f3c1d1213292bccddd637a083",
+      "bytes": 11551,
+      "sha256": "0a881c0764c60c96cab7e78f324872431ab3206a4633c987024391d3380662bd",
       "operation": "add"
     },
     {
       "path": "source/scientific-setup-selection.schema.json",
       "bytes": 3371,
-      "sha256": "3293d229b10882778dc7e5174a31c08c68dd57e7ba067122f86871368320277a",
+      "sha256": "772a82eb0f6c97a394893903f32c19b939124658baa3d3cc4e6d6f8b4d077ba2",
       "operation": "add"
     }
   ],
@@ -146,7 +146,8 @@
     "Capture/import and final setup publication share the existing Workspace lock; original review creation takes its own lock without nesting.",
     "Native request admission decodes, hashes and retains one original byte read.",
     "Reused Workspace archive must match its retained bytes/SHA receipt; interrupted receipt recovery uses portable.inspect_archive(verify=True).",
-    "Peer inspection by source_engineering confirms original review source selection preserves all relative companion links and stable captured_at preserves source identity across retries."
+    "Peer inspection by source_engineering confirms original review source selection preserves all relative companion links and stable captured_at preserves source identity across retries.",
+    "Setup question/notes match the original review core's20,000-character limits; text NULs are rejected before source capture."
   ],
   "native_receiving": {
     "status": "ready_for_existing_receiving_operation",
@@ -155,7 +156,7 @@
     "requires": "Original complete selected grid, actual parameter profile, baseline, explicit alternatives and source files from the receiving Workspace.",
     "result": "invocation.json and receiving-result.json retain accepting host, interpreter, exact selected identities and actual restored project results."
   },
-  "supersedes": "F0C9KBFNX4G",
+  "supersedes": "F0C8KN25V1B",
   "source_lineage_checks": [
     "Coefficient table's retained SHA versus the selected profile.table_summary.sha256",
     "Prepared grid input's original source_id/source_sha256 versus the bound actual source entry"
