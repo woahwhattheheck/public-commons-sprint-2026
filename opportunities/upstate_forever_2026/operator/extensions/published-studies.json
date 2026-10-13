@@ -2,12 +2,13 @@
   "schema": "upstate.operator-extension/v1",
   "id": "published-studies",
   "title": "Published studies",
-  "version": "2.4.0",
+  "version": "2.5.0",
   "order": 46,
   "assets": [
     "published_studies.mjs",
     "published_studies.css",
-    "published_review_reports.mjs"
+    "published_review_reports.mjs",
+    "published_microbial_selection.mjs"
   ],
   "backend": {
     "module": "published_study_operator",
@@ -26,7 +27,8 @@
       "published-study.review.save",
       "published-study.review.export",
       "published-study.review.import",
-      "published-study.review.prepare-source"
+      "published-study.review.prepare-source",
+      "published-study.microbial-selection.prepare"
     ],
     "invoke": {
       "handler": "invoke",
@@ -146,6 +148,32 @@
         ],
         "path": "/api/published-studies/review-source",
         "operation": "review-source",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "POST"
+        ],
+        "path": "/api/published-studies/microbial-selection-catalog",
+        "operation": "microbial-selection-catalog",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "POST"
+        ],
+        "path": "/api/published-studies/microbial-selection-preview",
+        "operation": "microbial-selection-preview",
         "handler": "read",
         "args": [
           "workspace_key",
