@@ -1,0 +1,42 @@
+{
+  "schema": "upstate.application-component-fragment/v1",
+  "id": "landcover-observation-profile-report",
+  "components": {
+    "landcover-observation-profile-report": {
+      "title": "217 watershed land-cover and dated observation scientific report",
+      "paths": [
+        "observations/landcover_observation_profiles_20261013/report/scientific-context.json",
+        "observations/landcover_observation_profiles_20261013/report/figure-spec.json",
+        "observations/landcover_observation_profiles_20261013/report/regional-classification-and-point-evidence.svg",
+        "observations/landcover_observation_profiles_20261013/report/forest-point-evidence.csv",
+        "observations/landcover_observation_profiles_20261013/report/domain-group-balances.csv",
+        "observations/landcover_observation_profiles_20261013/report/report_core.mjs",
+        "observations/landcover_observation_profiles_20261013/report/rebuild.mjs",
+        "observations/landcover_observation_profiles_20261013/report/source-index.json",
+        "observations/landcover_observation_profiles_20261013/report/README.md",
+        "landcover_observation_profiles.report.sources.json",
+        "integration/component_fragments/landcover-observation-profile-report.json",
+        "observations/eighteenmile_2023/sampling_flow_coverage/vendor/d3-path.cjs",
+        "observations/eighteenmile_2023/sampling_flow_coverage/vendor/d3-array.cjs",
+        "observations/eighteenmile_2023/sampling_flow_coverage/vendor/d3-shape.cjs",
+        "observations/eighteenmile_2023/sampling_flow_coverage/vendor/d3-array.LICENSE.txt",
+        "observations/eighteenmile_2023/sampling_flow_coverage/vendor/d3-path.LICENSE.txt",
+        "observations/eighteenmile_2023/sampling_flow_coverage/vendor/d3-shape.LICENSE.txt"
+      ],
+      "requires": [
+        "landcover-observation-profiles"
+      ],
+      "source_manifests": [
+        "landcover_observation_profiles.report.sources.json"
+      ]
+    }
+  },
+  "required_components": [
+    "landcover-observation-profile-report"
+  ],
+  "source_reference": {
+    "operation": "ECO-SCI-ROOT-LANDCOVER-PROFILE-REPORT-20261013",
+    "original_source_commit": "933dd4d0a927d31883f3772ec9de6c760d85c767",
+    "source_pull_request": 3653
+  }
+}
