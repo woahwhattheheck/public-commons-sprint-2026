@@ -21,6 +21,13 @@ import stat
 import tempfile
 
 ALLOWED = frozenset({
+    "source_tools/high_quality_water_preparation.py",
+    "source_tools/nlcd_range_preparation.py",
+    "source_tools/nlcd_remote_window.py",
+    "source_tools/nlcd_static.py",
+    "source_tools/nlcd_wcs.py",
+    "source_tools/raster_sources.py",
+    "source_tools/source_transfer.py",
     "model/geographic_scenario_contrasts.py",
     "model/GEOGRAPHIC_PHYSICAL_CONTRASTS.md",
     "model/geographic_utility_groups.py",
@@ -271,6 +278,13 @@ ALLOWED = frozenset({
     "source/ROBUST_RECEIVING.md",
 })
 REQUIRED = ALLOWED - {
+    "source_tools/high_quality_water_preparation.py",
+    "source_tools/nlcd_range_preparation.py",
+    "source_tools/nlcd_remote_window.py",
+    "source_tools/nlcd_static.py",
+    "source_tools/nlcd_wcs.py",
+    "source_tools/raster_sources.py",
+    "source_tools/source_transfer.py",
     "model/geographic_scenario_contrasts.py",
     "model/GEOGRAPHIC_PHYSICAL_CONTRASTS.md",
     "model/geographic_utility_groups.py",
@@ -936,6 +950,13 @@ def verify_geographic_operator_dependencies(application, pending):
             "operator/source_preparation.py",
             "operator/extensions/source-preparation.json",
             "operator/web/source_workbench.mjs", "operator/web/source_workbench.css",
+            "source_tools/high_quality_water_preparation.py",
+            "source_tools/nlcd_range_preparation.py",
+            "source_tools/nlcd_remote_window.py",
+            "source_tools/nlcd_static.py",
+            "source_tools/nlcd_wcs.py",
+            "source_tools/raster_sources.py",
+            "source_tools/source_transfer.py",
             "operator/extension_registry.py", "operator/web/extension_host.mjs",
             "model/geographic_receiving_context.py",
             "model/geographic_scenario_allocation.py",
