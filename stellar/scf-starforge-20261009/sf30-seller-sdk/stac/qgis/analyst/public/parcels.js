@@ -41,6 +41,17 @@ export function acceptParcelResult(draft, input, result) {
   if (action === 'successor.compare') draft.comparison = clone(result);
 }
 
+export function acceptParcelCaptureResult(draft, input, result) {
+  draft.capture ||= {};
+  const capture = draft.capture;
+  capture.directory = result.directory || input.payload.directory;
+  capture.observed = clone(result);
+  capture.section = input.action;
+  if (result.capture?.label) capture.label = result.capture.label;
+  if (result.receiving) capture.publisherChangeReason = result.receiving.publisherChangeReason || '';
+  draft.section = 'Capture';
+}
+
 export async function renderParcels(ctx) {
   const {element:e, button, link, panel, detail, note, actions, label, inputValue, selectValue,
     textArea, table, pager, compact, clean, request, run, render, save, jsonDownload,
@@ -49,7 +60,7 @@ export async function renderParcels(ctx) {
   const editionId = data.editions.some(row => row.id === p.editionId) ? p.editionId : data.activeEditionId;
   p.editionId = editionId || '';
   const edition = data.editions.find(row => row.id === editionId);
-  const tabs = ['Sources', 'Parcels', 'Responsibility', 'Portfolios', 'Later edition'];
+  const tabs = ['Sources', 'Capture', 'Parcels', 'Responsibility', 'Portfolios', 'Later edition'];
   const tab = tabs.includes(p.section) ? p.section : 'Sources';
   const update = (name, value) => { p[name] = value; save(); };
   const mutate = (target, field, value) => { target[field] = value; save(); };
@@ -71,9 +82,104 @@ export async function renderParcels(ctx) {
     edition && actions(e('span', {class:'count'}, edition.summary.selectedKeys + ' parcels · ' + (edition.capturedAt ? 'edition captured ' + edition.capturedAt : 'assembled ' + (edition.createdAt || 'see source files'))),
       edition.id !== data.activeEditionId && button('Make current parcel edition', () => run('source.select', {editionId: edition.id})),
       button('Refresh parcel workspace', render)));
-  const sections = {Sources: sources, Parcels: parcels, Responsibility: responsibility,
+  const sections = {Sources: sources, Capture: captures, Parcels: parcels, Responsibility: responsibility,
     Portfolios: portfolios, 'Later edition': laterEdition};
   return [toolbar, ...await sections[tab]()];
+
+
+  async function captures() {
+    p.capture ||= {maxRequests:8, timeout:45};
+    const c = p.capture;
+    const history = await request('/api/parcels/captures?offset=' + (c.offset || 0) + '&limit=25');
+    const current = c.observed?.directory === c.directory?.trim() ? c.observed : null;
+    const directory = () => requireValue(c.directory?.trim(), 'Choose this named capture’s absolute directory.');
+    const captureField = (key, title, options = {}, hint) =>
+      label(title, inputValue(c[key] ?? '', value => mutate(c, key, value), options), hint);
+    const read = async path => {
+      c.observed = await request('/api/parcels/capture?' + new URLSearchParams({directory:path}));
+      c.directory = c.observed.directory; c.label = c.observed.capture.label;
+      if (c.observed.receiving) c.publisherChangeReason = c.observed.receiving.publisherChangeReason || '';
+      save(); await render();
+    };
+    const statusRows = current ? [
+      ['Status', current.status], ['Completed source requests', current.completed],
+      ['Pending source requests', current.pending], ['Split responses', current.splitResponses],
+      ['Selected parcel keys', current.selection?.expectedDistinctKeys ?? 'Selection pending'],
+      ['Original capture', current.capture.captureId], ['Started by', current.capture.actor],
+      ['Started at', current.capture.createdAt]
+    ] : [];
+    const waiting = current?.waiting || [], blocked = current?.blocked || [];
+    const ready = current?.status === 'READY', receiving = current?.receiving;
+    const result = [panel('Capture a named publisher refresh',
+      note('Use this for a newly requested refresh of the Pittsburgh public sources. The existing retained cohort remains in Sources. Creating or opening a capture makes no publisher request.'),
+      captureField('directory', 'Capture working directory on this host', {},
+        'Choose an absolute directory outside this project. Keep this folder until its latest checkpoint is saved.'),
+      captureField('label', 'Refresh label'),
+      actions(button('Create named refresh', () => ctx.runCapture('init', {
+        directory:directory(), label:requireValue(c.label?.trim(), 'Name this refresh.')})),
+        button('Open capture / refresh status', () => read(directory()))),
+      current && table([['Measure', row => row[0]], ['Observed', row => clean(row[1])]], statusRows),
+      current && detail('Original selection and coverage', current.selection),
+      current && panel('Advance this same capture',
+        note('Each click makes at most the selected number of publisher requests. WAITING and BLOCKED are retained outcomes. Review the displayed deadline or issue before continuing.'),
+        captureField('maxRequests', 'Maximum publisher requests per action', {type:'number', min:1, max:64}),
+        captureField('timeout', 'Per-request timeout in seconds', {type:'number', min:1, max:120}),
+        actions(button('Advance capture', () => ctx.runCapture('advance', {
+          directory:directory(), maxRequests:Number(c.maxRequests || 8), timeout:Number(c.timeout || 45)}),
+          {disabled:ready || !!waiting.length || !!blocked.length}),
+          button('Save complete capture checkpoint', () => ctx.runCapture('checkpoint', {directory:directory()}))),
+        current.checkpoint && note('Saved checkpoint: ' + current.checkpoint.requestId + ' · ' +
+          current.checkpoint.members + ' files · ' + current.checkpoint.expandedBytes + ' expanded bytes')),
+      waiting.length > 0 && panel('Publisher cooldown',
+        table([['Request', row => row.jobId], ['Retry no earlier than', row => clean(row.retryAfter)],
+          ['Original response', row => detail('Retained status and headers', row)]], waiting),
+        note('Open capture / refresh status after the deadline. The capture engine preserves the provider’s saved retry deadline across interruption and receiving.')),
+      blocked.length > 0 && panel('Review blocked publisher requests',
+        table([['Request', row => row.jobId], ['Issue', row => clean(row.error?.message || row.error?.code)],
+          ['Original attempt', row => detail('Retained request and response', row)],
+          ['Select', row => button('Review ' + row.jobId, async () => {c.jobId = row.jobId; save(); await render();})]], blocked),
+        captureField('jobId', 'Publisher request to retry'),
+        label('Reason for retry', textArea(c.reason || '', value => mutate(c, 'reason', value))),
+        button('Record reviewed retry', () => ctx.runCapture('retry', {directory:directory(),
+          jobId:requireValue(c.jobId?.trim(), 'Choose the blocked request.'),
+          reason:requireValue(c.reason?.trim(), 'Record the reviewed reason for another attempt.')}))),
+      ready && panel('Prepare the complete receiving edition',
+        note('Preparation validates every retained source body and complete selected-key coverage through the original parcel intake. Metadata changes require a recorded review before publication.'),
+        current.publisherReview && detail('Publisher metadata changed during capture', current.publisherReview, true),
+        label('Publisher-change review reason, when required',
+          textArea(c.publisherChangeReason || '', value => mutate(c, 'publisherChangeReason', value))),
+        button(receiving ? 'Reopen completed receiving edition' : 'Prepare receiving edition',
+          () => ctx.runCapture('finalize', {directory:directory(),
+            ...(c.publisherChangeReason?.trim() ? {publisherChangeReason:c.publisherChangeReason.trim()} : {})}))),
+      receiving && panel('Completed parcel source edition',
+        e('p', {class:'break'}, receiving.directory),
+        e('p', {class:'break'}, 'Manifest SHA-256: ', e('code', {}, receiving.manifestSha256)),
+        detail('Complete receiving receipt', receiving, true),
+        button('Use this edition in Sources', async () => {
+          p.directory = receiving.directory; p.expectedManifestSha256 = receiving.manifestSha256;
+          delete p.sourcePreview; p.section = 'Sources'; save(); await render();
+        })))];
+    result.push(panel('Saved capture requests and checkpoints',
+      note('These records belong to the original workspace journal. History retains every result file and same-request continuation. A checkpoint restores the complete capture, including exact response bodies, attempt receipts and provider deadlines.'),
+      table([['Action / capture', row => [row.action, row.result?.capture?.label || row.input.label || ''].filter(Boolean).join(' · ')],
+        ['Status', row => row.status + (row.result?.status ? ' / ' + row.result.status : '')],
+        ['Operator / time', row => row.actor + ' · ' + row.updatedAt],
+        ['Request', row => compact(row.requestId)],
+        ['Open', row => button('Open saved capture', () => read(row.input.directory))],
+        ['Restore', row => row.checkpoint && row.status === 'COMPLETED' ? button('Choose checkpoint', async () => {
+          c.checkpointRequestId = row.requestId; save(); await render();
+        }) : '—'],
+        ['Details', row => detail('Original request and result', row)]], history.items),
+      pager({...history, limit:25}, async offset => {c.offset = offset; save(); await render();})));
+    result.push(panel('Restore a saved capture on this host',
+      note('Choose a completed checkpoint above and a new empty working directory outside this project. The restore checks every saved byte before allowing another capture action. It makes no publisher request.'),
+      captureField('checkpointRequestId', 'Original checkpoint request ID'),
+      captureField('restoreDirectory', 'New empty capture directory'),
+      button('Restore complete capture', () => ctx.runCapture('restore', {
+        directory:requireValue(c.restoreDirectory?.trim(), 'Choose a new receiving directory.'),
+        checkpointRequestId:requireValue(c.checkpointRequestId?.trim(), 'Choose a completed original checkpoint.')}))));
+    return result;
+  }
 
   async function sources() {
     if (p.directory === undefined && ctx.sourceDirectory) p.directory = ctx.sourceDirectory;

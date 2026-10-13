@@ -454,3 +454,92 @@ The original outer request files are reconstructed from the archived request jou
 The preparation returns `ORIGINAL_OPERATION_PREPARED` and writes an immutable receipt under `recovery/worked-workspace-<archive-sha256>.json`. It starts no listener or publisher acquisition. Repeating preparation for the same saved archive reopens its received workspace and requires that all saved events and analyst requests remain intact, including when later buyer work has advanced the workspace. A different received archive, actor, path, missing completed stage or changed saved request is rejected. If the current workspace already exists from its original creation and is healthy, continue that workspace directly.
 
 Retain any separately saved read-only observation captured after the selected archive as a separate original observation in the handoff. Do not fabricate missing journal timestamps or treat the older archive as containing that later observation. The saved snapshot and its completed domain outcomes remain the recovery authority.
+
+
+## 16. Capture a named publisher refresh in the analyst console
+
+**Parcels → Capture** operates the same supported Pittsburgh publisher capture as
+the standalone capture CLI. Use it for an agreed future refresh. The completed
+original cohort remains an existing source edition; opening the pane does not
+fetch it again.
+
+Choose an absolute working directory outside the project and give the refresh a
+clear label. **Create named refresh** saves its identity and operator without a
+publisher request. **Open capture / refresh status** reads an existing capture.
+Status shows the actual retained request counts, selected keys, original capture
+identity, operator and time.
+
+**Advance capture** submits one original analyst request. Choose 1–64 publisher
+requests and a 1–120 second timeout per request. Each action has a durable request
+budget charged immediately before each actual GET. Continuing that same analyst
+request uses its remaining budget. To authorize another bounded group after a
+completed action, click Advance again; it receives a new analyst request ID for
+the same capture. There is no unattended capture loop.
+
+WAITING and BLOCKED are normal retained capture outcomes. The cooldown table
+shows the publisher's recorded retry deadline and response. Refresh status after
+that deadline. A blocked request requires an explicit **Reason for retry** and
+**Record reviewed retry** before another Advance. Retrying preserves the original
+attempt evidence; it does not discard the body or rewrite a previous result.
+
+When status is READY, **Prepare receiving edition** validates the complete output
+with the original parcel intake. If the publisher metadata changed between its
+before and after captures, the returned comparison is saved for review. Record
+the publisher-change review reason and prepare again. The resulting receipt
+retains that reason, the complete directory, exact manifest SHA-256, file and byte
+counts and source summary. **Use this edition in Sources** copies that exact
+directory and SHA into the existing source preview. Preview and import retain
+their original separate review and request controls.
+
+### Complete capture checkpoints and independent receiving
+
+Every completed capture action retains a complete capture checkpoint in the
+original analyst journal. **Save complete capture checkpoint** also records work
+completed through the standalone capture CLI. Exact files are retained as
+content-addressed objects under the original analyst result closure. Later
+checkpoints share unchanged objects. This includes response bodies and headers,
+attempts, retry decisions, progress, selection and any finalized receiving files.
+Raw publisher bytes remain unchanged; exact decimal metadata displayed in an
+analyst review is represented as text.
+
+The saved-request table is paged and remains available after browser draft loss.
+History exposes the original result files and same-request continuation.
+Project export includes every checkpoint object plus the capture operator and
+original capture software. Project receiving verifies those hashes before
+publishing the received workspace database.
+
+On another host, select a completed original checkpoint and enter a new empty
+capture directory outside the project, then use **Restore complete capture**.
+Restoration checks and copies every retained member, preserving the capture,
+attempts and provider deadlines. It makes no publisher request. An interrupted
+restore must continue its original analyst request; other actions are refused
+until its receiving marker is complete. The old absolute working path remains in
+the immutable history. A finalized capture exposes its actual new receiving
+directory while preserving its original manifest and review reason.
+
+The original capture folder is still needed for work after an interrupted action
+until a complete checkpoint has been saved. An interrupted action cannot promise
+to retain bytes that never reached the workspace. Keep the source folder and use
+History's original continuation before moving the project.
+
+### Analyst API
+
+The original operation endpoint accepts action `parcel.capture`, with payload
+`{action, payload}`. It keeps the existing actor, revision, request ID, selected
+runtime and worker ownership.
+
+| Capture action | Inner payload |
+| --- | --- |
+| `init` | `directory, label` |
+| `advance` | `directory, maxRequests?, timeout?` |
+| `retry` | `directory, jobId, reason` |
+| `finalize` | `directory, publisherChangeReason?` |
+| `checkpoint` | `directory` |
+| `restore` | `directory, checkpointRequestId` |
+
+GET `/api/parcels/capture?directory=...` reads current status without a publisher
+request. GET `/api/parcels/captures?offset=0&limit=50` pages the original capture
+journal (limit 1–100). Completed action results include the exact checkpoint
+request ID, file count, expanded bytes and snapshot path. Each checkpoint
+supports at most 25,000 files and 16 GiB of expanded working files, within the
+original receiving system's applicable package limits.
