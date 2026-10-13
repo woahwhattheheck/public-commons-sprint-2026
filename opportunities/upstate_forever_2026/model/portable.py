@@ -1089,6 +1089,11 @@ def _verify_restored_workspace(manifest, destination):
                "implementation": implementation, "parameter_studies": parameter_studies,
                "joint_parameter_studies": joint_parameter_studies,
                       "client_source_recipes": client_source_recipes}
+    if any((restored.root / "profile-workbook-returns").glob("*/intent.json")):
+        from .profile_workbook_return import verify_all as verify_profile_workbook_returns
+        from .profile_editions import verify_all as verify_profile_editions
+        details["profile_workbook_returns"] = verify_profile_workbook_returns(restored)
+        details["profile_editions"] = verify_profile_editions(restored)
     if joint_parameter_studies:
         from .study_transfer import verify_received_studies
         details["selected_joint_studies"] = verify_received_studies(restored, joint_only=True)
