@@ -1,3 +1,4 @@
+import {createApplicationReturnPanel} from './grant-application-return-workspace.mjs';
 import {newSubmissionWorkingCopy, checkSubmissionWorkingCopy, exportSubmissionWorkingCopy, importSubmissionWorkingCopy,
   forkSubmissionWorkingCopy, saveSubmissionWorkingCopy, loadSubmissionWorkingCopy, listSubmissionWorkingCopies,
   submissionLimitValue, SUBMISSION_WORKING_MAX_BYTES} from './grant-submission-working-copy.mjs';
@@ -35,7 +36,7 @@ function workingSnapshot(){
   const incoming=published&&publishedBundle?{source:published,...publishedBundle}:null;
   return structuredClone({...workingBase,label,folder:'SCF submission working — '+label,draft,incoming,incomingLabel:publishedLabel,
     ui:{view:view(),format:format(),selectedAnswer,selectedField:draft?.fields.some(field=>field.id===selectedField)?selectedField:null},
-    limits,workbook:formWorkbookPanel.snapshot(),native:{id:savedId,revision:savedRevision,dirty}});
+    limits,workbook:formWorkbookPanel.snapshot(),applicationReturn:applicationReturnPanel.snapshot(),native:{id:savedId,revision:savedRevision,dirty}});
 }
 function workingStatus(){
   const el=$('working-status');if(!el)return;
@@ -77,7 +78,7 @@ async function flushWorking(){
 }
 function newWorkingSelection(){
   clearTimeout(workingTimer);workingBase=newSubmissionWorkingCopy();workingRevision=0;workingGeneration=0;workingStored=0;workingError=null;
-  unfinishedLimits.clear();formWorkbookPanel.restore(null);
+  unfinishedLimits.clear();formWorkbookPanel.restore(null);applicationReturnPanel.restore(null);
 }
 async function installWorking(value,{localNative=false}={}){
   cancelPublishedRead();clearTimeout(workingTimer);await workingWrite?.catch(()=>{});
@@ -92,7 +93,7 @@ async function installWorking(value,{localNative=false}={}){
   draft=next.draft;savedId=native.id;savedRevision=native.revision;dirty=native.dirty;
   published=incoming?.source||null;publishedBundle=incoming?{bundle:incoming.bundle,objects:incoming.objects}:null;publishedLabel=next.incomingLabel;
   $('view').value=ui.view;$('format').value=ui.format;selectedAnswer=ui.selectedAnswer;selectedField=ui.selectedField;
-  unfinishedLimits.clear();limits.forEach(row=>unfinishedLimits.set(row.fieldId,row));formWorkbookPanel.restore(workbook);
+  unfinishedLimits.clear();limits.forEach(row=>unfinishedLimits.set(row.fieldId,row));formWorkbookPanel.restore(workbook);applicationReturnPanel.restore(next.applicationReturn??null);
   workingReady=true;render();await flushWorking().catch(()=>{});
 }
 async function separateWorking(){
@@ -321,6 +322,9 @@ function nav(){
   const productButton=button('Product sources',()=>{$('view').value='products';render();},'nav-answer');
   productButton.setAttribute('aria-current',String(view()==='products'));
   productButton.append(node('span',(draft.productSourceAuthoring?.selection.registrations.length||0)+' working declarations'));root.append(productButton);
+  const returnsButton=button('Editable application returns',()=>{$('view').value='returns';render();},'nav-answer');
+  returnsButton.setAttribute('aria-current',String(view()==='returns'));
+  returnsButton.append(node('span',(draft.applicationReturns?.records?.filter(row=>row.kind==='issue').length||0)+' issued copies'));root.append(returnsButton);
   const handoverButton=button('Submission handover',()=>{$('view').value='handover';render();},'nav-answer');
   handoverButton.setAttribute('aria-current',String(view()==='handover'));
   handoverButton.append(node('span',(draft.handover?.editions.length||0)+' prepared editions · '+(draft.handover?.returns.length||0)+' observations'));root.append(handoverButton);
@@ -341,6 +345,18 @@ function answerView(root){
   }));
 }
 const formWorkbookPanel=createFormWorkbookPanel({getDraft:()=>draft,work,download,status,onWorkingChange:scheduleWorking,onApply:(next,changed)=>{draft=next;if(changed)touch();render();}});
+async function commitReturnedApplication(next){
+  await flushWorking();
+  const record=await saveDraft({id:savedId,revision:savedRevision,input:next});
+  draft=record.input;savedId=record.id;savedRevision=record.revision;dirty=false;
+  workingGeneration++;render();await flushWorking().catch(()=>{});
+}
+const applicationReturnPanel=createApplicationReturnPanel({
+  getDraft:()=>draft,commitDraft:commitReturnedApplication,work,download,exportDraft:envelope,
+  exportOffline:downloadIssuedOfflineEditor,status,onWorkingChange:scheduleWorking,
+});
+function applicationReturnsView(root){applicationReturnPanel.render(root);}
+
 function formProfile(root){
   const details=node('details'),summary=node('summary','Issuer form and source');details.append(summary);
   const grid=node('div',undefined,'grid');
@@ -552,12 +568,13 @@ function render(){
   currentStats=currentPreview=currentIssue=currentText=null;metadata();workingStatus();nav();
   const root=$('editor');root.replaceChildren();root.classList.toggle('grant-handover',view()==='handover');
   root.classList.toggle('product-authoring',view()==='products');
+  root.classList.toggle('application-return',view()==='returns');delete root.dataset.applicationReturnPanel;
   delete root.dataset.productSourceAuthoring;delete root.dataset.productSourceBundleId;
   if(!draft){root.append(node('h2','Open a retained application'),node('p','Read the current source, open a complete draft JSON, or select a saved browser draft.'),button('Open source package',()=>chooseFile('source')));
     if(view()==='saved')savedView(root);return;}
   $('draft-title').value=draft.title;
   $('copy-all').textContent=view()==='fields'?'Copy all form fields':'Copy all answers';
-  ({answers:answerView,fields:fieldView,review:reviewView,source:sourceView,planning:planningView,products:productSourcesView,handover:handoverView,history:historyView,saved:savedView}[view()]||answerView)(root);updateStats();sourceReadControls();
+  ({answers:answerView,fields:fieldView,review:reviewView,source:sourceView,planning:planningView,products:productSourcesView,returns:applicationReturnsView,handover:handoverView,history:historyView,saved:savedView}[view()]||answerView)(root);updateStats();sourceReadControls();
 }
 async function refreshSource({initial=false}={}){
   if(offlineEdition){chooseFile('source');return;}
@@ -608,6 +625,18 @@ async function downloadOfflineEditor(){
     if(controller.signal.aborted)throw controller.signal.reason;
     download(html,filename()+'-offline-editor.html','text/html;charset=utf-8');
     status('Downloaded the complete editable HTML. Open it in your browser, edit the same application, and download a new offline edition or full draft to keep changes.');
+  }finally{clearTimeout(timeout);if(offlineExportController===controller)offlineExportController=null;}
+}
+async function downloadIssuedOfflineEditor(issuedDraft,name){
+  const controller=new AbortController();offlineExportController=controller;
+  const timeout=setTimeout(()=>controller.abort(new Error('Editor capture timed out. Keep the complete issued draft and reopen this same issued copy.')),90000);
+  try{
+    status('Retaining the complete issued editor and original source…');
+    const runtime=offlineEdition?.runtime||await collectBrowserOfflineRuntime({signal:controller.signal});
+    if(controller.signal.aborted)throw controller.signal.reason;
+    const html=await createOfflineEditor({envelope:await envelope(issuedDraft),runtime});
+    if(controller.signal.aborted)throw controller.signal.reason;
+    download(html,name,'text/html;charset=utf-8');
   }finally{clearTimeout(timeout);if(offlineExportController===controller)offlineExportController=null;}
 }
 window.addEventListener('pagehide',()=>{offlineExportController?.abort();clearTimeout(workingTimer);void flushWorking().catch(()=>{});});

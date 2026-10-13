@@ -63,6 +63,8 @@ export function restoreHandoverSelection(draft,version) {
 export function authorSnapshot(draft) {
   const result=clone(draft);
   delete result.handover;
+  // Application-return custody remains in the parent, like complete handover history.
+  delete result.applicationReturns;delete result.applicationReturnContext;
   result.versions=[];
   // Original planning file bytes stay once in the parent draft. The frozen
   // metadata and native document bind the exact original file by its SHA.
