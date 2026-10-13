@@ -281,6 +281,8 @@ starforge merchant-recovery-remote workspace handoff operation \
   --expected-review-sha256 ORIGINAL_REVIEW_SHA256
 ~~~
 
+When the receiving host uses a custom Python executable, pass the same `--python ABS_PYTHON` option to this recorded-operation command. The programmatic `inspectHostHandoffAdoption` accepts the same optional `python` path.
+
 This is a read of recorded custody and completion, without native authentication or a new filesystem publication. Its recorded result does not assert that the current receiving application is unchanged or still stopped. That distinction matters after ordinary later work edits the adopted workspace. A repeated `adopt` performs the full current source/tree/absence/native-read-only checks again; it does not overwrite later work to reproduce the earlier result.
 
 The existing invocation without `--operation` remains supported and preserves its original direct exclusive-copy behavior. An interrupted canonical root from that older path has no recorded staging ownership and is never silently adopted by a new operation. Preserve the original partial tree and resolve its custody through its original receiving owner. Completed exact older roots and authenticated archives remain usable.

@@ -987,10 +987,10 @@ function retainedAdoptionResult(value, selected) {
   return value;
 }
 /** Read only the original saved receiving operation; this does not reauthenticate its native bundle. */
-export async function inspectHostHandoffAdoption({ operationDirectory, expectedReviewSha256 } = {}) {
+export async function inspectHostHandoffAdoption({ operationDirectory, expectedReviewSha256, python } = {}) {
   absolute(operationDirectory, 'original adoption operation');
   need(HASH.test(expectedReviewSha256 ?? ''), 'HOST_HANDOFF_RECEIVING_REVIEW_REQUIRED');
-  return readHostAdoption({ directory: operationDirectory, expectedReviewSha256 });
+  return readHostAdoption({ directory: operationDirectory, expectedReviewSha256, python });
 }
 
 async function targetContext(ctx, input) {
