@@ -21,6 +21,7 @@ SCHEMA = "upstate.native-assessment-selection/v1"
 CONTEXT_SCHEMA = "upstate.assessment-native-huc-context/v1"
 CONTEXT_SHA = "bef411c2954fc3e7deb6419b1222b55c36733957700f23ff4d460b35b2b9e360"
 ANNUAL_SCHEMA = "upstate.annual-reference-assessment-context/v1"
+PREPARATION_VERSION = 2
 MAX_FILE_BYTES = 32 * 1024 * 1024
 MAX_RETAINED_BYTES = 128 * 1024 * 1024
 
@@ -249,7 +250,8 @@ def _point_choices(workspace, selection, ids, by_id):
     return choices
 
 
-def _inventory(body, ids, by_id):
+def _inventory(workspace, body, ids, by_id, references):
+    """Keep every original CSV cell and append metadata from its exact native row."""
     if _sha(body) != PUBLISHED_ASSESSMENT_SHA:
         raise ValueError("Retain the complete original 192-record assessment CSV")
     reader = csv.DictReader(io.StringIO(body.decode("utf-8-sig"), newline=""))
@@ -261,15 +263,70 @@ def _inventory(body, ids, by_id):
     if len(all_rows) != 192 or len({row["site"] for row in all_rows}) != 159 or any(None in row for row in all_rows):
         raise ValueError("The original published assessment cohort differs")
     selected = [row for row in all_rows if row["site"] in set(ids)]
-    expected = {(station, row["source_id"], row["source_vintage"], row["id"]) for station in ids for row in by_id[station]["assessment_records"]}
+    expected = {(station, row["source_id"], row["source_vintage"], row["id"]): row
+                for station in ids for row in by_id[station]["assessment_records"]}
     observed = [(row["site"], row["source_id"], row["source_vintage"], row["id"]) for row in selected]
-    if len(observed) != len(set(observed)) or set(observed) != expected:
+    if len(observed) != len(set(observed)) or set(observed) != set(expected):
         raise ValueError("The selected assessment records differ from the retained native context")
+    added = ["publication_status", "assessment_title", "original_record_pointer",
+             "original_record_index", "original_normalized_sha256", "original_record_path"]
+    if set(added) & set(fields):
+        raise ValueError("Appended native metadata conflicts with an original inventory field")
+    available = [(collection, entry) for collection in workspace._list("sources")
+                 for entry in collection["entries"] if entry.get("kind") == "table"]
+    cache, retained, editions = {}, [], {}
+    preferred = {(row["collection_id"], row["source_id"]) for row in references}
+    for identity, row in zip(observed, selected):
+        native = expected[identity]
+        locator = native["original_record_locator"]
+        checksum = locator["sha256"]
+        if checksum not in cache:
+            matches = [(collection, entry) for collection, entry in available
+                       if entry["body"]["sha256"] == checksum]
+            matches.sort(key=lambda item: ((item[0]["id"], item[1]["id"]) not in preferred,
+                                           item[0]["id"], item[1]["id"]))
+            if not matches:
+                raise ValueError("Import the original normalized assessment edition: " + locator["path"])
+            collection, entry = matches[0]
+            document = _json(_body(workspace, entry["body"]))
+            if document.get("schema") != "upstate.water-quality-assessments/v1" or document.get("complete") is not True or document.get("unparsed_rows"):
+                raise ValueError("The retained original assessment edition is incomplete")
+            if not isinstance(document.get("records"), list) or not isinstance(document.get("source"), dict):
+                raise ValueError("Retain the complete original normalized assessment record array")
+            if document.get("row_count", len(document["records"])) != len(document["records"]):
+                raise ValueError("The original normalized assessment count differs")
+            reference = {"collection_id": collection["id"], "source_id": entry["id"],
+                         "source_sha256": checksum}
+            retained.append(reference)
+            cache[checksum] = (entry, document, reference)
+        entry, document, reference = cache[checksum]
+        index = locator.get("record_index")
+        if type(index) is not int or index < 0 or index >= len(document["records"]) or locator.get("record_pointer") != "/records/" + str(index):
+            raise ValueError("Preserve the exact original normalized record position")
+        original = document["records"][index]
+        if not isinstance(original, dict) or any(original.get(name) != row[name]
+                for name in ("id", "site", "source_id", "source_sha256", "source_vintage", "huc12")):
+            raise ValueError("The selected CSV record differs from its original normalized identity")
+        source = document["source"]
+        if any(original.get(name) != source.get(name) for name in
+               ("source_id", "source_sha256", "source_vintage", "publication_status")):
+            raise ValueError("The original assessment row differs from its publisher edition")
+        status = original.get("publication_status")
+        title = entry.get("title")
+        if not isinstance(status, str) or not status.strip() or not isinstance(title, str) or not title.strip():
+            raise ValueError("Retain the original assessment publication status and edition title")
+        row.update(publication_status=status, assessment_title=title,
+                   original_record_pointer=locator["record_pointer"], original_record_index=index,
+                   original_normalized_sha256=checksum, original_record_path=_path(locator["path"]))
+        editions[checksum] = {**reference, "title": title, "publication_status": status,
+                             "source_vintage": source["source_vintage"],
+                             "publisher_source_id": source["source_id"],
+                             "publisher_source_sha256": source["source_sha256"]}
     out = io.StringIO(newline="")
-    writer = csv.DictWriter(out, fieldnames=fields, lineterminator="\n")
+    writer = csv.DictWriter(out, fieldnames=[*fields, *added], lineterminator="\n")
     writer.writeheader()
     writer.writerows(selected)
-    return out.getvalue().encode("utf-8"), len(selected)
+    return out.getvalue().encode("utf-8"), len(selected), retained, list(editions.values())
 
 
 def _retain_entries(workspace, folder, references):
@@ -332,25 +389,31 @@ def prepare(workspace, selection_file, source_collection_id, source_id, title=No
     inventory_descriptor = report_bodies.get(PUBLISHED_ASSESSMENT_SHA)
     if inventory_descriptor is None:
         raise ValueError("The retained native report lacks its original 192-record inventory")
-    inventory, record_count = _inventory(_body(workspace, inventory_descriptor), ids, by_id)
+    inventory, record_count, normalized_refs, source_editions = _inventory(
+        workspace, _body(workspace, inventory_descriptor), ids, by_id, selection["site_tables"])
     chosen_title = title if title is not None else "Native coverage selection — " + str(len(ids)) + " stations"
     if not isinstance(chosen_title, str) or not chosen_title.strip() or len(chosen_title) > 240:
         raise ValueError("Use a nonempty study title up to 240 characters")
     report_ref = {"collection_id": source_collection_id, "source_id": source_id, "source_sha256": entry["body"]["sha256"]}
-    operation_id = digest({"schema": SCHEMA, "selection_sha256": _sha(raw), "report": report_ref,
+    operation_id = digest({"schema": SCHEMA, "preparation_version": PREPARATION_VERSION,
+                           "selected_inventory_sha256": _sha(inventory),
+                           "normalized_sources": normalized_refs,
+                           "selection_sha256": _sha(raw), "report": report_ref,
                            "title": chosen_title, "sources": selection["sources"], "watersheds": selection["watersheds"],
                            "inventory_sources": selection["site_tables"]})
     folder = workspace.root / "native-assessment-review" / operation_id
     with held(workspace.root / "locks" / ("native-assessment-review-" + operation_id + ".lock")):
         folder.mkdir(parents=True, exist_ok=True)
-        companions, source_refs = _retain_entries(workspace, folder, [report_ref, *selection["site_tables"]])
+        companions, source_refs = _retain_entries(
+            workspace, folder, [report_ref, *selection["site_tables"], *normalized_refs])
         atomic_bytes(folder / "native-selection.json", raw, immutable=True)
         companions.append({"path": "native-selection.json", "bytes": len(raw), "sha256": _sha(raw)})
         provenance = {"schema": "upstate.native-assessment-review-preparation/v1", "operation_id": operation_id,
                       "source_report": report_ref, "native_context_sha256": CONTEXT_SHA,
                       "original_native_input_sha256": context["input_sha256"], "binding": binding,
                       "selected_station_ids": ids, "assessment_record_count": record_count,
-                      "original_inventory_sha256": PUBLISHED_ASSESSMENT_SHA, "original_sources": source_refs}
+                      "original_inventory_sha256": PUBLISHED_ASSESSMENT_SHA, "original_sources": source_refs,
+                      "version": PREPARATION_VERSION, "source_editions": source_editions}
         provenance_body = canonical(provenance) + b"\n"
         atomic_bytes(folder / "review-provenance.json", provenance_body, immutable=True)
         companions.append({"path": "review-provenance.json", "bytes": len(provenance_body), "sha256": _sha(provenance_body)})
@@ -362,7 +425,9 @@ def prepare(workspace, selection_file, source_collection_id, source_id, title=No
                                  "uri": entry["uri"], "vintage": entry["vintage"],
                                  "path": "selected-assessments.csv", "bytes": len(inventory), "sha256": _sha(inventory),
                                  "companions": companions,
-                                 "metadata": {"schema": provenance["schema"], "source_report": report_ref,
+                                 "metadata": {"schema": provenance["schema"], "version": PREPARATION_VERSION,
+                                              "assessment_status": " | ".join(sorted({row["publication_status"] for row in source_editions})),
+                                              "source_editions": source_editions, "source_report": report_ref,
                                               "native_context_sha256": CONTEXT_SHA,
                                               "selected_station_ids": ids, "assessment_record_count": record_count}}]}
         manifest_path = folder / "sources.json"
@@ -380,7 +445,8 @@ def prepare(workspace, selection_file, source_collection_id, source_id, title=No
                       "selected_station_ids": ids, "operation_id": operation_id,
                       "selected_inventory": {"collection_id": imported["id"], "source_id": derived_id,
                                              "source_sha256": _sha(inventory)}}
-    return {"schema": "upstate.native-assessment-review-preparation/v1", "operation_id": operation_id,
+    return {"schema": "upstate.native-assessment-review-preparation/v1", "version": PREPARATION_VERSION,
+            "operation_id": operation_id,
             "review_binding": review_binding,
             "selection": selection, "selection_path": str(folder / "selection.json"),
             "source_collection_id": imported["id"], "source_id": derived_id,
