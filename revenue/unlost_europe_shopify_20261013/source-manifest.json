@@ -1,0 +1,291 @@
+{
+  "schema": "unlost.localization-source-manifest.v1",
+  "directory": "revenue/unlost_europe_shopify_20261013",
+  "original_case": {
+    "channel_id": "C0BTTA66TK3",
+    "thread_ts": "1791867144.473299"
+  },
+  "original_source": {
+    "canvas": "F0C8T3Q42Q2",
+    "bytes": 624728,
+    "sha256": "8bd85a8bd1e4354d368ede35768f569bbf79fe08fea7ddda88b4932c0cd7239f"
+  },
+  "files": [
+    {
+      "path": "build-localization.cjs",
+      "bytes": 4687,
+      "sha256": "50372fa45de94aa946fa7740b1a870389dd1389fc23358d3c8f215f8496eb097"
+    },
+    {
+      "path": "build.cjs",
+      "bytes": 2284,
+      "sha256": "ea44890ae32a218cf75db31e00a25e77812042bf3960aadfb2e7d2d3330b1915"
+    },
+    {
+      "path": "customer-package-receipt.json",
+      "bytes": 2532,
+      "sha256": "811fa631479d7ffe676dd99a7656b16f4f90046ae459ec0f05c832023628627e"
+    },
+    {
+      "path": "customer-package.cjs",
+      "bytes": 5659,
+      "sha256": "47baec0b81339a62598646fdb218d01606f1e47e41f643513433a717dbff1eec"
+    },
+    {
+      "path": "customer-renderers.cjs",
+      "bytes": 5275,
+      "sha256": "597c0d850c7d8c2747cdba780f0a5a194830cff6bc02ad8da63d9917d28d4b0f"
+    },
+    {
+      "path": "customer/localization-paid/app.html",
+      "bytes": 204882,
+      "sha256": "8b6f306f0d3716f9b641d7bdf6d2d5426a6183e343da8ccffe18c60f99b7f6cc"
+    },
+    {
+      "path": "customer/localization-paid/application-source.json",
+      "bytes": 108026,
+      "sha256": "d0d7932b52c974b5131840e8eccb4d557c435063fa3f4d135829569798ac78d3"
+    },
+    {
+      "path": "customer/localization-paid/working.json",
+      "bytes": 37695,
+      "sha256": "ee579e6118e1e3e9cdce24c699fa101141b9e6b46cfd4cea150526b3884e36eb"
+    },
+    {
+      "path": "customer/localization-README.txt",
+      "bytes": 1611,
+      "sha256": "923624015a9e00a484c3af58e9829d896ff8d4fcc7bc7da973b98a153091fb47"
+    },
+    {
+      "path": "customer/localization-sample/app.html",
+      "bytes": 148885,
+      "sha256": "450ffa2fcdc3a5e326b51d7e3612fd2bfb00be68f288e237bc5ee18b88626cc3"
+    },
+    {
+      "path": "customer/localization-sample/application-source.json",
+      "bytes": 76518,
+      "sha256": "ff221301af0ce1c7564dd930af37d8733a15b17febca017f59de2ca77c7cb286"
+    },
+    {
+      "path": "customer/localization-sample/working.json",
+      "bytes": 7896,
+      "sha256": "5d6e07ac89771f75b028e63f12b61e72977cd5dc4d4c3d5ff1dd8164cd638a42"
+    },
+    {
+      "path": "customer/paid.csv",
+      "bytes": 8753,
+      "sha256": "a7e45ee9dcf3f9e0410492b48a4d9e28b093c7083978e776ed49bf4cd10e6505"
+    },
+    {
+      "path": "customer/paid.html",
+      "bytes": 16032,
+      "sha256": "e1ad4dc50564534a57502598c210fe84ec44e12b33b0d7d35295ab5682568d67"
+    },
+    {
+      "path": "customer/paid.json",
+      "bytes": 9972,
+      "sha256": "91365b81214e4ddc34fd4854c2bb75734590fcf84f1aa73df13d413cc4d1b120"
+    },
+    {
+      "path": "customer/README.txt",
+      "bytes": 1125,
+      "sha256": "01f41f071c31fb6649ecb0fdc06fa0e1853ab0fd2efe37f00654f53845ced43c"
+    },
+    {
+      "path": "customer/sample.csv",
+      "bytes": 1934,
+      "sha256": "0ea67f943b3d996caf20c8d710115c46fe7edac4577cb6f04186fae1e95b4811"
+    },
+    {
+      "path": "customer/sample.html",
+      "bytes": 5063,
+      "sha256": "4ef3f806a47ce46f149602e17d72fd88c935af9a1e45bb97b9b022a82e2ac992"
+    },
+    {
+      "path": "customer/sample.json",
+      "bytes": 2631,
+      "sha256": "71c5e2a7ca715f981add6f28cf5de95111eda1456be6eb92bea22312e15f7787"
+    },
+    {
+      "path": "first-offer.json",
+      "bytes": 2577,
+      "sha256": "240a5c2c8c3655a8d5d01eb262305bff42c19be9c1773110a4c1402b0639d476"
+    },
+    {
+      "path": "host/connected_sha256.cjs",
+      "bytes": 18007,
+      "sha256": "bbc213d478d520611bf20fffea0759b9130b3c48d24c257d49542f0833e27b48"
+    },
+    {
+      "path": "localization-package-receipt.json",
+      "bytes": 2850,
+      "sha256": "5ecf22ccdf942aeb0ee295b84c73b396641d235dfc97925d36e19eca2d26604c"
+    },
+    {
+      "path": "localization/browser-originals.json",
+      "bytes": 369543,
+      "sha256": "305008db34c2d1e9c70aaaac517e9eec1a0a2049523824f0c4c087ad0c04181b"
+    },
+    {
+      "path": "localization/compose.cjs",
+      "bytes": 5351,
+      "sha256": "bb48f337f9bab17afcc422a35070e1474f0dfc6a5c12bba57dac3571c636f1fe"
+    },
+    {
+      "path": "localization/localization-core.cjs",
+      "bytes": 13681,
+      "sha256": "ed1f1053ca17afa6e134158020435e763cc427c12b48974ee1557188769e9d38"
+    },
+    {
+      "path": "localization/localization-view.cjs",
+      "bytes": 30637,
+      "sha256": "a82199345d4964095248c80972e83a1cf6642a38c28261fa809ce14af140894d"
+    },
+    {
+      "path": "localization/operate-example.cjs",
+      "bytes": 4915,
+      "sha256": "d713e3d8b9093347535413cdc9fb14614a475baeee5452827f67de3bb7aeb4b9"
+    },
+    {
+      "path": "localization/product-context.json",
+      "bytes": 1378,
+      "sha256": "a73f2ae90d880275021a86b418d5b70bedfcb06dc2f88071576eb9fda606c764"
+    },
+    {
+      "path": "localization/README.txt",
+      "bytes": 1610,
+      "sha256": "e4c2f4ea5a508dd58fef5680acafba5ddc95a24bbe217de632dc30a82886d2fe"
+    },
+    {
+      "path": "localization/rebuild.cjs",
+      "bytes": 1282,
+      "sha256": "04e2c9e01f5c7195d4f3af802fbd6154f963de2dde10d942ebdde74bc32c3993"
+    },
+    {
+      "path": "localization/run-existing-browser.mjs",
+      "bytes": 13854,
+      "sha256": "b5a454ec224948b77880d49079f548778a3cdc12b9e4426df52f7d6bde964502"
+    },
+    {
+      "path": "localization/zip.cjs",
+      "bytes": 1210,
+      "sha256": "cb2d1fbd918edbe3db65c7470fa42de6e49f97f451b8f0e6a0d9a89ebcd9e314"
+    },
+    {
+      "path": "prepare.cjs",
+      "bytes": 2438,
+      "sha256": "b2bb74853ec30dc5b465afe57ea8a3791ddabb016e058dae783ddeed114b5128"
+    },
+    {
+      "path": "README.md",
+      "bytes": 9287,
+      "sha256": "10b3f14de5899f4297be833dd08d7833cd3af0337b512299e718fcf51237b8c9"
+    },
+    {
+      "path": "rebuild-original.cjs",
+      "bytes": 906,
+      "sha256": "6b03dbfd815c199fa77530b3dde93084fef64a8b42e277635fc4a876346a2169"
+    },
+    {
+      "path": "runtime/host/connected_sha256.cjs",
+      "bytes": 18336,
+      "sha256": "023b01f089168605a6153b9e5f3ccd7a66a0d0487fab3e79522897a1df226cc2"
+    },
+    {
+      "path": "runtime/tools/revenue_owner_console_20261010/capture/capture_core.cjs",
+      "bytes": 9998,
+      "sha256": "ab7c7ba6411f58f6fb6d15e20685fa3c75c090f3e6fc8bd6c88f7eaf2ce198f6"
+    },
+    {
+      "path": "runtime/tools/revenue_owner_console_20261010/lead_capture_core.cjs",
+      "bytes": 12268,
+      "sha256": "75b949c45a4b848671fd78c7b631794d27691b092549e4259edb017c0474fae2"
+    },
+    {
+      "path": "runtime/tools/revenue_owner_console_20261010/lead_customer_files.cjs",
+      "bytes": 19719,
+      "sha256": "6fd989943d558d806cbb5cdb5e3bad9ee630950aebae13ba6a58dd373d897081"
+    },
+    {
+      "path": "runtime/tools/revenue_owner_console_20261010/lead_customer_requests.cjs",
+      "bytes": 35457,
+      "sha256": "e93569600867bc3da48d8063b5d62c318472f04cb0d2cc08762ed20d649e6a7f"
+    },
+    {
+      "path": "runtime/tools/revenue_owner_console_20261010/lead_fulfillment_core.cjs",
+      "bytes": 81753,
+      "sha256": "c683ae05e7a83e43ea8d5a3e7a0735f635d20954c1b7002c3c976e2e475b024d"
+    },
+    {
+      "path": "runtime/tools/revenue_owner_console_20261010/lead_reconciliation_core.cjs",
+      "bytes": 20121,
+      "sha256": "9225050eb8ea3a86fcc02e1845fbe0970473e7ae6bd08a858fb7c806f67562ad"
+    },
+    {
+      "path": "source-records.json",
+      "bytes": 22791,
+      "sha256": "ed14bb2979239d68300460e075c8661fb8f81851b80fb49a7272c8d7c90decf2"
+    },
+    {
+      "path": "source/customer-package-input.json",
+      "bytes": 452,
+      "sha256": "f93ab843d9235bb718732dfc181ff4f24aa72805a6735a990778752416bc5e57"
+    },
+    {
+      "path": "source/original-customer-package-manifest.json",
+      "bytes": 5100,
+      "sha256": "8da1f84ebb8db6458a452a82310253b68ea34c7af2a988867eadbbc828bc55b1"
+    },
+    {
+      "path": "source/original-customer-package-readme.md",
+      "bytes": 4191,
+      "sha256": "5caf3dd8971cd603c8503748bf4559ae78b416aef05039abb527d72eddeff8f4"
+    },
+    {
+      "path": "source/pre-localization-working-record.json",
+      "bytes": 113596,
+      "sha256": "14485668020aae2e4012e1d481c8abf756c347b1c45fe306a402a96e5efdfa7b"
+    },
+    {
+      "path": "source/predecessor-working-record.json",
+      "bytes": 41100,
+      "sha256": "205e880020f1312a0e1438c730912f783a1a1143ccf00c213fce27a7577811e4"
+    },
+    {
+      "path": "source/prepared-message.json",
+      "bytes": 1000,
+      "sha256": "175e9bb19ca90703e1298b46fa5fc280f6b02b6996278f9c78e642c7084b4185"
+    },
+    {
+      "path": "tools/revenue_owner_console_20261010/lead_fulfillment_core.cjs",
+      "bytes": 27853,
+      "sha256": "18e527fffc9a63d0ca95df63a717995ba9948c9cdb993ef8f47b8660d94b4fa4"
+    },
+    {
+      "path": "worked-examples/paid-content.csv",
+      "bytes": 598,
+      "sha256": "8e24ef6d6bf38d5f736f17bf2dd01cd267ee7a427338913d3d21a50e93dfe5fc"
+    },
+    {
+      "path": "worked-examples/paid.json",
+      "bytes": 109203,
+      "sha256": "c4fb1f4c185ab43203f5d3fc20b3b15166efd23fe09a28b356d56b9c7336ac16"
+    },
+    {
+      "path": "worked-examples/sample-content.csv",
+      "bytes": 599,
+      "sha256": "6ca6e6697e29ae1185f8a5a0d62796f5a4169470baa46d734cff0f4a6c4662ac"
+    },
+    {
+      "path": "worked-examples/sample.json",
+      "bytes": 80127,
+      "sha256": "ecef2339e07c5643f125f45b870afe0e3bed42dd5438bf84ba1606fec9ab75c1"
+    },
+    {
+      "path": "working-record.json",
+      "bytes": 909478,
+      "sha256": "8198f88c09f87093afa4de1fb4b26d75f062c3c1e2504630588fb8c603cb0cbf"
+    }
+  ],
+  "ownerInstruction": "Bryce requires the producing peer to open and use the exact final application, download and reopen the complete customer artifacts, and personally view every actual desktop and narrow-screen image before marking the package visually reviewed. Retain the original source and current customer record. Fix visible defects in the same original product; do not replace this operation with a screenshot-only claim or a parallel application."
+}

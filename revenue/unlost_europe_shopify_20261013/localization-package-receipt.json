@@ -1,0 +1,73 @@
+{
+  "schema": "unlost.localization-delivery.v1",
+  "prepared_at": "2026-10-13T12:00:00.000Z",
+  "pack_id": "UNLOST-EUROPE-SHOPIFY-LEADPACK-20261013",
+  "working_record_sha256": "f86db35e1a9984084620b8a03027d93129f072cc310849b079b30b731ea18ab2",
+  "companies": 6,
+  "editions": 2,
+  "customer_files": 14,
+  "customer_packages": 4,
+  "package_ids": {
+    "sample": "UNLOST-EUROPE-SHOPIFY-LEADPACK-20261013:sample-localization-package-02",
+    "paid": "UNLOST-EUROPE-SHOPIFY-LEADPACK-20261013:paid-localization-package-02"
+  },
+  "original_values_preserved": true,
+  "received_equal": true,
+  "files": [
+    {
+      "id": "UNLOST-EUROPE-SHOPIFY-LEADPACK-20261013:localization-file:guide",
+      "name": "localization-README.txt",
+      "bytes": 1611,
+      "sha256": "923624015a9e00a484c3af58e9829d896ff8d4fcc7bc7da973b98a153091fb47"
+    },
+    {
+      "id": "UNLOST-EUROPE-SHOPIFY-LEADPACK-20261013:localization-file:sample-app-html",
+      "name": "localization-sample/app.html",
+      "bytes": 148885,
+      "sha256": "450ffa2fcdc3a5e326b51d7e3612fd2bfb00be68f288e237bc5ee18b88626cc3"
+    },
+    {
+      "id": "UNLOST-EUROPE-SHOPIFY-LEADPACK-20261013:localization-file:sample-application-source-json",
+      "name": "localization-sample/application-source.json",
+      "bytes": 76518,
+      "sha256": "ff221301af0ce1c7564dd930af37d8733a15b17febca017f59de2ca77c7cb286"
+    },
+    {
+      "id": "UNLOST-EUROPE-SHOPIFY-LEADPACK-20261013:localization-file:sample-working-json",
+      "name": "localization-sample/working.json",
+      "bytes": 7896,
+      "sha256": "5d6e07ac89771f75b028e63f12b61e72977cd5dc4d4c3d5ff1dd8164cd638a42"
+    },
+    {
+      "id": "UNLOST-EUROPE-SHOPIFY-LEADPACK-20261013:localization-file:paid-app-html",
+      "name": "localization-paid/app.html",
+      "bytes": 204882,
+      "sha256": "8b6f306f0d3716f9b641d7bdf6d2d5426a6183e343da8ccffe18c60f99b7f6cc"
+    },
+    {
+      "id": "UNLOST-EUROPE-SHOPIFY-LEADPACK-20261013:localization-file:paid-application-source-json",
+      "name": "localization-paid/application-source.json",
+      "bytes": 108026,
+      "sha256": "d0d7932b52c974b5131840e8eccb4d557c435063fa3f4d135829569798ac78d3"
+    },
+    {
+      "id": "UNLOST-EUROPE-SHOPIFY-LEADPACK-20261013:localization-file:paid-working-json",
+      "name": "localization-paid/working.json",
+      "bytes": 37695,
+      "sha256": "ee579e6118e1e3e9cdce24c699fa101141b9e6b46cfd4cea150526b3884e36eb"
+    }
+  ],
+  "authored_workflow_operations": {
+    "sample": 11,
+    "paid": 11
+  },
+  "actual_browser_operation": "prepared; no completed browser result exists for these new applications",
+  "prepared_sender": {
+    "draft_id": "r1515436171865349317",
+    "message_id": "1a1345ab017920d0",
+    "thread_id": "1a13459aceec1582",
+    "state": "DRAFT_ACCOUNT_WAITING",
+    "automation": "AUTOMATION_DEFERRED",
+    "unchanged": true
+  }
+}

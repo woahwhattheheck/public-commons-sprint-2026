@@ -1,0 +1,71 @@
+# Unlost merchant localization desk
+
+This complete successor turns the existing six-merchant research package into an editable localization preparation workspace. The free application contains Fussy People. The paid application contains Cata-Collect, d+ design, STET STUDIOS, CÎME Skincare and The Lekker Company.
+
+## Open the application
+
+Open `customer/localization-sample/app.html` or `customer/localization-paid/app.html` in a current browser. Each is a self-contained offline application with all of its selected original research, a complete source download, an empty editable working file and five operating views.
+
+Merchant context retains the original published contacts, source URLs, geographic fit and current-language observations. Pilot scope records the merchant's selected language, current process, reviewer, product/page and commercial notes. Content & review keeps actual source text and manually entered translation side by side. Glossary records protected names and preferred terms. Handover freezes named whole work, produces readable reports and preserves the full edit history.
+
+The working file retains every selected original record, all entered values, prior versions, review decisions and named handovers. Opening a file from the other edition is rejected. A source, entered-translation, tone or relevant glossary change makes an earlier review visibly out of date while retaining the manual text and decision. Stale revision writes and another tab's changed browser copy preserve the operator's entered values; use Reopen browser copy after saving any separate work.
+
+This is a preparation application for the existing Unlost case. Text and decisions are entered work. Actual translation and store publication happen in the merchant's chosen original tools. App promotion eligibility and commercial terms are confirmed separately in the actual app; the existing research package remains one free profile and five additional profiles for US$20.
+
+## Complete customer packages
+
+The current fulfillment record contains the same six companies and two immutable editions, all seven original customer files and both original package selections. Seven additive application/source/working/guide files produce two successor packages:
+
+- `UNLOST-EUROPE-SHOPIFY-LEADPACK-20261013:sample-localization-package-02`
+- `UNLOST-EUROPE-SHOPIFY-LEADPACK-20261013:paid-localization-package-02`
+
+Each contains all four original customer documents plus the applicable complete application, source, initial working file and shared guide. The maintained seven-module fulfillment engine saves the full files and prepares these exact immutable selections. Whole-record and package reopening are equal. Original records, documents and historical package selections remain byte-preserved; the source before this addition is `source/pre-localization-working-record.json`.
+
+## Rebuild and operate
+
+Use an existing Node runtime:
+
+```sh
+node build-localization.cjs /absolute/new/private/output
+```
+
+The output directory must be new. The full original source and maintained engine are included. The builder creates both self-contained applications, both complete source downloads, initial working files, the full fulfillment record, exact selected customer file directories and two whole ZIPs. It also operates a separate authored preparation example through each actual application core and saves those complete worked files.
+
+The example uses a TJLabs-authored short preparation note and French translation, separately from the customer's empty opening workspace. It operates pilot/glossary/content/review, retains manual text after a source change, records the revised translation, re-reviews a changed applicable glossary, saves two full handovers, receives the complete working file into an independent state and preserves later edits when replaying the original request. These are actual executions of this JavaScript core; the browser programme below records the real user-interface operation.
+
+The ZIP implementation is reused unchanged from public-commons-sprint-2026 PR4159, commit bf5ad5662cd9861941df077fe63a1f8e79fb3d03, `revenue/billedok_catering_20261013/build.cjs`. All original UTF-8 files, bytes and archive selections are kept together.
+
+To rebuild one downloaded customer application source, save its six exact source members with their original paths and run `node rebuild.cjs /absolute/new/opened-application.html`. Its selected initial working file and complete application source remain embedded in the rebuilt HTML.
+
+## Actual desktop and phone operation
+
+An existing authorized CDP browser with an installed Playwright1.60+ can receive and operate both exact applications:
+
+```sh
+node localization/run-existing-browser.mjs --cdp EXISTING_AUTHORIZED_ENDPOINT --out NEW_PRIVATE_OUTPUT --playwright-module EXISTING_PLAYWRIGHT_ENTRY
+```
+
+The course receives the paired whole `browser-originals.json`, uses one new private context, operates the actual controls, observes a source change retaining its manual translation, records the new review, saves a handover, downloads CSV/report/working/source, checks all six source members, reopens the complete working file and captures every view at1440/390 plus the actual downloaded reports. It closes only its own contexts and detaches its client; the existing browser stays open. The course saves original applications, complete downloads, real full/viewport images, observation JSON and an image index.
+
+Open the output `index.html`, view every actual image and use the downloaded files as their recipient. Fix any visible product defect in the original source before presentation. Source preparation and operation of the core do not establish the later actual browser result.
+
+## Existing sender and research
+
+The same original business draft remains r1515436171865349317, current message1a1345ab017920d0, thread1a13459aceec1582, addressed to support@unlostlabs.com. Its actual prepare-only receiving is queue sequence399/revision1221 and checkpoint operation18f7fc122d86fa0e45fa0345d0aeb18304660b51465aa42899ddeec6e8272e98/revision6. The existing account coordinator carries Bryce's manual capacity instruction. This source addition creates no send or trigger.
+
+`source-records.json` is the complete original merchant research. `localization/product-context.json` ties this preparation workflow to the current developer-published Shopify listing and Bram's original merchant-trial post. Preserve Cata-Collect's five live languages, CÎME's English/French/Dutch and Lekker's Dutch/English; other selected language observations retain their original qualification.
+
+Original case: https://tokenjunkielabs.slack.com/archives/C0BTTA66TK3/p1791867144473299
+Additive source claim: https://tokenjunkielabs.slack.com/archives/C0BTTA66TK3/p1791892667662389
+
+## Complete owner instruction: complete rendered product and attachments
+
+Before calling a client/prospect-facing app, website, dashboard, demo, report, presentation or export ready, the producing peer must actually open, run or render the exact outgoing version, LOOK at the rendered screen or its real screenshots, and operate the important user controls. Check the actual screenshare width and narrow/mobile width where relevant, populated, empty, loading and error states, downloads/exports and reopening. Capturing screenshots without viewing them is insufficient. Fix ugly, broken, unstyled, cramped, clipped, overflowing or unreadable output within the authorized work before presenting it. Code review, DOM counts, HTTP200, unit checks or another peer's approval do not replace seeing the actual product.
+
+ALL ATTACHMENTS count. Open, view, play and use the final delivered HTML, PDF, report, slides, spreadsheet, map, image, video, audio, archive and project as its recipient would. For archives, extract and open the actual contained deliverables and working project. Tests, checklists and screenshots merely captured are not substitutes. Use available high-quality generative media models and natural voice generation/TTS for videos; avoid robotic default voices. Watch and listen to the final export for pronunciation, pacing, timing and audio alignment. Keep building and fixing; inspection is part of completing the product.
+
+Use plain industrial software design: readable tables, clear hierarchy, consistent typography and spacing, restrained controls, useful labels and responsive layouts. Preserve the real workflows, source data and computation. Reviews must lead directly to repairs and must not replace implementation/integration or become repeated checking. Keep validation focused on the actual remaining risk; do not run broad suites or build a separate verification product.
+
+Carry this complete instruction into delegated assignments and the active owner-controlled policy, boot, build and receiving guidance those workers actually read. Preserve other owner controls, original operation identities and historical records. Leave third-party/vendor policies intact. Do not force restarts, create watchers or revive owner-stopped work. When the runtime is unavailable, join the existing equipped receiver with the complete exact version and opening steps, inspect its actual rendered result, and continue independent implementation while it runs.
+
+
