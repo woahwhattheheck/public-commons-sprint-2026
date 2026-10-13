@@ -50,7 +50,7 @@ class Progression:
         self.regional_args = regional_args
         existing = item(self.path)
         documents = {}
-        for key in ("opening", "run_selection", "chemistry_selection", "monitoring_selection"):
+        for key in ("opening", "run_selection", "chemistry_selection", "monitoring_selection", "monitoring_opening", "monitoring_receiving"):
             path = getattr(args, key)
             if path:
                 resolved = str(path.resolve(strict=True))
@@ -279,6 +279,23 @@ class Progression:
                     and journal.get("workspace_id") == self.operator.ws(workspace).project["id"]
                     and journal.get("opening") == opening,
                     "The completed saved-view browser belongs to another retained opening")
+        elif script == "source/run_monitoring_browser.mjs":
+            opening_path, receiving_path = Path(choices["--opening"]), Path(choices["--receiving"])
+            opening, receiving = read_json(opening_path), read_json(receiving_path)
+            expected_selection = {field: receiving[field] for field in
+                                  ("network_id", "plan_id", "campaign_id")}
+            require(journal.get("schema") == "upstate.monitoring-browser/v1"
+                    and journal.get("workspace_key") == workspace
+                    and journal.get("selection", {}).get("workspace_key") == workspace
+                    and journal.get("selection", {}).get("project_id") == self.operator.ws(workspace).project["id"]
+                    and all(journal["selection"].get(field) == value
+                            for field, value in expected_selection.items())
+                    and journal.get("input", {}).get("opening_sha256") ==
+                        describe_file(opening_path.parent, opening_path)["sha256"]
+                    and journal.get("input", {}).get("receiving_sha256") ==
+                        describe_file(receiving_path.parent, receiving_path)["sha256"]
+                    and opening.get("selection") == receiving.get("selection"),
+                    "The completed Monitoring browser belongs to another original campaign or source selection")
         elif script == "source/run_chemistry_browser.mjs":
             if not bound:
                 return False
@@ -352,7 +369,7 @@ class Progression:
         command = [self.node, str(APP / script), "--url-file", str(self.private_url),
                    "--workspace", workspace or self.key, "--output", str(report_path.parent),
                    *arguments]
-        if name == "chemistry" and (report_path.parent / "request-state.json").is_file():
+        if name in {"chemistry", "monitoring-browser"} and (report_path.parent / "request-state.json").is_file():
             command.append("--resume")
         if self.args.video:
             command.append("--video")
@@ -360,6 +377,8 @@ class Progression:
             command.append("--headed")
         if self.args.browser_channel:
             command.extend(["--browser-channel", self.args.browser_channel])
+        if self.args.browser_executable:
+            command.extend(["--browser-executable", self.args.browser_executable])
         result = self.command(name, command)
         journal = read_json(report_path)
         require(journal.get("status") == "complete",
@@ -558,7 +577,50 @@ class Progression:
                 arguments.extend(["--" + name, value])
         self.browser("chemistry", "source/run_chemistry_browser.mjs", arguments)
 
+    def adopt_monitoring(self, selected, report):
+        if self.args.monitoring_receiving:
+            # Adopt the completed original campaign; source preparation and its
+            # optional frontier have already operated this exact native selection.
+            from model.monitoring_workspace import MonitoringWorkspace
+            frozen = self.frozen_input(self.request["documents"]["monitoring_receiving"],
+                                       "monitoring-receiving.json")
+            outcome = read_json(frozen)
+            choice = read_json(selected)
+            summary = outcome.get("summary") or {}
+            require(summary.get("complete") and outcome.get("selection") == choice and
+                    summary.get("original_project", {}).get("id") == self.operator.ws(self.key).project["id"],
+                    "Adopt the completed Monitoring receiver for this original project and selection")
+            require(outcome.get("request") == digest({"project": summary["original_project"],
+                    "workspace": str(self.workspace), "selection": choice}),
+                    "The Monitoring receiver belongs to another original Workspace directory")
+            native = MonitoringWorkspace(self.operator.ws(self.key))
+            network = native.get("networks", outcome["network_id"])
+            plan = native.get("plans", outcome["plan_id"])
+            campaign = native.campaign(outcome["campaign_id"])
+            require(plan["network_id"] == network["id"] and plan["configuration"] == choice["configuration"] and
+                    campaign["revision"]["plan_id"] == plan["id"] and
+                    campaign["revision"]["network_id"] == network["id"] and
+                    network["source_bindings"] == summary["original_source_bindings"],
+                    "The actual saved Monitoring network, plan or campaign differs from its receiving selection")
+            native.verify_sources(network)
+            receiver_workspace = Workspace(outcome["received"]["workspace"])
+            require(receiver_workspace.root != self.workspace and
+                    receiver_workspace.project["id"] == summary["original_project"]["id"],
+                    "Open the independent original Monitoring receiving Workspace")
+            receiver = MonitoringWorkspace(receiver_workspace)
+            revision = receiver.get("revisions", outcome["independent_revision"])
+            require(revision["campaign_id"] == outcome["campaign_id"] and
+                    revision["network_id"] == network["id"] and revision["plan_id"] == plan["id"] and
+                    receiver.get("plans", plan["id"]) == plan,
+                    "The original independent Monitoring receiving revision differs")
+            receiver.verify_sources(receiver.get("networks", network["id"]))
+            atomic_bytes(report, frozen.read_bytes(), immutable=True)
+            return {"adopted_original_receiver": True, "network_id": network["id"],
+                    "plan_id": plan["id"], "campaign_id": outcome["campaign_id"]}
+        return None
+
     def monitoring(self):
+        self.current_step = "monitoring"
         if not self.args.monitoring_selection:
             return
         report = self.output / "monitoring" / "receiving.json"
@@ -571,10 +633,12 @@ class Progression:
         else:
             selected = self.frozen_input(self.request["documents"]["monitoring_selection"],
                                          "monitoring-selection.json")
-            result = self.command("monitoring", [
-                sys.executable, "-B", str(APP / "operator/monitoring_receiving.py"),
-                "--workspace", str(self.workspace), "--selection", str(selected),
-                "--output", str(report.parent)])
+            result = self.adopt_monitoring(selected, report)
+            if result is None:
+                result = self.command("monitoring", [
+                    sys.executable, "-B", str(APP / "operator/monitoring_receiving.py"),
+                    "--workspace", str(self.workspace), "--selection", str(selected),
+                    "--output", str(report.parent)])
         require(report.is_file(), "Open the original monitoring receiving result")
         retained = read_json(report)
         if (retained.get("summary") or {}).get("complete") is True:
@@ -597,6 +661,33 @@ class Progression:
             self.record("monitoring", {**result, "journal": describe_file(self.output, report),
                                       "outcome": outcome})
         return outcome
+
+    def monitoring_browser(self, outcome):
+        if not self.args.monitoring_opening:
+            return
+        if outcome and outcome.get("kind") == "design_diagnostic":
+            self.record("monitoring-browser", {"design_outcome": outcome,
+                        "campaign_created": False, "browser_operated": False})
+            return
+        selected = self.frozen_input(self.request["documents"]["monitoring_selection"],
+                                     "monitoring-selection.json")
+        opening_path = self.frozen_input(self.request["documents"]["monitoring_opening"],
+                                         "monitoring-opening.json")
+        opening = read_json(opening_path)
+        require(opening.get("schema") == "upstate.regional-monitoring-opening/v1" and
+                opening.get("project_id") == self.operator.ws(self.key).project["id"] and
+                opening.get("operator_workspace_key") == self.key,
+                "Open Monitoring in the same original scientific Workspace")
+        require(opening.get("selection") == read_json(selected),
+                "The Monitoring opening differs from the exact retained native selection")
+        receiving_path = self.output / "monitoring" / "receiving.json"
+        receiving = read_json(receiving_path)
+        require(receiving.get("selection") == opening["selection"] and
+                (receiving.get("summary") or {}).get("complete") and
+                receiving["summary"]["original_project"]["id"] == opening["project_id"],
+                "The original Monitoring receiver must complete this same selected campaign")
+        self.browser("monitoring-browser", "source/run_monitoring_browser.mjs",
+                     ["--opening", str(opening_path), "--receiving", str(receiving_path)])
 
     def completed_transfer(self, opening, saved_view, plan):
         """Reopen a finished receiving task without staging its archive again."""
@@ -674,6 +765,7 @@ class Progression:
         refreshed = self.updated_opening(opening, plan)
         self.chemistry()
         monitoring_outcome = self.monitoring()
+        self.monitoring_browser(monitoring_outcome)
         self.browser("saved-view", "source/run_saved_regional_view_browser.mjs",
             ["--opening", str(self.output / "refreshed-opening.json"), "--skip-transfer",
              "--task-timeout-seconds", str(self.args.timeout)])
@@ -738,6 +830,8 @@ def main(argv=None):
     parser.add_argument("--run-selection", type=Path, help="Actual native grid/scenario/models JSON; otherwise reuse the opening's run or original saved view")
     parser.add_argument("--chemistry-selection", type=Path, help="Original chemistry driver case/source/request selection JSON")
     parser.add_argument("--monitoring-selection", type=Path, help="Original monitoring receiver network/cost/calendar selection JSON")
+    parser.add_argument("--monitoring-opening", type=Path, help="Prepared regional Monitoring opening; operate its actual saved campaign in the native browser")
+    parser.add_argument("--monitoring-receiving", type=Path, help="Adopt this completed original Monitoring receiver and its saved campaign")
     parser.add_argument("--prepare-only", action="store_true", help="Prepare source dependencies without executing native models")
     parser.add_argument("--node", default="node")
     parser.add_argument("--port", type=int, default=0)
@@ -745,11 +839,16 @@ def main(argv=None):
     parser.add_argument("--video", action="store_true")
     parser.add_argument("--headed", action="store_true")
     parser.add_argument("--browser-channel")
+    parser.add_argument("--browser-executable", help="Installed Chromium executable; runtime choice outside the scientific request identity")
     known, separator, regional_args = list(argv if argv is not None else sys.argv[1:]), None, []
     if "--" in known:
         separator = known.index("--")
         known, regional_args = known[:separator], known[separator + 1:]
     args = parser.parse_args(known)
+    require(not (args.browser_channel and args.browser_executable),
+            "Choose either --browser-channel or --browser-executable before starting native work")
+    require(not (args.monitoring_opening or args.monitoring_receiving) or args.monitoring_selection,
+            "--monitoring-opening/--monitoring-receiving require the exact --monitoring-selection")
     require(bool(args.opening) != bool(regional_args),
             "Supply either --opening or the original regional preparation arguments after --")
     require(0 <= args.port <= 65535 and 0 < args.timeout <= 86400,
