@@ -21,6 +21,7 @@ if(!options.output)throw new Error('Provide --output with a new private receivin
 if(Number(process.versions.node.split('.')[0])<22)throw new Error('Use the existing Node 22 or newer runtime.');
 const output=resolve(options.output),appRoot=join(sourceRoot,'stellar/scf-starforge-20261009/partners');
 const moduleAt=(kind,file)=>import(pathToFileURL(join(appRoot,kind,file)).href);
+const {jsonIdentity,fileIdentity,writeJSONFile}=await moduleAt('cfce-givecredit-statements','native-json.mjs');
 const readJSON=async path=>JSON.parse(await readFile(path,'utf8'));
 const sha256=value=>createHash('sha256').update(value).digest('hex');
 const need=(condition,message)=>{if(!condition)throw new Error(message);};
@@ -52,24 +53,25 @@ async function observation(context){
 }
 async function save(path,value){
   need(typeof path==='string'&&!path.startsWith('/')&&!path.includes('\\')&&path.split('/').every(part=>part&&part!=='.'&&part!=='..'),'Keep artifact paths inside this receiving output.');
-  const target=join(output,path),content=Buffer.isBuffer(value)?value:typeof value==='string'?value:JSON.stringify(value,null,2)+'\n';
-  const identity={path,bytes:Buffer.byteLength(content),sha256:sha256(content)};
+  const target=join(output,path),json=!Buffer.isBuffer(value)&&typeof value!=='string';
+  const identity={path,...(json?jsonIdentity(value,{pretty:true,newline:true}):{bytes:Buffer.byteLength(value),sha256:sha256(value)})};
+  const write=()=>json?writeJSONFile(target,value,{pretty:true,newline:true}):writeArtifact(target,value);
   await mkdir(dirname(target),{recursive:true,mode:0o700});
   const prior=result.artifacts.find(row=>row.path===path);
+  if(prior)need(prior.bytes===identity.bytes&&prior.sha256===identity.sha256,'The retained artifact identity changed: '+path);
   if(recovery.resume&&await exists(target)){
-    const original=await readFile(target),same=original.length===identity.bytes&&sha256(original)===identity.sha256;
+    const original=await fileIdentity(target,Number.MAX_SAFE_INTEGER),same=original.bytes===identity.bytes&&original.sha256===identity.sha256;
     if(!same){
       need(!prior,'Preserve the original saved artifact: '+path);
-      let preserved=join(output,'recovery/unrecorded',sha256(original),path);
+      let preserved=join(output,'recovery/unrecorded',original.sha256,path);
       await mkdir(dirname(preserved),{recursive:true,mode:0o700});
       if(await exists(preserved))preserved+='.'+randomUUID();
-      await rename(target,preserved);await writeArtifact(target,content);
-      result.resume.preservedUnrecorded||=[];result.resume.preservedUnrecorded.push({path,retained:preserved,bytes:original.length,sha256:sha256(original)});
+      await rename(target,preserved);await write();
+      result.resume.preservedUnrecorded||=[];result.resume.preservedUnrecorded.push({path,retained:preserved,...original});
     }
-  }else await writeArtifact(target,content);
-  if(prior)need(prior.bytes===identity.bytes&&prior.sha256===identity.sha256,'The retained artifact identity changed: '+path);
-  else result.artifacts.push(identity);
-  await checkpoint();return content;
+  }else await write();
+  if(!prior)result.artifacts.push(identity);
+  await checkpoint();return identity;
 }
 async function checkpoint(){await atomicJSON(join(output,'receiving.json'),result);}
 async function stage(name,work,{reuse=true}={}){
@@ -260,7 +262,7 @@ try{
   let giveState=await giveAPI.state();
   result.workspaces.givecredit=give.startup;
   const giveImport=async(source,label)=>{
-    const digest=giveStore.sourceDigest(source),state=await give.workspace.snapshot(),existing=state.editions.find(row=>row.sha256===digest);
+    const digest=giveStore.sourceDigest(source),state=await give.workspace.readonlySnapshot(),existing=state.editions.find(row=>row.sha256===digest);
     if(existing)return {edition:{id:existing.id,label:existing.label},alreadyPresent:true};
     giveState=await giveAPI.state();return giveAPI.import({source,label},{revision:giveState.revision,
       requestId:await requestFor('source:'+digest,{sourceSha256:digest,label})});
@@ -318,7 +320,7 @@ try{
       result.capture.status='complete';await observation({stage:'GiveCredit source capture',phase:'complete'});await checkpoint();
     }
     const imported=await giveImport(ledger,'Complete native GiveCredit ledger edition');
-    ledger=(await give.workspace.snapshot()).editions.find(row=>row.id===imported.edition.id);
+    ledger=(await give.workspace.readonlySnapshot()).editions.find(row=>row.id===imported.edition.id);
     await save('givecredit-ledger-source.json',ledger);
     const comparison=await giveAPI.compare(priorCarbon.edition.id,currentCarbon.edition.id);await save('givecredit-carbon-edition-comparison.json',comparison);
     const pools=await giveAPI.pools({editionId:ledger.id});await save('givecredit-contract-pools.json',pools);
@@ -327,11 +329,11 @@ try{
     return {ledgerEditionId:ledger.id,counts:Object.fromEntries(Object.entries(ledger.tables).map(([key,rows])=>[key,rows.length])),
       originalDonorPayments:choices.donorPayments.length,sourcePayouts:choices.payouts.length,status:ledger.metadata.status};
   });
-  ledger=ledger||(await give.workspace.snapshot()).editions.find(row=>row.id===ledgerStage.ledgerEditionId);
+  ledger=ledger||(await give.workspace.readonlySnapshot()).editions.find(row=>row.id===ledgerStage.ledgerEditionId);
   need(ledger&&ledger.sha256===giveStore.sourceDigest(ledger),'Reopen the exact retained GiveCredit ledger edition.');
   let giveStatement;
   const statementStage=await stage('Create the native GiveCredit period statement and all nine exports',async()=>{
-    const state=await give.workspace.snapshot(),payments=giveEngine.nativePayments(ledger);
+    const state=await give.workspace.readonlySnapshot(),payments=giveEngine.nativePayments(ledger);
     const dates=payments.map(row=>row.createdAt.slice(0,10)).sort();
     const fromDate=options.from||ledger.metadata.selection?.from?.slice(0,10)||dates[0]||ledger.metadata.startedAt.slice(0,10);
     const last=dates.at(-1)||ledger.metadata.completedAt.slice(0,10);
@@ -421,7 +423,7 @@ try{
     let giveReopened;
     try{
       giveReopened=await giveStore.GiveCreditWorkspace.open(receivedGive.directory);
-      const carbonState=await carbonReopened.snapshot(),giveState=await giveReopened.snapshot();
+      const carbonState=await carbonReopened.snapshot(),giveState=await giveReopened.readonlySnapshot();
       need(carbonEngine.statementVersion(carbonState,'statement-november-2025',2).totals.allocated==='1.177','The persisted carbon statement changed.');
       need(giveEngine.statementVersion(giveState,giveStatement.statementId,1).totals.paymentRecords===giveStatement.statement.totals.paymentRecords,'The persisted donor statement changed.');
       return {carbonRevision:carbonState.revision,giveCreditRevision:giveState.revision,carbonSources:carbonState.editions.length,giveCreditSources:giveState.editions.length};
@@ -434,7 +436,7 @@ try{
     let reopenedGive;
     try{
       reopenedGive=await giveStore.GiveCreditWorkspace.open(browserJourney.giveReceived.directory);
-      const carbonState=await reopenedCarbon.snapshot(),giveState=await reopenedGive.snapshot();
+      const carbonState=await reopenedCarbon.snapshot(),giveState=await reopenedGive.readonlySnapshot();
       const canonical=value=>Array.isArray(value)?'['+value.map(canonical).join(',')+']':
         value&&typeof value==='object'?'{'+Object.keys(value).sort().map(key=>JSON.stringify(key)+':'+canonical(value[key])).join(',')+'}':JSON.stringify(value);
       need(canonical(carbonState)===canonical(expectedCarbon.workspace),'The persisted browser-received carbon workspace changed.');
