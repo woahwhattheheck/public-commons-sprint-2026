@@ -10,6 +10,7 @@
         "model/ENSEMBLE_CONSUMERS.md",
         "integration/component_fragments/ensemble-scientific-report-composer.json",
         "model/ensemble_study_source.py",
+        "model/ensemble_study_scope.py",
         "model/NATIVE_STUDY_SCIENTIFIC_REPORT.md",
         "model/ensemble_consumers_cli.py"
       ],
