@@ -1,8 +1,9 @@
+import {attachMonitoringFieldReturn} from './monitoring_field_return.mjs';
 import {attachMonitoringFieldwork} from './monitoring_fieldwork.mjs';
 import {attachMonitoringReport} from './monitoring-report.mjs';
 import {attachMonitoringStudyTransfer} from './monitoring-study-transfer.mjs';
 /* Native host adapter: original authorization, task queue and file tickets. */
-const READS = new Set(['context.catalog','context.list','context.get','context.preview','list','get','frontier.progress','campaign.get','campaign.list','campaign.history','capabilities','source.catalog']);
+const READS = new Set(['campaign.fieldwork.preview-return','context.catalog','context.list','context.get','context.preview','list','get','frontier.progress','campaign.get','campaign.list','campaign.history','capabilities','source.catalog']);
 let componentReady;
 function component() {
   // The component is derived from the same shipped legacy entry, with external
@@ -15,6 +16,7 @@ const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
 export function attachMonitoring(host) {
   const {getState, api, endpoint, showTask, toast}=host;
   const fieldwork=attachMonitoringFieldwork({...host,transport});
+  const fieldReturn=attachMonitoringFieldReturn({...host,transport});
   const nodes = new Map(), pendingMemory = new Map();
   const storage = {
     get(key) {
@@ -107,6 +109,7 @@ export function attachMonitoring(host) {
     node.monitoringStudyTransfer ||= attachMonitoringStudyTransfer(node,host,key);
     node.monitoringStudyTransfer.update();
     await fieldwork.mount(root,key);
+    if(ticket===generation && workspace()===key)await fieldReturn.mount(root,key);
   }
   async function update() {
     active?.monitoringReport?.update();
@@ -126,9 +129,10 @@ export function attachMonitoring(host) {
       await node.refreshSources();
       if (!current()) return;
       await fieldwork.update();
+      if (current()) await fieldReturn.update();
       if (current()) completedByWorkspace.set(key, completed);
     } finally { updating = false; }
   }
-  function detach(){generation++;networkOpening++;active?.monitoringReport?.detach();active?.monitoringStudyTransfer?.detach();fieldwork.detach();if(active)active.remove();active=null;}
+  function detach(){generation++;networkOpening++;active?.monitoringReport?.detach();active?.monitoringStudyTransfer?.detach();fieldwork.detach();fieldReturn.detach();if(active)active.remove();active=null;}
   return {mount,update,detach,openNetwork,render:()=>'',dispatch:()=>false};
 }
