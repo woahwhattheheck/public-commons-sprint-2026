@@ -6,7 +6,7 @@ import re
 
 from model.common import verify_file
 from model.implementation_report_source import (
-    preview_report_source, import_report_source, get_report_source,
+    preview_report_source, import_report_source, get_report_source, list_report_sources,
 )
 from model.implementation_schema import ImplementationError, _safe_id
 
@@ -53,6 +53,12 @@ class ImplementationReportSource:
     def read(self, workspace, operation, payload):
         if operation == "preview":
             return self._selection(workspace, payload or {}, preview=True)
+        if operation == "list":
+            value = payload or {}
+            plan_id = _safe_id(value.get("plan_id"), "plan_id")
+            return {"workspace_key": workspace, "plan_id": plan_id,
+                    "items": list_report_sources(self.operator.ws(workspace), plan_id,
+                                                 report_id=value.get("report_id"))}
         if operation == "detail":
             value = payload or {}
             return self._public(workspace, value)
