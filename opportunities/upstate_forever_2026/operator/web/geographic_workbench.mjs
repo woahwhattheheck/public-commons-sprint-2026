@@ -16,7 +16,11 @@ export function readGeographicForm(form) {
   for (const input of form.querySelectorAll("[data-sp-option]")) if(input.value!=="") {
     let value=input.value;
     if(input.type==="checkbox")value=input.checked;
-    else if(input.type==="number") {value=Number(value);if(!Number.isFinite(value))throw new Error("Use a finite value for "+input.dataset.spOption+".");}
+    else if(input.type==="number"||input.hasAttribute("data-sp-numeric")) {
+      if(!value.trim())continue;
+      if(!/^[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?$/.test(value.trim()))throw new Error("Finish the numeric value for "+input.dataset.spOption+".");
+      value=Number(value);if(!Number.isFinite(value))throw new Error("Use a finite value for "+input.dataset.spOption+".");
+    }
     payload.options[input.dataset.spOption]=value;
   }
   return payload;
