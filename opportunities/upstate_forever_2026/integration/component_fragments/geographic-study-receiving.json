@@ -1,0 +1,39 @@
+{
+  "schema": "upstate.application-component-fragment/v1",
+  "id": "geographic-study-receiving",
+  "source_reference": "ES-20261012-ASTRA-S1 / ES26 selected Geographic scientific report to original editable case. Preserve captured Study lineage and the existing Geographic workbench; no reverse study-transfer dependency on its Geographic consumer.",
+  "components": {
+    "geographic-study-receiving": {
+      "title": "Receive selected Geographic studies and continue the original editable case",
+      "paths": [
+        "integration/component_fragments/geographic-study-receiving.json",
+        "model/geographic_study_transfer.py",
+        "model/geographic_study_receiving.py",
+        "operator/geographic_receiving.py",
+        "operator/web/geographic_received_studies.mjs",
+        "model/GEOGRAPHIC_STUDY_RECEIVING.md",
+        "source_tools/geographic_headwaters_handover.py",
+        "CURRENT_OWNER_DIRECTION.md"
+      ],
+      "requires": [
+        "geographic-operator",
+        "study-transfer"
+      ]
+    }
+  },
+  "extend_components": {
+    "study-transfer": {
+      "paths": [
+        "model/geographic_study_transfer.py",
+        "model/geographic_study_receiving.py",
+        "operator/geographic_receiving.py",
+        "operator/web/geographic_received_studies.mjs",
+        "source_tools/geographic_headwaters_handover.py",
+        "model/GEOGRAPHIC_STUDY_RECEIVING.md"
+      ]
+    }
+  },
+  "required_components": [
+    "geographic-study-receiving"
+  ]
+}
