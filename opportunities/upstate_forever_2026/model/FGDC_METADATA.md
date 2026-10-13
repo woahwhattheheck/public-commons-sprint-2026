@@ -139,7 +139,7 @@ ECO_PYTHON=/actual/equipped/python
   --receipt "$ECO_RECEIVING/metadata-receiving.json"
 ```
 
-The exact 16,377-byte original DTD is retained at `source/fgdc/fgdc-std-001-1998.dtd`, SHA256 `778584c89cf0f61a382900cfab7fb7171ae99894b9b54702540ca28cb4267598`. XML parsing disables network and external entity resolution. Albers and UTM use their original explicit parameter productions; other projected CRSs retain complete WKT and affine information in the common local-planar production. This avoids the published DTD/XSD disagreement on the nesting of `otherprj`.
+The exact 16,377-byte original DTD is retained at `source/fgdc/fgdc-std-001-1998.dtd`, SHA256 `778584c89cf0f61a382900cfab7fb7171ae99894b9b54702540ca28cb4267598`. XML parsing disables network and external entity resolution. Albers and UTM use their original explicit parameter productions; other projected CRSs retain complete WKT and affine information in the common other-grid production. This avoids the published DTD/XSD disagreement on the nesting of `otherprj`.
 
 The schema download uses only https://www.fgdc.gov/schemas/metadata/.
 For an offline receiving host, supply all eleven original schemas in that
