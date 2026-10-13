@@ -125,13 +125,33 @@ class Journey {
     const identity = await this.http("/api/identity");
     need(identity.workspaceId === this.input.workspaceId && identity.instanceId === this.input.instanceId,
       "Open the exact currently supplied native workspace listener.");
-    const engine = await playwright(this.input.browser || {});
-    this.browser = await engine.chromium.launch({
+    const selected = { ...(this.input.browser || {}) };
+    if (process.env.AUDIT_BROWSER_MODULE) {
+      need(path.isAbsolute(process.env.AUDIT_BROWSER_MODULE),
+        "AUDIT_BROWSER_MODULE must identify the installed module by absolute path.");
+      selected.module = process.env.AUDIT_BROWSER_MODULE;
+    }
+    if (process.env.AUDIT_BROWSER_EXECUTABLE) {
+      need(path.isAbsolute(process.env.AUDIT_BROWSER_EXECUTABLE),
+        "AUDIT_BROWSER_EXECUTABLE must identify the installed browser by absolute path.");
+      fs.accessSync(process.env.AUDIT_BROWSER_EXECUTABLE, fs.constants.X_OK);
+      selected.executablePath = process.env.AUDIT_BROWSER_EXECUTABLE;
+    }
+    const engine = await playwright(selected);
+    const launch = {
       headless: true,
-      ...(this.input.browser?.executablePath ? { executablePath: this.input.browser.executablePath } : {}),
+      ...(selected.executablePath ? { executablePath: selected.executablePath } : {}),
       args: [...(typeof process.getuid === "function" && process.getuid() === 0 ? ["--no-sandbox"] : []),
-        ...(this.input.browser?.args || [])]
-    });
+        ...(selected.args || [])]
+    };
+    this.browser = await engine.chromium.launch(launch);
+    const runtime = { format: "commons.audit-exchange.browser-runtime.v1", operation: OPERATION,
+      workspaceId: this.input.workspaceId, at: now(), originalSelection: this.input.browser || {},
+      selectedModule: selected.module || null,
+      executablePath: selected.executablePath || engine.chromium.executablePath(),
+      launchArguments: launch.args, version: this.browser.version() };
+    atomic(path.join(this.root, "runtime-selections", sha(bytes(runtime)) + ".json"), bytes(runtime));
+    emit({ stage: "ORIGINAL_BROWSER_RUNTIME_SELECTED", ...runtime });
     this.context = await this.browser.newContext({ viewport: { width: 1440, height: 1000 }, acceptDownloads: true });
     await this.context.route("**/api/action", route => this.forward(route));
     this.page = await this.newPage();
