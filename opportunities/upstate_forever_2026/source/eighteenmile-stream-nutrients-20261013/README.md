@@ -25,6 +25,16 @@ All four original WGS84 station points lie within the full-resolution NLDI **who
 
 The original query uses `splitCatchment=false`. USGS documents that a split catchment instead places the local basin boundary at the feature's linear-reference position: [original basin semantics](https://api.water.usgs.gov/docs/nldi/basin/). The `full_reach_basin_relation` column refers to that exact whole-reach source. Preserve this distinction when matching observations to the flow gauge, particularly SV-233 south of the gauge's reported location.
 
+### Original river-network position
+
+Six additional original NLDI responses bind the four published station coordinates to the river network: the gauge feature, the gauge's 100 km upstream-with-tributaries WQP index, and one hydrolocation response per station. Every hydrolocation retains both its provided point and the agency's indexed point. The normalizer checks that the provided coordinates exactly match the original station catalogue before using the indexed location.
+
+NHD ReachCode measures run from 0 at the downstream end to 100 at the upstream end ([USGS linear-reference definition](https://pubs.usgs.gov/fs/2012/3068/FS12-3068.pdf)). The gauge has ReachCode `03060101000042`, COMID `11749433`, measure `53.4049`. SV-233 has that same reach and COMID, but its original indexed measure is `17.172927977358476`: it is downstream of the gauge on the indexed network. Its inclusion in the upstream WQP query follows whole-catchment indexing and does not reverse that precise within-reach relationship.
+
+For different reaches, `indexed_upstream_reach` means the original upstream query includes the exact station ID and its COMID agrees with the station's independently received hydrolocation. The programme never compares numerical measures across different ReachCodes. The new `gauge_network_relation` remains separate from both `full_reach_basin_relation` and `gauge_split_basin_relation`; an indexed network relationship does not supply a point-specific drainage polygon.
+
+`derived/station-network-context.csv` retains every original linear reference, indexed point, comparison, source member and upstream-index match. The station and nutrient tables carry the corresponding network relation into the existing flow-coverage and published-study workflows. Gauge daily means retain their role as regional flow context for these sampling stations.
+
 The normalizer also accepts a retained `original/eighteenmile-gauge-basin.geojson` member declared in `source-manifest.json`. When that precise publisher response is supplied, it adds a separate `gauge_split_basin_relation` column. The maintained native acquisition request is in the original project thread at message 1791864567.609429.
 
 ## Reproduce and use the source
@@ -38,7 +48,8 @@ node derive-nutrients.mjs SOURCE_DIRECTORY OUTPUT_DIRECTORY
 The command verifies every manifest original before deriving:
 
 - `derived/nutrient-results.csv`: all 589 records with exact source-file/CSV-record references, original measured and limit values, fractions, statuses, method IDs, dates, clocks and time zones.
-- `derived/station-basin-join.csv`: four original station identities, locations, periods and whole-reach spatial relations.
+- `derived/station-basin-join.csv`: four original station identities, locations, periods, whole-reach spatial relations and independently sourced network positions.
+- `derived/station-network-context.csv`: exact original gauge/station linear references and reproducible upstream/downstream classifications.
 - `derived/station-year-characteristic-coverage.csv`: counts by actual station, year, characteristic and sample fraction, retaining quantitation limits and analytical methods.
 - `derived/source-summary.json`: complete source counts and the spatial/normalization method.
 
