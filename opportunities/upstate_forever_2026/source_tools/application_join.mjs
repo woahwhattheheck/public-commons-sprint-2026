@@ -371,4 +371,227 @@ function sourceLayer(files, {label = "authored source", sourceRef = null, predec
   return layerFromDocument({schema: "commons.source-bank/v1", source_root: ROOT, source_ref: sourceRef, files: entries}, {label});
 }
 
-export {canonical, memberName, transportJSON, layerFromDocument, readSourceLayer, composeApplication, sourceLayer, applySourceJoins};
+
+/** Recoverable literal composition over the current complete source members.
+ *
+ * file_guards is optional when first authoring a plan. The returned bank always
+ * contains exact before/after identities; replay its composition.integration to
+ * require that same base or its completed postimage.
+ */
+function composeSourceJoins(current, integration, {label = "guarded source joins"} = {}) {
+  const conflicts = [];
+  const fail = (code, detail) => { conflicts.push({code, ...detail}); };
+  const identity = body => {
+    const bytes = utf8Encode(body);
+    return {bytes: bytes.length, sha256: sha256Bytes(bytes)};
+  };
+  const same = (left, right) => left.bytes === right.bytes && left.sha256 === right.sha256;
+  const validIdentity = value => value && Number.isSafeInteger(value.bytes) &&
+    value.bytes >= 0 && typeof value.sha256 === "string" && /^[a-f0-9]{64}$/.test(value.sha256);
+  const occurrences = (body, span) => {
+    let count = 0, offset = 0;
+    while ((offset = body.indexOf(span, offset)) !== -1) { count++; offset++; }
+    return count;
+  };
+  const reject = () => {
+    const report = {schema: "upstate.source-join-conflicts/v1",
+      operation_id: integration?.operation_id || null, label, conflicts};
+    const error = Error("Source composition needs a fresh join: " +
+      conflicts.map(item => (item.path || "plan") + (item.id ? " [" + item.id + "]" : "") +
+        ": " + item.code).join("; "));
+    error.code = "SOURCE_JOIN_CONFLICT";
+    error.report = report;
+    throw error;
+  };
+  if (!current?.files || !current?.metadata || !integration ||
+      integration.schema !== "upstate.operator-integration/v1" ||
+      !Array.isArray(integration.edits) || !integration.edits.length ||
+      !Array.isArray(integration.allowed_paths)) {
+    fail("invalid_integration_plan", {}); reject();
+  }
+  const allowed = new Set(), groups = new Map(), ids = new Set(), checks = [];
+  for (const name of integration.allowed_paths) {
+    try {
+      const path = memberName(name);
+      if (allowed.has(path)) fail("repeated_allowed_path", {path});
+      allowed.add(path);
+    } catch (error) { fail("invalid_allowed_path", {path: String(name), message: error.message}); }
+  }
+  for (const edit of integration.edits) {
+    try {
+      const path = memberName(edit.path);
+      if (!allowed.has(path) || typeof current.files[path] !== "string" ||
+          typeof edit.id !== "string" || !edit.id || ids.has(edit.id) ||
+          typeof edit.before !== "string" || !edit.before ||
+          typeof edit.after !== "string" || !edit.after || edit.before === edit.after) {
+        fail("invalid_or_repeated_edit", {path, id: edit.id}); continue;
+      }
+      ids.add(edit.id);
+      if (!groups.has(path)) groups.set(path, []);
+      groups.get(path).push({...edit, path});
+    } catch (error) { fail("invalid_edit_path", {message: error.message}); }
+  }
+  if (integration.checks !== undefined && !Array.isArray(integration.checks))
+    fail("invalid_consumer_checks", {});
+  for (const check of Array.isArray(integration.checks) ? integration.checks : []) {
+    try {
+      const path = memberName(check.path);
+      if (!allowed.has(path) || typeof current.files[path] !== "string" ||
+          typeof check.id !== "string" || !check.id || ids.has(check.id) ||
+          typeof check.text !== "string" || !check.text ||
+          !Number.isSafeInteger(check.count) || check.count < 0 ||
+          !["before", "after"].includes(check.phase || "after")) {
+        fail("invalid_or_repeated_consumer_check", {path, id: check.id}); continue;
+      }
+      ids.add(check.id); checks.push({...check, path, phase: check.phase || "after"});
+      if (!groups.has(path)) groups.set(path, []);
+    } catch (error) { fail("invalid_consumer_path", {message: error.message}); }
+  }
+  const declared = integration.file_guards;
+  if (declared !== undefined && (!declared || typeof declared !== "object" || Array.isArray(declared)))
+    fail("invalid_file_guards", {});
+  if (declared && typeof declared === "object") {
+    for (const path of Object.keys(declared)) {
+      if (!groups.has(path)) fail("guard_has_no_member", {path});
+    }
+    for (const path of groups.keys()) {
+      const guard = declared[path];
+      if (!guard || !validIdentity(guard.before) || !validIdentity(guard.after))
+        fail("missing_or_invalid_file_guard", {path});
+    }
+  }
+  if (conflicts.length) reject();
+
+  const output = Object.create(null), baseFiles = [], outcomes = [], verifiedChecks = [];
+  const guards = Object.create(null), predecessors = Object.create(null), modes = Object.create(null);
+  for (const [path, edits] of groups) {
+    const original = current.files[path], actual = identity(original), expected = declared?.[path];
+    const metadata = current.metadata[path];
+    if (!metadata || metadata.sha256 !== actual.sha256 || metadata.bytes !== actual.bytes) {
+      fail("current_member_identity_changed", {path, actual, expected: metadata || null}); continue;
+    }
+    const completed = expected && same(actual, expected.after);
+    if (expected && !completed && !same(actual, expected.before)) {
+      fail("base_identity_changed", {path, actual, expected}); continue;
+    }
+    let body = original, failed = false;
+    for (const check of checks.filter(item => item.path === path && item.phase === "before")) {
+      if (completed) continue; // A completed replay no longer contains its original preimage.
+      const count = occurrences(body, check.text);
+      if (count !== check.count) {
+        fail("consumer_span_count", {path, id: check.id, phase: check.phase,
+          expected_count: check.count, actual_count: count}); failed = true;
+      } else verifiedChecks.push({id: check.id, path, phase: check.phase, count});
+    }
+    if (failed) continue;
+    for (const edit of edits) {
+      if (completed) {
+        outcomes.push({id: edit.id, path, action: "already_applied"}); continue;
+      }
+      const beforeCount = occurrences(body, edit.before), afterCount = occurrences(body, edit.after);
+      const before = identity(body);
+      if (afterCount === 1 && beforeCount === occurrences(edit.after, edit.before)) {
+        outcomes.push({id: edit.id, path, action: "already_applied", before, after: before});
+      } else if (beforeCount === 1 && afterCount === 0) {
+        const at = body.indexOf(edit.before);
+        body = body.slice(0, at) + edit.after + body.slice(at + edit.before.length);
+        outcomes.push({id: edit.id, path, action: "applied", before, after: identity(body)});
+      } else {
+        fail("literal_span_not_unique", {path, id: edit.id,
+          before_count: beforeCount, after_count: afterCount});
+        failed = true; break;
+      }
+    }
+    if (failed) continue;
+    const after = identity(body);
+    if (expected && !same(after, expected.after)) {
+      fail("postimage_identity_changed", {path, actual: after, expected: expected.after}); continue;
+    }
+    for (const check of checks.filter(item => item.path === path && item.phase === "after")) {
+      const count = occurrences(body, check.text);
+      if (count !== check.count) {
+        fail("consumer_span_count", {path, id: check.id, phase: check.phase,
+          expected_count: check.count, actual_count: count}); failed = true;
+      } else verifiedChecks.push({id: check.id, path, phase: check.phase, count});
+    }
+    if (failed) continue;
+    output[path] = body;
+    guards[path] = expected || {before: actual, after};
+    modes[path] = metadata.mode || "100644";
+    predecessors[path] = actual.sha256;
+    baseFiles.push({path, content: original, ...actual, mode: modes[path],
+      ...(metadata.git_blob ? {git_blob: metadata.git_blob} : {})});
+  }
+  if (conflicts.length) reject();
+  const boundIntegration = {...integration, file_guards: guards};
+  const layer = sourceLayer(output, {label, sourceRef: current.receipt?.source_ref || null,
+    predecessors, modes});
+  const receipt = {schema: "upstate.source-join-receipt/v1",
+    operation_id: integration.operation_id || null,
+    integration_sha256: digest(boundIntegration), outcomes, checks: verifiedChecks,
+    files: [...groups.keys()].map(path => ({path, ...guards[path]}))};
+  const bank = {...layer.document, composition: {
+    schema: "upstate.source-composition/v1",
+    integration: boundIntegration, base_files: baseFiles, receipt}};
+  layer.document = bank;
+  layer.receipt.integration_sha256 = receipt.integration_sha256;
+  return {layer, bank, receipt};
+}
+
+
+function sourceCompositionBank(results, {label = "complete source joins"} = {}) {
+  if (!Array.isArray(results) || !results.length)
+    throw Error("Choose completed source compositions");
+  const entries = new Map(), steps = [];
+  for (const result of results) {
+    const bank = result?.bank;
+    if (bank?.schema !== "commons.source-bank/v1" ||
+        bank.composition?.schema !== "upstate.source-composition/v1")
+      throw Error("Choose complete source composition results");
+    // Reopen both complete inventories, then reproduce the exact bound join.
+    // A valid output alone must never endorse a corrupted recovery preimage.
+    const composition = bank.composition, bases = composition.base_files;
+    if (!Array.isArray(bases) || !bases.length ||
+        !composition.integration?.file_guards || !composition.receipt)
+      throw Error("Retain the complete composition inputs, guards and receipt");
+    const seen = new Set();
+    for (const row of bases) {
+      const path = memberName(row.path);
+      if (seen.has(path) || typeof row.content !== "string" ||
+          !Number.isSafeInteger(row.bytes) || row.bytes < 0 ||
+          typeof row.sha256 !== "string" || !/^[a-f0-9]{64}$/.test(row.sha256) ||
+          !["100644", "100755"].includes(row.mode))
+        throw Error("Incomplete or repeated recovery input: " + path);
+      seen.add(path);
+    }
+    const base = layerFromDocument({schema: "commons.source-bank/v1",
+      source_ref: bank.source_ref || null, files: bases}, {label});
+    const layer = layerFromDocument(bank, {label});
+    const names = Object.keys(layer.files).sort();
+    if (canonical(names) !== canonical(Object.keys(base.files).sort()))
+      throw Error("Recovery inputs and composed outputs name different members");
+    const replay = composeSourceJoins(base, composition.integration, {label});
+    if (canonical(replay.receipt) !== canonical(composition.receipt))
+      throw Error("Recovery receipt differs from the retained original join");
+    for (const path of names) {
+      if (replay.layer.files[path] !== layer.files[path] ||
+          replay.layer.metadata[path].mode !== layer.metadata[path].mode ||
+          layer.metadata[path].base_sha256 !== base.metadata[path].sha256)
+        throw Error("Recovery output differs from its original join: " + path);
+    }
+    for (const [path, content] of Object.entries(layer.files)) {
+      const before = bases.find(row => row.path === path);
+      const prior = entries.get(path), meta = layer.metadata[path];
+      if (prior && (prior.sha256 !== before.sha256 || prior.mode !== before.mode))
+        throw Error("Source composition steps are not consecutive: " + path);
+      entries.set(path, {path, content, bytes: meta.bytes, sha256: meta.sha256,
+        mode: meta.mode || "100644", base_sha256: prior?.base_sha256 || before.sha256});
+    }
+    steps.push(bank.composition);
+  }
+  return {schema: "commons.source-bank/v1", source_root: ROOT,
+    files: [...entries.values()], composition: {
+      schema: "upstate.source-composition-sequence/v1", steps}};
+}
+
+export {canonical, memberName, transportJSON, layerFromDocument, readSourceLayer, composeApplication, sourceLayer, applySourceJoins, composeSourceJoins, sourceCompositionBank};
