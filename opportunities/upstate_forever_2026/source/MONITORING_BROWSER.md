@@ -104,3 +104,37 @@ On a worker shared with other native jobs, `--browser-renderer-limit 2` asks Chr
 This launch setting is recorded as `browser_runtime.renderer_process_limit` and stays outside the scientific selection and original request identity. After an operating-system termination, reuse the same `--output` with `--resume`; the driver reopens its exact saved campaign and resumes any retained original tasks. The browser limit is a Chromium process hint, not a total worker memory cap, so schedule large source imports and archive operations sequentially on a constrained worker.
 
 `journey.json.current_step` is written atomically before browser launch, native opening, each export, fresh-browser reopening and complete receiving. A hard worker termination therefore leaves the last active operator stage alongside the existing exact request state, even if it occurs before the first screenshot.
+
+## Open an existing campaign after transfer to another computer
+
+A full scientific Workspace contains the original Monitoring network, design, campaign revisions and retained source objects. The preparation opening and browser execution journals can live outside that archive. On a receiving computer, select the existing native records directly with `--restored-selection`. This starts a browser operation bound to the receiving operator's actual workspace key; it does not import another network or recalculate the design.
+
+Write a UTF-8 JSON selection using the original IDs from the completed receiving record or the native Monitoring library:
+
+```json
+{
+  "schema": "upstate.monitoring-browser-selection/v1",
+  "project_id": "ORIGINAL_PROJECT_ID",
+  "network_id": "ORIGINAL_NETWORK_ID",
+  "plan_id": "ORIGINAL_PLAN_ID",
+  "campaign_id": "ORIGINAL_CAMPAIGN_ID"
+}
+```
+
+The optional `context_id` selects retained observed context bound to that exact campaign revision. The existing `--context-id` flag may supply it when the file omits it; if both are supplied they must agree.
+
+```sh
+node source/run_monitoring_browser.mjs \
+  --url-file PRIVATE_OPERATOR_URL_FILE \
+  --restored-selection monitoring-browser-selection.json \
+  --workspace ACTUAL_RECEIVING_OPERATOR_KEY \
+  --output RECEIVING_BROWSER_DIRECTORY \
+  --browser-executable /tmp/chromium \
+  --browser-renderer-limit 2
+```
+
+Use the receiving operator's `workspace_key`, which is derived from its actual registered directory. The native project ID remains the scientific project's original ID. The browser reads `/api/state?compact=1`, the original Monitoring network, plan and campaign, and the retained vector catalogue. It checks the project, native record relationships, source collection and entry IDs, and original object hashes before operating the complete map, calendar, draft correction, exports and independent receiving course.
+
+The selected JSON file's SHA-256, actual workspace key, original IDs and chosen context are frozen in the new `request-state.json`. The full native network/plan/campaign/calendar/source-binding fingerprints are retained after their first read. Continue an interrupted operation with the same selection bytes, actual key and output directory plus `--resume`. The original opening/receiving mode keeps its previous input identity and remains available unchanged. A fresh receiving operation gets its own output directory; original request files from a different workspace retain their original identity.
+
+All modes use the same original queued export and Workspace restore requests. Report and project downloads retain the native file tickets' exact byte lengths and SHA-256 values.
