@@ -79,7 +79,7 @@ async function rehearsalOpenControl(control){
 }
 const rehearsal=attachRehearsal({getState:()=>state,api,endpoint,openItem,showTask,fileList,toast,refreshState:()=>refresh({force:true}),navigate,openControl:rehearsalOpenControl});
 const portfolio=attachPortfolio({getState:()=>state,refreshState:()=>refresh({force:true}),api,endpoint,openForm,submitAction,detail,fileList,sourceForm,toast,openItem,executeAction,showTask,openExtension:(...args)=>extensions.openExtension(...args)});
-const parameterStudies=attachParameterStudies({getState:()=>state,api,endpoint,openForm,submitAction,executeAction,detail,fileList,openItem,toast,navigate,refreshState:()=>refresh({force:true})});
+const parameterStudies=attachParameterStudies({getState:()=>state,api,endpoint,openForm,submitAction,executeAction,detail,fileList,openItem,toast,navigate,refreshState:()=>refresh({force:true}),openExtension:(...args)=>extensions.openExtension(...args)});
 const community=attachCommunity({getState:()=>state,api,endpoint,openForm,submitAction,detail,fileList,sourceForm,toast,openItem});
 const customerReviews=attachCustomerReviews({getState:()=>state,api,endpoint,openForm,submitAction,detail,fileList,uploadFile,showTask,toast,closeForm:()=>{formDialog.close();formContext=null;}});
 const receivingWaters=attachReceivingWaters({getState:()=>state,api,endpoint,openForm,submitAction,detail,fileList,showTask,toast,navigate,openDelivery:selection=>deliveryForm(undefined,selection)});
@@ -92,6 +92,7 @@ const programmes=attachProgrammes({getState:()=>state,api,endpoint,openForm,subm
 let operatingJourney=null;
 const journeyForm=async open=>{await open();return {operation_id:formContext?.operation_id};};
 const extensions=createExtensionHost({
+ openParameterStudy:selection=>parameterStudies.openSavedStudy(selection),
  openNativeProgramme:options=>experiments.openForInvestigation(options),
 getState:()=>state,getWorkspace:()=>workspace,api,endpoint,toast,
  navigationRoot:'.sidebar',refreshState:refresh,openItem,showTask,showRunLog,navigate,

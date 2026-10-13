@@ -302,6 +302,25 @@ export function attachCalibration({getState,api,endpoint,openForm,submitAction,d
     return periodWeighting(observation?.metadata?.recommended_temporal_weighting)||
       periodWeighting(observation?.recommended_temporal_weighting)||'whole_years';
   }
+  async function openForCandidates(value){
+    if(!value||typeof value!=='object'||Array.isArray(value)||typeof value.study_id!=='string')
+      throw Error('Choose a retained parameter study and its completed native candidates.');
+    const workspace=current();
+    if(!workspace||value.workspace_key&&value.workspace_key!==workspace)
+      throw Error('Open the study that owns these parameter candidates.');
+    if(!Array.isArray(value.candidate_run_ids)||!value.candidate_run_ids.length)
+      throw Error('Select at least one completed unchanged-baseline case.');
+    if(activeDraft?.workspace===workspace)captureDraft();
+    const packet=await api(endpoint('/api/parameter-studies/calibration',{id:value.study_id}));
+    if(current()!==workspace)throw Error('The workspace changed while opening the selected parameter study.');
+    const ids=[...new Set(value.candidate_run_ids)];
+    if(ids.some(id=>typeof id!=='string'||!packet.eligible?.some(row=>row.run_id===id)))
+      throw Error('Refresh the study to select its completed unchanged-baseline cases.');
+    if(!packet.can_calibrate)throw Error('The selected completed cases need a common native annual-load output.');
+    const handoff={...packet.handoff,workspace_key:workspace,candidate_run_ids:ids};
+    if(!ids.includes(handoff.reference_run_id))delete handoff.reference_run_id;
+    return newForm(null,null,handoff);
+  }
   async function openForObservations(value){
     if(!value||typeof value!=='object'||Array.isArray(value))throw Error('Choose a retained annual-observation binding.');
     const workspace=current();
@@ -320,13 +339,12 @@ export function attachCalibration({getState,api,endpoint,openForm,submitAction,d
       ...(typeof value.title==='string'?{title:value.title.trim()}:{})}));
     return newForm(null,handoff);
   }
-  async function newForm(planId=null,handoff=null){
+  async function newForm(planId=null,handoff=null,candidateHandoff=null){
     reviewsDesk.invalidate();mapsDesk.invalidate();
     const workspace=current(),request=++formRequest;
     const catalog=await read('catalog');
     if(current()!==workspace||request!==formRequest)return;
-    if(!catalog.observations?.some(row=>row.admitted_count>0))throw Error('Retain an original observation edition with admitted annual load records first.');
-    let draft=planId?null:savedDraft();
+    let draft=planId?null:(activeDraft?.workspace===workspace?activeDraft:savedDraft());
     if(planId){
       const packet=await read('plan',{id:planId});
       if(current()!==workspace||request!==formRequest)return;
@@ -335,6 +353,32 @@ export function attachCalibration({getState,api,endpoint,openForm,submitAction,d
     const selection=JSON.parse(JSON.stringify(draft?.selection??{schema:'upstate.calibration-selection/v1',title:'',candidate_run_ids:[],
       observation_id:'',catchments:{},objective:Object.fromEntries(pollutants.map(name=>[name,{weight:1}])),notes:[]}));
     let retainedFields=draft?.raw??null;
+    if(candidateHandoff){
+      const ids=candidateHandoff.candidate_run_ids;
+      const group=catalog.candidate_groups?.find(row=>row.grid_id===candidateHandoff.grid_id&&
+        row.scenario_id===candidateHandoff.scenario_id&&ids.every(id=>row.runs.some(run=>(run.id||run.run_id)===id)));
+      if(!group)throw Error('Refresh this study to use its completed original baseline candidates.');
+      const previousGroup=draft?.group;
+      selection.candidate_run_ids=[...ids];
+      if(candidateHandoff.reference_run_id&&ids.includes(candidateHandoff.reference_run_id))
+        selection.reference_run_id=candidateHandoff.reference_run_id;
+      else delete selection.reference_run_id;
+      const retainedTitle=retainedFields?.find(row=>row.name==='calibration_title')?.value;
+      if(!String(retainedTitle??selection.title??'').trim())selection.title=candidateHandoff.title;
+      const priorNotes=retainedFields?.find(row=>row.name==='calibration_notes')?.value;
+      const notes=typeof priorNotes==='string'?priorNotes.split(/\r?\n/).map(row=>row.trim()).filter(Boolean):(selection.notes??[]);
+      selection.notes=[...new Set([...notes,...(candidateHandoff.notes??[])])];
+      if(previousGroup&&previousGroup!==groupKey(group)){
+        delete selection.catchment_groups;delete selection.calibration_group_ids;delete selection.validation_group_ids;
+      }
+      const rebound=new Set(['calibration_candidates','calibration_run_group','calibration_reference_run','calibration_notes']);
+      retainedFields=retainedFields?.filter(row=>!rebound.has(row.name)&&
+        !(row.name==='calibration_title'&&!String(row.value).trim()))??null;
+      draft={...draft,group:groupKey(group),parameter_study:{
+        id:candidateHandoff.study_id,title:candidateHandoff.title,
+        selection_sha256:candidateHandoff.study_selection_sha256,
+        candidate_run_ids:[...ids],common_parameters:[...(candidateHandoff.common_parameters??[])]}};
+    }
     const retainedPeriod=retainedFields?.find(row=>row.name==='calibration_temporal_weighting')?.value;
     const temporalExplicit=draft?.temporal_weighting_explicit??
       Boolean(planId||periodWeighting(retainedPeriod)||periodWeighting(selection.temporal_weighting));
@@ -371,6 +415,8 @@ export function attachCalibration({getState,api,endpoint,openForm,submitAction,d
       throw Error(handoff?'Observation and catchment choices are saved. Complete a native baseline run before preparing a calibration.':
         'Complete a native baseline run before preparing a calibration.');
     }
+    if(!catalog.observations?.some(row=>row.admitted_count>0)&&!draft.parameter_study)
+      throw Error('Retain an original observation edition with admitted annual load records first.');
     const first=catalog.candidate_groups[0];
     const selectedGroup=catalog.candidate_groups.find(group=>group.runs.some(row=>selection.candidate_run_ids?.includes(row.id||row.run_id)));
     draft.group=draft.group||groupKey(selectedGroup||first);
@@ -382,7 +428,15 @@ export function attachCalibration({getState,api,endpoint,openForm,submitAction,d
     const objective=selection.objective??{},retainedRaw=draft.raw;
     openForm(planId?'Revise calibration selection':'New calibration',
       'Choose completed baseline profiles, original annual loads and source catchments. Inspect their connected groups, then retain the selection and validation split.',
-      '<div class="calibration-form"><div class="form-grid">'+
+      '<div class="calibration-form">'+
+      (draft.parameter_study?'<div class="notice"><strong>Started from a retained parameter study</strong><p>'+
+        esc(draft.parameter_study.title)+' · '+number(draft.parameter_study.candidate_run_ids.length)+
+        ' original completed runs. Observation, catchment and objective choices remain editable.</p><p class="mono">'+
+        esc(draft.parameter_study.id)+'</p></div>':'')+
+      (!catalog.observations?.some(row=>row.admitted_count>0)?
+        '<div class="notice"><p>The completed candidate selection is retained. Import original annual-load observations to evaluate it against field measurements.</p>'+
+        '<button type="button" data-action="observation-new">Import original observations</button></div>':'')+
+      '<div class="form-grid">'+
       field('Selection title',input('calibration_title',selection.title,'text','required'),'Use the scientific question or retained study name.',true)+
       field('Native grid and unchanged baseline',select('calibration_run_group',catalog.candidate_groups.map(group=>[groupKey(group),named('grids',group.grid_id)+' · '+named('scenarios',group.scenario_id)]),draft.group),'Profiles compared together must use this same grid and baseline.',true)+
       '<fieldset class="full"><legend>Completed candidate runs and profiles</legend><div id="calibration-candidates">'+candidateTable(catalog,draft)+'</div></fieldset>'+
@@ -872,5 +926,5 @@ export function attachCalibration({getState,api,endpoint,openForm,submitAction,d
     if(selection.preview&&reviewsDesk.active())return reviewsDesk.dispatch({dataset:{action:'calibration-review-preview',id:selection.review_id}});
     return {workspace_key:workspace,review_id:selection.review_id};
   }
-  return {render,mount,update,detach,dispatch,taskActions,openForObservations,openForReview};
+  return {render,mount,update,detach,dispatch,taskActions,openForObservations,openForReview,openForCandidates};
 }

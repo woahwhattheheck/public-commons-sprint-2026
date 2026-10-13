@@ -70,7 +70,8 @@
     "observed-station-studies",
     "gauge-support",
     "observed-context",
-    "workspace-finder"
+    "workspace-finder",
+    "monitoring-report"
   ],
   "components": {
     "core": {
@@ -3368,6 +3369,21 @@
         "core"
       ],
       "source_reference": "ES-20261013-WORKSPACE-FINDER: existing operator navigation, original retained core item routes and tasks."
+    },
+    "monitoring-report": {
+      "title": "Retained Monitoring designs and campaign revisions in ordered scientific reports",
+      "paths": [
+        "model/MONITORING_REPORT_SOURCE.md",
+        "model/monitoring_report_cli.py",
+        "model/monitoring_report_source.py",
+        "operator/extensions/monitoring-report.json",
+        "operator/monitoring_report_native.py",
+        "operator/web/monitoring-report.mjs"
+      ],
+      "requires": [
+        "monitoring",
+        "observed-context"
+      ]
     }
   }
 }

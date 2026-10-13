@@ -229,7 +229,7 @@ export function createProjectTransferDesk(host) {
       '<div class="pt-actions">'+button('check','Refresh receiving coverage','',busy||detailBusy||!selectedSnapshot)+
       button('inspect','Download missing-block request','',busy||!selectedSnapshot)+
       button('report','Export file inventory','',busy||!selectedSnapshot)+'</div>'+
-      acquisitionsView(detail?.source_acquisitions)+implementationView(detail?.implementation)+
+      acquisitionsView(detail?.source_acquisitions)+implementationView(detail?.implementation)+parameterStudiesView(detail?.parameter_studies)+
       '<div class="pt-divider"><h3>Reconstruct and continue</h3><p>Build a complete original archive for storage, or restore an editable copy into this operator’s receiving area.</p>'+
       '<div class="pt-actions">'+button('archive','Build original archive','',busy||!ready)+button('restore','Restore editable copy','',busy||!ready,true)+'</div></div></section>'+
       (showInventory?'<section class="pt-card"><h2>Compare editions</h2><div class="pt-grid"><label class="pt-field">Earlier edition<select data-pt-field="beforeSnapshot">'+snapshotOptions(beforeSnapshot)+'</select></label>'+
@@ -310,6 +310,30 @@ export function createProjectTransferDesk(host) {
       }).join('')+'</tbody></table></div>':'<p class="pt-empty">This edition contains no saved implementation or fieldwork plans.</p>')+
       '</details>';
   }
+
+  function parameterStudiesView(value,task=null) {
+    if(!value||value.schema!=='upstate.parameter-study-receiving/v1')return '';
+    const studies=arr(value.studies),destination=task?.result?.workspace_key||
+      (['project.transfer.capture','project.transfer.capture-study'].includes(task?.action)?task.workspace:null);
+    return '<details class="pt-settings"><summary>Parameter studies · '+studies.length.toLocaleString()+' saved '+(studies.length===1?'study':'studies')+'</summary>'+
+      '<p>Original model cases, quantitative results, difference maps and complete result archives travel with the editable workspace.</p>'+
+      (studies.length?'<div class="pt-table"><table><thead><tr><th>Study</th><th>Native cases</th><th>Retained results</th><th>Open</th></tr></thead><tbody>'+
+      studies.map(row=>{
+        const progress=row.progress||{},artifacts=row.artifacts||{};
+        const available=Object.values(artifacts).filter(item=>item.receiving_state==='matched');
+        const maps=available.filter(item=>/\.tiff?$/i.test(item.path||'')).length;
+        const refresh=Object.keys(artifacts).length-available.length;
+        const action=task?.state==='complete'&&destination&&identity.test(row.id||'')?
+          button('open-parameter-study','Open saved study','data-id="'+esc(task.id)+'" data-study-id="'+esc(row.id)+'"'):'';
+        return '<tr><td><strong>'+esc(row.title||row.id)+'</strong><p>'+esc(row.purpose||'')+'</p><small>'+esc(row.design)+' · '+esc(arr(row.models).join(' + '))+'</small></td>'+
+          '<td>'+esc(progress.completed||0)+' / '+esc(progress.total||arr(row.cases).length)+' complete'+
+          (progress.failed?'<br>'+esc(progress.failed)+' require recovery':'')+'</td><td>'+
+          countLabel(available.length,'matched result file')+(maps?' · '+countLabel(maps,'GIS map'):'')+
+          (artifacts.archive?.receiving_state==='matched'?'<br>Complete result ZIP retained':'')+
+          (refresh?'<br>'+countLabel(refresh,'export')+' require refresh from retained native cases':'')+'</td><td>'+action+(!destination?'Available after editable restoration':'')+'</td></tr>';
+      }).join('')+'</tbody></table></div>':'<p class="pt-empty">This edition contains no saved parameter studies.</p>')+'</details>';
+  }
+
   function taskView(item) {
     const result = item.result || {}, progress = item._transfer_progress;
     let outcome = '';
@@ -327,7 +351,7 @@ export function createProjectTransferDesk(host) {
       '<small>'+date(item.created_at)+' · '+short(item.id)+'</small>'+
       (!terminal(item.state)?'<p role="status">'+esc(progressText(progress) || item.state)+'</p>':'')+
       (item.error?'<div class="pt-error"><strong>'+esc(item.error.code || 'Task error')+'</strong><p>'+esc(item.error.message || item.error)+'</p></div>':'')+
-      outcome+acquisitionsView(result.source_acquisitions,item)+implementationView(result.implementation,item)+downloads(item._downloads)+'<div class="pt-actions">'+button('task','Task details','data-id="'+item.id+'"')+
+      outcome+acquisitionsView(result.source_acquisitions,item)+implementationView(result.implementation,item)+parameterStudiesView(result.parameter_studies,item)+downloads(item._downloads)+'<div class="pt-actions">'+button('task','Task details','data-id="'+item.id+'"')+
       (['failed','interrupted'].includes(item.state)?button('resume','Resume original task','data-id="'+item.id+'"',busy):'')+'</div></article>';
   }
   function render() {
@@ -427,6 +451,22 @@ export function createProjectTransferDesk(host) {
       });
       return;
     }
+
+    if(name==='open-parameter-study') {
+      const task=tasks().find(item=>item.id===id&&item.state==='complete');
+      const study=arr(task?.result?.parameter_studies?.studies).find(item=>item.id===target.dataset.studyId);
+      const destination=task?.result?.workspace_key||
+        (['project.transfer.capture','project.transfer.capture-study'].includes(task?.action)?task.workspace:null);
+      if(!study||!identity.test(study.id||'')||!destination)
+        throw new Error('Choose a saved parameter study from a completed capture or editable restoration.');
+      if(typeof host.openParameterStudy!=='function')
+        throw new Error('Open the current application to continue this saved parameter study.');
+      if(host.getWorkspace()!==destination)await host.selectWorkspace(destination);
+      if(host.getWorkspace()!==destination)throw new Error('The workspace changed while opening the retained study.');
+      await host.openParameterStudy({workspace_key:destination,experiment_id:study.id});
+      return;
+    }
+
     if (name==='older-tasks') {historyLimit+=20;render();await refreshTaskDetails();return;}
     if (name==='clear-request') {requestUpload=null;fileInputs.request=null;persist();render();return;}
     if (name==='open-snapshot') {selectedSnapshot=id;detail=null;fileOffset=0;tab='inspect';persist();render();await loadDetail(0);return;}
