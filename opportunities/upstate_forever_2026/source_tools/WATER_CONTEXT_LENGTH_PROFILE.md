@@ -34,7 +34,7 @@ Every individual length is bitwise equal before/after within each CRS. Maximum a
 
 These measured timings apply to the repeated geometry-length routine on this native host and source family. Use the actual model and complete Water Context workflow for end-to-end production timings.
 
-The unchanged 15,496-byte native result is [water-context-45-reach-native-profile-20261013.json](water-context-45-reach-native-profile-20261013.json), SHA-256 6286783310e60b376c429935681554792fc631bdf09605b7bbd601e937c301e6. Native production message: https://tokenjunkielabs.slack.com/archives/C0BTTA66TK3/p1791887877215699. Actual output file identity: libfile_2d1f87f856608191868ab68d9499bf61 / file_000000002f2c8243afc457c727fb699a.
+The unchanged 15,496-byte native result is [water-context-45-reach-native-profile-20261013.json](water-context-45-reach-native-profile-20261013.json), SHA-256 6286783310e60b376c429935681554792fc631bdf09605b7bbd601e937c301e6. Native production message: https://tokenjunkielabs.slack.com/archives/C0BTTA66TK3/p1791887375671549. Actual output file identity: libfile_2d1f87f856608191868ab68d9499bf61 / file_000000002f2c8243afc457c727fb699a.
 
 ## Current owner model direction
 
