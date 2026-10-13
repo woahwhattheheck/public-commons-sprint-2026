@@ -93,10 +93,10 @@ receiving host composes a newer shared application alongside that canonical
 edition, retain the original source root independently and pass it explicitly:
 
 ~~~sh
-"$ECO_PYTHON" -B "$ECO_SOURCE_ROOT/source_tools/install_cumulative_application.py" \\
-  --source "$ECO_SOURCE_ROOT" \\
-  --scientific-source "$ECO_CANONICAL_SCIENTIFIC_SOURCE" \\
-  --output "$ECO_INSTALLED_ROOT" \\
+"$ECO_PYTHON" -B "$ECO_SOURCE_ROOT/source_tools/install_cumulative_application.py" \
+  --source "$ECO_SOURCE_ROOT" \
+  --scientific-source "$ECO_CANONICAL_SCIENTIFIC_SOURCE" \
+  --output "$ECO_INSTALLED_ROOT" \
   --archive "$ECO_APPLICATION_ZIP"
 ~~~
 
