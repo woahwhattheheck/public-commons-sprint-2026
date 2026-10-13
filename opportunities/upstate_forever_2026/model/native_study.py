@@ -8,6 +8,7 @@ from pathlib import Path
 from .common import (INVEST_SOURCE, INVEST_VERSION, atomic_json, describe_file, identifier,
                      verify_file)
 from .reuse import copy_verified
+from .fgdc_metadata import validate_contact
 from . import native_versions
 
 SCHEMA = "commons.native-study-delivery/v1"
@@ -54,12 +55,13 @@ def prepare(selection):
     supplied = selection.get("contact", {})
     if not isinstance(supplied, dict):
         raise ValueError("Metadata contact must be an object when supplied")
-    contact = {}
+    contact = deepcopy(supplied)
     for key in ("name", "organization", "email"):
         text = supplied.get(key, "")
         if not isinstance(text, str):
             raise ValueError("Metadata contact fields must be text")
         contact[key] = text.strip()
+    validate_contact(contact)
     selection["contact"] = contact
     selection.setdefault("source_roles", {})
     selection.setdefault("overlays", {})
@@ -68,6 +70,7 @@ def prepare(selection):
 
 def source_records(workspace, grid, profile, records):
     """Append the actual domain, reporting polygon and native biophysical table."""
+    from .fgdc_metadata import retained_source_metadata
     records = {item["id"]: dict(item) for item in records}
     collection = grid["spec"]["source_collection_id"]
     selections = {
@@ -81,6 +84,7 @@ def source_records(workspace, grid, profile, records):
             "id": role, "source_collection_id": collection_id, "source_id": entry["id"],
             "title": entry["title"], "vintage": entry["vintage"], "uri": entry["uri"],
             "sha256": entry["body"]["sha256"],
+            "source_metadata": retained_source_metadata(entry),
         }
         if role in records and records[role]["sha256"] != item["sha256"]:
             raise ValueError("Native study source role differs from the original " + role)
