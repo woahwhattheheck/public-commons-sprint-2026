@@ -1,6 +1,6 @@
 {
   "schema": "upstate.measurements-installation/v1",
-  "edition": "complete-measurements-observation-chemistry-20261013",
+  "edition": "complete-measurements-observation-receiving-20261013",
   "source_reference": {
     "repository": "woahwhattheheck/public-commons-sprint-2026",
     "original_core_commit": "a81e07284183a2008a413198714759488c2d2c9d",
@@ -155,9 +155,17 @@
       "scientific_normaliser": "Unchanged existing full parseSource and characteristic editions",
       "native_receiving": "Original completed guided-intake continuation; physical execution is pending"
     },
+    "observation_receiving": {
+      "operation_id": "ECO-OBSERVATION-RECEIVING-15227-20261013",
+      "base_commit": "1cc7ba3dde1e116aa8a3b3a5781852c25380a2cd",
+      "source_bank": "c0e87c6b248f142fa5c1f394099aef2cd76ec568",
+      "original_receiver": "88bacaf506f3bc31ab3da69c08b411d1da0cd9af",
+      "guide": "measurement_workspace/OBSERVATION_EDITION_RECEIVING.md",
+      "native_status": "Full source prepared; execute the original equipped receiver and personally view its complete outputs."
+    },
     "sediment_model_comparisons": {
       "operation_id": "ECO-SEDIMENT-SURROGATE-9B23-20261013",
-      "basis_commit": "7a2384e215c569e7bedbb6f510132eb5641445d4",
+      "basis_commit": "0c21e53b59274cf8cf2100d52a5829dd3f5a036d",
       "original_study_merge": "bde779465829e7a82d9caf981a8648a3cd27854a",
       "source_packets": {
         "service": "57f31ba608d968d4017687fe70d2a0cd3f2bc668",
@@ -168,7 +176,7 @@
       },
       "source_results": "receiving/sediment-comparison-source-20261013",
       "receiving": "Same original 6ACE scientific-reference operation; supplied existing workspace handles and original source input",
-      "installed_files": 301
+      "installed_files": 303
     }
   },
   "files": [
@@ -244,8 +252,8 @@
     },
     {
       "path": "integration/component_fragments/measurement-observation-editions.json",
-      "bytes": 1461,
-      "sha256": "8ac32a7130cf57bfd690fb2f6102b4b25821d3255f3ceeeee95368cfb2f70fa7"
+      "bytes": 1670,
+      "sha256": "37229feeee83b7f1210783da97a4be0ac75da03a86383a547ce327dab3567c9e"
     },
     {
       "path": "integration/component_fragments/measurement-observed-benchmarks.json",
@@ -483,6 +491,11 @@
       "sha256": "c8d868a3cd62473465f73b79e0602678535ae3d22778a8bcfd52707530fc8c92"
     },
     {
+      "path": "measurement_workspace/engine/observation-edition-receiving.mjs",
+      "bytes": 32159,
+      "sha256": "36581f6442320c0f3628f6adc6fdb2bc839d1d84f31300285892cdbb00c3078a"
+    },
+    {
       "path": "measurement_workspace/engine/parse.mjs",
       "bytes": 3800,
       "sha256": "6e5bf1bb14b2b3baad048eb2b1bd93c56d43aab333b9728799d00d7f8006e33b"
@@ -499,8 +512,8 @@
     },
     {
       "path": "measurement_workspace/engine/reconciliation-receiving.mjs",
-      "bytes": 32377,
-      "sha256": "f058b76b21b52651f1fce85736c210fc0d0b1213423f2f9ae8cdeb4730d230b1"
+      "bytes": 32984,
+      "sha256": "039911d32da1b0422e3f74389b81c8d0a335432d39c4db156da835b789e7d7c9"
     },
     {
       "path": "measurement_workspace/engine/result_handback.mjs",
@@ -661,6 +674,11 @@
       "path": "measurement_workspace/OBSERVATION_EDITION_CHEMISTRY.md",
       "bytes": 8049,
       "sha256": "0d375963a1cba92743c648403431d896713834c020506e0777d0fdbf9b34071a"
+    },
+    {
+      "path": "measurement_workspace/OBSERVATION_EDITION_RECEIVING.md",
+      "bytes": 12926,
+      "sha256": "10f838df7b5bf95237852d0c2b9c0e6c9983e58a259e61de83ac2cce8a2626f6"
     },
     {
       "path": "measurement_workspace/observation_edition_source.py",
@@ -1265,7 +1283,7 @@
     {
       "path": "operator/MEASUREMENTS_INSTALLATION.md",
       "bytes": 16709,
-      "sha256": "8f49ab13216b71e26103b6a49ef481a21b2861334c8472365cb6c228a3ece221"
+      "sha256": "9b861710e1b0900af4f34723b619ffe494e7018aff5b9934a5a051533149fec4"
     },
     {
       "path": "operator/web/benchmarks.mjs",
@@ -1800,7 +1818,8 @@
       "db17b091b7212c715093fb467fc9f81e43c4c8fc7a045e2de759c470ea506a3d",
       "9573bc894b059ed561f83020772692a595e4e123bad947457e1f219c6eeacc97",
       "f7430cd088b0096849106a842e5d233c2beb05d04770383bf75a8924c97d2ae9",
-      "78d53d543baae6649d457c2a3d2f1a7bdf9a66a16b6ec7892f15d5965bdb81bd"
+      "78d53d543baae6649d457c2a3d2f1a7bdf9a66a16b6ec7892f15d5965bdb81bd",
+      "cb69030f24e8c74cf103bf1894c7cb34246ff2fc9b187585ce77cc9857057777"
     ],
     "CURRENT_OWNER_DIRECTION.md": [
       "57945ea0e6eca762011e9f7e6febd39255359143d454fd3aa58a3a849ec14fc9",
@@ -2157,6 +2176,12 @@
     ],
     "measurement_workspace/GUIDED_INTAKE.md": [
       "4fedf035be54e89f3f795a1310cc31eed45825577670aaa58c32b6c2e56b3f35"
+    ],
+    "measurement_workspace/engine/reconciliation-receiving.mjs": [
+      "f058b76b21b52651f1fce85736c210fc0d0b1213423f2f9ae8cdeb4730d230b1"
+    ],
+    "integration/component_fragments/measurement-observation-editions.json": [
+      "8ac32a7130cf57bfd690fb2f6102b4b25821d3255f3ceeeee95368cfb2f70fa7"
     ]
   },
   "requires": [
