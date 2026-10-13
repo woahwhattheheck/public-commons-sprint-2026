@@ -101,15 +101,14 @@ class PairCheckpoint:
     def advance(self, totals, next_window, *, force=False):
         self.next_window = next_window
         instant = time.monotonic()
-        if not force and instant - self.last_saved < 5.0:
-            return
-        values = _totals(totals, self.owner.area_ids)
-        atomic_json(self.path, {
-            "schema": CHECKPOINT_SCHEMA, "id": self.key, "selection": self.selection,
-            "next_window": next_window, "total_windows": self.total_windows,
-            "totals": values, "totals_sha256": digest(values), "updated_at": now(),
-        })
-        self.last_saved = instant
+        if force or instant - self.last_saved >= 5.0:
+            values = _totals(totals, self.owner.area_ids)
+            atomic_json(self.path, {
+                "schema": CHECKPOINT_SCHEMA, "id": self.key, "selection": self.selection,
+                "next_window": next_window, "total_windows": self.total_windows,
+                "totals": values, "totals_sha256": digest(values), "updated_at": now(),
+            })
+            self.last_saved = instant
         self.owner.observe(self, "aggregating")
 
     def observation(self, *, reused=False):
@@ -166,6 +165,10 @@ class PairResults:
         self.observe(None, "preparing")
 
     def observe(self, checkpoint, phase, *, error=None):
+        instant = time.monotonic()
+        mandatory = phase in ("preparing", "complete", "interrupted")
+        if not mandatory and instant - self.last_notified < 1.0:
+            return self.current
         value = {
             "schema": PROGRESS_SCHEMA, "context_id": self.context_id,
             "phase": phase, "updated_at": now(),
@@ -184,12 +187,10 @@ class PairResults:
         if error:
             value["error"] = error
         self.current = value
-        instant = time.monotonic()
-        if phase in ("preparing", "complete", "interrupted") or instant - self.last_notified >= 1.0:
-            atomic_json(self.root / "aggregation-progress.json", value)
-            if self.progress:
-                self.progress(deepcopy(value))
-            self.last_notified = instant
+        atomic_json(self.root / "aggregation-progress.json", value)
+        if self.progress:
+            self.progress(deepcopy(value))
+        self.last_notified = instant
         return value
 
     def evaluate(self, *, case_id, run_id, pollutant, baseline, alternative, calculate):
