@@ -122,3 +122,9 @@ files, operate Save/Open/filter/queue controls, and reopen the delivered archive
 and editable plan. Keep the labeled Lower Tugaloo receiving example distinct
 from original observations and from modeled native pollutant results. Inspect
 the actual result as its recipient; source review is not a substitute.
+
+## Reopen while a saved file is loading
+
+The desk preserves decisions typed while a selected project file is still being read. A newer selected file takes precedence over an older pending read; a cancelled selection invalidates the earlier reader. The complete original file/source validation remains in `restoreProject`. This is an actual control continuation, with the scientific preference calculations unchanged.
+
+A rebuilt desk may contain corrected controls while retaining exactly the same original scientific dataset. Receiving the same saved review through that desk keeps the native plan's original source collection and verifies the complete original `data/dataset.json` bytes before reusing it. A changed scientific dataset remains a separate source selection. The result separately identifies the current incoming desk collection and the plan's original source collection.
