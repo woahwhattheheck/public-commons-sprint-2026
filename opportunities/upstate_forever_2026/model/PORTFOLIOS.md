@@ -413,3 +413,24 @@ set of parcels. Its economic decision action carries that modeled set into
 the complete offline decision desk. The original workspace backup includes
 all retained selections, actual inputs, model outputs and application
 source needed to reopen the study.
+
+
+## Original raster precision and coverage
+
+Planning inventories made with common-valid-original-polygons/2 retain each
+raw alternative-minus-baseline feature sum and its numeric encoding bound.
+The bound sums half an ULP for each baseline and alternative retained annual
+mass cell in its actual raster dtype on the identical common-valid support,
+plus a conservative float64 accumulation bound. Portfolio scoring treats a
+change within that bound as zero before normalizing weights; CSV and JSON
+retain the original physical difference, the bound and adjusted scoring value.
+This describes numeric resolution, not ecological uncertainty. Previous
+inventory editions remain readable with their original method and identities.
+
+The original Gura receiving command defaults explicitly to 90% minimum common
+valid coverage. The five release subwatersheds retain measured coverage in
+the inventory; all physical summaries still use their original common-valid
+cells. A caller may supply a different --min-coverage. The previous 95%
+threshold excluded the three agricultural subwatersheds in the actual original
+Gura data (94.11–94.67% common valid coverage) while admitting unchanged forest
+units. No missing cell is filled or counted as a modeled value.
