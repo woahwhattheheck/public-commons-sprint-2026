@@ -12,7 +12,6 @@ import json
 import logging
 import os
 from pathlib import Path
-import shutil
 import stat
 import subprocess
 import time
@@ -110,6 +109,7 @@ def _copy_exports(workspace, directory, state, *, exports=None, build_archive=Tr
                     cases=[{name: case[name] for name in ("id", "run_id", "profile_id", "state")}
                            for case in current["cases"]])
         item["artifacts"] = exported
+        item["export_layout"] = exports.layout(key)
         outputs.update({key + "/" + name: value for name, value in exported.items()})
         for row in study_rows:
             results.append({
@@ -150,14 +150,16 @@ def _copy_exports(workspace, directory, state, *, exports=None, build_archive=Tr
     for item in studies:
         progress = item.get("progress", {})
         links = " ".join(
-            '<a href="' + escaped(value["path"]) + '">' + escaped(name) + "</a>"
+            '<a href="' + escaped(value["path"]) + '">' + escaped({"export_manifest": "Complete file manifest"}.get(name, name)) + "</a>"
             for name, value in item.get("artifacts", {}).items()
-            if name in {"report", "csv", "archive"})
+            if name in {"report", "csv", "archive", "export_manifest"})
         rows.append(
             "<tr><td>" + escaped(item["landscape"]) + "</td><td>" +
             escaped(item["model_scope"].upper()) + "</td><td>" + escaped(item["state"]) +
             "</td><td>" + escaped(progress.get("completed", 0)) + " / " +
-            escaped(progress.get("total", 0)) + "</td><td>" + links + "</td></tr>")
+            escaped(progress.get("total", 0)) + "</td><td>" + links + "<br><small>" +
+            escaped(item.get("export_layout", {}).get("mode", "pending")) +
+            " layout</small></td></tr>")
     report = """<!doctype html><html lang="en"><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Gura native parameter studies</title><style>
@@ -178,6 +180,14 @@ small{color:#515b63}a{color:#273844;margin-right:12px}code{overflow-wrap:anywher
         " " + escaped(result["mass_basis"]) + "</p><p>Open a study report to inspect " +
         "its quantities, native run IDs, actual coverage and explicit coefficients. " +
         "Every study includes the original parameter reference for its own landscape.</p>" +
+        "<h2>Portable study contents</h2><p>Flat studies carry their complete scientific files " +
+        "at the original relative paths. Nested studies retain their complete study ZIP " +
+        "when that layout is smaller. Open the file manifest for exact member hashes. " +
+        "Both layouts preserve native arguments and aggregation history.</p><p>" +
+        escaped(result["export_cache"]["logical_bytes_avoided"]) +
+        " logical bytes of duplicate or redundant nested contents avoided across " +
+        escaped(result["export_cache"]["flat_studies"]) +
+        " flat studies. These are file lengths, not measured filesystem space or compressed ZIP savings.</p>" +
         "<h2>Original methods</h2><p><a href=\"" + NDR_GUIDE + "\">InVEST 3.20 NDR guide</a>" +
         "<a href=\"" + SDR_GUIDE + "\">InVEST 3.20 SDR guide</a></p>" +
         "<small>Suite <code>" + escaped(state["id"]) + "</code></small></html>")
@@ -186,7 +196,9 @@ small{color:#515b63}a{color:#273844;margin-right:12px}code{overflow-wrap:anywher
         outputs[name] = describe_file(directory, directory / name)
     manifest = {"schema": "commons.gura-parameter-suite-package/v1",
                 "suite_id": state["id"], "workspace_id": workspace.project["id"],
-                "state": state["state"], "files": outputs}
+                "state": state["state"], "files": outputs,
+                "study_layouts": {item["study_id"]: item.get("export_layout", {})
+                                  for item in studies if item.get("study_id")}}
     atomic_json(directory / "manifest.json", manifest)
     artifacts = {"report": describe_file(directory, directory / "index.html"),
                  "csv": describe_file(directory, directory / "results.csv"),
@@ -201,6 +213,8 @@ small{color:#515b63}a{color:#273844;margin-right:12px}code{overflow-wrap:anywher
             progress=progress)
         artifacts["archive"] = describe_file(directory, directory / "gura-parameter-suite.zip")
         state["packaging"].update(state="complete", archive="current")
+    exports.prune()
+    state["packaging"]["cache"] = exports.progress()
     return artifacts
 
 
@@ -548,9 +562,11 @@ def main(argv=None):
                 if destination.is_relative_to(root):
                     raise ValueError("Save the external suite ZIP outside the source workspace")
                 destination.parent.mkdir(parents=True, exist_ok=True)
-                temporary = destination.with_name("." + destination.name + ".partial")
-                shutil.copyfile(directory / "gura-parameter-suite.zip", temporary)
-                os.replace(temporary, destination)
+                from model.reuse import copy_verified
+                transfer = {"files": 0, "bytes": 0, "methods": {}}
+                copy_verified(directory, state["files"]["archive"], destination.parent,
+                              path=destination.name, replace_mismatch=True, transfer=transfer)
+                state["external_archive_transfer"] = transfer
                 state["external_archive"] = receiver.artifact(destination, destination.parent)
             checkpoint("complete" if complete else "partial", active_study_key=None,
                        failed_study_keys=failures, completed_at=now() if complete else None)
