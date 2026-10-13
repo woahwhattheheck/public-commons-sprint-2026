@@ -925,7 +925,7 @@ def report_pdf(path, title, sections, *, contact, source_records):
     Path(path).parent.mkdir(parents=True, exist_ok=True)
     SimpleDocTemplate(str(path), pagesize=letter, rightMargin=.7 * inch, leftMargin=.7 * inch,
                       topMargin=.65 * inch, bottomMargin=.65 * inch,
-                      title=str(title), author=str(contact["organization"])).build(
+                      title=str(title), author=str(contact.get("organization", ""))).build(
                           story, onFirstPage=page_number, onLaterPages=page_number)
 
 
