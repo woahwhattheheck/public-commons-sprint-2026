@@ -320,3 +320,8 @@ JS += "\ndocument.getElementById('synthesis-link').href='/synthesis#'+capability
 # This publication view uses the same local capability and original job database.
 HTML = HTML.replace('<nav aria-label="Workspace">', '<nav aria-label="Workspace"><a id="lineage-link" href="/lineage">Lineage</a>', 1)
 JS += "\ndocument.getElementById('lineage-link').href='/lineage#'+capability;\n"
+
+
+# The dataset package and original publisher share this same Analysis workspace.
+HTML = HTML.replace('<nav aria-label="Workspace">', '<nav aria-label="Workspace"><a id="publication-link" href="/publication">Dataset publication</a>', 1)
+JS += "\ndocument.getElementById('publication-link').href='/publication#'+capability;\n"

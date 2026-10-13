@@ -32,7 +32,7 @@ _CHUNK = 1024 * 1024
 _MAX_MANIFEST = 64 * 1024 * 1024
 _MAX_FILES = 1_000_000
 _MANIFEST_NAME = "archive-manifest.json"
-_OUTPUTS = {"query-export", "workbook", "report-export", "change-export", "backup", "workspace-export"}
+_OUTPUTS = {"query-export", "workbook", "report-export", "change-export", "backup", "workspace-export", "dataset-package", "dataset-source"}
 
 
 def _now():
@@ -68,6 +68,10 @@ def _allowed_payload(value):
     if value == "datasets.sqlite3" or allowed_document_payload(value) or allowed_response_payload(value):
         return True
     if re.fullmatch(r"analysis-query-exports/(?:[a-f0-9]{32}/(?:manifest\.json|rows\.(?:csv|jsonl|sqlite3))|control/[a-f0-9]{32}\.json)", value):
+        return True
+    if re.fullmatch(r"analysis-publications/packages/[a-f0-9]{32}/(?:package/(?:datapackage|data)\.json|recipe\.json|manifest\.json|downloads\.json|report\.html|publication\.zip)", value):
+        return True
+    if re.fullmatch(r"analysis-publications/native-exports/[a-f0-9]{32}/(?:files-index\.json|files/(?:manifest\.json|source\.tar\.gz|source-edition\.json|capture-inspection\.json|RECEIVING\.md|reviews/[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}\.json))", value):
         return True
     if re.fullmatch(r"analysis-exports/(?:report|changes)-[a-f0-9]{64}\.(?:html|json|zip|csv)", value):
         return True
@@ -274,6 +278,10 @@ class WorkspaceArchives:
                 exclusions.append({"id": identifier, "kind": kind,
                                    "reason": "Earlier portable archives remain separate" if kind == "workspace-export" else "Earlier database backups not selected"})
                 continue
+            if kind == "dataset-source" and result.get("action") != "download-export":
+                # Their exact requests and receipts live in this database.
+                # They do not own a second copy of the workbench's files.
+                continue
             outputs.append({"id": identifier, "kind": kind,
                             "producer_directory": result.get("directory") or str(Path(result.get("path", "")).parent)})
             if kind == "query-export":
@@ -294,6 +302,68 @@ class WorkspaceArchives:
                         raise StateError("WORKSPACE_ARCHIVE_QUERY_CONTROL_CHANGED") from None
                     review_missing.append({"path": control, "id": identifier,
                                            "reason": "query_control_changed"})
+            elif kind == "dataset-package":
+                _need(result.get("schema") == "stellar-forge.analysis-dataset-publication-downloads.v1"
+                      and result.get("workspace_id") == self.identity
+                      and result.get("job_id") == identifier, "WORKSPACE_ARCHIVE_PUBLICATION_INVALID")
+                base = "analysis-publications/packages/" + identifier + "/"
+                expected = {"package/datapackage.json", "package/data.json", "recipe.json",
+                            "manifest.json", "report.html", "publication.zip"}
+                files = result.get("files")
+                _need(isinstance(files, list) and len(files) == len(expected)
+                      and {item.get("relative") for item in files} == expected,
+                      "WORKSPACE_ARCHIVE_COMPLETE_PUBLICATION_REQUIRED")
+                for item in files:
+                    add(base + item["relative"], item, identifier)
+                try:
+                    index_path = _payload(self.database.directory, base + "downloads.json")
+                    index_raw = read(index_path, _MAX_MANIFEST)
+                    index = parse(index_raw)
+                    _need(digest(index_raw) == result.get("index_sha256")
+                          and index.get("job_id") == identifier
+                          and index.get("workspace_id") == self.identity
+                          and index.get("files") == files,
+                          "WORKSPACE_ARCHIVE_PUBLICATION_INDEX_CHANGED")
+                    add(base + "downloads.json", {"bytes": len(index_raw), "sha256": digest(index_raw)}, identifier)
+                except (StateError, OSError):
+                    if review_missing is None:
+                        raise
+                    review_missing.append({"path": base + "downloads.json", "id": identifier,
+                                           "reason": "publication_index_required_or_changed"})
+            elif kind == "dataset-source":
+                _need(result.get("schema") == "stellar-forge.analysis-publication-native-result.v1"
+                      and result.get("workspace_id") == self.identity
+                      and result.get("job_id") == identifier, "WORKSPACE_ARCHIVE_PUBLICATION_INVALID")
+                source = result.get("source_files")
+                _need(isinstance(source, dict)
+                      and source.get("schema") == "stellar-forge.analysis-publication-source-files.v1"
+                      and source.get("workspace_id") == self.identity
+                      and source.get("job_id") == identifier
+                      and source.get("package_id") == result.get("package_id")
+                      and source.get("package_index_sha256") == result.get("index_sha256"),
+                      "WORKSPACE_ARCHIVE_COMPLETE_PUBLICATION_REQUIRED")
+                base = "analysis-publications/native-exports/" + identifier + "/"
+                files = source.get("files")
+                _need(isinstance(files, list) and 1 <= len(files) <= 10000
+                      and len({v.get("name") for v in files}) == len(files)
+                      and {"manifest.json", "source.tar.gz"} <= {v.get("name") for v in files},
+                      "WORKSPACE_ARCHIVE_COMPLETE_PUBLICATION_REQUIRED")
+                for item in files:
+                    _need(item.get("relative") == "files/" + item.get("name", ""),
+                          "WORKSPACE_ARCHIVE_PUBLICATION_INVALID")
+                    add(base + item["relative"], item, identifier)
+                try:
+                    index_path = _payload(self.database.directory, base + "files-index.json")
+                    index_raw = read(index_path, _MAX_MANIFEST)
+                    _need(digest(index_raw) == source.get("index_sha256")
+                          and parse(index_raw) == {k: v for k, v in source.items() if k != "index_sha256"},
+                          "WORKSPACE_ARCHIVE_PUBLICATION_INDEX_CHANGED")
+                    add(base + "files-index.json", {"bytes": len(index_raw), "sha256": digest(index_raw)}, identifier)
+                except (StateError, OSError):
+                    if review_missing is None:
+                        raise
+                    review_missing.append({"path": base + "files-index.json", "id": identifier,
+                                           "reason": "native_publication_index_required_or_changed"})
             elif kind == "workbook":
                 _need(result.get("schema") == "stellar-forge.customer-workbook.v1" and result.get("id") == identifier,
                       "WORKSPACE_ARCHIVE_WORKBOOK_INVALID")
