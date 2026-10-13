@@ -1,6 +1,6 @@
 # Connected receiving for the original Datasette operation
 
-Continue the saved publisher → installed Applications/browser → Conapi supplier/workbook operation. The publisher is already complete. Keep installed journal `555b8d80-50d9-4e18-92bd-6cca3dab97de`, original root `/dev/datasette-publisher-a49aa-fq7r4j79`, selected runtime `a78709d02d323924446702a851e85bcf256f2437` and the original twelve-part checkpoint. The complete receiver is 263,551 bytes, SHA-256 `50df338daa104b46db5ed79ecb93368f2ccc504d846acab1d1e31b274cabf8ec`, from public merge `560c33ccba1158e75d7fcfc99561a5b8490386c9` / canonical merge `0326a7d626dc3c74efcca23e84216cdd5beba96b`.
+Continue the saved publisher → installed Applications/browser → Conapi supplier/workbook operation. The publisher is already complete. Keep installed journal `555b8d80-50d9-4e18-92bd-6cca3dab97de`, original root `/dev/datasette-publisher-a49aa-fq7r4j79`, selected runtime `a78709d02d323924446702a851e85bcf256f2437` and the original twelve-part checkpoint. The complete receiver is 263,551 bytes, SHA-256 `50df338daa104b46db5ed79ecb93368f2ccc504d846acab1d1e31b274cabf8ec`, from the checkpoint-restoration source merged at public `58a68dc4820e5c715388de2ed45ac9c364669104` / canonical `b889e8ab554c6d697a507113cbcfdbb9f5183715`.
 
 ## Receive with the current host's connected tools
 
@@ -50,6 +50,23 @@ Evaluate the complete connected_receiving.mjs in functions with actual {tools,lo
 Call startConnectedOriginal(context,{key,selection,sourceBootstrap}) once using a stable private store key and the complete connected_bootstrap.py. The shell receives only the small Python reader; the entire source arrives over stdin after its actual READY. Keep initial admission nonblocking and normal functions waits under60seconds. The original process returns its actual invocation ID, PID, transport directory and facility observations. The native operation lock also rejects a simultaneous optional receiver on the same selected parent.
 
 A retained key is never passed to start again. Resume with resumeConnectedOriginal(context,{key}). This resumes the same actual session and never calls exec a second time. If exec returns before admission, retain its exact result. If the admission result is unresolved, reconcile that request before moving the same operation.
+
+## Equipped native host with a separate authorized provider peer
+
+The original host53736f005548 completed its CharityEngine course and retains working Python, Node24, Chromium and Playwright, but its actual tool inventory lacks the three Library actions (original receiving reply1791916586.235239). The original DSCEB3 conversation exposes those actions. Select the existing controller's explicit delegated provider mode for this concrete pairing; keep its native receiver, source, helpers, request grants and operation unchanged.
+
+Start once with `startConnectedOriginal(context,{key,selection,sourceBootstrap,providerMode:"delegated"})`. The native context needs only its actual exec_command/write_stdin and private load/store. It does not declare fictional Library tools. Select `selection.library_directory` from the provider peer's actual workspace: for this existing DSCEB3 binding, `/workspace/scratch/ceb3e8d59b19/datasette-connected-input`. The actual native host's private transfer parent remains a separate selection.
+
+The complete controller has three additional exports: `readDelegatedProviderRequest`, `performDelegatedLibraryAction` and `retainDelegatedProviderResult`. Include those exports when constructing the module in functions. The delegated source introduces no second native process. After the original native request receives its sole exclusive grant, the controller retains AWAITING_DELEGATED_PROVIDER and returns DELEGATED_PROVIDER_REQUEST.
+
+1. On the native owner, read the exact pending request with `readDelegatedProviderRequest(context,{key,requestId})`. Retain the whole returned envelope privately. It carries original invocation/PID/receiver source, action, consumer, request/argument hashes and the complete original arguments. The native grant token remains on the native owner.
+2. Send the complete envelope to the already-selected authorized provider peer through private receiving custody. Bind the peer to the actual admission's `{operation,invocationId,receiverPid,receiverSha256}`; do not select a different operation from arbitrary incoming messages.
+3. On the provider peer, call `performDelegatedLibraryAction(providerContext,{key:originalProviderKey,request,expected})` with that peer's actual connected tools/load/store. It checks the whole argument hash, retains CALLING before invoking exactly one of the three supported actions, and stores the complete returned object before returning `{identity,result}`.
+4. Return that unchanged response privately to the original native owner. Call `retainDelegatedProviderResult(context,{key,response})`, then `resumeConnectedOriginal(context,{key})`. The original native grant, response validation, URL byte transfer, helper finalization and xattrs continue unchanged.
+
+One native consumer and one selected provider peer own these steps. Replaying the same peer request returns its retained result without a new call; changed arguments/identity conflict. A lost provider result is reconciled under its existing CALLING/RESULT_UNKNOWN record through `reconciledResult`; a new key is not permission to repeat an uncertain mutation. The native owner accepts an already-retained identical response and rejects replacement bytes. Reattach still binds the same original native PID and journals.
+
+Prepared URLs and opaque session objects are private short-lived transfer material. Keep complete request/result carriers out of public Git, source indexes and ordinary progress messages. The peer forwards the original complete prepare/finalize objects; it does not invent signed URLs, discard headers, emulate a supported tool, transfer through another account, or replace the original helper. Report a concrete returned transfer-compatibility error in the same original request.
 
 ## Interrupted checkpoint restoration
 
