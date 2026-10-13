@@ -767,7 +767,13 @@ def operate_locked(args, output):
         raise ValueError("Reopen the original completed field campaign with this scientific project")
     received_qc_comparison = simulated_qc_comparison.inspect_comparison(
         reopened, qc_comparison["operation_id"])
-    if received_qc_comparison != qc_comparison:
+    # The receiver may have continued its editable plan. The current revision
+    # is live operating state; every original comparison/source field is fixed.
+    received_qc_snapshot = {key: value for key, value in received_qc_comparison.items()
+                            if key != "current_revision"}
+    original_qc_snapshot = {key: value for key, value in qc_comparison.items()
+                            if key != "current_revision"}
+    if received_qc_snapshot != original_qc_snapshot:
         raise ValueError("Reopen the same complete original field/QC comparison")
     save(received_qc_comparison=received_qc_comparison)
     from model.ensembles import Ensembles

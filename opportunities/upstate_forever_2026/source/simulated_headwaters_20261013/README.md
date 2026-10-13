@@ -89,3 +89,12 @@ The native source writer emits compressed GeoTIFFs, GeoPackages, the complete bi
 
 - [InVEST 3.20 NDR guide](https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.20.0/userguide/en/ndr.html)
 - [InVEST 3.20 SDR guide](https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.20.0/userguide/en/sdr.html)
+
+
+## Reopen the original QC comparison after continuing the received plan
+
+The full-project receiving continuation preserves legitimate edits made to the received field plan. The saved original QC comparison still identifies the same before/after review reports, original selection, source collection, comparison result and complete journals. Its `current_revision` field describes the currently open plan; it is not the revision of either frozen review.
+
+Both immediate and isolated cold receiving compare every original QC comparison field except that live `current_revision`. They continue to run the maintained comparison inspector, verify all original retained descriptors and the exact scientific source binding, and retain the receiver’s actual current revision in the returned inspection. A later saved plan note therefore remains usable on retry without changing or re-rendering either original QC review. Changes to the original comparison, source, browser selection or immutable review records still fail their existing checks.
+
+Use the same completed demonstration and original archive/destination for this continuation. In the existing recipient browser course, save the intended plan edit, reopen the original QC comparison and its before/after review downloads, then continue the same archive receiving command. View the actual desktop and390px output and verify that the edit remains present alongside the original scientific comparison. Keep the complete current `CURRENT_OWNER_DIRECTION.md` brief and the original modeled-versus-measured labels with that handover.

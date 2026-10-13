@@ -77,3 +77,24 @@ This feature follows [CURRENT_OWNER_DIRECTION.md](../CURRENT_OWNER_DIRECTION.md)
 For the actual RFP case, keep the 30 m upstream model domain, South Carolina reporting mask and four original utility focus anchors distinct. Preserve baseline, editable realistic riparian alternative and matched control, their actual source editions/assumptions/parameters, matched support and annual N/P kg/year and sediment tonnes/year reaching streams. A rectangular simulated demonstration retains that explicit scope. Use the history to explain observed execution speed together with actual commit/package records; do not infer missing timings or customer acceptance.
 
 The recipient is an experienced GIS, hydrology and modeling practice. Present inspectable production offload under its scientific direction: useful actual outputs, editable GIS and a complete cold-reopenable application/project. Open, LOOK at and operate the exact desktop/narrow application and every outgoing HTML/CSV/JSON/archive/project attachment, including the downloaded and restored copies. Correct unreadable or broken material in that same course. If a video is produced, use the actual working application, available natural generative TTS, and watch and listen to the finished export. Carry the complete referenced direction onward; preserve source/copyright, lab attribution, contact/incident and existing compute/ownership controls. Add no new approval gate, broad test sweep, private GitHub/Actions use or llama.cpp workload.
+
+## Original native receiving command
+
+Run the maintained receiver on the accepting host's existing scientific interpreter, actual application and original Workspace. Select either the retained ensemble or explicit ordered run IDs. The title must retain the actual source's geographic and simulation scope.
+
+```bash
+"$ECO_GIS_PYTHON" "$ECO_APPLICATION/source_tools/receive_native_run_history.py" \
+  --application "$ECO_APPLICATION" \
+  --workspace "$ECO_WORKSPACE" \
+  --state-directory "$ECO_RECEIVING_STATE" \
+  --output "$ECO_RECEIVING_OUTPUT" \
+  --ensemble-id "$ECO_ENSEMBLE_ID" \
+  --expected-project-id "$ECO_PROJECT_ID" \
+  --title "$ECO_HISTORY_TITLE"
+```
+
+Use separate receiving state and output directories outside the original Workspace. The receiver uses the registered history action, records the queue's actual accepted task and operation IDs, reads every authenticated history download, extracts the exact complete ZIP, creates a normal full Workspace backup, uploads and restores it, and launches the copied application's own history reader. Its output identifies the actual original and restored application/workspace, selected runs, observed timing coverage, file identities and readable handover.
+
+An interrupted or failed native phase resumes through its original task with `--resume-failed`. If a failed save had not yet retained any original snapshot and its selected native records have since advanced, `--refresh-preview` records the old failed request as a predecessor and obtains a fresh preview of the same run selection. Active or completed tasks and already-frozen snapshots retain their original identity. Source repairs are recorded in the same journal; the restored application's actual source identities are captured from its verified archive.
+
+The receiver uses actual saved records and performs no new scientific model run. Continue with the ordinary Native run desk and open all returned files. Personally inspect the desktop and narrow layouts of the downloaded `history/index.html`, operate the completed history in the original and copied applications, and inspect the complete JSON/CSV/ZIP attachments before placing them in the outgoing handover. The receiver supplies these review targets in `native-run-history-receiving-result.json`.

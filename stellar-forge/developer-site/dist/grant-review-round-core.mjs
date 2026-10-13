@@ -8,7 +8,11 @@ export const REVIEW_MAX_BYTES = 64 * 1024 * 1024;
 export const REVIEW_DECISIONS = ['accepted', 'changes-requested', 'not-applicable'];
 export const REVIEW_PRIORITIES = ['blocking', 'major', 'minor'];
 const clone = value => JSON.parse(JSON.stringify(value));
+// Cache only a bounded amount of complete serialized content. The source round
+// remains authoritative; every cache hit still requires the exact export bytes.
 const captureCache = new Map();
+const CAPTURE_CACHE_BYTES = 8 * 1024 * 1024;
+let captureCacheBytes = 0;
 const own = (value, key) => Object.prototype.hasOwnProperty.call(value, key);
 
 function need(value, message) { if (!value) throw new Error(message); }
@@ -56,7 +60,7 @@ function freeze(value) {
   }
   return value;
 }
-async function verifyCapture(capture) {
+async function verifyCapture(capture, parsedEnvelope = null) {
   exact(capture, ['id', 'fileName', 'receivedAt', 'bytes', 'draftSha256', 'exportText'], 'Received draft');
   hex(capture.id, 'Original export identity'); hex(capture.draftSha256, 'Original draft identity');
   text(capture.fileName, 'Original file name', 300, true); iso(capture.receivedAt, 'Receiving date');
@@ -66,19 +70,29 @@ async function verifyCapture(capture) {
   const cached = captureCache.get(capture.id);
   if (cached && cached.text === capture.exportText) {
     need(cached.draftSha256 === capture.draftSha256, 'Retain the original draft identity.');
+    captureCache.delete(capture.id); captureCache.set(capture.id, cached);
     return cached.draft;
   }
   need(await reviewSha256(capture.exportText) === capture.id, 'The received draft file has changed.');
-  const envelope = JSON.parse(capture.exportText);
+  const envelope = parsedEnvelope || JSON.parse(capture.exportText);
   need(envelope?.schema === DRAFT_ENVELOPE && envelope.draft?.schema === DRAFT_SCHEMA,
     'Open the complete draft exported by Prepare submission.');
   hex(envelope.sha256, 'Submission export digest');
   need(await reviewSha256(JSON.stringify(envelope.draft)) === envelope.sha256 && capture.draftSha256 === envelope.sha256,
     'The complete draft differs from its original export.');
   await verifyNativeDraft(envelope.draft);
-  const draft = freeze(clone(envelope.draft));
-  captureCache.set(capture.id, {text: capture.exportText, draftSha256: envelope.sha256, draft});
-  while (captureCache.size > 12) captureCache.delete(captureCache.keys().next().value);
+  // This envelope was parsed inside this module; freeze its owned draft directly.
+  const draft = freeze(envelope.draft);
+  if (capture.bytes <= CAPTURE_CACHE_BYTES) {
+    const previous = captureCache.get(capture.id);
+    if (previous) { captureCacheBytes -= previous.bytes; captureCache.delete(capture.id); }
+    while (captureCache.size && (captureCache.size >= 2 || captureCacheBytes + capture.bytes > CAPTURE_CACHE_BYTES)) {
+      const oldest = captureCache.keys().next().value;
+      captureCacheBytes -= captureCache.get(oldest).bytes; captureCache.delete(oldest);
+    }
+    captureCache.set(capture.id, {text: capture.exportText, bytes: capture.bytes, draftSha256: envelope.sha256, draft});
+    captureCacheBytes += capture.bytes;
+  }
   return draft;
 }
 export async function readSubmissionExport(exportText, {fileName = 'complete-submission-draft.json', receivedAt = new Date().toISOString()} = {}) {
@@ -87,13 +101,15 @@ export async function readSubmissionExport(exportText, {fileName = 'complete-sub
   need(envelope?.schema === DRAFT_ENVELOPE && envelope.draft, 'Choose the full draft from Prepare submission.');
   const capture = {id: await reviewSha256(exportText), fileName, receivedAt, bytes: measureText(exportText).utf8Bytes,
     draftSha256: envelope.sha256, exportText};
-  await verifyCapture(capture); return capture;
+  await verifyCapture(capture, envelope); return capture;
 }
 /** Use the original export schema for an existing shared-store draft; preserve every extension field. */
 export async function captureSubmissionDraft(draft, {fileName = 'browser-submission-draft.json', receivedAt = new Date().toISOString()} = {}) {
   await verifyNativeDraft(draft);
-  const body = clone(draft), envelope = {schema: DRAFT_ENVELOPE, exportedAt: receivedAt, sha256: await reviewSha256(JSON.stringify(body)), draft: body};
-  return readSubmissionExport(JSON.stringify(envelope) + '\n', {fileName, receivedAt});
+  const body = JSON.stringify(draft), digest = await reviewSha256(body);
+  const exported = '{"schema":' + JSON.stringify(DRAFT_ENVELOPE) + ',"exportedAt":' + JSON.stringify(receivedAt) +
+    ',"sha256":' + JSON.stringify(digest) + ',"draft":' + body + '}\n';
+  return readSubmissionExport(exported, {fileName, receivedAt});
 }
 function person(value) {
   exact(value, ['id', 'label'], 'Named participant'); identity(value.id, 'Participant identity'); text(value.label, 'Participant name', 200, true);
@@ -124,8 +140,11 @@ function projection(draft, selected, format) {
     return clone({title: ANSWERS.find(x => x[0] === id)[1], ...row});
   };
   if (selected.kind === 'application') {
-    const retained = clone(draft);
-    for (const key of ['id', 'folder', 'createdAt', 'updatedAt', 'versions']) delete retained[key];
+    // All descriptor drafts are owned, verified JSON. Omit history before
+    // materializing the binding rather than cloning history and discarding it.
+    const retained = {};
+    for (const key of Object.keys(draft)) if (!['id', 'folder', 'createdAt', 'updatedAt', 'versions'].includes(key))
+      retained[key] = draft[key];
     return {title: 'Complete prepared submission', body: retained, text: applicationOutput(draft, {format, useFields: false}),
       context: 'All current answers, form metadata, field mappings, source editions and complete draft extensions.'};
   }
@@ -154,23 +173,29 @@ async function descriptor(draft, selected, format) {
   return {target: clone(selected), key: targetKey(selected), title: value.title, text: value.text, context: value.context,
     bindingSha256: await reviewSha256(stable({target:selected,format,body:value.body,text:value.text})), counts: measureText(value.text)};
 }
-function nextState(round, drafts) {
-  return {revision:0, selectedEdition:round.initialEdition, draftId:drafts.get(round.initialEdition).id,
+function nextState(round, initialDraftId) {
+  return {revision:0, selectedEdition:round.initialEdition, draftId:initialDraftId,
     participants:[clone(round.creator)], decisions:[], decisionsHistory:[], changes:[], selections:[], status:'OPEN', completion:null};
+}
+function targetTitle(draft, selected) {
+  if (selected.kind === 'application') return 'Complete prepared submission';
+  if (selected.kind === 'answer') return ANSWERS.find(row => row[0] === selected.id)[1];
+  if (selected.kind === 'field') return draft.fields.find(row => row.id === selected.id).label || 'Unlabeled issuer field';
+  return REQUIREMENTS.find(row => row.id === selected.id).title;
 }
 function readyIssues(state, draft, format) {
   const issues = [];
   for (const selected of targets(draft)) {
     const rows = state.decisions.filter(x => targetKey(x.target) === targetKey(selected));
-    if (!rows.length) issues.push({kind:'unreviewed', target:clone(selected), message:projection(draft,selected,format).title + ' has no current reviewer decision.'});
-    else if (rows.some(x=>x.decision==='changes-requested')) issues.push({kind:'changes-requested',target:clone(selected),message:projection(draft,selected,format).title + ' still has a requested change.'});
+    if (!rows.length) issues.push({kind:'unreviewed', target:clone(selected), message:targetTitle(draft,selected) + ' has no current reviewer decision.'});
+    else if (rows.some(x=>x.decision==='changes-requested')) issues.push({kind:'changes-requested',target:clone(selected),message:targetTitle(draft,selected) + ' still has a requested change.'});
   }
   for (const change of state.changes) if (change.status !== 'resolved') issues.push({kind:'open-change',changeId:change.id,message:change.title + ' remains ' + change.status + '.'});
   for (const field of draft.fields) for (const message of fieldStatus(field,draft.form,format).issues) issues.push({kind:'field',target:{kind:'field',id:field.id},message});
   return issues;
 }
 async function reduce(round, state, event, drafts) {
-  const input=event.input, current=drafts.get(state.selectedEdition);
+  const input=event.input, currentEdition=state.selectedEdition, current=await drafts.get(currentEdition);
   need(event.expectedRevision === state.revision && event.sequence === state.revision+1, 'Retain the original review event order.');
   need(state.participants.some(x=>x.id===event.actorId), 'Retain the named participant selected for this action.');
   if (state.status === 'COMPLETE') need(event.kind === 'reopen', 'Reopen the completed review explicitly before adding work or receiving a revised draft.');
@@ -182,7 +207,7 @@ async function reduce(round, state, event, drafts) {
   } else if (event.kind === 'review') {
     exact(input,['editionId','target','bindingSha256','decision','note','references'],'Reviewer decision');
     need(input.editionId===state.selectedEdition,'Review the currently selected original draft.'); target(input.target); hex(input.bindingSha256,'Reviewed content');
-    const selected=await descriptor(current,input.target,round.format);
+    const selected=await drafts.describe(state.selectedEdition,input.target,round.format);
     need(selected.bindingSha256===input.bindingSha256,'The selected answer, field or source context changed before this review.');
     need(REVIEW_DECISIONS.includes(input.decision),'Select an explicit reviewer decision.'); text(input.note,'Reviewer note',100000,input.decision!=='accepted'); evidence(input.references);
     const row={id:event.id,originalReviewId:event.id,actorId:event.actorId,editionId:state.selectedEdition,target:clone(input.target),
@@ -192,7 +217,7 @@ async function reduce(round, state, event, drafts) {
   } else if (event.kind === 'change') {
     exact(input,['editionId','target','bindingSha256','title','priority','quote','note','references'],'Requested change');
     need(input.editionId===state.selectedEdition,'Request a change against the selected original draft.'); target(input.target); hex(input.bindingSha256,'Requested-change content');
-    const selected=await descriptor(current,input.target,round.format);
+    const selected=await drafts.describe(state.selectedEdition,input.target,round.format);
     need(selected.bindingSha256===input.bindingSha256,'The selected content changed before the request.');
     text(input.title,'Requested change title',300,true); need(REVIEW_PRIORITIES.includes(input.priority),'Select the change priority.');
     text(input.quote,'Original quoted text',100000); need(!input.quote||selected.text.includes(input.quote),'The quoted text must appear exactly in the selected answer or field.');
@@ -214,7 +239,7 @@ async function reduce(round, state, event, drafts) {
   } else if (event.kind === 'receive') {
     exact(input,['editionId','fromEdition','note','decisions'],'Revised draft selection');
     need(input.fromEdition===state.selectedEdition && input.editionId!==input.fromEdition,'Compare and explicitly select a different received edition.');
-    const incoming=drafts.get(input.editionId); need(incoming && incoming.id===state.draftId,'A review round receives editions of its original submission draft. Start a new round for a different draft identity.');
+    const incoming=await drafts.get(input.editionId); need(incoming && incoming.id===state.draftId,'A review round receives editions of its original submission draft. Start a new round for a different draft identity.');
     text(input.note,'Draft-selection note',100000,true); list(input.decisions,'Review carry-forward choices');
     need(input.decisions.length===state.decisions.length && new Set(input.decisions.map(x=>x.decisionId)).size===input.decisions.length,
       'Choose carry forward or reopen for every current reviewer decision.');
@@ -224,7 +249,7 @@ async function reduce(round, state, event, drafts) {
       const previous=state.decisions.find(x=>x.id===choice.decisionId); need(previous,'Select the original reviewer decision.');
       need(['carry','reopen'].includes(choice.choice),'Explicitly carry forward or reopen each decision.'); text(choice.note,'Carry-forward note',20000,choice.choice==='reopen');
       if(choice.choice==='carry'){
-        let selected; try{selected=await descriptor(incoming,previous.target,round.format);}catch{throw new Error('An absent or replaced field cannot carry its earlier review. Reopen that decision.');}
+        let selected; try{selected=await drafts.describe(input.editionId,previous.target,round.format);}catch{throw new Error('An absent or replaced field cannot carry its earlier review. Reopen that decision.');}
         need(selected.bindingSha256===previous.bindingSha256,'Changed text, source context, issuer prompt or limits require a new review.');
         const row={...clone(previous),id:event.id+':carry:'+i,editionId:input.editionId,at:event.at,carriedBy:event.actorId,carryNote:choice.note,carriedFrom:previous.id};
         retained.push(row); state.decisionsHistory.push(clone(row));
@@ -235,8 +260,8 @@ async function reduce(round, state, event, drafts) {
     // A resolved request remains historical. A later draft requires its explicit renewed resolution.
     for(const change of state.changes) if(change.status==='resolved') {
       let before=null,after=null;
-      try{before=(await descriptor(current,change.target,round.format)).bindingSha256;}catch{}
-      try{after=(await descriptor(incoming,change.target,round.format)).bindingSha256;}catch{}
+      try{before=(await drafts.describe(currentEdition,change.target,round.format)).bindingSha256;}catch{}
+      try{after=(await drafts.describe(input.editionId,change.target,round.format)).bindingSha256;}catch{}
       if(before!==after){change.status='open';change.resolutions.push({id:event.id+':reopen:'+change.id,actorId:event.actorId,at:event.at,changeId:change.id,editionId:input.editionId,status:'open',note:'The selected target or its source context changed in the explicitly received draft.'});}
     }
   } else if (event.kind === 'finish') {
@@ -250,6 +275,44 @@ async function reduce(round, state, event, drafts) {
   } else throw new Error('Unknown review action. Preserve the complete original supported round.');
   state.revision=event.sequence; return state;
 }
+// Validate every original capture, but retain at most two decoded editions while
+// replaying. Compact edition metadata and bounded descriptors do not own drafts.
+function editionReader(captures) {
+  const originals = new Map(captures.map(capture => [capture.id, {...capture}]));
+  const decoded = new Map(), summaries = new Map(), bindings = new Map();
+  let bindingBytes = 0;
+  async function get(id) {
+    if (!originals.has(id)) return undefined;
+    if (decoded.has(id)) {
+      const value = decoded.get(id); decoded.delete(id); decoded.set(id, value); return value;
+    }
+    const value = await verifyCapture(originals.get(id));
+    summaries.set(id, {id:value.id, title:value.title, sourceSha256:value.currentSource,
+      sourceCount:value.sources.length, versionCount:value.versions.length});
+    decoded.set(id, value);
+    while (decoded.size > 2) decoded.delete(decoded.keys().next().value);
+    return value;
+  }
+  async function describe(id, selected, format) {
+    target(selected);
+    const key = id + '\0' + format + '\0' + targetKey(selected);
+    if (bindings.has(key)) {
+      const value = bindings.get(key); bindings.delete(key); bindings.set(key, value); return value.descriptor;
+    }
+    const draft = await get(id); need(draft,'Select a retained original draft edition.');
+    const value = await descriptor(draft, selected, format);
+    const size = 2 * (value.text.length + value.title.length + value.context.length) + 1024;
+    if (size <= 2 * 1024 * 1024) {
+      while (bindings.size && (bindings.size >= 64 || bindingBytes + size > 2 * 1024 * 1024)) {
+        const first = bindings.keys().next().value;
+        bindingBytes -= bindings.get(first).bytes; bindings.delete(first);
+      }
+      bindings.set(key, {descriptor:value, bytes:size}); bindingBytes += size;
+    }
+    return value;
+  }
+  return {get, describe, has:id=>originals.has(id), summary:id=>summaries.get(id)};
+}
 async function build(round) {
   exact(round,['schema','id','title','folder','createdAt','updatedAt','format','creator','initialEdition','editions','events'],'Complete review round');
   need(round.schema===REVIEW_SCHEMA,'Open the complete review round.'); identity(round.id,'Review identity'); text(round.title,'Review title',300,true);
@@ -258,8 +321,10 @@ async function build(round) {
   list(round.editions,'Complete received drafts',100);need(round.editions.length>0,'Retain the original complete draft.');
   need(new Set(round.editions.map(x=>x.id)).size===round.editions.length,'Retain distinct original export identities.');
   need(measureText(JSON.stringify(round)).utf8Bytes<=REVIEW_MAX_BYTES,'This complete review exceeds 64 MiB. Keep its full export and start a separately named round for additional drafts.');
-  const drafts=new Map();for(const capture of round.editions)drafts.set(capture.id,await verifyCapture(capture));
-  need(drafts.has(round.initialEdition),'Retain the first received draft.');const state=nextState(round,drafts);
+  const drafts=editionReader(round.editions);
+  for(const capture of round.editions)await drafts.get(capture.id);
+  need(drafts.has(round.initialEdition),'Retain the first received draft.');
+  const state=nextState(round,drafts.summary(round.initialEdition).id);
   list(round.events,'Complete review actions',20000);const eventIds=new Set(),usedEditions=new Set([round.initialEdition]);let previous=null;
   for(const event of round.events){
     exact(event,['id','sequence','expectedRevision','at','actorId','kind','input','previousSha256','sha256'],'Saved review action');
@@ -284,7 +349,7 @@ export async function createReviewRound(capture,{id,title='SCF submission review
 }
 /** Every mutation receives a stable request ID and the selected event revision. Same-input replay preserves later work. */
 export async function applyReviewAction(round,{requestId,expectedRevision,actorId,kind,input,at=new Date().toISOString()},incomingCapture=null){
-  const original=await build(round);identity(requestId,'Original request identity');
+  const {state:{revision}}=await build(round);identity(requestId,'Original request identity');
   const previous=round.events.find(x=>x.id===requestId);
   if(previous){
     need(same({expectedRevision,actorId,kind,input},{expectedRevision:previous.expectedRevision,actorId:previous.actorId,kind:previous.kind,input:previous.input}),
@@ -292,7 +357,7 @@ export async function applyReviewAction(round,{requestId,expectedRevision,actorI
     if(incomingCapture)need(round.editions.some(x=>same(x,incomingCapture)),'Retain the original complete received export on replay.');
     return clone(round);
   }
-  need(expectedRevision===original.state.revision,'This review advanced. Reopen its latest saved state before applying the prepared action.');
+  need(expectedRevision===revision,'This review advanced. Reopen its latest saved state before applying the prepared action.');
   const next=clone(round);
   if(incomingCapture){
     need(kind==='receive'&&input.editionId===incomingCapture.id,'Bind the complete incoming draft to the selected receive action.');
@@ -306,23 +371,23 @@ export async function applyReviewAction(round,{requestId,expectedRevision,actorI
   await validateReviewRound(next);return next;
 }
 export async function reviewRoundView(round,{editionId=null}={}){
-  const {state,drafts}=await build(round),selectedId=editionId||state.selectedEdition,draft=drafts.get(selectedId);
+  const {state,drafts}=await build(round),selectedId=editionId||state.selectedEdition,draft=await drafts.get(selectedId);
   need(draft,'Select a retained original draft edition.');
-  const rows=[];for(const selected of targets(draft)) rows.push(await descriptor(draft,selected,round.format));
+  const rows=[];for(const selected of targets(draft)) rows.push(await drafts.describe(selectedId,selected,round.format));
   return {...clone(state),viewedEdition:selectedId,isCurrent:selectedId===state.selectedEdition,format:round.format,title:round.title,
     draft:clone(draft),capture:clone(round.editions.find(x=>x.id===selectedId)),targets:rows,
-    readiness:readyIssues(state,drafts.get(state.selectedEdition),round.format),
+    readiness:readyIssues(state,await drafts.get(state.selectedEdition),round.format),
     editions:round.editions.map(x=>({id:x.id,fileName:x.fileName,receivedAt:x.receivedAt,bytes:x.bytes,draftSha256:x.draftSha256,
-      title:drafts.get(x.id).title,sourceSha256:drafts.get(x.id).currentSource,sourceCount:drafts.get(x.id).sources.length,versionCount:drafts.get(x.id).versions.length}))};
+      title:drafts.summary(x.id).title,sourceSha256:drafts.summary(x.id).sourceSha256,sourceCount:drafts.summary(x.id).sourceCount,versionCount:drafts.summary(x.id).versionCount}))};
 }
 export async function compareReviewDraft(round,incomingCapture){
-  const {state,drafts}=await build(round),incoming=await verifyCapture(incomingCapture),current=drafts.get(state.selectedEdition);
+  const {state,drafts}=await build(round),incoming=await verifyCapture(incomingCapture),current=await drafts.get(state.selectedEdition);
   need(incoming.id===state.draftId,'This is a different submission draft. Start a new review round instead of replacing the original identity.');
   const keys=new Map();for(const selected of [...targets(current),...targets(incoming)]) keys.set(targetKey(selected),selected);
   const rows=[];
   for(const selected of keys.values()){
     let before=null,after=null;
-    if(targets(current).some(x=>targetKey(x)===targetKey(selected)))before=await descriptor(current,selected,round.format);
+    if(targets(current).some(x=>targetKey(x)===targetKey(selected)))before=await drafts.describe(state.selectedEdition,selected,round.format);
     if(targets(incoming).some(x=>targetKey(x)===targetKey(selected)))after=await descriptor(incoming,selected,round.format);
     rows.push({target:clone(selected),before,after,change:!before?'added':!after?'removed':before.bindingSha256===after.bindingSha256?'unchanged':'changed'});
   }
@@ -334,14 +399,16 @@ export async function compareReviewDraft(round,incomingCapture){
     })};
 }
 export async function exportReviewRound(round,{now=new Date().toISOString()}={}){
-  await validateReviewRound(round);iso(now,'Export date');const body=clone(round);
-  return JSON.stringify({schema:REVIEW_ENVELOPE,exportedAt:now,sha256:await reviewSha256(JSON.stringify(body)),round:body})+'\n';
+  await validateReviewRound(round);iso(now,'Export date');
+  const body=JSON.stringify(round),digest=await reviewSha256(body);
+  return '{"schema":'+JSON.stringify(REVIEW_ENVELOPE)+',"exportedAt":'+JSON.stringify(now)+
+    ',"sha256":'+JSON.stringify(digest)+',"round":'+body+'}\n';
 }
 export async function importReviewRound(serialized){
   text(serialized,'Complete review export',REVIEW_MAX_BYTES+65536,true);need(measureText(serialized).utf8Bytes<=REVIEW_MAX_BYTES+65536,'The complete review export exceeds its receiving allowance.');
   const packet=JSON.parse(serialized);need(packet?.schema===REVIEW_ENVELOPE&&packet.round,'Open the complete review-round export.');
   hex(packet.sha256,'Review export digest');need(await reviewSha256(JSON.stringify(packet.round))===packet.sha256,'The review packet differs from its original full export.');
-  await validateReviewRound(packet.round);return clone(packet.round);
+  await validateReviewRound(packet.round);return packet.round;
 }
 export async function reviewReport(round){
   const view=await reviewRoundView(round),personLabel=id=>view.participants.find(x=>x.id===id)?.label||id;
