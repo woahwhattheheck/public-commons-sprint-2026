@@ -1,0 +1,103 @@
+{
+  "schema": "upstate.simulated-restoration-programme/v1",
+  "id": "upper-savannah-square-riparian-20261013",
+  "title": "Simulated riparian hardwood establishment — original 30 m headwaters simulation",
+  "version": "2026-10-13-v1",
+  "status": "authored_simulated_design_pending_native_footprint_binding",
+  "owner_direction": {
+    "path": "opportunities/upstate_forever_2026/CURRENT_OWNER_DIRECTION.md",
+    "version": "2026-10-13.3"
+  },
+  "source_catalogue": {
+    "id": "sc-conservation-costs-20261013",
+    "sha256": "3667d9d58f1933bcd0840073b05a0879bd2d25610a17c4dc2b6c7894d0ddfc29",
+    "path": "source_data/sc_conservation_costs_20261013/catalogue.json",
+    "canonical_content_sha256": "b32e4e98690a0721b00263969702a4a4bc669ba9c84c4ee365a31ada54a7e1b2"
+  },
+  "expected_footprint": {
+    "resolution_m": 30,
+    "net_changed_cells": 635,
+    "net_changed_hectares": "57.15",
+    "basis": "Original source-owner square design declaration; actual run footprint must independently match before economic binding.",
+    "source_reference": "Original source-owner fixed-square design post8470, exact native packet awaiting the existing relay.",
+    "changed_transitions": [
+      {
+        "from_code": 81,
+        "to_code": 41,
+        "cells": 236
+      },
+      {
+        "from_code": 82,
+        "to_code": 41,
+        "cells": 399
+      }
+    ]
+  },
+  "planting": {
+    "spacing_x_ft": "12",
+    "spacing_y_ft": "12",
+    "benchmark_reference_spacing_ft": "12",
+    "density_scaling": "Explicit simulated linear scaling of historical planting benchmark with planting positions per acre; 1.0 at original 12 by 12 ft.",
+    "method": "hand",
+    "species": [
+      {
+        "catalogue_row_id": "scfc-seedling-10",
+        "share_parts": 1
+      },
+      {
+        "catalogue_row_id": "scfc-seedling-11",
+        "share_parts": 1
+      },
+      {
+        "catalogue_row_id": "scfc-seedling-04",
+        "share_parts": 1
+      }
+    ],
+    "species_interpretation": "Editable simulated equal-count willow oak, sweetgum and cherrybark oak mix. Actual soil, flooding, species suitability, available stock and agency design remain to be reviewed."
+  },
+  "cost_assumptions": {
+    "hand_planting_row_id": "nrcs-sc-fy25-391-1",
+    "machine_planting_row_id": "nrcs-sc-fy25-391-2",
+    "historical_price_factor": "1.00",
+    "historical_price_factor_basis": "No escalation inferred; FY2025 nominal benchmark retained as an explicit simulated planning allowance, not a current installed quote.",
+    "site_preparation_cents_per_acre": 18000,
+    "design_layout_cents_per_acre": 6500,
+    "contingency_fraction": "0.15",
+    "annual_maintenance_cents_per_acre": 3500,
+    "annual_forecast_basis": "Authored constant annual inspection, invasive control and maintenance allowance over the chosen horizon; not an observed expense or automatic payment annualization.",
+    "horizon_years": 20,
+    "real_discount_rate": "0.03",
+    "currency": "USD",
+    "allowance_status": "Explicit authored simulated planning assumptions, no contractor quotation.",
+    "assistance_row_id": "nrcs-sc-eqip-fy26-612-061",
+    "assistance_eligibility_confirmed": false,
+    "assistance_in_capital": false
+  },
+  "programme": {
+    "start_date": "2026-11-02",
+    "date_basis": "Authored simulated scheduling assumption, editable; no completed fieldwork claimed.",
+    "title": "Simulated riparian restoration work programme",
+    "scope": "Whole selected native scenario treatment footprint. Reporting-zone support area is not used as treatment quantity.",
+    "exclusions": [
+      "Land/easement purchase and opportunity cost",
+      "Permitting, access works and major channel construction",
+      "Tree shelters and fencing",
+      "Financing, tax and grant administration",
+      "Separate field monitoring laboratory programme"
+    ],
+    "exclusion_interpretation": "These scopes are excluded from this scenario option; if needed, add reviewed costs before treating it as a project budget.",
+    "monitoring_note": "Native annual avoided exports describe the modeled land-cover endpoint. Establishment lag, mortality and site suitability are not modeled by this cost design.",
+    "benchmark_applicability": "FY25 391 is a planning analogue for the authored riparian planting option. It is not evidence of 391 eligibility or minimum buffer width. Matched-control planting outside the riparian corridor uses it only as an explicitly labeled comparative planting benchmark.",
+    "task_duration_days": {
+      "review": 2,
+      "design-layout": 3,
+      "site-preparation": 5,
+      "planting": 10,
+      "contingency": 0,
+      "maintenance": 1
+    },
+    "maintenance_recurrence": "Initial one-day inspection milestone plus separately planned recurring maintenance within the annual allowance; no claim of completed visits."
+  },
+  "scenario_role": "riparian_restoration",
+  "role_interpretation": "Authored simulated role; exact native scenario definition retained on binding. Geometry, minimum riparian width and programme eligibility require explicit design review."
+}
