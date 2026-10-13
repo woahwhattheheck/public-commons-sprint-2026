@@ -5,6 +5,7 @@ import argparse
 import base64
 import ctypes
 import email
+import errno
 import fcntl
 import hashlib
 import importlib.metadata
@@ -45,7 +46,7 @@ def now():
     return time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
 
 def regular(path, maximum=MAX_FILE):
-    fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW)
+    fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
     try:
         before = os.fstat(fd)
         require(stat.S_ISREG(before.st_mode) and before.st_nlink == 1 and before.st_size <= maximum,
@@ -66,11 +67,12 @@ def regular(path, maximum=MAX_FILE):
     finally:
         os.close(fd)
 
-def file_identity(path):
-    fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW)
+def file_identity(path, maximum=MAX_FILE):
+    fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
     try:
         before = os.fstat(fd)
-        require(stat.S_ISREG(before.st_mode) and before.st_nlink == 1 and before.st_size <= MAX_FILE,
+        require(stat.S_ISREG(before.st_mode) and before.st_nlink == 1 and
+                (maximum is None or before.st_size <= maximum),
                 "SEMANTIC_RUNTIME_REGULAR_FILE_REQUIRED")
         digest, length = hashlib.sha256(), 0
         while True:
@@ -78,7 +80,7 @@ def file_identity(path):
             if not block:
                 break
             length += len(block)
-            require(length <= MAX_FILE, "SEMANTIC_RUNTIME_FILE_TOO_LARGE")
+            require(maximum is None or length <= maximum, "SEMANTIC_RUNTIME_FILE_TOO_LARGE")
             digest.update(block)
         after = os.fstat(fd)
         require(length == before.st_size and
@@ -93,36 +95,109 @@ def private_directory(path, create=False):
     require(path.is_absolute() and str(path) != "/" and str(path) == os.path.normpath(path),
             "SEMANTIC_RUNTIME_ABSOLUTE_DIRECTORY_REQUIRED")
     if create:
-        path.mkdir(mode=0o700, parents=True, exist_ok=True)
+        durable_directory(path)
     info = path.lstat()
     require(stat.S_ISDIR(info.st_mode) and not path.is_symlink() and
             not info.st_mode & 0o077 and path.resolve() == path and info.st_uid == os.getuid(),
             "SEMANTIC_RUNTIME_PRIVATE_DIRECTORY_REQUIRED")
+    if create:
+        sync_dir(path.parent)
     return path
 
 def sync_dir(path):
-    fd = os.open(path, os.O_RDONLY | os.O_DIRECTORY)
+    fd = os.open(path, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
     try:
         os.fsync(fd)
     finally:
         os.close(fd)
 
-def once(path, raw):
-    path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+def durable_directory(path):
+    """Publish every missing directory entry before any dependent original file."""
+    path = Path(path)
+    require(path.is_absolute() and str(path) == os.path.normpath(path),
+            "SEMANTIC_RUNTIME_ABSOLUTE_DIRECTORY_REQUIRED")
     try:
-        fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600)
-    except FileExistsError:
-        require(regular(path, max(len(raw), 1)) == raw, "SEMANTIC_RUNTIME_RETAINED_SOURCE_CHANGED", str(path))
-        return
-    try:
-        with os.fdopen(fd, "wb") as stream:
-            stream.write(raw)
-            stream.flush()
-            os.fsync(stream.fileno())
+        info = path.lstat()
+    except FileNotFoundError:
+        parent = path.parent
+        require(parent != path, "SEMANTIC_RUNTIME_DIRECTORY_PARENT_REQUIRED")
+        durable_directory(parent)
+        fd = os.open(parent, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
+        try:
+            before = os.fstat(fd)
+            require(parent.resolve() == parent, "SEMANTIC_RUNTIME_DIRECTORY_PARENT_CHANGED")
+            try:
+                os.mkdir(path.name, mode=0o700, dir_fd=fd)
+            except FileExistsError:
+                pass
+            info = path.lstat()
+            current = parent.lstat()
+            require((before.st_dev, before.st_ino) == (current.st_dev, current.st_ino),
+                    "SEMANTIC_RUNTIME_DIRECTORY_PARENT_CHANGED")
+            os.fsync(fd)
+        finally:
+            os.close(fd)
+    require(stat.S_ISDIR(info.st_mode) and not path.is_symlink() and path.resolve() == path,
+            "SEMANTIC_RUNTIME_DIRECTORY_CHANGED")
+    # Reentry can follow a stopped mkdir; its existing name also needs durability.
+    if path.parent != path:
         sync_dir(path.parent)
-    except BaseException:
-        # A partial write remains owned evidence and is never silently replaced.
-        raise
+
+def once(path, raw):
+    """Retain complete original bytes through a fsynced, no-replace publication."""
+    path = Path(path)
+    require(isinstance(raw, bytes), "SEMANTIC_RUNTIME_ORIGINAL_BYTES_REQUIRED")
+    private_directory(path.parent, True)
+    if path.exists() or path.is_symlink():
+        require(regular(path, max(len(raw), 1)) == raw,
+                "SEMANTIC_RUNTIME_RETAINED_SOURCE_CHANGED", str(path))
+        fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
+        try:
+            os.fsync(fd)
+        finally:
+            os.close(fd)
+        sync_dir(path.parent)
+        return
+    # A content-bound stage is resumable byte-for-byte. An incomplete wheel
+    # never becomes the final name and cannot leave an unrelated partial member
+    # inside the exact wheel inventory after this original copy completes.
+    temporary = path.parent / (".pending-" + sha(raw))
+    fd = os.open(temporary, os.O_RDWR | os.O_CREAT | os.O_NOFOLLOW | os.O_NONBLOCK, 0o600)
+    try:
+        info = os.fstat(fd)
+        require(stat.S_ISREG(info.st_mode) and info.st_nlink == 1 and
+                info.st_uid == os.getuid() and not info.st_mode & 0o077 and info.st_size <= len(raw),
+                "SEMANTIC_RUNTIME_PUBLICATION_STAGE_CHANGED")
+        at = 0
+        while at < info.st_size:
+            block = os.pread(fd, min(1048576, info.st_size - at), at)
+            require(block and block == raw[at:at + len(block)],
+                    "SEMANTIC_RUNTIME_PUBLICATION_STAGE_CHANGED")
+            at += len(block)
+        while at < len(raw):
+            written = os.pwrite(fd, raw[at:at + 1048576], at)
+            require(written > 0, "SEMANTIC_RUNTIME_PUBLICATION_SHORT_WRITE")
+            at += written
+        os.fsync(fd)
+    finally:
+        os.close(fd)
+    # Linux is the existing preparation contract. Atomic no-replace rename avoids
+    # an interrupted hard-link publication leaving a two-link final file that the
+    # original single-link custody reader would refuse on every subsequent retry.
+    libc = ctypes.CDLL(None, use_errno=True)
+    rename = getattr(libc, "renameat2", None)
+    require(rename is not None, "SEMANTIC_RUNTIME_NOREPLACE_UNAVAILABLE")
+    rename.argtypes = [ctypes.c_int, ctypes.c_char_p, ctypes.c_int, ctypes.c_char_p, ctypes.c_uint]
+    rename.restype = ctypes.c_int
+    if rename(-100, os.fsencode(temporary), -100, os.fsencode(path), 1) != 0:
+        code = ctypes.get_errno()
+        if code != errno.EEXIST:
+            raise OSError(code, os.strerror(code), str(path))
+        require(regular(path, max(len(raw), 1)) == raw,
+                "SEMANTIC_RUNTIME_RETAINED_SOURCE_CHANGED", str(path))
+        os.unlink(temporary)
+    sync_dir(path.parent)
+
 
 def atomic(path, value):
     temp = path.parent / (".pending-" + uuid.uuid4().hex)
@@ -200,21 +275,77 @@ def parent_lifecycle():
     if os.getppid() != parent or parent == 1:
         os.kill(os.getpid(), signal.SIGTERM)
 
-def stop_child(child):
-    if child.poll() is not None:
-        return
-    try:
-        os.killpg(child.pid, signal.SIGTERM)
-    except ProcessLookupError:
-        pass
-    try:
-        child.wait(timeout=5)
-    except subprocess.TimeoutExpired:
+def preparation_child_lifecycle():
+    parent_lifecycle()
+    # The parent blocks cancellation only across Popen/handle assignment.
+    # The original executed child must receive the normal TERM/INT signals.
+    signal.pthread_sigmask(signal.SIG_UNBLOCK, {signal.SIGINT, signal.SIGTERM})
+
+def group_members(group):
+    """Inspect only the original setsid process group, excluding inert zombies."""
+    live = []
+    for item in os.scandir("/proc"):
+        if not item.name.isdigit():
+            continue
         try:
-            os.killpg(child.pid, signal.SIGKILL)
+            raw = (Path(item.path) / "stat").read_text()
+        except (FileNotFoundError, ProcessLookupError):
+            continue
+        except PermissionError:
+            # An unrelated user's hidden process cannot be in this owned
+            # unprivileged preparation group; do not reject the whole census.
+            try:
+                if item.stat(follow_symlinks=False).st_uid != os.getuid():
+                    continue
+            except FileNotFoundError:
+                continue
+            raise
+        closing = raw.rfind(")")
+        require(closing >= 0, "SEMANTIC_RUNTIME_PROCESS_IDENTITY_INVALID")
+        fields = raw[closing + 2:].split()
+        require(len(fields) >= 20, "SEMANTIC_RUNTIME_PROCESS_IDENTITY_INVALID")
+        if int(fields[2]) == group and int(fields[3]) == group and fields[0] not in ("Z", "X"):
+            live.append(int(item.name))
+    return live
+
+def stop_child(child):
+    """Drain the one original group even after its leader has already exited."""
+    if child is None:
+        return
+    # command() keeps TERM/INT blocked through this complete cleanup. The same
+    # original signals are consumed or restored only after every writer drains.
+    deadline = time.monotonic() + 5
+    escalated, census_error = False, None
+    while True:
+        child.poll()
+        try:
+            os.killpg(child.pid, 0)
+        except ProcessLookupError:
+            child.wait()
+            if census_error is not None:
+                raise RuntimeError("SEMANTIC_RUNTIME_CHILD_CENSUS_FAILED") from census_error
+            return
+        try:
+            live = group_members(child.pid)
+        except Exception as error:
+            census_error = error
+            live = [child.pid]
+            escalated = True
+        if not live:
+            child.wait()
+            if census_error is not None:
+                raise RuntimeError("SEMANTIC_RUNTIME_CHILD_CENSUS_FAILED") from census_error
+            return
+        try:
+            os.killpg(child.pid, signal.SIGKILL if escalated else signal.SIGTERM)
         except ProcessLookupError:
             pass
-        child.wait()
+        if not escalated and time.monotonic() >= deadline:
+            escalated = True
+        # Keep this same owner/lock until every non-zombie group member is gone,
+        # including a still-exiting writer after KILL. Never publish completion
+        # or return custody merely because a fixed cleanup timer has expired.
+        time.sleep(0.05)
 
 def probe(output, vendor=None):
     require(sys.version_info >= (3, 11), "SEMANTIC_RUNTIME_PYTHON_VERSION",
@@ -274,22 +405,64 @@ def prepare(args):
         require(transferred.is_absolute() and root != transferred and
                 not root.is_relative_to(transferred) and not transferred.is_relative_to(root),
                 "SEMANTIC_RUNTIME_TRANSFER_SEPARATE_DIRECTORIES_REQUIRED")
-    existed = root.exists()
-    if existed:
-        private_directory(root)
-        require(not list(root.iterdir()) or (root / "selection.json").is_file(),
-                "SEMANTIC_RUNTIME_NEW_DIRECTORY_REQUIRED")
     private_directory(root, True)
+    root_identity = root.lstat()
+    def check_root():
+        current = root.lstat()
+        require(stat.S_ISDIR(current.st_mode) and root.resolve() == root and
+                (current.st_dev, current.st_ino) == (root_identity.st_dev, root_identity.st_ino) and
+                current.st_uid == os.getuid() and not current.st_mode & 0o077,
+                "SEMANTIC_RUNTIME_PREPARATION_DIRECTORY_CHANGED")
+        current_lock = (root / "preparation.lock").lstat()
+        held_lock = os.fstat(lock_fd)
+        require((current_lock.st_dev, current_lock.st_ino) == (held_lock.st_dev, held_lock.st_ino) and
+                stat.S_ISREG(current_lock.st_mode) and current_lock.st_nlink == 1 and
+                not current_lock.st_mode & 0o077 and current_lock.st_uid == os.getuid(),
+                "SEMANTIC_RUNTIME_LOCK_CHANGED")
     lock_fd = os.open(root / "preparation.lock", os.O_RDWR | os.O_CREAT | os.O_NOFOLLOW, 0o600)
-    require(stat.S_ISREG(os.fstat(lock_fd).st_mode) and os.fstat(lock_fd).st_nlink == 1,
-            "SEMANTIC_RUNTIME_LOCK_INVALID")
     try:
+        info = os.fstat(lock_fd)
+        require(stat.S_ISREG(info.st_mode) and info.st_nlink == 1 and
+                not info.st_mode & 0o077 and info.st_uid == os.getuid(),
+                "SEMANTIC_RUNTIME_LOCK_INVALID")
         fcntl.flock(lock_fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
-    except BlockingIOError:
+        os.fsync(lock_fd)
+        sync_dir(root)
+        check_root()
+        selected_path = root / "selection.json"
+        if not selected_path.exists():
+            # Failure before the complete source selection is not an unrelated
+            # populated runtime. Only this original lock/request/progress and its
+            # own unpublished stages may exist before source dispatch.
+            for retained in root.iterdir():
+                require(retained.name in ("preparation.lock", "preparation-request.json", "progress.json") or
+                        re.fullmatch(r"\.pending-(?:[a-f0-9]{32}|[a-f0-9]{64})", retained.name),
+                        "SEMANTIC_RUNTIME_NEW_DIRECTORY_REQUIRED")
+                st = retained.lstat()
+                require(stat.S_ISREG(st.st_mode) and st.st_nlink == 1 and st.st_uid == os.getuid() and
+                        not st.st_mode & 0o077, "SEMANTIC_RUNTIME_PRESELECTION_CUSTODY_CHANGED")
+            if (root / "progress.json").exists():
+                prior = json.loads(regular(root / "progress.json", 1048576))
+                require(prior.get("schema") == "stellar-forge.dcat-semantic-runtime-progress.v1" and
+                        prior.get("phase") in ("SELECTING", "FAILED", "INTERRUPTED"),
+                        "SEMANTIC_RUNTIME_PRESELECTION_PROGRESS_CHANGED")
+        request = {"schema": "stellar-forge.dcat-semantic-runtime-preparation-request.v1",
+                   "directory": str(root), "python": args.python, "vendor": args.vendor,
+                   "wheelhouse": args.wheelhouse,
+                   "transferDirectory": getattr(args, "transfer_directory", None),
+                   "transferSha256": getattr(args, "transfer_sha256", None)}
+        # Old fully selected runtimes bind through their exact selection below.
+        # New and lock-only original attempts retain caller input before reading it.
+        if not selected_path.exists() or (root / "preparation-request.json").exists():
+            once(root / "preparation-request.json", encoded(request))
+    except BaseException as error:
         os.close(lock_fd)
-        raise RuntimeError("SEMANTIC_RUNTIME_PREPARATION_ACTIVE")
+        if isinstance(error, BlockingIOError):
+            raise RuntimeError("SEMANTIC_RUNTIME_PREPARATION_ACTIVE") from error
+        raise
     state = {"schema": "stellar-forge.dcat-semantic-runtime-progress.v1", "phase": "SELECTING", "updatedAt": now()}
     def update(phase, **values):
+        check_root()
         state.update({"phase": phase, "updatedAt": now(), **values})
         atomic(root / "progress.json", state)
     try:
@@ -322,7 +495,9 @@ def prepare(args):
                      "onlyBinary": True}
         if transfer:
             selection["transfer"] = transfer
+        check_root()
         once(root / "selection.json", encoded(selection))
+        once(root / "preparation-request.json", encoded(request))
         if (root / "runtime.json").exists():
             return inspect(root)
         for path, raw in bodies.items():
@@ -336,32 +511,75 @@ def prepare(args):
                             "PIP_CONFIG_FILE": os.devnull})
         private_directory(attempt / "temporary", True)
         def command(name, argv, timeout=1200):
+            check_root()
             log = attempt / (name + ".log")
             raw_argv = [str(value) for value in argv]
             once(attempt / (name + "-command.json"), encoded({"argv": raw_argv, "startedAt": now()}))
             with log.open("xb") as stream:
                 os.chmod(log, 0o600)
-                child = subprocess.Popen(raw_argv, stdout=stream, stderr=subprocess.STDOUT, env=environment,
-                                         cwd=root, start_new_session=True, pass_fds=(lock_fd,), preexec_fn=parent_lifecycle)
-                cause = None
+                stream.flush()
+                os.fsync(stream.fileno())
+                sync_dir(attempt)
+                child, cause, previous_mask = None, None, None
+                overflow_after_drain = False
+                cancellation = {signal.SIGINT, signal.SIGTERM}
                 try:
+                    # Keep cancellation blocked in this one owner until its child
+                    # group and receipt are finished. Poll those original signals
+                    # while the command is running; repeated delivery cannot cut
+                    # through cleanup or the Popen-handle assignment boundary.
+                    previous_mask = signal.pthread_sigmask(signal.SIG_BLOCK, cancellation)
+                    check_root()
+                    child = subprocess.Popen(raw_argv, stdout=stream, stderr=subprocess.STDOUT, env=environment,
+                                             cwd=root, start_new_session=True, pass_fds=(lock_fd,),
+                                             preexec_fn=preparation_child_lifecycle)
                     update(name, childPid=child.pid, attempt=attempt.name)
-                    child.wait(timeout=timeout)
+                    deadline = time.monotonic() + timeout
+                    while child.poll() is None:
+                        waiting = signal.sigpending() & cancellation
+                        if waiting:
+                            signal.sigwait(waiting)
+                            raise KeyboardInterrupt("Original preparation owner stopped")
+                        require(os.fstat(stream.fileno()).st_size <= MAX_FILE,
+                                "SEMANTIC_RUNTIME_COMMAND_OUTPUT_LIMIT")
+                        if time.monotonic() >= deadline:
+                            raise subprocess.TimeoutExpired(raw_argv, timeout)
+                        time.sleep(0.05)
+                    require(os.fstat(stream.fileno()).st_size <= MAX_FILE,
+                            "SEMANTIC_RUNTIME_COMMAND_OUTPUT_LIMIT")
                 except BaseException as error:
                     cause = {"code": "TIMEOUT" if isinstance(error, subprocess.TimeoutExpired) else
-                             "CANCELLED" if isinstance(error, KeyboardInterrupt) else type(error).__name__,
+                             "CANCELLED" if isinstance(error, KeyboardInterrupt) else
+                             getattr(error, "code", type(error).__name__),
                              "message": str(error)[:4000]}
                     raise
                 finally:
-                    stop_child(child)
-                    stream.flush()
-                    os.fsync(stream.fileno())
-                    code = child.returncode
-                    receipt = {"exitCode": code if code is None or code >= 0 else None,
-                               "signal": -code if code is not None and code < 0 else None,
-                               "cause": cause, "completedAt": now(), "log": file_identity(log)}
-                    once(attempt / (name + "-result.json"), encoded(receipt))
-                require(child.returncode == 0, "SEMANTIC_RUNTIME_COMMAND_FAILED",
+                    try:
+                        stop_child(child)
+                        check_root()
+                        overflow_after_drain = os.fstat(stream.fileno()).st_size > MAX_FILE
+                        if overflow_after_drain and cause is None:
+                            cause = {"code": "SEMANTIC_RUNTIME_COMMAND_OUTPUT_LIMIT",
+                                     "message": "Original command log exceeded its limit before the complete group drained."}
+                        stream.flush()
+                        os.fsync(stream.fileno())
+                        code = None if child is None else child.returncode
+                        receipt = {"exitCode": code if code is None or code >= 0 else None,
+                                   "signal": -code if code is not None and code < 0 else None,
+                                   "cause": cause, "completedAt": now(), "log": file_identity(log, maximum=None)}
+                        once(attempt / (name + "-result.json"), encoded(receipt))
+                    finally:
+                        if previous_mask is not None:
+                            # Preserve the first command failure when repeated
+                            # cancellation arrives during its original drain.
+                            if cause is not None:
+                                waiting = signal.sigpending() & cancellation
+                                while waiting:
+                                    signal.sigwait(waiting)
+                                    waiting = signal.sigpending() & cancellation
+                            signal.pthread_sigmask(signal.SIG_SETMASK, previous_mask)
+                require(not overflow_after_drain, "SEMANTIC_RUNTIME_COMMAND_OUTPUT_LIMIT")
+                require(child is not None and child.returncode == 0, "SEMANTIC_RUNTIME_COMMAND_FAILED",
                         name + " failed; inspect the retained private log.")
         helper = Path(__file__).resolve()
         command("base-python", [base, "-B", helper, "probe", "--out", attempt / "base-python.json"], 30)
@@ -381,7 +599,7 @@ def prepare(args):
             original_wheels = json.loads(regular(payload / "records/wheel-selection.json", 16777216))
             private_directory(wheel_path, True)
             for row in original_wheels["packages"]:
-                handle = os.open(payload / "wheels" / member(row["file"]), os.O_RDONLY | os.O_NOFOLLOW)
+                handle = os.open(payload / "wheels" / member(row["file"]), os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
                 with os.fdopen(handle, "rb") as source_wheel:
                     write_owned(root, "wheels/" + row["file"], chunks(source_wheel), row)
             write_bytes(root, "requirements.lock", regular(payload / "records/requirements.lock", 1048576))
@@ -394,42 +612,90 @@ def prepare(args):
             require(sha(regular(lock_path, 1048576)) == wheel_selection["lockSha256"],
                     "SEMANTIC_RUNTIME_RESOLVED_LOCK_CHANGED")
         else:
-            downloaded = attempt / "downloaded"
-            private_directory(downloaded, True)
-            argv = [python, "-B", "-m", "pip", "--isolated", "download", "--disable-pip-version-check",
-                    "--no-cache-dir", "--only-binary=:all:", "--dest", downloaded,
-                    "--requirement", root / "source" / "requirements.txt"]
-            argv += ["--no-index", "--find-links", wheelhouse] if wheelhouse else ["--index-url", "https://pypi.org/simple"]
-            command("resolve-wheels", argv)
-            wheels, seen = [], set()
-            for path in sorted(downloaded.iterdir()):
-                require(path.is_file() and not path.is_symlink() and path.name.endswith(".whl"),
-                        "SEMANTIC_RUNTIME_WHEEL_REQUIRED")
-                with zipfile.ZipFile(path) as archive:
-                    names = [name for name in archive.namelist() if name.endswith(".dist-info/METADATA") and name.count("/") == 1]
-                    require(len(names) == 1, "SEMANTIC_RUNTIME_WHEEL_METADATA_INVALID")
-                    info = archive.getinfo(names[0])
-                    require(info.file_size <= 1048576, "SEMANTIC_RUNTIME_WHEEL_METADATA_TOO_LARGE")
-                    metadata = email.message_from_bytes(archive.read(names[0]))
-                name, version = normalized_name(metadata["Name"]), metadata["Version"]
-                require(isinstance(version, str) and re.fullmatch(r"[A-Za-z0-9.!+_-]+", version) and name not in seen,
-                        "SEMANTIC_RUNTIME_WHEEL_SELECTION_AMBIGUOUS")
-                seen.add(name)
-                identity = file_identity(path)
-                wheels.append({"name": name, "version": version, "file": path.name, **identity})
-            require(wheels and all(any(row["name"] == name and row["version"] == version for row in wheels)
-                                  for name, version in PINNED.items()), "SEMANTIC_RUNTIME_PINNED_WHEELS_REQUIRED")
+            resolution_path = root / "wheel-resolution.json"
+            if resolution_path.exists():
+                resolution = json.loads(regular(resolution_path, 16777216))
+                require(resolution.get("schema") == "stellar-forge.dcat-semantic-wheel-resolution.v1" and
+                        resolution.get("selectionSha256") == sha(regular(root / "selection.json", 16777216)),
+                        "SEMANTIC_RUNTIME_ORIGINAL_RESOLUTION_CHANGED")
+                downloaded = Path(resolution["directory"])
+                require(downloaded.is_absolute() and downloaded.parent.parent == root / "attempts" and
+                        re.fullmatch(r"[a-f0-9]{32}", downloaded.parent.name) and downloaded.name == "downloaded",
+                        "SEMANTIC_RUNTIME_RESOLUTION_DIRECTORY_CHANGED")
+                private_directory(downloaded)
+                wheel_selection = resolution["wheelSelection"]
+                lock_raw = resolution["lock"].encode("utf-8")
+                require(wheel_selection.get("schema") == "stellar-forge.dcat-semantic-wheel-selection.v1" and
+                        wheel_selection["requirementsSha256"] == source["requirementsSha256"] and
+                        wheel_selection["lockSha256"] == sha(lock_raw) and
+                        wheel_selection["source"] == {"kind": "wheelhouse" if wheelhouse else "pypi", "path": wheelhouse},
+                        "SEMANTIC_RUNTIME_ORIGINAL_RESOLUTION_CHANGED")
+                wheels = wheel_selection["packages"]
+                require(inventory(downloaded) == resolution["downloadedInventory"],
+                        "SEMANTIC_RUNTIME_ORIGINAL_WHEELS_CHANGED")
+            else:
+                # A legacy partial publication without an original resolution
+                # pointer is preserved for explicit recovery, never combined with
+                # a newly resolved dependency set.
+                require(not lock_path.exists() and
+                        (not wheel_path.exists() or not list(wheel_path.iterdir())),
+                        "SEMANTIC_RUNTIME_ORIGINAL_RESOLUTION_REQUIRED",
+                        "Retain the original downloaded wheels and lock; no original resolution receipt identifies this partial legacy publication.")
+                downloaded = attempt / "downloaded"
+                private_directory(downloaded, True)
+                argv = [python, "-B", "-m", "pip", "--isolated", "download", "--disable-pip-version-check",
+                        "--no-cache-dir", "--only-binary=:all:", "--dest", downloaded,
+                        "--requirement", root / "source" / "requirements.txt"]
+                argv += ["--no-index", "--find-links", wheelhouse] if wheelhouse else ["--index-url", "https://pypi.org/simple"]
+                command("resolve-wheels", argv)
+                wheels, seen = [], set()
+                for path in sorted(downloaded.iterdir()):
+                    require(path.is_file() and not path.is_symlink() and path.name.endswith(".whl"),
+                            "SEMANTIC_RUNTIME_WHEEL_REQUIRED")
+                    with zipfile.ZipFile(path) as archive:
+                        names = [name for name in archive.namelist() if name.endswith(".dist-info/METADATA") and name.count("/") == 1]
+                        require(len(names) == 1, "SEMANTIC_RUNTIME_WHEEL_METADATA_INVALID")
+                        info = archive.getinfo(names[0])
+                        require(info.file_size <= 1048576, "SEMANTIC_RUNTIME_WHEEL_METADATA_TOO_LARGE")
+                        metadata = email.message_from_bytes(archive.read(names[0]))
+                    name, version = normalized_name(metadata["Name"]), metadata["Version"]
+                    require(isinstance(version, str) and re.fullmatch(r"[A-Za-z0-9.!+_-]+", version) and name not in seen,
+                            "SEMANTIC_RUNTIME_WHEEL_SELECTION_AMBIGUOUS")
+                    seen.add(name)
+                    identity = file_identity(path)
+                    wheels.append({"name": name, "version": version, "file": path.name, **identity})
+                require(wheels and all(any(row["name"] == name and row["version"] == version for row in wheels)
+                                      for name, version in PINNED.items()), "SEMANTIC_RUNTIME_PINNED_WHEELS_REQUIRED")
+                lock_raw = ("# Complete original dependency resolution; every selected wheel is retained.\n" +
+                            "".join(row["name"] + "==" + row["version"] + " --hash=sha256:" + row["sha256"] + "\n"
+                                    for row in sorted(wheels, key=lambda value: value["name"]))).encode("utf-8")
+                wheel_selection = {"schema": "stellar-forge.dcat-semantic-wheel-selection.v1",
+                                   "requirementsSha256": source["requirementsSha256"], "lockSha256": sha(lock_raw),
+                                   "packages": wheels,
+                                   "inventory": sorted([{"path": row["file"], "kind": "file", "bytes": row["bytes"],
+                                                         "sha256": row["sha256"], "mode": 0o600} for row in wheels],
+                                                       key=lambda row: row["path"]),
+                                   "resolvedAt": now(),
+                                   "source": {"kind": "wheelhouse" if wheelhouse else "pypi", "path": wheelhouse}}
+                resolution = {"schema": "stellar-forge.dcat-semantic-wheel-resolution.v1",
+                              "selectionSha256": sha(regular(root / "selection.json", 16777216)),
+                              "directory": str(downloaded), "wheelSelection": wheel_selection,
+                              "downloadedInventory": inventory(downloaded), "lock": lock_raw.decode("utf-8")}
+                # The complete selected attempt and exact lock precede the first
+                # root wheel/lock copy. Restart uses this same attempt, never pip.
+                once(resolution_path, encoded(resolution))
             private_directory(wheel_path, True)
+            require(wheels and len({row["file"] for row in wheels}) == len(wheels),
+                    "SEMANTIC_RUNTIME_WHEEL_SELECTION_AMBIGUOUS")
             for row in wheels:
-                once(wheel_path / row["file"], regular(downloaded / row["file"]))
-            lock_raw = ("# Complete original dependency resolution; every selected wheel is retained.\n" +
-                        "".join(row["name"] + "==" + row["version"] + " --hash=sha256:" + row["sha256"] + "\n"
-                                for row in sorted(wheels, key=lambda value: value["name"]))).encode("utf-8")
+                name = member(row["file"])
+                require("/" not in name and name.endswith(".whl"), "SEMANTIC_RUNTIME_WHEEL_REQUIRED")
+                raw = regular(downloaded / name)
+                require(len(raw) == row["bytes"] and sha(raw) == row["sha256"],
+                        "SEMANTIC_RUNTIME_ORIGINAL_WHEELS_CHANGED")
+                once(wheel_path / name, raw)
             once(lock_path, lock_raw)
-            wheel_selection = {"schema": "stellar-forge.dcat-semantic-wheel-selection.v1",
-                               "requirementsSha256": source["requirementsSha256"], "lockSha256": sha(lock_raw),
-                               "packages": wheels, "inventory": inventory(wheel_path), "resolvedAt": now(),
-                               "source": {"kind": "wheelhouse" if wheelhouse else "pypi", "path": wheelhouse}}
+            verify_inventory(wheel_path, wheel_selection["inventory"])
             once(root / "wheel-selection.json", encoded(wheel_selection))
         command("install-locked", [python, "-B", "-m", "pip", "--isolated", "install", "--no-index",
                 "--no-cache-dir", "--no-compile", "--require-hashes", "--find-links", wheel_path,
@@ -441,9 +707,11 @@ def prepare(args):
         actual_packages = {row["name"]: row["version"] for row in imported["packages"]}
         require(all(actual_packages.get(row["name"]) == row["version"] for row in wheel_selection["packages"]),
                 "SEMANTIC_RUNTIME_INSTALLED_RESOLUTION_CHANGED")
-        selected_records = ["selection.json", "requirements.lock", "wheel-selection.json",
+        selected_records = ["selection.json", "preparation-request.json", "requirements.lock", "wheel-selection.json",
                             (attempt / "base-python.json").relative_to(root).as_posix(),
                             (attempt / "original-imports.json").relative_to(root).as_posix()]
+        if (root / "wheel-resolution.json").exists():
+            selected_records.append("wheel-resolution.json")
         for path in sorted(attempt.iterdir()):
             if path.is_file() and path.name.endswith((".log", "-command.json", "-result.json")):
                 selected_records.append(path.relative_to(root).as_posix())
@@ -459,6 +727,7 @@ def prepare(args):
                   "scope": "Selected base executable, original engine source, all resolved wheels and installed environment files; host OS and base standard library remain host prerequisites."}
         if transfer:
             record["transfer"] = transfer
+        check_root()
         once(root / "runtime.json", encoded(record))
         update("READY", childPid=None, receiptSha256=sha(encoded(record)))
         return inspect(root)
