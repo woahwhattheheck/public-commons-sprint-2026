@@ -22,6 +22,10 @@ FILES = (
     "model/compute_programme_cli.py",
     "model/programme_experiments.py",
     "model/programme_interactions.py",
+    "model/programme_case_status.py",
+    "model/parameter_case_status.py",
+    "docs/PROGRAMME_CASE_CONSOLE.md",
+    "docs/PARAMETER_CASE_CONSOLE.md",
     "model/PAIR_COMPLETION.md",
     "source_tools/receive_gura.py",
     "source_tools/gura_workflow.py",
@@ -33,12 +37,13 @@ FILES = (
     "source/gura-original-tables-3.20/source.json",
     "operator/programmes.py",
     "operator/web/programmes.mjs",
+    "operator/web/parameter_case_console.mjs",
     "operator/web/programmes.css",
     "PROGRAMMES.md",
 )
 
 
-PREVIOUS_EDITIONS = {
+PREVIOUS_EDITIONS ={
   "model/compute_programme.py": [
     "0d676a655f42427749a835706d139ce287bc8ea8f138970413652b6938a93e03",
     "f3ffdf5ed39aa827e83ed67b73fabad894f6219e46509e18da8f5a7c88512bce",
@@ -63,7 +68,8 @@ PREVIOUS_EDITIONS = {
     "d3d0b5e2a9fb774de81e61541c0b6420f58c766613e925d1e3ac566b293075d4",
     "0741c15a214d01880a35bc1ff62198b36af20dcabe3e2fba321ef0bfb53e8aef",
     "431a783614df0b72d3c25a3896f520ed69fbd421c172046d2a6b0b2480ccd94e",
-    "ad3ed6b0da026423fe1a42444306ebf2aa90474ab6e34a429d18360d45244656"
+    "ad3ed6b0da026423fe1a42444306ebf2aa90474ab6e34a429d18360d45244656",
+    "2e78ffe05f0df088339c32a2c3c1122a4e121b4e7c6d374752a835eec56863f9"
   ],
   "operator/web/programmes.mjs": [
     "0a334cf55eaa95a7c0347ad605adea170261495b3042fc33b6b051fbaad9d2d4",
@@ -74,7 +80,8 @@ PREVIOUS_EDITIONS = {
     "2602a24040ffbf5e9bb45dfcc709114328899cd2acb865c613478cba0ba09443",
     "8f415ee9049807121bc842c27a0cbd465eb7702a747540f82a6c5fa52cd8d493",
     "14b71fd70d0050c9968b9a025287c65d7240146aae8c085817762c79f4d40f8b",
-    "a68c80290257eed884503665ca47f6ebef5951a91a3667cb23d62dfc62ea6f3f"
+    "a68c80290257eed884503665ca47f6ebef5951a91a3667cb23d62dfc62ea6f3f",
+    "fefe6f9b6adc7fe9e662ca0260a8a08a44217da16d57fa908893a8b1e37bdd9e"
   ],
   "operator/web/programmes.css": [
     "939dea3c338775175b137239acfbc7d4cd1e2daef58060af2ed73ea98c484bdf",
@@ -88,7 +95,8 @@ PREVIOUS_EDITIONS = {
     "d8348ad65bbd0cb08327af500b668fbb8072882c7d1d32863738df42b2ca2093",
     "36551ce83830be56451913df78f5d64dee428ffd30f97490d41ef7c55313109b",
     "8ddac4633d080a775ac6dd99136fd7e04ba52b6c9ad9e1aac9e58ce9ef4f30fb",
-    "3c23eb8407888398fbb95370a2671d924817b7ed54223565c107244698a28b3e"
+    "3c23eb8407888398fbb95370a2671d924817b7ed54223565c107244698a28b3e",
+    "b6e086094c3246dc0d88bd8fac2ba643b92e64213e252c6d1ce14c0cbd47d99d"
   ],
   "PROGRAMMES.md": [
     "b0a9c33c09f4dddba47db5a677ddc135b5c4242630c255ab4c232d4f365a206f",
@@ -134,6 +142,14 @@ PREVIOUS_EDITIONS = {
     "3cc684db0f9ff7f4ef17e56826fece82947225709c3543c43e0136d2a1cc41a9",
     "29e08e1ccd4c23d8d9df986ecfebdc7474bb4f76dc48f11f4958e0e74bf12637",
     "36844187971332a94ef0858ead1305880710b3126b4d9afcf09dc3f0185c99e8"
+  ],
+  "model/parameter_case_status.py": [
+    "6152010782ea3163137c1282633ae270ef9376b73ec07f70a8c08736a6f5d7a8",
+    "f5ce7d3de05e3e2d5e55453db619bc6c0988f8a168446ad38da9d92725ab253c"
+  ],
+  "operator/web/parameter_case_console.mjs": [
+    "3d9ea07a81a91ac62780eeacd8fab29b622dc9692b1b98346266158a79508834",
+    "d3245562620abb46d69a7c76a46d27b63d8005ccf26d80eabe08ad2f57190638"
   ]
 }
 
@@ -156,6 +172,73 @@ def replace(source, old, new, label):
     if source.count(old) != 1:
         raise ValueError(label + ": current source needs one compatible registration anchor; found " + str(source.count(old)))
     return source.replace(old, new, 1)
+
+
+CONSOLE_QUERY_KEYS = (
+    "programme_id", "include_sources", "run_id", "attempt_id", "stream",
+    "log_offset", "expected_attempt_id", "history_offset", "limit",
+)
+
+
+def patch_case_console(source):
+    """Compose current query fields and assets without narrowing peer routes."""
+    tree = ast.parse(source, filename="operator/server.py")
+    calls = [node for node in ast.walk(tree)
+             if isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute)
+             and node.func.attr == "read" and isinstance(node.func.value, ast.Attribute)
+             and node.func.value.attr == "programmes"]
+    if len(calls) != 1 or len(calls[0].args) < 3:
+        raise ValueError("Programme console: expected one maintained native read dispatcher.")
+    query = calls[0].args[2]
+    retained = {node.value for node in ast.walk(query)
+                if isinstance(node, ast.Constant) and isinstance(node.value, str)}
+    missing = [name for name in CONSOLE_QUERY_KEYS if name not in retained]
+    if missing:
+        # AST column positions are UTF-8 bytes. Preserve any preceding Unicode
+        # and every unknown peer query field exactly.
+        raw = source.encode("utf-8")
+        lines = raw.splitlines(keepends=True)
+        start = sum(map(len, lines[:query.lineno - 1])) + query.col_offset
+        end = sum(map(len, lines[:query.end_lineno - 1])) + query.end_col_offset
+        original = raw[start:end].decode("utf-8")
+        fields = ", ".join(json.dumps(name) + ": one(" + json.dumps(name) + ")"
+                           for name in missing)
+        replacement = "(" + original + " | {" + fields + "})"
+        source = (raw[:start] + replacement.encode("utf-8") + raw[end:]).decode("utf-8")
+    matches = list(re.finditer(r"if selected not in (\(*)(\{[^}\n]+\})([^:\n]*):", source))
+    if len(matches) != 1:
+        raise ValueError("Programme console: expected the maintained static asset registry.")
+    match = matches[0]
+    members = ast.literal_eval(match.group(2))
+    if not isinstance(members, set) or not all(isinstance(item, str) for item in members):
+        raise ValueError("Programme console: expected the original literal asset set.")
+    if "parameter_case_console.mjs" not in members:
+        members.add("parameter_case_console.mjs")
+        literal = "{" + ", ".join(json.dumps(item) for item in sorted(members)) + "}"
+        source = (source[:match.start(2)] + literal + source[match.end(2):])
+    ast.parse(source, filename="operator/server.py")
+    return source
+
+
+def check_console_dependencies(application):
+    """Use the current original native readers; do not replace their engines."""
+    required = {
+        "model/native_execution.py": ("inspect_execution",),
+        "model/native_worker.py": ("identity_matches",),
+        "model/parameter_studies.py": ("_read", "native_case_context"),
+    }
+    for name, symbols in required.items():
+        path = application / name
+        if not path.is_file():
+            raise ValueError("Receive the complete current native application first; missing " + name)
+        tree = ast.parse(path.read_text(encoding="utf-8"), filename=name)
+        exported = {node.name for node in tree.body
+                    if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef))}
+        missing = set(symbols) - exported
+        if missing:
+            raise ValueError("The retained-case console needs current " + name + ": " +
+                             ", ".join(sorted(missing)) +
+                             ". Receive the maintained native application before this extension.")
 
 
 def patch_server(source):
@@ -195,7 +278,7 @@ def patch_server(source):
         if not all(value in source for value in ("programmes.mjs", "programmes.css", "ACTIONS.update(PROGRAMME_ACTIONS)")):
             raise ValueError("Complete the current programme asset and action registrations before adding study attribution.")
         ast.parse(source, filename="operator/server.py")
-        return source
+        return patch_case_console(source)
     source = add(source, "from model.spatial_exports import SpatialExports\n",
                  "from programmes import Programmes, ACTIONS as PROGRAMME_ACTIONS, READS as PROGRAMME_READS\n", "programme import")
     source = add(source, "ACTIONS.update(CUSTOMER_REVIEW_ACTIONS)\n",
@@ -262,7 +345,7 @@ def patch_server(source):
     source = (source[:match.start()] + "if selected not in " + match.group(1) +
               literal + match.group(3) + ":" + source[match.end():])
     ast.parse(source, filename="operator/server.py")
-    return source
+    return patch_case_console(source)
 
 
 def patch_app(source):
@@ -337,6 +420,7 @@ def run(application, source_root, *, dry_run=False):
     lock_root.mkdir(exist_ok=True)
     with (lock_root / "programme-install.lock").open("a+") as lock:
         fcntl.flock(lock, fcntl.LOCK_EX)
+        check_console_dependencies(application)
         pending = {}
         original = {}
         for name in FILES:
