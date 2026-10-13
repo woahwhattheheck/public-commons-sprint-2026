@@ -30,7 +30,7 @@ INCREMENTAL_ACTIONS = frozenset({
 })
 FORMAT = "upstate.operator-project-transfer/v1"
 RECOVERY_FORMAT = "upstate.operator-project-recovery/v1"
-HISTORY_ONLY = ACTIONS | {"workspace.backup", "workspace.restore"} | INCREMENTAL_ACTIONS
+HISTORY_ONLY = ACTIONS | {"workspace.backup", "workspace.restore", "project.transfer.capture-study"} | INCREMENTAL_ACTIONS
 UNFINISHED = {"queued", "running", "interrupted", "failed", "cancelled"}
 RESUMABLE = {"interrupted", "failed"}
 ID = re.compile(r"[0-9a-f]{64}")
@@ -163,7 +163,9 @@ class ProjectContinuity:
                             "handler_available": task["action"] in self.supported_actions,
                             "origin": task.get("transfer_origin")})
         overview = ws.overview()
+        saved_view = getattr(self.operator, "operator_session", lambda key: None)(workspace_key)
         return {"project": ws.project, "workspace_key": workspace_key,
+                "operator_session": _clone(saved_view),
                 "tasks": records,
                 "summary": {"tasks": len(records),
                             "complete": sum(t["state"] == "complete" for t in records),
@@ -315,11 +317,17 @@ class ProjectContinuity:
             for selected in tasks:
                 if selected["state"] != "complete":
                     self._capture_inputs(ws, selected, previews, uploads)
+            if task["payload"].get("journey") is not None:
+                saved_view = {"journey": _clone(task["payload"]["journey"]),
+                              "revision": task["payload"].get("journey_revision")}
+            else:
+                saved_view = _clone(getattr(op, "operator_session", lambda key: None)(task["workspace"]))
             transfer = {"schema": FORMAT, "id": task["id"], "project": _clone(ws.project),
                         "title": task["payload"].get("title") or ws.project["title"] + " — complete project",
                         "created_at": now(), "original_workspace_key": task["workspace"],
                         "original_operation_id": task["operation_id"], "tasks": tasks,
                         "uploads": uploads, "previews": previews,
+                        "operator_session": saved_view,
                         "selection": {"include_intermediates": bool(task["payload"].get("include_intermediates", True)),
                                       "transport": transport,
                                       "task_ids": [t["id"] for t in tasks]},
@@ -336,6 +344,10 @@ class ProjectContinuity:
         native_action = "project.transfer.capture" if transport == "incremental" else "workspace.backup"
         native_task = {**task, "action": native_action,
                        "payload": {"include_intermediates": transfer["selection"]["include_intermediates"]}}
+        saved_view = transfer.get("operator_session")
+        if saved_view is not None:
+            native_task["payload"].update(journey=_clone(saved_view["journey"]),
+                                          journey_revision=saved_view.get("revision"))
         result = op._invoke(native_task)
         if isinstance(result.get("files"), int):
             result = {**result, "member_count": result["files"]}
