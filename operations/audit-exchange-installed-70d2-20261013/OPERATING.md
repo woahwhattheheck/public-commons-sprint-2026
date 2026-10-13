@@ -34,7 +34,7 @@ No model-weather or new analysis input is created by this installed course.
 
 ## Select the persistent host once
 
-Use the actual original accepting isolated Linux host. Select one private, persistent, ordinary directory with room for the complete Git source, retained distribution, installed dependency graph, two editable projects and a complete archive. The receiver does not choose /dev or another temporary mount automatically. Check the actual chosen filesystem and its visibility from the receiving and artifact-saving processes before execution. The owned temporary directory is ROOT/temporary; TMPDIR, TMP and TEMP are passed to the entire producing lifetime.
+Use the actual original accepting isolated Linux host. Select one private, persistent, ordinary directory owned by the running UID with mode0700; filesystem and shared roots are rejected. Choose room for the complete Git source, retained distribution, installed dependency graph, two editable projects and a complete archive. The receiver does not choose /dev or another temporary mount automatically. Check the actual chosen filesystem and its visibility from the receiving and artifact-saving processes before execution. The owned temporary directory is ROOT/temporary; TMPDIR, TMP and TEMP are passed to the entire producing lifetime.
 
 Host dependencies are the original Node22.16+, Python with lxml, an installed Playwright module and an installed Chromium executable. Use the existing runtime; this source does not purchase capacity or start Actions. The standard original Runtime installer uses its existing offline dependency cache.
 
@@ -75,12 +75,14 @@ ROOT/persistent-operation.json identifies the one original operation and exact r
 The root retains:
 
 - original-source/source-packet.json and payload.json: complete unmodified private source.
-- controller-source/: the complete original browser/guide, full new launcher/lease module and narrowly repaired original controller.
+- controller-generations/COHORT_SHA/: each complete original browser/guide, launcher/lease module and narrowly repaired original controller, with every full source identity.
 - generations/COMMIT/: exact Git source, selected build/archive, complete install directories, source identity and full preparation/inspection observations.
 - installed-operation-input.json: immutable original customer input.
 - complete-installed-case/: original Applications workspace, both editable projects, original requests, stage files, source records, screenshots and native/browser/Merchant logs.
 - attempts/TIME-ID/: each complete invocation, full stdout/stderr, events and report.
 - archives/: full private case ZIPs, complete manifests and byte/hash receipts.
+
+A deliberate following launcher/controller correction requires --adopt-controller. The new complete controller cohort is retained under its full source identity, while all older source stays intact. The first browser path in the original customer input remains unchanged; the following controller verifies and uses that complete original browser body. The attempt records which controller generation actually ran. This source adoption does not retarget the customer Runtime or alter its saved request bodies.
 
 Do not erase a completed step to force another mutation. The customer controller reopens its original stage/request selection; unavailable responses use that same original request. A stopped Applications process gets the original controller's next retained process-start review/UUID while customer effects remain unchanged.
 

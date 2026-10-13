@@ -33,15 +33,15 @@ if (!globalThis[key]) {
   }
   const spawn = cp.spawn, spawnSync = cp.spawnSync, fork = cp.fork;
   cp.spawn = function(command,args,value) {
-    if (!Array.isArray(args)) return spawn.call(this,command,[],options(args));
+    if (!Array.isArray(args)) return spawn.call(this,command,[],options(value ?? args));
     return spawn.call(this,command,args,options(value));
   };
   cp.spawnSync = function(command,args,value) {
-    if (!Array.isArray(args)) return spawnSync.call(this,command,[],options(args));
+    if (!Array.isArray(args)) return spawnSync.call(this,command,[],options(value ?? args));
     return spawnSync.call(this,command,args,options(value));
   };
   cp.fork = function(module,args,value) {
-    if (!Array.isArray(args)) return fork.call(this,module,[],options(args,true));
+    if (!Array.isArray(args)) return fork.call(this,module,[],options(value ?? args,true));
     return fork.call(this,module,args,options(value,true));
   };
   syncBuiltinESMExports();
