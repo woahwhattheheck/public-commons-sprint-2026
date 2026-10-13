@@ -5,6 +5,7 @@
   "version": "1.0.0",
   "order": 74,
   "assets": [
+    "economic_request_store.mjs",
     "implementation_cost_review.mjs"
   ],
   "backend": {

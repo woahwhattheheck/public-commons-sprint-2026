@@ -19,6 +19,7 @@ from pathlib import Path
 import tempfile
 
 FILES = (
+    "operator/web/economic_request_store.mjs",
     "model/implementation_cost_review.py",
     "operator/implementation_cost_review.py",
     "operator/extensions/implementation-cost-review.json",
