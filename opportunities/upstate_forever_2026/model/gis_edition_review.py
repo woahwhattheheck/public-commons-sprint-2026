@@ -437,6 +437,8 @@ def read(workspace, receipt_id, review_id, *, verify_files=True):
 
 
 def review(workspace, selection, *, progress=None):
+    if "review_version" in selection and selection["review_version"] != VERSION:
+        raise ValueError("The selected GIS review producer version changed; reopen the current catalogue before submitting a new review")
     original, received, binding = _pair(workspace, selection)
     key = gis.fingerprint(binding)
     folder = _folder(workspace, binding["receipt_id"], key)

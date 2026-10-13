@@ -139,6 +139,14 @@ original export/received pair through the existing review action creates the
 current immutable report edition. Previously completed review IDs and adopted
 source contexts retain their original content and continue to reopen.
 
+The current catalogue supplies its producer version to the existing queued
+review request. This distinguishes the new report from an earlier completed
+task for the same pair, while preserving exact same-version lost-response and
+retry recovery. An explicitly versioned CLI/request must match the installed
+producer; the ordinary CLI selection can continue to omit that optional field.
+
+Geographic continuation: **ES-20261013-GIS-REVIEW-GEOGRAPHY**.
+
 ### Portable report and recovery
 
 The complete review ZIP opens through **REVIEW.html** and includes both original project manifests, review.json, layers.csv and every layer's full change records or derived support/value rasters. The report preserves the exact exported/received project and edition IDs, original source/run/scenario provenance, inventory fingerprints and subtraction direction. Keep the complete ZIP contents together so its relative links resolve.

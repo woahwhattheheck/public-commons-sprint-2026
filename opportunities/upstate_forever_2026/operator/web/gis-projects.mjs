@@ -111,7 +111,10 @@ export function attachGISProjects({getState, api, refreshState, showTask, toast}
         throw new Error('Choose the retained original export of this received GIS selection.');
       const prior=reviewDraft(receipt_id);
       saveReview(receipt_id,{export_id,review_id:prior.export_id===export_id?prior.review_id:''});
-      await submit('gis.project.review',{receipt_id,export_id});
+      const review_version=catalogue.review_version;
+      if(typeof review_version!=='string'||!review_version.trim())
+        throw new Error('Receive the current GIS review provider and refresh this catalogue before building its report.');
+      await submit('gis.project.review',{receipt_id,export_id,review_version});
     }catch(failure){error(failure.message);}finally{button.disabled=false;}
   }
   function adoptionPayload(form){
