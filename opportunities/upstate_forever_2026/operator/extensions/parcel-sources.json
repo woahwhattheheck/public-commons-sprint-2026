@@ -2,7 +2,7 @@
   "schema": "upstate.operator-extension/v1",
   "id": "parcel-sources",
   "title": "Parcel sources",
-  "version": "1",
+  "version": "2",
   "order": 24,
   "assets": [
     "parcel_source_desk.mjs",

@@ -22,9 +22,29 @@ FILES = (
     "operator/parcel_source_receiving.py",
     "operator/PARCEL_SOURCE_DESK.md",
 )
-# The first source edition adds distinct paths. Later authored editions can name
-# their exact predecessor here after composing the current installed source.
-PREVIOUS = {name: None for name in FILES}
+# Upgrade the exact first authored edition, or accept an already identical file.
+# Other concurrently changed bodies require composition before replacement.
+PREVIOUS = {
+    "model/parcel_source_desk.py": "485ed7003a5cfcac637ccb396d912c703160fdea4168073b70e787e73be87c96",
+    "operator/parcel_source_desk.py": "1bb5e2ad973f2f4333ff7599e868c1f72370d665cedc7eaa6a108bc14fa9a768",
+    "model/parcel_source_cli.py": "d63d02410c9ca3980b6fcce8186344049bb1ed5db118771d3b81a55e992439fc",
+    "operator/extensions/parcel-sources.json": "fdf8e0c2a95da26c1a2be94d4f98fcd77e8d9b41e5a5a37bf1efa78584a4fd61",
+    "operator/web/parcel_source_desk.mjs": "53715f9fd20c201632062275a326fda557fb300236421da566fbb5e8aa7e2032",
+    "operator/web/parcel_source_desk.css": "185bdf76de310a7e5bfebc5e431e46b43a8dd279c402737f2de148a6d9a4017c",
+    "operator/install_parcel_source_desk.py": "2a3ed593e210b4e83ad7cf919b19396e4b8faea6d0651afb556be3b0e6487aa6",
+    "operator/parcel_source_receiving.py": "f345fb4dd52d956d20c9ef6bee779555eb67ace3ec913ef4f802cf09418d5c0d",
+    "operator/PARCEL_SOURCE_DESK.md": "f15511ebf3803057752cc3f90580764b96046ec787d166032e1a047b187c2c99"
+}
+# Later authored editions are accepted by exact retained hash as well.
+PREVIOUS_EDITIONS = {
+    "operator/install_parcel_source_desk.py": (
+        "07c7f4a3d47520edc29c978ba8e535a91aad2720d0509fcf49b4e703f62006c9",
+    ),
+    "operator/PARCEL_SOURCE_DESK.md": (
+        "cc8d081f0c7c2af3963fb0c76edd0383cf07f423c9c700e51ac8485811c197ef",
+        "698818021ba3dedef762957820afa3950f59789937767b5545ea6e10e8e6d83b",
+    ),
+}
 DEPENDENCIES = (
     "model/workspace.py", "model/common.py", "model/conservation.py",
     "model/priorities.py", "source_tools/reporting_parcels.py",
@@ -79,7 +99,7 @@ def run(application, source_root, *, dry_run=False):
             if before is not None and before != data:
                 if name.endswith(".json") and json.loads(before) == json.loads(data):
                     data = before
-                elif sha(before) != PREVIOUS[name]:
+                elif sha(before) not in (PREVIOUS[name], *PREVIOUS_EDITIONS.get(name, ())):
                     raise ValueError("Compose the current authored parcel desk before replacing " + name)
             original[name], pending[name] = before, data
         changed = [name for name in FILES if original[name] != pending[name]]

@@ -2,7 +2,7 @@
   "schema": "upstate.operator-extension/v1",
   "id": "receptors",
   "title": "Source-water areas",
-  "version": "5",
+  "version": "6",
   "order": 65,
   "assets": [
     "receptors.mjs",
@@ -16,7 +16,9 @@
       "receptor.experiment.build",
       "receptor.package.export",
       "receptor.source-areas.prepare",
-      "receptor.scenario.save"
+      "receptor.scenario.save",
+      "receptor.programme.create",
+      "receptor.programme.compare"
     ],
     "invoke": {
       "handler": "invoke",
@@ -125,6 +127,34 @@
           "operation",
           "payload"
         ]
+      },
+      {
+        "methods": [
+          "POST"
+        ],
+        "path": "/api/receptors/programme-plan",
+        "operation": "programme-plan",
+        "handler": "read",
+        "args": [
+          "operator",
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "GET"
+        ],
+        "path": "/api/receptors/programme",
+        "operation": "programme",
+        "handler": "read",
+        "args": [
+          "operator",
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
       }
     ],
     "items": [
@@ -171,6 +201,17 @@
           "operation",
           "payload"
         ]
+      },
+      {
+        "kind": "receptor-programmes",
+        "operation": "programme",
+        "handler": "read",
+        "args": [
+          "operator",
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
       }
     ],
     "state": {
@@ -209,7 +250,8 @@
       "refreshState",
       "openItem",
       "navigate",
-      "closeDetail"
+      "closeDetail",
+      "getProgramme"
     ],
     "styles": [
       "/web/receptors.css"
