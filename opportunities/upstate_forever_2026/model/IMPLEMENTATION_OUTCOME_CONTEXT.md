@@ -14,7 +14,7 @@ A source-only registration returns the source choice for later selection and a n
 
 ## What the source retains
 
-All 17 members of the original outcome report bank remain under `outcome/`, unchanged. They include the selected `plan.json`, original Implementation report, new outcome HTML, complete calculation JSON, all four outcome CSVs and the original report manifest. Their internal relative links stay usable.
+All members of the original outcome report bank remain under `outcome/`, unchanged. The original 17 core members remain supported; newly built figure editions also carry their complete original SVG files and `outcome-figures.json`. They include the selected `plan.json`, original Implementation report, new outcome HTML, complete calculation JSON, all four outcome CSVs and the original report manifest. Their internal relative links stay usable.
 
 The adapter also reads local source links from that selected saved plan. It uses the existing FIELD12 attachment inventory, retaining local files only through their declared original size and SHA-256. Available original lab CSVs, mapping and audit files are copied under `original/attachments/<sha256>/`. Declared references without complete file descriptors or with unavailable original files remain explicit in `original/attachment-inventory.json`. Changed bytes fail verification.
 
@@ -37,7 +37,7 @@ Censored bounds, open endpoints and unavailable intervals pass through the exist
 
 The complete original group support and units accompany each site comparison. Period support remains distinct from sampled site–group–date bins and unique site–date combinations. The source record CSV and complete calculation JSON retain the original decisions and identifiers.
 
-The existing scientific renderer consumes the recipe's typed tables and links. The client bridge converts those same blocks into the existing client report structure, preserves the observed binding in its quantity provenance, and links any retained scientific SVG with its original caption. Source figures continue to render in the scientific report. Current client outputs keep their distinct `client-report` stems, briefing and index; scientific outputs keep their original stems.
+The existing scientific renderer consumes the recipe's typed tables, links and original figure specifications. The client bridge converts those same blocks into the existing client report structure and preserves the observed binding in its quantity provenance. Both report products render the original scientific figures: HTML and Markdown use the retained SVG, and native PDFs use the same numeric specification through the existing vector renderer. Captions, exact bound endpoints and original source files remain attached. Current client outputs keep their distinct `client-report` stems, briefing and index; scientific outputs keep their original stems.
 
 ## Existing observed studies and concurrency
 
