@@ -135,9 +135,21 @@ These are the exact original blobs already retained in `../20261013-prepared/`. 
 | Lower Tugaloo upstream HUCs, excluding the focal watershed | 31 |
 | Lower Tugaloo upstream acres | 573,633.44 |
 | Lower Tugaloo upstream priority HUCs | 1 |
-| Lower Tugaloo upstream selected SC classification records | 1,002 |
+| Lower Tugaloo upstream selected SC classification source features | 1,002 |
 | Lower Tugaloo focal plus upstream HUCs / acres | 32 / 633,323.13 |
 
 The traversal counts each distinct upstream HUC once. When combining receiving watersheds, use the union of their HUC12 memberships to avoid counting shared upstream land repeatedly. SCDES classification counts retain their South Carolina source scope.
 
-The retained CSV is 111,728 bytes, SHA-256 `3f25af3b660a0949d01218c7cfb1fcb48be7e5092641f35da3be2921c47debfc`; the summary is 36,440 bytes, SHA-256 `00a94474c5b24370b05b3c1dd22afd5313b84563b5da02d030b3979976212b44`. The source operation is `ECO13-CLOUD-INTEGRATION-WATERSHED-CONNECTIVITY-20261013`, continuing the existing `ECO-WATERSHED13-20261013` application workflow.
+The complete **revision 2** files are available directly in [connectivity/](connectivity/) and in the same linked Slack document:
+
+| Current file | Bytes | SHA-256 |
+|---|---:|---|
+| [WATERSHED_CONNECTIVITY.md](connectivity/WATERSHED_CONNECTIVITY.md) | 13,150 | `6ecf7533db4fe60b3e92d684260fcfc8d79e42a9ed74290a2145dda38e55b04a` |
+| [watershed-connectivity-217.csv](connectivity/watershed-connectivity-217.csv) | 111,728 | `3f25af3b660a0949d01218c7cfb1fcb48be7e5092641f35da3be2921c47debfc` |
+| [watershed-connectivity-summary.json](connectivity/watershed-connectivity-summary.json) | 38,779 | `c1ff41a0fc0ccca91f4a8e909c27f2043b615229b57fb595b20e5acbd55c07d7` |
+
+Revision 2 adds the four utility-focus contributing memberships, their distinct union, publisher classification names and direct publisher links. The four-focus union is **36 HUC12s, 739,086.63 acres, three NRCS priority HUCs and 1,002 selected classification source features**. Upper Six And Twenty Creek is already upstream of Lower Six And Twenty Creek; Choestoea Creek is already upstream of Lower Tugaloo River. Adding the four separate contributing totals yields 782,778.80 acres and counts 43,692.17 acres twice. The saved union uses each original HUC once. Utility service-area polygons retain their own geographic meaning.
+
+The CSV remains byte-for-byte identical to revision 1. The [historical revision 1 summary](connectivity/editions/1/watershed-connectivity-summary.json) is retained separately: 36,440 bytes, SHA-256 `00a94474c5b24370b05b3c1dd22afd5313b84563b5da02d030b3979976212b44`. That older digest describes the explicitly versioned historical file; use the revision 2 table for the current summary.
+
+The source operation is `ECO13-CLOUD-INTEGRATION-WATERSHED-CONNECTIVITY-20261013`, continuing the existing `ECO-WATERSHED13-20261013` application workflow.
