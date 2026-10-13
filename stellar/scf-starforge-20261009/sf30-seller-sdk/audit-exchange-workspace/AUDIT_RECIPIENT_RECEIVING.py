@@ -127,8 +127,12 @@ def owned_child(command, cwd, log, lock_fd):
         child = None; known = {}
         previous_mask = signal.pthread_sigmask(signal.SIG_BLOCK, {signal.SIGTERM, signal.SIGINT})
         try:
-            child = subprocess.Popen(command, cwd=cwd, stdin=subprocess.DEVNULL, stdout=output,
-                                     stderr=subprocess.STDOUT, pass_fds=(lock_fd,), start_new_session=True)
+            # Popen inherits the temporary blocked mask; reset it in this exact
+            # child before exec, preserving its PID, process group and lease FD.
+            wrapper = "import os,signal,sys;signal.pthread_sigmask(signal.SIG_SETMASK,{int(x) for x in sys.argv[1].split(',') if x});os.execvpe(sys.argv[2],sys.argv[2:],os.environ)"
+            launched = [sys.executable, "-c", wrapper, ",".join(str(int(x)) for x in previous_mask), *command]
+            child = subprocess.Popen(launched, cwd=cwd, stdin=subprocess.DEVNULL, stdout=output,
+                                     stderr=subprocess.STDOUT, pass_fds=tuple(lock_fd) if isinstance(lock_fd, (tuple, list)) else (lock_fd,), start_new_session=True)
             row = process_identity(child.pid)
             require(row is not None, "receiving_process", "The original child identity did not return.")
             known[child.pid] = row

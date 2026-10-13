@@ -374,6 +374,55 @@ def plan(workspace, return_path, operator, journal=None):
               "draftSha256": digest(draft), "originalSource": value["source"], "reviews": commands}
     result["sha256"] = digest(canonical(result).encode()); return result
 
+def validate_preview(workspace, raw, draft, manuscript, preview, accepted):
+    """Validate complete original preview without publishing or applying a new request."""
+    require(isinstance(preview, dict), "recipient_preview", "Retain the complete preview object.")
+    plain = {key: item for key, item in preview.items() if key != "sha256"}
+    require(preview.get("schema") == PREVIEW and preview.get("sha256") == digest(canonical(plain).encode())
+            and preview.get("returnSha256") == digest(raw), "recipient_preview",
+            "Select the complete unchanged preview for this exact returned archive.")
+    selected = scope(raw, manuscript)
+    require(workspace.state()["workspaceId"] == selected["workspaceId"], "recipient_workspace",
+            "This return belongs to another original workspace.")
+    # Derive and verify the complete authored bodies independently of preview JSON.
+    rows = manuscript["editions"][-1]["reviews"]
+    require(len(preview.get("reviews", [])) == len(rows)
+            and preview["workspaceId"] == selected["workspaceId"]
+            and preview["manuscriptId"] == selected["manuscriptId"]
+            and preview["editionSha256"] == selected["editionSha256"]
+            and preview["draftSha256"] == digest(draft) and preview["originalSource"] == manuscript["source"],
+            "recipient_preview", "The preview does not contain this whole manuscript edition.")
+    pending_expected = preview["expectedVersion"]
+    require(type(pending_expected) is int and pending_expected >= 0, "recipient_preview", "Retain the native expected version.")
+    for row, proposed in zip(rows, preview["reviews"]):
+        exact_keys(proposed, {"localId", "accepted", "request", "result"})
+        request = proposed["request"]
+        require(proposed["localId"] == row["localId"] and type(proposed["accepted"]) is bool
+                and isinstance(request, dict) and request.get("inputs") == native_inputs(row),
+                "recipient_preview", "A preview changed the complete authored review body.")
+        exact_keys(request, {"requestId", "expectedVersion", "action", "inputs"})
+        require(request["action"] == "review.save" and type(request["expectedVersion"]) is int
+                and request["requestId"] == request_id(manuscript, row["localId"], request["expectedVersion"]),
+                "recipient_preview", "The preview changed an original native request identity.")
+        if proposed["accepted"]:
+            prior = accepted.get(row["localId"])
+            require(prior == {"request": request, "result": proposed["result"]},
+                    "recipient_outcome", "The preview's accepted original operation is absent or different.")
+        else:
+            require(request["expectedVersion"] == pending_expected and proposed["result"] is None,
+                    "recipient_preview", "The pending native versions are not contiguous.")
+            pending_expected += 1
+            if row["localId"] in accepted:
+                require(accepted[row["localId"]]["request"] == request,
+                        "recipient_outcome", "This review has a different accepted original request.")
+    # Before any first write validate untouched original review heads against the preview.
+    state = workspace.state(); heads = {r["id"]: r for r in state["reviews"]}
+    for row in rows:
+        if row["localId"] not in accepted and row["id"]:
+            require(row["id"] in heads and digest(canonical(heads[row["id"]]).encode()) == row["baseReviewSha256"],
+                    "recipient_review_changed", "The existing native review changed after preview.", status=409)
+    return selected
+
 def apply(workspace, return_path, preview_path, journal):
     raw, original, draft, manuscript, kinds = read_return(return_path)
     preview = checked_json(read_file(preview_path, MAX_DRAFT))
@@ -388,43 +437,7 @@ def apply(workspace, return_path, preview_path, journal):
         publish(root / "SOURCE.json", encoded(selected))
         publish(root / "recipient-return.zip", raw)
         accepted = discover(workspace, root, selected, manuscript)
-        # Derive and verify the complete authored bodies independently of preview JSON.
-        rows = manuscript["editions"][-1]["reviews"]
-        require(len(preview.get("reviews", [])) == len(rows)
-                and preview["workspaceId"] == selected["workspaceId"]
-                and preview["manuscriptId"] == selected["manuscriptId"]
-                and preview["editionSha256"] == selected["editionSha256"]
-                and preview["draftSha256"] == digest(draft) and preview["originalSource"] == manuscript["source"],
-                "recipient_preview", "The preview does not contain this whole manuscript edition.")
-        pending_expected = preview["expectedVersion"]
-        require(type(pending_expected) is int and pending_expected >= 0, "recipient_preview", "Retain the native expected version.")
-        for row, proposed in zip(rows, preview["reviews"]):
-            exact_keys(proposed, {"localId", "accepted", "request", "result"})
-            request = proposed["request"]
-            require(proposed["localId"] == row["localId"] and type(proposed["accepted"]) is bool
-                    and isinstance(request, dict) and request.get("inputs") == native_inputs(row),
-                    "recipient_preview", "A preview changed the complete authored review body.")
-            exact_keys(request, {"requestId", "expectedVersion", "action", "inputs"})
-            require(request["action"] == "review.save" and type(request["expectedVersion"]) is int
-                    and request["requestId"] == request_id(manuscript, row["localId"], request["expectedVersion"]),
-                    "recipient_preview", "The preview changed an original native request identity.")
-            if proposed["accepted"]:
-                prior = accepted.get(row["localId"])
-                require(prior == {"request": request, "result": proposed["result"]},
-                        "recipient_outcome", "The preview's accepted original operation is absent or different.")
-            else:
-                require(request["expectedVersion"] == pending_expected and proposed["result"] is None,
-                        "recipient_preview", "The pending native versions are not contiguous.")
-                pending_expected += 1
-                if row["localId"] in accepted:
-                    require(accepted[row["localId"]]["request"] == request,
-                            "recipient_outcome", "This review has a different accepted original request.")
-        # Before any first write validate untouched original review heads against the preview.
-        state = workspace.state(); heads = {r["id"]: r for r in state["reviews"]}
-        for row in rows:
-            if row["localId"] not in accepted and row["id"]:
-                require(row["id"] in heads and digest(canonical(heads[row["id"]]).encode()) == row["baseReviewSha256"],
-                        "recipient_review_changed", "The existing native review changed after preview.", status=409)
+        validate_preview(workspace, raw, draft, manuscript, preview, accepted)
         publish(root / "previews" / (preview["sha256"] + ".json"), encoded(preview))
         for proposed in preview["reviews"]:
             request = proposed["request"]
