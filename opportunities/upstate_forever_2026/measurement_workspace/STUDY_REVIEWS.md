@@ -225,3 +225,109 @@ A source or task failure retains the actual diagnostic and completed checkpoints
 ### Installation closure
 
 The complete Published Studies family includes `source_tools/continue_study_report.py` and the additive `published-study-report-receiving` component fragment. Scientific Reports already depends on Study transfer and Published Studies; the fragment retains the receiving helper/entrypoints in that existing direction. It adds no reverse Published Studies dependency on the report renderer. A standalone Published Studies installation keeps its original observation/review commands; the optional report continuation additionally needs the maintained Scientific Reports operator and original Study transfer dispatcher.
+
+
+## Recipient opening page — presentation edition 2
+
+New review exports identify `presentation_edition: "published-study-review/2"`
+in the existing `review-export.json`. The original bundle schema, review content
+identity, exact source binding, native selected report, all source members and
+import contract are unchanged. Earlier archives remain readable.
+
+Extract the complete `saved-review.zip` and open `review.html`. The opening page
+has an actual device-width viewport and readable original station, parameter,
+stratum, year, named-month and saved-table labels. Its first controls open the
+selected scientific study report, complete original study ZIP and exact review
+JSON. Long source identities wrap; full saved notes are available in an explicit
+disclosure and in the unchanged review JSON. This keeps a long working-operation
+note from filling the opening page, without editing or omitting it.
+
+The page's small-screen layout uses one readable label/value column. Keyboard
+focus remains visible. Printing keeps native labels and links, with full notes
+printed when their disclosure is open. A changed interpretation remains explicitly
+identified next to its unchanged source edition and filters. Actual measurements,
+units, qualifiers, censor treatment and scientific calendars remain in the
+maintained original report.
+
+### Same native f17 export continuation
+
+This repairs the actual F942 received-page finding at sales
+`1791888827.064409`. Preserve its completed report
+`observed-report-8255ad49c0c3b1de2b97`, original f17 project, six rendered PDF pages,
+two selected-record pages and complete 53-member scientific report. Reuse its
+actual retained review ID; do not recapture observations or rerun analysis.
+
+Export that review with the maintained command into a **new** owned output
+directory after receiving the current source. Keep the prior archive and exact
+review JSON. The original native CLI shown above accepts `export --review-id`
+and `--out`; use the actual existing Workspace, review ID and native interpreter.
+Reopen the new complete archive through the normal review importer. Receiving
+preserves an existing current study edition.
+
+The producing worker must actually open, LOOK at and use the exact outgoing
+`review.html` at the presentation/desktop width and 390px, operate its notes and
+source-identity disclosures, and follow all three original links. Inspect
+applicable populated/empty/error states, downloads and reopening. Open and view
+the actual selected report/PDF pages, original CSV/JSON, complete source archive
+and received editable study in their normal recipient-facing applications.
+Look at the actual screens or viewed screenshots; source text, schemas, HTTP200,
+DOM counts and passing tests are not visual acceptance. Repair concrete defects
+on this same source/course and return its exact outgoing source/artifact identity,
+actual viewports and controls/files used. Keep plain readable industrial styling,
+focused internal validation and the main engineering work moving.
+
+Every delegated worker carries the complete application `AGENTS.md` and
+`CURRENT_OWNER_DIRECTION.md`, version `2026-10-13.3`, with this guide. The
+standalone installer and original portable application capture include both.
+This is a normal current-source receiving continuation; create no new watcher,
+approval gate or duplicate model/observation job. Preserve active native model
+execution, existing owners and **October 13, 2026 14:00 UTC** cutoff.
+
+### Complete current owner brief
+
+
+# Current owner direction: Ecosystem Sciences demonstration
+
+Version: `2026-10-13.3`. Owner: Bryce / TokenJunkieLabs. Direction for the Upper Savannah application, demonstration, presentation and work orders. Continue the broad build without arbitrary feature/scenario caps. Preserve today's cutoff: **October 13, 2026, 10:00 a.m. Eastern / 14:00 UTC**. Do not pause work or extend the sprint.
+
+## Direct owner instructions
+
+> do the simulated model
+
+> just make sure that what we put infront of him is something he would need and want and he will be blown away how relevant it is to him and how he wants it,a nd also the speed we produced it
+
+> just checking dont pause anythi g
+
+> and make sure wherever the fleet is coordinating in slack or github or wherever on this demo / presentation / ecosystem gets that update toand passes it along to other agents because the feed may be moving fast
+
+## Build for an experienced scientific practice
+
+Ecosystem Sciences lists GIS, hydrology/monitoring, ecological modeling, watershed assessment, statistics, visualization, optimization and publishing. Tim Maguire's practice includes GIS, modeling and water resources. Its South Platte work assembled data, mapped natural capital and produced watershed investment decision support. Do not assume it lacks these capabilities. Its unmet tooling, InVEST or production-capacity gap is unknown until the call. Sources: [Services](https://www.ecosystemsciences.com/read-me), [Firm](https://www.ecosystemsciences.com/firm), [South Platte](https://www.ecosystemsciences.com/).
+
+Show concrete delivery and engineering offload on the actual Upper Savannah RFP workflow: source assembly, reproducible native calculations, editable scenarios, useful decisions and a complete working handoff. The prime retains scientific direction, method choices, interpretation/review and the client relationship. Relevance comes from useful work they can inspect, adapt and receive; do not promise Tim's reaction or claim an unconfirmed need.
+
+## Execute the prepared simulated case now
+
+Native execution is the immediate hard priority. Issue the prepared simulated case on the verified scientific runtime, retain its actual run identity and progress, and obtain the real native outputs. Continue the source/runtime/application integration needed to make that happen. Further plans, stock demonstrations, policy reviews and cosmetic inspection do not replace execution. Do not introduce a bid decision or a prime's yes as a gate.
+
+Demonstrate the scientific operation in the actual application:
+
+1. Use the RFP's 30 m GIS selection. Keep the upstream contributing model domain distinct from the South Carolina reporting mask and the four existing utility focus anchors; retain their actual source geometries and identities.
+2. Run the baseline, a realistic riparian alternative and its matched control with explicit, editable source editions, assumptions, parameters and scenario changes.
+3. Show active run/progress/logs and completed native annual NDR/SDR results: nitrogen and phosphorus in **kg/year**, sediment in **tonnes/year**, representing delivery to streams. Do not present these modeled stream loads as intake concentrations.
+4. Compare the actual maps, tables and report, preserving matched scientific support and original units. Keep source/assumption edits and their consequences inspectable.
+5. Export the editable GIS/project and complete scientific working package. Cold-reopen the delivered application/project and show the retained sources, selections, results and useful controls.
+
+Identify the simulated case as modeled. Never invent measurements, completion or customer acceptance.
+
+## Present the real work and real speed
+
+Actually open, see and use the outgoing app and every attachment as its recipient would. Repair defects and ship a plain, readable product. Apply the standing inspection rule without review/test theatre or parallel bureaucracy.
+
+If producing video, record the actual working application and use available natural generative voice/TTS. Watch and listen to the final export. Generated frames must never pretend to be a working app. Explain speed using actual elapsed start, commit, run and package history; do not invent delivery times or guaranteed reactions.
+
+## Carry this direction with the work
+
+Pass this complete brief into every current child, provider and cloud work order and handoff. Include its durable path and version `2026-10-13.3` with the next result. Relay it at the actual coordination surface and onward to participating workers; fast feeds can bury an update. Acknowledgment alone is not delivery.
+
+Preserve active compute and existing implementation ownership. Do not force worker restarts, drop an active run or create a new controller. Keep lab attribution, source/copyright, incident and contact controls, personal-meeting approval, no private GitHub/Actions, no llama.cpp and focused internal validation. No new approval gate or broad test sweep is authorized.

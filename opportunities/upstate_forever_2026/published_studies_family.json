@@ -1,9 +1,9 @@
 {
   "schema": "upstate.published-study-family/v1",
-  "version": "2.4.11",
+  "version": "2.4.12",
   "repository": "woahwhattheheck/public-commons-sprint-2026",
   "application_path": "opportunities/upstate_forever_2026",
-  "source_reference_base": "560c33ccba1158e75d7fcfc99561a5b8490386c9",
+  "source_reference_base": "1056ae0a433decfd7927fe3c9e32f5dbe89dbb43",
   "instruction": "Resolve the complete inventory at this delivery commit and include this inventory. The installer retains the existing host. The lake, four-stream nutrient, and utility microbial builtins retain their separate original source cohorts. Stream analytical reports preserve their complete original application layout; selected exports preserve every original result column and analytical series dimension. The microbial temporal and calendar companion preserves its complete original application layout, self-contained HTML explorer and a separately bound native scientific-report recipe. Named saved reviews retain exact original study editions and complete cohort selections; complete review exports include the original study and selected report tree. Review import preserves an existing current study edition. The owned published-study-reviews component fragment retains complete review, hydrologic-source and microbial-gallery dependencies in cumulative application assembly. RL-18151 preserves its complete original 40-file scientific family and exact 498-result cohort. The shared native receiving course preserves the existing SV-833 saved-review continuation and provides the complete RL-18151 import/report/study/project lifecycle. Geographic station selections open the maintained original-observation review workflow with explicit matched/missing coverage and original donor provenance. Explicit saved-review relocation verifies the original operation and archives, preserves original request/source identities and records separate receiving-host locations. Saved observation reviews prepare immutable selected scientific report sources for the existing ordered composer. Source editions preserve the complete original review archive and selected native tables; same-project selected Study transfer preserves the editable original review and study. The installer composes only the saved-review dispatcher registration into the installed shared source. The optional same-operation scientific report continuation preserves original and explicit hydrology review editions separately, then exports both saved reports with their editable study history and reads them with the independently restored application. Received Studies exposes exact saved Published-review source cards, native editor navigation, original selected-record/interpretation/review ZIP downloads and explicit report replace/append. The complete original source binding and filters are checked before direct editor navigation; current local draft/lifecycle takes precedence over delayed replies. The maintained installer composes the original received-study registration and declared assets without removing peer handlers. The outgoing exact product and every delivered attachment must be opened, visually inspected and used under the owner rule in operator/RECEIVED_PUBLISHED_REVIEWS.md; preserve the October13 14:00UTC cutoff. Captured external saved reviews can be explicitly admitted through the original importer and editor; original source bindings and admission provenance remain portable with later selected reviews. Carry CURRENT_OWNER_DIRECTION.md version 2026-10-13.3 and application AGENTS into the existing native course.",
   "external_source_edition": {
     "files": 62,
@@ -53,8 +53,8 @@
     },
     {
       "path": "install_published_studies.py",
-      "bytes": 21574,
-      "sha256": "41d075f7c74c215fa68d156becf011fb86aa6f41df6a7441de0374b41b488c57"
+      "bytes": 23242,
+      "sha256": "188e28262e912aa926afcaaa3ed09b701616f66dddac5b9da8c9a7e9f70be91d"
     },
     {
       "path": "integration/component_fragments/geographic-study-selection.json",
@@ -138,13 +138,13 @@
     },
     {
       "path": "measurement_workspace/STUDY_REVIEWS.md",
-      "bytes": 23073,
-      "sha256": "5fe30b9de12b2d7c7002c9c3efb38d231b4212ec4cc7d0d121004be976f1e3e5"
+      "bytes": 31586,
+      "sha256": "e0c7edf073554e26b22a3b057e639b103e7430f46b25275b7219020a6d646599"
     },
     {
       "path": "measurement_workspace/study_reviews.py",
-      "bytes": 19638,
-      "sha256": "8817e1384471a501c22c1c46fb7507ac0c110aa3a686e4a84c686ba04544c3dd"
+      "bytes": 26141,
+      "sha256": "f217c330c199c4b0fe2c2d041dc7db7d0d638b05f5659ac2dbac7088148c055b"
     },
     {
       "path": "measurement_workspace/SV833_OBSERVATIONS.md",
@@ -2294,7 +2294,14 @@
       "source_binding": "study/version/native collection/original manifest and file inventory",
       "portable_root": "published_studies/reviews",
       "browser": "exact multivalue filters and per-workspace guarded drafts",
-      "team_read_route": "/api/published-studies/review"
+      "team_read_route": "/api/published-studies/review",
+      "presentation": {
+        "edition": "published-study-review/2",
+        "issue": 4094,
+        "source": "measurement_workspace/study_reviews.py",
+        "native_finding": "F942 sales1791888827.064409",
+        "scope": "Responsive readable opening page and original source links; saved records/notes/bindings and original import remain exact"
+      }
     },
     "rl18151": {
       "commit": "f1d2d75822a82d578807fba6fe78d2d2e667bae9",
@@ -2367,6 +2374,12 @@
         "schema": "upstate.published-review-admission/v1",
         "scope": "Explicit captured original ZIP into maintained review importer/editor; current study head preserved; immutable admission/source retained in revised-only Study exports",
         "owner_direction": "CURRENT_OWNER_DIRECTION.md version 2026-10-13.3"
+      },
+      "public_registration": {
+        "base": "4cd09695d721ed6e185b88ad8702338d6cae8978",
+        "issue": 4094,
+        "scope": "Exact seven original guarded imports/calls plus declared assets/styles composed into current original readers/controller; current Economic and other source controls retained",
+        "installation": "The original guarded installer composes these registrations into the recipient's current shared files; the family does not overwrite shared peer bodies."
       }
     },
     "selected_microbial_activities": {
