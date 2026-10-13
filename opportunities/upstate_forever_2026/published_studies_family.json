@@ -103,8 +103,8 @@
     },
     {
       "path": "measurement_workspace/observation_support.py",
-      "bytes": 18701,
-      "sha256": "d53bdb9789d93b6d9c7ce680872cdf0014ec1d519e532c3878c25437d4fad456"
+      "bytes": 19001,
+      "sha256": "0111273db28ce55068c03a2bd2a393881abc5850eabae65b5bfdcd3b91a17343"
     },
     {
       "path": "measurement_workspace/published_studies.py",
