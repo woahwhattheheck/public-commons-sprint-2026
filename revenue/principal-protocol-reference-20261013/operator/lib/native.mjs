@@ -42,6 +42,10 @@ export async function runNative(root,requestId,plan,mode,config,{signal}={}){
  need(Array.isArray(result.files)&&new Set(result.files.map(f=>f.path)).size===result.files.length,'NATIVE_FILE_SET');for(const f of result.files)await verifyFile(attempt,f);
  need(result.invocation?.argv&&identity(result.invocation.argv)===identity(spec.argv),'NATIVE_ARGV_CHANGED');
  const selected=[...result.files,{...(await fileDescriptor(terminal)),path:'result.json'}];
+ if(!selected.some(f=>f.path==='input.json'))selected.push({...(await fileDescriptor(specPath)),path:'input.json'});
+ for(const [name,file,descriptor]of [['owner-source.py',owner,spec.owner],['attempt-source.py',script,spec.script]]){
+  const data=await fs.readFile(file);need(data.length===descriptor.bytes&&hash(data)===descriptor.sha256,'NATIVE_SOURCE_CHANGED');await writeExact(path.join(attempt,name),data);selected.push({path:name,bytes:data.length,sha256:hash(data)});
+ }
  try{selected.push({...(await fileDescriptor(path.join(attempt,'controller-stderr.bin'))),path:'controller-stderr.bin'});}catch(e){if(e.code!=='ENOENT')throw e;}
  return{result:clone(result),attempt,files:await Promise.all(selected.map(async f=>{const data=await fs.readFile(path.join(attempt,f.path));need(data.length===f.bytes&&hash(data)===f.sha256,'NATIVE_FILE_CHANGED');return{...f,data};}))};
 }
