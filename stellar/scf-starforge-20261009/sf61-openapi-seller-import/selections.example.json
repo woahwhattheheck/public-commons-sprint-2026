@@ -1,8 +1,0 @@
-[
-  { "method": "GET", "path": "/forecast/{city}", "serviceName": "Weather example",
-    "accepts": [{ "scheme": "exact", "network": "stellar:testnet", "amount": "10000",
-      "asset": "DEMO_NONPAYABLE_ASSET", "payTo": "DEMO_NONPAYABLE_RECIPIENT", "maxTimeoutSeconds": 60 }] },
-  { "method": "POST", "path": "/forecast", "serviceName": "Weather example",
-    "accepts": [{ "scheme": "exact", "network": "stellar:testnet", "amount": "20000",
-      "asset": "DEMO_NONPAYABLE_ASSET", "payTo": "DEMO_NONPAYABLE_RECIPIENT", "maxTimeoutSeconds": 60 }] }
-]

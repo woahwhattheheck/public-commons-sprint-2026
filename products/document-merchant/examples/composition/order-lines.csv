@@ -1,4 +1,0 @@
-order_id,merchant_name,issued_on,customer_name,customer_address,subtotal_display,shipping_display,tax_display,total_display,gift_message,note,sku,description,quantity,unit_price_display,line_total_display
-example-1001,Example Workshop,2026-10-12,Sample customer A,Example delivery address,$124.00,$8.00,$0.00,$132.00,Thank you for supporting our workshop.,Prepared from the original order values.,KIT-01,Workshop kit,2,$50.00,$100.00
-example-1001,Example Workshop,2026-10-12,Sample customer A,Example delivery address,$124.00,$8.00,$0.00,$132.00,Thank you for supporting our workshop.,Prepared from the original order values.,REF-01,Refill pack,1,$24.00,$24.00
-example-1002,Example Workshop,2026-10-12,Sample customer B,Second example delivery address,$50.00,$8.00,$0.00,$58.00,,,KIT-01,Workshop kit,1,$50.00,$50.00

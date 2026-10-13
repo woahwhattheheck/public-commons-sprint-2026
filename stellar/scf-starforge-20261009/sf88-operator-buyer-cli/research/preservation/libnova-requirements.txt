@@ -1,3 +1,0 @@
-# Python 3.11+; only the LIBNOVA S3 receiving path imports this dependency.
-# boto3 supplies its compatible botocore signer and S3 service model.
-boto3>=1.36,<2

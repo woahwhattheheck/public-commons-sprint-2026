@@ -1,3 +1,0 @@
-# ZIP/TAR receiving is standard-library only; the released 7z AIP path loads this dependency lazily.
-# Reader API and held BinaryIO/WriterFactory behavior reviewed against the v1.1.3 source.
-py7zr==1.1.3

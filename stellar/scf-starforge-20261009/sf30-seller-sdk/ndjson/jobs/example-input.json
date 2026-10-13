@@ -1,7 +1,0 @@
-{
-  "reportName": "Original publisher dataset",
-  "sourceLabel": "Selected publisher edition",
-  "sourceFormat": "json-array",
-  "sourceArrayPointer": "/grants",
-  "queryJson": "{\"limit\":\"50\"}"
-}

@@ -1,0 +1,146 @@
+{
+  "schema": "commons.source-transfer/v1",
+  "operation": "ECO-SCI-ROOT-WATERSHED-EVIDENCE-EXPORT-20261013",
+  "source_ref": "6f098daf08003a13671c04ff6d1bdc45535c158d",
+  "source_url": "https://github.com/woahwhattheheck/public-commons-sprint-2026/commit/6f098daf08003a13671c04ff6d1bdc45535c158d",
+  "file": "watershed-evidence-sources.json.gz",
+  "compression": "gzip",
+  "bytes": 998732,
+  "sha256": "b44aeafc1acb69b601c93549b19a557fbb722ada7479cd05e7c03a395850bb23",
+  "decoded_bytes": 6223142,
+  "decoded_sha256": "362650dbfc930e30960c370e84e31522ec800507e6ef0a65013f09ab988afe7d",
+  "member_count": 26,
+  "member_bytes": 5942344,
+  "files": [
+    {
+      "path": "operator/web/watershed_context.mjs",
+      "bytes": 55856,
+      "sha256": "b052da9c4b8dfd177ab98b9f0e3d4f5b36ae8159bf90b7accb07814993c80bfa"
+    },
+    {
+      "path": "integration/run_watershed_context_operator.py",
+      "bytes": 31058,
+      "sha256": "ec397f29b9c8aa354964f0db652881522c09b2d9ac066c85e5c8e2c4d43fb6b3"
+    },
+    {
+      "path": "operator/WATERSHED_CONTEXT.md",
+      "bytes": 46290,
+      "sha256": "739f5ffe4e07b8c75b3d6ad952e824e92364230047bcc39891f3407dd1fb86cd"
+    },
+    {
+      "path": "integration/WATERSHED_CONTEXT_RECEIVING.md",
+      "bytes": 19674,
+      "sha256": "6832695e297af142a5d257df83e7c7cd55431cee9622dd5cc5a2f01de1c15d90"
+    },
+    {
+      "path": "model/watershed_observation_context.py",
+      "bytes": 16057,
+      "sha256": "e6ed89ff64e637f886064d7b3f2c5f6e02eaee5f322043aa58b3ab7eddb0d997"
+    },
+    {
+      "path": "operator/watershed_context.py",
+      "bytes": 40514,
+      "sha256": "690b6a0c4dd7d526cedf738bbda3f7cb5fcbfe3458c9cf9e6e47ed5e9e0fa60b"
+    },
+    {
+      "path": "model/watershed_brief.py",
+      "bytes": 34449,
+      "sha256": "8db28c194ae47cb3642a742cafc923544e8d35ec1c7751fc5cdb5e3e6829de78"
+    },
+    {
+      "path": "operator/install_watershed_context.py",
+      "bytes": 11967,
+      "sha256": "15dfe961a2eab686e9b2f1a5bd890301ad78c9344964aadd29aef762133f7489"
+    },
+    {
+      "path": "integration/component_fragments/watershed-observation-exports.json",
+      "bytes": 594,
+      "sha256": "c618509bf553126d611e34e0f94aaf4d6a8eee187f90012e2267e2d8d02058d9"
+    },
+    {
+      "path": "operator/web/watershed_context.css",
+      "bytes": 8546,
+      "sha256": "64ae54c38d3d109196b442e8bdf23f2329218d8bbd85405c9422ffbfa4040392"
+    },
+    {
+      "path": "operator/extensions/watershed-context.json",
+      "bytes": 3225,
+      "sha256": "7ce8553fc806375e55428668f8b420163bd1d35eb45e236628a96b5233bc9dd6"
+    },
+    {
+      "path": "observations/landcover_observation_profiles_20261013/watershed-profiles.csv",
+      "bytes": 115090,
+      "sha256": "9e999756fb01b84a4d88784dae5030e0658d5eef922e771825c5a40a6b925d62"
+    },
+    {
+      "path": "observations/wbd_station_join_20261013/query-plan.json",
+      "bytes": 813824,
+      "sha256": "498652d776ff4eef2fac4c94f0bf62742c8441b12beb9bebaaf08375f943aad7"
+    },
+    {
+      "path": "observations/wbd_station_join_20261013/derived/point_watersheds.csv",
+      "bytes": 254495,
+      "sha256": "4dae939207751422d63620d5fff17d0a6eb04e70743f8636e704db5363b5e8a4"
+    },
+    {
+      "path": "observations/landcover_2023_2025/annual-2023.json",
+      "bytes": 477495,
+      "sha256": "1e4bea16ffb1ccaf8361972a042bb2b71a2320b36aea069d9a2282954e005836"
+    },
+    {
+      "path": "observations/landcover_2023_2025/annual-2025.json",
+      "bytes": 477860,
+      "sha256": "21a9d49dc2811778ef86d5bd05114530e52bdd2cabb60e8eb4857dd8fd40adc8"
+    },
+    {
+      "path": "observations/landcover_2023_2025/huc12-change-summary.csv",
+      "bytes": 23193,
+      "sha256": "6d703c75b24eb9dc38a1d868bcd0b43e976e6e94bbb7a8eeef25bf69328c4bec"
+    },
+    {
+      "path": "observations/landcover_2023_2025/huc12-transitions.csv",
+      "bytes": 2729737,
+      "sha256": "275fd764bc637f3f0b9dfc633438f078703eecf05f8b983476ccfa1152fdf815"
+    },
+    {
+      "path": "observations/landcover_observation_profiles_20261013/profiles_core.mjs",
+      "bytes": 14173,
+      "sha256": "f4579c9394c64d78a38d676f0a370eb6ac0fc08a3c6644a6ce36ca51f1e5fbbc"
+    },
+    {
+      "path": "observations/landcover_observation_profiles_20261013/input-manifest.json",
+      "bytes": 2563,
+      "sha256": "191f454d939d6d1cf156a27bec1d2bd0da2e9b848fd9529e5e0bdda0f3098a78"
+    },
+    {
+      "path": "observations/landcover_observation_profiles_20261013/rebuild.mjs",
+      "bytes": 2970,
+      "sha256": "b7ad41368e2a0d5588fd87320950bdf658aed7a7805660153b99165fbd4dfb24"
+    },
+    {
+      "path": "observations/landcover_observation_profiles_20261013/README.md",
+      "bytes": 12203,
+      "sha256": "90bf1464f91e56090483127739cba75adfc03941bf006151f5b224fd51a9d087"
+    },
+    {
+      "path": "observations/landcover_observation_profiles_20261013/landcover-groups.csv",
+      "bytes": 286138,
+      "sha256": "ddfdae193d347b4389aa71d4dfe586189e62346a13b131b42f455f9907315b1d"
+    },
+    {
+      "path": "observations/landcover_observation_profiles_20261013/original-location-context.csv",
+      "bytes": 219832,
+      "sha256": "63fd8fb2de83c0f7f04b8ecbb1500037173851aebe0ca70432f1fc9cc776f92e"
+    },
+    {
+      "path": "observations/landcover_observation_profiles_20261013/summary.json",
+      "bytes": 230282,
+      "sha256": "8cdd9f1c3b9bd9eb9b4a331f1ade646f75bf3b81ca152840bb1cd833d9092471"
+    },
+    {
+      "path": "landcover_observation_profiles.sources.json",
+      "bytes": 14259,
+      "sha256": "e01c8cfb228f2c98cbb1198b58a76d2b02744f4eef4cc76749859be7f1be643e"
+    }
+  ]
+}

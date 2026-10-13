@@ -1,7 +1,0 @@
-__pycache__/
-*.pyc
-.venv/
-bi-workspace/
-*.bi-backup
-examples/sandag/data/*.csv
-examples/sandag/expected-native-rows.csv

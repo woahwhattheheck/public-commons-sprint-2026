@@ -1,8 +1,0 @@
-{
-  "id": "green-company-pilot",
-  "expected_revision": 0,
-  "type": "prepare_pilot",
-  "company_key": "domain:greenlane.test",
-  "owner": "Demonstration operator",
-  "note": "Observe a frozen two-member expansion cohort."
-}

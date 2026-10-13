@@ -1,7 +1,0 @@
-year,days,p10_cfs,p90_cfs,p95_cfs,threshold_method
-2020,366,50.9,165,250,Empirical nearest-rank quantile; ties included
-2021,365,35.1,105,129,Empirical nearest-rank quantile; ties included
-2022,365,24.5,107,142,Empirical nearest-rank quantile; ties included
-2023,365,25.3,99.1,136,Empirical nearest-rank quantile; ties included
-2024,366,16.3,109,176,Empirical nearest-rank quantile; ties included
-2025,365,21.4,75.5,102,Empirical nearest-rank quantile; ties included
