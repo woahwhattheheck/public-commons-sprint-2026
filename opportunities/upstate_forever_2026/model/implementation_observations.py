@@ -134,43 +134,131 @@ def _attachment_inventory(workspace, plan):
     return records, available
 
 
-def _selection(workspace, selected, plan_digest):
-    selected = _clone(selected or {})
+def _report_choices(selection, choices):
+    """Replace only observed-source fields, preserving the original list form."""
+    selected = _clone(selection)
+    roles = dict(selected.get("source_roles", {}))
+    if choices:
+        roles[observed_context.ROLE] = _clone(choices[0])
+    else:
+        roles.pop(observed_context.ROLE, None)
+    selected["source_roles"] = roles
+    if "observed_context_sources" in selected or len(choices) > 1:
+        selected["observed_context_sources"] = _clone(choices)
+    selected.pop("observed_context_binding", None)
+    observed_context.source_choices(selected)
+    return selected
+
+
+def _bound_report_selection(workspace, value):
+    selected = _clone(value if value is not None else {})
     if not isinstance(selected, dict) or not isinstance(selected.get("source_roles", {}), dict):
         raise ImplementationError("Select the original report selection object with source_roles")
     selected.setdefault("source_roles", {})
-    seen = set()
-    while True:
-        source = observed_context._source(workspace, selected)
-        actual = source["binding"] if source else None
-        declared = selected.get("observed_context_binding")
-        if declared is not None and declared != actual:
-            raise ImplementationError("The selected observed report differs from its original binding")
-        if actual is None:
-            selected.pop("observed_context_binding", None)
-            return selected, None
+    choices = observed_context.source_choices(selected)
+    actual = observed_context.bind(workspace, selected)
+    declared = selected.get("observed_context_binding")
+    if declared is not None and declared != actual:
+        raise ImplementationError("The selected observed reports differ from their original binding")
+    selected = _report_choices(selected, choices)
+    if actual is not None:
         selected["observed_context_binding"] = actual
-        identity = source["recipe"].get("implementation_observation_identity", {})
-        if (identity.get("schema") != REPORT_IDENTITY
-                or identity.get("project_id") != workspace.project["id"]
-                or identity.get("plan", {}).get("sha256") != plan_digest):
-            return selected, actual
-        checksum = actual["body_sha256"]
+    return selected, choices, actual
+
+
+def _composition_selection(workspace, value, identity_name, matches):
+    """Reopen this producer in its selected slot without discarding other reports."""
+    selected, choices, actual = _bound_report_selection(workspace, value)
+    index = 0
+    source = None
+    for candidate_index, choice in enumerate(choices):
+        candidate = observed_context._source(
+            workspace, {"source_roles": {observed_context.ROLE: choice}})
+        identity = candidate["recipe"].get(identity_name, {})
+        if matches(candidate, identity):
+            index, source = candidate_index, candidate
+            break
+    if source is None:
+        return selected, actual, {"index": 0, "source": _clone(choices[0]) if choices else None}
+    seen = set()
+    while source is not None:
+        identity = source["recipe"].get(identity_name, {})
+        if not matches(source, identity):
+            break
+        checksum = source["binding"]["body_sha256"]
         if checksum in seen:
-            raise ImplementationError("The selected field report repeats an original source binding")
+            raise ImplementationError("The composed report repeats an original source binding")
         seen.add(checksum)
-        original = identity["original_delivery_selection"]
-        roles = dict(selected["source_roles"])
-        old = original.get("source_roles", {}).get(observed_context.ROLE)
-        if old is None:
-            roles.pop(observed_context.ROLE, None)
+        original, original_choices, original_binding = _bound_report_selection(
+            workspace, identity["original_delivery_selection"])
+        if original_binding != identity.get("original_observed_context_binding"):
+            raise ImplementationError("The composed report's retained original context changed")
+        composition = identity.get("report_composition")
+        if composition is None:
+            previous = _clone(original_choices[0]) if original_choices else None
         else:
-            roles[observed_context.ROLE] = _clone(old)
-        selected["source_roles"] = roles
-        selected.pop("observed_context_binding", None)
-        expected = identity.get("original_observed_context_binding")
-        if observed_context.bind(workspace, selected) != expected:
-            raise ImplementationError("The composed field report's original context changed")
+            position = composition.get("index")
+            previous = composition.get("source")
+            replace_source = composition.get("replace", previous is not None)
+            if (type(position) is not int or position < 0 or position > len(original_choices)
+                    or type(replace_source) is not bool
+                    or (previous is not None and (
+                        (replace_source and (position == len(original_choices)
+                                             or original_choices[position] != previous))
+                        or (not replace_source and previous not in original_choices)))):
+                raise ImplementationError("The composed report's original source slot changed")
+        remaining = choices[:index] + choices[index + 1:]
+        if previous is not None and previous in remaining:
+            # A separately selected original source is a different document from
+            # this composed producer. Keep both deliberate selections in place.
+            selected = _report_choices(selected, remaining)
+            actual = observed_context.bind(workspace, selected)
+            if actual is not None:
+                selected["observed_context_binding"] = actual
+            return selected, actual, {"index": index, "source": _clone(previous), "replace": False}
+        choices[index:index + 1] = [_clone(previous)] if previous is not None else []
+        selected = _report_choices(selected, choices)
+        actual = observed_context.bind(workspace, selected)
+        if actual is not None:
+            selected["observed_context_binding"] = actual
+        if previous is None:
+            return selected, actual, {"index": index, "source": None}
+        source = observed_context._source(
+            workspace, {"source_roles": {observed_context.ROLE: previous}})
+    return selected, actual, {"index": index, "source": _clone(choices[index])}
+
+
+def _compose_report_selection(workspace, selected, choice, composition):
+    choices = observed_context.source_choices(selected)
+    index, previous = composition["index"], composition["source"]
+    replace_source = composition.get("replace", previous is not None)
+    if (type(index) is not int or index < 0 or index > len(choices)
+            or type(replace_source) is not bool
+            or (previous is not None and (
+                (replace_source and (index == len(choices) or choices[index] != previous))
+                or (not replace_source and previous not in choices)))):
+        raise ImplementationError("The selected report composition slot changed")
+    choices[index:index + replace_source] = [_clone(choice)]
+    result = _report_choices(selected, choices)
+    result["observed_context_binding"] = observed_context.bind(workspace, result)
+    return result
+
+
+def _composition_identity(selected, composition):
+    # Keep exact implicit single-source legacy identities and completed receipts.
+    if "observed_context_sources" in selected or composition["index"] != 0:
+        return {"report_composition": _clone(composition)}
+    return {}
+
+
+def _selection(workspace, selected, plan_digest):
+    def matches(source, identity):
+        return (identity.get("schema") == REPORT_IDENTITY
+                and identity.get("project_id") == workspace.project["id"]
+                and identity.get("plan", {}).get("sha256") == plan_digest
+                and source["entry"].get("id") == "field-observed-report-" + digest(identity)[:24])
+    return _composition_selection(
+        workspace, selected, "implementation_observation_identity", matches)
 
 
 def _context(workspace, saved_plan, existing_report_selection):
@@ -186,7 +274,7 @@ def _context(workspace, saved_plan, existing_report_selection):
         raise ImplementationError("The saved FIELD12 revision changed during source selection")
     revision_file = _describe(workspace.root, revision_path)
     attachments, attachment_files = _attachment_inventory(workspace, original)
-    selected, binding = _selection(workspace, existing_report_selection, checksum)
+    selected, binding, composition = _selection(workspace, existing_report_selection, checksum)
     identity = {
         "schema": REPORT_IDENTITY, "edition": EDITION,
         "project_id": workspace.project["id"],
@@ -196,9 +284,11 @@ def _context(workspace, saved_plan, existing_report_selection):
         "attachment_inventory": attachments,
         "original_delivery_selection": selected,
         "original_observed_context_binding": binding,
+        **_composition_identity(selected, composition),
     }
     return {"plan": original, "identity": identity, "operation_id": digest(identity),
-            "revision_path": revision_path, "attachment_files": attachment_files}
+            "revision_path": revision_path, "attachment_files": attachment_files,
+            "report_composition": composition}
 
 
 def _rows(plan):
@@ -384,10 +474,17 @@ def _source_collection(workspace, context, root, rows):
     return collection, members, by_name["field-observations.csv"]
 
 
-def _compose_existing(workspace, selected, root):
-    source = observed_context._source(workspace, selected)
+def _compose_existing(workspace, selected, root, composition=None):
+    binding = observed_context.bind(workspace, selected)
+    if composition is None:
+        choices = observed_context.source_choices(selected)
+        choice = choices[0] if choices else None
+    else:
+        choice = composition["source"]
+    source = (observed_context._source(workspace, {"source_roles": {observed_context.ROLE: choice}})
+              if choice is not None else None)
     if source is None:
-        return {}, None, []
+        return {}, binding, []
     prefix = "existing-context/"
     for relative, item in source["members"].items():
         _retain(item["path"], root / (prefix + relative), item)
@@ -416,7 +513,7 @@ def _compose_existing(workspace, selected, root):
         links.append(prefix + name)
     recipe["source_links"] = links
     # The new recipe replaces inputs with every verified composed member.
-    return recipe, source["binding"], sorted(prefix + name for name in source["members"])
+    return recipe, binding, sorted(prefix + name for name in source["members"])
 
 
 def _sections(context, rows, summary, observation_ids):
@@ -470,7 +567,8 @@ def _report(workspace, context, root, rows, result, source_members, editions):
     directory = root / "report"
     directory.mkdir(parents=True, exist_ok=True)
     selected = context["identity"]["original_delivery_selection"]
-    recipe, binding, names = _compose_existing(workspace, selected, directory)
+    composition = context["report_composition"]
+    recipe, binding, names = _compose_existing(workspace, selected, directory, composition)
     if binding != context["identity"]["original_observed_context_binding"]:
         raise ImplementationError("The selected observed report changed while composing field measurements")
     for item in source_members + [_describe(root, root / "model-sources.json")]:
@@ -517,8 +615,7 @@ def _report(workspace, context, root, rows, result, source_members, editions):
     atomic_json(directory / "model-sources.json", manifest, immutable=True)
     collection = workspace.import_sources(directory / "model-sources.json")
     choice = {"source_collection_id": collection["id"], "source_id": entry["id"]}
-    selection = {**selected, "source_roles": {**selected["source_roles"], observed_context.ROLE: choice}}
-    selection["observed_context_binding"] = observed_context.bind(workspace, selection)
+    selection = _compose_report_selection(workspace, selected, choice, composition)
     atomic_json(directory / "delivery-selection.json", selection, immutable=True)
     report_paths = sorted(set(names + ["observed-report.json", "model-sources.json", "delivery-selection.json"]))
     return {
