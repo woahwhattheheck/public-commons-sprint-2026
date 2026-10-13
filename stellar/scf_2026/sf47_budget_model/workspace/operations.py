@@ -625,6 +625,18 @@ class Operations:
             value.pop("current")
             return portfolios.select(context, value, short_id(body.get("alternativeId"), "Alternative ID"))
 
+    def installation_workflows(self, program_id, body):
+        from operations_installation_workflows import inventory
+        with self._snapshot():
+            context = self._context(identifier(program_id, "operation"))
+            return inventory(self, context, body)
+
+    def seed_workflow_installation(self, program_id, body):
+        from operations_installation_workflows import seed
+        with self._snapshot():
+            context = self._context(identifier(program_id, "operation"))
+            return seed(self, context, body)
+
     def seed_installation(self, program_id, body):
         installations.object_value(body, ("expectedVersion",), "installation seed")
         with self._snapshot():
@@ -727,11 +739,11 @@ class Operations:
                          "Open through the existing workspace's operations import. This bundle preserves the original planner history, selected immutable plan, recorded source attachments, operations events, close reviews complete saved operating forecasts and delivery allocation portfolios.\n"
                          "Conditional planning amounts are separate from recorded cash. Testnet purchases are product operations. A work review or case close does not create an award, payment, customer agreement or external tranche acceptance.\n"
                          "Private access keys are not included.\n").encode()}
-            if installation_id is not None or installation_revision is not None:
-                files.update(installations.selected_files(context, saved_installations, installation_id, installation_revision))
             for metadata in context["sources"].values():
                 _, raw = self.source(program_id, metadata["id"])
                 files["sources/" + metadata["id"]] = raw
+            if installation_id is not None or installation_revision is not None:
+                files.update(installations.selected_files(context, saved_installations, installation_id, installation_revision, files))
         if sum(len(raw) for raw in files.values()) > MAX_BUNDLE:
             domain.fail("The complete operations bundle exceeds 32 MiB.", status=413)
         manifest = {"schema": SCHEMA + ".bundle", "files": [{"path": name, "bytes": len(raw),
@@ -887,7 +899,7 @@ class Operations:
         cohort.validate_import(reviews, events)
         completion.validate_import(context, document.get("completionPlans", []), reviews, events, source_program["version"])
         saved_installations = document.get("installations", [])
-        installations.validate_import(context, saved_installations, events, source_program["version"])
+        installations.validate_import(context, saved_installations, events, source_program["version"], files)
         implementation.validate_import(context, reviews, events, saved_installations, files)
         refs = installations.latest_refs(saved_installations)
         if document.get("installationRefs", []) != refs:
