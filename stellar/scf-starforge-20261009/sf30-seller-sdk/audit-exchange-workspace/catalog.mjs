@@ -1507,6 +1507,177 @@ export const tools = [
       "destructiveHint": false,
       "openWorldHint": false
     }
+  },
+  {
+    "action": "recipient.prepare",
+    "name": "audit_recipient_prepare",
+    "description": "Build the complete offline recipient editor from this author's exact retained workspace/application export.",
+    "mutation": true,
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "requestId": {
+          "type": "string"
+        },
+        "expectedVersion": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "actor": {
+          "type": "string"
+        },
+        "note": {
+          "type": "string"
+        },
+        "exportId": {
+          "type": "string"
+        },
+        "expectedSha256": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "requestId",
+        "expectedVersion",
+        "actor",
+        "note",
+        "exportId",
+        "expectedSha256"
+      ],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "idempotentHint": true,
+      "destructiveHint": false,
+      "openWorldHint": false
+    }
+  },
+  {
+    "action": "recipient.stage",
+    "name": "audit_recipient_stage",
+    "description": "Retain a complete returned recipient ZIP and verify its original author export, whole manuscript and history before preview.",
+    "mutation": true,
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "requestId": {
+          "type": "string"
+        },
+        "expectedVersion": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "actor": {
+          "type": "string"
+        },
+        "note": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "contentBase64": {
+          "type": "string"
+        },
+        "expectedSha256": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "requestId",
+        "expectedVersion",
+        "actor",
+        "note",
+        "name",
+        "contentBase64",
+        "expectedSha256"
+      ],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "idempotentHint": true,
+      "destructiveHint": false,
+      "openWorldHint": false
+    }
+  },
+  {
+    "action": "recipient.preview",
+    "name": "audit_recipient_preview",
+    "description": "Plan every authored review against this original workspace, recovering only exact accepted native requests.",
+    "mutation": false,
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "returnId": {
+          "type": "string"
+        },
+        "operator": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "returnId",
+        "operator"
+      ],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "idempotentHint": true,
+      "destructiveHint": false,
+      "openWorldHint": false
+    }
+  },
+  {
+    "action": "recipient.apply",
+    "name": "audit_recipient_apply",
+    "description": "Apply the entire saved original preview through native review requests and retain the complete acceptance custody ZIP. Recover the same outer envelope after an unknown outcome.",
+    "mutation": true,
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "requestId": {
+          "type": "string"
+        },
+        "expectedVersion": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "actor": {
+          "type": "string"
+        },
+        "note": {
+          "type": "string"
+        },
+        "returnId": {
+          "type": "string"
+        },
+        "previewSha256": {
+          "type": "string"
+        },
+        "preview": {
+          "type": "object"
+        }
+      },
+      "required": [
+        "requestId",
+        "expectedVersion",
+        "actor",
+        "note",
+        "returnId",
+        "previewSha256",
+        "preview"
+      ],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "idempotentHint": true,
+      "destructiveHint": false,
+      "openWorldHint": false
+    }
   }
 ];
 

@@ -64,6 +64,20 @@
         "CORRECTIONS.md",
         "text/plain; charset=utf-8"
       ]
+    ],
+    [
+      "/recipient-operator.js",
+      [
+        "public/recipient-operator.js",
+        "text/javascript; charset=utf-8"
+      ]
+    ],
+    [
+      "/AUDIT_RECIPIENT_INSTALLED.md",
+      [
+        "AUDIT_RECIPIENT_INSTALLED.md",
+        "text/plain; charset=utf-8"
+      ]
     ]
   ]
 }
