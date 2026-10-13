@@ -62,9 +62,9 @@ class ScientificSetup:
                 raise self.Fault("SCIENTIFIC_SETUP_WORKSPACE", "Open the original selected Workspace.", 409)
             if set(payload) - {"workspace", "profile_id", "grid_id"}:
                 raise self.Fault("SCIENTIFIC_SETUP_SELECTION", "Choose a saved profile and optional saved grid.", 422)
-            profile = self._guard(ws._get, "profiles", identifier(payload.get("profile_id")))
+            profile = self._guard(ws._get, "profiles", self._guard(identifier, payload.get("profile_id")))
             grid_id = payload.get("grid_id")
-            active = list(grid_models(self._guard(ws.get_grid, identifier(grid_id)))) if grid_id else list(selected(profile))
+            active = list(grid_models(self._guard(ws.get_grid, self._guard(identifier, grid_id)))) if grid_id else list(selected(profile))
             return {"workspace_key": workspace_key, "grid_id": grid_id or None,
                     "configuration": self._guard(setup_configuration.profile_configuration, ws, profile, active)}
         if operation == "preview":
