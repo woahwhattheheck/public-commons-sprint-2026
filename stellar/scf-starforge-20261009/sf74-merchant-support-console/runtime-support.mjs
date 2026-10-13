@@ -6,6 +6,12 @@ import {reconcile} from '../sf97-merchant-revenue-ops/native-reconcile.mjs';
 import {normalizeTrafficHistoryReport} from '../sf30-seller-sdk/operations/history.mjs';
 import {parseWorkspace,MAX_WORKSPACE_BYTES} from './workspace-file.mjs';
 
+import {RECOVERY_FILES,RECOVERY_FILE_LIMIT,readRecoveryObservationFiles,recoveryCaptureView,
+  compareRecoveryCaptures,recoveryRepairQueue,recoveryCaptureHtml} from './recovery-runtime.mjs';
+
+import {COMPARISON_FILES,COMPARISON_FILE_LIMIT,readComparisonObservationFiles,comparisonCaptureView,
+  compareComparisonCaptures,comparisonRepairQueue,comparisonCaptureHtml} from './comparison-runtime.mjs';
+
 export const RUNTIME_SCHEMA = 'stellar-forge.merchant-runtime-case.v1';
 export const HANDOFF_SCHEMA = 'stellar-forge.merchant-support-handoff.v1';
 export const MAX_RUNTIME_BYTES = 192 * 1024 * 1024;
@@ -15,7 +21,7 @@ const MAX_FILE = 2_000_000;
 const PACKET_FILES = ['bundle.json','operator-brief.md','metrics.prom','manifest.json'];
 const NATIVE_FILES = ['report.json','events.ndjson','deliveries.ndjson'];
 const PERIOD_FILES = ['history.json',...NATIVE_FILES];
-const FILES = [...PACKET_FILES,...PERIOD_FILES];
+const FILES = [...PACKET_FILES,...PERIOD_FILES,...RECOVERY_FILES,...COMPARISON_FILES];
 const INPUTS = ['resource','catalog','origin','network','payTo','method','credentialed'];
 const COUNTERS = ['started','completed','responses','inFlight','success','challenge','clientError','serverError','other','disconnected'];
 const CUMULATIVE = COUNTERS.filter(key=>key!=='inFlight');
@@ -170,6 +176,18 @@ function periodPacket(bytes) {
 }
 function readCaptureFiles(files) {
   fields(files,FILES,'runtime files');
+  if(own(files,'comparison-observation.json')) {
+    if(Object.keys(files).length!==COMPARISON_FILES.length||COMPARISON_FILES.some(name=>!own(files,name)))
+      fail('A comparison observation needs all three complete original files without another capture mixed into them');
+    const bytes=Object.fromEntries(COMPARISON_FILES.map(name=>[name,source(files[name],name,COMPARISON_FILE_LIMIT)]));
+    return {kind:'OBJECT_COMPARISON',bytes,original:readComparisonObservationFiles(bytes)};
+  }
+  if(own(files,'recovery-observation.json')) {
+    if(Object.keys(files).length!==RECOVERY_FILES.length||RECOVERY_FILES.some(name=>!own(files,name)))
+      fail('A recovery observation needs all three original files without another capture mixed into them');
+    const bytes=Object.fromEntries(RECOVERY_FILES.map(name=>[name,source(files[name],name,RECOVERY_FILE_LIMIT)]));
+    return {kind:'RECOVERY_OPERATION',bytes,original:readRecoveryObservationFiles(bytes)};
+  }
   const period=own(files,'history.json'),bytes={};
   if(period) {
     if(Object.keys(files).some(name=>!PERIOD_FILES.includes(name))||!own(files,'report.json'))
@@ -196,6 +214,17 @@ function sample(value) {
   fields(value.scope,['inputs','routeId','path'],'runtime route mapping');
   const inputs=inputScope(value.scope.inputs),routeId=text(value.scope.routeId,80,'selected runtime route',false);
   const {kind,bytes,original,nativeCount}=readCaptureFiles(value.files);
+  if(kind==='OBJECT_COMPARISON') {
+    if(own(value.scope,'path')||routeId!==original.meta.requestId)
+      fail('Select the original comparison request identity without a runtime route path');
+    return {kind,scope:{inputs,routeId},files:value.files,original,route:{id:routeId,method:null},native:null};
+  }
+  if(kind==='RECOVERY_OPERATION') {
+    if(own(value.scope,'path')||routeId!==original.meta.requestId)
+      fail('Select the original recovery request identity without a runtime route path');
+    return {kind,scope:{inputs,routeId},files:value.files,original,
+      route:{id:routeId,method:null},native:null};
+  }
   if(kind==='DURABLE_PERIOD') {
     const path=text(value.scope.path,2048,'selected retained route path',false);
     const route=original.routes.find(row=>row.id===routeId&&row.method===inputs.method&&row.path===path);
@@ -234,13 +263,18 @@ export function parseRuntime(textValue) {
     nativeCaptures:Number(Boolean(before?.native))+Number(Boolean(after?.native)),
     files:[before,after].filter(Boolean).reduce((n,s)=>n+Object.keys(s.files).length,0),
     sourceBytes:[before,after].filter(Boolean).reduce((n,s)=>n+Object.values(s.files).reduce((k,f)=>k+f.bytes,0),0),
+    ...([before,after].some(c=>c?.kind==='OBJECT_COMPARISON')?
+      {comparisonCaptures:[before,after].filter(c=>c?.kind==='OBJECT_COMPARISON').length}: {}),
+    ...([before,after].some(c=>c?.kind==='RECOVERY_OPERATION')?
+      {recoveryCaptures:[before,after].filter(c=>c?.kind==='RECOVERY_OPERATION').length}: {}),
     ...([before,after].some(c=>c?.kind==='DURABLE_PERIOD')?
       {periodCaptures:[before,after].filter(c=>c?.kind==='DURABLE_PERIOD').length}: {})}};
 }
 export function inspectRuntimeFiles({files,inputs,routeId,path}) {
   fields(files,FILES,'uploaded runtime files');
-  const wrapped={},maximum=own(files,'history.json')?MAX_PERIOD_SOURCE_BYTES:MAX_FILE;
+  const wrapped={},defaultMaximum=own(files,'history.json')?MAX_PERIOD_SOURCE_BYTES:MAX_FILE;
   for(const [name,data] of Object.entries(files)) {
+    const maximum=COMPARISON_FILES.includes(name)?COMPARISON_FILE_LIMIT:RECOVERY_FILES.includes(name)?RECOVERY_FILE_LIMIT:defaultMaximum;
     if(typeof data!=='string'||data.length>4*Math.ceil(maximum/3))fail('Invalid uploaded '+name);
     const bytes=Buffer.from(data,'base64');
     if(bytes.toString('base64')!==data)fail('Invalid source encoding for '+name);
@@ -250,6 +284,12 @@ export function inspectRuntimeFiles({files,inputs,routeId,path}) {
   // mapping for attachment. The packet itself does not claim an external origin.
   if(routeId===undefined) {
     const {kind,original}=readCaptureFiles(wrapped);
+    if(kind==='OBJECT_COMPARISON')return {kind,routes:[{id:original.meta.requestId,method:null}],
+      sessionId:original.meta.sessionId,capturedAt:original.meta.capturedAt,
+      mode:'RETAINED_OBJECT_COMPARISON',objectComparison:original.summary};
+    if(kind==='RECOVERY_OPERATION')return {kind,routes:[{id:original.meta.requestId,method:null}],
+      sessionId:original.meta.sessionId,capturedAt:original.meta.capturedAt,
+      mode:'ORIGINAL_RECOVERY_EVIDENCE',recovery:original.summary};
     if(kind==='DURABLE_PERIOD')return {kind,routes:original.routes,sessionId:null,
       sessionIds:original.report.sessionIds,capturedAt:original.history.generatedAt,
       mode:original.report.originalSellerMode,range:original.history.range,days:original.history.days.length};
@@ -261,6 +301,8 @@ export function inspectRuntimeFiles({files,inputs,routeId,path}) {
 }
 function captureView(capture,currentInputs) {
   if(!capture)return null;
+  if(capture.kind==='OBJECT_COMPARISON')return comparisonCaptureView(capture,inputScope(currentInputs));
+  if(capture.kind==='RECOVERY_OPERATION')return recoveryCaptureView(capture,inputScope(currentInputs));
   if(capture.kind==='DURABLE_PERIOD')return periodCaptureView(capture,currentInputs);
   const o=capture.original.observation;
   const native=capture.native;
@@ -340,6 +382,8 @@ function compareRuntime(before,after) {
   if(!isDeepStrictEqual(before.scope.inputs,after.scope.inputs)||before.scope.routeId!==after.scope.routeId||
     !before.caseMatches||!after.caseMatches)
     return {state:'SCOPE_DIFFERS',detail:'The case inputs or selected runtime route changed. Review each capture under its saved scope.',interval:null};
+  if(before.kind==='OBJECT_COMPARISON'||after.kind==='OBJECT_COMPARISON')return compareComparisonCaptures(before,after);
+  if(before.kind==='RECOVERY_OPERATION'||after.kind==='RECOVERY_OPERATION')return compareRecoveryCaptures(before,after);
   if(before.kind==='DURABLE_PERIOD'||after.kind==='DURABLE_PERIOD') {
     if(before.kind!==after.kind)return {state:'DIFFERENT_OBSERVATION_KINDS',
       detail:'A process packet and a retained period have different aggregation scopes. Review the original captures separately.',interval:null};
@@ -367,6 +411,8 @@ export function reviewRuntime(supportText,inputs) {
   const parsed=parseRuntime(supportText),before=captureView(parsed.before,inputs),after=captureView(parsed.after,inputs);
   const comparison=compareRuntime(before,after),queue=[];
   for(const [side,capture] of [['before',before],['after',after]])if(capture) {
+    if(capture.kind==='OBJECT_COMPARISON')queue.push(...comparisonRepairQueue(capture,side));
+    if(capture.kind==='RECOVERY_OPERATION')queue.push(...recoveryRepairQueue(capture,side));
     if(!capture.caseMatches)queue.push({source:side,routeId:capture.scope.routeId,kind:'scope',action:'Review the saved case mapping before using this capture for the current route.'});
     if(capture.observerAttached===false||capture.observerErrors)queue.push({source:side,routeId:capture.scope.routeId,kind:'observer',action:'Inspect the original observer lifecycle and errors before relying on complete traffic counts.'});
     if(capture.period) {
@@ -386,7 +432,11 @@ export function reviewRuntime(supportText,inputs) {
   if(observed.disconnected)queue.push({source:comparison.interval?'interval':after?'after':'before',routeId:latest.scope.routeId,kind:'http',action:`Review ${observed.disconnected} disconnected request(s), backend deadlines and caller cancellation.`});
   return {schema:'stellar-forge.merchant-runtime-review.v1',generatedAt:new Date().toISOString(),
     before,after,comparison,queue,summary:parsed.summary,
-    interpretation:'HTTP outcomes, native settlement notices, merchant inbox delivery and customer fulfillment are separate observations. Original packet hashes identify retained bytes; they do not authenticate a seller.'};
+    interpretation:[before,after].some(c=>c?.kind==='OBJECT_COMPARISON')?
+      'Object comparison captures retain the exact original request, complete SDK JSON, rendered artifacts and ordered artifact history. Native authentication describes the original saved execution only. Reopening verifies retained content and source bindings without decrypting either backup. Both encrypted bundles remain external; comparison does not restore a session.':
+      [before,after].some(c=>c?.kind==='RECOVERY_OPERATION')?
+      'Recovery captures retain the exact saved operation, reviewed native source, all referenced evidence and native process/publication outcomes. They do not count HTTP traffic or prove a payment. The encrypted recovery bundle remains external unless independently retained through its original native source-delivery owner; textual evidence alone cannot restore a session.':
+      'HTTP outcomes, native settlement notices, merchant inbox delivery and customer fulfillment are separate observations. Original packet hashes identify retained bytes; they do not authenticate a seller.'};
 }
 const escape=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const bindingLabel=value=>({CURRENT_ROUTE:'Current saved route',HISTORICAL_ROUTE_VARIANT:'Earlier method or path',REMOVED_ROUTE:'Removed from current report'}[value]??value);
@@ -443,10 +493,10 @@ function periodComparisonHtml(comparison) {
 export function runtimeHtml(report,{name='Merchant case',metadata={}}={}) {
   const sections=['before','after'].filter(side=>report[side]).map(side=>{
     const c=report[side],r=c.route;
-    return `<section><h2>${side==='before'?'Before':'After'} · ${escape(r.id)}</h2><p>${escape(c.scope.inputs.resource)} · ${escape(r.method)}</p><p>${escape(c.startedAt)} → ${escape(c.capturedAt)} · ${escape(c.mode)} · ${c.period?c.sessionIds.length+' original sessions':'Session '+escape(c.sessionId)}</p>
-      <table><tr><th>Started</th><th>Completed</th><th>2xx</th><th>402</th><th>5xx</th><th>Disconnected</th></tr><tr>${['started','completed','success','challenge','serverError','disconnected'].map(k=>'<td>'+r[k]+'</td>').join('')}</tr></table>
+    return `<section><h2>${side==='before'?'Before':'After'} · ${escape(r.id)}</h2><p>${escape(c.scope.inputs.resource)} · ${c.kind==='OBJECT_COMPARISON'?'Retained Object comparison':c.kind==='RECOVERY_OPERATION'?'Native recovery evidence':escape(r.method)}</p><p>${escape(c.startedAt)} → ${escape(c.capturedAt)} · ${escape(c.mode)} · ${c.period?c.sessionIds.length+' original sessions':'Session '+escape(c.sessionId)}</p>
+      ${c.kind==='OBJECT_COMPARISON'?comparisonCaptureHtml(c):c.kind==='RECOVERY_OPERATION'?recoveryCaptureHtml(c):`<table><tr><th>Started</th><th>Completed</th><th>2xx</th><th>402</th><th>5xx</th><th>Disconnected</th></tr><tr>${['started','completed','success','challenge','serverError','disconnected'].map(k=>'<td>'+r[k]+'</td>').join('')}</tr></table>`}
       <p>${c.caseMatches?'Mapped to the current case inputs.':'Saved mapping differs from the current case.'}</p>
-      ${periodHtml(c)}${nativeHtml(c)}
+      ${['OBJECT_COMPARISON','RECOVERY_OPERATION'].includes(c.kind)?'':periodHtml(c)+nativeHtml(c)}
       <details><summary>Original runtime alerts</summary><ul>${c.alerts.map(a=>'<li>'+escape(a)+'</li>').join('')}</ul></details>
       <details><summary>Original source files</summary><table><tr><th>File</th><th>Bytes</th><th>SHA-256</th></tr>${c.files.map(f=>`<tr><td>${escape(f.name)}</td><td>${f.bytes}</td><td><code>${f.sha256}</code></td></tr>`).join('')}</table></details></section>`;
   }).join('');

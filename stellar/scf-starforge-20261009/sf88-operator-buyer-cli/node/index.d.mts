@@ -1711,3 +1711,160 @@ export interface UndispatchedContinuationStatus {
     successorRuntime?: NativeRuntimeSourceBinding;
   };
 }
+
+
+/** Standalone workspace:null sessions whose original total/per-request caps are zero. */
+export interface ObjectSessionRecoverySelection {
+  directory: string;
+  /** Canonical root containing the session, original signer/policy/evidence and all recorded assemblies. */
+  stateRoot: string;
+  include?: readonly string[];
+  signal?: AbortSignal;
+}
+export interface ObjectSessionRecoverySnapshotOptions extends ObjectSessionRecoverySelection {
+  output: string;
+  /** Exact full inspect result, including all original bytes and prior lease history. */
+  expectedReviewSha256: string;
+  quiesced: true;
+  /** Environment variable name only; independent from wallet/operator keys. */
+  passphraseEnv?: string;
+}
+export interface ObjectSessionRecoveryArchiveOptions {
+  bundle: string;
+  passphraseEnv?: string;
+  expectedRecordSha256?: string;
+  signal?: AbortSignal;
+}
+export interface ObjectSessionRecoveryIdentity extends JsonObject {
+  sessionId: string;
+  directory: string;
+  definitionSha256: string;
+  configurationsSha256: string;
+  configurationSha256: string;
+  sourceIntentId: string;
+  sourceUrl: string;
+  deliveryMode: 'whole' | 'chunks';
+  bytes: number;
+  chunkCount: number;
+  expectedSnapshot: string;
+  expectedSha256: string | null;
+  limits: {maxAtomic:'0'; maxTotalAtomic:'0'; plannedMaxAtomic:'0'};
+}
+export interface ObjectSessionRecoveryPlan extends JsonObject {
+  schema: 'stellar-forge.sf88.object-session-recovery.v1';
+  stateRoot: string;
+  directory: string;
+  reviewSha256: string;
+  objectSession: ObjectSessionRecoveryIdentity;
+  absentLedger: {path:string; state:'ABSENT'};
+  policy: string;
+  signer: string;
+  evidence: string;
+  selected: string[];
+  include: string[];
+  missing: string[];
+  parentDirectories: string[];
+  sourceFiles: ({path:string; kind:'directory'} | {path:string; kind:'file'; size:number; sha256:string})[];
+  assemblies: {destination:string; bytes:number; sha256:string; chunkManifestSha256:string}[];
+  checkpoint: JsonObject;
+  runtime: {path:string; retained:false}[];
+  walletEnvironmentExported: false;
+  restoreMode: 'ORIGINAL_CANONICAL_STATE_ROOT';
+}
+export interface ObjectSessionRecoveryRecord extends JsonObject {
+  schema: 'stellar-forge.sf88.object-session-recovery.v1';
+  recordSha256: string;
+  createdAt: string;
+  stateRoot: string;
+  directory: string;
+  reviewSha256: string;
+  objectSession: ObjectSessionRecoveryIdentity;
+  /** Original native evidence at capture, without claiming a fresh payment reconciliation. */
+  checkpoint: JsonObject;
+  absentLedger: {path:string; state:'ABSENT'};
+  files: number;
+  bytes: number;
+  runtime: {path:string; retained:false}[];
+  walletEnvironmentExported: false;
+  restoreMode: 'ORIGINAL_CANONICAL_STATE_ROOT';
+}
+export interface ObjectSessionRecoverySnapshot extends ObjectSessionRecoveryRecord {
+  status: 'OBJECT_SESSION_BACKUP_CREATED';
+  bundle: string;
+  /** The exact already-published bundle was verified; no new capture was made. */
+  reused?: true;
+  leaseReleaseErrors?: {directory:string; code:string}[];
+}
+export interface ObjectSessionRecoveryVerification extends ObjectSessionRecoveryRecord {
+  status: 'OBJECT_SESSION_BACKUP_VERIFIED';
+}
+export interface ObjectSessionRecoveryRestore extends ObjectSessionRecoveryRecord {
+  status: 'OBJECT_SESSION_STATE_RESTORED';
+  executionStarted: false;
+  originalStateRetained: true;
+  /** Same owned restoration reopened; current state was preserved rather than overwritten. */
+  reused?: true;
+  current?: JsonObject;
+  nativeReopenErrors: {directory:string; code:string}[];
+  publicationSyncError: string | null;
+  cleanupErrors: {directory:string; code:string}[];
+}
+export type ObjectSessionRecoveryNative = ObjectSessionRecoveryPlan | ObjectSessionRecoverySnapshot |
+  ObjectSessionRecoveryVerification | ObjectSessionRecoveryRestore;
+export class ObjectSessionRecoveryResult<T extends ObjectSessionRecoveryNative = ObjectSessionRecoveryNative> {
+  private constructor();
+  readonly operation: WorkspaceRecoveryOperation;
+  readonly native: Readonly<T> | null;
+  readonly process: WorkspaceRecoveryProcess;
+  /** False does not assert that a native snapshot or restore was never published. */
+  readonly completionReported: boolean;
+  readonly ok: boolean;
+}
+export type ObjectSessionRecoverySuccess<T extends ObjectSessionRecoveryNative> =
+  ObjectSessionRecoveryResult<T> & {readonly native:Readonly<T>; readonly completionReported:true; readonly ok:true};
+export class ObjectSessionRecoveryError extends BuyerError {
+  readonly result: ObjectSessionRecoveryResult;
+  constructor(code:string,result:ObjectSessionRecoveryResult);
+}
+export class ObjectSessionRecovery {
+  /** New runtimes default to an 8 MiB private result bound. Creates no buyer, ledger or application state. */
+  constructor(options:WorkspaceRecoveryOptions);
+  inspect(options:ObjectSessionRecoverySelection): Promise<ObjectSessionRecoverySuccess<ObjectSessionRecoveryPlan>>;
+  snapshot(options:ObjectSessionRecoverySnapshotOptions): Promise<ObjectSessionRecoverySuccess<ObjectSessionRecoverySnapshot>>;
+  verify(options:ObjectSessionRecoveryArchiveOptions): Promise<ObjectSessionRecoverySuccess<ObjectSessionRecoveryVerification>>;
+  restore(options:ObjectSessionRecoveryArchiveOptions): Promise<ObjectSessionRecoverySuccess<ObjectSessionRecoveryRestore>>;
+  compare(options:ObjectSessionComparisonOptions): Promise<ObjectSessionComparisonResult & {readonly ok:true; readonly completionReported:true; readonly native:Readonly<ObjectSessionComparison>}>;
+}
+
+
+/** Two exact authenticated editions. Neither comparison nor report dispatches restore. */
+export interface ObjectSessionComparisonOptions {
+  before: Omit<ObjectSessionRecoveryArchiveOptions,'signal'> & {expectedRecordSha256:string};
+  after: Omit<ObjectSessionRecoveryArchiveOptions,'signal'> & {expectedRecordSha256:string};
+  signal?: AbortSignal;
+}
+export interface ObjectSessionComparison extends JsonObject {
+  schema:'stellar-forge.sf88.object-session-comparison.v1';
+  status:'OBJECT_SESSION_BACKUPS_COMPARED';
+  authenticated:true;
+  sessionId:string; directory:string; stateRoot:string;
+  before:{bundle:string;recordSha256:string;verification:ObjectSessionRecoveryVerification;record:JsonObject};
+  after:{bundle:string;recordSha256:string;verification:ObjectSessionRecoveryVerification;record:JsonObject};
+  /** Indexed member unions refer to full records, avoiding repeated inventories. */
+  comparison:JsonObject;
+  comparisonSha256:string;
+}
+export class ObjectSessionComparisonResult {
+  private constructor();
+  readonly operation:'compare';
+  readonly native:Readonly<ObjectSessionComparison | JsonObject> | null;
+  readonly partialComparison:Readonly<JsonObject> | null;
+  readonly process:WorkspaceRecoveryProcess;
+  readonly completionReported:boolean;
+  readonly ok:boolean;
+}
+export class ObjectSessionComparisonError extends BuyerError {
+  readonly result:ObjectSessionComparisonResult;
+  constructor(code:string,result:ObjectSessionComparisonResult);
+}
+
