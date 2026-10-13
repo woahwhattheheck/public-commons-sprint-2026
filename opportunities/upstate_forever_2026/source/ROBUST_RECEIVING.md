@@ -318,3 +318,44 @@ The browser journal retains its original source identities, download hashes,
 screenshots and optional video, with the private operator capability redacted.
 Continue this command within the existing native receiving operation and
 publish its actual receipt and process outcome with the same operation.
+
+## Carry the maintained receiving companions in cumulative source layers
+
+The guarded `source/install_robust_workbench.py` accepts the complete maintained
+S1 selected-review receiving packet and the Conservation selected-editor
+receiving packet as optional layers. It also accepts the original paired
+ensemble Study-transfer helper, CLI, descriptor and controller. These additions
+do not change the original required Decision core or the ordinary file-preimage
+and registration-retirement checks. Supply the complete authored source packet
+with its bytes, SHA-256 and current preimages; the installer preserves a newer
+unrecognized file for explicit composition.
+
+The S1 packet consists of `source_tools/receive_scientific_report_review.py`,
+its `RECEIVE_SCIENTIFIC_REPORT_REVIEW.md` guide and
+`integration/component_fragments/customer-review-receiving.json`.
+Its selected continuation requires the original Customer review typed roots and
+saved scientific-report edition transfer. Continue an existing completed S1
+receipt with `--continue-receipt`; the observed-scientific-review wrapper exposes
+that exact nested path as `review.receipt`. Supply `--response` only for a real
+returned response. The receiver retains the original review and response prefix,
+then imports supplied feedback only into the independent received Workspace.
+The complete commands and receipt identities are in the original S1 guide.
+
+The Conservation packet retains the original 45-file Design installer and the
+existing `operator/conservation_design_browser_receiving.py` course. Its optional
+`--selected-study` continues the same saved plan/editor operation. Cumulative
+installation checks the original parent browser companion, provider, descriptor,
+selected editor snapshot/capture/verify calls and portable frozen-database
+support before writing. Install a missing full Design component with its own
+maintained installer first; a receiving companion alone does not provide that
+component. Its complete operation and rendered-inspection requirements remain
+in `operator/CONSERVATION_DESIGN_RECEIVING.md` and
+`operator/CONSERVATION_DESIGN_BROWSER.md`.
+
+When the assembled Study core imports paired ensemble transfer, the cumulative
+installer also checks the original paired Store, report, portable, CLI and
+registered operator/browser dependencies. Existing paired analysis IDs, source
+rasters and report identities remain authoritative. These source checks do not
+launch a model, render a report or constitute native receiving acceptance.
+Continue the same accepted receiving operation and retain its actual command,
+process result, archive identity and reopened records.
