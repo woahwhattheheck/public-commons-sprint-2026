@@ -49,14 +49,14 @@ const csvCell = value => '"'+String(value??'').replace(/"/g,'""')+'"';
 const filteredStationCSV = (stationRows,editionId,coordinateFor,assessmentEdition='') => {
   const columns=['edition_id','selected_assessment_edition','station_id','station_description','county',
     'assessment_editions','assessment_cause_codes','assessment_cause_labels','use_codes','use_support_labels',
-    'publisher_huc12s','priority_codes','assessment_source_pages','location_status','longitude_wgs84','latitude_wgs84',
+    'publisher_huc12s','station_publisher_huc12s','station_publisher_huc8s','station_publisher_huc_relations','original_record_pointers','priority_codes','assessment_source_pages','location_status','longitude_wgs84','latitude_wgs84',
     'watershed_status','mapped_watershed_ids','linked_observation_rows','assessment_records','original_source_references'];
   const records=stationRows.map(row=>{
     const xy=coordinateFor(row)||[],values=field=>inventoryValues(row,field,assessmentEdition).join('; ');
     return [editionId,assessmentEdition,row.station_id,values('station_description'),values('county'),
       values('source_vintage'),assessmentCauses(row,assessmentEdition).join('; '),
       assessmentCauses(row,assessmentEdition).map(causeLabel).join('; '),values('impaired_use'),values('use_support'),
-      values('huc12'),values('priority_rank'),values('source_page'),row.status,xy[0]??'',xy[1]??'',
+      values('huc12'),values('station_publisher_huc12'),values('station_publisher_huc8'),values('station_publisher_huc_relation'),values('original_record_pointer'),values('priority_rank'),values('source_page'),row.status,xy[0]??'',xy[1]??'',
       row.watershed_status||row.membership_status||'',list(row.watersheds).map(w=>w.watershed_id).join('; '),
       row.observation_count||0,editionReferences(row,assessmentEdition).length,JSON.stringify(editionReferences(row,assessmentEdition))];
   });
@@ -317,14 +317,17 @@ export function attachStationGeography(host) {
     const references=assessmentReferences(row);
     if(!references.length)return '<h4>Original assessment and inventory</h4><p>No inventory rows are attached to this study station.</p>';
     const columns=[['source_vintage','Assessment edition'],['cause','Cause'],['impaired_use','Use'],
-      ['use_support','Support'],['huc12','Publisher HUC12'],['priority_rank','Priority'],['source_page','Source page']];
+      ['use_support','Support'],['huc12','Assessment HUC12'],['station_publisher_huc12','Station HUC12'],
+      ['station_publisher_huc8','Station HUC8'],['station_publisher_huc_relation','Publisher comparison'],
+      ['geographic_huc12s','Mapped HUC12'],['publisher_huc_relation','Spatial comparison'],
+      ['priority_rank','Priority'],['source_page','Source page'],['original_record_pointer','Original record pointer']];
     return '<h4>Original assessment editions ('+references.length+' records)</h4>'+
-      '<p class="sg-help">Each edition retains its original cause, use and published watershed. Mapped watershed membership follows the original station coordinates. Assessment TN is Total Nitrogen; reach-classification TN is Trout Natural.</p>'+
+      '<p class="sg-help">Each edition retains its original cause, use and published watershed. Station publisher assignments remain separate from assessment assignments. Mapped watershed membership follows the original station coordinates and selected polygons. Original JSON pointers retain distinct source records. Assessment TN is Total Nitrogen; reach-classification TN is Trout Natural.</p>'+
       '<p>'+esc(inventoryValues(row,'station_description').join(' · '))+'</p>'+
       '<div class="sg-table-scroll"><table class="sg-assessment-table"><thead><tr>'+columns.map(([,label])=>'<th>'+esc(label)+'</th>').join('')+'</tr></thead><tbody>'+
       references.map(ref=>'<tr>'+columns.map(([field])=>{const value=inventoryField(ref,field);
         return '<td>'+esc(field==='cause'&&value?(inventoryField(ref,'cause_label')||causeLabel(value))+' ('+value+')':
-          field==='use_support'?value.replace(/_/g,' '):value||'—')+'</td>';}).join('')+'</tr>').join('')+'</tbody></table></div>'+
+          ['use_support','station_publisher_huc_relation','publisher_huc_relation'].includes(field)?value.replace(/_/g,' '):value||'—')+'</td>';}).join('')+'</tr>').join('')+'</tbody></table></div>'+
       '<details><summary>Complete original assessment rows and source references</summary><pre>'+esc(JSON.stringify(references,null,2))+'</pre></details>';
   }
   function downloadFilteredStations() {

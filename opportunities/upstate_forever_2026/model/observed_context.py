@@ -72,11 +72,20 @@ def bind(workspace, selection):
     return source["binding"] if source else None
 
 
+def _retained_member(members, name, prefix):
+    """Resolve a producer-relative name inside its selected original study."""
+    relative = _relative(name).as_posix()
+    candidate = relative if not prefix or relative.startswith(prefix) else prefix + relative
+    if candidate not in members:
+        raise ValueError("Original concentration response is absent: " + candidate)
+    return candidate
+
+
 def _bind_rows(source, rows, filename=None, *, member_prefix=""):
     """Attach the actual retained recipe selector and its verified member."""
     binding, members = source["binding"], source["members"]
     for row in rows:
-        name = member_prefix + (filename or row["source_file"])
+        name = _retained_member(members, filename or row["source_file"], member_prefix)
         member = members[name]
         row["source_selector"] = {
             "source_collection_id": binding["source_collection_id"],
@@ -88,7 +97,7 @@ def _bind_rows(source, rows, filename=None, *, member_prefix=""):
         }
         original_name = row.get("original_source_path")
         if original_name:
-            original_name = member_prefix + original_name
+            original_name = _retained_member(members, original_name, member_prefix)
             original = members.get(original_name)
             if original is None:
                 raise ValueError("Original concentration response is absent: " + original_name)
@@ -112,39 +121,34 @@ def _concentration_support(source):
     members = source["members"]
     measured = published_studies.WQP_FILE
     cohort = published_studies.WQP_COHORT
-    # A direct study source retains plain member names. The regional report
-    # retains the same study below its original application-relative namespace.
-    # Resolve one complete namespace without changing source-authored row paths.
-    prefixes = sorted({
-        name[:-len(suffix)]
-        for name in members for suffix in (measured, cohort)
-        if name == suffix or name.endswith("/" + suffix)
-    })
+    # Recipes may retain a standalone study or canonical application-root paths.
+    # Select one exact study prefix; another study must never supply missing members.
+    prefixes = {
+        name[:-len(logical)]
+        for logical in (measured, cohort)
+        for name in members
+        if name == logical or name.endswith("/" + logical)
+    }
     if not prefixes:
         return None
     if len(prefixes) != 1:
-        raise ValueError("Observed concentration context selects multiple original study namespaces")
-    member_prefix = prefixes[0]
+        raise ValueError("Observed concentration context selects multiple original study roots")
+    prefix = next(iter(prefixes))
     required = (measured, cohort, "study.json", "stations.csv", "seasonal_summaries.csv")
-    member_names = {name: member_prefix + name for name in required}
-    missing = [name for name in member_names.values() if name not in members]
+    missing = [prefix + name for name in required if prefix + name not in members]
     if missing:
         raise ValueError("Observed concentration context is missing original inputs: " + ", ".join(missing))
-    originals = {name: members[member_names[name]]["path"].read_bytes() for name in required}
+    actual = {name: _retained_member(members, name, prefix) for name in required}
+    originals = {name: members[actual[name]]["path"].read_bytes() for name in required}
     study = published_studies._json(originals["study.json"])
     if study.get("schema") != published_studies.STUDY_SCHEMA:
         raise ValueError("Observed concentration study has another original schema")
-    stations = _bind_rows(
-        source, published_studies._csv_rows(originals["stations.csv"], "stations"),
-        "stations.csv", member_prefix=member_prefix,
-    )
-    seasonal = _bind_rows(
-        source, published_studies._csv_rows(originals["seasonal_summaries.csv"], "seasonal"),
-        "seasonal_summaries.csv", member_prefix=member_prefix,
-    )
-    rows = _bind_rows(
-        source, published_studies._combined_observations(originals), member_prefix=member_prefix,
-    )
+    stations = _bind_rows(source, published_studies._csv_rows(originals["stations.csv"], "stations"),
+                          "stations.csv", member_prefix=prefix)
+    seasonal = _bind_rows(source, published_studies._csv_rows(originals["seasonal_summaries.csv"], "seasonal"),
+                          "seasonal_summaries.csv", member_prefix=prefix)
+    rows = _bind_rows(source, published_studies._combined_observations(originals),
+                      member_prefix=prefix)
     sites = {row["site_id"] for row in stations}
     observations = published_studies._observation_context(
         rows, seasonal, study, sites, set(CONCENTRATIONS), {"surface"},
@@ -156,11 +160,11 @@ def _concentration_support(source):
         "selection": {
             "site_ids": sorted(sites), "parameters": sorted(CONCENTRATIONS),
             "strata": ["surface"], "sampling_period": study.get("grab_sampling", {}),
-            "source_member_prefix": member_prefix,
         },
         "input_members": {
-            name: {"bytes": members[name]["bytes"], "sha256": members[name]["sha256"]}
-            for name in member_names.values()
+            actual[name]: {"bytes": members[actual[name]]["bytes"],
+                           "sha256": members[actual[name]]["sha256"]}
+            for name in required
         },
         "observations": enrich_observation_context(observations),
     }
