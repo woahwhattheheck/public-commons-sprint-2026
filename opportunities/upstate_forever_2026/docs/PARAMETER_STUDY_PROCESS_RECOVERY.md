@@ -35,3 +35,13 @@ Receive the complete current application containing `model/native_execution.py`,
 For the existing equipped course, first compile the changed Python modules in memory from their actual files. Reopen an already completed saved study and confirm its original case/run selections and current report. Continue the existing unfinished course through the same task or saved CLI argument array, retaining its actual command, process receipt and first result. The completed-course and original case identity are the receiving basis.
 
 **For Tim:** Reopen the saved study, read the interruption if present, and choose Resume remaining cases after the current host is ready; completed native results stay available.
+
+### Reopening a worker that ended while the operator was closed
+
+The first continuation reconciles the original worker request before a replacement
+can launch. A disappeared worker with no result retains an unavailable exit code
+and an interruption receipt; it does not acquire a guessed signal or OOM cause.
+After reviewing the actual capacity and receipt, use the same saved study's run
+control again. That explicit retry may replace the recorded failed attempt while
+retaining its original request and completed cases. A completed owned worker is
+allowed to exit before the coordinator reacquires its inherited batch lease.

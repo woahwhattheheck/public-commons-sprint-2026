@@ -1,3 +1,5 @@
+import {attachCommunityRevisions} from './community_revisions.mjs';
+
 /**
  * Utility/community planning inside the original Upper Savannah operator.
  * Every mutation uses the host's retained form operation and native task queue.
@@ -357,6 +359,7 @@ export function attachCommunity({getState,api,endpoint,openForm,submitAction,det
   const tables=()=>list(data().community_tables);
   const plans=()=>list(data().community_plans);
   const reports=()=>list(data().community_reports);
+  const revisions=attachCommunityRevisions({getState:current,api,endpoint,openForm,submitAction,detail,fileList,openPlan:id=>planDetail(id)});
   const key=(kind,id)=>workspace()+'|'+kind+'|'+id;
   function sync(){
     if(activeWorkspace!==workspace()){
@@ -524,14 +527,15 @@ export function attachCommunity({getState,api,endpoint,openForm,submitAction,det
       const count=list(p.selected_groups).length||p.summaries?.overall?.groups;
       return '<tr><th scope="row">'+e(p.title)+'<small>'+e(p.purpose||'')+'</small></th><td>'+e(row('community_tables',p.table_id)?.title||short(p.table_id))+'</td>'+
         '<td class="number-cell">'+n(count)+'</td><td class="number-cell">'+n(list(p.interventions).length)+'</td><td>'+e(p.previous_plan_id?'Revised plan':'Initial plan')+'</td>'+
-        '<td class="actions-cell">'+button('plan-open','Open','data-id="'+e(p.id)+'"','small')+button('plan-revise','Revise','data-id="'+e(p.id)+'"','small')+button('report-new','Build report','data-id="'+e(p.id)+'"','small')+'</td></tr>';
+        '<td class="actions-cell">'+button('plan-open','Open','data-id="'+e(p.id)+'"','small')+button('plan-revise','Revise','data-id="'+e(p.id)+'"','small')+button('report-new','Build report','data-id="'+e(p.id)+'"','small')+revisions.planButton(p)+'</td></tr>';
     });
   }
   function planView(){
-    return plans().length?section('Intervention plans','Each saved plan keeps its original source table, selected communities, model context and previous revision.',
+    const body=plans().length?section('Intervention plans','Each saved plan keeps its original source table, selected communities, model context and previous revision.',
       table(['Plan / purpose','Community table','Groups','Interventions','Revision',''],planRows()),
       button('plan-new','New intervention plan','','primary')):
       empty('Build a source-water intervention plan','Select communities, connect the original scientific results, and record a complete protection, restoration or monitoring work program.',button('plan-new','New intervention plan','','primary'));
+    return body+revisions.renderList();
   }
   function reportView(){
     return reports().length?section('Community and utility reports','Open a retained report to preview its full narrative and download every original editable file.',
@@ -1011,7 +1015,7 @@ export function attachCommunity({getState,api,endpoint,openForm,submitAction,det
     selectRetainedTable(p.table_id);local.plan=p.id;local.tab='plans';if(row('community_reports',local.report)?.plan_id!==p.id)local.report='';persist();
     const related=reports().filter(r=>(r.plan_id||r.selection?.plan_id)===id);
     detail(p.title,
-      '<p class="community-intro">'+e(p.purpose)+'</p><div class="community-detail-actions">'+button('plan-revise','Revise plan','data-id="'+e(p.id)+'"')+button('report-new','Build complete report','data-id="'+e(p.id)+'"','primary')+'</div>'+
+      '<p class="community-intro">'+e(p.purpose)+'</p><div class="community-detail-actions">'+button('plan-revise','Revise plan','data-id="'+e(p.id)+'"')+button('report-new','Build complete report','data-id="'+e(p.id)+'"','primary')+revisions.planButton(p)+'</div>'+
       metrics(groups)+section('Selected communities',t.title,groupTable(groups,t))+
       section('Intervention work program','Retained priorities, work owners, intended benefits and costs.',interventionTable(p.interventions,t))+
       (p.intervention_import?section('Received intervention programme',p.intervention_import.source.filename,'<div class="section-body"><p>'+n(p.intervention_import.summary.row_count)+' original CSV rows retained with this revision. '+n(p.intervention_import.summary.added_ids.length)+' added, '+n(p.intervention_import.summary.changed_ids.length)+' changed and '+n(p.intervention_import.summary.removed_ids.length)+' removed from the preceding saved plan.</p><p class="note">Build the complete report to download the original received CSV beside the current editable programme.</p></div>'):'')+
@@ -1088,6 +1092,7 @@ export function attachCommunity({getState,api,endpoint,openForm,submitAction,det
     return openDelivery(JSON.parse(JSON.stringify(selection)));
   }
   function taskActions(task){
+    if(task?.action==='community.plan.compare')return revisions.taskActions(task);
     if(task?.workspace!==workspace()||task.action!=='community.report.source.prepare'||task.state!=='complete'||!task.result?.source)return '';
     return '<div class="page-actions">'+
       (typeof openScientificReport==='function'?button('report-source-scientific','Open scientific report','data-id="'+e(task.id)+'"','primary'):'')+
@@ -1113,6 +1118,7 @@ export function attachCommunity({getState,api,endpoint,openForm,submitAction,det
     return openItem(buttonNode.dataset.kind,buttonNode.dataset.id);
   }
   async function dispatch(node){
+    if(node.dataset.action?.startsWith('community-revision-'))return revisions.dispatch(node);
     const action=node.dataset.action?.replace(/^community-/,'');
     if(action?.startsWith('tab-')){local.tab=action.slice(4);redraw();return;}
     if(action==='sources'){document.getElementById('detail-dialog')?.close();return sourceForm();}

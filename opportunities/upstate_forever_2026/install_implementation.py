@@ -19,6 +19,12 @@ from pathlib import Path
 import tempfile
 
 FILES = (
+    "model/scientific_briefing.py",
+    "source_tools/prepare_scientific_briefing.py",
+    "operator/source_report_editions.py",
+    "operator/source_reports.py",
+    "operator/extensions/source-reports.json",
+    "docs/SCIENTIFIC_REPORT_BRIEFING.md",
     "model/scientific_report.py",
     "model/observed_report_render.py",
     "model/implementation_qc.py",
@@ -99,6 +105,7 @@ OPTIONAL_FILES = (
     "docs/IMPLEMENTATION_METHOD_CONTEXT.md",
     "docs/IMPLEMENTATION_LAB_RESULTS.md",
     "docs/IMPLEMENTATION_LAB_DISPATCH.md",
+    "docs/IMPLEMENTATION_LAB_METHOD_DEFINITIONS.md",
     "docs/IMPLEMENTATION_EVIDENCE_INTEGRATION.md",
     "docs/IMPLEMENTATION_DISPATCH_REPORT.md",
     "docs/IMPLEMENTATION_SOURCE_REPORTS.md",
