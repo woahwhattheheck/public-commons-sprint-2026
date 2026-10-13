@@ -90,6 +90,17 @@ Canonical local policy: `C:/Users/lucys/.commons/rendered-product-inspection-pol
 
 
 
-## Current owner browser reservation
+## Current browser custody
 
-Bryce reserved the local Codex in-app browser from 2026-10-13 16:00 UTC until he explicitly releases it after his meeting. During that reservation, do not navigate, reload, click, capture, open/change tabs or change its viewport. Continue this complete receiving course only in an independently isolated cloud browser. Original instruction: https://tokenjunkielabs.slack.com/archives/C0BU51F1PL3/p1791906463475599 . Source/build work and these saved application files remain available.
+Bryce reserved the local Codex in-app browser from 2026-10-13 16:00 UTC until he said the meeting was over or released it. His direct 16:18:37 UTC message says he just got out of the meeting, satisfying that original condition. Preserve the currently accepted browser operator, its queue and Bryce's selected demo/report tabs when arranging actual use. Independent isolated cloud receiving remains available. Original handoff: https://tokenjunkielabs.slack.com/archives/C0BU51F1PL3/p1791906463475599 . Direct meeting-over message: https://tokenjunkielabs.slack.com/archives/C0C8KTYSUKU/p1791908317570929 .
+
+## Complete receiving with supplied HTML
+
+An existing authorized browser host which permits full supplied HTML on `about:blank` can run these same two original courses with `--page-source supplied-html`. Both entries create a fresh owned blank page for each exact original document, supply the complete unchanged file body, record its byte length and SHA-256, and block document network requests. No local server, replacement origin or external navigation is used. The selected profile documents, both working apps, package previews and downloads retain their original bytes.
+
+```sh
+node browser-packages.mjs --delivery BUILT_DIRECTORY --out NEW_PACKAGE_REVIEW --cdp AUTHORIZED_ENDPOINT --playwright-module EXISTING_ENTRY --page-source supplied-html
+node browser-receiving.mjs --delivery BUILT_DIRECTORY --out NEW_OPERATING_REVIEW --cdp AUTHORIZED_ENDPOINT --playwright-module EXISTING_ENTRY --page-source supplied-html
+```
+
+An opaque supplied document can refuse browser storage; the original app displays its permanent save-file warning and continues in the open tab. The real working-file download and independent fresh phone import remain part of the same complete course. This supplied mode does not assert persistent browser storage. Without that option, the original exact navigation-byte receiving mode remains selected. Preserve the actual browser owner's current authorization and accepted work; only the courses' own contexts/pages are closed. Producing peers must still inspect the actual rendered output and every outgoing attachment.
