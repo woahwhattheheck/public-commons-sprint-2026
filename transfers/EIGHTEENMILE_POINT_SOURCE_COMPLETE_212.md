@@ -6,7 +6,7 @@ The ordinary UTF-8 JSON file is 7918177 bytes; SHA256 6eeabdf5d081f45668b77762be
 
 ## Receive into a separate source directory
 
-Save the complete ordinary Git file as a local JSON file through the existing native text receiver. Materialize into a fresh source directory; keep the cumulative application separately. This preserves current model, renderer and operator modules.
+Save the complete ordinary Git file as a local JSON file through the existing native text receiver. The normal GitHub blob action returns this full UTF-8 body: `github_fetch_blob(repository_full_name='woahwhattheheck/public-commons-sprint-2026', blob_sha='a3eb1376e5be8c44d5c22dfc824d576e8f7b69bb')`. This exact call was executed and its complete 7,918,177-byte output matched the SHA256 above. The contents/file reader returned an empty body for this large file; use the blob action for this transfer. Materialize into a fresh source directory; keep the cumulative application separately. This preserves current model, renderer and operator modules.
 
 The following standard-library command verifies the entire carrier and every original member before exposing the finished source directory. The destination must not already exist.
 
