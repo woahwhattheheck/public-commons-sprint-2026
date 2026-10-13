@@ -158,3 +158,9 @@ export async function receiveLedger(current,incoming){const next=await readLedge
 export function ledgerText(ledger){return JSON.stringify(ledger,null,2)+"\n";}
 export function sourceBytes(document){const bytes=fromBase64(document.content_base64);need(bytes.length===document.bytes,"Source size changed");return bytes;}
 export function decodeJSON(bytes){need(bytes.length<=LIMITS.ledger_bytes,"File exceeds workbook limit");return JSON.parse(dec.decode(bytes));}
+
+export async function operationRequest(input,operationId){
+ const opened=await readLedger(input),event=opened.ledger.operations.find(x=>x.id===operationId);need(event,"Operation was not found","NOT_FOUND");const selected=new Set();
+ function visit(value){if(Array.isArray(value)){for(const item of value)visit(item);}else if(value&&typeof value==="object"){for(const [key,item] of Object.entries(value)){if(key==="source_ids"){for(const id of item)selected.add(id);}else visit(item);}}}
+ visit(event.input);return {id:event.id,at:event.at,type:event.type,input:copy(event.input),documents:opened.ledger.documents.filter(d=>selected.has(d.id))};
+}
