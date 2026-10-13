@@ -2,7 +2,7 @@
   "schema": "upstate.operator-extension/v1",
   "id": "watershed-context",
   "title": "Regional watershed context",
-  "version": "1.8.0",
+  "version": "1.9.0",
   "order": 55,
   "assets": [
     "watershed_context.mjs",
@@ -141,7 +141,18 @@
       "args": [
         "task"
       ]
-    }
+    },
+    "file_routes": [
+      {
+        "path": "/api/file/watershed-explorer/{workspace_key}/{source_sha256}/source-explorer.html",
+        "handler": "source_explorer_file",
+        "args": [
+          "workspace_key",
+          "route.source_sha256"
+        ],
+        "response": "ticket_policy_pair"
+      }
+    ]
   },
   "client": {
     "module": "/web/watershed_context.mjs",
