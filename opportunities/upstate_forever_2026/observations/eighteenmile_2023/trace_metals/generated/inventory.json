@@ -15,8 +15,8 @@
   "members": [
     {
       "path": "README.md",
-      "bytes": 7190,
-      "sha256": "ccfe101d62f990d50fa675e91b5e45a39ce9fa16dc0bd6fe14b80277224b58cf"
+      "bytes": 9442,
+      "sha256": "0d24fc223e5238549348dd4af64dfe7318c9ff3866e20658e397333b00f5fe2b"
     },
     {
       "path": "analysis_core.mjs",
@@ -35,8 +35,8 @@
     },
     {
       "path": "explorer.html",
-      "bytes": 1151307,
-      "sha256": "6f03fe164c9dcfd8c079b3acf974d5b1e6fc69f3ba336ea1c62b1fd511617ed6"
+      "bytes": 1153569,
+      "sha256": "21f925946d0d10cea1e4dd3edbc9e46164fbba81f098f7346d51a071aad42ed6"
     },
     {
       "path": "explorer.mjs",
@@ -146,7 +146,7 @@
     {
       "path": "sources.json",
       "bytes": 6178,
-      "sha256": "a6aae3eab8d9cccef94eaebb4ac1f3d9376232404538d660deeced8646009e08"
+      "sha256": "9ccca1c4fdcc2d2e6435c0b3d3c99d910ed1c8be11c939219d2bfb8427730e32"
     },
     {
       "path": "wqp/normalize_core.mjs",
