@@ -105,6 +105,12 @@ def options(workspace, geography_id, table=None):
                  "assessment_reference":("assessment_reference","source_uri")}
         defaults={key:next(name for name in names if name in fields)
                   for key,names in aliases.items() if any(name in fields for name in names)}
+        cause_candidates=[name for name in aliases["cause"] if name in fields]
+        if cause_candidates:
+            # Some original editions omit cause_code while retaining cause_raw.
+            # Choose the most complete original column; keep alias order on ties.
+            defaults["cause"]=max(cause_candidates,key=lambda name:sum(
+                bool(_field(row["original"].get(name)).strip()) for row in records))
         tables.append({"reference": _source_ref(reference), "title": binding.get("title"),
                        "uri": binding.get("uri"), "vintage": binding["source_metadata"].get("vintage"),
                        "source_sha256": binding["source_sha256"], "row_count": len(records),
