@@ -918,6 +918,18 @@ export function attachParameterStudies(host) {
   }
 
   function taskActions(task) {
+    if (task.action === 'parameter-study.ensemble.continue' && task.workspace) {
+      return (task.result?.studies || []).map(row => {
+        const attrs = 'data-id="' + escapeHTML(row.experiment_id) +
+          '" data-workspace="' + escapeHTML(task.workspace) + '"';
+        return '<section class="section"><h3>' + escapeHTML(row.title) + '</h3>' +
+          '<p>' + escapeHTML(row.state) + ' · original scenario ' + escapeHTML(row.scenario_title) + '</p>' +
+          '<div class="page-actions">' + button('open', 'Open scenario parameter study', attrs) +
+          (row.source?.source ? button('source-open', 'Compose scientific report',
+            attrs + ' data-source-id="' + escapeHTML(row.source.id) + '"') : '') +
+          '</div>' + host.fileList(row.source?.downloads || []) + '</section>';
+      }).join('');
+    }
     if (task.action === 'parameter-study.source.prepare' && task.result?.experiment_id && task.workspace) {
       const result = task.result, attrs = 'data-id="' + escapeHTML(result.experiment_id) +
         '" data-workspace="' + escapeHTML(task.workspace) + '"';
