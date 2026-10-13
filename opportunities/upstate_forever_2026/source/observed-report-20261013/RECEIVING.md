@@ -55,7 +55,11 @@ The selected-study option uses the current scientific-report Study transfer fami
 
 Repeat the same command with **--resume**. Keep the original Workspace, output directory, source manifests or selection, title, contact and selected-study choice. The command uses stable queue request IDs and reopens completed operations and downloads. Interrupted or failed original tasks resume through the operator's retained task record. Its progress and original selection live beside the result.
 
-The initial preview is retained without treating its later “already saved” status as a new selection. Complete downloads use streaming byte and checksum verification. The original report identity retains its authoring Workspace path after receiving.
+The original preview is saved before its render request is submitted. On resume, the receiver verifies that saved preview against the same ordered sources, title, contact and Workspace, then submits the identical original task payload. It does not request a new renderer-derived preview for this retained operation. A completed task reopens its original edition directly.
+
+If execution stopped after the original renderer published its complete operation but before the edition or queue completion was saved, the same render action verifies those original output files and publishes the missing edition record. A later formatter version does not rerender that completed output. An operation that has not yet completed rendering still uses the original installed-source check; changing its renderer does not silently replace its selected edition.
+
+The selected-study export likewise reuses its saved preview token and original request. Complete downloads use streaming byte and checksum verification. The original report identity retains its authoring Workspace path after receiving. Subsequent report editions use their own newly reviewed preview and retain this completed edition.
 
 **--timeout** sets the allowance for each original queued operation, default 1,800 seconds. **--upload-limit-gib** sets the original receiver's archive capacity, default 4 GiB. Use the capacity appropriate to the retained project.
 
