@@ -1,7 +1,10 @@
 {
   "schema": "upstate.application-component-fragment/v1",
   "id": "geographic-study-transfer",
-  "components": {
+  "required_components": [
+    "study-transfer"
+  ],
+  "extend_components": {
     "study-transfer": {
       "paths": [
         "model/geographic_study_transfer.py",
@@ -27,8 +30,5 @@
         "CURRENT_OWNER_DIRECTION.md"
       ]
     }
-  },
-  "required_components": [
-    "study-transfer"
-  ]
+  }
 }
