@@ -27,6 +27,27 @@ def geometry_identity(workspace, spec, name):
             "where": selection.get("where")}
 
 
+def retain_grid_definition(workspace, spec, definition):
+    """Keep an explicitly selected grid's identity across description changes."""
+    base_id = spec.get("base_grid_id")
+    if not base_id:
+        return definition
+    original = workspace.get_grid(base_id)["grid"]
+    def identity(value):
+        retained = dict(value)
+        retained.pop("reference_alignment", None)
+        normalization = dict(retained["reference_normalization"])
+        normalization.pop("method", None)
+        retained["reference_normalization"] = normalization
+        return retained
+    # All numeric fields, source provenance and unknown future fields remain
+    # part of this comparison. Geometry, buffer and source guards still apply
+    # in reuse_grid_inputs before any original preparation is copied.
+    if digest(identity(original)) == digest(identity(definition)):
+        return original
+    return definition
+
+
 def reuse_grid_inputs(workspace, state, directory, selected_models):
     """Return the same state with byte-identical available inputs carried forward.
 
