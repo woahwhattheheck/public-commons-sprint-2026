@@ -172,7 +172,10 @@
     "stellar/scf_2026/sf49_data_commissioning/installation-workorders/pipeline-delivery-workbench.json",
     "products/pipeline-delivery-workbench/OPERATING.md",
     "stellar-forge/developer-site/GRANT_PIPELINE_DELIVERY_WORKBENCH.md",
-    "stellar-forge/developer-site/grant-products/pipeline-delivery-workbench.json"
+    "stellar-forge/developer-site/grant-products/pipeline-delivery-workbench.json",
+    "products/pipeline-delivery-workbench/PACKAGE_README.md",
+    "products/pipeline-delivery-workbench/PUBLIC_SOURCE.json",
+    "products/pipeline-delivery-workbench/AGENTS.md"
   ],
   "excludeFiles": [
     "stellar/scf-starforge-20261009/distribution/index.mjs"
@@ -180,12 +183,12 @@
   "product": {
     "schema": "stellar-forge.merchant-product-package.v1",
     "description": "TJLabs Pipeline Delivery Workbench: complete original Dagster/dbt customer source, actual native operation, accountable release and independently received editable history.",
-    "readme": "products/pipeline-delivery-workbench/OPERATING.md",
+    "readme": "products/pipeline-delivery-workbench/PACKAGE_README.md",
     "bin": {
       "starforge": "stellar/scf-starforge-20261009/distribution/cli.mjs"
     },
     "repository": {
-      "url": "https://github.com/woahwhattheheck/tjlabs-stellar-merchant-workspace",
+      "url": "https://github.com/woahwhattheheck/public-commons-sprint-2026",
       "directory": ""
     }
   }
