@@ -79,7 +79,7 @@ def html_document(study, report):
         '<p>Buffer distances are metres on each side of the selected stream lines. Lines in the following plots connect discrete native scenarios; they are not a fitted response model or an inferred optimum.</p></section>'+
         '<section><h2>Native response by actual changed area</h2>'+plots(rows)+'</section>'+
         '<section><h2>All selected scenarios and support</h2>'+table(rows,[
-        ("placement_title","Placement"),("width_m","Width each side (m)"),("changed_area_ha","Changed ha"),("corridor_area_ha","Corridor ha"),
+        ("placement_title","Placement"),("pollutant","Pollutant"),("width_m","Width each side (m)"),("changed_area_ha","Changed ha"),("corridor_area_ha","Corridor ha"),
         ("native_export","Native export"),("export_reduction","Signed reduction"),("units","Units"),
         ("percent_reduction","Reduction %"),("reduction_per_changed_ha","Reduction / changed ha"),
         ("common_valid_cells","Common cells"),("common_area_ha","Common ha"),("common_coverage_fraction","Common coverage fraction"),

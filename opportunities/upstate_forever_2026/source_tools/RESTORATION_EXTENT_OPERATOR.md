@@ -45,7 +45,7 @@ For a saved study:
       --connection PRIVATE_OPERATOR_CONNECTION.json \
       --journal OWNED_COURSE/journal inspect --id ACTUAL_STUDY_ID
 
-The native server may bind an identical active request to an earlier accepted task. The client retains both the requested operation and returned original operation/task ID, compares workspace/action/payload/request SHA and reads the accepted task through GET before using its decorated output tickets. Resume keeps that accepted identity.
+The native server may bind an identical active request to an earlier accepted task. The client retains both the requested operation and returned original operation/task ID, compares workspace/action/payload/request SHA and reads the accepted task through GET before using its decorated output tickets. Resume keeps that accepted identity. The browser's thin task read recomputes the original request digest from its Python task record before adoption; it does not replace floating-point representations with JavaScript-generated hash input. Imported tasks are read and matched before any Resume POST.
 
 ## One original native and browser receiving course
 
@@ -78,7 +78,7 @@ The complete phase queues only selected effective native runs, reads actual run 
 
 It opens one operator only for that owned cold-received copy. The author's original operator remains under its existing owner. The browser uses a separate private profile, views the author and cold receiver at 1440 and 390 pixels, uses ordinary field/placement controls, downloads and reopens complete working files, interrupts one returned response to an ALREADY COMPLETED original report task and reconciles that same task. It downloads each real report member and checks its exact bytes. No extra model run is issued by the browser.
 
-The course closes the owned browser and receiver before reporting completion. A closed browser result and completed native case are reused after verifying their original identities; an unfinished owner/process must be reconciled, not blindly replaced. Private connection receipts, tokens and browser profiles are outside the published archive.
+The course closes the owned browser and receiver before reporting completion. A closed browser result and completed native case are reused after verifying their original identities; an unfinished owner/process must be reconciled, not blindly replaced. Private connection receipts, tokens and browser profiles are outside the published archive. On Linux, both owned child processes inherit the course flock and retain immutable PID/start-tick/argv records before execution. A live original parent or browser keeps its existing operation. A leftover private receiver is gently drained only after the exact parent and owned browser are terminal. A dead browser owner file is retired only after its original process group is terminal; no unrelated process is signalled.
 
 ## Delivered outputs and normal recipient use
 
