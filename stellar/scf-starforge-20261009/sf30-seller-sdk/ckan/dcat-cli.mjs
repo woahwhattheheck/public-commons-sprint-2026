@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { correctionExchangeCliOptions, correctionExchangeCliUsage, executeDcatCorrectionExchangeCommand } from './dcat-correction-exchange-cli.mjs';
 import { correctionCliOptions, correctionCliUsage, executeDcatCorrectionCommand } from './dcat-correction-cli.mjs';
 // MIT. DCAT catalog operations through the original retained workspace and loopback service.
 import { resolve, dirname } from 'node:path';
@@ -39,6 +40,7 @@ const usage = [
   '  dcat receive --file FILE.ckanw --sha256 HASH --workspace NEW_DIR',
   ...semanticCliUsage,
   ...correctionCliUsage,
+  ...correctionExchangeCliUsage,
   ...semanticRuntimeCliUsage,
   ...semanticRuntimeTransferCliUsage,
   'Set SCF_DCAT_PYTHON to the prepared interpreter; the default profile original requires Python 3.13.',
@@ -49,6 +51,7 @@ const output = value => process.stdout.write(JSON.stringify(value, null, 2) + '\
 const optionsByCommand = {
   ...semanticCliOptions,
   ...correctionCliOptions,
+  ...correctionExchangeCliOptions,
   ...semanticRuntimeCliOptions,
   ...semanticRuntimeTransferCliOptions,
   init: ['workspace', 'origin'], serve: ['workspace', 'port', 'managed-selection', 'startup-file'],
@@ -178,7 +181,8 @@ export async function main(supplied = process.argv.slice(2)) {
       return { project, ...web, shutdown };
     }
     let result;
-    if (Object.hasOwn(correctionCliOptions, command)) result = await executeDcatCorrectionCommand(project, command, options);
+    if (Object.hasOwn(correctionExchangeCliOptions, command)) result = await executeDcatCorrectionExchangeCommand(project, command, options);
+    else if (Object.hasOwn(correctionCliOptions, command)) result = await executeDcatCorrectionCommand(project, command, options);
     else if (Object.hasOwn(semanticCliOptions, command)) result = await executeDcatSemanticCommand(project, command, options);
     else if (command === 'init' || command === 'status') result = project.status();
     else if (command === 'source') result = await project.dcatSource(required('source'));

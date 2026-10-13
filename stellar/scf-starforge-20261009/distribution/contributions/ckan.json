@@ -1,7 +1,7 @@
 {
   "schema": "stellar-forge.merchant-distribution-contribution.v1",
   "id": "ckan",
-  "description": "CKAN and DCAT catalog workspaces with exact typed correction drafts, migration review, native semantic validation and saved snapshot comparison, release selection and complete customer receiving",
+  "description": "CKAN and DCAT catalog workspaces with exact typed correction drafts, complete recipient proposals and author reconciliation, migration review, native semantic validation, saved snapshot comparison and whole customer receiving",
   "commands": {
     "ckan": "stellar/scf-starforge-20261009/sf30-seller-sdk/ckan/cli.mjs",
     "ckan-publisher": "stellar/scf-starforge-20261009/sf30-seller-sdk/ckan/publisher/cli.mjs",
@@ -12,7 +12,7 @@
     "ckan": "Capture complete sources, review editions and refresh decisions, publish and receive CKAN workspaces",
     "ckan-publisher": "Review and publish complete DataStore editions and buyer handoffs",
     "ckan-agent": "Operate one saved CKAN project through its browser and authenticated merchant tools",
-    "dcat": "Acquire original DCAT editions, edit attributed correction drafts, review migration, semantic findings and snapshot impact, select releases, roll back and receive whole workspaces"
+    "dcat": "Acquire original DCAT editions, edit attributed correction drafts, issue and reconcile complete recipient proposals, review migration and semantic impact, select releases, roll back and receive whole workspaces"
   },
   "exports": {
     "./seller/ckan": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/ckan/source.mjs",
@@ -36,7 +36,10 @@
     "./merchant/runtime/dcat-receiving": "./source/stellar/scf-starforge-20261009/distribution/runtime-workspace/application-dcat-receiving.mjs",
     "./seller/dcat/semantic/runtime-transfer": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/ckan/dcat-semantic-runtime-transfer.mjs",
     "./seller/dcat/corrections": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/ckan/dcat-corrections.mjs",
-    "./seller/dcat/corrections/json": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/ckan/public/dcat-correction-json.mjs"
+    "./seller/dcat/corrections/json": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/ckan/public/dcat-correction-json.mjs",
+    "./seller/dcat/corrections/exchange": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/ckan/dcat-correction-exchange.mjs",
+    "./seller/dcat/corrections/exchange-codec": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/ckan/public/dcat-correction-exchange.mjs",
+    "./seller/dcat/corrections/recipient": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/ckan/dcat-correction-recipient.mjs"
   },
   "applicationProviders": {
     "ckan": "stellar/scf-starforge-20261009/sf30-seller-sdk/ckan/application-provider.mjs"
@@ -267,6 +270,18 @@
     "stellar-forge/mcp-merchant-operator/ckan-dcat-corrections.mjs",
     "operations/dcat-correction-customer-390e-20261013/RECEIVING.md",
     "operations/dcat-correction-customer-390e-20261013/run-correction-browser.mjs",
-    "operations/dcat-correction-customer-390e-20261013/run-correction-customer.mjs"
+    "operations/dcat-correction-customer-390e-20261013/run-correction-customer.mjs",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/ckan/dcat-correction-exchange.mjs",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/ckan/public/dcat-correction-exchange.mjs",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/ckan/dcat-correction-recipient.mjs",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/ckan/public/dcat-correction-recipient.mjs",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/ckan/public/dcat-correction-recipient.css",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/ckan/public/dcat-correction-exchanges.mjs",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/ckan/dcat-correction-exchange-cli.mjs",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/ckan/CORRECTION_EXCHANGES.md",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/ckan/CORRECTION_EXCHANGES_AGENT.md",
+    "stellar-forge/mcp-merchant-operator/ckan-dcat-correction-exchanges.mjs",
+    "stellar-forge/mcp-merchant-operator/catalog/ckan-dcat-correction-exchanges.mjs",
+    "operations/dcat-correction-customer-390e-20261013/run-recipient-correction-browser.mjs"
   ]
 }

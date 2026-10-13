@@ -18,6 +18,7 @@ const assets = new Map([['/', ['index.html', 'text/html; charset=utf-8']],
   ['/dcat-json.mjs', ['dcat-json.mjs', 'text/javascript; charset=utf-8']],
   ['/dcat-correction-json.mjs', ['dcat-correction-json.mjs', 'text/javascript; charset=utf-8']],
   ['/dcat-corrections.mjs', ['dcat-corrections.mjs', 'text/javascript; charset=utf-8']],
+  ['/dcat-correction-exchanges.mjs', ['dcat-correction-exchanges.mjs', 'text/javascript; charset=utf-8']],
   ['/remote-publication.mjs', ['remote-publication.mjs', 'text/javascript; charset=utf-8']],
   ['/capture-plans.mjs', ['capture-plans.mjs', 'text/javascript; charset=utf-8']],
   ['/dcat-sources.mjs', ['dcat-sources.mjs', 'text/javascript; charset=utf-8']],
@@ -77,6 +78,40 @@ async function receiveArchiveUpload(request, workbench, expectedSha256) {
     try { previous = await hashPrivate(file, count); } catch (error) { if (error.code !== 'ENOENT') throw error; }
     if (previous) {
       if (previous.hash !== expectedSha256 || previous.bytes !== count) throw fault('CKAN_ARCHIVE_UPLOAD_CHANGED');
+    } else await rename(temporary, file);
+    await syncDirectory(root); return file;
+  } finally {
+    if (!closed) await handle.close();
+    await unlink(temporary).catch(error => { if (error.code !== 'ENOENT') throw error; });
+  }
+}
+async function receiveDcatProposalUpload(request, workbench, expectedSha256) {
+  if (!/^[a-f0-9]{64}$/.test(expectedSha256 ?? '') ||
+      request.headers['content-type'] !== 'application/octet-stream')
+    throw fault('DCAT_EXCHANGE_UPLOAD_INVALID', 'Choose the complete returned file and its SHA-256.', 415);
+  const root = join(workbench.directory, 'workspace-incoming');
+  await privateDirectory(root, true);
+  const temporary = join(root, '.proposal-upload-' + randomUUID());
+  const file = join(root, 'correction-proposal-' + expectedSha256 + '.bin');
+  const handle = await open(temporary, constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL | constants.O_NOFOLLOW, 0o600);
+  const hash = createHash('sha256'); let count = 0, closed = false;
+  try {
+    for await (const chunk of request) {
+      count += chunk.length;
+      if (count > 268435456) throw fault('DCAT_EXCHANGE_UPLOAD_TOO_LARGE', 'Choose a complete proposal no larger than 256 MiB.', 413);
+      hash.update(chunk); let offset = 0;
+      while (offset < chunk.length) {
+        const written = await handle.write(chunk, offset, chunk.length - offset);
+        if (!written.bytesWritten) throw fault('DCAT_EXCHANGE_UPLOAD_FAILED');
+        offset += written.bytesWritten;
+      }
+    }
+    if (count === 0 || hash.digest('hex') !== expectedSha256) throw fault('DCAT_EXCHANGE_UPLOAD_HASH');
+    await handle.sync(); await handle.close(); closed = true;
+    let previous;
+    try { previous = await hashPrivate(file, count); } catch (error) { if (error.code !== 'ENOENT') throw error; }
+    if (previous) {
+      if (previous.hash !== expectedSha256 || previous.bytes !== count) throw fault('DCAT_EXCHANGE_UPLOAD_CHANGED');
     } else await rename(temporary, file);
     await syncDirectory(root); return file;
   } finally {
@@ -180,6 +215,23 @@ export async function startCkanServer({ workbench, port = 0, token = randomBytes
               schema: state.schema, createdAt: state.createdAt, catalogOrigin: state.catalogOrigin, sourceKind: state.sourceKind ?? 'ckan',
               ...(state.authTokenEnv ? { authTokenEnv: state.authTokenEnv } : {}),
             } });
+        }
+        if (parts[0] === 'dcat' && parts[1] === 'exchanges') {
+          if (parts[2] === 'guide' && parts.length === 3) {
+            response.writeHead(200, { 'content-type': 'text/markdown; charset=utf-8',
+              'content-disposition': 'attachment; filename="CORRECTION_EXCHANGES.md"' });
+            response.end(await readFile(fileURLToPath(new URL('./CORRECTION_EXCHANGES.md', import.meta.url)))); return;
+          }
+          if (parts.length === 2) return json(response, workbench.listDcatCorrectionExchanges({
+            kind: url.searchParams.get('kind') ?? 'issues',
+            offset: Number(url.searchParams.get('offset') ?? 0), limit: Number(url.searchParams.get('limit') ?? 30),
+            query: url.searchParams.get('query') ?? '', correctionId: url.searchParams.get('correctionId') ?? null }));
+          if (parts[2] === 'issues' && parts.length === 4) return json(response, await workbench.dcatCorrectionExchange(parts[3]));
+          if (parts[2] === 'proposals' && parts.length === 4) return json(response, await workbench.dcatCorrectionProposal(parts[3]));
+          if (parts[2] === 'download' && parts.length === 3)
+            return await downloadWorkspaceArchive(response, await workbench.dcatCorrectionExchangeDownload({
+              kind: url.searchParams.get('kind'), id: url.searchParams.get('id'),
+              ...(url.searchParams.has('key') ? { key: url.searchParams.get('key') } : {}) }));
         }
         if (parts[0] === 'dcat' && parts[1] === 'corrections') {
           if (parts[2] === 'guide' && parts.length === 3) {
@@ -398,9 +450,26 @@ export async function startCkanServer({ workbench, port = 0, token = randomBytes
           return json(response, { operationId: result.id }, 202);
         } finally { uploading = false; }
       }
+      if (request.method === 'POST' && parts[0] === 'dcat' && parts[1] === 'exchanges' &&
+          parts[2] === 'receive' && parts.length === 3) {
+        if (uploading || workbench.status().active)
+          throw fault('CKAN_PROJECT_BUSY', 'Finish the current project operation before receiving a proposal.', 409);
+        const requestId = url.searchParams.get('requestId');
+        if (!/^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/.test(requestId ?? ''))
+          throw fault('DCAT_EXCHANGE_REQUEST_ID', 'Use the original request UUID.');
+        uploading = true;
+        try {
+          const expectedSha256 = request.headers['x-dcat-sha256'];
+          const file = await receiveDcatProposalUpload(request, workbench, expectedSha256);
+          const result = workbench.receiveDcatCorrectionProposal({ requestId, file, expectedSha256 });
+          return json(response, { operationId: result.id, proposalId: result.proposalId }, 202);
+        } finally { uploading = false; }
+      }
       if (request.method === 'POST') {
         if (uploading) throw fault('CKAN_PROJECT_BUSY', 'Finish the current upload before starting another project operation.', 409);
-        const input = await body(request, ['remote', 'capture-plans', 'capture-plan-runs'].includes(parts[0]) || parts[0] === 'dcat' && parts[1] !== 'semantic', ['remote', 'capture-plans', 'capture-plan-runs'].includes(parts[0]) ? 4194304 : parts[0] === 'dcat' && parts[1] === 'semantic' ? 50331648 : parts[0] === 'dcat' && parts[1] === 'corrections' ? 16777216 : 131072);
+        const input = await body(request, ['remote', 'capture-plans', 'capture-plan-runs'].includes(parts[0]) || parts[0] === 'dcat' && !['semantic', 'exchanges'].includes(parts[1]), ['remote', 'capture-plans', 'capture-plan-runs'].includes(parts[0]) ? 4194304 : parts[0] === 'dcat' && parts[1] === 'semantic' ? 50331648 : parts[0] === 'dcat' && ['corrections', 'exchanges'].includes(parts[1]) ? 16777216 : 131072);
+        if (parts[0] === 'dcat' && parts[1] === 'exchanges' && parts[2] === 'preview' && parts.length === 3)
+          return json(response, await workbench.previewDcatCorrectionProposal(input));
         if (parts[0] === 'dcat' && parts[1] === 'corrections' && parts[2] === 'preview' && parts.length === 3)
           return json(response, await workbench.previewDcatCorrection(input));
         if (parts[0] === 'capture-plans' && parts[1] === 'preview' && parts.length === 2)
@@ -410,7 +479,11 @@ export async function startCkanServer({ workbench, port = 0, token = randomBytes
         if (parts[0] === 'refreshes' && parts[2] === 'preview' && parts.length === 3)
           return json(response, exactPresentation(await workbench.previewRefresh(parts[1], input)));
         let result;
-        if (parts[0] === 'capture-plans' && parts[1] === 'save' && parts.length === 2)
+        if (parts[0] === 'dcat' && parts[1] === 'exchanges' && parts[2] === 'issue' && parts.length === 3)
+          result = workbench.issueDcatCorrectionExchange(input);
+        else if (parts[0] === 'dcat' && parts[1] === 'exchanges' && parts[2] === 'apply' && parts.length === 3)
+          result = workbench.applyDcatCorrectionProposal(input);
+        else if (parts[0] === 'capture-plans' && parts[1] === 'save' && parts.length === 2)
           result = workbench.saveCapturePlan(input);
         else if (parts[0] === 'capture-plans' && parts[1] === 'run' && parts.length === 2)
           result = workbench.runCapturePlan(input);
@@ -471,6 +544,8 @@ export async function startCkanServer({ workbench, port = 0, token = randomBytes
         else if (parts[0] === 'cancel' && parts.length === 1) return json(response, workbench.cancel());
         else throw fault('CKAN_ROUTE_NOT_FOUND', 'The requested project action does not exist.', 404);
         return json(response, { operationId: result.id,
+          ...(result.exchangeId ? { exchangeId: result.exchangeId } : {}),
+          ...(result.proposalId ? { proposalId: result.proposalId } : {}),
           ...(result.correctionId ? { correctionId: result.correctionId } : {}),
           ...(result.revisionId ? { revisionId: result.revisionId } : {}),
           ...(result.catalogId ? { catalogId: result.catalogId } : {}),
