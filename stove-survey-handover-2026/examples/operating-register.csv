@@ -1,0 +1,280 @@
+"collection","id","operator","site","job","status","title","detail","reference","date","evidence","createdRevision","updatedRevision"
+"sites","site-stovecraft","stovecraft","","","current","","Fictional site 1 — no real address
+Changed fictional access instructions for the next visit; preserved handover stays original.
+Authored example for Stovecraft Installations","DEMO-1 / DEMO-PROPERTY-1","","","2","21"
+"sites","site-stoves-sweeps","stoves-sweeps","","","current","","Fictional site 2 — no real address
+Operator to agree access
+Authored example for Stoves and Sweeps Ltd","DEMO-2 / DEMO-PROPERTY-2","","","25","25"
+"sites","site-premier","premier","","","current","","Fictional site 3 — no real address
+Operator to agree access
+Authored example for Premier Stoves and Fireplaces Ltd","DEMO-3 / DEMO-PROPERTY-3","","","40","40"
+"sites","site-riley","riley","","","current","","Fictional site 4 — no real address
+Operator to agree access
+Authored example for Riley Stoves & Sweeps","DEMO-4 / DEMO-PROPERTY-4","","","63","63"
+"sites","site-everwarm","everwarm","","","current","","Fictional site 5 — no real address
+Operator to agree access
+Authored example for Everwarm Fires","DEMO-5 / DEMO-PROPERTY-5","","","83","83"
+"sites","site-country","country","","","current","","Fictional site 6 — no real address
+Operator to agree access
+Authored example for Country Stoves & Sweeps","DEMO-6 / DEMO-PROPERTY-6","","","105","105"
+"appliances","appliance-stovecraft","stovecraft","site-stovecraft","","current","Fictional demonstration appliance 1","Operator-selected demonstration model
+Operator recorded
+Demonstration room
+No technical suitability or compliance conclusion is inferred.","DEMO-SERIAL-1","","","3","3"
+"appliances","appliance-stoves-sweeps","stoves-sweeps","site-stoves-sweeps","","current","Fictional demonstration appliance 2","Operator-selected demonstration model
+Operator recorded
+Demonstration room
+No technical suitability or compliance conclusion is inferred.","DEMO-SERIAL-2","","","26","26"
+"appliances","appliance-premier","premier","site-premier","","current","Fictional demonstration appliance 3","Operator-selected demonstration model
+Operator recorded
+Demonstration room
+No technical suitability or compliance conclusion is inferred.","DEMO-SERIAL-3","","","41","41"
+"appliances","appliance-riley","riley","site-riley","","current","Fictional demonstration appliance 4","Operator-selected demonstration model
+Operator recorded
+Demonstration room
+No technical suitability or compliance conclusion is inferred.","DEMO-SERIAL-4","","","64","64"
+"appliances","appliance-everwarm","everwarm","site-everwarm","","current","Fictional demonstration appliance 5","Operator-selected demonstration model
+Operator recorded
+Demonstration room
+No technical suitability or compliance conclusion is inferred.","DEMO-SERIAL-5","","","84","84"
+"appliances","appliance-country","country","site-country","","current","Fictional demonstration appliance 6","Operator-selected demonstration model
+Operator recorded
+Demonstration room
+No technical suitability or compliance conclusion is inferred.","DEMO-SERIAL-6","","","106","106"
+"enquiries","enquiry-stovecraft","stovecraft","site-stovecraft","","open","Fictional Stovecraft Installations commissioning enquiry","Requested day only; crew and attendance require an explicit confirmed visit.","DEMO-REQUEST-1","2026-10-14","stovecraft-original-field-note.txt [86bc9905061b42cb3114ce5263314ec8f508af4bab24f82bc86282c2e9331d27]","5","5"
+"enquiries","enquiry-stoves-sweeps","stoves-sweeps","site-stoves-sweeps","","open","Fictional Stoves and Sweeps Ltd commissioning enquiry","Requested day only; crew and attendance require an explicit confirmed visit.","DEMO-REQUEST-2","2026-10-14","stoves-sweeps-original-field-note.txt [90249195e939a2beb487ec5f5dfe444187fab9990c532d8589243abbabab5a2a]","28","28"
+"enquiries","enquiry-premier","premier","site-premier","","open","Fictional Premier Stoves and Fireplaces Ltd commissioning enquiry","Requested day only; crew and attendance require an explicit confirmed visit.","DEMO-REQUEST-3","2026-10-14","premier-original-field-note.txt [fd18063fb0591cd79b5e751de24f6c34b30ab0cfecf265a6bf1b750405372efd]","43","43"
+"enquiries","enquiry-riley","riley","site-riley","","open","Fictional Riley Stoves & Sweeps commissioning enquiry","Requested day only; crew and attendance require an explicit confirmed visit.","DEMO-REQUEST-4","2026-10-14","riley-original-field-note.txt [fba961661acdb0c81e137666a70da8c815161a3599422d29420cdceec6e1aa6c]","66","66"
+"enquiries","enquiry-everwarm","everwarm","site-everwarm","","open","Fictional Everwarm Fires commissioning enquiry","Requested day only; crew and attendance require an explicit confirmed visit.","DEMO-REQUEST-5","2026-10-14","everwarm-original-field-note.txt [85038a7c0b413002b2eae539414b70998a49d55526b5966e29b6d07a8e5f001f]","86","86"
+"enquiries","enquiry-country","country","site-country","","open","Fictional Country Stoves & Sweeps commissioning enquiry","Requested day only; crew and attendance require an explicit confirmed visit.","DEMO-REQUEST-6","2026-10-14","country-original-field-note.txt [c4149647f66f6e5385398560fb1227f879f77666befe9d99137c288ae1614c10]","108","108"
+"surveys","survey-stovecraft","stovecraft","site-stovecraft","","finalized","","Fictional measured survey; original units and source retained without computing clearance.
+Operator recorded observation: 425.5 mm (Fictional input — not a design minimum)
+Record site observations for quotation: pass; Demonstration record reviewed by the example author.","","2026-10-13T09:00:00.000Z","stovecraft-original-field-note.txt [86bc9905061b42cb3114ce5263314ec8f508af4bab24f82bc86282c2e9331d27]","6","7"
+"surveys","survey-stoves-sweeps","stoves-sweeps","site-stoves-sweeps","","finalized","","Fictional measured survey; original units and source retained without computing clearance.
+Operator recorded observation: 425.5 mm (Fictional input — not a design minimum)
+Record site observations for quotation: pass; Demonstration record reviewed by the example author.","","2026-10-13T09:00:00.000Z","stoves-sweeps-original-field-note.txt [90249195e939a2beb487ec5f5dfe444187fab9990c532d8589243abbabab5a2a]","29","30"
+"surveys","survey-premier","premier","site-premier","","finalized","","Fictional measured survey; original units and source retained without computing clearance.
+Operator recorded observation: 425.5 mm (Fictional input — not a design minimum)
+Record site observations for quotation: pass; Demonstration record reviewed by the example author.","","2026-10-13T09:00:00.000Z","premier-original-field-note.txt [fd18063fb0591cd79b5e751de24f6c34b30ab0cfecf265a6bf1b750405372efd]","44","45"
+"surveys","survey-riley","riley","site-riley","","finalized","","Fictional measured survey; original units and source retained without computing clearance.
+Operator recorded observation: 425.5 mm (Fictional input — not a design minimum)
+Record site observations for quotation: pass; Demonstration record reviewed by the example author.","","2026-10-13T09:00:00.000Z","riley-original-field-note.txt [fba961661acdb0c81e137666a70da8c815161a3599422d29420cdceec6e1aa6c]","67","68"
+"surveys","survey-everwarm","everwarm","site-everwarm","","finalized","","Fictional measured survey; original units and source retained without computing clearance.
+Operator recorded observation: 425.5 mm (Fictional input — not a design minimum)
+Record site observations for quotation: pass; Demonstration record reviewed by the example author.","","2026-10-13T09:00:00.000Z","everwarm-original-field-note.txt [85038a7c0b413002b2eae539414b70998a49d55526b5966e29b6d07a8e5f001f]","87","88"
+"surveys","survey-country","country","site-country","","finalized","","Fictional measured survey; original units and source retained without computing clearance.
+Operator recorded observation: 425.5 mm (Fictional input — not a design minimum)
+Record site observations for quotation: pass; Demonstration record reviewed by the example author.","","2026-10-13T09:00:00.000Z","country-original-field-note.txt [c4149647f66f6e5385398560fb1227f879f77666befe9d99137c288ae1614c10]","109","110"
+"quotes","quote-stovecraft","stovecraft","site-stovecraft","","accepted","Demonstration agreed work","Fictional agreed scope for this selected programme.
+Additional work requires an independently accepted variation.
+Explicit fictional agreed terms; no general price or service interval is assumed.
+Total 200000 minor units GBP
+accepted at 2026-10-13T10:00:00.000Z by Fictional customer; DEMO-ACCEPT-1; Worked acceptance only; no external message has been sent.","","2026-10-13","stovecraft-original-field-note.txt [86bc9905061b42cb3114ce5263314ec8f508af4bab24f82bc86282c2e9331d27]","8","10"
+"quotes","quote-stoves-sweeps","stoves-sweeps","site-stoves-sweeps","","accepted","Demonstration agreed work","Fictional agreed scope for this selected programme.
+Additional work requires an independently accepted variation.
+Explicit fictional agreed terms; no general price or service interval is assumed.
+Total 200000 minor units GBP
+accepted at 2026-10-13T10:00:00.000Z by Fictional customer; DEMO-ACCEPT-2; Worked acceptance only; no external message has been sent.","","2026-10-13","stoves-sweeps-original-field-note.txt [90249195e939a2beb487ec5f5dfe444187fab9990c532d8589243abbabab5a2a]","31","33"
+"quotes","quote-premier","premier","site-premier","","accepted","Demonstration agreed work","Fictional agreed scope for this selected programme.
+Additional work requires an independently accepted variation.
+Demonstration written terms: valid for 30 days, 50% deposit and balance at completion; an actual agreed written exception would be entered explicitly. Additional work requires prior acceptance.
+Total 200000 minor units GBP
+accepted at 2026-10-13T10:00:00.000Z by Fictional customer; DEMO-ACCEPT-3; Worked acceptance only; no external message has been sent.","","2026-10-13","premier-original-field-note.txt [fd18063fb0591cd79b5e751de24f6c34b30ab0cfecf265a6bf1b750405372efd]","46","48"
+"quotes","quote-riley","riley","site-riley","","accepted","Demonstration agreed work","Original sweep visit; any newly found repair is quoted separately.
+Additional work requires an independently accepted variation.
+Explicit fictional agreed terms; no general price or service interval is assumed.
+Total 6500 minor units GBP
+accepted at 2026-10-13T10:00:00.000Z by Fictional customer; DEMO-ACCEPT-4; Worked acceptance only; no external message has been sent.","","2026-10-13","riley-original-field-note.txt [fba961661acdb0c81e137666a70da8c815161a3599422d29420cdceec6e1aa6c]","69","71"
+"quotes","quote-everwarm","everwarm","site-everwarm","","accepted","Demonstration agreed work","Fictional agreed scope for this selected programme.
+Additional work requires an independently accepted variation.
+Fictional agreed sweep/CCTV service price only; it is not an installation tariff.
+Total 12000 minor units GBP
+accepted at 2026-10-13T10:00:00.000Z by Fictional customer; DEMO-ACCEPT-5; Worked acceptance only; no external message has been sent.","","2026-10-13","everwarm-original-field-note.txt [85038a7c0b413002b2eae539414b70998a49d55526b5966e29b6d07a8e5f001f]","89","91"
+"quotes","quote-country","country","site-country","","accepted","Demonstration agreed work","Fictional agreed scope for this selected programme.
+Additional work requires an independently accepted variation.
+Explicit fictional agreed terms; no general price or service interval is assumed.
+Total 200000 minor units GBP
+accepted at 2026-10-13T10:00:00.000Z by Fictional customer; DEMO-ACCEPT-6; Worked acceptance only; no external message has been sent.","","2026-10-13","country-original-field-note.txt [c4149647f66f6e5385398560fb1227f879f77666befe9d99137c288ae1614c10]","111","113"
+"jobs","job-stovecraft","stovecraft","site-stovecraft","","completed","Example Stovecraft Installations job","Fictional agreed scope for this selected programme.
+A source-informed fictional operating example.
+Current readiness: ready for reviewed handover
+Check Operator-selected recorded work check: pass; Example work check recorded by operator.; evidence evidence-stovecraft
+Requirement Actual supplied work record: recorded; DEMO-WORK-RECORD-stovecraft; The attached text is explicitly demonstration evidence, not a certification.; originals evidence-stovecraft
+Requirement record document-stovecraft at 2026-10-14T10:35:00.000Z by Example responsible operator: recorded; DEMO-WORK-RECORD-stovecraft; The attached text is explicitly demonstration evidence, not a certification.
+started 2026-10-13T12:00:00.000Z 
+handover-committed 2026-10-13T12:00:00.000Z ","quote-stovecraft","2026-10-14T10:45:00.000Z","","11","19"
+"jobs","followup-stovecraft","stovecraft","site-stovecraft","","planned","Fictional later service enquiry","Later service assessment; no automatic charge or confirmed attendance.
+Independent successor retains original handover.
+Current readiness: Complete at least one actual site visit.","job-stovecraft","","","22","22"
+"jobs","job-stoves-sweeps","stoves-sweeps","site-stoves-sweeps","","planned","Example Stoves and Sweeps Ltd job","Fictional agreed scope for this selected programme.
+A source-informed fictional operating example.
+Current readiness: Complete at least one actual site visit.; Finish, abort or cancel all outstanding visits.; Record Operator-selected recorded work check.; Record Actual supplied work record.
+Check Operator-selected recorded work check: unreviewed; ; evidence 
+Requirement Actual supplied work record: unreviewed; ; ; originals ","quote-stoves-sweeps","","","34","34"
+"jobs","job-premier","premier","site-premier","","completed","Example Premier Stoves and Fireplaces Ltd job","Fictional agreed scope for this selected programme.
+A source-informed fictional operating example.
+Current readiness: Resolve each blocking finding before current handover.
+Check Operator-selected recorded work check: pass; Example work check recorded by operator.; evidence evidence-premier
+Requirement Actual supplied work record: recorded; DEMO-WORK-RECORD-premier; The attached text is explicitly demonstration evidence, not a certification.; originals evidence-premier
+Requirement record document-premier at 2026-10-14T10:35:00.000Z by Example responsible operator: recorded; DEMO-WORK-RECORD-premier; The attached text is explicitly demonstration evidence, not a certification.
+started 2026-10-13T12:00:00.000Z 
+handover-committed 2026-10-13T12:00:00.000Z ","quote-premier","2026-10-14T10:45:00.000Z","","49","59"
+"jobs","job-riley","riley","site-riley","","in-progress","Example Riley Stoves & Sweeps job","Original sweep visit; any newly found repair is quoted separately.
+A source-informed fictional operating example.
+Current readiness: Resolve each blocking finding before current handover.
+Check Operator-selected recorded work check: pass; Example work check recorded by operator.; evidence evidence-riley
+Requirement Actual supplied work record: recorded; DEMO-WORK-RECORD-riley; The attached text is explicitly demonstration evidence, not a certification.; originals evidence-riley
+Requirement record document-riley at 2026-10-14T10:35:00.000Z by Example responsible operator: recorded; DEMO-WORK-RECORD-riley; The attached text is explicitly demonstration evidence, not a certification.
+started 2026-10-13T12:00:00.000Z ","quote-riley","","","72","79"
+"jobs","remedial-riley","riley","site-riley","","planned","Requested separately scoped follow-up","Fictional remedial assessment only; further priced work awaits separate acceptance.
+No inferred acceptance or change to original sweep scope.
+Current readiness: Complete at least one actual site visit.","job-riley","","","81","81"
+"jobs","job-everwarm","everwarm","site-everwarm","","completed","Example Everwarm Fires job","Fictional agreed scope for this selected programme.
+A source-informed fictional operating example.
+Current readiness: ready for reviewed handover
+Check Operator-selected recorded work check: pass; Recorded demonstration correction after separate remedial action.; evidence evidence-everwarm
+Requirement Actual supplied work record: recorded; DEMO-WORK-RECORD-everwarm; The attached text is explicitly demonstration evidence, not a certification.; originals evidence-everwarm
+Requirement record document-everwarm at 2026-10-14T10:35:00.000Z by Example responsible operator: recorded; DEMO-WORK-RECORD-everwarm; The attached text is explicitly demonstration evidence, not a certification.
+started 2026-10-13T12:00:00.000Z 
+handover-committed 2026-10-13T12:00:00.000Z ","quote-everwarm","2026-10-14T10:45:00.000Z","","92","101"
+"jobs","job-country","country","site-country","","in-progress","Example Country Stoves & Sweeps job","Fictional agreed scope for this selected programme.
+A source-informed fictional operating example.
+Current readiness: Complete at least one actual site visit.; Finish, abort or cancel all outstanding visits.; Record Actual supplied work record.
+Check Operator-selected recorded work check: pass; Example work check recorded by operator.; evidence evidence-country
+Requirement Actual supplied work record: unreviewed; ; ; originals 
+started 2026-10-13T12:00:00.000Z ","quote-country","","","114","118"
+"visits","visit-stovecraft","stovecraft","site-stovecraft","job-stovecraft","finished","","Actual-example visit completion is separate from job readiness.
+Planned 2026-10-14T08:00:00.000Z to 2026-10-14T11:00:00.000Z (Europe/London); DEMO-CREW-stovecraft
+Actual 2026-10-14T08:05:00.000Z to 2026-10-14T10:30:00.000Z
+confirmed; 
+started; 
+finished; Actual-example visit completion is separate from job readiness.","","2026-10-14T08:00:00.000Z","","13","17"
+"visits","visit-stoves-sweeps","stoves-sweeps","site-stoves-sweeps","job-stoves-sweeps","requested","","Weather-related proposed alternative; customer confirmation still required.
+Planned 2026-10-15T08:30:00.000Z to 2026-10-15T10:30:00.000Z (Europe/London); DEMO-CREW-stoves-sweeps
+Actual  to 
+confirmed; 
+confirmation-reset; Appointment details changed; a fresh confirmation is required.","","2026-10-15T08:30:00.000Z","","36","38"
+"visits","visit-premier","premier","site-premier","job-premier","finished","","Actual-example visit completion is separate from job readiness.
+Planned 2026-10-14T08:00:00.000Z to 2026-10-14T11:00:00.000Z (Europe/London); DEMO-CREW-premier
+Actual 2026-10-14T08:05:00.000Z to 2026-10-14T10:30:00.000Z
+confirmed; 
+started; 
+finished; Actual-example visit completion is separate from job readiness.","","2026-10-14T08:00:00.000Z","","52","56"
+"visits","visit-riley","riley","site-riley","job-riley","finished","","Actual-example visit completion is separate from job readiness.
+Planned 2026-10-14T08:00:00.000Z to 2026-10-14T11:00:00.000Z (Europe/London); DEMO-CREW-riley
+Actual 2026-10-14T08:05:00.000Z to 2026-10-14T10:30:00.000Z
+confirmed; 
+started; 
+finished; Actual-example visit completion is separate from job readiness.","","2026-10-14T08:00:00.000Z","","74","78"
+"visits","visit-everwarm","everwarm","site-everwarm","job-everwarm","finished","","Actual-example visit completion is separate from job readiness.
+Planned 2026-10-14T08:00:00.000Z to 2026-10-14T11:00:00.000Z (Europe/London); DEMO-CREW-everwarm
+Actual 2026-10-14T08:05:00.000Z to 2026-10-14T10:30:00.000Z
+confirmed; 
+started; 
+finished; Actual-example visit completion is separate from job readiness.","","2026-10-14T08:00:00.000Z","","94","99"
+"visits","visit-country","country","site-country","job-country","aborted","","Explicit fictional appointment; showroom or response hours are not crew availability.
+Planned 2026-10-14T08:00:00.000Z to 2026-10-14T11:00:00.000Z (Europe/London); DEMO-CREW-country
+Actual 2026-10-14T08:05:00.000Z to 2026-10-14T09:00:00.000Z
+confirmed; 
+started; 
+aborted; Fictional weather interruption. The original observation remains retained.","","2026-10-14T08:00:00.000Z","","116","120"
+"visits","visit-return-country","country","site-country","job-country","requested","","Separate requested continuation after the original interrupted visit.
+Planned 2026-10-16T08:00:00.000Z to 2026-10-16T10:00:00.000Z (Europe/London); DEMO-CREW-country
+Actual  to ","","2026-10-16T08:00:00.000Z","","121","121"
+"fieldRecords","field-stovecraft","stovecraft","site-stovecraft","job-stovecraft","recorded","","Fictional observation supplied by the responsible operator; no automatic technical finding.
+Retained instrument observation: 12.75 operator-entered unit; Fictional instrument reading
+check-stovecraft: pass; Example work check recorded by operator.","visit-stovecraft","2026-10-14T08:30:00.000Z","stovecraft-original-field-note.txt [86bc9905061b42cb3114ce5263314ec8f508af4bab24f82bc86282c2e9331d27]","16","16"
+"fieldRecords","field-premier","premier","site-premier","job-premier","recorded","","Fictional observation supplied by the responsible operator; no automatic technical finding.
+Retained instrument observation: 12.75 operator-entered unit; Fictional instrument reading
+check-premier: pass; Example work check recorded by operator.","visit-premier","2026-10-14T08:30:00.000Z","premier-original-field-note.txt [fd18063fb0591cd79b5e751de24f6c34b30ab0cfecf265a6bf1b750405372efd]","55","55"
+"fieldRecords","field-riley","riley","site-riley","job-riley","recorded","","Fictional observation supplied by the responsible operator; no automatic technical finding.
+Retained instrument observation: 12.75 operator-entered unit; Fictional instrument reading
+check-riley: pass; Example work check recorded by operator.","visit-riley","2026-10-14T08:30:00.000Z","riley-original-field-note.txt [fba961661acdb0c81e137666a70da8c815161a3599422d29420cdceec6e1aa6c]","77","77"
+"fieldRecords","field-everwarm","everwarm","site-everwarm","job-everwarm","recorded","","Fictional observation supplied by the responsible operator; no automatic technical finding.
+Retained instrument observation: 12.75 operator-entered unit; Fictional instrument reading
+check-everwarm: fail; Original demonstration finding requires a later explicit correction.","visit-everwarm","2026-10-14T08:30:00.000Z","everwarm-original-field-note.txt [85038a7c0b413002b2eae539414b70998a49d55526b5966e29b6d07a8e5f001f]","97","97"
+"fieldRecords","field-corrected-everwarm","everwarm","site-everwarm","job-everwarm","recorded","","Original failed result remains in history; this is a separate actual-example observation.
+check-everwarm: pass; Recorded demonstration correction after separate remedial action.","visit-everwarm","2026-10-14T09:15:00.000Z","everwarm-original-field-note.txt [85038a7c0b413002b2eae539414b70998a49d55526b5966e29b6d07a8e5f001f]","98","98"
+"fieldRecords","field-country","country","site-country","job-country","recorded","","Fictional observation supplied by the responsible operator; no automatic technical finding.
+Retained instrument observation: 12.75 operator-entered unit; Fictional instrument reading
+check-country: pass; Example work check recorded by operator.","visit-country","2026-10-14T08:30:00.000Z","country-original-field-note.txt [c4149647f66f6e5385398560fb1227f879f77666befe9d99137c288ae1614c10]","119","119"
+"findings","later-finding-premier","premier","site-premier","job-premier","open","","blocking
+New fictional concern reported after the preserved handover; current readiness now requires explicit resolution.","","","premier-original-field-note.txt [fd18063fb0591cd79b5e751de24f6c34b30ab0cfecf265a6bf1b750405372efd]","61","61"
+"findings","finding-riley","riley","site-riley","job-riley","open","","blocking
+Fictional newly observed issue; customer decision on separate remedial work remains outstanding.","visit-riley","","riley-original-field-note.txt [fba961661acdb0c81e137666a70da8c815161a3599422d29420cdceec6e1aa6c]","80","80"
+"payments","receipt-stovecraft","stovecraft","site-stovecraft","job-stovecraft","current","","receipt
+200000 GBP minor units
+Manual record of fictional external payment, not a transaction.","DEMO-EXTERNAL-RECEIPT-1","2026-10-13T10:30:00.000Z","","12","12"
+"payments","receipt-stoves-sweeps","stoves-sweeps","site-stoves-sweeps","job-stoves-sweeps","current","","receipt
+200000 GBP minor units
+Manual record of fictional external payment, not a transaction.","DEMO-EXTERNAL-RECEIPT-2","2026-10-13T10:30:00.000Z","","35","35"
+"payments","receipt-premier","premier","site-premier","job-premier","superseded correction","","receipt
+100000 GBP minor units
+Manual record of fictional external payment, not a transaction.","DEMO-EXTERNAL-RECEIPT-3","2026-10-13T10:30:00.000Z","","50","50"
+"payments","receipt-corrected-premier","premier","site-premier","job-premier","current","","receipt
+100000 GBP minor units
+Correct the original demonstration receipt reference while retaining it.","DEMO-CORRECTED-REFERENCE","2026-10-13T10:30:00.000Z","","51","51"
+"payments","balance-premier","premier","site-premier","job-premier","current","","receipt
+100000 GBP minor units
+Fictional completion balance receipt.","DEMO-BALANCE-REFERENCE","2026-10-14T10:40:00.000Z","","58","58"
+"payments","receipt-riley","riley","site-riley","job-riley","current","","receipt
+6500 GBP minor units
+Manual record of fictional external payment, not a transaction.","DEMO-EXTERNAL-RECEIPT-4","2026-10-13T10:30:00.000Z","","73","73"
+"payments","receipt-everwarm","everwarm","site-everwarm","job-everwarm","current","","receipt
+12000 GBP minor units
+Manual record of fictional external payment, not a transaction.","DEMO-EXTERNAL-RECEIPT-5","2026-10-13T10:30:00.000Z","","93","93"
+"payments","refund-everwarm","everwarm","site-everwarm","job-everwarm","current","","refund
+1000 GBP minor units
+Fictional operator-agreed refund; no automated website penalty.","DEMO-EXTERNAL-REFUND","2026-10-15T10:00:00.000Z","","103","103"
+"payments","receipt-country","country","site-country","job-country","current","","receipt
+200000 GBP minor units
+Manual record of fictional external payment, not a transaction.","DEMO-EXTERNAL-RECEIPT-6","2026-10-13T10:30:00.000Z","","115","115"
+"handovers","handover_f1f541d540351e6346d38c39aca072c9ac2dbb251b40ccd6c2336d2db4bda2e2","stovecraft","site-stovecraft","job-stovecraft","preserved edition 1","","Fictional completed work with retained observations, selected original documents and separately recorded payments.","f1f541d540351e6346d38c39aca072c9ac2dbb251b40ccd6c2336d2db4bda2e2","2026-10-14T10:45:00.000Z","stovecraft-original-field-note.txt [86bc9905061b42cb3114ce5263314ec8f508af4bab24f82bc86282c2e9331d27]","19","19"
+"handovers","handover_2a030bdc0bc87d1366968aa414b4a055c80354bd2e5678d9304e23adc2ed0250","premier","site-premier","job-premier","preserved edition 1","","Fictional completed work with retained observations, selected original documents and separately recorded payments.","2a030bdc0bc87d1366968aa414b4a055c80354bd2e5678d9304e23adc2ed0250","2026-10-14T10:45:00.000Z","premier-original-field-note.txt [fd18063fb0591cd79b5e751de24f6c34b30ab0cfecf265a6bf1b750405372efd]","59","59"
+"handovers","handover_04211dd820b2af3ec50f6ca6eccaf037fab3d77f745993545ee1caa9532b7a3d","everwarm","site-everwarm","job-everwarm","preserved edition 1","","Fictional completed work with retained observations, selected original documents and separately recorded payments.","04211dd820b2af3ec50f6ca6eccaf037fab3d77f745993545ee1caa9532b7a3d","2026-10-14T10:45:00.000Z","everwarm-original-field-note.txt [85038a7c0b413002b2eae539414b70998a49d55526b5966e29b6d07a8e5f001f]","101","101"
+"servicePlans","service-stovecraft","stovecraft","site-stovecraft","job-stovecraft","open","","Explicit fictional operator-selected follow-up date; not a universal statutory interval.
+Reminder remains unsent.
+Reminder: not-sent
+linked 2026-10-13T12:00:00.000Z; ","followup-stovecraft","2027-04-14","","20","23"
+"servicePlans","service-premier","premier","site-premier","job-premier","open","","Explicit fictional operator-selected follow-up date; not a universal statutory interval.
+Reminder remains unsent.
+Reminder: not-sent","","2027-04-14","","60","60"
+"servicePlans","service-everwarm","everwarm","site-everwarm","job-everwarm","open","","Explicit fictional operator-selected follow-up date; not a universal statutory interval.
+Reminder remains unsent.
+Reminder: not-sent","","2027-04-14","","102","102"
+"attachments","csv-stovecraft","","","","retained original","stovecraft-sites-original.csv","Authored fictional commissioning input; not an actual customer document.
+267 bytes; text/csv;charset=utf-8","67963248b5fa3bc6673a638babc83a55dab34f174e532581f05aa7ae7ca2d101","","","1","1"
+"attachments","evidence-stovecraft","stovecraft","site-stovecraft","","retained original","stovecraft-original-field-note.txt","Authored fictional commissioning input; not an actual customer document.
+224 bytes; text/plain;charset=utf-8","86bc9905061b42cb3114ce5263314ec8f508af4bab24f82bc86282c2e9331d27","","","4","4"
+"attachments","csv-stoves-sweeps","","","","retained original","stoves-sweeps-sites-original.csv","Authored fictional commissioning input; not an actual customer document.
+264 bytes; text/csv;charset=utf-8","f758c53503c749b3c101da98dff34284347339c4ab892171a3957ed664f8a1c5","","","24","24"
+"attachments","evidence-stoves-sweeps","stoves-sweeps","site-stoves-sweeps","","retained original","stoves-sweeps-original-field-note.txt","Authored fictional commissioning input; not an actual customer document.
+221 bytes; text/plain;charset=utf-8","90249195e939a2beb487ec5f5dfe444187fab9990c532d8589243abbabab5a2a","","","27","27"
+"attachments","csv-premier","","","","retained original","premier-sites-original.csv","Authored fictional commissioning input; not an actual customer document.
+276 bytes; text/csv;charset=utf-8","c33d8f936a06063be097a610fa2146185874e82a0d516b79c6b449c45ea537a4","","","39","39"
+"attachments","evidence-premier","premier","site-premier","","retained original","premier-original-field-note.txt","Authored fictional commissioning input; not an actual customer document.
+233 bytes; text/plain;charset=utf-8","fd18063fb0591cd79b5e751de24f6c34b30ab0cfecf265a6bf1b750405372efd","","","42","42"
+"attachments","csv-riley","","","","retained original","riley-sites-original.csv","Authored fictional commissioning input; not an actual customer document.
+264 bytes; text/csv;charset=utf-8","2de83ad2a27d41b5739c4e27e5e9ce81d9b01e6bfeb7cc4d064ff75a33ea4f00","","","62","62"
+"attachments","evidence-riley","riley","site-riley","","retained original","riley-original-field-note.txt","Authored fictional commissioning input; not an actual customer document.
+221 bytes; text/plain;charset=utf-8","fba961661acdb0c81e137666a70da8c815161a3599422d29420cdceec6e1aa6c","","","65","65"
+"attachments","csv-everwarm","","","","retained original","everwarm-sites-original.csv","Authored fictional commissioning input; not an actual customer document.
+257 bytes; text/csv;charset=utf-8","7f5f75256d1800aec6e0925610643f64734018b86df73e943d488c92bcf486ea","","","82","82"
+"attachments","evidence-everwarm","everwarm","site-everwarm","","retained original","everwarm-original-field-note.txt","Authored fictional commissioning input; not an actual customer document.
+214 bytes; text/plain;charset=utf-8","85038a7c0b413002b2eae539414b70998a49d55526b5966e29b6d07a8e5f001f","","","85","85"
+"attachments","csv-country","","","","retained original","country-sites-original.csv","Authored fictional commissioning input; not an actual customer document.
+266 bytes; text/csv;charset=utf-8","319d81d0c773b1d8c856bab8080a3b9866635ba301e6bd93e7a4f7aa29f5d9b0","","","104","104"
+"attachments","evidence-country","country","site-country","","retained original","country-original-field-note.txt","Authored fictional commissioning input; not an actual customer document.
+223 bytes; text/plain;charset=utf-8","c4149647f66f6e5385398560fb1227f879f77666befe9d99137c288ae1614c10","","","107","107"
+"imports","import_84704949f9a4f3b5801c0f71b00f66f698f12adbc9ac542d87576e76187bc8a7","stovecraft","","","retained original intake","","row_1: create site-stovecraft
+row_2: ignore Outside this fictional selected programme.","csv-stovecraft","2026-10-13T12:00:00.000Z","stovecraft-sites-original.csv [67963248b5fa3bc6673a638babc83a55dab34f174e532581f05aa7ae7ca2d101]","2","2"
+"imports","import_e8cd435615671ec250dea3f5fc654af5feabe6f024cb0cb2ee099d708f5bed95","stoves-sweeps","","","retained original intake","","row_1: create site-stoves-sweeps
+row_2: ignore Outside this fictional selected programme.","csv-stoves-sweeps","2026-10-13T12:00:00.000Z","stoves-sweeps-sites-original.csv [f758c53503c749b3c101da98dff34284347339c4ab892171a3957ed664f8a1c5]","25","25"
+"imports","import_bf642a149c019ea0171f9beee1d32b584c3009c7ae5cde17f5ec27a951e088bc","premier","","","retained original intake","","row_1: create site-premier
+row_2: ignore Outside this fictional selected programme.","csv-premier","2026-10-13T12:00:00.000Z","premier-sites-original.csv [c33d8f936a06063be097a610fa2146185874e82a0d516b79c6b449c45ea537a4]","40","40"
+"imports","import_163deb4a3168202fb473b5c7782553bcfa66a35938aa3921f4c9e6f6f03c3464","riley","","","retained original intake","","row_1: create site-riley
+row_2: ignore Outside this fictional selected programme.","csv-riley","2026-10-13T12:00:00.000Z","riley-sites-original.csv [2de83ad2a27d41b5739c4e27e5e9ce81d9b01e6bfeb7cc4d064ff75a33ea4f00]","63","63"
+"imports","import_9adcecc0dfd7dccecb713c423f186b63e7727124e5f63bb5e70b1f16c5c52595","everwarm","","","retained original intake","","row_1: create site-everwarm
+row_2: ignore Outside this fictional selected programme.","csv-everwarm","2026-10-13T12:00:00.000Z","everwarm-sites-original.csv [7f5f75256d1800aec6e0925610643f64734018b86df73e943d488c92bcf486ea]","83","83"
+"imports","import_00b4c147afac48bde8b9c9ada500ff508d29ffb97b76534b6f4b516f4d0f7a9d","country","","","retained original intake","","row_1: create site-country
+row_2: ignore Outside this fictional selected programme.","csv-country","2026-10-13T12:00:00.000Z","country-sites-original.csv [319d81d0c773b1d8c856bab8080a3b9866635ba301e6bd93e7a4f7aa29f5d9b0]","105","105"
