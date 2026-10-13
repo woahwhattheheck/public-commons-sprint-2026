@@ -31,6 +31,22 @@ Use the existing Node, Playwright module and permitted Chromium executable. Save
 
 Use the existing Operator controller and its selected **restored** Workspace key. If the current server exposes only the sender, register/open the already restored Workspace through the maintained Operator receiving flow first; do not launch a replacement native calculation.
 
+## Reference edition and original sensitivity plan
+
+The same command now accepts both the complete parameter course and its separately saved reference edition. A reference edition has the original baseline, riparian alternative and matched control complete; its full saved sensitivity plan and actual pending run states remain in the editable project. Browser completion does not promote those pending runs.
+
+Set `"completion_scope": "reference"` to choose the retained reference archive in a caller's `receiving.json`. That caller may correctly remain `state: "partial"`. The command selects its actual `reference_handover_editions` entry, verifies the original contained-application cold result and uses that entry's archive, handover, restored directory, delivery and reference basis. An explicit archive SHA/handover ID can select an earlier retained reference generation after the full course advances. Keep a separate browser output directory for each archive generation. `"completion_scope": "full_course"` requires the original completed course and full cold receiving. Without a caller file, use the actual restored root and original archive/handover IDs; the archived record still determines and verifies the scope.
+
+The command opens the original full course table, expands its saved parameters and IDs, and compares every shown run state with the corresponding original `run.json`. All planned runs are retained in the result: completed IDs, pending IDs, exact progress, original reference IDs and report basis. It opens each additional sensitivity run in the existing Runs desk without attempting to execute it or read a nonexistent native log. The reference trio's original completed logs remain part of the same course. Full-course archives created before the course table was added remain supported; a reference archive must include that table and basis.
+
+## Local restoration and control
+
+The same saved Geographic case now opens its maintained allocation workbench from PR4307. Every saved allocation edition is checked against the original `allocation.json` in the restored Workspace and its exact baseline/restoration/control IDs. The command operates every retained quantity scope, geographic relationship and region, including the distinction between upstream model support and South Carolina reporting support. It selects the original physical-input class choices, expands support and normalization details, opens each original map/scatterplot through its displayed link, downloads all original source tickets, and reloads the saved allocation.
+
+Screens at 1440 and390 pixels retain each scope/relationship and any zero-support region. The source records retain all other selected region identities and controls. The existing renderer owns all numerical units, common-support masks, signs, area denominators and unavailable reasons; the browser does not calculate a substitute result. If the actual archived case has no completed allocation edition, the command records that absence and checks the workbench's visible explanation. It does not call that branch an operated allocation result.
+
+These chapters use `geographic_browser_course.mjs` and `geographic_allocation_browser.mjs` beside the existing receiving script. The complete source assembly must include these modules, the unchanged customer-review chapter and the original component fragment. The existing actual native process continues independently; source installation takes place at its owned boundary.
+
 ## The complete recipient course
 
 The command verifies the original handover's complete file descriptors and the restored project identity. It physically opens the outgoing START_HERE page at 1440 and 390 pixels, operates the actual comparison filter and Clear, follows each unique local primary report/map/review link, retains screen captures, and verifies linked source descriptors. Original working attachments remain at their delivered relative paths. The report and customer review preserve their companion assets.

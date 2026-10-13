@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import signal
 from pathlib import Path
 import sys
@@ -72,7 +73,10 @@ def parser():
     export.add_argument("--destination")
     call = common(commands.add_parser("call", help="Submit an exact original domain JSON request"), connect=True)
     call.add_argument("--action", required=True, choices=["status", "prepare", "rows", "compare", "export", "nld.status", "nld.rows",
-                                                    "nld.prepare", "nld.execute", "nld.report", "nld.pack", "nld.restore"])
+                                                    "nld.prepare", "nld.execute", "nld.report", "nld.pack", "nld.restore",
+                                                    "bdnb.schema", "bdnb.status", "bdnb.get", "bdnb.rows",
+                                                    "bdnb.import", "bdnb.select", "bdnb.compare", "bdnb.review",
+                                                    "bdnb.publish", "bdnb.pack"])
     call.add_argument("--request", required=True)
     request = common(commands.add_parser("request", help="Read or resume one existing HTTP action"), connect=True)
     request.add_argument("--id", required=True)
@@ -137,11 +141,20 @@ def connected(args):
         return original
     if action == "rows":
         return client.rows(**body)
+    if action in {"bdnb.schema", "bdnb.status", "bdnb.get", "bdnb.rows"}:
+        return client.bdnb_read(action, body)
     if action == "nld.status":
         return client.nld_status(**body)
     if action == "nld.rows":
         return client.nld_rows(**body)
-    request_id = args.request_id or uuid.uuid4().hex
+    if action == "bdnb.pack":
+        request_id = body.get("pack_id")
+        if not isinstance(request_id, str) or not re.fullmatch(r"[a-f0-9]{32}", request_id):
+            raise DatasetteClientError("BDNB_PACK_ID_REQUIRED", "Supply the original pack_id in the full pack body.")
+        if args.request_id is not None and args.request_id != request_id:
+            raise DatasetteClientError("BDNB_PACK_REQUEST_ID_CHANGED", "--request-id must equal the selected pack_id.")
+    else:
+        request_id = args.request_id or uuid.uuid4().hex
     emit({"schema": SCHEMA, "operation_id": args.operation_id,
           "request_id": request_id, "action": action}, stream=sys.stderr)
     value = client.submit(action, body, request_id=request_id)["request"]

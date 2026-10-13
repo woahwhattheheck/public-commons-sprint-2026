@@ -19,7 +19,19 @@ MEMBERS = ("model/native_execution.py", "model/native_worker.py",
            "model/parameter_scientific_figures.py", "model/ensemble_parameter_studies.py",
            "model/ensemble_study_scope.py",
            "docs/ENSEMBLE_PARAMETER_CONTINUATION.md",
+           "source_tools/receive_ensemble_parameter_reports.py",
+           "docs/ENSEMBLE_PARAMETER_REPORT_RECEIVING.md",
            "integration/ensemble-parameter-core-joins.json",
+           "model/parameter_study_transfer.py",
+           "model/parameter_study_receiving.py",
+           "operator/parameter_receiving.py",
+           "operator/web/parameter_received_studies.mjs",
+           "model/PARAMETER_STUDY_RECEIVING.md",
+           "integration/parameter-receiving-joins.json",
+           "model/parameter_archive_source.py",
+           "model/PARAMETER_ARCHIVE_SOURCE.md",
+           "receiving/gura-original-four-case-results.json",
+           "integration/component_fragments/parameter-archive-source.json",
            "model/record_catalog.py", "model/delivery_catalogue.py",
            "operator/web/parameter_case_console.mjs", "operator/web/parameter_studies.mjs",
            "operator/web/parameter_studies.css", "docs/PARAMETER_CASE_CONSOLE.md",
@@ -153,6 +165,17 @@ PREVIOUS.setdefault("model/ensemble_study_scope.py", []).append("b38c9f4faf3dfcf
 
 PREVIOUS.setdefault("model/parameter_report_source.py", []).append("ad4f6fa11af45a1383b4324450065b33695058a618b8004271e6797c3e197818")
 
+
+# Exact installed source before the complete original-study receiving course (PR4223).
+PREVIOUS.setdefault("install_native_supervision.py", []).append("31d8b2e3b3d452f84607dc1cae5423da0719ed332dada8fb4ba14e3b03d59c27")
+PREVIOUS.setdefault("operator/NATIVE_JOBS.md", []).append("42ff7c774500e491d8b64dfc6f7d35c82ac8927fe3256d44d6041c63c3ee03ae")
+
+
+# Exact original editable-study receiving predecessors; other editions need composition.
+PREVIOUS.setdefault("model/parameter_study_transfer.py", []).append("3efc94139c219704e86cf58c8542ee4aa55ae0628e8055544c76a13772c92e96")
+PREVIOUS.setdefault("model/PARAMETER_STUDY_RECEIVING.md", []).append("3074c392626d8819a87c1420f2d8c1474e3a22389e807004be8ee2f33b6fc544")
+
+PREVIOUS.setdefault("operator/web/parameter_studies.mjs", []).extend(["2750067a4807ab23092fb75d67256831f1e6ece7fd3a1623c6a656a4a203246c","4a8037c1160a98737a933fc2183b5411751ddfa079a97a0fe5561c1459c0197e"])
 
 def sha(data):
     return hashlib.sha256(data).hexdigest()
@@ -643,29 +666,114 @@ def parameter_study_dependency(body):
 
 
 
-def retained_reader_dependencies(application):
+def parameter_receiving_patch(bodies, ledger_body):
+    """Compose original receiving hooks without replacing shared source owners."""
+    ledger = json.loads(ledger_body.decode("utf-8"))
+    allowed = {
+        "model/scientific_report_study_transfer.py", "model/study_transfer.py",
+        "model/study_receiving.py", "operator/study_receiving.py",
+        "operator/web/app.mjs", "operator/web/parameter_studies.mjs",
+        "operator/web/received_studies.mjs",
+    }
+    additions = {
+        "model/parameter_study_transfer.py", "model/parameter_study_receiving.py",
+        "operator/parameter_receiving.py", "operator/web/parameter_received_studies.mjs",
+        "model/PARAMETER_STUDY_RECEIVING.md",
+    }
+    changes = ledger.get("changes")
+    if (ledger.get("schema") != "upstate.parameter-study-receiving-joins/v1" or
+            not isinstance(changes, list) or len(changes) != 14 or
+            set(ledger.get("additive_members", [])) != additions):
+        raise ValueError("Receive the complete original Parameter receiving source-join ledger.")
+    expected_unions = [
+        {"path": "operator/extensions/study-transfer.json",
+         "location": ["assets"], "values": ["parameter_received_studies.mjs"]},
+        {"path": "operator/extensions/study-transfer.json",
+         "location": ["client", "requires"], "values": ["openParameterStudy"]},
+    ]
+    if ledger.get("json_unions") != expected_unions:
+        raise ValueError("The receiving descriptor must preserve its exact two list unions.")
+    if {item.get("path") for item in changes if isinstance(item, dict)} != allowed:
+        raise ValueError("The receiving ledger names unexpected shared source paths.")
+    result = dict(bodies)
+    applied = []
+    for index, item in enumerate(changes):
+        if (not isinstance(item, dict) or item.get("path") not in allowed or
+                not isinstance(item.get("before"), str) or not item["before"] or
+                not isinstance(item.get("after"), str) or not item["after"]):
+            raise ValueError("Invalid original Parameter receiving source join.")
+        name, before, after = item["path"], item["before"], item["after"]
+        text = result[name].decode("utf-8")
+        count = text.count(after)
+        if count == 1:
+            state = "already_composed"
+        elif count:
+            raise ValueError("Ambiguous Parameter receiving postimage: " + name)
+        else:
+            text = replace_one(text, before, after, "Parameter receiving: " + name)
+            state = "composed"
+        result[name] = text.encode("utf-8")
+        applied.append({"path": name, "join": index + 1, "state": state})
+    descriptor = "operator/extensions/study-transfer.json"
+    document = json.loads(result[descriptor].decode("utf-8"))
+    modified = False
+    for item in expected_unions:
+        node = document
+        for key in item["location"][:-1]:
+            node = node.get(key) if isinstance(node, dict) else None
+        target = node.get(item["location"][-1]) if isinstance(node, dict) else None
+        if not isinstance(target, list):
+            raise ValueError("Retain the current Study transfer descriptor list: " +
+                             ".".join(item["location"]))
+        for value in item["values"]:
+            if value not in target:
+                target.append(value)
+                modified = True
+    if modified:
+        result[descriptor] = (json.dumps(document, ensure_ascii=False, indent=2) + "\n").encode("utf-8")
+    for name in allowed:
+        if name.endswith(".py"):
+            ast.parse(result[name].decode("utf-8"), filename=name)
+    return result, {"ledger_sha256": sha(ledger_body), "joins": applied,
+                    "descriptor_unions": expected_unions,
+                    "policy": "exact original receiving hooks; unrelated source and descriptor entries retained"}
+
+
+def retained_reader_dependencies(application, replacements=None):
     """Validate and retain scientific/context modules used by the incoming readers."""
     required = {
         "model/common.py": ("canonical", "digest", "held", "identifier", "relative_file",
                             "read_json", "file_digest", "atomic_json", "describe_file",
-                            "now", "verify_file"),
+                            "now", "verify_file", "atomic_bytes"),
         "model/model_selection.py": ("selected", "run_models", "validate_completed_run"),
         "model/native_versions.py": ("model_versions", "version_label"),
         "model/parameter_calibration.py": ("candidates",),
         "model/parameter_exports.py": ("member_descriptors",),
         "model/ensemble_scientific_source.py": ("_member", "_copy", "_text", "_render",
-                                               "delivery_selection"),
+                                               "delivery_selection", "_csv"),
         "model/observed_context.py": ("source_choices", "collect", "_figure_detail_tables"),
         "model/ensemble_scientific_figures.py": ("_number", "_axis", "_domain", "_svg"),
         "model/scientific_figures.py": ("_validate_figure",),
         "model/observed_report_render.py": ("prepare", "render"),
+        "model/scientific_report_editions.py": ("preview", "validate_request", "render_prepared",
+                                               "render", "inspect", "export", "directory"),
+        "model/study_transfer.py": ("export_study",),
+        "model/study_receiving.py": ("detail",),
+        "model/parameter_study_transfer.py": ("include_source", "lock_paths"),
+        "model/parameter_study_receiving.py": ("summary", "augment"),
+        "model/parameter_report_source.py": ("_choices", "_sections", "_table"),
+        "model/parameter_scientific_figures.py": ("write",),
+        "model/project_transfer_workspace.py": ("NativeProjectTransfer",),
+        "model/reuse.py": ("copy_verified",),
     }
     bodies, records = {}, {}
+    replacements = replacements or {}
     for name, symbols in required.items():
         path = application / name
-        if not path.is_file():
+        original = path.read_bytes() if path.is_file() else None
+        body = replacements.get(name, original)
+        if body is None:
             raise ValueError("Receive the complete current saved-study application first; missing " + name)
-        body = path.read_bytes()
         tree = ast.parse(body.decode("utf-8"), filename=name)
         declarations = {node.name for node in tree.body
                         if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef))}
@@ -673,16 +781,19 @@ def retained_reader_dependencies(application):
         if missing:
             raise ValueError("Retained Parameter reader needs current " + name + ": " +
                              ", ".join(sorted(missing)))
-        bodies[name] = body
+        if original is not None:
+            bodies[name] = original
         records[name] = {"bytes": len(body), "sha256": sha(body),
                          "functions": list(symbols),
-                         "policy": "retain installed scientific/context source unchanged"}
+                         "policy": ("validate composed incoming/source-join API" if name in replacements
+                                    else "retain installed scientific/context source unchanged")}
     constants = {
         "model/parameter_exports.py": ("MEMBER_SCHEMA",),
+        "model/parameter_scientific_figures.py": ("SPEC", "COORDINATES", "COVERAGE"),
         "model/ensemble_scientific_source.py": ("RECIPE_SCHEMA", "ROLE"),
     }
     for name, symbols in constants.items():
-        tree = ast.parse(bodies[name].decode("utf-8"), filename=name)
+        tree = ast.parse(replacements.get(name, bodies.get(name)).decode("utf-8"), filename=name)
         declared = {target.id for node in tree.body if isinstance(node, ast.Assign)
                     for target in node.targets if isinstance(target, ast.Name)}
         if not set(symbols) <= declared:
@@ -725,24 +836,64 @@ def install(application, increment, *, retention=False):
     application, increment = Path(application).resolve(strict=True), Path(increment).resolve(strict=True)
     originals = {name: (application / name).read_bytes()
                  for name in ("operator/server.py", "operator/web/app.mjs", "model/portable.py")}
+    incoming = {}
+    # Validate complete owned modules first. Shared scientific/transfer owners are
+    # composed below from their actual installed bytes, never replaced wholesale.
+    for name in MEMBERS:
+        body = (increment / name).read_bytes()
+        if name.endswith(".py"):
+            ast.parse(body.decode("utf-8"), filename=name)
+        elif name.endswith(".json"):
+            json.loads(body.decode("utf-8"))
+        if name == "model/ensemble_study_scope.py":
+            source_scope_dependency(body)
+        destination = application / name
+        if destination.exists():
+            current = destination.read_bytes()
+            if current != body and sha(current) not in PREVIOUS.get(name, []):
+                raise ValueError("An authored native supervision member already exists; compose its source: " + name)
+            originals[name] = current
+        incoming[name] = body
+
+    shared_receiving = (
+        "model/scientific_report_study_transfer.py", "model/study_transfer.py",
+        "model/study_receiving.py", "operator/study_receiving.py",
+        "operator/web/app.mjs", "operator/web/parameter_studies.mjs",
+        "operator/web/received_studies.mjs", "operator/extensions/study-transfer.json",
+    )
+    receiving_bodies = {}
+    for name in shared_receiving:
+        if name in incoming:
+            receiving_bodies[name] = incoming[name]
+        else:
+            originals[name] = (application / name).read_bytes()
+            receiving_bodies[name] = originals[name]
+    receiving_ledger = incoming["integration/parameter-receiving-joins.json"]
+    receiving_bodies, receiving_composition = parameter_receiving_patch(
+        receiving_bodies, receiving_ledger)
     dependency = "model/parameter_studies.py"
     originals[dependency] = (application / dependency).read_bytes()
-    core_ledger = (increment / "integration/ensemble-parameter-core-joins.json").read_bytes()
+    core_ledger = incoming["integration/ensemble-parameter-core-joins.json"]
     composed_core, core_composition = ensemble_parameter_core_patch(originals[dependency], core_ledger)
     retained_dependencies = {dependency: parameter_study_dependency(composed_core)}
     retained_dependencies[dependency].update(
         policy="retain native science with exact additive original-case/source joins",
         source_composition=core_composition)
-    reader_bodies, reader_records = retained_reader_dependencies(application)
-    originals.update(reader_bodies)
+
+    changed = {**incoming, **receiving_bodies, dependency: composed_core}
+    reader_bodies, reader_records = retained_reader_dependencies(application, changed)
+    for name, body in reader_bodies.items():
+        if name in originals and originals[name] != body:
+            raise ValueError("Concurrent source changed during receiving preflight: " + name)
+        originals[name] = body
     retained_dependencies.update(reader_records)
-    changed = {
-        dependency: composed_core,
-        "operator/server.py": parameter_report_server_patch(parameter_result_server_patch(server_patch(
-            originals["operator/server.py"].decode("utf-8"), retention=retention))).encode("utf-8"),
-        "operator/web/app.mjs": parameter_report_browser_patch(browser_patch(
-            originals["operator/web/app.mjs"].decode("utf-8"))).encode("utf-8"),
-        "model/portable.py": portable_patch(originals["model/portable.py"].decode("utf-8")).encode("utf-8")}
+    changed["operator/server.py"] = parameter_report_server_patch(
+        parameter_result_server_patch(server_patch(
+            originals["operator/server.py"].decode("utf-8"), retention=retention))).encode("utf-8")
+    changed["operator/web/app.mjs"] = parameter_report_browser_patch(browser_patch(
+        receiving_bodies["operator/web/app.mjs"].decode("utf-8"))).encode("utf-8")
+    changed["model/portable.py"] = portable_patch(
+        originals["model/portable.py"].decode("utf-8")).encode("utf-8")
     ensemble_path = "operator/web/ensembles.mjs"
     originals[ensemble_path] = (application / ensemble_path).read_bytes()
     changed[ensemble_path] = ensemble_parameter_browser_patch(
@@ -752,21 +903,11 @@ def install(application, increment, *, retention=False):
         originals["operator/programmes.py"] = programme_path.read_bytes()
         changed["operator/programmes.py"] = programme_patch(
             originals["operator/programmes.py"].decode("utf-8")).encode("utf-8")
-    for name in MEMBERS:
-        body = (increment / name).read_bytes()
-        if name == "integration/ensemble-parameter-core-joins.json" and body != core_ledger:
-            raise ValueError("The Ensemble continuation ledger changed during installation preflight.")
+    for name, body in changed.items():
         if name.endswith(".py"):
-            ast.parse(body.decode("utf-8"))
-        if name == "model/ensemble_study_scope.py":
-            source_scope_dependency(body)
-        destination = application / name
-        if destination.exists():
-            current = destination.read_bytes()
-            if current != body and sha(current) not in PREVIOUS.get(name, []):
-                raise ValueError("An authored native supervision member already exists; compose its source: " + name)
-            originals[name] = current
-        changed[name] = body
+            ast.parse(body.decode("utf-8"), filename=name)
+    # The selected ordinary archive retains exact historical source bytes and
+    # is distinct from the editable study/retained-run transfer family.
     edition = sha(json.dumps({name: sha(body) for name, body in sorted(changed.items())},
                                       sort_keys=True).encode())
     backup = application / ".native-supervision-preimages" / edition
@@ -777,11 +918,15 @@ def install(application, increment, *, retention=False):
     for name, body in originals.items():
         if (application / name).read_bytes() != body:
             raise ValueError("Concurrent source changed before native supervision installation: " + name)
-    # Install additive modules first, then the narrow current-source registration.
-    ordered = [dependency, *MEMBERS, "operator/web/ensembles.mjs", "operator/server.py",
-               "operator/web/app.mjs", "model/portable.py"]
-    if "operator/programmes.py" in changed:
-        ordered.append("operator/programmes.py")
+    for name, body in incoming.items():
+        if (increment / name).read_bytes() != body:
+            raise ValueError("Incoming receiving source changed before installation: " + name)
+    # Owned modules first, then shared registrations and original native science.
+    ordered = list(dict.fromkeys([
+        *MEMBERS, *shared_receiving, dependency, "operator/web/ensembles.mjs",
+        "operator/server.py", "operator/web/app.mjs", "model/portable.py",
+        *(["operator/programmes.py"] if "operator/programmes.py" in changed else []),
+    ]))
     for name in ordered:
         destination = application / name
         if name in originals:
@@ -792,14 +937,16 @@ def install(application, increment, *, retention=False):
         mode = destination.stat().st_mode & 0o777 if destination.exists() else 0o644
         if not destination.exists() or destination.read_bytes() != changed[name]:
             atomic_write(destination, changed[name], mode)
-    for dependency in retained_dependencies:
-        if (application / dependency).read_bytes() != changed.get(dependency, originals[dependency]):
-            raise ValueError("The retained scientific/context source changed during native supervision installation: " + dependency)
+    for name in retained_dependencies:
+        expected = changed[name] if name in changed else originals[name]
+        if (application / name).read_bytes() != expected:
+            raise ValueError("The retained scientific/context source changed during native supervision installation: " + name)
     receipt = {"schema": "upstate.native-supervision-install/v1", "operation_id": MARKER,
                "installed_at": dt.datetime.now(dt.timezone.utc).isoformat(),
                "edition": edition,
                "preimages": {name: sha(body) for name, body in originals.items()},
                "retained_dependencies": retained_dependencies,
+               "receiving_composition": receiving_composition,
                "files": {name: {"bytes": len(body), "sha256": sha(body)} for name, body in changed.items()}}
     if not (backup / "installation.json").exists():
         atomic_write(backup / "installation.json", (json.dumps(receipt, indent=2) + "\n").encode())

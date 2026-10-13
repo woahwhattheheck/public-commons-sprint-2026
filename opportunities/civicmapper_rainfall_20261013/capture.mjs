@@ -2,6 +2,7 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import {randomUUID,createHash} from "node:crypto";
+import "./catalogue.js";
 import "./core.js";
 const R=globalThis.RainfallReview;
 const [command,...words]=process.argv.slice(2);
@@ -44,9 +45,14 @@ async function get(url,init={},retain=null) {
 function requestFor(metadata){
  return {start_dt:metadata.start,end_dt:metadata.end,f:"sensor_columnar",rollup:metadata.interval_minutes===60?"Hourly":metadata.interval_minutes+"-minute",delivery:"artifact",[metadata.sensor_type==="gauge"?"gauges":"pixels"]:metadata.sensors.join(",")};
 }
+function verifyConfiguredTimeLabel(metadata){
+ const expected=metadata.interval_minutes===60?"range":"end";
+ if(metadata.timestamp_label!==expected)throw Error("The configured "+metadata.interval_minutes+" minute API product uses "+expected+" timestamp labels. Retain the original response and use that source convention.");
+}
 function verifyOriginalTask(task){
  if(task.schema!=="rainfall-capture-job/v1")throw Error("Unknown capture job.");
  R.metadata(task.metadata);
+ verifyConfiguredTimeLabel(task.metadata);
  if(task.metadata.units!=="inches")throw Error("The retained job must record the configured API units as inches.");
  const endpoint=root+"v2/"+task.metadata.sensor_type+"/"+task.metadata.product+"/";
  if(task.metadata.source_url!==endpoint||canonical(task.request)!==canonical(requestFor(task.metadata)))throw Error("The saved original capture selection and request disagree.");
@@ -113,12 +119,14 @@ async function capture(){
  if(args.units && args.units!=="inches")throw Error("The configured 3RWW API returns inches; --units must be inches.");
  let task,recovered=null,recoveredArtifact=null;
  const taskPath=args.out+".job.json";
- if(args.resume==="yes"){task=await json(taskPath);verifyOriginalTask(task);const prior=recoveredJobResponse(task);recovered=prior.envelope;recoveredArtifact=prior.artifact;if(await completedCapture(task,taskPath,args.out))return;}
+ if(args.resume==="yes"){task=await json(taskPath);verifyOriginalTask(task);if(args.selection){const selected=GaugeCatalogue.validateSelection(await json(args.selection));if(canonical(selected)!==canonical(task.metadata.catalogue_selection))throw Error("The selected catalogue differs from the saved original capture job. Resume using its retained selection.");}const prior=recoveredJobResponse(task);recovered=prior.envelope;recoveredArtifact=prior.artifact;if(await completedCapture(task,taskPath,args.out))return;}
  else{
   const sensors=String(args.sensors||"").split(",").map(x=>x.trim()).filter(Boolean);
   const interval=Number(args.interval||15),product=args.product||"historic15",sensor=args.sensor||"gauge";
-  const metadata={label:args.label||product+" "+args.start,product,sensor_type:sensor,sensors,start:args.start,end:args.end,interval_minutes:interval,units:"inches",timestamp_label:args["timestamp-label"]||"end",retrieved_at:new Date().toISOString(),source_url:root+"v2/"+sensor+"/"+product+"/"};
+  const metadata={label:args.label||product+" "+args.start,product,sensor_type:sensor,sensors,start:args.start,end:args.end,interval_minutes:interval,units:"inches",timestamp_label:args["timestamp-label"]||(interval===60?"range":"end"),source_time_zone:"America/New_York",retrieved_at:new Date().toISOString(),source_url:root+"v2/"+sensor+"/"+product+"/"};
+  if(args.selection)metadata.catalogue_selection=GaugeCatalogue.validateSelection(await json(args.selection));
   R.metadata(metadata);
+  verifyConfiguredTimeLabel(metadata);
   if(product==="historic5"&&interval!==5)throw Error("historic5 requires a 5 minute interval.");
   if(interval===5&&product!=="historic5")throw Error("Use historic5 for five-minute data.");
   const request=requestFor(metadata);
@@ -178,7 +186,7 @@ async function review(){
  await fs.mkdir(args.out,{recursive:true});
  await save(path.join(args.out,"review-project.json"),R.project(releases,notes));
  await fs.writeFile(path.join(args.out,"report.html"),R.report(releases,notes));
- await save(path.join(args.out,"summary.json"),{version:R.VERSION,releases:releases.map(x=>({metadata:x.metadata,fingerprint:x.fingerprint,summaries:x.summaries,warnings:x.warnings})),comparison:comparison?{summary:comparison.summary,source_transitions:comparison.sourceTransitions}:null});
+ await save(path.join(args.out,"summary.json"),{version:R.VERSION,releases:releases.map(x=>({metadata:x.metadata,fingerprint:x.fingerprint,summaries:x.summaries,warnings:x.warnings})),comparison:comparison?{summary:comparison.summary,source_transitions:comparison.sourceTransitions,catalogue_context:comparison.catalogue_context}:null});
  if(comparison)await fs.writeFile(path.join(args.out,"interval-comparison.csv"),R.csv(comparison.rows));
  for(let i=0;i<releases.length;i++){
   await fs.writeFile(path.join(args.out,"release-"+(i+1)+"-coverage.csv"),R.csv(releases[i].summaries));

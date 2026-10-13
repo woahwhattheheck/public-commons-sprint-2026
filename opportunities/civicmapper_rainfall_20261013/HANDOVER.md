@@ -43,3 +43,19 @@ All current instructions in the repository's original `AGENTS.md` remain applica
 The retained 2026-10-13 public source packet confirms historic15 gauge availability through 2026-08-31T23:45:00-04:00. The selected original window is 2026-07-13T00:00:00Z to 2026-07-14T00:00:00Z, using active `properties.web_id` values `1` (PWSA Observatory Hill) and `2` (Alcosan). GeoJSON feature IDs differ from API query IDs. Capture continues the original POST and provider job URL; the package consumes its completed response. The packet records its observed source and any HTTP metadata actually exposed by its acquisition route.
 
 Observed totals represent available valid readings. Missing values are not filled. Capture records the publisher's inch units; generic imported millimetre captures are converted by the original review engine. Nothing in this rainfall package changes the Ecosystem model inputs or claims a pollutant load at a utility intake.
+
+## Source catalogue workflow in the same handover
+
+The package includes the maintained gauge catalogue reviewer, its complete source project, a source comparison HTML report, and all editable catalogue source. Both reviewer pages use the same exact calculation module and retain the original source texts. The opening guide links to the source reviewer and report; the prepared rainfall and catalogue reviewers link back to each other.
+
+Open catalogue.html, inspect repeated query/external IDs and records without query IDs, choose current active records, save the source review, export its source report and request-selection JSON, and reopen the saved source review. Open the complete exported source records CSV normally and inspect the original records. A selection binds current catalogue records and exact source bytes; it does not establish historical instrument identity. For a new capture, --selection validates the chosen query IDs against --sensors. Preserve the existing July request and its original continuation.
+
+The receiving worker must personally open and view the exact source reviewer, its report, and all downloaded files at desktop and narrow widths alongside the existing rainfall receiving course. The browser course is extended to operate these source controls; screenshots must be viewed by the producing worker. One unchanged source edition needs one focused receiving pass.
+
+The source catalogue course can run independently of a rainfall capture:
+
+    node receive_handover.mjs --catalogue /absolute/application/directory --out /new/catalogue-receiving-directory
+
+It opens the included actual source catalogues, operates record filters and selection, downloads and reopens the original-source project, inspects the source report at desktop/narrow widths, and repeats the saved review in a fresh browser context. Use the existing Playwright/Chromium paths as in the full receiving command. This starts no rainfall request. The producing worker then views the actual pages, every relevant image and the downloaded attachments.
+
+The catalogue-only archive is received independently when BUILD.json is present: the course checks its exact ZIP identity and member roster, extracts with Python's standard ZIP reader, verifies every extracted file, then opens the extracted catalogue in a fresh browser context. It also operates all report-page exports, including both exact original GeoJSON files. The CLI checks both saved and embedded source projects against the same 40 MB reopening limit as the browser.

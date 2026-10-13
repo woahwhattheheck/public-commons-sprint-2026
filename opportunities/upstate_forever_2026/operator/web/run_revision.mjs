@@ -20,12 +20,15 @@ export function revisionFormRequest(review,step,workspace){
 export function attachRunRevisions(host){
   const {api,endpoint,getState,getWorkspace,openItem,showTask,openDesk,openRunRevisionForm,toast}=host;
   let root=null,workspace=null,epoch=0,intent=0,busy=false,error='',notice='',review=null,rows=[],signature='',loading=false;
-  let baselineDraft='',titleDraft='';
+  let baselineDraft='',titleDraft='',busyOwner=null;
   const remembered=new Map();
   const current=()=>getWorkspace?.()||getState()?.workspace_key;
   const mark=()=>({root,workspace,epoch,intent});
   const mounted=m=>root===m.root&&root?.isConnected&&workspace===m.workspace&&current()===m.workspace&&epoch===m.epoch;
   const valid=m=>mounted(m)&&intent===m.intent;
+  function supersede(){intent++;busyOwner=null;busy=false;}
+  function claimBusy(m){busyOwner=m;busy=true;}
+  function releaseBusy(m){if(busyOwner!==m)return;busyOwner=null;busy=false;if(mounted(m))render();}
   const url=(operation,query={})=>endpoint('/api/run-revisions/'+operation,query);
   const unwrap=result=>result?.review||result;
   const data=()=>getState()?.data||{};
@@ -86,12 +89,12 @@ export function attachRunRevisions(host){
       (review.revised_run_id?'<p><strong>'+esc(run?.state||'Saved run')+'</strong> · '+esc(runName(review.revised_run_id))+'</p><p class="revision-id">'+esc(review.revised_run_id)+'</p>'+item('runs',review.revised_run_id,run?.state==='complete'?'Open completed revised run':'Inspect inputs and start native models'):'<p class="revision-muted">No revised run has been prepared for these inputs.</p>')+
       '<p>The original run controls preview the changed cells, start or resume the native models, and retain their actual arguments and logs.</p></section>'+
       '<section><h3>3. Compare the actual results</h3><p>The reference remains first and the revised run remains the alternative. Input changes and annual model quantities keep their original support and units.</p>'+
-      '<div class="revision-actions">'+button('compare','Compare reference and revised run','',locked||!ready)+button('inputs','Review actual input changes','',busy||!ready)+button('quantities','Review native quantities','',busy||!ready)+
+      '<div class="revision-actions">'+button('compare','Compare reference and revised run','',locked||!ready)+button('inputs','Review actual input changes','',busy||!ready)+button('quantities','Review native quantities','',busy||!ready)+button('history','Inspect execution history for this pair','',locked||!ready)+button('gis','Prepare editable GIS handover','',locked||!ready||!review.comparison_id)+
       (review.comparison_id?item('comparisons',review.comparison_id,'Open saved comparison and delivery'):'')+'</div>'+
       (!ready?'<p class="revision-muted">Complete both retained runs to compare their outputs.</p>':'')+'</section></div>'+
       '<h3>Retained operations</h3>'+operations()+
       '<div class="revision-actions">'+button('export','Download revision JSON','',busy)+button('backup','Back up complete Workspace','',busy)+'</div>'+
-      '<p class="revision-muted">Revision JSON reopens these exact choices in the original or restored Workspace. It does not contain the model rasters. Use the complete Workspace backup or the existing GIS and delivery exports for the full handoff.</p></section>';
+      '<p class="revision-muted">Revision JSON reopens these exact choices in the original or restored Workspace. It does not contain the model rasters. Use Prepare editable GIS handover to retain this reference, revision, saved comparison and complete input context. Save an execution history for the exact pair first when it should accompany the GIS archive. A complete Workspace backup retains the runnable application.</p></section>';
   }
   function operations(){
     if(!review.operations?.length)return '<p>No revised input has been submitted.</p>';
@@ -122,8 +125,16 @@ export function attachRunRevisions(host){
       return openRunRevisionForm({...request,isCurrent:()=>valid(m)});
     }
     if(kind==='inputs')return openDesk('scenario-inputs','openPair',review.baseline_run_id,review.revised_run_id);
+    if(kind==='history'||kind==='gis'){
+      if(pending()||!pairReady())throw Error('Complete both original runs and finish accepted revision tasks before handover.');
+      if(kind==='gis'&&!review.comparison_id)throw Error('Save the original reference-first comparison before GIS handover.');
+      const pair={workspace_key:workspace,baseline_run_id:review.baseline_run_id,revised_run_id:review.revised_run_id};
+      if(kind==='history')return openDesk('native-run-desk','createForRuns',{workspace_key:workspace,
+        run_ids:[pair.baseline_run_id,pair.revised_run_id],title:(review.title+' · reference and revision').slice(0,240)});
+      return openDesk('gis-projects','createForRunRevision',{...pair,revision_id:review.id});
+    }
     if(kind==='quantities')return openDesk('native-process-reports','createForRuns',{workspace_key:workspace,run_ids:[review.baseline_run_id,review.revised_run_id],models:nativeModels(review.selection),title:review.title+' · reference and revision'});
-    busy=true;render();
+    claimBusy(m);render();
     try{
       if(kind==='create'){
         if(!baselineDraft||!titleDraft.trim())throw Error('Choose the completed reference run and enter a revision title.');
@@ -136,13 +147,13 @@ export function attachRunRevisions(host){
       }else if(kind==='export'||kind==='backup'){
         const captured=await request('capture',{id:review.id});if(!captured)return;
         receive(captured);
-        if(kind==='backup'){busy=false;return host.openBackup();}
+        if(kind==='backup'){releaseBusy(m);return host.openBackup();}
         const result=await request('export',undefined,{id:review.id});if(!result)return;
         download(JSON.stringify(result.export||result.review||result,null,2)+'\n',review.id+'.json','application/json');
         notice='Downloaded the checked revision choices. Use a complete Workspace backup to retain all original inputs and outputs.';
       }
       if(valid(m)){const result=await request('catalog');if(result)rows=result.reviews||rows;}
-    }finally{if(mounted(m)){busy=false;render();}}
+    }finally{releaseBusy(m);}
   }
   function download(body,name,type){
     const blob=new Blob([body],{type}),href=URL.createObjectURL(blob),a=document.createElement('a');a.href=href;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(href),1000);
@@ -150,23 +161,23 @@ export function attachRunRevisions(host){
   async function importFile(file){
     if(!file||busy)return;
     if(file.size>8*1024*1024)throw Error('Choose a revision JSON smaller than 8 MiB. Complete model archives belong in Workspace restore.');
-    const m=mark();busy=true;render();
+    intent++;const m=mark();claimBusy(m);render();
     try{
       const body=await file.text();if(!valid(m))return;
       let value;try{value=JSON.parse(body);}catch{throw Error('Choose the complete exported revision JSON.');}
       const result=await request('import',{review:value});
       if(result){receive(result);notice='Reopened the exact retained revision. No model was submitted.';const list=await request('catalog');if(list)rows=list.reviews||rows;}
-    }finally{if(valid(m)){busy=false;render();}}
+    }finally{releaseBusy(m);}
   }
-  function fail(e){error=e.message||String(e);busy=false;render();toast?.(error);}
-  function click(event){const node=event.target.closest('[data-revision-action]');if(node&&root?.contains(node)){event.preventDefault();const m=mark();action(node.dataset.revisionAction,node).catch(e=>{if(mounted(m))fail(e);});}}
+  function fail(e){error=e.message||String(e);busyOwner=null;busy=false;render();toast?.(error);}
+  function click(event){const node=event.target.closest('[data-revision-action]');if(node&&root?.contains(node)){event.preventDefault();const pendingAction=action(node.dataset.revisionAction,node),m=mark();pendingAction.catch(e=>{if(valid(m))fail(e);});}}
   function change(event){
     if(event.target.id==='revision-baseline')baselineDraft=event.target.value;
-    if(event.target.id==='revision-import'){const m=mark();importFile(event.target.files?.[0]).catch(e=>{if(mounted(m))fail(e);});}
+    if(event.target.id==='revision-import'){const pendingImport=importFile(event.target.files?.[0]),m=mark();pendingImport.catch(e=>{if(valid(m))fail(e);});}
   }
   function input(event){if(event.target.id==='revision-title')titleDraft=event.target.value;}
   async function mount(container){detach();root=container;workspace=current();root.addEventListener('click',click);root.addEventListener('change',change);root.addEventListener('input',input);render();await reload();}
-  function detach(){if(root){root.removeEventListener('click',click);root.removeEventListener('change',change);root.removeEventListener('input',input);}epoch++;intent++;root=null;workspace=null;review=null;rows=[];busy=false;loading=false;error='';notice='';signature='';baselineDraft='';titleDraft='';}
+  function detach(){if(root){root.removeEventListener('click',click);root.removeEventListener('change',change);root.removeEventListener('input',input);}epoch++;intent++;root=null;workspace=null;review=null;rows=[];busyOwner=null;busy=false;loading=false;error='';notice='';signature='';baselineDraft='';titleDraft='';}
   function update(){
     if(!root)return;
     if(current()!==workspace){detach();return;}
@@ -178,14 +189,16 @@ export function attachRunRevisions(host){
     if(value?.workspace_key!==undefined&&value.workspace_key!==workspace)throw Error('Choose the run in its original Workspace.');
     const id=typeof value==='string'?value:value?.run_id;
     if(find('runs',id)?.state!=='complete')throw Error('Choose a completed original run.');
-    intent++;baselineDraft=id;titleDraft='Revision of '+runName(id);error='';notice='Choose a title and create the revision to keep this completed run as its reference.';render();
+    supersede();baselineDraft=id;titleDraft='Revision of '+runName(id);error='';notice='Choose a title and create the revision to keep this completed run as its reference.';render();
     root.querySelector('#revision-title')?.focus();
   }
   async function openSaved(value){
     const id=typeof value==='string'?value:value?.id;
     if(!root||current()!==workspace)throw Error('Open the revision desk first.');
     if(value?.workspace_key&&value.workspace_key!==workspace)throw Error('Open the original Workspace first.');
-    intent++;const result=await request('review',undefined,{id});if(result){receive(result);render();}
+    supersede();const m=mark();claimBusy(m);error='';notice='';render();
+    try{const result=await request('review',undefined,{id});if(result){receive(result);render();}}
+    finally{releaseBusy(m);}
   }
   function taskActions(task){
     if(task.workspace!==current()||!Array.isArray(task._run_revisions))return '';

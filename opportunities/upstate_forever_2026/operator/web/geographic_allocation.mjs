@@ -68,31 +68,54 @@ function physicalMarkup(region,current,binding) {
 function sitingMarkup(region) {
   const entries=Object.entries(region.siting_contrasts||{});
   if(!entries.length)return "";
-  const support=[],mass=[],normalized=[],partitions=[],basis=[],shared=[];
+  const support=[],mass=[],avoided=[],areas=[],normalized=[],partitions=[],basis=[],shared=[];
+  const unavailable=(value,reason)=>typeof value==="number"&&Number.isFinite(value)?"":label(reason||"unavailable in this retained edition");
   for(const [variable,value] of entries){
-    const name=(pollutantNames[variable]||label(variable))+" ("+value.units+")";
+    const quantity=pollutantNames[variable]||label(variable);
+    const name=quantity+" ("+value.units+")";
+    const rateUnits=value.normalized_units||String(value.units||"").replace("/year","/(ha*year)");
     support.push([name,allocationNumber(value.native_common_cells),allocationNumber(value.native_common_hectares),allocationNumber(value.categorical_and_native_common_cells)]);
-    shared.push([name,value.equal_positive_local_area_and_class_budget===true?"Equal positive area and class counts":value.equal_positive_local_area_and_class_budget===false?"Different or zero local budgets":"Unavailable",allocationNumber(value.shared_changed_hectares),allocationNumber(value.advantage_per_shared_changed_ha,true)]);
+    shared.push([quantity,value.equal_positive_local_area_and_class_budget===true?"Equal positive area and class counts":value.equal_positive_local_area_and_class_budget===false?"Different or zero local budgets":"Unavailable",
+      allocationNumber(value.shared_changed_hectares),allocationNumber(value.advantage_per_shared_changed_ha,true),
+      rateUnits,unavailable(value.advantage_per_shared_changed_ha,value.shared_advantage_unavailable_reason)]);
     mass.push([name,allocationNumber(value.mass?.baseline),allocationNumber(value.mass?.restoration),allocationNumber(value.mass?.control),allocationNumber(value.restoration_advantage_mass,true)]);
     for(const arm of ["restoration","control"]){
       const item=value.alternatives?.[arm]||{};
-      normalized.push([name+" · "+arm,allocationNumber(item.actual_changed_hectares),allocationNumber(item.avoided_export_mass,true),allocationNumber(item.avoided_export_percent,true),allocationNumber(item.avoided_export_per_changed_ha,true)]);
-      if(item.normalization_basis)basis.push(name+" · "+arm+": "+item.normalization_basis);
+      const regionArea=Object.hasOwn(item,"region_changed_hectares")?item.region_changed_hectares:item.actual_changed_hectares;
+      const commonArea=item.native_common_changed_hectares;
+      const armName=quantity+" · "+arm;
+      avoided.push([armName,arm==="restoration"?"B − R":"B − C",allocationNumber(item.avoided_export_mass,true),value.units,
+        allocationNumber(item.avoided_export_percent,true),unavailable(item.avoided_export_percent,item.avoided_export_percent_unavailable_reason)]);
+      areas.push([armName,allocationNumber(item.whole_scenario_changed_hectares),allocationNumber(regionArea),
+        allocationNumber(commonArea),allocationNumber(item.changed_native_support_fraction)]);
+      for(const [areaLabel,key,reasonKey,basisKey] of [
+        ["Whole-scenario changed ha","avoided_export_per_whole_scenario_changed_ha","whole_scenario_rate_unavailable_reason","whole_scenario_normalization_basis"],
+        ["Changed ha inside this region","avoided_export_per_changed_ha","local_rate_unavailable_reason","normalization_basis"],
+        ["Changed ha inside native common support","avoided_export_per_native_common_changed_ha","native_common_rate_unavailable_reason","native_common_normalization_basis"]
+      ]){
+        normalized.push([armName,areaLabel,allocationNumber(item[key],true),rateUnits,unavailable(item[key],item[reasonKey])]);
+        if(item[basisKey])basis.push(armName+" · "+areaLabel+": "+item[basisKey]);
+      }
       for(const [partition,part] of Object.entries(item.source_cell_partitions||{})){
         partitions.push([name+" · "+arm+" · "+label(partition),allocationNumber(part.cells),allocationNumber(part.baseline_mass),allocationNumber(part.alternative_mass),allocationNumber(part.avoided_export_mass,true)]);
       }
     }
   }
-  return '<section class="geo-allocation-section"><h4>Native comparison on the same source pixels</h4><p>These retained three-way quantities share the exact same addressed source-pixel mask within each quantity. Positive restoration advantage (control minus restoration) means less modeled export under restoration. Zero common support remains unavailable.</p>'+
-    table(["Quantity and annual units","Baseline","Restoration","Control","Restoration advantage"],mass)+
-    '<details><summary>Shared support, changed-area normalization and source-cell response</summary>'+
+  return '<section class="geo-allocation-section"><h4>Native comparison on the same source pixels</h4><p>These retained three-way quantities share one original pollutant-specific baseline, restoration and control finite mask. Positive restoration advantage (control minus restoration) means less modeled export under restoration. Negative differences remain visible; absent common support stays unavailable.</p>'+
+    table(["Quantity and annual units","Baseline","Restoration","Control","Restoration advantage (C − R)"],mass)+
+    table(["Quantity / alternative","Difference","Avoided stream export","Annual units","Avoided percent","Percent unavailable reason"],avoided)+
+    '<details><summary>Common support and three original intervention areas</summary>'+
     table(["Quantity","Native common cells","Native common ha","Categorical + native cells"],support)+
-    '<p>Avoided export is baseline minus the selected alternative on the retained common support. Each per-hectare value uses its displayed actual changed area and original normalization basis.</p>'+
-    table(["Quantity / alternative","Actual changed ha","Avoided annual export","Avoided percent","Avoided export / changed ha"],normalized)+
-    table(["Quantity","Local area and origin-class budget","Shared changed ha","Advantage / shared changed ha"],shared)+
-    '<p>Source-pixel partitions distinguish changed land, unchanged land and missing categorical support. They describe where source export changed under the modeled scenario.</p>'+
-    table(["Quantity / alternative / source pixels","Cells","Baseline","Alternative","Avoided export"],partitions)+
-    '<ul>'+basis.map(x=>"<li>"+esc(x)+"</li>").join("")+"</ul></details></section>";
+    '<p>Whole-scenario area is the complete original intervention. Regional area counts actual changed categorical cells inside this exact mask. Native-common changed area additionally requires finite output in all three runs for this pollutant. These areas are not interchangeable; common coverage is a fraction from zero to one.</p>'+
+    table(["Quantity / alternative","Whole-scenario changed ha","Changed ha inside region","Changed ha inside native common support","Common / region fraction"],areas)+"</details>"+
+    '<details><summary>Avoided export per explicitly selected changed hectare</summary>'+
+    '<p>Each rate divides this region’s same-cell avoided export by its separately named original denominator. Zero area and absent native support stay unavailable for different stated reasons. Regional rates are descriptive: changes in retention or routing outside this mask can change export originating inside it, so the rate does not isolate a causal effect of local planted hectares or an intake load.</p>'+
+    table(["Quantity / alternative","Original area denominator","Avoided export / ha","Rate units","Unavailable reason"],normalized)+
+    '<p>C − R per equal local changed ha (descriptive) is supplied only for positive equal local changed area and original-class counts. Globally matched cases can have unequal local or native-common treatment budgets.</p>'+
+    table(["Quantity","Local area and origin-class budget","Shared local changed ha","C − R / equal local ha","Rate units","Unavailable reason"],shared)+
+    '<ul>'+basis.map(x=>"<li>"+esc(x)+"</li>").join("")+"</ul></details>"+
+    '<details><summary>Response at changed and unchanged source cells</summary><p>These original partitions describe export originating from changed land, unchanged land and source cells lacking common categorical support, then delivered along modeled flow paths. Their mass difference can include nonlocal routing and retention responses.</p>'+
+    table(["Quantity / alternative / source pixels","Cells","Baseline","Alternative","Avoided export"],partitions)+"</details></section>";
 }
 export function allocationMarkup(result,requested={}) {
   const chosen=allocationSelection(result,requested),row=chosen.selected,report=result?.report;

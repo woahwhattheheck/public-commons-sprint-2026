@@ -1,0 +1,15 @@
+# Authored SHACL acceptance for this development derivation only.
+@prefix : <https://dcat.example.org/> .
+@prefix dqv: <http://www.w3.org/ns/dqv#> .
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+:DatasetShape a sh:NodeShape ;
+  sh:targetNode :Dataset ;
+  sh:property [
+    sh:path dqv:hasQualityMeasurement ;
+    sh:minCount 1 ;
+    sh:node :MeasurementShape
+  ] .
+:MeasurementShape a sh:NodeShape ;
+  sh:property [ sh:path dqv:value ; sh:minCount 1 ; sh:datatype xsd:decimal ] ;
+  sh:property [ sh:path dqv:computedOn ; sh:hasValue :Dataset ] .

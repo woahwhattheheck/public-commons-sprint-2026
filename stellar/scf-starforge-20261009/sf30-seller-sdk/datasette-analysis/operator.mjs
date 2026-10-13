@@ -1,5 +1,6 @@
 // MIT. Datasette customer views on the original Analysis workspace and domain API.
 import {mountNld} from './nld_operator.mjs';
+import {mountBdnb} from './bdnb_operator.mjs';
 const $ = id => document.getElementById(id);
 const token = location.hash.slice(1);
 const nativeSchema = 'stellar-forge.datasette-operator.v1';
@@ -7,9 +8,12 @@ const state = {snapshot: null, selected: null, offset: 0, next: null,
   page: null, busy: false, refresh: null, poll: null, currentView: 'editions',
   shownRequests: new Set(), comparison: null, comparisonPage: null,
   rowGeneration: 0, comparisonGeneration: 0, submitGeneration: 0,
-  preparing: false, submitting: false, prepareRevision: 0, receipts: new Map()};
+  preparing: false, preparingAction: false, submitting: false, prepareRevision: 0, receipts: new Map()};
 const storageKey = 'stellar-forge:datasette-pending:' + location.origin;
 const object = value => value !== null && typeof value === 'object' && !Array.isArray(value);
+const exactBody = value => value === null || typeof value !== 'object' ? JSON.stringify(value)
+  : Array.isArray(value) ? '[' + value.map(exactBody).join(',') + ']'
+  : '{' + Object.keys(value).sort().map(key => JSON.stringify(key) + ':' + exactBody(value[key])).join(',') + '}';
 function el(tag, text, className) {
   const item = document.createElement(tag);
   if (text !== undefined) item.textContent = String(text);
@@ -93,7 +97,7 @@ function requireScope(scope) {
 }
 function mutationControls() {
   for (const button of document.querySelectorAll('[data-mutation]'))
-    button.disabled = state.busy || state.preparing || state.submitting;
+    button.disabled = state.busy || state.preparing || state.preparingAction || state.submitting;
 }
 function clearPending(requestId) {
   if (pending()?.request_id === requestId) pending(null);
@@ -458,6 +462,7 @@ async function refresh() {
       String(b.updated_at).localeCompare(String(a.updated_at)) || a.id.localeCompare(b.id));
     $('analysis-link').href = (value.analysis_path || '/') + '#' + token;
     renderRequests(); renderEditions(); renderSummary(); renderFiles(); nld.render(value);
+    bdnb.render(value).catch(error => notice(error.message, true));
     clearTimeout(state.poll);
     state.poll = setTimeout(() => refresh().catch(error => notice(error.message, true)), state.busy ? 1500 : 10000);
     return value;
@@ -496,14 +501,16 @@ async function submitEnvelope(envelope, expectedScope = workspaceScope()) {
   try {
     result = await api('/api/datasette/requests', {method: 'POST', body: envelope});
     requireScope(expectedScope);
-    if (result.request?.id !== envelope.request_id || result.request?.action !== envelope.action)
+    if (result.request?.id !== envelope.request_id || result.request?.action !== envelope.action
+        || exactBody(result.request?.body) !== exactBody(envelope.body))
       throw new Error('The returned receipt differs from the original request.');
     result.request = rememberReceipt(result.request);
     clearPending(envelope.request_id);
     if (result.request.action === 'compare') state.comparison = null;
   } catch (error) {
     const accepted = state.receipts.get(envelope.request_id);
-    if (workspaceScope() === expectedScope && accepted?.action === envelope.action) {
+    if (workspaceScope() === expectedScope && accepted?.action === envelope.action
+        && exactBody(accepted.body) === exactBody(envelope.body)) {
       result = {request: accepted, reused: true}; clearPending(envelope.request_id);
     } else {
       if (generation === state.submitGeneration && workspaceScope() === expectedScope)
@@ -522,13 +529,24 @@ async function submitEnvelope(envelope, expectedScope = workspaceScope()) {
   }
   return result;
 }
-async function startAction(action, body, expectedScope = workspaceScope()) {
+async function startAction(action, body, expectedScope = workspaceScope(), options = {}) {
   if (!state.snapshot) await refresh();
   if (expectedScope === null) expectedScope = workspaceScope();
   requireScope(expectedScope);
-  if (state.busy || state.submitting || state.preparing && action !== 'prepare')
+  if (state.busy || state.submitting || state.preparingAction || state.preparing && action !== 'prepare')
     throw new Error('Wait for the current Datasette action to finish.');
-  return submitEnvelope({request_id: crypto.randomUUID().replaceAll('-', ''), action, body}, expectedScope);
+  if (pending()) throw new Error('Reconnect the original unanswered request in Operator activity before creating another.');
+  const requestId = options.requestId || crypto.randomUUID().replaceAll('-', '');
+  if (!/^[a-f0-9]{32}$/.test(requestId)) throw new Error('Use an original 32-character request ID.');
+  const envelope = {request_id: requestId, action, body};
+  if (new TextEncoder().encode(JSON.stringify(envelope)).byteLength > 1024 * 1024)
+    throw new Error('Use the complete host file descriptor for a request larger than 1 MiB.');
+  state.preparingAction = true; mutationControls();
+  try {
+    if (options.prepared) await options.prepared(envelope);
+    requireScope(expectedScope);
+    return await submitEnvelope(envelope, expectedScope);
+  } finally {state.preparingAction = false; mutationControls();}
 }
 async function resumeRequest(requestId) {
   await api('/api/datasette/requests/' + requestId + '/resume', {method: 'POST', body: {}});
@@ -546,13 +564,15 @@ function samePrepareSelection(original) {
 }
 const nld = mountNld({api, startAction, el, definition, jsonDetails, table, display, bytes,
   notice, download, workspaceScope});
+const bdnb = mountBdnb({api, startAction, submitEnvelope, el, definition, jsonDetails,
+  table, display, bytes, notice, download, workspaceScope});
 for (const id of ['handover-path', 'handover-json', 'handover-file', 'prefix', 'prepare-resume']) {
   $(id).addEventListener('input', () => {state.prepareRevision++;});
   $(id).addEventListener('change', () => {state.prepareRevision++;});
 }
 $('prepare-form').addEventListener('submit', async event => {
   event.preventDefault();
-  if (state.preparing || state.submitting || state.busy) {
+  if (state.preparing || state.preparingAction || state.submitting || state.busy) {
     notice('The original Datasette source operation is still being submitted.', true); return;
   }
   const original = prepareSelection(), initialScope = workspaceScope(), initialView = state.currentView;

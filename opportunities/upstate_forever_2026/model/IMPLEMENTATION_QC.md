@@ -2,6 +2,26 @@
 
 The existing field plan can retain a complete scientific review of explicitly declared sample duplicates, replicates and blanks. The review uses an exact saved plan revision, preserves every original observation and source relationship, and records the reviewer's criteria and interpretation. Its output is a normal retained Implementation report edition that travels with the existing complete Workspace archive. The same review can become an ordinary ordered scientific report source.
 
+## Open the readable report and its original files
+
+After opening a saved QC review, choose **report.html** in its retained-file controls. A saved corrective-action edition offers the same report link. In a saved comparison, choose **Open readable report and original sources**. The report opens in a separate browser tab, leaving the editable field plan and current draft intact.
+
+The report's own links now open or download the exact JSON, CSV and other companion files belonging to that saved edition. They use the existing authenticated Operator file session. Each request reopens the original native report, checks its original plan/review/decision binding and complete member inventory, and checks the selected file's byte count and SHA-256 before serving it. A missing or changed original file is reported as an error. It is never substituted with a similarly named file from another report.
+
+This applies to all three report families:
+
+| Saved report | Useful files reached from its own links | Original identity |
+| --- | --- | --- |
+| Sample QC review | Complete evaluated review, retained criteria, original-record/result tables and source inventory | Original review ID and exact field-plan revision |
+| Corrective-action review | Complete decision/receipt, original QC binding, retained task/evidence context and source files | Original action report and committed native revision |
+| Explicit QC comparison | Full comparison, source inputs and the complete **before-review.zip** and **after-review.zip** | Explicit selected original reviews and authored group pairs |
+
+The comparison's two original review ZIPs are complete flat report packages. Download each ZIP, extract all its members together and open its **report.html**; those unchanged originals retain their own relative links. The comparison's full export also contains these two packages.
+
+For offline use, choose the existing **Complete review ZIP**, **Complete follow-through ZIP** or **Export complete original source package** control. Extract the complete package before opening its report. Saving only the HTML file from an online tab does not collect its companion files. The full original Workspace export carries the report banks and native histories; after receiving it, open the saved report in the receiving Operator to obtain file links for that local workspace. Sender-only ticket URLs are not portable source identities.
+
+The readable view admits only the exact original `window.print()` event handler used by **Print complete review** and **Print complete comparison**. That button opens the browser's print interface; choose the destination or cancel there. Other scripts, event handlers and form submissions remain disabled. The handler is restricted by its SHA-256 in `script-src-attr`, while script elements remain disabled. Only the exact retained `report.html` receives the file-session origin needed by the original links. Other attached HTML files keep the host's ordinary isolated view. Model calculations, source values, criteria, decisions, original report bytes and ZIP content are unchanged by opening or downloading a report. Explicit presentation successors remain separate report editions; the selected report ID always determines the files shown.
+
 ## Review the original results
 
 Open an existing native plan in **Implementation & fieldwork → Field records → Sample quality control**. The editor identifies the saved revision it uses. Unsaved field edits remain in the original plan editor; save those edits first when they should become part of a new review.

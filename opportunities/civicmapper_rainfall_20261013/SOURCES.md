@@ -16,9 +16,13 @@ Retrieved October 13, 2026.
 - src/components/sidebar/downloadTableUtils.js and src/store/utils/dateTime.js at the same pinned commit: exported time handling.
 - src/store/utils/transformers.js, blob 4babc16d055494395775d475d4c18d7cb701ef19, and src/components/sidebar/geomPicker.jsx, blob c4cb0732fded825b12b47fcd345ca01878721eb6: active gauge web_id selection used by the actual request.
 - Full observed availability and gauge response packet: source/20261013/publisher-selection.json. Original URLs are https://atlas.3riverswetweather.org/rainfall/v2/latest-observations/?format=json and https://atlas.3riverswetweather.org/rainfall/gauges/. The public HTTPS importer returned complete bytes but did not expose HTTP status or response headers; the packet preserves that distinction.
+- src/results/engine.test.js, blob 477c530d5250fa36030b2b3cf8cc79b70f9df30a, and src/components/sidebar/downloadTableUtils.test.js, blob b1107ff29d0d150fe1ef8228e5c9681da47eba94: explicit hourly ranges, repeated Eastern daylight-saving hours, and empty columnar sensor groups. These are versioned application contracts; a new hourly service result is not implied.
+- Gauge catalogue originals and exact edition identities are retained in source/20261013/gauge-catalogue-project.json. The reference file is public/static/data/gauges.geojson, blob 414cd43138fea18aa96512564c3ee390f92830c4 at the same pinned source commit. Its feature.id and properties.id correspond to query and external IDs; the current provider has explicit web_id and ext_id properties.
 - Older API documentation: https://3rww.github.io/api-docs/
   Used to interpret source codes. Its planned/v1 routes are not used as the current live contract.
 
 The actual data capture records its public endpoint, selected window/sensors, retrieval time, original raw response, and exact text hash. This source note does not substitute for a retrieved rainfall result.
 
 The code in this directory was written for this workshare. It does not copy the existing CivicMapper or 3RWW user interface, credentials, map assets, application source, or customer data.
+
+The retained reference catalogue carries its original Apache 2.0 license and source attribution in THIRD_PARTY.md and licenses/3rww-rainfall-Apache-2.0.txt. Source texts remain unmodified; the comparisons and reports are separate derived outputs.

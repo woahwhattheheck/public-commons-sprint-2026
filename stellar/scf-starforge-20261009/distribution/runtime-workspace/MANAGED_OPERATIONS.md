@@ -172,3 +172,7 @@ Generate a new UUID for a new operation and retain the file. Resubmit that same 
 | managed-run | homeId, optional releaseId, original command, string-array args, current home expectedRevision |
 
 The original starforge installation and home forge.mjs commands operate the same home directly. See [Managed package installation](../../sf46-release/MANAGED_PACKAGE.md) and [Runtime workspace](README.md).
+
+## Complete configuration editions
+
+The original configuration editor now retains independent per-file drafts and complete before/after bytes for every new native save. Open, compare, restore and export exact retained editions through [Managed configuration editions](MANAGED_CONFIGURATION.md). The existing managed worker, home lock and current-file digest comparison continue to own each change. A submitted draft stays retained until the native worker's actual completed outcome is read.

@@ -57,7 +57,7 @@ let formOpeningRequest=0;
 const acceptedTasks=new Map();
 const form=$('#operation-form'),formDialog=$('#form-dialog'),detailDialog=$('#detail-dialog');
 
-const spatialWorkspace=createSpatialWorkspace({request:api,getWorkspace:()=>workspace,refreshState:refresh,showTask,openItem,toast});
+const spatialWorkspace=createSpatialWorkspace({request:api,getWorkspace:()=>workspace,refreshState:refresh,showTask,openItem,toast,openStudyTransfer:selection=>extensions.openExtension('study-transfer','openForStudies',selection)});
 const scenarioInputReview=createScenarioInputReview({getState:()=>state,esc,number,button,table,short,when,runTitle,nativeModels});
 
 async function api(path,{method='GET',body,raw,filename,signal}={}){
@@ -109,7 +109,8 @@ async function openRetainedBuiltIn(selection,target,open){
  if(selection?.workspace_key!==workspace||!/^[0-9a-f]{64}$/.test(selection?.id||''))
   throw Error('Open the saved report or review in its original Workspace.');
  const request={workspace,workspaceRevision,connectionEpoch};
- const admitted=()=>capability&&workspace===request.workspace&&workspaceRevision===request.workspaceRevision&&connectionEpoch===request.connectionEpoch;
+ const admitted=()=>capability&&workspace===request.workspace&&workspaceRevision===request.workspaceRevision&&connectionEpoch===request.connectionEpoch&&
+  (typeof selection.isCurrent!=='function'||selection.isCurrent());
  if(!admitted())return null;
  detailDialog.close();detailContext=null;
  const navigation=navigate(target),targetNavigation=navigationRevision;
@@ -239,6 +240,64 @@ function finderDestination(open){
  if(detailDialog.open)detailDialog.close();
  return open();
 }
+function finderContext(selection){
+ if(selection?.workspace_key!==workspace||!workspace)throw Error('Open this result in its original Workspace.');
+ const request={workspace,workspaceRevision,connectionEpoch};
+ return ()=>Boolean(capability)&&workspace===request.workspace&&workspaceRevision===request.workspaceRevision&&
+  connectionEpoch===request.connectionEpoch&&(typeof selection.isCurrent!=='function'||selection.isCurrent());
+}
+function finderCancelled(){
+ const error=Error('The Finder request is no longer current.');error.name='AbortError';return error;
+}
+async function searchFinderStudies(selection){
+ const current=finderContext(selection),project=state?.data?.project?.id;
+ const {query='',kind='',offset=0,limit=25,signal}=selection;
+ if(typeof query!=='string'||query.length>2048||typeof kind!=='string'||kind.length>128||
+    !Number.isSafeInteger(offset)||offset<0||!Number.isSafeInteger(limit)||limit<1||limit>1000)
+  throw Error('Choose a valid saved-study search page.');
+ if(!current()||signal?.aborted)throw finderCancelled();
+ let result;
+ try{result=await api('/api/study-transfer/catalog?'+new URLSearchParams({
+  workspace:selection.workspace_key,query,kind,offset,limit}),{signal});}
+ catch(error){if(!current()||signal?.aborted)throw finderCancelled();throw error;}
+ if(!current()||signal?.aborted)throw finderCancelled();
+ if(!project||result?.project?.id!==project||result.schema!=='upstate.study-catalog/v1'||
+    !Array.isArray(result.items)||result.offset!==offset||result.limit!==limit||
+    !Number.isSafeInteger(result.total)||result.total<0||result.items.length>limit||
+    !(result.next_offset===null||(Number.isSafeInteger(result.next_offset)&&
+      result.next_offset===offset+result.items.length&&result.next_offset<result.total)))
+  throw Error('The operator returned an inconsistent saved-study page. Refresh the original Workspace.');
+ return {...result,workspace_key:selection.workspace_key};
+}
+async function openFinderSource(selection){
+ const current=finderContext(selection);
+ if(!/^[0-9a-f]{64}$/.test(selection.source_collection_id||'')||
+    typeof selection.source_id!=='string'||!selection.source_id.length||selection.source_id.length>1024||
+    /[\u0000-\u001f\u007f]/.test(selection.source_id))
+  throw Error('Choose an original retained source entry.');
+ if(!current())return null;
+ if(formDialog.open)throw Error('Save or close the current draft before opening a Finder result.');
+ return finderDestination(()=>inspectSource(selection.source_collection_id,selection.source_id,undefined,{isCurrent:current}));
+}
+async function openFinderReport(selection){
+ const current=finderContext(selection);
+ if(!current())return null;
+ if(formDialog.open)throw Error('Save or close the current draft before opening a Finder result.');
+ return finderDestination(()=>openSavedScientificReport({...selection,isCurrent:current}));
+}
+async function openFinderStudy(selection){
+ const admitted=finderContext(selection);
+ if(typeof selection.kind!=='string'||!selection.kind||
+    !(selection.kind==='robust-decisions'?/^study_[0-9a-f]{32}$/:/^[0-9a-f]{64}$/).test(selection.id||''))
+  throw Error('Choose an original retained study.');
+ if(!admitted())return null;
+ if(formDialog.open)throw Error('Save or close the current draft before opening a Finder result.');
+ let targetNavigation=-1;
+ const current=()=>admitted()&&view==='study-transfer'&&navigationRevision===targetNavigation;
+ const opening=finderDestination(()=>extensions.openDesk('study-transfer','openForFinder',{...selection,isCurrent:current}));
+ targetNavigation=navigationRevision;
+ try{return await opening;}catch(error){if(!current())return null;throw error;}
+}
 const workspaceFinder=attachWorkspaceFinder({
  getState:()=>state,getWorkspace:()=>workspace,
  getDesks:()=>$$('.sidebar [data-view]').filter(node=>viewLabels[node.dataset.view]||extensions.hasView(node.dataset.view))
@@ -246,6 +305,8 @@ const workspaceFinder=attachWorkspaceFinder({
  navigate:next=>finderDestination(()=>navigate(next)),
  openItem:(kind,id)=>finderDestination(()=>openItem(kind,id)),
  showTask:id=>finderDestination(()=>showTask(id)),
+ openSource:openFinderSource,openScientificReport:openFinderReport,
+ searchStudies:searchFinderStudies,openStudy:openFinderStudy,
  taskLabel:action=>actionLabels[action]||human(action),
  canOpen:()=>!formDialog.open,reportError:error=>toast(error.message||String(error))
 });
@@ -1398,8 +1459,16 @@ function restoreForm(){
  'Verify and restore original archive',async()=>{const upload=await uploadFile(form.elements.namedItem('restore_file').files[0]);return submitAction('workspace.restore',{upload_id:upload.id});});
 }
 
-async function inspectSource(collection,id,layer){
- const value=await api(endpoint('/api/source-info',{collection,source:id,...(layer?{layer}:{})}));
+async function inspectSource(collection,id,layer,{isCurrent=()=>true}={}){
+ const requested={workspace,workspaceRevision,connectionEpoch,navigationRevision,itemRequest:++itemRequest};
+ const current=()=>workspace===requested.workspace&&workspaceRevision===requested.workspaceRevision&&
+  connectionEpoch===requested.connectionEpoch&&navigationRevision===requested.navigationRevision&&
+  itemRequest===requested.itemRequest&&isCurrent();
+ if(!current())return null;
+ let value;
+ try{value=await api(endpoint('/api/source-info',{collection,source:id,...(layer?{layer}:{})}));}
+ catch(error){if(!current())return null;throw error;}
+ if(!current())return null;
  const entry=value.source;
  let html='<div class="meta"><span>'+esc(entry.kind)+'</span><span>'+esc(entry.vintage)+'</span><span>'+esc(entry.units||'')+'</span></div><p>'+external(entry.uri)+'</p>';
  if(value.layers)html+='<div class="filters">'+field('Original native layer','<select id="source-layer">'+value.layers.map(x=>'<option value="'+esc(x)+'" '+(x===value.selected_layer?'selected':'')+'>'+esc(x)+'</option>').join('')+'</select>')+'</div>'+
@@ -1480,7 +1549,7 @@ async function dispatch(button){
  if(action==='form-close'){if(formContext?.busy)throw Error('The current request is being retained. Wait for its response before closing.');formDialog.close();formContext=null;return;}
  if(action==='detail-close'){detailDialog.close();detailContext=null;return;}
  if(action==='spatial-item'){
-  const target={workspace,kind:button.dataset.kind,id,collection:button.dataset.collection,subject:button.dataset.subject,subject_kind:button.dataset.subjectKind,statistic:button.dataset.statistic,run:button.dataset.run,quantity:button.dataset.quantity};
+  const target={workspace,kind:button.dataset.kind,id,collection:button.dataset.collection,subject:button.dataset.subject,subject_kind:button.dataset.subjectKind,statistic:button.dataset.statistic,run:button.dataset.run,quantity:button.dataset.quantity,reference_id:button.dataset.referenceId,reference_sha256:button.dataset.referenceSha256,candidate_sha256:button.dataset.candidateSha256};
   detailDialog.close();detailContext=null;await spatialWorkspace.openTarget(target);return navigate('spatial');
  }
  if(action==='item')return openItem(button.dataset.kind,id);
@@ -1588,7 +1657,7 @@ $('#workspace-select').addEventListener('change',event=>selectWorkspace(event.ta
 window.addEventListener('hashchange',()=>{const incoming=new URLSearchParams(location.hash.slice(1)).get('token');if(incoming){sessionStorage.setItem(keyName,incoming);sessionStorage.removeItem('upstate-selected-workspace');history.replaceState(null,'','/');location.reload();return;}const requested=location.hash.slice(1);if(viewLabels[requested]||extensions.hasView(requested))navigate(requested).catch(globalError);});
 window.addEventListener('online',()=>refresh({force:true}));
 function showConnection(message='Open your private access link or paste it below.'){
- connectionEpoch++;itemRequest++;
+ connectionEpoch++;itemRequest++;workspaceFinder.reset();
  nativeJobs.detach();rehearsal.detach();extensions.detach();spatialWorkspace.suspend();
  programmes.detach();community.detach();customerReviews.detach();experiments.detach();
  receivingWaters.detach();portfolio.detach();parameterStudies.detach();deliveryInspection.detach();

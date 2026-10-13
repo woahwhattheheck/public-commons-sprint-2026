@@ -250,20 +250,36 @@ def original_source_intake(args, course):
     manifest = getattr(args, "source_manifest", None)
     collection_id = getattr(args, "source_collection_id", None)
     analysis_id = getattr(args, "analysis_source_id", None)
-    requested = None
-    if manifest:
-        manifest = manifest.resolve(strict=True)
-        required(manifest.is_file(), "Choose the original source manifest file")
-        requested = {"mode": "registered-manifest", "manifest": {
-            "path": str(manifest), "bytes": manifest.stat().st_size, "sha256": file_digest(manifest)}}
-    elif collection_id:
-        requested = {"mode": "existing-collection", "source_collection_id": collection_id}
-    if requested is not None and analysis_id:
-        requested["analysis_source_id"] = analysis_id
     saved = course.value.get("original_source_intake")
     if saved:
         required(isinstance(saved, dict) and isinstance(saved.get("request"), dict),
                  "The original source-intake record is incomplete")
+    requested = None
+    if manifest:
+        phase = course.value["phases"].get("original-source-import")
+        if saved and phase:
+            # The phase journals its exact native preview before admission. Reconcile
+            # that original task even when its temporary staging has been removed;
+            # unfinished workers still validate the original preview's source bytes.
+            required(phase["request"]["action"] == "source.import",
+                     "The retained source-intake phase uses another original action")
+            original = saved["request"].get("manifest")
+            required(saved["request"].get("mode") == "registered-manifest"
+                     and isinstance(original, dict),
+                     "Resume with the same original source-intake choice")
+            requested = {"mode": "registered-manifest", "manifest": {
+                "path": str(manifest.resolve()), "bytes": original["bytes"],
+                "sha256": original["sha256"]}}
+        else:
+            manifest = manifest.resolve(strict=True)
+            required(manifest.is_file(), "Choose the original source manifest file")
+            requested = {"mode": "registered-manifest", "manifest": {
+                "path": str(manifest), "bytes": manifest.stat().st_size, "sha256": file_digest(manifest)}}
+    elif collection_id:
+        requested = {"mode": "existing-collection", "source_collection_id": collection_id}
+    if requested is not None and analysis_id:
+        requested["analysis_source_id"] = analysis_id
+    if saved:
         if requested is not None:
             required(saved["request"] == requested, "Resume with the same original source-intake choice")
         return saved["request"]

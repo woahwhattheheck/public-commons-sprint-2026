@@ -8,6 +8,8 @@ import {hostname} from 'node:os';
 import {resolve,join,relative,isAbsolute,sep,extname,basename} from 'node:path';
 import {pathToFileURL,fileURLToPath} from 'node:url';
 import {operateGeographicReview} from './geographic_review_browser.mjs';
+import {admitGeographicCourse,operateGeographicCourse,selectGeographicReceivingEdition} from './geographic_browser_course.mjs';
+import {operateGeographicAllocation} from './geographic_allocation_browser.mjs';
 
 const CUTOFF=Date.parse('2026-10-13T14:00:00Z');
 const INPUT='upstate.geographic-browser-input/v1', RESULT='upstate.geographic-browser-result/v1';
@@ -37,17 +39,19 @@ async function main(argv){
  try{
   check();requireValue(argv.length===1&&isAbsolute(argv[0]),'Pass one absolute path to the complete receiving input JSON');
   const settings=await readJSON(argv[0]);
-  const allowed=['schema','operation_id','restored_root','connection_file','output_directory','playwright_module','executable','state_file','archive_sha256','handover_id'];
+  const allowed=['schema','operation_id','restored_root','connection_file','output_directory','playwright_module','executable','state_file','archive_sha256','handover_id','completion_scope'];
   requireValue(settings.schema===INPUT&&Object.keys(settings).every(k=>allowed.includes(k)),'Select the complete geographic browser input');
   safeId(settings.operation_id);
-  let originalState=null;
+  let originalState=null,selectedState=null;
+  if(settings.completion_scope!==undefined)requireValue(['reference','full_course'].includes(settings.completion_scope),'Use the actual saved reference or full-course scope');
   if(settings.state_file){
    requireValue(isAbsolute(settings.state_file),'Use the original absolute receiving state path');
    originalState=await readJSON(settings.state_file);
-   requireValue(originalState.schema==='upstate.geographic-headwaters-receiving/v1'&&originalState.state==='complete','Finish the same original geographic receiving operation before its browser course');
-   settings.restored_root??=originalState.restored?.directory;
-   settings.archive_sha256??=originalState.archive?.sha256;
-   settings.handover_id??=originalState.handover?.id;
+   selectedState=selectGeographicReceivingEdition(settings,originalState,{requireValue});
+   settings.completion_scope??=selectedState.completion_scope;
+   settings.restored_root??=selectedState.restored?.directory;
+   settings.archive_sha256??=selectedState.archive?.sha256;
+   settings.handover_id??=selectedState.handover?.id;
   }
   for(const key of ['restored_root','connection_file','output_directory','playwright_module','executable'])requireValue(typeof settings[key]==='string'&&isAbsolute(settings[key]),'Use the actual absolute '+key);
   const restored=await fs.realpath(settings.restored_root);
@@ -75,17 +79,20 @@ async function main(argv){
   for(const row of Object.values(completion.files))await verified(delivered,row);
   const prepared=record.prepared,project=receiving.result.project;
   requireValue(project.id===prepared.project_id&&record.scientific.workspace_id===project.id&&record.scientific.ensemble_id===prepared.ensemble_id,'The delivered source, project and native ensemble differ');
-  requireValue(prepared.geography&&prepared.geography.model_domain_huc12s?.length&&record.scientific.state==='complete','Select the complete actual geographic course');
+  requireValue(prepared.geography&&prepared.geography.model_domain_huc12s?.length&&record.scientific.state==='complete','Select the completed actual geographic report edition');
   const workspace=join(restored,'workspace');
   requireValue(equal(await readJSON(await regular(workspace,'workspace.json')),project),'The restored Workspace changed its original project');
   const runIds=[prepared.baseline_run_id,...prepared.alternative_run_ids].map(safeId);
   for(const key of ['id','source_collection_id','grid_id','profile_id','ensemble_id'])safeId(prepared[key]);
   safeId(record.delivery_id);
+  const course=await admitGeographicCourse({workspace,record,readJSON,regular,equal,requireValue,safeId});
+  requireValue(settings.completion_scope===undefined||settings.completion_scope===course.completion_scope,'The requested scope differs from the original archived report edition');
   if(settings.state_file){
    requireValue(isAbsolute(settings.state_file),'Use the original absolute receiving state path');
    const state=originalState;
-   requireValue(state.archive?.sha256===settings.archive_sha256&&state.handover?.id===settings.handover_id,'The caller state selects another original archive or handover generation');
-   requireValue(state.project_id===project.id&&state.ensemble_id===prepared.ensemble_id&&state.delivery_id===record.delivery_id&&state.prepared?.id===prepared.id,'The caller state names another geographic delivery');
+   requireValue(selectedState.archive?.sha256===settings.archive_sha256&&selectedState.handover?.id===settings.handover_id,'The caller state selects another original archive or handover generation');
+   requireValue(state.project_id===project.id&&state.ensemble_id===prepared.ensemble_id&&selectedState.delivery_id===record.delivery_id&&state.prepared?.id===prepared.id,'The caller state names another geographic delivery');
+   requireValue(equal(selectedState.reference_basis,course.reference_basis),'The caller and original archive select different native reference progress');
   }
   const connection=await readJSON(settings.connection_file),operatorURL=new URL(connection.operator_url),token=new URLSearchParams(operatorURL.hash.slice(1)).get('token');
   requireValue(['http:','https:'].includes(operatorURL.protocol)&&!operatorURL.username&&!operatorURL.password&&token,'Use the exact existing operator startup URL with its capability');
@@ -95,7 +102,10 @@ async function main(argv){
   if(connection.origin)requireValue(new URL(connection.origin).origin===operatorURL.origin,'The retained operator origin differs');
   const binding={schema:INPUT,operation_id:settings.operation_id,project_id:project.id,geographic_id:prepared.id,
    ensemble_id:prepared.ensemble_id,source_collection_id:prepared.source_collection_id,grid_id:prepared.grid_id,profile_id:prepared.profile_id,
-   run_ids:runIds,delivery_id:record.delivery_id,review_id:record.review.review_id,handover_id:completion.id,
+   run_ids:runIds,completion_scope:course.completion_scope,course_state:course.course_state,
+   planned_run_ids:course.planned_run_ids,completed_run_ids:course.completed_run_ids,pending_run_ids:course.pending_run_ids,
+   native_progress:course.native_progress,reference_basis:course.reference_basis,
+   delivery_id:record.delivery_id,review_id:record.review.review_id,handover_id:completion.id,
    archive_sha256:receiving.archive_sha256,operator_workspace:connection.workspace_key};
   const progressPath=join(output,'browser-progress.json');
   progress=await exists(progressPath)?await readJSON(progressPath):{schema:RESULT,binding,attempts:[],created_at:now()};
@@ -161,6 +171,8 @@ async function main(argv){
   await page.goto(startURL,{waitUntil:'load'});requireValue(await page.locator('#native-filter').count()===1,'Open the original populated geographic START_HERE');
   const tableRows=page.locator('[data-native-case]'),rowCount=await tableRows.count();requireValue(rowCount>0,'The original native comparison table is empty');
   await screenshot(page,'handover',1440);await screenshot(page,'handover',390);
+  await saveRecord('original-full-course',course);
+  await operateGeographicCourse({page,course,record,screenshot,action,requireValue,equal});
   await page.locator('#native-filter').fill('__no_original_case_matches__');
   await waitFor(async()=>await tableRows.evaluateAll(rows=>rows.every(r=>r.hidden)),'handover filter');
   await page.locator('#clear-filter').click();
@@ -171,6 +183,7 @@ async function main(argv){
   for(const row of [...Object.values(record.links.scientific),...Object.values(record.links.delivery),...record.links.figures,record.links.assumptions,record.links.selection,record.links.binding,record.links.native_report])
    descriptors.set(join(workspace,member(row.path)),row);
   for(const row of Object.values(completion.files))descriptors.set(join(delivered,member(row.path)),row);
+  for(const report of record.course_snapshot?.joint_reports||[])for(const row of [report.index,report.archive]){await verified(workspace,row);descriptors.set(join(workspace,member(row.path)),row);}
   const primary=await page.locator('a[href]').evaluateAll(nodes=>nodes.map(n=>({href:n.getAttribute('href'),text:n.textContent.trim()})));
   const seen=new Set();
   for(const [index,item] of primary.entries()){
@@ -207,7 +220,7 @@ async function main(argv){
   await waitFor(async()=>{const value=await api('/api/state');return value.workspace_key===connection.workspace_key&&value.data?.project?.id===project.id;},'same restored project');
   const before=await api('/api/state');await saveRecord('operator-before',before);
   requireValue(before.data.sources.some(x=>x.id===prepared.source_collection_id),'The existing operator has another source edition');
-  for(const id of runIds)requireValue(before.data.runs.some(x=>x.id===id),'The existing operator has another original native run');
+  for(const id of course.planned_run_ids)requireValue(before.data.runs.some(x=>x.id===id),'The existing operator omits an original planned native run');
   async function navigate(view){await closeDialog();await click('[data-view="'+view+'"]');}
   await navigate('geographic-headwaters');
   await waitFor(async()=>await page.locator('[data-geo-case="'+prepared.id+'"]').count()>0,'saved geographic case');
@@ -216,9 +229,10 @@ async function main(argv){
   const saved=await api('/api/geographic-headwaters/case',{case_id:prepared.id});
   requireValue(equal(saved.case,prepared),'The saved operator case differs from the delivered geographic source');
   requireValue(saved._downloads?.length>0,'The original saved case has no native file tickets');
-  await ticketDownloads('[data-geo-case-detail]',saved._downloads,'original-case-download');
+  await ticketDownloads('[data-geo-case-detail] > .geo-actions',saved._downloads,'original-case-download');
   requireValue(saved._downloads.every(x=>downloadedURLs.has(new URL(x.url,operatorURL).pathname)),'Not every original case download control was exercised');
   await screenshot(page,'geographic-saved-case',1440);await screenshot(page,'geographic-saved-case',390);
+  await operateGeographicAllocation({page,workspace,prepared,saved,api,readJSON,regular,verified,equal,requireValue,check,waitFor,saveRecord,screenshot,action,ticketDownloads,downloadedURLs,context});
   await click('[data-geo-edit="'+prepared.id+'"]');
   const title=page.locator('[data-sp-title]');
   await waitFor(async()=>await title.inputValue()===prepared.selection.title,'original geographic choices');
@@ -258,6 +272,18 @@ async function main(argv){
     await waitFor(async()=>await page.locator('#detail-title').textContent()==='Original native model log'&&(await page.locator('#native-log').textContent()).includes(log.text??log.content??''),'retained native log content');
     await screenshot(page,'run-log-'+id.slice(0,12),1440);
    }
+  }
+  await navigate('runs');
+  for(const id of course.planned_run_ids){
+   const retained=course.records.find(row=>row.path==='runs/'+id+'/run.json').value;
+   const current=await api('/api/item',{kind:'runs',id});
+   requireValue(equal(Object.fromEntries(Object.entries(current).filter(([key])=>key!=='_downloads')),retained),'The Operator changed an original planned native record');
+   await saveRecord('planned-run-'+id,current);
+   if(runIds.includes(id))continue;
+   await closeDialog();await click('[data-action="item"][data-kind="runs"][data-id="'+id+'"]');
+   await waitFor(async()=>await page.locator('#detail-dialog').evaluate(node=>node.open),'original sensitivity run');
+   await screenshot(page,'planned-run-'+id.slice(0,12),1440);await screenshot(page,'planned-run-'+id.slice(0,12),390);
+   action('planned_run_opened',{run_id:id,state:current.state,completion_scope:course.completion_scope});
   }
   await navigate('sources');await click('[data-action="item"][data-kind="sources"][data-id="'+prepared.source_collection_id+'"]');
   const sources=await api('/api/item',{kind:'sources',id:prepared.source_collection_id});

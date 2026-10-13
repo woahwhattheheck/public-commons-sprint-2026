@@ -1,0 +1,345 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Supplier catalogue coverage</title>
+<style>
+:root{color-scheme:light;font-family:Arial,Helvetica,sans-serif;color:#202020;background:#f5f5f5;font-size:15px;line-height:1.5}
+*{box-sizing:border-box}body{margin:0}main{max-width:1440px;margin:auto;padding:32px}
+header,section{background:#fff;border:1px solid #c9c9c9;padding:24px;margin:0 0 20px}
+h1{font-size:28px;line-height:1.2;margin:0 0 12px}h2{font-size:20px;line-height:1.3;margin:0 0 12px}
+p{margin:0 0 14px}p:last-child{margin-bottom:0}a{color:inherit;text-underline-offset:3px;overflow-wrap:anywhere}
+.eyebrow{font-size:12px;font-weight:bold;letter-spacing:.06em;text-transform:uppercase}.muted,.secondary{color:#606060}
+.secondary{display:block;font-size:12px;margin-top:4px;overflow-wrap:anywhere}.stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:20px}
+.stat{border:1px solid #d2d2d2;padding:14px}.stat strong{display:block;font-size:27px;line-height:1.2}.stat span{display:block;font-size:13px;margin-top:4px}
+.table-wrap{overflow:auto;border:1px solid #c9c9c9}table{border-collapse:collapse;width:100%;font-size:13px;text-align:left}
+th,td{padding:10px 12px;border-bottom:1px solid #dedede;vertical-align:top;overflow-wrap:anywhere}th{background:#eeeeee;font-weight:bold}tbody tr:last-child td{border-bottom:0}
+dl{display:grid;grid-template-columns:170px minmax(0,1fr);gap:8px 16px;margin:0}dt{font-weight:bold}dd{margin:0;overflow-wrap:anywhere}
+details{margin-top:16px}summary{cursor:pointer;font-weight:bold}pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#f5f5f5;border:1px solid #dedede;padding:16px;font-size:12px}
+nav{display:flex;gap:14px;flex-wrap:wrap;margin-top:16px;font-size:13px}.notice{border-left:3px solid #444;padding-left:12px}
+@media(max-width:700px){main{padding:12px}header,section{padding:16px}.stats{grid-template-columns:repeat(2,minmax(0,1fr))}dl{grid-template-columns:1fr;gap:2px}dd{margin-bottom:10px}}
+@media print{:root{background:#fff;font-size:11px}main{padding:0;max-width:none}header,section{border:0;padding:0;margin-bottom:24px}.table-wrap{overflow:visible}table{font-size:9px}th,td{padding:5px}tr{break-inside:avoid}nav{display:none}a{text-decoration:none}.stats{grid-template-columns:repeat(3,1fr)}}
+</style></head><body><main>
+<header><p class="eyebrow">Supplier feed review</p><h1>Supplier catalogue coverage</h1>
+<p>Published price tiers linked to catalogue services by the exact origin and path supplied in the source files.</p>
+<p class="notice">Each price tier remains a separate record. Blank price fields display as “Not published”; published zero values remain zero. Price wording and billing periods retain the publisher’s terms.</p>
+<div class="stats"><div class="stat"><strong>23</strong><span>Published price tiers</span></div><div class="stat"><strong>29</strong><span>Catalogue services</span></div><div class="stat"><strong>12</strong><span>Matched price tiers</span></div><div class="stat"><strong>7</strong><span>Services with mapped prices</span></div><div class="stat"><strong>11</strong><span>Prices outside the catalogue</span></div><div class="stat"><strong>22</strong><span>Services without mapped prices</span></div></div>
+<nav aria-label="Report sections"><a href="#sources">Sources</a><a href="#mapped">Mapped prices</a><a href="#outside">Prices outside catalogue</a><a href="#unpriced">Services without prices</a><a href="#exceptions">Review exceptions</a><a href="#originals">Original rows</a></nav></header>
+<section id="sources"><h2>Sources and matching rule</h2><dl>
+<dt>Publisher</dt><dd>Elite Digital AI Solutions Ltd / Elite Digital Agency</dd>
+<dt>Publisher edition</dt><dd>2026-08-12</dd>
+<dt>Acquired</dt><dd>2026-10-12</dd>
+<dt>Pricing file</dt><dd><a href="https://elitedigitalagency.io/data/published-pricing.csv" rel="noreferrer">https://elitedigitalagency.io/data/published-pricing.csv</a></dd>
+<dt>Catalogue file</dt><dd><a href="https://elitedigitalagency.io/data/services-catalogue.csv" rel="noreferrer">https://elitedigitalagency.io/data/services-catalogue.csv</a></dd>
+<dt>Publisher metadata</dt><dd><a href="https://elitedigitalagency.io/data/datapackage.json" rel="noreferrer">https://elitedigitalagency.io/data/datapackage.json</a></dd>
+<dt>License</dt><dd>CC-BY-4.0</dd>
+<dt>Join origin</dt><dd>https://elitedigitalagency.io</dd>
+<dt>Service relationship</dt><dd>Pricing path → catalogue URL pathname. Case and trailing slashes are retained. Multiple distinct price names may map to one service.</dd>
+</dl><details><summary>Complete metadata, file fingerprints and coverage counts</summary><pre>{
+  &quot;coverageId&quot;: &quot;659582196f380630c38789b45db3010358810f9cf2cc7b369b64bc57ab0ac356&quot;,
+  &quot;joinPolicy&quot;: {
+    &quot;origin&quot;: &quot;https://elitedigitalagency.io&quot;,
+    &quot;originInput&quot;: &quot;https://elitedigitalagency.io&quot;,
+    &quot;pricingIdentityColumn&quot;: &quot;name&quot;,
+    &quot;pricingPathColumn&quot;: &quot;path&quot;,
+    &quot;catalogueURLColumn&quot;: &quot;url&quot;,
+    &quot;pathComparison&quot;: &quot;exact&quot;,
+    &quot;cardinality&quot;: &quot;many price tiers to one service&quot;,
+    &quot;queryAndFragmentPolicy&quot;: &quot;review exception&quot;,
+    &quot;changedPathPolicy&quot;: &quot;review exception&quot;,
+    &quot;urlGrammar&quot;: &quot;strict-http-path-v1&quot;,
+    &quot;originEquivalence&quot;: &quot;ASCII scheme and host case; HTTP 80 and HTTPS 443 defaults&quot;,
+    &quot;supportedHosts&quot;: &quot;ASCII DNS without IDNA labels; canonical dotted-quad IPv4&quot;
+  },
+  &quot;sourceMetadata&quot;: {
+    &quot;acquiredAt&quot;: &quot;2026-10-12&quot;,
+    &quot;catalogueURL&quot;: &quot;https://elitedigitalagency.io/data/services-catalogue.csv&quot;,
+    &quot;license&quot;: &quot;CC-BY-4.0&quot;,
+    &quot;licenseURL&quot;: &quot;https://creativecommons.org/licenses/by/4.0/&quot;,
+    &quot;metadataURL&quot;: &quot;https://elitedigitalagency.io/data/datapackage.json&quot;,
+    &quot;originalDataPackage&quot;: {
+      &quot;$schema&quot;: &quot;https://frictionlessdata.io/schemas/datapackage.json&quot;,
+      &quot;contributors&quot;: [
+        {
+          &quot;path&quot;: &quot;https://elitedigitalagency.io/&quot;,
+          &quot;role&quot;: &quot;publisher&quot;,
+          &quot;title&quot;: &quot;Elite Digital AI Solutions Ltd&quot;
+        }
+      ],
+      &quot;created&quot;: &quot;2026-08-12&quot;,
+      &quot;description&quot;: &quot;First-party published pricing, service catalogue and AI-crawler policy for Elite Digital AI Solutions Ltd. Amounts are the prices shown on the website on the capture date — not market estimates.&quot;,
+      &quot;homepage&quot;: &quot;https://elitedigitalagency.io/open-data/&quot;,
+      &quot;licenses&quot;: [
+        {
+          &quot;name&quot;: &quot;CC-BY-4.0&quot;,
+          &quot;path&quot;: &quot;https://creativecommons.org/licenses/by/4.0/&quot;,
+          &quot;title&quot;: &quot;Creative Commons Attribution 4.0 International&quot;
+        }
+      ],
+      &quot;name&quot;: &quot;elite-digital-agency-open-datasets&quot;,
+      &quot;resources&quot;: [
+        {
+          &quot;description&quot;: &quot;GBP amounts as displayed on Elite Digital Agency pages. charity_amount_gbp is blank when no separate charity rate is published for that row.&quot;,
+          &quot;encoding&quot;: &quot;utf-8&quot;,
+          &quot;format&quot;: &quot;csv&quot;,
+          &quot;mediatype&quot;: &quot;text/csv&quot;,
+          &quot;name&quot;: &quot;published-pricing&quot;,
+          &quot;path&quot;: &quot;published-pricing.csv&quot;,
+          &quot;schema&quot;: {
+            &quot;fields&quot;: [
+              {
+                &quot;name&quot;: &quot;name&quot;,
+                &quot;title&quot;: &quot;Price key&quot;,
+                &quot;type&quot;: &quot;string&quot;
+              },
+              {
+                &quot;name&quot;: &quot;path&quot;,
+                &quot;title&quot;: &quot;Site path&quot;,
+                &quot;type&quot;: &quot;string&quot;
+              },
+              {
+                &quot;name&quot;: &quot;title&quot;,
+                &quot;title&quot;: &quot;Label&quot;,
+                &quot;type&quot;: &quot;string&quot;
+              },
+              {
+                &quot;name&quot;: &quot;amount_gbp&quot;,
+                &quot;title&quot;: &quot;Amount (GBP)&quot;,
+                &quot;type&quot;: &quot;number&quot;
+              },
+              {
+                &quot;name&quot;: &quot;charity_amount_gbp&quot;,
+                &quot;title&quot;: &quot;Charity amount (GBP)&quot;,
+                &quot;type&quot;: &quot;number&quot;
+              },
+              {
+                &quot;name&quot;: &quot;period&quot;,
+                &quot;title&quot;: &quot;Period&quot;,
+                &quot;type&quot;: &quot;string&quot;
+              },
+              {
+                &quot;name&quot;: &quot;display&quot;,
+                &quot;title&quot;: &quot;Display string&quot;,
+                &quot;type&quot;: &quot;string&quot;
+              },
+              {
+                &quot;name&quot;: &quot;source_url&quot;,
+                &quot;title&quot;: &quot;Source URL&quot;,
+                &quot;type&quot;: &quot;string&quot;
+              },
+              {
+                &quot;name&quot;: &quot;capture_date&quot;,
+                &quot;title&quot;: &quot;Capture date&quot;,
+                &quot;type&quot;: &quot;date&quot;
+              }
+            ]
+          },
+          &quot;title&quot;: &quot;Published service prices&quot;
+        },
+        {
+          &quot;description&quot;: &quot;Every service, consultancy and charity offering with its canonical URL.&quot;,
+          &quot;encoding&quot;: &quot;utf-8&quot;,
+          &quot;format&quot;: &quot;csv&quot;,
+          &quot;mediatype&quot;: &quot;text/csv&quot;,
+          &quot;name&quot;: &quot;services-catalogue&quot;,
+          &quot;path&quot;: &quot;services-catalogue.csv&quot;,
+          &quot;schema&quot;: {
+            &quot;fields&quot;: [
+              {
+                &quot;name&quot;: &quot;slug&quot;,
+                &quot;title&quot;: &quot;Slug&quot;,
+                &quot;type&quot;: &quot;string&quot;
+              },
+              {
+                &quot;name&quot;: &quot;title&quot;,
+                &quot;title&quot;: &quot;Title&quot;,
+                &quot;type&quot;: &quot;string&quot;
+              },
+              {
+                &quot;name&quot;: &quot;short&quot;,
+                &quot;title&quot;: &quot;Short description&quot;,
+                &quot;type&quot;: &quot;string&quot;
+              },
+              {
+                &quot;name&quot;: &quot;section&quot;,
+                &quot;title&quot;: &quot;Section&quot;,
+                &quot;type&quot;: &quot;string&quot;
+              },
+              {
+                &quot;name&quot;: &quot;url&quot;,
+                &quot;title&quot;: &quot;Canonical URL&quot;,
+                &quot;type&quot;: &quot;string&quot;
+              }
+            ]
+          },
+          &quot;title&quot;: &quot;Service catalogue&quot;
+        },
+        {
+          &quot;description&quot;: &quot;Named user-agents permitted in robots.txt, each with its own Content-Signal line.&quot;,
+          &quot;encoding&quot;: &quot;utf-8&quot;,
+          &quot;format&quot;: &quot;csv&quot;,
+          &quot;mediatype&quot;: &quot;text/csv&quot;,
+          &quot;name&quot;: &quot;ai-crawler-policy&quot;,
+          &quot;path&quot;: &quot;ai-crawler-policy.csv&quot;,
+          &quot;schema&quot;: {
+            &quot;fields&quot;: [
+              {
+                &quot;name&quot;: &quot;user_agent&quot;,
+                &quot;title&quot;: &quot;User-agent&quot;,
+                &quot;type&quot;: &quot;string&quot;
+              },
+              {
+                &quot;name&quot;: &quot;purpose&quot;,
+                &quot;title&quot;: &quot;Purpose&quot;,
+                &quot;type&quot;: &quot;string&quot;
+              },
+              {
+                &quot;name&quot;: &quot;allowed&quot;,
+                &quot;title&quot;: &quot;Allowed&quot;,
+                &quot;type&quot;: &quot;string&quot;
+              },
+              {
+                &quot;name&quot;: &quot;content_signal&quot;,
+                &quot;title&quot;: &quot;Content-Signal&quot;,
+                &quot;type&quot;: &quot;string&quot;
+              },
+              {
+                &quot;name&quot;: &quot;source_url&quot;,
+                &quot;title&quot;: &quot;Source URL&quot;,
+                &quot;type&quot;: &quot;string&quot;
+              },
+              {
+                &quot;name&quot;: &quot;capture_date&quot;,
+                &quot;title&quot;: &quot;Capture date&quot;,
+                &quot;type&quot;: &quot;date&quot;
+              }
+            ]
+          },
+          &quot;title&quot;: &quot;AI crawler allow-list&quot;
+        }
+      ],
+      &quot;sources&quot;: [
+        {
+          &quot;path&quot;: &quot;https://elitedigitalagency.io/pricing/&quot;,
+          &quot;title&quot;: &quot;Elite Digital published pricing&quot;
+        },
+        {
+          &quot;path&quot;: &quot;https://elitedigitalagency.io/robots.txt&quot;,
+          &quot;title&quot;: &quot;robots.txt AI crawler policy&quot;
+        }
+      ],
+      &quot;title&quot;: &quot;Elite Digital Agency Open Knowledge Datasets&quot;,
+      &quot;version&quot;: &quot;1.0.0&quot;
+    },
+    &quot;pricingURL&quot;: &quot;https://elitedigitalagency.io/data/published-pricing.csv&quot;,
+    &quot;publisher&quot;: &quot;Elite Digital AI Solutions Ltd / Elite Digital Agency&quot;,
+    &quot;publisherEdition&quot;: &quot;2026-08-12&quot;
+  },
+  &quot;sourceFiles&quot;: {
+    &quot;pricing&quot;: {
+      &quot;sourceURL&quot;: &quot;https://elitedigitalagency.io/data/published-pricing.csv&quot;,
+      &quot;sha256&quot;: &quot;6891cc62b1341ee0cdf601a78e9e04b6232f1c26cc1cdeb8f021a5edc1fa5dcb&quot;,
+      &quot;columns&quot;: [
+        &quot;name&quot;,
+        &quot;path&quot;,
+        &quot;title&quot;,
+        &quot;amount_gbp&quot;,
+        &quot;charity_amount_gbp&quot;,
+        &quot;period&quot;,
+        &quot;display&quot;,
+        &quot;source_url&quot;,
+        &quot;capture_date&quot;
+      ]
+    },
+    &quot;catalogue&quot;: {
+      &quot;sourceURL&quot;: &quot;https://elitedigitalagency.io/data/services-catalogue.csv&quot;,
+      &quot;sha256&quot;: &quot;c225a1e081f783ce20eaf5de222449c03a3d01130ebb9d123b29fcb3673034c9&quot;,
+      &quot;columns&quot;: [
+        &quot;slug&quot;,
+        &quot;title&quot;,
+        &quot;short&quot;,
+        &quot;section&quot;,
+        &quot;url&quot;
+      ]
+    }
+  },
+  &quot;summary&quot;: {
+    &quot;pricingRows&quot;: 23,
+    &quot;catalogueRows&quot;: 29,
+    &quot;matchedPriceRows&quot;: 12,
+    &quot;matchedServices&quot;: 7,
+    &quot;multiTierServices&quot;: 4,
+    &quot;unmatchedPriceRows&quot;: 11,
+    &quot;unpricedServices&quot;: 22,
+    &quot;unresolvedPriceRows&quot;: 0,
+    &quot;unresolvedServices&quot;: 0,
+    &quot;exceptionCount&quot;: 0,
+    &quot;billingPeriods&quot;: {
+      &quot;one-off&quot;: 13,
+      &quot;month&quot;: 5,
+      &quot;free&quot;: 5
+    }
+  }
+}</pre></details></section>
+<section id="mapped"><h2>Mapped published prices</h2><p>12 price tiers map to 7 services. 4 services have multiple published price tiers.</p><div class="table-wrap"><table><thead><tr><th scope="col">Catalogue service</th><th scope="col">Published price tier</th><th scope="col">Amount (GBP)</th><th scope="col">Charity amount (GBP)</th><th scope="col">Billing period</th><th scope="col">Published wording</th><th scope="col">Source page</th><th scope="col">Capture date</th></tr></thead><tbody><tr><td><strong>Search Engine Optimisation</strong><span class="secondary">seo</span><span class="secondary"><a href="https://elitedigitalagency.io/services/seo/" rel="noreferrer">/services/seo/</a></span></td><td><strong>SEO Growth retainer</strong><span class="secondary">seo-growth</span></td><td>1995</td><td><span class="muted">Not published</span></td><td>month</td><td>£1,995/month</td><td><a href="https://elitedigitalagency.io/pricing/" rel="noreferrer">Published source</a></td><td>2026-08-12</td></tr><tr><td><strong>Search Engine Optimisation</strong><span class="secondary">seo</span><span class="secondary"><a href="https://elitedigitalagency.io/services/seo/" rel="noreferrer">/services/seo/</a></span></td><td><strong>SEO Enterprise retainer</strong><span class="secondary">seo-scale</span></td><td>4995</td><td><span class="muted">Not published</span></td><td>month</td><td>£4,995/month</td><td><a href="https://elitedigitalagency.io/pricing/" rel="noreferrer">Published source</a></td><td>2026-08-12</td></tr><tr><td><strong>Answer Engine Optimisation (AEO/GEO)</strong><span class="secondary">aeo</span><span class="secondary"><a href="https://elitedigitalagency.io/services/aeo/" rel="noreferrer">/services/aeo/</a></span></td><td><strong>AEO / SEO retainer from</strong><span class="secondary">aeo-from</span></td><td>995</td><td><span class="muted">Not published</span></td><td>month</td><td>from £995/month</td><td><a href="https://elitedigitalagency.io/pricing/" rel="noreferrer">Published source</a></td><td>2026-08-12</td></tr><tr><td><strong>Web Design &amp; Development</strong><span class="secondary">web-design-development</span><span class="secondary"><a href="https://elitedigitalagency.io/services/web-design-development/" rel="noreferrer">/services/web-design-development/</a></span></td><td><strong>Web design from</strong><span class="secondary">web-design-from</span></td><td>3495</td><td><span class="muted">Not published</span></td><td>one-off</td><td>from £3,495</td><td><a href="https://elitedigitalagency.io/pricing/" rel="noreferrer">Published source</a></td><td>2026-08-12</td></tr><tr><td><strong>Web Design &amp; Development</strong><span class="secondary">web-design-development</span><span class="secondary"><a href="https://elitedigitalagency.io/services/web-design-development/" rel="noreferrer">/services/web-design-development/</a></span></td><td><strong>Business website from</strong><span class="secondary">business-site-from</span></td><td>8495</td><td><span class="muted">Not published</span></td><td>one-off</td><td>from £8,495</td><td><a href="https://elitedigitalagency.io/pricing/" rel="noreferrer">Published source</a></td><td>2026-08-12</td></tr><tr><td><strong>Website Redesign</strong><span class="secondary">website-redesign</span><span class="secondary"><a href="https://elitedigitalagency.io/services/website-redesign/" rel="noreferrer">/services/website-redesign/</a></span></td><td><strong>Website redesign from</strong><span class="secondary">website-redesign-from</span></td><td>3495</td><td><span class="muted">Not published</span></td><td>one-off</td><td>from £3,495</td><td><a href="https://elitedigitalagency.io/pricing/" rel="noreferrer">Published source</a></td><td>2026-08-12</td></tr><tr><td><strong>Shopify Web Design</strong><span class="secondary">shopify-web-design</span><span class="secondary"><a href="https://elitedigitalagency.io/services/shopify-web-design/" rel="noreferrer">/services/shopify-web-design/</a></span></td><td><strong>Ecommerce website from</strong><span class="secondary">ecommerce-from</span></td><td>12000</td><td><span class="muted">Not published</span></td><td>one-off</td><td>from £12,000</td><td><a href="https://elitedigitalagency.io/pricing/" rel="noreferrer">Published source</a></td><td>2026-08-12</td></tr><tr><td><strong>Shopify Web Design</strong><span class="secondary">shopify-web-design</span><span class="secondary"><a href="https://elitedigitalagency.io/services/shopify-web-design/" rel="noreferrer">/services/shopify-web-design/</a></span></td><td><strong>Shopify web design from</strong><span class="secondary">shopify-from</span></td><td>8495</td><td><span class="muted">Not published</span></td><td>one-off</td><td>from £8,495</td><td><a href="https://elitedigitalagency.io/pricing/" rel="noreferrer">Published source</a></td><td>2026-08-12</td></tr><tr><td><strong>WordPress Web Design</strong><span class="secondary">wordpress-web-design</span><span class="secondary"><a href="https://elitedigitalagency.io/services/wordpress-web-design/" rel="noreferrer">/services/wordpress-web-design/</a></span></td><td><strong>WordPress web design from</strong><span class="secondary">wordpress-from</span></td><td>3495</td><td><span class="muted">Not published</span></td><td>one-off</td><td>from £3,495</td><td><a href="https://elitedigitalagency.io/pricing/" rel="noreferrer">Published source</a></td><td>2026-08-12</td></tr><tr><td><strong>Charity Registration</strong><span class="secondary">charity-registration</span><span class="secondary"><a href="https://elitedigitalagency.io/charities/charity-registration/" rel="noreferrer">/charities/charity-registration/</a></span></td><td><strong>Charity Commission registration (Standard)</strong><span class="secondary">charity-registration-standard</span></td><td>899</td><td><span class="muted">Not published</span></td><td>one-off</td><td>£899</td><td><a href="https://elitedigitalagency.io/charities/charity-registration/" rel="noreferrer">Published source</a></td><td>2026-08-12</td></tr><tr><td><strong>Charity Registration</strong><span class="secondary">charity-registration</span><span class="secondary"><a href="https://elitedigitalagency.io/charities/charity-registration/" rel="noreferrer">/charities/charity-registration/</a></span></td><td><strong>Charity Commission registration (Premium)</strong><span class="secondary">charity-registration-premium</span></td><td>1349</td><td><span class="muted">Not published</span></td><td>one-off</td><td>£1,349</td><td><a href="https://elitedigitalagency.io/charities/charity-registration/" rel="noreferrer">Published source</a></td><td>2026-08-12</td></tr><tr><td><strong>Charity Registration</strong><span class="secondary">charity-registration</span><span class="secondary"><a href="https://elitedigitalagency.io/charities/charity-registration/" rel="noreferrer">/charities/charity-registration/</a></span></td><td><strong>Charity Commission registration (Fully managed)</strong><span class="secondary">charity-registration-managed</span></td><td>2249</td><td><span class="muted">Not published</span></td><td>one-off</td><td>£2,249</td><td><a href="https://elitedigitalagency.io/charities/charity-registration/" rel="noreferrer">Published source</a></td><td>2026-08-12</td></tr></tbody></table></div></section>
+<section id="outside"><h2>Published prices outside the supplied catalogue</h2><p>These original pricing paths have no service counterpart in the supplied catalogue. Keep the complete price records available for scope and catalogue review.</p><div class="table-wrap"><table><thead><tr><th scope="col">Pricing path</th><th scope="col">Published price tier</th><th scope="col">Amount (GBP)</th><th scope="col">Charity amount (GBP)</th><th scope="col">Billing period</th><th scope="col">Published wording</th><th scope="col">Source page</th><th scope="col">Capture date</th></tr></thead><tbody><tr><td><a href="https://elitedigitalagency.io/starter-website/" rel="noreferrer">/starter-website/</a></td><td><strong>Starter website (standard)</strong><span class="secondary">starter-website</span></td><td>1500</td><td>1000</td><td>one-off</td><td>£1,500</td><td><a href="https://elitedigitalagency.io/pricing/" rel="noreferrer">Published source</a></td><td>2026-08-12</td></tr><tr><td><a href="https://elitedigitalagency.io/industries/healthcare/" rel="noreferrer">/industries/healthcare/</a></td><td><strong>Healthcare website Essential</strong><span class="secondary">healthcare-essential</span></td><td>1995</td><td><span class="muted">Not published</span></td><td>one-off</td><td>from £1,995</td><td><a href="https://elitedigitalagency.io/industries/healthcare/" rel="noreferrer">Published source</a></td><td>2026-08-12</td></tr><tr><td><a href="https://elitedigitalagency.io/industries/healthcare/" rel="noreferrer">/industries/healthcare/</a></td><td><strong>Healthcare website Practice</strong><span class="secondary">healthcare-practice</span></td><td>2950</td><td><span class="muted">Not published</span></td><td>one-off</td><td>from £2,950</td><td><a href="https://elitedigitalagency.io/industries/healthcare/" rel="noreferrer">Published source</a></td><td>2026-08-12</td></tr><tr><td><a href="https://elitedigitalagency.io/industries/healthcare/" rel="noreferrer">/industries/healthcare/</a></td><td><strong>Healthcare website Authority</strong><span class="secondary">healthcare-authority</span></td><td>4500</td><td><span class="muted">Not published</span></td><td>one-off</td><td>from £4,500</td><td><a href="https://elitedigitalagency.io/industries/healthcare/" rel="noreferrer">Published source</a></td><td>2026-08-12</td></tr><tr><td><a href="https://elitedigitalagency.io/subscribe/" rel="noreferrer">/subscribe/</a></td><td><strong>Website care from</strong><span class="secondary">care-only</span></td><td>99</td><td><span class="muted">Not published</span></td><td>month</td><td>from £99/month</td><td><a href="https://elitedigitalagency.io/subscribe/" rel="noreferrer">Published source</a></td><td>2026-08-12</td></tr><tr><td><a href="https://elitedigitalagency.io/subscribe/" rel="noreferrer">/subscribe/</a></td><td><strong>Care &amp; growth from</strong><span class="secondary">care-growth-from</span></td><td>299</td><td><span class="muted">Not published</span></td><td>month</td><td>from £299/month</td><td><a href="https://elitedigitalagency.io/subscribe/" rel="noreferrer">Published source</a></td><td>2026-08-12</td></tr><tr><td><a href="https://elitedigitalagency.io/tools/free-geo-audit/" rel="noreferrer">/tools/free-geo-audit/</a></td><td><strong>Free GEO audit</strong><span class="secondary">free-geo-audit</span></td><td>0</td><td>0</td><td>free</td><td>£0</td><td><a href="https://elitedigitalagency.io/tools/free-geo-audit/" rel="noreferrer">Published source</a></td><td>2026-08-12</td></tr><tr><td><a href="https://elitedigitalagency.io/tools/ai-visibility-checker/" rel="noreferrer">/tools/ai-visibility-checker/</a></td><td><strong>AI visibility checker</strong><span class="secondary">ai-visibility-checker</span></td><td>0</td><td>0</td><td>free</td><td>£0</td><td><a href="https://elitedigitalagency.io/tools/ai-visibility-checker/" rel="noreferrer">Published source</a></td><td>2026-08-12</td></tr><tr><td><a href="https://elitedigitalagency.io/tools/schema-checker/" rel="noreferrer">/tools/schema-checker/</a></td><td><strong>Schema checker</strong><span class="secondary">schema-checker</span></td><td>0</td><td>0</td><td>free</td><td>£0</td><td><a href="https://elitedigitalagency.io/tools/schema-checker/" rel="noreferrer">Published source</a></td><td>2026-08-12</td></tr><tr><td><a href="https://elitedigitalagency.io/tools/robots-checker/" rel="noreferrer">/tools/robots-checker/</a></td><td><strong>Robots.txt checker</strong><span class="secondary">robots-checker</span></td><td>0</td><td>0</td><td>free</td><td>£0</td><td><a href="https://elitedigitalagency.io/tools/robots-checker/" rel="noreferrer">Published source</a></td><td>2026-08-12</td></tr><tr><td><a href="https://elitedigitalagency.io/tools/website-cost-estimator/" rel="noreferrer">/tools/website-cost-estimator/</a></td><td><strong>Website cost estimator</strong><span class="secondary">website-cost-estimator</span></td><td>0</td><td>0</td><td>free</td><td>£0</td><td><a href="https://elitedigitalagency.io/tools/website-cost-estimator/" rel="noreferrer">Published source</a></td><td>2026-08-12</td></tr></tbody></table></div></section>
+<section id="unpriced"><h2>Catalogue services without mapped published prices</h2><p>These source services have no price record at the same exact origin and path. They remain complete catalogue entries for commercial follow-up and catalogue maintenance.</p><div class="table-wrap"><table><thead><tr><th scope="col">Catalogue service</th><th scope="col">Section</th><th scope="col">Published description</th><th scope="col">Canonical URL</th></tr></thead><tbody><tr><td><strong>Pay-Per-Click &amp; Performance</strong><span class="secondary">ppc</span></td><td>services</td><td>ROAS-led paid search social and programmatic that pays back.</td><td><a href="https://elitedigitalagency.io/services/ppc/" rel="noreferrer">https://elitedigitalagency.io/services/ppc/</a></td></tr><tr><td><strong>Google Ads Management</strong><span class="secondary">google-ads</span></td><td>services</td><td>Revenue-focused Google Ads campaigns — Search Shopping and Performance Max.</td><td><a href="https://elitedigitalagency.io/services/google-ads/" rel="noreferrer">https://elitedigitalagency.io/services/google-ads/</a></td></tr><tr><td><strong>Meta (Facebook &amp; Instagram) Ads</strong><span class="secondary">meta-ads</span></td><td>services</td><td>Creative-led Facebook and Instagram advertising that drives enquiries and sales.</td><td><a href="https://elitedigitalagency.io/services/meta-ads/" rel="noreferrer">https://elitedigitalagency.io/services/meta-ads/</a></td></tr><tr><td><strong>Local SEO</strong><span class="secondary">local-seo</span></td><td>services</td><td>Dominate local search and Google Maps for the areas that matter most.</td><td><a href="https://elitedigitalagency.io/services/local-seo/" rel="noreferrer">https://elitedigitalagency.io/services/local-seo/</a></td></tr><tr><td><strong>Ecommerce SEO</strong><span class="secondary">ecommerce-seo</span></td><td>services</td><td>Category page authority product schema and AI shopping search optimisation.</td><td><a href="https://elitedigitalagency.io/services/ecommerce-seo/" rel="noreferrer">https://elitedigitalagency.io/services/ecommerce-seo/</a></td></tr><tr><td><strong>Social Media Marketing</strong><span class="secondary">social-media-marketing</span></td><td>services</td><td>Organic and paid social tuned to discovery in TikTok IG and LinkedIn search.</td><td><a href="https://elitedigitalagency.io/services/social-media-marketing/" rel="noreferrer">https://elitedigitalagency.io/services/social-media-marketing/</a></td></tr><tr><td><strong>Content Marketing</strong><span class="secondary">content-marketing</span></td><td>services</td><td>Topical authority that ranks in Google and gets quoted by LLMs.</td><td><a href="https://elitedigitalagency.io/services/content-marketing/" rel="noreferrer">https://elitedigitalagency.io/services/content-marketing/</a></td></tr><tr><td><strong>Email &amp; Lifecycle</strong><span class="secondary">email-marketing</span></td><td>services</td><td>First-party data programmes that turn list size into revenue.</td><td><a href="https://elitedigitalagency.io/services/email-marketing/" rel="noreferrer">https://elitedigitalagency.io/services/email-marketing/</a></td></tr><tr><td><strong>Branding &amp; Creative</strong><span class="secondary">branding-creative</span></td><td>services</td><td>Identity messaging and creative systems that travel across every channel.</td><td><a href="https://elitedigitalagency.io/services/branding-creative/" rel="noreferrer">https://elitedigitalagency.io/services/branding-creative/</a></td></tr><tr><td><strong>Conversion Rate Optimisation</strong><span class="secondary">conversion-rate-optimisation</span></td><td>services</td><td>Make every existing visit work harder with structured experimentation.</td><td><a href="https://elitedigitalagency.io/services/conversion-rate-optimisation/" rel="noreferrer">https://elitedigitalagency.io/services/conversion-rate-optimisation/</a></td></tr><tr><td><strong>Analytics &amp; Reporting</strong><span class="secondary">analytics-reporting</span></td><td>services</td><td>Server-side cookieless-ready measurement you can actually trust.</td><td><a href="https://elitedigitalagency.io/services/analytics-reporting/" rel="noreferrer">https://elitedigitalagency.io/services/analytics-reporting/</a></td></tr><tr><td><strong>Reputation &amp; Reviews Management</strong><span class="secondary">reputation-management</span></td><td>services</td><td>Build genuine reviews and the trust signals that win local and AI search.</td><td><a href="https://elitedigitalagency.io/services/reputation-management/" rel="noreferrer">https://elitedigitalagency.io/services/reputation-management/</a></td></tr><tr><td><strong>SEO Consultancy</strong><span class="secondary">seo-consultancy</span></td><td>consultancy</td><td>Senior-level SEO direction without hiring in-house.</td><td><a href="https://elitedigitalagency.io/consultancy/seo-consultancy/" rel="noreferrer">https://elitedigitalagency.io/consultancy/seo-consultancy/</a></td></tr><tr><td><strong>Digital Strategy</strong><span class="secondary">digital-strategy</span></td><td>consultancy</td><td>A clear 12-month plan for growth in an AI-first market.</td><td><a href="https://elitedigitalagency.io/consultancy/digital-strategy/" rel="noreferrer">https://elitedigitalagency.io/consultancy/digital-strategy/</a></td></tr><tr><td><strong>Brand Consultancy</strong><span class="secondary">brand-consultancy</span></td><td>consultancy</td><td>Position message and visual systems that compound over time.</td><td><a href="https://elitedigitalagency.io/consultancy/brand-consultancy/" rel="noreferrer">https://elitedigitalagency.io/consultancy/brand-consultancy/</a></td></tr><tr><td><strong>AI Search Consultancy</strong><span class="secondary">ai-search-consultancy</span></td><td>consultancy</td><td>Get found inside Perplexity Gemini ChatGPT and Google AI Overviews.</td><td><a href="https://elitedigitalagency.io/consultancy/ai-search-consultancy/" rel="noreferrer">https://elitedigitalagency.io/consultancy/ai-search-consultancy/</a></td></tr><tr><td><strong>Ecommerce Consultancy</strong><span class="secondary">ecommerce-consultancy</span></td><td>consultancy</td><td>From CRO to AEO end-to-end help for online stores.</td><td><a href="https://elitedigitalagency.io/consultancy/ecommerce-consultancy/" rel="noreferrer">https://elitedigitalagency.io/consultancy/ecommerce-consultancy/</a></td></tr><tr><td><strong>Training &amp; Workshops</strong><span class="secondary">training-workshops</span></td><td>consultancy</td><td>Upskill your team on modern SEO AEO paid and creative.</td><td><a href="https://elitedigitalagency.io/consultancy/training-workshops/" rel="noreferrer">https://elitedigitalagency.io/consultancy/training-workshops/</a></td></tr><tr><td><strong>Charity Marketing</strong><span class="secondary">charity-marketing</span></td><td>charities</td><td>End-to-end marketing built for cause-led organisations.</td><td><a href="https://elitedigitalagency.io/charities/charity-marketing/" rel="noreferrer">https://elitedigitalagency.io/charities/charity-marketing/</a></td></tr><tr><td><strong>Charity Website Design</strong><span class="secondary">web-design</span></td><td>charities</td><td>A professional donation-ready website for your charity from £1000.</td><td><a href="https://elitedigitalagency.io/charities/web-design/" rel="noreferrer">https://elitedigitalagency.io/charities/web-design/</a></td></tr><tr><td><strong>Google Ad Grants Management</strong><span class="secondary">google-ad-grants</span></td><td>charities</td><td>Recover protect and grow your $10k/month Ad Grants account.</td><td><a href="https://elitedigitalagency.io/charities/google-ad-grants/" rel="noreferrer">https://elitedigitalagency.io/charities/google-ad-grants/</a></td></tr><tr><td><strong>Charity SEO &amp; AEO</strong><span class="secondary">charity-seo-aeo</span></td><td>charities</td><td>Be the answer when donors ask AI who should I support.</td><td><a href="https://elitedigitalagency.io/charities/charity-seo-aeo/" rel="noreferrer">https://elitedigitalagency.io/charities/charity-seo-aeo/</a></td></tr></tbody></table></div></section>
+<section id="exceptions"><h2>Review exceptions</h2><p>0 pricing records and 0 catalogue records need review. 0 exception entries retain their complete source records.</p><p class="muted">All supplied identities and service paths support an unambiguous coverage result.</p></section>
+<section id="originals"><h2>Complete original source rows</h2><p>Every original column and field is preserved below. CSV row and source line numbers refer to the original files.</p>
+<details><summary>Pricing source — 23 rows</summary><div class="table-wrap"><table><thead><tr><th scope="col">CSV row</th><th scope="col">Source line</th><th scope="col">name</th><th scope="col">path</th><th scope="col">title</th><th scope="col">amount_gbp</th><th scope="col">charity_amount_gbp</th><th scope="col">period</th><th scope="col">display</th><th scope="col">source_url</th><th scope="col">capture_date</th></tr></thead><tbody><tr><td>2</td><td>2</td><td>starter-website</td><td>/starter-website/</td><td>Starter website (standard)</td><td>1500</td><td>1000</td><td>one-off</td><td>£1,500</td><td>https://elitedigitalagency.io/pricing/</td><td>2026-08-12</td></tr><tr><td>3</td><td>3</td><td>web-design-from</td><td>/services/web-design-development/</td><td>Web design from</td><td>3495</td><td></td><td>one-off</td><td>from £3,495</td><td>https://elitedigitalagency.io/pricing/</td><td>2026-08-12</td></tr><tr><td>4</td><td>4</td><td>business-site-from</td><td>/services/web-design-development/</td><td>Business website from</td><td>8495</td><td></td><td>one-off</td><td>from £8,495</td><td>https://elitedigitalagency.io/pricing/</td><td>2026-08-12</td></tr><tr><td>5</td><td>5</td><td>ecommerce-from</td><td>/services/shopify-web-design/</td><td>Ecommerce website from</td><td>12000</td><td></td><td>one-off</td><td>from £12,000</td><td>https://elitedigitalagency.io/pricing/</td><td>2026-08-12</td></tr><tr><td>6</td><td>6</td><td>website-redesign-from</td><td>/services/website-redesign/</td><td>Website redesign from</td><td>3495</td><td></td><td>one-off</td><td>from £3,495</td><td>https://elitedigitalagency.io/pricing/</td><td>2026-08-12</td></tr><tr><td>7</td><td>7</td><td>shopify-from</td><td>/services/shopify-web-design/</td><td>Shopify web design from</td><td>8495</td><td></td><td>one-off</td><td>from £8,495</td><td>https://elitedigitalagency.io/pricing/</td><td>2026-08-12</td></tr><tr><td>8</td><td>8</td><td>wordpress-from</td><td>/services/wordpress-web-design/</td><td>WordPress web design from</td><td>3495</td><td></td><td>one-off</td><td>from £3,495</td><td>https://elitedigitalagency.io/pricing/</td><td>2026-08-12</td></tr><tr><td>9</td><td>9</td><td>healthcare-essential</td><td>/industries/healthcare/</td><td>Healthcare website Essential</td><td>1995</td><td></td><td>one-off</td><td>from £1,995</td><td>https://elitedigitalagency.io/industries/healthcare/</td><td>2026-08-12</td></tr><tr><td>10</td><td>10</td><td>healthcare-practice</td><td>/industries/healthcare/</td><td>Healthcare website Practice</td><td>2950</td><td></td><td>one-off</td><td>from £2,950</td><td>https://elitedigitalagency.io/industries/healthcare/</td><td>2026-08-12</td></tr><tr><td>11</td><td>11</td><td>healthcare-authority</td><td>/industries/healthcare/</td><td>Healthcare website Authority</td><td>4500</td><td></td><td>one-off</td><td>from £4,500</td><td>https://elitedigitalagency.io/industries/healthcare/</td><td>2026-08-12</td></tr><tr><td>12</td><td>12</td><td>aeo-from</td><td>/services/aeo/</td><td>AEO / SEO retainer from</td><td>995</td><td></td><td>month</td><td>from £995/month</td><td>https://elitedigitalagency.io/pricing/</td><td>2026-08-12</td></tr><tr><td>13</td><td>13</td><td>seo-growth</td><td>/services/seo/</td><td>SEO Growth retainer</td><td>1995</td><td></td><td>month</td><td>£1,995/month</td><td>https://elitedigitalagency.io/pricing/</td><td>2026-08-12</td></tr><tr><td>14</td><td>14</td><td>seo-scale</td><td>/services/seo/</td><td>SEO Enterprise retainer</td><td>4995</td><td></td><td>month</td><td>£4,995/month</td><td>https://elitedigitalagency.io/pricing/</td><td>2026-08-12</td></tr><tr><td>15</td><td>15</td><td>care-only</td><td>/subscribe/</td><td>Website care from</td><td>99</td><td></td><td>month</td><td>from £99/month</td><td>https://elitedigitalagency.io/subscribe/</td><td>2026-08-12</td></tr><tr><td>16</td><td>16</td><td>care-growth-from</td><td>/subscribe/</td><td>Care &amp; growth from</td><td>299</td><td></td><td>month</td><td>from £299/month</td><td>https://elitedigitalagency.io/subscribe/</td><td>2026-08-12</td></tr><tr><td>17</td><td>17</td><td>charity-registration-standard</td><td>/charities/charity-registration/</td><td>Charity Commission registration (Standard)</td><td>899</td><td></td><td>one-off</td><td>£899</td><td>https://elitedigitalagency.io/charities/charity-registration/</td><td>2026-08-12</td></tr><tr><td>18</td><td>18</td><td>charity-registration-premium</td><td>/charities/charity-registration/</td><td>Charity Commission registration (Premium)</td><td>1349</td><td></td><td>one-off</td><td>£1,349</td><td>https://elitedigitalagency.io/charities/charity-registration/</td><td>2026-08-12</td></tr><tr><td>19</td><td>19</td><td>charity-registration-managed</td><td>/charities/charity-registration/</td><td>Charity Commission registration (Fully managed)</td><td>2249</td><td></td><td>one-off</td><td>£2,249</td><td>https://elitedigitalagency.io/charities/charity-registration/</td><td>2026-08-12</td></tr><tr><td>20</td><td>20</td><td>free-geo-audit</td><td>/tools/free-geo-audit/</td><td>Free GEO audit</td><td>0</td><td>0</td><td>free</td><td>£0</td><td>https://elitedigitalagency.io/tools/free-geo-audit/</td><td>2026-08-12</td></tr><tr><td>21</td><td>21</td><td>ai-visibility-checker</td><td>/tools/ai-visibility-checker/</td><td>AI visibility checker</td><td>0</td><td>0</td><td>free</td><td>£0</td><td>https://elitedigitalagency.io/tools/ai-visibility-checker/</td><td>2026-08-12</td></tr><tr><td>22</td><td>22</td><td>schema-checker</td><td>/tools/schema-checker/</td><td>Schema checker</td><td>0</td><td>0</td><td>free</td><td>£0</td><td>https://elitedigitalagency.io/tools/schema-checker/</td><td>2026-08-12</td></tr><tr><td>23</td><td>23</td><td>robots-checker</td><td>/tools/robots-checker/</td><td>Robots.txt checker</td><td>0</td><td>0</td><td>free</td><td>£0</td><td>https://elitedigitalagency.io/tools/robots-checker/</td><td>2026-08-12</td></tr><tr><td>24</td><td>24</td><td>website-cost-estimator</td><td>/tools/website-cost-estimator/</td><td>Website cost estimator</td><td>0</td><td>0</td><td>free</td><td>£0</td><td>https://elitedigitalagency.io/tools/website-cost-estimator/</td><td>2026-08-12</td></tr></tbody></table></div></details>
+<details><summary>Catalogue source — 29 rows</summary><div class="table-wrap"><table><thead><tr><th scope="col">CSV row</th><th scope="col">Source line</th><th scope="col">slug</th><th scope="col">title</th><th scope="col">short</th><th scope="col">section</th><th scope="col">url</th></tr></thead><tbody><tr><td>2</td><td>2</td><td>seo</td><td>Search Engine Optimisation</td><td>Win durable organic visibility on Google and beyond.</td><td>services</td><td>https://elitedigitalagency.io/services/seo/</td></tr><tr><td>3</td><td>3</td><td>aeo</td><td>Answer Engine Optimisation (AEO/GEO)</td><td>Get cited by Google AI Overviews Perplexity ChatGPT and Gemini.</td><td>services</td><td>https://elitedigitalagency.io/services/aeo/</td></tr><tr><td>4</td><td>4</td><td>ppc</td><td>Pay-Per-Click &amp; Performance</td><td>ROAS-led paid search social and programmatic that pays back.</td><td>services</td><td>https://elitedigitalagency.io/services/ppc/</td></tr><tr><td>5</td><td>5</td><td>google-ads</td><td>Google Ads Management</td><td>Revenue-focused Google Ads campaigns — Search Shopping and Performance Max.</td><td>services</td><td>https://elitedigitalagency.io/services/google-ads/</td></tr><tr><td>6</td><td>6</td><td>meta-ads</td><td>Meta (Facebook &amp; Instagram) Ads</td><td>Creative-led Facebook and Instagram advertising that drives enquiries and sales.</td><td>services</td><td>https://elitedigitalagency.io/services/meta-ads/</td></tr><tr><td>7</td><td>7</td><td>local-seo</td><td>Local SEO</td><td>Dominate local search and Google Maps for the areas that matter most.</td><td>services</td><td>https://elitedigitalagency.io/services/local-seo/</td></tr><tr><td>8</td><td>8</td><td>ecommerce-seo</td><td>Ecommerce SEO</td><td>Category page authority product schema and AI shopping search optimisation.</td><td>services</td><td>https://elitedigitalagency.io/services/ecommerce-seo/</td></tr><tr><td>9</td><td>9</td><td>social-media-marketing</td><td>Social Media Marketing</td><td>Organic and paid social tuned to discovery in TikTok IG and LinkedIn search.</td><td>services</td><td>https://elitedigitalagency.io/services/social-media-marketing/</td></tr><tr><td>10</td><td>10</td><td>content-marketing</td><td>Content Marketing</td><td>Topical authority that ranks in Google and gets quoted by LLMs.</td><td>services</td><td>https://elitedigitalagency.io/services/content-marketing/</td></tr><tr><td>11</td><td>11</td><td>email-marketing</td><td>Email &amp; Lifecycle</td><td>First-party data programmes that turn list size into revenue.</td><td>services</td><td>https://elitedigitalagency.io/services/email-marketing/</td></tr><tr><td>12</td><td>12</td><td>web-design-development</td><td>Web Design &amp; Development</td><td>Fast accessible conversion-tuned websites built for AEO.</td><td>services</td><td>https://elitedigitalagency.io/services/web-design-development/</td></tr><tr><td>13</td><td>13</td><td>website-redesign</td><td>Website Redesign</td><td>Rebuild an underperforming site without losing a single ranking.</td><td>services</td><td>https://elitedigitalagency.io/services/website-redesign/</td></tr><tr><td>14</td><td>14</td><td>shopify-web-design</td><td>Shopify Web Design</td><td>Bespoke Shopify stores built for conversion speed and search.</td><td>services</td><td>https://elitedigitalagency.io/services/shopify-web-design/</td></tr><tr><td>15</td><td>15</td><td>wordpress-web-design</td><td>WordPress Web Design</td><td>Custom WordPress and headless builds your team can actually manage.</td><td>services</td><td>https://elitedigitalagency.io/services/wordpress-web-design/</td></tr><tr><td>16</td><td>16</td><td>branding-creative</td><td>Branding &amp; Creative</td><td>Identity messaging and creative systems that travel across every channel.</td><td>services</td><td>https://elitedigitalagency.io/services/branding-creative/</td></tr><tr><td>17</td><td>17</td><td>conversion-rate-optimisation</td><td>Conversion Rate Optimisation</td><td>Make every existing visit work harder with structured experimentation.</td><td>services</td><td>https://elitedigitalagency.io/services/conversion-rate-optimisation/</td></tr><tr><td>18</td><td>18</td><td>analytics-reporting</td><td>Analytics &amp; Reporting</td><td>Server-side cookieless-ready measurement you can actually trust.</td><td>services</td><td>https://elitedigitalagency.io/services/analytics-reporting/</td></tr><tr><td>19</td><td>19</td><td>reputation-management</td><td>Reputation &amp; Reviews Management</td><td>Build genuine reviews and the trust signals that win local and AI search.</td><td>services</td><td>https://elitedigitalagency.io/services/reputation-management/</td></tr><tr><td>20</td><td>20</td><td>seo-consultancy</td><td>SEO Consultancy</td><td>Senior-level SEO direction without hiring in-house.</td><td>consultancy</td><td>https://elitedigitalagency.io/consultancy/seo-consultancy/</td></tr><tr><td>21</td><td>21</td><td>digital-strategy</td><td>Digital Strategy</td><td>A clear 12-month plan for growth in an AI-first market.</td><td>consultancy</td><td>https://elitedigitalagency.io/consultancy/digital-strategy/</td></tr><tr><td>22</td><td>22</td><td>brand-consultancy</td><td>Brand Consultancy</td><td>Position message and visual systems that compound over time.</td><td>consultancy</td><td>https://elitedigitalagency.io/consultancy/brand-consultancy/</td></tr><tr><td>23</td><td>23</td><td>ai-search-consultancy</td><td>AI Search Consultancy</td><td>Get found inside Perplexity Gemini ChatGPT and Google AI Overviews.</td><td>consultancy</td><td>https://elitedigitalagency.io/consultancy/ai-search-consultancy/</td></tr><tr><td>24</td><td>24</td><td>ecommerce-consultancy</td><td>Ecommerce Consultancy</td><td>From CRO to AEO end-to-end help for online stores.</td><td>consultancy</td><td>https://elitedigitalagency.io/consultancy/ecommerce-consultancy/</td></tr><tr><td>25</td><td>25</td><td>training-workshops</td><td>Training &amp; Workshops</td><td>Upskill your team on modern SEO AEO paid and creative.</td><td>consultancy</td><td>https://elitedigitalagency.io/consultancy/training-workshops/</td></tr><tr><td>26</td><td>26</td><td>charity-marketing</td><td>Charity Marketing</td><td>End-to-end marketing built for cause-led organisations.</td><td>charities</td><td>https://elitedigitalagency.io/charities/charity-marketing/</td></tr><tr><td>27</td><td>27</td><td>web-design</td><td>Charity Website Design</td><td>A professional donation-ready website for your charity from £1000.</td><td>charities</td><td>https://elitedigitalagency.io/charities/web-design/</td></tr><tr><td>28</td><td>28</td><td>google-ad-grants</td><td>Google Ad Grants Management</td><td>Recover protect and grow your $10k/month Ad Grants account.</td><td>charities</td><td>https://elitedigitalagency.io/charities/google-ad-grants/</td></tr><tr><td>29</td><td>29</td><td>charity-seo-aeo</td><td>Charity SEO &amp; AEO</td><td>Be the answer when donors ask AI who should I support.</td><td>charities</td><td>https://elitedigitalagency.io/charities/charity-seo-aeo/</td></tr><tr><td>30</td><td>30</td><td>charity-registration</td><td>Charity Registration</td><td>We register your UK charity with the Charity Commission end to end.</td><td>charities</td><td>https://elitedigitalagency.io/charities/charity-registration/</td></tr></tbody></table></div></details>
+<details><summary>Original pricing CSV text</summary><pre>name,path,title,amount_gbp,charity_amount_gbp,period,display,source_url,capture_date
+starter-website,/starter-website/,Starter website (standard),1500,1000,one-off,&quot;£1,500&quot;,https://elitedigitalagency.io/pricing/,2026-08-12
+web-design-from,/services/web-design-development/,Web design from,3495,,one-off,&quot;from £3,495&quot;,https://elitedigitalagency.io/pricing/,2026-08-12
+business-site-from,/services/web-design-development/,Business website from,8495,,one-off,&quot;from £8,495&quot;,https://elitedigitalagency.io/pricing/,2026-08-12
+ecommerce-from,/services/shopify-web-design/,Ecommerce website from,12000,,one-off,&quot;from £12,000&quot;,https://elitedigitalagency.io/pricing/,2026-08-12
+website-redesign-from,/services/website-redesign/,Website redesign from,3495,,one-off,&quot;from £3,495&quot;,https://elitedigitalagency.io/pricing/,2026-08-12
+shopify-from,/services/shopify-web-design/,Shopify web design from,8495,,one-off,&quot;from £8,495&quot;,https://elitedigitalagency.io/pricing/,2026-08-12
+wordpress-from,/services/wordpress-web-design/,WordPress web design from,3495,,one-off,&quot;from £3,495&quot;,https://elitedigitalagency.io/pricing/,2026-08-12
+healthcare-essential,/industries/healthcare/,Healthcare website Essential,1995,,one-off,&quot;from £1,995&quot;,https://elitedigitalagency.io/industries/healthcare/,2026-08-12
+healthcare-practice,/industries/healthcare/,Healthcare website Practice,2950,,one-off,&quot;from £2,950&quot;,https://elitedigitalagency.io/industries/healthcare/,2026-08-12
+healthcare-authority,/industries/healthcare/,Healthcare website Authority,4500,,one-off,&quot;from £4,500&quot;,https://elitedigitalagency.io/industries/healthcare/,2026-08-12
+aeo-from,/services/aeo/,AEO / SEO retainer from,995,,month,from £995/month,https://elitedigitalagency.io/pricing/,2026-08-12
+seo-growth,/services/seo/,SEO Growth retainer,1995,,month,&quot;£1,995/month&quot;,https://elitedigitalagency.io/pricing/,2026-08-12
+seo-scale,/services/seo/,SEO Enterprise retainer,4995,,month,&quot;£4,995/month&quot;,https://elitedigitalagency.io/pricing/,2026-08-12
+care-only,/subscribe/,Website care from,99,,month,from £99/month,https://elitedigitalagency.io/subscribe/,2026-08-12
+care-growth-from,/subscribe/,Care &amp; growth from,299,,month,from £299/month,https://elitedigitalagency.io/subscribe/,2026-08-12
+charity-registration-standard,/charities/charity-registration/,Charity Commission registration (Standard),899,,one-off,£899,https://elitedigitalagency.io/charities/charity-registration/,2026-08-12
+charity-registration-premium,/charities/charity-registration/,Charity Commission registration (Premium),1349,,one-off,&quot;£1,349&quot;,https://elitedigitalagency.io/charities/charity-registration/,2026-08-12
+charity-registration-managed,/charities/charity-registration/,Charity Commission registration (Fully managed),2249,,one-off,&quot;£2,249&quot;,https://elitedigitalagency.io/charities/charity-registration/,2026-08-12
+free-geo-audit,/tools/free-geo-audit/,Free GEO audit,0,0,free,£0,https://elitedigitalagency.io/tools/free-geo-audit/,2026-08-12
+ai-visibility-checker,/tools/ai-visibility-checker/,AI visibility checker,0,0,free,£0,https://elitedigitalagency.io/tools/ai-visibility-checker/,2026-08-12
+schema-checker,/tools/schema-checker/,Schema checker,0,0,free,£0,https://elitedigitalagency.io/tools/schema-checker/,2026-08-12
+robots-checker,/tools/robots-checker/,Robots.txt checker,0,0,free,£0,https://elitedigitalagency.io/tools/robots-checker/,2026-08-12
+website-cost-estimator,/tools/website-cost-estimator/,Website cost estimator,0,0,free,£0,https://elitedigitalagency.io/tools/website-cost-estimator/,2026-08-12
+</pre></details>
+<details><summary>Original catalogue CSV text</summary><pre>slug,title,short,section,url
+seo,Search Engine Optimisation,Win durable organic visibility on Google and beyond.,services,https://elitedigitalagency.io/services/seo/
+aeo,Answer Engine Optimisation (AEO/GEO),Get cited by Google AI Overviews Perplexity ChatGPT and Gemini.,services,https://elitedigitalagency.io/services/aeo/
+ppc,Pay-Per-Click &amp; Performance,ROAS-led paid search social and programmatic that pays back.,services,https://elitedigitalagency.io/services/ppc/
+google-ads,Google Ads Management,Revenue-focused Google Ads campaigns — Search Shopping and Performance Max.,services,https://elitedigitalagency.io/services/google-ads/
+meta-ads,Meta (Facebook &amp; Instagram) Ads,Creative-led Facebook and Instagram advertising that drives enquiries and sales.,services,https://elitedigitalagency.io/services/meta-ads/
+local-seo,Local SEO,Dominate local search and Google Maps for the areas that matter most.,services,https://elitedigitalagency.io/services/local-seo/
+ecommerce-seo,Ecommerce SEO,Category page authority product schema and AI shopping search optimisation.,services,https://elitedigitalagency.io/services/ecommerce-seo/
+social-media-marketing,Social Media Marketing,Organic and paid social tuned to discovery in TikTok IG and LinkedIn search.,services,https://elitedigitalagency.io/services/social-media-marketing/
+content-marketing,Content Marketing,Topical authority that ranks in Google and gets quoted by LLMs.,services,https://elitedigitalagency.io/services/content-marketing/
+email-marketing,Email &amp; Lifecycle,First-party data programmes that turn list size into revenue.,services,https://elitedigitalagency.io/services/email-marketing/
+web-design-development,Web Design &amp; Development,Fast accessible conversion-tuned websites built for AEO.,services,https://elitedigitalagency.io/services/web-design-development/
+website-redesign,Website Redesign,Rebuild an underperforming site without losing a single ranking.,services,https://elitedigitalagency.io/services/website-redesign/
+shopify-web-design,Shopify Web Design,Bespoke Shopify stores built for conversion speed and search.,services,https://elitedigitalagency.io/services/shopify-web-design/
+wordpress-web-design,WordPress Web Design,Custom WordPress and headless builds your team can actually manage.,services,https://elitedigitalagency.io/services/wordpress-web-design/
+branding-creative,Branding &amp; Creative,Identity messaging and creative systems that travel across every channel.,services,https://elitedigitalagency.io/services/branding-creative/
+conversion-rate-optimisation,Conversion Rate Optimisation,Make every existing visit work harder with structured experimentation.,services,https://elitedigitalagency.io/services/conversion-rate-optimisation/
+analytics-reporting,Analytics &amp; Reporting,Server-side cookieless-ready measurement you can actually trust.,services,https://elitedigitalagency.io/services/analytics-reporting/
+reputation-management,Reputation &amp; Reviews Management,Build genuine reviews and the trust signals that win local and AI search.,services,https://elitedigitalagency.io/services/reputation-management/
+seo-consultancy,SEO Consultancy,Senior-level SEO direction without hiring in-house.,consultancy,https://elitedigitalagency.io/consultancy/seo-consultancy/
+digital-strategy,Digital Strategy,A clear 12-month plan for growth in an AI-first market.,consultancy,https://elitedigitalagency.io/consultancy/digital-strategy/
+brand-consultancy,Brand Consultancy,Position message and visual systems that compound over time.,consultancy,https://elitedigitalagency.io/consultancy/brand-consultancy/
+ai-search-consultancy,AI Search Consultancy,Get found inside Perplexity Gemini ChatGPT and Google AI Overviews.,consultancy,https://elitedigitalagency.io/consultancy/ai-search-consultancy/
+ecommerce-consultancy,Ecommerce Consultancy,From CRO to AEO end-to-end help for online stores.,consultancy,https://elitedigitalagency.io/consultancy/ecommerce-consultancy/
+training-workshops,Training &amp; Workshops,Upskill your team on modern SEO AEO paid and creative.,consultancy,https://elitedigitalagency.io/consultancy/training-workshops/
+charity-marketing,Charity Marketing,End-to-end marketing built for cause-led organisations.,charities,https://elitedigitalagency.io/charities/charity-marketing/
+web-design,Charity Website Design,A professional donation-ready website for your charity from £1000.,charities,https://elitedigitalagency.io/charities/web-design/
+google-ad-grants,Google Ad Grants Management,Recover protect and grow your $10k/month Ad Grants account.,charities,https://elitedigitalagency.io/charities/google-ad-grants/
+charity-seo-aeo,Charity SEO &amp; AEO,Be the answer when donors ask AI who should I support.,charities,https://elitedigitalagency.io/charities/charity-seo-aeo/
+charity-registration,Charity Registration,We register your UK charity with the Charity Commission end to end.,charities,https://elitedigitalagency.io/charities/charity-registration/
+</pre></details>
+</section></main></body></html>

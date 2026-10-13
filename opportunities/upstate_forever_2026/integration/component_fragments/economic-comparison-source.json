@@ -5,6 +5,8 @@
     "economic-comparison-source": {
       "title": "Economic comparison scientific source and original editable studies",
       "paths": [
+        "operator/economic_receive.py",
+        "operator/ECONOMIC_RECEIVING_PHASES.md",
         "model/economic_comparison_source.py",
         "model/economic_comparison_study_transfer.py",
         "operator/economic_comparison_source.py",
