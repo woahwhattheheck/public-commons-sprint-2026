@@ -127,3 +127,11 @@ node RECEIVING.mjs /absolute/haystack-turnover-operation
 ~~~
 
 The complete application is MIT-licensed under [LICENSE](LICENSE). Original upstream material retains its accompanying [HAYSTACK_LICENSE.txt](HAYSTACK_LICENSE.txt) and provenance.
+
+## Point-list modelling and contractor returns
+
+Open **Point-list modelling** from the existing workspace. Import the complete CSV or TSV through the native Python reader, select original Haystack rows, review naming and source-column mappings, and keep stable entity identities through every model revision. The full local Brick 1.4.4 catalogue, actual SHACL report and source observation status remain distinct. Export the complete editable workspace and explicitly keep or adopt each contractor-returned model while retaining all incoming source and history.
+
+The [complete modelling guide](SEMANTIC_MODELLING.md) covers the interface, original request recovery, typed client, CLI, native reports and independent receiving. The [native standards guide](SEMANTIC_NATIVE.md) describes the separate, exact offline dependency archive and explicit local installation. Inspecting, browsing or validating never installs dependencies or fetches an ontology.
+
+`SEMANTIC_RECEIVING.mjs` runs the same complete original point-modelling operation from one retained JSON input. It includes the full 624-record Charlie source, an explicitly derived point list, exact model revisions, native validation, desktop/mobile operator work, contractor return and independent application receiving. Read its actual result to distinguish completed stages and native conformance from prepared source.

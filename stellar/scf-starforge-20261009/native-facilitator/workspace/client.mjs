@@ -1,5 +1,5 @@
 // MIT. Typed-client implementation for the original authenticated native operator.
-import {receiveNativeCatalogView} from './catalog-receiving.mjs';
+import {receiveNativeCatalogView, streamNativeCatalogView} from './catalog-receiving.mjs';
 
 export class NativeOperatorError extends Error {
   constructor(code, {status = null, method = null, path = null, cause} = {}) {
@@ -84,9 +84,10 @@ export function createNativeOperatorClient({operatorUrl, token, fetch:fetchImpl 
   const client = {
     origin,
     status:options => get('status', options),
-    profiles({after = '', signal} = {}) {
+    profiles({after = '', limit = 30, signal} = {}) {
       if (after) profileName(after);
-      return get('profiles?' + new URLSearchParams({after}), {signal});
+      need(Number.isSafeInteger(limit) && limit >= 1 && limit <= 100, 'FACILITATOR_PROFILE_PAGE_INVALID');
+      return get('profiles?' + new URLSearchParams({after, limit:String(limit)}), {signal});
     },
     profile(name, options) {
       return get('profile?' + new URLSearchParams({name:profileName(name)}), options);
@@ -121,6 +122,10 @@ export function createNativeOperatorClient({operatorUrl, token, fetch:fetchImpl 
       const received = await receiveNativeCatalogView({...selection,
         readPage:input => client.catalog(input, {signal}), onProgress});
       return JSON.parse(received.parts.join(''));
+    },
+    async streamCatalog(selection, {write, signal, onProgress} = {}) {
+      return streamNativeCatalogView({...selection,
+        readPage:input => client.catalog(input, {signal}), write, onProgress});
     },
     async receiveCatalog(selection, {signal, onProgress} = {}) {
       return receiveNativeCatalogView({...selection,
