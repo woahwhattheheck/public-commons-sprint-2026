@@ -131,7 +131,8 @@ function pageHeader(title,description,actions=''){return '<header class="page-he
 function section(title,description,body,actions=''){return '<section class="section"><header class="section-header"><div><h3>'+esc(title)+'</h3>'+(description?'<p>'+esc(description)+'</p>':'')+'</div>'+actions+'</header>'+body+'</section>';}
 function metaId(row){return '<small><span class="mono">'+esc(short(row.id))+'</span> · '+esc(when(row.created_at||row.captured_at))+'</small>';}
 function itemButton(kind,id,label='Open'){return button('item',label,'data-kind="'+kind+'" data-id="'+id+'"','small')+(['sources','grids','runs','comparisons','deliveries'].includes(kind)?button('spatial-item','Map','data-kind="'+kind+'" data-id="'+id+'"','small'):'');}
-function sourceName(collection,id){return state?.data.sources.find(x=>x.id===collection)?.entries.find(x=>x.id===id)?.title||id||'—';}
+function sourceDisplayTitle(entry){return entry?.id==='GURA_NLCD'?'Land cover':entry?.title||entry?.name||entry?.id||'—';}
+function sourceName(collection,id){const entry=state?.data.sources.find(x=>x.id===collection)?.entries.find(x=>x.id===id);return entry?sourceDisplayTitle(entry):id||'—';}
 function sumCell(artifact){return artifact?number(artifact.sum)+' <small>'+esc(artifact.sum_units||artifact.units||'')+'</small>':'—';}
 function render(){
   if(!state)return;
@@ -265,9 +266,9 @@ async function openItem(kind,id,focus=true){
   const requestedWorkspace=workspace,row=await api(endpoint('/api/item',{kind,id}));if(workspace!==requestedWorkspace)return;detailContext={kind,id,state:row.state,files:row._downloads||[]};
   let content='';
   if(kind==='sources'){
-    content=defs({captured_at:row.captured_at,source_count:row.entries.length,scope:row.scope})+table(['Source','Kind / units','Edition','Original source',''],row.entries.map(e=>'<tr><td class="name-cell"><strong>'+esc(e.title)+'</strong><small>'+esc(e.id)+'</small></td><td>'+esc(e.kind)+'<br>'+esc(e.units||'')+'</td><td>'+esc(e.vintage)+'</td><td>'+external(e.uri)+'</td><td>'+button('source-inspect','Inspect native file','data-collection="'+id+'" data-source="'+esc(e.id)+'"','small')+'</td></tr>'));
+    content=defs({captured_at:row.captured_at,source_count:row.entries.length,scope:row.scope})+table(['Source','Kind / units','Edition','Original source',''],row.entries.map(e=>'<tr><td class="name-cell"><strong>'+esc(sourceDisplayTitle(e))+'</strong><small>'+esc(e.id)+'</small></td><td>'+esc(e.kind)+'<br>'+esc(e.units||'')+'</td><td>'+esc(e.vintage)+'</td><td>'+external(e.uri)+'</td><td>'+button('source-inspect','Inspect native file','data-collection="'+id+'" data-source="'+esc(e.id)+'"','small')+'</td></tr>'));
   }else if(kind==='profiles'){
-    content='<div class="two-columns">'+nativeModels(row).map(name=>section(name==='ndr'?'Nutrient delivery ratio':'Sediment delivery ratio','Original '+name.toUpperCase()+' parameters.','<div class="section-body">'+defs(row[name]||{})+'</div>')).join('')+'</div>'+defs({selected_models:nativeModelLabel(row),biophysical_table:sourceName(row.source_collection_id,row.biophysical_source_id),land_cover_codes:row.table_summary.lucodes,model_period:row.model_period||'Not supplied',references:row.references})+button('profile-clone','Create revised profile','data-id="'+id+'"');
+    content='<div class="two-columns">'+nativeModels(row).map(name=>section(name==='ndr'?'Nutrient delivery ratio':'Sediment delivery ratio','Original '+name.toUpperCase()+' parameters.','<div class="section-body">'+defs(row[name]||{})+'</div>')).join('')+'</div>'+defs({selected_models:nativeModelLabel(row),biophysical_table:sourceName(row.source_collection_id,row.biophysical_source_id),land_cover_codes:row.table_summary.lucodes,model_period:row.model_period||'Not supplied',references:row.references})+button('source-inspect','Open original biophysical table','data-collection="'+esc(row.source_collection_id)+'" data-source="'+esc(row.biophysical_source_id)+'"')+button('profile-clone','Create revised profile','data-id="'+id+'"');
   }else if(kind==='grids'){
     content=defs({state:row.state,selected_models:nativeModelLabel(row.spec),reused_original_grid:row.spec.base_grid_id||'Prepared from the selected original sources',reused_inputs:Object.keys(row.reused_inputs||{}),crs:row.grid?.crs_name,dimensions:row.grid?.width+' × '+row.grid?.height,resolution_m:row.grid?.resolution_m,pixel_area_ha:row.grid?.pixel_area_ha,bounds:row.grid?.bounds,transform:row.grid?.transform,upstream_context_m:row.spec.upstream_buffer_m})+table(['Input','Source edition','Units / source','Native minimum','Native maximum'],Object.entries(row.inputs||{}).map(([name,input])=>'<tr><td>'+esc(name)+'</td><td>'+esc(input.vintage)+'</td><td>'+external(input.source_uri)+'</td><td>'+number(input.minimum)+'</td><td>'+number(input.maximum)+'</td></tr>'));
   }else if(kind==='scenarios'){
@@ -303,6 +304,8 @@ async function openItem(kind,id,focus=true){
     if(row.priority)content+='<h3 class="subheading">Combined priority settings</h3>'+defs(row.priority);
     if(row.state==='failed')content+=button('delivery-resume','Resume original delivery','data-id="'+id+'"','primary');
   }
+  if(kind==='comparisons')content+='<div class="page-actions">'+button('comparison-delivery','Build delivery from this comparison','data-id="'+id+'"')+'</div>';
+  if(kind==='runs'&&row.state==='complete')content+='<div class="page-actions">'+button('run-compare-selection','Compare this run','data-id="'+id+'"')+'</div>';
   if(['sources','grids','runs','comparisons','deliveries','spatial_reviews'].includes(kind))content='<div class="page-actions">'+button('spatial-item','Open in spatial review','data-kind="'+kind+'" data-id="'+id+'"')+'</div>'+content;
   content+='<h3 class="subheading">Retained files</h3>'+fileList(row._downloads)+'<details class="technical"><summary>Original record, selection and provenance</summary><pre class="json-view">'+esc(pretty(Object.fromEntries(Object.entries(row).filter(([key])=>key!=='_downloads'))))+'</pre></details>';
   detail(row.title||row.metadata?.title||row.spec?.title||row.selection?.title||viewLabels[kind]||human(kind),content,{kind,id,state:row.state});detailContext.files=row._downloads;
@@ -367,7 +370,7 @@ async function showTask(id,focus=true){
   const body='<div class="meta">'+badge(row.state)+'<span>'+esc(when(row.created_at))+'</span><span>'+row.attempts.length+' retained attempts</span></div>'+(row.error?'<div class="notice error">'+esc(row.error.message)+'</div>':'')+
   (row.result?.workspace_key?'<div class="notice"><strong>Original workspace restored</strong>'+button('workspace-select','Open restored copy','data-id="'+row.result.workspace_key+'"','small')+'</div>':'')+
   (row.action==='spatial.review.export'&&row.result?.id?'<div class="page-actions">'+itemButton('spatial_exports',row.result.id,'Open map pack')+'</div>':'')+
-  programmes.taskActions(row)+receivingWaters.taskActions(row)+customerReviews.taskActions(row)+experiments.taskActions(row)+registeredActions+conservation.taskActions(row)+fileList(row._downloads||[])+'<div class="page-actions">'+(['failed','interrupted','cancelled'].includes(row.state)?button('task-resume','Resume original selection','data-id="'+row.id+'"','primary'):'')+(row.state==='queued'?button('task-cancel','Cancel before start','data-id="'+row.id+'"'):'')+'</div><details class="technical" open><summary>Original selected inputs and attempts</summary><pre class="json-view">'+esc(pretty(row))+'</pre></details>';
+  (row._item?'<div class="page-actions">'+itemButton(row._item.kind,row._item.id,'Open saved result')+'</div>':'')+programmes.taskActions(row)+receivingWaters.taskActions(row)+customerReviews.taskActions(row)+experiments.taskActions(row)+registeredActions+conservation.taskActions(row)+fileList(row._downloads||[])+'<div class="page-actions">'+(['failed','interrupted','cancelled'].includes(row.state)?button('task-resume','Resume original selection','data-id="'+row.id+'"','primary'):'')+(row.state==='queued'?button('task-cancel','Cancel before start','data-id="'+row.id+'"'):'')+'</div><details class="technical" open><summary>Original selected inputs and attempts</summary><pre class="json-view">'+esc(pretty(row))+'</pre></details>';
   detail(actionLabels[row.action]||row.action,body,{kind:'task',id,state:row.state});detailContext.files=row._downloads||[];
   if(focus)$('#detail-body').scrollTop=0;
 }
@@ -375,10 +378,10 @@ async function showTask(id,focus=true){
 const input=(name,type='text',value='',attrs='')=>'<input name="'+esc(name)+'" type="'+esc(type)+'" value="'+esc(value??'')+'" '+attrs+'>';
 const area=(name,value='',attrs='')=>'<textarea name="'+esc(name)+'" '+attrs+'>'+esc(value??'')+'</textarea>';
 const field=(label,control,note='',wide=false)=>'<label class="'+(wide?'full':'')+'"><span>'+esc(label)+'</span>'+control+(note?'<small>'+esc(note)+'</small>':'')+'</label>';
-const select=(name,rows,value='',required=true)=>'<select name="'+esc(name)+'" '+(required?'required':'')+'><option value="">Choose…</option>'+rows.map(x=>{const pair=Array.isArray(x)?x:[x.id,x.title||x.name||short(x.id)];return '<option value="'+esc(pair[0])+'" '+(String(pair[0])===String(value??'')?'selected':'')+'>'+esc(pair[1])+'</option>';}).join('')+'</select>';
+const select=(name,rows,value='',required=true)=>'<select name="'+esc(name)+'" '+(required?'required':'')+'><option value="">Choose…</option>'+rows.map(x=>{const pair=Array.isArray(x)?x:[x.id,x.id==='GURA_NLCD'?sourceDisplayTitle(x):x.title||x.name||short(x.id)];return '<option value="'+esc(pair[0])+'" '+(String(pair[0])===String(value??'')?'selected':'')+'>'+esc(pair[1])+'</option>';}).join('')+'</select>';
 const checks=(name,rows,chosen=[])=>'<div class="checkbox-list">'+rows.map(row=>'<label class="check"><input type="checkbox" name="'+esc(name)+'" value="'+esc(row.id)+'" '+(chosen.includes(row.id)?'checked':'')+'><span>'+esc(row.title||runTitle(row.id)||short(row.id))+'</span></label>').join('')+'</div>';
 const val=(name,root=form)=>root.querySelector('[name="'+name+'"]')?.value??'';
-const chosen=(name,root=form)=>$$('[name="'+name+'"]:checked',root).map(x=>x.value);
+const chosen=(name,root=form)=>$('[name="'+name+'"]:checked',root).map(x=>x.value);
 const num=(name,root=form,optional=false)=>{const text=val(name,root).trim();if(!text&&optional)return undefined;const n=Number(text);if(!text||!Number.isFinite(n))throw Error('Enter a finite value for '+human(name)+'.');return n;};
 const lines=text=>text.split(/\r?\n/).map(x=>x.trim()).filter(Boolean);
 const sources=()=>state.data.sources;
@@ -469,7 +472,7 @@ function sourceForm(){
   }
   const preview=await api('/api/source-preview',{method:'POST',body:data});
   currentDraft();sourcePreview=preview;
-  $('#source-preview').innerHTML='<h3 class="subheading">'+esc(sourcePreview.title)+'</h3><p class="note">'+sourcePreview.entries.length+' original sources · manifest <span class="mono">'+esc(short(sourcePreview.manifest_sha256))+'</span></p>'+table(['Source','Kind / role','Original URI','Vintage / units'],sourcePreview.entries.map(x=>'<tr><td>'+esc(x.title)+'<small>'+esc(x.path)+'</small></td><td>'+esc(x.kind)+'<br>'+esc(x.role||'')+'</td><td>'+external(x.uri)+'</td><td>'+esc(x.vintage)+'<br>'+esc(x.units||'')+'</td></tr>'));
+  $('#source-preview').innerHTML='<h3 class="subheading">'+esc(sourcePreview.title)+'</h3><p class="note">'+sourcePreview.entries.length+' original sources · manifest <span class="mono">'+esc(short(sourcePreview.manifest_sha256))+'</span></p>'+table(['Source','Kind / role','Original URI','Vintage / units'],sourcePreview.entries.map(x=>'<tr><td>'+esc(sourceDisplayTitle(x))+'<small>'+esc(x.path)+'</small></td><td>'+esc(x.kind)+'<br>'+esc(x.role||'')+'</td><td>'+external(x.uri)+'</td><td>'+esc(x.vintage)+'<br>'+esc(x.units||'')+'</td></tr>'));
   $('#form-submit').textContent='Import this source edition';
   $('#form-progress').textContent='Preview retained. Review the exact source selection before import.';
  },()=>{
@@ -567,10 +570,10 @@ async function gridForm(id){
  openForm(row?'Extend or revise native grid':'Prepare native model grid','Choose the native models and their original sources, reporting area and upstream context. A completed grid can supply its exact common inputs when the remaining model sources arrive.',
  '<div class="form-grid">'+field('Grid title',input('title','text',row?.title?row.title+' · revision':'','required'))+field('Source edition',select('collection',sources(),collection))+
  field('Native models',select('models',nativeModelOptions(),nativeModels(row).join(',')),'NDR requires elevation, land cover and precipitation. SDR requires elevation, land cover, rainfall erosivity and soil erodibility.',true)+
- field('Native cell size',input('resolution','number',row?.resolution_m??originalResolution,'required min="0" step="any"'),'Metres per square cell. Match the original projected land-cover grid; 30 m is the Upper Savannah default.')+
+ field('Native cell size',input('resolution','number',row?.resolution_m??originalResolution,'required min="0" step="any"'),'Metres per square cell, matching the original projected land-cover grid. The Upper Savannah production maps require 30 × 30 m cells (RFP p. 2). The original Gura demonstration retains its separate 300 m grid.')+
  (canReuse?'<label class="full"><span>Reuse original grid preparation</span><span><input name="reuse_original_grid" type="checkbox" checked> Carry completed common files from '+esc(short(original.id))+'</span><small>Keep the original cell size, geometry, source selections and context buffer to reuse them. Clear this choice when changing the physical grid. New input roles are prepared in the new grid.</small></label>':'')+
  rasterRoles.map(([key,label,models])=>field(label,select('raster_'+key,sourceRows(collection,'raster'),row?.input_sources?.[key])).replace('<label','<label data-native-models="'+models+'"')).join('')+
- field('Upstream context buffer',input('buffer','number',row?.upstream_buffer_m??'','required min="0.01" max="999999" step="any"'),'Metres. The model domain must cover the selected reporting area.')+
+ field('Upstream context buffer',input('buffer','number',row?.upstream_buffer_m??'','required min="0.01" max="999999" step="any"'),'Metres of upstream context beyond the reporting area. Select the buffer for the catchment and retain its rationale; the RFP requires an external modeling buffer without fixing its distance.')+
  vectorSelection('reporting','Reporting boundary',collection,row?.reporting_area)+vectorSelection('domain','Hydrologic model domain',collection,row?.model_domain)+'</div>',
  'Prepare original grid',()=>{
   const modelFields=nativeModelFields(),active=nativeModels(modelFields),input_sources={},resolution=num('resolution');
@@ -778,7 +781,7 @@ function observationForm(){
    if(!file||context.observationCSVFile!==file)throw Error('Choose the original CSV and wait for its column mapping.');
    const columns={},parameter_mapping={};
    for(const key of keys)if(val('column_'+key))columns[key]=val('column_'+key);
-   for(const node of $$('[data-parameter-row]',form)){
+   for(const node of $('[data-parameter-row]',form)){
     const key=val('parameter_from',node).trim();if(Object.hasOwn(parameter_mapping,key))throw Error('An original parameter label is mapped twice.');parameter_mapping[key]=val('parameter_to',node);
    }
    const metadata={...(context.observationMetadata||{}),title:val('title'),source_uri:val('source_uri'),value_basis:val('basis'),annualization_method:val('annualization_method'),columns,parameter_mapping,accepted_qualifiers:[...(form.elements.namedItem('blank_qualifier').checked?['']:[]),...lines(val('qualifiers'))]};
@@ -1036,6 +1039,8 @@ async function dispatch(button){
  if(action==='run-start')return executeAction('run.start',{run_id:id});
  if(action==='run-completed-models')return completedModelsForm(id);
  if(action==='run-compare')return compareForm();
+ if(action==='run-compare-selection'){detailDialog.close();detailContext=null;return compareForm({baseline_run_id:id});}
+ if(action==='comparison-delivery'){const comparison=await api(endpoint('/api/item',{kind:'comparisons',id}));detailDialog.close();detailContext=null;return deliveryForm(undefined,{baseline_run_id:comparison.baseline_run_id,scenario_run_ids:comparison.alternatives.map(x=>x.run_id)});}
  if(action==='run-log'||action==='run-log-more')return showRunLog(id,action==='run-log-more');
  if(action==='observation-new')return observationForm();
  if(action==='observation-compare')return observationCompareForm(id);
