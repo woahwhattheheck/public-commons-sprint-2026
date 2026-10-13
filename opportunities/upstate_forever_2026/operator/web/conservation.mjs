@@ -1,5 +1,6 @@
 /** Conservation studies and portfolios within the existing GIS operator. */
 import { renderKeoweePointCriteria } from "./keowee-method-view.mjs";
+import { attachConservationWorkingView } from "./conservation_working_view.mjs";
 import { renderJointChoices } from "./conservation_joint_choices.mjs";
 const POLLUTANTS = [
   ["nitrogen_export", "Nitrogen"],
@@ -128,6 +129,146 @@ export function attachConservation({
       notice: null, busy: false, pending: new Set(), selectionOrigin: null,
     });
     return memories.get(key);
+  }
+  const working = attachConservationWorkingView({
+    getWorkspace: workspace,
+    getProject: () => getState?.()?.data?.project,
+    capture: workingSnapshot, compare: compareWorkingSnapshot, apply: applyWorkingSnapshot,
+    repaint: () => paint(),
+  });
+  function workingSnapshot() {
+    const ui = memory(), data = getState?.()?.data || {}, available = ui.overview?.available || {};
+    const json = value => value === undefined ? null : JSON.parse(JSON.stringify(value));
+    const originalSources = [];
+    for (const [name, raw] of Object.entries(ui.draft || {})) {
+      if (!name.endsWith("_source") || !raw) continue;
+      try {
+        const ref = JSON.parse(raw);
+        const source = sources().find(row => row.source_collection_id === ref.source_collection_id && row.source_id === ref.source_id);
+        if (source && !originalSources.some(row => row.source_collection_id === source.source_collection_id && row.source_id === source.source_id))
+          originalSources.push(json(source));
+      } catch (_) { /* Incomplete authored source fields stay literal in the draft. */ }
+    }
+    const runIds = new Set([ui.draft?.baseline_run_id, ui.draft?.score_alternative,
+      ...(ui.draft?.alternative_run_ids || []), ...(ui.draft?.matched_families || []).flatMap(row =>
+        [row.baseline_run_id,row.alternative_run_id]),ui.scenario?.baseline_run_id].filter(Boolean));
+    const retainedRuns = runs().filter(row => runIds.has(row.id)).map(row => json({
+      id:row.id, title:row.title, state:row.state, selection:row.selection, execution:row.execution}));
+    return {
+      schema:"upstate.conservation-working-draft/v1",project:json(data.project),workspace_key:workspace(),
+      form:["study","portfolio","optimization","scenario","sources"].includes(ui.form) ? ui.form : null,
+      draft:json(ui.draft),portfolio:json(ui.portfolio),optimization:json(ui.optimization),
+      scenario:json(ui.scenario),acquisition:json(ui.acquisition),
+      selection:{study_id:ui.study?.id || null,plan_id:ui.plan?.id || null,
+        selected_ids:[...ui.selectedIds],excluded_ids:[...ui.excludedIds],
+        retained_selection:json(ui.retainedSelection),selection_origin:json(ui.selectionOrigin)},
+      originals:{study:json(ui.study),plan:json(ui.plan),sources:originalSources,runs:retainedRuns,
+        scenario:json((available.scenario_bridges || ui.overview?.scenario_bridges || [])
+          .find(row => row.id === ui.scenario?.conservation_scenario_id))},
+      display:{search:ui.search,eligibility:ui.eligibility,sort:ui.sort,direction:ui.direction,
+        ranges:json(ui.ranges),metricFilter:json(ui.metricFilter),displayAlternative:ui.displayAlternative || ""},
+    };
+  }
+  function validateWorkingSnapshot(value) {
+    const object = row => row && typeof row === "object" && !Array.isArray(row);
+    const strings = row => Array.isArray(row) && row.every(item => typeof item === "string");
+    if (!object(value) || value.schema !== "upstate.conservation-working-draft/v1" ||
+        !object(value.project) || value.project.id !== getState?.()?.data?.project?.id ||
+        ![null,"study","portfolio","optimization","scenario","sources"].includes(value.form) ||
+        !["draft","portfolio","acquisition","selection","originals","display"].every(name => object(value[name])) ||
+        ![value.optimization,value.scenario].every(row => row === null || object(row)) ||
+        !strings(value.selection.selected_ids) || !strings(value.selection.excluded_ids) ||
+        !strings(value.draft.alternative_run_ids) || !Array.isArray(value.draft.matched_families) ||
+        !value.draft.matched_families.every(object) ||
+        !Array.isArray(value.originals.sources) || !Array.isArray(value.originals.runs)) {
+      throw Error("Choose a complete Conservation working edition for this original project.");
+    }
+    if (value.optimization && ["criteria","scenario_cases","profiles"].some(name =>
+      value.optimization[name] !== undefined && (!Array.isArray(value.optimization[name]) ||
+        !value.optimization[name].every(object)))) throw Error("The authored priority rows must retain their complete original objects.");
+    if (value.selection.retained_selection !== null && !object(value.selection.retained_selection))
+      throw Error("Retain the complete original candidate selection.");
+    return value;
+  }
+  async function compareWorkingSnapshot(value) {
+    validateWorkingSnapshot(value);
+    const key = workspace(), projectId = getState?.()?.data?.project?.id, rows = [];
+    const same = (a,b) => {
+      const ordered = x => Array.isArray(x) ? x.map(ordered) : x && typeof x === "object"
+        ? Object.fromEntries(Object.keys(x).sort().map(k => [k,ordered(x[k])])) : x;
+      return JSON.stringify(ordered(a)) === JSON.stringify(ordered(b));
+    };
+    let available = true;
+    const report = (label,message,required = false) => {rows.push({label,message});if(required) available = false;};
+    const original = async (label, loader, previous, fields) => {
+      try {
+        const current = await loader();
+        if (!current) throw Error("The workspace changed.");
+        if (!previous || fields.some(name => !same(current[name],previous[name])))
+          throw Error("The current original identity differs from this saved working edition.");
+        report(label,"Same retained original record");return current;
+      } catch (error) {report(label,error.message || String(error),true);return null;}
+    };
+    let overview;
+    try {overview = await read("overview");if(!overview) throw Error("The workspace changed.");}
+    catch(error) {report("Project source catalogue",error.message || String(error),true);}
+    let study = null, plan = null, retainedSelection = null;
+    if (value.selection.study_id) study = await original("Study " + value.selection.study_id,
+      () => catalogRead("study",{study_id:value.selection.study_id}),value.originals.study,["id","selection"]);
+    if (value.selection.plan_id) plan = await original("Portfolio " + value.selection.plan_id,
+      () => read("plan",{plan_id:value.selection.plan_id}),value.originals.plan,["id","study_id","selection"]);
+    if (plan && plan.study_id !== study?.id) report("Portfolio study","The portfolio and selected study differ.",true);
+    if (value.selection.retained_selection) {
+      const selection = value.selection.retained_selection;
+      retainedSelection = await original("Complete retained candidate selection",
+        () => catalogRead("selection",{study_id:value.selection.study_id,selection_id:selection.selection_id}),
+        selection,["id","selection_id","study_id","index_id","source_inventory","reference","count"]);
+    }
+    const currentSources = (overview?.available?.sources || []).flatMap(collection =>
+      (collection.entries || []).map(entry => ({...entry,source_collection_id:collection.id,source_id:entry.id})));
+    for (const source of value.originals.sources) {
+      const current = currentSources.find(row => row.source_collection_id === source.source_collection_id && row.source_id === source.source_id);
+      const unchanged = current && same([current.body?.bytes,current.body?.sha256],[source.body?.bytes,source.body?.sha256]);
+      report("Source " + (source.title || source.source_id), unchanged ? "Same original source bytes" :
+        "Original source is unavailable or changed; the literal draft choice is retained for correction.");
+    }
+    for (const run of value.originals.runs) {
+      const current = (overview?.available?.runs || []).find(row => row.id === run.id);
+      report("Run " + (run.title || run.id), current && same(current.selection,run.selection)
+        ? "Same original native selection" : "Original run is unavailable or changed; the literal draft choice is retained for correction.");
+    }
+    if (value.scenario?.conservation_scenario_id) {
+      const current = (overview?.scenario_bridges || []).find(row => row.id === value.scenario.conservation_scenario_id);
+      report("Saved scenario footprint",current ? "Same retained scenario ID" : "Restore the original scenario record before continuing this prepared footprint.",
+        !current);
+    }
+    if (["portfolio","optimization"].includes(value.form) && study?.state !== "complete")
+      report("Editable decision context","This authored decision needs its complete original study.",true);
+    if (value.form === "scenario" && !value.scenario?.conservation_scenario_id && !plan)
+      report("Scenario planning context","This authored footprint needs its original saved portfolio.",true);
+    if (workspace() !== key || getState?.()?.data?.project?.id !== projectId) throw Error("The selected workspace changed while its original records were being read.");
+    if (!rows.length) report("New study","Original project matches; the complete unfinished forms can be restored.");
+    return {available,rows,workspace:key,projectId,study,plan,retainedSelection,overview};
+  }
+  async function applyWorkingSnapshot(value, original) {
+    validateWorkingSnapshot(value);
+    if (!original.available || original.workspace !== workspace() || original.projectId !== getState?.()?.data?.project?.id)
+      throw Error("Review this working edition against the currently open original project.");
+    const ui = memory();
+    resetCatalog(ui);ui.readVersion++;clearChecked(ui);
+    ui.overview = original.overview;ui.study = original.study;ui.plan = original.plan;
+    ui.retainedSelection = original.retainedSelection;
+    ui.selectedIds = new Set(value.selection.selected_ids);ui.excludedIds = new Set(value.selection.excluded_ids);
+    ui.selectionOrigin = structuredClone(value.selection.selection_origin);
+    ui.draft = structuredClone(value.draft);ui.portfolio = structuredClone(value.portfolio);
+    ui.optimization = structuredClone(value.optimization);ui.scenario = structuredClone(value.scenario);
+    ui.acquisition = structuredClone(value.acquisition);ui.form = value.form;
+    for (const name of ["search","eligibility","sort","direction","ranges","metricFilter","displayAlternative"])
+      if (Object.prototype.hasOwnProperty.call(value.display,name)) ui[name] = structuredClone(value.display[name]);
+    ui.optimizationResult = null;ui.reportSource = null;ui.detailId = null;ui.detailRow = null;ui.page = 1;
+    ui.notice = {kind:"status",message:"Restored the original authored working edition."};
+    if (ui.study?.state === "complete") await refreshCatalog(true);
+    paint();
   }
   const sources = () => {
     const available = getState?.()?.data?.sources || memory().overview?.available?.sources || [];
@@ -2562,6 +2703,7 @@ export function attachConservation({
       (ui.notice ? '<div class="cons-notice' + (ui.notice.kind === "error" ? " cons-error" : "") +
         '" role="' + (ui.notice.kind === "error" ? "alert" : "status") + '">' +
         h(ui.notice.message) + "</div>" : "") +
+      working.render() +
       (ui.form === "study" ? studyForm() : "") +
       (ui.form === "sources" ? sourceAcquisitionForm() : "") +
       (ui.form === "source-result" ? sourceCaptureView() : "") +
@@ -2803,7 +2945,7 @@ export function attachConservation({
       node.querySelector(":scope > summary")?.textContent?.trim()).filter(Boolean));
     const active = document.activeElement;
     if (!active || !mounted.contains(active)) return null;
-    const key = ["data-field", "data-filter", "data-candidate-id", "data-scenario-model", "data-scenario-profile", "data-optimization-filter", "data-catalog-range", "data-catalog-metric", "data-family-treatment", "data-family-pair", "data-family-case-criterion", "data-family-case-family"].find(name => active.hasAttribute?.(name));
+    const key = ["data-field", "data-filter", "data-candidate-id", "data-scenario-model", "data-scenario-profile", "data-optimization-filter", "data-catalog-range", "data-catalog-metric", "data-family-treatment", "data-family-pair", "data-family-case-criterion", "data-family-case-family", "data-working-field"].find(name => active.hasAttribute?.(name));
     if (!key) return null;
     return { key, value: active.getAttribute(key),
       start: typeof active.selectionStart === "number" ? active.selectionStart : null,
@@ -2817,7 +2959,7 @@ export function attachConservation({
       if (ui.openDetails?.has(title)) node.open = true;
     }
     if (!focus) return;
-    const target = [...mounted.querySelectorAll("[data-field],[data-filter],[data-candidate-id],[data-scenario-model],[data-scenario-profile],[data-optimization-filter],[data-catalog-range],[data-catalog-metric],[data-family-treatment],[data-family-pair],[data-family-case-criterion],[data-family-case-family]")]
+    const target = [...mounted.querySelectorAll("[data-field],[data-filter],[data-candidate-id],[data-scenario-model],[data-scenario-profile],[data-optimization-filter],[data-catalog-range],[data-catalog-metric],[data-family-treatment],[data-family-pair],[data-family-case-criterion],[data-family-case-family],[data-working-field]")]
       .find(node => node.getAttribute(focus.key) === focus.value);
     if (target) {
       target.focus({ preventScroll: true });
@@ -2842,6 +2984,8 @@ export function attachConservation({
     if (clear) clear.disabled = !checkedCount(ui);
   }
   function changed(event) {
+    if (working.field(event)) return;
+    try {
     const target = event.target, ui = memory();
     if (!(target instanceof Element)) return;
     if (target.hasAttribute("data-candidate-id") && event.type === "change") {
@@ -3047,12 +3191,14 @@ export function attachConservation({
     if (event.type === "change" && ["mode", "purpose", "score_basis", "baseline_run_id", "score_alternative",
       "method_category", "method_native_classes", "method_headwaters", "plan.mode", "scenario.output", "scenario.grid_id", "scenario.profile_id"].includes(name) ||
       event.type === "change" && name.endsWith("_source")) paint();
+    } finally { working.remember(); }
   }
   async function dispatch(node) {
     const action = node?.dataset?.action;
     if (!action?.startsWith("conservation-")) return false;
     const ui = memory(), name = action.slice("conservation-".length);
     try {
+      if (name.startsWith("working-")) return await working.dispatch(name.slice("working-".length),node);
       if (!workspace()) throw new Error("Open a workspace before using conservation planning.");
       switch (name) {
         case "transfer-study":
@@ -3379,7 +3525,7 @@ export function attachConservation({
       ui.notice = { kind: "error", message };
       paint();
       if (toast) toast(message);
-    }
+    } finally { if (!name.startsWith("working-")) working.remember(); }
     return true;
   }
   function taskActions(task) {
@@ -3478,6 +3624,7 @@ export function attachConservation({
     if (!ui.overview || stamp !== ui.taskStamp) void refreshOverview(!!ui.overview);
   }
   function detach() {
+    working.detach();
     if (mounted && activeWorkspace === workspace()) captureView();
     transferVersion++;
     if (transferRequest) {

@@ -21,6 +21,10 @@ import stat
 import tempfile
 
 ALLOWED = frozenset({
+    "operator/web/conservation_working.mjs",
+    "operator/web/conservation_working_view.mjs",
+    "operator/CONSERVATION_WORKING_FILES.md",
+    "integration/component_fragments/conservation-working-files.json",
     "model/conservation_joint_choices.py",
     "operator/web/conservation_joint_choices.mjs",
     "CONSERVATION_JOINT_CHOICES.md",
@@ -635,6 +639,10 @@ ALLOWED = frozenset({
     "source/ROBUST_RECEIVING.md",
 })
 REQUIRED = ALLOWED - {
+    "operator/web/conservation_working.mjs",
+    "operator/web/conservation_working_view.mjs",
+    "operator/CONSERVATION_WORKING_FILES.md",
+    "integration/component_fragments/conservation-working-files.json",
     "model/conservation_joint_choices.py",
     "operator/web/conservation_joint_choices.mjs",
     "CONSERVATION_JOINT_CHOICES.md",
@@ -2508,10 +2516,36 @@ def verify_conservation_joint_dependencies(application, pending):
         raise ValueError("Conservation joint choices use original append-only component fields")
 
 
+
+def verify_conservation_working_dependencies(application, pending):
+    """Keep complete browser drafts, portable editions and their original editor together."""
+    editor = pending.get("operator/web/conservation.mjs")
+    if editor is None:
+        editor = read_existing(application, "operator/web/conservation.mjs")
+    if editor is None or b"./conservation_working_view.mjs" not in editor:
+        return
+    for name in ("operator/web/conservation_working.mjs",
+                 "operator/web/conservation_working_view.mjs",
+                 "operator/CONSERVATION_WORKING_FILES.md",
+                 "operator/extensions/conservation.json",
+                 "integration/component_fragments/conservation-working-files.json"):
+        assembled_data(application, pending, name)
+    descriptor = json.loads(assembled_data(application, pending, "operator/extensions/conservation.json"))
+    if not {"conservation_working.mjs", "conservation_working_view.mjs"} <= set(descriptor.get("assets", [])):
+        raise ValueError("Register both original Conservation working-file web assets")
+    fragment = json.loads(assembled_data(application, pending,
+        "integration/component_fragments/conservation-working-files.json"))
+    component = fragment.get("extend_components", {}).get("conservation-scientific-report-source", {})
+    if set(component) - {"paths", "requires", "import_roots", "source_manifests"}:
+        raise ValueError("Conservation working files need the original append-only component fields")
+    for name in component.get("paths", []):
+        assembled_data(application, pending, name)
+
 def verify_composition(application, pending):
     verify_conservation_joint_dependencies(application, pending)
     verify_advancing_study_dependencies(application, pending)
     verify_conservation_sampling_dependencies(application, pending)
+    verify_conservation_working_dependencies(application, pending)
     verify_native_observation_context_dependencies(application, pending)
     verify_sampling_native_evidence_dependencies(application, pending)
     verify_terrain_receiving_dependencies(application, pending)
