@@ -234,3 +234,24 @@ boundary; preserve the source of every running native process. The producing
 operator must open, view and use the actual populated Programme, reports,
 source downloads and received editable project under the standing owner
 direction and original 14:00 UTC cutoff.
+
+## Receive a directly prepared original Workspace
+
+For an original preparation made through the native Workspace API, use
+`--workspace-preparation ORIGINAL_PREPARED_ID` with the unchanged original
+`--workspace`, its full original `--selection` JSON, and a newly owned
+`--output`. Choose `--report-only --reference-handover` when the original
+reference trio is already complete. The existing `--run-reference` or `--run`
+modes are explicit execution choices.
+
+This mode validates the retained preparation, receipt, source/grid/profiles,
+scenarios and all original native run selections. It starts a CURRENT receiving
+admission whose `origin` identifies the actual prepared record, input receipt
+and original three run IDs. Current receiver/producer hashes describe receiving
+code; they are not asserted as historical preparation provenance. It does not
+call geographic.prepare, import new sources, or create an absent Workspace.
+
+Resume with the same current admission and output. A later explicit report or
+executor source adoption uses the existing admission modes normally. Never
+manufacture a previous CLI receipt for a directly prepared project, and never
+change its original selection merely to fit a receiving command.
