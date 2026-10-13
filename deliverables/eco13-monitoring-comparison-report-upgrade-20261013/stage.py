@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Stage the complete Monitoring upgrade using the application's original source reader."""
+"""Stage a complete component upgrade using the unchanged original source reader."""
 from __future__ import annotations
 
 import argparse
@@ -72,7 +72,7 @@ def main():
             raise ValueError("Choose a fresh stage; an existing file has another edition: " + name)
     for name, body in sorted(files.items()):
         publish_file(destination / name, body)
-    result = {"schema": "upstate.monitoring-source-upgrade-stage/v1",
+    result = {"schema": manifest["schema"].replace("-upgrade/v1", "-upgrade-stage/v1"),
               "application": str(application), "source_root": str(destination),
               "source_commit": manifest["source_commit"],
               "files": len(files), "source_bytes": sum(map(len, files.values())),
