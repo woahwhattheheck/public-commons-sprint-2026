@@ -1,0 +1,263 @@
+{
+  "schema": "paycashless.application-source.v1",
+  "files": [
+    {
+      "path": "README.md",
+      "bytes": 5109,
+      "sha256": "ae53240d9bea7c8ba51b2b4a0011a1a452b46862ca54d9a2abfb2fb67326586b",
+      "mode": 420
+    },
+    {
+      "path": "OPERATIONS.md",
+      "bytes": 9776,
+      "sha256": "476cc45799b98ef610714a31b8c6927a567999a762c752b3711f85fc2f9f2974",
+      "mode": 420
+    },
+    {
+      "path": "COMMISSIONING.md",
+      "bytes": 7569,
+      "sha256": "bccf482fb8a43e4a68aaf5d76751817dd472d0532f4e03241b0ee1fdd096f4fe",
+      "mode": 420
+    },
+    {
+      "path": "SOURCES.md",
+      "bytes": 5974,
+      "sha256": "c97c35c69bdfca7196f5622a1918d470ab5ef0629641208994f9e0e9dd8d8a42",
+      "mode": 420
+    },
+    {
+      "path": "PAYCASHLESS_INTEGRATION.json",
+      "bytes": 6916,
+      "sha256": "d1a94bfd214869237258e6251fb430e59c570790de06f7463b09cdcc6a6363eb",
+      "mode": 420
+    },
+    {
+      "path": "PAYCASHLESS_MODEL.md",
+      "bytes": 11838,
+      "sha256": "c8bee9c2bc1ad0253fd3cf900a212abf8754e7cbfb2ac40b572b5b3794ca48c0",
+      "mode": 420
+    },
+    {
+      "path": "PAYCASHLESS_OPERATOR.md",
+      "bytes": 12290,
+      "sha256": "2d83b5bb65ff5388348776cec561aa0e5ed8fb2cfe428416ca32d90aa5b0a113",
+      "mode": 420
+    },
+    {
+      "path": "SETTLEMENT_STREAM.md",
+      "bytes": 6935,
+      "sha256": "8ba833da5b9c214f4f20cbdcfd1e68d4d98a5eda230018e84f747a3b9dc4edaa",
+      "mode": 420
+    },
+    {
+      "path": "examples/configuration.example.json",
+      "bytes": 1288,
+      "sha256": "26c5007a388b0c07de291024680ed6e97e4d42f7e51f38c5a6c45ab55be7a2b5",
+      "mode": 420
+    },
+    {
+      "path": "server.mjs",
+      "bytes": 16740,
+      "sha256": "b5784518fc63185b97eb2726db39536bcb1063b739b13fdd0f7befd774f4549a",
+      "mode": 420
+    },
+    {
+      "path": "cli.mjs",
+      "bytes": 10989,
+      "sha256": "0e5b66c0ec0b121b69a0bbc128196296fd8f121f5702a16e914d1d9f3f8deb72",
+      "mode": 420
+    },
+    {
+      "path": "worker.mjs",
+      "bytes": 3597,
+      "sha256": "2fa5e65b65ec98d739154b07c7d53c1f437b59ad1c8cacc68e85540d687eca45",
+      "mode": 420
+    },
+    {
+      "path": "operate-paycashless.mjs",
+      "bytes": 30249,
+      "sha256": "d9d64ab7492e5238b1b9ea93e95f7fb86cdb9be244866bbfbb57fc5a18c31bce",
+      "mode": 420
+    },
+    {
+      "path": "settlement-stream.mjs",
+      "bytes": 1947,
+      "sha256": "af49b7af54306f19149c5fdc66a0a4f1d8cf7d0887af31d34baf439a75865112",
+      "mode": 420
+    },
+    {
+      "path": "lib/workspace.mjs",
+      "bytes": 79938,
+      "sha256": "f4c501f56eecf0bfff52cb176198b3c4913f27904520d62cee73d2d6abbe2b62",
+      "mode": 420
+    },
+    {
+      "path": "lib/paycashless.mjs",
+      "bytes": 49116,
+      "sha256": "e2f557058326899a35004a28081f5967465c821cc9e2d944834bf54a5a0dc571",
+      "mode": 420
+    },
+    {
+      "path": "lib/reports.mjs",
+      "bytes": 8513,
+      "sha256": "f431b6ef1b330fc6ba5f60d7061a0bd941a21f9900c87d1192c5e2bdeba04030",
+      "mode": 420
+    },
+    {
+      "path": "lib/catalogue.mjs",
+      "bytes": 8525,
+      "sha256": "20e905228dec89d645f9901fbc1e9eb27645791b463b52e2222a2e8ef8db70a4",
+      "mode": 420
+    },
+    {
+      "path": "lib/native.mjs",
+      "bytes": 13298,
+      "sha256": "aa6ac695d8da29ac7d6d88fe112ee06b607b5af50081275bef90ac3a276c58c6",
+      "mode": 420
+    },
+    {
+      "path": "lib/provider-auth.mjs",
+      "bytes": 4435,
+      "sha256": "f45e6080e52c2504bc43d7548574b9b1e7f6adce3339c689996f85abe1917f26",
+      "mode": 420
+    },
+    {
+      "path": "lib/resources.mjs",
+      "bytes": 12015,
+      "sha256": "cf294af3a8b1f1f62c2aac3d67b23ca731bd85f10ad07df099797fda26874966",
+      "mode": 420
+    },
+    {
+      "path": "lib/transport.mjs",
+      "bytes": 10309,
+      "sha256": "3c58b4cbc89564c685d9923c89c8808588f6078496ec7ade236969c4f2131ebf",
+      "mode": 420
+    },
+    {
+      "path": "lib/validation.mjs",
+      "bytes": 1283,
+      "sha256": "27ee8b2f977b0be431675f876110b802f9b79592ae82ba0a7e980c912208675c",
+      "mode": 420
+    },
+    {
+      "path": "lib/webhooks.mjs",
+      "bytes": 4389,
+      "sha256": "7b9f9d17b7b9145e82b9178a62deb2f42e50f47c8b463921fa52dbc69c2ac107",
+      "mode": 420
+    },
+    {
+      "path": "lib/source-json.mjs",
+      "bytes": 4558,
+      "sha256": "65564476743fd5e3fe9cbbacb7653d1755b08a6c1b7c5c8c1481a287cc9eb317",
+      "mode": 420
+    },
+    {
+      "path": "lib/decimal.mjs",
+      "bytes": 3118,
+      "sha256": "e8839506d3e7473cf07c0c0d444d75d123792b55bea44c3182a38199be53cab4",
+      "mode": 420
+    },
+    {
+      "path": "lib/schema.mjs",
+      "bytes": 4948,
+      "sha256": "350ec545bf66ba2a18c6c1140ed1f922180b0c40fca5fae03446ab83a0003807",
+      "mode": 420
+    },
+    {
+      "path": "lib/files.mjs",
+      "bytes": 17087,
+      "sha256": "2e58f169bf7033e98ccf663e07650c56eb874876763a20543ca889f0b5cf85f9",
+      "mode": 420
+    },
+    {
+      "path": "lib/archive.mjs",
+      "bytes": 13417,
+      "sha256": "0f9f2e8b0120e480e06bb4fcca91a5059a20e667dfdced505396cbb1104a319c",
+      "mode": 420
+    },
+    {
+      "path": "lib/runtime.mjs",
+      "bytes": 11338,
+      "sha256": "6b2313defe4628551096de5a06e4f353e18b74a4c0caf994a0c2fb00e12116f5",
+      "mode": 420
+    },
+    {
+      "path": "lib/receiving.mjs",
+      "bytes": 21940,
+      "sha256": "942d80018c4c8a832b313b708e4f6534917937a21c03f5d9ca22df217f47aea7",
+      "mode": 420
+    },
+    {
+      "path": "lib/settlement-sse.mjs",
+      "bytes": 3023,
+      "sha256": "27f98b62760f854363735bf396c036972eba274184f864e13bcd896bd719f406",
+      "mode": 420
+    },
+    {
+      "path": "lib/settlement-stream.mjs",
+      "bytes": 13545,
+      "sha256": "c37d7c44a3cd3842e934906fe88b9f0315e14d522cb3a9827655186e90fc5000",
+      "mode": 420
+    },
+    {
+      "path": "web/app.mjs",
+      "bytes": 80954,
+      "sha256": "10c835171f4ed454b95c8283d5fba83c507c5451db9ecec9a04234b54cd98ecd",
+      "mode": 420
+    },
+    {
+      "path": "web/index.html",
+      "bytes": 22286,
+      "sha256": "1e0ea208ef0373fc497b206698e73eca9419070d62846a460573e8afa521dbd1",
+      "mode": 420
+    },
+    {
+      "path": "web/styles.css",
+      "bytes": 9615,
+      "sha256": "6ff7fad98830113fb7c5bebcd8662107ac70ed761e25fd9b7d8eaceea287f08d",
+      "mode": 420
+    },
+    {
+      "path": "web/journal.mjs",
+      "bytes": 8077,
+      "sha256": "d72774a02f0b978c082476f0aa728fb47956906c32c80f303a99d948b320ea8c",
+      "mode": 420
+    },
+    {
+      "path": "web/sha256.mjs",
+      "bytes": 3383,
+      "sha256": "fbc57cd9ad9f17f90f084d7d387ab02794c6a330b26a98392c129bbe09ef44ba",
+      "mode": 420
+    },
+    {
+      "path": "web/payment-display.mjs",
+      "bytes": 3974,
+      "sha256": "c48ae033cb7f40db252ccae1a92b439fcb046213e18720394f5cf2b43215953b",
+      "mode": 420
+    },
+    {
+      "path": "sources/paycashless-openapi.json",
+      "bytes": 82733,
+      "sha256": "32a8f2c29ec63dde0b76002460e1c66b5950267c51677f6d507b7185a10e9592",
+      "mode": 420
+    },
+    {
+      "path": "sources/paycashless-projections.json",
+      "bytes": 11297,
+      "sha256": "123faee683c951fc3e5bfc002deaad11c72f8741791c2c9533a030538c94a172",
+      "mode": 420
+    },
+    {
+      "path": "sources/horizon-original.json",
+      "bytes": 115403,
+      "sha256": "da96f63c9697fc51bb7bf372f430797e6da207670a13b9cc8b359b60de501ec9",
+      "mode": 420
+    },
+    {
+      "path": "sources/provider-source-receipts.json",
+      "bytes": 4956,
+      "sha256": "ad3f46be50227e90bfae85b453469821acee797eeb1a09422f7dbd9aa69b36da",
+      "mode": 420
+    }
+  ]
+}

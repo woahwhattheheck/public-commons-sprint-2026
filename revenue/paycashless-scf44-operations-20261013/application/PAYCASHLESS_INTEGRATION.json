@@ -1,0 +1,142 @@
+{
+  "schema": "paycashless.integration-contract.v1",
+  "version": 1,
+  "applicationPath": "revenue/paycashless-scf44-operations-20261013/application",
+  "methods": {
+    "book.save": {
+      "definition": "Book",
+      "bookId": "optional logical ID; defaults requestId",
+      "sourceIds": "optional original IDs"
+    },
+    "link.save": {
+      "bookVersionId": "immutable Book version row",
+      "decision": "Decision"
+    },
+    "reconciliation.create": {
+      "bookVersionId": "immutable Book version row",
+      "versionIds": "optional explicit full original resource-version selection",
+      "sourceIds": "optional full original-source selection",
+      "captureIds": "optional selected capture IDs",
+      "name": "optional"
+    },
+    "report.create": {
+      "reconciliationId": "immutable original reconciliation ID",
+      "name": "optional"
+    }
+  },
+  "Book": {
+    "id": "logical string ID",
+    "name": "required",
+    "environment": "sandbox|production",
+    "connectionAliases": {
+      "paycashless": "nonempty distinct aliases",
+      "horizon": "distinct aliases (can be empty)"
+    },
+    "period": {
+      "start": "ISO offset inclusive",
+      "end": "ISO offset exclusive",
+      "timeZone": "IANA display context"
+    },
+    "filters": {
+      "invoiceIds": "string[]",
+      "paymentIds": "string[]",
+      "payoutIds": "string[]",
+      "customerIds": "string[]"
+    },
+    "collectionBasis": "createdAt|updatedAt; exact native timestamp for period membership",
+    "settlementBasis": "provider|stellar; provider status and selected chain evidence remain separate fields",
+    "notes": "string"
+  },
+  "Decision": {
+    "action": "allocate|note|exclude|include|withdraw",
+    "status": "proposed|accepted|rejected",
+    "supersedesId": "prior exact tip or null",
+    "actor": "required",
+    "reason": "required",
+    "subjectVersionId": "exact paycashless-payment or paycashless-payout; note/exclude/include may select invoice or invoice-payment too",
+    "settlementVersionId": "horizon-operation for allocate, null otherwise",
+    "allocationAmount": "positive exact decimal string in original provider MINOR units for allocate, null otherwise",
+    "settlementAmount": "positive exact decimal string in original Stellar asset units for allocate, null otherwise",
+    "unitBinding": "for allocate: {currency,providerUnit:'minor',assetType:'native'|'credit_alphanum4'|'credit_alphanum12',assetCode,assetIssuer:string|null,network,account,direction:'incoming'|'outgoing',memo:string|null,memoType:string|null}; null otherwise",
+    "conversion": "for allocate: {rate:positive decimal settlement-unit→provider-minor-unit,sourceIds:nonempty string[],reason}; exact settlementAmount*rate===allocationAmount, no inferred exchange/scale; null otherwise",
+    "sourceIds": "original supporting source IDs[]",
+    "corroborationVersionIds": "complete selected original versions; never counted twice",
+    "notes": "string"
+  },
+  "projection": {
+    "kinds": [
+      "paycashless-payment",
+      "paycashless-payout",
+      "paycashless-invoice",
+      "paycashless-invoice-payment",
+      "paycashless-dedicated-account",
+      "paycashless-account-request",
+      "paycashless-tax-rate",
+      "paycashless-bank",
+      "paycashless-bank-account",
+      "paycashless-event",
+      "paycashless-operation-result",
+      "horizon-operation",
+      "horizon-transaction",
+      "horizon-network",
+      "horizon-account",
+      "horizon-ledger"
+    ],
+    "version": "original existing {id,resourceId,provider,kind,sourceId,connectionAlias,sourceScope,environment,value,numberTokens,contentSha256,...}",
+    "relatedReads": "[{action,input:{params,query?}}], original inherited shape"
+  },
+  "Result": {
+    "schema": "paycashless.payment-reconciliation.v1",
+    "bookId": "logical",
+    "environment": "selected",
+    "period": "full",
+    "collectionBasis": "selected",
+    "settlementBasis": "selected",
+    "rows": "all native payment/invoice/instalment/payout check rows",
+    "invoices": "full invoice rows including original, exact minor amounts, linked invoicePayments and checks",
+    "invoicePayments": "full original rows and exact invoiceId/intentId related version IDs/checks",
+    "payments": "full original payment rows; succeeded collections counted once at payment-intent layer",
+    "payouts": "full original payout rows with original status/confirmation/approval/charges",
+    "accounts": "complete selected account/request rows",
+    "settlements": "complete selected original Stellar movement + transaction/network evidence and checks",
+    "events": "full verified original webhook facts, never current native state solely by arrival",
+    "allocations": "every selected allocation/decision and exact checks",
+    "exceptions": "complete unresolved/mismatch/version/coverage findings",
+    "totals": "unit-separated {sourceScope,environment,currency,unit:'minor',role,values:{amount,count,...}} buckets; invoice stocks separate from collections/payouts; unknown date/amount stays unknown",
+    "coverage": "full source/capture/query/cursor/terminal completeness and exact selection",
+    "selectedVersionIds": "all",
+    "historyVersionIds": "all",
+    "sourceIds": "all selected/history/evidence",
+    "linkIds": "all",
+    "semantics": "explicit supplied-status/no-double-count/evidence rules"
+  },
+  "rowCommon": {
+    "id": "stable derived row ID",
+    "versionId": "immutable resourceVersion id",
+    "resourceId": "exact original provider id",
+    "sourceId": "original source",
+    "sourceScope": "exact native scope",
+    "environment": "original",
+    "kind": "native kind",
+    "status": "original status or null",
+    "currency": "original or null",
+    "inPeriod": "true|false|null",
+    "amounts": "object each original monetary field→exact normalized decimal text|null",
+    "checks": "[{code,state:'MATCH'|'MISMATCH'|'UNKNOWN',...complete evidence}]",
+    "original": "complete original value",
+    "numberTokens": "full original numeric spellings",
+    "relatedVersionIds": "all selected linked original version IDs"
+  },
+  "coreExports": {
+    "normalizeBook": "(input)->Book",
+    "normalizeLinkDecision": "(input,{book,versions,sources,decisions})->Decision",
+    "reconcilePayments": "({book,versions,history,sources,decisions,coverage})->Result"
+  },
+  "report": "paycashlessReport(data)->{json,csv,html}; same original retained artifact writer",
+  "notes": [
+    "All four method names and original Node24 SQLite journal remain unchanged.",
+    "No Bridge source is required for this bank-rail API product. Original Horizon source/read contracts are reused for explicit independently selected settlement proof.",
+    "Official API money is original minor units. Provider timestamp basis is explicit; undated partial responses/events stay UNKNOWN.",
+    "No aggregate adds invoices or instalments to the payment-intent collection total."
+  ]
+}

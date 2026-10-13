@@ -1,0 +1,430 @@
+{
+  "schema": "paycashless.original-operation-projections.v1",
+  "originalSha256": "32a8f2c29ec63dde0b76002460e1c66b5950267c51677f6d507b7185a10e9592",
+  "actions": {
+    "POST /v1/payments/checkout": {
+      "id": "paycashless.payment.checkout",
+      "kind": "paycashless-operation-result",
+      "projection": {
+        "pointer": "",
+        "many": false
+      },
+      "pagination": null,
+      "paginationOptions": null,
+      "sandboxOnly": false,
+      "readback": {
+        "action": "paycashless.payment.verify",
+        "params": {
+          "reference": "/body/reference"
+        },
+        "resourceKind": "paycashless-payment",
+        "match": {
+          "pointer": "/reference",
+          "inputPointer": "/body/reference"
+        }
+      }
+    },
+    "POST /v1/payments": {
+      "id": "paycashless.payment.create",
+      "kind": "paycashless-operation-result",
+      "projection": {
+        "pointer": "",
+        "many": false
+      },
+      "pagination": null,
+      "paginationOptions": null,
+      "sandboxOnly": false,
+      "readback": {
+        "action": "paycashless.payment.verify",
+        "params": {
+          "reference": "/body/reference"
+        },
+        "resourceKind": "paycashless-payment",
+        "match": {
+          "pointer": "/reference",
+          "inputPointer": "/body/reference"
+        }
+      }
+    },
+    "GET /v1/payments": {
+      "id": "paycashless.payments.list",
+      "kind": "paycashless-payment",
+      "projection": {
+        "pointer": "/data",
+        "many": true
+      },
+      "pagination": "paycashless-cursor",
+      "paginationOptions": {
+        "defaults": {
+          "limit": 100
+        }
+      },
+      "sandboxOnly": false,
+      "readback": null
+    },
+    "POST /v1/payouts": {
+      "id": "paycashless.payout.create",
+      "kind": "paycashless-operation-result",
+      "projection": {
+        "pointer": "",
+        "many": false
+      },
+      "pagination": null,
+      "paginationOptions": null,
+      "sandboxOnly": false,
+      "readback": {
+        "action": "paycashless.payout.verify",
+        "params": {
+          "reference": "/body/reference"
+        },
+        "resourceKind": "paycashless-payout",
+        "match": {
+          "pointer": "/reference",
+          "inputPointer": "/body/reference"
+        }
+      }
+    },
+    "GET /v1/payouts": {
+      "id": "paycashless.payouts.list",
+      "kind": "paycashless-payout",
+      "projection": {
+        "pointer": "/data",
+        "many": true
+      },
+      "pagination": "paycashless-cursor",
+      "paginationOptions": {
+        "defaults": {
+          "limit": 100
+        }
+      },
+      "sandboxOnly": false,
+      "readback": null
+    },
+    "GET /v1/payouts/{id}": {
+      "id": "paycashless.payout.get",
+      "kind": "paycashless-payout",
+      "projection": {
+        "pointer": "",
+        "many": false
+      },
+      "pagination": null,
+      "paginationOptions": null,
+      "sandboxOnly": false,
+      "readback": null
+    },
+    "GET /v1/payouts/verify/{reference}": {
+      "id": "paycashless.payout.verify",
+      "kind": "paycashless-payout",
+      "projection": {
+        "pointer": "",
+        "many": false
+      },
+      "pagination": null,
+      "paginationOptions": null,
+      "sandboxOnly": false,
+      "readback": null
+    },
+    "GET /v1/payments/{id}": {
+      "id": "paycashless.payment.get",
+      "kind": "paycashless-payment",
+      "projection": {
+        "pointer": "",
+        "many": false
+      },
+      "pagination": null,
+      "paginationOptions": null,
+      "sandboxOnly": false,
+      "readback": null
+    },
+    "POST /v1/dedicated_accounts": {
+      "id": "paycashless.dedicated-account.create",
+      "kind": "paycashless-account-request",
+      "projection": {
+        "pointer": "",
+        "many": false
+      },
+      "pagination": null,
+      "paginationOptions": null,
+      "sandboxOnly": false,
+      "readback": null
+    },
+    "GET /v1/dedicated_accounts": {
+      "id": "paycashless.dedicated-accounts.list",
+      "kind": "paycashless-dedicated-account",
+      "projection": {
+        "pointer": "/data",
+        "many": true
+      },
+      "pagination": "paycashless-cursor",
+      "paginationOptions": {
+        "defaults": {
+          "limit": 100
+        }
+      },
+      "sandboxOnly": false,
+      "readback": null
+    },
+    "GET /v1/dedicated_accounts/requests/{code}/status": {
+      "id": "paycashless.account-request.get",
+      "kind": "paycashless-account-request",
+      "projection": {
+        "pointer": "",
+        "many": false
+      },
+      "pagination": null,
+      "paginationOptions": null,
+      "sandboxOnly": false,
+      "readback": null
+    },
+    "GET /v1/dedicated_accounts/{id}": {
+      "id": "paycashless.dedicated-account.get",
+      "kind": "paycashless-dedicated-account",
+      "projection": {
+        "pointer": "",
+        "many": false
+      },
+      "pagination": null,
+      "paginationOptions": null,
+      "sandboxOnly": false,
+      "readback": null
+    },
+    "POST /v1/invoices": {
+      "id": "paycashless.invoice.create",
+      "kind": "paycashless-operation-result",
+      "projection": {
+        "pointer": "",
+        "many": false
+      },
+      "pagination": null,
+      "paginationOptions": null,
+      "sandboxOnly": false,
+      "readback": {
+        "action": "paycashless.invoices.list",
+        "params": {},
+        "query": {
+          "reference": "/body/reference"
+        },
+        "resourceKind": "paycashless-invoice",
+        "match": {
+          "pointer": "/reference",
+          "inputPointer": "/body/reference"
+        }
+      }
+    },
+    "GET /v1/invoices": {
+      "id": "paycashless.invoices.list",
+      "kind": "paycashless-invoice",
+      "projection": {
+        "pointer": "/data",
+        "many": true
+      },
+      "pagination": "paycashless-cursor",
+      "paginationOptions": {
+        "defaults": {
+          "limit": 100
+        }
+      },
+      "sandboxOnly": false,
+      "readback": null
+    },
+    "POST /v1/invoices/{id}/cancel": {
+      "id": "paycashless.invoice.cancel",
+      "kind": "paycashless-operation-result",
+      "projection": {
+        "pointer": "",
+        "many": false
+      },
+      "pagination": null,
+      "paginationOptions": null,
+      "sandboxOnly": false,
+      "readback": {
+        "action": "paycashless.invoice.get",
+        "params": {
+          "id": "/params/id"
+        },
+        "resourceKind": "paycashless-invoice",
+        "resourceIdPointer": "/params/id"
+      }
+    },
+    "GET /v1/invoices/{id}": {
+      "id": "paycashless.invoice.get",
+      "kind": "paycashless-invoice",
+      "projection": {
+        "pointer": "",
+        "many": false
+      },
+      "pagination": null,
+      "paginationOptions": null,
+      "sandboxOnly": false,
+      "readback": null
+    },
+    "GET /v1/invoices/{id}/payments": {
+      "id": "paycashless.invoice-payments.list",
+      "kind": "paycashless-invoice-payment",
+      "projection": {
+        "pointer": "/data",
+        "many": true
+      },
+      "pagination": "paycashless-cursor",
+      "paginationOptions": {
+        "defaults": {
+          "limit": 100
+        }
+      },
+      "sandboxOnly": false,
+      "readback": null
+    },
+    "POST /v1/tax_rates": {
+      "id": "paycashless.tax-rate.create",
+      "kind": "paycashless-operation-result",
+      "projection": {
+        "pointer": "",
+        "many": false
+      },
+      "pagination": null,
+      "paginationOptions": null,
+      "sandboxOnly": false,
+      "readback": null
+    },
+    "GET /v1/tax_rates": {
+      "id": "paycashless.tax-rates.list",
+      "kind": "paycashless-tax-rate",
+      "projection": {
+        "pointer": "/data",
+        "many": true
+      },
+      "pagination": "paycashless-cursor",
+      "paginationOptions": {
+        "defaults": {
+          "limit": 100
+        }
+      },
+      "sandboxOnly": false,
+      "readback": null
+    },
+    "PUT /v1/tax_rates/{id}": {
+      "id": "paycashless.tax-rate.update",
+      "kind": "paycashless-tax-rate",
+      "projection": {
+        "pointer": "",
+        "many": false
+      },
+      "pagination": null,
+      "paginationOptions": null,
+      "sandboxOnly": false,
+      "readback": {
+        "action": "paycashless.tax-rate.get",
+        "params": {
+          "id": "/params/id"
+        },
+        "resourceKind": "paycashless-tax-rate",
+        "resourceIdPointer": "/params/id"
+      }
+    },
+    "GET /v1/tax_rates/{id}": {
+      "id": "paycashless.tax-rate.get",
+      "kind": "paycashless-tax-rate",
+      "projection": {
+        "pointer": "",
+        "many": false
+      },
+      "pagination": null,
+      "paginationOptions": null,
+      "sandboxOnly": false,
+      "readback": null
+    },
+    "POST /v1/simulations/dedicated_accounts/{id}/transfer": {
+      "id": "paycashless.dedicated-account.simulate",
+      "kind": "paycashless-operation-result",
+      "projection": {
+        "pointer": "",
+        "many": false
+      },
+      "pagination": null,
+      "paginationOptions": null,
+      "sandboxOnly": true,
+      "readback": {
+        "action": "paycashless.dedicated-account.get",
+        "params": {
+          "id": "/params/id"
+        },
+        "resourceKind": "paycashless-dedicated-account",
+        "resourceIdPointer": "/params/id"
+      }
+    },
+    "POST /v1/simulations/payments/checkout/{id}/transfer": {
+      "id": "paycashless.payment.simulate",
+      "kind": "paycashless-operation-result",
+      "projection": {
+        "pointer": "",
+        "many": false
+      },
+      "pagination": null,
+      "paginationOptions": null,
+      "sandboxOnly": true,
+      "readback": {
+        "action": "paycashless.payment.get",
+        "params": {
+          "id": "/params/id"
+        },
+        "resourceKind": "paycashless-payment",
+        "resourceIdPointer": "/params/id"
+      }
+    },
+    "GET /v1/banks": {
+      "id": "paycashless.banks.list",
+      "kind": "paycashless-bank",
+      "projection": {
+        "pointer": "",
+        "many": true
+      },
+      "pagination": null,
+      "paginationOptions": null,
+      "sandboxOnly": false,
+      "readback": null
+    },
+    "GET /v1/payments/{reference}/verify": {
+      "id": "paycashless.payment.verify",
+      "kind": "paycashless-payment",
+      "projection": {
+        "pointer": "",
+        "many": false
+      },
+      "pagination": null,
+      "paginationOptions": null,
+      "sandboxOnly": false,
+      "readback": null
+    },
+    "GET /v1/banks/account_lookup": {
+      "id": "paycashless.bank-account.lookup",
+      "kind": "paycashless-bank-account",
+      "projection": {
+        "pointer": "",
+        "many": false
+      },
+      "pagination": null,
+      "paginationOptions": null,
+      "sandboxOnly": false,
+      "readback": null
+    },
+    "POST /v1/simulations/invoices/{id}/payment": {
+      "id": "paycashless.invoice.simulate",
+      "kind": "paycashless-operation-result",
+      "projection": {
+        "pointer": "",
+        "many": false
+      },
+      "pagination": null,
+      "paginationOptions": null,
+      "sandboxOnly": true,
+      "readback": {
+        "action": "paycashless.invoice.get",
+        "params": {
+          "id": "/params/id"
+        },
+        "resourceKind": "paycashless-invoice",
+        "resourceIdPointer": "/params/id"
+      }
+    }
+  }
+}
