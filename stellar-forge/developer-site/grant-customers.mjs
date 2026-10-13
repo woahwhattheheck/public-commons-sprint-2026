@@ -378,6 +378,16 @@ export function receiveGrantCustomerSources(index, companion) {
     /https:\/\/github\.com\/woahwhattheheck\/tjlabs-stellar-merchant-workspace\/blob\/([a-f0-9]{40})\/(stellar\/scf-starforge-\d{8}\/sf30-seller-sdk\/open311\/gis\/INSTALL\.md)/, municipal);
   receive('municipal-native-format-interchange', 'Municipal GIS original format interchange result',
     /https:\/\/github\.com\/woahwhattheheck\/public-commons-sprint-2026\/blob\/([a-f0-9]{40})\/(operations\/open311-gis-8e5f-\d{8}\/format-interchange-result\.json)/, municipal);
+  receive('municipal-suite-operating', 'Municipal six-application operation and saved Applications',
+    /https:\/\/github\.com\/woahwhattheheck\/tjlabs-stellar-merchant-workspace\/blob\/([a-f0-9]{40})\/(products\/open311\/OPERATING\.md)/, municipal);
+  receive('municipal-suite-receiving', 'Municipal complete editable workspace receiving',
+    /https:\/\/github\.com\/woahwhattheheck\/tjlabs-stellar-merchant-workspace\/blob\/([a-f0-9]{40})\/(products\/open311\/RECEIVING\.md)/, municipal);
+  receive('municipal-suite-workflows', 'Municipal cross-application source and returned-file workflows',
+    /https:\/\/github\.com\/woahwhattheheck\/tjlabs-stellar-merchant-workspace\/blob\/([a-f0-9]{40})\/(products\/open311\/WORKFLOWS\.md)/, municipal);
+  receive('municipal-service-configuration-installation', 'Municipal six-application installation and service configuration',
+    /https:\/\/github\.com\/woahwhattheheck\/tjlabs-stellar-merchant-workspace\/blob\/([a-f0-9]{40})\/(stellar\/scf-starforge-\d{8}\/sf30-seller-sdk\/open311\/service-configuration\/INSTALL\.md)/, municipal);
+  receive('municipal-suite-distribution-selection', 'Municipal complete six-application distribution selection',
+    /https:\/\/github\.com\/woahwhattheheck\/tjlabs-stellar-merchant-workspace\/blob\/([a-f0-9]{40})\/(stellar\/scf-starforge-\d{8}\/distribution\/selections\/open311-service-configuration\.json)/, municipal);
   const iati = section(companion, IATI)?.text || '';
   receive('iati-organisation-financial-workspace', 'IATI organisation and programme financial review',
     /https:\/\/github\.com\/woahwhattheheck\/tjlabs-stellar-merchant-workspace\/blob\/([a-f0-9]{40})\/(stellar\/scf-starforge-\d{8}\/sf30-seller-sdk\/iati\/ORGANISATION_RECONCILIATION\.md)/, iati);
