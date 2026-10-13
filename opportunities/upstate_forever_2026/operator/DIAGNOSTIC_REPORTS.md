@@ -118,3 +118,51 @@ analysis ID, report SHA, source collection and document ID; further scientific
 runs or new report editions can then continue independently.
 
 TokenJunkieLabs.
+
+## Selected editable studies retain the scientific lineage
+
+When a completed delivery containing this source is included in a selected-study
+archive, the original transfer resolver checks the exact retained recipe and raw
+report companion. A same-project source adds the original Scientific
+interpretation and its existing typed native-run, grid, parameter, land-cover
+and observation dependencies to the archive. The original saved report capture
+also travels when present, so a historical partial report can be prepared again
+after its live analysis has advanced.
+
+The report's copied bytes remain the selected report revision. A newer live
+diagnostic report under the same immutable analysis identity can travel as
+editable working state alongside that historical source; it does not replace
+the report's pinned companion.
+
+Reports imported from another project keep their exact source and companion
+bytes and are recorded as external-project scientific evidence. The resolver
+does not interpret their IDs as local native records. This preserves the
+distinction between imported scientific evidence and editable local analysis.
+
+The study preview lists the required original analysis and native records before
+export. Its immutable transfer identity includes the typed scientific report
+source mapping. Receiving checks that each retained mapping is preserved while
+allowing subsequent scientific work and additional report sources. Archives made
+before this lineage extension retain their original receiving contract.
+
+Use the original **Transfer study** workflow on the relevant saved study or
+completed Decision delivery. Inspect the dependency preview, export the editable
+study, restore it into a separate original workspace, and reopen both the exact
+report source and the original analysis. For this updated source edition, the
+same `operator/install_diagnostic_reports.py` installer includes the native
+lineage helper and guarded current study-transfer join.
+
+## Producing-stage compatibility in the report
+
+Current diagnostic reports record the actual completed producing-stage versions
+for each native run and per-metric shared support. The report source copies those
+fields unchanged and renders their compatibility state and explanation. NDR
+compatibility governs nitrogen/phosphorus; SDR compatibility governs sediment.
+An incompatible selected model family stays visible as unavailable, with its
+full expected membership. Other compatible metric cohorts can still be read.
+
+Observation tables keep the expected and shared source counts even when
+cross-profile fit is unavailable because of producing-version differences.
+The report shows the original score state and reason beside the separate
+complete/shared-cohort values. Older saved diagnostic reports remain readable;
+they do not acquire invented execution-version metadata.
