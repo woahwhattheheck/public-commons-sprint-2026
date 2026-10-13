@@ -120,6 +120,11 @@ export class TykProductClient {
   capture(input) { return this.call('capture', input); }
   importCapture(input) { return this.call('importCapture', input); }
   createCohort(input) { return this.call('createCohort', input); }
+  createGatewayCommissioning(input) { return this.call('createGatewayCommissioning', input); }
+  readGatewayCommissioning(input) { return this.call('readGatewayCommissioning', input); }
+  prepareGatewayCommissioningStep(input) { return this.call('prepareGatewayCommissioningStep', input); }
+  refreshGatewayCommissioning(input) { return this.call('refreshGatewayCommissioning', input); }
+  recordGatewayCommissioningReview(input) { return this.call('recordGatewayCommissioningReview', input); }
   createCommissioning(input) { return this.call('createCommissioning', input); }
   readCommissioning(input) { return this.call('readCommissioning', input); }
   prepareCommissioningStep(input) { return this.call('prepareCommissioningStep', input); }

@@ -146,3 +146,7 @@ Upgrade an installed edition into a new runtime directory while retaining the
 customer's original private product and workspace. Review that new source
 through the same Applications lifecycle, then continue the saved portfolio and
 customer receiving records.
+
+## Complete two-Gateway commissioning selection
+
+This selection carries the Gateway commissioning kernel, leased-store bindings, complete editable-intake/review browser and typed five-action client. The original browser manifest registers both new modules. The native receiving helper remains beside the existing native journey in complete source receiving and is excluded from the ordinary installed runtime source selection. [Gateway commissioning](../../../../products/tyk-merchant/GATEWAY_COMMISSIONING.md) is retained as an explicit support file. All native operations use the original Tyk controller and both Gateway targets' original environment references.

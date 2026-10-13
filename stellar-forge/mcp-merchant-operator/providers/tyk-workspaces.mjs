@@ -10,6 +10,7 @@ export default defineMerchantProvider({
   tools:tykWorkspaceTools,
   instructions:[{prefix:'merchant_tyk_',order:180,text:
     'Use the declared original Tyk workspace. Capture its complete native portfolio and save explicit cohorts from that capture. '+
+    'For two Gateway targets, create_gateway_commissioning freezes complete source entries and explicit staging/production connections. Prepare each ready step and inspect its original rollout before dispatch. Reload explicitly, capture active sources and record every actual operational check. Native OpenAPI imports require the returned API ID and explicit acceptance of both complete source hashes; never treat an expected ID as native evidence. ' +
     'For a Dashboard cohort, create_commissioning binds the complete saved Classic selection to its operating-plan history. '+
     'Read commissioning progress; prepare only its ready conversion, staging or promotion step, then use the original dispatch tool for that exact rollout. '+
     'Accept native conversion only after reviewing every original and converted definition. Capture current staged definitions, record every API/check result against the returned context SHA, then review and dispatch the original promotion. '+
