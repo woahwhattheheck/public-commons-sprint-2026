@@ -1,3 +1,4 @@
+import {verifyApplicationReturns} from './grant-application-return.mjs';
 import {requirementCoverage,requirementCoverageHtml} from './grant-requirement-review-core.mjs';
 import {verifyProductSourceImports} from './grant-product-authoring-core.mjs';
 import {verifyIssuerProgrammes,issuerContextSection} from './grant-issuer-source.mjs';
@@ -387,6 +388,7 @@ export async function verifyHandover(draft,{planningOptions={}}={}) {
 // Native entry points above retain the original 16 MiB validateDraft gate.
 export async function verifyHandoverContents(draft,{planningOptions={}}={}) {
   validateDraftShape(draft);validateHandover(draft);
+  await verifyApplicationReturns(draft);
   await verifyProductSourceImports(draft,contentHash);
   for(const source of draft.sources)await verifyOriginalApplication(source);
   for(const source of draft.planSources||[])await verifyPlanningSource(source,planningOptions);

@@ -50,11 +50,21 @@ The offline collector follows the new static import through the same route. The 
 
 22B7 / 2D73 / 81CF own the original selected-form saved-v7 operation. 05C7 remains the cumulative manuscript, source and four-output publisher. This extension supplies an additional operation step in that existing browser lifetime; it starts no browser, server, issuer submission or new case.
 
-Import `receiveSubmissionWorkingCopy` from `GRANT_SUBMISSION_WORKING_BROWSER.mjs` and pass the original already-open Playwright `page`, actual served `baseUrl`, existing saved `draftId` and an owned output `directory`. Use its real issuer-form receiving case, which already has at least one mapped field. Freeze the coherent complete served source at that original invocation boundary.
+Import `receiveSubmissionWorkingCopy` from `GRANT_SUBMISSION_WORKING_BROWSER.mjs` and pass the original already-open Playwright `page`, actual served `baseUrl`, existing saved `draftId` and an owned output `directory`. Use the real saved application and preserve its actual field inventory. A case with no issuer fields still carries the full answer, source comparison, unapplied header-only workbook and offline working-copy round trip. The incomplete-limit step runs only when an actual field exists. Freeze the coherent complete served source at that original invocation boundary.
 
 The helper opens that real draft, keeps an unapplied original workbook and raw unfinished limit, reads the current original four-file source, changes only trailing answer whitespace, reloads into an independent working copy, and proves incomplete text leaves the original native record unchanged. It downloads whole working JSON and offline HTML, opens the exact offline file and compares all complete draft/source/raw/workbook inputs. It then restores the actual original answer/limit and performs one explicit native Save at the original revision. The unapplied worksheet remains unapplied. It exports the native draft, final working file, complete result and actual wide/narrow screenshots. No fixture is substituted for a customer response, issuer limit or selected source.
 
 The helper returns `OPERATED_AWAITING_PIXEL_INSPECTION`, not a rendered acceptance. The producing operator must personally inspect the real output and repair a concrete problem before claiming readiness. Preserve the original active invocation; adopt this source at its next explicit boundary rather than restarting a frozen course.
+
+## Continue after an interrupted browser or lost Save response
+
+Use the same complete receiving directory, original browser profile and native record. The helper binds that directory to the original operation, served application URL and draft ID. Its completed stages retain the full working snapshots and native record; each interrupted attempt keeps its own complete artifacts. A later attempt verifies retained files before reusing those stages.
+
+Before the one native Save, the helper retains the exact candidate, its original record and expected revision. On restart, it reads that same record through the original drafts module. An unchanged preceding record permits the original Save. A record one revision later is accepted only when its full input equals the original model's retained candidate at the actual saved-version timestamp. A different newer record is preserved for reconciliation. The first record and Save candidate are never rewritten by a retry.
+
+Checkpoint receiving uses the maintained working-copy fork and writer to create a distinct complete local recovery branch. Existing working copies remain in the original browser store. Portable offline opening still clears only its local native writer pointer. Full incoming sources, unfinished sheets, actual limits, native versions and original answer content stay together.
+
+The final result verifies every complete output before a repeated invocation returns it. Its images still require direct inspection by the producing operator. The same outer case/controller retains browser ownership, archives these complete files and performs the original expected-version saved-case replacement. This helper does not start another browser or saved-case writer.
 
 ## Receiving checklist for the producing operator
 
