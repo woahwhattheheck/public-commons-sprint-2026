@@ -99,8 +99,8 @@ class ParameterViews:
 
         def project(value):
             # Same original selection and completed-stage validation as inspect_run.
-            if digest(value["selection"]) != key:
-                raise ValueError("Original run selection changed")
+            if value.get("id") != key or digest(value["selection"]) != key:
+                raise ValueError("Original run identity or selection changed")
             validate_completed_run(value)
             versions = model_versions(value) if value["state"] == "complete" else None
             return {"selection": value["selection"], "state": value["state"],
