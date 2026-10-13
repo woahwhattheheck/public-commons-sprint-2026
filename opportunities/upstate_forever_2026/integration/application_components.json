@@ -4527,7 +4527,7 @@
         "operator/extensions/native-run-desk.json",
         "operator/extensions/project-continuity.json",
         "operator/extensions/project-transfer.json",
-        "operator/extensions/robust-decisions.json",
+        "operator/extensions/robust-decisions.json.retired-ECO13-RELEASE-20261013",
         "operator/extensions/scenario_reports.json",
         "operator/extensions/source-preparation.json",
         "operator/extensions/station-geography.json",
