@@ -19,9 +19,9 @@ The two source tools `portable.mjs` and `build_portable_reader.mjs` live under t
 The preview folder contains generated outputs. The [complete source transfer folder](../../source/utility-class-attribution-20261013/) contains both committed transfer parts and the receiver. From the application root, materialize them into a new directory:
 
 ```sh
-python source/utility-class-attribution-20261013/receive.py \\
-  --part source/utility-class-attribution-20261013/part-1.json \\
-  --part source/utility-class-attribution-20261013/part-2.json \\
+python source/utility-class-attribution-20261013/receive.py \
+  --part source/utility-class-attribution-20261013/part-1.json \
+  --part source/utility-class-attribution-20261013/part-2.json \
   --destination NEW_COMPLETE_DELIVERY
 ```
 
