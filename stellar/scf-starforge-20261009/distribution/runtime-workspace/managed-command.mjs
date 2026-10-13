@@ -7,7 +7,7 @@ import { fileURLToPath } from 'node:url';
 import { prepareApplicationCommand, observeApplicationOutput } from './application-command.mjs';
 import { assertPythonManagedLaunch, pythonManagedStopSignal } from '../python-runtime/application-lifecycle.mjs';
 import { plain, absolute, privateDirectory, readJSON, saveJSON, canonical, json, digest,
-  need, now, processIdentity } from './storage.mjs';
+  need, now, processIdentity, runtimeWorkspaceError } from './storage.mjs';
 
 async function run(directory) {
   await privateDirectory(absolute(directory));
@@ -81,7 +81,7 @@ async function run(directory) {
     if (outcome) await outcome.catch(() => {});
     if (observing) await observing.close().catch(() => {});
     result = { exitCode: null, signal: null, state: 'LAUNCH_FAILED', stopped: stopping,
-      error: { code: error.code ?? 'MANAGED_COMMAND_ERROR', message: String(error.message).slice(0, 2000) } };
+      error: runtimeWorkspaceError(error, 'MANAGED_COMMAND_ERROR') };
   } finally {
     clearInterval(timer); process.off('SIGTERM', stop); process.off('SIGINT', stop);
   }
