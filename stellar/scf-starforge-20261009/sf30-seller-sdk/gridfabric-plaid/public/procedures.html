@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>GridFabric customer procedures</title>
+<link rel="stylesheet" href="/style.css">
+<link rel="stylesheet" href="/procedures.css">
+<script type="module" src="/procedures.mjs"></script>
+</head>
+<body>
+<a class="skip" href="#main">Skip to customer procedure</a>
+<header class="topbar">
+<div><p class="eyebrow">STARFORGE / GRIDFABRIC PLAID</p><h1>Customer procedures</h1></div>
+<div class="top-actions"><a href="/">Device events and reporting</a><span id="connection-state">Opening saved work</span></div>
+</header>
+<div class="workspace-bar"><span id="workspace-identity">Original workspace</span><span id="workspace-revision">Revision —</span></div>
+<div id="notice" class="notice" role="status" aria-live="polite" hidden></div>
+<section id="connection-panel" class="panel connection">
+<h2>Open the private connection</h2>
+<p>Use the connection from the original GridFabric application.</p>
+<form id="connection-form"><label>Connection token<input id="connection-token" type="password" autocomplete="off" required></label><button type="submit">Connect</button></form>
+</section>
+<section id="storage-panel" class="panel" hidden>
+<h2>Entered work needs saving</h2><p id="storage-message"></p>
+<button id="storage-retry" type="button">Retry saving the same work</button>
+<button id="storage-export" type="button">Download all current browser work</button>
+</section>
+<main id="main" tabindex="-1">
+<p class="lead">Plan the customer work, retain original records and files, and deliver a procedure with its full revision history.</p>
+<fieldset id="controls" disabled><legend class="visually-hidden">Customer procedure workspace</legend>
+<nav class="procedure-tabs" aria-label="Procedure sections">
+<button type="button" data-section="plan" aria-current="page">Plan and steps</button>
+<button type="button" data-section="selection">Original records and files</button>
+<button type="button" data-section="capture">Capture and saved requests</button>
+<button type="button" data-section="receive">Receive and return</button>
+</nav>
+<section id="section-plan" class="procedure-section"></section>
+<section id="section-selection" class="procedure-section" hidden></section>
+<section id="section-capture" class="procedure-section" hidden></section>
+<section id="section-receive" class="procedure-section" hidden></section>
+</fieldset>
+</main>
+<footer class="procedure-footer"><span id="save-state">Local work is saved in this browser before capture.</span><span id="work-state">Waiting for the original connection</span></footer>
+</body>
+</html>

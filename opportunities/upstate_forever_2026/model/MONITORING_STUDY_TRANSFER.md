@@ -83,3 +83,11 @@ An explicitly selected saved scientific report edition can follow this producer 
 ## Original fieldwork returns
 
 When a campaign event was returned from Implementation fieldwork, selected transfer retains the exact immutable `monitoring_field_returns/<request_id>/request.json` and `field-plan.json` that the original return producer recorded. Its maintained `source_binding` validator checks the reviewed request digest, original field-plan revision/document digest and complete event payload. The reviewed campaign revision enters the same typed history closure. Receiving repeats this validation from the transferred originals, so a field event remains tied to the actual saved fieldwork source.
+
+## Open a restored selection in Monitoring
+
+In **Study transfer**, use **Open in Monitoring** beside an available Monitoring network, design, campaign or observational context. The original extension host opens the Monitoring desk in the selected Workspace before passing the typed record identity to it. A design opens its retained network and configuration; a campaign opens its actual current retained revision and design. A context opens its retained network and the immutable context itself.
+
+A context can have no design or campaign. This is the ordinary opening for a source-backed observational network. Its station matches, original observation filters and complete context export remain available immediately. When an older context records a campaign revision, its saved calendar remains part of that context; opening it does not replace those dates with the campaign's later revision. Choose a design or campaign explicitly before making a new preview.
+
+The receiving Workspace is the selection boundary. Switching workspaces while an opening request is in progress prevents its result from changing the newly selected desk. Selecting another network clears the previous design, campaign, frontier results and download links. The original Study transfer selection and archive controls remain independent of opening a record.

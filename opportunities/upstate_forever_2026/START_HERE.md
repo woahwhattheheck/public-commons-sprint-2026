@@ -16,6 +16,10 @@ python -B -m model.cli runtime
 
 The runtime command reads the actual installed version and verifies the selected NDR and SDR module sources. The environment definition pins InVEST and Python; the package manager resolves their compatible GIS dependencies. The [InVEST installation guide](https://invest.readthedocs.io/en/3.20.0/installing.html) recommends conda-forge for this installation path.
 
+The environment also installs the maintained Investigations dependencies (`fastapi>=0.115`, `pydantic>=2.8`, and `httpx>=0.27`). Pydantic 2 supplies the validators used by the original InVEST and investigation schemas. These are application dependencies even when no remote AI provider is configured.
+
+Decision studies use the maintained `robust-workbench` registration. The superseded `robust-decisions` registration is retained as `operator/extensions/robust-decisions.json.retired-ECO13-RELEASE-20261013`; keep that exact source record outside the active `*.json` registration inventory so each original `robust.*` action has one owner.
+
 The environment requests `matplotlib-base` for the workbench's static map renderer. The maintained cartography module uses `Agg` / `FigureCanvasAgg` and writes PNG, SVG and PDF files; the browser operator serves those outputs through its existing local server. This keeps the plotting library and its required dependencies without adding the Qt/PySide6 desktop backend solely through the `matplotlib` metapackage. [Matplotlib's dependency guide](https://matplotlib.org/stable/install/dependencies.html) and the [conda-forge packaging guidance](https://conda-forge.org/docs/maintainer/knowledge_base/#matplotlib) document this package split. InVEST remains pinned to 3.20.0, Python remains pinned to 3.12, and all other declared scientific and GIS dependencies remain the same.
 
 From this application directory, create a study and open the operator:

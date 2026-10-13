@@ -2,7 +2,7 @@
   "schema": "stellar-forge.distribution-source-selection.v1",
   "id": "document-merchant",
   "title": "Paid document merchant and customer",
-  "description": "Complete document merchant and customer browser with original native payment and job receiving: CSV/JSON datasets, grouped records, full HTML/Markdown templates, saved quotes, PDF/source output and portable Collections. Ordered PDF assembly preserves complete sources and delivers all received volumes in one customer archive.",
+  "description": "Complete document merchant and customer browser with original native payment and job receiving: CSV/JSON datasets, grouped records, full HTML/Markdown templates, saved quotes, PDF/source output and portable Collections. Ordered PDF assembly preserves complete sources and delivers all received volumes in one customer archive. The same authenticated customer supports agent fulfillment, explicit saved-plan approval and complete verified downloads.",
   "base": {
     "commands": [
       "installation",
@@ -211,14 +211,19 @@
     "products/document-merchant/ASSEMBLY.md",
     "products/document-merchant/assembly.d.mts",
     "products/document-merchant/examples/ordered-pdfs.json",
-    "stellar/scf-starforge-20261009/distribution/selections/DOCUMENT_MERCHANT.md"
+    "stellar/scf-starforge-20261009/distribution/selections/DOCUMENT_MERCHANT.md",
+    "products/document-merchant/AGENT.md",
+    "products/document-merchant/agent.d.mts",
+    "products/document-merchant/agent-schema.d.mts",
+    "products/document-merchant/agent-client.d.mts",
+    "products/document-merchant/agent-cli.d.mts"
   ],
   "excludeFiles": [
     "stellar/scf-starforge-20261009/distribution/index.mjs"
   ],
   "product": {
     "schema": "stellar-forge.merchant-product-package.v1",
-    "description": "Document merchants, complete dataset/template production, customer browser and CLI, original paid jobs and full PDF/source Collection receiving.",
+    "description": "Document merchants, complete dataset/template production, customer browser and CLI, original paid jobs and full PDF/source Collection receiving. Includes the typed MCP customer client and remote CLI for the same original saved workflows.",
     "repository": {
       "url": "https://github.com/woahwhattheheck/public-commons-sprint-2026",
       "directory": ""

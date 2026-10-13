@@ -78,6 +78,7 @@ def detail(workspace, key):
     closure = study_transfer._Closure(
         workspace, identity["selection"],
         report_lineage="scientific_report_sources" in identity,
+        implementation_lineage="implementation_report_sources" in identity,
     ).resolve(identity.get("investigation_dependencies", ()))
     captured_reports = identity.get("scientific_report_editions", [])
     captured_fields = identity.get("implementation_report_sources", [])
