@@ -21,6 +21,14 @@ import stat
 import tempfile
 
 ALLOWED = frozenset({
+    "source_tools/geographic_programme_browser.mjs",
+    "source_tools/receive_geographic_handover_browser.mjs",
+    "source_tools/geographic_review_browser.mjs",
+    "source_tools/geographic_browser_course.mjs",
+    "source_tools/geographic_allocation_browser.mjs",
+    "docs/GEOGRAPHIC_HANDOVER_BROWSER.md",
+    "integration/component_fragments/geographic-handover-browser.json",
+    "model/paired_ensemble/ensemble_portable.py",
     "integration/component_fragments/geographic-study-receiving.json",
     "model/geographic_study_receiving.py",
     "operator/geographic_receiving.py",
@@ -348,6 +356,14 @@ ALLOWED = frozenset({
     "source/ROBUST_RECEIVING.md",
 })
 REQUIRED = ALLOWED - {
+    "source_tools/geographic_programme_browser.mjs",
+    "source_tools/receive_geographic_handover_browser.mjs",
+    "source_tools/geographic_review_browser.mjs",
+    "source_tools/geographic_browser_course.mjs",
+    "source_tools/geographic_allocation_browser.mjs",
+    "docs/GEOGRAPHIC_HANDOVER_BROWSER.md",
+    "integration/component_fragments/geographic-handover-browser.json",
+    "model/paired_ensemble/ensemble_portable.py",
     "integration/component_fragments/geographic-study-receiving.json",
     "model/geographic_study_receiving.py",
     "operator/geographic_receiving.py",
@@ -1168,6 +1184,13 @@ def verify_geographic_study_dependencies(application, pending):
         "source_tools/receive_geographic_headwaters.py",
         "CURRENT_OWNER_DIRECTION.md",
     )
+    if helper is not None and b"from .compute_programme import ComputeProgrammes" in helper:
+        members += (
+            "model/compute_programme.py", "model/receptor_study_transfer.py",
+            "model/geographic_programme.py",
+        )
+    if helper is not None and b"ensemble_portable" in helper:
+        members += ("model/paired_ensemble/ensemble_portable.py",)
     for name in (*members,
                  "integration/component_fragments/geographic-study-transfer.json",
                  "model/common.py", "model/native_versions.py",
@@ -1312,7 +1335,47 @@ def verify_geographic_received_study_dependencies(application, pending):
         raise ValueError("Retain the original Geographic received-study component")
 
 
+def verify_geographic_browser_dependencies(application, pending):
+    """Keep the maintained receiving browser with its original Programme chapter."""
+    def source(name):
+        return pending[name] if name in pending else read_existing(application, name)
+
+    driver = source("source_tools/receive_geographic_handover_browser.mjs")
+    chapter = source("source_tools/geographic_programme_browser.mjs")
+    if chapter is None and (driver is None or b"geographic_programme_browser.mjs" not in driver):
+        return
+    members = (
+        "source_tools/receive_geographic_handover_browser.mjs",
+        "source_tools/geographic_review_browser.mjs",
+        "source_tools/geographic_browser_course.mjs",
+        "source_tools/geographic_allocation_browser.mjs",
+        "source_tools/geographic_programme_browser.mjs",
+        "docs/GEOGRAPHIC_HANDOVER_BROWSER.md",
+    )
+    for name in members + (
+            "integration/component_fragments/geographic-handover-browser.json",
+            "source_tools/receive_geographic_headwaters.py",
+            "source_tools/geographic_headwaters_handover.py",
+            "model/geographic_programme.py", "model/compute_programme.py",
+            "operator/geographic_preparation.py",
+            "operator/extensions/geographic-headwaters.json",
+            "operator/web/geographic_workbench.mjs", "CURRENT_OWNER_DIRECTION.md"):
+        assembled_data(application, pending, name)
+    driver = assembled_data(application, pending, members[0])
+    if b"geographic_programme_browser.mjs" not in driver:
+        raise ValueError("Retain the Programme chapter in the original Geographic browser")
+    fragment = json.loads(assembled_data(
+        application, pending, "integration/component_fragments/geographic-handover-browser.json"))
+    family = fragment.get("components", {}).get("geographic-handover-browser", {})
+    if (fragment.get("schema") != "upstate.application-component-fragment/v1"
+            or fragment.get("id") != "geographic-handover-browser"
+            or not set(members).issubset(set(family.get("paths", [])))
+            or "geographic-native-receiving" not in family.get("requires", [])):
+        raise ValueError("Retain the original Geographic receiving browser component")
+
+
 def verify_composition(application, pending):
+    verify_geographic_browser_dependencies(application, pending)
     verify_geographic_received_study_dependencies(application, pending)
     verify_geographic_programme_dependencies(application, pending)
     verify_geographic_study_dependencies(application, pending)
