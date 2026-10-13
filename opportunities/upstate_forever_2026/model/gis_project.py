@@ -598,6 +598,10 @@ def atlas_desktop_binding(layer, map_layer):
                     style = variant["style"]
                     rows = style["entries"]
                     if (shader.get("colorRampType") == "INTERPOLATED" and shader.get("clip", "0") == "0"
+                            and not list(renderer.find("rasterTransparency") or [])
+                            and all(child.tag in {"rasterrenderer", "rasterresampler"}
+                                    for child in map_layer.find("pipe"))
+                            and float(map_layer.findtext("layerOpacity", "1")) == 1
                             and int(renderer.get("band", "-1")) == layer["data"]["band"]
                             and float(renderer.get("opacity", "1")) == 1
                             and int(renderer.get("alphaBand", "-1")) == -1
