@@ -62,6 +62,50 @@ The original source manifests selected by the context and monitoring installers
 resolve to their exact retained ordinary files, lengths and SHA256 values. The four-stream nutrient packet keeps its
 separate provenance manifest and dated concentration semantics.
 
+Current complete and compact Workspace catalogues already read retained scenario
+analysis summaries. During cumulative installation, their original readers keep
+that state ownership; only the older extension's duplicate `scenario_analyses`
+state binding is omitted. Its actions, item reads, browser and scientific
+producer remain registered. The installation record retains the omitted binding,
+the unchanged Workspace hash and exact descriptor transform. Older Workspaces
+that do not share both catalogue readers keep the original extension binding.
+
+When both known original Decision registrations are present, their retirement
+keeps both exact bodies. The earlier retirement file stays unchanged; the active
+known predecessor moves to a sibling whose suffix is its SHA-256. The original
+owner's remaining registration checks still run, and a failed preflight restores
+the active path. Unknown predecessor or retirement bodies stop the installation.
+
+Scientific interpretation retains its current registered provider when its
+complete original descriptor and runtime cohort are present. The maintained
+report installer verifies its scientific-edition host and source-transfer joins.
+Earlier direct-host patches apply to legacy applications; a mixed legacy and
+registered host stops for source composition. Both native Workspace polling
+readers remain unchanged.
+
+The shared extension installer and cumulative lifecycle also retain the current
+admitted-task confirmation: its saved workspace, operation and session remain
+attached to the returned task before refresh or result inspection. Both use the
+same source check for that lifecycle, preserving its action-label fallback and
+message instead of restoring an earlier confirmation branch.
+
+## Current already-composed application
+
+The full current-source edition contains its maintained server and registered
+providers. Use `source_tools/RECEIVE_COMPLETE_APPLICATION.md` for the original
+preparation CLI and current-source Operator startup. Model preparation imports
+Workspace directly and does not depend on this installer's legacy composition.
+Do not replay an earlier direct-host registration over a current provider merely
+to reopen the same Workspace. The existing source assembler's inspection keeps
+the selected current component and native-source closure explicit.
+
+The current Scenario analysis descriptor may retain `when_missing: true`.
+When the maintained registry implements that contract, cumulative installation
+preserves this exact conditional descriptor: the native catalogue owns an
+existing key and the extension supplies it only when absent. The older duplicate
+unconditional binding is the only one removed by the original compatibility
+transform. No native Workspace reader is rewritten.
+
 ## Compose and install
 
 Use the existing equipped scientific interpreter, original base carrier and

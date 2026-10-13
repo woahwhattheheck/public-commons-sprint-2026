@@ -2,6 +2,13 @@
 
 The source assembler combines a retained application and selected component packages into one directory, one complete source map and one portable ZIP. It runs on Linux with Python 3.10 or later and uses the standard library. Use the same scientific workspace and its existing source, scenario and run identifiers after receiving the application.
 
+The complete Python assembler, original complete-source receiver and JavaScript
+carrier decoder/composer accept at most 512 MiB of decoded carrier/source bytes
+and 10,000 source members. This bounded capacity includes the cumulative source
+edition's retained observation, GIS and component bodies. The same original
+member hashes, Git blob identities, source manifests and receiving checks apply;
+scientific input references keep their declared external status.
+
 ## Selected complete edition and original source closure
 
 The maintained assembler uses the complete `integration/application_components.json`
