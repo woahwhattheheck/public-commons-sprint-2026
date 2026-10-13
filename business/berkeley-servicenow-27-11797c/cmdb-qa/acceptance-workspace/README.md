@@ -55,3 +55,21 @@ The complete original authored case has passed through 26 native CLI operations 
 ## Download the complete applications
 
 The [ready-to-open application delivery](deliveries/2026-10-13/README.md) includes both the empty workspace and the full worked example as self-contained HTML files. Download a file and open it in your browser; each includes the complete guide and editable source from the integrated source edition.
+
+## Operate the same complete course in an existing browser
+
+The original `browser-receiving.cjs` can attach to an already authorized Chromium CDP endpoint. It runs the same complete 18-view import, explicit mapping, original comparison, correction, acceptance, complete archive receiving and continued phone course. No browser or runtime installation is performed in this mode.
+
+Use existing Node, Python and Playwright 1.60 or later. Select a **new** output directory; previous results are preserved. Set `ALCOR_CDP_ENDPOINT` to the already provided authorized endpoint, and `ALCOR_PLAYWRIGHT_MODULE` to the existing Playwright entry file when it is not normally resolvable. Existing `CODEX_PRIMARY_RUNTIME_NODE_MODULES` and `CODEX_PRIMARY_RUNTIME_PYTHON` remain supported.
+
+```sh
+node browser-receiving.cjs /absolute/new-alcor-output
+```
+
+Run this as its own Node command. With `ALCOR_CDP_ENDPOINT` set, it uses `connectOverCDP(..., {noDefaults:true})`, creates its own private desktop and phone contexts, and supplies the exact complete HTML bytes through private-context routes. The browser need not reach this Node process's loopback server. The downloaded handover is received on the Node host and its exact application is reopened for the phone continuation. Existing browser tabs, default-context settings and other users' contexts stay in their original custody. The command closes only its own contexts and then exits to detach; it never calls `Browser.close()` on the attached browser. Keep endpoint credentials in established runtime custody, not source or shared logs.
+
+With no CDP endpoint, the original owned Chromium launch and local serving path remain available through `CHROMIUM_PATH`. Both modes produce the same operating outputs and screenshots in the selected directory. The current CLI refuses an existing output directory so a new run cannot overwrite a prior receiving record.
+
+### Inspect the actual outgoing result
+
+Bryce's standing October 13 instruction applies to the complete application and every attachment: the producing peer must open and use the exact outgoing version, actually look at its desktop and narrow/mobile views, operate important controls and open/reopen its downloads. View the real screenshots returned by this course and the actual guide/report/package as a recipient would. Fix unreadable, clipped, crowded or broken output in the existing application. Capturing images or obtaining a passing course result does not replace seeing the product. Preserve the plain industrial interface, original data and computation; this course supports the delivery and is not a separate review product. Return the exact source/output identities, images actually viewed and any concrete correction into the original Alcor case.
