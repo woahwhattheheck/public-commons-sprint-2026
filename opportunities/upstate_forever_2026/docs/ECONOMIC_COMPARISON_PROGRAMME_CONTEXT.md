@@ -81,3 +81,61 @@ The producer must use the existing original native receiving course. Open the ac
 Per repository `AGENTS.md` version `2026-10-13.1`, open/render and **LOOK at the exact outgoing product and attachments** at desktop and narrow width. Operate the actual source/report controls, downloads, saved-source reopening and received Study. Capture accessible screenshots, but do not treat screenshot capture as visual inspection. Repair actual wrapping, clipping or misplaced units in the existing formatter rather than changing the scientific quantities.
 
 Source review is not a claim of Python execution, native report completion or browser inspection. The same native course owns the first actual traceback and final client-visible verification.
+
+
+## Native configuration and boundary context successor
+
+The programme binder now captures the exact saved grid definition and specification,
+profile, scenario, coefficient rows, selected source descriptors and original source
+manifest declarations in `native_model_context`. The snapshot is also retained as
+`native-model-context.json` in the original programme operation directory. Its
+canonical SHA256 is part of the saved cost input; therefore it travels through the
+ordinary Economic edition, comparison package, report source and selected Study.
+No new source provider, model run, raster transform or economic calculation is introduced.
+
+The snapshot identifies the original CRS/WKT, affine transform, cell size, rectangular
+extent, model-domain source selection, added model-context buffer, reporting-mask
+selection and selected reporting zone. These are distinct from one another and from
+the verified treatment footprint. A grid bounding rectangle is not a surveyed
+implementation boundary. The original profile's NDR/SDR parameter declarations,
+including routing and SDR `l_max` where present, retain their exact names and values.
+Requested InVEST version and original observed stage versions remain separate.
+The complete source entries retain units, conversion rules, dates, URI, body hashes,
+classification and original manifest context. Simulated inputs remain simulated.
+
+The report adds compact readable configuration tables only from that captured
+snapshot. An older cost edition without this field explicitly says the values were
+not captured; it does not fill them from current Workspace settings or a profile title.
+If a later manual edit changes the physical source while retaining the old metadata,
+the report marks its configuration as historical. Snapshot integrity and original
+design binding are still verified. Original v1/v2 source recipes reconnect before any
+new v3 interpretation, so an existing captured report does not change after upgrade.
+
+The completed original Economic reports now supply the selected reporting-zone
+description and source in the comparison's readable sections. Those report files are
+checked against the original comparison identity before use. Original all-valid
+baseline and alternative totals, where present, are shown with each run's valid-cell
+count. They are not subtracted to invent a benefit. Avoided export and the existing
+cost-per-mass values still use the original common-support quantities. Every pollutant
+ratio is a separate view of the same declared-scope annualized cost; the ratios do not
+allocate the cost among pollutants and must not be added.
+
+### Native continuation and review boundary
+
+This successor changes only the binder, existing comparison source model and this
+already-installed guide. The current receiving owner must finish any already-issued
+4136/4198 operation with its frozen source first. A new programme preview uses
+`simulated-restoration-programme-20261013-v2-native-context`; a newly generated
+comparison source uses
+`economic-comparison-scientific-source-20261013-v3-native-context`.
+Existing native runs, raster outputs, saved editions and captured recipes are preserved.
+The public binder and report-source command arguments are unchanged.
+
+Source review checked the actual `Workspace.get_grid`, `Workspace._get`,
+profile/table, footprint, scenario-report and comparison capture contracts. This is
+not a claim of a new native execution. Use the same accepted receiving course for
+the first real invocation and returned traceback. As required by
+`CURRENT_OWNER_DIRECTION.md` v2026-10-13.3 and `AGENTS.md` v2026-10-13.1,
+the producing worker must open/render and LOOK at the exact outgoing desktop and
+narrow reports, operate the controls, inspect every attachment and download, then
+reopen the retained project/Study before calling the delivery ready.

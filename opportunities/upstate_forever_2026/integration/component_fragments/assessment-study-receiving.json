@@ -327,7 +327,8 @@
         "operator/study_transfer.py",
         "source_tools/receive_observed_station_studies.py",
         "integration/component_fragments/economic-comparison.json",
-        "integration/component_fragments/economic-comparison-source.json"
+        "integration/component_fragments/economic-comparison-source.json",
+        "model/parameter_study_transfer.py"
       ]
     },
     "station-assessment": {
@@ -654,7 +655,8 @@
         "operator/study_transfer.py",
         "source_tools/receive_observed_station_studies.py",
         "integration/component_fragments/economic-comparison.json",
-        "integration/component_fragments/economic-comparison-source.json"
+        "integration/component_fragments/economic-comparison-source.json",
+        "model/parameter_study_transfer.py"
       ]
     },
     "study-transfer": {
@@ -981,7 +983,8 @@
         "operator/study_transfer.py",
         "source_tools/receive_observed_station_studies.py",
         "integration/component_fragments/economic-comparison.json",
-        "integration/component_fragments/economic-comparison-source.json"
+        "integration/component_fragments/economic-comparison-source.json",
+        "model/parameter_study_transfer.py"
       ],
       "requires": [
         "station-assessment"

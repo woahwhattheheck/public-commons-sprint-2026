@@ -1,0 +1,224 @@
+{
+  "schema": "tjl.publication.report-dataset.v1",
+  "id": "ohio-self-sufficiency-method-2025",
+  "title": "Ohio household-cost standard: 2025 methods",
+  "description": "Editable source-backed budget definitions and household assumptions for the 2025 Self-Sufficiency Standard.",
+  "publicationPeriod": "2025",
+  "dataPeriod": "2025 methodological edition; individual input years retained in source notes",
+  "geography": "Ohio household-cost production; national model with state and county inputs",
+  "methodology": "Each row records a source method or interpretation, not a count of households. Text is paraphrased from the full 2025 CWW Technical Brief; the unchanged public-reader extraction and original retained PDF remain linked. Original 2026 report Tables 4 and 5 OCR is retained separately for editorial comparison. County monetary amounts belong to the separate Ohio 2025 workbook.",
+  "source": {
+    "title": "The Self-Sufficiency Standard 2025 Update: Technical Brief",
+    "url": "https://selfsufficiencystandard.org/wp-content/uploads/2025/03/SSS2025_TechnicalBrief.pdf",
+    "locator": "Printed pages 4–9,14–17,19–25,27–29; exact retained complete original PDF and full text.",
+    "publisher": "Center for Women’s Welfare, University of Washington School of Social Work",
+    "retrievedAt": "2026-10-13T11:50:44Z",
+    "note": "Full original PDF (987,471 bytes); full public-reader extraction (83,856 bytes). Original source declares CC BY 4.0. Measurement inputs differ by cost category and update year.",
+    "rights": "Creative Commons Attribution 4.0 International, as stated on printed page 2."
+  },
+  "columns": [
+    {
+      "key": "label",
+      "label": "Budget item or assumption",
+      "kind": "text",
+      "role": "label",
+      "unit": "",
+      "period": "2025 methodological edition",
+      "definition": "Paraphrased source-method description; not an observed household count or monetary estimate."
+    },
+    {
+      "key": "group",
+      "label": "Production grouping",
+      "kind": "text",
+      "role": "note",
+      "unit": "",
+      "period": "2025 methodological edition",
+      "definition": "Paraphrased source-method description; not an observed household count or monetary estimate."
+    },
+    {
+      "key": "included",
+      "label": "2025 source method",
+      "kind": "text",
+      "role": "note",
+      "unit": "",
+      "period": "2025 methodological edition",
+      "definition": "Paraphrased source-method description; not an observed household count or monetary estimate."
+    },
+    {
+      "key": "interpretation",
+      "label": "Working-edition meaning",
+      "kind": "text",
+      "role": "note",
+      "unit": "",
+      "period": "2025 methodological edition",
+      "definition": "Paraphrased source-method description; not an observed household count or monetary estimate."
+    },
+    {
+      "key": "source_pages",
+      "label": "Printed source pages",
+      "kind": "text",
+      "role": "source",
+      "unit": "",
+      "period": "2025 methodological edition",
+      "definition": "Printed page labels in the retained 2025 Technical Brief; original report locators explicitly identified."
+    }
+  ],
+  "rows": [
+    {
+      "id": "scope",
+      "values": {
+        "label": "Model scope",
+        "group": "interpretation",
+        "included": "Full basic-needs costs without public subsidies or informal/private help.",
+        "interpretation": "Costs vary by county and household composition; the assumptions describe working-age adults working full time.",
+        "source_pages": "4"
+      },
+      "locator": "2025 Technical Brief, printed page 4",
+      "note": "Method definition; original publisher text and report comparison retained."
+    },
+    {
+      "id": "work-month",
+      "values": {
+        "label": "Work and time units",
+        "group": "interpretation",
+        "included": "Eight hours per day, 22 days per month and 12 months per year; 176 hours in the standard work month.",
+        "interpretation": "Keep the source's hourly-per-worker, monthly-household and annual-household labels with their original values.",
+        "source_pages": "4–5; original report Table 5"
+      },
+      "locator": "2025 Technical Brief, printed pages 4–5; original report Table 5",
+      "note": "Method definition; original publisher text and report comparison retained."
+    },
+    {
+      "id": "adults",
+      "values": {
+        "label": "Working adults",
+        "group": "interpretation",
+        "included": "One- and two-adult households assume all adults work full time year-round. Additional adults beyond two are non-working dependants.",
+        "interpretation": "Additional adults contribute housing, food, health and miscellaneous costs; transportation costs are assigned to the working adults.",
+        "source_pages": "5"
+      },
+      "locator": "2025 Technical Brief, printed page 5",
+      "note": "Method definition; original publisher text and report comparison retained."
+    },
+    {
+      "id": "child-ages",
+      "values": {
+        "label": "Child age groups",
+        "group": "interpretation",
+        "included": "Infants: 0–2; preschool: 3–5; school age: 6–12; teenagers: 13–17.",
+        "interpretation": "Select actual source household counts and ages together when comparing county costs.",
+        "source_pages": "4"
+      },
+      "locator": "2025 Technical Brief, printed page 4",
+      "note": "Method definition; original publisher text and report comparison retained."
+    },
+    {
+      "id": "housing",
+      "values": {
+        "label": "Housing",
+        "group": "budget",
+        "included": "HUD fair-market rent and utilities; bedroom requirements follow household size.",
+        "interpretation": "Use the original county housing amount; telephone/broadband costs are recorded with miscellaneous costs.",
+        "source_pages": "6–7"
+      },
+      "locator": "2025 Technical Brief, printed pages 6–7",
+      "note": "Method definition; original publisher text and report comparison retained."
+    },
+    {
+      "id": "child-care",
+      "values": {
+        "label": "Child care",
+        "group": "budget",
+        "included": "Weighted home and centre care: infants 43%/57%, preschool 26%/74%, school age 46%/54%.",
+        "interpretation": "Infants and preschool children receive full-time care; school-age care is part time in the school year and full time in summer.",
+        "source_pages": "8–9"
+      },
+      "locator": "2025 Technical Brief, printed pages 8–9",
+      "note": "Method definition; original publisher text and report comparison retained."
+    },
+    {
+      "id": "food",
+      "values": {
+        "label": "Food",
+        "group": "budget",
+        "included": "Groceries using the USDA Low-Cost Food Plan, June 2024 costs, adjusted by county.",
+        "interpretation": "The 2025 method cites the 2024 Map the Meal Gap release using 2022 data for its county food-cost index. Keep that input period separate from newer food-insecurity estimates.",
+        "source_pages": "14–16"
+      },
+      "locator": "2025 Technical Brief, printed pages 14–16",
+      "note": "Method definition; original publisher text and report comparison retained."
+    },
+    {
+      "id": "transport",
+      "values": {
+        "label": "Transportation",
+        "group": "budget",
+        "included": "Local transit for qualifying areas, or ownership and running costs of a car for each of the first two working adults.",
+        "interpretation": "Includes commuting, child-care stops and an errand trip; the model does not add the initial purchase price of the vehicle.",
+        "source_pages": "16–17"
+      },
+      "locator": "2025 Technical Brief, printed pages 16–17",
+      "note": "Method definition; original publisher text and report comparison retained."
+    },
+    {
+      "id": "health",
+      "values": {
+        "label": "Health care",
+        "group": "budget",
+        "included": "Employer-sponsored insurance contributions and age-specific out-of-pocket costs.",
+        "interpretation": "The 2025 update uses MEPS metropolitan/non-metropolitan premiums and single, employee-plus-one or family coverage by household size.",
+        "source_pages": "19–20"
+      },
+      "locator": "2025 Technical Brief, printed pages 19–20",
+      "note": "Method definition; original publisher text and report comparison retained."
+    },
+    {
+      "id": "miscellaneous",
+      "values": {
+        "label": "Miscellaneous",
+        "group": "budget",
+        "included": "Other necessities allowance plus broadband, equipment and mobile phone/service costs.",
+        "interpretation": "The 2025 broadband specification is 100 Mbps down/20 Mbps up. Mobile service is modelled for each adult. Keep all these costs within the source category.",
+        "source_pages": "21–22"
+      },
+      "locator": "2025 Technical Brief, printed pages 21–22",
+      "note": "Method definition; original publisher text and report comparison retained."
+    },
+    {
+      "id": "taxes",
+      "values": {
+        "label": "Taxes and credits",
+        "group": "budget",
+        "included": "The source calculates federal/state income taxes, payroll and relevant sales taxes, with applicable tax credits.",
+        "interpretation": "Credits are displayed as monthly amounts in the model. Preserve whether the workbook tax field is gross or net of credits before summing a budget.",
+        "source_pages": "22–25; original report Table 5 note"
+      },
+      "locator": "2025 Technical Brief, printed pages 22–25; original report Table 5 note",
+      "note": "Method definition; original publisher text and report comparison retained."
+    },
+    {
+      "id": "scope-limits",
+      "values": {
+        "label": "Basic-needs scope",
+        "group": "interpretation",
+        "included": "The basic standard covers daily needs under its working-family assumptions.",
+        "interpretation": "The method does not estimate additional costs of retirement or a work-limiting disability. Savings, education and debt repayment require their own interpretation.",
+        "source_pages": "4; 21; 27"
+      },
+      "locator": "2025 Technical Brief, printed page 4; 21; 27",
+      "note": "Method definition; original publisher text and report comparison retained."
+    },
+    {
+      "id": "emergency",
+      "values": {
+        "label": "Emergency savings",
+        "group": "interpretation",
+        "included": "A separate calculation covers one adult's income loss over an average unemployment spell, after expected unemployment benefits.",
+        "interpretation": "For two-adult households the second adult remains employed. Keep the emergency-savings supplement separate from the basic monthly and annual standard.",
+        "source_pages": "27–29"
+      },
+      "locator": "2025 Technical Brief, printed pages 27–29",
+      "note": "Method definition; original publisher text and report comparison retained."
+    }
+  ]
+}

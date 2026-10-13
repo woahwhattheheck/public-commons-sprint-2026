@@ -1,0 +1,1 @@
+{"schema":"upstate.application-component-fragment/v1","id":"archive-delta","components":{"archive-delta":{"title":"Exact incremental complete-study archive transport and editable native receiving","paths":["source_tools/archive_delta.py","source_tools/archive_delta_view.py","docs/INCREMENTAL_STUDY_DELIVERY.md"],"requires":["core"]}},"required_components":["archive-delta"]}

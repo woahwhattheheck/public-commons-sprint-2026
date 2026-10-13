@@ -22,7 +22,9 @@
         "measurement_workspace/web/large_files.mjs",
         "operator/web/measured_large_files.mjs",
         "measurement_workspace/legacy_chemistry.py",
-        "measurement_workspace/LEGACY_CHEMISTRY.md"
+        "measurement_workspace/LEGACY_CHEMISTRY.md",
+        "model/portable_databases.py",
+        "model/MEASUREMENTS_PORTABLE.md"
       ],
       "requires": [
         "measurement-chemistry"
