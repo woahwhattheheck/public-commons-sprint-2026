@@ -1,4 +1,4 @@
-"""Receive a saved scientific edition through Customer review and full restore.
+"""Receive a saved scientific edition or complete pair through review and full restore.
 
 Select an actual completed edition and explicit review questions. The command
 retains one creation timestamp and real response generation, exports the original
@@ -23,7 +23,7 @@ if str(APPLICATION) not in sys.path:
     sys.path.insert(0, str(APPLICATION))
 
 from model import portable, reviews, scientific_report_editions, scientific_report_review
-from model.common import atomic_bytes, atomic_json, describe_file, digest, file_digest, held, now, read_json, verify_file
+from model.common import atomic_bytes, atomic_json, describe_file, digest, file_digest, held, identifier, now, read_json, verify_file
 from model.workspace import Workspace
 
 SCHEMA = "upstate.scientific-report-review-receiving/v1"
@@ -59,6 +59,53 @@ def _verified_packet(path, review, generation):
     return inspected
 
 
+def _review_engine(comparison_id=None):
+    if comparison_id is None:
+        return scientific_report_review
+    from model import report_changes_review
+    return report_changes_review
+
+
+def _review_target(identity):
+    """Retain one scientific edition or one exact complete pair in native receipts."""
+    if identity.get("schema") == scientific_report_review.SCHEMA:
+        return {"scientific_report_edition_id": identifier(
+            identity.get("scientific_report_edition_id"))}
+    engine = _review_engine(identity.get("comparison_id"))
+    if identity.get("schema") != engine.SCHEMA or engine is scientific_report_review:
+        raise ValueError("Retain the original scientific report or comparison review identity")
+    pair = identity.get("pair_identity")
+    if not isinstance(pair, dict):
+        raise ValueError("Retain both original scientific report fingerprints")
+    editions = []
+    for side in ("left", "right"):
+        original = pair.get(side)
+        if (not isinstance(original, dict)
+                or original.get("project_id") != identity.get("project_id")):
+            raise ValueError("The review pair belongs to another original project")
+        editions.append(identifier(original.get("edition_id")))
+    return {"comparison_id": identifier(identity.get("comparison_id")),
+            "scientific_report_edition_ids": editions}
+
+
+def _target_editions(target):
+    return ([target["scientific_report_edition_id"]]
+            if "scientific_report_edition_id" in target
+            else target["scientific_report_edition_ids"])
+
+
+def _verify_target(workspace, target, source_identity):
+    if source_identity.get("project_id") != workspace.project["id"]:
+        raise ValueError("The review target belongs to another scientific project")
+    for edition_id in _target_editions(target):
+        scientific_report_editions.inspect(workspace, edition_id)
+    if "comparison_id" in target:
+        context = _review_engine(target["comparison_id"]).comparison_context(
+            workspace, target["comparison_id"])
+        if context["identity"] != source_identity:
+            raise ValueError("The original complete reviewed comparison changed")
+
+
 def _verify_source(workspace, created):
     descriptor = created["source_receipt"]
     receipt = read_json(verify_file(workspace.root, descriptor))
@@ -74,9 +121,17 @@ def _verify_source(workspace, created):
         raise ValueError("The complete original review source collection changed")
     primary, entry = workspace.source_file(
         created["source_collection_id"], created["source_id"])
-    if (entry.get("role") != scientific_report_review.ROLE
-            or entry.get("metadata", {}).get("scientific_report_identity") != identity):
-        raise ValueError("The review source identifies another scientific report")
+    target = _review_target(identity)
+    engine = _review_engine(target.get("comparison_id"))
+    identity_field = ("scientific_report_comparison_identity" if "comparison_id" in target
+                      else "scientific_report_identity")
+    if (entry.get("role") != engine.ROLE
+            or entry.get("metadata", {}).get(identity_field) != identity
+            or any(created.get(name) != value for name, value in target.items()
+                   if name != "scientific_report_edition_ids")):
+        raise ValueError("The review source identifies another scientific report or pair")
+    if "comparison_id" in target:
+        engine.source_members(entry, identity)
     body = entry["body"]
     if primary.stat().st_size != body["bytes"] or file_digest(primary) != body["sha256"]:
         raise ValueError("The original report HTML differs from its source body")
@@ -172,8 +227,11 @@ def receive_capture(workspace_path, capture_id, capture_sha256, edition_id,
                    created_at=created_at, completed_capture=proof)
 
 
-def _reopen(workspace, edition_id, draft, preview, created, review, generation, completed_capture=None):
-    actual_preview = scientific_report_review.preview_review(workspace, edition_id, draft)
+def _reopen(workspace, edition_id, draft, preview, created, review, generation,
+            completed_capture=None, *, comparison_id=None):
+    engine = _review_engine(comparison_id)
+    actual_preview = engine.preview_review(
+        workspace, comparison_id if comparison_id is not None else edition_id, draft)
     if actual_preview != preview:
         raise ValueError("Reopening changed the original scientific report or review preview")
     packet = reviews.show_review(workspace, created["review_id"], previews=False)
@@ -187,8 +245,9 @@ def _reopen(workspace, edition_id, draft, preview, created, review, generation, 
     source = _verify_source(workspace, created)
     if source["member_count"] != created["source_member_count"]:
         raise ValueError("The report source lost an original file")
+    target = _review_target(created["source_identity"])
     result = {"review_id": created["review_id"], "source": source,
-            "scientific_report_edition_id": edition_id,
+            **target,
             "review_sha256": digest(review), "files": packet["files"],
             "selected_response_ids": generation["response_ids"],
             "through_response_id": generation["through_response_id"],
@@ -381,24 +440,52 @@ def list_editions(workspace):
     return rows
 
 
+def list_comparisons(workspace):
+    from model import report_changes_review
+
+    rows = []
+    for path in sorted((workspace.root / report_changes_review.report_changes.KIND).glob("*/comparison.json")):
+        if path.parent.name.startswith("."):
+            continue
+        context = report_changes_review.comparison_context(workspace, path.parent.name)
+        record = context["record"]
+        rows.append({"id": record["id"], "title": record["title"],
+                     "project_id": workspace.project["id"],
+                     "left_edition_id": record["identity"]["left"]["edition_id"],
+                     "right_edition_id": record["identity"]["right"]["edition_id"],
+                     "change_count": record["change_count"], "page_count": record["page_count"],
+                     "member_count": len(context["members"]), "plan": deepcopy(record["plan"])})
+    return rows
+
+
 def receive(workspace_path, edition_id, review_selection, output, *, created_at=None,
-            completed_capture=None):
+            completed_capture=None, comparison_id=None):
+    if (edition_id is None) == (comparison_id is None):
+        raise ValueError("Select one saved scientific edition or one saved report comparison")
+    if comparison_id is not None and completed_capture is not None:
+        raise ValueError("Adopt the original editions before reviewing their saved comparison")
     workspace = Workspace(Path(workspace_path).resolve())
     draft_path = _ordinary(Path(review_selection).resolve())
     draft = read_json(draft_path)
-    preview = scientific_report_review.preview_review(workspace, edition_id, draft)
+    engine = _review_engine(comparison_id)
+    preview = engine.preview_review(
+        workspace, comparison_id if comparison_id is not None else edition_id, draft)
+    target = _review_target(preview["source_identity"])
     requested_time = (reviews._date(created_at, "Review creation time")
                       if created_at is not None else None)
     identity = {"schema": SCHEMA, "edition": EDITION,
                 "project_id": workspace.project["id"],
-                "scientific_report_edition_id": edition_id,
+                **target,
                 "review_preview_operation_id": preview["operation_id"],
                 "review_selection": preview["review_selection"],
                 "requested_created_at": requested_time,
                 "consumer_source_sha256": {
                     module.__name__: file_digest(Path(module.__file__))
-                    for module in (scientific_report_review, scientific_report_editions, reviews, portable)},
+                    for module in (engine, scientific_report_editions, reviews, portable)},
                 "receiver_source_sha256": file_digest(Path(__file__))}
+    if comparison_id is not None:
+        identity["consumer_source_sha256"][engine.report_changes.__name__] = file_digest(
+            Path(engine.report_changes.__file__))
     if completed_capture is not None:
         from model import scientific_report_capture
         _verify_completed_capture(workspace, edition_id, completed_capture)
@@ -437,9 +524,10 @@ def receive(workspace_path, edition_id, review_selection, output, *, created_at=
                        "review_selection": preview["review_selection"]}
         atomic_json(retained_request, request, immutable=True)
         atomic_json(request_path, request, immutable=True)
-        _event("prepare-original-review", operation_id=operation_id, edition_id=edition_id)
-        created = scientific_report_review.create_review(
-            workspace, edition_id, preview["review_selection"],
+        _event("prepare-original-review", operation_id=operation_id, **target)
+        created = engine.create_review(
+            workspace, comparison_id if comparison_id is not None else edition_id,
+            preview["review_selection"],
             expected_operation_id=preview["operation_id"], created_at=request["created_at"])
         atomic_json(retained / "created.json", created, immutable=True)
         current = reviews.show_review(workspace, created["review_id"], previews=False)
@@ -453,7 +541,7 @@ def receive(workspace_path, edition_id, review_selection, output, *, created_at=
                           "response_ids": [row["id"] for row in current["responses"]]}
             atomic_json(generation_path, generation, immutable=True)
         reopened = _reopen(workspace, edition_id, preview["review_selection"],
-                           preview, created, review, generation, completed_capture)
+                           preview, created, review, generation, completed_capture, comparison_id=comparison_id)
         atomic_json(retained / "reopened.json", reopened, immutable=True)
 
         _event("export-original-review", review_id=created["review_id"],
@@ -501,7 +589,7 @@ def receive(workspace_path, edition_id, review_selection, output, *, created_at=
                 verify_file(restored_retained, describe_file(retained, path))
         restored_result = _reopen(
             restored, edition_id, preview["review_selection"],
-            preview, created, review, generation, completed_capture)
+            preview, created, review, generation, completed_capture, comparison_id=comparison_id)
         if restored_result != reopened:
             raise ValueError("Original and restored report/review source identities differ")
 
@@ -535,18 +623,19 @@ def receive(workspace_path, edition_id, review_selection, output, *, created_at=
             raise ValueError("The received review receipt identifies another original request")
         _verified_packet(received_directory, review, generation)
         final = _reopen(restored, edition_id, preview["review_selection"],
-                        preview, created, review, generation, completed_capture)
+                        preview, created, review, generation, completed_capture, comparison_id=comparison_id)
         if final != reopened:
             raise ValueError("Joining the review package changed its original selected report")
         result = {
             "schema": SCHEMA + "/result", "state": "complete",
             "operation_id": operation_id, "identity": identity,
             "workspace": str(workspace.root), "project_id": workspace.project["id"],
-            "scientific_report_edition_id": edition_id,
+            **target,
             "review_id": created["review_id"], "created_at": request["created_at"],
             "title": created["title"], "purpose": created["purpose"],
             "source_collection_id": created["source_collection_id"], "source_id": created["source_id"],
-            "original_study_count": created["original_study_count"],
+            **({"original_study_count": created["original_study_count"]}
+               if "original_study_count" in created else {}),
             "source_member_count": created["source_member_count"],
             "artifact_count": created["artifact_count"],
             "selected_response_generation": generation,
@@ -586,16 +675,23 @@ def continue_selected_review(workspace_path, receipt_path, *, response_path=None
         raise ValueError("The original report receiving identity is not retained in this Workspace")
     created = read_json(retained / "created.json")
     review = read_json(retained / "original-review.json")
+    target = _review_target(created["source_identity"])
     if (created["review_id"] != original["review_id"] or review["id"] != created["review_id"]
-            or created["scientific_report_edition_id"] != original["scientific_report_edition_id"]):
-        raise ValueError("The completed course names another saved report or review")
+            or any(original.get(name) != value or original["identity"].get(name) != value
+                   for name, value in target.items())
+            or any(created.get(name) != value for name, value in target.items()
+                   if name != "scientific_report_edition_ids")):
+        raise ValueError("The completed course names another saved report, comparison or review")
     packet = reviews.show_review(workspace, review["id"], previews=False)
     if _clean_review(packet["review"]) != review:
         raise ValueError("The original saved review changed before editable transfer")
     source = _verify_source(workspace, created)
-    edition_id = original["scientific_report_edition_id"]
-    scientific_report_editions.inspect(workspace, edition_id)
+    edition_id = target.get("scientific_report_edition_id")
+    comparison_id = target.get("comparison_id")
+    _verify_target(workspace, target, created["source_identity"])
     completed_capture = original["identity"].get("completed_capture")
+    if comparison_id is not None and completed_capture is not None:
+        raise ValueError("A comparison review must retain both original saved report editions")
     capture_verification = (_verify_completed_capture(workspace, edition_id, completed_capture)
                             if completed_capture is not None else None)
     operation = receipt_path.parent / "selected-review"
@@ -613,10 +709,10 @@ def continue_selected_review(workspace_path, receipt_path, *, response_path=None
                 "original_operation_id": original_id, "original_receipt": {
                     "bytes": receipt_path.stat().st_size, "sha256": file_digest(receipt_path)},
                 "project_id": workspace.project["id"], "review_id": review["id"],
-                "scientific_report_edition_id": edition_id, "selection": selection}
+                **target, "selection": selection}
     with held(operation / "operation.lock"):
         atomic_json(operation / "identity.json", identity, immutable=True)
-        _event("preview-selected-review", review_id=review["id"], edition_id=edition_id)
+        _event("preview-selected-review", review_id=review["id"], **target)
         archive_path = operation / "editable-review.zip"
         archive_receipt = operation / "study-export.json"
         if archive_receipt.is_file():
@@ -645,13 +741,27 @@ def continue_selected_review(workspace_path, receipt_path, *, response_path=None
                 or captured["identity"]["selection"] != study_transfer.normalise(selection)):
             raise ValueError("The selected archive identifies another original review selection")
         required = {(row["kind"], row["id"]) for row in captured["identity"]["nodes"]}
-        if not {("reviews", review["id"]), ("scientific-report-editions", edition_id)}.issubset(required):
-            raise ValueError("The selected archive lost the original review or saved scientific report")
+        expected_nodes = {("reviews", review["id"]),
+                          *(("scientific-report-editions", key) for key in _target_editions(target))}
+        if comparison_id is not None:
+            expected_nodes.add(("scientific-report-comparisons", comparison_id))
+        if not expected_nodes.issubset(required):
+            raise ValueError("The selected archive lost the original review, comparison or saved editions")
         snapshots = [row for row in captured["identity"].get("customer_reviews", [])
                      if row["id"] == review["id"]]
         if len(snapshots) != 1 or snapshots[0]["review_sha256"] != digest(review):
             raise ValueError("The selected archive lost its exact native customer-feedback receipt")
         snapshot = snapshots[0]
+        if comparison_id is not None:
+            links = [row for row in snapshot.get("report_comparisons", [])
+                     if row["source_collection_id"] == created["source_collection_id"]
+                     and row["source_id"] == created["source_id"]]
+            if (len(links) != 1 or links[0].get("external")
+                    or links[0].get("comparison_id") != comparison_id
+                    or [links[0].get("left_edition_id"), links[0].get("right_edition_id")]
+                       != target["scientific_report_edition_ids"]
+                    or links[0].get("source_identity_sha256") != digest(created["source_identity"])):
+                raise ValueError("The selected review lost its exact typed comparison source")
         _event("restore-selected-review", study_id=captured["id"])
         restored_receipt, restored = _restore(operation, archived, workspace.project)
         verification = study_transfer.verify_received_studies(restored)
@@ -663,13 +773,13 @@ def continue_selected_review(workspace_path, receipt_path, *, response_path=None
                 != snapshot["response_ids"]
                 or _verify_source(restored, created) != source):
             raise ValueError("The received selected review changed its original report or response prefix")
-        scientific_report_editions.inspect(restored, edition_id)
+        _verify_target(restored, target, created["source_identity"])
         if (completed_capture is not None and _verify_completed_capture(
                 restored, edition_id, completed_capture) != capture_verification):
             raise ValueError("The selected received report differs from its original completed capture")
         complete = {"schema": SCHEMA + "/selected-review-result", "state": "complete",
                     "identity": identity, "project_id": workspace.project["id"],
-                    "review_id": review["id"], "scientific_report_edition_id": edition_id,
+                    "review_id": review["id"], **target,
                     "study_id": captured["id"], "archive": archived, "restore": restored_receipt,
                     "captured_review": snapshot,
                     "report_source": source, "verification": verification,
@@ -682,7 +792,8 @@ def continue_selected_review(workspace_path, receipt_path, *, response_path=None
             # Additional received responses may advance logical verification.
             # Preserve the exact first receiving receipt rather than rewriting it.
             for name in ("schema", "state", "identity", "project_id", "review_id",
-                         "scientific_report_edition_id", "study_id", "archive", "restore",
+                         "scientific_report_edition_id", "comparison_id", "scientific_report_edition_ids",
+                         "study_id", "archive", "restore",
                          "captured_review", "report_source", "completed_capture"):
                 if previous.get(name) != complete.get(name):
                     raise ValueError("The original selected-review receiving result changed")
@@ -765,6 +876,7 @@ def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--workspace", required=True, type=Path)
     parser.add_argument("--edition-id")
+    parser.add_argument("--comparison-id", help="Exact saved complete report pair to review")
     parser.add_argument("--capture-id",
                         help="Exact completed original CLI capture to adopt before review")
     parser.add_argument("--capture-sha256",
@@ -773,6 +885,8 @@ def main(argv=None):
     parser.add_argument("--output", type=Path)
     parser.add_argument("--created-at")
     parser.add_argument("--list", action="store_true", help="Inspect actual complete scientific editions")
+    parser.add_argument("--list-comparisons", action="store_true",
+                        help="Inspect complete local saved pairs without creating a review")
     parser.add_argument("--list-captures", action="store_true",
                         help="List original completed CLI captures without adoption or rendering")
     parser.add_argument("--selected-study", action="store_true",
@@ -782,25 +896,31 @@ def main(argv=None):
     parser.add_argument("--response", type=Path,
                         help="Actual returned customer response; import only into the selected received copy")
     args = parser.parse_args(argv)
-    if args.list or args.list_captures:
-        if (args.list and args.list_captures or args.selected_study or args.continue_receipt
-                or args.response or args.capture_id or args.capture_sha256):
+    if args.list or args.list_captures or args.list_comparisons:
+        if (sum((args.list, args.list_captures, args.list_comparisons)) != 1
+                or args.selected_study or args.continue_receipt
+                or args.response or args.capture_id or args.capture_sha256 or args.comparison_id):
             parser.error("Choose one read-only catalogue without a receiving or adoption request")
         workspace = Workspace(args.workspace.resolve())
         if args.list_captures:
             from model import scientific_report_capture
             result = scientific_report_capture.catalog(workspace)
+        elif args.list_comparisons:
+            result = list_comparisons(workspace)
         else:
             result = list_editions(workspace)
     elif args.continue_receipt:
-        if (args.edition_id or args.review_selection or args.output or args.created_at
+        if (args.edition_id or args.comparison_id or args.review_selection or args.output or args.created_at
                 or args.capture_id or args.capture_sha256):
             parser.error("--continue-receipt uses the exact retained review, selection and original output")
         result = continue_selected_review(args.workspace, args.continue_receipt,
                                           response_path=args.response)
     else:
-        if not args.edition_id or not args.review_selection or not args.output:
-            parser.error("--edition-id, --review-selection and --output are required for receiving")
+        if (bool(args.edition_id) == bool(args.comparison_id)
+                or not args.review_selection or not args.output):
+            parser.error("Choose --edition-id or --comparison-id, with --review-selection and --output")
+        if args.comparison_id and (args.capture_id or args.capture_sha256):
+            parser.error("Adopt the original editions before choosing their saved comparison")
         if bool(args.capture_id) != bool(args.capture_sha256):
             parser.error("--capture-id and --capture-sha256 must pin the same completed original report")
         if args.response and not args.selected_study:
@@ -811,7 +931,7 @@ def main(argv=None):
                                      created_at=args.created_at)
         else:
             result = receive(args.workspace, args.edition_id, args.review_selection, args.output,
-                             created_at=args.created_at)
+                             created_at=args.created_at, comparison_id=args.comparison_id)
         if args.selected_study:
             result = continue_selected_review(args.workspace, Path(result["receipt"]),
                                               response_path=args.response)
