@@ -23,6 +23,7 @@ from .model_selection import (grid_models, models as normalize_models,
                               required_outputs, run_models, selected,
                               validate_completed_run)
 from . import rasters
+from .native_execution import storage_exhausted
 
 SCHEMA = "upstate.parameter-experiment/v1"
 SELECTION_SCHEMA = "upstate.parameter-experiment-selection/v1"
@@ -688,7 +689,10 @@ def execute(workspace, key, *, progress=None):
                     case.pop("error", None)
                 except Exception as error:
                     case["state"] = "failed"
-                    case["error"] = {"type": type(error).__name__, "message": str(error)}
+                    case["error"] = deepcopy(getattr(error, "native_failure", None)) or {
+                        "type": type(error).__name__, "message": str(error)}
+                    if storage_exhausted(error):
+                        raise
                     save()
                     if case["id"] == "baseline":
                         raise
@@ -711,8 +715,15 @@ def execute(workspace, key, *, progress=None):
                 save(state="complete", completed_at=now(), active_case_id=None, active_run_id=None)
             return state
         except BaseException as error:
-            save(state="failed", active_case_id=None, active_run_id=None,
-                 error={"type": type(error).__name__, "message": str(error)})
+            failure = deepcopy(getattr(error, "native_failure", None)) or {
+                "type": type(error).__name__, "message": str(error)}
+            try:
+                save(state="failed", active_case_id=None, active_run_id=None, error=failure)
+            except OSError:
+                # The original run journal has reserved recovery capacity.
+                # Preserve its primary failure if this larger study cannot save.
+                if not storage_exhausted(error):
+                    raise
             raise
 
 

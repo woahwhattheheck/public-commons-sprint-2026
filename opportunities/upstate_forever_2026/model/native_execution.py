@@ -32,6 +32,24 @@ def storage_status(directory):
         return {"error": {"type": type(exc).__name__, "message": str(exc)}}
 
 
+def storage_exhausted(error):
+    """Recognize actual capacity failures across native and coordinator wrappers."""
+    seen = set()
+    while error is not None and id(error) not in seen:
+        seen.add(id(error))
+        failure = getattr(error, "native_failure", None)
+        if isinstance(failure, dict) and failure.get("kind") == "storage_exhausted":
+            return True
+        if isinstance(error, OSError) and error.errno in (
+                errno.ENOSPC, getattr(errno, "EDQUOT", errno.ENOSPC)):
+            return True
+        message = str(error).lower()
+        if "no space left on device" in message or "disk quota exceeded" in message:
+            return True
+        error = error.__cause__ or error.__context__
+    return False
+
+
 def _error(exc):
     causes = []
     current = exc
@@ -46,10 +64,7 @@ def _error(exc):
     result = dict(causes[0])
     if len(causes) > 1:
         result["causes"] = causes[1:]
-    storage_errors = {errno.ENOSPC, getattr(errno, "EDQUOT", errno.ENOSPC)}
-    messages = " ".join(item["message"].lower() for item in causes)
-    if (any(item.get("errno") in storage_errors for item in causes)
-            or "no space left on device" in messages or "disk quota exceeded" in messages):
+    if storage_exhausted(exc):
         result["kind"] = "storage_exhausted"
         result["recovery"] = ("Make space on the recorded run filesystem, then continue "
                               "this same run ID to reuse its completed native stages.")
@@ -184,6 +199,11 @@ class NativeExecution:
         self.save()
         logging.getLogger(__name__).info("Native run %s: %s%s%s", self.state["id"], name,
             " " + model if model else "", " " + artifact if artifact else "")
+
+    def reuse_progress(self, value):
+        """Retain the throttled original-stage lookup and verified transfer state."""
+        self.state["execution"]["stage_reuse"] = copy.deepcopy(value)
+        self.save()
 
     def finish(self):
         current = self.state["execution"]
