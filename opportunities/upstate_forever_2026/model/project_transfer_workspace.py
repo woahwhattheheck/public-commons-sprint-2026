@@ -133,11 +133,17 @@ class NativeProjectTransfer:
                 retained_implementation = snapshot["archive"].get("implementation")
                 if retained_implementation is not None and retained_implementation != implementation:
                     raise TransferError("Receiving changed the original fieldwork plan history")
+                from .portable_parameter_studies import verify_parameter_studies
+                parameter_studies = verify_parameter_studies(restored, snapshot["archive"]["members"])
+                retained_studies = snapshot["archive"].get("parameter_studies")
+                if retained_studies is not None and retained_studies != parameter_studies:
+                    raise TransferError("Receiving changed the original parameter study results")
                 result = {"project": snapshot["archive"]["project"], "directory": str(target),
                           "workspace": str(target / "workspace"), "application": str(target / "application"),
                           "identity": "MATCH", "recovered_after_lost_reply": True,
                           "source_acquisitions": source_acquisitions,
-                          "implementation": implementation}
+                          "implementation": implementation,
+                          "parameter_studies": parameter_studies}
             else:
                 record["state"] = "restoring"
                 _atomic(record_path, canonical(record) + b"\n", replace=True)
