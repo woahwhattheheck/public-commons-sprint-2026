@@ -1,0 +1,28 @@
+{
+  "schema": "upstate.application-component-fragment/v1",
+  "id": "monitoring-field-study",
+  "source_reference": "RIVER13 completed1193 field-support study: original730 measurements,36 original observation stations,87 native assessment sites and unchanged three saved plans; source collection371fca0c31de80d7309e6b7793ca56ac4563a7135409f667e240340957b098a3.",
+  "components": {
+    "monitoring-field-study": {
+      "title": "Saved regional monitoring field selection and original station evidence",
+      "paths": [
+        "source/monitoring-field-study/source/build_field_page.py",
+        "source/monitoring-field-study/source/build_field_support.py",
+        "source/monitoring-field-study/source/field_planning.html",
+        "source/monitoring-field-study/source/make_field_brief.py",
+        "source/monitoring-field-study/source/receive_field_support.py",
+        "source/monitoring-field-study/README.md",
+        "source/monitoring-field-study/CURRENT_OWNER_DIRECTION.md",
+        "source/monitoring-field-study/source-manifest.json",
+        "source/monitoring-field-study/INSTALLATION.md",
+        "integration/component_fragments/monitoring-field-study.json"
+      ],
+      "requires": [
+        "monitoring-chemistry-study"
+      ]
+    }
+  },
+  "required_components": [
+    "monitoring-field-study"
+  ]
+}

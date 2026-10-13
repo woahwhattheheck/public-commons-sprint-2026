@@ -13,7 +13,14 @@
     "pull_request": 3724,
     "native_merge": "71f0c79e10f13d420d753e5b4df17cc126140e83",
     "monitoring_chemistry_study_commit": "5ee552982cfa2ffdd254032358d64c81064151ce",
-    "monitoring_chemistry_study_pull_request": 4183
+    "monitoring_chemistry_study_pull_request": 4183,
+    "monitoring_field_source": {
+      "library_file_id": "libfile_da3d3a5b72b08191afbce9320855de88",
+      "files": 8,
+      "source_bytes": 198490,
+      "collection_id": "371fca0c31de80d7309e6b7793ca56ac4563a7135409f667e240340957b098a3",
+      "source_manifest_sha256": "e4fddfb4837676f96e8722f05b582b8cdc7f186cb20dd5fe050636aff090f7db"
+    }
   },
   "original_source_manifest": {
     "path": "integration/reach_chemistry/SOURCE_MANIFEST.json",
@@ -180,8 +187,8 @@
     },
     {
       "path": "operator/install_chemistry.py",
-      "bytes": 26870,
-      "sha256": "502aed32b9cdcf893216f7fd2f32f25cfec5332e2019f07b19772301331ede20"
+      "bytes": 27942,
+      "sha256": "ce29854f5f80cb4514e9a806f925af22218a75fc456a48c520aa1d9189c3f0bf"
     },
     {
       "path": "integration/reach_chemistry/install_chemistry_legacy.py",
@@ -277,6 +284,56 @@
       "path": "integration/component_fragments/monitoring-chemistry-study.json",
       "bytes": 1811,
       "sha256": "547decbb015f91aa092c4d0672ec1630299101cdf7388768b42bec73bee7cdd0"
+    },
+    {
+      "path": "source/monitoring-field-study/source/build_field_page.py",
+      "bytes": 2735,
+      "sha256": "37ba9a8eb9b7bcc325040b27996ba18a7de7f00a269959036283eb9415573fc6"
+    },
+    {
+      "path": "source/monitoring-field-study/source/build_field_support.py",
+      "bytes": 16171,
+      "sha256": "df577042f70fc1dfa6c991016f0bc847e8336cc57544bb8f84b0e7658f5bbd8b"
+    },
+    {
+      "path": "source/monitoring-field-study/source/field_planning.html",
+      "bytes": 33752,
+      "sha256": "4d11998ccf7364acd6df779d82187dba08054dd31d9f2d841e2886632690826c"
+    },
+    {
+      "path": "source/monitoring-field-study/source/make_field_brief.py",
+      "bytes": 5564,
+      "sha256": "95c446f933049a97beff8ab3acf73e86e704b591e0de88538883d87f6aa2f1f2"
+    },
+    {
+      "path": "source/monitoring-field-study/source/receive_field_support.py",
+      "bytes": 2594,
+      "sha256": "0c0b4ffaa3d4d58ad40babe385950c74164375348f1ca6bf1a1c40318993f2ea"
+    },
+    {
+      "path": "source/monitoring-field-study/README.md",
+      "bytes": 4079,
+      "sha256": "7d5029a7f2b31846dd7bc3fd51105c90ad713e425a2d435b806f3748c3ee2507"
+    },
+    {
+      "path": "source/monitoring-field-study/CURRENT_OWNER_DIRECTION.md",
+      "bytes": 4999,
+      "sha256": "57945ea0e6eca762011e9f7e6febd39255359143d454fd3aa58a3a849ec14fc9"
+    },
+    {
+      "path": "source/monitoring-field-study/source-manifest.json",
+      "bytes": 129156,
+      "sha256": "e4fddfb4837676f96e8722f05b582b8cdc7f186cb20dd5fe050636aff090f7db"
+    },
+    {
+      "path": "integration/component_fragments/monitoring-field-study.json",
+      "bytes": 1322,
+      "sha256": "43ef0c65fcf204f7ea36830e1ce00982e721214bb4bec41883e551bd1521fca1"
+    },
+    {
+      "path": "source/monitoring-field-study/INSTALLATION.md",
+      "bytes": 17237,
+      "sha256": "7bd79b2524eea49d785ae57a66973ccd85bca9a1a68445f3f31fbd3f82759ea9"
     }
   ],
   "preserved_shared_dependencies": [
@@ -311,7 +368,9 @@
       "native-chemistry-scientific-source-v2"
     ],
     "completed_monitoring_chemistry_study": "source/monitoring-chemistry-study/README.md",
-    "study_original_inventory": "source/monitoring-chemistry-study/COMPOUND_SOURCE.json"
+    "study_original_inventory": "source/monitoring-chemistry-study/COMPOUND_SOURCE.json",
+    "completed_monitoring_field_study": "source/monitoring-field-study/INSTALLATION.md",
+    "field_original_manifest": "source/monitoring-field-study/source-manifest.json"
   },
   "preserves": "Original physical project, source editions, completed numerical runs, old scientific report/source identities, current composite observation semantics and original installer lock/preimage guard.",
   "editor_lifetime": "pinned-workspace-and-native-activation"
