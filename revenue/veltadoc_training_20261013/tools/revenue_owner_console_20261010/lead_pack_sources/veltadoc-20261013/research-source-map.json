@@ -1,0 +1,326 @@
+{
+  "schema": "veltadoc.training-research.v1",
+  "checked_at": "2026-10-13T05:24:40Z",
+  "buyer": {
+    "company": "Veltadoc",
+    "founder_profile_name": "arma rama",
+    "email": "arma.marama@gmail.com",
+    "founder_source": "https://www.firstusers.tech/startups/veltadoc",
+    "contact_source": "https://www.veltadoc.com/terms",
+    "product_source": "https://www.veltadoc.com/certificate-generator",
+    "capabilities": "Spreadsheet recipient/course/date mapping into branded certificate PDFs in a ZIP; current homepage also describes an own Word template option for Pro.",
+    "interpretation": "The six prospects are selected for an observed relevant workflow. Current preparation software, purchase intent and administrative effort are questions for the proposed conversation."
+  },
+  "records": [
+    {
+      "slug": "baristabarbar",
+      "company": "BARistaBARBAR",
+      "company_domain": "baristabarbar.co.uk",
+      "company_url": "https://www.baristabarbar.co.uk/",
+      "area": "East London, United Kingdom",
+      "source_url": "https://www.baristabarbar.co.uk/barista-training",
+      "contact_name": "Training team",
+      "email": "info@baristabarbar.co.uk",
+      "phone": "+44 20 7655 0848",
+      "contact_type": "published company inbox",
+      "contact_source": "https://www.baristabarbar.co.uk/barista-training",
+      "observed": "The 2.5-hour Basic Barista Course includes a participation certificate. The course page says certificates are posted the following week and publishes reservation dates and a direct email.",
+      "booking": "Reservations are accepted through the published email, Eventbrite or PayPal; students register on arrival.",
+      "fit_hypothesis": "After the tutor confirms attendance, the class roster could populate a batch of the school's own participation certificates, with a staff review before the existing print-and-post step.",
+      "opening": "Hi BARistaBARBAR team — your Basic Barista Course page says participation certificates are posted the following week. Would a short example of preparing a class's print-ready certificates from one spreadsheet be useful? You would keep your current wording and approve attendance before generating the batch.",
+      "qualification": "Discuss the school's own Basic Course participation certificate. Preserve its existing wording, approval and postal process; establish current batch preparation and whether a reusable CSV mapping would help.",
+      "role": "Training administration",
+      "proposed_demo": "Three fictional attendees with name, course and completion date, mapped to an approved participation-certificate layout; check spelling, long names and the print output.",
+      "source_refs": [
+        "turn222view0"
+      ],
+      "source_support": "Course duration and participation certificate: lines52–54,108. Postal process:82. Published contact and address:75–81,134.",
+      "checked_date": "2026-10-13"
+    },
+    {
+      "slug": "london-school-coffee",
+      "company": "London School of Coffee",
+      "company_domain": "londonschoolofcoffee.com",
+      "company_url": "https://londonschoolofcoffee.com/",
+      "area": "Wandsworth, London, United Kingdom",
+      "source_url": "https://londonschoolofcoffee.com/collections/non-sca-skills-based-courses-lsc",
+      "contact_name": "Course administration",
+      "email": "info@londonschoolofcoffee.com",
+      "phone": "+44 7769 907253",
+      "contact_type": "published company inbox",
+      "contact_source": "https://londonschoolofcoffee.com/collections/non-sca-skills-based-courses-lsc",
+      "observed": "The school explicitly offers its own skills-based courses with a completion certificate. Its one-day Barista Beginner Masterclass runs at Wandsworth and collects each student's name and email when booking.",
+      "booking": "The Beginner Masterclass uses dated bookings and named student fields.",
+      "fit_hypothesis": "A confirmed class roster could produce the school's own completion certificates in one batch, reusing the mapping and approved school branding for later dates.",
+      "opening": "Hi London School of Coffee team — I saw that your own skills-based courses include a completion certificate, and the Beginner Masterclass already collects each student's name. Would a small example of turning a completed class roster into branded certificates help your course administration? It can use fictional attendees and your approved wording.",
+      "qualification": "Select an own-school skills course such as the Beginner Masterclass. Keep any SCA exam, approval and issuing systems with their existing authority; confirm the actual school certificate workflow and export format.",
+      "role": "Course administration",
+      "proposed_demo": "A fictional Beginner Masterclass roster with name, course and completion date, reviewed by the operator before producing the school's own documents.",
+      "additional_sources": [
+        "https://londonschoolofcoffee.com/collections/non-sca-skills-based-courses-lsc/products/lsc-basic-barista"
+      ],
+      "source_refs": [
+        "turn218view0",
+        "turn219view1"
+      ],
+      "source_support": "Own courses and completion certificate:collection54; contact90–96. Masterclass booking69–71, location83, timing99.",
+      "checked_date": "2026-10-13"
+    },
+    {
+      "slug": "coffee-company",
+      "company": "The Coffee Company",
+      "company_domain": "coffee-company.co.uk",
+      "company_url": "https://coffee-company.co.uk/",
+      "area": "Newton Abbot, Devon, United Kingdom",
+      "source_url": "https://coffee-company.co.uk/training-and-engineering/",
+      "contact_name": "Training team",
+      "email": "info@coffee-company.co.uk",
+      "phone": "+44 1626 335516",
+      "contact_type": "published general business email; office phone and contact form also available",
+      "contact_source": "https://coffee-company.co.uk/privacy-policy/",
+      "observed": "The company offers barista training to its wholesale customers and includes a participation certificate on completion.",
+      "booking": "Training is arranged through the company; the contact page provides its Newton Abbot office number and a general inquiry form.",
+      "fit_hypothesis": "A completed wholesale customer's training roster could become a batch of participation PDFs with consistent company branding, ready for staff review and the chosen delivery method.",
+      "opening": "Hi Coffee Company team — your wholesale barista training includes a participation certificate. Would a short roster-to-certificate example help the person who prepares those after a training session? You could keep your own wording and review the whole batch before sending or printing it.",
+      "qualification": "Confirm the current training schedule and certificate preparation process. A general published business address is available in its own privacy page; the current contact form and office phone are alternative routes.",
+      "role": "Training coordination",
+      "proposed_demo": "A fictional group of three wholesale-customer trainees, using confirmed completion fields and the provider's approved participation wording.",
+      "additional_sources": [
+        "https://coffee-company.co.uk/contact-us/",
+        "https://coffee-company.co.uk/about-the-coffee-company/"
+      ],
+      "source_refs": [
+        "turn218view1",
+        "turn219view0",
+        "turn225search5",
+        "turn226search0"
+      ],
+      "source_support": "Training/certificate:training28. Office:contact29–36. Correct info@coffee-company.co.uk appears in privacy policy's rights and changes sections; a separate security paragraph contains a .uk.com typo and is not the selected address.",
+      "checked_date": "2026-10-13"
+    },
+    {
+      "slug": "bristol-flower",
+      "company": "Bristol Flower School",
+      "company_domain": "bristolflowerschool.co.uk",
+      "company_url": "https://www.bristolflowerschool.co.uk/",
+      "area": "Henleaze, Bristol, United Kingdom",
+      "source_url": "https://www.bristolflowerschool.co.uk/floristry-course/",
+      "contact_name": "Jill Woodall",
+      "email": "",
+      "phone": "+44 7769 684103",
+      "contact_type": "published business phone",
+      "contact_source": "https://www.bristolflowerschool.co.uk/contact/",
+      "observed": "Its ten-week fast-track floristry evening course runs through the year, is limited to eight students, and awards a completion certificate. Jill Woodall is the named teacher and founder.",
+      "booking": "The course page directs private-training inquiries to Jill; the school's contact page publishes her telephone and studio address.",
+      "fit_hypothesis": "A small cohort's completion certificates could be generated together from an approved student list, with reusable names/course/date mapping for each term.",
+      "opening": "Hi Jill — I saw that your ten-week floristry course finishes with a completion certificate for each student. Would a brief example of preparing a term's certificates from one list be useful? The sample can use fictional names and retain your wording and visual identity.",
+      "qualification": "Use the published business phone to introduce the specific workflow. Establish whether the small cohort size makes the batch step worthwhile and keep tutor approval of completion in place.",
+      "role": "Founder and teacher",
+      "proposed_demo": "A fictional eight-student term list with the approved course name and completion date; inspect long names and every certificate before delivery.",
+      "additional_sources": [
+        "https://www.bristolflowerschool.co.uk/about/"
+      ],
+      "source_refs": [
+        "turn222view1",
+        "turn225view1",
+        "turn226search1",
+        "turn227view3"
+      ],
+      "source_support": "Course27, completion35, cap37, Jill39. About21 identifies Jill. Contact page publishes0117 9623834 and Jill07769684103; email remains protected in the readable representation.",
+      "checked_date": "2026-10-13"
+    },
+    {
+      "id": "veltadoc-shoreditch-academy-20261013",
+      "company": "The Shoreditch Academy of Image Making",
+      "company_domain": "theshoreditchacademy.com",
+      "area": "Shoreditch, London, United Kingdom",
+      "source_url": "https://theshoreditchacademy.com/cyanotype-on-glass",
+      "contact_name": "Course administration team",
+      "role": "Published course inquiry contact",
+      "email": "hello@theshoreditchacademy.com",
+      "phone": "+44 (0)20 7729 2739",
+      "contact_type": "published_business_email",
+      "contact_source": "https://theshoreditchacademy.com/cyanotype-on-glass",
+      "checked_date": "2026-10-13",
+      "observed": "The academy runs a physical four-hour Cyanotype On Glass workshop for up to ten people, using a classroom and darkroom. The course outcome explicitly includes the academy's certificate of attendance and a digital badge. Its current course page offers dates by arrangement and publishes the course-inquiry email.",
+      "current_process": "The own attendance certificate follows a hands-on workshop. The public page does not identify the software used to prepare or distribute it.",
+      "fit_hypothesis": "A small, tutor-approved attendance list is a practical demonstration input for producing one branded PDF per attendee. Keep the existing academy wording and badge process; compare name placement, course title/date and per-person export against the current certificate.",
+      "opening": "Your Cyanotype On Glass workshop includes an attendance certificate for a small studio group. Would a preview using your current certificate layout and a few example attendee names help you assess whether Veltadoc could simplify preparation after each class?",
+      "qualification": "Confirm the course administrator's current template, required wording and preferred handoff format. The instructor still confirms attendance. Ask about the next arranged cohort rather than assuming a fixed date. The inquiry body publishes the complete hello@theshoreditchacademy.com address; a later FAQ line contains a formatting error, so use the clear inquiry contact.",
+      "catalogue_example": "https://theshoreditchacademy.com/cyanotype-on-glass",
+      "certificate_type": "Provider's own attendance certificate",
+      "cohort_context": "Four-hour in-person workshop; maximum ten attendees; dates by arrangement",
+      "sources": [
+        {
+          "url": "https://theshoreditchacademy.com/cyanotype-on-glass",
+          "supports": [
+            "Four-hour classroom/darkroom workshop and maximum10 cohort",
+            "Own attendance-certificate outcome and digital badge",
+            "Published inquiry email and phone",
+            "Dates by arrangement and Shoreditch studio"
+          ],
+          "location": "Lines43–61,97–104,150–167",
+          "ref": "turn221view0"
+        }
+      ],
+      "slug": "shoreditch-academy",
+      "company_url": "https://theshoreditchacademy.com/",
+      "booking": "The own attendance certificate follows a hands-on workshop. The public page does not identify the software used to prepare or distribute it.",
+      "proposed_demo": "A small, tutor-approved attendance list is a practical demonstration input for producing one branded PDF per attendee. Keep the existing academy wording and badge process; compare name placement, course title/date and per-person export against the current certificate.",
+      "additional_sources": [],
+      "source_refs": [
+        "turn227view0"
+      ],
+      "source_support": "Four-hour classroom/darkroom workshop and maximum10 cohort; Own attendance-certificate outcome and digital badge; Published inquiry email and phone; Dates by arrangement and Shoreditch studio"
+    },
+    {
+      "id": "veltadoc-photoion-20261013",
+      "company": "Photoion Photography School",
+      "company_domain": "photoion.co.uk",
+      "area": "Waterloo, London, United Kingdom",
+      "source_url": "https://www.photoion.co.uk/about-us/faqs/",
+      "contact_name": "Photoion course administration team",
+      "role": "Published school contact",
+      "email": "hello@photoion.co.uk",
+      "phone": "020 3370 9686",
+      "contact_type": "published_business_email",
+      "contact_source": "https://www.photoion.co.uk/courses/intermediate-photography-course-london/",
+      "checked_date": "2026-10-13",
+      "observed": "Photoion's official FAQ states that students can request a certificate after completing any of its courses or workshops, through the tutor or school. The live Digital Photography Level2 course is taught in person over two days, with groups limited to eight. The school publishes its business email and Waterloo studio address.",
+      "current_process": "Own course/workshop completion certificates are available on request to a tutor or the school. The live storefront identifies Photoion as part of City Academy; keep that affiliation when reaching the appropriate course administrator.",
+      "fit_hypothesis": "An on-request certificate workflow fits a small named batch or a single replacement PDF. Demonstrate the current Photoion template with sample names, course/date fields and individual downloads, then compare it with the team's present preparation process.",
+      "opening": "Your FAQ offers completion certificates when a learner asks the tutor or school. Would a preview of your current certificate with sample Level2 attendee names be useful for comparing how a single request or a small class batch is prepared?",
+      "qualification": "Confirm whether certificates are issued locally by Photoion or centrally through City Academy, plus the current template and completion approval. Keep the pilot limited to the provider's existing own-course certificate. The current course has small physical classes; certificate software and its current workload are not public.",
+      "catalogue_example": "https://www.photoion.co.uk/courses/intermediate-photography-course-london/",
+      "certificate_type": "Provider's own course/workshop completion certificate, on request",
+      "cohort_context": "Two-day physical Level2 photography course; maximum eight attendees",
+      "sources": [
+        {
+          "url": "https://www.photoion.co.uk/about-us/faqs/",
+          "supports": [
+            "Provider offers a certificate following any course or workshop on request to tutor or school"
+          ],
+          "ref": "turn223search0",
+          "retrieval": "Official primary page indexed and retrieved in full search result; direct subsequent page open timed out."
+        },
+        {
+          "url": "https://www.photoion.co.uk/courses/intermediate-photography-course-london/",
+          "supports": [
+            "Current two-day course and maximum eight attendees",
+            "Published hello@photoion.co.uk and phone",
+            "Waterloo address",
+            "Current City Academy affiliation"
+          ],
+          "location": "Lines2,162–175,314–320,349",
+          "ref": "turn224view2"
+        }
+      ],
+      "slug": "photoion",
+      "company_url": "https://www.photoion.co.uk/",
+      "booking": "Own course/workshop completion certificates are available on request to a tutor or the school. The live storefront identifies Photoion as part of City Academy; keep that affiliation when reaching the appropriate course administrator.",
+      "proposed_demo": "An on-request certificate workflow fits a small named batch or a single replacement PDF. Demonstrate the current Photoion template with sample names, course/date fields and individual downloads, then compare it with the team's present preparation process.",
+      "additional_sources": [
+        "https://www.photoion.co.uk/courses/intermediate-photography-course-london/"
+      ],
+      "source_refs": [
+        "turn227view1",
+        "turn227view2"
+      ],
+      "source_support": "Provider offers a certificate following any course or workshop on request to tutor or school | Current two-day course and maximum eight attendees; Published hello@photoion.co.uk and phone; Waterloo address; Current City Academy affiliation"
+    }
+  ],
+  "contribution_source": {
+    "canvas_id": "F0C9KT0K7KJ",
+    "record": {
+      "schema": "commons.research.prospect-pair.v1",
+      "buyer": "Veltadoc",
+      "case_parent": {
+        "channel_id": "C0BTTA66TK3",
+        "thread_ts": "1791868549.605979"
+      },
+      "contributor": "379A work_scanner",
+      "owner": "379A business_delivery",
+      "checked_utc": "2026-10-13T05:19:00Z",
+      "records": [
+        {
+          "id": "veltadoc-shoreditch-academy-20261013",
+          "company": "The Shoreditch Academy of Image Making",
+          "company_domain": "theshoreditchacademy.com",
+          "area": "Shoreditch, London, United Kingdom",
+          "source_url": "https://theshoreditchacademy.com/cyanotype-on-glass",
+          "contact_name": "Course administration team",
+          "role": "Published course inquiry contact",
+          "email": "hello@theshoreditchacademy.com",
+          "phone": "+44 (0)20 7729 2739",
+          "contact_type": "published_business_email",
+          "contact_source": "https://theshoreditchacademy.com/cyanotype-on-glass",
+          "checked_date": "2026-10-13",
+          "observed": "The academy runs a physical four-hour Cyanotype On Glass workshop for up to ten people, using a classroom and darkroom. The course outcome explicitly includes the academy's certificate of attendance and a digital badge. Its current course page offers dates by arrangement and publishes the course-inquiry email.",
+          "current_process": "The own attendance certificate follows a hands-on workshop. The public page does not identify the software used to prepare or distribute it.",
+          "fit_hypothesis": "A small, tutor-approved attendance list is a practical demonstration input for producing one branded PDF per attendee. Keep the existing academy wording and badge process; compare name placement, course title/date and per-person export against the current certificate.",
+          "opening": "Your Cyanotype On Glass workshop includes an attendance certificate for a small studio group. Would a preview using your current certificate layout and a few example attendee names help you assess whether Veltadoc could simplify preparation after each class?",
+          "qualification": "Confirm the course administrator's current template, required wording and preferred handoff format. The instructor still confirms attendance. Ask about the next arranged cohort rather than assuming a fixed date. The inquiry body publishes the complete hello@theshoreditchacademy.com address; a later FAQ line contains a formatting error, so use the clear inquiry contact.",
+          "catalogue_example": "https://theshoreditchacademy.com/cyanotype-on-glass",
+          "certificate_type": "Provider's own attendance certificate",
+          "cohort_context": "Four-hour in-person workshop; maximum ten attendees; dates by arrangement",
+          "sources": [
+            {
+              "url": "https://theshoreditchacademy.com/cyanotype-on-glass",
+              "supports": [
+                "Four-hour classroom/darkroom workshop and maximum10 cohort",
+                "Own attendance-certificate outcome and digital badge",
+                "Published inquiry email and phone",
+                "Dates by arrangement and Shoreditch studio"
+              ],
+              "location": "Lines43–61,97–104,150–167",
+              "ref": "turn221view0"
+            }
+          ]
+        },
+        {
+          "id": "veltadoc-photoion-20261013",
+          "company": "Photoion Photography School",
+          "company_domain": "photoion.co.uk",
+          "area": "Waterloo, London, United Kingdom",
+          "source_url": "https://www.photoion.co.uk/about-us/faqs/",
+          "contact_name": "Photoion course administration team",
+          "role": "Published school contact",
+          "email": "hello@photoion.co.uk",
+          "phone": "020 3370 9686",
+          "contact_type": "published_business_email",
+          "contact_source": "https://www.photoion.co.uk/courses/intermediate-photography-course-london/",
+          "checked_date": "2026-10-13",
+          "observed": "Photoion's official FAQ states that students can request a certificate after completing any of its courses or workshops, through the tutor or school. The live Digital Photography Level2 course is taught in person over two days, with groups limited to eight. The school publishes its business email and Waterloo studio address.",
+          "current_process": "Own course/workshop completion certificates are available on request to a tutor or the school. The live storefront identifies Photoion as part of City Academy; keep that affiliation when reaching the appropriate course administrator.",
+          "fit_hypothesis": "An on-request certificate workflow fits a small named batch or a single replacement PDF. Demonstrate the current Photoion template with sample names, course/date fields and individual downloads, then compare it with the team's present preparation process.",
+          "opening": "Your FAQ offers completion certificates when a learner asks the tutor or school. Would a preview of your current certificate with sample Level2 attendee names be useful for comparing how a single request or a small class batch is prepared?",
+          "qualification": "Confirm whether certificates are issued locally by Photoion or centrally through City Academy, plus the current template and completion approval. Keep the pilot limited to the provider's existing own-course certificate. The current course has small physical classes; certificate software and its current workload are not public.",
+          "catalogue_example": "https://www.photoion.co.uk/courses/intermediate-photography-course-london/",
+          "certificate_type": "Provider's own course/workshop completion certificate, on request",
+          "cohort_context": "Two-day physical Level2 photography course; maximum eight attendees",
+          "sources": [
+            {
+              "url": "https://www.photoion.co.uk/about-us/faqs/",
+              "supports": [
+                "Provider offers a certificate following any course or workshop on request to tutor or school"
+              ],
+              "ref": "turn223search0",
+              "retrieval": "Official primary page indexed and retrieved in full search result; direct subsequent page open timed out."
+            },
+            {
+              "url": "https://www.photoion.co.uk/courses/intermediate-photography-course-london/",
+              "supports": [
+                "Current two-day course and maximum eight attendees",
+                "Published hello@photoion.co.uk and phone",
+                "Waterloo address",
+                "Current City Academy affiliation"
+              ],
+              "location": "Lines2,162–175,314–320,349",
+              "ref": "turn224view2"
+            }
+          ]
+        }
+      ]
+    }
+  }
+}
