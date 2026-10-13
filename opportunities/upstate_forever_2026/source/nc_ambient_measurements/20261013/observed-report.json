@@ -1,0 +1,309 @@
+{
+  "schema": "upstate.observed-report/v1",
+  "title": "NC ambient monitoring: original observations and decisions",
+  "edition": "20261013-nc-ambient-originals",
+  "inputs": [
+    {
+      "path": "source/nc_ambient_measurements/20261013/original/h600-station.csv",
+      "bytes": 1263,
+      "sha256": "a618533e59a3acd3d5a28b3d2b4d47020ecdc315a672bf551d2c84c68b2ed835"
+    },
+    {
+      "path": "source/nc_ambient_measurements/20261013/original/h320-station.csv",
+      "bytes": 1263,
+      "sha256": "253f0c40b1e760f8ccb4d52f6e52020f9321c99bd44e4176e357e9f452710728"
+    },
+    {
+      "path": "source/nc_ambient_measurements/20261013/original/h600-2008-2009.csv",
+      "bytes": 148456,
+      "sha256": "edf0ab6ccb6022901a59ef226421ab1bb1dcaf55762792ab92d43590e7a122d4"
+    },
+    {
+      "path": "source/nc_ambient_measurements/20261013/original/h600-2010.csv",
+      "bytes": 72888,
+      "sha256": "84db3c7d97360265a4c918da4d97bd89184ae121e3221dac14ba513f2106781e"
+    },
+    {
+      "path": "source/nc_ambient_measurements/20261013/original/h600-2011-2013.csv",
+      "bytes": 190338,
+      "sha256": "a23e3db88d9132c7306323924869f668cc39237c29f5a1b454fd0e16286e6cc2"
+    },
+    {
+      "path": "source/nc_ambient_measurements/20261013/original/h600-2014-2015.csv",
+      "bytes": 108013,
+      "sha256": "2c90ac3a2e5835fb68dc98d65c132050bca48a38289305ad9661a0d47b66f9ec"
+    },
+    {
+      "path": "source/nc_ambient_measurements/20261013/original/h600-2016-2020.csv",
+      "bytes": 189308,
+      "sha256": "cc2da237389ff5d97cd1d8dfff7e2eccb2f54f086173dc194ae8fea92e4d2a81"
+    },
+    {
+      "path": "source/nc_ambient_measurements/20261013/original/h600-2021-2025.csv",
+      "bytes": 136170,
+      "sha256": "1b4019820b8363f26e1ceff05da2d98e811ccb070f654316611da351000fb642"
+    },
+    {
+      "path": "source/nc_ambient_measurements/20261013/original/h600-narrow-2026.csv",
+      "bytes": 2104,
+      "sha256": "ff23acf30ff70da1166fe3bf0428038ce5ab6ff58f38307d349d04e2489d7ef7"
+    },
+    {
+      "path": "source/nc_ambient_measurements/20261013/original/h600-activity-2008-2010.csv",
+      "bytes": 163834,
+      "sha256": "cf205524cdf3fe055010def201f4f12ce85d74860f988e8c67615b22711923f4"
+    },
+    {
+      "path": "source/nc_ambient_measurements/20261013/original/h600-activity-2011-2013.csv",
+      "bytes": 139373,
+      "sha256": "e8c0747df6b9f028837bfb06dd8d225fa48803f43e9c9a0eaa71cfd2982ba4c5"
+    },
+    {
+      "path": "source/nc_ambient_measurements/20261013/original/h600-activity-2014-2016.csv",
+      "bytes": 118552,
+      "sha256": "a02ba30b6a3aeca37ae8b1e0e83a43b99800e9a3dcfc491ff9e51f150fbe7018"
+    },
+    {
+      "path": "source/nc_ambient_measurements/20261013/original/h600-activity-2017-2025.csv",
+      "bytes": 203161,
+      "sha256": "4312d99a314d109a0f0b02d956c1191d74fdf3a04e334cd54532ae902fcd47d8"
+    },
+    {
+      "path": "source/nc_ambient_measurements/20261013/original/h600-limits-2008-2025.csv",
+      "bytes": 84460,
+      "sha256": "e58071166df691bcbca93e61ddd1d10f1438cb3bcfcac27eb8438a15327f2e79"
+    },
+    {
+      "path": "source/nc_ambient_measurements/20261013/profile_checks/h600-modern-narrow-2021-2025.csv",
+      "bytes": 189711,
+      "sha256": "5a1f524409768e5180070299e7c7075a0a6048568cf037a9d4b75ccee08fba35"
+    },
+    {
+      "path": "source/nc_ambient_measurements/20261013/profile_checks/h600-modern-activity-2021-2025.csv",
+      "bytes": 180869,
+      "sha256": "8bc50c3d908db886db124b71b01a11fecdbab6bb9e8b9adf4828ff1af2a72132"
+    }
+  ],
+  "figure_spec": "source/nc_ambient_measurements/20261013/figure-spec.json",
+  "figures": [
+    {
+      "id": "horsepasture-temperature",
+      "path": "source/nc_ambient_measurements/20261013/figures/horsepasture-temperature.svg"
+    },
+    {
+      "id": "horsepasture-phosphorus",
+      "path": "source/nc_ambient_measurements/20261013/figures/horsepasture-phosphorus.svg"
+    }
+  ],
+  "sections": [
+    [
+      "What the original measurements add",
+      [
+        "This source edition joins the publisher's original result, activity, detection-limit and station exports by their qualified identities. It retains 1957 measurement records, 1957 activity rows and 426 detection-limit rows. Every numeric result remains linked to its original field values, method, comments and source row.",
+        {
+          "kind": "table",
+          "columns": [
+            "Original station",
+            "Publisher station name",
+            "Results",
+            "Characteristics",
+            "Observed dates"
+          ],
+          "rows": [
+            [
+              "21NC03WQ-H6000000",
+              "HORSEPASTURE RIV AT NC 281 NR UNION",
+              "1957",
+              "29",
+              "2008-01-28 to 2025-12-03"
+            ]
+          ]
+        },
+        "An independent current WQX3 profile check for 2021–2025 matches all 318 original result IDs and 318 activity IDs. Across 21 mapped result fields and 17 mapped activity fields, every compared value agrees with the retained legacy profile. Those two current-profile originals and the explicit field mapping are included as companions.",
+        "Use this measured context alongside the retained NC legal-designation and 2022 assessment editions. The source station coordinates are published NAD83; the native point source provides the geometry for selecting the project cohort."
+      ]
+    ],
+    [
+      "Horsepasture thermal observations and seasonal support",
+      [
+        {
+          "kind": "table",
+          "columns": [
+            "Sampling window",
+            "Records",
+            "Sample dates",
+            ">20°C records",
+            ">20°C dates",
+            "Jun–Aug records"
+          ],
+          "rows": [
+            [
+              "2008–2015",
+              "49",
+              "49",
+              "10",
+              "10",
+              "10"
+            ],
+            [
+              "2016–2020",
+              "31",
+              "30",
+              "7",
+              "6",
+              "7"
+            ],
+            [
+              "2021–2025",
+              "26",
+              "26",
+              "8",
+              "8",
+              "12"
+            ]
+          ]
+        },
+        "The 2016–2020 window contains 31 readings on 30 dates, with 7 readings above 20°C on 6 dates. Two readings of 21.8°C on 26 August 2016 retain distinct result IDs and reported times 13:45 and 15:45 EST.",
+        "The 2021–2025 window contains 26 readings on 26 dates, with 8 above 20°C. It has 12 June–August readings, compared with 7 in the earlier window. July has 4 readings in the later window and zero in the earlier window. This difference in seasonal support matters when interpreting the two counts.",
+        "The 7.7°C record on 14 May 2025 carries the publisher's J12 calibration-acceptance comment. Excluding this coded-qualified reading leaves 25 later readings and the same 8 above 20°C. Bridge-access and depth-conversion comments remain visible as sampling context.",
+        "The 20°C line follows the trout-temperature criterion in the agency's 2022 methodology. The agency applies its own quality review, station-to-assessment-unit allocation and statistical assessment procedure. This report supplies the original measured series and descriptive screen for that review."
+      ]
+    ],
+    [
+      "Nutrients: preserve detection limits and methods",
+      [
+        "Horsepasture has 144 total-phosphorus records under USEPA 365.1, reported as P: 56 uncensored numeric results and 88 non-detections. Non-detections retain their original practical quantitation limits instead of numerical substitutions.",
+        "The original characteristic names Ammonia-nitrogen and Ammonia, and the retired nitrate/nitrite name and Nitrate+Nitrite, remain distinct. Their method, fraction and as N specification remain available for a documented comparability decision.",
+        "The complete edition contains 59 comparison groups defined by source station, characteristic, fraction, method, units, media and result basis. Descriptive numeric summaries use uncensored numeric records within each group. Comments and detection-limit context are reported alongside those summaries.",
+        {
+          "kind": "links",
+          "items": [
+            {
+              "title": "Complete method and unit comparison groups",
+              "path": "source/nc_ambient_measurements/20261013/comparison-groups.csv"
+            },
+            {
+              "title": "All observations with original source-row links",
+              "path": "source/nc_ambient_measurements/20261013/observations.csv"
+            },
+            {
+              "title": "All original detection and quality comments",
+              "path": "source/nc_ambient_measurements/20261013/quality-and-detection-review.csv"
+            }
+          ]
+        }
+      ]
+    ],
+    [
+      "Source issues to resolve before quantitative use",
+      [
+        {
+          "kind": "table",
+          "columns": [
+            "Original result",
+            "Sampling date",
+            "Published value",
+            "Review action"
+          ],
+          "rows": [
+            [
+              "STORET-778294713",
+              "2017-10-04",
+              "85 mg/L",
+              "Inspect original value/unit mapping; retain published record."
+            ],
+            [
+              "STORET-778310633",
+              "2017-11-28",
+              "104.1 mg/L",
+              "Inspect original value/unit mapping; retain published record."
+            ],
+            [
+              "STORET-778317420",
+              "2017-12-14",
+              "97.8 mg/L",
+              "Inspect original value/unit mapping; retain published record."
+            ]
+          ]
+        },
+        "The three 2017 dissolved-oxygen rows above are retained unchanged. Their published values exceed this analysis's 30 mg/L review trigger. The trigger is a source-review rule; it is separate from the 6 mg/L trout-water criterion. No percent-saturation conversion has been applied.",
+        "Horsepasture's three uncensored turbidity results above 10 NTU are 12 NTU on 16 March 2010, 14 NTU on 7 February 2018 and 110 NTU on 29 August 2023. The 2023 activity retains the publisher's field-depth conversion note. Original result dates and comments support follow-up at the event level.",
+        {
+          "kind": "links",
+          "items": [
+            {
+              "title": "Original-value review queue",
+              "path": "source/nc_ambient_measurements/20261013/source-value-review.csv"
+            },
+            {
+              "title": "Temperature, oxygen and turbidity screens by period",
+              "path": "source/nc_ambient_measurements/20261013/criterion-screens.csv"
+            }
+          ]
+        }
+      ]
+    ],
+    [
+      "Bacteria: match the sampling design to the question",
+      [
+        "Horsepasture's 138 fecal-coliform records contain at most 2 samples in any 30-calendar-day window in this retained cohort. The referenced recreation criterion uses at least 5 consecutive samples in 30 days. The exported sampling-support analysis shows the actual dates and preserves censored records.",
+        "The 900 cfu/100 mL result on 25 August 2008 carries Q1: the publisher records that holding time was exceeded before the laboratory received the sample. The source value and warning remain together.",
+        "For a recreation assessment campaign, obtain the needed sequence of samples within 30 days with verified holding times. For thermal follow-up, cover July as well as August and use continuous temperature logging where duration and daily timing are decision-relevant. Pair water-quality sampling with an actual discharge measurement when the scientific question is mass export.",
+        {
+          "kind": "links",
+          "items": [
+            {
+              "title": "Original bacterial sampling-frequency support",
+              "path": "source/nc_ambient_measurements/20261013/microbial-sampling-support.json"
+            },
+            {
+              "title": "Monthly coverage across all parameters",
+              "path": "source/nc_ambient_measurements/20261013/sampling-coverage.csv"
+            }
+          ]
+        }
+      ]
+    ],
+    [
+      "Open the complete editable source edition",
+      [
+        "The original CSV files remain byte-for-byte intact. The reproducible derivation, source inventory, complete observation and quality tables, station geometry and scientific figure specification travel with this saved report.",
+        {
+          "kind": "links",
+          "items": [
+            {
+              "title": "Source methods, exact URLs and interpretation",
+              "path": "source/nc_ambient_measurements/20261013/README.md"
+            },
+            {
+              "title": "All original capture URLs and SHA256 identities",
+              "path": "source/nc_ambient_measurements/20261013/provenance.json"
+            },
+            {
+              "title": "Complete source summary",
+              "path": "source/nc_ambient_measurements/20261013/summary.json"
+            },
+            {
+              "title": "Native report opening, export and receiving instructions",
+              "path": "source/nc_ambient_measurements/20261013/NATIVE_OPENING.md"
+            }
+          ]
+        }
+      ]
+    ]
+  ],
+  "source_links": [
+    "source/nc_ambient_measurements/20261013/profile-reconciliation.json",
+    "source/nc_ambient_measurements/20261013/README.md",
+    "source/nc_ambient_measurements/20261013/provenance.json",
+    "source/nc_ambient_measurements/20261013/source-inventory.json",
+    "source/nc_ambient_measurements/20261013/observations.csv",
+    "source/nc_ambient_measurements/20261013/comparison-groups.csv",
+    "source/nc_ambient_measurements/20261013/sampling-coverage.csv",
+    "source/nc_ambient_measurements/20261013/thermal-screen.csv",
+    "source/nc_ambient_measurements/20261013/source-value-review.csv",
+    "source/nc_ambient_measurements/20261013/criterion-screens.csv",
+    "source/nc_ambient_measurements/20261013/microbial-sampling-support.json",
+    "source/nc_ambient_measurements/20261013/figure-spec.json"
+  ]
+}

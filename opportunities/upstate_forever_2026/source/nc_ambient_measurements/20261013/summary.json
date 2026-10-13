@@ -1,0 +1,412 @@
+{
+  "schema": "upstate.nc-ambient-measurements/v1",
+  "captured_at": "2026-10-13",
+  "original_files": 14,
+  "original_result_rows": 1957,
+  "original_activity_rows": 1957,
+  "original_limit_rows": 426,
+  "original_station_rows": 2,
+  "distinct_results": 1957,
+  "distinct_activities": 1957,
+  "unreferenced_activity_rows": 0,
+  "censored_results": 425,
+  "censored_without_limit": 0,
+  "multiple_limit_results": 0,
+  "distinct_characteristics": 29,
+  "comparison_groups": 59,
+  "quality_comment_results": 591,
+  "quality_codes": {
+    "B1": 3,
+    "B2": 3,
+    "B4": 11,
+    "J12": 5,
+    "J6": 7,
+    "J8": 4,
+    "Q1": 109,
+    "Q2": 3
+  },
+  "stations": [
+    {
+      "organization": "21NC03WQ",
+      "station_id": "21NC03WQ-H6000000",
+      "name": "HORSEPASTURE RIV AT NC 281 NR UNION",
+      "latitude": 35.09222,
+      "longitude": -82.97642,
+      "datum": "NAD83",
+      "huc8": "03060101",
+      "county": "175",
+      "records": 1957,
+      "characteristics": 29,
+      "first_date": "2008-01-28",
+      "last_date": "2025-12-03",
+      "source": {
+        "path": "source/nc_ambient_measurements/20261013/original/h600-station.csv",
+        "row": 2
+      }
+    },
+    {
+      "organization": "21NC03WQ",
+      "station_id": "21NC03WQ-H3200000",
+      "name": "BIG CRK BESIDE SR 1608 NR HIGHLANDS",
+      "latitude": 35.00824,
+      "longitude": -83.15964,
+      "datum": "NAD83",
+      "huc8": "03060102",
+      "county": "113",
+      "records": 0,
+      "characteristics": 0,
+      "first_date": null,
+      "last_date": null,
+      "source": {
+        "path": "source/nc_ambient_measurements/20261013/original/h320-station.csv",
+        "row": 2
+      }
+    }
+  ],
+  "horsepasture_temperature_windows": [
+    {
+      "period": "2008–2015",
+      "records": 49,
+      "sampling_dates": 49,
+      "above_20_count": 10,
+      "dates_with_any_above_20": 10,
+      "exactly_20_count": 0,
+      "maximum": 24.9,
+      "monthly_records": {
+        "10": 3,
+        "11": 5,
+        "12": 5,
+        "01": 5,
+        "02": 4,
+        "03": 6,
+        "04": 4,
+        "05": 2,
+        "06": 3,
+        "07": 3,
+        "08": 4,
+        "09": 5
+      },
+      "summer_records": 10,
+      "commented_or_qualified_records": 1,
+      "comment_free_records": 48,
+      "comment_free_above_20": 10,
+      "coded_qualification_records": 0,
+      "without_coded_qualification_records": 49,
+      "without_coded_qualification_above_20": 10,
+      "duplicate_sampling_dates": []
+    },
+    {
+      "period": "2016–2020",
+      "records": 31,
+      "sampling_dates": 30,
+      "above_20_count": 7,
+      "dates_with_any_above_20": 6,
+      "exactly_20_count": 0,
+      "maximum": 24.6,
+      "monthly_records": {
+        "10": 4,
+        "11": 1,
+        "12": 4,
+        "01": 5,
+        "02": 3,
+        "03": 2,
+        "04": 2,
+        "05": 2,
+        "06": 3,
+        "08": 4,
+        "09": 1
+      },
+      "summer_records": 7,
+      "commented_or_qualified_records": 0,
+      "comment_free_records": 31,
+      "comment_free_above_20": 7,
+      "coded_qualification_records": 0,
+      "without_coded_qualification_records": 31,
+      "without_coded_qualification_above_20": 7,
+      "duplicate_sampling_dates": [
+        {
+          "date": "2016-08-26",
+          "readings": [
+            {
+              "time": "13:45:00",
+              "time_zone": "EST",
+              "value": 21.8,
+              "result_id": "STORET-699361998",
+              "source": {
+                "path": "source/nc_ambient_measurements/20261013/original/h600-2016-2020.csv",
+                "row": 55
+              }
+            },
+            {
+              "time": "15:45:00",
+              "time_zone": "EST",
+              "value": 21.8,
+              "result_id": "STORET-699362005",
+              "source": {
+                "path": "source/nc_ambient_measurements/20261013/original/h600-2016-2020.csv",
+                "row": 56
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "period": "2021–2025",
+      "records": 26,
+      "sampling_dates": 26,
+      "above_20_count": 8,
+      "dates_with_any_above_20": 8,
+      "exactly_20_count": 0,
+      "maximum": 24.1,
+      "monthly_records": {
+        "10": 3,
+        "11": 1,
+        "12": 2,
+        "01": 1,
+        "02": 2,
+        "05": 3,
+        "06": 4,
+        "07": 4,
+        "08": 4,
+        "09": 2
+      },
+      "summer_records": 12,
+      "commented_or_qualified_records": 3,
+      "comment_free_records": 23,
+      "comment_free_above_20": 6,
+      "coded_qualification_records": 1,
+      "without_coded_qualification_records": 25,
+      "without_coded_qualification_above_20": 8,
+      "duplicate_sampling_dates": []
+    }
+  ],
+  "interpretation": [
+    "Original organization, station, activity and result identities remain qualified and independently retained.",
+    "Comparison groups keep original characteristic, fraction, analytical method, method specification, unit, media and basis separate.",
+    "Censored records retain every original detection/quantitation limit. No zero, half-limit or full-limit substitution is used.",
+    "Numeric summaries describe uncensored numeric results within each exact comparison group; all commented records remain visible.",
+    "Thermal counts are a source screen against the published 20°C trout-temperature criterion. Uneven grab sampling and differing sample dates do not establish a temperature trend or an official assessment category.",
+    "Original same-day readings retain separate result identities and times. Date-level thermal counts are reported alongside record-level counts.",
+    "The 2016–2020 assessment window and 2021–2025 subsequent evidence are separate. Original station metadata and measurement-bearing station cohorts are counted independently.",
+    "A station source cohort is not automatically the selected project geography. Import the original NAD83 station points and intersect the selected study domain before assigning membership."
+  ],
+  "source_value_review_records": 3,
+  "criterion_screens": [
+    {
+      "station_id": "21NC03WQ-H6000000",
+      "period": "2008–2015",
+      "characteristic": "Temperature, water",
+      "unit": "deg C",
+      "criterion": 20,
+      "direction": "above",
+      "original_records": 49,
+      "uncensored_numeric_matching_unit": 49,
+      "censored_results": 0,
+      "screen_hits": 10,
+      "hit_dates": 10,
+      "hit_result_ids": [
+        "STORET-92496561",
+        "STORET-92504330",
+        "STORET-92512063",
+        "STORET-92904770",
+        "STORET-92912565",
+        "STORET-92919931",
+        "STORET-525483935",
+        "STORET-525804702",
+        "STORET-601526452",
+        "STORET-601537028"
+      ],
+      "coded_qualification_records": 0,
+      "source_value_review_records": 0
+    },
+    {
+      "station_id": "21NC03WQ-H6000000",
+      "period": "2008–2015",
+      "characteristic": "Dissolved oxygen (DO)",
+      "unit": "mg/L",
+      "criterion": 6,
+      "direction": "below",
+      "original_records": 49,
+      "uncensored_numeric_matching_unit": 49,
+      "censored_results": 0,
+      "screen_hits": 0,
+      "hit_dates": 0,
+      "hit_result_ids": [],
+      "coded_qualification_records": 0,
+      "source_value_review_records": 0
+    },
+    {
+      "station_id": "21NC03WQ-H6000000",
+      "period": "2008–2015",
+      "characteristic": "Turbidity",
+      "unit": "NTU",
+      "criterion": 10,
+      "direction": "above",
+      "original_records": 93,
+      "uncensored_numeric_matching_unit": 82,
+      "censored_results": 11,
+      "screen_hits": 1,
+      "hit_dates": 1,
+      "hit_result_ids": [
+        "STORET-99053369"
+      ],
+      "coded_qualification_records": 0,
+      "source_value_review_records": 0
+    },
+    {
+      "station_id": "21NC03WQ-H6000000",
+      "period": "2016–2020",
+      "characteristic": "Temperature, water",
+      "unit": "deg C",
+      "criterion": 20,
+      "direction": "above",
+      "original_records": 31,
+      "uncensored_numeric_matching_unit": 31,
+      "censored_results": 0,
+      "screen_hits": 7,
+      "hit_dates": 6,
+      "hit_result_ids": [
+        "STORET-601635738",
+        "STORET-699361998",
+        "STORET-699362005",
+        "STORET-778383549",
+        "STORET-877746845",
+        "STORET-907460988",
+        "STORET-923422997"
+      ],
+      "coded_qualification_records": 0,
+      "source_value_review_records": 0
+    },
+    {
+      "station_id": "21NC03WQ-H6000000",
+      "period": "2016–2020",
+      "characteristic": "Dissolved oxygen (DO)",
+      "unit": "mg/L",
+      "criterion": 6,
+      "direction": "below",
+      "original_records": 31,
+      "uncensored_numeric_matching_unit": 31,
+      "censored_results": 0,
+      "screen_hits": 0,
+      "hit_dates": 0,
+      "hit_result_ids": [],
+      "coded_qualification_records": 0,
+      "source_value_review_records": 3
+    },
+    {
+      "station_id": "21NC03WQ-H6000000",
+      "period": "2016–2020",
+      "characteristic": "Turbidity",
+      "unit": "NTU",
+      "criterion": 10,
+      "direction": "above",
+      "original_records": 33,
+      "uncensored_numeric_matching_unit": 19,
+      "censored_results": 14,
+      "screen_hits": 1,
+      "hit_dates": 1,
+      "hit_result_ids": [
+        "STORET-778328292"
+      ],
+      "coded_qualification_records": 0,
+      "source_value_review_records": 0
+    },
+    {
+      "station_id": "21NC03WQ-H6000000",
+      "period": "2021–2025",
+      "characteristic": "Temperature, water",
+      "unit": "deg C",
+      "criterion": 20,
+      "direction": "above",
+      "original_records": 26,
+      "uncensored_numeric_matching_unit": 26,
+      "censored_results": 0,
+      "screen_hits": 8,
+      "hit_dates": 8,
+      "hit_result_ids": [
+        "STORET-992412891",
+        "STORET-992412892",
+        "STORET-993117712",
+        "STORET-993117714",
+        "STORET-1051994669",
+        "STORET-1051994670",
+        "STORET-1067934664",
+        "STORET-1108684689"
+      ],
+      "coded_qualification_records": 1,
+      "source_value_review_records": 0
+    },
+    {
+      "station_id": "21NC03WQ-H6000000",
+      "period": "2021–2025",
+      "characteristic": "Dissolved oxygen (DO)",
+      "unit": "mg/L",
+      "criterion": 6,
+      "direction": "below",
+      "original_records": 26,
+      "uncensored_numeric_matching_unit": 26,
+      "censored_results": 0,
+      "screen_hits": 0,
+      "hit_dates": 0,
+      "hit_result_ids": [],
+      "coded_qualification_records": 1,
+      "source_value_review_records": 0
+    },
+    {
+      "station_id": "21NC03WQ-H6000000",
+      "period": "2021–2025",
+      "characteristic": "Turbidity",
+      "unit": "NTU",
+      "criterion": 10,
+      "direction": "above",
+      "original_records": 25,
+      "uncensored_numeric_matching_unit": 21,
+      "censored_results": 4,
+      "screen_hits": 1,
+      "hit_dates": 1,
+      "hit_result_ids": [
+        "STORET-1051994671"
+      ],
+      "coded_qualification_records": 0,
+      "source_value_review_records": 0
+    }
+  ],
+  "microbial_sampling_support": [
+    {
+      "station_id": "21NC03WQ-H6000000",
+      "characteristic": "Fecal Coliform",
+      "total_records": 138,
+      "censored_records": 2,
+      "maximum_records_in_30_calendar_days": 2,
+      "example_window": [
+        {
+          "date": "2008-01-28",
+          "result_id": "STORET-92454491"
+        },
+        {
+          "date": "2008-02-20",
+          "result_id": "STORET-92464667"
+        }
+      ],
+      "consecutive_samples_required_by_referenced_criterion": 5,
+      "records_above_400_with_matching_units": [
+        {
+          "result_id": "STORET-92512068",
+          "date": "2008-08-25",
+          "value": 900,
+          "original_unit": "cfu/100mL",
+          "quality_codes": [
+            "Q1"
+          ],
+          "result_comment": "Q1; Holding time exceeded;  Holding time exceeded prior to receipt by lab.",
+          "source": {
+            "path": "source/nc_ambient_measurements/20261013/original/h600-2008-2009.csv",
+            "row": 123
+          }
+        }
+      ],
+      "interpretation": "Calendar windows include the starting date through its next 29 dates. Published holding-time and other comments remain attached. Sampling-frequency support is distinct from computing a recreational assessment."
+    }
+  ]
+}
