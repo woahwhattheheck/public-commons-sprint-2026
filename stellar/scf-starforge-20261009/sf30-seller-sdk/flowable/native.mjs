@@ -431,3 +431,12 @@ export function reconcileFlowableRequest(plan,before,after,response){
  if(correspondence.matches)return result('CONFIRMED','All selected native processes, active activities and preserved tasks match the exact migration target.',{...correspondence,confirmation:acknowledged?'NATIVE_MIGRATION_RECEIPT_AND_READBACK':'CURRENT_NATIVE_MIGRATION_STATE_MATCH'});
  return result(acknowledged?'ACCEPTED':'UNKNOWN',acknowledged?'The original native migration was acknowledged; complete selected target correspondence remains pending.':'Native migration outcome remains unresolved without repeating its dispatch.',correspondence);
 }
+
+
+// Read-only consumers share the original exact native JSON evidence parser.
+export function readFlowableLosslessJSON(source){
+ if(typeof source!=='string'||Buffer.byteLength(source,'utf8')>1024*1024)
+  throw fail('FLOWABLE_INPUT_INVALID','Exact JSON evidence is limited to 1 MiB.');
+ JSON.parse(source); // Preserve the original JSON grammar boundary.
+ return losslessJson(source);
+}

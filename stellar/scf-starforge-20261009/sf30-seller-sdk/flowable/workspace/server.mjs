@@ -6,6 +6,7 @@ import { createHash, randomBytes, timingSafeEqual } from 'node:crypto';
 import { pipeline } from 'node:stream/promises';
 import {serveFlowableHistoryAnalysis} from './history-service.mjs';
 import {previewFlowableEventIntake,readFlowableEventExample,reviewFlowableEventIntake,describeFlowableEventPreparation} from './event-intake.mjs';
+import {previewFlowableDocumentIntake,describeFlowableDocumentPreparation,reviewFlowableDocumentIntake,readFlowableDocumentResult,readFlowableDocumentExample} from './document-intake.mjs';
 import { openFlowableWorkspace } from './model.mjs';
 import { FLOWABLE_WORKSPACE_ACTIONS, FLOWABLE_MAX_JSON_BYTES, validateFlowableAction } from './actions.mjs';
 import { need } from '../../../distribution/runtime-workspace/storage.mjs';
@@ -63,7 +64,7 @@ export async function startFlowableWorkspaceServer({
   const declared=JSON.parse(await readFile(new URL('./browser-assets.json',import.meta.url),'utf8'));
   need(declared.schema==='stellar-forge.browser-assets.v1' && declared.root==='./' &&
     Array.isArray(declared.routes),'FLOWABLE_BROWSER_ASSETS_INVALID');
-  const allowed=new Map([["/","index.html"],["/browser.mjs","browser.mjs"],["/style.css","style.css"],["/actions.mjs","actions.mjs"],["/programme-browser.mjs","programme-browser.mjs"],["/programme-authoring.mjs","programme-authoring.mjs"],["/programme-authoring-store.mjs","programme-authoring-store.mjs"],["/programme-authoring-browser.mjs","programme-authoring-browser.mjs"],["/process-programme.mjs","process-programme.mjs"],["/case-programme.mjs","case-programme.mjs"],["/programme-core.mjs","programme-core.mjs"],["/programme-process.source-draft.json","examples/process.source-draft.json"],["/programme-case.source-draft.json","examples/case.source-draft.json"],["/decision-programme.mjs","decision-programme.mjs"],["/programme-decision.source-draft.json","examples/decision.source-draft.json"],["/event-intake-browser.mjs","event-intake-browser.mjs"],["/history-browser.mjs","history-browser.mjs"]]);
+  const allowed=new Map([["/","index.html"],["/browser.mjs","browser.mjs"],["/style.css","style.css"],["/actions.mjs","actions.mjs"],["/programme-browser.mjs","programme-browser.mjs"],["/programme-authoring.mjs","programme-authoring.mjs"],["/programme-authoring-store.mjs","programme-authoring-store.mjs"],["/programme-authoring-browser.mjs","programme-authoring-browser.mjs"],["/process-programme.mjs","process-programme.mjs"],["/case-programme.mjs","case-programme.mjs"],["/programme-core.mjs","programme-core.mjs"],["/programme-process.source-draft.json","examples/process.source-draft.json"],["/programme-case.source-draft.json","examples/case.source-draft.json"],["/decision-programme.mjs","decision-programme.mjs"],["/programme-decision.source-draft.json","examples/decision.source-draft.json"],["/document-intake-browser.mjs","document-intake-browser.mjs"],["/event-intake-browser.mjs","event-intake-browser.mjs"],["/history-browser.mjs","history-browser.mjs"]]);
   const assets=new Map();
   for(const [route,[filename,type]] of declared.routes) {
     need(allowed.get(route)===filename && !assets.has(route),'FLOWABLE_BROWSER_ASSETS_INVALID');
@@ -143,7 +144,7 @@ export async function startFlowableWorkspaceServer({
             result=await model.stageDelivery(req,{requestId:uploadRequestId,filename});
           } finally {abort.signal.removeEventListener('abort',onAbort);}
         } else {
-          need(['/api/action','/api/event','/api/history-analysis'].includes(url.pathname),'FLOWABLE_ROUTE_NOT_FOUND',undefined,404);
+          need(['/api/action','/api/event','/api/document','/api/history-analysis'].includes(url.pathname),'FLOWABLE_ROUTE_NOT_FOUND',undefined,404);
           need(/^application\/json(?:\s*;\s*charset=utf-8)?$/i.test(req.headers['content-type']??''),
             'FLOWABLE_JSON_REQUIRED',undefined,415);
           const input=await jsonBody(req);
@@ -151,6 +152,10 @@ export async function startFlowableWorkspaceServer({
             'FLOWABLE_ACTION_INPUT_INVALID');
           if(url.pathname==='/api/history-analysis'){
             result=await serveFlowableHistoryAnalysis({workspace:model,method:input.method,input:input.args});
+          }else if(url.pathname==='/api/document'){
+            const functions={preview:previewFlowableDocumentIntake,review:reviewFlowableDocumentIntake,preparation:describeFlowableDocumentPreparation,result:readFlowableDocumentResult};
+            if(input.method==='example')result=await readFlowableDocumentExample();
+            else{need(Object.hasOwn(functions,input.method),'FLOWABLE_DOCUMENT_METHOD_REQUIRED');result=await functions[input.method]({workspace:model,input:input.args});}
           }else if(url.pathname==='/api/event'){
             const functions={preview:previewFlowableEventIntake,review:reviewFlowableEventIntake,preparation:describeFlowableEventPreparation};
             if(input.method==='example')result=await readFlowableEventExample(input.args?.name);
