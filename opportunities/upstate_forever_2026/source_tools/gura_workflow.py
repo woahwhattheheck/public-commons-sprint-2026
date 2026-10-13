@@ -12,6 +12,7 @@ from datetime import datetime, timezone
 import hashlib
 import importlib
 import json
+import math
 import os
 from pathlib import Path
 import socket
@@ -195,14 +196,42 @@ def operation_lock(source_directory):
             fcntl.flock(handle.fileno(), fcntl.LOCK_UN)
 
 
-def check_receiving(path, workspace):
+def _native_selection(args, grid=None):
+    """Keep native cell size and upstream context as independent selections."""
+    requested = {
+        "resolution_m": getattr(args, "expected_resolution_m", None),
+        "upstream_buffer_m": getattr(args, "upstream_buffer_m", None),
+    }
+    for key, value in requested.items():
+        if value is not None and (not math.isfinite(float(value)) or float(value) <= 0):
+            raise ValueError("Select a positive finite " + key)
+    if grid is None:
+        return (requested["resolution_m"],
+                requested["upstream_buffer_m"] if requested["upstream_buffer_m"] is not None else 300.0)
+    retained = {
+        "resolution_m": float(grid["grid"]["resolution_m"]),
+        "upstream_buffer_m": float(grid["spec"]["upstream_buffer_m"]),
+    }
+    for key, value in retained.items():
+        if not math.isfinite(value) or value <= 0:
+            raise ValueError("The retained Gura grid has an invalid " + key)
+        selected = requested[key]
+        if selected is not None and not math.isclose(float(selected), value, rel_tol=1e-9, abs_tol=1e-8):
+            raise ValueError("Continue the retained Gura " + key + "=" + format(value, "g")
+                             + "; use a separate Workspace and source directory for another selection")
+    return retained["resolution_m"], retained["upstream_buffer_m"]
+
+
+def check_receiving(path, workspace, args=None):
     from source_tools.gura_comparison import _context
     original_path, receipt, ws, collection, grid, profile, baseline = _context(path)
     if ws.root.resolve() != workspace.resolve():
         raise ValueError("Select the original Workspace from receiving.json: " + str(ws.root))
-    for key in ("resolution_m", "upstream_buffer_m"):
-        if float(receipt.get("native_grid", {}).get(key, -1)) != 300.0:
-            raise ValueError("Continue the original GURA-NATIVE-01 300 m cell / 300 m context selection")
+    resolution_m, upstream_buffer_m = _native_selection(args, grid)
+    for key, selected in (("resolution_m", resolution_m), ("upstream_buffer_m", upstream_buffer_m)):
+        if not math.isclose(float(receipt.get("native_grid", {}).get(key, -1)), selected,
+                            rel_tol=1e-9, abs_tol=1e-8):
+            raise ValueError("The Gura receiving record differs from its retained grid " + key)
     for model in ("ndr", "sdr"):
         role = model + "_archive"
         archived = receipt.get("archives", {}).get(model, {})
@@ -249,6 +278,7 @@ def restore_workflow_paths(args):
     for name in ("source_collection_id", "grid_id", "profile_id", "scenario_id", "programme_id"):
         if receipt[name] != metadata[name]:
             raise ValueError("The copied Gura workflow changed its original " + name)
+    _native_selection(args, ws.get_grid(receipt["grid_id"]))
     stored_conversions = metadata["conversions"]
     if args.convert is None and stored_conversions is not None:
         args.convert = [str(left) + ":" + str(right) for left, right in stored_conversions]
@@ -265,7 +295,7 @@ def restore_workflow_paths(args):
         present = read_json(current_receiving)
         if (Path(present["workspace"]).resolve() == args.workspace
                 and Path(present["selection_path"]).is_file()):
-            check_receiving(current_receiving, args.workspace)
+            check_receiving(current_receiving, args.workspace, args)
             # The capsule was verified above. A previous interrupted restore
             # may already have rebound this receipt before saving progress.
             return True
@@ -275,7 +305,7 @@ def restore_workflow_paths(args):
     receipt.update(workspace=str(args.workspace), source_directory=str(args.source_directory),
                    selection_path=str(relocated_selection))
     atomic_json(current_receiving, receipt)
-    check_receiving(current_receiving, args.workspace)
+    check_receiving(current_receiving, args.workspace, args)
     event("copied_workflow_reopened", workspace_id=ws.project["id"],
           receiving=str(current_receiving), original_programme_id=receipt["programme_id"])
     return True
@@ -320,13 +350,18 @@ def prepare(args, identity):
     restore_workflow_paths(args)
     receiving_path = args.source_directory / "receiving.json"
     if receiving_path.exists():
-        receipt = check_receiving(receiving_path, args.workspace)
+        receipt = check_receiving(receiving_path, args.workspace, args)
         event("original_workspace_reopened", receiving=str(receiving_path),
               programme_id=receipt["programme_id"], grid_id=receipt["grid_id"])
         return receipt
     inputs = original_inputs(args)
     selection_path = args.source_directory / "programme-selection.json"
     prior_selection = read_json(selection_path) if selection_path.exists() else None
+    retained_grid = None
+    if prior_selection is not None:
+        from model.workspace import Workspace
+        retained_grid = Workspace(args.workspace).get_grid(prior_selection["grid_id"])
+    resolution_m, upstream_buffer_m = _native_selection(args, retained_grid)
     source_reference = (prior_selection.get("source_reference") if prior_selection else None)
     source_reference = source_reference or getattr(args, "_retained_source_reference", None)
     if args.source_reference and source_reference and args.source_reference != source_reference:
@@ -341,16 +376,17 @@ def prepare(args, identity):
         ndr_table_source_uri=inputs["ndr_table"]["uri"], sdr_table_source_uri=inputs["sdr_table"]["uri"],
         source_edition=inputs["ndr_archive"]["edition"],
         source_reference=source_reference,
-        expected_resolution_m=300.0, upstream_buffer_m=300.0,
+        expected_resolution_m=resolution_m, upstream_buffer_m=upstream_buffer_m,
     )
     event("preparing_original_inputs", workspace=str(args.workspace),
           source_directory=str(args.source_directory), inputs=inputs,
-          resolution_m=300, pixel_area_ha=9, upstream_buffer_m=300)
+          expected_resolution_m=resolution_m, upstream_buffer_m=upstream_buffer_m)
     receipt = receive_gura.receive(selected)
-    check_receiving(receiving_path, args.workspace)
+    check_receiving(receiving_path, args.workspace, args)
     event("original_inputs_prepared", receiving=str(receiving_path),
           programme_id=receipt["programme_id"], grid_id=receipt["grid_id"],
-          profile_id=receipt["profile_id"], scenario_id=receipt["scenario_id"])
+          profile_id=receipt["profile_id"], scenario_id=receipt["scenario_id"],
+          native_grid=receipt["native_grid"])
     return receipt
 
 
@@ -603,6 +639,10 @@ def main(argv=None):
     parser.add_argument("--tables", type=Path,
                         default=APPLICATION_ROOT / "source" / "gura-original-tables-3.20")
     parser.add_argument("--source-reference")
+    parser.add_argument("--expected-resolution-m", type=float,
+                        help="Optional expected source cell size; resume retains the original grid")
+    parser.add_argument("--upstream-buffer-m", type=float,
+                        help="Independent context distance; new intake defaults to 300 m, resume retains the original")
     parser.add_argument("--convert", action="append",
                         help="Optional original FROM:TO class pair; repeat for a selected cohort")
     parser.add_argument("--zone-id-field",
@@ -625,6 +665,10 @@ def main(argv=None):
     args.operator_state = (args.operator_state or args.workspace.with_name(args.workspace.name + "-operator")).resolve()
     args.backup = (args.backup or args.workspace.with_name(
         args.workspace.name + ("-physical-complete.zip" if args.physical_only else "-complete.zip"))).resolve()
+    for option in ("expected_resolution_m", "upstream_buffer_m"):
+        value = getattr(args, option)
+        if value is not None and (not math.isfinite(value) or value <= 0):
+            parser.error("--" + option.replace("_", "-") + " must be positive and finite")
     if not 0 <= args.port <= 65535:
         parser.error("--port must be between 0 and 65535")
     if args.backup.is_relative_to(args.workspace):
@@ -634,7 +678,7 @@ def main(argv=None):
             return status(args)
         if args.command == "serve":
             restore_workflow_paths(args)
-            check_receiving(args.source_directory / "receiving.json", args.workspace)
+            check_receiving(args.source_directory / "receiving.json", args.workspace, args)
             return serve(args)
         return workflow(args)
     except (ValueError, OSError, KeyError, TypeError, ImportError, RuntimeError) as error:
