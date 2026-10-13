@@ -20,6 +20,9 @@ import tempfile
 
 FILES = (
     "model/scientific_briefing.py",
+    "model/scientific_report_editions.py",
+    "model/scientific_report_review.py",
+    "operator/web/reviews.mjs",
     "source_tools/prepare_scientific_briefing.py",
     "operator/source_report_editions.py",
     "operator/source_reports.py",
@@ -94,6 +97,7 @@ FILES = (
 OFFLINE_FILE = "operator/web/implementation_workbench.html"
 OFFLINE_BUILDER = "build_implementation_offline.py"
 OPTIONAL_FILES = (
+    "model/SCIENTIFIC_REPORT_REVIEW.md",
     "model/IMPLEMENTATION_QC.md",
     "observations/eighteenmile_2023/wqp_20261013/field-intake/README.md",
     "observations/eighteenmile_2023/wqp_20261013/field-intake/LABORATORY_CYCLE.md",
@@ -190,6 +194,23 @@ def patch_error(source):
         source = source.replace(anchor, anchor + ERROR_IMPORT, 1)
     ast.parse(source, filename="operator/server.py")
     return source
+
+
+def patch_scientific_review_host(source):
+    """Compose the saved-report handoff without replacing the original app."""
+    if "const sourceReports=attachSourceReports({" not in source:
+        return source
+    if "prepareCustomerReview:value=>customerReviews.prepareScientificReportReview(value)" in source:
+        return source
+    anchor = " showTask,refresh,openBackup:()=>backupForm(),\n openStudy:selection=>"
+    replacement = (
+        " showTask,refresh,openBackup:()=>backupForm(),\n"
+        " prepareCustomerReview:value=>customerReviews.prepareScientificReportReview(value),\n"
+        " openStudy:selection=>"
+    )
+    if source.count(anchor) != 1 or "const customerReviews=attachCustomerReviews(" not in source:
+        raise ValueError("Compose the saved scientific report review hook with this original application")
+    return source.replace(anchor, replacement, 1)
 
 
 def host_installed(application, server, app):
@@ -339,6 +360,9 @@ def run(application, source_root, *, dry_run=False, expected_preimages=None):
             app_text = host.patch_app(app_text)
             original["operator/web/app.mjs"] = app_before
             pending["operator/web/app.mjs"] = app_text.encode("utf-8")
+        app_text = patch_scientific_review_host(app_text)
+        original["operator/web/app.mjs"] = app_before
+        pending["operator/web/app.mjs"] = app_text.encode("utf-8")
         server_text = patch_error(server_text)
         original["operator/server.py"] = server_before
         pending["operator/server.py"] = server_text.encode("utf-8")
