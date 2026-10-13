@@ -5,11 +5,23 @@ The source assembler combines a retained application and selected component pack
 ## Selected complete edition and original source closure
 
 The maintained assembler uses the complete `integration/application_components.json`
-inside the selected application. If an older source bank has no catalogue, the
-current receiver supplies its maintained catalogue and closure helper. Keep both
-members when transporting the application. The commands in this guide use that
-explicit catalogue automatically; the catalogue's `required_components` and
-transitive `requires` determine the requested edition.
+supplied by the selected application or an explicit guarded overlay. Its
+`required_components` and transitive `requires` determine that edition. The
+current full application's declared component selection stays strict.
+
+An older complete source bank can predate component catalogues. The receiver keeps
+that bank's original edition, source reference and selected overlay payloads, then
+retains a catalogue whose single `retained-source` component contains those actual
+source members. The same Python import, operator declaration and web-resource
+closure inspection runs against that original selection. Later components in the
+receiving tool's own catalogue are not silently added to the requested edition.
+Original external scientific inputs retain their separate source declarations.
+
+The receiver includes its assembly module and `source_tools/application_components.py`
+helper when absent. Transport both source modules beside the selected catalogue;
+the helper uses only the Python standard library. An explicitly supplied catalogue
+is never replaced by an inferred selection, and the generated original selection
+travels with subsequent snapshots and receiving.
 
 A component may declare `source_manifests` alongside its source `paths`. Each
 selected manifest uses the native `upstate.sources/v1` format. Closure follows
