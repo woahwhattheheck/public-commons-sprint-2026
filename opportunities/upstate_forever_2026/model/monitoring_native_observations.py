@@ -199,8 +199,6 @@ def _row(source, row, options):
         "lower_unbounded": False, "upper_unbounded": False,
         "status": "uninterpreted",
         "sampling_cohort_schema": "upstate.native-observation-sampling-cohort/v1",
-        "time_support": row.get("time_support"), "quantity_basis": row.get("quantity_basis"),
-        "measurement_support": row.get("measurement_support"),
     }
     # Preserve field presence, nulls and blank original values in cohort keys.
     names = {
@@ -217,6 +215,9 @@ def _row(source, row, options):
             continue
         for key in names.get(field, (field,)):
             result[key] = deepcopy(value)
+    for key in ("time_support", "quantity_basis", "measurement_support"):
+        if key in row:
+            result[key] = deepcopy(row[key])
     if "species" in row:
         result["speciation"] = deepcopy(row["species"])
     if "method" in row:
