@@ -24,12 +24,13 @@ from model.common import (
     read_json, verify_file,
 )
 
-VERSION = 1
+VERSION = 3
 SCHEMA = "upstate.parcel-criteria-selection/v1"
 PROFILE_FILE = Path(__file__).resolve().parents[1] / "source" / "parcel-criteria-sources-20261013.json"
 ACRE_M2 = 4046.8564224
 DEFAULTS = {
     "adjacency_m": 0.0, "waterway_buffer_m": 30.48,
+    "spatial_criteria_basis": "whole_original_parcel",
     "land_cover_basis": "whole_parcel", "floodplain_development_basis": "whole_parcel",
     "stream_feature_types": [460], "waterway_feature_types": [460, 336],
     "agricultural_codes": [81, 82], "forest_codes": [41, 42, 43],
@@ -391,6 +392,34 @@ def _area(layer, zone, evidence, predicate=None):
     return measured, measured if complete else None, rows, complete
 
 
+def _area_interval(zone, observed, *, coverage=None, complete=False,
+                   area_basis="reporting_parcel", source_roles=(), reference):
+    """Bound an in-parcel footprint with original positive and certainty geometry."""
+    positive = observed.intersection(zone)
+    lower_m2 = min(zone.area, max(0.0, positive.area))
+    if complete:
+        unresolved_m2 = 0.0
+    else:
+        known = _union([positive, coverage.intersection(zone) if coverage is not None else None])
+        unresolved_m2 = min(zone.area - lower_m2, max(0.0, zone.difference(known).area))
+    upper_m2 = max(lower_m2, min(zone.area, lower_m2 + unresolved_m2))
+    return {
+        "lower": lower_m2 / ACRE_M2, "upper": upper_m2 / ACRE_M2,
+        "unit": "acres", "closed": True,
+        "method": ("original_positive_footprint_plus_unresolved_coverage" if source_roles
+                   else "parcel_geometry_area_limit"),
+        "reference": reference, "area_basis": area_basis,
+        "analysis_area_acres": zone.area / ACRE_M2,
+        "observed_positive_acres": lower_m2 / ACRE_M2 if source_roles else None,
+        "structural_only": not bool(source_roles),
+        "unresolved_acres": (upper_m2 - lower_m2) / ACRE_M2,
+        "confirmed_absence_acres": max(0.0, zone.area - upper_m2) / ACRE_M2,
+        "source_roles": sorted(set(source_roles)),
+        "coverage_complete": complete, "exact": lower_m2 == upper_m2,
+        "meaning": "Closed geometric acreage limits from the retained parcel, positively selected footprint, and actual certainty coverage.",
+    }
+
+
 def _class_values(layer, properties):
     field = layer.choice.get("fields", {}).get("classification", "H2OCLASS")
     original = _field(properties, field)
@@ -499,16 +528,23 @@ def _drinking_water_geometry(layers, zone, settings, evidence):
 
 
 def _derive_parcel(unit, layers, rasters, settings, metric_types):
-    full, zone = unit["geometry"], unit["clipped"]
+    full, reporting = unit["geometry"], unit["clipped"]
+    basis = settings["spatial_criteria_basis"]
+    zone = full if basis == "whole_original_parcel" else reporting
     values = {key: None for key in metric_types}
-    evidence = {}
+    evidence, metric_bounds = {}, {}
     raw = {
         "whole_parcel_acres": full.area / ACRE_M2,
-        "reporting_parcel_acres": zone.area / ACRE_M2,
-        "reporting_share": zone.area / full.area,
+        "reporting_parcel_acres": reporting.area / ACRE_M2,
+        "reporting_share": reporting.area / full.area,
+        "spatial_criteria_acres": zone.area / ACRE_M2,
+        "spatial_criteria_basis": basis,
         "stream_orders": None, "stream_length_m": None,
     }
     values["parcel_acres"] = raw["whole_parcel_acres"]
+    metric_bounds["parcel_acres"] = _area_interval(
+        full, full, complete=True, area_basis="whole_original_parcel", source_roles=["parcels"],
+        reference="Original full parcel geometry retained by this study; Lake Keowee Appendix D, printed page 142.")
     adjacency = settings["adjacency_m"]
 
     protected = layers.get("protected_lands")
@@ -532,7 +568,8 @@ def _derive_parcel(unit, layers, rasters, settings, metric_types):
         raw["stream_length_m_observed"] = measured
         raw["stream_length_m"] = measured if complete else None
         evidence["streams"]["length_definition"] = (
-            "Union of selected original stream/river lines, clipped to the reporting parcel")
+            "Union of selected original stream/river lines intersected with " + basis)
+        evidence["streams"]["area_basis"] = basis
     orders = layers.get("stream_orders")
     if orders:
         _, rows, complete = _capture(orders, zone, evidence)
@@ -573,28 +610,41 @@ def _derive_parcel(unit, layers, rasters, settings, metric_types):
     values["stream_fw_with_listed_impairment"] = _all([fw, impairment_flag])
     values["stream_fw_without_listed_impairment"] = _all([fw, _not(impairment_flag)])
 
-    # The published footprint is the original variable riparian model unioned
-    # with a 100-foot surface-water buffer, or an already retained complete union.
+    # Every observed component is a positive subset of the published union.
+    # Missing components enlarge the acreage interval; they never remove a
+    # positively mapped surface-water buffer or variable riparian footprint.
     sensitive = layers.get("sensitive_riparian")
-    sensitive_geometry, sensitive_complete = _union([]), False
+    sensitive_geometry, sensitive_complete, sensitive_coverage = _union([]), False, None
+    sensitive_roles = []
     if sensitive:
         geometry, _, sensitive_complete = _capture(sensitive, zone, evidence)
         sensitive_geometry = geometry.intersection(zone)
+        sensitive_coverage = sensitive.coverage
+        sensitive_roles.append("sensitive_riparian")
     else:
         lookup = zone.buffer(settings["waterway_buffer_m"])
         waterways, water_complete = _water_geometry(layers, lookup, settings, evidence)
         constant = waterways.buffer(settings["waterway_buffer_m"]).intersection(zone)
+        sensitive_geometry = constant
         raw["waterway_buffer_acres_observed"] = constant.area / ACRE_M2
+        sensitive_roles.extend(role for role in ("streams", "waterbodies") if layers.get(role))
         variable = layers.get("variable_riparian")
         if variable:
             geometry, _, variable_complete = _capture(variable, zone, evidence)
             sensitive_geometry = _union([constant, geometry.intersection(zone)])
             sensitive_complete = water_complete and variable_complete
-    raw["sensitive_riparian_acres_observed"] = sensitive_geometry.area / ACRE_M2
-    values["sensitive_riparian_acres"] = sensitive_geometry.area / ACRE_M2 if sensitive_complete else None
-    values["sensitive_riparian_present"] = (
-        _presence_geometry(sensitive_geometry, sensitive_complete)
-        if sensitive or layers.get("variable_riparian") else None)
+            sensitive_roles.append("variable_riparian")
+    raw["sensitive_riparian_acres_observed"] = (
+        sensitive_geometry.area / ACRE_M2 if sensitive_roles else None)
+    interval = _area_interval(
+        zone, sensitive_geometry, coverage=sensitive_coverage, complete=sensitive_complete,
+        source_roles=sensitive_roles, area_basis=basis,
+        reference="Lake Keowee Appendix D, printed page 139: original variable riparian footprint unioned with the selected surface-water buffer; observed components remain positive subsets of that union.")
+    metric_bounds["sensitive_riparian_acres"] = interval
+    values["sensitive_riparian_acres"] = (
+        interval["lower"] if interval["lower"] == interval["upper"] else None)
+    values["sensitive_riparian_present"] = _presence_geometry(
+        sensitive_geometry, sensitive_complete or interval["lower"] == interval["upper"])
 
     wetlands = layers.get("wetlands")
     if wetlands:
@@ -620,10 +670,20 @@ def _derive_parcel(unit, layers, rasters, settings, metric_types):
             "modifier_codes": sorted(SPECIAL_MODIFIERS)}
 
     hydric = layers.get("hydric_soils")
+    hydric_geometry, hydric_complete = _union([]), False
     if hydric:
-        observed, complete_area, _, _ = _area(hydric, zone, evidence)
-        raw["hydric_soil_acres_observed"] = observed / ACRE_M2
-        values["hydric_soil_acres"] = complete_area / ACRE_M2 if complete_area is not None else None
+        hydric_geometry, _, hydric_complete = _capture(hydric, zone, evidence)
+        raw["hydric_soil_acres_observed"] = hydric_geometry.intersection(zone).area / ACRE_M2
+    else:
+        raw["hydric_soil_acres_observed"] = None
+    interval = _area_interval(
+        zone, hydric_geometry, coverage=hydric.coverage if hydric else None,
+        complete=hydric_complete, source_roles=["hydric_soils"] if hydric else [],
+        area_basis=basis,
+        reference="Lake Keowee Appendix D, printed page 140: acres of the selected original hydric-soil footprint in the declared parcel scoring geometry. Mixed or unmapped soil areas remain inside the upper limit until the retained source resolves them.")
+    metric_bounds["hydric_soil_acres"] = interval
+    values["hydric_soil_acres"] = (
+        interval["lower"] if interval["lower"] == interval["upper"] else None)
 
     floodplain = layers.get("floodplains")
     flood_geometry, flood_complete = _union([]), False
@@ -640,7 +700,7 @@ def _derive_parcel(unit, layers, rasters, settings, metric_types):
 
     land_cover = rasters.get("land_cover")
     if land_cover:
-        cover_zone = full if settings["land_cover_basis"] == "whole_parcel" else zone
+        cover_zone = full if settings["land_cover_basis"] == "whole_parcel" else reporting
         classes = sorted(set(settings["agricultural_codes"] + settings["forest_codes"] +
                              settings["developed_codes"]))
         stat = land_cover.zonal(cover_zone, classes=classes,
@@ -727,18 +787,19 @@ def _derive_parcel(unit, layers, rasters, settings, metric_types):
                 "high" if value >= levels["high_min"] else "medium" if value >= levels["medium_min"] else "low")
         evidence["critical_watershed_area"] = {
             "source_id": critical.binding["id"], "parcel_mean": stat["mean"],
-            "classification": levels, "area_basis": "reporting_parcel",
+            "classification": levels, "area_basis": basis,
             "units": critical.binding["selection"].get("units"),
         }
     values.update(raw)
     return {
-        "id": unit["id"], "label": unit["label"], "metrics": values, "evidence": evidence,
+        "id": unit["id"], "label": unit["label"], "metrics": values, "metric_bounds": metric_bounds,
+        "evidence": evidence, "spatial_criteria_basis": basis,
         "geometry_corrections": unit["geometry_corrections"],
         "original_source_array_index": unit["source_array_index"],
     }
 
 
-def _complete_population(rows):
+def _complete_population(rows, settings):
     positive = [row["metrics"]["stream_length_m"] for row in rows
                 if row["metrics"]["stream_length_m"] is not None and row["metrics"]["stream_length_m"] > 0]
     incomplete = [row["id"] for row in rows if row["metrics"]["stream_length_m"] is None]
@@ -751,7 +812,8 @@ def _complete_population(rows):
             else False if length == 0 and not incomplete else None)
     return {
         "metric": "stream_length_m", "statistic": "arithmetic_mean",
-        "population": "All selected reporting parcels with a positive complete original stream length",
+        "population": "All selected parcels with a positive complete original stream length under the saved spatial_criteria_basis",
+        "spatial_criteria_basis": settings["spatial_criteria_basis"],
         "complete_parcels": len(rows) - len(incomplete),
         "positive_parcels": len(positive), "incomplete_parcel_count": len(incomplete),
         "threshold_m": mean if not incomplete else None,
@@ -786,6 +848,8 @@ def _settings(value):
         result[key] = sorted(set(result[key]))
     if result["headwater_orders"] != [1, 2]:
         raise ValueError("The canonical table uses orders [1, 2]; select the protection first-order variant through its raw stream_orders binding")
+    if result["spatial_criteria_basis"] not in ("whole_original_parcel", "reporting_parcel"):
+        raise ValueError("Source criterion geometry must be whole_original_parcel or reporting_parcel")
     if result["land_cover_basis"] not in ("whole_parcel", "reporting_parcel"):
         raise ValueError("Land-cover basis must be whole_parcel or reporting_parcel")
     if result["floodplain_development_basis"] not in ("whole_parcel", "floodplain_intersection"):
@@ -968,6 +1032,34 @@ def _metric_types():
     return result
 
 
+def _metric_geometry(settings, metric_types):
+    """Retain the actual geometry choice for every source-derived criterion."""
+    basis = settings["spatial_criteria_basis"]
+    result = {name: {"area_basis": basis} for name in metric_types}
+    for name in ("stream_orders", "stream_length_m", "spatial_criteria_acres"):
+        result[name] = {"area_basis": basis}
+    for name in ("parcel_acres", "already_protected", "adjacent_to_protected_land"):
+        if name in result:
+            result[name] = {"area_basis": "whole_original_parcel"}
+    for name in ("developed_land_present", "agricultural_cover_at_least_half",
+                 "agriculture_adjacent_to_water"):
+        if name in result:
+            result[name] = {
+                "area_basis": "whole_original_parcel" if settings["land_cover_basis"] == "whole_parcel" else "reporting_parcel"}
+    for name in ("floodplain_with_development", "floodplain_without_development"):
+        if name in result:
+            result[name] = {
+                "area_basis": basis,
+                "development_basis": settings["floodplain_development_basis"],
+                "meaning": "Floodplain presence uses the spatial criterion geometry; development uses the independently selected basis."}
+    for name in ("nitrogen_export_priority", "phosphorus_export_priority", "sediment_export_priority"):
+        if name in result:
+            result[name] = {
+                "area_basis": None,
+                "meaning": "The source-only builder leaves this model criterion unresolved. An explicit native export binding records its own reporting footprint and support."}
+    return result
+
+
 def _coverage(rows, metric_types, source_resolution):
     fields = {}
     for name, kind in metric_types.items():
@@ -980,6 +1072,16 @@ def _coverage(rows, metric_types, source_resolution):
             summary["levels"] = dict(Counter(known))
         elif known:
             summary.update(minimum=min(known), maximum=max(known))
+        intervals = [row.get("metric_bounds", {}).get(name) for row in rows]
+        present = [interval for interval in intervals if interval is not None]
+        if present:
+            summary.update(
+                intervals=len(present),
+                bounded_unknown=sum(value is None and interval is not None
+                                    for value, interval in zip(values, intervals)),
+                minimum_lower=min(interval["lower"] for interval in present),
+                maximum_upper=max(interval["upper"] for interval in present),
+                interval_unit=present[0]["unit"])
         fields[name] = summary
     return {"parcels": len(rows), "fields": fields,
             "source_roles": {name: value["state"] for name, value in source_resolution.items()}}
@@ -992,13 +1094,19 @@ def _csv(path, rows, fields):
         if isinstance(value, str) and value.lstrip().startswith(("=", "+", "-", "@")):
             return "'" + value
         return value
+    interval_fields = sorted({key for row in rows for key in row.get("metric_bounds", {})})
+    bound_columns = [name + suffix for name in interval_fields for suffix in ("_lower", "_upper")]
     stream = io.StringIO(newline="")
-    writer = csv.DictWriter(stream, fieldnames=["id", "label", *fields])
+    writer = csv.DictWriter(stream, fieldnames=["id", "label", *fields, *bound_columns, "metric_bounds"])
     writer.writeheader()
     for row in rows:
+        intervals = row.get("metric_bounds", {})
         writer.writerow({key: printable(value) for key, value in {
             "id": row["id"], "label": row["label"],
-            **{key: row["metrics"].get(key) for key in fields}}.items()})
+            **{key: row["metrics"].get(key) for key in fields},
+            **{name + "_" + end: intervals.get(name, {}).get(end)
+               for name in interval_fields for end in ("lower", "upper")},
+            "metric_bounds": intervals}.items()})
     atomic_bytes(path, stream.getvalue().encode("utf-8"))
 
 
@@ -1008,11 +1116,15 @@ def _geopackage(path, crs, units, rows, metric_types):
     temporary = path.with_name(path.stem + ".partial.gpkg")
     if temporary.exists():
         temporary.unlink()
+    interval_fields = sorted({key for row in rows for key in row.get("metric_bounds", {})})
     properties = {
         "parcel_id": "str", "label": "str", "whole_acres": "float",
-        "reporting_acres": "float", "stream_m": "float", "stream_orders": "str",
+        "reporting_acres": "float", "criteria_acres": "float", "criteria_basis": "str",
+        "stream_m": "float", "stream_orders": "str",
         **{key: "int" if kind == "boolean" else "float" if kind == "number" else "str"
            for key, kind in metric_types.items()},
+        **{name + "_" + end: "float" for name in interval_fields for end in ("lower", "upper")},
+        "metric_bounds": "str",
     }
     by_id = {row["id"]: row for row in rows}
     for name, geometry_key in (("original_parcels", "geometry"), ("reporting_parcels", "clipped")):
@@ -1025,10 +1137,16 @@ def _geopackage(path, crs, units, rows, metric_types):
                     "parcel_id": row["id"], "label": row["label"],
                     "whole_acres": metrics["whole_parcel_acres"],
                     "reporting_acres": metrics["reporting_parcel_acres"],
+                    "criteria_acres": metrics["spatial_criteria_acres"],
+                    "criteria_basis": metrics["spatial_criteria_basis"],
                     "stream_m": metrics["stream_length_m"],
                     "stream_orders": json.dumps(metrics["stream_orders"]),
                     **{key: int(metrics[key]) if kind == "boolean" and metrics[key] is not None
                        else metrics[key] for key, kind in metric_types.items()},
+                    **{name + "_" + end: row.get("metric_bounds", {}).get(name, {}).get(end)
+                       for name in interval_fields for end in ("lower", "upper")},
+                    "metric_bounds": json.dumps(row.get("metric_bounds", {}), ensure_ascii=False,
+                                                sort_keys=True, allow_nan=False),
                 }
                 destination.write({"geometry": mapping(conservation._multipolygon(unit[geometry_key])),
                                    "properties": record})
@@ -1043,6 +1161,9 @@ def _source_manifest(state, directory, table, descriptors):
         "geometry_context_sha256": state["selection"]["geometry_context_sha256"],
         "builder_id": state["id"], "parcel_count": len(table["rows"]),
         "metric_coverage": table["coverage"], "field_names": table["fields"],
+        "numeric_intervals": table["numeric_intervals"],
+        "spatial_criteria_basis": table["spatial_criteria_basis"],
+        "metric_geometry": table["metric_geometry"],
         "definition_sha256": state["selection"]["method_definition_sha256"],
         "role": "PUBLISHED_PARCEL_CRITERIA",
     }
@@ -1055,6 +1176,7 @@ def _source_manifest(state, directory, table, descriptors):
             "Original source-derived parcel criteria; JSON preserves true, false, null and exact original parcel IDs.",
             "CSV is an exported viewing table; its formula-like text is escaped for spreadsheet display.",
             "GeoPackage contains both original and reporting parcel geometries with source-derived criteria.",
+            "Numeric acreage intervals retain lower/upper limits and original source/coverage meaning; canonical acreage stays null when unresolved.",
         ],
         "entries": [
             {"id": identity, "kind": "table", "role": "PUBLISHED_PARCEL_CRITERIA",
@@ -1092,7 +1214,8 @@ def overview(workspace):
         "schema": "upstate.parcel-criteria-overview/v1",
         "operations": [
             {key: value.get(key) for key in ("id", "title", "state", "study_id", "progress",
-                                            "created_at", "updated_at", "source_collection_id", "source_id")}
+                                            "created_at", "updated_at", "source_collection_id", "source_id",
+                                            "spatial_criteria_basis")}
             for path in sorted((workspace.root / "parcel-criteria").glob("*/state.json"))
             for value in [read_json(path)]
         ],
@@ -1150,6 +1273,7 @@ def prepare(workspace, value):
                     "schema": "upstate.parcel-criteria-operation/v1", "id": key,
                     "title": request.get("title") or study["title"] + " - original parcel criteria",
                     "study_id": study["id"], "state": "prepared", "created_at": now(),
+                    "spatial_criteria_basis": settings["spatial_criteria_basis"],
                     "updated_at": now(), "selection": selection, "request": request,
                     "progress": {"stage": "prepared", "completed": 0, "total": None},
                 }
@@ -1221,7 +1345,7 @@ def prepare(workspace, value):
                     state["updated_at"] = now()
                     atomic_json(directory / "state.json", state)
                 raster_metadata = {role: raster.metadata for role, raster in rasters.items()}
-            population = _complete_population(rows)
+            population = _complete_population(rows, settings)
             coverage = _coverage(rows, metric_types, selection["source_resolution"])
             fields = sorted({name for row in rows for name in row["metrics"]})
             table = {
@@ -1232,11 +1356,21 @@ def prepare(workspace, value):
                 "geometry_context": selection["geometry_context"],
                 "geometry_context_sha256": selection["geometry_context_sha256"],
                 "created_at": state["created_at"], "settings": settings,
+                "spatial_criteria_basis": settings["spatial_criteria_basis"],
+                "metric_geometry": _metric_geometry(settings, metric_types),
                 "source_bindings": bindings, "source_resolution": selection["source_resolution"],
                 "original_rasters": raster_metadata,
                 "method_definition_sha256": selection["method_definition_sha256"],
                 "source_profile_sha256": profile_sha, "fields": fields,
                 "metric_types": metric_types, "population_statistics": {"stream_length": population},
+                "numeric_intervals": {
+                    "fields": sorted({name for row in rows for name in row.get("metric_bounds", {})}),
+                    "unit": "acres", "endpoints": "closed",
+                    "lower": "Area of the positively retained footprint inside the bound original parcel geometry.",
+                    "upper": "Lower area plus the part of the parcel outside both positive geometry and actual certainty coverage.",
+                    "exact_value": "Canonical metric equals the area only when determined; an unresolved exact area is null.",
+                    "scoring": "Evaluate published threshold steps across the entire interval; retain exact points when all attainable values receive the same points.",
+                },
                 "coverage": coverage, "rows": rows,
             }
             atomic_json(directory / "criteria.json", table)
@@ -1257,6 +1391,9 @@ def prepare(workspace, value):
                 "source_collection_id": edition["id"], "source_id": source_id,
                 "table": {"format": "json", "id_column": "id", **descriptors["table"]},
                 "fields": fields, "coverage": coverage, "population_statistics": table["population_statistics"],
+                "numeric_intervals": table["numeric_intervals"],
+                "spatial_criteria_basis": table["spatial_criteria_basis"],
+                "metric_geometry": table["metric_geometry"],
                 "selected_sources": bindings, "source_resolution": selection["source_resolution"],
                 "geometry_context": selection["geometry_context"],
                 "geometry_context_sha256": selection["geometry_context_sha256"],
@@ -1271,7 +1408,7 @@ def prepare(workspace, value):
                 },
                 "available_bindings": {
                     "headwater_stream": {"kind": "stream_order", "input": "table", "field": "stream_orders",
-                                         "reference": "Original NHDPlus HR streamorde values intersecting the reporting parcel."}
+                                         "reference": "Original NHDPlus HR streamorde values intersecting " + settings["spatial_criteria_basis"] + "."}
                 },
             }
             atomic_json(directory / "result.json", result)

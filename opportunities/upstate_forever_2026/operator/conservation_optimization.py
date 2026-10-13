@@ -206,6 +206,21 @@ class ConservationOptimization:
         payload = self._mapping(task.get("payload"))
         if action == "conservation.optimization.export":
             return self._call(optimization.export, ws, self._id(payload, "plan_id"))
+        if action == "conservation.optimization.save" and payload.get("preview_task_id"):
+            if set(payload) != {"preview_task_id"}:
+                raise self.Fault("CONSERVATION_OPTIMIZATION_PREVIEW",
+                                 "Save the original preview or submit a new decision selection.")
+            original = self.operator.task_view(self._id(payload, "preview_task_id"))
+            if (original.get("workspace") != task["workspace"]
+                    or original.get("action") != "conservation.optimization.preview"
+                    or original.get("state") != "complete"
+                    or not isinstance(original.get("result"), dict)):
+                raise self.Fault("CONSERVATION_OPTIMIZATION_PREVIEW",
+                                 "Choose a completed original portfolio preview in this workspace.")
+            analysis = original["result"]
+            request = self._mapping(analysis.get("request"), "Original preview selection")
+            result = self._call(optimization.save, ws, request, retained_analysis=analysis)
+            return {**result, "preview_task_id": original["id"]}
         selection = self._mapping(payload.get("spec", payload), "Optimization selection")
         function = (optimization.preview if action == "conservation.optimization.preview"
                     else optimization.save)

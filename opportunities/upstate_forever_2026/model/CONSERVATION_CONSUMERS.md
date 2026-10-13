@@ -277,3 +277,13 @@ overlap is a separate measured relation. The bridge retains those original
 boundary descriptors and actual area fractions, while the original native
 scenario kernel applies the saved land-cover replacement at the selected
 grid's actual resolution.
+
+## Source-derived acreage intervals and presentation continuity
+
+The original selected candidate remains the consumer's authoritative scientific record. A point candidate's `point_score.metric_bounds` retains closed acreage endpoints, observed positive area, unresolved area, certainty coverage, actual geometry basis and source references. `point_score.metric_values` keeps an unresolved exact acreage null. Individual `score_components` retain their known/possible contribution and whether the whole interval determined exact points. A complete point score can therefore coexist with a bounded acreage measurement.
+
+A true practice prerequisite and equal total contribution bounds determine an applicable exact practice score. Missing and false prerequisites retain their own states. Downstream implementation or monitoring records can display those states directly while preserving the original `unit_key`, native ID and source selection. Published points remain parcel-priority quantities; physical annual mass and selected-union quantities retain their original separate fields.
+
+Builder-produced criterion metadata records `spatial_criteria_basis` and per-field `metric_geometry`. New source derivations default to the whole original parcel; reporting-boundary criteria are an explicit retained adaptation. Parcel size, protected-land, land-cover, floodplain-development and native export bases can differ deliberately and are recorded separately. The source table binds the exact original parcel/reporting context, so a matching ID string alone is insufficient to substitute another geometry edition. The full metadata and original criterion source remain in the retained study and source assets.
+
+`conservation.export_packet` now binds an additional presentation edition to the same verified candidate and geometry files and saved selected IDs. It retains prior study/plan file descriptors and creates current HTML, CSV/GIS and criterion/source supplements in its own export directory. Consumers reopening an older saved plan keep the original source and decision identities while receiving the current readable presentation. The full working archive continues through the ordinary Workspace backup/restore path. See [CONSERVATION_REPORTS.md](CONSERVATION_REPORTS.md), [PARCEL_CRITERIA_GEOMETRY.md](../source_tools/PARCEL_CRITERIA_GEOMETRY.md) and [PARCEL_CRITERIA_INTERVALS.md](../source_tools/PARCEL_CRITERIA_INTERVALS.md).

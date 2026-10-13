@@ -16,162 +16,299 @@ import re
 import tempfile
 
 OWNED = frozenset({
-    "model/conservation_catalog.py",
-    "operator/conservation_catalog.py",
-    "operator/extensions/conservation-catalog.json",
-    "operator/CONSERVATION_CATALOG.md",
     "model/CONSERVATION.md",
     "model/CONSERVATION_CONSUMERS.md",
     "model/CONSERVATION_EXPERIMENTS.md",
     "model/CONSERVATION_OPTIMIZATION.md",
+    "model/CONSERVATION_REPORTS.md",
     "model/KEOWEE_PRIORITIES.md",
+    "model/PORTFOLIOS.md",
     "model/conservation.py",
     "model/conservation_bindings.py",
+    "model/conservation_catalog.py",
     "model/conservation_cli.py",
     "model/conservation_optimization.py",
+    "model/conservation_reporting.py",
     "model/conservation_scenarios.py",
     "model/keowee_priority.py",
+    "model/portfolios.py",
     "operator/CONSERVATION.md",
+    "operator/CONSERVATION_CATALOG.md",
+    "operator/CONSERVATION_EXPERIMENT_BROWSER.md",
+    "operator/CONSERVATION_HOST.md",
     "operator/CONSERVATION_OPTIMIZATION.md",
     "operator/conservation.py",
     "operator/conservation_browser_receiving.py",
+    "operator/conservation_catalog.py",
     "operator/conservation_experiment_browser_receiving.py",
-    "operator/CONSERVATION_EXPERIMENT_BROWSER.md",
     "operator/conservation_optimization.py",
     "operator/conservation_regional_receiving.py",
+    "operator/extensions/conservation-catalog.json",
     "operator/extensions/conservation-optimization.json",
+    "operator/extensions/conservation.json",
     "operator/install_conservation.py",
     "operator/web/conservation.css",
     "operator/web/conservation.mjs",
+    "operator/web/conservation_optimization.css",
+    "operator/web/conservation_optimization.mjs",
+    "operator/web/conservation_optimization_bridge.mjs",
+    "operator/web/retained_desks.mjs",
+    "source/conservation-documentation-integration-20261013.json",
+    "source/conservation-reporting-joins-20261013.json",
     "source/keowee-priority-integration-20261013.json",
     "source/keowee-priority-methods-20261013.json",
+    "source/parcel-criteria-geometry-integration-20261013.json",
     "source/parcel-criteria-integration-20261013.json",
+    "source/parcel-criteria-interval-integration-20261013.json",
     "source/parcel-criteria-sources-20261013.json",
+    "source/soil-floodplain-integration-20261013.json",
+    "source/soil-floodplain-source-profile-20261013.json",
     "source_tools/PARCEL_CRITERIA.md",
+    "source_tools/PARCEL_CRITERIA_GEOMETRY.md",
+    "source_tools/PARCEL_CRITERIA_INTERVALS.md",
+    "source_tools/SOIL_FLOODPLAIN_SOURCES.md",
     "source_tools/parcel_criteria.py",
-    "source_tools/receive_drive_source.py",
+    "source_tools/soil_floodplain_sources.py",
 })
 SCHEMA = "upstate.conservation-addon/v1"
-# Previously published E7A1 source editions that can be upgraded directly.
-# Other authored edits stay available for explicit composition.
-PREVIOUS_SOURCES = {
-    "model/conservation.py": {
-        "d407c94dd3df29ef7de6e5d8396f3a048619df0529f88dfb4e1fb4176ef72c12": 81874,
-        "099cdbb19f03560e6cf8214605a3d2212afdc5221e8f192eab46f74ed54065ca": 88457,
-        "8755fb5f3b9e7870868db8f3c5345030b117259340918e14250c85ea5d4c67f3": 89137,
-        "60b7d500a585f685886404ac23785416c6fafb0a733550169258a90413ce3464": 91061
-    },
-    "model/conservation_cli.py": {
-        "1ead9b863bcd772e0845c7603465a24cc5eeb95a877730ccc6f9c4344310c8ed": 3722
-    },
-    "model/conservation_scenarios.py": {
-        "7d219c37ccd94094bf1e3355433ed12499a5aec389220cc7608d76140643ae6d": 10383,
-        "d3518493716250749bb16804e1e8699ffa8d52da96b9c082c4dd9437ea5dbb2a": 11455,
-        "a6c5f1f98bae9e4b9add1a013a10801a9e8bb9771d35c24418f455f5c219ac91": 30659
-    },
-    "model/CONSERVATION.md": {
-        "5114f307d8640188ad45d09c61e32ee564f94e77f5171c81951f83dc85736c81": 9930,
-        "4d51f59276d6585e817d43f44dd80c6aaeed3e15cc6cf149e9cc2b3d0d90cd87": 12685,
-        "c46d49b9d9ec84e16be050679546a11edeea6f0f5862b21544e6313e4fca7930": 12197
-    },
-    "operator/conservation.py": {
-        "530d230e20704b058ffc50cebea6cab01b2af42f94d1a472de2482ce95ada0a4": 8663,
-        "ba2975b292cbad34536b0f2128a76920c8cfe4e528565cf9575b618720864eda": 8494,
-        "4162a1f93e8ec39960482db85a045a0f5ef0437f7e04a8963ce9348ca6ce22db": 8673,
-        "454b71b56f7eec4c0c175cb23a597ad32b6f053858692a8dcae92ea97aa4df2e": 9666,
-        "9c38b58b730209ab72daa3096bc8d7b98c776429ac4ad4249f04abe45c3dc301": 10378
-    },
-    "operator/web/conservation.mjs": {
-        "7857010fbb286a33bde354715d067ee649304f51ce86b4c642a1bcd34f400c65": 67285,
-        "52e834dd9675a64b57260274a358635f1c8fa25510232207e10d0885629ef25e": 65147,
-        "ec645237ca3d8321a07e42479ce2af32c960c8b3c28113b11ac23547e16be808": 72380,
-        "e18f46038591553b4ae8e0c10f1c449f97d227a5a50170add0d2b7195ad2879b": 75848,
-        "1ca5e8e1d45767f96c1814d2384150f4c49594c4ddae070451a230956bcc6e75": 100418,
-        "ee9d18d1233af1fc2e9a4d6ba84134feaac9e84497c77a83da582cb92da6b710": 108252
-    },
-    "operator/web/conservation.css": {
-        "9eddc5584dfe6ae93c6e6a779af56ba9604b63757084cb1cd81bdca99617eb13": 7848,
-        "625e039cf970763d80ef94a1d8e0d155a28e80249de93fa8fc410e26b90351e5": 7705,
-        "fa8bfb6ec628f1ea618d8378b5964f8a32e12ec6cb4a2dbc6d945db3de098555": 7946,
-        "8ac5b887081ce108c0a5f1aaa69313240d7c2a6bc9d738ed479a2f766e4b7654": 8425,
-        "82f69e6bcf264ac5c49e5eb61b6490cbac89419eabf9877b3c3332415785cad5": 8507
-    },
-    "operator/CONSERVATION.md": {
-        "f01c3d65fbfaea80a60299cee4058d231d1265ff68a19198519abc8240d676cc": 11327,
-        "c109ce231393d18f149b5f2bfc5faaec56948d1efda26ddc1c5a3144c1b5b231": 13676,
-        "793620676d53702da2447fc0fa47f02f767c0b2b958152395db523b9683d7a12": 18294,
-        "d39ab0132a9c32639883943994ece1c7819ae23b73d13c5957af6211d904c277": 22899
-    },
-    "operator/install_conservation.py": {
-        "fac4eb6c7c8b7b27d1a2cbbc13fbee8d2e2ad682d1ba5fcda0126b7676255ae1": 32051,
-        "d8e9824780d84641a9ee47d180158adc18e340dff1912945fc75bce78237893f": 31581,
-        "30492615ba6f862f7f676183ee293eb0252a59a159830e9976875aa2ab450bda": 20002,
-        "76e556f53783d6379a53a775651415541306d9b23ba80d4eec1ff2dfb22a3644": 30753,
-        "c9aaa958816139e151fd99cc194deac931186783563738119e7b4ae69a413696": 17382,
-        "b7250a44731d3f421a6779e7c236d132e6b446166c8eaab5d34523a8553957b0": 19888,
-        "833aed492f04532201544e5f959ca852fe730d79969a6bc009a754f0f14dc42d": 22965,
-        "1fde2cd0fd7c7960a99e7757e7724cce43ff5835a48dbab2eaa30092ffa2b37a": 20992,
-        "172c2cac2e9933bc5088993e55218597776010e1c6d5c31307e7c24d6c05849a": 21551
-    },
-    "operator/conservation_regional_receiving.py": {
-        "fc6bb0b216927c04c4cf1f665c237e397f997260de6f6457a192d987eb5d0276": 43910,
-        "a4326a019784fdb0bd03aa071ee5f01e40694d3063d0a8b6da70caed5ce9daf7": 26367,
-        "6db8fe4ab19613472c9e671669c66d4381d1f982b011d7bd6ce314cd0e069b5c": 20028,
-        "a450c334ce4bded570acf1584d9623a00f60fa997049015256d0b4b7d830bae1": 29344
-    },
-    "model/conservation_bindings.py": {
-        "882f401903cc02250d8210f6a116fd3dfc27995980f50aeef5c150449a814354": 34965,
-        "e3b3a7288817d408b9e685afb4dac7c361d3ace444cf4e99419fe830a7cdd060": 36408
-    },
-    "model/CONSERVATION_CONSUMERS.md": {
-        "0a42f6685d086ec9bca55e6e63d891058de5be5547a5bc4d116a2d2626358123": 16972,
-        "aabd1f2ca24827c783d47da103ae55e130a2d22ae77688748848762ff4cd49d0": 16693
-    },
-    "operator/conservation_browser_receiving.py": {
-        "92376677bdeeacdc5294a02ed89a9c9a463373b023bb6aa4ddcd170adc3e0c93": 17804,
-        "8c95b46f72826e3d95f1bd79479a80e69146703b6c2088f319c1d0eb5a1d1cad": 19144
-    },
-    "source_tools/receive_drive_source.py": {
-        "c6771e6d8d0ed681b162f49e0d30ebf6f8bd7412666bf128409e498d83bf1b3c": 8658
-    },
-    "model/keowee_priority.py": {
-        "cb7c6f9aa1d193c594b9427cb80ddedc9a209924e4347f5759a54e51151341dd": 34855
-    },
-    "source/keowee-priority-methods-20261013.json": {
-        "f6f0d496697b03cdd667407ff26f0377f1262df608b21f6a3ff059357c134ec5": 45833
-    },
-    "model/KEOWEE_PRIORITIES.md": {
-        "4163651c9bbe009f22cd5cb6d065fbc89265d0daff9fa013e444c8b1781df45f": 32064
-    },
-    "source/keowee-priority-integration-20261013.json": {
-        "36026ed1afb9f2e2de2cc50ee1b6ab0bdc965e324da023624e073ccc6c1dbcae": 9830
-    },
-    "model/CONSERVATION_EXPERIMENTS.md": {
-        "b8859697162b7dd37e19c59fed4ab5abae8fc3e02e50a6e31e6faed9e28bd65d": 12071
-    },
-    "source_tools/parcel_criteria.py": {
-        "07710f48afcf7e5725c058fe82498669110081144846a3555ed707ec839b9f41": 69645
-    },
-    "source/parcel-criteria-sources-20261013.json": {
-        "4b2276fb7c976f08ac11d6d95a96af0ed806a914442deda5126c30916f3b57a0": 18204
-    },
-    "source_tools/PARCEL_CRITERIA.md": {
-        "3c1b9b9c8df3452aa5d16969be10e0917978d80130d138d3df9220a073dc72c3": 22775
-    },
-    "source/parcel-criteria-integration-20261013.json": {
-        "d11fc0238a4637af7432df34761d43bd3dd4f6abedcc72f81700dca6bf6b0da8": 7315
-    },
-    "operator/conservation_optimization.py": {
-        "e987a181ac60463b725897c5321306871c4bc004d336b5468d57641e4b1bec63": 12222,
-        "3f16dae23b8cfe5e928cd4f4670e6dfe514bb790dee7c029e7717e8588b8ad1b": 12287
-    },
-    "operator/extensions/conservation-optimization.json": {
-        "744ecd44e96f32aea580f09fad04cecd0d203603d40443e98ad972bbe24712ce": 1841
-    },
-    "operator/CONSERVATION_OPTIMIZATION.md": {
-        "0ce2dd533a1de760c342ba068b62fd6e0607deca4da2df64bb7f70eff52d99ec": 7842,
-        "d397e3cb792b2de4b934a2e9e320861c89be28f63dde9b1b6c89791240707e0d": 8748
-    }
+KNOWN_PRIOR = {
+    "model/conservation.py": [
+        "d407c94dd3df29ef7de6e5d8396f3a048619df0529f88dfb4e1fb4176ef72c12",
+        "60b7d500a585f685886404ac23785416c6fafb0a733550169258a90413ce3464",
+        "099cdbb19f03560e6cf8214605a3d2212afdc5221e8f192eab46f74ed54065ca",
+        "8755fb5f3b9e7870868db8f3c5345030b117259340918e14250c85ea5d4c67f3",
+        "771681f14e61426ce74b10844f203627eaf8c1a435f674fed42bb87ad08470d0",
+        "fe8324135c497c1286307ba4d2aee9c56ba96873378d86aaa53078051c8f5c39"
+    ],
+    "model/conservation_cli.py": [
+        "1ead9b863bcd772e0845c7603465a24cc5eeb95a877730ccc6f9c4344310c8ed"
+    ],
+    "model/conservation_scenarios.py": [
+        "7d219c37ccd94094bf1e3355433ed12499a5aec389220cc7608d76140643ae6d",
+        "a6c5f1f98bae9e4b9add1a013a10801a9e8bb9771d35c24418f455f5c219ac91",
+        "2bc3fa18d2ed4e8b59310e4a442411b7f7b91aec585ac2d1916060ce8345e25b",
+        "d3518493716250749bb16804e1e8699ffa8d52da96b9c082c4dd9437ea5dbb2a"
+    ],
+    "model/CONSERVATION.md": [
+        "5114f307d8640188ad45d09c61e32ee564f94e77f5171c81951f83dc85736c81",
+        "c46d49b9d9ec84e16be050679546a11edeea6f0f5862b21544e6313e4fca7930",
+        "4d51f59276d6585e817d43f44dd80c6aaeed3e15cc6cf149e9cc2b3d0d90cd87",
+        "586fdf871373935689f6876c753da09051774ae76ac08b0c0b71cfef83489e19"
+    ],
+    "operator/conservation.py": [
+        "530d230e20704b058ffc50cebea6cab01b2af42f94d1a472de2482ce95ada0a4",
+        "454b71b56f7eec4c0c175cb23a597ad32b6f053858692a8dcae92ea97aa4df2e",
+        "4162a1f93e8ec39960482db85a045a0f5ef0437f7e04a8963ce9348ca6ce22db",
+        "8849903b808a82b5d96d2bf2a047dba47602d3bfe098c088378384237d258891",
+        "9c38b58b730209ab72daa3096bc8d7b98c776429ac4ad4249f04abe45c3dc301",
+        "ba2975b292cbad34536b0f2128a76920c8cfe4e528565cf9575b618720864eda"
+    ],
+    "operator/web/conservation.mjs": [
+        "7857010fbb286a33bde354715d067ee649304f51ce86b4c642a1bcd34f400c65",
+        "ec645237ca3d8321a07e42479ce2af32c960c8b3c28113b11ac23547e16be808",
+        "1ca5e8e1d45767f96c1814d2384150f4c49594c4ddae070451a230956bcc6e75",
+        "e18f46038591553b4ae8e0c10f1c449f97d227a5a50170add0d2b7195ad2879b",
+        "ee1ed5e75d34616416e342db99df34587cdc750d38c7f808a6d2ea58a6c2595b",
+        "ee9d18d1233af1fc2e9a4d6ba84134feaac9e84497c77a83da582cb92da6b710",
+        "52e834dd9675a64b57260274a358635f1c8fa25510232207e10d0885629ef25e"
+    ],
+    "operator/web/conservation.css": [
+        "9eddc5584dfe6ae93c6e6a779af56ba9604b63757084cb1cd81bdca99617eb13",
+        "fa8bfb6ec628f1ea618d8378b5964f8a32e12ec6cb4a2dbc6d945db3de098555",
+        "8ac5b887081ce108c0a5f1aaa69313240d7c2a6bc9d738ed479a2f766e4b7654",
+        "82f69e6bcf264ac5c49e5eb61b6490cbac89419eabf9877b3c3332415785cad5",
+        "625e039cf970763d80ef94a1d8e0d155a28e80249de93fa8fc410e26b90351e5"
+    ],
+    "operator/CONSERVATION.md": [
+        "f01c3d65fbfaea80a60299cee4058d231d1265ff68a19198519abc8240d676cc",
+        "793620676d53702da2447fc0fa47f02f767c0b2b958152395db523b9683d7a12",
+        "9c94af3dac766ae3fd32a2e514d1efff911960db5d01b9b3d60c2919ae81aff9",
+        "c109ce231393d18f149b5f2bfc5faaec56948d1efda26ddc1c5a3144c1b5b231",
+        "d39ab0132a9c32639883943994ece1c7819ae23b73d13c5957af6211d904c277"
+    ],
+    "operator/install_conservation.py": [
+        "c9aaa958816139e151fd99cc194deac931186783563738119e7b4ae69a413696",
+        "3df8ad132ad6f9046b26f151ff82c29aa7faffdbbf9d1bedb5d5262cadac4e6b",
+        "833aed492f04532201544e5f959ca852fe730d79969a6bc009a754f0f14dc42d",
+        "85542e76771b019929c3005f0d1548b98d318c00eedfaf4ab8f3f43bdd06e132",
+        "d8e9824780d84641a9ee47d180158adc18e340dff1912945fc75bce78237893f",
+        "30492615ba6f862f7f676183ee293eb0252a59a159830e9976875aa2ab450bda",
+        "76e556f53783d6379a53a775651415541306d9b23ba80d4eec1ff2dfb22a3644",
+        "b7250a44731d3f421a6779e7c236d132e6b446166c8eaab5d34523a8553957b0",
+        "1fde2cd0fd7c7960a99e7757e7724cce43ff5835a48dbab2eaa30092ffa2b37a",
+        "172c2cac2e9933bc5088993e55218597776010e1c6d5c31307e7c24d6c05849a",
+        "fac4eb6c7c8b7b27d1a2cbbc13fbee8d2e2ad682d1ba5fcda0126b7676255ae1",
+        "5662e0ee4c342dbd8ec50a8d3cdf74b7af10841680b46559f6eb6ad2f40ab8eb"
+    ],
+    "operator/conservation_regional_receiving.py": [
+        "a4326a019784fdb0bd03aa071ee5f01e40694d3063d0a8b6da70caed5ce9daf7",
+        "a450c334ce4bded570acf1584d9623a00f60fa997049015256d0b4b7d830bae1",
+        "1dd1fc8896250ff6606cb6036517b6d1b4dc2c86a335b9832d753aa2a3374721",
+        "39df599c151e71c3ced1425133ba8473822feb312dfc6ac8408285c0baa7175e",
+        "fc6bb0b216927c04c4cf1f665c237e397f997260de6f6457a192d987eb5d0276",
+        "6db8fe4ab19613472c9e671669c66d4381d1f982b011d7bd6ce314cd0e069b5c",
+        "103055f8e60711f20a3043f60e7bbc1ca55628985d4cc5308091aef527904352"
+    ],
+    "model/keowee_priority.py": [
+        "9686b4b9224f2d09f705e09a4300877f2bf5ce39a4405c81aa5fc84b2cd8949e",
+        "cb7c6f9aa1d193c594b9427cb80ddedc9a209924e4347f5759a54e51151341dd",
+        "3f8e48b83d74355b280baafefe0142cd5b23924813aeeba48170ec8815497043",
+        "f83004ffaf97a2f5182fffb632d8ece6570d117983e210b084ccf41da1000d7f"
+    ],
+    "source/keowee-priority-methods-20261013.json": [
+        "f6f0d496697b03cdd667407ff26f0377f1262df608b21f6a3ff059357c134ec5"
+    ],
+    "model/KEOWEE_PRIORITIES.md": [
+        "07336e7e3dd1fab21beed2330b034502c30a80f5b16af77e0cd57d5bb6b34f15",
+        "4163651c9bbe009f22cd5cb6d065fbc89265d0daff9fa013e444c8b1781df45f"
+    ],
+    "source/keowee-priority-integration-20261013.json": [
+        "36026ed1afb9f2e2de2cc50ee1b6ab0bdc965e324da023624e073ccc6c1dbcae"
+    ],
+    "model/conservation_bindings.py": [
+        "be59aef70c5a35c8e76e5a58d5b507ecb8a8833efad0d8a829bbebc0cdc9d49a",
+        "e3b3a7288817d408b9e685afb4dac7c361d3ace444cf4e99419fe830a7cdd060",
+        "882f401903cc02250d8210f6a116fd3dfc27995980f50aeef5c150449a814354",
+        "172dad7c968aa41c384387950ce306f1dfe34a8d3d04d4bb56c180d0c0845cda"
+    ],
+    "model/CONSERVATION_CONSUMERS.md": [
+        "aabd1f2ca24827c783d47da103ae55e130a2d22ae77688748848762ff4cd49d0",
+        "0a42f6685d086ec9bca55e6e63d891058de5be5547a5bc4d116a2d2626358123",
+        "9bcc0a413f9d2e8feec08d2ff827c829e1a875d977519e3b61edb7f907f3b5e9"
+    ],
+    "model/CONSERVATION_EXPERIMENTS.md": [
+        "b8859697162b7dd37e19c59fed4ab5abae8fc3e02e50a6e31e6faed9e28bd65d"
+    ],
+    "source_tools/parcel_criteria.py": [
+        "3671c92e3315af3cd979b6a1244ea97c51924cc9ed201169725e341ae19e147c",
+        "0924148f60ea61d63cd45f6e5470cd1e264fbfd343c48f619285274da49821cc",
+        "07710f48afcf7e5725c058fe82498669110081144846a3555ed707ec839b9f41",
+        "9b4881b0a6da0dcedfa9f2a4bb2125c216971e38479c91f0527b1497b11f76b9"
+    ],
+    "source/parcel-criteria-sources-20261013.json": [
+        "4b2276fb7c976f08ac11d6d95a96af0ed806a914442deda5126c30916f3b57a0",
+        "f4e925fc839f5c814ecaf785aa4ad8762f950ee94d4f431d269b6a545656f79a"
+    ],
+    "source_tools/PARCEL_CRITERIA.md": [
+        "3c1b9b9c8df3452aa5d16969be10e0917978d80130d138d3df9220a073dc72c3"
+    ],
+    "source/parcel-criteria-integration-20261013.json": [
+        "d11fc0238a4637af7432df34761d43bd3dd4f6abedcc72f81700dca6bf6b0da8"
+    ],
+    "model/conservation_optimization.py": [
+        "60d91c12df8abe5db11aeff9c9473ae68e20e8c20322c95c3e03266c3ccba85c",
+        "46c0c69edca2c9705ae00086f534b773540337bf04b3b96a1f888253ec8758f3",
+        "0e44f1d6678294ee65e76c8f538b6a2d7a37e5cf95f3187067e47e023a4635b2",
+        "1be2d82eb3c195546b1198bdea127160a9b0eec14de220ec51f07ce97d506962"
+    ],
+    "operator/conservation_optimization.py": [
+        "e987a181ac60463b725897c5321306871c4bc004d336b5468d57641e4b1bec63",
+        "51d9926b4e0db34bf7963a486ee0026d9dfd9d3a6d531b1efc7de7e726301ae7",
+        "3f16dae23b8cfe5e928cd4f4670e6dfe514bb790dee7c029e7717e8588b8ad1b"
+    ],
+    "operator/extensions/conservation-optimization.json": [
+        "744ecd44e96f32aea580f09fad04cecd0d203603d40443e98ad972bbe24712ce",
+        "5cf6d37ed965d78f3d4a63ad6901812af959e0afe45448e7309b8c4257a0fe72"
+    ],
+    "model/CONSERVATION_OPTIMIZATION.md": [
+        "2a1f19d4310ec23436d154e5c0f8c6960e784becef69503d43744a2f5fae2236",
+        "71de30fc9350b19e518752b432e71293507356ec8c20040e688eb41945113e4d",
+        "be3c82f588ece2da730f1404038eeb3295de5f1cb13c204c51e9c7e05b35ea2b"
+    ],
+    "operator/CONSERVATION_OPTIMIZATION.md": [
+        "0ce2dd533a1de760c342ba068b62fd6e0607deca4da2df64bb7f70eff52d99ec",
+        "c100bfc5035d07f6457ab4c1cdef9e7f02a2b7814a45859fe497c2daea7e5be6",
+        "d397e3cb792b2de4b934a2e9e320861c89be28f63dde9b1b6c89791240707e0d",
+        "7d078a291c137ff62d6a6c2d62a34fe7b365a65a82f149cf029d8dc2aaa9d397"
+    ],
+    "model/portfolios.py": [
+        "f0364a184cace554c136c04ab6d34b71963e9600a5bcc5c0fa0bf491b882c8fd"
+    ],
+    "model/PORTFOLIOS.md": [
+        "5807ae6b025d188e3725c945d16c87f7fc46adba45d49a4c7c1742be2101b3af"
+    ],
+    "source_tools/soil_floodplain_sources.py": [
+        "0b9a0792323aaeeaa6e8897c80bc3940d2010d1fef5304d3faf371d6ada5012f"
+    ],
+    "source/soil-floodplain-source-profile-20261013.json": [
+        "7c342a0de9dd1bcfae835dd89de38a26e41609cc8aa01608db0fe5e9c8c23a4b"
+    ],
+    "source_tools/SOIL_FLOODPLAIN_SOURCES.md": [
+        "8f2af4f20478f27699c4aebfdee941276ef225637e49e7c8c9c08c83d7ba6133"
+    ],
+    "source/soil-floodplain-integration-20261013.json": [
+        "093122c990a283d8bbf930f6445827a9a0e68d6376315369af975cc70f69771d"
+    ],
+    "source_tools/PARCEL_CRITERIA_INTERVALS.md": [
+        "fadf7251a0e0bcce5c95a0d49d5dd2ecbf41e720d5054671bd6c8ccb823f9fab"
+    ],
+    "source/parcel-criteria-interval-integration-20261013.json": [
+        "ec07287aea78731d11ec5bfadd03fd43077aa762f849c0bf32fc2bdb64e6eb8e"
+    ],
+    "model/conservation_reporting.py": [
+        "271f5bf8ba1df82766fe49efe8ec386e6de3579ad7965ec3a85221bbd6e1a8f9"
+    ],
+    "model/CONSERVATION_REPORTS.md": [
+        "22bcfa38b6db3b78e285d53e8e1ae87a67d186fbc58bb29f837e6631a120c6b6"
+    ],
+    "source/conservation-reporting-joins-20261013.json": [
+        "4a6a69aca0062ad71c1919d868dabca0511e7ce65277d67dcfd4de40b65499c2"
+    ],
+    "operator/conservation_browser_receiving.py": [
+        "92376677bdeeacdc5294a02ed89a9c9a463373b023bb6aa4ddcd170adc3e0c93",
+        "8c95b46f72826e3d95f1bd79479a80e69146703b6c2088f319c1d0eb5a1d1cad"
+    ],
+    "source_tools/receive_drive_source.py": [
+        "c6771e6d8d0ed681b162f49e0d30ebf6f8bd7412666bf128409e498d83bf1b3c"
+    ],
+    "operator/server.py": [
+        "8757233424c636a4a685d041e7d486c0c05b1ecfcd75a9a1c225a80e5a5893ce"
+    ],
+    "operator/web/app.mjs": [
+        "328932e7405e91e2e3d194ed7fe8e865a71ecdf37ae11ef5b37136d106c6d91a"
+    ],
+    "operator/web/index.html": [
+        "37fabd65df3e0f19f486055cfb1ed435bd7919fb63de3389784fa88ebcfb064f"
+    ],
+    "source_tools/soil_sources.py": [
+        "082a1ed13145e0532fba7350534e71a22d1efbf68ed30c100b274baa94de8b2a"
+    ],
+    "model/conservation_catalog.py": [
+        "91700433cc6e0cca672894bacc215c32e71ea83de4a3ab06305601aabbe20c4f"
+    ],
+    "operator/conservation_catalog.py": [
+        "6d769d19b31af2c0237a7cf43e14eb4f956e4b9d700e90f54bbad28f19138c95"
+    ],
+    "operator/extensions/conservation-catalog.json": [
+        "26cced64e361a42e4d6df7d18edb3fa3bec5b9a3523f15afb7e6b60522858d59"
+    ],
+    "operator/CONSERVATION_CATALOG.md": [
+        "34546b7109ee378b9e5d4207b7151c3104be54564da640ac2a03769039e4c7ad"
+    ],
+    "operator/conservation_experiment_browser_receiving.py": [
+        "3a4727836d1a78fb54e00cf16098e167618e16a7181623f32d67412365c78b2b"
+    ],
+    "operator/CONSERVATION_EXPERIMENT_BROWSER.md": [
+        "703700f71cc0c849991ea89a439d436e3fef10500525f6f0bbc7c87d261afa29"
+    ],
+    "operator/web/conservation_optimization_bridge.mjs": [
+        "2d79a5ff3bb86c434c9f895f00bee37a9b90c0a4bad0c26129a7d1bcb941a22a"
+    ],
+    "operator/web/conservation_optimization.mjs": [
+        "d337ad6a2076d4611482a636cc5160e4b837b16e5fa1628b9c4325e49f272ad7"
+    ],
+    "operator/web/conservation_optimization.css": [
+        "f8fe9a40855df1c7e241c58106c327bb1c1ef4af0ea9940572139e1c6b9237fd"
+    ],
+    "operator/CONSERVATION_HOST.md": [
+        "6156262c9746fa163c5793cb4f15cea34a5bcdf2fbd9a1272820d09717c4cc7a"
+    ],
+    "operator/extensions/conservation.json": [
+        "749b35c774827e15e732d31a11766afb5a05f6bf3abd3bb33d2118e5afdd0550"
+    ],
+    "operator/web/retained_desks.mjs": [
+        "3313f4fa86212b12627985d6332a796ebffa913889f452b136f28df4da121d96"
+    ]
 }
 
 
@@ -210,17 +347,17 @@ def python_method_return(text, class_name, method_name, decorator):
     return text[:first] + f"return {decorator}({expression})" + text[last:]
 
 
-
 # The complete application registers Conservation through retained_desks. Older
 # bare applications still use the original direct adapter below.
-REGISTERED_REPAIR = json.loads(r'''{"server_removals":["from conservation import Conservation, ACTIONS as CONSERVATION_ACTIONS, READS as CONSERVATION_READS\n","ACTIONS.update(CONSERVATION_ACTIONS)\n","        self.conservation = Conservation(self, Fault)\n","        if action in CONSERVATION_ACTIONS:\n            return self.conservation.invoke(task)\n","                conservation_reads = {\"/api/conservation/\" + name: name for name in CONSERVATION_READS}\n                if url.path in conservation_reads:\n                    return self.send_json(200, self.app.conservation.read(workspace,\n                        conservation_reads[url.path], {name: one(name) for name in (\"study_id\", \"plan_id\")}))\n"],"app_patterns":[["(?m)^import \\{attachConservation(?:WithOptimization)?\\} from '[^'\\n]+';\\n",""],["(?ms)^const conservation=attachConservation(?:WithOptimization)?\\(.*?\\);\\n",""],["(?ms)^  if\\(view==='conservation'\\)\\{\\n.*?conservation\\.mount\\(\\$\\('#content'\\),state\\);return;\\n  \\}\\n",""],["(?m)^[ \\t]*conservation\\.detach\\(\\);\\n",""],["(?m)^[ \\t]*if\\(typeof conservation!=='undefined'\\)conservation\\.detach\\(\\);\\n",""],["if\\(typeof conservation!=='undefined'\\)conservation\\.detach\\(\\);",""],["(?ms)^ if\\(button\\.dataset\\.action\\?\\.startsWith\\('conservation-'\\).*?return conservation\\.dispatch\\(button\\);\\n \\}\\n",""],["\\+conservation\\.taskActions\\(row\\)",""]],"registered_block":"  // Registered desks retain sole ownership of their controller and actions.\n  if(extensions.hasView(view)){\n    community.detach();customerReviews.detach();spatialWorkspace.suspend();\n    if(typeof programmes!=='undefined')programmes.detach();\n    if(typeof experiments!=='undefined')experiments.detach();\n    if(typeof experimentDiagnostics!=='undefined')experimentDiagnostics.detach();\n    if(typeof receivingWaters!=='undefined')receivingWaters.detach();\n    if(typeof rehearsal!=='undefined')rehearsal.detach();\n    if(typeof journey!=='undefined'){journey.detach();journey.updateRail(view);}\n    if(typeof scenarioAnalysis!=='undefined')scenarioAnalysis.detach();\n    extensions.render(view,$('#content'),state);return;\n  }"}''')
+REGISTERED_REPAIR = json.loads(r'''{"server_removals":["from conservation import Conservation, ACTIONS as CONSERVATION_ACTIONS, READS as CONSERVATION_READS\n","ACTIONS.update(CONSERVATION_ACTIONS)\n","        self.conservation = Conservation(self, Fault)\n","        if action in CONSERVATION_ACTIONS:\n            return self.conservation.invoke(task)\n","                conservation_reads = {\"/api/conservation/\" + name: name for name in CONSERVATION_READS}\n                if url.path in conservation_reads:\n                    return self.send_json(200, self.app.conservation.read(workspace,\n                        conservation_reads[url.path], {name: one(name) for name in (\"study_id\", \"plan_id\")}))\n","                conservation_reads = {\"/api/conservation/\" + name: name for name in CONSERVATION_READS}\n                if url.path in conservation_reads:\n                    return self.send_json(200, self.app.conservation.read(workspace,\n                        conservation_reads[url.path], {name: one(name) for name in (\"study_id\", \"plan_id\", \"operation_id\")}))\n"],"app_patterns":[["(?m)^import \\{attachConservation(?:WithOptimization)?\\} from '[^'\\n]+';\\n",""],["(?ms)^const conservation=attachConservation(?:WithOptimization)?\\(.*?\\);\\n",""],["(?ms)^  if\\(view==='conservation'\\)\\{\\n.*?conservation\\.mount\\(\\$\\('#content'\\),state\\);return;\\n  \\}\\n",""],["(?m)^[ \\t]*conservation\\.detach\\(\\);\\n",""],["(?m)^[ \\t]*if\\(typeof conservation!=='undefined'\\)conservation\\.detach\\(\\);\\n",""],["if\\(typeof conservation!=='undefined'\\)conservation\\.detach\\(\\);",""],["(?ms)^ if\\(button\\.dataset\\.action\\?\\.startsWith\\('conservation-'\\).*?return conservation\\.dispatch\\(button\\);\\n \\}\\n",""],["\\+conservation\\.taskActions\\(row\\)",""]],"registered_block":"  // Registered desks retain sole ownership of their controller and actions.\n  if(extensions.hasView(view)){\n    community.detach();customerReviews.detach();spatialWorkspace.suspend();\n    if(typeof programmes!=='undefined')programmes.detach();\n    if(typeof experiments!=='undefined')experiments.detach();\n    if(typeof experimentDiagnostics!=='undefined')experimentDiagnostics.detach();\n    if(typeof receivingWaters!=='undefined')receivingWaters.detach();\n    if(typeof rehearsal!=='undefined')rehearsal.detach();\n    if(typeof journey!=='undefined'){journey.detach();journey.updateRail(view);}\n    if(typeof scenarioAnalysis!=='undefined')scenarioAnalysis.detach();\n    extensions.render(view,$('#content'),state);return;\n  }"}''')
 
 
-def registered_conservation(application):
+def registered_conservation(application, files=None):
     descriptor = application / "operator" / "extensions" / "conservation.json"
-    if not descriptor.is_file():
+    incoming = (files or {}).get("operator/extensions/conservation.json")
+    if incoming is None and not descriptor.is_file():
         return False
-    value = json.loads(descriptor.read_text(encoding="utf-8"))
+    value = json.loads(incoming if incoming is not None else descriptor.read_text(encoding="utf-8"))
     backend = value.get("backend", {})
     factory = backend.get("factory", {})
     expected = {
@@ -238,7 +375,8 @@ def registered_conservation(application):
     for asset in value.get("assets", []):
         if not isinstance(asset, str) or Path(asset).name != asset:
             raise ValueError("The Conservation descriptor must name original web assets")
-        if not (application / "operator" / "web" / asset).is_file():
+        if ("operator/web/" + asset not in (files or {})
+                and not (application / "operator" / "web" / asset).is_file()):
             raise ValueError("Receive the complete registered Conservation desk asset: " + asset)
     for name in ("operator/extension_registry.py", "operator/web/extension_host.mjs"):
         if not (application / name).is_file():
@@ -308,8 +446,10 @@ def patch_server(text, registered=False):
                 '                conservation_reads = {"/api/conservation/" + name: name for name in CONSERVATION_READS}\n'
                 '                if url.path in conservation_reads:\n'
                 '                    return self.send_json(200, self.app.conservation.read(workspace,\n'
-                '                        conservation_reads[url.path], {name: one(name) for name in ("study_id", "plan_id")}))\n',
+                '                        conservation_reads[url.path], {name: one(name) for name in ("study_id", "plan_id", "operation_id")}))\n',
                 "Conservation read routes", marker='conservation_reads = {"/api/conservation/"')
+    text = text.replace('for name in ("study_id", "plan_id")',
+                        'for name in ("study_id", "plan_id", "operation_id")')
     # Preserve the current extension-host union and either quote style.
     # Edit only the literal static set inside the original selected-file guard.
     static_sets = []
@@ -368,13 +508,30 @@ def conservation_lifecycle(text):
     return text[:position] + addition + text[position:]
 
 
+def conservation_action_labels(text):
+    for action, label in (
+        ("conservation.criteria.prepare", "Prepare original parcel criteria"),
+        ("conservation.experiment.prepare", "Prepare paired conservation experiment"),
+        ("conservation.sources.capture", "Acquire soil and floodplain sources"),
+        ("conservation.optimization.preview", "Preview conservation portfolio"),
+        ("conservation.optimization.save", "Save optimized conservation portfolio"),
+        ("conservation.optimization.export", "Export conservation decision packet"),
+    ):
+        if repr(action) + ":" not in text and json.dumps(action) + ":" not in text:
+            text = once(text, "const actionLabels={",
+                        "const actionLabels={" + repr(action) + ":" + repr(label) + ",",
+                        "Conservation continuation operation label")
+    return text
+
+
 def patch_app(text, registered=False):
     if registered:
-        return patch_registered_app(text)
+        return conservation_action_labels(patch_registered_app(text))
     text = text.replace("for(const node of $('[data-view]'))",
                         "for(const node of $$('[data-view]'))")
     text = text.replace("parameter('sdr','l_max','Maximum slope length','Metres.','min=\"0\"')", "parameter('sdr','l_max','Maximum L factor','Dimensionless maximum for the LS slope-length factor.','min=\"0\"')")
-    if "import {attachConservation}" not in text:
+    if ("import {attachConservation}" not in text
+            and "import {attachConservationWithOptimization}" not in text):
         text = "import {attachConservation} from './conservation.mjs';\n" + text
     text = once(text, "const viewLabels={",
                 "const viewLabels={conservation:'Conservation plans',",
@@ -385,15 +542,9 @@ def patch_app(text, registered=False):
                 "'conservation.plan.save':'Save conservation plan',"
                 "'conservation.export':'Export conservation packet','conservation.scenario.create':'Create selected-land scenario',",
                 "Conservation operation labels", marker="'conservation.build':")
-    for action, label in (
-        ("conservation.criteria.prepare", "Prepare original parcel criteria"),
-        ("conservation.experiment.prepare", "Prepare paired conservation experiment"),
-    ):
-        if repr(action) + ":" not in text:
-            text = once(text, "const actionLabels={",
-                        "const actionLabels={" + repr(action) + ":" + repr(label) + ",",
-                        "Conservation continuation operation label")
-    if "const conservation=attachConservation(" not in text:
+    text = conservation_action_labels(text)
+    if ("const conservation=attachConservation(" not in text
+            and "const conservation=attachConservationWithOptimization(" not in text):
         matches = list(re.finditer(r"(?m)^const endpoint = [^\n]+\n", text))
         if len(matches) != 1:
             raise ValueError("Expected the original endpoint helper")
@@ -432,6 +583,19 @@ def patch_app(text, registered=False):
         "['conservation-open-study','conservation-open-plan'].includes(button.dataset.action)",
         "['conservation-open-study','conservation-open-plan','conservation-use-criteria',"
         "'conservation-new-parcel-study'].includes(button.dataset.action)")
+    navigation_pattern = r"(\[[^\n\]]*'conservation-open-study'[^\n\]]*\])\.includes\(button\.dataset\.action\)"
+    navigation = (
+        "['conservation-open-study','conservation-open-plan','conservation-use-criteria',"
+        "'conservation-new-parcel-study','conservation-new-experiment',"
+        "'conservation-open-source-capture','conservation-criteria-from-sources',"
+        "'conservation-optimization-open-preview','conservation-optimization-open-analysis']"
+    )
+    matches = list(re.finditer(navigation_pattern, text))
+    if len(matches) != 1:
+        raise ValueError("Expected one Conservation task navigation route")
+    selected_navigation = matches[0]
+    text = (text[:selected_navigation.start(1)] + navigation +
+            text[selected_navigation.end(1):])
     prior_task_stamp = "(data.tasks||[]).filter(t=>String(t.action||'').startsWith('conservation.')).map(t=>[t.id,t.state])"
     current_task_stamp = (
         "(data.tasks||[]).filter(t=>String(t.action||'').startsWith('conservation.')||"
@@ -473,6 +637,30 @@ def patch_app(text, registered=False):
 
 
 
+def patch_soil_sources(text, registered=False):
+    """Keep retained original K-source editions reopenable with their manifest."""
+    before = (
+        '                path = directory / item["path"]\n'
+        '                if path.stat().st_size != item["bytes"] or file_digest(path) != item["sha256"]:\n'
+        '                    raise ValueError("Retained soil source or companion bytes changed")\n'
+        '            return entry\n\n'
+        '        client = Sda(directory, resume=resume)\n'
+    )
+    after = (
+        '                path = directory / item["path"]\n'
+        '                if path.stat().st_size != item["bytes"] or file_digest(path) != item["sha256"]:\n'
+        '                    raise ValueError("Retained soil source or companion bytes changed")\n'
+        '            atomic_json(directory / "source-manifest.json", {\n'
+        '                "schema": "upstate.sources/v1", "title": entry["title"],\n'
+        '                "entries": [entry]}, immutable=True)\n'
+        '            return entry\n\n'
+        '        client = Sda(directory, resume=resume)\n'
+    )
+    if after in text:
+        return text
+    return once(text, before, after, "Retained original soil source manifest")
+
+
 def patch_index(text, registered=False):
     if registered:
         return text
@@ -507,7 +695,7 @@ def read_packet(path):
         files = {name: (bundle / name).read_text(encoding="utf-8")
                  for name in sorted(OWNED) if (bundle / name).is_file()}
         value = {
-            "schema": SCHEMA, "operation_id": "UPSTATE-FULL-PRODUCT-BUILD-BRYCE-20261012-E7A1",
+            "schema": SCHEMA, "operation_id": "ES-EXP-2319/COMPLETE-CONSERVATION-20261013",
             "edition": "complete-directory",
             "files": files,
             "file_metadata": {name: {"sha256": sha(body.encode("utf-8")),
@@ -516,7 +704,7 @@ def read_packet(path):
         }
     else:
         value = json.loads(path.read_text(encoding="utf-8"))
-    if value.get("schema") not in (SCHEMA, "upstate.conservation-source/v1"):
+    if value.get("schema") not in (SCHEMA, "commons.source-bank/v1", "upstate.conservation-source/v1"):
         raise ValueError("Select the complete conservation source packet")
     if isinstance(value.get("files"), list):
         bodies, metadata = {}, {}
@@ -545,20 +733,78 @@ def read_packet(path):
         if expected.get("sha256") != sha(encoded) or expected.get("bytes") != len(encoded):
             raise ValueError("Source body differs from its retained identity: " + name)
     needed = {
-        "model/conservation_catalog.py", "operator/conservation_catalog.py",
+        "model/conservation.py",
+        "model/conservation_bindings.py",
+        "model/conservation_catalog.py",
+        "model/conservation_cli.py",
+        "model/conservation_optimization.py",
+        "model/conservation_reporting.py",
+        "model/conservation_scenarios.py",
+        "model/keowee_priority.py",
+        "model/portfolios.py",
+        "operator/conservation.py",
+        "operator/conservation_browser_receiving.py",
+        "operator/conservation_catalog.py",
+        "operator/conservation_experiment_browser_receiving.py",
+        "operator/conservation_optimization.py",
+        "operator/conservation_regional_receiving.py",
         "operator/extensions/conservation-catalog.json",
-        "model/conservation.py", "model/conservation_cli.py", "model/conservation_scenarios.py",
-        "model/conservation_bindings.py", "model/conservation_optimization.py",
-        "model/keowee_priority.py", "source/keowee-priority-methods-20261013.json",
-        "source_tools/parcel_criteria.py", "source/parcel-criteria-sources-20261013.json",
-        "operator/conservation.py", "operator/web/conservation.mjs",
-        "operator/web/conservation.css", "operator/conservation_optimization.py",
         "operator/extensions/conservation-optimization.json",
+        "operator/extensions/conservation.json",
+        "operator/install_conservation.py",
+        "source/conservation-documentation-integration-20261013.json",
+        "source/conservation-reporting-joins-20261013.json",
+        "source/keowee-priority-integration-20261013.json",
+        "source/keowee-priority-methods-20261013.json",
+        "source/parcel-criteria-geometry-integration-20261013.json",
+        "source/parcel-criteria-integration-20261013.json",
+        "source/parcel-criteria-interval-integration-20261013.json",
+        "source/parcel-criteria-sources-20261013.json",
+        "source/soil-floodplain-integration-20261013.json",
+        "source/soil-floodplain-source-profile-20261013.json",
+        "source_tools/parcel_criteria.py",
+        "source_tools/soil_floodplain_sources.py",
     }
     if needed - set(files):
-        raise ValueError("The complete current scientific and operator family must travel together; missing: "
-                         + ", ".join(sorted(needed - set(files))))
+        raise ValueError("The complete backend, CLI and operator source must travel together")
     return value
+
+
+def verify_application_dependencies(application, incoming):
+    """Resolve source dependencies against the actual receiving application."""
+    required = (
+        "model/common.py", "model/workspace.py", "model/rasters.py",
+        "source/capture_original_overlays.py", "source/capture_upstream_network.py",
+        "source_tools/soil_sources.py", "operator/extension_registry.py",
+    )
+    missing = [name for name in required
+               if name not in incoming and not (application / name).is_file()]
+    if missing:
+        raise ValueError("Receive the current complete application sources: " + ", ".join(missing))
+    server = (application / "operator/server.py").read_text(encoding="utf-8")
+    required_registrations = (
+        "from extension_registry import ExtensionRegistry",
+        "self.extensions.handles_action(action)",
+        'self.app.extensions.has_route("GET", url.path)',
+        "self.extensions.decorate_task(",
+    )
+    if any(marker not in server for marker in required_registrations):
+        raise ValueError("Receive the current registry-integrated operator core before its "
+                         "Conservation source cohort; its registered actions and routes "
+                         "serve the existing optimization descriptor.")
+    solver_text = incoming.get("model/portfolios.py")
+    if solver_text is None:
+        solver_text = (application / "model/portfolios.py").read_text(encoding="utf-8")
+    solver_tree = ast.parse(solver_text)
+    functions = {node.name for node in solver_tree.body if isinstance(node, ast.FunctionDef)}
+    if not {"_optimize", "_money", "_usd", "_area_capacity"} <= functions:
+        raise ValueError("Receive the maintained portfolio solver with its numeric resource contract.")
+    soil_text = incoming.get("source_tools/soil_sources.py")
+    if soil_text is None:
+        soil_text = (application / "source_tools/soil_sources.py").read_text(encoding="utf-8")
+    if not any(isinstance(node, ast.ClassDef) and node.name == "Sda"
+               for node in ast.parse(soil_text).body):
+        raise ValueError("Receive the maintained original USDA SDA source client.")
 
 
 def install(application, source):
@@ -566,10 +812,8 @@ def install(application, source):
     if not (application / "model" / "workspace.py").is_file():
         raise ValueError("Select the existing Upper Savannah application directory")
     packet = read_packet(source)
-    registered = registered_conservation(application)
-    for dependency in ("model/portfolios.py", "model/experiments.py", "model/common.py"):
-        if not (application / dependency).is_file():
-            raise ValueError("The current cumulative application needs its maintained dependency: " + dependency)
+    registered = registered_conservation(application, packet["files"])
+    verify_application_dependencies(application, packet["files"])
     marker = sha(source.read_bytes() if source is not None else
                  json.dumps(packet, sort_keys=True, ensure_ascii=False, separators=(",", ":")).encode("utf-8"))
     bank = application.parent / ".upstate-conservation-install" / application.name
@@ -587,15 +831,16 @@ def install(application, source):
             incoming = body.encode("utf-8")
             current = path.read_bytes() if path.exists() else None
             if current is not None and current != incoming:
-                allowed = PREVIOUS_SOURCES.get(name, {})
-                if allowed.get(sha(current)) != len(current):
-                    raise ValueError("A conservation source file has another current edition: " + name +
-                                     ". Preserve it and compose the editions before installation.")
+                known = set(KNOWN_PRIOR.get(name, ()))
+                known.update(packet.get("compatible_base_sha256", {}).get(name, ()))
+                if sha(current) not in known:
+                    raise ValueError("Compose the current conservation source before installing its successor: " + name)
             if current != incoming:
                 updates[name], original[name] = incoming, current
         for name, patch in (("operator/server.py", patch_server),
                             ("operator/web/app.mjs", patch_app),
-                            ("operator/web/index.html", patch_index)):
+                            ("operator/web/index.html", patch_index),
+                            ("source_tools/soil_sources.py", patch_soil_sources)):
             path = application / name
             if not path.parent.resolve().is_relative_to(application):
                 raise ValueError("Source directory leaves the selected application: " + name)
@@ -605,6 +850,11 @@ def install(application, source):
             incoming = patch(current.decode("utf-8"), registered=registered).encode("utf-8")
             if incoming != current:
                 updates[name], original[name] = incoming, current
+        for name, content in updates.items():
+            if name.endswith(".py"):
+                compile(content.decode("utf-8"), str(application / name), "exec")
+            elif name.endswith(".json"):
+                json.loads(content)
         receipt_dir = bank / marker
         receipt_dir.mkdir(parents=True, exist_ok=True)
         written = []
