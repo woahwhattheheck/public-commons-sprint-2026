@@ -1,0 +1,5 @@
+period_id,account_id,start,end,billed_quantity,billed_unit,billed_water_charge,tariff_id,tariff_application_at,fixed_charge_factor,source_reference,recorded_quantity,recorded_unit,recorded_source_reference
+A-OCT,EXAMPLE-A,2026-10-01T00:00:00-05:00,2026-10-03T00:00:00-05:00,240,US_GAL,13.80,EXAMPLE-RATE,2026-10-03T00:00:00-05:00,1,invented bill A,240,US_GAL,invented consumption A
+B-FALL,EXAMPLE-B,2026-11-01T00:00:00-05:00,2026-11-02T00:00:00-06:00,250,US_GAL,14.00,EXAMPLE-RATE,2026-11-02T00:00:00-06:00,1,invented bill B,250,US_GAL,invented consumption B
+C-GAP,EXAMPLE-C,2026-10-01T00:00:00-05:00,2026-10-02T00:00:00-05:00,120,US_GAL,11.40,EXAMPLE-RATE,2026-10-02T00:00:00-05:00,1,invented bill C,120,US_GAL,invented consumption C
+D-NEGATIVE,EXAMPLE-D,2026-10-01T00:00:00-05:00,2026-10-02T00:00:00-05:00,-1,US_GAL,0,EXAMPLE-RATE,2026-10-02T00:00:00-05:00,1,invented unresolved credit D,120,US_GAL,invented consumption D
