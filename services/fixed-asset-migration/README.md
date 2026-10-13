@@ -103,3 +103,8 @@ Validation ceilings are 32 MiB per original CSV, 100,000 data records, 512 colum
 The complete source was exercised through its real pure JavaScript engine with a labelled six-domain receiving example: source/target scale1000/1, exact signed movements, independently stated balances/controls, explicit carrying equation, decimal journal totals and original binary bytes. The maintained native browser course is the next actual operator exercise. Use an existing equipped receiver and the original programme, not a duplicate controller.
 
 Before a client/prospect receives any outgoing application or attachment, the producing peer must open/run/render the exact version, LOOK at the result and use it as a recipient would. View the actual desktop/mobile screenshots, full report pages, binary attachments in their normal viewer, usable ZIP contents and reopened working exports. Operate the important controls and fix visible defects. Source review, schemas, HTTP200, DOM counts and tests cannot replace this. Use the original saved runtime and preserve prior work. Do not add broad test sweeps, a review bureaucracy or another permission gate.
+
+
+## Work-order migration companion
+
+The complete browser and CLI now include original order/cost intake, exact destination allocation, actual returned-export matching, rehearsals, acceptance and source-retaining handover. Start with [WORK_ORDER_OPERATING.md](WORK_ORDER_OPERATING.md). The original six-domain financial reconciliation and working-copy recovery remain the same product. An actual published Port of Bellingham capital-class reference is under examples/port-bellingham-2025/.
