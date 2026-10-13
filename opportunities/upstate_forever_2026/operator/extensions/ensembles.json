@@ -2,7 +2,7 @@
   "schema": "upstate.operator-extension/v1",
   "id": "ensembles",
   "title": "Scenario sensitivity",
-  "version": "4.1",
+  "version": "4.2",
   "order": 50,
   "assets": [
     "ensembles.mjs"
@@ -102,6 +102,19 @@
         ],
         "path": "/api/ensembles/consumer",
         "operation": "consumer",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "GET"
+        ],
+        "path": "/api/ensembles/annual-references",
+        "operation": "annual-references",
         "handler": "read",
         "args": [
           "workspace_key",

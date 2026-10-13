@@ -23,8 +23,8 @@ NDR_GUIDE = "https://storage.googleapis.com/releases.naturalcapitalproject.org/i
 SDR_GUIDE = "https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.20.0/userguide/en/sdr.html"
 OVERLAY_LABELS = (("drinking_water", "Drinking-water source areas"),
                   ("high_quality_waters", "Designated high-quality waters"))
-DELIVERY_EDITION = "2026-10-13-integrated-report-4"
-DELIVERY_FORMAT_VERSION = "retained-grid-study-observed-client-report-10"
+DELIVERY_EDITION = "2026-10-13-integrated-native-study-report-11"
+DELIVERY_FORMAT_VERSION = "retained-grid-study-observed-client-report-11"
 
 def _copy(source, target, expected=None):
     target.parent.mkdir(parents=True, exist_ok=True)
@@ -786,6 +786,9 @@ def build(workspace, selection):
                 "edition": CLIENT_REPORT_EDITION, "renderer": scientific_report.REPORT_VERSION,
                 **{name: state["files"][name]["path"] for name in
                    ("report", "report_html", "report_markdown", "report_data")}}
+            manifest["client_companion"] = {
+                "edition": client_report.REPORT_EDITION,
+                **{name: state["files"][name]["path"] for name in companion_keys}}
             if study_mode:
                 manifest["delivery_mode"] = "native_study"
                 manifest["native_study"] = state["native_study"]
@@ -796,6 +799,9 @@ def build(workspace, selection):
                 report_path = state["files"][report_name]["path"]
                 if report_path not in manifest["project_assets"]:
                     manifest["project_assets"].append(report_path)
+            # A stable, unique inventory also keeps retries of the final snapshot identical.
+            manifest["project_assets"] = sorted(set(
+                manifest["project_assets"] + [atlas_browser.BROWSER_PATH]))
             # The browser includes the final scientific/client/analysis inventory.
             # Omit derived package descriptors from its view: a previous working ZIP
             # checksum would change this captured HTML again on every retry.

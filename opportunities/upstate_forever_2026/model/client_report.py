@@ -19,7 +19,7 @@ from . import native_study
 from .model_selection import MODEL_LABELS, run_scope
 
 SCHEMA = "upstate.client-report/v1"
-REPORT_EDITION = "2026-10-13-client-report-7"
+REPORT_EDITION = "2026-10-13-client-report-8"
 RFP_URL = "https://www.upstateforever.org/files/files/20261002_FINAL_EC-SDC%20Mapping%20RFP%20APPENDIX%20COMBINED.pdf"
 RFP_SHA256 = "a519d33190eefaef7ec082c19642fc6b8ef89329ad3c648a561699c7dd277e74"
 POLLUTANTS = (
@@ -363,12 +363,14 @@ def compose_report(*, workspace, selection, state, baseline, alternatives, grid,
     changes. The optional existing scenario_summary supplies its richer support
     labels directly, without traversing any regional raster.
     """
-    title = selection.get("title") or workspace.project.get("title") or "Source-water assessment"
     baseline_name, baseline_scenario = _run_name(workspace, baseline)
     model_scopes = {run["id"]: run_scope(run) for run in [baseline] + alternatives}
     selected_models = model_scopes[baseline["id"]]["selected_models"]
     study_mode = native_study.mode(selection) == "native_study"
     study = dict(state.get("native_study") or selection.get("native_study") or {})
+    title = (selection.get("title") or (study.get("title") if study_mode else None)
+             or workspace.project.get("title")
+             or ("Original native study" if study_mode else "Source-water assessment"))
     maps = _map_rows(state, selected_models)
     expected_families = set(native_study.MAP_FAMILIES) if study_mode else {item[0] for item in MAPS}
     if study_mode:
@@ -407,6 +409,12 @@ def compose_report(*, workspace, selection, state, baseline, alternatives, grid,
             [_text(study.get("title")), _text(study.get("purpose"))] +
             ([str(study["reference"])] if study.get("reference") else []) +
             [str(item) for item in study.get("methods", [])]))
+        context_path = _safe_path((state.get("files") or {}).get("native_study_context"))
+        if context_path:
+            sections[0]["assets"] = [{
+                "title": "Original study metadata and retained selections",
+                "path": context_path,
+            }]
 
     sections.append(_section("study", "Study area and retained selections", [
         "The selected reporting area is retained separately from the hydrologic modeling domain. The original model uses upstream context to represent contributing flow; delivered annual-mass artifacts and their totals use the reporting mask.",
@@ -641,6 +649,9 @@ def compose_report(*, workspace, selection, state, baseline, alternatives, grid,
         "map_families_expected": len(expected_families),
         "delivery_mode": native_study.mode(selection),
         "native_study": study if study_mode else None,
+        "native_study_context": ((state.get("files") or {}).get("native_study_context")
+                                 if study_mode else None),
+        "selected_map_families": [item["role"] for item in maps if item["files"]],
         "report_kind_label": "Original native study" if study_mode else "Source-water assessment",
         "maps": maps, "sections": sections,
         "sources": list(source_records),
@@ -772,7 +783,10 @@ def render_pdf(path, report):
     doc = SimpleDocTemplate(str(path), pagesize=(8.5*inch, 11*inch),
                             leftMargin=.675*inch, rightMargin=.675*inch,
                             topMargin=.65*inch, bottomMargin=.65*inch,
-                            title=report["title"], author="TokenJunkie Labs")
+                            title=report["title"],
+                            author=(str((report.get("contact") or {}).get("organization") or "")
+                                    if report.get("delivery_mode") == "native_study"
+                                    else "TokenJunkie Labs"))
     p = lambda value, sty="ClientBody": Paragraph(html.escape(str(value)).replace("\n", "<br/>"), styles[sty])
     story = [p(report.get("report_kind_label", "Source-water assessment").upper(), "ClientMeta"),
              p(report["title"], "ClientTitle"),
