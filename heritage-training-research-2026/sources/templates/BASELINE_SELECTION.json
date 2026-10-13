@@ -1,0 +1,33 @@
+{
+  "schema": "commons.uid370.baseline-selection-template.v1",
+  "status": "unselected",
+  "analysisDate": null,
+  "scope": {
+    "country": "England",
+    "constructionRoles": [],
+    "heritageDefinition": null,
+    "qualificationTypes": [],
+    "nonAccreditedTrainingIncluded": null
+  },
+  "sourceEditionIds": [],
+  "fundingRoutes": [],
+  "periods": [],
+  "contentReviewerRole": null,
+  "geographyBasis": null,
+  "populationDefinitions": [],
+  "partitionDeclarations": [],
+  "suppressionRules": [],
+  "unresolvedIssueIds": [
+    "I01",
+    "I02",
+    "I03",
+    "I04",
+    "I05",
+    "I06",
+    "I07",
+    "I08",
+    "I09",
+    "I10"
+  ],
+  "decision": null
+}
