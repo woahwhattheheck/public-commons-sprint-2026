@@ -1,0 +1,225 @@
+{
+  "format": "upper-savannah-measurements-large-file-source/v1",
+  "version": "1.2.2",
+  "files": [
+    {
+      "path": "MEASUREMENT_LARGE_FILES.md",
+      "bytes": 20195,
+      "sha256": "dea17f752f8c1ec4e09c1b6878f79fd3344174e6f49a659f28c8cd1f1e1086b5",
+      "role": "addition"
+    },
+    {
+      "path": "install_measurement_large_files.py",
+      "bytes": 12865,
+      "sha256": "12dc4f8f34746959738b22867aa3af443fa65a388ff1ba7b3436294671eb967c",
+      "role": "addition"
+    },
+    {
+      "path": "integration/component_fragments/measurement-large-files.json",
+      "bytes": 1474,
+      "sha256": "f37a796c4e442e9e179c8402522b2ee75785fe2cf1f3517cf0cb3986db24643c",
+      "role": "addition"
+    },
+    {
+      "path": "measurement_workspace/__init__.py",
+      "bytes": 40,
+      "sha256": "4952e0eec7fa862a4603ae7612b02661dfc97aa20a5910229fad70bade543332",
+      "role": "native"
+    },
+    {
+      "path": "measurement_workspace/chemistry.py",
+      "bytes": 40609,
+      "sha256": "896083e15789debc1fcd2fea2fe26f8a60ae0588b6229c67444bc75020acd4ef",
+      "role": "native"
+    },
+    {
+      "path": "measurement_workspace/engine/calibration.mjs",
+      "bytes": 4461,
+      "sha256": "9d9ff7ab3d6ccb5a00f06b11d0f6cb209640c27749c750dc8f4b8cb15e0e1199",
+      "role": "native"
+    },
+    {
+      "path": "measurement_workspace/engine/cli.mjs",
+      "bytes": 7455,
+      "sha256": "14b5500ba2f08a45560581e81b1d8c17340b93b48541ba79c6702911bc806d59",
+      "role": "patch"
+    },
+    {
+      "path": "measurement_workspace/engine/collection_zip.mjs",
+      "bytes": 1548,
+      "sha256": "adaafa1a90bed1218168b53dac5bfc7e6f11813bdac389b2ffd8cab5ad009d5a",
+      "role": "native"
+    },
+    {
+      "path": "measurement_workspace/engine/collections.mjs",
+      "bytes": 15866,
+      "sha256": "4be6736b90f8c1ec15b1394b6e2b0da9eba81a144feff2ddf007eed619fc885e",
+      "role": "native"
+    },
+    {
+      "path": "measurement_workspace/engine/http.mjs",
+      "bytes": 8030,
+      "sha256": "197fd4e5a732b0ad162b16107a5292bb184e6c5eeb5fd6e73a73861e063e2f43",
+      "role": "patch"
+    },
+    {
+      "path": "measurement_workspace/engine/large_archive.py",
+      "bytes": 7422,
+      "sha256": "b696119eefc797eb544887c70d3c17d4aa66334679ffff0d2363b2592b7b1a4d",
+      "role": "addition"
+    },
+    {
+      "path": "measurement_workspace/engine/large_cli.mjs",
+      "bytes": 3008,
+      "sha256": "d64245d07e20feb65b6099a5ebc407060fa5a9547a1d8a6c4cdf3f2ad8299762",
+      "role": "addition"
+    },
+    {
+      "path": "measurement_workspace/engine/large_delivery.mjs",
+      "bytes": 28600,
+      "sha256": "f48f15c1682af0f6c439b5f866e8dbc91ac8b09d60d8379caf660037ea61f90c",
+      "role": "addition"
+    },
+    {
+      "path": "measurement_workspace/engine/large_http.mjs",
+      "bytes": 2005,
+      "sha256": "7ae6567de4aa8ce2fce5454fee7a331a62f040449e1b9201da31ebfb80f02e54",
+      "role": "addition"
+    },
+    {
+      "path": "measurement_workspace/engine/large_intake.mjs",
+      "bytes": 19455,
+      "sha256": "34e7518208949bba903b7fac72e93c61f01c95c42a393be8b6e265c917e0d706",
+      "role": "addition"
+    },
+    {
+      "path": "measurement_workspace/engine/large_io.mjs",
+      "bytes": 4487,
+      "sha256": "331208c794eee0b45008f18598f7d426359a079c6ccf34a10d12302fb265d523",
+      "role": "addition"
+    },
+    {
+      "path": "measurement_workspace/engine/large_sources.mjs",
+      "bytes": 5152,
+      "sha256": "0020b0a12817fb6e2e877ac0455fcd5cb5660d990c532f2222a430332b4d1792",
+      "role": "addition"
+    },
+    {
+      "path": "measurement_workspace/engine/normalise.mjs",
+      "bytes": 16147,
+      "sha256": "27b978c27b3db0e27865e4b3a046be5451acce514348ee25eb372ab0cebfb0b5",
+      "role": "native"
+    },
+    {
+      "path": "measurement_workspace/engine/parse.mjs",
+      "bytes": 3800,
+      "sha256": "6e5bf1bb14b2b3baad048eb2b1bd93c56d43aab333b9728799d00d7f8006e33b",
+      "role": "native"
+    },
+    {
+      "path": "measurement_workspace/engine/providers.mjs",
+      "bytes": 6482,
+      "sha256": "b6cc24dbadce5f8b1bc4ac1eb2a8b86b146f6fc04d5b060b1096b05fd7204b8e",
+      "role": "native"
+    },
+    {
+      "path": "measurement_workspace/engine/stream_csv.mjs",
+      "bytes": 2704,
+      "sha256": "08324ba99c7337fe82b2f1c76c7c1c2979b0064ee81762ba4881a7fbb31a16ff",
+      "role": "addition"
+    },
+    {
+      "path": "measurement_workspace/engine/workspace.mjs",
+      "bytes": 23337,
+      "sha256": "8c3d173100c3f9f14db0de62a71c8a507cb94d402ca1ddec2fa335fc1a58055f",
+      "role": "patch"
+    },
+    {
+      "path": "measurement_workspace/extension.py",
+      "bytes": 6568,
+      "sha256": "5c349c157d0de20fa2598820d59baf31389ad5d88d4b2e5112ca5a800473caea",
+      "role": "patch"
+    },
+    {
+      "path": "measurement_workspace/large_context.py",
+      "bytes": 6545,
+      "sha256": "0d9cb79443768f48e04bc879a8beaf2bcf0324d29322ed31a96cedfe2e2f52c2",
+      "role": "addition"
+    },
+    {
+      "path": "measurement_workspace/large_file_patches.json",
+      "bytes": 42317,
+      "sha256": "307f98afc3ccbecb294bb18cf4d4b1fe3a0e4b05bc3f4390883169178407e056",
+      "role": "addition"
+    },
+    {
+      "path": "measurement_workspace/operator.py",
+      "bytes": 10444,
+      "sha256": "7c3bbd9e0972c2a1e1f6b8f2ac5d36d8dcee87e1d5183db2a77f9875e70310ca",
+      "role": "patch"
+    },
+    {
+      "path": "measurement_workspace/web/collections.mjs",
+      "bytes": 8945,
+      "sha256": "1e4910387bea5986e503d0609075546645554311e58c4c974023dca02184d1b2",
+      "role": "native"
+    },
+    {
+      "path": "measurement_workspace/web/extension.mjs",
+      "bytes": 3544,
+      "sha256": "05c7a3e4e45ae89de3c8a27cd819c337c3ba5fe5e20e9496584844d66051ab80",
+      "role": "patch"
+    },
+    {
+      "path": "measurement_workspace/web/large_files.mjs",
+      "bytes": 17940,
+      "sha256": "e26b5472953158c8a5c06fe078772a64cf789e37c534053988e7bc5c43a2cd54",
+      "role": "addition"
+    },
+    {
+      "path": "measurement_workspace/web/workspace.css",
+      "bytes": 4996,
+      "sha256": "3192e0bb56b04fe67a81487bd07e34b7181b5145eae1f103cbef53decec96039",
+      "role": "native"
+    },
+    {
+      "path": "measurement_workspace/web/workspace.js",
+      "bytes": 22052,
+      "sha256": "e29054f855bc5da1d2c13707364e72a34cd574f42c9dde359bb7be5a6b354dd1",
+      "role": "native"
+    },
+    {
+      "path": "operator/extensions/measured-observations.json",
+      "bytes": 1910,
+      "sha256": "70b84f908e8aa8d48bfec814f4a5f01f83c1f6cc5bf420ddeb2daa5514a768f6",
+      "role": "native"
+    },
+    {
+      "path": "measurement_workspace/web/chemistry.mjs",
+      "role": "native",
+      "bytes": 35156,
+      "sha256": "e4619ad2cb16afb7b87e9e787fb34c722e0422ee50d1d3fb125f9883ff32beda"
+    },
+    {
+      "path": "measurement_workspace/legacy_chemistry.py",
+      "role": "addition",
+      "bytes": 18503,
+      "sha256": "bfb2ddf892170abf3157819844d36687930785dd23c225872cbfd3214e2b02aa"
+    },
+    {
+      "path": "measurement_workspace/LEGACY_CHEMISTRY.md",
+      "role": "addition",
+      "bytes": 9345,
+      "sha256": "b77421baa56f8d8185131c4f69f10411713c97cac72b54827ba2e1352f253c7f"
+    }
+  ],
+  "origin_manifest_sha256": "812896a296ce245165102b480a66aa1532cf4ec84bead5bafd227f64b0d89ca7",
+  "continuity": {
+    "current_native_binding_commit": "882ea7f7ca3085bf684d061076a3cf83fbbaca0b",
+    "large_file_composition_commit": "f1c2da88de14240a341da9d9f396e12fb98c4cf2",
+    "atomic_source_hydration_commit": "804f98226ddc4677abd7d4603846bc496c25be60",
+    "complete_installer": "operator/install_measurements.py",
+    "complete_inventory": "integration/measurements/INSTALLATION.json",
+    "original_standalone_module": "measurement_workspace/legacy_chemistry.py"
+  }
+}
