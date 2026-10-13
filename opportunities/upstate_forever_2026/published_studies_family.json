@@ -1,0 +1,495 @@
+{
+  "schema": "upstate.published-study-family/v1",
+  "version": "1.4.0",
+  "repository": "woahwhattheheck/public-commons-sprint-2026",
+  "application_path": "opportunities/upstate_forever_2026",
+  "source_reference_base": "7161256c24314229609e1366518be32c5f32165d",
+  "instruction": "Resolve these paths at this inventory's delivery commit. Include this inventory file itself. Install with install_published_studies.py into the existing current ECSA host, then import the separately versioned original study bank with --with-installed-context.",
+  "external_source_edition": {
+    "files": 62,
+    "bank_sha256": "46334fae01f7ab6d356b70dbcfe2c5bfb555cccae99877e78c8f80cf17970272",
+    "url": "https://chatgpt.com/space/page_fb63164ad5208191b42417dd980ffb6a"
+  },
+  "files": [
+    {
+      "path": "eighteenmile_chlorophyll_reconciled.sources.json",
+      "bytes": 8289,
+      "sha256": "1ca92b037b8a60900a643cf4d0d5549400e3173a2960665d9159af5d5800ad6a"
+    },
+    {
+      "path": "eighteenmile_lake_microcystin_reconciliation.sources.json",
+      "bytes": 24802,
+      "sha256": "2d87369cade7297a0d35621e1bd198862eb717fb9a21d8f56bcb76b597a80dff"
+    },
+    {
+      "path": "eighteenmile_lake_observation_report.sources.json",
+      "bytes": 19603,
+      "sha256": "b2eea50ff94a658dae3f2e0079de72afc3e10e68b932b1b8aa007bc6fe8cc433"
+    },
+    {
+      "path": "eighteenmile_lake_paired_analysis.sources.json",
+      "bytes": 37871,
+      "sha256": "34af2770b39339760994263833e981692cc1c75806206f78dbd9705c30b8eee8"
+    },
+    {
+      "path": "install_published_studies.py",
+      "bytes": 8995,
+      "sha256": "b90aa1b0be5026ec6a17b78696e6de640e9c31eb08a464957b32d4b228cef2c0"
+    },
+    {
+      "path": "measurement_workspace/OBSERVATION_SUPPORT.md",
+      "bytes": 5368,
+      "sha256": "0d2d48b0788575f1ff842270d0a5d519db647ecf9660298c2d14959975fc23f1"
+    },
+    {
+      "path": "measurement_workspace/observation_support.py",
+      "bytes": 13573,
+      "sha256": "43a18c4e81392968233dc3b858d3bb76752e6db2cb9095a9afb69bfe15f1aa48"
+    },
+    {
+      "path": "measurement_workspace/published_studies.py",
+      "bytes": 89942,
+      "sha256": "8c564cedad2db7dab5f53b01cd6dcc4e55b49602e4128b657f56f3e85fea8d75"
+    },
+    {
+      "path": "observations/eighteenmile_2023/cohort_reconciliation_20261013/cohort_reconciliation.json",
+      "bytes": 8067,
+      "sha256": "e16b9acc3d4674f905a0c3d5ea3295d7f7b5a40f93939ea82ecd0b73cd747613"
+    },
+    {
+      "path": "observations/eighteenmile_2023/cohort_reconciliation_20261013/cohort_summary.csv",
+      "bytes": 644,
+      "sha256": "91ede9238f0ec14f05d337e219718920a0eea5ce2c322fd6b7b5fbaa952dde36"
+    },
+    {
+      "path": "observations/eighteenmile_2023/cohort_reconciliation_20261013/raw/sv268-2023-07-11-all-results.csv",
+      "bytes": 7667,
+      "sha256": "ad93857105eb2090a39cda5d01b82158e1936eaea408862e4fc2ca9a02a0e902"
+    },
+    {
+      "path": "observations/eighteenmile_2023/cohort_reconciliation_20261013/raw/sv374-2023-08-08-all-results.csv",
+      "bytes": 8424,
+      "sha256": "8cff65c8c495f147bdf14f3e291384c6a640f375471dde490c98659d111a5e5a"
+    },
+    {
+      "path": "observations/eighteenmile_2023/cohort_reconciliation_20261013/README.md",
+      "bytes": 4380,
+      "sha256": "cdcf3d231111b844520137c2f5acd9e405c21723b9cfd98e644b941c5d7e2041"
+    },
+    {
+      "path": "observations/eighteenmile_2023/cohort_reconciliation_20261013/reconcile_cli.mjs",
+      "bytes": 1149,
+      "sha256": "5fb7c1b9ba071ad52506da8b0655af34c0e22e97a120f9cc98a51e7c656c2e37"
+    },
+    {
+      "path": "observations/eighteenmile_2023/cohort_reconciliation_20261013/reconcile.mjs",
+      "bytes": 8581,
+      "sha256": "bdc4dfe58f171fd5134aa2d768ae1baba1467032638ea0a91811c9adfc0f1a9e"
+    },
+    {
+      "path": "observations/eighteenmile_2023/cohort_reconciliation_20261013/source-inputs.json",
+      "bytes": 1926,
+      "sha256": "7bb2188ac84adcb8ab760aed3d758adb90316998c219a7f8ff4bb36a7cf82b7b"
+    },
+    {
+      "path": "observations/eighteenmile_2023/cohort_reconciliation_20261013/study_chlorophyll_cohort.csv",
+      "bytes": 43187,
+      "sha256": "d77d5138cd7aa0f5a78171059f831c4519f90455942f5c93c0ac99e9f14fcf0d"
+    },
+    {
+      "path": "observations/eighteenmile_2023/continuous_monthly_do.csv",
+      "bytes": 2338,
+      "sha256": "cb238e309d54620160b87ffa5e27b7a53de93bc002800bb5c084129e051b565b"
+    },
+    {
+      "path": "observations/eighteenmile_2023/continuous_monthly_ph.csv",
+      "bytes": 2166,
+      "sha256": "696f7436e4af095677dab397c1854395656cb0f385219ecf9c69b234c846fa05"
+    },
+    {
+      "path": "observations/eighteenmile_2023/microcystin_reconciliation/build_report_reconciliation.mjs",
+      "bytes": 2232,
+      "sha256": "07c4e052c9ad8fa72e0378776b04f040f95cb0bdcf285f5bd6c4a3312bb9629c"
+    },
+    {
+      "path": "observations/eighteenmile_2023/microcystin_reconciliation/different-date-clock-matches.csv",
+      "bytes": 1556,
+      "sha256": "dc9a1f3ae9e2ff98894e6f7283aa45dcec6226a0b106cfa348b8da60e72f6d2f"
+    },
+    {
+      "path": "observations/eighteenmile_2023/microcystin_reconciliation/excluded-original-records.csv",
+      "bytes": 13984,
+      "sha256": "7fb919289e66e341810bbc8711727dc54be6340d7b72a5810c5035c73fc70bdf"
+    },
+    {
+      "path": "observations/eighteenmile_2023/microcystin_reconciliation/input-manifest.json",
+      "bytes": 3280,
+      "sha256": "d988f55ff602c197b88bf34597cb23bc867a2122f64ec870b55fc6de7c51f69c"
+    },
+    {
+      "path": "observations/eighteenmile_2023/microcystin_reconciliation/published-table8.csv",
+      "bytes": 169,
+      "sha256": "c06b5b2b7801761b7b80c253ed1cb129e36c2ae65c3555903e0e2cd70e2540b0"
+    },
+    {
+      "path": "observations/eighteenmile_2023/microcystin_reconciliation/README.md",
+      "bytes": 3679,
+      "sha256": "03cd718cf79f3681c7c4822a48ae9bc4dba0809ae3bdb15079d1fa88bc722a96"
+    },
+    {
+      "path": "observations/eighteenmile_2023/microcystin_reconciliation/reconcile_core.mjs",
+      "bytes": 9324,
+      "sha256": "d2cdc5429fb5cfb1e85d231347d114108f69989e7ae8dc3041f413d88a572278"
+    },
+    {
+      "path": "observations/eighteenmile_2023/microcystin_reconciliation/reconcile_report.mjs",
+      "bytes": 6766,
+      "sha256": "269f222af6db18871a93fbc1259021d6c3c650b81bfdc3ecee1ad32a36193abf"
+    },
+    {
+      "path": "observations/eighteenmile_2023/microcystin_reconciliation/report-comparison.csv",
+      "bytes": 1985,
+      "sha256": "4bbb688867eb7230595caebbb8f29565b723a8943c5c213366dc5055916d0de5"
+    },
+    {
+      "path": "observations/eighteenmile_2023/microcystin_reconciliation/report-reconciliation.html",
+      "bytes": 8709,
+      "sha256": "b2aed59d4690aeef3a5be3fe909e53caa49228b9631b872a06be10c5ede57950"
+    },
+    {
+      "path": "observations/eighteenmile_2023/microcystin_reconciliation/report-reconciliation.json",
+      "bytes": 289952,
+      "sha256": "ec5f084a86bb4fa8e84e231d950ebbe039011eb04fe01f038bba04344fc069c1"
+    },
+    {
+      "path": "observations/eighteenmile_2023/microcystin_reconciliation/selected-original-records.csv",
+      "bytes": 75481,
+      "sha256": "0f544065b1a541746954dea7f21fd4a96b1922ecfdaa3df8b9c3682dc20e59fb"
+    },
+    {
+      "path": "observations/eighteenmile_2023/microcystin_support_20261013/original-campaign-support.json",
+      "bytes": 104610,
+      "sha256": "77ea745496c41a02c0f2b1539d7f4149ba424b14d98ca7402f009fcf1672fe9d"
+    },
+    {
+      "path": "observations/eighteenmile_2023/paired_analysis/build_paired_analysis.mjs",
+      "bytes": 2429,
+      "sha256": "6ef3f2d64800d3808e327e93d639b8518668dab0ce805d417b275f1fbf07e13a"
+    },
+    {
+      "path": "observations/eighteenmile_2023/paired_analysis/chlorophyll-pair-summary.csv",
+      "bytes": 1843,
+      "sha256": "76819273f6bcf20e67df4c60d75dd1eb2ea04df7e92092e3ffdd6d2fa7bdd8c6"
+    },
+    {
+      "path": "observations/eighteenmile_2023/paired_analysis/chlorophyll-pairs.csv",
+      "bytes": 34728,
+      "sha256": "857e88df18b3afd96e953b66d3d040a5ed47c148865b733039db6749b46dbe75"
+    },
+    {
+      "path": "observations/eighteenmile_2023/paired_analysis/chlorophyll-station-summary.csv",
+      "bytes": 394,
+      "sha256": "a133e613bb42976311bad1185b36fa1ff510e73ae6a6b65483aed623c89e0836"
+    },
+    {
+      "path": "observations/eighteenmile_2023/paired_analysis/cross-analyte-links.csv",
+      "bytes": 48164,
+      "sha256": "2ed47ca6dbbee1ee24a246a0c594ec5b60c058047b1f5cbe49f68efd4b0fce72"
+    },
+    {
+      "path": "observations/eighteenmile_2023/paired_analysis/input-manifest.json",
+      "bytes": 3476,
+      "sha256": "3b3e8c4daa96c82b4f1943cec5b8fbf78727edf267965865cb12c4dc1ff13aab"
+    },
+    {
+      "path": "observations/eighteenmile_2023/paired_analysis/methods.json",
+      "bytes": 2604,
+      "sha256": "4b674bf9ec972ae857000d04f710e1bae41553872165e6c49e1ad9735be97b23"
+    },
+    {
+      "path": "observations/eighteenmile_2023/paired_analysis/microcystin-campaign-support.csv",
+      "bytes": 22959,
+      "sha256": "84268ac3973433dbff7bb0e93e5c18e48f62de40c32dbc5b3f4f090ec21174b2"
+    },
+    {
+      "path": "observations/eighteenmile_2023/paired_analysis/microcystin-pair-summary.csv",
+      "bytes": 999,
+      "sha256": "d4e6795d03face071f6ee69275fe10aad596a3b56432003106a7f51a8c09136e"
+    },
+    {
+      "path": "observations/eighteenmile_2023/paired_analysis/microcystin-pairs.csv",
+      "bytes": 32274,
+      "sha256": "951cc21b3ec387079a6243f7bde0f070b94550f09647fd8ef49ab6000395644a"
+    },
+    {
+      "path": "observations/eighteenmile_2023/paired_analysis/originals/normalize_core.mjs",
+      "bytes": 12502,
+      "sha256": "5becd65982c591a641068e0c2784f6d33a4f926c867a96b49c6eb787c7977ae6"
+    },
+    {
+      "path": "observations/eighteenmile_2023/paired_analysis/originals/SV-268-2023.csv",
+      "bytes": 92801,
+      "sha256": "0c9b8e6051b697937d9fcc035b3ce958aea56d082d3188d332570e4ac9961b4b"
+    },
+    {
+      "path": "observations/eighteenmile_2023/paired_analysis/originals/SV-374-2023.csv",
+      "bytes": 92708,
+      "sha256": "9b242799e822559b52404f0a0e5a888959b5ea4c537de15f2907eb09fa50a4a4"
+    },
+    {
+      "path": "observations/eighteenmile_2023/paired_analysis/originals/SV-838-2023.csv",
+      "bytes": 16829,
+      "sha256": "85e7be4eafff695ce2ae3095d343471fa9d4fd502e32a5644e4a82a497d76f3d"
+    },
+    {
+      "path": "observations/eighteenmile_2023/paired_analysis/originals/SV-839-2023.csv",
+      "bytes": 17299,
+      "sha256": "aec400eed27db53d435a0e9b7cfd387eeb828379802358c01bf933965057de92"
+    },
+    {
+      "path": "observations/eighteenmile_2023/paired_analysis/originals/SV-840-2023.csv",
+      "bytes": 16792,
+      "sha256": "a7039fb099d4fda958923f986169dabfa17168ac66d57f36d9720c7ccffa3af0"
+    },
+    {
+      "path": "observations/eighteenmile_2023/paired_analysis/paired_analysis.mjs",
+      "bytes": 14000,
+      "sha256": "f550d2c2ac73dde011c4d052a17a1b9c11bd6e05f5239e44afb48bb2e667d874"
+    },
+    {
+      "path": "observations/eighteenmile_2023/paired_analysis/paired_report.mjs",
+      "bytes": 14277,
+      "sha256": "97d5e652810e9dce7d56376599002c51089db3aee1be98bbfc8953d4c4f9ccc8"
+    },
+    {
+      "path": "observations/eighteenmile_2023/paired_analysis/paired-observations-report.html",
+      "bytes": 16606,
+      "sha256": "2eab15e17422dece65c34ceb4f4dcc8b7bdb5f4676fb208e8db5f22dfdd33b49"
+    },
+    {
+      "path": "observations/eighteenmile_2023/paired_analysis/paired-observations.json",
+      "bytes": 456848,
+      "sha256": "db6a21764d0c56a18d55d73a4e179156f2a47de0c68fead5c825d815244afe0b"
+    },
+    {
+      "path": "observations/eighteenmile_2023/paired_analysis/README.md",
+      "bytes": 5057,
+      "sha256": "30dfdb28eaa342623c985f9142e031abdd4600d1a3f687f447f182cdbd6ef755"
+    },
+    {
+      "path": "observations/eighteenmile_2023/paired_analysis/source-records.csv",
+      "bytes": 123444,
+      "sha256": "56f1fdc441d0039704877518a9059670cb201f24b8c4f19953ecd487813d1bbc"
+    },
+    {
+      "path": "observations/eighteenmile_2023/README.md",
+      "bytes": 2360,
+      "sha256": "e2325c6f6807e337c2871d57c708f063b3e999e317c2ab4cd139fd57ee873b8d"
+    },
+    {
+      "path": "observations/eighteenmile_2023/reported_npdes_permits.csv",
+      "bytes": 769,
+      "sha256": "d59fa0ccc847d0d26342f3d6ab727c84acee6188933f82ab3635b7fc0b1ff1c2"
+    },
+    {
+      "path": "observations/eighteenmile_2023/seasonal_summaries.csv",
+      "bytes": 8170,
+      "sha256": "f4c30f642a8c276715953326ff69c6848136f21bb99122553fc90391d28f7b3a"
+    },
+    {
+      "path": "observations/eighteenmile_2023/source_notes.json",
+      "bytes": 3408,
+      "sha256": "158a2f46a71bfbb2d6d25f8cde7c5ffea9d54904d671bef43948180c57642efb"
+    },
+    {
+      "path": "observations/eighteenmile_2023/stations.csv",
+      "bytes": 2246,
+      "sha256": "ca4c5eda792a42c4eb1bd222e37d7ba5217e4610feefa22f5090b4b2332a7dd4"
+    },
+    {
+      "path": "observations/eighteenmile_2023/stations.json",
+      "bytes": 4331,
+      "sha256": "15e547413181c92ca55cbc196703f8583bd2e7032ade302c376be4bc38d0193e"
+    },
+    {
+      "path": "observations/eighteenmile_2023/study.json",
+      "bytes": 2697,
+      "sha256": "7163a6048615600c98e42ebb1d6f8ba6f4dd39e90c2eddce2fc34a285fb866a8"
+    },
+    {
+      "path": "observations/eighteenmile_2023/surface_ranges.csv",
+      "bytes": 1234,
+      "sha256": "78d12cc0231041dd07395ebffdeea2ab5a3bbaa86ca7657ea19785c6ad02f44b"
+    },
+    {
+      "path": "observations/eighteenmile_2023/table7-visual-context.csv",
+      "bytes": 1430,
+      "sha256": "499dce024181c88ee4514fb2cf62e9f2a2e4258882562a8cbfaa5f48a4206030"
+    },
+    {
+      "path": "observations/eighteenmile_2023/table7-visual-reading.json",
+      "bytes": 3971,
+      "sha256": "f1b187f3c4a6ddbebf80ce1140f789eb1d9951b6c0f6f8e12f60c9601d4f9283"
+    },
+    {
+      "path": "observations/eighteenmile_2023/wqp_20261013/build_observation_report.mjs",
+      "bytes": 34350,
+      "sha256": "72f13dc112d4a5236e00bd5f7dfadea4aedd5c7e188f1e0eb4e35cbd8ae15c76"
+    },
+    {
+      "path": "observations/eighteenmile_2023/wqp_20261013/lake-observations-report.html",
+      "bytes": 281844,
+      "sha256": "8579601be55147e146347a2b8285d4ba6216aff81ebb593d681f37c5e2a6c174"
+    },
+    {
+      "path": "observations/eighteenmile_2023/wqp_20261013/README.md",
+      "bytes": 10282,
+      "sha256": "50286e2acba4b929a437eb1d30264a297f1a9650ec3b237814555ad72c1cb061"
+    },
+    {
+      "path": "observations/eighteenmile_2023/wqp_20261013/report-reconciliation.json",
+      "bytes": 6288,
+      "sha256": "f59fe99960e39ff224a9dabab97bcf4403054082d758f7fb41caf8e72cf91f10"
+    },
+    {
+      "path": "observations/eighteenmile_2023/wqp_20261013/source-acquisition.json",
+      "bytes": 3615,
+      "sha256": "20b01c904177216037d3e611f79fbe507a96a7ee696af73a3be472c42652207f"
+    },
+    {
+      "path": "observations/eighteenmile_2023/wqp_20261013/source-manifest.json",
+      "bytes": 3504,
+      "sha256": "e49971929e869597f60676e27fc9042e4f4f0abcc57a229fc0ae5e7668b7bb67"
+    },
+    {
+      "path": "observations/eighteenmile_2023/wqp_20261013/sv268-sv374-chlorophyll-2023-original.csv",
+      "bytes": 24946,
+      "sha256": "a4f36e75c22603e134e737bee3428cc9e4970cf017ecab907fb73869da02081f"
+    },
+    {
+      "path": "observations/eighteenmile_2023/wqp_20261013/sv268-sv374-microcystins-2023-original.csv",
+      "bytes": 22213,
+      "sha256": "cede3d8895eb0b5122fac940403dab3277c8658ec2e0a401e57b66a96169cc88"
+    },
+    {
+      "path": "observations/eighteenmile_2023/wqp_20261013/three-lake-activities-2023-original.csv",
+      "bytes": 32166,
+      "sha256": "8118f52771b1bc87822e821f52c4980bdd8ab3471c8a5b790a9c8129ccf72f85"
+    },
+    {
+      "path": "observations/eighteenmile_2023/wqp_20261013/three-lake-chlorophyll-schedule.csv",
+      "bytes": 4482,
+      "sha256": "b80145b5f8f8760e6cb134412e98eb6d553fc7c8a00eca1059c9530d5bb67112"
+    },
+    {
+      "path": "observations/eighteenmile_2023/wqp_20261013/three-lake-observations.csv",
+      "bytes": 19733,
+      "sha256": "f5a33909cbcb030c25a8c1760bfbe5b84efe0a9061bad0655303223b24b1a522"
+    },
+    {
+      "path": "observations/eighteenmile_2023/wqp_20261013/three-lake-results-2023-original.csv",
+      "bytes": 47412,
+      "sha256": "5b22e3de1a4311963b2ed616886273788bd485897f276663157a7137ce0aaa61"
+    },
+    {
+      "path": "observations/eighteenmile_2023/wqp_20261013/three-lake-series-coverage.csv",
+      "bytes": 1089,
+      "sha256": "1aff9be45f5288f03f56ff66f9483235f32e769a62d6e90a41c9ed87fd74a410"
+    },
+    {
+      "path": "observations/eighteenmile_2023/wqp_20261013/three-lake-stations-original.csv",
+      "bytes": 1764,
+      "sha256": "85a33ed59d36327d6ec127e9d2f83cf688095103ef887b7ab1d408b45d4ec8e3"
+    },
+    {
+      "path": "observations/eighteenmile_2023/wqp/flow_context_methods.public.json",
+      "bytes": 4562,
+      "sha256": "6d3127bec00175f656b07a13807baf6a0b6e6e9f21b05b0965411b8191cc8b28"
+    },
+    {
+      "path": "observations/eighteenmile_2023/wqp/FLOW_CONTEXT_PUBLIC.md",
+      "bytes": 5480,
+      "sha256": "000714744a41caba9d0823f42e50895befca77b57144e575df5a6500420e9503"
+    },
+    {
+      "path": "observations/eighteenmile_2023/wqp/flow_context.mjs",
+      "bytes": 4678,
+      "sha256": "2d53a3b41a2a8a8032f1c05a2245c798b7c69a3c6cf761a3c5e922044607a3da"
+    },
+    {
+      "path": "observations/eighteenmile_2023/wqp/flow_original_source.mjs",
+      "bytes": 2370,
+      "sha256": "3c1a40457a4b87d677395f2b2bd4a19485f97062d7df248edc8836bc19b4476f"
+    },
+    {
+      "path": "observations/eighteenmile_2023/wqp/flow-context-public-sources.json",
+      "bytes": 5713,
+      "sha256": "f7e5d9b4ceac543d8beafdd069e4133ba1bb5430ffd7ca2365a9b4f8ccc81108"
+    },
+    {
+      "path": "observations/eighteenmile_2023/wqp/originals/SV-838-2023.csv",
+      "bytes": 16829,
+      "sha256": "85e7be4eafff695ce2ae3095d343471fa9d4fd502e32a5644e4a82a497d76f3d"
+    },
+    {
+      "path": "observations/eighteenmile_2023/wqp/originals/SV-839-2023.csv",
+      "bytes": 17299,
+      "sha256": "aec400eed27db53d435a0e9b7cfd387eeb828379802358c01bf933965057de92"
+    },
+    {
+      "path": "observations/eighteenmile_2023/wqp/originals/SV-840-2023.csv",
+      "bytes": 16792,
+      "sha256": "a7039fb099d4fda958923f986169dabfa17168ac66d57f36d9720c7ccffa3af0"
+    },
+    {
+      "path": "observations/eighteenmile_2023/wqp/originals/usgs_02186702_2023_2023.json",
+      "bytes": 29226,
+      "sha256": "973897d3813100b498482b4acf88ba705da50dcf6e28baea5fe7fe818e76d3f9"
+    },
+    {
+      "path": "observations/eighteenmile_2023/wqp/reproduce_study_flow.mjs",
+      "bytes": 3827,
+      "sha256": "74aa69ebe47b46833c7801692f384d0c918487b41c9a8a40c6ddb2ffa73d2dc5"
+    },
+    {
+      "path": "observations/eighteenmile_2023/wqp/study_flow_dates.csv",
+      "bytes": 27050,
+      "sha256": "0ccb737025dc99a5534ccfc7ae0202451fd2b031e028f2eea0480e7d28c4df67"
+    },
+    {
+      "path": "operator/extensions/published-studies.json",
+      "bytes": 2476,
+      "sha256": "5738f2f2528adb69bf21e558dca7c2bce2354466dc8a00cb01807a006a98d97d"
+    },
+    {
+      "path": "operator/published_study_operator.py",
+      "bytes": 19255,
+      "sha256": "e8d4b4397fcb937cb609fdbff141ac3429c2b916f99ca0947c110d018abfe9be"
+    },
+    {
+      "path": "operator/web/published_studies.css",
+      "bytes": 6429,
+      "sha256": "7f961d02db80b73cb3adb50ec668d1019b262dfde52ed3063a7a44754b9542ec"
+    },
+    {
+      "path": "operator/web/published_studies.mjs",
+      "bytes": 40994,
+      "sha256": "884334972fad7f3560b53b43381877e9062518a71e48ef0aee0a6dedfd7883c0"
+    },
+    {
+      "path": "PUBLISHED_STUDIES.md",
+      "bytes": 29582,
+      "sha256": "ffbe0b4910bbb412691bf2e87faaba9dcf51b35f0992e4728f2c4c12735cb4c8"
+    },
+    {
+      "path": "receive_published_studies.py",
+      "bytes": 2617,
+      "sha256": "838ff46aea53861766c620b40d91d67302c5e00a3020d35bd9b4547f6aa961b9"
+    },
+    {
+      "path": "tools/attach_published_report.py",
+      "bytes": 2849,
+      "sha256": "563ff9332e781d066c2c74cfb012d9a994a76b4e80f1b3bf2876cc4c2f3c7444"
+    }
+  ]
+}

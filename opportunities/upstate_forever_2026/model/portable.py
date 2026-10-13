@@ -47,6 +47,8 @@ APPLICATION_FILES = (
     "eighteenmile_point_source_context.sources.json",
     "eighteenmile_lake_observation_report.sources.json",
     "eighteenmile_lake_paired_analysis.sources.json",
+    "published_studies_family.json",
+    "eighteenmile_lake_microcystin_reconciliation.sources.json",
     "install_published_studies.py",
     "receive_published_studies.py",
     "tools/attach_published_report.py",
