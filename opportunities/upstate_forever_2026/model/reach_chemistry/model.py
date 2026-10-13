@@ -7,6 +7,7 @@ or implicit annual-to-daily conversion are applied.
 from __future__ import annotations
 from dataclasses import dataclass
 from copy import deepcopy
+from bisect import bisect_left, bisect_right
 from hashlib import sha256
 import json
 import math
@@ -102,6 +103,10 @@ class Project:
         self.volume = np.asarray([number(r.get("volume_m3"), f"reaches.{rid}.volume_m3", positive=True)
                                   for rid, r in self.reaches.items()], dtype=float)
         self.state_volumes = np.repeat(self.volume, self.ns)
+        hydrology = mapping(raw.get("hydrology", {"mode": "fixed-volume"}), "hydrology")
+        if set(hydrology) - {"mode"} or hydrology.get("mode") not in ("fixed-volume", "variable-storage"):
+            raise ModelError("hydrology.mode must be fixed-volume or variable-storage")
+        self.variable_storage = hydrology["mode"] == "variable-storage"
         for group, items in [("species", self.species), ("reaches", self.reaches),
                              ("flows", self.flows), ("exchanges", self.exchanges),
                              ("reactions", self.reactions), ("loads", self.loads),
@@ -134,6 +139,11 @@ class Project:
             if src is not None: self.reach(src)
             if dst is not None: self.reach(dst)
             number(f.get("m3_day"), f"flow {fid}.m3_day")
+            if "solute_transport" in f:
+                if type(f["solute_transport"]) is not bool:
+                    raise ModelError(f"flow {fid}.solute_transport must be boolean")
+                if not f["solute_transport"] and (src is None or dst is not None):
+                    raise ModelError(f"flow {fid}: water-only flow must leave a reach to an external boundary")
             c = mapping(f.get("concentration_mg_l", {}), f"flow {fid}.concentration_mg_l")
             if c and src is not None:
                 raise ModelError(f"flow {fid}: concentration applies only to boundary inflow")
@@ -146,6 +156,8 @@ class Project:
         for rid, r in self.reactions.items():
             self.specie(r.get("source"))
             number(r.get("rate_day"), f"reaction {rid}.rate_day")
+            if r.get("volume_scaling", "constant") not in ("constant", "inverse"):
+                raise ModelError(f"reaction {rid}.volume_scaling must be constant or inverse")
             products = mapping(r.get("products", {}), f"reaction {rid}.products")
             total = 0.0
             for sid, fraction in products.items():
@@ -194,10 +206,24 @@ class Project:
                     if name not in choices: raise ModelError(f"phase.{key}: unknown id {name}")
                     number(factor, f"phase.{key}.{name}")
         self.end_day = end
+        self.phase_ends = tuple(float(phase["until_day"]) for phase in self.phases)
         self.fingerprint = sha256(canonical_bytes(self.raw)).hexdigest()
-        # Fixed-volume water continuity must hold in EVERY phase, not just baseline.
+        # Validate the complete hydraulic trajectory once, including every phase.
+        # Flow rates are piecewise constant; endpoint positivity proves positive
+        # volume throughout each linear-storage interval.
+        self.hydraulic_segments = []
+        start, volume = 0.0, self.volume.copy()
         for phase in self.phases:
-            self.check_water(phase)
+            water = self.check_water(phase)
+            rates = np.asarray([row["residual_m3_day"] for row in water])
+            final = volume + rates * (phase["until_day"] - start) if self.variable_storage else volume.copy()
+            if not np.isfinite(final).all() or np.any(final <= 0):
+                reach = self.rids[int(np.where(~np.isfinite(final) | (final <= 0))[0][0])]
+                raise ModelError(f"reach {reach}: storage becomes nonpositive or non-finite before day {phase['until_day']}")
+            self.hydraulic_segments.append({"start_day": start, "until_day": float(phase["until_day"]),
+                                           "initial": volume.copy(), "final": final.copy(),
+                                           "rate": rates, "water": water})
+            volume, start = final, float(phase["until_day"])
 
     def specie(self, sid: str) -> dict:
         if not isinstance(sid, str) or sid not in self.species:
@@ -226,7 +252,7 @@ class Project:
             if f.get("target") is not None: incoming[self.ri[f["target"]]] += q
         residual = incoming - outgoing
         bad = np.where(np.abs(residual) > 1e-9 * np.maximum(1.0, np.maximum(incoming, outgoing)))[0]
-        if len(bad):
+        if len(bad) and not self.variable_storage:
             r = int(bad[0])
             raise ModelError(f"fixed-volume water balance fails at {self.rids[r]}, phase ending {phase['until_day']}: "
                              f"inflow {incoming[r]} != outflow {outgoing[r]} m3/day; add explicit boundary flow")
@@ -255,7 +281,8 @@ class Project:
         for fid, f in self.flows.items():
             q = f["m3_day"] * phase.get("flow_multipliers", {}).get(fid, 1.0)
             if f.get("source") is not None:
-                transport(f["source"], f.get("target"), q)
+                if f.get("solute_transport", True):
+                    transport(f["source"], f.get("target"), q)
             else:
                 for sid, c in f.get("concentration_mg_l", {}).items():
                     forcing(self.tag(f, f"boundary:{fid}"), self.index(f["target"], sid), q * c / 1000.0)
@@ -280,16 +307,62 @@ class Project:
                                "products": dict(r.get("products", {})), "rate_day": float(k),
                                "basis": self.species[r["source"]]["basis"],
                                "sink_fraction": 1.0 - sum(r.get("products", {}).values()),
-                               "sink_label": r.get("sink_label")})
+                               "sink_label": r.get("sink_label"),
+                               **({"volume_scaling": "inverse"} if r.get("volume_scaling") == "inverse" else {})})
         A = sparse.coo_matrix((val, (row, col)), shape=(self.n, self.n)).tocsc()
         if not np.isfinite(A.data).all() or not np.isfinite(b).all():
             raise ModelError("operator overflow; review model units and magnitudes")
         return Operator(A, b, tags, external, ledger, phase, self.check_water(phase))
 
-    def state_rows(self, mass: np.ndarray) -> list[dict]:
+    def volume_at(self, day: float) -> np.ndarray:
+        day = number(day, "hydraulic day")
+        if day > self.end_day:
+            raise ModelError("hydraulic day exceeds the original project duration")
+        if not self.variable_storage:
+            return self.volume.copy()
+        segment = self.hydraulic_segments[bisect_left(self.phase_ends, day)]
+        return segment["initial"] + segment["rate"] * (day - segment["start_day"])
+
+    def state_volumes_at(self, day: float) -> np.ndarray:
+        return np.repeat(self.volume_at(day), self.ns)
+
+    def storage_rows(self, day: float) -> list[dict]:
+        volumes = self.volume_at(day)
+        # At an internal boundary report the new operating period's flow.
+        segment = self.hydraulic_segments[min(bisect_right(self.phase_ends, day),
+                                              len(self.hydraulic_segments)-1)]
+        rows = []
+        for index, reach in enumerate(self.rids):
+            water = segment["water"][index]
+            discharge = water["outgoing_m3_day"]
+            rows.append({"reach": reach, "volume_m3": float(volumes[index]),
+                         "incoming_m3_day": water["incoming_m3_day"],
+                         "outgoing_m3_day": discharge,
+                         "storage_change_m3_day": water["residual_m3_day"],
+                         "nominal_turnover_days": float(volumes[index] / discharge) if discharge else None})
+        return rows
+
+    def storage_budgets(self) -> list[dict]:
+        final = self.volume_at(self.end_day)
+        rows = []
+        for index, reach in enumerate(self.rids):
+            incoming = sum(s["water"][index]["incoming_m3_day"] * (s["until_day"] - s["start_day"])
+                           for s in self.hydraulic_segments)
+            outgoing = sum(s["water"][index]["outgoing_m3_day"] * (s["until_day"] - s["start_day"])
+                           for s in self.hydraulic_segments)
+            residual = float(self.volume[index] + incoming - outgoing - final[index])
+            rows.append({"reach": reach, "initial_storage_m3": float(self.volume[index]),
+                         "inflow_m3": incoming, "outflow_m3": outgoing,
+                         "final_storage_m3": float(final[index]), "residual_m3": residual,
+                         "relative_residual": residual / max(1.0, abs(float(self.volume[index]) + incoming),
+                                                              abs(float(final[index]) + outgoing))})
+        return rows
+
+    def state_rows(self, mass: np.ndarray, day: float | None = None) -> list[dict]:
+        volumes = self.volume if day is None else self.volume_at(day)
         return [{"reach": rid, "species": sid, "basis": self.species[sid]["basis"],
                  "kg": float(mass[self.index(rid, sid)]),
-                 "mg_l": float(1000.0 * mass[self.index(rid, sid)] / self.volume[i])}
+                 "mg_l": float(1000.0 * mass[self.index(rid, sid)] / volumes[i])}
                 for i, rid in enumerate(self.rids) for sid in self.sids]
 
     def basis_sum(self, values: np.ndarray) -> dict[str, float]:
