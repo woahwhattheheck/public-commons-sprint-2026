@@ -2,7 +2,7 @@
   "schema": "upstate.operator-extension/v1",
   "id": "community-revisions",
   "title": "Community plan revision comparisons",
-  "version": "1",
+  "version": "2",
   "order": 75,
   "requires_actions": [
     "community.plan.save",
@@ -21,7 +21,8 @@
       ]
     },
     "actions": [
-      "community.plan.compare"
+      "community.plan.compare",
+      "community.revision.receive"
     ],
     "invoke": {
       "handler": "invoke",
@@ -68,12 +69,48 @@
           "operation",
           "payload"
         ]
+      },
+      {
+        "methods": [
+          "GET"
+        ],
+        "path": "/api/community-revisions/receive-preview",
+        "operation": "receive-preview",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "GET"
+        ],
+        "path": "/api/community-revisions/received",
+        "operation": "received",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
       }
     ],
     "items": [
       {
         "kind": "community_plan_comparisons",
         "operation": "inspect",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "kind": "community_received_revisions",
+        "operation": "received",
         "handler": "read",
         "args": [
           "workspace_key",
