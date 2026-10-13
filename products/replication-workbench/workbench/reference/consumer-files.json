@@ -1,0 +1,4 @@
+{
+  "report.sql": "SELECT * FROM \"main\".\"test1\" ORDER BY \"id\";\n",
+  "README.md": "# Original local consumer\n\nreport.sql selects the retained source relation. Its reviewed change selects the separate parallel relation; both database snapshots remain available.\n"
+}

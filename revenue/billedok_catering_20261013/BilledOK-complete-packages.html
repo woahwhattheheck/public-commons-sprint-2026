@@ -97,4 +97,24 @@ function packagePanelMain(){
  }
  start().catch(e=>{status.textContent=e.message;});
 }
-packagePanelMain();</script></div></body></html>
+packagePanelMain();
+function bindBilledOKProfileNavigation(frame){
+ frame.addEventListener("load",()=>{
+  const doc=frame.contentDocument;if(!doc)return;
+  doc.addEventListener("click",event=>{
+   const link=event.target.closest?.("a[href]"),href=link?.getAttribute("href");
+   if(!href?.startsWith("#"))return;
+   event.preventDefault();
+   let id=href.slice(1);try{id=decodeURIComponent(id);}catch{}
+   const target=id?doc.getElementById(id)||Array.from(doc.getElementsByName(id)).find(el=>el.tagName==="A"):doc.documentElement;
+   if(!target)return;
+   target.scrollIntoView({block:"start"});
+   if(!target.hasAttribute("tabindex")){
+    target.setAttribute("tabindex","-1");
+    target.addEventListener("blur",()=>target.removeAttribute("tabindex"),{once:true});
+   }
+   target.focus({preventScroll:true});
+  });
+ });
+}
+bindBilledOKProfileNavigation(document.getElementById("preview"));</script></div></body></html>

@@ -202,4 +202,5 @@ function readZipRecords(bytes,options,allowCompression) {
   checkPaths(records);
   return records;
 }
-module.exports={utf8,utf8Text,base64,fromBase64,crc32,packStoredZip,readStoredZip,packZip,readZip};
+function readZipArchive(bytes,options={}) { return require('./connected_zip_archive.cjs').readZipArchive(bytes,options); }
+module.exports={readZipArchive,utf8,utf8Text,base64,fromBase64,crc32,packStoredZip,readStoredZip,packZip,readZip};

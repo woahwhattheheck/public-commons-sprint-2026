@@ -1,9 +1,10 @@
 #!/usr/bin/env node
 /** Original Event worksheet choices: complete file preparation and receiving. */
-import { open, lstat, realpath, link, unlink } from 'node:fs/promises';
+import { open, lstat, realpath, link, unlink, readFile } from 'node:fs/promises';
 import { resolve, dirname, basename, join } from 'node:path';
 import { randomUUID } from 'node:crypto';
-import { initial, reopen, review, nativeColumns, reviewHTML } from './workbook-columns.mjs';
+import { initial, reopen, review, nativeColumns, reviewHTML, serializeChoices, serializeNativeJSON } from './workbook-columns.mjs';
+import { renderEditableWorkbookColumns } from './workbook-editor.mjs';
 const MAX=16*1024*1024;
 const need=(ok,text)=>{if(!ok)throw Error(text);};
 async function read(path){
@@ -37,7 +38,7 @@ async function publish(path,body){
 }
 function args(values){
   const command=values.shift(),out={command};
-  need(['template','inspect','columns','html'].includes(command),'Use template, inspect, columns or html.');
+  need(['template','inspect','columns','html','editor'].includes(command),'Use template, inspect, columns, html or editor.');
   while(values.length){const key=values.shift();need(['--proposal','--workspace','--programme','--choices','--out'].includes(key)&&values.length,'Unknown or incomplete argument '+key);need(!Object.hasOwn(out,key.slice(2)),'Do not repeat '+key);out[key.slice(2)]=values.shift();}
   return out;
 }
@@ -51,7 +52,7 @@ async function main(){
   if(a.command==='template'){
     need(a.proposal&&a.workspace&&a.programme&&a.out,'Template needs --proposal, --workspace, --programme and --out.');
     value=initial({workspace_id:a.workspace,programme:a.programme,proposal:proposal(await read(a.proposal))});
-    console.log(JSON.stringify(await publish(a.out,JSON.stringify(value,null,2)+'\n'),null,2));return;
+    console.log(JSON.stringify(await publish(a.out,serializeChoices(value)),null,2));return;
   }
   need(a.choices,'Select the complete --choices handover.');
   value=reopen(await read(a.choices));
@@ -64,7 +65,13 @@ async function main(){
     if(a.out)console.log(JSON.stringify(await publish(a.out,raw),null,2));else process.stdout.write(raw);
   }else{
     need(a.out,'Choose a new --out path for the complete selected file.');
-    const raw=a.command==='columns'?JSON.stringify(nativeColumns(value),null,2)+'\n':reviewHTML(value);
+    let raw;
+    if(a.command==='editor'){
+      const [coreSource,controllerSource]=await Promise.all([
+        readFile(new URL('./workbook-columns.mjs',import.meta.url),'utf8'),
+        readFile(new URL('./workbook-editor.js',import.meta.url),'utf8')]);
+      raw=renderEditableWorkbookColumns(value,{coreSource,controllerSource});
+    }else raw=a.command==='columns'?serializeNativeJSON(nativeColumns(value)):reviewHTML(value);
     console.log(JSON.stringify(await publish(a.out,raw),null,2));
   }
 }

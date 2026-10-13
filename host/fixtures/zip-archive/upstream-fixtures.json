@@ -1,0 +1,174 @@
+{
+  "schema": "commons.original-zip-fixtures.v1",
+  "repository": "Stuk/jszip",
+  "ref": "0f2f1e4d0509514417db83fe5b86bde90e0ffe8d",
+  "license": "MIT",
+  "fixtures": [
+    {
+      "name": "data_descriptor.zip",
+      "gitBlob": "e884181129f845bab40e29e17f55dbd6d5fb2aef",
+      "contentBase64": "UEsDBAoACAAAAHaDIUIAAAAADAAAAAwAAAAJABwASGVsbG8udHh0VVQJAANvAONQbwDjUHV4CwABBOgDAAAE6AMAAEhlbGxvIFdvcmxkClBLBwjj5ZWwDAAAAAwAAABQSwECHgMKAAgAAAB2gyFC4+WVsAwAAAAMAAAACQAYAAAAAAAAAAAApIEAAAAASGVsbG8udHh0VVQFAANvAONQdXgLAAEE6AMAAAToAwAAUEsFBgAAAAABAAEATwAAAF8AAAAAAA==",
+      "bytes": 196,
+      "path": "test/ref/data_descriptor.zip",
+      "sha256": "14e965f2e62e6faf170e1d379f52aa4431361208e5e592b748529100109c28e7",
+      "expected": [
+        {
+          "name": "Hello.txt",
+          "kind": "file",
+          "bytes": 12,
+          "sha256": "d2a84f4b8b650937ec8f73cd8be2c74add5a911ba64df27458ed8229da804a26"
+        }
+      ]
+    },
+    {
+      "name": "all.windows.zip",
+      "gitBlob": "97b8ab9337f93695520adff0a2873a2fe9c1397b",
+      "contentBase64": "UEsDBBQAAAAAAGJ+/zrj5ZWwDAAAAAwAAAAJAAAASGVsbG8udHh0SGVsbG8gV29ybGQKUEsDBBQAAAAIAGJ+/zo8P+uKJQAAACkAAAAQAAAAaW1hZ2VzL3NtaWxlLmdpZnP3dLMwT2RlYGVoYGIAgv/3GHRANEiEgYmjh39i+mquIEYGawBQSwECFAAUAAAAAABifv864+WVsAwAAAAMAAAACQAAAAAAAAABACAAAAAAAAAASGVsbG8udHh0UEsBAhQAFAAAAAgAYn7/Ojw/64olAAAAKQAAABAAAAAAAAAAAAAgAAAAMwAAAGltYWdlcy9zbWlsZS5naWZQSwUGAAAAAAIAAgB1AAAAhgAAAAAA",
+      "bytes": 273,
+      "path": "test/ref/all.windows.zip",
+      "sha256": "c0e8be4922c2e8b59fd25129665eb6c00eba4ff8f361bcbff35d1fc5e9e9f6a1",
+      "expected": [
+        {
+          "name": "Hello.txt",
+          "kind": "file",
+          "bytes": 12,
+          "sha256": "d2a84f4b8b650937ec8f73cd8be2c74add5a911ba64df27458ed8229da804a26"
+        },
+        {
+          "name": "images/smile.gif",
+          "kind": "file",
+          "bytes": 41,
+          "sha256": "0f75e9983d179da20565dfe3aa3614c7a76541974c5371620741c8df0e14d9bb"
+        }
+      ]
+    },
+    {
+      "name": "archive_comment.zip",
+      "gitBlob": "40ab733fca087730733234c013da715defcbf978",
+      "contentBase64": "UEsDBAoAAAAAAJx08Trj5ZWwDAAAAAwAAAAJAAAASGVsbG8udHh0SGVsbG8gV29ybGQKUEsBAh4DCgAAAAAAnHTxOuPllbAMAAAADAAAAAkAAAANAAAAAAAAAKSBAAAAAEhlbGxvLnR4dGVudHJ5IGNvbW1lbnRQSwUGAAAAAAEAAQBEAAAAMwAAAAwAZmlsZSBjb21tZW50",
+      "bytes": 153,
+      "path": "test/ref/archive_comment.zip",
+      "sha256": "8dda966acc62972743af4b1ed72c26aa56b61b2010b70b5eeb6a836230601323",
+      "expected": [
+        {
+          "name": "Hello.txt",
+          "kind": "file",
+          "bytes": 12,
+          "sha256": "d2a84f4b8b650937ec8f73cd8be2c74add5a911ba64df27458ed8229da804a26"
+        }
+      ]
+    },
+    {
+      "name": "utf8_in_name.zip",
+      "gitBlob": "32ecb71b9d7576ff814b9396f19619789fd3668e",
+      "contentBase64": "UEsDBAoAAAgAABh9RUBq+phBBgAAAAYAAAAJAAAA4oKsMTUudHh04oKsMTUKUEsBAh4DCgAACAAAGH1FQGr6mEEGAAAABgAAAAkAAAAAAAAAAAAAAKSBAAAAAOKCrDE1LnR4dFBLBQYAAAAAAQABADcAAAAtAAAAAAA=",
+      "bytes": 122,
+      "path": "test/ref/utf8_in_name.zip",
+      "sha256": "9e697cfcf4709d6b9d0e69ca564fa86395f8f8e33f2a7cd591849c58ce1a70b0",
+      "expected": [
+        {
+          "name": "€15.txt",
+          "kind": "file",
+          "bytes": 6,
+          "sha256": "72e4473860e8384a9f8cedc7b0b775d346a85fe0a0e8aee43c652afb0ad17d83"
+        }
+      ]
+    },
+    {
+      "name": "winrar_utf8_in_name.zip",
+      "gitBlob": "5dfdf857d43bd5263cff8a7da896f051175a1ffb",
+      "contentBase64": "UEsDBAoAAAAAABh9RUBq+phBBgAAAAYAAAAHABIAXzE1LnR4dHVwDgABhPuNTeKCrDE1LnR4dOKCrDE1ClBLAQIfAAoAAAAAABh9RUBq+phBBgAAAAYAAAAHABIAAAAAAAAAIAAAAAAAAABfMTUudHh0dXAOAAGE+41N4oKsMTUudHh0UEsFBgAAAAABAAEARwAAAD0AAAAAAA==",
+      "bytes": 154,
+      "path": "test/ref/winrar_utf8_in_name.zip",
+      "sha256": "96c39f34e9bfe6745a45825dd032e16a98886b2eb123b1e5b0f97c36f16c0c78",
+      "expected": [
+        {
+          "name": "€15.txt",
+          "kind": "file",
+          "bytes": 6,
+          "sha256": "72e4473860e8384a9f8cedc7b0b775d346a85fe0a0e8aee43c652afb0ad17d83"
+        }
+      ]
+    },
+    {
+      "name": "zip64.zip",
+      "gitBlob": "a997177b4f7e9f22032bb4cbd1af1dae966d87eb",
+      "contentBase64": "UEsDBC0AAAAAAHaDIULj5ZWw//////////8JADAASGVsbG8udHh0VVQJAANvAONQbwDjUHV4CwABBOgDAAAE6AMAAAEAEAAMAAAAAAAAAAwAAAAAAAAASGVsbG8gV29ybGQKUEsBAh4DLQAAAAAAdoMhQuPllbAMAAAA/////wkAJAAAAAAAAAAAAKSBAAAAAEhlbGxvLnR4dFVUBQADbwDjUHV4CwABBOgDAAAE6AMAAAEACAAMAAAAAAAAAFBLBgYsAAAAAAAAAB4DLQAAAAAAAAAAAAEAAAAAAAAAAQAAAAAAAABbAAAAAAAAAGMAAAAAAAAAUEsGBwAAAAC+AAAAAAAAAAEAAABQSwUGAAAAAAEAAQBbAAAA/////wAA",
+      "bytes": 288,
+      "path": "test/ref/zip64.zip",
+      "sha256": "188719263f4df8f262bc9d10b237976af1fdddd1697b3d9d226129e9ba56b237",
+      "expected": [
+        {
+          "name": "Hello.txt",
+          "kind": "file",
+          "bytes": 12,
+          "sha256": "d2a84f4b8b650937ec8f73cd8be2c74add5a911ba64df27458ed8229da804a26"
+        }
+      ]
+    },
+    {
+      "name": "folder.zip",
+      "gitBlob": "c06e26a7a0e8e1b99c353b1c6076074f111b3726",
+      "contentBase64": "UEsDBAoDAAAAAANt8zoAAAAAAAAAAAAAAAAHAAAAZm9sZGVyL1BLAQIUAwoDAAAAAANt8zoAAAAAAAAAAAAAAAAHAAAAAAAAAAAAEIDtQQAAAABmb2xkZXIvUEsFBgAAAAABAAEANQAAACUAAAAAAA==",
+      "bytes": 112,
+      "path": "test/ref/folder.zip",
+      "sha256": "33066e599107262502bee7bf8f649fc9008813def502ab0496595774b77a3200",
+      "expected": [
+        {
+          "name": "folder/",
+          "kind": "directory",
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        }
+      ]
+    },
+    {
+      "name": "extra_attributes.zip",
+      "gitBlob": "1bae71204987b82ca38b97a12c83eb2483d72981",
+      "contentBase64": "UEsDBAoAAAAAAJx08Trj5ZWwDAAAAAwAAAAJABwASGVsbG8udHh0VVQJAANocGBKaHBgSnV4CwABBOgDAAAE6AMAAEhlbGxvIFdvcmxkClBLAQIeAwoAAAAAAJx08Trj5ZWwDAAAAAwAAAAJABgAAAAAAAAAAACkgQAAAABIZWxsby50eHRVVAUAA2hwYEp1eAsAAQToAwAABOgDAABQSwUGAAAAAAEAAQBPAAAATwAAAAAA",
+      "bytes": 180,
+      "path": "test/ref/extra_attributes.zip",
+      "sha256": "015556bbca079f8f49f5037a0976e7dcaeb019ce69ec19b1f00395bca10b0323",
+      "expected": [
+        {
+          "name": "Hello.txt",
+          "kind": "file",
+          "bytes": 12,
+          "sha256": "d2a84f4b8b650937ec8f73cd8be2c74add5a911ba64df27458ed8229da804a26"
+        }
+      ]
+    },
+    {
+      "name": "deflate-stream.zip",
+      "gitBlob": "79a89cd02e4e826ea0077b95df20563dde99d978",
+      "contentBase64": "UEsDBBQACAAIANRxmDwAAAAAAAAAAF4AAAAJAAAASGVsbG8udHh0VcixDYAwDATAnil+AgZgDhaA+EMsJTaKLWV9aq68s2ngQnd3e1C1EwcWYaQgHUEiGyFaKyetEDdzkfbrRPHxTkaoGwazucS+fVBLBwiTTw7hSQAAAF4AAABQSwECHgMUAAgACADUcZg8k08O4UkAAABeAAAACQAAAAAAAAABAAAApIEAAAAASGVsbG8udHh0UEsFBgAAAAABAAEANwAAAIAAAAAAAA==",
+      "bytes": 205,
+      "path": "test/ref/deflate-stream.zip",
+      "sha256": "92de00e73a54e9bd2a8ceeb45c338a7a38604e777afac0e92f591d1ce8836e2e",
+      "expected": [
+        {
+          "name": "Hello.txt",
+          "kind": "file",
+          "bytes": 94,
+          "sha256": "5ba82c991b055a1ce12c0a16ad65b5beb38251bb1cf11c7d830f1b8ed32cafdd"
+        }
+      ]
+    },
+    {
+      "name": "nested_zip64.zip",
+      "gitBlob": "85860c37fd8abc8c0517607509f21e2bddc4cb9e",
+      "contentBase64": "UEsDBC0AAAAAALSdIUJBMtzz//////////8JADAAemlwNjQuemlwVVQJAAPULuNQ1C7jUHV4CwABBOgDAAAE6AMAAAEAEAAgAQAAAAAAACABAAAAAAAAUEsDBC0AAAAAAHaDIULj5ZWw//////////8JADAASGVsbG8udHh0VVQJAANvAONQbwDjUHV4CwABBOgDAAAE6AMAAAEAEAAMAAAAAAAAAAwAAAAAAAAASGVsbG8gV29ybGQKUEsBAh4DLQAAAAAAdoMhQuPllbAMAAAA/////wkAJAAAAAAAAAAAAKSBAAAAAEhlbGxvLnR4dFVUBQADbwDjUHV4CwABBOgDAAAE6AMAAAEACAAMAAAAAAAAAFBLBgYsAAAAAAAAAB4DLQAAAAAAAAAAAAEAAAAAAAAAAQAAAAAAAABbAAAAAAAAAGMAAAAAAAAAUEsGBwAAAAC+AAAAAAAAAAEAAABQSwUGAAAAAAEAAQBbAAAA/////wAAUEsBAh4DLQAAAAAAtJ0hQkEy3PMgAQAA/////wkAJAAAAAAAAAAAAKSBAAAAAHppcDY0LnppcFVUBQAD1C7jUHV4CwABBOgDAAAE6AMAAAEACAAgAQAAAAAAAFBLBgYsAAAAAAAAAB4DLQAAAAAAAAAAAAEAAAAAAAAAAQAAAAAAAABbAAAAAAAAAHcBAAAAAAAAUEsGBwAAAADSAQAAAAAAAAEAAABQSwUGAAAAAAEAAQBbAAAA/////wAA",
+      "bytes": 564,
+      "path": "test/ref/nested_zip64.zip",
+      "sha256": "aa24e98001afa5fc65175a61c98eb55343d18e1a2898d0cc5b6608164e709a9c",
+      "expected": [
+        {
+          "name": "zip64.zip",
+          "kind": "file",
+          "bytes": 288,
+          "sha256": "188719263f4df8f262bc9d10b237976af1fdddd1697b3d9d226129e9ba56b237"
+        }
+      ]
+    }
+  ]
+}

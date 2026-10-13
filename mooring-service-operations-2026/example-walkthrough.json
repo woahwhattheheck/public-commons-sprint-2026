@@ -1,0 +1,30 @@
+[
+  {
+    "title": "Six distinct operator workflows",
+    "detail": "Real published company work informs the catalogue. All owners, boats, moorings, permits, measurements, prices and decisions are explicitly invented demonstration data.",
+    "ids": [
+      "demo-1-mooring",
+      "demo-2-mooring",
+      "demo-3-mooring",
+      "demo-4-mooring",
+      "demo-5-mooring",
+      "demo-6-mooring"
+    ]
+  },
+  {
+    "title": "Complete seasonal service",
+    "detail": "The first four jobs carry finalized findings, original evidence, required checks, gear storage and frozen completion snapshots. One linked repair is completed, visibly reopened and completed again."
+  },
+  {
+    "title": "Authority response and corrected handoff",
+    "detail": "The first original submission is returned with a specific issue. Its separate amended successor is reviewed, sent and records a demonstration approval. The permit remains a separate original decision record."
+  },
+  {
+    "title": "Continue actual unfinished work",
+    "detail": "The fifth job remains in progress; the sixth remains confirmed. A conflicting request and next-year permit mismatch show concrete review findings without changing those saved jobs."
+  },
+  {
+    "title": "Full original intake",
+    "detail": "The BOM/CRLF CSV, quoted comma, row decisions, one new asset and one preserved existing-asset link travel in the full working export."
+  }
+]

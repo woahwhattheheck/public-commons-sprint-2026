@@ -2,7 +2,7 @@
   "schema": "stellar-forge.distribution-source-selection.v1",
   "id": "ckan-dcat",
   "title": "CKAN and DCAT catalog operations",
-  "description": "Complete CKAN data products and DCAT migration, recurring acquisition, semantic validation and snapshot comparison, retained reviews/releases, browser and merchant MCP, managed Application setup and complete recipient transfer",
+  "description": "Complete CKAN data products and DCAT exact typed catalogue corrections, migration, recurring acquisition, semantic validation and snapshot comparison, retained reviews/releases, browser and merchant MCP, managed Application setup and complete recipient transfer",
   "base": {
     "commands": [
       "installation",
@@ -337,14 +337,25 @@
     "stellar/scf-starforge-20261009/sf30-seller-sdk/seller.mjs",
     "stellar/scf-starforge-20261009/sf74-merchant-support-console/case-store.mjs",
     "stellar/scf-starforge-20261009/sf74-merchant-support-console/runtime-support.mjs",
-    "stellar/scf-starforge-20261009/sf74-merchant-support-console/workspace-file.mjs"
+    "stellar/scf-starforge-20261009/sf74-merchant-support-console/workspace-file.mjs",
+    "stellar-forge/mcp-merchant-operator/catalog/ckan-dcat-corrections.mjs",
+    "stellar-forge/mcp-merchant-operator/ckan-dcat-corrections.mjs",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/ckan/CORRECTIONS_AGENT.md",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/ckan/CORRECTION_WORKBENCH.md",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/ckan/dcat-correction-cli.mjs",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/ckan/dcat-corrections.mjs",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/ckan/public/dcat-correction-json.mjs",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/ckan/public/dcat-corrections.mjs",
+    "operations/dcat-correction-customer-390e-20261013/RECEIVING.md",
+    "operations/dcat-correction-customer-390e-20261013/run-correction-browser.mjs",
+    "operations/dcat-correction-customer-390e-20261013/run-correction-customer.mjs"
   ],
   "excludeFiles": [
     "stellar/scf-starforge-20261009/distribution/index.mjs"
   ],
   "product": {
     "schema": "stellar-forge.merchant-product-package.v1",
-    "description": "Complete CKAN data products and DCAT migration, recurring acquisition, semantic validation and snapshot comparison, retained reviews/releases, browser and merchant MCP, managed Application setup and complete recipient transfer",
+    "description": "Complete CKAN data products and DCAT exact typed catalogue corrections, migration, recurring acquisition, semantic validation and snapshot comparison, retained reviews/releases, browser and merchant MCP, managed Application setup and complete recipient transfer",
     "repository": {
       "url": "https://github.com/woahwhattheheck/public-commons-sprint-2026",
       "directory": "stellar/scf-starforge-20261009/sf30-seller-sdk/ckan"

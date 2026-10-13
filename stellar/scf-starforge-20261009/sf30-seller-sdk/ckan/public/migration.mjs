@@ -1,5 +1,6 @@
 // MIT. Catalogue migration operator view; original values are rendered as text.
 import { renderDcatSources } from './dcat-sources.mjs';
+import { renderDcatCorrections } from './dcat-corrections.mjs';
 import { parseDcatJson, parseDcatJsonText, stringifyDcatJson, isExactCkanNumber } from './dcat-json.mjs';
 const pageSize = 25;
 const memories = new Map();
@@ -602,7 +603,17 @@ export async function renderDcatMigration(ctx) {
     onReviewCreated: value => { memory.selectedReview = value; memory.filters = {}; },
   }));
   if (!ctx.current()) return;
-  ctx.view.append(uploadPanel(ctx, memory), reviewPanel(ctx, dcat, memory));
+  ctx.view.append(uploadPanel(ctx, memory));
+  ctx.view.append(await renderDcatCorrections(ctx, {
+    onMaterialized: (result, useAs) => {
+      if (useAs === 'source') { memory.sourceId = result.catalogId; memory.candidateId = ''; }
+      else { memory.sourceId = result.migrationSourceId; memory.candidateId = result.catalogId; }
+      memory.mappingRows = []; memory.comparisonId = ''; memory.normalizeV3 = false;
+      memory.lastReadReview = null; memory.label = 'Corrected catalogue review';
+    },
+  }));
+  if (!ctx.current()) return;
+  ctx.view.append(reviewPanel(ctx, dcat, memory));
   if (dcat.catalogs.length) ctx.view.append(card(title('Retained catalogue documents'),
     table(['Label', 'Profile', 'Original source', 'Received', 'Bytes', 'SHA-256'], dcat.catalogs.map(item => [
       item.label || item.id, item.profile ?? '', item.origin ?? '', readableTime(item.receivedAt),
