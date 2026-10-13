@@ -187,7 +187,78 @@ def authority(meta, ns, key, value=None):
                  and value.get("provider") == "gmail" and value.get("activity") == "Mail sending",
                  "LOCAL_STATE_ACCOUNT", "Keep the original Gmail account identity and complete state.")
 
-def original_source(source, text):
+def session_journal_source(source, text, namespace, key):
+    """Bind exact original in-session bytes without inventing Git provenance."""
+    need(namespace == "checkpoint" and isinstance(key, str),
+         "LOCAL_STATE_ORIGIN", "Original session receiving belongs to its checkpoint identity.")
+    need(not any(name in source for name in ("commit_sha", "blob_sha", "repository", "path")),
+         "LOCAL_STATE_ORIGIN", "Session provenance must not claim an unobserved Git source.")
+    value=json.loads(text)
+    journal_text=source.get("journal_content")
+    input_text=source.get("runtime_input_content")
+    need(isinstance(journal_text,str) and isinstance(input_text,str),
+         "LOCAL_STATE_ORIGIN", "Keep the complete original session and input bytes.")
+    journal=json.loads(journal_text)
+    runtime_input=json.loads(input_text)
+    source_ref=source.get("source")
+    iso_pattern=r"^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\.[0-9]{3}Z$"
+    def original_iso(value):
+        if not isinstance(value,str) or not re.fullmatch(iso_pattern,value):
+            return False
+        try:
+            parsed=datetime.fromisoformat(value.replace("Z","+00:00"))
+            return parsed.isoformat(timespec="milliseconds").replace("+00:00","Z")==value
+        except ValueError:
+            return False
+    need(isinstance(source_ref,dict) and isinstance(source_ref.get("reference"),str)
+         and source_ref["reference"] and isinstance(source_ref.get("custodian"),str)
+         and source_ref["custodian"] and original_iso(source_ref.get("observed_at"))
+         and original_iso(source.get("observed_at")),
+         "LOCAL_STATE_ORIGIN", "Keep the actual source custody and capture time.")
+    input_id=source.get("input_sha256")
+    lease=source.get("operation_lease")
+    state_key=source.get("state_key")
+    need(isinstance(input_id,str) and HEX.fullmatch(input_id)
+         and isinstance(lease,str) and lease and isinstance(state_key,str) and state_key
+         and key==sha(encoded({"input_sha256":input_id,"lease":lease}))
+         and source.get("operation_key")==key and source.get("sha256")==sha(text),
+         "LOCAL_STATE_ORIGIN", "The original input, lease and checkpoint key changed.")
+    journal_identity={"sha256":sha(journal_text),"bytes":len(journal_text.encode("utf-8"))}
+    input_identity={"sha256":sha(input_text),"bytes":len(input_text.encode("utf-8"))}
+    need(source.get("journal")==journal_identity and source.get("runtime_input")==input_identity
+         and isinstance(runtime_input,dict) and isinstance(journal,dict)
+         and journal.get("schema")=="commons.connected-first-contact/v1"
+         and journal.get("input_sha256")==input_id and journal.get("lease")==lease
+         and isinstance(journal.get("input"),dict) and isinstance(journal.get("events"),list),
+         "LOCAL_STATE_ORIGIN", "Retain all original session events and exact source hashes.")
+    payload_text=value.get("payload_text")
+    need(isinstance(payload_text,str),"LOCAL_STATE_ORIGIN","Complete derived checkpoint payload required.")
+    payload=json.loads(payload_text)
+    measured={"sha256":sha(payload_text),"bytes":len(payload_text.encode("utf-8"))}
+    metadata={"schema":"commons.connected-contact-checkpoint/v1","operation_key":key,
+              "input_sha256":input_id,"operation_lease":lease,"state_key":state_key,
+              "revision":1,"updated_at":source["observed_at"],"active":None,
+              "payload":{**measured,"chunks":[{"kind":"local-inline",**measured}]}}
+    location={"kind":"commons.connected-contact-session-origin/v1","source":source_ref,
+              "operation_key":key,"input_sha256":input_id,"operation_lease":lease,
+              "state_key":state_key,"runtime_input":input_identity,"journal":journal_identity}
+    expected_payload={"schema":"commons.connected-contact-checkpoint-payload/v1",
+                      "runtime_input":runtime_input,"journal":journal,"transports":[]}
+    selected=journal.get("returned_mailbox_revision")
+    if isinstance(selected,dict) and selected.get("revision_kind")=="draft":
+        expected_payload["session_input_revision_source"]={
+            "schema":"commons.contact-checkpoint-session-input-revision-source/v1",
+            "operation_key":key,"input_sha256":input_id,"operation_lease":lease,"state_key":state_key,
+            "source":source_ref,"runtime_input":input_identity,"journal":journal_identity,
+            "original_event_count":len(journal["events"]),"selection_sha256":sha(encoded(selected))}
+    need(value.get("metadata")==metadata and value.get("original_location")==location
+         and payload==expected_payload,
+         "LOCAL_STATE_ORIGIN", "The new checkpoint must contain the unchanged entire original session.")
+    return source
+
+def original_source(source, text, namespace=None, key=None):
+    if isinstance(source,dict) and source.get("kind")=="original-session-journal-readback":
+        return session_journal_source(source,text,namespace,key)
     if isinstance(source, dict) and source.get("kind") == "git-original-ref-readback":
         value=json.loads(text)
         need(isinstance(source.get("repository"),str) and "/" in source["repository"]
@@ -244,7 +315,7 @@ def receive_batch(db, meta, request):
         text, value = content(entry)
         authority(meta, ns, key, value)
         need(entry.get("expected_sha256") is None, "LOCAL_STATE_ADOPTION", "Initial adoption is create-only.")
-        origin = original_source(entry.get("origin"), text)
+        origin = original_source(entry.get("origin"), text, ns, key)
         normalized.append({"namespace":ns,"key":key,"content":text,"origin":origin})
     op = operation(request)
     fingerprint = sha(encoded({"action":"receive-batch","entries":normalized}))
@@ -279,7 +350,7 @@ def write(db, meta, request, receive=False, record_operation=True):
     before = head(db, ns, key)
     expected = request.get("expected_sha256")
     if receive:
-        origin = original_source(request.get("origin"), text)
+        origin = original_source(request.get("origin"), text, ns, key)
         need(expected is None, "LOCAL_STATE_ADOPTION", "Initial adoption is create-only.")
     else:
         need(expected is None or isinstance(expected,str) and HEX.fullmatch(expected),

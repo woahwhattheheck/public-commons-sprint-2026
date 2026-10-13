@@ -61,7 +61,8 @@ function loadConnectedContactProduct({configuration,tools,sourceDirectory=__dirn
  }
  const required=['host/connected_first_contact.cjs','host/connected_first_contact_checkpoint.cjs',
   'host/connected_contact_local_state.py','host/connected_contact_file_state.cjs',
-  'host/connected_contact_local_adoption.cjs','host/connected_first_contact_queue_drain.cjs'];
+  'host/connected_contact_local_adoption.cjs','host/connected_first_contact_queue_drain.cjs',
+  'host/connected_first_contact_draft.cjs'];
  for(const name of required)if(typeof sources[name]!=='string')throw Error('Complete source required: '+name);
  // A source directory is one immutable edition for the lifetime of this process.
  // Never clear Node's cache and silently replace modules inside a live controller.
@@ -90,7 +91,16 @@ function loadConnectedContactProduct({configuration,tools,sourceDirectory=__dirn
   custody.modules.set(resolved,{module:loaded,sha256:selectedSha});
   return value;
  }
- const factory=selectedModule('host/connected_first_contact.cjs');
+ const carrier=selectedModule('host/connected_first_contact.cjs');
+ const drafts=selectedModule('host/connected_first_contact_draft.cjs');
+ // Reuse the original saved-draft wrapper for each exact input. The checkpoint
+ // uses this same factory during opening and retained input-revision validation.
+ // Ordinary contacts keep the unchanged carrier constructor.
+ const factory=custody.draftFactory||(custody.draftFactory=Object.freeze({...carrier,createConnectedFirstContact:options=>
+  options?.input?.native_draft!==undefined
+   ? drafts.createConnectedExistingFirstContactDraft({...options,
+      createConnectedFirstContact:carrier.createConnectedFirstContact})
+   : carrier.createConnectedFirstContact(options)}));
  const keys={hash:'host/connected_sha256.cjs',intent:'host/revenue_outbound_intent.cjs',gateway:'host/first_contact_gateway.cjs',mailboxAdmission:'host/connected_mailbox_admission.cjs',publicationPolicy:'commons-publication-policy.cjs',attachments:'host/connected_contact_attachments.cjs',deliveryCorrection:'host/contact_delivery_correction.cjs',content:'host/first_contact_content.cjs',deliveryNotices:'host/connected_delivery_notices.cjs'};
  const selected=Object.fromEntries(Object.entries(keys).map(([key,name])=>[key,sources[name]]));
  const modules=Object.freeze({...factory.loadOriginalContactModules({...selected,deliveryNoticeSources:sources}),
@@ -103,14 +113,37 @@ function loadConnectedContactProduct({configuration,tools,sourceDirectory=__dirn
  const adoption=selectedModule('host/connected_contact_local_adoption.cjs');
  const queue=selectedModule('host/connected_first_contact_queue_drain.cjs');
  const checkTools=()=>{if(!tools||typeof tools!=='object')throw Error('Supply the existing connected operator tool bindings.');};
+ async function receiveOriginalDraft({runtimeInputText,lease,stateKey,load,store,githubActorAction,githubRefAction}={}){
+  checkTools();
+  if(typeof runtimeInputText!=='string'||typeof load!=='function'||typeof store!=='function')
+   throw Error('Retain the exact original draft input text and original synchronous private journal callbacks.');
+  const input=JSON.parse(runtimeInputText);
+  if(!input||typeof input!=='object'||Array.isArray(input)||!input.native_draft)
+   throw Error('Select the complete original saved Gmail draft input.');
+  const allowed=new Set(['mcp__codex_apps__gmail_list_drafts','mcp__codex_apps__gmail_read_email']);
+  const readonlyTools=new Proxy(tools,{get(target,key){
+   const value=target[key];if(typeof value!=='function')return value;
+   return (...args)=>{
+    if(!allowed.has(key))throw Object.assign(Error('Original draft intake permits only native draft/message reads.'),{code:'CONTACT_DRAFT_READ_ONLY'});
+    return value(...args);
+   };
+  }});
+  const contact=factory.createConnectedFirstContact({tools:readonlyTools,modules,input,lease,stateKey,load,store,
+   githubActorAction,githubRefAction});
+  const received=await contact.receiveDraft(),plan=contact.plan(),journal=load(stateKey);
+  if(!journal||journal.input_sha256!==plan.input_sha256||journal.lease!==lease)
+   throw Error('Retain the complete original journal after draft receiving.');
+  return {schema:'commons.connected-contact-original-draft-intake/v1',
+   runtimeInputText,journalText:JSON.stringify(journal),stateKey,lease,plan,received};
+ }
  async function readOriginal(operationKey){return checkpoint.readConnectedContactCheckpoint({storage,operationKey,sha256Utf8:modules.sha256Utf8});}
  async function openOriginal(operationKey,options={}){
   checkTools();const received=await readOriginal(operationKey);
   return checkpoint.openConnectedContactCheckpoint({...options,tools,storage,factory,modules,
    input:received.payload.runtime_input,lease:received.metadata.operation_lease,stateKey:received.metadata.state_key,mode:'reopen'});
  }
- return Object.freeze({factory,modules,checkpoint,adoption,storage,manifest,sources,
-  initialize:()=>state.initializeContactCoordinator(settings),readOriginal,openOriginal,
+ return Object.freeze({factory,drafts,modules,checkpoint,adoption,storage,manifest,sources,
+  initialize:()=>state.initializeContactCoordinator(settings),readOriginal,openOriginal,receiveOriginalDraft,
   createDrain:options=>{checkTools();return queue.createNativeConnectedFirstContactDrain({...options,tools,storage,carrier:factory,checkpoints:checkpoint,modules});}});
 }
 module.exports={loadConnectedContactProduct};

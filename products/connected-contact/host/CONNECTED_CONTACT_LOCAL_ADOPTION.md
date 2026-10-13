@@ -20,13 +20,13 @@ Pass checkpoints with the exact input_sha256 and original lease, plus optional m
 
 ```js
 const prepared = await prepareConnectedContactAdoption({
-  tools, storage,
-  modules: {admission, gateway, intent, checkpoint},
+  tools, storage, factory,
+  modules: {...originalModules, admission, checkpoint},
   sha256Utf8,
   classifyReturnedGmailRateLimit,
   classifyReturnedSendRateLimit,
   operationId,
-  accounts, contacts, checkpoints,
+  accounts, contacts, checkpoints, originalJournals,
   ownerHandoff,
   observedAt,                 // retain the first preparation time
   githubRefAction: 'github_fetch_commit',
@@ -46,11 +46,11 @@ const receipt = await receivePreparedConnectedContactAdoption({
 });
 ```
 
-Receiving uses only the saved envelope. It revalidates complete bytes and the same coordinator authority, journals the exact receiveBatch arguments before invoking, and retains the complete typed result. Every initial entry is create-only. The batch must contain at least one account, contact or checkpoint, but it need not contain an account. Whole-account cutover and later company-record receiving are distinct operations in the same coordinator; existing accounts are not reimported for each company. The original coordinator commits the selected account, recipient, intent and checkpoint entries in one SQLite transaction.
+Receiving uses only the saved envelope. It revalidates complete bytes and the same coordinator authority, journals the exact receiveBatch arguments before invoking, and retains the complete typed result. Every initial entry is create-only. The batch must contain at least one account, contact, checkpoint or original session journal, but it need not contain an account. Whole-account cutover and later company-record receiving are distinct operations in the same coordinator; existing accounts are not reimported for each company. The original coordinator commits the selected account, recipient, intent and checkpoint entries in one SQLite transaction.
 
 An uncertain receiving return is reconciled by calling the same function with the same saved prepared envelope, coordinator and operation ID. The backend returns the original batch receipt. Do not regenerate timestamps, reread source into a replacement envelope, choose a new operation ID, or create another coordinator to resolve an uncertain result. A changed payload under the same ID is a hard conflict. An entry already received by another batch remains a conflict requiring its original receipt.
 
-Typed local receipts preserve original Git source identities and complete origins. Local storage revisions are separate from business revisions; they are never labeled new Git commits. The helper validates each returned original revision, content, receipt, operation identity and unchanged origin.
+Typed local receipts preserve complete origins: actual Git identities for Git selections and exact retained session sources for original session journals. Local storage revisions are separate from business revisions; they are never labeled new Git commits. The helper validates each returned original revision, content, receipt, operation identity and unchanged origin.
 
 ## Operator entry points
 
@@ -61,3 +61,31 @@ After receiving, the original owner may reopen the same checkpoint through the m
 ## Verification boundary
 
 The source is reviewed against the actual coordinator receiveBatch shape and the complete original checkpoint preparer. Focused source checks use synthetic immutable Git responses and an in-memory batch receiver; they exercise identity, complete bytes, changed-source rejection and same-request recovery without real provider calls. They do not claim a live migration, filesystem durability, mailbox send, or actual customer receiving. Those remain with the original operator and complete paired product.
+
+
+## Original journals retained in the writer's session
+
+Use optional `originalJournals` for an actual original journal which has no Git checkpoint. Each entry is:
+
+```js
+{
+  runtimeInputText, // complete original UTF-8 JSON text, unchanged
+  journalText,      // complete original UTF-8 JSON text, unchanged
+  stateKey,
+  lease,
+  operationKey,    // optional; when supplied must match the original digest
+  source: {reference, custodian, observed_at}
+}
+```
+
+The batch preparer calls the original checkpoint's `prepareConnectedContactJournalAdoption` with those exact texts, the same frozen preparation time, the complete original modules, and the product's factory. Native-draft inputs use the existing original draft wrapper from `loadConnectedContactProduct`; pass `product.factory`, not a bare carrier which lacks that wrapper. The complete modules must include the configured original mailboxes, MIME/attachments, gateway, intent and validators, in addition to `admission` and `checkpoint`. The CLI forwards them directly from the selected product.
+
+This path validates the original whole input/journal and stable operation identity without a provider call. A session-only batch performs no Git source reads. Its immutable origin is `original-session-journal-readback`, preserving both complete raw texts and the actual source custodian/reference/time. It has no invented commit or blob. The saved checkpoint content, original identity, every journal event, and any accepted original returned evidence are retained according to the checkpoint receiver's contract. Later normal checkpoint transports remain separate from historical session events.
+
+All selected entries share one create-only `receiveBatch`. An operation cannot appear twice across Git checkpoints and session journals. Company-only intake may leave `accounts`, `contacts`, and `checkpoints` empty; it preserves the existing complete fleet authority and does not receive or reset a shared account. The owner handoff concerns the original writers of these selected records. Unrelated mailbox work does not need to stop.
+
+An existing saved Gmail draft with no prior first-contact journal needs its original owner's exact complete input and the maintained constructor's actual first journal before this intake. A draft ID or saved email body is not sufficient evidence of a past journal, queue, claim or account reservation. Follow `ORIGINAL_SAVED_DRAFTS.md` for that original helper. Construction/plan, source receiving, account preparation and sending are distinct operations.
+
+The operator's private selection JSON uses the same `originalJournals` key. Prepare still retains the whole source/request before receive. Its frozen preparation may be transferred to the actual coordinator host and received without `--operator`; the original authority is reverified there. This does not make an unverified host or invented connected-tool bridge a deployed controller.
+
+Focused source checks exercise an ordinary journal and a native-draft journal in the same company batch, no Git calls, exact source-text custody, same-request recovery after a lost return, and duplicate/altered-input rejection. The earlier full Git/account/recipient/intent/checkpoint receiving checks also pass unchanged. These are source-only checks, with no live migration or Gmail call.
