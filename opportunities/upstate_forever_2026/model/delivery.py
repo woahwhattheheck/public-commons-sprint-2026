@@ -141,7 +141,7 @@ def _grid_measurements(grid):
             "pixels": pixels, "resolution": resolution}
 
 def _fgdc(path, title, raster, *, unit, grid, sources, selection, profile, contact,
-          native_model=None):
+          native_model=None, native_execution=None):
     from pyproj import CRS, Transformer
     cells = _grid_measurements(grid)
     native_model = native_model or {}
@@ -203,6 +203,11 @@ def _fgdc(path, title, raster, *, unit, grid, sources, selection, profile, conta
         "in the native working archive. Per-hectare rates converted to " + unit +
         " by multiplication by " + cells["hectares"] + ". Reporting-mask pixel-centre selection; no interpolated output values.")
     ET.SubElement(step, "procdate").text = day
+    if native_execution:
+        add("idinfo/descript/supplinf", "Original producing-model metadata: " +
+            json.dumps(native_model, ensure_ascii=False, sort_keys=True) +
+            ". Complete ordered run/stage/source records: " + native_execution["path"] +
+            "; SHA256 " + native_execution["sha256"] + ".")
     add("spdoinfo/direct", "Raster")
     add("spdoinfo/rastinfo/rasttype", "Grid Cell")
     add("spdoinfo/rastinfo/rowcount", grid["grid"]["height"])
@@ -339,6 +344,9 @@ def build(workspace, selection):
     report_title = (selection.get("title")
                     or (selection["native_study"]["title"] if study_mode else None)
                     or workspace.project.get("title") or "Source-water assessment")
+    native_versions.comparison_versions([baseline, *alternatives], ("ndr", "sdr"))
+    native_execution = scientific_report.execution_provenance(baseline, alternatives)
+    selection["native_execution_digest"] = digest(native_execution)
     version_provenance = {
         "policy": native_versions.POLICY,
         "runs": {run["id"]: native_versions.model_versions(run)
@@ -378,6 +386,15 @@ def build(workspace, selection):
             atomic_json(state_path, state)
         try:
             state.pop("error", None)
+            execution_path = directory / "native-execution.json"
+            if "native_execution" not in state["files"]:
+                atomic_json(execution_path, native_execution)
+                state["files"]["native_execution"] = describe_file(directory, execution_path)
+                atomic_json(state_path, state)
+            else:
+                verify_file(directory, state["files"]["native_execution"])
+                if read_json(execution_path) != native_execution:
+                    raise ValueError("The retained execution provenance differs from this delivery selection")
             observed_product = observed_context.collect(workspace, selection, directory, state)
             if (observed_product is None) != (observed_link is None):
                 raise ValueError("Observed report context does not match the selected source")
@@ -467,7 +484,8 @@ def build(workspace, selection):
                 if metadata_key not in state["files"]:
                     _fgdc(metadata_path, cartography.LABELS[name], item, unit=item["units"],
                           grid=grid, sources=records, selection=selection, profile=profile, contact=contact,
-                          native_model=baseline_versions[native_versions.models_for_outputs((name,))[0]])
+                          native_model=baseline_versions[native_versions.models_for_outputs((name,))[0]],
+                          native_execution=state["files"]["native_execution"])
                     state["files"][metadata_key] = describe_file(directory, metadata_path)
                     atomic_json(state_path, state)
             settings = selection.get("map_settings", {})
@@ -759,6 +777,7 @@ def build(workspace, selection):
                         "delivery_id": key, "delivery_mode": native_study.mode(selection),
                         "native_study": state.get("native_study"), "baseline_run_id": baseline["id"],
                         "native_version_provenance": version_provenance,
+                        "native_execution": state["files"]["native_execution"],
                         "scenario_run_ids": scenario_ids, "profile_id": profile["id"],
                         "grid_id": grid["id"], "grid_measurements": cells, "comparison_id": comparison["id"],
                         "observation_comparison_ids": selection.get("observation_comparison_ids", []),
@@ -801,6 +820,8 @@ def build(workspace, selection):
                          "audit_scope": _delivery_audit_scope(selection, grid)},
                 "model": {"name": "InVEST NDR and SDR", "version": common_version,
                           "versions": versions, "native_version_provenance": version_provenance,
+                          "application_version": INVEST_VERSION,
+                          "execution_provenance": state["files"]["native_execution"],
                           "upstream_buffer_m": grid["spec"]["upstream_buffer_m"],
                           "baseline_run_id": baseline["id"], "scenario_run_ids": scenario_ids,
                           "profile_id": profile["id"], "grid_id": grid["id"]},
