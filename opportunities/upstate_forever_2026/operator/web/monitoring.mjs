@@ -1,4 +1,5 @@
 import {attachMonitoringFieldwork} from './monitoring_fieldwork.mjs';
+import {attachMonitoringReport} from './monitoring-report.mjs';
 /* Native host adapter: original authorization, task queue and file tickets. */
 const READS = new Set(['context.catalog','context.list','context.get','context.preview','list','get','frontier.progress','campaign.get','campaign.list','campaign.history','capabilities','source.catalog']);
 let componentReady;
@@ -100,9 +101,12 @@ export function attachMonitoring(host) {
     active=node;root.replaceChildren(node);
     await node.ready;
     if(ticket!==generation || workspace()!==key)return;
+    node.monitoringReport ||= attachMonitoringReport(node,host,key);
+    node.monitoringReport.update();
     await fieldwork.mount(root,key);
   }
   async function update() {
+    active?.monitoringReport?.update();
     if (!active?.isConnected || active.busy || updating) return;
     const node = active, key = workspace(), version = generation;
     const current = () => active === node && generation === version &&
@@ -121,6 +125,6 @@ export function attachMonitoring(host) {
       if (current()) completedByWorkspace.set(key, completed);
     } finally { updating = false; }
   }
-  function detach(){generation++;networkOpening++;fieldwork.detach();if(active)active.remove();active=null;}
+  function detach(){generation++;networkOpening++;active?.monitoringReport?.detach();fieldwork.detach();if(active)active.remove();active=null;}
   return {mount,update,detach,openNetwork,render:()=>'',dispatch:()=>false};
 }
