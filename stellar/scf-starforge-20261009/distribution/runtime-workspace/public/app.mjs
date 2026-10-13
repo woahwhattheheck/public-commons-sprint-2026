@@ -5,6 +5,7 @@ import { createWorkspaceReceivingView } from './workspace-receiving.mjs';
 import { createOperatingProceduresView } from './operating-procedures.mjs';
 import { createManagedWorkspaceView } from './managed.mjs';
 import { createApplicationsWorkspaceView } from './applications.mjs';
+import { createApplicationGroupsView } from './application-groups.mjs';
 import { createPythonWorkspaceView } from './python.mjs';
 import { createSourceBuildWorkspaceView } from './source-build.mjs';
 import { createRuntimeOutputView } from './runtime-output.mjs';
@@ -49,6 +50,7 @@ function switchView(name, { refreshState = true } = {}) {
   }
   if (name === 'managed') managed.refresh().catch(error);
   if (name === 'applications') applications.refresh().catch(error);
+  if (name === 'application-groups') applicationGroups.refresh().catch(error);
   if (name === 'transfers') transfers.refresh().catch(error);
   if (name === 'workspace-backups') workspaceReceiving.refresh().catch(error);
   if (name === 'operating-procedures') operatingProcedures.refresh().catch(error);
@@ -264,7 +266,7 @@ async function refresh({ quiet = false } = {}) {
         if (saved?.selectedId && value.runtimes.some(item => item.id === saved.selectedId)) {
           selectedId = saved.selectedId; value = await api(query('/api/state', { runtimeId: selectedId, operationDetail: detailMode }));
         }
-        if (['runtime', 'profile', 'operations', 'deployment', 'managed', 'images', 'applications', 'transfers', 'python', 'source-builds', 'workspace-backups', 'operating-procedures'].includes(saved?.view) && view === requestedView) view = saved.view;
+        if (['runtime', 'profile', 'operations', 'deployment', 'managed', 'images', 'applications', 'application-groups', 'transfers', 'python', 'source-builds', 'workspace-backups', 'operating-procedures'].includes(saved?.view) && view === requestedView) view = saved.view;
         logSelection = saved?.logSelection ?? null;
       } catch {}
     }
@@ -532,6 +534,8 @@ const managed = createManagedWorkspaceView({ api, getState: () => state, operati
   refreshOperation, openLog, switchView, message, error });
 const applications = createApplicationsWorkspaceView({ root: $('applications-workspace'), api, getState: () => state, getToken: () => token,
   refreshWorkspace: refresh, switchView, message, error });
+const applicationGroups = createApplicationGroupsView({ root: $('application-groups-workspace'), api, getState: () => state,
+  openApplication: id => applications.choose(id), message, error });
 const python = createPythonWorkspaceView({ api, getState: () => state, operation, refreshWorkspace: refresh,
   openLog, switchView, message, error,
   openApplication: descriptor => applications.beginPython(descriptor),
@@ -555,6 +559,7 @@ window.addEventListener('hashchange', () => {
   images.reset();
   managed.reset();
   applications.reset();
+  applicationGroups.reset();
   transfers.reset();
   workspaceReceiving.reset();
   operatingProcedures.reset();
