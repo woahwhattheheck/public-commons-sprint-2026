@@ -146,3 +146,9 @@ export function analyzePairedSensitivity(originalRows, source) {
       station_pair_dates: new Set(rows.map(row => [row.source.station_a, row.source.station_b, row.source.date].join("|"))).size,
       station_analyte_groups: groups.size, scenarios: scenarios.length}, stability, scenarios};
 }
+
+export function writePairedSensitivityJson(result) {
+  const {scenarios, ...summary} = result;
+  return JSON.stringify(summary, null, 2).slice(0, -2) + ',\n  "scenarios": [\n' +
+    scenarios.map(row => "    " + JSON.stringify(row)).join(",\n") + "\n  ]\n}\n";
+}

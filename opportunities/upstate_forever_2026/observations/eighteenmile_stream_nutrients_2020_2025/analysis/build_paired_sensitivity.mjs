@@ -6,7 +6,7 @@ import { dirname, resolve, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { spawnSync } from "node:child_process";
 import { parseCsv, writeCsv } from "./csv.mjs";
-import { analyzePairedSensitivity } from "./paired_sensitivity.mjs";
+import { analyzePairedSensitivity, writePairedSensitivityJson } from "./paired_sensitivity.mjs";
 import { renderPairedSensitivity } from "./paired_sensitivity_report.mjs";
 
 const root = dirname(fileURLToPath(import.meta.url));
@@ -50,7 +50,7 @@ async function writeExact(name, data) {
   }
 }
 const outputs = {
-  "paired-sensitivity.json": JSON.stringify(result, null, 2) + "\n",
+  "paired-sensitivity.json": writePairedSensitivityJson(result),
   "paired-sensitivity-scenarios.csv": writeCsv(result.scenarios),
   "paired-sensitivity.html": renderPairedSensitivity(result)
 };
