@@ -11,7 +11,8 @@ import re
 import tempfile
 
 MARKER = "ES-SUPERVISION-20261012"
-MEMBERS = ("model/native_worker.py", "operator/native_jobs.py", "operator/programme_jobs.py",
+MEMBERS = ("model/native_execution.py", "model/native_worker.py",
+           "operator/native_jobs.py", "operator/programme_jobs.py",
            "operator/web/jobs.mjs", "operator/web/jobs.css", "operator/NATIVE_JOBS.md",
            "install_native_supervision.py")
 PREVIOUS = {
@@ -69,6 +70,14 @@ PREVIOUS["install_native_supervision.py"].extend([
     "a1662f789268a79a1a949f2cf80d0ed2a00cc12c88ea029273b5bf76df2f3f9a",
     "d8606e537707dc8439fc622e6ed039ae6d78233947d4167edaa904df61830ad8",
 ])
+
+# Exact reviewed current sources for the resource-observation receiving join.
+PREVIOUS.setdefault("model/native_execution.py", []).extend(["90ab72a4fa50bc091cc9d94c1d8723acff71affdf25d8cefe9943668ca17ef37"])
+PREVIOUS.setdefault("model/native_worker.py", []).extend(["d2741fe7d10c968f957058d0d451459abd2190a0c810ed17095fcb13887119d3"])
+PREVIOUS.setdefault("operator/native_jobs.py", []).extend(["f1211b519a6ec10759d0dc86b6a4a2c0eaa3bc4832d1d6307cf8416e144f132c"])
+PREVIOUS.setdefault("operator/web/jobs.mjs", []).extend(["a444e9902dd6166e55accac9bbe6abe85532b1d61d4779e839f7d9ee11971331"])
+PREVIOUS.setdefault("operator/NATIVE_JOBS.md", []).extend(["d39a47eaa42cefba9507ac5dbd496b099ab7c8ca95087bf0bb1f414a75ecc5da","41a54e92a90fd6666b2786e04272e0cfd1a5cb1a39915f96c46b1b2f7fb2ec6a","e2ae8fd5912f8cccf51eb44f21d78d187a321a98cca50f92cbb9a17637916799"])
+PREVIOUS.setdefault("install_native_supervision.py", []).extend(["9690dc3d9228c53f383e283684388df7775fc3264802287ea6847437f7fa419c"])
 
 DETACH_DISPOSITION = ('            final_state = ("interrupted" if isinstance(error, NativeJobDetached) else\n'
                       '                           "cancelled" if isinstance(error, NativeJobCancelled) else "failed")\n')
