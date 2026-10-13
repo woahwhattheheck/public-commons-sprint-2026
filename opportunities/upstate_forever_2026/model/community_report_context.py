@@ -15,7 +15,7 @@ from .common import (atomic_json, describe_file, digest, file_digest, held,
 from .communities import REPORT_KIND
 
 SCHEMA = "upstate.community-report-context/v1"
-VERSION = "1"
+VERSION = "2"
 RECIPE = "community-scientific-report.json"
 MANIFEST = "sources.json"
 
@@ -116,6 +116,67 @@ def _sections(payload, report_id, report_sha256):
             ]),
         ]],
     ]
+    revision = payload.get("plan_revision")
+    if revision:
+        costs = revision.get("costs", {})
+        before_costs, after_costs = costs.get("before", {}), costs.get("after", {})
+        selection = revision.get("selection", {})
+        scientific = revision.get("scientific_context", {})
+        csv = revision.get("received_csv", {})
+        counts = revision.get("counts", {})
+        sections.append(["Changes from previous saved Community plan", [
+            "This register compares the two retained planning editions. The previous-plan.json, "
+            "plan-revision-summary.json and plan-revision-changes.csv originals accompany this report. "
+            "Entered cost-estimate differences keep missing estimates separate and do not represent "
+            "environmental benefits or measured programme expenditure.",
+            _table(["Original revision", "Saved identity"], [
+                ["Previous plan", revision.get("previous_plan_id")],
+                ["Saved plan", revision.get("plan_id")],
+                ["Previous revision", revision.get("previous_revision_number")],
+                ["Saved revision", revision.get("revision_number")],
+                ["Original community table", revision.get("table_id")],
+                ["Original community source SHA256", revision.get("source_sha256")],
+            ]),
+            _table(["Interventions added", "Removed", "Changed", "Unchanged", "Changed fields"], [[
+                counts.get("added_interventions"), counts.get("removed_interventions"),
+                counts.get("changed_interventions"), counts.get("unchanged_interventions"),
+                counts.get("changed_fields"),
+            ]]),
+            _table(["Change", "Intervention", "Field", "Previous value", "Saved value"], [
+                [row.get("change"), row.get("title") or row.get("intervention_id"),
+                 row.get("field"), row.get("before"), row.get("after")]
+                for row in revision.get("changes", [])
+            ]),
+            _table(["Plan detail", "Previous value", "Saved value"], [
+                [row.get("field"), row.get("before"), row.get("after")]
+                for row in revision.get("plan_changes", [])
+            ]),
+            _table(["Entered estimate basis", "Previous plan", "Saved plan"], [
+                ["Entered total USD", before_costs.get("entered_total_usd"), after_costs.get("entered_total_usd")],
+                ["Known estimate count", before_costs.get("known_estimate_count"), after_costs.get("known_estimate_count")],
+                ["Unknown estimate count", before_costs.get("unknown_estimate_count"), after_costs.get("unknown_estimate_count")],
+                ["Entered-estimate difference USD", None, costs.get("entered_estimate_difference_usd")],
+                ["Difference basis", None, costs.get("basis")],
+            ]),
+            "Community selections below describe whole original source block groups. Their utility "
+            "and watershed overlaps retain original memberships and are not additive.",
+            _table(["Whole source block-group selection", "Previous plan", "Saved plan"], [
+                ["Selection", selection.get("before"), selection.get("after")],
+                ["Whole-group summary", selection.get("before_summary"), selection.get("after_summary")],
+                ["Added block groups", None, selection.get("added_geoids")],
+                ["Removed block groups", None, selection.get("removed_geoids")],
+            ]),
+            _table(["Scientific context selection", "Previous value", "Saved value"], [
+                [row.get("field"), row.get("before"), row.get("after")]
+                for row in scientific.get("identifier_changes", [])
+            ]),
+            _table(["Original scientific and CSV lineage", "Previous plan", "Saved plan"], [
+                ["Scientific snapshot SHA256", scientific.get("before_snapshot_sha256"), scientific.get("after_snapshot_sha256")],
+                ["Snapshot changed", None, scientific.get("snapshot_changed")],
+                ["Received CSV SHA256", csv.get("before_sha256"), csv.get("after_sha256")],
+                ["CSV import plan", csv.get("before_import_plan_id"), csv.get("after_import_plan_id")],
+            ]),
+        ]])
     regional = payload.get("regional_watershed_context")
     if regional:
         hucs = regional.get("hucs", [])
@@ -219,6 +280,21 @@ def prepare(workspace, report_id, *, report_sha256, delivery_id=None, import_sou
             raise ValueError("The original Community report index differs: " + name)
     if payload["plan"].get("context", {}).get("snapshot_sha256") != report.get("context_snapshot_sha256"):
         raise ValueError("The original Community report scientific context differs")
+    revision = payload.get("plan_revision")
+    if revision:
+        if (revision.get("schema") != "upstate.community-plan-revision/v1"
+                or revision.get("plan_id") != report.get("plan_id")
+                or revision.get("previous_plan_id") != payload["plan"].get("previous_plan_id")
+                or revision.get("table_id") != report.get("table_id")
+                or report.get("plan_revision") != revision):
+            raise ValueError("The original Community revision register differs from its saved plan")
+        if not {"plan-revision-summary.json", "plan-revision-changes.csv", "previous-plan.json"} <= paths.keys():
+            raise ValueError("The original Community revision register is missing its retained companions")
+        if read_json(paths["plan-revision-summary.json"]) != revision:
+            raise ValueError("The original Community revision summary differs from its report")
+        previous = read_json(paths["previous-plan.json"])
+        if previous.get("id") != revision["previous_plan_id"]:
+            raise ValueError("The original Community revision register names a different previous plan")
     identity = {"schema": SCHEMA, "version": VERSION, "project_id": workspace.project["id"],
                 "report_id": report_id, "report_sha256": report_sha256,
                 "original_files": {name: {"bytes": item["bytes"], "sha256": item["sha256"]}
