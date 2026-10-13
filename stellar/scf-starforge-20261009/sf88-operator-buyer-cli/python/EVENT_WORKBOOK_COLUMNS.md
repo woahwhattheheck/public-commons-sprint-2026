@@ -35,6 +35,110 @@ use the existing **Review current customer edits** workflow, inspect its new
 review and select the new proposal. The preceding attempts stay in the native
 programme history.
 
+
+## Continue the same worksheet with an offline receiving engineer
+
+The original Event browser's **Download complete editable worksheet** control
+creates one self-contained HTML file from the exact displayed proposal and
+every selected column array. The recipient can open it without the private
+Analysis server or its capability. The complete native worksheet proposal,
+original workspace/programme/operation/review identities, all unresolved
+columns and additional already-resolved sheet arrays stay in this file.
+Original acquired event files and analytical output remain in the customer's
+full sixteen-file delivery; this worksheet carries the complete column work.
+
+The file uses the same installed column model and controls as the original
+browser. Select a worksheet, page through all its columns, choose actual source
+names/report ordinals, keep or change headings, conversion types, null labels
+and precision, reorder/add/remove rows, or restore that sheet's original
+columns. Every unfinished value remains editable. The whole new source and
+preceding definitions can be read in the same file. Nothing is applied to the
+native workbook while working in this file.
+
+**Save complete editable worksheet** saves a new full HTML edition with the
+current choices and selected worksheet/page. Reopen that downloaded edition
+to continue. The saved file supplies the initial work; a different browser
+cache is offered as an explicit restoration, with confirmation before replacing
+the displayed choices. Cache failure leaves complete file saving available.
+Opening an older copy does not silently substitute a newer browser draft.
+If browser storage fails or fills up, the visible storage warning survives the
+change notification. A separate warning beside the column controls remains
+visible even when the host displays another status message, and clears only
+after a successful complete browser-storage write and readback. The complete
+choices remain in the open editor and its full-file downloads remain available.
+The editor warns before leaving changed choices. Requesting a download keeps
+that reminder in the original window, since the browser may cancel the file
+save. Reopen the complete saved file to continue its retained edition.
+
+**Download complete choices for original programme** exports the existing
+source-bound JSON. The source proposal is independently downloadable, and
+**Download complete readable review** retains every selected row in the
+existing complete report. Keep the editable HTML when unfinished alternatives
+must travel with the work. All downloads retain the full original proposal
+rather than a screenshot or only the currently visible page.
+
+In the original Event browser, reopen the SAME programme and pending proposal,
+choose **Reopen complete choices**, and select the recipient's full JSON.
+The existing receiver checks the complete original context before an explicit
+replacement. A different source, review or operation is rejected while current
+work remains in place. It also preserves edits or native action changes made
+during an unfinished file read. Review the resulting whole worksheet and
+continue the original explicit apply with its actual note. The original
+workbook performs Unicode heading uniqueness, complete row conversions and
+current-definition checks. A customer's deliberately changed definitions still
+use **Review current customer edits** first.
+
+The installed file command creates the same self-contained HTML directly:
+
+~~~sh
+starforge event-workbook-columns editor \
+  --choices /private/customer/worksheet-choices.json \
+  --out /private/customer/worksheet-editor.html
+~~~
+
+An original source selection can be checked before creating that file:
+
+~~~sh
+starforge event-workbook-columns editor \
+  --choices /private/customer/worksheet-choices.json \
+  --proposal /private/customer/native-column-proposal.json \
+  --workspace ORIGINAL_WORKSPACE_ID \
+  --programme OriginalProgramme \
+  --out /private/customer/worksheet-editor.html
+~~~
+
+The full original CLI receiver and create-only publication remain in use.
+A different existing output is preserved. The installed source includes the
+complete shared core, HTML composer and controller. The editable HTML requires
+a modern browser with ES modules; its local control flow has no network call
+and carries no Analysis capability. Original JSON inputs keep the existing
+16 MiB allowance; complete editable HTML has a 128 MiB allowance to include
+the full escaped source/choices and installed editor without truncation.
+
+Both choice-file controls and the CLI template use the exact UTF-8 return-file
+allowance, including its final newline. The original-proposal download and CLI
+native-columns output apply the same exact bound before download/publication. They retain readable indented JSON when
+it fits and use complete compact JSON when that is needed to stay within
+16 MiB. If the complete current choices still exceed that allowance, the
+operator sees a return-size error; no rows, proposal fields or unfinished
+choices are removed. Saving the complete editable HTML remains available up to
+its separate 128 MiB allowance, so oversized working choices can still travel
+and reopen in full before a fitting return is selected.
+
+Continue the same actual native receiving operation. Open the original
+customer's unresolved proposal, edit more than one worksheet and more than one
+page, include a temporarily incomplete heading/source selection, retain an
+extra resolved sheet, and download the full editable file. At desktop and
+narrow width, operate every important control, save/reopen with a different
+browser draft available, explicitly restore or retain the file's edition, and
+open all original-proposal/choice/readable downloads. Return the actual full
+choice file to the same pending native proposal, review and apply it, then
+deliver and independently restore the original customer workbook/workspace.
+The producing maintainer views the actual returned screens and every outgoing
+attachment, repairs practical defects directly and joins those original output
+locations to the existing receiving record.
+
+
 ## 2. Review the complete worksheet
 
 Select a worksheet, then work through its retained output columns. Twenty rows
@@ -137,7 +241,7 @@ that original financial operation.
 The portable module and CLI are shipped alongside the original Event source
 projector under sf88-operator-buyer-cli/event-feed. They need the maintained
 Node.js runtime and no additional package. The maintained distribution exposes
-**starforge event-workbook-columns** with the same four commands, and exports
+**starforge event-workbook-columns** with template, inspect, columns, html and editor commands, and exports
 the portable core as **./buyer/event-workbook-columns**. The direct source
 invocations below run from the installed sf88-operator-buyer-cli directory.
 
@@ -203,7 +307,9 @@ existing work is preserved. It never contacts a host or starts a native action.
 
 The shared module exports context, initial, reopen, sourceColumns,
 selectedOrdinal, chooseSource, replaceColumns, review, nativeColumns and
-reviewHTML for the same portable source-bound flow. The browser mount is
+reviewHTML for the same portable source-bound flow. serializeChoices and
+serializeNativeJSON retain complete return files within
+MAX_EVENT_WORKBOOK_CHOICES_BYTES, including the final newline. The browser mount is
 createEventWorkbookColumnReview. The native backend and original workbook
 writer are unchanged.
 
@@ -242,7 +348,7 @@ Keep plain industrial presentation: readable tables, clear hierarchy, useful
 labels, consistent typography and spacing, restrained controls and responsive
 layouts. Repair concrete layout or behavior issues in this same source.
 Continue the complete original native operation; use focused checks for actual
-remaining risks and retain the owner's October 13, 2026 14:00 UTC cutoff.
+remaining risks and preserve this SCF operation's actual owner schedule.
 An equipped receiver returns exact source, original operation/workspace IDs,
 complete files and actual viewed normal/narrow frames to the producer. Carry
 this full instruction into any delegated operating course.
