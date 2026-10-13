@@ -26,6 +26,7 @@ from . import rasters
 from .native_execution import process_interrupted, storage_exhausted
 from .parameter_exports import (EDITION as EXPORT_EDITION, retain_differences,
                                 retain_member_manifest, write_archive)
+from .parameter_response import EDITION as RESPONSE_EDITION
 from .reuse import copy_verified
 
 SCHEMA = "upstate.parameter-experiment/v1"
@@ -657,7 +658,8 @@ def _compatible_aggregation_implementations():
         segment = ast.get_source_segment(source, node) if node is not None else None
         if segment is None or hashlib.sha256(segment.encode("utf-8")).hexdigest() != checksum:
             return ()
-    return ({"engine_sha256": "4ce8b04985412aac1bbec30677a4f5adabb96cde848de1c00aff104dc1b40134","cache_sha256": "fb7846b4e66b2d20fe34e2e291176e0862d101041ab01a9652c0c6a339b284b2"},
+    return ({"engine_sha256": "96d42955202ea579eefef60ced9ec5d941a8c9f5930eef10c6ec42bfcddf9a1c", "cache_sha256": "fb7846b4e66b2d20fe34e2e291176e0862d101041ab01a9652c0c6a339b284b2"},
+            {"engine_sha256": "4ce8b04985412aac1bbec30677a4f5adabb96cde848de1c00aff104dc1b40134","cache_sha256": "fb7846b4e66b2d20fe34e2e291176e0862d101041ab01a9652c0c6a339b284b2"},
             {"engine_sha256": "5da6f3fad2485eaf957f6b2e36fc3a1bfa16a0e83cce33239100ab8ca233ba71","cache_sha256": "fb7846b4e66b2d20fe34e2e291176e0862d101041ab01a9652c0c6a339b284b2"},
             {"engine_sha256": "e7bd1aea4ba50903ee4880feb2ddb7f47c3d5febd26edb0b1f616d93c5e1032c","cache_sha256": "fb7846b4e66b2d20fe34e2e291176e0862d101041ab01a9652c0c6a339b284b2"},
             {"engine_sha256": "bc16ad49224303546624465a67a30544ead368b9f5c4deb1e29d5273801d5296","cache_sha256": "fb7846b4e66b2d20fe34e2e291176e0862d101041ab01a9652c0c6a339b284b2"},
@@ -811,6 +813,7 @@ def _summarize(workspace, key, *, progress=None):
 
 
 def _report(result):
+    from .parameter_response import STYLE as response_style, render_report as response_report
     esc = lambda value: html.escape(str(value), quote=True)
     def number(value):
         return "—" if value is None else format(value, ",.6g")
@@ -896,15 +899,15 @@ def _report(result):
 main{max-width:1320px;margin:32px auto;padding:0 24px}h1{font-size:26px;margin-bottom:8px}
 h2{font-size:19px;margin-top:30px}.meta{color:#555}table{border-collapse:collapse;width:100%;font-size:12px}
 th,td{padding:9px;text-align:left;border:1px solid #d5d5d5;vertical-align:top;overflow-wrap:anywhere}
-th{background:#efefef}tbody tr:nth-child(even){background:#fafafa}.scroll{overflow:auto}
-code{overflow-wrap:anywhere}a{color:#242424}@media print{main{margin:0;padding:0}thead{display:table-header-group}}</style>
+th{background:#efefef}tbody tr:nth-child(even){background:#fafafa}.scroll{overflow:auto}.scroll>table{min-width:900px}
+code{overflow-wrap:anywhere}a{color:#242424}@media print{main{margin:0;padding:0}thead{display:table-header-group}.scroll>table{min-width:0}}""" + response_style + """</style>
 </head><body><main><h1>""" + esc(result["title"]) + "</h1><p>" + esc(result["purpose"]) + """</p><p class="meta">Baseline requested InVEST """ + esc(requested_text) + " · " + esc(result["design"]) + " · " + str(result["completed_cases"]) + " / " + str(result["total_cases"]) + """ cases complete</p>
 <p class="meta">Native models: """ + esc(", ".join(result["models"]).upper()) + """</p>
 <p><a href="results.csv">Download quantitative results (CSV)</a> · <a href="results.json">Open full results (JSON)</a> · <a href="selection.json">Open saved design</a></p>
 """ + execution + """
 <h2>Parameter selection</h2><div class="scroll"><table><thead><tr><th>Axis</th><th>Native parameters</th><th>Values</th><th>Reason</th><th>Sources</th></tr></thead><tbody>""" + "".join(axes) + """</tbody></table></div>
 <h2>Quantitative comparisons</h2><p>""" + esc(result["comparison_basis"]) + """</p><p>""" + esc(result["mass_basis"]) + """</p><div class="scroll"><table><thead><tr><th>Area</th><th>Case</th><th>Pollutant</th><th>Units</th><th>Baseline on shared cells</th><th>Case on shared cells</th><th>Change</th><th>Change %</th><th>Shared cells</th><th>Support</th></tr></thead><tbody>""" + "".join(row_html) + """</tbody></table></div>
-""" + map_section + """<h2>Interpretation and source</h2><p>""" + esc(result["range_basis"]) + """</p><p>Numeric single-parameter responses include the change per parameter unit and normalized elasticity in the downloadable data. Coupled parameter changes retain their complete joint selection.</p>
+""" + response_report(result["rows"], PARAMETERS) + map_section + """<h2>Interpretation and source</h2><p>""" + esc(result["range_basis"]) + """</p><p>Numeric single-parameter responses describe the finite change between the selected settings. The input-response section reconciles shared-cell and full totals and preserves the original parameter and area units. Coupled parameter changes retain their complete joint selection.</p>
 <p>Study <code>""" + esc(result["experiment_id"]) + "</code><br>Baseline <code>" + esc(result["selection"]["baseline_run_id"]) + "</code></p></main></body></html>"
 
 
@@ -959,6 +962,11 @@ def _exports(workspace, state):
     atomic_json(directory / "results.json", result)
     atomic_bytes(directory / "report.html", _report(result).encode("utf-8"))
     files = ["selection.json", "results.json", "results.csv", "report.html", "profiles.json"]
+    from .parameter_response import export_document, csv_document
+    interpretation = export_document(result, describe_file(directory, directory / "results.json"), PARAMETERS)
+    atomic_json(directory / "response-interpretation.json", interpretation)
+    atomic_bytes(directory / "response-interpretation.csv", csv_document(interpretation).encode("utf-8"))
+    files.extend(("response-interpretation.json", "response-interpretation.csv"))
     version_files = ("native-versions.json", "native-versions.csv")
     files.extend(name for name in version_files if (directory / name).is_file())
     if (directory / "aggregation.json").is_file():
@@ -997,6 +1005,8 @@ def _exports(workspace, state):
         ("selection", "selection.json"), ("results", "results.json"), ("csv", "results.csv"),
         ("report", "report.html"), ("profiles", "profiles.json"), ("archive", "experiment-results.zip"))}
     artifacts["export_manifest"] = member_manifest
+    artifacts["response_interpretation"] = describe_file(directory, directory / "response-interpretation.json")
+    artifacts["response_interpretation_csv"] = describe_file(directory, directory / "response-interpretation.csv")
     artifacts.update(map_files)
     for name, filename in (("native_versions", "native-versions.json"),
                            ("native_versions_csv", "native-versions.csv")):
@@ -1007,6 +1017,7 @@ def _exports(workspace, state):
     state["export_edition"] = EXPORT_EDITION
     state["native_version_edition"] = NATIVE_VERSION_EDITION
     state["summary_edition"] = result["summary_edition"]
+    state["response_interpretation_edition"] = RESPONSE_EDITION
     return artifacts
 
 
@@ -1092,6 +1103,15 @@ def execute(workspace, key, *, progress=None):
             if (state.get("export_edition") == EXPORT_EDITION
                     and state.get("native_version_edition") == NATIVE_VERSION_EDITION
                     and state.get("summary_edition") == SUMMARY_EDITION):
+                if state.get("response_interpretation_edition") != RESPONSE_EDITION:
+                    # The retained scientific matrix is already current. Add the
+                    # interpretation and report from those same saved rows only.
+                    # This edition needs neither a native run nor raster reduction.
+                    verify_file(directory, state["artifacts"]["results"])
+                    state["artifacts"] = _exports(workspace, state)
+                    state["updated_at"] = now()
+                    atomic_json(state_path, state)
+                    return {**state, "reused": True, "exports_refreshed": True}
                 for item in state["artifacts"].values():
                     verify_file(directory, item)
                 return {**state, "reused": True}
@@ -1187,3 +1207,4 @@ def summarize(workspace, key):
             state["state"] = "partial"
         atomic_json(directory / "experiment.json", state)
         return result
+

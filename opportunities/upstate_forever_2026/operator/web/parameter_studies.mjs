@@ -485,7 +485,10 @@ export function attachParameterStudies(host) {
       '</small></td><td class="number-cell">' + format(row.baseline_mass) + '</td><td class="number-cell">' + format(row.case_mass) +
       '</td><td class="number-cell">' + format(row.change) + '<small>' + format(row.percent_change) + (row.percent_change === null ? '' : '%') +
       '</small></td><td>' + (row.support_changed ? 'Coverage changed' : 'Matching coverage') + '<small>' +
-      format(row.paired_valid_cells) + ' paired cells</small><details class="row-detail"><summary>Coverage and response</summary><dl class="definition">' +
+      format(row.paired_valid_cells) + ' paired cells</small>' +
+      (row.response_interpretation?.direction_reversal ? '<small class="parameter-response-emphasis">Shared-cell and full-total changes have opposite signs.</small>' : '') +
+      (row.response_interpretation_html ? '<details class="row-detail"><summary>Interpret this comparison</summary>' + row.response_interpretation_html + '</details>' : '') +
+      '<details class="row-detail"><summary>Original coverage and response fields</summary><dl class="definition">' +
       [['Pixel area (ha)', row.pixel_area_ha], ['Paired area (ha)', row.paired_area_ha],
        ['Baseline valid area (ha)', row.baseline_valid_area_ha], ['Case valid area (ha)', row.case_valid_area_ha],
        ['Baseline valid cells', row.baseline_valid_cells], ['Case valid cells', row.case_valid_cells], ['Baseline full mass', row.baseline_full_mass],
@@ -1072,3 +1075,4 @@ export function attachParameterStudies(host) {
 
   return {render, mount, detach, dispatch, taskActions, openSavedStudy, openFromCalibration};
 }
+
