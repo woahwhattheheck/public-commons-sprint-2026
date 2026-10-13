@@ -7,6 +7,7 @@ standard errors remain available beside the imported Workspace observations.
 from __future__ import annotations
 
 import argparse
+import base64
 from collections import Counter, defaultdict
 import csv
 import datetime as dt
@@ -154,23 +155,66 @@ def _member(archive, basename):
                   "crc32": f"{info.CRC:08x}"}
 
 
+def _undecodable_bytes(text, *, offset=0):
+    """Locate original undecodable bytes without assigning them characters."""
+    result = []
+    for character in text:
+        code = ord(character)
+        if 0xDC80 <= code <= 0xDCFF:
+            result.append({"byte_offset": offset, "hex": f"{code - 0xDC00:02X}"})
+            offset += 1
+        else:
+            offset += len(character.encode("utf-8"))
+    return result
+
+
 def _table(body, member):
-    text = body.decode("utf-8-sig")
+    # The release dictionary declares CSV text, not a character encoding.
+    # Surrogateescape keeps invalid UTF-8 bytes intact while CSV is parsed;
+    # affected cells below carry exact bytes plus an explicit display notation.
+    text = body.decode("utf-8-sig", errors="surrogateescape")
+    bom_bytes = 3 if body.startswith(b"\xef\xbb\xbf") else 0
+    undecodable = _undecodable_bytes(text, offset=bom_bytes)
+    decoding = {"publisher_encoding": None, "parser_encoding": "utf-8-sig",
+                "utf8_bom_bytes": bom_bytes, "undecodable_bytes": undecodable,
+                "undecodable_byte_count": len(undecodable),
+                "text_representation": "Valid UTF-8 text is unchanged; undecodable bytes in "
+                                       "cells listed by undecodable_cells display as \\xHH. "
+                                       "Their content_base64 retains the exact parsed cell bytes. "
+                                       "No publisher character encoding is inferred."}
     first = text.splitlines()[0] if text else ""
     # load_est members are CSV according to the exact publisher dictionary;
     # the paired site table's literal header determines comma versus tab.
     delimiter = "\t" if "\t" in first else ","
     reader = csv.DictReader(io.StringIO(text, newline=""), delimiter=delimiter)
     if (not reader.fieldnames or "station_id" not in reader.fieldnames
-            or len(reader.fieldnames) != len(set(reader.fieldnames))):
+            or len(reader.fieldnames) != len(set(reader.fieldnames))
+            or any(_undecodable_bytes(name) for name in reader.fieldnames)):
         raise ValueError("Original station table has invalid headers: " + member)
     rows = []
     for number, row in enumerate(reader, 1):
         if None in row or any(value is None for value in row.values()):
             raise ValueError("Original table row has an unexpected cell count: "
                              + member + " / " + str(number))
-        rows.append({"record_number": number, "ending_line": reader.line_num, "row": row})
-    return reader.fieldnames, delimiter, rows
+        record = {"record_number": number, "ending_line": reader.line_num, "row": row}
+        preserved = {}
+        for field, value in row.items():
+            invalid = _undecodable_bytes(value)
+            if not invalid:
+                continue
+            original = value.encode("utf-8", errors="surrogateescape")
+            preserved[field] = {"bytes": len(original),
+                                "sha256": hashlib.sha256(original).hexdigest(),
+                                "content_base64": base64.b64encode(original).decode("ascii"),
+                                "undecodable_bytes": invalid,
+                                "scope": "Original CSV field value after delimiter/quote parsing"}
+            row[field] = "".join(f"\\x{ord(character) - 0xDC00:02X}"
+                                 if 0xDC80 <= ord(character) <= 0xDCFF else character
+                                 for character in value)
+        if preserved:
+            record["undecodable_cells"] = preserved
+        rows.append(record)
+    return reader.fieldnames, delimiter, rows, decoding
 
 
 def _estimate(series, record, member, site_index):
@@ -256,9 +300,9 @@ def inventory(directory, *, huc8=None):
     with zipfile.ZipFile(root / "load_est.zip") as loads, zipfile.ZipFile(root / "sitegage.zip") as sites:
         for series in SERIES:
             site_body, site_member = _member(sites, "sitegage_" + series + ".txt")
-            site_columns, site_delimiter, site_rows = _table(site_body, site_member["member"])
+            site_columns, site_delimiter, site_rows, site_decoding = _table(site_body, site_member["member"])
             load_body, load_member = _member(loads, "load_est_" + series + ".txt")
-            load_columns, load_delimiter, load_rows = _table(load_body, load_member["member"])
+            load_columns, load_delimiter, load_rows, load_decoding = _table(load_body, load_member["member"])
             site_index = defaultdict(list)
             for item in site_rows:
                 pair = (item["row"]["station_id"].strip(),
@@ -271,9 +315,9 @@ def inventory(directory, *, huc8=None):
                     records.append(item)
             tables.append({"series": series,
                            "loads": {**load_member, "columns": load_columns, "delimiter": load_delimiter,
-                                     "records": len(load_rows)},
+                                     "records": len(load_rows), "decoding": load_decoding},
                            "sites": {**site_member, "columns": site_columns, "delimiter": site_delimiter,
-                                     "records": len(site_rows)}})
+                                     "records": len(site_rows), "decoding": site_decoding}})
     counts = Counter(row["series"] for row in records)
     usable = Counter(row["series"] for row in records if not row["issues"])
     return {"schema": "upstate.usgs-annual2012-inventory/v1", "source": source,
