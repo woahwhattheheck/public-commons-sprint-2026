@@ -9,10 +9,15 @@ from typing import Any
 from urllib.parse import quote
 
 from model.common import describe_file
+from measurement_workspace.source_observations import builtin_companion
 from measurement_workspace.published_studies import PublishedStudyStore, TABLE_TITLES, COMPANION_SCHEMA, _manifest_path, INSTALLED_CONTEXT_PATHS
 
 ACTIONS = ("published-study.import", "published-study.export", "published-study.report")
 BUILTIN_ID = "scdes-eighteenmile-lake-2023"
+BUILTIN_DIRECTORIES = {
+    BUILTIN_ID: "eighteenmile_2023",
+    "scdes-eighteenmile-streams-2020-2025": "eighteenmile_stream_nutrients_2020_2025",
+}
 # Interactive original reports use an opaque origin and cannot call the operator.
 REPORT_POLICY = ("sandbox allow-scripts allow-downloads allow-modals allow-popups "
                  "allow-popups-to-escape-sandbox; default-src 'none'; "
@@ -37,7 +42,12 @@ class PublishedStudyProvider:
                 self.roots[root_id] = path
         self.builtin = Path(__file__).resolve().parent.parent / "observations" / "eighteenmile_2023"
 
-    def _builtin_source(self):
+    def _builtin_source(self, builtin_id=BUILTIN_ID):
+        if builtin_id != BUILTIN_ID:
+            directory = BUILTIN_DIRECTORIES.get(builtin_id) if isinstance(builtin_id, str) else None
+            if directory is None:
+                self._fail("STUDY_BUILTIN", "The installed study source is unavailable.", 404)
+            return builtin_companion(self.builtin.parent / directory)
         required = (
             "study.json", "stations.csv", "stations.json", "seasonal_summaries.csv",
             "surface_ranges.csv", "continuous_monthly_do.csv", "continuous_monthly_ph.csv",
@@ -244,13 +254,15 @@ class PublishedStudyProvider:
         try:
             if operation == "catalog":
                 builtin = []
-                if (self.builtin / "study.json").is_file():
-                    metadata = json.loads((self.builtin / "study.json").read_text(encoding="utf-8-sig"))
-                    builtin.append({
-                        "id": BUILTIN_ID, "title": metadata["title"],
-                        "publication": metadata.get("publication"),
-                        "counts": metadata.get("content_counts", {}),
-                    })
+                for builtin_id, directory in BUILTIN_DIRECTORIES.items():
+                    source = self.builtin.parent / directory / "study.json"
+                    if source.is_file():
+                        metadata = json.loads(source.read_text(encoding="utf-8-sig"))
+                        builtin.append({
+                            "id": builtin_id, "title": metadata["title"],
+                            "publication": metadata.get("publication"),
+                            "counts": metadata.get("content_counts", {}),
+                        })
                 return {
                     **store.list_studies(),
                     "builtin_studies": builtin,
@@ -281,9 +293,10 @@ class PublishedStudyProvider:
                 evidence = {}
                 builtin_id = payload.get("builtin_id")
                 if builtin_id is not None:
-                    if builtin_id != BUILTIN_ID or not (self.builtin / "study.json").is_file():
+                    directory = BUILTIN_DIRECTORIES.get(builtin_id)
+                    if directory is None or not (self.builtin.parent / directory / "study.json").is_file():
                         self._fail("STUDY_BUILTIN", "The installed study source is unavailable.", 404)
-                    source, evidence = self._builtin_source()
+                    source, evidence = self._builtin_source(builtin_id)
                 elif isinstance(payload.get("source_json"), str):
                     source = payload["source_json"].encode("utf-8")
                 else:
