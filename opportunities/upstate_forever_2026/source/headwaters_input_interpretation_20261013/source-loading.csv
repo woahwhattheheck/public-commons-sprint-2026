@@ -1,0 +1,4 @@
+scenario,changed_cells,changed_area_ha,pasture_cells,crop_cells,assumed_source_n_kg_year,assumed_source_p_kg_year,assumed_source_n_reduction_kg_year,assumed_source_p_reduction_kg_year
+baseline,0,0,0,0,11638.136039699928,906.3321563518217,0,0
+riparian,635,57.15,236,399,10746.834646118848,833.4258741390121,891.3013935810795,72.90628221280963
+matched_control,635,57.15,236,399,10746.84721373514,833.4269100044833,891.288825964788,72.90524634733845
