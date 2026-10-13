@@ -28,6 +28,7 @@ CODE_FILES = (
     "measurement_workspace/study_context.py",
     "measurement_workspace/observation_support.py",
     "measurement_workspace/source_observations.py",
+    "measurement_workspace/ORIGINAL_RESULT_SELECTION.md",
     "measurement_workspace/wqp_profiles.py",
     "measurement_workspace/sv833_observations.py",
     "measurement_workspace/rl18151_observations.py",
