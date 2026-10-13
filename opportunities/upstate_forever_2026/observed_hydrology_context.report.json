@@ -1,7 +1,7 @@
 {
   "schema": "upstate.observed-report/v1",
   "title": "Observed Upper Savannah hydrology and Eighteenmile scientific context",
-  "edition": "2026-10-13 original 29-gauge seasonal hydrology, whole basins and scientific studies",
+  "edition": "2026-10-13 original seasonal hydrology and eight native scientific figures",
   "period": {
     "study_start": "2023-04-05",
     "study_end": "2023-10-17",
@@ -957,6 +957,76 @@
       "sha256": "9d80e91e2c33f7955dec97e6b4c740eb9705f95d3f7796df6175d39231e92897"
     },
     {
+      "path": "observations/flow_seasonality_20261013/figures/combined-figure-spec.json",
+      "bytes": 717787,
+      "sha256": "23c6a4e002bc44ff4f80b8def5f68d7e43c51584ec684a2c5c1b10d0f931ce47"
+    },
+    {
+      "path": "observations/flow_seasonality_20261013/figures/eighteenmile_monthly_flow.svg",
+      "bytes": 17597,
+      "sha256": "129d89fbf15d86e13a2c218c7003a7f7f6db8a7bad8fba2c3354021ed1e7ac95"
+    },
+    {
+      "path": "observations/flow_seasonality_20261013/figures/eighteenmile_seasonal_contrasts.svg",
+      "bytes": 11949,
+      "sha256": "4683d5bf0ed9c3ca56328be26f7d172799dec8f3ec22422128cbd58fcd0f651f"
+    },
+    {
+      "path": "observations/flow_seasonality_20261013/figures/figure_source.mjs",
+      "bytes": 11245,
+      "sha256": "4446e7eb152c7a377a57330e30f77da85d5e4790be5a68c9f779b3ca90b21b18"
+    },
+    {
+      "path": "observations/flow_seasonality_20261013/figures/figure-points.csv",
+      "bytes": 136647,
+      "sha256": "4877b1c614ea07b1231bc363d61ff84f77f99e34bee7904daeb8d18765a66577"
+    },
+    {
+      "path": "observations/flow_seasonality_20261013/figures/figure-spec.json",
+      "bytes": 301867,
+      "sha256": "8e2f7ef4a81de910dfd2edb6f00e68eb6a91390de473c8c31af3b855e8055284"
+    },
+    {
+      "path": "observations/flow_seasonality_20261013/figures/inputs.json",
+      "bytes": 22411,
+      "sha256": "2d9d5f2004768c0134d6da92f9faf73f4b9643d704fa40378e50de9844d2ed9e"
+    },
+    {
+      "path": "observations/flow_seasonality_20261013/figures/observed_flow_duration_context.svg",
+      "bytes": 38627,
+      "sha256": "1be6ec562c7d543ddeca9fbec9adab86a8340e5ec72d26edcde91975af4bc237"
+    },
+    {
+      "path": "observations/flow_seasonality_20261013/figures/products.mjs",
+      "bytes": 7601,
+      "sha256": "81fc8ac035fe2a4c7449052103eb134d95b19d8cf56e1cd38a96aa2677ed8485"
+    },
+    {
+      "path": "observations/flow_seasonality_20261013/figures/README.md",
+      "bytes": 5011,
+      "sha256": "e9144253729d2cf0cb74dd5e198693285073880725ea6b342ce49169bf8e9ac1"
+    },
+    {
+      "path": "observations/flow_seasonality_20261013/figures/rebuild.mjs",
+      "bytes": 3600,
+      "sha256": "f2594c317ef4dcbe474f2aa944aff82dd555902d375c57aa60dbbaee1706fd8a"
+    },
+    {
+      "path": "observations/flow_seasonality_20261013/figures/regional_high_flow_volume.svg",
+      "bytes": 26661,
+      "sha256": "5b2a4b63ae513461677c6245a3fec000ca3dbb0f7f7edb58f6819be4cea25774"
+    },
+    {
+      "path": "observations/flow_seasonality_20261013/figures/render_svg.mjs",
+      "bytes": 7026,
+      "sha256": "792a6af995657436eb80cc3b1e1aeca1b7091d20fabfb621704b877f07954b20"
+    },
+    {
+      "path": "observations/flow_seasonality_20261013/figures/seasonal-figures.html",
+      "bytes": 97759,
+      "sha256": "93137abd6fa9d33f3b897c6082422af3407cb23596ada9172e8aff90a14729cf"
+    },
+    {
       "path": "observations/flow_seasonality_20261013/flow_seasonality.mjs",
       "bytes": 22230,
       "sha256": "7f849e5bd5d8d879fa5f2d10a3121c32524384830353a581d3a6634127791c18"
@@ -1565,6 +1635,16 @@
       "path": "observed_flow_seasonality.sources.json",
       "bytes": 36470,
       "sha256": "9e32b74700446eea432196bd4f71da2c7946949f74f0c922c6829d0869152b8a"
+    },
+    {
+      "path": "observed_seasonal_figures.report.json",
+      "bytes": 28940,
+      "sha256": "f0bfccfe0310fb989e5d6b6f277377db35af563798755bbae53f8372cea3cadb"
+    },
+    {
+      "path": "observed_seasonal_figures.sources.json",
+      "bytes": 27766,
+      "sha256": "a807105f010ae9a3fa7661dae6c43753d91b4294a5b9a0ed6e94822dfb3be038"
     },
     {
       "path": "source_tools/assess_observed_context.mjs",
@@ -3925,7 +4005,7 @@
       ]
     ]
   ],
-  "figure_spec": "observations/eighteenmile_2023/figures/figure-spec.json",
+  "figure_spec": "observations/flow_seasonality_20261013/figures/combined-figure-spec.json",
   "figures": [
     {
       "id": "chlorophyll-time-series",
@@ -3942,6 +4022,22 @@
     {
       "id": "chlorophyll-antecedent-context",
       "path": "observations/eighteenmile_2023/figures/chlorophyll_antecedent_context.svg"
+    },
+    {
+      "id": "observed-monthly-eighteenmile",
+      "path": "observations/flow_seasonality_20261013/figures/eighteenmile_monthly_flow.svg"
+    },
+    {
+      "id": "observed-seasonal-eighteenmile",
+      "path": "observations/flow_seasonality_20261013/figures/eighteenmile_seasonal_contrasts.svg"
+    },
+    {
+      "id": "observed-high-flow-volume",
+      "path": "observations/flow_seasonality_20261013/figures/regional_high_flow_volume.svg"
+    },
+    {
+      "id": "observed-flow-duration-context",
+      "path": "observations/flow_seasonality_20261013/figures/observed_flow_duration_context.svg"
     }
   ],
   "source_links": [
@@ -3992,7 +4088,14 @@
     "observations/flow_seasonality_20261013/original-flow-positions.json",
     "observations/flow_seasonality_20261013/inputs.json",
     "observations/flow_seasonality_20261013/README.md",
-    "observed_flow_seasonality.sources.json"
+    "observed_flow_seasonality.sources.json",
+    "observations/flow_seasonality_20261013/figures/seasonal-figures.html",
+    "observations/flow_seasonality_20261013/figures/figure-points.csv",
+    "observations/flow_seasonality_20261013/figures/README.md",
+    "observations/flow_seasonality_20261013/figures/eighteenmile_monthly_flow.svg",
+    "observations/flow_seasonality_20261013/figures/eighteenmile_seasonal_contrasts.svg",
+    "observations/flow_seasonality_20261013/figures/regional_high_flow_volume.svg",
+    "observations/flow_seasonality_20261013/figures/observed_flow_duration_context.svg"
   ],
   "routine_nutrient_context": {
     "edition": "routine-nutrient-flow-20261013-v1",
