@@ -1,3 +1,4 @@
+import {attachParameterCaseConsole} from './parameter_case_console.mjs';
 const escapeHTML = value => String(value ?? '').replace(/[&<>"']/g, character => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[character]));
 const format = value => value === null || value === undefined ? '—' : typeof value === 'number' ? value.toLocaleString(undefined, {maximumFractionDigits: 7}) : escapeHTML(value);
 const short = value => String(value || '').slice(0, 12);
@@ -151,6 +152,7 @@ export function parseParameterStudyValues(text) {
 }
 
 export function attachParameterStudies(host) {
+  const caseConsole = attachParameterCaseConsole(host);
   let root = null, controller = null, selected = null, currentWorkspace = null, pendingOpen = null;
   let study = null, results = null, resultFilters = {area_id: '', pollutant: '', offset: 0};
   let caseFilter = '', caseOffset = 0, draftCatalog = null, draftRoot = null;
@@ -343,7 +345,8 @@ export function attachParameterStudies(host) {
       (row.native_version_labels ? '<small>' + Object.entries(row.native_version_labels).map(([model, value]) =>
         escapeHTML(model.toUpperCase() + ': ' + value)).join('<br>') + '</small>' : '') + '</td><td class="mono">' +
       (Object.entries(row.overrides || {}).map(([name, value]) => escapeHTML(name) + ' = ' + format(value)).join('<br>') || 'Baseline values') +
-      '</td><td class="actions-cell"><button type="button" data-action="item" data-kind="runs" data-id="' + escapeHTML(row.run_id) +
+      '</td><td class="actions-cell">' + button('case-console', 'Native case console', 'data-id="' + escapeHTML(selected) + '" data-run-id="' + escapeHTML(row.run_id) + '"') +
+      '<button type="button" data-action="item" data-kind="runs" data-id="' + escapeHTML(row.run_id) +
       '">Open native run</button><button type="button" data-action="run-log" data-id="' + escapeHTML(row.run_id) +
       '">Log</button><button type="button" data-action="item" data-kind="profiles" data-id="' + escapeHTML(row.profile_id) + '">Profile</button></td></tr>');
     panel.innerHTML = rows.length ? gridTable(['Case', 'State', 'Parameter changes', ''], rows) + '<div class="parameter-study-pager">' +
@@ -616,6 +619,7 @@ export function attachParameterStudies(host) {
     if (node.dataset.workspace && node.dataset.workspace !== workspace()) {
       throw new Error('Open this task in its original Workspace before opening its parameter study.');
     }
+    if (action === 'case-console') return caseConsole.open(id, node.dataset.runId);
     if (action === 'new' || action === 'revise') return newStudy(action === 'revise' ? id : null, node.dataset.baselineId);
     if (action === 'open') {
       currentWorkspace = workspace(); study = null; results = null;
