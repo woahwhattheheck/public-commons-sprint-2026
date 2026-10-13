@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 /** Reopen an actual received scientific report through its original Sources desk. */
 import { chromium } from 'playwright';
+import { runAssessmentReceivingChapter } from './assessment_browser.mjs';
 import { mkdir, readFile, writeFile, rename } from 'node:fs/promises';
 import { createReadStream } from 'node:fs';
 import { resolve, join, relative } from 'node:path';
@@ -10,11 +11,12 @@ import { parseArgs } from 'node:util';
 const { values: args } = parseArgs({ options: {
   'url-file': { type: 'string' }, 'receiving-receipt': { type: 'string' },
   output: { type: 'string' }, 'browser-channel': { type: 'string' },
+  'assessment-preparation': { type: 'string' },
   headed: { type: 'boolean', default: false }, video: { type: 'boolean', default: false },
   help: { type: 'boolean', default: false },
 } });
 if (args.help) {
-  process.stdout.write('Usage: node source/observed-report-20261013/receive_browser.mjs --url-file PRIVATE_OPERATOR_URL_FILE --receiving-receipt scientific-report-receiving.json --output DIRECTORY [--video] [--headed] [--browser-channel CHANNEL]\n');
+  process.stdout.write('Usage: node source/observed-report-20261013/receive_browser.mjs --url-file PRIVATE_OPERATOR_URL_FILE --receiving-receipt scientific-report-receiving.json --output DIRECTORY [--assessment-preparation ORIGINAL_PREPARATION_DIRECTORY] [--video] [--headed] [--browser-channel CHANNEL]\n');
   process.exit(0);
 }
 const output = resolve(args.output || 'scientific-report-browser');
@@ -146,13 +148,20 @@ async function main() {
     }
   });
   await page.goto(privateURL, { waitUntil: 'domcontentloaded' });
+  if (args['assessment-preparation']) {
+    journal.assessment_chapter = await runAssessmentReceivingChapter({
+      page, preparationDirectory: args['assessment-preparation'], receivingReceipt: receipt,
+      outputDirectory: join(output, 'assessment'), operatorURL: privateURL, redact,
+    });
+  }
+  const reportActionStart = actionRequests.length;
   await sourcesDesk(receipt.restored_workspace_key);
   const detail = await openEdition(receipt);
   await shot('01-reopened-scientific-report', '[data-scientific-report-detail]');
   for (const role of ['report_pdf', 'report_html', 'report_markdown', 'report_data']) {
     const member = detail.files.find(row => row.role === role);
     requireValue(member, 'The saved report omitted ' + role);
-    const row = page.locator('[data-scientific-report-detail] tbody tr')
+    const row = page.locator('[data-scientific-report-files] tbody tr, [data-scientific-report-detail] tbody tr')
       .filter({ has: page.getByRole('cell', { name: member.path, exact: true }) });
     await download(row.getByRole('link', { name: 'Download', exact: true }), member,
       member.path.split('/').pop(), role);
@@ -192,8 +201,9 @@ async function main() {
     journal.selected_study = { study_id: selected.study_id, workspace_key: selected.workspace_key,
       retained_records: selected.original_nodes.length, edition_id: selected.edition_id };
   }
-  journal.action_requests = actionRequests;
-  requireValue(actionRequests.length === 0,
+  journal.assessment_action_requests = actionRequests.slice(0, reportActionStart);
+  journal.action_requests = actionRequests.slice(reportActionStart);
+  requireValue(journal.action_requests.length === 0,
     'Reopening the original report unexpectedly submitted a new queued operation.');
   requireValue(journal.browser_errors.length === 0,
     'The original Sources report journey returned a browser error.');

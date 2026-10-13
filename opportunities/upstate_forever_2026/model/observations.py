@@ -9,6 +9,7 @@ from pathlib import Path
 from .common import atomic_json, digest, finite, now, read_json, retain_file, verify_file
 from . import rasters, observation_support, observation_diagnostics
 
+COMPARISON_SCHEMA_VERSION = 7
 NATIVE = {"nitrogen": ("ndr", "n_total_export", "kg/year"),
           "phosphorus": ("ndr", "p_surface_export", "kg/year"),
           "sediment": ("sdr", "sed_export", "metric_tonnes/year")}
@@ -379,7 +380,7 @@ def compare(workspace, run_id, observation_id, catchments):
         }
     profile = workspace._get("profiles", state["selection"]["profile_id"])
     value = {
-        "comparison_version": 6, "run_id": run_id, "observation_id": observation_id, "catchment_selection": catchments,
+        "comparison_version": COMPARISON_SCHEMA_VERSION, "run_id": run_id, "observation_id": observation_id, "catchment_selection": catchments,
         "model_scope": scope,
         "catchment_source": {"uri": entry["uri"], "vintage": entry["vintage"],
                              "sha256": entry["body"]["sha256"]},

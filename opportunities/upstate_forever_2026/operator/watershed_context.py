@@ -15,6 +15,7 @@ from model import utility_observed_context as observed_model
 from model import watershed_observation_context as evidence_model
 from model import watershed_briefing as briefing_model
 from model import utility_monitoring
+from model import watershed_source_review
 from model.watershed_brief import (
     BRIEF_FORMAT, selection_with_contributing_context, write_selection_brief,
 )
@@ -600,6 +601,22 @@ class WatershedContextActions:
         if not isinstance(include_evidence, bool):
             raise ValueError("Choose whether this export includes original observations")
         chosen = value.get("huc12s")
+        review_text = value.get("source_review_text")
+        review, review_bodies = None, {}
+        if review_text is not None:
+            choices, _ = self._utility_choices(report)
+            review, review_bodies, reviewed_utility = watershed_source_review.receive(
+                review_text, report, choices)
+            reviewed_hucs = review["selection"]["huc12s"]
+            if chosen is not None and sorted(set(chosen)) != reviewed_hucs:
+                raise ValueError("The export selection differs from the received source review")
+            value = dict(value)
+            chosen = reviewed_hucs
+            if value.get("utility_key") and (
+                    reviewed_utility is None or value["utility_key"] != reviewed_utility["key"]):
+                raise ValueError("The requested utility differs from the reviewed selection")
+            if reviewed_utility is not None:
+                value["utility_key"] = reviewed_utility["key"]
         utility, utility_body = None, None
         if value.get("utility_key"):
             choices, profile_bodies = self._utility_choices(report)
@@ -621,6 +638,8 @@ class WatershedContextActions:
             report, selected, report_sha,
             Path(__file__).resolve().parents[1] / "outputs" / "watershed-connectivity-20261013",
         )
+        if review is not None:
+            selection["source_review"] = review
         evidence_context, evidence_bodies = (evidence_model.load_for_selection(
             Path(__file__).resolve().parents[1], selection, value.get("evidence_profile_sha256"))
             if include_evidence else (None, {}))
@@ -643,6 +662,9 @@ class WatershedContextActions:
             "csv_format": CSV_FORMAT, "csv_columns": list(context_model.HUC_COLUMNS),
             "brief_format": BRIEF_FORMAT, "source_briefing_edition": briefing_model.EDITION,
         }
+        if review is not None:
+            identity["source_review_sha256"] = review["original_file_sha256"]
+            identity["source_review_version"] = watershed_source_review.VERSION
         if utility is not None:
             identity["utility_selection_sha256"] = utility["key"]
         if observed_context is not None:
@@ -703,6 +725,10 @@ class WatershedContextActions:
                 result["utility_selection"] = utility
                 result["files"]["original-utility-profile.json"] = describe_file(
                     target, target / "original-utility-profile.json")
+            if review is not None:
+                result["source_review"] = review
+                result["files"].update(watershed_source_review.retain(
+                    target, review_text, review, review_bodies))
             result["files"].update(brief_files)
             result["files"].update(briefing_model.write(target, selection))
             result["files"].update(observed_files)

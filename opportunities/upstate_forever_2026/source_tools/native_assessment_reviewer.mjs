@@ -1,6 +1,144 @@
 // Native station coverage review over completed original membership outputs.
 import { createArchiveCodec } from "./archive_codec.mjs";
 
+
+export function annualReferenceInterpretation(annual) {
+  if (annual?.schema !== "upstate.annual-reference-assessment-context/v1" ||
+      !Array.isArray(annual.basins) || !Array.isArray(annual.basin_overlaps))
+    throw Error("Choose the completed original annual-reference context.");
+  const period=annual.method?.source_global_target_period;
+  if (!period || !/^\d{4}-\d{2}-\d{2}$/.test(period.start) ||
+      !/^\d{4}-\d{2}-\d{2}$/.test(period.end_exclusive) ||
+      period.start >= period.end_exclusive || !Number.isInteger(period.reference_year))
+    throw Error("Retain the annual source-global reference horizon.");
+  const rows=[], basins=new Map(), keys=new Set();
+  const definitions={
+    nitrogen:{field:"ACTUAL",unit:"kg/year",yield_unit:"kg/ha/year",basis:"Total nitrogen",code:"00600"},
+    phosphorus:{field:"ACTUAL",unit:"kg/year",yield_unit:"kg/ha/year",basis:"Total phosphorus",code:"00665"},
+    sediment:{field:"ACTUAL_MT",unit:"metric_tonnes/year",yield_unit:"metric_tonnes/ha/year"},
+  };
+  const finite=value=>typeof value==="number"&&Number.isFinite(value);
+  for (const basin of annual.basins) {
+    const comid=String(basin.comid), area=basin.selected_basin_area_km2;
+    if (!/^\d+$/.test(comid) || basins.has(comid) || !finite(area) || area<=0 ||
+        !Array.isArray(basin.targets) || !Array.isArray(basin.original_target_station_names) ||
+        !/^[a-f0-9]{64}$/.test(basin.basin_source_sha256||"") ||
+        !Array.isArray(basin.selected_component_indices) || !basin.selected_component_indices.length ||
+        basin.selected_component_indices.some(x=>!Number.isInteger(x)||x<0) ||
+        new Set(basin.selected_component_indices).size!==basin.selected_component_indices.length)
+      throw Error("Annual catchment identity, whole-polygon area or component selection is invalid.");
+    basins.set(comid,basin);
+    for (const target of basin.targets) {
+      const d=definitions[target.parameter], original=target.original;
+      if (!d || target.field!==d.field || target.unit!==d.unit || !original ||
+          String(original.COMID)!==comid || original[d.field]!==target.value ||
+          !finite(target.value) || target.value<0 || !Number.isInteger(original.OBJECTID) ||
+          !/^[a-f0-9]{64}$/.test(target.source_sha256||"") ||
+          !/^[A-Za-z0-9_.-]+$/.test(target.source_member||""))
+        throw Error("Annual target does not retain its original source field, unit or record.");
+      const key=JSON.stringify([target.source_member,original.OBJECTID,comid,target.parameter]);
+      if (keys.has(key)) throw Error("Original annual target is repeated.");
+      keys.add(key);
+      const constituent=target.parameter==="sediment"?String(original.CONSTITUEN||"").trim():d.basis;
+      if (!constituent) throw Error("Retain the original sediment constituent.");
+      const sedimentCode=constituent.toUpperCase()==="TSS"?"00530":
+        ["SSC","SS"].includes(constituent.toUpperCase())?"80154":null;
+      const areaHa=area*100, value=target.value/areaHa;
+      if (!finite(areaHa)||!finite(value)) throw Error("Annual reference yield is nonfinite.");
+      rows.push({
+        comid,station_id:String(original.STATION_ID||""),station_name:String(original.STATION_NM||""),
+        parameter:target.parameter,reference_basis:constituent,
+        parameter_code:d.code||sedimentCode,source_field:target.field,
+        annual_reference_mass:target.value,annual_mass_unit:target.unit,
+        whole_catchment_area_km2:area,whole_catchment_area_ha:areaHa,
+        annual_reference_yield:value,yield_unit:d.yield_unit,
+        period_start:period.start,period_end_exclusive:period.end_exclusive,
+        reference_base_year:period.reference_year,period_scope:"source_global",
+        station_sampling_period:"Not exposed in this regional source",
+        estimator:"Published regional long-term average annual calibration target",
+        source_member:target.source_member,source_sha256:target.source_sha256,
+        source_uri:target.source_uri,original_record_id:original.OBJECTID,
+        basin_source_sha256:basin.basin_source_sha256,basin_source_uri:basin.basin_source_uri,
+        selected_component_indices:[...basin.selected_component_indices],
+        source_coefficient_TSS_CONV:original.TSS_CONV??null,coefficient_applied:false,
+        original_attributes:original,
+      });
+    }
+  }
+  if (basins.size!==annual.summary?.basins || rows.length!==annual.summary?.targets)
+    throw Error("Annual reference count differs from the completed original context.");
+  const pairs=new Set();
+  for (const relation of annual.basin_overlaps) {
+    const a=basins.get(String(relation.first_comid)), b=basins.get(String(relation.second_comid));
+    const key=[relation.first_comid,relation.second_comid].map(String).sort().join("/");
+    if (!a||!b||a===b||pairs.has(key)||!finite(relation.intersection_area_km2) ||
+        relation.intersection_area_km2<0 ||
+        relation.intersection_area_km2>Math.min(a.selected_basin_area_km2,b.selected_basin_area_km2)*(1+1e-10))
+      throw Error("Retain the original complete catchment-pair relationships.");
+    pairs.add(key);
+  }
+  if(pairs.size!==basins.size*(basins.size-1)/2)
+    throw Error("Original annual catchment relationship table is incomplete.");
+  return {
+    schema:"upstate.annual-reference-yield-interpretation/v1",
+    edition:"original-annual-reference-yields-20261013-v1",
+    original_input_sha256:annual.input_sha256,original_source_commit:annual.source_commit,
+    reference_period:{...period,scope:"source_global",station_sampling_period:"Not exposed in this regional source"},
+    area_definition:"Complete retained source-basin polygon components, EPSG:5070 square kilometres multiplied by 100; not raster coverage or publisher gage drainage area.",
+    yield_definition:"Original published annual reference mass divided by the same complete source-basin hectares.",
+    method:{
+      area_crs:"EPSG:5070",native_mass_available:false,
+      coefficient_application:"None; original TSS_CONV is retained as source context only.",
+      comparability:"Area normalization preserves the original constituent and source-global temporal support. TSS is not SSC. A source reference yield is not an InVEST prediction or incremental/downstream-delivered yield.",
+      dependence:"Original overlaps and containment remain attached. Nested whole-basin totals are not independent or additive.",
+      uncertainty:"Reporting precision is retained; this regional source does not supply target standard errors or station-specific sampling horizons.",
+      source_method_uri:"https://water.usgs.gov/nawqa/sparrow/FAQs/faq.html",
+    },
+    rows,relationships:annual.basin_overlaps,
+    original_coordinate_operations:annual.coordinate_operations,
+    original_runtime:annual.runtime,
+  };
+}
+
+export function annualReferenceCsv(interpretation, relationships=false) {
+  const fields=relationships?
+    ["first_comid","second_comid","intersection_area_km2","first_area_fraction","second_area_fraction","first_covers_second","second_covers_first"]:
+    ["comid","station_id","station_name","parameter","reference_basis","parameter_code",
+     "annual_reference_mass","annual_mass_unit","whole_catchment_area_km2","whole_catchment_area_ha",
+     "annual_reference_yield","yield_unit","period_start","period_end_exclusive","reference_base_year",
+     "period_scope","station_sampling_period","estimator","source_field","source_member","source_sha256",
+     "source_uri","original_record_id","basin_source_sha256","basin_source_uri",
+     "selected_component_indices","source_coefficient_TSS_CONV","coefficient_applied"];
+  const quoted=value=>'"'+String(value===null||value===undefined?"":typeof value==="object"?JSON.stringify(value):value).replaceAll('"','""')+'"';
+  const rows=relationships?interpretation.relationships:interpretation.rows;
+  return [fields.map(quoted).join(","),...rows.map(row=>fields.map(k=>quoted(row[k])).join(","))].join("\n")+"\n";
+}
+
+function annualReferenceHtml(annual, esc) {
+  if (!annual) return "";
+  const result=annualReferenceInterpretation(annual);
+  const display=(n,d=4)=>Number(n).toLocaleString("en-US",{maximumFractionDigits:d});
+  const groups=[...new Set(result.rows.map(r=>r.parameter+"/"+r.reference_basis))];
+  const tables=groups.map(group=>{
+    const rows=result.rows.filter(r=>r.parameter+"/"+r.reference_basis===group),first=rows[0];
+    return "<h3>"+esc(first.reference_basis)+"</h3><div class=\"table\"><table><caption>"+
+      esc("Original annual mass ("+first.annual_mass_unit+"); whole-basin yield ("+first.yield_unit+")")+
+      "</caption><thead><tr><th>Original annual reference</th><th>Whole basin (ha)</th><th>Annual mass</th><th>Annual yield</th></tr></thead><tbody>"+
+      rows.map(r=>"<tr><td>"+esc(r.station_name)+"<br><span class=\"muted\">COMID "+esc(r.comid)+
+        "</span></td><td>"+esc(display(r.whole_catchment_area_ha,2))+"</td><td>"+
+        esc(display(r.annual_reference_mass,2))+"</td><td>"+esc(display(r.annual_reference_yield,6))+"</td></tr>").join("")+
+      "</tbody></table></div>";
+  }).join("");
+  return '<section id="annual-reference-yields"><h2>Original annual loads per whole-catchment hectare</h2>'+
+    "<p>These "+result.rows.length+" source targets use their original five basin polygons. The denominator is the complete selected basin area, not raster cells or the selected South Carolina assessment area. Raw source masses remain visible beside the derived yields.</p>"+
+    "<p>Reference year "+esc(result.reference_period.reference_year)+"; source-global horizon "+esc(result.reference_period.start)+
+    " to "+esc(result.reference_period.end_exclusive)+" (end exclusive). Individual station sampling periods are not exposed by this release.</p>"+
+    tables+"<p>Raw TSS stays separate from SSC and from the regional method-conversion sensitivity source. No conversion coefficient is applied here. The three tributaries and nested downstream basins retain their original relationships; these whole-basin totals must not be added as independent regional parts.</p>"+
+    '<p><a href="annual-reference-yields.csv">All original-reference yields and source periods (CSV)</a> · '+
+    '<a href="annual-reference-yields.json">Full source and denominator context (JSON)</a> · '+
+    '<a href="annual-reference-relations.csv">All ten original catchment relationships (CSV)</a></p></section>';
+}
+
 export function createNativeCoverageModel(context, annual) {
   if (context?.schema !== "upstate.assessment-native-huc-context/v1" || !Array.isArray(context.stations))
     throw Error("Choose the completed native assessment context.");
@@ -212,6 +350,7 @@ export function renderNativeAssessmentReviewer({result,context,annual=null,html}
     esc(Object.entries(row.utility_membership).filter(([,v])=>v.covered).map(([k])=>k).join("; ")||"Outside both")+
     "</td><td>"+esc(annual?(model.memberships.get(row.station_id).map(x=>x.comid).join("; ")||"Outside selected catchments"):"Context not attached")+"</td><td>"+
     row.assessment_records.length+"</td></tr>").join("");
+  const annualView=annualReferenceHtml(annual,esc);
   const ui='<section id="native-coverage"><h2>Physical station coverage</h2>'+
     '<p>Choose an original utility selection or annual-reference catchment, inspect actual station membership and open the related assessment editions below. Geographic membership and publisher labels remain separate.</p>'+
     '<p id="native-notice" role="status"></p><div id="native-interactive" hidden><div class="review-controls">'+
@@ -244,8 +383,8 @@ export function renderNativeAssessmentReviewer({result,context,annual=null,html}
     '<noscript><style>.native-print-only{display:block!important}</style></noscript>';
   const payload=JSON.stringify({binding,context,annual}).replaceAll("<","\\u003c").replaceAll("\u2028","\\u2028").replaceAll("\u2029","\\u2029");
   return html.replace(policy[0],'<meta http-equiv="Content-Security-Policy" content="'+updated+'">')
-    .replace("</head>",style+"</head>").replace("<nav>",'<nav><a href="#native-coverage">Physical coverage</a>')
-    .replace('<section id="association-reviewer">',ui+'<section id="association-reviewer">')
+    .replace("</head>",style+"</head>").replace("<nav>",'<nav><a href="#native-coverage">Physical coverage</a>'+(annual?'<a href="#annual-reference-yields">Annual reference yields</a>':''))
+    .replace('<section id="association-reviewer">',ui+annualView+'<section id="association-reviewer">')
     .replace("</body>",'<script id="native-review-data" type="application/json">'+payload+'</script>'+
       '<script id="native-review-state" type="application/json">null</script><script>'+script+"</script></body>");
 }

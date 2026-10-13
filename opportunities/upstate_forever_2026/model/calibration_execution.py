@@ -12,10 +12,9 @@ import re
 from .common import digest, read_json, verify_file
 from .model_selection import run_models, validate_completed_run
 from .native_versions import comparison_versions, model_versions, version_label
-from .observations import NATIVE
+from .observations import COMPARISON_SCHEMA_VERSION, NATIVE
 
 SCHEMA = "upstate.calibration-native-execution/v1"
-COMPARISON_SCHEMA_VERSION = 6
 UNIT_GUIDES = {
     "ndr": "https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.20.0/userguide/en/ndr.html",
     "sdr": "https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.20.0/userguide/en/sdr.html",

@@ -49,6 +49,7 @@ const applicationNames = ['operator/receiving_water_browser.mjs', 'operator/serv
   'model/cartography.py', 'model/rasters.py'];
 if (selection.editable_selection) applicationNames.push(
   'operator/web/receiving_water_editing.mjs', 'operator/web/receiving_water_sources.mjs',
+  'operator/web/receiving_water_plan_compare.mjs',
   'operator/web/receiving_waters_extension.mjs',
   'operator/web/receiving_waters.css', 'operator/web/extensions/study_transfer.mjs',
   'operator/extensions/receiving-waters.json', 'model/receiving_waters.py',
@@ -486,6 +487,84 @@ async function editableSelection(kind, row) {
   await closeDialogs();
   await checkpoint();
 }
+async function openPlanPair(referenceId, candidateId) {
+  await openWater('plan', referenceId);
+  await page.locator('#water-selected [data-action="water-compare-new"]').click();
+  await page.locator('#water-selected [data-water-plan-chooser]').waitFor();
+  await page.locator('#water-selected [name="plan_compare_reference"]').selectOption(referenceId);
+  await page.locator('#water-selected [name="plan_compare_candidate"]').selectOption(candidateId);
+  await page.locator('#water-selected [data-action="water-compare-apply"]').click();
+  const root = page.locator('#water-selected[aria-busy="false"][data-water-record-kind="plan-comparison"] [data-water-plan-comparison]' +
+    attr('data-reference', referenceId) + attr('data-candidate', candidateId) + '[aria-busy="false"]');
+  await root.waitFor();
+  assert.equal(await page.locator('#form-dialog').evaluate(node => node.open), false,
+    'Saved plan comparison operates in the original Receiving view.');
+  return root;
+}
+async function operatePlanComparison(plan, analysis) {
+  const candidateId = report.editable_selection.records.plan.id;
+  const candidate = await api(endpoint('/api/receiving-waters/plan', {plan_id: candidateId}));
+  let root = await openPlanPair(plan.id, candidateId);
+  await captureEditable('editable-plan-comparison');
+  const firstId = plan.receptors[0]?.id || candidate.receptors[0]?.id;
+  assert.ok(firstId, 'Compare the actual saved receiving areas.');
+  await root.locator('[data-water-compare-search]').fill(firstId);
+  await root.locator('[data-action="water-compare-detail"]' + attr('data-id', firstId)).waitFor();
+  const expectedName = 'receiving-plan-comparison-' + plan.id.slice(0, 12) + '-' + candidateId.slice(0, 12) + '.json';
+  const received = page.waitForEvent('download');
+  await root.locator('[data-action="water-compare-download"]').click();
+  const download = await received;
+  assert.equal(download.suggestedFilename(), expectedName);
+  const filename = path.join(output, expectedName.replace(/\.json$/, '-attempt-' + report.attempts.length + '.json'));
+  await download.saveAs(filename);
+  assert.equal(await download.failure(), null);
+  const comparison = JSON.parse(await fs.readFile(filename, 'utf8'));
+  assert.equal(comparison.schema, 'upstate.receiving-water-plan-comparison/v1');
+  assert.equal(comparison.project_id, report.project_id);
+  assert.equal(comparison.reference.id, plan.id);
+  assert.equal(comparison.reference.record_sha256, plan.record_sha256);
+  assert.equal(comparison.candidate.id, candidate.id);
+  assert.equal(comparison.candidate.record_sha256, candidate.record_sha256);
+  assert.equal(comparison.same_record, plan.id === candidate.id);
+  assert.deepEqual(comparison.rows.map(row => row.id).sort(),
+    [...new Set([...plan.receptors, ...candidate.receptors].map(row => row.id))].sort(),
+    'The downloaded original comparison remains complete when the visible table is filtered.');
+  const status = comparison.rows.find(row => row.id === firstId).state;
+  await root.locator('[data-water-compare-status]').selectOption(status);
+  await root.locator('[data-action="water-compare-detail"]' + attr('data-id', firstId)).click();
+  await page.locator('#detail-dialog[open]').waitFor();
+  await captureEditable('editable-plan-comparison-original-detail');
+  await closeDialogs();
+  await root.locator('[data-water-compare-search]').fill('');
+  await root.locator('[data-water-compare-status]').selectOption('');
+  await root.locator('[data-action="water-compare-swap"]').click();
+  await page.locator('#water-selected[aria-busy="false"][data-water-record-kind="plan-comparison"] [data-water-plan-comparison]' +
+    attr('data-reference', candidateId) + attr('data-candidate', plan.id) + '[aria-busy="false"]').waitFor();
+  root = await openPlanPair(plan.id, candidateId);
+  const result = {reference_id: plan.id, candidate_id: candidateId,
+    reference_record_sha256: plan.record_sha256, candidate_record_sha256: candidate.record_sha256,
+    same_record: comparison.same_record, original_receiving_areas: comparison.rows.length,
+    download: await fileRecord(filename), completed: true, reopened: false};
+  if (analysis) {
+    await root.locator('[data-water-compare-analysis]').selectOption(analysis.id);
+    await root.locator('[data-action="water-compare-analysis"]').click();
+    await page.locator('#form-dialog[open] [data-water-comparison-revision]').waitFor();
+    await page.waitForFunction(() => /original receiving areas loaded/.test(
+      document.querySelector('#water-accounting-plan-status')?.textContent || ''));
+    const field = page.locator('#operation-form [name="receiving_advanced_selection"]');
+    await field.waitFor({state: 'attached'});
+    const draft = JSON.parse(await field.inputValue());
+    assert.deepEqual(draft, {...analysis.identity.selection, plan_id: candidateId},
+      'The candidate-plan analysis draft changes only the exact original plan choice.');
+    await captureEditable('editable-plan-comparison-analysis-draft');
+    await closeDialogs();
+    result.analysis_draft = {original_analysis_id: analysis.id, candidate_plan_id: candidateId,
+      original_other_selections_preserved: true, submitted: false};
+  }
+  report.editable_selection.comparison = result;
+  await checkpoint();
+}
+
 async function reopenEditableRecords() {
   if (!selection.editable_selection) return;
   for (const [kind, row] of Object.entries(report.editable_selection.records)) {
@@ -498,6 +577,11 @@ async function reopenEditableRecords() {
     }
     row.reopened = true;
   }
+  const comparison = report.editable_selection.comparison;
+  assert.ok(comparison?.completed, 'Complete the actual saved plan comparison first.');
+  await openPlanPair(comparison.reference_id, comparison.candidate_id);
+  await captureEditable('editable-plan-comparison-cold-reopen');
+  comparison.reopened = true;
   report.editable_selection.complete = true;
   report.editable_selection.visual_review = 'Open the exact saved screenshots and operate the outgoing view before client-facing delivery.';
   await checkpoint();
@@ -528,6 +612,7 @@ try {
     attempt.stage = 'operate_editable_selection';
     await editableSelection('plan', plan);
     if (analysis) await editableSelection('analysis', analysis);
+    await operatePlanComparison(plan, analysis);
   }
   attempt.stage = 'operate_maps';
   for (const target of cases) {

@@ -83,6 +83,11 @@ export function attachEconomicDesk(host) {
     draft=restored?.draft||blank();
     pending=restored?.pendingRequest?copy(restored.pendingRequest):(restored?.pendingId?{id:restored.pendingId,workspace,legacy:true,state:'original_task_lookup'}:null);
     lastReceipt=restored?.lastReceipt||null;retiredRequest=restored?.retiredRequest||null;openEditionId=restored?.openEditionId||null;
+    source=null;preview=null;worksheetPreview=null;implementationOptions=null;implementationRun='';epoch++;editionEpoch++;
+    const inputs=node('[data-inputs]');if(inputs){inputs.innerHTML='';inputs.hidden=true;}
+    const previewBox=node('[data-preview]');if(previewBox)previewBox.hidden=true;
+    const editionBox=node('[data-edition]');if(editionBox)editionBox.hidden=true;
+    node('[data-edition-frame]')?.removeAttribute('src');
   }
   function downloadRecovery(name,value) {
     downloadWorksheet({filename:name,content:typeof value==='string'?value:JSON.stringify(value,null,2)+'\n',mimeType:'application/json'});
@@ -660,7 +665,7 @@ export function attachEconomicDesk(host) {
       if(event.target.matches('[data-economic-recovery-file]')){
         const file=event.target.files?.[0];event.target.value='';if(!file)return;if(requestSending||taskReading)throw Error('Wait for the original request lookup before opening a recovery file.');
         const selectedWorkspace=workspace,selectedFrame=frame,turn=mountTurn;if(file.size>128*1024*1024)throw Error('Choose a recovery file within 128 MiB.');const value=JSON.parse(await file.text());if(!activeTaskContext(selectedWorkspace,selectedFrame,turn))return;
-        const recovered=await recoveryStore.importFile(value,pending);if(!activeTaskContext(selectedWorkspace,selectedFrame,turn))return;adoptRecoveredState(recovered);recoveryBlocked='';storageIssue=recoveryStore.warning;renderRecovery();await loadCatalog();if(pending?.id)await pollOriginal();return;
+        const recovered=await recoveryStore.importFile(value,pending);if(!activeTaskContext(selectedWorkspace,selectedFrame,turn))return;requestedSource=null;adoptRecoveredState(recovered);recoveryBlocked='';storageIssue=recoveryStore.warning;renderRecovery();await loadCatalog({preserve:false});if(!activeTaskContext(selectedWorkspace,selectedFrame,turn))return;if(pending?.id)await pollOriginal();else if(!pending&&openEditionId)await openEdition(openEditionId);return;
       }
       if(pending||recoveryBlocked){setBusy(busy);throw Error('Recover the original Economic request before changing its retained inputs.');}
       if(event.target.matches('[data-implementation-run]')){implementationRun=event.target.value;renderImplementation();return;}

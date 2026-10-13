@@ -61,13 +61,28 @@ export function assessmentContextFilteredCSV(rows,selection){
  })].join('\r\n')+'\r\n';
 }
 
+export function assessmentReportVersion(catalog){
+ const version=catalog?.report_version;
+ return typeof version==='string'&&version.trim()===version&&version.length>0?version:null;
+}
+export function assessmentReportRequest(catalog,{context_id,parcel_id,delivery_id}){
+ const version=assessmentReportVersion(catalog);
+ if(!version)throw Error('Reload Assessment context to load the current report preparation controls.');
+ return {context_id,...(parcel_id?{parcel_id}:{}),...(delivery_id?{delivery_id}:{}),report_version:version};
+}
+export function assessmentReportReady(result,catalog,contextId,parcelId=null,deliveryId=''){
+ const version=assessmentReportVersion(catalog);
+ return Boolean(version&&result?.version===version&&result.context_id===contextId&&
+  (result.parcel_id||null)===(parcelId||null)&&(result.selected_delivery_id||'')===deliveryId);
+}
+
 export function attachAssessmentContext(host){
  let node=null,workspace=null,state=null,catalog=null,options=null,edition=null,draft=empty();
  let controller=null,epoch=0,busy=false,error='',message='',requests=[],currentTask=null,selectedEdition=null;
  let selectedPolygon='',query='',page=0,taskFingerprint='';
  let parcelEdition=null,selectedParcelEdition=null,parcelQuery='',parcelPage=0;
  let optionsRequest=0,editionRequest=0,parcelRequest=0,pendingEdition=null,optionsLoading=false;
- let reportDelivery='',reportReady=null;
+ let reportDelivery='',reportReady=null,reportPreparing=false,reportPreparationRequest=0;
  let catalogRequest=0,geographyRequest=0,geographyOpening=false;
  const parcelActions=new Set(['assessment.context.parcels','assessment.context.receive_parcels']);
  const read=(operation,value={})=>host.api('/api/assessment-context/'+operation,{method:'POST',body:{workspace,...value},signal:controller?.signal});
@@ -149,7 +164,7 @@ export function attachAssessmentContext(host){
     await loadOptions(draft.station_geography_id,true);if(gen!==epoch||request!==catalogRequest)return;if(selectedEdition)await openEdition(selectedEdition);}
    else renderForm();
    if(gen!==epoch||request!==catalogRequest)return;if(initial&&selectedParcelEdition)await openParcels(selectedParcelEdition);
-   if(gen!==epoch||request!==catalogRequest)return;renderParcels();renderParcelResult();await openPendingEdition();}catch(e){if(gen===epoch&&request===catalogRequest)fail(e);}
+   if(gen!==epoch||request!==catalogRequest)return;renderResult();renderParcels();renderParcelResult();await openPendingEdition();}catch(e){if(gen===epoch&&request===catalogRequest)fail(e);}
  }
  async function openEdition(id){
   cancelGeographyOpening();
@@ -204,19 +219,36 @@ export function attachAssessmentContext(host){
     list(r.station_ids).join(' '),JSON.stringify(r.original_parcel_attributes)].join(' ').toLowerCase().includes(term));
  }
  function reportControls(contextId,parcelId=null){
-  const ready=reportReady?.context_id===contextId&&(reportReady.parcel_id||null)===(parcelId||null)&&
-   (reportReady.selected_delivery_id||'')===reportDelivery;
+  const ready=assessmentReportReady(reportReady,catalog,contextId,parcelId,reportDelivery);
   return '<section class="ac-report"><h3>Scientific and client report</h3><label>Retain a saved mapped delivery (optional)<select data-ac-report-delivery>'+
    '<option value="">New report selection</option>'+list(state?.data?.deliveries).map(row=>'<option value="'+esc(row.id)+'" '+(row.id===reportDelivery?'selected':'')+'>'+esc(row.title||row.id)+'</option>').join('')+'</select></label>'+
    '<div class="ac-toolbar">'+btn('prepare-report','Use saved '+(parcelId?'parcel and assessment':'assessment')+' context in report',
-    'data-context="'+esc(contextId)+'" data-parcel="'+esc(parcelId||'')+'" '+(busy?'disabled':''))+
+    'data-context="'+esc(contextId)+'" data-parcel="'+esc(parcelId||'')+'" '+(busy||reportPreparing||!assessmentReportVersion(catalog)?'disabled':''))+
    (ready?btn('open-report','Open scientific report')+btn('open-mapped-report','Open Maps and delivery'):'')+'</div>'+
    '<p>Open the scientific report to arrange the original studies and publish their saved assessment or parcel context. Maps and delivery keeps the chosen native runs and map settings. Both use the complete saved selection and original packages; current table searches do not replace that selection.</p></section>';
  }
  function acceptReport(task){
   if(task?.workspace!==workspace||task?.action!=='assessment.context.report'||task.state!=='complete'||
-     !task.result?.source||!task.result?.delivery_selection)return;
+     !task.result?.source||!task.result?.delivery_selection||
+     task.result.version!==assessmentReportVersion(catalog))return;
   reportReady=clone(task.result);persist();renderResult();renderParcelResult();
+ }
+ async function prepareCurrentReport(contextId,parcelId=null){
+  if(busy||reportPreparing)return;
+  const gen=epoch,keyNow=workspace,deliveryId=reportDelivery,request=++reportPreparationRequest;
+  const active=()=>Boolean(node)&&gen===epoch&&keyNow===workspace&&request===reportPreparationRequest&&
+   keyNow===(host.getWorkspace()||host.getState()?.workspace_key);
+  reportPreparing=true;renderResult();renderParcelResult();
+  try{
+   const available=await read('catalog');
+   if(!active())return;
+   catalog=available;
+   if(reportDelivery!==deliveryId||
+      (parcelId?(parcelEdition?.id!==parcelId||parcelEdition.context_id!==contextId):edition?.id!==contextId))return;
+   const payload=assessmentReportRequest(available,{context_id:contextId,parcel_id:parcelId,delivery_id:deliveryId});
+   await submit('assessment.context.report',payload);
+  }catch(e){if(active())fail(e);}
+  finally{if(active()){reportPreparing=false;renderResult();renderParcelResult();}}
  }
  async function openReport(value,originalWorkspace=workspace,{mapped=false}={}){
   if(!value?.source||!value?.delivery_selection)throw Error('Finish the retained assessment report-source operation first.');
@@ -296,7 +328,7 @@ export function attachAssessmentContext(host){
  function ownedTasks(){return list(state?.tasks).filter(t=>String(t.action||'').startsWith('assessment.context.')&&(!t.workspace||t.workspace===workspace));}
  function renderTasks(){
   const target=node?.querySelector('[data-ac-tasks]');if(!target)return;
-  target.innerHTML=ownedTasks().slice(-15).reverse().map(t=>'<div class="ac-task">'+btn('task',t.action+' · '+t.state,'data-id="'+esc(t.id)+'"')+
+  target.innerHTML=ownedTasks().slice(0,15).map(t=>'<div class="ac-task">'+btn('task',t.action+' · '+t.state,'data-id="'+esc(t.id)+'"')+
    (t.state==='complete'&&t.action==='assessment.context.report'&&t.result?.source?btn('report-task','Open scientific report','data-id="'+esc(t.id)+'"'):'')+
    (t.state==='complete'&&t.result?.id?btn('open-result','Open saved result','data-id="'+esc(t.result.id)+'" data-parcels="'+(parcelActions.has(t.action)?'1':'0')+'"'):'')+(t.error?'<span>'+esc(t.error.message||t.error)+'</span>':'')+'</div>').join('')||'<p>Operations appear here after submission. They remain in the original queue when this desk closes.</p>';
  }
@@ -344,8 +376,7 @@ export function attachAssessmentContext(host){
   const t=event.target.closest('[data-ac-action]');if(!t)return;
   const a=t.dataset.acAction;
   if(a==='prepare-report'){
-   await submit('assessment.context.report',{context_id:t.dataset.context,...(t.dataset.parcel?{parcel_id:t.dataset.parcel}:{}),
-    ...(reportDelivery?{delivery_id:reportDelivery}:{})});
+   await prepareCurrentReport(t.dataset.context,t.dataset.parcel||null);
   }
   else if(a==='open-report'||a==='open-mapped-report'){try{await openReport(reportReady,workspace,{mapped:a==='open-mapped-report'});}catch(e){fail(e);}}
   else if(a==='report-task'){
@@ -405,7 +436,7 @@ export function attachAssessmentContext(host){
  }
 
  function mount(container,initial=host.getState()){
-  detach();node=container;state=initial;workspace=host.getWorkspace()||state?.workspace_key;controller=new AbortController();epoch++;restore();if(pendingEdition&&pendingEdition.workspace!==workspace)pendingEdition=null;
+  detach();node=container;state=initial;workspace=host.getWorkspace()||state?.workspace_key;controller=new AbortController();epoch++;reportPreparing=false;reportPreparationRequest++;restore();if(pendingEdition&&pendingEdition.workspace!==workspace)pendingEdition=null;
   node.innerHTML='<section class="ac-desk"><header><h1>Assessment geographic context</h1><p>Original assessment records, watershed association and parcel context in one retained source edition.</p></header>'+
    '<p data-ac-notice class="ac-notice" aria-live="polite"></p><details open><summary>Prepare from a saved station study</summary><div data-ac-form-area></div></details>'+
    '<section class="ac-toolbar"><label>Saved context<select data-ac-editions></select></label><label>Receive complete context ZIP<input type="file" accept=".zip" data-ac-receive></label></section>'+
