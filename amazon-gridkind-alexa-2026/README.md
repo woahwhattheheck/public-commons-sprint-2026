@@ -44,6 +44,14 @@ Feasible days remain usable when another date needs attention. The result explai
 
 The [complete weekly operator guide](WEEK_PLANNING.md) covers the routine editor, per-day repair, saved revisions, daily continuation, export formats, and model boundaries.
 
+## Review a week with another person
+
+Select a saved household week and create an independent review request. Download the exact request and offline reviewer HTML; the reviewer edits a local copy and returns a complete response. In the original household, preview it against the current saved week and explicitly resolve conflicting name/day choices. Applying the return preserves the original request, returned notes, owner selections and a newly planned normal week in the existing history.
+
+The review does not approve or execute a daily schedule. A resulting day continues through the original fresh proposal → exact approval → labeled simulation. Full household backups retain the linked review history and restore as a separate household in another browser.
+
+The [complete review and receiving guide](WEEK_REVIEW.md) covers offline operation, source and identity limits, owner reconciliation, interrupted returns and full independent reopening. The new review workflow's actual native/browser receiving is reported separately from the accepted original daily/week journeys.
+
 ## What survives reopening
 
 The SQLite workspace retains named households, input revisions, original proposal views, dated weekly schedules, tariff comparisons, approvals, simulated receipts, and their record relationships. Each record includes the original scenario and source hashes for the optimizer, agent, analyzer, and weekly planner used to produce it.

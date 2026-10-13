@@ -39,6 +39,23 @@
 <div class="controls week-export"><button id="edit-saved" type="button" class="secondary">Use this saved week as the draft</button><a id="export-csv" class="button-link secondary" href="#">Download schedule CSV</a><a id="export-calendar" class="button-link secondary" href="#">Download calendar</a></div>
 <p class="field-hint">CSV and calendar downloads use this saved result. Calendar events are tentative, use the entered local clock time, and appear without reminders. Repeated imports may duplicate events in some calendar applications.</p>
 </section>
+
+<section id="week-review" class="panel" aria-labelledby="week-review-title">
+<div class="tag">Household review</div><h2 id="week-review-title">Ask someone to review a saved week</h2>
+<p class="dim">Export an offline review of the selected saved week. Another person can edit its seven-day inputs and return a JSON response. You choose how to combine it with your current saved week before a new normal week is planned.</p>
+<p id="review-base-summary" class="notice">Open a saved week above to create a request.</p>
+<div class="review-grid"><label for="review-recipient">Recipient label<input id="review-recipient" maxlength="100" placeholder="e.g. Household co-planner"></label><label for="review-message">What should they review?<textarea id="review-message" maxlength="4000" rows="3" placeholder="Ask about load windows, quiet hours or hourly prices."></textarea></label></div>
+<div class="controls"><button id="request-week-review" type="button" disabled>Create review request from selected saved week</button></div>
+<label for="review-request-select">Saved review request<select id="review-request-select"><option value="">Choose a request from household history</option></select></label>
+<p id="review-request-summary" class="field-hint">Review requests appear on the same history pages as saved weeks.</p>
+<div class="controls"><a id="review-export-html" class="button-link secondary only-hidden" href="#">Download offline review HTML</a><a id="review-export-json" class="button-link secondary only-hidden" href="#">Download original request JSON</a></div>
+<div class="review-return"><h3>Bring a returned review into the household</h3><p class="dim">The reviewer's name is self-stated. GridKind checks the exact original request and compares original, current and returned inputs. It does not verify a person's identity.</p>
+<div class="review-grid"><label for="review-return-file">Returned review JSON<input id="review-return-file" type="file" accept=".json,application/json" disabled></label><label for="review-target">Current saved week to compare<select id="review-target" disabled><option value="">Choose a saved week with the same dates</option></select></label></div>
+<p id="review-return-summary" class="field-hint"></p><div class="controls"><button id="preview-week-return" type="button" class="secondary" disabled>Preview returned changes</button></div>
+<div id="review-preview" class="only-hidden"><h3>Choose what to carry forward</h3><p id="review-preview-summary" class="notice"></p><div id="review-notes"></div><div id="review-conflicts"></div><div id="review-plan-comparison"></div><div class="controls"><button id="apply-week-return" type="button" disabled>Apply choices as a new saved week</button></div><p class="field-hint">Each choice applies to the complete day, including its prices, load order, windows and rest-day setting. The new week uses the current installed planner. Daily approval and execution remain separate.</p></div>
+<p id="review-status" class="field-hint" role="status" aria-live="polite"></p>
+<div id="review-pending" class="notice only-hidden"><p id="review-pending-description"></p><button id="review-retry-apply" type="button" class="secondary">Resume the original apply request</button><button id="review-repreview-pending" type="button" class="secondary only-hidden">Keep original attempt and reopen the return for fresh preview</button></div>
+</div></section>
 </div><aside class="history-column">
 <section class="panel" aria-labelledby="saved-weeks-title">
 <div class="section-heading"><div><div class="tag">This household</div><h2 id="saved-weeks-title">Saved weeks</h2></div><button id="refresh-history" type="button" class="secondary" disabled>Refresh</button></div>

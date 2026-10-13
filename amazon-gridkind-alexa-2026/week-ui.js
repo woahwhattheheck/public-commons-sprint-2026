@@ -1,3 +1,4 @@
+import {inspectRequestPackage,inspectResponse,reviewDigest} from './week-review.mjs';
 import {createExactInputs} from './exact-inputs.js';
 const $=id=>document.getElementById(id);
 const clone=value=>structuredClone(value);
@@ -50,6 +51,7 @@ function refresh(){
   for(const button of document.querySelectorAll('[data-saved-week]'))button.disabled=busy;
   if(state)$('household-name').textContent=state.workspace.households.find(home=>home.id===draftHome)?.name||state.workspace.selectedName;
   if(blocked())status('The active household changed in another tab. Your draft remains here. Use “Start from saved household inputs” to open the now-active household.');
+  refreshReview();
 }
 function renderPicker(){
   const out=$('day-picker');out.replaceChildren();
@@ -202,6 +204,199 @@ function copyDays(kind){
     dirty=true;persist();renderPicker();status('Copied this day to '+count+' other day'+(count===1?'':'s')+'. Plan and save to update the schedule.');$('error').textContent='';
   }catch(error){problem(error);}
 }
+
+let reviewRequest=null,reviewBundle=null,returnResponse=null,returnPreview=null,previewContext=null,reviewVersion=0,reviewPending=null,reviewStorageHome=null,reviewFailure=null,pendingOutcome=null;
+const reviewKnown=new Map(),weekKnown=new Map();
+const reviewContextKey=()=>state?JSON.stringify(context()):'';
+const reviewStorageKey=()=> 'gridkind.week-review-apply.v1:'+state.workspace.selectedId;
+function reviewStatus(text){$('review-status').textContent=text;}
+function discardPreview(){returnPreview=null;previewContext=null;$('review-preview').classList.add('only-hidden');$('review-conflicts').replaceChildren();refreshReview();}
+function rememberReviewRows(){
+  for(const row of page?.records||[]){
+    if(row.kind==='week-request')reviewKnown.set(row.id,row);
+    if(row.kind==='week')weekKnown.set(row.id,row);
+  }
+  if(record&&recordHome===draftHome)weekKnown.set(record.id,record);
+  if(reviewRequest)reviewKnown.set(reviewRequest.id,reviewRequest);
+}
+function selectOptions(id,rows,placeholder,preferred){
+  const node=$(id),held=preferred??node.value;node.replaceChildren();
+  const empty=make('option',placeholder);empty.value='';node.append(empty);
+  for(const row of rows){const o=make('option','#'+row.sequence+' · '+row.label);o.value=row.id;node.append(o);}
+  if([...node.options].some(o=>o.value===held))node.value=held;
+}
+function refreshReview(){
+  if(!state)return;
+  const homeKey=state.workspace.generation+':'+draftHome;
+  if(reviewStorageHome!==homeKey){
+    reviewStorageHome=homeKey;reviewRequest=null;reviewBundle=null;returnResponse=null;returnPreview=null;previewContext=null;
+    reviewVersion++;reviewKnown.clear();weekKnown.clear();reviewPending=null;pendingOutcome=null;
+    try{const held=JSON.parse(sessionStorage.getItem(reviewStorageKey())||'null');if(held?.action==='apply-return'&&held.context?.householdId===draftHome&&typeof held.requestId==='string'&&typeof held.targetRecordId==='string'&&typeof held.response?.responseId==='string'&&held.choices&&typeof held.choices==='object')reviewPending=held;else if(held)reviewStatus('A saved apply entry is incomplete. It remains untouched in this tab; reopen the original response file to inspect it.');}catch{reviewStatus('A saved apply entry could not be read. It remains untouched in this tab.');}
+    $('review-return-file').value='';$('review-preview').classList.add('only-hidden');
+  }
+  rememberReviewRows();
+  const no=busy||blocked(),hasRecord=record&&recordHome===state.workspace.selectedId;
+  $('review-base-summary').textContent=hasRecord?'Selected saved week: #'+record.sequence+' · '+record.detail.report.input.name+' · '+record.detail.report.input.startDate:'Open a saved week above to create a request.';
+  $('request-week-review').disabled=no||!hasRecord;
+  for(const id of ['review-recipient','review-message','review-request-select'])$(id).disabled=no||!!reviewPending;
+  if(reviewPending)$('request-week-review').disabled=true;
+  const heldRequest=reviewRequest?.id||$('review-request-select').value;
+  selectOptions('review-request-select',[...reviewKnown.values()].sort((a,b)=>b.sequence-a.sequence),'Choose a saved review request',heldRequest);
+  selectOptions('review-target',[...weekKnown.values()].sort((a,b)=>b.sequence-a.sequence),'Choose a saved week with the same dates');
+  $('review-target').disabled=no||!reviewRequest||!!reviewPending;
+  $('review-return-file').disabled=no||!reviewRequest||!!reviewPending;
+  $('preview-week-return').disabled=no||!reviewRequest||!returnResponse||!$('review-target').value||!!reviewPending;
+  $('review-retry-apply').disabled=no||!reviewPending;
+  $('review-repreview-pending').classList.toggle('only-hidden',!reviewPending||!pendingOutcome);
+  $('review-repreview-pending').disabled=no||!reviewPending||!pendingOutcome;
+  $('review-pending').classList.toggle('only-hidden',!reviewPending);
+  if(reviewPending)$('review-pending-description').textContent='An original apply request is retained for response '+reviewPending.response.responseId+'. Resume it to reconcile a lost reply; it keeps its original household, target, choices and request identity.';
+  if(returnPreview&&previewContext!==reviewContextKey()){
+    returnPreview=null;$('review-preview').classList.add('only-hidden');reviewStatus('Household state changed. Preview the original return again against a deliberately selected saved week.');
+  }
+  const unresolved=returnPreview?.conflicts.some(key=>!document.querySelector('[data-review-choice="'+key+'"]')?.value);
+  $('apply-week-return').disabled=no||!returnPreview||unresolved||!!reviewPending;
+  if(reviewRequest){
+    const query='?householdId='+encodeURIComponent(draftHome)+'&recordId='+encodeURIComponent(reviewRequest.id);
+    $('review-export-json').href='/api/week-review/export'+query+'&format=json';$('review-export-html').href='/api/week-review/export'+query+'&format=html';
+  }
+  for(const id of ['review-export-json','review-export-html'])$(id).classList.toggle('only-hidden',!reviewRequest||blocked());
+}
+async function reviewCall(payload){
+  if(busy||!state)return null;
+  busy=true;reviewFailure=null;$('error').textContent='';refresh();
+  try{
+    const response=await fetch('/api/week-review',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(payload)});
+    const body=await response.json();if(body.state)receiveState(body.state);
+    if(!response.ok){reviewFailure={status:response.status,body};throw Error(body.error||'Could not continue the household review.');}
+    return body;
+  }catch(e){problem(e);return null;}finally{busy=false;refresh();}
+}
+async function openReview(id){
+  if(busy||blocked())return;
+  if(reviewPending&&reviewPending.requestId!==id){reviewStatus('Resume the retained apply for its original request before opening another review.');return;}
+  const version=++reviewVersion,home=draftHome,ctx=reviewContextKey();
+  try{
+    const value=await read('/api/week-review/export?householdId='+encodeURIComponent(home)+'&recordId='+encodeURIComponent(id)+'&format=json');
+    if(version!==reviewVersion||home!==draftHome||ctx!==reviewContextKey())return;
+    reviewBundle=inspectRequestPackage(value);reviewRequest=reviewBundle.request;returnResponse=null;returnPreview=null;previewContext=null;
+    $('review-return-file').value='';$('review-return-summary').textContent='';$('review-preview').classList.add('only-hidden');
+    $('review-request-summary').textContent='Original request #'+reviewRequest.sequence+' · '+(reviewRequest.detail.recipient||'Household reviewer')+' · '+reviewRequest.detail.baseRecord.detail.report.input.startDate+'. '+(reviewRequest.detail.message||'No extra instructions.');
+    if(record?.detail?.report?.input.startDate===reviewRequest.detail.baseRecord.detail.report.input.startDate)$('review-target').value=record.id;
+    reviewKnown.set(reviewRequest.id,reviewRequest);refreshReview();
+    const url=new URL(location.href);url.searchParams.set('review',id);history.replaceState(null,'',url);reviewStatus('Original request opened. Download the self-contained HTML for the reviewer, or import their response below.');
+  }catch(e){if(version===reviewVersion)problem(e);}
+}
+function reviewValueSummary(value){
+  if(typeof value==='string')return value;
+  return (value.enabled?'Planned day':'Rest day')+' · '+value.scenario.maxKw+' kW cap · '+value.scenario.tasks.length+' loads · '+value.scenario.tasks.map(t=>t.label+' '+hour(t.earliest)+'–'+hour(t.deadline)).join('; ');
+}
+function renderReviewPreview(){
+  const p=returnPreview,out=$('review-conflicts');out.replaceChildren();
+  $('review-preview').classList.remove('only-hidden');
+  $('review-preview-summary').textContent=p.reviewer+' returned this week. '+p.conflicts.length+' conflicting field'+(p.conflicts.length===1?' needs':'s need')+' an explicit choice. Dates remain '+p.startDate+'. '+(p.sourceChanged?'Original and current saved source versions differ.':'');
+  $('review-notes').replaceChildren(make('p',p.attribution,'field-hint'),make('p',p.notes||'No overall reviewer note.','dim'));
+  for(const field of p.fields){
+    const card=make('article',undefined,field.status==='conflict'?'conflict':'');
+    card.append(make('h4',field.label+' · '+({unchanged:'Unchanged',same:'Both made the same change',current:'Owner change only',returned:'Reviewer change only',conflict:'Different owner and reviewer changes'}[field.status]||field.status)));
+    const versions=make('div',undefined,'review-versions');
+    for(const [key,label]of [['base','Original request'],['current','Current saved week'],['returned','Returned suggestion']]){
+      const col=make('div');col.append(make('h4',label),make('p',reviewValueSummary(field[key])));
+      if(typeof field[key]!=='string'){const detail=make('details');detail.append(make('summary','Exact hourly prices and load inputs'),make('pre',JSON.stringify(field[key],null,2)));col.append(detail);}versions.append(col);
+    }
+    card.append(versions);
+    const index=field.key.startsWith('day-')?Number(field.key.slice(4)):null;
+    if(index!==null&&p.dayNotes[index])card.append(make('p','Reviewer note: '+p.dayNotes[index],'dim'));
+    const label=make('label','Carry forward','review-choice'),select=make('select');select.dataset.reviewChoice=field.key;
+    if(field.status==='conflict'){const o=make('option','Choose explicitly…');o.value='';select.append(o);}
+    for(const [value,title]of [['current','Current saved week'],['returned','Returned suggestion']]){const option=make('option',title);option.value=value;select.append(option);}
+    select.value=field.defaultChoice||'';select.onchange=refreshReview;label.append(select);card.append(label);out.append(card);
+  }
+  const wrap=make('div',undefined,'saved-table-scroll'),table=make('table',undefined,'saved-table'),head=make('thead'),tr=make('tr');
+  for(const h of ['Date','Original planned cost','Current planned cost','Returned planned cost'])tr.append(make('th',h));head.append(tr);table.append(head);const body=make('tbody');
+  for(let i=0;i<7;i++){const row=make('tr');row.append(make('td',p.baseReport.days[i].date));for(const report of [p.baseReport,p.currentReport,p.returnedReport]){const day=report.days[i];row.append(make('td',day.status==='planned'?money(day.plan.optimized.cost):day.status));}body.append(row);}
+  table.append(body);wrap.append(table);$('review-plan-comparison').replaceChildren(make('p','Costs above describe three separate versions, not the final selected combination. Applying choices calculates the resulting new week; infeasible days stay explicit.','field-hint'),wrap);
+  refreshReview();
+}
+async function applyReview(payload,isResume=false){
+  if(busy||blocked())return;
+  const key=reviewStorageKey();
+  if(!isResume){sessionStorage.setItem(key,JSON.stringify(payload));reviewPending=clone(payload);}
+  pendingOutcome=null;
+  const result=await reviewCall(payload);
+  if(!result){
+    const o=reviewFailure?.body?.reviewOutcome;
+    if(o?.status==='not_committed'&&o.householdId===payload.context.householdId&&o.requestId===payload.requestId&&o.responseId===payload.response.responseId&&o.targetRecordId===payload.targetRecordId&&o.responseSha256===reviewDigest(payload.response)&&o.choicesSha256===reviewDigest(payload.choices))pendingOutcome=clone(o);
+    reviewStatus(pendingOutcome?'The server confirmed this exact apply was not committed. Keep the original attempt and deliberately preview the same return with current household state.':'The original apply request is retained. Resume it to reconcile the server outcome without changing its response ID or choices.');refreshReview();return;}
+  try{sessionStorage.removeItem(key);}catch{}
+  reviewPending=null;pendingOutcome=null;returnPreview=null;previewContext=null;$('review-preview').classList.add('only-hidden');
+  if(result.householdId!==state.workspace.selectedId){reviewStatus('The original application was reconciled in its original household. Reopen that household to view the saved week.');refreshReview();return;}
+  record=result.record;recordHome=result.householdId;draftHome=result.householdId;renderRecord();await loadHistory();
+  reviewStatus((result.replayed?'Reopened the already committed':'Saved the new')+' week #'+record.sequence+'. The original request, reviewer response and explicit choices remain in household history. Daily approval and execution are unchanged.');
+  $('results-title').scrollIntoView({behavior:'smooth',block:'start'});refreshReview();
+}
+$('request-week-review').onclick=async()=>{
+  if(!record||busy||blocked())return;
+  const baseId=record.id,home=draftHome;
+  const result=await reviewCall({action:'request',baseRecordId:baseId,recipient:$('review-recipient').value,message:$('review-message').value,context:context()});
+  if(!result||home!==draftHome)return;
+  await loadHistory();await openReview(result.record.id);
+};
+$('review-request-select').onchange=()=>{const id=$('review-request-select').value;reviewVersion++;discardPreview();if(id)openReview(id);else{reviewRequest=null;reviewBundle=null;returnResponse=null;$('review-request-select').value='';refreshReview();}};
+$('review-target').onchange=()=>{reviewVersion++;discardPreview();};
+$('review-return-file').onchange=async()=>{
+  const version=++reviewVersion,file=$('review-return-file').files?.[0],request=reviewRequest,ctx=reviewContextKey();returnResponse=null;discardPreview();if(!file||!request)return;
+  try{if(file.size>256*1024)throw Error('Choose a returned GridKind review JSON no larger than 256 KiB.');const value=JSON.parse(await file.text());
+    if(version!==reviewVersion||file!==$('review-return-file').files?.[0]||request!==reviewRequest||ctx!==reviewContextKey())return;
+    returnResponse=inspectResponse(value,request);
+    $('review-return-summary').textContent=file.name+' · '+returnResponse.reviewer+' · Response '+returnResponse.responseId+'. Original JSON retained for this comparison.';
+    $('error').textContent='';refreshReview();
+  }catch(e){if(version===reviewVersion){problem(e);$('review-return-summary').textContent='The selected file was not admitted: '+e.message;}}
+};
+$('preview-week-return').onclick=async()=>{
+  if(!reviewRequest||!returnResponse||busy||blocked())return;
+  const version=++reviewVersion,request=reviewRequest,response=clone(returnResponse),target=$('review-target').value;
+  discardPreview();const result=await reviewCall({action:'preview-return',requestId:request.id,targetRecordId:target,response,context:context()});
+  if(!result||version!==reviewVersion||request!==reviewRequest||target!==$('review-target').value)return;
+  returnPreview=result.preview;previewContext=reviewContextKey();renderReviewPreview();reviewStatus('Compare each complete day and choose explicitly wherever both versions changed.');
+};
+$('apply-week-return').onclick=async()=>{
+  if(!returnPreview||previewContext!==reviewContextKey()||busy||blocked())return;
+  try{
+    const choices=Object.fromEntries([...document.querySelectorAll('[data-review-choice]')].filter(n=>n.value).map(n=>[n.dataset.reviewChoice,n.value]));
+    for(const key of returnPreview.conflicts)if(!choices[key])throw Error('Choose current or returned for every conflicting day or name.');
+    await applyReview({action:'apply-return',requestId:reviewRequest.id,targetRecordId:returnPreview.targetRecordId,response:clone(returnResponse),choices,context:context()});
+  }catch(e){problem(e);}
+};
+$('review-retry-apply').onclick=async()=>{if(reviewPending&&!busy){try{await applyReview(clone(reviewPending),true);}catch(e){problem(e);}}};
+
+
+$('review-repreview-pending').onclick=async()=>{
+  if(!reviewPending||!pendingOutcome||busy||blocked())return;
+  const original=clone(reviewPending),outcome=clone(pendingOutcome),ctx=reviewContextKey(),version=++reviewVersion,home=draftHome;
+  busy=true;refresh();
+  try{
+    const query='?householdId='+encodeURIComponent(home);
+    const [raw,target]=await Promise.all([
+      read('/api/week-review/export'+query+'&recordId='+encodeURIComponent(original.requestId)+'&format=json'),
+      read('/api/workspace/record'+query+'&id='+encodeURIComponent(original.targetRecordId))
+    ]);
+    if(ctx!==reviewContextKey()||version!==reviewVersion||home!==draftHome)throw Error('Household state changed while reopening the original attempt. Its pending payload remains retained.');
+    const bundle=inspectRequestPackage(raw),response=inspectResponse(original.response,bundle.request);
+    if(target.kind!=='week')throw Error('The original target is no longer an owned saved week.');
+    const archiveKey=reviewStorageKey()+':attempt:'+reviewDigest(original);
+    sessionStorage.setItem(archiveKey,JSON.stringify({payload:original,outcome,archivedAt:new Date().toISOString()}));
+    sessionStorage.removeItem(reviewStorageKey());
+    reviewPending=null;pendingOutcome=null;reviewBundle=bundle;reviewRequest=bundle.request;returnResponse=response;returnPreview=null;previewContext=null;
+    reviewKnown.set(reviewRequest.id,reviewRequest);weekKnown.set(target.id,target);
+    $('review-request-summary').textContent='Reopened original request #'+reviewRequest.sequence+' after a confirmed uncommitted attempt.';
+    $('review-return-summary').textContent='Original response '+response.responseId+' is preserved. Choose a current saved week and review the changes again.';
+    refreshReview();$('review-target').value=target.id;$('review-preview').classList.add('only-hidden');$('error').textContent='';
+    reviewStatus('The earlier exact attempt is archived in this tab. Preview the same returned response against the deliberately selected saved week; fresh apply will use current household state.');
+  }catch(e){problem(e);}
+  finally{busy=false;refresh();}
+};
+
 $('week-form').addEventListener('input',changed);
 $('week-form').onsubmit=async event=>{
   event.preventDefault();if(busy||blocked())return;
@@ -232,4 +427,6 @@ try{
     fillDraft();status('Reopened this tab’s weekly draft. Saved results remain in household history.');await loadHistory();
   }else await freshDraft();
   if(requestedRecord)await openRecord(requestedRecord);
+  const requestedReview=new URL(location.href).searchParams.get('review');if(requestedReview)await openReview(requestedReview);
 }catch(error){problem(error);}
+

@@ -6,7 +6,7 @@ export function mountHouseholds({getState,isBusy,mutate,onProblem}){
   const money=n=>Number.isFinite(n)?'$'+n.toFixed(4):'—';
   const hour=n=>Number.isInteger(n)?String(n).padStart(2,'0')+':00':'—';
   const date=value=>{const d=new Date(value);return Number.isFinite(d.valueOf())?d.toLocaleString(undefined,{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'}):'Saved record';};
-  const kind={scenario:'Inputs',plan:'Plan',comparison:'Tariff comparison',approval:'Approval',execution:'Simulation',cancel:'Plan cleared',restore:'Restored inputs',week:'Weekly plan'};
+  const kind={scenario:'Inputs',plan:'Plan',comparison:'Tariff comparison',approval:'Approval',execution:'Simulation',cancel:'Plan cleared',restore:'Restored inputs',week:'Weekly plan','week-request':'Week review request','week-return':'Returned week review'};
   let key=null,householdId=null,page=null,detail=null,readRevision=0,importRevision=0,bundle=null,preview=null;
   function button(text,handler){const node=el('button',text,'secondary');node.type='button';node.dataset.mutates='true';node.onclick=handler;return node;}
   function download(value,filename){
@@ -64,6 +64,15 @@ export function mountHouseholds({getState,isBusy,mutate,onProblem}){
         el('p','Earliest feasible '+money(t.baselineCostUsd)+' · Optimized '+money(t.optimizedCostUsd)+' for planned days.','dim'),
         table(['Date','Status','Cost'],report.days.map(day=>[day.date,day.status,day.status==='planned'?money(day.plan.optimized.cost):'—'])));
       const link=el('a','Open the weekly schedule','button-link secondary');link.href='/week?record='+encodeURIComponent(detail.id);out.append(link);
+    }
+    if(detail.kind==='week-request'){
+      const base=detail.detail?.baseRecord,request=detail.detail;
+      out.append(el('h4','Independent household review'),el('p','Requested for '+(request?.recipient||'Household reviewer')+' · '+(base?.detail?.report?.input?.startDate||''),'record-summary'),el('p',request?.message||'No extra instructions.','dim'));
+      const link=el('a','Open request, exports and returned review','button-link secondary');link.href='/week?review='+encodeURIComponent(detail.id);out.append(link);
+      out.append(el('p','The request retains its exact original saved week. Reviewer labels are self-stated; applying a return creates a new weekly plan, not a daily approval.','field-hint'));
+    }
+    if(detail.kind==='week-return'){
+      out.append(el('h4','Retained review response and reconciliation'),el('p','The exact returned file, original request and explicit choices are retained below. Open the resulting weekly plan from household history to continue.','dim'));
     }
     const controls=el('div',undefined,'controls');
     controls.append(button(detail.kind==='week'?'Use the household inputs saved alongside this week':'Use these saved inputs',async()=>{const result=await mutate('restore',{recordId:detail.id});if(result)status('Saved inputs reopened. Plan a fresh schedule to continue.');}));
@@ -128,7 +137,7 @@ export function mountHouseholds({getState,isBusy,mutate,onProblem}){
       const data=await mutate('preview-import',{bundle:candidate});
       if(revision!==importRevision||!data)return;
       bundle=candidate;preview=data.preview;
-      $('household-import-preview').textContent=preview.name+' · '+preview.records+' records · '+preview.plans+' plans · '+preview.comparisons+' tariff comparisons · '+(preview.weeks||0)+' weeks. Restore creates a separate household.';
+      $('household-import-preview').textContent=preview.name+' · '+preview.records+' records · '+preview.plans+' plans · '+preview.comparisons+' tariff comparisons · '+(preview.weeks||0)+' weeks · '+(preview.weekRequests||0)+' review requests · '+(preview.weekReturns||0)+' returned reviews. Restore creates a separate household.';
     }catch(error){$('household-import-preview').textContent=error.message;onProblem(error);}
     finally{refresh();}
   };
