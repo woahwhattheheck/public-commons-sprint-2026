@@ -1281,9 +1281,17 @@ function renderReports() {
         report.scope_comparison?details('Full comparison scope',report.scope_comparison):null);
       const table=el('div');table.id='report-changes-grid';const paging=el('div');paging.id='report-changes-pager';changes.append(table,paging);right.append(changes);
     }
+    if(report.decision_carry_forward){
+      const lineage=report.decision_carry_forward,open=el('a','Review prior decisions and saved applications');
+      open.href='/reconciliation/carry-forward?source_report_id='+encodeURIComponent(report.report_id)+'#'+capability;
+      right.append(panel('Prior decision lineage',
+        el('p','This report retains reviewed candidate outcomes, explicit selections and their original frozen report/source history. Later manual decisions keep their own sequence.','hint'),
+        facts([['Applications in this run',lineage.applied_here?.length],['Original reports',lineage.reports?.length],['Retained source editions',lineage.source_editions?.length]]),
+        open,details('Complete frozen decision lineage',lineage)));
+    }
     const queries=panel('Original saved query recipes');
     for(const q of report.queries||[]){
-      queries.append(panel(q.kind==='fields'?'Complete field differences':q.kind==='normalizations'?'Complete normalization records':q.kind||q.name,
+      queries.append(panel(q.kind==='fields'?'Complete field differences':q.kind==='normalizations'?'Complete normalization records':q.kind==='decision_carry'?'Reviewed prior decisions and selections':q.kind||q.name,
         q.kind==='fields'?el('p','The complete handover includes every recorded field, original value, exact difference, allowance and rule in the original CSV and Parquet query exports.','hint'):q.kind==='normalizations'?el('p','The complete CSV and Parquet exports retain every original value, exact conversion candidate, canonical value, policy, result and failure reason.','hint'):null,
         facts([['Query name',q.name],['Query',q.query_id],['Revision',q.revision]]),
         details('Complete saved SQL and parameters',{sql:q.sql,parameters_text:q.parameters_text}),details('Full native query record',q)));
@@ -1358,6 +1366,12 @@ function renderNativeRequest(remote,family) {
   const id=remote.request_id,route=remote.route||API+'/'+remote.kind;
   const item=el('div',undefined,'panel subtle');item.dataset.nativeRequestId=id;item.dataset.nativeRequestFamily=family;
   item.append(facts([['Operation',requestName({...remote,route})],['Request',id],['Native state',remote.state],['Created',when(remote.created_at)]]));
+  if(family==='reconciliation'&&['carry-review','carry-apply'].includes(remote.kind)){
+    const open=el('a','Open this original prior-decision request');
+    open.href='/reconciliation/carry-forward?request_id='+encodeURIComponent(id)+'#'+capability;
+    item.append(open,details('Complete original request and retained result',remote));
+    return item;
+  }
   if(ID32.test(id||'')&&(family==='reconciliation'||route===API+'/exports')){
     item.append(toolbar(button('Reopen original request',async()=>{
       const full=await api((family==='export'?'/api':API)+'/requests/'+id);
@@ -1424,6 +1438,7 @@ async function start() {
 }
 $('dataset-home').href='/#'+capability;
 $('timescale-intake-home').href='/timescale-intake/#'+capability;
+$('carry-forward-home').href='/reconciliation/carry-forward#'+capability;
 $('refresh').addEventListener('click',()=>action('Refreshing saved catalogs',refreshLists));
 document.querySelectorAll('nav [data-screen]').forEach(node=>node.addEventListener('click',()=>{
   if(state.busy)return;
