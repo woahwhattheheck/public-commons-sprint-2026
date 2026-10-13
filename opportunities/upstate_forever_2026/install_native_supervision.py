@@ -444,6 +444,8 @@ def install(application, increment, *, retention=False):
         mode = destination.stat().st_mode & 0o777 if destination.exists() else 0o644
         if not destination.exists() or destination.read_bytes() != changed[name]:
             atomic_write(destination, changed[name], mode)
+    if (application / dependency).read_bytes() != originals[dependency]:
+        raise ValueError("The retained scientific source changed during native supervision installation")
     receipt = {"schema": "upstate.native-supervision-install/v1", "operation_id": MARKER,
                "installed_at": dt.datetime.now(dt.timezone.utc).isoformat(),
                "edition": edition,
