@@ -813,7 +813,7 @@ def build(workspace, selection):
                     grid=grid, profile=profile, records=records,
                     observation_results=observation_results, comparison=comparison,
                     scenario_summary=summary,
-                    decision_product=decision_product,
+                    decision_product=decision_product, observed_product=observed_product,
                     additional_sections=receiving_water_delivery.report_section(water_product),
                     output_stem="client-report", file_key_prefix="client_",
                     working_archive_path=working_relative)

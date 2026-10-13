@@ -22,7 +22,7 @@ from .native_versions import (POLICY as EXECUTION_VERSION_POLICY, guide_url,
                               model_versions, models_for_outputs, version_label)
 
 SCHEMA = "upstate.client-report/v1"
-REPORT_EDITION = "2026-10-13-client-report-native-execution-13"
+REPORT_EDITION = "2026-10-13-client-report-observed-outcomes-14"
 RFP_URL = "https://www.upstateforever.org/files/files/20261002_FINAL_EC-SDC%20Mapping%20RFP%20APPENDIX%20COMBINED.pdf"
 RFP_SHA256 = "a519d33190eefaef7ec082c19642fc6b8ef89329ad3c648a561699c7dd277e74"
 POLLUTANTS = (
@@ -961,10 +961,51 @@ def write_report(directory, report, *, pdf_name="report.pdf", output_stem=None,
     names.update(write_briefing(directory, report, stem=stem))
     return {file_key_prefix + key: value for key, value in names.items()}
 
+def _observed_sections(product):
+    """Adapt already collected observed blocks without an Implementation dependency."""
+    if product is None:
+        return []
+    def original_path(value):
+        relative = _safe_path(value)
+        if relative is None:
+            raise ValueError("Observed client assets must remain in the retained delivery.")
+        return relative
+    sections = []
+    for index, (heading, blocks) in enumerate(product["sections"]):
+        section = {"id": "observed-context-" + str(index + 1), "title": _text(heading),
+                   "paragraphs": [], "tables": [], "assets": []}
+        for block in blocks:
+            if isinstance(block, str):
+                section["paragraphs"].append(block)
+            elif isinstance(block, dict) and block.get("kind") == "table":
+                columns, rows = block.get("columns", []), block.get("rows", [])
+                if not columns or any(len(row) != len(columns) for row in rows):
+                    raise ValueError("An observed client table has inconsistent columns.")
+                section["tables"].append({
+                    "columns": [_text(value) for value in columns],
+                    "rows": [[_text(value) for value in row] for row in rows],
+                    "caption": block.get("caption"),
+                })
+            elif isinstance(block, dict) and block.get("kind") == "links":
+                for item in block.get("items", []):
+                    relative = original_path(item["path"])
+                    section["assets"].append({"path": relative, "title": item.get("title") or relative})
+            elif isinstance(block, dict) and block.get("kind") == "figure":
+                relative = original_path(block["path"])
+                title = block.get("title") or "Original scientific source figure"
+                if block.get("caption"):
+                    section["paragraphs"].append(str(block["caption"]))
+                section["assets"].append({"path": relative, "title": title})
+            else:
+                raise ValueError("An observed report block has no supported client representation.")
+        sections.append(section)
+    return sections
+
+
 def build_report(*, workspace, directory, selection, state, baseline, alternatives,
                  grid, profile, records, observation_results, comparison=None,
                  scenario_summary=None, additional_sections=(), decision_product=None,
-                 output_stem=None, file_key_prefix="", working_archive_path=None):
+                 observed_product=None, output_stem=None, file_key_prefix="", working_archive_path=None):
     """Drop-in report hook for the existing delivery.py report branch."""
     from .client_receiving_waters import build_sections, LEGACY_SECTION_TITLE
 
@@ -982,6 +1023,10 @@ def build_report(*, workspace, directory, selection, state, baseline, alternativ
         run_names=run_names, number=_fmt, text=_text,
     )
     appended = list(decision_delivery.client_sections(decision_product))
+    appended.extend(_observed_sections(observed_product))
+    if observed_product is not None:
+        report["observed_context"] = observed_product["binding"]
+        report["quantity_provenance"]["observed_context"] = observed_product["binding"]
     if decision_product is not None:
         report["source_decision"] = decision_product["binding"]
         report["quantity_provenance"]["source_decision"] = decision_product["binding"]
