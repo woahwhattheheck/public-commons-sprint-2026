@@ -67,6 +67,48 @@ function sourceHistogram(body,entry,area) {
   return result;
 }
 
+function originalMetadata(result,entry) {
+  const metadata=result.metadata;
+  if(!metadata||typeof metadata!=="object")throw Error("Retain the original producer metadata");
+  const match=(keys,expected,label)=>{
+    const present=keys.filter(key=>Object.prototype.hasOwnProperty.call(metadata,key));
+    if(!present.length)throw Error(label+" is absent from the original result");
+    for(const key of present)same(metadata[key],expected,label+" ("+key+")");
+  };
+  match(["sha256","raster_sha256"],entry.sha256,"Original raster identity");
+  match(["domain_sha256","polygon_body_sha256"],entry.model_domain_decoded_sha256,"Original polygon identity");
+  if(metadata.source_id!==undefined)same(metadata.source_id,entry.id,"Original raster source ID");
+  if(metadata.raster_bytes!==undefined)same(metadata.raster_bytes,entry.bytes,"Original raster byte count");
+  if(metadata.epsg!==undefined)same(metadata.epsg,5070,"Original raster CRS");
+  const urls=[];
+  if(metadata.source_uri!==undefined){
+    same(metadata.source_uri,entry.uri,"Original source URL");
+    urls.push(httpUrl(metadata.source_uri,"Source URL"));
+  }
+  if(metadata.source_urls!==undefined){
+    if(!Array.isArray(metadata.source_urls)||!metadata.source_urls.length)throw Error("Retain original source URLs");
+    urls.push(...metadata.source_urls.map(value=>httpUrl(value,"Source URL")));
+  }
+  if(!urls.length)throw Error("Retain an original source URL");
+  return [...new Set(urls)];
+}
+function coordinateMethod(method) {
+  const operation=method.coordinate_conversion;
+  if(typeof operation==="string" && operation.trim())return operation;
+  if(!operation||typeof operation!=="object"||typeof operation.description!=="string"||!operation.description.trim())
+    throw Error("Retain the declared original coordinate operation");
+  const parts=[operation.description];
+  if(operation.source_epsg!==undefined||operation.target_epsg!==undefined){
+    if(!Number.isInteger(operation.source_epsg)||!Number.isInteger(operation.target_epsg))throw Error("Invalid coordinate operation CRS");
+    parts.push("EPSG:"+operation.source_epsg+" to EPSG:"+operation.target_epsg);
+  }
+  if(operation.stated_accuracy_m!==undefined){
+    if(!Number.isFinite(operation.stated_accuracy_m)||operation.stated_accuracy_m<0)throw Error("Invalid stated coordinate-operation accuracy");
+    parts.push("Stated coordinate-operation accuracy: "+operation.stated_accuracy_m+" m");
+  }
+  return parts.join(". ");
+}
+
 function group(row,codes) {return codes.reduce((sum,code)=>sum+row.get(code).cells,0);}
 function watershedName(properties) {
   for(const key of ["name","NAME","Name","gnis_name","GNIS_NAME"])
@@ -76,7 +118,7 @@ function watershedName(properties) {
 function htmlReport(result,entry,rows,summary) {
   const classRows=summary.domainClasses.map(r=>"<tr><td>"+r.class_code+"</td><td>"+escape(r.name)+"</td><td class=\"n\">"+number(r.cells,0)+"</td><td class=\"n\">"+number(r.area_ha)+"</td><td class=\"n\">"+percent(r.percent_valid)+"</td></tr>").join("");
   const watershedRows=rows.map(r=>"<tr data-search=\""+escape((r.huc12+" "+r.name).toLowerCase())+"\"><th scope=\"row\">"+r.huc12+"</th><td>"+escape(r.name)+"</td><td class=\"n\">"+number(r.valid_area_ha)+"</td><td class=\"n\">"+percent(r.forest_percent)+"</td><td class=\"n\">"+percent(r.developed_percent)+"</td><td class=\"n\">"+percent(r.agriculture_percent)+"</td><td class=\"n\">"+number(r.nodata_cells,0)+"</td></tr>").join("");
-  const sourceLinks=result.metadata.source_urls.map((url,i)=>'<li><a href="'+escape(httpUrl(url,"Source URL"))+'">Original source '+(i+1)+"</a></li>").join("");
+  const sourceLinks=summary.sourceUrls.map((url,i)=>'<li><a href="'+escape(httpUrl(url,"Source URL"))+'">Original source '+(i+1)+"</a></li>").join("");
   return '<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>'+escape(summary.title)+'</title><style>'+
   '*{box-sizing:border-box}body{margin:0;background:#f4f4f4;color:#202020;font:15px/1.5 system-ui,sans-serif}main{max-width:1250px;margin:auto;padding:28px}h1{font-size:27px;margin:0 0 10px}h2{font-size:20px;margin:28px 0 10px}p{max-width:95ch}a{color:#222;text-decoration:underline}nav{display:flex;gap:18px;flex-wrap:wrap;margin:20px 0}section{background:white;border:1px solid #aaa;padding:20px;margin:16px 0}.metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px}.metric{border-left:3px solid #555;padding:8px 12px}.metric strong{display:block;font-size:22px}.scroll{overflow:auto}table{border-collapse:collapse;width:100%;font-size:13px}th,td{padding:9px 10px;border-bottom:1px solid #ddd;text-align:left;vertical-align:top}thead th{background:#eee;position:sticky;top:0}.n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}tbody th{font-weight:500}input{width:min(100%,430px);padding:10px;border:1px solid #777;font:inherit}label{display:block;font-weight:600;margin:8px 0}.scope{font-size:14px;color:#444}details{margin:16px 0}code{overflow-wrap:anywhere;font-size:12px}.status{display:block;margin:8px 0;color:#444}@media(max-width:600px){main{padding:12px}section{padding:12px}h1{font-size:23px}}@media print{body{background:#fff}main{max-width:none;padding:0}nav,.filter{display:none}section{border:0;padding:0;break-inside:auto}tr{break-inside:avoid}thead{display:table-header-group}thead th{position:static}.scroll{overflow:visible}a{color:#000}}'+
   '</style></head><body><main><h1>'+escape(summary.title)+'</h1><p>Original categorical land cover summarized over the retained watershed polygons. Pixel centres determine membership on the unchanged EPSG:5070 source grid.</p><nav><a href="watersheds.csv" download>Watershed table · CSV</a><a href="watershed-classes.csv" download>All watershed classes · CSV</a><a href="original-zonal.json" download>Complete original calculation · JSON</a><a href="observed-report.json" download>Scientific report recipe</a></nav><section><div class="metrics">'+
@@ -84,7 +126,7 @@ function htmlReport(result,entry,rows,summary) {
   '<p class="scope">Domain totals count the union once. Watershed rows retain individual polygon membership; '+number(result.domain.overlap_cells,0)+' cells occur in overlapping source watersheds. The full rectangular raster includes '+number(result.domain.outside_domain_cells,0)+' cells outside the polygon domain, including its model-context buffer.</p></section>'+
   '<section><h2>Land cover within the original watershed domain</h2><p>Percentages use valid classified domain cells. Hectares use the determinant of the retained native affine transform.</p><div class="scroll"><table><thead><tr><th>Class</th><th>Land cover</th><th class="n">Cells</th><th class="n">Hectares</th><th class="n">Share of valid area</th></tr></thead><tbody>'+classRows+'</tbody></table></div></section>'+
   '<section><h2>All original watersheds</h2><p>Forest combines classes 41–43; developed combines 21–24; agriculture combines pasture/hay 81 and cultivated crops 82. Each row covers its complete original HUC polygon, including portions across state boundaries. The complete class table preserves each category separately.</p><div class="filter"><label for="search">Find a HUC12 or watershed name</label><input id="search" type="search" placeholder="HUC12 or name" autocomplete="off"><span id="status" class="status" role="status">'+rows.length+' watersheds</span></div><div class="scroll"><table id="watersheds"><thead><tr><th>HUC12</th><th>Name</th><th class="n">Valid ha</th><th class="n">Forest</th><th class="n">Developed</th><th class="n">Agriculture</th><th class="n">NoData cells</th></tr></thead><tbody>'+watershedRows+'</tbody></table></div></section>'+
-  '<section><h2>Original source and method</h2><p>'+escape(result.method.pixel_rule)+'. '+escape(result.method.coordinate_conversion)+'. '+escape(result.method.polygon_edges)+'.</p><p>Grid: '+result.grid.width+' × '+result.grid.height+'; cell area '+summary.cellArea+' m². Full raster: '+number(result.raster.cell_count,0)+' cells, '+number(result.raster.nodata_count,0)+' NoData cells.</p><p><a href="raster-source-entry.json">Original raster source entry</a> · <a href="class-area.csv">Original full-raster class counts</a> · <a href="observed-report.json">Scientific delivery recipe</a></p><ul>'+sourceLinks+'</ul><details><summary>Source identities</summary><p>Raster SHA256 <code>'+entry.sha256+'</code></p><p>Original decoded polygon SHA256 <code>'+entry.model_domain_decoded_sha256+'</code></p><p>Zonal result SHA256 <code>'+summary.zonalSha+'</code></p></details></section></main>'+
+  '<section><h2>Original source and method</h2><p>'+escape(result.method.pixel_rule)+'. '+escape(summary.coordinateMethod)+'. '+escape(result.method.polygon_edges)+'.</p><p>Grid: '+result.grid.width+' × '+result.grid.height+'; cell area '+summary.cellArea+' m². Full raster: '+number(result.raster.cell_count,0)+' cells, '+number(result.raster.nodata_count,0)+' NoData cells.</p><p><a href="raster-source-entry.json">Original raster source entry</a> · <a href="class-area.csv">Original full-raster class counts</a> · <a href="observed-report.json">Scientific delivery recipe</a></p><ul>'+sourceLinks+'</ul><details><summary>Source identities</summary><p>Raster SHA256 <code>'+entry.sha256+'</code></p><p>Original decoded polygon SHA256 <code>'+entry.model_domain_decoded_sha256+'</code></p><p>Zonal result SHA256 <code>'+summary.zonalSha+'</code></p></details></section></main>'+
   '<script>const field=document.getElementById("search"),rows=Array.from(document.querySelectorAll("#watersheds tbody tr"));field.addEventListener("input",()=>{const q=field.value.trim().toLowerCase();let count=0;for(const row of rows){const show=row.dataset.search.includes(q);row.hidden=!show;if(show)count++;}document.getElementById("status").textContent=count+" of "+rows.length+" watersheds";});</script></body></html>\n';
 }
 export function composeOriginalLandcoverContext({zonalBody,rasterEntryBody,classAreaBody,expectedZonalSha256}) {
@@ -104,13 +146,10 @@ export function composeOriginalLandcoverContext({zonalBody,rasterEntryBody,class
   const area=Math.abs(result.grid.affine[0]*result.grid.affine[4]);
   if(!Number.isFinite(area)||area<=0)throw Error("Invalid original pixel area");
   near(result.method.cell_area_m2,area,"Method cell area");
-  same(result.metadata.raster_sha256,entry.sha256,"Original raster identity");
-  same(result.metadata.polygon_body_sha256,entry.model_domain_decoded_sha256,"Original polygon identity");
+  const sourceUrls=originalMetadata(result,entry),methodText=coordinateMethod(result.method);
   if(!/^[a-f0-9]{64}$/.test(entry.model_domain_decoded_sha256))throw Error("Original polygon identity is absent");
   same(result.metadata.year,Number(entry.source_time.slice(0,4)),"Original product year");
   same(result.metadata.nodata,entry.metadata.nodata,"Original NoData code");
-  if(!Array.isArray(result.metadata.source_urls)||!result.metadata.source_urls.length)throw Error("Retain original source URLs");
-  for(const url of result.metadata.source_urls)httpUrl(url,"Source URL");
   httpUrl(entry.uri,"Raster source URL");
   same(result.raster.cell_count,result.grid.width*result.grid.height,"Full raster cell count");
   same(result.raster.nodata_count,entry.metadata.nodata_cells,"Full raster NoData");
@@ -137,7 +176,7 @@ export function composeOriginalLandcoverContext({zonalBody,rasterEntryBody,class
       developed_percent:share(group(byClass,[21,22,23,24]),valid),agriculture_percent:share(group(byClass,[81,82]),valid)};
   }).sort((a,b)=>a.huc12.localeCompare(b.huc12));
   if(rows.reduce((s,r)=>s+r.selected_cells,0)<domain.unique_cells)throw Error("Watershed accounting is smaller than its union");
-  const summary={title:"Original "+result.metadata.year+" land cover — complete watershed domain",cellArea:area,
+  const summary={title:"Original "+result.metadata.year+" land cover — complete watershed domain",cellArea:area,sourceUrls,coordinateMethod:methodText,
     domainValid:domain.unique_cells-domain.nodata_cells,zonalSha:expectedZonalSha256,
     domainClasses:CODES.map((code,i)=>({...domainClasses.get(code),name:NAMES[i],percent_valid:share(domainClasses.get(code).cells,domain.unique_cells-domain.nodata_cells)}))};
   const columns=["huc12","name","selected_cells","valid_cells","nodata_cells","valid_area_ha","forest_percent","developed_percent","agriculture_percent"];
@@ -163,7 +202,7 @@ export function composeOriginalLandcoverContext({zonalBody,rasterEntryBody,class
         table(["HUC12","Name","Valid hectares","Forest (%)","Developed (%)","Agriculture (%)"],rows.map(r=>[r.huc12,r.name,number(r.valid_area_ha),r.forest_percent===null?"":number(r.forest_percent),r.developed_percent===null?"":number(r.developed_percent),r.agriculture_percent===null?"":number(r.agriculture_percent)]),[0.18,0.3,0.13,0.13,0.13,0.13])
       ]],
       ["Source and method",[
-        result.method.pixel_rule+". "+result.method.coordinate_conversion+". "+result.method.polygon_edges+".",
+        result.method.pixel_rule+". "+summary.coordinateMethod+". "+result.method.polygon_edges+".",
         {kind:"links",items:[{title:"Searchable complete land-cover report",path:"landcover-report.html"},{title:"All watershed summary rows",path:"watersheds.csv"},{title:"All watershed and class rows",path:"watershed-classes.csv"},{title:"Original full zonal result",path:"original-zonal.json"},{title:"Original raster source entry",path:"raster-source-entry.json"}]}
       ]]
     ],source_links:Object.keys(files)};
