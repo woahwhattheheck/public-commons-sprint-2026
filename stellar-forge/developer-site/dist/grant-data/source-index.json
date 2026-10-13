@@ -5,9 +5,9 @@
   "applicant": "Bryce Muhlnickel / TokenJunkieLabs",
   "application": {
     "path": "application.md",
-    "bytes": 49291,
-    "sha256": "108fe3d10fcd1fc00e91a06f44bb6e99d9a91eea72f8591e46123c0ae279657e",
-    "git_blob": "3b8b540d7f25f218373c89db394c5510268c1ad7"
+    "bytes": 49677,
+    "sha256": "b11620def6ff6fb7908ca942b173d33683d604273e5fe2897c9f8213d64b1938",
+    "git_blob": "5ba957f842b68ecf463543b429691cc9ffcd51e2"
   },
   "request": {
     "basis": "prospective",
@@ -1624,13 +1624,79 @@
         "sha256": "d41c2de3b6624bff4b73521baae77b217879413504b7b4514343e96318e34fd7",
         "git_blob": "ef8e382b15d32890fd1d37810344ba4ba92c3964"
       }
+    },
+    {
+      "repository": "woahwhattheheck/tjlabs-stellar-merchant-workspace",
+      "commit": "4042d88f2fec313cfde80fff8df05aceaf5708f2",
+      "path": "products/superset-report/OPERATING.md",
+      "url": "https://github.com/woahwhattheheck/tjlabs-stellar-merchant-workspace/blob/4042d88f2fec313cfde80fff8df05aceaf5708f2/products/superset-report/OPERATING.md",
+      "source_kind": "source-file",
+      "id": "superset-report-complete-product",
+      "kind": "published-source",
+      "label": "Complete Superset report application and operator handover",
+      "source_registration": "superset-report"
+    },
+    {
+      "repository": "woahwhattheheck/tjlabs-stellar-merchant-workspace",
+      "commit": "4042d88f2fec313cfde80fff8df05aceaf5708f2",
+      "path": "stellar/scf-starforge-20261009/distribution/selections/superset-report.json",
+      "url": "https://github.com/woahwhattheheck/tjlabs-stellar-merchant-workspace/blob/4042d88f2fec313cfde80fff8df05aceaf5708f2/stellar/scf-starforge-20261009/distribution/selections/superset-report.json",
+      "source_kind": "source-file",
+      "id": "superset-report-selection",
+      "kind": "published-source",
+      "label": "Complete Superset selected-package recipe",
+      "source_registration": "superset-report"
+    },
+    {
+      "repository": "woahwhattheheck/public-commons-sprint-2026",
+      "commit": "7cde1c2537e038b43388f7286fd9c88a0d12994a",
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/superset/examples/README.md",
+      "url": "https://github.com/woahwhattheheck/public-commons-sprint-2026/blob/7cde1c2537e038b43388f7286fd9c88a0d12994a/stellar/scf-starforge-20261009/sf30-seller-sdk/superset/examples/README.md",
+      "source_kind": "source-file",
+      "id": "superset-original-native-customer",
+      "kind": "published-source",
+      "label": "Original Superset customer and full receiving programme",
+      "source_registration": "superset-report"
+    },
+    {
+      "repository": "woahwhattheheck/public-commons-sprint-2026",
+      "commit": "7cde1c2537e038b43388f7286fd9c88a0d12994a",
+      "path": "stellar/scf-starforge-20261009/distribution/runtime-install.mjs",
+      "url": "https://github.com/woahwhattheheck/public-commons-sprint-2026/blob/7cde1c2537e038b43388f7286fd9c88a0d12994a/stellar/scf-starforge-20261009/distribution/runtime-install.mjs",
+      "source_kind": "source-file",
+      "id": "superset-original-runtime-installer",
+      "kind": "published-source",
+      "label": "Original source archive and installed-runtime receiving engine",
+      "source_registration": "superset-report"
+    },
+    {
+      "repository": "woahwhattheheck/tjlabs-stellar-merchant-workspace",
+      "commit": "6bf48482bcde72e03698df3b6bd63cf584ce64df",
+      "path": "products/directus-content-data/OPERATING.md",
+      "url": "https://github.com/woahwhattheheck/tjlabs-stellar-merchant-workspace/blob/6bf48482bcde72e03698df3b6bd63cf584ce64df/products/directus-content-data/OPERATING.md",
+      "source_kind": "source-file",
+      "id": "directus-content-data-complete-product",
+      "kind": "published-source",
+      "label": "Complete Directus collection application and project handover",
+      "source_registration": "directus-content-data"
+    },
+    {
+      "repository": "woahwhattheheck/tjlabs-stellar-merchant-workspace",
+      "commit": "6bf48482bcde72e03698df3b6bd63cf584ce64df",
+      "path": "stellar/scf-starforge-20261009/distribution/selections/directus-content-data.json",
+      "url": "https://github.com/woahwhattheheck/tjlabs-stellar-merchant-workspace/blob/6bf48482bcde72e03698df3b6bd63cf584ce64df/stellar/scf-starforge-20261009/distribution/selections/directus-content-data.json",
+      "source_kind": "source-file",
+      "id": "directus-content-data-selection",
+      "kind": "published-source",
+      "label": "Complete Directus selected-package recipe",
+      "source_registration": "directus-content-data"
     }
   ],
   "product_and_finance": {
     "path": "product-and-finance.md",
-    "git_blob": "5d64ba8d57c4c342f0083a1aa4e424240fbe54b3",
-    "bytes": 410679,
-    "sha256": "c2b6acde517f573507106f95b826bab16e90e1ea1bacfa36fe76d95e3f182940",
+    "git_blob": "10f94c687cfca7f5df67456aea3169e4e22898f1",
+    "bytes": 414228,
+    "sha256": "bd880d3a5c65f4d0dc973fc3403c20e4c347d493444fcd47e10edb69782ad328",
     "basis": "Complete maintained product and finance companion. Accepted customer installations share the existing six funded packages and original cost assumptions. The selected Datasette source editions and editable customer analysis use the same six funded packages. The merchant financial chapter applies the shipped settlement, invoice, collection and accountant foundation to the same prospective customer integration packages.",
     "prior_git_blob": "29e0ab9723e0eb787041409803158dc3ae94c1e3"
   },
@@ -1793,7 +1859,7 @@
         "baseline_count_scope": "The eight original archived case records are not added to or substituted for the application's eighteen team-operated development purchases."
       }
     ],
-    "current_application_sha256": "108fe3d10fcd1fc00e91a06f44bb6e99d9a91eea72f8591e46123c0ae279657e",
+    "current_application_sha256": "b11620def6ff6fb7908ca942b173d33683d604273e5fe2897c9f8213d64b1938",
     "economic_product_commit": "be44be564e35b63af23246bad531a95374bbb4c0",
     "economic_application_operation": "SCF-FRED-ECONOMIC-CUSTOMER-APPLICATION-20261012",
     "coastal_product_commit": "92eb1c73a3cab9781ef7dbabdc12067344fb6aa2",
@@ -1926,7 +1992,39 @@
         ],
         "scope": "Selected source identities and individually dated source-transfer evidence. Execution and settlement remain with their original result sources."
       },
-      "companion_projector_git_blob": "a8add1aa955bc52b8bdbe861bd2c4ff959bd86ba"
+      "companion_projector_git_blob": "a8add1aa955bc52b8bdbe861bd2c4ff959bd86ba",
+      "product_source_registrations": [
+        {
+          "id": "directus-content-data",
+          "heading": "## Report and content commissioning and complete receiving",
+          "source_ids": [
+            "directus-content-data-complete-product",
+            "directus-content-data-selection"
+          ],
+          "definition": {
+            "path": "grant-products/directus-content-data.json",
+            "bytes": 924,
+            "sha256": "63309c54b2927cc40f1698c17d5ce20e394521c929524cf30e7b4fea398d0db3",
+            "git_blob": "622b0704940ebfbb93cc6a58761b059ea3664fab"
+          }
+        },
+        {
+          "id": "superset-report",
+          "heading": "## Report and content commissioning and complete receiving",
+          "source_ids": [
+            "superset-report-complete-product",
+            "superset-report-selection",
+            "superset-original-native-customer",
+            "superset-original-runtime-installer"
+          ],
+          "definition": {
+            "path": "grant-products/superset-report.json",
+            "bytes": 1639,
+            "sha256": "4fe2448da7330327bae58f5f82ca4bf9416330ca41bc5eb4779f585551793b12",
+            "git_blob": "55fcd7a216a0925ea99b15695d107cb8bda744ac"
+          }
+        }
+      ]
     },
     "datasette_customer_commit": "b1a6ad827c02cdf95c613b23ef07ce1996400fd6",
     "datasette_publisher_commit": "ab876f6dc2ad24b7938f6b928202d78fbdeef777",
@@ -1961,8 +2059,8 @@
     "route": "/grant-submission.html",
     "application_route": "/grant-data/application.md",
     "source_index_route": "/grant-data/source-index.json",
-    "application_sha256": "108fe3d10fcd1fc00e91a06f44bb6e99d9a91eea72f8591e46123c0ae279657e",
-    "application_git_blob": "3b8b540d7f25f218373c89db394c5510268c1ad7",
+    "application_sha256": "b11620def6ff6fb7908ca942b173d33683d604273e5fe2897c9f8213d64b1938",
+    "application_git_blob": "5ba957f842b68ecf463543b429691cc9ffcd51e2",
     "draft_schema": "stellar-forge.grant-submission-draft.v1",
     "export_schema": "stellar-forge.grant-submission-export.v1",
     "form_map_schema": "stellar-forge.grant-form-map.v1",
@@ -2023,8 +2121,8 @@
     "schema": "stellar-forge.grant-review-round-integration.v1",
     "route": "/grant-review-round.html",
     "submission_route": "/grant-submission.html",
-    "application_sha256": "108fe3d10fcd1fc00e91a06f44bb6e99d9a91eea72f8591e46123c0ae279657e",
-    "application_git_blob": "3b8b540d7f25f218373c89db394c5510268c1ad7",
+    "application_sha256": "b11620def6ff6fb7908ca942b173d33683d604273e5fe2897c9f8213d64b1938",
+    "application_git_blob": "5ba957f842b68ecf463543b429691cc9ffcd51e2",
     "draft_schema": "stellar-forge.grant-submission-draft.v1",
     "draft_export_schema": "stellar-forge.grant-submission-export.v1",
     "review_schema": "stellar-forge.grant-review-round.v1",
@@ -2037,8 +2135,8 @@
     "route": "/grant-companion.html",
     "source": "/grant-data/product-and-finance.md",
     "source_index": "/grant-data/source-index.json",
-    "source_sha256": "c2b6acde517f573507106f95b826bab16e90e1ea1bacfa36fe76d95e3f182940",
-    "source_bytes": 410679,
+    "source_sha256": "bd880d3a5c65f4d0dc973fc3403c20e4c347d493444fcd47e10edb69782ad328",
+    "source_bytes": 414228,
     "assets": [
       "/grant-companion.html",
       "/grant-companion.css",
