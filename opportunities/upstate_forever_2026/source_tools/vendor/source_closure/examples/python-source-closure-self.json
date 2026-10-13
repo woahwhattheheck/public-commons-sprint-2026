@@ -1,0 +1,19 @@
+{
+  "schema": "commons.python-source-selection/v1",
+  "label": "Complete public Python source collector",
+  "module_roots": [
+    "host",
+    "."
+  ],
+  "entrypoints": [
+    {
+      "script": "host/python_source_closure.py"
+    }
+  ],
+  "resources": [
+    "host/PYTHON_SOURCE_CLOSURE.md",
+    "host/examples/python-source-closure-self.json"
+  ],
+  "external_modules": [],
+  "dynamic_imports": []
+}
