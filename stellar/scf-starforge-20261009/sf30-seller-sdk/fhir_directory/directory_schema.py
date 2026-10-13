@@ -13,7 +13,7 @@ SCHEMA="stellar-forge.human-services-directory.v1"
 KINDS={"connections","discoveries","requests","sources","editions","comparisons",
     "acquisitions","importProfiles","mappings","mappingPreviews","sourceConversions","selections",
     "referralJoins","handoffs","exports","receivingReviews","receives",
-    "conformancePlans","conformanceAssessments","conformanceReviews","conformanceComparisons","operatingPlans","operatingPlanReturns","correctionPlans","correctionPreviews","corrections","correctionWorksheets","correctionWorksheetImports","correctionWorksheetReturns","correctionWorksheetReviews"}
+    "conformancePlans","conformanceAssessments","conformanceReviews","conformanceComparisons","operatingPlans","operatingPlanReturns","correctionPlans","correctionPreviews","corrections","correctionWorksheets","correctionWorksheetImports","correctionWorksheetReturns","correctionWorksheetReviews","correctionWorksheetReconciliations","correctionWorksheetReconciliationReviews"}
 MUTABLE={"acquisitions","receives"}
 TARGETS={"Organization","Location","HealthcareService","Endpoint"}
 ROOT_TABLES={"organization":"Organization","location":"Location","service":"HealthcareService"}
@@ -31,6 +31,7 @@ def catalogue():
     value["operatingReturnsCatalogue"]=source.json_value((HERE/"directory-operating-returns-schema.json").read_bytes())
     value["correctionsCatalogue"]=source.json_value((HERE/"directory-corrections-schema.json").read_bytes())
     value["correctionWorksheetsCatalogue"]=source.json_value((HERE/"directory-correction-worksheets-schema.json").read_bytes())
+    value["correctionWorksheetReconciliationCatalogue"]=source.json_value((HERE/"directory-correction-worksheet-reconciliation-schema.json").read_bytes())
     profile=guidance()
     value["guidance"]={"schema":profile["schema"],"publishedMappingRows":len(profile["publishedMappings"]),
         "migrations":profile["migrations"],"selectedSources":profile["selectedSources"]}
@@ -54,6 +55,15 @@ def _json(value,label):
     return value
 
 def validate(value,spec,label="Input"):
+    if "oneOf" in spec:
+        matches=0
+        for alternative in spec["oneOf"]:
+            try:validate(value,alternative,label);matches+=1
+            except InputError:pass
+        if matches!=1:raise InputError(label+" must match exactly one declared input form")
+        return value
+    if "const" in spec and (type(value)is not type(spec["const"])or value!=spec["const"]):
+        raise InputError(label+" differs from its declared fixed value")
     if "anyOf" in spec:
         for alternative in spec["anyOf"]:
             try:return validate(value,alternative,label)
