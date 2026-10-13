@@ -2,10 +2,11 @@
   "schema": "upstate.operator-extension/v1",
   "id": "economic-comparison",
   "title": "Saved Economic comparisons",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "order": 66,
   "assets": [
-    "economic_comparison.mjs"
+    "economic_comparison.mjs",
+    "economic_comparison_source.mjs"
   ],
   "requires_actions": [
     "economic.edition.build"

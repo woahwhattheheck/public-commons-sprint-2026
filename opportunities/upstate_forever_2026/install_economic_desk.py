@@ -12,6 +12,15 @@ from pathlib import Path
 import tempfile
 
 FILES = (
+    "operator/web/economic_received_comparisons.mjs",
+    "docs/ECONOMIC_COMPARISON_STUDY_TRANSFER.md",
+    "operator/ECONOMIC_COMPARISON_REPORT.md",
+    "model/economic_comparison_source.py",
+    "model/economic_comparison_study_transfer.py",
+    "operator/economic_comparison_source.py",
+    "operator/extensions/economic-comparison-source.json",
+    "operator/web/economic_comparison_source.mjs",
+    "integration/component_fragments/economic-comparison-source.json",
     "model/common.py",
     "model/economic_comparison.py",
     "model/economic_comparison_render.py",
@@ -76,11 +85,11 @@ def run(application, source_root, *, dry_run=False):
             if name.endswith(".json"):
                 manifest = json.loads(data)
                 if name.startswith("operator/extensions/"):
-                    expected_id = "economic-comparison" if name.endswith("economic-comparison.json") else "economic-desk"
+                    expected_id = Path(name).stem
                     if manifest.get("schema") != "upstate.operator-extension/v1" or manifest.get("id") != expected_id:
                         raise ValueError("Choose the authored " + expected_id + " registration.")
-                elif name == "integration/component_fragments/economic-comparison.json":
-                    if manifest.get("schema") != "upstate.application-component-fragment/v1" or manifest.get("id") != "economic-comparison":
+                elif name.startswith("integration/component_fragments/"):
+                    if manifest.get("schema") != "upstate.application-component-fragment/v1" or manifest.get("id") != Path(name).stem:
                         raise ValueError("Choose the authored complete Economic comparison component.")
             pending[name] = data
         changed = [name for name in pending if pending[name] != original[name]]
