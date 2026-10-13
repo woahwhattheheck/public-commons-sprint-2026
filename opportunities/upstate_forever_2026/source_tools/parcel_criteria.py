@@ -410,9 +410,18 @@ def _class_flag(layer, zone, classes, evidence):
     scoped = layer.choice.get("class_scope")
     contains_classes = scoped == "all" or (
         isinstance(scoped, list) and set(classes).issubset(set(scoped)))
-    if rows:
-        return True
-    return False if complete and contains_classes else None
+    result = True if rows else False if complete and contains_classes else None
+    detail = evidence[layer.role]
+    detail["classification_scope"] = _copy(scoped)
+    detail["source_where"] = _copy(layer.choice.get("where"))
+    detail["source_reference"] = layer.choice.get("reference")
+    detail["source_meaning"] = layer.choice.get("meaning")
+    detail.setdefault("classification_queries", {})["|".join(sorted(classes))] = {
+        "requested_classes": sorted(classes), "value": result,
+        "source_contains_requested_classes": contains_classes,
+        "negative_meaning": "No matching retained feature in the selected classification source inventory",
+    }
+    return result
 
 
 def _wetland_type(layer, properties):

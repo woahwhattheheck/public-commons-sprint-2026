@@ -264,7 +264,17 @@ selection["sources"]["classifications"] = criterion_source
 ~~~
 
 Continue the existing `parcel_criteria.prepare` workflow with that selection.
-It retains the existing positive/negative/unknown calculation: positive native
-FW intersections remain positive; absent FW inside complete captured geometry
-can be negative; absent FW beyond that geometry remains unknown. This source
-join does not change the published criterion definitions or scoring.
+It retains the existing positive/negative/unknown calculation for the selected
+regulatory classification inventory: positive native FW intersections remain
+positive; no matching retained FW feature inside complete captured geometry can
+be negative; absence beyond that geometry remains unknown. The source is the
+SCDES classification inventory. Its negative result does not establish absence
+of ecological freshwater in another state's missing inventory.
+
+The actual criteria are `stream_fw_with_listed_impairment` and
+`stream_fw_without_listed_impairment`. Per-row JSON evidence records requested
+classes, selected class scope, source filter, reference, meaning and the
+classification result. The exported table also preserves the complete original
+source/coverage bindings and native body hashes. A broader freshwater criterion
+requires its own geographic inventory coverage and keeps cross-state missing
+inventory unknown. Original criterion definitions and scoring are unchanged.
