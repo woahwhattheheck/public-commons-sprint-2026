@@ -199,7 +199,7 @@ def cold_inspect(workspace_path, expectation_path):
 
 def continue_report(workspace, output, state, state_path, specification):
     from model.common import atomic_json, digest, held, read_json, file_digest
-    from model.portable import restore
+    from model.portable import restore, resume_restore
     from model import published_review_report_source, study_transfer, observed_context
     from measurement_workspace.published_studies import PublishedStudyStore
     from measurement_workspace.study_reviews import PublishedStudyReviews
@@ -400,6 +400,7 @@ def continue_report(workspace, output, state, state_path, specification):
             "model/published_review_report_source.py",
             "model/published_review_study_transfer.py",
             "model/scientific_report_study_transfer.py",
+            "model/portable.py",
         ):
             item = members.get("application/" + name)
             _check(item is not None, "The editable Study omitted required application source " + name)
@@ -418,15 +419,14 @@ def continue_report(workspace, output, state, state_path, specification):
                                      "selection": inspected["study"]["identity"]["selection"]})
         receiving = root / "cold-reopened-study"
         if receiving.exists():
-            # Reusing a receiving directory verifies all original archive members,
-            # not just its Workspace identifier.
-            for name, expected in members.items():
-                _check(identity(receiving / name) == {field: expected[field] for field in ("bytes", "sha256")},
-                       "An original received member differs: " + name)
-            restored = {"application": str(receiving / "application"),
-                        "workspace": str(receiving / "workspace")}
+            # Reopen the original completed receive, including the importer's
+            # registered delivery roles/navigation and full receiving result.
+            restored = resume_restore(
+                archive, receiving,
+                expected_archive_sha256=phases["editable_study"]["sha256"])
         else:
             restored = restore(archive, receiving)
+        checkpoint("editable_study_receiving", restored)
         restored_app = Path(restored["application"]).resolve(strict=True)
         child = restored_app / "source_tools/continue_study_report.py"
         child_result = root / "cold-reopen.json"
