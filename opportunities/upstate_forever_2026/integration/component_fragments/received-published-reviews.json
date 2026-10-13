@@ -1,0 +1,26 @@
+{
+  "schema": "upstate.application-component-fragment/v1",
+  "id": "received-published-reviews",
+  "source_reference": "https://github.com/woahwhattheheck/public-commons-sprint-2026/tree/main/opportunities/upstate_forever_2026",
+  "extend_components": {
+    "published-studies": {
+      "paths": [
+        "model/received_published_reviews.py",
+        "operator/received_published_reviews.py",
+        "operator/web/received_published_reviews.mjs",
+        "operator/web/received_published_reviews.css",
+        "operator/RECEIVED_PUBLISHED_REVIEWS.md"
+      ]
+    },
+    "study-transfer": {
+      "paths": [
+        "model/received_published_reviews.py",
+        "operator/received_published_reviews.py",
+        "operator/web/received_published_reviews.mjs",
+        "operator/web/received_published_reviews.css",
+        "operator/RECEIVED_PUBLISHED_REVIEWS.md"
+      ]
+    }
+  },
+  "required_components": []
+}

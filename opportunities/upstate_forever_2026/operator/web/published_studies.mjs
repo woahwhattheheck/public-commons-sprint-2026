@@ -54,7 +54,7 @@ export function createPublishedStudiesDesk(host) {
   const drafts = new Map();
   let editGeneration = 0, savedReview = null, reviewChoice = "", reviewTitle = "", reviewNotes = "";
   let loadedStudy = null, loadedSelection = null, reviewLoading = false, reviewRequest = 0, interpretationMatches = true;
-  let catalogPreference = null;
+  let catalogPreference = null, directReviewOpening = null;
   const reviewReports = createPublishedReviewReports(host, {
     context: () => ({workspace, review:copy(savedReview), changed:reviewChanged(), busy, view:viewGeneration, edit:editGeneration}),
     queue: (action, payload) => queue(action, payload),
@@ -247,22 +247,45 @@ export function createPublishedStudiesDesk(host) {
       if (arr(catalog?.source_roots).some(root => root.id === prior)) rootControl.value = prior;
     }
   }
-  async function openReview(reviewId) {
+  async function openReview(reviewId, expected = null) {
     if (!reviewId || !node) return;
     const id = ++request, opening = ++reviewRequest, expectedWorkspace = workspace, expectedView = viewGeneration;
     const expectedEdit = ++editGeneration;
+    if (expected) {
+      // A direct received-review navigation supersedes the mount's catalogue
+      // request and any earlier geographic request without replacing its data.
+      ++catalogRequest; catalogPreference = null; ++geographicRequest;
+    }
     const active = () => Boolean(node) && workspace === expectedWorkspace && host.getWorkspace() === expectedWorkspace &&
       viewGeneration === expectedView && request === id && editGeneration === expectedEdit;
+    if (expected) directReviewOpening = active;
     reviewLoading = true; renderReview(); status("Opening saved study review…");
     try {
       const result = await api("/api/published-studies/review", {review_id:reviewId});
       if (!active()) return;
       const review = result.review, content = review?.content, binding = content?.binding;
-      if (!binding?.study_id || !binding?.version_id || !tableIds.has(content.table)) throw new Error("Saved review has an unsupported source binding or table.");
-      const study = await api("/api/published-studies/study", {study_id:binding.study_id, version_id:binding.version_id});
+      if (review?.id !== reviewId || !binding?.study_id || !binding?.version_id || !tableIds.has(content.table))
+        throw new Error("Saved review has an unsupported source binding or table.");
+      if (expected && (canonical(binding) !== canonical(expected.expected_binding) ||
+          canonical(content.selection) !== canonical(expected.expected_selection)))
+        throw new Error("This saved review differs from the original received study edition or selection.");
+      const [study, freshCatalog] = await Promise.all([
+        api("/api/published-studies/study", {study_id:binding.study_id, version_id:binding.version_id}),
+        expected ? api("/api/published-studies/catalog", {}) : Promise.resolve(catalog),
+      ]);
       if (!active()) return;
-      if (!arr(catalog?.studies).some(item => item.study_id === binding.study_id && item.version_id === binding.version_id)) {
+      if (!arr(freshCatalog?.studies).some(item => item.study_id === binding.study_id && item.version_id === binding.version_id)) {
         throw new Error("The saved review's exact source edition is unavailable in the study catalogue. Refresh the catalogue and reopen the review.");
+      }
+      if (study?.record?.study_id !== binding.study_id || study?.record?.version_id !== binding.version_id ||
+          study.record.source_collection_id !== binding.source_collection_id ||
+          study.record.source_manifest?.sha256 !== binding.source_manifest_sha256)
+        throw new Error("The opened study differs from the saved review's original source binding.");
+      if (expected) {
+        ++catalogRequest;
+        catalog = freshCatalog;
+        geographicInput = null; geographicPreview = null; geographicChoice = ""; geographicLoading = false;
+        renderGeographic();
       }
       selected = binding.study_id + "|" + binding.version_id;
       interpretationMatches = result.interpretation_matches_snapshot !== false;
@@ -271,12 +294,24 @@ export function createPublishedStudiesDesk(host) {
       complete = study; loadedStudy = selected; loadedSelection = canonical(currentPayload());
       renderCatalog(); renderSummary(); renderTables(result.context); renderReview(); remember();
       status("Saved review opened with its exact study edition and selection.");
-    } catch (error) { if (active()) showError(error); }
-    finally {
+      return copy(review);
+    } catch (error) {
+      if (active()) { showError(error); if (expected) throw error; }
+    } finally {
+      if (expected && directReviewOpening === active) directReviewOpening = null;
       if (node && workspace === expectedWorkspace && viewGeneration === expectedView && opening === reviewRequest) {
         reviewLoading = false; renderReview();
       }
     }
+  }
+  async function openSavedReview(value) {
+    if (!node || !value || value.workspace_key !== workspace || host.getWorkspace() !== workspace)
+      throw new Error("Open this saved review in its original receiving Workspace.");
+    if (typeof value.review_id !== "string" || !/^review-[0-9a-f]{64}$/.test(value.review_id) ||
+        !value.expected_binding || typeof value.expected_binding !== "object" || Array.isArray(value.expected_binding) ||
+        !value.expected_selection || typeof value.expected_selection !== "object" || Array.isArray(value.expected_selection))
+      throw new Error("Choose a received saved review with its exact original binding and selection.");
+    return openReview(value.review_id, copy(value));
   }
   function saveReview(asNew = false) {
     if (!selectionReady() || busy || reviewLoading) { status("Wait for the selected source tables to finish loading.", true); return; }
@@ -712,7 +747,7 @@ export function createPublishedStudiesDesk(host) {
       host.getWorkspace() === expectedWorkspace && viewGeneration === expectedView;
     try {
       const result = await api("/api/published-studies/catalog", {});
-      if (!active()) return;
+      if (!active() || directReviewOpening?.()) return;
       const previous = selected, acceptPreference = expectedEdit === editGeneration;
       prefer = acceptPreference ? preferred?.result || null : null;
       if (catalogPreference === preferred) catalogPreference = null;
@@ -916,9 +951,9 @@ export function createPublishedStudiesDesk(host) {
   function detach() {
     remember(); reviewReports.detach(); microbialSelection.detach();
     events?.abort(); for (const controller of requests) controller.abort(); requests.clear();
-    ++request; ++catalogRequest; ++viewGeneration; ++reviewRequest; ++geographicRequest; catalogPreference = null;
+    ++request; ++catalogRequest; ++viewGeneration; ++reviewRequest; ++geographicRequest; catalogPreference = null; directReviewOpening = null;
     if (node) node.classList.remove("published-studies-desk");
     node = null; events = null;
   }
-  return {mount,update,detach,openForStations};
+  return {mount,update,detach,openForStations,openSavedReview};
 }
