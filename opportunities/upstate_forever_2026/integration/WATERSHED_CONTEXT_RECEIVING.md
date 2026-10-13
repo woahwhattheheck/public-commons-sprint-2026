@@ -4,9 +4,9 @@ This component joins the current merged supporting-source and printable-brief pr
 
 ## Apply the coherent source
 
-The component contains complete postimages for the provider, browser desk/style, extension descriptor, installer, readable brief, both receiving entry points, and the original HTTP receiving driver. Source preimages are recorded in its bank. Compose on those exact source editions; retain later unrelated application changes.
+Apply the complete regional continuation over the current application. Its source bank identifies the exact merged commit, every included file and the maintained dependencies. It includes the provider, source loader and validation, installer, readable brief, HTTP receiving driver, source manifests and original source companions. Preserve the current browser desk/style, extension descriptor, native model and both receiving entry points while composing these files.
 
-Use the matching source completion F0C8QLW4JBU. Its revision-2 source loader exposes load_native_network_sources(directory, network_name, *, network_path=None), and its strict validator retains the exact raw scientific inputs. The maintained native model is 47,676 bytes / SHA256 6ba9b6b0f1ccd6bb5afb4c0a3cc9e47ca20e1d0ee2d58a4455adef1f1d9b4fd4. The original shared extension host supplies uploadFile and the original task queue.
+The maintained source completion is edition 4, F0C8UJL2A3E. The merged composition also preserves the explicit canonical-parent manifest importer and external native-network reference support. Its loader exposes load_native_network_sources(directory, network_name, *, network_path=None), and its strict validator retains the exact raw scientific inputs. The current native model is 47,841 bytes / SHA256 e911461dffbc86ed5927f640cea5027915d5e08566bd798a8ce4bfd13d00ec09, Git blob 4d2f9bf1355ab98906c9694c21bc511cabfc4b36. The original shared extension host supplies uploadFile and the original task queue.
 
 ```sh
 python operator/install_watershed_context.py \
@@ -22,7 +22,7 @@ A registered source edition or original Workspace source collection supplies the
 
 Choosing a different original network uses its exact raw input and its own byte-bound provenance. The provider removes the previous network's provenance and original sidecars from the new input inventory, then attaches the selected source's checked companions. The remaining water-context and classified-water originals stay with the report.
 
-Selections use CSV format upstate.watershed-context-csv/v2 and the actual maintained HUC_COLUMNS in their identity. Printable brief format v2 includes the official native-network publisher link from a verified origin companion. Its separate supporting_source_references and brief-source hash bind that link to the exact selected input. Previously saved export bytes remain readable.
+Selections use CSV format upstate.watershed-context-csv/v2 and the actual maintained HUC_COLUMNS in their identity. Printable brief format v3 combines the distinct contributing-watershed union with the official native-network publisher link from a verified origin companion. Its separate supporting_source_references and brief-source hash bind that link to the exact selected input. Previously saved export bytes remain readable.
 
 ## Receive the completed original result
 

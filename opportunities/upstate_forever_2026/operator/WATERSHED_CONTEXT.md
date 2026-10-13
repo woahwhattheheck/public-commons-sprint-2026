@@ -334,7 +334,7 @@ briefs. These references carry the topology and provenance hashes so the saved
 brief identifies the network edition used for that selection. The calculation
 fingerprint continues to describe only the model inputs.
 
-Planning briefs use the maintained version 2 source-reference format. A changed
+Planning briefs use the maintained version 3 format, including contributing watershed membership and source references. A changed
 source reference creates a new export identity along with the existing report,
 CSV, brief-format and complete-source-edition identities. Earlier exports retain
 their original source binding. Reopening an export also checks its retained
