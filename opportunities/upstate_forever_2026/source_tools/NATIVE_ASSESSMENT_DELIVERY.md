@@ -229,3 +229,142 @@ Pass this rule to child/delegated workers and persist it in owner-controlled pro
 Canonical local policy: `C:/Users/lucys/.commons/rendered-product-inspection-policy.md` and `.json`. Portable repository copy: `docs/policies/rendered-product-inspection-policy.md` and `.json` when present. Only Bryce can change this standing rule.
 <!-- bryce-rendered-product-inspection:end -->
 
+
+
+## Original five-basin annual-reference maps
+
+The ordinary native-assessment delivery now includes the five exact original
+NLDI reference-basin footprints beside the eleven published annual targets.
+The complete report uses the original component review and preserves all 17,138
+source polygon vertices. Its selected footprints contain 17,130 vertices:
+Jackson uses component 0; Cohens uses components 0 and 1, including the small
+local part. The two separately retained four-vertex Virginia triangles remain
+original source components and are shown only in the explicit component-review
+view. The original response bodies remain unchanged.
+
+The existing command is unchanged. Rebuild the same delivery through
+`native_assessment_delivery_cli.mjs --microbial` with its already-retained
+source directories. The existing ten-file source successor now also requires
+`annual_reference_maps.mjs`, maintained
+`observed_flow_map.mjs`, and its original
+`source/hydrology-huc05-07-20261013/nldi/geographic_support.mjs` dependency;
+the existing assessment-source-delivery component declares the whole closure.
+
+The map uses the maintained full-geometry renderer. Its display-only projection
+is spherical Web Mercator, EPSG:3857:
+x = R × longitude in radians,
+y = R × ln(tan(π/4 + latitude/2)),
+R = 6,378,137 metres.
+The original geographic source is WGS84 longitude/latitude. Every coordinate
+is transformed for display without simplification, snapping, clipping, union
+or geometry repair. The formula follows the
+[PROJ primary definition](https://proj.org/en/stable/operations/projections/webmerc.html).
+These display grid coordinates and distances do not replace original basin
+areas or assert corrected ground distances. The original EPSG:5070 whole-basin
+areas remain the annual-yield denominators.
+
+### Human use and source meaning
+
+Open `association/OPEN_ASSESSMENT_ASSOCIATIONS.html` and select Annual
+basin map. The map, basin dropdown and physical-coverage basin filter share the
+same selected COMID. Fit selected basin changes only the view. Show retained
+excluded original components adds outline-only source components; it does not
+add their areas, stations or loads to the selected annual references. A source
+reach's first original vertex anchors its map label; it is not an estimated
+station coordinate or inferred outlet.
+
+The three tributaries are mutually disjoint within both downstream Savannah
+basins; Jackson is nested in Cohens. The ten original spatial relations are
+retained. Do not add the whole-basin annual masses or source-normalized yields
+as independent regional pieces, assign one station load to individual HUCs, or
+call these incremental or downstream-delivered yields. TN, TP and raw TSS keep
+their original source basis and periods. The separate regional sediment-method
+sensitivity context remains separately selected.
+
+The report writes these ordinary `association/` companions:
+
+- `annual-reference-basin-map.json`: selected source geometries, areas,
+  original source hashes, original component review and all ten relations.
+- `annual-reference-original-components.geojson`: every original
+  polygon component, including the reviewed exclusions.
+- `annual-reference-selected-basins.geojson`: exactly the selected
+  original components, with source identities and whole-basin area labels.
+- `annual-reference-display-geometry.geojson`: explicitly derived
+  EPSG:3857 display geometries; original source references remain attached.
+- `annual-reference-basins.svg` and five
+  `annual-reference-basin-COMID.svg` views.
+- `annual-reference-original-components.svg` and two complete
+  `annual-reference-*-figure.json` specifications.
+
+The existing scientific recipe uses the maintained projected-map SVG/PDF
+renderer with those exact derived display geometries. It adds the selected
+five-basin overview and the separately labeled source-component appendix.
+Every new file is retained by the same source-entry companions and complete
+ZIP. The derived report edition advances; original source IDs, targets,
+yield values, area denominators and native model results remain intact.
+
+### Complete the same receiving operation
+
+Continue the existing ES9960 annual5154 operation on its currently accepted
+C5AE course (former unstarted0730 annual7303/9808). Reuse its original project,
+source collection and retained files. Open the exact populated outgoing HTML,
+each SVG/GeoJSON/JSON/CSV download, the complete archive's extracted files and
+the ordinary scientific PDF. View all relevant basin-map and component-review
+pages. Exercise dropdown, polygon and table selection; native basin filter;
+fit/reset and excluded components; keyboard activation; normal/narrow layout;
+SVG download; saved-HTML reopening; PDF export; and independent archive reopen.
+Use the full current owner rule above: capturing screenshots or reading source
+does not replace viewing and using the exact outgoing product. Return the
+actual viewed pixels and the first concrete product defect to the original
+source course for repair.
+
+
+## Current owner direction carried with this source
+
+The complete current owner brief is included below and at `CURRENT_OWNER_DIRECTION.md`. Version `2026-10-13.3`; cutoff remains 14:00 UTC. Preserve the existing native execution owner and original annual5154 receiving course while this source report joins its completed outputs.
+
+# Current owner direction: Ecosystem Sciences demonstration
+
+Version: `2026-10-13.3`. Owner: Bryce / TokenJunkieLabs. Direction for the Upper Savannah application, demonstration, presentation and work orders. Continue the broad build without arbitrary feature/scenario caps. Preserve today's cutoff: **October 13, 2026, 10:00 a.m. Eastern / 14:00 UTC**. Do not pause work or extend the sprint.
+
+## Direct owner instructions
+
+> do the simulated model
+
+> just make sure that what we put infront of him is something he would need and want and he will be blown away how relevant it is to him and how he wants it,a nd also the speed we produced it
+
+> just checking dont pause anythi g
+
+> and make sure wherever the fleet is coordinating in slack or github or wherever on this demo / presentation / ecosystem gets that update toand passes it along to other agents because the feed may be moving fast
+
+## Build for an experienced scientific practice
+
+Ecosystem Sciences lists GIS, hydrology/monitoring, ecological modeling, watershed assessment, statistics, visualization, optimization and publishing. Tim Maguire's practice includes GIS, modeling and water resources. Its South Platte work assembled data, mapped natural capital and produced watershed investment decision support. Do not assume it lacks these capabilities. Its unmet tooling, InVEST or production-capacity gap is unknown until the call. Sources: [Services](https://www.ecosystemsciences.com/read-me), [Firm](https://www.ecosystemsciences.com/firm), [South Platte](https://www.ecosystemsciences.com/).
+
+Show concrete delivery and engineering offload on the actual Upper Savannah RFP workflow: source assembly, reproducible native calculations, editable scenarios, useful decisions and a complete working handoff. The prime retains scientific direction, method choices, interpretation/review and the client relationship. Relevance comes from useful work they can inspect, adapt and receive; do not promise Tim's reaction or claim an unconfirmed need.
+
+## Execute the prepared simulated case now
+
+Native execution is the immediate hard priority. Issue the prepared simulated case on the verified scientific runtime, retain its actual run identity and progress, and obtain the real native outputs. Continue the source/runtime/application integration needed to make that happen. Further plans, stock demonstrations, policy reviews and cosmetic inspection do not replace execution. Do not introduce a bid decision or a prime's yes as a gate.
+
+Demonstrate the scientific operation in the actual application:
+
+1. Use the RFP's 30 m GIS selection. Keep the upstream contributing model domain distinct from the South Carolina reporting mask and the four existing utility focus anchors; retain their actual source geometries and identities.
+2. Run the baseline, a realistic riparian alternative and its matched control with explicit, editable source editions, assumptions, parameters and scenario changes.
+3. Show active run/progress/logs and completed native annual NDR/SDR results: nitrogen and phosphorus in **kg/year**, sediment in **tonnes/year**, representing delivery to streams. Do not present these modeled stream loads as intake concentrations.
+4. Compare the actual maps, tables and report, preserving matched scientific support and original units. Keep source/assumption edits and their consequences inspectable.
+5. Export the editable GIS/project and complete scientific working package. Cold-reopen the delivered application/project and show the retained sources, selections, results and useful controls.
+
+Identify the simulated case as modeled. Never invent measurements, completion or customer acceptance.
+
+## Present the real work and real speed
+
+Actually open, see and use the outgoing app and every attachment as its recipient would. Repair defects and ship a plain, readable product. Apply the standing inspection rule without review/test theatre or parallel bureaucracy.
+
+If producing video, record the actual working application and use available natural generative voice/TTS. Watch and listen to the final export. Generated frames must never pretend to be a working app. Explain speed using actual elapsed start, commit, run and package history; do not invent delivery times or guaranteed reactions.
+
+## Carry this direction with the work
+
+Pass this complete brief into every current child, provider and cloud work order and handoff. Include its durable path and version `2026-10-13.3` with the next result. Relay it at the actual coordination surface and onward to participating workers; fast feeds can bury an update. Acknowledgment alone is not delivery.
+
+Preserve active compute and existing implementation ownership. Do not force worker restarts, drop an active run or create a new controller. Keep lab attribution, source/copyright, incident and contact controls, personal-meeting approval, no private GitHub/Actions, no llama.cpp and focused internal validation. No new approval gate or broad test sweep is authorized.
