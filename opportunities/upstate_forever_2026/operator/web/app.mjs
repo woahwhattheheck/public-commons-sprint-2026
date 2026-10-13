@@ -19,6 +19,7 @@ import {attachPortfolio} from './portfolio.mjs';
 import {attachProgrammes} from './programmes.mjs';
 import {attachSourceReports} from './source_reports.mjs';
 import {createScenarioInputReview} from './scenario_input_review.mjs';
+import {createScientificInspection,scientificValue} from './scientific_inspection.mjs';
 
 const $ = (s, root=document) => root.querySelector(s);
 const $$ = (s, root=document) => [...root.querySelectorAll(s)];
@@ -34,7 +35,7 @@ const external = value => safeURL(value) ? '<a href="'+esc(value)+'" target="_bl
 const badge = value => '<span class="status '+esc(value)+'">'+esc(human(value))+'</span>';
 const noRows = (title, description, action, label) => '<div class="empty"><h2>'+esc(title)+'</h2><p>'+esc(description)+'</p>'+(action?'<button class="primary" data-action="'+action+'">'+esc(label)+'</button>':'')+'</div>';
 const table = (heads, rows) => '<div class="table-scroll"><table><thead><tr>'+heads.map(h=>'<th>'+esc(h)+'</th>').join('')+'</tr></thead><tbody>'+rows.join('')+'</tbody></table></div>';
-const defs = obj => '<dl class="definition">'+Object.entries(obj).map(([k,v])=>'<dt>'+esc(human(k))+'</dt><dd>'+(typeof v==='object'?'<span class="mono">'+esc(pretty(v))+'</span>':esc(v??'—'))+'</dd>').join('')+'</dl>';
+const defs = obj => scientificInspection.fields(obj);
 const button = (action,label,extra='',style='') => '<button type="button" class="'+esc(style)+'" data-action="'+esc(action)+'" '+extra+'>'+esc(label)+'</button>';
 const named = (kind,id) => {const row=state?.data?.[kind]?.find(x=>x.id===id);return row?.title||row?.metadata?.title||row?.spec?.title||row?.selection?.title||short(id);};
 const viewLabels={'parameter-studies':'Parameter studies',portfolios:'Conservation portfolios',conservation:'Conservation plans',rehearsal:'Operator rehearsal','receiving-waters':'Receiving waters',experiments:'Scenario experiments',programmes:'Run programmes',overview:'Workspace overview',sources:'Original sources',profiles:'Parameter profiles',grids:'Model grids',scenarios:'Land-cover scenarios',runs:'Native model runs',comparisons:'Run comparisons',spatial:'Spatial review',communities:'Communities','customer-reviews':'Customer reviews',observations:'Observed water quality',deliveries:'Maps and delivery'};
@@ -56,6 +57,8 @@ let formRevision=0,navigationRevision=0,workspaceRevision=0,interactionRevision=
 let formOpeningRequest=0;
 const acceptedTasks=new Map();
 const form=$('#operation-form'),formDialog=$('#form-dialog'),detailDialog=$('#detail-dialog');
+const scientificInspection=createScientificInspection({getState:()=>state,getWorkspace:()=>workspace,reportError:globalError});
+scientificInspection.installStyles(document);
 
 const spatialWorkspace=createSpatialWorkspace({request:api,getWorkspace:()=>workspace,refreshState:refresh,showTask,openItem,toast,openStudyTransfer:selection=>extensions.openExtension('study-transfer','openForStudies',selection)});
 const scenarioInputReview=createScenarioInputReview({getState:()=>state,esc,number,button,table,short,when,runTitle,nativeModels});
@@ -311,7 +314,7 @@ const workspaceFinder=attachWorkspaceFinder({
  canOpen:()=>!formDialog.open,reportError:error=>toast(error.message||String(error))
 });
 function toast(message){clearTimeout(toastTimer);$('#toast').textContent=message;$('#toast').hidden=false;toastTimer=setTimeout(()=>$('#toast').hidden=true,5500);}
-function globalError(error){$('#global-error').textContent=error.message||String(error);$('#global-error').hidden=false;}
+function globalError(error){$('#global-error').innerHTML=scientificInspection.error(error);$('#global-error').hidden=false;}
 function clearError(){$('#global-error').hidden=true;$('#global-error').textContent='';}
 async function refresh({force=false}={}){
   if(!capability)return;
@@ -492,13 +495,14 @@ function renderTasks(){
   $('#task-count').textContent=active.length+retained.length;
   $('#task-banner').hidden=!active.length;
   if(active.length)$('#task-banner').innerHTML='<strong>'+esc(active[0].state==='running'?'Original operation running':'Original operation queued')+'</strong>'+esc(actionLabels[active[0].action]||active[0].action)+button('tasks','Inspect operations','','small');
-  $('#task-list').innerHTML=retainedMarkup+(tasks.length?tasks.map(row=>'<article class="task-row"><h3>'+esc(actionLabels[row.action]||row.action)+badge(row.state)+'</h3><time>'+esc(when(row.created_at))+'</time>'+(row.error?'<p class="error-text">'+esc(row.error.message)+'</p>':'')+'<div class="task-actions">'+button('task-open','Details','data-id="'+row.id+'"','small')+(['failed','interrupted','cancelled'].includes(row.state)?button('task-resume','Resume original selection','data-id="'+row.id+'"','small'):'')+(row.state==='queued'?button('task-cancel','Cancel before start','data-id="'+row.id+'"','small'):'')+'</div></article>').join(''):'<div class="section-body note">Workspace operations will appear here with their selected inputs and retained attempts.</div>');
+  $('#task-list').innerHTML=retainedMarkup+(tasks.length?tasks.map(row=>'<article class="task-row"><h3>'+esc(actionLabels[row.action]||row.action)+badge(row.state)+'</h3><time>'+esc(when(row.created_at))+'</time>'+(row.error?'<p class="error-text">'+esc(scientificInspection.diagnostic(row.error,{state:row.state}).summary)+'</p>':'')+'<div class="task-actions">'+button('task-open','Details','data-id="'+row.id+'"','small')+(['failed','interrupted','cancelled'].includes(row.state)?button('task-resume','Resume original selection','data-id="'+row.id+'"','small'):'')+(row.state==='queued'?button('task-cancel','Cancel before start','data-id="'+row.id+'"','small'):'')+'</div></article>').join(''):'<div class="section-body note">Workspace operations will appear here with their selected inputs and retained attempts.</div>');
 }
 function fileList(files){
   if(!files?.length)return '';
   return '<div class="file-list">'+files.map(f=>'<div class="file-row"><div><strong>'+esc(f.label||f.filename)+'</strong><small>'+esc(f.filename)+' · '+bytes(f.bytes)+'</small><small class="mono">SHA256 '+esc(f.sha256)+'</small></div><div class="inline-actions">'+(f.filename.toLowerCase().endsWith('.pdf')?button('preview-file','Preview','data-file-id="'+f.id+'"','small'):'')+'<a href="'+esc(f.url)+'?download=1" download>Download</a></div></div>').join('')+'</div>';
 }
 function detail(title,body,{kind,id,state:status}={}){
+  scientificInspection.clear();
   detailRequest=++itemRequest;if(kind!=='deliveries')deliveryInspection.detach();
   $('#detail-title').textContent=title;$('#detail-body').innerHTML=body;
   detailContext={kind,id,state:status,files:detailContext?.files||[]};
@@ -523,9 +527,10 @@ async function openItem(kind,id,focus=true){
     content=defs({kind:row.kind,reason:row.reason,source_edition:named('sources',row.source_collection_id)})+table(['Original mask','From land-cover codes','To code','Reason','Selection'],row.patches.map(p=>'<tr><td>'+esc(sourceName(row.source_collection_id,p.mask_source_id))+'</td><td>'+esc(p.from_codes.join(', '))+'</td><td>'+p.to_code+'</td><td>'+esc(p.reason)+'</td><td>'+esc(pretty({layer:p.layer,where:p.where}))+'</td></tr>'))+button('scenario-clone','Create revised scenario','data-id="'+id+'"')+scenarioInputReview.scenarioPanel(row);
   }else if(kind==='runs'){
     content='<div class="meta">'+badge(row.state)+'<span>InVEST '+esc(row.selection.invest_version)+'</span><span>'+esc(runTitle(row.id))+'</span></div>';
-    if(row.error)content+='<div class="notice error">'+esc(row.error.message)+'</div>';
+    content+=scientificInspection.run(row);
+    if(row.error)content+=scientificInspection.error(row.error,{state:row.state});
     content+=table(['Native stage','Execution source','Started','Completed','Retained outputs'],Object.entries(row.stages||{}).map(([name,stage])=>'<tr><td>'+esc(human(name))+'</td><td>'+(stage.reused_from?'Reused from '+esc(short(stage.reused_from.run_id))+'<br><small>'+esc(when(stage.reused_at))+'</small>':'Calculated in this retained run')+'</td><td>'+esc(when(stage.started_at))+'</td><td>'+esc(when(stage.completed_at))+'</td><td>'+(Object.keys(stage.files||{}).length+(stage.artifact?1:0))+'</td></tr>'));
-    content+=table(['Export','Annual reporting total','Valid cells'],Object.entries(row.artifacts||{}).map(([name,item])=>'<tr><td>'+esc(human(name))+'</td><td>'+sumCell(item)+'</td><td>'+number(item.valid_cells)+'</td></tr>'));
+    content+=Object.keys(row.artifacts||{}).length?table(['Export','Annual reporting total','Valid cells'],Object.entries(row.artifacts||{}).map(([name,item])=>'<tr><td>'+esc(human(name))+'</td><td>'+sumCell(item)+'</td><td>'+number(item.valid_cells)+'</td></tr>')):'<p class="scientific-note">No native export totals are retained for this run yet. Follow its original operation; a prepared selection is not a calculated result.</p>';
     content+=completedModelOrigins(row);
     content+=scenarioInputReview.runPanel(row);
     content+='<div class="page-actions">'+(['prepared','failed'].includes(row.state)?button('run-start-confirmed',row.state==='failed'?'Resume original models':'Run original models','data-id="'+id+'"','primary'):'')+(canSelectCompletedModels(row)?button('run-completed-models','Use completed models','data-id="'+id+'"'):'')+button('run-log','Read native log','data-id="'+id+'"')+'</div><pre id="native-log" class="logs" hidden></pre>';
@@ -544,7 +549,7 @@ async function openItem(kind,id,focus=true){
      if(row.exclusions.length)content+='<details class="technical"><summary>'+row.exclusions.length+' original context or excluded rows</summary><pre class="json-view">'+esc(pretty(row.exclusions))+'</pre></details>';
    }else if(kind==='spatial_exports'){
     content='<div class="meta">'+badge(row.state)+'</div>'+defs({saved_review:row.review_id,paper:row.selection?.paper,resolution_dpi:row.selection?.dpi,created_at:row.created_at});
-    if(row.error)content+='<div class="notice error">'+esc(row.error.message||row.error)+'</div>';
+    if(row.error)content+=scientificInspection.error(row.error,{state:row.state});
     if(row.review_id)content+='<div class="page-actions">'+button('spatial-item','Open saved view','data-kind="spatial_reviews" data-id="'+esc(row.review_id)+'"')+'</div>';
     if(row.summary)content+=defs({map_mode:row.summary.mode,coordinate_system:row.summary.view?.crs,extent:row.summary.view?.bounds,annotations:row.summary.marker_count});
     content+=customerReviews.mapActions(row);
@@ -555,7 +560,9 @@ async function openItem(kind,id,focus=true){
   if(kind==='runs'&&row.state==='complete')content+='<div class="page-actions">'+button('run-compare-selection','Compare this run','data-id="'+id+'"')+(extensions.hasView('run-revisions')?button('run-revision-open','Revise and compare','data-id="'+id+'"'):'')+'</div>';
   if(['sources','grids','runs','comparisons','deliveries','spatial_reviews'].includes(kind))content='<div class="page-actions">'+button('spatial-item','Open in spatial review','data-kind="'+kind+'" data-id="'+id+'"')+'</div>'+content;
   if(kind!=='deliveries')content+='<h3 class="subheading">Retained files</h3>'+fileList(row._downloads)+'<details class="technical"><summary>Original record, selection and provenance</summary><pre class="json-view">'+esc(pretty(Object.fromEntries(Object.entries(row).filter(([key])=>key!=='_downloads'))))+'</pre></details>';
-  detail(row.title||row.metadata?.title||row.spec?.title||row.selection?.title||viewLabels[kind]||human(kind),content,{kind,id,state:row.state});detailContext.files=row._downloads;
+  const inspectionTitle=row.title||row.metadata?.title||row.spec?.title||row.selection?.title||viewLabels[kind]||human(kind);
+  detail(inspectionTitle,content,{kind,id,state:row.state});detailContext.files=row._downloads;
+  if(kind!=='deliveries')scientificInspection.bind($('#detail-body'),{kind,record:row,title:inspectionTitle});
   if(['runs','scenarios','comparisons'].includes(kind))detailContext.footprintRevision=scenarioInputReview.revision();
   if(kind==='deliveries'){detailContext.deliveryRevision=deliveryRevision(row);deliveryInspection.mount($('#detail-body'));}
   if(kind==='portfolios'||kind==='portfolio_reports'){detailContext.portfolio=row;mountPortfolioDetail();}
@@ -631,11 +638,12 @@ async function showTask(id,focus=true,isCurrent=()=>true){
     catch(error){revisionActions='<div class="notice">'+esc('The revision link could not open: '+error.message)+'</div>';}
     if(workspace!==requestedWorkspace||request!==itemRequest||!isCurrent())return;
   }
-  const body='<div class="meta">'+badge(row.state)+'<span>'+esc(when(row.created_at))+'</span><span>'+row.attempts.length+' retained attempts</span></div>'+(row.error?'<div class="notice error">'+esc(row.error.message)+'</div>':'')+
+  const body='<div class="meta">'+badge(row.state)+'<span>'+esc(when(row.created_at))+'</span><span>'+row.attempts.length+' retained attempts</span></div>'+scientificInspection.task(row)+
   (row.result?.workspace_key?'<div class="notice"><strong>Original workspace restored</strong>'+button('workspace-select','Open restored copy','data-id="'+row.result.workspace_key+'"','small')+'</div>':'')+
   (row.action==='spatial.review.export'&&row.result?.id?'<div class="page-actions">'+itemButton('spatial_exports',row.result.id,'Open map pack')+'</div>':'')+
-  (row._item?'<div class="page-actions">'+itemButton(row._item.kind,row._item.id,'Open saved result')+'</div>':'')+scenarioInputReview.taskActions(row)+community.taskActions(row)+programmes.taskActions(row)+(extensions.hasView('receiving-waters')?'':receivingWaters.taskActions(row))+nativeJobs.taskActions(row)+customerReviews.taskActions(row)+experiments.taskActions(row)+parameterStudies.taskActions(row)+registeredActions+revisionActions+fileList(row._downloads||[])+'<div class="page-actions">'+(['failed','interrupted','cancelled'].includes(row.state)?button('task-resume','Resume original selection','data-id="'+row.id+'"','primary'):'')+(row.state==='queued'?button('task-cancel','Cancel before start','data-id="'+row.id+'"'):'')+'</div><details class="technical" open><summary>Original selected inputs and attempts</summary><pre class="json-view">'+esc(pretty(row))+'</pre></details>';
+  (row._item?'<div class="page-actions">'+itemButton(row._item.kind,row._item.id,'Open saved result')+'</div>':'')+scenarioInputReview.taskActions(row)+community.taskActions(row)+programmes.taskActions(row)+(extensions.hasView('receiving-waters')?'':receivingWaters.taskActions(row))+nativeJobs.taskActions(row)+customerReviews.taskActions(row)+experiments.taskActions(row)+parameterStudies.taskActions(row)+registeredActions+revisionActions+fileList(row._downloads||[])+'<div class="page-actions">'+(['failed','interrupted','cancelled'].includes(row.state)?button('task-resume','Resume original selection','data-id="'+row.id+'"','primary'):'')+(row.state==='queued'?button('task-cancel','Cancel before start','data-id="'+row.id+'"'):'')+'</div><details class="technical"><summary>Original selected inputs and attempts · JSON</summary><pre class="json-view">'+esc(pretty(row))+'</pre></details>';
   detail(actionLabels[row.action]||row.action,body,{kind:'task',id,state:row.state});detailContext.files=row._downloads||[];
+  scientificInspection.bind($('#detail-body'),{kind:'task',record:row,title:actionLabels[row.action]||row.action});
   if(focus)$('#detail-body').scrollTop=0;
 }
 
@@ -1298,7 +1306,7 @@ function observationForm(){
      if(formContext.observationHeaders)for(const key of keys){const selected=value.columns?.[key]??key;setOptions(form.elements.namedItem('column_'+key),formContext.observationHeaders.map(x=>[x,x]),formContext.observationHeaders.includes(selected)?selected:'');}
      syncContextColumns();
      $('#form-error').hidden=true;
-    }catch(error){if(current()){context.observationMetadata=null;context.observationMetadataFile=null;context.observationMetadataError=error.message;$('#form-error').textContent=error.message;$('#form-error').hidden=false;}}
+    }catch(error){if(current()){context.observationMetadata=null;context.observationMetadataFile=null;context.observationMetadataError=error.message;$('#form-error').innerHTML=scientificInspection.error(error);$('#form-error').hidden=false;}}
     finally{if(current()){context.observationMetadataLoading=false;syncContextColumns();}}
    });
   form.elements.namedItem('observation_file').addEventListener('change',async()=>{
@@ -1315,7 +1323,7 @@ function observationForm(){
     for(const key of keys){const selected=context.observationMetadata?.columns?.[key]??key;setOptions(form.elements.namedItem('column_'+key),headers.map(x=>[x,x]),headers.includes(selected)?selected:'');}
     $('#csv-header-note').textContent=headers.length+' original CSV fields: '+headers.join(', ');syncContextColumns();
     $('#form-error').hidden=true;
-   }catch(error){if(current()){context.observationCSVError=error.message;$('#form-error').textContent=error.message;$('#form-error').hidden=false;}}
+   }catch(error){if(current()){context.observationCSVError=error.message;$('#form-error').innerHTML=scientificInspection.error(error);$('#form-error').hidden=false;}}
    finally{if(current())context.observationCSVLoading=false;}
   });
  });
@@ -1465,9 +1473,11 @@ async function inspectSource(collection,id,layer,{isCurrent=()=>true}={}){
   connectionEpoch===requested.connectionEpoch&&navigationRevision===requested.navigationRevision&&
   itemRequest===requested.itemRequest&&isCurrent();
  if(!current())return null;
+ detail('Reading original source','<section class="scientific-section" role="status"><h3>Reading the selected native file…</h3><p>The original file, field schema and coordinate information are being opened. You may close this view without changing the source.</p></section>',{kind:'source-loading',id,collection});
+ requested.itemRequest=itemRequest;
  let value;
  try{value=await api(endpoint('/api/source-info',{collection,source:id,...(layer?{layer}:{})}));}
- catch(error){if(!current())return null;throw error;}
+ catch(error){if(!current())return null;detail('Original source could not be opened',scientificInspection.error(error)+'<div class="page-actions">'+button('source-inspect','Try reading this original source again','data-collection="'+esc(collection)+'" data-source="'+esc(id)+'"'+(layer?' data-layer="'+esc(layer)+'"':''))+'</div>',{kind:'source-error',id,collection});return null;}
  if(!current())return null;
  const entry=value.source;
  let html='<div class="meta"><span>'+esc(entry.kind)+'</span><span>'+esc(entry.vintage)+'</span><span>'+esc(entry.units||'')+'</span></div><p>'+external(entry.uri)+'</p>';
@@ -1476,11 +1486,12 @@ async function inspectSource(collection,id,layer,{isCurrent=()=>true}={}){
  if(entry.kind==='raster')html+=defs({width:value.width,height:value.height,bands:value.count,coordinate_reference_system:value.crs,pixel_resolution:value.resolution,bounds:value.bounds,types:value.dtypes,nodata:value.nodata});
  if(value.sample){
   const columns=value.columns||Object.keys(value.sample[0]||{});
-  html+='<h3 class="subheading">Original source preview</h3><p class="note">First '+value.sample.length+' retained rows. Download the original file for the complete source.</p>'+table(columns,value.sample.map(row=>'<tr>'+columns.map(k=>'<td>'+esc(typeof row[k]==='object'?JSON.stringify(row[k]):row[k])+'</td>').join('')+'</tr>'));
+  html+='<h3 class="subheading">Original source preview</h3>'+(value.sample.length?'<p class="note">First '+value.sample.length+' retained rows. Download the original file for the complete source.</p>'+table(columns,value.sample.map(row=>'<tr>'+columns.map(k=>'<td>'+scientificValue(row[k],k,{data:state?.data,collectionId:collection})+'</td>').join('')+'</tr>')):'<p class="note">The original source returned no preview rows. Its retained file remains available below; no measurement or feature is invented for this view.</p>');
  }
  if(['raster','vector'].includes(entry.kind))html+='<div class="page-actions">'+button('spatial-item','Open in spatial review','data-kind="source-info" data-id="'+esc(id)+'" data-collection="'+esc(collection)+'"')+'</div>';
  html+='<h3 class="subheading">Exact original file</h3>'+fileList([value.download])+'<details class="technical"><summary>Retained metadata</summary><pre class="json-view">'+esc(pretty(value))+'</pre></details>';
  detail(entry.title,html,{kind:'source-info',id,collection});detailContext.files=[value.download];
+ scientificInspection.bind($('#detail-body'),{kind:'source-info',record:value,title:entry.title||sourceDisplayTitle(entry)});
  $('#source-layer')?.addEventListener('change',()=>inspectSource(collection,id,$('#source-layer').value).catch(globalError));
 }
 async function inspectFormVector(button){
@@ -1555,7 +1566,7 @@ async function dispatch(button){
  if(action==='item')return openItem(button.dataset.kind,id);
  if(action==='source-open')return sourceForm();
  if(action==='source-reports-open'){sourceReports.focus();return;}
- if(action==='source-inspect')return inspectSource(button.dataset.collection,button.dataset.source);
+ if(action==='source-inspect')return inspectSource(button.dataset.collection,button.dataset.source,button.dataset.layer);
  if(action==='profile-new'||action==='profile-clone')return profileForm(id);
  if(action==='grid-new'||action==='grid-clone')return gridForm(id);
  if(action==='scenario-new'||action==='scenario-clone')return scenarioForm(id);
@@ -1631,7 +1642,7 @@ document.addEventListener('click',async event=>{
  const interaction=admissionContext(button.dataset.action,null),context=formContext;
  try{clearError();await dispatch(button);}catch(error){
   if(currentAdmission(interaction,{details:false})){
-   if(formDialog.open&&formContext===context){$('#form-error').textContent=error.message;$('#form-error').hidden=false;}
+   if(formDialog.open&&formContext===context){$('#form-error').innerHTML=scientificInspection.error(error);$('#form-error').hidden=false;}
    else if(!formDialog.open)globalError(error);
   }
  }
@@ -1643,7 +1654,7 @@ form.addEventListener('submit',async event=>{
  try{await current.onSubmit();}
  catch(error){
   if(formContext===current&&workspace===current.workspace&&connectionEpoch===epoch){
-   $('#form-error').textContent=error.message;$('#form-error').hidden=false;
+   $('#form-error').innerHTML=scientificInspection.error(error);$('#form-error').hidden=false;
    $('#form-progress').textContent=current.acceptedTask?
     'Operation retained. Open Tasks to inspect the saved operation.':
     'Draft retained in this form. Correct the selection or retry the same request.';

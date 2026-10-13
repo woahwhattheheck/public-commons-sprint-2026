@@ -82,6 +82,13 @@ export function createMeasurementHandler({directory,base=DEFAULT_BASE,fetcher=gl
         if(input.format==='csv')send(response,200,calibrationCSV(value),'text/csv; charset=utf-8','calibration-input.csv');else send(response,200,value);return;
       }
       if(method==='POST'&&parts[0]==='paired-loads'){send(response,200,pairedLoads(s,await readBody(request)));return;}
+      if(method==='GET'&&parts[0]==='exports'&&parts.length===1){
+        const offset=Number(query.offset??0),limit=Number(query.limit??20);
+        if(!Number.isSafeInteger(offset)||offset<0||!Number.isSafeInteger(limit)||limit<1||limit>100)throw new InputError('Choose a nonnegative offset and a result page size from 1 to 100.');
+        const value=s.readConsistent(()=>({total:s.db.prepare('SELECT COUNT(*) n FROM exports').get().n,offset,limit,
+          rows:s.db.prepare('SELECT id,kind,created_at AS createdAt,revision AS workspaceRevision FROM exports ORDER BY created_at DESC,id DESC LIMIT ? OFFSET ?').all(limit,offset)}));
+        send(response,200,value);return;
+      }
       if(method==='GET'&&parts[0]==='exports'&&parts[1]){const row=s.db.prepare('SELECT content FROM exports WHERE id=?').get(parts[1]);if(!row)throw new InputError('Export not found',404);send(response,200,JSON.parse(row.content),'application/json; charset=utf-8','measurement-export.json');return;}
       if(method==='GET'&&parts[0]==='portable'){send(response,200,s.portable(),'application/json; charset=utf-8','upper-savannah-measurements.json');return;}
       if(method==='POST'&&parts[0]==='receive'){send(response,201,s.receive(await readBody(request)));return;}
