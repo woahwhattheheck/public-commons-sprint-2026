@@ -174,7 +174,8 @@ export async function receivePropertyOperations(originalInput){
    run.receiving={report:result.report,...await identity(result.report),snapshot:result.snapshot,propertyId:result.propertyId,revision:result.propertyRevision};journal.propertyId=result.propertyId;await save();
    if(input.browser&&!run.browser){
     run.browser=await receivePropertyBrowser({url:ready.url,createdAt:input.expectedCreatedAt,propertyId:journal.propertyId,
-     outputDirectory:join(customer,'browser',purpose,run.id),playwrightModule:input.browser.playwrightModule,executablePath:input.browser.executablePath});await save();
+     outputDirectory:join(customer,'browser',purpose,run.id),inspectionDirectory:join(output,'private','browser-inspection',purpose,run.id),
+     playwrightModule:input.browser.playwrightModule,executablePath:input.browser.executablePath});await save();
    }
    await closeRun(run,{requireNormal:true});
    const raw=await readJSON(join(input.workspaceDirectory,'workspace.json'));const rawFile=join(customer,'application',purpose+'-workspace.json');await writeJSON(rawFile,raw);

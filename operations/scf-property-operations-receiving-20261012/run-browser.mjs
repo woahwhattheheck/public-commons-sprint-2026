@@ -1,13 +1,15 @@
 // MIT. Read-only receiving of the original Property Operations browser while its owner stays open.
 import {join,resolve,isAbsolute} from 'node:path';
 import {pathToFileURL} from 'node:url';
-import {identity,need,now,writeJSON,view,directory} from './io.mjs';
-export async function receivePropertyBrowser({url,createdAt,propertyId,outputDirectory,playwrightModule,executablePath}){
+import {identity,need,now,writeJSON,view,directory,separate} from './io.mjs';
+export async function receivePropertyBrowser({url,createdAt,propertyId,outputDirectory,inspectionDirectory,playwrightModule,executablePath}){
  need(typeof url==='string'&&new URL(url).hostname==='127.0.0.1'&&isAbsolute(playwrightModule)&&isAbsolute(executablePath),'PROPERTY_BROWSER_INPUT');
- const playwright=await import(pathToFileURL(resolve(playwrightModule)));
- need(playwright.chromium?.launch,'PROPERTY_BROWSER_RUNTIME');
+ separate(outputDirectory,inspectionDirectory);separate(inspectionDirectory,outputDirectory);
+ const namespace=await import(pathToFileURL(resolve(playwrightModule)));
+ const playwright=namespace.chromium?namespace:namespace.default;
+ need(playwright?.chromium?.launch,'PROPERTY_BROWSER_RUNTIME');
  const executable=await identity(executablePath),source=await identity(playwrightModule);
- await directory(outputDirectory,{create:true});let browser=null,context=null,primary=null;const errors=[],rejected=[],requests=[],pages=[];
+ await directory(outputDirectory,{create:true});await directory(inspectionDirectory,{create:true});let browser=null,context=null,primary=null;const errors=[],rejected=[],requests=[],pages=[];
  try{
   browser=await playwright.chromium.launch({executablePath,headless:true,args:['--no-sandbox','--disable-dev-shm-usage']});
   context=await browser.newContext({viewport:{width:1440,height:1000},acceptDownloads:true});
@@ -52,8 +54,8 @@ export async function receivePropertyBrowser({url,createdAt,propertyId,outputDir
    pages.push({section:'property/'+tab,characters:(await page.locator('[data-property-tab="'+tab+'"]').innerText()).length,visible:true});
   }
   await page.locator('.property-tabs button[data-tab="sources"]').click();
-  await page.screenshot({path:join(outputDirectory,'Property_Desktop.png'),fullPage:true});
-  await page.setViewportSize({width:390,height:844});await page.screenshot({path:join(outputDirectory,'Property_Mobile.png'),fullPage:true});
+  await page.screenshot({path:join(inspectionDirectory,'Property_Desktop.png'),fullPage:true});
+  await page.setViewportSize({width:390,height:844});await page.screenshot({path:join(inspectionDirectory,'Property_Mobile.png'),fullPage:true});
   const dimensions=await page.evaluate(()=>({viewport:innerWidth,document:document.documentElement.scrollWidth}));
   need(errors.length===0&&rejected.length===0,'PROPERTY_BROWSER_READ_FAILED');
   const report={schema:'stellar-forge.property-browser-receiving.v1',status:'COMPLETE',createdAt,propertyId,source,executable,
