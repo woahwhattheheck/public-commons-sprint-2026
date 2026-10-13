@@ -91,6 +91,13 @@ export async function assertDeliveryLease(lease, directory) {
     throw new Error('SF98_DELIVERY_LOCK_REPLACED');
 }
 
+// Inherit the same flock open-file description in an owned child. The caller
+// must drain that child before releasing this lease; no new lock is acquired.
+export async function deliveryLeaseDescriptor(lease, directory) {
+  await assertDeliveryLease(lease, directory);
+  return holders.get(lease).handle.fd;
+}
+
 export async function withDeliveryLease(directory, operation, options) {
   const lease = await acquireDeliveryLease(directory, options);
   try { return await operation(lease); }
