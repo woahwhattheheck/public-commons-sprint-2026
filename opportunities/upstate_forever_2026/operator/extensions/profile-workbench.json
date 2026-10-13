@@ -2,7 +2,7 @@
   "schema": "upstate.operator-extension/v1",
   "id": "profile-workbench",
   "title": "Profile workbench",
-  "version": "8",
+  "version": "9",
   "order": 25,
   "assets": [
     "profile_workbench.mjs",
@@ -11,7 +11,10 @@
     "biophysical_evidence.mjs",
     "biophysical_authoring_core.mjs",
     "biophysical_authoring.mjs",
-    "management_cases.mjs"
+    "management_cases.mjs",
+    "profile_workbook_return.mjs",
+    "profile_workbook_return_storage.mjs",
+    "profile_workbook_return.css"
   ],
   "backend": {
     "module": "profile_workbench",
@@ -34,7 +37,8 @@
       "profile.biophysical.authoring.save",
       "profile.biophysical.authoring.register",
       "profile.management.prepare",
-      "profile.management.experiment.prepare"
+      "profile.management.experiment.prepare",
+      "profile.workbook_return.create"
     ],
     "invoke": {
       "handler": "invoke",
@@ -333,6 +337,84 @@
           "operation",
           "payload"
         ]
+      },
+      {
+        "methods": [
+          "POST"
+        ],
+        "path": "/api/profile-workbench/workbook-return/catalog",
+        "operation": "workbook-return-catalog",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "POST"
+        ],
+        "path": "/api/profile-workbench/workbook-return/profile",
+        "operation": "workbook-return-profile",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "POST"
+        ],
+        "path": "/api/profile-workbench/workbook-return/book",
+        "operation": "workbook-return-book",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "POST"
+        ],
+        "path": "/api/profile-workbench/workbook-return/preview",
+        "operation": "workbook-return-preview",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "POST"
+        ],
+        "path": "/api/profile-workbench/workbook-return/inspect",
+        "operation": "workbook-return-inspect",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "POST"
+        ],
+        "path": "/api/profile-workbench/workbook-return/operation",
+        "operation": "workbook-return-operation",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
       }
     ],
     "decorate_task": {
@@ -359,7 +441,8 @@
       "openDesk"
     ],
     "styles": [
-      "/web/profile_workbench.css"
+      "/web/profile_workbench.css",
+      "/web/profile_workbook_return.css"
     ],
     "view": {
       "id": "profile-workbench",
