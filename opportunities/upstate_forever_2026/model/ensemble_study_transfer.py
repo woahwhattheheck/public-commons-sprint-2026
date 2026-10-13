@@ -266,6 +266,76 @@ def _local_release(closure, key, ensemble_id, expected=None):
     closure.tree(prefix.rstrip("/"))
 
 
+def _archived_paired_report(closure, key, product, selection):
+    """Verify the frozen report through its original complete result archive."""
+    import hashlib
+    import json
+    import zipfile
+    from .paired_ensemble.ensemble_portable import _manifest
+    from .paired_ensemble.ensemble_store import fingerprint
+
+    descriptor = product.get("archive")
+    if not isinstance(descriptor, dict):
+        raise ValueError("The captured paired report needs its original result archive")
+    relative = _relative(descriptor.get("path"))
+    path = closure.add_file(relative, descriptor)
+    expected = {field: descriptor[field] for field in ("bytes", "sha256")}
+    token = (relative, expected["bytes"], expected["sha256"], key, product["report_signature"])
+    verified = getattr(closure, "_captured_paired_report_archives", set())
+    if token in verified:
+        return
+    if fingerprint(path) != expected:
+        raise ValueError("The original paired result archive changed")
+
+    with zipfile.ZipFile(path, "r", allowZip64=True) as archive:
+        manifest, _ = _manifest(archive, None)
+        if manifest.get("ensemble_id") != key:
+            raise ValueError("The captured result archive belongs to another paired analysis")
+
+        def record(name):
+            member = manifest["members"].get(name)
+            if member is None or member["bytes"] > 64 * 1024 ** 2:
+                raise ValueError("The captured paired metadata is missing or exceeds its reader capacity: " + name)
+            raw = archive.read(name)
+            if (len(raw) != member["bytes"]
+                    or hashlib.sha256(raw).hexdigest() != member.get("sha256")):
+                raise ValueError("The captured paired metadata changed: " + name)
+            return json.loads(raw, parse_constant=lambda value: (_ for _ in ()).throw(
+                ValueError("Nonfinite captured paired metadata: " + value)))
+
+        original = record("analysis.json")
+        reports = record("reports.json")
+        if (original.get("schema") != "upstate.paired-raster-ensemble/v1"
+                or original.get("id") != key or original.get("state") != "complete"
+                or original.get("selection") != selection
+                or digest(original.get("selection")) != key):
+            raise ValueError("The captured paired archive changed its original native selection")
+        if (reports.get("ensemble_id") != key
+                or digest(reports) != product["report_signature"]):
+            raise ValueError("The paired archive changed its captured report edition")
+        artifacts = original.get("artifacts")
+        report_files = reports.get("files")
+        if not isinstance(artifacts, dict) or not isinstance(report_files, list):
+            raise ValueError("Retain the complete original quantitative and report inventory")
+        for item in [*artifacts.values(), *report_files]:
+            if not isinstance(item, dict):
+                raise ValueError("A captured paired member needs its original byte descriptor")
+            name = _relative(item.get("path"))
+            member = manifest["members"].get(name)
+            if (member is None or any(item.get(field) != member.get(field)
+                                      for field in ("bytes", "sha256"))):
+                raise ValueError("The captured paired inventory differs from its original archive: " + name)
+        provenance = reports.get("native_provenance")
+        if provenance is not None and provenance not in report_files:
+            raise ValueError("The captured paired report lost its original runtime provenance")
+
+    # The closure records the archive before reading it. Recheck that same file
+    # identity after metadata inspection without hashing a large raster ZIP twice.
+    closure.add_file(relative, descriptor)
+    verified.add(token)
+    closure._captured_paired_report_archives = verified
+
+
 def _local_paired_products(closure, plan, *, operation=None):
     """Retain the original paired rasters named by this native course."""
     if operation is None:
@@ -329,9 +399,12 @@ def _local_paired_products(closure, plan, *, operation=None):
         report_path = prefix + "reports.json"
         if product.get("report_signature") is not None:
             reports = closure.read(report_path)
-            if (reports.get("ensemble_id") != key
-                    or digest(reports) != product["report_signature"]):
-                raise ValueError("The paired product changed its captured report edition")
+            if reports.get("ensemble_id") != key:
+                raise ValueError("The editable paired report belongs to another analysis")
+            if digest(reports) != product["report_signature"]:
+                _archived_paired_report(closure, key, product, selected)
+            # A later report may add recipient maps or formatting while the
+            # captured course keeps its own immutable archive. Carry both editions.
             closure._descriptors(reports.get("files", []), prefix)
         if product.get("archive") is not None:
             closure._descriptors(product["archive"])
