@@ -27,7 +27,7 @@ export function createMultivariateControlWorkbench(host){
    '<label class="mc-wide"><span>Scientific reason and comparison question</span><textarea data-mc-field="reason" rows="3">'+esc(d.reason)+'</textarea></label>'+
    select("baseline_run_id","Original baseline run",catalog.baselines.map(x=>option(x.id,(x.title||x.id)+" · "+x.state,d.baseline_run_id)).join(""))+
    select("restoration_footprint_id","Actual restoration footprint",catalog.restorations.map(x=>option(x.id,(x.title||x.id)+" · run "+x.run_id,d.restoration_footprint_id)).join(""))+
-   '</div><p>Select the prepared covariates to constrain. Exact land-cover transitions remain separate. Every original changed treatment cell stays in the design. Bounds divide each covariate into intervals; the first and last intervals remain open. Blank bounds create a single interval and do not constrain that covariate. An included covariate still requires valid values at all treatment cells, even with no boundaries; disable it to keep it descriptive only.</p>'+
+   '</div>'+(!catalog.restorations.length?'<p class="mc-callout">No saved restoration footprint is available yet. Open Scenario footprints, select the actual original restoration run and prepare its footprint, then return here. This compiles the original land-cover change without rerunning the nutrient or sediment models.</p>':'')+'<p>Select the prepared covariates to constrain. Exact land-cover transitions remain separate. Every original changed treatment cell stays in the design. Bounds divide each covariate into intervals; the first and last intervals remain open. Blank bounds create a single interval and do not constrain that covariate. An included covariate still requires valid values at all treatment cells, even with no boundaries; disable it to keep it descriptive only.</p>'+
    table(["Include prepared covariate","Original units and range","Increasing interval boundaries"],ROLES.map(role=>['<label class="mc-check"><input type="checkbox" data-mc-enabled="'+role+'" '+(d.enabled[role]?"checked":"")+' '+(!restored?.scalars?.[role]?"disabled":"")+'>'+esc(label[role])+'</label>',esc(restored?.scalars?.[role]?.units||"Choose a footprint")+"<small>"+esc(numeric(restored?.scalars?.[role]?.minimum))+" to "+esc(numeric(restored?.scalars?.[role]?.maximum))+"</small>",'<label><span class="mc-sr">'+esc(label[role])+' boundaries</span><input data-mc-boundaries="'+role+'" value="'+esc(d.boundaries[role])+'" placeholder="Enter increasing boundaries"></label>']))+
    '<h3>Additional original covariates</h3><p>Slope and stream connectivity are matched only when you select aligned source rasters below. Elevation does not substitute for slope. Describe the physical meaning of each selected source.</p>'+
    ["SLOPE","CONNECTIVITY"].map(role=>{const x=d.optional[role];return '<section class="mc-optional"><label class="mc-check"><input type="checkbox" data-mc-optional="'+role+'" data-mc-part="enabled" '+(x.enabled?"checked":"")+'>Include '+esc(label[role])+'</label>'+(x.enabled?'<div class="mc-grid"><label><span>Original source and units</span><select data-mc-optional="'+role+'" data-mc-part="source">'+option("","Choose an aligned original raster",x.source)+list(catalog.covariate_sources).map(y=>option(exclusionKey(y),(y.title||y.source_id)+" · "+y.units,x.source)).join("")+'</select></label><label><span>Increasing boundaries</span><input data-mc-optional="'+role+'" data-mc-part="boundaries" value="'+esc(x.boundaries)+'"></label><label class="mc-wide"><span>What this raster measures</span><textarea data-mc-optional="'+role+'" data-mc-part="definition">'+esc(x.definition)+'</textarea></label></div>':"")+'</section>';}).join("")+
@@ -64,7 +64,7 @@ export function createMultivariateControlWorkbench(host){
  }
  function render(){
   if(!node)return;
-  node.innerHTML='<div class="mc-desk" data-mc-desk><header class="page-header"><div><p class="eyebrow">UPPER SAVANNAH MODELING</p><h1>Matched controls</h1><p>Prepare, inspect and run source-bound counterfactual land-cover controls.</p></div><div class="mc-actions">'+button("reload","Refresh retained designs")+button("export","Export desk choices")+button("import","Reopen desk choices")+button("backup","Export original Workspace")+'</div></header>'+
+  node.innerHTML='<div class="mc-desk" data-mc-desk><header class="page-header"><div><p class="eyebrow">UPPER SAVANNAH MODELING</p><h1>Matched controls</h1><p>Prepare, inspect and run source-bound counterfactual land-cover controls.</p></div><div class="mc-actions">'+button("reload","Refresh retained designs")+button("footprints","Scenario footprints")+button("sources","Original sources")+button("export","Export desk choices")+button("import","Reopen desk choices")+button("backup","Export original Workspace")+'</div></header>'+
    '<div role="alert" data-mc-error hidden></div><div role="status" aria-live="polite" data-mc-notice hidden></div>'+
    '<input type="file" accept=".json,application/json" data-mc-import hidden>'+
    '<section class="mc-section" data-mc-form>'+form()+'</section>'+
@@ -132,6 +132,8 @@ export function createMultivariateControlWorkbench(host){
   const action=target.dataset.mcAction, clickWorkspace=workspace, clickGeneration=generation;
   try{
    if(action==="reload"){await loadCatalog();return;}
+   if(action==="footprints"){await host.navigate("scenario-footprint");return;}
+   if(action==="sources"){await host.navigate("sources");return;}
    if(action==="export"){if(!desk)throw Error("Load the original project first.");download(desk,"matched-control-desk.json");return;}
    if(action==="import"){node.querySelector("[data-mc-import]").click();return;}
    if(action==="backup"){await host.openBackup();return;}
@@ -147,7 +149,7 @@ export function createMultivariateControlWorkbench(host){
    if(action==="clone"){if(!result)throw Error("Open an original design first.");const next=clone(desk);next.draft=draftFromSelection(result.selection);write(next);preview=null;message="Original choices copied into the editable draft. Change a scientific choice to prepare a new design.";render();return;}
    if(action==="preview"){
     const selection=selectionFromDraft(desk.draft,catalog),w=workspace,g=generation,fingerprint=canonical(selection);
-    busy=true;error="";render();
+    busy=true;error="";message="Reviewing the original source bindings…";render();
     try{const value=await read("preview",{selection},w);if(active(w,g)&&fingerprint===canonical(selectionSafely())){preview=value;message="Original sources bound. Preparation will verify these same inputs.";}}
     finally{if(active(w,g)){busy=false;render();}}return;
    }
