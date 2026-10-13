@@ -46,8 +46,8 @@
     },
     {
       "path": "measurement_workspace/engine/cli.mjs",
-      "bytes": 19364,
-      "sha256": "ffc9452237f659a1cf0ba883e0e58c4402bcb767bbb0d3a9d5733e63ab33a639",
+      "bytes": 21637,
+      "sha256": "25cf788d40f621d8160bc3d50137b59c1e9d1fea20e4cc0fd015ee9246089ece",
       "role": "patch"
     },
     {
@@ -142,8 +142,8 @@
     },
     {
       "path": "measurement_workspace/engine/workspace.mjs",
-      "bytes": 24178,
-      "sha256": "f8edf6c7049d294fca42ff06fbb4981c89343042976f132f2c87aeb8fc0934a9",
+      "bytes": 24381,
+      "sha256": "5f8943af96e650d5712744e163f3f5d38f78c3db43083b822826613cbefc6acb",
       "role": "patch"
     },
     {
@@ -184,8 +184,8 @@
     },
     {
       "path": "measurement_workspace/operator.py",
-      "bytes": 11069,
-      "sha256": "9fc9d66ed2def7e31e5eb8a13652f364373d62960ca07d1ebd9e285b06a75e08",
+      "bytes": 11150,
+      "sha256": "9d0cbd0a540eb0a58da391a9432cfc4b4a28dadaa2e6678c15ad151c2440b56b",
       "role": "patch"
     },
     {
@@ -208,14 +208,14 @@
     },
     {
       "path": "measurement_workspace/web/collections.mjs",
-      "bytes": 32288,
-      "sha256": "4a600961950996a56ac2cf7a55d17399584034ec71eedc3bdf136c3c6cce5b84",
+      "bytes": 32497,
+      "sha256": "003a69b436f058677b9a031be8c327295143d01f592dd05f42439feb3ecc02c4",
       "role": "native"
     },
     {
       "path": "measurement_workspace/web/extension.mjs",
-      "bytes": 11061,
-      "sha256": "b4b8564e480eb14386f42f4a69c6c9ec29b7e18da9f1b2fbfe52e25175ec45f0",
+      "bytes": 11569,
+      "sha256": "e0d1720593fa811d052ba4a38d4102ca37c001d6bb3375b56e725ad773f0c306",
       "role": "patch"
     },
     {
@@ -256,8 +256,8 @@
     },
     {
       "path": "operator/extensions/measured-observations.json",
-      "bytes": 2711,
-      "sha256": "c8230ead4c4d6e4ffa9cde3483758490e1a1898c9bc365ef21e0f250269d2585",
+      "bytes": 2773,
+      "sha256": "d9d5d444876604f9b516e76dbd141a43b18a5f913f7c5d01a61e983e541004bc",
       "role": "native"
     },
     {

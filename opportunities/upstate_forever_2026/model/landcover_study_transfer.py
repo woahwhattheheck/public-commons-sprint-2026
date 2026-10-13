@@ -38,6 +38,38 @@ def _body(closure, descriptor):
     return closure.read(descriptor["object"])
 
 
+def _timeline_references(selection, binding, report):
+    """Bind explicit chronology to retained source records without a raster import."""
+    annual = selection.get("annual_sources")
+    if (not isinstance(annual, list) or len(annual) < 2
+            or any(not isinstance(item, dict) or set(item) != {
+                "year", "source_collection_id", "source_id", "band"} for item in annual)):
+        raise ValueError("Timeline Study needs every original year, source and band")
+    years = [item["year"] for item in annual]
+    if (any(type(year) is not int or not 1 <= year <= 9999 for year in years)
+            or any(first >= second for first, second in zip(years, years[1:]))):
+        raise ValueError("Timeline Study changed its explicit observation chronology")
+    references = []
+    for item in annual:
+        choice = {key: value for key, value in item.items() if key != "year"}
+        identifier(choice["source_collection_id"])
+        if (not isinstance(choice["source_id"], str) or not choice["source_id"].strip()
+                or type(choice["band"]) is not int or choice["band"] < 1):
+            raise ValueError("Timeline Study changed an original source or band")
+        references.append(choice)
+    if len({digest(choice) for choice in references}) != len(references):
+        raise ValueError("Timeline Study repeats an original source band")
+    timeline = report.get("timeline")
+    if (not isinstance(timeline, dict)
+            or timeline.get("schema") != "upstate.landcover-timeline/v1"
+            or timeline.get("years") != years
+            or report.get("options", {}).get("support_scope") != "all"
+            or selection.get("options", {}).get("support_scope", "all") != "all"):
+        raise ValueError("Timeline Study lost its complete common-support chronology")
+    identifier(binding.get("temporal_reducer_sha256"))
+    return references
+
+
 def _captured(closure, entry):
     recipe = _body(closure, entry["body"])
     metadata = entry["metadata"]
@@ -96,7 +128,7 @@ def _captured(closure, entry):
             or origin.get("area_basis") != report.get("grid", {}).get("area_basis")):
         raise ValueError("Land-cover source changed its saved ledger or original binding")
     selection = binding["selection"]
-    source_mode = selection.get("input_mode") == "sources"
+    source_mode = selection.get("input_mode") in ("sources", "timeline")
     if (binding.get("schema") != (SOURCE_BINDING if source_mode else RUN_BINDING)
             or origin.get("input_mode") != selection.get("input_mode", "runs")):
         raise ValueError("Land-cover source changed its original operand mode")
@@ -123,7 +155,10 @@ def _captured(closure, entry):
             selection.get("baseline_run_id"), *selection.get("alternative_run_ids", [])]:
         raise ValueError("Land-cover source changed its ordered native runs")
     if source_mode:
-        references = [selection.get("baseline_source"), *selection.get("alternative_sources", [])]
+        if selection.get("input_mode") == "timeline":
+            references = _timeline_references(selection, binding, report)
+        else:
+            references = [selection.get("baseline_source"), *selection.get("alternative_sources", [])]
         if [row.get("source_selection") for row in operands] != references:
             raise ValueError("Land-cover source changed its ordered raster sources or bands")
         keys = ["source-" + digest(choice)[:20] for choice in references[1:]]

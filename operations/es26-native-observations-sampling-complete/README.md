@@ -6,12 +6,18 @@ This is a guarded feature overlay for an existing complete application. The actu
 
 ## Exact source artifacts
 
-- `source-20261013.json`: 4,076,047 bytes; SHA256 `431f07fe027207b2b4744dbeddc7e04bee27d9e6e3cd0b0275a2555e12ce10ec`.
-- `native-observations-sampling-source-20261013.zip`: 1,032,950 bytes; SHA256 `bb71b3333891f3f059a89e0da1aa3b6a4f1162421435853d996eb0fa67cf0c8f`.
-- 186 application-relative members; 3,733,821 total source bytes. Every ZIP member was reopened and compared with its declared original source bytes, CRC and SHA256.
+- `source-20261013.json`: 4,077,121 bytes; SHA256 `522765606f9327def068c4d14ea44891d1cdbc87139d6e1d43a2623485b468c3`.
+- `native-observations-sampling-source-20261013.zip`: 1,032,930 bytes; SHA256 `d8179b488d583c4357f2f1789802e7de12a83b15782eb9cea8d0596820bb7587`.
+- 186 application-relative members; 3,733,767 total source bytes. Every ZIP member was reopened and compared with its declared original source bytes, CRC and SHA256.
 - The updated full 18-file feature packet remains at `operations/es26-native-observations-sampling/source-20261013.json`. Its original preimages and source base remain retained alongside the three follow-up source corrections.
 
 The carrier composes merged PR4817 with three reviewed integration corrections: preserve absent versus explicit-null historical support fields; display every exact cohort field, presence and value; and document the original 45-input preparation command. All current SV833 native fields exist, so the historical-presence correction does not alter its authored source support. No native execution or visual acceptance is claimed by this source carrier.
+
+## Component schema correction
+
+This edition removes only the empty `retained_only` extension fields from its original `terrain-study-transfer.json` and `monitoring-native-evidence.json`. The maintained component loader accepts only `paths`, `requires`, `import_roots` and `source_manifests`; the empty unsupported keys blocked source assembly before any scientific processing. Every declared source path, dependency and scientific body remains unchanged.
+
+The separate advancing Conservation-to-Sampling feature has newer original Monitoring source and component bodies. This 186-file overlay retains its own prior feature edition; it must not overwrite those later bodies. The installer reports such conflicts and preserves the current source. Consume the Conservation owner's complete successor, including its matching installer and schema correction, when that family is present. The two unrelated original Headwaters fragment identity repairs are separately merged in PR4836.
 
 ## Consume in the same original receiving course
 

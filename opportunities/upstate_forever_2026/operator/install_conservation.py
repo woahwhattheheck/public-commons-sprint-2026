@@ -16,6 +16,7 @@ import re
 import tempfile
 
 OWNED = frozenset({
+    "integration/component_fragments/conservation-joint-choices.json",
     "model/conservation_joint_choices.py",
     "operator/web/conservation_joint_choices.mjs",
     "CONSERVATION_JOINT_CHOICES.md",
@@ -120,6 +121,7 @@ OWNED = frozenset({
 })
 SCHEMA = "upstate.conservation-addon/v1"
 KNOWN_PRIOR = {
+    "CONSERVATION_JOINT_CHOICES.md": ["9b7d99a7ac1365904e8ab77293900ea4ef9bad79574365ca2142e6a829247369"],
     "model/conservation_report_maps.py": [
         "f1d494b72926a93762812c35478971a2e73ddf4484434be0e8b4a6f789b40158"
     ],
@@ -197,6 +199,7 @@ KNOWN_PRIOR = {
         "7478f563ff1ee1a2626b06df63e62a59c25277a91ad28d217fba7f4fe0ab7949"
     ],
     "operator/install_conservation.py": [
+        "c3c00af15b43415285e164cac76cac6739111272ac0ffbc45d32d3b79a11d8c5",
         "77c515d812cd3a1aac24681881760611dd78dccd8cac0458ff947a4cc86b33e4",
         "920c83ab79a998750b34a6fa49f014575b873f1b41d655baaa66d0db0dbc8aff",
         "c9aaa958816139e151fd99cc194deac931186783563738119e7b4ae69a413696",
@@ -435,6 +438,7 @@ KNOWN_PRIOR = {
         "e79a634aa44a5f4061d4123590a5ad3c4f592bb3eb196f0c4bb377665511c788"
     ],
     "operator/extensions/conservation.json": [
+        "bf37aef817918dfb337a00867e65b452e07c6264aa3375832861b7c09efa882e",
         "749b35c774827e15e732d31a11766afb5a05f6bf3abd3bb33d2118e5afdd0550",
         "3211e501743819a2d25e7c47e499d4705e57009db297ef476b09e8c19f722093"
     ],
@@ -1078,11 +1082,16 @@ def read_packet(path):
     if joint_requested or joint_ui_requested:
         needed.update({"model/conservation_joint_choices.py",
                        "operator/web/conservation_joint_choices.mjs",
+                       "integration/component_fragments/conservation-joint-choices.json",
+                       "operator/extensions/conservation.json",
                        "CONSERVATION_JOINT_CHOICES.md",
                        "model/conservation_report_source.py",
                        "model/conservation_study_transfer.py"})
         if not joint_requested or not joint_ui_requested:
             raise ValueError("Receive the joint Conservation engine and original operator hooks together.")
+        descriptor = json.loads(files.get("operator/extensions/conservation.json", "{}"))
+        if "conservation_joint_choices.mjs" not in descriptor.get("assets", []):
+            raise ValueError("Receive the registered joint Conservation web asset with its original descriptor.")
     if needed - set(files):
         raise ValueError("The complete backend, CLI and operator source must travel together")
     return value
