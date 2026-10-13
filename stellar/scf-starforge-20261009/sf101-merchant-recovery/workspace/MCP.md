@@ -733,3 +733,52 @@ native launch.
 The programmatic export `./merchant/mcp/recovery/receive` provides
 `receiveRecoveryWorkspaceMerchant(input, { onProgress })` and its input/result
 declarations. It uses the same original entry and saved native request.
+
+## Preserve a saved Object comparison in Support
+
+The existing Support tools also accept a saved `object-compare` request. First read
+`merchant_recovery_request` and `merchant_recovery_support_cases` through the same
+configured workspace. Select that original request's review hash and observed
+attempt, an existing case ID/revision, a before/after observation slot and one
+stable transfer ID. Pass the complete eight-field selection to
+`merchant_recovery_support_review`; the fields are documented in
+[RECOVERY_SUPPORT.md](RECOVERY_SUPPORT.md).
+
+The returned frozen review identifies both original backup declarations and
+record digests, the byte-exact request and every referenced comparison
+JSON/HTML/Markdown artifact across its ordered history. Prepared and incomplete
+requests remain explicit. Confirm that exact Support review SHA before
+`merchant_recovery_support_save`. A lost reply is read through
+`merchant_recovery_support_transfer`; explicit same-transfer continuation
+reconciles the original saved case revision without moving a later case head.
+
+`merchant_recovery_support_handoff` returns the complete original Support file.
+`merchant_recovery_support_export` and
+`merchant_recovery_support_package` use the maintained full case-source package
+and independent receiver, preserving every case revision and capture. The
+consumer recognizes `OBJECT_COMPARISON` separately from recovery observations
+and traffic measurements. It checks retained report/content bindings and
+preserves all original process, failure and partial-result facts.
+
+This read/capture path performs no new native comparison, backup decryption or
+restore. Both encrypted backups remain external. A saved authentication result
+is attributed to its original run, not to the current path contents. The
+complete three-file capture must fit 64 MiB including encoded artifact bodies;
+the existing whole Support runtime limit is 192 MiB. Oversized native comparison
+artifacts remain available through their original exact artifact downloads;
+Support rejects the complete oversized cohort without truncating any source.
+
+## Carry the complete encrypted comparison pair
+
+The original review/start selection for `object-bundle-export` also accepts `sourceSide: "before" | "after"` when the selected source is a clean completed `object-compare` request. Use its exact `sourceRequestId`, `sourceReviewHash` and `sourceAttempt`. Each export keeps a separate original export request ID and the complete frozen comparison evidence.
+
+| Maintained tool | Exact selection |
+| --- | --- |
+| `merchant_recovery_bundle_pair` | `workspace, profileId, beforeId, afterId` |
+| `merchant_recovery_bundle_pair_attach` | Those four fields plus `transferId, expectedPairSha256, expectedReviewSha256, expectedRevision, actor` |
+| `merchant_recovery_bundle_attachment` | `workspace, profileId, transferId` plus exactly one of `pairSha256` or `archiveSha256` |
+| `merchant_recovery_bundle_case_export` | Same original attachment selector as above |
+
+`beforeId` and `afterId` name completed authenticated original export requests. Pair read returns `pairSha256`; attachment requires that exact value plus the separately saved Support review hash and actual case revision. The host derives both archive paths and original native identities from the retained queue; model-facing input cannot supply archive contents, paths or passphrase environment values.
+
+One existing SF49 delivery contains both archives, and the same attachment request reconciles an interrupted reply before upload. Full case export uses the actual attached revision, complete source inventory and original independent receiver. The standalone archive flow remains available without commercial terms. See [RECOVERY_BUNDLES.md](RECOVERY_BUNDLES.md#carry-both-encrypted-editions-from-one-comparison) for full commands, size/custody limits and installed/rendered acceptance.
