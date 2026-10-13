@@ -8,14 +8,14 @@ technical detail; the screen does not infer a missing source label.
 
 ## Follow the actual saved case
 
-Open a native run, programme or parameter-study task and choose **Open calculation
-console**. The screen names the selected case, shows its current saved execution
+Open a native run, programme, parameter-study or saved-ensemble task and choose
+**Open calculation console**. The screen names the selected case, shows its current saved execution
 phase and retains the original elapsed time, worker observation and disk space.
 
 Preparing a grid, matching an existing stage, running the model and producing its
 physical exports are different states. The screen does not invent percent
-completion. A completed selected case is distinguished from the parent study or
-programme: the original parent task still determines overall completion.
+completion. A completed selected case is distinguished from the parent study,
+programme or ensemble: the original parent task still determines overall completion.
 
 The stage list shows which selected native models are saved. **Saved physical
 results** uses only original retained artifact totals and units, including zero.
@@ -93,3 +93,28 @@ exact warm-message approval remain with Bryce.
 ## Existing application source registration
 
 The complete change also retains the current `operator/server.py` with the new `native_presentation.mjs` asset in its existing explicit web-file allowlist. Receive all six complete files together, including the original component-fragment declaration. The original component-fragment loader extends the existing core source closure with the helper and this guide. The existing application export includes its `model/` and `operator/` source tree; keep the helper beside the original `jobs.mjs`. A completed selected native case does not hide a current failed, interrupted or cancelled parent-task issue: that issue retains its original next action beside the completed case outputs.
+
+## Follow a saved ensemble without losing the case boundary
+
+The original saved-ensemble supervisor supplies the ensemble title, original run
+position and member labels. The calculation console identifies its selection as
+**Ensemble case** and retains that same full ensemble binding in technical detail.
+The original operation download continues to include the complete task and native
+snapshot; no new identity or task is created by this presentation.
+
+**Stop saved ensemble** remains the existing coordinator action. A Stop request
+between scientific workers is still pending even when the last selected case is
+complete. In that state, **Stopping saved ensemble** explains the retained request
+and keeps completed outputs available while the original coordinator pauses at its
+case boundary. An active child keeps its existing worker-closing explanation. The
+parent task, rather than one completed member, determines the whole ensemble's
+completion or interruption.
+
+Receive this helper and guide with the current complete application, including
+WO39's original `operator/web/jobs.mjs`, `operator/native_jobs.py` and ensemble
+worker/coordinator source from PR4715. Preserve newer source and live workers. On
+the original saved ensemble's already-planned receiving course, inspect the actual
+selected member, original run position and parent state. If that operation uses
+Stop between members, follow that same pending Stop to its saved state, then use
+its original continuation. This adds no scientific solve or duplicate browser
+course; the existing producing-peer screen and attachment review still applies.
