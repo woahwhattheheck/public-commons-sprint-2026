@@ -1,3 +1,15 @@
+# Current owner direction — October 13, 2026
+
+This section records Bryce’s later production instruction and takes precedence over the earlier Ecosystem cutoff text retained below. The original rendered-product rule remains in force.
+
+Bryce’s direct instruction, relayed in the original Ecosystem production thread at 2026-10-13 14:52:26 UTC (message 1791903146.158779), supersedes the earlier 10 a.m. Eastern / 14:00 UTC cutoff for that build and delivery. Continue the existing product until it is delivered and improved as far as available inputs allow. Preserve its actual source, native calculation, map/report and editable-application owners; integrate useful independent work into their current operation.
+
+This is a production continuation. Existing client-contact and personal-meeting instructions, public-repository-only work, no GitHub Actions and all other owner controls remain unchanged. Continue the actual LOOK-and-operate requirement for the outgoing version and its attachments, make focused repairs, and keep implementing and integrating the deliverable.
+
+The preceding source is retained in the original internal coordination thread. The earlier instruction copy below is preserved as dated history; its former cutoff does not stop the later authorized Ecosystem production.
+
+---
+
 # Owner-directed rendered-product inspection
 
 Source: direct owner instruction of October 13, 2026. Repository copy version: `2026-10-13.1`.
