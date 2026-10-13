@@ -331,10 +331,13 @@ def restore_archive(archive, target, *, operation=None, expected_sha256=None):
         if _published(target, state):
             # Keep later customer revisions, while still requiring each original
             # immutable source file carried by this completed receiving.
+            from .response_documents import allowed_document_payload
             from .response_sources import allowed_response_payload
             for entry in files:
-                if allowed_response_payload(entry["path"]) and not _file_matches(target / entry["path"], entry):
-                    _error("RESPONSE_SOURCE_CLOSURE_CHANGED", operation)
+                source_kind = ("DOCUMENT" if allowed_document_payload(entry["path"])
+                               else "RESPONSE" if allowed_response_payload(entry["path"]) else None)
+                if source_kind and not _file_matches(target / entry["path"], entry):
+                    _error(source_kind + "_SOURCE_CLOSURE_CHANGED", operation)
             return _finish(control, target, state, True)
         if state["phase"] == "complete":
             _error("PUBLISHED_DIRECTORY_MISSING", operation)
