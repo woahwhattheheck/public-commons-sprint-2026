@@ -22,6 +22,10 @@ from portfolio import PortfolioWorkspace
 
 from .adjustments import prepare_adjustment, verify_native_before
 from .capture import NativeReaderTransport, native_capture_identity
+from .commissioning import (
+    ACTIONS as COMMISSIONING_ACTIONS, ADOPTION_MODE, ImportCommissioning,
+    acceptance_context, is_commissioned,
+)
 from .planner import (
     check_edition, metadata_from_probe, prepare_schedule, review_schedule,
     target_identity, verify_plan,
@@ -40,6 +44,7 @@ ACTIONS = {
     "receive_target_file", "accept", "handover", "archive", "abandon_set",
     "archive_save", "archive_review", "archive_publish", "archive_query_export", "archive_inspect", "archive_receive",
 }
+ACTIONS.update(COMMISSIONING_ACTIONS)
 
 
 def error_value(exc):
@@ -72,6 +77,8 @@ class TargetWorkspace:
                 "id", "revision", "created_at", "updated_at", "state", "profile_id",
                 "source_edition_id", "project_id", "project_name", "plan_sha256",
                 "review_sha256", "capture_edition_id", "acceptance_sha256", "error",
+                "commissioning_origin", "commissioning_root_id", "adoption_review_sha256",
+                "commissioning_inventory_sha256", "commissioning_comparison_sha256",
             )})
         return {"schema": "portfolio.target-workspace.v1",
                 "profiles": [public_profile(p) for p in self.profiles.values()],
@@ -131,6 +138,8 @@ class TargetWorkspace:
                 if request.get("result_sha256") else None}
 
     def _run(self, kind, args, request_id):
+        if kind in COMMISSIONING_ACTIONS:
+            return ImportCommissioning(self).run(kind, args, request_id)
         if kind.startswith("archive_"):
             return self.archives._run_locked(request_id, kind, args)
         if kind == "intake":
@@ -277,6 +286,8 @@ class TargetWorkspace:
         if self.store._index("deployments", request_id).exists():
             return self.store.index("deployments", request_id)
         parent = self.store.index("deployments", args["deployment_id"])
+        if is_commissioned(parent):
+            raise TargetError("COMMISSIONING_CORRECTION_ROUTE", "Use prepare_observed_correction for this imported plan so unchanged source intent is compared with actual native values.")
         if args.get("expected_revision") != parent["revision"]:
             raise TargetError("STALE_REVISION", "Reopen the original target before preparing its correction.")
         profile = self.profile(parent["profile_id"])
@@ -524,6 +535,8 @@ class TargetWorkspace:
 
     def continue_deployment(self, identity, review_sha256, *, retry_rejected=False):
         value, plan, review = self._reviewed(identity, review_sha256)
+        if plan.get("mode") == ADOPTION_MODE:
+            raise TargetError("COMMISSIONING_ADOPTION_READ_ONLY", "An adopted plan has no creation or execution calls. Prepare and review an observed-value correction separately.")
         if value["state"] in ("ACCEPTED", "CAPTURED", "EXPORTED", "NATIVE_COMPLETE"):
             return value
         profile = self.profile(value["profile_id"])
@@ -797,6 +810,9 @@ class TargetWorkspace:
         return self._save(value)
 
     def capture_target(self, request_id, identity, *, expected_revision=None):
+        selected = self.store.index("deployments", identity)
+        if is_commissioned(selected):
+            return ImportCommissioning(self).capture(request_id, identity, expected_revision=expected_revision)
         value, previous = self._capture_start(request_id, identity, expected_revision)
         if previous is not None:
             return {**value, "original_capture": previous}
@@ -916,6 +932,9 @@ class TargetWorkspace:
                   "comparison_sha256": value["comparison_sha256"], "review_sha256": value["review_sha256"],
                   "reviewer": args["reviewer"], "note": args["note"], "exceptions": exceptions,
                   "accepted_at": utcnow()}
+        commissioned = acceptance_context(self, value, args)
+        if commissioned is not None:
+            result["commissioning"] = commissioned
         value["acceptance_request_id"] = request_id
         value["acceptance_sha256"] = self.store.put(result)["sha256"]
         value.setdefault("acceptance_results", {})[request_id] = value["acceptance_sha256"]
@@ -1033,8 +1052,11 @@ class TargetWorkspace:
             )), "</section><section><h2>Receiving and continued operation</h2>",
             "<p>Keep this report with portfolio-migration-handover.json and the portable workspace. Reopen that same workspace to inspect the original source, "
             "review, native requests and replies, returned project, and acceptance. Select private target credentials separately on the receiving host.</p>",
-            "<p>A following task correction starts from a new source edition and the saved original migration. An uncertain native call is reconciled through its "
-            "original project, OperationSet or detail before any further write. Keep the original target comparison and the accepting operator's stated differences.</p>",
+            ("<p>A following imported-plan correction compares retained source intent with current native values; the source edition may remain unchanged. "
+             "Use prepare_observed_correction and retain the exact adoption, capture and human acceptance.</p>"
+             if is_commissioned(value) else
+             "<p>A following task correction starts from a new source edition and the saved original migration. An uncertain native call is reconciled through its "
+             "original project, OperationSet or detail before any further write. Keep the original target comparison and the accepting operator's stated differences.</p>"),
             "<details><summary>Exact retained acceptance</summary><pre>" + text(acceptance) + "</pre></details>",
             "</section></body></html>",
         ]
