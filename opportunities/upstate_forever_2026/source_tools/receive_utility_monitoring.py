@@ -23,7 +23,7 @@ if str(APPLICATION) not in sys.path:
 from model.common import (atomic_bytes, atomic_json, describe_file, digest, file_digest,
                           held, now, read_json, verify_file)
 from model.workspace import Workspace
-from model import utility_monitoring
+from model import utility_monitoring, watershed_source_review
 from model.monitoring_workspace import MonitoringWorkspace
 from model.monitoring_design import solve_design
 from source_tools.prepare_watershed_context import import_source_edition, load_source_edition
@@ -34,6 +34,7 @@ CODE = (
     "source_tools/receive_utility_monitoring.py", "operator/watershed_context.py",
     "model/utility_monitoring.py", "model/utility_microbial_study.py",
     "model/watershed_context.py", "model/watershed_brief.py", "model/watershed_briefing.py",
+    "model/watershed_source_review.py",
     "model/client_briefing.py", "model/utility_watershed_context.py",
     "model/utility_observed_context.py", "model/receiving_waters.py",
     "model/receiving_water_monitoring.py", "model/monitoring_sources.py",
@@ -182,6 +183,17 @@ def _reopen(workspace, provider, record):
                   "export_id": prepared["export_id"], "network_id": network["id"],
                   "candidate_huc12s": candidate_ids, "summary": network["summary"],
                   "station_assignment_issues": prepared["station_assignment_issues"]}
+        if item.get("source_review_sha256"):
+            export_root, export, source_selection, _, _ = utility_monitoring.export_selection(
+                workspace, prepared["export_id"])
+            original_review = verify_file(export_root, export["files"]["source-explorer-review.json"])
+            if (file_digest(original_review) != item["source_review_sha256"]
+                    or (source_selection.get("source_review") or {}).get("original_file_sha256")
+                    != item["source_review_sha256"]
+                    or source_selection["source_review"]["selection"] != item["source_review_selection"]):
+                raise ValueError("Fresh receiving changed the reviewed source selection or discussion")
+            result["source_review_sha256"] = item["source_review_sha256"]
+            result["source_review_selection"] = item["source_review_selection"]
         design = item.get("design")
         if design:
             plan = native.get("plans", design["plan_id"])
@@ -202,7 +214,7 @@ def _reopen(workspace, provider, record):
 
 def run(workspace_path, operation, *, utilities=UTILITIES, programme_path=None,
         include_microbial=True, context_directory=None, source_manifest=None,
-        domain_manifest=None):
+        domain_manifest=None, source_review_path=None):
     started = time.monotonic()
     workspace = Workspace(Path(workspace_path).expanduser().resolve(strict=True))
     root = Path(operation).expanduser().resolve()
@@ -218,6 +230,18 @@ def run(workspace_path, operation, *, utilities=UTILITIES, programme_path=None,
     context_root = Path(context_directory or APPLICATION / "source/water_context/20261013").expanduser().resolve(strict=True)
     manifest = Path(source_manifest or context_root / "complete-native-sources.json").expanduser().resolve(strict=True)
     programme, programme_body = _programme(programme_path, utilities)
+    review_body = (Path(source_review_path).expanduser().resolve(strict=True).read_bytes()
+                   if source_review_path is not None else None)
+    review_text = review_body.decode("utf-8") if review_body is not None else None
+    if review_text is not None:
+        if len(review_body) > 256 * 1024:
+            raise ValueError("Choose the original source review JSON, up to 256 KiB")
+        review_document = json.loads(review_text)
+        if (not isinstance(review_document, dict)
+                or review_document.get("schema") != watershed_source_review.SCHEMA
+                or not isinstance(review_document.get("selection"), dict)
+                or review_document["selection"].get("kind") != "utility"):
+            raise ValueError("This source-to-Monitoring course requires the complete utility review")
     root.mkdir(parents=True, exist_ok=True)
     with held(root / ".utility-monitoring-receiving.lock", blocking=False):
         # A resume selects the exact original domain edition from its retained intent.
@@ -238,6 +262,9 @@ def run(workspace_path, operation, *, utilities=UTILITIES, programme_path=None,
                      "source_inputs": [{key: row[key] for key in ("name", "bytes", "sha256")} for row in source_files],
                      "programme_file": {"bytes": len(programme_body), "sha256": hashlib.sha256(programme_body).hexdigest()} if programme_body is not None else None,
                      "implementation": {name: describe_file(APPLICATION, APPLICATION / name) for name in CODE}}
+        if review_body is not None:
+            selection["source_review_file"] = {
+                "bytes": len(review_body), "sha256": hashlib.sha256(review_body).hexdigest()}
         if domain_manifest:
             domain_manifest = Path(domain_manifest).expanduser().resolve(strict=True)
             selection["domain_manifest"] = describe_file(domain_manifest.parent, domain_manifest)
@@ -245,6 +272,8 @@ def run(workspace_path, operation, *, utilities=UTILITIES, programme_path=None,
         atomic_json(root / "selection.json", selection, immutable=True)
         if programme_body is not None:
             atomic_bytes(root / "original-programme.json", programme_body, immutable=True)
+        if review_body is not None:
+            atomic_bytes(root / "original-source-review.json", review_body, immutable=True)
         state_path = root / "state.json"
         state = read_json(state_path) if state_path.exists() else {
             "schema": SCHEMA, "id": key, "created_at": now(), "utilities": {}}
@@ -271,14 +300,22 @@ def run(workspace_path, operation, *, utilities=UTILITIES, programme_path=None,
                 if len(matches) != 1:
                     raise ValueError("Select one available original utility profile for " + utility_id)
                 selected.append(matches[0])
+            review_choice = None
+            if review_text is not None:
+                _, _, review_choice = watershed_source_review.receive(review_text, report, choices)
+                if review_choice is None or review_choice["key"] not in {row["key"] for row in selected}:
+                    raise ValueError("The received review belongs to another selected utility")
             checkpoint("regional_report", report_id=report["id"],
                        source_collection_id=imported["source_collection_id"])
             for choice in selected:
                 utility_id = choice["utility_id"]
                 checkpoint("utility_export", current_utility=utility_id)
+                export_payload = {"report_id": report["id"], "utility_key": choice["key"]}
+                if review_choice is not None and review_choice["key"] == choice["key"]:
+                    export_payload["source_review_text"] = review_text
                 exported = provider.invoke({
                     "workspace": workspace.project["id"], "action": "watershed.context.export",
-                    "payload": {"report_id": report["id"], "utility_key": choice["key"]}})
+                    "payload": export_payload})
                 checkpoint("utility_network", current_utility=utility_id)
                 prepared = utility_monitoring.prepare(
                     workspace, {"export_id": exported["id"], "include_microbial": include_microbial,
@@ -292,6 +329,9 @@ def run(workspace_path, operation, *, utilities=UTILITIES, programme_path=None,
                         "summary": prepared["summary"], "network_summary": prepared["network_summary"],
                         "station_assignment_issues": prepared["station_assignment_issues"],
                         "method": prepared["method"], "recommended_excluded_ids": prepared["recommended_excluded_ids"]}
+                if exported.get("source_review") is not None:
+                    item["source_review_sha256"] = exported["source_review_sha256"]
+                    item["source_review_selection"] = exported["source_review"]["selection"]
                 native_directory = workspace.root / utility_monitoring.FOLDER / prepared["id"]
                 item["files"] = {}
                 for member in ("original/utility-watershed-packet.zip", "original/selected-watersheds.json",
@@ -333,6 +373,7 @@ def main(argv=None):
     parser.add_argument("--operation", required=True)
     parser.add_argument("--utility", action="append", choices=UTILITIES)
     parser.add_argument("--programme", help="Original supplied costs/calendar/configuration by utility")
+    parser.add_argument("--source-review", help="Exact complete-utility JSON downloaded from the source explorer")
     parser.add_argument("--without-microbial", action="store_true")
     parser.add_argument("--context-directory")
     parser.add_argument("--source-manifest")
@@ -341,7 +382,7 @@ def main(argv=None):
     result = run(args.workspace, args.operation, utilities=args.utility or UTILITIES,
                  programme_path=args.programme, include_microbial=not args.without_microbial,
                  context_directory=args.context_directory, source_manifest=args.source_manifest,
-                 domain_manifest=args.domain_manifest)
+                 domain_manifest=args.domain_manifest, source_review_path=args.source_review)
     print(json.dumps(result, ensure_ascii=False, allow_nan=False, indent=2))
     return 0
 

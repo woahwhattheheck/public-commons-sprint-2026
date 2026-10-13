@@ -1,0 +1,88 @@
+{
+  "schema": "upstate.georgia-document-context/v1",
+  "title": "Published document context for original GIS notes at their declared field capacity",
+  "edition": "Georgia approved2024",
+  "method": "Exact ReachID match to the original2024 published stream/lake PDF; concise interpretation is separate from original captured GIS Notes.",
+  "records": [
+    {
+      "native_reach_id": "GAR030601080103",
+      "gis_capture_sha256": "3ee2c87781d6b85d9c1e9d495cb45a93c52ec7e02ae3d573c189318cc0a8d8e9",
+      "source_uri": "https://epd.georgia.gov/document/document/2024305bstreamspdf/download",
+      "pdf_page_index": 273,
+      "summary": "Low-conductivity pH needs more observations; macroinvertebrate assessment awaits revised metrics.",
+      "source_field": "Notes",
+      "gis_declared_length": 254,
+      "context_kind": "separate_published_document_summary"
+    },
+    {
+      "native_reach_id": "GAR030601060607",
+      "gis_capture_sha256": "3ee2c87781d6b85d9c1e9d495cb45a93c52ec7e02ae3d573c189318cc0a8d8e9",
+      "source_uri": "https://epd.georgia.gov/document/document/2024305bstreamspdf/download",
+      "pdf_page_index": 252,
+      "summary": "Macroinvertebrate assessment awaits revised metrics; pH remains pending because only six months of 2013 data were available.",
+      "source_field": "Notes",
+      "gis_declared_length": 254,
+      "context_kind": "separate_published_document_summary"
+    },
+    {
+      "native_reach_id": "GAR030601020211",
+      "gis_capture_sha256": "3ee2c87781d6b85d9c1e9d495cb45a93c52ec7e02ae3d573c189318cc0a8d8e9",
+      "source_uri": "https://epd.georgia.gov/document/document/2024305bstreamspdf/download",
+      "pdf_page_index": 271,
+      "summary": "Potentially biased pH measurements require new sampling with the revised method, especially in low-conductivity water.",
+      "source_field": "Notes",
+      "gis_declared_length": 254,
+      "context_kind": "separate_published_document_summary"
+    },
+    {
+      "native_reach_id": "GAR030601020209",
+      "gis_capture_sha256": "3ee2c87781d6b85d9c1e9d495cb45a93c52ec7e02ae3d573c189318cc0a8d8e9",
+      "source_uri": "https://epd.georgia.gov/document/document/2024305bstreamspdf/download",
+      "pdf_page_index": 278,
+      "summary": "pH remains pending after several months of faulty 2013 sonde measurements.",
+      "source_field": "Notes",
+      "gis_declared_length": 254,
+      "context_kind": "separate_published_document_summary"
+    },
+    {
+      "native_reach_id": "GAR030601020104",
+      "gis_capture_sha256": "3ee2c87781d6b85d9c1e9d495cb45a93c52ec7e02ae3d573c189318cc0a8d8e9",
+      "source_uri": "https://epd.georgia.gov/document/document/2024305bstreamspdf/download",
+      "pdf_page_index": 254,
+      "summary": "pH remains pending while EPD distinguishes possible 2017–2018 probe bias from actual impairment.",
+      "source_field": "Notes",
+      "gis_declared_length": 254,
+      "context_kind": "separate_published_document_summary"
+    },
+    {
+      "native_reach_id": "GAR030601020113",
+      "gis_capture_sha256": "3ee2c87781d6b85d9c1e9d495cb45a93c52ec7e02ae3d573c189318cc0a8d8e9",
+      "source_uri": "https://epd.georgia.gov/document/document/2024305bstreamspdf/download",
+      "pdf_page_index": 253,
+      "summary": "pH remains pending while EPD distinguishes possible 2017–2018 probe bias from actual impairment.",
+      "source_field": "Notes",
+      "gis_declared_length": 254,
+      "context_kind": "separate_published_document_summary"
+    },
+    {
+      "native_reach_id": "GAR030601030410",
+      "gis_capture_sha256": "0b655ecca0c5cb18cf778448ebe2af4f75615411a97f3236caaef8634e7b89fb",
+      "source_uri": "https://epd.georgia.gov/document/document/2024305bstreamspdf/download",
+      "pdf_page_index": 276,
+      "summary": "A 2021 fish-community TMDL is recorded; pH remains pending during investigation of possible probe bias.",
+      "source_field": "Notes",
+      "gis_declared_length": 254,
+      "context_kind": "separate_published_document_summary"
+    },
+    {
+      "native_reach_id": "GAR030601030201",
+      "gis_capture_sha256": "14d18f1536bdad18ae96fa365f0588ef644939a2e7363793ff3d11758731c8b8",
+      "source_uri": "https://epd.georgia.gov/document/document/2024305blakespdf/download",
+      "pdf_page_index": 8,
+      "summary": "Drinking Water and Recreation meet their uses; Fishing has a PCB impairment. Mercury remains in Category 3 because one site's trophic-weighted residue was 0.25–0.30 mg/kg.",
+      "source_field": "Notes",
+      "gis_declared_length": 254,
+      "context_kind": "separate_published_document_summary"
+    }
+  ]
+}

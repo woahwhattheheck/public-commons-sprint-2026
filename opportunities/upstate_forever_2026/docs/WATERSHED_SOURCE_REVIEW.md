@@ -4,7 +4,7 @@ The original Upper Savannah explorer can now carry a reviewed utility or watersh
 
 ## Use the original explorer
 
-Open the utility source study at https://chatgpt.com/space/page_e620a8f6b9b48191a6be00b524713167 or the identical application file `source/utility-source-context/20261013/source-explorer.html`.
+In the native **Regional watersheds** desk, choose **Open the original utility source explorer**. The same utility study is available at https://chatgpt.com/space/page_e620a8f6b9b48191a6be00b524713167 or the identical application file `source/utility-source-context/20261013/source-explorer.html`.
 
 Choose ARJWS or PRWD. The original source inventory retains 303 USGS records, the 217-unit model domain, ARJWS's four contributing HUC12s and PRWD's 32. The existing phone layout keeps the complete selected utility name visible.
 
@@ -64,3 +64,70 @@ The source is the [USGS WBD subwatershed service](https://hydro.nationalmap.gov/
 `source_tools/watershed_source_review.mjs` implements the standalone explorer's exact selection serialization. The self-contained HTML embeds the same function body. `model/watershed_source_review.py` verifies and binds the received JSON, labels discussion text and supplies brief sections. The existing `watershed.context.export` action accepts optional `source_review_text`; no new execution service or duplicate receiver is introduced. The ordinary registered Regional watersheds controller provides the chooser and existing task/report navigation.
 
 The native installer includes the receiver, guide and self-contained explorer. Browser reads use a workspace/epoch/request guard so a late file read cannot replace another project's review. Actual original source exercises in V8 reproduce ARJWS4, PRWD32 and the domain's nine NC records; a zero-result selection is rejected before download.
+
+## Continue the existing native receiving course
+
+The same `source_tools/receive_utility_monitoring.py` accepts `--source-review /actual/upper-savannah-source-review.json`. Use a **complete utility planning area** review for this source-to-Monitoring course. The supplied review must belong to one of its selected ARJWS/PRWD utilities. Filtered and focused reviews use the Regional watersheds desk and its ordinary saved export instead.
+
+The receiver binds the exact incoming bytes in its original immutable selection and retains `original-source-review.json` in the existing operation. The matching utility uses the same native export action with that text. The other selected utility retains its ordinary original selection. Fresh reopening verifies the original review hash, its bound source selection, the saved report and the original native network. Existing programme costs and dates continue to come from the explicit programme input.
+
+Use the current accepting operation's real application, interpreter, Workspace and output directories. Keep the application pinned during a native run. Resume an issued course with the same exact inputs; to add a later review to an already completed course, use its reopened Regional watersheds desk and save the reviewed export there. The source review does not replace an existing operation's immutable selection.
+
+Open the populated native HTML brief, source briefing and extracted complete ZIP. Operate the explorer at the actual screenshare and 390-pixel width, download the original review, import it, reopen its report and inspect the exact rendered discussion labels and area/geographic scope. Return the actual original report/export/network IDs and the first runtime exception through the existing receiving thread so the producing owner can repair it directly.
+
+## Current owner product inspection instruction
+
+The following is the complete current project instruction, source version `2026-10-13.1`, retained here for the native receiving worker.
+
+# Owner-directed rendered-product inspection
+
+Source: direct owner instruction of October 13, 2026. Repository copy version: `2026-10-13.1`.
+Scope: owner-controlled work across providers, local and cloud runtimes, and current and future workers. Existing owner controls remain in force.
+
+Before calling a client/prospect-facing app, website, dashboard, demo, report, presentation or export ready, the producing worker must open/run/render the exact outgoing version, LOOK at the rendered screen or its real screenshots, and operate the important user controls. Check the actual screenshare width and narrow/mobile width where relevant, populated/empty/loading/error states, downloads/exports and reopening. Capturing screenshots without viewing them is insufficient. Fix ugly, broken, unstyled, cramped, clipped, overflowing or unreadable output within the authorized work before presenting it. Code review, DOM counts, HTTP200, unit checks or another worker's approval do not replace seeing the actual product.
+
+The Ecosystem product requires plain industrial design: readable tables, clear hierarchy, consistent typography/spacing, restrained controls, useful labels and responsive layouts. Keep the real workflows/data/computation. Reviews must lead directly to repairs and must not replace implementation/integration or become endless rechecking. The existing focused-validation policy remains; do not run broad suites or build a verification product.
+
+Persist this instruction in the active owner-controlled instruction surfaces actually read by the relevant workers: global/project AGENTS/CLAUDE/GEMINI/rules, provider-specific boot instructions, source mirrors, cloud repository copies and current build/receiving guides. Include this instruction in every delegated child assignment, including assignments to another provider or runtime. Maintainers update their own consumed files and return exact paths, source/version and readback. A coordination acknowledgment alone is not propagation. Do not alter historical evidence or third-party/vendor policies. No forced restarts, new watchers or revival of owner-stopped work.
+
+Inspect the actual completed scientific screens, reports, source pages and downloadable HTML in the real operator. Prior empty-Workspace screenshots are not completed-workspace acceptance. Preserve current engineering owners; other coordinators receive propagation rather than duplicate implementation. Continue native source/runtime/archive joins rather than diverting everyone to cosmetic review. This instruction does not extend or restart the Ecosystem sprint: the existing cutoff is October 13, 2026 at 10:00 a.m. America/Kentucky/Louisville, 14:00 UTC.
+
+Source assembly and standalone application handoffs retain the application-level instruction copies with their current guides. This file records an owner-requested product delivery requirement; it does not change provider safeguards, repository access controls, or existing authorization boundaries.
+
+
+<!-- bryce-rendered-product-inspection:begin -->
+## Standing lab rule: inspect the rendered product before presenting it
+
+Bryce's direct owner instruction, October 13, 2026. This applies to every current and future lab peer, provider, model, harness, local session, cloud session, and delegated or child worker.
+
+Before calling a client/prospect-facing app, site, dashboard, demo, report, presentation, or export ready, or putting it before a client/prospect, the responsible producing peer MUST open/run/render the exact outgoing version and visually LOOK at the actual result. Inspect at the actual screenshare/presentation width and at narrow/mobile widths where relevant. Operate critical controls; inspect applicable loaded, empty, loading, and error states; exercise downloads/exports and reopen the delivered files. Capture real screenshots or rendered page images and actually VIEW them. Capturing without viewing does not satisfy this rule.
+
+This includes ALL attachments. Literally observe the actual thing the way a user or recipient would see and use it: open and view downloaded HTML, every relevant PDF/report page, slides, spreadsheets, maps, images, video/audio, archives and project attachments in their normal recipient-facing viewer or application; play audiovisual media and inspect the usable contents of archives/projects. Metadata, schemas, source text, and a browser link do not substitute for opening the attachment and using the delivered result normally.
+
+Fix ugly, cramped, broken, unstyled, clipped, overflowing, or unreadable results within the authorized task before presenting them. Favor simple industrial/plain presentation, consistent spacing and typography, readable tables, and working controls. Do not add decorative template slop. Source review, unit tests, HTTP 200, DOM counts, a reviewer/model approval, or an evidence form do not substitute for looking at and operating the real outgoing product.
+
+This is focused internal product validation, never permission to build or submit a proof, test, or verification product, run broad suites, or repeatedly recheck an unchanged accepted version. Building and integrating the actual deliverable remains the main work; do not substitute endless reviews for delivery. Retain an exact-version visual receipt in the handoff: source/head or artifact hash, URL/file, viewport sizes, screenshots actually viewed, controls/states/export files exercised, fixes, and any precise unresolved gap. A changed outgoing version needs inspection of the affected result.
+
+Bryce explicitly clarified: "that includes all attachments and this does not become review theatre or test theatre you need to literally observe the actual thing the way a user would see and use it". A checklist, screenshot folder, receipt, passing test, or parallel review bureaucracy is not the requirement or a substitute for actual observation and normal use. Perform focused fixes and keep shipping the main work; create no review or approval gate.
+
+Bryce also instructed: "also add that if u make a video use voice gen tts not robot voices, use generative stuff we have models, use them". For video/media narration, use available high-quality generative voice/TTS and applicable generative visual/media capabilities when helpful, with natural professional delivery instead of robotic default voices. Actually play/listen/watch the final exported attachment and inspect clarity, pronunciation, pacing, timing, and audio alignment. Reviewing a text script does not substitute for experiencing the final video/audio. This adds no paid-service purchase or real-person voice-cloning authorization; preserve lab attribution and third-party copyright/license controls.
+
+Pass this rule to child/delegated workers and persist it in owner-controlled provider/project/cloud instruction copies. Record delivery and readback coverage; never claim every running session loaded it without evidence. This rule creates no hooks, watchers, restarts, approval queue, credential restrictions, or new publication authority. Preserve all existing owner rules, including no llama.cpp, no private GitHub repositories or Actions, focused validation, attribution, incident communication, personal meeting approval, contact holds, demo pauses, bounty restrictions, and owner cutoffs.
+
+Canonical local policy: `C:/Users/lucys/.commons/rendered-product-inspection-policy.md` and `.json`. Portable repository copy: `docs/policies/rendered-product-inspection-policy.md` and `.json` when present. Only Bryce can change this standing rule.
+<!-- bryce-rendered-product-inspection:end -->
+
+## Opening the installed explorer
+
+The Regional watersheds link serves the exact installed source edition through
+the registered `watershed-explorer` file family. The normal authenticated
+operator file transport checks its full byte count and SHA-256 before sending it.
+Its content policy permits only the SHA-256 of the installed inline executable
+script, keeps an opaque sandbox origin, and permits the source view's local
+downloads, print request and explicit external source links. The source view
+makes no network requests. If the application source changes, reopen the desk
+to obtain that edition's link.
+
+Discussion text remains in the current explorer view and its downloaded review.
+Import that JSON in Regional watersheds to retain it with the original source
+files and the complete report packet.

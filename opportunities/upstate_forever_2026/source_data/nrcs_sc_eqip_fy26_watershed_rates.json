@@ -1,0 +1,98 @@
+{
+  "schema": "upstate.nrcs-payment-source/v1",
+  "id": "nrcs-sc-eqip-fy26-watershed-practices",
+  "publisher": "USDA Natural Resources Conservation Service",
+  "state": "SC",
+  "program": "EQIP",
+  "fiscal_year": 2026,
+  "source_url": "https://www.nrcs.usda.gov/sites/default/files/2026-04/SC%20EQIP%20Payment%20Schedule%20-%20FY26.pdf",
+  "source_title": "NRCS - SOUTH CAROLINA FY26 PAYMENT SCHEDULE",
+  "source_pdf_pages": 12,
+  "retrieved_date": "2026-10-13",
+  "legend_source_url": "https://www.nrcs.usda.gov/getting-assistance/payment-schedules",
+  "categories": {
+    "STANDARD": "No category prefix in original component",
+    "HU": "Historically Underserved",
+    "PR": "High Priority Practices",
+    "WP": "Source Water Protection",
+    "SU": "Supplemental Payment"
+  },
+  "scope": {
+    "practice_codes": [
+      "390",
+      "391",
+      "393",
+      "412",
+      "490",
+      "578",
+      "580",
+      "590",
+      "612",
+      "655"
+    ],
+    "selected_rows": 63,
+    "source_pages": [
+      6,
+      7,
+      8,
+      9,
+      10,
+      11
+    ]
+  },
+  "authorship": "TokenJunkieLabs — ES26 ecosystem research",
+  "value_interpretation": {
+    "original_column": "UNIT COST",
+    "published_schedule": "NRCS - SOUTH CAROLINA FY26 PAYMENT SCHEDULE",
+    "amount_kind": "nrcs_payment_schedule",
+    "currency": "USD",
+    "fiscal_year": 2026,
+    "default_implementation_cost": null,
+    "default_recurrence": null,
+    "default_eligibility": null
+  },
+  "unit_policy": {
+    "source_units_preserved": true,
+    "allowed_source_units": [
+      "Ac",
+      "DiaInFt",
+      "SqFt",
+      "Ft",
+      "No",
+      "Ea"
+    ],
+    "geometry_or_quantity_conversion": "Explicit worksheet mapping required; no conversion encoded in this source table."
+  },
+  "extraction": {
+    "method": "Official publisher PDF text extraction",
+    "row_selection": "All components present for the ten selected practice codes",
+    "deduplication_key": [
+      "practice_code",
+      "component",
+      "unit"
+    ],
+    "validation": {
+      "rows": 63,
+      "unique_keys": 63,
+      "amount_cents_agree": true,
+      "required_practices_present": true
+    },
+    "source_artifact": {
+      "path": "source_data/nrcs_sc_eqip_fy26_watershed_rates.csv",
+      "bytes": 17939,
+      "sha256": "8dbf2049b3bafb4bf25055fdb4fb618862dfaafbd78dc3e8d911c63904b345fc"
+    }
+  },
+  "counts_by_practice": {
+    "390": 6,
+    "391": 3,
+    "393": 8,
+    "412": 4,
+    "490": 20,
+    "578": 6,
+    "580": 4,
+    "590": 6,
+    "612": 4,
+    "655": 2
+  }
+}

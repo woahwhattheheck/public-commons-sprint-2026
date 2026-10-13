@@ -9,7 +9,8 @@
     "economic_desk.mjs",
     "economic_desk.css",
     "economic_cost_worksheet.mjs",
-    "economic_implementation.mjs"
+    "economic_implementation.mjs",
+    "economic_comparison.mjs"
   ],
   "backend": {
     "module": "economic_workbench",

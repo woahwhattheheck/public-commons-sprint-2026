@@ -155,6 +155,63 @@ export async function runCustomerReviewChapter({page,choice,output,checkRunning,
       state.phases.draft={state:'complete',completed_at:new Date().toISOString(),native_imported:false};await save();
     });
   }
+
+  if(!state.phases.response_import){
+    await action('import-response-preserve-draft-and-original-reference',async()=>{
+      const retainedDownload=async label=>{
+        const found=state.downloads.filter(item=>item.path.includes('/customer-'+label+'-')).at(-1);
+        if(!found)fail('The existing customer course must retain its original '+label+' download.');
+        return {...await exactMember(output,found),member:found};
+      };
+      const savedDraft=await retainedDownload('simulated-local-draft');
+      const savedRecord=await retainedDownload('original-response-record');
+      const response=JSON.parse(savedDraft.body.toString('utf8'));
+      const record=JSON.parse(savedRecord.body.toString('utf8'));
+      const originalResponse=record.response||record;
+      if(response.review_id!==choice.selected.original_review_id||response.project_id!==choice.selected.project_id||
+         response.previous_response_id!==choice.selected.response_id||originalResponse.review_id!==choice.selected.original_review_id||
+         originalResponse.project_id!==choice.selected.project_id||originalResponse.previous_response_id===choice.selected.response_id)
+        fail('The selected response downloads differ from their original teaching generations.');
+      const receive=async path=>{checkRunning();await page.locator('#response-file').setInputFiles(path);checkRunning();};
+      const waitImported=async()=>page.waitForFunction(({name,summary})=>
+        document.querySelector('#notice-text')?.textContent.includes('Imported the local response as your current draft')&&
+        document.querySelector('#reviewer-name')?.value===name&&document.querySelector('#reviewer-form textarea')?.value===summary,
+        {name:response.reviewer.name,summary:response.summary});
+      const checkDraft=async summary=>{
+        if(await page.locator('#reviewer-name').inputValue()!==response.reviewer.name||
+           await page.locator('#reviewer-form textarea').inputValue()!==summary)
+          fail('The current customer draft lost its retained reviewer or wording.');
+      };
+      await page.setViewportSize({width:1440,height:1000});await open(originalPath);await packet(choice.selected.original_review_id);
+      const workingNote='SIMULATED local teaching notes held before importing the retained response. Undo must restore these exact notes.';
+      await page.locator('#reviewer-name').fill(response.reviewer.name);
+      await page.locator('#reviewer-form textarea').fill(workingNote);
+      await receive(savedDraft.path);await waitImported();checkRunning();
+      await shot('response-imported-desktop','The real Import response control opens the exact previously downloaded browser-local response.');
+      await click(page.getByRole('button',{name:'Undo draft replacement',exact:true}));await checkDraft(workingNote);
+      await shot('response-import-undone','Undo restores the explicitly authored local notes that existed before the import.');
+      await receive(savedRecord.path);
+      await page.waitForFunction(()=>document.querySelector('#notice-text')?.textContent.includes('different recorded revision')&&
+        document.querySelector('#history-detail h2')?.textContent==='Imported response reference');
+      checkRunning();await checkDraft(workingNote);
+      await shot('response-historical-reference','The actual earlier response is an explicit reference, preserving its original predecessor and the current local draft.');
+      await download('imported-original-response-record',()=>click(page.getByRole('button',{name:'Download full record',exact:true})),
+        body=>{if(!equal(JSON.parse(body.toString('utf8')),record))fail('The re-downloaded imported reference differs from the original full response record.');});
+      await tab('overview');
+      await receive(manifestFile.path);
+      await page.waitForFunction(()=>document.querySelector('#notice')?.classList.contains('error')&&
+        document.querySelector('#notice-text')?.textContent.startsWith('Response import:'));
+      checkRunning();await checkDraft(workingNote);
+      await shot('response-import-invalid-file','The original case manifest is correctly rejected as a response file while the current teaching draft remains intact.');
+      await receive(savedDraft.path);await waitImported();await open(originalPath);
+      await packet(choice.selected.original_review_id);await checkDraft(response.summary);
+      await shot('response-import-reopened','The imported teaching draft survives the ordinary desk reopening with its exact source response predecessor.');
+      state.phases.response_import={state:'complete',completed_at:new Date().toISOString(),
+        response_file:savedDraft.member,original_record_file:savedRecord.member,
+        response_previous_id:response.previous_response_id,reference_previous_id:originalResponse.previous_response_id};
+      await save();
+    });
+  }
   if(!state.phases.handback){
     await action('open-ready-handback-and-revised-work',async()=>{
       await open(handbackPath);await page.getByRole('heading',{name:'Engineering handback',exact:true}).waitFor({state:'visible'});

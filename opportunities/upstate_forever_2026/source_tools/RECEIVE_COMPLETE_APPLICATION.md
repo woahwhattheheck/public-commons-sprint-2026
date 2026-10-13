@@ -22,11 +22,11 @@ The first `demo_process_started` line identifies the actual host, PID, interpret
   --workspace "$WORKSPACE" --output "$DEMO_OUTPUT" --field-only
 ```
 
-Remove only the mode flag to continue the same retained calculation and reporting course. Do not start a second worker against the same case. A running native child retains its application edition until its ordinary process boundary. The retained recipe, profile, grid and original run identities remain authoritative. The operation cutoff is October 13, 2026 at 14:00 UTC.
+Remove only the mode flag to continue the same retained calculation and reporting course. Run one writer per actual Workspace. Independent hosts may execute the same original recipe in their own isolated Workspaces, retaining their actual IDs and runtime. A running native child retains its application edition until its ordinary process boundary. The retained recipe, profile, grid and original run identities remain authoritative. The operation cutoff is October 13, 2026 at 14:00 UTC.
 
 ## Open the maintained current Operator
 
-This source edition already includes the current server, registered provider descriptors and shared browser host. Apply the declared compatibility source overlay before receiving it as the complete current edition; its exact guards preserve newer canonical source. Use the original current-source startup route. Replaying an older cumulative installer's direct-host patch list over already registered providers is not part of this route.
+This source edition already includes the current server, registered provider descriptors and shared browser host. The current-source compatibility and complete-source capacity changes are already included in this edition; no separate overlay is required. Use the original current-source startup route. Replaying an older cumulative installer's direct-host patch list over already registered providers is not part of this route.
 
 Before the browser handoff, inspect the selected application through the existing source assembler. It follows the current component catalogue, fragments, native manifests, imports, web assets and source identities. The selected component count comes from that edition; the earlier verified 97-component application is a predecessor, not a fixed count for newer source.
 
