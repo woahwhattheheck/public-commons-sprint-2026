@@ -1,0 +1,105 @@
+{
+  "schema": "upstate.water-quality-inventory/v1",
+  "prepared_at": "2026-10-12",
+  "rfp": {
+    "uri": "https://www.upstateforever.org/files/files/20261002_FINAL_EC-SDC%20Mapping%20RFP%20APPENDIX%20COMBINED.pdf",
+    "publisher_file_bytes": 7470549,
+    "publisher_file_sha256": "04313cdda0b19f98b4081ef1eeec2f52707437759f9058f8d0e5abc8d83d6dbf",
+    "received_local_path": "/workspace/scratch/996013b67b92/science-arm/upper-savannah-rfp.pdf"
+  },
+  "existing_domain": {
+    "source_id": "upstate-wbd-upstream-domain-20261012",
+    "retained_archive_file_id": "libfile_cce17e762e948191be1d226b1dbce00d",
+    "archive_bytes": 8800689,
+    "archive_sha256": "1fc35e5d0986e42d93922527d46e38bc5132653db75863934349dbbfaa352c04",
+    "selected_huc12_count": 217,
+    "format": "original Esri polygon JSON and complete topology/feature bindings",
+    "classification_capture_reuse": "scdes-classified-streams-upper-savannah-20261012",
+    "classification_capture_legacy": "scdes-water-classification-provisional-20261012"
+  },
+  "focus_watersheds": [
+    {
+      "huc12": "030601010703",
+      "name": "Upper Six and Twenty Creek",
+      "utility": "ARJWS",
+      "source": "RFP appendix map1,pdfpage12"
+    },
+    {
+      "huc12": "030601010704",
+      "name": "Lower Six and Twenty Creek",
+      "utility": "ARJWS",
+      "source": "RFP appendix map1,pdfpage12"
+    },
+    {
+      "huc12": "030601020502",
+      "name": "Choestoea Creek",
+      "utility": "PRWD",
+      "source": "RFP appendix map1,pdfpage12"
+    },
+    {
+      "huc12": "030601020507",
+      "name": "Lower Tugaloo River",
+      "utility": "PRWD",
+      "source": "RFP appendix map1,pdfpage12"
+    }
+  ],
+  "published_focus_evidence": {
+    "source_uri": "https://des.sc.gov/sites/des/files/Documents/BOW/WaterQuality/TMDLAttainmentStatus.pdf",
+    "status_date": "2026-07-28",
+    "source_page": 37,
+    "scope": "Two complete published entries in the Choestoea focus watershed; full-table import is available in the module",
+    "records": [
+      {
+        "site": "SV-108",
+        "huc12": "030601020502",
+        "description": "CHOESTOEA CREEK AT S-37-49",
+        "county": "OCONEE",
+        "use": "REC",
+        "cause": "ECOLI",
+        "use_support": "Not Supported",
+        "tmdl_relation": "InTMDL",
+        "tmdl_report": "0904-12",
+        "approval_date": "2012-08-31"
+      },
+      {
+        "site": "SV-301",
+        "huc12": "030601020502",
+        "description": "NORRIS CK AT S-37-435 1 MI S OF WESTMINSTER",
+        "county": "OCONEE",
+        "use": "REC",
+        "cause": "ECOLI",
+        "use_support": "Not Supported",
+        "tmdl_relation": "InTMDL",
+        "tmdl_report": "0904-12",
+        "approval_date": "2012-08-31"
+      }
+    ]
+  },
+  "integration": {
+    "source_manifest_schema": "upstate.sources/v1",
+    "context_schema": "upstate.water-quality-context/v1",
+    "workspace_kind": "water-quality-contexts",
+    "build_entry": "source_tools.water_quality_context.build_workspace_context(workspace, selection)",
+    "download_descriptors": "model.common.describe_file under record.files",
+    "paired_report_join_key": "watersheds[].huc12"
+  },
+  "classification_source": {
+    "uri": "https://gis.des.sc.gov/gisserver/rest/services/water/SCHydroClass/MapServer/2",
+    "discovery_uri": "https://gis.des.sc.gov/stormwater/js/a_settings.js",
+    "source_page": "https://app.notion.com/p/3f7dd77231008124b767e1dccf8a706e",
+    "source_carrier": "F0C9J6KRJDN",
+    "object_id_field": "OBJECTID",
+    "typed_oid_alias": "OBJECTID_1",
+    "nullable_integer_field": "OBJECTID_1",
+    "mapped_classification_status": "provisional",
+    "capture_date": "2026-10-12",
+    "retained_features": 1886,
+    "class_counts": {
+      "ORW": 1040,
+      "TN": 247,
+      "TPGT": 599
+    },
+    "original_geometry_bytes": 4978867,
+    "attribute_csv_sha256": "ce95ef233822d1205f5fda534e95e361a933147301f787906b509f8b4525cf18"
+  }
+}
