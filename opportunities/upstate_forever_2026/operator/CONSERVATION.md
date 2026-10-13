@@ -2,7 +2,7 @@
 
 Operation: UPSTATE-FULL-PRODUCT-BUILD-BRYCE-20261012-E7A1.
 
-This addition carries retained planning-unit geometry through a complete candidate inventory, explicit land selection, saved portfolios, editable GIS/tabular exports and original land-cover scenarios. It uses the existing authenticated operator, task queue, Workspace and scientific engine. Code is covered by the repository MIT license. Scientific interpretation: Needs expert review.
+This addition carries retained planning-unit geometry through a complete candidate inventory, explicit land selection, saved portfolios, editable GIS/tabular exports and original land-cover scenarios. It uses the existing authenticated operator, task queue, Workspace and scientific engine. Code is covered by the repository MIT license. 
 
 ## Install into the current application
 
@@ -78,7 +78,7 @@ The scientific CLI supports overview, prepare, build, inspect, selection, plan-s
     python -B -m model.conservation_cli --workspace /absolute/current-workspace plan-save portfolio.json
     python -B -m model.conservation_cli --workspace /absolute/current-workspace export STUDY_ID --plan-id PLAN_ID
 
-The existing task queue accepts conservation.prepare, conservation.build, conservation.plan.save, conservation.export and conservation.scenario.create. Authenticated reads are /api/conservation/overview, /api/conservation/study?study_id=ID and /api/conservation/plan?plan_id=ID, with the usual workspace query. The browser uses the same queue and retained read methods.
+The existing task queue accepts conservation.prepare, conservation.build, conservation.plan.save, conservation.export, conservation.scenario.create, conservation.criteria.prepare and conservation.experiment.prepare. Authenticated reads are /api/conservation/overview, /api/conservation/study?study_id=ID and /api/conservation/plan?plan_id=ID, with the usual workspace query. The browser uses the same queue and retained read methods.
 
 Source-context and native-model states, exact source selections, coverage and practical run timings should accompany a walkthrough recording. Use the receiving result's actual stage timings when narrating a prepared result and a fresh operation.
 
@@ -88,3 +88,75 @@ Source-context and native-model states, exact source selections, coverage and pr
 - Native NDR 3.20 contract: https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.20.0/userguide/en/ndr.html
 - Native SDR 3.20 contract: https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.20.0/userguide/en/sdr.html
 - Current full-product work order: https://tokenjunkielabs.slack.com/archives/C0BTTA66TK3/p1791846014898459
+
+
+## Published parcel criteria and practice scores
+
+Select the original parcel source and its native identifier field. The exact unit selection preserves typed values, including identifier text with leading zeros. Choose the reporting geography, or a completed native baseline with its original grid. Published practice scores require parcel units. Watershed and management-unit inventories retain their existing geometry and native-quantity workflows.
+
+Choose Published practice points in the scoring controls. The operator reads the maintained Lake Keowee method catalogue, including each practice's criteria, point maximum and priority ranges. It uses the selected category's published purpose. The complete method, original source pages and interpretation choices are in model/KEOWEE_PRIORITIES.md.
+
+Build criteria from imported layers queues the actual parcel derivation. The builder resolves retained original overlays, intersects them with the selected parcels, and imports a criterion table with its source editions and coverage. Native-context derivation uses the retained grid's original land-cover source. Its JSON table binds the exact parcel geometry selection, reporting geometry and source bodies. Use prepared parcel criteria reopens that original study before selecting the generated table; the same geometry binding is checked when the points are calculated.
+
+Land-protection acreage uses the complete original parcel geometry. Reporting-area intersections and native output coverage have separate fields. Choose the first-order Appendix D variant only when the retained stream-order column is available; the system derives the criterion from those orders. The Table 31 variant uses first- and second-order streams. The method guide documents the published difference.
+
+The original export-priority categories can come from the retained criterion table. When a completed baseline contains both NDR and SDR, Current-study native export classes derives three classes from actual parcel-mean nitrogen, phosphorus and sediment outputs. The retained interpretation identifies that current-study adaptation and records its cutoffs. NDR-only and SDR-only inventories keep their actual output availability.
+
+Build the inventory to calculate the selected practice points. Candidate rows show point totals and priority labels; the details expose individual criterion contributions and their original sources. A known zero and an unavailable criterion remain distinct. The model retains known points and unresolved contributions. These records travel with the candidate exports and the saved portfolio.
+
+## From a portfolio to native experiments and ensemble maps
+
+Open a saved portfolio and choose Create land-cover scenario. Record the source and replacement land-cover codes and the purpose of the change. The scenario uses the unique selected footprint, and its native profile must contain coefficients for the replacement class.
+
+Continue with offers three paths: save the scenario, prepare its native run, or prepare a paired experiment. The native paths select an existing grid, an existing profile and NDR, SDR or both. The native scope controls list NDR and SDR against the selected completed grid and retained profile. Unsupported choices are disabled. A matching study baseline supplies the initial selected families; changing the grid or profile recomputes their compatible intersection. A deliberately selected partial scope remains explicit in the request. Completed grids keep their original model resolution. A complete model domain must contain the selected footprint; reporting-area overlap is measured separately.
+
+A paired experiment finds or prepares the original land-cover baseline on that same grid, profile and model choice. Additional retained profiles receive their own matched original baseline. The interface lists explicit completed original baselines only when their grid, profile, selected model families and retained InVEST version match. Additional-profile controls display native-family compatibility, while preparation verifies each original coefficient table, its retained checksum, every original grid land-cover class and the scenario replacement class. Optional parameter axes use the maintained experiment schema: path, values and reference. The experiment editor provides the complete native parameter controls and published design presets. No native models execute while a scenario or experiment is being prepared.
+
+Open paired experiment from the finished operation to run the cases through the existing workspace queue. The experiment retains native outputs, common-support comparisons, candidate metrics and its HTML, CSV and JSON reports. Completed native cases can also be received from the compute programme and synchronized into the same retained experiment.
+
+Saved conservation scenarios remain visible after reopening the application or restoring a portable workspace. Their experiment rows show current case progress from the actual retained experiment, with preparation history kept separately. Open an existing experiment or prepare another one using the same original conservation footprint. A scenario saved before choosing a native grid can acquire its first paired experiment through these controls.
+
+After the native pairs finish, the experiment's paired-ensemble control previews the actual members and source references. Each land-cover alternative becomes a separate product with one member per retained profile and the selected native pollutants. The maintained all-pairs support and chosen quantiles determine the resulting ensemble maps. Open and export those products through the existing paired-ensemble workflow.
+
+## Execute and reopen the regional native journey
+
+The receiving runner accepts the selected native families using --models ndr, --models sdr or --models ndr sdr alongside its existing --grid-id and --profile-id. The explicit original land-cover arguments remain required.
+
+Add --prepare-experiment to retain the matching experiment, or --execute-experiment to calculate it and reopen its completed summary from a new Workspace instance. --experiment-title records the experiment title. Repeat --experiment-profile-id for additional actual profiles. --experiment-axes reads the parameter-axis array from an existing JSON file; --experiment-design chooses one_at_a_time or factorial. All native work uses the maintained experiment engine and original workspace locks.
+
+The receiving record includes the scenario and experiment IDs, native stage result, report files and reopened summary. Its state is written between stages so an interrupted command can resume through the same retained model and experiment identities.
+
+The additional queue actions are conservation.criteria.prepare and conservation.experiment.prepare. The conservation overview includes published_methods and scenario_bridges. These additions use the existing authenticated operator and task queue. The overview also lists criteria_operations so a restored workspace can reopen a completed table or resume its saved source derivation without old task history. conservation.criteria.prepare accepts operation_id for that retained continuation.
+
+
+The parcel import desk can open this same form with data-action="conservation-new-parcel-study", data-source-collection and data-source-id. Optional data-layer, data-id-field, data-label-field, data-where and data-study-title retain the actual imported source selection. data-where contains a typed JSON object. The operator opens a fresh parcel study; reporting-area or native-baseline selection continues in the existing conservation controls.
+
+
+## Registered operator integration and live experiment progress
+
+The provider remains the same Conservation class and original task queue. Its declared actions include parcel criteria and paired-experiment preparation. Register each route and queue action once when the cumulative application uses the extension host. The separate conservation-optimization descriptor retains its own queue and the same original Conservation plan IDs.
+
+The client exports attachConservation with render, mount, detach, dispatch and taskActions. A new mounted Conservation view renders its section before mounting; ordinary host updates preserve current form inputs and selection. The module listens to the existing task feed for conservation operations and the exact experiment.save, experiment.run and experiment.summarize actions, including published progress. Completing or summarizing an experiment refreshes the saved-scenario cards through the same overview.
+
+Controls arriving from a task or another desk must close the current detail view and navigate to Conservation before dispatching conservation-open-study, conservation-open-plan, conservation-use-criteria or conservation-new-parcel-study. The imported parcel callback retains the exact source, layer and typed filter. Its full registration contract is above. Native run/scenario buttons and experiment-show continue through the existing host dispatch.
+
+The native scope is retained independently for each new portfolio scenario. Reopening a saved scenario keeps that scenario's original identity while allowing a further compatible experiment. Changing a profile does not silently replace an explicit baseline or incompatible selected comparison profile; the form identifies the mismatch and asks for a compatible selection within the same workflow.
+
+## Actual source-water protection receiving
+
+The cumulative regional receiver supports protection_upstream and protection_reporting when the actual retained public-water source has been prepared. These are distinct from utility-focus watershed geography. Their original candidate table, positive source-water overlap cohort, optimizer analysis and saved plan remain in the same Workspace.
+
+Run the browser receiver against that actual regional record and the current local operator startup receipt:
+
+    python -B operator/conservation_browser_receiving.py \
+      --operator-receipt /absolute/local-operator-startup.json \
+      --regional-receiving /absolute/current-workspace/conservation-receiving/regional-receiving.json \
+      --study-key protection_upstream \
+      --output /absolute/conservation-browser-receiving \
+      --chromium /usr/bin/chromium
+
+The runner uses the actual eligible original HUC IDs with positive published protection overlap, selects through the rendered controls, saves the portfolio through the original queue, reloads and reopens it, and downloads its exported packet. The report retains the chosen original candidate rows and source regional plan ID alongside the actual task IDs, four screenshots and optional video. Use the same output directory to resume an interrupted receiving operation. The original upstream study remains the default when --study-key is omitted.
+
+## Published-practice optimization
+
+The queued conservation-optimization catalog exposes published_axes alongside context_axes and physical_axes. The published-method objective uses the selected original practice's complete point score and prerequisite; its category, retained criterion sources, original priority definition and native support remain visible. Physical pollutant quantities and geographic context keep their own units. The original optimizer writes the selected plan through Conservation, so its study and plan controls reopen the same saved selection. See operator/CONSERVATION_OPTIMIZATION.md and model/CONSERVATION_OPTIMIZATION.md for the full native request and export shape.

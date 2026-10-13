@@ -10,7 +10,10 @@ const TITLES = {
 };
 const clone = value => structuredClone(value);
 const json = value => JSON.stringify(value, null, 2);
-const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+const canonical = value => Array.isArray(value) ? value.map(canonical) :
+  value !== null && typeof value === 'object' ?
+    Object.fromEntries(Object.keys(value).sort().map(key => [key, canonical(value[key])])) : value;
+const same = (a, b) => JSON.stringify(canonical(a)) === JSON.stringify(canonical(b));
 const keyPattern = /^[A-Z0-9]{16}$/;
 
 export function acceptParcelResult(draft, input, result) {

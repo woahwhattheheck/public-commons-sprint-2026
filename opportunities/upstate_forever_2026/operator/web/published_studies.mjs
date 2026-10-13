@@ -1,0 +1,360 @@
+const PARAMETERS = {
+  total_phosphorus: "Total phosphorus", total_nitrogen: "Total nitrogen",
+  total_chlorophyll_a: "Total chlorophyll-a", microcystins: "Microcystins",
+  dissolved_oxygen: "Dissolved oxygen", ph: "pH", water_temperature: "Water temperature",
+  specific_conductivity: "Specific conductivity", turbidity: "Turbidity"
+};
+const MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+const esc = value => String(value ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const label = value => PARAMETERS[value] || String(value ?? "").replaceAll("_", " ");
+const arr = value => Array.isArray(value) ? value : [];
+const canonical = value => {
+  if (Array.isArray(value)) return "[" + value.map(canonical).join(",") + "]";
+  if (value && typeof value === "object") return "{" + Object.keys(value).sort().map(k => JSON.stringify(k) + ":" + canonical(value[k])).join(",") + "}";
+  return JSON.stringify(value);
+};
+function tasksFrom(state) {
+  const value = state?.tasks;
+  if (Array.isArray(value)) return value;
+  if (Array.isArray(value?.items)) return value.items;
+  return value && typeof value === "object" ? Object.values(value).filter(v => v && typeof v === "object" && v.id) : [];
+}
+function cell(row, field) {
+  if (field === "parameter") return label(row.parameter);
+  if (field === "month") return MONTHS[Number(row.month) - 1] || row.month;
+  if (field === "sd") return row.sd_published_token || row.raw_cells?.sd || row.sd;
+  if (field === "minimum" && row.minimum_qualifier === "below_detection_limit") return "< " + row.minimum_detection_limit;
+  return row.raw_cells?.[field] ?? row[field];
+}
+function safeURL(value) {
+  if (typeof value !== "string") return "";
+  if (value.startsWith("/api/file/")) return value;
+  try { const url = new URL(value); return url.protocol === "https:" ? url.href : ""; } catch { return ""; }
+}
+function link(url, title) {
+  const safe = safeURL(url);
+  return safe ? '<a href="' + esc(safe) + '" target="_blank" rel="noopener noreferrer">' + esc(title) + "</a>" : esc(title);
+}
+
+export function createPublishedStudiesDesk(host) {
+  let node = null, workspace = null, events = null, catalog = null, complete = null, selected = null;
+  let request = 0, catalogRequest = 0, busy = false, taskStamp = "", tab = "seasonal";
+  let selection = {site_ids: [], parameters: [], strata: [], year: null, months: []};
+  const requests = new Set(), operationIds = new Map(), pending = new Map();
+
+  function find(selector) { return node?.querySelector(selector); }
+  function status(message, error = false) {
+    const target = find("[data-ps-status]");
+    if (target) { target.textContent = message; target.dataset.error = String(error); }
+  }
+  async function api(path, body) {
+    const controller = new AbortController(); requests.add(controller);
+    try { return await host.api(path, {method: "POST", body: {workspace, ...body}, signal: controller.signal}); }
+    finally { requests.delete(controller); }
+  }
+  function showError(error) {
+    if (error?.name !== "AbortError") { status(error?.message || String(error), true); host.toast(error?.message || "Study request failed"); }
+  }
+  function activeRecord() {
+    return arr(catalog?.studies).find(row => selected === row.study_id + "|" + row.version_id);
+  }
+  function currentPayload() {
+    const record = activeRecord();
+    return record ? {study_id: record.study_id, version_id: record.version_id, selection} : null;
+  }
+
+  function frame() {
+    node.classList.add("published-studies-desk");
+    node.innerHTML =
+      '<header class="ps-header"><div><p class="ps-eyebrow">Field observations</p><h1>Published studies</h1>' +
+      '<p>Inspect source tables by station, depth and parameter, then retain a complete study or export a selected report.</p></div>' +
+      '<button type="button" data-ps-action="refresh">Refresh studies</button></header>' +
+      '<p class="ps-status" data-ps-status role="status" aria-live="polite"></p>' +
+      '<section class="ps-intake" aria-label="Study intake"><div data-ps-builtins></div>' +
+      '<details><summary>Import another source or reopen a study</summary><form data-ps-import>' +
+      '<div class="ps-form-grid"><label>Source folder<select name="root_id" required></select></label>' +
+      '<label class="ps-wide">Source file or study directory<input name="relative_path" placeholder="studies/eighteenmile-2023.json" required></label>' +
+      '<label>Original report file<input name="report_path" placeholder="Optional PDF in the same folder"></label>' +
+      '<label>Table 7 image<input name="image_path" placeholder="Optional PNG in the same folder"></label></div>' +
+      '<p class="ps-help">Accepts the study companion JSON, a complete study ZIP, or a directory of published tables. Paths start inside the selected source folder.</p>' +
+      '<button type="submit">Import study</button></form></details></section>' +
+      '<section class="ps-study-control"><label>Retained study<select data-ps-study aria-label="Retained study"></select></label>' +
+      '<div class="ps-actions"><button type="button" data-ps-action="report" disabled>Export selected report</button>' +
+      '<button type="button" data-ps-action="export" disabled>Export complete study</button></div></section>' +
+      '<div data-ps-summary></div>' +
+      '<form class="ps-filters" data-ps-filters hidden><fieldset><legend>Stations</legend><div data-ps-sites></div></fieldset>' +
+      '<div class="ps-filter-grid"><label>Parameter<select name="parameter"><option value="">All parameters</option>' +
+      Object.entries(PARAMETERS).map(([key, value]) => '<option value="' + key + '">' + esc(value) + "</option>").join("") +
+      '</select></label><label>Depth stratum<select name="stratum"><option value="">All strata</option><option value="surface">Surface</option><option value="mid">Mid-water</option><option value="bottom">Bottom</option></select></label>' +
+      '<label>Continuous year<select name="year"><option value="">All years</option></select></label>' +
+      '<label>Continuous month<select name="month"><option value="">All months</option>' +
+      MONTHS.map((month, index) => '<option value="' + (index + 1) + '">' + month + "</option>").join("") +
+      '</select></label></div><p class="ps-help">Month and year select continuous summaries. Seasonal tables retain their full published sampling campaign. Surface field ranges and continuous sensors retain their reported depths.</p></form>' +
+      '<nav class="ps-tabs" aria-label="Study tables">' +
+      [["seasonal","Seasonal"],["continuous","Continuous"],["ranges","Field ranges"],["stations","Stations"],["sources","Sources and methods"]]
+        .map(([id, title]) => '<button type="button" data-ps-tab="' + id + '" aria-pressed="' + (id === tab) + '">' + title + "</button>").join("") +
+      '</nav><div data-ps-tables></div><aside class="ps-row-detail" data-ps-detail hidden aria-label="Original row details"></aside>';
+  }
+
+  function renderCatalog() {
+    if (!node) return;
+    const studies = arr(catalog?.studies);
+    const control = find("[data-ps-study]");
+    control.innerHTML = studies.length
+      ? studies.map(row => '<option value="' + esc(row.study_id + "|" + row.version_id) + '">' + esc(row.title + " · " + row.version_id.slice(-8)) + "</option>").join("")
+      : '<option value="">Import a study to begin</option>';
+    if (!studies.some(row => row.study_id + "|" + row.version_id === selected)) selected = studies[0] ? studies[0].study_id + "|" + studies[0].version_id : null;
+    control.value = selected || "";
+    const rootControl = find('form[data-ps-import] select[name="root_id"]');
+    const priorRoot = rootControl.value;
+    rootControl.innerHTML = arr(catalog?.source_roots).map(root => '<option value="' + esc(root.id) + '">' + esc(root.label) + "</option>").join("");
+    if (arr(catalog?.source_roots).some(root => root.id === priorRoot)) rootControl.value = priorRoot;
+    find("[data-ps-builtins]").innerHTML = arr(catalog?.builtin_studies).map(study =>
+      '<div class="ps-builtin"><div><strong>' + esc(study.title) + '</strong><p class="ps-help">' +
+      esc(study.publication) + " · " + esc(study.counts.stations) + " stations · " +
+      esc(study.counts.seasonal_summary_rows) + " seasonal summaries</p></div>" +
+      '<button type="button" data-ps-builtin="' + esc(study.id) + '">Import installed study</button></div>'
+    ).join("");
+    for (const button of node.querySelectorAll('[data-ps-action="report"],[data-ps-action="export"]')) button.disabled = !selected || busy;
+  }
+
+  function renderSummary() {
+    const target = find("[data-ps-summary]");
+    if (!complete) {
+      target.innerHTML = '<div class="ps-empty"><h2>Study context follows its sources</h2><p>Import the installed Eighteenmile study or select a retained study source to inspect the original tables.</p></div>';
+      find("[data-ps-filters]").hidden = true; find("[data-ps-tables]").innerHTML = ""; return;
+    }
+    const {study, record} = complete, counts = record.counts || {}, grab = study.grab_sampling || {}, continuous = study.continuous || {};
+    target.innerHTML = '<section class="ps-summary"><h2>' + esc(study.title) + '</h2><p>' +
+      esc(study.issuing_body) + " · Technical report " + esc(study.technical_report) + " · " + esc(study.publication) +
+      '</p><dl class="ps-counts">' +
+      [["Stations",counts.stations],["Seasonal rows",counts.seasonal],["Monthly DO",counts.monthly_do],["Monthly pH",counts.monthly_ph],["Field range rows",counts.surface_ranges]]
+        .map(([key,value]) => "<div><dt>" + esc(key) + "</dt><dd>" + esc(value) + "</dd></div>").join("") +
+      '</dl><div class="ps-support"><p><strong>Grab sampling:</strong> ' + esc(grab.start) + " through " + esc(grab.end) +
+      "; surface " + esc(grab.surface_depth_m) + " m; " + esc(grab.visits_per_site) + " planned visits per site.</p>" +
+      '<p><strong>Continuous sensors:</strong> ' + esc(arr(continuous.stations).join(", ")) + "; " +
+      esc(continuous.interval_minutes) + " minute interval at approximately " + esc(continuous.approximate_depth_m) +
+      " m. Monthly sample counts are days.</p></div></section>";
+    const availableSites = arr(complete.tables.stations).map(row => row.site_id);
+    selection.site_ids = selection.site_ids.filter(id => availableSites.includes(id));
+    if (!selection.site_ids.length) selection.site_ids = availableSites;
+    find("[data-ps-sites]").innerHTML = availableSites.map(id => '<label class="ps-check"><input type="checkbox" name="site" value="' +
+      esc(id) + '"' + (selection.site_ids.includes(id) ? " checked" : "") + ">" + esc(id) + "</label>").join("");
+    const years = [...new Set([...arr(complete.tables.monthly_do),...arr(complete.tables.monthly_ph)].map(row => row.year))].sort();
+    const yearControl = find('form[data-ps-filters] select[name="year"]');
+    yearControl.innerHTML = '<option value="">All years</option>' + years.map(year => '<option value="' + year + '">' + year + "</option>").join("");
+    yearControl.value = selection.year || "";
+    find('form[data-ps-filters] select[name="parameter"]').value = selection.parameters[0] || "";
+    find('form[data-ps-filters] select[name="stratum"]').value = selection.strata[0] || "";
+    find('form[data-ps-filters] select[name="month"]').value = selection.months[0] || "";
+    find("[data-ps-filters]").hidden = false;
+  }
+
+  function sourcePage(row) {
+    const pdf = arr(complete?.source_artifacts).find(item => item.path.toLowerCase().endsWith(".pdf"));
+    const url = pdf?.download?.url || row.source_url || row.report_url || complete?.study?.original_url;
+    const page = row.source_pdf_page || row.report_pdf_page;
+    return link(page && url ? url.split("#")[0] + "#page=" + page : url, "Table " + (row.source_table || row.report_table || "—") + " · PDF " + (page || "—"));
+  }
+  function table(title, rows, columns, source = true) {
+    if (!rows.length) return '<section class="ps-table-section"><h2>' + esc(title) + '</h2><p class="ps-empty-row">No rows match this selection.</p></section>';
+    return '<section class="ps-table-section"><h2>' + esc(title) + ' <span class="ps-help">(' + rows.length + ')</span></h2><div class="ps-table-scroll"><table><thead><tr>' +
+      columns.map(([,title]) => "<th>" + esc(title) + "</th>").join("") +
+      (source ? "<th>Source</th>" : "") + "<th>Original row</th></tr></thead><tbody>" +
+      rows.map(row => "<tr>" + columns.map(([field]) => "<td>" + esc(cell(row,field)) + "</td>").join("") +
+        (source ? "<td>" + sourcePage(row) + "</td>" : "") +
+        '<td><button type="button" class="ps-link-button" data-ps-row="' + esc(row.record_id || "") + '">Details</button></td></tr>').join("") +
+      "</tbody></table></div></section>";
+  }
+  function renderTables(context) {
+    if (!node || !context) return;
+    for (const button of node.querySelectorAll("[data-ps-tab]")) button.setAttribute("aria-pressed", String(button.dataset.psTab === tab));
+    const tables = context.tables;
+    let output = "";
+    if (tab === "seasonal") {
+      output = table("Seasonal concentration summaries", arr(tables.seasonal), [
+        ["site_id","Station"],["stratum","Stratum"],["depth_min_m","From m"],["depth_max_m","To m"],
+        ["parameter","Parameter"],["units","Unit"],["mean","Mean"],["sd","SD"],
+        ["minimum","Min"],["maximum","Max"],["n","n as printed"]
+      ]);
+      const methods = [...new Set(arr(tables.seasonal).flatMap(row => [row.censor_substitution,row.parameter_formula]).filter(Boolean))];
+      output += '<section class="ps-methods"><h3>Published statistical treatment</h3><p>Mean and standard deviation describe the original seasonal samples. Depth intervals follow each site and stratum.</p>' +
+        methods.map(method => "<p>" + esc(method) + "</p>").join("") + "</section>";
+    } else if (tab === "continuous") {
+      const columns = [["site_id","Station"],["year","Year"],["month","Month"],["units","Unit"],["avg_daily_minimum","Avg daily min"],["avg_daily_maximum","Avg daily max"],["published_avg_daily_range","Published avg daily range"],["n_days","Days"]];
+      output = table("Monthly dissolved oxygen", arr(tables.monthly_do), columns) +
+        table("Monthly pH", arr(tables.monthly_ph), [...columns,["days_with_max_above_8_5","Days max > 8.5"]]);
+    } else if (tab === "ranges") {
+      const rows = arr(context.surface_parameter_ranges).map(row => ({...row, record_id: arr(tables.surface_ranges).find(raw => raw.site_id === row.site_id)?.record_id}));
+      output = table("Surface field ranges", rows, [
+        ["site_id","Station"],["parameter","Parameter"],["units","Unit"],["minimum","Min"],["maximum","Max"],["depth_m","Depth m"],["period_start","Start"],["period_end","End"],["general_event_count","Typical events"]
+      ]);
+    } else if (tab === "stations") {
+      output = table("Station coordinates and native datums", arr(tables.stations), [
+        ["site_id","Station"],["description","Description"],["latitude","Latitude"],["longitude","Longitude"],["datum","Datum"],["epsg","EPSG"],["monitoring_location_id","Monitoring location"]
+      ]) + table("Permits identified by the published report", arr(tables.permits), [
+        ["npdes_permit_id","Permit"],["report_facility_name","Reported facility"],["edition","Edition"]
+      ]);
+    } else {
+      output = '<section class="ps-methods"><h2>Original report and retained files</h2><p>' +
+        link(complete.study.original_url,"Publisher report") + '</p><ul class="ps-source-list">' +
+        arr(context.source_artifacts).map(item => "<li>" + link(item.download?.url,item.path) + '<span class="ps-help">' +
+          Number(item.bytes).toLocaleString() + " bytes</span></li>").join("") + "</ul></section>";
+      for (const visual of arr(context.visual_context)) {
+        const reading = visual.visual_reading || {};
+        output += '<section class="ps-visual"><h2>Table 7 original page reading</h2><p>' + esc(reading.result) +
+          "</p><p>Printed page " + esc(reading.printed_page) + " · PDF viewer page " + esc(reading.pdf_viewer_page) + "</p>";
+        const image = arr(context.source_artifacts).find(item => /table-?7.*\.png$/i.test(item.path));
+        if (image?.download?.url) output += '<img loading="lazy" src="' + esc(image.download.url) + '" alt="Table 7 from the original publisher report">';
+        const discrepancy = visual.source_discrepancy || {};
+        output += '<p>The five printed table counts total ' + esc(discrepancy.table_n_sum) +
+          ". The methods section reports " + esc(discrepancy.methods_reported_chlorophyll_samples) +
+          " chlorophyll samples. Each statement is retained with its original page.</p>" +
+          (visual.numeric_consistency ? "<p>" + esc(visual.numeric_consistency.interpretation) + "</p>" : "") + "</section>";
+      }
+    }
+    const notes = arr(context.source_notes);
+    if (notes.length) output += '<details class="ps-source-notes"><summary>Source notes (' + notes.length + ')</summary>' +
+      notes.map(note => '<article><h3>' + esc(label(note.code)) + "</h3><p>" +
+        esc(note.context || JSON.stringify(note)) + "</p>" +
+        (note.source_pdf_page ? "<p>" + sourcePage(note) + "</p>" : "") + "</article>").join("") + "</details>";
+    find("[data-ps-tables]").innerHTML = output;
+  }
+
+  async function loadSelection() {
+    const payload = currentPayload(); if (!payload || !node) return;
+    const id = ++request; status("Loading published table selection…");
+    try {
+      const result = await api("/api/published-studies/context", payload);
+      if (id !== request || !node) return;
+      renderTables(result); status("Published source tables loaded.");
+    } catch (error) { if (id === request) showError(error); }
+  }
+  async function loadStudy() {
+    const record = activeRecord(); ++request;
+    if (!record) { complete = null; renderSummary(); return; }
+    const id = request; status("Opening retained study…");
+    try {
+      const result = await api("/api/published-studies/study", {study_id: record.study_id, version_id: record.version_id});
+      if (id !== request || !node) return;
+      complete = result; renderSummary(); await loadSelection();
+    } catch (error) { if (id === request) showError(error); }
+  }
+  async function refreshCatalog(prefer = null) {
+    const id = ++catalogRequest;
+    try {
+      const result = await api("/api/published-studies/catalog", {});
+      if (id !== catalogRequest || !node) return;
+      const previous = selected;
+      catalog = result;
+      if (prefer?.study_id && prefer?.version_id) selected = prefer.study_id + "|" + prefer.version_id;
+      renderCatalog();
+      if (selected !== previous || !complete || prefer) await loadStudy();
+    } catch (error) { if (id === catalogRequest) showError(error); }
+  }
+
+  async function queue(action, payload) {
+    if (busy) return;
+    const expectedWorkspace = workspace;
+    const key = canonical({workspace,action,payload});
+    if (!operationIds.has(key)) operationIds.set(key, "published-study-" + crypto.randomUUID());
+    busy = true; renderCatalog(); status("Queueing study task…");
+    try {
+      const task = await host.api("/api/actions", {method:"POST",body:{workspace,action,payload,operation_id:operationIds.get(key)}});
+      pending.set(task.id,{action,key});
+      if (!node || workspace !== expectedWorkspace) return;
+      if (task.state === "complete" || task.state === "completed") {
+        pending.delete(task.id); operationIds.delete(key); await refreshCatalog(task.result);
+      }
+      await host.refresh({force:true});
+      host.showTask(task.id);
+      status("Study task " + task.id + " is " + task.state + ".");
+      update(host.getState());
+    } catch (error) { showError(error); }
+    finally { if (workspace === expectedWorkspace) { busy = false; if (node) renderCatalog(); } }
+  }
+  function detail(id) {
+    const rows = Object.values(complete?.tables || {}).flat();
+    const row = rows.find(item => item.record_id === id);
+    if (!row) return;
+    const target = find("[data-ps-detail]");
+    target.innerHTML = '<div class="ps-detail-head"><h2>Original row</h2><button type="button" data-ps-action="close-detail">Close</button></div>' +
+      '<p>' + esc(row.source_file) + " · CSV row " + esc(row.source_csv_row) + " · " + sourcePage(row) +
+      '</p><dl class="ps-raw-cells">' + Object.entries(row.raw_cells || {}).map(([key,value]) =>
+        "<dt>" + esc(key) + "</dt><dd>" + esc(value === "" ? "(blank)" : value) + "</dd>").join("") + "</dl>";
+    target.hidden = false; target.scrollIntoView({block:"nearest",behavior:"smooth"});
+  }
+  function filters() {
+    const form = find("[data-ps-filters]"), data = new FormData(form), sites = data.getAll("site");
+    if (!sites.length) { status("Select at least one station.",true); return; }
+    selection = {site_ids:sites,parameters:data.get("parameter") ? [data.get("parameter")] : [],
+      strata:data.get("stratum") ? [data.get("stratum")] : [],year:data.get("year") ? Number(data.get("year")) : null,
+      months:data.get("month") ? [Number(data.get("month"))] : []};
+    loadSelection();
+  }
+  function click(event) {
+    const button = event.target.closest("button"); if (!button || !node.contains(button)) return;
+    if (button.dataset.psBuiltin) queue("published-study.import",{builtin_id:button.dataset.psBuiltin});
+    if (button.dataset.psTab) { tab = button.dataset.psTab; loadSelection(); }
+    if (button.dataset.psRow) detail(button.dataset.psRow);
+    const action = button.dataset.psAction;
+    if (action === "refresh") refreshCatalog();
+    if (action === "close-detail") find("[data-ps-detail]").hidden = true;
+    if (action === "report" && currentPayload()) queue("published-study.report",currentPayload());
+    if (action === "export" && currentPayload()) {
+      const {study_id,version_id} = currentPayload(); queue("published-study.export",{study_id,version_id});
+    }
+  }
+  function submit(event) {
+    if (event.target.matches("[data-ps-filters]")) { event.preventDefault(); return; }
+    if (!event.target.matches("[data-ps-import]")) return;
+    event.preventDefault();
+    const data = new FormData(event.target), root_id = data.get("root_id");
+    const payload = {source:{root_id,relative_path:String(data.get("relative_path") || "").trim()},evidence:[]};
+    for (const [field,filename] of [["report_path","2023LakeProgramFinalReport.pdf"],["image_path","table7-page21.png"]]) {
+      const relative_path = String(data.get(field) || "").trim();
+      if (relative_path) payload.evidence.push({filename,source:{root_id,relative_path}});
+    }
+    queue("published-study.import",payload);
+  }
+
+  function update(state = host.getState()) {
+    if (!node || host.getWorkspace() !== workspace) return;
+    const relevant = tasksFrom(state).filter(task => String(task.action || "").startsWith("published-study."));
+    const stamp = relevant.map(task => task.id + ":" + task.state).sort().join("|");
+    if (stamp === taskStamp) return; taskStamp = stamp;
+    let completed = null;
+    for (const task of relevant) {
+      if (!pending.has(task.id)) continue;
+      if (task.state === "complete" || task.state === "completed") {
+        const entry = pending.get(task.id); pending.delete(task.id); operationIds.delete(entry.key);
+        completed = task.result; status("Study task completed.");
+      } else if (["failed","interrupted","cancelled"].includes(task.state)) {
+        pending.delete(task.id); status(task.error?.message || ("Study task " + task.state + ". Open the task to resume."),true);
+      }
+    }
+    if (completed) refreshCatalog(completed);
+  }
+  function mount(target, state = host.getState()) {
+    detach();
+    node = target; workspace = host.getWorkspace(); events = new AbortController();
+    if (!workspace) { node.textContent = "Choose a workspace to inspect published studies."; return; }
+    busy = false; taskStamp = ""; catalog = null; complete = null; selected = null; selection = {site_ids:[],parameters:[],strata:[],year:null,months:[]};
+    frame();
+    node.addEventListener("click",click,{signal:events.signal});
+    node.addEventListener("submit",submit,{signal:events.signal});
+    node.addEventListener("change",event => {
+      if (event.target.matches("[data-ps-study]")) {
+        selected = event.target.value; selection.site_ids = []; find("[data-ps-detail]").hidden = true; loadStudy();
+      } else if (event.target.closest("[data-ps-filters]")) filters();
+    },{signal:events.signal});
+    update(state); refreshCatalog();
+  }
+  function detach() {
+    events?.abort(); for (const controller of requests) controller.abort(); requests.clear();
+    ++request; ++catalogRequest;
+    if (node) node.classList.remove("published-studies-desk");
+    node = null; events = null;
+  }
+  return {mount,update,detach};
+}

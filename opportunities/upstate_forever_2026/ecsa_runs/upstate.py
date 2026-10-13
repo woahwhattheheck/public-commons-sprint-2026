@@ -16,6 +16,7 @@ import tempfile
 from typing import Any
 from .provider import safe_relative
 from .workspace_adapter import WorkspaceRetention
+from .store import check_sha
 
 
 def _identifier(value: Any) -> str:
@@ -32,7 +33,7 @@ def retention_for(operator, workspace) -> WorkspaceRetention:
                               namespace='upstate:' + str(project_id))
 
 
-def _selected_inputs(workspace, run_id: str) -> tuple[dict, dict[str, Path]]:
+def _selected_inputs(workspace, run_id: str) -> tuple[dict, dict[str, Path], dict[str, dict]]:
     state = workspace.inspect_run(run_id)
     selection = state['selection']
     grid = workspace.get_grid(_identifier(selection['grid_id']))
@@ -40,6 +41,7 @@ def _selected_inputs(workspace, run_id: str) -> tuple[dict, dict[str, Path]]:
     scenario = workspace._get('scenarios', _identifier(selection['scenario_id']))
     root = Path(workspace.root).resolve()
     files: dict[str, Path] = {}
+    expected_files: dict[str, dict] = {}
 
     def add(relative: str, expected: dict | None = None):
         name = safe_relative(relative).as_posix()
@@ -47,11 +49,16 @@ def _selected_inputs(workspace, run_id: str) -> tuple[dict, dict[str, Path]]:
         if name != relative or path.is_symlink() or not path.is_file() or not path.resolve().is_relative_to(root):
             raise ValueError(f'Native dependency is not a retained file: {relative}')
         if expected is not None:
-            h = hashlib.sha256()
-            with path.open('rb') as src:
-                for chunk in iter(lambda: src.read(1024 * 1024), b''): h.update(chunk)
-            if h.hexdigest() != expected['sha256'] or path.stat().st_size != expected['bytes']:
-                raise ValueError(f'Original native dependency changed: {name}')
+            sha = check_sha(expected.get('sha256'))
+            size = expected.get('bytes')
+            if type(size) is not int or size < 0:
+                raise ValueError('Original native dependency byte length must be nonnegative')
+            if path.stat().st_size != size:
+                raise ValueError(f'Original native dependency length changed: {name}')
+            descriptor = {'sha256': sha, 'bytes': size}
+            if name in expected_files and expected_files[name] != descriptor:
+                raise ValueError(f'Original native dependency metadata conflicts: {name}')
+            expected_files[name] = descriptor
         files[name] = path
 
     add('workspace.json')
@@ -85,7 +92,45 @@ def _selected_inputs(workspace, run_id: str) -> tuple[dict, dict[str, Path]]:
         for body in bodies:
             add(body['object'], body)
     return {'project': workspace.project, 'selection': selection, 'grid': grid,
-            'profile': profile, 'scenario': scenario, 'sources': sources}, files
+            'profile': profile, 'scenario': scenario, 'sources': sources}, files, expected_files
+
+
+def _native_file_metadata(result: dict, run_id: str) -> dict[str, dict]:
+    """Select exact file descriptors from the original completed native stages."""
+    prefix = 'runs/' + run_id + '/'
+    expected = {}
+
+    def add(item):
+        if not isinstance(item, dict):
+            raise TypeError('Original native file metadata must be a descriptor')
+        relative = safe_relative(item['path']).as_posix()
+        if relative != item['path']:
+            raise ValueError('Original native file metadata must use canonical paths')
+        sha = check_sha(item.get('sha256'))
+        size = item.get('bytes')
+        if type(size) is not int or size < 0:
+            raise ValueError('Original native file byte length must be nonnegative')
+        name = prefix + relative
+        descriptor = {'sha256': sha, 'bytes': size}
+        if name in expected and expected[name] != descriptor:
+            raise ValueError('Original native file descriptors conflict: ' + name)
+        expected[name] = descriptor
+
+    for item in result.get('artifacts', {}).values():
+        add(item)
+    for model in ('ndr', 'sdr', 'landcover'):
+        stage = result.get('stages', {}).get(model)
+        if stage is None:
+            continue
+        for field in ('arguments', 'requested_arguments', 'artifact'):
+            if stage.get(field) is not None:
+                add(stage[field])
+        for item in stage.get('files', {}).values():
+            add(item)
+        for field in ('companions', 'additional_files'):
+            for item in stage.get(field, []):
+                add(item)
+    return expected
 
 
 def invoke_original_run(operator, task: dict, workspace, run_id: str) -> dict:
@@ -125,12 +170,12 @@ def invoke_original_run(operator, task: dict, workspace, run_id: str) -> dict:
         if assembled['id'] != run_id:
             raise ValueError('Completed-stage assembly changed the original selected run')
 
-    inputs, native_files = _selected_inputs(workspace, run_id)
+    inputs, native_files, expected_files = _selected_inputs(workspace, run_id)
     # Freeze before native execution. The immutable blob copies below are used
     # during final retention, so later source changes cannot rebind the edition.
     frozen = {}
     for name, path in native_files.items():
-        sha, size = retention.store.put_file(path)
+        sha, size = retention.store.put_file(path, expected=expected_files.get(name))
         frozen[name] = retention.store.blob_path(sha)
     result = workspace.run(run_id)  # THE ORIGINAL native.execute_run path.
     if not isinstance(result, dict) or result.get('state') != 'complete' or result.get('id') != run_id:
@@ -158,9 +203,14 @@ def invoke_original_run(operator, task: dict, workspace, run_id: str) -> dict:
                             model_family=family, run_id=run_id,
                             scenario_id=inputs['selection']['scenario_id'],
                             inputs={'native_inputs': inputs, 'original_request': task['payload']},
-                            native_files=frozen, native_directories=tuple(native_directories))
+                            native_files=frozen, native_directories=tuple(native_directories),
+                            native_file_metadata=_native_file_metadata(result, run_id))
     task['retention'] = meta
     return result
+
+
+# Advertise the maintained run.start payload consumed above.
+ORIGINAL_RUN_CAPABILITIES = {"run.start": {"source_runs": True}}
 
 
 def integrate_operator(source: str | Path, *, write: bool = False) -> dict:
