@@ -2,7 +2,7 @@
   "schema": "upstate.operator-extension/v1",
   "id": "assessment-context",
   "title": "Assessment geographic context",
-  "version": "1.4.3",
+  "version": "1.4.4",
   "order": 67,
   "assets": [
     "assessment_context.mjs",
