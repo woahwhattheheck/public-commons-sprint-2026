@@ -170,7 +170,7 @@ the resulting native records.
 
 ## Rendered product inspection
 
-Before the October 13 14:00 UTC sprint handoff, the producing worker opens this exact populated workflow and LOOKS at its rendered desktop and narrow screens. Operate inspection, invalid input, saving, reopening, native case navigation, request recovery and export. View the actual screenshots and scientific output, then repair clipping, unreadable tables, missing styles or broken controls. Preserve the images with the receiving output. Source review alone does not establish the outgoing product's visual readiness.
+Before presenting the outgoing product, the producing worker opens this exact populated workflow and LOOKS at its rendered desktop and narrow screens. Operate inspection, invalid input, saving, reopening, native case navigation, request recovery and export. View the actual screenshots and scientific output, then repair clipping, unreadable tables, missing styles or broken controls. Preserve the images with the receiving output. Source review alone does not establish the outgoing product's visual readiness.
 
 
 ## Reopen a binding from an independently received Chemistry case

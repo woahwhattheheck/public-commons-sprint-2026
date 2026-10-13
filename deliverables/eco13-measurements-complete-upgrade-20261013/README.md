@@ -4,7 +4,7 @@ This release carries the original measured-observation engine and collections, t
 
 ## Owner's primary demonstration scope
 
-Canonical owner direction: `opportunities/upstate_forever_2026/CURRENT_OWNER_DIRECTION.md`, version `2026-10-13.3`, retained at source commit `e7325cdf`. The complete brief is included in this source bank as `CURRENT_OWNER_DIRECTION.md`.
+Canonical owner direction: `opportunities/upstate_forever_2026/CURRENT_OWNER_DIRECTION.md`, version `2026-10-13.4`, renewed by Bryce on October 13 at 10:46 a.m. Eastern. The complete brief is included in this source bank as `CURRENT_OWNER_DIRECTION.md`.
 
 The owner's October 13 direction for this Upper Savannah RFP keeps the main demonstration on its actual geographic and source shapes: a 30 m grid, the upstream model domain distinguished from the South Carolina reporting mask and utility focus, clearly identified realistic simulated inputs, and native InVEST NDR/SDR baseline, restoration and matched-control cases. Present annual nitrogen and phosphorus reaching streams in kg/year and sediment in tonnes/year, with differences, maps, reports, editable parameters and source editions, export and cold reopening. Retain the actual elapsed operation history and show the production workshare.
 
@@ -14,9 +14,9 @@ Tim remains the scientific lead and retains scientific direction, review and the
 
 This complete successor includes the original Measurements1.2 incremental intake, original source chunks/rejections, disk-backed complete population export, independent editable receiving and browser pane. The original1.2 standalone Chemistry compiler remains byte-preserved under `measurement_workspace/legacy_chemistry.py`; the active native compound/interval binding remains current. Streamed source hydration now takes place inside the original atomic snapshot transaction, so reviewed record/source editions and original collection exports remain identical.
 
-The frozen source parts contain 76 complete UTF-8 members / 934,242 source bytes. They include the original 23-file core, the complete current binding and interface, the original stoichiometry helper used for exact source intervals and derived nitrogen, the atomic snapshot guide, and the scoped installation inventory and writer. The package initializer is carried as a reference to the preserved base; the installer does not replace it.
+The frozen source parts contain 76 complete UTF-8 members / 948,586 source bytes. They include the original 23-file core, the complete current binding and interface, the original stoichiometry helper used for exact source intervals and derived nitrogen, the atomic snapshot guide, and the scoped installation inventory and writer. The package initializer is carried as a reference to the preserved base; the installer does not replace it.
 
-The source pin is `928f953e274374805467838809b1c9d8be8ca554`. Every member and source part has its exact byte count and SHA in `manifest.json`. The separate bootstrap holds the complete unchanged original application assembler, its matching component reader and the required component-fragment helper. The stager checks all three byte identities, loads the fragment helper before the component reader and assembler, and uses their original source-bank reader and file publisher. It works independently of the base application's assembler edition. The complete current AGENTS instruction is also verified and retained at the stage root.
+The source pin is `11ca2f61b8207c0309fa85ce8d336661226fb2e7`. Every member and source part has its exact byte count and SHA in `manifest.json`. The separate bootstrap holds the complete unchanged original application assembler, its matching component reader and the required component-fragment helper. The stager checks all three byte identities, loads the fragment helper before the component reader and assembler, and uses their original source-bank reader and file publisher. It works independently of the base application's assembler edition. The complete current AGENTS instruction is also verified and retained at the stage root.
 
 Use the existing full Upper Savannah application with its installed extension registry, native Workspace APIs, Published Studies and maintained Chemistry 0.3 compound/interval component. If the receiving application predates Chemistry 0.3, install the complete `deliverables/eco13-chemistry-compound-upgrade-20261013` release first using its original guarded installer. The measurement package preserves that engine and its current reporting consumers.
 
@@ -82,7 +82,7 @@ The current owner instruction is repository `AGENTS.md` version `2026-10-13.1`. 
 
 Repair broken, cramped, clipped, overflowing or unreadable output in the same authorized operation, retaining the plain industrial presentation and original scientific computation. Return accessible screenshots and actual files to the producing team for inspection. Continue the existing receiving owner and native project; do not start a parallel scientific calculation merely to install this source.
 
-The existing Ecosystem sprint cutoff is **October 13, 2026, 14:00 UTC** (10:00 a.m. America/Kentucky/Louisville).
+Bryce's renewed owner direction version 2026-10-13.4 supersedes the earlier Eco cutoff. Continue existing unfinished work from its actual retained state while preserving active processes, completed scientific outputs and original implementation owners.
 
 
 ## Continue original streamed sources
@@ -112,7 +112,7 @@ Original dot/4081 native execution reproduced the missing-streamed-evidence defe
 
 ## Original returned-review comparison and independent incorporation
 
-This same complete installation now includes all ten byte-exact original returned-review 1.0.2 sources, the original decision desk, its native queued operator provider and both UI mirrors. Existing Measurements, large-source handling, the original 36-record Chemistry receiving course and all workspace-lifetime protections remain in this release. Read `operator/MEASUREMENT_RETURNED_REVIEWS.md` in the installed application.
+This same complete installation now includes all ten byte-exact original returned-review 1.0.3 sources, the original decision desk, its native queued operator provider and both UI mirrors. Existing Measurements, large-source handling, the original 36-record Chemistry receiving course and all workspace-lifetime protections remain in this release. Read `operator/MEASUREMENT_RETURNED_REVIEWS.md` in the installed application.
 
 After the guarded installation, start the original operator normally on the independently received application copy with its own operator state and port. The registry loads descriptors during Operator construction; a browser reload alone cannot register the new provider. Preserve any active scientific process and use its existing operation boundary.
 
@@ -126,6 +126,14 @@ The included original-provider course operates the already completed ASTRA 533-r
 python -B STAGE/checks/measurement_returned_reviews_operator.py --application APP --workspace ISOLATED_ORIGINAL_SCIENTIFIC_WORKSPACE --original ASTRA_COMPLETED_533_COURSE_DIRECTORY --output NEW_OUTSIDE_DIRECTORY
 ```
 
-The original directory must contain `input-archives/baseline.zip`, `input-archives/returned.zip`, `input-archives/current.zip`, `comparison/plan.json` and `decisions.json`. It reuses their exact native plan identity, title, decisions and archive bytes. Use the existing producer's retained original case; no recreated population or capacity run is required. Output is outside the application, scientific Workspace and original case. Keep the same output for an interrupted course. The original decision HTML still requires actual permitted desktop/narrow operation and attachment viewing before client readiness.
+The original directory must contain `comparison/plan.json` and `decisions.json`, plus the original `baseline.zip`, `returned.zip` and `current.zip` in either `input-archives/` or the delivered workbench's `comparison/inputs/`. The course retains their exact original identities. It reuses their exact native plan identity, title, decisions and archive bytes. Use the existing producer's retained original case; no recreated population or capacity run is required. Output is outside the application, scientific Workspace and original case. Keep the same output for an interrupted course. The original decision HTML still requires actual permitted desktop/narrow operation and attachment viewing before client readiness.
 
 Whole-Workspace transfer captures the independent reviewed project's exact owned database path (`measurement-returned-reviews/results/<64-hex-id>/result/measurements/measurements.sqlite`) through the original SQLite online-backup mechanism. This includes committed WAL edits while preserving unrelated SQLite source files byte-exact.
+
+## Actual receiving source continuity
+
+This full release preserves the native receiver's PR4543 registry admission, complete delivered-workbench input support and registered stylesheet fixes, together with original returned-review 1.0.3. The same 533-record/five-source operation completed its native queue, compare/apply, 11 downloads, independent receiving and later-edit cold reopen; see the installed returned-review guide for that owner's precise receipt. Installation does not issue the native course again. The separate 36-record authored Chemistry course remains available under its existing operation and source identity.
+
+The installer verifies the declared complete AGENTS bytes/SHA and the complete CURRENT_OWNER_DIRECTION source supplied by this bank. It no longer requires obsolete literal dates or an old policy version. The original registry, runtime, shared lock, known-predecessor checks and rollback remain in force. Every outgoing changed panel and attachment still requires actual recipient-style operation and viewing by its producing receiver.
+
+The returned-review input panel now clears an unsubmitted prior decision selection before reading a replacement. A malformed, wrong-plan, unreadable or failed-upload replacement leaves incorporation disabled. Clear/reselect affects that pending selection only; an already admitted native request keeps its original task journal. The actual browser owner continues this correction from the completed receiving operation.
