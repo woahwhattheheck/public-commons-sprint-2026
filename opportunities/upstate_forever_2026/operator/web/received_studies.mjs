@@ -20,6 +20,20 @@ function files(rows,primary=null) {
   return links.length?'<ul class="st-received-files">'+links.map(row=>'<li><a href="'+esc(row.url)+'?download=1" download>'+
     esc(row.label||row.filename)+'</a><small>'+Number(row.bytes||0).toLocaleString()+' B</small></li>').join('')+'</ul>':'';
 }
+function receivedManagementHTML(value,disabled=false){
+  const rows=list(value.management_case_studies);if(!rows.length)return '';
+  return '<section aria-label="Saved land-management designs"><h4>Editable land-management designs</h4>'+
+    rows.map((row,index)=>'<article class="st-received-source"><h4>'+esc(row.title)+'</h4>'+
+      '<p>'+esc(row.case_count)+' named cases · '+esc(row.profile_count)+' retained profiles · '+
+      esc(list(row.experiment_ids).length)+' retained native experiments.</p>'+
+      '<p>The original saved coefficient choices, source citations and profile lineage remain with this Study. Opening a design does not run a model.</p>'+
+      (row.editable===true?'<div class="st-actions">'+button('management-open','Open saved management design',
+        'data-management-index="'+index+'"'+(disabled?' disabled':''))+'</div>':'<p>This source is retained for reference.</p>')+
+      '<details class="st-details"><summary>Original design and coefficient identities</summary><dl>'+
+      [['Management design',row.id],['Reference profile',row.baseline_profile_id],['Derived profile set',row.profile_set_id],
+       ['Original table SHA-256',row.table_sha256]].map(([label,id])=>'<dt>'+esc(label)+'</dt><dd><code>'+esc(id)+'</code></dd>').join('')+
+      '</dl></details></article>').join('')+'</section>';
+}
 function allFiles(rows,label='Complete original files'){
   return '<details class="st-details"><summary>'+esc(label)+'</summary>'+files(rows)+'</details>';
 }
@@ -50,10 +64,10 @@ export function attachReceivedStudies(host) {
       '<p>Open a saved study, its scientific reports, original editable plans, assessment contexts, customer feedback, Gauge geography and selected watershed comparisons.</p></div>'+
       button('refresh','Refresh received studies')+'</div>'+
       (error?'<p class="st-row-error" role="alert">'+esc(error)+'</p>':'')+
-      '<div class="st-table-scroll"><table class="st-table"><thead><tr><th>Study</th><th>Scientific reports</th><th>Report comparisons</th><th>Editable plans</th><th>Assessment sources</th><th>Gauge studies</th><th>Model studies</th><th>Parameter studies</th><th>Reviews</th><th>Watershed comparisons</th><th>Open</th></tr></thead><tbody>'+
+      '<div class="st-table-scroll"><table class="st-table"><thead><tr><th>Study</th><th>Scientific reports</th><th>Report comparisons</th><th>Editable plans</th><th>Assessment sources</th><th>Gauge studies</th><th>Model studies</th><th>Parameter studies</th><th>Management designs</th><th>Reviews</th><th>Watershed comparisons</th><th>Open</th></tr></thead><tbody>'+
       page.items.map(row=>'<tr><td><strong>'+esc(row.title)+'</strong><small>'+esc(row.captured_at||'')+'</small>'+
         (row.error?'<p class="st-row-error">'+esc(row.error)+'</p>':'')+'</td><td>'+esc(row.report_count??'')+
-        '</td><td>'+esc(row.report_comparison_count??0)+'</td><td>'+esc(row.editable_plan_count??'')+'</td><td>'+esc(row.assessment_source_count??0)+'</td><td>'+esc(row.editable_gauge_count??0)+'</td><td>'+esc(row.native_ensemble_source_count??0)+'</td><td>'+esc(row.editable_parameter_study_count??0)+'</td><td>'+esc(row.customer_review_count??0)+'</td><td>'+esc(row.observed_landcover_source_count??0)+'</td><td>'+
+        '</td><td>'+esc(row.report_comparison_count??0)+'</td><td>'+esc(row.editable_plan_count??'')+'</td><td>'+esc(row.assessment_source_count??0)+'</td><td>'+esc(row.editable_gauge_count??0)+'</td><td>'+esc(row.native_ensemble_source_count??0)+'</td><td>'+esc(row.editable_parameter_study_count??0)+'</td><td>'+esc(row.management_case_count??0)+'</td><td>'+esc(row.customer_review_count??0)+'</td><td>'+esc(row.observed_landcover_source_count??0)+'</td><td>'+
         (row.state==='unreadable'?'Saved record needs repair':button('open',row.id===selected?'Reopen study':'Open study','data-id="'+esc(row.id)+'"'))+
         '</td></tr>').join('')+'</tbody></table></div>'+
       (!page.items.length?'<p class="st-empty">'+(loading?'Reading retained Study transfers…':'Receive a Study archive, switch to its restored Workspace, and open its saved study here.')+'</p>':'')+
@@ -128,6 +142,7 @@ export function attachReceivedStudies(host) {
     html+=receivedGaugeHTML(value,!!disabled);
     html+=receivedNativeEnsembleHTML(value,!!disabled);
     html+=receivedParameterStudiesHTML(value,!!disabled);
+    html+=receivedManagementHTML(value,!!disabled);
     html+=receivedComparabilityHTML(value,!!disabled);
     html+=receivedEconomicComparisonsHTML(value,!!disabled);
     html+=receivedObservedLandcoverHTML(value,!!disabled);
@@ -158,6 +173,18 @@ export function attachReceivedStudies(host) {
     if(action==='previous')return loadPage(Math.max(0,page.offset-page.limit));
     if(action==='next'&&page.next_offset!==null)return loadPage(page.next_offset);
     if(action==='open')return open(target.dataset.id);
+    if(action==='management-open'){
+      const ws=workspace,e=epoch,value=opened,index=Number(target.dataset.managementIndex);
+      const row=Number.isSafeInteger(index)&&index>=0?list(value?.management_case_studies)[index]:null;
+      if(!value||value.id!==selected||value.workspace_key!==ws||!row||row.editable!==true||
+         ![row.id,row.baseline_profile_id,row.profile_set_id,row.table_sha256].every(validID)||
+         typeof host.openDesk!=='function')throw Error('Reopen the original saved management design in its received Study.');
+      if(!current(ws,e))return;
+      try{return await host.openDesk('profile-workbench','openSavedManagementDesign',{
+        workspace_key:ws,management_case_id:row.id,profile_id:row.baseline_profile_id,
+        profile_set_id:row.profile_set_id,table_sha256:row.table_sha256
+      });}catch(reason){if(!current(ws,e)||opened!==value||selected!==value.id)return;throw reason;}
+    }
     if(action?.startsWith('geographic-')){
       const ws=workspace,e=epoch,value=opened;
       if(!value||value.id!==selected||value.workspace_key!==ws)
