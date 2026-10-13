@@ -22,13 +22,14 @@ let uiKey = 'upstate-source-refresh-selection:' + workspace;
 let retained = {}, original = {}, previewResult = null, previewSelection = null, selectedPlan = null;
 let busy = false, timer = null, fingerprints = {}, oldStates = new Map();
 let previewEpoch = 0, planRequest = 0, selectedPlanStamp = null;
-let preferences = {}, requests = {};
+let preferences = {}, requests = {}, reportDraftPlan = null;
 const requestKey = () => 'upstate-source-refresh-requests:' + workspace;
-const requestLabels = {'source.refresh.plan':'Save update plan','source.refresh.apply':'Continue saved update','source.refresh.landcover':'Create change layers','workspace.backup':'Export complete study'};
+const requestLabels = {'source.refresh.plan':'Save update plan','source.refresh.apply':'Continue saved update','source.refresh.landcover':'Create change layers','source.refresh.report_source':'Prepare scientific report source','workspace.backup':'Export complete study'};
 const canonical = value => JSON.stringify(value, function(key, item) { return item && !Array.isArray(item) && typeof item === 'object' ? Object.fromEntries(Object.keys(item).sort().map(name => [name,item[name]])) : item; });
 const classes = ['from-year','to-year','from-classes','to-classes','zone-field'];
 function readPreferences() {
-  preferences = {};
+  preferences = {}; reportDraftPlan = null;
+  for (const name of ['title','rationale','notes']) $('#report-source-' + name).value = '';
   uiKey = 'upstate-source-refresh-selection:' + workspace;
   try { preferences = JSON.parse(sessionStorage.getItem(uiKey) || '{}'); } catch {}
   requests = {};
@@ -72,6 +73,10 @@ function savePreferences() {
   if ($('#mapping').querySelector('[data-source-id]')) {
     preferences.sourceMaps ||= {}; preferences.sourceMaps[mappingKey] = {};
     $('#mapping').querySelectorAll('[data-source-id]').forEach(node => { preferences.sourceMaps[mappingKey][node.dataset.sourceId] = node.value; });
+  }
+  if (reportDraftPlan) {
+    preferences.reportDrafts ||= {};
+    preferences.reportDrafts[reportDraftPlan] = Object.fromEntries(['title','rationale','notes'].map(name => [name,$('#report-source-' + name).value]));
   }
   sessionStorage.setItem(uiKey, JSON.stringify(preferences));
 }
@@ -202,7 +207,7 @@ async function runAction(action, payload) {
   // A completed apply may have prepared targets under an earlier source edition;
   // a new explicit click reopens the same plan with a new queue operation. An
   // unacknowledged or active click retains its original request identity.
-  const freshCompleted = request?.state === 'complete' && ['workspace.backup','source.refresh.plan','source.refresh.apply'].includes(action);
+  const freshCompleted = request?.state === 'complete' && ['workspace.backup','source.refresh.plan','source.refresh.apply','source.refresh.report_source'].includes(action);
   if (!request || freshCompleted) {
     request = {operation_id:'source-refresh-' + crypto.randomUUID(),workspace,action,payload:value,created_at:new Date().toISOString()};
     requests[key] = request;
@@ -225,6 +230,9 @@ function updateButtons() {
   for (const id of ['prepare-plan','run-plan','download-report','export-study']) $('#' + id).disabled = busy || !$('#plans').value;
   $('#download-plan').disabled = busy || !selectedPlan || selectedPlan.id !== $('#plans').value;
   $('#calculate-change').disabled = busy || !$('#from-raster').value || !$('#to-raster').value;
+  $('#prepare-report-source').disabled = busy || !selectedPlan || selectedPlan.id !== $('#plans').value || selectedPlan.state?.state !== 'complete';
+  $('#receiving-source-impact').hidden = typeof host?.openExtension !== 'function';
+  $('#receiving-source-impact').disabled = busy || !$('#plans').value;
 }
 async function choosePlan({force=false} = {}) {
   const id = $('#plans').value, selectedWorkspace = workspace;
@@ -234,7 +242,9 @@ async function choosePlan({force=false} = {}) {
   const ticket = ++planRequest, previousId = selectedPlan?.id;
   selectedPlan = null; updateButtons();
   if (!id) {
-    selectedPlanStamp = null;
+    selectedPlanStamp = null; reportDraftPlan = null;
+    for (const name of ['title','rationale','notes']) $('#report-source-' + name).value = '';
+    renderReportSources();
     $('#plan-detail').innerHTML = '<p class="empty">Choose a saved update plan.</p>';
     return;
   }
@@ -247,6 +257,14 @@ async function choosePlan({force=false} = {}) {
   }
   if (disposed || ticket !== planRequest || workspace !== selectedWorkspace || $('#plans').value !== id) return;
   selectedPlan = response; selectedPlanStamp = stamp;
+  if (reportDraftPlan !== id) {
+    reportDraftPlan = id;
+    const draft = preferences.reportDrafts?.[id] || {};
+    $('#report-source-title').value = draft.title || response.title || response.selection?.title || 'Source update report';
+    $('#report-source-rationale').value = draft.rationale || '';
+    $('#report-source-notes').value = draft.notes || '';
+  }
+  renderReportSources();
   const plan = selectedPlan.plan || selectedPlan;
   const current = selectedPlan.state || selectedPlan.execution || plan.execution || {};
   const preview = plan.preview || plan.assessment || plan.snapshot || plan;
@@ -256,6 +274,20 @@ async function choosePlan({force=false} = {}) {
     (current.phase ? '<p>Current phase: ' + esc(current.phase) + '</p>' : '') +
     assessmentBody(preview) + executionBody(current) + details(current, 'Retained progress and replacement identities');
   updateButtons();
+}
+function renderReportSources() {
+  const planId = $('#plans').value;
+  const rows = (retained.report_sources || []).filter(row => row.plan_id === planId);
+  const canOpen = typeof host?.openScientificReport === 'function';
+  $('#report-sources').innerHTML = rows.length ? rows.map(row => '<article class="task"><h3>' +
+    esc(row.title) + '</h3><p>' + esc(row.created_at) + ' · saved source <span class="mono">' + esc(short(row.id)) +
+    '</span></p><div class="actions"><button type="button" data-report-source="' + esc(row.id) +
+    '" data-selection-mode="replace"' + (canOpen ? '' : ' disabled') + '>Open this report source</button>' +
+    '<button type="button" data-report-source="' + esc(row.id) + '" data-selection-mode="append"' +
+    (canOpen ? '' : ' disabled') + '>Add to current report</button>' +
+    '<button type="button" data-report-source-download="' + esc(row.id) + '">Download source identity</button></div></article>').join('') +
+    (canOpen ? '' : '<p class="muted">This source is available in Scientific Reports in the full operator workspace.</p>') :
+    '<p class="empty">Complete the selected update, then retain its scientific rationale and actual results here.</p>';
 }
 function comparisonCoverage(item) {
   const coverage = item.spatial_support?.native_coverage;
@@ -284,7 +316,7 @@ function isRefreshTask(task) {
 }
 function renderTasks() {
   const tasks = (original.tasks || []).filter(isRefreshTask);
-  const labels = {'source.refresh.plan':'Save source-update plan','source.refresh.apply':'Continue source update','source.refresh.landcover':'Measure land-cover change','source-refresh.apply':'Continue source update','workspace.backup':'Export complete study'};
+  const labels = {'source.refresh.plan':'Save source-update plan','source.refresh.apply':'Continue source update','source.refresh.landcover':'Measure land-cover change','source.refresh.report_source':'Prepare scientific report source','source-refresh.apply':'Continue source update','workspace.backup':'Export complete study'};
   const pendingRequests = unresolvedRequests();
   const recovery = pendingRequests.length ? '<div class="request-recovery"><h3>Continue a submitted selection</h3><p>These submitted selections retain their original request identities. Continue a selection to obtain its original task.</p>' + pendingRequests.map(row => '<button type="button" data-retry-request="' + esc(row.operation_id) + '">' + esc(requestLabels[row.action] || row.action) + '</button>').join(' ') + '</div>' : '';
   $('#tasks').innerHTML = recovery + (tasks.length ? tasks.map(task => '<article class="task"><div class="task-head"><strong>' +
@@ -351,7 +383,7 @@ async function refreshOnce({force=false, suppliedState=null} = {}) {
       options($('#plans'), plans, chosen, 'Choose a saved update');
       fingerprints.plans = planFingerprint;
     }
-    renderChanges(); renderTasks();
+    renderChanges(); renderTasks(); renderReportSources();
     if ($('#plans').value) await choosePlan({force});
     updateButtons();
   } catch (e) {
@@ -450,6 +482,21 @@ $('#download-report').addEventListener('click', () => guarded(async () => {
   download(report[format], 'Upper_Savannah_Source_Update_' + short(id) + '.' + format,
     format === 'html' ? 'text/html;charset=utf-8' : 'text/csv;charset=utf-8');
 }));
+$('#prepare-report-source').addEventListener('click', () => guarded(async () => {
+  const id = $('#plans').value;
+  if (!id || selectedPlan?.id !== id) throw new Error('Open the completed update first.');
+  const title = $('#report-source-title').value.trim(), rationale = $('#report-source-rationale').value.trim();
+  const note = $('#report-source-notes').value.trim();
+  if (!title || !rationale) throw new Error('Enter the report title and scientific reason for the update.');
+  savePreferences();
+  await runAction('source.refresh.report_source', {plan_id:id,title,rationale,notes:note ? [note] : []});
+}));
+for (const name of ['title','rationale','notes']) $('#report-source-' + name).addEventListener('input', savePreferences);
+$('#receiving-source-impact').addEventListener('click', () => guarded(async () => {
+  const id = $('#plans').value;
+  if (!id || typeof host?.openExtension !== 'function') return;
+  await host.openExtension('receiving-source-impact','openForRefresh',{workspace_key:workspace,refresh_plan_id:id});
+}));
 $('#export-study').addEventListener('click', () => guarded(async () => {
   const id = $('#plans').value;
   if (!id) throw new Error('Choose a saved update.');
@@ -479,11 +526,24 @@ $('#workspace').addEventListener('change', () => guarded(async () => {
   for (const id of ['from-edition','to-edition','plans','from-raster','to-raster','zones']) {
     options($('#' + id), [], '', 'Opening selected workspace…');
   }
-  for (const id of ['mapping','preview-result','plan-detail','change-results','tasks']) $('#' + id).replaceChildren();
+  for (const id of ['mapping','preview-result','plan-detail','change-results','tasks','report-sources']) $('#' + id).replaceChildren();
   error(null); notice('');
   await load({force:true});
 }));
 root.addEventListener('click', event => {
+  const openReport = event.target.closest('[data-report-source]');
+  if (openReport) guarded(async () => {
+    const row = (retained.report_sources || []).find(item => item.id === openReport.dataset.reportSource && item.plan_id === $('#plans').value);
+    if (!row || typeof host?.openScientificReport !== 'function') throw new Error('Reopen the saved report source in the full operator.');
+    const chosenWorkspace = workspace, mode = openReport.dataset.selectionMode;
+    if (!['replace','append'].includes(mode)) return;
+    await host.openScientificReport({workspace_key:chosenWorkspace,sources:[row.source],title:row.title,selection_mode:mode});
+  });
+  const sourceDownload = event.target.closest('[data-report-source-download]');
+  if (sourceDownload) {
+    const row = (retained.report_sources || []).find(item => item.id === sourceDownload.dataset.reportSourceDownload && item.plan_id === $('#plans').value);
+    if (row) download(row, 'Source_Update_Report_' + short(row.id) + '.json');
+  }
   const retry = event.target.closest('[data-retry-request]');
   if (retry) guarded(async () => {
     const request = Object.values(requests).find(row => row.operation_id === retry.dataset.retryRequest);
