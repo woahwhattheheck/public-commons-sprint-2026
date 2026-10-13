@@ -8,7 +8,8 @@
     "extensions/study_transfer.mjs",
     "extensions/study_transfer.css",
     "received_studies.mjs",
-    "gauge_received_studies.mjs"
+    "gauge_received_studies.mjs",
+    "ensemble_received_studies.mjs"
   ],
   "requires_actions": [
     "workspace.restore"

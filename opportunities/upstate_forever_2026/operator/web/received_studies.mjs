@@ -1,4 +1,5 @@
 import {receivedGaugeHTML,openReceivedGauge} from './gauge_received_studies.mjs';
+import {receivedNativeEnsembleHTML,openReceivedNativeEnsemble} from './ensemble_received_studies.mjs';
 /** Original selected-study receiving, reports and editable Implementation lineage. */
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const list=v=>Array.isArray(v)?v:[];
@@ -41,10 +42,10 @@ export function attachReceivedStudies(host) {
       '<p>Open a saved study, its scientific reports, original editable plans and Gauge geography.</p></div>'+
       button('refresh','Refresh received studies')+'</div>'+
       (error?'<p class="st-row-error" role="alert">'+esc(error)+'</p>':'')+
-      '<div class="st-table-scroll"><table class="st-table"><thead><tr><th>Study</th><th>Scientific reports</th><th>Editable plans</th><th>Gauge studies</th><th>Open</th></tr></thead><tbody>'+
+      '<div class="st-table-scroll"><table class="st-table"><thead><tr><th>Study</th><th>Scientific reports</th><th>Editable plans</th><th>Gauge studies</th><th>Model studies</th><th>Open</th></tr></thead><tbody>'+
       page.items.map(row=>'<tr><td><strong>'+esc(row.title)+'</strong><small>'+esc(row.captured_at||'')+'</small>'+
         (row.error?'<p class="st-row-error">'+esc(row.error)+'</p>':'')+'</td><td>'+esc(row.report_count??'')+
-        '</td><td>'+esc(row.editable_plan_count??'')+'</td><td>'+esc(row.editable_gauge_count??0)+'</td><td>'+
+        '</td><td>'+esc(row.editable_plan_count??'')+'</td><td>'+esc(row.editable_gauge_count??0)+'</td><td>'+esc(row.native_ensemble_source_count??0)+'</td><td>'+
         (row.state==='unreadable'?'Saved record needs repair':button('open',row.id===selected?'Reopen study':'Open study','data-id="'+esc(row.id)+'"'))+
         '</td></tr>').join('')+'</tbody></table></div>'+
       (!page.items.length?'<p class="st-empty">'+(loading?'Reading retained Study transfers…':'Receive a Study archive, switch to its restored Workspace, and open its saved study here.')+'</p>':'')+
@@ -91,6 +92,7 @@ export function attachReceivedStudies(host) {
       html+='</article>';
     }
     html+=receivedGaugeHTML(value,!!disabled);
+    html+=receivedNativeEnsembleHTML(value,!!disabled);
     return html+'</section>';
   }
   async function loadPage(offset=0) {
@@ -117,6 +119,14 @@ export function attachReceivedStudies(host) {
     if(action==='previous')return loadPage(Math.max(0,page.offset-page.limit));
     if(action==='next'&&page.next_offset!==null)return loadPage(page.next_offset);
     if(action==='open')return open(target.dataset.id);
+    if(action?.startsWith('native-ensemble-')){
+      const ws=workspace,e=epoch,value=opened;
+      if(!value||value.id!==selected||value.workspace_key!==ws)
+        throw Error('Reopen the original received Study.');
+      return await openReceivedNativeEnsemble(host,value,target,{
+        workspace_key:ws,current:()=>current(ws,e)&&opened===value&&selected===value.id,
+      });
+    }
     if(action?.startsWith('gauge-')){
       const ws=workspace,e=epoch,value=opened;
       if(!value||value.id!==selected||value.workspace_key!==ws)
