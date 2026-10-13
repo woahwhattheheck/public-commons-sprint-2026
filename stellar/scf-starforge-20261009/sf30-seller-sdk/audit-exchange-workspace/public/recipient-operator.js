@@ -1,8 +1,10 @@
 import {auditSha256} from "/client.mjs";
+import {mountRecipientQueue} from "/recipient-queue.js";
 
 export function mountRecipientOperator(host){
   const $=id=>document.getElementById(id), clone=value=>JSON.parse(JSON.stringify(value));
   const LIMIT=256*1024*1024;
+  let queue=null;
   let workspaceId=null, inventory="", selectedPreview=null, returnFile=null;
   const source=$("recipient-author-export"), returned=$("recipient-return");
   const record=id=>(host.state()?.exports||[]).find(row=>row.id===id);
@@ -56,6 +58,7 @@ export function mountRecipientOperator(host){
     $("recipient-download-return").disabled=busy||!record(returned.value);
     source.disabled=busy||!state;returned.disabled=busy||!state;
     $("recipient-empty").hidden=Boolean(entries.some(row=>["workspace","application"].includes(row.kind)));
+    queue?.sync();
   }
   source.addEventListener("change",sync);
   returned.addEventListener("change",()=>{clearPreview();sync();});
@@ -86,7 +89,7 @@ export function mountRecipientOperator(host){
     const id=returned.value;if(!record(id))throw new Error("Choose a retained complete return.");
     const value=await host.read("recipient.preview",{returnId:id,operator:host.operator()});
     if(value.returnId!==id||value.preview.workspaceId!==host.state().workspaceId)throw new Error("The preview belongs to a different original selection.");
-    selectedPreview=clone(value);summary(selectedPreview);
+    selectedPreview=clone(value);summary(selectedPreview);await queue.rememberPreview(selectedPreview);
   }));
   $("recipient-apply-form").addEventListener("submit",event=>{event.preventDefault();host.run("Apply exact recipient review preview",async()=>{
     if(!same())throw new Error("Preview this complete return against the current operator and native version.");
@@ -102,7 +105,9 @@ export function mountRecipientOperator(host){
   $("recipient-download-return").addEventListener("click",()=>host.run("Download complete retained return",async()=>{
     const item=record(returned.value);if(item)await host.download(item);
   }));
+  queue=mountRecipientQueue(host,{selectReturn:id=>{if(!record(id)||record(id).kind!=="recipient-return")throw new Error("The original retained return is unavailable.");returned.value=id;clearPreview();sync();}});
   return {sync,recovered:async(action,result)=>{
+    if(await queue.recovered(action,result))return;
     if(result?.archive){sync();if(action==="recipient.stage")returned.value=result.archive.id;
       $("recipient-result").textContent="Recovered original "+action+" and retained complete artifact "+result.archive.id+".";
       await host.download(result.archive);}
