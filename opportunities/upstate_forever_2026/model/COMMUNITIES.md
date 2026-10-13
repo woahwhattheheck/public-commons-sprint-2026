@@ -181,6 +181,22 @@ The walkthrough also accepts `--geometry-source-id EXACT_ID` together with
 edition. Its default still reuses the original upstream-domain collection or the
 retained four-focus edition when available.
 
+### Receive a mapped revision of an existing programme
+
+The maintained Community receiving entrypoint can continue a retained plan and its original report without creating new intervention examples. Choose a complete report of that exact plan. The course downloads its original `interventions.csv`, reverses and explicitly renames the columns while retaining every original cell and row order, and operates the existing browser mapping controls. The saved revision retains the original intervention IDs, values, geography, scientific context, notes and planning estimates.
+
+```bash
+"$ECO_GIS_PYTHON" "$ECO_APPLICATION/operator/community_receiving.py" \
+  --workspace "$ECO_WORKSPACE" --output "$ECO_COMMUNITY_MAPPING_OUTPUT" \
+  --source-revision "$ECO_APPLICATION_REVISION" \
+  --mapped-plan "$ECO_ORIGINAL_PLAN_ID" --mapped-report "$ECO_ORIGINAL_REPORT_ID" \
+  --node "$ECO_NODE" --node-modules "$ECO_NODE_MODULES" --chromium "$ECO_CHROMIUM"
+```
+
+Use the accepting owner's existing project and installed runtimes. The selected plan must already contain intervention data from the retained original RFP community table. The original plan and report are preserved, and no model is launched. The course records the original CSV download and deterministic renamed-column input, previews and applies the explicit field choices in the browser, saves a native revision, and builds the current complete report. A header-only transformation must produce zero added, removed or changed intervention records.
+
+The same native queue creates the Workspace archive and restores it through the normal upload route. The restored application is launched separately and reopens the original and mapped plans, report, received CSV, field provenance and saved Community view. Desktop and mobile screenshots are retained in the receiving output for actual visual inspection. Reuse the same output directory to continue its saved requests and accepted task IDs; `--resume-failed-tasks` resumes an original failed task after its concrete source/input repair. Completion is recorded in `community-mapping-receiving-result.json` only after the delivered application completes its cold reopening.
+
 ## Native coverage in report editions
 
 The printable HTML, editable Markdown and browser plan distinguish two spatial
