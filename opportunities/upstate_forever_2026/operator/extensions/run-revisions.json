@@ -2,7 +2,7 @@
   "schema": "upstate.operator-extension/v1",
   "id": "run-revisions",
   "title": "Run revisions",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "order": 43,
   "assets": [
     "run_revision.mjs",
@@ -143,6 +143,10 @@
       "mount": "mount",
       "update": "update",
       "detach": "detach"
-    }
+    },
+    "dispatch": "dispatch",
+    "action_prefixes": [
+      "runrevision-"
+    ]
   }
 }
