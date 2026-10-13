@@ -277,7 +277,10 @@ function selectionRequest(){
  if((has(budget.capital_limit)||has(budget.annualized_limit))&&!budget.currency)throw Error("Select the cost currency before exporting a budget selection.");
  const targets=state.retain_unmodeled_targets?Object.fromEntries(Object.entries(report.selection?.targets||{}).filter(([key])=>!METRICS.some(m=>m.key===key))):{};for(const m of METRICS)if(has(state.filters[m.key]))targets[m.key]=state.filters[m.key];
  const costRecords=new Map((Array.isArray(report.selection?.costs)?report.selection.costs:[]).map(x=>[x.run_id,{...x}]));
- for(const x of report.alternatives.filter(x=>x.cost))costRecords.set(x.run_id,{run_id:x.run_id,currency:x.cost.currency,capital:x.cost.capital,annual_operating:x.cost.annual_operating,horizon_years:x.cost.horizon_years,discount_rate:x.cost.discount_rate,source:x.cost.source,note:x.cost.note||""});
+ for(const x of report.alternatives.filter(x=>x.cost)){
+  const retained=costRecords.get(x.run_id)||{};
+  costRecords.set(x.run_id,{...retained,run_id:x.run_id,currency:x.cost.currency,capital:x.cost.capital,annual_operating:x.cost.annual_operating,horizon_years:x.cost.horizon_years,discount_rate:x.cost.discount_rate,source:{...(retained.source||{}),...x.cost.source},note:x.cost.note||""});
+ }
  const costs=[...costRecords.values()];
  const value={...(report.selection||{}),schema:"upstate.decision-selection/v1",title:report.title,comparison_id:report.scope.comparison_id,costs,targets,notes:[...(report.notes||[]),...(state.notes?[state.notes]:[])]};
  if(has(budget.capital_limit)||has(budget.annualized_limit))value.budget=budget;else delete value.budget;
