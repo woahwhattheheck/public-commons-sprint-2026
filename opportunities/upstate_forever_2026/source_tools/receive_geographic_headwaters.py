@@ -23,6 +23,7 @@ from model import geographic_headwaters as geographic
 from source_tools.geographic_headwaters_reopen import cold_reopen, receiving_lock
 from source_tools.demo_deadline import CUTOFF, DemoDeadlineReached, check_cutoff, cutoff_guard
 from source_tools.geographic_archive import (retained_prepared, retained_reference_prepared,
+                                             retained_execution_prepared,
                                              retain_binding, verify_archive)
 from source_tools.geographic_headwaters_handover import prepare as prepare_handover
 
@@ -182,8 +183,11 @@ def receive(args):
                      "receiver_sha256":file_digest(Path(__file__))}
         path = output/"receiving.json"
         adopted_prepared = None
-        if args.adopt_handover or args.adopt_reference_report:
-            if args.adopt_reference_report:
+        if args.adopt_handover or args.adopt_reference_report or args.adopt_prepared:
+            if args.adopt_prepared:
+                original_admission, state, adopted_prepared = retained_execution_prepared(
+                    workspace, output, source_bytes, selection)
+            elif args.adopt_reference_report:
                 original_admission, state, adopted_prepared, adopted_basis = retained_reference_prepared(
                     workspace, output, source_bytes, selection)
             else:
@@ -191,11 +195,15 @@ def receive(args):
                     workspace, output, source_bytes, selection)
             operation_id = state["operation_id"]
             adopted_source = {
-                "schema": ("upstate.geographic-reference-report-adoption/v1"
+                "schema": ("upstate.geographic-prepared-execution-adoption/v1"
+                           if args.adopt_prepared else
+                           "upstate.geographic-reference-report-adoption/v1"
                            if args.adopt_reference_report else "upstate.geographic-handover-adoption/v1"),
                 "operation_id": operation_id, "project_id": workspace.project["id"],
                 "original_admission": original_admission,
                 "geographic_edition_id": adopted_prepared["id"],
+                "requested_native_mode": ("reference" if args.run_reference else "full_course")
+                    if args.adopt_prepared else None,
                 "sources": {name: file_digest(APP/name) for name in (
                     "source_tools/receive_geographic_headwaters.py",
                     "source_tools/geographic_archive.py",
@@ -206,12 +214,17 @@ def receive(args):
                     "source_tools/demo_deadline.py",
                     "model/geographic_receiving_context.py",
                     "source_tools/geographic_scenario_context.py",
-                    "source_tools/geographic_scenario_interpretation.mjs")},
+                    "source_tools/geographic_scenario_interpretation.mjs",
+                    "source_tools/headwaters_parameter_course.py",
+                    "model/ensembles.py", "model/ensemble_operations.py",
+                    "model/native.py", "model/native_arguments.py", "model/stage_cache.py",
+                    "model/model_selection.py", "model/native_versions.py")},
             }
             adoption_id = digest(adopted_source)
             atomic_json(output/"handover-adoptions"/(adoption_id+".json"),
                         {"id":adoption_id, **adopted_source}, immutable=True)
-            state["reference_report_adoption_id" if args.adopt_reference_report
+            state["prepared_execution_adoption_id" if args.adopt_prepared else
+                  "reference_report_adoption_id" if args.adopt_reference_report
                   else "handover_adoption_id"] = adoption_id
         else:
             operation_id = digest(admission)
@@ -468,6 +481,7 @@ def main(argv=None):
     parser.add_argument("--output",type=Path)
     parser.add_argument("--node",default="node",help="Actual equipped Node executable for the maintained complete source-loading report")
     adoption = parser.add_mutually_exclusive_group()
+    adoption.add_argument("--adopt-prepared",action="store_true",help="Execute the original retained preparation under its unchanged admission after explicit source adoption; use only with --run-reference or --run")
     adoption.add_argument("--adopt-handover",action="store_true",help="Use the completed original preparation under its retained admission for report-only handover source adoption")
     adoption.add_argument("--adopt-reference-report",action="store_true",help="Adopt report-only receiving for the original completed reference trio while its full native course keeps its actual state")
     modes = parser.add_mutually_exclusive_group()
@@ -481,6 +495,8 @@ def main(argv=None):
     args = parser.parse_args(argv)
     if args.reference_handover and not args.report_only:
         parser.error("--reference-handover requires --report-only; --run-reference already retains that handover")
+    if args.adopt_prepared and not (args.run_reference or args.run):
+        parser.error("--adopt-prepared requires explicit --run-reference or --run")
     if (args.adopt_handover or args.adopt_reference_report) and not args.report_only:
         parser.error("Report adoption requires --report-only; native preparation keeps its original admitted source")
     if not (args.catalog or args.preview) and args.output is None:
