@@ -487,3 +487,10 @@ The native application, worker, request and history algorithms remain unchanged.
 The complete [provider installation and receiving course](adaptations/airtable-netsuite/INSTALLED.md) extends this same Workbench. The existing `migration-acceptance` selection now carries the full source, editable browser review, ordinary-file offline builder, read-only provider capture, exact preparation and original native receiving command. Use `starforge migration-provider-capture`, `migration-provider-prepare`, `migration-provider-review` and `migration-provider-receive` with the actual inputs documented there.
 
 Provider modules and original Workspace/native history remain unchanged. Attributed mapping approval, measured comparison/acceptance and explicit local consumer selection are separate. Preserve complete provider originals, independent expected rows, invalid draft text and original request identity across retries and customer handover. The authored reference project retains its deliberate discrepancy. This reusable installation contains no tenant capture or private customer proposal.
+
+
+## Twenty source and destination comparison
+
+The complete [Twenty adapter](adaptations/twenty/README.md) adds read-only selected-object capture, independently retained destination pages, composite field and relationship mapping, full population review and attributed mapping history. Its [capture guide](adaptations/twenty/CAPTURE_OPERATING.md) and [operating guide](adaptations/twenty/OPERATING.md) connect that source to the existing local dlt/DuckDB comparison, business acceptance and complete receiving operation.
+
+Open the self-contained `adaptations/twenty/dist/twenty-review.html` or serve the full product root and open `adaptations/twenty/`. Saved working files retain unfinished forms and raw mappings; reviewed projects retain the original capture and mapping editions. The adapter's native receiving command uses this product's original Workspace and request journals. Keep the full adapter source manifest and original Workbench dependencies together when copying or receiving the application.

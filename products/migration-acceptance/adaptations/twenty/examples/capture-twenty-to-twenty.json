@@ -1,0 +1,123 @@
+{
+  "schema": "twenty.capture-config.v1",
+  "operationId": "replace_with_original_twenty_to_twenty_operation",
+  "consistency": {
+    "mode": "observed-interval"
+  },
+  "source": {
+    "kind": "twenty-rest",
+    "baseUrl": "https://source.example.test",
+    "workspaceReference": "Replace with authorized original source workspace identity",
+    "tokenEnv": "TWENTY_SOURCE_API_KEY",
+    "deployedVersion": null,
+    "objects": [
+      {
+        "namePlural": "companies",
+        "fields": [
+          "id",
+          "name",
+          "legacyId",
+          "domainName"
+        ],
+        "scope": {
+          "coverage": "all-live",
+          "population": "Replace with the exact authorized source population for companies",
+          "deleted": "not-observed-by-list"
+        },
+        "filter": null
+      },
+      {
+        "namePlural": "people",
+        "fields": [
+          "id",
+          "name",
+          "legacyId",
+          "emails",
+          "company"
+        ],
+        "scope": {
+          "coverage": "all-live",
+          "population": "Replace with the exact authorized source population for people",
+          "deleted": "not-observed-by-list"
+        },
+        "filter": null
+      },
+      {
+        "namePlural": "opportunities",
+        "fields": [
+          "id",
+          "name",
+          "legacyId",
+          "stage",
+          "amount",
+          "company",
+          "pointOfContact"
+        ],
+        "scope": {
+          "coverage": "all-live",
+          "population": "Replace with the exact authorized source population for opportunities",
+          "deleted": "not-observed-by-list"
+        },
+        "filter": null
+      }
+    ]
+  },
+  "target": {
+    "kind": "twenty-rest",
+    "baseUrl": "https://destination.example.test",
+    "workspaceReference": "Replace with authorized target workspace identity",
+    "tokenEnv": "TWENTY_TARGET_API_KEY",
+    "deployedVersion": null,
+    "objects": [
+      {
+        "namePlural": "companies",
+        "fields": [
+          "id",
+          "name",
+          "legacyId",
+          "domainName"
+        ],
+        "scope": {
+          "coverage": "all-live",
+          "population": "Replace with the exact authorized target population for companies",
+          "deleted": "not-observed-by-list"
+        },
+        "filter": null
+      },
+      {
+        "namePlural": "people",
+        "fields": [
+          "id",
+          "name",
+          "legacyId",
+          "emails",
+          "company"
+        ],
+        "scope": {
+          "coverage": "all-live",
+          "population": "Replace with the exact authorized target population for people",
+          "deleted": "not-observed-by-list"
+        },
+        "filter": null
+      },
+      {
+        "namePlural": "opportunities",
+        "fields": [
+          "id",
+          "name",
+          "legacyId",
+          "stage",
+          "amount",
+          "company",
+          "pointOfContact"
+        ],
+        "scope": {
+          "coverage": "all-live",
+          "population": "Replace with the exact authorized target population for opportunities",
+          "deleted": "not-observed-by-list"
+        },
+        "filter": null
+      }
+    ]
+  }
+}

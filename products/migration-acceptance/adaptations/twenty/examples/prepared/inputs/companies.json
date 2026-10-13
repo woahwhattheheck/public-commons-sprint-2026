@@ -1,0 +1,12 @@
+[
+  {
+    "company_key": "001",
+    "name": "Cedar Workshop",
+    "website": "https://cedar.example.test"
+  },
+  {
+    "company_key": "002",
+    "name": "Northline Studio",
+    "website": "https://northline.example.test"
+  }
+]

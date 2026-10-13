@@ -1,0 +1,647 @@
+{
+  "schema": "twenty.projection.v1",
+  "operationId": "authored_crm_company_person_opportunity_20261013",
+  "mappingId": "authored_crm_mapping",
+  "capture": {
+    "bytes": 40357,
+    "sha256": "819119ec71d4dd4b2c0454115671e5e19dc9636be5864478538633f2484b3749"
+  },
+  "mapping": {
+    "bytes": 8351,
+    "sha256": "aaab9ea644ecef6c1d4df137cbcad10e3bc8b58b4f5f72d91cfd99bb16e962f3"
+  },
+  "populations": [
+    {
+      "side": "source",
+      "kind": "retained-json",
+      "object": "companies",
+      "rows": 2,
+      "pages": 1,
+      "scope": {
+        "coverage": "all-exported",
+        "population": "Every independently authored companies source record",
+        "deleted": "No deletion history authored"
+      }
+    },
+    {
+      "side": "source",
+      "kind": "retained-json",
+      "object": "people",
+      "rows": 3,
+      "pages": 1,
+      "scope": {
+        "coverage": "all-exported",
+        "population": "Every independently authored people source record",
+        "deleted": "No deletion history authored"
+      }
+    },
+    {
+      "side": "source",
+      "kind": "retained-json",
+      "object": "opportunities",
+      "rows": 2,
+      "pages": 1,
+      "scope": {
+        "coverage": "all-exported",
+        "population": "Every independently authored opportunities source record",
+        "deleted": "No deletion history authored"
+      }
+    },
+    {
+      "side": "target",
+      "kind": "twenty-rest",
+      "object": "companies",
+      "rows": 2,
+      "pages": 1,
+      "fields": [
+        "id",
+        "name",
+        "legacyId",
+        "domainName"
+      ],
+      "scope": {
+        "coverage": "all-live",
+        "population": "Every authored example companies record",
+        "deleted": "not-observed-by-list"
+      }
+    },
+    {
+      "side": "target",
+      "kind": "twenty-rest",
+      "object": "people",
+      "rows": 3,
+      "pages": 1,
+      "fields": [
+        "id",
+        "name",
+        "legacyId",
+        "emails",
+        "company"
+      ],
+      "scope": {
+        "coverage": "all-live",
+        "population": "Every authored example people record",
+        "deleted": "not-observed-by-list"
+      }
+    },
+    {
+      "side": "target",
+      "kind": "twenty-rest",
+      "object": "opportunities",
+      "rows": 2,
+      "pages": 1,
+      "fields": [
+        "id",
+        "name",
+        "legacyId",
+        "stage",
+        "amount",
+        "company",
+        "pointOfContact"
+      ],
+      "scope": {
+        "coverage": "all-live",
+        "population": "Every authored example opportunities record",
+        "deleted": "not-observed-by-list"
+      }
+    }
+  ],
+  "consistency": {
+    "mode": "observed-interval",
+    "evidence": "Explicitly authored reference responses; no provider call was made."
+  },
+  "relations": {
+    "source": [],
+    "target": [
+      {
+        "field": "company",
+        "fieldId": "44444444-0000-4000-8000-000000000009",
+        "type": "MANY_TO_ONE",
+        "joinColumnName": "companyId",
+        "targetObject": "companies",
+        "targetObjectMetadataId": "11111111-0000-4000-8000-000000000001",
+        "reference": "#/components/schemas/CompanyForResponse",
+        "capturedTarget": true
+      },
+      {
+        "field": "company",
+        "fieldId": "44444444-0000-4000-8000-000000000015",
+        "type": "MANY_TO_ONE",
+        "joinColumnName": "companyId",
+        "targetObject": "companies",
+        "targetObjectMetadataId": "11111111-0000-4000-8000-000000000001",
+        "reference": "#/components/schemas/CompanyForResponse",
+        "capturedTarget": true
+      },
+      {
+        "field": "pointOfContact",
+        "fieldId": "44444444-0000-4000-8000-000000000016",
+        "type": "MANY_TO_ONE",
+        "joinColumnName": "pointOfContactId",
+        "targetObject": "people",
+        "targetObjectMetadataId": "11111111-0000-4000-8000-000000000002",
+        "reference": "#/components/schemas/PersonForResponse",
+        "capturedTarget": true
+      }
+    ]
+  },
+  "tables": [
+    {
+      "name": "companies",
+      "sourceObject": "companies",
+      "targetObject": "companies",
+      "sourcePath": "inputs/companies.json",
+      "expectedPath": "expected/companies.json",
+      "sourceRows": 2,
+      "expectedRows": 2,
+      "columns": [
+        {
+          "name": "company_key",
+          "type": "text",
+          "nullable": false,
+          "source": {
+            "pointer": "/legacyId",
+            "missing": {
+              "mode": "error"
+            }
+          },
+          "target": {
+            "pointer": "/legacyId",
+            "missing": {
+              "mode": "error"
+            }
+          }
+        },
+        {
+          "name": "name",
+          "type": "text",
+          "nullable": false,
+          "source": {
+            "pointer": "/name",
+            "missing": {
+              "mode": "error"
+            }
+          },
+          "target": {
+            "pointer": "/name",
+            "missing": {
+              "mode": "error"
+            }
+          }
+        },
+        {
+          "name": "website",
+          "type": "text",
+          "nullable": true,
+          "source": {
+            "pointer": "/website",
+            "missing": {
+              "mode": "error"
+            }
+          },
+          "target": {
+            "pointer": "/domainName/primaryLinkUrl",
+            "missing": {
+              "mode": "error"
+            }
+          }
+        }
+      ],
+      "primaryKey": [
+        "company_key"
+      ],
+      "sourceOrigins": [
+        {
+          "row": 0,
+          "id": "001",
+          "bodySha256": "a7b9d8fdff3b304c0032aec30c1e20d9a0d262aceb88816fb4ecf49ef814fe10",
+          "rowsPointer": ""
+        },
+        {
+          "row": 1,
+          "id": "002",
+          "bodySha256": "a7b9d8fdff3b304c0032aec30c1e20d9a0d262aceb88816fb4ecf49ef814fe10",
+          "rowsPointer": ""
+        }
+      ],
+      "expectedOrigins": [
+        {
+          "page": 0,
+          "row": 0,
+          "id": "22222222-0000-4000-8000-000000000001",
+          "bodySha256": "2d134461da70ebd2a8dedc2dd2a9ed6e7fe509fd7d456664a84a961a31037cc0"
+        },
+        {
+          "page": 0,
+          "row": 1,
+          "id": "22222222-0000-4000-8000-000000000002",
+          "bodySha256": "2d134461da70ebd2a8dedc2dd2a9ed6e7fe509fd7d456664a84a961a31037cc0"
+        }
+      ],
+      "missingCells": {
+        "source": [],
+        "target": []
+      }
+    },
+    {
+      "name": "people",
+      "sourceObject": "people",
+      "targetObject": "people",
+      "sourcePath": "inputs/people.json",
+      "expectedPath": "expected/people.json",
+      "sourceRows": 3,
+      "expectedRows": 3,
+      "columns": [
+        {
+          "name": "person_key",
+          "type": "text",
+          "nullable": false,
+          "source": {
+            "pointer": "/legacyId",
+            "missing": {
+              "mode": "error"
+            }
+          },
+          "target": {
+            "pointer": "/legacyId",
+            "missing": {
+              "mode": "error"
+            }
+          }
+        },
+        {
+          "name": "first_name",
+          "type": "text",
+          "nullable": true,
+          "source": {
+            "pointer": "/firstName",
+            "missing": {
+              "mode": "error"
+            }
+          },
+          "target": {
+            "pointer": "/name/firstName",
+            "missing": {
+              "mode": "error"
+            }
+          }
+        },
+        {
+          "name": "last_name",
+          "type": "text",
+          "nullable": true,
+          "source": {
+            "pointer": "/lastName",
+            "missing": {
+              "mode": "error"
+            }
+          },
+          "target": {
+            "pointer": "/name/lastName",
+            "missing": {
+              "mode": "error"
+            }
+          }
+        },
+        {
+          "name": "email",
+          "type": "text",
+          "nullable": true,
+          "source": {
+            "pointer": "/email",
+            "missing": {
+              "mode": "error"
+            }
+          },
+          "target": {
+            "pointer": "/emails/primaryEmail",
+            "missing": {
+              "mode": "error"
+            }
+          }
+        },
+        {
+          "name": "company_key",
+          "type": "text",
+          "nullable": true,
+          "source": {
+            "pointer": "/companyKey",
+            "missing": {
+              "mode": "error"
+            }
+          },
+          "target": {
+            "pointer": "/companyId",
+            "missing": {
+              "mode": "error"
+            },
+            "transform": {
+              "kind": "reference",
+              "object": "companies",
+              "keyPointer": "/id",
+              "valuePointer": "/legacyId"
+            }
+          }
+        }
+      ],
+      "primaryKey": [
+        "person_key"
+      ],
+      "sourceOrigins": [
+        {
+          "row": 0,
+          "id": "P001",
+          "bodySha256": "191d0e17ab6527b3681e1a4dc7a949868fd6ff326b98b902575e52f9d3a1e4f7",
+          "rowsPointer": ""
+        },
+        {
+          "row": 1,
+          "id": "P002",
+          "bodySha256": "191d0e17ab6527b3681e1a4dc7a949868fd6ff326b98b902575e52f9d3a1e4f7",
+          "rowsPointer": ""
+        },
+        {
+          "row": 2,
+          "id": "P003",
+          "bodySha256": "191d0e17ab6527b3681e1a4dc7a949868fd6ff326b98b902575e52f9d3a1e4f7",
+          "rowsPointer": ""
+        }
+      ],
+      "expectedOrigins": [
+        {
+          "page": 0,
+          "row": 0,
+          "id": "33333333-0000-4000-8000-000000000001",
+          "bodySha256": "2ff67f22eed934fdf9d60b7f0d09f467838f481ba15597ec06a04d0ce421574d"
+        },
+        {
+          "page": 0,
+          "row": 1,
+          "id": "33333333-0000-4000-8000-000000000002",
+          "bodySha256": "2ff67f22eed934fdf9d60b7f0d09f467838f481ba15597ec06a04d0ce421574d"
+        },
+        {
+          "page": 0,
+          "row": 2,
+          "id": "33333333-0000-4000-8000-000000000003",
+          "bodySha256": "2ff67f22eed934fdf9d60b7f0d09f467838f481ba15597ec06a04d0ce421574d"
+        }
+      ],
+      "missingCells": {
+        "source": [],
+        "target": []
+      }
+    },
+    {
+      "name": "opportunities",
+      "sourceObject": "opportunities",
+      "targetObject": "opportunities",
+      "sourcePath": "inputs/opportunities.json",
+      "expectedPath": "expected/opportunities.json",
+      "sourceRows": 2,
+      "expectedRows": 2,
+      "columns": [
+        {
+          "name": "opportunity_key",
+          "type": "text",
+          "nullable": false,
+          "source": {
+            "pointer": "/legacyId",
+            "missing": {
+              "mode": "error"
+            }
+          },
+          "target": {
+            "pointer": "/legacyId",
+            "missing": {
+              "mode": "error"
+            }
+          }
+        },
+        {
+          "name": "name",
+          "type": "text",
+          "nullable": false,
+          "source": {
+            "pointer": "/name",
+            "missing": {
+              "mode": "error"
+            }
+          },
+          "target": {
+            "pointer": "/name",
+            "missing": {
+              "mode": "error"
+            }
+          }
+        },
+        {
+          "name": "stage",
+          "type": "text",
+          "nullable": false,
+          "source": {
+            "pointer": "/stage",
+            "missing": {
+              "mode": "error"
+            },
+            "transform": {
+              "kind": "lookup",
+              "entries": [
+                {
+                  "from": "Proposal",
+                  "to": "PROPOSAL"
+                },
+                {
+                  "from": "Qualification",
+                  "to": "QUALIFICATION"
+                }
+              ]
+            }
+          },
+          "target": {
+            "pointer": "/stage",
+            "missing": {
+              "mode": "error"
+            }
+          }
+        },
+        {
+          "name": "amount",
+          "type": "decimal",
+          "nullable": true,
+          "source": {
+            "pointer": "/amount",
+            "missing": {
+              "mode": "error"
+            }
+          },
+          "target": {
+            "pointer": "/amount/amountMicros",
+            "missing": {
+              "mode": "error"
+            },
+            "transform": {
+              "kind": "decimal-shift",
+              "places": 6
+            }
+          },
+          "precision": 20,
+          "scale": 2
+        },
+        {
+          "name": "currency",
+          "type": "text",
+          "nullable": true,
+          "source": {
+            "pointer": "/currency",
+            "missing": {
+              "mode": "error"
+            }
+          },
+          "target": {
+            "pointer": "/amount/currencyCode",
+            "missing": {
+              "mode": "error"
+            }
+          }
+        },
+        {
+          "name": "company_key",
+          "type": "text",
+          "nullable": true,
+          "source": {
+            "pointer": "/companyKey",
+            "missing": {
+              "mode": "error"
+            }
+          },
+          "target": {
+            "pointer": "/companyId",
+            "missing": {
+              "mode": "error"
+            },
+            "transform": {
+              "kind": "reference",
+              "object": "companies",
+              "keyPointer": "/id",
+              "valuePointer": "/legacyId"
+            }
+          }
+        },
+        {
+          "name": "contact_key",
+          "type": "text",
+          "nullable": true,
+          "source": {
+            "pointer": "/contactKey",
+            "missing": {
+              "mode": "error"
+            }
+          },
+          "target": {
+            "pointer": "/pointOfContactId",
+            "missing": {
+              "mode": "error"
+            },
+            "transform": {
+              "kind": "reference",
+              "object": "people",
+              "keyPointer": "/id",
+              "valuePointer": "/legacyId"
+            }
+          }
+        }
+      ],
+      "primaryKey": [
+        "opportunity_key"
+      ],
+      "sourceOrigins": [
+        {
+          "row": 0,
+          "id": "O001",
+          "bodySha256": "395a793dfc11121c86e61f2876da7b359fd54a3e697ee394a91648677b545ca2",
+          "rowsPointer": ""
+        },
+        {
+          "row": 1,
+          "id": "O002",
+          "bodySha256": "395a793dfc11121c86e61f2876da7b359fd54a3e697ee394a91648677b545ca2",
+          "rowsPointer": ""
+        }
+      ],
+      "expectedOrigins": [
+        {
+          "page": 0,
+          "row": 0,
+          "id": "55555555-0000-4000-8000-000000000001",
+          "bodySha256": "cb8cd9c9ee36fdf79df868cc3fe067fa0073b3c67c3f695f39afd268f30168e7"
+        },
+        {
+          "page": 0,
+          "row": 1,
+          "id": "55555555-0000-4000-8000-000000000002",
+          "bodySha256": "cb8cd9c9ee36fdf79df868cc3fe067fa0073b3c67c3f695f39afd268f30168e7"
+        }
+      ],
+      "missingCells": {
+        "source": [],
+        "target": []
+      }
+    }
+  ],
+  "relationships": [
+    {
+      "id": "person_company",
+      "side": "source",
+      "childTable": "people",
+      "parentTable": "companies",
+      "orphans": [],
+      "count": 0
+    },
+    {
+      "id": "person_company",
+      "side": "target",
+      "childTable": "people",
+      "parentTable": "companies",
+      "orphans": [],
+      "count": 0
+    },
+    {
+      "id": "opportunity_company",
+      "side": "source",
+      "childTable": "opportunities",
+      "parentTable": "companies",
+      "orphans": [],
+      "count": 0
+    },
+    {
+      "id": "opportunity_company",
+      "side": "target",
+      "childTable": "opportunities",
+      "parentTable": "companies",
+      "orphans": [],
+      "count": 0
+    },
+    {
+      "id": "opportunity_person",
+      "side": "source",
+      "childTable": "opportunities",
+      "parentTable": "people",
+      "orphans": [],
+      "count": 0
+    },
+    {
+      "id": "opportunity_person",
+      "side": "target",
+      "childTable": "opportunities",
+      "parentTable": "people",
+      "orphans": [],
+      "count": 0
+    }
+  ],
+  "coverage": {
+    "deleted": "Each original selection states its coverage; absence is not a deletion.",
+    "attachments": "Complete API response metadata is retained. Linked binary attachments remain separate original sources.",
+    "snapshot": "All selected pages and schemas are retained. An observed interval is not a transaction across workspaces."
+  }
+}

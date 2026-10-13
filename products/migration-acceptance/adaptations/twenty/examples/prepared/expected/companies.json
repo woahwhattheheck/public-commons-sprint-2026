@@ -1,0 +1,50 @@
+{
+  "schema": "dlthub.expected-table.v1",
+  "table": "companies",
+  "complete": true,
+  "rowCount": 2,
+  "columns": [
+    {
+      "name": "company_key",
+      "type": "VARCHAR"
+    },
+    {
+      "name": "name",
+      "type": "VARCHAR"
+    },
+    {
+      "name": "website",
+      "type": "VARCHAR"
+    }
+  ],
+  "rows": [
+    [
+      {
+        "type": "text",
+        "value": "001"
+      },
+      {
+        "type": "text",
+        "value": "Cedar Workshop"
+      },
+      {
+        "type": "text",
+        "value": "https://cedar.example.test"
+      }
+    ],
+    [
+      {
+        "type": "text",
+        "value": "002"
+      },
+      {
+        "type": "text",
+        "value": "Northline Studio"
+      },
+      {
+        "type": "text",
+        "value": "https://northline.example.test"
+      }
+    ]
+  ]
+}

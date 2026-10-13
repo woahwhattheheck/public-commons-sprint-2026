@@ -1,0 +1,269 @@
+{
+  "schema": "twenty.capture.v1",
+  "evidenceKind": "authored-reference",
+  "state": "complete",
+  "operationId": "authored_crm_company_person_opportunity_20261013",
+  "startedAt": "2026-10-13T20:00:00.000Z",
+  "completedAt": "2026-10-13T20:00:00.000Z",
+  "consistency": {
+    "mode": "observed-interval",
+    "evidence": "Explicitly authored reference responses; no provider call was made."
+  },
+  "source": {
+    "kind": "retained-json",
+    "system": "Authored legacy JSON reference",
+    "workspaceReference": "authored-source-only",
+    "objects": [
+      {
+        "spec": {
+          "namePlural": "companies",
+          "recordIdPointer": "/legacyId",
+          "rowsPointer": "",
+          "scope": {
+            "coverage": "all-exported",
+            "population": "Every independently authored companies source record",
+            "deleted": "No deletion history authored"
+          }
+        },
+        "original": {
+          "body": "[\n  {\n    \"legacyId\": \"001\",\n    \"name\": \"Cedar Workshop\",\n    \"website\": \"https://cedar.example.test\"\n  },\n  {\n    \"legacyId\": \"002\",\n    \"name\": \"Northline Studio\",\n    \"website\": \"https://northline.example.test\"\n  }\n]\n",
+          "bytes": 221,
+          "sha256": "a7b9d8fdff3b304c0032aec30c1e20d9a0d262aceb88816fb4ecf49ef814fe10",
+          "status": 200,
+          "receivedAt": "2026-10-13T20:00:00.000Z",
+          "request": {},
+          "filename": "companies.json"
+        }
+      },
+      {
+        "spec": {
+          "namePlural": "people",
+          "recordIdPointer": "/legacyId",
+          "rowsPointer": "",
+          "scope": {
+            "coverage": "all-exported",
+            "population": "Every independently authored people source record",
+            "deleted": "No deletion history authored"
+          }
+        },
+        "original": {
+          "body": "[\n  {\n    \"legacyId\": \"P001\",\n    \"firstName\": \"Alex\",\n    \"lastName\": \"Reed\",\n    \"email\": \"alex@example.test\",\n    \"companyKey\": \"001\"\n  },\n  {\n    \"legacyId\": \"P002\",\n    \"firstName\": \"Jo\",\n    \"lastName\": \"Mills\",\n    \"email\": null,\n    \"companyKey\": \"002\"\n  },\n  {\n    \"legacyId\": \"P003\",\n    \"firstName\": \"Casey\",\n    \"lastName\": \"Lin\",\n    \"email\": \"\",\n    \"companyKey\": null\n  }\n]\n",
+          "bytes": 389,
+          "sha256": "191d0e17ab6527b3681e1a4dc7a949868fd6ff326b98b902575e52f9d3a1e4f7",
+          "status": 200,
+          "receivedAt": "2026-10-13T20:00:00.000Z",
+          "request": {},
+          "filename": "people.json"
+        }
+      },
+      {
+        "spec": {
+          "namePlural": "opportunities",
+          "recordIdPointer": "/legacyId",
+          "rowsPointer": "",
+          "scope": {
+            "coverage": "all-exported",
+            "population": "Every independently authored opportunities source record",
+            "deleted": "No deletion history authored"
+          }
+        },
+        "original": {
+          "body": "[\n  {\n    \"legacyId\": \"O001\",\n    \"name\": \"CRM setup\",\n    \"stage\": \"Proposal\",\n    \"amount\": \"1200.12\",\n    \"currency\": \"USD\",\n    \"companyKey\": \"001\",\n    \"contactKey\": \"P001\"\n  },\n  {\n    \"legacyId\": \"O002\",\n    \"name\": \"Support renewal\",\n    \"stage\": \"Qualification\",\n    \"amount\": \"0.00\",\n    \"currency\": \"CAD\",\n    \"companyKey\": \"002\",\n    \"contactKey\": \"P002\"\n  }\n]\n",
+          "bytes": 373,
+          "sha256": "395a793dfc11121c86e61f2876da7b359fd54a3e697ee394a91648677b545ca2",
+          "status": 200,
+          "receivedAt": "2026-10-13T20:00:00.000Z",
+          "request": {},
+          "filename": "opportunities.json"
+        }
+      }
+    ]
+  },
+  "target": {
+    "kind": "twenty-rest",
+    "baseUrl": "https://crm.example.test",
+    "workspaceReference": "authored-target-only",
+    "deployedVersion": null,
+    "openapi": {
+      "core": {
+        "body": "{\n  \"openapi\": \"3.1.1\",\n  \"info\": {\n    \"title\": \"Authored reference contract\",\n    \"version\": \"v0.1\"\n  },\n  \"paths\": {\n    \"/companies\": {\n      \"get\": {\n        \"description\": \"Authored selected object response\"\n      }\n    },\n    \"/people\": {\n      \"get\": {\n        \"description\": \"Authored selected object response\"\n      }\n    },\n    \"/opportunities\": {\n      \"get\": {\n        \"description\": \"Authored selected object response\"\n      }\n    }\n  },\n  \"components\": {\n    \"schemas\": {\n      \"CompanyForResponse\": {\n        \"type\": \"object\",\n        \"properties\": {\n          \"id\": {\n            \"type\": \"string\"\n          },\n          \"name\": {\n            \"type\": \"string\"\n          },\n          \"legacyId\": {\n            \"type\": \"string\"\n          },\n          \"domainName\": {\n            \"type\": \"object\"\n          }\n        }\n      },\n      \"PersonForResponse\": {\n        \"type\": \"object\",\n        \"properties\": {\n          \"id\": {\n            \"type\": \"string\"\n          },\n          \"name\": {\n            \"type\": \"object\"\n          },\n          \"legacyId\": {\n            \"type\": \"string\"\n          },\n          \"emails\": {\n            \"type\": \"object\"\n          },\n          \"company\": {\n            \"oneOf\": [\n              {\n                \"$ref\": \"#/components/schemas/CompanyForResponse\"\n              }\n            ]\n          },\n          \"companyId\": {\n            \"type\": [\n              \"string\",\n              \"null\"\n            ],\n            \"format\": \"uuid\"\n          }\n        }\n      },\n      \"OpportunityForResponse\": {\n        \"type\": \"object\",\n        \"properties\": {\n          \"id\": {\n            \"type\": \"string\"\n          },\n          \"name\": {\n            \"type\": \"string\"\n          },\n          \"legacyId\": {\n            \"type\": \"string\"\n          },\n          \"stage\": {\n            \"type\": \"string\"\n          },\n          \"amount\": {\n            \"type\": \"object\"\n          },\n          \"company\": {\n            \"oneOf\": [\n              {\n                \"$ref\": \"#/components/schemas/CompanyForResponse\"\n              }\n            ]\n          },\n          \"companyId\": {\n            \"type\": [\n              \"string\",\n              \"null\"\n            ],\n            \"format\": \"uuid\"\n          },\n          \"pointOfContact\": {\n            \"oneOf\": [\n              {\n                \"$ref\": \"#/components/schemas/PersonForResponse\"\n              }\n            ]\n          },\n          \"pointOfContactId\": {\n            \"type\": [\n              \"string\",\n              \"null\"\n            ],\n            \"format\": \"uuid\"\n          }\n        }\n      }\n    }\n  }\n}\n",
+        "bytes": 2591,
+        "sha256": "5edeab4952851c239f382db355fbec561c180976a1bb53a8bb26cac6cfa3cdac",
+        "status": 200,
+        "receivedAt": "2026-10-13T20:00:00.000Z",
+        "request": {}
+      },
+      "metadata": {
+        "body": "{\n  \"openapi\": \"3.1.1\",\n  \"info\": {\n    \"title\": \"Authored metadata reference\",\n    \"version\": \"v0.1\"\n  },\n  \"paths\": {\n    \"/objects\": {\n      \"get\": {}\n    },\n    \"/fields\": {\n      \"get\": {}\n    }\n  }\n}\n",
+        "bytes": 206,
+        "sha256": "557eb6b1e6c56647f8fc3e3d00caf9b02bd43c15d84391c559ac3c89949a61c2",
+        "status": 200,
+        "receivedAt": "2026-10-13T20:00:00.000Z",
+        "request": {}
+      }
+    },
+    "metadata": {
+      "before": {
+        "objects": [
+          {
+            "body": "{\n  \"data\": [\n    {\n      \"id\": \"11111111-0000-4000-8000-000000000001\",\n      \"nameSingular\": \"company\",\n      \"namePlural\": \"companies\",\n      \"isActive\": true,\n      \"isSystem\": false,\n      \"fields\": [\n        {\n          \"id\": \"44444444-0000-4000-8000-000000000001\",\n          \"objectMetadataId\": \"11111111-0000-4000-8000-000000000001\",\n          \"name\": \"id\",\n          \"type\": \"UUID\",\n          \"isActive\": true,\n          \"isSystem\": true,\n          \"isNullable\": false,\n          \"settings\": null\n        },\n        {\n          \"id\": \"44444444-0000-4000-8000-000000000002\",\n          \"objectMetadataId\": \"11111111-0000-4000-8000-000000000001\",\n          \"name\": \"name\",\n          \"type\": \"TEXT\",\n          \"isActive\": true,\n          \"isSystem\": false,\n          \"isNullable\": true,\n          \"settings\": null\n        },\n        {\n          \"id\": \"44444444-0000-4000-8000-000000000003\",\n          \"objectMetadataId\": \"11111111-0000-4000-8000-000000000001\",\n          \"name\": \"legacyId\",\n          \"type\": \"TEXT\",\n          \"isActive\": true,\n          \"isSystem\": false,\n          \"isNullable\": true,\n          \"settings\": null\n        },\n        {\n          \"id\": \"44444444-0000-4000-8000-000000000004\",\n          \"objectMetadataId\": \"11111111-0000-4000-8000-000000000001\",\n          \"name\": \"domainName\",\n          \"type\": \"LINKS\",\n          \"isActive\": true,\n          \"isSystem\": false,\n          \"isNullable\": true,\n          \"settings\": null\n        }\n      ]\n    },\n    {\n      \"id\": \"11111111-0000-4000-8000-000000000002\",\n      \"nameSingular\": \"person\",\n      \"namePlural\": \"people\",\n      \"isActive\": true,\n      \"isSystem\": false,\n      \"fields\": [\n        {\n          \"id\": \"44444444-0000-4000-8000-000000000005\",\n          \"objectMetadataId\": \"11111111-0000-4000-8000-000000000002\",\n          \"name\": \"id\",\n          \"type\": \"UUID\",\n          \"isActive\": true,\n          \"isSystem\": true,\n          \"isNullable\": false,\n          \"settings\": null\n        },\n        {\n          \"id\": \"44444444-0000-4000-8000-000000000006\",\n          \"objectMetadataId\": \"11111111-0000-4000-8000-000000000002\",\n          \"name\": \"name\",\n          \"type\": \"FULL_NAME\",\n          \"isActive\": true,\n          \"isSystem\": false,\n          \"isNullable\": true,\n          \"settings\": null\n        },\n        {\n          \"id\": \"44444444-0000-4000-8000-000000000007\",\n          \"objectMetadataId\": \"11111111-0000-4000-8000-000000000002\",\n          \"name\": \"legacyId\",\n          \"type\": \"TEXT\",\n          \"isActive\": true,\n          \"isSystem\": false,\n          \"isNullable\": true,\n          \"settings\": null\n        },\n        {\n          \"id\": \"44444444-0000-4000-8000-000000000008\",\n          \"objectMetadataId\": \"11111111-0000-4000-8000-000000000002\",\n          \"name\": \"emails\",\n          \"type\": \"EMAILS\",\n          \"isActive\": true,\n          \"isSystem\": false,\n          \"isNullable\": true,\n          \"settings\": null\n        },\n        {\n          \"id\": \"44444444-0000-4000-8000-000000000009\",\n          \"objectMetadataId\": \"11111111-0000-4000-8000-000000000002\",\n          \"name\": \"company\",\n          \"type\": \"RELATION\",\n          \"isActive\": true,\n          \"isSystem\": false,\n          \"isNullable\": true,\n          \"settings\": {\n            \"relationType\": \"MANY_TO_ONE\",\n            \"joinColumnName\": \"companyId\"\n          }\n        }\n      ]\n    },\n    {\n      \"id\": \"11111111-0000-4000-8000-000000000003\",\n      \"nameSingular\": \"opportunity\",\n      \"namePlural\": \"opportunities\",\n      \"isActive\": true,\n      \"isSystem\": false,\n      \"fields\": [\n        {\n          \"id\": \"44444444-0000-4000-8000-000000000010\",\n          \"objectMetadataId\": \"11111111-0000-4000-8000-000000000003\",\n          \"name\": \"id\",\n          \"type\": \"UUID\",\n          \"isActive\": true,\n          \"isSystem\": true,\n          \"isNullable\": false,\n          \"settings\": null\n        },\n        {\n          \"id\": \"44444444-0000-4000-8000-000000000011\",\n          \"objectMetadataId\": \"11111111-0000-4000-8000-000000000003\",\n          \"name\": \"name\",\n          \"type\": \"TEXT\",\n          \"isActive\": true,\n          \"isSystem\": false,\n          \"isNullable\": true,\n          \"settings\": null\n        },\n        {\n          \"id\": \"44444444-0000-4000-8000-000000000012\",\n          \"objectMetadataId\": \"11111111-0000-4000-8000-000000000003\",\n          \"name\": \"legacyId\",\n          \"type\": \"TEXT\",\n          \"isActive\": true,\n          \"isSystem\": false,\n          \"isNullable\": true,\n          \"settings\": null\n        },\n        {\n          \"id\": \"44444444-0000-4000-8000-000000000013\",\n          \"objectMetadataId\": \"11111111-0000-4000-8000-000000000003\",\n          \"name\": \"stage\",\n          \"type\": \"SELECT\",\n          \"isActive\": true,\n          \"isSystem\": false,\n          \"isNullable\": true,\n          \"settings\": null\n        },\n        {\n          \"id\": \"44444444-0000-4000-8000-000000000014\",\n          \"objectMetadataId\": \"11111111-0000-4000-8000-000000000003\",\n          \"name\": \"amount\",\n          \"type\": \"CURRENCY\",\n          \"isActive\": true,\n          \"isSystem\": false,\n          \"isNullable\": true,\n          \"settings\": null\n        },\n        {\n          \"id\": \"44444444-0000-4000-8000-000000000015\",\n          \"objectMetadataId\": \"11111111-0000-4000-8000-000000000003\",\n          \"name\": \"company\",\n          \"type\": \"RELATION\",\n          \"isActive\": true,\n          \"isSystem\": false,\n          \"isNullable\": true,\n          \"settings\": {\n            \"relationType\": \"MANY_TO_ONE\",\n            \"joinColumnName\": \"companyId\"\n          }\n        },\n        {\n          \"id\": \"44444444-0000-4000-8000-000000000016\",\n          \"objectMetadataId\": \"11111111-0000-4000-8000-000000000003\",\n          \"name\": \"pointOfContact\",\n          \"type\": \"RELATION\",\n          \"isActive\": true,\n          \"isSystem\": false,\n          \"isNullable\": true,\n          \"settings\": {\n            \"relationType\": \"MANY_TO_ONE\",\n            \"joinColumnName\": \"pointOfContactId\"\n          }\n        }\n      ]\n    }\n  ],\n  \"totalCount\": 3,\n  \"pageInfo\": {\n    \"hasNextPage\": false,\n    \"hasPreviousPage\": false,\n    \"startCursor\": \"11111111-0000-4000-8000-000000000001\",\n    \"endCursor\": \"11111111-0000-4000-8000-000000000003\"\n  }\n}\n",
+            "bytes": 6205,
+            "sha256": "aa9297eb7dd7d0fb316c963b26c4a01c141cc771069d5743b153a2cd956afd96",
+            "status": 200,
+            "receivedAt": "2026-10-13T20:00:00.000Z",
+            "request": {
+              "startingAfter": null,
+              "limit": 60
+            }
+          }
+        ],
+        "fields": [
+          {
+            "body": "{\n  \"data\": [\n    {\n      \"id\": \"44444444-0000-4000-8000-000000000001\",\n      \"objectMetadataId\": \"11111111-0000-4000-8000-000000000001\",\n      \"name\": \"id\",\n      \"type\": \"UUID\",\n      \"isActive\": true,\n      \"isSystem\": true,\n      \"isNullable\": false,\n      \"settings\": null\n    },\n    {\n      \"id\": \"44444444-0000-4000-8000-000000000002\",\n      \"objectMetadataId\": \"11111111-0000-4000-8000-000000000001\",\n      \"name\": \"name\",\n      \"type\": \"TEXT\",\n      \"isActive\": true,\n      \"isSystem\": false,\n      \"isNullable\": true,\n      \"settings\": null\n    },\n    {\n      \"id\": \"44444444-0000-4000-8000-000000000003\",\n      \"objectMetadataId\": \"11111111-0000-4000-8000-000000000001\",\n      \"name\": \"legacyId\",\n      \"type\": \"TEXT\",\n      \"isActive\": true,\n      \"isSystem\": false,\n      \"isNullable\": true,\n      \"settings\": null\n    },\n    {\n      \"id\": \"44444444-0000-4000-8000-000000000004\",\n      \"objectMetadataId\": \"11111111-0000-4000-8000-000000000001\",\n      \"name\": \"domainName\",\n      \"type\": \"LINKS\",\n      \"isActive\": true,\n      \"isSystem\": false,\n      \"isNullable\": true,\n      \"settings\": null\n    },\n    {\n      \"id\": \"44444444-0000-4000-8000-000000000005\",\n      \"objectMetadataId\": \"11111111-0000-4000-8000-000000000002\",\n      \"name\": \"id\",\n      \"type\": \"UUID\",\n      \"isActive\": true,\n      \"isSystem\": true,\n      \"isNullable\": false,\n      \"settings\": null\n    },\n    {\n      \"id\": \"44444444-0000-4000-8000-000000000006\",\n      \"objectMetadataId\": \"11111111-0000-4000-8000-000000000002\",\n      \"name\": \"name\",\n      \"type\": \"FULL_NAME\",\n      \"isActive\": true,\n      \"isSystem\": false,\n      \"isNullable\": true,\n      \"settings\": null\n    },\n    {\n      \"id\": \"44444444-0000-4000-8000-000000000007\",\n      \"objectMetadataId\": \"11111111-0000-4000-8000-000000000002\",\n      \"name\": \"legacyId\",\n      \"type\": \"TEXT\",\n      \"isActive\": true,\n      \"isSystem\": false,\n      \"isNullable\": true,\n      \"settings\": null\n    },\n    {\n      \"id\": \"44444444-0000-4000-8000-000000000008\",\n      \"objectMetadataId\": \"11111111-0000-4000-8000-000000000002\",\n      \"name\": \"emails\",\n      \"type\": \"EMAILS\",\n      \"isActive\": true,\n      \"isSystem\": false,\n      \"isNullable\": true,\n      \"settings\": null\n    },\n    {\n      \"id\": \"44444444-0000-4000-8000-000000000009\",\n      \"objectMetadataId\": \"11111111-0000-4000-8000-000000000002\",\n      \"name\": \"company\",\n      \"type\": \"RELATION\",\n      \"isActive\": true,\n      \"isSystem\": false,\n      \"isNullable\": true,\n      \"settings\": {\n        \"relationType\": \"MANY_TO_ONE\",\n        \"joinColumnName\": \"companyId\"\n      }\n    },\n    {\n      \"id\": \"44444444-0000-4000-8000-000000000010\",\n      \"objectMetadataId\": \"11111111-0000-4000-8000-000000000003\",\n      \"name\": \"id\",\n      \"type\": \"UUID\",\n      \"isActive\": true,\n      \"isSystem\": true,\n      \"isNullable\": false,\n      \"settings\": null\n    },\n    {\n      \"id\": \"44444444-0000-4000-8000-000000000011\",\n      \"objectMetadataId\": \"11111111-0000-4000-8000-000000000003\",\n      \"name\": \"name\",\n      \"type\": \"TEXT\",\n      \"isActive\": true,\n      \"isSystem\": false,\n      \"isNullable\": true,\n      \"settings\": null\n    },\n    {\n      \"id\": \"44444444-0000-4000-8000-000000000012\",\n      \"objectMetadataId\": \"11111111-0000-4000-8000-000000000003\",\n      \"name\": \"legacyId\",\n      \"type\": \"TEXT\",\n      \"isActive\": true,\n      \"isSystem\": false,\n      \"isNullable\": true,\n      \"settings\": null\n    },\n    {\n      \"id\": \"44444444-0000-4000-8000-000000000013\",\n      \"objectMetadataId\": \"11111111-0000-4000-8000-000000000003\",\n      \"name\": \"stage\",\n      \"type\": \"SELECT\",\n      \"isActive\": true,\n      \"isSystem\": false,\n      \"isNullable\": true,\n      \"settings\": null\n    },\n    {\n      \"id\": \"44444444-0000-4000-8000-000000000014\",\n      \"objectMetadataId\": \"11111111-0000-4000-8000-000000000003\",\n      \"name\": \"amount\",\n      \"type\": \"CURRENCY\",\n      \"isActive\": true,\n      \"isSystem\": false,\n      \"isNullable\": true,\n      \"settings\": null\n    },\n    {\n      \"id\": \"44444444-0000-4000-8000-000000000015\",\n      \"objectMetadataId\": \"11111111-0000-4000-8000-000000000003\",\n      \"name\": \"company\",\n      \"type\": \"RELATION\",\n      \"isActive\": true,\n      \"isSystem\": false,\n      \"isNullable\": true,\n      \"settings\": {\n        \"relationType\": \"MANY_TO_ONE\",\n        \"joinColumnName\": \"companyId\"\n      }\n    },\n    {\n      \"id\": \"44444444-0000-4000-8000-000000000016\",\n      \"objectMetadataId\": \"11111111-0000-4000-8000-000000000003\",\n      \"name\": \"pointOfContact\",\n      \"type\": \"RELATION\",\n      \"isActive\": true,\n      \"isSystem\": false,\n      \"isNullable\": true,\n      \"settings\": {\n        \"relationType\": \"MANY_TO_ONE\",\n        \"joinColumnName\": \"pointOfContactId\"\n      }\n    }\n  ],\n  \"totalCount\": 16,\n  \"pageInfo\": {\n    \"hasNextPage\": false,\n    \"hasPreviousPage\": false,\n    \"startCursor\": \"44444444-0000-4000-8000-000000000001\",\n    \"endCursor\": \"44444444-0000-4000-8000-000000000016\"\n  }\n}\n",
+            "bytes": 4911,
+            "sha256": "587c526ba32b580b05df5c3f21141a2eaaea0e4db7c3a7550a8ae24cb39bcc98",
+            "status": 200,
+            "receivedAt": "2026-10-13T20:00:00.000Z",
+            "request": {
+              "startingAfter": null,
+              "limit": 60
+            }
+          }
+        ]
+      },
+      "after": {
+        "objects": [
+          {
+            "body": "{\n  \"data\": [\n    {\n      \"id\": \"11111111-0000-4000-8000-000000000001\",\n      \"nameSingular\": \"company\",\n      \"namePlural\": \"companies\",\n      \"isActive\": true,\n      \"isSystem\": false,\n      \"fields\": [\n        {\n          \"id\": \"44444444-0000-4000-8000-000000000001\",\n          \"objectMetadataId\": \"11111111-0000-4000-8000-000000000001\",\n          \"name\": \"id\",\n          \"type\": \"UUID\",\n          \"isActive\": true,\n          \"isSystem\": true,\n          \"isNullable\": false,\n          \"settings\": null\n        },\n        {\n          \"id\": \"44444444-0000-4000-8000-000000000002\",\n          \"objectMetadataId\": \"11111111-0000-4000-8000-000000000001\",\n          \"name\": \"name\",\n          \"type\": \"TEXT\",\n          \"isActive\": true,\n          \"isSystem\": false,\n          \"isNullable\": true,\n          \"settings\": null\n        },\n        {\n          \"id\": \"44444444-0000-4000-8000-000000000003\",\n          \"objectMetadataId\": \"11111111-0000-4000-8000-000000000001\",\n          \"name\": \"legacyId\",\n          \"type\": \"TEXT\",\n          \"isActive\": true,\n          \"isSystem\": false,\n          \"isNullable\": true,\n          \"settings\": null\n        },\n        {\n          \"id\": \"44444444-0000-4000-8000-000000000004\",\n          \"objectMetadataId\": \"11111111-0000-4000-8000-000000000001\",\n          \"name\": \"domainName\",\n          \"type\": \"LINKS\",\n          \"isActive\": true,\n          \"isSystem\": false,\n          \"isNullable\": true,\n          \"settings\": null\n        }\n      ]\n    },\n    {\n      \"id\": \"11111111-0000-4000-8000-000000000002\",\n      \"nameSingular\": \"person\",\n      \"namePlural\": \"people\",\n      \"isActive\": true,\n      \"isSystem\": false,\n      \"fields\": [\n        {\n          \"id\": \"44444444-0000-4000-8000-000000000005\",\n          \"objectMetadataId\": \"11111111-0000-4000-8000-000000000002\",\n          \"name\": \"id\",\n          \"type\": \"UUID\",\n          \"isActive\": true,\n          \"isSystem\": true,\n          \"isNullable\": false,\n          \"settings\": null\n        },\n        {\n          \"id\": \"44444444-0000-4000-8000-000000000006\",\n          \"objectMetadataId\": \"11111111-0000-4000-8000-000000000002\",\n          \"name\": \"name\",\n          \"type\": \"FULL_NAME\",\n          \"isActive\": true,\n          \"isSystem\": false,\n          \"isNullable\": true,\n          \"settings\": null\n        },\n        {\n          \"id\": \"44444444-0000-4000-8000-000000000007\",\n          \"objectMetadataId\": \"11111111-0000-4000-8000-000000000002\",\n          \"name\": \"legacyId\",\n          \"type\": \"TEXT\",\n          \"isActive\": true,\n          \"isSystem\": false,\n          \"isNullable\": true,\n          \"settings\": null\n        },\n        {\n          \"id\": \"44444444-0000-4000-8000-000000000008\",\n          \"objectMetadataId\": \"11111111-0000-4000-8000-000000000002\",\n          \"name\": \"emails\",\n          \"type\": \"EMAILS\",\n          \"isActive\": true,\n          \"isSystem\": false,\n          \"isNullable\": true,\n          \"settings\": null\n        },\n        {\n          \"id\": \"44444444-0000-4000-8000-000000000009\",\n          \"objectMetadataId\": \"11111111-0000-4000-8000-000000000002\",\n          \"name\": \"company\",\n          \"type\": \"RELATION\",\n          \"isActive\": true,\n          \"isSystem\": false,\n          \"isNullable\": true,\n          \"settings\": {\n            \"relationType\": \"MANY_TO_ONE\",\n            \"joinColumnName\": \"companyId\"\n          }\n        }\n      ]\n    },\n    {\n      \"id\": \"11111111-0000-4000-8000-000000000003\",\n      \"nameSingular\": \"opportunity\",\n      \"namePlural\": \"opportunities\",\n      \"isActive\": true,\n      \"isSystem\": false,\n      \"fields\": [\n        {\n          \"id\": \"44444444-0000-4000-8000-000000000010\",\n          \"objectMetadataId\": \"11111111-0000-4000-8000-000000000003\",\n          \"name\": \"id\",\n          \"type\": \"UUID\",\n          \"isActive\": true,\n          \"isSystem\": true,\n          \"isNullable\": false,\n          \"settings\": null\n        },\n        {\n          \"id\": \"44444444-0000-4000-8000-000000000011\",\n          \"objectMetadataId\": \"11111111-0000-4000-8000-000000000003\",\n          \"name\": \"name\",\n          \"type\": \"TEXT\",\n          \"isActive\": true,\n          \"isSystem\": false,\n          \"isNullable\": true,\n          \"settings\": null\n        },\n        {\n          \"id\": \"44444444-0000-4000-8000-000000000012\",\n          \"objectMetadataId\": \"11111111-0000-4000-8000-000000000003\",\n          \"name\": \"legacyId\",\n          \"type\": \"TEXT\",\n          \"isActive\": true,\n          \"isSystem\": false,\n          \"isNullable\": true,\n          \"settings\": null\n        },\n        {\n          \"id\": \"44444444-0000-4000-8000-000000000013\",\n          \"objectMetadataId\": \"11111111-0000-4000-8000-000000000003\",\n          \"name\": \"stage\",\n          \"type\": \"SELECT\",\n          \"isActive\": true,\n          \"isSystem\": false,\n          \"isNullable\": true,\n          \"settings\": null\n        },\n        {\n          \"id\": \"44444444-0000-4000-8000-000000000014\",\n          \"objectMetadataId\": \"11111111-0000-4000-8000-000000000003\",\n          \"name\": \"amount\",\n          \"type\": \"CURRENCY\",\n          \"isActive\": true,\n          \"isSystem\": false,\n          \"isNullable\": true,\n          \"settings\": null\n        },\n        {\n          \"id\": \"44444444-0000-4000-8000-000000000015\",\n          \"objectMetadataId\": \"11111111-0000-4000-8000-000000000003\",\n          \"name\": \"company\",\n          \"type\": \"RELATION\",\n          \"isActive\": true,\n          \"isSystem\": false,\n          \"isNullable\": true,\n          \"settings\": {\n            \"relationType\": \"MANY_TO_ONE\",\n            \"joinColumnName\": \"companyId\"\n          }\n        },\n        {\n          \"id\": \"44444444-0000-4000-8000-000000000016\",\n          \"objectMetadataId\": \"11111111-0000-4000-8000-000000000003\",\n          \"name\": \"pointOfContact\",\n          \"type\": \"RELATION\",\n          \"isActive\": true,\n          \"isSystem\": false,\n          \"isNullable\": true,\n          \"settings\": {\n            \"relationType\": \"MANY_TO_ONE\",\n            \"joinColumnName\": \"pointOfContactId\"\n          }\n        }\n      ]\n    }\n  ],\n  \"totalCount\": 3,\n  \"pageInfo\": {\n    \"hasNextPage\": false,\n    \"hasPreviousPage\": false,\n    \"startCursor\": \"11111111-0000-4000-8000-000000000001\",\n    \"endCursor\": \"11111111-0000-4000-8000-000000000003\"\n  }\n}\n",
+            "bytes": 6205,
+            "sha256": "aa9297eb7dd7d0fb316c963b26c4a01c141cc771069d5743b153a2cd956afd96",
+            "status": 200,
+            "receivedAt": "2026-10-13T20:00:00.000Z",
+            "request": {
+              "startingAfter": null,
+              "limit": 60
+            }
+          }
+        ],
+        "fields": [
+          {
+            "body": "{\n  \"data\": [\n    {\n      \"id\": \"44444444-0000-4000-8000-000000000001\",\n      \"objectMetadataId\": \"11111111-0000-4000-8000-000000000001\",\n      \"name\": \"id\",\n      \"type\": \"UUID\",\n      \"isActive\": true,\n      \"isSystem\": true,\n      \"isNullable\": false,\n      \"settings\": null\n    },\n    {\n      \"id\": \"44444444-0000-4000-8000-000000000002\",\n      \"objectMetadataId\": \"11111111-0000-4000-8000-000000000001\",\n      \"name\": \"name\",\n      \"type\": \"TEXT\",\n      \"isActive\": true,\n      \"isSystem\": false,\n      \"isNullable\": true,\n      \"settings\": null\n    },\n    {\n      \"id\": \"44444444-0000-4000-8000-000000000003\",\n      \"objectMetadataId\": \"11111111-0000-4000-8000-000000000001\",\n      \"name\": \"legacyId\",\n      \"type\": \"TEXT\",\n      \"isActive\": true,\n      \"isSystem\": false,\n      \"isNullable\": true,\n      \"settings\": null\n    },\n    {\n      \"id\": \"44444444-0000-4000-8000-000000000004\",\n      \"objectMetadataId\": \"11111111-0000-4000-8000-000000000001\",\n      \"name\": \"domainName\",\n      \"type\": \"LINKS\",\n      \"isActive\": true,\n      \"isSystem\": false,\n      \"isNullable\": true,\n      \"settings\": null\n    },\n    {\n      \"id\": \"44444444-0000-4000-8000-000000000005\",\n      \"objectMetadataId\": \"11111111-0000-4000-8000-000000000002\",\n      \"name\": \"id\",\n      \"type\": \"UUID\",\n      \"isActive\": true,\n      \"isSystem\": true,\n      \"isNullable\": false,\n      \"settings\": null\n    },\n    {\n      \"id\": \"44444444-0000-4000-8000-000000000006\",\n      \"objectMetadataId\": \"11111111-0000-4000-8000-000000000002\",\n      \"name\": \"name\",\n      \"type\": \"FULL_NAME\",\n      \"isActive\": true,\n      \"isSystem\": false,\n      \"isNullable\": true,\n      \"settings\": null\n    },\n    {\n      \"id\": \"44444444-0000-4000-8000-000000000007\",\n      \"objectMetadataId\": \"11111111-0000-4000-8000-000000000002\",\n      \"name\": \"legacyId\",\n      \"type\": \"TEXT\",\n      \"isActive\": true,\n      \"isSystem\": false,\n      \"isNullable\": true,\n      \"settings\": null\n    },\n    {\n      \"id\": \"44444444-0000-4000-8000-000000000008\",\n      \"objectMetadataId\": \"11111111-0000-4000-8000-000000000002\",\n      \"name\": \"emails\",\n      \"type\": \"EMAILS\",\n      \"isActive\": true,\n      \"isSystem\": false,\n      \"isNullable\": true,\n      \"settings\": null\n    },\n    {\n      \"id\": \"44444444-0000-4000-8000-000000000009\",\n      \"objectMetadataId\": \"11111111-0000-4000-8000-000000000002\",\n      \"name\": \"company\",\n      \"type\": \"RELATION\",\n      \"isActive\": true,\n      \"isSystem\": false,\n      \"isNullable\": true,\n      \"settings\": {\n        \"relationType\": \"MANY_TO_ONE\",\n        \"joinColumnName\": \"companyId\"\n      }\n    },\n    {\n      \"id\": \"44444444-0000-4000-8000-000000000010\",\n      \"objectMetadataId\": \"11111111-0000-4000-8000-000000000003\",\n      \"name\": \"id\",\n      \"type\": \"UUID\",\n      \"isActive\": true,\n      \"isSystem\": true,\n      \"isNullable\": false,\n      \"settings\": null\n    },\n    {\n      \"id\": \"44444444-0000-4000-8000-000000000011\",\n      \"objectMetadataId\": \"11111111-0000-4000-8000-000000000003\",\n      \"name\": \"name\",\n      \"type\": \"TEXT\",\n      \"isActive\": true,\n      \"isSystem\": false,\n      \"isNullable\": true,\n      \"settings\": null\n    },\n    {\n      \"id\": \"44444444-0000-4000-8000-000000000012\",\n      \"objectMetadataId\": \"11111111-0000-4000-8000-000000000003\",\n      \"name\": \"legacyId\",\n      \"type\": \"TEXT\",\n      \"isActive\": true,\n      \"isSystem\": false,\n      \"isNullable\": true,\n      \"settings\": null\n    },\n    {\n      \"id\": \"44444444-0000-4000-8000-000000000013\",\n      \"objectMetadataId\": \"11111111-0000-4000-8000-000000000003\",\n      \"name\": \"stage\",\n      \"type\": \"SELECT\",\n      \"isActive\": true,\n      \"isSystem\": false,\n      \"isNullable\": true,\n      \"settings\": null\n    },\n    {\n      \"id\": \"44444444-0000-4000-8000-000000000014\",\n      \"objectMetadataId\": \"11111111-0000-4000-8000-000000000003\",\n      \"name\": \"amount\",\n      \"type\": \"CURRENCY\",\n      \"isActive\": true,\n      \"isSystem\": false,\n      \"isNullable\": true,\n      \"settings\": null\n    },\n    {\n      \"id\": \"44444444-0000-4000-8000-000000000015\",\n      \"objectMetadataId\": \"11111111-0000-4000-8000-000000000003\",\n      \"name\": \"company\",\n      \"type\": \"RELATION\",\n      \"isActive\": true,\n      \"isSystem\": false,\n      \"isNullable\": true,\n      \"settings\": {\n        \"relationType\": \"MANY_TO_ONE\",\n        \"joinColumnName\": \"companyId\"\n      }\n    },\n    {\n      \"id\": \"44444444-0000-4000-8000-000000000016\",\n      \"objectMetadataId\": \"11111111-0000-4000-8000-000000000003\",\n      \"name\": \"pointOfContact\",\n      \"type\": \"RELATION\",\n      \"isActive\": true,\n      \"isSystem\": false,\n      \"isNullable\": true,\n      \"settings\": {\n        \"relationType\": \"MANY_TO_ONE\",\n        \"joinColumnName\": \"pointOfContactId\"\n      }\n    }\n  ],\n  \"totalCount\": 16,\n  \"pageInfo\": {\n    \"hasNextPage\": false,\n    \"hasPreviousPage\": false,\n    \"startCursor\": \"44444444-0000-4000-8000-000000000001\",\n    \"endCursor\": \"44444444-0000-4000-8000-000000000016\"\n  }\n}\n",
+            "bytes": 4911,
+            "sha256": "587c526ba32b580b05df5c3f21141a2eaaea0e4db7c3a7550a8ae24cb39bcc98",
+            "status": 200,
+            "receivedAt": "2026-10-13T20:00:00.000Z",
+            "request": {
+              "startingAfter": null,
+              "limit": 60
+            }
+          }
+        ]
+      }
+    },
+    "objects": [
+      {
+        "spec": {
+          "namePlural": "companies",
+          "objectMetadataId": "11111111-0000-4000-8000-000000000001",
+          "fields": [
+            "id",
+            "name",
+            "legacyId",
+            "domainName"
+          ],
+          "scope": {
+            "coverage": "all-live",
+            "population": "Every authored example companies record",
+            "deleted": "not-observed-by-list"
+          },
+          "filter": null
+        },
+        "pages": [
+          {
+            "body": "{\n  \"data\": {\n    \"companies\": [\n      {\n        \"id\": \"22222222-0000-4000-8000-000000000001\",\n        \"legacyId\": \"001\",\n        \"name\": \"Cedar Workshop\",\n        \"domainName\": {\n          \"primaryLinkUrl\": \"https://cedar.example.test\"\n        }\n      },\n      {\n        \"id\": \"22222222-0000-4000-8000-000000000002\",\n        \"legacyId\": \"002\",\n        \"name\": \"Northline Studio\",\n        \"domainName\": {\n          \"primaryLinkUrl\": \"https://northline.example.test\"\n        }\n      }\n    ]\n  },\n  \"totalCount\": 2,\n  \"pageInfo\": {\n    \"hasNextPage\": false,\n    \"hasPreviousPage\": false,\n    \"startCursor\": \"22222222-0000-4000-8000-000000000001\",\n    \"endCursor\": \"22222222-0000-4000-8000-000000000002\"\n  }\n}\n",
+            "bytes": 707,
+            "sha256": "2d134461da70ebd2a8dedc2dd2a9ed6e7fe509fd7d456664a84a961a31037cc0",
+            "status": 200,
+            "receivedAt": "2026-10-13T20:00:00.000Z",
+            "request": {
+              "selectionSha256": "ba803d834fa00f036f8aaa460cab7811a0ce85dff581ffeeb3efb1c582e45063",
+              "startingAfter": null,
+              "limit": 60,
+              "depth": 0
+            }
+          }
+        ]
+      },
+      {
+        "spec": {
+          "namePlural": "people",
+          "objectMetadataId": "11111111-0000-4000-8000-000000000002",
+          "fields": [
+            "id",
+            "name",
+            "legacyId",
+            "emails",
+            "company"
+          ],
+          "scope": {
+            "coverage": "all-live",
+            "population": "Every authored example people record",
+            "deleted": "not-observed-by-list"
+          },
+          "filter": null
+        },
+        "pages": [
+          {
+            "body": "{\n  \"data\": {\n    \"people\": [\n      {\n        \"id\": \"33333333-0000-4000-8000-000000000001\",\n        \"legacyId\": \"P001\",\n        \"name\": {\n          \"firstName\": \"Alex\",\n          \"lastName\": \"Reed\"\n        },\n        \"emails\": {\n          \"primaryEmail\": \"alex@example.test\"\n        },\n        \"companyId\": \"22222222-0000-4000-8000-000000000001\"\n      },\n      {\n        \"id\": \"33333333-0000-4000-8000-000000000002\",\n        \"legacyId\": \"P002\",\n        \"name\": {\n          \"firstName\": \"Jo\",\n          \"lastName\": \"Mills\"\n        },\n        \"emails\": {\n          \"primaryEmail\": null\n        },\n        \"companyId\": \"22222222-0000-4000-8000-000000000002\"\n      },\n      {\n        \"id\": \"33333333-0000-4000-8000-000000000003\",\n        \"legacyId\": \"P003\",\n        \"name\": {\n          \"firstName\": \"Casey\",\n          \"lastName\": \"Lin\"\n        },\n        \"emails\": {\n          \"primaryEmail\": \"\"\n        },\n        \"companyId\": null\n      }\n    ]\n  },\n  \"totalCount\": 3,\n  \"pageInfo\": {\n    \"hasNextPage\": false,\n    \"hasPreviousPage\": false,\n    \"startCursor\": \"33333333-0000-4000-8000-000000000001\",\n    \"endCursor\": \"33333333-0000-4000-8000-000000000003\"\n  }\n}\n",
+            "bytes": 1160,
+            "sha256": "2ff67f22eed934fdf9d60b7f0d09f467838f481ba15597ec06a04d0ce421574d",
+            "status": 200,
+            "receivedAt": "2026-10-13T20:00:00.000Z",
+            "request": {
+              "selectionSha256": "d774c6c28deff316fc46df5224e0fe8c6fb750c202237c9051e863827815fbf8",
+              "startingAfter": null,
+              "limit": 60,
+              "depth": 0
+            }
+          }
+        ]
+      },
+      {
+        "spec": {
+          "namePlural": "opportunities",
+          "objectMetadataId": "11111111-0000-4000-8000-000000000003",
+          "fields": [
+            "id",
+            "name",
+            "legacyId",
+            "stage",
+            "amount",
+            "company",
+            "pointOfContact"
+          ],
+          "scope": {
+            "coverage": "all-live",
+            "population": "Every authored example opportunities record",
+            "deleted": "not-observed-by-list"
+          },
+          "filter": null
+        },
+        "pages": [
+          {
+            "body": "{\n  \"data\": {\n    \"opportunities\": [\n      {\n        \"id\": \"55555555-0000-4000-8000-000000000001\",\n        \"legacyId\": \"O001\",\n        \"name\": \"CRM setup\",\n        \"stage\": \"PROPOSAL\",\n        \"amount\": {\n          \"amountMicros\": 1250120000,\n          \"currencyCode\": \"USD\"\n        },\n        \"companyId\": \"22222222-0000-4000-8000-000000000001\",\n        \"pointOfContactId\": \"33333333-0000-4000-8000-000000000001\"\n      },\n      {\n        \"id\": \"55555555-0000-4000-8000-000000000002\",\n        \"legacyId\": \"O002\",\n        \"name\": \"Support renewal\",\n        \"stage\": \"QUALIFICATION\",\n        \"amount\": {\n          \"amountMicros\": 0,\n          \"currencyCode\": \"CAD\"\n        },\n        \"companyId\": \"22222222-0000-4000-8000-000000000002\",\n        \"pointOfContactId\": \"33333333-0000-4000-8000-000000000002\"\n      }\n    ]\n  },\n  \"totalCount\": 2,\n  \"pageInfo\": {\n    \"hasNextPage\": false,\n    \"hasPreviousPage\": false,\n    \"startCursor\": \"55555555-0000-4000-8000-000000000001\",\n    \"endCursor\": \"55555555-0000-4000-8000-000000000002\"\n  }\n}\n",
+            "bytes": 1033,
+            "sha256": "cb8cd9c9ee36fdf79df868cc3fe067fa0073b3c67c3f695f39afd268f30168e7",
+            "status": 200,
+            "receivedAt": "2026-10-13T20:00:00.000Z",
+            "request": {
+              "selectionSha256": "4b66b9fa3115a8431b9a7cb799c4fc770f4ebc144801858b4406d6e38828776a",
+              "startingAfter": null,
+              "limit": 60,
+              "depth": 0
+            }
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,23 @@
+[
+  {
+    "person_key": "P001",
+    "first_name": "Alex",
+    "last_name": "Reed",
+    "email": "alex@example.test",
+    "company_key": "001"
+  },
+  {
+    "person_key": "P002",
+    "first_name": "Jo",
+    "last_name": "Mills",
+    "email": null,
+    "company_key": "002"
+  },
+  {
+    "person_key": "P003",
+    "first_name": "Casey",
+    "last_name": "Lin",
+    "email": "",
+    "company_key": null
+  }
+]
