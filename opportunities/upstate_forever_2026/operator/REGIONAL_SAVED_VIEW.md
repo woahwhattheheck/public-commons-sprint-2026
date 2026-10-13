@@ -20,7 +20,7 @@ python -B SOURCE_ROOT/operator/install_regional_saved_view.py \
   --source-root SOURCE_ROOT
 ~~~
 
-The installer uses the shared application/.locks/extension-install.lock while reading, composing, validating and replacing source. It applies named literal joins to the receiving application's current files; unrelated current code remains present. An already installed exact join stays unchanged. An altered overlapping join identifies its path and name for reconciliation.
+The installer uses the shared application/.locks/extension-install.lock while reading, composing, validating and replacing source. It applies named literal joins to the receiving application's current files; unrelated current code remains present. An already installed exact join stays unchanged. The declared current variants also preserve the installed Decision studies diagnostic opener and native Save view's Project continuity handoff when rerunning this component installer. Other altered overlapping joins identify their path and name for reconciliation.
 
 The six shared product surfaces are the original journey, extension host, app capabilities, watershed opener, decision preparation and registered journey descriptor. The original journey integration declaration and component source inventory are updated to match the composed code. The inventory is checked against every current component body before changing the affected member hashes. JavaScript is parsed with the existing Node executable when available; Python syntax is parsed before publication. The installation keeps original source backups and a per-file before/after record beside the application.
 
@@ -49,7 +49,7 @@ The original pending operation identities remain in browser storage when switchi
 
 ## Operate the full browser continuation
 
-Use the original server's private URL receipt, including its capability fragment, in a local file. The driver consumes that private URL and redacts it from its journal. Supply the actual regional opening receipt; the driver operates retained source data and original controls.
+Use the original server's private URL receipt, including its capability fragment, in a local file. The driver consumes that private URL and redacts it from its journal. Native task polling sends its private Bearer capability to the original operator's task endpoint, with redirects disabled; the download cookie continues to serve only original file downloads. Supply the actual regional opening receipt; the driver operates retained source data and original controls.
 
 ~~~sh
 node source/run_saved_regional_view_browser.mjs \
