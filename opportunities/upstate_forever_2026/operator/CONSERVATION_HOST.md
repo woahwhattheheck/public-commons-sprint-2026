@@ -20,7 +20,7 @@ Scientific interpretation uses the maintained Diagnostics L5 provider, model and
 
 ## Existing queue and retained results
 
-Conservation registers seven existing provider actions: prepare, build, plan.save, export, scenario.create, criteria.prepare and experiment.prepare, each prefixed `conservation.`. The original authenticated reads remain `/api/conservation/overview`, `/study` and `/plan`.
+Conservation registers eight provider actions: prepare, build, plan.save, export, scenario.create, criteria.prepare, experiment.prepare and sources.capture, each prefixed `conservation.`. Its authenticated reads are `/api/conservation/overview`, `/study`, `/plan` and `/source-capture`. The source-capture read selects its retained `operation_id`; all routes use the existing workspace and operator authorization.
 
 Scientific interpretation registers `diagnostics.analyze`, its original catalog/item/experiment reads and `experiment_diagnostics` state summaries. Both views use the original workspace, serial task queue and verified file tickets.
 
@@ -55,3 +55,13 @@ The South Carolina utility study uses its original regional geography. The origi
 This change keeps the current shared application as the base and applies the four maintained host anchors plus the original task-dialog join. The older static Conservation installer is unnecessary for an application with these installed registrations. Its original source remains available for its earlier standalone receiving context.
 
 The registry catalogue at `/api/extensions` exposes each accepted desk, original actions and any import issue. The retained task records, provider errors and receiving output identify the actual next operation after an interruption. Existing recursive workspace/application backups carry all registrations, source files and retained studies.
+
+## Original source and criterion continuation
+
+The maintained Conservation descriptor registers `conservation.sources.capture` once beside the original seven actions. A new acquisition supplies `spec`; a continuation supplies the original `operation_id`. The provider queues the existing soils/FEMA acquisition module and exposes the retained operation through `/api/conservation/source-capture?operation_id=ID`. Overview adds the saved source acquisitions alongside criteria operations, studies and portfolios.
+
+The existing `conservation.criteria.prepare` action also accepts `source_operation_id`. It consumes that actual capture's returned `parcel_criteria_selection` and optionally merges the explicitly selected `settings.spatial_criteria_basis`. The two choices are `whole_original_parcel` and `reporting_parcel`. Completed source families remain available through their original editions while another family resumes. The prepared table records its originating study and exact parcel/reporting geometry; using it restores that selection before published points are built.
+
+Receive the full acquisition, criterion, published-method, reporting, scenario and optimization cohort together. The [operator journey](CONSERVATION.md) connects actual sources, bounded acreage, published points, saved selection, original native scenario and report export. [CONSERVATION_REPORTS.md](../model/CONSERVATION_REPORTS.md) describes retained presentation editions and complete source/criterion tables. Existing source identities, task history and portable Workspace receiving remain the host's shared surface.
+
+Saving a reviewed optimizer preview uses the original completed task ID. Its provider verifies the same workspace/action/state, and its scientific model verifies the recorded analysis against the original study and candidate/geometry inventories before saving the exact selected units. The complete decision then travels through the original Conservation plan and export interfaces.

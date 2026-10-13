@@ -50,14 +50,10 @@ normal task endpoint and original resume path.
 | Action | Payload | Complete result |
 | --- | --- | --- |
 | conservation.optimization.preview | The model selection below, or {spec: selection}. | Complete original analysis, candidate inventory, selected IDs, signed objectives, support, resource constraints, optimization outcome and named preferences. |
-| conservation.optimization.save | The same model selection. | Original plan, retained analysis reference, selected IDs and union-recomputed physical/geographic summary. |
+| conservation.optimization.save | A new model selection, or solely {preview_task_id: original completed preview task ID}. | Original plan, retained analysis reference, exact selected IDs and union-recomputed physical/geographic summary. |
 | conservation.optimization.export | {plan_id: original saved plan ID}. | Verified ZIP descriptor for the complete original portfolio and every retained decision-analysis file. |
 
-The preview computes in the task worker. Its complete response is retained in
-that original task; it does not create an analysis record. Save computes the
-selected decision and retains its full analysis beneath the original study,
-then saves the original plan. Persisted results reopen without rerunning the
-solver. Export also stays in the worker.
+The preview computes in the task worker and retains its complete result in that original task. Saving with the sole preview_task_id payload reads that completed preview in the same workspace, verifies its full recorded analysis and original study/candidate/geometry identities, and saves its exact selected IDs and normalized request. It retains the original solver result without running that decision again. Saving a new model selection explicitly computes a new preview before retaining its analysis and original plan. Persisted results reopen through the existing analysis/plan reads. Export also stays in the worker.
 
 A source-context selection can operate on the existing completed regional
 receiving study before a native pollutant case is bound:
@@ -174,13 +170,7 @@ exclusion reasons, signed objective quantities, fixed normalization, selected
 geometry unions and overlaps, supplied costs, and named preference outcomes.
 Pagination changes the visible table, not the calculation or selected inventory.
 
-**Revise selection** reopens the normalized request. **Save selected land plan**
-recomputes that request through the original optimizer and saves the resulting
-land through Conservation. Refresh and use the saved-plan or retained-analysis
-catalog to reopen it. **Export complete decision packet** queues the original
-portfolio ZIP and displays verified download tickets with the saved plan.
-**Open plan and prepare a native scenario** returns to the original core
-Conservation controls with that exact plan identity.
+**Revise selection** reopens the normalized request for a new explicit calculation. Saving the reviewed result sends only the original completed preview task ID; the provider/model verify and retain that exact analysis and selected land through Conservation. Refresh and use the saved-plan or retained-analysis catalog to reopen it. **Export complete decision packet** queues the original portfolio ZIP and displays verified download tickets with the saved plan. **Open plan and prepare a native scenario** returns to the original core Conservation controls with that exact plan identity.
 
 The browser client and the core candidate catalog share a panel through
 conservation_optimization_bridge.mjs. The original conservation.mjs remains
@@ -196,3 +186,11 @@ Maintained for TokenJunkieLabs in the existing Upper Savannah application.
 The repository's MIT license applies. **Needs expert review**: interpretation of
 geographic priorities, native model outputs, conservation practices and costs
 requires the project's domain review.
+
+## Interval-derived points and original source reporting
+
+A published-method objective uses an exact applicable practice total: the retained lower and upper contribution sums must agree, the prerequisite must be true, and the original point total must equal the candidate score. A numeric acreage can remain a closed interval while all values in it receive the same published points. Incomplete, inapplicable or unknown-prerequisite totals retain their original state and do not satisfy a positive published-point weight. Required native export criteria also retain their original selected pollutant output and coverage threshold.
+
+The full original candidate is preserved in each analysis row and CSV record, including `point_score.metric_bounds`, metric/source bindings and criterion contributions. The request binds the published definition, original table and interpretation. The full source-study selection remains in the analysis. Choosing per-reporting-hectare explicitly divides those original parcel points by actual reporting area; the actual whole-parcel or reporting criterion geometry remains separately recorded.
+
+Decision export calls the original Conservation report/export service before adding the retained optimization files. Current packets therefore include the exact/bounded criterion tables, source register, original criterion bytes and presentation identity as well as the decision analysis. The report describes the actual saved optimizer choice and solver result; manual and greedy ranked plans retain their respective selection meaning. See [CONSERVATION_REPORTS.md](../model/CONSERVATION_REPORTS.md).
