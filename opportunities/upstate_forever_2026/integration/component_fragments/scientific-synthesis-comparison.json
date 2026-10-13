@@ -3,7 +3,7 @@
   "id": "scientific-synthesis-comparison",
   "extend_components": {
     "scientific-report-editions": {
-      "append_paths": [
+      "paths": [
         "operator/web/scientific_synthesis_compare_core.mjs",
         "operator/web/scientific_synthesis_compare_report.mjs",
         "operator/web/scientific_synthesis_compare.mjs",

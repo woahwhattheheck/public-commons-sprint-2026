@@ -1,5 +1,7 @@
 # Read original evidence while authoring a scientific synthesis
 
+Read the application's [CURRENT_OWNER_DIRECTION.md](../CURRENT_OWNER_DIRECTION.md), version `2026-10-13.4`, and [AGENTS.md](../AGENTS.md). Carry both complete unchanged files with this source and the existing receiving handoff. Continue the original native work and personally open, use and visually inspect the actual populated app and every outgoing attachment before calling the result client-ready; source review alone is not rendered acceptance. Keep the original operation and focused product work moving without another approval gate.
+
 The existing Sources → Scientific reports → Scientist-authored synthesis workflow now opens a readable view of each exact retained reference. The attributed document, original save task, complete source catalogue and portable working-copy format are unchanged.
 
 ## Use the same authored chapter
