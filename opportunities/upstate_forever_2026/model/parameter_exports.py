@@ -9,7 +9,7 @@ import tempfile
 import time
 import zipfile
 
-from .common import atomic_json, describe_file, digest, identifier, relative_file
+from .common import atomic_json, describe_file, digest, file_digest, identifier, read_json, relative_file
 from .model_selection import required_outputs, run_models
 from .rasters import MASS_UNITS
 from .reuse import copy_verified
@@ -121,17 +121,39 @@ def _identity(value):
     return (value.st_dev, value.st_ino, value.st_size, value.st_mtime_ns, value.st_ctime_ns)
 
 
+def _checked_file(path, expected=None, *, progress=None):
+    """Hash one regular body with before/after identity checks, without buffering it."""
+    checksum, size = hashlib.sha256(), 0
+    with Path(path).open("rb") as source:
+        before = os.fstat(source.fileno())
+        if not stat.S_ISREG(before.st_mode):
+            raise ValueError("A parameter archive body must be a regular file")
+        for block in iter(lambda: source.read(1024 * 1024), b""):
+            checksum.update(block)
+            size += len(block)
+            if progress:
+                progress(len(block), size)
+        if (_identity(before) != _identity(os.fstat(source.fileno()))
+                or _identity(before) != _identity(Path(path).stat())):
+            raise ValueError("A parameter archive body changed during verification")
+    actual = {"bytes": size, "sha256": checksum.hexdigest()}
+    if expected is not None and any(actual[key] != expected.get(key) for key in actual):
+        raise ValueError("A retained parameter archive body differs from its original bytes")
+    return actual
+
+
 def write_archive(directory, destination, descriptors, *, progress=None):
     """Stream exact retained members, including large GeoTIFFs, into one ZIP."""
     directory = Path(directory).resolve()
     destination = Path(destination)
-    members = {}
-    for item in descriptors:
-        name = item["path"]
-        relative_file(directory, name)
-        if name in members and members[name] != item:
-            raise ValueError("Parameter archive repeats a member with different source bytes")
-        members[name] = item
+    members = member_descriptors(directory, descriptors)
+    checkpoint = destination.with_name("." + destination.name + ".members.json")
+    selection = {
+        "schema": "upstate.parameter-archive-members/v1",
+        "implementation_sha256": file_digest(Path(__file__)),
+        "files": [members[name] for name in sorted(members)],
+        "format": "sorted-zip64-fixed-time-stored-gis-and-zip-deflated-other/v1",
+    }
     started, published = time.monotonic(), None
     observation = {"schema": "upstate.parameter-archive-progress/v1",
                    "phase": "preparing", "members_total": len(members),
@@ -148,6 +170,39 @@ def write_archive(directory, destination, descriptors, *, progress=None):
             progress(dict(observation))
             published = instant
     report(force=True)
+    cached = None
+    if (checkpoint.is_file() and not checkpoint.is_symlink()
+            and destination.is_file() and not destination.is_symlink()):
+        try:
+            candidate = read_json(checkpoint)
+            if (isinstance(candidate, dict)
+                    and candidate.get("schema") == "upstate.parameter-archive-checkpoint/v1"
+                    and candidate.get("selection") == selection
+                    and isinstance(candidate.get("archive"), dict)):
+                cached = candidate
+        except (OSError, ValueError, TypeError):
+            pass
+    if cached is not None:
+        # A cache hit still verifies every current scientific member and the
+        # published ZIP. It avoids another ZIP write/compression pass, not the
+        # original byte checks required for independent receiving.
+        for name, item in sorted(members.items()):
+            report(phase="verifying", current_member=name, current_member_bytes=0)
+            def checked(count, size):
+                observation["source_bytes_processed"] += count
+                report(current_member_bytes=size)
+            _checked_file(relative_file(directory, name), item, progress=checked)
+            observation["members_completed"] += 1
+        try:
+            report(phase="verifying-archive", current_member=None, current_member_bytes=0)
+            _checked_file(destination, cached["archive"])
+        except (OSError, ValueError, TypeError):
+            # Keep the old derived ZIP until a complete replacement is ready.
+            cached = None
+        if cached is not None:
+            report(force=True, phase="complete", current_member=None, reused=True)
+            return
+        observation.update(source_bytes_processed=0, members_completed=0)
     pending = None
     try:
         with tempfile.NamedTemporaryFile(dir=destination.parent, prefix=".parameter-",
@@ -188,7 +243,10 @@ def write_archive(directory, destination, descriptors, *, progress=None):
             os.fsync(fd)
         finally:
             os.close(fd)
-        report(force=True, phase="complete", current_member=None)
+        archive_identity = _checked_file(destination)
+        atomic_json(checkpoint, {"schema": "upstate.parameter-archive-checkpoint/v1",
+                                 "selection": selection, "archive": archive_identity})
+        report(force=True, phase="complete", current_member=None, reused=False)
     finally:
         if pending is not None:
             pending.unlink(missing_ok=True)

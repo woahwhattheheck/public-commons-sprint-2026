@@ -571,7 +571,10 @@ def _compatible_aggregation_implementations():
         segment = ast.get_source_segment(source, node) if node is not None else None
         if segment is None or hashlib.sha256(segment.encode("utf-8")).hexdigest() != checksum:
             return ()
-    return ({"engine_sha256": "467abced7106c569b80576e16a7e465cafc8921a2402ca13f9c488b4bfd49a0d","cache_sha256": "9fc1f05a28b306ad8c411e5cafd5a622659e773b31d062233e2028580b0bec98"},
+    return ({"engine_sha256": "5da6f3fad2485eaf957f6b2e36fc3a1bfa16a0e83cce33239100ab8ca233ba71","cache_sha256": "fb7846b4e66b2d20fe34e2e291176e0862d101041ab01a9652c0c6a339b284b2"},
+            {"engine_sha256": "e7bd1aea4ba50903ee4880feb2ddb7f47c3d5febd26edb0b1f616d93c5e1032c","cache_sha256": "fb7846b4e66b2d20fe34e2e291176e0862d101041ab01a9652c0c6a339b284b2"},
+            {"engine_sha256": "bc16ad49224303546624465a67a30544ead368b9f5c4deb1e29d5273801d5296","cache_sha256": "fb7846b4e66b2d20fe34e2e291176e0862d101041ab01a9652c0c6a339b284b2"},
+            {"engine_sha256": "467abced7106c569b80576e16a7e465cafc8921a2402ca13f9c488b4bfd49a0d","cache_sha256": "9fc1f05a28b306ad8c411e5cafd5a622659e773b31d062233e2028580b0bec98"},
             {"engine_sha256": "2294aa27eae35c1d60f3526cbf1e3dcc58e97ec3006a8d89e2839e063ad95687","cache_sha256": "9fc1f05a28b306ad8c411e5cafd5a622659e773b31d062233e2028580b0bec98"},
             {"engine_sha256": "7bd58c5e1a3e6334b127fd584df34f6cbe478481147586806198ce16e4059a20","cache_sha256": "9fc1f05a28b306ad8c411e5cafd5a622659e773b31d062233e2028580b0bec98"})
 
