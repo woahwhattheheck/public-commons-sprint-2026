@@ -83,3 +83,17 @@ workspace, and streams native deliveries to complete private files.
 A normal Stop drains the original workspace and closes its writer. A later
 Open keeps its workspace UUID, source histories, saved requests and completed
 receiving records.
+
+## Complete cohort commissioning
+
+The same installed workspace now carries a saved Dashboard cohort through native
+conversion, source review, staging, per-API operational acceptance, promotion and
+complete final handover. Its original rollout dispatcher and native journal remain
+the write owners. The maintained OperatingPlan stores complete manuscript editions
+and supporting files in that same workspace. See [OPERATING.md](OPERATING.md) for
+the seven-step browser and typed SDK/CLI course, and [RECEIVING.md](RECEIVING.md) for
+the complete source and native receiving path.
+
+The original shared catalogue exposes 22 workspace actions and 28 Tyk MCP tools.
+Actual native and rendered results remain attached to the original receiving
+operation; source availability alone does not establish customer-facing readiness.
