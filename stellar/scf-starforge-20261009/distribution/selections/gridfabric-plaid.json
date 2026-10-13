@@ -76,7 +76,8 @@
     "leap-intervals",
     "gridfabric-plaid",
     "operator-discovery",
-    "gridfabric-procedures"
+    "gridfabric-procedures",
+    "runtime-workspace-backup"
   ],
   "components": [
     "stellar/scf-starforge-20261009/distribution",
