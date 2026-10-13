@@ -338,8 +338,8 @@
     },
     {
       "path": "source/monitoring-field-study/INSTALLATION.md",
-      "bytes": 24632,
-      "sha256": "5fe9e2270c0206a24e9e6807e1cb76896c1d2a49c0666e1015d9b2135bb0bfff"
+      "bytes": 24401,
+      "sha256": "5c101eea446c487f4ad46efdeb9ffbd38d9bf2c20f825d5422b19b03b484b03c"
     },
     {
       "path": "model/monitoring_field_selection.py",
