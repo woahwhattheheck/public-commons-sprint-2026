@@ -96,3 +96,48 @@ This driver is part of the current public application and therefore travels in t
 When the receiving machine already has a working Chromium binary, add `--browser-executable /actual/installed/chromium`. The driver passes that explicit path to the existing Playwright launch. Choose either this option or `--browser-channel NAME`; omitting both retains Playwright’s bundled Chromium selection.
 
 The public journey records the requested browser kind, executable path or channel, and headless setting in `browser_runtime`. A resumed attempt preserves its previous runtime selection in the attempt history. This runtime choice is separate from the original scientific input and task fingerprints, so a repaired or newly available browser can continue the same retained requests with `--resume`.
+
+## Reopen completed analyses from a received full Workspace
+
+Use `--restored-selection` when the native Workspace already contains the chemical case and its completed analyses. This mode opens those original records directly, reads their actual requests and source references, inspects every selected analysis, downloads its original results, and exports the retained editable project. `--receive` additionally receives that project through Original sources and Reach chemistry; `--transfer` continues through the original full Workspace backup and independent receiving workflow.
+
+The native case reader verifies the chemical project fingerprint and the bytes of its original source edition, manifest and companions. The browser checks the actual receiving project's identity, each completed run's case and project selection, and the complete retained case/run fingerprints. Each selected analysis is opened through the current Reach chemistry interface, including its native result collection and result downloads.
+
+Prepare an explicit UTF-8 selection JSON. This is the completed original authored numerical-method reference in the retained Upper Savannah working Workspace:
+
+```json
+{
+  "schema": "upstate.chemistry-browser-selection/v1",
+  "project_id": "b9d5d257-c6bb-4f07-b975-8e8c63705db3",
+  "case_id": "ddd984b567d881798f214530ebf0aef4601ab0744df7af7831bcb17e4e302abb",
+  "run_ids": [
+    "59d4b738620b469249bb297fa05626012de72a1cdd4e5135a9f6dc4b7f9c8a53",
+    "6742a178dfe5c7dc69ea3c7b9cebfb1477bb3074db98f1c8990c5686569bc58d",
+    "2296638a0531acf18d172955d3da5e7845dc71ccaf76189b36b0217565c40a5a",
+    "9e2e96abc6dcdbb799c00a106e50fb93c98298ea8c44fccd2282e12ac202a044"
+  ]
+}
+```
+
+These IDs select the original simulation, calibration, 512-draw uncertainty and eight-observation monitoring analyses, in that order. Their numerical-method reference provenance remains part of the saved case and original source edition. Select the actual native case and completed run IDs when operating another retained study.
+
+```sh
+node source/run_chemistry_browser.mjs \
+  --url-file PRIVATE_OPERATOR_URL_FILE \
+  --workspace ACTUAL_RECEIVING_OPERATOR_KEY \
+  --restored-selection chemistry-browser-selection.json \
+  --receive --transfer \
+  --browser-executable /tmp/chromium \
+  --browser-renderer-limit 2 \
+  --output RECEIVING_CHEMISTRY_BROWSER_DIRECTORY
+```
+
+The receiving operator's workspace key comes from its actual registered directory. Its scientific project ID remains unchanged. A fresh receiving operation uses a fresh output directory. The driver freezes the exact selected-file SHA, actual workspace key, original project/case/run IDs and receive/transfer choices in `request-state.json`. Native case and completed-run fingerprints exclude only transport-specific workspace/download fields. Continue the same operation with the same file bytes, workspace and flags plus `--resume`.
+
+This mode selects saved outcomes; the existing `--case-id` / source-input modes continue to provide scientific editing and new calculation. The two modes are mutually exclusive. In restored mode the browser does not submit a valid case save or calculation. It retains the original case and completed runs through native result inspection, editable project export, optional project receiving and optional full Workspace transfer. Exported archives must include every selected analysis. Both forms of receiving check every selected analysis and its original artifact identities; editable-project receiving also compares the original native result rows.
+
+Completed journals retain `case_id`, the first selected `run_id`, the complete ordered `run_ids` and the new input identity. Every queued export/import/receiving request keeps the original durable request body and operation ID, including after a lost browser response.
+
+### Run on a constrained receiving worker
+
+`--browser-renderer-limit 2` asks Chromium to limit renderer processes. Choose a value from 1 through 32 when the worker shares memory with scientific jobs. This is recorded in browser runtime metadata and stays outside the frozen scientific input. The atomic `journey.json.current_step` names browser opening, native analysis inspection, export and receiving stages so an interrupted worker leaves an actionable continuation.
