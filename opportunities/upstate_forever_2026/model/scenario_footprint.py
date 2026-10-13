@@ -49,13 +49,32 @@ def validate_destination_codes(profile, scenario):
 
 
 def _transition_counts(before, after, selected, counts):
+    """Count exact signed-int32 pairs without NumPy's two-column record sort."""
     import numpy as np
     if not np.any(selected):
         return
-    pairs, numbers = np.unique(
-        np.column_stack((before[selected].astype("int64"),
-                         after[selected].astype("int64"))), axis=0, return_counts=True)
-    for (origin, destination), count in zip(pairs, numbers):
+    # The kernel checks every valid original/assigned class fits signed int32.
+    # Pack the original bit patterns; no lossy arithmetic or dense class matrix.
+    origins = before[selected].astype("uint32").astype("uint64")
+    destinations = after[selected].astype("uint32").astype("uint64")
+    pairs, numbers = np.unique((origins << np.uint64(32)) | destinations,
+                               return_counts=True)
+    for packed, count in zip(pairs, numbers):
+        value = int(packed)
+        origin, destination = value >> 32, value & 0xffffffff
+        if origin >= 0x80000000:
+            origin -= 0x100000000
+        if destination >= 0x80000000:
+            destination -= 0x100000000
+        key = (origin, destination)
+        counts[key] = counts.get(key, 0) + int(count)
+
+
+def _constant_transition_counts(before, destination, selected, counts):
+    """A declared patch has one target code; retain its exact original counts."""
+    import numpy as np
+    codes, numbers = np.unique(before[selected], return_counts=True)
+    for origin, count in zip(codes, numbers):
         key = (int(origin), int(destination))
         counts[key] = counts.get(key, 0) + int(count)
 
@@ -261,8 +280,8 @@ def apply_scenario(baseline, destination, grid, patches, *, source_loader,
                     row["reverted_to_baseline_cells"] += int(
                         (changed & (original == patch["to_code"])).sum())
                     if np.any(eligible):
-                        target_values = np.full(values.shape, patch["to_code"], dtype="int64")
-                        _transition_counts(values, target_values, eligible, local_transitions[i])
+                        _constant_transition_counts(
+                            values, patch["to_code"], eligible, local_transitions[i])
                     values[eligible] = patch["to_code"]
                     changes[changed] += 1
                     last_owner[changed] = i
@@ -459,13 +478,8 @@ def _retain_record(workspace, directory, manifest):
         "files": files, "preview": report["preview"], "guides": GUIDES})
 
 
-def preview_run(workspace, run_id):
-    """Compile an existing native selection without starting NDR/SDR.
-
-    The original run ID retains selected-model semantics from the current core.
-    A completed identical footprint reopens with its original timestamps and hashes.
-    """
-    from . import rasters
+def _preview_inputs(workspace, run_id):
+    """Resolve the same current retained source graph for preview and execution."""
     run = workspace.inspect_run(identifier(run_id))
     selection = copy.deepcopy(run["selection"])
     grid = workspace.get_grid(selection["grid_id"])
@@ -490,6 +504,81 @@ def preview_run(workspace, run_id):
                "coefficient_body": coefficient_source["body"],
                "masks": {sid: {"body": entry["body"], "companions": entry.get("companions", [])}
                          for sid, (_, entry) in sorted(sources.items())}}
+    return (run, selection, grid, profile, scenario, target_codes,
+            baseline, sources, request)
+
+
+def reuse_prepared_landcover(workspace, run_id, directory):
+    """Adopt a completed exact footprint without recompiling its regional grid.
+
+    Missing or superseded previews fall back to normal native preparation.
+    A present exact preview must verify before its independent copy is retained.
+    All locations resolve beneath the receiving Workspace, including after restore.
+    """
+    from .reuse import copy_verified
+    base = workspace.root / OUTPUT_ROOT
+    if not base.is_dir():
+        return None
+    run_id = identifier(run_id)
+    directory = Path(directory).resolve()
+    if directory != (workspace.root / "runs" / run_id).resolve():
+        raise ValueError("Prepared land cover must belong to its current native run")
+    (run, selection, grid, profile, scenario, target_codes,
+     baseline, sources, request) = _preview_inputs(workspace, run_id)
+    if scenario["kind"] != "landcover":
+        return None
+    key = digest(request)
+    original = base / key
+    manifest_path = original / "complete.json"
+    if not manifest_path.exists():
+        return None
+    manifest = read_json(manifest_path)
+    if (manifest.get("schema") != "upstate.scenario-footprint-files/v1"
+            or manifest.get("request") != request):
+        raise ValueError("The prepared land-cover footprint request differs")
+    files = manifest["files"]
+    # The report supplies the original patch accounting; the raster supplies
+    # the exact same completed categorical pixels. Verify the full source report.
+    for descriptor in files.values():
+        verify_file(original, descriptor)
+    report = read_json(verify_file(original, files["report"]))
+    if (report.get("request") != request or report.get("run_id") != run_id
+            or report.get("selection") != selection
+            or report.get("compiler_version") != VERSION
+            or report.get("declared_target_codes") != target_codes):
+        raise ValueError("The prepared land-cover report differs from its native selection")
+    transfer = {}
+    artifact = copy_verified(
+        original, files["scenario_lulc"], directory, path="scenario_lulc.tif",
+        transfer=transfer, replace_mismatch=True)
+    # Native stages are recursively retained relative to their run directory by
+    # the existing Study exporter. Keep every nested descriptor in that scope.
+    retained_report = copy_verified(
+        original, files["report"], directory, path="prepared-footprint.json",
+        transfer=transfer, replace_mismatch=True)
+    artifact = {**artifact, "units": "class"}
+    return {
+        "completed_at": now(), "edits": report["patches"],
+        "artifact": artifact,
+        "prepared_footprint": {
+            "request_id": key, "run_id": run_id,
+            "compiler_version": VERSION,
+            "compiler_sha256": request["compiler_sha256"],
+            "report": retained_report, "landcover": artifact,
+            "original_workspace_directory": original.relative_to(workspace.root).as_posix(),
+            "transfer": transfer,
+        },
+    }
+
+
+def preview_run(workspace, run_id):
+    """Compile an existing native selection without starting NDR/SDR.
+
+    The original run ID retains selected-model semantics from the current core.
+    A completed identical footprint reopens with its original timestamps and hashes.
+    """
+    (run, selection, grid, profile, scenario, target_codes,
+     baseline, sources, request) = _preview_inputs(workspace, run_id)
     key = digest(request)
     base = workspace.root / OUTPUT_ROOT
     base.mkdir(parents=True, exist_ok=True)
