@@ -353,7 +353,7 @@ def _receptor_section(state, inventory):
 
 def compose_report(*, workspace, selection, state, baseline, alternatives, grid,
                    profile, source_records, observation_results, comparison=None,
-                   scenario_summary=None):
+                   scenario_summary=None, working_archive_path=None):
     """Return a JSON-serializable report model from original retained objects.
 
     baseline.artifacts are the existing rate_to_mass REPORTING-MASK outputs.
@@ -557,6 +557,11 @@ def compose_report(*, workspace, selection, state, baseline, alternatives, grid,
                 "parcel_csv", "parcel_geopackage", "parcel_scenario_csv", "parcel_inventory",
                 "working_archive"):
         path = _safe_path(files.get(key))
+        if key == "working_archive" and working_archive_path is not None:
+            planned = _safe_path(working_archive_path)
+            if planned is None or (path is not None and path != planned):
+                raise ValueError("The planned working archive must retain its package-relative path")
+            path = planned
         if path:
             handoff_rows.append([key.replace("_", " "), path])
     sections.append(_section("handoff", "Open, review and reuse the delivery", [
@@ -565,6 +570,34 @@ def compose_report(*, workspace, selection, state, baseline, alternatives, grid,
         "Receive the full working archive through the existing restore workflow into a new directory. Reopen the original study, inspect the same retained inputs and result identifiers, and build a later delivery edition from the selected runs when a reviewed source, scenario or planning choice changes.",
         "The final handoff includes publication maps, physical GIS layers, source/method metadata, this readable report and its editable forms, the complete scientific working project, and the operating guide used by the receiving team."
     ], [_table(["Delivered item", "Relative path"], handoff_rows)] if handoff_rows else []))
+    sections[-1]["assets"] = [{"title": title, "path": path} for title, path in handoff_rows]
+
+    scientific_assets = []
+    asset_titles = {
+        "report": "Complete scientific report (PDF)",
+        "report_html": "Complete scientific report (HTML)",
+        "report_markdown": "Editable scientific report (Markdown)",
+        "report_data": "Scientific quantities, source editions and bindings (JSON)",
+    }
+    seen_scientific_paths = set()
+    for role, item in files.items():
+        if role not in asset_titles and not role.startswith(("economic_", "observed_context_")):
+            continue
+        path = _safe_path(item)
+        if path and path not in seen_scientific_paths:
+            scientific_assets.append({"title": asset_titles.get(role, role.replace("_", " ")),
+                                      "path": path})
+            seen_scientific_paths.add(path)
+    if scientific_assets:
+        section = _section("scientific-evidence", "Scientific report and decision evidence", [
+            "The scientific report retains the complete model parameters, annual quantities, comparison "
+            "support, source editions and economic-analysis coverage for this same delivery. Its "
+            "economic tables distinguish available estimates from alternatives without a recorded cost.",
+            "Open the retained reports and selected evidence below from the extracted delivery folder. "
+            "Keep the folder structure when sharing the study."
+        ])
+        section["assets"] = scientific_assets
+        sections.append(section)
 
     if selection.get("notes"):
         sections.append(_section("project-notes", "Project-specific interpretation",
@@ -748,6 +781,14 @@ def render_pdf(path, report):
                 ("ROWBACKGROUNDS", (0,1), (-1,-1), [colors.white, colors.HexColor("#f8f9fa")])
             ]))
             story.extend([tbl, Spacer(1, 12)])
+        for asset in section.get("assets", []):
+            relative = _safe_path(asset.get("path"))
+            if relative:
+                label = str(asset.get("title") or relative)
+                story.append(Paragraph(
+                    '<link href="' + html.escape(relative, quote=True) + '">' +
+                    html.escape(label) + '</link>', styles["ClientBody"]))
+                story.append(p(relative, "ClientMeta"))
     story.extend([p("RFP source", "ClientHeading"),
                   Paragraph('<link href="' + html.escape(RFP_URL, quote=True) +
                             '">Official RFP and appendix</link>, PDF pages 1-4.', styles["ClientBody"]),
@@ -800,7 +841,7 @@ def write_report(directory, report, *, pdf_name="report.pdf", output_stem=None,
 def build_report(*, workspace, directory, selection, state, baseline, alternatives,
                  grid, profile, records, observation_results, comparison=None,
                  scenario_summary=None, additional_sections=(),
-                 output_stem=None, file_key_prefix=""):
+                 output_stem=None, file_key_prefix="", working_archive_path=None):
     """Drop-in report hook for the existing delivery.py report branch."""
     from .client_receiving_waters import build_sections, LEGACY_SECTION_TITLE
 
@@ -808,7 +849,8 @@ def build_report(*, workspace, directory, selection, state, baseline, alternativ
                             baseline=baseline, alternatives=alternatives, grid=grid,
                             profile=profile, source_records=records,
                             observation_results=observation_results, comparison=comparison,
-                            scenario_summary=scenario_summary)
+                            scenario_summary=scenario_summary,
+                            working_archive_path=working_archive_path)
     run_names = {run["id"]: _run_name(workspace, run)[0]
                  for run in [baseline] + list(alternatives)}
     water_report = build_sections(
