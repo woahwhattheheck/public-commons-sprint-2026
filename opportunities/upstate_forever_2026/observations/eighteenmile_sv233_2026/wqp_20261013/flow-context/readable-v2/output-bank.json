@@ -1,0 +1,127 @@
+{
+  "schema": "commons.ordered-gzip-base64-file/v1",
+  "filename": "sv233-readable-flow-product.json",
+  "bytes": 19974091,
+  "sha256": "999e31fc09e9c2ff5a857762ec9589b659338740d90a41cf3de0807dd551c995",
+  "compressed_bytes": 880501,
+  "compressed_sha256": "1e1f7997c42c03ef8f657f49c9400cbbc9684fefba2df0553342ca18f018b7b4",
+  "study_id": "db7910de786d25d147d283257ab4903101d1f90a9a7287ca71275786bd656f80",
+  "result_id": "25b44686ec32e1820f77b9f308d0c6fd41c200954b8cef7a4767a4688a514f38",
+  "files": [
+    {
+      "path": "report.html",
+      "bytes": 41429,
+      "sha256": "39ebc1e9bb58a3f0481dad50a150a92751ca8a298dc4d56d501ef67f7928cc8e"
+    },
+    {
+      "path": "flow-loads.json",
+      "bytes": 7187705,
+      "sha256": "a84ff918926bb1b2358557f8620e3db306e997078ba6fee3800d442188e122ba"
+    },
+    {
+      "path": "observed-loads.json",
+      "bytes": 2253891,
+      "sha256": "e1e9fffb8836c7350422d71e7da239dc28be5e7b1f5c88619113460550b3aa62"
+    },
+    {
+      "path": "flow-study.json",
+      "bytes": 3409902,
+      "sha256": "5b5309f0dda5813ec2a3d2b239e0c13b71f8c41bac5360c5d5af2ba319b7b9c8"
+    },
+    {
+      "path": "flow-input.json",
+      "bytes": 1004566,
+      "sha256": "5da6c0a0507605145c603b526aa321b2beb391425a831c0f4a40c9b250169abf"
+    },
+    {
+      "path": "contract.json",
+      "bytes": 2030,
+      "sha256": "ae90eeab48bd03151c5257c38a88c1c9dd6c79ed49c53b491031aedfe696f25f"
+    },
+    {
+      "path": "daily-loads.csv",
+      "bytes": 296,
+      "sha256": "25a3fa50a54f6561f5b4f58c58040a7065d82729b86010eccc51cad2ff72493c"
+    },
+    {
+      "path": "period-loads.csv",
+      "bytes": 524,
+      "sha256": "9c2d2f1e750a1b704e9cd19662e788fbe013152a332cd937cf52fb4d09267eaa"
+    },
+    {
+      "path": "concentration-context.csv",
+      "bytes": 2120193,
+      "sha256": "a95a751ad3492691f998918115e76f6dade189479b28aa6a9f4f4daf7f8481f6"
+    },
+    {
+      "path": "annual-loads.csv",
+      "bytes": 284,
+      "sha256": "f1c4a2e6bd80887f89ee5cd74074cb368163d8a900fd6c656b0a9a26af9db5ac"
+    },
+    {
+      "path": "load-selection.json",
+      "bytes": 2325,
+      "sha256": "c933909b8c15db01e76bf84d8ab2329e51514e07bc5fec0664ebcfdae693f89d"
+    },
+    {
+      "path": "README.txt",
+      "bytes": 2146,
+      "sha256": "cc3cf27d530075ecede14c7928e4181503333a51c017f57c3f6ebeb01a4f41c7"
+    },
+    {
+      "path": "observation-export-metadata.json",
+      "bytes": 899,
+      "sha256": "37ecf0f7e4584980cb737e0685521ec9afa33add30ad4b2339e2471344d6a391"
+    },
+    {
+      "path": "flow-report.html",
+      "bytes": 17002,
+      "sha256": "f25cc3a14f64b77ad0aa9eb79653e21ad53473be7a8f98b98943f3572cbf1048"
+    },
+    {
+      "path": "daily-flow.csv",
+      "bytes": 661484,
+      "sha256": "778d61409bd4a80b6ee564af4077040aaa1d50b255b79d8efbb1a65bac8bd2b0"
+    },
+    {
+      "path": "flow-periods.csv",
+      "bytes": 2592,
+      "sha256": "7c3dc8e172801fc8973b60098ed84ef704541ec8b30cb8988fbb51160f17e081"
+    },
+    {
+      "path": "sample-flow.csv",
+      "bytes": 510805,
+      "sha256": "dcefef7dc79b40ce98ff21ab2bb2ade37a484970da69706eec3be131226eb3cb"
+    },
+    {
+      "path": "prior-report.html",
+      "bytes": 11427,
+      "sha256": "6e1a3cca396c0800ae3b0b4e114453c45c527d2d5f5dc942a4040525be139d91"
+    }
+  ],
+  "parts": [
+    {
+      "path": "output-part-001.txt",
+      "bytes": 500000,
+      "sha256": "cde05375d17f97fcc5e6df2201470e5ebc1ea1f9f93298b3c325abf16c068ba2",
+      "git_blob": "fc23060bd94047ff1889fae9ea36adbc8fb48b45"
+    },
+    {
+      "path": "output-part-002.txt",
+      "bytes": 500000,
+      "sha256": "b4f9fe8b48742711a68184866753a52ea73ccca2c6f79bfd554b58aa239d76f0",
+      "git_blob": "120c4f68015c049ce9a190e60e060d9c20c54c48"
+    },
+    {
+      "path": "output-part-003.txt",
+      "bytes": 174004,
+      "sha256": "8521acbafa6e46074c56a5d9ac7bada111b1d42574d1f04c0cf105cde3e7e0db",
+      "git_blob": "773923493a8001fc15a1f2c866b3442309fb9c80"
+    }
+  ],
+  "renderer": {
+    "path": "measurement_workspace/engine/flow_reports.mjs",
+    "commit": "26f1c467515cac638d6cd3fb69dd02fee14301f8",
+    "sha256": "ed439016338b3b157a0b1f1b38251f23eac10b9b7c53b96ad1f266cbc503d6b6"
+  }
+}
