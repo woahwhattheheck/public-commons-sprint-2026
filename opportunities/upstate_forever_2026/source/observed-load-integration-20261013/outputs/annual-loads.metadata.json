@@ -1,0 +1,9 @@
+{
+  "title": "Complete explicitly matched integrated annual mass estimates",
+  "source_uri": "https://www.waterqualitydata.us/",
+  "value_basis": "annual_mass_rate",
+  "annualization_method": "date-assigned concentration interpolation multiplied by original daily mean discharge",
+  "accepted_qualifiers": [
+    ""
+  ]
+}
