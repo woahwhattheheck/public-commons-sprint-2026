@@ -16,7 +16,7 @@ from . import gauge_support, observed_context
 from .common import (atomic_bytes, atomic_json, describe_file, digest, file_digest,
                      held, identifier, read_json, verify_file)
 
-VERSION = "1.0.0"
+VERSION = "1.1.0"
 SCHEMA = "upstate.gauge-report-context/v1"
 RECIPE = "gauge-report.json"
 MANIFEST = "gauge-report.sources.json"
@@ -158,7 +158,8 @@ def _map(edition, station, catchments, hucs, gauges):
                                 for i, p in enumerate(ring)) + " Z"
                         for polygon in polygons for ring in polygon)
     esc = lambda value: html.escape(str(value), quote=True)
-    title = "Saved whole catchment, regional HUC12s and gauge " + station_id
+    support = gauge_support.support_for_result(edition["result"])
+    title = support["label"] + ", regional HUC12s and gauge " + station_id
     shapes = []
     for feature in selected_hucs:
         props = feature.get("properties", {})
@@ -169,14 +170,14 @@ def _map(edition, station, catchments, hucs, gauges):
                               ("; reporting selection" if reporting else "; upstream context")) + "</title></path>")
     if selected:
         shapes.append('<path fill="none" stroke="#202020" stroke-width="1.8" fill-rule="evenodd" d="' +
-                      path(selected["geometry"]) + '"><title>Original upstream whole catchment</title></path>')
+                      path(selected["geometry"]) + '"><title>' + esc(support["label"]) + '</title></path>')
     if point:
         x, y = xy(point["geometry"]["coordinates"])
         shapes.append('<circle cx="%.3f" cy="%.3f" r="5" fill="#111" stroke="#fff" stroke-width="1.5">' %
                       (x, y) + "<title>" + esc(station_id) + "</title></circle>")
     return ('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 560" role="img" aria-labelledby="title desc">'
         '<title id="title">' + esc(title) + '</title><desc id="desc">Saved source geometry. Reporting HUC12s are grey; '
-        'upstream context is white; the whole catchment has a dark outline; the gauge is a point. '
+        'upstream context is white; the selected catchment has a dark outline; the gauge is a point. '
         'Locally scaled longitude and latitude are used for display. Reported areas retain EPSG:5070 calculations.</desc>'
         '<rect width="1000" height="560" fill="#fff"/>' + "".join(shapes) + "</svg>")
 
@@ -185,6 +186,7 @@ def _sections(edition, maps):
     result = edition["result"]
     stations = result["stations"]
     summary = result["summary"]
+    support = gauge_support.support_for_result(result)
     scope_rows = [[row["scope"].replace("_", " "), row.get("label") or row["id"],
                    _area(row["area_m2"]), _area(row["catchment_union_overlap_m2"]),
                    _percent(row["covered_fraction"])] for row in result["scope_summary"]]
@@ -200,18 +202,17 @@ def _sections(edition, maps):
                 ["Separate utility areas", str(summary["utility_area_count"])],
                 ["Gauge points inside the regional domain", str(summary["gauges_with_point_in_region"])],
                 ["Complete numeric flow calendars", str(summary["complete_numeric_flow_gauges"])],
-                ["Gauge points outside their supplied whole catchment", str(summary["gauges_outside_own_catchment"])],
+                ["Gauge points outside their selected source catchment", str(summary["gauges_outside_own_catchment"])],
             ]),
-            "The selected source is NHDPlusV2 upstream whole-catchment support, using "
-            "simplified=false and splitCatchment=false. Its original station locations, "
-            "source identifiers and geometric relations remain attached to this report.",
+            support["label"] + ". " + support["description"] +
+            " Original station locations, source identifiers and geometric relations remain attached to this report.",
         ]],
         ["Gauge locations and original catchment support", [
             _table(["Gauge / original series", "Original name", "Point HUC12", "Point relative to own catchment"],
                 [[row["station_id"] + " / " + row["ts_id"], row["station_name"],
                   ", ".join(row["point_huc12s"]) or row["point_membership_status"],
                   row["point_own_catchment_relation"]] for row in stations]),
-            _table(["Gauge", "Whole catchment km²", "Inside region km²", "Reporting overlap km²", "Outside region km²"],
+            _table(["Gauge", "Selected catchment km²", "Inside region km²", "Reporting overlap km²", "Outside region km²"],
                 [[row["station_id"], _area(row["catchment_area_m2"]), _area(row["regional_domain_area_m2"]),
                   _area(row["reporting_overlap_area_m2"]), _area(row["outside_regional_domain_area_m2"])]
                  for row in stations]),
@@ -283,7 +284,7 @@ def _sections(edition, maps):
         ]),
         "The SVG and self-contained map HTML use the saved output coordinates and the Gauge support desk's "
         "local longitude/latitude display scale. Reporting HUC12s are grey, upstream context is white, "
-        "whole catchments have a dark outline and gauges are points. All numeric areas retain the original "
+        "selected source catchments have a dark outline and gauges are points. All numeric areas retain the original "
         "EPSG:5070 results. Original source bodies and companion files accompany the report package.",
     ]])
     return sections
@@ -292,13 +293,14 @@ def _sections(edition, maps):
 def _map_page(edition, content):
     esc = lambda value: html.escape(str(value), quote=True)
     blocks = []
+    support = gauge_support.support_for_result(edition["result"])
     for row in edition["result"]["stations"]:
         svg = content.get(row["station_id"])
         blocks.append("<section><h2>" + esc(row["station_id"] + " — " + row["station_name"]) + "</h2><p>"
-            "Series " + esc(row["ts_id"]) + "; point relative to own whole catchment: " +
+            "Series " + esc(row["ts_id"]) + "; point relative to selected catchment: " +
             esc(row["point_own_catchment_relation"]) + ".</p>" +
             (svg if svg else "<p>The saved selection contains no display geometry for this station.</p>") +
-            "<p>Whole catchment " + esc(_area(row["catchment_area_m2"])) + " km²; reporting overlap " +
+            "<p>Selected catchment " + esc(_area(row["catchment_area_m2"])) + " km²; reporting overlap " +
             esc(_area(row["reporting_overlap_area_m2"])) + " km²; observed numeric days " +
             esc(row["flow"]["totals"]["numeric_day_count"]) + " / " +
             esc(row["flow"]["totals"]["calendar_days"]) + ".</p></section>")
@@ -310,7 +312,8 @@ def _map_page(edition, content):
         "@media print{body{margin:0;padding:0}section{break-before:page}svg{max-height:70vh}}</style>"
         "<h1>" + esc(edition["title"]) + "</h1><p>Saved Gauge support edition <code>" + esc(edition["id"]) +
         "</code>. Regional report <code>" + esc(edition["regional"]["report_id"]) + "</code>.</p>"
-        "<p>Reporting HUC12s: grey fill. Regional upstream context: white fill. Original upstream whole catchment: "
+        "<p>" + esc(support["label"]) + ". " + esc(support["description"]) + "</p>"
+        "<p>Reporting HUC12s: grey fill. Regional upstream context: white fill. Selected source catchment: "
         "dark outline. Gauge: point. Display uses locally scaled longitude and latitude; reported areas retain "
         "the original EPSG:5070 calculations.</p>" + "".join(blocks) + "</html>")
 
@@ -334,8 +337,8 @@ def delivery_selection(workspace, source, delivery_id=None):
 
 
 
-def _directory(workspace, edition, members):
-    identity = {"version": VERSION, "report_loader_edition": observed_context.EDITION,
+def _directory(workspace, edition, members, *, version=VERSION):
+    identity = {"version": version, "report_loader_edition": observed_context.EDITION,
         "workspace_id": workspace.project["id"], "gauge_support_id": edition["id"],
         "build_id": edition["build_id"],
         "members": [item for unused, item in sorted(members.values(), key=lambda pair: pair[1]["path"])]}
@@ -454,7 +457,11 @@ def latest(workspace, edition_id):
     operation_id, directory = _directory(workspace, edition, members)
     checkpoint = directory / "standalone.json"
     if not checkpoint.exists():
-        return None
+        # Reopen already delivered original whole-source reports without rewriting them.
+        operation_id, directory = _directory(workspace, edition, members, version="1.0.0")
+        checkpoint = directory / "standalone.json"
+        if not checkpoint.exists():
+            return None
     value = read_json(checkpoint)
     if (value.get("operation_id") != operation_id or value.get("gauge_support_id") != edition["id"]
             or value.get("workspace_id") != workspace.project["id"]):
@@ -506,6 +513,7 @@ def prepare(workspace, edition_id, *, import_source=True, delivery_id=None, rend
             "project_id": workspace.project["id"], "gauge_support_id": edition["id"],
             "gauge_build_id": edition["build_id"], "regional": edition["regional"],
             "station_edition_id": edition["station_edition_id"], "summary": edition["summary"],
+            "support": gauge_support.support_for_result(edition["result"]),
             "original_selection": edition["selection"], "inputs": inputs,
             "sections": _sections(edition, maps),
             "source_links": ["retained/package.json", "retained/gauge-support.zip",
@@ -519,7 +527,8 @@ def prepare(workspace, edition_id, *, import_source=True, delivery_id=None, rend
             "scope": {"project_id": workspace.project["id"], "gauge_support_id": edition["id"],
                 "regional_report_id": edition["regional"]["report_id"],
                 "reporting_huc12s": edition["selection"]["reporting_huc12s"],
-                "support_kind": gauge_support.SUPPORT_KIND},
+                "support_kind": gauge_support.support_for_result(edition["result"])["kind"],
+                "support": gauge_support.support_for_result(edition["result"])},
             "entries": [{"id": source_id, "kind": "document", "title": recipe["title"],
                 "role": "gauge-support-report-context", "path": RECIPE,
                 "uri": "workspace://" + workspace.project["id"] + "/gauge-support/" + edition["id"],

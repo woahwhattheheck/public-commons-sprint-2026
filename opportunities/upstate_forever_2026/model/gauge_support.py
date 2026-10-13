@@ -16,7 +16,7 @@ from . import station_geography as geography
 from .common import (atomic_bytes, atomic_json, canonical, describe_file, digest,
                      file_digest, identifier, now, read_json, verify_file)
 
-VERSION = "1.0.0"
+VERSION = "1.1.0"
 KIND = "gauge-support"
 SCHEMA = "upstate.gauge-support/v1"
 AREA_CRS = "EPSG:5070"
@@ -29,6 +29,58 @@ METHODS = {
     "coverage": "Daily numeric coverage uses the original site_no and ts_id pair, exact calendar denominators and original qualifiers. Approved, estimated and provisional counts can overlap. Observed-day statistics remain original; missing days are not filled.",
     "aggregation": "Catchment union is calculated geometrically. Nested or overlapping gauge catchments are not summed as independent drainage areas.",
 }
+
+SUPPORT_DEFINITIONS = {
+    SUPPORT_KIND: {
+        "kind": SUPPORT_KIND, "label": "Original upstream whole catchments",
+        "query_simplified": False, "query_split_catchment": False, "source_method": None,
+        "description": METHODS["support_geometry"],
+    },
+    "nhdplusv2_upstream_gauge_split": {
+        "kind": "nhdplusv2_upstream_gauge_split", "label": "Original indexed-gauge split catchments",
+        "query_simplified": False, "query_split_catchment": True, "source_method": "basin",
+        "description": "Original NLDI indexed-gauge basin responses use simplified=false and splitCatchment=true. The selected returned gauge-specific upstream geometry and original request/response remain retained.",
+    },
+    "nhdplusv2_coordinate_delineated_upstream": {
+        "kind": "nhdplusv2_coordinate_delineated_upstream", "label": "Coordinate-delineated upstream catchments",
+        "query_simplified": False, "query_split_catchment": True, "source_method": "process",
+        "description": "The documented USGS process delineates upstream support at the original NLDI gauge coordinate. Original drainageBasin geometry, request, response and job identity are retained. This coordinate-based method remains distinct from indexed-gauge basin retrieval.",
+    },
+}
+
+
+def support_definition(kind):
+    if kind not in SUPPORT_DEFINITIONS:
+        raise ValueError("Choose a retained whole, indexed-gauge split or coordinate-delineated upstream source")
+    return dict(SUPPORT_DEFINITIONS[kind])
+
+
+def support_for_result(result):
+    """Read actual saved semantics; original whole editions remain readable unchanged."""
+    rows = result.get("stations") or []
+    kinds = {row.get("support_kind") for row in rows}
+    if len(kinds) != 1:
+        raise ValueError("A saved Gauge edition must retain one declared support geometry method")
+    definition = support_definition(next(iter(kinds)))
+    retained = result.get("support")
+    if retained is not None:
+        for key in ("kind", "query_simplified", "query_split_catchment", "source_method"):
+            if retained.get(key) != definition[key]:
+                raise ValueError("Saved support interpretation differs from its original geometry method")
+        return dict(retained)
+    return definition
+
+
+def _support_contract(properties, station_key):
+    definition = support_definition(properties.get("support_kind"))
+    if (properties.get("query_simplified") is not False or
+            properties.get("query_split_catchment") is not definition["query_split_catchment"]):
+        raise ValueError("Original source request flags differ from the declared support for " + station_key)
+    if definition["source_method"] and properties.get("source_method") != definition["source_method"]:
+        raise ValueError("Retain the original indexed or coordinate source method for " + station_key)
+    if str(properties.get("station_id", "")) != station_key or not properties.get("basin_id"):
+        raise ValueError("Retain the original station and basin identifiers for " + station_key)
+    return definition
 
 
 def _regional(workspace, report_id):
@@ -180,6 +232,7 @@ def render_report(result):
     year_rows = [{"station_id": station["station_id"], **year}
                  for station in result["stations"] for year in (station.get("flow") or {}).get("years", [])]
     title = esc(result["title"])
+    support = support_for_result(result)
     return ("<!doctype html><html lang='en'><meta charset='utf-8'><meta name='viewport' content='width=device-width'>"
         "<title>" + title + "</title><style>body{font:15px system-ui;color:#202020;background:#fff;margin:32px;max-width:1200px}"
         "table{border-collapse:collapse;width:100%;margin:20px 0;font-size:13px}td,th{border:1px solid #ccc;padding:8px;text-align:left}"
@@ -188,10 +241,10 @@ def render_report(result):
         "<h1>" + title + "</h1><p>Regional report <code>" + esc(result["regional"]["report_id"]) +
         "</code> · " + esc(result["summary"]["gauge_count"]) + " retained gauges · " +
         esc(result["summary"]["regional_huc_count"]) + " regional HUC12 polygons.</p>"
-        "<p>NHDPlusV2 upstream whole catchments; original requests retain simplified=false and splitCatchment=false.</p>"
+        "<p><strong>" + esc(support["label"]) + ".</strong> " + esc(support["description"]) + "</p>"
         "<h2>Gauge support and original flow coverage</h2>" +
         _table(stations, [("station_id","Station"),("station_name","Original name"),("series","USGS series"),
-            ("hucs","Gauge point HUC12"),("status","Location"),("own_basin","Point in supplied catchment"),("support_km2","Whole catchment km²"),
+            ("hucs","Gauge point HUC12"),("status","Location"),("own_basin","Point in supplied catchment"),("support_km2","Selected catchment km²"),
             ("regional_pct","Catchment within region %"),("numeric_days","Numeric days"),("calendar_days","Calendar days")]) +
         "<h2>Original annual coverage</h2>" +
         _table(year_rows, [("station_id","Station"),("year","Year"),("numeric_day_count","Numeric"),
@@ -264,6 +317,13 @@ def build(workspace, selection):
     catchment_ref = dict(selection.get("catchment_source") or {})
     catchment_ref["id_field"] = "station_id"
     catchments, catchment_bindings = _polygon_rows(workspace, [catchment_ref], "id_field")
+    definitions = [_support_contract(row["properties"], key) for key, row in sorted(catchments.items())]
+    if not definitions or any(row != definitions[0] for row in definitions):
+        raise ValueError("Select one complete retained support edition with one geometry method")
+    support = definitions[0]
+    if selection.get("support_kind") is not None and selection["support_kind"] != support["kind"]:
+        raise ValueError("The selected support method differs from the actual source properties")
+    selection["support_kind"] = support["kind"]
     coverage, coverage_binding = _coverage(workspace, selection.get("coverage_source") or {})
     utility_refs = selection.get("utility_sources") or []
     utility, utility_bindings = _polygon_rows(workspace, utility_refs, "id_field", namespace=True) if utility_refs else ({}, [])
@@ -291,15 +351,20 @@ def build(workspace, selection):
     rows, intersections, annual, scope_rows, source_features, huc_features = [], [], [], [], [], []
     for station_key, catchment in sorted(catchments.items()):
         props, basin = catchment["properties"], catchment["geometry"]
-        if (props.get("support_kind") != SUPPORT_KIND or props.get("query_simplified") is not False
-                or props.get("query_split_catchment") is not False):
-            raise ValueError("Use the declared original NLDI whole-catchment request for " + station_key)
         site, series = str(props.get("site_no", "")).strip(), str(props.get("ts_id", "")).strip()
         if station_key != "USGS-" + site:
             raise ValueError("Original gauge and basin site identifiers differ: " + station_key)
         location = stations.get(station_key)
         if location is None:
             raise ValueError("Retained station geography omits catchment station " + station_key)
+        if support["source_method"] == "process":
+            coordinates = location.get("coordinates")
+            requested_point = [props.get("requested_longitude"), props.get("requested_latitude")]
+            if (not coordinates or len(coordinates) < 2 or any(isinstance(value, bool) or
+                    not isinstance(value, (int, float)) or not math.isfinite(value) for value in requested_point)
+                    or any(not math.isclose(float(coordinates[i]), requested_point[i], rel_tol=0, abs_tol=1e-8)
+                           for i in range(2))):
+                raise ValueError("The coordinate-delineated request must use this retained original gauge point: " + station_key)
         flow = coverage.get((site, series))
         if flow is None:
             raise ValueError("Original calendar coverage omits site / series " + site + " / " + series)
@@ -315,8 +380,9 @@ def build(workspace, selection):
         reporting_area = basin.intersection(reporting_geometry).area
         row = {"station_id": station_key, "site_no": site, "ts_id": series,
             "station_name": flow["station"].get("station_nm") or props.get("station_name") or station_key,
-            "basin_id": props.get("basin_id"), "support_kind": SUPPORT_KIND,
-            "query_simplified": False, "query_split_catchment": False,
+            "basin_id": props.get("basin_id"), "support_kind": support["kind"],
+            "query_simplified": False, "query_split_catchment": support["query_split_catchment"],
+            "source_method": props.get("source_method"),
             "location_status": location["status"], "coordinates": location.get("coordinates"),
             "point_huc12s": point_hucs, "point_memberships": memberships, "point_membership_status": membership_status,
             "station_source_ref": location.get("selected_source_ref"), "catchment_source_ref": catchment["source_ref"],
@@ -395,7 +461,8 @@ def build(workspace, selection):
         "title": selection.get("title") or "Regional gauge and catchment support",
         "project_id": workspace.project["id"], "selection": selection, "regional": regional,
         "station_edition_id": station["id"], "station_build_id": station["build_id"],
-        "area_crs": AREA_CRS, "sources": source_bindings, "methods": METHODS, "summary": summary,
+        "area_crs": AREA_CRS, "sources": source_bindings, "support": support,
+        "methods": {**METHODS, "support_geometry": support["description"]}, "summary": summary,
         "stations": rows, "scope_summary": summary_scopes, "utility_intersections": scope_rows,
         "catchment_relationships": overlap_rows,
         "unused_coverage_pairs": [{"site_no": key[0], "ts_id": key[1]} for key in sorted(set(coverage) -
@@ -482,8 +549,26 @@ def catalog(workspace):
         reports.append({"id": row["id"], "title": row.get("title"), "summary": row.get("summary"),
             "hucs": [{"huc12": huc["huc12"], "name": huc.get("name"), "priority": huc.get("priority")}
                      for huc in report["hucs"]], "source_ref": reference})
+    # Resolve support choices from the retained manifest, without decoding large geometry here.
+    collections, support_sources = {}, []
+    for source in original["sources"]:
+        if source.get("kind") != "vector":
+            continue
+        collection_id = source["collection_id"]
+        if collection_id not in collections:
+            collections[collection_id] = workspace._get("sources", collection_id)
+        entry = next((item for item in collections[collection_id]["entries"]
+                      if item["id"] == source["source_id"]), None)
+        if entry is None:
+            continue
+        kind = entry.get("support_kind")
+        if kind is None and entry.get("role") == "upstream-whole-catchment-support":
+            kind = SUPPORT_KIND
+        if kind in SUPPORT_DEFINITIONS:
+            support_sources.append({**source, "support": support_definition(kind)})
     # Coverage JSON is registered as a table source by the source preparation command.
     return {"schema": "upstate.gauge-support-catalog/v1", "sources": original["sources"],
+        "support_sources": support_sources, "support_definitions": list(SUPPORT_DEFINITIONS.values()),
         "station_editions": original["editions"], "reports": reports,
         "editions": [{key: row.get(key) for key in ("id","title","created_at","summary","selection")}
                      for row in workspace._list(KIND)]}
