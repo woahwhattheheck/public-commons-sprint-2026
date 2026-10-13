@@ -269,6 +269,13 @@ class Operator:
         pack = chosen["spatial_export_id"]
         if pack and selection.get("spatial_review_id") and pack.get("review_id") != selection["spatial_review_id"]:
             raise Fault("JOURNEY_SELECTION", "The map pack belongs to a different saved geographic view.")
+        # Calibration review: retain the original dossier in a saved journey.
+        review_id = selection.get("calibration_review_id", "")
+        if not isinstance(review_id, str):
+            raise Fault("JOURNEY_SELECTION", "Choose one saved calibration review.")
+        if review_id:
+            from calibration import validate_review_journey
+            validate_review_journey(ws, journey)
         request_sha256 = digest(journey)
         current = self.operator_session(workspace)
         if current and (current.get("request_sha256") == request_sha256 or current.get("journey") == journey):

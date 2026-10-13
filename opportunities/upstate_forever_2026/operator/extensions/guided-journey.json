@@ -2,7 +2,7 @@
   "schema": "upstate.operator-extension/v1",
   "id": "guided-journey",
   "title": "Guided operating journey",
-  "version": "2",
+  "version": "3",
   "order": 10,
   "assets": [
     "journey.mjs",
@@ -47,7 +47,8 @@
       "openComparison",
       "openJourneyDelivery",
       "openBackup",
-      "openRestore"
+      "openRestore",
+      "openExtension"
     ],
     "styles": [
       "/web/journey.css"
