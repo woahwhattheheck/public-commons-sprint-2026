@@ -22,6 +22,7 @@ from directory_runtime import InputError,ConflictError,source,original_workspace
 import directory_schema as schema
 from directory_source_schema import standards,original_sources
 import directory_conformance_rules as rules
+import directory_conformance_foreign_keys as foreign_keys
 
 HERE=Path(__file__).resolve().parent
 VERSION="stellar-forge.directory-conformance.v1"
@@ -31,13 +32,32 @@ MAX_ROWS=250000
 MAX_FINDINGS=1000000
 MAX_INTERACTIVE=4194304
 ENGINE_FILES=("directory_conformance.py","directory_conformance_rules.py",
-    "directory-conformance-schema.json","directory_source_schema.py","directory_index.py")
+    "directory-conformance-schema.json","directory_source_schema.py","directory_index.py",
+    "directory_conformance_foreign_keys.py")
 OUTCOMES=("pass","annotation","error","warning","not-evaluated")
 SEVERITIES=("error","warning","not-evaluated")
 MEDIA={"report":"text/html; charset=utf-8","findings":"application/x-ndjson",
     "rows":"application/x-ndjson","index":"application/vnd.sqlite3","rules":"application/json",
     "summary":"application/json","package":"application/zip"}
 EXT={"report":"html","findings":"jsonl","rows":"jsonl","index":"sqlite","rules":"json","summary":"json","package":"zip"}
+ORIGINAL_ASSESSMENT_FILES=frozenset(MEDIA)
+MEDIA.update({key:"application/json"if key=="foreignKeyCoverage"else"application/x-ndjson"
+    for key in foreign_keys.FILE_KINDS})
+EXT.update({key:"json"if key=="foreignKeyCoverage"else"jsonl"for key in foreign_keys.FILE_KINDS})
+FOREIGN_KEY_SUMMARY=("implementationEdition","declaredForeignKeys","selectedDeclarations",
+    "declaredCompositeKeys","selectedCompositeKeys","outcomeRows","candidateRows","matchRows","states")
+FOREIGN_KEY_SQL={"foreignKeys":"SELECT body FROM foreign_keys ORDER BY ordinal",
+    "foreignKeyCandidates":"SELECT body FROM foreign_key_candidates ORDER BY ordinal",
+    "foreignKeyMatches":"SELECT body FROM foreign_key_matches ORDER BY ordinal"}
+
+def assessment_file_kinds(record):
+    edition=record["engine"].get("implementationEdition")
+    if edition is not None and edition!=foreign_keys.EDITION:
+        raise InputError("Receive the declared original conformance implementation edition")
+    if edition==foreign_keys.EDITION and record["family"]=="hsds-3.3.1":
+        return ORIGINAL_ASSESSMENT_FILES|set(foreign_keys.FILE_KINDS)
+    return ORIGINAL_ASSESSMENT_FILES
+
 STYLE="body{font:14px system-ui,sans-serif;color:#25272a;background:#fff;margin:32px auto;padding:0 24px;max-width:1480px}h1{font-size:28px}h2{font-size:20px;margin-top:30px}a{color:inherit}table{border-collapse:collapse;width:100%;margin:16px 0;font-size:12px}th,td{border:1px solid #c9ccce;padding:8px;text-align:left;vertical-align:top;overflow-wrap:anywhere}th{background:#eceeef}pre{white-space:pre-wrap;overflow-wrap:anywhere;font-size:12px}.meta{padding:16px;border:1px solid #b8bdc1;background:#f6f7f7}.muted{color:#5b6167}code{font-size:12px}"
 
 def catalogue():
@@ -62,7 +82,7 @@ def table_row(values):return "<tr>"+"".join("<td>"+esc(v)+"</td>"for v in values
 def page_top(label):return "<!doctype html><html lang='en'><head><meta charset='utf-8'><title>"+esc(label)+"</title><style>"+STYLE+"</style></head><body>"+title(label)
 
 def engine_identity():
-    return {"schema":VERSION,"files":{name:{"bytes":(HERE/name).stat().st_size,
+    return {"schema":VERSION,"implementationEdition":foreign_keys.EDITION,"files":{name:{"bytes":(HERE/name).stat().st_size,
         "sha256":source.sha((HERE/name).read_bytes())}for name in ENGINE_FILES},
         "originalSourceSha256":source.sha((HERE/"directory-original-source.json").read_bytes())}
 
@@ -321,6 +341,39 @@ class DirectoryConformance:
             out.write("</tbody></table><h2>Evaluated outcomes</h2>"+table_head(["Code",*OUTCOMES]))
             for row in summary["checks"]:out.write(table_row([row["code"],*[row[k]for k in OUTCOMES]]))
             out.write("</tbody></table>")
+            if summary.get("foreignKeys"):
+                coverage=source.json_value(db.execute("SELECT body FROM metadata WHERE name='foreignKeyCoverage'").fetchone()[0])
+                out.write("<h2>Declared tabular foreign keys</h2><p>"+esc(coverage["meaning"])+"</p><p>"+
+                    esc(str(coverage["declaredForeignKeys"])+" original declarations; "+str(coverage["selectedDeclarations"])+
+                    " selected declarations; "+str(coverage["declaredCompositeKeys"])+" composite declarations in the published source.")+"</p>")
+                out.write("<p>"+esc(foreign_keys.POLICY["nullMatch"])+"</p><p>"+esc(foreign_keys.POLICY["ambiguity"])+"</p>")
+                out.write(table_head(["Original declaration","Fields","Target","Selected","Original row outcomes"]))
+                for rule in coverage["declarations"]:
+                    out.write(table_row([rule["source"]["path"]+rule["source"]["pointer"],
+                        source.lexical_json(rule.get("fields",[])),
+                        rule.get("targetTable","")+" "+source.lexical_json(rule.get("targetFields",[])),
+                        rule["selected"],source.lexical_json(rule["outcomes"])]))
+                out.write("</tbody></table><h3>Every original row and declaration outcome</h3>"+
+                    table_head(["Declaration","Original source / row","Source pointer","State","Existence","Matching original targets","Field interpretation"]))
+                for row in db.execute("SELECT body FROM foreign_keys ORDER BY ordinal"):
+                    value=source.json_value(row[0]);ref=value["ref"]
+                    out.write(table_row([value["declarationId"],ref["sourceId"]+" / "+ref["recordId"],
+                        ref.get("pointer",""),value["state"],value["constraintOutcome"],value["candidateCount"],
+                        source.lexical_json(value["components"])]))
+                    if out.tell()>MAX_FILE:raise InputError("The complete foreign-key report exceeds 1 GiB")
+                out.write("</tbody></table><h3>Every exact original target match</h3>"+
+                    table_head(["Outcome","Original child","Original target","Target pointer","Target member"]))
+                for row in db.execute("SELECT body FROM foreign_key_matches ORDER BY ordinal"):
+                    value=source.json_value(row[0]);ref=value["targetRef"]
+                    out.write(table_row([value["outcomeId"],value["sourceRef"]["sourceId"]+" / "+value["sourceRef"]["recordId"],
+                        ref["sourceId"]+" / "+ref["recordId"],ref.get("pointer",""),ref.get("memberName","")]))
+                    if out.tell()>MAX_FILE:raise InputError("The complete original-match report exceeds 1 GiB")
+                out.write("</tbody></table>")
+                if not extra:
+                    out.write("<p><a href='foreignKeys.jsonl'>Every foreign-key outcome</a> · "+
+                        "<a href='foreignKeyCandidates.jsonl'>All original target candidates</a> · "+
+                        "<a href='foreignKeyMatches.jsonl'>Every exact match</a> · "+
+                        "<a href='foreignKeyCoverage.json'>Complete source declarations and coverage</a></p>")
             if extra:out.write("<h2>Recorded review</h2><pre>"+esc(source.lexical_json(extra))+"</pre>")
             out.write("<h2>Every retained finding</h2><p>Original JSON pointers refer to unchanged source records. Value previews are explicitly bounded; their hashes and the complete original source and rule files preserve the full values.</p>")
             out.write(table_head(["Severity","Code","Original source / record","Pointer","Finding","Requirement source","Original value"]))
@@ -363,8 +416,11 @@ class DirectoryConformance:
                                 {**rule["source"],"ruleId":rule["id"],"table":rule["table"]},rule["requirement"])
                         elif rule["mode"]=="annotation":sink.count("coverage:"+rule["keyword"],"annotation")
                     sink.current=None
-                    populations=Counter()
+                    populations=Counter();relations=None
                     with self.directory_open_index(plan["subjectKind"],plan["subjectId"])as native:
+                        if plan["family"]=="hsds-3.3.1":
+                            relations=foreign_keys.ForeignKeyAssessment(self,plan,sink,logical_key)
+                            relations.prepare(native)
                         for row in self.directory_iter_rows(plan["subjectKind"],plan["subjectId"]):
                             if row["table"]not in plan["tables"]:continue
                             sink.begin(row);populations[row["table"]]+=1
@@ -378,7 +434,9 @@ class DirectoryConformance:
                             else:
                                 sink.count("source-protocol-unselected","not-evaluated");sink.emit("source-protocol-unselected","not-evaluated","",
                                     "The original indexed row uses another protocol.",{"family":plan["family"]},row["protocol"])
+                            if relations:relations.check(row)
                             self._conformance_native_observations(native,plan,row,sink);sink.end()
+                    relationship_coverage=relations.finish()if relations else None
                     severities={s:sink.db.execute("SELECT count(*) FROM findings WHERE severity=?",(s,)).fetchone()[0]for s in SEVERITIES}
                     summary={"schema":VERSION,"planId":plan["id"],"requestSha256":request_sha,
                         "selectedRows":sink.row_count,"originalRows":sum(plan["population"].values()),
@@ -386,8 +444,19 @@ class DirectoryConformance:
                         "checks":counter_rows(sink.checks),"tableChecks":table_counter_rows(sink.table_checks),
                         "ruleCoverage":dict(coverage),"rules":len(rule_list),"formatPolicy":plan["formatPolicy"],
                         "meaning":"Selected checked assertions and retained unevaluated requirements; no blanket certification or remote completeness claim"}
+                    if relationship_coverage:
+                        summary["foreignKeys"]={key:relationship_coverage[key]for key in FOREIGN_KEY_SUMMARY}
                     sink.finish(summary)
                     paths={"index":index_path}
+                    if relationship_coverage:
+                        for kind,sql in FOREIGN_KEY_SQL.items():
+                            path=temp/(kind+".jsonl")
+                            with writer(path)as out:
+                                for row in sink.db.execute(sql):
+                                    out.write(row[0]+"\n")
+                                    if out.tell()>MAX_FILE:raise InputError("Complete foreign-key file exceeds 1 GiB")
+                            paths[kind]=path
+                        paths["foreignKeyCoverage"]=checked_write(temp/"foreignKeyCoverage.json",jbytes(relationship_coverage))
                     for kind,sql in (("findings","SELECT body FROM findings ORDER BY ordinal"),("rows","SELECT body FROM rows ORDER BY ordinal")):
                         path=temp/(kind+".jsonl")
                         with writer(path)as out:
@@ -425,7 +494,7 @@ class DirectoryConformance:
 
     def _verify_conformance_assessment(self,record):
         self._conformance_plan(record["planId"])
-        if set(record["files"])!=set(MEDIA):raise InputError("Receive every complete conformance assessment file")
+        if set(record["files"])!=assessment_file_kinds(record):raise InputError("Receive every complete file from the declared conformance assessment edition")
         for d in record["files"].values():self._directory_file_path(d)
         with self._conformance_index(record)as db:
             if db.execute("PRAGMA quick_check").fetchone()[0]!="ok":raise InputError("The received assessment index is not readable")
@@ -433,6 +502,18 @@ class DirectoryConformance:
             if summary!=record["summary"]:raise InputError("The original complete conformance summary differs from its index")
             if db.execute("SELECT count(*) FROM findings").fetchone()[0]!=summary["findings"]or db.execute("SELECT count(*) FROM rows").fetchone()[0]!=summary["selectedRows"]:
                 raise InputError("The complete assessment index counts differ from the original record")
+            if "foreignKeyCoverage"in record["files"]:
+                coverage=foreign_keys.verify_index(db,summary["foreignKeys"])
+                path=self._directory_file_path(record["files"]["foreignKeyCoverage"])
+                if path.stat().st_size>foreign_keys.MAX_RECORD_BYTES or source.json_value(path.read_bytes())!=coverage:
+                    raise InputError("The complete foreign-key coverage file differs from its original native index")
+                for key,sql in FOREIGN_KEY_SQL.items():
+                    full_hash=hashlib.sha256();full_bytes=0
+                    for row in db.execute(sql):
+                        raw=(row[0]+"\n").encode("utf-8");full_hash.update(raw);full_bytes+=len(raw)
+                    descriptor=record["files"][key]
+                    if descriptor["sha256"]!=full_hash.hexdigest()or descriptor["bytes"]!=full_bytes:
+                        raise InputError("The complete foreign-key export differs from every original native index row")
         return record
 
     def directory_conformance_findings(self,ident,offset=0,limit=50,severity=None,table=None,code=None,source_id=None,record_id=None):
@@ -463,6 +544,31 @@ class DirectoryConformance:
             nxt=offset+len(rows)
             return {"assessmentId":record["id"],"rows":rows,"total":total,"offset":offset,"limit":limit,
                 "nextOffset":nxt if nxt<total else None,"bytes":used,"byteBudget":MAX_INTERACTIVE}
+
+    def directory_conformance_foreign_keys(self,ident,offset=0,limit=50,table=None,state=None,rule_id=None,source_id=None,record_id=None):
+        return self._conformance_foreign_key_page(ident,"foreign_keys",offset,limit,
+            {"table_name":table,"state":state,"rule_id":rule_id,"source_id":source_id,"record_id":record_id})
+
+    def directory_conformance_foreign_key_candidates(self,ident,offset=0,limit=50,table=None,state=None,group_id=None,source_id=None,record_id=None):
+        return self._conformance_foreign_key_page(ident,"foreign_key_candidates",offset,limit,
+            {"table_name":table,"state":state,"group_id":group_id,"source_id":source_id,"record_id":record_id})
+
+    def directory_conformance_foreign_key_matches(self,ident,offset=0,limit=50,outcome_id=None,candidate_id=None):
+        return self._conformance_foreign_key_page(ident,"foreign_key_matches",offset,limit,
+            {"outcome_id":outcome_id,"candidate_id":candidate_id})
+
+    def _conformance_foreign_key_page(self,ident,table,offset,limit,filters):
+        record=self.directory_record("conformanceAssessments",ident)
+        if "foreignKeyCoverage"not in record["files"]:
+            raise InputError("This original assessment predates the foreign-key implementation edition; preserve it and select a current assessment")
+        clauses=[];params=[]
+        for key,value in filters.items():
+            if value is not None:
+                if type(value)is not str or not value or len(value)>128:
+                    raise InputError("Select exact bounded foreign-key filters")
+                if key.endswith("_id"):source.identity(value)
+                clauses.append(key+"=?");params.append(value)
+        return self._conformance_page(record,table,clauses,params,offset,limit)
 
     def directory_conformance_finding(self,ident,finding_id):
         record=self.directory_record("conformanceAssessments",ident);source.identity(finding_id)
