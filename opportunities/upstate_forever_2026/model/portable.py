@@ -317,8 +317,23 @@ def restore(archive_path, destination):
         restored = Workspace(pending / "workspace")
         if restored.project != manifest["project"]:
             raise ValueError("Receiving changed the original workspace identity")
-        for kind in ("sources", "profiles", "scenarios", "observations", "observation-comparisons"):
+        for kind in ("sources", "profiles", "scenarios", "observations", "observation-comparisons",
+                     "planning-inventories", "portfolios", "portfolio-reports"):
             restored._list(kind)
+        if restored._list("planning-inventories"):
+            from .planning_inventory import inspect as inspect_planning_inventory
+            for inventory in restored._list("planning-inventories"):
+                inspect_planning_inventory(restored, inventory["id"])
+        if restored._list("portfolios"):
+            from .portfolios import verify_portfolio
+            for portfolio in restored._list("portfolios"):
+                verify_portfolio(restored, portfolio)
+        for report in restored._list("portfolio-reports"):
+            for retained in report["files"].values():
+                path = restored.root.joinpath(*member_name(retained["path"]).parts)
+                if (not path.is_file() or path.stat().st_size != retained["bytes"]
+                        or file_digest(path) != retained["sha256"]):
+                    raise ValueError("Receiving changed a conservation portfolio report")
         reviews = restored._list("spatial-reviews")
         if reviews:
             from .spatial import SpatialReview

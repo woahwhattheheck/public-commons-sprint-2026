@@ -6,6 +6,7 @@ import {attachCustomerReviews} from './reviews.mjs';
 import {attachReceivingWaters} from './receiving_waters.mjs';
 import {createExtensionHost} from './extension_host.mjs';
 import {attachExperiments} from './experiments.mjs';
+import {attachPortfolio} from './portfolio.mjs';
 import {attachProgrammes} from './programmes.mjs';
 
 const $ = (s, root=document) => root.querySelector(s);
@@ -25,8 +26,8 @@ const table = (heads, rows) => '<div class="table-scroll"><table><thead><tr>'+he
 const defs = obj => '<dl class="definition">'+Object.entries(obj).map(([k,v])=>'<dt>'+esc(human(k))+'</dt><dd>'+(typeof v==='object'?'<span class="mono">'+esc(pretty(v))+'</span>':esc(v??'—'))+'</dd>').join('')+'</dl>';
 const button = (action,label,extra='',style='') => '<button type="button" class="'+esc(style)+'" data-action="'+esc(action)+'" '+extra+'>'+esc(label)+'</button>';
 const named = (kind,id) => {const row=state?.data?.[kind]?.find(x=>x.id===id);return row?.title||row?.metadata?.title||row?.spec?.title||row?.selection?.title||short(id);};
-const viewLabels={conservation:'Conservation plans',rehearsal:'Operator rehearsal','receiving-waters':'Receiving waters',experiments:'Scenario experiments',programmes:'Run programmes',overview:'Workspace overview',sources:'Original sources',profiles:'Parameter profiles',grids:'Model grids',scenarios:'Land-cover scenarios',runs:'Native model runs',comparisons:'Run comparisons',spatial:'Spatial review',communities:'Communities','customer-reviews':'Customer reviews',observations:'Observed water quality',deliveries:'Maps and delivery'};
-const actionLabels={'conservation.experiment.prepare':'Prepare paired conservation experiment','conservation.criteria.prepare':'Prepare original parcel criteria','conservation.prepare':'Prepare conservation study','conservation.build':'Build conservation inventory','conservation.plan.save':'Save conservation plan','conservation.export':'Export conservation packet','conservation.scenario.create':'Create selected-land scenario','compute.programme.pair-completion':'Prepare matching scenario baselines','rehearsal.save':'Save operator rehearsal','rehearsal.begin':'Begin walkthrough step','rehearsal.record':'Record actual step outcome','rehearsal.export':'Export walkthrough and media','paired_ensemble.build':'Build paired ensemble','paired_ensemble.resume':'Continue paired ensemble','paired_ensemble.export':'Export paired ensemble','paired_ensemble.receive':'Receive paired ensemble','receiving.water.catalog':'Compile published waters','receiving.water.plan':'Prepare receiving areas','receiving.water.profile':'Prepare utility areas','receiving.water.analyze':'Analyze receiving waters','experiment.save':'Save experiment design','experiment.run':'Run scenario experiment','experiment.summarize':'Build experiment report','compute.programme.experiment':'Use saved experiment','compute.programme.save':'Save run programme','compute.programme.run':'Continue run programme','compute.programme.report':'Build result catalogue','compute.programme.delivery':'Build programme delivery','customer.review.create':'Create customer review','customer.review.export':'Export customer review','customer.review.response.import':'Receive customer response','community.table.import':'Import community table','community.plan.save':'Save intervention plan','community.report.build':'Build community report','spatial.review.save':'Save spatial review','spatial.review.export':'Export saved spatial review','source.import':'Import original sources','profile.save':'Save parameter profile','scenario.save':'Save land-cover scenario','grid.prepare':'Prepare model grid','run.prepare':'Prepare native run','run.start':'Run selected native models','run.compare':'Compare native runs','observation.import':'Import original observations','observation.compare':'Compare observed annual loads','delivery.build':'Build complete map delivery','workspace.backup':'Back up scientific workspace','workspace.restore':'Restore scientific workspace'};
+const viewLabels={portfolios:'Conservation portfolios',conservation:'Conservation plans',rehearsal:'Operator rehearsal','receiving-waters':'Receiving waters',experiments:'Scenario experiments',programmes:'Run programmes',overview:'Workspace overview',sources:'Original sources',profiles:'Parameter profiles',grids:'Model grids',scenarios:'Land-cover scenarios',runs:'Native model runs',comparisons:'Run comparisons',spatial:'Spatial review',communities:'Communities','customer-reviews':'Customer reviews',observations:'Observed water quality',deliveries:'Maps and delivery'};
+const actionLabels={'portfolio.inventory.build':'Build native planning inventory','portfolio.preview':'Analyze conservation choices','portfolio.save':'Save conservation portfolio','portfolio.scenario.prepare':'Prepare portfolio scenario','portfolio.run.prepare':'Prepare portfolio model run','portfolio.run.start':'Run portfolio native models','portfolio.report.build':'Build portfolio report','portfolio.decision.build':'Build portfolio economic comparison','conservation.experiment.prepare':'Prepare paired conservation experiment','conservation.criteria.prepare':'Prepare original parcel criteria','conservation.prepare':'Prepare conservation study','conservation.build':'Build conservation inventory','conservation.plan.save':'Save conservation plan','conservation.export':'Export conservation packet','conservation.scenario.create':'Create selected-land scenario','compute.programme.pair-completion':'Prepare matching scenario baselines','rehearsal.save':'Save operator rehearsal','rehearsal.begin':'Begin walkthrough step','rehearsal.record':'Record actual step outcome','rehearsal.export':'Export walkthrough and media','paired_ensemble.build':'Build paired ensemble','paired_ensemble.resume':'Continue paired ensemble','paired_ensemble.export':'Export paired ensemble','paired_ensemble.receive':'Receive paired ensemble','receiving.water.catalog':'Compile published waters','receiving.water.plan':'Prepare receiving areas','receiving.water.profile':'Prepare utility areas','receiving.water.analyze':'Analyze receiving waters','experiment.save':'Save experiment design','experiment.run':'Run scenario experiment','experiment.summarize':'Build experiment report','compute.programme.experiment':'Use saved experiment','compute.programme.save':'Save run programme','compute.programme.run':'Continue run programme','compute.programme.report':'Build result catalogue','compute.programme.delivery':'Build programme delivery','customer.review.create':'Create customer review','customer.review.export':'Export customer review','customer.review.response.import':'Receive customer response','community.table.import':'Import community table','community.plan.save':'Save intervention plan','community.report.build':'Build community report','spatial.review.save':'Save spatial review','spatial.review.export':'Export saved spatial review','source.import':'Import original sources','profile.save':'Save parameter profile','scenario.save':'Save land-cover scenario','grid.prepare':'Prepare model grid','run.prepare':'Prepare native run','run.start':'Run selected native models','run.compare':'Compare native runs','observation.import':'Import original observations','observation.compare':'Compare observed annual loads','delivery.build':'Build complete map delivery','workspace.backup':'Back up scientific workspace','workspace.restore':'Restore scientific workspace'};
 const mapFamilies=['future_sediment_loss','future_nutrient_runoff','critical_drinking_water','high_quality_waters','current_nutrient_export','current_sediment_export','combined_pollutant_export'];
 const mapTitles={future_sediment_loss:'Future sediment loss',future_nutrient_runoff:'Future nutrient runoff',critical_drinking_water:'Critical drinking-water sources',high_quality_waters:'Designated high-quality waters',current_nutrient_export:'Current nutrient export',current_sediment_export:'Current sediment export',combined_pollutant_export:'Combined pollutant export'};
 const keyName='upstate-operator-capability';
@@ -65,6 +66,7 @@ async function rehearsalOpenControl(control){
  return dispatch(button);
 }
 const rehearsal=attachRehearsal({getState:()=>state,api,endpoint,openItem,showTask,fileList,toast,refreshState:()=>refresh({force:true}),navigate,openControl:rehearsalOpenControl});
+const portfolio=attachPortfolio({getState:()=>state,api,endpoint,openForm,submitAction,detail,fileList,sourceForm,toast,openItem,executeAction,showTask,openExtension:(...args)=>extensions.openExtension(...args)});
 const community=attachCommunity({getState:()=>state,api,endpoint,openForm,submitAction,detail,fileList,sourceForm,toast,openItem});
 const customerReviews=attachCustomerReviews({getState:()=>state,api,endpoint,openForm,submitAction,detail,fileList,uploadFile,showTask,toast,closeForm:()=>{formDialog.close();formContext=null;}});
 const receivingWaters=attachReceivingWaters({getState:()=>state,api,endpoint,openForm,submitAction,detail,fileList,showTask,toast});
@@ -136,8 +138,13 @@ function itemButton(kind,id,label='Open'){return button('item',label,'data-kind=
 function sourceDisplayTitle(entry){return entry?.id==='GURA_NLCD'?'Land cover':entry?.title||entry?.name||entry?.id||'—';}
 function sourceName(collection,id){const entry=state?.data.sources.find(x=>x.id===collection)?.entries.find(x=>x.id===id);return entry?sourceDisplayTitle(entry):id||'—';}
 function sumCell(artifact){return artifact?number(artifact.sum)+' <small>'+esc(artifact.sum_units||artifact.units||'')+'</small>':'—';}
+function mountPortfolioDetail(){
+  if(detailDialog.open&&['portfolios','portfolio_reports'].includes(detailContext?.kind)&&detailContext?.portfolio)portfolio.mountItem($('#detail-body'),detailContext.portfolio);
+}
 function render(){
   if(!state)return;
+  if(view!=='portfolios')portfolio.detach();
+  mountPortfolioDetail();
   if(view==='conservation'){
     if(typeof extensions!=='undefined')extensions.detach();
     if(typeof experiments!=='undefined')experiments.detach();
@@ -238,12 +245,14 @@ function render(){
     if(d.spatial_exports?.length)html+=section('Saved map packs','Printable figures retain the selected review, source editions, extent, legend and annotations.',table(['Map pack','State','Paper / resolution',''],d.spatial_exports.map(row=>'<tr><td class="name-cell"><strong>'+esc(row.title||row.id)+'</strong>'+metaId(row)+'</td><td>'+badge(row.state)+'</td><td>'+esc([row.selection?.paper?.toUpperCase()||'',row.selection?.dpi?row.selection.dpi+' dpi':''].filter(Boolean).join(' · '))+'</td><td class="actions-cell">'+itemButton('spatial_exports',row.id,'Open files')+'</td></tr>')));
     html+='<div class="map-cards">'+mapFamilies.map((id,i)=>'<article class="map-card"><p class="map-index">MAP FAMILY '+String(i+1).padStart(2,'0')+'</p><h3>'+mapTitles[id]+'</h3><p>Generated from the selected original model outputs and retained source editions.</p></article>').join('')+'</div>';
   }
+  if(view==='portfolios')html=portfolio.render();
   if(view==='communities')html=community.render();
   if(view==='customer-reviews')html=customerReviews.render();
   if(view==='receiving-waters')html=receivingWaters.render();
   $('#content').innerHTML=html;
   if(view==='receiving-waters')receivingWaters.mount($('#content'));else receivingWaters.detach();
   if(view==='runs'){const actions=$('.page-actions',$('#content'));if(actions)actions.insertAdjacentHTML('beforeend',button('programme-open','Run programmes'));}
+  if(view==='portfolios')portfolio.mount($('#content'));else portfolio.detach();
   if(view==='communities')community.mount($('#content'));else community.detach();
   if(view==='customer-reviews')customerReviews.mount($('#content'));else customerReviews.detach();
 }
@@ -267,7 +276,9 @@ function detail(title,body,{kind,id,state:status}={}){
 async function openItem(kind,id,focus=true){
   const requestedWorkspace=workspace,row=await api(endpoint('/api/item',{kind,id}));if(workspace!==requestedWorkspace)return;detailContext={kind,id,state:row.state,files:row._downloads||[]};
   let content='';
-  if(kind==='sources'){
+  if(kind==='portfolios'||kind==='portfolio_reports'){
+    content=portfolio.renderItem(row,kind);
+  }else if(kind==='sources'){
     content=defs({captured_at:row.captured_at,source_count:row.entries.length,scope:row.scope})+table(['Source','Kind / units','Edition','Original source',''],row.entries.map(e=>'<tr><td class="name-cell"><strong>'+esc(sourceDisplayTitle(e))+'</strong><small>'+esc(e.id)+'</small></td><td>'+esc(e.kind)+'<br>'+esc(e.units||'')+'</td><td>'+esc(e.vintage)+'</td><td>'+external(e.uri)+'</td><td>'+button('source-inspect','Inspect native file','data-collection="'+id+'" data-source="'+esc(e.id)+'"','small')+'</td></tr>'));
   }else if(kind==='profiles'){
     content='<div class="two-columns">'+nativeModels(row).map(name=>section(name==='ndr'?'Nutrient delivery ratio':'Sediment delivery ratio','Original '+name.toUpperCase()+' parameters.','<div class="section-body">'+defs(row[name]||{})+'</div>')).join('')+'</div>'+defs({selected_models:nativeModelLabel(row),biophysical_table:sourceName(row.source_collection_id,row.biophysical_source_id),land_cover_codes:row.table_summary.lucodes,model_period:row.model_period||'Not supplied',references:row.references})+button('source-inspect','Open original biophysical table','data-collection="'+esc(row.source_collection_id)+'" data-source="'+esc(row.biophysical_source_id)+'"')+button('profile-clone','Create revised profile','data-id="'+id+'"');
@@ -311,6 +322,7 @@ async function openItem(kind,id,focus=true){
   if(['sources','grids','runs','comparisons','deliveries','spatial_reviews'].includes(kind))content='<div class="page-actions">'+button('spatial-item','Open in spatial review','data-kind="'+kind+'" data-id="'+id+'"')+'</div>'+content;
   content+='<h3 class="subheading">Retained files</h3>'+fileList(row._downloads)+'<details class="technical"><summary>Original record, selection and provenance</summary><pre class="json-view">'+esc(pretty(Object.fromEntries(Object.entries(row).filter(([key])=>key!=='_downloads'))))+'</pre></details>';
   detail(row.title||row.metadata?.title||row.spec?.title||row.selection?.title||viewLabels[kind]||human(kind),content,{kind,id,state:row.state});detailContext.files=row._downloads;
+  if(kind==='portfolios'||kind==='portfolio_reports'){detailContext.portfolio=row;mountPortfolioDetail();}
   if(kind==='observations'){detailContext.observation=row;renderObservationRows();$('#observation-search').addEventListener('input',renderObservationRows);$('#observation-filter').addEventListener('change',renderObservationRows);}
   if(kind==='observation_comparisons'){
      detailContext.observationComparison=row;
@@ -1006,7 +1018,7 @@ async function selectWorkspace(id){
  conservation.detach();
  rehearsal.detach();
  extensions.detach();
- spatialWorkspace.suspend();programmes.detach();community.detach();customerReviews.detach();experiments.detach();receivingWaters.detach();workspace=id;state=null;sessionStorage.setItem('upstate-selected-workspace',id);
+ spatialWorkspace.suspend();programmes.detach();community.detach();customerReviews.detach();experiments.detach();receivingWaters.detach();portfolio.detach();workspace=id;state=null;sessionStorage.setItem('upstate-selected-workspace',id);
  detailDialog.close();detailContext=null;lastRendered='';$('#content').innerHTML='<div class="empty"><h2>Opening selected workspace…</h2></div>';await refresh({force:true});
 }
 async function dispatch(button){
@@ -1019,6 +1031,7 @@ async function dispatch(button){
  const action=button.dataset.action,id=button.dataset.id;
  if(await extensions.dispatch(button))return;
  if(action?.startsWith('experiment-'))return experiments.dispatch(button);
+ if(action?.startsWith('portfolio-'))return portfolio.dispatch(button);
  if(action?.startsWith('programme-'))return programmes.dispatch(button);
  if(action?.startsWith('community-'))return community.dispatch(button);
  if(action?.startsWith('review-'))return customerReviews.dispatch(button);
