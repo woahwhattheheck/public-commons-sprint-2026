@@ -171,6 +171,48 @@ delivery = client.deliver(recipe, "/private/customer/workbook-delivery")
 print(delivery["workbook"])
 ```
 
+### Retry an interrupted workbook build
+
+A lost client reply and an interrupted server build have different continuations.
+Rerun the original delivery command to reconnect to a running or complete job.
+If the original workspace records the build as **Interrupted**, **Failed** or
+**Cancelled**, select **Retry build** in a product using this client, or call:
+
+```sh
+stellar-forge-workbook-deliver \
+  --database /private/customer/database \
+  --operation /private/customer/october-edition-delivery \
+  --retry-build 7c7e3160bd0846a4ab4940b9de3ce7f0
+```
+
+Choose a new 32-character lowercase hexadecimal request ID for that retry, and
+reuse that same ID if its reply is lost or the client restarts. The client reads
+the original saved definition and build request. It leaves the original report,
+workbook definition, refresh decision and failed attempt in place, then builds
+that exact historical definition through the existing workspace process.
+
+Each attempt has its own `build-attempts/REQUEST_ID/` directory with the durable
+intent, previous job record, complete files, received handoff and delivery
+receipt. When retrying a later failed attempt, give its ID with `--failed-job`
+and choose a new `--retry-build` ID. If the selected parent is already running or
+complete, the client continues that parent and receives its original output.
+
+The Python action is:
+
+```python
+result = client.retry_build(
+    "/private/customer/october-edition-delivery",
+    "7c7e3160bd0846a4ab4940b9de3ce7f0",
+    # failed_job_id="ID_OF_A_LATER_FAILED_ATTEMPT",
+    wait_seconds=300,
+)
+```
+
+A running result returns its job ID and operation directory for reconnection.
+A complete result points to the independently received workbook and original
+handoff. Retry retains the same column mappings; a data conversion error needs
+a newly reviewed workbook definition before a changed mapping can be built.
+
 ## Offline receiving and reopening
 
 The handoff contains `workbook.xlsx`, `definition.json`, `manifest.json` and the

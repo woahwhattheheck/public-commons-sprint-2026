@@ -1,3 +1,4 @@
+import {attachObservedContext} from './monitoring-observed.mjs';
 /* Original-operator extension. No external services, build step or second server. */
 (() => {
   "use strict";
@@ -37,6 +38,7 @@
         <div id="frontier-results"></div>
        </div></div><div id="status" class="status" role="status" aria-live="polite">Ready.</div>
       </section>`;
+      attachObservedContext(this);
     }
     $(id) { return this.shadowRoot.getElementById(id); }
     async api(action, params={}) {
@@ -70,11 +72,11 @@
       this.$("adopt-plan").onclick=()=>this.run(async()=>{this.requireCampaign();this.requirePlan();const bindings=Object.fromEntries(Object.entries(this.campaign.revision.site_bindings).filter(([h])=>this.plan.selected_ids.includes(h)));await this.api("campaign.revise",{...this.revisionParams(),plan_id:this.plan.id,site_bindings:bindings,note:"Replanned from saved monitoring design."});await this.openCampaign(this.campaign.revision.campaign_id);});
       this.$("save-bindings").onclick=()=>this.run(async()=>{this.requireCampaign();const bindings={};for(const select of this.$("bindings").querySelectorAll("select")){if(select.value)bindings[select.dataset.huc]=select.value;}await this.api("campaign.revise",{...this.revisionParams(),site_bindings:bindings,note:"Updated source-station bindings."});await this.openCampaign(this.campaign.revision.campaign_id);});
       this.$("event-form").onsubmit=e=>{e.preventDefault();this.run(async()=>{this.requireCampaign();await this.api("campaign.event",{...this.revisionParams(),visit_key:this.$("visitkey").value,status:this.$("event-status").value,sample_id:this.$("sample-id").value.trim()||null,occurred_at:this.$("occurred").value,note:this.$("event-note").value});await this.openCampaign(this.campaign.revision.campaign_id);});};
-      for(const button of this.shadowRoot.querySelectorAll("[data-export]"))button.onclick=()=>this.run(async()=>{this.requirePlan();const useCampaign=this.campaign&&this.campaign.plan.id===this.plan.id;const result=await this.api("export",{...(useCampaign?{campaign_id:this.campaign.revision.campaign_id,expected_revision_id:this.campaign.revision.id}:{plan_id:this.plan.id}),format:button.dataset.export});const base=new URL(document.baseURI);const href=new URL(result.download_url,base);if(href.origin!==base.origin)throw Error("Unexpected download origin");const a=document.createElement("a");a.href=href.href;a.textContent=`${button.textContent} · ${result.bytes.toLocaleString()} bytes`;a.download="";this.$("downloads").append(a);});
+      for(const button of this.shadowRoot.querySelectorAll("[data-export]"))button.onclick=()=>this.run(async()=>{this.requirePlan();const useCampaign=this.campaign&&this.campaign.plan.id===this.plan.id;const result=await this.api("export",{...(useCampaign?{campaign_id:this.campaign.revision.campaign_id,expected_revision_id:this.campaign.revision.id}:{plan_id:this.plan.id}),format:button.dataset.export,...(this.observedContextIdForPlan?.(this.plan.id)?{context_id:this.observedContextIdForPlan(this.plan.id)}:{})});const base=new URL(document.baseURI);const href=new URL(result.download_url,base);if(href.origin!==base.origin)throw Error("Unexpected download origin");const a=document.createElement("a");a.href=href.href;a.textContent=`${button.textContent} · ${result.bytes.toLocaleString()} bytes`;a.download="";this.$("downloads").append(a);});
       this.$("occurred").value=new Date().toISOString();
       this.$("domain-collection").onchange=()=>this.sourceChoices();
       this.$("station-collection").onchange=()=>this.sourceChoices();
-      this.run(async()=>{await this.refresh();await this.refreshSources();});
+      this.ready=this.run(async()=>{await this.refresh();await this.refreshSources();});
     }
     async refreshSources(){if(!this.transport)return;const catalog=await this.api("source.catalog");this.sourceCatalog=catalog;for(const id of ["domain-collection","station-collection"]){const select=this.$(id),old=select.value,placeholder=select.options[0]?.textContent||"Select retained source edition";select.replaceChildren(new Option(placeholder,""),...catalog.collections.map(row=>new Option(row.title,row.id)));select.value=old;}this.sourceChoices();}
     sourceChoices(){for(const [selectId,listId] of [["domain-collection","domain-entries"],["station-collection","station-entries"]]){const selected=this.$(selectId).value||(selectId==="station-collection"?this.$("domain-collection").value:"");const entries=this.sourceCatalog?.collections.find(c=>c.id===selected)?.entries||[];this.$(listId).replaceChildren(...entries.map(e=>new Option(e.title,e.id)));}}

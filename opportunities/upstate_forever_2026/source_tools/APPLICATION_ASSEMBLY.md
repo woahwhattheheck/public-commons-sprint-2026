@@ -2,6 +2,47 @@
 
 The source assembler combines a retained application and selected component packages into one directory, one complete source map and one portable ZIP. It runs on Linux with Python 3.10 or later and uses the standard library. Use the same scientific workspace and its existing source, scenario and run identifiers after receiving the application.
 
+## Selected complete edition and original source closure
+
+The maintained assembler uses the complete `integration/application_components.json`
+inside the selected application. If an older source bank has no catalogue, the
+current receiver supplies its maintained catalogue and closure helper. Keep both
+members when transporting the application. The commands in this guide use that
+explicit catalogue automatically; the catalogue's `required_components` and
+transitive `requires` determine the requested edition.
+
+A component may declare `source_manifests` alongside its source `paths`. Each
+selected manifest uses the native `upstate.sources/v1` format. Closure follows
+every entry's primary `path` and each `companions[].path`, retains the native
+manifest-parent boundary, and checks any declared original SHA256 and byte count.
+The same checks apply to JSON/base64 source maps, embedded original input banks,
+installed directories and repeated receiving. A manifest self-companion is retained
+once as a file and remains a reference of each source entry that declares it.
+
+Use the original complete edition source, its complete component overlays and their
+declared predecessor hashes in the normal receiving command. Before publication,
+inspect the same composition to obtain exact missing source identities:
+
+```sh
+python3 -B source_tools/application_assembly.py /owned/current-application \
+  --overlay /owned/current-component-source.json \
+  --edition upper-savannah-complete \
+  --inspect
+```
+
+The component inventory report includes `source_manifests`, original source IDs and
+all source-primary/source-companion dependency edges. Missing files, invalid native
+paths and changed original bodies prevent complete-edition publication. Scientific
+inputs supplied as external datasets remain explicit external references unless the
+selected component declares their native manifest as part of this application.
+
+For an intentional partial edition, publish a catalogue with its own edition name
+and the desired `required_components`, retaining the available component definitions
+and dependency declarations. Compose that catalogue as an ordinary guarded source
+overlay. Its explicit selection travels with the resulting source; an older
+selection is never inferred from a later catalogue. Read-only `--inspect` remains
+available while a source family is being completed.
+
 ## Receive source and components
 
 Save the complete source carriers to ordinary files, retaining every numbered block. Read the application source first and apply the chosen overlays in source order:
@@ -127,6 +168,8 @@ if (received.metadata.json_sha256 !== original.metadata.json_sha256)
 The default document budget is 900,000 UTF-16 characters, including metadata and any retained bootstrap. The encoder calculates a fitting fragment size, wraps Base64 at 120 columns and emits as many numbered parts as needed. `maxBase64Chars`, `lineWidth`, `title` and `sourceReference` are configurable. When the bank contains the original `source_tools/receive_drive_source.py`, each part includes that exact body by default. Current installed application snapshots can omit that historical receiver and use the maintained assembler directly. Set `includeBootstrap: true` to require and include the retained receiver, or `false` to omit it.
 
 Use the existing authorized source documents as the receiving surface. Read their actual tab IDs and current revision IDs, reconcile any existing content, then write each complete `text` with a native Google Docs `insertText` request and `write_control.requiredRevisionId`. Keep writes sequential. A timeout requires reading that same document before retrying; a revision conflict requires composing with the current content. Read back the completed documents and pass their entire text through `decodeNativeSourceDocuments`.
+
+Large source transfers use exact-sized byte buffers for UTF-8, Base64 and decompressed gzip data. Compression retains only DEFLATE's 32 KiB match history, and SHA-256 reads complete input blocks directly with a reusable schedule. Gzip decoding checks the declared output size against the existing 64 MiB source limit before allocation and verifies its length and CRC afterward. These allocation changes preserve source hashes, the original retained gzip and JSON, and deterministic output from the compressor.
 
 Export each completed native document as `text/plain`. Pass the returned opaque `file_uri` unchanged to the connected Drive uploader; this moves the actual provider export into an ordinary downloadable file. Fetch that complete file back and verify its fragment and full transport. Exported text may carry a BOM, CRLF and extra paragraph whitespace, so its file hash is recorded separately from the original fragment, gzip and JSON hashes. Verify the receiving account's permission on every part. Keep the completed exported files and their IDs as the stable inputs while source successors are applied to the installed application.
 

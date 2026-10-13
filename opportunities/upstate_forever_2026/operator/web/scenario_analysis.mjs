@@ -281,6 +281,7 @@ export function scenarioSourceAreaEnvelope(record){
 
 export function attachScenarioAnalysis({getState,api,endpoint,openForm,submitAction,fileList,toast,openItem,openDelivery,openReceivingPlan}){
   const cache=new Map(),inflight=new Map();
+  let sourceIntakeVersion=0;
   const delivery=createAnalysisDelivery({getState,api,endpoint,openDelivery,openReceivingPlan,openItem,onChange:()=>redraw()});
   let container=null,controller=null,workspaceKey='',error='',generation=0;
   let local={selected:'',region:'reporting_area',run:'',weight:'',tab:'physical'};
@@ -295,7 +296,7 @@ export function attachScenarioAnalysis({getState,api,endpoint,openForm,submitAct
   }
   function sync(){
     if(workspaceKey!==workspace()){
-      workspaceKey=workspace();generation++;error='';
+      workspaceKey=workspace();generation++;sourceIntakeVersion++;error='';
       local={selected:'',region:'reporting_area',run:'',weight:'',tab:'physical'};
       try{const saved=JSON.parse(sessionStorage.getItem('upstate-scenario-analysis:'+workspace())||'null');if(saved&&typeof saved==='object')local={...local,...saved};}catch{}
     }
@@ -574,8 +575,8 @@ export function attachScenarioAnalysis({getState,api,endpoint,openForm,submitAct
         .catch(e=>{if(g===generation&&container){error=e.message;redraw();}});
   }
   function detach(){generation++;controller?.abort();container=null;updateSignature='';}
-  function runTitle(id){
-    const run=rows(data().runs).find(r=>r.id===id),scenario=rows(data().scenarios).find(s=>s.id===run?.selection?.scenario_id);
+  function runTitle(id,selectedData=data()){
+    const run=rows(selectedData.runs).find(r=>r.id===id),scenario=rows(selectedData.scenarios).find(s=>s.id===run?.selection?.scenario_id);
     return scenario?.title||short(id);
   }
   function weightInputs(prefix,value={nitrogen_export:1,phosphorus_export:1,sediment_export:1}){
@@ -601,13 +602,13 @@ export function attachScenarioAnalysis({getState,api,endpoint,openForm,submitAct
       field('Value type','<select name="zone_filter_type">'+[['text','Text'],['number','Number'],['boolean','True or false'],['null','Empty value']].map(([id,title])=>'<option value="'+id+'"'+(type===id?' selected':'')+'>'+title+'</option>').join('')+'</select>')+
       button('zone-filter-remove','Remove filter','','small')+'</div>';
   }
-  function zoneRow(value={}){
+  function zoneRow(value={},sourceCatalog=rows(data().sources)){
     let areaId=value.id;
     if(!areaId){do{areaId='planning-area-'+(++zoneNumber);}while(zoneIds.has(areaId));}
     zoneIds.add(areaId);
     const rowKey=String(++zoneRowNumber);
     zoneDrafts.set(rowKey,JSON.parse(JSON.stringify(value)));
-    const edition=rows(data().sources).find(source=>source.id===value.source_collection_id);
+    const edition=sourceCatalog.find(source=>source.id===value.source_collection_id);
     const predicates=Object.entries(value.where||{});
     const lineage=analysisSourceMetadata(value);
     const origin=lineage.source_plan_id?'<p class="note analysis-origin">Original source plan: '+esc(lineage.source_plan_id)+
@@ -615,7 +616,7 @@ export function attachScenarioAnalysis({getState,api,endpoint,openForm,submitAct
     return '<fieldset data-analysis-zone-row data-analysis-zone-key="'+rowKey+'" class="analysis-zone"><legend>Retained planning area</legend><div class="analysis-editor-grid">'+
       field('Area ID',input('zone_id',areaId,'required'))+
       field('Area name',input('zone_title',value.title||'','required maxlength="160"'))+
-      field('Source edition','<select name="zone_collection" required>'+options(rows(data().sources),value.source_collection_id||'','Choose edition')+'</select>')+
+      field('Source edition','<select name="zone_collection" required>'+options(sourceCatalog,value.source_collection_id||'','Choose edition')+'</select>')+
       field('Vector source','<select name="zone_source" required>'+options(rows(edition?.entries).filter(entry=>entry.kind==='vector'),value.source_id||'','Choose vector source')+'</select>')+
       field('Layer',input('zone_layer',value.layer||''),'Leave empty to use the retained source layer.')+
       field('Buffer (metres)',input('zone_buffer',value.buffer_m??0,'type="number" min="0" step="any"'),'Published polygons need no added buffer. Use a positive buffer for lines or points.')+
@@ -624,12 +625,12 @@ export function attachScenarioAnalysis({getState,api,endpoint,openForm,submitAct
       '</div><div class="analysis-zone-filters" data-analysis-zone-filters>'+predicates.map(([name,actual])=>filterRow(name,actual)).join('')+'</div>'+
       button('zone-filter-add','Add attribute filter','','small')+origin+button('zone-remove','Remove planning area','','small')+'</fieldset>';
   }
-  function sourceOptions(row){
-    const edition=rows(data().sources).find(s=>s.id===row.querySelector('[name="zone_collection"]').value);
+  function sourceOptions(row,sourceCatalog=rows(data().sources)){
+    const edition=sourceCatalog.find(s=>s.id===row.querySelector('[name="zone_collection"]').value);
     const source=row.querySelector('[name="zone_source"]'),previous=source.value;
     source.innerHTML=options(rows(edition?.entries).filter(e=>e.kind==='vector'),previous,'Choose vector source');
   }
-  function zoneSelections(form){
+  function zoneSelections(form,sourceCatalog=rows(data().sources)){
     const bindings=zone=>({
       source_collection_id:zone.source_collection_id,source_id:zone.source_id,
       layer:zone.layer||null,where:zone.where||{},buffer_m:zone.buffer_m||0
@@ -666,18 +667,21 @@ export function attachScenarioAnalysis({getState,api,endpoint,openForm,submitAct
       }
       return zone;
     });
-    return validateAnalysisZones(chosen,rows(data().sources));
+    return validateAnalysisZones(chosen,sourceCatalog);
   }
-  function newAnalysis(previous=null){
-    const completed=rows(data().runs).filter(completeNativeRun);
+  function newAnalysis(previous=null,selectedData=data()){
+    sourceIntakeVersion++;
+    const formWorkspace=workspace(),sourceCatalog=rows(selectedData.sources);
+    if(!formWorkspace)throw Error('Select a scientific workspace before building an analysis.');
+    const completed=rows(selectedData.runs).filter(completeNativeRun);
     if(!completed.length)throw Error('Complete the selected nutrient or sediment model outputs before building an analysis. Open Native model runs to continue those calculations.');
     const initial=previous?.selection||{};
-    const initialZones=validateAnalysisZones(initial.zones||[],rows(data().sources));
+    const initialZones=validateAnalysisZones(initial.zones||[],sourceCatalog);
     const sourceAreaOrigins=rows(initial.source_area_origins).map(sourceAreaOrigin);
     zoneNumber=0;zoneRowNumber=0;zoneIds=new Set(initialZones.map(zone=>zone.id));zoneDrafts=new Map();
     weightNumber=0;weightIds=new Set(['selected',...rows(initial.weight_sets).map(choice=>choice.id)]);weightDrafts=new Map();
-    const baseline=initial.baseline_run_id||completed.find(r=>rows(data().scenarios).find(s=>s.id===r.selection.scenario_id)?.kind==='baseline')?.id||completed[0].id;
-    const runChoices=completed.map(r=>({id:r.id,title:runTitle(r.id)+' · '+(r.selection.models||['ndr','sdr']).map(name=>name.toUpperCase()).join(' + ')+' · '+short(r.selection.profile_id)+' · '+nativeVersionLabel(r)}));
+    const baseline=initial.baseline_run_id||completed.find(r=>rows(selectedData.scenarios).find(s=>s.id===r.selection.scenario_id)?.kind==='baseline')?.id||completed[0].id;
+    const runChoices=completed.map(r=>({id:r.id,title:runTitle(r.id,selectedData)+' · '+(r.selection.models||['ndr','sdr']).map(name=>name.toUpperCase()).join(' + ')+' · '+short(r.selection.profile_id)+' · '+nativeVersionLabel(r)}));
     const html='<div class="analysis-form"><div class="form-grid">'+
       field('Analysis title',input('analysis_title',initial.title||'Watershed scenario analysis','required maxlength="240"'))+
       field('Baseline','<select name="analysis_baseline" required>'+options(runChoices,baseline,'Choose baseline')+'</select>')+
@@ -687,8 +691,9 @@ export function attachScenarioAnalysis({getState,api,endpoint,openForm,submitAct
       field('Baseline percentile',input('analysis_percentile',initial.percentile??95,'type="number" min="0.000001" max="100" step="any" required'))+
       '</div><div id="analysis-explicit-caps" class="analysis-editor-grid" hidden>'+pollutants.map(([id,title,unit])=>field(title+' cap ('+unit+'/cell)',input('cap_'+id,initial.caps?.[id]??'','type="number" min="0.000000000001" step="any"'))).join('')+'</div></fieldset>'+
       '<fieldset><legend>Weight sensitivity</legend><p class="note">Add the planning choices to compare. The saved base weights are always included.</p><div id="analysis-weight-rows">'+rows(initial.weight_sets).map(choice=>weightRow(choice)).join('')+'</div>'+button('weight-add','Add weight selection','','small')+'</fieldset>'+
-      '<fieldset><legend>Planning areas</legend><p class="note">The original reporting area is always included. Retained vector areas are intersected with that reporting boundary. Attribute filters retain their exact source types; overlapping areas stay separate.</p><label><span>Add prepared source areas</span><input type="file" name="analysis_source_areas_file" accept=".json,application/json"><small>Choose the source-area JSON produced for this workspace. Existing planning areas stay in the form.</small></label><div id="analysis-zone-rows">'+initialZones.map(zone=>zoneRow(zone)).join('')+'</div>'+button('zone-add','Add planning area','','small')+'</fieldset></div>';
+      '<fieldset><legend>Planning areas</legend><p class="note">The original reporting area is always included. Retained vector areas are intersected with that reporting boundary. Attribute filters retain their exact source types; overlapping areas stay separate.</p><label><span>Add prepared source areas</span><input type="file" name="analysis_source_areas_file" accept=".json,application/json"><small>Choose the source-area JSON produced for this workspace. Existing planning areas stay in the form.</small></label><div id="analysis-zone-rows">'+initialZones.map(zone=>zoneRow(zone,sourceCatalog)).join('')+'</div>'+button('zone-add','Add planning area','','small')+'</fieldset></div>';
     openForm('Build scenario analysis','Select completed native outputs and retain the full quantitative analysis in this workspace.',html,'Build analysis',async()=>{
+      if(workspace()!==formWorkspace)throw Error('Reopen this analysis draft in its original workspace.');
       const form=document.getElementById('operation-form'),val=name=>form.elements.namedItem(name)?.value;
       const ids=[...form.querySelectorAll('[name="analysis_run"]:checked')].map(n=>n.value);
       const baselineRun=completed.find(r=>r.id===val('analysis_baseline'));
@@ -713,11 +718,12 @@ export function attachScenarioAnalysis({getState,api,endpoint,openForm,submitAct
         const title=row.querySelector('[name="weight_title"]').value.trim();if(!title)throw Error('Name each sensitivity weight selection.');
         return {...(weightDrafts.get(id)||{}),id,title,weights:parseAnalysisWeights(Object.fromEntries(pollutants.map(([key])=>[key,shared.includes(key)?row.querySelector('[name="weight_'+key+'"]').value:0])))};
       });
-      selection.zones=zoneSelections(form);
+      selection.zones=zoneSelections(form,sourceCatalog);
       if(sourceAreaOrigins.length)selection.source_area_origins=sourceAreaOrigins.map(sourceAreaOrigin);
       return submitAction('scenario.analyze',selection);
     },()=>{
       const form=document.getElementById('operation-form');
+      form._analysisSourceCatalog=sourceCatalog;
       function scope(){
         const baselineRun=completed.find(run=>run.id===form.elements.namedItem('analysis_baseline').value);
         const selectedRuns=[baselineRun,...[...form.querySelectorAll('[name="analysis_run"]:checked')].map(node=>completed.find(run=>run.id===node.value))];
@@ -753,13 +759,13 @@ export function attachScenarioAnalysis({getState,api,endpoint,openForm,submitAct
           if(originWorkspace!==workspace()||document.getElementById('operation-form')!==form)return;
           const value=JSON.parse(raw.replace(/^\uFEFF/,''));
           const selection=value?.selection||value;
-          const zones=validateAnalysisZones(selection?.zones,rows(data().sources));
+          const zones=validateAnalysisZones(selection?.zones,sourceCatalog);
           if(!zones.length)throw Error('The selected file contains no retained source areas.');
           const existing=new Set([...form.querySelectorAll('[data-analysis-zone-row]')].map(row=>row.querySelector('[name="zone_id"]').value.trim()));
           const duplicate=zones.find(zone=>existing.has(zone.id));
           if(duplicate)throw Error('This form already contains planning area '+duplicate.id+'. Remove that row before replacing its selection.');
           const origins=[...rows(selection.source_area_origins),...(value.origin?[value.origin]:[])].map(sourceAreaOrigin);
-          const html=zones.map(zone=>zoneRow(zone)).join('');
+          const html=zones.map(zone=>zoneRow(zone,sourceCatalog)).join('');
           document.getElementById('analysis-zone-rows').insertAdjacentHTML('beforeend',html);
           for(const origin of origins){
             if(!sourceAreaOrigins.some(item=>canonicalSelection(item)===canonicalSelection(origin)))sourceAreaOrigins.push(origin);
@@ -774,14 +780,14 @@ export function attachScenarioAnalysis({getState,api,endpoint,openForm,submitAct
         const selectedIds=[...form.querySelectorAll('[name="analysis_run"]:checked')].map(n=>n.value);
         const initialIds=selectedIds.length?selectedIds:rows(initial.scenario_run_ids);
         const available=completed.filter(r=>r.id!==b?.id&&r.selection.grid_id===b?.selection.grid_id&&commonOutputs([b,r]).length);
-        document.getElementById('analysis-run-choices').innerHTML=available.length?available.map(r=>'<label class="check"><input type="checkbox" name="analysis_run" value="'+esc(r.id)+'"'+(initialIds.includes(r.id)?' checked':'')+'><span>'+esc(runTitle(r.id))+'<small>'+esc((r.selection.models||['ndr','sdr']).map(name=>name.toUpperCase()).join(' + ')+' · '+short(r.selection.profile_id)+' · '+nativeVersionLabel(r))+'</small></span></label>').join(''):'<p class="note">The baseline can be analyzed now. Completed alternatives on this grid will appear here. Execution versions are checked for the common outputs of the selected cohort.</p>';
+        document.getElementById('analysis-run-choices').innerHTML=available.length?available.map(r=>'<label class="check"><input type="checkbox" name="analysis_run" value="'+esc(r.id)+'"'+(initialIds.includes(r.id)?' checked':'')+'><span>'+esc(runTitle(r.id,selectedData))+'<small>'+esc((r.selection.models||['ndr','sdr']).map(name=>name.toUpperCase()).join(' + ')+' · '+short(r.selection.profile_id)+' · '+nativeVersionLabel(r))+'</small></span></label>').join(''):'<p class="note">The baseline can be analyzed now. Completed alternatives on this grid will appear here. Execution versions are checked for the common outputs of the selected cohort.</p>';
         scope();
       }
       alternatives();form.elements.namedItem('analysis_baseline').addEventListener('change',alternatives);
       form.elements.namedItem('analysis_cap_mode').addEventListener('change',scope);
       form.querySelector('#analysis-run-choices').addEventListener('change',scope);
       form.querySelector('#analysis-zone-rows').addEventListener('change',event=>{
-        if(event.target.name==='zone_collection')sourceOptions(event.target.closest('[data-analysis-zone-row]'));
+        if(event.target.name==='zone_collection')sourceOptions(event.target.closest('[data-analysis-zone-row]'),sourceCatalog);
         if(event.target.name==='zone_filter_type'){
           const value=event.target.closest('[data-analysis-zone-filter]').querySelector('[name="zone_filter_value"]');
           value.disabled=event.target.value==='null';
@@ -790,12 +796,12 @@ export function attachScenarioAnalysis({getState,api,endpoint,openForm,submitAct
       });
     });
   }
-  function create(request){
-    if(request===undefined)return newAnalysis();
+  function create(request,selectedData=data()){
+    if(request===undefined)return newAnalysis(null,selectedData);
     const seed=request?.selection;
     if(!seed||typeof seed!=='object'||Array.isArray(seed))throw Error('Supply a retained native-run selection for the analysis form.');
     if(request.workspace_key&&request.workspace_key!==workspace())throw Error('The selected runs belong to a different current workspace.');
-    const completed=rows(data().runs).filter(completeNativeRun),byId=new Map(completed.map(run=>[run.id,run]));
+    const completed=rows(selectedData.runs).filter(completeNativeRun),byId=new Map(completed.map(run=>[run.id,run]));
     const baseline=byId.get(seed.baseline_run_id);
     if(!baseline)throw Error('The supplied baseline must have completed its selected original native model outputs in this workspace.');
     if(!baseline.selection?.grid_id)throw Error('The supplied baseline has no retained model grid.');
@@ -808,22 +814,34 @@ export function attachScenarioAnalysis({getState,api,endpoint,openForm,submitAct
     const versionIssues=nativeCommonVersionIssues(suppliedRuns,nativeModelsForOutputs(commonOutputs(suppliedRuns)));
     if(versionIssues.length)throw Error(versionIssues.join(' '));
     if(!commonOutputs([baseline,...ids.map(id=>byId.get(id))]).length)throw Error('Choose a native cohort that shares nutrient or sediment outputs across every selected run.');
-    return newAnalysis({selection:{...seed,baseline_run_id:baseline.id,scenario_run_ids:ids}});
+    return newAnalysis({selection:{...seed,baseline_run_id:baseline.id,scenario_run_ids:ids}},selectedData);
   }
-  function createForSourceAreas(request){
-    if(request?.workspace_key&&request.workspace_key!==workspace())throw Error('These source areas belong to a different current workspace.');
-    const seed=request?.selection;
-    if(!seed||typeof seed!=='object'||Array.isArray(seed))throw Error('Supply the retained source-area selection.');
-    const zones=validateAnalysisZones(seed.zones,rows(data().sources));
-    if(!zones.length)throw Error('Choose at least one retained source area.');
+  async function createForSourceAreas(request){
+    const expectedWorkspace=workspace(),requestVersion=++sourceIntakeVersion;
+    if(!expectedWorkspace)throw Error('Select the original workspace for these source areas.');
+    if(request?.workspace_key&&request.workspace_key!==expectedWorkspace)throw Error('These source areas belong to a different current workspace.');
+    const seed=sourceAreaOrigin(request?.selection);
+    const requestedZones=validateAnalysisZones(seed.zones);
+    if(!requestedZones.length)throw Error('Choose at least one retained source area.');
     const origins=rows(seed.source_area_origins).map(sourceAreaOrigin);
     if(request.origin){
       const origin=sourceAreaOrigin(request.origin);
       if(!origins.some(item=>canonicalSelection(item)===canonicalSelection(origin)))origins.push(origin);
     }
+    let selectedData=data();
+    const available=zone=>rows(selectedData.sources).some(edition=>edition.id===zone.source_collection_id&&
+      rows(edition.entries).some(entry=>entry.id===zone.source_id&&entry.kind==='vector'));
+    if(!requestedZones.every(available)){
+      const fresh=await api('/api/state?workspace='+encodeURIComponent(expectedWorkspace));
+      if(workspace()!==expectedWorkspace)throw Error('The selected workspace changed while opening these source areas.');
+      if(requestVersion!==sourceIntakeVersion)throw Error('A newer analysis draft replaced this source-area request.');
+      if(fresh?.workspace_key!==expectedWorkspace||!fresh.data)throw Error('The returned source catalog belongs to a different workspace.');
+      selectedData=fresh.data;
+    }
+    const zones=validateAnalysisZones(requestedZones,rows(selectedData.sources));
     const selected={...seed,zones,...(origins.length?{source_area_origins:origins}:{})};
-    if(seed.baseline_run_id)return create({...request,selection:selected});
-    return newAnalysis({selection:selected});
+    if(seed.baseline_run_id)return create({workspace_key:expectedWorkspace,selection:selected},selectedData);
+    return newAnalysis({selection:selected},selectedData);
   }
   function download(content,filename,type){
     const url=URL.createObjectURL(new Blob([content],{type}));
@@ -849,7 +867,7 @@ export function attachScenarioAnalysis({getState,api,endpoint,openForm,submitAct
     if(action==='retry'){error='';const id=local.selected;cache.delete(identity(id));await load(id,{fresh:true});redraw();return;}
     if(action==='weight-add'){document.getElementById('analysis-weight-rows').insertAdjacentHTML('beforeend',weightRow());document.getElementById('operation-form')._analysisUpdateScope?.();return;}
     if(action==='weight-remove'){node.closest('[data-analysis-weight-row]')?.remove();return;}
-    if(action==='zone-add'){document.getElementById('analysis-zone-rows').insertAdjacentHTML('beforeend',zoneRow());return;}
+    if(action==='zone-add'){const form=document.getElementById('operation-form');document.getElementById('analysis-zone-rows').insertAdjacentHTML('beforeend',zoneRow({},form._analysisSourceCatalog||rows(data().sources)));return;}
     if(action==='zone-remove'){node.closest('[data-analysis-zone-row]')?.remove();return;}
     if(action==='zone-filter-add'){node.closest('[data-analysis-zone-row]').querySelector('[data-analysis-zone-filters]').insertAdjacentHTML('beforeend',filterRow());return;}
     if(action==='zone-filter-remove'){node.closest('[data-analysis-zone-filter]')?.remove();return;}

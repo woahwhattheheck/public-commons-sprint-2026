@@ -1,0 +1,219 @@
+{
+  "schema": "upstate.monitoring-observed-source-install/v1",
+  "version": "1.3.0",
+  "source_root": "opportunities/upstate_forever_2026",
+  "predecessor": "Original Monitoring1.2.1 / PR3140 composed with current receiving-water Monitoring1.3.0 at4d7415ebdb4ed3ed522b419349aac0178aa37476",
+  "files": [
+    {
+      "path": "source/eighteenmile-stream-nutrients-20261013/monitoring-context/monitoring-context.json",
+      "bytes": 1524679,
+      "sha256": "9f4e9f8676a11cf858a193d398d139346b1ba182099fb5a7de20f5de541eb25f",
+      "predecessor_sha256": []
+    },
+    {
+      "path": "source/eighteenmile-stream-nutrients-20261013/monitoring-context/station-topology.csv",
+      "bytes": 11298,
+      "sha256": "d9b470b28a9efbe81aece089fcebe8320ed214160a0c13d80cc8bccf58865697",
+      "predecessor_sha256": []
+    },
+    {
+      "path": "source/eighteenmile-stream-nutrients-20261013/monitoring-context/paired-contrasts-network.csv",
+      "bytes": 97910,
+      "sha256": "ea83882184e0d76bfb6364cda4c5eb5d0068146a4d2f0a8e623fed4ff60db626",
+      "predecessor_sha256": []
+    },
+    {
+      "path": "source/eighteenmile-stream-nutrients-20261013/monitoring-context/original-station-points.geojson",
+      "bytes": 2460,
+      "sha256": "54c846513c0e5a885c9f9b06ab43dc9c29dcdd9dfb7abc49917eba4cc19451c0",
+      "predecessor_sha256": []
+    },
+    {
+      "path": "source/eighteenmile-stream-nutrients-20261013/monitoring-context/context-summary.json",
+      "bytes": 1106,
+      "sha256": "9f00117e5ba34b847ad7246c671e7f26711300310c62b1571b70b4a585df77aa",
+      "predecessor_sha256": []
+    },
+    {
+      "path": "source/eighteenmile-stream-nutrients-20261013/monitoring-context/original/sv375-upstream-wqp.json",
+      "bytes": 1111,
+      "sha256": "b2ec0eed6f86400099afd835762c1bb3225b0f34e4f1bdebf25f4312e40f715d",
+      "predecessor_sha256": []
+    },
+    {
+      "path": "source/eighteenmile-stream-nutrients-20261013/monitoring-context/original/sv245-upstream-wqp.json",
+      "bytes": 2141,
+      "sha256": "0c33e1bfa5049b71682ad2c7f79731aa9dfce5e977b579f374a3c01590c2873c",
+      "predecessor_sha256": []
+    },
+    {
+      "path": "source/eighteenmile-stream-nutrients-20261013/monitoring-context/original/sv376-upstream-wqp.json",
+      "bytes": 2676,
+      "sha256": "8c318710f5c52c7c2767cc80b1b2c9582d9c9809efd860a26ab79aefcb32c2f4",
+      "predecessor_sha256": []
+    },
+    {
+      "path": "source/eighteenmile-stream-nutrients-20261013/monitoring-context/derive-monitoring-context.mjs",
+      "bytes": 11134,
+      "sha256": "0add82fd22a6ac8dadcd06790f6af34516ed7f3f46b1dee85644dbe3d4d3bdfe",
+      "predecessor_sha256": []
+    },
+    {
+      "path": "source/eighteenmile-stream-nutrients-20261013/monitoring-context/input-manifest.json",
+      "bytes": 3824,
+      "sha256": "afa16c127e7511ae1d975ece6e05cf1142607b7d903ab7a786e0ba36c2cd1f17",
+      "predecessor_sha256": []
+    },
+    {
+      "path": "model/monitoring_observed_context.py",
+      "bytes": 27224,
+      "sha256": "6071c0aa5f0715ec31caa0778e7b52fed70098845ed4361d48fed72c530cf556",
+      "predecessor_sha256": []
+    },
+    {
+      "path": "operator/web/monitoring-observed.mjs",
+      "bytes": 11144,
+      "sha256": "7ebb4f2d5f1fe2505f085c6e7b9472339cfc8dc2e3871bbfe985d228d8cf3ebe",
+      "predecessor_sha256": []
+    },
+    {
+      "path": "model/MONITORING_OBSERVED_CONTEXT.md",
+      "bytes": 11799,
+      "sha256": "18a222a0269cd333713041854d4be2a9811912664c7b082589f5c9ae6e319992",
+      "predecessor_sha256": []
+    },
+    {
+      "path": "integrations/monitoring/install_observed_context.py",
+      "bytes": 3950,
+      "sha256": "863e063d5fae900ecccdc86df47ec07c6b192c6ad56c953c85dfe68928475b5a",
+      "predecessor_sha256": []
+    },
+    {
+      "path": "model/monitoring_actions.py",
+      "bytes": 3355,
+      "sha256": "9bdecb178fc77025f26669d8428baa69066074d3c700e4a1535bc24e67b13686",
+      "predecessor_sha256": [
+        "e9bc8115891abb1a855c96c0007a93926049d0a1d4f208ef30fe462026b7b87f"
+      ]
+    },
+    {
+      "path": "model/monitoring_workspace.py",
+      "bytes": 34010,
+      "sha256": "fe465c33f8a4faf95d01c8ac3e189306639614fb5ce9079031a3c6e6f7096340",
+      "predecessor_sha256": [
+        "3cbe9008882a748880c394a480a32c0b68beaf66be85599fb2061484cfff7d1c"
+      ]
+    },
+    {
+      "path": "operator/monitoring_native.py",
+      "bytes": 6844,
+      "sha256": "6e988dbba4730c08af0afe3fb242fa01ed407e6a801163965a12672d279a7d60",
+      "predecessor_sha256": [
+        "f1db205c2240b65d15fbe6d44c357459b31caa82d348dc9b8a058135e6a91c75"
+      ]
+    },
+    {
+      "path": "operator/extensions/monitoring.json",
+      "bytes": 1669,
+      "sha256": "224aa0281aa1047e804bcf7dcf6d34451ca9bb59cd5a18e06ff4dfdcc7b405b4",
+      "predecessor_sha256": [
+        "dd42f8a79612669422d6d1d3ddf91bff8f8d017d90eb60c2f601252e8627ced8",
+        "8f562aeab5eb007c0bfbb1e9eb54274817d7d0cd093935f7a27647fe42fc007c"
+      ]
+    },
+    {
+      "path": "operator/web/monitoring.mjs",
+      "bytes": 7237,
+      "sha256": "be145e48c968912ad9d759977b1f26b8271ef5bd1702411be21a9bf1ba77658a",
+      "predecessor_sha256": [
+        "4997a2652034fae1708455f742b72b68dcc7d3a405c0ff303c7c69828b6ab9ea",
+        "1728c22d5b2c9ffaf572b9cea8d9f9dcc4a3e28edd81c5125d7af9d227b124be"
+      ]
+    },
+    {
+      "path": "operator/web/monitoring-component.mjs",
+      "bytes": 23901,
+      "sha256": "064d50959afc32411df87e9cd1479dc1d0802ad9e83ada549de0d9e1ac654949",
+      "predecessor_sha256": [
+        "46747a23fb5d77dac210eb16fa0894774956e5a1776c5a48c278b1a26a47a288",
+        "52cc07c29bde345efbe305ad0b47a7835c75af16649a8d7c548a80f849d575be"
+      ]
+    },
+    {
+      "path": "eighteenmile_monitoring_context.sources.json",
+      "bytes": 40904,
+      "sha256": "a75e285b50d21cd1cc85f8d34d538ad2c231be8b3240b991b9c6d309f9bfb9f7",
+      "predecessor_sha256": []
+    },
+    {
+      "path": "integrations/monitoring/source_adoption.json",
+      "bytes": 12151,
+      "sha256": "7620dbe4b3e5a4f6fd9a9d24215c393248198591dffa00ef8876791310e93a3c",
+      "predecessor_sha256": [
+        "830e35b5d5b8929ef6ea238935b96bd7148c1224fab04802a89c9b52234f98a7",
+        "785ffefbacf24579a9d6d138797ea50874e42a9ce75b7db5282c24f36d42be19"
+      ]
+    }
+  ],
+  "requires": [
+    "operator/extension_registry.py",
+    "model/monitoring_sources.py:verify_retained_binding",
+    "source/eighteenmile-stream-nutrients-20261013/flow-analysis/",
+    "observations/eighteenmile_stream_nutrients_2020_2025/analysis/paired-station-contrasts.csv"
+  ],
+  "original_preimages": {
+    "model/monitoring_actions.py": {
+      "git_blob": "58d75aeb326c42a093053d38ce7232e167904d31",
+      "sha256": "e9bc8115891abb1a855c96c0007a93926049d0a1d4f208ef30fe462026b7b87f",
+      "bytes": 2595
+    },
+    "model/monitoring_workspace.py": {
+      "git_blob": "873ad61355b68708e7f6bd1889298ba214e94305",
+      "sha256": "3cbe9008882a748880c394a480a32c0b68beaf66be85599fb2061484cfff7d1c",
+      "bytes": 32727
+    },
+    "operator/monitoring_native.py": {
+      "git_blob": "003bc725984a7eba1f62c60d5a5dcf8863d2e5b3",
+      "sha256": "f1db205c2240b65d15fbe6d44c357459b31caa82d348dc9b8a058135e6a91c75",
+      "bytes": 6628
+    },
+    "operator/extensions/monitoring.json": {
+      "git_blob": "a58d4ace95f5c9a220d1cb85b86b14bedaf83d08",
+      "sha256": "dd42f8a79612669422d6d1d3ddf91bff8f8d017d90eb60c2f601252e8627ced8",
+      "bytes": 1567
+    },
+    "operator/web/monitoring.mjs": {
+      "git_blob": "bf5309d6e8657353b422e245060c18c1866302a3",
+      "sha256": "4997a2652034fae1708455f742b72b68dcc7d3a405c0ff303c7c69828b6ab9ea",
+      "bytes": 4568
+    },
+    "operator/web/monitoring-component.mjs": {
+      "git_blob": "e10feaa3e6bb43ec610745f08174b86aa7554829",
+      "sha256": "46747a23fb5d77dac210eb16fa0894774956e5a1776c5a48c278b1a26a47a288",
+      "bytes": 23679
+    },
+    "integrations/monitoring/source_adoption.json": {
+      "git_blob": "74572c672b6cf769faa8b5a02ee155d369f98160",
+      "sha256": "830e35b5d5b8929ef6ea238935b96bd7148c1224fab04802a89c9b52234f98a7",
+      "bytes": 8615
+    }
+  },
+  "composition_preimages": {
+    "operator/extensions/monitoring.json": {
+      "bytes": 1567,
+      "sha256": "8f562aeab5eb007c0bfbb1e9eb54274817d7d0cd093935f7a27647fe42fc007c"
+    },
+    "operator/web/monitoring.mjs": {
+      "bytes": 7172,
+      "sha256": "1728c22d5b2c9ffaf572b9cea8d9f9dcc4a3e28edd81c5125d7af9d227b124be"
+    },
+    "operator/web/monitoring-component.mjs": {
+      "bytes": 23690,
+      "sha256": "52cc07c29bde345efbe305ad0b47a7835c75af16649a8d7c548a80f849d575be"
+    },
+    "integrations/monitoring/source_adoption.json": {
+      "bytes": 9362,
+      "sha256": "785ffefbacf24579a9d6d138797ea50874e42a9ce75b7db5282c24f36d42be19"
+    }
+  }
+}

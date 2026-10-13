@@ -46,19 +46,78 @@ const editionReferences = (row,edition='') => assessmentReferences(row).filter(r
 const inventoryValues = (row,field,edition='') => [...new Set(editionReferences(row,edition).map(ref=>inventoryField(ref,field)).filter(Boolean))].sort((a,b)=>a.localeCompare(b));
 const assessmentCauses = (row,edition='') => inventoryValues(row,'cause',edition);
 const csvCell = value => '"'+String(value??'').replace(/"/g,'""')+'"';
-const filteredStationCSV = (stationRows,editionId,coordinateFor,assessmentEdition='') => {
+
+const assessmentMissing = 'null';
+const assessmentValueKey = value => value ? JSON.stringify(value) : assessmentMissing;
+const assessmentSourceKey = ref => canonical([inventoryField(ref,'source_id')||ref.source_id||'',inventoryField(ref,'source_sha256')||ref.source_sha256||'']);
+const assessmentFields = {cause:'cause',use:'impaired_use',support:'use_support',publication:'publication_status'};
+const matchesAssessment = (ref,selection={},omit='') =>
+  (omit==='source'||!selection.source||assessmentSourceKey(ref)===selection.source)&&
+  (omit==='edition'||!selection.edition||inventoryField(ref,'source_vintage')===selection.edition)&&
+  Object.entries(assessmentFields).every(([key,field])=>omit===key||!selection[key]||
+    (key==='cause'?inventoryField(ref,field)===selection[key]:assessmentValueKey(inventoryField(ref,field))===selection[key]));
+const selectedAssessmentReferences = (row,selection={}) => assessmentReferences(row).filter(ref=>matchesAssessment(ref,selection));
+const referenceValues = (references,field) => [...new Set(references.map(ref=>inventoryField(ref,field)).filter(Boolean))].sort((a,b)=>a.localeCompare(b));
+const assessmentSelectionActive = selection => Object.values(selection).some(Boolean);
+const assessmentValueLabel = value => value ? value.replace(/_/g,' ') : 'Not recorded';
+const assessmentFacets = (stationRows,selection={}) => {
+  const definitions={source:'source_id',edition:'source_vintage',...assessmentFields},result={};
+  for(const [facet,field] of Object.entries(definitions)){
+    const choices=new Map();
+    for(const station of stationRows)for(const ref of assessmentReferences(station)){
+      const value=inventoryField(ref,field);
+      const key=facet==='source'?assessmentSourceKey(ref):facet==='edition'||facet==='cause'?value:assessmentValueKey(value);
+      if(!key)continue;
+      let entry=choices.get(key);
+      if(!entry){entry={key,value,label:facet==='source'?
+        (value||ref.source_id||'Original inventory')+' · '+short(inventoryField(ref,'source_sha256')||ref.source_sha256):
+        facet==='cause'?causeLabel(value)+' ('+value+')':facet==='edition'?value:assessmentValueLabel(value),stations:new Set(),records:0};choices.set(key,entry);}
+      if(matchesAssessment(ref,selection,facet)){entry.stations.add(String(station.station_id));entry.records++;}
+    }
+    result[facet]=[...choices.values()].map(({stations,...entry})=>({...entry,station_count:stations.size}))
+      .sort((a,b)=>a.label.localeCompare(b.label)||a.key.localeCompare(b.key));
+  }
+  return result;
+};
+const filteredAssessmentCSV = (stationRows,editionId,coordinateFor,selection={}) => {
+  const columns=['edition_id','station_id','assessment_source_id','publisher_source_sha256','inventory_body_sha256',
+    'source_vintage','publication_status','evidence_kind','assessment_record_id','original_record_pointer',
+    'original_record_index','inventory_row_number','cause_code','cause_label','use','use_support',
+    'publisher_huc12','station_publisher_huc12','station_publisher_huc8','station_publisher_huc_relation',
+    'geographic_huc12s','location_status','longitude_wgs84','latitude_wgs84','source_page','source_uri',
+    'selected_assessment_filters','original_record','original_source_reference'];
+  const records=[];
+  for(const row of stationRows){
+    const xy=coordinateFor(row)||[];
+    for(const ref of selectedAssessmentReferences(row,selection)){
+      const value=field=>inventoryField(ref,field),record=ref.assessment_record||{};
+      records.push([editionId,row.station_id,value('source_id')||ref.source_id,
+        value('source_sha256')||ref.source_sha256,record.inventory_body_sha256||ref.source_sha256,
+        value('source_vintage'),value('publication_status'),value('evidence_kind'),
+        value('assessment_record_id')||value('id'),value('original_record_pointer')||ref.record_pointer,
+        record.original_record_index??ref.record_index??'',record.inventory_row_number??ref.row_number??'',
+        value('cause'),value('cause_label')||causeLabel(value('cause')),value('impaired_use'),value('use_support'),
+        value('huc12'),value('station_publisher_huc12'),value('station_publisher_huc8'),value('station_publisher_huc_relation'),
+        list(row.watersheds).map(item=>item.watershed_id).join('; '),row.status,xy[0]??'',xy[1]??'',
+        value('source_page'),value('source_uri'),JSON.stringify(selection),JSON.stringify(ref.original),JSON.stringify(ref)]);
+    }
+  }
+  return [columns,...records].map(record=>record.map(csvCell).join(',')).join('\r\n')+'\r\n';
+};
+
+const filteredStationCSV = (stationRows,editionId,coordinateFor,selection={}) => {
   const columns=['edition_id','selected_assessment_edition','station_id','station_description','county',
-    'assessment_editions','assessment_cause_codes','assessment_cause_labels','use_codes','use_support_labels',
+    'selected_assessment_filters','assessment_editions','assessment_cause_codes','assessment_cause_labels','use_codes','use_support_labels',
     'publisher_huc12s','station_publisher_huc12s','station_publisher_huc8s','station_publisher_huc_relations','original_record_pointers','priority_codes','assessment_source_pages','location_status','longitude_wgs84','latitude_wgs84',
     'watershed_status','mapped_watershed_ids','linked_observation_rows','assessment_records','original_source_references'];
   const records=stationRows.map(row=>{
-    const xy=coordinateFor(row)||[],values=field=>inventoryValues(row,field,assessmentEdition).join('; ');
-    return [editionId,assessmentEdition,row.station_id,values('station_description'),values('county'),
-      values('source_vintage'),assessmentCauses(row,assessmentEdition).join('; '),
-      assessmentCauses(row,assessmentEdition).map(causeLabel).join('; '),values('impaired_use'),values('use_support'),
+    const references=selectedAssessmentReferences(row,selection),xy=coordinateFor(row)||[],values=field=>referenceValues(references,field).join('; ');
+    return [editionId,selection.edition||'',row.station_id,values('station_description'),values('county'),
+      JSON.stringify(selection),values('source_vintage'),values('cause'),
+      referenceValues(references,'cause').map(causeLabel).join('; '),values('impaired_use'),values('use_support'),
       values('huc12'),values('station_publisher_huc12'),values('station_publisher_huc8'),values('station_publisher_huc_relation'),values('original_record_pointer'),values('priority_rank'),values('source_page'),row.status,xy[0]??'',xy[1]??'',
       row.watershed_status||row.membership_status||'',list(row.watersheds).map(w=>w.watershed_id).join('; '),
-      row.observation_count||0,editionReferences(row,assessmentEdition).length,JSON.stringify(editionReferences(row,assessmentEdition))];
+      row.observation_count||0,references.length,JSON.stringify(references)];
   });
   return [columns,...records].map(record=>record.map(csvCell).join(',')).join('\r\n')+'\r\n';
 };
@@ -103,7 +162,7 @@ const coverageCSV = (coverage,editionId) => {
 
 export function attachStationGeography(host) {
   let node=null, workspace=null, state=null, catalog=null, edition=null, draft=defaultDraft();
-  let requests=[], currentTask=null, selectedEdition=null, selectedStation=null, filter='all', search='', causeFilter='', assessmentEdition='', page=0;
+  let requests=[], currentTask=null, selectedEdition=null, selectedStation=null, filter='all', search='', causeFilter='', assessmentEdition='', assessmentSource='', useFilter='', supportFilter='', publicationFilter='', page=0;
   let watershedFilter='', coveragePage=0, coverageSearch='', coverageOpen=false, coverageCache=null;
   let generation=0, controller=null, loading=false, busy=false, error='', message='', taskFingerprint='';
   let sourceFingerprint='', viewBox=null, baseViewBox=null, projectPoint=null, drag=null, advancedOpen=false, formOpen=true;
@@ -117,18 +176,19 @@ export function attachStationGeography(host) {
     if (!workspace) return;
     try {
       sessionStorage.setItem(cacheKey(workspace),JSON.stringify({draft,requests:requests.slice(-32),currentTask,selectedEdition,
-        selectedStation,filter,search,causeFilter,assessmentEdition,watershedFilter,coveragePage,coverageSearch,coverageOpen,page,aliasesText,observationTablesText,sourceOptionsText,advancedOpen,formOpen,microbialDomainMode}));
+        selectedStation,filter,search,causeFilter,assessmentEdition,assessmentSource,useFilter,supportFilter,publicationFilter,watershedFilter,coveragePage,coverageSearch,coverageOpen,page,aliasesText,observationTablesText,sourceOptionsText,advancedOpen,formOpen,microbialDomainMode}));
     } catch (_) { /* Original server tasks and source editions remain retained. */ }
   }
   function restore() {
     draft=defaultDraft(); requests=[]; currentTask=null; selectedEdition=null; selectedStation=null;microbialDomainMode='required';
-    filter='all';search='';causeFilter='';assessmentEdition='';watershedFilter='';coveragePage=0;coverageSearch='';coverageOpen=false;page=0;aliasesText='{}';observationTablesText='[]';sourceOptionsText='{}';advancedOpen=false;formOpen=true;
+    filter='all';search='';causeFilter='';assessmentEdition='';assessmentSource='';useFilter='';supportFilter='';publicationFilter='';watershedFilter='';coveragePage=0;coverageSearch='';coverageOpen=false;page=0;aliasesText='{}';observationTablesText='[]';sourceOptionsText='{}';advancedOpen=false;formOpen=true;
     try {
       const value=JSON.parse(sessionStorage.getItem(cacheKey(workspace))||'{}');
       draft={...draft,...(value.draft||{})}; requests=list(value.requests);currentTask=value.currentTask||null;
       selectedEdition=value.selectedEdition||null;selectedStation=value.selectedStation||null;
       microbialDomainMode=['required','auto','none'].includes(value.microbialDomainMode)?value.microbialDomainMode:'required';
       filter=statuses.includes(value.filter)?value.filter:'all';search=value.search||'';causeFilter=typeof value.causeFilter==='string'?value.causeFilter:'';assessmentEdition=typeof value.assessmentEdition==='string'?value.assessmentEdition:'';page=Number(value.page)||0;
+      for(const [key,set] of [['assessmentSource',value=>assessmentSource=value],['useFilter',value=>useFilter=value],['supportFilter',value=>supportFilter=value],['publicationFilter',value=>publicationFilter=value]])set(typeof value[key]==='string'?value[key]:'');
       watershedFilter=typeof value.watershedFilter==='string'?value.watershedFilter:'';
       coveragePage=Math.max(0,Number(value.coveragePage)||0);coverageSearch=typeof value.coverageSearch==='string'?value.coverageSearch:'';coverageOpen=!!value.coverageOpen;
       aliasesText=value.aliasesText||JSON.stringify(draft.aliases||{},null,2);
@@ -222,16 +282,20 @@ export function attachStationGeography(host) {
         (['failed','interrupted','cancelled'].includes(task.state)?button('resume-task','Resume','data-sg-id="'+esc(task.id)+'"'):'')+'</td></tr>';
     }).join('')+'</tbody></table>':'<p class="sg-help">Geography builds and received packages appear here in the original operator queue.</p>';
   }
+  const assessmentSelection = () => ({source:assessmentSource,edition:assessmentEdition,cause:causeFilter,use:useFilter,support:supportFilter,publication:publicationFilter});
+  const selectedReferences = row => selectedAssessmentReferences(row,assessmentSelection());
+  const selectedValues = (row,field) => referenceValues(selectedReferences(row),field);
+  const selectedLabels = (row,field) => [...new Set(selectedReferences(row).map(ref=>inventoryField(ref,field)))].map(assessmentValueLabel).sort((a,b)=>a.localeCompare(b));
   function filteredRows() {
-    const query=search.trim().toLocaleLowerCase();
+    const query=search.trim().toLocaleLowerCase(),selection=assessmentSelection();
     return rows().filter(row=>{
+      const references=selectedAssessmentReferences(row,selection);
       const membership=row.watershed_status||row.membership_status;
       const geographyMatches=!watershedFilter||(watershedFilter==='__outside__'?membership==='outside':
         watershedFilter==='__unresolved__'?membership==='unresolved':list(row.watersheds).some(w=>watershedKey(w)===watershedFilter));
       return geographyMatches&&(filter==='all'||row.status===filter||membership===filter)&&
-        (!assessmentEdition||editionReferences(row,assessmentEdition).length>0)&&
-        (!causeFilter||assessmentCauses(row,assessmentEdition).includes(causeFilter))&&(!query||[row.station_id,row.label,row.name,
-        ...list(row.watersheds).map(x=>x.watershed_id),...['station_description','county','cause','cause_label','impaired_use','source_vintage','huc12','use_support'].flatMap(field=>inventoryValues(row,field,assessmentEdition))].join(' ').toLocaleLowerCase().includes(query));
+        (!assessmentSelectionActive(selection)||references.length>0)&&(!query||[row.station_id,row.label,row.name,
+        ...list(row.watersheds).map(x=>x.watershed_id),...['station_description','county','cause','cause_label','impaired_use','source_vintage','huc12','use_support','publication_status'].flatMap(field=>referenceValues(references,field))].join(' ').toLocaleLowerCase().includes(query));
     });
   }
 
@@ -295,50 +359,59 @@ export function attachStationGeography(host) {
     message='Downloaded '+selected.length+' watershed features with distinct station IDs, original cause counts and source references.';notice();
   }
 
-  function renderEditionFilter() {
-    const target=node?.querySelector('[data-sg-assessment-edition]');if(!target)return;
-    const editions=[...new Set(rows().flatMap(row=>inventoryValues(row,'source_vintage')))].sort();
-    if(assessmentEdition&&!editions.includes(assessmentEdition)){assessmentEdition='';page=0;}
-    target.innerHTML='<option value="">All assessment editions</option>'+editions.map(value=>
-      '<option value="'+esc(value)+'"'+(value===assessmentEdition?' selected':'')+'>'+esc(value)+'</option>').join('');
-    target.disabled=!editions.length;
-  }
-  function renderCauseFilter() {
-    renderEditionFilter();
-    const target=node?.querySelector('[data-sg-cause]');if(!target)return;
-    const counts=new Map();
-    for(const row of rows())for(const cause of assessmentCauses(row,assessmentEdition))counts.set(cause,(counts.get(cause)||0)+1);
-    if(causeFilter&&!counts.has(causeFilter)){causeFilter='';page=0;}
-    target.innerHTML='<option value="">All assessment causes</option>'+[...counts].sort(([a],[b])=>a.localeCompare(b)).map(([cause,count])=>
-      '<option value="'+esc(cause)+'"'+(cause===causeFilter?' selected':'')+'>'+esc(causeLabel(cause))+' ('+esc(cause)+') · '+count+' stations</option>').join('');
-    target.disabled=!counts.size;
+  function renderAssessmentFilters() {
+    const bindings=[
+      ['source','[data-sg-assessment-source]','All publisher sources',()=>assessmentSource,value=>assessmentSource=value],
+      ['edition','[data-sg-assessment-edition]','All assessment editions',()=>assessmentEdition,value=>assessmentEdition=value],
+      ['cause','[data-sg-cause]','All assessment causes',()=>causeFilter,value=>causeFilter=value],
+      ['use','[data-sg-use]','All designated uses',()=>useFilter,value=>useFilter=value],
+      ['support','[data-sg-support]','All support labels',()=>supportFilter,value=>supportFilter=value],
+      ['publication','[data-sg-publication]','All publication states',()=>publicationFilter,value=>publicationFilter=value]
+    ];
+    const available=assessmentFacets(rows(),{});
+    for(const [key,,,get,set] of bindings)if(get()&&!available[key].some(item=>item.key===get())){set('');page=0;}
+    const facets=assessmentFacets(rows(),assessmentSelection());
+    for(const [key,selector,label,get] of bindings){
+      const target=node?.querySelector(selector);if(!target)continue;
+      target.innerHTML='<option value="">'+esc(label)+'</option>'+facets[key].map(item=>
+        '<option value="'+esc(item.key)+'"'+(item.key===get()?' selected':'')+'>'+esc(item.label)+' · '+item.station_count+' stations / '+item.records+' records</option>').join('');
+      target.disabled=!facets[key].length;
+    }
   }
   function inventoryDetail(row) {
-    const references=assessmentReferences(row);
-    if(!references.length)return '<h4>Original assessment and inventory</h4><p>No inventory rows are attached to this study station.</p>';
+    const allReferences=assessmentReferences(row),references=selectedReferences(row);
+    if(!allReferences.length)return '<h4>Original assessment and inventory</h4><p>No inventory rows are attached to this study station.</p>';
     const columns=[['source_vintage','Assessment edition'],['cause','Cause'],['impaired_use','Use'],
-      ['use_support','Support'],['huc12','Assessment HUC12'],['station_publisher_huc12','Station HUC12'],
+      ['use_support','Support'],['publication_status','Publication'],['source_id','Publisher source'],['huc12','Assessment HUC12'],['station_publisher_huc12','Station HUC12'],
       ['station_publisher_huc8','Station HUC8'],['station_publisher_huc_relation','Publisher comparison'],
       ['geographic_huc12s','Mapped HUC12'],['publisher_huc_relation','Spatial comparison'],
       ['priority_rank','Priority'],['source_page','Source page'],['original_record_pointer','Original record pointer']];
-    return '<h4>Original assessment editions ('+references.length+' records)</h4>'+
-      '<p class="sg-help">Each edition retains its original cause, use and published watershed. Station publisher assignments remain separate from assessment assignments. Mapped watershed membership follows the original station coordinates and selected polygons. Original JSON pointers retain distinct source records. Assessment TN is Total Nitrogen; reach-classification TN is Trout Natural.</p>'+
-      '<p>'+esc(inventoryValues(row,'station_description').join(' · '))+'</p>'+
+    return '<h4>Matching assessment records ('+references.length+' of '+allReferences.length+')</h4>'+
+      '<p class="sg-help">Selected cause, use, support and edition must match the same original record. Each edition retains its original cause, use and published watershed. Station publisher assignments remain separate from assessment assignments. Mapped watershed membership follows the original station coordinates and selected polygons. Original JSON pointers retain distinct source records. Assessment TN is Total Nitrogen; reach-classification TN is Trout Natural.</p>'+
+      '<p>'+esc(selectedValues(row,'station_description').join(' · '))+'</p>'+
       '<div class="sg-table-scroll"><table class="sg-assessment-table"><thead><tr>'+columns.map(([,label])=>'<th>'+esc(label)+'</th>').join('')+'</tr></thead><tbody>'+
       references.map(ref=>'<tr>'+columns.map(([field])=>{const value=inventoryField(ref,field);
         return '<td>'+esc(field==='cause'&&value?(inventoryField(ref,'cause_label')||causeLabel(value))+' ('+value+')':
           ['use_support','station_publisher_huc_relation','publisher_huc_relation'].includes(field)?value.replace(/_/g,' '):value||'—')+'</td>';}).join('')+'</tr>').join('')+'</tbody></table></div>'+
-      '<details><summary>Complete original assessment rows and source references</summary><pre>'+esc(JSON.stringify(references,null,2))+'</pre></details>';
+      (!references.length?'<p>No original record at this station matches all selected assessment filters.</p>':'')+
+      '<details><summary>All original assessment rows and source references ('+allReferences.length+')</summary><pre>'+esc(JSON.stringify(allReferences,null,2))+'</pre></details>';
   }
   function downloadFilteredStations() {
     if(!edition)throw Error('Open a saved station geography edition first.');
     const selected=filteredRows();
-    const body=filteredStationCSV(selected,edition.id,stationPoint,assessmentEdition);
+    const body=filteredStationCSV(selected,edition.id,stationPoint,assessmentSelection());
     const url=URL.createObjectURL(new Blob([body],{type:'text/csv;charset=utf-8'}));
     const link=document.createElement('a');link.href=url;
     link.download='station-geography-'+short(edition.id)+'-filtered.csv';link.hidden=true;
     node.appendChild(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
-    message='Downloaded '+selected.length+' filtered station rows with their original assessment references.';notice();
+    message='Downloaded '+selected.length+' station rows and '+selected.reduce((total,row)=>total+selectedReferences(row).length,0)+' matching original assessment records.';notice();
+  }
+  function downloadFilteredAssessments() {
+    if(!edition)throw Error('Open a saved station geography edition first.');
+    const selected=filteredRows(),count=selected.reduce((total,row)=>total+selectedReferences(row).length,0);
+    downloadCSV(filteredAssessmentCSV(selected,edition.id,stationPoint,assessmentSelection()),
+      'station-geography-'+short(edition.id)+'-assessment-records.csv');
+    message='Downloaded '+count+' matching original assessment records at '+selected.length+' stations.';notice();
   }
   function renderSummary() {
     const target=node?.querySelector('[data-sg-summary]');if(!target)return;
@@ -362,17 +435,18 @@ export function attachStationGeography(host) {
     const target=node?.querySelector('[data-sg-table]');if(!target)return;
     const selected=filteredRows(),limit=75;page=Math.max(0,Math.min(page,Math.max(0,Math.ceil(selected.length/limit)-1)));
     const visible=selected.slice(page*limit,(page+1)*limit);
-    target.innerHTML='<div class="sg-table-caption"><span>'+esc(selected.length)+' of '+esc(rows().length)+' stations · page '+esc(page+1)+' of '+Math.max(1,Math.ceil(selected.length/limit))+'</span>'+
-      '<div>'+button('export-filtered','Download filtered CSV',!edition?'disabled':'')+button('previous','Previous',page===0?'disabled':'')+button('next','Next',(page+1)*limit>=selected.length?'disabled':'')+'</div></div>'+
-      '<div class="sg-table-scroll"><table><thead><tr><th>Exact station ID</th><th>Assessment causes / county</th><th>Location</th><th>Longitude / latitude</th><th>Watershed membership</th><th>Observed rows</th></tr></thead><tbody>'+
-      visible.map(row=>{const coordinates=stationPoint(row),descriptions=inventoryValues(row,'station_description');return '<tr'+(String(row.station_id)===String(selectedStation)?' aria-selected="true" class="sg-selected"':'')+'>'+
+    target.innerHTML='<div class="sg-table-caption"><span>'+esc(selected.length)+' of '+esc(rows().length)+' stations · '+selected.reduce((total,row)=>total+selectedReferences(row).length,0)+' matching assessment records · page '+esc(page+1)+' of '+Math.max(1,Math.ceil(selected.length/limit))+'</span>'+
+      '<div>'+button('export-filtered','Download station CSV',!edition?'disabled':'')+button('export-assessments','Download assessment records CSV',!edition?'disabled':'')+button('previous','Previous',page===0?'disabled':'')+button('next','Next',(page+1)*limit>=selected.length?'disabled':'')+'</div></div>'+
+      '<div class="sg-table-scroll"><table><thead><tr><th>Exact station ID</th><th>Assessment causes / county</th><th>Use / support / publication</th><th>Location</th><th>Longitude / latitude</th><th>Watershed membership</th><th>Observed rows</th></tr></thead><tbody>'+
+      visible.map(row=>{const coordinates=stationPoint(row),descriptions=selectedValues(row,'station_description');return '<tr'+(String(row.station_id)===String(selectedStation)?' aria-selected="true" class="sg-selected"':'')+'>'+
         '<td>'+button('station',row.station_id,'data-sg-station="'+esc(row.station_id)+'"')+(row.label?'<small>'+esc(row.label)+'</small>':'')+(descriptions.length?'<small class="sg-station-description">'+esc(descriptions.join(' · '))+'</small>':'')+'</td>'+
-        '<td>'+esc(assessmentCauses(row,assessmentEdition).map(code=>causeLabel(code)+' ('+code+')').join('; ')||'—')+'<small>'+esc(inventoryValues(row,'county').join(', '))+'</small></td>'+
+        '<td>'+esc(selectedValues(row,'cause').map(code=>causeLabel(code)+' ('+code+')').join('; ')||'—')+'<small>'+esc(selectedValues(row,'county').join(', '))+'</small></td>'+
+        '<td>'+esc(selectedLabels(row,'impaired_use').join('; ')||'Not recorded')+'<small>'+esc(selectedLabels(row,'use_support').join('; ')||'Not recorded')+'</small><small>'+esc(selectedLabels(row,'publication_status').join('; ')||'Not recorded')+'</small></td>'+
         '<td><span class="sg-status">'+esc(row.status)+'</span></td><td>'+ (coordinates?esc(number(coordinates[0]))+'<br>'+esc(number(coordinates[1])):'—')+'</td>'+
         '<td>'+esc(row.watershed_status||row.membership_status||'—')+
         (list(row.watersheds).length?'<small>'+esc(list(row.watersheds).map(w=>w.watershed_id).join(', '))+'</small>':'')+'</td>'+
         '<td>'+esc(row.observation_count||0)+'</td></tr>';}).join('')+
-      (!visible.length?'<tr><td colspan="6">No stations match this filter.</td></tr>':'')+'</tbody></table></div>';
+      (!visible.length?'<tr><td colspan="7">No stations match this filter.</td></tr>':'')+'</tbody></table></div>';
   }
   function sourceDetails(candidate) {
     const ref=candidate.source_ref||candidate.source||{}, coordinates=candidate.native_coordinates||candidate.coordinates_native;
@@ -451,7 +525,7 @@ export function attachStationGeography(host) {
       '<g>'+candidateFeatures.map(f=>mark(f,true)).join('')+stationFeatures.map(f=>mark(f,false)).join('')+'</g></svg>'+
       '<p class="sg-map-note">● Resolved station · ○ Original candidate · Retained watershed boundaries · WGS84 display</p>';
   }
-  function renderResult(reset=false) {renderCauseFilter();renderWatershedFilter();renderCoverage();renderSummary();renderDownloads();renderTable();renderDetail();renderMap(reset);save();}
+  function renderResult(reset=false) {renderAssessmentFilters();renderWatershedFilter();renderCoverage();renderSummary();renderDownloads();renderTable();renderDetail();renderMap(reset);save();}
   async function loadCatalog(refreshForm=false) {
     if(!node||loading)return;loading=true;
     const key=workspace,version=generation;
@@ -561,8 +635,15 @@ export function attachStationGeography(host) {
     else if(target.matches('[data-sg-options]'))sourceOptionsText=target.value;
     else if(target.matches('[data-sg-search]')){search=target.value;page=0;renderTable();renderMap();}
     else if(target.matches('[data-sg-filter]')){filter=target.value;page=0;renderTable();renderMap();}
-    else if(target.matches('[data-sg-cause]')){causeFilter=target.value;page=0;renderTable();renderMap();}
-    else if(target.matches('[data-sg-assessment-edition]')){assessmentEdition=target.value;page=0;renderCauseFilter();renderTable();renderMap();}
+    else if(target.matches('[data-sg-cause],[data-sg-assessment-edition],[data-sg-assessment-source],[data-sg-use],[data-sg-support],[data-sg-publication]')){
+      if(target.matches('[data-sg-cause]'))causeFilter=target.value;
+      else if(target.matches('[data-sg-assessment-edition]'))assessmentEdition=target.value;
+      else if(target.matches('[data-sg-assessment-source]'))assessmentSource=target.value;
+      else if(target.matches('[data-sg-use]'))useFilter=target.value;
+      else if(target.matches('[data-sg-support]'))supportFilter=target.value;
+      else publicationFilter=target.value;
+      page=0;renderAssessmentFilters();renderTable();renderDetail();renderMap();
+    }
     else if(target.matches('[data-sg-watershed-filter]'))applyWatershed(target.value);
     else if(target.matches('[data-sg-coverage-search]')){coverageSearch=target.value;coveragePage=0;renderCoverage();}
     save();
@@ -600,6 +681,7 @@ export function attachStationGeography(host) {
       else if(act==='clear-selection'){draft=defaultDraft();aliasesText='{}';observationTablesText='[]';sourceOptionsText='{}';formOpen=true;renderForm();save();}
       else if(act==='edit-edition')useEdition();
       else if(act==='export-filtered')downloadFilteredStations();
+      else if(act==='export-assessments')downloadFilteredAssessments();
       else if(act==='export-coverage')downloadCoverage();
       else if(act==='select-watershed')applyWatershed(item.dataset.sgWatershedKey);
       else if(act==='coverage-previous'){coveragePage=Math.max(0,coveragePage-1);renderCoverage();save();}
@@ -660,10 +742,15 @@ export function attachStationGeography(host) {
       '<label class="sg-upload">Reopen original geography package<input type="file" data-sg-receive accept=".zip,application/zip"></label></section>'+
       '<section data-sg-summary></section><section class="sg-results"><div class="sg-filters"><label>Find station<input type="search" data-sg-search value="'+esc(search)+'" placeholder="Station, watershed, description, county or cause"></label>'+
       '<label>Location status<select data-sg-filter>'+statuses.map(s=>'<option value="'+s+'"'+(s===filter?' selected':'')+'>'+esc(s==='all'?'All stations':s)+'</option>').join('')+'</select></label>'+
+      '<label>Publisher source<select data-sg-assessment-source><option value="">All publisher sources</option></select></label>'+
       '<label>Assessment edition<select data-sg-assessment-edition><option value="">All assessment editions</option></select></label>'+
       '<label data-sg-cause-label>Assessment cause<select data-sg-cause><option value="">All assessment causes</option></select></label>'+
+      '<label>Designated use<select data-sg-use><option value="">All designated uses</option></select></label>'+
+      '<label>Use support<select data-sg-support><option value="">All support labels</option></select></label>'+
+      '<label>Publication state<select data-sg-publication><option value="">All publication states</option></select></label>'+
       '<label class="sg-watershed-picker">Geometry-derived watershed<select data-sg-watershed-filter></select></label>'+
       '<div class="sg-map-controls">'+button('zoom-in','Zoom in')+button('zoom-out','Zoom out')+button('fit-map','Fit study')+'</div></div>'+
+      '<p class="sg-help">Assessment filters match one original record together. Combined source use labels remain literal; Not recorded selects an empty source field. Each option counts matching original records and distinct stations with the other assessment filters applied. The station map, matching detail and both filtered downloads use this selection. Watershed coverage and complete edition downloads retain the whole saved study.</p>'+
       '<div class="sg-map-layout"><div data-sg-map></div><aside data-sg-detail></aside></div><div data-sg-table></div></section>'+
       '<details class="sg-coverage" data-sg-coverage '+(coverageOpen?'open':'')+'><summary>Watershed station coverage</summary><label>Find watershed, station or cause<input type="search" data-sg-coverage-search value="'+esc(coverageSearch)+'" placeholder="Watershed ID, native name, station or cause"></label><div data-sg-coverage-content></div></details>'+
       '<section data-sg-downloads></section><section class="sg-operations"><h2>Retained operations</h2><div class="sg-table-scroll" data-sg-tasks></div></section></section>';

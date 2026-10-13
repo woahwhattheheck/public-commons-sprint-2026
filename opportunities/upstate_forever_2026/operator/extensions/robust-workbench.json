@@ -2,7 +2,7 @@
   "schema": "upstate.operator-extension/v1",
   "id": "robust-workbench",
   "title": "Decision studies",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "order": 68,
   "assets": [
     "robust_workbench.mjs",
@@ -122,6 +122,34 @@
           "operation",
           "payload"
         ]
+      },
+      {
+        "path": "/api/robust-workbench/delivery-options",
+        "methods": [
+          "GET",
+          "POST"
+        ],
+        "operation": "delivery-options",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "path": "/api/robust-workbench/delivery-release",
+        "methods": [
+          "GET",
+          "POST"
+        ],
+        "operation": "delivery-release",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
       }
     ],
     "decorate_task": {
@@ -157,7 +185,8 @@
       "getState",
       "api",
       "refreshState",
-      "showTask"
+      "showTask",
+      "openExtension"
     ]
   }
 }

@@ -45,12 +45,14 @@ export function attachEco13(host){
     remember('eco13:draft:'+workspace+':'+recordId,drafts.get(recordId));
   }
   function frame(){
-    node.innerHTML='<div class="eco13-desk"><header class="eco13-head"><div><p class="eco13-eyebrow">Saved experiments and planning editions</p><h1>Scenario workbench</h1><p>Receive completed model results, compare explicit costs and outcomes, and transfer an editable edition.</p></div><div class="eco13-actions"><button type="button" data-action="eco13-refresh">Refresh</button><button type="button" data-action="eco13-import">Receive archive</button><input class="eco13-file-input" type="file" accept=".zip,application/zip" data-upload aria-label="Choose an exported comparison archive"></div></header><p class="eco13-notice" data-slot="notice" aria-live="polite"></p><p class="eco13-error" data-slot="error" role="alert" hidden></p><div class="eco13-layout"><aside class="eco13-sidebar"><section class="eco13-panel"><h2>Receive an original experiment</h2><div data-slot="receive"></div></section><section class="eco13-panel"><h2>Saved editions</h2><div data-slot="records"></div></section><section class="eco13-panel"><h2>Workspace jobs</h2><div data-slot="tasks"></div></section></aside><div class="eco13-main" data-slot="main"><section class="eco13-panel"><h2>Open a saved comparison</h2><p>Choose an edition or receive an experiment from this workspace. Original model work continues in the experiment queue.</p></section></div></div></div>';
+    node.innerHTML='<div class="eco13-desk"><header class="eco13-head"><div><p class="eco13-eyebrow">Saved experiments and planning editions</p><h1>Scenario workbench</h1><p>Receive completed model results, compare explicit costs and outcomes, and transfer an editable edition.</p></div><div class="eco13-actions"><button type="button" data-action="eco13-refresh">Refresh</button><button type="button" data-action="eco13-import">Receive archive</button><input class="eco13-file-input" type="file" accept=".zip,application/zip" data-upload aria-label="Choose an exported comparison archive"></div></header><p class="eco13-notice" data-slot="notice" aria-live="polite"></p><p class="eco13-error" data-slot="error" role="alert" hidden></p><div class="eco13-layout"><aside class="eco13-sidebar"><section class="eco13-panel"><h2>Receive an original experiment</h2><div data-slot="receive"></div></section><section class="eco13-panel"><h2>Saved editions</h2><div data-slot="records"></div></section><section class="eco13-panel"><h2>Comparison reviews</h2><div data-slot="comparison-reviews"></div></section><section class="eco13-panel"><h2>Workspace jobs</h2><div data-slot="tasks"></div></section></aside><div class="eco13-main" data-slot="main"><section class="eco13-panel"><h2>Open a saved comparison</h2><p>Choose an edition or receive an experiment from this workspace. Original model work continues in the experiment queue.</p></section></div></div></div>';
   }
   function renderCatalog(){
     if(!node||!catalog)return;
     const list=(catalog.records||[]).slice().sort((a,b)=>String(b.created_at||'').localeCompare(String(a.created_at||'')));
     slot('records').innerHTML=list.length?'<ul class="eco13-record-list">'+list.map(r=>'<li><button type="button" data-action="eco13-open" data-id="'+esc(r.id)+'"'+(r.id===recordId?' aria-current="true"':'')+'><strong>'+esc(r.title||r.id)+'</strong><span>'+esc(r.kind)+' · '+esc(r.status)+' · '+count(r.counts?.paired_records)+' outcomes</span><time>'+esc(r.created_at||'')+'</time></button></li>').join('')+'</ul>':'<p class="eco13-muted">No saved comparisons in this workspace.</p>';
+    const retained=catalog.comparison_reviews||[];
+    slot('comparison-reviews').innerHTML=retained.length?'<ul class="eco13-record-list">'+retained.map(item=>'<li><strong>'+esc(item.title)+'</strong><span>'+esc(item.disposition)+' · '+count(item.responses)+' responses</span><div class="eco13-actions"><button type="button" data-action="review-open" data-id="'+esc(item.review_id)+'">Open customer review</button><button type="button" data-action="eco13-review-receive" data-capture-id="'+esc(item.capture_id)+'" data-queue>Reopen editable comparison</button></div></li>').join('')+'</ul>':'<p class="eco13-muted">Capture a saved comparison below to retain its customer review and revision history.</p>';
     const issues=catalog.issues||[];
     if(issues.length)slot('records').innerHTML+='<details class="eco13-source"><summary>'+issues.length+' saved '+(issues.length===1?'record needs':'records need')+' attention</summary><ul>'+issues.map(x=>'<li>'+esc(typeof x==='string'?x:x.message||x.error||JSON.stringify(x))+'</li>').join('')+'</ul></details>';
     if(!slot('receive').querySelector('form')){
@@ -150,6 +152,31 @@ export function attachEco13(host){
     }finally{if(token===economicToken){economicBusy=false;renderEconomicSources();}}
   }
 
+
+  function reviewDraftKey(ws=workspace,id=recordId){return 'eco13:review-draft:'+ws+':'+id;}
+  function captureReviewDraft(form=node?.querySelector('[data-form="comparison-review"]')){
+    if(!form)return null;
+    const value={title:form.elements.title.value,purpose:form.elements.purpose.value,notes:form.elements.notes.value};
+    remember(reviewDraftKey(form.dataset.workspace,form.dataset.recordId),value);return value;
+  }
+  function renderReviewSection(){
+    const target=slot('review-selection');if(!target||!view)return;
+    const r=view.record,draft=stored(reviewDraftKey(),null),retained=view.customer_reviews||[];
+    target.innerHTML='<h2>Review this saved edition</h2><p>Create an ordinary Customer review containing this exact report, saved costs and objectives, source context and complete editable comparison. Unfinished scientific results stay visible. Unsaved planning changes are not included.</p>'+
+      (retained.length?'<h3>Retained reviews of this exact edition</h3><ul class="eco13-record-list">'+retained.map(item=>'<li><strong>'+esc(item.title)+'</strong><span>'+esc(item.disposition)+' · '+count(item.responses)+' responses</span><div class="eco13-actions"><button type="button" data-action="review-open" data-id="'+esc(item.review_id)+'">Open customer review</button><button type="button" data-action="eco13-review-receive" data-capture-id="'+esc(item.capture_id)+'" data-queue>Reopen editable comparison</button></div></li>').join('')+'</ul>':'')+
+      '<form data-form="comparison-review" data-workspace="'+esc(workspace)+'" data-record-id="'+esc(recordId)+'"><label>Review title<input name="title" maxlength="300" value="'+esc(draft?.title??r.title)+'" required></label><label>Decision purpose<textarea name="purpose" maxlength="20000" rows="4" required placeholder="What decision should the reviewer make from this saved comparison?">'+esc(draft?.purpose??'')+'</textarea></label><label>Review notes<textarea name="notes" maxlength="20000" rows="3" placeholder="Retain any context, uncertainty or question for the reviewer.">'+esc(draft?.notes??'')+'</textarea></label><p class="eco13-muted">The review includes the complete report, costs and budget choices, actual native identities and paired support, all unfinished cases, and the editable archive. Use Customer reviews → Engineering handbacks to address returned requests with an actual revised comparison review.</p><div class="eco13-actions"><button type="submit" data-queue>Create customer review</button><span class="eco13-muted" data-slot="review-draft-status"></span></div></form>';
+  }
+  async function submitReview(form){
+    if(!form.reportValidity())return;
+    if(!view||form.dataset.workspace!==workspace||form.dataset.recordId!==recordId||activeWorkspace()!==workspace)
+      throw new Error('The selected workspace or comparison changed. Reopen the intended saved edition.');
+    const draft=captureReviewDraft(form),sourceWorkspace=workspace,sourceId=recordId;
+    const payload={record_id:sourceId,title:draft.title.trim(),purpose:draft.purpose.trim(),notes:draft.notes.trim()?[draft.notes.trim()]:[]};
+    if(!payload.title||!payload.purpose)throw new Error('State the review title and decision purpose.');
+    await submitAction('eco13.review.create',payload);
+    if(workspace===sourceWorkspace&&recordId===sourceId){const label=slot('review-draft-status');if(label)label.textContent='Review queued; this draft remains available until its saved review is returned.';}
+  }
+
   function renderView(){
     if(!node||!view)return;const r=view.record,c=r.counts||{},scenarios=view.scenarios||[],objectives=view.objectives||[];
     const draft=drafts.get(r.id),chosen=new Set(draft?.objectives||(view.settings?.objectives||[]).map(objectiveKey));
@@ -163,6 +190,8 @@ export function attachEco13(host){
     const economic=r.economic_report||view.economic_report;
     const economicButton=economic?.report_id&&typeof host.openExtension==='function'?'<button type="button" data-action="eco13-economic">Open decision analysis</button>':'';
     slot('main').innerHTML='<section class="eco13-panel eco13-record-head"><div class="eco13-title-row"><div><p class="eco13-eyebrow">'+esc(r.kind)+' edition · '+esc(r.status)+'</p><h2>'+esc(r.title||r.id)+'</h2><p class="eco13-muted">'+esc(r.created_at||'')+'</p></div><div class="eco13-actions">'+originalButton+economicButton+'<button type="button" data-action="eco13-export" data-queue>Export editable comparison</button></div></div><dl class="eco13-counts"><div><dt>Original cases</dt><dd>'+count(c.original_cases)+'</dd></div><div><dt>Native runs planned</dt><dd>'+count(c.planned_native_runs)+'</dd></div><div><dt>Alternative outcomes</dt><dd>'+count(c.paired_records)+'</dd></div><div><dt>Parameter outcomes</dt><dd>'+count(c.parameter_records)+'</dd></div><div><dt>Unfinished results</dt><dd>'+count(c.incomplete_records)+'</dd></div></dl><p>Selected models: '+esc((r.selected_models||[]).map(v=>String(v).toUpperCase()).join(', ')||'See original result')+' · Currency: '+esc(r.currency)+'</p>'+renderDownloads(view._downloads)+'<details class="eco13-source"><summary>Original source and edition identity</summary><dl><dt>Comparison</dt><dd><code>'+esc(r.id)+'</code></dd><dt>Original experiment</dt><dd><code>'+esc(r.original_experiment_id||'—')+'</code></dd><dt>Original workspace</dt><dd><code>'+esc(r.source_workspace_id||'—')+'</code></dd><dt>Source edition</dt><dd><code>'+esc(r.source_record_id||'—')+'</code></dd><dt>Retained plan</dt><dd><code>'+esc(r.plan_sha256||'—')+'</code></dd></dl></details></section><section class="eco13-panel"><h2>Native outcomes</h2><div class="eco13-tabs" role="tablist" aria-label="Result types">'+[['outcomes','Land-cover alternatives',c.paired_records],['parameters','Parameter sensitivity',c.parameter_records],['incomplete','Unfinished cases',c.incomplete_records]].map(([id,label,n])=>'<button type="button" role="tab" id="eco13-tab-'+id+'" data-action="eco13-kind" data-kind="'+id+'" aria-controls="eco13-outcome-panel" aria-selected="'+(kind===id)+'" tabindex="'+(kind===id?'0':'-1')+'">'+esc(label)+' <span>'+count(n)+'</span></button>').join('')+'</div><div class="eco13-filters"><label>Alternative<select data-filter="scenario_id"><option value="">All alternatives</option>'+scenarios.map(s=>'<option value="'+esc(s.id)+'">'+esc(s.label||s.id)+'</option>').join('')+'</select></label><label>Outcome<select data-filter="metric"><option value="">All outcomes</option>'+[...new Set(objectives.map(o=>o.metric))].map(metric=>'<option value="'+esc(metric)+'">'+esc(metric.replaceAll('_',' '))+'</option>').join('')+'</select></label><label class="eco13-search">Search results<input type="search" data-filter="q" placeholder="Scenario, parameter or result" value="'+esc(filter.q)+'"></label><label>Rows<select data-page-size><option value="50">50</option><option value="100">100</option><option value="250">250</option></select></label><button type="button" data-action="eco13-clear-filters">Clear filters</button></div><div id="eco13-outcome-panel" role="tabpanel" aria-labelledby="eco13-tab-'+kind+'"><p class="eco13-status" data-slot="row-status" aria-live="polite"></p><div class="eco13-scroll" data-slot="rows" aria-label="Original result table" tabindex="0"></div></div><div class="eco13-pager"><button type="button" data-action="eco13-page" data-step="first">First</button><button type="button" data-action="eco13-page" data-step="previous">Previous</button><span data-slot="page"></span><button type="button" data-action="eco13-page" data-step="next">Next</button><button type="button" data-action="eco13-page" data-step="last">Last</button></div><p class="eco13-muted">Each outcome retains its native units and paired grid-cell coverage. Positive improvement means less exported nutrient or sediment mass. Parameter effects remain separate from land-cover alternatives.</p></section><section class="eco13-panel"><h2>Saved cost comparison</h2>'+renderRanking(view.ranking)+'</section><section class="eco13-panel"><h2>Save a planning edition</h2><p>Set intervention estimates and the outcomes that matter to this decision. Each save creates an independent edition of these retained model results.</p><form data-form="planning"><label>New edition title<input name="title" maxlength="180" value="'+esc(draft?.title||r.title+' — planning update')+'" required></label><div class="eco13-planning-grid"><div><h3>Intervention costs ('+esc(r.currency)+')</h3><div class="eco13-scroll"><table class="eco13-cost-inputs"><thead><tr><th>Alternative</th><th>Cost</th></tr></thead><tbody>'+costInputs+'</tbody></table></div><p class="eco13-muted">Leave a field empty to keep its current value. An unspecified cost remains unknown. Enter zero only for an intended zero-cost intervention.</p></div><div><h3>Selected outcomes</h3><div class="eco13-objectives">'+(checkboxes||'<p class="eco13-muted">Complete paired outcomes will become selectable when they are received.</p>')+'</div><label>Budget ceiling ('+esc(r.currency)+')<input name="budget" inputmode="decimal" value="'+esc(draft?.budget??money(view.settings?.budget_cents))+'" placeholder="No ceiling"'+(chosen.size?'':' disabled')+'></label><p class="eco13-muted">The cost screen compares every selected parameter set within compatible grid-cell and baseline groups. Leave the budget empty for no ceiling.</p></div></div><div class="eco13-actions"><button type="submit" data-queue>Save new edition</button><button type="button" data-action="eco13-reset-planning" data-queue>Restore original planning choices</button><span class="eco13-muted" data-slot="draft-status">'+(dirty?'Unsaved planning changes':'')+'</span></div></form></section>';
+    const reviewSection=document.createElement('section');reviewSection.className='eco13-panel';reviewSection.dataset.slot='review-selection';
+    slot('main').append(reviewSection);renderReviewSection();
     const economics=document.createElement('section');economics.className='eco13-panel';economics.dataset.slot='economic-sources';
     slot('main').insertBefore(economics,node.querySelector('[data-form="planning"]').closest('section'));renderEconomicSources();
     const scenario=node.querySelector('[data-filter="scenario_id"]'),metric=node.querySelector('[data-filter="metric"]');
@@ -247,7 +276,7 @@ export function attachEco13(host){
     remember('eco13:watched:'+sourceWorkspace,[...values.entries()].slice(-30));if(sourceWorkspace===workspace)watched.set(id,sourceRecord||null);
   }
   async function submitAction(action,payload){
-    if(!workspace)throw new Error('Open an original workspace before creating a comparison.');
+    if(!workspace||activeWorkspace()!==workspace)throw new Error('Reopen the intended original workspace before submitting this comparison operation.');
     const sourceWorkspace=workspace,key=JSON.stringify({workspace:sourceWorkspace,action,payload});
     const body=pending.get(key)||{workspace:sourceWorkspace,action,payload,operation_id:operationId()};
     savePending(key,body);setBusy(1);setIssue('');
@@ -287,7 +316,7 @@ export function attachEco13(host){
     const sourceWorkspace=workspace,submittedDraft=JSON.stringify(drafts.get(sourceId));dirty=false;
     try{await submitAction('eco13.report.save',payload);}
     catch(error){if(recordId===sourceId&&workspace===sourceWorkspace)dirty=true;throw error;}
-    if(JSON.stringify(drafts.get(sourceId))===submittedDraft){drafts.delete(sourceId);remember('eco13:draft:'+sourceWorkspace+':'+sourceId,null);if(recordId===sourceId&&workspace===sourceWorkspace){dirty=false;const status=slot('draft-status');if(status)status.textContent='Planning edition queued';}}
+    if(JSON.stringify(drafts.get(sourceId))===submittedDraft&&recordId===sourceId&&workspace===sourceWorkspace){const status=slot('draft-status');if(status)status.textContent='Planning edition queued; draft retained until the saved edition is returned';}
   }
   async function receiveUpload(file){
     if(!file)return;const maximum=state()?.limits?.upload_bytes;
@@ -304,7 +333,8 @@ export function attachEco13(host){
     if(!String(task?.action||'').startsWith('eco13.'))return '';
     const id=task._eco13?.record_id||task.result?.record_id;if(!id)return '';
     const message=task._eco13?.archive_status==='export_from_saved_record'&&typeof task._eco13.archive_message==='string'?task._eco13.archive_message:'';
-    return (message?'<p class="eco13-muted">'+esc(message)+'</p>':'')+'<button type="button" data-action="eco13-open" data-id="'+esc(id)+'">Open comparison</button>';
+    const reviewId=task._review?.review_id||task._eco13?.review_id||task.result?.review_id;
+    return (message?'<p class="eco13-muted">'+esc(message)+'</p>':'')+'<button type="button" data-action="eco13-open" data-id="'+esc(id)+'">Open comparison</button>'+(reviewId?'<button type="button" data-action="review-open" data-id="'+esc(reviewId)+'">Open customer review</button>':'');
   }
   async function dispatch(button){
     const action=button?.dataset?.action;if(!action?.startsWith('eco13-'))return false;
@@ -335,6 +365,11 @@ export function attachEco13(host){
       filter={scenario_id:'',metric:'',q:''};offset=0;for(const input of node.querySelectorAll('[data-filter]'))input.value='';await loadRows();
     }else if(action==='eco13-export'){if(view)await submitAction('eco13.comparison.export',{record_id:recordId});}
     else if(action==='eco13-reset-planning'){if(view)await submitAction('eco13.report.save',{record_id:recordId,reset_report_options:true,clear_budget:true});}
+    else if(action==='eco13-review-receive'){
+      const captured=[...(catalog?.comparison_reviews||[]),...(view?.customer_reviews||[])].find(item=>item.capture_id===button.dataset.captureId);
+      if(!captured)throw new Error('Refresh the retained review catalogue before reopening this comparison.');
+      await submitAction('eco13.review.receive',{review_id:captured.review_id,source_collection_id:captured.source_collection_id});
+    }
     else if(action==='eco13-economic-load')await loadEconomicSources(true);
     else if(action==='eco13-economic-more')await loadEconomicSources(false);
     else if(action==='eco13-economic-zone'){
@@ -350,13 +385,14 @@ export function attachEco13(host){
     return true;
   }
   function onClick(event){const button=event.target.closest('[data-action]');if(!button||!node?.contains(button)||!button.dataset.action.startsWith('eco13-'))return;event.preventDefault();event.stopPropagation();dispatch(button).catch(error=>setIssue(errorMessage(error)));}
-  function onSubmit(event){const form=event.target.closest('form[data-form]');if(!form||!node?.contains(form))return;event.preventDefault();event.stopPropagation();const work=form.dataset.form==='receive'?submitReceive(form):submitPlanning(form);Promise.resolve(work).catch(error=>setIssue(errorMessage(error)));}
+  function onSubmit(event){const form=event.target.closest('form[data-form]');if(!form||!node?.contains(form))return;event.preventDefault();event.stopPropagation();const work=form.dataset.form==='receive'?submitReceive(form):form.dataset.form==='comparison-review'?submitReview(form):submitPlanning(form);Promise.resolve(work).catch(error=>setIssue(errorMessage(error)));}
   function onInput(event){
     const input=event.target;
     if(input.matches('[data-filter="q"]')){
       filter.q=input.value.trim();offset=0;clearTimeout(debounce);rowAbort?.abort();rowToken++;
       clearRows('Waiting for selected search results…');debounce=setTimeout(()=>loadRows(),300);
     }
+    if(input.closest('[data-form="comparison-review"]')){captureReviewDraft(input.closest('form'));const label=slot('review-draft-status');if(label)label.textContent='Review draft retained in this browser';}
     if(input.closest('[data-form="planning"]')){dirty=true;captureDraft();const label=slot('draft-status');if(label)label.textContent='Unsaved planning changes';}
   }
   function onChange(event){
@@ -395,7 +431,10 @@ export function attachEco13(host){
             const id=task._eco13?.record_id||task.result?.record_id;
             if(id&&!dirty)openId=id;
             else if(id)announce('A completed comparison is ready in Saved editions. Your planning changes are still here.');
-          }else announce('The '+task.action.replace(/^eco13\./,'').replaceAll('.',' ')+' job is '+task.state+'. Open its queue details to continue.');
+          }else {
+            if(task.action==='eco13.report.save'&&task.payload?.record_id===recordId&&drafts.has(recordId)){dirty=true;const label=slot('draft-status');if(label)label.textContent='Planning save '+task.state+'; your draft remains available';}
+            announce('The '+task.action.replace(/^eco13\./,'').replaceAll('.',' ')+' job is '+task.state+'. Open its queue details to continue.');
+          }
         }
       }
     }

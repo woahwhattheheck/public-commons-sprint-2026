@@ -1,0 +1,87 @@
+{
+  "schema": "upstate.monitoring-context-inputs/v1",
+  "inputs": [
+    {
+      "key": "stations",
+      "path": "source/eighteenmile-stream-nutrients-20261013/derived/station-basin-join.csv",
+      "bytes": 2297,
+      "sha256": "9d87038d44d15937982c09c98205dcbaf99ae14d75b4885412b17fd544d1dec7"
+    },
+    {
+      "key": "activities",
+      "path": "source/eighteenmile-stream-nutrients-20261013/flow-analysis/activity-flow.csv",
+      "bytes": 115732,
+      "sha256": "7b7acb8c3a08a64ef2f56dbb0376d7aa33cdc656342711040021a6952db3a21e"
+    },
+    {
+      "key": "flow",
+      "path": "observations/observed_hydrology_20261013/derived/daily_flow.csv",
+      "bytes": 2273280,
+      "sha256": "59df488cc9820a6eef7750d6938cf91573f701c8ad4683a6c102ec26c7a04863"
+    },
+    {
+      "key": "annual",
+      "path": "source/eighteenmile-stream-nutrients-20261013/flow-analysis/network-year-flow-coverage.csv",
+      "bytes": 1421,
+      "sha256": "987a960c15b9659af3643c7962c9e239ef9371712fd1ceb23c4714f6b20bf967"
+    },
+    {
+      "key": "station_year",
+      "path": "source/eighteenmile-stream-nutrients-20261013/flow-analysis/station-year-flow-coverage.csv",
+      "bytes": 3762,
+      "sha256": "4d4f1b8dab0bc1ac9ab9d68a9626dfc6f6e41cb0e1bc0cefd9bcb75ef7773716"
+    },
+    {
+      "key": "monthly",
+      "path": "source/eighteenmile-stream-nutrients-20261013/flow-analysis/monthly-flow-coverage.csv",
+      "bytes": 44734,
+      "sha256": "b1b81a1ca070a470b886f4dd806ea22153e3641b93c9e2a49e35605029001f55"
+    },
+    {
+      "key": "episodes",
+      "path": "source/eighteenmile-stream-nutrients-20261013/flow-analysis/high-flow-episodes.csv",
+      "bytes": 27241,
+      "sha256": "f54d358774504e8ac8462ca3b1e8394da026908f888c4d297fcad3467afea5ab"
+    },
+    {
+      "key": "thresholds",
+      "path": "source/eighteenmile-stream-nutrients-20261013/flow-analysis/flow-thresholds.csv",
+      "bytes": 467,
+      "sha256": "bd370ee458fd03b8bb5c1d3ce7edbd45e8806dee319ecf37f1553093a98c7a44"
+    },
+    {
+      "key": "contrasts",
+      "path": "observations/eighteenmile_stream_nutrients_2020_2025/analysis/paired-station-contrasts.csv",
+      "bytes": 23431,
+      "sha256": "1e40329d943a79c93079d970c888f59e6cfd9ed4a0512fcebdc012cc8f6116d7"
+    },
+    {
+      "navigation_anchor": "21SC60WQ_WQX-SV-375",
+      "path": "source/eighteenmile-stream-nutrients-20261013/monitoring-context/original/sv375-upstream-wqp.json",
+      "bytes": 1111,
+      "sha256": "b2ec0eed6f86400099afd835762c1bb3225b0f34e4f1bdebf25f4312e40f715d",
+      "uri": "https://api.water.usgs.gov/nldi/linked-data/comid/11749145/navigation/UT/wqp?f=json&distance=100"
+    },
+    {
+      "navigation_anchor": "21SC60WQ_WQX-SV-245",
+      "path": "source/eighteenmile-stream-nutrients-20261013/monitoring-context/original/sv245-upstream-wqp.json",
+      "bytes": 2141,
+      "sha256": "0c33e1bfa5049b71682ad2c7f79731aa9dfce5e977b579f374a3c01590c2873c",
+      "uri": "https://api.water.usgs.gov/nldi/linked-data/comid/11749687/navigation/UT/wqp?f=json&distance=100"
+    },
+    {
+      "navigation_anchor": "21SC60WQ_WQX-SV-376",
+      "path": "source/eighteenmile-stream-nutrients-20261013/monitoring-context/original/sv376-upstream-wqp.json",
+      "bytes": 2676,
+      "sha256": "8c318710f5c52c7c2767cc80b1b2c9582d9c9809efd860a26ab79aefcb32c2f4",
+      "uri": "https://api.water.usgs.gov/nldi/linked-data/comid/11749243/navigation/UT/wqp?f=json&distance=100"
+    },
+    {
+      "navigation_anchor": "USGS-02186702",
+      "path": "source/eighteenmile-stream-nutrients-20261013/original/eighteenmile-upstream-wqp.json",
+      "bytes": 3746,
+      "sha256": "675be5c87e358a776bb61eb0f2a46a973ca79dc662105e175cdb23e887c6a96d",
+      "uri": "https://api.water.usgs.gov/nldi/linked-data/nwissite/USGS-02186702/navigation/UT/wqp?f=json&distance=100"
+    }
+  ]
+}

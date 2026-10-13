@@ -432,6 +432,7 @@ export function attachEnsembles(context) {
         'The original decision report includes its shared geographic support, units and supplied costs.</p>';
     }
     html+=annualReferenceHTML(plan.annual_reference);
+    html+=flowSupportHTML(plan.flow_support);
     html+=downloadsHTML(value.downloads);
     html+='<details class="technical"><summary>Original handoff, pending members and scientific source identities</summary><pre class="json-view">'+
       escapeHTML(JSON.stringify({plan,result},null,2))+'</pre></details>';
@@ -458,6 +459,30 @@ export function attachEnsembles(context) {
         import_id:reference.import_id,observation_id:reference.binding?.observation_id,
         catchments:reference.binding?.catchments,catchment_source:reference.catchment_source,
         original_preparation_id:reference.original_preparation_id},null,2))+'</pre></details></section>';
+  }
+
+  function flowSupportHTML(support) {
+    if(!support)return '';
+    const rows=support.rows||[];
+    return '<section class="section"><h3>Original daily-flow context</h3>'+
+      '<p>'+escapeHTML(support.title||'Exact source periods')+' · '+
+      escapeHTML(numeric(rows.length))+' original annual-reference records. Source interval: '+
+      escapeHTML(support.source_period?.start)+' → '+escapeHTML(support.source_period?.end)+
+      ' (end exclusive).</p>'+
+      '<p>Daily coverage retains each reference’s original flow station, series and dates. '+
+      'Covered-days volume uses the available numeric daily means. Annual calibration retains its original observations and temporal weighting.</p>'+
+      table(['Record / constituent','Original observation / flow station','Source interval','Daily support','Numeric / requested days',
+        'Outside source days','Approved / estimated / provisional days','Covered volume m³','Complete-period volume m³'],
+        rows.map(row=>'<tr>'+cell(row.record_id+' · '+row.parameter)+
+          cell((row.station_id||'Unspecified')+' / '+(row.flow_station_id||'Unresolved'))+
+          cell(row.original_period_start+' → '+row.original_period_end)+cell(label(row.status))+
+          cell(numeric(row.numeric_days)+' / '+numeric(row.expected_days))+cell(numeric(row.days_outside_captured_period))+
+          cell(numeric(row.daily_summary?.approved_days)+' / '+numeric(row.daily_summary?.estimated_days)+' / '+
+            numeric(row.daily_summary?.provisional_days))+cell(numeric(row.covered_days_volume_m3))+
+          cell(numeric(row.complete_reference_period_volume_m3))+'</tr>'))+
+      '<details><summary>Original flow sources and interpretation</summary><pre class="json-view">'+
+      escapeHTML(JSON.stringify({source:support.source,source_operation_id:support.source_operation_id,
+        source_originals:support.source_originals,methods:support.methods},null,2))+'</pre></details></section>';
   }
 
   async function openAnnualReference(selection={}) {
@@ -524,6 +549,11 @@ export function attachEnsembles(context) {
         referenceChoices.map(row=>'<option value="'+escapeHTML(row.id)+'">'+escapeHTML(row.title)+'</option>').join('')+'</select>',
         'Imported sources preserve their exact observation and catchment binding. Saved evaluations retain their objectives, spatial groups and holdout choices.')+'</div>'+
         '<div class="full" id="ensemble-annual-reference-summary"></div>'+
+        '<div class="full">'+field('Original daily-flow context',
+          '<select name="consumer_flow_support"><option value="">Use annual reference alone</option></select>',
+          'Choose existing exact-period source support, or replay the captured daily source for this original annual import.')+
+          '<div id="ensemble-flow-prepare-control">'+button('flow-prepare','Prepare original flow context',id)+'</div></div>'+
+        '<div class="full" id="ensemble-flow-support-summary"></div>'+
         field('Retained annual-load observations',select('consumer_observations',data.observations||[],'Choose an original annual-load edition'))+
         field('Original catchment source','<select name="consumer_catchments" required><option value="">Choose retained polygon geography</option>'+
           (data.catchment_sources||[]).map((row,index)=>'<option value="'+index+'">'+escapeHTML(row.title+' · '+row.id+' · '+short(row.collection_id))+'</option>').join('')+'</select>')+
@@ -566,6 +596,14 @@ export function attachEnsembles(context) {
             if(!retained)throw Error('Reopen the original annual-reference import.');
             payload.reference_import_id=retained.import_id;
             payload.reference_options={...parse('consumer_reference_options'),title};
+            const flowChoice=selected.elements.namedItem('consumer_flow_support').value;
+            if(flowChoice==='generate')payload.prepare_flow_support=true;
+            else if(flowChoice) {
+              const support=(data.flow_support?.sources||[]).find(row=>row.id===flowChoice &&
+                row.import_id===retained.import_id && row.workspace_id===retained.workspace_id);
+              if(!support)throw Error('Reopen the original flow-support source for this annual import.');
+              payload.flow_support_source=support.source;
+            }
           } else if(saved.startsWith('plan:')) {
             const retained=(data.reference_selections||[]).find(row=>row.id===saved.slice(5));
             if(!retained)throw Error('Reopen the original annual-reference selection.');
@@ -599,6 +637,14 @@ export function attachEnsembles(context) {
         if(mode==='decision' && ready.some(row=>row.profile_id===first))selected.elements.namedItem('consumer_reference').value=first;
         if(mode==='calibration') {
           const choice=selected.elements.namedItem('consumer_saved_references');
+          const flowChoice=selected.elements.namedItem('consumer_flow_support');
+          const showFlow=()=>{
+            const support=(data.flow_support?.sources||[]).find(row=>row.id===flowChoice.value);
+            selected.querySelector('#ensemble-flow-support-summary').innerHTML=
+              flowChoice.value==='generate'?'<p class="note">The original captured daily source will be replayed for this import’s exact admitted record periods, registered in this Workspace, and retained with the evaluation. Missing or unmatched source support remains explicit.</p>':
+              flowSupportHTML(support);
+          };
+          flowChoice.addEventListener('change',showFlow);
           const showReference=()=>{
             const saved=!!choice.value;
             for(const name of ['consumer_observations','consumer_catchments','consumer_id_field']){
@@ -610,6 +656,16 @@ export function attachEnsembles(context) {
             const box=selected.elements.namedItem('consumer_reference_options');
             box.value=retained?JSON.stringify(retained.selection,null,2):'{}';
             selected.querySelector('#ensemble-annual-reference-summary').innerHTML=annualReferenceHTML(annual);
+            const supportRows=(data.flow_support?.sources||[]).filter(row=>annual &&
+              row.import_id===annual.import_id && row.workspace_id===annual.workspace_id &&
+              row.observation_id===annual.binding?.observation_id);
+            flowChoice.innerHTML='<option value="">Use annual reference alone</option>'+
+              (annual?'<option value="generate">Prepare original support and evaluate</option>':'')+
+              supportRows.map(row=>'<option value="'+escapeHTML(row.id)+'">'+escapeHTML(row.title+' · '+
+                numeric(row.record_count)+' records · '+short(row.source.collection_id))+'</option>').join('');
+            flowChoice.disabled=!annual;
+            selected.querySelector('#ensemble-flow-prepare-control').hidden=!annual;
+            showFlow();
           };
           choice.addEventListener('change',showReference);
           if(prefill.annual_import_id)choice.value='annual:'+prefill.annual_import_id;
@@ -682,6 +738,13 @@ export function attachEnsembles(context) {
     if(action==='consumer-decision')return consumerForm(id,'decision');
     if(action==='consumer-calibration')return consumerForm(id,'calibration',{annual_import_id:node.dataset.annualImport});
     if(action==='consumer-open')return openConsumer(id);
+    if(action==='flow-prepare'){
+      const choice=form()?.elements.namedItem('consumer_saved_references')?.value||'';
+      if(!choice.startsWith('annual:'))throw Error('Choose an original annual-reference import first.');
+      const result=await submitAction('ensemble.flow-support',{reference_import_id:choice.slice(7)});
+      toast('The original flow replay is queued. Reopen this study’s annual-reference form for the retained support and use the task downloads to inspect its source periods.');
+      return result;
+    }
     if(action==='consumer-resume')return submitAction('ensemble.consumer.resume',{consumer_id:id});
     if(action==='preview')return preview();
     if(action==='study-apply')return applyStudy();

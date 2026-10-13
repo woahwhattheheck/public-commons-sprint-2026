@@ -21,10 +21,12 @@ import tempfile
 FILES = (
     "model/implementation_schema.py",
     "model/implementation.py",
+    "model/portable_implementation.py",
     "model/implementation_reporting.py",
     "model/implementation_cli.py",
     "model/implementation_sources.py",
     "model/implementation_economics.py",
+    "model/implementation_observations.py",
     "operator/implementation_operator.py",
     "operator/extensions/implementation.json",
     "operator/web/implementation.mjs",
@@ -32,6 +34,10 @@ FILES = (
     "operator/web/implementation_forms.mjs",
     "operator/web/implementation.css",
     "operator/web/implementation_catalog.json",
+    "source_tools/receive_implementation.py",
+    "source/implementation/20261013/greenwood-review-plan.json",
+    "source/keowee-native-receiving-20261013/greenwood-native-feature.json",
+    "source/keowee-native-receiving-20261013/source-interval-journey.json",
 )
 OFFLINE_FILE = "operator/web/implementation_workbench.html"
 OFFLINE_BUILDER = "build_implementation_offline.py"
@@ -40,6 +46,9 @@ OPTIONAL_FILES = (
     "docs/implementation-native-guide.md",
     "docs/implementation-operator-guide.md",
     "IMPLEMENTATION_SOURCE_IMPORT.md",
+    "docs/IMPLEMENTATION_OBSERVATIONS.md",
+    "docs/IMPLEMENTATION_PORTABLE_RECEIVING.md",
+    "docs/IMPLEMENTATION_NATIVE_RECEIVING.md",
 )
 RECEIPT = ".implementation-install.json"
 ERROR_IMPORT = "from implementation_operator import implementation_error\n"

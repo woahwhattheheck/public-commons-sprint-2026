@@ -1,5 +1,6 @@
 // Copyright TokenJunkieLabs. Data-only archive recovery; decoded source is never executed.
 import { createArchiveCodec } from "./archive_codec.mjs";
+import { createXzSourceDecoder } from "./xz_source.mjs";
 
 export const DEFAULT_LIMITS = Object.freeze({
   maxInputBytes: 64 * 1024 * 1024,
@@ -124,7 +125,8 @@ export function createSourceBankToolkit(options = {}) {
             (metadata.mode !== undefined && !["100644", "100755"].includes(metadata.mode)))
           fail("source-map metadata needs original bytes, SHA-256 and an optional regular-file mode: " + path);
         return { path, content: bank.files[path], bytes: metadata.bytes,
-                 sha256: metadata.sha256, mode: metadata.mode, declaredMetadata: metadata };
+                 sha256: metadata.sha256, mode: metadata.mode, encoding: metadata.encoding,
+                 declaredMetadata: metadata };
       });
     } else if (Array.isArray(bank.files)) entries = bank.files;
     else if (bank.files && typeof bank.files === "object")
@@ -286,10 +288,15 @@ export function createSourceBankToolkit(options = {}) {
     return JSON.parse(spans.length ? spans.join("") + text.slice(start) : text);
   }
   function gzipEnvelope(value, depth) {
-    if (!["base64+gzip", "gzip+base64"].includes(value.encoding) || !Array.isArray(value.chunks) ||
-        !value.chunks.length || value.chunks.length > limits.maxMembers ||
-        value.chunks.some(part => typeof part !== "string"))
+    if (!["base64+gzip", "gzip+base64", "base64+gzip+utf8-json"].includes(value.encoding) || !Array.isArray(value.chunks) ||
+        !value.chunks.length || value.chunks.length > limits.maxMembers)
       fail("gzip source envelope needs ordered base64 chunks");
+    let chunks;
+    if (value.chunks.every(part => typeof part === "string")) chunks = value.chunks;
+    else if (value.chunks.every((part, index) => part && typeof part === "object" &&
+        !Array.isArray(part) && part.index === index && typeof part.content_base64 === "string"))
+      chunks = value.chunks.map(part => part.content_base64);
+    else fail("gzip source chunks must be strings or a complete zero-based indexed sequence");
     const pairs = [["compressed_bytes", "compressed_sha256"], ["gzip_bytes", "gzip_sha256"]];
     const identities = pairs.filter(([bytes, sha]) => value[bytes] !== undefined || value[sha] !== undefined)
       .map(([bytes, sha]) => {
@@ -305,11 +312,11 @@ export function createSourceBankToolkit(options = {}) {
     if (!Number.isSafeInteger(value.decoded_bytes) || value.decoded_bytes < 0 ||
         typeof value.decoded_sha256 !== "string" || !shaPattern.test(value.decoded_sha256))
       fail("gzip source envelope needs decoded bytes and SHA-256");
-    const encodedLength = value.chunks.reduce((n, part) => n + part.length, 0);
+    const encodedLength = chunks.reduce((n, part) => n + part.length, 0);
     if (encodedLength > Math.ceil(limits.maxInputBytes / 3) * 4 + 4 ||
         compressed.bytes > limits.maxInputBytes || value.decoded_bytes > limits.maxOutputBytes)
       fail("gzip source envelope exceeds byte limits");
-    const packed = decodeBase64(value.chunks.join(""), limits.maxInputBytes, "gzip source envelope");
+    const packed = decodeBase64(chunks.join(""), limits.maxInputBytes, "gzip source envelope");
     count(packed.length, compressed.bytes, "compressed source envelope");
     const compressedSha256 = hash(packed, compressed.sha256, "compressed source envelope");
     const raw = codec.gunzip(packed, { maxOutputBytes: value.decoded_bytes, maxMembers: limits.maxGzipMembers });
@@ -434,6 +441,16 @@ export function createSourceBankToolkit(options = {}) {
     const inputSha256 = hash(a, expectedSha256, "input");
     let result;
     if (a.length >= 4 && [0x04034b50, 0x06054b50].includes(u32(a, 0))) result = zip(a);
+    else if (a.length >= 6 && [253,55,122,88,90,0].every((v,i)=>a[i]===v)) {
+      const recovered = createXzSourceDecoder(codec, {
+        maxInputBytes: limits.maxInputBytes, maxOutputBytes: limits.maxOutputBytes,
+        maxDictionaryBytes: 64 * 1024 * 1024, maxBlocks: limits.maxMembers
+      })(a);
+      result = unwrapJson(carrierJson(codec.utf8Decode(recovered.data)), depth + 1);
+      result.payloadSha256 = recovered.sha256;
+      result.xzBytes = a.length;
+      result.xz = { checkType: recovered.checkType, blocks: recovered.blocks };
+    }
     else if (a.length >= 2 && a[0] === 31 && a[1] === 139) {
       const raw = codec.gunzip(a, { maxOutputBytes: limits.maxOutputBytes, maxMembers: limits.maxGzipMembers });
       result = unwrapJson(carrierJson(codec.utf8Decode(raw)), depth + 1);

@@ -20,7 +20,8 @@ from model.robust_decisions.eco_robust.integration import ACTION_NAMES, dispatch
 from model.robust_decisions.eco_robust.operations import DecisionWorkspace
 from model.robust_decisions.eco_robust.schema import Study
 
-READS = frozenset({"catalog", "study", "run", "methods", "experiment", "diagnostic"})
+READS = frozenset({"catalog", "study", "run", "methods", "experiment", "diagnostic",
+                   "delivery-options", "delivery-release"})
 RECEIPT_SCHEMA = "upstate.robust-operator-operation/v1"
 
 
@@ -31,6 +32,17 @@ def _revision(value, *, optional=False):
         value = int(value)
     if type(value) is not int or value < 1:
         raise ValueError("Select a positive retained study revision")
+    return value
+
+
+def _point_index(value):
+    """A frontier choice is explicit and zero based; no implicit first point."""
+    if value in (None, ""):
+        return None
+    if isinstance(value, str) and re.fullmatch(r"0|[1-9][0-9]*", value):
+        value = int(value)
+    if type(value) is not int or value < 0:
+        raise ValueError("Select a nonnegative retained frontier point index")
     return value
 
 
@@ -158,6 +170,27 @@ class RobustWorkbench:
                         "candidate": ["cost", "capacity", "group", "required", "excluded"],
                         "profile": ["probability"],
                         "study": ["title", "budget", "cost_units", "capacity", "group_limits", "notes"]}}
+        if operation in {"delivery-options", "delivery-release"}:
+            # The original saved calculation is authoritative. Read its bound
+            # revision directly, without Store construction or a SQL migration.
+            from model.robust_decisions.eco_robust.decision_delivery import describe
+            profile_id = None
+            if operation == "delivery-release":
+                profile_id = identifier(value.get("profile_id"))
+            result = describe(
+                ws, _native_id(value.get("study_id"), "study"),
+                _native_id(value.get("run_id"), "run"), profile_id,
+                point_index=_point_index(value.get("point_index")))
+            if operation == "delivery-release":
+                if not result.get("ready") or not isinstance(result.get("selection"), dict):
+                    issues = result.get("issues") or ["The selected native profile is not ready for delivery"]
+                    raise self.Fault("DECISION_DELIVERY_UNAVAILABLE",
+                                     "; ".join(str(item.get("message") or item.get("code") or
+                                                   "Unavailable native profile")
+                                               if isinstance(item, dict) else str(item)
+                                               for item in issues), 409)
+                return {"kind": "native_delivery", **result}
+            return result
         native = DecisionWorkspace(ws)
         native.recover()
         if operation == "catalog":

@@ -1,71 +1,105 @@
 # Receive and finish the retained NHDPlus HR originals
 
-This receiver connects the saved original HTTP responses to the current scientific source intake. It reuses the complete native inventories and arbitrary geometry batches already retained by ECO13-AE11, fills uncovered grid cells through the maintained adaptive collector, and requests only missing native geometry IDs. It then selects whole source features intersecting the original 217-HUC polygon union, assembles a transferable source edition, imports into an existing Workspace, and optionally runs the current Water and Habitat Context analysis.
+The receiver continues the existing ECO13-AE11 source operation from its retained original HTTP responses. It preserves the selected bank's complete native inventories and geometry batches, acquires the remaining candidate IDs, selects whole original flowlines intersecting the retained 217-HUC polygon union, assembles a transferable source edition and imports it into the existing Workspace. A retained Water and Habitat Context boundary selection can run that analysis immediately after import.
 
-## Source and dependencies
+The maintained original-HUC mode queries the actual watershed envelopes instead of requiring completion of the entire rectangular domain grid. Existing broad queries and their native IDs remain part of the acquisition. The final original polygon selection determines which whole flowlines enter the scientific source.
 
-Run from the Upstate application root containing model/ and source_tools/. The application must include capture_water_sources.py from PR2884, merge 270d5162048fa5a1ccd887c7dc86d2b0264d8299 or a compatible successor. Its capture_layer function accepts stream_spatial_relation. Preserve the newer geometry-selected FW intake from PR2856 and all independent consumers.
+## Select the original source edition
 
-Python uses the existing project dependencies. Exact polygon selection requires Shapely; the existing source intake/native model uses the application's GDAL/PROJ environment. This utility adds no dependency and no Actions workflow.
+The following verified source example uses revision 10, [F0C8TFT58P3](https://tokenjunkielabs.slack.com/docs/T0BRETUB5TK/F0C8TFT58P3). Its decoded source-bank JSON has:
 
-The retained source operation is indexed from Slack Canvas F0C8UD4L25S and the canonical Eco thread. Its expanded revision 2 original-response bank is F0C8UNL563E: https://tokenjunkielabs.slack.com/docs/T0BRETUB5TK/F0C8UNL563E . Join that carrier's numbered base64 parts, decode base64, then decompress gzip into nhd-original-progress.json. Verify the exact JSON byte count and SHA256 printed with the selected carrier. The receiver independently verifies the bank and every decoded member.
+- **2,797,473 bytes**
+- **SHA256 `0816e8b4749c1e1d383dcd0e9c5c079a03a6e98951595890b6074d44d46b3aaa`**
+- 61 retained original geometry responses, covering 26,414 native IDs and 91,009,987 original response bytes.
+- Six retained inventory scopes and their 26,414 candidate IDs.
 
-The exact target is 217 original HUC12 IDs with SHA256 ec0cb3d05a0ede9da1b9238b7c7bff2fa495d94e5a6a0451890b54233edfbd52. Supply the retained original domain ZIP whose members include model-domain.esri.json.gz, feature-bindings.json and domain-summary.json.
+Follow that carrier's stated part order and encoding to recover its complete JSON. Verify the decoded byte count and SHA256. The receiver verifies the bank and every embedded member independently. A later source bank can be selected with its own actual published identity.
+
+The original 217-HUC domain is `dbc61-upstate-model-domain-20261012.zip`, 8,800,689 bytes, SHA256 `1fc35e5d0986e42d93922527d46e38bc5132653db75863934349dbbfaa352c04`. Its stable Library identity is `libfile_cce17e762e948191be1d226b1dbce00d`. The exact sorted HUC12 list has SHA256 `ec0cb3d05a0ede9da1b9238b7c7bff2fa495d94e5a6a0451890b54233edfbd52`.
+
+The retained domain ZIP includes `model-domain.esri.json.gz`, `feature-bindings.json` and `domain-summary.json`. Original polygon coordinates and IDs remain the source for both envelope acquisition and final exact-domain membership.
+
+## Application and native dependencies
+
+Run from the existing Upstate application root containing `model/` and `source_tools/`. Keep these maintained modules together:
+
+- `source_tools/original_huc12_bounds.py`
+- `source_tools/capture_water_sources.py`
+- `source_tools/resume_nhd_originals.py`
+- `source_tools/water_context_geometry.py`
+- `source_tools/water_context_intake.py`
+
+The bounds producer uses only Python's standard library. Exact polygon selection uses Shapely, and the existing source intake and model use the application's GDAL/PROJ environment. Use the established GIS interpreter and current complete application from the same receiving operation. The source-preparation component catalogue includes these maintained source paths.
 
 ## Recover the retained original responses
 
-inventory-progress.json within the bank contains native_geometry_pages. For each row, its stable_reference identifies the exact original file attached to the existing Eco source page:
+The selected bank's `inventory-progress.json` lists `native_geometry_pages`. Each row's `stable_reference` identifies the exact original file attached to the existing [Ecosystem Sciences source page](https://app.notion.com/p/3f7dd77231008124b767e1dccf8a706e).
 
-https://app.notion.com/p/3f7dd77231008124b767e1dccf8a706e
+Resolve those stable references through the authorized file-download tool and keep the original body under its recorded filename. Preserve the stable reference in operation records; temporary signed URLs are download transports. Keep the original response bytes unchanged.
 
-Resolve those stable references through the authorized Notion file-download tool and download the original response under its recorded filename. The download tool returns temporary signed URLs; retain the stable references in work records. Never rewrite or format the original JSON bodies.
+Alternatively, provide a local JSON mapping from each recorded filename to its downloaded path or freshly resolved HTTPS URL through `--downloads`. The receiver checks the original byte count, available content hash, native-ID equality, complete native fields, EPSG:3857, Z/M flags and coordinate dimensions. It records its own verified content hash for subsequent resumes. Diagnostic XY-only samples stay outside the native Z/M page set.
 
-You can instead create a local JSON mapping from each recorded filename to its downloaded path or a freshly resolved HTTPS URL. Pass that file with --downloads. The receiver checks each response's original byte count, available original content hash, native-ID equality, full native fields, EPSG:3857, Z/M flags and coordinate dimensions, then records its own content hash for later resumes. It preserves each full original response.
+## Complete the original-HUC source import
 
-Revision 2 contains six geometry references, totaling 2,751,164 original bytes for 775 requested IDs. The complete final 25-feature response is also embedded in the bank with its verified source hash. The receiving process performs the feature-level checks before admitting them. The diagnostic XY-only singleton remains a separate companion; it is excluded from native Z/M pages.
+Use the established operation paths and GIS interpreter. In the example below, `NHD_BANK` is the decoded revision 10 bank, `NHD_DOMAIN_ARCHIVE` is the original domain ZIP, and the capture, download, edition and Workspace variables name their existing operation directories.
 
-## Run through complete source import
+```sh
+cd "$APPLICATION"
 
-From the application root:
+"$GIS_PYTHON" -m source_tools.original_huc12_bounds \
+  --archive "$NHD_DOMAIN_ARCHIVE" \
+  --output "$NHD_CAPTURE_ROOT/bounds217"
 
-~~~sh
-python -m source_tools.resume_nhd_originals \
-  --bank /data/nhd-original-progress.json \
-  --bank-sha256 83efb8d6612881ab11f91fe89284cba8c17cfa1a1324c57a02767d26af53ff8c \
-  --domain-archive /data/dbc61-upstate-model-domain-20261012.zip \
-  --download-directory /data/nhd-original-downloads \
-  --output /data/nhd-source-capture \
-  --edition /data/nhd-source-edition \
-  --archive-output /data/nhd-source-edition.zip \
-  --workspace /data/existing-upstate-workspace \
+NHD_HUC_BOUNDS="$NHD_CAPTURE_ROOT/bounds217/original-217-huc12-native-bounds.json"
+NHD_HUC_BOUNDS_SHA256=$("$GIS_PYTHON" -c \
+  'import hashlib,pathlib,sys; print(hashlib.sha256(pathlib.Path(sys.argv[1]).read_bytes()).hexdigest())' \
+  "$NHD_HUC_BOUNDS")
+
+"$GIS_PYTHON" -m source_tools.resume_nhd_originals \
+  --bank "$NHD_BANK" \
+  --bank-sha256 0816e8b4749c1e1d383dcd0e9c5c079a03a6e98951595890b6074d44d46b3aaa \
+  --domain-archive "$NHD_DOMAIN_ARCHIVE" \
+  --huc-bounds "$NHD_HUC_BOUNDS" \
+  --huc-bounds-sha256 "$NHD_HUC_BOUNDS_SHA256" \
+  --download-directory "$NHD_ORIGINAL_DOWNLOADS" \
+  --output "$NHD_CAPTURE_ROOT" \
+  --edition "$NHD_EDITION_ROOT" \
+  --archive-output "${NHD_EDITION_ROOT}.zip" \
+  --workspace "$NHD_WORKSPACE" \
   --timeout 180 \
   --chunk 500
-~~~
+```
 
-For a different bank revision, use its actual published hash. A running capture is pinned to its original bank hash. Resume it with the same bank, output directory, domain archive and edition path. Start another output directory when adopting a different bank snapshot.
+When the source holder already supplied the verified bounds JSON, use that file and its actual SHA256 directly. The receiver compares the complete inventory against the unchanged original ZIP before making queries. A downloaded ZIP's local basename may differ; its source hashes, native field identities, CRS, complete HUC set and all polygon extrema must match.
 
-Add --boundary /data/retained-boundary-reference.json to execute model.water_context.build immediately after source import. That file is the actual native boundary reference:
+The bounds producer preserves original decimal coordinate tokens. Its JSON and CSV contain the typed native object ID, HUC12, all-ring bounds and ring/vertex counts for each original feature. Only the comparison with the original summary reproduces that composer's documented historical float serialization; query extrema remain original numbers. See [ORIGINAL_HUC12_BOUNDS.md](ORIGINAL_HUC12_BOUNDS.md) for the complete source reduction contract.
 
-~~~json
+Omit both `--huc-bounds` flags to retain the original 4-by-4 rectangular coverage mode. The new mode does not change the declared source bank, native layer, original geometry handling or final polygon selection.
+
+A running capture remains pinned to its original bank hash. Resume with the same bank, output directory, original domain ZIP and edition path. To adopt a different published bank snapshot, select another output directory and reuse the already downloaded original bodies through `--download-directory` or `--downloads`. Keep the previous operation and source edition intact.
+
+## Continue into Water and Habitat Context
+
+Add `--boundary "$NHD_BOUNDARY_SELECTION"` to run `model.water_context.build` after source import. This is the existing native boundary selector:
+
+```json
 {"collection_id":"existing-imported-collection-id","source_id":"existing-polygon-source-id"}
-~~~
+```
 
-Use the real existing collection/source values. The source binding supplies the NHD stream-order overlay automatically. The model writes its normal saved assessment; the receiver also retains workspace-bindings.json, water-context-selection.json and water-context-assessment.json in the capture directory.
+Use the actual saved collection/source reference. The prepared source bindings supply the original NHD stream-order overlay. The model writes its ordinary saved assessment; the receiving operation retains `workspace-bindings.json`, `water-context-selection.json` and `water-context-assessment.json`.
 
---counts-only finishes the entire native candidate inventory and retains any supplied geometry, then exits before acquiring remaining geometry or creating a source edition. An ordinary invocation resumes those same caches.
+`--counts-only` completes the selected coverage inventory and retains supplied geometry, then returns before requesting remaining geometry or creating the immutable edition. An ordinary invocation resumes those same original response caches.
 
-## Coverage and interruption behavior
+## Coverage and restart behavior
 
-The bank contains the complete 4x4 grid of the original domain envelope. The receiver recomputes those 16 cells from the actual ZIP's domain-summary.json and compares every coordinate. Each completed scope must have paired original unrestricted where=1=1 requests with equal spatial relations. The receiver proves whole-cell coverage from the exact union of these source-query envelopes. It partitions at every recorded x boundary and checks the complete vertical interval in every resulting strip, preserving gaps of any positive width. Adjoining complete child queries can therefore replace their parent query, while incomplete child groups still trigger the missing cell's native acquisition.
+Original-HUC mode verifies all 217 envelopes and retains their complete derived inventory as a source companion. A HUC query is skipped only when the exact union of complete original query envelopes covers its entire extent. Coverage partitions at every recorded x boundary and checks the whole y interval of every resulting strip. Positive-width gaps remain uncovered.
 
-The retained first cell used exact Intersects; the next whole cell used the supported conservative IndexIntersects relation. Both are valid candidate sources for subsequent exact polygon selection. Each missing cell uses the maintained collector's adaptive IndexIntersects inventory path in its own directory. Every native count/ID response is preserved. Shared boundaries can repeat IDs; the final candidate set is their union.
+The original broad scopes are preserved even when another scope makes them redundant for coverage. Their count/ID requests, responses and candidate IDs remain in the selected union. Completed tile and HUC inventories from the same operation's prior capture are restored from their original HTTP records before the live capture is updated. Their response hashes, unrestricted envelope query parameters and matching count/ID scopes are verified.
 
-received-geometry.json checkpoints validated original pages after every successful batch. On restart those bytes, hashes, requested native IDs and geometry are checked again. Remaining IDs are computed by set difference. Actual geometry timeouts divide a batch; quota handling remains in the maintained OriginalSource HTTP helper. Successful pieces are checkpointed immediately and reused.
+Uncovered HUCs enter one maintained collector call with a single metadata read. Each scope has a stable HUC12-based identifier and an exact numeric envelope string. Adaptive subdivisions preserve the decimal boundaries. Saved split decisions are recovered by the same stable identifier, exact scope and depth even when other HUCs have become covered, avoiding another timeout at a previously split parent. Successful response caches remain reusable after interruption.
 
-All geometry retains original native attributes and coordinates. Stream order comes from the publisher's streamorde field. Exact-domain selection identifies original feature IDs using the retained polygon union and preserves the original whole flowlines. Each source edition includes its native metadata, original responses, requests, selection geometry and transfer inventory.
+Legacy grid mode recomputes all 16 cells from the original `domain-summary.json`. Its original native coordinate and coverage rules remain available. Both modes retain the publisher-supported conservative candidate relation and finish with the same original polygon intersection.
 
-The capture descriptor is marked complete only after the entire grid's native inventory and every requested geometry ID are present. The normal intake then enforces its existing source contract. An interruption retains completed response caches and received pages for the next invocation.
+`received-geometry.json` checkpoints validated pages after each successful batch. Restarts verify those bytes, hashes, requested IDs and geometry; remaining native IDs are obtained by set difference. Geometry timeouts split a batch through the maintained collector. Original-source quota handling remains in its existing HTTP helper.
 
-## Implementation review
-
-The implementation was manually reviewed against the merged adaptive capture, the existing exact-domain helper, Workspace.import_sources, water_context_intake.bind_workspace and model.water_context.build contracts. The authoring container currently returns environment_offline for Python execution. The native receiving process is the execution point for syntax, source-page validation and the actual model run.
+The complete candidate inventory and every requested native geometry ID must be present before the descriptor is marked complete. `water_context_geometry.select_domain_objects` then identifies whole original flowlines intersecting the retained 217-HUC polygon union. Stream order remains the publisher's `streamorde` value. The resulting source edition includes original metadata, responses, requests, selection geometry, derived envelope inventory and transfer manifest.

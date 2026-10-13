@@ -39,6 +39,22 @@ Use **Open engineering response** on the completed task to inspect the received 
 
 A task that reports a different project, changed member or conflicting response generation retains the original package for investigation. Select the intended workspace and reopen the complete task details before retrying. Continue from the original operation and its saved files.
 
+## Continue exports after a project transfer
+
+The complete project retains the review selections, customer response records and engineering editions. Exported desk folders belong to the operator computer that created them. After receiving the project on another computer, **Exported desks**, **Exported handbacks** and the original completed task identify a sender-local package that is unavailable and offer **Rebuild selected export**.
+
+1. Open the restored source project, then the original review or engineering response.
+2. Find the historical export and choose **Rebuild selected export**.
+3. Check the displayed selection. An ordinary review identifies its original customer response generation, including an initial review with no customer responses. A handback identifies its exact saved engineering edition.
+4. Rebuild the export. The new local task provides the desk and complete ZIP using the restored original source files.
+5. Continue review from that package. Later replies and engineering editions remain in their existing histories.
+
+A rebuild preserves the source export selection and records the source task in its queued request. The local package is newly generated; its file inventory and package identity describe those newly exported bytes. The original task and its export history remain available. Task references continue to resolve through repeated project transfers.
+
+An unfinished export recovered by the original project-transfer operation also retains its original selected response generation when resumed. A new ordinary **Export current review** continues to check that the response shown in the form is still current.
+
+The receiver checks the exact task request, transfer lineage, scientific project and selected edition before recognizing a missing sender export. A local package with a changed inventory, changed archive size, invalid path or symlink displays its own export issue. Other retained reviews and exports remain usable. Opening that task or serving its files retains the underlying error; the damaged row does not offer automatic rebuild. A present desk whose ZIP is absent is inspected completely before recovery is offered. A rebuild also checks the full hash of an available source archive. Original download handling verifies the selected file bytes before serving them.
+
 ## Day-to-day navigation
 
 | Where | What it answers |

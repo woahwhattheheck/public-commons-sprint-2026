@@ -1,0 +1,1121 @@
+{
+  "operation_id": "ATSSC-ORIGINAL-FORMULA-GROUPS-6CF6-20261012",
+  "original_archive": {
+    "file_name": "ATSSC_Original_Annexes_and_Workbook_Catalogue.zip",
+    "bytes": 2691467,
+    "sha256": "f31ec3fef4ee808ada65afb66cfbf67114c7be8016ca6307bf664c56bffcab8e"
+  },
+  "created_at": "2026-10-13T00:51:54.126986+00:00",
+  "program": {
+    "bytes": 29214,
+    "sha256": "96b40d6251c4060aeb752b2435f9f03a28333f86366b25380a8d641af1be2ae5"
+  },
+  "inventory": {
+    "schema": "tjlabs.atssc.original-formula-dependencies.v1",
+    "analysis_revision": 2,
+    "original_archive_sha256": "f31ec3fef4ee808ada65afb66cfbf67114c7be8016ca6307bf664c56bffcab8e",
+    "parser": {
+      "package": "openpyxl",
+      "version": "3.1.5",
+      "method": "Read-only Tokenizer and A1 Translator; original workbook files remain byte-identical."
+    },
+    "workbooks": [
+      {
+        "role": "foreign_producer",
+        "source": {
+          "filename": "annex-c1---copy-of-nq-2023-001_-fp.xlsx",
+          "bytes": 189033,
+          "sha256": "649106f345787fb9f3154b5f2fcd418503e4bbfe5b46b191e714c1d7370df8c4"
+        },
+        "formulas": 803,
+        "shared_expanded": 210,
+        "shared_masters": 21,
+        "parsed_formulas": 803,
+        "structural_groups": 183,
+        "reference_tokens": 1284,
+        "direct_formula_edges": 248,
+        "visible_formulas": 343,
+        "hidden_formulas_reachable_from_visible": 3,
+        "original_reference_error_formulas": 92,
+        "original_named_ref_error_formulas": 0,
+        "visible_formulas_with_ref_dependency": 0,
+        "issues_by_kind": {
+          "original_reference_error": 11
+        },
+        "sheets": [
+          {
+            "worksheet": "Variables",
+            "state": "hidden",
+            "formulas": 123,
+            "structural_groups": 15,
+            "reachable_from_visible_formula": 3,
+            "original_reference_error_formulas": 0,
+            "formula_depends_on_original_ref_error": 0
+          },
+          {
+            "worksheet": "Intro",
+            "state": "visible",
+            "formulas": 16,
+            "structural_groups": 12,
+            "reachable_from_visible_formula": 16,
+            "original_reference_error_formulas": 0,
+            "formula_depends_on_original_ref_error": 0
+          },
+          {
+            "worksheet": "Info",
+            "state": "visible",
+            "formulas": 3,
+            "structural_groups": 1,
+            "reachable_from_visible_formula": 3,
+            "original_reference_error_formulas": 0,
+            "formula_depends_on_original_ref_error": 0
+          },
+          {
+            "worksheet": "Cert | Attest",
+            "state": "visible",
+            "formulas": 9,
+            "structural_groups": 7,
+            "reachable_from_visible_formula": 9,
+            "original_reference_error_formulas": 0,
+            "formula_depends_on_original_ref_error": 0
+          },
+          {
+            "worksheet": "Public",
+            "state": "visible",
+            "formulas": 21,
+            "structural_groups": 13,
+            "reachable_from_visible_formula": 21,
+            "original_reference_error_formulas": 0,
+            "formula_depends_on_original_ref_error": 0
+          },
+          {
+            "worksheet": "Pub - Range",
+            "state": "visible",
+            "formulas": 11,
+            "structural_groups": 9,
+            "reachable_from_visible_formula": 11,
+            "original_reference_error_formulas": 0,
+            "formula_depends_on_original_ref_error": 0
+          },
+          {
+            "worksheet": "Prod FY",
+            "state": "hidden",
+            "formulas": 120,
+            "structural_groups": 29,
+            "reachable_from_visible_formula": 0,
+            "original_reference_error_formulas": 25,
+            "formula_depends_on_original_ref_error": 56
+          },
+          {
+            "worksheet": "Fin FY",
+            "state": "hidden",
+            "formulas": 197,
+            "structural_groups": 43,
+            "reachable_from_visible_formula": 0,
+            "original_reference_error_formulas": 56,
+            "formula_depends_on_original_ref_error": 60
+          },
+          {
+            "worksheet": "Prod",
+            "state": "visible",
+            "formulas": 149,
+            "structural_groups": 39,
+            "reachable_from_visible_formula": 149,
+            "original_reference_error_formulas": 0,
+            "formula_depends_on_original_ref_error": 0
+          },
+          {
+            "worksheet": "Con - WT | ME",
+            "state": "visible",
+            "formulas": 85,
+            "structural_groups": 19,
+            "reachable_from_visible_formula": 85,
+            "original_reference_error_formulas": 0,
+            "formula_depends_on_original_ref_error": 0
+          },
+          {
+            "worksheet": "Public Summary | Résumé pub INT",
+            "state": "visible",
+            "formulas": 49,
+            "structural_groups": 17,
+            "reachable_from_visible_formula": 49,
+            "original_reference_error_formulas": 0,
+            "formula_depends_on_original_ref_error": 0
+          },
+          {
+            "worksheet": "DataTab",
+            "state": "hidden",
+            "formulas": 20,
+            "structural_groups": 7,
+            "reachable_from_visible_formula": 0,
+            "original_reference_error_formulas": 11,
+            "formula_depends_on_original_ref_error": 11
+          }
+        ],
+        "functions": [
+          "HYPERLINK",
+          "IF",
+          "IFERROR",
+          "SUM",
+          "UPPER",
+          "VLOOKUP"
+        ]
+      },
+      {
+        "role": "importer_purchaser",
+        "source": {
+          "filename": "annex-c2---copy-of-nq-2023-001_-importer_purchaser.xlsx",
+          "bytes": 489011,
+          "sha256": "6f69da68fec452a6d248b8a96f55c533c53afb0dc103183fe5978271e21525e9"
+        },
+        "formulas": 3158,
+        "shared_expanded": 421,
+        "shared_masters": 119,
+        "parsed_formulas": 3158,
+        "structural_groups": 507,
+        "reference_tokens": 4869,
+        "direct_formula_edges": 960,
+        "visible_formulas": 1790,
+        "hidden_formulas_reachable_from_visible": 3,
+        "original_reference_error_formulas": 4,
+        "original_named_ref_error_formulas": 0,
+        "visible_formulas_with_ref_dependency": 0,
+        "issues_by_kind": {
+          "external_workbook_reference": 4,
+          "original_reference_error": 4
+        },
+        "sheets": [
+          {
+            "worksheet": "Notes",
+            "state": "hidden",
+            "formulas": 0,
+            "structural_groups": 0,
+            "reachable_from_visible_formula": 0,
+            "original_reference_error_formulas": 0,
+            "formula_depends_on_original_ref_error": 0
+          },
+          {
+            "worksheet": "Variables",
+            "state": "hidden",
+            "formulas": 123,
+            "structural_groups": 15,
+            "reachable_from_visible_formula": 3,
+            "original_reference_error_formulas": 0,
+            "formula_depends_on_original_ref_error": 0
+          },
+          {
+            "worksheet": "Intro",
+            "state": "visible",
+            "formulas": 23,
+            "structural_groups": 15,
+            "reachable_from_visible_formula": 23,
+            "original_reference_error_formulas": 0,
+            "formula_depends_on_original_ref_error": 0
+          },
+          {
+            "worksheet": "Info",
+            "state": "visible",
+            "formulas": 3,
+            "structural_groups": 1,
+            "reachable_from_visible_formula": 3,
+            "original_reference_error_formulas": 0,
+            "formula_depends_on_original_ref_error": 0
+          },
+          {
+            "worksheet": "Cert | Attest",
+            "state": "visible",
+            "formulas": 13,
+            "structural_groups": 11,
+            "reachable_from_visible_formula": 13,
+            "original_reference_error_formulas": 0,
+            "formula_depends_on_original_ref_error": 0
+          },
+          {
+            "worksheet": "Pub - Questions",
+            "state": "visible",
+            "formulas": 47,
+            "structural_groups": 41,
+            "reachable_from_visible_formula": 47,
+            "original_reference_error_formulas": 0,
+            "formula_depends_on_original_ref_error": 0
+          },
+          {
+            "worksheet": "Begin",
+            "state": "hidden",
+            "formulas": 0,
+            "structural_groups": 0,
+            "reachable_from_visible_formula": 0,
+            "original_reference_error_formulas": 0,
+            "formula_depends_on_original_ref_error": 0
+          },
+          {
+            "worksheet": "Pub - Purch",
+            "state": "visible",
+            "formulas": 82,
+            "structural_groups": 29,
+            "reachable_from_visible_formula": 82,
+            "original_reference_error_formulas": 0,
+            "formula_depends_on_original_ref_error": 0
+          },
+          {
+            "worksheet": "Pub - Range",
+            "state": "visible",
+            "formulas": 14,
+            "structural_groups": 12,
+            "reachable_from_visible_formula": 14,
+            "original_reference_error_formulas": 0,
+            "formula_depends_on_original_ref_error": 0
+          },
+          {
+            "worksheet": "End",
+            "state": "hidden",
+            "formulas": 0,
+            "structural_groups": 0,
+            "reachable_from_visible_formula": 0,
+            "original_reference_error_formulas": 0,
+            "formula_depends_on_original_ref_error": 0
+          },
+          {
+            "worksheet": "Pub - RFP  | DP ",
+            "state": "visible",
+            "formulas": 183,
+            "structural_groups": 2,
+            "reachable_from_visible_formula": 183,
+            "original_reference_error_formulas": 0,
+            "formula_depends_on_original_ref_error": 0
+          },
+          {
+            "worksheet": "Imp - China | Chine",
+            "state": "visible",
+            "formulas": 452,
+            "structural_groups": 70,
+            "reachable_from_visible_formula": 452,
+            "original_reference_error_formulas": 0,
+            "formula_depends_on_original_ref_error": 0
+          },
+          {
+            "worksheet": "Imp - Other | Autres",
+            "state": "visible",
+            "formulas": 193,
+            "structural_groups": 25,
+            "reachable_from_visible_formula": 193,
+            "original_reference_error_formulas": 0,
+            "formula_depends_on_original_ref_error": 0
+          },
+          {
+            "worksheet": "Purchase - Achats",
+            "state": "visible",
+            "formulas": 352,
+            "structural_groups": 64,
+            "reachable_from_visible_formula": 352,
+            "original_reference_error_formulas": 0,
+            "formula_depends_on_original_ref_error": 0
+          },
+          {
+            "worksheet": "RFP - Summary | DP - Résumé",
+            "state": "visible",
+            "formulas": 8,
+            "structural_groups": 6,
+            "reachable_from_visible_formula": 8,
+            "original_reference_error_formulas": 0,
+            "formula_depends_on_original_ref_error": 0
+          },
+          {
+            "worksheet": "RFP | DP 1",
+            "state": "visible",
+            "formulas": 21,
+            "structural_groups": 10,
+            "reachable_from_visible_formula": 21,
+            "original_reference_error_formulas": 0,
+            "formula_depends_on_original_ref_error": 0
+          },
+          {
+            "worksheet": "RFP | DP 2",
+            "state": "visible",
+            "formulas": 21,
+            "structural_groups": 10,
+            "reachable_from_visible_formula": 21,
+            "original_reference_error_formulas": 0,
+            "formula_depends_on_original_ref_error": 0
+          },
+          {
+            "worksheet": "RFP | DP 3",
+            "state": "visible",
+            "formulas": 21,
+            "structural_groups": 10,
+            "reachable_from_visible_formula": 21,
+            "original_reference_error_formulas": 0,
+            "formula_depends_on_original_ref_error": 0
+          },
+          {
+            "worksheet": "RFP | DP 4",
+            "state": "visible",
+            "formulas": 21,
+            "structural_groups": 10,
+            "reachable_from_visible_formula": 21,
+            "original_reference_error_formulas": 0,
+            "formula_depends_on_original_ref_error": 0
+          },
+          {
+            "worksheet": "RFP | DP 5",
+            "state": "visible",
+            "formulas": 21,
+            "structural_groups": 10,
+            "reachable_from_visible_formula": 21,
+            "original_reference_error_formulas": 0,
+            "formula_depends_on_original_ref_error": 0
+          },
+          {
+            "worksheet": "RFP | DP 6",
+            "state": "visible",
+            "formulas": 21,
+            "structural_groups": 10,
+            "reachable_from_visible_formula": 21,
+            "original_reference_error_formulas": 0,
+            "formula_depends_on_original_ref_error": 0
+          },
+          {
+            "worksheet": "RFP | DP 7",
+            "state": "visible",
+            "formulas": 21,
+            "structural_groups": 10,
+            "reachable_from_visible_formula": 21,
+            "original_reference_error_formulas": 0,
+            "formula_depends_on_original_ref_error": 0
+          },
+          {
+            "worksheet": "RFP | DP 8",
+            "state": "visible",
+            "formulas": 21,
+            "structural_groups": 10,
+            "reachable_from_visible_formula": 21,
+            "original_reference_error_formulas": 0,
+            "formula_depends_on_original_ref_error": 0
+          },
+          {
+            "worksheet": "RFP | DP 9",
+            "state": "visible",
+            "formulas": 21,
+            "structural_groups": 10,
+            "reachable_from_visible_formula": 21,
+            "original_reference_error_formulas": 0,
+            "formula_depends_on_original_ref_error": 0
+          },
+          {
+            "worksheet": "RFP | DP 10",
+            "state": "visible",
+            "formulas": 21,
+            "structural_groups": 10,
+            "reachable_from_visible_formula": 21,
+            "original_reference_error_formulas": 0,
+            "formula_depends_on_original_ref_error": 0
+          },
+          {
+            "worksheet": "RFP | DP 11",
+            "state": "visible",
+            "formulas": 21,
+            "structural_groups": 10,
+            "reachable_from_visible_formula": 21,
+            "original_reference_error_formulas": 0,
+            "formula_depends_on_original_ref_error": 0
+          },
+          {
+            "worksheet": "RFP | DP 12",
+            "state": "visible",
+            "formulas": 21,
+            "structural_groups": 10,
+            "reachable_from_visible_formula": 21,
+            "original_reference_error_formulas": 0,
+            "formula_depends_on_original_ref_error": 0
+          },
+          {
+            "worksheet": "RFP | DP 13",
+            "state": "visible",
+            "formulas": 21,
+            "structural_groups": 10,
+            "reachable_from_visible_formula": 21,
+            "original_reference_error_formulas": 0,
+            "formula_depends_on_original_ref_error": 0
+          },
+          {
+            "worksheet": "RFP | DP 14",
+            "state": "visible",
+            "formulas": 21,
+            "structural_groups": 10,
+            "reachable_from_visible_formula": 21,
+            "original_reference_error_formulas": 0,
+            "formula_depends_on_original_ref_error": 0
+          },
+          {
+            "worksheet": "RFP | DP 15",
+            "state": "visible",
+            "formulas": 21,
+            "structural_groups": 10,
+            "reachable_from_visible_formula": 21,
+            "original_reference_error_formulas": 0,
+            "formula_depends_on_original_ref_error": 0
+          },
+          {
+            "worksheet": "RFP | DP 16",
+            "state": "visible",
+            "formulas": 21,
+            "structural_groups": 10,
+            "reachable_from_visible_formula": 21,
+            "original_reference_error_formulas": 0,
+            "formula_depends_on_original_ref_error": 0
+          },
+          {
+            "worksheet": "RFP | DP 17",
+            "state": "visible",
+            "formulas": 21,
+            "structural_groups": 10,
+            "reachable_from_visible_formula": 21,
+            "original_reference_error_formulas": 0,
+            "formula_depends_on_original_ref_error": 0
+          },
+          {
+            "worksheet": "RFP | DP 18",
+            "state": "visible",
+            "formulas": 21,
+            "structural_groups": 10,
+            "reachable_from_visible_formula": 21,
+            "original_reference_error_formulas": 0,
+            "formula_depends_on_original_ref_error": 0
+          },
+          {
+            "worksheet": "RFP | DP 19",
+            "state": "visible",
+            "formulas": 21,
+            "structural_groups": 10,
+            "reachable_from_visible_formula": 21,
+            "original_reference_error_formulas": 0,
+            "formula_depends_on_original_ref_error": 0
+          },
+          {
+            "worksheet": "RFP | DP 20",
+            "state": "visible",
+            "formulas": 21,
+            "structural_groups": 10,
+            "reachable_from_visible_formula": 21,
+            "original_reference_error_formulas": 0,
+            "formula_depends_on_original_ref_error": 0
+          },
+          {
+            "worksheet": "MiniDB",
+            "state": "hidden",
+            "formulas": 1245,
+            "structural_groups": 141,
+            "reachable_from_visible_formula": 0,
+            "original_reference_error_formulas": 4,
+            "formula_depends_on_original_ref_error": 4
+          }
+        ],
+        "functions": [
+          "CELL",
+          "COUNTA",
+          "COUNTBLANK",
+          "HYPERLINK",
+          "IF",
+          "IFERROR",
+          "LEN",
+          "MAX",
+          "REPT",
+          "ROUNDUP",
+          "SUM",
+          "UPPER",
+          "VLOOKUP",
+          "_XLFN.TEXTJOIN",
+          "_XLFN.UNIQUE",
+          "_XLFN._XLWS.FILTER"
+        ]
+      },
+      {
+        "role": "domestic_producer",
+        "source": {
+          "filename": "annex-c3---copy-of-nq-2023-001_-pro.xlsx",
+          "bytes": 249000,
+          "sha256": "321ec7fb3af87cf6f1d1eb595c242f8f1133483c0e51c199b12a278c6a71e127"
+        },
+        "formulas": 2033,
+        "shared_expanded": 445,
+        "shared_masters": 66,
+        "parsed_formulas": 2033,
+        "structural_groups": 351,
+        "reference_tokens": 3035,
+        "direct_formula_edges": 665,
+        "visible_formulas": 1000,
+        "hidden_formulas_reachable_from_visible": 3,
+        "original_reference_error_formulas": 85,
+        "original_named_ref_error_formulas": 0,
+        "visible_formulas_with_ref_dependency": 2,
+        "issues_by_kind": {
+          "original_reference_error": 2
+        },
+        "sheets": [
+          {
+            "worksheet": "Variables",
+            "state": "hidden",
+            "formulas": 123,
+            "structural_groups": 15,
+            "reachable_from_visible_formula": 3,
+            "original_reference_error_formulas": 0,
+            "formula_depends_on_original_ref_error": 0
+          },
+          {
+            "worksheet": "Intro",
+            "state": "visible",
+            "formulas": 16,
+            "structural_groups": 12,
+            "reachable_from_visible_formula": 16,
+            "original_reference_error_formulas": 0,
+            "formula_depends_on_original_ref_error": 0
+          },
+          {
+            "worksheet": "Info",
+            "state": "visible",
+            "formulas": 3,
+            "structural_groups": 1,
+            "reachable_from_visible_formula": 3,
+            "original_reference_error_formulas": 0,
+            "formula_depends_on_original_ref_error": 0
+          },
+          {
+            "worksheet": "Cert | Attest",
+            "state": "visible",
+            "formulas": 13,
+            "structural_groups": 11,
+            "reachable_from_visible_formula": 13,
+            "original_reference_error_formulas": 0,
+            "formula_depends_on_original_ref_error": 0
+          },
+          {
+            "worksheet": "Public",
+            "state": "visible",
+            "formulas": 51,
+            "structural_groups": 43,
+            "reachable_from_visible_formula": 51,
+            "original_reference_error_formulas": 0,
+            "formula_depends_on_original_ref_error": 0
+          },
+          {
+            "worksheet": "Pub - Range",
+            "state": "visible",
+            "formulas": 13,
+            "structural_groups": 11,
+            "reachable_from_visible_formula": 13,
+            "original_reference_error_formulas": 0,
+            "formula_depends_on_original_ref_error": 0
+          },
+          {
+            "worksheet": "Pub-Allegations",
+            "state": "visible",
+            "formulas": 55,
+            "structural_groups": 4,
+            "reachable_from_visible_formula": 55,
+            "original_reference_error_formulas": 2,
+            "formula_depends_on_original_ref_error": 2
+          },
+          {
+            "worksheet": "Prod FY",
+            "state": "hidden",
+            "formulas": 120,
+            "structural_groups": 29,
+            "reachable_from_visible_formula": 0,
+            "original_reference_error_formulas": 25,
+            "formula_depends_on_original_ref_error": 56
+          },
+          {
+            "worksheet": "Fin FY",
+            "state": "hidden",
+            "formulas": 197,
+            "structural_groups": 43,
+            "reachable_from_visible_formula": 0,
+            "original_reference_error_formulas": 56,
+            "formula_depends_on_original_ref_error": 60
+          },
+          {
+            "worksheet": "Prod",
+            "state": "visible",
+            "formulas": 276,
+            "structural_groups": 53,
+            "reachable_from_visible_formula": 276,
+            "original_reference_error_formulas": 0,
+            "formula_depends_on_original_ref_error": 0
+          },
+          {
+            "worksheet": "Con - WT | ME",
+            "state": "visible",
+            "formulas": 86,
+            "structural_groups": 20,
+            "reachable_from_visible_formula": 86,
+            "original_reference_error_formulas": 0,
+            "formula_depends_on_original_ref_error": 0
+          },
+          {
+            "worksheet": "Fin",
+            "state": "visible",
+            "formulas": 433,
+            "structural_groups": 61,
+            "reachable_from_visible_formula": 433,
+            "original_reference_error_formulas": 0,
+            "formula_depends_on_original_ref_error": 0
+          },
+          {
+            "worksheet": "Con-Allegations",
+            "state": "visible",
+            "formulas": 12,
+            "structural_groups": 4,
+            "reachable_from_visible_formula": 12,
+            "original_reference_error_formulas": 0,
+            "formula_depends_on_original_ref_error": 0
+          },
+          {
+            "worksheet": "Public Summary | Résumé pub INT",
+            "state": "visible",
+            "formulas": 42,
+            "structural_groups": 16,
+            "reachable_from_visible_formula": 42,
+            "original_reference_error_formulas": 0,
+            "formula_depends_on_original_ref_error": 0
+          },
+          {
+            "worksheet": "MiniDB",
+            "state": "hidden",
+            "formulas": 593,
+            "structural_groups": 75,
+            "reachable_from_visible_formula": 0,
+            "original_reference_error_formulas": 2,
+            "formula_depends_on_original_ref_error": 2
+          }
+        ],
+        "functions": [
+          "HYPERLINK",
+          "IF",
+          "IFERROR",
+          "LEN",
+          "REPT",
+          "ROUNDUP",
+          "SUM",
+          "UPPER",
+          "VLOOKUP",
+          "_XLFN.UNIQUE",
+          "_XLFN._XLWS.FILTER"
+        ]
+      },
+      {
+        "role": "union",
+        "source": {
+          "filename": "annex-c4---copy-of-nq-2023-001_-uni.xlsx",
+          "bytes": 128622,
+          "sha256": "8135ff3fc5ff5f529c79db9c69bedb70876b41d653c121b8b34be6610f377596"
+        },
+        "formulas": 602,
+        "shared_expanded": 140,
+        "shared_masters": 10,
+        "parsed_formulas": 602,
+        "structural_groups": 147,
+        "reference_tokens": 999,
+        "direct_formula_edges": 186,
+        "visible_formulas": 138,
+        "hidden_formulas_reachable_from_visible": 3,
+        "original_reference_error_formulas": 101,
+        "original_named_ref_error_formulas": 0,
+        "visible_formulas_with_ref_dependency": 0,
+        "issues_by_kind": {
+          "original_reference_error": 20
+        },
+        "sheets": [
+          {
+            "worksheet": "Variables",
+            "state": "hidden",
+            "formulas": 127,
+            "structural_groups": 17,
+            "reachable_from_visible_formula": 3,
+            "original_reference_error_formulas": 0,
+            "formula_depends_on_original_ref_error": 0
+          },
+          {
+            "worksheet": "Intro",
+            "state": "visible",
+            "formulas": 16,
+            "structural_groups": 12,
+            "reachable_from_visible_formula": 16,
+            "original_reference_error_formulas": 0,
+            "formula_depends_on_original_ref_error": 0
+          },
+          {
+            "worksheet": "Info",
+            "state": "visible",
+            "formulas": 3,
+            "structural_groups": 1,
+            "reachable_from_visible_formula": 3,
+            "original_reference_error_formulas": 0,
+            "formula_depends_on_original_ref_error": 0
+          },
+          {
+            "worksheet": "Cert | Attest",
+            "state": "visible",
+            "formulas": 9,
+            "structural_groups": 7,
+            "reachable_from_visible_formula": 9,
+            "original_reference_error_formulas": 0,
+            "formula_depends_on_original_ref_error": 0
+          },
+          {
+            "worksheet": "Public",
+            "state": "visible",
+            "formulas": 67,
+            "structural_groups": 27,
+            "reachable_from_visible_formula": 67,
+            "original_reference_error_formulas": 0,
+            "formula_depends_on_original_ref_error": 0
+          },
+          {
+            "worksheet": "Prod FY",
+            "state": "hidden",
+            "formulas": 120,
+            "structural_groups": 29,
+            "reachable_from_visible_formula": 0,
+            "original_reference_error_formulas": 25,
+            "formula_depends_on_original_ref_error": 56
+          },
+          {
+            "worksheet": "Fin FY",
+            "state": "hidden",
+            "formulas": 197,
+            "structural_groups": 43,
+            "reachable_from_visible_formula": 0,
+            "original_reference_error_formulas": 56,
+            "formula_depends_on_original_ref_error": 60
+          },
+          {
+            "worksheet": "Conf",
+            "state": "visible",
+            "formulas": 43,
+            "structural_groups": 17,
+            "reachable_from_visible_formula": 43,
+            "original_reference_error_formulas": 0,
+            "formula_depends_on_original_ref_error": 0
+          },
+          {
+            "worksheet": "DataTab",
+            "state": "hidden",
+            "formulas": 20,
+            "structural_groups": 1,
+            "reachable_from_visible_formula": 0,
+            "original_reference_error_formulas": 20,
+            "formula_depends_on_original_ref_error": 20
+          }
+        ],
+        "functions": [
+          "CELL",
+          "HYPERLINK",
+          "IF",
+          "IFERROR",
+          "LEN",
+          "MAX",
+          "REPT",
+          "ROUNDUP",
+          "SUM",
+          "UPPER",
+          "VLOOKUP"
+        ]
+      },
+      {
+        "role": "certification",
+        "source": {
+          "filename": "annex-c5---copy-of-nq-2023-001_certification-attestation.xlsx",
+          "bytes": 115088,
+          "sha256": "1680f22bd259465ff779521e3170787a4adc86eb37ecceb4c8a8faa30d765e57"
+        },
+        "formulas": 1065,
+        "shared_expanded": 129,
+        "shared_masters": 7,
+        "parsed_formulas": 1065,
+        "structural_groups": 114,
+        "reference_tokens": 863,
+        "direct_formula_edges": 210,
+        "visible_formulas": 32,
+        "hidden_formulas_reachable_from_visible": 3,
+        "original_reference_error_formulas": 652,
+        "original_named_ref_error_formulas": 0,
+        "visible_formulas_with_ref_dependency": 0,
+        "issues_by_kind": {},
+        "sheets": [
+          {
+            "worksheet": "Variables",
+            "state": "hidden",
+            "formulas": 123,
+            "structural_groups": 15,
+            "reachable_from_visible_formula": 3,
+            "original_reference_error_formulas": 0,
+            "formula_depends_on_original_ref_error": 0
+          },
+          {
+            "worksheet": "Intro",
+            "state": "visible",
+            "formulas": 16,
+            "structural_groups": 12,
+            "reachable_from_visible_formula": 16,
+            "original_reference_error_formulas": 0,
+            "formula_depends_on_original_ref_error": 0
+          },
+          {
+            "worksheet": "Info",
+            "state": "visible",
+            "formulas": 3,
+            "structural_groups": 1,
+            "reachable_from_visible_formula": 3,
+            "original_reference_error_formulas": 0,
+            "formula_depends_on_original_ref_error": 0
+          },
+          {
+            "worksheet": "Cert | Attest",
+            "state": "visible",
+            "formulas": 13,
+            "structural_groups": 11,
+            "reachable_from_visible_formula": 13,
+            "original_reference_error_formulas": 0,
+            "formula_depends_on_original_ref_error": 0
+          },
+          {
+            "worksheet": "Prod FY",
+            "state": "hidden",
+            "formulas": 120,
+            "structural_groups": 29,
+            "reachable_from_visible_formula": 0,
+            "original_reference_error_formulas": 25,
+            "formula_depends_on_original_ref_error": 56
+          },
+          {
+            "worksheet": "Fin FY",
+            "state": "hidden",
+            "formulas": 197,
+            "structural_groups": 43,
+            "reachable_from_visible_formula": 0,
+            "original_reference_error_formulas": 56,
+            "formula_depends_on_original_ref_error": 60
+          },
+          {
+            "worksheet": "MiniDB",
+            "state": "hidden",
+            "formulas": 593,
+            "structural_groups": 8,
+            "reachable_from_visible_formula": 0,
+            "original_reference_error_formulas": 571,
+            "formula_depends_on_original_ref_error": 581
+          }
+        ],
+        "functions": [
+          "HYPERLINK",
+          "IF",
+          "IFERROR",
+          "SUM",
+          "UPPER",
+          "VLOOKUP",
+          "_XLFN.UNIQUE",
+          "_XLFN._XLWS.FILTER"
+        ]
+      }
+    ],
+    "totals": {
+      "formula_occurrences": 7661,
+      "shared_followers_expanded": 1345,
+      "shared_masters": 223,
+      "parsed_formulas": 7661,
+      "workbook_structural_groups": 1302,
+      "cross_workbook_structural_shapes": 904,
+      "dependency_edges": 2269,
+      "reference_tokens": 11050
+    },
+    "files": [
+      {
+        "path": "foreign-producer/C1_First_Family_Calculation_Boundary.json",
+        "bytes": 60309,
+        "sha256": "670ce4724d91929140073042dd51d2b89e3100ee927e8be656d49b7dcbb99ba5"
+      },
+      {
+        "path": "foreign-producer/formula_dependency_edges.csv",
+        "bytes": 38873,
+        "sha256": "1b059c57352d834a4a117055baf8c7d0084ca0a2fc595401908b3b2aeac1d0f1"
+      },
+      {
+        "path": "foreign-producer/formula_occurrences.json",
+        "bytes": 2435925,
+        "sha256": "dbf1a8bfbc4cc5873ad58ee4b592ca07ed5e613fded1c4a3248eff62bf8428eb"
+      },
+      {
+        "path": "foreign-producer/formula_references.csv",
+        "bytes": 229178,
+        "sha256": "99b78ad5ce80d9823f5fae41714ae71f077bc742a52c3a27c399d28df7a14137"
+      },
+      {
+        "path": "foreign-producer/questionnaire_source_text.json",
+        "bytes": 302576,
+        "sha256": "1b3809c0efcea32a44063aa6f757890acdac53c822ac3ce8cadba7fe83a87322"
+      },
+      {
+        "path": "foreign-producer/source_issues.json",
+        "bytes": 2456,
+        "sha256": "589bb7faeeb151258496562561a69a45c403484f73f69b5f0c35ab7dc7770816"
+      },
+      {
+        "path": "foreign-producer/structural_groups.json",
+        "bytes": 400405,
+        "sha256": "7aa568d889ca5750e444e94beacf07dba74ad12ec7e1daac4c9d7fdb552866dd"
+      },
+      {
+        "path": "foreign-producer/worksheet_dependencies.csv",
+        "bytes": 536,
+        "sha256": "72808f6dcd2dd3249752c182dfe3b3dc272ee5a199af29516bfe094ea5f23a4d"
+      },
+      {
+        "path": "importer-purchaser/formula_dependency_edges.csv",
+        "bytes": 161724,
+        "sha256": "f02b4edb1540780a02bce07eafdb50cd506959011900959d9dfce2506886cee8"
+      },
+      {
+        "path": "importer-purchaser/formula_occurrences.json",
+        "bytes": 8640404,
+        "sha256": "6ef29c98965a0c7c817adaad6098763bd1749ba0da56f21241c75e6eadc47293"
+      },
+      {
+        "path": "importer-purchaser/formula_references.csv",
+        "bytes": 1054931,
+        "sha256": "2d84f9bc1154c1f6606dc5bdf93277f0e858f5a829ef0cb5f6298f0edcb0207c"
+      },
+      {
+        "path": "importer-purchaser/questionnaire_source_text.json",
+        "bytes": 659630,
+        "sha256": "156801aeb5cbb62957ac425818f5e60d00ee82da0e0438c0772ca5bb9c0b2f8d"
+      },
+      {
+        "path": "importer-purchaser/source_issues.json",
+        "bytes": 1959,
+        "sha256": "de4a6c427cdb01f869177bf0a7e72aabd0bacea8966a27f157d66a5440cb5ea7"
+      },
+      {
+        "path": "importer-purchaser/structural_groups.json",
+        "bytes": 1206520,
+        "sha256": "6035efd5165d76749f30293bb1715d1e07a7f7009a727ac029e9ca3331c98656"
+      },
+      {
+        "path": "importer-purchaser/worksheet_dependencies.csv",
+        "bytes": 1363,
+        "sha256": "f7c8ba150c76fb2b6b545a5c83c6e8cd20df45fd7717f03b5b44a70ad27519cb"
+      },
+      {
+        "path": "domestic-producer/formula_dependency_edges.csv",
+        "bytes": 101854,
+        "sha256": "f83f25e2148ab671b07058b410018507a7053bee4df66b73d9ebf037d89695cf"
+      },
+      {
+        "path": "domestic-producer/formula_occurrences.json",
+        "bytes": 5384674,
+        "sha256": "11d2000fddaaa0d7ba70312de2efcdb35346deb35be503d60f8d9b77d8654bec"
+      },
+      {
+        "path": "domestic-producer/formula_references.csv",
+        "bytes": 541836,
+        "sha256": "56e9297e86b1d67402d11d4d14809148fd8787372a12066b6a52c71ca499bf8c"
+      },
+      {
+        "path": "domestic-producer/questionnaire_source_text.json",
+        "bytes": 428909,
+        "sha256": "446d1c457d5dd779aad141d9a52bf984afbdc92d28869119349efb61f81210ee"
+      },
+      {
+        "path": "domestic-producer/source_issues.json",
+        "bytes": 630,
+        "sha256": "2bb568880c34b38b4a438edd478a8f7228525c55cd4b45ebe449b0db5ce1f65a"
+      },
+      {
+        "path": "domestic-producer/structural_groups.json",
+        "bytes": 833301,
+        "sha256": "af7a33f50672578120ff05bfa00c6ee02127165bcc2ae3c82ced3e30606d3563"
+      },
+      {
+        "path": "domestic-producer/worksheet_dependencies.csv",
+        "bytes": 641,
+        "sha256": "58f3471da58611ef77210c7ccefa3eefb765fbbd540e2d86c17cd503ab7b1839"
+      },
+      {
+        "path": "union/formula_dependency_edges.csv",
+        "bytes": 28764,
+        "sha256": "03144086e1fae9ec97bf892df72ad0eaba3309fd1786d35f5596a4758e835239"
+      },
+      {
+        "path": "union/formula_occurrences.json",
+        "bytes": 1919338,
+        "sha256": "8dbdc8e0d5f16ef4aa958810c1d271d45ccafb90809af1b255f4ef205f117550"
+      },
+      {
+        "path": "union/formula_references.csv",
+        "bytes": 178371,
+        "sha256": "82cc3ede37a0a51ecdaa55de643b125aa177b4b43a12271cfc4d3502d439f2ab"
+      },
+      {
+        "path": "union/questionnaire_source_text.json",
+        "bytes": 236682,
+        "sha256": "433b785f7c58ee3c0df0c431e841cb2bed1b663e30ef15c4460b40cca9920e7d"
+      },
+      {
+        "path": "union/source_issues.json",
+        "bytes": 4302,
+        "sha256": "69035232944cfe3d5f9847a03d91669dc3a2d60c93f851f74e87e725cc447dcc"
+      },
+      {
+        "path": "union/structural_groups.json",
+        "bytes": 321303,
+        "sha256": "3f98b011e5ff226ea75a757dacdf7d5ba5cc294103c266b115c9f898be14647e"
+      },
+      {
+        "path": "union/worksheet_dependencies.csv",
+        "bytes": 409,
+        "sha256": "44fbc6b61e69c4f7477033ff7256ba7a4cc13beec6e8637590e0543efc13c6c5"
+      },
+      {
+        "path": "certification/formula_dependency_edges.csv",
+        "bytes": 32378,
+        "sha256": "274bb4ec352a994db7fbc0d8c0a13f6b0ea9b55f8799ded485da9000c31007a1"
+      },
+      {
+        "path": "certification/formula_occurrences.json",
+        "bytes": 2570275,
+        "sha256": "f5a49933f5b607e834cd8d85165382b86d1de328dc5b5e169522254b99e9eec8"
+      },
+      {
+        "path": "certification/formula_references.csv",
+        "bytes": 172475,
+        "sha256": "a78e92fd018dffd586f994fd7d963b6e0b2847b27a1ded80aa9a7ead94bd1ea1"
+      },
+      {
+        "path": "certification/questionnaire_source_text.json",
+        "bytes": 371968,
+        "sha256": "10f8ae25628dc6b77a279919f714ac47932e9f87c03103c8e5a7618ff6954da0"
+      },
+      {
+        "path": "certification/source_issues.json",
+        "bytes": 221,
+        "sha256": "f21da1ba2e14c7d3c39525c62e4591d1a0fed424a2e316ab84498c618f9e4c98"
+      },
+      {
+        "path": "certification/structural_groups.json",
+        "bytes": 355094,
+        "sha256": "c19d393b6d042b25659836e577399d9ea4a93cc58e8c9f2a78851bba4ea3a7aa"
+      },
+      {
+        "path": "certification/worksheet_dependencies.csv",
+        "bytes": 358,
+        "sha256": "594fc32237e4e3f2a128791e7f1cc1fb6f290744d219d3ae7f50b19ae300f10c"
+      }
+    ],
+    "interpretation": {
+      "grouping": "Structural token equality with anchored and relative reference axes preserved. A group is a migration candidate, not a certified equivalent business rule.",
+      "dependencies": "Static formula references include cells, ranges, whole rows/columns, worksheet spans and resolvable absolute defined names. Source formulas and unresolved names/dynamic references remain explicit.",
+      "visibility": "Visible-formula reachability is conservative static closure. Absence from that closure does not establish a hidden sheet is obsolete: external report consumers, named outputs and intended future inputs require separate source mapping.",
+      "errors": "Original #REF! errors, including qualified broken references and retained named errors, are separate from original cached error values. Dependency reachability does not imply the affected branch executes for every answer.",
+      "calculation": "This source projection expands inherited formula references and records dependencies; it does not execute the questionnaire or calculate respondent answers."
+    }
+  }
+}

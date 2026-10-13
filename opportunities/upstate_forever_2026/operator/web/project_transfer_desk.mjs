@@ -3,6 +3,7 @@ export function createProjectTransferDesk(host) {
   const arr = value => Array.isArray(value) ? value : [];
   const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const short = value => String(value || '').slice(0, 12);
+  const countLabel = (value, noun) => value.toLocaleString()+' '+noun+(value===1?'':'s');
   const identity = /^[0-9a-f]{64}$/;
   const bytes = value => {
     if (!Number.isFinite(Number(value)) || value === null) return 'Unavailable';
@@ -228,7 +229,7 @@ export function createProjectTransferDesk(host) {
       '<div class="pt-actions">'+button('check','Refresh receiving coverage','',busy||detailBusy||!selectedSnapshot)+
       button('inspect','Download missing-block request','',busy||!selectedSnapshot)+
       button('report','Export file inventory','',busy||!selectedSnapshot)+'</div>'+
-      acquisitionsView(detail?.source_acquisitions)+
+      acquisitionsView(detail?.source_acquisitions)+implementationView(detail?.implementation)+
       '<div class="pt-divider"><h3>Reconstruct and continue</h3><p>Build a complete original archive for storage, or restore an editable copy into this operator’s receiving area.</p>'+
       '<div class="pt-actions">'+button('archive','Build original archive','',busy||!ready)+button('restore','Restore editable copy','',busy||!ready,true)+'</div></div></section>'+
       (showInventory?'<section class="pt-card"><h2>Compare editions</h2><div class="pt-grid"><label class="pt-field">Earlier edition<select data-pt-field="beforeSnapshot">'+snapshotOptions(beforeSnapshot)+'</select></label>'+
@@ -260,7 +261,7 @@ export function createProjectTransferDesk(host) {
       (['project.transfer.capture','project.transfer.capture-study'].includes(task?.action) ? task.workspace : null);
     const continuations = rows.filter(row => row.continued_from).length;
     return '<details class="pt-settings"><summary>Retained soil and floodplain acquisitions · '+
-      rows.length.toLocaleString()+' operations · '+continuations.toLocaleString()+' continuations</summary>'+
+      countLabel(rows.length,'operation')+' · '+countLabel(continuations,'continuation')+'</summary>'+
       '<p>Original source requests, provider responses, imported source editions and continuation history travel with this project.</p>'+
       (rows.length?'<div class="pt-table"><table><thead><tr><th>Acquisition</th><th>Retained state</th><th>Source editions</th><th>Open</th></tr></thead><tbody>'+
       rows.map(row => {
@@ -271,11 +272,42 @@ export function createProjectTransferDesk(host) {
         return '<tr><td><strong>'+esc(row.title || 'Source acquisition')+'</strong><div class="pt-id">'+esc(row.id)+'</div>'+
           (row.continued_from?'<small>Continues '+esc(short(row.continued_from))+'</small>':'')+
           '<div>'+arr(row.families).map(esc).join(', ')+'</div></td><td>'+esc(String(row.state || 'prepared').replaceAll('_',' '))+
-          (Number.isSafeInteger(row.retained_result_files)?'<small> · '+row.retained_result_files+' result files</small>':'')+
+          (Number.isSafeInteger(row.retained_result_files)?'<small> · '+countLabel(row.retained_result_files,'result file')+'</small>':'')+
           '</td><td>'+editions.map(value=>'<span class="pt-id" title="'+esc(value)+'">'+esc(short(value))+'</span>').join('<br>')+
           (editions.length?'':'No imported edition in this acquisition')+'</td><td>'+action+
           (!retained?'Original preparation retained':!destination?'Available after editable restoration':'')+'</td></tr>';
       }).join('')+'</tbody></table></div>':'<p class="pt-empty">This edition contains no retained soil or floodplain acquisition operations.</p>')+
+      '</details>';
+  }
+  function implementationView(value, task = null) {
+    if (!value || value.schema !== 'upstate.implementation-receiving/v1') return '';
+    const plans = arr(value.plans);
+    const destination = task?.result?.workspace_key ||
+      (['project.transfer.capture','project.transfer.capture-study'].includes(task?.action) ? task.workspace : null);
+    const reports = plans.reduce((n,row) => n + arr(row.reports).length,0);
+    return '<details class="pt-settings"><summary>Implementation and fieldwork · '+
+      countLabel(plans.length,'plan')+' · '+countLabel(reports,'report edition')+'</summary>'+
+      '<p>Saved plan revisions, tasks, sites, field records, attached originals and retained reports remain available in the editable project.</p>'+
+      (plans.length?'<div class="pt-table"><table><thead><tr><th>Saved plan</th><th>Fieldwork</th><th>Sources and reports</th><th>Open</th></tr></thead><tbody>'+
+      plans.map(row => {
+        const counts = row.record_counts || {}, linked = arr(row.unavailable_attachments);
+        const revisions = Number.isSafeInteger(row.revision_count) ? row.revision_count : null;
+        const action = task?.state === 'complete' && destination && typeof row.id === 'string' &&
+          Number.isSafeInteger(row.revision) && row.revision >= 1 ?
+          button('open-fieldwork','Open saved revision','data-id="'+esc(task.id)+'" data-plan-id="'+esc(row.id)+'"') : '';
+        const fieldCounts = [['tasks','task'],['sites','site'],['visits','visit'],['activities','activity'],['observations','observation'],['monitoring_plans','monitoring plan']]
+          .filter(([key])=>Number.isSafeInteger(counts[key])&&counts[key]>0)
+          .map(([key,label])=>label==='activity'?counts[key].toLocaleString()+' '+(counts[key]===1?'activity':'activities'):countLabel(counts[key],label)).join(' · ');
+        return '<tr><td><strong>'+esc(row.title || 'Implementation plan')+'</strong><div class="pt-id">'+esc(row.id)+'</div>'+
+          '<small>Revision '+esc(row.revision)+(revisions===null?'':' · '+countLabel(revisions,'retained revision'))+'</small></td>'+
+          '<td>'+(fieldCounts||'No fieldwork records in this revision')+'</td><td>'+
+          (Number.isSafeInteger(row.attachment_count)?countLabel(row.attachment_count,'attached original'):'')+
+          (linked.length?'<div>'+countLabel(linked.length,'external source reference')+'</div><ul>'+
+            linked.map(item=>'<li>'+esc(item.label||item.id||item.reference)+'</li>').join('')+'</ul>':'')+
+          (arr(row.reports).length?'<ul>'+row.reports.map(report=>'<li>Report revision '+esc(report.revision)+
+            (report.as_of?' · '+esc(report.as_of):'')+(Number.isSafeInteger(report.files)?' · '+countLabel(report.files,'file'):'')+'</li>').join('')+'</ul>':'<div>No retained report edition</div>')+
+          '</td><td>'+action+(!destination?'Available after editable restoration':'')+'</td></tr>';
+      }).join('')+'</tbody></table></div>':'<p class="pt-empty">This edition contains no saved implementation or fieldwork plans.</p>')+
       '</details>';
   }
   function taskView(item) {
@@ -295,7 +327,7 @@ export function createProjectTransferDesk(host) {
       '<small>'+date(item.created_at)+' · '+short(item.id)+'</small>'+
       (!terminal(item.state)?'<p role="status">'+esc(progressText(progress) || item.state)+'</p>':'')+
       (item.error?'<div class="pt-error"><strong>'+esc(item.error.code || 'Task error')+'</strong><p>'+esc(item.error.message || item.error)+'</p></div>':'')+
-      outcome+acquisitionsView(result.source_acquisitions,item)+downloads(item._downloads)+'<div class="pt-actions">'+button('task','Task details','data-id="'+item.id+'"')+
+      outcome+acquisitionsView(result.source_acquisitions,item)+implementationView(result.implementation,item)+downloads(item._downloads)+'<div class="pt-actions">'+button('task','Task details','data-id="'+item.id+'"')+
       (['failed','interrupted'].includes(item.state)?button('resume','Resume original task','data-id="'+item.id+'"',busy):'')+'</div></article>';
   }
   function render() {
@@ -378,6 +410,21 @@ export function createProjectTransferDesk(host) {
       await host.openDesk('conservation','dispatch',{dataset:{
         action:'conservation-open-source-capture',operationId:row.resume_operation_id
       }});
+      return;
+    }
+    if (name==='open-fieldwork') {
+      const task = tasks().find(item => item.id === id && item.state === 'complete');
+      const plan = arr(task?.result?.implementation?.plans).find(item => item.id === target.dataset.planId);
+      const destination = task?.result?.workspace_key ||
+        (['project.transfer.capture','project.transfer.capture-study'].includes(task?.action) ? task.workspace : null);
+      if (!plan || !Number.isSafeInteger(plan.revision) || plan.revision < 1 || !destination)
+        throw new Error('Choose a saved fieldwork revision from a completed capture or editable restoration.');
+      if (typeof host.openDesk !== 'function') throw new Error('Reopen the current operator to use its registered scientific desks.');
+      if (host.getWorkspace() !== destination) await host.selectWorkspace(destination);
+      if (host.getWorkspace() !== destination) throw new Error('The workspace changed while opening the saved fieldwork plan.');
+      await host.openDesk('implementation','openSavedPlan',{
+        workspace_key:destination,plan_id:plan.id,revision:plan.revision
+      });
       return;
     }
     if (name==='older-tasks') {historyLimit+=20;render();await refreshTaskDetails();return;}

@@ -379,16 +379,20 @@ function render(){
 }
 async function refreshSource({initial=false}={}){
   cancelPublishedRead();
-  const request={controller:new AbortController(),view:view()};
+  const request={controller:new AbortController(),view:view(),draft,savedId,savedRevision};
   publishedRead=request;sourceReadControls();clearError();
   status('Reading the current application. Saved drafts and source packages remain available.');
   try{
     const received=await readPublished(request.controller.signal);
     if(publishedRead!==request)return;
+    const sameSelection=draft===request.draft&&savedId===request.savedId&&
+      savedRevision===request.savedRevision;
     published=received.source;publishedBundle={bundle:received.bundle,objects:received.objects};
     publishedLabel='Current application reader';
     if(!draft){draft=retainPublishedBundle(createDraft(published,{id:uid()}));dirty=false;}
-    if(!initial&&view()===request.view)$('view').value='source';
+    // A read started for another open draft may still supply a comparison,
+    // but it cannot navigate the subsequently selected working application.
+    if(!initial&&sameSelection&&view()===request.view)$('view').value='source';
     render();status('Read the current application edition. Compare its complete source before receiving it.');
   }catch(error){
     if(publishedRead===request&&error.name!=='AbortError')fail(error);

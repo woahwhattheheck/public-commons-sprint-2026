@@ -4,7 +4,8 @@ Retains count/ID/geometry responses for the existing water_context_intake
 receiver. The original 217-HUC domain archive is required.
 """
 from __future__ import annotations
-import argparse, datetime, gzip, hashlib, json, os, time, urllib.error, urllib.parse, urllib.request, zipfile
+import argparse, datetime, gzip, hashlib, json, os, re, time, urllib.error, urllib.parse, urllib.request, zipfile
+from decimal import Decimal, localcontext
 from pathlib import Path
 
 OPERATION = "ECO13-AE11-WATER-SOURCE-20261013"
@@ -116,11 +117,22 @@ def subdivision_candidate(error):
     reason = getattr(error, "reason", None)
     return isinstance(reason, TimeoutError) or "timed out" in str(reason).lower()
 
-def subdivide_scope(scope):
-    """Four adjoining envelopes exactly cover the parent, including its boundary."""
-    envelope = json.loads(scope["geometry"])
+def subdivide_scope(scope, exact=False):
+    """Four adjoining envelopes cover the parent; explicit HUC scopes retain decimals."""
+    if exact:
+        from source_tools.original_huc12_bounds import parsed, exact_json
+        envelope = parsed(scope["geometry"])
+    else:
+        envelope = json.loads(scope["geometry"])
     xmin, ymin, xmax, ymax = (envelope[key] for key in ("xmin", "ymin", "xmax", "ymax"))
-    xmid, ymid = (xmin + xmax) / 2, (ymin + ymax) / 2
+    if exact:
+        values = [Decimal(value) for value in (xmin, ymin, xmax, ymax)]
+        with localcontext() as context:
+            context.prec = max(50, max(len(value.as_tuple().digits) +
+                                       abs(value.as_tuple().exponent) for value in values) * 2 + 10)
+            xmid, ymid = (values[0] + values[2]) / 2, (values[1] + values[3]) / 2
+    else:
+        xmid, ymid = (xmin + xmax) / 2, (ymin + ymax) / 2
     if not xmin < xmid < xmax or not ymin < ymid < ymax:
         raise ValueError("Envelope cannot be subdivided without losing coordinate precision")
     children = []
@@ -132,11 +144,13 @@ def subdivide_scope(scope):
                 "xmax": xmid if column == 0 else xmax,
                 "ymax": ymid if row == 0 else ymax,
                 "spatialReference": envelope.get("spatialReference", {"wkid": 3857})}
-            child = dict(scope, geometry=encode(bounds).decode())
+            child = dict(scope, geometry=exact_json(bounds) if exact else encode(bounds).decode())
             children.append(child)
     return children
 
-def capture_layer(source, kind, summary, hucs, chunk, counts_only=False, stream_grid=1, stream_max_depth=4, stream_spatial_relation="intersects"):
+def capture_layer(source, kind, summary, hucs, chunk, counts_only=False, stream_grid=1, stream_max_depth=4, stream_spatial_relation="intersects", native_scopes=None):
+    if native_scopes is not None and kind != "stream_order":
+        raise ValueError("Explicit native envelopes belong to the stream-order capture")
     url = LAYERS[kind]
     metadata, metadata_path, metadata_receipt = source.read(kind + "-metadata", url, {"f": "pjson"})
     oid = [field["name"] for field in metadata["fields"] if field["type"] == "esriFieldTypeOID"]
@@ -151,26 +165,64 @@ def capture_layer(source, kind, summary, hucs, chunk, counts_only=False, stream_
         supported = metadata.get("supportedSpatialRelationships", [])
         if supported and relation not in supported:
             raise ValueError("Original publisher metadata does not support " + relation)
-        xmin, ymin, xmax, ymax = summary["native_bounds"]
-        if not xmin < xmax or not ymin < ymax:
-            raise ValueError("Original model-domain bounds must have positive extent")
-        scopes = []
-        for row in range(stream_grid):
-            for column in range(stream_grid):
-                envelope = {
-                    "xmin": xmin + (xmax - xmin) * column / stream_grid,
-                    "ymin": ymin + (ymax - ymin) * row / stream_grid,
-                    "xmax": xmax if column + 1 == stream_grid else xmin + (xmax - xmin) * (column + 1) / stream_grid,
-                    "ymax": ymax if row + 1 == stream_grid else ymin + (ymax - ymin) * (row + 1) / stream_grid,
-                    "spatialReference": {"wkid": 3857}}
-                scopes.append({"where": "1=1", "geometry": encode(envelope).decode(),
+        if native_scopes is not None:
+            from source_tools.original_huc12_bounds import parsed, exact_json
+            if not isinstance(native_scopes, list) or not native_scopes:
+                raise ValueError("Explicit native scopes must contain retained envelopes")
+            scopes, scope_ids, seen_scopes = [], [], set()
+            for item in native_scopes:
+                label = item.get("id")
+                if (not isinstance(label, str)
+                        or re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_-]{0,63}", label) is None
+                        or label in seen_scopes):
+                    raise ValueError("Explicit native scopes need unique stable identifiers")
+                geometry = item.get("geometry")
+                if not isinstance(geometry, str):
+                    raise ValueError("Explicit envelope geometry must retain its numeric JSON")
+                envelope = parsed(geometry)
+                reference = envelope.get("spatialReference", {})
+                if reference.get("latestWkid", reference.get("wkid")) not in (3857, 102100, 102113):
+                    raise ValueError("Explicit envelopes must use the original native EPSG:3857")
+                coordinates = [envelope.get(key) for key in ("xmin", "ymin", "xmax", "ymax")]
+                if (any(isinstance(value, bool) or not isinstance(value, (int, Decimal))
+                        or isinstance(value, Decimal) and not value.is_finite()
+                        for value in coordinates)
+                        or not coordinates[0] < coordinates[2]
+                        or not coordinates[1] < coordinates[3]):
+                    raise ValueError("Explicit native envelope has invalid original bounds")
+                seen_scopes.add(label)
+                scope_ids.append(label)
+                scopes.append({"where": "1=1", "geometry": exact_json(envelope),
                                "geometryType": "esriGeometryEnvelope", "inSR": "3857",
                                "spatialRel": relation})
-        meaning = {"selection": "union of native model-domain envelope tile candidates",
-                   "domain_bounds_3857": summary["native_bounds"], "tile_rows": stream_grid,
-                   "candidate_spatial_relationship": relation,
-                   "tile_columns": stream_grid,
-                   "exact_domain_membership": "water_context_geometry.select_domain_objects"}
+            meaning = {
+                "selection": "union of explicitly retained native HUC12 envelope candidates",
+                "native_scopes": [{"id": label, "geometry": scope["geometry"]}
+                                  for label, scope in zip(scope_ids, scopes)],
+                "candidate_spatial_relationship": relation,
+                "exact_domain_membership": "water_context_geometry.select_domain_objects",
+            }
+        else:
+            xmin, ymin, xmax, ymax = summary["native_bounds"]
+            if not xmin < xmax or not ymin < ymax:
+                raise ValueError("Original model-domain bounds must have positive extent")
+            scopes = []
+            for row in range(stream_grid):
+                for column in range(stream_grid):
+                    envelope = {
+                        "xmin": xmin + (xmax - xmin) * column / stream_grid,
+                        "ymin": ymin + (ymax - ymin) * row / stream_grid,
+                        "xmax": xmax if column + 1 == stream_grid else xmin + (xmax - xmin) * (column + 1) / stream_grid,
+                        "ymax": ymax if row + 1 == stream_grid else ymin + (ymax - ymin) * (row + 1) / stream_grid,
+                        "spatialReference": {"wkid": 3857}}
+                    scopes.append({"where": "1=1", "geometry": encode(envelope).decode(),
+                                   "geometryType": "esriGeometryEnvelope", "inSR": "3857",
+                                   "spatialRel": relation})
+            meaning = {"selection": "union of native model-domain envelope tile candidates",
+                       "domain_bounds_3857": summary["native_bounds"], "tile_rows": stream_grid,
+                       "candidate_spatial_relationship": relation,
+                       "tile_columns": stream_grid,
+                       "exact_domain_membership": "water_context_geometry.select_domain_objects"}
     native_id_set, queries, companions = set(), [], [metadata_receipt]
     inventory_progress = {"schema": "upstate.native-query-progress/v1",
                           "kind": kind, "scope": meaning, "completed": [], "subdivisions": []}
@@ -180,7 +232,9 @@ def capture_layer(source, kind, summary, hucs, chunk, counts_only=False, stream_
         previous = json_file(progress_path)
         if previous.get("schema") != inventory_progress["schema"]:
             raise ValueError("Existing inventory progress uses a different schema")
-        if previous.get("kind") == kind and previous.get("scope") == meaning:
+        if previous.get("kind") == kind and (previous.get("scope") == meaning or native_scopes is not None):
+            # Stable HUC suffixes plus inventory()\'s exact scope/depth check keep
+            # original split decisions reusable when other HUCs are now covered.
             inventory_progress["subdivisions"] = list(previous.get("subdivisions", []))
             previous_subdivisions = {item["suffix"]: item for item in inventory_progress["subdivisions"]}
 
@@ -188,7 +242,7 @@ def capture_layer(source, kind, summary, hucs, chunk, counts_only=False, stream_
         previous = previous_subdivisions.get(suffix)
         if previous and previous.get("scope") == scope and previous.get("depth") == depth:
             companions.extend(previous.get("retained_count_sources", []))
-            for index, child in enumerate(subdivide_scope(scope)):
+            for index, child in enumerate(subdivide_scope(scope, exact=native_scopes is not None)):
                 inventory(child, suffix + "-q" + str(index), depth + 1)
             return
         adaptive = kind == "stream_order" and depth < stream_max_depth
@@ -202,7 +256,7 @@ def capture_layer(source, kind, summary, hucs, chunk, counts_only=False, stream_
         except (urllib.error.URLError, TimeoutError, ConnectionError) as error:
             if kind != "stream_order" or depth >= stream_max_depth or not subdivision_candidate(error):
                 raise
-            children = subdivide_scope(scope)
+            children = subdivide_scope(scope, exact=native_scopes is not None)
             inventory_progress["subdivisions"].append({
                 "suffix": suffix, "depth": depth, "scope": scope,
                 "error_type": type(error).__name__, "error": str(error),
@@ -233,7 +287,8 @@ def capture_layer(source, kind, summary, hucs, chunk, counts_only=False, stream_
                           "scope_count": len(selected), "unique_native_ids": len(native_id_set)}), flush=True)
 
     for scope_index, scope in enumerate(scopes):
-        suffix = "" if len(scopes) == 1 else "-tile-" + str(scope_index).zfill(4)
+        suffix = ("-scope-" + scope_ids[scope_index] if native_scopes is not None
+                  else "" if len(scopes) == 1 else "-tile-" + str(scope_index).zfill(4))
         inventory(scope, suffix, 0)
     native_ids = sorted(native_id_set)
     descriptor = {"kind": kind, "uri": url, "metadata": metadata_path,

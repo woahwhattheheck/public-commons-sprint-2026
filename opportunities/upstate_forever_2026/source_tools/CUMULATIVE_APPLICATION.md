@@ -34,6 +34,27 @@ The same command reuses an identical installed edition. A changed source bank us
 its own receiving directory. The returned JSON gives the mounted application path,
 actual file count, source identity and complete archive path, size and SHA256.
 
+## Preserve the selected edition's original sources
+
+The cumulative installer validates the selected
+`integration/application_components.json` before applying authored transforms,
+then checks the installed result after restoring its original embedded input bytes.
+Reusing an existing output performs the same component validation before archive
+publication. Preserve the maintained catalogue and `source_tools/application_components.py`
+when receiving a successor source bank.
+
+Components' `source_manifests` identify the native `upstate.sources/v1` manifests
+that belong to this application edition. Their primary files and every companion
+must remain under the manifest's own directory, with the original declared hashes.
+The checker includes native CSV, GeoJSON and binary companions even when they are
+not Python or browser assets. The installation report returns the inspected
+manifest paths and original source IDs together with their member identities.
+
+The installer continues to use each component author's maintained transformations.
+A changed source bank or explicit edition catalogue uses a fresh output/archive
+name. A deliberately partial application carries its own catalogue selection; keep
+that selection explicit rather than labelling an omitted family complete.
+
 ## Open the retained scientific project
 
 Launch the combined operator with its existing original Workspace:
