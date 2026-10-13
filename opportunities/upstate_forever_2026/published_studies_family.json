@@ -1,6 +1,6 @@
 {
   "schema": "upstate.published-study-family/v1",
-  "version": "2.1.1",
+  "version": "2.1.2",
   "repository": "woahwhattheheck/public-commons-sprint-2026",
   "application_path": "opportunities/upstate_forever_2026",
   "source_reference_base": "2d8fe39c96ca83436896e439ca763f5d66097f54",
@@ -134,7 +134,7 @@
     {
       "path": "microbial_temporal_observed_report.sources.json",
       "bytes": 9642,
-      "sha256": "99d4525c5e70346f3b79229601b55a41bec4050708ef8b8081fedd735983025f"
+      "sha256": "6d9291d86b32957c5bc998be230b1b7d6e99543a9960308913d61ca9050c8224"
     },
     {
       "path": "model/UTILITY_MICROBIAL_STUDY.md",
@@ -1168,8 +1168,8 @@
     },
     {
       "path": "source/ecoli_temporal_analysis/20261013/build-publication-figures.mjs",
-      "bytes": 1680,
-      "sha256": "4c80b5a902d1ab0216d3a4758ad0ba5f27da21d3e15410320981a61c48916af0"
+      "bytes": 2262,
+      "sha256": "5cff009450b0ed86d9948be632eded9f7e181439c5e021f74fd0aa39f751405f"
     },
     {
       "path": "source/ecoli_temporal_analysis/20261013/CALENDAR_SUPPORT.md",
@@ -1259,7 +1259,7 @@
     {
       "path": "source/ecoli_temporal_analysis/20261013/observed-report.json",
       "bytes": 16122,
-      "sha256": "24fc6c3521a35e271a6a5d16077411196e1121a5963672f65fe4b82868afa125"
+      "sha256": "47d0e07cca07832bbf502cbdc7d8ce7ffa4bf761f68e18c5151e366a8d87292a"
     },
     {
       "path": "source/ecoli_temporal_analysis/20261013/PUBLICATION_FIGURES.md",
@@ -1811,16 +1811,17 @@
       "calendar_authored_commit": "3f164c39d4f58d2c9baeac9b557a7e4461a896a4",
       "explorer_merge_commit": "271b6313992e6d257edb6e4fbb1a5affc8ccd45f",
       "manifest": "microbial_temporal_observed_report.sources.json",
-      "manifest_sha256": "99d4525c5e70346f3b79229601b55a41bec4050708ef8b8081fedd735983025f",
+      "manifest_sha256": "6d9291d86b32957c5bc998be230b1b7d6e99543a9960308913d61ca9050c8224",
       "source_files": 46,
-      "source_bytes": 1944396,
+      "source_bytes": 1944978,
       "binding_module": "measurement_workspace/utility_microbiology_context.py",
       "figure_merge_commit": "79d29e9c546485ee941b5af095f75ee744763633",
       "figure_authored_commit": "6ac5d729fef3a0607380d9f16c79e3f36e83c635",
       "scientific_figures": 3,
       "scientific_panels": 6,
       "plotted_source_positions": 445,
-      "gallery_source": "source/ecoli_temporal_analysis/20261013/publication-figures.html"
+      "gallery_source": "source/ecoli_temporal_analysis/20261013/publication-figures.html",
+      "runtime_loader_merge_commit": "6aa29be87ece7d08e7033f9e0a3ffdc0d738dd1a"
     },
     "paired_sensitivity": {
       "commit": "da78bc3dcd9af746c2ac2af311fcdaee9c34a4e0",
