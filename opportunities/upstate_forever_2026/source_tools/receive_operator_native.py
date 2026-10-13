@@ -438,7 +438,8 @@ def run_locked(args, application, workspace, output, state, runs, deadline):
         if not isinstance(error, DeadlineReached):
             try:
                 save(state="interrupted" if isinstance(error, (KeyboardInterrupt, SystemExit)) else "failed",
-                     error={"type": type(error).__name__, "message": str(error)}, active_task_id=current)
+                     error={"type": type(error).__name__, "message": str(error)},
+                     active_task_id=current or receipt.get("active_task_id"))
             except OSError as receipt_error:
                 raise error from receipt_error
         raise
