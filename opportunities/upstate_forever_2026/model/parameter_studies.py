@@ -21,12 +21,14 @@ from .profiles import NDR_KEYS, SDR_KEYS, checked_parameters
 from .model_selection import (grid_models, models as normalize_models,
                               required_outputs, run_models, selected,
                               validate_completed_run)
+from .native_versions import comparison_versions, guide_url, model_versions, version_label
 from . import rasters
 from .native_execution import storage_exhausted
 from .parameter_exports import EDITION as EXPORT_EDITION, retain_differences, write_archive
 from .reuse import copy_verified
 
 SCHEMA = "upstate.parameter-experiment/v1"
+NATIVE_VERSION_EDITION = "parameter-study-native-versions/1"
 SELECTION_SCHEMA = "upstate.parameter-experiment-selection/v1"
 DESIGNS = ("one-at-a-time", "factorial")
 PARAMETERS = {
@@ -45,8 +47,6 @@ ALLOWED = {"ndr": NDR_KEYS, "sdr": SDR_KEYS}
 
 def _baseline(workspace, run_id):
     run = workspace.inspect_run(identifier(run_id))
-    if run["selection"].get("invest_version") != INVEST_VERSION:
-        raise ValueError("Select a baseline from the current retained InVEST version")
     profile = workspace._get("profiles", run["selection"]["profile_id"])
     grid = workspace.get_grid(run["selection"]["grid_id"])
     workspace._get("scenarios", run["selection"]["scenario_id"])
@@ -57,6 +57,37 @@ def _baseline(workspace, run_id):
         raise ValueError("The retained grid lacks inputs for a selected baseline model")
     validate_completed_run(run)
     return run, profile
+
+
+def _baseline_versions(run):
+    versions = model_versions(run)
+    return {"baseline_native_versions": versions,
+            "baseline_version_labels": {model: version_label(info) for model, info in versions.items()},
+            "baseline_version_guides": {model: guide_url(model, info) for model, info in versions.items()},
+            "preparation_invest_version": INVEST_VERSION}
+
+
+def _check_preparation_versions(run):
+    """Bind new cases to the maintained runner without replacing saved studies."""
+    for model, info in model_versions(run).items():
+        stage = (run.get("stages") or {}).get(model) or {}
+        if run.get("state") != "complete" and not stage.get("completed_at"):
+            # An unfinished stage can still execute under the current runner.
+            # Its historical request is not a completed execution observation.
+            continue
+        if info["comparison_version"] != INVEST_VERSION:
+            raise ValueError("New parameter cases use InVEST " + INVEST_VERSION +
+                             "; the retained baseline " + model.upper() + " uses " +
+                             version_label(info) + ". Reopen the existing saved study "
+                             "to summarize its original completed cases.")
+
+
+def _retained_study_id(workspace, selection):
+    """Use the original Workspace experiment-spec identity without writing it."""
+    value = {name: item for name, item in selection.items() if name not in ("id", "schema")}
+    value["schema"] = "upstate.experiment-specs/v1"
+    key = digest(value)
+    return key if (workspace.root / "experiments" / key / "experiment.json").is_file() else None
 
 
 def catalog(workspace, baseline_run_id):
@@ -73,7 +104,8 @@ def catalog(workspace, baseline_run_id):
     return {"baseline_run_id": run["id"], "selection": run["selection"],
             "baseline_state": run["state"], "profile_title": profile["title"],
             "references": profile["references"], "parameters": parameters,
-            "designs": list(DESIGNS), "invest_version": INVEST_VERSION,
+            "designs": list(DESIGNS), "invest_version": run["selection"].get("invest_version"),
+            "invest_version_basis": "baseline_requested_declaration", **_baseline_versions(run),
             "models": list(active), "pollutants": list(required_outputs(active))}
 
 
@@ -257,6 +289,8 @@ def preview(workspace, selection):
     count = _count(selection, profile)
     if count < 1:
         raise ValueError("Select at least one parameter value different from the baseline")
+    if _retained_study_id(workspace, selection) is None:
+        _check_preparation_versions(run)
     return {"schema": SCHEMA, "title": selection["title"], "design": selection["design"],
             "baseline_run_id": run["id"], "baseline_state": run["state"],
             "baseline_selection": run["selection"], "case_count": count + 1,
@@ -264,7 +298,8 @@ def preview(workspace, selection):
             "examples": list(itertools.islice(_cases(selection, profile), 12)),
             "example_count": min(count, 12), "reporting_areas": selection["reporting_areas"],
             "difference_maps": selection["difference_maps"],
-            "selection": selection, "invest_version": INVEST_VERSION,
+            "selection": selection, "invest_version": run["selection"].get("invest_version"),
+            "invest_version_basis": "baseline_requested_declaration", **_baseline_versions(run),
             "models": list(run_models(run)),
             "pollutants": list(required_outputs(run_models(run)))}
 
@@ -275,6 +310,10 @@ def prepare(workspace, selection):
     count = _count(selection, profile)
     if count < 1:
         raise ValueError("Select at least one parameter value different from the baseline")
+    retained = _retained_study_id(workspace, selection)
+    if retained is not None:
+        return inspect(workspace, retained)
+    _check_preparation_versions(baseline)
     spec = workspace._save("experiment-specs", selection)
     key = spec["id"]
     directory = workspace.root / "experiments" / key
@@ -285,7 +324,8 @@ def prepare(workspace, selection):
             return inspect(workspace, key)
         atomic_json(directory / "selection.json", selection, immutable=True)
         cases = [{"id": "baseline", "label": "Baseline", "overrides": {}, "axis_values": [],
-                  "profile_id": profile["id"], "run_id": baseline["id"], "state": baseline["state"]}]
+                  "profile_id": profile["id"], "run_id": baseline["id"], "state": baseline["state"],
+                  "run_selection": deepcopy(baseline["selection"])}]
         base_references = profile["references"] if isinstance(profile["references"], list) else [profile["references"]]
         profiles_by_signature = {
             _profile_signature(item, models=active): item for item in workspace._list("profiles")
@@ -311,10 +351,12 @@ def prepare(workspace, selection):
             profiles_by_signature[signature] = saved
             run = workspace.prepare_run({**baseline["selection"], "profile_id": saved["id"]})
             cases.append({**case, "profile_id": saved["id"], "run_id": run["id"],
-                          "profile_reused": reused_profile, "state": run["state"]})
+                          "profile_reused": reused_profile, "state": run["state"],
+                          "run_selection": deepcopy(run["selection"])})
         state = {"schema": SCHEMA, "id": key, "workspace_id": workspace.project["id"],
                  "selection": selection, "state": "prepared", "created_at": now(),
-                 "updated_at": now(), "invest_version": INVEST_VERSION,
+                 "updated_at": now(), "invest_version": baseline["selection"].get("invest_version"),
+                 "invest_version_basis": "baseline_requested_declaration", **_baseline_versions(baseline),
                  "baseline_selection": baseline["selection"], "cases": cases,
                  "models": list(run_models(baseline)),
                  "pollutants": list(required_outputs(run_models(baseline))),
@@ -352,10 +394,28 @@ def inspect(workspace, key):
         if (run["selection"]["profile_id"] != case["profile_id"]
                 or run_models(run) != active
                 or any(run["selection"][field] != state["baseline_selection"][field]
-                       for field in ("grid_id", "scenario_id", "invest_version"))):
+                       for field in ("grid_id", "scenario_id"))):
             raise ValueError("An experiment case changed its retained model selection")
+        frozen = case.get("run_selection")
+        if frozen is not None:
+            if not isinstance(frozen, dict) or run["selection"] != frozen:
+                raise ValueError("An experiment case changed its original saved run selection")
+        elif run["selection"].get("invest_version") != state["baseline_selection"].get("invest_version"):
+            # Historical cases were prepared under this original shared declaration.
+            raise ValueError("A legacy experiment case changed its retained requested version")
+        if case["id"] == "baseline":
+            if run["id"] != state["selection"]["baseline_run_id"] or run["selection"] != state["baseline_selection"]:
+                raise ValueError("The experiment baseline differs from its original saved run")
+            state.update(_baseline_versions(run))
         validate_completed_run(run)
         case["state"] = run["state"]
+        if run["state"] == "complete":
+            versions = model_versions(run, active)
+            case["native_versions"] = versions
+            case["native_version_labels"] = {model: version_label(info) for model, info in versions.items()}
+        else:
+            case.pop("native_versions", None)
+            case.pop("native_version_labels", None)
         if run.get("error"):
             case["error"] = run["error"]
         else:
@@ -491,9 +551,61 @@ def _response(case, profile, change, baseline_mass):
     return result
 
 
+def _compatible_aggregation_implementations():
+    """Retain exact reviewed predecessor sums across this metadata-only edition."""
+    import ast
+    import hashlib
+    from . import parameter_pair_cache
+    # The cache successor is an exact authored body, not a future-code wildcard.
+    # Its restore/adoption path only copies authenticated values; it performs no
+    # scientific arithmetic. Both numerical engine functions must be unchanged.
+    if hashlib.sha256(Path(parameter_pair_cache.__file__).read_bytes()).hexdigest() != "fb7846b4e66b2d20fe34e2e291176e0862d101041ab01a9652c0c6a339b284b2":
+        return ()
+    source = Path(__file__).read_text(encoding="utf-8")
+    expected = {"_areas": "358bb1a794bc17936921875a278d4f1cc4fa9c92a0dd5002b759f7e71e8044c3","_paired": "b365337efc4d2f9d73b07271cf0301d1673670d031d51cc7da01279c218fa6a9"}
+    nodes = {node.name: node for node in ast.parse(source).body if isinstance(node, ast.FunctionDef)}
+    for name, checksum in expected.items():
+        node = nodes.get(name)
+        segment = ast.get_source_segment(source, node) if node is not None else None
+        if segment is None or hashlib.sha256(segment.encode("utf-8")).hexdigest() != checksum:
+            return ()
+    return ({"engine_sha256": "467abced7106c569b80576e16a7e465cafc8921a2402ca13f9c488b4bfd49a0d","cache_sha256": "9fc1f05a28b306ad8c411e5cafd5a622659e773b31d062233e2028580b0bec98"},
+            {"engine_sha256": "2294aa27eae35c1d60f3526cbf1e3dcc58e97ec3006a8d89e2839e063ad95687","cache_sha256": "9fc1f05a28b306ad8c411e5cafd5a622659e773b31d062233e2028580b0bec98"},
+            {"engine_sha256": "7bd58c5e1a3e6334b127fd584df34f6cbe478481147586806198ce16e4059a20","cache_sha256": "9fc1f05a28b306ad8c411e5cafd5a622659e773b31d062233e2028580b0bec98"})
+
+
+def _version_exports(directory, result):
+    """Keep every case/model source binding beside the unchanged quantitative CSV."""
+    cohort = result["native_versions"]
+    document = {"schema": "upstate.parameter-native-versions/v1",
+                "experiment_id": result["experiment_id"],
+                "workspace_id": result["workspace_id"],
+                "native_versions": cohort, "native_run_selections": result["native_run_selections"],
+                "native_version_labels": result["native_version_labels"],
+                "native_version_guides": result["native_version_guides"]}
+    atomic_json(directory / "native-versions.json", document)
+    fields = ["case_id", "case", "run_id", "model", "comparison_version", "basis",
+              "observed_stage_version", "observed_run_version", "requested_version",
+              "differs_from_requested", "stage_completed_at", "version_label", "guide_url", "reused_from"]
+    output = io.StringIO(newline="")
+    writer = csv.DictWriter(output, fieldnames=fields, extrasaction="ignore")
+    writer.writeheader()
+    for case in result["cases"]:
+        run_id = case["run_id"]
+        versions = cohort["runs"].get(run_id)
+        if versions is None:
+            continue
+        for model in cohort["models"]:
+            info = versions[model]
+            writer.writerow({**info, "case_id": case["id"], "case": case["label"],
+                             "run_id": run_id, "model": model,
+                             "version_label": result["native_version_labels"][run_id][model],
+                             "guide_url": result["native_version_guides"][run_id][model],
+                             "reused_from": json.dumps(info.get("reused_from"), sort_keys=True)})
+    atomic_bytes(directory / "native-versions.csv", output.getvalue().encode("utf-8"))
+
+
 def _summarize(workspace, key, *, progress=None):
-    import rasterio
-    from .parameter_pair_cache import PairResults
     state = inspect(workspace, key)
     directory = workspace.root / "experiments" / key
     completed = [case for case in state["cases"] if case["state"] == "complete"]
@@ -504,6 +616,12 @@ def _summarize(workspace, key, *, progress=None):
     profile = workspace._get("profiles", baseline_case["profile_id"])
     active = run_models(baseline)
     pollutants = required_outputs(active)
+    # Reject an incompatible execution cohort before opening raster inputs or a cache.
+    completed_runs = {case["run_id"]: workspace.inspect_run(case["run_id"]) for case in completed}
+    native_versions = comparison_versions(
+        [completed_runs[case["run_id"]] for case in completed], active)
+    import rasterio
+    from .parameter_pair_cache import PairResults
     baseline_files = {name: verify_file(workspace.root / "runs" / baseline["id"],
                                         baseline["artifacts"][name]) for name in pollutants}
     with rasterio.open(baseline_files[pollutants[0]]) as raster:
@@ -512,10 +630,11 @@ def _summarize(workspace, key, *, progress=None):
     cache = PairResults(
         directory, workspace_id=workspace.project["id"], experiment_id=key,
         engine_path=Path(__file__), areas=areas,
-        total_pairs=len(completed) * len(pollutants), progress=progress)
+        total_pairs=len(completed) * len(pollutants), progress=progress,
+        compatible_implementations=_compatible_aggregation_implementations())
     rows = []
     for case in completed:
-        run = workspace.inspect_run(case["run_id"])
+        run = completed_runs[case["run_id"]]
         for pollutant in pollutants:
             path = (baseline_files[pollutant] if case["id"] == "baseline" else
                     verify_file(workspace.root / "runs" / run["id"], run["artifacts"][pollutant]))
@@ -554,7 +673,15 @@ def _summarize(workspace, key, *, progress=None):
               "workspace_id": workspace.project["id"], "title": state["selection"]["title"],
               "purpose": state["selection"]["purpose"], "design": state["selection"]["design"],
               "selection": state["selection"], "baseline_selection": baseline["selection"],
-              "invest_version": INVEST_VERSION, "completed_cases": len(completed),
+              "invest_version": baseline["selection"].get("invest_version"),
+              "invest_version_basis": "baseline_requested_declaration",
+              "native_versions": native_versions,
+              "native_run_selections": {run_id: deepcopy(run["selection"]) for run_id, run in completed_runs.items()},
+              "native_version_labels": {run_id: {model: version_label(info) for model, info in versions.items()}
+                                       for run_id, versions in native_versions["runs"].items()},
+              "native_version_guides": {run_id: {model: guide_url(model, info) for model, info in versions.items()}
+                                       for run_id, versions in native_versions["runs"].items()},
+              "completed_cases": len(completed),
               "total_cases": len(state["cases"]), "cases": state["cases"],
               "areas": [{k: v for k, v in area.items() if k != "geometry"} for area in areas],
               "rows": rows, "ranges": ranges,
@@ -571,6 +698,7 @@ def _summarize(workspace, key, *, progress=None):
                                      "biophysical_source_id": profile["biophysical_source_id"],
                                      "source_collection_id": profile["source_collection_id"],
                                      "table_summary": profile["table_summary"]}}
+    _version_exports(directory, result)
     atomic_json(directory / "results.json", result)
     fields = ["case_id", "case", "run_id", "profile_id", "area_id", "area", "pollutant", "units",
               "baseline_mass", "case_mass", "change", "percent_change", "baseline_full_mass",
@@ -606,27 +734,6 @@ def _report(result):
                     esc(", ".join(map(str, axis["values"]))) + "</td><td>" +
                     esc(axis["reason"]) + "</td><td>" +
                     "<br>".join(esc(ref) for ref in axis["references"]) + "</td></tr>")
-    maps = result.get("difference_maps", {})
-    map_section = ""
-    if maps.get("requested"):
-        map_rows = []
-        for alternative in maps.get("alternatives", []):
-            for pollutant, descriptor in alternative["artifacts"].items():
-                map_rows.append("<tr><td>" + esc(alternative["case"]) + "</td><td>" +
-                                esc(pollutant.replace("_export", "")) + "</td><td>" +
-                                esc(descriptor["units"]) + '</td><td><a href="' +
-                                esc(descriptor["path"]) + '">Download GeoTIFF</a></td></tr>')
-        if map_rows:
-            map_section = ('<h2>Spatial parameter responses</h2><p>' +
-                           esc(maps["basis"]) + '</p><p><a href="' +
-                           esc(maps["comparison"]["path"]) + '">Original comparison</a> · ' +
-                           '<a href="' + esc(maps["grid"]["path"]) +
-                           '">Original grid</a></p><div class="scroll"><table><thead><tr>' +
-                           '<th>Case</th><th>Pollutant</th><th>Units</th><th>GIS file</th>' +
-                           '</tr></thead><tbody>' + "".join(map_rows) + '</tbody></table></div>')
-        else:
-            map_section = ("<h2>Spatial parameter responses</h2><p>Maps will be included "
-                           "as the selected native alternatives complete.</p>")
     return """<!doctype html><html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1"><title>""" + esc(result["title"]) + """</title>
 <style>body{font:14px/1.5 system-ui,sans-serif;color:#202020;background:#fff;margin:0}
@@ -640,7 +747,7 @@ code{overflow-wrap:anywhere}a{color:#242424}@media print{main{margin:0;padding:0
 <p><a href="results.csv">Download quantitative results (CSV)</a> · <a href="results.json">Open full results (JSON)</a> · <a href="selection.json">Open saved design</a></p>
 <h2>Parameter selection</h2><div class="scroll"><table><thead><tr><th>Axis</th><th>Native parameters</th><th>Values</th><th>Reason</th><th>Sources</th></tr></thead><tbody>""" + "".join(axes) + """</tbody></table></div>
 <h2>Quantitative comparisons</h2><p>""" + esc(result["comparison_basis"]) + """</p><p>""" + esc(result["mass_basis"]) + """</p><div class="scroll"><table><thead><tr><th>Area</th><th>Case</th><th>Pollutant</th><th>Units</th><th>Baseline on shared cells</th><th>Case on shared cells</th><th>Change</th><th>Change %</th><th>Shared cells</th><th>Support</th></tr></thead><tbody>""" + "".join(row_html) + """</tbody></table></div>
-""" + map_section + """<h2>Interpretation and source</h2><p>""" + esc(result["range_basis"]) + """</p><p>Numeric single-parameter responses include the change per parameter unit and normalized elasticity in the downloadable data. Coupled parameter changes retain their complete joint selection.</p>
+<h2>Interpretation and source</h2><p>""" + esc(result["range_basis"]) + """</p><p>Numeric single-parameter responses include the change per parameter unit and normalized elasticity in the downloadable data. Coupled parameter changes retain their complete joint selection.</p>
 <p>Study <code>""" + esc(result["experiment_id"]) + "</code><br>Baseline <code>" + esc(result["selection"]["baseline_run_id"]) + "</code></p></main></body></html>"
 
 
@@ -658,6 +765,8 @@ def _exports(workspace, state):
     atomic_json(directory / "results.json", result)
     atomic_bytes(directory / "report.html", _report(result).encode("utf-8"))
     files = ["selection.json", "results.json", "results.csv", "report.html", "profiles.json"]
+    version_files = ("native-versions.json", "native-versions.csv")
+    files.extend(name for name in version_files if (directory / name).is_file())
     if (directory / "aggregation.json").is_file():
         files.append("aggregation.json")
         aggregation = read_json(directory / "aggregation.json")
@@ -678,14 +787,23 @@ def _exports(workspace, state):
                 descriptors.append(copy_verified(
                     workspace.root / "runs" / case["run_id"], stage["arguments"], directory,
                     path="native-arguments/" + case["id"] + "/" + model + ".json"))
+            if stage and stage.get("requested_arguments"):
+                descriptors.append(copy_verified(
+                    workspace.root / "runs" / case["run_id"], stage["requested_arguments"], directory,
+                    path="native-arguments/" + case["id"] + "/" + model + "-requested.json"))
     write_archive(directory, directory / "experiment-results.zip", descriptors)
     artifacts = {name: describe_file(directory, directory / filename) for name, filename in (
         ("selection", "selection.json"), ("results", "results.json"), ("csv", "results.csv"),
         ("report", "report.html"), ("profiles", "profiles.json"), ("archive", "experiment-results.zip"))}
     artifacts.update(map_files)
+    for name, filename in (("native_versions", "native-versions.json"),
+                           ("native_versions_csv", "native-versions.csv")):
+        if (directory / filename).is_file():
+            artifacts[name] = describe_file(directory, directory / filename)
     if (directory / "aggregation.json").is_file():
         artifacts["aggregation"] = describe_file(directory, directory / "aggregation.json")
     state["export_edition"] = EXPORT_EDITION
+    state["native_version_edition"] = NATIVE_VERSION_EDITION
     return artifacts
 
 
@@ -704,7 +822,8 @@ def execute(workspace, key, *, progress=None):
     with held(directory / ".experiment.lock", blocking=False):
         state = inspect(workspace, key)
         if state["state"] == "complete":
-            if state.get("export_edition") == EXPORT_EDITION:
+            if (state.get("export_edition") == EXPORT_EDITION
+                    and state.get("native_version_edition") == NATIVE_VERSION_EDITION):
                 for item in state["artifacts"].values():
                     verify_file(directory, item)
                 return {**state, "reused": True}
