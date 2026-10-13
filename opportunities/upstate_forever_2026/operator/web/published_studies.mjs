@@ -179,7 +179,7 @@ export function createPublishedStudiesDesk(host) {
     const reports = arr(value?.retained_reports);
     if (!reports.length) return "";
     return '<section class="ps-methods"><h3>Original studies and scientific analyses</h3><p>Open each retained report to inspect its stated observation cohort, sampling dates, figures and source files. Full-study analyses keep their original scope when the tables below are filtered.</p><ul class="ps-source-list">' +
-      reports.map(report => "<li>" + link(report.url, report.path.endsWith("/nutrient-flow-study.html") ? "Open nutrient and gauge-flow study, 2020–2025" : "Open " + report.path.split("/").pop()) +
+      reports.map(report => "<li>" + link(report.url, report.title ? "Open " + report.title : "Open " + report.path.split("/").pop()) +
         " · " + link(report.download?.url + "?download=1", "Download original HTML") +
         '<span class="ps-help">' + Number(report.bytes).toLocaleString() + " bytes</span></li>").join("") +
       "</ul><p>Export the complete study to keep the report and all original companion files together for offline use.</p></section>";
