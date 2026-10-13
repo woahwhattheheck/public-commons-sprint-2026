@@ -3,7 +3,7 @@ import {constants} from 'node:fs';
 import {open,lstat,realpath,rename,link,unlink} from 'node:fs/promises';
 import {dirname,resolve,join} from 'node:path';
 import {createHash,randomUUID} from 'node:crypto';
-import {privateDirectory,regular,withWorkspaceWrite} from '../../distribution/runtime-workspace/storage.mjs';
+import {privateDirectory,regular,withWorkspaceWrite,workspaceReceivingState} from '../../distribution/runtime-workspace/storage.mjs';
 import {jsonChunks,jsonDocumentChunks} from './json-stream.mjs';
 const fail=(code,message)=>{throw Object.assign(new Error(message),{code});};
 export function jsonIdentity(value,{pretty=false,newline=false}={}){
@@ -28,7 +28,7 @@ export async function fileIdentity(path,maximum=512*1024*1024){
 async function runtimeParent(directory){
   const file=join(directory,'workspace.json');let handle;
   try{handle=await open(file,constants.O_RDONLY|constants.O_NOFOLLOW);}
-  catch(error){if(error.code==='ENOENT')return false;throw error;}
+  catch(error){if(error.code==='ENOENT')return Boolean(await workspaceReceivingState(directory));throw error;}
   let config;
   try{
     const info=await handle.stat();if(!info.isFile())fail('CAPTURE_WORKSPACE_FILE','A containing workspace identity must be a regular file.');
@@ -43,10 +43,10 @@ async function runtimeParent(directory){
       const schema=JSON.parse(match[1]);
       if(schema==='stellar-forge.runtime-workspace.v1')
         fail('CAPTURE_RUNTIME_CONFIG_SIZE','The containing runtime configuration exceeds its maintained identity-reader limit.');
-      return false;
+      return Boolean(await workspaceReceivingState(directory));
     }
   }finally{await handle.close();}
-  return config?.schema==='stellar-forge.runtime-workspace.v1'&&config.directory===directory;
+  return config?.schema==='stellar-forge.runtime-workspace.v1'&&config.directory===directory||Boolean(await workspaceReceivingState(directory));
 }
 export async function withNativeDocumentWrite(path,work){
   path=resolve(path);const parent=dirname(path);
