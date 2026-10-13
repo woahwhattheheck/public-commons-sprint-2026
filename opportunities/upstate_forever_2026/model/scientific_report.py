@@ -15,7 +15,7 @@ from urllib.parse import unquote, urlsplit
 from .common import INVEST_VERSION, atomic_bytes, atomic_json, describe_file
 from . import rasters
 
-REPORT_VERSION = "upstate.scientific-report/v10"
+REPORT_VERSION = "upstate.scientific-report/v11"
 POLLUTANT_NAMES = {
     "nitrogen_export": "Nitrogen", "phosphorus_export": "Phosphorus",
     "sediment_export": "Sediment", "nitrogen": "Nitrogen",
@@ -110,7 +110,6 @@ def link(title, target):
                 or any(part == ".." for part in decoded.split("/"))):
             return label
     return {"kind": "link", "label": label, "href": href}
-
 
 def _cell(value):
     if isinstance(value, dict) and value.get("kind") == "link":
@@ -507,7 +506,6 @@ def _retained_rows(value, prefix=""):
         yield [prefix, _plain(value)]
 
 
-
 def _receiving_metric_blocks(baseline_physical, alternatives):
     """Read retained subject metrics without recomputing or merging receptor areas."""
     def physical_table(physical, caption):
@@ -528,6 +526,20 @@ def _receiving_metric_blocks(baseline_physical, alternatives):
                 "The paired scenario-change table uses the common baseline and alternative cells.",
             ))
         changes = alternative.get("changes", {})
+        paired_rows = [
+            [_label(key), _quantity(value, "baseline_sum_on_common_cells"),
+             _quantity(value, "alternative_sum_on_common_cells"), _mass_units(key, value),
+             _count(value.get("valid_cells")), _percent(value.get("coverage_fraction"))]
+            for key, value in changes.items()
+        ]
+        if paired_rows:
+            blocks.append(_table(
+                ["Pollutant", "Paired baseline", "Paired alternative", "Unit", "Paired cells", "Coverage"],
+                paired_rows, widths=[1.0, 1.1, 1.1, 1.2, .8, .8],
+                caption="Native run " + str(run_id) + ". Baseline and alternative annual exports over "
+                        "the same paired valid cells. These quantities can differ from each run's "
+                        "full-support totals above. Coverage is the paired share of the selected cells.",
+            ))
         rows = []
         bases = {}
         for key, value in changes.items():
@@ -548,19 +560,6 @@ def _receiving_metric_blocks(baseline_physical, alternatives):
             ["Pollutant", "Net change", "Increased export", "Avoided export", "Unit", "Paired cells", "Coverage"],
             rows, widths=[1.0, .9, 1.0, 1.0, 1.2, .8, .8], caption=caption,
         ))
-        if changes:
-            blocks.append(_table(
-                ["Pollutant", "Baseline on paired cells", "Alternative on paired cells",
-                 "Unit", "Paired cells", "Coverage"],
-                [[_label(key), _quantity(value, "baseline_sum_on_common_cells"),
-                  _quantity(value, "alternative_sum_on_common_cells"), _mass_units(key, value),
-                  _count(value.get("valid_cells")), _percent(value.get("coverage_fraction"))]
-                 for key, value in changes.items()],
-                widths=[1.0, 1.3, 1.3, 1.2, .8, .8],
-                caption="Native run " + str(run_id) + ". These retained annual totals use "
-                        "the same valid baseline and alternative cells as the paired change. "
-                        "An absent or zero valid-cell count means an unavailable quantity.",
-            ))
     return blocks
 
 
@@ -583,9 +582,10 @@ def receiving_sections(product):
     selection_rows.extend(["Alternative run", _plain(run_id)]
                           for run_id in inventory.get("alternative_run_ids", []))
     blocks.append(_table(["Study selection", "Retained value"], selection_rows, widths=[1.8, 4.2]))
-    if identity:
-        blocks.append(_table(["Receiving-water identity", "Retained value"],
-                             list(_retained_rows(identity)), widths=[2.2, 3.8]))
+    identity_rows = list(_retained_rows(identity))
+    if identity_rows:
+        blocks.append(_table(["Original receiving-water identity", "Retained value"],
+                             identity_rows, widths=[2.2, 3.8]))
     normalization = inventory.get("normalization", {})
     blocks.extend(_priorities(normalization))
     setting_rows = [row for key, value in normalization.items()
@@ -602,7 +602,10 @@ def receiving_sections(product):
             blocks.append(str(union["interpretation"]))
         if union.get("relationship_precision"):
             blocks.append("Contribution relationship: " + str(union["relationship_precision"]) + ".")
-        blocks.append("Retained receptor IDs: " + ", ".join(str(value) for value in union.get("receptor_ids", [])) + ".")
+        receptor_rows = list(_retained_rows(union.get("receptor_ids", []), "Original receiving-area identifiers"))
+        if receptor_rows:
+            blocks.append(_table(["Family selection", "Retained identifiers"],
+                                 receptor_rows, widths=[2.2, 3.8]))
         blocks.extend(_receiving_metric_blocks(
             union.get("baseline_physical", {}),
             {run_id: value["metrics"] for run_id, value in union.get("alternatives", {}).items()},

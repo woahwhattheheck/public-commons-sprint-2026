@@ -117,3 +117,37 @@ Completed original stages are verified before loading InVEST. `--mode native` ca
 The biophysical join checks the actual original table hashes, joined rows and retained output identity. On a moved Workspace it preserves the original provenance document byte for byte, including its producing-machine source paths. This prevents a new receiving location from changing the scientific source edition. Current resolved input paths are recorded separately from those original locations.
 
 Each comparison now includes `native_reference_artifact`, relative to the named `gura-receiving` root, so the original raster used in the comparison can be inspected or transferred independently with its exact file identity.
+
+## Original native-reference comparison
+
+The canonical Gura receiver compares every original export with the retained
+Workspace annual-mass raster on its actual common cells. It also scans the
+entire reference raster, so cells outside the Workspace extent remain visible
+as explicit support and mass differences. The common support receives a hash
+bound to the actual CRS, affine transform, dimensions and fixed-window mask.
+
+Both InVEST 3.20 reference exports use rates per hectare. At the original Gura
+15 m grid, annual mass is the original rate multiplied once by 0.0225 hectares.
+The maintained Workspace stores that product as float32. The comparison now
+retains the direct float64 mass differences and separately encodes the original
+mass into the actual Workspace dtype before measuring cell differences.
+Maximum encoding roundoff, encoded-reference totals, changed-cell counts, MAE
+and RMSE separate storage rounding from differences in native computation.
+
+"Equal after retained mass encoding" requires common valid cells, identical
+complete valid support, equal encoded cell values, matching native runtime
+cohorts and the original scientific setup. The setup comes from the executed
+stage arguments and the original Workspace selection, retaining flow direction,
+flow threshold, NDR/SDR parameters, optional runoff reference mean, baseline
+land cover, routing/reporting selectors and zero added context buffer.
+Differences are retained quantitatively with their reasons; no arbitrary
+numerical tolerance is added.
+
+The existing completed-Workspace restoration path recomputes these summaries
+from retained outputs. It requires the raster reader for comparison, and keeps
+the completed native stages. The source edition, archive/member identities and
+original model-specific table provenance remain intact.
+
+Official model definitions:
+- https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.20.0/userguide/en/ndr.html
+- https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.20.0/userguide/en/sdr.html

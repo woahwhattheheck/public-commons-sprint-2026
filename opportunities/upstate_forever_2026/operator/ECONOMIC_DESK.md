@@ -154,3 +154,8 @@ Each invocation creates a timestamped directory under --output. operator-journey
 ## Bulk reviewed cost worksheets
 
 Use **Download cost worksheet CSV** or **Download cost worksheet JSON** to prepare sourced implementation estimates for the original report's alternatives. **Review completed worksheet** previews all changes before **Apply reviewed worksheet** updates the current inputs. The original worksheet and estimate provenance travel through saved inputs, complete editions and the client-report economic package. The [complete worksheet workflow](COST_WORKSHEETS.md) documents fields, exact report/zone binding, spreadsheet editing, subset imports and receiving.
+
+
+## Continue a chosen scenario into fieldwork
+
+In a completed edition, choose **Plan implementation**, explicitly select one original whole scenario, review its modeled outcomes and source costs, and continue to the existing Implementation & fieldwork desk. Choose the destination plan there; its native source intake preserves the economic edition and its original reporting zone. Assignments, schedules and field budgets use the existing plan controls. See [Economic scenarios into implementation planning](ECONOMIC_IMPLEMENTATION.md) for the complete source and receiving workflow.

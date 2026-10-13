@@ -4,6 +4,7 @@
  */
 const escapeHTML=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const e=escapeHTML;
+const SCIENTIFIC_SCOPE_TEXT="Community totals describe the selected whole source block groups. Native exports retain each run's original reporting-area valid cells. A community or intervention selection does not clip or allocate those exports. Alternative-minus-baseline changes use the original common valid cells; their support can differ from either full-run total. Negative changes mean lower modeled export and positive changes mean higher modeled export on that common support. Parameter-profile changes remain sensitivity comparisons.";
 const list=value=>Array.isArray(value)?value:[];
 const text=value=>Array.isArray(value)?value.join('\n'):String(value??'');
 const human=value=>String(value??'').replaceAll('_',' ');
@@ -467,7 +468,7 @@ export function attachCommunity({getState,api,endpoint,openForm,submitAction,det
   }
   function contextForm(context={}){
     const selectedGrid=context.grid_id||list(data().runs).find(r=>r.id===context.baseline_run_id)?.selection?.grid_id||'';
-    return '<div class="form-grid">'+
+    return '<p class="note">'+e(SCIENTIFIC_SCOPE_TEXT)+'</p><div class="form-grid">'+
       field('Original model grid',select('community_grid',list(data().grids).filter(g=>g.state==='complete').map(g=>({id:g.id,title:entityTitle('grids',g.id)})),selectedGrid,'No grid selected'))+
       field('Completed baseline run',select('community_baseline',completeRuns(selectedGrid),context.baseline_run_id||'','No baseline selected'))+
       '<fieldset class="full"><legend>Completed alternative runs</legend><p class="note">Choose the actual alternative runs on the selected baseline grid.</p><div id="community-context-alternatives">'+checks('community_alternatives',completeRuns(selectedGrid).filter(r=>r.id!==context.baseline_run_id),list(context.scenario_run_ids))+'</div></fieldset>'+
@@ -679,6 +680,15 @@ export function attachCommunity({getState,api,endpoint,openForm,submitAction,det
         '<td>'+e(list(r.geoids).length?r.geoids.join(', '):'Selected plan groups in this membership')+'</td>'+
         '<td>'+e(r.owner||'Unassigned')+'<small>'+e(r.next_step||'')+'</small></td><td class="number-cell">'+usd(r.cost_estimate_usd)+'</td></tr>'));
   }
+  function scientificCoverage(context={}){
+    const rows=list(context.physical_totals);
+    const note='<div class="section-body"><p class="note">'+e(SCIENTIFIC_SCOPE_TEXT)+'</p></div>';
+    if(!rows.length)return note;
+    return note+table(['Original run','Pollutant','Reporting-area total','Unit','Run valid cells','Cell area (ha)'],
+      rows.map(row=>'<tr><th scope="row">'+e(entityTitle('runs',row.run_id))+'<small>'+e(short(row.run_id))+'</small></th>'+
+        '<td>'+e(human(row.pollutant))+'</td><td>'+e(row.value??'Unspecified')+'</td><td>'+e(row.unit||'Unspecified')+'</td>'+
+        '<td>'+e(row.artifact?.valid_cells??'Unspecified')+'</td><td>'+e(row.artifact?.pixel_area_ha??'Unspecified')+'</td></tr>'));
+  }
   function contextDetails(plan){
     const c=plan.context??{},items=[];
     if(c.grid_id)items.push(['Model grid',entityTitle('grids',c.grid_id),button('native-item','Open grid','data-kind="grids" data-id="'+e(c.grid_id)+'"','small')]);
@@ -686,7 +696,7 @@ export function attachCommunity({getState,api,endpoint,openForm,submitAction,det
     for(const id of list(c.scenario_run_ids))items.push(['Alternative model run',entityTitle('runs',id),button('native-item','Open run','data-kind="runs" data-id="'+e(id)+'"','small')]);
     if(c.delivery_id)items.push(['GIS delivery',entityTitle('deliveries',c.delivery_id),button('native-item','Open delivery','data-kind="deliveries" data-id="'+e(c.delivery_id)+'"','small')]);
     for(const id of list(c.source_collection_ids))items.push(['Supporting source edition',entityTitle('sources',id),button('native-item','Open source','data-kind="sources" data-id="'+e(id)+'"','small')]);
-    return items.length?table(['Context','Original selection',''],items.map(([kind,title,action])=>'<tr><th scope="row">'+e(kind)+'</th><td>'+e(title)+'</td><td class="actions-cell">'+action+'</td></tr>')):
+    return items.length?scientificCoverage(c)+table(['Context','Original selection',''],items.map(([kind,title,action])=>'<tr><th scope="row">'+e(kind)+'</th><td>'+e(title)+'</td><td class="actions-cell">'+action+'</td></tr>')):
       '<div class="section-body"><p class="note">This plan retains the original community table. Add completed scientific selections in a revised plan when they are ready.</p></div>';
   }
   async function planDetail(id){
@@ -724,6 +734,7 @@ export function attachCommunity({getState,api,endpoint,openForm,submitAction,det
     const title=r.title||r.selection?.title||'Community and utility report';
     const body='<div class="community-detail-actions">'+(planId?button('plan-open','Open original plan','data-id="'+e(planId)+'"'):'')+
       (html?button('report-preview',preview?'Hide report preview':'Preview full report','data-id="'+e(id)+'" data-preview="'+(!preview)+'"','primary'):'')+'</div>'+
+      '<p class="note">'+e(SCIENTIFIC_SCOPE_TEXT)+'</p>'+
       (preview&&html?'<iframe class="community-report-preview" title="'+e(title)+'" src="'+e(html.url)+'" sandbox="" referrerpolicy="no-referrer"></iframe>':'')+
       (files.length?fileList(files):'<p class="notice">The report has no completed file tickets yet. Inspect its original operation for progress.</p>')+
       '<details class="technical"><summary>Complete retained report record</summary><pre class="json-view">'+e(JSON.stringify(r,null,2))+'</pre></details>';

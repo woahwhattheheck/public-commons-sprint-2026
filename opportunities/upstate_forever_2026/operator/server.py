@@ -43,6 +43,7 @@ from implementation_operator import implementation_error
 from delivery_review import read as read_delivery_report, send_preview as send_delivery_report_preview, REPORT_EDITION as CLIENT_REPORT_EDITION
 from extension_registry import ExtensionRegistry
 from programmes import Programmes, ACTIONS as PROGRAMME_ACTIONS, READS as PROGRAMME_READS
+from task_requests import TaskRequests
 
 JSON_LIMIT = 4 * 1024 * 1024
 ACTIVE = {"queued", "running"}
@@ -128,6 +129,7 @@ class Operator:
         self.gates = {}
         self.downloads = {}
         self.task_catalog = ProjectedFileCache()
+        self.task_requests = TaskRequests(self.root)
         self.rehearsals = Rehearsals(self, Fault)
         self.customer_reviews = CustomerReviews(self, Fault)
         self.experiments = ExperimentOperator(self, Fault)
@@ -232,15 +234,20 @@ class Operator:
                   "scenario_id": "scenarios", "run_id": "runs", "comparison_id": "comparisons",
                   "spatial_review_id": "spatial_reviews", "spatial_export_id": "spatial_exports",
                   "delivery_id": "deliveries"}
-        overview = ws.overview()
         chosen = {}
         for key, collection in fields.items():
             selected = selection.get(key, "")
             if not isinstance(selected, str):
                 raise Fault("JOURNEY_SELECTION", "Choose a saved " + key.replace("_", " ") + ".")
-            chosen[key] = next((row for row in overview.get(collection, []) if row["id"] == selected), None)
-            if selected and chosen[key] is None:
+            chosen[key] = None
+            if not selected:
+                continue
+            if not re.fullmatch(r"[0-9a-f]{64}", selected):
                 raise Fault("JOURNEY_SELECTION", "This workspace does not contain the selected " + key.replace("_", " ") + ".")
+            try:
+                chosen[key] = ws.retained_item(collection, selected)
+            except FileNotFoundError as error:
+                raise Fault("JOURNEY_SELECTION", "This workspace does not contain the selected " + key.replace("_", " ") + ".") from error
         run, baseline = chosen["run_id"], chosen["baseline_run_id"]
         if run and any(run.get("selection", {}).get(key) != selection.get(key) for key in ("grid_id", "profile_id", "scenario_id")):
             raise Fault("JOURNEY_SELECTION", "The selected run uses a different grid, profile or scenario.")
@@ -320,8 +327,15 @@ class Operator:
                 if task["request_sha256"] != request_sha:
                     raise Fault("OPERATION_REUSED", "That operation identity already belongs to a different selection.", 409)
                 return task
-            for task in self.task_list(workspace):
-                if task["state"] in ACTIVE and task["request_sha256"] == request_sha:
+            for candidate in self.task_requests.matching(workspace, request_sha, ACTIVE):
+                # Reopen the exact original record before returning it. Cached
+                # metadata only narrows candidates; task state remains authoritative.
+                try:
+                    task = self.task(candidate["id"])
+                except FileNotFoundError:
+                    continue
+                if (task["workspace"] == workspace and task["state"] in ACTIVE
+                        and task["request_sha256"] == request_sha):
                     return task
             task = {"schema": "upstate.operator-task/v1", "id": key, "operation_id": operation_id,
                     **request, "request_sha256": request_sha, "created_at": now(),
@@ -1011,7 +1025,8 @@ class Handler(BaseHTTPRequestHandler):
                 review_reads = {"/api/reviews/" + name: name for name in CUSTOMER_REVIEW_READS}
                 if url.path in review_reads:
                     return self.send_json(200, self.app.customer_reviews.read(workspace, review_reads[url.path],
-                        {name: one(name) for name in ("review_id", "before_id", "after_id", "export_id")}))
+                        {name: one(name) for name in ("review_id", "before_id", "after_id", "export_id",
+                                                   "response_id", "handback_id", "revised_review_id")}))
                 if url.path == "/api/spatial/catalog":
                     return self.send_json(200, self.app.spatial_read(workspace, "catalog"))
                 if url.path == "/api/deliveries/report":

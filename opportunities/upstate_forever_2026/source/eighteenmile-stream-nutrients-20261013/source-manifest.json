@@ -30,28 +30,69 @@
       "uri": "https://api.water.usgs.gov/nldi/linked-data/nwissite/USGS-02186702/basin?f=json&simplified=false&splitCatchment=false",
       "bytes": 13935,
       "sha256": "097050d2b09e371feb2dbcf3fe1d2fba90730086db45d4a90be514706145dc88"
+    },
+    {
+      "path": "original/eighteenmile-upstream-wqp.json",
+      "uri": "https://api.water.usgs.gov/nldi/linked-data/nwissite/USGS-02186702/navigation/UT/wqp?f=json&distance=100",
+      "bytes": 3746,
+      "sha256": "675be5c87e358a776bb61eb0f2a46a973ca79dc662105e175cdb23e887c6a96d"
+    },
+    {
+      "path": "original/eighteenmile-gauge-network-location.json",
+      "uri": "https://api.water.usgs.gov/nldi/linked-data/nwissite/USGS-02186702?f=json",
+      "bytes": 601,
+      "sha256": "4ba9c663f4734dae1216d99564d9ae2392e7e139b5208aeaa174fa63489cb0c8"
+    },
+    {
+      "path": "original/eighteenmile-sv233-hydrolocation.json",
+      "uri": "https://api.water.usgs.gov/nldi/linked-data/hydrolocation?f=json&coords=POINT(-82.80447251%2034.63478373)",
+      "bytes": 727,
+      "sha256": "32c6c233907b984f49631df17f454313db24158ae4b8f9381665375fb5720378"
+    },
+    {
+      "path": "original/eighteenmile-sv245-hydrolocation.json",
+      "uri": "https://api.water.usgs.gov/nldi/linked-data/hydrolocation?f=json&coords=POINT(-82.69169936%2034.74190271)",
+      "bytes": 725,
+      "sha256": "817d7a5d5e30a71d1d4ce963f126625740ac4ce94cdbb7acb82b8057b892b86c"
+    },
+    {
+      "path": "original/eighteenmile-sv375-hydrolocation.json",
+      "uri": "https://api.water.usgs.gov/nldi/linked-data/hydrolocation?f=json&coords=POINT(-82.649218%2034.791084)",
+      "bytes": 723,
+      "sha256": "23e9f9c65d2bc1c087bf0adb1845db5f2b570c6ecbf938e4ac58eed4a141f718"
+    },
+    {
+      "path": "original/eighteenmile-sv376-hydrolocation.json",
+      "uri": "https://api.water.usgs.gov/nldi/linked-data/hydrolocation?f=json&coords=POINT(-82.73586%2034.71909)",
+      "bytes": 720,
+      "sha256": "9126f3a127a60fa92bab3d7c57451e8018a1f2f0815829637df45cd2f6803b80"
     }
   ],
   "derived": [
     {
+      "path": "derived/station-network-context.csv",
+      "bytes": 1811,
+      "sha256": "4afeaf2ec9bdcac10333109bec8f990a061c83ce0f2e96f0d33a2ffac049ee1a"
+    },
+    {
       "path": "derived/station-basin-join.csv",
-      "bytes": 745,
-      "sha256": "e89efa609a3cd012f7569f7607813438ecea2b17faa636cd7c20d218c22c7f81"
+      "bytes": 2297,
+      "sha256": "9d87038d44d15937982c09c98205dcbaf99ae14d75b4885412b17fd544d1dec7"
     },
     {
       "path": "derived/nutrient-results.csv",
-      "bytes": 160938,
-      "sha256": "22401ee767cd8324477063dc72a976b586f874a68f8b6971451faca19abbfcde"
+      "bytes": 199318,
+      "sha256": "3e899a8cbce5330102b1ce2a8ff2af2eae3517a2ccd96f6b546c2bfb45def5a0"
     },
     {
       "path": "derived/station-year-characteristic-coverage.csv",
-      "bytes": 6576,
-      "sha256": "3fe22053aed8a750c5d8dc7fd13f6691a89220312ba0cf08e30d0982e66a26a4"
+      "bytes": 7931,
+      "sha256": "6113bc43dfff1b7e0bee81b769a92518c8620a28e725049d302ca10ab1e24612"
     },
     {
       "path": "derived/source-summary.json",
-      "bytes": 2862,
-      "sha256": "df226890b5431602283e5ff454f38c9fb626b9c99cc54cd78fd37390c6d95f98"
+      "bytes": 6701,
+      "sha256": "3de246b3cf320629274f936d9dc9c98a7caf59fb6fe354d6733227967794d919"
     }
   ],
   "reproduction": "node derive-nutrients.mjs SOURCE_DIRECTORY OUTPUT_DIRECTORY",
@@ -76,5 +117,14 @@
     "bytes": 220485,
     "file_upload_id": "3f8dd772-3100-811c-a944-00b29c9a0197",
     "page": "https://app.notion.com/p/3f7dd77231008147bfb0d97e296fda3b"
+  },
+  "network": {
+    "gauge": "USGS-02186702",
+    "query_distance_km": 100,
+    "original_responses": 6,
+    "method": "Original station coordinate hydrolocation and gauge ReachCode/measure; original UT/WQP station identities for different-reach upstream context.",
+    "measure_definition": "https://pubs.usgs.gov/fs/2012/3068/FS12-3068.pdf",
+    "navigation_definition": "https://api.water.usgs.gov/docs/nldi/navigation/",
+    "same_reach_downstream_station": "21SC60WQ_WQX-SV-233"
   }
 }

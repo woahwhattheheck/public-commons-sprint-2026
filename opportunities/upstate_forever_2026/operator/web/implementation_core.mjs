@@ -296,6 +296,63 @@ export function csvPlan(plan,collection,asOf=today()){
   return rowsCsv(rows,[...fixed[collection],...extras]);
 }
 export function safeLink(value){try{const u=new URL(value);return ['https:','http:'].includes(u.protocol)?u.href:null;}catch{return null;}}
+function economicSourceReports(plan, table) {
+  const record = value => value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+  const value = item => item === null || item === undefined ? '—' : item;
+  const rowsTable = (headers, rows) => table(headers, rows.map(row => row.map(value)));
+  const links = new Map(plan.source_links.map(row => [row.id,row]));
+  const ids = new Set(), parts = [];
+  for (const candidate of plan.candidates) {
+    const source=record(candidate.source), link=record(links.get(source.source_link_id));
+    const snapshot=record(link.snapshot), row=record(source.row_snapshot), binding=record(snapshot.binding);
+    if (snapshot.schema!=='upstate.implementation-economic-source/v1' || !row.run_id || row.run_id!==binding.run_id) continue;
+    ids.add(candidate.id);
+    const zone=record(record(snapshot.native_source).zone);
+    let html='<section><h3>'+esc(candidate.label)+'</h3><p>One complete modeled scenario, retained from its original economic edition. Positive avoided export means a reduction; negative values mean an increase. Each pollutant keeps its own units and spatial comparison support.</p>';
+    html+=rowsTable(['Source field','Retained value'],[
+      ['Economic edition',binding.edition_id],['Native report',binding.report_id],
+      ['Native report SHA-256',binding.report_sha256],['Selected scenario run',row.run_id],
+      ['Baseline run',row.baseline_run_id],['Reporting zone',zone.title||binding.zone_id],
+      ['Reporting zone ID',binding.zone_id],['Reporting area (ha)',row.reporting_area_ha]
+    ]);
+    html+='<p>The reporting area describes the selected source zone. It does not assign an intervention footprint or allocate costs by area.</p>';
+    const physical=[],supports=[];
+    for(const benefit of candidate.modeled_benefits||[]){
+      if(!benefit||typeof benefit!=='object'||benefit.quantity!=='avoided_export')continue;
+      const output=record(benefit.output), support=record(output.support), label=benefit.label||benefit.metric;
+      physical.push([label,benefit.units||output.units,output.baseline,output.alternative,output.reduction,output.reduction_percent]);
+      supports.push([label,support.status,support.area_ha,support.valid_cells,support.detail]);
+    }
+    html+=rowsTable(['Quantity','Unit','Baseline export','Scenario export','Avoided export','Avoided export (%)'],physical);
+    html+='<p>A dash means the original quantity is unavailable; percentages with a zero baseline remain undefined. Support marked paired uses the original common finite cells. Other support states retain their source qualification.</p>';
+    html+=rowsTable(['Quantity','Support status','Shared area (ha)','Shared valid cells','Source qualification'],supports);
+    html+='<h4>Retained source estimate</h4>';
+    const original=row.original_cost, summary=record(row.source_cost_summary);
+    if(!original||typeof original!=='object'||Array.isArray(original)){
+      html+='<p>No implementation estimate is retained for this scenario.</p>';
+    }else{
+      const currency=summary.currency||original.currency, rate=original.discount_rate;
+      html+=rowsTable(['Cost assumption','Retained value','Unit'],[
+        ['Capital',original.capital,currency],['Annual operating',original.annual_operating,String(value(currency))+'/year'],
+        ['Analysis horizon',original.horizon_years,'years'],['Real discount rate',typeof rate==='number'?rate*100:null,'%'],
+        ['Present value',summary.present_value,currency],['Annualized cost',summary.annualized,String(value(currency))+'/year']
+      ]);
+      const scope=record(original.scope),origin=record(original.source);
+      const scopeLabels={whole_scenario:'Whole scenario',reporting_zone:'Specified reporting zone',retained:'Retained source footprint; review original scope'};
+      html+=rowsTable(['Estimate provenance','Retained value'],[
+        ['Footprint',scopeLabels[scope.kind]||'Footprint not specified'],['Footprint zone',scope.zone_id],
+        ['Footprint report',scope.producer_report_id],['Source',origin.title],['Reference',origin.uri],
+        ['As of',origin.as_of],['Note',original.note],['Scope note',original.scope_note]
+      ]);
+      html+='<details><summary>Complete original estimate, footprint and review metadata</summary><pre>'+esc(JSON.stringify(original,null,2))+'</pre></details>';
+    }
+    html+='<p>This estimate is source context. The implementation budget, commitments and actual costs remain the separately entered ledger.</p>';
+    html+='<details><summary>Complete original candidate and physical results</summary><pre>'+esc(JSON.stringify(candidate,null,2))+'</pre></details></section>';
+    parts.push(html);
+  }
+  return {ids,html:parts.length?'<section><h2>Selected economic scenarios</h2>'+parts.join('')+'</section>':''};
+}
+
 export function reportHtml(plan,asOf=today()){
   const summary=summarize(plan,asOf);
   const text=value=>value===null||value===undefined?'':typeof value==='object'?JSON.stringify(value):String(value);
@@ -316,7 +373,10 @@ export function reportHtml(plan,asOf=today()){
   }).join('');
   const css='body{font:14px/1.5 system-ui,sans-serif;color:#202124;margin:32px;max-width:1200px}h1{font-size:28px}h2{font-size:19px;margin-top:32px}h3{font-size:16px;margin-top:24px}table{border-collapse:collapse;width:100%;font-size:12px}th,td{border:1px solid #c9cbce;text-align:left;padding:7px;vertical-align:top;white-space:pre-wrap;overflow-wrap:anywhere}th{background:#f1f2f3}.scroll{overflow:auto}.meta{color:#575b60}.stats{display:flex;gap:24px;flex-wrap:wrap}.stats b{display:block;font-size:22px}pre{white-space:pre-wrap;overflow-wrap:anywhere}details{margin:12px 0}.field-record{margin-bottom:24px}@media print{body{margin:10mm}thead{display:table-header-group}tr{break-inside:avoid}.scroll{overflow:visible}h2,h3{break-after:avoid}}';
   let html='<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>'+esc(plan.title)+' — implementation report</title><style>'+css+'</style><body><h1>'+esc(plan.title)+'</h1><p class="meta">Implementation and field monitoring · '+esc(plan.id)+' · native revision '+esc(plan.revision)+' · as of '+esc(asOf)+'</p><p>'+esc(plan.description)+'</p><div class="stats"><span><b>'+summary.tasks.complete+' / '+summary.tasks.total+'</b>Tasks complete</span><span><b>'+money(summary.budget.budget)+'</b>Budget</span><span><b>'+money(summary.budget.commitment)+'</b>Commitments</span><span><b>'+money(summary.budget.actual)+'</b>Actual costs</span><span><b>'+summary.field.observations+'</b>Recorded results</span></div>';
-  html+='<h2>Selected conservation and intervention records</h2>'+table(['ID','Candidate','Original candidate area (ha)','Reporting footprint (ha)','Area basis','Original source snapshot','Modeled quantities'],plan.candidates.map(c=>[c.id,c.label,c.area_ha??'',c.reporting_area_ha??'',c.area_basis||'',c.source,c.modeled_benefits||[]]));
+  const economics=economicSourceReports(plan,table);
+  html+=economics.html;
+  const otherCandidates=plan.candidates.filter(c=>!economics.ids.has(c.id));
+  if(otherCandidates.length||!economics.ids.size)html+='<h2>Selected conservation and intervention records</h2>'+table(['ID','Candidate','Original candidate area (ha)','Reporting footprint (ha)','Area basis','Original source snapshot','Modeled quantities'],otherCandidates.map(c=>[c.id,c.label,c.area_ha??'',c.reporting_area_ha??'',c.area_basis||'',c.source,c.modeled_benefits||[]]));
   html+='<h2>Assigned implementation work</h2>'+table(['Task','Candidate','Owner','Status','Start','Last working date','Progress','Notes','Evidence references'],summary.schedule.tasks.map(s=>{const t=plan.tasks.find(t=>t.id===s.id);return [t.title,t.candidate_id||'',t.assignee||'',t.status,s.start||'',s.last_work_date||'',t.progress_pct+'%',t.notes||'',t.evidence_refs||[]];}));
   if(summary.schedule.issues.length)html+='<h2>Dates to complete</h2><ul>'+summary.schedule.issues.map(i=>'<li>'+esc(i.task_id+': '+i.message)+'</li>').join('')+'</ul>';
   html+='<h2>Cost ledger (USD)</h2>'+table(['Kind','Item','Task','Amount','Date','Reference'],plan.budget_lines.map(b=>[b.kind,b.label,b.task_id||'',money(b.amount_minor),b.date||'',b.reference||'']));

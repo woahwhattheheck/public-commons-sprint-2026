@@ -27,13 +27,89 @@ export class ImplementationWorkbench {
     this.onSubmit=e=>{if(e.target.matches('[data-impl-form]')){e.preventDefault();this.saveForm(e.target).catch(x=>this.fail(x));}};
     this.root.addEventListener('click',this.onClick);this.root.addEventListener('change',this.onChange);this.root.addEventListener('submit',this.onSubmit);
     this.beforeUnload=e=>{if(this.dirty){e.preventDefault();e.returnValue='';}};window.addEventListener('beforeunload',this.beforeUnload);
-    this.workspace=host.getState?.()?.workspace_key||'offline';this.storageKey='upstate.implementation.drafts/v1/'+this.workspace;this.readLocal();
+    this.workspace=host.getState?.()?.workspace_key||'offline';this.storageKey='upstate.implementation.drafts/v1/'+this.workspace;this.readLocal();this.readEconomic();
   }
   async start(){
     this.render();
     if(this.native){await this.reloadList();if(!this.catalog){const c=await this.read('/api/implementation/catalog');this.catalog=c.catalog||c;}}
-    if(!this.plan){const first=this.planList[0]?.id||Object.keys(this.offlineCopies)[0];if(first)await this.openPlan(first);else{this.plan=makePlan();this.dirty=true;this.cache();}}
+    if(!this.plan){const first=(this.economicHandoff?.plan_id&&this.offlineCopies[this.economicHandoff.plan_id]?this.economicHandoff.plan_id:null)||this.planList[0]?.id||Object.keys(this.offlineCopies)[0];if(first)await this.openPlan(first);else{this.plan=makePlan();this.dirty=true;this.cache();}}
     this.render();
+  }
+  readEconomic(){
+    this.economicHandoff=null;
+    try{const value=JSON.parse(localStorage.getItem(this.storageKey+'/economic-handoff')||'null');if(value?.binding?.workspace_key===this.workspace)this.economicHandoff=value;}catch{}
+  }
+  cacheEconomic(){
+    try{if(this.economicHandoff)localStorage.setItem(this.storageKey+'/economic-handoff',JSON.stringify(this.economicHandoff));else localStorage.removeItem(this.storageKey+'/economic-handoff');}
+    catch{this.message='Keep this view open until the native import completes; the browser could not retain the handoff.';}
+  }
+  async receiveEconomicScenario(payload){
+    if(!this.native||this.gone||payload?.workspace_key!==this.workspace||this.host.getState?.()?.workspace_key!==this.workspace)throw Error('Open this economic scenario in its original native workspace.');
+    const binding=Object.fromEntries(['workspace_key','edition_id','run_id','report_id','report_sha256','zone_id'].map(key=>[key,payload[key]]));
+    const old=this.economicHandoff;
+    if(old&&old.stage!=='complete'&&!docEqual(old.binding,binding))throw Error('Finish or dismiss the retained economic scenario before opening another.');
+    const turn=this.generation;
+    const edition=await this.read('/api/economic-desk/edition',{edition_id:binding.edition_id});
+    const module=await import('./economic_implementation.mjs');
+    if(this.gone||turn!==this.generation||this.host.getState?.()?.workspace_key!==this.workspace)throw Error('The selected workspace or plan changed while opening this economic scenario. Open it again.');
+    const choices=module.economicImplementationOptions(edition,this.workspace);
+    const actual=module.economicImplementationSelection(choices,binding.run_id);
+    if(!docEqual(actual,binding))throw Error('The handoff differs from the original saved edition, native report or zone.');
+    const choice=choices.alternatives.find(row=>row.run_id===binding.run_id);
+    this.economicHandoff={...(old&&docEqual(old.binding,binding)?old:{}),binding,
+      review:{title:choices.edition_title,zone_title:choices.zone_title,alternative:choice},
+      stage:old&&docEqual(old.binding,binding)?old.stage:'review'};
+    this.tab='sources';this.cacheEconomic();
+    if(!this.root.querySelector('dialog[open]'))this.render();
+    else this.host.toast?.('The economic scenario is retained. Close the current editor to review its import.');
+    return {accepted:true,edition_id:binding.edition_id,run_id:binding.run_id};
+  }
+  economicPanel(){
+    const h=this.economicHandoff;if(!h)return '';
+    const alternative=h.review?.alternative||{},binding=h.binding;
+    const costs=alternative.original_cost;
+    const saving=h.stage==='saving'||h.stage==='importing';
+    const summary=alternative.outputs?.map(output=>'<li>'+esc(output.label||output.metric)+': '+esc(output.reduction??'Unavailable')+' '+esc(output.units||'')+' avoided export</li>').join('')||'';
+    return '<section class="iw-notice" aria-label="Economic scenario handoff"><div class="iw-section-head"><h3>'+esc(h.stage==='complete'?'Economic source imported':'Plan one retained economic scenario')+'</h3>'+button('economic-dismiss',h.stage==='complete'?'Close':'Dismiss selection','',saving?'iw-disabled':'')+'</div><p><b>'+esc(alternative.label||binding.run_id)+'</b> · '+esc(h.review?.zone_title||binding.zone_id)+'</p><p>'+esc(h.review?.title||binding.edition_id)+'</p>'+(summary?'<ul>'+summary+'</ul>':'')+'<p>'+esc(costs?'Original '+costs.currency+' estimate: capital '+costs.capital+'; annual operating '+costs.annual_operating+'. Cost source and footprint travel with this scenario.':'This scenario has no supplied implementation cost.')+'</p><p>One complete scenario becomes one source-linked candidate. Its reporting area, signed physical changes and original assumptions are retained. Choose tasks, field methods and cost ledger entries in this plan.</p>'+(alternative.eligible===false?'<p>Saved screening: '+esc((alternative.decision?.reasons||[]).join('; ')||'outside the edition’s prepared criteria')+'.</p>':'')+'<details><summary>Original scenario and cost context</summary><pre class="iw-json">'+esc(JSON.stringify({binding,original_cost:costs||null,calculated_cost:alternative.cost||null,outputs:alternative.outputs||[]},null,2))+'</pre></details>'+
+      (h.stage==='complete'?'<p>Attached to plan '+esc(h.plan_id)+' at native revision '+esc(h.revision)+'. Open the source register below or use Add method workflow to plan its work.</p>':
+      saving?'<p>The original '+esc(h.stage==='saving'?'plan save':'source import')+' operation is retained. Its native task and browser draft remain available.</p>':
+      '<div class="iw-actions">'+button('economic-import',this.dirty||!this.nativePlan?'Save this plan and import scenario':'Import scenario into this plan','','iw-primary')+button('economic-new','Create a new plan for this scenario')+'</div><p>Current plan: '+esc(this.plan?.title||'')+'. Use Saved plan above to choose another existing plan.</p>')+'</section>';
+  }
+  async importEconomicScenario(){
+    const h=this.economicHandoff;
+    if(!h||!this.native||this.gone)throw Error('Open a retained economic scenario first.');
+    if(this.pending)throw Error('Finish the retained native plan operation before importing this scenario.');
+    if(this.root.querySelector('dialog[open]'))throw Error('Finish the current plan editor before importing this scenario.');
+    if(h.binding.workspace_key!==this.workspace||this.host.getState?.()?.workspace_key!==this.workspace)throw Error('The scenario belongs to another workspace.');
+    if(h.stage==='complete')return;
+    if(['saving','importing'].includes(h.stage))throw Error('Reopen the retained plan and finish its original economic import operation.');
+    h.plan_id=this.plan.id;h.stage=this.dirty||!this.nativePlan?'saving':'importing';h.operation_id=null;this.cacheEconomic();
+    try{
+      if(h.stage==='saving'){
+        const kind=this.importedFile?'implementation.plan.import':this.nativePlan?'implementation.plan.save':'implementation.plan.create';
+        await this.queue(kind,{document:this.plan,expected_revision:this.plan.revision});
+      }else{
+        await this.queue('implementation.source.import',{
+          kind:'economic_scenario',source_id:h.binding.edition_id,...h.binding,
+          selected_ids:[h.binding.run_id],plan_id:this.plan.id,expected_revision:this.plan.revision
+        });
+      }
+    }catch(error){
+      if(!this.pending&&!h.operation_id){h.stage='review';this.cacheEconomic();}
+      throw error;
+    }
+  }
+  async finishEconomicOperation(pending){
+    const h=this.economicHandoff;
+    if(!h||h.operation_id!==pending.operation_id||h.plan_id!==pending.plan_id)return;
+    if(pending.action==='implementation.source.import'&&h.stage==='importing'){
+      h.stage='complete';h.revision=this.nativePlan?.revision;this.tab='sources';this.cacheEconomic();this.render();return;
+    }
+    if(h.stage==='saving'){
+      h.operation_id=null;h.stage='review';this.cacheEconomic();
+      if(this.dirty||this.plan.id!==h.plan_id){this.message='The plan revision was saved. Review the retained browser changes, then import the economic scenario.';this.render();return;}
+      await this.importEconomicScenario();
+    }
   }
   readLocal(){try{const data=JSON.parse(localStorage.getItem(this.storageKey)||'{"plans":{}}');this.offlineCopies=data.plans||{};}catch(e){this.message='Browser storage could not be read. Export JSON to retain your work.';}}
   cache(){if(!this.plan)return;this.offlineCopies[this.plan.id]={document:clone(this.plan),dirty:this.dirty,pending:this.pending?clone(this.pending):null,updated_at:new Date().toISOString()};try{localStorage.setItem(this.storageKey,JSON.stringify({schema:'upstate.implementation-drafts/v1',plans:this.offlineCopies}));}catch(e){this.message='Browser storage is full or unavailable. Use Export JSON to save the current plan.';}}
@@ -62,6 +138,7 @@ export class ImplementationWorkbench {
     if(this.pending)throw Error('The previous plan operation is still retained. Open its task or retry its original operation before starting another.');
     const issues=validatePlan(this.plan);if(issues.length)throw Error(issues.map(x=>x.path+': '+x.message).join('\n'));
     this.pending={id:null,operation_id:uid('implementation-op'),action,payload:clone(payload),snapshot:clone(this.plan),plan_id:this.plan.id};
+    if(this.economicHandoff&&['saving','importing'].includes(this.economicHandoff.stage)&&this.economicHandoff.plan_id===this.plan.id&&!this.economicHandoff.operation_id){this.economicHandoff.operation_id=this.pending.operation_id;this.cacheEconomic();}
     this.cache();await this.submitPending();
   }
   async submitPending(){
@@ -106,6 +183,7 @@ export class ImplementationWorkbench {
     if(['failed','cancelled'].includes(task.state)){
       this.error=task.error?.message||'The native operation '+task.state+'. Your browser draft is retained.';
       if(task.error?.code==='IMPLEMENTATION_REVISION_CONFLICT')this.error+=' Reopen the current native plan to compare; export this draft to retain all field changes.';
+      if(this.economicHandoff?.operation_id===pending.operation_id){this.economicHandoff.stage='review';this.economicHandoff.operation_id=null;this.cacheEconomic();}
       this.pending=null;this.cache();if(!this.root.querySelector('dialog[open]'))this.render();return;
     }
     if(task.state!=='complete')return;
@@ -120,7 +198,7 @@ export class ImplementationWorkbench {
       this.nativePlan=clone(r.plan||r.document);this.history=r.history||[];this.downloads=r._downloads||[];this.pending=null;this.error='';
       if(docEqual(this.plan,pending.snapshot)){this.plan=clone(this.nativePlan);this.dirty=false;this.importedFile=false;this.message=pending.action==='implementation.plan.report'?'Native report package is ready for revision '+this.plan.revision+'.':'Native revision '+this.plan.revision+' saved and reopened.';}
       else this.message='Native revision '+this.nativePlan.revision+' saved. Later browser edits are retained separately; export or reconcile them before the next commit.';
-      this.cache();this.render();
+      this.cache();this.render();await this.finishEconomicOperation(pending);
     }catch(e){
       if(current()){this.error=e?.message||String(e);this.message='The completed native operation remains retained. Retry reopening its saved result.';this.cache();if(!this.root.querySelector('dialog[open]'))this.render();}
     }finally{if(this.resolvingOperation===pending.operation_id)this.resolvingOperation=null;}
@@ -131,7 +209,7 @@ export class ImplementationWorkbench {
     if(!p){this.root.innerHTML='<section class="iw"><h2>Implementation & fieldwork</h2><p>Opening retained plans…</p>'+(this.error?'<pre role="alert">'+esc(this.error)+'</pre>':'')+'</section>';return;}
     let stats=null,validation=validatePlan(p);try{if(!validation.length)stats=summarize(p,this.asOf);}catch(e){validation=[{path:'calendar',message:e.message}];}
     const plans=new Map([...this.planList.map(x=>[x.id,x]),...Object.values(this.offlineCopies).map(x=>[x.document.id,x.document]),[p.id,p]]);
-    this.root.innerHTML='<section class="iw"><header class="iw-header"><div><p class="iw-eyebrow">UPPER SAVANNAH · IMPLEMENTATION</p><h2>'+esc(p.title)+'</h2><p class="iw-muted">'+esc(this.native?'Native workspace · '+this.workspace:'Portable field workspace')+' · revision '+p.revision+(this.dirty?' · browser draft':'')+'</p></div><div class="iw-actions">'+button('new','New plan')+button('import','Open JSON')+button('settings','Plan settings')+'</div></header><div class="iw-toolbar">'+field('Saved plan','<select data-impl-change="plan">'+options([...plans.values()].map(x=>[x.id,x.title]),p.id,false)+'</select>')+field('Report date','<input type="date" value="'+esc(this.asOf)+'" data-impl-change="asof">')+'<div class="iw-actions">'+button('save',this.native?'Save native revision':'Save browser draft','','iw-primary')+button('export-json','Export JSON')+(this.native?button('reopen','Reopen native'):'')+'</div></div>'+(this.message?'<p class="iw-notice" role="status">'+esc(this.message)+'</p>':'')+(this.error?'<pre class="iw-error" role="alert">'+esc(this.error)+'</pre>':'')+(validation.length?'<div class="iw-error"><b>Complete these fields</b><ul>'+validation.map(v=>'<li>'+esc(v.path+': '+v.message)+'</li>').join('')+'</ul></div>':'')+(this.pending?'<p class="iw-notice">Native operation '+esc(this.pending.id||this.pending.operation_id)+' is retained. '+(!this.pending.id?button('retry-submit','Retry original operation'):this.pending.state==='interrupted'?button('resume-task','Resume original task'):this.pending.state==='complete'?button('refresh-result','Reopen completed result'):'')+'</p>':'')+'<nav class="iw-tabs" aria-label="Implementation views">'+TABS.map(([id,label])=>'<button type="button" data-impl="tab" data-tab="'+id+'" aria-current="'+(this.tab===id?'page':'false')+'">'+label+'</button>').join('')+'</nav><main class="iw-body">'+this.body(stats)+'</main><footer class="iw-footer"><span>'+esc(p.id)+'</span><span>Original candidate sources, dated work and field results remain linked.</span></footer><dialog class="iw-dialog" aria-label="Edit implementation record"><div data-impl-dialog></div></dialog><input hidden type="file" accept=".json,application/json" data-impl-file></section>';
+    this.root.innerHTML='<section class="iw"><header class="iw-header"><div><p class="iw-eyebrow">UPPER SAVANNAH · IMPLEMENTATION</p><h2>'+esc(p.title)+'</h2><p class="iw-muted">'+esc(this.native?'Native workspace · '+this.workspace:'Portable field workspace')+' · revision '+p.revision+(this.dirty?' · browser draft':'')+'</p></div><div class="iw-actions">'+button('new','New plan')+button('import','Open JSON')+button('settings','Plan settings')+'</div></header><div class="iw-toolbar">'+field('Saved plan','<select data-impl-change="plan">'+options([...plans.values()].map(x=>[x.id,x.title]),p.id,false)+'</select>')+field('Report date','<input type="date" value="'+esc(this.asOf)+'" data-impl-change="asof">')+'<div class="iw-actions">'+button('save',this.native?'Save native revision':'Save browser draft','','iw-primary')+button('export-json','Export JSON')+(this.native?button('reopen','Reopen native'):'')+'</div></div>'+(this.message?'<p class="iw-notice" role="status">'+esc(this.message)+'</p>':'')+(this.error?'<pre class="iw-error" role="alert">'+esc(this.error)+'</pre>':'')+(validation.length?'<div class="iw-error"><b>Complete these fields</b><ul>'+validation.map(v=>'<li>'+esc(v.path+': '+v.message)+'</li>').join('')+'</ul></div>':'')+(this.pending?'<p class="iw-notice">Native operation '+esc(this.pending.id||this.pending.operation_id)+' is retained. '+(!this.pending.id?button('retry-submit','Retry original operation'):this.pending.state==='interrupted'?button('resume-task','Resume original task'):this.pending.state==='complete'?button('refresh-result','Reopen completed result'):'')+'</p>':'') +this.economicPanel()+'<nav class="iw-tabs" aria-label="Implementation views">'+TABS.map(([id,label])=>'<button type="button" data-impl="tab" data-tab="'+id+'" aria-current="'+(this.tab===id?'page':'false')+'">'+label+'</button>').join('')+'</nav><main class="iw-body">'+this.body(stats)+'</main><footer class="iw-footer"><span>'+esc(p.id)+'</span><span>Original candidate sources, dated work and field results remain linked.</span></footer><dialog class="iw-dialog" aria-label="Edit implementation record"><div data-impl-dialog></div></dialog><input hidden type="file" accept=".json,application/json" data-impl-file></section>';
   }
   table(headers,rows,emptyText='No records yet.'){
     return rows.length?'<div class="iw-table-wrap"><table><thead><tr>'+headers.map(h=>'<th>'+esc(h)+'</th>').join('')+'</tr></thead><tbody>'+rows.map(r=>'<tr>'+r.map(c=>'<td>'+c+'</td>').join('')+'</tr>').join('')+'</tbody></table></div>':empty(emptyText);
@@ -168,6 +246,9 @@ export class ImplementationWorkbench {
   }
   async act(b){
     const action=b.dataset.impl;
+    if(action==='economic-dismiss'){if(this.economicHandoff&&['saving','importing'].includes(this.economicHandoff.stage))throw Error('Finish the retained source operation before dismissing its selection.');this.economicHandoff=null;this.cacheEconomic();this.render();return;}
+    if(action==='economic-import'){await this.importEconomicScenario();return;}
+    if(action==='economic-new'){if(this.pending)throw Error('Finish the retained plan operation first.');const h=this.economicHandoff;if(!h)throw Error('Open a saved economic scenario first.');if(['saving','importing'].includes(h.stage))throw Error('Finish the retained economic import on its original plan first.');this.cache();this.generation++;this.history=[];this.downloads=[];this.plan=makePlan();this.plan.title=h.review?.alternative?.label||'Economic scenario implementation';this.plan.description='Implementation of the retained complete scenario for '+(h.review?.zone_title||h.binding.zone_id)+'.';this.nativePlan=null;this.importedFile=false;this.dirty=true;this.pending=null;h.stage='review';h.plan_id=this.plan.id;this.cache();this.cacheEconomic();this.render();await this.importEconomicScenario();return;}
     if(action==='retry-submit'){await this.submitPending();return;}
     if(action==='resume-task'){await this.resumePending();return;}
     if(action==='refresh-result'){await this.update(this.lastState||this.host.getState?.()||{});return;}
@@ -211,7 +292,48 @@ export class ImplementationWorkbench {
 
 }
 export function attachImplementationWorkbench(host){
-  let workbench=null;
-  return {mount(node,state){workbench?.detach();const instance=new ImplementationWorkbench(node,host);workbench=instance;instance.start().catch(e=>instance.fail(e));},update(state){const instance=workbench;instance?.update(state).catch(e=>instance.fail(e));},detach(){workbench?.detach();workbench=null;},dispatch(){return false;}};
+  let workbench=null,ready=null,request=null;
+  async function consume(){
+    const selected=request,instance=workbench,start=ready;
+    if(!selected||!instance||!start||selected.consuming)return;
+    selected.consuming=true;
+    try{
+      await start;
+      if(request!==selected)return;
+      if(workbench!==instance){selected.consuming=false;return consume();}
+      const value=await instance.receiveEconomicScenario(selected.payload);
+      if(request===selected){request=null;selected.resolve(value);}
+    }catch(error){
+      if(request===selected&&workbench!==instance){selected.consuming=false;return consume();}
+      if(request===selected){request=null;selected.reject(error);}instance.fail(error);
+    }
+  }
+  return {
+    mount(node,state){
+      workbench?.detach();
+      const instance=new ImplementationWorkbench(node,host);workbench=instance;
+      ready=instance.start().then(()=>instance.update(host.getState?.()||state||{}));ready.catch(error=>instance.fail(error));
+      consume();
+    },
+    update(state){const instance=workbench;instance?.update(state).catch(error=>instance.fail(error));},
+    detach(){
+      workbench?.detach();workbench=null;ready=null;
+      if(request){request.reject(Error('The implementation desk was closed before the scenario opened.'));request=null;}
+    },
+    openEconomicScenario(payload){
+      if(payload?.workspace_key!==host.getState?.()?.workspace_key)return Promise.reject(Error('Open the selected economic edition in its original workspace.'));
+      if(typeof host.navigate!=='function')return Promise.reject(Error('The extension host needs its original desk navigation capability.'));
+      if(request)return Promise.reject(Error('The previous economic scenario is still opening.'));
+      return new Promise((resolve,reject)=>{
+        request={payload:clone(payload),resolve,reject};
+        try{
+          const navigation=host.navigate('implementation');
+          Promise.resolve(navigation).then(()=>consume()).catch(error=>{if(request){const selected=request;request=null;selected.reject(error);}});
+          consume();
+        }catch(error){request=null;reject(error);}
+      });
+    },
+    dispatch(){return false;}
+  };
 }
 export function mountPortableImplementation(node,catalog){const w=new ImplementationWorkbench(node,{},catalog);w.start().catch(e=>w.fail(e));return w;}
