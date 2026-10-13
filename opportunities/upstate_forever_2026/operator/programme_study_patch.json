@@ -1,0 +1,100 @@
+{
+  "schema": "commons.guarded-source-edits/v1",
+  "component": "programme-native-study",
+  "version": "1.0.2",
+  "base_commit": "bfa5454d292c774502b2ef6d9306206ce4bf8d91",
+  "source_preimages": {
+    "model/compute_programme.py": {
+      "bytes": 95604,
+      "sha256": "dc102a0ff059c2e004d33cb5a45ff358d2e91bc3a55a7db33ac99afd2c012b13"
+    },
+    "operator/web/programmes.mjs": {
+      "bytes": 78664,
+      "sha256": "b4166ab4d763dc0df5dde77f3164f369b80779104cd260752388cfa8c148bd32"
+    }
+  },
+  "compatible_source_preimages": {
+    "b39554bf4ead42d1fb42af7c21a9e241f384fd41": {
+      "model/compute_programme.py": {
+        "bytes": 91434,
+        "sha256": "5df48145fc5b05a4a2468fe938c2eddd5c4bd508c6407e6e95cd3cc616969f37"
+      },
+      "operator/web/programmes.mjs": {
+        "bytes": 65117,
+        "sha256": "14b71fd70d0050c9968b9a025287c65d7240146aae8c085817762c79f4d40f8b"
+      }
+    }
+  },
+  "edits": [
+    {
+      "path": "model/compute_programme.py",
+      "before": "        choice = _copy(selection)\n        if \"baseline_run_id\" in choice or \"scenario_run_ids\" in choice:",
+      "after": "        choice = _copy(selection)\n        from . import native_study\n        study_mode = native_study.prepare(choice)\n        if \"baseline_run_id\" in choice or \"scenario_run_ids\" in choice:"
+    },
+    {
+      "path": "model/compute_programme.py",
+      "before": "raise ValueError(\"Select baseline and future runs containing both NDR and SDR for the complete seven-map delivery\")",
+      "after": "raise ValueError(\"Select baseline and future runs containing both NDR and SDR for the selected map delivery\")"
+    },
+    {
+      "path": "model/compute_programme.py",
+      "before": "        if not isinstance(roles, dict) or needed - set(roles):\n",
+      "after": "        if not isinstance(roles, dict) or (not study_mode and needed - set(roles)):\n"
+    },
+    {
+      "path": "model/compute_programme.py",
+      "before": "        if not isinstance(overlays, dict) or {\"drinking_water\", \"high_quality_waters\"} - set(overlays):\n",
+      "after": "        if not isinstance(overlays, dict) or (not study_mode and {\"drinking_water\", \"high_quality_waters\"} - set(overlays)):\n"
+    },
+    {
+      "path": "model/compute_programme.py",
+      "before": "        for field in (\"name\", \"organization\", \"email\"):\n            _text(contact.get(field), \"the metadata contact \" + field)\n",
+      "after": "        if not study_mode:\n            for field in (\"name\", \"organization\", \"email\"):\n                _text(contact.get(field), \"the metadata contact \" + field)\n"
+    },
+    {
+      "path": "model/compute_programme.py",
+      "before": "                \"run_states\": run_states, \"ready\": all(state == \"complete\" for state in run_states.values())}",
+      "after": "                \"run_states\": run_states, \"ready\": all(state == \"complete\" for state in run_states.values()),\n                \"delivery_mode\": native_study.mode(choice),\n                \"required_map_families\": list(native_study.MAP_FAMILIES if study_mode else scientific_common.MAP_IDS)}"
+    },
+    {
+      "path": "model/compute_programme.py",
+      "before": "raise RuntimeError(\"The original seven-map delivery has not completed\")",
+      "after": "raise RuntimeError(\"The selected original map delivery has not completed\")"
+    },
+    {
+      "path": "operator/web/programmes.mjs",
+      "before": "      actionButton('report', 'Build result catalogue', record.id, nativeActive ? 'disabled' : '') +\n",
+      "after": "      actionButton('report', 'Build result catalogue', record.id, nativeActive ? 'disabled' : '') +\n      actionButton('study-export', 'Export native study', record.id, nativeActive ? 'disabled' : '') +\n"
+    },
+    {
+      "path": "operator/web/programmes.mjs",
+      "before": "ensembleCandidatesHTML(record) +\n",
+      "after": "studyDeliveriesHTML(record) + ensembleCandidatesHTML(record) +\n"
+    },
+    {
+      "path": "operator/web/programmes.mjs",
+      "before": "    if (action === 'open-report') return showReport(value);\n",
+      "after": "    if (action === 'open-report') return showReport(value);\n    if (action === 'study-export') return studyExportForm(value);\n    if (action === 'delivery') return openItem('deliveries', value);\n"
+    },
+    {
+      "path": "operator/web/programmes.mjs",
+      "before": "    if (button.dataset.action === 'programme-import') return importForm();\n",
+      "after": "    if (button.dataset.action === 'programme-import') return importForm();\n    if (button.dataset.action === 'programme-delivery') return openItem('deliveries', button.dataset.id);\n"
+    },
+    {
+      "path": "operator/web/programmes.mjs",
+      "before": "      (task.experiment?.experiment_id?'<button type=\"button\" data-action=\"experiment-show\" data-id=\"'+\n",
+      "after": "      (task.action === 'compute.programme.delivery' && task.result?.delivery_id ?\n        '<button type=\"button\" data-action=\"programme-delivery\" data-id=\"' + escapeHTML(task.result.delivery_id) + '\">Open maps and report</button>' : '')+\n      (task.experiment?.experiment_id?'<button type=\"button\" data-action=\"experiment-show\" data-id=\"'+\n"
+    },
+    {
+      "path": "operator/web/programmes.mjs",
+      "before": "  function completionMessage(task) {\n",
+      "after": "  function completionMessage(task) {\n    if (task.action === 'compute.programme.delivery' && task.result?.delivery_id) return 'Maps, scientific report and original study source package are ready.';\n"
+    },
+    {
+      "path": "operator/web/programmes.mjs",
+      "before": "  async function dispatchLocal(action, value) {\n",
+      "after": "  function studyDeliveriesHTML(value) {\n    const rows = Object.values(value?.deliveries || {});\n    if (!rows.length) return '';\n    return '<section class=\"programme-output\"><h3>Saved maps and reports</h3>' +\n      table(['Study', 'Edition', 'State', 'Open'], rows.map(row =>\n        '<tr><td>' + escapeHTML(row.selection?.native_study?.title || row.selection?.title || 'Saved map delivery') +\n        (row.error?.message ? '<p class=\"error\">' + escapeHTML(row.error.message) + '</p>' : '') +\n        '</td><td>' + escapeHTML(row.selection?.delivery_mode === 'native_study' ? 'Native study' : 'Regional RFP') +\n        '</td><td>' + stateBadge(row.state) + '</td><td>' +\n        (row.state === 'complete' && row.delivery_id ? actionButton('delivery', 'Maps and report', row.delivery_id) : 'Open the retained operation to continue') +\n        '</td></tr>')) + '</section>';\n  }\n\n  async function studyExportForm(programmeId) {\n    const requestedWorkspace = workspaceKey();\n    const current = await api(query('detail', {programme_id: programmeId}));\n    if (requestedWorkspace !== workspaceKey()) return;\n    const rows = asArray(current.runs);\n    const complete = row => row.state === 'complete' && nativeModels(row.native_selection?.models || row.models).length === 2;\n    const baselines = rows.filter(row => complete(row) && row.scenario_kind === 'baseline');\n    const alternativesFor = key => {\n      const base = baselines.find(row => row.key === key);\n      return rows.filter(row => complete(row) && row.scenario_kind === 'landcover' &&\n        row.profile_id === base?.profile_id && row.run_id !== base?.run_id);\n    };\n    const preferred = baselines.find(row => row.key === current.baseline_run && alternativesFor(row.key).length)\n      || baselines.find(row => alternativesFor(row.key).length);\n    if (!preferred) {\n      detail('Complete the native study cases',\n        '<p>Select one completed original-land-cover baseline and at least one completed land-cover alternative under the same parameter profile. Both cases need NDR and SDR on this programme’s retained grid.</p>' +\n        '<p>The study export reuses those original model outputs and includes current nutrient and sediment exports, combined export priority, and future nutrient and sediment changes.</p>',\n        {kind: 'programme-study-inputs', id: programmeId});\n      return;\n    }\n    let form, formRoot, revision = 0, previewSerial = 0;\n    const field = name => form.elements.namedItem(name);\n    const isCurrent = version => requestedWorkspace === workspaceKey() && version === revision &&\n      formRoot?.isConnected && document.querySelector('#operation-form') === form;\n    const readSelection = () => {\n      const future = [...formRoot.querySelectorAll('[name=\"study_future\"]:checked')].map(node => node.value);\n      if (!future.length) throw new Error('Select at least one completed land-cover alternative.');\n      const selection = {\n        delivery_mode: 'native_study',\n        native_study: {title: field('study_title').value.trim(), purpose: field('study_purpose').value.trim()},\n        baseline_run: field('study_baseline').value, scenario_runs: future,\n        contact: {name: field('study_contact_name').value.trim(),\n          organization: field('study_contact_org').value.trim(), email: field('study_contact_email').value.trim()},\n      };\n      const reference = field('study_reference').value.trim();\n      if (reference) selection.native_study.reference = reference;\n      if (!selection.native_study.title || !selection.native_study.purpose)\n        throw new Error('Name the study and explain its purpose and input assumptions.');\n      return selection;\n    };\n    const invalidate = () => {\n      revision += 1;\n      formRoot.querySelector('[data-study-preview]').textContent = 'Review the current study selections before export.';\n    };\n    const futureChoices = () => {\n      const candidates = alternativesFor(field('study_baseline').value);\n      const holder = formRoot.querySelector('[data-study-alternatives]');\n      holder.innerHTML = candidates.length ? candidates.map(row =>\n        '<label><input type=\"checkbox\" name=\"study_future\" value=\"' + escapeHTML(row.key) + '\" checked> ' +\n        escapeHTML(row.title || row.key) + ' <small class=\"mono\">' + escapeHTML(short(row.run_id)) + '</small></label>').join('') :\n        '<p>Select a baseline with completed same-profile land-cover alternatives.</p>';\n    };\n    const review = async () => {\n      const selection = readSelection(), version = revision, serial = ++previewSerial;\n      const target = formRoot.querySelector('[data-study-preview]');\n      target.textContent = 'Checking the original completed runs and native-study export…';\n      try {\n        const result = await api('/api/programmes/delivery-preview', {method: 'POST',\n          body: {workspace: requestedWorkspace, programme_id: programmeId, selection}});\n        if (!isCurrent(version) || serial !== previewSerial || canonical(selection) !== canonical(readSelection())) return null;\n        target.innerHTML = '<div class=\"notice\"><strong>' +\n          escapeHTML(result.ready ? 'Ready to export the selected native study' : 'Complete the selected native calculations') +\n          '</strong><p>' + escapeHTML(result.scenario_runs.length) + ' land-cover alternative(s). Required map families: ' +\n          escapeHTML(asArray(result.required_map_families).map(name => name.replaceAll('_', ' ')).join('; ')) +\n          '.</p><p>Annual nitrogen and phosphorus remain in kilograms; sediment remains in metric tonnes. Change maps use alternative minus baseline on paired valid cells.</p></div>';\n        return result;\n      } catch (error) {\n        if (!isCurrent(version) || serial !== previewSerial) return null;\n        target.textContent = error.message || String(error);\n        throw error;\n      }\n    };\n    openForm('Export native study',\n      'Build maps, the scientific report and the original study source package from completed model cases.',\n      '<div class=\"programme-form\" data-study-form><div class=\"form-grid\">' +\n      '<label>Study title<input name=\"study_title\" required value=\"' + escapeHTML(current.title) + '\"></label>' +\n      '<label>Completed baseline<select name=\"study_baseline\" required>' +\n      baselines.filter(row => alternativesFor(row.key).length).map(row => '<option value=\"' + escapeHTML(row.key) + '\"' +\n        (row.key === preferred.key ? ' selected' : '') + '>' + escapeHTML(row.title || row.key) + '</option>').join('') +\n      '</select></label></div><label>Purpose, input assumptions and interpretation<textarea name=\"study_purpose\" rows=\"3\" required>' +\n      escapeHTML(current.selection?.description || '') + '</textarea></label>' +\n      '<label>Source or teaching reference<input name=\"study_reference\" value=\"' +\n      escapeHTML(current.source_reference || current.selection?.source_reference || '') + '\"></label>' +\n      '<fieldset><legend>Completed land-cover alternatives</legend><div data-study-alternatives></div></fieldset>' +\n      '<details><summary>Metadata contact, if applicable</summary><div class=\"form-grid\">' +\n      '<label>Name<input name=\"study_contact_name\"></label><label>Organization<input name=\"study_contact_org\"></label>' +\n      '<label>Email<input name=\"study_contact_email\" type=\"email\"></label></div></details>' +\n      '<p class=\"note\">This native-study edition provides five model-derived map families and retains the original grid, parameter table, scenario edits and runtime. Label simulated inputs in the study title and purpose when this is a teaching case. Additional source-water or designation maps use separately selected source records.</p>' +\n      '<button type=\"button\" data-study-review>Review study export</button><div data-study-preview role=\"status\" aria-live=\"polite\"></div></div>',\n      'Build maps and report', async () => {\n        const selection = readSelection(), version = revision;\n        const result = await review();\n        if (!result || !isCurrent(version) || canonical(selection) !== canonical(readSelection()))\n          throw new Error('The study selection changed; review it and export again.');\n        if (!result.ready) throw new Error('Complete the selected baseline and alternatives before export.');\n        return submitAction('compute.programme.delivery', {programme_id: programmeId, selection});\n      }, () => {\n        form = document.querySelector('#operation-form');\n        formRoot = form.querySelector('[data-study-form]');\n        futureChoices();\n        formRoot.addEventListener('input', invalidate);\n        formRoot.addEventListener('change', event => {\n          if (event.target.name === 'study_baseline') futureChoices();\n          invalidate();\n        });\n        formRoot.querySelector('[data-study-review]').addEventListener('click', async event => {\n          const button = event.currentTarget;\n          button.disabled = true;\n          try { await review(); } catch (error) {\n            if (formRoot?.isConnected && document.querySelector('#operation-form') === form &&\n                requestedWorkspace === workspaceKey())\n              formRoot.querySelector('[data-study-preview]').textContent = error.message || String(error);\n          }\n          finally { if (button.isConnected) button.disabled = false; }\n        });\n        invalidate();\n      });\n  }\n\n  async function dispatchLocal(action, value) {\n"
+    }
+  ]
+}
