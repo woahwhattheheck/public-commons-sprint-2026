@@ -4,7 +4,8 @@ from __future__ import annotations
 from pathlib import Path
 
 from model.common import identifier
-from model import setup_review
+from model import setup_review, setup_configuration
+from model.model_selection import grid_models, selected
 
 ACTIONS = frozenset({"scientific.setup.create"})
 
@@ -37,6 +38,7 @@ class ScientificSetup:
             "source-inventory.csv": "Original source inventory",
             "prepared-inputs.csv": "Prepared grid input inventory",
             "scenario-changes.csv": "Baseline and alternative changes",
+            "selected-parameters.csv": "Selected parameters, units and original methods",
         }
         downloads = []
         bodies = [entry["body"], *entry.get("companions", [])]
@@ -54,6 +56,17 @@ class ScientificSetup:
         payload = payload or {}
         if operation == "catalog":
             return {"workspace_key": workspace_key, **self._guard(setup_review.catalog, ws)}
+        if operation == "configuration":
+            transport_workspace = payload.get("workspace", workspace_key)
+            if transport_workspace != workspace_key:
+                raise self.Fault("SCIENTIFIC_SETUP_WORKSPACE", "Open the original selected Workspace.", 409)
+            if set(payload) - {"workspace", "profile_id", "grid_id"}:
+                raise self.Fault("SCIENTIFIC_SETUP_SELECTION", "Choose a saved profile and optional saved grid.", 422)
+            profile = self._guard(ws._get, "profiles", identifier(payload.get("profile_id")))
+            grid_id = payload.get("grid_id")
+            active = list(grid_models(self._guard(ws.get_grid, identifier(grid_id)))) if grid_id else list(selected(profile))
+            return {"workspace_key": workspace_key, "grid_id": grid_id or None,
+                    "configuration": self._guard(setup_configuration.profile_configuration, ws, profile, active)}
         if operation == "preview":
             selection = dict(payload)
             transport_workspace = selection.pop("workspace", workspace_key)
