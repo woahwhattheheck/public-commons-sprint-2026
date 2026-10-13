@@ -1,5 +1,10 @@
 import { mountOperations } from './operations.mjs';
+import {mountDeliveryAgenda} from './operations_agenda.mjs';
+import {readStaffSession,staffRequest,signInOwner,signOutStaff,currentStaffContext,staffDeskStorageKey} from './staff-session.mjs';
+import {mountStaffRecovery} from './staff-recovery.mjs';
+import { mountPlanComparison } from './plan_comparison.mjs';
 import { mountPlanningSourceTables } from './source-tables.mjs';
+import {createCasePlanningController,renderCasePlanningBar,CASE_PLANNING_MAX_BYTES} from './case-planning.mjs';
 const $ = (selector, root = document) => root.querySelector(selector);
 const clone = value => structuredClone(value);
 function sourceBase64(buffer) {
@@ -11,40 +16,182 @@ const esc = value => String(value ?? '').replace(/[&<>"']/g, character => ({'&':
 const money = value => value === null || value === undefined || value === '' ? 'Not entered' : new Intl.NumberFormat('en-US', {style:'currency',currency:'USD',maximumFractionDigits:2}).format(Number(value));
 const amount = value => new Intl.NumberFormat('en-US',{maximumFractionDigits:2}).format(Number(value || 0));
 const label = value => String(value).replace(/_/g,' ').replace(/([a-z])([A-Z])/g,'$1 $2').replace(/^./, character => character.toUpperCase());
-const tabs = [['overview','Overview'],['work','Work packages'],['milestones','Milestones'],['staffing','Staffing'],['payments','Payment timing'],['delivery','Delivery plan'],['history','Saved versions'],['source-tables','Source tables'],['operations','Delivery operations']];
-const state = {token:null,plans:[],current:null,draft:null,tab:'overview',dirty:false,stale:false,busy:false,history:[],selectedHistory:null};
+const tabs = [['overview','Overview'],['source-tables','Source tables'],['work','Work packages'],['milestones','Milestones'],['staffing','Staffing'],['payments','Payment timing'],['delivery','Delivery plan'],['history','Saved versions'],['comparison','Compare saved plans'],['operations','Delivery operations'],['agenda','Delivery agenda']];
+const state = {principal:null,staffContext:null,plans:[],current:null,draft:null,tab:'overview',dirty:false,stale:false,busy:false,history:[],selectedHistory:null};
+const planReadActions=new Set(['reload','export','daily','scenario','history-view']);
+const canEditPlan=()=>state.principal?.role==='owner'||state.principal?.role==='lead';
+const canCreatePlan=()=>canEditPlan()&&state.principal.caseIds.includes('*');
 let controlId = 0;
 let operationsView = null;
-function closeOperations() {operationsView?.dispose();operationsView=null;}
+let deliveryAgendaView = null;
+let initialOperationsNavigation = null;
+const deliveryAgendaSessions = new Map();
+let comparisonView = null;
+const comparisonSelections = new Map();
 let sourceTablesView = null;
 function closeSourceTables() {sourceTablesView?.dispose();sourceTablesView=null;}
-let requestIds = {};
-try { requestIds = JSON.parse(sessionStorage.getItem('sf47.requests') || '{}'); } catch {}
+function closeOperations() {operationsView?.dispose();operationsView=null;comparisonView?.dispose();comparisonView=null;deliveryAgendaView?.dispose();deliveryAgendaView=null;}
+
+const casePlanningStyle=document.createElement('link');casePlanningStyle.rel='stylesheet';casePlanningStyle.href='/case-planning.css';document.head.append(casePlanningStyle);
+const casePlanningPanel=document.createElement('section');
+casePlanningPanel.hidden=true;$('#main-content').prepend(casePlanningPanel);
+const caseDraftInput=document.createElement('input');
+caseDraftInput.type='file';caseDraftInput.accept='.json,application/json';caseDraftInput.hidden=true;
+$('#workbench').append(caseDraftInput);
+const caseDraftDialog=document.createElement('dialog');
+caseDraftDialog.className='case-planning-drafts';caseDraftDialog.setAttribute('aria-label','Retained case planning work');
+$('#workbench').append(caseDraftDialog);
+let casePlanningRoute=null;
+const casePlanningPointer=()=>state.principal?.id?staffDeskStorageKey('sf47.case-planning',state.staffContext):null;
+const casePlanning=createCasePlanningController({
+  api,principal:()=>state.principal,
+  confirmWorkingDraftReplacement:()=>confirm('Discard the unsaved planning draft and open this retained case draft?'),
+  getSnapshot:()=>({current:state.current,draft:state.draft,dirty:state.dirty,stale:state.stale,
+    note:$('#change-note').value,tab:state.tab}),
+  onChange:()=>{renderCasePlanningBar(casePlanningPanel,casePlanning,casePlanningAction);busy(state.busy);},
+  onError:error=>inform(error.message,true),
+  remember:id=>{const key=casePlanningPointer();if(key)try{id?sessionStorage.setItem(key,id):sessionStorage.removeItem(key);}catch{}}
+});
+function retainCasePlanning(){casePlanning.schedule();}
+function downloadCasePlanning(value,name){
+  const url=URL.createObjectURL(new Blob([value],{type:'application/json'})),link=document.createElement('a');
+  link.href=url;link.download=name;link.click();setTimeout(()=>URL.revokeObjectURL(url),10000);
+}
+async function installCasePlanning(snapshot,route=null){
+  initialOperationsNavigation=null;
+  const [listing,history]=await Promise.all([api('/api/plans'),api('/api/plans/'+snapshot.current.id+'/history')]);
+  state.plans=listing.plans;state.current=snapshot.current;state.draft=snapshot.draft;
+  state.dirty=snapshot.dirty;state.stale=snapshot.stale;state.tab=snapshot.tab;
+  state.history=history.revisions;state.selectedHistory=null;$('#change-note').value=snapshot.note;
+  const retained=casePlanning.summary();
+  casePlanningRoute=route||{caseId:retained.caseId,tab:snapshot.returnSelection?'amendments':'overview',
+    planningReturn:snapshot.returnSelection};
+  render(true);
+}
+async function receiveCasePlanningSave(body){
+  const received=body?await casePlanning.save(body):await casePlanning.savePending();
+  await installCasePlanning(received.snapshot);
+  inform('Received original save as revision '+received.result.revision+'. Review this exact saved revision in its case.');
+}
+async function openCasePlanning(current,selection={}){
+  return run(async()=>{
+    const snapshot=await casePlanning.start(current,selection);
+    await installCasePlanning(snapshot);
+    inform('Opened the complete working plan for '+current.program.name+'. Its selected case baseline remains visible above.');
+  });
+}
+async function showCasePlanningDrafts(){
+  const rows=await casePlanning.list();caseDraftDialog.replaceChildren();
+  const heading=document.createElement('h2');heading.textContent='Retained case planning work';
+  const message=document.createElement('p');message.textContent=rows.length?
+    'Open the complete source project, working inputs and original save request retained by your signed-in identity.':
+    'Open an existing Delivery case and choose Edit plan and workbook for this case.';
+  caseDraftDialog.append(heading,message);
+  for(const row of rows){
+    const entry=document.createElement('p'),choose=document.createElement('button');choose.type='button';
+    choose.dataset.casePlanningDraft=row.id;
+    choose.textContent=row.caseName+' · plan revision '+row.planRevision+' · '+row.updatedAt+(row.pending?' · original save pending':'');
+    choose.addEventListener('click',()=>run(async()=>{
+      const snapshot=await casePlanning.open(row.id);caseDraftDialog.close();await installCasePlanning(snapshot);
+    }));entry.append(choose);caseDraftDialog.append(entry);
+  }
+  const close=document.createElement('button');close.type='button';close.textContent='Close';
+  close.addEventListener('click',()=>caseDraftDialog.close());caseDraftDialog.append(close);caseDraftDialog.showModal();
+}
+function casePlanningAction(action){
+  if(!canEditPlan()||state.busy)return;
+  if(action==='import'){
+    if(casePlanning.summary()?.pending){inform('Receive the retained save before opening another draft file.',true);return;}
+    caseDraftInput.value='';caseDraftInput.click();return;
+  }
+  run(async()=>{
+    if(action==='list')return showCasePlanningDrafts();
+    if(action==='export'){
+      const source=await casePlanning.exportDraft();downloadCasePlanning(source,casePlanning.summary().id+'.json');return;
+    }
+    if(action==='recover-local'){
+      const source=await casePlanning.exportDraft();downloadCasePlanning(source,casePlanning.summary().id+'-current-work.json');
+      await installCasePlanning(await casePlanning.recoverLocal());return;
+    }
+    if(action==='receive')return receiveCasePlanningSave();
+    if(action==='resolve-rejected'){await installCasePlanning(await casePlanning.resolveRejected());return;}
+    if(action==='refresh-basis'){
+      await installCasePlanning(await casePlanning.refreshPlanningBasis());
+      inform('The latest saved plan is now the write basis. Your complete entered inputs remain. Review those changes and the source-table baseline before saving.');return;
+    }
+    if(action==='planning'){
+      state.tab='source-tables';retainCasePlanning();await casePlanning.flush();render(true);return;
+    }
+    if(action==='amendments'){
+      const route=await casePlanning.prepareReturn();await installCasePlanning(casePlanning.snapshot(),route);return;
+    }
+    if(action==='detach'){
+      await casePlanning.detach();casePlanningRoute=null;
+      inform('Complete case planning work is retained in Saved case planning work.');render();return;
+    }
+  });
+}
+for(const [title,action]of [['Open case planning draft','import'],['Saved case planning work','list']]){
+  const control=document.createElement('button');control.type='button';control.textContent=title;
+  control.dataset.casePlanningGlobal=action;control.addEventListener('click',()=>casePlanningAction(action));
+  $('.planbar .button-row').append(control);
+}
+caseDraftInput.addEventListener('change',()=>{
+  const file=caseDraftInput.files[0];if(!file)return;
+  run(async()=>{
+    if(file.size>CASE_PLANNING_MAX_BYTES)throw new Error('Open the complete case draft within its original retained-source capacity.');
+    const snapshot=await casePlanning.importDraft(await file.text());await installCasePlanning(snapshot);
+    inform('Opened the complete case planning draft and checked its original case and saved revision.');
+  });
+});
+$('#change-note').addEventListener('input',()=>{if(!state.busy&&canEditPlan())retainCasePlanning();});
+
+const requestBanks=new Map();
+function requestBank(context){
+  const key=staffDeskStorageKey('sf47.requests',context);
+  if(!requestBanks.has(key)){
+    let value={};try{const saved=JSON.parse(sessionStorage.getItem(key)||'{}');if(saved&&typeof saved==='object'&&!Array.isArray(saved))value=saved;}catch{}
+    requestBanks.set(key,value);
+  }
+  return {key,ids:requestBanks.get(key)};
+}
 function inform(message, error = false) {
   const node = $('#message'); node.textContent = message; node.dataset.error = String(error); node.setAttribute('role',error?'alert':'status');
 }
 function busy(value) {
   state.busy = value; $('#workbench').setAttribute('aria-busy',String(value));
-  sourceTablesView?.setHostBusy(value);
   for(const control of document.querySelectorAll('#workbench button,#workbench input:not([type=file]),#workbench select,#workbench textarea')) {
-    control.disabled = value || control.dataset.fixedDisabled === 'true' || control.dataset.action === 'save' && !state.dirty;
+    if(control.closest('.operations,.plan-comparison,.delivery-agenda')) continue;
+    const action=control.dataset.action;
+    const roleDisabled=!canEditPlan()&&(control.matches('[data-path],#change-note')||action&&!planReadActions.has(action));
+    const newPlanDisabled=['clone','import'].includes(action)&&!canCreatePlan();
+    const retained=casePlanning.summary();
+    const pendingDisabled=Boolean(retained?.pending)&&
+      (control.matches('[data-path],#change-note,#plan-select')||
+       ['calculate','save','reload','clone','import','restore'].includes(action));
+    const draftRoleDisabled=(control.dataset.casePlanningGlobal||control.dataset.casePlanningAction)&&!canEditPlan();
+    control.disabled = value || roleDisabled || newPlanDisabled || pendingDisabled || draftRoleDisabled ||
+      control.dataset.fixedDisabled === 'true' || action === 'save' && !state.dirty;
   }
+  operationsView?.setHostBusy(value);
+  deliveryAgendaView?.setHostBusy(value);
+  comparisonView?.setHostBusy(value);
+  sourceTablesView?.setHostBusy(value||Boolean(casePlanning.summary()?.pending));
 }
 async function api(path, body, options = {}) {
-  const headers = {authorization:'Bearer ' + state.token,...options.headers};
-  if(body !== undefined && !options.raw) headers['content-type'] = 'application/json';
-  const response = await fetch(path,{method:body===undefined?'GET':'POST',headers,...(body===undefined?{}:{body:options.raw?body:JSON.stringify(body)})});
-  if(options.download && response.ok) return response;
-  let result;try {result = await response.json();} catch {throw new Error('The server response was interrupted. Reopen the saved plan to continue.');}
-  if(!response.ok) {const error = new Error(result.error?.message || 'The operation did not complete.'); error.code=result.error?.code;error.status=response.status;throw error;}
-  return result;
+  try {return await staffRequest(path,body,{...options,staffContext:options.staffContext===undefined?state.staffContext:options.staffContext});}
+  catch(error) {
+    if(error.status===401) inform('Sign in as the original operator in the recovery dialog to continue this open desk.',true);
+    throw error;
+  }
 }
-async function mutationId(action, payload) {
+async function mutationId(action,payload,context=state.staffContext) {
+  const {key,ids:requestIds}=requestBank(context);
   const bytes = new TextEncoder().encode(JSON.stringify({action,payload}));
   const hash = Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',bytes)), value=>value.toString(16).padStart(2,'0')).join('');
   requestIds[hash] ||= crypto.randomUUID();
   const keys = Object.keys(requestIds); while(keys.length > 100) delete requestIds[keys.shift()];
-  try {sessionStorage.setItem('sf47.requests',JSON.stringify(requestIds));} catch {}
+  try {sessionStorage.setItem(key,JSON.stringify(requestIds));} catch {}
   return requestIds[hash];
 }
 function field(title, path, value, options = {}) {
@@ -69,7 +216,7 @@ function pathValue(parts) {return parts.reduce((value,key)=>value?.[key],state.d
 function setPath(parts, value) {
   let current = state.draft;for(let i=0;i<parts.length-1;i++){current[parts[i]] ??= {};current=current[parts[i]];}current[parts.at(-1)]=value;
 }
-function changed() {state.dirty=true;state.stale=true;updateBar();}
+function changed() {state.dirty=true;state.stale=true;retainCasePlanning();updateBar();}
 function updateBar() {
   if(!state.current) return;
   $('#revision-label').textContent = state.current.name + ' · Revision ' + state.current.revision;
@@ -226,22 +373,44 @@ function render(focus = false) {
   if(!state.current) return;
   controlId=0;
   $('#plan-select').innerHTML=state.plans.map(row=>'<option value="'+esc(row.id)+'"'+(row.id===state.current.id?' selected':'')+'>'+esc(row.name)+'</option>').join('');
-  $('#sections').innerHTML=tabs.map(([id,title])=>'<button type="button" data-tab="'+id+'"'+(state.tab===id?' aria-current="page"':'')+'>'+title+'</button>').join('');
-  $('.savebar').hidden=state.tab==='operations';
+  $('#sections').innerHTML=tabs.filter(([id])=>canEditPlan()||id!=='source-tables').map(([id,title])=>'<button type="button" data-tab="'+id+'"'+(state.tab===id?' aria-current="page"':'')+'>'+title+'</button>').join('');
+  $('.savebar').hidden=!canEditPlan()||['operations','comparison','agenda'].includes(state.tab);
   if(state.tab==='operations') {
-    const mounted=mountOperations({container:$('#main-panel'),api,plan:state.current,inform,mutationId});
-    operationsView=mounted;
-    mounted.ready.catch(error=>{if(operationsView===mounted&&mounted.root.isConnected)inform(error.message,true);});
+    const navigation=initialOperationsNavigation;
+    const mounted=mountOperations({container:$('#main-panel'),api,plan:state.current,inform,mutationId,principal:state.principal,
+      initialNavigation:navigation,staffContext:state.staffContext,route:navigation?null:casePlanningRoute,onOpenPlanning:openCasePlanning,
+      onPlanningReturn:(selection,localDraftId)=>casePlanning.acknowledgeReturn(selection,localDraftId),
+      onObservedCase:current=>casePlanning.observeCase(current)});
+    operationsView=mounted;mounted.setHostBusy(state.busy);
+    mounted.ready.then(()=>{if(operationsView===mounted&&initialOperationsNavigation===navigation)initialOperationsNavigation=null;})
+      .catch(error=>{if(operationsView===mounted&&mounted.root.isConnected)inform(error.message,true);});
+  } else if(state.tab==='agenda') {
+    const agendaContext=state.staffContext?{...state.staffContext}:null;
+    const key=staffDeskStorageKey('sf47.delivery-agenda',agendaContext);
+    if(!deliveryAgendaSessions.has(key))deliveryAgendaSessions.set(key,{});
+    const mounted=mountDeliveryAgenda({container:$('#main-panel'),
+      api:(path,body,options={})=>api(path,body,{...options,staffContext:agendaContext}),principal:state.principal,
+      session:deliveryAgendaSessions.get(key),
+      onOpen:async selection=>{
+        if(deliveryAgendaView!==mounted||!mounted.root.isConnected)return;
+        initialOperationsNavigation=selection;state.tab='operations';retainCasePlanning();render();
+        const opened=operationsView;await opened.ready;
+      }});
+    deliveryAgendaView=mounted;mounted.setHostBusy(state.busy);
+    mounted.ready.catch(error=>{if(deliveryAgendaView===mounted&&mounted.root.isConnected)inform(error.message,true);});
   } else if(state.tab==='source-tables') {
-    const mounted=mountPlanningSourceTables({
-      container:$('#main-panel'),api,inform,run,
+    const mounted=mountPlanningSourceTables({container:$('#main-panel'),api,inform,run,
       getPlan:()=>state.current,getDraft:()=>state.draft,
-      storeBook:value=>{state.draft.planning.sourceTables=value;state.dirty=true;updateBar();},
-      applyDraft:value=>{state.draft=value;state.dirty=true;state.stale=false;updateBar();}
-    });
-    sourceTablesView=mounted;
-    mounted.setHostBusy(state.busy);
+      storeBook:value=>{state.draft.planning.sourceTables=value;state.dirty=true;retainCasePlanning();updateBar();},
+      applyDraft:value=>{state.draft=value;state.dirty=true;state.stale=false;retainCasePlanning();updateBar();}});
+    sourceTablesView=mounted;mounted.setHostBusy(state.busy||Boolean(casePlanning.summary()?.pending));
     mounted.ready.catch(error=>{if(sourceTablesView===mounted&&mounted.root.isConnected)inform(error.message,true);});
+  } else if(state.tab==='comparison') {
+    if(!comparisonSelections.has(state.current.id))comparisonSelections.set(state.current.id,{});
+    const mounted=mountPlanComparison({container:$('#main-panel'),api,plan:state.current,plans:state.plans,
+      history:state.history,inform,selection:comparisonSelections.get(state.current.id)});
+    comparisonView=mounted;mounted.setHostBusy(state.busy);
+    mounted.ready.catch(error=>{if(comparisonView===mounted&&mounted.root.isConnected)inform(error.message,true);});
   } else {
     $('#main-panel').innerHTML=({overview,work,milestones,staffing,payments,delivery,history}[state.tab])();
   }
@@ -249,6 +418,12 @@ function render(focus = false) {
   if(focus) $('#main-content').focus();
 }
 async function loadPlan(id, acknowledge = true) {
+  if(casePlanning.summary()){
+    if(casePlanning.summary().pending)throw new Error('Receive the original retained save before opening another saved plan.');
+    if(acknowledge&&!confirm('Keep this complete case draft in Saved case planning work and open the selected saved plan?'))return render();
+    await casePlanning.detach();casePlanningRoute=null;
+    acknowledge=false;
+  }
   if(acknowledge && state.dirty && !confirm('Discard the unsaved draft and reopen a saved plan?')) return render();
   const [current,versions]=await Promise.all([api('/api/plans/'+id),api('/api/plans/'+id+'/history')]);
   state.current=current;state.draft={scenario:clone(current.scenario),planning:clone(current.planning),report:clone(current.report)};
@@ -268,18 +443,23 @@ function patch() {
 }
 async function calculate() {
   const result=await api('/api/plans/'+state.current.id+'/estimate',{expectedRevision:state.current.currentRevision,scenarioPatch:patch(),planning:state.draft.planning});
-  state.draft=result;state.stale=false;render();inform('Draft calculated with the original SF47 model. Save a revision to retain these inputs.');
+  state.draft=result;state.stale=false;retainCasePlanning();render();inform('Draft calculated with the original SF47 model. Save a revision to retain these inputs.');
 }
 async function save() {
+  if(casePlanning.summary()?.pending)return receiveCasePlanningSave();
   const note=$('#change-note').value.trim();
   if(!note) throw new Error('Enter a revision note before saving.');
   const payload={expectedRevision:state.current.currentRevision,scenarioPatch:patch(),planning:state.draft.planning,note};
   payload.requestId=await mutationId('save:'+state.current.id,payload);
+  if(casePlanning.summary()){
+    retainCasePlanning();await casePlanning.flush();return receiveCasePlanningSave(payload);
+  }
   const result=await api('/api/plans/'+state.current.id+'/save',payload);
   await accept(result);inform(result.unchanged?'The saved inputs are unchanged.':'Saved revision '+result.revision+'.');
 }
 async function download(suffix, filename) {
-  const response=await api('/api/plans/'+state.current.id+'/'+suffix,undefined,{download:true});
+  const selection=casePlanning.summary()?'?revision='+state.current.revision:'';
+  const response=await api('/api/plans/'+state.current.id+'/'+suffix+selection,undefined,{download:true});
   const blob=await response.blob(),url=URL.createObjectURL(blob),link=document.createElement('a');
   link.href=url;link.download=filename;document.body.append(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
   inform('Downloaded saved revision '+state.current.revision+(state.dirty?'. Your unsaved draft remains in the workspace.':'.'));
@@ -291,6 +471,8 @@ async function run(action) {
 }
 async function onAction(buttonNode) {
   const action=buttonNode.dataset.action,index=Number(buttonNode.dataset.index),planning=state.draft.planning;
+  if(!canEditPlan()&&!planReadActions.has(action))throw new Error('Your staff role can review saved plans. A lead saves planning changes.');
+  if(['clone','import'].includes(action)&&!canCreatePlan())throw new Error('An installation-wide lead creates or imports planning alternatives.');
   if(action==='calculate') return calculate();
   if(action==='save') return save();
   if(action==='reload') return loadPlan(state.current.id);
@@ -306,6 +488,7 @@ async function onAction(buttonNode) {
   }
   if(action==='history-view') {state.selectedHistory=await api('/api/plans/'+state.current.id+'/revision/'+buttonNode.dataset.revision);render();return;}
   if(action==='restore') {
+    if(casePlanning.summary())throw new Error('Keep this complete case draft, then leave case planning before restoring another saved edition.');
     if(state.dirty && !confirm('Replace this unsaved draft with the selected saved revision?')) return;
     const note=prompt('Reason for restoring this revision');if(note===null)return;if(!note.trim())throw new Error('Enter a restore note.');
     const payload={expectedRevision:state.current.currentRevision,selectedRevision:Number(buttonNode.dataset.revision),note};
@@ -341,11 +524,11 @@ async function onAction(buttonNode) {
 }
 $('#workbench').addEventListener('click',event=>{
   const tab=event.target.closest('[data-tab]');
-  if(tab && !state.busy){state.tab=tab.dataset.tab;render(true);return;}
+  if(tab && !state.busy){initialOperationsNavigation=null;state.tab=tab.dataset.tab;retainCasePlanning();render(true);return;}
   const control=event.target.closest('[data-action]');if(control)run(()=>onAction(control));
 });
 $('#main-panel').addEventListener('input',event=>{
-  const control=event.target.closest('[data-path]');if(!control || state.busy)return;
+  const control=event.target.closest('[data-path]');if(!control || state.busy || !canEditPlan())return;
   const parts=JSON.parse(control.dataset.path);
   let value=control.value;if(control.dataset.kind==='integer' && value!=='')value=Number(value);
   setPath(parts,value);changed();
@@ -378,29 +561,64 @@ $('#import-file').addEventListener('change',event=>{
     state.tab='overview';await accept(current);inform('Imported '+current.name+' with '+current.revision+' retained revision'+(current.revision===1?'':'s')+'.');
   });
 });
-async function openAccess(token) {
-  state.token=token;
-  await api('/api/access');
-  sessionStorage.setItem('sf47.access',token);
+async function openSession() {
+  const session=await readStaffSession();
+  if(!session.authenticated){showSignIn();return;}
+  state.principal=session.principal;state.staffContext=currentStaffContext();
+  if(state.principal.role==='contributor'){location.replace('/team');return;}
   state.plans=(await api('/api/plans')).plans;
+  $('#staff-identity').textContent=state.principal.displayName+' · '+label(state.principal.role);
   $('#access-panel').hidden=true;$('#workbench').hidden=false;$('#sign-out').hidden=false;
-  await loadPlan(state.plans[0].id,false);
-  $('#access-key').value='';inform('');
+  if(!canEditPlan())state.tab='operations';
+  let reopened=false,recoveryMessage='';
+  if(canEditPlan()){
+    let selected;try{selected=sessionStorage.getItem(casePlanningPointer());}catch{}
+    if(selected)try{await installCasePlanning(await casePlanning.open(selected));reopened=true;}
+    catch(error){recoveryMessage=error.message;}
+  }
+  if(state.plans.length&&!reopened)await loadPlan(state.plans[0].id,false);
+  else if(!reopened) {
+    $('#main-panel').innerHTML='<section class="panel"><h2>No assigned case</h2><p>Your installation administrator can assign an existing case from the Team workspace.</p></section>';
+    $('#plan-select').replaceChildren();$('#sections').replaceChildren();$('.savebar').hidden=true;
+  }
+  $('#access-key').value='';inform(recoveryMessage,recoveryMessage!=='');
 }
-$('#access-form').addEventListener('submit',event=>{event.preventDefault();run(()=>openAccess($('#access-key').value.trim()));});
-$('#sign-out').addEventListener('click',()=>{
-  if(state.dirty && !confirm('Close access and discard this unsaved draft?'))return;
-  closeOperations();
-  closeSourceTables();
-  state.token=null;state.current=null;state.draft=null;state.plans=[];state.history=[];state.selectedHistory=null;state.dirty=false;
-  sessionStorage.removeItem('sf47.access');$('#main-panel').replaceChildren();$('#plan-select').replaceChildren();$('#sections').replaceChildren();
-  $('#workbench').hidden=true;$('#sign-out').hidden=true;$('#access-panel').hidden=false;$('#access-key').value='';inform('Workspace access closed. Saved revisions remain available.');
+function showSignIn() {
+  closeOperations();closeSourceTables();casePlanning.forgetVisible();casePlanningRoute=null;caseDraftDialog.close();
+  state.principal=null;state.staffContext=null;state.current=null;state.draft=null;state.plans=[];state.history=[];
+  initialOperationsNavigation=null;deliveryAgendaSessions.clear();
+  state.selectedHistory=null;state.dirty=false;state.stale=false;
+  $('#main-panel').replaceChildren();$('#plan-select').replaceChildren();$('#sections').replaceChildren();
+  $('#workbench').hidden=true;$('#sign-out').hidden=true;$('#access-panel').hidden=false;
+  $('#staff-identity').textContent='Grant workspace';$('#access-key').value='';
+}
+async function openAccess(token) {
+  await signInOwner(token);
+  await openSession();
+}
+$('#access-form').addEventListener('submit',event=>{
+  event.preventDefault();const token=$('#access-key').value.trim();$('#access-key').value='';
+  run(()=>openAccess(token));
 });
-window.addEventListener('beforeunload',event=>{if(state.dirty){event.preventDefault();event.returnValue='';}});
+$('#sign-out').addEventListener('click',()=>run(async()=>{
+  if(operationsView?.hasOpenForm()&&!confirm('Sign out and close this unsaved form? Keep the desk open to finish it first.'))return;
+  if(casePlanning.summary()){
+    retainCasePlanning();await casePlanning.flush();
+  }else if(state.dirty&&!confirm('Sign out and discard this unsaved draft?'))return;
+  await signOutStaff();showSignIn();inform('Signed out. Saved case planning work and original requests reopen with your identity.');
+}));
+window.addEventListener('beforeunload',event=>{const retained=casePlanning.summary();if(state.dirty||operationsView?.hasOpenForm()||retained?.pending||retained?.persisting||retained?.localFault){event.preventDefault();event.returnValue='';}});
+mountStaffRecovery({getContext:()=>state.staffContext,inform,onRestored:session=>{
+  state.principal=session.principal;state.staffContext=currentStaffContext();
+  $('#staff-identity').textContent=state.principal.displayName+' · '+label(state.principal.role);
+}});
 const fragment=new URLSearchParams(location.hash.slice(1));
-const supplied=fragment.get('access');
-if(supplied) window.history.replaceState(null,'',location.pathname+location.search);
-let stored;try {stored=sessionStorage.getItem('sf47.access');} catch {}
-if(supplied || stored) {
-  openAccess(supplied || stored).catch(error=>{state.token=null;$('#access-panel').hidden=false;inform(error.message,true);});
-} else $('#access-panel').hidden=false;
+let supplied=fragment.get('access');
+if(supplied)window.history.replaceState(null,'',location.pathname+location.search);
+try {
+  supplied ||= sessionStorage.getItem('sf47.access');
+  sessionStorage.removeItem('sf47.access');
+} catch {}
+const opening=supplied?openAccess(supplied):openSession();
+supplied=null;
+opening.catch(error=>{showSignIn();inform(error.message,true);});

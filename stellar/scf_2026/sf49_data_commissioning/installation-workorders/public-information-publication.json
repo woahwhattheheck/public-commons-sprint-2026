@@ -1,0 +1,93 @@
+{
+  "schema": "stellar-forge.installation-workorder-profile.v1",
+  "id": "public-information-publication",
+  "title": "Public-information publishing: original staff workspace, WordPress, resident delivery and independent receiving",
+  "task": {
+    "name": "Install and operate the complete original public-information publishing workflow",
+    "purpose": "Give the selected publishing team one editable source and procurement workspace, original media and native WordPress operation, accessible frozen resident releases, and a complete independently received application with its retained history.",
+    "request": "Continue the original customer Workshare and Installation. Select the complete original application, source-use authority, actual controlling documents and retained workspace. Install the complete original source without changing its source origin or business rules. Operate the existing staff editor, selected resident release and native WordPress services through Applications. Retain original edit/review/publication/native-return history, export the complete selected application and state, and independently receive and reopen the same work.",
+    "completeOutput": "Complete original source manifest and source editions; actual installed Python and native WordPress selections; original staff, resident and native service entries; retained source, procurement, media, review and native-return work; original operator/workspace/native-tools/procurement packages; whole installation ZIP with all source, native site and lifecycle lineage; independently received editable application, onward export and usable operating handover.",
+    "repeatTrigger": "A real change to the selected source records, controlling documents, publication release or native return is handled in the same original application and case. A source successor is explicitly adopted while prior editions remain. Reopening a service, receiving an interrupted lifecycle request or transferring the same complete archive continues its existing operation.",
+    "pricedUnit": "Keep the original Workshare scope, commercial milestones and phase ownership. A selected paid Stellar source or service retains its actual useful result, price, authorised budget and payer. Source files, archive parts, HTTP calls and retries remain parts of that original whole operation."
+  },
+  "source": {
+    "reference": "The complete selected publication source manifest, original application and saved workspace; original Workshare/proposal and controlling documents; products/publication-workspace/SCF.md and native/API.md.",
+    "mode": "MIXED",
+    "population": "Every original selected source member and source edition; retained publishing and procurement records and revisions; captured object/media bytes; original release and native-return files; actual native runtime site and original lifecycle history.",
+    "meaning": "Preserve each original source origin, URL, captured byte identity, source date, record ID, revision, assessment, publication/release identity and native-return comparison. Keep procurement controlling-document editions and cited requirements in the original separate procurement source model. A received installation has its own UUID and retains originating source, workspace and operation lineage.",
+    "changePolicy": "The original staff/source owners select and review changed source or controlling documents. Adopt complete application successors through the existing installation, preserving prior source editions and saved workspace history. A frozen resident release stays selected by its original identity; native WordPress changes return through the original comparison and explicit source decisions."
+  },
+  "receiving": {
+    "application": "The complete original publishing application and its actual Store/delivery/native runner; products/publication-workspace typed client and CLI; source-owned merchant_publication MCP tools; the existing Applications staff, resident and WordPress roles; and original Customer Installation bindings.",
+    "acceptanceRule": "Prepare the exact selected full source and saved workspace. Inspect the original database and source identities; open the original staff records and procurement through the managed service; stop/reopen that same service; receive the selected frozen release and actual native runtime when present. Close staff and WordPress before a complete snapshot. Independently receive all source and original state, reopen the actual staff application, recover the originating lifecycle record and export the received installation onward.",
+    "changeAndWithdraw": "Keep actual source rights and publishing decisions with the original source/customer owners. The staff operator controls original edits and review, the native operator controls the selected local WordPress site, and the receiving operator controls the independently delivered application. Preserve previous source/history when an input is replaced or withdrawn.",
+    "recovery": "Retain the same operation UUID and exact source/backup selection. Read the original lifecycle result after an interrupted response. Completed receiving uses the full retained original input even after donor temporary files are removed; differing surviving donor bytes are rejected for that same request. Interrupted Store restore attempts stay retained, and a continuation selects a fresh empty attempt. Copy prior operations under their originating installation UUID.",
+    "maintenance": "Name the original application/source owner, procurement owner, native site operator, receiving operator and commercial owner. Keep complete source manifests, Python/lxml and native runtime selections, environment-reference ownership, actual Applications entries and whole receiving archives with the original case."
+  },
+  "steps": [
+    {
+      "title": "Select the complete original work and source",
+      "result": "Use the actual retained Workshare/Installation seed and original proposal/controlling-source attachments. Keep commercial terms, phase ownership, funded assignments, acceptance checks and actual source-use authority."
+    },
+    {
+      "title": "Prepare the whole original application",
+      "result": "Verify every selected original source member and root license; retain the complete source edition and native bridge. Initialize the original Store or restore its exact completed workspace backup into the private installation."
+    },
+    {
+      "title": "Open the original staff and resident applications",
+      "result": "Register the prepared directory with the existing Applications owner. Start the actual staff editor, inspect retained editable source/procurement work and original revision history, and select the complete frozen resident release."
+    },
+    {
+      "title": "Operate the actual native publishing runtime",
+      "result": "Attach the existing selected Node/Playground module and exact WordPress core ZIP. Use the original plugins, theme, editor, media and source-return operations with the original private environment reference and local native site."
+    },
+    {
+      "title": "Maintain complete source and operating history",
+      "result": "Use the original application for edits, controlling-source review, release decisions and native returns. Adopt a complete source successor with all service roles closed, retain the original source edition and reopen the same managed entries."
+    },
+    {
+      "title": "Export the original whole operator handover",
+      "result": "Close the staff service, then call the original workspace/operator/native-tools/procurement packagers. Retain complete original files and their exact manifests, with the native-posts implementation and source operating guide."
+    },
+    {
+      "title": "Independently receive the complete installation",
+      "result": "Close staff and WordPress, archive all source editions, original operator backup, closed native site and lifecycle history, then receive it into the actual new directory using the original restore API. Retain source and originating operation lineage."
+    },
+    {
+      "title": "Reopen, revise and deliver the received application",
+      "result": "Open the independently received staff workspace, inspect the original editable records and history, reattach native host paths as needed, and make an onward full export. Deliver the complete source, original useful outputs, operating guide and receiving result to the original case."
+    }
+  ],
+  "inputs": [
+    "Original Workshare/Installation seed, complete commercial source, scope, phases, acceptance checks and receiving ownership",
+    "Complete selected original application source with root LICENSE, manifest, original entry/model/delivery/native runner and preserved relative dependency layout",
+    "Exact original completed workspace recovery ZIP and its actual source/edit/review/procurement history",
+    "Actual Python3.11-or-later executable and original lxml>=5.3,<7 dependency; selected existing Node/Playground and complete official WordPress core for native operation",
+    "Original private service environment-reference assignment, canonical installation directory and actual managed staff/resident/native selections",
+    "Selected complete frozen resident release and actual native publication/source-return state when those operations are part of the original scope",
+    "Whole installation ZIP with exact SHA256, complete original source/state/native-site members and independent receiving directory",
+    "Original seed payment, funded/commercial assignments and merchant/buyer choices for any selected paid source or Stellar service"
+  ],
+  "sourceFiles": [
+    {
+      "path": "products/publication-workspace/SCF.md",
+      "blob": "3c9294dd5165487e998c9696280881f34a959d81"
+    },
+    {
+      "path": "products/publication-workspace/native/API.md",
+      "blob": "44233fe797f49a08f1a0e74a0cd81743492a6ffe"
+    },
+    {
+      "path": "products/publication-workspace/native/manage.py",
+      "blob": "6c2a0486badf2551b59d670c4c5ab5e3ec9ecff4"
+    },
+    {
+      "path": "products/publication-workspace/client.mjs",
+      "blob": "0674c2c734148f6c9d544227fe0597010f9e6f3a"
+    },
+    {
+      "path": "products/publication-workspace/commission.mjs",
+      "blob": "f21aaf242e13ec8da29b7bce42f44053ad2eeb2b"
+    }
+  ]
+}

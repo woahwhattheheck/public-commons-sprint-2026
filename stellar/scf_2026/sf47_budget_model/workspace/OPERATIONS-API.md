@@ -2,6 +2,18 @@
 
 This is an extension of the original SF47 planning workspace. It preserves budget.py, the current candidate and all planning revisions. It uses the existing Workspace connection, mutex, process lease and idempotent `_transaction` method, and creates only `ops_*` tables.
 
+## Installation delivery queue
+
+`GET /api/operations/{case}/delivery-queue?asOfDate=YYYY-MM-DD` returns the complete current-head work queue. `GET /api/operations/{case}/delivery-queue/export.zip?asOfDate=YYYY-MM-DD` returns its report and complete native case. Omit the date for the current UTC date. Save optional installation coordination with the existing `installation.save` command; receive the full queue ZIP through the existing case import route. [Installation delivery queue](DELIVERY_QUEUE.md) documents the source fields, dated classifications, typed selections and receiving identity.
+
+## Work and invoice intake
+
+The original Operations service adds `list_work_intakes`, `work_intake` and `preview_work_intake`. The `work-intake.upload`, `work-intake.save` and `work-intake.apply` actions execute inside its existing request transaction. Full case exports retain `workIntakes` and current `workIntakeRefs`; receiving validates complete immutable editions and their native record links. Older cases keep their original snapshot shape. [Complete work/invoice source contract](WORK_INTAKE.md) describes fields, routes, CLI and typed/MCP access.
+
+## Installation effort and support
+
+`POST /api/operations/{case}/installation-effort-seed` accepts the current case version, saved Installation identity/edition, selected asOfDate and optional complete same-edition document. Its complete input uses `document.effort.schema = "stellar-forge.sf47-installation-effort.v1"`. Persist it through the original Installation preview/save transaction. `POST /api/operations/{case}/installation-effort-selection` accepts an original forecastId and exact saved Installation selections to return complete native Forecast inputs from reviewed phase remainders. [Installation effort and support](INSTALLATION_EFFORT.md) specifies the SDK/CLI/MCP operation, source pointers, original Work and support meanings, and full receiving.
+
 ## Public interfaces
 
 `operations.py`: `Operations(workspace)` with `list(plan_id=None)`, `create(body)`, `read(id)`, `command(id,body)`, `history(id,after=0,limit=100)`, `source(id,source_id)`, `report(id)`, `export(id)`, `import_bundle(raw,name,request_id,actor)`.
@@ -72,6 +84,46 @@ An already-dispatched mutation keeps its original request identity and native re
 The existing original case supports pure preview and immutable saved forecasts. `POST /api/operations/{case}/forecast-preview` takes `{expectedVersion, inputs}` and returns `source`, normalized `inputs`, the complete `report`, and `previewSha256`. The original command route accepts `action:"forecast.save"` with `data:{inputs,expectedPreviewSha256}` plus its existing expectedVersion/operator/note/requestId fields. Save is atomic with the original case event and stable request receipt.
 
 `GET /api/operations/{case}/forecasts` lists summaries. `GET /api/operations/{case}/forecasts/{forecast}` reopens the complete original record and adds its current-source comparison. Appending `/export.zip` downloads complete saved JSON, dated cash/work and other native CSV reports with their file manifest. Full case archives now include the optional `forecasts` collection; old archives remain valid. The receiver checks each complete snapshot, recalculation, digest and original save-event link. See [FORECAST.md](FORECAST.md) for the input fields and all date/payment semantics.
+
+## Portfolio and saved Installation phases
+
+Portfolio allocates the complete remaining task set from one current saved Forecast. The optional phase join binds original commercial task IDs to exact saved Installation editions. The existing Portfolio preview, save, selection and full-case receiving routes remain the native lifecycle.
+
+| Operation | Native selection and result |
+| --- | --- |
+| `POST /api/operations/{case}/portfolio-seed` | `{expectedVersion, forecastId, installationSelections?, inputs?}`; returns the complete editable input, original Forecast/source tasks and Installation source choices. |
+| `POST /api/operations/{case}/portfolio-preview` | `{expectedVersion, inputs}`; returns normalized input, full source, complete report and reviewed `previewSha256`. |
+| Original `command`, `action: "portfolio.save"` | `data: {inputs, expectedPreviewSha256}` plus the original version, actor, note and request ID; saves the complete reviewed Portfolio atomically. |
+| `GET /api/operations/{case}/portfolios/{portfolioId}` | Reopens the complete saved source, input, results and current-source comparison. |
+| `GET /api/operations/{case}/portfolios/{portfolioId}/export.zip` | Downloads the complete saved calculation and its original source. |
+| `POST /api/operations/{case}/portfolio-selection` | `{expectedVersion, portfolioId, alternativeId}`; returns complete original Forecast `inputs` and the selected source/date identity. |
+
+A seed selection is `{taskId, installationId, installationRevision, installationSha256}`. Supply the current full draft in optional `inputs` when joining phases into an allocation already being edited. The three-argument SDK seed and the original seed body continue to work. Seed attaches or refreshes base phase plans and preserves all explicit alternative overrides, including `installationPlans: []`.
+
+An optional `inputs.installationPlans` array contains complete plans:
+
+```text
+{
+  taskId, installationId, installationRevision, installationSha256,
+  deliveryPhaseIds: [phaseId, ...], deliveryBoundaryNote,
+  phases: [{
+    phaseId, remainingHours, effortHours: {resourceId: hours, ...},
+    dependsOn: [phaseId, ...], releaseDate, dueDate,
+    minBusinessDays, priority, note
+  }],
+  note
+}
+```
+
+The service retains every original phase ID and dependency. Remaining-hour and effort values are exact decimal strings or null; dates are civil `YYYY-MM-DD` or null. Phase priority is `null` to inherit the parent task priority or an explicit integer; `100` remains the explicit value 100. Newly seeded phase priorities are null. Phase remainders must total the original commercial task remainder, and each resource-effort map must total its phase remainder. Acceptance observations remain original source fields and never supply remaining effort.
+
+The original aggregate `tasks` array remains complete. A bound parent's release, due date, priority and dependencies govern its phase graph, while its retained aggregate effort map is dormant and its minimum working duration is zero. Explicit delivery phases and the boundary note identify the commercial work window; subsequent support still uses shared resource capacity. An alternative's `installationPlans` replaces that complete field when supplied. Every included plan retains all original phases. An explicit `[]` uses the original aggregate task allocation, including its required resource effort; omission inherits the base phase array. To refresh a selected alternative's source, seed its complete inherited fields as temporary base `inputs` with `alternatives: []`, then retain the returned `installationPlans` as its explicit override in the full original draft.
+
+The native seed exposes `installationCandidates` with exact edition identities, matching task IDs and complete original phase/term metadata. An unavailable candidate retains its source result. Selected source metadata uses schema `stellar-forge.sf47-portfolio-installations.v1` and its native digest. Each alternative's calculated `installationPlans` separates `deliveryStartDate`/`deliveryFinishDate` from `allWorkFinishDate`; phase rows retain `scheduleTaskId`, `deliveryScope`, original observations and the explicit remaining effort. Edit the complete saved `inputs`, preserving the result projection as the reviewed output. See the adjacent [TypeScript declaration](agent-client.d.mts) for the detailed source and result fields.
+
+Both `portfolio.save` and `forecast.save` return `{id, version, action, kind, recordId}`. Reopen `recordId` through its saved read route for `sha256` and `previewSha256`; the receipt's `id` is the case ID. The original transaction resolves exact request replay before a new mutation. Date selection returns a Forecast draft; its preview and save use the existing Forecast implementation.
+
+The complete operations-case export and original import carry the saved Installation editions, exact source attachments, Forecasts, Portfolios and event history. `portfolio_installations.py` supplies the native source/phase join and is retained by both managed runtime selectors. [Portfolio delivery allocation](PORTFOLIO.md), [CLI operation](CLI.md#portfolio-with-installation-phases) and [agent consumption](AGENT.md#portfolio-allocation-and-original-cash-handoff) cover the full receiving workflow.
 
 ## Source-bound cohort acceptance
 

@@ -1,0 +1,63 @@
+/* Delivery risks and mitigations within the original Operations desk. */
+.delivery-risk-desk{--risk-border:#b4b6b8;--risk-muted:#55595d;--risk-paper:#f3f3f2;color:#242628;line-height:1.5;max-width:100%}
+.delivery-risk-desk *{box-sizing:border-box}
+.risk-heading{display:flex;justify-content:space-between;align-items:flex-start;gap:1rem}
+.risk-heading h3{font-size:1.3rem;margin:0 0 .4rem}
+.risk-heading p{margin:0 0 1rem;max-width:78ch;color:var(--risk-muted)}
+.risk-tabs,.risk-actions{display:flex;gap:.5rem;flex-wrap:wrap;align-items:center}
+.risk-tabs{border-bottom:1px solid var(--risk-border);margin:1rem 0;padding-bottom:.85rem}
+.risk-tabs button[aria-current=page],.risk-workbench nav button[aria-current=true]{background:#26282b;color:#fff;border-color:#26282b}
+.risk-workbench nav button[aria-current=true] small{color:#eee}
+.delivery-risk-desk button{white-space:normal;line-height:1.4}
+.delivery-risk-desk [hidden]{display:none!important}
+.delivery-risk-desk label{display:flex;flex-direction:column;gap:.35rem;font-weight:600;min-width:0}
+.delivery-risk-desk label small{font-weight:400;color:var(--risk-muted)}
+.delivery-risk-desk input,.delivery-risk-desk select,.delivery-risk-desk textarea{width:100%;font:inherit}
+.delivery-risk-desk textarea{min-height:5.5rem;resize:vertical}
+.delivery-risk-desk select[multiple]{min-height:9rem}
+.delivery-risk-desk fieldset{min-width:0;border:1px solid var(--risk-border);padding:1rem;margin:1rem 0}
+.delivery-risk-desk legend{font-weight:600;padding:0 .35rem}
+.delivery-risk-desk h4{font-size:1.05rem;margin:0 0 .7rem}
+.delivery-risk-desk h5{font-size:1rem;margin:0 0 .6rem}
+.risk-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1rem;margin:1rem 0}
+.risk-wide{grid-column:1/-1}
+.risk-filters{display:grid;grid-template-columns:2fr repeat(3,minmax(8rem,1fr));gap:.75rem;margin:1.25rem 0}
+.risk-workbench{display:grid;grid-template-columns:minmax(14rem,1fr) minmax(25rem,3fr);gap:1rem;margin:1.2rem 0;align-items:start}
+.risk-workbench>aside{border:1px solid var(--risk-border);padding:1rem}
+.risk-workbench nav{display:flex;flex-direction:column;gap:.5rem;margin-top:1rem;max-height:44rem;overflow:auto}
+.risk-workbench nav button{text-align:left}
+.risk-workbench nav small{display:block;font-size:.73rem;color:var(--risk-muted);overflow-wrap:anywhere}
+.risk-panel,.risk-edition{border:1px solid var(--risk-border);padding:1rem;margin:1rem 0;min-width:0}
+.risk-workbench>.risk-panel,.risk-workbench>div>.risk-panel{margin-top:0}
+.risk-edition small,.risk-panel>small{display:block;overflow-wrap:anywhere}
+.risk-empty{border:1px dashed var(--risk-border);padding:1.1rem;color:var(--risk-muted)}
+.risk-notice,.risk-pending{border:1px solid #95989c;background:var(--risk-paper);padding:1rem;margin:1rem 0;overflow-wrap:anywhere}
+.risk-pending h4{margin-bottom:.5rem}
+.delivery-risk-desk [role=alert]{border-left:3px solid #303338;padding:.65rem .8rem;font-weight:600;overflow-wrap:anywhere}
+.delivery-risk-desk [role=status]{overflow-wrap:anywhere}
+.risk-table{overflow:auto;max-width:100%;border:1px solid var(--risk-border);margin:1rem 0}
+.risk-table table{width:100%;min-width:660px;border-collapse:collapse;margin:0}
+.risk-table th,.risk-table td{padding:.75rem;text-align:left;vertical-align:top;border-bottom:1px solid #d5d6d7;max-width:35rem;overflow-wrap:anywhere}
+.risk-table th{background:var(--risk-paper);font-size:.82rem}
+.risk-table tr:last-child td{border-bottom:0}
+.risk-table td small{display:block;color:var(--risk-muted);margin:.3rem 0}
+.risk-table td>.risk-actions{margin-top:.6rem}
+.risk-badge{display:inline-block;border:1px solid #aaadb0;padding:.12rem .4rem;background:#fff;color:#272a2d;font-size:.78rem;white-space:nowrap;margin:.12rem .15rem .12rem 0}
+.risk-due{display:block;font-size:.84rem;text-decoration:underline;text-underline-offset:.2rem;margin:.25rem 0}
+.risk-action-summary{border-bottom:1px solid #d3d4d5;padding:.3rem 0 .55rem;margin-bottom:.4rem}
+.risk-action-summary:last-child{border:0}
+.risk-metrics{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));border:1px solid var(--risk-border);margin:1rem 0}
+.risk-metrics>div{padding:.8rem;border-right:1px solid var(--risk-border)}
+.risk-metrics>div:last-child{border-right:0}
+.risk-metrics strong{display:block;font-size:1.45rem;font-variant-numeric:tabular-nums}
+.risk-metrics small{color:var(--risk-muted)}
+.risk-save-bar{border:1px solid #777b80;background:var(--risk-paper);padding:1rem;display:grid;grid-template-columns:auto minmax(12rem,1fr) auto;gap:1rem;align-items:center}
+.risk-source{padding:.55rem 0;border-bottom:1px solid #ddd}
+.risk-source small{display:block;color:var(--risk-muted);overflow-wrap:anywhere}
+.delivery-risk-desk details{border:1px solid var(--risk-border);padding:.75rem 1rem;margin:1rem 0}
+.delivery-risk-desk summary{font-weight:600;cursor:pointer;overflow-wrap:anywhere}
+.delivery-risk-desk pre{max-height:30rem;overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere;background:var(--risk-paper);padding:.8rem;font-size:.78rem}
+.delivery-risk-desk code{font-size:.8rem;overflow-wrap:anywhere}
+.delivery-risk-desk input:focus-visible,.delivery-risk-desk select:focus-visible,.delivery-risk-desk textarea:focus-visible,.delivery-risk-desk button:focus-visible,.delivery-risk-desk summary:focus-visible{outline:2px solid #25282c;outline-offset:2px}
+@media(max-width:1100px){.risk-workbench{grid-template-columns:1fr}.risk-workbench nav{max-height:16rem}.risk-filters{grid-template-columns:repeat(2,minmax(0,1fr))}.risk-metrics{grid-template-columns:repeat(3,minmax(0,1fr))}.risk-metrics>div:nth-child(3){border-right:0}.risk-metrics>div:nth-child(-n+3){border-bottom:1px solid var(--risk-border)}.risk-save-bar{grid-template-columns:1fr}.risk-save-bar button{justify-self:start}}
+@media(max-width:640px){.risk-fields,.risk-filters{grid-template-columns:1fr}.risk-wide{grid-column:auto}.risk-heading{flex-direction:column}.risk-panel,.delivery-risk-desk fieldset,.risk-workbench>aside{padding:.75rem}.risk-metrics>div{padding:.65rem}.risk-metrics strong{font-size:1.2rem}.risk-tabs button{font-size:.85rem}.risk-table th,.risk-table td{padding:.6rem}}

@@ -1,0 +1,135 @@
+{
+  "schema": "stellar-forge.installation-workorder-profile.v1",
+  "id": "commissioning-collections",
+  "title": "Commissioning collections: original customer scope, invoice attribution, dated cash and independent handover",
+  "task": {
+    "name": "Receive and operate the customer's complete commissioning-to-collection workspace",
+    "purpose": "Give the commissioning or finance operator one repeatable view of the original commercial work, accepted milestone dates, issued invoices, credits, allocated customer payments, physical bank or Stellar cash, refunds and saved Xero reconciliation cycles. Preserve every selected source edition and native accounting record so the customer can correct and continue the work independently.",
+    "request": "Continue the original customer Workshare and its full agreed phase population in the existing Grant Operations case. Retain the complete commercial packet or saved Delivery handover, its original plan hash and every exact source of phase effort. Install the Commissioning Collections application beside the original merchant receivables, bank, refund and Xero components, using their existing AccountingWorkspace and request journal. Import the complete authorized partner-commissioning-workshares/v1 source with its original numeric values and currency scales; inspect and retain its byte identity. Select the actual original customer for each project and explicitly attribute invoice lines, net and tax portions, native allocation portions, credit-note lines, receipt and refund portions and saved Xero cash cycles. Record actual milestone acceptance separately from planned acceptance, original invoice terms and expected collection dates. Review the full selected cohort, every capacity or missing-attribution finding and the separate commercial, settlement and physical-cash totals. Save the reviewed capture with its original revision, preview SHA, request ID and complete selection. Retain a second source edition and a later saved native account/cash cycle, then capture the exact changed cohort against the first saved baseline. The receiving customer reopens the same owned workspace, reads the saved requests and complete files, makes one agreed source or attribution correction through the original review flow, and receives the whole current handover. Carry actual observations into the original Installation checks and original phase-linked Workshare; preserve customer contacts and external sender ownership.",
+    "completeOutput": "The complete original Workshare and source/effort selections in Grant Operations; the selected installed product and exact runtime/dependency identity; all selected project-source editions; the original customer, invoice, allocation, credit, bank receipt/correction and refund references; the selected original Xero cash-cycle source identities; two immutable reviewed cohort captures with dated balances and explained differences; selected-cohort HTML/CSV/JSON reports; the full private capture archive and complete original operator workspace handover; original request/recovery receipts; and an independently recorded customer reopen, correction and handover result in the original Installation.",
+    "repeatTrigger": "A new source edition or commissioning milestone, an issued or corrected invoice, an allocation or credit disposition, a bank statement/receipt correction, an actual refund, a later Xero account observation, or the customer's agreed collection review date. Retain each cycle against its actual account date and selected baseline.",
+    "pricedUnit": "One complete agreed customer commissioning cohort and operating cycle, including its source intake, original ledger attribution, review, customer correction and complete handover. Select actual commercial and atomic payment terms from the original Workshare and merchant deployment."
+  },
+  "source": {
+    "reference": "The original customer Workshare packet or saved Delivery handover, complete authorized commissioning workshare edition, original native receivables workspace and selected saved Xero cash cycles.",
+    "mode": "MIXED",
+    "population": "Retain the complete original commercial case and all Workshare phases. Keep every project and milestone in each selected workshare source edition, then identify the explicitly selected customer/project cohort. Read original invoices and lines, allocations, credits, receipts, refunds and selected saved Xero cycles through their maintained native owners. Keep full original files and complete pagination; a selected report cohort does not redefine the original ledger population.",
+    "meaning": "Commercial source fees are original net amounts with explicit currency scale and milestone percentages. Invoice bindings distinguish net and tax. Allocation and credit portions are explicit original record references, shared capacity is checked across the selected cohort, and unattributed original allocation remainders remain visible. Receipt/refund portions describe physical cash separately from invoice settlement. Actual receipt/payout dates, accounting/correction dates, allocation/release dates and selected as-of date keep their native meanings. Planned acceptance and expected collection are planning fields; recorded acceptance requires the actual original observation. Cross-currency amounts remain separate and no inferred exchange rate is applied.",
+    "changePolicy": "Retain a new source edition and its replacement reference without overwriting the old bytes or saved capture. Rebuild a draft from the new original edition, reconcile explicit customer/record selections, preview current native state and save a new immutable capture. Select the prior capture as a baseline only when it is the actual desired comparison. Correct invoices, allocations, credits, receipt ownership/coverage or refunds through their original native controllers before refreshing the cohort. Preserve old source/capture files, original request IDs and the original customer/source withdrawal instruction."
+  },
+  "receiving": {
+    "application": "Starforge Commissioning Collections selected product merchant-commissioning-collections and its original Grant Operations Source Preparation/Installation desks; merchant operator path /receivables/commissioning/ and native API /api/receivables/commissioning.",
+    "acceptanceRule": "The named customer operator opens the actual selected installed edition and original owned workspace; imports and inspects the whole source; reviews every selected project/milestone and explicit native attribution; captures a full first cohort and a later baseline comparison; resolves or explicitly retains the original findings; downloads and reopens selected reports and the complete private archive; makes an agreed correction and reviews its resulting capture; closes/reopens the original owner; and recovers the saved original request without duplicate source imports or captures. Record actual dates, operator, native request/capture IDs and full output hashes against every original Workshare-linked Installation check.",
+    "changeAndWithdraw": "The customer uses its original source replacement, selection/review and native accounting correction routes. A superseding source or capture keeps the prior edition and immutable history. Stop using a withdrawn source for new commissioned cycles according to the original customer's authority while retaining records required by that customer's actual agreement. Revoke or change access through the existing deployment/owner controls; do not replace the customer's workspace, source ownership or financial record identities.",
+    "recovery": "Keep the complete original import/capture request and actor before sending. If the reply is uncertain, read the original request journal, adopt its recorded result or retry the same exact request. Preserve WORKSPACE_COMMIT_UNKNOWN, outcomeUnknown, reopenRequired and the native commitUncertainty details; close/reopen the original workspace when directed, then reconcile the original request. A later list/file read failure does not discard a successful write. Retain full files by their original byte lengths and SHA-256, and keep the complete private workspace handover with its existing owner.",
+    "maintenance": "Use the current named merchant/finance operator and the customer's original support agreement. Review source changes, invoice/customer identity, shared attribution capacity, dated cash and Xero observations at the agreed cycle. Keep separate accountable owners for commercial approval, native accounting corrections, source-use authority, installation/runtime operation and customer handover. Record actual fixes and successor captures in the original case; use the existing sender for external communication."
+  },
+  "steps": [
+    {
+      "title": "Receive the whole original paid scope",
+      "result": "Retain the actual complete Workshare packet or saved Delivery handover, original plan/phase IDs, commercial currency, schedule, acceptance criteria and every exact effort pointer. Use the existing Source Preparation Desk to inspect complete original files and select the commissioning-collections profile. Preserve the original case, source and phase population; attach the whole prepared source cohort to the existing Operations case."
+    },
+    {
+      "title": "Prepare the existing Installation",
+      "result": "Read the original installation-workshare-seed and profile binding template. Bind the actual merchant and independent customer deployments, receiving host/operator, source-use authority and selected exact atomic payment terms. Use the original prepareInstallation and native Installation preview; keep every original Workshare-linked acceptance check and assignment. Save the complete original Installation draft through its existing workflow."
+    },
+    {
+      "title": "Install the complete original merchant application",
+      "result": "Build/select merchant-commissioning-collections with its original receivables, bank/refund, Xero, shared browser client and Python source dependencies. Receive the complete selected package, source/manifest and actual native runtime through the existing installation owner. Open the original AccountingWorkspace and CommissioningCollectionsWorkspace with one lease; use the installed application/provider or original CLI. Preserve the original current customer and accounting data."
+    },
+    {
+      "title": "Inspect and retain the complete project source",
+      "result": "Read the customer's actual partner-commissioning-workshares/v1 file, including all project IDs, fee numeric tokens, currency scales, milestone shares, original case/source references and full source date. Inspect complete bytes, review normalization and retain the original import with its expected SHA/revision/request. Keep the saved source edition and original file download; use a named replacement edition for later changes."
+    },
+    {
+      "title": "Bind the actual native customer and billed work",
+      "result": "Select each real customer and original issued invoice line. Attribute exact net/tax portions to the relevant project milestone and keep invoice SHA, source reference, line ID, issue/due dates and original whole invoice balances. Add native allocation and credit-note portions using their exact record IDs. Review cohort-wide capacities and every unattributed original remainder; do not infer a customer or milestone from a similar amount or free-text stage."
+    },
+    {
+      "title": "Reconcile physical cash and customer corrections",
+      "result": "Select exact original receipt and refund portions separately from invoice allocations. Retain bank coverage and predecessor/successor identities, actual versus accounting dates, void/reversal dates, reserved refunds and unposted verified returns. Correct a wrong customer, source coverage, allocation or refund in its native controller, then refresh the reviewed cohort. Preserve each original correction and source-specific successor; do not rewrite the accounting ledger from a report."
+    },
+    {
+      "title": "Join saved Xero cash cycles",
+      "result": "Use the original Xero package/return and saved cash-cycle owner. Select actual saved cycle IDs and account dates, preserve original provider observation time/source hashes and all component findings. Review invoice payments, credits, prepayments, overpayments, allocations, refunds and direct-versus-credit representation separately. Resolve differences through the original explicit cash matching and native ledger operations, then select the resulting saved cycle."
+    },
+    {
+      "title": "Review and capture the full cohort",
+      "result": "Review original source identity and as-of date, milestone dates, explicit native bindings, commercial net/tax, invoice settlement and physical-cash totals by currency, every finding and full file inventory. Capture the exact normalized selection against its returned revision/preview SHA with the retained original request. Keep the complete native capture and selected HTML/CSV/JSON reports."
+    },
+    {
+      "title": "Run the repeat cycle and original recovery",
+      "result": "Retain an actual later source/account edition, choose the earlier immutable capture as baseline and preview the complete cohort again. Explain original source, assignment, dated balance and Xero changes before capture. Reopen the original owner and recover the earlier saved request by its actual ID; a repeat read or retry must return its original source/capture. Keep newer customer work intact."
+    },
+    {
+      "title": "Receive independent customer operation and full handover",
+      "result": "The named customer operator opens the installed desk, reads all selected source/capture pages, performs the agreed correction through the original review flow, saves a successor and receives its full files. Deliver the selected reports to the intended recipient and the complete private account/archive only to the authorized operational recipient. Record the actual operator/date, installation/capture/request identities and complete bytes/hashes in the original Installation checks and customer handover."
+    }
+  ],
+  "inputs": [
+    "The complete original customer Workshare receiving packet with prepared_case.id and workshare_input.source.case_id, or the original saved dealscout.delivery-handover.v1 wrapper with its full snapshot and hash.",
+    "The full original dealscout.workshare-plan.v1 commercial plan, every phase/acceptance/dependency and the actual original source of phase hours or minutes plus complete effort total.",
+    "The complete authorized partner-commissioning-workshares/v1 project source, original source date/reference, explicit currency scales and any later source editions.",
+    "The existing native customer and issued invoice/credit/receipt/allocation/refund inventory, including exact invoice/credit line IDs, native record UUIDs and source hashes.",
+    "Complete original bank statement/receipt coverage and source-specific correction successor references when bank cash participates in the cohort.",
+    "The actual retained Xero source/return package and saved cash-cycle IDs, source observation times, original account dates and explicit reviewed matching.",
+    "The original selected merchant/customer deployments, receiving runtime/host and named independent customer operator.",
+    "The actual selected merchant payment network, asset, recipient, authority, exact atomic unit price/count/budget and original terms source IDs.",
+    "The customer's actual milestone acceptance observations, planned dates and invoice terms; preserve their separate meanings.",
+    "The existing original workspace handover, operator support/withdrawal instructions, full saved request journal and agreed report/archive recipients."
+  ],
+  "sourceFiles": [
+    {
+      "path": "stellar/scf-starforge-20261009/merchant-settlement-accounting/receivables/commissioning-collections/source.mjs",
+      "blob": "5720ca1d0a5b1235b205d25dd2ff1054a4faf7c9"
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/merchant-settlement-accounting/receivables/commissioning-collections/domain.mjs",
+      "blob": "98ff8fc88002c9231cdd41c9002aa094ce9fff65"
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/merchant-settlement-accounting/receivables/commissioning-collections/reports.mjs",
+      "blob": "702f117967eea4698cba82ad6574c067ddfdcdde"
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/merchant-settlement-accounting/receivables/commissioning-collections/workspace.mjs",
+      "blob": "3cde97f086f13a0811249fb4f0f3bc43ee275fe2"
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/merchant-settlement-accounting/receivables/commissioning-collections/http.mjs",
+      "blob": "a2885503916ab443ff5bc78c221da329da569824"
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/merchant-settlement-accounting/receivables/commissioning-collections/server.mjs",
+      "blob": "18ebf5626f62e00564a421e7108f3ffe32af6853"
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/merchant-settlement-accounting/receivables/commissioning-collections/public/app.mjs",
+      "blob": "8bef84d48430d3bdf937edfdb970625cdc397281"
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/merchant-settlement-accounting/receivables/commissioning-collections/browser-assets.json",
+      "blob": "08836a09f1b64b787d0be0c9abe8094ca2db2d08"
+    },
+    {
+      "path": "stellar/scf_2026/sf49_data_commissioning/installation-workorders/profiles.mjs",
+      "blob": "45e01e96fcd797c075553282d8daa701ad11e48b"
+    },
+    {
+      "path": "stellar/scf_2026/sf49_data_commissioning/installation-workorders/prepare-core.mjs",
+      "blob": "e23a23ad1a68fc826ca6282a8582434b0ce3ec92"
+    },
+    {
+      "path": "stellar/scf_2026/sf49_data_commissioning/installation-workorders/source-inputs.py",
+      "blob": "fb00ddaa566a49c1141c755864773a11bd21d0ba"
+    },
+    {
+      "path": "stellar/scf_2026/sf49_data_commissioning/installation-workorders/handover-inputs.py",
+      "blob": "cd9e408aac7b271704e2f0b278140a4872b0a466"
+    },
+    {
+      "path": "stellar/scf_2026/sf47_budget_model/workspace/INSTALLATION_SOURCE_DESK.md",
+      "blob": "0fb49d701cd329aa0b0d933475756bb93d49ee03"
+    }
+  ]
+}

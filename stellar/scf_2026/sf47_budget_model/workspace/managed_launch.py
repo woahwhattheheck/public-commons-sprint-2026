@@ -12,89 +12,17 @@ from datetime import datetime, timezone
 from uuid import uuid4
 
 from model import Problem, canonical
+from managed_source import manifest_files
 
 SCHEMA = "stellar-forge.sf47.workspace-launch.v1"
 SELECTION_SCHEMA = "stellar-forge.sf47.workspace-selection.v1"
 SOURCE = Path(__file__).resolve().parent
-# Keep the original managed Python/Node source selection identical.
-BOOT_FILES = (
-    "source_tables.py",
-    "source_workbooks.py",
-    "source-workbooks.mjs",
-    "source-workbook-export.mjs",
-    "WORKBOOK_HANDOVER.md",
-    "../../../scf-starforge-20261009/sf30-seller-sdk/dataset-refresh/workbook/reader.py",
-    "source-tables-core.mjs",
-    "source-tables.mjs",
-    "source-tables.css",
-    "source-tables-cli.mjs",
-    "SOURCE_TABLES.md",
-    "../../../../stellar-forge/developer-site/dist/source-table-workspace.mjs",
-    "../../../../stellar-forge/developer-site/dist/source-delimited.mjs",
-    "../../../../stellar-forge/developer-site/dist/source-table-corrections.mjs",
-    "../../../../stellar-forge/developer-site/dist/source-document-tables.mjs",
-    "../../../../stellar-forge/developer-site/dist/source-table-intake.mjs",
-    "../../../../stellar-forge/developer-site/dist/onboarding.mjs",
-    "../../../../stellar-forge/developer-site/dist/offer.mjs",
-    "../../../../stellar-forge/developer-site/dist/grant-plan-core.mjs",
-    "../../../../stellar-forge/developer-site/dist/grant-plan-source.mjs",
-    "../budget.py",
-    "cli.py",
-    "server.py",
-    "model.py",
-    "launcher.mjs",
-    "launch.mjs",
-    "managed_launch.py",
-    "workshare_intake.py",
-    "operations.py",
-    "operations_domain.py",
-    "operations_http.py",
-    "operations_cli.py",
-    "operations_intake.py",
-    "operations_support.py",
-    "operations_buyer.py",
-    "operations_completion.py",
-    "operations_cohort.py","operations_implementation.py",
-    "operations_installations.py",
-    "operations_workflow_source.py",
-    "operations_installation_workflows.py",
-    "operations_installation_workflows.mjs",
-    "operations_workshare_installations.py",
-    "forecast.py",
-    "portfolio.py",
-    "portfolio_schedule.py",
-    "index.html",
-    "app.mjs",
-    "style.css",
-    "operations.mjs",
-    "operations.css",
-    "operations_support.mjs",
-    "operations_buyer.mjs",
-    "operations_buyer.css",
-    "operations_completion.mjs",
-    "operations_completion.css",
-    "operations_cohort.mjs",
-    "operations_cohort.css","operations_implementation.mjs","operations_implementation.css",
-    "operations_installations.mjs",
-    "operations_installations.css",
-    "forecast.mjs",
-    "forecast.css",
-    "portfolio.mjs",
-    "portfolio-working-copies.mjs",
-    "portfolio-working-copy-store.mjs",
-    "portfolio-browser-assets.json",
-    "PORTFOLIO_WORKING_COPIES.md",
-    "PORTFOLIO_WORKING_COPIES_BROWSER.md",
-    "portfolio.css",
-    "support_handoff.mjs","implementation_handoff.mjs",
-    "buyer_handoff.mjs",
-    "agent-client.mjs",
-    "agent-contracts.mjs"
-)
+SOURCE_MANIFEST = "managed-source.json"
+SOURCE_BASE_PATH = "stellar/scf_2026/sf47_budget_model/workspace"
 PRIVATE_NAME = "managed-launch.json"
 
 
-def file_sha(path, maximum):
+def file_bytes(path, maximum):
     descriptor = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
     with os.fdopen(descriptor, "rb") as stream:
         before = os.fstat(stream.fileno())
@@ -105,7 +33,30 @@ def file_sha(path, maximum):
         if (len(raw) != before.st_size or before.st_size != after.st_size or
                 before.st_mtime_ns != after.st_mtime_ns or before.st_ctime_ns != after.st_ctime_ns):
             raise Problem("The selected source changed during reading.", 409, "GRANT_SOURCE_FILE_CHANGED")
-        return hashlib.sha256(raw).hexdigest()
+        return raw
+
+
+def file_sha(path, maximum):
+    return hashlib.sha256(file_bytes(path, maximum)).hexdigest()
+
+
+def managed_source(directory):
+    raw = file_bytes(directory / SOURCE_MANIFEST, 1024 * 1024)
+    try:
+        value = json.loads(raw.decode("utf-8"))
+    except (ValueError, UnicodeError) as error:
+        raise Problem("Select the complete managed source manifest.", 422,
+                      "GRANT_SOURCE_MANIFEST_INVALID") from error
+    try:
+        names = manifest_files(value)
+    except ValueError as error:
+        raise Problem(str(error), 422, "GRANT_SOURCE_MANIFEST_INVALID") from error
+    hashes = {name: hashlib.sha256(raw).hexdigest() if name == SOURCE_MANIFEST
+              else file_sha(directory / name, 1024 * 1024) for name in names}
+    if file_sha(directory / SOURCE_MANIFEST, 1024 * 1024) != hashes[SOURCE_MANIFEST]:
+        raise Problem("The managed source inventory changed during reading.", 409,
+                      "GRANT_SOURCE_MANIFEST_CHANGED")
+    return hashes
 
 
 def selection(workspace_path, source_path, source_directory=None):
@@ -121,10 +72,7 @@ def selection(workspace_path, source_path, source_directory=None):
         "scenarioSha256": file_sha(scenario, 32 * 1024 * 1024),
         "pythonExecutable": executable,
         "pythonRealPath": str(Path(executable).resolve()),
-        "sourceSha256": {
-            name: file_sha(selected_source / name, 1024 * 1024)
-            for name in BOOT_FILES
-        },
+        "sourceSha256": managed_source(selected_source),
     }
     return selected, hashlib.sha256(canonical(selected).encode("utf-8")).hexdigest()
 
@@ -139,7 +87,7 @@ def require_selection(workspace_path, source_path, expected_sha, access_file=Non
         raise Problem("The workspace, scenario, Python or installed source changed. Review this launch again.",
                       409, "GRANT_LAUNCH_SELECTION_CHANGED")
     execution = {"sourceDirectory": str(SOURCE),
-                 "sourceSha256": {name: file_sha(SOURCE / name, 1024 * 1024) for name in BOOT_FILES}}
+                 "sourceSha256": managed_source(SOURCE)}
     if execution["sourceSha256"] != selected["sourceSha256"]:
         raise Problem("The managed release differs from the reviewed original grant source.", 409,
                       "GRANT_EXECUTED_SOURCE_CHANGED")

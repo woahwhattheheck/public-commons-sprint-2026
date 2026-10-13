@@ -23,7 +23,8 @@ function download(blob,name){
   const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=name;a.click();
   setTimeout(()=>URL.revokeObjectURL(url),10000);
 }
-const definitive=error=>[400,401,403,404,409,413,422].includes(error?.status)&&typeof error?.code==='string';
+const definitive=error=>[400,409,413,415,422].includes(error?.status)&&typeof error?.code==='string';
+const DRAFT_SCHEMA='stellar-forge.sf47-cohort-draft.v1';
 const localKey=id=>'sf47.cohort.review.'+id;
 const nonce=prefix=>prefix+'-'+crypto.randomUUID();
 
@@ -36,7 +37,7 @@ export function mountCohort({container,current,saveApi,session,mutationId,record
     try{const saved=JSON.parse(sessionStorage.getItem(localKey(current.program.id))||'null');if(saved?.schema==='sf47.cohort-session.v1')Object.assign(session,saved);}catch{}
     session.loaded=true;
   }
-  for(const [key,value] of Object.entries({tranche:2,tab:'setup',drafts:{},preview:null,review:null,reviewId:'',dialog:null,editors:{},lastEditorKey:null,pending:null,accepted:null,inflight:null,notice:'',error:'',purchasePage:0,intentPage:0,intentFilter:'all'})){
+  for(const [key,value] of Object.entries({tranche:2,tab:'setup',drafts:{},preview:null,review:null,reviewId:'',dialog:null,editors:{},lastEditorKey:null,pending:null,accepted:null,inflight:null,notice:'',error:'',purchasePage:0,intentPage:0,intentFilter:'all',customerUseIntakes:[],alternateDrafts:[]})){
     if(!Object.hasOwn(session,key))session[key]=value;
   }
   let active=true,busy=false,hostBusy=false,caseValue=current;
@@ -53,10 +54,75 @@ export function mountCohort({container,current,saveApi,session,mutationId,record
   const sourceFields=value=>'<fieldset class="cohort-wide"><legend>Retained original evidence</legend><div class="cohort-fields">'+
     field('Attached originals','sourceIds',value.sourceIds||[],{options:sources(),multiple:true,wide:true})+
     field('Original reference and attributed observation','sourceNote',value.sourceNote||'',{area:true,wide:true,help:'Select source bytes already in this case or retain the exact reference and observation. A direct entry stays attributed to the reviewing operator.'})+'</div></fieldset>';
+  function retainEditors(){
+    const value=draft();if(value)value.editorState={editors:clone(session.editors),lastEditorKey:session.lastEditorKey,
+      openEditorKey:session.dialog?.editorKey??null};
+  }
+  function restoreEditors(value){
+    const saved=value?.editorState;
+    session.editors=clone(saved?.editors||{});
+    const key=saved?.lastEditorKey??saved?.openEditorKey;
+    session.lastEditorKey=key&&Object.hasOwn(session.editors,key)?key:null;
+    session.dialog=null;
+  }
+  function draftOrigin(value){
+    const originalCaseId=Object.hasOwn(value,'originalCaseId')?value.originalCaseId:caseValue.program.id;
+    const sourceVersion=Object.hasOwn(value,'sourceVersion')?value.sourceVersion:value.baseVersion;
+    if(typeof originalCaseId!=='string'||originalCaseId.length>100||!/^[A-Za-z0-9][A-Za-z0-9._-]*$/.test(originalCaseId)||
+      !Number.isSafeInteger(sourceVersion)||sourceVersion<0)
+      throw new Error('Retain the original draft case identity and whole source version.');
+    return {originalCaseId,sourceVersion};
+  }
+  function portableDraft(value){
+    retainEditors();
+    const selected=value===draft()?draft():value;
+    return {schema:DRAFT_SCHEMA,...draftOrigin(selected),reviewCaseId:caseValue.program.id,reviewVersion:selected.baseVersion,
+      inputs:clone(selected.inputs),...(selected.customerUse?{customerUse:clone(selected.customerUse)}:{}),
+      ...(selected.editorState?{editorState:clone(selected.editorState)}:{})};
+  }
+  function importedDraft(value,rule){
+    if(value.schema!==DRAFT_SCHEMA||![2,3].includes(value.inputs?.tranche))
+      throw new Error('Select the exported original Cohort draft.');
+    const x=value.inputs;
+    if(!['buyerDeploymentIds','merchantDeploymentIds','operations','facilitators','bindings','products','outcomes'].every(key=>Array.isArray(x[key]))||
+      !x.coverage||!Array.isArray(x.coverage.gaps)||!x.awardAcceptance)
+      throw new Error('The complete Cohort draft must retain its original scope, entries, coverage and award inputs.');
+    const origin=draftOrigin({...value,baseVersion:caseValue.program.version});
+    if(Object.hasOwn(value,'customerUse')&&(!value.customerUse||typeof value.customerUse!=='object'||Array.isArray(value.customerUse)))
+      throw new Error('Retain the complete customer-use source selection.');
+    let editorState;
+    if(Object.hasOwn(value,'editorState')){
+      const state=value.editorState,editors=state?.editors;
+      if(!state||typeof state!=='object'||!editors||typeof editors!=='object'||Array.isArray(editors))
+        throw new Error('Retain the complete unfinished Cohort entries.');
+      const kinds=['operations','facilitators','bindings','products','outcomes','coverage','awardAcceptance','requiredWork'];
+      for(const [key,row] of Object.entries(editors)){
+        if(!row||row.editorKey!==key||!kinds.includes(row.kind)||!row.data||typeof row.data!=='object'||Array.isArray(row.data)||
+          !Array.isArray(row.data.sourceIds)||typeof row.data.sourceNote!=='string'||
+          (row.kind==='coverage'&&!Array.isArray(row.data.gaps))||
+          (row.kind==='products'&&!Array.isArray(row.data.purchaseIds))||
+          (row.kind==='requiredWork'&&!Array.isArray(row.data.workIds)))
+          throw new Error('An unfinished Cohort entry is incomplete. Use its complete exported draft.');
+      }
+      if([state.lastEditorKey,state.openEditorKey].some(key=>key!==null&&key!==undefined&&
+        (typeof key!=='string'||!Object.hasOwn(editors,key))))
+        throw new Error('The selected unfinished entry is absent from this complete draft.');
+      editorState=clone(state);
+    }
+    return {...origin,inputs:clone(x),rule:clone(rule),baseVersion:caseValue.program.version,dirty:true,
+      ...(Object.hasOwn(value,'customerUse')?{customerUse:clone(value.customerUse)}:{}),
+      ...(editorState?{editorState}:{})};
+  }
+  function draftIdentity(value){
+    return {inputs:value.inputs,rule:value.rule,baseVersion:value.baseVersion,...draftOrigin(value),
+      customerUse:value.customerUse??null,editorState:value.editorState??{editors:{},lastEditorKey:null,openEditorKey:null}};
+  }
   function persist(critical=false){
+    retainEditors();
     const saved={schema:'sf47.cohort-session.v1',tranche:session.tranche,tab:session.tab,drafts:session.drafts,
       reviewId:session.reviewId,dialog:session.dialog,editors:session.editors,lastEditorKey:session.lastEditorKey,pending:session.pending,accepted:session.accepted,
-      purchasePage:session.purchasePage,intentPage:session.intentPage,intentFilter:session.intentFilter};
+      purchasePage:session.purchasePage,intentPage:session.intentPage,intentFilter:session.intentFilter,
+      customerUseIntakes:session.customerUseIntakes,alternateDrafts:session.alternateDrafts};
     try{
       const raw=JSON.stringify(saved);if(raw.length>2000000)throw new Error('The retained local review exceeds its 2 MB draft bound.');
       sessionStorage.setItem(localKey(current.program.id),raw);
@@ -97,13 +163,14 @@ export function mountCohort({container,current,saveApi,session,mutationId,record
     const id=String(tranche);
     if(session.drafts[id])return;
     const seeded=await saveApi(prefix+'/cohort-seed',{expectedVersion:caseValue.program.version,tranche});
-    session.drafts[id]={inputs:seeded.inputs,rule:seeded.rule,baseVersion:caseValue.program.version,dirty:false};
+    session.drafts[id]={inputs:seeded.inputs,rule:seeded.rule,baseVersion:caseValue.program.version,
+      originalCaseId:caseValue.program.id,sourceVersion:caseValue.program.version,dirty:false};
     persist();
   }
   async function showReview(id){
     const review=await saveApi(prefix+'/reviews/'+id);
     if(review.purpose!=='COHORT_EVALUATION')throw new Error('Select an original cohort evaluation.');
-    session.tranche=review.cohort.inputs.tranche;await loadDraft(session.tranche);
+    retainEditors();const tranche=review.cohort.inputs.tranche;await loadDraft(tranche);session.tranche=tranche;restoreEditors(draft());
     session.reviewId=id;session.review=review;session.tab='saved';persist();
   }
   async function finishAccepted(){
@@ -154,6 +221,51 @@ export function mountCohort({container,current,saveApi,session,mutationId,record
   function sourceLinks(ids){
     return (ids||[]).map(id=>'<a href="'+prefix+'/sources/'+encodeURIComponent(id)+'" download>'+esc(caseValue.sources.find(x=>x.id===id)?.filename||id)+'</a>').join('<br>')||'No attached original';
   }
+  function receiveCustomerUseDraft(){
+    const value=session.requestCustomerUse;if(!value)return;
+    if(value.schema!=='stellar-forge.sf47-cohort-evaluation.v1'||value.source?.programId!==caseValue.program.id||
+      ![2,3].includes(value.inputs?.tranche)||!value.rule||!value.customerUse)
+      throw new Error('Select the complete customer-use draft from this original case.');
+    const retained={schema:value.schema,source:clone(value.source),rule:clone(value.rule),inputs:clone(value.inputs),customerUse:clone(value.customerUse)};
+    if(!session.customerUseIntakes.some(row=>JSON.stringify(row.value)===JSON.stringify(retained))){
+      if(session.customerUseIntakes.length>=20)throw new Error('Export and remove an older retained calendar intake before opening another.');
+      session.customerUseIntakes.push({id:crypto.randomUUID(),value:retained});
+    }
+    delete session.requestCustomerUse;persist();
+  }
+  function alternateDraft(next,labelText){
+    if(session.pending||session.inflight||session.accepted)throw new Error('Continue the original freeze before opening another review draft.');
+    if(!next?.inputs||![2,3].includes(next.inputs.tranche)||!next.rule)throw new Error('Select a complete retained Cohort draft.');
+    retainEditors();
+    const incoming={...clone(next),...draftOrigin(next),dirty:true},tranche=incoming.inputs.tranche;
+    const prior=clone({tranche:session.tranche,drafts:session.drafts,alternateDrafts:session.alternateDrafts,
+      preview:session.preview,review:session.review,reviewId:session.reviewId,dialog:session.dialog,tab:session.tab,
+      editors:session.editors,lastEditorKey:session.lastEditorKey});
+    const old=session.drafts[String(tranche)];
+    if(old&&JSON.stringify(draftIdentity(old))!==JSON.stringify(draftIdentity(incoming))){
+      if(session.alternateDrafts.length>=20)throw new Error('Export and remove an older retained alternate draft before opening another.');
+      session.alternateDrafts.push({id:crypto.randomUUID(),label:old.inputs.name||'Earlier review draft',draft:clone(old)});
+    }
+    session.tranche=tranche;session.drafts[String(tranche)]=incoming;restoreEditors(incoming);
+    session.preview=null;session.review=null;session.reviewId='';session.tab='setup';session.purchasePage=0;session.intentPage=0;
+    try{persist(true);}catch(error){Object.assign(session,prior);throw error;}
+    session.notice=labelText+' Earlier edited drafts and unfinished entries remain available. Evaluate the current original records before freezing.';
+  }
+  function customerUseIntakes(){
+    let output='';
+    if(session.customerUseIntakes.length)output+='<section class="cohort-panel"><h3>Saved customer-use selections</h3><p>These inputs retain the exact Installation editions and original receipts. Opening one preserves your previous review draft.</p>'+
+      session.customerUseIntakes.map(row=>'<details><summary>'+esc(row.value.inputs.name)+' · source v'+row.value.source.version+'</summary>'+
+        detail('Exact saved Installation selection',row.value.customerUse)+
+        button('Open as review draft','customer-use-open','data-id="'+esc(row.id)+'" data-cohort-write="true"')+
+        button('Export complete draft','customer-use-export','data-id="'+esc(row.id)+'" data-cohort-recovery="true"')+
+        button('Remove this local intake','customer-use-remove','data-id="'+esc(row.id)+'"')+'</details>').join('')+'</section>';
+    if(session.alternateDrafts.length)output+='<section class="cohort-panel"><h3>Retained edited drafts</h3>'+
+      session.alternateDrafts.map(row=>'<div class="cohort-actions"><span>'+esc(row.label)+' · source v'+row.draft.baseVersion+'</span>'+
+        button('Open retained draft','alternate-open','data-id="'+esc(row.id)+'" data-cohort-write="true"')+
+        button('Export draft','alternate-export','data-id="'+esc(row.id)+'" data-cohort-recovery="true"')+
+        button('Remove this local copy','alternate-remove','data-id="'+esc(row.id)+'"')+'</div>').join('')+'</section>';
+    return output;
+  }
   function header(){
     const d=draft(),stale=d&&d.baseVersion!==caseValue.program.version;
     const pending=session.pending;
@@ -163,6 +275,7 @@ export function mountCohort({container,current,saveApi,session,mutationId,record
       button('Export draft','draft-export','data-cohort-recovery="true"',!d)+button('Import draft','draft-import')+(session.lastEditorKey&&session.editors[session.lastEditorKey]?button('Resume unfinished entry','resume-editor'):'')+'</div></header>'+
       '<div class="cohort-status">'+pill(label(caseValue.program.mode))+pill('Draft source v'+(d?.baseVersion??'…'),stale?'attention':'')+
       (stale?note('The case has a later version. Refresh source keeps your selections and lets you review the current records before freezing.'):'')+'</div>'+
+      (d?note('Draft origin '+esc(d.originalCaseId??caseValue.program.id)+' · source v'+esc(d.sourceVersion??d.baseVersion)+'. Current review source v'+esc(d.baseVersion)+'.'):'')+
       (session.notice?'<p class="cohort-success" role="status">'+esc(session.notice)+'</p>':'')+
       (session.storageWarning?'<p class="cohort-warning">'+esc(session.storageWarning)+'</p>':'')+
       (session.error?'<p class="cohort-error" role="alert">'+esc(session.error)+'</p>':'')+
@@ -187,7 +300,8 @@ export function mountCohort({container,current,saveApi,session,mutationId,record
       field('Selected original buyer deployments','buyerDeploymentIds',x.buyerDeploymentIds,{options:deps('BUYER').map(y=>[y.id,y.name+' · '+y.operator+' · '+label(y.participantClass)]),multiple:true,wide:true})+
       field('Selected original merchant installations','merchantDeploymentIds',x.merchantDeploymentIds,{options:deps('MERCHANT').map(y=>[y.id,y.name+' · '+y.operator+' · '+label(y.participantClass)]),multiple:true,wide:true})+
       field('Review note','note',x.note,{area:true,wide:true})+'</div></form>'+
-      note('All original purchase rows remain visible. Unselected deployments are reported outside the scope; missing first-attempt clocks remain unplaced. Source classification is preserved on the original purchase.')+'</section>'+
+      note('All original purchase rows remain visible. Unselected deployments are reported outside the scope; missing first-attempt clocks remain unplaced. Source classification is preserved on the original purchase.')+
+      (draft().customerUse?detail('Retained customer-use source selection',draft().customerUse):'')+'</section>'+
       '<section class="cohort-panel"><div class="cohort-section-heading"><h3>Coverage & actual award clock</h3>'+button('Edit coverage','edit','data-kind="coverage" data-cohort-write="true"')+'</div>'+
       '<p>'+pill(label(x.coverage.state))+' · '+x.coverage.gaps.length+' recorded gaps</p><p>'+esc(x.coverage.sourceNote||'Source coverage has not been established.')+'</p>'+
       table(['Gap start','Gap end','Retained observation'],x.coverage.gaps.map(g=>[esc(g.startAt),esc(g.endAt),esc(g.note)]))+
@@ -419,7 +533,7 @@ export function mountCohort({container,current,saveApi,session,mutationId,record
   function render(){
     if(!available())return;
     const d=draft();
-    root.innerHTML=header()+navigation()+(!d?empty('Opening the original acceptance rule…'):
+    root.innerHTML=header()+customerUseIntakes()+navigation()+(!d?empty('Opening the original acceptance rule…'):
       session.tab==='setup'?setup():session.tab==='participants'?participants():session.tab==='purchases'?purchases():
       session.tab==='outcomes'?outcomes():session.tab==='preview'?evaluate():saved())+
       (d?modal():'')+'<input type="file" accept=".json,application/json" data-cohort-import hidden>';
@@ -438,17 +552,23 @@ export function mountCohort({container,current,saveApi,session,mutationId,record
   root.addEventListener('change',event=>{
     const el=event.target;if(el.name==='tranche'){
       const selected=Number(el.value);
-      run(async()=>{session.tranche=selected;session.dialog=null;session.preview=null;session.review=null;session.reviewId='';session.purchasePage=0;await loadDraft(selected);});
+      run(async()=>{retainEditors();await loadDraft(selected);session.tranche=selected;restoreEditors(draft());session.preview=null;session.review=null;session.reviewId='';session.purchasePage=0;});
     }else if(el.name==='intentFilter'){session.intentFilter=el.value;session.intentPage=0;persist();render();}
     else if(el.matches('[data-cohort-import]')){
       const file=el.files?.[0];if(!file)return;
       run(async()=>{
-        if(file.size>2000000)throw new Error('Select a bounded cohort draft up to 2 MB.');
+        if(session.pending||session.inflight||session.accepted)throw new Error('Continue the original freeze before importing another review draft.');
+        if(file.size>2000000)throw new Error('Select a complete Cohort draft up to 2 MB.');
         const source=JSON.parse(await file.text());
-        if(source.schema!=='stellar-forge.sf47-cohort-draft.v1'||![2,3].includes(source.inputs?.tranche))throw new Error('Select the exported original cohort draft.');
-        const tranche=source.inputs.tranche;await loadDraft(tranche);
-        session.tranche=tranche;session.drafts[String(tranche)]={inputs:clone(source.inputs),rule:session.drafts[String(tranche)].rule,baseVersion:caseValue.program.version,dirty:true};
-        session.preview=null;session.tab='setup';session.notice='Imported the explicit draft. Original case identities are checked by the native preview; no source or purchase was imported.';
+        if(source.schema!==DRAFT_SCHEMA||![2,3].includes(source.inputs?.tranche))throw new Error('Select the exported original Cohort draft.');
+        const seeded=await saveApi(prefix+'/cohort-seed',{expectedVersion:caseValue.program.version,tranche:source.inputs.tranche});
+        const incoming=importedDraft(source,seeded.rule);
+        if(!available()){
+          if(session.alternateDrafts.length>=20)throw new Error('Export and remove an older retained alternate draft before importing another.');
+          session.alternateDrafts.push({id:crypto.randomUUID(),label:file.name,draft:incoming});
+          session.notice='The complete imported Cohort input is available in Retained edited drafts.';persist(true);return;
+        }
+        alternateDraft(incoming,'Imported the complete review draft from '+incoming.originalCaseId+' at source v'+incoming.sourceVersion+'.');
       });
     }
   });
@@ -457,6 +577,18 @@ export function mountCohort({container,current,saveApi,session,mutationId,record
     const action=target.dataset.cohortAction;
     if(action==='draft-import'){$('[data-cohort-import]').click();return;}
     run(async()=>{
+      if(action.startsWith('customer-use-')||action.startsWith('alternate-')){
+        const incoming=action.startsWith('customer-use-'),list=incoming?session.customerUseIntakes:session.alternateDrafts;
+        const row=list.find(item=>item.id===target.dataset.id);if(!row)throw new Error('The selected retained draft is unavailable.');
+        const selected=incoming?{inputs:row.value.inputs,rule:row.value.rule,baseVersion:row.value.source.version,
+          originalCaseId:row.value.source.programId,sourceVersion:row.value.source.version,customerUse:row.value.customerUse}:row.draft;
+        if(action.endsWith('-export')){
+          const value=portableDraft(selected);
+          download(new Blob([JSON.stringify(value,null,2)+'\n'],{type:'application/json'}),'tranche-'+selected.inputs.tranche+'-cohort-draft.json');return;
+        }
+        if(action.endsWith('-open')){alternateDraft(selected,'Opened the selected customer-use review input.');return;}
+        if(action.endsWith('-remove')){list.splice(list.indexOf(row),1);return;}
+      }
       if(action==='tab'){session.tab=target.dataset.tab;session.dialog=null;return;}
       if(action==='refresh'){
         await reload({adopt:true});session.notice='Read the current original case. Your edited selections remain intact; preview them against this source before freezing.';return;
@@ -464,7 +596,7 @@ export function mountCohort({container,current,saveApi,session,mutationId,record
       if(action==='retry'){await sendPending();return;}
       if(action==='readback'){await finishAccepted();return;}
       if(action==='draft-export'){
-        const value={schema:'stellar-forge.sf47-cohort-draft.v1',originalCaseId:current.program.id,sourceVersion:draft().baseVersion,inputs:clone(inputs())};
+        const value=portableDraft(draft());
         download(new Blob([JSON.stringify(value,null,2)+'\n'],{type:'application/json'}),'tranche-'+session.tranche+'-cohort-draft.json');return;
       }
       if(action==='preview'){
@@ -486,9 +618,10 @@ export function mountCohort({container,current,saveApi,session,mutationId,record
         const blob=await response.blob();if(available())download(blob,session.reviewId+'-cohort.zip');return;
       }
       if(action==='use-review'){
-        const r=session.review;if(!r)return;const tranche=r.cohort.inputs.tranche;
-        session.tranche=tranche;session.drafts[String(tranche)]={inputs:clone(r.cohort.inputs),rule:clone(r.cohort.rule),baseVersion:caseValue.program.version,dirty:true};
-        session.preview=null;session.dialog=null;session.tab='setup';session.notice='Opened the original frozen inputs as a new draft. The previous review remains unchanged.';return;
+        const r=session.review;if(!r)return;
+        alternateDraft({inputs:clone(r.cohort.inputs),rule:clone(r.cohort.rule),baseVersion:caseValue.program.version,
+          originalCaseId:r.cohort.source.programId??caseValue.program.id,sourceVersion:r.cohort.source.version,dirty:true},
+          'Opened the original frozen inputs as a new review draft.');return;
       }
     });
   });
@@ -501,6 +634,7 @@ export function mountCohort({container,current,saveApi,session,mutationId,record
   },true);
   render();
   const ready=(async()=>{
+    receiveCustomerUseDraft();
     if(session.inflight){try{await session.inflight;}catch(error){session.error=error.message;}}
     await loadDraft(session.tranche);
     if(session.accepted)await finishAccepted();
