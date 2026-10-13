@@ -137,7 +137,7 @@ fit(data.stations.flatMap(s=>[s.original_coordinates,s.snapped_coordinates]));
 }
 
 function renderStationNetworkReport(result, observationContext=null) {
-  const observationSection=observationContext?renderObservationNetworkSection(observationContext,result,{mapLinks:true,downloadPrefix:"observation_context/"}):"";
+  const observationSection=observationContext?renderObservationNetworkSection(observationContext,result,{mapLinks:true,downloadPrefix:"observation_context/",sourcePrefix:"../../"}):"";
   const observationStyles=observationContext?observationNetworkStyles:"";
   const esc=value=>String(value??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
   const fmt=(value,d=3)=>typeof value==="number"&&Number.isFinite(value)?value.toLocaleString("en-US",{minimumFractionDigits:d,maximumFractionDigits:d}):"Unresolved";

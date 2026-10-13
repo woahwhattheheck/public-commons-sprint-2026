@@ -75,3 +75,11 @@ This complete release also retains the original returned-review 1.0.2 engine, st
 Use the same guarded installer above for this complete combined source. After installation, start the original operator normally against the independently received application copy and its own operator state/port; registry descriptors are loaded when the Operator is constructed. Refreshing an already-running browser alone does not register the new backend. Do not force-restart an active scientific operation.
 
 Saved comparisons and independent results live under the scientific Workspace's `measurement-returned-reviews/` family. The original whole-Workspace archive includes that folder; the native descriptor's read-only verifier checks the retained immutable files on receiving. The editable result's live SQLite database remains editable. Its complete `project.zip` and the handoff ZIP retain the frozen exported edition, exact submitted decisions and original branches. Original normalization, returned-review comparison and incorporation algorithms are unchanged.
+
+The included original-provider course operates the already completed ASTRA 533-record case through this same queue and independently receives its result:
+
+```sh
+python -B STAGE/checks/measurement_returned_reviews_operator.py --application APP --workspace ISOLATED_ORIGINAL_SCIENTIFIC_WORKSPACE --original ASTRA_COMPLETED_533_COURSE_DIRECTORY --output NEW_OUTSIDE_DIRECTORY
+```
+
+The original directory must contain `input-archives/baseline.zip`, `input-archives/returned.zip`, `input-archives/current.zip`, `comparison/plan.json` and `decisions.json`. It reuses their exact native plan identity, title, decisions and archive bytes. Use the existing producer's retained original case; no recreated population or capacity run is required. Output is outside the application, scientific Workspace and original case. Keep the same output for an interrupted course. The original decision HTML still requires actual permitted desktop/narrow operation and attachment viewing before client readiness.

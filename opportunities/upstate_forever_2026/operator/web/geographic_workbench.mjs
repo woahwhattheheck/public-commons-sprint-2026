@@ -191,7 +191,7 @@ export function createGeographicWorkbench(host) {
   function programmeTasks(){
     const id=openedCase?.case?.id;
     const rows=new Map(list(openedCase?.programme_operations).map(task=>[task.id,task]));
-    for(const task of list(host.getState()?.tasks).filter(task=>task.action==="geography.adopt-programme"&&
+    for(const task of list(host.getState()?.tasks).filter(task=>["geography.adopt-programme","geography.open-programme"].includes(task.action)&&
       task.payload?.case_id===id&&(!task.workspace||task.workspace===workspace)))rows.set(task.id,{...rows.get(task.id),...task,restored:false});
     return [...rows.values()].sort((a,b)=>String(b.created_at||"").localeCompare(String(a.created_at||"")));
   }
@@ -220,18 +220,25 @@ export function createGeographicWorkbench(host) {
         run.title||run.key,run.state||"Unknown",run.completed_at||"—"]));
       if(list(p.issues).length)content+='<p>Continue these original native operations, then refresh the states:</p><ul>'+
         p.issues.map(x=>'<li>'+esc(x.key)+': '+esc(x.message)+'</li>').join("")+'</ul>';
-      const accepted=current.some(x=>["queued","running","complete","interrupted","failed","cancelled"].includes(x.state));
+      const accepted=current.some(x=>x.action==="geography.adopt-programme"&&["queued","running","complete","interrupted","failed","cancelled"].includes(x.state));
       const enabled=p.ready&&!programmeLoading&&!programmeSubmitting&&!accepted;
       content+='<div class="geo-actions"><button type="button" data-geo-programme-adopt'+(enabled?"":" disabled")+'>'+
         (programmeSubmitting?"Saving original Programme…":"Save completed runs as a Programme")+'</button></div>'+
         '<p class="geo-small">Uses the three original NDR and SDR results. The parameter study keeps its own progress. Annual N/P quantities are kg/year and sediment is metric tonnes/year delivered to streams.</p>';
     }else if(!programmeLoading&&!programmeError)content+='<p>Refresh the original run states to inspect this case.</p>';
     if(tasks.length)content+='<div class="geo-programme-tasks"><h4>Saved Programme operations</h4>'+tasks.map(task=>{
-      const id=task.result?.programme_id;
+      const id=task.result?.programme_id,receipt=task.result?.operator_opening;
+      const currentRevision=host.getState()?.data?.operator_session?.revision||null;
+      const savedView=task.action==="geography.open-programme"&&task.state==="complete"&&
+        receipt?.selection_applied===true&&receipt.revision===currentRevision;
       return '<p><strong>'+esc(task.state)+'</strong> · '+esc(task.result?.programme_state||task.created_at||"")+
         (task.error?.message?' · '+esc(task.error.message):"")+'</p><div class="geo-actions">'+
         (task.restored?list(task._downloads).filter(file=>String(file.url).startsWith("/api/file/")).map(file=>'<a href="'+esc(file.url+(file.url.includes("?")?"&":"?")+"download=1")+'" download>Download original operation</a>').join(""):'<button type="button" data-geo-programme-task="'+esc(task.id)+'">Open original operation</button>')+
         (id?'<button type="button" data-action="programme-open" data-id="'+esc(id)+'">Open saved Programme</button>':"")+
+        (task.action==="geography.adopt-programme"&&task.state==="complete"&&id?
+          '<button type="button" data-geo-programme-opening="'+esc(task.id)+'"'+(programmeSubmitting?" disabled":"")+'>Save as project opening</button>':"")+
+        (savedView?'<button type="button" data-geo-programme-open-view="'+esc(task.id)+'">Open saved project view</button>':"")+
+        (receipt?.state==="preserved_current"?'<span class="geo-small">A later project view was preserved. The saved Programme remains available.</span>':"")+
         (!task.restored&&["failed","interrupted","cancelled"].includes(task.state)?'<button type="button" data-geo-programme-resume="'+esc(task.id)+'">Resume original operation</button>':"")+'</div>';
     }).join("")+'</div>';
     target.innerHTML=content;
@@ -279,6 +286,52 @@ export function createGeographicWorkbench(host) {
       if(active(key,own)&&caseGeneration===caseOwn){programmeSubmitting=false;renderProgramme();}
     }
   }
+  async function saveProgrammeOpening(id){
+    if(programmeSubmitting)return;
+    const original=programmeTasks().find(x=>x.id===id&&x.action==="geography.adopt-programme"&&x.state==="complete");
+    if(!original?.result?.programme_id||!openedCase?.case)throw new Error("Choose a completed Programme operation from this geographic case.");
+    const key=workspace,own=version,caseOwn=caseGeneration,caseId=openedCase.case.id;
+    const snapshot=host.getState();
+    if(snapshot?.workspace_key!==key||snapshot?.data?.operator_session_error)
+      throw new Error("Refresh the original project view before selecting its opening.");
+    const observed=snapshot?.data?.operator_session?.revision||null;
+    const payload={case_id:caseId,adoption_task_id:id,expected_revision:observed};
+    const storage=KEY+":programme-request:"+key+":opening:"+id+":"+(observed||"empty");
+    let request;const retained=localStorage.getItem(storage);
+    if(retained){request=JSON.parse(retained);if(request.workspace!==key||request.action!=="geography.open-programme"||canonical(request.payload)!==canonical(payload))
+      throw new Error("The retained opening request belongs to another observed view.");}
+    else{
+      request={workspace:key,action:"geography.open-programme",payload,operation_id:"geo-opening-"+crypto.randomUUID()};
+      const exact=JSON.stringify(request);localStorage.setItem(storage,exact);
+      if(localStorage.getItem(storage)!==exact)throw new Error("Save the original opening request before continuing.");
+    }
+    programmeSubmitting=true;programmeError="";renderProgramme();
+    try{
+      const task=await host.api("/api/actions",{method:"POST",body:request});
+      localStorage.setItem(storage+":task",JSON.stringify({workspace:key,operation_id:request.operation_id,task_id:task.id}));
+      if(!active(key,own)||caseGeneration!==caseOwn||openedCase?.case.id!==caseId)return;
+      await host.refresh({force:true});
+      if(active(key,own)&&caseGeneration===caseOwn)status("The original project-opening operation is "+task.state+". Later saved views are preserved.");
+    }catch(error){
+      if(active(key,own)&&caseGeneration===caseOwn)programmeError=error.message+" The original observed revision and request are retained.";
+    }finally{
+      if(active(key,own)&&caseGeneration===caseOwn){programmeSubmitting=false;renderProgramme();}
+    }
+  }
+  async function openProgrammeView(id){
+    const task=programmeTasks().find(x=>x.id===id&&x.action==="geography.open-programme"&&x.state==="complete");
+    const receipt=task?.result?.operator_opening;
+    if(receipt?.selection_applied!==true)throw new Error("This operation preserved another project view. Open its saved Programme instead.");
+    const key=workspace,own=version,caseOwn=caseGeneration;
+    await host.refresh({force:true});
+    if(!active(key,own)||caseGeneration!==caseOwn)return;
+    const saved=host.getState()?.data?.operator_session;
+    if(saved?.revision!==receipt.revision||canonical(saved.journey?.selection)!==canonical(receipt.requested_selection))
+      throw new Error("A newer project view is saved. Its selections are preserved; open the Programme or review that newer view.");
+    await host.openExtension("guided-journey","dispatch",{dataset:{action:"journey-open-saved-view"}});
+    if(active(key,own)&&caseGeneration===caseOwn)await host.navigate("journey");
+  }
+
   async function resumeProgramme(id){
     const task=programmeTasks().find(x=>x.id===id);if(!task)throw new Error("Open an original Programme operation from this geographic case.");
     const key=workspace,own=version,caseOwn=caseGeneration;
@@ -332,6 +385,8 @@ export function createGeographicWorkbench(host) {
     try{
       if(button.hasAttribute("data-geo-programme-refresh"))return await loadProgramme();
       if(button.hasAttribute("data-geo-programme-adopt"))return await adoptProgramme();
+      if(button.dataset.geoProgrammeOpening)return await saveProgrammeOpening(button.dataset.geoProgrammeOpening);
+      if(button.dataset.geoProgrammeOpenView)return await openProgrammeView(button.dataset.geoProgrammeOpenView);
       if(button.dataset.geoProgrammeTask)return host.showTask(button.dataset.geoProgrammeTask);
       if(button.dataset.geoProgrammeResume)return await resumeProgramme(button.dataset.geoProgrammeResume);
       if(button.hasAttribute("data-geo-preview-button"))return await previewCurrent();

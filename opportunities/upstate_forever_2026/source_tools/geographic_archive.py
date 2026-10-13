@@ -12,7 +12,7 @@ from pathlib import Path
 import stat
 import zipfile
 
-from model.common import atomic_json, digest, identifier, read_json
+from model.common import atomic_json, describe_file, digest, identifier, read_json, verify_file
 from model import portable, reviews
 
 
@@ -198,13 +198,11 @@ def reference_snapshot(workspace, prepared, reference_basis):
             "comparison": comparison, "members": members, "paired_products": paired}
 
 
-def retained_execution_prepared(workspace, output, selection_bytes, normalized_selection):
-    """Adopt a new executor for the same prepared course without preparing or running it."""
+def _prepared_execution(workspace, prepared):
+    """Verify one original geographic preparation against its actual native course."""
     from source_tools.headwaters_parameter_course import _load, _reference_member
     from model.model_selection import run_models
 
-    original, state, prepared = _retained_preparation(
-        workspace, output, selection_bytes, normalized_selection)
     record, plan, _ = _load(workspace, prepared["ensemble_id"])
     reference = _reference_member(workspace, plan)
     expected = {"grid_id": prepared["grid_id"],
@@ -243,7 +241,65 @@ def retained_execution_prepared(workspace, output, selection_bytes, normalized_s
                      and tuple(run_models(run)) == ("ndr", "sdr"),
                      "Adopt the exact original native run selections without duplicating members")
             seen.add(key)
+    return prepared
+
+def retained_execution_prepared(workspace, output, selection_bytes, normalized_selection):
+    """Adopt a new executor for the same prepared course without preparing or running it."""
+    original, state, prepared = _retained_preparation(
+        workspace, output, selection_bytes, normalized_selection)
+    _prepared_execution(workspace, prepared)
     return original, state, prepared
+
+
+def retained_workspace_prepared(workspace, prepared_id, normalized_selection):
+    """Open an existing direct-Workspace preparation without inventing CLI history.
+
+    The caller starts its own explicit receiving admission for this saved
+    preparation. This read-only entry never prepares inputs or dispatches runs.
+    """
+    key = identifier(prepared_id)
+    root = workspace.root.resolve()
+    relative = "geographic-headwaters/" + key
+    directory = root / relative
+    def original_record(name):
+        path = directory / name
+        _require(not path.is_symlink() and path.resolve(strict=True).is_relative_to(root)
+                 and stat.S_ISREG(path.stat().st_mode),
+                 "Open an original retained geographic preparation record")
+        return read_json(path)
+    prepared = original_record("prepared.json")
+    inputs = original_record("inputs/input-receipt.json")
+    identity = inputs.get("identity", {})
+    _require(prepared.get("schema") == "upstate.geographic-headwaters-prepared/v1"
+             and prepared.get("id") == key and prepared.get("directory") == relative
+             and prepared.get("project_id") == workspace.project["id"]
+             and prepared.get("state") == "prepared"
+             and prepared.get("selection") == normalized_selection
+             and identity.get("schema") == "upstate.geographic-headwaters/v1"
+             and identity.get("id") == key
+             and digest({name: value for name, value in identity.items() if name != "id"}) == key
+             and identity.get("project_id") == workspace.project["id"]
+             and identity.get("selection") == normalized_selection
+             and identity.get("geographic_binding") == prepared.get("geography")
+             and inputs.get("geography") == prepared.get("geography")
+             and inputs.get("input_summary") == prepared.get("input_summary"),
+             "Use the exact saved geographic preparation and its original input receipt")
+    inputs_root = directory / "inputs"
+    for item in inputs["files"]:
+        # Match the original portable archive contract: runtime locks are not
+        # scientific inputs and are deliberately absent from a cold restore.
+        if portable.member_name(item["path"]).name.endswith(".lock"):
+            continue
+        verify_file(inputs_root, item)
+    collection = workspace._get("sources", prepared["source_collection_id"])
+    manifest = collection["original_manifest"]
+    source_file = describe_file(inputs_root, inputs_root / "sources.json")
+    _require(all(source_file[key] == manifest[key] for key in ("bytes", "sha256")),
+             "The physical original input manifest differs from the retained source collection")
+    verify_file(root, {"path": manifest["object"],
+                       "bytes": manifest["bytes"], "sha256": manifest["sha256"]})
+    return _prepared_execution(workspace, prepared)
+
 
 
 def retained_prepared(workspace, output, selection_bytes, normalized_selection):
@@ -281,7 +337,7 @@ def _archive_selection(requested, handover):
 
 
 def binding(workspace, prepared, scientific, delivery, review, response_id, *,
-            archive_selection=None, handover=None, utility_context=None, reference_basis=None):
+            archive_selection=None, handover=None, utility_context=None, reference_basis=None, programme=None):
     """Bind full-course completion, or an explicitly separate reference edition."""
     members = {}
     cache = {}
@@ -482,6 +538,25 @@ def binding(workspace, prepared, scientific, delivery, review, response_id, *,
             collection(item["source"]["source_collection_id"])
         utility_sources.update(utilities.source_collection_ids(original_context))
 
+    programme_identity = None
+    if programme is not None:
+        from model.geographic_programme import verify as verify_programme
+        verify_programme(workspace, programme)
+        _require(programme.get("geographic_id") == prepared["id"]
+                 and programme.get("existing_delivery_id") == delivery_id,
+                 "Retain the Programme of the selected original geographic delivery")
+        programme_identity = digest(programme)
+        directory = root / "compute-programmes" / identifier(programme["programme_id"])
+        record(directory.relative_to(root).as_posix() + "/programme.json")
+        record(directory.relative_to(root).as_posix() + "/progress.json")
+        for path in sorted(directory.rglob("*")):
+            _require(not path.is_symlink(), "Original Programme contains a symbolic link")
+            if path.is_file() and not path.name.endswith(".lock"):
+                item = describe_file(root, path)
+                add(item["path"], item)
+        for item in programme["report"]["files"]:
+            descriptor("", item)
+
     archive_delivery = None
     if handover is not None:
         handover_id = identifier(handover["id"])
@@ -497,6 +572,7 @@ def binding(workspace, prepared, scientific, delivery, review, response_id, *,
                  and handover_record.get("scientific", {}).get("id") == scientific_id
                  and handover_record.get("delivery_id") == delivery_id
                  and handover_record.get("reference_basis") == reference_basis
+                 and handover_record.get("geographic_programme") == programme
                  and handover_record.get("review", {}).get("review_id") == review["id"]
                  and handover_record.get("review", {}).get("latest_response_id") == response_id
                  and digest(handover_record) == handover["identity"]["content_sha256"]
@@ -548,6 +624,9 @@ def binding(workspace, prepared, scientific, delivery, review, response_id, *,
         "omitted_runtime_locks": sorted(omitted_runtime_members),
         "members": dict(sorted(members.items())),
     }
+    if programme is not None:
+        value.update(geographic_programme_id=programme["programme_id"],
+                     geographic_programme_sha256=programme_identity)
     if reference is not None:
         value.update(schema="upstate.geographic-reference-handover-binding/v1",
                      completion_scope="reference", reference_basis=reference["basis"],
@@ -559,7 +638,7 @@ def binding(workspace, prepared, scientific, delivery, review, response_id, *,
 
 
 def retain_binding(workspace, output, prepared, scientific, delivery, review, response_id, *,
-                   archive_selection=None, handover=None, utility_context=None, reference_basis=None):
+                   archive_selection=None, handover=None, utility_context=None, reference_basis=None, programme=None):
     """Retain the pre-backup selection before the archive's publication window.
 
     Its immutable generation survives a lost outer receiving checkpoint.
@@ -578,6 +657,9 @@ def retain_binding(workspace, output, prepared, scientific, delivery, review, re
     if reference_basis is not None:
         reference_snapshot(workspace, prepared, reference_basis)
         scope.update(completion_scope="reference", reference_basis=reference_basis)
+    if programme is not None:
+        scope.update(geographic_programme_id=programme["programme_id"],
+                     geographic_programme_sha256=digest(programme))
     path = Path(output) / "archive-bindings" / (digest(scope) + ".json")
     if path.exists():
         selected = read_json(path)
@@ -589,7 +671,7 @@ def retain_binding(workspace, output, prepared, scientific, delivery, review, re
         return selected
     selected = binding(workspace, prepared, scientific, delivery, review, response_id,
                        archive_selection=archive_selection, handover=handover,
-                       utility_context=utility_context, reference_basis=reference_basis)
+                       utility_context=utility_context, reference_basis=reference_basis, programme=programme)
     atomic_json(path, selected, immutable=True)
     return selected
 

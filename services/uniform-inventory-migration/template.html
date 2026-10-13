@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Uniform and inventory migration workspace</title><style>__STYLES__</style></head>
+<body><div id="app"><p>Opening complete migration workspace…</p></div><noscript>Enable JavaScript to operate the migration workspace. Complete input files remain on your computer.</noscript>
+<script id="bootstrap" type="application/json">__BOOTSTRAP__</script>
+<script type="module">
+const data=JSON.parse(document.querySelector('#bootstrap').textContent);
+const shaURL=URL.createObjectURL(new Blob([data.shaSource],{type:'text/javascript'}));
+const marker="import {sha256Utf8} from './sha256.mjs';";
+if(!data.engineSource.startsWith(marker))throw new Error('The bundled engine dependency differs.');
+const engineSource=data.engineSource.replace(marker,'import {sha256Utf8} from '+JSON.stringify(shaURL)+';');
+const engineURL=URL.createObjectURL(new Blob([engineSource],{type:'text/javascript'}));
+const appURL=URL.createObjectURL(new Blob([data.appSource],{type:'text/javascript'}));
+try{
+const [engine,app]=await Promise.all([import(engineURL),import(appURL)]);
+await app.mountUniformWorkspace(engine,data);
+}catch(error){document.querySelector('#app').textContent='Unable to open this complete workspace: '+error.message;}
+finally{URL.revokeObjectURL(engineURL);URL.revokeObjectURL(appURL);URL.revokeObjectURL(shaURL);}
+</script></body></html>

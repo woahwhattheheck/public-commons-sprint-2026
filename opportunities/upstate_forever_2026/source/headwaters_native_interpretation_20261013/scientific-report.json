@@ -1,6 +1,6 @@
 {
   "schema": "upstate.observed-report/v1",
-  "edition": "headwaters-native-interpretation-20261013-v1",
+  "edition": "headwaters-native-interpretation-20261013-v2",
   "title": "Original headwaters demonstration: source loading, native delivery and routing",
   "classification": "SIMULATED DEMONSTRATION INPUTS; ORIGINAL COMPLETED NATIVE OUTPUTS",
   "sections": [
@@ -159,6 +159,62 @@
             ]
           ]
         },
+        {
+          "kind": "table",
+          "columns": [
+            "Routing",
+            "Pollutant and annual unit",
+            "Corridor per changed ha",
+            "Control per changed ha",
+            "Reporting support (ha)"
+          ],
+          "rows": [
+            [
+              "MFD",
+              "Nitrogen (kg/year/changed model ha)",
+              "46.314",
+              "19.245",
+              "1263.06"
+            ],
+            [
+              "MFD",
+              "Phosphorus (kg/year/changed model ha)",
+              "3.712",
+              "1.558",
+              "1263.06"
+            ],
+            [
+              "MFD",
+              "Sediment (t/year/changed model ha)",
+              "2.238",
+              "1.993",
+              "1257.84"
+            ],
+            [
+              "D8",
+              "Nitrogen (kg/year/changed model ha)",
+              "46.982",
+              "17.539",
+              "1274.76"
+            ],
+            [
+              "D8",
+              "Phosphorus (kg/year/changed model ha)",
+              "3.765",
+              "1.422",
+              "1274.76"
+            ],
+            [
+              "D8",
+              "Sediment (t/year/changed model ha)",
+              "6.944",
+              "3.517",
+              "1274.76"
+            ]
+          ]
+        },
+        "This intervention-area normalization divides the original reporting-support baseline-minus-alternative annual stream export by each alternative's actual net changed model area: 57.15 ha for the corridor and 57.15 ha for the matched control. It measures the whole modeled response per changed hectare, including downstream delivery effects; it is not an observed removal rate or export density at the changed cells. The reporting-support area in the last column is a separate denominator and is not used in this division.",
+        "The six-row display uses each routing's Lmax 122 records. All 24 original configuration/scenario/pollutant rows, their support identities and original unchanged input-area records remain retained; the Lmax 333 results are numerically identical within routing in this case. Normalizing equal changed areas preserves the within-profile ranking. MFD and D8 stay separate support groups, and differing landscape covariates prevent a single-factor causal interpretation.",
         "The ratio compares two positive modeled reductions on the same valid comparison support within one profile. It is not a quoted price or a financial return. Full-grid assumed input loads and valid native export masks have different coverage; this report does not divide one by the other to infer a delivery fraction."
       ]
     ],

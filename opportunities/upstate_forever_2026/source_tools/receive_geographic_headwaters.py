@@ -23,7 +23,7 @@ from model import geographic_headwaters as geographic
 from source_tools.geographic_headwaters_reopen import cold_reopen, receiving_lock
 from source_tools.demo_deadline import CUTOFF, DemoDeadlineReached, check_cutoff, cutoff_guard
 from source_tools.geographic_archive import (retained_prepared, retained_reference_prepared,
-                                             retained_execution_prepared,
+                                             retained_execution_prepared, retained_workspace_prepared,
                                              retain_binding, verify_archive)
 from source_tools.geographic_headwaters_handover import prepare as prepare_handover
 
@@ -63,6 +63,34 @@ def _scientific_source(workspace, ensemble_id, output):
                     / (digest(value) + ".json"), value, immutable=True)
     atomic_json(pointer, scientific)
     return scientific
+
+
+def _geographic_programme(workspace, output, prepared, delivery):
+    """Retain the original completed-output adoption before any archive capture."""
+    from model import geographic_programme
+
+    scope = {"project_id": workspace.project["id"], "geographic_id": prepared["id"],
+             "existing_delivery_id": delivery["id"]}
+    target = Path(output) / "programme-editions" / (digest(scope) + ".json")
+    previous = read_json(target) if target.exists() else None
+    pointer = Path(output) / "geographic-programme.json"
+    old = read_json(pointer) if pointer.exists() else None
+    if old is not None:
+        if (old.get("schema") != geographic_programme.SCHEMA
+                or old.get("project_id") != workspace.project["id"]):
+            raise ValueError("Retain the original programme output in its own receiving project")
+        atomic_json(Path(output) / "programme-history" / (digest(old) + ".json"),
+                    old, immutable=True)
+        if previous is None and all(old.get(key) == value for key, value in scope.items()):
+            previous = old
+    programme = geographic_programme.adopt(
+        workspace, prepared["id"], delivery_id=delivery["id"], previous=previous)
+    if any(programme.get(key) != value for key, value in scope.items()):
+        raise ValueError("The adopted programme changed its original geographic delivery")
+    geographic_programme.verify(workspace, programme)
+    atomic_json(target, programme, immutable=True)
+    atomic_json(pointer, programme)
+    return programme
 
 
 def _reference_report(workspace, output, prepared, course, basis, scientific,
@@ -156,7 +184,8 @@ def _reference_report(workspace, output, prepared, course, basis, scientific,
 
 
 def receive(args):
-    workspace = Workspace(args.workspace.resolve(), create=True, title="Upper Savannah geographic demonstration")
+    workspace = (Workspace(args.workspace.resolve(strict=True)) if args.workspace_preparation else
+                 Workspace(args.workspace.resolve(), create=True, title="Upper Savannah geographic demonstration"))
     # Source intake is explicit; paths name original ordinary Workspace manifests.
     for manifest in args.import_sources:
         with held(workspace.root/".workspace.lock", blocking=False):
@@ -183,6 +212,17 @@ def receive(args):
                      "receiver_sha256":file_digest(Path(__file__))}
         path = output/"receiving.json"
         adopted_prepared = None
+        if args.workspace_preparation:
+            adopted_prepared = retained_workspace_prepared(
+                workspace, args.workspace_preparation, selection)
+            original_directory = workspace.root / adopted_prepared["directory"]
+            admission["origin"] = {
+                "kind": "retained_workspace_preparation",
+                "geographic_edition_id": adopted_prepared["id"],
+                "prepared": describe_file(workspace.root, original_directory / "prepared.json"),
+                "input_receipt": describe_file(workspace.root, original_directory / "inputs" / "input-receipt.json"),
+                "native_run_ids": [adopted_prepared["baseline_run_id"], *adopted_prepared["alternative_run_ids"]],
+                "source_identity_meaning": "Current receiving code; original producer/native provenance remains in the retained Workspace"}
         if args.adopt_handover or args.adopt_reference_report or args.adopt_prepared:
             if args.adopt_prepared:
                 original_admission, state, adopted_prepared = retained_execution_prepared(
@@ -332,6 +372,9 @@ def receive(args):
             raise ValueError("Complete the original mapped delivery before handover")
         save(scientific_source=scientific["source"],delivery_id=delivery["id"])
         atomic_json(output/"mapped-delivery.json",delivery)
+        programme = phase("geographic_programme", lambda: _geographic_programme(
+            workspace, output, prepared, delivery))
+        save(geographic_programme=programme)
         from model import reviews
         review_selection = {"schema":reviews.SELECTION_SCHEMA,
             "title":selection["title"]+": geography, assumptions and native results",
@@ -379,13 +422,13 @@ def receive(args):
         save(selected_completion_scope="reference" if selected_reference is not None else "full_course")
         handover = phase("handover", lambda: prepare_handover(
             workspace, output, state, prepared, scientific, delivery, exported,
-            reference_basis=selected_reference))
+            reference_basis=selected_reference, programme=programme))
         save(**{"reference_handover" if selected_reference is not None else "handover": handover})
         archive_policy = {"include_intermediates": True, "include_deliveries": True}
         selected_binding = retain_binding(
             workspace, output, prepared, scientific, delivery, review, response_id,
             archive_selection=archive_policy, handover=handover, utility_context=utilities,
-            reference_basis=selected_reference)
+            reference_basis=selected_reference, programme=programme)
         save(**{"reference_archive_binding_id" if selected_reference is not None
                 else "archive_binding_id": selected_binding["id"]})
         from model import portable
@@ -427,7 +470,7 @@ def receive(args):
             output/"cold-reopen"/edition, receiving_lock_fd=receiving_lock_fd,
             receiving_lock_path=output/".geographic-receiving.lock",
             review_response_id=response_id, receiving_context=utilities,
-            scenario_context=interpreted, reference_basis=selected_reference))
+            scenario_context=interpreted, reference_basis=selected_reference, programme=programme))
         if selected_reference is not None:
             history = state.setdefault("reference_handover_editions", {})
             history[edition] = {"reference_basis": selected_reference,
@@ -483,6 +526,7 @@ def main(argv=None):
     parser.add_argument("--output",type=Path)
     parser.add_argument("--node",default="node",help="Actual equipped Node executable for the maintained complete source-loading report")
     adoption = parser.add_mutually_exclusive_group()
+    adoption.add_argument("--workspace-preparation",help="Receive this actual saved geographic preparation by ID, with a new current receiving admission and no historical CLI claim")
     adoption.add_argument("--adopt-prepared",action="store_true",help="Execute the original retained preparation under its unchanged admission after explicit source adoption; use only with --run-reference or --run")
     adoption.add_argument("--adopt-handover",action="store_true",help="Use the completed original preparation under its retained admission for report-only handover source adoption")
     adoption.add_argument("--adopt-reference-report",action="store_true",help="Adopt report-only receiving for the original completed reference trio while its full native course keeps its actual state")
@@ -495,6 +539,10 @@ def main(argv=None):
     modes.add_argument("--report-only",action="store_true")
     parser.add_argument("--reference-handover",action="store_true",help="Include a separate reference-scoped full project archive and cold receiving for an actual partial course report")
     args = parser.parse_args(argv)
+    if args.workspace_preparation and not (args.report_only or args.run_reference or args.run):
+        parser.error("--workspace-preparation requires --report-only, --run-reference or --run")
+    if args.workspace_preparation and args.import_sources:
+        parser.error("--workspace-preparation receives the existing retained source collections; import new sources separately")
     if args.reference_handover and not args.report_only:
         parser.error("--reference-handover requires --report-only; --run-reference already retains that handover")
     if args.adopt_prepared and not (args.run_reference or args.run):
