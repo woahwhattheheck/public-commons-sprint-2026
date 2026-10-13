@@ -1,0 +1,226 @@
+{
+  "schema": "tjl.interoperability-writing-plan.v1",
+  "edition": "2026-10-13.1",
+  "purpose": "Authored test-design sample",
+  "profile": null,
+  "implementation_versions": [],
+  "source_editions": [],
+  "scenarios": [
+    {
+      "id": "S01",
+      "edition": 1,
+      "title": "Authorized action",
+      "preconditions": "Pin one valid subject, resource and policy edition; use a clean client and an entitled action.",
+      "procedure": "Submit the selected valid authorization request; retain its original request and response.",
+      "expected_behavior": "The selected contract returns its permit outcome for this subject/action/resource.",
+      "interpretation_note": "A successful transport status alone does not establish the decision.",
+      "requirements": [
+        "WR-01",
+        "WR-02",
+        "WR-03",
+        "WR-04"
+      ],
+      "selected_contract_clause": null,
+      "fixture_references": [],
+      "execution_ids": [],
+      "status": "not-executed"
+    },
+    {
+      "id": "S02",
+      "edition": 1,
+      "title": "Missing required entitlement",
+      "preconditions": "Reuse the S01 resource and action; select an authenticated test subject missing an entitlement required by the pinned rule.",
+      "procedure": "Submit the request and preserve the complete native decision response.",
+      "expected_behavior": "The selected contract returns its denial outcome.",
+      "interpretation_note": "Authentication failure does not establish the policy denial.",
+      "requirements": [
+        "WR-01",
+        "WR-03",
+        "WR-04"
+      ],
+      "selected_contract_clause": null,
+      "fixture_references": [],
+      "execution_ids": [],
+      "status": "not-executed"
+    },
+    {
+      "id": "S03",
+      "edition": 1,
+      "title": "Different requested action",
+      "preconditions": "Reuse S01 subject/resource; select a second action that the agreed policy does not entitle.",
+      "procedure": "Submit the second action while holding resource, identity and policy edition constant.",
+      "expected_behavior": "The selected contract denies the second action.",
+      "interpretation_note": "An earlier permit for another action is not evidence for this action.",
+      "requirements": [
+        "WR-01",
+        "WR-02",
+        "WR-04"
+      ],
+      "selected_contract_clause": null,
+      "fixture_references": [],
+      "execution_ids": [],
+      "status": "not-executed"
+    },
+    {
+      "id": "S04",
+      "edition": 1,
+      "title": "Authentication failure",
+      "preconditions": "Select an intentionally invalid test credential; preserve the same intended request dimensions without retaining the secret in the ordinary report.",
+      "procedure": "Make the request through the selected authenticated boundary and retain the authentication error.",
+      "expected_behavior": "The boundary rejects authentication according to the pinned contract; record authorization as not observed.",
+      "interpretation_note": "Do not translate this result into an authorization-policy denial.",
+      "requirements": [
+        "WR-03",
+        "WR-04"
+      ],
+      "selected_contract_clause": null,
+      "fixture_references": [],
+      "execution_ids": [],
+      "status": "not-executed"
+    },
+    {
+      "id": "S05",
+      "edition": 1,
+      "title": "Invalid request structure",
+      "preconditions": "Select one exact request validation constraint from the pinned interface; construct a fixture violating only that constraint.",
+      "procedure": "Submit the malformed fixture and retain its precise structured error and transport status.",
+      "expected_behavior": "The interface returns the contract's specified validation error.",
+      "interpretation_note": "The violated field and contract clause are completed before execution; no generic HTTP code is assumed.",
+      "requirements": [
+        "WR-01",
+        "WR-02",
+        "WR-03"
+      ],
+      "selected_contract_clause": null,
+      "fixture_references": [],
+      "execution_ids": [],
+      "status": "not-executed"
+    },
+    {
+      "id": "S06",
+      "edition": 1,
+      "title": "Fresh request after policy change",
+      "preconditions": "Retain configuration A and its positive baseline; apply selected change B using the authorized test administration route; start a separately recorded clean client state.",
+      "procedure": "Observe configuration B; record the time and source of that observation; issue a fresh request after the agreed propagation interval.",
+      "expected_behavior": "The fresh request has the outcome specified for configuration B.",
+      "interpretation_note": "The selected interval, time uncertainty and cleared client state must be recorded.",
+      "requirements": [
+        "WR-02",
+        "WR-05",
+        "WR-08"
+      ],
+      "selected_contract_clause": null,
+      "fixture_references": [],
+      "execution_ids": [],
+      "status": "not-executed"
+    },
+    {
+      "id": "S07",
+      "edition": 1,
+      "title": "Retained client state after policy change",
+      "preconditions": "Use the same A-to-B change as S06; explicitly retain one identified prior credential/key/cache state in a separate test client.",
+      "procedure": "Exercise the selected client behavior and capture both its service interaction and client outcome.",
+      "expected_behavior": "Compare against the selected profile's stated retained-state behavior.",
+      "interpretation_note": "Complete the profile expectation first; previously obtained plaintext and fresh key access are different assertions.",
+      "requirements": [
+        "WR-04",
+        "WR-05",
+        "WR-07"
+      ],
+      "selected_contract_clause": null,
+      "fixture_references": [],
+      "execution_ids": [],
+      "status": "not-executed"
+    },
+    {
+      "id": "S08",
+      "edition": 1,
+      "title": "Obligation-dependent decision",
+      "preconditions": "Choose a contract/profile that defines the exact obligation under test and an enforcement client with a stated capability.",
+      "procedure": "Request the decision, retain every returned obligation, and operate the enforcement path while recording its handling.",
+      "expected_behavior": "The selected decision and obligation-handling assertions each match the profile.",
+      "interpretation_note": "Record authorization and enforcement separately; unknown obligations must remain in the original response.",
+      "requirements": [
+        "WR-02",
+        "WR-04",
+        "WR-06"
+      ],
+      "selected_contract_clause": null,
+      "fixture_references": [],
+      "execution_ids": [],
+      "status": "not-executed"
+    },
+    {
+      "id": "S09",
+      "edition": 1,
+      "title": "Dependency interruption and recovery",
+      "preconditions": "Identify an authorized isolated test dependency and selected recovery behavior; preserve the last complete state before interruption.",
+      "procedure": "Interrupt only that test dependency using the approved test control; record the failure; restore it and perform a separately identified recovery attempt.",
+      "expected_behavior": "Each attempt is assessed against its own availability or recovery assertion.",
+      "interpretation_note": "Preserve failure and recovery as separate runs; do not overwrite the failed observation with the successful retry.",
+      "requirements": [
+        "WR-02",
+        "WR-03",
+        "WR-08"
+      ],
+      "selected_contract_clause": null,
+      "fixture_references": [],
+      "execution_ids": [],
+      "status": "not-executed"
+    },
+    {
+      "id": "S10",
+      "edition": 1,
+      "title": "Complete object access",
+      "preconditions": "Fix original plaintext bytes, produced protected-object bytes, selected policy and entitled client.",
+      "procedure": "Perform the complete authorized access path; retain decision/key-access evidence when available and compare recovered bytes with the original fixture.",
+      "expected_behavior": "The end-to-end assertions in the selected profile are met, including exact recovered fixture bytes.",
+      "interpretation_note": "A decision-only response cannot complete this scenario.",
+      "requirements": [
+        "WR-01",
+        "WR-04",
+        "WR-07"
+      ],
+      "selected_contract_clause": null,
+      "fixture_references": [],
+      "execution_ids": [],
+      "status": "not-executed"
+    },
+    {
+      "id": "S11",
+      "edition": 1,
+      "title": "Cross-implementation comparison",
+      "preconditions": "Fix the scenario and source editions; retain the full native request mapping for implementation A and B.",
+      "procedure": "Execute the same assertion in each selected implementation; retain each native input and output independently.",
+      "expected_behavior": "Each implementation meets the selected assertion, and the documented mapping supports the comparison.",
+      "interpretation_note": "Any intentional difference is named; use the narrow profile/version/object scope in the conclusion.",
+      "requirements": [
+        "WR-01",
+        "WR-07",
+        "WR-08"
+      ],
+      "selected_contract_clause": null,
+      "fixture_references": [],
+      "execution_ids": [],
+      "status": "not-executed"
+    },
+    {
+      "id": "S12",
+      "edition": 1,
+      "title": "Independent report handover",
+      "preconditions": "Freeze a completed report edition and its member manifest; select a receiving location with the intended evidence permissions.",
+      "procedure": "Open the delivered report, follow scenario-to-run-to-evidence links, read the actual attachments, and reconstruct a selected assessment.",
+      "expected_behavior": "The recipient can locate every delivered item and identify the basis of the selected assessment.",
+      "interpretation_note": "Separately distributed controlled evidence must have a real route/custodian; redacted copies retain their original relationship.",
+      "requirements": [
+        "WR-09",
+        "WR-11",
+        "WR-12"
+      ],
+      "selected_contract_clause": null,
+      "fixture_references": [],
+      "execution_ids": [],
+      "status": "not-executed"
+    }
+  ]
+}
