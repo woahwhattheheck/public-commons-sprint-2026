@@ -313,7 +313,8 @@ class Operator:
         if action == "run.prepare":
             return ws.prepare_run(value)
         if action == "run.start":
-            return ws.run(required(value, "run_id"))
+            from ecsa_runs.upstate import invoke_original_run
+            return invoke_original_run(self, task, ws, required(value, "run_id"))
         if action == "run.compare":
             return ws.compare_runs(value["run_ids"])
         if action == "observation.import":
@@ -870,7 +871,7 @@ class Handler(BaseHTTPRequestHandler):
                         {name: values[0] for name, values in query.items()}))
                 raise Fault("ROUTE_MISSING", "This operator route does not exist.", 404)
             selected = "index.html" if url.path == "/" else url.path.removeprefix("/web/")
-            if selected not in ({"experiments.mjs", "experiments.css", "app.mjs", "community.css", "community.mjs", "index.html", "programmes.css", "programmes.mjs", "reviews.css", "reviews.mjs", "spatial.mjs", "style.css"} | self.app.extensions.web_assets):
+            if selected not in ({'app.mjs', 'community.css', 'community.mjs', 'experiments.css', 'experiments.mjs', 'index.html', 'programmes.css', 'programmes.mjs', 'receiving_water_spatial.mjs', 'receiving_waters.css', 'receiving_waters.mjs', 'reviews.css', 'reviews.mjs', 'spatial.mjs', 'style.css'} | self.app.extensions.web_assets):
                 raise Fault("PAGE_MISSING", "This operator page does not exist.", 404)
             data = (Path(__file__).parent / "web" / selected).read_bytes()
             self.close_connection = True

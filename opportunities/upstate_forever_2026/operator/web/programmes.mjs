@@ -97,6 +97,77 @@ export function attachProgrammes(context) {
     if (Array.isArray(stages)) return stages.map(item => item.name || item.stage || item).join(' · ');
     return Object.entries(stages).map(([name, stage]) => name + (stage?.completed_at ? ' completed' : stage?.state ? ': ' + labelState(stage.state) : stage?.started_at ? ' started' : '')).join(' · ');
   }
+  function storageText(storage) {
+    if (!storage || typeof storage !== 'object') return '';
+    const parts = [];
+    if (Number.isFinite(storage.available_bytes) && storage.available_bytes >= 0) {
+      const units = ['B', 'KiB', 'MiB', 'GiB', 'TiB'];
+      let amount = storage.available_bytes, unit = 0;
+      while (amount >= 1024 && unit < units.length - 1) { amount /= 1024; unit++; }
+      parts.push(amount.toLocaleString(undefined, {maximumFractionDigits: unit ? 2 : 0}) + ' ' + units[unit] + ' available');
+    }
+    if (Number.isFinite(storage.available_inodes) && storage.available_inodes >= 0) {
+      parts.push(storage.available_inodes.toLocaleString() + ' available inodes');
+    }
+    return parts.join(' · ') || (storage.error?.message ? String(storage.error.message) : '');
+  }
+  function executionSummary(execution) {
+    if (!execution || typeof execution !== 'object') return '';
+    const phases = {
+      starting: 'Starting native run', log: 'Opening native log',
+      verify_stage: 'Checking retained model stage', verify_export: 'Checking retained export',
+      grid: 'Opening model grid', runtime: 'Opening model runtime', sources: 'Opening original sources',
+      landcover: 'Preparing land cover', stage_identity: 'Resolving model stage',
+      waiting_stage: 'Waiting for shared model stage', stage_reuse: 'Reusing model stage',
+      validate: 'Validating model inputs', native: 'Calculating native model',
+      retain_stage: 'Retaining model outputs', export: 'Writing export raster', complete: 'Native run complete',
+    };
+    return [
+      Number.isInteger(execution.attempt) ? 'Attempt ' + execution.attempt : '',
+      execution.model ? String(execution.model).toUpperCase() : '',
+      phases[execution.phase] || (execution.phase ? labelState(execution.phase) : ''),
+      execution.artifact ? labelState(execution.artifact) : '',
+      execution.state && execution.state !== execution.phase ? labelState(execution.state) : '',
+    ].filter(Boolean).join(' · ');
+  }
+  function executionHTML(row) {
+    const execution = row.execution, summary = executionSummary(execution);
+    const storage = storageText(execution?.storage);
+    const checkpoint = execution?.storage_recorded_at || execution?.phase_started_at || execution?.started_at || execution?.updated_at;
+    let html = summary ? '<small>' + escapeHTML(summary) + '</small>' : '';
+    if (storage) {
+      html += '<small>Storage recorded' +
+        (checkpoint ? ' · ' + escapeHTML(new Date(checkpoint).toLocaleString()) : '') +
+        ': ' + escapeHTML(storage) + '</small>';
+    }
+    html += failureRecoveryHTML(row.error);
+    const history = asArray(row.execution_history);
+    if (history.length) {
+      html += '<details data-programme-details="' + escapeHTML('execution:' + record.id + ':' + row.key) +
+        '"><summary>Previous execution attempts</summary><ul>' + history.map(item => {
+          const message = item?.error?.message || (typeof item?.error === 'string' ? item.error : '');
+          return '<li>' + escapeHTML(executionSummary(item)) +
+            (item?.updated_at ? ' · ' + escapeHTML(new Date(item.updated_at).toLocaleString()) : '') +
+            (message ? '<p class="programme-run-error">' + escapeHTML(message) + '</p>' : '') +
+            failureRecoveryHTML(item?.error) + '</li>';
+        }).join('') + '</ul></details>';
+    }
+    return html;
+  }
+  function failureRecoveryHTML(error) {
+    let html = '';
+    const storage = storageText(error?.storage_at_failure);
+    if (storage) {
+      const recorded = error?.storage_recorded_at;
+      html += '<small>Storage at failure' +
+        (recorded ? ' · ' + escapeHTML(new Date(recorded).toLocaleString()) : '') +
+        ': ' + escapeHTML(storage) + '</small>';
+    }
+    if (typeof error?.recovery === 'string' && error.recovery) {
+      html += '<p class="programme-run-error">' + escapeHTML(error.recovery) + '</p>';
+    }
+    return html;
+  }
   function programmeHTML() {
     if (!selected) return '<section class="section"><h2>Original calculations, continued together</h2><p>A programme may contain a single baseline or an expanded list of prepared cases. The existing native engine validates every input and executes each saved selection. Completed model stages remain available when another case needs attention.</p></section>';
     if (!record) return '<section class="section" role="status"><h2>Opening saved programme…</h2></section>';
@@ -115,7 +186,7 @@ export function attachProgrammes(context) {
         '<small class="mono">' + escapeHTML(row.key) + '</small></td><td>' + escapeHTML(named('profiles', row.profile_id)) +
         '<small>' + escapeHTML(named('scenarios', row.scenario_id)) + '</small><small>' + escapeHTML(nativeModelLabel(models)) + '</small>' +
         '<small>' + escapeHTML([Object.keys(row.parameter_changes || {}).length ? 'Parameters changed' : '', row.table_changed ? 'Biophysical table changed' : '', row.scenario_changed ? 'Land cover changed' : ''].filter(Boolean).join(' · ') || 'Reference selections') + '</small></td><td>' + stateBadge(row.state) +
-        '<small>' + escapeHTML(stageText(row)) + '</small>' + (error ? '<p class="programme-run-error">' + escapeHTML(error) + '</p>' : '') +
+        '<small>' + escapeHTML(stageText(row)) + '</small>' + (error ? '<p class="programme-run-error">' + escapeHTML(error) + '</p>' : '') + executionHTML(row) +
         '</td><td>' + escapeHTML(row.run_id ? short(row.run_id) : '—') + '</td><td><div class="programme-row-actions">' + native + '</div></td></tr>';
     });
     const report = record.latest_report || record.report;
@@ -140,18 +211,23 @@ export function attachProgrammes(context) {
       '<section class="programme-output"><header class="section-header"><div><h3>Result catalogue</h3><p>Open the original quantities, units, geographic coverage and result files retained for these runs.</p></div>' +
       actionButton('open-report', 'Open saved catalogue', record.id, report || files.length ? '' : 'disabled') + '</header>' +
       (files.length ? fileList(files) : '<p class="note">Build the catalogue after a run finishes. Completed cases can be reported while other cases remain in the programme.</p>') + '</section>' +
-      '<details class="technical"><summary>Complete saved selections and provenance</summary><pre class="json-view">' +
+      '<details class="technical" data-programme-details="' + escapeHTML('selection:' + record.id) + '"><summary>Complete saved selections and provenance</summary><pre class="json-view">' +
       escapeHTML(JSON.stringify(record.selection, null, 2)) + '</pre></details></section>';
   }
   function draw() {
     if (!host) return;
     const preserveScroll = host.scrollTop;
+    const expanded = new Set(Array.from(host.querySelectorAll('details[data-programme-details][open]'),
+      node => node.dataset.programmeDetails));
     host.innerHTML = '<div class="programme-workbench"><header class="page-header"><div><p class="eyebrow">UPPER SAVANNAH SCIENTIFIC WORKBENCH</p><h1>Run programmes</h1><p>Run saved native cases, inspect progress, pause between calculations and continue the same work after reopening.</p></div>' +
       '<div class="page-actions">' + actionButton('create', 'Create programme') + actionButton('import', 'Import selections') +
       (catalogue?.experiments_available ? actionButton('experiment', 'Use saved experiment') : '') +
       '<button type="button" data-view="runs">Native model runs</button></div></header><div class="notice error" data-programme-error role="alert"' +
       (latestError ? '' : ' hidden') + '>' + escapeHTML(latestError) + '</div>' + catalogueHTML() + programmeHTML() +
       '<p class="programme-method">Parameter designs and interpretation use the selected experiment and scientific profile. ' + methodLink + '.</p></div>';
+    for (const node of host.querySelectorAll('details[data-programme-details]')) {
+      node.open = expanded.has(node.dataset.programmeDetails);
+    }
     host.scrollTop = preserveScroll;
   }
   async function refreshRecord() {

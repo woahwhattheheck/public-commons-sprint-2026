@@ -2,7 +2,7 @@
   "schema": "upstate.operator-extension/v1",
   "id": "receptors",
   "title": "Source-water areas",
-  "version": "2",
+  "version": "3",
   "order": 65,
   "assets": [
     "receptors.mjs",
