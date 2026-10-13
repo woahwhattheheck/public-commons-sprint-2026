@@ -345,6 +345,9 @@ def _recommendation(closure, kind, key, value):
         closure.need("monitoring_observed_contexts", value["context_id"], reason)
         closure.need("monitoring_networks", value["network_id"], reason)
         closure.need("sources", value["source_binding"]["source_collection_id"], reason)
+        if any("model_evidence" in row for row in value.get("targets", [])):
+            from . import monitoring_native_evidence
+            monitoring_native_evidence.include(closure, value)
         revision = value.get("revision")
         if type(revision) is not int or revision < 1:
             raise ValueError("The sampling proposal lost its original revision number.")
