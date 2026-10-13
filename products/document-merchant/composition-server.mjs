@@ -76,10 +76,13 @@ export async function documentCompositionExtension(controller){
       }
     }
     if(method==='POST'){
-      if(['stage','restore','prepare','run','receive','export','assembly-stage','assembly-prepare',
+      if(path==='correction-draft'){
+        send(await controller.correctionDraft({...await body(2*1048576),signal}));return true;
+      }
+      if(['stage','correct','restore','prepare','run','receive','export','assembly-stage','assembly-prepare',
         'assembly-run','assembly-receive','assembly-export'].includes(path)){
         // Whole dataset and all template bytes fit the existing host's selected 48 MiB ceiling.
-        const input=await body(path==='stage'||path==='restore'?40*1048576:2*1048576);
+        const input=await body(path==='stage'||path==='correct'||path==='restore'?40*1048576:2*1048576);
         send(controller.start(path,input),202);return true;
       }
       if(path==='cancel'){send(await controller.cancel(await body()),202);return true;}

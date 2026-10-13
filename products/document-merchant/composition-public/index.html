@@ -140,6 +140,7 @@
 <section id="saved-panel" class="panel" hidden>
   <div class="section-heading"><div><p class="eyebrow">SAVED DOCUMENT SET</p><h2 id="saved-title"></h2><p id="saved-id" class="muted"></p></div><button id="refresh-detail" type="button">Refresh</button></div>
   <div id="counts" class="counts"></div>
+  <section id="correction-lineage" class="source-details" hidden></section>
   <details class="source-details"><summary>Saved source and configuration</summary><dl id="source-details"></dl><div class="action-row">
     <button id="download-plan" type="button">Download complete source plan</button>
     <button id="download-preview" type="button">Download source review</button>
@@ -158,12 +159,41 @@
   </section>
   <section class="documents-section">
     <p class="eyebrow">3 · CUSTOMER FILES</p><h3>Documents and receiving</h3>
+    <p>Select documents below to correct their source or order an unchanged repeat.</p>
+    <div class="action-row">
+      <button id="correction-select-page" type="button">Select this page</button><button id="correction-clear" type="button">Clear selection</button>
+      <span id="correction-count" class="muted">0 documents selected</span>
+      <button id="correct-selected" type="button" disabled>Edit selected documents</button>
+      <button id="repeat-selected" type="button" disabled>Repeat selected documents</button>
+    </div>
+    <label>Continue a saved correction draft <input id="correction-import" type="file" accept=".json,application/json"></label>
     <div class="table-scroll"><table><thead><tr><th scope="col">Document</th><th scope="col">Order or task</th><th scope="col">Source</th><th scope="col">Current state</th><th scope="col">Customer PDF</th></tr></thead><tbody id="document-rows"></tbody></table></div>
     <div class="pagination"><button id="document-previous" type="button">Previous</button><span id="document-page"></span><button id="document-next" type="button">Next</button></div>
     <div class="action-row"><button id="export-documents" type="button" disabled>Export received documents</button><span class="muted">The complete Collection includes the received PDFs and their original source files.</span></div>
     <div id="exports" class="exports"></div>
   </section>
 
+  <section id="correction-editor" class="documents-section" hidden aria-labelledby="correction-editor-title">
+    <p class="eyebrow">SELECTED DOCUMENTS</p><h3 id="correction-editor-title">Correct selected documents</h3>
+    <p id="correction-original" class="mono"></p>
+    <p>Edit the selected records and templates. Original task references stay attached. Save the new source, review it, then prepare and accept its current merchant price. The original files and jobs stay in their saved document set.</p>
+    <form id="correction-form">
+      <div class="form-grid">
+        <label>New document-set ID <input id="correction-id" required maxlength="64" pattern="[A-Za-z0-9][A-Za-z0-9._-]{0,63}"></label>
+        <label>Name <input id="correction-name" required maxlength="200"></label>
+      </div>
+      <label>Reason <textarea id="correction-reason" required maxlength="2000" rows="2"></textarea></label>
+      <label>Selected record <select id="correction-record"></select></label>
+      <div id="correction-fields" class="form-grid"></div>
+      <details><summary>Complete record JSON, including all line items</summary>
+        <textarea id="correction-record-json" rows="16" spellcheck="false" aria-label="Complete selected record"></textarea>
+        <button id="correction-apply-json" type="button">Apply complete record</button>
+      </details>
+      <h4>Selected templates</h4><div id="correction-templates"></div>
+      <div class="action-row"><button id="correction-stage" class="primary" type="submit">Prepare selected source documents</button>
+        <button id="correction-save-draft" type="button">Download editable draft</button></div>
+    </form>
+  </section>
   <section class="documents-section" aria-labelledby="assembly-heading">
     <p class="eyebrow">4 · ORDERED PDF BUNDLE</p><h3 id="assembly-heading">Assemble invoices or reports</h3>
     <p>Choose complete received PDFs from this document set. The saved bundle preserves their order and every original file. PDFMint assembly uses its own commissioned merchant price.</p>
