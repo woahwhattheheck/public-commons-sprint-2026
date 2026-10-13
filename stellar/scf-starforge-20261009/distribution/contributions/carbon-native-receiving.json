@@ -15,7 +15,9 @@
     "stellar/scf-starforge-20261009/partners/carbon-native-receiving/SDK_RUNTIME.md",
     "stellar/scf-starforge-20261009/partners/carbon-native-receiving/sdk-originals/stellar-sdk-16.3.1-original-npm-metadata.json",
     "stellar/scf-starforge-20261009/partners/carbon-native-receiving/sdk-originals/stellar-sdk-16.3.1-original-dist-metadata.json",
-    "stellar/scf-starforge-20261009/partners/carbon-native-receiving/sdk-originals/stellar-sdk-16.3.1-original-LICENSE.txt"
+    "stellar/scf-starforge-20261009/partners/carbon-native-receiving/sdk-originals/stellar-sdk-16.3.1-original-LICENSE.txt",
+    "stellar/scf-starforge-20261009/partners/carbon-native-receiving/capture-ledger-interval.d.mts",
+    "stellar/scf-starforge-20261009/partners/carbon-native-receiving/HISTORICAL_LEDGER_SOURCES.md"
   ],
   "commands": {
     "carbon-native-receiving": "stellar/scf-starforge-20261009/partners/carbon-native-receiving/cli.mjs"
@@ -39,6 +41,10 @@
     "./carbon-native-receiving/sdk-runtime": {
       "types": "./source/stellar/scf-starforge-20261009/partners/carbon-native-receiving/prepare-sdk-runtime.d.mts",
       "default": "./source/stellar/scf-starforge-20261009/partners/carbon-native-receiving/prepare-sdk-runtime.mjs"
+    },
+    "./carbon-native-receiving/history": {
+      "types": "./source/stellar/scf-starforge-20261009/partners/carbon-native-receiving/capture-ledger-interval.d.mts",
+      "default": "./source/stellar/scf-starforge-20261009/partners/carbon-native-receiving/capture-ledger-interval.mjs"
     }
   },
   "nativePeers": {

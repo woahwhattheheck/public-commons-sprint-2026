@@ -12,7 +12,11 @@
     "stellar/scf-starforge-20261009/sf101-merchant-recovery/workspace/connection.d.mts",
     "stellar/scf-starforge-20261009/sf101-merchant-recovery/workspace/MCP.md",
     "stellar/scf-starforge-20261009/sf101-merchant-recovery/workspace/native-receiving.mjs",
-    "stellar/scf-starforge-20261009/sf101-merchant-recovery/workspace/native-receiving.d.mts"
+    "stellar/scf-starforge-20261009/sf101-merchant-recovery/workspace/native-receiving.d.mts",
+    "stellar/scf-starforge-20261009/sf101-merchant-recovery/workspace/host-handoff.mjs",
+    "stellar/scf-starforge-20261009/sf101-merchant-recovery/workspace/host-handoff-cli.mjs",
+    "stellar/scf-starforge-20261009/sf101-merchant-recovery/workspace/host-handoff.d.mts",
+    "stellar/scf-starforge-20261009/sf101-merchant-recovery/workspace/HOST_HANDOFF.md"
   ],
   "merchantProviders": {
     "recovery-workspaces": "stellar/scf-starforge-20261009/sf101-merchant-recovery/workspace/merchant-provider.mjs"
@@ -30,6 +34,10 @@
     "./merchant/mcp/recovery/receive": {
       "types": "./source/stellar/scf-starforge-20261009/sf101-merchant-recovery/workspace/native-receiving.d.mts",
       "import": "./source/stellar/scf-starforge-20261009/sf101-merchant-recovery/workspace/native-receiving.mjs"
+    },
+    "./merchant/remote-recovery/workspace/handoff": {
+      "types": "./source/stellar/scf-starforge-20261009/sf101-merchant-recovery/workspace/host-handoff.d.mts",
+      "import": "./source/stellar/scf-starforge-20261009/sf101-merchant-recovery/workspace/host-handoff.mjs"
     }
   },
   "commands": {

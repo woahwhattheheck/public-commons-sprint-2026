@@ -1,5 +1,6 @@
 /* TokenJunkieLabs: retained native comparisons joined to saved decision views. */
 import {mount as mountPanel} from './scenario_decisions.mjs';
+import {prepareAssessment,uploadAssessment,operationId} from './decision_transfer.mjs';
 
 const escape = value => String(value ?? '').replace(/[&<>"']/g, character =>
   ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[character]));
@@ -172,11 +173,26 @@ export function buildDecisionInput(catalog, baselineId) {
   };
 }
 
+
+export function workspaceSourceSignature(state){
+  const data=state?.data||{};
+  const ordered=(rows,project)=>(Array.isArray(rows)?rows:[]).map(project).sort((a,b)=>String(a[0]).localeCompare(String(b[0])));
+  return JSON.stringify({
+    runs:ordered((data.runs||[]).filter(row=>row.state==='complete'),row=>[row.id,row.state,row.completed_at||'']),
+    comparisons:ordered(data.comparisons||[],row=>[row.id]),
+    reports:ordered(data.scenario_reports||[],row=>[row.id,row.state||'',row.updated_at||row.created_at||'']),
+    completed:ordered((state?.tasks||[]).filter(row=>row.state==='complete'&&
+      ['run.start','run.compare','scenario.decision.build'].includes(row.action)),
+      row=>[row.id,row.action,row.result?.id||'']),
+  });
+}
+
 export function attachDecisionWorkbench({getState, api, endpoint, toast}) {
-  let root=null, frame=null, controller=null, snapshot=null, workspaceKey=null;
-  let selection=null, loadedView=null, generation=0, lastBaseline=null;
+  let root=null, frame=null, controller=null, snapshot=null, liveCatalog=null, workspaceKey=null;
+  let selection=null, loadedView=null, previousViewId=null,generation=0,lastBaseline=null;
+  let sourceStamp='',savedStamp='',backgroundRefresh=null,nextSourceRefresh=0;
   let pending=null, currentError='', currentMessage='', loading=false;
-  let savedViews=[], requestKeys=new Map(), objectiveId='';
+  let savedViews=[], requestKeys=new Map(), objectiveId='',transferring=null;
   const localKey = () => 'upstate-scenario-decisions:' + workspaceKey;
   const node = selector => frame?.querySelector(selector);
   const currentWorkspace = () => getState()?.workspace_key;
@@ -195,6 +211,7 @@ export function attachDecisionWorkbench({getState, api, endpoint, toast}) {
     try {localStorage.setItem(localKey(), JSON.stringify({
       selection, title:node('[name="decision-title"]')?.value || '',
       purpose:node('[name="decision-purpose"]')?.value || '',
+      previous_view_id:previousViewId,
     }));} catch (_) {}
   };
   function initialState(catalog) {
@@ -239,11 +256,18 @@ export function attachDecisionWorkbench({getState, api, endpoint, toast}) {
       '<div data-decision-panel></div>' +
       '<details class="section decision-interpretation"><summary>Method and original source choices</summary><div data-decision-methods></div></details>';
   }
+  function choiceCatalog(){
+    if(!liveCatalog)return snapshot;
+    if(!snapshot||!loadedView)return liveCatalog;
+    const union=key=>[...new Map([...(snapshot[key]||[]),...(liveCatalog[key]||[])].map(row=>[row.id,row])).values()];
+    return {...liveCatalog,scoped_reports:union('scoped_reports'),comparisons:union('comparisons'),runs:union('runs')};
+  }
   function optionLists() {
     const saved=node('[name="saved-decision"]'), native=node('[name="native-comparison"]');
     const geographic=node('[name="watershed-report"]'),objectives=node('[name="decision-objective"]');
+    const available=choiceCatalog(),geographicValue=geographic?.value,nativeValue=native?.value;
     if(geographic)geographic.innerHTML='<option value="">Choose saved common-mask geography</option>'+
-      (snapshot?.scoped_reports||[]).map(row=>'<option value="'+escape(row.id)+'">'+
+      (available?.scoped_reports||[]).map(row=>'<option value="'+escape(row.id)+'">'+
         escape((row.title||short(row.id))+' · '+row.report.zones.length+' zones')+'</option>').join('');
     if(objectives){
       objectives.innerHTML='<option value="">Set directions directly</option>'+
@@ -255,8 +279,10 @@ export function attachDecisionWorkbench({getState, api, endpoint, toast}) {
       savedViews.map(view=>'<option value="'+escape(view.id)+'"'+
         (loadedView?.id===view.id?' selected':'')+'>'+escape(view.title)+'</option>').join('');
     if (native) native.innerHTML='<option value="">Choose retained operands</option>' +
-      (snapshot?.comparisons || []).map(comparison=>'<option value="'+escape(comparison.id)+'">'+
+      (available?.comparisons || []).map(comparison=>'<option value="'+escape(comparison.id)+'">'+
         escape(short(comparison.baseline_run_id)+' · '+comparison.alternatives.length+' alternatives · '+short(comparison.id))+'</option>').join('');
+    if(geographic&&geographicValue)geographic.value=geographicValue;
+    if(native&&nativeValue)native.value=nativeValue;
   }
   function showObjective(){
     const objective=snapshot?.methods?.objectives?.find(row=>row.id===objectiveId);
@@ -291,6 +317,7 @@ export function attachDecisionWorkbench({getState, api, endpoint, toast}) {
       'Each retained watershed report uses one common mask across its original run cohort for each pollutant. Selecting fewer cases retains that geographic support; selecting another report changes its stated coverage.',
     ];
     let content=explanations.map(text=>'<p>'+escape(text)+'</p>').join('');
+    for(const issue of snapshot.scoped_report_issues||[])content+='<p class="decision-error">'+escape(issue.source+': '+issue.error)+'</p>';
     const sources=snapshot.methods?.sources || [];
     const list=Array.isArray(sources)?sources:Object.values(sources);
     for(const source of list){
@@ -307,6 +334,7 @@ export function attachDecisionWorkbench({getState, api, endpoint, toast}) {
     lastBaseline=selection?.baseline_id;objectiveId=selection?.objective_id||'';
     controller=mountPanel(node('[data-decision-panel]'),data,{
       initialState:selection,
+      notifyAssessment:false,
       onChange(next) {
         retainSelection(next);
         if (next.baseline_id!==lastBaseline) {
@@ -323,12 +351,13 @@ export function attachDecisionWorkbench({getState, api, endpoint, toast}) {
       'Current retained workspace results. Select a baseline and the cases, geography and metrics to assess.';
   }
   async function loadCurrent({keepSelection=true}={}) {
-    const ticket=++generation, requested=workspaceKey;
+    const ticket=++generation,requested=workspaceKey,stamp=workspaceSourceSignature(getState());
     loading=true;status('Reading original run and comparison metadata…');
     try {
       const result=await api(endpoint('/api/decisions/catalog'));
       if(ticket!==generation||workspaceKey!==requested||!root)return;
-      snapshot=result;savedViews=result.saved_views||[];loadedView=null;
+      snapshot=result;liveCatalog=result;sourceStamp=stamp;savedViews=result.saved_views||[];loadedView=null;
+      if(!keepSelection)previousViewId=null;
       if(!selection||!keepSelection)selection=initialState(result);
       mountValues();status(result.runs.length+' completed native runs available. Choose the assessment scope and directions.');
     } catch(error) {if(ticket===generation)status(error.message||String(error),true);}
@@ -341,7 +370,7 @@ export function attachDecisionWorkbench({getState, api, endpoint, toast}) {
     try {
       const row=await api(endpoint('/api/decisions/view',{view_id:id}));
       if(ticket!==generation||workspaceKey!==requested||!root)return;
-      loadedView=row;snapshot=row.source_snapshot;selection=row.selection;
+      loadedView=row;previousViewId=row.id;snapshot=row.source_snapshot;selection=row.selection;
       node('[name="decision-title"]').value=row.title||'';
       node('[name="decision-purpose"]').value=row.purpose||'';
       mountValues();status('Saved assessment reopened with its original run references and decision settings.');
@@ -354,7 +383,7 @@ export function attachDecisionWorkbench({getState, api, endpoint, toast}) {
     }
     const bodyKey=action+':'+JSON.stringify(payload);
     let operation=requestKeys.get(bodyKey);
-    if(!operation){operation=crypto.randomUUID();requestKeys.set(bodyKey,operation);}
+    if(!operation){operation=operationId();requestKeys.set(bodyKey,operation);}
     status('Submitting the original workspace operation…');
     const result=await api('/api/actions',{method:'POST',body:{
       workspace:workspaceKey,action,payload,operation_id:operation,
@@ -364,6 +393,9 @@ export function attachDecisionWorkbench({getState, api, endpoint, toast}) {
       'The native comparison is queued. Existing completed differences are reused.');
   }
   async function act(action) {
+    if(transferring?.workspace===workspaceKey&&['save','compare','refresh'].includes(action)){
+      status('The original assessment transfer is in progress. Its retained parts will be reused after an interruption.');return;
+    }
     if(action==='refresh')return loadCurrent({keepSelection:true});
     if(action==='retry'&&pending?.id) {
       pending={...pending,...await api('/api/task/resume',{method:'POST',body:{id:pending.id}})};
@@ -375,11 +407,27 @@ export function attachDecisionWorkbench({getState, api, endpoint, toast}) {
     if(action==='save') {
       const title=node('[name="decision-title"]').value.trim();
       if(!title)throw Error('Give this assessment a title before saving.');
-      return submit('decision.view.save',{
-        title,purpose:node('[name="decision-purpose"]').value.trim(),selection,
-        assessment:controller.getComparison(),
-        ...(loadedView?{previous_view_id:loadedView.id}:{}),
-      });
+      const selectedWorkspace=workspaceKey;
+      const original={
+        title,purpose:node('[name="decision-purpose"]').value.trim(),
+        selection:JSON.parse(JSON.stringify(selection)),
+        ...(previousViewId?{previous_view_id:previousViewId}:{}),
+      };
+      const assessment=controller.getComparison();
+      const url=endpoint('/api/decisions/assessment/upload');
+      const transfer={workspace:selectedWorkspace,id:operationId()};
+      transferring=transfer;
+      const progress=message=>{if(transferring===transfer)status(message);};
+      try{
+        const prepared=await prepareAssessment(assessment,{progress});
+        const transmitted=await uploadAssessment(prepared,{
+          api,url,workspace:selectedWorkspace,progress,
+          isCurrent:()=>transferring===transfer&&workspaceKey===selectedWorkspace&&currentWorkspace()===selectedWorkspace,
+        });
+        if(workspaceKey!==selectedWorkspace||currentWorkspace()!==selectedWorkspace)
+          throw Error('Reopen the original workspace to save its retained assessment.');
+        return await submit('decision.view.save',{...original,...transmitted});
+      }finally{if(transferring===transfer)transferring=null;}
     }
     if(action==='compare'){
       const ids=[selection.baseline_id,...selection.alternative_ids].filter(Boolean);
@@ -391,10 +439,38 @@ export function attachDecisionWorkbench({getState, api, endpoint, toast}) {
       return submit('run.compare',{run_ids:ids});
     }
   }
+  function refreshExternalSources(){
+    if(!root||loading||backgroundRefresh||transferring?.workspace===workspaceKey||Date.now()<nextSourceRefresh)return;
+    const stamp=workspaceSourceSignature(getState());
+    if(stamp===sourceStamp)return;
+    const request={workspace:workspaceKey,generation,stamp};
+    backgroundRefresh=request;
+    Promise.resolve(api(endpoint('/api/decisions/catalog'))).then(result=>{
+      if(backgroundRefresh!==request||request.workspace!==workspaceKey||request.generation!==generation||!root)return;
+      liveCatalog=result;sourceStamp=stamp;nextSourceRefresh=0;savedViews=result.saved_views||savedViews;
+      if(loadedView){
+        optionLists();
+        status('New workspace results are available in the report and comparison selectors.');
+      }else{
+        const retained=controller?currentSelection():selection;
+        snapshot=result;
+        controller?.setData(buildDecisionInput(snapshot,retained?.baseline_id));
+        if(controller&&retained)controller.setState(retained);
+        optionLists();showMethods();
+        status('The completed native results and watershed reports have refreshed. The current decision settings are retained.');
+      }
+    }).catch(error=>{
+      nextSourceRefresh=Date.now()+5000;
+      if(backgroundRefresh===request&&request.workspace===workspaceKey&&request.generation===generation)
+        status('Refreshing workspace results: '+(error.message||String(error)),true);
+    }).finally(()=>{if(backgroundRefresh===request)backgroundRefresh=null;});
+  }
   function observe() {
     if(workspaceKey!==currentWorkspace())return;
     savedViews=getState()?.data?.decision_views||savedViews;
-    if(!pending)return;
+    const changedSaved=JSON.stringify(savedViews.map(row=>row.id));
+    if(changedSaved!==savedStamp){savedStamp=changedSaved;if(frame)optionLists();}
+    if(!pending){refreshExternalSources();return;}
     const task=(getState()?.tasks||[]).find(item=>item.id===pending.id);
     if(!task)return;
     pending={...pending,...task};
@@ -418,27 +494,31 @@ export function attachDecisionWorkbench({getState, api, endpoint, toast}) {
     }
     const changingWorkspace=workspaceKey!==nextWorkspace;
     detach();
-    if(changingWorkspace){pending=null;snapshot=null;loadedView=null;savedViews=[];requestKeys=new Map();}
+    if(changingWorkspace){pending=null;snapshot=null;liveCatalog=null;loadedView=null;previousViewId=null;savedViews=[];requestKeys=new Map();transferring=null;sourceStamp='';savedStamp='';backgroundRefresh=null;nextSourceRefresh=0;}
     root=container;workspaceKey=nextWorkspace;
     frame=document.createElement('div');frame.className='decision-workbench';frame.innerHTML=controls();
     container.replaceChildren(frame);
     let draft;
     try{draft=JSON.parse(localStorage.getItem(localKey())||'null');}catch(_){}
-    selection=draft?.selection||null;
+    selection=draft?.selection||null;previousViewId=draft?.previous_view_id||null;
     node('[name="decision-title"]').value=draft?.title||'';
     node('[name="decision-purpose"]').value=draft?.purpose||'';
     frame.addEventListener('click',event=>{
       const button=event.target.closest('[data-decision-action]');
       if(!button)return;event.preventDefault();event.stopPropagation();
       button.disabled=true;
-      Promise.resolve(act(button.dataset.decisionAction)).catch(error=>status(error.message||String(error),true))
+      const actionWorkspace=workspaceKey;
+      Promise.resolve(act(button.dataset.decisionAction)).catch(error=>{
+        if(workspaceKey===actionWorkspace)status(error.message||String(error),true);
+      })
         .finally(()=>{button.disabled=false;});
     });
     frame.addEventListener('change',event=>{
       if(event.target.name==='saved-decision')openView(event.target.value);
       if(event.target.name==='native-comparison'){
-        const compare=snapshot?.comparisons?.find(row=>row.id===event.target.value);
-        if(compare){selection={...(selection||{}),baseline_id:compare.baseline_run_id,
+        const available=choiceCatalog();
+        const compare=available?.comparisons?.find(row=>row.id===event.target.value);
+        if(compare){snapshot=available;selection={...(selection||{}),baseline_id:compare.baseline_run_id,
           alternative_ids:compare.alternatives.map(row=>row.run_id),
           metric_ids:METRICS.filter(metric=>snapshot.runs.find(run=>run.id===compare.baseline_run_id)?.artifacts?.[metric.id]).map(metric=>metric.id),catchment_ids:['reporting-mask:' + snapshot.runs.find(run=>run.id===compare.baseline_run_id).selection.grid_id]};loadedView=null;mountValues();remember();}
       }
@@ -449,8 +529,10 @@ export function attachDecisionWorkbench({getState, api, endpoint, toast}) {
         selection=currentSelection();showObjective();remember();
       }
       if(event.target.name==='watershed-report'){
-        const saved=snapshot?.scoped_reports?.find(row=>row.id===event.target.value);
+        const available=choiceCatalog();
+        const saved=available?.scoped_reports?.find(row=>row.id===event.target.value);
         if(saved){
+          snapshot=available;
           const ids=(saved.report.runs||[]).map(row=>row.id).filter(id=>snapshot.runs.some(run=>run.id===id));
           selection={...(selection||{}),baseline_id:saved.baseline_run_id,
             alternative_ids:ids.filter(id=>id!==saved.baseline_run_id),
@@ -470,7 +552,7 @@ export function attachDecisionWorkbench({getState, api, endpoint, toast}) {
   }
   function detach() {
     remember();generation++;controller?.destroy?.();controller=null;
-    root=null;frame=null;loading=false;
+    root=null;frame=null;loading=false;backgroundRefresh=null;
   }
   return {mount,detach,update:observe};
 }

@@ -26,7 +26,10 @@ Required existing components:
 The operator may call receptor_experiments.plan(workspace, selection),
 build(workspace, selection) or inspect(workspace, comparison_id) directly.
 Each returned profile product points to its retained inventory and
-workspace-relative files.
+workspace-relative files. The Source-water areas operator desk opens this same
+component through the shared extension registry; its full controls, retained
+tasks, reports and complete result ZIP are described in
+operator/RECEPTORS_OPERATOR.md.
 
 ## Build from a retained experiment
 
@@ -143,6 +146,15 @@ Detailed receiving-area quantities preserve:
 - Whole-basin metrics in separate basin_ columns, including the original valid
   support SHA-256. Unprefixed physical quantities describe the receiving area.
 
+The common retained pollutant cohort determines each inventory's rows. A
+completed NDR-only profile can report nitrogen and phosphorus; an SDR-only
+profile can report sediment. Each group retains pollutants and run_pollutants
+from the core inventory. Older saved inventories derive the available cohort
+from their actual scenario_exports. The expected area/alternative/pollutant
+rows use that real cohort. For a partial-model experiment, use the maintained engine edition that carries
+its actual selected models into canonical case and paired-baseline identities.
+The operator's direct-baseline mode can already consume completed NDR/SDR runs.
+
 Physical units remain those recorded by the existing raster products. The
 adapter applies no additional pixel-area multiplication. Negative change means
 lower annual export. A percentage is blank for a zero baseline. Quantities are
@@ -181,34 +193,17 @@ select the actual existing experiment and receptor specification, then build
 once. Inspect the resulting profile-to-baseline mapping and open the report.
 Repeat only to continue unfinished work or receive newly completed native cases.
 
-If native rasters are still being prepared, the existing receptor network
-module can immediately compute real original-HUC membership paths:
-
-```python
-import json
-from pathlib import Path
-from model.rasters import vector_geometry
-from model.receptor_network import upstream_memberships
-
-profile = json.loads(Path(
-    "source/receptor-profiles/utility-focus-20261012.json"
-).read_text(encoding="utf-8"))
-rows, crs = vector_geometry(ORIGINAL_HUC12_FILE, target_crs="EPSG:5070")
-memberships = upstream_memberships(rows, profile["receptors"])
-Path("original-huc12-receptor-memberships.json").write_text(
-    json.dumps(memberships, indent=2, ensure_ascii=False) + "\n",
-    encoding="utf-8",
-)
-```
-
-Set ORIGINAL_HUC12_FILE to the actual original 217-HUC domain file received in
-the workspace; choose its original HUC12 layer if the datasource has multiple
-layers. This computes actual anchor coverage, upstream HUC counts, overlaps
-and original downstream paths while raster processing proceeds.
+The operator's **Original watershed connections** mode receives the actual
+original Esri JSON/GZIP/ZIP source before native rasters finish. It builds with
+model.receptor_network_cli, saves original memberships and geometry, and offers
+an ordered drainage-path inspector and complete linked source package. This
+source-only entrypoint uses Python's standard library. Its saved specification
+carries the original source collection and network entry into later native
+comparisons. See operator/RECEPTORS_OPERATOR.md and model/RECEPTOR_NETWORK.md.
 
 ## Source basis
 
-Written against ES-EXP-2319 source carrier F0C8PGPP6PL, contributing-area
-component F0C8TFLHT0U, and original scientific workspace common and portable
+Written against ES-EXP-2319 source carrier F0C8MU63NB0, contributing-area
+component revision 3 F0C8PMN99LJ, and original scientific workspace common and portable
 interfaces. Native product IDs and physical quantities are produced by the
 receiving workspace using its retained inputs.

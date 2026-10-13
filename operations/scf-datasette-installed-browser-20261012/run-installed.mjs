@@ -146,8 +146,9 @@ export async function runInstalledDatasetteBrowser({
   try{
     await save('ORIGINAL_PROGRAMME_RETAINED');
     const {buildDistribution}=await fromRepo(DIST+'build.mjs');
-    state.build=await buildDistribution({repository,ref:sourceRef,output:join(outputDirectory,'build'),
-      selection:'datasette',offline:true,resume:true,python,onProgress:event=>{
+    const buildDirectory=join(outputDirectory,'build');
+    state.build=await buildDistribution({repository,ref:sourceRef,output:buildDirectory,
+      selection:'datasette',offline:true,resume:await exists(buildDirectory),python,onProgress:event=>{
         if(['selected','materializing','packaged','reused'].includes(event.phase))
           process.stderr.write(JSON.stringify({operation:'datasette-installed-build',...event})+'\n');
       }});
@@ -222,9 +223,39 @@ export async function runInstalledDatasetteBrowser({
       commands:Object.fromEntries(['datasette','datasette-application','datasette-mcp','datasette-analysis'].map(name=>[name,spec.commands[name]]))};
     state.checks={...state.checks,selectedSourceBuilt:true,installedRuntimeReady:true,originalGzipRetained:true,pythonTypesRetained:true,typedClientExports:true};
     await save('INSTALLED_SOURCE_VERIFIED');
-    const runtimeModel=await fromInstalled(DIST+'runtime-workspace/model.mjs'),appsDirectory=join(outputDirectory,'applications');
-    if(!await exists(join(appsDirectory,'workspace.json')))await runtimeModel.createRuntimeWorkspace({directory:appsDirectory});
+    const runtimeModel=await fromInstalled(DIST+'runtime-workspace/model.mjs');
+    if(!state.applicationWorkspace){
+      state.applicationWorkspace={attempts:[{directory:join(outputDirectory,'applications'),createdAt:stamp()}]};
+      await save('APPLICATION_WORKSPACE_INPUT_RETAINED');
+    }
+    let applicationPreparation=state.applicationWorkspace.attempts.at(-1);
+    let appsDirectory=applicationPreparation.directory;
+    while(!await exists(join(appsDirectory,'workspace.json'))){
+      if(await exists(appsDirectory)){
+        need(!Object.values(state.applications).some(item=>item.saved),
+          'DATASETTE_INSTALLED_ORIGINAL_APPLICATION_WORKSPACE_MISSING');
+        applicationPreparation.interruptedAt??=stamp();
+        const previousDirectory=appsDirectory;
+        appsDirectory=join(outputDirectory,'applications-recovery-'+
+          String(state.applicationWorkspace.attempts.length).padStart(4,'0'));
+        applicationPreparation={directory:appsDirectory,previousDirectory,createdAt:stamp()};
+        state.applicationWorkspace.attempts.push(applicationPreparation);
+        await save('APPLICATION_WORKSPACE_RECOVERY_RETAINED');
+        continue;
+      }
+      applicationPreparation.result=await runtimeModel.createRuntimeWorkspace({directory:appsDirectory});
+      applicationPreparation.completedAt=stamp();
+      await save('APPLICATION_WORKSPACE_CREATED');
+    }
     apps=await runtimeModel.openRuntimeWorkspace({directory:appsDirectory});
+    const applicationConfig=await readJSON(join(appsDirectory,'workspace.json'));
+    need(!state.applicationWorkspace.workspaceId||
+      state.applicationWorkspace.workspaceId===applicationConfig.workspaceId,
+      'DATASETTE_INSTALLED_ORIGINAL_APPLICATION_WORKSPACE_CHANGED');
+    state.applicationWorkspace.directory=appsDirectory;
+    state.applicationWorkspace.workspaceId=applicationConfig.workspaceId;
+    applicationPreparation.result??=applicationConfig;
+    await save('APPLICATION_WORKSPACE_RETAINED');
     const attachment=await apps.attach({directory:runtimeDirectory,label:'Datasette complete installed receiving'});
     const ensureApplication=async(role,directory,selectedPort)=>{
       let item=state.applications[role];
@@ -361,8 +392,8 @@ export async function runInstalledDatasetteBrowser({
       const observation=await page.locator('#ds-observation').textContent();
       need(window?.notBefore&&observation.includes(window.notBefore.replace('T',' ').replace(/Z$/,' UTC')),
         'DATASETTE_BROWSER_OBSERVATION_WINDOW');
-      state.checks.exactBrowserRows=true;state.checks.reviewedAliasesRetained=true;state.checks.wriSelectionReusable=true;
       await page.screenshot({path:join(outputDirectory,'desktop-source.png'),fullPage:true});
+      state.checks.exactBrowserRows=true;state.checks.reviewedAliasesRetained=true;state.checks.wriSelectionReusable=true;
       await save('BROWSER_SOURCE_REVIEWED');
     }
     const editionId='browser-received-wri';
@@ -448,16 +479,16 @@ export async function runInstalledDatasetteBrowser({
     if(!state.sourceDownload){
       await page.locator('#ds-export-edition').click();await waitBrowser(page);
       const receipt=JSON.parse(await page.locator('#ds-export-result pre').textContent());
-      state.sourceDownload=await browserDownload(page,'#ds-export-result',join(outputDirectory,'browser-source.sfds.gz'));
-      need(state.sourceDownload.sha256===receipt.sha256,'DATASETTE_BROWSER_SOURCE_DOWNLOAD');
-      state.artifacts.push(state.sourceDownload);await save('BROWSER_SOURCE_DOWNLOADED');
+      const downloaded=await browserDownload(page,'#ds-export-result',join(outputDirectory,'browser-source.sfds.gz'));
+      need(downloaded.sha256===receipt.sha256,'DATASETTE_BROWSER_SOURCE_DOWNLOAD');
+      state.sourceDownload=downloaded;state.artifacts.push(downloaded);await save('BROWSER_SOURCE_DOWNLOADED');
     }
     if(!state.workspaceDownload){
       await page.locator('#ds-export-workspace').click();await waitBrowser(page);
       const receipt=JSON.parse(await page.locator('#ds-workspace-export-result pre').textContent());
-      state.workspaceDownload=await browserDownload(page,'#ds-workspace-export-result',join(outputDirectory,'browser-workspace.zip'));
-      need(state.workspaceDownload.sha256===receipt.sha256,'DATASETTE_BROWSER_WORKSPACE_DOWNLOAD');
-      state.workspaceExport=receipt;state.artifacts.push(state.workspaceDownload);await save('BROWSER_WORKSPACE_DOWNLOADED');
+      const downloaded=await browserDownload(page,'#ds-workspace-export-result',join(outputDirectory,'browser-workspace.zip'));
+      need(downloaded.sha256===receipt.sha256,'DATASETTE_BROWSER_WORKSPACE_DOWNLOAD');
+      state.workspaceDownload=downloaded;state.workspaceExport=receipt;state.artifacts.push(downloaded);await save('BROWSER_WORKSPACE_DOWNLOADED');
     }
     const browserReceivedDirectory=join(outputDirectory,'browser-received-workspace');
     if(!state.workspaceReceived){

@@ -568,3 +568,27 @@ The browser arm opens the actual workspace and uses its visible controls for com
 The same host's MCP and typed-client arm reads the original rows, makes an explicit reviewed successor mapping from actual retained source values, compares the resulting native runs, receives every original package file and reopens the original report from a separate sparse working warehouse.
 
 The browser arm closes only the browser context it owns. The original native caller owns server start, server shutdown, source selection and final project reopening. A source or browser parse check alone is not the native receiving result; the completed receiving record identifies the actual executed project and its full exported files.
+
+
+## Review prior decisions in a later run
+
+Open **Prior decisions** from the reconciliation header. The dedicated panel uses
+the same warehouse, capability and original request journal. Choose a frozen
+prior report and a different run of the same saved pair, read the complete
+applicability preview, and select the eligible dispositions you want to carry.
+A changed meaning, normalization/tolerance policy, complete original typed row,
+duplicate ambiguity or existing target decision prevents that selection from
+being applied. Missing findings are not recorded as corrections.
+
+The new decision preserves the prior outcome and original reason. It records the
+current engineer, the explicit carry rationale, the frozen source report and the
+exact original decision sequence. Any later manual decision is another normal
+revision. The report's full native `decision_carry` recipe includes all candidates
+from its applied reviews, including unselected and ineligible findings.
+
+Follow [Prior decisions and complete handover](PRIOR_DECISIONS.md) for the full
+operator, CLI and typed-client procedure. When a report has carry lineage, its
+complete package contains that guide, every referenced original report/review/
+application under `decision-carry/`, all lineage source editions and the
+original editable warehouse. Reopen through the existing package receiver;
+the source records and decision history are never reconstructed from a CSV.

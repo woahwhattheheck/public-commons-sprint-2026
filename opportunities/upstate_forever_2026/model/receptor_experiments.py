@@ -249,6 +249,8 @@ def _build_group(workspace, selected, group):
         "inventory_id": inventory["id"], "case_ids": [row["id"] for row in group["cases"]],
         "alternative_run_ids": [row["run_id"] for row in group["cases"]],
         "files": references, "areas": inventory["areas"],
+        "pollutants": inventory.get("pollutants", sorted({row["pollutant"] for row in inventory["scenario_exports"]})),
+        "run_pollutants": inventory.get("run_pollutants", {}),
         "scenario_exports": inventory["scenario_exports"]}
 
 
@@ -284,7 +286,7 @@ def _joined_rows(experiment_id, group, product):
         rows.append(row)
     expected = {(area["id"], case["run_id"], pollutant)
                 for area in product["areas"] for case in group["cases"]
-                for pollutant in ("nitrogen_export", "phosphorus_export", "sediment_export")}
+                for pollutant in product.get("pollutants", sorted({row["pollutant"] for row in product["scenario_exports"]}))}
     if seen != expected:
         raise ValueError("Inventory omits a selected area, alternative or pollutant")
     return rows

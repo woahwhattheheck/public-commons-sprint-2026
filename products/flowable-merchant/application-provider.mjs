@@ -51,8 +51,8 @@ export async function prepareFlowableProductApplication(settings, context) {
   // The shared Applications composer adds its selected port to the original command.
   return { args: ['open', '--dir', selected.directory, '--expected-binding', selected.bindingSha256],
     inputs, createDirectories: [], resourceKey: selected.resourceId,
-    applicationReview: { schema: 'stellar-forge.application-review-content.v1', title: 'Flowable process and decision operations',
-      summary: 'Open native process and decision portfolios, deploy original BPMN and DMN resources, operate human tasks and evaluate rules with complete execution history and customer handover.',
+    applicationReview: { schema: 'stellar-forge.application-review-content.v1', title: 'Flowable process, case and decision operations',
+      summary: 'Open process, case and decision portfolios; deploy original BPMN, CMMN and DMN resources; operate case work and human tasks; evaluate rules and receive complete history.',
       sections: [
         { title: 'Original workspace', rows: [
           { label: 'Product', value: selected.profile.name },
@@ -146,9 +146,9 @@ export async function flowableProductStartup(request, text) {
 export default {
   schema: APPLICATION_PROVIDER_SCHEMA, id: 'flowable-product', order: 450,
   catalog({ common, field }) { return [{
-    id: 'flowable-product', command: 'flowable-product', title: 'Flowable process and decision operations', terminal: false,
+    id: 'flowable-product', command: 'flowable-product', title: 'Flowable process, case and decision operations', terminal: false,
     requiredSource: PRODUCT + 'managed.mjs',
-    description: 'Open native process and decision portfolios, reviewed BPMN and DMN releases, human tasks, validated migration, decision evaluation and complete source/history receiving.',
+    description: 'Open process, case and decision portfolios, reviewed BPMN/CMMN/DMN releases, case work, human tasks, validated process migration, native rule evaluation and complete receiving.',
     fields: [
       field('workspaceDirectory', 'Private product directory', 'path', true, 'Select the directory initialized by flowable-product init.'),
       ...common.map(item => item.name === 'port' ? { ...item, label: 'Workspace port',
