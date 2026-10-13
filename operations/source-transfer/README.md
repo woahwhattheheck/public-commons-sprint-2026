@@ -58,3 +58,8 @@ If a connector changes an existing plaintext source body, return to the exact or
 ## Validation performed
 
 The factory round-tripped empty text, ordinary text, non-breaking spaces, emoji, BOMs, CRLF, literal escape characters and a 240,000-byte repeated input. SHA-256 was checked against the standard `abc` value. Invalid Unicode and changed declared identities were rejected. A complete retained 532,998-byte source packet was independently decoded from its existing gzip carrier and matched its original SHA and complete text. No customer source is included in this reusable codec.
+
+
+## Compose source into the current application
+
+Use [Source bank receiving](SOURCE_BANK_RECEIVING.md) to apply complete source families to a fresh copy of an existing application, retain concurrent source changes through exact guarded edits, and continue the original native operation with its existing Workspace.

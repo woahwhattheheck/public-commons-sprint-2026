@@ -5,6 +5,7 @@ import {resolve,join,dirname} from "node:path";
 import {fileURLToPath} from "node:url";
 import {hostname} from "node:os";
 import * as core from "./core.mjs";
+import {recipientHTML} from "./offline-recipient.mjs";
 const hash=text=>createHash("sha256").update(text).digest("hex"),now=()=>new Date().toISOString();
 const root=resolve(process.env.DEFARM_DESK_DIR||"./partner-workspace");
 const port=Number(process.env.DEFARM_DESK_PORT||4317),host="127.0.0.1";
@@ -83,7 +84,8 @@ function admitted(req){
 const server=http.createServer(async(req,res)=>{try{
  admitted(req);const url=new URL(req.url,"http://"+host+":"+port),path=url.pathname;
  if(req.method==="GET"&&path==="/"){res.setHeader("Content-Security-Policy","default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self' data:; frame-ancestors 'none'; base-uri 'none'; form-action 'none'");return reply(res,200,await readFile(join(here,"index.html"),"utf8"),"text/html");}
- if(req.method==="GET"&&["/app.mjs","/core.mjs","/style.css"].includes(path))return reply(res,200,await readFile(join(here,path.slice(1)),"utf8"),path.endsWith("css")?"text/css":"text/javascript");
+ if(req.method==="GET"&&["/app.mjs","/core.mjs","/source-reader.mjs","/style.css"].includes(path))return reply(res,200,await readFile(join(here,path.slice(1)),"utf8"),path.endsWith("css")?"text/css":"text/javascript");
+ if(req.method==="GET"&&path==="/recipient.html")return reply(res,200,await recipientHTML(),"text/html");
  if(req.method==="GET"&&path==="/api/config")return reply(res,200,{gateway:gatewayURL.origin,network,key_configured:!!apiKey,token,sdk:core.SDK_PIN});
  if(req.method==="GET"&&path==="/api/cases"){const list=[];for(const name of await readdir(join(root,"cases")))if(/^[a-f0-9]{64}\.json$/.test(name)){const c=await get(name.slice(0,-5));list.push({id:c.id,title:c.title,state:c.state,revision:c.revision,created_at:c.created_at,rows:c.items.length,source:c.source.name});}return reply(res,200,list.sort((a,b)=>b.created_at.localeCompare(a.created_at)));}
  if(req.method==="POST"&&path==="/api/cases"){
@@ -110,6 +112,7 @@ const server=http.createServer(async(req,res)=>{try{
   const[,id,action]=match;
   if(req.method==="GET"&&!action)return reply(res,200,await get(id));
   if(req.method==="GET"&&action==="export")return reply(res,200,core.exportCase(await get(id),hash,now()));
+  if(req.method==="GET"&&action==="offline"){const c=await get(id);return reply(res,200,await recipientHTML(JSON.stringify(core.exportCase(c,hash,now()),null,2)+"\n"),"text/html");}
   if(req.method==="GET"&&action==="report"){res.setHeader("Content-Security-Policy","default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'; frame-ancestors 'self'");return reply(res,200,core.report(await get(id)),"text/html");}
   if(req.method==="GET"&&action==="rows"){const c=await get(id);return reply(res,200,core.csvOutput([["source_row","original_cells_json","selected_item_json"],...c.source_rows.map(r=>[r.row,JSON.stringify(r.cells??r.item),JSON.stringify(r.item)])]),"text/csv");}
   if(req.method==="POST"){

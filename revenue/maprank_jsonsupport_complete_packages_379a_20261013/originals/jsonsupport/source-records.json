@@ -1,0 +1,317 @@
+{
+  "id": "JSONSUPPORT-AUTOMATION-PARTNER-PACK-20261013",
+  "prepared_at": "2026-10-13T08:08:00Z",
+  "customer": {
+    "name": "JSON Support",
+    "company_domain": "jsonsupport.com",
+    "contact_url": "mailto:supportgdl@jsonsupport.com",
+    "case_id": "C0BTTA66TK3/1791877916.462569",
+    "prospect_id": "jsonsupport.com"
+  },
+  "brief": {
+    "title": "Automation and spreadsheet partner introductions",
+    "description": "One free complete example and five additional source-qualified automation/integration and spreadsheet-service prospects, with published business contacts, their existing workflows and a tailored JSON/CSV/XLSX comparison.",
+    "geography": "International, English-language business contact",
+    "skills": [
+      "API integration",
+      "Spreadsheet reporting",
+      "Workflow automation"
+    ],
+    "lead_kind": "company_fit",
+    "quantity": 5,
+    "currency": "USD",
+    "price_minor": 2000,
+    "max_age_days": 14,
+    "excluded_domains": [],
+    "excluded_sources": [],
+    "exclusions": "Distinct company domains and current published business contacts. Preserve existing software, client-specific report logic and actual data-processing requirements."
+  },
+  "operator_note": "Original case C0BTTA66TK3/1791877916.462569. 379A retains customer preparation and original company continuation. One free SmoothWork example plus five additional partner prospects for US$20 total. Exact domain Slack and both mailboxes terminal empty at2026-10-13T07:50Z. Owner's 07:17:50UTC reduced outbound instruction is preserved; current package preparation is internal.",
+  "customer_instructions": "Start with the HTML partner profiles and editable CSV. Each original URL supports the published contact or existing workflow. The tailored introductions suggest a small JSON/CSV/XLSX comparison within that existing workflow. Confirm the present conversion method, payload size, nested structure, dates and numeric values, client data permissions, destination and expected volume. The free browser converter is distinct from the authenticated server API and Pro webhook. Keep spreadsheet formulas, macros, report design and reconciliation in the current implementation. Five additional profiles cost US$20 total. One correction or replacement is included within seven days for an existing customer, duplicate, dead published contact or clear mismatch.",
+  "records": [
+    {
+      "slug": "smoothwork",
+      "role": "sample",
+      "organization": "SmoothWork",
+      "company_domain": "smoothwork.ai",
+      "company_url": "https://smoothwork.ai/",
+      "person": "Milan, Automation and Airtable consultant",
+      "geography": "Budapest, Hungary; remote clients across markets",
+      "source_url": "https://smoothwork.ai/custom-api-integration-services/",
+      "contact_url": "mailto:hello@smoothwork.ai",
+      "contact_instructions": "Published business email hello@smoothwork.ai; +36 30 367 9742. The service page names Milan as its automation and Airtable consultant and lists 1053 Budapest, Ferenciek Square 2.",
+      "demand": "SmoothWork explicitly offers API integrations that collect data and build reports, alongside code and no-code workflows, Airtable implementations and ongoing support. Its own n8n guide covers authenticated HTTP requests and JSON responses.",
+      "current_workflow": "Custom API integrations, n8n HTTP requests, Airtable and code/no-code client workflows already exist. The reviewed sources do not identify its current XLSX generation component.",
+      "fit": "Offer a short comparison for one existing API-to-spreadsheet report: post an approved small JSON response to JSON Support, receive the XLSX and compare column expansion, dates, numbers and file handoff with SmoothWork's current implementation. For recurring client delivery, compare the Pro inbound webhook's emailed workbook with the existing n8n or scripted delivery step. Keep data preparation and client-specific business logic in SmoothWork's existing workflow.",
+      "opening_message": "Your API integration service already covers collecting data and building reports, and your n8n guide walks through authenticated JSON requests. Would a small JSON-to-XLSX comparison be useful for a client workflow where the last step is delivering a spreadsheet? We can compare it with the component you already use.",
+      "qualification": "Confirm the present workbook-generation method, typical payload size, nested-array layout, destination and monthly call volume. Use an approved non-sensitive example first. The authenticated API processes data on the server; the separate free browser converter runs locally. Confirm current API limits and whether clients permit that service before choosing it.",
+      "sources": [
+        {
+          "url": "https://smoothwork.ai/custom-api-integration-services/",
+          "supports": "API data collection and reporting service, code/no-code delivery, consultant Milan and public email/phone/Budapest contact."
+        },
+        {
+          "url": "https://smoothwork.ai/connect_to_any_apis_in_n8n/",
+          "supports": "Published authenticated n8n HTTP-request and JSON workflow."
+        }
+      ],
+      "published_on": "",
+      "author_updated_on": "",
+      "lead_kind": "company_fit",
+      "checked_at": "2026-10-13",
+      "deadline_on": "",
+      "deadline_at": "",
+      "budget": "",
+      "source_status": "unconfirmed",
+      "status_note": "First-party service and contact sources reviewed on 13 October 2026. Product fit and comparison suggestions are research judgments for qualification.",
+      "buyer_key": "company:smoothwork.ai",
+      "tags": [
+        "automation-integration",
+        "spreadsheet-reporting",
+        "role:sample"
+      ],
+      "operator_note": "Original JSON Support case C0BTTA66TK3/1791877916.462569. Complete source-qualified potential partner profile; retain current workflow and public business contact. https://smoothwork.ai/custom-api-integration-services/ | https://smoothwork.ai/connect_to_any_apis_in_n8n/"
+    },
+    {
+      "slug": "opswick",
+      "role": "paid",
+      "organization": "Opswick",
+      "company_domain": "opswick.com",
+      "company_url": "https://opswick.com/",
+      "person": "Automation team",
+      "geography": "Remote automation delivery; office geography not stated on the reviewed homepage",
+      "source_url": "https://opswick.com/",
+      "contact_url": "mailto:hello@opswick.com",
+      "contact_instructions": "Published business email hello@opswick.com appears in the audit section and footer. The reviewed page does not name an individual contact.",
+      "demand": "Opswick advertises n8n, Make and Zapier builds, including back-office data pipelines, spreadsheet reconciliation, reporting, sync and ongoing care. Its reporting and back-office offerings are concrete contexts for a structured-data export component.",
+      "current_workflow": "Existing automation builds clean, synchronize and report spreadsheet data using the customer's stack. Its current workbook export component is not published.",
+      "fit": "Compare JSON Support at the end of a reporting flow that already produces a clean array of records. Use the authenticated API for a returned XLSX or the Pro webhook for the agreed email destination, while preserving existing reconciliation and validation logic. A useful evaluation asks whether one conversion service reduces maintenance for a specific report rather than changing the whole automation.",
+      "opening_message": "Your back-office service already handles spreadsheet reconciliation and reporting in n8n and Make. Would it be useful to compare one final XLSX delivery step with a JSON-to-workbook API, using the same clean records and report recipient as your current flow?",
+      "qualification": "Confirm that an actual client workflow needs an XLSX attachment, what generates it today, schema/formatting requirements, permitted data processing and expected volume. Keep its data cleaning and reconciliation rules outside the conversion step.",
+      "sources": [
+        {
+          "url": "https://opswick.com/",
+          "supports": "Published n8n/Make/Zapier stack, back-office spreadsheet reconciliation and reporting services, and hello@opswick.com."
+        }
+      ],
+      "published_on": "",
+      "author_updated_on": "",
+      "lead_kind": "company_fit",
+      "checked_at": "2026-10-13",
+      "deadline_on": "",
+      "deadline_at": "",
+      "budget": "",
+      "source_status": "unconfirmed",
+      "status_note": "First-party service and contact sources reviewed on 13 October 2026. Product fit and comparison suggestions are research judgments for qualification.",
+      "buyer_key": "company:opswick.com",
+      "tags": [
+        "automation-integration",
+        "spreadsheet-reporting",
+        "role:paid"
+      ],
+      "operator_note": "Original JSON Support case C0BTTA66TK3/1791877916.462569. Complete source-qualified potential partner profile; retain current workflow and public business contact. https://opswick.com/"
+    },
+    {
+      "slug": "betechnical",
+      "role": "paid",
+      "organization": "betechnical",
+      "company_domain": "betechnical.co.uk",
+      "company_url": "https://www.betechnical.co.uk/",
+      "person": "Ryan",
+      "geography": "United Kingdom; works remotely with clients internationally",
+      "source_url": "https://www.betechnical.co.uk/excel-automation",
+      "contact_url": "mailto:hello@betechnical.co.uk",
+      "contact_instructions": "The official Excel service page names Ryan as the person handling delivery and publishes hello@betechnical.co.uk. The business is a trading name of Williams Digital Solutions Ltd.",
+      "demand": "betechnical automates recurring Excel and Google Sheets reports, imports CSV exports, and sends recipients their own figures through Outlook or Gmail. Its published workflow uses Excel formulas, Power Query and VBA, with a specific example of distributing separate adviser reports.",
+      "current_workflow": "Existing Power Query, formulas and VBA macros already handle spreadsheet preparation and email distribution. Its guide explains that some macros require desktop Excel.",
+      "fit": "Suggest JSON Support for a new upstream JSON or CSV feed that needs a plain XLSX handoff before the existing workbook/reporting logic. Compare a small exported record set with the present import process, or evaluate the reverse XLSX-to-JSON endpoint for a downstream integration. Preserve formulas, workbook macros and recipient-specific distribution; this conversion service is not a replacement for them.",
+      "opening_message": "Your Excel service already combines source imports, repeatable reports and sending each person their own figures. Would a small JSON/CSV-to-XLSX adapter be worth comparing for a new source feed, while leaving your existing Power Query, VBA and report distribution intact?",
+      "qualification": "Check whether the real friction is format conversion rather than workbook logic, whether the source can be represented as simple records, the approved handling of client data and the current limits. A workbook needing macro preservation or advanced formula/layout changes should stay with the existing Excel implementation.",
+      "sources": [
+        {
+          "url": "https://www.betechnical.co.uk/excel-automation",
+          "supports": "Existing Excel/Google Sheets/CSV/Outlook/Gmail services, named Ryan and public business email; explicit workflow and corporate identity."
+        }
+      ],
+      "published_on": "",
+      "author_updated_on": "",
+      "lead_kind": "company_fit",
+      "checked_at": "2026-10-13",
+      "deadline_on": "",
+      "deadline_at": "",
+      "budget": "",
+      "source_status": "unconfirmed",
+      "status_note": "First-party service and contact sources reviewed on 13 October 2026. Product fit and comparison suggestions are research judgments for qualification.",
+      "buyer_key": "company:betechnical.co.uk",
+      "tags": [
+        "automation-integration",
+        "spreadsheet-reporting",
+        "role:paid"
+      ],
+      "operator_note": "Original JSON Support case C0BTTA66TK3/1791877916.462569. Complete source-qualified potential partner profile; retain current workflow and public business contact. https://www.betechnical.co.uk/excel-automation"
+    },
+    {
+      "slug": "good-picnic",
+      "role": "paid",
+      "organization": "Good Picnic Consulting",
+      "company_domain": "goodpicnic.ca",
+      "company_url": "https://goodpicnic.ca/",
+      "person": "Victor",
+      "geography": "Vancouver, British Columbia, Canada",
+      "source_url": "https://goodpicnic.ca/",
+      "contact_url": "mailto:hello@goodpicnic.ca",
+      "contact_instructions": "Victor introduces himself on the official homepage, which publishes hello@goodpicnic.ca and identifies Good Picnic Consulting Inc. in Vancouver.",
+      "demand": "Good Picnic delivers Excel reporting, web data imports and CSV/XML import/export. Its published WATSON Advisors project parses CSV survey results into customer-facing reports, and other listed work includes recurring reporting and database-connected spreadsheets.",
+      "current_workflow": "Existing VBA, formulas, Power Query, Google Sheets and Airtable workflows. The firm also handles large workbooks; those complex or large workbooks remain outside a proposed small source-format comparison.",
+      "fit": "Offer JSON Support as a lightweight intake option for a small API or survey export before Victor's existing report model. Compare the same selected JSON/CSV records as an XLSX handoff and check headers, values and row structure. A second possible comparison is the reverse endpoint for delivering a small spreadsheet result into an API workflow, with the reporting model unchanged.",
+      "opening_message": "Your WATSON case turns survey CSVs into client-facing Excel reports. Would a small JSON/CSV-to-XLSX intake comparison be useful when a new data source arrives in a different format, while keeping your existing report model and macros in place?",
+      "qualification": "Confirm a current API/survey source, the existing conversion approach, small-file size and client data permissions. JSON Support's About page advertises an approximately 4 MB conversion size; confirm the endpoint-specific current limit before a pilot. Keep large workbooks, macros, multiple-sheet logic and branded report generation with Victor's current tools.",
+      "sources": [
+        {
+          "url": "https://goodpicnic.ca/",
+          "supports": "Named Victor, public business email, Vancouver location, CSV survey/reporting case and current spreadsheet service/tool list."
+        }
+      ],
+      "published_on": "",
+      "author_updated_on": "",
+      "lead_kind": "company_fit",
+      "checked_at": "2026-10-13",
+      "deadline_on": "",
+      "deadline_at": "",
+      "budget": "",
+      "source_status": "unconfirmed",
+      "status_note": "First-party service and contact sources reviewed on 13 October 2026. Product fit and comparison suggestions are research judgments for qualification.",
+      "buyer_key": "company:goodpicnic.ca",
+      "tags": [
+        "automation-integration",
+        "spreadsheet-reporting",
+        "role:paid"
+      ],
+      "operator_note": "Original JSON Support case C0BTTA66TK3/1791877916.462569. Complete source-qualified potential partner profile; retain current workflow and public business contact. https://goodpicnic.ca/"
+    },
+    {
+      "slug": "excel-automation-consulting-uk",
+      "role": "paid",
+      "organization": "Excel Automation Consulting",
+      "company_domain": "excelautomation.co.uk",
+      "company_url": "https://www.excelautomation.co.uk/",
+      "person": "Consulting team",
+      "geography": "United Kingdom; remote consulting throughout the UK",
+      "source_url": "https://www.excelautomation.co.uk/power-query-consultancy.html",
+      "contact_url": "mailto:contact@excelautomation.co.uk",
+      "contact_instructions": "Published general business email: contact@excelautomation.co.uk; +44 7747 945237. The contact page publishes the email and offers an enquiry form and discovery call for spreadsheet, reporting or data challenges.",
+      "demand": "The consultancy offers CSV/Excel file consolidation, folder imports, repeatable data transformation and reporting. Its published example projects include management-pack automation and recurring file consolidation.",
+      "current_workflow": "Existing Excel, VBA and Power Query consulting, CSV/Excel consolidation, repeatable transformations and reporting.",
+      "fit": "For a client-approved workflow that already produces clean tabular CSV or JSON, JSON Support could supply the final XLSX conversion or the reverse CSV/XLSX-to-JSON handoff. The consultant would retain transformation rules, workbook logic, validation and customer delivery.",
+      "opening_message": "Your Power Query service covers CSV/Excel consolidation, and your example projects include recurring reporting packs. I build JSON Support, an API for converting JSON or CSV to XLSX and spreadsheet inputs back to JSON. For a client-approved workflow with a simple tabular export, would it be useful to compare one conversion step using sample data? You would keep the transformation and reporting logic in your existing process.",
+      "qualification": "Direct match on spreadsheet reporting and CSV handling. The proposed API step is a fit hypothesis: existing Power Query/VBA may already meet the whole need. Start with one non-sensitive sample and confirm that an external API is acceptable. No named client, active purchase, API use or need for replacement software is asserted. Published project examples describe the firm's approach; they do not identify independently verified customer outcomes.",
+      "sources": [
+        {
+          "url": "https://www.excelautomation.co.uk/power-query-consultancy.html",
+          "supports": "CSV/Excel consolidation, folder imports, repeatable transformation, reporting services, published email and UK-wide delivery",
+          "retrieved_at": "2026-10-13 08:05:04 UTC",
+          "reference": "turn264view2"
+        },
+        {
+          "url": "https://www.excelautomation.co.uk/case-studies.html",
+          "supports": "Published examples of monthly management packs and repeatable file consolidation",
+          "retrieved_at": "2026-10-13 08:05:04 UTC",
+          "reference": "turn264view3"
+        },
+        {
+          "url": "https://www.excelautomation.co.uk/contact.html",
+          "supports": "Current business email, telephone and reporting/data enquiry route",
+          "retrieved_at": "2026-10-13 08:05:04 UTC",
+          "reference": "turn265view3"
+        }
+      ],
+      "published_on": "",
+      "author_updated_on": "",
+      "lead_kind": "company_fit",
+      "checked_at": "2026-10-13",
+      "deadline_on": "",
+      "deadline_at": "",
+      "budget": "",
+      "source_status": "unconfirmed",
+      "status_note": "First-party service and contact sources reviewed on 13 October 2026. Proposed product fit remains a research judgment to qualify.",
+      "buyer_key": "company:excelautomation.co.uk",
+      "tags": [
+        "automation-integration",
+        "spreadsheet-reporting",
+        "role:paid"
+      ],
+      "operator_note": "Original JSON Support case C0BTTA66TK3/1791877916.462569. Complete additive peer research F0C8B9DLSTZ. A specialist consultancy with a published role mailbox and concrete CSV/reporting work; complements the pack's general automation agencies."
+    },
+    {
+      "slug": "workiflow-make-integration",
+      "role": "paid",
+      "organization": "Workiflow",
+      "company_domain": "workiflow.com",
+      "company_url": "https://www.workiflow.com/",
+      "person": "Make automation and integration team",
+      "geography": "Beaverton, Oregon, United States; remote client delivery",
+      "source_url": "https://www.workiflow.com/partnerships/make",
+      "contact_url": "mailto:hello@workiflow.com",
+      "contact_instructions": "Published general business email: hello@workiflow.com; +1 678 361 2242. The published contact page offers hello@workiflow.com, a Beaverton office phone and a discovery-call/enquiry route.",
+      "demand": "Workiflow designs and maintains Make scenarios, including custom API/HTTP connections when an app lacks a native module. Its data practice also builds reporting pipelines and leadership reports.",
+      "current_workflow": "Existing client-owned Make scenarios with API/HTTP connectors, source-system integrations, data pipelines and reporting.",
+      "fit": "An existing Make scenario that produces approved, flat JSON rows could POST them to JSON Support for an XLSX output or use the Pro webhook's emailed spreadsheet. This is a candidate final delivery step; Workiflow would retain source-system connections, transformations, error handling and client ownership.",
+      "opening_message": "Your Make practice builds custom API/HTTP connectors and maintains the full scenario after launch. I build JSON Support, which can convert tabular JSON or CSV into XLSX and accepts webhook JSON for an emailed spreadsheet. If a client already needs a simple Excel export, would your Make team consider one sample conversion step alongside its existing workflow? Your scenario would keep the source integrations and reporting rules.",
+      "qualification": "Strong technical fit for an HTTP/webhook integration, but the company describes a 50-person team rather than a solo consultancy. Approach a defined Make implementation, not an agency-wide migration. Confirm the client's external-service/data-processing requirements and whether the existing platform already generates the required workbook. Flat tabular export is the proposed use; advanced workbook formulas, macros and complex report layouts are outside this opening.",
+      "sources": [
+        {
+          "url": "https://www.workiflow.com/partnerships/make",
+          "supports": "Maintained Make scenarios, API/HTTP custom connectors, client-owned environments, current team scale",
+          "retrieved_at": "2026-10-13 08:05:04 UTC",
+          "reference": "turn265view0"
+        },
+        {
+          "url": "https://www.workiflow.com/expertise/data-analytics",
+          "supports": "Reporting/data pipeline practice and governed data access",
+          "retrieved_at": "2026-10-13 08:05:04 UTC",
+          "reference": "turn262view0"
+        },
+        {
+          "url": "https://www.workiflow.com/contact",
+          "supports": "Current email, published telephone and Beaverton office geography",
+          "retrieved_at": "2026-10-13 08:05:04 UTC",
+          "reference": "turn265view1"
+        }
+      ],
+      "published_on": "",
+      "author_updated_on": "",
+      "lead_kind": "company_fit",
+      "checked_at": "2026-10-13",
+      "deadline_on": "",
+      "deadline_at": "",
+      "budget": "",
+      "source_status": "unconfirmed",
+      "status_note": "First-party service and contact sources reviewed on 13 October 2026. Proposed product fit remains a research judgment to qualify.",
+      "buyer_key": "company:workiflow.com",
+      "tags": [
+        "automation-integration",
+        "spreadsheet-reporting",
+        "role:paid"
+      ],
+      "operator_note": "Original JSON Support case C0BTTA66TK3/1791877916.462569. Complete additive peer research F0C8B9DLSTZ. Promotes the original owner's reserve using directly verified implementation and contact sources; supplies a clear Make/HTTP route complementary to the Excel consultancy."
+    }
+  ],
+  "product_sources": [
+    {
+      "url": "https://www.jsonsupport.com/developers.html",
+      "supports": "Authenticated conversion/reverse endpoints, Pro inbound webhook, published current usage and price."
+    },
+    {
+      "url": "https://www.jsonsupport.com/contact.html",
+      "supports": "Published company business contact supportgdl@jsonsupport.com."
+    },
+    {
+      "url": "https://www.jsonsupport.com/",
+      "supports": "Browser-local conversion, nested records and JSON/JSONL/CSV input."
+    },
+    {
+      "url": "https://www.firstusers.tech/startups/json-support",
+      "supports": "Founder Jonathan Augustin and August30,2026 product introduction seeking early adopters."
+    }
+  ]
+}

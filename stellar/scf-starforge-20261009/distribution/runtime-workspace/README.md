@@ -19,6 +19,19 @@ The command runs on the operator's Linux host with Node 22.16 or later, Python
 version; its profile reports that requirement before preparation. The browser
 itself adds no npm dependency or build step.
 
+
+## Retain result files for another Application
+
+[Application result sets](APPLICATION_RESULT_SETS.md) connect an explicitly
+selected complete output folder to its original saved Application and run.
+Review the native context and every file, capture under a retained request UUID,
+then open the set in the existing Companion sets workflow to prepare a separate
+working copy and Review/Save the next Application. Complete handovers preserve
+the original records, all file bytes, capture recovery and current receiving
+custody; receiving never launches an imported run. The guide includes the full
+producer rendering and attachment inspection rule and the exact cold-reopen
+course. Source delivery is not rendered customer acceptance.
+
 ## Open the workspace
 
 Choose a new private workspace directory. Its parent must already exist. A

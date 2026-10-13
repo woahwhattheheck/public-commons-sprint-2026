@@ -28,14 +28,14 @@
     {
       "edition": "sample",
       "name": "Unlost-complete-sample-documents.html",
-      "bytes": 162248,
-      "sha256": "3b160c46649b34be169e22ddbf693e0b9c406c43cd2611e6268731fdb3d4de7d"
+      "bytes": 163532,
+      "sha256": "5b53c384a80bbb0d62cdcfa250468125a291f9f63182efef633e61f13620d0fa"
     },
     {
       "edition": "paid",
       "name": "Unlost-complete-paid-documents.html",
-      "bytes": 218558,
-      "sha256": "40ddb525fe1330589cc03f897503df70f0aee4cfdfb77c4f94a2969601ae5923"
+      "bytes": 219798,
+      "sha256": "515f9a81c7d4658bd0c13374fd68d7074dc88a4434ebf650ecb942ca96743748"
     }
   ],
   "selections": [

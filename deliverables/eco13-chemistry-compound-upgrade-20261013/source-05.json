@@ -2,10 +2,8 @@
   "schema": "upstate.source-files/v1",
   "source_reference": {
     "repository": "woahwhattheheck/public-commons-sprint-2026",
-    "source_commit": "5ee552982cfa2ffdd254032358d64c81064151ce",
-    "source_root": "opportunities/upstate_forever_2026",
-    "operation_id": "ECO13-MONITORING-CHEMISTRY-STUDY-DD6B-20261013",
-    "monitoring_field_study_commit": "e230bbfe1e2ad71110de96e01ff26ebb6232d52e"
+    "source_commit": "8869efd5092de7b89b71db16d3fba60fabcc6729",
+    "operation_id": "ECO13-FIELD-ASSIGNMENT-COMPLETE-DD6B-20261013"
   },
   "files": [
     {

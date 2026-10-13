@@ -13,8 +13,8 @@
     },
     {
       "path": "browser-packages.mjs",
-      "bytes": 9707,
-      "sha256": "da12db1bd276a58ae508fb23834364a25f5ab321cd8496e7c28997959bae728c"
+      "bytes": 11393,
+      "sha256": "4a5ca0b434d114a4bf94c13d3a06fa96109f78f91049136ef98aba5ae1a57342"
     },
     {
       "path": "browser-receiving.mjs",
@@ -93,13 +93,13 @@
     },
     {
       "path": "package-viewer.mjs",
-      "bytes": 3267,
-      "sha256": "241fd8753ce2fd347492a7695af1db86ed2e7e4f814cb73c565f48ac8829fb36"
+      "bytes": 7131,
+      "sha256": "fc9f956957a76ab79213fa894694cf187e65c93aae4dfb27950570506de31888"
     },
     {
       "path": "README.md",
-      "bytes": 10473,
-      "sha256": "d0a95e9741c3d57fa3489af8e5ccfdff100e33f489d2f93195f06e23c4657f9f"
+      "bytes": 10963,
+      "sha256": "255263998eca24d5817da56409762815e0d64c0d8571f3e35230f1d5982d0bf3"
     },
     {
       "path": "render.cjs",
@@ -153,8 +153,8 @@
     },
     {
       "path": "VentCRM-complete-packages.html",
-      "bytes": 222778,
-      "sha256": "cf359d6af304d05c6eb53bcc0d708537359f6d4825c3160d4919444667e6a142"
+      "bytes": 225898,
+      "sha256": "15379a23f701a078ff229bbb21c02c1a315f17f2668d740b730bcb941b1ab8af"
     }
   ]
 }
