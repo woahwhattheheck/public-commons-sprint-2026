@@ -215,3 +215,37 @@ Download the criterion CSVs for complete alternatives and field bindings, or
 CSV and GeoPackage also carry the option arrays, class states and profile identity.
 These exports retain the saved parcel decision and its original full/reporting
 geometry.
+
+## Retained county parcel supplier editions
+
+A prepared parcel inventory can combine several original county suppliers. Its
+study binding now preserves the imported source's complete typed metadata beside
+the original body identity, layer and parcel identity field. This includes the
+actual `input_sources` and `county_coverage` captured by the reporting-parcel
+preparer; reports do not look up a later provider edition.
+
+The ordinary candidate and portfolio reports display **County parcel source
+editions**. Read the county and provider together with the original service
+filter, captured edition, source status and native identity field. The same
+export contains `source-editions.csv` and `source-coverage.csv`; its existing
+`source-register.json` retains the complete typed metadata, original supplier
+records and native source-body hashes. Capture dates, service edit dates and
+parcel assessment dates keep their distinct meanings. Supplier capture coverage
+is the extent of the prepared inventory, while the study and selected portfolio
+report their own reporting footprints and union quantities separately.
+
+An older saved study receives these supplements through the existing presentation
+export. The renderer opens the exact retained source collection and source ID,
+checks its body hash and size against the saved binding, and enriches only the
+report view. The original saved study, plan, measurements, selected IDs and
+geometry remain the inputs to that presentation. Import the full matched source
+cohort, including `model/source_lineage.py`, with the maintained Conservation
+installer.
+
+Parcel priority delivery uses the same retained metadata and writes
+`priorities/source-lineage.json`, `priorities/source-lineage.html`, and both
+supplier CSV files into its ordinary delivery packet. New parcel-containing
+deliveries include the source-lineage format version in their identity, so an
+older completed packet cannot silently omit these members when the same
+selection is prepared again. The saved input selection and numerical parcel
+inventory retain their existing grid, full-geometry and reporting-area contracts.

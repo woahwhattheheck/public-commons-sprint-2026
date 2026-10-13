@@ -12,7 +12,7 @@ from pathlib import Path
 import re
 import sqlite3
 
-from model import experiments
+from model import experiments, experiment_diagnostics
 from model.common import (atomic_bytes, atomic_json, canonical,
                           digest, held, identifier, now, read_json, verify_file)
 from model.robust_decisions.eco_robust.engine import canonical_hash
@@ -20,7 +20,7 @@ from model.robust_decisions.eco_robust.integration import ACTION_NAMES, dispatch
 from model.robust_decisions.eco_robust.operations import DecisionWorkspace
 from model.robust_decisions.eco_robust.schema import Study
 
-READS = frozenset({"catalog", "study", "run", "methods", "experiment"})
+READS = frozenset({"catalog", "study", "run", "methods", "experiment", "diagnostic"})
 RECEIPT_SCHEMA = "upstate.robust-operator-operation/v1"
 
 
@@ -166,7 +166,8 @@ class RobustWorkbench:
                 key = identifier(item["id"])
                 catalogue.append({**item, "summary_available":
                                   (ws.root / "experiments" / key / "summary.json").is_file()})
-            return {"studies": native.store.list(), "experiments": catalogue}
+            return {"studies": native.store.list(), "experiments": catalogue,
+                    "diagnostics": experiment_diagnostics.listing(ws)}
         if operation == "study":
             result = native.store.read(_native_id(value.get("study_id"), "study"),
                                        _revision(value.get("revision"), optional=True))
@@ -177,6 +178,9 @@ class RobustWorkbench:
         if operation == "run":
             return native.store.read_run(_native_id(value.get("study_id"), "study"),
                                          _native_id(value.get("run_id"), "run"))
+        if operation == "diagnostic":
+            from model.robust_decisions.eco_robust.diagnostics import preview
+            return preview(ws, identifier(value.get("diagnostic_id")))
         if operation == "experiment":
             key = identifier(value.get("experiment_id"))
             summary = experiments.read_summary(ws, key)
@@ -232,10 +236,13 @@ class RobustWorkbench:
             if "summary" in value:
                 raise ValueError("Select one original experiment summary")
             value["summary"] = self._uploaded(value.pop("summary_upload_id"))
-        if action in {"robust.summary.prepare", "robust.experiment.prepare"} and "configuration_upload_id" in value:
+        if action in {"robust.summary.prepare", "robust.experiment.prepare", "robust.diagnostic.prepare"} and "configuration_upload_id" in value:
             if "configuration" in value:
                 raise ValueError("Select one decision configuration")
             value["configuration"] = self._uploaded(value.pop("configuration_upload_id"))
+        if action == "robust.diagnostic.prepare":
+            identifier(value.get("diagnostic_id"))
+            identifier(value.get("report_sha256"))
         if "study_id" in value:
             _native_id(value["study_id"], "study")
         if "run_id" in value:
@@ -338,6 +345,8 @@ class RobustWorkbench:
                 for row in revisions:
                     value = json.loads(row["input"])
                     Study.model_validate(value)
+                    from model.robust_decisions.eco_robust.diagnostics import verify_binding
+                    verify_binding(workspace, value.get("source", {}))
                     if canonical_hash(value) != row["sha256"]:
                         raise ValueError("The retained study revision identity differs")
                     identities[row["revision"]] = row["sha256"]

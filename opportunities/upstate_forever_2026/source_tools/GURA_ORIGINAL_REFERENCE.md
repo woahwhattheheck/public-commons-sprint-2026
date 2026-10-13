@@ -100,6 +100,20 @@ For the original native calculation's definitions, consult the pinned [NDR sourc
 
 The original source and executed argument paths remain part of the scientific record. When a complete project is restored to another directory or host, comparison resolves each direct-native export through its retained relative file descriptor and verifies its byte count and SHA256 inside the received `gura-receiving` directory. Earlier saved records are supported by mapping the export's original path relative to its recorded native-selection directory and matching that exact member in the retained output inventory.
 
-Continue with the restored application and Workspace returned by the normal `model.cli restore` command. Supply the same original release archives through `--inputs`; `--mode workspace` reopens the application baseline and computes comparisons from the received original outputs. `--mode both` also follows the existing native-stage reuse check. Native export totals and executed argument provenance retain their original values and identities.
+Continue with the restored application and Workspace returned by the normal `model.cli restore` command. The complete Workspace already contains each original extracted source file and its byte/hash inventory. Omit `--inputs` to verify and reopen that retained edition; the driver checks the official release identity, original argument document, embedded input version, and every selected input against that inventory. Supply `--inputs` for a first intake or when deliberately rechecking the original release ZIPs.
+
+```bash
+"$UPSTATE_PYTHON" -B -m source_tools.receive_gura_native \
+  --application "$UPSTATE_APPLICATION" \
+  --workspace "$GURA_REFERENCE_WORKSPACE" \
+  --models ndr sdr --mode workspace \
+  --archive "$GURA_REFERENCE_ARCHIVE"
+```
+
+Use a new archive destination when saving another complete backup. This command reopens the same baseline and regenerates its comparisons from the received original outputs. The saved grid retains the original 15 m cells and zero added buffer; existing source, profile, scenario and run identities remain unchanged.
+
+Completed original stages are verified before loading InVEST. `--mode native` can verify their retained inputs and outputs using the standard Python library and the retained application. `--mode workspace` uses the GIS stack for original-cell checks and result comparisons; it requests InVEST through the ordinary Workspace executor only when its selected run is unfinished. `--mode both` executes only original stages that are missing, then follows that same Workspace continuation. Existing stage runtime metadata continues to describe the environment that produced the results.
+
+The biophysical join checks the actual original table hashes, joined rows and retained output identity. On a moved Workspace it preserves the original provenance document byte for byte, including its producing-machine source paths. This prevents a new receiving location from changing the scientific source edition. Current resolved input paths are recorded separately from those original locations.
 
 Each comparison now includes `native_reference_artifact`, relative to the named `gura-receiving` root, so the original raster used in the comparison can be inspected or transferred independently with its exact file identity.

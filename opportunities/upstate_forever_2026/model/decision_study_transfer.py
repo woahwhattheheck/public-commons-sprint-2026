@@ -242,6 +242,9 @@ def _diagnostic_binding(source):
         raise ValueError("The decision needs its original diagnostic report binding.")
     identifier(binding.get("diagnostic_id"))
     identifier(binding.get("report_sha256"))
+    if (source.get("diagnostic_id") != binding["diagnostic_id"]
+            or source.get("diagnostic_report_sha256") != binding["report_sha256"]):
+        raise ValueError("The decision source has conflicting diagnostic revision identities.")
     prefix = ("robust_decisions/diagnostic-revisions/" + binding["diagnostic_id"]
               + "/" + binding["report_sha256"] + "/")
     for field in ("report", "manifest"):

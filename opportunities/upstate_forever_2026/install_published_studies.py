@@ -20,6 +20,7 @@ CODE_FILES = (
     "operator/web/published_studies.mjs",
     "operator/web/published_studies.css",
     "PUBLISHED_STUDIES.md",
+    "published_studies_family.json",
     "install_published_studies.py",
     "receive_published_studies.py",
     "tools/attach_published_report.py",
@@ -50,11 +51,12 @@ def portable_source(source):
     additions = {
         "APPLICATION_DIRECTORIES": ("measurement_workspace", "observations"),
         "APPLICATION_FILES": (
-            "PUBLISHED_STUDIES.md", "install_published_studies.py",
+            "PUBLISHED_STUDIES.md", "published_studies_family.json", "install_published_studies.py",
             "receive_published_studies.py", "tools/attach_published_report.py",
             "eighteenmile_chlorophyll_reconciled.sources.json",
             "eighteenmile_lake_observation_report.sources.json",
             "eighteenmile_lake_paired_analysis.sources.json",
+            "eighteenmile_lake_microcystin_reconciliation.sources.json",
         ),
     }
     lines = source.splitlines(keepends=True)
@@ -113,6 +115,7 @@ def main():
         source / "eighteenmile_chlorophyll_reconciled.sources.json",
         source / "eighteenmile_lake_observation_report.sources.json",
         source / "eighteenmile_lake_paired_analysis.sources.json",
+        source / "eighteenmile_lake_microcystin_reconciliation.sources.json",
     ):
         if not manifest.is_file():
             continue

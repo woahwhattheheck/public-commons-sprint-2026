@@ -2,11 +2,12 @@
   "schema": "upstate.operator-extension/v1",
   "id": "conservation-design",
   "title": "Scenario design",
-  "version": "1",
+  "version": "2",
   "order": 88,
   "assets": [
     "conservation_design.mjs",
-    "conservation_design.css"
+    "conservation_design.css",
+    "conservation_design_editor.mjs"
   ],
   "backend": {
     "module": "conservation_design",
@@ -19,7 +20,9 @@
     },
     "actions": [
       "conservation.design.prepare",
-      "conservation.design.receive"
+      "conservation.design.receive",
+      "conservation.design.editor.open",
+      "conservation.design.editor.write"
     ],
     "invoke": {
       "handler": "invoke",
@@ -66,6 +69,19 @@
           "operation",
           "payload"
         ]
+      },
+      {
+        "methods": [
+          "POST"
+        ],
+        "path": "/api/conservation-design/editor",
+        "operation": "editor",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
       }
     ],
     "decorate_task": {
@@ -73,7 +89,18 @@
       "args": [
         "task"
       ]
-    }
+    },
+    "file_routes": [
+      {
+        "path": "/api/file/conservation-design/{workspace_key}/editor/{member_path...}",
+        "response": "ticket_policy_pair",
+        "handler": "editor_file",
+        "args": [
+          "workspace_key",
+          "route.member_path"
+        ]
+      }
+    ]
   },
   "client": {
     "module": "/web/conservation_design.mjs",

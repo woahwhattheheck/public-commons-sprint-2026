@@ -12,3 +12,5 @@
 .cd-root dl{display:grid;grid-template-columns:170px 1fr;gap:7px}.cd-root dt{font-weight:600}.cd-root dd{margin:0;overflow-wrap:anywhere}
 .cd-root code{overflow-wrap:anywhere}.cd-downloads{padding-left:20px}.cd-downloads li{margin:7px 0}
 @media(max-width:800px){.cd-columns{grid-template-columns:1fr}.cd-root header{display:block}.cd-root dl{grid-template-columns:1fr}.cd-root{padding:12px}}
+
+.cd-editor{max-width:none}.cd-editor iframe{display:block;width:100%;height:calc(100vh - 230px);min-height:620px;border:1px solid #aaa;background:#fff}.cd-editor header{align-items:center}.cd-editor>p{margin:8px 0}

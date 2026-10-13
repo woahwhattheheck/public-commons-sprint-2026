@@ -3,17 +3,19 @@ from pathlib import Path
 p=argparse.ArgumentParser()
 p.add_argument("--app-root",required=True)
 p.add_argument("--workspace",required=True)
-p.add_argument("--manifest",required=True)
+p.add_argument("--manifest",help="Source manifest; defaults to the application regional observed context")
 p.add_argument("--output",required=True)
 p.add_argument("--contact-json")
+p.add_argument("--create-workspace",action="store_true")
 a=p.parse_args()
 app=Path(a.app_root).resolve(strict=True)
 sys.path.insert(0,str(app))
 from model.workspace import Workspace
 from model.common import atomic_json,describe_file,digest,held,verify_file
 from model import observed_context,scientific_report
-ws=Workspace(a.workspace)
-collection=ws.import_sources(Path(a.manifest).resolve(strict=True))
+ws=Workspace(a.workspace,create=a.create_workspace,title="Upper Savannah observed science")
+manifest=Path(a.manifest) if a.manifest else app/"observed_hydrology_context.sources.json"
+collection=ws.import_sources(manifest.resolve(strict=True))
 matches=[e for e in collection["entries"] if e.get("metadata",{}).get("report_schema")=="upstate.observed-report/v1"]
 if len(matches)!=1: raise ValueError("Select exactly one original observed-report source")
 entry=matches[0]

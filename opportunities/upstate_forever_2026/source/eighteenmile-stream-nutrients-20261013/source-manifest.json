@@ -1,0 +1,80 @@
+{
+  "schema": "upstate.original-nutrient-source-package/v1",
+  "title": "Eighteenmile Creek original stream nutrient records, 2020–2025",
+  "source_edition": "eighteenmile-stream-nutrients-20261013",
+  "source_interval": {
+    "start_inclusive": "2020-01-01",
+    "end_inclusive": "2025-12-31"
+  },
+  "originals": [
+    {
+      "path": "original/seneca-nutrient-stations.csv",
+      "uri": "https://www.waterqualitydata.us/data/Station/search?huc=03060101&startDateLo=01-01-2020&startDateHi=12-31-2025&characteristicType=Nutrient&mimeType=csv&zip=no",
+      "bytes": 14616,
+      "sha256": "c27a0e7fcd486c17634c71f1f2ac8e29b7d6eaec29bf08c22c0c47d186b5708c"
+    },
+    {
+      "path": "original/nutrient-results-2020-2022.csv",
+      "uri": "https://www.waterqualitydata.us/data/Result/search?siteid=21SC60WQ_WQX-SV-233%3B21SC60WQ_WQX-SV-245%3B21SC60WQ_WQX-SV-375%3B21SC60WQ_WQX-SV-376&startDateLo=01-01-2020&startDateHi=12-31-2022&characteristicType=Nutrient&mimeType=csv&zip=no",
+      "bytes": 69221,
+      "sha256": "90ca40a8697c6bc301e97e394452235ecf0ea0653024b93a2dc61f60ef1f6733"
+    },
+    {
+      "path": "original/nutrient-results-2023-2025.csv",
+      "uri": "https://www.waterqualitydata.us/data/Result/search?siteid=21SC60WQ_WQX-SV-233%3B21SC60WQ_WQX-SV-245%3B21SC60WQ_WQX-SV-375%3B21SC60WQ_WQX-SV-376&startDateLo=01-01-2023&startDateHi=12-31-2025&characteristicType=Nutrient&mimeType=csv&zip=no",
+      "bytes": 153018,
+      "sha256": "6c36b486618b4569454ecc8e531c4b4adbd739c5f6f726f97f8e5ceafe7a7f03"
+    },
+    {
+      "path": "original/eighteenmile-whole-reach-basin.geojson",
+      "uri": "https://api.water.usgs.gov/nldi/linked-data/nwissite/USGS-02186702/basin?f=json&simplified=false&splitCatchment=false",
+      "bytes": 13935,
+      "sha256": "097050d2b09e371feb2dbcf3fe1d2fba90730086db45d4a90be514706145dc88"
+    }
+  ],
+  "derived": [
+    {
+      "path": "derived/station-basin-join.csv",
+      "bytes": 745,
+      "sha256": "e89efa609a3cd012f7569f7607813438ecea2b17faa636cd7c20d218c22c7f81"
+    },
+    {
+      "path": "derived/nutrient-results.csv",
+      "bytes": 160938,
+      "sha256": "22401ee767cd8324477063dc72a976b586f874a68f8b6971451faca19abbfcde"
+    },
+    {
+      "path": "derived/station-year-characteristic-coverage.csv",
+      "bytes": 6576,
+      "sha256": "3fe22053aed8a750c5d8dc7fd13f6691a89220312ba0cf08e30d0982e66a26a4"
+    },
+    {
+      "path": "derived/source-summary.json",
+      "bytes": 2862,
+      "sha256": "df226890b5431602283e5ff454f38c9fb626b9c99cc54cd78fd37390c6d95f98"
+    }
+  ],
+  "reproduction": "node derive-nutrients.mjs SOURCE_DIRECTORY OUTPUT_DIRECTORY",
+  "geometry": {
+    "source": "NLDI USGS-02186702",
+    "crs": "OGC:CRS84",
+    "simplified": false,
+    "splitCatchment": false,
+    "original_commit": "904ac1340507365a897ca846e7cfab3577898507",
+    "original_path": "observations/observed_hydrology_20261013/original/eighteenmile_nldi_whole_basin.geojson",
+    "method_reference": "https://api.water.usgs.gov/docs/nldi/basin/"
+  },
+  "preservation": {
+    "original_fields": 63,
+    "original_result_rows": 589,
+    "activity_count": 153,
+    "below_quantification": 181,
+    "numeric_results": 408
+  },
+  "full_query_companion": {
+    "url": "https://www.waterqualitydata.us/data/Result/search?siteid=21SC60WQ_WQX-SV-233%3B21SC60WQ_WQX-SV-245%3B21SC60WQ_WQX-SV-375%3B21SC60WQ_WQX-SV-376&startDateLo=01-01-2020&startDateHi=12-31-2025&characteristicType=Nutrient&mimeType=csv&zip=no",
+    "bytes": 220485,
+    "file_upload_id": "3f8dd772-3100-811c-a944-00b29c9a0197",
+    "page": "https://app.notion.com/p/3f7dd77231008147bfb0d97e296fda3b"
+  }
+}

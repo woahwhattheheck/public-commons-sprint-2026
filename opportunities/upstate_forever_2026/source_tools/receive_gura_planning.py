@@ -158,7 +158,7 @@ def main(argv=None):
     application = args.application.resolve(strict=True)
     sys.path.insert(0, str(application))
     sys.path.insert(0, str(application / "source_tools"))
-    import receive_gura_reference as receiver
+    import receive_gura_native as receiver
     from model.common import held
     from model.model_selection import run_models
     from model.planning_inventory import build as build_inventory

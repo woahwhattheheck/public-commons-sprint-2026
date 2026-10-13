@@ -28,6 +28,7 @@ APPLICATION = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(APPLICATION))
 from model.common import atomic_json, canonical, digest, file_digest, held, now, read_json
 from model.workspace import Workspace
+from model.record_catalog import ProjectedFileCache, task_summary
 from model import portable
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -38,6 +39,8 @@ from customer_reviews import CustomerReviews, ACTIONS as CUSTOMER_REVIEW_ACTIONS
 from experiment_operator import ExperimentOperator, ACTIONS as EXPERIMENT_ACTIONS, READS as EXPERIMENT_READS
 from parameter_study_api import ParameterStudyAPI, ACTIONS as PARAMETER_STUDY_ACTIONS, READS as PARAMETER_STUDY_READS
 from model.spatial_exports import SpatialExports
+from implementation_operator import implementation_error
+from delivery_review import read as read_delivery_report, send_preview as send_delivery_report_preview, REPORT_EDITION as CLIENT_REPORT_EDITION
 from extension_registry import ExtensionRegistry
 from programmes import Programmes, ACTIONS as PROGRAMME_ACTIONS, READS as PROGRAMME_READS
 
@@ -96,6 +99,9 @@ def json_body(data):
     return result
 
 def summary_error(error):
+    implementation_detail = implementation_error(error)
+    if implementation_detail is not None:
+        return implementation_detail
     if isinstance(error, Fault):
         return {"code": error.code, "message": str(error)}, error.status
     if isinstance(error, FileNotFoundError):
@@ -121,6 +127,7 @@ class Operator:
         self.spatial_exports = {}
         self.gates = {}
         self.downloads = {}
+        self.task_catalog = ProjectedFileCache()
         self.rehearsals = Rehearsals(self, Fault)
         self.customer_reviews = CustomerReviews(self, Fault)
         self.experiments = ExperimentOperator(self, Fault)
@@ -284,8 +291,13 @@ class Operator:
     def task(self, key):
         return read_json(self.root / "tasks" / (token(key) + ".json"))
 
-    def task_list(self, workspace=None):
-        items = [read_json(p) for p in (self.root / "tasks").glob("*.json")]
+    def task_list(self, workspace=None, *, compact=False):
+        paths = list((self.root / "tasks").glob("*.json"))
+        if compact:
+            self.task_catalog.retain_paths(paths)
+            items = [self.task_catalog.read(path, task_summary) for path in paths]
+        else:
+            items = [read_json(path) for path in paths]
         if workspace:
             items = [x for x in items if x["workspace"] == workspace]
         return sorted(items, key=lambda x: x["created_at"], reverse=True)
@@ -674,11 +686,11 @@ class Operator:
             result = self.parameter_studies.inspect(workspace, key)
             result["_downloads"] = self._files(workspace, result, ws.root / "experiments" / token(key))
             return result
-        records = ws.overview().get(kind, [])
-        item = next((x for x in records if x["id"] == token(key)), None)
-        if item is None:
-            raise Fault("ITEM_MISSING", "The selected retained item is absent.", 404)
-        result = json.loads(json.dumps(item))
+        key = token(key)
+        try:
+            result = ws.retained_item(kind, key)
+        except FileNotFoundError as error:
+            raise Fault("ITEM_MISSING", "The selected retained item is absent.", 404) from error
         if kind == "sources":
             downloads = []
             for row in result["entries"]:
@@ -722,6 +734,8 @@ class Operator:
         else:
             downloads = []
         result["_downloads"] = downloads
+        if kind == "deliveries":
+            result["_current_report_edition"] = CLIENT_REPORT_EDITION
         return result
 
     def source_info(self, workspace, collection, source, layer=None):
@@ -780,9 +794,9 @@ class Operator:
                               native_tags=original.tags())
         return result
 
-    def state(self, workspace):
+    def state(self, workspace, *, compact=False):
         ws = self.ws(workspace)
-        state = ws.overview()
+        state = ws.operator_overview() if compact else ws.overview()
         try:
             state["operator_session"] = self.operator_session(workspace)
         except (Fault, OSError, ValueError) as error:
@@ -796,16 +810,20 @@ class Operator:
             study.pop("cases", None)
         from programme_activity import ProgrammeActivity
         state["compute_programmes"] = ProgrammeActivity(self, Fault).summaries(workspace, state["runs"])
-        for row in state["observations"]:
-            row["row_count"] = len(row["rows"])
-            row.pop("rows")
+        # Compact core readers already retain these exact summaries without
+        # repeatedly reading the original rows and stage file inventories.
+        if not compact:
+            for row in state["observations"]:
+                row["row_count"] = len(row["rows"])
+                row.pop("rows")
         for row in state["runs"]:
-            row["stage_summary"] = {k: {x: v for x, v in stage.items() if x in {"started_at", "completed_at", "reused_from", "reused_at"}}
-                                    | {"file_count": len(stage.get("files", {}))}
-                                    for k, stage in row.get("stages", {}).items()}
+            if not compact:
+                row["stage_summary"] = {k: {x: v for x, v in stage.items() if x in {"started_at", "completed_at", "reused_from", "reused_at", "runtime"}}
+                                        | {"file_count": len(stage.get("files", {}))}
+                                        for k, stage in row.get("stages", {}).items()}
             row.pop("stages", None)
         return {"workspace_key": workspace, "workspaces": self.public_workspaces(), "data": state,
-                "tasks": self.task_list(workspace), "registered_sources": [
+                "tasks": self.task_list(workspace, compact=compact), "registered_sources": [
                     {k: v for k, v in row.items() if k != "path"} for row in self.registered.values()],
                 "limits": {"upload_bytes": self.upload_limit, "source_extraction_bytes": self.extraction_limit},
                 "closing": self.closing}
@@ -960,6 +978,10 @@ class Handler(BaseHTTPRequestHandler):
                 reply = self.app.extensions.file_reply(url.path)
                 return self.send_file(reply["ticket_id"], download=one("download") == "1",
                                       content_security_policy=reply["content_security_policy"])
+            if url.path == "/api/file/delivery-report":
+                self.authorized(file=True)
+                return send_delivery_report_preview(self, one("workspace", self.app.primary), one("id"),
+                                                    report=one("report", "scientific"))
             if url.path.startswith("/api/file/"):
                 self.authorized(file=True)
                 return self.send_file(url.path.rsplit("/", 1)[1], download=one("download") == "1")
@@ -981,7 +1003,7 @@ class Handler(BaseHTTPRequestHandler):
                     return self.send_json(200, self.app.experiments.read(workspace, experiment_reads[url.path],
                         {name: one(name) for name in ("experiment_id", "offset", "limit", "case_ids")}))
                 if url.path == "/api/state":
-                    return self.send_json(200, self.app.state(workspace))
+                    return self.send_json(200, self.app.state(workspace, compact=one("compact") == "1"))
                 programme_reads = {"/api/programmes/" + name: name for name in PROGRAMME_READS}
                 if url.path in programme_reads:
                     return self.send_json(200, self.app.programmes.read(workspace, programme_reads[url.path],
@@ -992,6 +1014,9 @@ class Handler(BaseHTTPRequestHandler):
                         {name: one(name) for name in ("review_id", "before_id", "after_id", "export_id")}))
                 if url.path == "/api/spatial/catalog":
                     return self.send_json(200, self.app.spatial_read(workspace, "catalog"))
+                if url.path == "/api/deliveries/report":
+                    return self.send_json(200, read_delivery_report(self.app, workspace, one("id"),
+                                                                  report=one("report", "scientific")))
                 if url.path == "/api/item":
                     return self.send_json(200, self.app.item(workspace, one("kind"), one("id")))
                 if url.path == "/api/source-info":
@@ -1026,7 +1051,7 @@ class Handler(BaseHTTPRequestHandler):
                         {name: values[0] for name, values in query.items()}))
                 raise Fault("ROUTE_MISSING", "This operator route does not exist.", 404)
             selected = "index.html" if url.path == "/" else url.path.removeprefix("/web/")
-            if selected not in (({'parameter_studies.mjs', 'parameter_studies.css', 'portfolio.mjs', 'portfolio.css', 'app.mjs', 'community.css', 'community.mjs', 'experiments.css', 'experiments.mjs', 'index.html', 'programmes.css', 'programmes.mjs', 'receiving_water_spatial.mjs', 'receiving_waters.css', 'receiving_waters.mjs', 'reviews.css', 'reviews.mjs', 'spatial.mjs', 'style.css', 'conservation.mjs', 'conservation.css', 'conservation_optimization_bridge.mjs', 'conservation_optimization.mjs', 'conservation_optimization.css', 'observed_series.mjs'} | self.app.extensions.web_assets | {"rehearsal.mjs", "rehearsal.css"})):
+            if selected not in (({'parameter_studies.mjs', 'parameter_studies.css', 'portfolio.mjs', 'portfolio.css', 'app.mjs', 'community.css', 'community.mjs', 'experiments.css', 'experiments.mjs', 'index.html', 'programmes.css', 'programmes.mjs', 'receiving_water_spatial.mjs', 'receiving_waters.css', 'receiving_waters.mjs', 'reviews.css', 'reviews.mjs', 'spatial.mjs', 'style.css', 'conservation.mjs', 'conservation.css', 'conservation_optimization_bridge.mjs', 'conservation_optimization.mjs', 'conservation_optimization.css', 'observed_series.mjs'} | self.app.extensions.web_assets | {"delivery_review.mjs", "delivery_review.css"} | {"rehearsal.mjs", "rehearsal.css"})):
                 raise Fault("PAGE_MISSING", "This operator page does not exist.", 404)
             data = (Path(__file__).parent / "web" / selected).read_bytes()
             self.close_connection = True

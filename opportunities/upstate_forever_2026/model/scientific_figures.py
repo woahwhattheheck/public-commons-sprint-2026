@@ -36,10 +36,17 @@ def _validate_figure(figure):
             if line.get("axis", "y") not in ("x", "y"):
                 raise ValueError("Reference line needs an x or y axis")
             _number(line["value"])
+        for annotation in panel.get("annotations", []):
+            _number(annotation["x"])
+            _number(annotation["y"])
+            if not isinstance(annotation.get("text"), str) or not annotation["text"].strip():
+                raise ValueError("Scientific annotations need their original text")
 
 def _marker(drawing, x, y, kind, radius, color, open_marker=False):
     from reportlab.graphics.shapes import Circle, Polygon, Rect, Line
     from reportlab.lib import colors
+    if kind == "diamond-mean":
+        kind, open_marker = "diamond", True
     fill = colors.white if open_marker else color
     if kind in ("triangle", "triangle-up"):
         drawing.add(Polygon([x, y+radius*1.2, x-radius, y-radius, x+radius, y-radius],
@@ -144,6 +151,60 @@ def panel_drawing(panel, width):
             drawing.add(PolyLine(segment,strokeColor=ink,strokeWidth=.8,strokeDashArray=[] if si==0 else [4,2]))
         for x,y,is_open in marker_points:
             _marker(drawing,x,y,str(marker),2.1,ink,is_open)
+    # Place the original annotation text and threshold labels in the figure.
+    # Candidate boxes are scored against earlier labels and every source marker.
+    from reportlab.pdfbase.pdfmetrics import stringWidth
+    point_locations = [(X(p["x"]), Y(p["y"])) for series in panel.get("series", [])
+                       for p in series.get("points", []) if p.get("y") is not None]
+    placed = []
+    notes = [{"x": X(a["x"]), "y": Y(a["y"]), "text": a["text"]}
+             for a in panel.get("annotations", [])]
+    for reference in panel.get("reference_lines", []):
+        if not reference.get("label"):
+            continue
+        axis = reference.get("axis", "y")
+        value = _number(reference["value"])
+        if axis == "x" and x0 <= value <= x1:
+            notes.append({"x": X(value), "y": bottom + plot_h - 8,
+                          "text": str(reference["label"])})
+        elif axis == "y" and y0 <= value <= y1:
+            notes.append({"x": left + plot_w - 8, "y": Y(value),
+                          "text": str(reference["label"])})
+    for note in notes:
+        label = str(note["text"])
+        font_size = 6.5
+        label_w = stringWidth(label, "Helvetica", font_size)
+        if label_w > plot_w - 6:
+            raise ValueError("Scientific annotation is wider than the original panel")
+        box_w, box_h = label_w + 4, 11
+        px, py = note["x"], note["y"]
+        candidates = []
+        for dy in (8, -19, 22, -33, 36, -47):
+            for dx in (6, -box_w - 6, -box_w / 2):
+                bx = min(left + plot_w - box_w - 2, max(left + 2, px + dx))
+                by = min(bottom + plot_h - box_h - 2, max(bottom + 2, py + dy))
+                candidates.append((bx, by))
+        # Sparse plot-space alternatives let a crowded event keep its full label.
+        for by in (bottom + plot_h - box_h - 3, bottom + plot_h / 2, bottom + 3):
+            for bx in (left + 3, left + (plot_w - box_w) / 2, left + plot_w - box_w - 3):
+                candidates.append((bx, by))
+        def score(position):
+            bx, by = position
+            overlap = sum(max(0, min(bx + box_w, ox + ow) - max(bx, ox)) *
+                          max(0, min(by + box_h, oy + oh) - max(by, oy))
+                          for ox, oy, ow, oh in placed)
+            hidden = sum(bx - 3 <= x <= bx + box_w + 3 and by - 3 <= y <= by + box_h + 3
+                         for x, y in point_locations)
+            distance = (bx + box_w / 2 - px) ** 2 + (by + box_h / 2 - py) ** 2
+            return overlap * 10000 + hidden * 100000 + distance
+        bx, by = min(candidates, key=score)
+        placed.append((bx, by, box_w, box_h))
+        ex = min(bx + box_w, max(bx, px))
+        ey = min(by + box_h, max(by, py))
+        drawing.add(Line(px, py, ex, ey, strokeColor=ink, strokeWidth=.35))
+        drawing.add(Rect(bx, by, box_w, box_h, strokeColor=None, fillColor=colors.white))
+        drawing.add(String(bx + 2, by + 3, label, fontName="Helvetica",
+                           fontSize=font_size, fillColor=ink))
     # Compact monochrome legend reproduces each source-series marker and line style.
     cursor, legend_y = left, 12.0
     for si, series in enumerate(panel.get("series", [])):
