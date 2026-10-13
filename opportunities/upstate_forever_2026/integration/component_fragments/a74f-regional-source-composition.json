@@ -6,7 +6,8 @@
     "core": {
       "paths": [
         "operator/REGIONAL_MODEL_AND_ENSEMBLE.md",
-        "integration/component_fragments/a74f-regional-source-composition.json"
+        "integration/component_fragments/a74f-regional-source-composition.json",
+        "CURRENT_OWNER_DIRECTION.md"
       ]
     },
     "gauge-support": {
