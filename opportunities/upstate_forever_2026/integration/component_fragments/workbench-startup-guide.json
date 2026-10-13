@@ -1,0 +1,49 @@
+{
+  "schema": "upstate.application-component-fragment/v1",
+  "id": "workbench-startup-guide",
+  "source_reference": "workbench-startup-and-windows-receiving/2026-10-13",
+  "components": {
+    "windows-workspace-receiving": {
+      "paths": [
+        "model/common.py",
+        "model/windows_fs.py",
+        "model/verified_files.py",
+        "model/reuse.py",
+        "model/native_execution.py",
+        "model/parameter_views.py",
+        "model/paired_ensemble/ensemble_store.py",
+        "model/robust_decisions/eco_robust/operations.py",
+        "model/portable.py",
+        "model/portable_databases.py",
+        "model/study_transfer.py",
+        "model/client_source_recipe_portable.py",
+        "operator/server.py",
+        "source_tools/workbench_session.py",
+        "integration/component_fragments/workbench-startup-guide.json"
+      ],
+      "requires": [
+        "core",
+        "recipient-workbench-opening"
+      ]
+    },
+    "workbench-startup-guide": {
+      "paths": [
+        "operator/web/startup_guide.mjs",
+        "operator/web/startup_guide.css",
+        "operator/STARTUP_GUIDE.md",
+        "operator/web/index.html",
+        "operator/web/app.mjs",
+        "operator/server.py",
+        "integration/component_fragments/workbench-startup-guide.json"
+      ],
+      "requires": [
+        "core",
+        "recipient-workbench-opening",
+        "windows-workspace-receiving"
+      ]
+    }
+  },
+  "required_components": [
+    "workbench-startup-guide"
+  ]
+}

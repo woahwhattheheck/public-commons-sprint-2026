@@ -6,6 +6,7 @@
 <meta name="color-scheme" content="light">
 <title>Upper Savannah Scientific Workbench</title>
 <link rel="stylesheet" href="/web/style.css">
+<link rel="stylesheet" href="/web/startup_guide.css">
 <link rel="stylesheet" href="/web/delivery_review.css">
 <link rel="stylesheet" href="/web/community.css">
 <link rel="stylesheet" href="/web/reviews.css">
@@ -22,7 +23,7 @@
 <header class="topbar">
   <div class="brand"><span class="brand-mark" aria-hidden="true">US</span><div><strong>Upper Savannah</strong><span>Scientific workbench</span></div></div>
   <label class="workspace-control"><span>Workspace</span><select id="workspace-select" aria-label="Selected workspace"></select></label>
-  <div class="top-actions"><button type="button" data-action="journey-save-view" title="Save the selected analysis and notes in this workspace">Save view and notes</button><button type="button" data-action="refresh" title="Refresh retained state">Refresh</button><button type="button" data-action="tasks" aria-controls="task-panel" aria-expanded="false">Operations <span id="task-count">0</span></button></div>
+  <div class="top-actions"><button id="startup-guide-open" type="button" aria-controls="startup-guide-card" aria-expanded="false" disabled>Quick guide</button><button type="button" data-action="journey-save-view" title="Save the selected analysis and notes in this workspace">Save view and notes</button><button type="button" data-action="refresh" title="Refresh retained state">Refresh</button><button type="button" data-action="tasks" aria-controls="task-panel" aria-expanded="false">Operations <span id="task-count">0</span></button></div>
 </header>
 <div class="shell">
   <nav class="sidebar" aria-label="Scientific workflow">
