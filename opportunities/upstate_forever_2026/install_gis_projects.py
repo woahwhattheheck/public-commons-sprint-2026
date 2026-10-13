@@ -20,7 +20,17 @@ OWN_FILES = tuple('model/' + x for x in MODEL_FILES) + (
     'source_tools/receive_native_study_gis.py', 'source/GIS_NATIVE_STUDY.md',
     'integration/component_fragments/gis-native-study.json',
     'source_tools/receive_run_revision_gis.py', 'source/GIS_RUN_REVISION.md',
-    'integration/component_fragments/gis-run-revision.json')
+    'integration/component_fragments/gis-run-revision.json',
+    'operator/web/gis-working-selection.mjs',
+    'operator/GIS_WORKING_SELECTION.md',
+    'operator/gis-working-selection.schema.json',
+    'operator/gis_source_selection_receiving.py',
+    'operator/gis_source_selection_receiving.mjs',
+    'operator/GIS_SOURCE_SELECTION_RECEIVING.md',
+    'source_tools/receive_webmap_gis.py',
+    'source_tools/receive_gis_edition_review.py',
+    'source_tools/receive_gis_edition_review_browser.mjs',
+    'integration/component_fragments/gis-source-selection.json')
 SHARED_REPORT_FILES = {
     'operator/web/run_revision.mjs': {'4cdfa55c29efe0546ba32debf3b1d5e96953c6327543e2b5be54c5b37b0935fd', '22f01d2c4f9edee410a30e4ba681daba4f6383b7a69d66fbadccda4d1185e768'},
     'operator/web/run_workbench.mjs': {'d7aae8e14cd8b3843b6f9b71e853eb7e0d83a9d73d88cbaa7933129f0fe58d18'},
@@ -139,13 +149,37 @@ NATIVE_STUDY_CATALOGUE = ('                    return self.send_json(200, GISPro
 ORIGINAL_CATALOGUE = '                    return self.send_json(200, GISProjects(self.app).catalogue(workspace))\n'
 
 
+def working_selection_asset(text):
+    """Admit the one module used by current GIS in the original legacy server."""
+    tree = ast.parse(text)
+    selected = [node.comparators[0] for node in ast.walk(tree)
+                if isinstance(node, ast.Compare)
+                and isinstance(node.left, ast.Name) and node.left.id == 'selected'
+                and len(node.ops) == 1 and isinstance(node.ops[0], ast.NotIn)
+                and isinstance(node.comparators[0], ast.Set)
+                and any(isinstance(item, ast.Constant) and item.value == 'app.mjs'
+                        for item in node.comparators[0].elts)]
+    if len(selected) != 1:
+        raise ValueError('Original browser asset admission changed')
+    node = selected[0]
+    if any(isinstance(item, ast.Constant) and item.value == 'gis-working-selection.mjs'
+           for item in node.elts):
+        return text
+    rows = text.splitlines(keepends=True)
+    before = sum(len(row.encode('utf-8')) for row in rows[:node.end_lineno - 1]) + node.end_col_offset - 1
+    raw = text.encode('utf-8')
+    result = (raw[:before] + b', "gis-working-selection.mjs"' + raw[before:]).decode('utf-8')
+    ast.parse(result)
+    return result
+
+
 def server_source(text):
     # Normalize our exact earlier direct route before the existing vector joins.
     for route in (PREVIOUS_NATIVE_STUDY_CATALOGUE, PREVIOUS_CONTEXT_CATALOGUE, NATIVE_STUDY_CATALOGUE):
         if route in text:
             text = once(text, route, ORIGINAL_CATALOGUE, 'native-study direct route')
     text = _vector_server_source(_base_server_source(text))
-    return once(text, ORIGINAL_CATALOGUE, NATIVE_STUDY_CATALOGUE, 'native-study selected read')
+    return working_selection_asset(once(text, ORIGINAL_CATALOGUE, NATIVE_STUDY_CATALOGUE, 'native-study selected read'))
 
 
 def _remove_vector_server_source(text):
@@ -188,7 +222,7 @@ def index_source(text):
 
 def legacy_server_source(text):
     """Remove only the exact former GIS-owned joins before shared registration."""
-    for route in (PREVIOUS_NATIVE_STUDY_CATALOGUE, NATIVE_STUDY_CATALOGUE):
+    for route in (PREVIOUS_NATIVE_STUDY_CATALOGUE, PREVIOUS_CONTEXT_CATALOGUE, NATIVE_STUDY_CATALOGUE):
         if route in text:
             text = once(text, route, ORIGINAL_CATALOGUE, 'native-study registered route')
     text = _remove_vector_server_source(text)
@@ -206,7 +240,10 @@ def legacy_server_source(text):
                 return self.send_file(ticket["id"], download=one("download") == "1", content_security_policy=policy)
 ''', '', 'legacy GIS file route')
     text = once(text, '                if url.path == "/api/gis/projects":\n                    return self.send_json(200, GISProjects(self.app).catalogue(workspace))\n', '', 'legacy GIS catalogue')
-    return once(text, ', "gis-projects.mjs", "gis-projects.css"', '', 'legacy GIS static assets')
+    text = once(text, ', "gis-projects.mjs", "gis-projects.css"', '', 'legacy GIS static assets')
+    if ', "gis-working-selection.mjs"' in text:
+        text = once(text, ', "gis-working-selection.mjs"', '', 'legacy GIS working asset')
+    return text
 
 
 def legacy_browser_source(text):
