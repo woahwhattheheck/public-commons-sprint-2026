@@ -1,0 +1,82 @@
+{
+  "schema": "stellar-forge.sf47-commercial-economics-input.v1",
+  "id": "commercial-units-20261013",
+  "name": "Quoted service care and complete-output planning",
+  "asOfDate": "2026-10-13",
+  "windowStart": "2027-01-04",
+  "billingPeriodDays": 30,
+  "outputCountsPerDay": [
+    1,
+    2,
+    5
+  ],
+  "requestsPerOutput": 4,
+  "monthlyPurchasedCareCents": 60000,
+  "cohortEngineGitBlob": "3cf156e25ee3dd4e139bf1b27a65a2c9d781c556",
+  "outputScope": "A selected chart/report or content-data result, acquired completely through the existing merchant and buyer workflow.",
+  "expectedOutput": "Complete selected result with native schema and source identity, paid outcome where applicable, retained rows/files, and receiving/reopening at the agreed destination.",
+  "sourcePeriod": "Customer-selected source edition; unchanged across retries of the same original output.",
+  "stressCases": [
+    {
+      "id": "base",
+      "extraRequestsPerOutput": 0,
+      "refundEveryOutputs": 0
+    },
+    {
+      "id": "retry-refund",
+      "extraRequestsPerOutput": 1,
+      "refundEveryOutputs": 10
+    }
+  ],
+  "costs": {
+    "providerAndNetworkCostPerAttemptUsd": null,
+    "paymentFeePerOriginalChargeUsd": null,
+    "refundHandlingUsdPerRefundedCharge": null,
+    "activeHoursPerOutput": null,
+    "actualCashLaborRateUsd": null,
+    "otherMonthlyFixedUsd": null
+  },
+  "workshares": [
+    {
+      "id": "cocart-implementation",
+      "label": "Proposed CoCart direct-customer implementation",
+      "currency": "USD",
+      "fee": "7200",
+      "hours": "60",
+      "hourlyCost": "95",
+      "otherCosts": "360",
+      "sourceIds": [],
+      "sourceNote": "Original proposed $7,200/60h/15-business-day implementation and proposed 5% referral. $95/hour planning rate. Other costs here are only the $360 referral; hosting, paid-provider charges and taxes are unestimated, so contribution is before those costs."
+    },
+    {
+      "id": "cocart-monthly-care",
+      "label": "Proposed monthly care, up to five engineering hours",
+      "currency": "USD",
+      "fee": "600",
+      "hours": "5",
+      "hourlyCost": "95",
+      "otherCosts": "0",
+      "sourceIds": [],
+      "sourceNote": "Original proposed $600/month for five care hours; $95/hour planning valuation. No referral is assumed on care without an agreed term. Other cost is zero only for this labor-only sensitivity; hosting, provider charges and taxes remain separately unestimated."
+    }
+  ],
+  "provenance": {
+    "quotedTerms": "Relationship-owner-confirmed October 12 CoCart proposal: $7,200 for 60 hours over 15 business days, 5% of collected initial implementation fees; optional $600/month for up to five care hours. No accepted customer contract or collected revenue asserted.",
+    "valuation": "$95/hour is the unchanged grant planning valuation, not an observed wage or committed contributor cash payment.",
+    "hypotheticalService": "January 4–February 2, 2027 is an arbitrary 30-day billing period; the original 14-day observation rule is unchanged. 1/2/5 outputs per day, four original requests per output, one extra retry per output and each tenth output refunded are explicit stress assumptions, not customer demand, observed failure rates or grant purchasing targets.",
+    "careCost": "The $600 care offer is conditional. Treating it as purchased monthly support is a merchant-side scenario; the separate quoted care workshare is the seller-side scenario. Neither is a booked sale."
+  },
+  "forecast": {
+    "implementationCashCostUsd": null,
+    "careCashCostUsd": null,
+    "implementationStart": "2027-01-04",
+    "implementationFinish": "2027-01-22",
+    "implementationReceipts": [
+      "2027-01-04",
+      "2027-01-25"
+    ],
+    "careStart": "2027-02-01",
+    "careFinish": "2027-02-28",
+    "careReceipt": "2027-02-01"
+  }
+}

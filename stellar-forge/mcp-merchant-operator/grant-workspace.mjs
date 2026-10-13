@@ -1,4 +1,20 @@
+import {grantSourceCollectionVerbs,executeGrantSourceCollectionTool} from './grant-source-collection.mjs';
+import {SOURCE_COLLECTION_MAX_COPY_BYTES} from '../../stellar/scf_2026/sf47_budget_model/workspace/installation-source-collection-store.mjs';
 import {grantWorkspaceTools} from './catalog/grant-workspace.mjs';
+import {retainGrantFundingSave} from './grant-funding-recovery.mjs';
+import {seedGrantCohortDelivery,editCohortDelivery,refreshGrantCohortDelivery,
+  reviewGrantCohortDelivery,calculateCohortDelivery,openGrantCohortDelivery,exportGrantCohortDelivery}
+  from '../../stellar/scf_2026/sf47_budget_model/workspace/cohort_delivery_agent.mjs';
+import {seedGrantCohortAdoption,reviewGrantCohortAdoption,editCohortAdoption,rebaseGrantCohortAdoption,
+  scheduleCohortAdoption,compareCohortAdoption,prepareGrantCohortAdoption,validateCohortAdoptionPrepared,
+  inspectGrantCohortAdoptionRequest,saveGrantCohortAdoption,openGrantCohortAdoption,exportCohortAdoption}
+  from '../../stellar/scf_2026/sf47_budget_model/workspace/cohort_planning_agent.mjs';
+import {grantInstallationSourceVerbs, executeGrantInstallationSourceTool} from './grant-installation-sources.mjs';
+import {INSTALLATION_SOURCE_MAX_ARCHIVE_BYTES} from '../../stellar/scf_2026/sf47_budget_model/workspace/installation-source-desk-agent.mjs';
+import {grantPlanningSourceVerbs,executeGrantPlanningSourceTool} from './grant-planning-sources.mjs';
+import {grantReportingCaptureVerbs,executeGrantReportingCaptureTool} from './grant-reporting-capture.mjs';
+import {grantProcedureVerbs,executeGrantProcedureTool} from './grant-procedures.mjs';
+import {GRANT_MAX_WORKBOOK_HANDOVER_BYTES} from '../../stellar/scf_2026/sf47_budget_model/workspace/agent-contracts.mjs';
 export {grantWorkspaceTools} from './catalog/grant-workspace.mjs';
 import {GRANT_TRANSFER_CHUNK_BYTES as CHUNK} from '../../stellar/scf_2026/sf47_budget_model/workspace/agent-contracts.mjs';
 // MIT. Merchant MCP tools for the original SF47 grant planning and delivery service.
@@ -14,6 +30,10 @@ import { GrantWorkspaceClient, inspectGrantAgentBinding, readGrantAgentFile,
 export const GRANT_WORKSPACE_CONNECTION_SCHEMA = 'stellar-forge.sf47-workspace-connection.v1';
 const SNAPSHOT = 'stellar-forge.sf47-agent-snapshot.v1', TRANSFER = 'stellar-forge.sf47-agent-input.v1';
 const MAX_JSON = 64 * 1024 * 1024, PAGE_BYTES = 48000;
+const MAX_RETAINED = Math.max(MAX_JSON,GRANT_MAX_WORKBOOK_HANDOVER_BYTES,INSTALLATION_SOURCE_MAX_ARCHIVE_BYTES,SOURCE_COLLECTION_MAX_COPY_BYTES);
+const canonicalSourceRequest = value => value === null || typeof value !== 'object' ? JSON.stringify(value)
+  : Array.isArray(value) ? '['+value.map(canonicalSourceRequest).join(',')+']'
+  : '{'+Object.keys(value).sort().map(key=>JSON.stringify(key)+':'+canonicalSourceRequest(value[key])).join(',')+'}';
 const hash = bytes => createHash('sha256').update(bytes).digest('hex');
 const json = value => Buffer.from(JSON.stringify(value) + '\n');
 const need = (test, code, message, details = {}) => {
@@ -75,6 +95,20 @@ async function directory(filename) {
   return filename;
 }
 
+
+const ADOPTION_REQUEST = 'stellar-forge.sf47-cohort-adoption-agent-request.v1';
+const ADOPTION_RETURNED = 'stellar-forge.sf47-cohort-adoption-agent-returned.v1';
+const adoptionCanonical = value => JSON.stringify((function order(v) {
+  return Array.isArray(v) ? v.map(order) : plain(v)
+    ? Object.fromEntries(Object.keys(v).sort().map(key => [key,order(v[key])])) : v;
+})(value));
+const adoptionRequestKey = (caseId, requestId) => {
+  need(typeof caseId === 'string' && /^operation-[a-f0-9]{32}$/.test(caseId) &&
+    typeof requestId === 'string' && /^[A-Za-z0-9][A-Za-z0-9._-]{0,99}$/.test(requestId),
+    'GRANT_ADOPTION_INPUT', 'Select the original adoption case and request identities.');
+  return hash(Buffer.from(caseId + '\0' + requestId));
+};
+
 /** Connection aliases are host input; tools never choose paths or executables. */
 export async function readGrantWorkspaceConfiguration(filename) {
   filename = resolve(filename);
@@ -100,8 +134,9 @@ export async function readGrantWorkspaceConfiguration(filename) {
       identifier(inputAlias, 'Grant input alias');
       exact(file, ['file', 'sha256', 'kind', 'label', 'mediaType'], ['file']);
       const filename = hpath(file.file, base), stat = await lstat(filename);
-      need(stat.isFile() && !stat.isSymbolicLink() && stat.size <= GRANT_MAX_BUNDLE_BYTES &&
-        await realpath(filename) === filename, 'GRANT_CONFIGURATION_ERROR', 'Declare a complete regular input file up to 32 MiB.');
+      const inputMaximum=file.kind==='source-working-copy'?SOURCE_COLLECTION_MAX_COPY_BYTES:GRANT_MAX_BUNDLE_BYTES;
+      need(stat.isFile() && !stat.isSymbolicLink() && stat.size <= inputMaximum &&
+        await realpath(filename) === filename, 'GRANT_CONFIGURATION_ERROR', 'Declare a complete regular input file: ordinary inputs32 MiB, explicit source-working-copy inputs512 MiB.');
       if (file.sha256 !== undefined) sha(file.sha256);
       inputs[inputAlias] = {file:filename, label:line(file.label ?? inputAlias),
         kind:boundedText(file.kind ?? 'original', 'Input kind', 80),
@@ -159,6 +194,10 @@ function presentation(value, base = '') {
 
 export class MerchantGrantWorkspaces {
   #config; #clients = new Map(); #readers = new RetainedFileReads({errorPrefix:'GRANT'});
+  #planningHandovers = new Map();
+  #sourceCollections = new Map();
+  #reportingCaptures = new Map();
+  #procedureOperations = new Map();
   #closing = false; #close; #pending = new Set();
   constructor(config) { this.#config = config; }
   get summary() { return {configured:Boolean(this.#config.grantWorkspaces),
@@ -203,15 +242,90 @@ export class MerchantGrantWorkspaces {
     return {...retained, retention:{state:'COMPLETE'}, ...(original.value === undefined ? {} : presentation(original.value)),
       fileRead:{tool:'merchant_grant_file_read', workspace:alias, snapshotId:id, expectedSha256:digest}};
   }
-  async #loadSnapshot(alias, selected, expected) {
+  async #snapshotMeta(alias, selected, expected) {
     const root = await this.#root(alias), meta = decode(await readGrantAgentFile(join(root, 'snapshots', snapshotId(selected) + '.json'), 65536));
     need(meta.schema === SNAPSHOT && meta.workspace === alias && meta.id === selected &&
-      sha(meta.file?.sha256) === sha(expected), 'GRANT_SNAPSHOT_CONFLICT', 'Use the original workspace, snapshot and file SHA together.');
-    const bytes = await readGrantAgentFile(join(root, 'files', meta.file.sha256), MAX_JSON);
+      sha(meta.file?.sha256) === sha(expected) && Number.isSafeInteger(meta.file.bytes) &&
+      meta.file.bytes >= 0 && meta.file.bytes <= MAX_RETAINED,
+    'GRANT_SNAPSHOT_CONFLICT', 'Use the original workspace, snapshot, complete byte count and file SHA together.');
+    return {meta,directory:root};
+  }
+  async #loadSnapshot(alias, selected, expected) {
+    const {meta,directory:root}=await this.#snapshotMeta(alias,selected,expected);
+    const bytes = await readGrantAgentFile(join(root, 'files', meta.file.sha256), MAX_RETAINED);
     need(bytes.length === meta.file.bytes && hash(bytes) === meta.file.sha256, 'GRANT_SNAPSHOT_CHANGED', 'The retained original file differs from its manifest.');
     return {meta, bytes, directory:root};
   }
-  async #input(alias, selection, expected) {
+  async #openSnapshotFile(alias, selected, expected) {
+    const {meta,directory:root}=await this.#snapshotMeta(alias,selected,expected);
+    const handle=await open(join(root,'files',meta.file.sha256),
+      constants.O_RDONLY | constants.O_NOFOLLOW | (constants.O_NONBLOCK ?? 0));
+    try {
+      const stat=await handle.stat();
+      need(stat.isFile() && stat.size===meta.file.bytes && typeof process.getuid==='function' &&
+        stat.uid===process.getuid() && (stat.mode & 0o077)===0,
+      'GRANT_SNAPSHOT_CHANGED','Open the original private immutable snapshot with its complete retained size.');
+      // The shared reader takes sole custody, verifies the full descriptor hash
+      // and checks its identity before every chunk. Large handovers need no copy.
+      return {readonlyFileHandle:handle,bytes:meta.file.bytes,sha256:meta.file.sha256,
+        name:meta.file.name,type:meta.file.contentType};
+    } catch(error) { await handle.close(); throw error; }
+  }
+  async #cachedPlanningHandover(alias, identity, create) {
+    need(plain(identity) && /^[A-Za-z0-9][A-Za-z0-9._-]{0,99}$/.test(identity.requestId ?? '') &&
+      /^plan-[a-f0-9]{32}$/.test(identity.planId ?? '') && Number.isSafeInteger(identity.revision) &&
+      identity.revision>0 && identity.revision<=1000000,
+    'GRANT_HANDOVER_REQUEST','Use the original request ID and exact saved plan revision.');
+    sha(identity.expectedContentSha256);
+    const requestSha256=hash(Buffer.from(canonicalSourceRequest(identity)));
+    const key=alias+'\0'+identity.requestId, pending=this.#planningHandovers.get(key);
+    if(pending) {
+      need(pending.requestSha256===requestSha256,'GRANT_HANDOVER_REQUEST_CONFLICT',
+        'This handover request already owns a different original saved revision or export profile.');
+      return pending.promise;
+    }
+    const operation=(async()=>{
+      const parent=await directory(join(await this.#root(alias),'planning-handovers'));
+      const root=await directory(join(parent,hash(Buffer.from(identity.requestId))));
+      const declaration={schema:'stellar-forge.sf47-workbook-handover-request.v1',workspace:alias,
+        requestSha256,selection:JSON.parse(canonicalSourceRequest(identity))};
+      await immutable(join(root,'request.json'),json(declaration));
+      const existing=async()=>{
+        let record;
+        try {record=decode(await readGrantAgentFile(join(root,'result.json'),256*1024));}
+        catch(error) {if(error.code==='ENOENT')return null;throw error;}
+        need(record.schema==='stellar-forge.sf47-workbook-handover-result.v1' &&
+          record.workspace===alias && record.requestSha256===requestSha256 &&
+          record.result?.requestId===identity.requestId && record.result?.retention?.state==='COMPLETE',
+        'GRANT_HANDOVER_RESULT_CONFLICT','Keep the original complete handover result and request together.');
+        for(const item of [record.result.archive,...record.result.files]) {
+          const {meta,directory:retained}=await this.#snapshotMeta(alias,item.id,item.file.sha256);
+          const stat=await lstat(join(retained,'files',meta.file.sha256));
+          need(stat.isFile()&&!stat.isSymbolicLink()&&stat.size===meta.file.bytes&&
+            meta.file.bytes===item.file.bytes,'GRANT_HANDOVER_FILE_CHANGED',
+          'A retained original handover file is unavailable at its complete size.');
+        }
+        return record.result;
+      };
+      const retained=await existing();if(retained)return retained;
+      const result=await create();
+      if(result.retention?.state!=='COMPLETE')return result;
+      const record={schema:'stellar-forge.sf47-workbook-handover-result.v1',workspace:alias,requestSha256,result};
+      try {await immutable(join(root,'result.json'),json(record));}
+      catch(error) {
+        // Independent clients may finish the same read-only export together.
+        // The first complete original result owns this request permanently.
+        if(error.code!=='GRANT_RETAINED_CONFLICT')throw error;
+      }
+      const complete=await existing();
+      need(complete,'GRANT_HANDOVER_RESULT_UNAVAILABLE','Reopen the original complete handover result after retained storage is available.');
+      return complete;
+    })();
+    this.#planningHandovers.set(key,{requestSha256,promise:operation});
+    try {return await operation;}finally{this.#planningHandovers.delete(key);}
+  }
+  async #input(alias, selection, expected, maximum) {
+    if(maximum!==undefined)uint(maximum,'Original input maximum',SOURCE_COLLECTION_MAX_COPY_BYTES,1);
     exact(selection, ['hostInput', 'snapshotId', 'transferId', 'sourceWorkspace']);
     need(['hostInput','snapshotId','transferId'].filter(key => selection[key] !== undefined).length === 1,
       'GRANT_INPUT_SELECTION_INVALID', 'Choose one host input, retained snapshot or completed transfer.');
@@ -221,7 +335,8 @@ export class MerchantGrantWorkspaces {
       identifier(selection.hostInput, 'Grant input alias');
       const input = binding.inputs[selection.hostInput];
       need(input, 'GRANT_INPUT_NOT_CONFIGURED', 'Choose a declared original input alias.');
-      bytes = await readGrantAgentFile(input.file, GRANT_MAX_BUNDLE_BYTES);
+      const bound=input.kind==='source-working-copy'?(maximum??GRANT_MAX_BUNDLE_BYTES):Math.min(maximum??GRANT_MAX_BUNDLE_BYTES,GRANT_MAX_BUNDLE_BYTES);
+      bytes = await readGrantAgentFile(input.file, bound);
       if (input.sha256) need(hash(bytes) === input.sha256, 'GRANT_INPUT_CHANGED', 'The declared original input hash changed.');
       metadata = {name:input.file.split(/[\\/]/).at(-1), sha256:hash(bytes), bytes:bytes.length, contentType:input.mediaType};
     } else if (selection.snapshotId !== undefined) {
@@ -236,6 +351,7 @@ export class MerchantGrantWorkspaces {
     }
     need(hash(bytes) === sha(expected) && bytes.length === metadata.bytes, 'GRANT_INPUT_CHANGED',
       'The selected input differs from the exact reviewed SHA256 or byte count.');
+    if(maximum!==undefined)need(bytes.length<=maximum,'GRANT_INPUT_TOO_LARGE','Receive the complete input within its declared original bound.');
     return {bytes, metadata, sourceWorkspace:source};
   }
   async #modelInputs(alias, args, label, maximum = GRANT_MAX_SOURCE_BYTES) {
@@ -344,6 +460,91 @@ export class MerchantGrantWorkspaces {
       return {transferId:selected, state:'COMPLETE', file, missingOffsets:[], chunkBytes:CHUNK};
     } finally { await unlink(temporary).catch(() => {}); }
   }
+
+  async #adoptionRecords(alias, caseId, requestId) {
+    const id = adoptionRequestKey(caseId, requestId);
+    const root = await directory(join(await this.#root(alias), 'cohort-adoption-requests'));
+    return {prepared:join(root,id + '.prepared.json'),returned:join(root,id + '.returned.json')};
+  }
+  async #adoptionRecord(filename) {
+    try { return decode(await readGrantAgentFile(filename,MAX_JSON)); }
+    catch (error) { if (error.code === 'ENOENT') return null; throw error; }
+  }
+  #adoptionPreparedRecord(record, selected, expectedSha256) {
+    need(record?.schema === ADOPTION_REQUEST, 'GRANT_ADOPTION_RETAINED_CHANGED',
+      'Select the complete retained adoption request.');
+    const prepared = validateCohortAdoptionPrepared(record.prepared, expectedSha256);
+    need(prepared.caseId === selected.caseId && prepared.request.requestId === selected.requestId,
+      'GRANT_ADOPTION_RETAINED_CHANGED', 'The retained adoption request belongs to another original case or request.');
+    return prepared;
+  }
+  #adoptionAccepted(record, prepared) {
+    if (!record) return null;
+    need(record.schema === ADOPTION_RETURNED && record.preparedSha256 === prepared.preparedSha256 &&
+      plain(record.response) && typeof record.response.contentBase64 === 'string',
+      'GRANT_ADOPTION_RESPONSE_CHANGED', 'Keep the complete native response for this original prepared request.');
+    const original = record.response, bytes = Buffer.from(original.contentBase64,'base64');
+    need(bytes.toString('base64') === original.contentBase64 && bytes.length === original.bytes &&
+      hash(bytes) === original.sha256 && original.status >= 200 && original.status < 300 &&
+      adoptionCanonical(decode(bytes)) === adoptionCanonical(original.value),
+      'GRANT_ADOPTION_RESPONSE_CHANGED', 'The original accepted response differs from its complete retained bytes.');
+    const {contentBase64,...response} = original;
+    return {...response,bytes};
+  }
+  async #adoptionPrepare(alias, client, caseId, body) {
+    const files = await this.#adoptionRecords(alias,caseId,body.requestId);
+    const existing = await this.#adoptionRecord(files.prepared);
+    if (existing) {
+      const prepared = this.#adoptionPreparedRecord(existing,{caseId,requestId:body.requestId},
+        existing.prepared?.preparedSha256);
+      need(existing.intent !== null && adoptionCanonical(existing.intent) === adoptionCanonical(body),
+        'GRANT_ADOPTION_REQUEST_CHANGED',
+        'This request already has another complete prepared input. Reopen its original adoption_request.');
+      return prepared;
+    }
+    const prepared = await prepareGrantCohortAdoption(client,caseId,body);
+    const record = json({schema:ADOPTION_REQUEST,intent:body,prepared});
+    need(record.length <= MAX_JSON, 'GRANT_ADOPTION_RETAINED_LIMIT',
+      'Retain the complete adoption request within the original JSON file bound.');
+    await immutable(files.prepared,record);
+    return prepared;
+  }
+  async #adoptionSave(alias, client, prepared, expectedSha256) {
+    validateCohortAdoptionPrepared(prepared,expectedSha256);
+    const selected = {caseId:prepared.caseId,requestId:prepared.request.requestId};
+    const files = await this.#adoptionRecords(alias,selected.caseId,selected.requestId);
+    const existing = await this.#adoptionRecord(files.prepared);
+    if (existing) this.#adoptionPreparedRecord(existing,selected,expectedSha256);
+    else {
+      const record = json({schema:ADOPTION_REQUEST,intent:null,prepared});
+      need(record.length <= MAX_JSON,'GRANT_ADOPTION_RETAINED_LIMIT',
+        'Retain the complete adoption request within the original JSON file bound.');
+      await immutable(files.prepared,record);
+    }
+    const returned = await this.#adoptionRecord(files.returned);
+    const acceptedResponse = this.#adoptionAccepted(returned,prepared);
+    return saveGrantCohortAdoption(client,prepared,expectedSha256,{acceptedResponse,
+      retainResponse:async response => {
+        need(Buffer.isBuffer(response.bytes),'GRANT_ADOPTION_RESPONSE_CHANGED',
+          'The native save must return its complete original response bytes.');
+        const {bytes,...metadata} = response;
+        const record = json({schema:ADOPTION_RETURNED,preparedSha256:expectedSha256,
+          response:{...metadata,bytes:bytes.length,sha256:hash(bytes),contentBase64:bytes.toString('base64')}});
+        await immutable(files.returned,record);
+      }});
+  }
+  async #adoptionRequest(alias, client, caseId, requestId, expectedSha256) {
+    sha(expectedSha256);
+    const files = await this.#adoptionRecords(alias,caseId,requestId);
+    const record = await this.#adoptionRecord(files.prepared);
+    if (!record) return {schema:ADOPTION_REQUEST,found:false,caseId,requestId,expectedPreparedSha256:expectedSha256};
+    const prepared = this.#adoptionPreparedRecord(record,{caseId,requestId},expectedSha256);
+    const returned = await this.#adoptionRecord(files.returned);
+    const accepted = this.#adoptionAccepted(returned,prepared);
+    const status = await inspectGrantCohortAdoptionRequest(client,prepared,expectedSha256,{acceptedResult:accepted});
+    return {schema:ADOPTION_REQUEST,found:true,prepared,returned,status};
+  }
+
   async #execute(name, args) {
     const definition = grantWorkspaceTools.find(tool => tool.name === name);
     need(definition, 'GRANT_TOOL_UNKNOWN', 'Choose an original grant tool.');
@@ -354,6 +555,19 @@ export class MerchantGrantWorkspaces {
         ({workspace, label:value.label, selectionSha256:value.selectionSha256, allowStart:value.allowStart,
           inputs:Object.keys(value.inputs)}))};
     const binding = this.#binding(alias);
+    if (grantReportingCaptureVerbs.has(verb)) return executeGrantReportingCaptureTool(verb,args,{
+      binding,root:()=>this.#root(alias),directory,immutable,pending:this.#reportingCaptures,
+      load:(input,expected)=>this.#input(alias,input,expected),
+      loadRetained:(id,expected)=>this.#loadSnapshot(alias,id,expected),
+      retain:(original,selection)=>this.#snapshot(alias,original,selection),
+    });
+    if (grantProcedureVerbs.has(verb)) return executeGrantProcedureTool(verb,args,{
+      binding,root:()=>this.#root(alias),directory,immutable,pending:this.#procedureOperations,
+      client:()=>this.#client(alias),
+      load:(input,expected)=>this.#input(alias,input,expected),
+      loadRetained:(id,expected)=>this.#loadSnapshot(alias,id,expected),
+      retain:(original,selection)=>this.#snapshot(alias,original,selection),
+    });
     if (verb === 'receive_begin') return this.#receiveBegin(alias, args);
     if (verb === 'receive_chunk') return this.#receiveChunk(alias, args);
     if (verb === 'receive_status') return this.#transferStatus(await this.#transfer(alias, args.transferId));
@@ -363,7 +577,7 @@ export class MerchantGrantWorkspaces {
         ({input, label:row.label, kind:row.kind, mediaType:row.mediaType, declaredSha256:row.sha256 ?? null}))};
       const file = binding.inputs[identifier(args.input)];
       need(file, 'GRANT_INPUT_NOT_CONFIGURED', 'Choose one original host input alias.');
-      const bytes = await readGrantAgentFile(file.file, GRANT_MAX_BUNDLE_BYTES);
+      const bytes = await readGrantAgentFile(file.file,file.kind==='source-working-copy'?SOURCE_COLLECTION_MAX_COPY_BYTES:GRANT_MAX_BUNDLE_BYTES);
       need(!file.sha256 || hash(bytes) === file.sha256, 'GRANT_INPUT_CHANGED', 'The declared original input changed.');
       return {workspace:alias, input:args.input, name:file.file.split(/[\\/]/).at(-1), bytes:bytes.length,
         sha256:hash(bytes), mediaType:file.mediaType, kind:file.kind};
@@ -375,10 +589,9 @@ export class MerchantGrantWorkspaces {
     if (['snapshot','rows','file_read'].includes(verb)) {
       if (verb === 'file_read') return this.#readers.read({scope:alias + ':' + snapshotId(args.snapshotId),
         key:args.snapshotId, kind:'SF47_ORIGINAL', directory:await this.#root(alias), readId:args.readId,
-        expectedSha256:sha(args.expectedSha256), offset:uint(args.offset ?? 0, 'Byte offset', MAX_JSON),
+        expectedSha256:sha(args.expectedSha256), offset:uint(args.offset ?? 0, 'Byte offset', MAX_RETAINED),
         limit:uint(args.limit ?? CHUNK, 'Byte page size', CHUNK, 1),
-        load:async () => { const data = await this.#loadSnapshot(alias, args.snapshotId, args.expectedSha256);
-          return {bytes:data.bytes, name:data.meta.file.name, type:data.meta.file.contentType}; }});
+        load:() => this.#openSnapshotFile(alias,args.snapshotId,args.expectedSha256)});
       const original = await this.#loadSnapshot(alias, args.snapshotId, args.expectedSha256);
       need(/^application\/json\b/i.test(original.meta.file.contentType), 'GRANT_JSON_REQUIRED', 'This complete native file is not a JSON snapshot.');
       const value = pointer(decode(original.bytes), args.pointer ?? '');
@@ -397,31 +610,170 @@ export class MerchantGrantWorkspaces {
           pointer:args.pointer + '/' + next, recovery:'Use merchant_grant_snapshot for selected nested values or merchant_grant_file_read for the complete original response.'}} : {})};
     }
     const client = this.#client(alias);
+    if(grantSourceCollectionVerbs.has(verb))return executeGrantSourceCollectionTool(verb,args,{
+      alias,binding,client,directory,root:()=>this.#root(alias),pending:this.#sourceCollections,
+      load:(input,expected,maximum)=>this.#input(alias,input,expected,maximum),
+      retain:(original,selection)=>this.#snapshot(alias,original,selection),
+    });
+    if (grantInstallationSourceVerbs.has(verb)) return executeGrantInstallationSourceTool(verb,args,{
+      alias,binding,client,load:(input,expected)=>this.#input(alias,input,expected),
+      retain:(original,selection)=>this.#snapshot(alias,original,selection),
+    });
+    if (grantPlanningSourceVerbs.has(verb)) return executeGrantPlanningSourceTool(verb,args,{
+      client,load:(input,expected)=>this.#input(alias,input,expected),
+      retain:(original,selection)=>this.#snapshot(alias,original,selection),
+      cachedHandover:(identity,create)=>this.#cachedPlanningHandover(alias,identity,create),
+    });
     if (verb === 'open') return client.open({expectedSelectionSha256:args.expectedSelectionSha256});
     if (verb === 'inspect') return client.inspect();
     if (verb === 'browser') return client.browser();
     if (verb === 'close') return client.detach(args.expectedInstanceId);
     const rest = Object.fromEntries(Object.entries(args).filter(([key]) => key !== 'workspace'));
-    const reads = {plans:'plans', plan:'plan', plan_history:'plan-history', cases:'cases', case:'case',
-      case_report:'case-report', case_history:'case-history', forecasts:'forecasts', forecast:'forecast',
+    const reads = {plans:'plans', plan:'plan', plan_history:'plan-history', plan_comparison:'plan-comparison', cases:'cases', case:'case',
+      case_report:'case-report', operating_workflows:'operating-workflows', case_history:'case-history', amendments:'amendments', amendment:'amendment', forecasts:'forecasts', forecast:'forecast',
       portfolios:'portfolios', portfolio:'portfolio', review:'review', completion:'completion',
-      installations:'installations',installation:'installation',installation_history:'installation-history'};
+      settlements:'settlements',settlement:'settlement',
+      risks:'risks', risk_register:'risk-register', risk_history:'risk-history', risk_comparison:'risk-comparison',
+      engagements:'engagements', engagement:'engagement', delivery_calendar:'delivery-calendar', delivery_agenda:'delivery-agenda',
+      work_intakes:'work-intakes',work_intake:'work-intake',task_outcomes:'task-outcomes',task_outcome:'task-outcome',
+      cost_funding:'cost-funding',funding_edition:'funding-edition',funding_request:'funding-request',
+      ledger_intake:'ledger-intake',ledger_intake_original:'ledger-intake-original',
+      account_reconciliation:'account-reconciliation',account_reconciliation_statement_inputs:'account-reconciliation-statement-inputs',
+      cash_account:'cash-account',supplier_account:'supplier-account',performance:'performance',delivery_queue:'delivery-queue',installation_returns:'installation-returns',installations:'installations',installation:'installation',installation_history:'installation-history'};
     let original;
     if (Object.hasOwn(reads, verb)) original = await client.read(reads[verb], rest);
     else if (['plan_estimate','plan_save','plan_restore','plan_clone'].includes(verb)) {
       const {planId, ...body} = rest; original = await client.plan(verb.slice(5), planId, body);
     } else if (verb === 'case_create') original = await client.createCase(rest);
     else if (verb === 'case_command') { const {caseId, ...body} = rest; original = await client.command(caseId, body); }
-    else if (verb === 'installation_seed') original=await client.installationSeed(args.caseId,args.expectedVersion);
-    else if (verb === 'installation_workflows') {
-      const {caseId,...body}=rest; original=await client.installationWorkflows(caseId,body);
+    else if (verb === 'account_reconciliation_preview' || verb === 'account_reconciliation_apply') {
+      const {caseId,inputs,input,inputPointer,expectedInputSha256,...selected}=rest;
+      const document=await this.#modelInputs(alias,args,'Account reconciliation',GRANT_MAX_BUNDLE_BYTES);
+      for (const [key,value] of Object.entries(selected))
+        need(!Object.hasOwn(document,key) || document[key] === value,'GRANT_INPUT_CONFLICT',
+          'The supplied '+key+' differs from the complete retained reconciliation request.');
+      const body={...document,...selected};
+      original=verb === 'account_reconciliation_preview'
+        ? await client.accountReconciliationPreview(caseId,body)
+        : await client.accountReconciliationApply(caseId,body);
     }
-    else if (verb === 'installation_workflow_seed') {
+    else if (verb === 'cash_correction_preview' || verb === 'cash_correction_apply') {
+      const {caseId,inputs,input,inputPointer,expectedInputSha256,...selected}=rest;
+      const document=await this.#modelInputs(alias,args,'Cash correction',GRANT_MAX_BUNDLE_BYTES);
+      for (const [key,value] of Object.entries(selected))
+        need(!Object.hasOwn(document,key) || document[key] === value,'GRANT_INPUT_CONFLICT',
+          'The supplied ' + key + ' differs from the complete retained cash correction.');
+      const body={...document,...selected};
+      original=verb === 'cash_correction_preview'
+        ? await client.cashCorrectionPreview(caseId,body)
+        : await client.cashCorrectionApply(caseId,body);
+    }
+    else if (verb === 'ledger_intake_inspect') {
+      original=await client.ledgerIntakeInspect(args.caseId,
+        await this.#modelInputs(alias,args,'Ledger source file',GRANT_MAX_BUNDLE_BYTES));
+    }
+    else if (verb === 'ledger_intake_preview' || verb === 'ledger_intake_apply') {
+      const {caseId,inputs,input,inputPointer,expectedInputSha256,...body}=rest;
+      const document=await this.#modelInputs(alias,args,'Ledger intake',GRANT_MAX_BUNDLE_BYTES);
+      original=verb === 'ledger_intake_preview'
+        ? await client.ledgerIntakePreview(caseId,{...body,document})
+        : await client.ledgerIntakeApply(caseId,{...body,document});
+    }
+    else if (verb === 'statement_inspect') original=await client.statementInspect(args.caseId,args.expectedVersion,
+      await this.#modelInputs(alias,args,'Original bank statement',GRANT_MAX_BUNDLE_BYTES));
+    else if (verb === 'statement_preview') original=await client.statementPreview(args.caseId,args.expectedVersion,
+      await this.#modelInputs(alias,args,'Statement',GRANT_MAX_BUNDLE_BYTES));
+    else if (verb === 'statement_receive') {
+      const {caseId,input,inputPointer,expectedInputSha256,...body}=rest;
+      original=await client.statementReceive(caseId,{...body,inputs:await this.#modelInputs(alias,args,'Statement',GRANT_MAX_BUNDLE_BYTES)});
+    }
+    else if (verb === 'installation_return_review_seed') {
+      const {caseId,...body}=rest; original=await client.installationReturnReviewSeed(caseId,body);
+    }
+    else if (verb === 'installation_return_seed') {
+      const {caseId,...body}=rest; original=await client.installationReturnSeed(caseId,body);
+    }
+    else if (['installation_return_preview','installation_return_review_preview','installation_return','installation_return_stage'].includes(verb)) {
+      const {caseId,inputs,input,inputPointer,expectedInputSha256,...body}=rest;
+      const selected=await this.#modelInputs(alias,args,'Installation receiving');
+      const methods={installation_return_preview:'installationReturnPreview',
+        installation_return_review_preview:'installationReturnReviewPreview',
+        installation_return:'installationReturn',installation_return_stage:'installationReturnStage'};
+      original=await client[methods[verb]](caseId,{...body,inputs:selected});
+    }
+    else if (verb === 'work_intake_upload') {
+      const {caseId,...body}=rest;original=await client.workIntakeUpload(caseId,body);
+    }
+    else if (['work_intake_preview','work_intake_save','work_intake_apply'].includes(verb)) {
       const {caseId,inputs,input,inputPointer,expectedInputSha256,...body}=rest;
       if(inputs!==undefined||input!==undefined||inputPointer!==undefined||expectedInputSha256!==undefined)
-        body.document=await this.#modelInputs(alias,args,'Installation');
-      original=await client.installationWorkflowSeed(caseId,body);
+        body.document=await this.#modelInputs(alias,args,'Work intake',GRANT_MAX_BUNDLE_BYTES);
+      const method={work_intake_preview:'workIntakePreview',work_intake_save:'workIntakeSave',work_intake_apply:'workIntakeApply'}[verb];
+      original=await client[method](caseId,body);
     }
+    else if (verb === 'funding_seed') {
+      const {caseId,...body}=rest; original=await client.fundingSeed(caseId,body);
+    }
+    else if (verb === 'funding_preview'||verb === 'funding_save') {
+      const {caseId,inputs,input,inputPointer,expectedInputSha256,...body}=rest;
+      const complete=await this.#modelInputs(alias,args,'Complete cost funding allocation');
+      original=verb==='funding_preview'?await client.fundingPreview(caseId,{...body,inputs:complete}):
+        await retainGrantFundingSave({directory:await this.#root(alias),client,caseId,body:{...body,inputs:complete}});
+    }
+    else if (verb === 'risk_seed') {
+      const {caseId,...body}=rest; original=await client.riskSeed(caseId,body);
+    }
+    else if (verb === 'risk_preview'||verb === 'risk_save') {
+      const {caseId,inputs,input,inputPointer,expectedInputSha256,...body}=rest;
+      const document=await this.#modelInputs(alias,args,'Complete delivery risk register',GRANT_MAX_SOURCE_BYTES);
+      original=verb==='risk_preview'?await client.riskPreview(caseId,{...body,document}):
+        await client.riskSave(caseId,{...body,document});
+    }
+    else if (verb === 'risk_request') {
+      const command=await this.#modelInputs(alias,args,'Original delivery risk save command',GRANT_MAX_SOURCE_BYTES);
+      original=await client.riskRequest(args.caseId,{command});
+    }
+    else if (verb === 'task_outcomes_seed') original=await client.taskOutcomesSeed(args.caseId,args.expectedVersion);
+    else if (verb === 'task_outcomes_preview'||verb === 'task_outcomes_save') {
+      const {caseId,inputs,input,inputPointer,expectedInputSha256,...body}=rest;
+      const complete=await this.#modelInputs(alias,args,'Customer task outcomes');
+      original=verb==='task_outcomes_preview'?await client.taskOutcomesPreview(caseId,{...body,inputs:complete}):
+        await client.taskOutcomesSave(caseId,{...body,inputs:complete});
+    }
+    else if (verb === 'engagement_seed') original = await client.engagementSeed(args.caseId, args.expectedVersion, args.reviewId);
+    else if (verb === 'engagement_preview') original = await client.engagementPreview(args.caseId, args.expectedVersion,
+      await this.#modelInputs(alias, args, 'Contributor Engagements'));
+    else if (verb === 'engagement_prepare') {
+      const document = await this.#modelInputs(alias, args, 'Contributor Engagements');
+      original = await client.engagementPrepare(args.caseId, {
+        expectedVersion:args.expectedVersion, requestId:args.requestId, actor:args.actor, note:args.note,
+        document, expectedPreviewSha256:args.expectedPreviewSha256});
+    }
+    else if (verb === 'engagement_forecast') original = await client.engagementForecast(args.caseId, args.expectedVersion,
+      await this.#modelInputs(alias, args, 'Engagement to Forecast selection'));
+    else if (verb === 'engagement_portfolio') original = await client.engagementPortfolio(args.caseId, args.expectedVersion,
+      await this.#modelInputs(alias, args, 'Engagement to Portfolio selection'));
+    else if (verb === 'engagement_receiving') {
+      const data = await this.#modelInputs(alias, args, 'Engagement receiving');
+      // A referenced native selection cannot replace the separately retained command identity.
+      exact(data, ['reviewId','reviewSha256','forecastId','portfolioId','forecastSelection','portfolioSelection'],
+        ['reviewId','reviewSha256','forecastId','portfolioId','forecastSelection','portfolioSelection']);
+      original = await client.engagementReceiving(args.caseId, {
+        expectedVersion:args.expectedVersion, requestId:args.requestId, actor:args.actor, note:args.note, ...data});
+    }
+    else if (verb === 'customer_use_calendar') {
+      const {caseId,...body}=rest;original=await client.customerUseCalendar(caseId,body);
+    }
+    else if (verb === 'customer_use_calendar_expand') {
+      const {caseId,expectedVersion}=rest;
+      const input=await this.#modelInputs(alias,args,'Complete Installation and customer-use pattern');
+      exact(input,['document','pattern'],['document','pattern']);
+      original=await client.customerUseCalendarExpand(caseId,{expectedVersion,...input});
+    }
+    else if (verb === 'customer_use_calendar_cohort') {
+      const {caseId,...body}=rest;original=await client.customerUseCalendarCohort(caseId,body);
+    }
+    else if (verb === 'installation_seed') original=await client.installationSeed(args.caseId,args.expectedVersion);
     else if (verb === 'installation_workshares') {
       const {caseId,...body}=rest; original=await client.installationWorkshares(caseId,body);
     }
@@ -431,11 +783,172 @@ export class MerchantGrantWorkspaces {
       if(hasDocument)body.document=await this.#modelInputs(alias,args,'Installation');
       original=await client.installationWorkshareSeed(caseId,body);
     }
+    else if (verb === 'installation_workflows') {
+      const {caseId,...body}=rest; original=await client.installationWorkflows(caseId,body);
+    }
+    else if (verb === 'installation_workflow_seed') {
+      const {caseId,inputs,input,inputPointer,expectedInputSha256,...body}=rest;
+      if(inputs!==undefined||input!==undefined||inputPointer!==undefined||expectedInputSha256!==undefined)
+        body.document=await this.#modelInputs(alias,args,'Installation');
+      original=await client.installationWorkflowSeed(caseId,body);
+    }
+    else if (verb === 'installation_effort_seed') {
+      const {caseId,inputs,input,inputPointer,expectedInputSha256,...body}=rest;
+      if(inputs!==undefined||input!==undefined||inputPointer!==undefined||expectedInputSha256!==undefined)
+        body.document=await this.#modelInputs(alias,args,'Installation');
+      original=await client.installationEffortSeed(caseId,body);
+    }
+    else if (verb === 'installation_effort_selection') {
+      const {caseId,...body}=rest;
+      original=await client.installationEffortSelection(caseId,body);
+    }
     else if (verb === 'installation_preview'||verb === 'installation_save') {
       const {caseId,inputs,input,inputPointer,expectedInputSha256,...body}=rest;
       const document=await this.#modelInputs(alias,args,'Installation');
       original=verb==='installation_preview'?await client.installationPreview(caseId,{...body,document}):
         await client.installationSave(caseId,{...body,document});
+    }
+    else if (verb === 'work_billing_catalog') original=await client.workBillingCatalog(args.caseId);
+    else if (verb === 'work_billing_authority') original=await client.workBillingAuthority(args.caseId,args.authorityId);
+    else if (verb === 'work_billing_authority_save') {
+      const {caseId,...body}=rest;original=await client.workBillingSaveAuthority(caseId,body);
+    }
+    else if (verb === 'work_billing') original=await client.workBilling(args.caseId,args.chargeId);
+    else if (verb === 'work_billing_preview'||verb === 'work_billing_prepare') {
+      const {caseId,...body}=rest;
+      original=verb==='work_billing_preview'?await client.workBillingPreview(caseId,body):
+        await client.workBillingPrepare(caseId,body);
+    }
+    else if (['work_billing_apply','work_billing_cancel','work_billing_issue'].includes(verb)) {
+      const {caseId,chargeId,...body}=rest;
+      const methods={work_billing_apply:'workBillingApply',work_billing_cancel:'workBillingCancel',work_billing_issue:'workBillingIssue'};
+      original=await client[methods[verb]](caseId,chargeId,body);
+    }
+    else if (verb === 'work_billing_preview_issue') original=await client.workBillingPreviewIssue(args.caseId,args.chargeId);
+    else if (verb === 'work_billing_refresh') original=await client.workBillingRefresh(args.caseId,args.chargeId);
+    else if (verb === 'expense_billing_catalog') original=await client.expenseBillingCatalog(args.caseId);
+    else if (verb === 'expense_billing') original=await client.expenseBilling(args.caseId,args.chargeId);
+    else if (verb === 'expense_billing_preview'||verb === 'expense_billing_prepare') {
+      const {caseId,...body}=rest;
+      original=verb==='expense_billing_preview'?await client.expenseBillingPreview(caseId,body):
+        await client.expenseBillingPrepare(caseId,body);
+    }
+    else if (['expense_billing_apply','expense_billing_cancel','expense_billing_issue'].includes(verb)) {
+      const {caseId,chargeId,...body}=rest;
+      const methods={expense_billing_apply:'expenseBillingApply',expense_billing_cancel:'expenseBillingCancel',expense_billing_issue:'expenseBillingIssue'};
+      original=await client[methods[verb]](caseId,chargeId,body);
+    }
+    else if (verb === 'expense_billing_preview_issue') original=await client.expenseBillingPreviewIssue(args.caseId,args.chargeId);
+    else if (verb === 'expense_billing_refresh') original=await client.expenseBillingRefresh(args.caseId,args.chargeId);
+    else if (verb === 'commercial_changes') original=await client.commercialChanges(args.caseId,args.billingId,args.milestoneId);
+    else if (verb === 'commercial_change') original=await client.commercialChange(args.caseId,args.changeId);
+    else if (verb === 'commercial_change_preview'||verb === 'commercial_change_prepare') {
+      const {caseId,billingId,milestoneId,...body}=rest;
+      original=verb==='commercial_change_preview'?await client.commercialChangePreview(caseId,billingId,milestoneId,body):
+        await client.commercialChangePrepare(caseId,billingId,milestoneId,body);
+    }
+    else if (['commercial_change_apply','commercial_change_cancel','commercial_change_issue'].includes(verb)) {
+      const {caseId,changeId,...body}=rest;
+      const methods={commercial_change_apply:'commercialChangeApply',commercial_change_cancel:'commercialChangeCancel',commercial_change_issue:'commercialChangeIssue'};
+      original=await client[methods[verb]](caseId,changeId,body);
+    }
+    else if (verb === 'commercial_change_preview_issue') original=await client.commercialChangePreviewIssue(args.caseId,args.changeId);
+    else if (verb === 'commercial_change_refresh') original=await client.commercialChangeRefresh(args.caseId,args.changeId);
+    else if (verb === 'commercial_connections') original=await client.commercialConnections();
+    else if (verb === 'commercial_connection_configure') original=await client.commercialConfigureConnection(rest);
+    else if (verb === 'commercial_customers') original=await client.commercialCustomers(args.endpointId);
+    else if (verb === 'commercial_list') original=await client.commercialList(args.caseId);
+    else if (verb === 'commercial') original=await client.commercialDetail(args.caseId,args.billingId);
+    else if (verb === 'commercial_schedule'||verb === 'commercial_prepare') {
+      const {caseId,...body}=rest;
+      original=verb==='commercial_schedule'?await client.commercialSchedule(caseId,body):
+        await client.commercialPrepare(caseId,body);
+    }
+    else if (verb === 'commercial_draft'||verb === 'commercial_issue') {
+      const {caseId,billingId,milestoneId,...body}=rest;
+      original=verb==='commercial_draft'?await client.commercialDraft(caseId,billingId,milestoneId,body):
+        await client.commercialIssue(caseId,billingId,milestoneId,body);
+    }
+    else if (verb === 'commercial_preview') original=await client.commercialPreview(args.caseId,args.billingId,args.milestoneId);
+    else if (verb === 'commercial_refresh') original=await client.commercialRefresh(args.caseId,args.billingId);
+
+
+    else if (verb.startsWith('cohort_delivery_')) {
+      let value;
+      if (verb==='cohort_delivery_seed') {
+        const {caseId,...body}=rest;value=await seedGrantCohortDelivery(client,caseId,body);
+      } else if (verb==='cohort_delivery_request') {
+        value=await this.#adoptionRequest(alias,client,args.caseId,args.requestId,args.expectedPreparedSha256);
+        if(value.found)need(value.prepared.document.schema==='stellar-forge.sf47-cohort-delivery-comparison.v1',
+          'GRANT_DELIVERY_INPUT','Select the original recorded delivery request.');
+      } else if (verb==='cohort_delivery_open') {
+        value=await openGrantCohortDelivery(client,args.caseId,args.sourceId,args.expectedSourceSha256);
+      } else {
+        const document=await this.#modelInputs(alias,args,'Complete recorded cohort delivery',GRANT_MAX_BUNDLE_BYTES);
+        if (verb==='cohort_delivery_edit') value=editCohortDelivery(document,args.changes);
+        else if (verb==='cohort_delivery_review') value=await reviewGrantCohortDelivery(client,args.caseId,args.expectedVersion,document);
+        else if (verb==='cohort_delivery_refresh') {
+          const {caseId,inputs,input,inputPointer,expectedInputSha256,...selection}=rest;
+          value=await refreshGrantCohortDelivery(client,caseId,document,selection);
+        } else if (verb==='cohort_delivery_prepare') {
+          const comparison=calculateCohortDelivery(document);
+          const {caseId,inputs,input,inputPointer,expectedInputSha256,...body}=rest;
+          value=await this.#adoptionPrepare(alias,client,caseId,{...body,document:comparison});
+        } else if (verb==='cohort_delivery_save') {
+          need(document.document?.schema==='stellar-forge.sf47-cohort-delivery-comparison.v1',
+            'GRANT_DELIVERY_INPUT','Select the complete original prepared recorded delivery.');
+          value=await this.#adoptionSave(alias,client,document,args.expectedPreparedSha256);
+        } else if (verb==='cohort_delivery_export') {
+          original={...exportGrantCohortDelivery(document,args.format),status:200,
+            source:{kind:'GRANT_COHORT_DELIVERY',workspace:alias,selectionSha256:binding.selectionSha256,operation:verb}};
+        } else throw failure('GRANT_TOOL_UNKNOWN','Choose an original cohort delivery operation.');
+      }
+      if(value!==undefined)original={value,bytes:json(value),mediaType:'application/json',status:200,
+        filename:verb.replaceAll('_','-')+'.json',
+        source:{kind:'GRANT_COHORT_DELIVERY',workspace:alias,selectionSha256:binding.selectionSha256,operation:verb}};
+    }
+    else if (verb.startsWith('adoption_')) {
+      let value;
+      if (verb === 'adoption_seed') {
+        const {caseId,...body}=rest; value=await seedGrantCohortAdoption(client,caseId,body);
+      } else if (verb === 'adoption_request') {
+        value=await this.#adoptionRequest(alias,client,args.caseId,args.requestId,args.expectedPreparedSha256);
+      } else if (verb === 'adoption_open') {
+        value=await openGrantCohortAdoption(client,args.caseId,args.sourceId,args.expectedSourceSha256);
+      } else {
+        const document=await this.#modelInputs(alias,args,'Complete adoption document',GRANT_MAX_BUNDLE_BYTES);
+        if (verb === 'adoption_review') value=await reviewGrantCohortAdoption(client,args.caseId,args.expectedVersion,document);
+        else if (verb === 'adoption_edit') value=editCohortAdoption(document,args.changes,args.options);
+        else if (verb === 'adoption_rebase') value=await rebaseGrantCohortAdoption(client,args.caseId,args.expectedVersion,document);
+        else if (verb === 'adoption_schedule') {
+          let constraints;
+          const chosen=['constraints','constraintsInput','expectedConstraintsSha256','constraintsPointer']
+            .some(key=>args[key]!==undefined);
+          if (chosen) constraints=await this.#modelInputs(alias,{inputs:args.constraints,input:args.constraintsInput,
+            expectedInputSha256:args.expectedConstraintsSha256,inputPointer:args.constraintsPointer},
+            'Complete delivery constraints',GRANT_MAX_BUNDLE_BYTES);
+          value=scheduleCohortAdoption({document,...(constraints===undefined?{}:{constraints}),
+            ...(args.name===undefined?{}:{name:args.name}),
+            ...(args.method===undefined?{}:{method:args.method}),
+            ...(args.maxSearchSteps===undefined?{}:{maxSearchSteps:args.maxSearchSteps})});
+        } else if (verb === 'adoption_compare') {
+          const candidate=await this.#modelInputs(alias,{inputs:args.candidate,input:args.candidateInput,
+            expectedInputSha256:args.expectedCandidateSha256,inputPointer:args.candidatePointer},
+            'Complete adoption candidate',GRANT_MAX_BUNDLE_BYTES);
+          value=compareCohortAdoption({beforeDocument:document,afterDocument:candidate,options:args.options});
+        } else if (verb === 'adoption_prepare') {
+          const {caseId,inputs,input,expectedInputSha256,inputPointer,...body}=rest;
+          value=await this.#adoptionPrepare(alias,client,caseId,{...body,document});
+        } else if (verb === 'adoption_save') {
+          value=await this.#adoptionSave(alias,client,document,args.expectedPreparedSha256);
+        } else if (verb === 'adoption_export') {
+          original={...exportCohortAdoption(document,args.format),status:200,
+            source:{kind:'GRANT_COHORT_ADOPTION',workspace:alias,selectionSha256:binding.selectionSha256,operation:verb}};
+        } else throw failure('GRANT_TOOL_UNKNOWN','Choose an original adoption operation.');
+      }
+      if (value!==undefined) original={value,bytes:json(value),mediaType:'application/json',status:200,
+        filename:verb.replaceAll('_','-')+'.json',
+        source:{kind:'GRANT_COHORT_ADOPTION',workspace:alias,selectionSha256:binding.selectionSha256,operation:verb}};
     }
     else if (verb === 'cohort_seed') original=await client.cohortSeed(args.caseId,args.expectedVersion,args.tranche);
     else if (verb === 'cohort_preview') original=await client.cohortPreview(args.caseId,args.expectedVersion,
@@ -443,6 +956,12 @@ export class MerchantGrantWorkspaces {
     else if (verb === 'cohort_prepare') {
       const {caseId,input,inputPointer,expectedInputSha256,...body}=rest;
       original=await client.cohortPrepare(caseId,{...body,inputs:await this.#modelInputs(alias,args,'Cohort',GRANT_MAX_BUNDLE_BYTES)});
+    }
+    else if (verb === 'settlement_correction_preview') {
+      const {caseId,...body}=rest;original=await client.settlementCorrectionPreview(caseId,body);
+    }
+    else if (verb === 'settlement_correct') {
+      const {caseId,...body}=rest;original=await client.settlementCorrect(caseId,body);
     }
     else if (verb === 'implementation_source') original=await client.implementationSource(args.caseId,args.expectedVersion,args.sourceId,args.asOfAt);
     else if (verb === 'implementation_preview') original=await client.implementationPreview(args.caseId,args.expectedVersion,
@@ -464,13 +983,23 @@ export class MerchantGrantWorkspaces {
         completion_submit:'completionSubmit',completion_decision:'completionDecision'}[verb];
       original=await client[method](caseId,body);
     }
+    else if (verb === 'amendment_preview') original = await client.amendmentPreview(args.caseId, args.expectedVersion,
+      await this.#modelInputs(alias, args, 'Plan amendment'));
+    else if (verb === 'amendment_calendar_export') original = await client.amendmentCalendarExport(args.caseId,
+      await this.#modelInputs(alias, args, 'Amendment calendar export'));
     else if (verb === 'forecast_preview') original = await client.forecastPreview(args.caseId, args.expectedVersion,
       await this.#modelInputs(alias, args, 'Forecast'));
     else if (verb === 'forecast_save') {
       const {caseId, input, inputPointer, expectedInputSha256, ...body} = rest;
       original = await client.forecastSave(caseId, {...body, inputs:await this.#modelInputs(alias, args, 'Forecast')});
-    } else if (verb === 'portfolio_seed') original = await client.portfolioSeed(args.caseId, args.expectedVersion, args.forecastId);
-    else if (verb === 'portfolio_preview') original = await client.portfolioPreview(args.caseId, args.expectedVersion,
+    } else if (verb === 'portfolio_seed') {
+      const options = {};
+      if (args.installationSelections !== undefined) options.installationSelections = args.installationSelections;
+      if (['inputs','input','inputPointer','expectedInputSha256'].some(key => args[key] !== undefined)) {
+        options.inputs = await this.#modelInputs(alias, args, 'Portfolio');
+      }
+      original = await client.portfolioSeed(args.caseId, args.expectedVersion, args.forecastId, options);
+    } else if (verb === 'portfolio_preview') original = await client.portfolioPreview(args.caseId, args.expectedVersion,
       await this.#modelInputs(alias, args, 'Portfolio'));
     else if (verb === 'portfolio_save') {
       const {caseId, input, inputPointer, expectedInputSha256, ...body} = rest;
@@ -478,9 +1007,14 @@ export class MerchantGrantWorkspaces {
     } else if (verb === 'portfolio_selection') original = await client.portfolioSelection(args.caseId, args.expectedVersion,
       args.portfolioId, args.alternativeId);
     else if (verb === 'export') original = await client.download(args.kind, rest);
-    else if (['plan_import','case_import','source_attach','intake','support_preview','support_receive','buyer_preview','buyer_receive'].includes(verb)) {
+    else if (['plan_import','case_import','source_attach','intake','support_preview','support_receive','buyer_preview','buyer_receive','settlement_preview','settlement_receive'].includes(verb)) {
       const {input, expectedInputSha256, ...body} = rest, selected = await this.#input(alias, input, expectedInputSha256);
-      if (verb === 'support_preview') {
+      if (verb === 'settlement_preview') {
+        const selection=body.name===undefined&&body.selections===undefined?undefined:{name:body.name,selections:body.selections};
+        original=await client.settlementPreview(body.caseId,body.expectedVersion,selected.bytes,body.filename,selection);
+      } else if (verb === 'settlement_receive') {
+        const {caseId,...fields}=body;original=await client.settlementReceive(caseId,selected.bytes,fields);
+      } else if (verb === 'support_preview') {
         original = await client.supportPreview(body.caseId, body.expectedVersion, selected.bytes, body.filename);
       } else if (verb === 'support_receive') {
         const {caseId, ...fields} = body;
@@ -503,11 +1037,12 @@ export class MerchantGrantWorkspaces {
       } else { const {caseId, ...fields} = body; original = await client.attach(caseId, selected.bytes, fields); }
     } else throw failure('GRANT_TOOL_UNKNOWN', 'Choose an original grant operation.');
     return this.#snapshot(alias, original, {tool:name, ...Object.fromEntries(Object.entries(rest).filter(([key]) =>
-      ['planId','caseId','forecastId','portfolioId','alternativeId','sourceId','reviewId','installationId','revision','after','before','limit','kind',
-        'requestId','expectedRevision','expectedVersion','input','inputPointer','expectedInputSha256',
-        'workshareCaseId','expectedSourceSha256','packetSourceId','expectedPacketSha256',
+      ['planId','caseId','intakeId','forecastId','portfolioId','alternativeId','sourceId','reviewId','reviewSha256','installationId','revision','after','before','limit','kind','format',
+        'requestId','riskId','beforeReviewId','beforeReviewSha256','afterReviewId','afterReviewSha256','expectedComparisonSha256','expectedRevision','expectedVersion','input','inputPointer','expectedInputSha256',
+        'workshareCaseId','expectedSourceSha256','packetSourceId','expectedPacketSha256','installationRefs','groupId',
+        'expectedPreparedSha256','parentSourceId','expectedParentSha256','planSourceId','expectedPlanSha256','expectedReviewBusinessSha256',
         'filename','expectedPreviewSha256','deploymentId','tranche','asOfDate','asOfAt','receiptId','cohortReviewIds','implementationReviewIds','sha256',
-        'expectedReviewSha256','confirmedOn','deadlineOn','submittedOn','formReference','outcomeId','state','date'].includes(key)))});
+        'startDate','endDate','expectedReportSha256','rowId','expectedCashId','decision','expectedReviewSha256','confirmedOn','deadlineOn','submittedOn','formReference','outcomeId','state','date'].includes(key)))});
   }
   async call(name, args = {}) {
     need(!this.#closing, 'GRANT_CLOSING', 'The original grant client is closing.');
@@ -515,14 +1050,31 @@ export class MerchantGrantWorkspaces {
     try { return await pending; } finally { this.#pending.delete(pending); }
   }
   close() {
+    this.#closing = true;
     if (!this.#close) {
-      this.#closing = true;
-      this.#close = (async () => {
-        await Promise.allSettled([...this.#pending]); await this.#readers.close();
-        const outcomes = await Promise.allSettled([...this.#clients.values()].map(client => client.close()));
-        if (outcomes.some(result => result.status === 'rejected'))
-          throw failure('GRANT_SHUTDOWN_INCOMPLETE', 'An original owned grant service reported an incomplete shutdown.');
+      const closing = (async () => {
+        await Promise.allSettled([...this.#pending]);
+        // Readers and clients are independent owned resources. Keep their actual
+        // instances and attempt every drain even if another owner reports failure.
+        const owners = [
+          {name:'retained file readers', close:() => this.#readers.close()},
+          ...[...this.#clients].map(([alias, client]) => ({name:alias, close:() => client.close()})),
+        ];
+        const outcomes = await Promise.allSettled(owners.map(owner => Promise.resolve().then(owner.close)));
+        const failed = outcomes.flatMap((result, index) => result.status === 'rejected'
+          ? [{owner:owners[index].name, error:result.reason}] : []);
+        if (failed.length) {
+          const first = failed[0].error;
+          throw Object.assign(failure('GRANT_SHUTDOWN_INCOMPLETE',
+            'An original grant reader or service has not finished shutdown.'), {
+              cause:first,
+              failures:failed.map(item => ({owner:item.owner, code:item.error?.code ?? null,
+                message:String(item.error?.message ?? item.error).slice(0,1024)})),
+            });
+        }
       })();
+      this.#close = closing;
+      closing.catch(() => { if (this.#close === closing) this.#close = null; });
     }
     return this.#close;
   }

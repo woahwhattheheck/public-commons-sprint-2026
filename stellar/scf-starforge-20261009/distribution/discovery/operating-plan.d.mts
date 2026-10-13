@@ -93,3 +93,64 @@ export function operatingFileSummary(file: OperatingFile): OperatingFileSummary;
 export function addOperatingFile(draft: OperatingPlanDraft, stepId: string, file: OperatingFile): OperatingPlanDraft;
 export function removeOperatingFile(draft: OperatingPlanDraft, stepId: string, fileId: string): OperatingPlanDraft;
 export function compareOperatingFiles(previous?: OperatingFile[], returned?: OperatingFile[]): OperatingFileComparison;
+
+export interface OperatingCycleOptions {
+  /** Saved source content; all later original history is retained too. */
+  revision?: number;
+  title: string;
+  period: string;
+  datePolicy?: 'clear' | 'keep' | 'shift';
+  /** Both real YYYY-MM-DD dates are required only for shift. */
+  shiftFrom?: string;
+  shiftTo?: string;
+  referenceFiles?: { stepId: string; fileId: string }[];
+}
+export interface OperatingCyclePreview {
+  source: { id: string; revision: number; historyRevisions: number; createdAt: string; title: string; period: string };
+  datePolicy: 'clear' | 'keep' | 'shift'; shiftDays: number; shiftFrom?: string; shiftTo?: string;
+  content: OperatingPlanContent;
+  steps: { id: string; title: string; owner: string; previousStatus: OperatingStepState;
+    previousDue: string; due: string; originalFiles: OperatingFileSummary[]; referenceFiles: OperatingFileSummary[] }[];
+}
+/** Resets current progress/results and carries only explicitly selected reference files. */
+export function previewOperatingPlanCycle(plan: OperatingPlan, options: OperatingCycleOptions): OperatingCyclePreview;
+/** Independent plan identity, complete unchanged original history and one new planned revision. */
+export function createOperatingPlanCycle(plan: OperatingPlan, options: OperatingCycleOptions & {
+  id: string; savedAt?: string;
+}): OperatingPlan;
+
+
+export const OPERATING_WORK_SCHEMA: 'stellar-forge.operating-work-selection.v1';
+export const OPERATING_WORK_MAX_BYTES: number;
+export interface OperatingWorkOptions {
+  asOf: string; owner?: string; customer?: string; search?: string;
+  status?: 'all' | 'unfinished' | OperatingStepState;
+  due?: 'all' | 'overdue' | 'today' | 'future' | 'undated';
+  assignment?: 'all' | 'assigned' | 'unassigned';
+}
+export interface OperatingWorkRow {
+  planId: string; revision: number; savedAt: string; stepId: string; position: number;
+  title: string; planTitle: string; customer: string; period: string;
+  owner: string; stepOwner: string; planOwner: string; status: OperatingStepState;
+  due: string; dueState: 'overdue' | 'today' | 'future' | 'undated';
+  files: Array<Pick<OperatingFile, 'id' | 'name' | 'bytes' | 'mediaType'>>;
+}
+export interface OperatingWorkProjection {
+  asOf: string; filters: Required<OperatingWorkOptions>;
+  sources: Array<{ id: string; revision: number; savedAt: string; title: string; steps: number }>;
+  rows: OperatingWorkRow[];
+  counts: { plans: number; matchedPlans: number; work: number;
+    due: Record<'overdue' | 'today' | 'future' | 'undated', number>;
+    status: Record<OperatingStepState, number> };
+}
+export interface OperatingWorkSelection {
+  schema: typeof OPERATING_WORK_SCHEMA;
+  options: Required<OperatingWorkOptions>;
+  /** Complete original histories of the selected parent plans. */
+  plans: OperatingPlan[];
+}
+export function projectOperatingWork(plans: OperatingPlan[], options: OperatingWorkOptions): OperatingWorkProjection;
+export function createOperatingWorkSelection(plans: OperatingPlan[], options: OperatingWorkOptions): OperatingWorkSelection;
+export function inspectOperatingWorkSelection(value: unknown): OperatingWorkSelection;
+export function serializeOperatingWorkSelection(value: OperatingWorkSelection): string;
+export function renderOperatingWorkHTML(value: OperatingWorkSelection): string;

@@ -1,0 +1,80 @@
+{
+  "schema": "stellar-forge.installation-workorder-profile.v1",
+  "source": {
+    "mode": "SNAPSHOT",
+    "reference": "The original complete current delivery, optional baseline/reissue, selected EDD profile and complete saved field/correspondence choices. Bind the exact retained filenames, byte counts and SHA-256 values.",
+    "population": "Every physical row, field and native parent reference in each selected input. Retain all duplicates, ambiguous parents, qualifiers, independent method/reporting limits and the complete original archives. A review summary is not the source population.",
+    "meaning": "Keep laboratory sample/test/batch/result keys and their original scope, analyte names/codes, result lexemes and types, units, detect flags, qualifiers, dates, blanks and separately reported limits. Preserve current and baseline decisions independently. A correspondence is an explicit reviewed relationship between original source/profile/review identities; it does not assert one-to-one row alignment.",
+    "changePolicy": "Retain every input edition and saved choice document separately. Review changed source or profile bindings before applying earlier choices. Keep original source rows and immutable prepared result versions available; record the customer’s acceptance, correction and import result only when actually returned."
+  },
+  "receiving": {
+    "application": "The maintained Merchant Workspace Laboratory EDD application, its original laboratoryReview merchant job, Laboratory operator/MCP tools, lab-edd CLI/SDK and complete result-folder receiver. Select the actual installed release and original operating workspace.",
+    "acceptanceRule": "Inspect both complete deliveries and all native rows; save and export the complete reviewed field and correspondence choices; prepare through the original selected operation; download the entire result ZIP; have readLabResult verify original source identities, all derived native members and conversions; receive the whole verified result folder; cold reopen it and inspect the current/baseline native files; run the selected client EDP/import and retain that actual complete result; deliver the original operator handover.",
+    "changeAndWithdraw": "The laboratory/customer owns source-use permission, client profile/EDP rules and final scientific/field decisions. The installation operator owns the selected runtime and private original workspace; the receiving customer owns its import decision. Keep withdrawn or superseded inputs in their retained historical edition and record any restriction on subsequent operation.",
+    "recovery": "Use the original source slots, sealed upload descriptors, job reference, review document and result digest. Read the original operation before retrying an uncertain upload, checkout, worker or download. Stop and drain through the existing worker owner. Resume the same result-folder publication using its complete binding and receipt-last contract; preserve an existing different folder and select a separately reviewed destination.",
+    "maintenance": "Name the laboratory profile owner, reviewer, client EDP/import operator, merchant owner, source-rights holder and receiving engineer. Carry the original included correction/reissue, start conditions, environment responsibility, support scope and complete source/output locations into the original case."
+  },
+  "sourceFiles": [
+    {
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/lab-edd/result.mjs",
+      "blob": "02edd9fe7da98ec70c695dad3c43e0de3c41d9f2"
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/lab-edd/reconciliation.mjs",
+      "blob": "a2f87b593ad9e34d669a73df254e11d2f5e37d95"
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/lab-edd/reconciliation-profile.mjs",
+      "blob": "ff84eed7f51663438bfe14f1d90251c3bbb47ffc"
+    }
+  ],
+  "id": "laboratory-edd-reissue",
+  "title": "Laboratory EDD: complete delivery, reviewed reissue and independent customer receiving",
+  "task": {
+    "name": "Receive and review a complete laboratory EDD and its selected reissue",
+    "purpose": "Give the laboratory and its receiving customer a traceable complete delivery with original sample, test, batch and result identities, explicit field choices, native output files and a result that the recipient can independently reopen.",
+    "request": "Continue the original laboratory Workshare and Installation. Select the agreed client EDD profile and the complete current delivery, plus its one included baseline/reissue when applicable. Inspect all physical source rows and native parent identities. Preserve repeated or ambiguous sample, test and result keys; save each field decision and each cross-edition correspondence explicitly. Prepare the native current and baseline outputs through the original laboratoryReview function or original local operator, retain the original sealed input/job identity, reopen the complete result and receive it into the customer’s original EDP/import and operating workflow.",
+    "completeOutput": "The complete original current and baseline source files; selected profile and source hashes; full review and comparison; saved field-decision and correspondence tables; independently verified native current/baseline archives; immutable result ZIP and complete local result folder with manifest, receipt and entry page; original job/input/output identities; client EDP/import outcome when performed; and the editable operating and correction handover.",
+    "repeatTrigger": "A later agreed laboratory delivery or a newly selected reissue can be another useful task under its actual source and price. Downloading, cold reopening or recovering the same accepted result continues that original task. The included reissue and correction cycle remain part of the original implementation scope.",
+    "pricedUnit": "Keep the implementation fee and milestone triggers in the original Workshare. Where a paid laboratoryReview function is selected, approve the entire selected delivery/reissue job, its sealed input slots, atomic job price and task budget separately. A changed profile or extra source family follows the original scope-change process."
+  },
+  "steps": [
+    {
+      "title": "Select the original Workshare, profile and complete inputs",
+      "result": "Use the retained commercial case/plan and all original phase effort. Bind the client profile, entire current source and optional baseline/reissue, source-use authority, named reviewers and the actual existing customer receiving environment."
+    },
+    {
+      "title": "Install and open the maintained laboratory application",
+      "result": "Use the selected full application/source package and its original dependencies. Open the existing operator workspace, inspect original jobs/inputs and retain actual runtime/source identity. Select local or original paid-job execution using its existing lifecycle."
+    },
+    {
+      "title": "Inspect every physical source row and native relationship",
+      "result": "Read sample, test, batch and result tables in full. Preserve repeated keys, ambiguous parents, qualifiers, values, units and independently reported limits. Keep scientific/profile issues visible for explicit review."
+    },
+    {
+      "title": "Save the complete current and baseline review",
+      "result": "Record every intended field choice in its original document and each correspondence in its source-bound table. Export and reimport the complete choice tables through the original operator. Keep the unchanged original source and independently selected baseline review."
+    },
+    {
+      "title": "Prepare and verify both native output families",
+      "result": "Submit the original five-slot input contract when using laboratoryReview: source, decisions, baseline, baselineDecisions and correspondences. Preserve required/optional slot semantics and the original sealed descriptors. Reopen the returned result with the maintained verifier and compare every expected native member and conversion binding."
+    },
+    {
+      "title": "Receive the whole customer result",
+      "result": "Use the original CLI/SDK result-folder receiver to retain the original result ZIP, all verified members, binding, manifest, receipt and relative-link entry page. Cold reopen the complete folder and give the client its independently addressable current and baseline files."
+    },
+    {
+      "title": "Complete client import and operator handover",
+      "result": "Run the selected client EDP/import where authorized, retain its actual complete result, resolve the original included correction cycle and repeat the useful workflow with the named operator. Preserve the original proposal and pending selections until actual acceptance is received."
+    }
+  ],
+  "inputs": [
+    "Complete original native Workshare receiving packet, original commercial case/plan identity and original per-phase/total effort document",
+    "Complete current EDD and selected baseline/reissue, exact profile, original archives and every physical source row",
+    "Complete current and baseline field-decision documents and the full source-bound correspondence table when selected",
+    "Actual merchant and independent buyer deployments, private runtime/workspace/source release and source-use authority",
+    "Original sealed input descriptors, job/checkout/review/result identities and full download receipts when the paid function is used",
+    "Named laboratory reviewer, client EDP/import operator, receiving engineer and their agreed acceptance/correction responsibilities",
+    "Original complete result ZIP, native outputs, result-folder receipt and actual client import/receiving outcome"
+  ]
+}

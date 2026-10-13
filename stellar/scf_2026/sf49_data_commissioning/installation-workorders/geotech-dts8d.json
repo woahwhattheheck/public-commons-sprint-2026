@@ -1,0 +1,80 @@
+{
+  "schema": "stellar-forge.installation-workorder-profile.v1",
+  "source": {
+    "mode": "SNAPSHOT",
+    "reference": "The selected complete laboratory export family/families, actual customer DTS profile, original legacy or modern workbook bytes and complete saved review/correspondence documents.",
+    "population": "Every original file, sheet, physical row/cell and selected export table in the agreed project. Retain blank/sparse rows, duplicate and ambiguous identities, formula tokens and cached values, errors, native numeric/text types and formats. Preserve original and derived members independently.",
+    "meaning": "Preserve 1900/1904 date epoch, explicit offsets and original date representation; native sample/test/result identity; analyte, result, unit, detect/qualifier and independent limit fields. A chosen formula/error literal is an explicit reviewer decision. A legacy XLS→XLSX reissue changes the container and is named separately; it does not silently replace or relabel the original source.",
+    "changePolicy": "Keep the complete original workbook and each named reissue. Bind every conversion to its exact original filename, profile and source hash. Review changes across independent source families explicitly. Actual proprietary customer format/EDP acceptance is recorded only after the customer’s native importer returns it."
+  },
+  "receiving": {
+    "application": "The maintained Laboratory EDD product and its legacy BIFF8/Python file-mode reader, original laboratoryReview worker, CLI/SDK and verified result-folder receiver, joined to the customer’s existing DTS8D/Enviro Data operating environment.",
+    "acceptanceRule": "Read the full original source with the selected native decoder/profile; review all fields/cells and preserve scientific context; require explicit literal choices where the maintained renderer needs them; prepare separately named derived workbooks with exact conversion metadata; independently reopen the original source and every derived member through the maintained result verifier; cold reopen the whole customer result folder; run and retain the selected customer import and operator handover.",
+    "changeAndWithdraw": "The customer supplies the actual DTS/client import contract, source rights and scientific/profile decisions. The installation operator owns runtime and delivered mapping; the customer controls production database import. Preserve withdrawn/superseded original files and their history without implying that a published profile description is the customer’s installed template.",
+    "recovery": "Preserve the original workbook, exclusive input/output paths, process owner, sealed input and job reference. Use the original process broker’s Stop/drain and same-operation recovery. Retain staged input until the owner confirms retirement. Reopen and verify the complete result before resuming the same customer folder/import; never overwrite a different completed result.",
+    "maintenance": "Assign the source-format owner, workbook reviewer, DTS/Enviro Data operator, runtime owner and independent receiver. Keep the original project/family limits, included correction, start conditions, mapping decisions and actual import configuration in the original workshare."
+  },
+  "sourceFiles": [
+    {
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/lab-edd/result.mjs",
+      "blob": "02edd9fe7da98ec70c695dad3c43e0de3c41d9f2"
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/lab-edd/model.mjs",
+      "blob": "151d3b157d007ce2cd414a99a99a01fc97dc3f10"
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/lab-edd/reconciliation-profile.mjs",
+      "blob": "ff84eed7f51663438bfe14f1d90251c3bbb47ffc"
+    }
+  ],
+  "id": "geotech-dts8d",
+  "title": "Legacy laboratory DTS8D: complete original workbook, explicit reissue and native receiving",
+  "task": {
+    "name": "Prepare a complete reviewed laboratory export for the selected DTS8D/Enviro Data import",
+    "purpose": "Retain the full original laboratory source and produce an explicitly reviewed native delivery that the customer can map and import through its existing environmental data workflow.",
+    "request": "Continue the original Geotech Workshare and Installation for the agreed project and up to the selected two source-export families. Select the actual client format and complete inputs. Where a legacy BIFF8 XLS workbook is used, inspect its original physical cells, formulas/caches, types, formats, row gaps and date epoch through the maintained decoder. Save explicit choices for formula/error literals and cross-profile correspondences. Prepare the separately named XLSX reissue where required, retaining the original XLS unchanged, then receive the full result and use the customer’s actual DTS/Enviro Data import procedure.",
+    "completeOutput": "Complete original laboratory inputs and profile selection; every physical source row/cell and original scientific field; full review and explicit field/correspondence choices; separately named native reissue with exact original-source conversion binding; unchanged original files; complete result ZIP and verified customer result folder; original mapping/crosswalk and actual import outcome; operator handover and included correction record.",
+    "repeatTrigger": "Another agreed delivery or changed source edition may form a later task. Reopening the same workbook/result or recovering an interrupted import remains the original operation. Extra formats, source families, projects or broad data remediation require the original change process.",
+    "pricedUnit": "Keep the original fixed implementation workshare and milestones separate from any selected paid laboratoryReview job. Price the complete selected useful delivery/reissue and its approved task budget; do not count output files, sheets or repeated downloads as additional useful purchases."
+  },
+  "steps": [
+    {
+      "title": "Bind actual source and customer import contract",
+      "result": "Retain the original Workshare, complete source families and actual customer DTS/client profile. Record the selected project, rights, owners and receiving environment. Published DTS documentation alone is not a supplied customer template."
+    },
+    {
+      "title": "Open the maintained complete workbook reader",
+      "result": "Use the original legacy/modern reader and private process broker. Inspect all source members, physical rows/cells, types, date epochs, formulas/caches, formatting and original scientific fields."
+    },
+    {
+      "title": "Review mapping and scientific identity",
+      "result": "Save every selected field correction and source-family correspondence through the original review. Preserve duplicate and ambiguous records, qualifiers, detect flags, units and independent limits; retain original row identities."
+    },
+    {
+      "title": "Make explicit reissue choices",
+      "result": "For formula/error cells requiring literals, retain explicit reviewed values. Keep original XLS bytes unchanged and derive the separately named .xls.xlsx member with its exact sourceFile/profile/conversion identity."
+    },
+    {
+      "title": "Verify complete native result and folder",
+      "result": "Prepare with the original operator/job. Verify the complete required member and conversion sets, reopen originals and derived outputs, then receive the whole result ZIP and its complete relative-link result folder."
+    },
+    {
+      "title": "Run selected native import and correction",
+      "result": "Use the customer’s actual DTS/Enviro Data import procedure, preserve its full outcome and reconcile the agreed correction cycle. Keep any unapplied customer choice or unsupported import as an explicit outstanding result."
+    },
+    {
+      "title": "Hand over the original operating project",
+      "result": "Deliver all source files, mapping/review/correspondence documents, native outputs, result folder and import history. Reopen the complete delivery with the named operator and retain the original maintenance/change responsibilities."
+    }
+  ],
+  "inputs": [
+    "Original complete customer Workshare receiving packet and exact phase/total effort sources",
+    "Actual agreed project, up to its selected two source-export families and every original member",
+    "Customer-supplied DTS/client profile and receiving/import procedure; do not substitute an unreceived installed workbook",
+    "Original legacy XLS or modern source bytes, all sheets/physical rows/cells, date epoch and formula/cache/error context",
+    "Saved field literals, complete cross-profile correspondences and original scientific qualifier/limit/unit decisions",
+    "Actual native runtime/merchant inputs, source authority, job/result identities and complete folder receiver",
+    "Named customer import operator, reviewer, independent receiver and original included correction/change terms"
+  ]
+}

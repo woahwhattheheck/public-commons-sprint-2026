@@ -1,0 +1,33 @@
+{
+  "schema": "gravitee.source-files.v1",
+  "files": [
+    "products/gravitee-merchant/NOTICE.md",
+    "products/gravitee-merchant/OPERATING.md",
+    "products/gravitee-merchant/README.md",
+    "products/gravitee-merchant/RECEIVING.md",
+    "products/gravitee-merchant/actions.mjs",
+    "products/gravitee-merchant/application-provider.mjs",
+    "products/gravitee-merchant/browser-assets.json",
+    "products/gravitee-merchant/cli.mjs",
+    "products/gravitee-merchant/client.d.ts",
+    "products/gravitee-merchant/client.mjs",
+    "products/gravitee-merchant/contract.mjs",
+    "products/gravitee-merchant/contracts/apim-4.12.21.json",
+    "products/gravitee-merchant/delivery.mjs",
+    "products/gravitee-merchant/native-receiving.mjs",
+    "products/gravitee-merchant/native.mjs",
+    "products/gravitee-merchant/package.json",
+    "products/gravitee-merchant/server.mjs",
+    "products/gravitee-merchant/source-files.json",
+    "products/gravitee-merchant/source.mjs",
+    "products/gravitee-merchant/store.mjs",
+    "products/gravitee-merchant/web/browser.mjs",
+    "products/gravitee-merchant/web/index.html",
+    "products/gravitee-merchant/web/style.css",
+    "products/gravitee-merchant/workspace.mjs",
+    "stellar-forge/mcp-merchant-operator/catalog/gravitee-workspace.mjs",
+    "stellar-forge/mcp-merchant-operator/gravitee-workspace.mjs",
+    "stellar-forge/mcp-merchant-operator/providers/gravitee-workspaces.mjs",
+    "stellar/scf-starforge-20261009/distribution/runtime-workspace/storage.mjs"
+  ]
+}

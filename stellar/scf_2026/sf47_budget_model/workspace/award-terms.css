@@ -1,0 +1,33 @@
+/* Industrial operating forms; keyboard and small-screen layouts use the same source. */
+.award-terms-desk{color:#202020;background:#fff;font:14px/1.5 system-ui,sans-serif;min-width:0}
+.award-terms-desk header{border-bottom:1px solid #999;margin-bottom:16px}
+.award-terms-desk h2,.award-terms-desk h3,.award-terms-desk h4{line-height:1.25;margin:20px 0 10px}
+.award-terms-desk p{max-width:100ch;overflow-wrap:anywhere}
+.terms-actions,.terms-tabs{display:flex;flex-wrap:wrap;gap:8px;margin:14px 0}
+.terms-tabs{border-block:1px solid #aaa;padding:10px 0}
+.award-terms-desk button{border:1px solid #6c6c6c;border-radius:2px;color:#202020;background:#f2f2f2;padding:8px 12px;font:inherit;cursor:pointer;min-height:38px}
+.award-terms-desk button[aria-current=page]{background:#202020;color:white}
+.award-terms-desk button:disabled{cursor:default;color:#6b6b6b;background:#f3f3f3;border-color:#ccc}
+.award-terms-desk button:focus-visible,.award-terms-desk input:focus-visible,.award-terms-desk select:focus-visible,.award-terms-desk textarea:focus-visible,.award-terms-desk summary:focus-visible{outline:2px solid #111;outline-offset:3px}
+.terms-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px 18px;margin:12px 0}
+.terms-grid label{display:flex;flex-direction:column;gap:5px;font-weight:600;min-width:0}
+.terms-grid input,.terms-grid textarea,.terms-grid select{box-sizing:border-box;width:100%;min-width:0;background:white;color:#222;border:1px solid #888;border-radius:2px;padding:8px;font:inherit;font-weight:400;min-height:38px}
+.terms-grid textarea{resize:vertical}
+.terms-grid small{font-weight:400;color:#555}
+.terms-wide{grid-column:1/-1}
+.terms-table{overflow:auto;max-width:100%;margin:12px 0}
+.terms-table table{border-collapse:collapse;min-width:100%;font-size:13px}
+.terms-table th,.terms-table td{border:1px solid #b2b2b2;padding:8px;text-align:left;vertical-align:top;overflow-wrap:anywhere;min-width:72px}
+.terms-table th{background:#ededed;font-weight:600}
+.award-terms-desk fieldset{min-width:0;border:1px solid #aaa;margin:16px 0;padding:12px}
+.award-terms-desk legend{font-weight:600;padding:0 6px;overflow-wrap:anywhere}
+.award-terms-desk details{border:1px solid #bbb;margin:12px 0;padding:10px;min-width:0}
+.award-terms-desk summary{cursor:pointer;font-weight:600;overflow-wrap:anywhere}
+.award-terms-desk pre{white-space:pre-wrap;overflow-wrap:anywhere;font:12px/1.5 ui-monospace,monospace;max-height:520px;overflow:auto}
+.terms-notice{border:1px solid #777;border-left-width:4px;background:#f3f3f3;padding:12px;margin:14px 0}
+.terms-check{display:flex;align-items:flex-start;gap:9px;margin:16px 0}
+.terms-check input{margin-top:5px}
+[data-terms-error]:not(:empty){border-left:4px solid #333;padding:10px;background:#eee;font-weight:600}
+.award-terms-desk [hidden]{display:none}
+@media(max-width:720px){.terms-grid{grid-template-columns:1fr}.terms-wide{grid-column:auto}.terms-actions button,.terms-tabs button{flex:1 1 160px}.award-terms-desk fieldset{padding:9px}.terms-table{max-width:calc(100vw - 44px)}}
+@media print{.terms-tabs,.terms-actions{display:none}.terms-table{overflow:visible}.award-terms-desk pre{max-height:none}.award-terms-desk fieldset, .terms-table tr{break-inside:avoid}}

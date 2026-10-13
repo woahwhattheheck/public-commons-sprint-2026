@@ -1,0 +1,89 @@
+{
+  "schema": "stellar-forge.installation-workorder-profile.v1",
+  "id": "amberdata-spot-research",
+  "title": "Amberdata complete spot research",
+  "task": {
+    "name": "Complete spot coverage and OHLCV research for a closed interval",
+    "purpose": "Give one research consumer a repeatable opening and closing market-data review with the full source population, explicit gaps, exchange-specific units and a result its analyst can reopen.",
+    "request": "Use the original spot_instruments and spot_ohlcv reads for one approved exchange/instrument and explicit start-inclusive/end-exclusive UTC interval, then the original ohlcv_summary Python function. Receive the complete ordered provider page chain before accepting the research result. For the proposed twice-business-day calendar use hourly candles; the first daily review closes the interval since the previous business-day close and the second closes the current working interval.",
+    "completeOutput": "Original instrument/availability response, all selected OHLCV pages, explicit original bounds and units, observed row coverage and gaps, first open/last close/high/low/volume as exact decimal strings, complete saved research output, and original Node/Python buyer records and customer files.",
+    "repeatTrigger": "A new closed source interval ending at the customer's next opening or closing review. Weekend source observations travel in the next opening interval. Reopen, retries and repeat calculation on the same acquired source preserve the original customer task.",
+    "pricedUnit": "The customer's complete selected interval review. The original native routes remain individually priced: actual instrument reads, all OHLCV pages and the single research request have separate original intents."
+  },
+  "source": {
+    "mode": "LIVE",
+    "reference": "https://api.amberdata.com/markets/spot/exchanges/information and https://api.amberdata.com/markets/spot/ohlcv/{instrument}, under the selected product.json and approved provider API version.",
+    "population": "One licensed exchange/instrument and explicit closed UTC interval. Retain every ordered page and original provider body; the proposed hourly interval includes weekend observations in the next business opening review.",
+    "meaning": "Preserve source instrument/exchange, API version, start-inclusive/end-exclusive bounds and minutes/hours/days interval. Keep base/quote/volume units and daily candle boundary from the selected exchange; contract volume remains contracts. Missing candles remain gaps and exact Decimal results remain strings.",
+    "authority": "Amberdata or an expressly licensed customer controls the existing API account, permitted use, consumer/audience and retention. The provider credential remains in the selected host's AMBERDATA_API_KEY secret reference.",
+    "changePolicy": "The saved product fixes exchange, instrument, window, units and response shape. Every later window is an explicit reviewed product/source revision before publication; preserve prior releases and receiving. Review source/API-version or entitlement changes through the existing operator."
+  },
+  "receiving": {
+    "application": "Original Python merchant workspace and Amberdata customer.mjs/customer.py through SF88, using the selected product.json and generated seller client.",
+    "host": "",
+    "operator": "",
+    "acceptanceRule": "The named analyst opens the entire source window and research output, verifies full ordered page completion and source coverage, explains missing intervals and native units, reopens both buyer clients, and performs the existing release recovery and rollback.",
+    "changeAndWithdraw": "Save the next explicit product window and source revision, review and activate it through the original release controls, then demonstrate original-release rollback and the agreed source/terms withdrawal.",
+    "recovery": "Receive and save native response bytes before interpretation; reopen the same intent/result after interruption. Repair interpretation against retained bytes, preserve both source releases, and restore the complete exported workspace on the receiving host.",
+    "maintenance": "Preserve the review rounds, handoff, correction window and continuing-operation responsibilities in the complete original selected Workshare. Record the actual accepted trigger and source account, host and maintenance owners."
+  },
+  "steps": [
+    {
+      "title": "Select entitlement and full interval",
+      "result": "Agree audience, API version/response shape, exchange/instrument, unit meaning, interval, selected native prices and receiving owner."
+    },
+    {
+      "title": "Bind and receive both original reads",
+      "result": "Use the existing fixed host/path bindings and secret reference, preserve original responses and finish every selected continuation."
+    },
+    {
+      "title": "Complete the source-native calculation",
+      "result": "Run the original trusted Python summary with exact source bodies and return full coverage, gaps and Decimal values."
+    },
+    {
+      "title": "Finish native customer delivery",
+      "result": "Operate all three selected native testnet operations and reopen their complete results in the original Node and Python customers."
+    },
+    {
+      "title": "Operate later windows and recovery",
+      "result": "Save the next explicit product window and revision, review/activate it, recover an interrupted intent, and perform restart/rollback."
+    },
+    {
+      "title": "Receive and accept the whole installation",
+      "result": "Export and reopen original source, product, workspace, release history and buyer examples; complete the original selected review rounds and operator handoff."
+    }
+  ],
+  "inputs": [
+    "Complete original Amberdata commissioning source and matching receiving packet.",
+    "Approved provider version/shape, exchange/instrument, explicit interval, units and account/source rights.",
+    "Actual host/origin and named engineer; existing AMBERDATA_API_KEY reference.",
+    "Original merchant/buyer deployment IDs, facilitator and native payment tuple.",
+    "Explicit whole-task maximum covering every original priced read, page and research request."
+  ],
+  "sourceFiles": [
+    {
+      "path": "stellar/scf_2026/sf49_data_commissioning/installation-workorders/prepare-core.mjs",
+      "blob": "e23a23ad1a68fc826ca6282a8582434b0ce3ec92"
+    },
+    {
+      "path": "stellar/scf_2026/sf47_budget_model/workspace/INSTALLATIONS.md",
+      "blob": "0ef16af94159e5a8dd8752f1630d9d046352310f"
+    },
+    {
+      "path": "products/grant-operations/OPERATING.md",
+      "blob": "a7215b05079ed36f5f9298ab712f9666b4e94848"
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/examples/amberdata-native-research/README.md",
+      "blob": "5a3f08f5b60d4a8e461239313f240f4fd1be39ad"
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/examples/amberdata-native-research/plan.mjs",
+      "blob": "8a6abcc952b8f0ee0c17d4cc8d970a65eb9bf27b"
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/examples/amberdata-native-research/contract.py",
+      "blob": "e5a17aac3cb849cd470f8ee24eb611a3d874bc44"
+    }
+  ]
+}

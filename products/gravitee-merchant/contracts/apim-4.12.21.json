@@ -1,0 +1,499 @@
+{
+  "schema": "gravitee.management-contract.v1",
+  "release": "4.12.21",
+  "releaseCommit": "d30e08232f6d7ac19165bf19224c45fefd286930",
+  "sourceBlob": "524e5424f3c07412b2dd4cbe65aef34de01012af",
+  "source": "https://github.com/gravitee-io/gravitee-api-management/blob/4.12.21/gravitee-apim-rest-api/gravitee-apim-rest-api-management-v2/gravitee-apim-rest-api-management-v2-rest/src/main/resources/openapi/openapi-apis.yaml",
+  "basePath": "/management/v2",
+  "organizationPath": "/organizations/{orgId}",
+  "operations": {
+    "listApis": {
+      "method": "GET",
+      "path": "/environments/{envId}/apis",
+      "schemaRef": null,
+      "parameterRefs": [
+        "pageParam",
+        "perPageParam",
+        "apisSearchExpandsParam"
+      ],
+      "queryParameters": [
+        "page",
+        "perPage",
+        "expands"
+      ],
+      "requestBodyRequired": false,
+      "summary": "List APIs",
+      "successStatuses": [
+        200
+      ]
+    },
+    "createApi": {
+      "method": "POST",
+      "path": "/environments/{envId}/apis",
+      "schemaRef": "#/components/schemas/CreateApiV4",
+      "parameterRefs": [],
+      "queryParameters": [],
+      "requestBodyRequired": true,
+      "summary": "Create an API",
+      "successStatuses": [
+        201
+      ]
+    },
+    "createApiFromSwagger": {
+      "method": "POST",
+      "path": "/environments/{envId}/apis/_import/swagger",
+      "schemaRef": "#/components/schemas/ImportSwaggerDescriptor",
+      "parameterRefs": [],
+      "queryParameters": [],
+      "requestBodyRequired": true,
+      "summary": "Import API definition",
+      "successStatuses": [
+        201
+      ]
+    },
+    "createApiWithImportDefinition": {
+      "method": "POST",
+      "path": "/environments/{envId}/apis/_import/definition",
+      "schemaRef": "#/components/schemas/ExportApiV4",
+      "parameterRefs": [],
+      "queryParameters": [],
+      "requestBodyRequired": true,
+      "summary": "Import API definition",
+      "successStatuses": [
+        201
+      ]
+    },
+    "verifyPaths": {
+      "method": "POST",
+      "path": "/environments/{envId}/apis/_verify/paths",
+      "schemaRef": "#/components/schemas/VerifyApiPaths",
+      "parameterRefs": [
+        "envIdParam"
+      ],
+      "queryParameters": [],
+      "requestBodyRequired": true,
+      "summary": "Verify HTTP API paths",
+      "successStatuses": [
+        200
+      ]
+    },
+    "verifyHosts": {
+      "method": "POST",
+      "path": "/environments/{envId}/apis/_verify/hosts",
+      "schemaRef": "#/components/schemas/VerifyApiHosts",
+      "parameterRefs": [
+        "envIdParam"
+      ],
+      "queryParameters": [],
+      "requestBodyRequired": true,
+      "summary": "Verify TCP and Kafka API hosts",
+      "successStatuses": [
+        200
+      ]
+    },
+    "getApi": {
+      "method": "GET",
+      "path": "/environments/{envId}/apis/{apiId}",
+      "schemaRef": null,
+      "parameterRefs": [],
+      "queryParameters": [],
+      "requestBodyRequired": false,
+      "summary": "Get a specific API",
+      "successStatuses": [
+        200
+      ]
+    },
+    "updateApi": {
+      "method": "PUT",
+      "path": "/environments/{envId}/apis/{apiId}",
+      "schemaRef": "#/components/schemas/UpdateApi",
+      "parameterRefs": [],
+      "queryParameters": [],
+      "requestBodyRequired": true,
+      "summary": "Update an API",
+      "successStatuses": [
+        200
+      ],
+      "supportsIfMatch": true
+    },
+    "patchApi": {
+      "method": "PATCH",
+      "path": "/environments/{envId}/apis/{apiId}",
+      "schemaRef": "#/components/schemas/ApiMergePatch",
+      "parameterRefs": [],
+      "queryParameters": [
+        "dryRun"
+      ],
+      "requestBodyRequired": true,
+      "summary": "Patch a V4 HTTP Proxy API",
+      "successStatuses": [
+        200
+      ]
+    },
+    "createApiDeployment": {
+      "method": "POST",
+      "path": "/environments/{envId}/apis/{apiId}/deployments",
+      "schemaRef": "#/components/schemas/ApiDeployment",
+      "parameterRefs": [],
+      "queryParameters": [],
+      "requestBodyRequired": false,
+      "summary": "Request a deployment to gateway instances",
+      "successStatuses": [
+        202
+      ]
+    },
+    "getCurrentApiDeployment": {
+      "method": "GET",
+      "path": "/environments/{envId}/apis/{apiId}/deployments/current",
+      "schemaRef": null,
+      "parameterRefs": [],
+      "queryParameters": [],
+      "requestBodyRequired": false,
+      "summary": "Get the current deployment of an API",
+      "successStatuses": [
+        200
+      ]
+    },
+    "verifyApiDeployment": {
+      "method": "GET",
+      "path": "/environments/{envId}/apis/{apiId}/deployments/_verify",
+      "schemaRef": null,
+      "parameterRefs": [],
+      "queryParameters": [],
+      "requestBodyRequired": false,
+      "summary": "Check if a deployment is possible",
+      "successStatuses": [
+        200
+      ],
+      "specificationMethod": "POST",
+      "implementationSource": "https://github.com/gravitee-io/gravitee-api-management/blob/4.12.21/gravitee-apim-rest-api/gravitee-apim-rest-api-management-v2/gravitee-apim-rest-api-management-v2-rest/src/main/java/io/gravitee/rest/api/management/v2/rest/resource/api/ApiResource.java",
+      "implementationBlob": "62012eab07baf3dad23053a8ebe809514dae0a16"
+    },
+    "exportApiDefinition": {
+      "method": "GET",
+      "path": "/environments/{envId}/apis/{apiId}/_export/definition",
+      "schemaRef": null,
+      "parameterRefs": [],
+      "queryParameters": [
+        "excludeAdditionalData"
+      ],
+      "requestBodyRequired": false,
+      "summary": "Export an API",
+      "successStatuses": [
+        200
+      ]
+    },
+    "updateApiWithDefinition": {
+      "method": "PUT",
+      "path": "/environments/{envId}/apis/{apiId}/_import/definition",
+      "schemaRef": "#/components/schemas/ExportApiV4",
+      "parameterRefs": [],
+      "queryParameters": [],
+      "requestBodyRequired": true,
+      "summary": "Update API from definition",
+      "successStatuses": [
+        200
+      ]
+    },
+    "startApi": {
+      "method": "POST",
+      "path": "/environments/{envId}/apis/{apiId}/_start",
+      "schemaRef": null,
+      "parameterRefs": [],
+      "queryParameters": [],
+      "requestBodyRequired": false,
+      "summary": "Start an API",
+      "successStatuses": [
+        204
+      ],
+      "supportsIfMatch": true
+    },
+    "stopApi": {
+      "method": "POST",
+      "path": "/environments/{envId}/apis/{apiId}/_stop",
+      "schemaRef": null,
+      "parameterRefs": [],
+      "queryParameters": [],
+      "requestBodyRequired": false,
+      "summary": "Stop an API",
+      "successStatuses": [
+        204
+      ],
+      "supportsIfMatch": true
+    },
+    "rollbackApi": {
+      "method": "POST",
+      "path": "/environments/{envId}/apis/{apiId}/_rollback",
+      "schemaRef": "#/components/schemas/ApiRollback",
+      "parameterRefs": [],
+      "queryParameters": [],
+      "requestBodyRequired": true,
+      "summary": "Rollback an API",
+      "successStatuses": [
+        204
+      ]
+    },
+    "reviewsAsk": {
+      "method": "POST",
+      "path": "/environments/{envId}/apis/{apiId}/reviews/_ask",
+      "schemaRef": "#/components/schemas/ApiReview",
+      "parameterRefs": [],
+      "queryParameters": [],
+      "requestBodyRequired": true,
+      "summary": "Ask for a review",
+      "successStatuses": [
+        204
+      ],
+      "supportsIfMatch": true
+    },
+    "reviewsAccept": {
+      "method": "POST",
+      "path": "/environments/{envId}/apis/{apiId}/reviews/_accept",
+      "schemaRef": "#/components/schemas/ApiReview",
+      "parameterRefs": [],
+      "queryParameters": [],
+      "requestBodyRequired": true,
+      "summary": "Accept a review",
+      "successStatuses": [
+        204
+      ],
+      "supportsIfMatch": true
+    },
+    "reviewsReject": {
+      "method": "POST",
+      "path": "/environments/{envId}/apis/{apiId}/reviews/_reject",
+      "schemaRef": "#/components/schemas/ApiReview",
+      "parameterRefs": [],
+      "queryParameters": [],
+      "requestBodyRequired": true,
+      "summary": "Reject a review",
+      "successStatuses": [
+        204
+      ],
+      "supportsIfMatch": true
+    },
+    "listApiPlans": {
+      "method": "GET",
+      "path": "/environments/{envId}/apis/{apiId}/plans",
+      "schemaRef": null,
+      "parameterRefs": [
+        "pageParam",
+        "perPageParam"
+      ],
+      "queryParameters": [
+        "statuses",
+        "securities",
+        "mode",
+        "subscribableBy",
+        "fields",
+        "page",
+        "perPage"
+      ],
+      "requestBodyRequired": false,
+      "summary": "List the API's plans",
+      "successStatuses": [
+        200
+      ]
+    },
+    "createApiPlan": {
+      "method": "POST",
+      "path": "/environments/{envId}/apis/{apiId}/plans",
+      "schemaRef": "#/components/schemas/CreatePlan",
+      "parameterRefs": [],
+      "queryParameters": [],
+      "requestBodyRequired": true,
+      "summary": "Create an API's plan",
+      "successStatuses": [
+        201
+      ]
+    },
+    "getApiPlan": {
+      "method": "GET",
+      "path": "/environments/{envId}/apis/{apiId}/plans/{planId}",
+      "schemaRef": null,
+      "parameterRefs": [],
+      "queryParameters": [],
+      "requestBodyRequired": false,
+      "summary": "Get one API's plan",
+      "successStatuses": [
+        200
+      ]
+    },
+    "updateApiPlan": {
+      "method": "PUT",
+      "path": "/environments/{envId}/apis/{apiId}/plans/{planId}",
+      "schemaRef": "#/components/schemas/UpdatePlan",
+      "parameterRefs": [],
+      "queryParameters": [],
+      "requestBodyRequired": true,
+      "summary": "Update one API's plan",
+      "successStatuses": [
+        200
+      ]
+    },
+    "closeApiPlan": {
+      "method": "POST",
+      "path": "/environments/{envId}/apis/{apiId}/plans/{planId}/_close",
+      "schemaRef": null,
+      "parameterRefs": [],
+      "queryParameters": [],
+      "requestBodyRequired": false,
+      "summary": "Close an API's plan",
+      "successStatuses": [
+        200
+      ]
+    },
+    "deprecateApiPlan": {
+      "method": "POST",
+      "path": "/environments/{envId}/apis/{apiId}/plans/{planId}/_deprecate",
+      "schemaRef": null,
+      "parameterRefs": [],
+      "queryParameters": [],
+      "requestBodyRequired": false,
+      "summary": "Deprecate an API's plan",
+      "successStatuses": [
+        200
+      ]
+    },
+    "publishApiPlan": {
+      "method": "POST",
+      "path": "/environments/{envId}/apis/{apiId}/plans/{planId}/_publish",
+      "schemaRef": null,
+      "parameterRefs": [],
+      "queryParameters": [],
+      "requestBodyRequired": false,
+      "summary": "Publish an API's plan",
+      "successStatuses": [
+        200
+      ]
+    },
+    "getApiEvents": {
+      "method": "GET",
+      "path": "/environments/{envId}/apis/{apiId}/events",
+      "schemaRef": null,
+      "parameterRefs": [
+        "pageParam",
+        "perPageParam",
+        "from",
+        "to",
+        "eventTypes"
+      ],
+      "queryParameters": [
+        "page",
+        "perPage",
+        "from",
+        "to",
+        "types"
+      ],
+      "requestBodyRequired": false,
+      "summary": "Get API Events",
+      "successStatuses": [
+        200
+      ]
+    },
+    "getApiEventById": {
+      "method": "GET",
+      "path": "/environments/{envId}/apis/{apiId}/events/{eventId}",
+      "schemaRef": null,
+      "parameterRefs": [],
+      "queryParameters": [],
+      "requestBodyRequired": false,
+      "summary": "Get single API Event by it's ID",
+      "successStatuses": [
+        200
+      ]
+    },
+    "getApiPages": {
+      "method": "GET",
+      "path": "/environments/{envId}/apis/{apiId}/pages",
+      "schemaRef": null,
+      "parameterRefs": [
+        "parentId"
+      ],
+      "queryParameters": [
+        "parentId"
+      ],
+      "requestBodyRequired": false,
+      "summary": "Get API documentation pages",
+      "successStatuses": [
+        200
+      ]
+    },
+    "createDocumentationPage": {
+      "method": "POST",
+      "path": "/environments/{envId}/apis/{apiId}/pages",
+      "schemaRef": "#/components/schemas/CreateDocumentation",
+      "parameterRefs": [],
+      "queryParameters": [],
+      "requestBodyRequired": true,
+      "summary": "Create API documentation page",
+      "successStatuses": [
+        201
+      ]
+    },
+    "updateDocumentationPage": {
+      "method": "PUT",
+      "path": "/environments/{envId}/apis/{apiId}/pages/{pageId}",
+      "schemaRef": "#/components/schemas/UpdateDocumentation",
+      "parameterRefs": [],
+      "queryParameters": [],
+      "requestBodyRequired": true,
+      "summary": "Update API documentation page",
+      "successStatuses": [
+        200
+      ]
+    },
+    "publishDocumentationPage": {
+      "method": "POST",
+      "path": "/environments/{envId}/apis/{apiId}/pages/{pageId}/_publish",
+      "schemaRef": null,
+      "parameterRefs": [],
+      "queryParameters": [],
+      "requestBodyRequired": false,
+      "summary": "Publish API Documentation Page",
+      "successStatuses": [
+        200
+      ]
+    },
+    "getApiMetadata": {
+      "method": "GET",
+      "path": "/environments/{envId}/apis/{apiId}/metadata",
+      "successStatuses": [
+        200
+      ],
+      "schemaRef": null,
+      "parameterRefs": [
+        "pageParam",
+        "perPageParam",
+        "apiMetadataSourceParam",
+        "apiMetadataSortByParam"
+      ],
+      "queryParameters": [
+        "page",
+        "perPage",
+        "source",
+        "sortBy"
+      ],
+      "requestBodyRequired": false,
+      "summary": "Get metadata pertaining to API"
+    },
+    "listApiMembers": {
+      "method": "GET",
+      "path": "/environments/{envId}/apis/{apiId}/members",
+      "successStatuses": [
+        200
+      ],
+      "schemaRef": null,
+      "parameterRefs": [
+        "pageParam",
+        "perPageParam"
+      ],
+      "queryParameters": [
+        "page",
+        "perPage"
+      ],
+      "requestBodyRequired": false,
+      "summary": "Get the API's members"
+    }
+  }
+}

@@ -72,22 +72,42 @@ def receipt(context, receipt_id, *, active=False, as_of=None):
     return row
 
 
+def plan_review_required(context, saved):
+    if not saved:
+        return False
+    basis = saved.get("planContentSha256")
+    return (basis != context["plan"]["contentSha256"] if basis is not None
+            else bool(context["program"].get("lastPlanAmendmentVersion")))
+
+
 def seed(context, tranche):
     tranche = domain.integer(tranche, "Completion tranche", 1, 3)
     saved = selected_plan(context, tranche)
-    if saved:
+    review_required = plan_review_required(context, saved)
+    if saved and not review_required:
         return {"tranche": tranche, "savedId": saved["id"], "inputs": deepcopy(saved["inputs"]),
                 "packages": package_rows(context, tranche), "rule": deepcopy(RULE)}
     anchor = context["program"].get("calendarStart") or context["plan"]["planning"].get("calendarStart")
+    retained = {row["costId"]: row for row in saved["inputs"]["items"]} if saved else {}
     items = []
     for cost in native_costs(context, tranche):
-        items.append({"costId": cost["id"], "ownerIds": [],
-                      "startDate": plus_days(anchor, cost["start_day"]) if anchor else None,
-                      "endDate": plus_days(anchor, cost["end_day"]) if anchor else None,
-                      "state": "PLANNED", "completedOn": None, "workIds": [], "deploymentIds": [],
-                      "sourceIds": [], "note": "", "completionNote": ""})
-    return {"tranche": tranche, "savedId": None, "inputs": {"tranche": tranche, "items": items, "note": ""},
-            "packages": package_rows(context, tranche), "rule": deepcopy(RULE)}
+        items.append(deepcopy(retained[cost["id"]]) if cost["id"] in retained else {
+            "costId": cost["id"], "ownerIds": [],
+            "startDate": plus_days(anchor, cost["start_day"]) if anchor else None,
+            "endDate": plus_days(anchor, cost["end_day"]) if anchor else None,
+            "state": "PLANNED", "completedOn": None, "workIds": [], "deploymentIds": [],
+            "sourceIds": [], "note": "", "completionNote": ""})
+    result = {"tranche": tranche, "savedId": saved["id"] if saved else None,
+              "inputs": {"tranche": tranche, "items": items, "note": saved["inputs"]["note"] if saved else ""},
+              "packages": package_rows(context, tranche), "rule": deepcopy(RULE)}
+    if saved and "installationSelections" in saved["inputs"]:
+        current_costs = {item["costId"] for item in items}
+        result["inputs"]["installationSelections"] = [deepcopy(item) for item in saved["inputs"]["installationSelections"]
+                                                      if item["costId"] in current_costs]
+    if review_required:
+        result.update({"reviewRequired": True, "previousInputs": deepcopy(saved["inputs"]),
+                       "planContentSha256": context["plan"]["contentSha256"]})
+    return result
 
 
 def package_rows(context, tranche):
@@ -106,11 +126,11 @@ def package_rows(context, tranche):
 
 
 def normalize_inputs(context, value, *, check_bindings=True):
-    value = object_value(value, ("tranche", "items", "note"), "completion plan")
+    value = object_value(value, ("tranche", "items", "note", "installationSelections"), "completion plan")
     tranche = domain.integer(value.get("tranche"), "Completion tranche", 1, 3)
     items = value.get("items")
     costs = {row["id"]: row for row in native_costs(context, tranche)}
-    if not isinstance(items, list) or not 1 <= len(items) <= MAX_ITEMS or len(items) != len(costs):
+    if not isinstance(items, list) or len(items) > MAX_ITEMS or len(items) != len(costs):
         domain.fail("Keep one deliverable row for every original work package in this tranche.", "INVALID_COMPLETION")
     available = maps(context)
     prepared, seen = [], set()
@@ -148,7 +168,11 @@ def normalize_inputs(context, value, *, check_bindings=True):
                          "sourceIds": domain.reference_list(raw.get("sourceIds", []), context["sources"], "Deliverable sources"),
                          "note": text(raw.get("note", ""), "Assignment note", 12000), "completionNote": note})
     prepared.sort(key=lambda row: list(costs).index(row["costId"]))
-    return {"tranche": tranche, "items": prepared, "note": text(value.get("note", ""), "Completion plan note", 12000)}
+    result = {"tranche": tranche, "items": prepared, "note": text(value.get("note", ""), "Completion plan note", 12000)}
+    if "installationSelections" in value:
+        from operations_completion_installations import selections
+        result["installationSelections"] = selections(context, value["installationSelections"], tranche)
+    return result
 
 
 def install(db):
@@ -199,18 +223,25 @@ def normalize_extension(context, value, tranche, *, restoring=False):
 
 
 def validate_plan(context, row, maximum_version):
-    object_value(row, ("schema", "id", "tranche", "version", "createdAt", "updatedAt", "recordedBy", "inputs", "extensions", "sha256"), "retained completion plan")
+    object_value(row, ("schema", "id", "tranche", "version", "createdAt", "updatedAt", "recordedBy", "inputs", "extensions", "sha256", "planContentSha256", "installationEvidence"), "retained completion plan")
     if row.get("schema") != SCHEMA or not re.fullmatch(r"completion-[a-f0-9]{32}", str(row.get("id", ""))):
         domain.fail("The retained completion plan identity is invalid.", "INVALID_COMPLETION")
     domain.integer(row.get("version"), "Completion save version", 2, maximum_version)
     domain.timestamp(row.get("createdAt"), "Completion plan creation")
     domain.timestamp(row.get("updatedAt"), "Completion plan update")
     text(row.get("recordedBy"), "Original plan operator", 300, True)
+    if "planContentSha256" in row and row["planContentSha256"] != context["plan"]["contentSha256"]:
+        domain.fail("The saved deliverable assignments differ from their original plan revision.", "INVALID_COMPLETION")
     # Preserve the original saved assignment when a later native work or deployment correction
     # changes its live association. The original event binds this row; preview reviews current links.
     normalized = normalize_inputs(context, row.get("inputs"), check_bindings=False)
     if normalized != row["inputs"] or normalized["tranche"] != row["tranche"]:
         domain.fail("The retained completion plan differs from its original selection.", "INVALID_COMPLETION")
+    if "installationSelections" in row["inputs"]:
+        from operations_completion_installations import validate_evidence
+        validate_evidence(context, row["inputs"], row.get("installationEvidence"))
+    elif "installationEvidence" in row:
+        domain.fail("The Installation evidence has no original assignment selection.", "INVALID_COMPLETION")
     extensions = row.get("extensions")
     if not isinstance(extensions, list) or len(extensions) > MAX_EXTENSIONS:
         domain.fail("The retained confirmed-extension collection is invalid.", "INVALID_COMPLETION")
@@ -302,8 +333,29 @@ def dashboard(context, as_of=None):
     }
 
 
-def preview(context, data, cohort_reviews=None, cohort_history=None, implementation_reviews=None):
-    data = object_value(data, ("receiptId", "asOfDate", "summary", "cohortReviewIds", "implementationReviewIds"), "completion preview")
+def business_snapshot(context, *, legacy=False, implementation_evidence=False):
+    """Use one complete source for preview and preparation.
+
+    Earlier previews selected installation references only with implementation
+    evidence and omitted work-intake references. Reproduce that exact projection
+    only when validating a frozen preparation created by that earlier reader.
+    """
+    business = {
+        "program": {key: context["program"][key] for key in ("id", "name", "mode", "calendarStart")},
+        "plan": deepcopy(context["plan"]), "records": deepcopy(context["records"]),
+        "sources": sorted(deepcopy(list(context["sources"].values())), key=lambda row: row["id"]),
+    }
+    if context.get("completionPlans"):
+        business["completionPlans"] = deepcopy(context["completionPlans"])
+    if context.get("installationRefs") and (not legacy or implementation_evidence):
+        business["installationRefs"] = deepcopy(context["installationRefs"])
+    if not legacy and context.get("workIntakeRefs"):
+        business["workIntakeRefs"] = deepcopy(context["workIntakeRefs"])
+    return business
+
+
+def preview(context, data, cohort_reviews=None, cohort_history=None, implementation_reviews=None, *, legacy_source=False, correction_review=None):
+    data = object_value(data, ("receiptId", "asOfDate", "summary", "cohortReviewIds", "implementationReviewIds", "correctionReviewId"), "completion preview")
     as_of = day(data.get("asOfDate") or today(), "Completion calendar date")
     original = receipt(context, data.get("receiptId"), active=True, as_of=as_of)
     clock = _clock(context, original, as_of)
@@ -314,6 +366,12 @@ def preview(context, data, cohort_reviews=None, cohort_history=None, implementat
         issues.append({"code": "FUTURE_PREPARATION", "costId": None, "message": "Prepare from actual received work and the current calendar date."})
     if not saved:
         issues.append({"code": "PLAN_REQUIRED", "costId": None, "message": "Save the original tranche deliverable assignments before preparation."})
+    if saved and plan_review_required(context, saved):
+        issues.append({"code": "PLAN_AMENDMENT_REVIEW", "costId": None,
+                       "message": "Review and save this tranche's assignments against the amended plan before preparing its completion."})
+    if saved and {item["costId"] for item in saved["inputs"]["items"]} != {item["id"] for item in native_costs(context, clock["tranche"])}:
+        issues.append({"code": "PLAN_PACKAGES_CHANGED", "costId": None,
+                       "message": "Open saved assignments to reconcile the current tranche packages; the earlier assignments remain in case history."})
     if not summary_text.strip():
         issues.append({"code": "SUMMARY_REQUIRED", "costId": None, "message": "Enter the completed tranche result for the form."})
     available = maps(context)
@@ -339,15 +397,8 @@ def preview(context, data, cohort_reviews=None, cohort_history=None, implementat
                 reasons.append("A linked work observation ends after this preparation date.")
             for reason in reasons:
                 issues.append({"code": "DELIVERABLE_REVIEW", "costId": item["costId"], "message": reason})
-    business = {
-        "program": {key: context["program"][key] for key in ("id", "name", "mode", "calendarStart")},
-        "plan": context["plan"], "records": context["records"],
-        "sources": sorted(context["sources"].values(), key=lambda row: row["id"]),
-    }
-    if context.get("completionPlans"):
-        business["completionPlans"] = context["completionPlans"]
-    if "implementationReviewIds" in data and context.get("installationRefs"):
-        business["installationRefs"] = deepcopy(context["installationRefs"])
+    business = business_snapshot(context, legacy=legacy_source,
+                                 implementation_evidence="implementationReviewIds" in data)
     source = {"programId": context["program"]["id"], "version": context["program"]["version"],
               "planContentSha256": context["plan"]["contentSha256"], "businessSha256": digest(business)}
     result = {"schema": PREVIEW_SCHEMA, "source": source, "rule": deepcopy(RULE), "asOfDate": as_of,
@@ -377,13 +428,25 @@ def preview(context, data, cohort_reviews=None, cohort_history=None, implementat
         result["implementationEvidence"] = retained
         result["issues"].extend(extra_issues)
         result["ready"] = not result["issues"]
+    if "correctionReviewId" in data:
+        from operations_completion_corrections import evidence as correction_evidence
+        if correction_review is None or correction_review["id"] != data["correctionReviewId"]:
+            domain.fail("Select the complete original correction edition.", "COMPLETION_CORRECTIONS", 409)
+        result["correctionEvidence"] = correction_evidence(context, correction_review, as_of, original["id"])
+        result["issues"].extend(result["correctionEvidence"]["report"]["issues"])
+        result["ready"] = not result["issues"]
+    if saved and "installationEvidence" in saved:
+        from operations_completion_installations import evaluate as installation_evaluate
+        result["installationEvidence"] = installation_evaluate(context, saved["inputs"], saved["installationEvidence"], as_of)
+        result["issues"].extend(result["installationEvidence"]["issues"])
+        result["ready"] = not result["issues"]
     result["previewSha256"] = digest(result)
     return result
 
 
 def _outcome_link(context, value):
     value = object_value(value, ("receiptId", "reviewId", "reviewSha256", "previewSha256", "submittedOn",
-                                 "formReference", "originalDeadlineOn", "deadlineOn", "extensionId"), "completion submission")
+                                 "formReference", "originalDeadlineOn", "deadlineOn", "extensionId", "correction"), "completion submission")
     original = receipt(context, value.get("receiptId"))
     if not re.fullmatch(r"review-[a-f0-9]{32}", str(value.get("reviewId", ""))):
         domain.fail("Retain the original prepared completion identity.", "COMPLETION_REVIEW")
@@ -402,7 +465,15 @@ def _outcome_link(context, value):
             domain.fail("The form must retain its actual issuer-confirmed deadline source.", "COMPLETION_SUBMISSION")
     elif deadline != base:
         domain.fail("A later form deadline needs its retained issuer confirmation.", "COMPLETION_SUBMISSION")
-    return {"receiptId": original["id"], "reviewId": value["reviewId"],
+    correction = {}
+    if "correction" in value:
+        selected = object_value(value["correction"], ("reviewId", "roundId", "revision", "sourceOutcomeId"), "correction submission link")
+        from operations_completion_corrections import ident
+        ident(selected.get("reviewId"), "review"); ident(selected.get("roundId"), "corrections")
+        ident(selected.get("sourceOutcomeId"), "outcome")
+        domain.integer(selected.get("revision"), "Selected correction revision", 1, 100)
+        correction = {"correction": deepcopy(selected)}
+    return {**correction, "receiptId": original["id"], "reviewId": value["reviewId"],
             "reviewSha256": domain.sha(value.get("reviewSha256"), "Frozen completion source", False),
             "previewSha256": domain.sha(value.get("previewSha256"), "Prepared completion identity", False),
             "submittedOn": submitted, "formReference": text(value.get("formReference"), "Original form submission reference", 4000, True),
@@ -426,18 +497,26 @@ def normalize_outcome_link(context, data, previous):
 
 def command(ops, context, name, data, actor, next_version):
     program_id = context["program"]["id"]
+    if name == "completion.corrections.save":
+        from operations_completion_corrections import save
+        return save(ops, context, data, actor, next_version)
     if name == "completion.save":
         object_value(data, ("inputs",), "completion plan save")
         inputs = normalize_inputs(context, data.get("inputs"))
         if context["program"]["mode"] != "WALKTHROUGH" and any(item["completedOn"] and item["completedOn"] > today() for item in inputs["items"]):
             domain.fail("Record actual completed work with its observed date.", "INVALID_COMPLETION")
+        from operations_completion_installations import capture as capture_installations
+        installation_evidence = capture_installations(ops, context, inputs) if "installationSelections" in inputs else None
         before = selected_plan(context, inputs["tranche"])
-        if before and before["inputs"] == inputs:
+        if (before and before["inputs"] == inputs and before.get("installationEvidence") == installation_evidence
+                and not plan_review_required(context, before)):
             return {"before": before, "after": before, "kind": "completion", "recordId": before["id"], "unchanged": True}
         after = seal({"schema": SCHEMA, "id": before["id"] if before else "completion-" + uuid.uuid4().hex,
                       "tranche": inputs["tranche"], "version": next_version,
                       "createdAt": before["createdAt"] if before else now(), "updatedAt": now(), "recordedBy": actor,
-                      "inputs": inputs, "extensions": deepcopy(before["extensions"]) if before else []})
+                      "inputs": inputs, "extensions": deepcopy(before["extensions"]) if before else [],
+                      **({"installationEvidence": installation_evidence} if installation_evidence is not None else {}),
+                      "planContentSha256": context["plan"]["contentSha256"]})
         save_row(ops, program_id, after)
         return {"before": before, "after": after, "kind": "completion", "recordId": after["id"], "unchanged": False}
 
@@ -454,23 +533,30 @@ def command(ops, context, name, data, actor, next_version):
         identity = (extension["receiptId"], extension["reference"])
         if any((item["receiptId"], item["reference"]) == identity for item in before["extensions"]):
             domain.fail("That original issuer confirmation is already retained; reopen it or replay the original request.", "COMPLETION_EXTENSION_DUPLICATE", 409)
+        basis = before.get("planContentSha256")
+        if basis is None:
+            import operations_amendments as amendments
+            events = [json.loads(row[0]) for row in ops.db.execute(
+                "SELECT body_json FROM ops_events WHERE program_id=? ORDER BY version", (program_id,))]
+            basis = amendments.completion_basis(context["plan"], amendments.load(ops, program_id), events, before)["contentSha256"]
         after = seal({**before, "version": next_version, "updatedAt": now(), "recordedBy": actor,
-                      "extensions": [*before["extensions"], extension]})
+                      "extensions": [*before["extensions"], extension], "planContentSha256": basis})
         save_row(ops, program_id, after)
         return {"before": before, "after": after, "kind": "completion", "recordId": after["id"], "unchanged": False,
                 "extensionId": extension["id"]}
 
     if name == "completion.prepare":
-        object_value(data, ("receiptId", "asOfDate", "summary", "cohortReviewIds", "implementationReviewIds", "expectedPreviewSha256"), "completion preparation")
+        object_value(data, ("receiptId", "asOfDate", "summary", "cohortReviewIds", "implementationReviewIds", "correctionReviewId", "expectedPreviewSha256"), "completion preparation")
         reviews = ops._cohort_reviews(program_id, data["cohortReviewIds"]) if "cohortReviewIds" in data else None
         evidence = ops._implementation_reviews(program_id, data["implementationReviewIds"]) if "implementationReviewIds" in data else None
-        candidate = preview(context, {key: data[key] for key in ("receiptId", "asOfDate", "summary", "cohortReviewIds", "implementationReviewIds") if key in data},
-                            reviews, ops._cohort_history(program_id) if reviews is not None else None, evidence)
+        candidate = preview(context, {key: data[key] for key in ("receiptId", "asOfDate", "summary", "cohortReviewIds", "implementationReviewIds", "correctionReviewId") if key in data},
+                            reviews, ops._cohort_history(program_id) if reviews is not None else None, evidence,
+                            correction_review=ops._completion_correction_review(program_id, data["correctionReviewId"]) if "correctionReviewId" in data else None)
         if candidate["previewSha256"] != domain.sha(data.get("expectedPreviewSha256"), "Reviewed completion preview", False):
             domain.fail("The completion source changed after preview. Reopen and preview the current case.", "COMPLETION_PREVIEW_CONFLICT", 409)
         if not candidate["ready"]:
             domain.fail("Finish the listed deliverable and form fields before preparing this completion.", "COMPLETION_NOT_READY", 409)
-        snapshot = ops._business(context)
+        snapshot = business_snapshot(context)
         after = {"id": "review-" + uuid.uuid4().hex, "version": next_version, "createdAt": now(),
                  "actor": actor, "note": "Prepared tranche " + str(candidate["clock"]["tranche"]) + " completion.",
                  "businessSha256": digest(snapshot), "snapshot": snapshot, "report": domain.report(**context),
@@ -493,7 +579,13 @@ def command(ops, context, name, data, actor, next_version):
         if (context["program"]["mode"] != "WALKTHROUGH" and submitted > today()) or submitted < candidate["asOfDate"]:
             domain.fail("Retain the actual form date on or after its preparation.", "COMPLETION_SUBMISSION")
         submission_clock = _clock(context, candidate["receipt"], submitted)
-        link = _outcome_link(context, {
+        correction = candidate.get("correctionEvidence")
+        correction_link = {"correction": {
+            "reviewId": correction["reviewId"],
+            "roundId": correction["review"]["corrections"]["inputs"]["roundId"],
+            "revision": correction["review"]["corrections"]["revision"],
+            "sourceOutcomeId": correction["review"]["corrections"]["sourceOutcome"]["id"]}} if correction else {}
+        link = _outcome_link(context, {**correction_link,
             "receiptId": candidate["receipt"]["id"], "reviewId": review["id"], "reviewSha256": review["businessSha256"],
             "previewSha256": candidate["previewSha256"], "submittedOn": submitted,
             "formReference": data.get("formReference"), "originalDeadlineOn": candidate["clock"]["originalDeadlineOn"],
@@ -546,6 +638,14 @@ def validate_preparation(review):
         domain.fail("The retained prepared completion is incomplete.", "INVALID_COMPLETION")
     context = {**snapshot, "program": {**snapshot["program"], "version": candidate["source"]["version"]},
                "sources": {row["id"]: row for row in snapshot["sources"]}}
+    complete_source = business_snapshot(context)
+    if complete_source != snapshot or digest(snapshot) != review.get("businessSha256"):
+        domain.fail("The complete prepared snapshot differs from its retained source.", "INVALID_COMPLETION")
+    original_source_sha = candidate["source"].get("businessSha256")
+    legacy_source = original_source_sha != digest(complete_source)
+    if legacy_source and original_source_sha != digest(business_snapshot(
+            context, legacy=True, implementation_evidence="implementationEvidence" in candidate)):
+        domain.fail("The prepared source differs from its complete or original legacy projection.", "INVALID_COMPLETION")
     values = {"receiptId": candidate["receipt"]["id"], "asOfDate": candidate["asOfDate"], "summary": candidate["summary"]}
     cohorts = None
     if "cohortEvidence" in candidate:
@@ -559,23 +659,31 @@ def validate_preparation(review):
             domain.fail("The retained implementation evidence is invalid.", "INVALID_COMPLETION")
         implementation_reviews = [x["review"] for x in candidate["implementationEvidence"]]
         values["implementationReviewIds"] = [x["id"] for x in implementation_reviews]
-    recalculated = preview(context, values, cohorts, candidate.get("cohortHistory"), implementation_reviews)
-    if recalculated != candidate or candidate["source"]["businessSha256"] != review["businessSha256"]:
+    correction = candidate.get("correctionEvidence")
+    if correction:
+        values["correctionReviewId"] = correction["reviewId"]
+    recalculated = preview(context, values, cohorts, candidate.get("cohortHistory"), implementation_reviews,
+                           legacy_source=legacy_source, correction_review=correction["review"] if correction else None)
+    if recalculated != candidate:
         domain.fail("The original prepared completion differs from its complete frozen source.", "INVALID_COMPLETION")
 
 
-def validate_import(context, plans, reviews, events, maximum_version):
+def validate_import(context, plans, reviews, events, maximum_version, plan_history=()):
+    import operations_amendments as amendments
     if not isinstance(plans, list) or len(plans) > 3:
         domain.fail("Retain at most the three original completion plans.", "INVALID_COMPLETION")
     seen = set()
     for row in plans:
-        validate_plan(context, row, maximum_version)
+        selected_plan = amendments.completion_basis(context["plan"], plan_history, events, row)
+        validate_plan({**context, "plan": selected_plan}, row, maximum_version)
         if row["tranche"] in seen:
             domain.fail("The case repeats a completion plan.", "INVALID_COMPLETION")
         seen.add(row["tranche"])
         event = events[row["version"] - 1]
         if event.get("action") not in ("completion.save", "completion.extension") or event.get("after") != row:
             domain.fail("The retained completion plan differs from its original save event.", "INVALID_COMPLETION")
+    from operations_completion_corrections import validate_import as validate_corrections_import
+    validate_corrections_import(reviews, events)
     original_reviews = {row["id"]: row for row in reviews}
     for review in reviews:
         if review.get("purpose") != "TRANCHE_COMPLETION":
@@ -606,6 +714,13 @@ def validate_import(context, plans, reviews, events, maximum_version):
                 or link["receiptId"] != candidate["receipt"]["id"]
                 or link["originalDeadlineOn"] != candidate["clock"]["originalDeadlineOn"]):
             domain.fail("The actual form receipt differs from its prepared source.", "INVALID_COMPLETION")
+        correction = candidate.get("correctionEvidence")
+        expected_correction = {"reviewId": correction["reviewId"],
+            "roundId": correction["review"]["corrections"]["inputs"]["roundId"],
+            "revision": correction["review"]["corrections"]["revision"],
+            "sourceOutcomeId": correction["review"]["corrections"]["sourceOutcome"]["id"]} if correction else None
+        if link.get("correction") != expected_correction:
+            domain.fail("The resubmission differs from its exact frozen correction round.", "INVALID_COMPLETION")
 
 
 def review_files(review, read_source):
@@ -670,6 +785,17 @@ def review_files(review, read_source):
             'customer response or issuer decision.</p><table><thead><tr><th>Review</th><th>Observed and recorded through</th>'
             '<th>Separate receiving</th><th>Frozen selection SHA-256</th></tr></thead><tbody>' +
             ''.join(implementation_rows) + '</tbody></table>')
+    installation_section = ""
+    if candidate.get("installationEvidence"):
+        installation_section = ('<h2>Original Installation acceptance</h2><p><a href="installation-evidence.html">'
+            'Selected package/check observations and complete original editions</a>. Customer acceptance and paid results '
+            'retain their exact sources; package completion and issuer decisions remain distinct.</p>')
+    correction_section = ""
+    if candidate.get("correctionEvidence"):
+        selected = candidate["correctionEvidence"]
+        correction_section = ('<h2>Original issuer corrections</h2><p>This re-preparation retains the complete '
+            'original finding/response comparison and preceding submitted source. It does not record issuer acceptance.</p>'
+            '<p><a href="corrections/' + e(selected["reviewId"]) + '/corrections.html">Complete correction round</a></p>')
     page = ('<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width">'
             '<title>Tranche completion</title><style>body{font:16px system-ui;max-width:1100px;margin:2rem auto;padding:0 1rem;color:#202020}'
             'table{border-collapse:collapse;width:100%}th,td{border:1px solid #ccc;text-align:left;vertical-align:top;padding:.6rem}'
@@ -680,7 +806,7 @@ def review_files(review, read_source):
             '\nApplicable confirmed deadline: ' + e(candidate["clock"]["deadlineOn"]) +
             '</p><h2>Completed result</h2><p>' + e(candidate["summary"]) +
             '</p><table><thead><tr><th>Package</th><th>Original work</th><th>Success criteria</th><th>Owners</th><th>Completed</th><th>Result</th>'
-            '</tr></thead><tbody>' + ''.join(rows) + '</tbody></table>' + cohort_section + implementation_section + '<p><a href="' + e(RULE["sourceUrl"]) +
+            '</tr></thead><tbody>' + ''.join(rows) + '</tbody></table>' + cohort_section + implementation_section + correction_section + installation_section + '<p><a href="' + e(RULE["sourceUrl"]) +
             '">SCF tranche guidelines</a></p><small>Prepared ' + e(review["createdAt"]) + ' · ' + e(review["id"]) +
             ' · original source ' + e(review["businessSha256"]) + '</small></html>')
     files = {"completion.json": (canonical(review) + "\n").encode(),
@@ -703,6 +829,14 @@ def review_files(review, read_source):
         for evidence in candidate["implementationEvidence"]:
             for name, raw in implementation_files(evidence["review"], read_source).items():
                 files["implementation/" + evidence["reviewId"] + "/" + name] = raw
+    if candidate.get("correctionEvidence"):
+        from operations_completion_corrections import file_map as correction_files
+        selected = candidate["correctionEvidence"]
+        for name, raw in correction_files(selected["review"], read_source).items():
+            files["corrections/" + selected["reviewId"] + "/" + name] = raw
+    if candidate.get("installationEvidence"):
+        from operations_completion_installations import file_map as installation_files
+        files.update(installation_files(candidate, read_source))
     if sum(map(len, files.values())) > MAX_BUNDLE:
         domain.fail("The complete prepared form exceeds the original archive bound.", status=413)
     manifest = {"schema": "stellar-forge.sf47-completion-files.v1", "reviewId": review["id"],

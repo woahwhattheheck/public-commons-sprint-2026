@@ -23,14 +23,26 @@ from model import Workspace, Problem, HERE, SOURCE_URL, canonical, csv_bytes, MA
 
 STATIC = {"/": ("index.html", "text/html; charset=utf-8"),
           "/app.mjs": ("app.mjs", "text/javascript; charset=utf-8"),
+          "/case-planning.mjs": ("case-planning.mjs", "text/javascript; charset=utf-8"),
+          "/case-planning.css": ("case-planning.css", "text/css; charset=utf-8"),
+          "/case-planning-guide.md": ("CASE_PLANNING.md", "text/markdown; charset=utf-8"),
           "/style.css": ("style.css", "text/css; charset=utf-8")}
 VERSION = "1.0.0"
 
 import operations_http
+import operations_dcat_sources as dcat_sources
+import plan_comparison
 operations_http.register_static(STATIC)
+STATIC.update({
+    "/plan_comparison.mjs": ("plan_comparison.mjs", "text/javascript; charset=utf-8"),
+    "/plan_comparison.css": ("plan_comparison.css", "text/css; charset=utf-8"),
+})
 import source_tables
 import source_workbooks
 source_tables.register_static(STATIC)
+import staff_http
+from staff_access import StaffAccess
+staff_http.register_static(STATIC)
 
 
 def atomic_private(path, data):
@@ -53,13 +65,24 @@ class Server(ThreadingHTTPServer):
     block_on_close = True
     allow_reuse_address = True
 
-    def __init__(self, port, workspace, token):
+    def __init__(self, port, workspace, token, *, on_created=None):
         self.workspace, self.token = workspace, token
-        super().__init__(("127.0.0.1", port), Handler)
-        authority = "127.0.0.1" if self.server_port == 80 else f"127.0.0.1:{self.server_port}"
-        self.origin = "http://" + authority
-        self.allowed_hosts = {authority, f"127.0.0.1:{self.server_port}"}
-        self.allowed_origins = {self.origin, f"http://127.0.0.1:{self.server_port}"}
+        self.staff = StaffAccess(workspace, token)
+        super().__init__(("127.0.0.1", port), Handler, bind_and_activate=False)
+        try:
+            # The original socket exists before binding; an owned receiving
+            # caller can retain it even when bind or activation fails.
+            if on_created is not None:
+                on_created(self)
+            self.server_bind()
+            self.server_activate()
+            authority = "127.0.0.1" if self.server_port == 80 else f"127.0.0.1:{self.server_port}"
+            self.origin = "http://" + authority
+            self.allowed_hosts = {authority, f"127.0.0.1:{self.server_port}"}
+            self.allowed_origins = {self.origin, f"http://127.0.0.1:{self.server_port}"}
+        except BaseException:
+            self.server_close()
+            raise
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -74,7 +97,9 @@ class Handler(BaseHTTPRequestHandler):
     def log_message(self, *_args):
         pass
 
-    def send(self, status, body, content_type="application/json; charset=utf-8", filename=None):
+    def send(self, status, body, content_type="application/json; charset=utf-8", filename=None, *, headers=None):
+        body = staff_http.filter_response(self, status, body)
+        staff_http.record_operation(self, status, body)
         if isinstance(body, (dict, list)):
             body = (canonical(body) + "\n").encode()
         if isinstance(body, str):
@@ -88,6 +113,8 @@ class Handler(BaseHTTPRequestHandler):
         self.send_header("Content-Security-Policy", "default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'")
         if filename:
             self.send_header("Content-Disposition", 'attachment; filename="' + filename + '"')
+        for key, value in (headers or {}).items():
+            self.send_header(key, value)
         self.end_headers()
         if self.command != "HEAD":
             try:
@@ -104,25 +131,33 @@ class Handler(BaseHTTPRequestHandler):
         if self.headers.get("Sec-Fetch-Site") == "cross-site" and api:
             raise Problem("Open the workspace through its local access link.", 403, "CROSS_SITE")
         if api:
-            supplied = self.headers.get("Authorization", "")
-            if not hmac.compare_digest(supplied, "Bearer " + self.server.token):
-                raise Problem("Use the private access link to open this workspace.", 401, "ACCESS_REQUIRED")
+            staff_http.authorize(self)
+
+    def recording_actor(self, supplied):
+        principal = getattr(self, "principal", None)
+        return principal["actor"] if principal and principal["role"] != "owner" else supplied
 
     def raw_body(self):
+        if hasattr(self, "_raw_cache"):
+            return self._raw_cache
         if self.headers.get("Transfer-Encoding"):
             raise Problem("Send the request with a Content-Length.", 400, "BODY_LENGTH")
         try:
             length = int(self.headers.get("Content-Length", ""))
         except ValueError as exc:
             raise Problem("Send the request with a Content-Length.", 411, "BODY_LENGTH") from exc
-        if not 0 <= length <= MAX_BUNDLE:
-            raise Problem("Request exceeds 32 MiB.", 413, "BODY_TOO_LARGE")
+        maximum = dcat_sources.request_limit(urlsplit(self.path).path)
+        if not 0 <= length <= maximum:
+            raise Problem("Request exceeds its selected original route capacity.", 413, "BODY_TOO_LARGE")
         body = self.rfile.read(length)
         if len(body) != length:
             raise Problem("The request body was incomplete.", 400, "INCOMPLETE_BODY")
+        self._raw_cache = body
         return body
 
     def json_body(self):
+        if hasattr(self, "_json_cache"):
+            return self._json_cache
         if self.headers.get_content_type() != "application/json":
             raise Problem("Send JSON for this operation.", 415)
         try:
@@ -131,9 +166,13 @@ class Handler(BaseHTTPRequestHandler):
             raise Problem("The request JSON is invalid.", 400, "INVALID_JSON") from exc
         if not isinstance(value, dict):
             raise Problem("The request must be a JSON object.")
+        self._json_cache = value
         return value
 
     def execute(self, operation):
+        self.__dict__.pop("_json_cache", None)
+        self.__dict__.pop("_raw_cache", None)
+        self.principal = None
         try:
             operation()
         except Problem as exc:
@@ -152,13 +191,21 @@ class Handler(BaseHTTPRequestHandler):
         self.execute(self.read)
 
     def read(self):
+        with self.server.workspace.mutex:
+            return self.read_authorized()
+
+    def read_authorized(self):
         parsed = urlsplit(self.path)
         path = parsed.path
         self.guard(api=path.startswith("/api/"))
         if path in STATIC:
             filename, mime = STATIC[path]
             return self.send(200, (HERE / filename).read_bytes(), mime)
+        if staff_http.read(self, parsed):
+            return
         if operations_http.read(self, parsed):
+            return
+        if plan_comparison.read_http(self, parsed):
             return
         workspace = self.server.workspace
         if path == "/api/access":
@@ -207,8 +254,15 @@ class Handler(BaseHTTPRequestHandler):
         self.execute(self.write)
 
     def write(self):
+        # Revocation and a case write have one order under the original mutex.
+        with self.server.workspace.mutex:
+            return self.write_authorized()
+
+    def write_authorized(self):
         path = urlsplit(self.path).path
         self.guard(api=True)
+        if staff_http.write(self, urlsplit(self.path)):
+            return
         if operations_http.write(self, urlsplit(self.path)):
             return
         workspace = self.server.workspace
@@ -257,8 +311,9 @@ class Handler(BaseHTTPRequestHandler):
         self.send(200, result)
 
 
-def create_server(workspace_path, source_path=None, port=0, access_file=None):
-    workspace = Workspace(workspace_path, source_path or HERE.parent / "sf10_current_candidate.json")
+def create_server(workspace_path, source_path=None, port=0, access_file=None, *, on_workspace=None, on_created=None):
+    workspace = Workspace(workspace_path, source_path or HERE.parent / "sf10_current_candidate.json",
+                          on_created=on_workspace)
     server = None
     try:
         token_path = workspace.root / "access.key"
@@ -269,7 +324,7 @@ def create_server(workspace_path, source_path=None, port=0, access_file=None):
         else:
             token = secrets.token_urlsafe(32)
             atomic_private(token_path, (token + "\n").encode())
-        server = Server(port, workspace, token)
+        server = Server(port, workspace, token, on_created=on_created)
         link = server.origin + "/#access=" + token
         access_path = Path(access_file).expanduser().resolve() if access_file else workspace.root / "open-workspace.html"
         page = ('<!doctype html><html lang="en"><meta charset="utf-8"><title>Open SF47 planning</title>'

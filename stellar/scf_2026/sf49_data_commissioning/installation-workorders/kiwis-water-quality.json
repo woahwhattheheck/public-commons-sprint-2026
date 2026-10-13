@@ -1,0 +1,80 @@
+{
+  "schema": "stellar-forge.installation-workorder-profile.v1",
+  "source": {
+    "mode": "MIXED",
+    "reference": "The exact selected KiWIS endpoint/programme, explicit datasource or omitted/provider-default selection, complete original responses and their provenance, and the full selected WQX/Lab/WQM counterpart input.",
+    "population": "Every requested series and selected window, including explicit empty/no-table coverage; complete station/timeseries/quality/release catalogues; every physical returned observation and counterpart row. Retain exact raw ZIP/body bytes and selected member identities, all original columns and numeric/string/null types.",
+    "meaning": "Keep station/parameter/series identity, original units, returned scalar lexemes and types, quality/release codes, request period/window and all provider metadata. Select the matching timestamp field and interpretation explicitly. Preserve timestamp and sample_timestamp separately when their instants differ. Retain physical duplicates, exact source pointers, independent limits, unmatched rows and full reasons for correspondence dispositions.",
+    "changePolicy": "Retain source captures and saved reviews as separate immutable editions. Compare actual provider metadata and scientific interpretation, including scalar types, while excluding only the implementation request-window wrapper from metadata comparison. Reuse choices only after source and interpretation bindings are checked. Keep all unmatched and changed records for explicit review."
+  },
+  "receiving": {
+    "application": "The maintained WQX workspace KiWIS commissioning application, its original source importer, WQM counterpart adapter, saved review/comparison workflow, browser/CLI/API operator and waterQualityReview commissioning mode. Select the actual full installed application and original project.",
+    "acceptanceRule": "Import/acquire complete exact original responses and all catalogue records; select explicit field/time/quality interpretation; review the full observation/counterpart population and every duplicate/unmatched disposition; save a complete review and compare selected saved editions; download all eight outputs; receive the entire bundle into an independent project and cold reopen; verify actual paid result input/review/export identities if the original paid function is selected; repeat the operator workflow with all sources retained.",
+    "changeAndWithdraw": "The service/source owner supplies access, publication/source-use rights and request limits. The scientific/operator reviewer owns mapping, quality, time and correspondence decisions. The installation/merchant owner owns the selected runtime and paid configuration; the receiving operator independently accepts the complete result. Withdrawals and changed access stay explicit with retained historical source.",
+    "recovery": "Keep original request/response checkpoints, selected raw files, source/input/review IDs, saved hashes and original paid job. Reuse an already retained response only after exact URL/request/body verification. Recover the same saved project/request and Stop/drain through its original owner; retain full result/download bytes and cold reopen rather than acquire another cohort or mint another job.",
+    "maintenance": "Name the service administrator, source rights owner, station/parameter steward, scientific reviewer, merchant/runtime owner and independent receiver. Preserve the original programme/counterpart limits, agreed start inputs, one correction cycle, runtime/dependency versions, source retention, access and ongoing support ownership."
+  },
+  "sourceFiles": [
+    {
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/wqx-water-quality/kiwis/source.mjs",
+      "blob": "a78add5df0a30bf0d6b8bea5e4a693739078c6f2"
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/wqx-water-quality/kiwis/model.mjs",
+      "blob": "89dc3aa899338b08258fbab18319157bf431e493"
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/wqx-water-quality/kiwis/workflow.mjs",
+      "blob": "fd3004c3264580559946628363634a1cbed42d03"
+    }
+  ],
+  "id": "kiwis-water-quality",
+  "title": "KiWIS water-quality: complete original responses, explicit correspondence and saved commissioning",
+  "task": {
+    "name": "Commission a complete KiWIS programme against its selected water-quality counterpart",
+    "purpose": "Give the operator a complete retained monitoring programme with explicit station/parameter/time/quality meaning, saved correspondence review, comparable source editions and independently received native outputs.",
+    "request": "Continue the original KiWIS Workshare and Installation for the selected service/programme and one agreed WQX, laboratory or original WQM counterpart. Retain exact original request URLs, raw response/ZIP bytes and all catalogue rows. Select station/parameter/time/quality mappings explicitly, preserving scalar types, duplicate physical rows, unmatched records and separate reported limits. Save the complete review and correspondence choices, compare the original source or saved-review editions, export all eight native outputs and independently receive/reopen the whole bundle. Use the existing waterQualityReview commissioning mode only with the exact saved review and original sealed input.",
+    "completeOutput": "Exact retained service/selection/request receipts and full raw response/ZIP members; all station/series/quality/release metadata; every observation and full counterpart row; complete source and mapping identities, saved review/decisions/correspondences and before/after comparison; bundle, review, decisions, observations, counterparts, correspondences, series and report exports; independently reopened project/result and operator handover.",
+    "repeatTrigger": "A selected later programme window, source edition or distinct reviewed counterpart comparison may be a new useful result. Recovering an interrupted acquisition, re-exporting or reopening the same saved bundle continues its original operation. Additional services, programmes, counterpart families or changed scope require an explicit original-case amendment.",
+    "pricedUnit": "Retain the original implementation fee and payment milestones. A paid waterQualityReview commissioning task approves the entire selected saved-review result, original input, atomic price and task budget. Underlying request counts, exports and repeated reads do not by themselves create additional useful purchases."
+  },
+  "steps": [
+    {
+      "title": "Bind the original service and counterpart programme",
+      "result": "Receive the original Workshare and phase effort, actual endpoint/access, programme/station/parameter scope and one complete selected counterpart. Record source-use authority, operator and actual receiving environment."
+    },
+    {
+      "title": "Retain exact responses and complete catalogue",
+      "result": "Import original response packets or use the strict selected acquisition. Preserve exact URLs, provider-default datasource, full raw ZIP/body bytes and every catalogue/quality/release row. Keep selected series with empty/no-table coverage visible."
+    },
+    {
+      "title": "Select scientific field and temporal meaning",
+      "result": "Review native keys, units, scalar types, quality flags and independent limits. Choose the exact timestamp field and offset interpretation, retaining alternate timestamps unchanged. Keep every physical duplicate and unmatched row."
+    },
+    {
+      "title": "Save whole correspondence review",
+      "result": "Use the original source-bound mapping/decisions. Make explicit links, Keep/exclude/review choices and reasons, preserving all candidate rows and full original fields. Save the exact source/input/review binding and editable choice documents."
+    },
+    {
+      "title": "Compare source and saved-review editions",
+      "result": "Retain the earlier capture/review and named successor. Compare full observations, counterpart records, provider metadata, scientific interpretation and before/after choices; preserve coverage and unmatched dispositions."
+    },
+    {
+      "title": "Receive all eight outputs and original paid result",
+      "result": "Download bundle, review, decisions, observations, counterparts, correspondences, series and report. Independently receive/cold reopen the bundle. When paid execution is selected, use waterQualityReview commissioning with exact reviewId/savedSha/reviewSha and sealed original input, then verify all eight returned export bytes."
+    },
+    {
+      "title": "Complete independent operating handover",
+      "result": "Open the complete project in the selected installed application on the actual receiving host, reproduce the reviewed comparison and source use, record the original correction cycle and deliver source/access, runtime, operations and maintenance responsibility."
+    }
+  ],
+  "inputs": [
+    "Original full customer Workshare packet and exact phase/total effort sources",
+    "One agreed KiWIS service/programme, endpoint/datasource semantics, selected stations/parameters/periods and access/source-use authority",
+    "Exact full original response receipts/ZIP bytes and every retained station/timeseries/quality/release catalogue",
+    "One complete selected WQX/Lab/WQM counterpart with all original rows, fields, limits and scalar types",
+    "Explicit station/parameter/time/offset/quality/units and correspondence decisions, including all duplicate/unmatched reasons",
+    "Current original installed WQX/KiWIS application, project/runtime, named independent receiver and private input/output locations",
+    "Exact saved review/input/source hashes, complete eight exports and approved original paid-task selections when used"
+  ]
+}

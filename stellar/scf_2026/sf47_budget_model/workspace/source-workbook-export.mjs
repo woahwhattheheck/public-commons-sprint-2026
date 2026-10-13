@@ -518,3 +518,47 @@ export function createPlanningWorkbookExport(context) {
   }
   return {render,dispose(){disposed=true;last=null;}};
 }
+
+
+/** Original Operations preparation workbook; text cells preserve ledger spelling. */
+export async function createOperationsWorkbookArchive(saved,current) {
+  const book=saved?.workbook;
+  need(book?.schema==='stellar-forge.sf47-work-invoice-workbook.v1','WORKBOOK_SOURCE','Open a saved work/invoice preparation.');
+  const fields={
+    WORK:['rowId','contributor','costId','description','startDate','endDate','hours','fundingBasis'],
+    INVOICES:['rowId','invoiceId','contributor','number','issuedDate','dueDate','lineId','description','amountUsd','currency','costId','workIds']
+  };
+  const tables=[
+    {name:'Work',headers:fields.WORK,rows:book.rows.WORK.map(r=>fields.WORK.map(k=>r[k])),widths:[46,44,28,70,18,18,16,20]},
+    {name:'Invoices',headers:fields.INVOICES,rows:book.rows.INVOICES.map(r=>fields.INVOICES.map(k=>r[k])),widths:[60,44,44,26,18,18,24,70,20,16,28,60]},
+    {name:'Contributors',headers:['contributorId','name','kind','state'],rows:current.records.contributors.map(r=>[r.id,r.name,r.kind,r.state]),widths:[44,54,24,20]},
+    {name:'Work packages',headers:['costId','description','tranche'],rows:current.plan.scenario.future_costs.map(r=>[r.id,r.description||r.name||r.id,String(r.tranche??'')]),widths:[30,90,20]},
+    {name:'Read me',headers:['Item','Detail'],rows:[
+      ['Book ID',saved.id],['Book source',saved.workbookSha256],['Name',book.name],['Operations case',current.program.id],
+      ['Saved version',String(saved.version)],['State',book.state],
+      ['Existing rows','Edit the Work and Invoices sheets. Keep existing row IDs, invoice IDs and line IDs. Omitted rows retain their current native records.'],
+      ['New work','Append a row with a distinct new- ID, retained contributor ID, dates in YYYY-MM-DD, exact positive hours and PREAWARD, GRANT, CUSTOMER or INTERNAL funding basis.'],
+      ['New invoices','Append lines with distinct new- row IDs, a blank invoiceId, one supplier ID and invoice number, matching dates and currency USD. Each line needs its own lineId and exact USD amount.'],
+      ['Work links','Use existing native work IDs separated by semicolons. Record new work first to obtain its native ID before linking a later invoice.'],
+      ['Exact input','All cells are text to preserve leading zeroes and exact decimal values. Keep ISO dates and decimal-point amounts without grouping. Formulas are rejected on receiving; enter the reviewed final value.'],
+      ['Return','Save the whole XLSX. Open the saved preparation in Work / invoice workbook, select this file and the last row for each sheet, inspect the original/current/returned comparison, and save the returned edition.'],
+      ['Review','Resolve field conflicts with a reason and review source matches for new rows. Save the edition, compare its complete native changes, then apply.'],
+      ['Record states','Existing work must be LOGGED and invoices RECEIVED for changes. Use the original case controls to reopen a record before editing it.'],
+      ['Reference sheets','Contributors and Work packages are reference lists. Add contributors or work packages in the original application.'],
+      ['Receiving','Download the complete native case ZIP alongside this workbook. Its saved editions, originals, record history and prior workbook returns reopen through the existing Operations import.']
+    ],widths:[30,110]}
+  ];
+  const parts=tables.map((table,i)=>({path:'xl/worksheets/sheet'+(i+1)+'.xml',
+    content:sheetXml(table.headers,table.rows,{widths:table.widths})}));
+  parts.unshift(
+    {path:'[Content_Types].xml',content:XML+'<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>'+tables.map((_,i)=>'<Override PartName="/xl/worksheets/sheet'+(i+1)+'.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>').join('')+'</Types>'},
+    {path:'_rels/.rels',content:XML+'<Relationships xmlns="'+PACKAGE_REL+'"><Relationship Id="workbook" Type="'+REL+'/officeDocument" Target="xl/workbook.xml"/></Relationships>'},
+    {path:'xl/workbook.xml',content:XML+'<workbook xmlns="'+MAIN+'" xmlns:r="'+REL+'"><workbookPr date1904="0"/><bookViews><workbookView activeTab="0"/></bookViews><sheets>'+tables.map((t,i)=>'<sheet name="'+xml(t.name)+'" sheetId="'+(i+1)+'" r:id="rId'+(i+1)+'"/>').join('')+'</sheets><calcPr calcId="0" calcMode="auto"/></workbook>'},
+    {path:'xl/_rels/workbook.xml.rels',content:XML+'<Relationships xmlns="'+PACKAGE_REL+'">'+tables.map((_,i)=>'<Relationship Id="rId'+(i+1)+'" Type="'+REL+'/worksheet" Target="worksheets/sheet'+(i+1)+'.xml"/>').join('')+'<Relationship Id="styles" Type="'+REL+'/styles" Target="styles.xml"/></Relationships>'},
+    {path:'xl/styles.xml',content:styles()}
+  );
+  const raw=zipWorkspace(parts);
+  need(raw.length<=8*1024*1024,'WORKBOOK_CAPACITY','The complete workbook exceeds the original 8 MiB operations attachment limit.');
+  return {schema:book.schema+'.xlsx',bookId:saved.id,bookSha256:saved.workbookSha256,
+    workbook:{filename:'work-invoices.xlsx',bytes:raw.length,sha256:await sha256(raw),data:raw},tables,parts};
+}

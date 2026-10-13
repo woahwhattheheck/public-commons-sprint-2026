@@ -1,0 +1,92 @@
+{
+  "schema": "stellar-forge.installation-workorder-profile.v1",
+  "id": "mobility-source-review",
+  "title": "Mobility source review and independent handover",
+  "task": {
+    "name": "Install and operate the original mobility source review and independent handover",
+    "purpose": "Give the original team its complete editable source-based staff application, retained working history, useful original outputs and an independently reopened installation.",
+    "request": "Continue the selected original Workshare and Installation. Preserve commercial scope, source-use authority and owner decisions. Select the complete original mobility runtime and existing workspace archive; operate its actual application through the maintained Applications lifecycle, then deliver the complete source/state and independent reopen.",
+    "completeOutput": "Complete runtime/source manifest and original license; retained source editions; selected Python and prepared original workspace; managed staff Application; useful original report/CSV; full original workspace ZIP; complete installation ZIP with source and lifecycle lineage; independently received editable application and onward export.",
+    "repeatTrigger": "A real change in selected source, reviewed evidence or working records continues through the original application. A complete source successor is explicitly adopted; service reopening and interrupted lifecycle receiving retain their original request/workspace.",
+    "pricedUnit": "Use the original full Workshare and actual funded/commercial assignments. Any selected paid source or Stellar operation retains its useful result, price, authorised budget and payer. A file, page or retry is part of that original whole unit."
+  },
+  "source": {
+    "reference": "Original selected Workshare/proposal, complete source manifest and workspace archive; products/partner-workspace/SCF.md and native/API.md.",
+    "mode": "MIXED",
+    "population": "Complete original monthly trip publications, source receipts, import field mappings, retained valid and invalid rows, comparable calendar periods, station flows, editable source findings and original revision history.",
+    "meaning": "Retain original source URL and complete byte identity, product/workspace UUID, import or record identifier, revision, evidence locator and actual original result. Keep pricing/customer data in the selected private case.",
+    "changePolicy": "Original staff/source owners select new data or editions through the original business application. Keep every prior source and record revision. Adopt runtime successors explicitly while preserving the same workspace and old editions."
+  },
+  "receiving": {
+    "application": "The complete selected original workbench.core/workbench.app application; products/partner-workspace typed client and CLI, merchant_partner tools, matching managed mobility Application, and original Customer Installation seed.",
+    "acceptanceRule": "Prepare the exact full source and selected original archive. Verify source/product/workspace identity; start and open the managed staff application. Receive and inspect the original monthly sources, review field mapping and quality, compare actual selected city/period imports using the product's calendar-day method, inspect station flows, edit source-backed findings and export complete native reports/CSV. Stop/reopen the same Application. Close it for full snapshot; independently receive all original source/state, open the received Application and continue an ordinary original record edit, then export onward.",
+    "changeAndWithdraw": "Original source and customer owners retain substantive data, review and publishing decisions. Retain previous source/history when material is changed or withdrawn; the integration does not infer programme eligibility or replace source decisions.",
+    "recovery": "Retain the exact lifecycle request UUID and inputs. Receive committed results/markers before requiring donor temporary paths; surviving donors must still match. Preserve interrupted restore attempts and use a new original empty restore destination. Keep prior installation requests under their originating UUID.",
+    "maintenance": "Name source/application owner, staff operator, receiving operator and commercial owner. Keep complete original source, manifests, Python selection, managed entries, actual useful outputs and whole receiving archive with the original case."
+  },
+  "steps": [
+    {
+      "title": "Select the complete original scope and sources",
+      "result": "Preserve the actual Workshare, phases, payment/funding choices, source permissions, acceptance checks and original saved workspace."
+    },
+    {
+      "title": "Prepare the whole original runtime",
+      "result": "Receive every source member and license into an immutable edition. Restore the original complete workspace archive or intentionally initialize the original empty product workspace."
+    },
+    {
+      "title": "Open the matching managed staff application",
+      "result": "Save and review the prepared directory in Applications. Bind the actual original product, workspace, source edition, Python and child PID to the server's loopback announcement."
+    },
+    {
+      "title": "Operate the complete original review workflow",
+      "result": "Receive and inspect the original monthly sources, review field mapping and quality, compare actual selected city/period imports using the product's calendar-day method, inspect station flows, edit source-backed findings and export complete native reports/CSV."
+    },
+    {
+      "title": "Keep exact source and record history",
+      "result": "Use the original current-record/history model. Close the managed service before source adoption; validate a complete successor against the same saved workspace and preserve prior editions."
+    },
+    {
+      "title": "Export useful original outputs",
+      "result": "Close the service and deliver native editable Markdown, CSV and full workspace/application archive with their actual complete identities."
+    },
+    {
+      "title": "Independently receive the whole installation",
+      "result": "Snapshot every source edition, original workspace archive and named lifecycle/lineage. Receive into a new actual directory using the original restore API; preserve the workspace UUID and assign a new installation identity."
+    },
+    {
+      "title": "Reopen and hand over the received application",
+      "result": "Open the received staff application, inspect original records and history, make an ordinary saved edit, and retain a complete onward export and operator handover."
+    }
+  ],
+  "inputs": [
+    "Original retained Workshare/Installation seed and complete proposal, scope, phases, funding and acceptance checks",
+    "Complete selected original runtime: workbench/, static/, run.py, README.md, LICENSE and exact member manifest",
+    "Original full workspace/application ZIP when continuing an existing product case",
+    "Original monthly mobility publications, source receipts, field mappings and actual selected city/period pairs",
+    "Installed Python3.11 or later with standard-library SQLite; selected private installation and managed application fields",
+    "Private transfer directory, retained lifecycle request IDs and original source/workspace/archive hashes",
+    "Whole installation ZIP and independent receiving directory; original paid service, merchant and payer choices when selected"
+  ],
+  "sourceFiles": [
+    {
+      "path": "products/partner-workspace/SCF.md",
+      "blob": "f3c4400b3896bec3472bfe9223c4bdb9f5478944"
+    },
+    {
+      "path": "products/partner-workspace/native/API.md",
+      "blob": "41d863fb40538397405c6b30e11c7e7d7e654ace"
+    },
+    {
+      "path": "products/partner-workspace/native/manage.py",
+      "blob": "9189ea1899a2c7a5335903ab0b1e97ab53f324bd"
+    },
+    {
+      "path": "products/partner-workspace/client.mjs",
+      "blob": "601179f261e099b7723f0aca5723f485cf6e5f25"
+    },
+    {
+      "path": "products/partner-workspace/commission.mjs",
+      "blob": "4ddf6a53d8e35ed9070c018c1952097d6ee41dba"
+    }
+  ]
+}

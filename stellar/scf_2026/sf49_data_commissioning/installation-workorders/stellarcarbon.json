@@ -1,0 +1,74 @@
+{
+  "schema": "stellar-forge.installation-workorder-profile.v1",
+  "payment": {},
+  "sourceFiles": [
+    {
+      "path": "products/stellarcarbon-statements/README.md",
+      "blob": "f2c6583a0aa08638d59b6fb0200b39ec5f33e46c"
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/partners/stellarcarbon-statements/README.md",
+      "blob": "1f116311529e86587f7f0340387b03766f044a56"
+    }
+  ],
+  "id": "stellarcarbon",
+  "title": "Stellarcarbon — complete customer and project reporting installation",
+  "task": {
+    "name": "Prepare, revise and deliver complete customer-period carbon statements",
+    "purpose": "Let the partner's reporting staff receive original contributions and retirement records, assign actual customers and projects, prepare complete period statements and continue the editable work with another operator. Carry any agreed reporting-service invoice through the original Merchant accounting customer and payment-plan workflow.",
+    "request": "One selected partner installation, its actual customer/project mapping groups and selected historical and current reporting periods. Receive the whole original seven-table backup or a completed native API acquisition, retain its network and coverage, save transaction/recipient/funder assignments, and produce both customer-group and consolidated statements. Carry later certificate allocations into new report versions while preserving the earlier delivered edition. The customer's original Workshare specifies the operated group count, included periods, review rounds, service fee and delivery calendar.",
+    "completeOutput": "The installed Stellarcarbon customer statements desk; complete original source editions and responses; named customers and their own project groups; versioned assignments; each selected statement's statement.html, statement.json, contributions.csv, allocations.csv and retirements.csv; consolidated statements; complete editable workspace and operating guide; and an independent receiving directory that reopens, accepts a mapping correction and produces a new version. When commissioned, preserve the original service-fee invoice and accounting-customer linkage.",
+    "repeatTrigger": "A customer's normal reporting period, newly acquired source edition, later certificate allocation, or agreed customer correction requires another complete statement run. Reopening an earlier delivery retains that delivery identity. Select the actual monthly or other reporting calendar from the original Workshare and count its paid service purchases separately from source transactions, report files, customer mappings or repeated reads.",
+    "pricedUnit": "One agreed complete reporting service for the selected customer groups, source edition and period, or the separately commissioned installation and handover. Retain the original quote/invoice schedule. If the selected merchant exposes a paid report operation, use its actual payment authority, atomic price and whole-result budget. CARBON quantities and source token payments remain source measurements and do not calculate the reporting-service fee."
+  },
+  "source": {
+    "reference": "Maintained Stellarcarbon statement source at stellar/scf-starforge-20261009/partners/stellarcarbon-statements/ and products/stellarcarbon-statements/README.md. Select the customer's actual original backup or official API edition in the same native desk; retain the complete source-edition manifest and original response bodies.",
+    "mode": "MIXED",
+    "population": "A complete selected original backup contains distribution_txs, minted_blocks, retirement_from_block, retirements, sink_status, sinking_txs and vcs_projects. A native API edition contains its declared available tables and completed /sink-txs/ and /retirements/ pagination plus linked transaction/certificate closure. Record the actual network, selected periods, acquisition interval, whole original files and covered records. Customer assignments use the full retained native contribution population within the agreed source selection.",
+    "meaning": "Preserve original transaction hashes and decimal-string TOIDs, funders, recipients, source/destination assets and issuers, certificate IDs, VCS project identities and original flags. CARBON uses three decimal places and original Stellar asset amounts seven. Customer projects remain distinct from VCS impact projects. Contribution statements use inclusive start/exclusive end creation dates and all linked allocations known in their source edition, including later certificate dates. The separate retirement register uses certificate retirement dates; whole certificate VCU quantity and attributed CARBON remain different measures.",
+    "changePolicy": "Receive a later complete source edition and compare every available native table before issuing a new statement version. Preserve earlier raw files, responses, customer/assignment snapshots and delivered report versions. Transaction rules precede recipient rules and funder rules; equally specific conflicts remain visible for the responsible operator to correct. API coverage remains explicit when full backup-only tables are absent. Source withdrawal or a changed customer mapping updates the subsequent operating edition without rewriting earlier deliveries."
+  },
+  "receiving": {
+    "application": "Stellarcarbon customer statements in Merchant Applications; maintained starforge stellarcarbon-statements command; original browser/typed client and complete source. Linux, Node 22 or newer and the existing Merchant flock/private workspace runtime. The optional original Merchant accounting workspace stays a separate selected directory.",
+    "acceptanceRule": "The receiving operator opens the selected original edition, identifies a real contribution and all its certificate allocations, assigns an agreed actual customer/project, prepares the selected historical and current periods and consolidated view, reviews the date bases and coverage, and exports all five complete statement files. Receive the complete staff workspace into a distinct private directory, stop and reopen it, correct an assignment and save a subsequent statement version while the original version remains readable. Where invoicing is commissioned, show the existing customer and original service-fee draft/recovery path.",
+    "changeAndWithdraw": "The partner's named reporting owner controls customer names, project membership, mapping choices, source selection and customer delivery. Save changed mappings or reporting selections as their next versions and explicitly revise the affected statement. Customer delivery exports the selected statement; the whole-workspace handover goes to the authorized staff receiver and contains all customers. Use the original Applications lifecycle to stop, reopen or move the desk.",
+    "recovery": "Resume the same source acquisition from its retained checkpoint and source selection. Recover a saved operation through its stable request identity; reopen the same private workspace after interruption. A service invoice saved before the local statement link is recovered from the original Merchant request journal. Export all source editions, assignments, statements, versions, invoice references and history; receive them into a new private directory and continue that received identity.",
+    "maintenance": "Name the source/account authority, reporting and mapping reviewer, installation host owner, accounting operator where used, receiving engineer and customer acceptance owner. Keep the selected source/runtime versions, original licenses, private credential references, refresh calendar, included correction effort and service/hosting costs in the original Workshare. Monthly operation uses one complete fresh source edition, full comparison, the agreed group and consolidated reports, saved correction versions and a complete editable handover."
+  },
+  "steps": [
+    {
+      "title": "Receive the original commissioning selection",
+      "result": "Use the current original Workshare seed and retain its complete scope, group count, periods, fee/milestones, review rounds, source files and acceptance criteria. Select the actual reporting owner, receiving host, customer mapping reviewer and any separate merchant/buyer/payment deployment."
+    },
+    {
+      "title": "Install and receive the complete original source",
+      "result": "Initialize a new private Stellarcarbon workspace, import the actual whole backup or complete native API acquisition, inspect every declared source table and retain the original network, source dates and coverage. Use the complete maintained source and existing Applications lifecycle."
+    },
+    {
+      "title": "Map customer and project reporting",
+      "result": "Create the partner's actual customer names and their projects, save transaction/recipient/funder assignments and agreed periods, and resolve conflicting or unassigned records with the original source in view. Keep source VCS projects distinct."
+    },
+    {
+      "title": "Deliver the agreed historical and current periods",
+      "result": "Prepare each commissioned customer/group statement and a consolidated statement for the selected periods. Review all linked allocations and the separately dated retirement register. Export the complete HTML, JSON and three CSV files for every delivered version."
+    },
+    {
+      "title": "Operate correction and service accounting",
+      "result": "Compare the next edition or mapping correction, save revised statements and preserve prior versions. Where included, bind the actual Merchant customer and use the original explicit service-fee invoice and calendar payment-plan workflow under the agreed terms."
+    },
+    {
+      "title": "Complete independent editable receiving",
+      "result": "Export the whole staff workspace, receive into a second private directory, reopen after stopping the initial receiver, continue a real assignment or report and deliver the fresh full handover. Complete the original consolidated reviews and staff handover within their existing Workshare."
+    }
+  ],
+  "inputs": [
+    "Original company Workshare, full commissioning source and receiving packet with the agreed installation, group/period quantities, review allowance, service fee and milestone schedule",
+    "Actual complete backup or authorized official API source selection, network, original source files and reuse rights",
+    "Actual customer names and projects, accountable mapping reviewer, source transaction/recipient/funder choices and reporting date ranges",
+    "Original case source attachment IDs, current plan/Workshare selection and actual deployment IDs when a paid resource is commissioned",
+    "Selected reporting-service payment/invoice terms; separate network, asset, atomic price, spending authority and facilitator only for a commissioned native paid operation",
+    "Linux/Node receiving host, private original and receiving directories, maintained source identity and named engineer",
+    "Original Merchant customer/accounting directory when invoice continuation is included",
+    "Reporting and acceptance owners, source refresh calendar, complete customer delivery destination and staff-only whole-workspace handover destination"
+  ]
+}
