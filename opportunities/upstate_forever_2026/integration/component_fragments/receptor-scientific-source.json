@@ -10,7 +10,15 @@
         "model/scientific_map_figures.py",
         "model/scientific_figures.py",
         "model/spatial_esri.py",
-        "source/capture_upstream_network.py"
+        "source/capture_upstream_network.py",
+        "model/receptor_report_transfer.py",
+        "model/RECEPTOR_REPORT_TRANSFER.md"
+      ]
+    },
+    "study-transfer": {
+      "paths": [
+        "model/receptor_report_transfer.py",
+        "model/RECEPTOR_REPORT_TRANSFER.md"
       ]
     }
   },
