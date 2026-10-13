@@ -389,6 +389,7 @@ def compare(workspace, run_id, observation_id, catchments):
         "model_source_vintages": workspace.get_grid(state["selection"]["grid_id"])["inputs"],
         "comparisons": comparisons, "exclusions": exclusions, "metrics": metrics,
         "context_rows": context, "support_summary": observation_support.summarize(observations["rows"]),
+        "source_admission": observation_support.admission_projection(observations["rows"], observations["metadata"]),
         "measurement_support_basis": "Residuals use annual receiving-water catchment loads of the "
                                      "same species. Facility/outfall discharges and concentrations "
                                      "retain their source quantities separately.",

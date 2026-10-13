@@ -152,6 +152,20 @@ def _candidates(workspace, selection):
     return candidates
 
 
+
+def _observation_catalog(item):
+    """Project current admission while preserving the original source edition."""
+    admission = observation_support.admission_projection(item["rows"], item["metadata"])
+    return {
+        "id": item["id"], "observation_id": item["id"], "title": item["metadata"]["title"],
+        "admitted_count": admission["eligible_count"], "context_count": admission["excluded_count"],
+        "original_admitted_count": item["admitted_count"],
+        "original_context_count": item["context_count"],
+        "parameters": admission["parameters"], "catchment_ids": admission["catchment_ids"],
+        "source_uri": item["metadata"]["source_uri"], "metadata": item["metadata"],
+        "admission": admission,
+    }
+
 def catalog(workspace):
     """Return actual saved baseline candidates and source observation editions."""
     groups = defaultdict(list)
@@ -176,13 +190,7 @@ def catalog(workspace):
     return {
         "schema": "upstate.calibration-catalog/v1", "workspace_id": workspace.project["id"],
         "candidate_groups": [_candidate_group(key, values) for key, values in sorted(groups.items())],
-        "observations": [
-            {"id": item["id"], "observation_id": item["id"], "title": item["metadata"]["title"],
-             "admitted_count": item["admitted_count"], "context_count": item["context_count"],
-             "parameters": sorted({r["parameter"] for r in item["rows"] if r["admitted"]}),
-             "catchment_ids": sorted({r["catchment_id"] for r in item["rows"] if r["admitted"]}),
-             "source_uri": item["metadata"]["source_uri"], "metadata": item["metadata"]}
-            for item in workspace._list("observations")],
+        "observations": [_observation_catalog(item) for item in workspace._list("observations")],
         "plans": [{"id": item["id"], "title": item["selection"]["title"],
                    "observation_id": item["selection"]["observation_id"],
                    "candidate_run_ids": item["selection"]["candidate_run_ids"]}
