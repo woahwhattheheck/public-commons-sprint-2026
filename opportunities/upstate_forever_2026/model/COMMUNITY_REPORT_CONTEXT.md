@@ -39,6 +39,8 @@ In the destination Workspace:
 
 The completed task and its download/source buttons remain available after reopening the operator. Ordinary task recovery reuses the same selected original file. The receiving Workspace owns the imported source; the source retains the donor's original project, report, plan and table identities. Earlier report editions retain their original content.
 
+Before presenting the handover, open and use this exact outgoing edition as its recipient would. Personally view the generated scientific HTML and every relevant PDF page, inspect the original CSV/JSON attachments and maps in their normal viewers, and open the ZIP’s usable contents. Operate the important source, report-only/add-to-draft, download and receiving controls at the actual presentation width and a narrow width where relevant; receive and reopen the same exported source and any delivered editable Study. Play and listen to any delivered audiovisual attachment. Fix unreadable tables, clipped or overflowing content and broken controls directly. This is Bryce’s standing all-attachments instruction in the application’s `AGENTS.md`: source inspection or captured-but-unviewed screenshots do not replace seeing and using the actual result. Keep this focused on the changed output and continue the original delivery.
+
 The same operation is available to a native receiver through the maintained model API:
 
 ```python
@@ -69,10 +71,10 @@ This route first uses the maintained archived-report receiver to verify the full
 From the actual application root, the corresponding command is:
 
 ```sh
-python -B -m model.community_report_handover \\
-  --workspace ACTUAL_RECEIVING_WORKSPACE pack-archive ORIGINAL_REPORT_ZIP \\
-  --report-record ORIGINAL_SAVED_REPORT_RECORD_JSON \\
-  --original-project-id ORIGINAL_PROJECT_UUID \\
+python -B -m model.community_report_handover \
+  --workspace ACTUAL_RECEIVING_WORKSPACE pack-archive ORIGINAL_REPORT_ZIP \
+  --report-record ORIGINAL_SAVED_REPORT_RECORD_JSON \
+  --original-project-id ORIGINAL_PROJECT_UUID \
   --report-sha256 ORIGINAL_REPORT_JSON_SHA256
 ```
 
