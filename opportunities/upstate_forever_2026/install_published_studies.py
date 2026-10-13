@@ -20,6 +20,10 @@ CODE_FILES = (
     "measurement_workspace/source_observations.py",
     "measurement_workspace/wqp_profiles.py",
     "measurement_workspace/sv833_observations.py",
+    "measurement_workspace/rl18151_observations.py",
+    "measurement_workspace/RL18151_OBSERVATIONS.md",
+    "source_tools/receive_original_study.py",
+    "source_tools/receive_rl18151_study.py",
     "source_tools/receive_sv833_study.py",
     "measurement_workspace/SV833_OBSERVATIONS.md",
     "measurement_workspace/utility_microbiology.py",
@@ -174,6 +178,9 @@ def main():
         if manifest.is_file():
             originals = context_source_files(source, manifest)
             data_files.extend(originals)
+    from measurement_workspace import rl18151_observations as rl18151
+    if (source / rl18151.MANIFEST).is_file():
+        data_files.extend(rl18151.source_files(source))
     from measurement_workspace import utility_microbiology as microbial
     microbial_root = source / microbial.SOURCE_DIRECTORY
     if microbial_root.is_dir():
@@ -230,7 +237,7 @@ def main():
         "extension": "published-studies", "view": "published-studies",
         "action": "published-study.import",
         "builtin_id": "scdes-eighteenmile-lake-2023",
-        "builtin_ids": ["scdes-eighteenmile-lake-2023"] + (["scdes-eighteenmile-streams-2020-2025"] if stream_root.is_dir() else []) + ([microbial.BUILTIN_ID] if microbial_root.is_dir() else []),
+        "builtin_ids": ["scdes-eighteenmile-lake-2023"] + (["scdes-eighteenmile-streams-2020-2025"] if stream_root.is_dir() else []) + ([microbial.BUILTIN_ID] if microbial_root.is_dir() else []) + (["scdes-sv833-water-quality-2021-2026"] if (source / "sv833_water_quality.sources.json").is_file() else []) + ([rl18151.BUILTIN_ID] if (source / rl18151.MANIFEST).is_file() else []),
         "files": [{"path": name, "sha256": digest(application / name)} for name in expected],
     }, indent=2))
 
