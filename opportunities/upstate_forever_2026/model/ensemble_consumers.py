@@ -200,8 +200,9 @@ def prepare_decision(workspace, ensemble_id, *, profile_ids=None, scenario_ids=N
     })
 
 
-def prepare_calibration(workspace, ensemble_id, reference_selection, *,
-                        profile_ids=None, pollutants=None):
+def prepare_calibration(workspace, ensemble_id, reference_selection=None, *,
+                        profile_ids=None, pollutants=None, reference_import_id=None,
+                        reference_options=None):
     """Bind completed baseline candidates to explicitly retained observations."""
     from . import calibration
     catalog = inspect(workspace, ensemble_id, profile_ids=profile_ids, scenario_ids=[])
@@ -212,7 +213,16 @@ def prepare_calibration(workspace, ensemble_id, reference_selection, *,
     parameters = [OUTPUT_PARAMETERS[name] for name in outputs]
     if not parameters:
         raise ValueError("Completed baseline candidates share no selected native output")
-    value = deepcopy(reference_selection)
+    source_reference = None
+    if reference_import_id is not None:
+        if reference_selection is not None:
+            raise ValueError("Choose the original annual import or an explicit reference selection, not both")
+        from . import ensemble_references
+        value, source_reference = ensemble_references.selection(workspace, reference_import_id, reference_options)
+    else:
+        if reference_options is not None:
+            raise ValueError("Reference options require an original annual-import selection")
+        value = deepcopy(reference_selection)
     if not isinstance(value, dict):
         raise ValueError("Supply the existing calibration observation/catchment selection")
     ids = [row["baseline_run_id"] for row in ready]
@@ -242,6 +252,7 @@ def prepare_calibration(workspace, ensemble_id, reference_selection, *,
         "selected_member_count": len(ready), "selected_profile_ids": [row["profile_id"] for row in ready],
         "pollutants": [name for name in outputs if OUTPUT_PARAMETERS[name] in plan["selection"]["objective"]],
         "available_pollutants": outputs, "selection": plan["selection"], "calibration_plan_id": plan["id"],
+        "annual_reference": source_reference,
         "reference_units": plan["units"], "spatial_groups": plan["spatial_groups"],
         "normalization": plan["normalization"], "exclusions": plan["exclusions"],
         "producer": {"path": "model/ensemble_consumers.py", "sha256": file_digest(Path(__file__))},
