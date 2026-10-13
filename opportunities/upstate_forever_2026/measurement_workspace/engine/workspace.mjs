@@ -1,3 +1,4 @@
+import {validateSedimentExports} from './sediment_workspace.mjs';
 import {validateBenchmarkExports} from './benchmark_workspace.mjs';
 import {initialiseIntake,exportIntakes,validateIntakes,receiveIntakes} from './intake.mjs';
 import {installLargeFileReads} from './large_intake.mjs';
@@ -222,6 +223,7 @@ export class MeasurementWorkspace {
     // Caller owns the original consistent read transaction.
     const value={format:'upper-savannah-measurements',version:1,createdAt:new Date().toISOString(),revision:this.revision(),tables:{}};
     for(const name of ['imports','records','import_records','stations','mappings','reviews','selected_versions','events','exports'])value.tables[name]=this.db.prepare(`SELECT * FROM ${name}`).all();
+    validateSedimentExports(value.tables.exports);
     value.intake=exportIntakes(this);
     return value;
   }
@@ -236,6 +238,7 @@ export class MeasurementWorkspace {
     }
     if(packageValue.intake)validateIntakes(packageValue.intake,tables.imports);
     validateBenchmarkExports(tables.exports);
+    validateSedimentExports(tables.exports);
     // Canonical values are rebuilt from complete originals, not trusted from the package.
     const expectedRecords=new Map(),expectedLinks=new Set();
     for(const source of tables.imports){

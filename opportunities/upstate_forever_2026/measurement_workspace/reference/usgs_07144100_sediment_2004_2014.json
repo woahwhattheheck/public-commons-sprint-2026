@@ -1,0 +1,51 @@
+{
+  "schema": "upstate.public-sediment-reference/v1",
+  "title": "USGS Little Arkansas River near Sedgwick calibration table, 2004–2014",
+  "source_url": "https://water.usgs.gov/admin/memo/SW/sw.2016.07%2Bwq.2016.10.pdf",
+  "source_document": "USGS Office of Surface Water Technical Memorandum 2016.07 / Office of Water Quality Technical Memorandum 2016.10",
+  "source_document_date": "2016-09-30",
+  "source_location": "Attachment B, model archive summary; 120-row calibration table, printed pages 24–25 (PDF pages 24–25 when counted from 1)",
+  "station": "07144100",
+  "station_name": "Little Arkansas River near Sedgwick, Kansas",
+  "model_id": "07144100.SSC.WY07.1",
+  "sensor": {
+    "id": "YSI 6600 / 6136",
+    "method": "Optical turbidity, YSI model 6136",
+    "unit": "FNU"
+  },
+  "analyte": "SSC",
+  "response_unit": "mg/L",
+  "discharge_unit": "ft3/s",
+  "discharge_conversion": {
+    "to": "m3/s",
+    "factor": 0.028316846592,
+    "definition": "1 international foot = 0.3048 metres; cubic conversion is exact"
+  },
+  "date_precision": "date only; no clock time or timezone is supplied by the published table",
+  "pairing": "Each numbered published table row supplies concurrent SSC, turbidity and discharge. Original row numbers identify distinct samples, including repeated dates. A shared calendar date does not combine samples or establish independent hydrologic events.",
+  "transcription": {
+    "method": "Extract published table text, select original raw SSC/TURB/Q columns, preserve printed decimal values and row order; discard no rows. No published rounded logarithms used for fitting.",
+    "rows": 120,
+    "distinct_dates": 115,
+    "range": {
+      "start": "2004-07-27",
+      "end": "2014-08-04"
+    },
+    "duplicate_source_rows_checked": true,
+    "conflicts": 0,
+    "limitations": "These are values at the precision printed in the USGS model archive summary, not the original laboratory or sensor CSV byte stream. Original author removed seven samples before this published120-row table; their complete original values are not contained here."
+  },
+  "published_model": {
+    "equation": "log10(SSC mg/L) = 0.262 + 0.933 log10(turbidity FNU) + 0.0431 log10(discharge ft3/s)",
+    "smearing_factor": 1.02,
+    "retransformed_equation": "SSC = 1.865 * turbidity^0.933 * discharge_ft3_s^0.0431",
+    "comparison": "Published coefficients are rounded. Re-fitting uses the raw columns at published precision; convert discharge units before comparing the intercept."
+  },
+  "course": {
+    "full_calibration": "All120 published samples assigned to training to reproduce the archive coefficients; this is a calibration reproduction.",
+    "temporal_validation": "Separate study: dates before2012-01-01 assigned to training; dates from2012-01-01 assigned to validation. This is a new explicitly declared temporal holdout exercise, not the author's published cross-validation or independent new monitoring data."
+  },
+  "license": "United States Geological Survey federal publication; source attribution retained.",
+  "retrieved_at": "2026-10-13",
+  "csv_sha256": "7783717d890ffc902096823a626b080cbaa457bc82977ebe97961abc74881e26"
+}
