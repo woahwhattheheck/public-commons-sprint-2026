@@ -89,7 +89,7 @@ PREVIOUS.setdefault("operator/web/jobs.mjs", []).extend(["3954f68136baab7e93f502
 PREVIOUS.setdefault("operator/parameter_study_api.py", []).extend(["a6eb20105e6f6f099a3f2a97021d914b2a9535b38cf64ee55bebb55caa3e3a11"])
 PREVIOUS.setdefault("install_native_supervision.py", []).extend(["1deba14b65ed046c7283cdeb9a97bd0702027eafc44e62993a8c54c6e1ab6e12"])
 PREVIOUS.setdefault("operator/NATIVE_JOBS.md", []).extend(["4f3c1dd30be3c78b585c0070662649e3c985fc56da383317e2c491b4f593b39e"])
-PREVIOUS.setdefault("operator/parameter_study_jobs.py", [, "7fa5a1a929c80251e75d0273722c73f83715b6ebe94c706dade354b4f0c62919"]).extend(["181b0dc0c401bbe4b44a6a106e0fe6236c1c776247398d5ee693532d8602217d"])
+PREVIOUS.setdefault("operator/parameter_study_jobs.py", []).extend(["181b0dc0c401bbe4b44a6a106e0fe6236c1c776247398d5ee693532d8602217d", "7fa5a1a929c80251e75d0273722c73f83715b6ebe94c706dade354b4f0c62919"])
 
 DETACH_DISPOSITION = ('            final_state = ("interrupted" if isinstance(error, NativeJobDetached) else\n'
                       '                           "cancelled" if isinstance(error, NativeJobCancelled) else "failed")\n')
