@@ -1,43 +1,80 @@
-# Simulated Piedmont headwaters: native demonstration
+# Simulated Piedmont headwaters: complete native demonstration
 
-This retained case runs a declared simulated landscape through the maintained Upper Savannah Scientific Workbench. The original importer, native InVEST 3.20 NDR/SDR models, comparison, process report, mapped delivery and portable project produce the results.
+This case operates one declared simulated landscape through the Upper Savannah Scientific Workbench. The existing importer, InVEST 3.20 NDR/SDR engines, scientific reports, map delivery, field/laboratory workflow and portable project produce the saved results.
 
-## The case
+## Scientific question
 
-The input grid contains 14,400 thirty-metre cells, covering 1,296 hectares in EPSG:26917. A generated two-tributary terrain drains toward the southern outlet. The sources contain land cover, elevation, annual precipitation, rainfall erosivity, soil erodibility, a restoration mask, model/reporting polygons, and simulated source-water/conservation areas.
+How does the placement of an equal-area forest restoration change the selected model's annual nitrogen, phosphorus and sediment exports?
 
-The alternative converts 236 pasture cells and 399 crop cells inside a true 90-metre Euclidean buffer of the generated stream-axis segments to forest: 635 cells, or 57.15 hectares. The baseline and alternative retain the same climate, soil, terrain, model profile and grid.
+The baseline covers 1,296 hectares on a 120 × 120 grid of 30-metre cells in EPSG:26917. The retained sources include convergent two-tributary terrain, land cover, annual precipitation, rainfall erosivity, soil erodibility, model/reporting polygons, and simulated source-water and conservation areas.
 
-The coefficients are explicit input assumptions. The native `measured-runoff` table enum expresses how NDR interprets a loading coefficient; these particular coefficients are simulated. The model applies its precipitation-proxy scaling once. Assumptions and exact units travel with the imported source edition.
+Two alternatives each convert 236 pasture cells and 399 crop cells to forest: **635 cells, or 57.15 hectares**. The riparian alternative follows the true 90-metre Euclidean buffer of the generated valley axes. The matched control lies outside that corridor and minimizes class-specific precipitation differences using the complete original candidate set. Both alternatives retain the same baseline grid and profile. The control arrives in its own source collection, preserving the original baseline and riparian input edition and run IDs.
+
+The canonical control is `matched-control.json`, reproduced by `generate-matched-control.mjs`; [MATCHED_CONTROL.md](MATCHED_CONTROL.md) records its methods and complete cell matches. Rainfall matching controls the assumed loading contrast closely; retained soil, erosion, terrain and spatial-pattern differences remain part of interpreting the computed response.
+
+The coefficients are explicit demonstration assumptions. The native `measured-runoff` table enum describes the NDR coefficient semantics. The model applies precipitation-proxy scaling once.
 
 ## Operate the complete case
 
-Use the maintained application and its pinned scientific environment. Choose separate sibling directories for the project and output:
+Use the maintained application and its pinned scientific environment. Choose separate sibling directories for the scientific project and operation output:
 
 ~~~sh
-python -B source_tools/simulated_headwaters.py \\
-  --workspace /owned/simulated-headwaters-workspace \\
+python -B source_tools/simulated_headwaters.py \
+  --workspace /owned/simulated-headwaters-workspace \
   --output /owned/simulated-headwaters-output
 ~~~
 
-The example paths are replaced by the operator's actual owned locations. The default recipe is this directory's `input-recipe.json`. Source arrays are retained, so Node is not required on the native execution host. `--prepare-only` completes the actual importer, grid, profiles, scenarios and prepared run records; continuing the same command without it executes those saved runs.
+Replace these example paths with actual owned locations. The default recipe is this directory's `input-recipe.json`. All original arrays and both intervention masks are retained, so Node is unnecessary on the execution host.
 
-The runner writes `demo-receiving.json` after each actual stage. It records the project, source, grid, profile, run, comparison, process-report and delivery IDs, measured stage durations and original archive/reopen results. Completed native stages are reused by their original IDs. The full input receipt hashes each generated file. A partial failure keeps the same operation's completed work available for continuation.
+The single driver carries the case through:
 
-The native-study delivery uses the simulated drinking-water and conservation overlays to exercise all seven map families. The process report separately displays native nitrogen/phosphorus loading, export and retention, sediment process quantities, and changes on common valid cells. The numerical model results are read from completed native outputs.
+1. Input generation, import, shared profile/grid, all three scenarios, and actual prepared changed-area calculations.
+2. Native NDR/SDR baseline, riparian and matched-control runs, reusing completed saved runs.
+3. One all-alternative comparison and native loading, export, retention and sediment process figures.
+4. The same project's complete field/laboratory campaign: original sample intake, quality review, corrective task, repeat collection and closeout.
+5. A seven-family native-study map delivery with the native process report and all five field scientific sources; saved paired nitrogen maps for both alternatives.
+6. The existing routing and dimensionless maximum-L parameter course, paired raster products and joint decision reports.
+7. A whole-project archive, independent restoration, and reopening of original completed runs, maps, field campaign and parameter study.
 
-## Reproduce the input recipe
+`--prepare-only` imports the real sources and prepares the grid, scenarios, footprints and saved parameter-study design. Continue the identical command without that option to execute the prepared case. `--field-only` prepares the same selections and completes the field/laboratory chapter using the installed GIS/application stack, then returns before checking or running InVEST. Continue the original normal command to reuse that completed chapter with the model runs.
 
-`generate-inputs.mjs` exports the pure deterministic `buildInputs()` function. It retains every input cell in `input-recipe.json`, plus source geometry, assumptions and input-only checks. Its terrain check verifies descending support and excludes unintended interior pits; native InVEST computes the actual routing and export results.
+`demo-receiving.json` records actual saved identities and elapsed stage times after each stage. A retry uses the same output directory and original project. Completed model and field operations retain their original results. A failed stage records its actual exception so the source can be repaired and that operation continued.
+
+## Read the results
+
+Original InVEST 3.20 N/P export rasters contain **kg/ha/year**, and original sediment export rasters contain **metric tonnes/ha/year**. The Workspace's integrated output cells contain annual mass after multiplication by the actual cell area once. A 30-metre cell covers 0.09 hectare. Native watershed-vector totals already contain annual mass. Read each selected artifact's unit.
+
+Native signed change is alternative minus baseline. Paired ensemble and decision avoided-export products label their baseline-minus-alternative convention separately. Read original full-domain totals and actual common-valid-cell comparisons with their respective supported areas.
+
+The current SDR `l_max=122` caps the dimensionless slope-length factor L. The parameter course compares the maintained MFD/D8 routing and Lmax 122/333 choices while retaining the original profile first. Its ranges describe those named choices. [PARAMETER_COURSE.md](PARAMETER_COURSE.md) explains the retained support groups, original member identities and decision reports.
+
+The field chapter contains explicitly simulated sample concentrations and collection events. Native laboratory/QC services calculate duplicate precision, preserve the censored blank and operate corrective work. [SIMULATED_FIELDWORK.md](../../docs/SIMULATED_FIELDWORK.md) gives the full operating sequence. The field concentration exercise and annual watershed-model outputs have distinct scientific uses.
+
+## Preserve and receive the working project
+
+Archives have separate stable editions bound to the delivery, saved views, field operation and ensemble. Earlier archives remain intact when an added chapter produces a new edition. A publication interrupted after writing an archive or restored directory recovers from that original complete inventory.
+
+The restored project is checked for its selected completed runs, delivery, both source-bound map reviews, field closeout and original parameter-study selection. Its source files, reports, native rasters, implementation history and ensemble products travel in the maintained whole-project package.
+
+The owner-directed build interval ends **13 October 2026 at 14:00 UTC / 10:00 Eastern**. The executing owner preserves completed work and the current saved stage at that cutoff.
+
+## Reproduce the retained inputs
+
+`generate-inputs.mjs` exports the pure deterministic `buildInputs()` function. It preserves every source cell, geometry and declared assumption in the original recipe:
 
 ~~~sh
 node --input-type=module -e 'import {buildInputs} from "./source/simulated_headwaters_20261013/generate-inputs.mjs"; process.stdout.write(JSON.stringify(buildInputs())+"\n")' > /owned/reproduced-input-recipe.json
 ~~~
 
-Compare the reproduced recipe with the retained original before using a changed edition. The source writer creates compressed GeoTIFFs, GeoPackages, the complete biophysical CSV, assumptions and an importable `upstate.sources/v1` manifest.
+The native source writer emits compressed GeoTIFFs, GeoPackages, the complete biophysical CSV, assumptions and importable source manifests. The separate control receiver binds the exact original recipe hash before importing its mask. The optional native routing diagnostic uses the maintained PyGeoProcessing D8/MFD algorithms on that same terrain.
 
-## Teach and inspect the actual result
+## Teach the actual result
 
-[TEACHING_GUIDE.md](TEACHING_GUIDE.md) gives the existing product's source → geography → assumptions → alternatives → native runs → comparison → maps → export → reopen sequence. `source_tools/simulated_headwaters_rehearsal.py` binds the actual receiving IDs to the maintained rehearsal recorder. The recorder captures the original operator, screenshots, recording, timings, downloads and independent archive receiving.
+[TEACHING_GUIDE.md](TEACHING_GUIDE.md) follows source → geography → assumptions → alternatives → native calculation → comparison → maps → field/lab → export → reopen. It includes the actual product controls, scientific units, same-area experiment, corrective field workflow and recording course.
 
-Use a browser host that can open the existing local application. A completed scientific archive can move to that host while preserving the selected project and native results. Actual model time and recorded-result walkthrough time remain separate.
+`source_tools/simulated_headwaters_rehearsal.py` binds the original completed case IDs to the maintained recorder. A qualified browser host can receive the completed scientific archive and open those saved results. The original receipt and teaching guide travel inside the final teaching ZIP. Model calculation time, transfer time and recorded walkthrough time remain separate actual measurements.
+
+## Model methods
+
+- [InVEST 3.20 NDR guide](https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.20.0/userguide/en/ndr.html)
+- [InVEST 3.20 SDR guide](https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.20.0/userguide/en/sdr.html)
