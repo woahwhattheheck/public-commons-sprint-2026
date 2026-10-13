@@ -16,7 +16,7 @@
         "programme-activity"
       ],
       "source_reference": {
-        "version": "1.0.0",
+        "version": "1.0.1",
         "purpose": "Retain completed original candidates and let the existing model-specific native matcher decide stage reuse"
       }
     }
