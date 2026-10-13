@@ -12,7 +12,8 @@
     "ensemble_received_studies.mjs",
     "observed_landcover_received.mjs",
     "observed_landcover_received.css",
-    "study_report_navigation.mjs"
+    "study_report_navigation.mjs",
+    "economic_received_comparisons.mjs"
   ],
   "requires_actions": [
     "workspace.restore"
@@ -140,7 +141,8 @@
       "navigate",
       "openExtension",
       "openItem",
-      "openScientificReport"
+      "openScientificReport",
+      "openDesk"
     ],
     "styles": [
       "/web/extensions/study_transfer.css",
