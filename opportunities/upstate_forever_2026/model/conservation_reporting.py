@@ -16,7 +16,7 @@ from pathlib import Path
 
 from .common import atomic_bytes, atomic_json, describe_file, digest, verify_file
 
-VERSION = 2
+VERSION = 3
 SCHEMA = "upstate.conservation-presentation/v1"
 ACRES_PER_HECTARE = 10000 / 4046.8564224
 AREA_METRICS = ("parcel_acres", "hydric_soil_acres", "sensitive_riparian_acres")
@@ -73,6 +73,8 @@ POINT_FIELDS = {
     "point_prerequisite": "str", "point_exact": "int", "point_lower": "int",
     "point_upper": "int", "point_maximum": "int",
     "point_interval_resolved_criteria": "int",
+    "point_score_options": "str", "point_priority_options": "str",
+    "point_source_profile": "str", "point_classification_states": "str",
 }
 for _metric in AREA_METRICS:
     POINT_FIELDS.update({
@@ -87,11 +89,14 @@ METRIC_FIELDS = [
     "observed_positive_acres", "unresolved_acres", "confirmed_absence_acres",
     "coverage_complete", "structural_only", "interval_method", "interval_reference",
     "binding_kind", "binding_field", "source_binding", "metric_geometry", "criterion_references",
+    "raw_value", "raw_unit", "source_classifications", "source_profile",
+    "native_pixel_area_m2", "original_profile_pixel_area_m2", "profile_transfer",
 ]
 CONTRIBUTION_FIELDS = [
     "id", "label", "selected", "criterion", "rule_type", "point_exact",
     "point_lower", "point_upper", "evaluation", "interval_resolved",
     "source_uri", "printed_page", "table", "reference", "terms",
+    "score_options", "source_classifications", "source_profile",
 ]
 
 
@@ -207,6 +212,28 @@ def _interval_resolved(row):
                for component in _components(row) for item in _leaves(component))
 
 
+def _classifications(component):
+    """Retained literal classifications, including nested combined criteria."""
+    for leaf in _leaves(component):
+        value = leaf.get("classification")
+        if isinstance(value, dict):
+            yield {**value, "criterion": leaf["id"], "metric": leaf.get("metric")}
+
+
+def _classification_states(row):
+    return sorted({
+        state
+        for component in _components(row)
+        for item in _classifications(component)
+        for state in item.get("attainable_states", [item.get("state")])
+        if state is not None
+    })
+
+
+def _retained_json(value):
+    return _json(value) if value is not None else None
+
+
 def flat_values(row, *, priority_ranges=None):
     point = row.get("point_score") or {}
     values = {
@@ -221,6 +248,10 @@ def flat_values(row, *, priority_ranges=None):
         "point_exact": point.get("points"), "point_lower": point.get("known_points"),
         "point_upper": point.get("possible_points"), "point_maximum": point.get("maximum"),
         "point_interval_resolved_criteria": _interval_resolved(row) if point else None,
+        "point_score_options": _retained_json(point.get("score_options")),
+        "point_priority_options": _retained_json(point.get("priority_options")),
+        "point_source_profile": _retained_json(point.get("source_profile")),
+        "point_classification_states": _retained_json(_classification_states(row)) if point else None,
     }
     for name in AREA_METRICS:
         bound = point.get("metric_bounds", {}).get(name, {})
@@ -254,6 +285,7 @@ def _rule_index(state):
     def visit(rule):
         if rule.get("metric"):
             result.setdefault(rule["metric"], []).append(rule.get("reference", {}))
+            result[rule["metric"]].extend(rule.get("source_profile_references", []))
         for term in rule.get("terms", []):
             visit(term)
     for rule in _category(state).get("criteria", []):
@@ -274,6 +306,10 @@ def metric_records(state, candidates, plan=None):
         point = row.get("point_score")
         if not point:
             continue
+        classifications = {}
+        for component in _components(row):
+            for classified in _classifications(component):
+                classifications.setdefault(classified["metric"], []).append(classified)
         for name, value in sorted(point.get("metric_values", {}).items()):
             limits = point.get("metric_bounds", {}).get(name, {})
             binding = point.get("metric_sources", {}).get(name, {})
@@ -299,8 +335,10 @@ def metric_records(state, candidates, plan=None):
                 "selected": row["id"] in chosen if chosen is not None else None,
                 "metric": name, "value": value,
                 "unit": limits.get("unit") or ("acres" if name.endswith("_acres") else
-                    "boolean" if isinstance(value, bool) else None),
-                "value_state": "exact" if value is not None else "closed_interval" if interval else "unresolved",
+                    "class" if name.endswith("_priority") else "boolean" if isinstance(value, bool) else None),
+                "value_state": ("source_profile_classification" if isinstance(value, dict) and
+                    value.get("schema") == "upstate.keowee-classification/v1" else
+                    "exact" if value is not None else "closed_interval" if interval else "unresolved"),
                 "lower": limits.get("lower"), "upper": limits.get("upper"),
                 "closed": limits.get("closed"),
                 "area_basis": limits.get("area_basis") or (
@@ -316,6 +354,12 @@ def metric_records(state, candidates, plan=None):
                 "binding_kind": binding.get("kind"), "binding_field": binding.get("field"),
                 "source_binding": binding, "metric_geometry": selected_geometry,
                 "criterion_references": references.get(name, []),
+                "raw_value": binding.get("raw"), "raw_unit": binding.get("unit"),
+                "source_classifications": classifications.get(name, []),
+                "source_profile": point.get("source_profile"),
+                "native_pixel_area_m2": binding.get("pixel_area_m2"),
+                "original_profile_pixel_area_m2": binding.get("original_profile_pixel_area_m2"),
+                "profile_transfer": binding.get("profile_transfer"),
             }
 
 
@@ -343,6 +387,9 @@ def contribution_records(state, candidates, plan=None):
                 "table": reference.get("table") if isinstance(reference, dict) else None,
                 "reference": reference,
                 "terms": component.get("terms"),
+                "score_options": component.get("score_options"),
+                "source_classifications": list(_classifications(component)),
+                "source_profile": row["point_score"].get("source_profile"),
             }
 
 
@@ -415,6 +462,12 @@ def dictionary():
             "point_prerequisite": "The method's practice prerequisite: met, absent or unresolved. Separate from other eligibility rules.",
             "point_interval_resolved_criteria": "Leaf criteria whose exact contribution is established despite an unresolved exact acreage.",
             "criterion_contributions": "One top-level contribution per published criterion. Nested maximum/sum terms stay inside that row and are never added again.",
+            "point_score_options": "JSON array of the actual retained attainable totals; numbers between the lower and upper bounds need not be attainable.",
+            "point_priority_options": "Retained attainable published priority labels, conditional on the practice prerequisite.",
+            "point_source_profile": "JSON identity of the original source profile and executable binding used by this saved score.",
+            "point_classification_states": "Literal classification states found across criteria: scored, ambiguous, unclassified or missing; bounded inputs retain every attainable state.",
+            "score_options": "Exact retained contribution alternatives; a source overlap keeps every matching class and a source gap keeps the original unresolved alternatives.",
+            "source_classifications": "Original scalar or bounded classification, matching and possible classes, references, source-profile identity and score options. Bound-evaluation probes are not observed measurements.",
         },
         "intervals": {
             "closed": "Both endpoints are included. A threshold exactly at the upper endpoint remains possible.",
@@ -431,6 +484,10 @@ def dictionary():
             "basis": "Selected native rates multiplied by actual polygon-cell intersection hectares.",
             "comparisons": "Alternative minus baseline on common original native support. Omitted model families remain unavailable.",
             "portfolio": "Native quantities and context overlap use the selected reporting-geometry union; overlapping parcels are counted once.",
+            "native_pixel_area_m2": "Actual retained current raster cell area used to convert the parcel mean area rate into mean cell mass.",
+            "original_profile_pixel_area_m2": "Original published raster cell area only if established by the saved source; null means it was not established.",
+            "profile_transfer": "Explicit current-grid interpretation for using original printed export bins: actual cell area, native/profile units, adaptation reference and sediment ton definition.",
+            "raw_value": "Actual retained input to the declared classification or transform; separate from the class label and annual parcel mass.",
         },
         "files": {
             "criterion-contributions.csv": "All published top-level criterion contributions, selected flag and original rule references.",
@@ -476,6 +533,9 @@ def write_supplements(workspace, directory, state, candidates, *, plan=None):
         "geometry_context": state["selection"]["bindings"].get("published_method", {}).get("geometry_context"),
         "criterion_metadata": state.get("normalization", {}).get("criterion_table", {}).get("metadata"),
         "published_method": state["selection"]["bindings"].get("published_method"),
+        "source_profile": state.get("normalization", {}).get("source_profile"),
+        "resolved_native_bands": state.get("normalization", {}).get("resolved_native_bands"),
+        "native_pixel_area_m2": state.get("normalization", {}).get("native_pixel_area_m2"),
     }
     atomic_json(directory / "source-register.json", document)
     source_fields = ["role", "id", "title", "uri", "vintage", "source_collection_id", "source_id",
@@ -568,31 +628,63 @@ def _point_detail(state, row):
     flat = flat_values(row, priority_ranges=state.get("normalization", {}).get("priority_ranges"))
     title = row["id"] + " · " + row["label"] + " · " + flat["point_status"]
     summary = _table(
-        ["Practice prerequisite", "Exact points", "Point lower", "Point upper", "Published maximum", "Priority", "Eligible"],
+        ["Practice prerequisite", "Exact points", "Point lower", "Point upper", "Attainable point totals",
+         "Published maximum", "Priority", "Possible priorities", "Eligible"],
         [[flat["point_prerequisite"], point.get("points"), point.get("known_points"),
-          point.get("possible_points"), point.get("maximum"), point.get("priority"), row["eligible"]]])
-    rule_rows = []
+          point.get("possible_points"), point.get("score_options"), point.get("maximum"),
+          point.get("priority"), point.get("priority_options"), row["eligible"]]])
+    rule_rows, classifications = [], []
     rule_definitions = {rule["id"]: rule for rule in _category(state).get("criteria", [])}
     for component in _components(row):
         rule = rule_definitions.get(component["id"], {})
         rule_rows.append([
             component["id"], rule.get("type"), component.get("points"),
-            component.get("known_points"), component.get("possible_points"),
+            component.get("known_points"), component.get("possible_points"), component.get("score_options"),
             any(bool(item.get("points_determined_by_interval")) for item in _leaves(component)),
             _reference_text(component.get("reference")),
         ])
+        classifications.extend(_classifications(component))
     metrics = list(metric_records(state, [row]))
     metric_rows = [[
         metric["metric"], METRIC_MEANINGS.get(metric["metric"]), metric["value"], metric["unit"], metric["lower"], metric["upper"],
         metric["closed"], AREA_BASIS.get(metric["area_basis"], metric["area_basis"]),
         metric["structural_only"], metric["binding_kind"], metric["binding_field"],
     ] for metric in metrics]
-    return ("<details><summary>" + _e(title) + "</summary>" + summary +
-            _table(["Criterion", "Combination", "Exact points", "Lower points", "Upper points",
-                    "Resolved by acreage interval", "Published reference"], rule_rows) +
-            _table(["Source metric", "Meaning", "Exact value", "Unit", "Lower", "Upper", "Closed", "Geometry basis",
-                    "Geometry-only bound", "Binding", "Original field"], metric_rows) +
-            "<p>Eligibility: " + _e("; ".join(row["exclusion_reasons"]) or "Eligible") + "</p></details>")
+    details = [
+        "<details><summary>" + _e(title) + "</summary>", summary,
+        _table(["Criterion", "Combination", "Exact points", "Lower points", "Upper points",
+                "Attainable contributions", "Resolved by acreage interval", "Published reference"], rule_rows),
+        _table(["Source metric", "Meaning", "Retained value or classification", "Unit", "Lower", "Upper", "Closed", "Geometry basis",
+                "Geometry-only bound", "Binding", "Original field"], metric_rows),
+    ]
+    if classifications:
+        details += [
+            "<h4>Literal published class interpretation</h4>",
+            _table(["Criterion", "Metric", "State", "States across acreage interval", "Matched original classes",
+                    "Possible classes", "Attainable contributions", "Original references"], (
+                [item["criterion"], item["metric"], item.get("state"), item.get("attainable_states"),
+                 item.get("matched_classes"), item.get("classes"), item.get("score_options"), item.get("references")]
+                for item in classifications)),
+        ]
+    native = [metric for metric in metrics if metric["binding_kind"] == "native_export"]
+    if native:
+        details += [
+            "<h4>Current native export classification</h4>",
+            _table(["Metric", "Original input value", "Input unit", "Current cell area (m²)",
+                    "Published source cell area (m²)", "Classification method", "Explicit current-grid transfer"], (
+                [metric["metric"], metric["raw_value"], metric["raw_unit"], metric["native_pixel_area_m2"],
+                 metric["original_profile_pixel_area_m2"], metric["source_binding"].get("band_method"),
+                 metric["profile_transfer"]] for metric in native)),
+            "<p>A missing published source cell area means that value was not established by the retained "
+            "source. Current-study tertiles, explicit current cutoffs and an explicitly recorded transfer of "
+            "the original printed bins are separate classifications. Annual parcel mass remains in its original pollutant fields.</p>",
+        ]
+    if point.get("source_profile"):
+        details.append("<details><summary>Retained source-profile identity</summary><pre>" +
+                       _e(json.dumps(point["source_profile"], ensure_ascii=False, indent=2)) + "</pre></details>")
+    details.append("<p>Eligibility: " + _e("; ".join(row["exclusion_reasons"]) or "Eligible") + "</p></details>")
+    return "".join(details)
+
 
 
 def extend_report(base, state, candidates, *, plan=None):
@@ -636,6 +728,14 @@ def extend_report(base, state, candidates, *, plan=None):
             "<p>A point range retains the lowest and highest criterion totals supported by the original selected "
             "sources. Its total is conditional on the practice prerequisite. A missing prerequisite remains visible "
             "even when the numeric criterion total is determined. Other study eligibility rules are shown separately.</p>",
+            "<p><strong>Attainable points are the retained discrete alternatives.</strong> A lower/upper pair does "
+            "not imply that every intermediate integer is possible. Combinations across unresolved criteria "
+            "remain conservative; correlations between missing observations are not inferred. "
+            "Original published bin endpoints remain literal. "
+            "An <strong>ambiguous</strong> value matches overlapping bins and keeps every matching class. An "
+            "<strong>unclassified</strong> value falls in a printed gap or beyond the recorded bins and keeps "
+            "the source profile's unresolved alternatives. <strong>Missing</strong> identifies an absent observation. "
+            "A bounded acreage retains every classification state encountered across its closed interval.</p>",
             "<p>Acreage ranges have <strong>closed endpoints</strong>: both limits are included. An exact contribution "
             "can follow when every acreage inside that range falls in the same published point band. The report "
             "then retains the acreage as unresolved and displays the determined points. A geometry-only bound has "
@@ -644,12 +744,13 @@ def extend_report(base, state, candidates, *, plan=None):
             "<p><a href=\"criterion-contributions.csv\">All criterion contributions</a> · "
             "<a href=\"criterion-values.csv\">All metric values and closed ranges</a> · "
             "<a href=\"criterion-scores.json\">Typed complete point results</a></p>",
-            _table(["Original ID", "Status", "Prerequisite", "Exact points", "Lower", "Upper", "Priority",
-                    "Whole acres", "Reporting acres"], (
+            _table(["Original ID", "Status", "Prerequisite", "Exact points", "Lower", "Upper", "Attainable totals", "Priority",
+                    "Possible priorities", "Whole acres", "Reporting acres"], (
                 [row["id"], _point_state(row["point_score"]),
                  flat_values(row)["point_prerequisite"], row["point_score"].get("points"),
                  row["point_score"].get("known_points"), row["point_score"].get("possible_points"),
-                 row.get("point_priority"), row["area_ha"] * ACRES_PER_HECTARE,
+                 row["point_score"].get("score_options"), row.get("point_priority"),
+                 row["point_score"].get("priority_options"), row["area_ha"] * ACRES_PER_HECTARE,
                  row["reporting_area_ha"] * ACRES_PER_HECTARE]
                 for row in point_rows[:500])),
             "<h3>Criterion and source details</h3>",

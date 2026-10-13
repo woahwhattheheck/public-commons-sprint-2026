@@ -44,6 +44,8 @@ point_lower and point_upper are sums of the retained per-criterion bounds. They 
 
 The top-level criterion table contributes each criterion once. Maximum and capped-sum subterms stay inside that criterion's retained terms; the long-form CSV never adds those child terms again.
 
+`point_score_options` preserves the discrete attainable totals from the retained source rules. A lower and upper total do not imply that every integer between them is possible. The report also carries `point_priority_options`, `point_source_profile` and `point_classification_states`. Combinations across unresolved criteria remain conservative because correlations between missing observations are not inferred. An unresolved practice prerequisite remains visible even when its conditional numeric contribution is determined.
+
 ## Closed acreage limits and exact points
 
 Both interval endpoints are included. For example, the original hydric rule awards one point at five acres, two at thirty, and three at fifty. If a recorded interval reaches exactly thirty acres at its upper endpoint, the two-point contribution remains possible. The complete source-bound interval is preserved in metric_bounds.
@@ -53,6 +55,8 @@ An exact point contribution can be determined even while the exact acreage is un
 A structural_only interval uses the parcel geometry to bound an area when a required original footprint is absent. Its observed_positive_acres remains null. A measured zero is different and stays numeric zero. Mixed and unknown soil map units remain unresolved under the fully-hydric source interpretation; a source query mask is not automatically certainty coverage.
 
 HTML numbers use the stored float representation rather than rounding an acreage across a published point threshold. CSV and JSON preserve the saved numeric values.
+
+The published profile retains literal bin endpoints, including the hydric-soil gap between 4.99 and 5 acres and the sensitive-buffer gap between 7.99 and 8 acres. A closed interval is evaluated at every relevant endpoint and across its intervening regions. The report retains an unclassified region or overlapping original classes instead of silently rounding the measurement into a neighboring bin. Its source references identify the unchanged original profile and the actual selected criterion field.
 
 ## Follow the decision
 
@@ -65,6 +69,8 @@ A refreshed export reconstructs the editable selected_union from the verified or
 ## Native units and support
 
 The existing Conservation path aggregates InVEST 3.20 NDR and SDR rates using actual polygon-cell intersection hectares. Nitrogen and phosphorus retain kg/year; sediment retains metric_tonnes/year. The report retains the actual native grid's resolution and pixel area.
+
+For an original published classification expressed per native pixel, the detail table retains the original scalar, its physical unit and the actual pixel area. A transfer from a published reference-cell cutoff to a different native cell area is an explicit recorded adaptation; it does not change the annual mass totals or replace the original source profile.
 
 An unselected model family stays unavailable with its original reason. An alternative retains its own support. Its paired difference is alternative minus baseline on the common native support; native structural stream omissions remain separately recorded. Added point fields never replace these quantities or change their units.
 
@@ -124,7 +130,7 @@ Use an actual retained source-operation result to prepare the criterion table, t
 
 ## Source references
 
-- Lake Keowee Watershed Plan (2020), Table 31 and Appendix D, including printed pages 139, 140 and 142: https://www.des.sc.gov/sites/des/files/Documents/BOW/WaterQuality/WPLakeKeowee.pdf
+- Lake Keowee Watershed Plan (2020), Table 31 and Appendix D, including printed pages 139, 140 and 142: https://www.des.sc.gov/sites/des/files/media/document/WBP_for_Lake_Keowee_Watersheds_2020.pdf
 - Original publisher edition: https://www.lakekeoweewatershed.org/files/files/Lake%20Keowee%20Watershed%20Plan.pdf
 - InVEST 3.20 nutrient delivery user guide: https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.20.0/userguide/en/ndr.html
 - InVEST 3.20 sediment delivery user guide: https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.20.0/userguide/en/sdr.html

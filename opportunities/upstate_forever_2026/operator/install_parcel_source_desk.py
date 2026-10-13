@@ -35,6 +35,16 @@ PREVIOUS = {
     "operator/parcel_source_receiving.py": "f345fb4dd52d956d20c9ef6bee779555eb67ace3ec913ef4f802cf09418d5c0d",
     "operator/PARCEL_SOURCE_DESK.md": "f15511ebf3803057752cc3f90580764b96046ec787d166032e1a047b187c2c99"
 }
+# Later authored editions are accepted by exact retained hash as well.
+PREVIOUS_EDITIONS = {
+    "operator/install_parcel_source_desk.py": (
+        "07c7f4a3d47520edc29c978ba8e535a91aad2720d0509fcf49b4e703f62006c9",
+    ),
+    "operator/PARCEL_SOURCE_DESK.md": (
+        "cc8d081f0c7c2af3963fb0c76edd0383cf07f423c9c700e51ac8485811c197ef",
+        "698818021ba3dedef762957820afa3950f59789937767b5545ea6e10e8e6d83b",
+    ),
+}
 DEPENDENCIES = (
     "model/workspace.py", "model/common.py", "model/conservation.py",
     "model/priorities.py", "source_tools/reporting_parcels.py",
@@ -89,7 +99,7 @@ def run(application, source_root, *, dry_run=False):
             if before is not None and before != data:
                 if name.endswith(".json") and json.loads(before) == json.loads(data):
                     data = before
-                elif sha(before) != PREVIOUS[name]:
+                elif sha(before) not in (PREVIOUS[name], *PREVIOUS_EDITIONS.get(name, ())):
                     raise ValueError("Compose the current authored parcel desk before replacing " + name)
             original[name], pending[name] = before, data
         changed = [name for name in FILES if original[name] != pending[name]]

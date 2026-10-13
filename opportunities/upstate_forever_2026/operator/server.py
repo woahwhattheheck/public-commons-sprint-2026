@@ -44,17 +44,17 @@ JSON_LIMIT = 4 * 1024 * 1024
 ACTIVE = {"queued", "running"}
 KINDS = {"sources", "profiles", "scenarios", "grids", "runs", "observations",
          "comparisons", "observation_comparisons", "deliveries", "spatial_reviews", "spatial_exports",
-         "community_tables", "community_plans", "community_reports"}
+         "community_tables", "community_plans", "community_reports",
+         "planning_inventories", "portfolios", "portfolio_reports"}
 ACTIONS = {"source.import", "profile.save", "scenario.save", "grid.prepare",
            "run.prepare", "run.start", "run.compare", "observation.import",
            "observation.compare", "delivery.build", "workspace.backup", "workspace.restore",
            "spatial.review.save", "spatial.review.export", "community.table.import", "community.plan.save",
-           "community.report.build"}
+           "community.report.build", "portfolio.inventory.build", "portfolio.preview", "portfolio.save",
+           "portfolio.scenario.prepare", "portfolio.report.build", "portfolio.decision.build",
+           "portfolio.run.prepare", "portfolio.run.start"}
 ACTIONS.update(REHEARSAL_ACTIONS)
 ACTIONS.update(CUSTOMER_REVIEW_ACTIONS)
-# PROJECT-TRANSFER12 integration
-from project_transfer import ProjectTransfers, ACTIONS as PROJECT_TRANSFER_ACTIONS
-ACTIONS.update(PROJECT_TRANSFER_ACTIONS)
 ACTIONS.update(EXPERIMENT_ACTIONS)
 ACTIONS.update(PROGRAMME_ACTIONS)
 
@@ -108,7 +108,6 @@ class Operator:
     def __init__(self, directory, state_directory, *, create=False, title=None,
                  source_manifests=(), source_roots=(), restore_directory=None, upload_limit=4*1024**3,
                  extraction_limit=64*1024**3):
-        self.project_transfers = ProjectTransfers(self, Fault)
         self.root = Path(state_directory).resolve()
         self.root.mkdir(parents=True, exist_ok=True, mode=0o700)
         self.owner = held(self.root / ".operator.lock", blocking=False)
@@ -366,8 +365,6 @@ class Operator:
             atomic_json(self.root / "tasks" / (key + ".json"), task)
 
     def _invoke(self, task):
-        if task["action"] in PROJECT_TRANSFER_ACTIONS:
-            return self.project_transfers.invoke(task)
         ws = self.ws(task["workspace"])
         value = task["payload"]
         action = task["action"]
@@ -389,6 +386,13 @@ class Operator:
             finally:
                 if cleanup:
                     shutil.rmtree(cleanup)
+        if action == "portfolio.run.prepare":
+            return ws.prepare_portfolio_run(value)
+        if action == "portfolio.run.start":
+            return ws.run_portfolio(value)
+        if action.startswith("portfolio."):
+            from model.portfolios import invoke
+            return invoke(ws, action, value)
         if action.startswith("community."):
             from model.communities import invoke
             return invoke(ws, action, value)
@@ -691,8 +695,19 @@ class Operator:
                          "Complete saved community " + ("table" if kind == "community_tables" else "plan"))]
             original, entry = ws.source_file(result["source"]["collection_id"], result["source"]["source_id"])
             downloads.append(self._ticket(workspace, original, entry["body"], "Original community CSV"))
-        elif kind == "community_reports":
+        elif kind == "planning_inventories":
+            from model.planning_inventory import inspect
+            result = inspect(ws, key)
             downloads = self._files(workspace, result, ws.root)
+        elif kind in {"community_reports", "portfolio_reports", "portfolios"}:
+            downloads = self._files(workspace, result, ws.root)
+            if kind == "portfolios":
+                path = ws.root / "portfolios" / (key + ".json")
+                downloads.insert(0, self._ticket(workspace, path,
+                    {"bytes": path.stat().st_size, "sha256": file_digest(path)},
+                    "Saved conservation portfolio"))
+                from model.portfolios import get_portfolio
+                result = get_portfolio(ws, key, details=True)
         elif kind in {"grids", "runs", "comparisons", "deliveries"}:
             downloads = self._files(workspace, result, ws.root / kind / key)
         else:
@@ -734,11 +749,23 @@ class Operator:
                             break
                     result.update(sample=rows, sample_limit=20)
         elif entry["kind"] == "raster":
+            import math
             import rasterio
+            from pyproj import CRS
             with rasterio.open(path) as original:
+                reference = CRS.from_user_input(original.crs) if original.crs else None
+                axes = reference.axis_info[:2] if reference else []
+                metre_grid = bool(reference and reference.is_projected and len(axes) == 2
+                                  and all(abs(axis.unit_conversion_factor - 1) <= 1e-12 for axis in axes))
+                affine = original.transform
+                native_cell = (float(affine.a) if metre_grid and affine.a > 0 and affine.e < 0
+                               and abs(affine.b) <= 1e-12 and abs(affine.d) <= 1e-12
+                               and math.isclose(affine.a, -affine.e, rel_tol=1e-9, abs_tol=1e-12)
+                               and math.isfinite(affine.a) else None)
                 result.update(width=original.width, height=original.height, count=original.count,
                               crs=str(original.crs), transform=list(original.transform)[:6],
-                              resolution=list(original.res), bounds=list(original.bounds),
+                              resolution=list(original.res), native_resolution_m=native_cell,
+                              projected_metre_grid=metre_grid, bounds=list(original.bounds),
                               dtypes=list(original.dtypes),
                               nodata=None if original.nodata is None or not __import__("math").isfinite(original.nodata) else original.nodata,
                               native_tags=original.tags())
@@ -776,7 +803,11 @@ class Operator:
         core_results = {"source.import": "sources", "profile.save": "profiles", "scenario.save": "scenarios",
                         "grid.prepare": "grids", "run.prepare": "runs", "run.start": "runs",
                         "run.compare": "comparisons", "observation.import": "observations",
-                        "observation.compare": "observation_comparisons", "delivery.build": "deliveries"}
+                        "observation.compare": "observation_comparisons", "delivery.build": "deliveries",
+                        "portfolio.inventory.build": "planning_inventories", "portfolio.save": "portfolios",
+                        "portfolio.report.build": "portfolio_reports", "portfolio.decision.build": "portfolio_reports",
+                        "portfolio.scenario.prepare": "scenarios", "portfolio.run.prepare": "runs",
+                        "portfolio.run.start": "runs"}
         if task["state"] == "complete" and task["action"] in core_results and result.get("id"):
             kind = core_results[task["action"]]
             task["_item"] = {"kind": kind, "id": result["id"]}
@@ -792,7 +823,7 @@ class Operator:
                              "community.report.build": "community_reports"}
         if task["action"] in community_actions and task["state"] == "complete":
             task["_downloads"] = self.item(task["workspace"], community_actions[task["action"]], result["id"])["_downloads"]
-        return self.rehearsals.decorate_task(self.extensions.decorate_task(self.experiments.decorate_task(self.programmes.decorate_task(self.project_transfers.decorate_task(self.customer_reviews.decorate_task(task))))))
+        return self.rehearsals.decorate_task(self.extensions.decorate_task(self.experiments.decorate_task(self.programmes.decorate_task(self.customer_reviews.decorate_task(task)))))
 
     def open_download(self, key):
         with self.lock:
@@ -975,7 +1006,7 @@ class Handler(BaseHTTPRequestHandler):
                         {name: values[0] for name, values in query.items()}))
                 raise Fault("ROUTE_MISSING", "This operator route does not exist.", 404)
             selected = "index.html" if url.path == "/" else url.path.removeprefix("/web/")
-            if selected not in (({'app.mjs', 'community.css', 'community.mjs', 'experiments.css', 'experiments.mjs', 'index.html', 'programmes.css', 'programmes.mjs', 'receiving_water_spatial.mjs', 'receiving_waters.css', 'receiving_waters.mjs', 'reviews.css', 'reviews.mjs', 'spatial.mjs', 'style.css', 'conservation.mjs', 'conservation.css', 'conservation_optimization_bridge.mjs', 'conservation_optimization.mjs', 'conservation_optimization.css'} | self.app.extensions.web_assets | {"rehearsal.mjs", "rehearsal.css"})):
+            if selected not in (({'portfolio.mjs', 'portfolio.css', 'app.mjs', 'community.css', 'community.mjs', 'experiments.css', 'experiments.mjs', 'index.html', 'programmes.css', 'programmes.mjs', 'receiving_water_spatial.mjs', 'receiving_waters.css', 'receiving_waters.mjs', 'reviews.css', 'reviews.mjs', 'spatial.mjs', 'style.css', 'conservation.mjs', 'conservation.css', 'conservation_optimization_bridge.mjs', 'conservation_optimization.mjs', 'conservation_optimization.css'} | self.app.extensions.web_assets | {"rehearsal.mjs", "rehearsal.css"})):
                 raise Fault("PAGE_MISSING", "This operator page does not exist.", 404)
             data = (Path(__file__).parent / "web" / selected).read_bytes()
             self.close_connection = True

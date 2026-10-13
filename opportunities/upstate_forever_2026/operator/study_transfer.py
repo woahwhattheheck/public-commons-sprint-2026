@@ -63,6 +63,24 @@ class StudyTransfer:
                     "limit": limit, "next_offset": next_offset if next_offset < len(tasks) else None}
         raise self.Fault("STUDY_ROUTE", "Select an existing scientific-study transfer view.", 404)
 
+    def _investigation_snapshot(self, workspace_key):
+        # Reuse the configured scientific integration. Its Store may live
+        # outside the Workspace; constructing another factory would lose it.
+        integration = getattr(self.operator, "science_investigations", None)
+        if integration is None:
+            registry = getattr(self.operator, "extensions", None)
+            entries = getattr(registry, "_extensions", {})
+            provider = (entries.get("investigations") or {}).get("provider")
+            integration = getattr(provider, "integration", None)
+        if integration is None:
+            return None
+        prepare = getattr(integration, "prepare_study_snapshot", None)
+        if not callable(prepare):
+            raise ValueError("Update the installed scientific investigation integration before transferring its history.")
+        # Original context binding takes the shared Workspace guard. Complete it
+        # before export_study freezes native members under the exclusive guard.
+        return prepare(workspace_key)
+
     def invoke(self, task):
         if task.get("action") != ACTION:
             raise self.Fault("STUDY_ACTION", "Select the scientific-study export action.", 404)
@@ -78,7 +96,10 @@ class StudyTransfer:
 
         destination = Path(self.operator.root) / "outputs" / (task["id"] + ".study.zip")
         try:
-            return study_transfer.export_study(workspace, destination, selection, progress=progress)
+            snapshot = self._investigation_snapshot(task["workspace"])
+            return study_transfer.export_study(
+                workspace, destination, selection, progress=progress,
+                investigation_snapshot=snapshot)
         except BaseException as error:
             progress({"phase": "failed", "error": {"type": type(error).__name__, "message": str(error)}})
             raise

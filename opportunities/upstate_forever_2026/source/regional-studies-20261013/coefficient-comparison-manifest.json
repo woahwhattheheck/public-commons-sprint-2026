@@ -1,0 +1,88 @@
+{
+  "schema": "upstate.published-coefficient-comparison/v1",
+  "source_commit": "edc04b2fae77153f1898c4dd475cee7f82c26e92",
+  "original_inputs": [
+    {
+      "path": "source/biophysical-regional-20261012/regional-biophysical.csv",
+      "sha256": "b2b5778c5d8c71b2b0c6db370f29a60e987d1be3d491cec91493a0b975b8b9e4",
+      "rows": 15
+    },
+    {
+      "path": "source/regional-studies-20261013/albright-2023-biophysical.csv",
+      "sha256": "64c5c803e09d50d9f51c029ece199a06c01d19951ae3fdce52b7fca7bb13bf8c",
+      "rows": 15
+    },
+    {
+      "path": "source/upper-flint-2024/nlcd-nonurban-coefficients.csv",
+      "sha256": "ba2e1b14ab77f7b327f1124d9b489a81b783c84b71176eb665365d899e27665d",
+      "rows": 9
+    }
+  ],
+  "comparison": {
+    "rows": 120,
+    "lucodes": 15,
+    "numeric_fields": 8,
+    "albright_changed_cells": 101,
+    "upper_flint_combined_changed_cells": 16
+  },
+  "transitions": {
+    "rows": 24,
+    "profiles": 3,
+    "directed_landcover_changes": [
+      [
+        82,
+        43
+      ],
+      [
+        81,
+        71
+      ],
+      [
+        41,
+        22
+      ],
+      [
+        42,
+        22
+      ],
+      [
+        43,
+        22
+      ],
+      [
+        41,
+        23
+      ],
+      [
+        42,
+        23
+      ],
+      [
+        43,
+        23
+      ]
+    ],
+    "quantity_scope": "Exact published input coefficient contrasts; native run outputs supply routed annual export."
+  },
+  "methods": {
+    "upper_flint": "Overlay the nine mapped nonurban source rows onto the retained complete regional reference.",
+    "ratio": "destination/source; null or empty when source is zero",
+    "delta": "destination-source",
+    "c_p": "usle_c*usle_p",
+    "ratio_precision_significant_digits": 12
+  },
+  "files": {
+    "source/regional-studies-20261013/COEFFICIENT_INTERPRETATION.md": {
+      "bytes": 9879,
+      "sha256": "5d9f95cfa3bef56cafb03cd5a6d97f9b3f906b49da612d7c453062a84bbe3508"
+    },
+    "source/regional-studies-20261013/coefficient-comparison.csv": {
+      "bytes": 10721,
+      "sha256": "123147cd962b1767a4f769dcce8ceb23876dd5a3a2b36def7ea77c99176e12a7"
+    },
+    "source/regional-studies-20261013/transition-coefficients.csv": {
+      "bytes": 4354,
+      "sha256": "d9fc96117a5747137e17990f88aff99b9942e5046a3eb2f271eeaebe971720bf"
+    }
+  }
+}

@@ -16,6 +16,7 @@ import re
 import tempfile
 
 OWNED = frozenset({
+    "integration/conservation_catalog_browser_composition.json",
     "model/CONSERVATION.md",
     "model/CONSERVATION_CONSUMERS.md",
     "model/CONSERVATION_EXPERIMENTS.md",
@@ -31,12 +32,15 @@ OWNED = frozenset({
     "model/conservation_reporting.py",
     "model/conservation_scenarios.py",
     "model/keowee_priority.py",
+    "model/keowee_profile_adapter.py",
     "model/portfolios.py",
     "operator/CONSERVATION.md",
     "operator/CONSERVATION_CATALOG.md",
+    "operator/CONSERVATION_CATALOG_BROWSER.md",
     "operator/CONSERVATION_EXPERIMENT_BROWSER.md",
     "operator/CONSERVATION_HOST.md",
     "operator/CONSERVATION_OPTIMIZATION.md",
+    "operator/KEOWEE_METHOD_VIEW.md",
     "operator/conservation.py",
     "operator/conservation_browser_receiving.py",
     "operator/conservation_catalog.py",
@@ -46,17 +50,21 @@ OWNED = frozenset({
     "operator/extensions/conservation-catalog.json",
     "operator/extensions/conservation-optimization.json",
     "operator/extensions/conservation.json",
+    "operator/extensions/keowee-method-view.json",
     "operator/install_conservation.py",
     "operator/web/conservation.css",
     "operator/web/conservation.mjs",
     "operator/web/conservation_optimization.css",
     "operator/web/conservation_optimization.mjs",
     "operator/web/conservation_optimization_bridge.mjs",
+    "operator/web/keowee-method-view.mjs",
     "operator/web/retained_desks.mjs",
     "source/conservation-documentation-integration-20261013.json",
     "source/conservation-reporting-joins-20261013.json",
+    "source/keowee-native-binding-20261013.json",
     "source/keowee-priority-integration-20261013.json",
     "source/keowee-priority-methods-20261013.json",
+    "source/keowee/20261013/lake-keowee-methodology.json",
     "source/parcel-criteria-geometry-integration-20261013.json",
     "source/parcel-criteria-integration-20261013.json",
     "source/parcel-criteria-interval-integration-20261013.json",
@@ -93,7 +101,8 @@ KNOWN_PRIOR = {
         "5114f307d8640188ad45d09c61e32ee564f94e77f5171c81951f83dc85736c81",
         "c46d49b9d9ec84e16be050679546a11edeea6f0f5862b21544e6313e4fca7930",
         "4d51f59276d6585e817d43f44dd80c6aaeed3e15cc6cf149e9cc2b3d0d90cd87",
-        "586fdf871373935689f6876c753da09051774ae76ac08b0c0b71cfef83489e19"
+        "586fdf871373935689f6876c753da09051774ae76ac08b0c0b71cfef83489e19",
+        "24244f46143402dfe22f432195c801e94b5a81e0b50c918f8ae1bac5fe70578e"
     ],
     "operator/conservation.py": [
         "530d230e20704b058ffc50cebea6cab01b2af42f94d1a472de2482ce95ada0a4",
@@ -101,7 +110,8 @@ KNOWN_PRIOR = {
         "4162a1f93e8ec39960482db85a045a0f5ef0437f7e04a8963ce9348ca6ce22db",
         "8849903b808a82b5d96d2bf2a047dba47602d3bfe098c088378384237d258891",
         "9c38b58b730209ab72daa3096bc8d7b98c776429ac4ad4249f04abe45c3dc301",
-        "ba2975b292cbad34536b0f2128a76920c8cfe4e528565cf9575b618720864eda"
+        "ba2975b292cbad34536b0f2128a76920c8cfe4e528565cf9575b618720864eda",
+        "ee7206166fb73ae57b0a87e32e88855e0f378e43f5d6f31afcc117c95e45469e"
     ],
     "operator/web/conservation.mjs": [
         "7857010fbb286a33bde354715d067ee649304f51ce86b4c642a1bcd34f400c65",
@@ -110,21 +120,24 @@ KNOWN_PRIOR = {
         "e18f46038591553b4ae8e0c10f1c449f97d227a5a50170add0d2b7195ad2879b",
         "ee1ed5e75d34616416e342db99df34587cdc750d38c7f808a6d2ea58a6c2595b",
         "ee9d18d1233af1fc2e9a4d6ba84134feaac9e84497c77a83da582cb92da6b710",
-        "52e834dd9675a64b57260274a358635f1c8fa25510232207e10d0885629ef25e"
+        "52e834dd9675a64b57260274a358635f1c8fa25510232207e10d0885629ef25e",
+        "ab542f2dcfa03e80aa1f1cb7dc8f999457cbf4a3c063668567226a852bbfbf65"
     ],
     "operator/web/conservation.css": [
         "9eddc5584dfe6ae93c6e6a779af56ba9604b63757084cb1cd81bdca99617eb13",
         "fa8bfb6ec628f1ea618d8378b5964f8a32e12ec6cb4a2dbc6d945db3de098555",
         "8ac5b887081ce108c0a5f1aaa69313240d7c2a6bc9d738ed479a2f766e4b7654",
         "82f69e6bcf264ac5c49e5eb61b6490cbac89419eabf9877b3c3332415785cad5",
-        "625e039cf970763d80ef94a1d8e0d155a28e80249de93fa8fc410e26b90351e5"
+        "625e039cf970763d80ef94a1d8e0d155a28e80249de93fa8fc410e26b90351e5",
+        "0808f1c93d172d7cbec13768e7789acc3669e0ff36fd02f0c7f1cd09dfd36bf8"
     ],
     "operator/CONSERVATION.md": [
         "f01c3d65fbfaea80a60299cee4058d231d1265ff68a19198519abc8240d676cc",
         "793620676d53702da2447fc0fa47f02f767c0b2b958152395db523b9683d7a12",
         "9c94af3dac766ae3fd32a2e514d1efff911960db5d01b9b3d60c2919ae81aff9",
         "c109ce231393d18f149b5f2bfc5faaec56948d1efda26ddc1c5a3144c1b5b231",
-        "d39ab0132a9c32639883943994ece1c7819ae23b73d13c5957af6211d904c277"
+        "d39ab0132a9c32639883943994ece1c7819ae23b73d13c5957af6211d904c277",
+        "606ec48543d3967cd8bef4b86d320ab273ff8b0f60f890d2bd5b91f11467fbee"
     ],
     "operator/install_conservation.py": [
         "c9aaa958816139e151fd99cc194deac931186783563738119e7b4ae69a413696",
@@ -138,7 +151,9 @@ KNOWN_PRIOR = {
         "1fde2cd0fd7c7960a99e7757e7724cce43ff5835a48dbab2eaa30092ffa2b37a",
         "172c2cac2e9933bc5088993e55218597776010e1c6d5c31307e7c24d6c05849a",
         "fac4eb6c7c8b7b27d1a2cbbc13fbee8d2e2ad682d1ba5fcda0126b7676255ae1",
-        "5662e0ee4c342dbd8ec50a8d3cdf74b7af10841680b46559f6eb6ad2f40ab8eb"
+        "5662e0ee4c342dbd8ec50a8d3cdf74b7af10841680b46559f6eb6ad2f40ab8eb",
+        "1bf6aa847d00df9b1e5a5bf8d9bc347f4ae73604e1f9e36abcfac827576f2256",
+        "1929be639e1ed2297e63611ce96115949b56d71e8c5a2cd58e91ed98d9b189f1"
     ],
     "operator/conservation_regional_receiving.py": [
         "a4326a019784fdb0bd03aa071ee5f01e40694d3063d0a8b6da70caed5ce9daf7",
@@ -147,13 +162,16 @@ KNOWN_PRIOR = {
         "39df599c151e71c3ced1425133ba8473822feb312dfc6ac8408285c0baa7175e",
         "fc6bb0b216927c04c4cf1f665c237e397f997260de6f6457a192d987eb5d0276",
         "6db8fe4ab19613472c9e671669c66d4381d1f982b011d7bd6ce314cd0e069b5c",
-        "103055f8e60711f20a3043f60e7bbc1ca55628985d4cc5308091aef527904352"
+        "103055f8e60711f20a3043f60e7bbc1ca55628985d4cc5308091aef527904352",
+        "f02cbba6296578a498566f577edde0c7cf897e37a1916bdceb7fa3faea6ef3a2",
+        "91e45b0b566ffd433cae627f3167f42123abb3c2ccf8e53c388767e4618254b3"
     ],
     "model/keowee_priority.py": [
         "9686b4b9224f2d09f705e09a4300877f2bf5ce39a4405c81aa5fc84b2cd8949e",
         "cb7c6f9aa1d193c594b9427cb80ddedc9a209924e4347f5759a54e51151341dd",
         "3f8e48b83d74355b280baafefe0142cd5b23924813aeeba48170ec8815497043",
-        "f83004ffaf97a2f5182fffb632d8ece6570d117983e210b084ccf41da1000d7f"
+        "f83004ffaf97a2f5182fffb632d8ece6570d117983e210b084ccf41da1000d7f",
+        "7f0021f5d01413a5412fc97b95285a6fc1ce371980c77cf6fbe5447dd15b8431"
     ],
     "source/keowee-priority-methods-20261013.json": [
         "f6f0d496697b03cdd667407ff26f0377f1262df608b21f6a3ff059357c134ec5"
@@ -174,7 +192,8 @@ KNOWN_PRIOR = {
     "model/CONSERVATION_CONSUMERS.md": [
         "aabd1f2ca24827c783d47da103ae55e130a2d22ae77688748848762ff4cd49d0",
         "0a42f6685d086ec9bca55e6e63d891058de5be5547a5bc4d116a2d2626358123",
-        "9bcc0a413f9d2e8feec08d2ff827c829e1a875d977519e3b61edb7f907f3b5e9"
+        "9bcc0a413f9d2e8feec08d2ff827c829e1a875d977519e3b61edb7f907f3b5e9",
+        "d8d014e9731170ee849af3d09100441ff0bb1b47c65e981fa5d431386a1fd65e"
     ],
     "model/CONSERVATION_EXPERIMENTS.md": [
         "b8859697162b7dd37e19c59fed4ab5abae8fc3e02e50a6e31e6faed9e28bd65d"
@@ -183,14 +202,20 @@ KNOWN_PRIOR = {
         "3671c92e3315af3cd979b6a1244ea97c51924cc9ed201169725e341ae19e147c",
         "0924148f60ea61d63cd45f6e5470cd1e264fbfd343c48f619285274da49821cc",
         "07710f48afcf7e5725c058fe82498669110081144846a3555ed707ec839b9f41",
-        "9b4881b0a6da0dcedfa9f2a4bb2125c216971e38479c91f0527b1497b11f76b9"
+        "9b4881b0a6da0dcedfa9f2a4bb2125c216971e38479c91f0527b1497b11f76b9",
+        "e8ad84d3f992cc1e2d40240abb84c33923d6f60de1dca5a3231cb9bd47f53e9c",
+        "1b27a5186fe99f255856e7515609c7a4ed88ff08ccad508479ade53b3955b7b4"
     ],
     "source/parcel-criteria-sources-20261013.json": [
         "4b2276fb7c976f08ac11d6d95a96af0ed806a914442deda5126c30916f3b57a0",
-        "f4e925fc839f5c814ecaf785aa4ad8762f950ee94d4f431d269b6a545656f79a"
+        "f4e925fc839f5c814ecaf785aa4ad8762f950ee94d4f431d269b6a545656f79a",
+        "028c4cb379e39fdf9b6ca53c964862b9ed05a9582e63803784814cfb7468ae30",
+        "c7dfd207ec90a25851b02f6a271cf4aed561cf33e6cc61ee96b9404be1bb9858"
     ],
     "source_tools/PARCEL_CRITERIA.md": [
-        "3c1b9b9c8df3452aa5d16969be10e0917978d80130d138d3df9220a073dc72c3"
+        "3c1b9b9c8df3452aa5d16969be10e0917978d80130d138d3df9220a073dc72c3",
+        "87779cb93017eff68557d8e8d95fef3aeb5d6fccf1d1868a611d9f22b326c8a8",
+        "b870cf11dede90a07568d0be967339a75301dbb6891d5fc56015b97934a61fa8"
     ],
     "source/parcel-criteria-integration-20261013.json": [
         "d11fc0238a4637af7432df34761d43bd3dd4f6abedcc72f81700dca6bf6b0da8"
@@ -199,12 +224,14 @@ KNOWN_PRIOR = {
         "60d91c12df8abe5db11aeff9c9473ae68e20e8c20322c95c3e03266c3ccba85c",
         "46c0c69edca2c9705ae00086f534b773540337bf04b3b96a1f888253ec8758f3",
         "0e44f1d6678294ee65e76c8f538b6a2d7a37e5cf95f3187067e47e023a4635b2",
-        "1be2d82eb3c195546b1198bdea127160a9b0eec14de220ec51f07ce97d506962"
+        "1be2d82eb3c195546b1198bdea127160a9b0eec14de220ec51f07ce97d506962",
+        "f29a835651918668a1a679f59573641e3366c05fda5b45f390bf8f2b27de451c"
     ],
     "operator/conservation_optimization.py": [
         "e987a181ac60463b725897c5321306871c4bc004d336b5468d57641e4b1bec63",
         "51d9926b4e0db34bf7963a486ee0026d9dfd9d3a6d531b1efc7de7e726301ae7",
-        "3f16dae23b8cfe5e928cd4f4670e6dfe514bb790dee7c029e7717e8588b8ad1b"
+        "3f16dae23b8cfe5e928cd4f4670e6dfe514bb790dee7c029e7717e8588b8ad1b",
+        "991172824ba097ebb27bbaca0d7cc23edb9e40f61a4816de320c9c2407bcbacd"
     ],
     "operator/extensions/conservation-optimization.json": [
         "744ecd44e96f32aea580f09fad04cecd0d203603d40443e98ad972bbe24712ce",
@@ -219,16 +246,21 @@ KNOWN_PRIOR = {
         "0ce2dd533a1de760c342ba068b62fd6e0607deca4da2df64bb7f70eff52d99ec",
         "c100bfc5035d07f6457ab4c1cdef9e7f02a2b7814a45859fe497c2daea7e5be6",
         "d397e3cb792b2de4b934a2e9e320861c89be28f63dde9b1b6c89791240707e0d",
-        "7d078a291c137ff62d6a6c2d62a34fe7b365a65a82f149cf029d8dc2aaa9d397"
+        "7d078a291c137ff62d6a6c2d62a34fe7b365a65a82f149cf029d8dc2aaa9d397",
+        "0c87997c89de6a8550cb61b52d5a879b16e61134d2de2aea3fcb136f579a3b59"
     ],
     "model/portfolios.py": [
-        "f0364a184cace554c136c04ab6d34b71963e9600a5bcc5c0fa0bf491b882c8fd"
+        "f0364a184cace554c136c04ab6d34b71963e9600a5bcc5c0fa0bf491b882c8fd",
+        "932bd2ba6a3f0378d9a3c3fc19adc2bad973ee44fba8f29d2dd58e2ef3c92d98",
+        "88d992732431d5b69f1b585217330975291281db96f8a03aa0aebf330a8e5808"
     ],
     "model/PORTFOLIOS.md": [
-        "5807ae6b025d188e3725c945d16c87f7fc46adba45d49a4c7c1742be2101b3af"
+        "5807ae6b025d188e3725c945d16c87f7fc46adba45d49a4c7c1742be2101b3af",
+        "4bb7f5359158207d007305fbbf91ec2715a1a08db00162a4b90239fadb0b80ce"
     ],
     "source_tools/soil_floodplain_sources.py": [
-        "0b9a0792323aaeeaa6e8897c80bc3940d2010d1fef5304d3faf371d6ada5012f"
+        "0b9a0792323aaeeaa6e8897c80bc3940d2010d1fef5304d3faf371d6ada5012f",
+        "f88ba0144a3c15c9d09d65a286af440d22c2d423b5c30422068cf3179033376b"
     ],
     "source/soil-floodplain-source-profile-20261013.json": [
         "7c342a0de9dd1bcfae835dd89de38a26e41609cc8aa01608db0fe5e9c8c23a4b"
@@ -237,26 +269,31 @@ KNOWN_PRIOR = {
         "8f2af4f20478f27699c4aebfdee941276ef225637e49e7c8c9c08c83d7ba6133"
     ],
     "source/soil-floodplain-integration-20261013.json": [
-        "093122c990a283d8bbf930f6445827a9a0e68d6376315369af975cc70f69771d"
+        "093122c990a283d8bbf930f6445827a9a0e68d6376315369af975cc70f69771d",
+        "85643aecdfad73b3cd6502a5aed0ca381e80a4fb1ed30043b40fabafa6a5202d"
     ],
     "source_tools/PARCEL_CRITERIA_INTERVALS.md": [
-        "fadf7251a0e0bcce5c95a0d49d5dd2ecbf41e720d5054671bd6c8ccb823f9fab"
+        "fadf7251a0e0bcce5c95a0d49d5dd2ecbf41e720d5054671bd6c8ccb823f9fab",
+        "26073d412324c60e38491a32bbd87226dfaf2dfaacbc0754e53f6c403bee86dc"
     ],
     "source/parcel-criteria-interval-integration-20261013.json": [
         "ec07287aea78731d11ec5bfadd03fd43077aa762f849c0bf32fc2bdb64e6eb8e"
     ],
     "model/conservation_reporting.py": [
-        "271f5bf8ba1df82766fe49efe8ec386e6de3579ad7965ec3a85221bbd6e1a8f9"
+        "271f5bf8ba1df82766fe49efe8ec386e6de3579ad7965ec3a85221bbd6e1a8f9",
+        "2dde322110556f71c0cfebf78a050e6a146f5dafeea7f16e8c744694cc3b2f1f"
     ],
     "model/CONSERVATION_REPORTS.md": [
-        "22bcfa38b6db3b78e285d53e8e1ae87a67d186fbc58bb29f837e6631a120c6b6"
+        "22bcfa38b6db3b78e285d53e8e1ae87a67d186fbc58bb29f837e6631a120c6b6",
+        "254b52695f08b5ba43bcdba78965d55d51222d2ff2a0d9699c9c3de387a99218"
     ],
     "source/conservation-reporting-joins-20261013.json": [
         "4a6a69aca0062ad71c1919d868dabca0511e7ce65277d67dcfd4de40b65499c2"
     ],
     "operator/conservation_browser_receiving.py": [
         "92376677bdeeacdc5294a02ed89a9c9a463373b023bb6aa4ddcd170adc3e0c93",
-        "8c95b46f72826e3d95f1bd79479a80e69146703b6c2088f319c1d0eb5a1d1cad"
+        "8c95b46f72826e3d95f1bd79479a80e69146703b6c2088f319c1d0eb5a1d1cad",
+        "e2672ff3f10f43c98604d6493615f5d076998ecdfbd5d696de3741158da02b63"
     ],
     "source_tools/receive_drive_source.py": [
         "c6771e6d8d0ed681b162f49e0d30ebf6f8bd7412666bf128409e498d83bf1b3c"
@@ -292,22 +329,58 @@ KNOWN_PRIOR = {
         "703700f71cc0c849991ea89a439d436e3fef10500525f6f0bbc7c87d261afa29"
     ],
     "operator/web/conservation_optimization_bridge.mjs": [
-        "2d79a5ff3bb86c434c9f895f00bee37a9b90c0a4bad0c26129a7d1bcb941a22a"
+        "2d79a5ff3bb86c434c9f895f00bee37a9b90c0a4bad0c26129a7d1bcb941a22a",
+        "6df5b9fba0c873eb45c5bf3ea99cd6d766ad0477c390742b97ab74bce6620c31"
     ],
     "operator/web/conservation_optimization.mjs": [
-        "d337ad6a2076d4611482a636cc5160e4b837b16e5fa1628b9c4325e49f272ad7"
+        "d337ad6a2076d4611482a636cc5160e4b837b16e5fa1628b9c4325e49f272ad7",
+        "7a29153e8786f0384538041c9befe12b0193c9aa5e17f138d76ebc4d3ad6f6c8"
     ],
     "operator/web/conservation_optimization.css": [
         "f8fe9a40855df1c7e241c58106c327bb1c1ef4af0ea9940572139e1c6b9237fd"
     ],
     "operator/CONSERVATION_HOST.md": [
-        "6156262c9746fa163c5793cb4f15cea34a5bcdf2fbd9a1272820d09717c4cc7a"
+        "6156262c9746fa163c5793cb4f15cea34a5bcdf2fbd9a1272820d09717c4cc7a",
+        "e79a634aa44a5f4061d4123590a5ad3c4f592bb3eb196f0c4bb377665511c788"
     ],
     "operator/extensions/conservation.json": [
-        "749b35c774827e15e732d31a11766afb5a05f6bf3abd3bb33d2118e5afdd0550"
+        "749b35c774827e15e732d31a11766afb5a05f6bf3abd3bb33d2118e5afdd0550",
+        "3211e501743819a2d25e7c47e499d4705e57009db297ef476b09e8c19f722093"
     ],
     "operator/web/retained_desks.mjs": [
-        "3313f4fa86212b12627985d6332a796ebffa913889f452b136f28df4da121d96"
+        "3313f4fa86212b12627985d6332a796ebffa913889f452b136f28df4da121d96",
+        "9e53dc3f51baae9dd3a1a26901a371d82bc68bd7bc940bbc6a050d6a516136de",
+        "f3641132250affeb3109f97dd0cd1f01414f7dcf009ae187154b5e27585768d9"
+    ],
+    "source_tools/PARCEL_CRITERIA_GEOMETRY.md": [
+        "35db87a06a0e4036044cca57cf1a8478a33af7a04332e2abf43455abf09cccc4"
+    ],
+    "source/parcel-criteria-geometry-integration-20261013.json": [
+        "80bc70beec2306f299bcbbfc84e27739898c05d520312154a1f3fff660a45878"
+    ],
+    "source/conservation-documentation-integration-20261013.json": [
+        "a334f272bebd0c16c3e79a92c98d2a5b654a9758779d22707048a375e7b377e8"
+    ],
+    "operator/CONSERVATION_CATALOG_BROWSER.md": [
+        "252c5ec0d85a556f3f391645b2048b71707d93b2b7f21457ea37e92f6bec00ae"
+    ],
+    "integration/conservation_catalog_browser_composition.json": [
+        "7d5078bc1d1626f218db5415d2e0e4a301aa0b94dc48fc6fd9c70b94b9ce402c"
+    ],
+    "model/keowee_profile_adapter.py": [
+        "e36148ceb0f042cc0fd86c1525034066e9376df0b12acf06e23e57e58186b971"
+    ],
+    "source/keowee-native-binding-20261013.json": [
+        "b5e50ed043db62ad166a2f8754e502fed212225b0a54ab9ee498505ba567b465"
+    ],
+    "source/keowee/20261013/lake-keowee-methodology.json": [
+        "388f9f7ae3246dd156fad446c616bbf8d3440a09b2edd524c45cef1d6c299da0"
+    ],
+    "operator/extensions/keowee-method-view.json": [
+        "2e5adabaaeeb8dacc71f8b47407af7136fd912d9d23232948ae67aeb25d83234"
+    ],
+    "operator/KEOWEE_METHOD_VIEW.md": [
+        "31f8446504c3027440bb5b8cca019c666058885ca1fd669e4c771a25e880d3a3"
     ]
 }
 
@@ -400,7 +473,17 @@ def patch_registered_server(text):
     return text
 
 
+def catalog_action_labels(text):
+    for action, label in [["conservation.catalog.prepare","Prepare candidate search"],["conservation.catalog.select","Retain candidate selection"],["conservation.catalog.plan.save","Save retained candidate plan"],["conservation.catalog.export","Export complete candidate rows"]]:
+        if repr(action) + ":" not in text:
+            text = once(text, "const actionLabels={",
+                        "const actionLabels={" + repr(action) + ":" + repr(label) + ",",
+                        "Candidate catalog action label")
+    return text
+
+
 def patch_registered_app(text):
+    text = catalog_action_labels(text)
     for pattern, replacement in REGISTERED_REPAIR["app_patterns"]:
         text = re.sub(pattern, lambda match: replacement, text)
     branch = REGISTERED_REPAIR["registered_block"]
@@ -525,6 +608,7 @@ def conservation_action_labels(text):
 
 
 def patch_app(text, registered=False):
+    text = catalog_action_labels(text)
     if registered:
         return conservation_action_labels(patch_registered_app(text))
     text = text.replace("for(const node of $('[data-view]'))",
@@ -733,6 +817,7 @@ def read_packet(path):
         if expected.get("sha256") != sha(encoded) or expected.get("bytes") != len(encoded):
             raise ValueError("Source body differs from its retained identity: " + name)
     needed = {
+        "integration/conservation_catalog_browser_composition.json",
         "model/conservation.py",
         "model/conservation_bindings.py",
         "model/conservation_catalog.py",
@@ -741,6 +826,7 @@ def read_packet(path):
         "model/conservation_reporting.py",
         "model/conservation_scenarios.py",
         "model/keowee_priority.py",
+        "model/keowee_profile_adapter.py",
         "model/portfolios.py",
         "operator/conservation.py",
         "operator/conservation_browser_receiving.py",
@@ -751,11 +837,21 @@ def read_packet(path):
         "operator/extensions/conservation-catalog.json",
         "operator/extensions/conservation-optimization.json",
         "operator/extensions/conservation.json",
+        "operator/extensions/keowee-method-view.json",
         "operator/install_conservation.py",
+        "operator/web/conservation.css",
+        "operator/web/conservation.mjs",
+        "operator/web/conservation_optimization.css",
+        "operator/web/conservation_optimization.mjs",
+        "operator/web/conservation_optimization_bridge.mjs",
+        "operator/web/keowee-method-view.mjs",
+        "operator/web/retained_desks.mjs",
         "source/conservation-documentation-integration-20261013.json",
         "source/conservation-reporting-joins-20261013.json",
+        "source/keowee-native-binding-20261013.json",
         "source/keowee-priority-integration-20261013.json",
         "source/keowee-priority-methods-20261013.json",
+        "source/keowee/20261013/lake-keowee-methodology.json",
         "source/parcel-criteria-geometry-integration-20261013.json",
         "source/parcel-criteria-integration-20261013.json",
         "source/parcel-criteria-interval-integration-20261013.json",
