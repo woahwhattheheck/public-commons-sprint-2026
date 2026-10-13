@@ -284,8 +284,8 @@ def _collect_source(source, directory, state, *, namespace=None):
             blocks.append({"kind": "figure", "path": item["path"], "title": figure["title"],
                            "caption": figure.get("caption", ""), "alt": figure.get("caption", figure["title"]),
                            "bytes": item["bytes"], "sha256": item["sha256"], "spec": figure})
-        sections.append(["Measured observations and flow context: scientific figures", blocks])
-    sections.append(["Observed scientific source files", [{"kind": "links", "items": [
+        sections.append(["Scientific source figures", blocks])
+    sections.append(["Selected scientific sources", [{"kind": "links", "items": [
         {"title": item.get("title", name), "path": item["path"]}
         for name, item in sorted(delivered.items())
         if name in recipe.get("source_links", [])]}]])
@@ -302,7 +302,7 @@ def collect(workspace, selection, directory, state):
         raise ValueError("Delivery observed sources differ from their bound original editions")
     if len(sources) == 1:
         return _collect_source(sources[0], directory, state)
-    sections = [["Selected observed studies", [
+    sections = [["Selected scientific studies", [
         "The following original studies are included in the selected order. Each study retains "
         "its original methods, sampling periods, source quantities, figures and measurement support.",
         {"kind": "table", "columns": ["Order", "Original report", "Source collection", "Source document"],
