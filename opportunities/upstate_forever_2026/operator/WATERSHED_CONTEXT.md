@@ -138,3 +138,11 @@ to every selection.
 When the source edition contains the original HUC12/ToHUC records, the detail panel shows the downstream path and distinct known upstream model watersheds, their published area, NRCS priority count, and selected-class record count. Open an in-domain HUC12 to inspect that watershed. Destinations outside the model domain retain the original identifier as text, so they do not lead to an unavailable detail view. Terminal outlets, unknown downstream attributes, and missing source rows remain distinct.
 
 The upstream summary excludes the focal watershed and uses the original published HUC areas. Reopening a saved selection restores its membership. Following an upstream or downstream HUC outside that selection returns to the full parent report and opens that watershed. The JSON and CSV export paths continue to use the same source-bound model report.
+
+## Planning briefs for saved watershed selections
+
+New selection exports include watershed-selection-brief.html and watershed-selection-brief.md alongside their original JSON and complete native-field CSV. Open the HTML to review or print the selected watershed, original state-area and NRCS-status tables, source-class query context, original drainage network and source links. The same saved report and selected HUC12 membership appear in all four formats.
+
+Export RFP focus brief selects Upper Six And Twenty Creek (030601010703), Lower Six And Twenty Creek (030601010704), Choestoea Creek (030601020502) and Lower Tugaloo River (030601020507) from the parent report. This control appears when all four original HUC12s are present. Other selections keep the existing Export matching watersheds and Export this watershed paths.
+
+The current selection export identity includes brief_format alongside csv_format and csv_columns. This gives the readable brief its own retained format identity while keeping prior saved selections available. Install model/watershed_brief.py with the provider. The standalone module and actual-report command are documented in model/WATERSHED_BRIEF.md.

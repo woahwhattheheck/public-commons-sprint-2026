@@ -18,6 +18,13 @@ const safeUrl = value => {
   } catch (_) { return null; }
 };
 
+const rfpFocusHuc12s = Object.freeze(['030601010703', '030601010704', '030601020502', '030601020507']);
+
+export function rfpFocusWatersheds(rows) {
+  const available = new Set(list(rows).map(row => row.huc12));
+  return rfpFocusHuc12s.every(huc => available.has(huc)) ? [...rfpFocusHuc12s] : [];
+}
+
 export function filterWatersheds(rows, filters = {}) {
   const needle = String(filters.search || '').trim().toLocaleLowerCase();
   return list(rows).filter(row =>
@@ -226,6 +233,8 @@ export function createWatershedContextDesk(host) {
       '<p>' + esc(number(selectedHucs.length)) +
       (selectedHucs.length === 1 ? ' watershed is' : ' watersheds are') +
       ' retained in this selection. Additional table filters refine the view; these downloads contain the complete saved selection.</p>' +
+      (savedExport.files?.['watershed-selection-brief.html']
+        ? '<p class="wc-note">Open the HTML planning brief to review or print this selection. The Markdown brief and original JSON and CSV are also available below.</p>' : '') +
       downloadsHtml(savedExport._downloads) +
       '<details><summary>Selected HUC12s and saved report</summary><pre>' +
       esc(pretty({huc12s:selectedHucs, report_id:savedExport.report_id,
@@ -282,7 +291,9 @@ export function createWatershedContextDesk(host) {
         metric(number(sum(all, 'selected_classification_count')), 'Selected-class reach records') +
         '</section>' + coverageHtml(report) +
         '<section class="wc-watersheds"><header class="wc-section-heading"><h2>Watersheds</h2>' +
-        '<div class="wc-actions"><button type="button" data-wc-clear>' + (selectedExportId ? 'Show all watersheds' : 'Clear filters') + '</button><button type="button" data-wc-export>Export matching watersheds</button></div></header>' +
+        '<div class="wc-actions"><button type="button" data-wc-clear>' + (selectedExportId ? 'Show all watersheds' : 'Clear filters') + '</button><button type="button" data-wc-export>Export matching watersheds</button>' +
+        (rfpFocusWatersheds(all).length ? '<button type="button" data-wc-export-rfp>Export RFP focus brief</button>' : '') +
+        '</div></header>' +
         filtersHtml() + '<p data-wc-count class="wc-note" aria-live="polite"></p>' +
         '<div class="wc-table-scroll"><table><thead><tr>' +
         ['Watershed', 'HUC8 / states', 'Area km²', 'NRCS priority', 'Selected reaches', 'Source classes', 'Coverage', ''].map(label => '<th scope="col">' + esc(label) + '</th>').join('') +
@@ -317,6 +328,8 @@ export function createWatershedContextDesk(host) {
       esc(row.name || row.huc12) + '">Details</button></td></tr>'
     ).join('') : '<tr><td colspan="8" class="wc-empty-cell">No watersheds match these filters.</td></tr>';
     root.querySelector('[data-wc-export]').disabled = busy || matching.length === 0;
+    const focusExport = root.querySelector('[data-wc-export-rfp]');
+    if (focusExport) focusExport.disabled = busy || rfpFocusWatersheds(rows()).length === 0;
   }
   function sourceReferences(references) {
     return list(references).map(reference => {
@@ -467,6 +480,7 @@ export function createWatershedContextDesk(host) {
         return;
       }
       if (button.hasAttribute('data-wc-export')) return await exportRows(filtered().map(row => row.huc12));
+      if (button.hasAttribute('data-wc-export-rfp')) return await exportRows(rfpFocusWatersheds(rows()));
       if (button.dataset.wcExportOne) return await exportRows([button.dataset.wcExportOne]);
       if (button.dataset.wcTask) return host.showTask?.(button.dataset.wcTask);
       if (button.dataset.wcHuc) {
