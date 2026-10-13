@@ -184,7 +184,7 @@ let operatingJourney=null;
 const journeyForm=async open=>{await open();return {operation_id:formContext?.operation_id};};
 const extensions=createExtensionHost({
  openRunRevisionForm,
- openParameterStudy:selection=>parameterStudies.openSavedStudy(selection),
+ openParameterStudy:(selection,options)=>parameterStudies.openSavedStudy(selection,options),
  openNativeProgramme:options=>experiments.openForInvestigation(options),
  openScientificReport,openSavedScientificReport,openSavedCustomerReview,prepareReportComparisonReview,openSavedReportComparison,
 getState:()=>state,getWorkspace:()=>workspace,api,endpoint,toast,

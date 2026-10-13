@@ -16,6 +16,7 @@ from . import implementation_report_transfer as fieldwork
 from .portable_implementation import report_edition
 from . import gauge_study_receiving
 from . import ensemble_study_receiving
+from . import parameter_study_receiving
 from . import report_review_study_receiving
 from . import report_changes_study_transfer
 from . import observation_comparability_study_transfer as comparability_transfer
@@ -59,6 +60,7 @@ def _summary(value):
         "selection": deepcopy(identity["selection"]),
         **gauge_study_receiving.summary(identity),
         **ensemble_study_receiving.summary(identity),
+        **parameter_study_receiving.summary(identity),
         **report_review_study_receiving.summary(identity),
         **report_changes_study_transfer.receiving_summary(identity),
         **comparability_transfer.summary(identity),
@@ -186,6 +188,7 @@ def detail(workspace, key):
         result["field_sources"].append(row)
     gauge_study_receiving.augment(closure, retained, result)
     ensemble_study_receiving.augment(closure, retained, result)
+    parameter_study_receiving.augment(closure, retained, result)
     report_review_study_receiving.augment(closure, retained, result)
     report_changes_study_transfer.augment_receiving(closure, retained, result)
     comparability_transfer.augment(closure, retained, result)
