@@ -101,3 +101,11 @@ Retain the repository AGENTS.md rendered-product instructions and opportunities/
 ## Installation through the existing native host
 
 Use the complete integration/measurements/INSTALLATION.json and original operator/install_measurements.py against the existing registered scientific application. All declared member bytes and current predecessors are retained in the complete source delivery, including current Flow products, source reconciliation, guided intake and characteristic interpretation. Run the original installer with --check first, then its normal install; it preserves the original scientific target requirements and its shared installation lock. Use the same existing host and Measurements database; do not manufacture a second scientific source set.
+
+## Delivery edition 2: complete project and companion identity
+
+New publications use deliveryEdition 2. The preview binds the complete native project and native display/domain context, plus each matching original collection and all of its files. The browser shows the whole included project counts and full companion inventory before publication, including imports and saved results outside the selected returned rows. Only the original portable export's freshly generated createdAt value is excluded from the project digest; original sources, event timestamps, reviews, saved results and intake history remain bound.
+
+Each collection's original definition, original source bytes, interpreted mapping and import ID must agree with the included native project. A matching collection retains every file, including unselected imports and companions, in the unchanged original order. Changing that inventory requires a fresh preview even when the scientific revision is unchanged.
+
+Cold receiving accepts the original edition 1 and current edition 2. Edition 1 uses the original report and generated-file renderer exactly; edition 2 adds explicit Prepared by TokenJunkieLabs attribution to the report and working instructions. Receiving an already retained return compares the entire incoming manifest and all original member bytes with that exact edition. A conflicting payload cannot silently reuse its identity. Retrying the same original publication continues to resolve the retained edition before inspecting the current workspace revision.
