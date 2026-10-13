@@ -318,6 +318,7 @@ COHORT_FILE = "cohort_reconciliation_20261013/study_chlorophyll_cohort.csv"
 COHORT_CONTEXT = "cohort_reconciliation_20261013/cohort_reconciliation.json"
 COHORT_MANIFEST = "eighteenmile_chlorophyll_reconciled.sources.json"
 REPORT_MANIFEST = "eighteenmile_lake_observation_report.sources.json"
+PAIRED_MANIFEST = "eighteenmile_lake_paired_analysis.sources.json"
 WQP_FILE = "wqp/derived/measurements.csv"
 WQP_COHORT = "wqp/derived/selected_chlorophyll.csv"
 WQP_COVERAGE = "wqp/derived/coverage.csv"
@@ -467,10 +468,10 @@ def _dated_context(complete, sites, parameters, observation_context):
 
 def _manifest_path(manifest_name, value):
     value = _name(value)
-    if manifest_name in (COHORT_MANIFEST, REPORT_MANIFEST):
+    if manifest_name in (COHORT_MANIFEST, REPORT_MANIFEST, PAIRED_MANIFEST):
         prefix = "observations/eighteenmile_2023/"
         if not value.startswith(prefix):
-            raise ValueError("The cohort manifest must identify files inside the original study directory.")
+            raise ValueError("Application-root study manifests must identify files inside the original study directory.")
         return _name(value[len(prefix):])
     return _name(str(PurePosixPath(manifest_name).parent / value))
 
@@ -574,7 +575,7 @@ def _observation_context(rows, seasonal, study, sites, parameters, strata):
 def _source_manifest(files: dict[str, bytes], study: dict[str, Any], study_id: str, version_id: str):
     """Register original map/table identities and every retained study document."""
     manifest_entries, source_entries, seen_ids, native_ids = [], {}, set(), {}
-    manifest_names = [name for name in ("model-sources.json", "wqp_20261013/source-manifest.json", COHORT_MANIFEST, REPORT_MANIFEST) if name in files]
+    manifest_names = [name for name in ("model-sources.json", "wqp_20261013/source-manifest.json", COHORT_MANIFEST, REPORT_MANIFEST, PAIRED_MANIFEST) if name in files]
     for manifest_name in manifest_names:
         parent = PurePosixPath(manifest_name).parent
         native = _json(files[manifest_name])

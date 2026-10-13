@@ -52,6 +52,7 @@ def portable_source(source):
             "receive_published_studies.py", "tools/attach_published_report.py",
             "eighteenmile_chlorophyll_reconciled.sources.json",
             "eighteenmile_lake_observation_report.sources.json",
+            "eighteenmile_lake_paired_analysis.sources.json",
         ),
     }
     lines = source.splitlines(keepends=True)
@@ -106,6 +107,7 @@ def main():
         source / DATA_ROOT / "wqp_20261013" / "source-manifest.json",
         source / "eighteenmile_chlorophyll_reconciled.sources.json",
         source / "eighteenmile_lake_observation_report.sources.json",
+        source / "eighteenmile_lake_paired_analysis.sources.json",
     ):
         if not manifest.is_file():
             continue
