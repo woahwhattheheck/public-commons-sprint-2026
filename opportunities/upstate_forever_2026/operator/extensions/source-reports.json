@@ -2,7 +2,7 @@
   "schema": "upstate.operator-extension/v1",
   "id": "source-reports",
   "title": "Retained source reports",
-  "version": "2.3.0",
+  "version": "2.4.0",
   "order": 56,
   "assets": [
     "source_reports.mjs",
@@ -26,6 +26,19 @@
         ],
         "path": "/api/source-reports/catalog",
         "operation": "catalog",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "POST"
+        ],
+        "path": "/api/source-reports/included-archive-preview",
+        "operation": "included-archive-preview",
         "handler": "read",
         "args": [
           "workspace_key",
