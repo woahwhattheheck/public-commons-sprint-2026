@@ -53,6 +53,7 @@ const applicationNames = ['operator/receiving_water_browser.mjs', 'operator/serv
 if (selection.editable_selection) applicationNames.push(
   'operator/web/receiving_water_editing.mjs', 'operator/web/receiving_water_sources.mjs',
   'operator/web/receiving_water_plan_compare.mjs',
+  'model/receiving_water_plan_map.py', 'operator/receiving_water_actions.py',
   'operator/web/receiving_waters_extension.mjs',
   'operator/web/receiving_waters.css', 'operator/web/extensions/study_transfer.mjs',
   'operator/extensions/receiving-waters.json', 'model/receiving_waters.py',

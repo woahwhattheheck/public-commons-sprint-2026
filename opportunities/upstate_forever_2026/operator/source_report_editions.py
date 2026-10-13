@@ -1,6 +1,9 @@
 """Saved standalone scientific editions on the original operator queue and file transport."""
 from __future__ import annotations
 
+import base64
+import hashlib
+import json
 from pathlib import Path, PurePosixPath
 from urllib.parse import quote
 
@@ -130,7 +133,7 @@ class ScientificReportEditions:
                 "_downloads": [self.operator._ticket(workspace, relative_file(directory, row["path"]),
                                                        row, row["role"]) for row in members]}
 
-    def member(self, workspace, key, name):
+    def member(self, workspace, key, name, *, with_view=False):
         ws = self.operator.ws(workspace)
         record, directory, _ = self._inspect(ws, identifier(key))
         allowed = {row["path"]: row for row in self._files(record, directory).values()}
@@ -138,7 +141,11 @@ class ScientificReportEditions:
             raise self.Fault("SCIENTIFIC_REPORT_MEMBER", "Choose a file in this saved report.", 404)
         item = allowed[name]
         path = relative_file(directory, name)
-        return self.operator._ticket(workspace, path, item, name), path
+        result = (self.operator._ticket(workspace, path, item, name), path)
+        if with_view:
+            view = "report" if name == record["files"].get("report_html", {}).get("path") else None
+            return (*result, view)
+        return result
 
     def export(self, workspace, key):
         result = retained_editions.export(self.operator.ws(workspace), identifier(key))
@@ -195,15 +202,61 @@ class ScientificReportEditions:
                 "viewer_url": url(record["files"]["html"]["path"]), "archive": archive,
                 "_downloads": ([archive] if archive else []) + generated}
 
-    def briefing_member(self, workspace, key, name):
+    def briefing_member(self, workspace, key, name, *, with_view=False):
         ws = self.operator.ws(workspace)
-        _, _, members = scientific_briefing.members(ws, identifier(key))
+        record, directory, members = scientific_briefing.members(ws, identifier(key))
         if name not in members:
             raise self.Fault("SCIENTIFIC_BRIEFING_MEMBER", "Choose a retained briefing or original report file.", 404)
         descriptor = members[name]
         path = Path(descriptor["source"])
-        return self.operator._ticket(workspace, path, descriptor, name), path
+        result = (self.operator._ticket(workspace, path, descriptor, name), path)
+        if with_view:
+            view = None
+            if name == record["original_files"].get("report_html", {}).get("path"):
+                view = "report"
+            elif (name == record["files"].get("html", {}).get("path")
+                  and self._current_briefing_document(record, members, name)):
+                view = "briefing"
+            return (*result, view)
+        return result
 
+    @staticmethod
+    def _current_briefing_document(record, members, name):
+        """Recognize only the exact installed, escaped interactive template.
+
+        The original members() call has verified the retained Workspace/report
+        binding and every declared member. Recheck the bytes actually used for
+        reconstruction so script provenance follows installed source, not merely
+        an archive's own manifest.
+        """
+        from model import client_briefing
+
+        def original_bytes(member):
+            item = members[member]
+            body = Path(item["source"]).read_bytes()
+            if len(body) != item["bytes"] or hashlib.sha256(body).hexdigest() != item["sha256"]:
+                raise ValueError("The retained scientific briefing member changed")
+            return body
+
+        try:
+            model_body = original_bytes(record["files"]["model"]["path"])
+            report = json.loads(model_body)
+            if report.get("schema") != scientific_briefing.SCHEMA:
+                return False
+            figures = {
+                figure["path"]: "data:image/svg+xml;base64," + base64.b64encode(
+                    original_bytes(figure["path"])).decode("ascii")
+                for section in report["sections"] for figure in section.get("figures", [])
+            }
+            document, _ = client_briefing.render(
+                report, report_href=record["original_files"]["report_html"]["path"],
+                model_href=record["files"]["model"]["path"],
+                report_model_bytes=model_body, figure_images=figures)
+            return document.encode("utf-8") == original_bytes(name)
+        except (OSError, ValueError, TypeError, KeyError, UnicodeError):
+            # Older producer editions keep the original isolated reader and
+            # complete offline package, including their original script bodies.
+            return False
 
     def review_preview(self, workspace, payload):
         result = scientific_report_review.preview_review(

@@ -16,6 +16,7 @@ import time
 import zipfile
 
 from .errors import StateError
+from .query_stream import reviewed_view_selection, resolve_view_selection
 from .storage import digest, parse, private_directory
 
 _SCHEMA = "stellar-forge.customer-report.v1"
@@ -211,8 +212,9 @@ class AnalysisReports:
 
     def prepare(self, request):
         views = request.get("expected_views")
-        if not isinstance(views, list) or len(_json(views).encode()) > 256 * 1024:
+        if not isinstance(views, (list, dict)) or len(_json(views).encode()) > 256 * 1024:
             raise StateError("ANALYSIS_REPORT_REVIEWED_VIEWS_REQUIRED")
+        views = reviewed_view_selection(views)
         return {"name": _name(request.get("name")), "revision": _revision(request.get("revision")),
                 "definition_sha256": _hash(request.get("definition_sha256")), "expected_views": views}
 
@@ -222,8 +224,7 @@ class AnalysisReports:
         record = _unpack(row)
         if row["sha256"] != spec["definition_sha256"]:
             raise StateError("ANALYSIS_REPORT_DEFINITION_CHANGED")
-        if self.database._views(db) != spec["expected_views"]:
-            raise StateError("DATASET_SQL_VIEWS_CHANGED")
+        resolve_view_selection(self.database, db, spec["expected_views"])
         return record
 
     def _data_reviews(self, db, views):
@@ -259,6 +260,7 @@ class AnalysisReports:
                 with self.database._connection(readonly=True) as db:
                     db.execute("BEGIN")
                     definition = self._input(db, spec)
+                    selected_views, _ = resolve_view_selection(self.database, db, spec["expected_views"])
                     workspace_id = db.execute("SELECT workspace_id FROM sf_analysis_format WHERE id=1").fetchone()[0]
                     sources, section_records, total_bytes, total_rows = {}, [], 0, 0
                     for section in definition["sections"]:
@@ -294,10 +296,12 @@ class AnalysisReports:
                                     if key not in {"sourceDirectory", "sequence", "created_at"}}
                     report = {"schema": _SCHEMA, "job_id": job_id, "workspace_id": workspace_id,
                         "definition": definition, "definition_sha256": spec["definition_sha256"],
-                        "views": spec["expected_views"], "sources": [sources[key] for key in sorted(sources)],
-                        "data_reviews": self._data_reviews(db, [view for view in spec["expected_views"] if view["version_id"] in sources]),
+                        "views": selected_views, "sources": [sources[key] for key in sorted(sources)],
+                        "data_reviews": self._data_reviews(db, [view for view in selected_views if view["version_id"] in sources]),
                         "sections": section_records, "total_rows": total_rows, "row_bytes": total_bytes,
                         "completed_at": _now()}
+                    if isinstance(spec["expected_views"], dict):
+                        report["view_selection"] = spec["expected_views"]
                     report["result_sha256"] = digest(_json(report).encode())
                 # The source snapshot is closed before the short write transaction.
                 # Later view changes do not rewrite this retained report.

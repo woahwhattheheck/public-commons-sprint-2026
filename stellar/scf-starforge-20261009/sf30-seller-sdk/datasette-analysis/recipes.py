@@ -209,7 +209,7 @@ def _review_key(rows, fields, hints, *, text_fields=()):
     ]
     return {
         "fields": list(fields), "rows_checked": len(rows),
-        "eligible": bool(rows) and not states["missing_rows"] and
+        "eligible": bool(fields) and bool(rows) and not states["missing_rows"] and
                     not unsupported and not duplicates,
         "nonblank": not states["missing_rows"],
         "unique": not duplicates and not unsupported,
@@ -405,7 +405,10 @@ def build_analysis(rows, columns, source):
                 not isinstance(field, str) for field in reviewed_fields):
             raise ValueError("reviewed_keys must contain explicitly selected source field names")
         reviewed_fields = [mapping.get(field, field) for field in reviewed_fields]
-        if not reviewed_fields or len(set(reviewed_fields)) != len(reviewed_fields) or any(
+        # An explicit empty list selects no reviewed business key. It must
+        # neither reject a complete table nor infer approval from a zero-column
+        # key on a one-row source.
+        if len(set(reviewed_fields)) != len(reviewed_fields) or any(
                 field not in normal_columns for field in reviewed_fields):
             raise ValueError("reviewed_keys must select distinct observed data columns")
         reviewed_key = _review_key(rows, reviewed_fields, hints, text_fields=(gppd_field,))

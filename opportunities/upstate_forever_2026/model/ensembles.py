@@ -864,6 +864,15 @@ class Ensembles:
                 state.update(state="interrupted" if not isinstance(exc, Exception) else "failed",
                              active=None, updated_at=now(),
                              execution_error={"type": type(exc).__name__, "message": str(exc)})
-                atomic_json(state_path, state)
+                try:
+                    atomic_json(state_path, state)
+                except OSError as receipt_error:
+                    exc.ensemble_receipt_error = {
+                        "type": type(receipt_error).__name__,
+                        "message": str(receipt_error), "errno": receipt_error.errno,
+                    }
+                    if hasattr(exc, "add_note"):
+                        exc.add_note("Could not retain the ensemble failure record: "
+                                     + str(receipt_error))
                 raise
         return self.inspect(key)

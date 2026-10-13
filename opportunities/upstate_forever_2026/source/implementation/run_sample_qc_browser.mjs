@@ -426,7 +426,7 @@ async function taskFiles(task,label){
  if(!await page.locator('#task-panel').isVisible())await page.locator('[data-action="tasks"]').first().click();
  await page.locator('[data-action="task-open"][data-id="'+task.id+'"]').first().click();await waitUI();
  const links=page.locator('#detail-body a[download]');await links.first().waitFor();
- const tickets=(task._downloads||[]).filter(t=>/\.(html|csv|zip)$/i.test(t.filename||t.label||''));
+ const tickets=task._downloads||[];
  check(tickets.some(t=>/\.zip$/i.test(t.filename||'')),'The native export has no complete ZIP download.');
  for(let i=0;i<tickets.length;i++){
   const ticket=tickets[i];check(hex(ticket.sha256)&&Number.isSafeInteger(ticket.bytes),'The original file ticket is incomplete.');
@@ -436,8 +436,71 @@ async function taskFiles(task,label){
   if(/\.html$/i.test(ticket.filename))journey.offline_html.push(file.path);
  }
  await shot(label+'-native-downloads',page.locator('#detail-body'));
+ await linkedReport(task._downloads,label);
  await closeDetail();
 }
+
+async function linkedReport(downloads,label){
+ await checkpoint();
+ const report=(downloads||[]).find(row=>row.filename==='report.html');
+ check(report&&report.url.startsWith('/api/file/implementation-qc/'),'The original QC report has no companion-aware view.');
+ const reportURL=new URL(report.url,origin),root=reportURL.pathname.slice(0,reportURL.pathname.lastIndexOf('/')+1);
+ const members=new Map();
+ for(const row of downloads||[]){
+  const url=new URL(row.url,origin);
+  if(url.origin===origin&&url.pathname.startsWith(root)&&!url.pathname.slice(root.length).includes('/'))
+   members.set(url.pathname,row);
+ }
+ const previousPage=page,reportPage=await context.newPage();
+ const visited=[];
+ try{
+  page=reportPage;page.setDefaultTimeout(60000);
+  const opened=await page.goto(reportURL.href,{waitUntil:'load'});
+  check(opened&&opened.ok(),'The retained QC HTML could not be opened through the original file session.');
+  const html=await opened.body();
+  check(html.length===report.bytes&&sha(html)===report.sha256,'The viewed QC report differs from its retained original bytes.');
+  await shot(label+'-linked-report');
+  await page.setViewportSize({width:390,height:844});await shot(label+'-linked-report-narrow');await page.setViewportSize({width:1440,height:1000});
+  const print=page.locator('button[onclick="window.print()"]');
+  let printed=false;
+  if(await print.count()){
+   await page.evaluate(()=>{window.__qcBeforePrint=false;window.addEventListener('beforeprint',()=>{window.__qcBeforePrint=true;},{once:true});});
+   await print.first().click();await page.waitForFunction(()=>window.__qcBeforePrint===true);printed=true;
+  }
+  const links=await page.locator('a[href]').evaluateAll(nodes=>nodes.map(n=>({raw:n.getAttribute('href'),url:n.href,text:n.textContent})));
+  const seen=new Set();
+  for(const link of links){
+   if(!link.raw||link.raw.startsWith('#')||/^[a-z][a-z0-9+.-]*:|^\/\//i.test(link.raw))continue;
+   const address=new URL(link.url);
+   check(address.origin===origin&&address.pathname.startsWith(root),'A report companion left its original report route.');
+   const expected=members.get(address.pathname);
+   check(expected&&hex(expected.sha256),'The report links a member outside its retained native inventory: '+link.raw);
+   if(seen.has(address.pathname))continue;seen.add(address.pathname);
+   const anchors=page.locator('a[href]');
+   const index=await anchors.evaluateAll((nodes,path)=>nodes.findIndex(n=>new URL(n.href).pathname===path),address.pathname);
+   check(index>=0,'The original report companion link disappeared.');
+   const name=label+'-linked-'+basename(expected.filename);
+   let retained;
+   if(/\.(html|pdf|png|jpe?g|webp|svg|txt)$/i.test(expected.filename)){
+    const incoming=page.waitForResponse(r=>new URL(r.url()).pathname===address.pathname);incoming.catch(()=>{});
+    await anchors.nth(index).click();const response=await incoming;check(response.ok(),'The report companion returned an error: '+expected.filename);
+    const bytes=await response.body();check(bytes.length===expected.bytes&&sha(bytes)===expected.sha256,'The opened report companion differs from its retained bytes.');
+    retained=await retain(name,bytes,'native-report-companion',{native_sha256:expected.sha256,suggested_filename:expected.filename});
+    await shot(label+'-opened-'+sha(expected.filename).slice(0,12));
+    const returned=await page.goto(reportURL.href,{waitUntil:'load'});check(returned&&returned.ok(),'The original QC report could not be reopened.');
+   }else{
+    retained=await download(anchors.nth(index),name,expected);
+   }
+   visited.push({filename:expected.filename,bytes:expected.bytes,sha256:expected.sha256,path:retained.path});
+  }
+  check(visited.length>0||report.url.includes('/actions/'),'The retained QC report exposes no original companion links.');
+  await retain(label+'-report-navigation.json',jsonBytes({report:{filename:report.filename,bytes:report.bytes,sha256:report.sha256},companions:visited,original_print_event_observed:printed}),'native-report-companion-navigation');
+  await step('Opened original QC HTML and its in-report companion links',{report_sha256:report.sha256,companions:visited.map(row=>row.filename)});
+ }finally{
+  page=previousPage;if(!reportPage.isClosed())await reportPage.close();
+ }
+}
+
 async function viewQC(index,{exports=true,suffix=''}={}){
  const reference=baselineQC[index],label=(index===0?'initial':'repeat')+suffix;
  await openQC();await readReview(reference);
@@ -452,6 +515,7 @@ async function viewQC(index,{exports=true,suffix=''}={}){
   await page.setViewportSize({width:390,height:844});await shot(label+'-readable-qc-narrow',page.locator('.iw-qc [data-qc="result-json"]'));await page.setViewportSize({width:1440,height:1000});
  }
  if(exports){const task=await exportTask('qc-'+display.report_id,'.iw-qc [data-qc="archive"]','implementation.qc.export',{plan_id:fieldwork.plan_id,report_id:display.report_id});await taskFiles(task,label+(display!==reference?'-readable-qc':'-qc'));await openQC();}
+ if(!exports)await linkedReport(display._downloads,label+'-qc');
  if(display!==reference||exports)await readReview(reference);
  await follow(reference);
  const current=await qc('actions',{report_id:reference.report_id});
@@ -471,6 +535,7 @@ async function viewQC(index,{exports=true,suffix=''}={}){
   }
   if(exports){const task=await exportTask('actions-'+presentation.action_report_id,'.iw-qc [data-qc="follow-archive"]','implementation.qc.actions.export',{plan_id:fieldwork.plan_id,action_report_id:presentation.action_report_id});
    await taskFiles(task,name+(presentation!==action?'-readable':''));await openQC();await readReview(reference);await follow(reference);}
+  if(!exports)await linkedReport(presentation._downloads,name);
 
  }
  await page.locator('.iw-qc [data-qc="follow-plan"]').click();await waitUI();

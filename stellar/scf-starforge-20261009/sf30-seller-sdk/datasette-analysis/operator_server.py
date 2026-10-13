@@ -28,7 +28,8 @@ _HASH = re.compile(r"[a-f0-9]{64}")
 _MAX_JSON = 1024 * 1024
 _MAX_HANDOVER = 32 * 1024 * 1024
 _ACTIONS = {"prepare", "compare", "export", "nld.prepare", "nld.execute",
-            "nld.report", "nld.pack", "nld.restore"}
+            "nld.report", "nld.pack", "nld.restore", "bdnb.import", "bdnb.select",
+            "bdnb.compare", "bdnb.review", "bdnb.publish", "bdnb.pack"}
 _TABLE = "sf_datasette_operator_requests"
 
 
@@ -214,6 +215,10 @@ class DatasetteOperator:
                 need(body.get("export_id", request_id) == request_id,
                      "DATASETTE_EXPORT_REQUEST_CHANGED", "The export ID must match its original request.")
                 body = {**body, "export_id": request_id}
+            if action == "bdnb.pack":
+                need(body.get("pack_id", request_id) == request_id,
+                     "BDNB_PACK_REQUEST_CHANGED", "The pack ID must match its original request.")
+                body = {**body, "pack_id": request_id}
             result = self.model.dispatch(action, body)
             raw = encoded(result).decode()
             with self.analysis.database._connection() as db:
@@ -261,6 +266,7 @@ def create_operator(analysis, *, operation_id, port=0, model_factory=DatasetteAn
             "/datasette/operator.mjs": ((here / "operator.mjs").read_bytes(), "text/javascript;charset=utf-8"),
             "/datasette/operator.css": ((here / "operator.css").read_bytes(), "text/css;charset=utf-8"),
             "/datasette/nld_operator.mjs": ((here / "nld_operator.mjs").read_bytes(), "text/javascript;charset=utf-8"),
+            "/datasette/bdnb_operator.mjs": ((here / "bdnb_operator.mjs").read_bytes(), "text/javascript;charset=utf-8"),
         }
         intake = private_directory(
             analysis.database.directory / "datasette-operator-intake" / operation_id,
@@ -431,6 +437,12 @@ def create_operator(analysis, *, operation_id, port=0, model_factory=DatasetteAn
                              "DATASETTE_DOWNLOAD_SELECTION_REQUIRED",
                              "Select one retained delivery filename and its edition.")
                         return self._download(values["name"], values.get("edition_id"), values.get("export_id"))
+                    if self.command == "POST" and url.path == "/api/datasette/bdnb/read" and not query:
+                        body = self._body()
+                        need(set(body) == {"action", "body"} and isinstance(body["body"], dict)
+                             and body["action"] in {"bdnb.schema", "bdnb.status", "bdnb.get", "bdnb.rows"},
+                             "BDNB_READ_SELECTION", "Select a supported BDNB reader and its original input.")
+                        return self._reply(200, controller.model.dispatch(body["action"], body["body"]))
                     if self.command == "POST" and url.path == "/api/datasette/intake" and not query:
                         return self._intake()
                     if self.command == "POST" and url.path == "/api/datasette/requests" and not query:

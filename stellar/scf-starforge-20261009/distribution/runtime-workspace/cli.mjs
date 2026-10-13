@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 // MIT. Open the original customer runtime workflow in a private operator browser.
 import { resolve } from 'node:path';
+import { open } from 'node:fs/promises';
 import { pathToFileURL } from 'node:url';
 import { createRuntimeWorkspace, openRuntimeWorkspace } from './model.mjs';
 import { startRuntimeWorkspace } from './server.mjs';
@@ -70,6 +71,8 @@ const HELP = `Starforge customer runtime workspace
   runtime-workspace application-setup-prepare --workspace DIRECTORY --operation PRIVATE_DIRECTORY [--document COMPLETE_JSON --mode new|reopen] [--kind TYPE] [--bindings PRIVATE_JSON] [--request-id UUID]
   runtime-workspace application-setup-status --operation PRIVATE_DIRECTORY
   runtime-workspace application-setup-save --workspace DIRECTORY --operation PRIVATE_DIRECTORY
+  runtime-workspace managed-config-history --workspace DIRECTORY --home-id ID [--path RELATIVE_FILE] [--operation-id UUID] [--cursor UUID] [--limit 40]
+  runtime-workspace managed-config-export --workspace DIRECTORY --home-id ID --path RELATIVE_FILE --output NEW_PRIVATE_JSONL
   runtime-workspace applications --workspace DIRECTORY [--history-limit 1]
   runtime-workspace application-history --workspace DIRECTORY --application-id ID [--limit 30] [--cursor CURSOR]
   runtime-workspace application-review --workspace DIRECTORY --request PRIVATE_JSON
@@ -170,6 +173,8 @@ const allowed = {
   'managed-review': ['--workspace', '--home-id', '--runtime-id'], 'managed-operation': ['--workspace', '--request'],
   'managed-recover': ['--workspace', '--operation-id'], 'managed-stop': ['--workspace', '--operation-id'],
   'managed-config': ['--workspace', '--home-id', '--path'],
+  'managed-config-history': ['--workspace', '--home-id', '--path', '--operation-id', '--cursor', '--limit'],
+  'managed-config-export': ['--workspace', '--home-id', '--path', '--output'],
   init: ['--workspace', '--runtime-home'], attach: ['--workspace', '--runtime', '--label'],
   serve: ['--workspace', '--port'], status: ['--workspace', '--runtime-id'], handoff: ['--workspace', '--runtime-id'],
   operations: ['--workspace', '--query', '--filter', '--runtime-id', '--limit', '--cursor'],
@@ -432,6 +437,30 @@ export async function main(argv = process.argv.slice(2)) {
   } else if (command === 'managed-status') result = await model.managedState({ homeId: options['--home-id'] ?? null });
   else if (command === 'managed-review') result = await model.reviewManagedAdoption({
     homeId: options['--home-id'], runtimeId: options['--runtime-id'] });
+  else if (command === 'managed-config-history') result = await model.managedConfigurationHistory({
+    homeId: options['--home-id'], path: options['--path'], operationId: options['--operation-id'],
+    cursor: options['--cursor'], limit: options['--limit'] ?? 40 });
+  else if (command === 'managed-config-export') {
+    if (!options['--output'] || !options['--path']) fail('MANAGED_CONFIGURATION_EXPORT_ARGUMENTS_REQUIRED');
+    const output = resolve(options['--output']), file = await open(output, 'wx', 0o600);
+    let count = 0, complete = false;
+    try {
+      const selection = await model.managedConfigurationHistory({ homeId: options['--home-id'],
+        path: options['--path'], selection: 'all' });
+      await file.writeFile(JSON.stringify({ schema: 'stellar-forge.managed-configuration-export.v1',
+        homeId: options['--home-id'], path: options['--path'], selection }) + '\n');
+      for (const row of selection.entries) {
+        const edition = await model.managedConfigurationHistory({ homeId: options['--home-id'],
+          path: options['--path'], operationId: row.operationId });
+        if (edition.intentSha256 !== row.intentSha256) fail('MANAGED_CONFIGURATION_EXPORT_SOURCE_CHANGED');
+        await file.writeFile(JSON.stringify(edition) + '\n'); count++;
+      }
+      await file.writeFile(JSON.stringify({ schema: 'stellar-forge.managed-configuration-export-complete.v1',
+        homeId: options['--home-id'], path: options['--path'], editions: count }) + '\n');
+      await file.sync(); complete = true;
+    } finally { await file.close(); }
+    result = { output, editions: count, complete };
+  }
   else if (command === 'managed-config') result = await model.managedConfig({
     homeId: options['--home-id'], ...(options['--path'] ? { path: options['--path'] } : {}) });
   else if (command === 'managed-operation') {

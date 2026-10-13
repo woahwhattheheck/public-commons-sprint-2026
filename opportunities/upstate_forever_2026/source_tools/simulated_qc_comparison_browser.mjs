@@ -28,7 +28,7 @@ export async function runQCComparisonChapter({page,choice,operatorURL,output,che
  const address=new URL(operatorURL),origin=address.origin,token=new URLSearchParams(address.hash.slice(1)).get('token');
  if(!['http:','https:'].includes(address.protocol)||address.username||address.password||!token)fail('Use the current original private Operator capability.');
  const redact=x=>String(x).split(String(operatorURL)).join('[private operator]').split(token).join('[private capability]').split(origin).join('[private origin]');
- const root=resolve(output),binding={...choice,operator_origin_sha256:hash(origin)},owned=new Set(),bindings=[];
+ const root=resolve(output),binding={...choice,operator_origin_sha256:hash(origin)},owned=new Set(),ownedPages=new Set(),bindings=[];
  const state=progress.qc_comparison||{schema:'upstate.simulated-qc-comparison-browser/v1',binding,created_at:now(),attempts:[],files:[],screenshots:[],requests:{}};
  if(state.schema!=='upstate.simulated-qc-comparison-browser/v1'||!equal(state.binding,binding))fail('Resume the same original comparison and operator registration.');
  state.private_files=state.private_files||[];
@@ -143,6 +143,45 @@ export async function runQCComparisonChapter({page,choice,operatorURL,output,che
    }finally{await fs.unlink(temp).catch(e=>{if(e.code!=='ENOENT')throw e;});}
   }finally{clearTimeout(timer);targetPage.off('download',listener);}
  };
+
+ const linkedReport=async(targetPage,downloads,label)=>{
+  await stop();
+  const report=downloads.find(item=>item.filename==='report.html');
+  if(!report||!report.url.startsWith('/api/file/implementation-qc/'))fail('The selected comparison has no original companion-aware report.');
+  const reportURL=new URL(report.url,origin),prefix=reportURL.pathname.slice(0,reportURL.pathname.lastIndexOf('/')+1);
+  const members=new Map(downloads.map(item=>[new URL(item.url,origin).pathname,item]));
+  const opening=targetPage.waitForEvent('popup').then(view=>{ownedPages.add(view);return view;});opening.catch(()=>{});
+  await targetPage.locator('.iw-qcc [data-qcc-report]').click();const view=await opening;
+  const visited=[];
+  try{
+   await view.waitForLoadState('load');
+   if(new URL(view.url()).origin!==origin||new URL(view.url()).pathname!==reportURL.pathname)fail('The opened comparison left its exact original report route.');
+   if(!(await view.locator('body').innerText()).includes(original.comparison.title))fail('The original linked report has another title.');
+   await retained('qc-comparison/attempt-'+attempt+'/'+label+'-linked-report.png',await view.screenshot({fullPage:true}),{kind:'actual-rendered-screenshot',producer_inspection:'required'});
+   await view.setViewportSize({width:390,height:844});
+   await retained('qc-comparison/attempt-'+attempt+'/'+label+'-linked-report-narrow.png',await view.screenshot({fullPage:true}),{kind:'actual-rendered-screenshot',producer_inspection:'required'});
+   await view.setViewportSize({width:1440,height:1000});
+   const print=view.locator('button[onclick="window.print()"]');let printed=false;
+   if(await print.count()){
+    await view.evaluate(()=>{window.__qcBeforePrint=false;window.addEventListener('beforeprint',()=>{window.__qcBeforePrint=true;},{once:true});});
+    await print.first().click();await view.waitForFunction(()=>window.__qcBeforePrint===true);printed=true;
+   }
+   const links=await view.locator('a[href]').evaluateAll(nodes=>nodes.map(n=>({raw:n.getAttribute('href'),url:n.href}))),seen=new Set();
+   for(const link of links){
+    if(!link.raw||link.raw.startsWith('#')||/^[a-z][a-z0-9+.-]*:|^\/\//i.test(link.raw))continue;
+    const address=new URL(link.url),item=members.get(address.pathname);
+    if(address.origin!==origin||!address.pathname.startsWith(prefix)||!item||!hex(item.sha256))fail('The comparison links a file outside its original inventory.');
+    if(seen.has(address.pathname))continue;seen.add(address.pathname);
+    const anchors=view.locator('a[href]'),index=await anchors.evaluateAll((nodes,path)=>nodes.findIndex(n=>new URL(n.href).pathname===path),address.pathname);
+    if(index<0)fail('The original comparison source link disappeared.');
+    const file=await download(view,'linked-original-comparison-member',()=>anchors.nth(index).click(),item,'qc-comparison/attempt-'+attempt+'/'+label+'-linked-'+item.filename);
+    visited.push({filename:item.filename,bytes:item.bytes,sha256:item.sha256,path:file.path});
+   }
+   if(!visited.some(item=>item.filename==='before-review.zip')||!visited.some(item=>item.filename==='after-review.zip'))fail('The original before/after review archives were not usable from the comparison.');
+   await retained('qc-comparison/attempt-'+attempt+'/'+label+'-report-navigation.json',Buffer.from(JSON.stringify({report:{filename:report.filename,bytes:report.bytes,sha256:report.sha256},companions:visited,original_print_event_observed:printed},null,2)+'\n'),{kind:'native-report-companion-navigation'});
+  }finally{if(!view.isClosed())await view.close();ownedPages.delete(view);}
+ };
+
  const verifyTask=(task,entry)=>{
   if(task.workspace!==choice.workspace_key||task.action!==entry.request.action||!equal(task.payload,entry.request.payload)||!hex(task.id)||!task.operation_id||task.id!==hash(canonical({workspace:task.workspace,operation_id:task.operation_id}))||task.request_sha256!==hash(canonical({workspace:task.workspace,action:task.action,payload:task.payload})))fail('The native comparison task differs from its original request.');
   if(entry.id&&(entry.id!==task.id||entry.accepted_operation_id!==task.operation_id))fail('The accepted native comparison task identity changed.');
@@ -244,6 +283,7 @@ export async function runQCComparisonChapter({page,choice,operatorURL,output,che
   const expectedFiles=new Map(original.files.map(item=>[item.path.split('/').pop(),item]));
   if(downloads.length!==expectedFiles.size||new Set(downloads.map(item=>item.filename||item.name)).size!==downloads.length)fail('The original complete report download list is incomplete or repeated.');
   for(const item of downloads){const expected=expectedFiles.get(item.filename||item.name);if(!expected||expected.bytes!==item.bytes||expected.sha256!==item.sha256)fail('The original source download inventory differs.');}
+  await linkedReport(page,downloads,'original');
   await page.locator('.iw-qcc [data-qcc-result] details').evaluate(el=>{el.open=true;});
   for(const item of downloads){
    const name=item.filename||item.name;if(typeof name!=='string'||!name||name!==name.split('/').pop()||name.includes('\\')||name==='.'||name==='..')fail('A native report download has another filename.');
@@ -262,6 +302,7 @@ export async function runQCComparisonChapter({page,choice,operatorURL,output,che
   const fresh=await received.newPage();await navigate(fresh);await openSaved(fresh);
   const receivedBody=await fresh.locator('.iw-qcc [data-qcc-result]').innerText();if(!receivedBody.includes(choice.comparison_report_id))fail('The independent browser did not reopen the exact original comparison.');
   await retained('qc-comparison/attempt-'+attempt+'/fresh-native-comparison.png',await fresh.screenshot({fullPage:true}),{kind:'actual-rendered-screenshot',producer_inspection:'required'});
+  await linkedReport(fresh,downloads,'fresh');
   await fresh.goto(pathToFileURL(join(root,'qc-comparison/report/report.html')).href,{waitUntil:'load'});
   if(!(await fresh.locator('body').innerText()).includes(original.comparison.title))fail('The exported original comparison HTML did not reopen.');
   await retained('qc-comparison/attempt-'+attempt+'/fresh-offline-report.png',await fresh.screenshot({fullPage:true}),{kind:'actual-rendered-screenshot',producer_inspection:'required'});
@@ -281,6 +322,7 @@ export async function runQCComparisonChapter({page,choice,operatorURL,output,che
   const errors=[];
   try{await restoreDraft();if(!page.isClosed()&&savedViewport)await page.setViewportSize(savedViewport);}catch(e){errors.push(redact(e.message||e));}
   for(const [p,pattern,handler]of bindings)if(!p.isClosed())try{await p.unroute(pattern,handler);}catch(e){errors.push(redact(e.message||e));}
+  for(const view of ownedPages)if(!view.isClosed())try{await view.close();}catch(e){errors.push(redact(e.message||e));}
   for(const context of owned)try{await context.close();}catch(e){errors.push(redact(e.message||e));}
   if(errors.length){state.status='interrupted';state.cleanup_errors=errors;Object.assign(state.attempts.at(-1),{status:'interrupted',ended_at:now(),cleanup_errors:errors});await save().catch(()=>{});}
   running.delete(page);

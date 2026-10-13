@@ -4,6 +4,7 @@ import { join, dirname, basename } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { spawn } from 'node:child_process';
 import { managedResult } from './managed-result.mjs';
+import { configurationHistory, configurationRestore, writeConfigurationEdition } from './managed-configuration-history.mjs';
 import { applicationEnvironment } from './application-environment.mjs';
 import { validateApplicationProviderBinding } from './application-providers.mjs';
 import { validatePythonManagedCommand, pythonManagedLaunch } from '../python-runtime/application-lifecycle.mjs';
@@ -21,6 +22,7 @@ export const managedOperationFields = Object.freeze({
   'managed-inspect': ['homeId', 'releaseId', 'load'],
   'managed-doctor': ['homeId', 'releaseId', 'requireNative', 'requiredFeatures'],
   'managed-config-save': ['homeId', 'path', 'content', 'expectedSha256'],
+  'managed-config-restore': ['homeId', 'path', 'historyOperationId', 'version', 'expectedSha256'],
   'managed-run': ['homeId', 'releaseId', 'command', 'args', 'expectedRevision', 'applicationId', 'terminal', 'terminalPython', 'environmentFile', 'environmentSha256', 'pythonCommand', 'buyerRunbook', 'jobResultReceiver', 'stellarApplication', 'applicationProvider'],
 });
 const TYPES = ['managed-homes', 'managed-reviews', 'managed-observations'];
@@ -183,7 +185,7 @@ export async function managedConfig(root, { homeId, path: relative } = {}) {
     let bytes = null;
     try { bytes = await regular(path, 20000); } catch (error) { if (error.code !== 'ENOENT') throw error; }
     return { homeId, path: relative, exists: Boolean(bytes), sha256: bytes ? digest(bytes) : null,
-      content: bytes ? new TextDecoder('utf-8', { fatal: true }).decode(bytes) : '', bytes: bytes?.length ?? 0 };
+      content: bytes ? new TextDecoder('utf-8', { fatal: true, ignoreBOM: true }).decode(bytes) : '', bytes: bytes?.length ?? 0 };
   }
   const files = [];
   async function walk(directory, prefix, depth) {
@@ -201,6 +203,9 @@ export async function managedConfig(root, { homeId, path: relative } = {}) {
   }
   await walk(home.configDirectory, '', 0);
   return { homeId, directory: home.configDirectory, files, limit: 200 };
+}
+export async function managedConfigurationHistory(root, options) {
+  return configurationHistory(root, options);
 }
 export async function normalizeManagedOperation(root, request) {
   const home = await homeView(await homeRecord(root, recordId(request.homeId)));
@@ -221,14 +226,16 @@ export async function normalizeManagedOperation(root, request) {
       'Refresh the managed home and review its current release selection', 409);
     request.expectedActive = home.active;
   }
-  if (request.operation === 'managed-config-save') {
-    need(typeof request.content === 'string' && Buffer.byteLength(request.content) <= 20000 &&
+  if (request.operation === 'managed-config-save' || request.operation === 'managed-config-restore') {
+    if (request.operation === 'managed-config-restore')
+      Object.assign(request, await configurationRestore(root, request));
+    need((request.remove === true && request.content === null || typeof request.content === 'string' && Buffer.byteLength(request.content) <= 20000) &&
       (request.expectedSha256 === null || /^[a-f0-9]{64}$/.test(request.expectedSha256 ?? '')), 'MANAGED_CONFIG_REVIEW_REQUIRED');
     await configPath(home.directory, request.path, { create: true });
-    if (request.path.endsWith('.json')) {
-      try { JSON.parse(request.content); } catch { need(false, 'MANAGED_CONFIG_JSON_INVALID'); }
+    if (!request.remove && request.path.endsWith('.json')) {
+      try { JSON.parse(request.content.replace(/^\uFEFF/, '')); } catch { need(false, 'MANAGED_CONFIG_JSON_INVALID'); }
     }
-    request.contentSha256 = digest(Buffer.from(request.content));
+    request.contentSha256 = request.remove ? null : digest(Buffer.from(request.content));
     return request;
   }
   if (request.operation === 'managed-rollback') {
@@ -335,16 +342,10 @@ export async function executeManagedOperation({ root, request, operationDirector
     await checkedRelease(request);
     result = await doctor(request.releaseDirectory, { requireNative: request.requireNative ?? false,
       requiredFeatures: request.requiredFeatures });
-  } else if (request.operation === 'managed-config-save') {
+  } else if (request.operation === 'managed-config-save' || request.operation === 'managed-config-restore') {
     result = await withHomeLock(request.homeDirectory, async home => {
       const path = await configPath(home, request.path, { create: true });
-      let before = null;
-      try { before = digest(await regular(path, 20000)); } catch (error) { if (error.code !== 'ENOENT') throw error; }
-      if (before === request.contentSha256)
-        return { path: request.path, sha256: before, bytes: Buffer.byteLength(request.content), reopened: true };
-      need(before === request.expectedSha256, 'MANAGED_CONFIG_CHANGED', 'Open the current file before saving another edit', 409);
-      await atomicFile(path, Buffer.from(request.content), 0o600);
-      return { path: request.path, previousSha256: before, sha256: request.contentSha256, bytes: Buffer.byteLength(request.content) };
+      return writeConfigurationEdition({ root, request, operationDirectory, path });
     });
   } else if (request.operation === 'managed-run') result = await runOriginalCommand(root, request, operationDirectory, checkpoint, leaseFd);
   else need(false, 'MANAGED_OPERATION_INVALID');

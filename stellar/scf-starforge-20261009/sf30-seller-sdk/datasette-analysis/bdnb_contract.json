@@ -1,0 +1,347 @@
+{
+  "schema": "stellar-forge.bdnb-operator-contract.v1",
+  "version": 2,
+  "sourceRoot": "stellar/scf-starforge-20261009/sf30-seller-sdk/datasette-analysis",
+  "ownerSeams": {
+    "source_domain": [
+      "bdnb_source.py",
+      "bdnb_dictionary.json",
+      "bdnb_contract.json",
+      "BDNB_SOURCE.md",
+      "bdnb_adapter.py",
+      "model.py BDNB dispatch and open_download only"
+    ],
+    "ui": [
+      "bdnb_operator.mjs",
+      "operator.mjs",
+      "operator.html",
+      "operator.css",
+      "operator_server.py BDNB action/read/assets registration"
+    ],
+    "analysis_receiving": [
+      "bdnb_products.py",
+      "BDNB.md",
+      "BDNB_RECEIVING.md",
+      "bdnb receiving/CLI/Kestra source and source rosters"
+    ]
+  },
+  "transport": {
+    "read": {
+      "method": "POST",
+      "path": "/api/datasette/bdnb/read",
+      "body": {
+        "action": "bdnb.schema|bdnb.status|bdnb.get|bdnb.rows",
+        "body": {}
+      }
+    },
+    "mutations": {
+      "method": "POST",
+      "path": "/api/datasette/requests",
+      "request_id": "original controller 32 lowercase hex",
+      "actions": [
+        "bdnb.import",
+        "bdnb.select",
+        "bdnb.compare",
+        "bdnb.review",
+        "bdnb.publish",
+        "bdnb.pack"
+      ],
+      "resume": "Original controller same-ID resume preserves original action/body. Adapter strips only injected resume from its semantic hash."
+    },
+    "download": {
+      "path": "existing operator download endpoint",
+      "name": "bdnb- prefix; use exact files[].name returned by publication/pack"
+    }
+  },
+  "identities": {
+    "entity_id": "required operator-generated 32 lower hexadecimal characters, unique across all BDNB entity kinds within this Datasette operation",
+    "entity_sha256": "SHA256 of the complete immutable stored entity body, excluding only its own sha256 field",
+    "row_id": "64 lowercase hexadecimal SHA256 bound to original edition/table/source ordinal/full raw record or comparison finding",
+    "replay": "Same entity ID and exact normalized action/body returns the retained entity. Conflicting reuse fails. All entities immutable; decisions are new review entities with explicit supersedes_id."
+  },
+  "commonEntity": {
+    "schema": "stellar-forge.bdnb-entity.v1",
+    "kind": "edition|selection|comparison|review|publication|pack",
+    "id": "32hex",
+    "title": "string",
+    "created_at": "ISO UTC",
+    "request_sha256": "64hex",
+    "sha256": "64hex",
+    "input": "exact normalized frozen input",
+    "summary": "kind-specific complete aggregate counts",
+    "collections": "map collection name -> {version_id,table,row_count,columns,row_order_column}",
+    "files": "array of {name,filename,bytes,sha256,content_type,...native manager binding}; empty before products",
+    "lineage": "array {kind,id,sha256}"
+  },
+  "mutationResult": {
+    "entity": "complete immutable entity",
+    "replayed": "boolean"
+  },
+  "actions": {
+    "bdnb.import": {
+      "body": {
+        "edition_id": "32hex",
+        "descriptor": {
+          "schema": "stellar-forge.bdnb-source.v1",
+          "title": "required",
+          "publisher": "required",
+          "source_url": "required original https public URL without embedded credentials; stable query parameters retained",
+          "license": "required original terms text/reference",
+          "captured_at": "required ISO datetime with offset",
+          "millesime": "required actual selected publisher edition, e.g. 2026-02.a",
+          "structure_version": "required selected dictionary version, e.g. v0.7.11",
+          "scope": {
+            "kind": "department|commune|custom",
+            "codes": [
+              "exact supplied scope codes"
+            ],
+            "description": "required source coverage and extraction description"
+          },
+          "tables": [
+            {
+              "table": "one of five dictionary table names",
+              "path": "absolute existing regular CSV file selected by operator",
+              "bytes": "nonnegative integer",
+              "sha256": "64hex exact whole file",
+              "format": "csv",
+              "delimiter": "single character, explicit",
+              "encoding": "utf-8",
+              "null_values": [
+                "explicit source strings treated as null; original strings remain"
+              ],
+              "geometry_encoding": "wkt|ewkb-hex|geojson-text|opaque",
+              "extra_fields": [
+                {
+                  "name": "actual unknown header field",
+                  "type": "text|integer|decimal|boolean|date|geometry",
+                  "nullable": true,
+                  "description": "source-backed meaning",
+                  "unit": null
+                }
+              ]
+            }
+          ],
+          "dictionary": "optional complete stellar-forge.bdnb-dictionary.v1 object; all five source-backed table definitions, actual field constraints, source URLs and publisher_structure matching structure_version"
+        }
+      },
+      "rules": [
+        "batiment_groupe is required; other core tables are optional and absence is reported explicitly.",
+        "Each table appears once; full CSV headers, all columns, all rows, original bytes and source row order are retained.",
+        "Imported whole files and projected row versions are immutable. Invalid cells/keys and duplicate keys stay visible as findings; absence of a required key prevents authoritative matching.",
+        "CSV raw cells remain original strings, including empty and zero. Declared typed projection is separate. Exact integers/decimals remain text, never binary float.",
+        "Original file is streamed, hash-verified and retained in the existing Analysis document store as ordered <=16MiB binary segments if needed; its whole identity and segment order are recorded. Original workspace archives carry those documents and database versions.",
+        "The bundled publisher v0.7.11 dictionary is used only when structure_version matches. Other selected versions require their complete explicitly supplied dictionary; primary-key changes require a separately reviewed adapter edition."
+      ]
+    },
+    "bdnb.select": {
+      "body": {
+        "selection_id": "32hex",
+        "edition_id": "32hex",
+        "title": "required",
+        "filters": {
+          "department_codes": [],
+          "commune_codes": [],
+          "group_ids": []
+        }
+      },
+      "rules": [
+        "All three lists are explicit; empty means no restriction for that dimension; nonempty dimensions combine by intersection.",
+        "Groups are selected from original group rows. All address associations for those groups remain; addresses are selected through those associations.",
+        "Original source edition stays complete. Selection is an immutable complete original DatasetDatabase version set, not an editable source.",
+        "Selection keeps absent table, orphan link and invalid projection findings explicit."
+      ]
+    },
+    "bdnb.compare": {
+      "body": {
+        "comparison_id": "32hex",
+        "before_selection_id": "32hex",
+        "after_selection_id": "32hex",
+        "title": "required",
+        "passage_edition_ids": [
+          "0 or more imported edition IDs containing passage tables"
+        ],
+        "correspondence_mode": "direct|chain",
+        "fields": "null for union of all actual group fields, or explicit nonempty array of field names",
+        "include_unchanged": false,
+        "edition_path": "required for chain: array of exact millesime labels, first=before, last=after, unique; optional for direct and then exactly [before,after]"
+      },
+      "rules": [
+        "Before and after must use different actual millesime labels; no automatic nearest edition substitution.",
+        "Same-ID matches are explicit identity continuity unless contradicted by selected passage evidence.",
+        "Direct uses the exact before→after interval. Chain uses the explicit edition_path in order and selected passage rows. Same-ID carry across an unchanged interval requires original group presence in both adjacent complete editions and no selected outgoing change. Intermediate edition presence comes from the explicitly selected passage_edition_ids. Missing presence is unresolved.",
+        "Creation/deletion require selected publisher creation/suppression evidence. Unmatched rows without that evidence are scope-entry/scope-exit or unresolved, never silently created/deleted.",
+        "Fusion/division/transformation complexe are grouped correspondences; do not fabricate pairwise equivalence or average numerical values.",
+        "All group values are compared using type-aware exact normalized tokens. Null, invalid, missing-column, empty text, numeric zero remain distinct.",
+        "Address association changes retain every link; address-denominator weights are neither normalized per group nor used to prorate group measures.",
+        "Each comparison row has a stable evidence_sha256 used by reviews.",
+        "Address attribute changes are compared independently of the complete group/address link register. The fields option limits group field comparisons only."
+      ]
+    },
+    "bdnb.review": {
+      "body": {
+        "review_id": "32hex",
+        "comparison_id": "32hex",
+        "item_id": "exact comparison row id",
+        "evidence_sha256": "exact current selected finding",
+        "outcome": "accepted|needs-review|deferred|rejected",
+        "author": "required supplied recorder",
+        "reason": "required meaningful text",
+        "supersedes_id": "null or exact current prior review ID"
+      },
+      "rules": [
+        "This records an operator review; it does not grant customer approval or alter original publisher rows.",
+        "Supersedes must identify the sole current tip for this comparison/item/evidence. New unpublished reviews validate current tips under original mutex; exact already published replay is adopted first.",
+        "Changed inputs yield a different comparison/evidence identity and require their own new review. Historical decisions remain."
+      ]
+    },
+    "bdnb.publish": {
+      "body": {
+        "publication_id": "32hex",
+        "entity_id": "selection or comparison ID",
+        "title": "required",
+        "note": "ordinary operator note",
+        "resume": "controller injected only"
+      },
+      "owner": "Engineering bdnb_products.py",
+      "rules": [
+        "Build complete original Analysis queries/report/workbook and full JSONL/CSV annexes using native streaming jobs.",
+        "Reports distinguish bounded rendered detail from full annex rows. No silent 100,000-row truncation.",
+        "Publication binds exact entity and current review set by hash; subsequent review changes require a new publication ID.",
+        "Return original file receipts in entity.files."
+      ]
+    },
+    "bdnb.pack": {
+      "body": {
+        "pack_id": "32hex",
+        "publication_id": "32hex",
+        "note": "ordinary operator note",
+        "resume": "controller injected only"
+      },
+      "owner": "Engineering bdnb_products.py",
+      "rules": [
+        "Use original Analysis workspace archive engine with complete original documents, immutable data versions, reports/workbooks/query exports and current database history.",
+        "Retain and return whole native archive descriptor and original job ID. No second database or archive engine."
+      ]
+    }
+  },
+  "reads": {
+    "bdnb.schema": {
+      "body": {},
+      "result": {
+        "schema": "stellar-forge.bdnb-schema.v1",
+        "contract": "this complete contract object",
+        "dictionary": "complete selected published field dictionary",
+        "limits": {
+          "page_rows": 250,
+          "csv_record_bytes": 2097152,
+          "command_bytes": 1048576,
+          "page_bytes": 8388608
+        },
+        "read_actions": [
+          "bdnb.schema",
+          "bdnb.status",
+          "bdnb.get",
+          "bdnb.rows"
+        ]
+      }
+    },
+    "bdnb.status": {
+      "body": {},
+      "result": {
+        "schema": "stellar-forge.bdnb-status.v1",
+        "operation_id": "original operation32hex",
+        "entities": "array in creation order of {kind,id,title,sha256,created_at,summary,lineage}",
+        "counts": "counts by entity kind"
+      }
+    },
+    "bdnb.get": {
+      "body": {
+        "entity_id": "32hex"
+      },
+      "result": "complete commonEntity"
+    },
+    "bdnb.rows": {
+      "body": {
+        "entity_id": "32hex",
+        "collection": "actual key from entity.collections",
+        "offset": 0,
+        "limit": 100
+      },
+      "result": {
+        "schema": "stellar-forge.bdnb-page.v1",
+        "entity_id": "32hex",
+        "entity_sha256": "64hex",
+        "collection": "string",
+        "offset": 0,
+        "limit": "requested row count; a page may stop earlier at complete-row 8MiB payload bound, with exact next_offset",
+        "total": "integer",
+        "next_offset": "integer or null",
+        "rows": "complete row objects; never summary substitutions",
+        "columns": "declared native storage columns",
+        "version_id": "64hex"
+      }
+    }
+  },
+  "rowShapes": {
+    "source": {
+      "id": "64hex",
+      "table": "source table name",
+      "ordinal": "1-based original data row",
+      "key": "original PK tuple or null",
+      "raw": "full original header -> string map",
+      "typed": "full header -> {type, state:'value|null|invalid|missing', value:exact string|boolean|null, raw:string, unit:null|string}",
+      "findings": "complete array {code,field,detail}",
+      "geometry": "{state:'valid|review|absent',crs:'EPSG:2154',encoding,raw,geojson:null|object,findings:[]}; original coordinates retained",
+      "source": "{edition_id,table,file_sha256,ordinal}"
+    },
+    "comparison": {
+      "id": "64hex",
+      "kind": "group|address|address-link|dictionary|coverage",
+      "classification": "unchanged|changed|renamed|merged|split|complex|created|deleted|scope-entry|scope-exit|unresolved",
+      "key": "complete logical correspondence key",
+      "before": "array of full source row identities plus raw/typed rows",
+      "after": "array of full source row identities plus raw/typed rows",
+      "changes": "array {field,before,after,state:'equal|different|unknown',reason}",
+      "correspondence": "{mode,edition_path,edges:[full selected original passage rows],continuity:[original presence evidence for unchanged intervals],findings:[]}",
+      "evidence_sha256": "64hex",
+      "findings": "complete domain findings",
+      "review": "latest complete current review entity with top-level id and history_ids, or null; review_ids and review_conflicts are adjacent full identity arrays"
+    }
+  },
+  "collections": {
+    "edition": "five actual present table names",
+    "selection": "five actual present table names, each original order; comparison-ready subset",
+    "comparison": [
+      "changes",
+      "summary"
+    ],
+    "review": [],
+    "publication": "original entity's data references plus product receipts",
+    "pack": []
+  },
+  "productsInterface": {
+    "module": "bdnb_products.py",
+    "call": "dispatch_bdnb_product(adapter, action, body)",
+    "adapter": {
+      "model": "original DatasetteAnalysis",
+      "analysis": "same model.analysis",
+      "database": "same analysis.database",
+      "directory": "private original operation/bdnb",
+      "get": "get(entity_id) -> complete entity",
+      "status": "status() -> status",
+      "rows": "rows(entity_id,collection,offset=0,limit=100) -> page",
+      "stream_rows": "context manager stream_rows(entity_id,collection) yields complete decoded rows from one original read transaction",
+      "raw_collection": "collection(entity_id,collection) -> native version receipt, immutable table and columns",
+      "begin": "begin(kind,id,body,title) -> (retained entity or None, normalized input/intent); exact request replay",
+      "commit": "commit(kind,id,body,title,summary,collections={},files=[],lineage=[]) -> frozen entity",
+      "current_reviews": "current_reviews(comparison_id) -> complete review entities plus exact review-set SHA",
+      "retain_descriptor": "original standard response documents retain all original source segments; no added archive extension needed"
+    }
+  },
+  "sourceSemantics": {
+    "geometry": "Original publisher Lambert-93/EPSG:2154 coordinates; no silent conversion to longitude/latitude. contains_fictive_geom_groupe labels generated geometry. Opaque/invalid geometries stay visible as original source records.",
+    "weights": "poids_s_* and poids_nb_loc_* denominators are address totals across all served groups, not totals across the selected group's addresses. Preserve raw exact values and publisher meaning.",
+    "scope": "Source descriptor coverage and selected territory define observation scope. Missing crosswalk rows do not prove creation/deletion; unchanged identifiers normally do not appear in the passage table.",
+    "operatingContext": "Kestra Ntico case study documents S3 ingestion and Docker/custom logic; deployed namespace, bucket, credentials and plugin/version must be operator supplied."
+  }
+}

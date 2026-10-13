@@ -9,6 +9,8 @@ import { prepareWaterEdition, stageWaterMerchant, startWaterMerchant, readWaterE
 
 import { inspectDssEdition, readDssOperation, previewDssExport, createDssExport, readDssExport, listDssExports, probeDssRuntime, dssDownload, verifyDssExport, exportDssHandover, receiveDssHandover, receiveDssUpload, dssHandoverDownload } from './dss.mjs';
 
+import { watershedCommand } from './watershed.mjs';
+
 const SCHEMA = 'starforge.usgs-water-project.v1';
 const json = value => JSON.stringify(value, null, 2) + '\n';
 const sha = value => createHash('sha256').update(typeof value === 'string' ? value : json(value)).digest('hex');
@@ -43,7 +45,7 @@ async function names(folder, extension = '.json') {
 export async function openWaterProject(directory, { transport, env = process.env } = {}) {
   const root = await privateDirectory(resolve(directory));
   const folders = {};
-  for (const name of ['revisions', 'requests', 'captures', 'capture-summaries', 'reviews', 'editions', 'dss-exports']) folders[name] = await privateDirectory(join(root, name));
+  for (const name of ['revisions', 'requests', 'captures', 'capture-summaries', 'reviews', 'editions', 'dss-exports', 'watersheds']) folders[name] = await privateDirectory(join(root, name));
   let pending = Promise.resolve(), closing = false, closed = false, closePromise;
   const operations = new Set(), acquisitions = new Map(), dssControllers = new Set();
   function active() { if (closed || closing) fail('The project is closing.', 'WATER_PROJECT_CLOSED', 503); }
@@ -246,6 +248,16 @@ export async function openWaterProject(directory, { transport, env = process.env
     prepareEdition: args => tracked(() => serial(() => edition(args))),
     readEdition: id => readWaterEdition(join(folders.editions, operationId(id))),
     listEditions,
+    listWatersheds: async () => {
+      const entries = (await readdir(folders.watersheds, { withFileTypes: true })).filter(row => row.isDirectory() && /^[A-Za-z0-9][A-Za-z0-9_-]{0,95}$/.test(row.name));
+      const rows = [];
+      for (const entry of entries) {
+        try { rows.push(await readPrivateJson(join(folders.watersheds, entry.name, 'state.json'))); }
+        catch (error) { if (error.code !== 'ENOENT') throw error; }
+      }
+      return rows;
+    },
+    watershed: (command, input = {}) => tracked(() => nativeDss(signal => watershedCommand({ directory: root, command, input, env, signal }))),
     inspectDssEdition: editionId => tracked(() => inspectDssEdition({ editionDirectory: join(folders.editions, operationId(editionId)), workspaceEditionId: editionId })),
     previewDssExport: args => tracked(async () => previewDssExport(await dssContext(args))),
     createDssExport: args => tracked(() => serial(async () => nativeDss(signal => dssContext(args).then(context => createDssExport({
