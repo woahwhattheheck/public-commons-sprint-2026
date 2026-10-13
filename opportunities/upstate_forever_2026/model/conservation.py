@@ -122,6 +122,11 @@ def _spec(value):
         result["baseline_run_id"] = None
         result["reporting_area"] = _choice(result.get("reporting_area"), "reporting area")
         result["analysis_crs"] = _text(result.get("analysis_crs"), "Analysis CRS", default="EPSG:5070")
+    if "matched_families" in result:
+        from .conservation_families import normalize
+        result["matched_families"] = normalize(result["matched_families"])
+        if result["matched_families"] and mode != "native_model":
+            raise ValueError("Matched native families require native_model mode")
     contexts = result.get("contexts", {})
     if not isinstance(contexts, dict) or set(contexts) - set(CONTEXT_NAMES):
         raise ValueError("Context sources must use protected_lands, drinking_water or high_quality_waters")
@@ -295,7 +300,10 @@ def _native(workspace, spec):
         return result, grid
     if INVEST_VERSION != "3.20.0":
         raise ValueError("Conservation quantities require the original InVEST 3.20.0 output-unit contract")
-    for key in [spec["baseline_run_id"]] + spec["alternative_run_ids"]:
+    from .conservation_families import run_ids as family_run_ids
+    selected_ids = list(dict.fromkeys(
+        [spec["baseline_run_id"]] + spec["alternative_run_ids"] + family_run_ids(spec)))
+    for key in selected_ids:
         run = workspace.inspect_run(key)
         if run["state"] != "complete":
             raise ValueError("Complete native run " + key + " before selecting its quantitative results")
@@ -333,6 +341,9 @@ def _native(workspace, spec):
             "id": key, "selection": run["selection"], "completed_at": run.get("completed_at"),
             "runtime": run.get("runtime"), "execution": execution, "outputs": outputs,
         }
+    if spec.get("matched_families"):
+        from .conservation_families import validate
+        validate(spec, result)
     return result, grid
 
 def prepare(workspace, value):
@@ -405,6 +416,9 @@ def inspect(workspace, key, *, include_candidates=True):
     state = _read_state(workspace, key)
     state["spec"] = state["selection"]["spec"]
     state["native_execution"] = _bound_native_execution(workspace, state, require_supported=False)
+    if state["state"] == "complete" and state["spec"].get("matched_families"):
+        from .conservation_families import inspect_support
+        inspect_support(workspace, state)
     if include_candidates and state["state"] == "complete":
         path = verify_file(workspace.root, state["files"]["candidates"])
         state = {**state, "candidates": read_json(path)["candidates"]}
@@ -647,6 +661,9 @@ def _open_native(workspace, state, stack):
         if (not math.isclose(reference.transform.a, resolution, rel_tol=1e-9, abs_tol=1e-7)
                 or not math.isclose(-reference.transform.e, resolution, rel_tol=1e-9, abs_tol=1e-7)):
             raise ValueError("Native outputs must preserve the original selected model grid's cell size")
+    if state["selection"]["spec"].get("matched_families") and state.get("matched_family_support"):
+        from .conservation_families import attach_support
+        attach_support(workspace, state, reference, result, stack)
     return reference, result
 
 
@@ -821,6 +838,11 @@ def _aggregate(reference, datasets, geometry, spec):
                 "profile_changed": datasets[key].get("_profile_changed", False),
             }
         result[pollutant] = value
+    if spec.get("matched_families"):
+        from .conservation_families import aggregate
+        matched = aggregate(reference, datasets, geometry, spec)
+        for pollutant in POLLUTANTS:
+            result[pollutant]["matched_families"] = matched[pollutant]
     return result
 
 def _eligibility(candidate, spec):
@@ -1211,6 +1233,12 @@ def build(workspace, selection):
                     from pyproj import CRS
                     if CRS.from_user_input(reference.crs) != crs:
                         raise ValueError("Native output CRS differs from the retained geometry analysis grid")
+                if spec.get("matched_families"):
+                    from .conservation_families import ensure_support, attach_support
+                    state["matched_family_support"] = ensure_support(workspace, state, reference, datasets)
+                    if "_matched_family_support" not in datasets:
+                        attach_support(workspace, state, reference, datasets, stack)
+                    atomic_json(directory / "study.json", state)
                 for index, unit in enumerate(units):
                     checkpoint = directory / "rows" / (digest(unit["id"]) + ".json")
                     if checkpoint.exists():
@@ -1273,7 +1301,9 @@ def build(workspace, selection):
             atomic_json(directory / "geometries.json", {"schema": "upstate.conservation-geometries/v1",
                                                        "study_id": key, "analysis_crs": crs.to_wkt(), "units": geometries})
             atomic_json(directory / "selection.json", {"selection": state["selection"], "method": METHOD,
-                                                      "normalization": state["normalization"], "context_sources": context_metadata})
+                                                      "normalization": state["normalization"], "context_sources": context_metadata,
+                                                      **({"matched_family_support": state["matched_family_support"]}
+                                                         if state.get("matched_family_support") else {})})
             _write_csv(directory / "candidates.csv", candidates, spec["alternative_run_ids"])
             _write_gpkg(directory / "geodata.gpkg", crs, candidates, geometries)
             atomic_bytes(directory / "index.html", _report(state, candidates).encode("utf-8"))
@@ -1281,6 +1311,12 @@ def build(workspace, selection):
                 ("candidates", "candidates.json"), ("geometries", "geometries.json"), ("selection", "selection.json"),
                 ("candidates_csv", "candidates.csv"), ("geopackage", "geodata.gpkg"), ("report", "index.html"),
             )}
+            if state.get("matched_family_support"):
+                state["files"]["matched_family_support"] = describe_file(
+                    workspace.root, directory / "matched-family-support.json")
+                for pollutant, support in state["matched_family_support"]["metrics"].items():
+                    if support["mask"] is not None:
+                        state["files"]["matched_support_" + pollutant] = support["mask"]
             state["files"].update(conservation_reporting.write_supplements(
                 workspace, directory, state, candidates))
             state.update(state="complete", completed_at=now(), updated_at=now(),
@@ -1574,6 +1610,13 @@ def export_packet(workspace, study_id, plan_id=None):
             plan_path = root / "conservation-plans" / plan["id"] / "plan.json"
             members["plan.json"] = (plan_path, describe_file(root, plan_path))
         candidates = read_json(candidate_source)["candidates"]
+        if state.get("matched_family_support"):
+            for role, descriptor in state["files"].items():
+                if role == "matched_family_support" or role.startswith("matched_support_"):
+                    source = verify_file(root, descriptor)
+                    if source.name in members and members[source.name][1] != descriptor:
+                        raise ValueError("Matched-family support packet member names collide")
+                    members[source.name] = (source, descriptor)
         members.update(conservation_reporting.presentation_members(
             workspace, directory, state, candidates, plan=plan))
         manifest = {

@@ -56,7 +56,7 @@ function freshStudy() {
     unit_type: "management_unit", planning_unit_label: "Planning unit",
     parcel_source: "", parcel_layer: "", id_field: "", label_field: "", parcel_where: "",
     reporting_source: "", reporting_layer: "", analysis_crs: "EPSG:5070",
-    baseline_run_id: "", alternative_run_ids: [], score_alternative: "",
+    baseline_run_id: "", alternative_run_ids: [], score_alternative: "", matched_families: [],
     protected_source: "", protected_layer: "", protected_reference: "", protected_meaning: "",
     protected_relation: "Area intersection",
     water_source: "", water_layer: "", water_reference: "", water_meaning: "",
@@ -518,6 +518,57 @@ export function attachConservation({
   }
   function filtered() { return candidates(); }
   function pageRows() { return candidates(); }
+  function matchedFamilies(study = memory().study) {
+    return study?.spec?.matched_families || study?.selection?.spec?.matched_families || [];
+  }
+  function matchedKind(kind) {
+    return ["matched-restoration", "matched-disturbance"].includes(kind);
+  }
+  function familyTitle(id, study = memory().study) {
+    const family = matchedFamilies(study).find(row => row.id === id);
+    return family?.label || id;
+  }
+  function studyFamilyFields(draft, runItems) {
+    return '<details class="cons-disclosure"' + (draft.matched_families?.length ? ' open' : '') +
+      '><summary>Matched model families</summary><p>Compare treatment effects while keeping each family’s own baseline. ' +
+      'A family pairs completed runs with the same parameter profile and grid; describe the scientific setting that makes the pair comparable. ' +
+      'The study baseline above continues to define its original current-export and fixed-baseline views.</p>' +
+      (draft.matched_families || []).map((row, index) => {
+        const prefix = "family." + index + ".";
+        return '<fieldset><legend>' + h(row.label || "Model family " + (index + 1)) + '</legend><div class="cons-grid">' +
+          input(prefix + "label", "Family name", row.label) +
+          select(prefix + "baseline_run_id", "This family’s baseline", row.baseline_run_id, runItems) +
+          select(prefix + "alternative_run_id", "This family’s treatment or development run", row.alternative_run_id,
+            runItems.filter(([id]) => !id || id !== row.baseline_run_id)) +
+          input(prefix + "reason", "Comparable scientific setting", row.reason,
+            'placeholder="For example, the same profile and routing with the selected land-cover treatment"') +
+          input(prefix + "reference", "Source or method reference, if applicable", row.reference || "") +
+          '</div>' + button("remove-family", "Remove family", 'data-index="' + index + '"') + '</fieldset>';
+      }).join("") + button("add-family", "Add matched model family") +
+      '<p class="cons-help">Each pollutant uses its own common valid footprint across all selected family pairs. ' +
+      'Coverage, structural stream omission and original run identities stay visible. These selected families do not assign probabilities.</p></details>';
+  }
+  function buildMatchedFamilies(draft) {
+    const ids = new Set(), pairs = new Set(), available = new Set(runs().map(run => run.id));
+    return (draft.matched_families || []).map(row => {
+      if (typeof row.id !== "string" || !row.id.trim() || row.id !== row.id.trim() || ids.has(row.id))
+        throw new Error("Each matched family needs its own nonempty original key.");
+      ids.add(row.id);
+      const label = String(row.label || "").trim(), reason = String(row.reason || "").trim();
+      if (!label || !reason) throw new Error("Give each matched family a name and describe its comparable scientific setting.");
+      if (!available.has(row.baseline_run_id) || !available.has(row.alternative_run_id))
+        throw new Error(label + " needs two completed runs from this Workspace.");
+      if (row.baseline_run_id === row.alternative_run_id)
+        throw new Error(label + " must pair different baseline and treatment runs.");
+      const pair = JSON.stringify([row.baseline_run_id, row.alternative_run_id]);
+      if (pairs.has(pair)) throw new Error("The same original run pair is already selected in another family.");
+      pairs.add(pair);
+      return { id: row.id, label, baseline_run_id: row.baseline_run_id,
+        alternative_run_id: row.alternative_run_id, reason,
+        ...(String(row.reference || "").trim() ? { reference: row.reference.trim() } : {}) };
+    });
+  }
+
   function buildSpec({ forCriteria = false } = {}) {
     const d = memory().draft;
     if (d.advanced_use) {
@@ -575,6 +626,7 @@ export function attachConservation({
       spec.baseline_run_id = d.baseline_run_id;
       spec.alternative_run_ids = [...new Set(d.alternative_run_ids)]
         .filter(id => id !== d.baseline_run_id);
+      if (d.matched_families?.length) spec.matched_families = buildMatchedFamilies(d);
     }
     if (forCriteria) {
       spec.score = { basis: "context", context_weights: {} };
@@ -702,6 +754,7 @@ export function attachConservation({
     d.reporting_source = refKey(spec.reporting_area); d.reporting_layer = spec.reporting_area?.layer || "";
     d.baseline_run_id = spec.baseline_run_id || "";
     d.alternative_run_ids = [...(spec.alternative_run_ids || [])];
+    d.matched_families = (spec.matched_families || []).map(row => ({ ...row }));
     const rules = spec.rules || {};
     for (const [field, name] of [["minimum_coverage", "minimum_coverage_fraction"],
       ["maximum_protected", "maximum_protected_fraction"], ["minimum_water", "minimum_source_water_fraction"]]) {
@@ -979,7 +1032,8 @@ export function attachConservation({
           "<p>No additional completed runs are available.</p>") + "</div>" +
         nativeExecution({spec: d, native_execution: Object.fromEntries(availableRuns.filter(run =>
           run.id === d.baseline_run_id || d.alternative_run_ids.includes(run.id))
-          .filter(run => run.execution).map(run => [run.id, run.execution]))}) + "</fieldset>" :
+          .filter(run => run.execution).map(run => [run.id, run.execution]))}) +
+        studyFamilyFields(d, runItems) + "</fieldset>" :
         '<fieldset><legend>Reporting area</legend><p class="cons-help">Area and overlap calculations use ' +
         "these retained boundaries. A reporting watershed becomes drinking-water context only when it has that documented role.</p>" +
         '<div class="cons-grid">' +
@@ -1058,7 +1112,10 @@ export function attachConservation({
       ...(study?.mode === "native_model" ? [
         ["current-export", "Current modeled export"],
         ["restoration", "Restoration reduction"],
-        ["avoided-conversion", "Increase under the development case"]] : []),
+        ["avoided-conversion", "Increase under the development case"],
+        ...(matchedFamilies(study).length ? [
+          ["matched-restoration", "Reduction within a matched model family"],
+          ["matched-disturbance", "Increase within a matched model family"]] : [])] : []),
       ...(study?.spec?.score?.basis === "published_method" && study?.selection?.bindings?.published_method
         ? [["published-method", "Original published practice points"]] : []),
       ["source-attribute", "Original planning-unit numeric attribute"]];
@@ -1074,6 +1131,7 @@ export function attachConservation({
     const kind = original?.kind && original.kind !== "multi-criteria" ? original.kind : "source-context";
     const row = { id: "criterion_" + n, label: "", kind, axis: "", basis: "total",
       scenario_run_id: original?.scenario_run_id || memory().study?.spec?.alternative_run_ids?.[0] || "",
+      family_id: original?.family_id || matchedFamilies()[0]?.id || "",
       field: "", unit: "", reference: "", direction: "maximize", weight: "1" };
     const axes = criterionAxes(row);
     row.axis = axes[0]?.[0] || "";
@@ -1100,6 +1158,8 @@ export function attachConservation({
             [["", "Choose a retained alternative"], ...alternatives.map(id => {
               const run = runs().find(item => item.id === id); return [id, run?.title || id];
             })]) : "") +
+          (matchedKind(row.kind) ? select(prefix + "family_id", "Matched baseline and treatment family", row.family_id,
+            [["", "Choose a retained family"], ...matchedFamilies(study).map(family => [family.id, family.label])]) : "") +
           (!attribute && row.kind !== "source-context" ?
             select(prefix + "basis", "Quantity basis", row.basis,
               [["total", "Total in the reporting footprint"], ["per-reporting-hectare", "Per reporting hectare"]]) : "") +
@@ -1115,8 +1175,8 @@ export function attachConservation({
   }
   function caseComparisonForm(draft) {
     if (draft.kind !== "multi-criteria") return "";
-    const paired = (draft.criteria || []).filter(row => ["restoration", "avoided-conversion"].includes(row.kind));
-    if (!paired.length) return '<p class="cons-help">Add a restoration or development criterion to compare original native cases.</p>';
+    const paired = (draft.criteria || []).filter(row => ["restoration", "avoided-conversion"].includes(row.kind) || matchedKind(row.kind));
+    if (!paired.length) return '<p class="cons-help">Add a restoration, development or matched-family criterion to compare original native cases.</p>';
     const alternatives = memory().study?.spec?.alternative_run_ids || [];
     return '<fieldset><legend>Native case comparisons</legend><p>Hold weights and resource limits fixed while replacing the explicitly selected native alternatives. ' +
       'Choose cases representing the scientific assumptions you want to compare; each row retains its own modeled quantities and coverage. ' +
@@ -1124,11 +1184,14 @@ export function attachConservation({
       (draft.scenario_cases || []).map((item, index) => '<fieldset><legend>Case comparison ' + (index + 1) +
         '</legend><div class="cons-grid">' +
         input("optimization.case." + index + ".name", "Comparison name", item.name) +
-        paired.map(row => select("optimization.case." + index + ".run." + row.id, row.label || row.id,
-          item.scenario_run_ids?.[row.id] || "",
-          [["", "Keep selected case"], ...alternatives.map(id => {
-            const run = runs().find(candidate => candidate.id === id); return [id, run?.title || id];
-          })])).join("") +
+        paired.map(row => matchedKind(row.kind)
+          ? select("optimization.case." + index + ".family." + row.id, row.label || row.id,
+            item.family_ids?.[row.id] || "", [["", "Keep selected matched family"], ...matchedFamilies().map(family => [family.id, family.label || family.id])])
+          : select("optimization.case." + index + ".run." + row.id, row.label || row.id,
+            item.scenario_run_ids?.[row.id] || "",
+            [["", "Keep selected case"], ...alternatives.map(id => {
+              const run = runs().find(candidate => candidate.id === id); return [id, run?.title || id];
+            })])).join("") +
         '</div>' + button("optimization-remove-case", "Remove comparison", 'data-index="' + index + '"') + '</fieldset>').join("") +
       button("optimization-add-case", "Add native case comparison") +
       '<p class="cons-help">Selection frequency describes these explicit cases. A probability requires a separately justified uncertainty model.</p></fieldset>';
@@ -1161,12 +1224,19 @@ export function attachConservation({
           }
           result.scenario_run_id = row.scenario_run_id;
         }
+        if (matchedKind(row.kind)) {
+          if (!matchedFamilies().some(family => family.id === row.family_id))
+            throw new Error(row.label + " needs its retained matched family.");
+          result.family_id = row.family_id;
+        }
       }
       return result;
     });
   }
   function nativeCaseSelection(draft, criteria) {
     const paired = new Set(criteria.filter(row => ["restoration", "avoided-conversion"].includes(row.kind)).map(row => row.id));
+    const matched = new Set(criteria.filter(row => matchedKind(row.kind)).map(row => row.id));
+    const families = new Set(matchedFamilies().map(row => row.id));
     const names = new Set(), alternatives = new Set(memory().study?.spec?.alternative_run_ids || []);
     const cases = (draft.scenario_cases || []).map(row => {
       const name = String(row.name || "").trim();
@@ -1179,8 +1249,15 @@ export function attachConservation({
         if (!alternatives.has(id)) throw new Error("Case comparisons must use this study's retained alternatives.");
         selected[criterion] = id;
       }
-      if (!Object.keys(selected).length) throw new Error(name + " needs at least one alternative case selection.");
-      return { name, scenario_run_ids: selected };
+      const selectedFamilies = {};
+      for (const [criterion, id] of Object.entries(row.family_ids || {})) {
+        if (!id) continue;
+        if (!matched.has(criterion)) throw new Error("A matched comparison refers to a removed or non-family criterion.");
+        if (!families.has(id)) throw new Error("Case comparisons must use this study's retained matched families.");
+        selectedFamilies[criterion] = id;
+      }
+      if (!Object.keys(selected).length && !Object.keys(selectedFamilies).length) throw new Error(name + " needs at least one native case or matched family selection.");
+      return { name, scenario_run_ids: selected, family_ids: selectedFamilies };
     });
     return { enabled: cases.length > 0, cases };
   }
@@ -1192,7 +1269,8 @@ export function attachConservation({
       '</p><div class="cons-table-wrap"><table class="cons-table"><thead><tr><th>Case comparison</th><th>Original alternatives</th>' +
       '<th>Eligible units</th><th>Selected units</th><th>Solver result</th><th>Relative gap</th></tr></thead><tbody>' +
       (stability.cases || []).map(row => '<tr><th scope="row">' + h(row.name) + '</th><td>' +
-        Object.entries(row.scenario_run_ids || {}).map(([criterion,id]) => h(criterion) + ': <code>' + h(id) + '</code>').join("<br>") +
+        [...Object.entries(row.scenario_run_ids || {}).map(([criterion,id]) => h(criterion) + ': <code>' + h(id) + '</code>'),
+          ...Object.entries(row.family_ids || {}).map(([criterion,id]) => h(criterion) + ': ' + h(familyTitle(id)))].join("<br>") +
         '</td><td>' + number(row.eligible_count) + '</td><td>' + number(row.selected_ids?.length) + '</td><td>' +
         h(human(row.optimization?.status)) + '</td><td>' + h(percent(row.optimization?.relative_gap)) + '</td></tr>').join("") +
       '</tbody></table></div></details>';
@@ -1223,6 +1301,7 @@ export function attachConservation({
               (finite(support.coverage_fraction) ? " · " + h(percent(support.coverage_fraction)) + " coverage" : "") +
               (finite(row.score_contributions?.[axis]) ? " · contribution " + number(row.score_contributions[axis]) : "") +
               (support.criterion?.scenario_run_id ? " · case " + h(support.criterion.scenario_run_id) : "") +
+              (support.criterion?.family_id ? " · family " + h(familyTitle(support.criterion.family_id)) : "") +
               (support.availability_reason ? " · " + h(support.availability_reason) : "") + '</span></td>';
           }).join("") + '<td>' + h((row.exclusions || []).join("; ")) + '</td></tr>';
       }).join("") + '</tbody></table></div></section>';
@@ -1242,6 +1321,14 @@ export function attachConservation({
         ...(sources.drinking_water ? [["source_water_area_ha", "Source-water area", "ha"]] : []),
         ...(sources.protected_lands ? [["unprotected_area_ha", "Unprotected area", "ha"]] : []),
         ...(sources.high_quality_waters ? [["high_quality_context", "High-quality-water context", "presence"]] : [])];
+    }
+    if (matchedKind(kind)) {
+      const families = matchedFamilies(study);
+      if (!families.some(row => row.id === draft?.family_id)) return [];
+      const selectedRuns = families.flatMap(row => [row.baseline_run_id, row.alternative_run_id]);
+      return POLLUTANTS.filter(([axis]) => selectedRuns.length && selectedRuns.every(id =>
+        Object.hasOwn(bindings.runs?.[id]?.outputs || {}, axis))).map(([axis, label]) =>
+        [axis, label, axis === "sediment_export" ? "metric tonnes/year" : "kg/year"]);
     }
     const baseline = bindings.runs?.[study?.spec?.baseline_run_id];
     let available = new Set(Object.keys(baseline?.outputs || {}));
@@ -1264,7 +1351,9 @@ export function attachConservation({
       purpose: request?.purpose || "Select land priorities under explicit area, cost and coverage limits.",
       kind, basis: request?.objective?.basis || "total",
       criteria: (request?.objective?.criteria || []).map(row => ({ ...row, weight: String(request?.weights?.[row.id] ?? 0) })),
-      scenario_cases: (request?.scenario_stability?.cases || []).map(row => ({ name: row.name, scenario_run_ids: { ...row.scenario_run_ids } })),
+      scenario_cases: (request?.scenario_stability?.cases || []).map(row => ({ name: row.name,
+        scenario_run_ids: { ...row.scenario_run_ids }, family_ids: { ...row.family_ids } })),
+      family_id: request?.objective?.family_id || matchedFamilies(study)[0]?.id || "",
       scenario_run_id: request?.objective?.scenario_run_id || study?.spec?.score?.alternative_run_id ||
         study?.spec?.alternative_run_ids?.[0] || "",
       area: request?.constraints?.area_ha ?? "", budget: request?.constraints?.budget_usd ?? "",
@@ -1321,6 +1410,11 @@ export function attachConservation({
       }
       objective.scenario_run_id = d.scenario_run_id;
     }
+    if (matchedKind(d.kind)) {
+      if (!matchedFamilies(study).some(row => row.id === d.family_id))
+        throw new Error("Choose a matched baseline and treatment family retained in this study.");
+      objective.family_id = d.family_id;
+    }
     const constraints = { area_basis: d.area_basis };
     for (const [key, value, label, integer] of [
       ["area_ha", d.area, "Area limit", false], ["max_count", d.count, "Unit limit", true]]) {
@@ -1363,7 +1457,9 @@ export function attachConservation({
         ? [["published-method", "Original published practice points"]] : []),
       ...(native ? [["current-export", "Current modeled export"],
         ["restoration", "Reduction from the selected restoration case"],
-        ["avoided-conversion", "Increase from the selected conversion case"]] : [])];
+        ["avoided-conversion", "Increase from the selected conversion case"],
+        ...(matchedFamilies(study).length ? [["matched-restoration", "Reduction within a matched native family"],
+          ["matched-disturbance", "Increase within a matched native family"]] : [])] : [])];
     const textArea = (name, label, value, rows = 3) => '<label class="cons-field" for="' + fieldId(name) +
       '"><span>' + h(label) + '</span><textarea id="' + fieldId(name) + '" data-field="' + h(name) +
       '" rows="' + rows + '" spellcheck="false">' + h(value) + '</textarea></label>';
@@ -1380,7 +1476,10 @@ export function attachConservation({
       (paired ? select("optimization.scenario_run_id", "Retained alternative case", d.scenario_run_id,
         [["", "Choose a retained alternative"], ...(study.spec?.alternative_run_ids || []).map(id => {
           const run = runs().find(row => row.id === id); return [id, (run?.title || id) + " · " + runQuantityLabel(run)];
-        })]) : "") + '</div>' + (d.kind === "multi-criteria" ? criterionForm(d) + caseComparisonForm(d) : '<fieldset><legend>Objective weights</legend><div class="cons-grid">' +
+        })]) : "") +
+      (matchedKind(d.kind) ? select("optimization.family_id", "Matched baseline and treatment", d.family_id,
+        [["", "Choose a matched family"], ...matchedFamilies(study).map(row => [row.id, row.label || row.id])]) : "") +
+      '</div>' + (d.kind === "multi-criteria" ? criterionForm(d) + caseComparisonForm(d) : '<fieldset><legend>Objective weights</legend><div class="cons-grid">' +
       axes.map(([axis,label,unit]) => input("optimization.weight_" + axis, label + " (" + unit + ")",
         d["weight_" + axis], 'type="number" min="0" step="any"')).join("") +
       '</div><p class="cons-help">' + (d.kind === "published-method"
@@ -1520,7 +1619,7 @@ export function attachConservation({
       (a.stability?.profiles || []).map(profile => '<tr><th scope="row">' + h(profile.name) + '</th><td>' +
         number(profile.eligible_count) + '</td><td>' + number(profile.selected_ids?.length) + '</td><td>' +
         h(human(profile.optimization?.status)) + '</td><td>' + h(percent(profile.optimization?.relative_gap)) + '</td></tr>').join("") +
-      '</tbody></table></div></details>' + scenarioStabilityView(a) + '<div class="cons-filters">' +
+      '</tbody></table></div></details>' + matchedFamilySupportView(ui.study) + scenarioStabilityView(a) + '<div class="cons-filters">' +
       '<label class="cons-field"><span>Find an original unit</span><input data-optimization-filter="search" value="' +
       h(ui.optimizationSearch || "") + '"></label><label class="cons-field"><span>Candidate view</span>' +
       '<select data-optimization-filter="mode">' + [["all","All retained units"],["selected","Selected"],["eligible","Eligible"],["excluded","Excluded"]]
@@ -1601,6 +1700,51 @@ export function attachConservation({
     return '<span class="cons-quantity">' + quantity + '</span><span class="cons-metric-note">' +
       h(coverage) + "</span>" + change;
   }
+  function matchedFamilySupportView(study = memory().study) {
+    const families = matchedFamilies(study), support = study?.matched_family_support;
+    if (!families.length) return "";
+    const rows = POLLUTANTS.map(([axis, label]) => {
+      const value = support?.metrics?.[axis];
+      if (!value) return "";
+      return '<tr><th scope="row">' + h(label) + '</th><td>' + h(human(value.state)) +
+        (value.reason ? '<span class="cons-metric-note">' + h(value.reason) + '</span>' : '') +
+        '</td><td>' + number(value.grid_valid_area_ha) + '</td><td>' + number(value.grid_structural_area_ha) +
+        '</td><td>' + number(value.grid_covered_area_ha) + '</td></tr>';
+    }).join("");
+    return '<details class="cons-disclosure"><summary>Matched native families and shared coverage</summary><p>' +
+      'Every family uses its own completed baseline and treatment with the same parameter profile. Each pollutant uses one common ' +
+      'footprint across all declared families. Mixed valid/structural cells and missing outputs are excluded from that common footprint. ' +
+      'The original study eligibility rules still apply before the decision criteria.</p>' +
+      families.map(row => '<dl class="cons-definitions"><dt>Family</dt><dd>' + h(row.label || row.id) +
+        '</dd><dt>Original baseline</dt><dd>' + h(row.baseline_run_id) +
+        '</dd><dt>Original treatment</dt><dd>' + h(row.alternative_run_id) +
+        '</dd><dt>Scientific setting</dt><dd>' + h(row.reason) +
+        (row.reference ? '<span class="cons-metric-note">' + h(row.reference) + '</span>' : '') + '</dd></dl>').join("") +
+      (rows ? '<p>Areas below describe the complete shared grid; each planning unit and selected union has its own clipped coverage.</p>' +
+        '<div class="cons-table-wrap"><table class="cons-table"><thead><tr><th>Quantity</th><th>Availability</th>' +
+        '<th>Valid area (ha)</th><th>Structural stream area (ha)</th><th>Total supported area (ha)</th></tr></thead><tbody>' +
+        rows + '</tbody></table></div>' : '<p>Shared coverage is calculated when the study is built.</p>') +
+      '</details>';
+  }
+  function matchedMetricTable(pollutants) {
+    const families = matchedFamilies();
+    if (!families.length) return "";
+    const rows = families.flatMap(family => POLLUTANTS.map(([axis, label]) => {
+      const value = pollutants?.[axis]?.matched_families?.[family.id];
+      if (!value) return "";
+      return '<tr><th scope="row">' + h(family.label || family.id) + '<span class="cons-metric-note">' + h(label) +
+        ' · ' + h(value.unit || "") + '</span></th><td>' + number(value.common_baseline) +
+        '</td><td>' + number(value.common_alternative) + '</td><td>' + number(value.reduction) +
+        '</td><td>' + number(value.delta) + '</td><td>' + h(percent(value.common_coverage_fraction)) +
+        '<span class="cons-metric-note">Valid ' + number(value.common_valid_area_ha) + ' ha · structural ' +
+        number(value.common_structural_stream_area_ha) + ' ha · missing ' + number(value.missing_area_ha) +
+        ' ha</span><span class="cons-metric-note">' + h(human(value.comparison_availability || "Unavailable")) + '</span>' +
+        (value.comparison_availability_reason ? '<span class="cons-metric-note">' + h(value.comparison_availability_reason) + '</span>' : '') + '</td></tr>';
+    })).join("");
+    return '<h4>Matched-family quantities on common support</h4><div class="cons-table-wrap"><table class="cons-table">' +
+      '<thead><tr><th>Family and quantity</th><th>Baseline</th><th>Treatment</th><th>Reduction</th>' +
+      '<th>Increase</th><th>Coverage</th></tr></thead><tbody>' + rows + '</tbody></table></div>';
+  }
   function metricTable(pollutants, alternatives = []) {
     const rows = POLLUTANTS.map(([name, title]) => {
       const metric = pollutants?.[name];
@@ -1624,7 +1768,7 @@ export function attachConservation({
     }).join("");
     return '<div class="cons-table-wrap"><table class="cons-table"><thead><tr><th>Pollutant</th><th>Baseline</th>' +
       alternatives.map(id => "<th>Alternative " + h(id) + "</th>").join("") +
-      "</tr></thead><tbody>" + rows + "</tbody></table></div>";
+      "</tr></thead><tbody>" + rows + "</tbody></table></div>" + matchedMetricTable(pollutants);
   }
   function nativeExecution(study) {
     const entries = Object.entries(study?.native_execution || {});
@@ -1691,7 +1835,7 @@ export function attachConservation({
         "<dt>Study interpretation</dt><dd>" + h(spec.score.interpretation || "") + "</dd>" : "") +
       (spec.costs ? "<dt>Cost table</dt><dd>" + lineForSource(spec.costs) + " · " + h(spec.costs.currency) + "</dd>" : "") +
       "</dl><details><summary>Complete retained specification</summary><pre>" +
-      h(JSON.stringify(spec, null, 2)) + "</pre></details></details>";
+      h(JSON.stringify(spec, null, 2)) + "</pre></details></details>" + matchedFamilySupportView(study);
   }
   function candidateDetail(candidate) {
     const ui = memory();
@@ -2566,6 +2710,15 @@ export function attachConservation({
     const name = target.getAttribute("data-field");
     if (!name) return;
     const value = target.type === "checkbox" ? target.checked : target.value;
+    if (name.startsWith("family.")) {
+      const [, index, field] = name.split(".");
+      const row = ui.draft.matched_families?.[Number(index)];
+      if (row && ["label", "baseline_run_id", "alternative_run_id", "reason", "reference"].includes(field)) {
+        row[field] = value;
+        if (event.type === "change" && field === "baseline_run_id") paint();
+      }
+      return;
+    }
     if (name.startsWith("optimization.")) {
       const field = name.slice("optimization.".length);
       if (field.startsWith("criterion.")) {
@@ -2573,12 +2726,15 @@ export function attachConservation({
         const row = ui.optimization.criteria?.[Number(index)];
         if (!row) return;
         row[key] = value;
-        if (event.type === "change" && ["kind", "scenario_run_id"].includes(key)) {
+        if (event.type === "change" && ["kind", "scenario_run_id", "family_id"].includes(key)) {
           const axes = criterionAxes(row);
           if (!axes.some(([axis]) => axis === row.axis)) row.axis = axes[0]?.[0] || "";
           if (row.kind === "source-context" || row.kind === "source-attribute") row.basis = "total";
           if (!["restoration", "avoided-conversion"].includes(row.kind)) {
             for (const item of ui.optimization.scenario_cases || []) delete item.scenario_run_ids?.[row.id];
+          }
+          if (!matchedKind(row.kind)) {
+            for (const item of ui.optimization.scenario_cases || []) delete item.family_ids?.[row.id];
           }
           paint();
         }
@@ -2590,22 +2746,23 @@ export function attachConservation({
         if (!row) return;
         if (key === "name") row.name = value;
         else if (key === "run") { row.scenario_run_ids ||= {}; row.scenario_run_ids[criterion] = value; }
+        else if (key === "family") { row.family_ids ||= {}; row.family_ids[criterion] = value; }
         return;
       }
       const previousKind = ui.optimization.kind;
       ui.optimization[field] = value;
       if (field === "kind" && value === "multi-criteria" && !ui.optimization.criteria?.length) {
-        const row = newCriterion(ui.optimization, { kind: previousKind, scenario_run_id: ui.optimization.scenario_run_id });
+        const row = newCriterion(ui.optimization, { kind: previousKind, scenario_run_id: ui.optimization.scenario_run_id, family_id: ui.optimization.family_id });
         ui.optimization.criteria = [row];
       }
-      if (event.type === "change" && ["kind", "scenario_run_id"].includes(field)) {
+      if (event.type === "change" && ["kind", "scenario_run_id", "family_id"].includes(field)) {
         const axes = optimizationAxes(ui.optimization);
         if (axes.length && !axes.some(([axis]) => Number(ui.optimization["weight_" + axis]) > 0)) {
           for (const [axis] of axes) ui.optimization["weight_" + axis] =
             ui.optimization.kind === "source-context" ? (axis === "reporting_area_ha" ? "1" : "0") : "1";
         }
       }
-      if (event.type === "change" && ["kind", "scenario_run_id", "stability"].includes(field)) paint();
+      if (event.type === "change" && ["kind", "scenario_run_id", "family_id", "stability"].includes(field)) paint();
       return;
     }
     if (name.startsWith("acquisition.")) {
@@ -2681,12 +2838,14 @@ export function attachConservation({
           ui.optimization.criteria.push(newCriterion(ui.optimization)); paint(); break;
         case "optimization-remove-criterion": {
           const [removed] = ui.optimization.criteria.splice(Number(node.dataset.index), 1);
-          if (removed) for (const item of ui.optimization.scenario_cases || []) delete item.scenario_run_ids?.[removed.id];
+          if (removed) for (const item of ui.optimization.scenario_cases || []) {
+            delete item.scenario_run_ids?.[removed.id]; delete item.family_ids?.[removed.id];
+          }
           paint(); break;
         }
         case "optimization-add-case":
           ui.optimization.scenario_cases ||= [];
-          ui.optimization.scenario_cases.push({ name: "", scenario_run_ids: {} }); paint(); break;
+          ui.optimization.scenario_cases.push({ name: "", scenario_run_ids: {}, family_ids: {} }); paint(); break;
         case "optimization-remove-case":
           ui.optimization.scenario_cases.splice(Number(node.dataset.index), 1); paint(); break;
         case "optimization-use-checked": {
@@ -2806,6 +2965,17 @@ export function attachConservation({
           resetCatalog(ui); ui.readVersion++; clearChecked(ui);
           resetCatalog(ui); clearChecked(ui);
           ui.study = null; ui.plan = null; ui.detailId = null; ui.form = null; paint(); break;
+        case "add-family": {
+          ui.draft.matched_families ||= [];
+          const ids = new Set(ui.draft.matched_families.map(row => row.id));
+          let n = 1; while (ids.has("family_" + n)) n++;
+          ui.draft.matched_families.push({ id: "family_" + n, label: "", reason: "", reference: "",
+            baseline_run_id: ui.draft.baseline_run_id,
+            alternative_run_id: ui.draft.score_alternative || ui.draft.alternative_run_ids[0] || "" });
+          paint(); break;
+        }
+        case "remove-family":
+          ui.draft.matched_families.splice(Number(node.dataset.index), 1); paint(); break;
         case "populate-json": {
           const original = ui.draft.advanced_use;
           ui.draft.advanced_use = false;

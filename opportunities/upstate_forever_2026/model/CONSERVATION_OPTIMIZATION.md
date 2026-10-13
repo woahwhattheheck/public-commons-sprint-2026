@@ -540,3 +540,132 @@ map, CSV and both GIS layers. Open PDF and HTML at desktop and narrow widths.
 The native receipt records file production; visual_review remains pending until
 the producing peer has looked at those actual outputs. Preserve that peer's
 completed course and full project archive when delivering the new decision.
+
+
+## Matched model families for conservation priorities
+
+The native study can retain an explicit set of baseline/treatment families. Each pair
+must contain two different completed original runs with the same original parameter
+profile and compatible grid. Different families may represent different original
+profiles, scientific settings or land-cover treatments. The analyst supplies a label,
+the scientific reason for the comparison and, where available, a source reference.
+
+The existing study baseline and alternatives still define current-export views,
+fixed-baseline comparisons, original study scoring and eligibility. Family effects
+are calculated separately from each family's own baseline. A family baseline does
+not silently become the reference for another family.
+
+In the existing Conservation study editor, expand **Matched model families**, select
+each baseline and treatment, and describe the setting. Building the study binds every
+selected run to its original output and profile. The same fields can be retained in
+the native study specification:
+
+```json
+{
+  "matched_families": [
+    {
+      "id": "setting_a",
+      "label": "Original setting A",
+      "baseline_run_id": "<completed original baseline A>",
+      "alternative_run_id": "<completed original treatment A>",
+      "reason": "<scientific setting shared by this pair>",
+      "reference": "<original method or source>"
+    },
+    {
+      "id": "setting_b",
+      "label": "Original setting B",
+      "baseline_run_id": "<completed original baseline B>",
+      "alternative_run_id": "<completed original treatment B>",
+      "reason": "<scientific setting shared by this pair>"
+    }
+  ]
+}
+```
+
+These identifiers illustrate the schema; select actual completed run IDs in the
+receiving Workspace. The optional reference is text retained with the family.
+
+### Common geographic support
+
+Every pollutant has its own common mask across **all families declared in the study**.
+Selecting only some families in a decision does not expand that footprint. Adding or
+removing a family creates a new study and support identity.
+
+| Mask code | Original run support at this cell | Treatment in a comparison |
+|---|---|---|
+| 1 | Valid in every selected baseline and treatment | Include original modeled values |
+| 2 | Structural stream omission in every selected run | Retain structural area separately |
+| 0 | Outside support, missing, or a valid/structural mixture | Exclude from common modeled quantities |
+
+A missing pollutant output in any selected run makes that pollutant unavailable for
+the cohort. Structural-only support has no modeled mass. Nitrogen and phosphorus
+retain kg/year; sediment retains metric tonnes/year. Missing quantities remain null.
+Raster support selection, original run roster, bytes, hashes and complete-grid areas
+are retained in `study.matched_family_support`. Polygon and portfolio union coverage
+are clipped independently from that same mask using the original geometry.
+
+### Decision objectives and family comparisons
+
+A standalone objective uses `kind: "matched-restoration"` for baseline minus
+treatment, or `kind: "matched-disturbance"` for treatment minus baseline, together with
+`family_id` and `basis`. Physical output weights remain separate. Negative effects
+retain their sign. The multi-criteria editor can combine an explicit family quantity
+with geographic context, source attributes or published practice points:
+
+```json
+{
+  "objective": {
+    "kind": "multi-criteria",
+    "criteria": [{
+      "id": "nitrogen_benefit",
+      "label": "Matched nitrogen reduction",
+      "kind": "matched-restoration",
+      "family_id": "setting_a",
+      "axis": "nitrogen_export",
+      "basis": "total",
+      "direction": "maximize"
+    }]
+  },
+  "weights": {"nitrogen_benefit": 1},
+  "scenario_stability": {
+    "enabled": true,
+    "cases": [{
+      "name": "Original setting B",
+      "family_ids": {"nitrogen_benefit": "setting_b"}
+    }]
+  }
+}
+```
+
+A family map changes the complete baseline/treatment pair for the named matched
+criterion. Existing `scenario_run_ids` maps continue to change alternatives for
+fixed-baseline criteria and can coexist in one case. Keep resource limits and decision
+weights explicit. Normalization uses one fixed absolute scale per criterion across
+the selected case and every enabled comparison. Adding a comparison can change that
+scale and defines a new analysis. Selection frequency describes the listed cases;
+it does not assign their scientific probability.
+
+Original study exclusions still apply. An explicit `include_ineligible` choice can
+override those prior exclusions through the maintained decision interface, while
+unavailable positive-weight family support and minimum decision coverage remain
+enforced. The editor preserves both map types when reopening a saved request.
+
+### Saved portfolios, geography and reports
+
+Unit details expose own baseline, treatment, signed reduction/increase, common
+coverage, valid area, structural area and missing area. The saved plan recomputes
+matched quantities on the original selected reporting union, counting overlaps once.
+Candidate score sums and weighted rankings remain distinct from those union masses.
+
+The existing editable decision GeoPackage retains every original planning geometry.
+The packet adds `matched-family-values.csv` with original units and a separate
+selected-union row, `matched-family-support.json`, and the original support TIFFs.
+The criterion-value table retains family, baseline, treatment and support references.
+Scientific Reports edition 4 explains family definitions, complete-grid support and
+clipped union quantities, alongside the existing maps and complete decision records.
+
+The maintained installer requires `model/conservation_families.py` when the selected
+native sources import it. Completed reopen verifies the immutable small support record;
+saving a retained preview and exporting decision geography require the same original
+support selection. The original native source receiver runs the complete study,
+decision, GIS/report and typed handover course with actual input IDs.
