@@ -1,0 +1,81 @@
+{
+  "schema": "upstate.eighteenmile-nutrient-source/v1",
+  "gauge": "USGS-02186702",
+  "records": 589,
+  "activities": 153,
+  "stations": [
+    {
+      "station_id": "21SC60WQ_WQX-SV-233",
+      "station_name": "SV-233",
+      "description": "EIGHTEENMILE CK AT 2-04-279",
+      "type": "River/Stream",
+      "longitude": -82.80447251,
+      "latitude": 34.63478373,
+      "datum": "WGS84",
+      "original_huc8": "03060101",
+      "full_reach_basin_relation": "inside",
+      "records": 263,
+      "activities": 68,
+      "start_date": "2020-01-06",
+      "end_date": "2025-11-04"
+    },
+    {
+      "station_id": "21SC60WQ_WQX-SV-245",
+      "station_name": "SV-245",
+      "description": "EIGHTEENMILE CK AT S-39-27 3.3 MI S OF LIBERTY",
+      "type": "River/Stream",
+      "longitude": -82.69169936,
+      "latitude": 34.74190271,
+      "datum": "WGS84",
+      "original_huc8": "03060101",
+      "full_reach_basin_relation": "inside",
+      "records": 4,
+      "activities": 1,
+      "start_date": "2023-12-14",
+      "end_date": "2023-12-14"
+    },
+    {
+      "station_id": "21SC60WQ_WQX-SV-375",
+      "station_name": "SV-375",
+      "description": "EIGHTEEN MILE CK AT ANN DRIVE",
+      "type": "River/Stream",
+      "longitude": -82.649218,
+      "latitude": 34.791084,
+      "datum": "WGS84",
+      "original_huc8": "03060101",
+      "full_reach_basin_relation": "inside",
+      "records": 185,
+      "activities": 48,
+      "start_date": "2022-01-11",
+      "end_date": "2025-12-04"
+    },
+    {
+      "station_id": "21SC60WQ_WQX-SV-376",
+      "station_name": "SV-376",
+      "description": "EIGHTEENMILE CK AT SIMMS SCHOOL RD/ S-39-44",
+      "type": "River/Stream",
+      "longitude": -82.73586,
+      "latitude": 34.71909,
+      "datum": "WGS84",
+      "original_huc8": "03060101",
+      "full_reach_basin_relation": "inside",
+      "records": 137,
+      "activities": 36,
+      "start_date": "2023-01-23",
+      "end_date": "2025-12-04"
+    }
+  ],
+  "characteristics": {
+    "Ammonia": 124,
+    "Kjeldahl nitrogen": 153,
+    "Nitrate + Nitrite": 153,
+    "Nitrogen": 6,
+    "Phosphorus": 153
+  },
+  "numeric_records": 408,
+  "below_quantification_records": 181,
+  "spatial_method": "Point-in-original-GeoJSON-polygon with all original exterior rings and holes, boundary retained explicitly; WGS84 station points. Original full-reach response uses splitCatchment=false. A supplied split-at-gauge response is evaluated separately.",
+  "original_fields": "All 63 WQP result fields remain in the two original date-query responses. Derived source_file/source_row point to their exact original CSV records.",
+  "units": "Original result and detection-limit units retained independently. Blank measured results remain blank; limits are not substituted for measurements.",
+  "source_interval": "2020-01-01 through 2025-12-31 inclusive publisher query"
+}
