@@ -17,6 +17,7 @@ import tempfile
 import zipfile
 from contextlib import ExitStack
 from datetime import date, datetime, timezone
+from os import PathLike
 from pathlib import Path, PurePosixPath
 
 REPORT_SCHEMA = "upstate.decision-report/v1"
@@ -251,7 +252,10 @@ def _descriptor(path, root, role):
 
 class _Reader:
     def __init__(self, workspace):
-        self.root = Path(getattr(workspace, "root", workspace)).resolve()
+        # A filesystem Path has a .root too: its anchor (often '/'), not the
+        # selected Workspace directory. Only Workspace objects use that member.
+        root = workspace if isinstance(workspace, (str, PathLike)) else getattr(workspace, "root", workspace)
+        self.root = Path(root).resolve()
         self.sources = {}
         self.project = self.json("workspace.json", "workspace")
         if not isinstance(self.project.get("id"), str):
