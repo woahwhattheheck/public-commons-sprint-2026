@@ -1,0 +1,153 @@
+{
+  "schema": "tjl.oacaa.household-illustration-source.v1",
+  "title": "OACAA 2025 published Table 5 statistical transcription",
+  "url": "https://oacaa.org/wp-content/uploads/2025/07/2025-OACA-Report-small.pdf",
+  "locator": "Table 5: Monthly expenses and self-sufficiency wages, sample counties, 2025",
+  "retrievedAt": "2026-10-13",
+  "capture": "Primary publisher PDF table returned by the public web index. All numerical cells below are a factual transcription. The full 11,255,300-byte PDF and its page pixels were not downloaded in this source step.",
+  "household": "Two adults and two school-age children",
+  "columns": [
+    [
+      "housing",
+      "Housing",
+      "USD per month"
+    ],
+    [
+      "child_care",
+      "Child care",
+      "USD per month"
+    ],
+    [
+      "food",
+      "Food",
+      "USD per month"
+    ],
+    [
+      "transportation",
+      "Transportation",
+      "USD per month"
+    ],
+    [
+      "health_care",
+      "Health care",
+      "USD per month"
+    ],
+    [
+      "miscellaneous",
+      "Miscellaneous",
+      "USD per month"
+    ],
+    [
+      "taxes",
+      "Taxes",
+      "USD per month"
+    ],
+    [
+      "hourly_wage",
+      "Hourly wage per working adult",
+      "USD per hour"
+    ],
+    [
+      "monthly_income",
+      "Monthly household income",
+      "USD per month"
+    ],
+    [
+      "annual_income",
+      "Annual household income",
+      "USD per year"
+    ],
+    [
+      "printed_minimum_wage",
+      "2024 Ohio Minimum Wage (hourly)",
+      "USD per hour"
+    ],
+    [
+      "printed_hourly_difference",
+      "Disparity between Ohio Minimum Wage and self-sufficiency wage",
+      "USD per hour"
+    ],
+    [
+      "printed_poverty_threshold",
+      "2024 federal poverty level threshold (annual)",
+      "USD per year"
+    ],
+    [
+      "printed_annual_difference",
+      "Disparity between federal poverty level threshold and self-sufficiency wage",
+      "USD per year"
+    ]
+  ],
+  "counties": [
+    {
+      "id": "vinton",
+      "county": "Vinton County",
+      "publishedPosition": "Low",
+      "values": [
+        "884",
+        "1101",
+        "953",
+        "752",
+        "749",
+        "593",
+        "658",
+        "14.85",
+        "5226",
+        "62713",
+        "10.70",
+        "-4.15",
+        "30900",
+        "-31813"
+      ]
+    },
+    {
+      "id": "sandusky",
+      "county": "Sandusky County",
+      "publishedPosition": "Middle",
+      "values": [
+        "884",
+        "1363",
+        "996",
+        "716",
+        "749",
+        "620",
+        "940",
+        "16.57",
+        "5833",
+        "69991",
+        "10.70",
+        "-5.87",
+        "30900",
+        "-39091"
+      ]
+    },
+    {
+      "id": "delaware",
+      "county": "Delaware County",
+      "publishedPosition": "High",
+      "values": [
+        "1621",
+        "1709",
+        "1147",
+        "739",
+        "876",
+        "758",
+        "1300",
+        "21.92",
+        "7716",
+        "92596",
+        "10.70",
+        "-11.22",
+        "30900",
+        "-61696"
+      ]
+    }
+  ],
+  "sourceNotes": [
+    "The publisher describes required self-sufficiency income, rather than income observed among households.",
+    "Low, middle and high are the publication's selected positions for this household type; the full county workbook is needed to independently reproduce that statewide selection.",
+    "The 2025 publication's county notes refer to Vinton, Sandusky and Delaware.",
+    "The publication describes its taxes row as net of tax credits; the seven displayed component amounts do not reproduce its displayed monthly total.",
+    "Both comparison row labels say 2024. Separate primary sources identify the displayed hourly amount as the 2025 non-tipped rate and the displayed annual threshold as the 2023 four-person/two-child official threshold."
+  ]
+}
