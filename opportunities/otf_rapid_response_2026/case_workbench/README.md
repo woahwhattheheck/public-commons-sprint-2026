@@ -81,3 +81,17 @@ Open desk.html in a normal browser. Open the authored example and inspect overvi
 Create a separate empty workbook, attach an authored source, retain it, and exercise the actual contract/case forms. Adding source files or changing action type preserves entered form drafts. Inspect the invalid-input response and an original operation replay. The example has 23 operations, 9 authored documents, 105 billed minutes, 30 excluded preparation minutes, USD 17 direct costs, two invoices totaling USD 192 and a completed paid closeout. Its source documents explicitly identify all example facts as authored.
 
 The focused source execution has completed the full example, complete original-document hashing, independent cold receive, exact replay, ZIP member readback and three concrete admission risks: a future amendment budget cannot cover earlier excess work; an old report cannot cover later work; large original files use linear base64 admission. The exact native Node/filesystem course and rendered browser/attachment course travel with the published source to the original equipped receiver.
+
+The cumulative desk receives vendor-core.mjs from public PR 4466 plus the actual proposal rendering correction, including explicit outward evidence selection, standard ordered lists and stable sentence punctuation. Complete handover admits the original workbook once and renders every member from that private validated read, retaining every prior exported member byte.
+
+## Original proposal replay and source-complete requests
+
+Retaining the same proposal again reuses its exact original operation and timestamp. The complete document metadata and bytes must still match. Other selected source files and entered form drafts remain available after retaining a proposal or receiving a request. The application makes the desk inert during an active operation, so a file selection cannot be silently lost while another action is awaiting validation.
+
+History's **Request and originals** download includes the original event fields and every original document referenced by its nested source_ids fields. The CLI has the same operation:
+
+```sh
+node cli.mjs request --workbook /private/otf/workbook.json --operation OPERATION_ID --output /private/otf/operation-with-originals.json
+```
+
+Receive that request against the same workbook origin and prior operations. It adds the exact referenced originals without copying unrelated later documents. The complete workbook remains the carrier for the complete history and any additional retained originals. Repeat proposal retention and operation export/receive in the existing whole browser course, including an unrelated pending original and an entered form draft.

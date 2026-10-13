@@ -106,6 +106,13 @@
         "examples/decision.source-draft.json",
         "application/json; charset=utf-8"
       ]
+    ],
+    [
+      "/event-intake-browser.mjs",
+      [
+        "event-intake-browser.mjs",
+        "text/javascript; charset=utf-8"
+      ]
     ]
   ]
 }

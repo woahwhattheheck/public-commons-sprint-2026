@@ -1,3 +1,4 @@
+import {requireApplicationInputWorkspace} from './application-input-workspace.mjs';
 // MIT. Runtime file intake reuses the original resumable Collection input engine.
 import { constants } from 'node:fs';
 import { open, readdir, link, unlink } from 'node:fs/promises';
@@ -50,9 +51,7 @@ async function openVerified(path,expected=null) {
 export function createApplicationInputsAPI(root,workspaceId) {
   const directory=join(root,'application-inputs'), copies=join(directory,'working');
   async function live() {
-    const config=await readJSON(join(root,'workspace.json'));
-    need(config.workspaceId===workspaceId && config.directory===root,
-      'RUNTIME_WORKSPACE_IDENTITY_CHANGED','Reopen the original Runtime workspace.',409);
+    await requireApplicationInputWorkspace(root,workspaceId);
   }
   async function exists(path) {
     try { await initializationDirectory(path); return true; }

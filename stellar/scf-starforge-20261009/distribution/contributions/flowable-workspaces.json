@@ -30,7 +30,9 @@
     "./seller/flowable/workspace/programme-receiving": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/native-programme-receiving.mjs",
     "./seller/flowable/workspace/process-programme": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/process-programme.mjs",
     "./seller/flowable/workspace/decision-programme": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/decision-programme.mjs",
-    "./seller/flowable/workspace/decision-programme-review": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/decision-programme-review.mjs"
+    "./seller/flowable/workspace/decision-programme-review": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/decision-programme-review.mjs",
+    "./seller/flowable/workspace/event-case": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/event-case.mjs",
+    "./seller/flowable/workspace/event-intake": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/event-intake.mjs"
   },
   "supportFiles": [
     "stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/README.md",
@@ -80,7 +82,17 @@
     "products/flowable-merchant/AUTHORING.md",
     "stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/examples/decision-commissioning.compile.json",
     "stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/examples/decision-commissioning.programme.json",
-    "stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/examples/decision-commissioning.inputs.json"
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/examples/decision-commissioning.inputs.json",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/examples/events/event-profile.json",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/examples/events/classification-change.json",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/examples/events/missing-owner.json",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/examples/events/schema-change.json",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/examples/events/metadata-change.schema.json",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/examples/events/metadata-change-v1.cmmn",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/examples/events/metadata-change-v2.cmmn",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/examples/events/cloudevents-1.0.2.schema.json",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/examples/events/CLOUDEVENTS_LICENSE",
+    "products/flowable-merchant/EVENT_INTAKE.md"
   ],
   "browserAssets": [
     {

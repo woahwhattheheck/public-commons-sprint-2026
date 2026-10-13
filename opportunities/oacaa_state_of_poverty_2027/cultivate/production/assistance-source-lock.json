@@ -1,0 +1,121 @@
+{
+  "schema": "tjl.oacaa.assistance-source-lock.v1",
+  "retrievedAt": "2026-10-13",
+  "files": [
+    {
+      "path": "ASSISTANCE_SOURCE_CONCORDANCE.json",
+      "bytes": 33956,
+      "sha256": "9b3bf75d58c9b60ccf9b0b56e78de016c463cc7b07268b1dd651a47bffcc674e"
+    },
+    {
+      "path": "ASSISTANCE_SOURCE_GUIDE.md",
+      "bytes": 6652,
+      "sha256": "a519a04b9b6d35655f33a441d2d8584ad73dd29e1eb4935d62006fa2e5eb8bbe"
+    },
+    {
+      "path": "ASSISTANCE_SOURCE_MANIFEST.json",
+      "bytes": 4632,
+      "sha256": "60aa5d753fd9354e7f0b116f64a181a6ba307817cc87eb8f6349afa47955fda7"
+    },
+    {
+      "path": "assistance-working-plan.json",
+      "bytes": 44731,
+      "sha256": "9d99a6acb2280eb704649f471c4398aedc882a6d5fa47da109f6f187baa09b4a"
+    },
+    {
+      "path": "assistance_member_graphics.py",
+      "bytes": 6657,
+      "sha256": "56f41c8e3008a7d4f701c33409887249d24479812538779213959af82d4ac488"
+    },
+    {
+      "path": "assistance_plan.cjs",
+      "bytes": 13353,
+      "sha256": "ad97dc6a8efd15ad3a55e064d9261af9aea198c7749b5e35acff8e4315712050"
+    },
+    {
+      "path": "assistance_reporting.cjs",
+      "bytes": 15645,
+      "sha256": "0e1c06d4e5a3283076337d02a1372e19c3424c7a4635201954f9fca713dcca9f"
+    },
+    {
+      "path": "datasets/ohio-assistance-health-2024-releases.csv",
+      "bytes": 62830,
+      "sha256": "ca9fe0fb00dfb09f6ad7264475fff5f0668495b07703005af2b9714424aff287"
+    },
+    {
+      "path": "datasets/ohio-assistance-health-2024-releases.json",
+      "bytes": 99484,
+      "sha256": "f3330efbff55d63a25794dabc5af2151d1440712a8362d015c6786ec4148e7e8"
+    },
+    {
+      "path": "datasets/ohio-assistance-heap-2024.csv",
+      "bytes": 42542,
+      "sha256": "be49666d9bb0b237372568d8099bef75fc4f1e9a0a666cc795ad14603c7f4f96"
+    },
+    {
+      "path": "datasets/ohio-assistance-heap-2024.json",
+      "bytes": 69154,
+      "sha256": "9ae98c96bb5d383d5c7fd439d8856c05951d9265de55658228402d7e91a126c5"
+    },
+    {
+      "path": "datasets/ohio-assistance-labour-2024-vintages.csv",
+      "bytes": 43810,
+      "sha256": "c18f7d7057a2430b54fbe548dfa70c09aa52c4ba9ee939602d6d35abb1237af6"
+    },
+    {
+      "path": "datasets/ohio-assistance-labour-2024-vintages.json",
+      "bytes": 92665,
+      "sha256": "833a404441e28b5a1484754629df025fbc13e6b9d670491dda8dd76b3c1eb1d8"
+    },
+    {
+      "path": "datasets/ohio-assistance-medicaid-2025-snapshot.csv",
+      "bytes": 42502,
+      "sha256": "93bb0e526ed41b1f74723c6036cc22fa110450d48f7e08ae22eb0bf6708855a7"
+    },
+    {
+      "path": "datasets/ohio-assistance-medicaid-2025-snapshot.json",
+      "bytes": 77139,
+      "sha256": "14a759330882d9b3b1165b29eefafb443aeabc451d98da3e088f19490aa49c98"
+    },
+    {
+      "path": "datasets/ohio-assistance-snap-2025-06.csv",
+      "bytes": 33483,
+      "sha256": "40b44b130af837ac53573e8d380385828b5c500de90792479ae514a7a9e70454"
+    },
+    {
+      "path": "datasets/ohio-assistance-snap-2025-06.json",
+      "bytes": 62219,
+      "sha256": "b81a98d92a26fa60db8bb1d153232f486d2296f5f7d5754a83a8af0171e94dd8"
+    },
+    {
+      "path": "sources/ASSISTANCE_HEALTH_ACS2024_1YR.json",
+      "bytes": 5943,
+      "sha256": "0537814ff4e8e10f9eae1a9d57637df38fb89c54f9b0bdadf5bfb99ca817ec0d"
+    },
+    {
+      "path": "sources/ASSISTANCE_HEALTH_ACS2024_5YR.json",
+      "bytes": 198714,
+      "sha256": "06d3fba5eeaeae6da30058dcc3aa7bac15ba8e1a7822b31d5601b4b5c6431eae"
+    },
+    {
+      "path": "sources/ASSISTANCE_HEAP_2024.csv",
+      "bytes": 3517,
+      "sha256": "d02b496ca7d152acd6cbeb05da3a18ef89811ba862b591def5c7d5041def1802"
+    },
+    {
+      "path": "sources/ASSISTANCE_LAUS_2024_CURRENT.txt",
+      "bytes": 12075,
+      "sha256": "d8c56da44eaeb470b3d2648e8ad961029b09d4c69ff62629a7ab60efd063ef10"
+    },
+    {
+      "path": "sources/ASSISTANCE_ORIGINALS.json",
+      "bytes": 478638,
+      "sha256": "0c4763df34ab1c5688bfc520d06af86eb4b9dfc40446bb39bafd407e2ce37bfe"
+    },
+    {
+      "path": "sources/ASSISTANCE_SNAP_2025_06.txt",
+      "bytes": 8929,
+      "sha256": "9c244c74ba5f9bd31aaef7923ebaba86d34cb0900ea8e24f6edf98f9e1d88f2a"
+    }
+  ]
+}

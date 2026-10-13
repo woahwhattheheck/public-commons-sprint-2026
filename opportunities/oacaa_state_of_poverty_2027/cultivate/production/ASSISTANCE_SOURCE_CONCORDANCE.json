@@ -1,0 +1,1809 @@
+{
+  "schema": "tjl.oacaa.assistance-concordance.v1",
+  "originalTable": "OACAA 2026 Table 10 and continued panels",
+  "originalUrl": "https://oacaa.org/wp-content/uploads/2026/08/2026-state-of-poverty-report_final-low.pdf",
+  "comparisons": [
+    {
+      "measure": "uninsured",
+      "originalState": "6.4%",
+      "originalPrintedYear": "2024",
+      "originalFootnote": "State ACS one-year; counties five-year",
+      "matchedRelease": "ACS 2020–2024 five-year",
+      "selectedStateOneYear": {
+        "period": "2024",
+        "numerator": 782626,
+        "denominator": 11714170,
+        "percent": "6.7"
+      },
+      "selectedStateFiveYear": {
+        "period": "2020–2024",
+        "numerator": 746399,
+        "denominator": 11642860,
+        "percent": "6.4"
+      },
+      "decision": "Retain both; correct the numerical release label and name the civilian noninstitutionalized universe."
+    },
+    {
+      "measure": "unemployment",
+      "originalState": "4.3%",
+      "measurementPeriod": "2024 annual average",
+      "matchedRelease": "2024 benchmark, footer 2025-04-22",
+      "selectedRelease": "2025 benchmark, footer 2026-05-05",
+      "currentState": "4.4%",
+      "changedGeographies": 72,
+      "decision": "Show source-vintage revision; never present as a year-to-year change."
+    },
+    {
+      "measure": "SNAP",
+      "originalState": "12.3%",
+      "originalPrintedYear": "2025; month not stated",
+      "selectedPeriod": "June 2025",
+      "selectedStateMembers": 1388233,
+      "selectedStateHouseholds": 711651,
+      "decision": "Publish exact monthly counts and reporting offices. Do not reconstruct the unspecified original month or an annual population share."
+    },
+    {
+      "measure": "HEAP",
+      "originalState": "5.0%",
+      "originalPrintedYear": "2025",
+      "selectedPeriod": "2024",
+      "selectedPublishedStateContext": "5.2%",
+      "selectedMeasure": "Applications in CSV; participating households in narrative",
+      "decision": "Name the selected year and preserve the measure-label distinction. Do not infer payments or approved/unique recipients."
+    },
+    {
+      "measure": "Medicaid",
+      "originalState": "24.5%",
+      "originalPrintedYear": "2025; month not stated",
+      "selectedSource": "HPIO February 2025 publication, ODM snapshot retrieved February 19, 2025",
+      "populationPeriod": "2019–2023 ACS five-year",
+      "enrollmentMonth": null,
+      "decision": "Label the actual retrieval date and source redistribution, retaining the unspecified enrollment month."
+    }
+  ],
+  "originalSelectedRows": [
+    {
+      "tablePart": 1,
+      "geographies": [
+        "Ohio",
+        "Adams",
+        "Allen",
+        "Ashland",
+        "Ashtabula"
+      ],
+      "row": [
+        "6",
+        "Percentage of population receiving SNAP benefits, 2025",
+        "12.3%",
+        "22.4%",
+        "13.3%",
+        "9.3%",
+        "17.8%"
+      ]
+    },
+    {
+      "tablePart": 1,
+      "geographies": [
+        "Ohio",
+        "Adams",
+        "Allen",
+        "Ashland",
+        "Ashtabula"
+      ],
+      "row": [
+        "7",
+        "Percentage of population who are enrolled in Medicaid, 2025",
+        "24.5%",
+        "37.8%",
+        "26.7%",
+        "19.6%",
+        "30.3%"
+      ]
+    },
+    {
+      "tablePart": 1,
+      "geographies": [
+        "Ohio",
+        "Adams",
+        "Allen",
+        "Ashland",
+        "Ashtabula"
+      ],
+      "row": [
+        "3",
+        "Percentage of population with no health insurance, 2024",
+        "6.4%",
+        "8.2%",
+        "5.9%",
+        "7.1%",
+        "10.3%"
+      ]
+    },
+    {
+      "tablePart": 1,
+      "geographies": [
+        "Ohio",
+        "Adams",
+        "Allen",
+        "Ashland",
+        "Ashtabula"
+      ],
+      "row": [
+        "8",
+        "Unemployment rate, 2024",
+        "4.3%",
+        "6.0%",
+        "4.4%",
+        "4.3%",
+        "4.3%"
+      ]
+    },
+    {
+      "tablePart": 1,
+      "geographies": [
+        "Ohio",
+        "Adams",
+        "Allen",
+        "Ashland",
+        "Ashtabula"
+      ],
+      "row": [
+        "9",
+        "Percentage of households receiving HEAP benefits, 2025",
+        "5.0%",
+        "18.5%",
+        "7.8%",
+        "2.6%",
+        "10.9%"
+      ]
+    },
+    {
+      "tablePart": 2,
+      "geographies": [
+        "Athens",
+        "Auglaize",
+        "Belmont",
+        "Brown",
+        "Butler"
+      ],
+      "row": [
+        "7",
+        "Percentage of population receiving SNAP benefits, 2025",
+        "12.8%",
+        "6.2%",
+        "13.3%",
+        "14.4%",
+        "10.3%"
+      ]
+    },
+    {
+      "tablePart": 2,
+      "geographies": [
+        "Athens",
+        "Auglaize",
+        "Belmont",
+        "Brown",
+        "Butler"
+      ],
+      "row": [
+        "3",
+        "Percentage of population who are enrolled in Medicaid 2025",
+        "21.4%",
+        "14.2%",
+        "25.3%",
+        "29.0%",
+        "25.1%"
+      ]
+    },
+    {
+      "tablePart": 2,
+      "geographies": [
+        "Athens",
+        "Auglaize",
+        "Belmont",
+        "Brown",
+        "Butler"
+      ],
+      "row": [
+        "8",
+        "Percentage of population with no health insurance, 2024",
+        "5.7%",
+        "3.5%",
+        "5.5%",
+        "6.4%",
+        "6.2%"
+      ]
+    },
+    {
+      "tablePart": 2,
+      "geographies": [
+        "Athens",
+        "Auglaize",
+        "Belmont",
+        "Brown",
+        "Butler"
+      ],
+      "row": [
+        "9",
+        "Unemployment rate, 2024",
+        "5.2%",
+        "3.7%",
+        "5.2%",
+        "5.0%",
+        "4.2%"
+      ]
+    },
+    {
+      "tablePart": 2,
+      "geographies": [
+        "Athens",
+        "Auglaize",
+        "Belmont",
+        "Brown",
+        "Butler"
+      ],
+      "row": [
+        "3",
+        "Percentage of households receiving HEAP benefits, 2025",
+        "10.3%",
+        "3.1%",
+        "6.9%",
+        "7.2%",
+        "2.3%"
+      ]
+    },
+    {
+      "tablePart": 3,
+      "geographies": [
+        "Carroll",
+        "Champaign",
+        "Clark",
+        "Clermont",
+        "Clinton"
+      ],
+      "row": [
+        "6",
+        "Percentage of population receiving SNAP benefits, 2025",
+        "i 10.5%",
+        "10.5%",
+        "16.7%",
+        "7.8%",
+        "11.7%"
+      ]
+    },
+    {
+      "tablePart": 3,
+      "geographies": [
+        "Carroll",
+        "Champaign",
+        "Clark",
+        "Clermont",
+        "Clinton"
+      ],
+      "row": [
+        "7",
+        "Percentage of population who are enrolled in Medicaid, 2025",
+        "20.8%",
+        "21.1%",
+        "34.1%",
+        "19.0%",
+        ""
+      ]
+    },
+    {
+      "tablePart": 3,
+      "geographies": [
+        "Carroll",
+        "Champaign",
+        "Clark",
+        "Clermont",
+        "Clinton"
+      ],
+      "row": [
+        "3",
+        "Percentage of population with no health insurance, 2024",
+        "10.1%",
+        "5.1%",
+        "6.6%",
+        "5.8%",
+        "6.0%"
+      ]
+    },
+    {
+      "tablePart": 3,
+      "geographies": [
+        "Carroll",
+        "Champaign",
+        "Clark",
+        "Clermont",
+        "Clinton"
+      ],
+      "row": [
+        "8",
+        "Unemployment rate, 2024",
+        "4.8%",
+        "4.2%",
+        "",
+        "4.1%",
+        "4.1%"
+      ]
+    },
+    {
+      "tablePart": 3,
+      "geographies": [
+        "Carroll",
+        "Champaign",
+        "Clark",
+        "Clermont",
+        "Clinton"
+      ],
+      "row": [
+        "9",
+        "Percentage of households receiving HEAP benefits, 2025",
+        "6.3%",
+        "",
+        "5.8%",
+        "2.1%",
+        "7.5%"
+      ]
+    },
+    {
+      "tablePart": 4,
+      "geographies": [
+        "Columbiana",
+        "Coshocton",
+        "Crawford",
+        "Cuyahoga",
+        "Darke"
+      ],
+      "row": [
+        "6",
+        "Percentage of population receiving SNAP benefits, 2025",
+        "13.6%",
+        "14.5%",
+        "16.0%",
+        "15.3%",
+        "8.5%"
+      ]
+    },
+    {
+      "tablePart": 4,
+      "geographies": [
+        "Columbiana",
+        "Coshocton",
+        "Crawford",
+        "Cuyahoga",
+        "Darke"
+      ],
+      "row": [
+        "7",
+        "Percentage of population who are enrolled in Medicaid, 2025",
+        "24.7%",
+        "26.3%",
+        "29.7%",
+        "29.5%",
+        "18.5%"
+      ]
+    },
+    {
+      "tablePart": 4,
+      "geographies": [
+        "Columbiana",
+        "Coshocton",
+        "Crawford",
+        "Cuyahoga",
+        "Darke"
+      ],
+      "row": [
+        "3",
+        "Percentage of population with no health insurance, 2024",
+        "7.1%",
+        "12.1%",
+        "6.1%",
+        "5.7%",
+        "7.2%"
+      ]
+    },
+    {
+      "tablePart": 4,
+      "geographies": [
+        "Columbiana",
+        "Coshocton",
+        "Crawford",
+        "Cuyahoga",
+        "Darke"
+      ],
+      "row": [
+        "8",
+        "Unemployment rate, 2024",
+        "4.9%",
+        "4.8%",
+        ". ..-.--- 4.9%",
+        "3.9%",
+        "4.0%"
+      ]
+    },
+    {
+      "tablePart": 4,
+      "geographies": [
+        "Columbiana",
+        "Coshocton",
+        "Crawford",
+        "Cuyahoga",
+        "Darke"
+      ],
+      "row": [
+        "9",
+        "Percentage of households receiving HEAP benefits, 2025",
+        "8.8%",
+        "10.5%",
+        "9.3%",
+        "4.0%",
+        "4.1%"
+      ]
+    },
+    {
+      "tablePart": 5,
+      "geographies": [
+        "Defiance",
+        "Delaware",
+        "Erie",
+        "Fairfield",
+        "Fayette"
+      ],
+      "row": [
+        "6 Percentage of population receiving SNAP benefits, 2025",
+        "10.5%",
+        "3.4%",
+        "12.4%",
+        "9.9%",
+        "14.2%"
+      ]
+    },
+    {
+      "tablePart": 5,
+      "geographies": [
+        "Defiance",
+        "Delaware",
+        "Erie",
+        "Fairfield",
+        "Fayette"
+      ],
+      "row": [
+        "7",
+        "Percentage of population who are enrolled in Medicaid, 2025",
+        "21.7%",
+        "9.2%",
+        "22..44% %",
+        "21.5% »%",
+        "27.6%"
+      ]
+    },
+    {
+      "tablePart": 5,
+      "geographies": [
+        "Defiance",
+        "Delaware",
+        "Erie",
+        "Fairfield",
+        "Fayette"
+      ],
+      "row": [
+        "",
+        "Percentage of population with no health insurance, 2024",
+        "8.4% 4%",
+        "4.7%",
+        "5.2%",
+        "5.9%",
+        "9.0%"
+      ]
+    },
+    {
+      "tablePart": 5,
+      "geographies": [
+        "Defiance",
+        "Delaware",
+        "Erie",
+        "Fairfield",
+        "Fayette"
+      ],
+      "row": [
+        "8",
+        "Unemploymentrate,2024",
+        "4.0%",
+        "3.6%",
+        "4.8%",
+        "",
+        ""
+      ]
+    },
+    {
+      "tablePart": 5,
+      "geographies": [
+        "Defiance",
+        "Delaware",
+        "Erie",
+        "Fairfield",
+        "Fayette"
+      ],
+      "row": [
+        "9",
+        "Percentage of households receiving HEAP benefits, 2025",
+        "7.0%",
+        "1.3%",
+        "5.8%",
+        "",
+        "11.5%"
+      ]
+    },
+    {
+      "tablePart": 6,
+      "geographies": [
+        "Franklin",
+        "Fulton",
+        "Gallia",
+        "Geauga",
+        "Greene"
+      ],
+      "row": [
+        "6",
+        "Percentage of population receiving SNAP benefits, 2025",
+        "12.5%",
+        "7.8%",
+        "19.4%",
+        "2.8%",
+        "8.7%"
+      ]
+    },
+    {
+      "tablePart": 6,
+      "geographies": [
+        "Franklin",
+        "Fulton",
+        "Gallia",
+        "Geauga",
+        "Greene"
+      ],
+      "row": [
+        "7",
+        "Percentage of population who are enrolled in Medicaid, 2025",
+        "27.7%",
+        "16.0%",
+        "32.3%",
+        "8.8%",
+        "18.5%"
+      ]
+    },
+    {
+      "tablePart": 6,
+      "geographies": [
+        "Franklin",
+        "Fulton",
+        "Gallia",
+        "Geauga",
+        "Greene"
+      ],
+      "row": [
+        "3",
+        "Percentage of population with no health insurance, 2024",
+        "8.8%",
+        "5.1%",
+        "8.7%",
+        "8.1%",
+        "4.9%"
+      ]
+    },
+    {
+      "tablePart": 6,
+      "geographies": [
+        "Franklin",
+        "Fulton",
+        "Gallia",
+        "Geauga",
+        "Greene"
+      ],
+      "row": [
+        "8",
+        "Unemployment rate, 2024",
+        "4.0%",
+        "4.7%",
+        "5.2%",
+        "3.4%",
+        "4.0%"
+      ]
+    },
+    {
+      "tablePart": 6,
+      "geographies": [
+        "Franklin",
+        "Fulton",
+        "Gallia",
+        "Geauga",
+        "Greene"
+      ],
+      "row": [
+        "9",
+        "Percentage of households receiving HEAP benefits, 2025",
+        "4.8%",
+        "4.7%",
+        "11.9%",
+        "2.5%",
+        "2.4%"
+      ]
+    },
+    {
+      "tablePart": 7,
+      "geographies": [
+        "Guernsey",
+        "Hamilton",
+        "Hancock",
+        "Hardin",
+        "Harrison"
+      ],
+      "row": [
+        "6",
+        "Percentage of population receiving SNAP benefits, 2025",
+        "14.7%",
+        "12.3%",
+        "8.7%",
+        "11.8%",
+        "12.2%"
+      ]
+    },
+    {
+      "tablePart": 7,
+      "geographies": [
+        "Guernsey",
+        "Hamilton",
+        "Hancock",
+        "Hardin",
+        "Harrison"
+      ],
+      "row": [
+        "7",
+        "Percentage of population who are enrolled in Medicaid, 2025",
+        "27.8%",
+        "26.9%",
+        "17.9%",
+        "22.1%",
+        "22.6%"
+      ]
+    },
+    {
+      "tablePart": 7,
+      "geographies": [
+        "Guernsey",
+        "Hamilton",
+        "Hancock",
+        "Hardin",
+        "Harrison"
+      ],
+      "row": [
+        "3",
+        "Percentage of population with no health insurance, 2024",
+        "11.9%",
+        "5.8%",
+        "5.7%",
+        "11,1%",
+        "12.2%"
+      ]
+    },
+    {
+      "tablePart": 7,
+      "geographies": [
+        "Guernsey",
+        "Hamilton",
+        "Hancock",
+        "Hardin",
+        "Harrison"
+      ],
+      "row": [
+        "8",
+        "Unemployment rate, 2024",
+        "5.5%",
+        "4.1%",
+        "4.0%",
+        "4.4%",
+        "5.0%"
+      ]
+    },
+    {
+      "tablePart": 7,
+      "geographies": [
+        "Guernsey",
+        "Hamilton",
+        "Hancock",
+        "Hardin",
+        "Harrison"
+      ],
+      "row": [
+        "9",
+        "Percentage of households receiving HEAP benefits, 2025",
+        "10.5%",
+        "2.1%",
+        "6.1%",
+        "8.4%",
+        "11.0%"
+      ]
+    },
+    {
+      "tablePart": 8,
+      "geographies": [
+        "Henry",
+        "Highland",
+        "Hocking",
+        "Holmes",
+        "Huron"
+      ],
+      "row": [
+        "6",
+        "Percentage of population receiving SNAP benefits, 2025",
+        "6.5%",
+        "14.8%",
+        "17.9%",
+        "2.5%",
+        "11.5%"
+      ]
+    },
+    {
+      "tablePart": 8,
+      "geographies": [
+        "Henry",
+        "Highland",
+        "Hocking",
+        "Holmes",
+        "Huron"
+      ],
+      "row": [
+        "7",
+        "Percentage of population who are enrolled in Medicaid, 2025",
+        "14.5%",
+        "29.6%",
+        "27.2%",
+        "7.9%",
+        "23.1%"
+      ]
+    },
+    {
+      "tablePart": 8,
+      "geographies": [
+        "Henry",
+        "Highland",
+        "Hocking",
+        "Holmes",
+        "Huron"
+      ],
+      "row": [
+        "3",
+        "Percentage of population with no health insurance, 2024",
+        "5.1%",
+        "7.6%",
+        "7.4%",
+        "41.5%",
+        "6.5%"
+      ]
+    },
+    {
+      "tablePart": 8,
+      "geographies": [
+        "Henry",
+        "Highland",
+        "Hocking",
+        "Holmes",
+        "Huron"
+      ],
+      "row": [
+        "8",
+        "Unemployment rate, 2024",
+        "4.7%",
+        "4.6%",
+        "4.6%",
+        "3.2%",
+        "5.2%"
+      ]
+    },
+    {
+      "tablePart": 8,
+      "geographies": [
+        "Henry",
+        "Highland",
+        "Hocking",
+        "Holmes",
+        "Huron"
+      ],
+      "row": [
+        "9",
+        "Percentage of households receiving HEAP benefits, 2025",
+        "4.2%",
+        "11.1%",
+        "10.9%",
+        "2.7%",
+        "6.1%"
+      ]
+    },
+    {
+      "tablePart": 9,
+      "geographies": [
+        "Jackson",
+        "Jefferson",
+        "Knox",
+        "Lake",
+        "Lawrence"
+      ],
+      "row": [
+        "6",
+        "Percentage of population receiving SNAP benefits, 2025",
+        "-. 20.0%",
+        "17.1% ±*-±",
+        "8.7% -",
+        "7.5%",
+        "19.6%"
+      ]
+    },
+    {
+      "tablePart": 9,
+      "geographies": [
+        "Jackson",
+        "Jefferson",
+        "Knox",
+        "Lake",
+        "Lawrence"
+      ],
+      "row": [
+        "7",
+        "Percentage of population who are enrolled in Medicaid, 2025",
+        "33.4%",
+        "29.2%",
+        "18.8%",
+        "15.9%",
+        "35.6%"
+      ]
+    },
+    {
+      "tablePart": 9,
+      "geographies": [
+        "Jackson",
+        "Jefferson",
+        "Knox",
+        "Lake",
+        "Lawrence"
+      ],
+      "row": [
+        "3",
+        "Percentage of population with no health insurance, 2024",
+        "7.9%",
+        "5.2%",
+        "11.3%",
+        "4.5%",
+        "5.5%"
+      ]
+    },
+    {
+      "tablePart": 9,
+      "geographies": [
+        "Jackson",
+        "Jefferson",
+        "Knox",
+        "Lake",
+        "Lawrence"
+      ],
+      "row": [
+        "8",
+        "Unemployment rate, 2024",
+        "5.2%",
+        "5.8%",
+        "4.1%",
+        "3.6%",
+        "5.0%"
+      ]
+    },
+    {
+      "tablePart": 9,
+      "geographies": [
+        "Jackson",
+        "Jefferson",
+        "Knox",
+        "Lake",
+        "Lawrence"
+      ],
+      "row": [
+        "9",
+        "Percentage of households receiving HEAP benefits, 2025",
+        "13.8%",
+        "9.7%",
+        "6.4%",
+        "2.4%",
+        "15.6%"
+      ]
+    },
+    {
+      "tablePart": 10,
+      "geographies": [
+        "Licking",
+        "Logan",
+        "Lorain",
+        "Lucas",
+        "Madison"
+      ],
+      "row": [
+        "6",
+        "Percentage 2025 of population receiving SNAP benefits,",
+        "10.2%",
+        "10.5%",
+        "11.4%",
+        "16.3%",
+        "9.7%"
+      ]
+    },
+    {
+      "tablePart": 10,
+      "geographies": [
+        "Licking",
+        "Logan",
+        "Lorain",
+        "Lucas",
+        "Madison"
+      ],
+      "row": [
+        "7",
+        "Percentage of population who are enrolled in Medicaid, 2025",
+        "20.4%",
+        "21.5%",
+        "22.8%",
+        "31.3%",
+        "19.5%"
+      ]
+    },
+    {
+      "tablePart": 10,
+      "geographies": [
+        "Licking",
+        "Logan",
+        "Lorain",
+        "Lucas",
+        "Madison"
+      ],
+      "row": [
+        "3",
+        "Percentage of population with no health insurance, 2024",
+        "5.3%",
+        "6.0%",
+        "5.3%",
+        "4.9%",
+        "7.7%"
+      ]
+    },
+    {
+      "tablePart": 10,
+      "geographies": [
+        "Licking",
+        "Logan",
+        "Lorain",
+        "Lucas",
+        "Madison"
+      ],
+      "row": [
+        "8",
+        "Unemployment rate, 2024",
+        "4.0%",
+        "4.0%",
+        "4.0%",
+        "6.0%",
+        "3.7%"
+      ]
+    },
+    {
+      "tablePart": 10,
+      "geographies": [
+        "Licking",
+        "Logan",
+        "Lorain",
+        "Lucas",
+        "Madison"
+      ],
+      "row": [
+        "9",
+        "Percentage of households receiving HEAP benefits, 2025",
+        "5.0%",
+        "6.5%",
+        "4.6%",
+        "7.1%",
+        "5.8%"
+      ]
+    },
+    {
+      "tablePart": 11,
+      "geographies": [
+        "Mahoning",
+        "Marion",
+        "Medina",
+        "Meigs",
+        "Mercer"
+      ],
+      "row": [
+        "6",
+        "Percentage of population receiving SNAP benefits, 2025",
+        "18.1%",
+        "17.8%",
+        "5.3%",
+        "18.4%",
+        "4.8%"
+      ]
+    },
+    {
+      "tablePart": 11,
+      "geographies": [
+        "Mahoning",
+        "Marion",
+        "Medina",
+        "Meigs",
+        "Mercer"
+      ],
+      "row": [
+        "7",
+        "Percentage of population who are enrolled in Medicaid, 2025",
+        "33.1%",
+        "32.3%",
+        "12.4%",
+        "31.4%",
+        "13.6%"
+      ]
+    },
+    {
+      "tablePart": 11,
+      "geographies": [
+        "Mahoning",
+        "Marion",
+        "Medina",
+        "Meigs",
+        "Mercer"
+      ],
+      "row": [
+        "3",
+        "Percentage of population with no health insurance, 2024",
+        "4.9%",
+        "5.4%",
+        "4.0%",
+        "6.6%",
+        "3.6%"
+      ]
+    },
+    {
+      "tablePart": 11,
+      "geographies": [
+        "Mahoning",
+        "Marion",
+        "Medina",
+        "Meigs",
+        "Mercer"
+      ],
+      "row": [
+        "8",
+        "Unemployment rate, 2024",
+        "5.0%",
+        "4.4%",
+        "3.3%",
+        "6.8%",
+        "3.3%"
+      ]
+    },
+    {
+      "tablePart": 11,
+      "geographies": [
+        "Mahoning",
+        "Marion",
+        "Medina",
+        "Meigs",
+        "Mercer"
+      ],
+      "row": [
+        "9",
+        "Percentage of households receiving HEAP benefits, 2025",
+        "8.0%",
+        "10.9%",
+        "2.2%",
+        "13.7%",
+        "3.1%"
+      ]
+    },
+    {
+      "tablePart": 12,
+      "geographies": [
+        "Miami",
+        "Monroe",
+        "Montgomery",
+        "Morgan",
+        "Morrow"
+      ],
+      "row": [
+        "6",
+        "Percentage of population receiving SNAP benefits, 2025",
+        "9.2%",
+        "12.8%",
+        "15.0%",
+        "14.8%",
+        "9.1%"
+      ]
+    },
+    {
+      "tablePart": 12,
+      "geographies": [
+        "Miami",
+        "Monroe",
+        "Montgomery",
+        "Morgan",
+        "Morrow"
+      ],
+      "row": [
+        "7",
+        "Percentage of population who are enrolled in Medicaid, 2025",
+        "20.2%",
+        "24.9%",
+        "30.5%",
+        "25.4%",
+        "19.6%"
+      ]
+    },
+    {
+      "tablePart": 12,
+      "geographies": [
+        "Miami",
+        "Monroe",
+        "Montgomery",
+        "Morgan",
+        "Morrow"
+      ],
+      "row": [
+        "3",
+        "Percentage of population with no health insurance, 2024",
+        "4.7%",
+        "7.7%",
+        "6.5%",
+        "6.4%",
+        "10.3%"
+      ]
+    },
+    {
+      "tablePart": 12,
+      "geographies": [
+        "Miami",
+        "Monroe",
+        "Montgomery",
+        "Morgan",
+        "Morrow"
+      ],
+      "row": [
+        "8",
+        "Unemployment rate, 2024",
+        "3.9%",
+        "6.2%",
+        "4.5%",
+        "5.5%",
+        "4.2%"
+      ]
+    },
+    {
+      "tablePart": 12,
+      "geographies": [
+        "Miami",
+        "Monroe",
+        "Montgomery",
+        "Morgan",
+        "Morrow"
+      ],
+      "row": [
+        "9",
+        "Percentage of households receiving HEAP benefits, 2025",
+        "4.3%",
+        "9.6%",
+        "3.8%",
+        "16.7%",
+        "6.8%"
+      ]
+    },
+    {
+      "tablePart": 13,
+      "geographies": [
+        "Muskingum",
+        "Noble",
+        "Ottawa",
+        "Paulding",
+        "Perry"
+      ],
+      "row": [
+        "6",
+        "Percentage of population receiving SNAP benefits, 2025",
+        "16.7%",
+        "8.7%",
+        "7.7%",
+        "10.5%",
+        "15.6%"
+      ]
+    },
+    {
+      "tablePart": 13,
+      "geographies": [
+        "Muskingum",
+        "Noble",
+        "Ottawa",
+        "Paulding",
+        "Perry"
+      ],
+      "row": [
+        "7",
+        "Percentage of population who are enrolled in Medicaid, 2025",
+        "29.8%",
+        "18.8%",
+        "14.5%",
+        "20.4%",
+        "29.0%"
+      ]
+    },
+    {
+      "tablePart": 13,
+      "geographies": [
+        "Muskingum",
+        "Noble",
+        "Ottawa",
+        "Paulding",
+        "Perry"
+      ],
+      "row": [
+        "3",
+        "Percentage of population with no health insurance, 2024",
+        "6.6%",
+        "7.7%",
+        "3.9%",
+        "5.2%",
+        "8.1%"
+      ]
+    },
+    {
+      "tablePart": 13,
+      "geographies": [
+        "Muskingum",
+        "Noble",
+        "Ottawa",
+        "Paulding",
+        "Perry"
+      ],
+      "row": [
+        "8",
+        "Unemployment rate, 2024",
+        "4.6%",
+        "6.4%",
+        "6.0%",
+        "4.0%",
+        "5.0%"
+      ]
+    },
+    {
+      "tablePart": 13,
+      "geographies": [
+        "Muskingum",
+        "Noble",
+        "Ottawa",
+        "Paulding",
+        "Perry"
+      ],
+      "row": [
+        "9",
+        "Percentage of households receiving HEAP benefits, 2025",
+        "10.2%",
+        "8.7%",
+        "3.7%",
+        "7.4%",
+        "12.6%"
+      ]
+    },
+    {
+      "tablePart": 14,
+      "geographies": [
+        "Pickaway",
+        "Pike",
+        "Portage",
+        "Preble",
+        "Putnam"
+      ],
+      "row": [
+        "6",
+        "Percentage of population receiving SNAP benefits, 2025",
+        "12.2%",
+        "23.4%",
+        "8.9%",
+        "9.9%",
+        "4.9%"
+      ]
+    },
+    {
+      "tablePart": 14,
+      "geographies": [
+        "Pickaway",
+        "Pike",
+        "Portage",
+        "Preble",
+        "Putnam"
+      ],
+      "row": [
+        "7",
+        "Percentage of population who are enrolled in Medicaid, 2025",
+        "22.4%",
+        "39.4%",
+        "18.4%",
+        "21.4%",
+        "11.6%"
+      ]
+    },
+    {
+      "tablePart": 14,
+      "geographies": [
+        "Pickaway",
+        "Pike",
+        "Portage",
+        "Preble",
+        "Putnam"
+      ],
+      "row": [
+        "3",
+        "Percentage of population with no health insurance, 2024",
+        "5.8%",
+        "4.8%",
+        "5.0%",
+        "5.4%",
+        "3.1%"
+      ]
+    },
+    {
+      "tablePart": 14,
+      "geographies": [
+        "Pickaway",
+        "Pike",
+        "Portage",
+        "Preble",
+        "Putnam"
+      ],
+      "row": [
+        "8",
+        "Unemployment rate, 2024",
+        "4.1%",
+        "5.4%",
+        "4.3%",
+        "3.9%",
+        "3.5%"
+      ]
+    },
+    {
+      "tablePart": 14,
+      "geographies": [
+        "Pickaway",
+        "Pike",
+        "Portage",
+        "Preble",
+        "Putnam"
+      ],
+      "row": [
+        "9",
+        "Percentage of households receiving HEAP benefits, 2025",
+        "7.4%",
+        "19.1%",
+        "5.1%",
+        "5,2%",
+        "4.3%"
+      ]
+    },
+    {
+      "tablePart": 15,
+      "geographies": [
+        "Richland",
+        "Ross",
+        "Sandusky",
+        "Scioto",
+        "Seneca"
+      ],
+      "row": [
+        "6",
+        "Percentage of population receiving SNAP benefits, 2025",
+        "14.5%",
+        "17.9%",
+        "10.3%",
+        "23.2%",
+        "12.4%"
+      ]
+    },
+    {
+      "tablePart": 15,
+      "geographies": [
+        "Richland",
+        "Ross",
+        "Sandusky",
+        "Scioto",
+        "Seneca"
+      ],
+      "row": [
+        "7",
+        "Percentage of population who are enrolled in Medicaid, 2025",
+        "27.9%",
+        "31.6%",
+        "22.5%",
+        "38.5%",
+        "23.1%"
+      ]
+    },
+    {
+      "tablePart": 15,
+      "geographies": [
+        "Richland",
+        "Ross",
+        "Sandusky",
+        "Scioto",
+        "Seneca"
+      ],
+      "row": [
+        "3",
+        "Percentage of population with no health insurance, 2024",
+        "8.1%",
+        "6.8%",
+        "6.3%",
+        "5.7%",
+        "5.3%"
+      ]
+    },
+    {
+      "tablePart": 15,
+      "geographies": [
+        "Richland",
+        "Ross",
+        "Sandusky",
+        "Scioto",
+        "Seneca"
+      ],
+      "row": [
+        "8",
+        "Unemployment rate, 2024",
+        "5.0%",
+        "4.6%",
+        "4.7%",
+        "5.8%",
+        "4.4%"
+      ]
+    },
+    {
+      "tablePart": 15,
+      "geographies": [
+        "Richland",
+        "Ross",
+        "Sandusky",
+        "Scioto",
+        "Seneca"
+      ],
+      "row": [
+        "9",
+        "Percentage of households receiving HEAP benefits, 2025",
+        "7.0%",
+        "12.2%",
+        "5.7%",
+        "19.0%",
+        "6.0%"
+      ]
+    },
+    {
+      "tablePart": 16,
+      "geographies": [
+        "Shelby",
+        "Stark",
+        "Summit",
+        "Trumbull",
+        "Tuscarawas"
+      ],
+      "row": [
+        "6",
+        "Percentage of population receiving SNAP benefits, 2025",
+        "9.4%",
+        "12.8%",
+        "14.9%",
+        "15.9%",
+        "11.1%"
+      ]
+    },
+    {
+      "tablePart": 16,
+      "geographies": [
+        "Shelby",
+        "Stark",
+        "Summit",
+        "Trumbull",
+        "Tuscarawas"
+      ],
+      "row": [
+        "7",
+        "Percentage of population who are enrolled in Medicaid, 2025",
+        "18.2%",
+        "24.7%",
+        "26.3%",
+        "29.6%",
+        "21.8%"
+      ]
+    },
+    {
+      "tablePart": 16,
+      "geographies": [
+        "Shelby",
+        "Stark",
+        "Summit",
+        "Trumbull",
+        "Tuscarawas"
+      ],
+      "row": [
+        "3",
+        "Percentage of population with no health insurance, 2024",
+        "4.2%",
+        "5.5%",
+        "5.6%",
+        "7.0%",
+        "8.5%"
+      ]
+    },
+    {
+      "tablePart": 16,
+      "geographies": [
+        "Shelby",
+        "Stark",
+        "Summit",
+        "Trumbull",
+        "Tuscarawas"
+      ],
+      "row": [
+        "8",
+        "Unemployment rate, 2024",
+        "3.9%",
+        "4.5%",
+        "4.4%",
+        "5.2%",
+        "4.0%"
+      ]
+    },
+    {
+      "tablePart": 16,
+      "geographies": [
+        "Shelby",
+        "Stark",
+        "Summit",
+        "Trumbull",
+        "Tuscarawas"
+      ],
+      "row": [
+        "9",
+        "Percentage of households receiving HEAP benefits, 2025",
+        "5.5%",
+        "4.5%",
+        "4.0%",
+        "4.8%",
+        "5.6%"
+      ]
+    },
+    {
+      "tablePart": 17,
+      "geographies": [
+        "Union",
+        "Van Wert",
+        "Vinton",
+        "Warren",
+        "Washington"
+      ],
+      "row": [
+        "6",
+        "Percentage of population receiving SNAP benefits, 2025",
+        "5.4%",
+        "8.4%",
+        "17.9%",
+        "4.4%",
+        "13.6%"
+      ]
+    },
+    {
+      "tablePart": 17,
+      "geographies": [
+        "Union",
+        "Van Wert",
+        "Vinton",
+        "Warren",
+        "Washington"
+      ],
+      "row": [
+        "7",
+        "Percentage of population who are enrolled in Medicaid, 2025",
+        "12.8%",
+        "19.5%",
+        "28.5%",
+        "13.1%",
+        "24.5%"
+      ]
+    },
+    {
+      "tablePart": 17,
+      "geographies": [
+        "Union",
+        "Van Wert",
+        "Vinton",
+        "Warren",
+        "Washington"
+      ],
+      "row": [
+        "3",
+        "Percentage of population with no health insurance, 2024",
+        "3.8%",
+        "4.0%",
+        "7.6%",
+        "3.9%",
+        "6.2%"
+      ]
+    },
+    {
+      "tablePart": 17,
+      "geographies": [
+        "Union",
+        "Van Wert",
+        "Vinton",
+        "Warren",
+        "Washington"
+      ],
+      "row": [
+        "8",
+        "Unemployment rate, 2024",
+        "3.3%",
+        "3.8%",
+        "5.2%",
+        "3.8%",
+        "5.0%"
+      ]
+    },
+    {
+      "tablePart": 17,
+      "geographies": [
+        "Union",
+        "Van Wert",
+        "Vinton",
+        "Warren",
+        "Washington"
+      ],
+      "row": [
+        "9",
+        "Percentage of households receiving HEAP benefits, 2025",
+        "2.8%",
+        "6.9%",
+        "17.0%",
+        "1.4%",
+        "9.0%"
+      ]
+    },
+    {
+      "tablePart": 18,
+      "geographies": [
+        "Wayne",
+        "Williams",
+        "Wood",
+        "Wyandot"
+      ],
+      "row": [
+        "6",
+        "Percentage of population receiving SNAP benefits, 2025",
+        "7.7%",
+        "9.6%",
+        "5.9%",
+        "10.6%"
+      ]
+    },
+    {
+      "tablePart": 18,
+      "geographies": [
+        "Wayne",
+        "Williams",
+        "Wood",
+        "Wyandot"
+      ],
+      "row": [
+        "7",
+        "Percentage of population who are enrolled in Medicaid, 2025",
+        "16.6% 6%",
+        "20.3% 3%",
+        "13.4% 4%",
+        "19.4%"
+      ]
+    },
+    {
+      "tablePart": 18,
+      "geographies": [
+        "Wayne",
+        "Williams",
+        "Wood",
+        "Wyandot"
+      ],
+      "row": [
+        "3",
+        "Percentage of population with no health insurance, 2024",
+        "13.9%",
+        "4.8%",
+        "4.2%",
+        "3.5%"
+      ]
+    },
+    {
+      "tablePart": 18,
+      "geographies": [
+        "Wayne",
+        "Williams",
+        "Wood",
+        "Wyandot"
+      ],
+      "row": [
+        "8",
+        "Unemployment rate, 2024",
+        "3.9%",
+        "4.4%",
+        "4.3%",
+        "3.9%"
+      ]
+    },
+    {
+      "tablePart": 18,
+      "geographies": [
+        "Wayne",
+        "Williams",
+        "Wood",
+        "Wyandot"
+      ],
+      "row": [
+        "9",
+        "Percentage of households receiving HEAP benefits, 2025",
+        "4.6%",
+        "4.6%",
+        "2.6%",
+        "7.1%"
+      ]
+    }
+  ],
+  "ocrPolicy": "Original OCR ambiguity stays raw. Do not split malformed cells or insert missing county values without the original page pixels.",
+  "canonicalGeographyCorrections": [
+    {
+      "source": "HPIO",
+      "printed": "Tuscawaras",
+      "canonical": "Tuscarawas County",
+      "fips": "39157",
+      "scope": "Label correction only; source count/rate unchanged"
+    },
+    {
+      "source": "PAMS SNAP",
+      "printed": "Def/Paudling",
+      "canonical": null,
+      "scope": "Preserve original combined-office label; no geographic allocation"
+    }
+  ],
+  "reconciliation": {
+    "snap": {
+      "households": {
+        "sumNonState": 711651,
+        "publishedState": 711651
+      },
+      "members": {
+        "sumNonState": 1388233,
+        "publishedState": 1388233
+      },
+      "adults": {
+        "sumNonState": 806501,
+        "publishedState": 806501
+      },
+      "children": {
+        "sumNonState": 581732,
+        "publishedState": 581732
+      }
+    },
+    "coverage": {
+      "labour": 89,
+      "healthFiveYear": 89,
+      "healthOneYear": 1,
+      "heap": 88,
+      "snap": 87,
+      "medicaid": 88
+    }
+  }
+}

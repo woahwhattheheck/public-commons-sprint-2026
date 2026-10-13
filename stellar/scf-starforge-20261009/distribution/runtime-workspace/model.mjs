@@ -1,3 +1,4 @@
+import {createApplicationResultSetsAPI} from './application-result-sets.mjs';
 import { managedResult } from './managed-result.mjs';
 import { createOperationRecordReader } from './operation-records.mjs';
 import { operationHistory, operationSummary } from './public/operation-history-model.mjs';
@@ -312,6 +313,7 @@ export async function openRuntimeWorkspace({ directory, openApiSetupPolicy = {} 
     ...applicationInputs,
     ...createApplicationInputSetsAPI(root,workspaceIdentity,applicationInputs),
     ...createApplicationInputSetEditionsAPI(root,workspaceIdentity,()=>model),
+    ...createApplicationResultSetsAPI(root,workspaceIdentity,()=>model),
     async sourcePlansState(input) { return sourceProductPlansState(root, input); },
     async sourcePlanRead(input) { return readSourceProductPlan(root, input); },
     async sourcePlanRuntimes(input) {
@@ -710,7 +712,7 @@ export async function openRuntimeWorkspace({ directory, openApiSetupPolicy = {} 
   };
   // Keep retained inspection available during receiving. All existing lifecycle
   // methods, including reviews that persist records, share the backup gate.
-  const readMethods = new Set(["applicationInputSetEditionReview","applicationInputSetEditionRead","applicationInputSetEditionReceived","applicationInputSetEditionsState","applicationInputSetsState","applicationInputSetInspect","applicationInputSetSelection","applicationInputsState","applicationInputInspect","applicationInputSelection","applicationInputDownload","runtimeProceduresState","runtimeProcedureRead","runtimeProcedureExport","sourcePlansState","sourcePlanRead","sourcePlanRuntimes","sourcePlanHandoff","sourcePlanBriefing","sourcePlanReceiving","sourceBuildsState","sourceBuildsReadReview","pythonState","pythonDownload","transfersState","transfersDownload","imagesState","imagesDownload","state","operationHistory","operationStatus","catalog","review","compare","handoff","logs","applicationGroupsState","applicationsState","applicationsHistory","applicationsOutput","applicationsOutputPage","applicationsOutputDownload","applicationsOutputSearch","applicationsOutputSearchDownload","runtimeOutputSearch","runtimeOutputSearchDownload","runtimeOutputSources","runtimeOutputPage","runtimeOutputDownload","applicationsTerminal","managedState","managedConfigurationHistory","close"]);
+  const readMethods = new Set(["applicationResultSetsState","applicationResultSetReview","applicationResultSetRead","applicationResultSetReceived","applicationInputSetEditionReview","applicationInputSetEditionRead","applicationInputSetEditionReceived","applicationInputSetEditionsState","applicationInputSetsState","applicationInputSetInspect","applicationInputSetSelection","applicationInputsState","applicationInputInspect","applicationInputSelection","applicationInputDownload","runtimeProceduresState","runtimeProcedureRead","runtimeProcedureExport","sourcePlansState","sourcePlanRead","sourcePlanRuntimes","sourcePlanHandoff","sourcePlanBriefing","sourcePlanReceiving","sourceBuildsState","sourceBuildsReadReview","pythonState","pythonDownload","transfersState","transfersDownload","imagesState","imagesDownload","state","operationHistory","operationStatus","catalog","review","compare","handoff","logs","applicationGroupsState","applicationsState","applicationsHistory","applicationsOutput","applicationsOutputPage","applicationsOutputDownload","applicationsOutputSearch","applicationsOutputSearchDownload","runtimeOutputSearch","runtimeOutputSearchDownload","runtimeOutputSources","runtimeOutputPage","runtimeOutputDownload","applicationsTerminal","managedState","managedConfigurationHistory","close"]);
   for (const [name, method] of Object.entries(model)) {
     if (typeof method !== 'function' || readMethods.has(name) || name.startsWith('workspaceBackup')) continue;
     model[name] = (...args) => withWorkspaceWrite(root, async () => {

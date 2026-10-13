@@ -198,6 +198,6 @@ export function createApplicationInputSetsView({root,api,getToken,getWorkspaceId
   }
   search.addEventListener('input',()=>{offset=0;void refresh();});
   panel.addEventListener('toggle',()=>{if(panel.open)void refresh();});enabled();
-  return {refresh,reset,update(){if(workspace!==getWorkspaceId())reset();enabled();editions.update();},
+  return {refresh,reset,async openSet(setId){if(workspace!==getWorkspaceId())reset();panel.open=true;await openSet(setId);panel.scrollIntoView({block:'nearest'});},update(){if(workspace!==getWorkspaceId())reset();enabled();editions.update();},
     show(){panel.open=true;enabled();void refresh();}};
 }

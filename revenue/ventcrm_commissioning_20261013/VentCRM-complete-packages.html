@@ -42,13 +42,31 @@ function parseCsvText(source){
  if(field!==""||row.length){row.push(field);rows.push(row);}
  return rows;
 }
-function documentPreview(name,source){
+function originalDocumentPreview(name,source){
  if(/\.html?$/i.test(name))return source;
  const esc=s=>String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
  let body;
  if(/\.csv$/i.test(name)){const rows=parseCsvText(source);body="<p>CSV preview. Scroll horizontally to read every column; download the original file to edit it in your spreadsheet.</p><div class=\"table\"><table>"+rows.map((r,i)=>"<tr>"+r.map(c=>(i?"<td>":"<th>")+esc(c)+(i?"</td>":"</th>")).join("")+"</tr>").join("")+"</table></div>";}
  else body="<pre>"+esc(/\.json$/i.test(name)?JSON.stringify(JSON.parse(source),null,2):source)+"</pre>";
  return "<!doctype html><html lang=\"en\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><title>"+esc(name)+"</title><style>:root{color-scheme:light}*{box-sizing:border-box}body{font:15px/1.55 system-ui,sans-serif;margin:0;padding:1rem;color:#171717;background:#fff}h1{font-size:1.2rem;overflow-wrap:anywhere}p{max-width:70ch}.table{overflow:auto;border:1px solid #aaa}table{border-collapse:collapse}th,td{text-align:left;vertical-align:top;min-width:160px;max-width:340px;border:1px solid #bbb;padding:.65rem;white-space:pre-wrap;overflow-wrap:anywhere}th{background:#eee}pre{font:14px/1.5 ui-monospace,monospace;white-space:pre-wrap;overflow-wrap:anywhere}</style></head><body><h1>"+esc(name)+"</h1>"+body+"</body></html>";
+}
+function renderCommissioningPreview(name,source){
+ if(!/-commissioning\.html$/.test(name))return null;
+ const match=source.match(/<script id="programme-data" type="application\/json">([\s\S]*?)<\/script>/);
+ if(!match)throw Error("The original commissioning programme could not be read.");
+ const data=JSON.parse(match[1]),seed=data.seed;
+ if(seed?.version!=="ventcrm.commissioning-seed.v1"||!Array.isArray(seed.operators)||!Array.isArray(seed.criteria))
+  throw Error("The original commissioning programme could not be read.");
+ const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+ const working=name.replace(/-commissioning\.html$/,"-working.json");
+ if(working===name)throw Error("The original commissioning filename is not recognized.");
+ const operators=seed.operators.map(x=>"<li>"+esc(x.company||x.id)+"</li>").join("");
+ const steps=seed.criteria.map(x=>"<li><h3>"+esc(x.title)+"</h3><p>"+esc(x.action||x.instruction)+"</p>"+(x.acceptance?"<p><strong>Review outcome:</strong> "+esc(x.acceptance)+"</p>":"")+(x.retain?"<p><strong>Retain:</strong> "+esc(x.retain)+"</p>":"")+"</li>").join("");
+ return '<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>'+esc(seed.title)+'</title><style>:root{color-scheme:light}*{box-sizing:border-box}body{font:15px/1.55 system-ui,sans-serif;margin:0;padding:1rem;color:#171717;background:#fff;overflow-wrap:anywhere}h1{font-size:1.25rem;line-height:1.3}h2{font-size:1.05rem;margin-top:1.4rem}h3{font-size:1rem;margin-bottom:.3rem}p{margin:.5rem 0;max-width:75ch}code{font:inherit;font-weight:600}aside{border:1px solid #aaa;background:#f5f5f5;padding:1rem}ol,ul{padding-left:1.5rem}li{margin:.45rem 0}details{border-top:1px solid #aaa;margin-top:1.2rem;padding-top:.9rem}summary{cursor:pointer;font-weight:600;min-height:44px}summary:focus-visible{outline:3px solid #333;outline-offset:3px}</style></head><body data-ventcrm-opening="complete"><h1>'+esc(seed.title)+'</h1><p>This package contains a complete editable commissioning desk for '+seed.operators.length+' '+(seed.operators.length===1?'selected operator':'selected operators')+'.</p><aside><h2>Open the working desk</h2><ol><li>Choose <strong>Download complete pack</strong> in the package controls and extract the ZIP.</li><li>Open <code>'+esc(name)+'</code> in your browser.</li><li>Choose <strong>Open working JSON</strong> and select <code>'+esc(working)+'</code> from the same extracted package.</li></ol><p>Then edit setup, source registers and review steps; save the complete working JSON to continue later. The document preview keeps the original programme and opening instructions together.</p></aside><h2>Included operators</h2><ul>'+operators+'</ul><details><summary>View the '+seed.criteria.length+' original commissioning steps</summary><ol>'+steps+'</ol></details></body></html>';
+}
+function documentPreview(name,source){
+ const opening=renderCommissioningPreview(name,source);
+ return opening===null?originalDocumentPreview(name,source):opening;
 }
 function packagePanelMain(){
  const payload=JSON.parse(document.getElementById("source").textContent),box=document.getElementById("downloads"),status=document.getElementById("status"),frame=document.getElementById("preview"),previewBox=document.getElementById("document-preview"),heading=document.getElementById("document-title");
