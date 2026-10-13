@@ -155,16 +155,53 @@
       "scientific_normaliser": "Unchanged existing full parseSource and characteristic editions",
       "native_receiving": "Original completed guided-intake continuation; physical execution is pending"
     },
+    "observation_receiving": {
+      "operation_id": "ECO-OBSERVATION-RECEIVING-15227-20261013",
+      "base_commit": "1cc7ba3dde1e116aa8a3b3a5781852c25380a2cd",
+      "source_bank": "c0e87c6b248f142fa5c1f394099aef2cd76ec568",
+      "original_receiver": "88bacaf506f3bc31ab3da69c08b411d1da0cd9af",
+      "guide": "measurement_workspace/OBSERVATION_EDITION_RECEIVING.md",
+      "native_status": "Full source prepared; execute the original equipped receiver and personally view its complete outputs."
+    },
+    "sediment_model_comparisons": {
+      "operation_id": "ECO-SEDIMENT-SURROGATE-9B23-20261013",
+      "basis_commit": "0c21e53b59274cf8cf2100d52a5829dd3f5a036d",
+      "original_study_merge": "bde779465829e7a82d9caf981a8648a3cd27854a",
+      "source_packets": {
+        "service": "57f31ba608d968d4017687fe70d2a0cd3f2bc668",
+        "science": "afd4801aaa6b5dbfc1bbb00507a54a6e42ebb653",
+        "reports": "b614b5f211583affa3815f19c37a90abd092ed3f",
+        "reference_receiving": "fa66162df735f03f25b0fd0a3e7816f234f50cdf",
+        "operator": "16faa22c766c99b9acb0260d11253b0786201975"
+      },
+      "source_results": "receiving/sediment-comparison-source-20261013",
+      "receiving": "Same original 6ACE scientific-reference operation; supplied existing workspace handles and original source input",
+      "installed_files": 303
+    },
+    "chiques_nutrient_sources": {
+      "operation_id": "ECO-CHIQUES-NUTRIENT-SOURCES-RD12-20261013",
+      "base_commit": "b9e30c58bec63ceb7e9c86796e4821f11f28696e",
+      "guide": "measurement_workspace/CHIQUES_NUTRIENT_SOURCES.md",
+      "native_rendered": false,
+      "preserves": "Original Chiques source files and complete existing Measurements, scientific reviews, source collections, result handbacks, sediment studies, flow comparisons and same-file interpretation comparison."
+    },
+    "original_workbook_returns": {
+      "operation_id": "ECO-ORIGINAL-WORKBOOK-RESULTS-20261013",
+      "base_commit": "bf109b4a0cddafe6434c7d0cf4ee9c57ec1ff48c",
+      "original_claim": "1791919621.914169",
+      "delivery_edition": 3
+    },
     "large_collections": {
       "operation_id": "CEDAR-10212-ECO-LARGE-COLLECTIONS-20261013",
       "original_claim": "1791920117.443899",
-      "source_base": "7a2384e215c569e7bedbb6f510132eb5641445d4",
+      "source_base": "94222ec3e88ed3ad5631fad6aa69eca346cb665e",
       "guide": "measurement_workspace/LARGE_COLLECTIONS.md",
       "browser_guide": "MEASUREMENT_COLLECTION_WORKING.md",
       "behavior": "Original canonical collections receive retained large originals, preserve reviewed per-file progress, and publish through the same collection-bound streaming native archive.",
       "complete_installer": "operator/install_measurements.py",
       "source_review": "Full native and browser source independently reviewed; actual complete source operations exercised with original custody and precise native writer envelopes.",
-      "preserves": "All earlier collection IDs, ordinary originals, native scientific parsers/imports, saved studies, current Flow/Sediment/Observation/Source-return implementation and original receiving ownership."
+      "preserves": "All earlier collection IDs, ordinary originals, native scientific parsers/imports, saved studies, current Flow/Sediment/Observation/Source-return implementation and original receiving ownership.",
+      "composed_prior_installer_members": 317
     }
   },
   "files": [
@@ -209,6 +246,11 @@
       "sha256": "4342891ca683b0f5e5035c5e7d8989eab8cb78a381cac2cea3aeba7c2bf9197b"
     },
     {
+      "path": "integration/component_fragments/measurement-chiques-nutrients.json",
+      "bytes": 1730,
+      "sha256": "32f7ed5a7ffcea8f800447f1b6a034044358f834861ca80d8f8aa51f15cd1eff"
+    },
+    {
       "path": "integration/component_fragments/measurement-collections.json",
       "bytes": 4523,
       "sha256": "48fc6a72f1ab393f7bba948437800a782d28da21dfb610bbfd66fdba318d4b58"
@@ -240,8 +282,8 @@
     },
     {
       "path": "integration/component_fragments/measurement-observation-editions.json",
-      "bytes": 1461,
-      "sha256": "8ac32a7130cf57bfd690fb2f6102b4b25821d3255f3ceeeee95368cfb2f70fa7"
+      "bytes": 1670,
+      "sha256": "37229feeee83b7f1210783da97a4be0ac75da03a86383a547ce327dab3567c9e"
     },
     {
       "path": "integration/component_fragments/measurement-observed-benchmarks.json",
@@ -286,7 +328,7 @@
     {
       "path": "MEASUREMENT_LARGE_FILES_SOURCE.json",
       "bytes": 11533,
-      "sha256": "b390bbfdee5afa1b8fc309ac42f896e68108e55514393cca858b49318022306d"
+      "sha256": "55db5f54ca44b4621cc1fc1651ebaacd700f44ef47c3d02368d8caa1df6343ed"
     },
     {
       "path": "MEASUREMENT_LARGE_FILES.md",
@@ -312,6 +354,11 @@
       "path": "measurement_workspace/chemistry.py",
       "bytes": 42412,
       "sha256": "22cdcd2e8b8d781edb93d794f3cb2c2be453f3ead72fada3a835cbb13ffa79bf"
+    },
+    {
+      "path": "measurement_workspace/CHIQUES_NUTRIENT_SOURCES.md",
+      "bytes": 13223,
+      "sha256": "0429b2aa22a9349aa481b1389ad96353ac6d097a9a5f1f3f41227fc78eefe5bf"
     },
     {
       "path": "measurement_workspace/DAILY_FLOW_STUDIES.md",
@@ -349,9 +396,29 @@
       "sha256": "a8cb9af87d6e2e4a101ad12beaf01a20a65133700d3b576d66e5290925a01488"
     },
     {
+      "path": "measurement_workspace/engine/chiques_nutrient_cli.mjs",
+      "bytes": 4199,
+      "sha256": "6fd63e7544862ee5a9e62078227369e5b86f535bfc9632dd6da18554c5cf7de9"
+    },
+    {
+      "path": "measurement_workspace/engine/chiques_nutrient_reports.mjs",
+      "bytes": 5816,
+      "sha256": "1453ff384937fcaaf643d209f86f20cbaae4bfb36ed600890523e1f23769eec5"
+    },
+    {
+      "path": "measurement_workspace/engine/chiques_nutrient_workspace.mjs",
+      "bytes": 4959,
+      "sha256": "0fa338a365ad81ea5c284402d32f6a783c09731711952bd275170a4abf077ec8"
+    },
+    {
+      "path": "measurement_workspace/engine/chiques_nutrients.mjs",
+      "bytes": 17806,
+      "sha256": "829d1cacfc8b46163a1a04d97fd2d463ed00f9fbfb05e104c2c4cf6792da942e"
+    },
+    {
       "path": "measurement_workspace/engine/cli.mjs",
-      "bytes": 19364,
-      "sha256": "ffc9452237f659a1cf0ba883e0e58c4402bcb767bbb0d3a9d5733e63ab33a639"
+      "bytes": 21637,
+      "sha256": "25cf788d40f621d8160bc3d50137b59c1e9d1fea20e4cc0fd015ee9246089ece"
     },
     {
       "path": "measurement_workspace/engine/collection_zip.mjs",
@@ -410,8 +477,8 @@
     },
     {
       "path": "measurement_workspace/engine/http.mjs",
-      "bytes": 15617,
-      "sha256": "496e869866da01f8b073493054360eeae32d9a0b1745e72d5ab0f7671bc53f3b"
+      "bytes": 16717,
+      "sha256": "2edacc47842d36dc2630b4e805d781b062a815f2b3c0a55aaa124156f43c5710"
     },
     {
       "path": "measurement_workspace/engine/intake_comparison.mjs",
@@ -489,6 +556,11 @@
       "sha256": "c8d868a3cd62473465f73b79e0602678535ae3d22778a8bcfd52707530fc8c92"
     },
     {
+      "path": "measurement_workspace/engine/observation-edition-receiving.mjs",
+      "bytes": 32159,
+      "sha256": "36581f6442320c0f3628f6adc6fdb2bc839d1d84f31300285892cdbb00c3078a"
+    },
+    {
       "path": "measurement_workspace/engine/parse.mjs",
       "bytes": 3800,
       "sha256": "6e5bf1bb14b2b3baad048eb2b1bd93c56d43aab333b9728799d00d7f8006e33b"
@@ -505,8 +577,8 @@
     },
     {
       "path": "measurement_workspace/engine/reconciliation-receiving.mjs",
-      "bytes": 32377,
-      "sha256": "f058b76b21b52651f1fce85736c210fc0d0b1213423f2f9ae8cdeb4730d230b1"
+      "bytes": 32984,
+      "sha256": "039911d32da1b0422e3f74389b81c8d0a335432d39c4db156da835b789e7d7c9"
     },
     {
       "path": "measurement_workspace/engine/result_handback.mjs",
@@ -527,6 +599,21 @@
       "path": "measurement_workspace/engine/returned_reviews.mjs",
       "bytes": 32888,
       "sha256": "1a4ec5d181f96828e71e53f9c1b37614339b4e293a13be38cfddd891f7200eea"
+    },
+    {
+      "path": "measurement_workspace/engine/sediment_comparison_reports.mjs",
+      "bytes": 25506,
+      "sha256": "90234aa29f0c643dff05d1adad39b057772fd772ff0c14bddd9bb4ad6ef15bec"
+    },
+    {
+      "path": "measurement_workspace/engine/sediment_comparison_workspace.mjs",
+      "bytes": 20114,
+      "sha256": "b32057f79fc5b1d8c55b2671f606bc29a1d1d2b8e800b2f45a9102596d01bc59"
+    },
+    {
+      "path": "measurement_workspace/engine/sediment_comparison.mjs",
+      "bytes": 20451,
+      "sha256": "9ac2c7c629f6f10fc52faf264640277b0ba9b06e77eec733b5a54c3d84bb0279"
     },
     {
       "path": "measurement_workspace/engine/sediment_pairs.mjs",
@@ -570,8 +657,8 @@
     },
     {
       "path": "measurement_workspace/engine/source_handback.mjs",
-      "bytes": 28600,
-      "sha256": "edf7eff2c1fe20c9b4d0a5fa4efb2f857e8987290a1138236c23b40a38fbb4bd"
+      "bytes": 32261,
+      "sha256": "7c7fb777aea899a035303c6ab57c4c7e6ea6cea313d1192266cf2aad8eff285f"
     },
     {
       "path": "measurement_workspace/engine/source_lineage.mjs",
@@ -584,14 +671,34 @@
       "sha256": "3e1812e964df450f3cd357d8fa0b3ff4d770d7329ea1d93894a98abeb18eaad7"
     },
     {
+      "path": "measurement_workspace/engine/source_workbook_append.py",
+      "bytes": 20420,
+      "sha256": "465eef1ca7f13e18f9da3fd95f5c92342f3a423b7d888d9beca640f96a24c693"
+    },
+    {
+      "path": "measurement_workspace/engine/source_workbook_browser.mjs",
+      "bytes": 7716,
+      "sha256": "6d8902072c21ebbc81fe5387ae634c19b0d7f95e6ebbd0467a377626e46c2856"
+    },
+    {
+      "path": "measurement_workspace/engine/source_workbook_course.mjs",
+      "bytes": 7299,
+      "sha256": "bd8833a3929d501d326f19faae8cbe712bdac0f3f1b2c1803cee7ad96c3d8ef0"
+    },
+    {
+      "path": "measurement_workspace/engine/source_workbook_returns.mjs",
+      "bytes": 8393,
+      "sha256": "649b436017a31b447bd3d96af538c128fb3fb98d8aa4d94375fdd157e3805c0a"
+    },
+    {
       "path": "measurement_workspace/engine/stream_csv.mjs",
       "bytes": 2704,
       "sha256": "08324ba99c7337fe82b2f1c76c7c1c2979b0064ee81762ba4881a7fbb31a16ff"
     },
     {
       "path": "measurement_workspace/engine/workspace.mjs",
-      "bytes": 24178,
-      "sha256": "f8edf6c7049d294fca42ff06fbb4981c89343042976f132f2c87aeb8fc0934a9"
+      "bytes": 24381,
+      "sha256": "5f8943af96e650d5712744e163f3f5d38f78c3db43083b822826613cbefc6acb"
     },
     {
       "path": "measurement_workspace/extension.py",
@@ -659,6 +766,11 @@
       "sha256": "0d375963a1cba92743c648403431d896713834c020506e0777d0fdbf9b34071a"
     },
     {
+      "path": "measurement_workspace/OBSERVATION_EDITION_RECEIVING.md",
+      "bytes": 12926,
+      "sha256": "10f838df7b5bf95237852d0c2b9c0e6c9983e58a259e61de83ac2cce8a2626f6"
+    },
+    {
       "path": "measurement_workspace/observation_edition_source.py",
       "bytes": 5987,
       "sha256": "b16a807d1e66b3d352ddf5ad9e6d26e9be5000587d0109e881a81cba27f8f7a8"
@@ -675,8 +787,8 @@
     },
     {
       "path": "measurement_workspace/operator.py",
-      "bytes": 11069,
-      "sha256": "9fc9d66ed2def7e31e5eb8a13652f364373d62960ca07d1ebd9e285b06a75e08"
+      "bytes": 11150,
+      "sha256": "9d0cbd0a540eb0a58da391a9432cfc4b4a28dadaa2e6678c15ad151c2440b56b"
     },
     {
       "path": "measurement_workspace/READABLE_RESULTS.md",
@@ -684,9 +796,54 @@
       "sha256": "1c2ce92f1a1b27a53a6cc39632a0dad64aa279d6f6adbb64dc03b75aae05c883"
     },
     {
+      "path": "measurement_workspace/reference/NATIVE_SEDIMENT_COMPARISON_RECEIVING.md",
+      "bytes": 25604,
+      "sha256": "0a1bf63d8301a3bb5793f702f8b7827e82e949d46a2cab2542fea0683ae98884"
+    },
+    {
+      "path": "measurement_workspace/reference/NATIVE_SEDIMENT_REFERENCE_RECEIVING.md",
+      "bytes": 18658,
+      "sha256": "108490902f1fbf34c9b4b0b4c99c2f60f624d307634e578ecaa3c23a5db64db3"
+    },
+    {
+      "path": "measurement_workspace/reference/receive-sediment-comparison.mjs",
+      "bytes": 22752,
+      "sha256": "f4e662f228fc949048a42a97428a25da31f35455c11529f131e29895295bfb8a"
+    },
+    {
+      "path": "measurement_workspace/reference/receive-sediment-reference.mjs",
+      "bytes": 24189,
+      "sha256": "7316097f07578540dc3f2597f8ee01b493a840fc6b1cf8c7749b31113451b714"
+    },
+    {
+      "path": "measurement_workspace/reference/run-chiques-nutrients.mjs",
+      "bytes": 12587,
+      "sha256": "188e58e5fb72fbc5051a698030c67f89087f967ee782486f20785dc675d471d5"
+    },
+    {
+      "path": "measurement_workspace/reference/run-chiques-nutrients.py",
+      "bytes": 1546,
+      "sha256": "3597f3f80e74637a2b6e343a77512658b1d462011e57e9dcd60c51789c6e93c8"
+    },
+    {
+      "path": "measurement_workspace/reference/run-sediment-comparison.mjs",
+      "bytes": 7375,
+      "sha256": "734bc4237245dd9c2476deaf27cebc07427555e321006c173a5930aeb13f3153"
+    },
+    {
       "path": "measurement_workspace/reference/run-sediment-reference.mjs",
       "bytes": 10840,
       "sha256": "ca2b37137919dcd08df28f770fe7f5a74068b4c157820d7ce398a207c9123acc"
+    },
+    {
+      "path": "measurement_workspace/reference/SCIENTIFIC_REFERENCE.md",
+      "bytes": 11481,
+      "sha256": "532a0e5b98e513667fec80dee3b2e4798288010cbc9f51a7551d83bec1b34939"
+    },
+    {
+      "path": "measurement_workspace/reference/sediment_comparison_reference.mjs",
+      "bytes": 7888,
+      "sha256": "8731d8d225a350bc33ee3b4a19d022f02848311fb862c0e84ab129615f417075"
     },
     {
       "path": "measurement_workspace/reference/sediment_reference_course.mjs",
@@ -697,6 +854,11 @@
       "path": "measurement_workspace/reference/sediment-reference.mjs",
       "bytes": 19586,
       "sha256": "d30d824673d21a180d3b968059c64f09b5444e2290a82cffe258f022e4700437"
+    },
+    {
+      "path": "measurement_workspace/reference/SOURCE_PAIRING.md",
+      "bytes": 34144,
+      "sha256": "7d7df0dae6e960c183d312a8e2ba1cb75b398118f271ddd95d72e54b2117ab21"
     },
     {
       "path": "measurement_workspace/reference/usgs_07144100_sediment_2004_2014.csv",
@@ -719,19 +881,29 @@
       "sha256": "75f2850fa5e4679887cf9703a962855cb8a6a76a49974645c4b15e3babc2e00a"
     },
     {
+      "path": "measurement_workspace/SEDIMENT_COMPARISON_WORKSPACE.md",
+      "bytes": 23538,
+      "sha256": "4f422d44a0077b0b9239ba3d6af14f56ae32b44487ec3de2eba3c2210df217b3"
+    },
+    {
+      "path": "measurement_workspace/SEDIMENT_COMPARISON.md",
+      "bytes": 27191,
+      "sha256": "f054a975b24c5740d93775ecdab3aac6a88e357989b2dec00bb31749ccb52afb"
+    },
+    {
       "path": "measurement_workspace/SEDIMENT_SURROGATE.md",
       "bytes": 26347,
       "sha256": "40e4560d8df608c33de0a289b9dcd1fd8eee36062fab7c75a8a873ca84841470"
     },
     {
       "path": "measurement_workspace/SOURCE_HANDBACK_BROWSER.md",
-      "bytes": 18440,
-      "sha256": "8c09ee3f5720d16cff8cfed86fde6baeae28fe1c5da287dc7bbe8fde85de1ee2"
+      "bytes": 19420,
+      "sha256": "3e10f811e2e68a300ae1badf87d784b784cf157fba81f016826684c1d9de8386"
     },
     {
       "path": "measurement_workspace/SOURCE_HANDBACK.md",
-      "bytes": 12815,
-      "sha256": "946736b70c4f1da6084732c4130db5884a3a58ad23ef725e55ab305100dc2a39"
+      "bytes": 20100,
+      "sha256": "307efafb343e4c969f6adaf9df91b6b184a0cbf25395499403b3ad04240b86cc"
     },
     {
       "path": "measurement_workspace/SOURCE_RECONCILIATION.md",
@@ -749,6 +921,11 @@
       "sha256": "70eb51e65ce68c4250789f7d0b44e789b9f79219172718f65bcd377c814d73ed"
     },
     {
+      "path": "measurement_workspace/web/chiques_nutrients.mjs",
+      "bytes": 16649,
+      "sha256": "3e13880b80db8eada003b8bb53f678b9c2d77aad7f454a99eefd050b7df5c767"
+    },
+    {
       "path": "measurement_workspace/web/collection_transfer.mjs",
       "bytes": 6217,
       "sha256": "08e3519c39f9389c975dbdb851da38ea31258261ce28d31da8c6460f2dd4dbde"
@@ -760,13 +937,13 @@
     },
     {
       "path": "measurement_workspace/web/collections.mjs",
-      "bytes": 32288,
-      "sha256": "4a600961950996a56ac2cf7a55d17399584034ec71eedc3bdf136c3c6cce5b84"
+      "bytes": 32497,
+      "sha256": "003a69b436f058677b9a031be8c327295143d01f592dd05f42439feb3ecc02c4"
     },
     {
       "path": "measurement_workspace/web/extension.mjs",
-      "bytes": 11061,
-      "sha256": "b4b8564e480eb14386f42f4a69c6c9ec29b7e18da9f1b2fbfe52e25175ec45f0"
+      "bytes": 11569,
+      "sha256": "e0d1720593fa811d052ba4a38d4102ca37c001d6bb3375b56e725ad773f0c306"
     },
     {
       "path": "measurement_workspace/web/flow_editions.css",
@@ -824,9 +1001,14 @@
       "sha256": "758103dabb6062634b7cb8c55ff66236297d2fcb064aa705b9368f422003931e"
     },
     {
+      "path": "measurement_workspace/web/sediment_comparisons.mjs",
+      "bytes": 44877,
+      "sha256": "43d7f7ab48903e7933eb5da5bfe6ec024dd5910a9aaddd591a212c88d1aaa3da"
+    },
+    {
       "path": "measurement_workspace/web/sediment.mjs",
-      "bytes": 61325,
-      "sha256": "90ec6f0d0422ba833b222ffd7989af747d2ab7e8fa57b8583ebd11633f508abd"
+      "bytes": 64030,
+      "sha256": "e6771c8e1dc2ec48dd86b481dcadd1c7a03bee35a0b1a0a8671412a5d87e9b64"
     },
     {
       "path": "measurement_workspace/web/source_handback.css",
@@ -835,8 +1017,8 @@
     },
     {
       "path": "measurement_workspace/web/source_handback.mjs",
-      "bytes": 37868,
-      "sha256": "79d939c471010c53ecb3407d97c1a437ff559bd1fa301b19ddfbc500c982e58f"
+      "bytes": 41413,
+      "sha256": "e66f656dc6f8e851d5d64602480a4595f36f44cdcc010f5d7ac6dd7e39838d1f"
     },
     {
       "path": "measurement_workspace/web/source_reconciliation.css",
@@ -855,8 +1037,8 @@
     },
     {
       "path": "measurement_workspace/web/workspace.js",
-      "bytes": 35288,
-      "sha256": "60fb137ea2b407c93e463b44dde0b471899a6318ae77e0a183c487282c09db8f"
+      "bytes": 35701,
+      "sha256": "2def3ff095bc93f896653cc6fb51c2e6c5dde11fe382ef26f5c8a1fe54828012"
     },
     {
       "path": "model/client_measurement_sources.py",
@@ -1185,8 +1367,8 @@
     },
     {
       "path": "operator/extensions/measured-observations.json",
-      "bytes": 2711,
-      "sha256": "c8230ead4c4d6e4ffa9cde3483758490e1a1898c9bc365ef21e0f250269d2585"
+      "bytes": 2773,
+      "sha256": "d9d5d444876604f9b516e76dbd141a43b18a5f913f7c5d01a61e983e541004bc"
     },
     {
       "path": "operator/extensions/measurement-returned-reviews-native.json",
@@ -1215,13 +1397,18 @@
     },
     {
       "path": "operator/MEASUREMENTS_INSTALLATION.md",
-      "bytes": 14585,
-      "sha256": "8495260736a8099747a27e60f696974d7c660d406a704ffe2208ea59c7756ba9"
+      "bytes": 16709,
+      "sha256": "9b861710e1b0900af4f34723b619ffe494e7018aff5b9934a5a051533149fec4"
     },
     {
       "path": "operator/web/benchmarks.mjs",
       "bytes": 33585,
       "sha256": "269b0fa7d2570325fa987c0b98f798859a04149bec2b073d95539e24be7c143a"
+    },
+    {
+      "path": "operator/web/chiques_nutrients.mjs",
+      "bytes": 16649,
+      "sha256": "3e13880b80db8eada003b8bb53f678b9c2d77aad7f454a99eefd050b7df5c767"
     },
     {
       "path": "operator/web/client_measurement_sources.mjs",
@@ -1275,8 +1462,8 @@
     },
     {
       "path": "operator/web/measured_collections.mjs",
-      "bytes": 32288,
-      "sha256": "4a600961950996a56ac2cf7a55d17399584034ec71eedc3bdf136c3c6cce5b84"
+      "bytes": 32497,
+      "sha256": "003a69b436f058677b9a031be8c327295143d01f592dd05f42439feb3ecc02c4"
     },
     {
       "path": "operator/web/measured_intake.mjs",
@@ -1295,8 +1482,8 @@
     },
     {
       "path": "operator/web/measured_observations_extension.mjs",
-      "bytes": 11632,
-      "sha256": "e5218a75299dbd3982b174e936f712236981b6030093523a14c632c198cef8c4"
+      "bytes": 12140,
+      "sha256": "2437ec857d3e2b0b99b746445b7b7892ba3c7d41e7c4c63e26960c9f0e7b8069"
     },
     {
       "path": "operator/web/measured_observations.css",
@@ -1305,8 +1492,8 @@
     },
     {
       "path": "operator/web/measured_observations.mjs",
-      "bytes": 35306,
-      "sha256": "b6d3fd0da7624254dfc55feea54f48ece1199f959047c7b7845c54288fff6a34"
+      "bytes": 35719,
+      "sha256": "5e12667b4af1abc5d35ef9a5832b59bf50f90b6bd7f59fa0a38e607cccbe9db4"
     },
     {
       "path": "operator/web/measured_results.mjs",
@@ -1334,9 +1521,14 @@
       "sha256": "50064e398d3864e388d2c104fdf9f780e637680587ee13146945ba52afcf402c"
     },
     {
+      "path": "operator/web/sediment_comparisons.mjs",
+      "bytes": 44877,
+      "sha256": "43d7f7ab48903e7933eb5da5bfe6ec024dd5910a9aaddd591a212c88d1aaa3da"
+    },
+    {
       "path": "operator/web/sediment.mjs",
-      "bytes": 61325,
-      "sha256": "90ec6f0d0422ba833b222ffd7989af747d2ab7e8fa57b8583ebd11633f508abd"
+      "bytes": 64030,
+      "sha256": "e6771c8e1dc2ec48dd86b481dcadd1c7a03bee35a0b1a0a8671412a5d87e9b64"
     },
     {
       "path": "operator/web/source_handback.css",
@@ -1345,8 +1537,8 @@
     },
     {
       "path": "operator/web/source_handback.mjs",
-      "bytes": 37868,
-      "sha256": "79d939c471010c53ecb3407d97c1a437ff559bd1fa301b19ddfbc500c982e58f"
+      "bytes": 41413,
+      "sha256": "e66f656dc6f8e851d5d64602480a4595f36f44cdcc010f5d7ac6dd7e39838d1f"
     },
     {
       "path": "operator/web/source_reconciliation.css",
@@ -1647,7 +1839,8 @@
       "a5517dfa93558403e75745ab98f476660f23f2ce74df5e97df023eef9d02d81a",
       "541e78c73837dfd00ed769af0bfb18a932f40ec300c5f95e0f721a6f829d49cd",
       "5b002b952b93cf474f6a7f7a6389362fb28fe1128a0b2051d9ced3b43f739c42",
-      "5a1ccec5c05d1cb643d5af4d81ef299e921b1b4728cc16a03a32a48e513710b5"
+      "5a1ccec5c05d1cb643d5af4d81ef299e921b1b4728cc16a03a32a48e513710b5",
+      "4ae49198aeae5018853dad963ea819301b62ef5daaff980d7760f557d8a8d01c"
     ],
     "measurement_workspace/engine/workspace.mjs": [
       "ae27aeaf1c57d67b71699a99c5894c00c209a15139c74c27cc0a90b3af7999d3",
@@ -1655,7 +1848,7 @@
       "8c3d173100c3f9f14db0de62a71c8a507cb94d402ca1ddec2fa335fc1a58055f",
       "d5414ec5fd900f4e7e44d878f887bbcc4982b2860302ad303c9ee81eecee3cc6",
       "5d4a617293f38fe8c58cd5a703243b85b9dd27aa01a8e665f1642c7bf4349d48",
-      "69ea2c9eab39cfb8c156252f442c500f741f8e4b05529b83324f914e7f30a820"
+      "22378c641fc742ee4d340d56e77daae6473da7537fb8f62ad01877dc51447287"
     ],
     "measurement_workspace/extension.py": [
       "5a0c67271d01b4b32e3ca97c637b8d2adf71da97d288a442272fd98acfb57ef6",
@@ -1671,7 +1864,8 @@
       "00a35730b8f0f891826927d923dabcb48b44c9fe6f7d7c4555185fa67c2bfea3",
       "d17cd011e4a115f64414d3db372d6e76be4174a64056e23e2b17963ed27e914e",
       "53ca268bcaf42c86e7a3e5f3ac3bcae35c9b6b6a2a05fe31186fc6eb85621b3f",
-      "d98bc3f5194407beb5c14fc7bb3d7ab80fa02facfa61116accd23635f174d685"
+      "d98bc3f5194407beb5c14fc7bb3d7ab80fa02facfa61116accd23635f174d685",
+      "28da657655db9de08416d68362212651d3eb203e11ddcaa46456eb199df7a87f"
     ],
     "operator/extensions/measured-observations.json": [
       "4995708ba0285439ab85d0a0d5af614d1b1aca9d6240f22246a53e54b400315e",
@@ -1685,7 +1879,8 @@
       "0c1b3078ad0a7931e443150fcb06a43842ae5daef4af3b7afb4efc83ca8fbb20",
       "35b507ccb2c6548046af457b4451b31d9a3ca9c594c5b6fd4054dd1f937fe84c",
       "818265e53c42803676de7f6e28276fb7ecbca631a8467265d82afe65ea4f5e30",
-      "7bbd6bf245814d8f28d6f3e851d58069b618e5e4c49bbdecd0d2817780259c2a"
+      "55f0dba6455d7c15f83741b91b31464265bdbff737cde573e34bd5256b78ce66",
+      "3cc96e2315f293ba6e5ad3f8c094f1985cc9fe830db89e04eb2b7532b18cdc66"
     ],
     "operator/web/measured_observations_extension.mjs": [
       "53956ef94c20be2083e3ecfb6389dc9352ccea1e52b42e60e487c65d083a2d48",
@@ -1697,7 +1892,8 @@
       "21aa79ec6326366e8f01074213338ab02e4bcc67fb7fcabc5eb01677ad67171d",
       "908a1b01cf4a1c65b6d448d9deefdaa20dc8dacd7c4fcc80ae307c6e87cc235d",
       "318000da39f13c99c61742298fd658b78dc08b2cc8aaedb44cd541f976d5dc7d",
-      "152f481368cf76e9e5a5ddbceaa9c7fcec6c92d0eca59c8dd53256bce8f112ca"
+      "152f481368cf76e9e5a5ddbceaa9c7fcec6c92d0eca59c8dd53256bce8f112ca",
+      "372c9f6932470763d26798ed34f02ead6c4ea1c420f26fadc4a890674f0e750b"
     ],
     "MEASURED_CHEMISTRY.md": [
       "a9d47546de0a79b85d9c86621bd55d4325d9c257b953ad48774fa7a3e264db15",
@@ -1760,7 +1956,10 @@
       "db17b091b7212c715093fb467fc9f81e43c4c8fc7a045e2de759c470ea506a3d",
       "9573bc894b059ed561f83020772692a595e4e123bad947457e1f219c6eeacc97",
       "f7430cd088b0096849106a842e5d233c2beb05d04770383bf75a8924c97d2ae9",
-      "78d53d543baae6649d457c2a3d2f1a7bdf9a66a16b6ec7892f15d5965bdb81bd"
+      "78d53d543baae6649d457c2a3d2f1a7bdf9a66a16b6ec7892f15d5965bdb81bd",
+      "cb69030f24e8c74cf103bf1894c7cb34246ff2fc9b187585ce77cc9857057777",
+      "766f9e8642cb7ef3f7d883a7ae83e63077b095703769ef84220b1a952033baae",
+      "228c1a99bd0f5b337db50d827a299a3050da2a74bef826e8e6442b7e7d0d98a5"
     ],
     "CURRENT_OWNER_DIRECTION.md": [
       "57945ea0e6eca762011e9f7e6febd39255359143d454fd3aa58a3a849ec14fc9",
@@ -1809,7 +2008,8 @@
       "802c96a2c537f61dffdda0cbea15420ff02446b4ba47fdb62039811a59fa96aa",
       "d265b9f6c6030e537ad212ca1033e369f44ffec8c2b95ba0b3edf1368baf860c",
       "85ca8cd361b7ec1da7197e12ac48fc3ac7007642a819a0e795604e0096d12060",
-      "e365b6bf2ba8d59c0d876f6f61bcd53f17e8b96f02d2f338a32a62bec2db8eb6"
+      "ec3f60496691a169ef4738fdd656720a7d90b8502a3e14a8e9dbbdd6f78fade7",
+      "7f6c1dfeea335f9eda5264600e24a54441c6c459aa35346d26d7975c510b0180"
     ],
     "measurement_workspace/engine/collections.mjs": [
       "4be6736b90f8c1ec15b1394b6e2b0da9eba81a144feff2ddf007eed619fc885e"
@@ -1824,7 +2024,8 @@
       "eb924b30be7b5b7b527655036287698bce49705e769858a4e9fd472fefb09921",
       "6cdb918d0caee814a302794fce70bf5cd7d3141aaa16207c1e7516fe3ae34d54",
       "1040567906c2534bec5a78cca729328034fdf8aa1bde97e02d4b883459585c0c",
-      "f43aec2344e4786f9556def812becdbe1dfa8f2425f32e2549c7fb1b77ef28ad"
+      "06fddc9486bd6a3bc06e1551e3798ede92a9cdf2b6cb2a93da127241341ab3df",
+      "688452fa59e5e30a27c428ae676e7526dac07adb7a0722ccccde04cd7866537c"
     ],
     "measurement_workspace/web/collections.mjs": [
       "1e4910387bea5986e503d0609075546645554311e58c4c974023dca02184d1b2",
@@ -1852,7 +2053,8 @@
       "63e38301e08256c1140cad505312cdb0a8bc9880b3f1cf3b9bc99024cf025d53",
       "19ad95139b181e31289e6dc76d827d0ad81cfb247715133cb82ed6bda39bfca4",
       "67e1d6a1d1ae5fb29ebab0bafa2b045cb722a0cda58f49d32b7f29e1fa6b3026",
-      "6508d5fd5e6e4bcc5e71ee4bd2100271334cedac17ad3e6571daafb3fd16edb3"
+      "6508d5fd5e6e4bcc5e71ee4bd2100271334cedac17ad3e6571daafb3fd16edb3",
+      "60fb137ea2b407c93e463b44dde0b471899a6318ae77e0a183c487282c09db8f"
     ],
     "observations/eighteenmile_stoichiometry_20261013/stoichiometry.py": [
       "6d629814e4d97d39cd23ebb17b308176592102f8f2090132868a0e217ce4ae6a"
@@ -1872,7 +2074,8 @@
       "050a92f504747a8af5eb4a293099bdb9a29e99e65bacea19dcb9e01e12e8c74a",
       "5d5c8a163ab6ff1f1fdb4b0c24cae5884e6d83083a3c8c7e66689f009168590a",
       "25116828fb07900a3398671f3ce114babd84fbf41b7df323b503f517b814d6c6",
-      "b5f069acc6ed7ce9187d45a49b40f9af5a3d86460af4e669cc8facf5fa00f3f0"
+      "b5f069acc6ed7ce9187d45a49b40f9af5a3d86460af4e669cc8facf5fa00f3f0",
+      "b6d3fd0da7624254dfc55feea54f48ece1199f959047c7b7845c54288fff6a34"
     ],
     "operator/web/measured_collections.mjs": [
       "1e4910387bea5986e503d0609075546645554311e58c4c974023dca02184d1b2",
@@ -2032,19 +2235,24 @@
       "dcbbb98d9a5ac7238203d4477f4ce405c7aa484ab1e2abe690b4582b0b95987b"
     ],
     "measurement_workspace/engine/source_handback.mjs": [
-      "698946f6bdc505296d9a891d161efdeb1a3942e675a1868abbda7e80ca68a962"
+      "698946f6bdc505296d9a891d161efdeb1a3942e675a1868abbda7e80ca68a962",
+      "edf7eff2c1fe20c9b4d0a5fa4efb2f857e8987290a1138236c23b40a38fbb4bd"
     ],
     "measurement_workspace/web/source_handback.mjs": [
-      "5699ccfb2c392927a5385c8ae8f78434e41f0ac274a2267cff1968780dc7431b"
+      "5699ccfb2c392927a5385c8ae8f78434e41f0ac274a2267cff1968780dc7431b",
+      "79d939c471010c53ecb3407d97c1a437ff559bd1fa301b19ddfbc500c982e58f"
     ],
     "operator/web/source_handback.mjs": [
-      "5699ccfb2c392927a5385c8ae8f78434e41f0ac274a2267cff1968780dc7431b"
+      "5699ccfb2c392927a5385c8ae8f78434e41f0ac274a2267cff1968780dc7431b",
+      "79d939c471010c53ecb3407d97c1a437ff559bd1fa301b19ddfbc500c982e58f"
     ],
     "measurement_workspace/SOURCE_HANDBACK_BROWSER.md": [
-      "d239ceb84bee136b4f39858b6b52441783db311713e5b75e8bddc3698b2ea3a8"
+      "d239ceb84bee136b4f39858b6b52441783db311713e5b75e8bddc3698b2ea3a8",
+      "8c09ee3f5720d16cff8cfed86fde6baeae28fe1c5da287dc7bbe8fde85de1ee2"
     ],
     "measurement_workspace/SOURCE_HANDBACK.md": [
-      "8722d8da1ef7406a2f345941227aefc3ebeda011ae81d3620d05c80f889be682"
+      "8722d8da1ef7406a2f345941227aefc3ebeda011ae81d3620d05c80f889be682",
+      "946736b70c4f1da6084732c4130db5884a3a58ad23ef725e55ab305100dc2a39"
     ],
     "model/client_source_files.py": [
       "b06aa9fbdd6550c9b170332e73c0e05491f221adaab96597d4c7e8932140caab",
@@ -2127,6 +2335,12 @@
     ],
     "measurement_workspace/GUIDED_INTAKE.md": [
       "4fedf035be54e89f3f795a1310cc31eed45825577670aaa58c32b6c2e56b3f35"
+    ],
+    "measurement_workspace/engine/reconciliation-receiving.mjs": [
+      "f058b76b21b52651f1fce85736c210fc0d0b1213423f2f9ae8cdeb4730d230b1"
+    ],
+    "integration/component_fragments/measurement-observation-editions.json": [
+      "8ac32a7130cf57bfd690fb2f6102b4b25821d3255f3ceeeee95368cfb2f70fa7"
     ]
   },
   "requires": [

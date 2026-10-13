@@ -10,7 +10,11 @@
         "model/LANDCOVER_TEMPORAL.md",
         "operator/LANDCOVER_TIMELINE.md",
         "operator/landcover_timeline_browser.mjs",
-        "operator/LANDCOVER_TIMELINE_BROWSER.md"
+        "operator/LANDCOVER_TIMELINE_BROWSER.md",
+        "model/landcover_timeline_study_receiving.py",
+        "model/LANDCOVER_TIMELINE_STUDY.md",
+        "model/landcover_change_accounts.py",
+        "model/LANDCOVER_CHANGE_ACCOUNTS.md"
       ]
     }
   },

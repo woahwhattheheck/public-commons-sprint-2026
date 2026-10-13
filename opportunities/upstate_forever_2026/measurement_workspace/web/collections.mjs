@@ -83,7 +83,7 @@ export function mountCollectionPanel(host,{request,refresh,workspaceKey}){
  }
  function applyResponse(p,response){
   if(p.rowKey){const row=state.rows.find(r=>r.key===p.rowKey);if(!row)throw new Error('Original source row is unavailable.');
-   row.error=null;if(p.path.endsWith('/prepare'))row.prepared=clone(response);else row.retained={...(row.retained||{}),...clone(response)};
+   row.error=null;if(p.path.endsWith('/prepare')){row.prepared=clone(response);row.retained={...(row.retained||{}),phase:row.retained?.phase==='committed'?'committed':'prepared',offset:response.bytes};}else row.retained={...(row.retained||{}),...clone(response)};
   }
   acceptCollectionResponse(state,p.id,response,new Date().toISOString());
   if(p.path==='/large/collections/preview')saveCollectionInspection(state,p.payload,response);
@@ -117,7 +117,7 @@ export function mountCollectionPanel(host,{request,refresh,workspaceKey}){
   }
   const prepared=await write('/large/intakes/'+row.intakeId+'/prepare','POST',{}, {kind:'prepare',rowKey:row.key},check);check();
   if(!hex(prepared.sourceSha256)||prepared.bytes!==row.source.bytes||!prepared.mapping)throw new Error('The installed source preparation returned an incomplete original identity.');
-  row.retained=clone(retained);row.prepared=clone(prepared);saveLocal();
+  row.retained={...clone(retained),phase:retained.phase==='committed'?'committed':'prepared',offset:prepared.bytes};row.prepared=clone(prepared);saveLocal();
   return {path:row.path,kind:row.kind,intakeId:row.intakeId,sha256:prepared.sourceSha256,label:retained.label,mapping:clone(prepared.mapping),origin:clone(retained.origin)};
  }
  async function inlineMember(row,check){
