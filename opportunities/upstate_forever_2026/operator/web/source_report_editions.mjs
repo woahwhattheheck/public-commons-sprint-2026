@@ -124,7 +124,7 @@ export function attachScientificReportEditions(host) {
           '<button type="button" data-scientific-report-action="remove" data-index="'+index+'"'+(locked?' disabled':'')+'>Remove</button></div></li>';
       }).join('')+'</ol>':'<p class="note">Saved calibration reviews, Scientific interpretation, native process studies and observed-water reports appear here after their report source is prepared.</p>')+
       '<div class="inline-actions"><button type="button" data-scientific-report-action="preview"'+(!chosen.length||selectionIssue||locked?' disabled':'')+'>Preview selected sources</button>'+
-      '<button type="button" data-scientific-report-action="render"'+(!preview||locked?' disabled':'')+'>'+(preview?.existing?'Reopen existing report':'Prepare PDF, HTML and data')+'</button></div>'+
+      '<button type="button" data-scientific-report-action="render"'+(!preview||locked?' disabled':'')+'>'+(preview?.existing?'Reopen existing report':'Prepare complete report files')+'</button></div>'+
       '<div data-scientific-report-preview>'+previewHTML()+'</div>'+
       '<h3>Saved scientific reports</h3>'+
       (editions.length?'<div class="table-scroll"><table><thead><tr><th>Report</th><th>Contents</th><th></th></tr></thead><tbody>'+
@@ -219,6 +219,16 @@ export function attachScientificReportEditions(host) {
     panel.querySelector('[data-scientific-report-detail]').scrollIntoView({block:'start'});
     return result;
   }
+  function editableFilesHTML(){
+    const formats=[['report_odt','Editable report (ODT)'],['report_workbook','Editable tables (XLSX)']];
+    const files=formats.map(([role,label])=>{
+      const item=opened.files.find(value=>value.role===role);
+      return item?link(item.url,label):'';
+    }).filter(Boolean);
+    return files.length?'<section class="scientific-report-preview"><h4>Edit this report</h4>'+
+      '<div class="inline-actions">'+files.join('')+'</div>'+
+      '<p>Open these files in your word processor or spreadsheet application. Save an edited copy beside the complete report ZIP. Each file retains its original report data; scientific changes continue through the original study and report workflows.</p></section>':'';
+  }
   function renderDetail(){
     const target=panel.querySelector('[data-scientific-report-detail]'),row=opened.edition;
     target.innerHTML='<div class="source-reports-heading"><div><h3>'+esc(row.title)+'</h3><p>'+
@@ -231,7 +241,7 @@ export function attachScientificReportEditions(host) {
       '<button type="button" data-scientific-report-action="backup">Back up Workspace with this report</button>'+
       (opened.archive?link(opened.archive.url,'Download report ZIP'):'')+'</div>'+
       '<p class="note">The report ZIP contains the rendered report, its selection, figures and retained report data. Study transfer also includes its ordered source collections and available original editable study history. The Workspace backup keeps the entire project.</p>'+
-      reportSourcesHTML()+briefingHTML();
+      editableFilesHTML()+reportSourcesHTML()+briefingHTML();
     panel.querySelector('[data-scientific-report-files]').innerHTML='<div class="table-scroll"><table><thead><tr><th>File</th><th>Size / SHA256</th><th></th></tr></thead><tbody>'+
       opened.files.map(item=>'<tr><td>'+esc(item.path)+'</td><td>'+size(item.bytes)+'<small class="mono">'+esc(item.sha256)+
         '</small></td><td>'+link(item.url,'Download')+'</td></tr>').join('')+'</tbody></table></div>';
