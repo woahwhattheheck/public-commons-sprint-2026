@@ -1,7 +1,7 @@
 {
   "schema": "upstate.application-component-fragment/v1",
   "id": "conservation-scientific-report-source",
-  "source_reference": "https://api.github.com/repos/woahwhattheheck/public-commons-sprint-2026/git/blobs/2e7a35c87526c63525cbdba25ef6efeaf3f3ed2b",
+  "source_reference": "https://api.github.com/repos/woahwhattheheck/public-commons-sprint-2026/git/blobs/b722148b722a67ab230f70c55e91aa35b72b717a",
   "components": {
     "conservation-scientific-report-source": {
       "title": "Saved Conservation portfolios in Scientific Reports",
@@ -12,12 +12,16 @@
         "operator/conservation.py",
         "operator/extensions/conservation.json",
         "operator/web/conservation.mjs",
-        "integration/conservation_report_operator_composition.json"
+        "integration/conservation_report_operator_composition.json",
+        "model/conservation_report_maps.py",
+        "model/CONSERVATION_REPORT_MAPS.md",
+        "integration/conservation_report_map_composition.json"
       ],
       "requires": [
         "conservation",
         "observed-context",
-        "scientific-report-editions"
+        "scientific-report-editions",
+        "scientific-map-figures"
       ]
     }
   },

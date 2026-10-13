@@ -4527,7 +4527,7 @@
         "operator/extensions/native-run-desk.json",
         "operator/extensions/project-continuity.json",
         "operator/extensions/project-transfer.json",
-        "operator/extensions/robust-decisions.json",
+        "operator/extensions/robust-decisions.json.retired-ECO13-RELEASE-20261013",
         "operator/extensions/scenario_reports.json",
         "operator/extensions/source-preparation.json",
         "operator/extensions/station-geography.json",
@@ -5462,7 +5462,10 @@
         "docs/SCIENTIFIC_REPORT_BRIEFING.md",
         "docs/OBSERVED_REPORT_RENDERING.md",
         "source_tools/receive_scientific_report_review.py",
-        "source_tools/RECEIVE_SCIENTIFIC_REPORT_REVIEW.md"
+        "source_tools/RECEIVE_SCIENTIFIC_REPORT_REVIEW.md",
+        "source_tools/receive_observed_scientific_review.py",
+        "source_tools/RECEIVE_OBSERVED_SCIENTIFIC_REVIEW.md",
+        "observations/eighteenmile_2023/scientific-review.request.json"
       ],
       "requires": [
         "eco13",

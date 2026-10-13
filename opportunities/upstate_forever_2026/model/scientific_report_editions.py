@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from .common import describe_file, digest, identifier, read_json, verify_file
+from .common import atomic_json, describe_file, digest, held, identifier, read_json, verify_file
 from . import observed_context
 
 KIND = "scientific-report-editions"
@@ -61,3 +61,62 @@ def files(value, selected):
             raise ValueError("Original report output uses a reserved saved-edition role")
         members[role] = describe_file(selected, selected / name)
     return members
+
+
+class PreviewChanged(ValueError):
+    """The selected native source edition differs from its reviewed preview."""
+
+
+def preview(workspace, payload):
+    """Prepare the same ordered-source preview used by the SourceReports queue."""
+    from . import observed_report_render as renderer
+    result = renderer.prepare(workspace, payload.get("sources"), title=payload.get("title"),
+                              contact=payload.get("contact"))
+    key = digest(result["render_identity"])
+    return {**result, "id": key, "existing": (directory(workspace, key) / "edition.json").is_file()}
+
+
+def render_prepared(workspace, prepared):
+    """Complete a retained original preview through the existing native renderer.
+
+    An original preview can retain its source-host path after Workspace transfer.
+    Its project belongs to the caller's retained operation; source bindings and
+    installed rendering bodies are checked by the same original rendering engine.
+    """
+    from . import observed_report_render as renderer
+    identity = prepared["render_identity"]
+    key = digest(identity)
+    if (prepared.get("schema") != "upstate.observed-report-preview/v1"
+            or prepared.get("id") != key
+            or prepared.get("operation_id") != "observed-report-" + key[:20]
+            or any(prepared.get(name) != identity.get(name)
+                   for name in ("title", "selection", "binding", "workspace"))):
+        raise ValueError("Use the retained original scientific report preview")
+    choices = observed_context.source_choices(identity["selection"])
+    if (prepared.get("source_count") != len(choices)
+            or [{"source_collection_id": row["source_collection_id"], "source_id": row["source_id"]}
+                for row in prepared.get("sources", [])] != choices):
+        raise ValueError("The original report preview changed its ordered source selection")
+    selected = directory(workspace, key)
+    # The original renderer owns report locking, native file reuse, original
+    # source retention, figure drawing and its installed-code identity checks.
+    with held(workspace.root / ".workspace.lock"):
+        result = renderer.render(workspace, prepared, selected)
+        value = {"schema": SCHEMA, "id": key, "project_id": workspace.project["id"],
+                 "title": prepared["title"], "render_identity": identity,
+                 **{name: result[name] for name in (
+                     "state", "operation_id", "source_count", "section_count",
+                     "figure_count", "sources", "files")}}
+        atomic_json(selected / "edition.json", value, immutable=True)
+    inspect(workspace, key)
+    return {"scientific_report_edition_id": key, "title": value["title"],
+            "state": "complete", "source_count": value["source_count"],
+            "operation_id": value["operation_id"]}
+
+
+def render(workspace, payload):
+    """Verify the explicit preview ID, then save its complete native edition."""
+    prepared = preview(workspace, payload)
+    if payload.get("preview_id") != prepared["id"]:
+        raise PreviewChanged("Preview this exact ordered study selection before preparing its report.")
+    return render_prepared(workspace, prepared)

@@ -33,7 +33,18 @@ export function renderCaseResources(value) {
     '<p class="note">These are the selected receipt’s observations. Shared-group totals include other processes and do not identify the cause of this case’s outcome.</p>';
 }
 
-export function attachParameterCaseConsole(host) {
+export function attachNativeCaseConsole(host, family = 'parameter-study') {
+  const settings = {
+    'parameter-study': {endpoint: '/api/parameter-studies/execution', queryId: 'id',
+      responseId: 'study_id', state: 'study_state', action: 'parameter-study.run',
+      payloadId: 'experiment_id', noun: 'study', initial: 'Run original study',
+      resume: 'Resume remaining study cases'},
+    'programme': {endpoint: '/api/programmes/execution', queryId: 'programme_id',
+      responseId: 'programme_id', state: 'programme_state', action: 'compute.programme.run',
+      payloadId: 'programme_id', noun: 'programme', initial: 'Run original programme',
+      resume: 'Continue unfinished programme runs'},
+  }[family];
+  if (!settings) throw new Error('Choose an original saved native case family.');
   let panel = null, selectedWorkspace = null, studyId = null, runId = null;
   let attemptId = '', stream = 'native', offset = null, expectedAttempt = '';
   let historyOffset = 0, snapshot = null, timer = null, request = null, listeners = null;
@@ -72,6 +83,7 @@ export function attachParameterCaseConsole(host) {
   function paint(value) {
     snapshot = value;
     const native = value.native, attempt = value.attempt;
+    const ownerActive = value.programme_active === true;
     panel.querySelector('[data-case-heading]').textContent =
       value.case_bindings.map(row => row.label || row.id).join(' / ');
     const phase = native.execution?.phase;
@@ -80,9 +92,11 @@ export function attachParameterCaseConsole(host) {
       (native.execution?.model ? ' · ' + native.execution.model.toUpperCase() : '');
     panel.querySelector('[data-case-live]').textContent = native.active
       ? 'This original native run currently holds its execution lock.'
+      : ownerActive
+      ? 'The original programme is active · ' + String(value.programme?.phase || '').replaceAll('_', ' ') + '.'
       : value.coordinator_active
       ? 'The workspace’s original native coordinator is active. Open its task to follow or reconnect that operation.'
-      : 'Open the saved case records or continue the same study’s remaining work.';
+      : 'Open the saved case records or continue the same ' + settings.noun + '’s remaining work.';
     const nativeError = native.error?.message || attempt?.error?.message;
     const error = panel.querySelector('[data-case-native-error]');
     error.hidden = !nativeError; error.textContent = nativeError || '';
@@ -104,13 +118,20 @@ export function attachParameterCaseConsole(host) {
       : '';
     const tasks = host.getState()?.tasks || [];
     const activeTasks = tasks.filter(task => task.workspace === selectedWorkspace &&
-      task.action === 'parameter-study.run' && task.payload?.experiment_id === studyId &&
+      task.action === settings.action && task.payload?.[settings.payloadId] === studyId &&
       ['running', 'queued'].includes(task.state));
-    const available = !native.active && !value.coordinator_active && !activeTasks.length &&
-      value.study_state !== 'complete';
+    const available = !native.active && !ownerActive && !value.coordinator_active && !activeTasks.length &&
+      value[settings.state] !== 'complete';
+    const owner = panel.querySelector('[data-case-owner]');
+    owner.textContent = settings.noun[0].toUpperCase() + settings.noun.slice(1) + ' · ' +
+      String(value[settings.state]).replaceAll('_', ' ') +
+      (value.programme?.recorded_state !== undefined && value.programme.recorded_state !== value.programme_state
+        ? ' (saved state: ' + String(value.programme.recorded_state).replaceAll('_', ' ') + ')' : '') +
+      (value.programme?.counts ? ' · ' + quantity(value.programme.counts.complete) + ' / ' +
+        quantity(value.programme.counts.total) + ' completed cases' : '');
     panel.querySelector('[data-case-resume]').disabled = !available;
     panel.querySelector('[data-case-resume]').textContent =
-      value.study_state === 'prepared' ? 'Run original study' : 'Resume remaining study cases';
+      value[settings.state] === 'prepared' ? settings.initial : settings.resume;
     const taskButton = panel.querySelector('[data-case-task]');
     taskButton.hidden = !attempt?.task_id || !tasks.some(task => task.id === attempt.task_id && task.workspace === selectedWorkspace);
     taskButton.dataset.taskId = attempt?.task_id || '';
@@ -161,23 +182,23 @@ export function attachParameterCaseConsole(host) {
       request_sha256: attempt?.request_sha256, request_body_sha256: attempt?.request_body_sha256});
     panel.querySelector('[data-case-receipts]').textContent = pretty({
       attempt, native_execution_history: native.execution_history, native_error: native.error,
-      verification: native.verification, continuation: value.continuation});
+      verification: native.verification, programme: value.programme, continuation: value.continuation});
   }
 
   async function update() {
     if (!current() || busy) return;
     clearTimeout(timer); busy = true;
     const epoch = generation, selectedPanel = panel;
-    const query = new URLSearchParams({workspace: selectedWorkspace, id: studyId, run_id: runId,
+    const query = new URLSearchParams({workspace: selectedWorkspace, [settings.queryId]: studyId, run_id: runId,
       stream, history_offset: String(historyOffset), limit: '25'});
     if (attemptId) query.set('attempt_id', attemptId);
     if (offset !== null) query.set('log_offset', String(offset));
     if (expectedAttempt) query.set('expected_attempt_id', expectedAttempt);
     request = new AbortController();
     try {
-      const value = await host.api('/api/parameter-studies/execution?' + query, {signal: request.signal});
+      const value = await host.api(settings.endpoint + '?' + query, {signal: request.signal});
       if (epoch !== generation || selectedPanel !== panel || !current()) return;
-      if (value.study_id !== studyId || value.native?.run_id !== runId)
+      if (value[settings.responseId] !== studyId || value.native?.run_id !== runId)
         throw new Error('The returned case differs from the original saved selection.');
       setError(null); paint(value);
     } catch (error) {
@@ -205,11 +226,11 @@ export function attachParameterCaseConsole(host) {
     if (name === 'native') { const id = runId; detach(); return host.openItem('runs', id); }
     if (name === 'task') { const id = node.dataset.taskId; detach(); return host.openItem('tasks', id); }
     if (name === 'resume') {
-      if (!snapshot || snapshot.native.active || snapshot.coordinator_active)
-        throw new Error('Follow the original active calculation before continuing this saved study.');
+      if (!snapshot || snapshot.native.active || snapshot.coordinator_active || snapshot.programme_active)
+        throw new Error('Follow the original active calculation before continuing this saved ' + settings.noun + '.');
       node.disabled = true;
-      const payload = {experiment_id: studyId};
-      await host.executeAction('parameter-study.run', payload);
+      const payload = {[settings.payloadId]: studyId};
+      await host.executeAction(settings.action, payload);
       return;
     }
     if (name === 'download' && snapshot) {
@@ -222,17 +243,17 @@ export function attachParameterCaseConsole(host) {
 
   async function open(study, run) {
     if (!/^[0-9a-f]{64}$/.test(study || '') || !/^[0-9a-f]{64}$/.test(run || ''))
-      throw new Error('Open an original saved parameter-study case.');
+      throw new Error('Open an original saved ' + settings.noun + ' case.');
     detach(); studyId = study; runId = run; selectedWorkspace = workspace();
     attemptId = ''; stream = 'native'; offset = null; expectedAttempt = '';
     historyOffset = 0; follow = true;
     host.detail('Saved native case',
       '<section class="native-console" data-parameter-case-console>' +
       '<h2 data-case-heading>Opening original case…</h2><p data-case-phase aria-live="polite"></p>' +
-      '<p class="note" data-case-live></p><div class="notice error" data-case-error hidden></div>' +
+      '<p class="note" data-case-owner></p><p class="note" data-case-live></p><div class="notice error" data-case-error hidden></div>' +
       '<div class="notice error" data-case-native-error hidden></div>' +
       '<div class="page-actions">' + action('refresh', 'Refresh') +
-      '<button type="button" data-case-console="resume" data-case-resume disabled>Resume remaining study cases</button>' +
+      '<button type="button" data-case-console="resume" data-case-resume disabled>' + esc(settings.resume) + '</button>' +
       action('native', 'Open native run') +
       '<button type="button" data-case-console="task" data-case-task hidden>Open original operator task</button>' +
       action('download', 'Download case record') + '</div>' +
@@ -250,7 +271,7 @@ export function attachParameterCaseConsole(host) {
       '<pre class="native-log" data-case-log tabindex="0" aria-label="Retained native log"></pre>' +
       '<details><summary>Original selected input identities</summary><pre data-case-identities></pre></details>' +
       '<details><summary>Original receipts and run history</summary><pre data-case-receipts></pre></details></section>',
-      {kind: 'parameter-case', id: study + ':' + run});
+      {kind: family + '-case', id: study + ':' + run});
     panel = document.querySelector('[data-parameter-case-console]');
     if (!panel) throw new Error('Open the saved native case in the current operator.');
     listeners = new AbortController();
@@ -265,4 +286,8 @@ export function attachParameterCaseConsole(host) {
   }
 
   return {open, detach};
+}
+
+export function attachParameterCaseConsole(host) {
+  return attachNativeCaseConsole(host, 'parameter-study');
 }

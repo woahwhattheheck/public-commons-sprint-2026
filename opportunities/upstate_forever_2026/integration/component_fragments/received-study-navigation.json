@@ -1,0 +1,22 @@
+{
+  "schema": "upstate.application-component-fragment/v1",
+  "id": "received-study-navigation",
+  "extend_components": {
+    "study-transfer": {
+      "paths": [
+        "docs/RECEIVED_STUDY_FIELDWORK.md",
+        "integration/component_fragments/received-study-navigation.json",
+        "model/study_receiving.py",
+        "operator/extensions/study-transfer.json",
+        "operator/study_receiving.py",
+        "operator/study_transfer.py",
+        "operator/web/extensions/study_transfer.css",
+        "operator/web/extensions/study_transfer.mjs",
+        "operator/web/received_studies.mjs"
+      ]
+    }
+  },
+  "source_reference": {
+    "workflow": "Original selected scientific report receiving to editable Implementation history and retained crew packets"
+  }
+}

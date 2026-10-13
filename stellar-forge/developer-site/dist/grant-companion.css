@@ -80,3 +80,23 @@ hr{border:0;border-top:1px solid #dadddf;margin:1.6rem 0}
   .companion-chapter pre{white-space:pre-wrap;overflow-wrap:anywhere;overflow:visible}
   a{color:#000}
 }
+
+/* Retained reading and complete edition comparison. */
+.reading-workspace{max-width:1480px;margin:0 auto;padding:1.25rem 2rem;border-bottom:1px solid #bfc2c5;background:#f8f9f9}
+.reading-workspace h2{font-size:1.25rem;margin:.25rem 0}.reading-workspace h3{font-size:1.1rem}
+.reading-workspace label{display:block;font-size:.875rem;font-weight:600}
+.reading-workspace input,.reading-workspace select,.reading-workspace textarea{display:block;width:100%;max-width:100%;min-height:40px;border:1px solid #a9adb1;background:#fff;color:#202124;padding:.5rem;font:inherit;border-radius:3px}
+.reading-workspace textarea{min-height:100px;resize:vertical}
+.reading-workspace [role=status]{min-height:1.5em;font-size:.875rem}
+.reading-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.75rem 1rem;margin:.75rem 0}
+.reading-actions{display:flex;gap:.6rem;align-items:end;flex-wrap:wrap;margin:.75rem 0}
+.reading-actions label{max-width:100%}.reading-workspace .reading-checkbox{display:flex;align-items:center;gap:.5rem;min-height:40px;font-weight:400}
+.reading-checkbox input{width:18px;min-height:18px}.reading-workspace details{margin:1rem 0;padding:.75rem;border:1px solid #c8cbce;background:#fff}
+.reading-workspace summary{font-weight:600;cursor:pointer}.reading-small{font-size:.78rem;overflow-wrap:anywhere;color:#555}
+.reading-note{border-top:1px solid #c8cbce;padding:.75rem 0}.reading-note h4{margin:.25rem 0}
+.reading-note p{overflow-wrap:anywhere}.reading-note pre,.reading-compare-grid pre{white-space:pre-wrap;overflow-wrap:anywhere;font:12px/1.5 ui-monospace,monospace}
+.reading-compare-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1rem}
+.reading-compare-grid>section{min-width:0;overflow-wrap:anywhere;border:1px solid #ddd;padding:.75rem}
+.reading-compare-grid pre{max-height:40rem;overflow:auto}.reading-compare-grid table{font-size:.78rem}.reading-compare-grid h2{font-size:1.15rem}
+@media(max-width:700px){.reading-workspace{padding:1rem}.reading-grid,.reading-compare-grid{grid-template-columns:1fr}.reading-actions>button{flex:1 1 auto}}
+@media print{.reading-workspace{display:none!important}}

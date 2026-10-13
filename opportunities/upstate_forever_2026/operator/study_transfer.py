@@ -39,6 +39,9 @@ class StudyTransfer:
     def read(self, workspace_key, operation, value=None):
         value = value or {}
         workspace = self.operator.ws(workspace_key)
+        if operation in {"received", "received-detail"}:
+            import study_receiving
+            return study_receiving.read(self.operator, workspace_key, operation, value)
         if operation == "catalog":
             return study_transfer.catalog(
                 workspace, kind=value.get("kind"), query=value.get("query", ""),

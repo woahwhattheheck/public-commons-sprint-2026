@@ -43,6 +43,8 @@ from .analysis_synthesis import AnalysisSynthesis
 from . import synthesis_http
 from .analysis_lineage import AnalysisLineage
 from . import lineage_http
+from . import worldbank_programmes_http
+from . import worldbank_intake_http
 from .analysis_publication import AnalysisPublications
 from . import publication_http, analysis_publication_cli
 from .errors import BuyerError, StateError
@@ -132,7 +134,7 @@ class AnalysisWorkspace:
     their imports and activations. Source registration is an operator action.
     """
 
-    def __init__(self, directory, *, checkout=None, node="node", research_connections=None, lineage_connections=None, publication_connections=None):
+    def __init__(self, directory, *, checkout=None, node="node", research_connections=None, lineage_connections=None, publication_connections=None, worldbank_core=None):
         self.database = DatasetDatabase(directory)
         self.checkout = str(Path(checkout).expanduser().resolve()) if checkout else None
         self.node = node
@@ -180,11 +182,46 @@ class AnalysisWorkspace:
             self.lineage = AnalysisLineage(self, connections=lineage_connections)
             self.publications = AnalysisPublications(self, connections=publication_connections)
             self._executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="dataset-analysis")
-        except BaseException:
+            # Lazy import preserves the original WorldBankAnalysis -> workspace join.
+            from .worldbank_programmes import WorldBankProgrammes
+            self.worldbank_programmes = WorldBankProgrammes(self, core=worldbank_core)
+            from .worldbank_intake import WorldBankIntake
+            self.worldbank_intake = WorldBankIntake(self, core=self.worldbank_programmes.core)
+        except BaseException as initial_error:
+            # Finish every initialized manager's shutdown attempt. A failed
+            # drain must not release this live workspace's exclusive owner.
+            cleanup_errors = []
+            for attribute, method in (
+                ("worldbank_intake", "close"), ("worldbank_programmes", "close"),
+                ("publications", "close"), ("lineage", "close"),
+                ("synthesis", "close"), ("research", "close"),
+                ("exports", "close"), ("workbooks", "close"),
+                ("archives", "close"), ("profiles", "cancel_all"),
+                ("_executor", "shutdown"),
+            ):
+                component = getattr(self, attribute, None)
+                if component is None:
+                    continue
+                try:
+                    if attribute == "_executor":
+                        component.shutdown(wait=True)
+                    else:
+                        getattr(component, method)()
+                except BaseException as cleanup_error:
+                    cleanup_error.add_note("Analysis constructor cleanup: " + attribute)
+                    cleanup_errors.append(cleanup_error)
+            if cleanup_errors:
+                initial_error.add_note("Analysis ownership retained because initialized cleanup did not complete.")
+                raise initial_error from BaseExceptionGroup(
+                    "Original Analysis constructor cleanup failures", cleanup_errors)
             os.close(self._owner)
             raise
 
     def close(self):
+        # The original recurring coordinator may still sequence Analysis jobs.
+        # Drain it before marking this workspace closed, without its job mutex.
+        self.worldbank_intake.close()
+        self.worldbank_programmes.close()
         with self._mutex:
             if self._closed:
                 return
@@ -688,6 +725,7 @@ def serve(workspace, *, port=0):
             if url.scheme or url.netloc or url.fragment:
                 return self._reply(400, {"error": "ANALYSIS_ROUTE_INVALID"})
             assets = {"/": (_analysis_ui.HTML, "text/html;charset=utf-8"), "/app.js": (_analysis_ui.JS, "text/javascript;charset=utf-8"), "/style.css": (_analysis_ui.CSS, "text/css;charset=utf-8")}
+            assets.update(worldbank_intake_http.assets())
             assets.update(synthesis_http.assets())
             assets.update(lineage_http.assets())
             assets.update(publication_http.assets())
@@ -707,6 +745,10 @@ def serve(workspace, *, port=0):
             if synthesis_http.get(self, workspace, url, query, parts):
                 return
             if lineage_http.get(self, workspace, url, query, parts):
+                return
+            if worldbank_intake_http.get(self, workspace, url, query, parts):
+                return
+            if worldbank_programmes_http.get(self, workspace, url, query, parts):
                 return
             if publication_http.get(self, workspace, url, query, parts):
                 return
@@ -874,6 +916,10 @@ def serve(workspace, *, port=0):
                     return
                 if lineage_http.post(self, workspace, url, parts, body):
                     return
+                if worldbank_intake_http.post(self, workspace, url, parts, body):
+                    return
+                if worldbank_programmes_http.post(self, workspace, url, parts, body):
+                    return
                 if publication_http.post(self, workspace, url, parts, body):
                     return
                 if url.path in {"/api/research-dossiers", "/api/research-sources", "/api/research-review", "/api/research-elements"}:
@@ -962,6 +1008,7 @@ def main():
     parser.add_argument("--database", required=True, help="Original private DatasetDatabase directory")
     parser.add_argument("--checkout", help="Matching full native Stellar Forge checkout/runtime, required for imports")
     parser.add_argument("--node", default="node")
+    parser.add_argument("--worldbank-core", help="Original installed World Bank core.py; browser requests select retained sources only")
     parser.add_argument("--research-connections", help="Private named original Research connections; browser requests select aliases only")
     parser.add_argument("--lineage-connections", help="Named original OpenLineage startup/token files; browser requests select aliases only")
     parser.add_argument("--publication-connections", help="Private aliases for the original Frictionless workbench and publisher; no token enters the browser")
@@ -1016,7 +1063,7 @@ def main():
     workspace = AnalysisWorkspace(args.database, checkout=args.checkout, node=args.node,
                                   research_connections=args.research_connections,
                                   lineage_connections=args.lineage_connections,
-                                  publication_connections=args.publication_connections)
+                                  publication_connections=args.publication_connections, worldbank_core=args.worldbank_core)
     try:
         if analysis_publication_cli.execute(workspace, args):
             return

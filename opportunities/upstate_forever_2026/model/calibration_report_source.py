@@ -14,12 +14,13 @@ import json
 from .common import (atomic_bytes, atomic_json, canonical, describe_file, digest,
                      held, identifier, read_json, verify_file)
 from . import calibration_review as reviews
-from . import observed_context
+from . import observed_context, observation_support
 from .scientific_figures import _validate_figure
 
 VERSION = 1
-EDITION = "native-calibration-review-report-v2"
-SUPPORTED_EDITIONS = frozenset({"native-calibration-review-report-v1", EDITION})
+EDITION = "native-calibration-review-report-v3-reference-basis"
+SUPPORTED_EDITIONS = frozenset({"native-calibration-review-report-v1",
+                               "native-calibration-review-report-v2", EDITION})
 KIND = "calibration-report-sources"
 DIRECTORY = "calibration-report-source-exports"
 SOURCE_ID = "native-calibration-review"
@@ -75,7 +76,7 @@ def _point_rows(report):
     return result
 
 
-def _figures(report):
+def _figures(report, metadata=None):
     points = _point_rows(report)
     figures = []
     for parameter in sorted({row["parameter"] for row in points}):
@@ -129,7 +130,9 @@ def _figures(report):
                         "the original objective, including its explicitly retained external annual "
                         "load where present. The nominal selected run is " + report["selected_run_id"]
                         + ". Original source-estimated reference methods and periods are retained "
-                        "in the accompanying source tables."),
+                        "in the accompanying source tables. Reference bases: "
+                        + "; ".join(dict.fromkeys(observation_support.reference_basis(row, metadata)["label"]
+                                                  for row in selected)) + "."),
             "panels": [panel],
         }
         _validate_figure(figure)
@@ -232,6 +235,12 @@ def _sections(review, report, plan, observed, detail, atlas):
             ]},
         ]],
     ]
+    sections.append(["Original constituent and analytical basis",
+                     observation_support.reference_basis_blocks(refs, observed.get("metadata"))])
+    if "tables/reference-basis.csv" in review["files"]:
+        sections[-1][1].append({"kind": "links", "items": [{
+            "title": "Complete original constituent identities and source fields",
+            "path": "dossier/tables/reference-basis.csv"}]})
     execution = reviews.native_execution(report, plan)
     execution_rows = execution.get("rows", [])
     selected_execution = [row for row in execution_rows if row["run_id"] == report["selected_run_id"]]
@@ -399,7 +408,7 @@ def prepare(workspace, review_id):
             atomic_bytes(directory / name, data, immutable=True)
             files[name] = describe_file(directory, directory / name)
 
-        figures = _figures(report)
+        figures = _figures(report, observed.get("metadata"))
         add("figures/specification.json", canonical({
             "schema": "upstate.scientific-figure-spec/v1", "edition": EDITION,
             "review_id": review["id"], "selected_run_id": report["selected_run_id"],
