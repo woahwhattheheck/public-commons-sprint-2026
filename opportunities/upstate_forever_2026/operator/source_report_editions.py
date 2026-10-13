@@ -1,12 +1,8 @@
 """Saved standalone scientific editions on the original operator queue and file transport."""
 from __future__ import annotations
 
-import hashlib
-import os
 from pathlib import Path, PurePosixPath
-import tempfile
 from urllib.parse import quote
-import zipfile
 
 from model.common import (atomic_json, describe_file, digest, held, identifier,
                           read_json, relative_file, verify_file)
@@ -109,51 +105,13 @@ class ScientificReportEditions:
         return self.operator._ticket(workspace, path, item, name), path
 
     def export(self, workspace, key):
-        ws = self.operator.ws(workspace)
-        record, directory, _ = self._inspect(ws, identifier(key))
-        destination = directory / "report-files.zip"
-        receipt = directory / "report-files.json"
-        files = self._files(record, directory)
-        members = {item["path"]: item for item in files.values()}
-        identity = {name: {field: item[field] for field in ("bytes", "sha256")}
-                    for name, item in sorted(members.items())}
-        with held(ws.root / ".workspace.lock"), held(directory / ".export.lock"):
-            if receipt.exists():
-                prior = read_json(receipt)
-                if prior.get("members") != identity:
-                    raise ValueError("The saved report archive belongs to another edition")
-                verify_file(directory, prior["file"])
-            else:
-                fd, temporary_name = tempfile.mkstemp(prefix=".report-files-", suffix=".zip", dir=directory)
-                os.close(fd)
-                temporary = Path(temporary_name)
-                try:
-                    with zipfile.ZipFile(temporary, "w", compression=zipfile.ZIP_DEFLATED,
-                                         allowZip64=True) as archive:
-                        for name, item in sorted(members.items()):
-                            path = relative_file(directory, name)
-                            info = zipfile.ZipInfo(name, (1980, 1, 1, 0, 0, 0))
-                            info.compress_type = zipfile.ZIP_DEFLATED
-                            info.external_attr = 0o100600 << 16
-                            info.file_size = item["bytes"]
-                            count, checksum = 0, hashlib.sha256()
-                            with path.open("rb") as source, archive.open(
-                                    info, "w", force_zip64=item["bytes"] >= zipfile.ZIP64_LIMIT) as target:
-                                while chunk := source.read(1024 * 1024):
-                                    count += len(chunk)
-                                    checksum.update(chunk)
-                                    target.write(chunk)
-                            if count != item["bytes"] or checksum.hexdigest() != item["sha256"]:
-                                raise ValueError("A saved scientific report file changed: " + name)
-                    os.replace(temporary, destination)
-                    atomic_json(receipt, {"members": identity,
-                                         "file": describe_file(directory, destination)}, immutable=True)
-                finally:
-                    temporary.unlink(missing_ok=True)
-            item = read_json(receipt)["file"]
-        return {"scientific_report_edition_id": key, "state": "complete",
-                "download": self.operator._ticket(workspace, destination, item,
-                                                  record["title"] + " — complete report files")}
+        result = retained_editions.export(self.operator.ws(workspace), identifier(key))
+        item = result["file"]
+        return {"scientific_report_edition_id": result["scientific_report_edition_id"],
+                "state": result["state"],
+                "download": self.operator._ticket(
+                    workspace, Path(result["directory"]) / item["path"], item,
+                    result["title"] + " — complete report files")}
 
 
     def briefing_catalog(self, workspace, source_edition_id):
