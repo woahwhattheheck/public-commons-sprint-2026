@@ -3,6 +3,7 @@
 from pathlib import Path
 import argparse,base64,json,mimetypes
 from html.parser import HTMLParser
+from review_workbench import augment
 
 class Links(HTMLParser):
     def __init__(self):super().__init__();self.links=[]
@@ -40,7 +41,7 @@ def main():
             add('report:'+mode+':'+href,path)
     payload=json.dumps(data,ensure_ascii=False,separators=(',',':'),allow_nan=False).replace('<','\\u003c')
     output=args.template.read_text().replace('__MAP__',(budget/'catchments.svg').read_text()).replace('__DATA__',payload)
-    args.output.parent.mkdir(parents=True,exist_ok=True);args.output.write_text(output)
+    args.output.parent.mkdir(parents=True,exist_ok=True);args.output.write_text(augment(output),encoding="utf-8")
     print(json.dumps({'path':str(args.output),'bytes':args.output.stat().st_size,'embedded_downloads':len(data['files'])}))
 
 if __name__=='__main__':main()
