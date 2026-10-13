@@ -16,7 +16,8 @@
         "source/monitoring-field-study/source-manifest.json",
         "source/monitoring-field-study/INSTALLATION.md",
         "integration/component_fragments/monitoring-field-study.json",
-        "source_tools/monitoring_field_selection_composition.py"
+        "source_tools/monitoring_field_selection_composition.py",
+        "source/monitoring-field-study/source/prepare_field_package_edition.py"
       ],
       "requires": [
         "monitoring-chemistry-study",

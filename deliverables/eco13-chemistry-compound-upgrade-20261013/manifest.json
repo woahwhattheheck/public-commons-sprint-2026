@@ -1,57 +1,64 @@
 {
   "schema": "upstate.chemistry-source-upgrade/v1",
-  "source_commit": "e230bbfe1e2ad71110de96e01ff26ebb6232d52e",
+  "source_commit": "8869efd5092de7b89b71db16d3fba60fabcc6729",
   "source_root": "opportunities/upstate_forever_2026",
-  "operation_id": "ECO13-MONITORING-FIELD-STUDY-UPGRADE-DD6B-20261013",
+  "operation_id": "ECO13-FIELD-ASSIGNMENT-COMPLETE-DD6B-20261013",
   "native_project_id": "b9d5d257-c6bb-4f07-b975-8e8c63705db3",
   "engine_version": "0.3.0",
   "installer": "operator/install_chemistry.py",
   "inventory": "integration/reach_chemistry/COMPOUND_SOURCE.json",
-  "source_files": 81,
-  "installed_files": 75,
-  "source_bytes": 1594702,
+  "source_files": 92,
+  "installed_files": 86,
+  "source_bytes": 1724148,
   "parts": [
     {
       "path": "source-01.json",
-      "bytes": 344145,
-      "sha256": "7c5aab9e02c3d8b67219e33034c081bf90b60f4da22251a55002b6858bf3db2a",
+      "bytes": 345967,
+      "sha256": "d1b1ce9e5cf7e2bcbf950044f88f790c4ccd052d9f2a6e4d6f81382ec8abebdc",
       "members": 25,
-      "source_bytes": 253582
+      "source_bytes": 255985
     },
     {
       "path": "source-02.json",
-      "bytes": 355317,
-      "sha256": "e15854901bd5ac301347c7bf89cc47f0830e26bf7b809d5842ced3748fd97d95",
+      "bytes": 356089,
+      "sha256": "7138e7a2782f2aa7f993fe3cb181e1fce29b6c1e906bd4dfa66e8fa81ffe2c90",
       "members": 15,
-      "source_bytes": 262800
+      "source_bytes": 264308
     },
     {
       "path": "source-03.json",
-      "bytes": 504068,
-      "sha256": "042e094a70a1a4dfba327db216628b55058e72ea12c33df9d0e97d1295a49a32",
+      "bytes": 503919,
+      "sha256": "3467384a315541d4a1b11e17536c511c3a0c3073f9aed4c48906aaa674cb6472",
       "members": 1,
       "source_bytes": 377616
     },
     {
       "path": "source-04.json",
-      "bytes": 63775,
-      "sha256": "1bb7af8f5283fa6cbeaca1e4eca41dfccbe6928ec445a478c245e6ef64936322",
+      "bytes": 63584,
+      "sha256": "fd0b57aa2acb0bb9f1517c2e2655420d57e52764b06b28350228d0f0a4c4aef5",
       "members": 2,
       "source_bytes": 47255
     },
     {
       "path": "source-05.json",
-      "bytes": 240133,
-      "sha256": "60d539b15ebb8c004a1da189b819d4d1ca7ff1014b374a706c680ed1ec4458d4",
+      "bytes": 239336,
+      "sha256": "cba5e7e610a42940ffad31f709233b4dadbcbd4fe220dd1e4232aef0fe64b2f6",
       "members": 14,
       "source_bytes": 177276
     },
     {
       "path": "source-06.json",
-      "bytes": 640363,
-      "sha256": "de621d2b606d022949f04f39bb5ea636a694a77554253f7b5f3048960dc3c6f1",
+      "bytes": 645640,
+      "sha256": "1892fb6d7422082c21d19e517f0b56ec2c9cd2ac56d360c48645fe3c95fafd15",
       "members": 24,
-      "source_bytes": 476173
+      "source_bytes": 480956
+    },
+    {
+      "path": "source-07.json",
+      "bytes": 163112,
+      "sha256": "5fc707d66a13f0c237e0b0d59bb8fce0a8e1b0d413f292a285f5e7c5270cdabf",
+      "members": 11,
+      "source_bytes": 120752
     }
   ],
   "files": [
@@ -60,35 +67,35 @@
       "bytes": 12010,
       "sha256": "81ec1c41e221af64148661e0be0f69eb39526920376ba6d010da1b8e2b50f82f",
       "role": "installed_component",
-      "source_commit": "326f0593b158251b03c371ed1a993de6e885b3a8"
+      "source_commit": "8869efd5092de7b89b71db16d3fba60fabcc6729"
     },
     {
       "path": "install_chemistry.py",
       "bytes": 293,
       "sha256": "3a6e006a1340dcdebe557b20b34228035a16c5667b9c1e19803bf2336f05a2c9",
       "role": "installed_component",
-      "source_commit": "326f0593b158251b03c371ed1a993de6e885b3a8"
+      "source_commit": "8869efd5092de7b89b71db16d3fba60fabcc6729"
     },
     {
       "path": "integration/component_fragments/chemistry-compound-observations.json",
       "bytes": 674,
       "sha256": "db30385a9f63e4526e08d5737965d1336f91a9936f36f06f3ae471b9cb07ef31",
       "role": "installed_component",
-      "source_commit": "326f0593b158251b03c371ed1a993de6e885b3a8"
+      "source_commit": "8869efd5092de7b89b71db16d3fba60fabcc6729"
     },
     {
       "path": "integration/component_fragments/chemistry_report_sources.json",
       "bytes": 511,
       "sha256": "896a7fc8b19492b8f65a3656ec1c31aeabfb2cbf637a6786835dc4b74ccf4644",
       "role": "installed_component",
-      "source_commit": "326f0593b158251b03c371ed1a993de6e885b3a8"
+      "source_commit": "8869efd5092de7b89b71db16d3fba60fabcc6729"
     },
     {
       "path": "integration/component_fragments/chemistry_reports.json",
       "bytes": 516,
       "sha256": "58bc7e277b9253f012e87811919e8889698b0b18c86bec9745cb22eeb44e1416",
       "role": "installed_component",
-      "source_commit": "5ee552982cfa2ffdd254032358d64c81064151ce",
+      "source_commit": "8869efd5092de7b89b71db16d3fba60fabcc6729",
       "previous_source_commit": "326f0593b158251b03c371ed1a993de6e885b3a8"
     },
     {
@@ -96,49 +103,56 @@
       "bytes": 798,
       "sha256": "197f33e4e57abc99bdeb3c6ffd4300cfa09b5f816ff6c16b5e65268b51b2bed8",
       "role": "installed_component",
-      "source_commit": "326f0593b158251b03c371ed1a993de6e885b3a8"
+      "source_commit": "8869efd5092de7b89b71db16d3fba60fabcc6729"
     },
     {
       "path": "integration/component_fragments/monitoring-chemistry-study.json",
       "bytes": 1811,
       "sha256": "547decbb015f91aa092c4d0672ec1630299101cdf7388768b42bec73bee7cdd0",
       "role": "installed_component",
-      "source_commit": "5ee552982cfa2ffdd254032358d64c81064151ce"
+      "source_commit": "8869efd5092de7b89b71db16d3fba60fabcc6729"
+    },
+    {
+      "path": "integration/component_fragments/monitoring-field-assignment.json",
+      "bytes": 1642,
+      "sha256": "a1bef6d6b6c746af63ce4ec39e9c3cf657d7733db9e342730377f37dc9bb35df",
+      "role": "installed_component",
+      "source_commit": "8869efd5092de7b89b71db16d3fba60fabcc6729"
     },
     {
       "path": "integration/component_fragments/monitoring-field-selection.json",
       "bytes": 933,
       "sha256": "e05a7f39cabe6ef233c2843c87f1f3bf6398b47aa8c876ea0557d2846d784dc4",
       "role": "installed_component",
-      "source_commit": "e230bbfe1e2ad71110de96e01ff26ebb6232d52e"
+      "source_commit": "8869efd5092de7b89b71db16d3fba60fabcc6729"
     },
     {
       "path": "integration/component_fragments/monitoring-field-study.json",
-      "bytes": 1570,
-      "sha256": "915b907e1a2531708efd1125501e43863e58ea79b7d12ca5d699c31d5946c7ef",
+      "bytes": 1651,
+      "sha256": "048caf88c4bd3bfc4e8843525848152895664d524da8ae4c033d2f6f5d03d4b0",
       "role": "installed_component",
-      "source_commit": "e230bbfe1e2ad71110de96e01ff26ebb6232d52e"
+      "source_commit": "8869efd5092de7b89b71db16d3fba60fabcc6729"
     },
     {
       "path": "integration/monitoring_observed_sources.json",
       "bytes": 45728,
       "sha256": "4a632a0c27007cfa9fb671739eaf2da9a96ee8191f43b3d97ad78c9df6b258a9",
       "role": "installed_component",
-      "source_commit": "e230bbfe1e2ad71110de96e01ff26ebb6232d52e"
+      "source_commit": "8869efd5092de7b89b71db16d3fba60fabcc6729"
     },
     {
       "path": "integration/monitoring_study_transfer_sources.json",
       "bytes": 26555,
       "sha256": "8ee0fd024c541d89541a23fbf83304dc71d8b79088603670ff0cf5dee40b0358",
       "role": "installed_component",
-      "source_commit": "e230bbfe1e2ad71110de96e01ff26ebb6232d52e"
+      "source_commit": "8869efd5092de7b89b71db16d3fba60fabcc6729"
     },
     {
       "path": "integration/reach_chemistry/COMPOUND_SOURCE.json",
-      "bytes": 17470,
-      "sha256": "d90e4992d165f8b7b1784e945c8df749a2ae31be1ee319ea494d1508d94452b8",
+      "bytes": 19873,
+      "sha256": "753d62209e498f402dc62fd657bbe5caca853c190be47074845b7a4ffe0b5662",
       "role": "installed_component",
-      "source_commit": "e230bbfe1e2ad71110de96e01ff26ebb6232d52e",
+      "source_commit": "8869efd5092de7b89b71db16d3fba60fabcc6729",
       "previous_source_commit": "5ee552982cfa2ffdd254032358d64c81064151ce"
     },
     {
@@ -146,42 +160,42 @@
       "bytes": 7099,
       "sha256": "0085740aa371b70f1ae5e9c9635aa6a2ea02701e1cad36009521d08b30f21e6d",
       "role": "installed_component",
-      "source_commit": "326f0593b158251b03c371ed1a993de6e885b3a8"
+      "source_commit": "8869efd5092de7b89b71db16d3fba60fabcc6729"
     },
     {
       "path": "integration/reach_chemistry/install_chemistry_legacy.py",
       "bytes": 7239,
       "sha256": "0229658125241edcc07b54bcd3a199c2e1f8ad06a85806044e404706052495ba",
       "role": "installed_component",
-      "source_commit": "326f0593b158251b03c371ed1a993de6e885b3a8"
+      "source_commit": "8869efd5092de7b89b71db16d3fba60fabcc6729"
     },
     {
       "path": "integrations/monitoring/PREDECESSORS.json",
       "bytes": 61953,
       "sha256": "d674e6a1d39e2a4f25523551d7f84cadd1ac9159f3380eebe376294f65216640",
       "role": "installed_component",
-      "source_commit": "e230bbfe1e2ad71110de96e01ff26ebb6232d52e"
+      "source_commit": "8869efd5092de7b89b71db16d3fba60fabcc6729"
     },
     {
       "path": "integrations/monitoring/current_application_files.json",
       "bytes": 8534,
       "sha256": "ac69363ed64ff85d98179c750dc579f641fe9706312b1ca90447ccc4ed0a6344",
       "role": "installed_component",
-      "source_commit": "e230bbfe1e2ad71110de96e01ff26ebb6232d52e"
+      "source_commit": "8869efd5092de7b89b71db16d3fba60fabcc6729"
     },
     {
       "path": "integrations/monitoring/source_adoption.json",
       "bytes": 52009,
       "sha256": "7087eed080244a6db9a3f762a56340275678b01dc8bb1654d1c333d8950d6dd4",
       "role": "installed_component",
-      "source_commit": "e230bbfe1e2ad71110de96e01ff26ebb6232d52e"
+      "source_commit": "8869efd5092de7b89b71db16d3fba60fabcc6729"
     },
     {
       "path": "model/CHEMISTRY_REPORTS.md",
       "bytes": 11685,
       "sha256": "9b738fd6f28b037e028b3f655f6a7895cafa8e5697e0d2cbc4504fd67412d992",
       "role": "installed_component",
-      "source_commit": "5ee552982cfa2ffdd254032358d64c81064151ce",
+      "source_commit": "8869efd5092de7b89b71db16d3fba60fabcc6729",
       "previous_source_commit": "326f0593b158251b03c371ed1a993de6e885b3a8"
     },
     {
@@ -189,119 +203,126 @@
       "bytes": 13283,
       "sha256": "b5a3f78a03fd469a7d084a07ad63f1c514219b240c8866c84faba4ff11a3db81",
       "role": "installed_component",
-      "source_commit": "326f0593b158251b03c371ed1a993de6e885b3a8"
+      "source_commit": "8869efd5092de7b89b71db16d3fba60fabcc6729"
     },
     {
       "path": "model/CHEMISTRY_STUDY_TRANSFER.md",
       "bytes": 10077,
       "sha256": "8bc2ff5f3ba72f1e25ee2f94f2b9f7c10d5898da4c57d60312f7f380eabd0a61",
       "role": "installed_component",
-      "source_commit": "326f0593b158251b03c371ed1a993de6e885b3a8"
+      "source_commit": "8869efd5092de7b89b71db16d3fba60fabcc6729"
     },
     {
       "path": "model/chemistry.py",
       "bytes": 23564,
       "sha256": "898f118238f90be7723b448821aba8ca6ba95c26f86642c75f0d05ec79c6d2d2",
       "role": "installed_component",
-      "source_commit": "326f0593b158251b03c371ed1a993de6e885b3a8"
+      "source_commit": "8869efd5092de7b89b71db16d3fba60fabcc6729"
     },
     {
       "path": "model/chemistry_cli.py",
       "bytes": 1161,
       "sha256": "4cf3e90a83474842cc4da0773c8d7c22fe1ecca2dc189da7347e52d4cc173cf2",
       "role": "installed_component",
-      "source_commit": "326f0593b158251b03c371ed1a993de6e885b3a8"
+      "source_commit": "8869efd5092de7b89b71db16d3fba60fabcc6729"
     },
     {
       "path": "model/chemistry_receiving.py",
       "bytes": 1713,
       "sha256": "1922cd3e239d750ccfb00217395eac4e3fd8e732bc2f26e5963dcb95099051e1",
       "role": "installed_component",
-      "source_commit": "326f0593b158251b03c371ed1a993de6e885b3a8"
+      "source_commit": "8869efd5092de7b89b71db16d3fba60fabcc6729"
     },
     {
       "path": "model/chemistry_report_source.py",
       "bytes": 43675,
       "sha256": "3dbdd1490fb7c7ffa8ec493ff023bec7117f8606683c26fec7e655342e39fb2c",
       "role": "installed_component",
-      "source_commit": "326f0593b158251b03c371ed1a993de6e885b3a8"
+      "source_commit": "8869efd5092de7b89b71db16d3fba60fabcc6729"
     },
     {
       "path": "model/chemistry_reports.py",
       "bytes": 13321,
       "sha256": "afdab18e74e78b2a7b7c4690067c91c7c7b6fdb66b9e94465b9dd0b976b288f0",
       "role": "installed_component",
-      "source_commit": "326f0593b158251b03c371ed1a993de6e885b3a8"
+      "source_commit": "8869efd5092de7b89b71db16d3fba60fabcc6729"
     },
     {
       "path": "model/chemistry_study_transfer.py",
       "bytes": 24377,
       "sha256": "2fefa43d8ac88706252500ecc64bf37682f2aa34ae80a88e55b3826ac4f670ca",
       "role": "installed_component",
-      "source_commit": "326f0593b158251b03c371ed1a993de6e885b3a8"
+      "source_commit": "8869efd5092de7b89b71db16d3fba60fabcc6729"
+    },
+    {
+      "path": "model/monitoring_field_assignment.py",
+      "bytes": 26552,
+      "sha256": "032b1d101ea14356f282041310242495adb1608624f6c633bf919b9d4c973c75",
+      "role": "installed_component",
+      "source_commit": "8869efd5092de7b89b71db16d3fba60fabcc6729"
     },
     {
       "path": "model/monitoring_field_selection.py",
       "bytes": 16868,
       "sha256": "3168fb44af42c9bbbf6855c9502917675a17849749a7b78a4e74fb2cecd1d5ea",
       "role": "installed_component",
-      "source_commit": "e230bbfe1e2ad71110de96e01ff26ebb6232d52e"
+      "source_commit": "8869efd5092de7b89b71db16d3fba60fabcc6729"
     },
     {
       "path": "model/reach_chemistry/OBSERVATIONS.md",
       "bytes": 5198,
       "sha256": "c0a2f30d9c4393d1592dfbb31cb8ded014096a064faecb156ae36120332e5465",
       "role": "installed_component",
-      "source_commit": "326f0593b158251b03c371ed1a993de6e885b3a8"
+      "source_commit": "8869efd5092de7b89b71db16d3fba60fabcc6729"
     },
     {
       "path": "model/reach_chemistry/__init__.py",
       "bytes": 452,
       "sha256": "e28dd88601593d8d8b017df42500509d985fd685068162f15ab8b04fcb8fc97d",
       "role": "installed_component",
-      "source_commit": "326f0593b158251b03c371ed1a993de6e885b3a8"
+      "source_commit": "8869efd5092de7b89b71db16d3fba60fabcc6729"
     },
     {
       "path": "model/reach_chemistry/__main__.py",
       "bytes": 47,
       "sha256": "79ee6f134c5c5193377cf9b189cbdcc3e2095e49ba9cec310114441c15a917c4",
       "role": "installed_component",
-      "source_commit": "326f0593b158251b03c371ed1a993de6e885b3a8"
+      "source_commit": "8869efd5092de7b89b71db16d3fba60fabcc6729"
     },
     {
       "path": "model/reach_chemistry/cli.py",
       "bytes": 5266,
       "sha256": "eb528efb01e30ed01fd166f6b6c271adc9dd5b573efced3f7aaa402f0b00d08c",
       "role": "installed_component",
-      "source_commit": "326f0593b158251b03c371ed1a993de6e885b3a8"
+      "source_commit": "8869efd5092de7b89b71db16d3fba60fabcc6729"
     },
     {
       "path": "model/reach_chemistry/inference.py",
       "bytes": 28892,
       "sha256": "a211132510f037d9ea4eacfeb034d6cc6447044c691618fb30818d3f03103210",
       "role": "installed_component",
-      "source_commit": "326f0593b158251b03c371ed1a993de6e885b3a8"
+      "source_commit": "8869efd5092de7b89b71db16d3fba60fabcc6729"
     },
     {
       "path": "model/reach_chemistry/io.py",
       "bytes": 7889,
       "sha256": "5089e364db63b90057fbc00685626c747999bedbe9d3fc5978a22411b5019407",
       "role": "installed_component",
-      "source_commit": "326f0593b158251b03c371ed1a993de6e885b3a8"
+      "source_commit": "8869efd5092de7b89b71db16d3fba60fabcc6729"
     },
     {
       "path": "model/reach_chemistry/model.py",
       "bytes": 16372,
       "sha256": "d8266d41953cc5a0c9469422c4b6baab083b1dae0abfbbf2b6b67bad32a4e14c",
       "role": "installed_component",
-      "source_commit": "326f0593b158251b03c371ed1a993de6e885b3a8"
+      "source_commit": "8869efd5092de7b89b71db16d3fba60fabcc6729"
     },
     {
       "path": "model/reach_chemistry/reporting.py",
       "bytes": 42356,
       "sha256": "8b8512b7e56b03cc9ba17b9b90d22837c172916d0f47cf741f04cabbb90ab8e1",
       "role": "installed_component",
-      "source_commit": "5ee552982cfa2ffdd254032358d64c81064151ce",
+      "source_commit": "8869efd5092de7b89b71db16d3fba60fabcc6729",
       "previous_source_commit": "326f0593b158251b03c371ed1a993de6e885b3a8"
     },
     {
@@ -309,127 +330,155 @@
       "bytes": 2263,
       "sha256": "b3980996de0de86680fa8477367868feb7f7bf8641f044bf671fa371a780c58e",
       "role": "installed_component",
-      "source_commit": "326f0593b158251b03c371ed1a993de6e885b3a8"
+      "source_commit": "8869efd5092de7b89b71db16d3fba60fabcc6729"
     },
     {
       "path": "model/reach_chemistry/solver.py",
       "bytes": 12398,
       "sha256": "0523bdf585a92cd727b8c6db3089b35224bdb8adc39b45411526c5874ca5eb37",
       "role": "installed_component",
-      "source_commit": "326f0593b158251b03c371ed1a993de6e885b3a8"
+      "source_commit": "8869efd5092de7b89b71db16d3fba60fabcc6729"
     },
     {
       "path": "operator/CHEMISTRY_COMPOUND_OBSERVATIONS.md",
       "bytes": 8197,
       "sha256": "725ea69d04761b07a42c9743773f17beaf7eb401eecdfe1e21afb517e53b3ee5",
       "role": "installed_component",
-      "source_commit": "326f0593b158251b03c371ed1a993de6e885b3a8"
+      "source_commit": "8869efd5092de7b89b71db16d3fba60fabcc6729"
     },
     {
       "path": "operator/CHEMISTRY_OPERATOR.md",
       "bytes": 24586,
       "sha256": "d51bde3936251066372f31f9d2434b6cdd8807285ceb8d14b45867d7e17cf30a",
       "role": "installed_component",
-      "source_commit": "326f0593b158251b03c371ed1a993de6e885b3a8"
+      "source_commit": "8869efd5092de7b89b71db16d3fba60fabcc6729"
     },
     {
       "path": "operator/MONITORING_FIELD_SELECTION.md",
       "bytes": 7795,
       "sha256": "5f5012281d132c2d922c18d52867ca48efbda07fc05ce126e394ebbcfe0f21a9",
       "role": "installed_component",
-      "source_commit": "e230bbfe1e2ad71110de96e01ff26ebb6232d52e"
+      "source_commit": "8869efd5092de7b89b71db16d3fba60fabcc6729"
     },
     {
       "path": "operator/chemistry.py",
       "bytes": 6549,
       "sha256": "f4cff632b8f328a35f650c5644674cd4e9844ba0a283fc1acfef0c23de80577a",
       "role": "installed_component",
-      "source_commit": "326f0593b158251b03c371ed1a993de6e885b3a8"
+      "source_commit": "8869efd5092de7b89b71db16d3fba60fabcc6729"
     },
     {
       "path": "operator/extensions/chemistry.json",
       "bytes": 3683,
       "sha256": "a184f18b3d84e5986e6c8592afb04253908e8a6cbc4fd5f4eb66af2f6a2ca570",
       "role": "installed_component",
-      "source_commit": "326f0593b158251b03c371ed1a993de6e885b3a8"
+      "source_commit": "8869efd5092de7b89b71db16d3fba60fabcc6729"
+    },
+    {
+      "path": "operator/extensions/monitoring-field-assignment.json",
+      "bytes": 3199,
+      "sha256": "5fd962a01b795ba8ef6aca69bdf95f2d5bb34b77e0c2d448c6c944953aafad26",
+      "role": "installed_component",
+      "source_commit": "8869efd5092de7b89b71db16d3fba60fabcc6729"
     },
     {
       "path": "operator/extensions/monitoring-field-selection.json",
       "bytes": 1974,
       "sha256": "74108c706cc569c12d578c1672dd7c9c48747702f45d9d402b309906b513d1a9",
       "role": "installed_component",
-      "source_commit": "e230bbfe1e2ad71110de96e01ff26ebb6232d52e"
+      "source_commit": "8869efd5092de7b89b71db16d3fba60fabcc6729"
     },
     {
       "path": "operator/install_chemistry.py",
-      "bytes": 34769,
-      "sha256": "70ad65fa6d5dcfc07f85fe6f23c71db1d3717dd4b75868e7d15b765b89195682",
+      "bytes": 36277,
+      "sha256": "378dd5acc709fae2488663bcd8c4f381da0cacc8e8fd0a662620e579ed89cdb5",
       "role": "installed_component",
-      "source_commit": "e230bbfe1e2ad71110de96e01ff26ebb6232d52e",
+      "source_commit": "8869efd5092de7b89b71db16d3fba60fabcc6729",
       "previous_source_commit": "5ee552982cfa2ffdd254032358d64c81064151ce"
+    },
+    {
+      "path": "operator/monitoring_field_assignment_operator.py",
+      "bytes": 1864,
+      "sha256": "1c80279ebce152554acd1ce35433e82f430749f028a8c61b4df8dee81940f53d",
+      "role": "installed_component",
+      "source_commit": "8869efd5092de7b89b71db16d3fba60fabcc6729"
     },
     {
       "path": "operator/monitoring_field_selection_native.py",
       "bytes": 2367,
       "sha256": "1077d4f492e88e33a12cecf9a8504f13775fc0cf811d972d7fa116497a15f45c",
       "role": "installed_component",
-      "source_commit": "e230bbfe1e2ad71110de96e01ff26ebb6232d52e"
+      "source_commit": "8869efd5092de7b89b71db16d3fba60fabcc6729"
     },
     {
       "path": "operator/web/chemistry-native.mjs",
       "bytes": 4558,
       "sha256": "4166b96a2e031926a49faf49f5063dc2a63546dbc0c74d76ebaa9ec95db82da0",
       "role": "installed_component",
-      "source_commit": "326f0593b158251b03c371ed1a993de6e885b3a8"
+      "source_commit": "8869efd5092de7b89b71db16d3fba60fabcc6729"
     },
     {
       "path": "operator/web/chemistry.css",
       "bytes": 2393,
       "sha256": "4276c4dca88f4987abc2062cf60ec00121ef97d18d7f9a2a4e247dcc2211aff7",
       "role": "installed_component",
-      "source_commit": "326f0593b158251b03c371ed1a993de6e885b3a8"
+      "source_commit": "8869efd5092de7b89b71db16d3fba60fabcc6729"
     },
     {
       "path": "operator/web/chemistry.mjs",
       "bytes": 35351,
       "sha256": "3a80140d808eb0d419641f02b6a25fea1111baf0fe93fd8cdb422b06e4c20065",
       "role": "installed_component",
-      "source_commit": "326f0593b158251b03c371ed1a993de6e885b3a8"
+      "source_commit": "8869efd5092de7b89b71db16d3fba60fabcc6729"
     },
     {
       "path": "operator/web/monitoring-field-selection.css",
       "bytes": 1451,
       "sha256": "0b53126ea205d7dcdcda34dec4a4e2ed5b0de6a00b7bc41352f6205efce90a82",
       "role": "installed_component",
-      "source_commit": "e230bbfe1e2ad71110de96e01ff26ebb6232d52e"
+      "source_commit": "8869efd5092de7b89b71db16d3fba60fabcc6729"
     },
     {
       "path": "operator/web/monitoring-field-selection.mjs",
       "bytes": 10454,
       "sha256": "6777157bb63378175693b44a7457029883435992a8c4f5ba45ff537763433a64",
       "role": "installed_component",
-      "source_commit": "e230bbfe1e2ad71110de96e01ff26ebb6232d52e"
+      "source_commit": "8869efd5092de7b89b71db16d3fba60fabcc6729"
     },
     {
       "path": "operator/web/monitoring.mjs",
       "bytes": 13439,
       "sha256": "e74108536d78fe90637d358cbd304e1ece3a1a89efd95dfd6d1fa095f5b116ab",
       "role": "shared_composition_reference",
-      "source_commit": "e230bbfe1e2ad71110de96e01ff26ebb6232d52e"
+      "source_commit": "8869efd5092de7b89b71db16d3fba60fabcc6729"
+    },
+    {
+      "path": "operator/web/monitoring_field_assignment.css",
+      "bytes": 1898,
+      "sha256": "cd8b186cf49165bc38cffa126bf7af1b1342be3f4831aad25cace7e082d87b35",
+      "role": "installed_component",
+      "source_commit": "8869efd5092de7b89b71db16d3fba60fabcc6729"
+    },
+    {
+      "path": "operator/web/monitoring_field_assignment.mjs",
+      "bytes": 19475,
+      "sha256": "e7a2d6ef5ebcbcc0acdb033587b278654612552c4e5a8c0fd0dc30f05b7d2104",
+      "role": "installed_component",
+      "source_commit": "8869efd5092de7b89b71db16d3fba60fabcc6729"
     },
     {
       "path": "requirements-chemistry.txt",
       "bytes": 24,
       "sha256": "794e78e97975a317667c64e1975884140754ff26feb267649b3d4e0249549522",
       "role": "installed_component",
-      "source_commit": "326f0593b158251b03c371ed1a993de6e885b3a8"
+      "source_commit": "8869efd5092de7b89b71db16d3fba60fabcc6729"
     },
     {
       "path": "source/CHEMISTRY_COMPOUND_RECEIVING.md",
       "bytes": 15972,
       "sha256": "206ddf19ce47cdd83d606bef0e59f7756711c5bcd21649fec3ab1a739d25f119",
       "role": "receiving_driver",
-      "source_commit": "2714cfca13fc4d0939ca9aa32834d0f3dfed9846",
+      "source_commit": "8869efd5092de7b89b71db16d3fba60fabcc6729",
       "source_git_blob": "c5e8e1334b31ec9a5f29c32bd75b78c1f35db939",
       "original_source_commit": "5a8c02a05f2c45c758d361c44c624479bfa157b4"
     },
@@ -440,7 +489,7 @@
       "role": "receiving_driver",
       "source_git_blob": "69a457a2ed0d469c216552e8b3b0a73f2d532d50",
       "previous_source_commit": "326f0593b158251b03c371ed1a993de6e885b3a8",
-      "source_commit": "1f4c4d710fd6cb0dd80cdb54b623ff0a4b1b9332",
+      "source_commit": "8869efd5092de7b89b71db16d3fba60fabcc6729",
       "previous_source_bank_git_blob": "82fcbaafaab280c38de102b76e1744668a1af2cc"
     },
     {
@@ -450,7 +499,7 @@
       "role": "receiving_driver",
       "source_git_blob": "4fd99c9d2644ecf2dd027efbb7e03aa536257b0e",
       "previous_source_commit": "326f0593b158251b03c371ed1a993de6e885b3a8",
-      "source_commit": "1f4c4d710fd6cb0dd80cdb54b623ff0a4b1b9332",
+      "source_commit": "8869efd5092de7b89b71db16d3fba60fabcc6729",
       "previous_source_bank_git_blob": "82fcbaafaab280c38de102b76e1744668a1af2cc"
     },
     {
@@ -458,28 +507,28 @@
       "bytes": 377616,
       "sha256": "ff2b0cfad89d8bf522b3d2d6dc7fecc217658881f3459f80716feffb476db381",
       "role": "receiving_source_bank",
-      "source_commit": "326f0593b158251b03c371ed1a993de6e885b3a8"
+      "source_commit": "8869efd5092de7b89b71db16d3fba60fabcc6729"
     },
     {
       "path": "source/monitoring-chemistry-study/COMPOUND_SOURCE.json",
       "bytes": 9135,
       "sha256": "532dcb9f3029a74b84568696abd55a406624a87baf65ad28dadf6ca735555bc5",
       "role": "installed_component",
-      "source_commit": "5ee552982cfa2ffdd254032358d64c81064151ce"
+      "source_commit": "8869efd5092de7b89b71db16d3fba60fabcc6729"
     },
     {
       "path": "source/monitoring-chemistry-study/CURRENT_OWNER_DIRECTION.md",
       "bytes": 4999,
       "sha256": "57945ea0e6eca762011e9f7e6febd39255359143d454fd3aa58a3a849ec14fc9",
       "role": "installed_component",
-      "source_commit": "5ee552982cfa2ffdd254032358d64c81064151ce"
+      "source_commit": "8869efd5092de7b89b71db16d3fba60fabcc6729"
     },
     {
       "path": "source/monitoring-chemistry-study/README.md",
       "bytes": 14422,
       "sha256": "5f1dd0d418164d0609398c546a941ace48d21e4df7cfdb56b976385ea90d6c49",
       "role": "installed_component",
-      "source_commit": "e230bbfe1e2ad71110de96e01ff26ebb6232d52e",
+      "source_commit": "8869efd5092de7b89b71db16d3fba60fabcc6729",
       "previous_source_commit": "5ee552982cfa2ffdd254032358d64c81064151ce"
     },
     {
@@ -487,14 +536,14 @@
       "bytes": 3355,
       "sha256": "a30a600b001481e6296b037307039763635921db75ca7bdcfe70cf2f3bd477fa",
       "role": "installed_component",
-      "source_commit": "5ee552982cfa2ffdd254032358d64c81064151ce"
+      "source_commit": "8869efd5092de7b89b71db16d3fba60fabcc6729"
     },
     {
       "path": "source/monitoring-chemistry-study/capture_editable_workspace.py",
       "bytes": 12732,
       "sha256": "3f6d35598148188b6eaa37ad285359d46a6b6c034af9e838b1245090e24e8f3d",
       "role": "installed_component",
-      "source_commit": "e230bbfe1e2ad71110de96e01ff26ebb6232d52e",
+      "source_commit": "8869efd5092de7b89b71db16d3fba60fabcc6729",
       "previous_source_commit": "5ee552982cfa2ffdd254032358d64c81064151ce"
     },
     {
@@ -502,14 +551,14 @@
       "bytes": 8646,
       "sha256": "de0bdced0fd048173f930dc54045abdd98ed2bf823a86c91fef94da79531bf2c",
       "role": "installed_component",
-      "source_commit": "5ee552982cfa2ffdd254032358d64c81064151ce"
+      "source_commit": "8869efd5092de7b89b71db16d3fba60fabcc6729"
     },
     {
       "path": "source/monitoring-chemistry-study/open_completed_study.py",
       "bytes": 15458,
       "sha256": "fda28c95aebc32e608e3f9204982f3d5fe9ff01a0c80e4add57b570b2f7276bd",
       "role": "installed_component",
-      "source_commit": "e230bbfe1e2ad71110de96e01ff26ebb6232d52e",
+      "source_commit": "8869efd5092de7b89b71db16d3fba60fabcc6729",
       "previous_source_commit": "5ee552982cfa2ffdd254032358d64c81064151ce"
     },
     {
@@ -517,112 +566,126 @@
       "bytes": 11780,
       "sha256": "dae34f48d6b74ab9a5d8828d41f008022012c56d7a7d0c7d3800f7ac3ffe16b9",
       "role": "installed_component",
-      "source_commit": "5ee552982cfa2ffdd254032358d64c81064151ce"
+      "source_commit": "8869efd5092de7b89b71db16d3fba60fabcc6729"
     },
     {
       "path": "source/monitoring-chemistry-study/presentation_tables.py",
       "bytes": 4953,
       "sha256": "1dde6dec7b5b630dd3b2711b4bbc14717cd92294e599a41731878c3a79fd7c76",
       "role": "installed_component",
-      "source_commit": "5ee552982cfa2ffdd254032358d64c81064151ce"
+      "source_commit": "8869efd5092de7b89b71db16d3fba60fabcc6729"
     },
     {
       "path": "source/monitoring-chemistry-study/refresh_report_layout.py",
       "bytes": 5519,
       "sha256": "17ff1d6d0adac6d5357ebe75a3947bad201644fd1b3b38016e137c90f71044c1",
       "role": "installed_component",
-      "source_commit": "5ee552982cfa2ffdd254032358d64c81064151ce"
+      "source_commit": "8869efd5092de7b89b71db16d3fba60fabcc6729"
     },
     {
       "path": "source/monitoring-chemistry-study/reporting.py",
       "bytes": 42356,
       "sha256": "8b8512b7e56b03cc9ba17b9b90d22837c172916d0f47cf741f04cabbb90ab8e1",
       "role": "installed_component",
-      "source_commit": "5ee552982cfa2ffdd254032358d64c81064151ce"
+      "source_commit": "8869efd5092de7b89b71db16d3fba60fabcc6729"
     },
     {
       "path": "source/monitoring-chemistry-study/run_compound_native.py",
       "bytes": 12590,
       "sha256": "62b5c3406179d80895b1a9664057a299a1e1339c01dafa392c5b003582803831",
       "role": "installed_component",
-      "source_commit": "5ee552982cfa2ffdd254032358d64c81064151ce"
+      "source_commit": "8869efd5092de7b89b71db16d3fba60fabcc6729"
     },
     {
       "path": "source/monitoring-chemistry-study/study.html",
       "bytes": 29520,
       "sha256": "7a7eb38d40bb9ff10864574682675dfc2c4d29bf768a9b7cc2ef4a5d4b3e7519",
       "role": "installed_component",
-      "source_commit": "5ee552982cfa2ffdd254032358d64c81064151ce"
+      "source_commit": "8869efd5092de7b89b71db16d3fba60fabcc6729"
     },
     {
       "path": "source/monitoring-field-study/CURRENT_OWNER_DIRECTION.md",
       "bytes": 4999,
       "sha256": "57945ea0e6eca762011e9f7e6febd39255359143d454fd3aa58a3a849ec14fc9",
       "role": "installed_component",
-      "source_commit": "e230bbfe1e2ad71110de96e01ff26ebb6232d52e"
+      "source_commit": "8869efd5092de7b89b71db16d3fba60fabcc6729"
     },
     {
       "path": "source/monitoring-field-study/INSTALLATION.md",
-      "bytes": 21241,
-      "sha256": "c3374d5f109820a16e6f1245fbafe8d92a83d5092f086a818c006bb716e71c42",
+      "bytes": 24401,
+      "sha256": "5c101eea446c487f4ad46efdeb9ffbd38d9bf2c20f825d5422b19b03b484b03c",
       "role": "installed_component",
-      "source_commit": "e230bbfe1e2ad71110de96e01ff26ebb6232d52e"
+      "source_commit": "8869efd5092de7b89b71db16d3fba60fabcc6729"
     },
     {
       "path": "source/monitoring-field-study/README.md",
       "bytes": 4079,
       "sha256": "7d5029a7f2b31846dd7bc3fd51105c90ad713e425a2d435b806f3748c3ee2507",
       "role": "installed_component",
-      "source_commit": "e230bbfe1e2ad71110de96e01ff26ebb6232d52e"
+      "source_commit": "8869efd5092de7b89b71db16d3fba60fabcc6729"
     },
     {
       "path": "source/monitoring-field-study/source-manifest.json",
-      "bytes": 129156,
-      "sha256": "e4fddfb4837676f96e8722f05b582b8cdc7f186cb20dd5fe050636aff090f7db",
+      "bytes": 130698,
+      "sha256": "cfa0cb8bb0a0d7c7054eed8e37f479947d951aba6f4dfc3a3f64e08e3ce2dc88",
       "role": "installed_component",
-      "source_commit": "e230bbfe1e2ad71110de96e01ff26ebb6232d52e"
+      "source_commit": "8869efd5092de7b89b71db16d3fba60fabcc6729"
     },
     {
       "path": "source/monitoring-field-study/source/build_field_page.py",
       "bytes": 2735,
       "sha256": "37ba9a8eb9b7bcc325040b27996ba18a7de7f00a269959036283eb9415573fc6",
       "role": "installed_component",
-      "source_commit": "e230bbfe1e2ad71110de96e01ff26ebb6232d52e"
+      "source_commit": "8869efd5092de7b89b71db16d3fba60fabcc6729"
     },
     {
       "path": "source/monitoring-field-study/source/build_field_support.py",
       "bytes": 16171,
       "sha256": "df577042f70fc1dfa6c991016f0bc847e8336cc57544bb8f84b0e7658f5bbd8b",
       "role": "installed_component",
-      "source_commit": "e230bbfe1e2ad71110de96e01ff26ebb6232d52e"
+      "source_commit": "8869efd5092de7b89b71db16d3fba60fabcc6729"
     },
     {
       "path": "source/monitoring-field-study/source/field_planning.html",
       "bytes": 34166,
       "sha256": "1bffa954dc26fc348e359558b5290ac7271926dfda53bf054e7407291313d266",
       "role": "installed_component",
-      "source_commit": "e230bbfe1e2ad71110de96e01ff26ebb6232d52e"
+      "source_commit": "8869efd5092de7b89b71db16d3fba60fabcc6729"
     },
     {
       "path": "source/monitoring-field-study/source/make_field_brief.py",
       "bytes": 5564,
       "sha256": "95c446f933049a97beff8ab3acf73e86e704b591e0de88538883d87f6aa2f1f2",
       "role": "installed_component",
-      "source_commit": "e230bbfe1e2ad71110de96e01ff26ebb6232d52e"
+      "source_commit": "8869efd5092de7b89b71db16d3fba60fabcc6729"
+    },
+    {
+      "path": "source/monitoring-field-study/source/prepare_field_package_edition.py",
+      "bytes": 8089,
+      "sha256": "bfa6a314eb25ef05b41a6fb6ce7b44ab36fc596cc66af5f086508d0ac0d4a4ef",
+      "role": "installed_component",
+      "source_commit": "8869efd5092de7b89b71db16d3fba60fabcc6729"
     },
     {
       "path": "source/monitoring-field-study/source/receive_field_support.py",
       "bytes": 2594,
       "sha256": "0c0b4ffaa3d4d58ad40babe385950c74164375348f1ca6bf1a1c40318993f2ea",
       "role": "installed_component",
-      "source_commit": "e230bbfe1e2ad71110de96e01ff26ebb6232d52e"
+      "source_commit": "8869efd5092de7b89b71db16d3fba60fabcc6729"
+    },
+    {
+      "path": "source/monitoring_field_assignment/RECEIVING.md",
+      "bytes": 20296,
+      "sha256": "65b4d54becc54bf7f6f168190e15c0485067a03260838ad999c0606988449e1b",
+      "role": "installed_component",
+      "source_commit": "8869efd5092de7b89b71db16d3fba60fabcc6729"
     },
     {
       "path": "source/run_chemistry_compound_receiving.py",
       "bytes": 41552,
       "sha256": "e1e459b8aef8ad9c8d26e5e04fdeb75dd4014349a8b045595d5c64788e8f5e44",
       "role": "receiving_driver",
-      "source_commit": "2714cfca13fc4d0939ca9aa32834d0f3dfed9846",
+      "source_commit": "8869efd5092de7b89b71db16d3fba60fabcc6729",
       "source_git_blob": "46424b4a2098173a4e04f4797f60d00b724d7dd9",
       "original_source_commit": "5a8c02a05f2c45c758d361c44c624479bfa157b4"
     },
@@ -631,14 +694,35 @@
       "bytes": 5703,
       "sha256": "511d363a41a9ac474047c41ea8da4d89a53aad243441261727832dd27fdfaf5a",
       "role": "installed_component",
-      "source_commit": "326f0593b158251b03c371ed1a993de6e885b3a8"
+      "source_commit": "8869efd5092de7b89b71db16d3fba60fabcc6729"
+    },
+    {
+      "path": "source_tools/monitoring_field_assignment_browser.mjs",
+      "bytes": 18057,
+      "sha256": "04473af7fe98b1befb03e9ac6433d20a6cf53a9b5646e6740358072cab784dbf",
+      "role": "installed_component",
+      "source_commit": "8869efd5092de7b89b71db16d3fba60fabcc6729"
     },
     {
       "path": "source_tools/monitoring_field_selection_composition.py",
       "bytes": 3838,
       "sha256": "5b36171a60d030ed1936f19f94f0e09fdcb4edc2ca04723ca947ae55c7fc9a28",
       "role": "installed_component",
-      "source_commit": "e230bbfe1e2ad71110de96e01ff26ebb6232d52e"
+      "source_commit": "8869efd5092de7b89b71db16d3fba60fabcc6729"
+    },
+    {
+      "path": "source_tools/receive_monitoring_field_assignment.py",
+      "bytes": 8143,
+      "sha256": "2efea03a1e0519a45b7d2de21be70c363456475fa14f84c7ef3ca2bfa39d4aa0",
+      "role": "installed_component",
+      "source_commit": "8869efd5092de7b89b71db16d3fba60fabcc6729"
+    },
+    {
+      "path": "source_tools/receive_monitoring_field_assignment_browser.mjs",
+      "bytes": 11537,
+      "sha256": "baa62ff972c7d07c64a54896c04228ba5046ab536030481043a3c64a2769d6ef",
+      "role": "installed_component",
+      "source_commit": "8869efd5092de7b89b71db16d3fba60fabcc6729"
     }
   ],
   "bootstrap": {
@@ -685,7 +769,10 @@
       "model/monitoring_campaign.py",
       "model/monitoring_common.py",
       "model/monitoring_sources.py",
-      "operator/web/monitoring.mjs"
+      "operator/web/monitoring.mjs",
+      "model/implementation.py",
+      "model/implementation_schema.py",
+      "model/portable_implementation.py"
     ],
     "required_native_runtime": [
       "model/workspace.py",
@@ -700,7 +787,10 @@
       "model/monitoring_campaign.py",
       "model/monitoring_common.py",
       "model/monitoring_sources.py",
-      "operator/web/monitoring.mjs"
+      "operator/web/monitoring.mjs",
+      "model/implementation.py",
+      "model/implementation_schema.py",
+      "model/portable_implementation.py"
     ],
     "scientific_python": [
       "numpy",
@@ -751,7 +841,7 @@
     "scientific_report_edition_id": "Retain the exact completed native edition, original source order, title, contact and selected Study identity.",
     "request_recovery_source_commit": "1f4c4d710fd6cb0dd80cdb54b623ff0a4b1b9332"
   },
-  "previous_source_commit": "5ee552982cfa2ffdd254032358d64c81064151ce",
+  "previous_source_commit": "e230bbfe1e2ad71110de96e01ff26ebb6232d52e",
   "scientific_report_edition": "reach-chemistry-scientific-report/4",
   "completed_study": {
     "directory": "source/monitoring-chemistry-study",
@@ -781,5 +871,22 @@
     "native_source_collection_id": "371fca0c31de80d7309e6b7793ca56ac4563a7135409f667e240340957b098a3",
     "original_source_manifest_sha256": "e4fddfb4837676f96e8722f05b582b8cdc7f186cb20dd5fe050636aff090f7db",
     "note": "Installed code and delivered source-manifest provenance are distinct from the complete original scientific package required for unchanged source import."
+  },
+  "field_assignment": {
+    "source_commit": "8b97244c08d6ad2cea455e0e5ef0e75b0016b77c",
+    "source_files": 10,
+    "source_bank_git_blob": "82cd0c53e3b4c7e04f1a308b59f5021e07eed869",
+    "guide": "source/monitoring_field_assignment/RECEIVING.md",
+    "corrected_scientific_manifest": {
+      "path": "source/monitoring-field-study/source-manifest.json",
+      "bytes": 130698,
+      "sha256": "cfa0cb8bb0a0d7c7054eed8e37f479947d951aba6f4dfc3a3f64e08e3ce2dc88",
+      "previous_collection": "371fca0c31de80d7309e6b7793ca56ac4563a7135409f667e240340957b098a3",
+      "companions_per_entry": 226
+    },
+    "package_preparer": {
+      "path": "source/monitoring-field-study/source/prepare_field_package_edition.py",
+      "source_commit": "2b676e8460820dc48683a09847a3b6a4a538168b"
+    }
   }
 }
