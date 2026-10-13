@@ -1,0 +1,32 @@
+{
+  "schema": "upstate.application-component-fragment/v1",
+  "id": "measurement-observation-editions",
+  "source_reference": "ECO-OBSERVATION-EDITIONS-15227-20261013: explicit relationships between retained original observations, named immutable reviewed editions, discrepancy report, calibration export and full editable receiving.",
+  "components": {
+    "measurement-observation-editions": {
+      "title": "Scientist-reviewed observation relationships and complete immutable editions",
+      "paths": [
+        "integration/component_fragments/measurement-observation-editions.json",
+        "measurement_workspace/OBSERVATION_EDITIONS.md",
+        "measurement_workspace/engine/observation_editions.mjs",
+        "measurement_workspace/engine/http.mjs",
+        "measurement_workspace/engine/cli.mjs",
+        "measurement_workspace/web/observation_editions.mjs",
+        "measurement_workspace/web/observation_editions.css",
+        "measurement_workspace/web/workspace.js",
+        "measurement_workspace/web/extension.mjs",
+        "operator/web/observation_editions.mjs",
+        "operator/web/observation_editions.css",
+        "operator/web/measured_observations.mjs",
+        "operator/web/measured_observations_extension.mjs",
+        "operator/extensions/measured-observations.json"
+      ],
+      "requires": [
+        "measurement-source-reconciliation"
+      ]
+    }
+  },
+  "required_components": [
+    "measurement-observation-editions"
+  ]
+}
