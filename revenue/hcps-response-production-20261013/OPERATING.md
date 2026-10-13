@@ -166,7 +166,7 @@ The author keeps the original issuing working copy. A file from another workspac
 3. Expand changes to inspect the complete issued baseline, current author value and returned colleague value. Requirements, slides and documents match their original IDs. Independently added records with a colliding ID, deletions, changed fields, absent fields, explicit null values and exact JSON types remain visible.
 4. Choose current, returned or a complete custom value for each listed change. **Keep all current author changes** and **Select all returned changes** are deliberate whole-side selections; they can be refined item by item. Document additions/removals and the complete chosen document order must agree. Requirement evidence, source reviews and PDF assembly must still reference actual selected documents.
 5. If the incoming working copy contains unapplied editor text or unfinished return-review work, inspect the complete original and the downloadable unfinished-editor envelope. Acknowledge the retained material before deciding from its applied content.
-6. Prepare the complete review plan. The ordinary response validator checks the assembled entire response, including all56 original requirements, all12 slide IDs/order, four summary flags, the240-second duration and complete source/evidence references.
+6. Prepare the complete review plan. The ordinary response validator checks the assembled entire response, including all 56 original requirements, all 12 slide IDs/order, four summary flags, the 240-second duration and complete source/evidence references.
 7. Resolve changed-material decisions. A completed/applicability decision that mixes content and evidence beyond either complete attributed side must be explicitly reopened or reviewed again. The same rule applies to a reviewed matrix or sample-summary source whose document/review material changes. **Explicitly reopen all changed-material decisions** creates visible reopening choices; prepare the plan again to inspect their result. Individual review JSON records the named reviewer, date where relevant, reason and complete decision basis.
 8. Choose **Apply exact plan as reviewed author edition**. One immutable edition appends to the author's existing history. It retains the full before/after draft, every explicit choice, material-review decisions, exact issue/return identities and the entire original returned file. The colleague's separate edition chain stays within that whole preserved return.
 
@@ -184,7 +184,7 @@ The recovery control stays visible independently of the comparison panel. Source
 
 ### Retained source and history limits
 
-The original per-file32MiB and selected128MiB limits remain. An author copy may retain at most128 issued/returned original archives and128 saved return decisions, within the existing128-edition limit. Its complete decoded document objects plus literal UTF-8 issued/returned archive bodies share a512MiB retained-history budget. Incoming custody nesting is limited to16 generations.
+The original per-file 32 MiB and selected 128 MiB limits remain. An author copy may retain at most 128 issued/returned original archives and 128 saved return decisions, within the existing 128-edition limit. Its complete decoded document objects plus literal UTF-8 issued/returned archive bodies share a 512 MiB retained-history budget. Incoming custody nesting is limited to 16 generations.
 
 The complete archive history is checked on open, export, native verification and receiving. It reconstructs every retained review from the exact archived issued/returned sources and explicit choices, then compares the complete result with its immutable author edition. Original document objects remain content-addressed and complete.
 
@@ -198,7 +198,7 @@ python3 PRIME_RETURN_RECEIVING.py \
   --node /absolute/node
 ~~~
 
-The following controller acquires the same original operation lock and verifies every completed preceding output. It uses the actual original author workspace and complete observed225-second presentation trace. It keeps source, browser profiles, loopback origin, checkpoints, logs and all following outputs beneath the original case's **prime-review/** directory.
+The following controller acquires the same original operation lock and verifies every completed preceding output. It uses the actual original author workspace and complete observed 225-second presentation trace. It keeps source, browser profiles, loopback origin, checkpoints, logs and all following outputs beneath the original case's **prime-review/** directory.
 
 The whole following journey:
 
@@ -208,7 +208,7 @@ The whole following journey:
 4. Retains a genuinely separate author edition over the same baseline.
 5. Compares the complete return in the real operator UI, preserves unfinished explicit choices across reload, selects a mixture of author/returned content, and explicitly reopens the resulting changed-material completion decision before saving the author edition.
 6. Downloads the whole editable application, opens it in another actual recipient profile, preserves every original byte/history/return plan, and reloads the same received copy.
-7. Captures actual desktop and390-pixel recipient/author views and preserves the entire original-plus-following case in **HCPS_Complete_Original_And_Prime_Review.tar.gz**.
+7. Captures actual desktop and 390-pixel recipient/author views and preserves the entire original-plus-following case in **HCPS_Complete_Original_And_Prime_Review.tar.gz**.
 
 The final archive includes complete application source, all original inputs, documents, immutable editions, issued/returned full files, browser working histories, actual outputs and original logs. Repeat the same command to continue or adopt only fully verified existing outputs. Earlier source and completed original results remain retained.
 
@@ -216,7 +216,7 @@ The producing operator must actually view the captured screens and open/use the 
 
 ## Current browser ownership
 
-Bryce explicitly released the October13 local in-app browser meeting hold in the original coordination message1791908979.290839: the meeting is over and the in-app browser is free again. Authorized local browser work may resume while preserving user tabs and saved state. The release applies to that browser hold only. A later direct owner reservation controls subsequent work.
+Bryce explicitly released the October 13 local in-app browser meeting hold in the original coordination message 1791908979.290839: the meeting is over and the in-app browser is free again. Authorized local browser work may resume while preserving user tabs and saved state. The release applies to that browser hold only. A later direct owner reservation controls subsequent work.
 
 Original release: https://tokenjunkielabs.slack.com/archives/C0BU51F1PL3/p1791908979290839 .
 

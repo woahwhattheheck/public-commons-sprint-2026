@@ -32,6 +32,10 @@ def drain(process,root,reason):
         if group_alive(process.pid):
             with contextlib.suppress(ProcessLookupError): os.killpg(process.pid,signal.SIGKILL)
     with contextlib.suppress(subprocess.TimeoutExpired): process.wait(timeout=15)
+    deadline=time.monotonic()+15
+    while group_alive(process.pid) and time.monotonic()<deadline:
+        process.poll();time.sleep(.2)
+    if group_alive(process.pid):raise RuntimeError("The original child group has not fully drained; retain this operation before preservation.")
     event(root,"child-drained",pid=process.pid,reason=reason,returncode=process.returncode)
 def main():
     parser=argparse.ArgumentParser(description=__doc__);parser.add_argument("--case",type=pathlib.Path,required=True)

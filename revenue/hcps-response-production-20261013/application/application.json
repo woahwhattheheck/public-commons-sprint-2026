@@ -18,8 +18,8 @@
     },
     {
       "path": "hcps-return.cjs",
-      "bytes": 25232,
-      "sha256": "c162561a4baee592a75cff109010f067f6078d45b5e677ef4bc8ebe7d4b2812d"
+      "bytes": 25477,
+      "sha256": "1b22874573c8bb1f4619b2c38e460bba0cfa776ecf25f383aef1d249e073dd3b"
     },
     {
       "path": "hcps-app.js",
@@ -28,8 +28,8 @@
     },
     {
       "path": "hcps-return-ui.js",
-      "bytes": 17380,
-      "sha256": "1233d6ee4062a59d44cbe0392589ffca9681cdfa78b076df79d88e4c46863b8b"
+      "bytes": 17481,
+      "sha256": "372755b02c3bec4a4a59684c1cda6f4b7f1b563ec1cb90b5862b89eedd5bdfcf"
     },
     {
       "path": "production-seed.json",
@@ -39,7 +39,7 @@
   ],
   "application": {
     "path": "HCPS_Response_Desk.html",
-    "bytes": 320393,
-    "sha256": "ff53b952efd809b6c94c91d5bd56fc553d4d5ad4eda85147580d2f0f815c1cbb"
+    "bytes": 320739,
+    "sha256": "af8fdd572f5bb3a659175d0c660216cf34a992d816baa2ad1b58dd4605cbcd12"
   }
 }
