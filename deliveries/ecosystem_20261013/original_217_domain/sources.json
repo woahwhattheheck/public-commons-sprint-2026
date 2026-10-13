@@ -1,0 +1,57 @@
+{
+  "schema": "upstate.sources/v1",
+  "title": "Original 217-watershed model domain — recovered transport intake",
+  "captured_at": null,
+  "scope": {
+    "kind": "retained_original_model_domain",
+    "feature_count": 217,
+    "huc12_field": "huc12",
+    "native_id_field": "objectid",
+    "source_crs": "EPSG:3857",
+    "original_geometry_body_sha256": "6f49c2f1dc10709d7957e38e92642a1de4cda44e67e4d70a8bc2ff51388e6af9",
+    "decoded_body_sha256": "2300d9b32a513d70503222a5d2e782e032107297214036a58e8b444a312169af"
+  },
+  "notes": [
+    "This is a current transport intake manifest for recovered original bytes. The original source-manifest bytes are not reproduced here.",
+    "The original model-domain.esri.json.gz is retained byte-for-byte from dbc61-upstate-model-domain-20261012.zip; no geometry, attribute, coordinate or scientific scope is regenerated.",
+    "Use an already imported matching original source collection when present. When this wrapper is imported, retain the actual collection ID returned by Workspace.import_sources."
+  ],
+  "entries": [
+    {
+      "id": "upstate-wbd-upstream-domain-20261012",
+      "uri": "https://raw.githubusercontent.com/woahwhattheheck/public-commons-sprint-2026/4b811273edfd559ecffd3e37220aa9720ceb484f/deliveries/ecosystem_20261013/original_217_domain/Original217_Gzip_Base64.txt",
+      "vintage": "Original upstream domain retained 2026-10-12; transport recovered 2026-10-13",
+      "title": "Retained original model domain: 217 WBD HUC12 watershed polygons",
+      "kind": "vector",
+      "path": "model-domain.esri.json.gz",
+      "sha256": "6f49c2f1dc10709d7957e38e92642a1de4cda44e67e4d70a8bc2ff51388e6af9",
+      "format": "EsriJSON",
+      "compression": "gzip",
+      "role": "MODEL_DOMAIN",
+      "source_crs": "EPSG:3857",
+      "native_id_field": "objectid",
+      "id_field": "huc12",
+      "companions": [
+        {
+          "path": "source-provenance.json",
+          "sha256": "2c755f77801b72a9a8444b032fc140010d36c55364b4ba2d33e6a2f9557e9285"
+        }
+      ],
+      "metadata": {
+        "schema": "upstate.original-domain-transport/v1",
+        "manifest_kind": "current_transport_intake",
+        "original_archive_sha256": "1fc35e5d0986e42d93922527d46e38bc5132653db75863934349dbbfaa352c04",
+        "original_member": "model-domain.esri.json.gz",
+        "original_spatial_reference": {
+          "wkid": 102100,
+          "latestWkid": 3857
+        },
+        "feature_count": 217,
+        "decoded_bytes": 11220042,
+        "decoded_sha256": "2300d9b32a513d70503222a5d2e782e032107297214036a58e8b444a312169af",
+        "transport_created_at": "2026-10-13T13:08:41Z",
+        "geometry_transformations": []
+      }
+    }
+  ]
+}

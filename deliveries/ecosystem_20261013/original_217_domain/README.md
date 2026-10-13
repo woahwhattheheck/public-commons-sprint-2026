@@ -19,3 +19,15 @@ The original decoded response, gzip and Base64 carrier remain separately retaine
 The original operated source was `upstate-wbd-upstream-domain-20261012`, collection `e11ef0eedfd65f245d5761a76cc0051be7d66b3d49b6e5dfe0a4fa6502f7b023`. A receiving workspace should retain an existing matching collection. A separately supplied transport intake manifest can bind these identical original bytes when a new intake is required; the native importer returns that intake's actual collection identity.
 
 This carrier continues the existing assessment receiving operation4731. Keep the receiving workspace's actual project identity, original input editions and native task journal with its preparation and completed outputs. Current owner direction remains `opportunities/upstate_forever_2026/CURRENT_OWNER_DIRECTION.md`, version2026-10-13.3.
+
+## Materialize and receive
+
+Keep all files in this directory together. Run the supplied decoder with the original encoded file:
+
+```sh
+python materialize_original_217.py --base64 Original217_Gzip_Base64.txt --output model-domain.esri.json.gz
+```
+
+The decoder verifies all three complete byte sequences and their SHA-256 values, then writes the original gzip once or reuses an identical existing file. Its JSON output names the actual saved path and all 217 original watershed identities. It uses Python's standard library.
+
+The adjacent `sources.json` is a current transport intake manifest. Its companion `source-provenance.json` retains the original archive, original operated source identity, original field definitions and this exact encoded carrier. Where a matching original domain collection is already imported, continue using it. Otherwise import this manifest through the existing native `Workspace.import_sources` operation and retain the returned collection ID before continuing the assessment preparation. The receiving workspace retains its actual project identity. The original four assessment manifests and their existing preparation command remain the inputs for the same assessment course.

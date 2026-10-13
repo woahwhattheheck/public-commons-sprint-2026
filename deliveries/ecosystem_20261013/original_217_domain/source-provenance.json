@@ -1,0 +1,182 @@
+{
+  "schema": "upstate.original-domain-transport/v1",
+  "transport_created_at": "2026-10-13T13:08:41Z",
+  "classification": "Original public agency geometry; current transport intake wrapper",
+  "manifest_status": "This companion and adjacent sources.json describe the current recovered transport. They are not the original source manifest.",
+  "carrier": {
+    "uri": "https://raw.githubusercontent.com/woahwhattheheck/public-commons-sprint-2026/4b811273edfd559ecffd3e37220aa9720ceb484f/deliveries/ecosystem_20261013/original_217_domain/Original217_Gzip_Base64.txt",
+    "git_blob": "5aa01038d5269fe898cfb2db0cf40b0023c0c382",
+    "filename": "Original217_Gzip_Base64.txt",
+    "encoding": "ASCII Base64, wrapped with LF; decode before gzip decompression",
+    "bytes": 4977044,
+    "sha256": "6611850144877557aa2b147d5e9f5e54c2090ee319fea3673c62abee5071b796",
+    "library_file_id": "libfile_1cd0a5e5c95c819180680383bd68ea89",
+    "file_id": "file_00000000628481f6abe0ddadd21ee6fc"
+  },
+  "original_archive": {
+    "filename": "dbc61-upstate-model-domain-20261012.zip",
+    "library_file_id": "libfile_cce17e762e948191be1d226b1dbce00d",
+    "file_id": "file_00000000982081f4a357dcf78d83f289",
+    "bytes": 8800689,
+    "sha256": "1fc35e5d0986e42d93922527d46e38bc5132653db75863934349dbbfaa352c04",
+    "member": "model-domain.esri.json.gz"
+  },
+  "original_body": {
+    "input_filename": "dbc61-upstate-model-domain-20261012.zip",
+    "input_sha256": "1fc35e5d0986e42d93922527d46e38bc5132653db75863934349dbbfaa352c04",
+    "zip_member": "model-domain.esri.json.gz",
+    "body_bytes": 3732669,
+    "body_sha256": "6f49c2f1dc10709d7957e38e92642a1de4cda44e67e4d70a8bc2ff51388e6af9",
+    "decoded_bytes": 11220042,
+    "decoded_sha256": "2300d9b32a513d70503222a5d2e782e032107297214036a58e8b444a312169af",
+    "feature_count": 217,
+    "feature_identity_field": "objectid",
+    "spatial_reference": {
+      "wkid": 102100,
+      "latestWkid": 3857
+    },
+    "source_fields": [
+      {
+        "name": "objectid",
+        "type": "esriFieldTypeOID",
+        "alias": "ObjectID"
+      },
+      {
+        "name": "tnmid",
+        "type": "esriFieldTypeString",
+        "alias": "TNMID",
+        "length": 40
+      },
+      {
+        "name": "metasourceid",
+        "type": "esriFieldTypeString",
+        "alias": "MetaSourceID",
+        "length": 40
+      },
+      {
+        "name": "sourcedatadesc",
+        "type": "esriFieldTypeString",
+        "alias": "SourceDataDesc",
+        "length": 100
+      },
+      {
+        "name": "sourceoriginator",
+        "type": "esriFieldTypeString",
+        "alias": "SourceOriginator",
+        "length": 130
+      },
+      {
+        "name": "sourcefeatureid",
+        "type": "esriFieldTypeString",
+        "alias": "SourceFeatureID",
+        "length": 40
+      },
+      {
+        "name": "loaddate",
+        "type": "esriFieldTypeDate",
+        "alias": "LoadDate",
+        "length": 8
+      },
+      {
+        "name": "referencegnis_ids",
+        "type": "esriFieldTypeString",
+        "alias": "ReferenceGNIS_IDs",
+        "length": 50
+      },
+      {
+        "name": "areaacres",
+        "type": "esriFieldTypeDouble",
+        "alias": "AreaAcres"
+      },
+      {
+        "name": "areasqkm",
+        "type": "esriFieldTypeDouble",
+        "alias": "AreaSqKm"
+      },
+      {
+        "name": "states",
+        "type": "esriFieldTypeString",
+        "alias": "States",
+        "length": 50
+      },
+      {
+        "name": "huc12",
+        "type": "esriFieldTypeString",
+        "alias": "HUC12",
+        "length": 12
+      },
+      {
+        "name": "name",
+        "type": "esriFieldTypeString",
+        "alias": "Name",
+        "length": 120
+      },
+      {
+        "name": "hutype",
+        "type": "esriFieldTypeString",
+        "alias": "HUType",
+        "length": 1
+      },
+      {
+        "name": "humod",
+        "type": "esriFieldTypeString",
+        "alias": "HUMod",
+        "length": 30
+      },
+      {
+        "name": "tohuc",
+        "type": "esriFieldTypeString",
+        "alias": "ToHUC",
+        "length": 16
+      },
+      {
+        "name": "noncontributingareaacres",
+        "type": "esriFieldTypeDouble",
+        "alias": "NonContributingAreaAcres"
+      },
+      {
+        "name": "noncontributingareasqkm",
+        "type": "esriFieldTypeDouble",
+        "alias": "NonContributingAreaSqKm"
+      },
+      {
+        "name": "globalid",
+        "type": "esriFieldTypeGlobalID",
+        "alias": "globalid",
+        "length": 38
+      },
+      {
+        "name": "shape_Length",
+        "type": "esriFieldTypeDouble",
+        "alias": "shape_Length"
+      },
+      {
+        "name": "shape_Area",
+        "type": "esriFieldTypeDouble",
+        "alias": "shape_Area"
+      }
+    ]
+  },
+  "prior_operated_identity": {
+    "report_library_file_id": "libfile_0b72f09311248191a3d06b36628fe972",
+    "report_filename": "Regional_Complete_Result.json",
+    "report_bytes": 87481,
+    "report_sha256": "768976e83455e18dbe3018822b971460c9f531ad777804747a3ae24b6059fe04",
+    "project_id": "b9d5d257-c6bb-4f07-b975-8e8c63705db3",
+    "source_collection_id": "e11ef0eedfd65f245d5761a76cc0051be7d66b3d49b6e5dfe0a4fa6502f7b023",
+    "source_id": "upstate-wbd-upstream-domain-20261012",
+    "equivalent_source": {
+      "source_collection_id": "c3c45ed10c8ba9603f781efde8597e755159449d08019267ae519e4e126fe9f4",
+      "source_id": "original-model-domain",
+      "source_sha256": "6f49c2f1dc10709d7957e38e92642a1de4cda44e67e4d70a8bc2ff51388e6af9",
+      "decoded_sha256": "2300d9b32a513d70503222a5d2e782e032107297214036a58e8b444a312169af",
+      "huc12_count": 217,
+      "id_field": "huc12",
+      "manifest": "/mnt/data/eco-cohort-resume/source-water-receiving/original-domain-source/5a02c70737ff8b11c0a3ecf1faa83f76f5b96e3df53e3514caed27a04f944b81/source-manifest.json",
+      "manifest_sha256": "5a675dc472d941a9d5b745347039aa156afddfda938b10fe4dc13d04e654ab21",
+      "retained_source": "/mnt/data/eco-cohort-resume/received/workspace/source-views/c3c45ed10c8ba9603f781efde8597e755159449d08019267ae519e4e126fe9f4/552d12bbb9fc2f61d7185692007d9a2f5ee5eafcb72b642bf7ff57a40e59d9c9/source-domain.esri.json.gz"
+    }
+  },
+  "receiving_identity": "Workspace.import_sources returns the actual new intake collection ID. Preserve that returned ID; do not assign the prior operated collection ID to this new wrapper.",
+  "geometry_transformations": []
+}
