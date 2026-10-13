@@ -2,7 +2,7 @@
   "schema": "upstate.operator-extension/v1",
   "id": "source-reports",
   "title": "Retained source reports",
-  "version": "2.2.0",
+  "version": "2.3.0",
   "order": 56,
   "assets": [
     "source_reports.mjs",
@@ -136,6 +136,19 @@
           "operation",
           "payload"
         ]
+      },
+      {
+        "methods": [
+          "GET"
+        ],
+        "path": "/api/source-reports/scientific-capture",
+        "operation": "scientific-capture",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
       }
     ],
     "file_routes": [
@@ -175,7 +188,8 @@
       "source-reports.render",
       "source-reports.export",
       "source-reports.briefing",
-      "source-reports.review"
+      "source-reports.review",
+      "source-reports.adopt"
     ],
     "invoke": {
       "handler": "invoke",
