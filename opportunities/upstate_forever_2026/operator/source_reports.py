@@ -331,12 +331,15 @@ class SourceReports:
             self._available_editions = available
 
 
-    def _entry(self, workspace, collection_id, selected_key):
+    def _collection(self, workspace, collection_id):
         if not re.fullmatch(r"[0-9a-f]{64}", str(collection_id or "")):
             raise self.Fault("SOURCE_REPORT_EDITION", "Choose a retained source edition.")
+        return self.operator.ws(workspace).retained_item("sources", collection_id)
+
+    def _entry(self, workspace, collection_id, selected_key):
+        collection = self._collection(workspace, collection_id)
         if not re.fullmatch(r"[0-9a-f]{64}", str(selected_key or "")):
             raise self.Fault("SOURCE_REPORT_ENTRY", "Choose a retained report source.")
-        collection = self.operator.ws(workspace).retained_item("sources", collection_id)
         matches = [row for row in collection["entries"] if entry_key(row["id"]) == selected_key]
         if len(matches) != 1 or not html_members(matches[0]):
             raise self.Fault("SOURCE_REPORT_ENTRY", "This source entry has no retained HTML report.", 404)
@@ -401,8 +404,27 @@ class SourceReports:
                     for row in reports if row["collection_id"] in retained_ids
                 ],
             })
+        retained_editions = []
+        for collection in collections:
+            documents = [{
+                "source_id": entry["id"], "title": entry["title"],
+                "kind": entry["kind"], "role": entry.get("role"),
+                "vintage": entry["vintage"],
+                "scientific_report": entry.get("kind") == "document"
+                                     and entry.get("role") == "OBSERVED_CONTEXT",
+            } for entry in collection.get("entries", [])
+              if entry.get("kind") == "document" or entry.get("role") == "OBSERVED_CONTEXT"]
+            if documents:
+                retained_editions.append({
+                    "collection_id": collection["id"],
+                    "title": collection.get("title") or collection.get("scope") or collection["id"],
+                    "original_manifest_sha256": collection["original_manifest"]["sha256"],
+                    "entry_count": len(collection["entries"]), "documents": documents,
+                    "scientific_sources": retained_scientific_sources(collection),
+                })
         return {"workspace_key": workspace, "reports": reports,
-                "available_editions": editions, "discovery_issues": self._discovery_issues}
+                "available_editions": editions, "retained_editions": retained_editions,
+                "discovery_issues": self._discovery_issues}
 
     def detail(self, workspace, payload):
         collection, entry, members = self._entry(
@@ -446,8 +468,14 @@ class SourceReports:
         return ticket, policy
 
     def archive(self, workspace, payload):
-        collection, entry, members = self._entry(
-            workspace, payload.get("collection_id"), payload.get("entry_key"))
+        # Existing report callers keep their exact HTML-entry admission. A whole
+        # retained collection needs no HTML member and uses the same ZIP writer.
+        if "entry_key" in payload:
+            collection, entry, members = self._entry(
+                workspace, payload.get("collection_id"), payload["entry_key"])
+        else:
+            collection = self._collection(workspace, payload.get("collection_id"))
+            entry = None
         ws = self.operator.ws(workspace)
         original = collection["original_manifest"]
         manifest_path = self._path(workspace, original)
@@ -455,9 +483,10 @@ class SourceReports:
         if len(original_body) != original["bytes"] or hashlib.sha256(original_body).hexdigest() != original["sha256"]:
             raise self.Fault("SOURCE_REPORT_CHANGED", "The original source manifest changed.", 409)
         original_manifest = json.loads(original_body)
-        selected = [row for row in original_manifest["entries"] if row["id"] == entry["id"]]
-        if len(selected) != 1:
-            raise self.Fault("SOURCE_REPORT_MANIFEST", "The original manifest does not identify this report.", 409)
+        if entry is not None:
+            selected = [row for row in original_manifest["entries"] if row["id"] == entry["id"]]
+            if len(selected) != 1:
+                raise self.Fault("SOURCE_REPORT_MANIFEST", "The original manifest does not identify this report.", 409)
         # Export the complete original collection, so related scientific source
         # IDs remain registered after reimport. Restore source_path here; member
         # preview uses each entry's independently normalized view_path instead.
@@ -542,7 +571,10 @@ class SourceReports:
             record = read_json(metadata)
             if record.get("selection") != selection:
                 raise self.Fault("SOURCE_REPORT_ARCHIVE", "The retained portable report selection changed.", 409)
-        return {"workspace_key": workspace, "source_id": entry["id"],
+        return {"workspace_key": workspace, "source_id": entry["id"] if entry is not None else None,
+                "collection_id": collection["id"],
+                "original_manifest_sha256": original["sha256"],
+                "source_ids": [row["id"] for row in original_manifest["entries"]],
                 "manifest_member": record["manifest_member"],
                 "download": self.operator._ticket(workspace, destination, record, "Report and complete original source edition")}
 
