@@ -70,6 +70,11 @@ def prepare(application, source):
         before, after = edit["before"], edit["after"]
         if current.count(after) == 1:
             state = "already_present"
+        elif any(current.count(present) == 1 for present in edit.get("present", [])):
+            matches = [present for present in edit["present"] if current.count(present) == 1]
+            if len(matches) != 1:
+                raise ValueError(name + ": multiple installed variants for " + edit["id"])
+            state = "already_present_current"
         elif any(current.count(previous) == 1 for previous in edit.get("previous", [])):
             matches = [previous for previous in edit["previous"] if current.count(previous) == 1]
             if len(matches) != 1:

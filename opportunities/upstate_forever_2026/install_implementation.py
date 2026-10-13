@@ -24,6 +24,7 @@ FILES = (
     "model/implementation_reporting.py",
     "model/implementation_cli.py",
     "model/implementation_sources.py",
+    "model/implementation_economics.py",
     "operator/implementation_operator.py",
     "operator/extensions/implementation.json",
     "operator/web/implementation.mjs",

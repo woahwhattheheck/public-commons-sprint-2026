@@ -237,17 +237,45 @@ def _commit_csv(pending, destination):
         os.replace(pending, destination)
 
 
+def _promote_legacy_inventory(workspace, inputs, directory):
+    """Bind versions to an exact completed inventory without repeating cell sums."""
+    legacy_identity = {name: value for name, value in inputs["identity"].items()
+                       if name != "native_versions"}
+    legacy_key = digest(legacy_identity)
+    legacy_directory = workspace.root / "planning-inventory-data" / legacy_key
+    pointer = legacy_directory / "record.json"
+    if not pointer.is_file():
+        return None
+    previous = inspect(workspace, read_json(pointer)["id"])
+    if previous["selection_id"] != legacy_key:
+        raise ValueError("Original planning inventory pointer selects another input identity")
+    original = read_json(verify_file(workspace.root, previous["files"]["inventory"]))
+    if original["native_inputs"] != legacy_identity:
+        raise ValueError("Original planning inventory inputs differ from this version binding")
+    origin = {
+        "method": "original-inventory-native-version-binding/1",
+        "inventory_id": previous["id"], "selection_id": previous["selection_id"],
+        "files": previous["files"],
+    }
+    inventory = {
+        **original, "selection_id": inputs["selection_id"],
+        "native_inputs": inputs["identity"],
+        "native_versions": inputs["native_versions"], "native_version": inputs["native_version"],
+        "derived_from": origin,
+    }
+    destination = directory / "inventory.json"
+    atomic_json(destination, inventory, immutable=True)
+    return workspace._save(KIND, {
+        **previous, "selection_id": inputs["selection_id"],
+        "native_versions": inputs["native_versions"], "native_version": inputs["native_version"],
+        "derived_from": origin,
+        "files": {**previous["files"],
+                  "inventory": describe_file(workspace.root, destination)},
+    })
+
+
 def build(workspace, selection, *, raster_cache_bytes=None):
     """Summarize original polygon features on a shared native valid-cell support."""
-    import fiona
-    import numpy as np
-    import rasterio
-    from pyproj import CRS, Transformer
-    from rasterio.features import geometry_mask
-    from rasterio.windows import transform as window_transform
-    from shapely.geometry import mapping, shape
-    from shapely.ops import transform
-
     from .raster_block_cache import DEFAULT_CACHE_BYTES, NativeBlockCache
     requested = dict(selection) if isinstance(selection, dict) else selection
     supplied = requested.pop("raster_cache_bytes", None) if isinstance(requested, dict) else None
@@ -268,6 +296,29 @@ def build(workspace, selection, *, raster_cache_bytes=None):
             if record["selection_id"] != inputs["selection_id"]:
                 raise ValueError("Planning inventory input identity changed")
             return record
+        promotion_started = time.monotonic()
+        promoted = _promote_legacy_inventory(workspace, inputs, directory)
+        if promoted is not None:
+            atomic_json(directory / "read-processing.json", {
+                "schema": "upstate.planning-raster-reads/v1",
+                "inventory_id": promoted["id"], "selection_id": inputs["selection_id"],
+                "csv_sha256": promoted["files"]["csv"]["sha256"],
+                "mode": "retained_inventory_version_binding",
+                "reused_from_inventory_id": promoted["derived_from"]["inventory_id"],
+                "elapsed_seconds": time.monotonic() - promotion_started,
+                "reads": read_cache.snapshot(),
+            })
+            atomic_json(completed, {"id": promoted["id"]}, immutable=True)
+            return promoted
+        import fiona
+        import numpy as np
+        import rasterio
+        from pyproj import CRS, Transformer
+        from rasterio.features import geometry_mask
+        from rasterio.windows import transform as window_transform
+        from shapely.geometry import mapping, shape
+        from shapely.ops import transform
+
         runs, outputs = inputs["runs"], inputs["outputs"]
         baseline = runs[0]
         counters = {"original_features": 0, "selected_features": 0,

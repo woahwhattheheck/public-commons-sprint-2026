@@ -1,62 +1,40 @@
-# Scenario design application receiving
+# Receive the complete Scenario design application
 
-This installer composes the complete original Scenario design component into the current scientific application. Follow [CONSERVATION_DESIGN.md](CONSERVATION_DESIGN.md) for the saved-plan and editor workflow.
+Scenario design continues an original saved Conservation plan into an editable geometry project, retains its alternatives in the same scientific Workspace, and receives its land-cover handover into the original native scenario and optional run. The maintained installer composes this complete component into the existing application.
 
-## Complete application installation
+Use [CONSERVATION_DESIGN.md](CONSERVATION_DESIGN.md) for the plan-to-scenario workflow, [CONSERVATION_DESIGN_EDITOR.md](CONSERVATION_DESIGN_EDITOR.md) for the embedded original editor, and [CONSERVATION_DESIGN_BROWSER.md](CONSERVATION_DESIGN_BROWSER.md) for the same-plan browser continuation.
 
-The source cohort includes the current original editor, its complete source manifest,
-the original conservation binding, the native provider and browser descriptor,
-and `operator/install_conservation_design.py`. Receive the entire cohort in the
-same application source directory before invoking the installer.
+## Install the complete current component
+
+Receive the installer's entire 41-file `FILES` cohort into one application source directory. It includes the complete original editor and its source manifest; the current binding and native-scenario source; the native provider, descriptor and browser; all four embedded-editor leaves; both browser receiving companion files; and this installer and guide. The current merged component includes the original UUID project-key correction and accepted-task export recovery.
 
 From the receiving application's existing Python environment:
 
 ```sh
 python -B SOURCE_ROOT/operator/install_conservation_design.py \
+  --application CURRENT_APPLICATION --source SOURCE_ROOT --preview
+
+python -B SOURCE_ROOT/operator/install_conservation_design.py \
   --application CURRENT_APPLICATION --source SOURCE_ROOT
 ```
 
-The installer uses the current application's `install_extensions.py` to compose
-the shared server and browser. It adds `scenario-design` to the actual current
-`model/portable.py` application directory inventory and, when present, the
-current `source_tools/application_assembly.py` snapshot inventory. The current
-assembler reads its directories from the installed portable source and remains
-unchanged. Earlier assemblers with a literal root tuple receive that one addition.
-These are surgical inventory joins: current SQLite snapshot handling, source exclusion
-rules, unrelated directories and other component registrations remain in their
-original implementations.
+The preview returns the proposed complete file paths, before/after hashes and dependency identities. Installation compiles the incoming Python source, checks every original editor manifest member, validates the embedded actions/read/file transport and uses the current application's `install_extensions.py` to compose its maintained host.
 
-Both the earlier portable inventory with an explicit root-file list and the
-newer portable inventory that walks all ordinary root files are supported.
-The original portable collector must expose its maintained literal directory
-tuple. The assembler may use either its earlier literal root tuple or the current
-`_installed_source_directories` resolver that reads this portable declaration.
-Other inventory implementations are reported for composition before writing.
+The installer adds `scenario-design` to the actual current portable application-directory inventory. A current assembler that reads that inventory needs no separate directory rewrite; an earlier assembler's literal root tuple receives the same addition. It also adds the original editor's database to the existing mutable-application database snapshot inventory. Current model data, source exclusions, unrelated source directories and other component registrations retain their maintained implementations.
 
-The original `model/conservation.py`, `model/common.py`, `model/rasters.py`
-and `model/workspace.py` are dependencies of the receiving application. The
-complete current original `model/conservation_bindings.py` and
-`model/conservation_scenarios.py` are included, so the installed design adapter
-can resolve an original saved plan and its actual native model scope. The
-receiving check requires the maintained scope-resolution methods before
-installing; current native coverage and paired-experiment implementation stay
-with the original scenario module. Installation compiles incoming Python
-sources without running tests or native model jobs. The editor's manifest
-checks every original editor source member.
+Installation checks current dependencies and target bytes, preserves changed predecessor files in its operation history, and restores unchanged postimages if its write sequence fails. The completed receipt is `operator/conservation-design-install.json`. Repeating the same installation preserves the same source. Known released predecessors may be upgraded; independently changed component bodies require composition against their current source before replacement.
 
-`--preview` returns the complete proposed source paths, predecessor and
-postimage hashes. Normal installation checks the current dependency and target
-bytes, preserves predecessor files in its operation history, restores unchanged
-postimages if the write sequence fails, and records the completed installation
-at `operator/conservation-design-install.json`. A repeat installation with
-the same source is safe; an independently edited component is surfaced for
-composition instead of being overwritten.
+### Existing application dependencies
 
-### Cumulative source receiving
+The receiving application supplies its maintained Workspace, Conservation, profiles, common, raster and verified-copy modules, the registered extension host, and the original `operator/conservation_browser_receiving.py` used by the companion. The current original `model/conservation_bindings.py` and `model/conservation_scenarios.py` are included in this component cohort. Their native model-scope and paired-experiment behavior remains in those original modules.
 
-Use the existing cumulative staging directory. After the maintained shared host
-and original Conservation sources have been joined, and before source checking,
-snapshotting and archive construction:
+The current portable implementation must already use its maintained `model/portable_databases.py` online backup helper. The installer checks the helper's snapshot and source-verification entry points and the portable module's actual snapshot call before composing the editor database member. Receive that existing application dependency first when installing into an older application.
+
+The descriptor must include the original `conservation.design.editor.open` and `conservation.design.editor.write` queue actions, the editor read route, its parent browser asset, and the authenticated editor file route. This catches a mixed edition in which the embedded source is present but its original transport is absent.
+
+## Join cumulative source receiving
+
+Use the existing cumulative application's staging directory after the current shared host and scientific component source are present and before its final source check, snapshot and archive construction:
 
 ```python
 from pathlib import Path
@@ -67,63 +45,78 @@ installer = runpy.run_path(str(application / "operator/install_conservation_desi
 result = installer["install"](application, application)
 ```
 
-The cumulative owner should use the installer's complete `FILES` cohort for
-its presence check. A wholly absent component can be skipped. A partially
-received component must list its missing members and continue source receiving
-before producing the final application. The installer is inside `operator/`,
-so existing application source collection carries the reinstall entry point.
+Pass the complete `FILES` tuple to the existing cumulative owner's source closure check. A wholly absent component can remain absent; a partially received component needs its listed missing files before the application archive is finalized. The installer lives in `operator/`, so the normal source collector retains its reinstall entry point. Keep the cumulative owner's current collection and assembly engine.
 
-For an in-memory composer, `inventory_sources(sources, *, directories=("scenario-design",))` accepts the actual
-current path-to-source mapping and returns the complete portable and optional
-assembler postimages. It changes only their directory literals; the composer
-keeps its existing conflict and source-receipt behavior. Other complete received
-components can pass their explicit root directories to the same helper, for
-example `("scenario-design", "measurement_workspace", "observations", "source_data")`.
-The default remains the original editor namespace. Existing roots stay in order
-and names already present are retained once.
+For an in-memory composer, `inventory_sources(sources, directories=("scenario-design",))` accepts actual current path-to-source text. Include both `model/portable.py` and `model/portable_databases.py` when composing the embedded component, plus the current optional `source_tools/application_assembly.py`. The returned postimages extend the original directory inventory and the exact editor database-member set. Preserve all returned members in the resulting application.
 
-### Original editor, saved designs and reopening
+Other fully received components can pass their explicit root names to the same helper, for example `("scenario-design", "measurement_workspace", "observations", "source_data")`. Existing names remain present once. Tuple/list inventories keep their original type and order; the database inventory remains a set. The regular filesystem installer always includes the database helper, validates its maintained capture path and composes it in the same guarded write operation.
 
-Restart the current operator after installation so its maintained registry
-discovers `conservation-design.json`. Scenario design lists the original saved
-Conservation plans. Prepare a selected plan and download its complete editable
-project ZIP.
+## Continue the original plan in the operator
 
-Run the supplied editor with the same application's Python environment:
+Restart the operator using its existing startup procedure so the registry discovers the complete current descriptor. Use the same Workspace and original saved Conservation plan.
+
+1. Open **Scenario design**, choose that plan and prepare its editable project. The retained preparation identifies its original plan, binding, project and source geometry.
+2. Use **Edit** to open the preparation's same original project inside the operator. Its original Store retains projects under `conservation-design/editor/projects.sqlite` in this Workspace.
+3. Create an independent alternative, edit the original polygons and save. The original optimistic revision check handles concurrent edits; the recovered draft remains tied to its Workspace and project.
+4. Use the original **Land-cover scenario** controls to supply the intended source codes, destination code and reason. An optional existing native grid/profile/model selection prepares the same scenario for its native run.
+5. Download the complete native handover ZIP and receive it through Scenario design's ordinary file input. The existing binary upload retains its original bytes and the queue carries its upload identity.
+6. Reopen the retained receiving record and follow its original scenario and optional prepared run.
+
+The embedded view keeps its connected editor frame during normal polling, save and export updates. **Save and return to Scenario design** flushes the original writer before leaving. Accepted queued writes and exports retain their operation identity through original result delivery, including verified export download, so a lost response can recover that same task.
+
+Use the actual retained land-cover source and native profile for code choices. A geographic source-context plan already supports editing and native scenario creation; modeled effects come from the existing scientific run after compatible preparation and execution.
+
+## Capture and reopen saved editor work
+
+The scientific Workspace archive includes the complete editor application namespace and retained prepared projects, handovers, original bindings, source descriptors and native receiving records. It now captures the embedded editor's original Store database through the application's existing SQLite online backup path:
+
+```text
+workspace/conservation-design/editor/projects.sqlite
+```
+
+The existing helper copies a consistent committed database view, including committed changes still represented in its WAL, into a self-contained snapshot. It excludes the live database's WAL, shared-memory and journal sidecars from ordinary file collection and verifies that the original database file has not been replaced during capture. Other SQLite data sources retain their original byte-preservation behavior.
+
+Save the editor's current alternative before requesting the Workspace archive. A committed Store revision enters the database snapshot; an unsaved browser draft remains local to its original browser recovery key. The archive is a consistent snapshot of that database at capture time. Writes committed after its snapshot belong to the next backup.
+
+Receive the archive into a new application/Workspace directory through the original portable flow, then reopen the same retained preparation in Scenario design. Its Edit control resolves the original project ID from the restored Store, retaining its saved alternatives and revisions. The extension restore hook also runs the original preparation and receiving validators, checking bindings, saved file identities and original plan/scenario/run relationships.
+
+A useful completed receiving record includes the original plan, preparation and project IDs; the saved editor revision and alternative; the native handover identity; the receiving/scenario/optional run IDs; the archive identity; and the same records reopened from the restored Workspace. Capture the actual visible result from the accepting host.
+
+### Independent standalone editor
+
+The supplied original editor remains usable independently:
 
 ```sh
 cd CURRENT_APPLICATION/scenario-design
 python server.py --workspace ORIGINAL_DESIGN_WORKSPACE
 ```
 
-The loopback editor listens on port 8848 by default; `--port` selects another
-local port. In the editor, receive the complete project ZIP, create an alternative,
-edit its original polygons, select explicit land-cover inputs, and export the
-native handover ZIP. Back in the original operator, receive that handover through
-the normal queue. Reopen the saved receiving record and follow its original
-scenario and optional prepared native run.
+Its loopback port defaults to 8848; `--port` chooses another local port. Its database belongs to that separate selected directory. Export and receive its complete project ZIP to transfer that independent project into another editor, preserving its alternatives and edit history. The scientific Workspace archive captures the embedded Store inside the scientific Workspace and the prepared/exported files retained there.
 
-A scientific Workspace backup now includes the complete editor namespace.
-Prepared projects and native handovers already live under the Workspace's
-`conservation-design/` directory and travel with the existing recursive data
-inventory. The maintained extension restore hook calls the original
-`get_preparation` and `get_receiving` validators for every retained operation,
-checking the saved binding, file identities, original plan reference and native
-scenario/run relationships.
+## Continue the existing browser receiving operation
 
-The standalone editor's draft database belongs to its chosen
-`ORIGINAL_DESIGN_WORKSPACE`. To transfer an in-progress draft, use the editor's
-complete project export and receive it in the destination editor; this preserves
-its alternatives and edit history. A scientific Workspace archive includes
-the prepared/exported files retained inside that Workspace.
+Use the installed `operator/conservation_design_browser_receiving.py` and complete companion guide. It consumes the completed original Conservation browser result, so the same study, plan and Workspace continue into this editor course.
 
-The complete native receiving journey is: original plan → prepared project →
-edited project → native handover → original scenario/run → Workspace backup →
-new-directory receiving → reopened design operation. Use the real retained IDs
-and original geometry at each stage.
+```sh
+"$ECO_GIS_PYTHON" -B "$ECO_APPLICATION/operator/conservation_design_browser_receiving.py" \
+  --operator-receipt "$ECO_OPERATOR_RECEIPT" \
+  --conservation-receiving "$ECO_CONSERVATION_BROWSER_RESULT" \
+  --from-codes $ECO_ORIGINAL_FROM_CODES \
+  --to-code "$ECO_DESTINATION_CODE" \
+  --reason "$ECO_DESIGN_REASON" \
+  --output "$ECO_DESIGN_RECEIVING_OUTPUT" \
+  --chromium /usr/bin/chromium \
+  --record-video
+```
 
-## Retained provider composition
+Use existing host paths and the actual explicitly chosen integer codes. `ECO_ORIGINAL_FROM_CODES` is the whitespace-separated source-code list. The local operator receipt contains its capability and remains on the accepting host.
 
-The installer reads the current descriptor's original provider factory and adds its workspace verification method in memory. Existing binary upload, draft recovery, embedded-editor routes and task controls stay in that actual source body. The added method reuses the original saved-operation validators. An already registered workspace verifier remains owned by its current provider. The current descriptor's version, routes, actions, assets and client capabilities are preserved.
+The companion saves useful screenshots and optional recording, the complete editable project and handover ZIPs, and a result with actual original task and object identities. It verifies the unchanged original saved plan, original geometry with any explicit feature exclusion, original native selection, complete upload identity and reopened scenario/optional prepared run. Reusing the same output directory continues the same request and accepted task identities.
 
-The separate receiving helper and this guide are additive public application source. The original component and its current scientific prerequisites remain their authors' maintained files.
+The existing native model owner continues scientific execution for any prepared run. Follow the saved-editor archive/reopen course above on that same receiving Workspace when testing transfer; retain the original native operation rather than starting another model computation.
+
+## Provider and source ownership
+
+The installer composes the original provider's Workspace verification method and descriptor registration in memory. Existing editor transport, file policy, binary upload, native queue and draft handling stay in their current source bodies. An already registered verifier remains with its owner.
+
+The complete source family, database inventory addition and receiving instructions travel in the maintained public application. Shared host, scientific engine, cumulative source collection and native run ownership remain with their respective current implementations.

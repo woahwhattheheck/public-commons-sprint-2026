@@ -4,7 +4,7 @@ This package installs the implementation workbench in the existing Upper Savanna
 
 ## Install the complete received package
 
-Use the current complete application and the cumulative received source directory. The source directory must contain the five implementation model modules, the native operator adapter, the implementation extension descriptor and the browser modules, stylesheet and catalog listed in install_implementation.py. The guide files are optional installation members. Include build_implementation_offline.py or a complete prebuilt operator/web/implementation_workbench.html. When the HTML file is absent, installation calls the received builder's build(source_root, temporary_output_path) during preparation, verifies the actual generated file against its returned byte count and SHA-256, and publishes those bytes with the other guarded file changes. A received builder is also installed for later regeneration. The generator uses the same received core, forms, UI, stylesheet and methods catalog as the native desk.
+Use the current complete application and the cumulative received source directory. The source directory must contain the six implementation model modules, including model/implementation_economics.py, the native operator adapter, the implementation extension descriptor and the browser modules, stylesheet and catalog listed in install_implementation.py. The guide files are optional installation members. Include build_implementation_offline.py or a complete prebuilt operator/web/implementation_workbench.html. When the HTML file is absent, installation calls the received builder's build(source_root, temporary_output_path) during preparation, verifies the actual generated file against its returned byte count and SHA-256, and publishes those bytes with the other guarded file changes. A received builder is also installed for later regeneration. The generator uses the same received core, forms, UI, stylesheet and methods catalog as the native desk.
 
 Run with the receiving application's Python environment:
 
@@ -135,6 +135,24 @@ For kind conservation_portfolio, source_id can identify a completed native conse
 For conservation_selection, portfolio_selection or mapped_selection, supply source_document or upload_id and an explicit field_mapping. JSON pointers identify the actual rows, original ID, label and any original area/benefit/owner fields. Selection must use selected_ids, a declared selector or explicit all_rows. The source-import guide gives the complete mapping contract.
 
 Optional method_mapping associates original strategy/method keys with exact catalog IDs. The result includes proposed_task_inputs for deliberate scheduling. Original source estimates remain original planning metadata. Operators enter the actual task durations, costs, commitments and expenditures.
+
+### Chosen economic scenario
+
+From a saved Economic desk edition, choose one actual modeled alternative and open its implementation handoff. The planner shows the original scenario, reporting zone, signed physical changes, screening and source estimate before import. Choose an existing saved plan, or use **Create a new plan for this scenario**. **Save this plan and import scenario** commits the current draft through the original native queue before attaching the selected source.
+
+The handoff binds the workspace, economic edition, alternative run, native report ID and SHA-256, and reporting zone. The provider reopens the verified original edition and retained native report; the browser sends these identities. One jointly modeled alternative becomes one source-linked candidate. Its reporting area remains reporting support, and its original cost footprint, assumptions, source and currency remain planning context. Enter task durations, methods, implementation budgets, commitments and actual spending deliberately in the plan. Native money records use USD integer cents.
+
+The complete source snapshot preserves the economic report, its frozen selection and costs, original member manifest, the selected native zone, the original run roster and signed modeled outputs. Reopening a retained import resumes its original operation and source-linked plan revision. Local edits and open record dialogs stay available during the handoff; a different workspace rejects the selection. The imported source and final plan each use the existing 16 MiB JSON limits.
+
+Install the current Economic desk and its browser helper `operator/web/economic_implementation.mjs` together with this FIELD12 edition. The required FIELD12 file list includes `model/implementation_economics.py`, so its syntax, exact bytes and installation receipt follow the same guarded preparation as the existing modules. The portable companion can reopen the resulting exported plan and retains its frozen source and field records.
+
+The extension-host entry is:
+
+    host.openExtension('implementation', 'openEconomicScenario', {
+      workspace_key, edition_id, run_id, report_id, report_sha256, zone_id
+    })
+
+The controller keeps that request through desk navigation and asynchronous startup, then reviews it in the original planner. The native import uses the existing `implementation.source.import` action with `kind: "economic_scenario"`, the same binding, `source_id: edition_id`, `selected_ids: [run_id]`, `plan_id` and `expected_revision`. The provider resolves the source from that workspace and feeds the existing mapped-selection importer. The ordinary source-import action and plan schema continue to carry the resulting candidate.
 
 ### Original uploads and field records
 

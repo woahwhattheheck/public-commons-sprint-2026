@@ -193,7 +193,95 @@ def join_server(text):
     return allow_browser_assets(text)
 
 
+def join_registry_app(text):
+    """Use one mounted registered desk and the original synchronous delivery helpers."""
+    # Both original controller editions are published predecessors. Preserve the
+    # current host's cross-desk callbacks by routing them to its sole desk.
+    for old in (
+        "    if(typeof receivingWaters!=='undefined')receivingWaters.detach();\n",
+        "  if(typeof receivingWaters!=='undefined'&&view!=='receiving-waters')receivingWaters.detach();\n",
+        "  if(view==='receiving-waters')html=receivingWaters.render();\n",
+        "  if(view==='receiving-waters')receivingWaters.mount($('#content'));else receivingWaters.detach();\n",
+        " if(action?.startsWith('water-'))return receivingWaters.dispatch(button);\n",
+    ):
+        text = text.replace(old, "")
+    text = text.replace("receivingWaters.detach();", "")
+    text = text.replace("receivingWaters.taskActions(row)+", "")
+    text = text.replace("openReceivingPlan:id=>receivingWaters.openPlan(id)",
+                        "openReceivingPlan:id=>extensions.openExtension('receiving-waters','openPlan',id)")
+    text = text.replace("openReceivingAnalysis:id=>receivingWaters.openAnalysis(id)",
+                        "openReceivingAnalysis:id=>extensions.openExtension('receiving-waters','openAnalysis',id)")
+    contexts = (
+        "{getState:()=>state,api,endpoint,openForm,submitAction,detail,fileList,showTask,toast}",
+        "{getState:()=>state,api,endpoint,openForm,submitAction,detail,fileList,showTask,toast,"
+        "navigate,openDelivery:selection=>deliveryForm(undefined,selection)}",
+    )
+    for context in contexts:
+        original = "const receivingWaters=attachReceivingWaters(" + context + ");\n"
+        if text.count(original) > 1:
+            raise ValueError("The original receiving-water controller is repeated")
+        text = text.replace(original, "", 1)
+    text = after_line(
+        text, "import {attachCustomerReviews}",
+        "import {attachReceivingWaters} from './receiving_waters.mjs';\n",
+        "import {attachReceivingWaters}",
+    )
+    # The original helper closure performs no work until called. Retain only its
+    # two synchronous form functions; lifecycle/actions belong to extension_host.
+    facade = ("const receivingWaterDelivery=(()=>{const original=attachReceivingWaters("
+              "{getState:()=>state,api,endpoint,openForm,submitAction,detail,fileList,showTask,toast});"
+              "return {deliveryFields:original.deliveryFields,deliverySelection:original.deliverySelection};})();\n")
+    text = after_line(text, "const customerReviews=attachCustomerReviews(",
+                      facade, "const receivingWaterDelivery=")
+    text = text.replace("receivingWaters.deliveryFields(", "receivingWaterDelivery.deliveryFields(")
+    text = text.replace("receivingWaters.deliverySelection(", "receivingWaterDelivery.deliverySelection(")
+    text = text.replace("receivingWaterDelivery.deliverySelection({baseline_run_id:val(\'baseline\'),scenario_run_ids:alternatives})",
+                        "receivingWaterDelivery.deliverySelection({baseline_run_id:val(\'baseline\'),scenario_run_ids:alternatives},row||{})")
+    text = replace_once(
+        text, " '<h3 class=\"subheading full\">Actual supporting source editions",
+        " receivingWaterDelivery.deliveryFields(row||{})+\n"
+        " '<h3 class=\"subheading full\">Actual supporting source editions",
+        "receivingWaterDelivery.deliveryFields(",
+    )
+    text = replace_once(
+        text, "return submitAction('delivery.build',{title:",
+        "return submitAction('delivery.build',{...receivingWaterDelivery.deliverySelection("
+        "{baseline_run_id:val('baseline'),scenario_run_ids:alternatives},row||{}),title:",
+        "...receivingWaterDelivery.deliverySelection(",
+    )
+    text = replace_once(
+        text, "  const target={workspace,kind:button.dataset.kind,id,collection:button.dataset.collection};\n",
+        "  const target={workspace,kind:button.dataset.kind,id,collection:button.dataset.collection,"
+        "subject:button.dataset.subject,subject_kind:button.dataset.subjectKind,statistic:button.dataset.statistic,"
+        "run:button.dataset.run,quantity:button.dataset.quantity};\n",
+        "subject:button.dataset.subject,subject_kind:button.dataset.subjectKind",
+    )
+    # Do not retain an unexpected second browser owner after known legacy joins.
+    if "receivingWaters." in text or "const receivingWaters=" in text:
+        raise ValueError("Compose the independently changed receiving-water controller before shared registration")
+    return text
+
+
+def join_client_report(text):
+    """Compose original physical quantities into the maintained report model."""
+    return replace_once(
+        text,
+        '    receptor_inventory = state.get("receptor_inventory") or {}\n'
+        '    if receptor_inventory:\n'
+        '        sections.append(_receptor_section(state, receptor_inventory))\n',
+        '    receptor_inventory = state.get("receptor_inventory") or {}\n'
+        '    if receptor_inventory:\n'
+        '        sections.append(_receptor_section(state, receptor_inventory))\n'
+        '    for index, (title, paragraphs) in enumerate(\n'
+        '            (state.get("receiving_waters") or {}).get("report_sections", [])):\n'
+        '        sections.append(_section("receiving-water-" + str(index), title, paragraphs))\n',
+        '"receiving-water-" + str(index)',
+    )
+
+
 def join_app(text):
+    if "createExtensionHost(" in text:
+        return join_registry_app(text)
     text = after_line(
         text, "import {attachCustomerReviews}",
         "import {attachReceivingWaters} from './receiving_waters.mjs';\n",
@@ -302,12 +390,15 @@ def join_delivery(text):
         "            future_maps = {}\n",
         "receiving_water_delivery.apply_map_specs(all_specs, water_product)",
     )
-    text = replace_once(
-        text, '                cartography.report_pdf(target, selection.get("title", workspace.project["title"]),\n',
-        '                sections.extend(receiving_water_delivery.report_section(water_product))\n'
-        '                cartography.report_pdf(target, selection.get("title", workspace.project["title"]),\n',
-        "sections.extend(receiving_water_delivery.report_section(water_product))",
-    )
+    if "cartography.report_pdf(" in text:
+        text = replace_once(
+            text, '                cartography.report_pdf(target, selection.get("title", workspace.project["title"]),\n',
+            '                sections.extend(receiving_water_delivery.report_section(water_product))\n'
+            '                cartography.report_pdf(target, selection.get("title", workspace.project["title"]),\n',
+            "sections.extend(receiving_water_delivery.report_section(water_product))",
+        )
+    elif "client_report.build_report(" not in text:
+        raise ValueError("Compose the current delivery report engine before receiving-water installation")
     text = replace_once(
         text, "            atomic_json(audit_manifest, manifest)\n",
         "            receiving_water_delivery.extend_assets(manifest, state)\n"
@@ -452,8 +543,14 @@ def install(root, *, check=False):
             raise FileNotFoundError(f"Receive the complete receiving-water extension source: {path}")
         if relative.endswith(".py"):
             ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+    joiners = dict(JOINERS)
+    if "client_report.build_report(" in (root / "model/delivery.py").read_text(encoding="utf-8"):
+        report_path = root / "model/client_report.py"
+        if not report_path.is_file():
+            raise FileNotFoundError("Receive the current complete model/client_report.py")
+        joiners["model/client_report.py"] = join_client_report
     originals, changes = {}, {}
-    for relative, join in JOINERS.items():
+    for relative, join in joiners.items():
         path = root / relative
         before = path.read_bytes()
         after = join(before.decode("utf-8")).encode("utf-8")

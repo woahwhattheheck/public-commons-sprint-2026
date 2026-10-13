@@ -24,7 +24,7 @@ from .common import (atomic_bytes, atomic_json, canonical, describe_file, digest
 
 from .station_assessment_context import enrich as enrich_assessments, geojson as assessment_geojson, report_section as assessment_report
 
-VERSION = "1.2.0"
+VERSION = "1.2.1"
 KIND = "station-geographies"
 RESULT_SCHEMA = "upstate.station-geography-result/v1"
 PACKAGE_SCHEMA = "upstate.station-geography-package/v1"
@@ -744,7 +744,10 @@ def build(workspace, selection):
          "evidence_kind", "source_uri", "source_sha256", "publisher_huc12", "cause_code", "cause_label",
          "cause_source_cell", "use", "use_support", "priority_ranking", "description", "county",
          "source_page", "tmdl_report", "approval_date", "location_status", "coordinates_wgs84",
-         "geographic_huc12s", "publisher_huc_relation", "station_source_ref", "inventory_source_ref", "original"],
+         "geographic_huc12s", "publisher_huc_relation", "station_publisher_huc12", "station_publisher_huc8",
+         "station_publisher_huc_relation", "station_publisher_huc_fields", "original_record_pointer",
+         "original_record_index", "inventory_body_sha256", "inventory_row_number",
+         "station_source_ref", "inventory_source_ref", "original"],
         assessment_links), immutable=True)
     atomic_bytes(destination / "source_inventory.csv", _csv(
         ["candidate_id", "native_station_id", "station_key", "native_crs", "native_crs_wkt", "native_coordinates",

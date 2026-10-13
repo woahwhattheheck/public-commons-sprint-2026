@@ -141,6 +141,19 @@ The designation adapter consumes the original source crosswalk, declared rule ed
 
 Use the original crosswalk builder's returned result with --crosswalk-result so its actual run directory and source-manifest identity are retained. Full commands, selection schema and source references are in [Water designation applicability](source_tools/WATER_DESIGNATION_APPLICABILITY.md).
 
+## Customer requests and engineering handbacks
+
+The existing Customer reviews desk now carries a complete revision workflow.
+Select a retained customer response, assign its actual requests, save planning
+and ready engineering editions, and connect each addressed item to files or
+requirements in a revised review. The complete handback carries both selected
+review desks, pinned customer response histories, and every engineering edition's
+replacement references.
+
+Use [Customer review handbacks](operator/CUSTOMER_REVIEW_HANDBACK.md) for the
+browser workflow and [the original CLI and portable receiving guide](model/REVIEW_HANDBACK.md)
+for independent reopening and joining the restored scientific project.
+
 ## Focused development checks
 
 The browser modules include focused checks for workspace-switch lifecycle and regional-cohort rendering/export behavior:

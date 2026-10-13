@@ -245,3 +245,49 @@ All paths remain under the original scientific Workspace and travel through its 
 Join these commands to the existing original native operation with its actual interpreter, saved Workspace and study IDs. The source-only profile receiver and completed watershed-context receiver can run first in the same Workspace; scientific raster consumers then use the original completed native selections when those results are retained. Keep the original Gura source edition/grid/context distinct from the Upper Savannah regional study.
 
 An accepting native receiver should return the actual command, application/interpreter, Workspace UUID, study and consumer IDs, output JSON/report paths, and the first exception if one occurs. The source authors can then patch the same complete component and resume its original handoff.
+
+
+## Original annual import to a saved native study
+
+The current Annual load references desk now offers **Evaluate saved study** beside its existing **Open calibration** action. This continuation uses the completed original import's retained binding. It opens the actual saved studies in the same Workspace, then the existing scientific-consumer form with that source preselected. Review the completed baseline profiles and outputs, original annual estimator, source period and catchment support, then submit the existing calibration action.
+
+From Scenario sensitivity, **Evaluate annual loads** also lists completed imported annual sources alongside previous calibration selections. Choosing an imported source fixes its original observation ID, source collection, catchment source and matching identity field. The form disables manual replacement of that binding. Choosing a prior evaluation retains its original groups, objective, record filters and held-out choices. Advanced analysis options remain available; they cannot replace an imported source's observation or spatial binding.
+
+### Headless original-source selection
+
+List the actual completed imports, source methods and periods:
+
+~~~sh
+"$PYTHON" -B -m model.ensemble_consumers_cli \
+  --workspace "$WORKSPACE" annual-references
+~~~
+
+Use the returned original import task ID with an existing saved study:
+
+~~~sh
+"$PYTHON" -B -m model.ensemble_consumers_cli \
+  --workspace "$WORKSPACE" calibration \
+  --ensemble-id "$ENSEMBLE_ID" \
+  --annual-import-id "$ANNUAL_IMPORT_TASK_ID"
+~~~
+
+Optional `--reference-options "$ANALYSIS_OPTIONS"` accepts the existing analysis choices: title, observation_record_ids, catchment_groups, calibration_group_ids, validation_group_ids, objective, delivered_external_loads, notes, leave_group_out and temporal_weighting. The original binding's recommended temporal weighting supplies the default. Source-period means and study-period compatibility are still evaluated by the existing calibration implementation. Optional `--pollutant`, `--profile-id`, `--prepare-only` and `--standard-errors` keep their original meanings. The existing `--references "$ANNUAL_REFERENCE_SELECTION"` route is preserved and mutually exclusive with `--annual-import-id`.
+
+The imported source may use the maintained F7DN436B original annual-estimator edition or the current Southeast SPARROW calibration-target edition. Both are admitted by their original producers and retain their own source release, estimation method, units, catchment choice, period semantics and uncertainty. The new adapter does not convert a source-global reference horizon into station-specific sampling dates. It displays the original producer's notes and distinct period/method groups, including the exclusive end date retained by observations. Original units and comparison units appear separately. Missing published standard errors remain missing; their availability is counted from actual admitted observation records.
+
+The original daily-discharge and concentration acquisitions continue through their established source and estimator owners. Contextual rows are not turned into annual-load references by this continuation.
+
+### Retention and native operation
+
+The adapter reads `annual-references/IMPORT_ID/operation.json`, requires its completed original import, verifies the Workspace, preparation and observation identities, and resolves the catchment vector from the exact retained source collection. On submission it verifies the original producer's prepared document descriptors and preparation identity. The saved scientific handoff adds `annual_reference` with its original binding, relative operation descriptor, catchment source descriptor and source summary. Existing consumer result pages display this context alongside the actual calibration and source-error results.
+
+No raster is opened and no model is launched to list imports or choose a study. The original calibration queue runs only when the operator submits the review form. Its existing source checks, spatial overlap groups, held-out evaluation and physical units remain authoritative. Imported records and their companions already travel in the complete original Workspace; all adapter file paths are relative to the current Workspace root.
+
+For the original receiving operation, open Annual load references → a completed import → Evaluate saved study → an existing completed native study. Confirm the original source and catchments remain selected, choose its actual baseline candidates/outputs, run the original queue, and reopen the resulting annual-reference context and calibration IDs. Then export/restore the same Workspace and repeat the retained-result opening. The CLI alternative above uses the same producer and retained IDs.
+
+
+### Exact original records for hydrology support
+
+The `annual-references` CLI includes each imported source's `reference_records`. Each admitted record retains its native `id`/`record_id`, observation and preparation IDs, original station/catchment IDs, parameter/method, period_start and exclusive period_end, original/comparison units, and complete `source_records`. When the original source explicitly names a flow_station_id, that identity is exposed separately; absence remains null. A water-quality station is not implicitly treated as its flow station.
+
+The existing hydrology support consumer can intersect those exact periods with retained daily dates, preserve unmatched station/series requests, and report captured versus requested support. Its available daily-flow edition and the annual estimate keep their separate source periods. A period-support summary describes the actual date/flow coverage; it does not supply a new annual pollutant estimate. The compact browser catalogue omits this potentially large per-record list; the saved scientific handoff and CLI keep the complete records. Applied observation_record_ids and objective filters remain in the original saved calibration selection.
