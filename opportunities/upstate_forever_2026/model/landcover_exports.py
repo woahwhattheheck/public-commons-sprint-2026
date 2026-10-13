@@ -20,11 +20,65 @@ def _csv(path: Path, columns: list[str], rows: list[dict]) -> None:
             writer.writerow(safe)
 
 
+def _source_edition_rows(report: dict) -> list[dict]:
+    """Bind readable annual-source labels to the actual retained raster inputs."""
+    editions = report.get("source_editions")
+    if editions is None:
+        return []
+    if not isinstance(editions, dict) or (editions.get("schema") != "upstate.landcover-source-editions/v1"
+            or editions.get("input_mode") != "sources"
+            or editions.get("area_method") != "fractional_polygon_overlap"
+            or editions.get("binding_file") != "input-editions.json"):
+        raise LedgerError("Unsupported original source-edition metadata")
+    baseline, alternatives = editions.get("baseline"), editions.get("alternatives")
+    if not isinstance(baseline, dict) or not isinstance(alternatives, list) or any(not isinstance(row, dict) for row in alternatives):
+        raise LedgerError("Retain the original baseline and alternative source editions")
+    if baseline.get("key") != "baseline" or [row.get("key") for row in alternatives] != report["scenarios"]:
+        raise LedgerError("Source-edition labels differ from the original comparison order")
+    inputs = {row["role"]: row for row in report["inputs"]}
+    rows = []
+    for role, edition in [("baseline", baseline), *(("alternative", row) for row in alternatives)]:
+        key = edition["key"]
+        raster = edition.get("raster")
+        retained = inputs.get("baseline" if role == "baseline" else "scenario:" + key)
+        if (not isinstance(raster, dict) or retained is None
+                or any(raster.get(field) != retained.get(field) for field in ("bytes", "sha256"))):
+            raise LedgerError("Source-edition metadata differs from its retained raster input")
+        for field in ("label", "source_collection_id", "source_id"):
+            if not isinstance(edition.get(field), str) or not edition[field]:
+                raise LedgerError("A source edition is missing its original " + field)
+        if isinstance(edition.get("band"), bool) or not isinstance(edition.get("band"), int) or edition["band"] < 1:
+            raise LedgerError("A source edition must retain its original positive band number")
+        for field in ("source_time", "source_crs", "units", "source_uri"):
+            if edition.get(field) is not None and not isinstance(edition[field], str):
+                raise LedgerError("Source-edition " + field + " must retain original text")
+        rows.append({
+            "role": role, "comparison_key": key, "label": edition["label"],
+            "source_time": edition.get("source_time") or "",
+            "source_collection_id": edition["source_collection_id"],
+            "source_id": edition["source_id"], "band": edition["band"],
+            "source_crs": edition.get("source_crs") or "",
+            "units": edition.get("units") or "", "source_uri": edition.get("source_uri") or "",
+            "raster_bytes": raster["bytes"], "raster_sha256": raster["sha256"],
+        })
+    return rows
+
+
 def export_report(output: Path | str) -> dict:
     root = Path(output)
     report = json.loads((root / "ledger.json").read_text(encoding="utf-8"))
     if report.get("schema") != SCHEMA or report.get("complete") is not True:
         raise LedgerError("Only complete land-cover ledgers may produce an operator report")
+    source_rows = _source_edition_rows(report)
+    if source_rows:
+        binding_path = root / "input-editions.json"
+        if not binding_path.is_file():
+            raise LedgerError("Retain input-editions.json with the complete source comparison")
+        identity = (binding_path.stat().st_size, sha256_file(binding_path))
+        if not any(item.get("role") == "context" and
+                   (item.get("bytes"), item.get("sha256")) == identity for item in report["inputs"]):
+            raise LedgerError("The portable source binding differs from the computed ledger context")
+        _csv(root / "source-editions.csv", list(source_rows[0]), source_rows)
     summary, transitions, groups, coverage, unknowns = [], [], [], [], []
     for row in report["rows"]:
         key = {k: row[k] for k in ("zone_id", "zone_name", "scenario")}
