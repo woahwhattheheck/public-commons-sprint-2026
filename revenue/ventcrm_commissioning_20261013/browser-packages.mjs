@@ -8,7 +8,7 @@ import {fileURLToPath,pathToFileURL} from "node:url";
 import {gunzipSync} from "node:zlib";
 import Zip from "./host/connected_zip.cjs";
 import {receiveOriginalPackages} from "./build-package-viewer.mjs";
-import {documentPreview} from "./vendor/customer-package-panel.mjs";
+import {previewVentCRMDocument as documentPreview} from "./package-viewer.mjs";
 const require=createRequire(import.meta.url),here=path.dirname(fileURLToPath(import.meta.url));
 const hash=bytes=>createHash("sha256").update(bytes).digest("hex");
 function installedPlaywright(selected){
@@ -91,6 +91,23 @@ async function run(){
      const member=members.find(m=>m.name===f.name);if(!member||member.bytes!==f.bytes||hash(member.data)!==f.sha256)throw Error("Downloaded original member differs.");
      const expectedPreview=documentPreview(f.name,Zip.utf8Text(member.data));
      if(await page.locator("#preview").getAttribute("srcdoc")!==expectedPreview)throw Error("The actual selected document preview differs.");
+     if(f.name.endsWith("-commissioning.html")){
+      const frame=page.frameLocator("#preview"),body=frame.locator('body[data-ventcrm-opening="complete"]');
+      await body.waitFor({state:"visible"});
+      await frame.getByRole("heading",{name:"Open the working desk",exact:true}).waitFor({state:"visible"});
+      const working=f.name.replace(/-commissioning\.html$/,"-working.json");
+      await frame.locator("code").filter({hasText:working}).waitFor({state:"visible"});
+      const expectedSeed=JSON.parse(Zip.utf8Text(member.data).match(/<script id="programme-data" type="application\/json">([\s\S]*?)<\/script>/)[1]).seed;
+      if(await frame.locator("body > ul > li").count()!==expectedSeed.operators.length)throw Error("The original operator selection differs in the embedded preview.");
+      await frame.locator("summary").click();
+      if(await frame.locator("details[open] > ol > li").count()!==expectedSeed.criteria.length)throw Error("The complete original commissioning steps are not open.");
+      const frameLayout=await body.evaluate(()=>({width:innerWidth,documentWidth:document.documentElement.scrollWidth}));
+      if(frameLayout.documentWidth>frameLayout.width+1)throw Error("The embedded commissioning preview overflows at "+width);
+      const embedded=width+"-"+i+"-commissioning-embedded.jpg";
+      await page.locator("#preview").screenshot({path:path.join(out,"screens",embedded),type:"jpeg",quality:86});
+      result.views.push({width,name:i+"-commissioning-embedded",file:embedded,...frameLayout,operators:expectedSeed.operators.length,steps:expectedSeed.criteria.length});
+      await capture(page,i+"-commissioning-open");save();
+     }
      await download(section.getByRole("button",{name:"Download document",exact:true}),i+"-"+f.name,f);
      const documentPage=await context.newPage();documentPage.on("pageerror",e=>result.browser_errors.push(e.message));
      await documentPage.goto(origin+"/documents/"+i+"/"+encodeURIComponent(f.name));await documentPage.locator("body").waitFor();
