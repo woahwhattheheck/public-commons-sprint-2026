@@ -20,6 +20,7 @@ from .common import (INVEST_VERSION, atomic_bytes, atomic_json, canonical,
                      verify_file, selected_models, required_roles, output_models)
 from .profiles import NDR_KEYS, SDR_KEYS, checked_parameters
 from . import rasters
+from .native_execution import storage_exhausted
 
 SELECTION_SCHEMA = "upstate.experiment-selection/v1"
 PLAN_SCHEMA = "upstate.experiment-plan/v1"
@@ -1098,9 +1099,12 @@ def execute(workspace, experiment_id, *, completed_only=False):
                                 output_artifacts=run["artifacts"])
                     state["progress"]["complete"] += 1
                 except Exception as exc:
-                    case.update(state="failed", updated_at=now(),
-                                error={"type": type(exc).__name__, "message": str(exc)})
+                    failure = copy.deepcopy(getattr(exc, "native_failure", None)) or {
+                        "type": type(exc).__name__, "message": str(exc)}
+                    case.update(state="failed", updated_at=now(), error=failure)
                     state["progress"]["failed"] += 1
+                    if storage_exhausted(exc):
+                        raise
                 if run is not None:
                     # A failed later model may still leave a complete reusable
                     # earlier stage. The native matcher verifies each stage.
@@ -1121,20 +1125,27 @@ def execute(workspace, experiment_id, *, completed_only=False):
                 state.pop("error", None)
             _summarize_locked(workspace, experiment_id, plan, state)
         except BaseException as exc:
-            if active is not None and active.get("state") == "running":
-                active.update(state="failed", updated_at=now(),
-                              error={"type": type(exc).__name__, "message": str(exc)})
-                _persist_case(directory, active)
-            state = _progress(directory, state)
-            state["state"] = "partial" if state["progress"]["complete"] else "failed"
-            state["error"] = {"type": type(exc).__name__, "message": str(exc)}
-            atomic_json(directory / "state.json", state)
-            # Preserve a useful results table even when the native environment,
-            # an input, or the caller interrupts the remaining selections.
+            capacity_failure = storage_exhausted(exc)
+            failure = copy.deepcopy(getattr(exc, "native_failure", None)) or {
+                "type": type(exc).__name__, "message": str(exc)}
             try:
-                _summarize_locked(workspace, experiment_id, plan, state)
-            except Exception:
-                pass
+                if active is not None and active.get("state") != "complete":
+                    active.update(state="failed", updated_at=now(), error=failure)
+                    _persist_case(directory, active)
+                state = _progress(directory, state)
+                state["state"] = "partial" if state["progress"]["complete"] else "failed"
+                state["error"] = failure
+                atomic_json(directory / "state.json", state)
+            except OSError:
+                if not capacity_failure:
+                    raise
+            # Existing completed exports remain available. A full filesystem
+            # needs capacity recovery before another aggregation/export write.
+            if not capacity_failure:
+                try:
+                    _summarize_locked(workspace, experiment_id, plan, state)
+                except Exception:
+                    pass
             raise
         if state["state"] != "complete":
             raise RuntimeError("Experiment " + experiment_id + ": " + state["error"]["message"])
