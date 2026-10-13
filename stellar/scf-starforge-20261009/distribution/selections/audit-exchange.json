@@ -2,7 +2,7 @@
   "schema": "stellar-forge.distribution-source-selection.v1",
   "id": "audit-exchange",
   "title": "Audit Exchange",
-  "description": "Native building audit review, original energy analysis, complete editable turnover",
+  "description": "Complete native building audit application, original energy analysis, editable recipient returns, and maintained Grant Operations Installation preparation and receiving.",
   "base": {
     "commands": [
       "installation",
@@ -12,7 +12,8 @@
       "runtime-transfer",
       "merchant-mcp",
       "merchant-mcp-stdio",
-      "merchant-mcp-client-config"
+      "merchant-mcp-client-config",
+      "grant-workspace"
     ],
     "exports": [
       "./runtime-profile",
@@ -46,7 +47,9 @@
   },
   "contributions": [
     "audit-exchange-workspace",
-    "merchant-provider-tools"
+    "merchant-provider-tools",
+    "merchant-console-browser-assets",
+    "grant-workspace"
   ],
   "components": [
     "stellar/scf-starforge-20261009/distribution",
@@ -91,7 +94,33 @@
     "stellar/scf-starforge-20261009/sf30-seller-sdk/examples/upstream-service.json",
     "stellar/scf-starforge-20261009/sf30-seller-sdk/examples/application.mjs",
     "stellar/scf-starforge-20261009/sf30-seller-sdk/examples/upstreams.json",
-    "stellar/scf-starforge-20261009/sf30-seller-sdk/source_file_delivery.py"
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/source_file_delivery.py",
+    "stellar/scf-starforge-20261009/distribution/BUILDING.md",
+    "stellar/scf-starforge-20261009/distribution/SOURCE_SELECTIONS.md",
+    "stellar/scf-starforge-20261009/distribution/RUNTIME_INSTALL.md",
+    "stellar/scf-starforge-20261009/distribution/RUNTIME_TRANSFER.md",
+    "stellar/scf-starforge-20261009/distribution/runtime-workspace/README.md",
+    "stellar/scf-starforge-20261009/distribution/runtime-workspace/APPLICATIONS.md",
+    "stellar/scf-starforge-20261009/distribution/runtime-workspace/APPLICATION_PROVIDERS.md",
+    "stellar/scf-starforge-20261009/distribution/runtime-workspace/SOURCE_BUILDS.md",
+    "stellar/scf-starforge-20261009/distribution/runtime-workspace/worker.mjs",
+    "stellar/scf-starforge-20261009/distribution/runtime-workspace/application-terminal.py",
+    "stellar/scf-starforge-20261009/distribution/runtime-workspace/managed-command.mjs",
+    "stellar-forge/mcp-merchant-operator/README.md",
+    "stellar-forge/mcp-merchant-operator/MERCHANT_PROVIDERS.md",
+    "stellar/scf_2026/sf47_budget_model/budget.py",
+    "stellar/scf_2026/sf47_budget_model/sf10_current_candidate.json",
+    "stellar/scf_2026/sf49_data_commissioning/installation-workorders/profiles.mjs",
+    "stellar/scf_2026/sf49_data_commissioning/installation-workorders/prepare-core.mjs",
+    "stellar/scf_2026/sf49_data_commissioning/installation-workorders/prepare.mjs",
+    "stellar/scf_2026/sf49_data_commissioning/installation-workorders/receive.mjs",
+    "stellar/scf_2026/sf49_data_commissioning/installation-workorders/README.md",
+    "stellar/scf_2026/sf49_data_commissioning/installation-workorders/AUDIT_EXCHANGE.md",
+    "stellar/scf_2026/sf49_data_commissioning/installation-workorders/audit-exchange.json",
+    "products/audit-exchange/OPERATING.md",
+    "products/audit-exchange/PACKAGE_README.md",
+    "products/audit-exchange/PUBLIC_SOURCE.json",
+    "products/audit-exchange/AGENTS.md"
   ],
   "excludeFiles": [
     "stellar/scf-starforge-20261009/distribution/index.mjs"
@@ -99,9 +128,13 @@
   "product": {
     "schema": "stellar-forge.merchant-product-package.v1",
     "description": "Native audit XML, official validation, source-bound review, actual nmecr models and complete editable building handover",
-    "readme": "products/audit-exchange/OPERATING.md",
+    "readme": "products/audit-exchange/PACKAGE_README.md",
     "bin": {
       "starforge": "stellar/scf-starforge-20261009/distribution/cli.mjs"
+    },
+    "repository": {
+      "url": "https://github.com/woahwhattheheck/public-commons-sprint-2026",
+      "directory": ""
     }
   }
 }
