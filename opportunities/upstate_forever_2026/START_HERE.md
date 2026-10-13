@@ -40,11 +40,20 @@ To reopen an existing study, run the same command with its existing workspace an
 | Parameter profiles and land-cover scenarios | Save explicit scientific coefficients and categorical edits with their original references. |
 | Native model runs and native run desk | Prepare or inspect individual calculations, completed stages, current logs and original output files. |
 | Scenario experiments | Design parameter and land-cover cases with an explicit reference and the appropriate paired baselines. |
+| Source-water areas | Inspect original upstream watershed membership, prepare original polygon areas, save ordered land-cover alternatives and assemble their matching-profile native programmes. |
 | Run programmes | Materialize an existing design or group prepared cases, execute the selected runs, pause between calculations, resume retained stages, and build the result catalogue. |
 | Spatial, community, observation and review screens | Examine geography, source coverage, actual outputs, observation periods and review requirements in the same workspace. |
 | Complete map delivery | Build the selected seven-map release, GIS layers, reports and portable working archive from completed native runs. |
 
 The extension catalogue at the authenticated `/api/extensions` route reports each installed desk and any concrete source dependency that needs attention. The source preparation and native run desks use this shared registry.
+
+## Source-water interventions and paired calculations
+
+Open **Source-water areas** to receive the original watershed network, inspect its named upstream memberships and save the intended receiving areas. **Prepare scenario areas** retains their original polygon bodies in the Workspace. Save explicit land-cover changes on those areas, including their source/destination classes, rationale and patch order.
+
+Choose **Prepare paired programme** from the prepared-area product. Select its actual original grid, the original land-cover baseline, retained parameter profiles, intended alternatives and NDR/SDR scope. Review the full run list; every profile receives its own matching baseline. Open the saved native programme to run, pause or continue those exact cases using the maintained execution service.
+
+After the programme finishes, return to its source-water plan, refresh calculation status and build the receiving-area comparisons. Existing reports retain matching-profile baselines, common valid support and original physical quantities. Saved source, scenario, programme and report selections travel with the complete working archive. See `model/RECEPTOR_PROGRAMMES.md` and `operator/RECEPTORS_OPERATOR.md` for the full browser and CLI journey.
 
 ## Select the scientific scope
 
@@ -72,7 +81,7 @@ See `PROGRAMMES.md` for the API, command-line service and integration points.
 python -B -m source_tools.receive_gura --help
 ```
 
-Supply the original NDR and SDR archive files, the separate original NDR and SDR CSV files, their source references, a receiving source directory and a workspace directory. The receiver preserves the actual 300-metre sample grid and its 9-hectare cells. Its upstream buffer is a separate, explicitly selected model-context distance.
+Supply the original NDR and SDR archive files, the separate original NDR and SDR CSV files, their source references, a receiving source directory and a workspace directory. The receiver reads and preserves the native cell size of the selected original raster. The pinned official InVEST 3.20.0 archives use 15-metre cells covering 0.0225 hectare each. A separately retained 300-metre case keeps its own grid and 9-hectare cells. The upstream buffer is an independent model-context distance; new intake uses zero added context, while continuation retains the saved selection. An explicit `--expected-resolution-m` asserts the source resolution without requesting resampling.
 
 The returned programme ID is ready for the same native execution, resumption, reporting, browser review and backup workflow used by the regional application.
 

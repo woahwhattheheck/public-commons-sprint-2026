@@ -198,7 +198,7 @@ def map_pdf(path, title, panels, *, overlays, boundary, crs, subtitle, footer, d
         if path is not None:
             Path(path).parent.mkdir(parents=True, exist_ok=True)
             fig.savefig(path, format="pdf", dpi=dpi, metadata={"Title": title, "Subject": subtitle,
-                                               "Creator": "Upper Savannah scientific workbench"})
+                                               "Creator": "Scientific Workbench"})
         if pdf_pages is not None:
             pdf_pages.savefig(fig, dpi=dpi)
     finally:
@@ -244,7 +244,7 @@ def report_pdf(path, title, sections, *, contact, source_records):
     def page_number(canvas, document):
         canvas.saveState()
         canvas.setFont("Helvetica", 7)
-        canvas.drawString(.7 * inch, .42 * inch, "Upper Savannah · retained model and source editions")
+        canvas.drawString(.7 * inch, .42 * inch, "Scientific study · retained model and source editions")
         canvas.drawRightString(7.8 * inch, .42 * inch, str(document.page))
         canvas.restoreState()
     Path(path).parent.mkdir(parents=True, exist_ok=True)
@@ -728,6 +728,9 @@ def render_spatial_review(directory, *, review, project, frame, layout, overlay_
                             paragraph(field.replace("_", " ") + ": " +
                                       json.dumps(native[field], ensure_ascii=False, sort_keys=True))
                 paragraph("Review notes", heading=True)
+                if review.get("atlas_review"):
+                    from .atlas_reviews import context_text
+                    paragraph(context_text(review["atlas_review"]))
                 paragraph(review.get("notes", "") or "No saved notes.")
                 paragraph("Point annotations", heading=True)
                 with Path(annotation_file).open(encoding="utf-8") as source:
@@ -747,7 +750,7 @@ def render_spatial_review(directory, *, review, project, frame, layout, overlay_
                         paragraph("Original numeric text: " + str(pixel["raw_value_text"]) +
                                   "; source SHA256 " + pixel["source_sha256"])
                     if result.get("difference"):
-                        paragraph("Alternative minus baseline: " + result["difference"]["value_text"] +
+                        paragraph("Right source minus left source: " + result["difference"]["value_text"] +
                                   " " + str(result["difference"]["units"]))
                     for group in result["features"]:
                         paragraph("Features: " + group["layer"]["title"] + "; IDs " +

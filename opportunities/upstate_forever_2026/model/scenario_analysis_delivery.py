@@ -120,7 +120,9 @@ def _cohort(workspace, record):
             if run["selection"]["profile_id"] != profile_id:
                 issue("profile", "This case changes the parameter profile. Retain a common-profile land-cover cohort for the original future-service maps.", key)
             scenario = workspace._get("scenarios", run["selection"]["scenario_id"])
-            if index and scenario["kind"] != "landcover":
+            if index == 0 and scenario["kind"] != "baseline":
+                issue("scenario_kind", "Choose an original baseline scenario for the current-export maps.", key)
+            elif index and scenario["kind"] != "landcover":
                 issue("scenario_kind", "Use an explicit source-bound land-cover alternative for future-service maps.", key)
             current_version = _version(run)
             case["native_version"] = current_version

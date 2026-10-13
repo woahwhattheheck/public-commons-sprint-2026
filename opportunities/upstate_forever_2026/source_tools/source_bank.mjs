@@ -103,10 +103,30 @@ export function createSourceBankToolkit(options = {}) {
   function sourceBank(bank) {
     if (!bank || typeof bank !== "object" || Array.isArray(bank)) fail("expected a source-bank object");
     const schema = bank.schema ?? bank.format;
-    if (![1, "commons.source-bank/v1", "upstate.source-files/v1", "eco-source-text-v1"].includes(schema))
+    if (![1, "commons.source-bank/v1", "commons.source-map/1",
+          "upstate.source-files/v1", "eco-source-text-v1"].includes(schema))
       fail("unsupported source-bank schema");
     let entries;
-    if (Array.isArray(bank.files)) entries = bank.files;
+    if (schema === "commons.source-map/1") {
+      if (!bank.files || typeof bank.files !== "object" || Array.isArray(bank.files) ||
+          !bank.file_metadata || typeof bank.file_metadata !== "object" || Array.isArray(bank.file_metadata))
+        fail("source map needs files and file_metadata mappings");
+      const paths = Object.keys(bank.files), metadataPaths = Object.keys(bank.file_metadata);
+      if (paths.length > limits.maxMembers) fail("source bank member limit exceeded");
+      if (paths.length !== metadataPaths.length ||
+          metadataPaths.some(path => !Object.prototype.hasOwnProperty.call(bank.files, path)))
+        fail("source-map metadata paths must match every source file exactly");
+      entries = paths.map(path => {
+        const metadata = bank.file_metadata[path];
+        if (!metadata || typeof metadata !== "object" || Array.isArray(metadata) ||
+            !Number.isSafeInteger(metadata.bytes) || metadata.bytes < 0 ||
+            typeof metadata.sha256 !== "string" || !shaPattern.test(metadata.sha256) ||
+            !["100644", "100755"].includes(metadata.mode))
+          fail("source-map metadata needs original bytes, SHA-256 and regular-file mode: " + path);
+        return { path, content: bank.files[path], bytes: metadata.bytes,
+                 sha256: metadata.sha256, mode: metadata.mode, declaredMetadata: metadata };
+      });
+    } else if (Array.isArray(bank.files)) entries = bank.files;
     else if (bank.files && typeof bank.files === "object")
       entries = Object.entries(bank.files).map(([path, content]) => ({ path, content }));
     else fail("source bank needs files");
@@ -134,9 +154,15 @@ export function createSourceBankToolkit(options = {}) {
       const row = fileRow(path, data, entry);
       row.executable = [0o755, "755", "0755", "100755"].includes(entry.mode);
       row.declaredSha256 = entry.sha256 !== undefined;
+      if (entry.declaredMetadata !== undefined) row.declaredMetadata = { ...entry.declaredMetadata };
       total += data.length; files.push(row);
     }
-    return summarize("source-bank", files, { schema, sourceRoot: bank.source_root ?? bank.base_path ?? null });
+    return summarize("source-bank", files, {
+      schema, sourceRoot: bank.source_root ?? bank.base_path ?? (schema === "commons.source-map/1" ? bank.prefix ?? null : null),
+      ...(schema === "commons.source-map/1" ? {
+        edition: bank.edition ?? null, repository: bank.repository ?? null, sourceRef: bank.source_ref ?? null
+      } : {})
+    });
   }
   const u16 = (a, p) => a[p] | (a[p + 1] << 8);
   const u32 = (a, p) => (a[p] | (a[p + 1] << 8) | (a[p + 2] << 16) | (a[p + 3] << 24)) >>> 0;
@@ -247,6 +273,51 @@ export function createSourceBankToolkit(options = {}) {
       result.envelope = { schema: value.schema, filename: portablePath(value.filename), bytes: data.length, sha256: identity };
       return result;
     }
+    if (value?.schema === "commons.source-bank-envelope/v1") {
+      if (value.encoding !== "base64+gzip"
+          || !Number.isSafeInteger(value.bytes) || value.bytes < 0
+          || !Number.isSafeInteger(value.gzip_bytes) || value.gzip_bytes < 0
+          || typeof value.sha256 !== "string" || !shaPattern.test(value.sha256)
+          || typeof value.gzip_sha256 !== "string" || !shaPattern.test(value.gzip_sha256))
+        fail("source-bank envelope requires decoded and gzip byte counts and SHA-256");
+      if (value.bytes > limits.maxOutputBytes || value.gzip_bytes > limits.maxInputBytes)
+        fail("source-bank envelope exceeds resource limits");
+      const packed = decodeBase64(value.data, limits.maxInputBytes, "source-bank envelope");
+      count(packed.length, value.gzip_bytes, "source-bank gzip");
+      const compressedSha256 = hash(packed, value.gzip_sha256, "source-bank gzip");
+      const raw = codec.gunzip(packed, {
+        maxOutputBytes: value.bytes, maxMembers: limits.maxGzipMembers
+      });
+      count(raw.length, value.bytes, "source-bank payload");
+      const payloadSha256 = hash(raw, value.sha256, "source-bank payload");
+      const result = sourceBank(JSON.parse(codec.utf8Decode(raw)));
+      return { ...result, envelope: {
+        schema: value.schema, encoding: value.encoding,
+        bytes: raw.length, sha256: payloadSha256,
+        gzipBytes: packed.length, gzipSha256: compressedSha256
+      }, payloadSha256, compressedSha256, compressedBytes: packed.length };
+    }
+    if (value && typeof value === "object" && !("schema" in value) && !("format" in value)
+        && "markdown_content" in value) {
+      if (typeof value.canvas_id !== "string" || !/^F[A-Z0-9]+$/.test(value.canvas_id)
+          || typeof value.markdown_content !== "string")
+        fail("Slack Canvas response needs its original canvas ID and Markdown");
+      const result = markdown(value.markdown_content, depth + 1, true);
+      return { ...result, carrier: {
+        type: "slack-canvas", canvasId: value.canvas_id,
+        markdownBytes: utf8Length(value.markdown_content),
+        markdownSha256: codec.sha256(codec.utf8Encode(value.markdown_content))
+      } };
+    }
+    if (value && typeof value === "object" && !("schema" in value) && !("format" in value)
+        && Array.isArray(value.content)) {
+      if (value.isError === true) fail("provider returned an error instead of source content");
+      if (value.content.length !== 1 || value.content[0]?.type !== "text"
+          || typeof value.content[0].text !== "string")
+        fail("provider source response must contain exactly one text result");
+      const result = decode(value.content[0].text, { depth: depth + 1 });
+      return { ...result, providerResponse: { type: "mcp-text-result" } };
+    }
     return sourceBank(value);
   }
   function packets(parts) {
@@ -278,13 +349,22 @@ export function createSourceBankToolkit(options = {}) {
     return { ...result, carrierEdition: first.edition, payloadSha256: codec.sha256(raw),
              compressedSha256: codec.sha256(packed), compressedBytes: packed.length };
   }
-  function markdown(text) {
+  function markdown(text, depth = 0, canvasEscapes = false) {
+    if (depth > 4) fail("archive envelope nesting exceeds limit");
     if (utf8Length(text) > limits.maxInputBytes) fail("carrier exceeds maxInputBytes");
-    const blocks = [...text.matchAll(/(?:^|\n)[ \t]*\x60{3}json[ \t]*\r?\n([\s\S]*?)\r?\n[ \t]*\x60{3}[ \t]*(?=\r?\n|$)/g)].map(m => JSON.parse(m[1]));
+    const blocks = [...text.matchAll(/(?:^|\n)[ \t]*\x60{3}json[ \t]*\r?\n([\s\S]*?)\r?\n[ \t]*\x60{3}[ \t]*(?=\r?\n|$)/g)].map(match => {
+      try { return JSON.parse(match[1]); }
+      catch (error) {
+        if (!canvasEscapes) throw error;
+        // Native Slack Canvas reads escape Markdown punctuation inside code blocks.
+        // Remove one documented transport layer only in an identified Canvas result.
+        return JSON.parse(match[1].replace(/\\([\\/"\x60*_{}\[\]()#+\-.!>])/g, "$1"));
+      }
+    });
     if (!blocks.length) fail("carrier contains no supported JSON fences");
     if (blocks.every(b => b?.schema === "upstate.application-source-part/v1")) return packets(blocks);
     if (blocks.length !== 1) fail("carrier must contain one bank/envelope or one ordered packet cohort");
-    return unwrapJson(blocks[0]);
+    return unwrapJson(blocks[0], depth + 1);
   }
   function decode(input, { expectedSha256, base64 = false, depth = 0 } = {}) {
     if (depth > 4) fail("archive envelope nesting exceeds limit");
@@ -302,8 +382,8 @@ export function createSourceBankToolkit(options = {}) {
       const text = codec.utf8Decode(a);
       if (text.trimStart().startsWith("{") || text.trimStart().startsWith("[")) {
         const value = JSON.parse(text);
-        result = Array.isArray(value) ? packets(value) : unwrapJson(value, depth + 1);
-      } else result = markdown(text);
+        result = Array.isArray(value) ? packets(value) : unwrapJson(value, depth);
+      } else result = markdown(text, depth);
     }
     return { ...result, inputSha256, inputBytes: a.length };
   }

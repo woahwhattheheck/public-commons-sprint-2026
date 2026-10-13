@@ -215,3 +215,33 @@ The existing provider now exposes `directory_operating_return_prepare/revise/com
 `readHumanServicesDirectoryOperatingReturn` reopens all original JSON inputs; `iterateHumanServicesDirectoryOperatingReturn` reads every contiguous original change page. The complete-file helpers validate the runtime-declared payload against its native descriptor and use the existing resumable whole-file receiver. Original model types and every native return input/record/page are exported in this package's declarations. Large native inputs use the original CLI/HTTP path; existing connected JSON limits are unchanged.
 
 The complete native course is `operate_operating_returns.py`; its actual completed result is consumed by `operate_operating_returns_clients.mjs`, covering the real operator, SDK/MCP reopen, full original files and fresh customer workspace. Preserve the selected completed result with its exact workspacePacket.
+
+
+## Complete original-row corrections
+
+The provider now exposes the same four source-native correction actions: `directory_correction_prepare`, `directory_correction_preview`, `directory_correction_apply` and `directory_correction_export`. Their argument keys are `correction_prepare`, `correction_preview`, `correction_apply` and `correction_export`; each contains the entire corresponding input from `directory-corrections-schema.json`.
+
+Preparation stores exact original source/row/resource/member identities and ordered lexical JSON or physical CSV edits. Preview builds complete derived sources and an immutable candidate edition/comparison. Apply explicitly accepts that exact preview and expected original edition; it does not replace a mutable head or update a publisher.
+
+Read full records with existing `directory_record` and `directory_records` for `correctionPlans`, `correctionPreviews` or `corrections`. Use `directory_correction_rows` with collection/recordId/offset/limit for every contiguous native edit/change page. Use `directory_correction_file` with collection/recordId/fileKind for complete plan input or change/review files. Prepared exports use the existing `directory_export_file` transport.
+
+Typed helpers keep the complete original request in error details, require exact saved identities, follow every page and verify full files against immutable native descriptors. They select the runtime-declared source.payloadFile rather than payload metadata. JSON value text remains a string throughout transport; no numeric reserialization is required.
+
+```js
+const prepared = await changeHumanServicesDirectoryCorrection({
+  client, workspace, action: 'prepare', input: completeOriginalInput
+});
+// Review prepared.record and explicitly select it.
+const preview = await changeHumanServicesDirectoryCorrection({
+  client, workspace, action: 'preview', input: {planId: prepared.record.id}
+});
+// Review all complete files and the candidate before acceptance.
+const accepted = await changeHumanServicesDirectoryCorrection({
+  client, workspace, action: 'apply',
+  input: {previewId: preview.record.id, expectedEditionId: prepared.record.editionId, actor}
+});
+```
+
+The native32MiB correction input allowance does not alter the connected inline or host-input limits. Use the native CLI for accepted inputs above the existing connected request bound. Full connected file receiving remains512MiB and native editable workspace receiving remains2GiB.
+
+[Source corrections](../SOURCE_CORRECTIONS.md) explains the full operator and native contract. [Complete client/customer course](../CORRECTION_CLIENTS.md) receives original files, reopens Merchant, independently restores the customer workspace and exports that actual customer state.

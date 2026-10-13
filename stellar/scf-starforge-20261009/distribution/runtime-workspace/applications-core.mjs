@@ -8,6 +8,7 @@ import { managedState, managedHome, openManagedHome, reviewManagedAdoption } fro
 import { applicationRunPage, applicationHistoryLimit } from './application-history.mjs';
 import { readApplicationTerminal, sendApplicationTerminal } from './application-command.mjs';
 import { applicationEnvironment } from './application-environment.mjs';
+import { managedResult, managedResultUncertain } from './managed-result.mjs';
 import { defaultApplicationProviders, applicationProviderForKind } from './application-providers.mjs';
 import { prepareProviderApplication, retainedApplicationArguments } from './application-provider.mjs';
 import { absolute, privateDirectory, makePrivate, regular, readJSON, saveJSON, recordId, operationId,
@@ -137,10 +138,11 @@ async function operationView(root, id) {
   const request = await readJSON(join(directory, 'request.json'), true);
   const state = await readJSON(join(directory, 'state.json'), true);
   const active = Boolean(state) && await operationRunning(join(directory, 'worker.lock'));
-  const result = await readJSON(join(directory, 'command-result.json'), true);
+  const commandResult = await readJSON(join(directory, 'command-result.json'), true);
+  const outcome = managedResult(state, commandResult);
   const stop = await readJSON(join(directory, 'stop.json'), true);
   const url = await readJSON(join(directory, 'application-url.json'), true);
-  return { id, request, state, result, active, stop,
+  return { id, request, state, ...outcome, active, stop,
     phase: !request ? 'PENDING' : !state ? 'QUEUED' : state.phase === 'RUNNING' && !active ? 'INTERRUPTED' : state.phase,
     url: url?.operationId === id ? url : null };
 }
@@ -200,7 +202,8 @@ async function view(root, saved, { homes = null, historyLimit = 30 } = {}) {
   const current = rows[0] ?? null;
   const phase = !connected ? 'CONNECTING' : !current ? 'READY' :
     current.active ? current.stop ? 'STOPPING' : current.url ? 'RUNNING' : 'STARTING' :
-      ['SUCCEEDED', 'CANCELLED'].includes(current.phase) ? current.result?.state === 'EXITED' || current.result?.state === 'LAUNCH_FAILED' ? 'FAILED' : 'STOPPED' :
+      ['SUCCEEDED', 'CANCELLED'].includes(current.phase) ? managedResultUncertain(current.result) ? current.result.state :
+        current.result?.state === 'EXITED' || current.result?.state === 'LAUNCH_FAILED' ? 'FAILED' : 'STOPPED' :
         current.phase;
   return { ...saved, phase, release: release ? { id: release.id, digest: release.digest, sourceCommit: release.sourceCommit } : null,
     home: home ? { id: home.id, directory: home.directory, revision: home.revision, phase: home.phase } : null,
@@ -426,6 +429,7 @@ export async function applicationOutput(root, { applicationId, operationId: id }
   const value = await operationView(root, id);
   let output = { text: '', totalBytes: 0, offset: 0 };
   try { output = await tailFile(join(operationPath(root, id), 'worker.log')); } catch (error) { if (error.code !== 'ENOENT') throw error; }
-  return { operationId: id, phase: value.phase, active: value.active, result: value.result, output };
+  return { operationId: id, phase: value.phase, active: value.active,
+    result: value.result, commandResult: value.commandResult, resultSource: value.resultSource, output };
 }
 export { readApplicationTerminal, sendApplicationTerminal };

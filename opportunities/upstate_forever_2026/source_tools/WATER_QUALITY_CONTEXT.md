@@ -190,3 +190,11 @@ python -m source_tools.source_priority_assessment \
 ```
 
 `source/water-quality-context/native-inputs-sources.json` retains the exact manifest for the acquired 2024 workbook and July 2026 PDF. To import these originals, place that manifest beside the retained original files named by its entries, then use the ordinary source importer. The native files remain in the science workstream's existing source archive.
+
+## Expanded classification names
+
+The existing water-quality desk, watershed table, reach detail, context CSV/GeoJSON and HTML report pair classification codes with readable names. The raw H2OCLASS value, normalized codes, original feature IDs and selected source editions remain separate fields.
+
+Classification **TN means Trout Natural**. Assessment-cause **TN means Total nitrogen**. Other trout classifications expand to Trout Put, Grow, and Take (TPGT) and Trout Put and Take (TPT). Classification names follow [the SCDES publisher copy of R.61-68, Section G](https://des.sc.gov/sites/des/files/Library/Regulations/R.61-68.pdf), with the May 23, 2025 amendment listed in its publication history. This display mapping preserves the existing source geometry, classification status and reach selection.
+
+New context outputs add classification_labels on each classified feature/link, direct_classification_labels and upstream_of_high_quality_labels on each watershed, and a publisher reference in method.classification_label_source_uri. Existing saved contexts receive readable names in the browser through the same code mapping, so opening an accepted edition does not require rebuilding its geographic intersections.

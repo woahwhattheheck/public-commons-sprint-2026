@@ -98,7 +98,7 @@ The proposed work item is **Screen riparian restoration opportunities in Lower S
 
 ### In the existing operator
 
-1. Reopen the retained project. Under **Original sources**, select or import the actual source editions in `source/sources.json` and `source/communities-rfp-20261012/source-manifest.json`. The focus source is `usgs-wbd-focus-huc12-20261012`; the community table is `RFP_COMMUNITIES_2024_ACS`.
+1. Reopen the retained project. Under **Original sources**, select or import the actual source editions in `source/sources.json` and `source/communities-rfp-20261012/source-manifest.json`. Use the original `upstate-wbd-upstream-domain-20261012` collection already retained in the study, or the original four-focus source `usgs-wbd-focus-huc12-20261012`. The community table is `RFP_COMMUNITIES_2024_ACS`.
 2. Open **Communities**, import the community table, and select ARJWS and Lower Six and Twenty Creek. Keep the six original whole block groups selected. Their retained Table 1 context totals 9,083 people, 4,108 households and 497 households below poverty.
 3. Create a plan with the work item above. Keep its original HUC12, selected communities and source editions attached; bind actual native baseline and alternative runs when those results are part of the programme.
 4. Save the plan and choose **Build complete report**. Download its actual `interventions.csv`.
@@ -114,7 +114,9 @@ From the maintained application directory:
 python operator/community_csv_walkthrough.py --workspace /actual/retained-workspace --output /actual/community-csv-output
 ~~~
 
-The command opens the existing Workspace, resolves or imports the original retained source editions, reads the actual WBD feature and saves the proposed programme. It exports the real saved report's CSV, edits that export, invokes `plan-revise-csv`, and builds the revised native report. Its output directory contains the original table and both saved plans, original/edited/revised CSVs, selected original WBD geometry, import comparison, complete report ZIP and `community-csv-workflow.json`.
+The command opens the existing Workspace, reuses its original upstream-domain or four-focus WBD collection, resolves the original RFP table, reads the actual HUC12 feature and saves the proposed programme. It exports the real saved report's CSV, edits that export, invokes `plan-revise-csv`, and builds the revised native report. Its output directory contains the original table and both saved plans, original/edited/revised CSVs, the selected WBD feature, the exact retained WBD geometry-source gzip, import comparison, complete report ZIP and `community-csv-workflow.json`.
+
+If the original domain archive has been received locally but its source collection has not yet been imported, add `--geometry-manifest /actual/domain/sources.json`. The command imports that original manifest and its original companions into the existing Workspace. Its returned workflow record names the actual source collection, entry, stored hash, decoded hash and CRS.
 
 To attach existing model results, pass `--baseline-run ACTUAL_BASELINE_ID` and repeat `--scenario-run ACTUAL_ALTERNATIVE_ID` as needed. The Workspace applies its existing grid and model-context checks.
 

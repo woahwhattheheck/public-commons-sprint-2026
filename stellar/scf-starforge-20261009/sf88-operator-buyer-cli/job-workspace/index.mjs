@@ -9,3 +9,5 @@ export { openJobIntake, jobIntakeExtension, JOB_INTAKE_SCHEMA, JOB_INTAKE_PHASES
 export * from './inputs/index.mjs';
 export { openJobResolutionBuyer, openJobResolutionController, jobResolutionExtension,
   runJobBuyerResolutionCommand } from './resolution/index.mjs';
+
+export * from '../../sf30-seller-sdk/jobs/outputs/index.mjs';

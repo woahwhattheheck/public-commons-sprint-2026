@@ -1,5 +1,6 @@
-/** Seven-family delivery planner and retained PDF atlas viewer. */
+/** Native-study and regional delivery planner with retained PDF atlas viewer. */
 import {createSpatialWorkspace} from './spatial.mjs';
+import {createAtlasReviewCollection} from './atlas_review_collection.mjs';
 const FAMILIES = [
  ['future_sediment_loss','Potential future sediment export'],
  ['future_nutrient_runoff','Potential future nitrogen and phosphorus export'],
@@ -14,6 +15,8 @@ const ROLES = [['PROTECTED_LANDS','Protected lands'],['PARCEL','Parcels'],
 const OVERLAYS = [['drinking_water','Drinking-water source areas',true],
  ['high_quality_waters','Designated high-quality waters',true],
  ['protected_lands','Protected-land map overlay',false],['parcels','Parcel priority inventory',false]];
+const isStudy = selection => selection?.delivery_mode==='native_study';
+const releaseFamilies = selection => FAMILIES.filter(([id])=>{const role=id==='critical_drinking_water'?'drinking_water':'high_quality_waters';return !isStudy(selection)||!['critical_drinking_water','high_quality_waters'].includes(id)||Boolean(selection.overlays?.[role])||(selection.receptor_spec?.receptors||[]).some(row=>row.role===role);});
 const MASS = ['nitrogen_export','phosphorus_export','sediment_export'];
 const STEPS = ['Native runs','Source context','Map settings','Review and build'];
 const esc = v => String(v ?? '').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -62,7 +65,10 @@ const hasNativeOutputs = r => r?.state==='complete' && ['ndr','sdr'].every(n=>mo
 export function deliveryEligibility(data, selection) {
  const reasons=[], baseline=rowBy(data,'runs',selection.baseline_run_id);
  if(!baseline) reasons.push('Choose the retained baseline run.');
- else if(!hasNativeOutputs(baseline)) reasons.push('The baseline needs completed NDR and SDR outputs.');
+ else {
+  if(!hasNativeOutputs(baseline)) reasons.push('The baseline needs completed NDR and SDR outputs.');
+  if(rowBy(data,'scenarios',baseline.selection.scenario_id)?.kind!=='baseline') reasons.push('Choose an original baseline scenario for the current-condition maps.');
+ }
  const ids=selection.scenario_run_ids||[];
  if(!ids.length) reasons.push('Select at least one completed land-cover alternative.');
  if(new Set(ids).size!==ids.length) reasons.push('Each alternative can appear only once.');
@@ -97,17 +103,22 @@ function choices(name,rows,selected) {
  const missing=selected.filter(id=>!rows.some(r=>r.id===id)).map(id=>({id,title:short(id)+' (retained choice unavailable)'}));
  return [...missing,...rows].map(r=>check(name,r.id,titleOf(r),selected.includes(r.id))).join('') || '<p class="atlas-note">No retained items are available.</p>';
 }
+const cohortLinked = selection => Boolean(selection.source_report_id || selection.source_report_sha256 ||
+ selection.economic_edition_id || selection.economic_edition_sha256 ||
+ selection.source_scenario_analysis_id || selection.source_scenario_analysis_sha256);
 function defaultSelection(data) {
- return {title:data?.project?.title||'',baseline_run_id:'',scenario_run_ids:[],source_roles:{},overlays:{},
+ return {delivery_mode:'regional_rfp',native_study:{title:'',purpose:'',reference:''},title:data?.project?.title||'',baseline_run_id:'',scenario_run_ids:[],source_roles:{},overlays:{},
   map_settings:{paper:'a4',dpi:220,display_percentile:98,weights:Object.fromEntries(MASS.map(k=>[k,1]))},
   contact:{name:'',organization:'',email:''},notes:[],observation_comparison_ids:[],spatial_review_ids:[],spatial_export_ids:[]};
 }
 
 export function attachMapAtlas(host) {
  let root=null, state=host.getState(), workspace='', draft=null, step=0, mode='prepare';
- let opened=null, error='', busy=false, operationId=null, generation=0, storageWarned=false, handoff=0;
+ let opened=null, error='', busy=false, operationId=null, generation=0, storageWarned=false, handoff=0, draftEdits=0;
  const drafts=new Map(), sourcePreview=new Map();
  let sourceContext=null, contextLoading=false, contextError='', inspection=null, inspectionRequest=0;
+ let economicChoices=null, economicLoading=false, economicError='', economicRequest=0, economicScope='';
+ const pairDrafts=new Map();
  const inspector=createSpatialWorkspace({
   request:(...args)=>host.api(...args),
   getWorkspace:()=>host.getWorkspace?.()||host.getState()?.workspace_key||'',
@@ -116,6 +127,12 @@ export function attachMapAtlas(host) {
   toast:message=>host.toast?.(message)
  });
 
+ const reviews=createAtlasReviewCollection({
+  getWorkspace:()=>host.getWorkspace?.()||host.getState()?.workspace_key||'',
+  getDelivery:()=>opened,getData:()=>data(),request:(...args)=>host.api(...args),
+  openReview:openSavedReview,prepareRelease:prepareReviewedRelease,
+  openItem:(...args)=>host.openItem?.(...args)
+ });
  const data=()=>state?.data||{};
  const key=()=>host.getWorkspace?.()||state?.workspace_key||'';
  const endpoint=(path,values={})=>path+'?'+new URLSearchParams({workspace,...values});
@@ -124,6 +141,7 @@ export function attachMapAtlas(host) {
   state=next||state;const current=key();if(current===workspace&&draft)return;
   inspector.suspend();inspection=null;inspectionRequest++;
   workspace=current;generation++;handoff++;opened=null;operationId=null;error='';busy=false;sourcePreview.clear();sourceContext=null;contextLoading=false;contextError='';
+  economicChoices=null;economicLoading=false;economicError='';economicRequest++;
   let saved=drafts.get(workspace);
   if(!saved){try{saved=JSON.parse(sessionStorage.getItem('upstate-atlas-draft:'+workspace)||'null');}catch{}}
   draft=clone(saved?.selection||defaultSelection(data()));step=saved?.step||0;operationId=saved?.operation_id||null;mode='prepare';
@@ -149,7 +167,7 @@ export function attachMapAtlas(host) {
   return rowBy(data(),'sources',choice?.source_collection_id)?.entries?.find(e=>e.id===choice?.source_id);
  }
  function sourceCard(group,key,label,required) {
-  const name=group+'__'+key,choice=draft[group]?.[key]||{},enabled=required||Boolean(choice.source_id);
+  const name=group+'__'+key,choice=draft[group]?.[key]||{},enabled=required||Object.prototype.hasOwnProperty.call(draft[group]||{},key);
   const sources=data().sources||[],rows=(rowBy(data(),'sources',choice.source_collection_id)?.entries||[]).filter(e=>group==='overlays'?e.kind==='vector':true);
   const bound=Boolean(choice.selection_id||choice.native_source_sha256||choice.rule_reference),disabled=!enabled?'disabled':'';
   const previews=sourcePreview.get(name),saved=(data().water_designations||[]).filter(row=>row.purpose===key);
@@ -170,11 +188,16 @@ export function attachMapAtlas(host) {
  function collect(options={}) {
   const f=form();if(!f)return clone(draft);
   const next=clone(draft);
-  if(step===0){next.title=value('title').trim();next.baseline_run_id=value('baseline');next.scenario_run_ids=selected('alternatives');}
+  if(step===0){
+   next.title=value('title').trim();
+   if(!cohortLinked(next)){next.baseline_run_id=value('baseline');next.scenario_run_ids=selected('alternatives');}
+   next.delivery_mode=value('delivery_mode')||'regional_rfp';
+   if(isStudy(next)){next.native_study={title:value('study_title').trim()||next.title,purpose:value('study_purpose').trim(),reference:value('study_reference').trim()};}
+  }
   if(step===1){
    for(const [group,items] of [['source_roles',ROLES.map(r=>[...r,true])],['overlays',OVERLAYS]]){
     next[group]??={};for(const [key,,required] of items){
-     const name=group+'__'+key,enabled=required||f.elements.namedItem(name+'__enabled')?.checked;
+     const name=group+'__'+key,enabled=(!isStudy(next)&&required)||f.elements.namedItem(name+'__enabled')?.checked;
      if(!enabled){delete next[group][key];continue;}
      const previous=next[group][key]||{};
      if(previous.selection_id||previous.native_source_sha256||previous.rule_reference)continue;
@@ -206,7 +229,7 @@ export function attachMapAtlas(host) {
    for(const name of MASS){m.weights[name]=numeric('weight_'+name);const cap=numeric('cap_'+name,{optional:true});
     if(cap!==undefined){if(cap<=0)throw Error('Priority caps must be positive.');m.caps[name]=cap;}}
    if(Object.values(m.weights).every(x=>x===0))throw Error('Choose at least one positive pollutant weight.');
-   for(const [id]of FAMILIES){const title=value('family_'+id).trim();if(title)m.family_titles[id]=title;}
+   for(const [id]of releaseFamilies(next)){const title=value('family_'+id).trim();if(title)m.family_titles[id]=title;}
    next.map_settings=m;
   }
   if(step===3){
@@ -219,13 +242,14 @@ export function attachMapAtlas(host) {
  function problems(selection=draft) {
   const out=[...deliveryEligibility(data(),selection).reasons];
   if(!selection.title?.trim())out.push('Enter the release title.');
-  for(const [group,items]of [['source_roles',ROLES],['overlays',OVERLAYS.filter(r=>r[2]||selection.overlays?.[r[0]])]]){
+  for(const [group,items]of [['source_roles',ROLES.filter(r=>!isStudy(selection)||selection.source_roles?.[r[0]])],['overlays',OVERLAYS.filter(r=>(!isStudy(selection)&&r[2])||selection.overlays?.[r[0]])]]){
    for(const [key,label]of items){const choice=selection[group]?.[key],entry=sourceEntry(choice);
     if(!choice?.source_collection_id||!choice?.source_id)out.push('Choose '+label.toLowerCase()+'.');
     else if(!entry)out.push(label+': the retained source is unavailable.');
     else if(group==='overlays'&&entry.kind!=='vector')out.push(label+': choose a vector source.');}
   }
-  for(const k of ['name','organization','email'])if(!selection.contact?.[k]?.trim())out.push('Enter the contact '+k+'.');
+  if(!isStudy(selection))for(const k of ['name','organization','email'])if(!selection.contact?.[k]?.trim())out.push('Enter the contact '+k+'.');
+  if(isStudy(selection)){if(!selection.native_study?.title?.trim())out.push('Enter the original study title.');if(!selection.native_study?.purpose?.trim())out.push('Describe the original study purpose.');}
   if(selection.receptor_spec){
    out.push(...receptorIssues(selection.receptor_spec));
    const baseline=rowBy(data(),'runs',selection.baseline_run_id),grid=rowBy(data(),'grids',baseline?.selection.grid_id);
@@ -288,7 +312,8 @@ export function attachMapAtlas(host) {
 
  function runStep(){
   const baseline=rowBy(data(),'runs',draft.baseline_run_id),all=data().runs||[],chosen=draft.scenario_run_ids||[];
-  const complete=all.filter(hasNativeOutputs);
+  const linked=cohortLinked(draft);
+  const complete=all.filter(run=>hasNativeOutputs(run)&&rowBy(data(),'scenarios',run.selection.scenario_id)?.kind==='baseline');
   const alternatives=all.filter(r=>chosen.includes(r.id)||(r.id!==draft.baseline_run_id&&!runIssues(r,baseline).length));
   const missing=chosen.filter(id=>!all.some(r=>r.id===id)).map(id=>({id,selection:{}}));
   const ordered=[...missing,...alternatives].sort((a,b)=>{
@@ -296,15 +321,19 @@ export function attachMapAtlas(host) {
   });
   const rows=ordered.map(run=>{
    const issues=run.selection.grid_id?runIssues(run,baseline):['Retained run unavailable.'];
-   return '<tr><td>'+check('alternatives',run.id,runName(data(),run.id),chosen.includes(run.id),issues.length&&!chosen.includes(run.id)?'disabled':'')+'</td><td>'+esc(issues.join(' ')||'Same grid, profile and complete land-cover alternative')+'</td><td>'+button('item','Open run','data-kind="runs" data-id="'+esc(run.id)+'"')+
-    (chosen.includes(run.id)?button('move','Move up','data-id="'+esc(run.id)+'" data-direction="-1" '+(chosen.indexOf(run.id)===0?'disabled':''))+
-     button('move','Move down','data-id="'+esc(run.id)+'" data-direction="1" '+(chosen.indexOf(run.id)===chosen.length-1?'disabled':'')):'')+'</td></tr>';
+   return '<tr><td>'+check('alternatives',run.id,runName(data(),run.id),chosen.includes(run.id),linked||(issues.length&&!chosen.includes(run.id))?'disabled':'')+'</td><td>'+esc(issues.join(' ')||'Same grid, profile and complete land-cover alternative')+'</td><td>'+button('item','Open run','data-kind="runs" data-id="'+esc(run.id)+'"')+
+    (chosen.includes(run.id)?button('move','Move up','data-id="'+esc(run.id)+'" data-direction="-1" '+(linked||chosen.indexOf(run.id)===0?'disabled':''))+
+     button('move','Move down','data-id="'+esc(run.id)+'" data-direction="1" '+(linked||chosen.indexOf(run.id)===chosen.length-1?'disabled':'')):'')+'</td></tr>';
   });
-  return '<div class="atlas-grid">'+field('Release title',input('title',draft.title,'required maxlength="140"'),'',true)+
-   field('Completed baseline',select('baseline',complete.map(r=>[r.id,runName(data(),r.id)]),draft.baseline_run_id,'required'),'',true)+'</div>'+
+  return '<div class="atlas-grid">'+field('Delivery mode',select('delivery_mode',[['regional_rfp','Regional RFP · complete seven-family specification'],['native_study','Original native study · original grid and source domain']],draft.delivery_mode||'regional_rfp','required'),'The original study retains its actual grid and source coverage. Regional RFP requirements remain unchanged.',true)+
+   (isStudy(draft)?field('Original study title',input('study_title',draft.native_study?.title||draft.title,'required maxlength="140"'),'',true)+field('Study purpose',textarea('study_purpose',draft.native_study?.purpose||'','required rows="3"'),'State the intended scientific question and geographic scope.',true)+field('Study reference',input('study_reference',draft.native_study?.reference||''),'Original source, publication or release reference.',true):'')+
+   field('Release title',input('title',draft.title,'required maxlength="140"'),'',true)+
+   field('Completed baseline',select('baseline',complete.map(r=>[r.id,runName(data(),r.id)]),draft.baseline_run_id,'required'+(linked?' disabled':'')),linked?'The saved report or economic edition supplies this ordered run selection.':'',true)+'</div>'+
    '<h3>Future land-cover alternatives</h3><p class="atlas-note">The first selected alternative supplies the principal future maps. Additional alternatives receive their own sheets. Each uses the baseline grid and parameter profile.</p>'+
    (rows.length?table(['Include','Scientific pairing',''],rows):'<p class="atlas-note">Complete a compatible land-cover alternative in the Native run desk to add it here.</p>')+
-   (draft.source_report_id?'<p class="atlas-linked">Saved watershed report '+esc(short(draft.source_report_id))+' supplies this exact ordered cohort. '+button('source-report','Open source report','data-id="'+esc(draft.source_report_id)+'"')+'</p>':'');
+   (linked?'<div class="atlas-linked"><p>The saved watershed report, scenario analysis or economic edition supplies this exact baseline and ordered alternatives. Choose a different run cohort to remove these retained result links from this draft and edit the runs.</p>'+
+    '<div class="atlas-actions">'+(draft.source_report_id?button('source-report','Open source report','data-id="'+esc(draft.source_report_id)+'"'):'')+
+    button('independent-release','Choose a different run cohort')+'</div></div>':'');
  }
  function settingsStep(){
   const m=draft.map_settings||{},baseline=rowBy(data(),'runs',draft.baseline_run_id);
@@ -313,25 +342,142 @@ export function attachMapAtlas(host) {
    field('Landscape paper',select('paper',[['letter','US Letter · 11 × 8.5 in'],['a4','A4 · 297 × 210 mm'],['a3','A3 · 420 × 297 mm']],m.paper||'a4'))+
    field('Print DPI',input('dpi',m.dpi??220,'type="number" min="120" max="600" step="1" required'))+
    field('Shared display percentile',input('display_percentile',m.display_percentile??98,'type="number" min="0" max="100" step="any" required'),'The largest exact per-raster cap applies to every alternative for that pollutant.')+'</div>'+
-   '<h3>Family titles</h3><div class="atlas-grid">'+FAMILIES.map(([id,label])=>field(label,input('family_'+id,m.family_titles?.[id]||'','maxlength="110" placeholder="'+esc(label)+'"'),'',true)).join('')+'</div>'+
+   '<h3>Family titles</h3><div class="atlas-grid">'+releaseFamilies(draft).map(([id,label])=>field(label,input('family_'+id,m.family_titles?.[id]||'','maxlength="110" placeholder="'+esc(label)+'"'),'',true)).join('')+'</div>'+
    '<h3>Combined export priority</h3><p class="atlas-note">Weights and positive-cell caps define the saved dimensionless planning index. Blank caps use the existing positive-cell 95th percentile. The display percentile above controls the printed legends.</p>'+
    table(['Pollutant','Weight','Explicit priority cap'],MASS.map(id=>'<tr><td>'+esc(human(id))+'<small>'+esc(baseline?.artifacts?.[id]?.units||'Native export units')+'</small></td><td>'+
     input('weight_'+id,m.weights?.[id]??1,'type="number" min="0" step="any" required aria-label="'+esc(human(id)+' weight')+'"')+'</td><td>'+
     input('cap_'+id,m.caps?.[id]??'','type="number" min="0" step="any" aria-label="'+esc(human(id)+' priority cap')+'"')+'</td></tr>'));
  }
+
+ function economicKey(selection=draft){
+  return pretty([selection.baseline_run_id,selection.scenario_run_ids||[],
+   selection.source_report_id||null,selection.source_report_sha256||null]);
+ }
+ function economicPair(selection=draft){
+  return pretty([selection.economic_edition_id||null,selection.economic_edition_sha256||null]);
+ }
+ function economicRelease(release,selection=draft){
+  const expected=[selection.baseline_run_id,...(selection.scenario_run_ids||[])],chosen=release?.selection;
+  if(!chosen||pretty([chosen.baseline_run_id,...(chosen.scenario_run_ids||[])])!==pretty(expected))
+   throw Error('The watershed report no longer matches this ordered run cohort. Refresh the compatible choices.');
+  if(selection.source_report_id&&chosen.source_report_id!==selection.source_report_id)
+   throw Error('Choose an economic edition from the linked watershed report.');
+  if(selection.source_report_sha256&&chosen.source_report_sha256!==selection.source_report_sha256)
+   throw Error('The linked watershed report bytes differ. Reopen its original selection.');
+  if(!release.ready)throw Error((release.issues||[]).map(row=>row.message).join(' ')||'Complete the original report cohort before selecting its economic edition.');
+  const editions=release.economic_editions||[];
+  if(!Array.isArray(editions)||editions.some(row=>!/^[0-9a-f]{64}$/.test(row.id||'')||!/^[0-9a-f]{64}$/.test(row.edition_sha256||'')))
+   throw Error('The economic choices need their retained edition identities. Refresh the original report.');
+  return editions;
+ }
+ function syncEconomicScope(){
+  const scope=pretty([workspace,generation,handoff,economicKey()]);
+  if(scope!==economicScope){
+   economicScope=scope;if(economicChoices?.key!==economicKey())economicChoices=null;
+   economicLoading=false;economicError='';economicRequest++;
+  }
+ }
+ function economicPanel(){
+  syncEconomicScope();
+  const linked=draft.economic_edition_id,valid=economicChoices?.key===economicKey(),choices=valid?economicChoices:null;
+  const editions=choices?.editions||[],selected=choices?.chosen_id||'',disabled=economicLoading?'disabled':'';
+  const bound=linked?'<p>Economic edition '+esc(short(linked))+' adds its selected-zone physical response, costs, budget criteria and complete decision package to the client report.</p>'+
+   button('remove-economics','Remove economic edition')+(draft.source_report_id?'<p class="atlas-note">The physical report and map selection remain linked to the original watershed report.</p>':''):'<p class="atlas-note">This draft includes the physical client report and maps. An optional completed economic edition adds its original selected-zone assessment.</p>';
+  return '<h3>Economic decision edition</h3>'+bound+
+   '<p class="atlas-note">Choose a compatible saved edition here to retain the current sources, layout, contact and notes. The current binding stays in place until a replacement is applied.</p>'+
+   '<div class="atlas-actions">'+button('load-economics',economicLoading?'Reading original editions…':'Refresh compatible economic editions',disabled)+'</div>'+
+   (economicError?'<p class="atlas-error" role="alert">'+esc(economicError)+'</p>':'')+
+   (choices?'<div class="atlas-grid">'+
+    field('Original watershed report',select('economic_report_choice',choices.reports.map(row=>[row.id,row.title||short(row.id)]),choices.report_id,disabled+(draft.source_report_id?' disabled':'')))+
+    field('Completed economic edition',select('economic_edition_choice',editions.map(row=>[row.id,row.title+' · '+row.zone_title]),selected,disabled+(editions.length?'':' disabled')))+'</div>'+
+    '<div class="atlas-actions">'+button('apply-economics','Use selected economic edition',disabled+(!selected?' disabled':''))+
+     (choices.report_id?button('source-report','Open compatible watershed report','data-id="'+esc(choices.report_id)+'"'):'')+'</div>'+
+    (editions.length?'':'<p class="atlas-note">This watershed report has no compatible completed economic edition. Save one in the Economic desk, return to this atlas draft and refresh its choices.</p>')+
+    ((choices.release?.economic_issues||[]).length?'<p class="atlas-note">'+esc(choices.release.economic_issues.map(row=>row.message).join(' '))+'</p>':''):'');
+ }
+ function renderEconomics(){
+  const panel=root?.querySelector('[data-atlas-economics]');
+  if(panel)panel.innerHTML=economicPanel();
+ }
+ async function loadEconomicChoices(reportId=''){
+  collect();persist();ensure();syncEconomicScope();
+  const panel=root?.querySelector('[data-atlas-economics]');if(!panel)return;
+  const atWorkspace=workspace,epoch=generation,intent=handoff,request=++economicRequest,keyAtStart=economicKey();
+  const owns=()=>workspace===atWorkspace&&generation===epoch&&handoff===intent&&economicRequest===request&&
+   economicKey()===keyAtStart&&panel===root?.querySelector('[data-atlas-economics]');
+  economicLoading=true;economicError='';renderEconomics();
+  try{
+   let reports;
+   if(draft.source_report_id)reports=[{id:draft.source_report_id,title:'Linked watershed report '+short(draft.source_report_id)}];
+   else{
+    const catalog=await host.api(endpoint('/api/scenario-reports/catalog'));
+    ensure();if(!owns())return;
+    const ids=[draft.baseline_run_id,...(draft.scenario_run_ids||[])];
+    reports=(catalog.reports||[]).filter(row=>pretty(row.selection?.run_ids)===pretty(ids))
+     .sort((a,b)=>(b.created_at||'').localeCompare(a.created_at||'')||a.id.localeCompare(b.id));
+   }
+   if(!reports.length)throw Error('Save a watershed report containing this exact baseline and ordered alternatives, then refresh its economic choices.');
+   const chosen=reportId||((economicChoices?.key===keyAtStart&&reports.some(row=>row.id===economicChoices.report_id))?economicChoices.report_id:reports[0].id);
+   if(!reports.some(row=>row.id===chosen))throw Error('Choose an available watershed report for this cohort.');
+   const release=await host.api(endpoint('/api/scenario-reports/release',{report_id:chosen}));
+   ensure();if(!owns())return;
+   if(release.selection?.source_report_id!==chosen)throw Error('The returned watershed report differs from the selected original. Refresh its choices.');
+   const editions=economicRelease(release);
+   reports=reports.map(row=>row.id===chosen?{...row,title:release.source_report?.report_title||row.title}:row);
+   const prior=economicChoices?.key===keyAtStart?economicChoices.chosen_id:'';
+   const wanted=editions.some(row=>row.id===prior)?prior:editions.some(row=>row.id===draft.economic_edition_id)?draft.economic_edition_id:'';
+   economicChoices={key:keyAtStart,reports,report_id:chosen,release,editions,chosen_id:wanted};
+  }catch(error){if(owns())economicError=error.message||String(error);}
+  finally{
+   if(workspace===atWorkspace&&generation===epoch&&economicRequest===request){
+    economicLoading=false;if(panel===root?.querySelector('[data-atlas-economics]'))renderEconomics();
+   }
+  }
+ }
+ async function applyEconomicChoice(){
+  collect();persist();ensure();syncEconomicScope();
+  const choices=economicChoices,keyAtStart=economicKey(),panel=root?.querySelector('[data-atlas-economics]');
+  if(!panel||choices?.key!==keyAtStart)throw Error('Refresh the economic editions for this run cohort.');
+  const chosenId=value('economic_edition_choice'),edition=choices.editions.find(row=>row.id===chosenId);
+  if(!edition)throw Error('Choose a compatible completed economic edition.');
+  choices.chosen_id=chosenId;
+  const atWorkspace=workspace,epoch=generation,intent=handoff,request=++economicRequest,previous=economicPair();
+  const owns=()=>workspace===atWorkspace&&generation===epoch&&handoff===intent&&economicRequest===request&&
+   economicKey()===keyAtStart&&panel===root?.querySelector('[data-atlas-economics]');
+  economicLoading=true;economicError='';renderEconomics();
+  try{
+   const release=await host.api(endpoint('/api/scenario-reports/release',{report_id:choices.report_id}));
+   ensure();if(!owns())return;
+   if(economicPair()!==previous)throw Error('The economic binding changed while its replacement loaded. Refresh and choose the intended edition.');
+   if(release.selection?.source_report_id!==choices.report_id)throw Error('The returned watershed report differs from the selected original. Refresh its choices.');
+   const editions=economicRelease(release),current=editions.find(row=>row.id===chosenId);
+   if(!current||current.edition_sha256!==edition.edition_sha256)
+    throw Error('The selected economic edition changed or is unavailable. Refresh the original choices.');
+   collect();
+   draft.economic_edition_id=current.id;draft.economic_edition_sha256=current.edition_sha256;
+   operationId=null;economicChoices={...choices,release,editions,chosen_id:current.id};persist();
+   host.toast?.('The selected economic edition is linked to this prepared atlas.');
+  }catch(error){if(owns())economicError=error.message||String(error);}
+  finally{
+   if(workspace===atWorkspace&&generation===epoch&&economicRequest===request){
+    economicLoading=false;if(panel===root?.querySelector('[data-atlas-economics]'))renderEconomics();
+   }
+  }
+ }
+
  function reviewStep(){
   const included=[draft.baseline_run_id,...(draft.scenario_run_ids||[])],c=draft.contact||{};
-  return '<div class="atlas-grid">'+field('Responsible contact',input('contact_name',c.name||'','required'))+
-   field('Organization',input('contact_organization',c.organization||'','required'))+
-   field('Email',input('contact_email',c.email||'','type="email" required'),'',true)+
+  return '<div class="atlas-grid">'+field('Responsible contact',input('contact_name',c.name||'',isStudy(draft)?'':'required'))+
+   field('Organization',input('contact_organization',c.organization||'',isStudy(draft)?'':'required'))+
+   field('Email',input('contact_email',c.email||'',isStudy(draft)?'type="email"':'type="email" required'),'',true)+
    field('Interpretation and delivery notes',textarea('notes',(draft.notes||[]).join('\n'),'rows="5"'),'One retained note per line.',true)+'</div>'+
    '<details class="atlas-inclusions"><summary>Original observations and editable spatial work</summary>'+
    '<h4>Observed annual-load comparisons</h4>'+choices('observations',(data().observation_comparisons||[]).filter(r=>included.includes(r.run_id)).map(r=>({...r,title:short(r.id)+' · '+runName(data(),r.run_id)})),draft.observation_comparison_ids||[])+
    '<h4>Saved map views</h4>'+choices('reviews',data().spatial_reviews||[],draft.spatial_review_ids||[])+
    '<h4>Completed map exports</h4>'+choices('exports',(data().spatial_exports||[]).filter(r=>r.state==='complete'),draft.spatial_export_ids||[])+'</details>'+
    '<div class="atlas-summary"><h3>Complete release</h3><p>'+esc(draft.title||'Untitled release')+'</p><p>'+esc(runName(data(),draft.baseline_run_id))+' · '+(draft.scenario_run_ids||[]).length+' alternatives</p>'+
-   '<p>Seven map families, combined atlas, separate map PDFs, JSON/CSV page index, physical GeoTIFFs, metadata, PDF/HTML/Markdown client report and editable working archive.</p>'+
-   (draft.economic_edition_id?'<p>Economic edition '+esc(short(draft.economic_edition_id))+' adds its selected-zone physical response, costs, budget criteria and complete decision package to the client report.</p>':'')+'</div>'+
+   '<p>'+releaseFamilies(draft).length+' selected map families'+(draft.receiving_waters?' plus the selected receiving-water analysis families':'')+', combined atlas, separate map PDFs, JSON/CSV page index, physical GeoTIFFs, metadata, PDF/HTML/Markdown report and editable working archive.</p>'+
+   '</div><section class="atlas-summary" data-atlas-economics>'+economicPanel()+'</section>'+
    sourceSummary(draft)+
    '<div data-atlas-problems></div>';
  }
@@ -354,12 +500,53 @@ export function attachMapAtlas(host) {
  function retainedFile(record){
   return opened?._downloads?.find(f=>f.sha256===record?.sha256&&f.bytes===record?.bytes);
  }
+ function pairChoices(){
+  const entries=[];
+  for(const row of opened?.atlas?.pages||[]){
+   if(!row.scenario_run_id)continue;
+   for(const [index,panel] of (row.panels||[]).entries()){
+    const scale=panel.display_scale;
+    if(!scale||!Number.isFinite(scale.minimum)||!Number.isFinite(scale.maximum)||scale.minimum>=scale.maximum)continue;
+    const units=['dimensionless','dimensionless (0-1)','dimensionless (0–1)'].includes(panel.units)?'dimensionless':panel.units;
+    const group=JSON.stringify([row.family,panel.title,Boolean(panel.signed),units,scale.minimum,scale.maximum]);
+    entries.push({id:JSON.stringify([row.map_key,index]),group,row,panel,index,
+     label:(row.subtitle||row.scenario_run_id)+' · '+panel.title+' · page '+row.page});
+   }
+  }
+  return entries.filter(entry=>entries.some(other=>other.group===entry.group&&other.row.scenario_run_id!==entry.row.scenario_run_id));
+ }
+ function pairDraft(choices=pairChoices()){
+  const key=workspace+'/'+opened?.id,value=pairDrafts.get(key)||{mode:'compare'};
+  const left=choices.find(item=>item.id===value.left)||choices[0];
+  const rights=left?choices.filter(item=>item.group===left.group&&item.row.scenario_run_id!==left.row.scenario_run_id):[];
+  const right=rights.find(item=>item.id===value.right)||rights[0];
+  const result={left:left?.id||'',right:right?.id||'',mode:['compare','swipe'].includes(value.mode)?value.mode:'compare'};
+  pairDrafts.set(key,result);return {value:result,left,right,rights,choices};
+ }
+ function pairControls(){
+  const {value,left,right,rights,choices}=pairDraft();
+  if(!left||!right)return '<h3>Compare alternative maps</h3><p class="atlas-note">Paired inspection is available when this release retains the same quantity for at least two alternatives. You can revise the selection to include other completed alternatives.</p>';
+  const options=(items,selected)=>items.map(item=>'<option value="'+esc(item.id)+'" '+(item.id===selected?'selected':'')+'>'+esc(item.label)+'</option>').join('');
+  return '<h3>Compare alternative maps</h3><p class="atlas-note">Choose the same map family and pollutant from two alternatives. Original pixels, native geography and the common atlas scale stay together.</p>'+
+   '<div class="atlas-grid"><label class="atlas-field"><span>Left source</span><select data-atlas-pair="left">'+options(choices,value.left)+'</select></label>'+
+   '<label class="atlas-field"><span>Right source</span><select data-atlas-pair="right">'+options(rights,value.right)+'</select></label>'+
+   '<label class="atlas-field"><span>View</span><select data-atlas-pair="mode"><option value="compare" '+(value.mode==='compare'?'selected':'')+'>Linked side by side</option><option value="swipe" '+(value.mode==='swipe'?'selected':'')+'>Swipe between sources</option></select></label></div>'+
+   '<p class="atlas-note">'+(left.panel.signed?'Each source is its selected alternative minus the release’s original baseline. Negative values show lower modeled export; positive values show higher export.':'Both sources show the same original absolute quantity.')+
+   ' Shared range: '+esc(left.panel.display_scale.minimum)+' to '+esc(left.panel.display_scale.maximum)+' '+esc(left.panel.units)+'.</p>'+
+   button('compare-panels','Open paired inspection');
+ }
+ function changePair(target){
+  const {value}=pairDraft();value[target.dataset.atlasPair]=target.value;
+  pairDrafts.set(workspace+'/'+opened.id,value);
+  const node=root.querySelector('[data-atlas-pair-controls]');
+  if(node){node.innerHTML=pairControls();node.querySelector('[data-atlas-pair="'+target.dataset.atlasPair+'"]')?.focus();}
+ }
  function outputPanel(){
   if(!opened)return '<h2>Saved releases</h2><div data-atlas-catalogue>'+catalogue()+'</div>';
   const atlas=opened.atlas,all=opened._downloads||[],atlasFile=retainedFile(opened.files?.map_atlas);
   const sourceReportId=opened.selection?.source_report_id;
   const reportPDF=retainedFile(opened.files?.report),reportHTML=retainedFile(opened.files?.report_html);
-  const reportMarkdown=retainedFile(opened.files?.report_markdown),reportModel=retainedFile(opened.files?.report_data);
+  const reportMarkdown=retainedFile(opened.files?.report_markdown),reportModel=retainedFile(opened.files?.report_data||opened.files?.report_model);
   const economicPackagePath=opened.economic_decision?.original_edition?.files?.complete_package?.path;
   const economicPackage=retainedFile(opened.economic_decision?.files?.[economicPackagePath]);
   const indexFile=retainedFile(opened.files?.map_atlas_index),csvFile=retainedFile(opened.files?.map_atlas_csv);
@@ -372,21 +559,23 @@ export function attachMapAtlas(host) {
    (atlas?' · '+atlas.page_count+' atlas pages':'')+'</p><div class="atlas-actions">'+
    (atlasFile?button('preview','Open complete atlas','data-url="'+esc(atlasFile.url)+'"')+downloadLink(atlasFile,'Download atlas PDF'):'')+
    downloadLink(archive,'Download complete GIS package')+
-   downloadLink(reportPDF,'Download client report PDF')+downloadLink(reportHTML,'Download report HTML')+
-   downloadLink(reportMarkdown,'Download report Markdown')+downloadLink(reportModel,'Download editable report model')+
+   downloadLink(reportPDF,'Download report PDF')+downloadLink(reportHTML,'Download report HTML')+
+   downloadLink(reportMarkdown,'Download report Markdown')+downloadLink(reportModel,'Download structured report data')+
    downloadLink(economicPackage,'Download economic decision package')+downloadLink(indexFile,'Download JSON index')+
    downloadLink(csvFile,'Download CSV index')+downloadLink(sourceContextFile,'Download source choices')+(sourceReportId?button('source-report','Open source watershed report','data-id="'+esc(sourceReportId)+'"'):'')+
    button('clone','Revise this selection')+button('item','Open complete record','data-kind="deliveries" data-id="'+esc(opened.id)+'"')+'</div>'+
    '<p class="atlas-note">For offline map review, extract the complete GIS package and open <code>index.html</code>.</p>'+
    (opened.error?'<p class="atlas-error">'+esc(opened.error.message||opened.error)+'</p>':'')+
    sourceSummary(opened.selection||{},atlas?.source_context?.water_designations||{})+
+   (['complete','received_snapshot'].includes(opened.state)&&atlas?'<section class="atlas-pair atlas-source" data-atlas-pair-controls>'+pairControls()+'</section>':'')+
+   (opened.atlas&&['complete','received_snapshot'].includes(opened.state)?'<section class="atlas-source" data-atlas-review-collection></section>':'')+
    '<div class="atlas-actions">'+Object.entries(opened.files||{}).filter(([name])=>name.startsWith('receptor_')).map(([name,record])=>downloadLink(retainedFile(record),'Download '+human(name.replace(/^receptor_/,'')))).join('')+'</div>'+
    table(['Page / family','Map','Legend and units',''],rows.map(row=>{
     const file=retainedFile(row.file);
     return '<tr><td>'+esc(row.page??'—')+'<small>'+esc(human(row.family||''))+'</small></td><td>'+esc(row.title)+'<small>'+esc(row.subtitle||'')+'</small></td><td>'+
      (row.panels||[]).map((p,index)=>'<div>'+esc(p.title)+' · '+esc(p.units)+
       (p.display_scale?'<small>'+esc(p.display_scale.minimum)+' to '+esc(p.display_scale.maximum)+'</small>':'')+
-      (opened.state==='complete'?button('inspect-panel','Inspect pixels and geography','data-map-key="'+esc(row.map_key)+'" data-panel-index="'+index+'"'):'')+'</div>').join('')+'</td><td>'+
+      (['complete','received_snapshot'].includes(opened.state)?button('inspect-panel','Inspect pixels and geography','data-map-key="'+esc(row.map_key)+'" data-panel-index="'+index+'"'):'')+'</div>').join('')+'</td><td>'+
       (atlasFile&&row.page?button('preview','Atlas page','data-url="'+esc(atlasFile.url)+'" data-page="'+row.page+'"'):'')+
       (file?button('preview','Map PDF','data-url="'+esc(file.url)+'"')+downloadLink(file,'Download'):'')+'</td></tr>';
    }))+'<div class="atlas-pdf" data-atlas-pdf hidden></div><details><summary>All retained delivery files</summary>'+
@@ -396,23 +585,26 @@ export function attachMapAtlas(host) {
  function inspectionPanel(){
   const target=inspection.target,lineage=target.lineage;
   return '<section class="atlas-inspection"><div class="atlas-actions">'+button('return-release','Back to atlas and files')+
-   button('show-print','Open original printed sheet')+'</div><h2>'+esc(target.title)+' / '+esc(target.panel)+'</h2>'+
+   (target.comparison?target.sides.map(side=>button('show-print','Open '+side.slot+' original sheet','data-side="'+esc(side.slot)+'"')).join(''):button('show-print','Open original printed sheet'))+'</div><h2>'+esc(target.title)+' / '+esc(target.panel)+'</h2>'+
+   (target.comparison?table(['Side','Alternative','Atlas page'],target.sides.map(side=>'<tr><td>'+esc(human(side.slot))+'</td><td>'+esc(side.label)+'<small>'+esc(side.scenario_run_id)+'</small></td><td>'+esc(side.atlas_page)+'</td></tr>')):'')+
    '<p class="atlas-note">Original raster: '+esc(target.units)+' · retained range '+esc(target.scale.minimum)+' to '+esc(target.scale.maximum)+
-   ' · atlas page '+esc(lineage.atlas_page)+'. Pan, inspect original pixels, annotate, save a spatial review or export a map pack below.</p>'+
+   ' · '+(target.comparison?'atlas pages '+target.sides.map(side=>esc(side.atlas_page)).join(' / '):'atlas page '+esc(lineage.atlas_page))+'. Pan, inspect original pixels, annotate, save a spatial review or export a map pack below.</p>'+
+   (target.review_id?'<p class="atlas-note">Saved revision '+esc(short(target.review_id))+' · '+esc(target.review_context?.status)+' · '+esc(target.review_context?.reviewer||'Reviewer not entered')+'. Saving changes retains a successor in this atlas collection.</p>':'')+
    (target.context_notes||[]).map(note=>'<p class="atlas-note">'+esc(note)+'</p>').join('')+
    '<div data-atlas-spatial></div></section>';
  }
  function render(){
   if(!root)return;
+  reviews.detach();
   inspector.suspend();
-  root.innerHTML='<section class="map-atlas"><header class="atlas-header"><div><p class="atlas-eyebrow">UPPER SAVANNAH SCIENTIFIC WORKBENCH</p>'+
-   '<h1>Map atlas and delivery</h1><p>Prepare the seven-family release, compare scenario maps on shared legends, and open the complete GIS package.</p></div>'+
+  root.innerHTML='<section class="map-atlas"><header class="atlas-header"><div><p class="atlas-eyebrow">SCIENTIFIC WORKBENCH</p>'+
+   '<h1>Map atlas and delivery</h1><p>Prepare regional or original-study releases, compare scenario maps on shared legends, and open the complete GIS package.</p></div>'+
    '<div class="atlas-actions">'+button('prepare','Prepare release')+button('releases','Saved releases')+'</div></header>'+
    '<div class="atlas-error" role="alert" data-atlas-error '+(!error?'hidden':'')+'>'+esc(error)+'</div>'+
    (mode==='inspect'&&inspection?inspectionPanel():mode==='outputs'?outputPanel():
    '<nav class="atlas-steps" aria-label="Delivery preparation">'+STEPS.map((label,i)=>'<button type="button" data-atlas-action="step" data-step="'+i+'" '+(i===step?'aria-current="step"':'')+'>'+String(i+1)+'. '+esc(label)+'</button>').join('')+'</nav>'+
    '<form data-atlas-form data-atlas-workspace="'+esc(workspace)+'"><h2>'+STEPS[step]+'</h2>'+
-   (step===0?runStep():step===1?'<p class="atlas-note">Use the original source editions and selected legal or operating geography. Source titles, native fields and saved designation bindings travel with the release.</p>'+ROLES.map(([k,l])=>sourceCard('source_roles',k,l,true)).join('')+OVERLAYS.map(([k,l,r])=>sourceCard('overlays',k,l,r)).join('')+receptorPanel():step===2?settingsStep():reviewStep())+
+   (step===0?runStep():step===1?'<p class="atlas-note">Use the original source editions and selected legal or operating geography. Source titles, native fields and saved designation bindings travel with the release.</p>'+ROLES.map(([k,l])=>sourceCard('source_roles',k,l,!isStudy(draft))).join('')+OVERLAYS.map(([k,l,r])=>sourceCard('overlays',k,l,r&&!isStudy(draft))).join('')+receptorPanel():step===2?settingsStep():reviewStep())+
    '<footer class="atlas-footer"><div class="atlas-actions">'+(step?button('previous','Back'):'')+
     (step<3?'<button type="submit">Continue</button>':'<button type="submit" class="atlas-primary" '+(busy?'disabled':'')+'>'+(busy?'Submitting…':'Build atlas and complete GIS delivery')+'</button>')+
     '</div><div class="atlas-actions">'+button('download-selection','Download selection')+
@@ -420,12 +612,13 @@ export function attachMapAtlas(host) {
     button('refresh','Refresh choices')+'</div></footer></form>')+'</section>';
   renderProblems();
   if(mode==='inspect'&&inspection)inspector.mount(root.querySelector('[data-atlas-spatial]'),state);
+  const reviewRoot=root.querySelector('[data-atlas-review-collection]');if(reviewRoot)reviews.mount(reviewRoot);
  }
  function showError(e){error=e?.message||String(e);const node=root?.querySelector('[data-atlas-error]');if(node){node.hidden=false;node.textContent=error;node.scrollIntoView({block:'nearest'});}}
  function clearError(){error='';const node=root?.querySelector('[data-atlas-error]');if(node){node.hidden=true;node.textContent='';}}
  function edit(event){
-  if(event?.target?.closest?.('[data-atlas-spatial]'))return;
-  operationId=null;
+  if(event?.target?.closest?.('[data-atlas-spatial], [data-atlas-pair-controls], [data-atlas-review-collection]'))return;
+  draftEdits++;operationId=null;
   try{collect();persist();renderProblems();}catch{/* Keep incomplete field text until the next explicit action. */}
  }
 
@@ -459,8 +652,14 @@ export function attachMapAtlas(host) {
  }
  async function importReceptors(file){
   if(!file)return;if(file.size>4*1024*1024)throw Error('The receptor profile exceeds the operator’s 4 MiB JSON request size.');
-  const atWorkspace=workspace,epoch=generation,body=JSON.parse(await file.text());
-  ensure();if(workspace!==atWorkspace||generation!==epoch)return;
+  collect({replaceReceptors:true});persist();
+  const atWorkspace=workspace,epoch=generation,request=++handoff,original=pretty(draft),edits=draftEdits;
+  const received=await file.text().then(text=>({text}),error=>({error}));
+  ensure();if(workspace!==atWorkspace||generation!==epoch||request!==handoff)return;
+  collect({replaceReceptors:true});
+  if(edits!==draftEdits||pretty(draft)!==original)throw Error('The release draft changed while the receptor profile loaded. Load it again to use it with the current draft.');
+  if('error' in received)throw received.error;
+  const body=JSON.parse(received.text);
   const spec=body.receptor_spec||body.selection?.receptor_spec||body.spec||body;
   const issues=receptorIssues(spec);if(issues.length)throw Error(issues.join('\n'));
   collect({replaceReceptors:true});draft.receptor_spec=clone(spec);sourcePreview.delete('receptor-network');
@@ -513,17 +712,20 @@ export function attachMapAtlas(host) {
  }
  async function importSelection(file){
   if(!file)return;if(file.size>4*1024*1024)throw Error('The selection JSON exceeds the operator’s 4 MiB JSON request size.');
-  const epoch=generation,atWorkspace=workspace,body=JSON.parse(await file.text());
-  ensure();if(epoch!==generation||workspace!==atWorkspace)return;
-  const selection=body.selection||body;
+  const epoch=generation,atWorkspace=workspace,request=++handoff,original=pretty(draft),edits=draftEdits;
+  const received=await file.text().then(text=>({text}),error=>({error}));
+  ensure();if(epoch!==generation||workspace!==atWorkspace||request!==handoff)return;
+  if(edits!==draftEdits||pretty(draft)!==original)throw Error('The release draft changed while the selection file loaded. Load it again to replace the current draft.');
+  if('error' in received)throw received.error;
+  const body=JSON.parse(received.text),selection=body.selection||body;
   if(!selection||typeof selection!=='object'||Array.isArray(selection)||!Array.isArray(selection.scenario_run_ids))throw Error('Choose a delivery selection with an ordered scenario_run_ids array.');
   draft={...defaultSelection(data()),...clone(selection)};operationId=null;step=0;mode='prepare';opened=null;persist();render();
  }
  async function inspectPanel(mapKey,panelIndex){
-  ensure();if(!opened||opened.state!=='complete')throw Error('Open a completed atlas release first.');
+  ensure();if(!opened||!['complete','received_snapshot'].includes(opened.state))throw Error('Open an original retained atlas release first.');
   const atWorkspace=workspace,epoch=generation,deliveryId=opened.id,request=++inspectionRequest;
   const existing=inspection?.target?.lineage;
-  if(existing?.delivery_id===deliveryId&&existing.map_key===mapKey&&existing.panel_index===panelIndex){
+  if(!inspection?.target?.comparison&&existing?.delivery_id===deliveryId&&existing.map_key===mapKey&&existing.panel_index===panelIndex){
    mode='inspect';render();return;
   }
   const result=await host.api('/api/map-atlas/inspect',{method:'POST',body:{workspace:atWorkspace,delivery_id:deliveryId,map_key:mapKey,panel_index:panelIndex}});
@@ -533,6 +735,42 @@ export function attachMapAtlas(host) {
   await inspector.openTarget({...result.target,workspace:atWorkspace});
   ensure();if(workspace!==atWorkspace||generation!==epoch||opened?.id!==deliveryId||request!==inspectionRequest)return;
   mode='inspect';render();
+ }
+ async function inspectPair(){
+  ensure();if(!opened||!['complete','received_snapshot'].includes(opened.state))throw Error('Open an original retained atlas release first.');
+  const {left,right,value}=pairDraft();
+  if(!left||!right)throw Error('Choose the same panel from two retained alternatives.');
+  const atWorkspace=workspace,epoch=generation,deliveryId=opened.id,request=++inspectionRequest;
+  const cache=JSON.stringify([deliveryId,value.left,value.right,value.mode]);
+  if(inspection?.comparisonKey===cache){mode='inspect';render();return;}
+  const choice=item=>({map_key:item.row.map_key,panel_index:item.index});
+  const result=await host.api('/api/map-atlas/compare',{method:'POST',body:{workspace:atWorkspace,delivery_id:deliveryId,left:choice(left),right:choice(right),mode:value.mode}});
+  ensure();if(workspace!==atWorkspace||generation!==epoch||opened?.id!==deliveryId||request!==inspectionRequest)return;
+  if(result.workspace_key!==atWorkspace||result.target?.kind!=='atlas-panel'||!result.target.comparison)throw Error('The paired atlas inspection belongs to another workspace or selection.');
+  inspection={target:result.target,comparisonKey:cache};inspector.suspend();
+  await inspector.openTarget({...result.target,workspace:atWorkspace});
+  ensure();if(workspace!==atWorkspace||generation!==epoch||opened?.id!==deliveryId||request!==inspectionRequest)return;
+  mode='inspect';render();
+ }
+ async function openSavedReview(id){
+  ensure();if(!opened||!['complete','received_snapshot'].includes(opened.state))throw Error('Open the original retained atlas first.');
+  const atWorkspace=workspace,epoch=generation,deliveryId=opened.id,request=++inspectionRequest;
+  const result=await host.api('/api/map-atlas/review',{method:'POST',body:{workspace:atWorkspace,delivery_id:deliveryId,review_id:id}});
+  ensure();if(workspace!==atWorkspace||generation!==epoch||opened?.id!==deliveryId||request!==inspectionRequest)return;
+  if(result.workspace_key!==atWorkspace||result.target?.review_id!==id)throw Error('The saved review belongs to another project or selection.');
+  inspection={target:result.target,reviewId:id};inspector.suspend();
+  await inspector.openTarget({kind:'spatial_reviews',id,workspace:atWorkspace});
+  ensure();if(workspace!==atWorkspace||generation!==epoch||opened?.id!==deliveryId||request!==inspectionRequest)return;
+  mode='inspect';render();
+ }
+ async function prepareReviewedRelease(value){
+  ensure();requireWorkspace(value.workspace);
+  if(opened?.id!==value.delivery_id)throw Error('Reopen the original atlas before preparing its reviewed release.');
+  const selection=clone(opened.selection),reviewSet=new Set(value.all_review_ids),exportSet=new Set(value.all_export_ids);
+  selection.spatial_review_ids=[...new Set([...(selection.spatial_review_ids||[]).filter(id=>!reviewSet.has(id)),...value.review_ids])];
+  selection.spatial_export_ids=[...new Set([...(selection.spatial_export_ids||[]).filter(id=>!exportSet.has(id)),...value.export_ids])];
+  await create({workspace_key:value.workspace,selection});
+  ensure();requireWorkspace(value.workspace);step=3;persist();render();
  }
  async function click(event){
   const b=event.target.closest('[data-atlas-action]');if(!b||!root?.contains(b))return;
@@ -546,18 +784,29 @@ export function attachMapAtlas(host) {
    else if(action==='open')await open(b.dataset.id);
    else if(action==='clone'){const selection=clone(opened.selection);await create({workspace_key:atWorkspace,selection});}
    else if(action==='source-report')await host.openExtension('scenario-reports','open',b.dataset.id,{workspace_key:atWorkspace});
+   else if(action==='independent-release'){
+    collect();for(const key of ['source_report_id','source_report_sha256','economic_edition_id','economic_edition_sha256','source_scenario_analysis_id','source_scenario_analysis_sha256'])delete draft[key];
+    operationId=null;step=0;mode='prepare';persist();render();
+   }else if(action==='remove-economics'){
+    collect();delete draft.economic_edition_id;delete draft.economic_edition_sha256;
+    operationId=null;persist();render();
+   }
    else if(action==='item')await host.openItem?.(b.dataset.kind,b.dataset.id);
    else if(action==='inspect-source')await inspectSource(b.dataset.sourceCardId);
    else if(action==='inspect-panel')await inspectPanel(b.dataset.mapKey,Number(b.dataset.panelIndex));
-   else if(action==='return-release'){mode='outputs';render();}
+   else if(action==='compare-panels')await inspectPair();
+   else if(action==='return-release'){mode='outputs';render();await reviews.refresh();}
    else if(action==='show-print'){
-    const row=opened?.atlas?.pages?.find(item=>item.map_key===inspection?.target?.lineage?.map_key);
+    const mapKey=b.dataset.side?inspection?.target?.sides?.find(side=>side.slot===b.dataset.side)?.map_key:inspection?.target?.lineage?.map_key;
+    const row=opened?.atlas?.pages?.find(item=>item.map_key===mapKey);
     const file=retainedFile(row?.file),url=safeFileURL(file?.url);
     if(!url)throw Error('The original printed map is unavailable.');
     const link=document.createElement('a');link.href=url;link.target='_blank';link.rel='noopener';link.click();
    }
    else if(action==='apply-designation')await applyDesignation(b.dataset.role);
    else if(action==='load-context')await loadSourceContext();
+   else if(action==='load-economics')await loadEconomicChoices();
+   else if(action==='apply-economics')await applyEconomicChoice();
    else if(action==='load-receptor')useReceptorProfile();
    else if(action==='remove-receptors'){collect({replaceReceptors:true});delete draft.receptor_spec;delete draft.receptor_profile_source;sourcePreview.delete('receptor-network');operationId=null;persist();render();}
    else if(action==='inspect-network')await inspectReceptorNetwork();
@@ -568,6 +817,7 @@ export function attachMapAtlas(host) {
    }else if(action==='download-selection')exportSelection();
    else if(action==='refresh'){collect();persist();const current=workspace;await host.refreshState?.({force:true});if(workspace===current){ensure();render();}}
    else if(action==='move'){
+    if(cohortLinked(draft))throw Error('Choose a different run cohort before changing the linked report order.');
     collect();const list=draft.scenario_run_ids,index=list.indexOf(b.dataset.id),target=index+Number(b.dataset.direction);
     if(index>=0&&target>=0&&target<list.length){[list[index],list[target]]=[list[target],list[index]];operationId=null;persist();render();}
    }else if(action==='preview'){
@@ -582,9 +832,12 @@ export function attachMapAtlas(host) {
   if(event.target.closest?.('[data-atlas-spatial]'))return;
   const target=event.target,atWorkspace=workspace,epoch=generation;
   try{
+   if(target.matches('[data-atlas-pair]')){changePair(target);return;}
    if(target.matches('[data-atlas-import]')){clearError();await importSelection(target.files?.[0]);return;}
    if(target.matches('[data-atlas-receptor-import]')){clearError();await importReceptors(target.files?.[0]);return;}
-   if(target.name==='baseline'||/__collection$|__source$|__enabled$/.test(target.name||'')){
+   if(target.name==='economic_report_choice'){clearError();await loadEconomicChoices(target.value);return;}
+   if(target.name==='economic_edition_choice'){if(economicChoices?.key===economicKey()){economicChoices.chosen_id=target.value;renderEconomics();}return;}
+   if(target.name==='baseline'||target.name==='delivery_mode'||/__collection$|__source$|__enabled$/.test(target.name||'')){
     collect();
     const match=target.name.match(/^(source_roles|overlays)__([^_].*?)__(collection|source|enabled)$/);
     if(match&&match[3]==='collection'){
@@ -612,12 +865,14 @@ export function attachMapAtlas(host) {
  }
  function update(next){
   const previous=workspace;ensure(next);
+  reviews.update();
   if(previous!==workspace){render();return;}
   const catalog=root?.querySelector('[data-atlas-catalogue]');if(catalog)catalog.innerHTML=catalogue();
   renderProblems();
   if(mode==='inspect'&&inspection&&root?.querySelector('[data-atlas-spatial]'))inspector.mount(root.querySelector('[data-atlas-spatial]'),state);
  }
  function detach(){
+  reviews.detach();
   inspector.suspend();
   if(root){try{if(mode==='prepare'){collect();persist();}}catch{}
    root.removeEventListener('click',click);root.removeEventListener('change',change);

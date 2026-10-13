@@ -4,12 +4,12 @@
   "operation_id": "UPSTATE-FULL-PRODUCT-BUILD-BRYCE-20261012-1FB3-GUIDED-JOURNEY",
   "files": {
     "operator/install_guided_journey.py": {
-      "bytes": 17703,
-      "sha256": "241421e4057c6e263b10094408e3947527667652b2bbb0f0fc91e9a81191d016"
+      "bytes": 18410,
+      "sha256": "d26ec75243ac872e62ee546173a41caaecb66dff931714eb2138a940e86a01cf"
     },
     "operator/Guided_Journey_Integration.json": {
-      "bytes": 11119,
-      "sha256": "eba741475103f001bc7761d669a9b450d9c1d2cbd2756e13c179ec8bbe2433c8"
+      "bytes": 11628,
+      "sha256": "ad5c2674dee229d3e2f6e88231ef70f147f5e1f0e06de44cf546ece39af2dfe3"
     },
     "operator/extensions/guided-journey.json": {
       "bytes": 1284,
@@ -24,8 +24,8 @@
       "sha256": "61952e1dbaf7340f0a43e2fa45df33f12a8d82f5a684fabe178bffab78903e5a"
     },
     "operator/GUIDED_JOURNEY.md": {
-      "bytes": 18743,
-      "sha256": "2827a63d79fffa2b6fa58354862f53ba448e88bfe89ae07db36b70337dad7083"
+      "bytes": 21626,
+      "sha256": "9faa5e12248e0535d982fc5c528af10f85c301a187021ccee0f7f9cce134aaaa"
     }
   },
   "source_context": {
@@ -37,6 +37,7 @@
     "public_application_head": "b376331722f7780cf12e7f17c498f69a0ae28946",
     "operator_composition_base": "1c6052e62b27e8bf16f0fa4841338972765a83f2",
     "operator_composition": "ECO13-CLOUD-INTEGRATION current-host adoption",
-    "authored_source_carrier": "F0C8JE0BTC3"
+    "authored_source_carrier": "F0C8JE0BTC3",
+    "current_host_continuation": "D406 current-host continuation based on 7956a4acb2e567a5d7a445a7c0898095cd3e1400; preserves registered desks and completed native stage predicate"
   }
 }

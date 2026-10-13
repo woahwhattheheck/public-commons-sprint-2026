@@ -890,58 +890,42 @@ class UpstateInvestigations:
             return self._snapshot_state(workspace_key, destination)
 
     def _snapshot_state(self, workspace_key, destination):
-        """Make a consistent one-workspace SQLite snapshot for the existing export.
-
-        destination is selected by the server's archive assembly, never by a
-        browser or language model. The original Operator task records named in
-        native_tasks must join that same complete handover.
-        """
+        """Copy the original Store using the shared native snapshot implementation."""
+        from .study_transfer import snapshot_project_state
         ws = self.operator.ws(workspace_key)
         store = self._context(workspace_key)["store"]
-        destination = Path(destination).absolute()
-        if destination.exists() or destination.is_symlink():
-            raise IntelligenceError("Select a new investigation snapshot destination.", 409)
-        destination.parent.mkdir(parents=True, exist_ok=True)
-        pending = None
-        try:
-            handle, name = tempfile.mkstemp(prefix=".investigations-", dir=destination.parent)
-            os.close(handle)
-            pending = Path(name)
-            with store.db() as src, closing(sqlite3.connect(str(pending))) as dst:
-                src.backup(dst)
-                if dst.execute("PRAGMA integrity_check").fetchone()[0] != "ok":
-                    raise IntelligenceError("The investigation snapshot could not be received.", 409)
-                bindings = [json.loads(row[0]) for row in dst.execute(
-                    "SELECT body FROM upstate_native_bindings WHERE tenant=? ORDER BY plan_id", (self.storage_tenant(workspace_key),))]
-                captured_tasks = []
-                for binding in bindings:
-                    saved = dst.execute(
-                        "SELECT body,observed_at FROM upstate_native_task_receipts WHERE tenant=? AND task_id=? "
-                        "ORDER BY observed_at DESC,source_sha256 DESC LIMIT 1",
-                        (self.storage_tenant(workspace_key), binding["native_task_id"])).fetchone()
-                    task = json.loads(saved[0]) if saved else None
-                    captured_tasks.append({
-                        "plan_id": binding["plan_id"], "task_id": binding["native_task_id"],
-                        "operation_id": binding["native_operation_id"],
-                        "native_state": task.get("state") if task else None,
-                        "task_source": "snapshot_record" if task else "pending_admission",
-                        "observed_at": saved[1] if saved else None,
-                    })
-            with pending.open("rb") as handle:
-                os.fsync(handle.fileno())
-            os.link(pending, destination)
-            fd = os.open(destination.parent, os.O_RDONLY | os.O_DIRECTORY)
-            try:
-                os.fsync(fd)
-            finally:
-                os.close(fd)
-            return {
-                "format": FORMAT + "/state-snapshot", "workspace_key": workspace_key,
-                "project_id": ws.project["id"], "project_sha256": native_digest(ws.project),
-                "path": str(destination), "bytes": destination.stat().st_size,
-                "sha256": file_digest(destination), "native_tasks": captured_tasks,
-                "state_file": "investigations.sqlite3", "created_at": now(),
-            }
-        finally:
-            if pending is not None:
-                pending.unlink(missing_ok=True)
+        namespace = store.storage_tenant(workspace_key)
+        with store.db() as source:
+            return snapshot_project_state(
+                ws, source, destination, namespace=namespace,
+                workspace_key=workspace_key, snapshot_format=FORMAT + "/state-snapshot",
+            )
+
+    def prepare_study_snapshot(self, workspace_key):
+        """Bind before the study exporter acquires the original exclusive lock.
+
+        The returned callback(staged_workspace, plan) uses this same Store's
+        configured path and never reacquires its shared lock during capture.
+        """
+        from .study_transfer import prepare_workspace_study_snapshot
+        context = self._context(workspace_key)
+        store = context["store"]
+        workspace = self.operator.ws(workspace_key)
+        root = workspace.root.resolve()
+        project_sha256 = native_digest(workspace.project)
+        # Capture the existing original queue receipts while normal Store
+        # locking is available, before the selected-study exclusive guard.
+        self.native_tasks(workspace_key)
+
+        def validate_binding():
+            current = self.operator.ws(workspace_key)
+            if (current.root.resolve() != root
+                    or native_digest(current.project) != project_sha256):
+                raise IntelligenceError("The investigation binding moved to another workspace.", 409)
+            store.storage_tenant(workspace_key)
+
+        return prepare_workspace_study_snapshot(
+            workspace, database_path=store.path, workspace_key=workspace_key,
+            validate_binding=validate_binding,
+            snapshot_format=FORMAT + "/state-snapshot",
+        )

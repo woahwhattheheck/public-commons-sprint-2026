@@ -89,3 +89,28 @@ Original NWI directory: https://fwspublicservices.wim.usgs.gov/wetlandsmapservic
 Original legal classification: https://www.scstatehouse.gov/coderegs/Chapter%2061-69.pdf and the current SCDES classified-waters source. Geographic classification/reach binding is retained as its own source work.
 
 Current official Atlas: https://gis.des.sc.gov/gisportal/apps/webappviewer/index.html?id=d0827cf30d3c490f9e22dd1000b8195a . Original map data: https://gis.des.sc.gov/gisportal/sharing/rest/content/items/362fc83c2e474c13a52c1a8cd57c93d9/data?f=pjson .
+
+## Exact provider feature selections
+
+`capture_layer` accepts a source specification's optional `where` expression.
+The maintained parcel planner forwards the provider's exact value. Omission
+means `1=1`; explicit null, empty, non-string or NUL-containing values are
+rejected before capture. No county name or SQL expression is inferred from
+a layer title.
+
+For a filtered source, every count, original-ID, native-geometry and
+provider-linear query carries the same original expression.
+`selection.json` and `layer-capture.json` retain it as `where`.
+The request receipt already retains each exact query parameter, so a partial
+response from another selection cannot be reused under the same request
+identity. Default `1=1` captures preserve the existing request and retained
+selection layout, allowing earlier complete single-county sources to remain
+valid.
+
+This enables SCFC's Coastal source to supply Aiken parcels with
+`County = 'Aiken County'` while retaining all original attributes and whole
+native polygons. The parcel engine additionally verifies the original
+`County` value before assigning Aiken's county-qualified identifier and
+compares the predicate before capture restoration or same-mask reuse.
+Its prepared source manifest keeps `source_where` separate from the
+publisher's metadata `definitionExpression`.

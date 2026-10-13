@@ -29,6 +29,7 @@ import time
 
 OPERATION = "SCF-DURABLE-PAID-JOBS-0B8D-20261011"
 REPOSITORY = "https://github.com/woahwhattheheck/public-commons-sprint-2026.git"
+MERCHANT_REPOSITORY = "https://github.com/woahwhattheheck/tjlabs-stellar-merchant-workspace.git"
 SOURCE = Path("stellar/scf-starforge-20261009")
 RETAINED = Path("/dev/shm/0b8d-scf-paid-jobs-native/sf30-paid-jobs-CKQrif")
 ORIGINAL_CORE_DIRECTORY = RETAINED
@@ -318,15 +319,15 @@ def completed_capsule_tools(source):
     return module
 
 
-def source_checkout(workspace, commit, logs):
+def source_checkout(workspace, commit, logs, repository=REPOSITORY):
     source = workspace / "source"
     if not source.exists():
         private_directory(source)
         execute(["git", "init", "--quiet", source], logs / "git-init", cwd=workspace)
-        execute(["git", "-C", source, "remote", "add", "origin", REPOSITORY], logs / "git-origin", cwd=workspace)
+        execute(["git", "-C", source, "remote", "add", "origin", repository], logs / "git-origin", cwd=workspace)
     require((source / ".git").is_dir() and source.resolve() == source, "ORIGINAL_PRIVATE_CHECKOUT_REQUIRED")
     origin = subprocess.check_output(["git", "-C", source, "remote", "get-url", "origin"], text=True).strip()
-    require(origin == REPOSITORY, "ORIGINAL_SOURCE_REMOTE_CHANGED")
+    require(origin == repository, "ORIGINAL_SOURCE_REMOTE_CHANGED")
     dirty = subprocess.check_output(["git", "-C", source, "status", "--porcelain", "--untracked-files=no"], text=True)
     require(not dirty, "PRESERVE_CHANGED_ORIGINAL_SOURCE")
     current = subprocess.run(["git", "-C", source, "rev-parse", "--verify", "HEAD"],
@@ -411,7 +412,7 @@ def install_runtime(source, workspace, node, npm, python, logs, offline):
             "lockSha256": digest(regular(runtime / "package-lock.json")), "inspection": report}
 
 
-def completed(path, phase, approval="terminal", input_files=False, source_commit=None):
+def completed(path, phase, approval="terminal", input_files=False, source_commit=None, output_files=False):
     if not path.is_file():
         return None
     value = read_json(path)
@@ -431,20 +432,20 @@ def completed(path, phase, approval="terminal", input_files=False, source_commit
                 value.get("operation") == APPLICATIONS_OPERATION and value.get("sourceCommit") == source_commit and
                 received.get("schema") == "stellar-forge.job-merchant-applications-received.v1" and
                 received.get("state") == "COMPLETE" and len(received.get("starts", [])) == 2 and
-                {job.get("id") for job in received.get("completedJobs", [])} == {"input-files:2026.10"},
+                {job.get("id") for job in received.get("completedJobs", [])} == {"output-files:2026.10" if output_files else "input-files:2026.10"},
                 "ORIGINAL_INSTALLED_APPLICATIONS_RESULT_REQUIRED")
         require(len({item["launch"]["instanceId"] for item in received["starts"]}) == 2 and
                 all(item["exit"]["state"] == "STOPPED" and item["exit"]["closeErrors"] == []
                     for item in received["starts"]), "ORIGINAL_APPLICATIONS_DRAIN_REQUIRED")
     else:
-        operation = "SCF-JOB-INPUT-FILES-0B8D-20261012" if input_files else (
+        operation = "SCF-JOB-RESULT-PACKAGES-0B8D-20261012" if output_files else "SCF-JOB-INPUT-FILES-0B8D-20261012" if input_files else (
             "SCF-JOB-BROWSER-APPROVAL-0B8D-20261012" if approval == "browser" else
             "SCF-JOB-CHECKOUT-CONTINUATION-0B8D-20261012")
         require(value.get("operation") == operation and
                 value.get("operatorLedger", {}).get("reservations") == 1, "ORIGINAL_CHECKOUT_RESULT_REQUIRED")
         if approval == "browser":
             intake = value.get("selfService", {})
-            expected_job = "input-files:2026.10" if input_files else "browser-checkout:2026.10"
+            expected_job = "output-files:2026.10" if output_files else "input-files:2026.10" if input_files else "browser-checkout:2026.10"
             require(intake.get("reference") == expected_job and
                     intake.get("phase") == "IMPORTED" and intake.get("reopened") is True and
                     value.get("approvalMode") == "ORIGINAL_BROWSER_BROKER",
@@ -468,6 +469,12 @@ def completed(path, phase, approval="terminal", input_files=False, source_commit
                     agent.get("accountingRunId") == resolution.get("accountingRunId") and
                     re.fullmatch(r"[a-f0-9]{64}", agent.get("manifestSha256", "")),
                     "ORIGINAL_COMPLETE_AGENT_RECEIVING_REQUIRED")
+        if output_files:
+            outputs = value.get("outputFiles", {})
+            require(outputs.get("result") == "PASS" and outputs.get("operation") == operation and
+                    outputs.get("jobId") == expected_job and len(outputs.get("files", [])) == 3 and
+                    outputs.get("package", {}).get("sha256") == value.get("artifact", {}).get("sha256"),
+                    "ORIGINAL_COMPLETE_OUTPUT_RECEIVING_REQUIRED")
     return value
 
 
@@ -476,9 +483,10 @@ def applications_receiving(source, workspace, out, node, args, env, state, state
     stage = private_directory(out / "applications")
     plan_path = stage / "continuation.json"
     checkout_path = out / "checkout.json"
-    checkout = completed(checkout_path, "checkout", args.approval, args.input_files, args.source_commit)
+    checkout = completed(checkout_path, "checkout", args.approval, args.input_files, args.source_commit, args.output_files)
     fixture = Path(checkout["fixtureDirectory"])
-    require(fixture == RETAINED / "checkout-input-files-continuation" and fixture.resolve() == fixture,
+    require(fixture == RETAINED / ("checkout-output-files-continuation" if args.output_files else
+                                 "checkout-input-files-continuation") and fixture.resolve() == fixture,
             "ORIGINAL_INPUT_MERCHANT_REQUIRED")
     identity = {"sourceCommit": args.source_commit, "checkoutSha256": digest(regular(checkout_path)),
                 "validationOperation": args.validation_operation, "retainedDirectory": str(RETAINED)}
@@ -710,6 +718,8 @@ def main():
     parser.add_argument("--workspace", required=True, type=Path)
     parser.add_argument("--out", required=True, type=Path)
     parser.add_argument("--source-commit", required=True)
+    parser.add_argument("--source-repository", choices=(REPOSITORY, MERCHANT_REPOSITORY),
+                        help="Exact selected source repository; retained with the original run.")
     parser.add_argument("--capsule", required=True, type=Path)
     parser.add_argument("--sha256", required=True)
     parser.add_argument("--input-mode", choices=("prepared", "completed-core"), default="prepared")
@@ -717,6 +727,9 @@ def main():
                         help="Receive completed bytes at this private project path through the original source-binding API.")
     parser.add_argument("--approval", choices=("terminal", "browser"), default="terminal")
     parser.add_argument("--input-files", action="store_true", help="Run original input files, resolution and agent receiving.")
+    parser.add_argument("--output-files", action="store_true", help="Receive three named output files through the distinct original package operation.")
+    parser.add_argument("--browser-module", type=Path, help="Actual installed Playwright module for output-file browser receiving.")
+    parser.add_argument("--browser-executable", type=Path, help="Actual installed Chromium executable for output-file browser receiving.")
     parser.add_argument("--applications", action="store_true", help="Build and receive that merchant through the installed Applications product.")
     parser.add_argument("--validation-operation", help="Original native controller operation for this selected release run.")
     parser.add_argument("--node", default=shutil.which("node"))
@@ -724,11 +737,21 @@ def main():
     parser.add_argument("--npm", default=shutil.which("npm"))
     parser.add_argument("--offline", action="store_true", help="Use the worker's existing npm cache.")
     args = parser.parse_args()
+    args.source_repository = args.source_repository or (MERCHANT_REPOSITORY if args.output_files else REPOSITORY)
     require(re.fullmatch(r"[0-9a-f]{40}", args.source_commit) and
             re.fullmatch(r"[0-9a-f]{64}", args.sha256), "IMMUTABLE_SOURCE_AND_INPUT_HASH_REQUIRED")
     require(sys.version_info >= (3, 11) and sys.platform == "linux", "ORIGINAL_LINUX_PYTHON_311_REQUIRED")
     require(re.fullmatch(r"24\.[0-9]+\.[0-9]+", args.node_version) and
             tuple(map(int, args.node_version.split("."))) >= (24, 19, 0), "SELECT_SUPPORTED_NODE_24_RUNTIME")
+    require(not (args.input_files and args.output_files), "SELECT_ONE_ORIGINAL_FILE_JOURNEY")
+    args.input_files = args.input_files or args.output_files
+    require(bool(args.browser_module) == bool(args.browser_executable), "SELECT_COMPLETE_BROWSER_RUNTIME")
+    require(not args.browser_module or args.output_files, "BROWSER_REVIEW_REQUIRES_OUTPUT_FILES_MODE")
+    if args.browser_module:
+        for runtime in (args.browser_module, args.browser_executable):
+            require(runtime.is_absolute() and runtime.is_file(), "ACTUAL_BROWSER_RUNTIME_REQUIRED")
+        args.browser_module = args.browser_module.resolve(strict=True)
+        args.browser_executable = args.browser_executable.resolve(strict=True)
     require(not args.input_files or args.approval == "browser", "INPUT_FILES_REQUIRE_ORIGINAL_BROWSER_APPROVAL")
     require(not args.applications or args.input_files, "APPLICATIONS_FOLLOWS_COMPLETE_INPUT_MERCHANT")
     if args.validation_operation is not None:
@@ -770,19 +793,26 @@ def main():
     fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
     state_path = out / "run-result.json"
     state = {"schema": RUN_SCHEMA, "operation": OPERATION, "sourceCommit": args.source_commit,
+             "sourceRepository": args.source_repository,
              "workspace": str(workspace), "outputDirectory": str(out), "retainedDirectory": str(RETAINED),
              "inputCapsuleSha256": args.sha256, "inputMode": args.input_mode,
              "approvalMode": args.approval, "inputFiles": args.input_files, "applications": args.applications,
+             "outputFiles": args.output_files,
+             "browserReview": {"module": str(args.browser_module), "executable": str(args.browser_executable)}
+                 if args.browser_module else None,
              "validationOperation": args.validation_operation, "nodeVersion": args.node_version,
              "phases": {}, "status": "RUNNING"}
     if placement is not None:
         state["storagePlacement"] = placement
     previous = read_json(state_path) if state_path.exists() else None
     if previous:
-        require(previous.get("inputMode", "prepared") == args.input_mode and
+        require(previous.get("sourceRepository", REPOSITORY) == args.source_repository and
+                previous.get("inputMode", "prepared") == args.input_mode and
                 previous.get("approvalMode", "terminal") == args.approval and
                 previous.get("inputFiles", False) == args.input_files and
                 previous.get("applications", False) == args.applications and
+                previous.get("outputFiles", False) == args.output_files and
+                previous.get("browserReview") == state["browserReview"] and
                 previous.get("validationOperation") == args.validation_operation and
                 previous.get("nodeVersion", "24.19.0") == args.node_version and
                 previous.get("storagePlacement") == state.get("storagePlacement"),
@@ -814,7 +844,7 @@ def main():
             require(shutil.which(command), "WORKER_COMPONENT_REQUIRED:" + command)
         state["runtime"] = {"node": version, "python": sys.version.split()[0], "platform": sys.platform}
         if args.input_mode == "completed-core":
-            source, hashes = source_checkout(workspace, args.source_commit, logs)
+            source, hashes = source_checkout(workspace, args.source_commit, logs, args.source_repository)
             completed_tools = completed_capsule_tools(source)
             capsule = completed_tools.read_completed_capsule(args.capsule, args.sha256)
             require(capsule["manifest"] == input_header, "COMPLETED_INPUT_HEADER_CHANGED")
@@ -848,7 +878,7 @@ def main():
         else:
             state["input"] = unpack_capsule(args.capsule, args.sha256, workspace)
             restored = True
-            source, hashes = source_checkout(workspace, args.source_commit, logs)
+            source, hashes = source_checkout(workspace, args.source_commit, logs, args.source_repository)
         state["sourceFiles"] = hashes
         state["installation"] = install_runtime(source, workspace, node, npm, sys.executable, logs, args.offline)
         if placement is not None:
@@ -886,11 +916,14 @@ def main():
                          "--retained", RETAINED, "--out", out / "customer.json"],
             "checkout": [sys.executable, source / SOURCE / "sf88-operator-buyer-cli/job-workspace/checkout/native-continuation.py",
                          "--retained", RETAINED, "--node", node, "--out", out / "checkout.json",
-                         "--approval", args.approval, *(["--input-files"] if args.input_files else [])],
+                         "--approval", args.approval,
+                         *(["--output-files"] if args.output_files else ["--input-files"] if args.input_files else []),
+                         *(["--browser-module", args.browser_module, "--browser-executable", args.browser_executable]
+                           if args.browser_module else [])],
         }
         for phase in (*PHASES, *(("applications",) if args.applications else ())):
             result_path = out / (phase + ".json")
-            result = completed(result_path, phase, args.approval, args.input_files, args.source_commit)
+            result = completed(result_path, phase, args.approval, args.input_files, args.source_commit, args.output_files)
             if result is not None:
                 entry = state["phases"].get(phase, {})
                 state["phases"][phase] = {**entry, "status": "COMPLETED", "reused": True,
@@ -917,7 +950,7 @@ def main():
             if command["exitCode"]:
                 state["phases"][phase]["status"] = "FAILED"
                 raise RuntimeError("ORIGINAL_" + phase.upper() + "_FAILED")
-            require(completed(result_path, phase, args.approval, args.input_files, args.source_commit) is not None,
+            require(completed(result_path, phase, args.approval, args.input_files, args.source_commit, args.output_files) is not None,
                     "ORIGINAL_PHASE_OUTPUT_REQUIRED:" + phase)
             state["phases"][phase].update({"status": "COMPLETED", "reused": False,
                                           "resultSha256": digest(regular(result_path))})

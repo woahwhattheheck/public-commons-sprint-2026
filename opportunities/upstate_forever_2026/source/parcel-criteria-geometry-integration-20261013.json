@@ -1,0 +1,160 @@
+{
+  "schema": "upstate.parcel-criteria-geometry-integration/v1",
+  "id": "ES-ORIGINAL-PARCEL-CRITERIA-GEOMETRY-20261013",
+  "source_repository": "woahwhattheheck/public-commons-sprint-2026",
+  "base_path": "opportunities/upstate_forever_2026",
+  "predecessors": {
+    "source_tools/parcel_criteria.py": {
+      "bytes": 75726,
+      "sha256": "9b4881b0a6da0dcedfa9f2a4bb2125c216971e38479c91f0527b1497b11f76b9"
+    },
+    "source/parcel-criteria-sources-20261013.json": {
+      "bytes": 21136,
+      "sha256": "f4e925fc839f5c814ecaf785aa4ad8762f950ee94d4f431d269b6a545656f79a"
+    },
+    "model/conservation_reporting.py": {
+      "bytes": 43009,
+      "sha256": "271f5bf8ba1df82766fe49efe8ec386e6de3579ad7965ec3a85221bbd6e1a8f9"
+    }
+  },
+  "successors": {
+    "source_tools/parcel_criteria.py": {
+      "bytes": 78888,
+      "sha256": "e8ad84d3f992cc1e2d40240abb84c33923d6f60de1dca5a3231cb9bd47f53e9c"
+    },
+    "source/parcel-criteria-sources-20261013.json": {
+      "bytes": 23509,
+      "sha256": "028c4cb379e39fdf9b6ca53c964862b9ed05a9582e63803784814cfb7468ae30"
+    },
+    "model/conservation_reporting.py": {
+      "bytes": 45107,
+      "sha256": "2dde322110556f71c0cfebf78a050e6a146f5dafeea7f16e8c744694cc3b2f1f"
+    },
+    "source_tools/PARCEL_CRITERIA_GEOMETRY.md": {
+      "bytes": 10362,
+      "sha256": "35db87a06a0e4036044cca57cf1a8478a33af7a04332e2abf43455abf09cccc4"
+    }
+  },
+  "ui": {
+    "action": "conservation.criteria.prepare",
+    "setting": "settings.spatial_criteria_basis",
+    "default": "whole_original_parcel",
+    "choices": [
+      {
+        "value": "whole_original_parcel",
+        "label": "Full original parcel"
+      },
+      {
+        "value": "reporting_parcel",
+        "label": "Reporting-boundary intersection"
+      }
+    ],
+    "task_result": [
+      "spatial_criteria_basis",
+      "metric_geometry"
+    ],
+    "capture_result": "Keep original source_operation_id/parcel_criteria_selection; merge the chosen spatial_criteria_basis into its existing settings before calling the builder.",
+    "meaning": "The original parcel/reporting/source selection stays bound; this setting chooses the source criterion geometry within that selection."
+  },
+  "report": "Current twelve conservation-reporting joins remain installed. The complete reporting-module successor consumes the actual table geometry and original per-metric binding.",
+  "documentation_joins": [
+    {
+      "id": "report-hydric",
+      "path": "model/CONSERVATION_REPORTS.md",
+      "before": "| hydric_soil_acres | Actual selected hydric footprint inside the reporting parcel, under the saved source interpretation. |",
+      "after": "| hydric_soil_acres | Actual selected hydric footprint inside the declared source-criterion geometry, under the saved source interpretation. |"
+    },
+    {
+      "id": "report-riparian",
+      "path": "model/CONSERVATION_REPORTS.md",
+      "before": "| sensitive_riparian_acres | Actual selected sensitive-riparian union inside the reporting parcel. |",
+      "after": "| sensitive_riparian_acres | Actual selected sensitive-riparian union inside the declared source-criterion geometry. |"
+    },
+    {
+      "id": "report-basis",
+      "path": "model/CONSERVATION_REPORTS.md",
+      "before": "The current regional implementation records its reporting intersection in the source-derived criterion table; an imported external criterion retains its own explicit selected interpretation.",
+      "after": "New source preparation uses the full original parcel by default for spatial criteria. The explicit spatial_criteria_basis setting can select reporting_parcel as a recorded adaptation. The saved table's per-metric geometry map preserves independent land-cover, protected-land, parcel-size and native support meanings; imported external criteria retain their selected interpretation."
+    },
+    {
+      "id": "builder-geometry-setting",
+      "path": "source_tools/PARCEL_CRITERIA.md",
+      "before": "    \"adjacency_m\": 0,\n",
+      "after": "    \"spatial_criteria_basis\": \"whole_original_parcel\",\n    \"adjacency_m\": 0,\n"
+    },
+    {
+      "id": "builder-result-geometry",
+      "path": "source_tools/PARCEL_CRITERIA.md",
+      "before": "| population_statistics | The actual complete stream-length population and retained threshold |",
+      "after": "| spatial_criteria_basis / metric_geometry | Actual source-criterion geometry and the independent basis of each metric |\n| population_statistics | The actual complete stream-length population, geometry basis and retained threshold |"
+    },
+    {
+      "id": "builder-description",
+      "path": "source_tools/PARCEL_CRITERIA.md",
+      "before": "The parcel-size threshold is therefore evaluated against the actual parcel size, while reporting-area quantities remain separately readable.",
+      "after": "The parcel-size threshold is evaluated against the full original parcel. New spatial source criteria also default to that full parcel through spatial_criteria_basis=whole_original_parcel. Select reporting_parcel explicitly for a reporting-boundary adaptation. Land-cover and floodplain-development bases remain independent choices. The generated table, source scope, CSV, GeoPackage and point report retain the actual criterion basis alongside the original full and reporting areas."
+    },
+    {
+      "id": "builder-population",
+      "path": "source_tools/PARCEL_CRITERIA.md",
+      "before": "The complete study stream-length mean is computed from positive original line lengths among the selected reporting parcels.",
+      "after": "The complete study stream-length mean is computed from positive original line lengths among the selected parcels under the same saved spatial_criteria_basis."
+    },
+    {
+      "id": "builder-hydric",
+      "path": "source_tools/PARCEL_CRITERIA.md",
+      "before": "Hydric-soil acreage is the unioned original selected hydric polygon area within the reporting parcel.",
+      "after": "Hydric-soil acreage is the unioned original selected hydric polygon area inside the declared spatial_criteria_basis; the current default is the full original parcel."
+    },
+    {
+      "id": "interval-hydric",
+      "path": "source_tools/PARCEL_CRITERIA_INTERVALS.md",
+      "before": "| hydric_soil_acres | Original parcel clipped to the retained reporting area | Positive selected hydric footprint plus unresolved certainty coverage |",
+      "after": "| hydric_soil_acres | Declared spatial_criteria_basis; full original parcel by default | Positive selected hydric footprint plus unresolved certainty coverage |"
+    },
+    {
+      "id": "interval-riparian",
+      "path": "source_tools/PARCEL_CRITERIA_INTERVALS.md",
+      "before": "| sensitive_riparian_acres | Original parcel clipped to the retained reporting area | Positive published riparian union or its observed components, plus unresolved support |",
+      "after": "| sensitive_riparian_acres | Declared spatial_criteria_basis; full original parcel by default | Positive published riparian union or its observed components, plus unresolved support |"
+    },
+    {
+      "id": "interval-geometry",
+      "path": "source_tools/PARCEL_CRITERIA_INTERVALS.md",
+      "before": "For a parcel crossing the reporting boundary, full parcel size and the in-study hydric or riparian acreage remain separate.",
+      "after": "For a parcel crossing the reporting boundary, the table preserves full parcel area, reporting area and the actual source-criterion geometry independently. New operations default to full original parcel geometry for spatial criteria; reporting_parcel is an explicit saved adaptation. Prior completed tables retain their original basis."
+    }
+  ],
+  "documentation_successors": {
+    "source_tools/PARCEL_CRITERIA.md": {
+      "bytes": 23407,
+      "sha256": "87779cb93017eff68557d8e8d95fef3aeb5d6fccf1d1868a611d9f22b326c8a8"
+    },
+    "source_tools/PARCEL_CRITERIA_INTERVALS.md": {
+      "bytes": 16130,
+      "sha256": "26073d412324c60e38491a32bbd87226dfaf2dfaacbc0754e53f6c403bee86dc"
+    },
+    "model/CONSERVATION_REPORTS.md": {
+      "bytes": 12919,
+      "sha256": "254b52695f08b5ba43bcdba78965d55d51222d2ff2a0d9699c9c3de387a99218"
+    }
+  },
+  "original_source_evidence": [
+    {
+      "uri": "https://www.des.sc.gov/sites/des/files/Documents/BOW/WaterQuality/WPLakeKeowee.pdf",
+      "printed_page": 139,
+      "meaning": "Published riparian scoring uses sensitive-riparian acreage within each parcel."
+    },
+    {
+      "uri": "https://www.des.sc.gov/sites/des/files/Documents/BOW/WaterQuality/WPLakeKeowee.pdf",
+      "printed_page": 140,
+      "meaning": "Published hydric scoring uses the parcel acreage containing hydric soils."
+    },
+    {
+      "uri": "https://www.des.sc.gov/sites/des/files/media/document/WBP_for_Lake_Keowee_Watersheds_2020.pdf",
+      "printed_page": 142,
+      "meaning": "Published parcel-size criterion uses the 50-acre parcel threshold."
+    }
+  ],
+  "receiving": "Install the complete current code/profile postimages, apply unique guide joins, compile Python, and prepare the actual source-backed parcel study. Prior completed operations and native quantities keep their original meaning."
+}

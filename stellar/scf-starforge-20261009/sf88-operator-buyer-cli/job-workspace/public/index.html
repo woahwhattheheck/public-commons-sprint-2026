@@ -68,9 +68,14 @@
           <form id="labelForm" class="label-form"><label>Label<input id="jobLabel" maxlength="512"></label><label class="check"><input id="archived" type="checkbox">Archived</label><button type="submit">Save</button></form>
           <section class="result" aria-labelledby="resultHeading">
             <div class="section-heading"><h3 id="resultHeading">Result</h3><span id="resultState"></span></div>
-            <p id="resultMeta" class="hint"></p>
+            <p id="resultMeta" class="hint"></p><details class="metadata"><summary>Technical result details</summary><pre id="resultTechnical"></pre></details>
             <div class="actions"><button id="previewButton" type="button">Preview</button><button id="downloadButton" type="button">Download</button><a id="resultLibraryLink" href="/">Open in library</a></div>
             <pre id="preview" class="preview" tabindex="0">The verified result will appear here.</pre>
+          </section>
+          <section id="outputFilesPanel" class="result" aria-labelledby="outputFilesHeading" hidden>
+            <div class="section-heading"><h3 id="outputFilesHeading">Output files</h3><button id="outputFilesButton" type="button">Show verified files</button></div>
+            <p id="outputFilesStatus" class="hint">Retrieve the result to receive all declared files and keep the complete package.</p>
+            <div class="table-scroll"><table><thead><tr><th>File</th><th>Status</th><th>Size</th><th>Actions</th></tr></thead><tbody id="outputFiles"></tbody></table></div>
           </section>
           <form id="noteForm" class="notes">
             <h3>Research notes</h3>
