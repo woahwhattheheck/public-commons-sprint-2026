@@ -397,7 +397,7 @@ def inspect(workspace, key):
                        for field in ("grid_id", "scenario_id"))):
             raise ValueError("An experiment case changed its retained model selection")
         frozen = case.get("run_selection")
-        if frozen is not None:
+        if "run_selection" in case:
             if not isinstance(frozen, dict) or run["selection"] != frozen:
                 raise ValueError("An experiment case changed its original saved run selection")
         elif run["selection"].get("invest_version") != state["baseline_selection"].get("invest_version"):
