@@ -6,7 +6,7 @@ This package contains the complete economic decision companion and its Economic 
 
 ## Receive the component
 
-The source ZIP contains the model companion, its source receiver and operating guides, plus the six Economic desk integration files. README_RECEIVING.md is this component guide. The source JSON and source-download HTML contain the same complete files.
+The source ZIP contains the model companion, its source receiver and operating guides, the Economic desk integration and authenticated receiving command, and the original Gura native comparison workflow. README_RECEIVING.md is this component guide. The source JSON and source-download HTML contain the same complete files.
 
     python -B receive_decision_source.py upper-savannah-decision-source.json /absolute/incoming-component
 
@@ -29,7 +29,7 @@ Choose a completed native report and its original reporting zone. Enter any actu
 
 Reporting-zone costs retain their source report, original zone and estimate. Changing zones unchecks those estimates until reviewed for the selected zone; whole-scenario costs retain their complete implementation footprint. Saved targets for absent outputs remain visible with an explicit clear action.
 
-operator/ECONOMIC_DESK.md documents the integration, exact host bindings, queue behavior, installation and native receiving journey.
+operator/ECONOMIC_DESK.md documents the integration, exact host bindings, queue behavior, installation, original server startup and authenticated receiving command. The complete operator/economic_receive.py follows the original report and zone through preview, saved inputs, queue completion, the authenticated desk, retained ZIP download and offline browser receiving. Supplied selection JSON enters through the existing draft queue so its original cost/source/scope details survive reopening and export.
 
 ## Operate the standalone companion
 
@@ -40,6 +40,10 @@ Open the resulting index.html to compare alternatives, apply view filters, inspe
 model/decision_receive.py builds from an actual completed input or accepts an existing edition, exercises installed Playwright/Chromium, and retains screenshots, downloads, saved-desk reopen, timings and print PDF. Its integration guide gives both invocation paths.
 
 Each candidate is one complete modeled scenario. Physical outputs keep their own annual mass units. Implementation costs describe the actual intervention footprint; the modeling-service workshare price is a separate commercial quantity.
+
+## Original Gura comparison workflow
+
+source_tools/gura_comparison.py continues the original retained Gura source intake through the existing native programme. Its catalog and plan commands inspect the original class labels, biophysical rows, observed source cells, grid and watershed IDs. Its execute command runs the saved full-model alternatives, builds the watershed comparison and per-zone economic editions, and retains the complete original Workspace archive. source_tools/GURA_COMPARISON.md gives the exact invocation and recovery behavior. Resume the existing GURA-NATIVE-01 operation with its original receiving JSON and programme; the regional Upper Savannah study keeps its own workspace and source context.
 
 ## Shared source and receiving
 

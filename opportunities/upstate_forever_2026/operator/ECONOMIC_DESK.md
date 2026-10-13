@@ -15,10 +15,10 @@ The existing model/decision_analysis.py, model/decision_cli.py and model/decisio
 
 ## Receive into the current application
 
-The current concrete receiving application is /mnt/data/eco12-integrated-20261012 and its Python is /opt/pyvenv/bin/python. Receive the core decision companion and the merged ECSA extension host there, then extract this separate integration source with the paths above.
+Receive the core decision companion and the current ECSA extension host into the actual cumulative application checkout, then extract this integration with the paths above. Run the installer with that checkout's original Python environment. The receiving example below uses the existing /opt/pyvenv/bin/python environment; substitute the actual application and source directories.
 
     /opt/pyvenv/bin/python -B install_economic_desk.py \
-      --application /mnt/data/eco12-integrated-20261012 \
+      --application /path/to/actual/cumulative-application \
       --source-root /path/to/received/economic-desk
 
 The optional --dry-run returns the exact intended changes. The installer compiles the actual Python source in memory, prepares all source changes, uses the original shared extension-install lock, and checks every current replacement boundary. It installs only its own provider, browser assets, registration, guide and installer. The current shared host owns the authenticated file route. It can be rerun against the same edition.
@@ -127,13 +127,22 @@ This reuses the already installed browser and completed model outcomes. The rece
 
 Run operator/economic_receive.py directly from the complete application checkout after the original operator is running. The six-file feature installer keeps its existing scope. This additional receiving command uses the installed Playwright Python package, an existing Chromium/Chrome executable, and the delivered model/decision_receive.py.
 
+If the original operator is not already running, start its existing server from that same checkout against the retained native workspace. Keep this process running in its terminal; its first output is the original ready JSON used by the receiving command in a second session:
+
+    /opt/pyvenv/bin/python -B operator/server.py \
+      --workspace /path/to/retained/native-workspace \
+      --operator-state /path/to/economic-operator-state \
+      --port 0 > /path/to/original-operator-ready.json
+
+Choose the workspace containing the completed original scenario-decisions report. The server's own start_server uses its available local port and returns the actual project, workspace key and authenticated operator URL.
+
     /opt/pyvenv/bin/python -B operator/economic_receive.py \
       --operator-url-file /path/to/original-operator-ready.json \
       --output /path/to/operator-receiving
 
 The URL file accepts the original server's JSON receipt (operator_url or url) or its printed URL text, including the original token fragment. Alternatively put that already-issued URL in UPSTATE_OPERATOR_URL and omit --operator-url-file; --operator-url-env selects another existing variable. The command keeps authentication values out of its records and command line. --application selects the existing complete checkout if the script is invoked from another directory.
 
-Use --workspace-key, --report-id and --zone-id to choose particular retained results. Without them, the command uses the operator's primary workspace and an available comparison report with a compatible alternative and shared-support zone. Baseline-only reference totals remain separate from this scenario journey. Optional --selection accepts that zone's existing decision-selection/v1 JSON; every supplied cost carries its actual whole_scenario or reporting_zone scope. With no supplied selection, all costs remain unchecked and the command produces the original physical comparison. --run-id chooses the demonstrated alternative. --browser-executable points at an already-installed browser when needed.
+Use --workspace-key, --report-id and --zone-id to choose particular retained results. Without them, the command uses the operator's primary workspace and an available comparison report with a compatible alternative and shared-support zone. Baseline-only reference totals remain separate from this scenario journey. Optional --selection accepts that zone's existing decision-selection/v1 JSON, including original cost source details and footprint provenance. Each supplied cost carries its whole_scenario, reporting_zone or source-bound retained scope. The command saves the complete original input through the existing queue, opens that saved input with the browser control, then continues the same preview and edition journey. It also retains the original selection file bytes in the receiving package. With no supplied selection, all costs remain unchecked and the command produces the original physical comparison. --run-id chooses the demonstrated alternative. --browser-executable points at an already-installed browser when needed.
 
 The command drives the original browser controls for report and zone selection, quantitative preview, saved inputs, reopening those inputs, and queued edition construction. It opens the authenticated embedded desk, chooses an actual modeled scenario, saves working HTML from that embedded desk, reopens it and produces its PDF. It then downloads the original complete package through the operator, checks its retained descriptors and members, and invokes the existing offline choose/filter/export/notes/save/reopen/print receiver.
 

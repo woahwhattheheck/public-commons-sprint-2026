@@ -54,7 +54,7 @@ export function attachEconomicDesk(host) {
   }
   function blank(reportId='',zoneId='') {
     return {reportId,reportSha:'',zoneId,title:'',currency:'USD',capital_limit:'',
-      annualized_limit:'',targets:{},costs:{},notes:''};
+      annualized_limit:'',targets:{},costs:{},notes:'',originalReportId:'',originalZoneId:'',originalSelection:null};
   }
   function current() {
     if(!draft||!frame)return draft;
@@ -75,13 +75,14 @@ export function attachEconomicDesk(host) {
     const selected=value.selection||{};
     const state=blank(value.report_id,value.zone_id);
     state.reportSha=value.report_sha256;state.title=selected.title||'';
+    state.originalReportId=value.report_id;state.originalZoneId=value.zone_id;state.originalSelection=JSON.parse(JSON.stringify(selected));
     state.currency=selected.budget?.currency||selected.costs?.[0]?.currency||'USD';
     state.capital_limit=selected.budget?.capital_limit??'';
     state.annualized_limit=selected.budget?.annualized_limit??'';
     state.targets={...selected.targets};state.notes=(selected.notes||[]).join('\n');
     for(const cost of selected.costs||[]){
       state.costs[cost.run_id]={
-        enabled:true,currency:cost.currency,capital:cost.capital,
+        originalCost:JSON.parse(JSON.stringify(cost)),enabled:true,currency:cost.currency,capital:cost.capital,
         annual_operating:cost.annual_operating,horizon_years:cost.horizon_years,
         discount_percent:Number(cost.discount_rate)*100,
         source_title:cost.source?.title||'',source_uri:cost.source?.uri||'',
@@ -106,25 +107,28 @@ export function attachEconomicDesk(host) {
     if(draft.reportSha!==source.source.sha256)throw Error('Refresh the changed native report before building this edition.');
     const currency=String(draft.currency||'').trim().toUpperCase();
     if(!/^[A-Z]{3}$/.test(currency))throw Error('Use a three-letter currency such as USD.');
+    const retained=draft.originalReportId===draft.reportId&&draft.originalZoneId===draft.zoneId?(draft.originalSelection||{}):{};
     const costs=[];
     const known=new Set([...source.alternatives,...(source.unavailable_alternatives||[])].map(row=>row.run_id));
     for(const [runId,value] of Object.entries(draft.costs)){
       if(!value.enabled)continue;
       if(!known.has(runId))throw Error('A saved cost names a scenario outside this native report.');
       const label=source.alternatives.find(row=>row.run_id===runId)?.label||short(runId);
-      const origin={title:String(value.source_title||'').trim(),uri:String(value.source_uri||'').trim(),as_of:String(value.source_as_of||'').trim()};
+      const original=draft.originalReportId===draft.reportId?(value.originalCost||{}):{};
+      const origin={...(original.source||{}),title:String(value.source_title||'').trim(),uri:String(value.source_uri||'').trim(),as_of:String(value.source_as_of||'').trim()};
       if(!origin.title||!origin.uri||!/^\d{4}-\d{2}-\d{2}$/.test(origin.as_of))throw Error('Add the actual cost source title, reference and as-of date for '+label+'.');
       const scope=value.cost_scope;
       if(scope!=='whole-scenario'&&value.estimate_zone_id&&value.estimate_zone_id!==zone.zone_id)throw Error('Review '+label+' cost originally scoped to '+(value.estimate_zone_title||value.estimate_zone_id)+' before including it in '+zone.title+'.');
-      const scopeRecord={kind:scope==='whole-scenario'?'whole_scenario':scope==='reporting-zone'?'reporting_zone':'retained'};
+      const scopeRecord={...(original.scope||{}),kind:scope==='whole-scenario'?'whole_scenario':scope==='reporting-zone'?'reporting_zone':'retained'};
       if(scopeRecord.kind!=='whole_scenario')Object.assign(scopeRecord,{zone_id:zone.zone_id,zone_title:zone.title,producer_report_id:source.producer_report_id});
+      else for(const name of ['zone_id','zone_title','producer_report_id'])delete scopeRecord[name];
       if(value.reviewed_from)scopeRecord.reviewed_from=value.reviewed_from;
       let note=String(value.note||'').trim();
       if(scope==='whole-scenario')note='Cost footprint: the complete modeled scenario. '+note;
       else if(scope==='reporting-zone')note='Cost footprint: an implementation estimate explicitly scoped to '+zone.title+'. '+note;
       else if(scope!=='retained')throw Error('Choose the cost footprint for '+label+'.');
       costs.push({
-        run_id:runId,currency:value.currency||currency,
+        ...original,run_id:runId,currency:value.currency||currency,
         capital:number(value.capital,label+' upfront cost'),
         annual_operating:number(value.annual_operating,label+' annual operating cost'),
         horizon_years:number(value.horizon_years,label+' horizon',{positive:true}),
@@ -132,11 +136,16 @@ export function attachEconomicDesk(host) {
         source:origin,note:note.trim(),scope:scopeRecord,scope_note:String(value.note||'').trim()
       });
     }
-    const selection={schema:'upstate.decision-selection/v1',title:draft.title.trim(),
+    const selection={...retained,schema:'upstate.decision-selection/v1',title:draft.title.trim(),
       comparison_id:zone.comparison_id,costs,targets:{},notes:draft.notes.split('\n').filter(line=>line.trim())};
-    const budget={currency};
-    for(const name of ['capital_limit','annualized_limit'])if(String(draft[name]).trim()!=='')budget[name]=number(draft[name],name.replaceAll('_',' '));
-    if(Object.keys(budget).length>1)selection.budget=budget;
+    delete selection.budget;
+    const budget={...(retained.budget||{}),currency};
+    let hasBudgetLimit=false;
+    for(const name of ['capital_limit','annualized_limit']){
+      delete budget[name];
+      if(String(draft[name]).trim()!==''){budget[name]=number(draft[name],name.replaceAll('_',' '));hasBudgetLimit=true;}
+    }
+    if(hasBudgetLimit)selection.budget=budget;
     for(const [metric,value] of Object.entries(draft.targets||{}))if(String(value).trim()!==''){
       if(!activeAxes(source).includes(metric))throw Error('The retained '+(axes[metric]?.label||metric)+' target names an unmodeled output. Clear it or choose its native report.');
       selection.targets[metric]=number(value,axes[metric].label+' avoided-export target');
