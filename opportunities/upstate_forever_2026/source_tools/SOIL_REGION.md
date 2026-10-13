@@ -126,9 +126,47 @@ and use the unchanged grid/K/coverage methods. Place the existing capture on
 the accepting host's owned persistent storage, preserving its original source
 directory and lock when continuing the current operation.
 
+## Source polygon correction
+
+Some native USDA AOI-clipped rings contain self-intersections. The geographic
+index now derives valid polygonal geometry from the original linework with
+GEOS MakeValid. Valid original geometries pass through unchanged. The complete
+original response, including the original WKB, remains in `original/`.
+
+Each corrected row records its original validity reason, source and indexed WKB
+SHA-256, source and resulting geometry types, actual Shapely/GEOS versions, and
+diagnostic planar square-degree areas in `properties.geometry_correction`.
+These degree areas describe the correction; they do not replace the native
+acreage or the projected raster-cell areas. The corrected indexed WKB and its
+spatial bounds are committed in the same existing tile transaction. Vector
+export carries the same correction properties and `coverage.json` reports the
+number of corrected fragments. Geometry without valid polygonal support still
+raises the concrete source error.
+
+The actual source polygon 65688604 exposed this path during regional capture:
+its original ring self-intersection was repaired from 936 to 938 coordinates,
+producing a valid Polygon. The diagnostic degree area changed only at floating
+point precision. This observation belongs to that polygon; it is not a blanket
+area-preservation guarantee for every invalid input. The implementation uses
+Shapely's default linework method, retaining compatibility with the existing
+Shapely 2.x runtime. See the [Shapely MakeValid reference](https://shapely.readthedocs.io/en/stable/reference/shapely.make_valid.html).
+
+Continue an interrupted original capture with the same `capture --resume`
+arguments and output directory. Its already completed tile/index and retained
+USDA responses remain reusable; the correction does not select a new domain,
+request another source edition, or change native rating values.
+
 ## Prepare K on the actual NLCD grid
 
-After the existing national NLCD owner returns the completed numeric regional raster, select that exact reference:
+The corrected native Annual NLCD 2025 region is available in the application's
+`source/annual-nlcd-native-20261013/source/` directory. Select its
+`land-cover.tif` and retain the adjacent `source-manifest.json` and companions.
+The corrected source ID is
+`usgs-annual-nlcd-2025-native-region-3fa517b4cc3251b9`; its 9,443,751-byte TIFF has
+SHA-256 `3fa517b4cc3251b9e1bd31e51b54b036a875c09e5f1075511da7c8e951656670`.
+This full 217-HUC-plus-buffer edition has 6,443 × 6,319 categorical cells. It
+supersedes the earlier `a9f6bfed…` raster, whose empty cached tile was corrected
+from the retained original PNG by PR #3387. Select the corrected reference:
 
 ~~~sh
 python3 -B -m source_tools.soil_region prepare \
