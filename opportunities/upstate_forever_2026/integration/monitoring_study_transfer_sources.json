@@ -73,18 +73,20 @@
     },
     {
       "path": "integrations/monitoring/source_adoption.json",
-      "bytes": 25476,
-      "sha256": "c8fa5a27fe68a5eb17863f52cd9b13e87b8625a0960c480ae8490469a54533b7",
+      "bytes": 25880,
+      "sha256": "53b7ff0e49b95bee66cf537625ff6b941851ffe386d3165b672353f6dae94a5c",
       "predecessor_sha256": [
-        "1c52b77c3cf651568251c049c797f492bcf1eee408660309058b705bf49ab361"
+        "1c52b77c3cf651568251c049c797f492bcf1eee408660309058b705bf49ab361",
+        "c8fa5a27fe68a5eb17863f52cd9b13e87b8625a0960c480ae8490469a54533b7"
       ]
     },
     {
       "path": "integration/monitoring_observed_sources.json",
-      "bytes": 26974,
-      "sha256": "77fdd06163233d11e78f5fd27439a6d93fe26f0868abea122fa8f6856d3c226e",
+      "bytes": 27202,
+      "sha256": "79985363d3d6b0922d55bc414f91b28c039b21b95678a56fcb813ec6c7d6db9d",
       "predecessor_sha256": [
-        "6903fe553d01dd601ee1c32d7a09c3e617ed3bc1c71eb552bdf6a47f404c0d91"
+        "6903fe553d01dd601ee1c32d7a09c3e617ed3bc1c71eb552bdf6a47f404c0d91",
+        "77fdd06163233d11e78f5fd27439a6d93fe26f0868abea122fa8f6856d3c226e"
       ]
     },
     {

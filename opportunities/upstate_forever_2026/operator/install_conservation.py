@@ -203,7 +203,8 @@ KNOWN_PRIOR = {
         "e54103b5949b2b02bf29b6e16d3beaaa8f124cfc406073ef0545d00dd74da4a7",
         "a4f76bbff48272cacc87ca74350ad24218c682c34ca7b6abf6292399c5336a6c",
         "27c1f0189ff1cdefdba33052a18d3e09725fb4dd63fd8fc070fbd145f72b580a",
-        "706708c62a9e881f635b898935c3de948bdc4ab92552ea0d07d5a44014b13536"
+        "706708c62a9e881f635b898935c3de948bdc4ab92552ea0d07d5a44014b13536",
+        "62cedec1064442f76cf40dc971901e7077ba7aa1c0614c1a7af7705aba360b6e"
     ],
     "operator/conservation_regional_receiving.py": [
         "a4326a019784fdb0bd03aa071ee5f01e40694d3063d0a8b6da70caed5ce9daf7",
@@ -479,6 +480,15 @@ KNOWN_PRIOR = {
     ],
     "model/native_versions.py": [
         "bd4996f78c9e21ea8093499a7f7ff9adc9622ffce9bdb49b22f4121199a8b6f2"
+    ],
+    "model/conservation_report_source.py": [
+        "b9cb922025f3843a3d26e4592249842c6df221f678db276fd0e083b3b4402538"
+    ],
+    "model/CONSERVATION_REPORT_SOURCE.md": [
+        "07ff0559636694b28836b0dcca6aef2a77c36cce8b6d9a6f265da5f93c4e7885"
+    ],
+    "integration/conservation_report_operator_composition.json": [
+        "44675f162fb4d1e2276abab5da7e75ea55717ed77776c0b1bc71e44cccf18fa1"
     ]
 }
 
