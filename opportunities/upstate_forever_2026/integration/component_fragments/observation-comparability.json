@@ -12,7 +12,8 @@
         "measurement_workspace/observation_comparability_delivery.py"
       ],
       "requires": [
-        "observed-context"
+        "observed-context",
+        "scientific-report-rendering"
       ]
     }
   },
