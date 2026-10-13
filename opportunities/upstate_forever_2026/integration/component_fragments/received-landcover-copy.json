@@ -16,7 +16,9 @@
         "operator/web/observed_landcover_received.mjs",
         "operator/web/observed_landcover_received.css",
         "operator/RECEIVED_LANDCOVER_COPY.md",
-        "integration/component_fragments/received-landcover-copy.json"
+        "integration/component_fragments/received-landcover-copy.json",
+        "CURRENT_OWNER_DIRECTION.md",
+        "AGENTS.md"
       ]
     },
     "observed-watershed-change": {
@@ -29,7 +31,9 @@
         "operator/web/observed_landcover_received.mjs",
         "operator/web/observed_landcover_received.css",
         "operator/RECEIVED_LANDCOVER_COPY.md",
-        "integration/component_fragments/received-landcover-copy.json"
+        "integration/component_fragments/received-landcover-copy.json",
+        "CURRENT_OWNER_DIRECTION.md",
+        "AGENTS.md"
       ]
     }
   }
