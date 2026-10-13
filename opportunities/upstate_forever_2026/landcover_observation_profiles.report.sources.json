@@ -117,8 +117,8 @@
         },
         {
           "path": "observations/landcover_observation_profiles_20261013/report/figure-spec.json",
-          "bytes": 91729,
-          "sha256": "ea76680c04cafa7ef8199dae8bbf28a1ccf201a9483886aed5d860a67384b212"
+          "bytes": 91706,
+          "sha256": "13f416a1dd581e68a32b35cdada5634f6288ac53e6c7a71f900fbed0e0326aa8"
         },
         {
           "path": "observations/landcover_observation_profiles_20261013/report/forest-point-evidence.csv",
@@ -137,13 +137,13 @@
         },
         {
           "path": "observations/landcover_observation_profiles_20261013/report/report_core.mjs",
-          "bytes": 16249,
-          "sha256": "056568fe43a23a7af5fc83ce4f5ef64357b9dbe94f137d17b028239982b91858"
+          "bytes": 16290,
+          "sha256": "12d88cc854468dc66f07645978702ea11e9af163bcf2ddc6069ffdcdf6440dae"
         },
         {
           "path": "observations/landcover_observation_profiles_20261013/report/source-index.json",
           "bytes": 5469,
-          "sha256": "30d1dcbfa11b6855c938be524007760de705934516c69a9fb123ce63e37699c0"
+          "sha256": "3891911ca877c0fb7ab2f39fcc98a9ae8b5f8e9a7e1558c766bd870b0db0e801"
         },
         {
           "path": "observations/landcover_observation_profiles_20261013/summary.json",
