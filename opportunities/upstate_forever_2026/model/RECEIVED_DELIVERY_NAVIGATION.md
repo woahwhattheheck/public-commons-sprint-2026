@@ -13,10 +13,12 @@ The receive response also exposes `delivery.files.map_atlas_received_browser`,
 
 ## Original capture and received navigation
 
-A scientific working archive is captured before the outer delivery manifest and
-final HTML atlas are produced. The receiver therefore composes its navigation from
-the complete file inventory that was actually captured. It does this after the
-same opened archive has been verified and retained as the working archive.
+The current complete delivery captures its scientific working archive after both
+report sets, the final HTML atlas and the delivery manifest have been produced.
+Earlier captured editions can predate that final navigation. The receiver handles
+each original edition using the complete file inventory actually captured in that
+archive, after the same opened archive has been verified and retained as the
+working archive.
 
 The new files are under `received-navigation-<original archive SHA256>/` within
 the registered Workspace delivery:
@@ -42,5 +44,5 @@ so neither the archive nor the inventory must contain its own hash. Publication
 uses the existing receive staging directory and final rename.
 
 Deliveries without an original atlas or scientific report retain their existing
-receive behavior. The original outer delivery package still carries its complete
-publication manifest and final atlas.
+receive behavior. The current outer delivery package and its working snapshot both retain their
+original report sets, publication manifest and final atlas.

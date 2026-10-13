@@ -154,3 +154,11 @@ After receiving a complete project on another computer, its historical compariso
 The maintained operator/web/extension_host.mjs exposes openExtension and verifies the selected original Workspace while loading the registered controller. The reviewed host source is 16,710 bytes, SHA256 f3e288e2e7d5137fb617f814b841d8a62a605ae6c2ee62b8d6fe46c9dac6b0bf. The Economic desk exports openReport({report_id,zone_id}); model.decision_analysis.inspect_scenario_report reads and verifies its original upstate.scenario-decisions/v1 source report. This desk uses those existing public module interfaces.
 
 The economic-sources response returns listing_sha256, total_report_directories, scanned, next_offset, adapter_available, reports, skipped and issues. Send the first listing_sha256 on subsequent pages; a changed collection returns HTTP409 / ECO13_SOURCE_COLLECTION_CHANGED. Each report retains report_id, report_sha256, baseline_run_id, run_ids, matched_alternatives and actual zones. Open only a selected zone with common_support_available using host.openExtension("economic-desk","openReport",{report_id,zone_id}). This read operation does not create a new report or queue a model run.
+
+## Saved comparison reviews and engineering revisions
+
+Use **Review this saved edition** to retain the exact report, planning choices, original native context and full editable comparison archive as an ordinary source collection in Customer reviews. Enter the decision purpose, create the review through the original queue and open its retained response history from the workbench. Only the saved edition is captured; planning and review drafts remain available if queue work fails.
+
+The **Comparison reviews** list reopens the actual review or receives its captured editable comparison through the existing archive receiver. Create a separate review for an actual revised comparison, then use the original review's **Engineering handbacks** to map customer requests to its real replacement files and requirements. The complete handback includes both comparison reviews and their original companion files. Full original Workspace transfer retains the review and engineering histories across machines.
+
+Complete operator and source-native instructions: [COMPARISON_REVIEW.md](COMPARISON_REVIEW.md).

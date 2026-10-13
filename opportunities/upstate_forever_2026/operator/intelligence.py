@@ -331,6 +331,10 @@ class IntelligenceFeature:
                       "created_at", "started_at", "ended_at", "error",
                       "_intelligence_origin")}
             entry["current_workspace"] = workspace
+            origin = task.get("_intelligence_origin") or "original_operator"
+            entry["_intelligence_origin"] = origin
+            entry["open_task"] = (origin == "original_operator"
+                                  and task.get("workspace") == workspace)
             if task.get("action") == "run.start":
                 entry["run_id"] = task.get("payload", {}).get("run_id")
             if task.get("action") == "experiment.run":
