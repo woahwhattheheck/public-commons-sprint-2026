@@ -137,6 +137,7 @@ def build_reports(workspace, directory, *, source_revision, title, note):
         files.append(path.name)
     files.extend(write_case_reports(workspace, directory, source_revision=source_revision))
     files.extend(write_register_reports(workspace, directory, source_revision=source_revision))
+    files.extend(write_property_financial_reports(workspace, directory, source_revision=source_revision))
     files.extend(write_crf_reports(workspace, directory, source_revision=source_revision))
     review_path = directory / "review.html"
     with PublishedText(review_path) as report:
@@ -147,6 +148,7 @@ def build_reports(workspace, directory, *, source_revision, title, note):
         report.write("<p>This handover retains original inputs, reviewed mapping editions, migration-round selections and the current correction queue. Field results concern the supplied evidence. Review the selected population and coverage before interpreting a count.</p>")
         report.write("<h2>Case and document migration</h2><p><a href=\"case-review.html\">Open the complete selected case policy, relationships, rehearsals, review decisions and cutover record</a>. All original projections/results are included as complete NDJSON and CSV.</p>")
         report.write("<h2>Register migration</h2><p><a href=\"register-review.html\">Open the complete typed registers, relationship checks, exact financial controls and cutover reviews</a>. Full original rows and findings accompany each selected edition.</p>")
+        report.write('<h2>Property and financial continuity</h2><p><a href="property-review.html">Open complete property, tenancy, relationship and temporal findings</a> · <a href="financial-review.html">Open original financial definitions, period calculations and independent output reconciliation</a>. Both reports retain every historical edition and link its complete catalogue and CSV/NDJSON sections.</p>')
         report.write('<h2>CRF reporting</h2><p><a href="crf-review.html">Open the complete retained reporting editions, findings, comparisons and workbook observations</a>. Every record includes its complete CSV and NDJSON section exports.</p>')
         report.write("<h2>Actions and current correction decisions</h2>")
         table_start(report, "Current correction queue at the selected revision", ("Correction", "State", "Owner", "Finding", "Latest review note"))
@@ -566,4 +568,150 @@ def write_crf_reports(workspace, directory, *, source_revision):
     files.append(path.name)
     if workspace.project["revision"] != source_revision:
         raise ValueError("CRF report changed from its selected original revision")
+    return files
+
+
+def _operating_records(workspace, kind, source_revision):
+    """Stream one original domain catalogue at the selected immutable capture."""
+    from migration_store import parse_json
+    for row in workspace.conn.execute(
+            "SELECT body_json FROM entities WHERE kind=? AND created_revision<=? ORDER BY created_revision,id",
+            (kind, source_revision)):
+        record = parse_json(row[0])
+        if record.get("kind") != kind or record.get("created_revision", source_revision + 1) > source_revision:
+            raise ValueError("Original operating catalogue differs from its selected record scope")
+        yield record
+
+
+def _operating_detail(stream, title, value):
+    # A legacy review can hold its entire decision array inline. Preserve every
+    # original member in the readable attachment without a second full HTML/JSON
+    # string allocation. The native complete exports remain authoritative.
+    stream.write("<details><summary>" + cell(title) + "</summary><pre>")
+    for chunk in json.JSONEncoder(ensure_ascii=False, indent=2, allow_nan=False).iterencode(value):
+        stream.write(escape(chunk))
+    stream.write("</pre></details>\n")
+
+
+def _operating_summary(stream, kind, record):
+    bare = kind.split(".", 1)[1]
+    if bare == "dataset":
+        context = record.get("context") or {}
+        table_start(stream, "Original dataset and acquisition", ("Original file", "Rows / issues", "Role / coverage", "System / capture"))
+        table_row(stream, (record.get("filename"), str(record.get("row_count")) + " / " + str(record.get("issue_count")),
+                           str(record.get("role", context.get("role"))) + " / " + str(context.get("coverage")),
+                           str(context.get("system")) + " / " + str(context.get("captured_at"))))
+        table_end(stream)
+        _operating_detail(stream, "Original mapping, identity and acquisition meaning",
+                          {"mapping": record.get("mapping"), "context": context,
+                           "file_sha256": record.get("file_sha256"), "parent_id": record.get("parent_id")})
+    elif kind == "property.contract":
+        _operating_detail(stream, "Complete platform, family, relationship and lease policy", record.get("contract"))
+    elif kind == "property.edition":
+        _operating_detail(stream, "Frozen complete family selection and effective cutoff",
+                          {key: record.get(key) for key in ("contract_id", "scope_id", "role", "cutoff", "families", "dataset_ids", "parent_id")})
+    elif kind == "property.reconciliation":
+        _operating_detail(stream, "Whole assessment, completeness and rule findings", record.get("assessment"))
+        _operating_detail(stream, "Exact original source and independent target editions",
+                          {key: record.get(key) for key in ("contract_id", "scope_id", "cutoff", "source_edition_id", "target_edition_id")})
+    elif kind == "finance.definition":
+        _operating_detail(stream, "Original native definition and reviewed financial interpretation", record.get("definition"))
+    elif kind == "finance.run":
+        _operating_detail(stream, "Original period and complete calculation",
+                          {key: record.get(key) for key in ("definition_id", "definition_sha256", "dataset_id", "opening_dataset_id",
+                                                           "company", "family", "period", "calculation")})
+        stream.write("<p>The complete exports retain calculated rows, included population, excluded original rows and every unresolved issue. A displayed total is not a replacement for those sections.</p>")
+    elif kind == "finance.reconciliation":
+        _operating_detail(stream, "Whole comparison and original native output binding",
+                          {key: record.get(key) for key in ("run_id", "output_dataset_id", "definition_id",
+                                                           "company", "family", "period", "comparison", "native_binding")})
+    elif bare == "review":
+        statuses = record.get("decision_statuses")
+        if statuses is None and isinstance(record.get("decisions"), list):
+            from collections import Counter
+            statuses = dict(Counter(decision.get("status", "Not supplied") for decision in record["decisions"]))
+        table_start(stream, "Original review disposition", ("Ready under selected rules", "Complete decisions", "Current recorded statuses", "Previous review"))
+        table_row(stream, (record.get("ready"), record.get("decision_count", len(record.get("decisions", []))),
+                           canonical(statuses) if statuses is not None else "See complete original record", record.get("parent_id")))
+        table_end(stream)
+        _operating_detail(stream, "Exact original and effective reviewed assessment",
+                          {key: record.get(key) for key in ("reconciliation_id", "effective_reconciliation_id", "reviewer_role", "note")})
+    elif bare == "control":
+        table_start(stream, "Recorded control and authority", ("Category", "Status", "Owner", "External reference", "Previous edition"))
+        table_row(stream, (record.get("category"), record.get("status"), record.get("owner"),
+                           record.get("external_reference"), record.get("parent_id")))
+        table_end(stream)
+        _operating_detail(stream, "Original affected records and actual retained authority",
+                          {key: record.get(key) for key in ("related_ids", "authority", "note")})
+    elif bare == "release":
+        stream.write("<p>This is retained acceptance evidence under the original selected scope. Reading it performs no platform write, payment, installation or new approval.</p>")
+        _operating_detail(stream, "Selected complete reviews, controls and acceptance",
+                          {key: record.get(key) for key in ("selections", "control_ids", "acceptance", "parent_id", "note")})
+
+
+def write_property_financial_reports(workspace, directory, *, source_revision):
+    """Include both original operating domains in the existing whole handover.
+
+    Called only by build_reports under its original owned live/snapshot revision.
+    Stream each unchanged domain exporter; do not recompute or restate its rules.
+    """
+    import financial_workspace as finance
+    import property_workspace as property_records
+    from migration_store import identifier
+    if workspace.project["revision"] != source_revision:
+        raise ValueError("Operating reports require the selected original revision")
+    directory = Path(directory)
+    files = []
+    domains = (
+        ("property", property_records, "Property and tenancy continuity",
+         "PROPERTY_CONTINUITY.md", "/property",
+         "The original contracts, full family selections, source and independently acquired return records, temporal rules, findings, decisions and controls remain separate retained editions. A property or tenancy identity is not an inferred person, account or contractor-job identity."),
+        ("financial", finance, "Financial reporting and reconciliation",
+         "FINANCIAL_REPORTING.md", "/financial",
+         "The original native definitions, selected periods, complete source and output populations, exact calculations, findings, decisions and controls remain separate retained editions. Earlier and later periods are not added together; rent, claims and other measures keep their original reviewed accounting scope."),
+    )
+    for label, module, title, guide, route, meaning in domains:
+        counts = {}
+        for kind in module.KINDS:
+            target = directory / (kind.replace(".", "-") + ".ndjson")
+            count = 0
+            with PublishedText(target) as output:
+                for record in _operating_records(workspace, kind, source_revision):
+                    output.write(canonical(record) + "\n")
+                    count += 1
+            counts[kind] = count
+            files.append(target.name)
+        target = directory / (label + "-review.html")
+        with PublishedText(target) as report:
+            report.write('<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>' + cell(title) + '</title><style>' + STYLE + '</style></head><body>')
+            report.write('<header><p class="subtle">Complete operating handover / Original retained history</p><h1>' + cell(title) + '</h1><p>Workspace <code>' + cell(workspace.project["id"]) + '</code> · Selected revision ' + str(source_revision) + '</p></header>')
+            report.write("<p>" + cell(meaning) + "</p>")
+            report.write("<p>Open the complete original files, full CSV/NDJSON populations and actual native outputs alongside this report. Coverage and authority are retained assertions with their original evidence. Matching data does not establish a missing customer approval or a vendor operation.</p>")
+            table_start(report, "Complete retained edition inventory", ("Record kind", "Retained editions", "Full original catalogue"))
+            for kind in module.KINDS:
+                name = kind.replace(".", "-") + ".ndjson"
+                report.write("<tr><td>" + cell(kind) + "</td><td>" + str(counts[kind]) + '</td><td><a href="' + cell(name) + '">' + cell(name) + "</a></td></tr>\n")
+            table_end(report)
+            for kind in module.KINDS:
+                report.write("<h2>" + cell(kind.split(".", 1)[1].replace("_", " ").capitalize() + " editions") + "</h2>")
+                for record in _operating_records(workspace, kind, source_revision):
+                    entity_id = identifier(record["id"])
+                    report.write('<section><h3>' + cell(record.get("title", entity_id)) + '</h3><p><code>' + cell(entity_id) + '</code> · Created at revision ' + cell(record.get("created_revision")) + "</p>")
+                    _operating_summary(report, kind, record)
+                    _operating_detail(report, "Complete original record, source identities and historical review basis", record)
+                    for extension in ("ndjson", "csv"):
+                        output_path = directory / (entity_id + "." + extension)
+                        with PublishedText(output_path) as output:
+                            for chunk in module.iter_export(workspace, kind, entity_id, extension):
+                                output.write(chunk.decode("utf-8"))
+                        files.append(output_path.name)
+                    report.write('<p>Complete original record and every retained section: <a href="' + cell(entity_id) + '.ndjson">NDJSON</a> · <a href="' + cell(entity_id) + '.csv">CSV</a>.</p></section>\n')
+                if not counts[kind]:
+                    report.write("<p>No " + cell(kind) + " record is retained in this selected workspace. This is an empty recorded inventory, not evidence that an external population is empty or accepted.</p>")
+            report.write('<h2>Continue the same editable workspace</h2><p>Receive the complete archive and start its selected application against the returned workspace. Open <code>' + cell(route) + '</code> and follow <a href="../application/' + cell(guide) + '">' + cell(guide) + "</a>. Keep original source, parent and operation identities; authorised later work creates a new retained edition.</p>")
+            report.write('<p>Open and visually inspect this exact report, all outgoing attachments and the actual important application controls at intended and narrow widths before presenting the product. A source review or generated report alone does not establish rendered readiness.</p>')
+            report.write('<p><a href="review.html">Complete migration handover</a> · <a href="register-review.html">Register populations and returned findings</a></p></body></html>\n')
+        files.append(target.name)
+    if workspace.project["revision"] != source_revision:
+        raise ValueError("Operating reports changed from the selected original revision")
     return files

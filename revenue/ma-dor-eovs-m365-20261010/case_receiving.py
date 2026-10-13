@@ -71,6 +71,8 @@ class Receiving:
     domain = "case"
     catalog_key = "case_entities"
     records = staticmethod(case_records)
+    lanes = (("producer", "steps"), ("customer", "customer_steps"))
+    delivery_lanes = ("producer", "customer")
     meaning = "Supplied original case workflow, retained decisions and portable customer continuation; no tenant write or inferred approval."
     def __init__(self, source_input, out):
         self.out = ordinary_directory(out, create=True)
@@ -89,10 +91,11 @@ class Receiving:
         self.raw, self.input = json_file(source_input, INPUT_LIMIT)
         value = self.input
         need(isinstance(value, dict) and value.get("schema") == self.schema, "Select the complete receiving input")
+        self.configure_input(value)
         self.operation_id = identifier(value.get("operation_id"))
         need(len(self.operation_id) <= 80, "Keep the original receiving ID within 80 characters")
         operation_ids, source_keys = set(), set()
-        for lane, field in (("producer", "steps"), ("customer", "customer_steps")):
+        for lane, field in self.lanes:
             need(isinstance(value.get(field), list) and value[field], "Supply complete original " + field)
             keys = set()
             for step in value[field]:
@@ -104,7 +107,7 @@ class Receiving:
                      "Select the actual complete case/source action")
                 keys.add(key)
                 operation_ids.add(operation_id)
-        reserved = {self.operation_id + "-" + lane + "-delivery" for lane in ("producer", "customer")}
+        reserved = {self.operation_id + "-" + lane + "-delivery" for lane in self.delivery_lanes}
         controls = {item + "-continue" for item in operation_ids | reserved}
         need(not (operation_ids & (reserved | controls)), "Original action and continuation identities overlap")
         need(isinstance(value.get("source_files", []), list), "Select complete original source files")
@@ -113,9 +116,7 @@ class Receiving:
             key = identifier(item.get("key"))
             need(key not in source_keys, "Keep every original source-file key distinct")
             source_keys.add(key)
-        comparison = value.get("comparison")
-        need(isinstance(comparison, dict) and set(comparison) == {"before_id", "after_id"},
-             "Select both actual rehearsal editions for the complete correction comparison")
+        self.validate_comparison_input(value)
         need(isinstance(value.get("authorization"), str) and value["authorization"].strip(),
              "Retain the actual authority for this original case operation")
         need(isinstance(value.get("actor"), str) and value["actor"].strip(), "Select the recorded operator")
@@ -135,6 +136,27 @@ class Receiving:
                      "runtime": {"path": str(runtime), "version": sys.version, **file_hash(runtime)}}
         self.put("selection.json", encoded(selection))
         self.selection = selection
+
+    def configure_input(self, value):
+        """Additive receivers may select existing modules before action admission."""
+
+    def validate_comparison_input(self, value):
+        comparison = value.get("comparison")
+        need(isinstance(comparison, dict) and set(comparison) == {"before_id", "after_id"},
+             "Select both actual rehearsal editions for the complete correction comparison")
+
+    def actor_for_lane(self, lane):
+        return self.input["actor"]
+
+    def get_record(self, workspace, kind, entity_id):
+        return workspace.dispatch(self.domain + "." + kind + ".get", {"id":entity_id})
+
+    def export_kind(self, kind):
+        return self.domain + "." + kind
+
+    def continue_original(self, workspace, folder, operation_id, actor, reason):
+        """False preserves the original case/register continuation control."""
+        return False
 
     def put(self, relative, data):
         relative = member_name(relative)
@@ -206,7 +228,7 @@ class Receiving:
         operation = step.get("operation")
         need(operation in self.allowed, "Use one advertised case/source operation")
         operation_id = identifier(step.get("operation_id"))
-        actor = step.get("actor", self.input["actor"])
+        actor = step.get("actor", self.actor_for_lane(lane))
         payload = self.resolve(step.get("payload"))
         need(isinstance(payload, dict) and not (set(payload) & {"operation_id", "actor", "expected_revision"}),
              "Keep the original operation envelope separate from the supplied action fields")
@@ -239,18 +261,19 @@ class Receiving:
                 reason = step.get("resume_reason")
                 need(isinstance(reason, str) and reason.strip(),
                      "Retain the original interrupted operation; use its predeclared resume_reason or resume it through the original CLI")
-                control = {"target_operation_id":operation_id, "reason":reason,
-                           "operation_id":operation_id + "-continue", "actor":actor,
-                           "expected_revision":workspace.project["revision"]}
-                control_path = self.out / folder / "resume-control.json"
-                if control_path.exists():
-                    _, prior_control = json_file(control_path)
-                    need(prior_control["target_operation_id"] == operation_id and
-                         prior_control["reason"] == reason and prior_control["actor"] == actor,
-                         "The original continuation reason changed")
-                    control = prior_control
-                self.put(folder + "/resume-control.json", encoded(control))
-                workspace.dispatch("operation.resume", control)
+                if not self.continue_original(workspace, folder, operation_id, actor, reason):
+                    control = {"target_operation_id":operation_id, "reason":reason,
+                               "operation_id":operation_id + "-continue", "actor":actor,
+                               "expected_revision":workspace.project["revision"]}
+                    control_path = self.out / folder / "resume-control.json"
+                    if control_path.exists():
+                        _, prior_control = json_file(control_path)
+                        need(prior_control["target_operation_id"] == operation_id and
+                             prior_control["reason"] == reason and prior_control["actor"] == actor,
+                             "The original continuation reason changed")
+                        control = prior_control
+                    self.put(folder + "/resume-control.json", encoded(control))
+                    workspace.dispatch("operation.resume", control)
         try:
             returned = workspace.dispatch(operation, request)
         except BaseException as error:
@@ -322,7 +345,7 @@ class Receiving:
                 for fmt in ("ndjson", "csv"):
                     path = self.out / prefix / (record["id"] + "." + fmt)
                     ordinary_directory(path.parent, create=True)
-                    _publish(workspace.iter_export(self.domain + "." + kind, record["id"], format=fmt), str(path))
+                    _publish(workspace.iter_export(self.export_kind(kind), record["id"], format=fmt), str(path))
                     self.remember(path)
         events = list(case_pages(workspace, "events", {}))
         self.put(prefix + "/events.json", encoded(events))
@@ -349,7 +372,7 @@ class Receiving:
                  "The original frozen catalogue no longer belongs to this workspace")
             for kind, records in catalog[self.catalog_key].items():
                 for record in records:
-                    need(workspace.dispatch(self.domain + "." + kind + ".get", {"id":record["id"]}) == record,
+                    need(self.get_record(workspace, kind, record["id"]) == record,
                          "A frozen original case edition changed during continuation")
             return catalog
         catalog = self.catalog(workspace, label)
@@ -379,7 +402,7 @@ class Receiving:
             _, payload = json_file(request_path)
         else:
             payload = {"operation_id":operation_id, "expected_revision":catalog["revision"],
-                       "actor":self.input["actor"], "title":self.input.get("title", "Case migration handover"),
+                       "actor":self.actor_for_lane(lane), "title":self.input.get("title", "Case migration handover"),
                        "note":"Original selected receiving operation " + self.operation_id + " / " + lane}
             self.put(folder + "/request.json", encoded(payload))
         need(payload["expected_revision"] == catalog["revision"],
@@ -390,16 +413,17 @@ class Receiving:
             reason = self.input.get("delivery_resume_reason")
             need(isinstance(reason, str) and reason.strip(),
                  "Keep the interrupted original delivery; use its predeclared reason or the original CLI resume")
-            control_path = self.out / folder / "resume-control.json"
-            if control_path.exists():
-                _, control = json_file(control_path)
-                need(control["reason"] == reason, "The original delivery continuation reason changed")
-            else:
-                control = {"operation_id":identifier(operation_id + "-continue"), "actor":self.input["actor"],
-                           "expected_revision":workspace.project["revision"],
-                           "target_operation_id":operation_id, "reason":reason}
-                self.put(folder + "/resume-control.json", encoded(control))
-            workspace.dispatch("operation.resume", control)
+            if not self.continue_original(workspace, folder, operation_id, self.actor_for_lane(lane), reason):
+                control_path = self.out / folder / "resume-control.json"
+                if control_path.exists():
+                    _, control = json_file(control_path)
+                    need(control["reason"] == reason, "The original delivery continuation reason changed")
+                else:
+                    control = {"operation_id":identifier(operation_id + "-continue"), "actor":self.actor_for_lane(lane),
+                               "expected_revision":workspace.project["revision"],
+                               "target_operation_id":operation_id, "reason":reason}
+                    self.put(folder + "/resume-control.json", encoded(control))
+                workspace.dispatch("operation.resume", control)
         response = workspace.dispatch("delivery.prepare", payload)
         record = response["result"]
         service = PortableService(workspace, workspace.root, SOURCE_ROOT)
@@ -432,7 +456,7 @@ class Receiving:
                 need(old == new, "Independent receiving case editions differ from the selected delivery")
 
     def accept_action(self, accepted):
-        need(isinstance(accepted, dict) and accepted.get("lane") in ("producer", "customer") and
+        need(isinstance(accepted, dict) and accepted.get("lane") in dict(self.lanes) and
              isinstance(accepted.get("original_result"), dict) and "result" in accepted["original_result"],
              "Retain a complete original accepted action")
         selected = accepted["lane"] + ":" + accepted["key"]
@@ -444,7 +468,7 @@ class Receiving:
         self.results[selected] = accepted["original_result"]["result"]
 
     def adopt_actions(self):
-        for lane, key in (("producer","steps"),("customer","customer_steps")):
+        for lane, key in self.lanes:
             for step in self.input.get(key, []):
                 path = self.out / "actions" / lane / step["key"] / "accepted.json"
                 if path.exists():
@@ -531,7 +555,7 @@ class Receiving:
                      "A received workspace lost its original recorded revision")
                 for kind, records in catalog[self.catalog_key].items():
                     for record in records:
-                        need(workspace.dispatch(self.domain + "." + kind + ".get", {"id":record["id"]}) == record,
+                        need(self.get_record(workspace, kind, record["id"]) == record,
                              "A received workspace changed an original immutable case edition")
             need(all(w.project["id"] == source["id"] for w in (recipient, returned)),
                  "An independently received project identity differs")
