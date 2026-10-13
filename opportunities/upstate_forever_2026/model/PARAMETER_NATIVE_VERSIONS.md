@@ -125,7 +125,7 @@ raster/model execution.
 
 ## Continue completed cases into annual-load calibration
 
-Open the original saved parameter study and choose **Calibrate completed cases**.
+Open the original saved parameter study and choose **Use completed cases in calibration**.
 The handoff lists each retained native run once, with every original study case
 label that uses it. Choose the completed cases to compare, then select
 **Open calibration selection**. The registered calibration desk preserves the
