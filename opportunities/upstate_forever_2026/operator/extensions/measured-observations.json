@@ -26,7 +26,9 @@
     "observation_editions.css",
     "sediment.mjs",
     "result_handback.mjs",
-    "intake_comparison.mjs"
+    "intake_comparison.mjs",
+    "collection_working.mjs",
+    "collection_transfer.mjs"
   ],
   "backend": {
     "module": "measurement_workspace.extension",
