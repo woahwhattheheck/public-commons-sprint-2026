@@ -27,9 +27,9 @@ Eight captured GIS Notes values reach their declared 254-character capacity. `pu
 From the current application containing merged PR3818 (836f6b0e7378e3dd3b92aef9e1846aa40172a358):
 
 ```sh
-node source_tools/georgia_assessment.mjs \\
-  --input SOURCE_ROOT/originals/selection.json \\
-  --document-context SOURCE_ROOT/published-document-context.json \\
+node source_tools/georgia_assessment.mjs \
+  --input SOURCE_ROOT/originals/selection.json \
+  --document-context SOURCE_ROOT/published-document-context.json \
   --output DERIVED_CONTEXT
 ```
 
