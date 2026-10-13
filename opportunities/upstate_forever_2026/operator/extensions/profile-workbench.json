@@ -2,12 +2,13 @@
   "schema": "upstate.operator-extension/v1",
   "id": "profile-workbench",
   "title": "Profile workbench",
-  "version": "2",
+  "version": "3",
   "order": 25,
   "assets": [
     "profile_workbench.mjs",
     "profile_workbench.css",
-    "profile_customer_review.mjs"
+    "profile_customer_review.mjs",
+    "biophysical_evidence.mjs"
   ],
   "backend": {
     "module": "profile_workbench",
@@ -22,7 +23,10 @@
       "profile.edition.save",
       "profile.edition.review",
       "profile.customer_review.create",
-      "profile.customer_review.apply"
+      "profile.customer_review.apply",
+      "profile.biophysical.evidence.save",
+      "profile.biophysical.ranges.prepare",
+      "profile.biophysical.experiment.prepare"
     ],
     "invoke": {
       "handler": "invoke",
@@ -146,6 +150,84 @@
         ],
         "path": "/api/profile-workbench/customer-reviews/preview",
         "operation": "customer-review-preview",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "POST"
+        ],
+        "path": "/api/profile-workbench/biophysical/catalog",
+        "operation": "biophysical-catalog",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "POST"
+        ],
+        "path": "/api/profile-workbench/biophysical/template",
+        "operation": "biophysical-template",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "POST"
+        ],
+        "path": "/api/profile-workbench/biophysical/evidence-preview",
+        "operation": "biophysical-evidence-preview",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "POST"
+        ],
+        "path": "/api/profile-workbench/biophysical/evidence-inspect",
+        "operation": "biophysical-evidence-inspect",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "POST"
+        ],
+        "path": "/api/profile-workbench/biophysical/ranges-preview",
+        "operation": "biophysical-ranges-preview",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "POST"
+        ],
+        "path": "/api/profile-workbench/biophysical/ranges-inspect",
+        "operation": "biophysical-ranges-inspect",
         "handler": "read",
         "args": [
           "workspace_key",

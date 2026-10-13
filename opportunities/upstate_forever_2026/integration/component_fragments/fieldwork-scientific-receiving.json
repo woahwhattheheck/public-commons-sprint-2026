@@ -236,8 +236,12 @@
       "paths": [
         "docs/PARAMETER_CASE_CONSOLE.md",
         "docs/PROGRAMME_CASE_CONSOLE.md",
+        "docs/PROGRAMME_LARGE_DESIGNS.md",
+        "model/delivery_catalogue.py",
         "model/parameter_case_status.py",
         "model/programme_case_status.py",
+        "model/programme_views.py",
+        "model/record_catalog.py",
         "operator/web/parameter_case_console.mjs"
       ]
     },
@@ -245,8 +249,12 @@
       "paths": [
         "docs/PARAMETER_CASE_CONSOLE.md",
         "docs/PROGRAMME_CASE_CONSOLE.md",
+        "docs/PROGRAMME_LARGE_DESIGNS.md",
+        "model/delivery_catalogue.py",
         "model/parameter_case_status.py",
         "model/programme_case_status.py",
+        "model/programme_views.py",
+        "model/record_catalog.py",
         "operator/web/parameter_case_console.mjs"
       ]
     },
@@ -284,6 +292,7 @@
     "programme_case_console": "ebed7e1af621fbf56a35b953e76c4fe1216fd35e",
     "utility_monitoring_reports": "6fc93c3def3dff865354ce2563cb97c6bfd2cad0",
     "implementation_selected_lineage": "6499a12661e26c8fe31eef40d59ea8f48cb6cf91",
-    "implementation_native_study_join": "1718cababa3c6b99834e57e6881387681f2c5e04"
+    "implementation_native_study_join": "1718cababa3c6b99834e57e6881387681f2c5e04",
+    "programme_large_designs": "8fd5ce83cda967610504c1ca38cec513e150bbe6"
   }
 }

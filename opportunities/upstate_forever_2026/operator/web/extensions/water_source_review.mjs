@@ -14,17 +14,31 @@ const relationNames = {
 };
 const sourceKey = row => JSON.stringify([row.collection_id,row.source_id]);
 const recordKey = row => JSON.stringify([row.edition?.id,row.id]);
+const jurisdiction = row => row.jurisdiction || (row.edition?.classification_system ? row.edition.jurisdiction : 'SC');
+const classificationSystem = row => row.classification_system || row.edition?.classification_system || 'SC-R61-69';
+const classComponents = row => row.class_components || (row.class_code ? [row.class_code] : []);
+const classificationDetails = row => [
+  ['Jurisdiction',jurisdiction(row)],['Classification system',classificationSystem(row)],
+  ['Original components',classComponents(row).join(', ')],['Primary class',row.primary_class],
+  ['Supplemental classes',(row.supplemental_classes||[]).join(', ')],
+  ['Original special markers',(row.special_markers||[]).join(', ')],
+  ['Original source index',row.original_index],['Reach effective date',row.effective_date],
+  ['Native effective-date value',row.native_effective_date],['Classification role',row.classification_role]
+].filter(([,v])=>v!==undefined&&v!==null&&v!=='').map(([k,v])=>'<dt>'+escape(k)+'</dt><dd>'+escape(plain(v))+'</dd>').join('');
+const declaredBoolean = value => value===true?'Yes':value===false?'No':'Not declared in this source';
 const safeHref = value => typeof value === 'string' &&
   (/^https?:\/\//i.test(value) || (value.startsWith('/') && !value.startsWith('//'))) ? value : '';
 const link = (url,label) => safeHref(url) ?
   '<a href="'+escape(url)+'" target="_blank" rel="noopener noreferrer">'+escape(label)+'</a>' :
   escape(label);
-const canonicalFilter = () => ({query:'',class_code:'',county:'',edition:'',priority:false,
+const canonicalFilter = () => ({query:'',jurisdiction:'',component:'',class_code:'',county:'',edition:'',priority:false,
   relation:'',huc12:'',sort:'waterbody',page:0,pageSize:25});
 
 export function filterRecords(records, filter={}) {
   const terms=normalize(filter.query).trim().split(/\s+/).filter(Boolean);
   const filtered=records.filter(row=>{
+    if(filter.jurisdiction && jurisdiction(row)!==filter.jurisdiction)return false;
+    if(filter.component && !classComponents(row).includes(filter.component))return false;
     if(filter.class_code && row.class_code!==filter.class_code)return false;
     if(filter.county && !(row.county_codes||[]).includes(filter.county))return false;
     if(filter.edition && row.edition?.id!==filter.edition)return false;
@@ -36,7 +50,7 @@ export function filterRecords(records, filter={}) {
           item.has_positive_intersection) : row.association_status===filter.relation;
       if(!matched)return false;
     }
-    const search=normalize([row.waterbody_name,row.reach_description,row.id,row.class_raw,
+    const search=normalize([row.waterbody_name,row.reach_description,row.id,row.class_raw,row.original_index,jurisdiction(row),classificationSystem(row),classComponents(row).join(' '),
       (row.county_codes||[]).join(' '),(row.linked_huc12||[]).join(' '),
       ...(row.native_associations||[]).map(item=>item.feature_id+' '+(item.native_waterbody_name||''))
     ].join(' '));
@@ -70,7 +84,9 @@ export function reviewExport(snapshot, records, filter) {
 }
 
 export function recordsCsv(records) {
-  const fields=['id','edition_id','edition_status','waterbody_name','county_codes','class_raw',
+  const fields=['id','edition_id','edition_status','jurisdiction','classification_system','class_components',
+    'primary_class','supplemental_classes','special_markers','original_index','effective_date','classification_role',
+    'waterbody_name','county_codes','class_raw',
     'class_code','previous_class','site_specific','no_discharge_zone','rfp_high_quality_candidate',
     'reach_description','source_pdf_page','source_printed_page','source_line_start','source_line_end',
     'source_url','association_status','native_feature_count','linked_huc12','native_associations'];
@@ -80,7 +96,8 @@ export function recordsCsv(records) {
     return '"'+text.replace(/"/g,'""')+'"';
   };
   return '\ufeff'+fields.map(cell).join(',')+'\r\n'+records.map(row=>{
-    const value={...row,edition_id:row.edition.id,edition_status:row.edition.status,
+    const value={...row,jurisdiction:jurisdiction(row),classification_system:classificationSystem(row),
+      class_components:classComponents(row),edition_id:row.edition.id,edition_status:row.edition.status,
       source_url:row.edition.source_url};
     return fields.map(field=>cell(value[field])).join(',');
   }).join('\r\n')+'\r\n';
@@ -88,7 +105,7 @@ export function recordsCsv(records) {
 
 
 
-const nativeFilterDefault=()=>({query:'',source:'',class_code:'',hydro_type:'',name_status:'',
+const nativeFilterDefault=()=>({query:'',source:'',jurisdiction:'',component:'',class_code:'',hydro_type:'',name_status:'',
   county:'',geography:'',relation:'',huc12:'',page:0,pageSize:25});
 const geographyNames={positive:'Positive measured intersection',touch:'Boundary touch only',
   outside:'Outside loaded geographic scope'};
@@ -97,6 +114,8 @@ const nativeSourceKey=row=>JSON.stringify([row.collection_id,row.source_id]);
 export function filterNativeFeatures(records,filter={}) {
   const terms=normalize(filter.query).trim().split(/\s+/).filter(Boolean);
   return records.filter(row=>{
+    if(filter.jurisdiction && jurisdiction(row)!==filter.jurisdiction)return false;
+    if(filter.component && !classComponents(row).includes(filter.component))return false;
     if(filter.source && nativeSourceKey(row)!==filter.source)return false;
     if(filter.class_code && row.class_code!==filter.class_code)return false;
     if(filter.hydro_type && (filter.hydro_type==='__blank__'?
@@ -118,6 +137,8 @@ export function filterNativeFeatures(records,filter={}) {
 
 export function nativeFeaturesCsv(records) {
   const fields=['feature_id','collection_id','source_id','layer_id','id_field','object_id',
+    'jurisdiction','classification_system','class_components','primary_class','supplemental_classes',
+    'special_markers','original_index','native_effective_date','classification_role',
     'waterbody_name','name_blank','county_raw','county_codes','county_blank','class_raw',
     'class_code','previous_class','site_specific','no_discharge_zone','hydro_type_raw',
     'publisher_huc12','legal_edition_status','data_status','geographic_status',
@@ -252,7 +273,9 @@ export function attachWaterSourceReview(host) {
       '<section class="section" data-water-inventory hidden></section>'+
       '<section class="section"><h2>Legal reaches</h2><div class="water-source-filters">'+
       '<label class="water-source-search">Find a reach<input name="water-query" type="search" placeholder="Name, reach description, native identifier or HUC12"></label>'+
-      '<label>Class<select name="water-class"></select></label>'+
+      '<label>Jurisdiction<select name="water-jurisdiction"></select></label>'+
+      '<label>Original component<select name="water-component"></select></label>'+
+      '<label>Complete original class<select name="water-class"></select></label>'+
       '<label>County code<select name="water-county"></select></label>'+
       '<label>Legal edition<select name="water-edition"></select></label>'+
       '<label>Geometry association<select name="water-relation"></select></label>'+
@@ -279,6 +302,8 @@ export function attachWaterSourceReview(host) {
       '<label>Native class<select name="water-native-class"></select></label>'+
       '<label>Publisher linework type<select name="water-native-type"></select></label>'+
       '<label>Waterbody name<select name="water-native-name"><option value="">All names</option><option value="blank">Blank native name</option><option value="named">Named features</option></select></label>'+
+      '<label>Jurisdiction<select name="water-native-jurisdiction"></select></label>'+
+      '<label>Original component<select name="water-native-component"></select></label>'+
       '<label>County code<select name="water-native-county"></select></label>'+
       '<label>Geographic intersection<select name="water-native-geography"><option value="">All captured features</option><option value="positive">Positive measured intersection</option><option value="touch">Boundary touch only</option><option value="outside">Outside loaded geography</option></select></label>'+
       '<label>Legal association<select name="water-native-relation"><option value="">All relationships</option><option value="none">No legal-row association</option><option value="candidate">Candidate</option><option value="partial">Partial</option><option value="coextensive">Explicit coextensive</option></select></label>'+
@@ -310,9 +335,12 @@ export function attachWaterSourceReview(host) {
   function filterControls(){
     const records=snapshot?.records||[];
     const unique=(field)=>[...new Set(records.flatMap(field))].sort((a,b)=>String(a).localeCompare(String(b)));
-    for(const [key,allowed] of Object.entries({class_code:unique(row=>row.class_code?[row.class_code]:[]),
+    for(const [key,allowed] of Object.entries({jurisdiction:unique(row=>[jurisdiction(row)]),component:unique(classComponents),
+      class_code:unique(row=>row.class_code?[row.class_code]:[]),
       county:unique(row=>row.county_codes||[]),edition:(snapshot?.editions||[]).map(row=>row.id),
       huc12:unique(row=>row.linked_huc12||[])}))if(filter[key]&&!allowed.includes(filter[key]))filter[key]='';
+    options(node('[name="water-jurisdiction"]'),unique(row=>[jurisdiction(row)]).map(value=>({value,label:value})),filter.jurisdiction,'All jurisdictions');
+    options(node('[name="water-component"]'),unique(classComponents).map(value=>({value,label:value})),filter.component,'All original components');
     options(node('[name="water-class"]'),unique(row=>row.class_code?[row.class_code]:[]).map(value=>({value,label:value})),filter.class_code,'All classes');
     options(node('[name="water-county"]'),unique(row=>row.county_codes||[]).map(value=>({value,label:value})),filter.county,'All counties');
     options(node('[name="water-edition"]'),(snapshot?.editions||[]).map(row=>({value:row.id,label:row.regulation+' · '+row.status+' · '+row.id})),filter.edition,'All loaded editions');
@@ -332,7 +360,7 @@ export function attachWaterSourceReview(host) {
       ' priority class rows · '+number(count.no_discharge_zone_rows)+' no-discharge-zone rows</p>'+
       '<p>Named aliases and split reaches retain their separate regulation rows.</p>'+
       '<div class="water-source-editions">'+snapshot.editions.map(edition=>'<article><h3>'+
-        escape(edition.regulation+' · '+edition.status)+'</h3><p>'+
+        escape((edition.jurisdiction||'South Carolina')+' · '+edition.regulation+' · '+edition.status)+'</h3><p>'+
         escape([edition.state_publication_date?'State publication '+edition.state_publication_date:'',
           edition.cwa_effective_date?'CWA effective '+edition.cwa_effective_date:'',
           edition.checked_at?'Source checked '+edition.checked_at:''].filter(Boolean).join(' · '))+'</p><p>'+
@@ -403,17 +431,22 @@ export function attachWaterSourceReview(host) {
     const sourceOptions=nativeCatalogue.sources.map(source=>({value:nativeSourceKey(source),
       label:source.title+' · '+source.source_id}));
     const classOptions=[...new Set(records.map(row=>row.class_code).filter(Boolean))].sort().map(value=>({value,label:value}));
+    const jurisdictionOptions=[...new Set(records.map(jurisdiction))].sort().map(value=>({value,label:value}));
+    const componentOptions=[...new Set(records.flatMap(classComponents))].sort().map(value=>({value,label:value}));
     const types=[...new Set(records.map(row=>row.hydro_type_raw).filter(value=>String(value??'').trim()))].sort();
     const typeOptions=[...types.map(value=>({value,label:value})),{value:'__blank__',label:'Blank native type'}];
     const countyOptions=[...[...new Set(records.flatMap(row=>row.county_codes||[]))].sort().map(value=>({value,label:value})),
       {value:'__blank__',label:'Blank native county'}];
     const hucOptions=[...new Set(records.flatMap(row=>row.positive_huc12||[]))].sort().map(value=>({value,label:value}));
     for(const [key,items] of Object.entries({source:sourceOptions,class_code:classOptions,
+      jurisdiction:jurisdictionOptions,component:componentOptions,
       hydro_type:typeOptions,county:countyOptions,huc12:hucOptions})){
       if(nativeFilter[key]&&!items.some(item=>item.value===nativeFilter[key]))nativeFilter[key]='';
     }
     if(sourceOptions.length===1)nativeFilter.source=sourceOptions[0].value;
     options(node('[name="water-native-source"]'),sourceOptions,nativeFilter.source,'All captured sources');
+    options(node('[name="water-native-jurisdiction"]'),jurisdictionOptions,nativeFilter.jurisdiction,'All jurisdictions');
+    options(node('[name="water-native-component"]'),componentOptions,nativeFilter.component,'All original components');
     options(node('[name="water-native-class"]'),classOptions,nativeFilter.class_code,'All native classes');
     options(node('[name="water-native-type"]'),typeOptions,nativeFilter.hydro_type,'All publisher linework types');
     options(node('[name="water-native-county"]'),countyOptions,nativeFilter.county,'All native counties');
@@ -498,6 +531,7 @@ export function attachWaterSourceReview(host) {
       visible.map(row=>'<tr'+(recordKey(row)===selectedRecord?' class="water-source-selected"':'')+'>'+
       '<td><button type="button" class="water-source-row-button" data-water-record-id="'+escape(recordKey(row))+'">'+escape(row.waterbody_name)+'</button>'+
       '<p class="water-source-reach-preview">'+escape(row.reach_description)+'</p></td><td>'+escape(row.class_raw)+
+      '<br><small>'+escape(jurisdiction(row)+' · '+classificationSystem(row))+'</small>'+
       (row.no_discharge_zone?'<br><span>NDZ</span>':'')+(row.site_specific?'<br><span>Site specific</span>':'')+
       '</td><td>'+escape((row.county_codes||[]).join(', '))+'</td><td>'+
       escape(relationNames[row.association_status]||row.association_status)+'<br><span>'+
@@ -513,11 +547,11 @@ export function attachWaterSourceReview(host) {
       edition.source_url.replace(/#.*$/,'')+'#page='+encodeURIComponent(row.source_pdf_page):'';
     const links=row.native_associations||[];
     return '<h2>'+escape(row.waterbody_name)+'</h2><p class="water-source-legal-description">'+escape(row.reach_description)+'</p>'+
-      '<dl class="water-source-definition"><dt>Legal class</dt><dd>'+escape(row.class_raw)+'</dd>'+
+      '<dl class="water-source-definition"><dt>Complete original class</dt><dd>'+escape(row.class_raw)+'</dd>'+classificationDetails(row)+
       '<dt>Previous class</dt><dd>'+escape(row.previous_class||'—')+'</dd>'+
       '<dt>County codes</dt><dd>'+escape((row.county_codes||[]).join(', '))+'</dd>'+
-      '<dt>No discharge zone</dt><dd>'+(row.no_discharge_zone?'Yes':'No')+'</dd>'+
-      '<dt>Site specific</dt><dd>'+(row.site_specific?'Yes':'No')+'</dd>'+
+      '<dt>No discharge zone</dt><dd>'+declaredBoolean(row.no_discharge_zone)+'</dd>'+
+      '<dt>Site specific</dt><dd>'+declaredBoolean(row.site_specific)+'</dd>'+
       '<dt>Legal edition</dt><dd>'+escape(edition.id+' · '+edition.status)+'</dd>'+
       '<dt>Original location</dt><dd>'+link(pageUrl,'PDF page '+row.source_pdf_page)+
       ' · printed page '+escape(row.source_printed_page)+' · lines '+escape(row.source_line_start)+'–'+escape(row.source_line_end)+'</dd>'+
@@ -652,7 +686,7 @@ export function attachWaterSourceReview(host) {
     return '<h3>Native feature '+escape(value.feature_id)+'</h3>'+
       '<p>Raw native class: '+escape(plain(actual.class_raw))+' · Resolved class: '+escape(actual.class_code||'Unparsed')+
       ' · Legal edition: '+escape(actual.legal_edition_status||actual.status||'')+
-      ' · Publisher status: '+escape(actual.data_status||'Unspecified')+'</p>'+
+      ' · Publisher status: '+escape(actual.data_status||'Unspecified')+'</p><dl>'+classificationDetails(actual)+'</dl>'+
       (Object.hasOwn(value.native_attributes,'HYDTYPE')?'<p>Publisher linework type (HYDTYPE): '+escape(plain(value.native_attributes.HYDTYPE)||'Blank native value')+'</p>':'')+
       '<p>'+link(value.source_layer.url,'Original source layer')+' · Native identifier '+
       '<code>'+escape(value.source_feature_refs[0].field)+' = '+escape(plain(value.source_feature_refs[0].value))+'</code></p>'+
@@ -734,14 +768,16 @@ export function attachWaterSourceReview(host) {
   }
   function changed(event){
     const field=event.target,name=field.name;
-    const nativeFields={'water-native-query':'query','water-native-source':'source','water-native-class':'class_code',
+    const nativeFields={'water-native-jurisdiction':'jurisdiction','water-native-component':'component',
+      'water-native-query':'query','water-native-source':'source','water-native-class':'class_code',
       'water-native-type':'hydro_type','water-native-name':'name_status','water-native-county':'county',
       'water-native-geography':'geography','water-native-relation':'relation','water-native-huc':'huc12',
       'water-native-page-size':'pageSize'};
     if(nativeFields[name]){nativeFilter[nativeFields[name]]=field.value;nativeFilter.page=0;drawNativeBrowser();return;}
     if(name==='water-registry'){openSerial++;pendingOpen=null;registryChoice=field.value;selectedRecord='';filter.page=0;remember();loadReview();return;}
     if(name==='water-crosswalk'){openSerial++;pendingOpen=null;crosswalkChoice=field.value;remember();loadReview();return;}
-    const fields={'water-query':'query','water-class':'class_code','water-county':'county','water-edition':'edition',
+    const fields={'water-jurisdiction':'jurisdiction','water-component':'component',
+      'water-query':'query','water-class':'class_code','water-county':'county','water-edition':'edition',
       'water-relation':'relation','water-huc':'huc12','water-sort':'sort','water-page-size':'pageSize','water-priority':'priority'};
     if(fields[name]){filter[fields[name]]=name==='water-priority'?field.checked:field.value;filter.page=0;drawRecord();drawTable();}
   }
