@@ -129,7 +129,7 @@ The implementation seed is retained before import. A crash after the original na
 
 ## Use and inspect the exact outgoing product
 
-The HTML works from a local file and embeds its selected source rows. Operate method, role, spacing, allowances, horizon/rate, reset, programme download, full-basis download, working-page save/reopen and print. Load the actual native `programme-preview.json` to display unchanged original physical values and enable the exact bound Economic selection download. Any design edit clears that binding until a matching new native preview is loaded.
+The HTML works from a local file and embeds its selected source rows. **Planting shares and work schedule** exposes each selected species' relative share, the proposed start date and all six task durations. The displayed work programme is rendered from those saved values, including zero-day milestones; imported JSON and reopened working pages show their actual edited schedule. Changes clear the previous native binding until the revised programme is bound again. Operate method, role, spacing, allowances, horizon/rate, reset, programme download, full-basis download, working-page save/reopen and print. Load the actual native `programme-preview.json` to display unchanged original physical values and enable the exact bound Economic selection download. Any design edit clears that binding until a matching new native preview is loaded.
 
 Before client-ready delivery, the producing native worker must:
 - Open and **LOOK at** this exact page at desktop and390px.
