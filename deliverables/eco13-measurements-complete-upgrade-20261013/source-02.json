@@ -2,7 +2,7 @@
   "schema": "upstate.source-files/v1",
   "source_reference": {
     "repository": "woahwhattheheck/public-commons-sprint-2026",
-    "source_commit": "05fe5871aea9c5cb07e3c29a8298bacd30bf0dd0",
+    "source_commit": "0827b03567e3d901c316696471e463bc57da2fd5",
     "operation_id": "ECO13-MEASUREMENTS-COMPLETE-DD6B-20261013"
   },
   "files": [
