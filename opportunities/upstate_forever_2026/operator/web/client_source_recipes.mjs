@@ -162,9 +162,21 @@ export function createClientSourceRecipes(host){
   }
   function renderUse(){
     const target=q('[data-cr-use]');if(!target)return;if(!use){target.innerHTML='<p>A prepared use retains the exact reviewed payload before an original scientific source commit is submitted.</p>';return;}
-    const local=use.use.workspace_key===workspace&&use.use.project_id===working.project_id;
-    const request=use.use.commit_request,row=working.requests.find(item=>item.id===request.operation_id);
-    target.innerHTML='<p><strong>'+(use.applied?'Original source result attached':'Prepared source use')+'</strong> · <code>'+esc(use.use.id)+'</code> · '+(local?'selected local Workspace':'retained producer Workspace; prepare a new local use to commit')+'</p>'+details('Complete prepared review and exact original commit request',use.use)+(use.applied?details('Original attached commit and complete source collection',use.applied):'')+'<div class="cr-actions">'+downloads(use._downloads)+(use.applied?.commit?.source_collection_id?action('source','Open native scientific source edition','data-cr-id="'+esc(use.applied.commit.source_collection_id)+'"'):'')+(local&&!use.applied?action('commit','Submit exact saved source commit','data-cr-mutate'):'')+(row?.task_id?action('task','Open original commit progress','data-cr-id="'+row.task_id+'"'):'')+(local&&!use.applied?action('attach','Attach completed original source result','data-cr-mutate'):'')+'</div>';
+    const prepared=use.use,local=prepared.workspace_key===workspace&&prepared.project_id===working.project_id;
+    const request=prepared.commit_request,row=working.requests.find(item=>item.id===request.operation_id);
+    const selected=arr(request.payload.selections),review=prepared.review,files=arr(review.inspection?.files);
+    const recipeEdition=arr(prepared.recipe_record?.events).find(item=>item.revision===review.recipe_revision);
+    const collection=use.applied?.collection,collectionId=use.applied?.commit?.source_collection_id;
+    const sourceRows=selected.map(choice=>{
+      const file=files[choice.file_index],part=file?.inspection?.parts?.[choice.part_index];
+      return '<tr><td>'+esc(choice.title)+'</td><td>'+esc(file?.filename)+'<br><span class="cr-muted">'+esc(part?.name)+'</span></td><td>'+esc(choice.role)+'</td><td>'+esc(choice.units||'No physical units selected')+'</td></tr>';
+    }).join('');
+    const summary='<h3>'+esc(request.payload.title)+'</h3><p>Reviewed by <strong>'+esc(review.reviewer)+'</strong>. Recipe <strong>'+esc(recipeEdition?.definition?.name||review.recipe_id)+'</strong>, revision '+esc(review.recipe_revision)+'. '+selected.length+' reviewed source '+(selected.length===1?'selection':'selections')+'.</p>'+
+      '<div class="cr-scroll"><table><caption>Sources selected for this use</caption><thead><tr><th scope="col">Source title</th><th scope="col">Original file and part</th><th scope="col">Scientific role</th><th scope="col">Units</th></tr></thead><tbody>'+sourceRows+'</tbody></table></div>';
+    const attached=collectionId?'<p><strong>'+(local?'Attached scientific source edition: ':'Preserved producer source edition: ')+'</strong>'+esc(collection?.title||use.applied.commit.title||request.payload.title)+' · <code>'+esc(collectionId)+'</code></p>'+(!local?'<p class="cr-muted">This received use preserves the producer’s source result and history. It does not create that edition in this Workspace’s native source catalog. Prepare a new local use from a local inspection to commit sources here.</p>':''):'';
+    target.innerHTML='<p><strong>'+(use.applied?'Original source result attached':'Prepared source use')+'</strong> · <code>'+esc(prepared.id)+'</code> · '+(local?'selected local Workspace':'retained producer Workspace; prepare a new local use to commit')+'</p>'+summary+attached+
+      details('Complete prepared review and exact original commit request',prepared)+(use.applied?details('Original attached commit and complete source collection',use.applied):'')+
+      '<div class="cr-actions">'+downloads(use._downloads)+(local&&collectionId?action('source','Open native scientific source edition','data-cr-id="'+esc(collectionId)+'"'):'')+(local&&!use.applied?action('commit','Submit exact saved source commit','data-cr-mutate'):'')+(row?.task_id?action('task','Open original commit progress','data-cr-id="'+row.task_id+'"'):'')+(local&&!use.applied?action('attach','Attach completed original source result','data-cr-mutate'):'')+'</div>';
   }
   function renderOperation(){
     const target=q('[data-cr-operation]');if(!target)return;
@@ -227,7 +239,7 @@ export function createClientSourceRecipes(host){
     if(name==='invalid'){if(invalidRaw!==null)download(invalidRaw,'source-recipes-previous-browser-copy.txt','text/plain');return;}
     if(name==='intake'){host.navigate('client-source-intake');return;}
     if(name==='task'){await host.showTask(id);return;}
-    if(name==='source'){await host.openItem('sources',id);return;}
+    if(name==='source'){need(use?.applied?.commit?.source_collection_id===id&&use.use.workspace_key===workspace&&use.use.project_id===working.project_id,'This source edition is preserved producer history; prepare a new local use to commit sources in this Workspace.');await host.openItem('sources',id);return;}
     await run(async(key,epoch)=>{
       if(name==='refresh'){await host.refresh({force:true});if(!current(key,epoch))return;state=host.getState();await refresh(key,epoch);return;}
       if(name==='preview'){await preview();return;}
