@@ -307,7 +307,7 @@ def finish(state, region, area, binding):
 def report_sections(report):
     rows, denominators = [], []
     for region in report["regions"]:
-        if region["kind"] not in ("whole_selection", "utility_upstream_union"):
+        if region["kind"] not in ("whole_selection", "utility_upstream_union", "boundary_intersection"):
             continue
         for pollutant, value in region["siting_contrasts"].items():
             def show(number):
@@ -330,7 +330,33 @@ def report_sections(report):
                 "equal positive area/classes" if value["equal_positive_local_area_and_class_budget"]
                 else "different or zero local budget",
             ])
-    return [["Restoration versus control on identical native cells", [
+    boundary_sections = []
+    for region in report["regions"]:
+        if region["kind"] != "boundary_intersection":
+            continue
+        def amount(value):
+            return "Unavailable" if value is None else format(value, ".7g")
+        boundary_sections.append([region["title"], [
+            "Original boundary: " + region["boundary_description"] + ". "
+            "This region intersects the complete retained upstream model domain with that boundary. "
+            "The selected reporting-HUC mask remains a separate region.",
+            "Vector area: " + amount(region["vector_area_ha"]) + " ha; raster-selected area: "
+            + amount(region["selected_pixel_area_ha"]) + " ha. Common output support below "
+            "is the finite intersection of the same baseline, restoration and control rasters "
+            "for each quantity. Missing outputs remain excluded.",
+            {"kind": "table",
+             "columns": ["Quantity", "Annual units", "Common cells", "Common ha",
+                         "Baseline", "Restoration", "Matched control"],
+             "rows": [[pollutant, value["units"], value["native_common_cells"],
+                       amount(value["native_common_hectares"]),
+                       *[amount(value["mass"][role]) for role in RUNS]]
+                      for pollutant, value in region["siting_contrasts"].items()]},
+            "These are contributions from source cells inside the named region reaching modeled streams. "
+            "The original full-domain outputs retain upstream interactions; the region total does not "
+            "represent flow across the state boundary or delivered load at an intake. Original masks, "
+            "run identities and full-precision quantities remain in the linked source tables.",
+        ]])
+    return boundary_sections + [["Restoration versus control on identical native cells", [
         NOTES[0], NOTES[1], NOTES[2], NOTES[3],
         {"kind": "table",
          "columns": ["Original region", "Scope", "Quantity", "Units", "Common cells",

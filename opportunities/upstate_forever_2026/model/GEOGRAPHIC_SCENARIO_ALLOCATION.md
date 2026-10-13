@@ -59,6 +59,18 @@ Utility areas, nested protection buffers, HUC associations and family unions can
 
 An empty display geometry, a region with no selected cells, and a region with selected cells but no three-run valid categorical support remain explicit. The original raster mask can retain boundary cells even when its display polygon is empty. Those mask-selected cells and quantities remain valid retained accounting; the report names this condition and omits only the absent map shape, without inventing a replacement polygon. They do not become evidence of balance or no effect. The balance plot excludes only rows with no common categorical support, and its caption/table retain that exclusion. Supported zero-change rows remain visible at the origin.
 
+### Full upstream domain inside the original reporting boundary
+
+The same allocation operation now reports the complete retained upstream model domain intersected with the original selected reporting boundary. In the current Upper Savannah case this is the modeled 36-HUC upstream domain within South Carolina. It is separate from the four selected anchor HUCs within South Carolina, the full upstream domain across state lines and the utility protection areas.
+
+The region uses ID `whole-model-domain-in-reporting-boundary`, kind `boundary_intersection` and quantity scope `model_domain`. The scope means it reads the original full-domain native outputs, with their original per-hectare-to-cell mass conversion. It does not reuse the narrower reporting rasters or change the native grid, source selection, restoration/control allocation or running model.
+
+The boundary reader must reproduce the exact retained original source binding. Its intersection geometry, source identity and vector area enter the allocation identity. The ordinary one-pass computation then supplies the actual raster-selected area, categorical allocation, three-run native support and same-cell baseline/restoration/control annual totals. Nitrogen and phosphorus remain kg/year; sediment remains metric tonnes/year. The native common area is reported separately for each quantity. Its spatial definition limits the result to the modeled upstream domain inside the boundary; it does not claim all Upper Savannah land has been modeled.
+
+Open the section **Full upstream domain inside the original reporting boundary** in the existing scientific report. Its three-row quantity table gives baseline, restoration and matched-control masses on identical native cells. The following retained contrast tables give avoided export and restoration advantage. `siting-contrasts.csv/json`, `allocation.json`, `native-support.csv`, `allocations.csv`, `regions.geojson` and the original rendered maps all include the same region. The existing source import, ordered Scientific Report, complete source ZIP and editable Workspace handover carry it with their other regions.
+
+Use the existing geographic receiving continuation above with its default model-domain and reporting scopes. A context explicitly restricted to `reporting` retains that requested scope and does not calculate this broader region. On the native recipient, open the final report table, its boundary map and original CSV/GIS outputs, then cold-reopen the same delivered project. Preserve the active preparation/native process; this addition consumes its completed outputs.
+
 ### Original utility-focus unions
 
 The optional utility_upstream_union rows use the retained source/receptor-profiles/utility-focus-20261012.json profile, whose original schema is upstate.receptor-spec/v1. That profile attributes its anchors to the issuer appendix identified by SHA-256 04313cdda0b19f98b4081ef1eeec2f52707437759f9058f8d0e5abc8d83d6dbf.
@@ -108,7 +120,7 @@ The report identifies the exact project, geographic preparation, allocation and 
 
 The native signed change is **alternative minus baseline**, accumulated from the original stored Float32 signed-difference pixels. Baseline and alternative totals retain the original accumulation of their values. Subtracting the displayed totals need not reproduce the stored signed change exactly, and the renderer does not recompute it. The full row retains direction and sum_basis in the original kernel's JSON/CSV.
 
-**Do not subtract restoration and control pairwise native changes as a matched-control effect.** Their baseline intersections can differ. This companion adds three-run support counts but deliberately does not replace the native quantity calculation with a new common-support mass estimator.
+**Do not subtract restoration and control pairwise native changes as a matched-control effect.** Their baseline intersections can differ. The original Receiving pairwise rows keep their historical support and arithmetic. The separate maintained siting-contrast calculation reads all three original outputs on their shared finite cells and retains those same-cell totals, avoided exports and direct restoration/control differences in its own tables.
 
 These modeled annual quantities represent exports originating from source pixels in the named support and delivered to streams. A mask total is not a load crossing that boundary. They are not observed loads, intake concentrations, reservoir delivery or treatment removal. Equal local changed counts or class mix alone do not establish equal rainfall, terrain, routing, baseline export or native response.
 
