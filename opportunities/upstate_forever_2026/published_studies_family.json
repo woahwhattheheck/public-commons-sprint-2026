@@ -1,6 +1,6 @@
 {
   "schema": "upstate.published-study-family/v1",
-  "version": "2.4.7",
+  "version": "2.4.8",
   "repository": "woahwhattheheck/public-commons-sprint-2026",
   "application_path": "opportunities/upstate_forever_2026",
   "source_reference_base": "0cd423ac3d94e3455a743dd3f17af084fa71a122",
@@ -53,8 +53,8 @@
     },
     {
       "path": "install_published_studies.py",
-      "bytes": 16445,
-      "sha256": "263ce8a1dd6f7faa96fb80f17009c95652a95514bec625b4dc93b7be0d09aac8"
+      "bytes": 16551,
+      "sha256": "05e7fdc17a8ddc2b24e150959ba14aeaecb0f6d8f144c36017abd2940fee6d7c"
     },
     {
       "path": "integration/component_fragments/geographic-study-selection.json",
@@ -85,6 +85,11 @@
       "path": "measurement_workspace/geographic_study_selection.py",
       "bytes": 9770,
       "sha256": "9008a32f3712f4bb335acf8294781658d146c1037fc02fd62707ec98339f56f4"
+    },
+    {
+      "path": "measurement_workspace/microbial_selection.py",
+      "bytes": 24872,
+      "sha256": "4d2614392aaac6e9eb6638d64d8964dc5d84c223a6e9e07fa725762eb94a45c3"
     },
     {
       "path": "measurement_workspace/OBSERVATION_SUPPORT.md",
@@ -1190,6 +1195,11 @@
       "path": "operator/web/published_studies.mjs",
       "bytes": 74650,
       "sha256": "767e583709a623930ad34bbac4599fe94177e6901893d486c9a878ee8b5dba4f"
+    },
+    {
+      "path": "operator/web/published_microbial_selection.mjs",
+      "bytes": 14197,
+      "sha256": "46f6909f2badf288d1deaf62d15c6bac78ad4bc2c122635b62fe1d2407a8f1c5"
     },
     {
       "path": "operator/web/station_geography.mjs",
