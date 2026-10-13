@@ -302,7 +302,8 @@ a{color:inherit;text-underline-offset:3px}[hidden]{display:none!important}.toolb
 .deck .sidebar{display:none}.deck .layout{grid-template-columns:minmax(0,1fr)}.deck .stage{max-width:1440px;width:100%;margin:auto}.deck .slide{min-height:calc(100vh - 130px);font-size:20px}.deck table{font-size:15px}.deck .slide h2{font-size:34px}.deck .slide h1{font-size:46px}.deck .slide:not(.current){display:none}
 #status{margin:0 20px;font-size:12px;color:#444}.footer{font-size:12px;color:#555;padding:16px 24px;max-width:1400px;margin:auto}.print-notes{display:none}
 @media(max-width:800px){.layout{display:block}.sidebar{position:static;max-height:none;border-right:0}.sidebar ol{display:flex;flex-wrap:wrap;gap:4px 12px}.stage{padding:12px}.slide{padding:24px 20px}.slide h1{font-size:29px}.slide h2{font-size:23px}.facts{grid-template-columns:1fr}.deck .slide{font-size:17px}.deck .slide h1{font-size:34px}.deck .slide h2{font-size:27px}.panel{inset:80px 12px 12px auto;width:calc(100vw - 24px)}}
-@media print{@page{size:landscape;margin:14mm}body{background:#fff;font-size:12pt}.toolbar,.sidebar,.panel,#status,.footer,.slide-footer a{display:none!important}.layout{display:block}.stage{padding:0;max-width:none!important}.slide,.deck .slide,.deck .slide:not(.current){display:block;min-height:0;border:0;padding:0;margin:0;break-after:page;font-size:12pt}.slide.print-exclude{display:none!important}.slide h1,.deck .slide h1{font-size:28pt}.slide h2,.deck .slide h2{font-size:21pt}.table-scroll{overflow:visible}table,.deck table{font-size:9pt}th,td{min-width:0;padding:6px}tr{break-inside:avoid}thead{display:table-header-group}.slide-footer{font-size:8pt}.facts{grid-template-columns:repeat(3,minmax(0,1fr))}.print-with-notes .print-notes{display:block;break-before:page}.print-notes pre{white-space:pre-wrap;font:11pt/1.5 system-ui,sans-serif}}
+.meeting-confirm{max-width:min(36rem,calc(100vw - 32px));box-sizing:border-box;border:1px solid #666;border-radius:0;background:#fff;color:#222;padding:24px;line-height:1.5}.meeting-confirm::backdrop{background:rgba(0,0,0,.4)}.meeting-confirm h2{margin:0 0 12px;font-size:20px}.meeting-confirm .actions{margin-top:20px;display:flex;gap:12px;flex-wrap:wrap}
+@media print{.meeting-confirm{display:none!important}@page{size:landscape;margin:14mm}body{background:#fff;font-size:12pt}.toolbar,.sidebar,.panel,#status,.footer,.slide-footer a{display:none!important}.layout{display:block}.stage{padding:0;max-width:none!important}.slide,.deck .slide,.deck .slide:not(.current){display:block;min-height:0;border:0;padding:0;margin:0;break-after:page;font-size:12pt}.slide.print-exclude{display:none!important}.slide h1,.deck .slide h1{font-size:28pt}.slide h2,.deck .slide h2{font-size:21pt}.table-scroll{overflow:visible}table,.deck table{font-size:9pt}th,td{min-width:0;padding:6px}tr{break-inside:avoid}thead{display:table-header-group}.slide-footer{font-size:8pt}.facts{grid-template-columns:repeat(3,minmax(0,1fr))}.print-with-notes .print-notes{display:block;break-before:page}.print-notes pre{white-space:pre-wrap;font:11pt/1.5 system-ui,sans-serif}}
 """
 
 
@@ -317,6 +318,20 @@ var index=0,visible=[],presenting=false,printing=false,scrollScheduled=false,not
 var status=document.getElementById('status'),notesPanel=document.getElementById('notes-panel'),agendaPanel=document.getElementById('agenda-panel');
 var notes={schema:model.notes_schema,binding:binding,meeting:{title:'',date:'',participants:'',purpose:''},entries:[],agenda:Array.from(agenda),updated_at:null};
 function message(text){status.textContent=text;}
+function confirmMeetingChange(prompt,acceptLabel){
+ return new Promise(function(resolve){
+  var previous=document.activeElement,dialog=document.createElement('dialog'),heading=document.createElement('h2'),body=document.createElement('p'),actions=document.createElement('div'),cancel=document.createElement('button'),accept=document.createElement('button'),settled=false;
+  dialog.className='meeting-confirm';dialog.setAttribute('aria-labelledby','meeting-confirm-heading');
+  heading.id='meeting-confirm-heading';heading.textContent='Confirm meeting change';body.textContent=prompt;actions.className='actions';
+  cancel.type=accept.type='button';cancel.textContent='Keep current notes';accept.textContent=acceptLabel;
+  actions.append(cancel,accept);dialog.append(heading,body,actions);document.body.append(dialog);
+  function finish(accepted){if(settled)return;settled=true;dialog.remove();if(previous&&previous.isConnected)previous.focus();resolve(accepted);}
+  cancel.onclick=function(){dialog.close('cancel');};accept.onclick=function(){dialog.close('confirm');};
+  dialog.addEventListener('cancel',function(event){event.preventDefault();dialog.close('cancel');});
+  dialog.addEventListener('close',function(){finish(dialog.returnValue==='confirm');});
+  try{dialog.showModal();cancel.focus();}catch(error){finish(false);message('The meeting change was not applied: '+error.message);}
+ });
+}
 function text(value){return String(value==null?'':value);}
 function current(){return visible[index]||null;}
 function currentMeta(){var s=current();return s?model.slides.find(function(v){return v.id===s.id;}):null;}
@@ -369,13 +384,13 @@ window.addEventListener('scroll',function(){
  });
 },{passive:true});
 slides.forEach(function(slide){slide.addEventListener('focusin',function(){if(!printing&&!presenting&&visible.includes(slide)){index=visible.indexOf(slide);update();}});});
-document.addEventListener('keydown',function(e){if(e.key==='Escape'){if(!notesPanel.hidden){close(notesPanel);e.preventDefault();}else if(!agendaPanel.hidden){close(agendaPanel);e.preventDefault();}}});
+document.addEventListener('keydown',function(e){if(document.querySelector('.meeting-confirm[open]'))return;if(e.key==='Escape'){if(!notesPanel.hidden){close(notesPanel);e.preventDefault();}else if(!agendaPanel.hidden){close(agendaPanel);e.preventDefault();}}});
 document.getElementById('previous').onclick=function(){go(index-1);};document.getElementById('next').onclick=function(){go(index+1);};
 document.getElementById('present').onclick=function(){presenting=!presenting;update();go(index);};
 document.getElementById('chapter-select').onchange=function(e){chapter(e.target.value);};
 document.querySelectorAll('[data-chapter-link]').forEach(function(a){a.onclick=function(e){e.preventDefault();chapter(a.dataset.chapterLink);};});
 document.getElementById('fullscreen').onclick=function(){if(document.fullscreenElement){document.exitFullscreen().catch(function(e){message(e.message);});}else if(document.documentElement.requestFullscreen){document.documentElement.requestFullscreen().catch(function(){message('Fullscreen is unavailable; presentation mode remains available.');});}else message('Fullscreen is unavailable in this browser.');};
-document.addEventListener('keydown',function(e){if(e.target.closest('input,textarea,select,button')||!notesPanel.hidden||!agendaPanel.hidden)return;if(presenting&&['ArrowRight','PageDown','ArrowLeft','PageUp','Home','End'].includes(e.key)){e.preventDefault();go(e.key==='Home'?0:e.key==='End'?visible.length-1:index+(['ArrowRight','PageDown'].includes(e.key)?1:-1));}if(e.key==='Escape'&&presenting){presenting=false;update();}});
+document.addEventListener('keydown',function(e){if(document.querySelector('.meeting-confirm[open]'))return;if(e.target.closest('input,textarea,select,button')||!notesPanel.hidden||!agendaPanel.hidden)return;if(presenting&&['ArrowRight','PageDown','ArrowLeft','PageUp','Home','End'].includes(e.key)){e.preventDefault();go(e.key==='Home'?0:e.key==='End'?visible.length-1:index+(['ArrowRight','PageDown'].includes(e.key)?1:-1));}if(e.key==='Escape'&&presenting){presenting=false;update();}});
 function close(panel){panel.hidden=true;(panel===notesPanel?document.getElementById('notes'):document.getElementById('agenda')).focus();}
 document.querySelectorAll('[data-close]').forEach(function(b){b.onclick=function(){close(document.getElementById(b.dataset.close));};});
 document.getElementById('agenda').onclick=function(){notesPanel.hidden=true;agendaPanel.hidden=false;agendaPanel.querySelector('button').focus();};
@@ -391,7 +406,7 @@ function renderNotes(){
  var holder=document.getElementById('note-list');holder.replaceChildren();
  notes.entries.forEach(function(v,n){var card=document.createElement('section');card.className='note-card';var head=document.createElement('header'),title=document.createElement('strong'),jump=document.createElement('button'),remove=document.createElement('button');title.textContent=(n+1)+'. '+v.kind;jump.type=remove.type='button';jump.textContent='Open report page';remove.textContent='Remove';
  jump.onclick=function(){var s=model.slides.find(function(x){return x.id===v.slide_id;});if(!agenda.has(s.chapter))setAgenda(Array.from(agenda).concat([s.chapter]));close(notesPanel);go(visible.findIndex(function(x){return x.id===v.slide_id;}));};
- remove.onclick=function(){if(!window.confirm('Remove this meeting entry?'))return;notes.entries=notes.entries.filter(function(x){return x.id!==v.id;});save();renderNotes();};
+ remove.onclick=async function(){if(!await confirmMeetingChange('Remove this meeting entry? Other entries and the original scientific report stay available.','Remove entry'))return;notes.entries=notes.entries.filter(function(x){return x.id!==v.id;});save();renderNotes();document.getElementById('add-note').focus();};
  head.append(title,jump,remove);card.append(head);var context=document.createElement('p');context.className='notice';context.textContent=model.slides.find(function(x){return x.id===v.slide_id;}).title+' · '+v.slide_id;card.append(context);
  card.append(choices('Kind',v.kind,[['question','Question'],['decision','Decision'],['action','Follow-up action']],function(x){v.kind=x;title.textContent=(n+1)+'. '+x;}));
  card.append(field('Meeting entry',v.body,'textarea',function(x){v.body=x;}));var pair=document.createElement('div');pair.className='field-pair';pair.append(field('Owner',v.owner,'text',function(x){v.owner=x;}),field('Due date',v.due,'date',function(x){v.due=x;}));card.append(pair);
@@ -411,7 +426,7 @@ function download(name,type,body){var url=URL.createObjectURL(new Blob([body],{t
 document.getElementById('export-json').onclick=function(){save();download('meeting-notes-'+binding.report_sha256.slice(0,12)+'.json','application/json',JSON.stringify(notes,null,2)+'\n');};
 document.getElementById('export-markdown').onclick=function(){save();download('meeting-notes-'+binding.report_sha256.slice(0,12)+'.md','text/markdown;charset=utf-8',markdown());};
 document.getElementById('import-notes').onchange=async function(e){
- var file=e.target.files[0];if(!file)return;try{if(file.size>64*1024*1024)throw Error('Choose a meeting file under 64 MiB.');var next=validate(JSON.parse(await file.text()));if(notes.entries.length||Object.values(notes.meeting).some(Boolean)){if(!window.confirm('Replace the notes open in this browser with the imported meeting? Export the current notes first if you want to keep both.'))return;}notes=next;agenda=new Set(notes.agenda);bindMeeting();renderNotes();setAgenda(notes.agenda);message('Meeting notes opened for this report edition.');}catch(error){message(error.message);}finally{e.target.value='';}
+ var file=e.target.files[0];if(!file)return;try{if(file.size>64*1024*1024)throw Error('Choose a meeting file under 64 MiB.');var next=validate(JSON.parse(await file.text()));if(notes.entries.length||Object.values(notes.meeting).some(Boolean)){if(!await confirmMeetingChange('Replace the notes open in this browser with the imported meeting? Export the current notes first if you want to keep both.','Replace notes'))return;}notes=next;agenda=new Set(notes.agenda);bindMeeting();renderNotes();setAgenda(notes.agenda);message('Meeting notes opened for this report edition.');}catch(error){message(error.message);}finally{e.target.value='';}
 };
 function preparePrint(){
  printing=true;
