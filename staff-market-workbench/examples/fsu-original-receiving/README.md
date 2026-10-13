@@ -30,6 +30,8 @@ The same operator now captures the actual accepted pricing view, received handba
 
 The producing worker must open and LOOK at those actual images and the running populated workbench, operate the important controls and repair visible defects before presenting the case. Inspect source text, original prices, column alignment, overflow, loading/error feedback and native downloads. The original request journal, source rows and accepted pricing calculation remain the execution source. Set FSU_SOURCE_COMMIT to the actual selected complete application commit and retain that application's consumed instructions with its receiving output.
 
+The retained case also includes `result/PRODUCER_INSPECTION.md` with the current producing-worker inspection course; the original generated `README.md` remains byte-stable when the existing operation is reopened.
+
 # Owner-directed rendered-product inspection
 
 Source: direct owner instruction of October 13, 2026. Repository copy version: `2026-10-13.1`.
