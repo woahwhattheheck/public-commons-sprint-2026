@@ -1,0 +1,30 @@
+// SPDX-License-Identifier: MIT
+// Explicitly authored commissioning data shaped to the retained native contract.
+import {hash,textPin,canonical,sealConfigurationPlan} from '../core.mjs';
+const b64=bytes=>{const abc='ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';let out='';for(let i=0;i<bytes.length;i+=3){const n=(bytes[i]<<16)|((bytes[i+1]??0)<<8)|(bytes[i+2]??0);out+=abc[n>>>18]+abc[(n>>>12)&63]+(i+1<bytes.length?abc[(n>>>6)&63]:'=')+(i+2<bytes.length?abc[n&63]:'=');}return out;};
+const clone=v=>JSON.parse(JSON.stringify(v));
+const node=v=>v===null?{kind:'null',value:null,yamlToken:'--- ~\n'}:Array.isArray(v)?{kind:'array',value:v.map(node)}:typeof v==='object'?{kind:'map',value:Object.fromEntries(Object.entries(v).map(([k,x])=>[k,node(x)]))}:{kind:typeof v==='number'?'integer':typeof v==='boolean'?'boolean':'string',value:String(v),yamlToken:'--- '+JSON.stringify(v)+'\n'};
+const caseId='otobo-configuration-reference';
+const parser={module:'YAML::XS',version:'authored-reference',profile:'authored typed reference; actual native helper records installed version'};
+const evidence=(id,value)=>{const body=JSON.stringify(value,null,2)+'\n';return{id,filename:id+'.json',body_base64:b64(new TextEncoder().encode(body)),...textPin(body),purpose:'Authored target lookup reference'};};
+const common={Groups:{support:{Name:'support',Comment:'Support operators',Valid:'valid'}},Roles:{agents:{Name:'agents',Comment:'Service agents',Valid:'valid'}},Types:{Incident:{Name:'Incident',Valid:'valid'}},Templates:{Reply:{Name:'Reply',Comment:'Retained response',Template:'Hello',ContentType:'text/plain; charset=utf-8',TemplateType:'Answer',Valid:'valid',PreSelectedTicketStateID:null}},Services:{Support:{Name:'Support',NameShort:'Support',Parent:null,Valid:'valid'}}};
+const queue={Name:'SupportQ',RealName:'Support team',Group:'support',Calendar:'',FirstResponseTime:0,FirstResponseNotify:0,UpdateTime:0,UpdateNotify:0,SolutionTime:0,SolutionNotify:0,UnlockTimeout:0,FollowUp:'possible',FollowUpLock:0,DefaultSignKey:0,SystemAddress:{Name:'support@example.invalid',Realname:'Support team',Queue:'SupportQ',Comment:'Authored support address',Valid:'valid'},Salutation:{Name:'Support greeting',Text:'Hello,\n',ContentType:'text/plain; charset=utf-8',Comment:'Authored salutation',Valid:'valid'},Signature:{Name:'Support signature',Text:'Support team\n',ContentType:'text/plain; charset=utf-8',Comment:'Authored signature',Valid:'valid'},Valid:'valid'};
+const source={...clone(common),Services:{...clone(common.Services),'Support::Premium':{Name:'Support::Premium',NameShort:'Premium',Parent:'Support',Valid:'valid'}},SLAs:{Gold:{Name:'Gold',Services:['Support::Premium'],Valid:'valid',FirstResponseTime:30}},Queues:{SupportQ:{...clone(queue),Comment:'Reviewed support queue'}},QueueTemplates:{SupportQ:['Reply']},RoleGroups:{agents:{ro:['support'],rw:[]}},GenericAgents:{Weekly:{Name:'Weekly',NewQueue:'SupportQ',Owners:['ops'],ScheduleDays:['1'],Valid:1}}};
+const before={...clone(common),SLAs:{},Queues:{SupportQ:{...clone(queue),Comment:'Earlier queue note'}},QueueTemplates:{SupportQ:[]},RoleGroups:{agents:{ro:['support'],rw:['support']}},GenericAgents:{}};
+function capture(data,side,time,label){
+ const e=evidence('settings',{Valid:['valid','invalid'],FollowUp:['possible'],Owners:['ops'],permissionTypes:['ro','rw'],maxQueueLevel:5});
+ const files=Object.entries(data).map(([family,entries])=>{const body=JSON.stringify({[family]:entries},null,2)+'\n';return {id:'file-'+family,filename:family+'.yml',family,body_base64:b64(new TextEncoder().encode(body)),...textPin(body),entries:Object.entries(entries).map(([name,value])=>({name,value:node(value)}))};});
+ const c={schema:'otobo.capture.v1',caseId,side,workspaceReference:side==='source'?'authored-source-workspace':'authored-target-workspace',observedAt:time,evidenceKind:'authored-reference',environment:{parser,description:'Authored reference shaped to native exports; native capture is a separate executable course.'},files,evidenceFiles:[e],completeness:Object.fromEntries(Object.keys(data).map(k=>[k,true])),externalContext:{lookupSets:{Valid:{values:['valid','invalid'],evidenceFileIds:['settings']},FollowUp:{values:['possible'],evidenceFileIds:['settings']},Owners:{values:['ops'],evidenceFileIds:['settings']}},permissionTypes:{values:['ro','rw'],evidenceFileIds:['settings']},maxQueueLevel:{value:5,evidenceFileIds:['settings']}},label};
+ return {...c,captureId:hash(c)};
+}
+export function buildReference(){
+ const sourceCapture=capture(source,'source','2026-10-13T12:00:00Z','Authored original configuration');
+ const beforeCapture=capture(before,'target','2026-10-13T12:05:00Z','Authored independent target baseline');
+ const decisions=sourceCapture.files.flatMap(f=>f.entries.map(e=>({sourceFileId:f.id,family:f.family,name:e.name,action:f.family==='RoleGroups'?'replace-pair-permissions':f.family==='QueueTemplates'?'add-links':f.family==='Queues'?'overwrite':before[f.family]?.[e.name]?'keep-target':'create',reason:'Authored review of exact selected configuration',...(f.family==='GenericAgents'?{genericAgentReviewed:true}:{})})));
+ const p={schema:'otobo.handover-plan.v1',caseId,sourceCaptureId:sourceCapture.captureId,targetCaptureId:beforeCapture.captureId,expectedParser:parser,reviewer:'Authored reference reviewer',reviewedAt:'2026-10-13T12:10:00Z',decisions};
+ const plan=sealConfigurationPlan({source:sourceCapture,before:beforeCapture,reviewer:p.reviewer,reviewedAt:p.reviewedAt,decisions});
+ const intended=clone(source),returned=clone(source);returned.RoleGroups.agents={ro:['support'],rw:['support']};returned.Queues.SupportQ.Comment='Earlier queue note';
+ const after=capture(returned,'target','2026-10-13T12:20:00Z','Authored return: queue note and permission replacement intentionally differ');
+ const matchingAfter=capture(intended,'target','2026-10-13T12:21:00Z','Authored exact planned configuration');
+ return {source:sourceCapture,before:beforeCapture,plan,after,matchingAfter};
+}
