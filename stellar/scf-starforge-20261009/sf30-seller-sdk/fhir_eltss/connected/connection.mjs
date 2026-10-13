@@ -268,17 +268,20 @@ export class EltssConnection {
     if(expectedSha256!==undefined)need(checked(expectedSha256,SHA,'input SHA256')===selected.sha256,'ELTSS_INPUT_CHANGED');
     return {...await inputSnapshot(selected,root),name:basename(selected.file),label:selected.label};
   }
-  async request(method,path,{input,upload,outputDirectory,headers={},adoptWorkspace=false,jsonUpload=false,operationId}={}){
+  async request(method,path,{input,upload,outputDirectory,headers={},adoptWorkspace=false,jsonUpload=false,operationId,
+    maxJsonInputBytes=MAX_JSON_INPUT}={}){
+    need(Number.isSafeInteger(maxJsonInputBytes)&&maxJsonInputBytes>=1&&maxJsonInputBytes<=MAX_PACKET_BYTES,
+      'ELTSS_INPUT_LIMIT','Select the host-declared native JSON byte limit.');
     const original=await this.#ensure(),mutates=method!=='GET';
     need(path.startsWith('/api/') && !path.startsWith('//') && !/[\r\n\0]/.test(path),'ELTSS_ROUTE_INVALID');
     let stream,body;
     if(upload){
-      if(jsonUpload)need(upload.bytes<=MAX_JSON_INPUT,'ELTSS_INPUT_LIMIT','The original complete JSON input exceeds 4 MiB.');
+      if(jsonUpload)need(upload.bytes<=maxJsonInputBytes,'ELTSS_INPUT_LIMIT','The original complete JSON input exceeds its declared native byte limit.');
       stream=await streamFile(upload);body=stream.body;
     }
     else if(input!==undefined){
       body=JSON.stringify(input);
-      need(Buffer.byteLength(body)<=MAX_JSON_INPUT,'ELTSS_INPUT_LIMIT','Use the original native JSON request limit.');
+      need(Buffer.byteLength(body)<=maxJsonInputBytes,'ELTSS_INPUT_LIMIT','Use the original native JSON request limit.');
     }
     if(adoptWorkspace){
       need(upload && typeof upload.sha256==='string','ELTSS_IMPORT_SOURCE_REQUIRED');

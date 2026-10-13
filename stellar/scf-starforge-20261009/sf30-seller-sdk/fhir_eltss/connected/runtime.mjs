@@ -118,12 +118,18 @@ export function createMerchantWorkspaceRuntime({
   inputActions=nativeInputActions,routeFor=eltssNativeRoute,configKey='eltssCareplans',
   exportNamespace='eltss',exportSchema=EXPORT_SCHEMA,resultSchema=RESULT_SCHEMA,manifestName=MANIFEST_NAME,
   parseExport=parseEltssExport,errorPrefix='ELTSS',apiSchema='stellar-forge.eltss-merchant-api.v1',
-  schemaMetadata={},uploadRoute=eltssUploadRoute,
+  schemaMetadata={},uploadRoute=eltssUploadRoute,nativeJsonInputLimits={},
   importActions={source_import:'source',packet_import:'packet',workspace_import:'workspace',
     handoff_import:'handoff',artifact_import:'artifact'},
   receivingKinds={source:'source-packet',packet:'dataset-packet',workspace:'workspace-packet',
     handoff:'handoff-packet',artifact:'artifact-file'}
 }={}){
+  need(plain(nativeJsonInputLimits),'ELTSS_INPUT_LIMIT','Native JSON byte limits belong to the host action catalogue.');
+  const jsonLimits=Object.freeze({...nativeJsonInputLimits});
+  for(const [action,limit]of Object.entries(jsonLimits))
+    need(Object.hasOwn(inputActions,action)&&Number.isSafeInteger(limit)&&limit>=1&&limit<=MAX_PACKET_BYTES,
+      'ELTSS_INPUT_LIMIT','Select a declared native input action and supported byte limit.');
+  const jsonInputLimit=action=>Object.hasOwn(jsonLimits,action)?jsonLimits[action]:MAX_JSON_INPUT;
 return class MerchantWorkspace {
   #config;#clients=new Map();#pending=new Set();#queues=new Map();
   #readers=new RetainedFileReads({errorPrefix});#closing=false;#close=null;
@@ -228,7 +234,8 @@ return class MerchantWorkspace {
     if(action==='workspaces')return this.summary;
     if(action==='schema')return {schema:apiSchema,tools,
       nativeWorkspace:'stellar-forge.eltss-workspace.v1',nativeSource:'stellar-forge.eltss-source.v1',
-      nativeFieldProfile:'stellar-forge.eltss-field-profile.v1',maximumNativeJsonBytes:MAX_JSON_INPUT,nativeInputActions:inputActions,
+      nativeFieldProfile:'stellar-forge.eltss-field-profile.v1',maximumNativeJsonBytes:MAX_JSON_INPUT,
+      nativeJsonInputLimits:jsonLimits,nativeInputActions:inputActions,
       nativeMapping:'stellar-forge.eltss-mapping.v1',maximumPacketBytes:MAX_PACKET_BYTES,
       recovery:'Read the same saved acquisition operation after an uncertain reply. The native request, pause, resume, correction preview hash, receiving UUID and whole-archive hash keep their original identities.',
       files:'Every completed read or mutation retains its complete native response and original request. Full JSON input also retains unchanged original-input.json. Binary routes retain every original byte through the maintained merchant range and resumable receiving protocol.',...schemaMetadata};
@@ -267,14 +274,15 @@ return class MerchantWorkspace {
       const root=await this.#root(alias),spool=await directory(join(root,'pending'));
       const upload=await client.hostInput(args.input,spool,args.expectedSha256);
       try{
-        const bytes=await readSourceFile(upload.path,{privateFile:true,maxBytes:MAX_JSON_INPUT}),
+        const maxJsonInputBytes=jsonInputLimit(args.action),
+          bytes=await readSourceFile(upload.path,{privateFile:true,maxBytes:maxJsonInputBytes}),
           body=decode(bytes),key=inputActions[args.action];
         need(key && plain(body),'ELTSS_INPUT_INVALID','The complete selected native input must be a JSON object.');
         // This parse validates only the envelope. The original UTF-8 bytes are
         // sent unchanged, including numeric tokens and whitespace.
         const route=routeFor(args.action,{[key]:body});
         need(route?.method==='POST','ELTSS_INPUT_INVALID');
-        const original=await client.request('POST',route.target,{upload,jsonUpload:true});
+        const original=await client.request('POST',route.target,{upload,jsonUpload:true,maxJsonInputBytes});
         return await this.#capture(alias,original,{...args,received:{input:args.input,
           sha256:upload.sha256,bytes:upload.bytes,nativeAction:args.action}},
           {action,method:'POST',target:route.target,inputBytes:bytes});
@@ -330,7 +338,7 @@ return class MerchantWorkspace {
       need(route.artifact,'ELTSS_FILE_NOT_FOUND');
       expected={bytes:route.artifact.bytes};
     }
-    const original=await client.request(route.method,route.target,{input:route.input,
+    const original=await client.request(route.method,route.target,{input:route.input,maxJsonInputBytes:jsonInputLimit(action),
       ...(root?{outputDirectory:await directory(join(root,'pending'))}:{}),operationId:args.operationId});
     if(expected && original.ok){
       const bytes=original.file?.bytes??original.bytes.length,sha256=original.file?.sha256??digest(original.bytes);
