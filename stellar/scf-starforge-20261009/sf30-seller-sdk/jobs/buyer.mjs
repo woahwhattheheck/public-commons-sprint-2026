@@ -5,6 +5,9 @@ import { open, link, unlink, lstat } from 'node:fs/promises';
 import { dirname, join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { createPublicHttpsFetch } from '../../sf31-buyer-client/public-transport.mjs';
+import { RESULT_PACKAGE_TYPE } from './outputs/contract.mjs';
+import { readResultPackage } from './outputs/archive.mjs';
+import { receiveResultPackage, reopenResultPackage } from './outputs/receive.mjs';
 import { absolute, privateDirectory, readBytes, readJson, writeBytes, writeJson,
   jsonBytes, digest, syncDirectory, exists } from '../../sf88-operator-buyer-cli/node/store.mjs';
 
@@ -363,6 +366,42 @@ class JobBuyer {
       return this.#recordDelivery(current, destination, reused);
     });
   }
+  async #packageSelection() {
+    const receipt = await this.receipt();
+    need(receipt.delivery && receipt.latestStatus, 'JOB_OUTPUT_DOWNLOAD_REQUIRED');
+    const current = status(receipt.latestStatus, this.acceptance), saved = receipt.delivery;
+    need(current.state === 'COMPLETED' && current.result.contentType === RESULT_PACKAGE_TYPE,
+      'JOB_OUTPUT_PACKAGE_REQUIRED');
+    need(saved.jobId === this.jobId && saved.functionId === this.acceptance.functionId &&
+      saved.inputSha256 === this.acceptance.inputSha256 && saved.acceptanceSha256 === receipt.acceptanceSha256 &&
+      saved.sourceUrl === this.acceptance.resultUrl && Number.isSafeInteger(saved.completedRevision) &&
+      saved.completedRevision > 0 && saved.completedRevision <= current.revision &&
+      ['bytes','sha256','contentType','filename'].every(key => saved[key] === current.result[key]) &&
+      saved.nativeSettlement?.id === current.nativeSettlement.id &&
+      saved.nativeSettlement?.at === current.nativeSettlement.at, 'JOB_OUTPUT_DELIVERY_CHANGED');
+    return { source: absolute(saved.path), expected: current.result, job: { id: this.jobId,
+      functionId: this.acceptance.functionId, inputSha256: this.acceptance.inputSha256,
+      publicOrigin: new URL(this.acceptance.resultUrl).origin, nativeSettlement: current.nativeSettlement } };
+  }
+  outputPackage(options = {}) {
+    return scoped(options, async (signal, check) => {
+      const selected = await this.#packageSelection(); check();
+      const packet = await readResultPackage(selected.source, { ...selected, signal });
+      return packet.describe();
+    });
+  }
+  receiveOutputs({ directory, signal, deadlineMs = 300000 } = {}) {
+    return scoped({ signal, deadlineMs }, async (active, check) => {
+      const selected = await this.#packageSelection(); check();
+      return receiveResultPackage({ ...selected, directory, signal: active });
+    });
+  }
+  reopenOutputs({ directory, signal, deadlineMs = 300000 } = {}) {
+    return scoped({ signal, deadlineMs }, async (active, check) => {
+      const selected = await this.#packageSelection(); check();
+      return reopenResultPackage({ directory, expected: selected.expected, job: selected.job, signal: active });
+    });
+  }
   async #recordDelivery(current, destination, reused) {
     const expected = current.result;
     const delivery = { schema: DELIVERY_SCHEMA, jobId: this.jobId, functionId: this.acceptance.functionId,
@@ -393,7 +432,7 @@ class JobBuyer {
 /** CLI bridge; callers receive printable metadata with the capability omitted. */
 export async function runJobBuyerCommand(argv) {
   const [command, ...rest] = argv, args = Object.create(null);
-  need(['retain', 'inspect', 'wait', 'fetch'].includes(command), 'JOB_BUYER_COMMAND_REQUIRED');
+  need(['retain', 'inspect', 'wait', 'fetch', 'outputs', 'receive-outputs', 'reopen-outputs'].includes(command), 'JOB_BUYER_COMMAND_REQUIRED');
   const allowed = new Set(['--state', '--acceptance-file', '--claim-token-file', '--handoff-file', '--transport-file', '--out', '--deadline-ms', '--poll-ms']);
   for (let i = 0; i < rest.length; i += 2) {
     need(allowed.has(rest[i]) && typeof rest[i + 1] === 'string' && !rest[i + 1].startsWith('--') &&
@@ -414,7 +453,7 @@ export async function runJobBuyerCommand(argv) {
     return buyer.receipt();
   }
   need(!args['--acceptance-file'] && !args['--claim-token-file'] && !args['--handoff-file'] &&
-    (command === 'fetch' || !args['--out']) && (command === 'wait' || !args['--poll-ms']), 'JOB_BUYER_ARGUMENT_INVALID');
+    (['fetch', 'receive-outputs', 'reopen-outputs'].includes(command) || !args['--out']) && (command === 'wait' || !args['--poll-ms']), 'JOB_BUYER_ARGUMENT_INVALID');
   const options = {};
   for (const [flag, key] of [['--deadline-ms', 'deadlineMs'], ['--poll-ms', 'pollMs']]) {
     if (args[flag] !== undefined) {
@@ -423,6 +462,9 @@ export async function runJobBuyerCommand(argv) {
   }
   const buyer = await openJobBuyer({ directory, transport });
   if (command === 'fetch') return buyer.download({ destination: absolute(args['--out']), ...options });
+  if (command === 'outputs') return buyer.outputPackage(options);
+  if (command === 'receive-outputs') return buyer.receiveOutputs({ directory: absolute(args['--out']), ...options });
+  if (command === 'reopen-outputs') return buyer.reopenOutputs({ directory: absolute(args['--out']), ...options });
   return buyer[command](options);
 }
 

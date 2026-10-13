@@ -1,3 +1,15 @@
+const packageType = 'application/vnd.stellar-forge.job-result+zip';
+function fileType(value) {
+  const type = String(value ?? '').split(';')[0].toLowerCase();
+  if (type === packageType || type === 'application/zip') return 'ZIP package';
+  if (type === 'text/csv') return 'CSV spreadsheet';
+  if (type === 'text/tab-separated-values') return 'TSV spreadsheet';
+  if (type === 'application/json' || type.endsWith('+json')) return 'JSON document';
+  if (type === 'application/pdf') return 'PDF document';
+  if (type.startsWith('image/')) return type.slice(6).toUpperCase() + ' image';
+  if (type.startsWith('text/')) return 'Text document';
+  return 'Binary file';
+}
 // MIT. Merchant inputs → retained private request → original customer checkout.
 import { createInputFilePanel } from './files.mjs';
 const byId = id => document.getElementById(id);
@@ -147,7 +159,19 @@ function renderFunction() {
   if (!definition) return;
   byId('functionDescription').textContent = definition.description;
   for (const key of ['amount','network','asset','payTo']) byId(key).textContent = definition.payment[key];
-  byId('output').textContent = definition.output.filename + ' · ' + definition.output.contentType + ' · up to ' + size(definition.maxOutputBytes);
+  byId('output').textContent = definition.output.filename + ' · ' + fileType(definition.output.contentType) + ' · up to ' + size(definition.maxOutputBytes);
+  byId('declaredOutputs').hidden = definition.output.format !== 'package';
+  byId('declaredOutputFiles').replaceChildren();
+  if (definition.output.format === 'package') {
+    for (const [slot, file] of Object.entries(definition.output.files)) {
+      const item = node('li', file.filename + ' · ' + fileType(file.contentType) + ' · ' +
+        (file.required ? 'required' : 'optional') + ' · up to ' + size(file.maxBytes));
+      const technical = node('details');
+      technical.append(node('summary', 'Technical details'),
+        node('pre', JSON.stringify({ 'Output slot': slot, 'Content type': file.contentType }, null, 2)));
+      item.append(technical); byId('declaredOutputFiles').append(item);
+    }
+  }
   byId('timeout').textContent = (definition.timeoutMs / 1000).toLocaleString() + ' seconds';
   byId('accessField').hidden = catalog.authentication !== 'access-token';
   byId('prepareNew').textContent = definition.inputFiles ? 'Save request and add files' : 'Prepare checkout';

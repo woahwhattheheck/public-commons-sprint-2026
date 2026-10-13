@@ -7,6 +7,7 @@ import { openJobStore } from './store.mjs';
 import { openInputStore } from './inputs/store.mjs';
 import { openJobResolution } from './resolution/service.mjs';
 import { executeJob } from './execution.mjs';
+import { inspectResultPackage } from './outputs/archive.mjs';
 import { openOutbox, instrumentNativeSettlement, SCHEMA as NATIVE_EVENT_SCHEMA } from '../../sf98-merchant-delivery/outbox.mjs';
 
 const fail = (code, status = 400) => { throw jobError(code, status); };
@@ -232,6 +233,22 @@ export async function openJobMerchant({ configPath, directory, env = process.env
     const body = await store.readResult(row.result);
     return { body, bytes: body.length, sha256: row.result.sha256, contentType: row.result.contentType, filename: row.result.filename };
   }
+  async function packagedOutput(row, { signal } = {}) {
+    const definition = source.compiled.functions[row.functionId];
+    if (definition.output.format !== 'package') fail('JOB_OUTPUT_PACKAGE_REQUIRED', 409);
+    signal?.throwIfAborted();
+    const saved = await output(row), attempt = row.attempts.at(-1);
+    if (!attempt || attempt.state !== 'COMPLETED' || attempt.resultSha256 !== saved.sha256)
+      fail('JOB_OUTPUT_ATTEMPT_CHANGED', 409);
+    const packet = inspectResultPackage(saved.body, { expected: saved, signal,
+      job: { id: row.id, functionId: row.functionId, inputSha256: row.inputSha256,
+        configSha256: row.source.configSha256, applicationSha256: row.source.applicationSha256,
+        publicOrigin: row.source.publicOrigin, attemptId: attempt.id,
+        nativeSettlement: { id: row.settlement.id, at: row.settlement.at } } });
+    if (packet.manifest.policy.policySha256 !== definition.output.policySha256)
+      fail('JOB_OUTPUT_POLICY_CHANGED', 409);
+    return packet;
+  }
   // Acquiring the kernel-held original lease proves the previous merchant process
   // and its Worker threads retired. Unfinished executions require explicit retry.
   try {
@@ -404,6 +421,14 @@ export async function openJobMerchant({ configPath, directory, env = process.env
       schedule(); return model.get(row.id, borrow);
     },
     async result(id) { return output(rowFor(id)); },
+    async outputPackage(id, options = {}) { return (await packagedOutput(rowFor(id), options)).describe(); },
+    async outputFile(id, slot, options = {}) {
+      const packet = await packagedOutput(rowFor(id), options);
+      const file = packet.manifest.files.find(value => value.slot === slot);
+      if (!file) fail('JOB_OUTPUT_FILE_NOT_FOUND', 404);
+      return { body: packet.file(slot), bytes: file.bytes, sha256: file.sha256,
+        contentType: file.contentType, filename: file.filename };
+    },
     async customerStatus({ id, token } = {}, borrow) { return customerView(customerRow(id, token, borrow)); },
     async customerResult({ id, token } = {}) { return output(customerRow(id, token)); },
     async close() {

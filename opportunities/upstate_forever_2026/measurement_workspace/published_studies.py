@@ -332,6 +332,14 @@ WQP_SUMMARY = "wqp/derived/summary.json"
 FLOW_FILE = "wqp/study_flow_dates.csv"
 FLOW_METHODS = "wqp/flow_context_methods.json"
 FLOW_METHODS_PUBLIC = "wqp/flow_context_methods.public.json"
+FIGURE_MANIFEST = "figures/model-sources.json"
+FIGURES = {
+    "figures/chlorophyll_time_series.svg": "Chlorophyll at the five original stations",
+    "figures/chlorophyll_distributions.svg": "All selected chlorophyll observations and distributions",
+    "figures/sampling_flow_context.svg": "Observed upstream flow on the original laboratory dates",
+    "figures/chlorophyll_antecedent_context.svg": "Chlorophyll and preceding upstream flow",
+}
+FIGURE_SCOPE = "These retained figures show the complete original 75-observation chlorophyll cohort and 16 laboratory dates. They retain their full source scope when the study tables are filtered."
 WQP_FIELDS = {
     "monitoring_location_id": "station_id", "activity_id": "activity_id",
     "date": "sample_date", "local_time": "sample_time", "source_timezone": "sample_timezone",
@@ -401,7 +409,22 @@ def _observation_rows(data: bytes, source_file: str = OBSERVATION_FILE) -> list[
                 row[field] = float(raw[field])
                 if not math.isfinite(row[field]):
                     raise ValueError(f"Non-finite original observation {field} at row {number}.")
-        row["censored"] = bool(re.search(r"below|not detected|less than|above.*upper|greater than", raw["detection_condition"], re.I))
+        row["detection_limit_type"] = original.get(
+            "detection_limit_type", original.get("DetectionQuantitationLimitTypeName", "")
+        )
+        quantitation = original.get("quantitation_class", "")
+        lower_censored = quantitation == "censored_below" or bool(
+            re.search(r"below|not detected|less than", raw["detection_condition"], re.I)
+        )
+        upper_censored = quantitation == "censored_above" or bool(
+            re.search(r"above.*upper|greater than", raw["detection_condition"], re.I)
+        ) or bool(
+            row["value"] is None and row["detection_limit"] is not None
+            and raw["detection_condition"] == "Present Above Quantification Limit"
+            and re.search(r"upper quantitation limit", row["detection_limit_type"], re.I)
+        )
+        row["censor_direction"] = "above" if upper_censored else "below" if lower_censored else ""
+        row["censored"] = bool(row["censor_direction"])
         if source_file in (WQP_FILE, WQP_COHORT):
             row.update(
                 original_record_id=original["record_id"], original_source_path=original["source_path"],
@@ -473,13 +496,27 @@ def _dated_context(complete, sites, parameters, observation_context):
 
 
 def _manifest_path(manifest_name, value):
-    value = _name(value)
+    """Resolve a native companion within the retained study tree."""
+    if not isinstance(value, str) or not value or "\\" in value or "\x00" in value:
+        raise ValueError("A manifest source must use a relative POSIX path.")
+    reference = PurePosixPath(value)
+    if reference.is_absolute() or str(reference) != value or value == ".":
+        raise ValueError("A manifest source must use a canonical relative path.")
     if manifest_name in (COHORT_MANIFEST, REPORT_MANIFEST, PAIRED_MANIFEST):
+        value = _name(value)
         prefix = "observations/eighteenmile_2023/"
         if not value.startswith(prefix):
             raise ValueError("Application-root study manifests must identify files inside the original study directory.")
         return _name(value[len(prefix):])
-    return _name(str(PurePosixPath(manifest_name).parent / value))
+    parts = list(PurePosixPath(_name(manifest_name)).parent.parts)
+    for part in reference.parts:
+        if part == "..":
+            if not parts:
+                raise ValueError("A native companion must remain inside the retained study directory.")
+            parts.pop()
+        else:
+            parts.append(part)
+    return _name("/".join(parts))
 
 
 def _observation_context(rows, seasonal, study, sites, parameters, strata):
@@ -581,7 +618,7 @@ def _observation_context(rows, seasonal, study, sites, parameters, strata):
 def _source_manifest(files: dict[str, bytes], study: dict[str, Any], study_id: str, version_id: str):
     """Register original map/table identities and every retained study document."""
     manifest_entries, source_entries, seen_ids, native_ids = [], {}, set(), {}
-    manifest_names = [name for name in ("model-sources.json", "wqp/flow-context-sources.json", "wqp/flow-context-public-sources.json", "wqp_20261013/source-manifest.json", COHORT_MANIFEST, REPORT_MANIFEST, PAIRED_MANIFEST) if name in files]
+    manifest_names = [name for name in ("model-sources.json", "wqp/flow-context-sources.json", "wqp/flow-context-public-sources.json", "wqp_20261013/source-manifest.json", FIGURE_MANIFEST, COHORT_MANIFEST, REPORT_MANIFEST, PAIRED_MANIFEST) if name in files]
     for manifest_name in manifest_names:
         parent = PurePosixPath(manifest_name).parent
         native = _json(files[manifest_name])
@@ -639,7 +676,7 @@ def _source_manifest(files: dict[str, bytes], study: dict[str, Any], study_id: s
         if name in source_entries:
             continue
         suffix = PurePosixPath(name).suffix.lower()
-        if suffix not in (".csv", ".json", ".geojson", ".md", ".pdf", ".png", ".jpg", ".jpeg", ".mjs", ".html"):
+        if suffix not in (".csv", ".json", ".geojson", ".md", ".pdf", ".png", ".jpg", ".jpeg", ".mjs", ".cjs", ".txt", ".html", ".svg"):
             continue
         source_id = "study-" + _hash(name.encode("utf-8"))[:16]
         if source_id in seen_ids:
@@ -811,7 +848,7 @@ class PublishedStudyStore:
                 if staging.exists():
                     shutil.rmtree(staging)
         record = _json(record_path.read_bytes())
-        if not record.get("source_collection_id") or record.get("source_registration_schema") != "upstate.published-study-sources/v6":
+        if not record.get("source_collection_id") or record.get("source_registration_schema") != "upstate.published-study-sources/v7":
             source_manifest, source_entries = _source_manifest(files, study, study_id, version_id)
             manifest_path = final / "sources.json"
             _atomic(manifest_path, _json_bytes(source_manifest))
@@ -823,7 +860,7 @@ class PublishedStudyStore:
             }
             record["counts"] = {**{name: len(rows) for name, rows in tables.items()}, **result_counts}
             record["source_collection_id"] = collection["id"]
-            record["source_registration_schema"] = "upstate.published-study-sources/v6"
+            record["source_registration_schema"] = "upstate.published-study-sources/v7"
             record["source_entries"] = source_entries
             _atomic(record_path, _json_bytes(record))
         _atomic(
@@ -1137,8 +1174,26 @@ class PublishedStudyStore:
             writer.writerows(row["raw_cells"] for row in rows)
             _atomic(destination / filename, output.getvalue().encode("utf-8"))
             written.append(filename)
+        support_output = io.StringIO(newline="")
+        support_columns = (
+            "site_id", "parameter", "project_id", "activity_type", "sample_support",
+            "record_count", "distinct_activity_count", "quantified_count", "below_limit_count",
+            "unresolved_count", "unit", "mean_lower", "mean_upper",
+            "mean_upper_inclusive", "complete_interval_support", "basis",
+        )
+        support_writer = csv.DictWriter(support_output, fieldnames=support_columns, lineterminator="\n")
+        support_writer.writeheader()
+        for series in context["observations"]["series"]:
+            support = series.get("observation_support", {})
+            support_writer.writerow({
+                **{name: series.get(name, "") for name in support_columns[:5]},
+                **{name: support.get(name, "") for name in support_columns[5:]},
+            })
+        _atomic(destination / "observation-support-selected.csv", support_output.getvalue().encode("utf-8"))
+        written.append("observation-support-selected.csv")
         report_context = dict(context)
         report_context["related_reports"] = []
+        report_context["scientific_figures"] = []
         record = context["record"]
         version_root = self._version_root(study_id, record["version_id"])
         manifest_bytes = (version_root / "sources.json").read_bytes()
@@ -1150,7 +1205,8 @@ class PublishedStudyStore:
         copied = set()
         for artifact in context["source_artifacts"]:
             name = artifact["path"]
-            if PurePosixPath(name).suffix.lower() not in (".html", ".htm"):
+            is_html = PurePosixPath(name).suffix.lower() in (".html", ".htm")
+            if not is_html and not name.startswith("figures/"):
                 continue
             binding = bindings[record["source_entries"][name]]
             members = [name]
@@ -1170,10 +1226,15 @@ class PublishedStudyStore:
                 _atomic(destination / report_member, raw)
                 written.append(report_member)
                 copied.add(member)
-            report_context["related_reports"].append({
-                "filename": "original-sources/" + name,
-                "title": binding.get("title") or PurePosixPath(name).name,
-            })
+            if is_html:
+                report_context["related_reports"].append({
+                    "filename": "original-sources/" + name,
+                    "title": binding.get("title") or PurePosixPath(name).name,
+                })
+            if name in FIGURES:
+                report_context["scientific_figures"].append({
+                    "filename": "original-sources/" + name, "title": FIGURES[name],
+                })
         report_context["embedded_images"] = []
         for artifact in context["source_artifacts"]:
             name = artifact["path"]
@@ -1201,7 +1262,7 @@ class PublishedStudyStore:
         return {
             "directory": str(destination.resolve()),
             "files": [
-                {"filename": path.name, "path": str(path.resolve()), "bytes": path.stat().st_size,
+                {"filename": path.name, "relative_path": str(path.relative_to(destination)), "path": str(path.resolve()), "bytes": path.stat().st_size,
                  "sha256": _hash(path.read_bytes()),
                  "mime_type": mimetypes.guess_type(path.name)[0] or "application/octet-stream"}
                 for path in (destination / name for name in sorted(written))
@@ -1327,13 +1388,12 @@ class PublishedStudyStore:
                     ". " + esc(evidence["timezone_interpretation"]) + "</p>"
                 )
             observed += "</section>"
-        observed += support_report_html(context)
         dated = context.get("dated_context", {})
         observed += table("Retained WQP source coverage", dated.get("coverage", []), [
             ("site_id", "Station"), ("project_id", "Source project"), ("characteristic", "Original characteristic"),
             ("sample_fraction", "Fraction"), ("reported_unit", "Source unit"), ("record_count", "Rows"),
             ("numeric_reported_count", "Numeric reported"), ("quantified_count", "Quantified"),
-            ("censored_below_count", "Censored below"),
+            ("censored_below_count", "Censored below"), ("censored_above_count", "Censored above"),
         ])
         observed += table("Original upstream flow context", dated.get("flow_rows", []), [
             ("sampling_date", "Sampling date"), ("gauge_id", "Upstream gauge"),
@@ -1350,7 +1410,15 @@ class PublishedStudyStore:
         ) + "<p>Selected activity dates outside the retained flow-date table: " + esc(
             ", ".join(dated.get("dates_without_flow_context", [])) or "none"
         ) + ".</p></section>"
+        observed += support_report_html(context)
         related_reports = "".join('<p><a href="' + esc(item["filename"]) + '">' + esc(item["title"]) + "</a></p>" for item in context.get("related_reports", []))
+        figures = ""
+        if context.get("scientific_figures"):
+            figures = "<section><h2>Original scientific figures</h2><p>" + esc(FIGURE_SCOPE) + "</p>" + "".join(
+                '<figure><img src="' + esc(item["filename"]) + '" alt="' + esc(item["title"]) +
+                '" style="max-width:100%;height:auto"><figcaption>' + esc(item["title"]) + "</figcaption></figure>"
+                for item in context["scientific_figures"]
+            ) + "</section>"
         url = study.get("original_url", "")
         source_link = (
             '<a href="' + esc(url) + '">Original publisher report</a>'
@@ -1380,7 +1448,7 @@ class PublishedStudyStore:
             "<div class='source'><p>" + source_link + "</p><p>Seasonal rows retain their original sample support, "
             "depths and concentration units. Monthly n values count days. Original numeric cells remain available "
             "in the accompanying CSV files.</p>" + visuals + "</div>" +
-            related_reports + seasonal + observed + monthly + ranges + stations + permits +
+            related_reports + seasonal + observed + figures + monthly + ranges + stations + permits +
             "<section><h2>Source notes</h2><ul>" + notes + "</ul></section></body></html>"
         )
 

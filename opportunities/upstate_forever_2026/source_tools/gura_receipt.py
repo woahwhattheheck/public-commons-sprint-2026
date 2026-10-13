@@ -57,7 +57,9 @@ def prepare(workspace, *, run_id=None, receiving_state=None, output=None):
     state_path = Path(receiving_state) if receiving_state is not None else (
         ws.root / "gura-receiving" / "gura-receiving-state.json")
     state_path = state_path.resolve(strict=True)
-    original_state = read_json(state_path)
+    from hashlib import sha256
+    original_state_bytes = state_path.read_bytes()
+    original_state = json.loads(original_state_bytes)
     if (original_state.get("schema") != SOURCE_STATE_SCHEMA
             or original_state.get("workspace_id") != ws.project["id"]):
         raise ValueError("Select the original Gura receiving state for this Workspace")
@@ -178,8 +180,9 @@ def prepare(workspace, *, run_id=None, receiving_state=None, output=None):
         programme = manager.create(programme_selection)
         if len(programme["runs"]) != 1 or programme["runs"][0]["run_id"] != chosen_run:
             raise ValueError("The ordinary programme must reuse the exact original native run")
-        state_copy = target.parent / "original-receiving-state.json"
-        atomic_bytes(state_copy, state_path.read_bytes(), immutable=True)
+        state_copy = (target.parent / "original-receiving-states" /
+                      (sha256(original_state_bytes).hexdigest() + ".json"))
+        atomic_bytes(state_copy, original_state_bytes, immutable=True)
         selection_path = target.parent / "programme-selection.json"
         atomic_json(selection_path, programme_selection, immutable=True)
         receipt = {
