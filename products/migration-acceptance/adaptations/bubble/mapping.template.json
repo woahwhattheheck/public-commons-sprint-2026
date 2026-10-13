@@ -1,0 +1,40 @@
+{
+  "schema": "bubble.mapping.v1",
+  "id": "replace_with_your_reviewed_mapping",
+  "expectedBasis": "Describe the separately retained destination capture and its selected population.",
+  "tables": [
+    {
+      "name": "replace_table",
+      "sourceTypeId": "replace_source_type",
+      "expectedTypeId": "replace_expected_type",
+      "primaryKey": [
+        "business_key"
+      ],
+      "columns": [
+        {
+          "name": "business_key",
+          "type": "text",
+          "nullable": false,
+          "source": {
+            "kind": "field",
+            "pointer": "/REPLACE_ACTUAL_SOURCE_FIELD",
+            "missing": {
+              "mode": "error"
+            }
+          },
+          "expected": {
+            "kind": "field",
+            "pointer": "/REPLACE_ACTUAL_EXPECTED_FIELD",
+            "missing": {
+              "mode": "error"
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "relationships": [],
+  "acceptance": {
+    "controls": []
+  }
+}

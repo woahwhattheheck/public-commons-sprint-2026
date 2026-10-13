@@ -1,0 +1,2061 @@
+{
+  "schema": "tjlabs.provider-migration-project.v1",
+  "id": "authored_bubble_four_type_20261013",
+  "title": "Authored four-type Bubble migration example",
+  "createdAt": "2026-10-13T00:20:00Z",
+  "updatedAt": "2026-10-13T00:20:00Z",
+  "revision": 0,
+  "capture": {
+    "schema": "bubble.reconciliation-capture.v1",
+    "source": {
+      "schema": "bubble.capture.v1",
+      "operationId": "authored-bubble-source-20261013",
+      "state": "complete",
+      "configuration": {
+        "schema": "bubble.capture-config.v1",
+        "operationId": "authored-bubble-source-20261013",
+        "endpoint": {
+          "origin": "https://example-source.bubbleapps.io",
+          "versionPath": "/version-test"
+        },
+        "authEnv": "BUBBLE_SOURCE_TOKEN",
+        "plan": "ordinary",
+        "consistency": {
+          "mode": "observed-interval"
+        },
+        "types": [
+          {
+            "id": "organizations",
+            "typeName": "organizations",
+            "scope": {
+              "population": "Explicit authored organizations roster; no customer or API request",
+              "coverage": "all-live",
+              "inactive": "Both authored active and inactive rows retained",
+              "deleted": "not-observed-by-list"
+            },
+            "partitioning": {
+              "mode": "single",
+              "populationCoverage": "complete-declared",
+              "evidence": "Authored fixture roster in examples/README.md; this is not an observed live app."
+            },
+            "partitions": [
+              {
+                "id": "all",
+                "constraints": [],
+                "sort_field": "Created Date",
+                "descending": false,
+                "additional_sort_fields": [
+                  {
+                    "sort_field": "_id",
+                    "descending": false
+                  }
+                ],
+                "expectedCount": {
+                  "value": 2,
+                  "source": "examples/README.md#authored-record-roster",
+                  "evidence": "Exact authored full roster retained in this capture body."
+                }
+              }
+            ]
+          },
+          {
+            "id": "people",
+            "typeName": "people",
+            "scope": {
+              "population": "Explicit authored people roster; no customer or API request",
+              "coverage": "all-live",
+              "inactive": "Both authored active and inactive rows retained",
+              "deleted": "not-observed-by-list"
+            },
+            "partitioning": {
+              "mode": "single",
+              "populationCoverage": "complete-declared",
+              "evidence": "Authored fixture roster in examples/README.md; this is not an observed live app."
+            },
+            "partitions": [
+              {
+                "id": "all",
+                "constraints": [],
+                "sort_field": "Created Date",
+                "descending": false,
+                "additional_sort_fields": [
+                  {
+                    "sort_field": "_id",
+                    "descending": false
+                  }
+                ],
+                "expectedCount": {
+                  "value": 2,
+                  "source": "examples/README.md#authored-record-roster",
+                  "evidence": "Exact authored full roster retained in this capture body."
+                }
+              }
+            ]
+          },
+          {
+            "id": "cases",
+            "typeName": "cases",
+            "scope": {
+              "population": "Explicit authored cases roster; no customer or API request",
+              "coverage": "all-live",
+              "inactive": "Both authored active and inactive rows retained",
+              "deleted": "not-observed-by-list"
+            },
+            "partitioning": {
+              "mode": "single",
+              "populationCoverage": "complete-declared",
+              "evidence": "Authored fixture roster in examples/README.md; this is not an observed live app."
+            },
+            "partitions": [
+              {
+                "id": "all",
+                "constraints": [],
+                "sort_field": "Created Date",
+                "descending": false,
+                "additional_sort_fields": [
+                  {
+                    "sort_field": "_id",
+                    "descending": false
+                  }
+                ],
+                "expectedCount": {
+                  "value": 2,
+                  "source": "examples/README.md#authored-record-roster",
+                  "evidence": "Exact authored full roster retained in this capture body."
+                }
+              }
+            ]
+          },
+          {
+            "id": "documents",
+            "typeName": "documents",
+            "scope": {
+              "population": "Explicit authored documents roster; no customer or API request",
+              "coverage": "all-live",
+              "inactive": "Both authored active and inactive rows retained",
+              "deleted": "not-observed-by-list"
+            },
+            "partitioning": {
+              "mode": "single",
+              "populationCoverage": "complete-declared",
+              "evidence": "Authored fixture roster in examples/README.md; this is not an observed live app."
+            },
+            "partitions": [
+              {
+                "id": "all",
+                "constraints": [],
+                "sort_field": "Created Date",
+                "descending": false,
+                "additional_sort_fields": [
+                  {
+                    "sort_field": "_id",
+                    "descending": false
+                  }
+                ],
+                "expectedCount": {
+                  "value": 2,
+                  "source": "examples/README.md#authored-record-roster",
+                  "evidence": "Exact authored full roster retained in this capture body."
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "startedAt": "2026-10-13T00:00:00Z",
+      "completedAt": "2026-10-13T00:03:00Z",
+      "consistency": {
+        "mode": "observed-interval"
+      },
+      "types": [
+        {
+          "id": "organizations",
+          "partitions": [
+            {
+              "id": "all",
+              "pages": [
+                {
+                  "request": {
+                    "cursor": 0,
+                    "limit": 100,
+                    "exclude_remaining": false,
+                    "selectionSha256": "426b1c10324c7969fe9e80a82f5d5df33a6c6c3b539ad81b9b9d07008b3ad5ca"
+                  },
+                  "status": 200,
+                  "receivedAt": "2026-10-13T00:01:00Z",
+                  "body": "{\"response\":{\"cursor\":0,\"count\":2,\"remaining\":0,\"results\":[{\"_id\":\"org-source-n\",\"Organization Code\":\"ORG-N\",\"Name\":\"Example North Services\",\"Region\":\"North\",\"Active\":true},{\"_id\":\"org-source-s\",\"Organization Code\":\"ORG-S\",\"Name\":\"Example South Services\",\"Region\":\"South\",\"Active\":true}]}}",
+                  "bytes": 289,
+                  "sha256": "ccceb242f82ff9f3998f3956920dd2f61db8ab1ba69e5f13f048cda6115de6b9"
+                }
+              ],
+              "countBefore": {
+                "request": {
+                  "cursor": 0,
+                  "limit": 100,
+                  "exclude_remaining": false,
+                  "selectionSha256": "426b1c10324c7969fe9e80a82f5d5df33a6c6c3b539ad81b9b9d07008b3ad5ca"
+                },
+                "status": 200,
+                "receivedAt": "2026-10-13T00:01:00Z",
+                "body": "{\"response\":{\"cursor\":0,\"count\":2,\"remaining\":0,\"results\":[{\"_id\":\"org-source-n\",\"Organization Code\":\"ORG-N\",\"Name\":\"Example North Services\",\"Region\":\"North\",\"Active\":true},{\"_id\":\"org-source-s\",\"Organization Code\":\"ORG-S\",\"Name\":\"Example South Services\",\"Region\":\"South\",\"Active\":true}]}}",
+                "bytes": 289,
+                "sha256": "ccceb242f82ff9f3998f3956920dd2f61db8ab1ba69e5f13f048cda6115de6b9"
+              },
+              "countAfter": {
+                "request": {
+                  "cursor": 0,
+                  "limit": 100,
+                  "exclude_remaining": false,
+                  "selectionSha256": "426b1c10324c7969fe9e80a82f5d5df33a6c6c3b539ad81b9b9d07008b3ad5ca"
+                },
+                "status": 200,
+                "receivedAt": "2026-10-13T00:02:00Z",
+                "body": "{\"response\":{\"cursor\":0,\"count\":2,\"remaining\":0,\"results\":[{\"_id\":\"org-source-n\",\"Organization Code\":\"ORG-N\",\"Name\":\"Example North Services\",\"Region\":\"North\",\"Active\":true},{\"_id\":\"org-source-s\",\"Organization Code\":\"ORG-S\",\"Name\":\"Example South Services\",\"Region\":\"South\",\"Active\":true}]}}",
+                "bytes": 289,
+                "sha256": "ccceb242f82ff9f3998f3956920dd2f61db8ab1ba69e5f13f048cda6115de6b9"
+              }
+            }
+          ]
+        },
+        {
+          "id": "people",
+          "partitions": [
+            {
+              "id": "all",
+              "pages": [
+                {
+                  "request": {
+                    "cursor": 0,
+                    "limit": 100,
+                    "exclude_remaining": false,
+                    "selectionSha256": "281019d2020e0c43f79d9402d64c23f6fb7585373116eddd7722f85b95a33fe8"
+                  },
+                  "status": 200,
+                  "receivedAt": "2026-10-13T00:01:00Z",
+                  "body": "{\"response\":{\"cursor\":0,\"count\":2,\"remaining\":0,\"results\":[{\"_id\":\"person-source-a\",\"Member Code\":\"P-001\",\"Name\":\"Example Person A\",\"Organization\":\"org-source-n\",\"Allowed Organizations\":[\"org-source-n\",\"org-source-s\"],\"Email\":null,\"Created Date\":\"2026-10-01T09:00:00Z\"},{\"_id\":\"person-source-b\",\"Member Code\":\"P-002\",\"Name\":\"Example Person B\",\"Organization\":\"org-source-s\",\"Allowed Organizations\":[\"org-source-s\"],\"Created Date\":\"2026-10-02T10:00:00Z\"}]}}",
+                  "bytes": 455,
+                  "sha256": "b9ca173d62fcc329b6335c1feafa00a9d76d34a2840176b6925aa53bdd030d14"
+                }
+              ],
+              "countBefore": {
+                "request": {
+                  "cursor": 0,
+                  "limit": 100,
+                  "exclude_remaining": false,
+                  "selectionSha256": "281019d2020e0c43f79d9402d64c23f6fb7585373116eddd7722f85b95a33fe8"
+                },
+                "status": 200,
+                "receivedAt": "2026-10-13T00:01:00Z",
+                "body": "{\"response\":{\"cursor\":0,\"count\":2,\"remaining\":0,\"results\":[{\"_id\":\"person-source-a\",\"Member Code\":\"P-001\",\"Name\":\"Example Person A\",\"Organization\":\"org-source-n\",\"Allowed Organizations\":[\"org-source-n\",\"org-source-s\"],\"Email\":null,\"Created Date\":\"2026-10-01T09:00:00Z\"},{\"_id\":\"person-source-b\",\"Member Code\":\"P-002\",\"Name\":\"Example Person B\",\"Organization\":\"org-source-s\",\"Allowed Organizations\":[\"org-source-s\"],\"Created Date\":\"2026-10-02T10:00:00Z\"}]}}",
+                "bytes": 455,
+                "sha256": "b9ca173d62fcc329b6335c1feafa00a9d76d34a2840176b6925aa53bdd030d14"
+              },
+              "countAfter": {
+                "request": {
+                  "cursor": 0,
+                  "limit": 100,
+                  "exclude_remaining": false,
+                  "selectionSha256": "281019d2020e0c43f79d9402d64c23f6fb7585373116eddd7722f85b95a33fe8"
+                },
+                "status": 200,
+                "receivedAt": "2026-10-13T00:02:00Z",
+                "body": "{\"response\":{\"cursor\":0,\"count\":2,\"remaining\":0,\"results\":[{\"_id\":\"person-source-a\",\"Member Code\":\"P-001\",\"Name\":\"Example Person A\",\"Organization\":\"org-source-n\",\"Allowed Organizations\":[\"org-source-n\",\"org-source-s\"],\"Email\":null,\"Created Date\":\"2026-10-01T09:00:00Z\"},{\"_id\":\"person-source-b\",\"Member Code\":\"P-002\",\"Name\":\"Example Person B\",\"Organization\":\"org-source-s\",\"Allowed Organizations\":[\"org-source-s\"],\"Created Date\":\"2026-10-02T10:00:00Z\"}]}}",
+                "bytes": 455,
+                "sha256": "b9ca173d62fcc329b6335c1feafa00a9d76d34a2840176b6925aa53bdd030d14"
+              }
+            }
+          ]
+        },
+        {
+          "id": "cases",
+          "partitions": [
+            {
+              "id": "all",
+              "pages": [
+                {
+                  "request": {
+                    "cursor": 0,
+                    "limit": 100,
+                    "exclude_remaining": false,
+                    "selectionSha256": "29889848ffba7cb3260dedeab8bd019abf8d66de255f0abfe6b836508a7a6d99"
+                  },
+                  "status": 200,
+                  "receivedAt": "2026-10-13T00:01:00Z",
+                  "body": "{\"response\":{\"cursor\":0,\"count\":2,\"remaining\":0,\"results\":[{\"_id\":\"case-source-a\",\"Case Code\":\"CASE-001\",\"Organization\":\"org-source-n\",\"Person\":\"person-source-a\",\"Amount\":\"1234.50\",\"Case Status\":\"open\",\"Opened Date\":\"2026-10-01\",\"Closed Date\":null},{\"_id\":\"case-source-b\",\"Case Code\":\"CASE-002\",\"Organization\":\"org-source-s\",\"Person\":\"person-source-b\",\"Amount\":\"0.00\",\"Case Status\":\"closed\",\"Opened Date\":\"2026-10-02\",\"Closed Date\":\"2026-10-10\"}]}}",
+                  "bytes": 448,
+                  "sha256": "cf84608c076604aa289625e138d0d853d810b6f63e28ba56a0be2bc25a900bfb"
+                }
+              ],
+              "countBefore": {
+                "request": {
+                  "cursor": 0,
+                  "limit": 100,
+                  "exclude_remaining": false,
+                  "selectionSha256": "29889848ffba7cb3260dedeab8bd019abf8d66de255f0abfe6b836508a7a6d99"
+                },
+                "status": 200,
+                "receivedAt": "2026-10-13T00:01:00Z",
+                "body": "{\"response\":{\"cursor\":0,\"count\":2,\"remaining\":0,\"results\":[{\"_id\":\"case-source-a\",\"Case Code\":\"CASE-001\",\"Organization\":\"org-source-n\",\"Person\":\"person-source-a\",\"Amount\":\"1234.50\",\"Case Status\":\"open\",\"Opened Date\":\"2026-10-01\",\"Closed Date\":null},{\"_id\":\"case-source-b\",\"Case Code\":\"CASE-002\",\"Organization\":\"org-source-s\",\"Person\":\"person-source-b\",\"Amount\":\"0.00\",\"Case Status\":\"closed\",\"Opened Date\":\"2026-10-02\",\"Closed Date\":\"2026-10-10\"}]}}",
+                "bytes": 448,
+                "sha256": "cf84608c076604aa289625e138d0d853d810b6f63e28ba56a0be2bc25a900bfb"
+              },
+              "countAfter": {
+                "request": {
+                  "cursor": 0,
+                  "limit": 100,
+                  "exclude_remaining": false,
+                  "selectionSha256": "29889848ffba7cb3260dedeab8bd019abf8d66de255f0abfe6b836508a7a6d99"
+                },
+                "status": 200,
+                "receivedAt": "2026-10-13T00:02:00Z",
+                "body": "{\"response\":{\"cursor\":0,\"count\":2,\"remaining\":0,\"results\":[{\"_id\":\"case-source-a\",\"Case Code\":\"CASE-001\",\"Organization\":\"org-source-n\",\"Person\":\"person-source-a\",\"Amount\":\"1234.50\",\"Case Status\":\"open\",\"Opened Date\":\"2026-10-01\",\"Closed Date\":null},{\"_id\":\"case-source-b\",\"Case Code\":\"CASE-002\",\"Organization\":\"org-source-s\",\"Person\":\"person-source-b\",\"Amount\":\"0.00\",\"Case Status\":\"closed\",\"Opened Date\":\"2026-10-02\",\"Closed Date\":\"2026-10-10\"}]}}",
+                "bytes": 448,
+                "sha256": "cf84608c076604aa289625e138d0d853d810b6f63e28ba56a0be2bc25a900bfb"
+              }
+            }
+          ]
+        },
+        {
+          "id": "documents",
+          "partitions": [
+            {
+              "id": "all",
+              "pages": [
+                {
+                  "request": {
+                    "cursor": 0,
+                    "limit": 100,
+                    "exclude_remaining": false,
+                    "selectionSha256": "d005937a4ae9b664bfdfabd1218926d9d3aebf3d2acf0aa22082757381d1efc1"
+                  },
+                  "status": 200,
+                  "receivedAt": "2026-10-13T00:01:00Z",
+                  "body": "{\"response\":{\"cursor\":0,\"count\":2,\"remaining\":0,\"results\":[{\"_id\":\"doc-source-a\",\"Document Code\":\"DOC-001\",\"Case\":\"case-source-a\",\"Name\":\"Example intake attachment\",\"Asset\":{\"url\":\"https://example.org/authored/intake.pdf\",\"name\":\"intake.pdf\"},\"Active\":true},{\"_id\":\"doc-source-b\",\"Document Code\":\"DOC-002\",\"Case\":\"case-source-b\",\"Name\":\"Example closure attachment\",\"Asset\":null,\"Active\":false}]}}",
+                  "bytes": 396,
+                  "sha256": "304f6b50d9bd0e539123d14839fc039cc7a053f3cf104b351fb39570bc0cef67"
+                }
+              ],
+              "countBefore": {
+                "request": {
+                  "cursor": 0,
+                  "limit": 100,
+                  "exclude_remaining": false,
+                  "selectionSha256": "d005937a4ae9b664bfdfabd1218926d9d3aebf3d2acf0aa22082757381d1efc1"
+                },
+                "status": 200,
+                "receivedAt": "2026-10-13T00:01:00Z",
+                "body": "{\"response\":{\"cursor\":0,\"count\":2,\"remaining\":0,\"results\":[{\"_id\":\"doc-source-a\",\"Document Code\":\"DOC-001\",\"Case\":\"case-source-a\",\"Name\":\"Example intake attachment\",\"Asset\":{\"url\":\"https://example.org/authored/intake.pdf\",\"name\":\"intake.pdf\"},\"Active\":true},{\"_id\":\"doc-source-b\",\"Document Code\":\"DOC-002\",\"Case\":\"case-source-b\",\"Name\":\"Example closure attachment\",\"Asset\":null,\"Active\":false}]}}",
+                "bytes": 396,
+                "sha256": "304f6b50d9bd0e539123d14839fc039cc7a053f3cf104b351fb39570bc0cef67"
+              },
+              "countAfter": {
+                "request": {
+                  "cursor": 0,
+                  "limit": 100,
+                  "exclude_remaining": false,
+                  "selectionSha256": "d005937a4ae9b664bfdfabd1218926d9d3aebf3d2acf0aa22082757381d1efc1"
+                },
+                "status": 200,
+                "receivedAt": "2026-10-13T00:02:00Z",
+                "body": "{\"response\":{\"cursor\":0,\"count\":2,\"remaining\":0,\"results\":[{\"_id\":\"doc-source-a\",\"Document Code\":\"DOC-001\",\"Case\":\"case-source-a\",\"Name\":\"Example intake attachment\",\"Asset\":{\"url\":\"https://example.org/authored/intake.pdf\",\"name\":\"intake.pdf\"},\"Active\":true},{\"_id\":\"doc-source-b\",\"Document Code\":\"DOC-002\",\"Case\":\"case-source-b\",\"Name\":\"Example closure attachment\",\"Asset\":null,\"Active\":false}]}}",
+                "bytes": 396,
+                "sha256": "304f6b50d9bd0e539123d14839fc039cc7a053f3cf104b351fb39570bc0cef67"
+              }
+            }
+          ]
+        }
+      ],
+      "observation": "AUTHORED EXAMPLE: bodies were created from the explicit fictional roster. No Bubble account was accessed."
+    },
+    "expected": {
+      "schema": "bubble.capture.v1",
+      "operationId": "authored-bubble-expected-20261013",
+      "state": "complete",
+      "configuration": {
+        "schema": "bubble.capture-config.v1",
+        "operationId": "authored-bubble-expected-20261013",
+        "endpoint": {
+          "origin": "https://example-expected.bubbleapps.io",
+          "versionPath": "/version-test"
+        },
+        "authEnv": "BUBBLE_EXPECTED_TOKEN",
+        "plan": "ordinary",
+        "consistency": {
+          "mode": "observed-interval"
+        },
+        "types": [
+          {
+            "id": "organizations",
+            "typeName": "organizations",
+            "scope": {
+              "population": "Explicit authored organizations roster; no customer or API request",
+              "coverage": "all-live",
+              "inactive": "Both authored active and inactive rows retained",
+              "deleted": "not-observed-by-list"
+            },
+            "partitioning": {
+              "mode": "single",
+              "populationCoverage": "complete-declared",
+              "evidence": "Authored fixture roster in examples/README.md; this is not an observed live app."
+            },
+            "partitions": [
+              {
+                "id": "all",
+                "constraints": [],
+                "sort_field": "Created Date",
+                "descending": false,
+                "additional_sort_fields": [
+                  {
+                    "sort_field": "_id",
+                    "descending": false
+                  }
+                ],
+                "expectedCount": {
+                  "value": 2,
+                  "source": "examples/README.md#authored-record-roster",
+                  "evidence": "Exact authored full roster retained in this capture body."
+                }
+              }
+            ]
+          },
+          {
+            "id": "people",
+            "typeName": "people",
+            "scope": {
+              "population": "Explicit authored people roster; no customer or API request",
+              "coverage": "all-live",
+              "inactive": "Both authored active and inactive rows retained",
+              "deleted": "not-observed-by-list"
+            },
+            "partitioning": {
+              "mode": "single",
+              "populationCoverage": "complete-declared",
+              "evidence": "Authored fixture roster in examples/README.md; this is not an observed live app."
+            },
+            "partitions": [
+              {
+                "id": "all",
+                "constraints": [],
+                "sort_field": "Created Date",
+                "descending": false,
+                "additional_sort_fields": [
+                  {
+                    "sort_field": "_id",
+                    "descending": false
+                  }
+                ],
+                "expectedCount": {
+                  "value": 2,
+                  "source": "examples/README.md#authored-record-roster",
+                  "evidence": "Exact authored full roster retained in this capture body."
+                }
+              }
+            ]
+          },
+          {
+            "id": "cases",
+            "typeName": "cases",
+            "scope": {
+              "population": "Explicit authored cases roster; no customer or API request",
+              "coverage": "all-live",
+              "inactive": "Both authored active and inactive rows retained",
+              "deleted": "not-observed-by-list"
+            },
+            "partitioning": {
+              "mode": "single",
+              "populationCoverage": "complete-declared",
+              "evidence": "Authored fixture roster in examples/README.md; this is not an observed live app."
+            },
+            "partitions": [
+              {
+                "id": "all",
+                "constraints": [],
+                "sort_field": "Created Date",
+                "descending": false,
+                "additional_sort_fields": [
+                  {
+                    "sort_field": "_id",
+                    "descending": false
+                  }
+                ],
+                "expectedCount": {
+                  "value": 2,
+                  "source": "examples/README.md#authored-record-roster",
+                  "evidence": "Exact authored full roster retained in this capture body."
+                }
+              }
+            ]
+          },
+          {
+            "id": "documents",
+            "typeName": "documents",
+            "scope": {
+              "population": "Explicit authored documents roster; no customer or API request",
+              "coverage": "all-live",
+              "inactive": "Both authored active and inactive rows retained",
+              "deleted": "not-observed-by-list"
+            },
+            "partitioning": {
+              "mode": "single",
+              "populationCoverage": "complete-declared",
+              "evidence": "Authored fixture roster in examples/README.md; this is not an observed live app."
+            },
+            "partitions": [
+              {
+                "id": "all",
+                "constraints": [],
+                "sort_field": "Created Date",
+                "descending": false,
+                "additional_sort_fields": [
+                  {
+                    "sort_field": "_id",
+                    "descending": false
+                  }
+                ],
+                "expectedCount": {
+                  "value": 2,
+                  "source": "examples/README.md#authored-record-roster",
+                  "evidence": "Exact authored full roster retained in this capture body."
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "startedAt": "2026-10-13T00:10:00Z",
+      "completedAt": "2026-10-13T00:13:00Z",
+      "consistency": {
+        "mode": "observed-interval"
+      },
+      "types": [
+        {
+          "id": "organizations",
+          "partitions": [
+            {
+              "id": "all",
+              "pages": [
+                {
+                  "request": {
+                    "cursor": 0,
+                    "limit": 100,
+                    "exclude_remaining": false,
+                    "selectionSha256": "5c63af232c8b119f13da6c8c9bffcbb983def457ba925eac688f5018df86099c"
+                  },
+                  "status": 200,
+                  "receivedAt": "2026-10-13T00:11:00Z",
+                  "body": "{\"response\":{\"cursor\":0,\"count\":2,\"remaining\":0,\"results\":[{\"_id\":\"org-target-100\",\"organization_code\":\"ORG-N\",\"name\":\"Example North Services\",\"region\":\"North\",\"enabled\":true},{\"_id\":\"org-target-200\",\"organization_code\":\"ORG-S\",\"name\":\"Example South Services\",\"region\":\"South\",\"enabled\":true}]}}",
+                  "bytes": 295,
+                  "sha256": "ddf2598ece35ea3343607ac70c5f3d8695a0721c37b01aa50b5afc3f3ebf3dd7"
+                }
+              ],
+              "countBefore": {
+                "request": {
+                  "cursor": 0,
+                  "limit": 100,
+                  "exclude_remaining": false,
+                  "selectionSha256": "5c63af232c8b119f13da6c8c9bffcbb983def457ba925eac688f5018df86099c"
+                },
+                "status": 200,
+                "receivedAt": "2026-10-13T00:11:00Z",
+                "body": "{\"response\":{\"cursor\":0,\"count\":2,\"remaining\":0,\"results\":[{\"_id\":\"org-target-100\",\"organization_code\":\"ORG-N\",\"name\":\"Example North Services\",\"region\":\"North\",\"enabled\":true},{\"_id\":\"org-target-200\",\"organization_code\":\"ORG-S\",\"name\":\"Example South Services\",\"region\":\"South\",\"enabled\":true}]}}",
+                "bytes": 295,
+                "sha256": "ddf2598ece35ea3343607ac70c5f3d8695a0721c37b01aa50b5afc3f3ebf3dd7"
+              },
+              "countAfter": {
+                "request": {
+                  "cursor": 0,
+                  "limit": 100,
+                  "exclude_remaining": false,
+                  "selectionSha256": "5c63af232c8b119f13da6c8c9bffcbb983def457ba925eac688f5018df86099c"
+                },
+                "status": 200,
+                "receivedAt": "2026-10-13T00:12:00Z",
+                "body": "{\"response\":{\"cursor\":0,\"count\":2,\"remaining\":0,\"results\":[{\"_id\":\"org-target-100\",\"organization_code\":\"ORG-N\",\"name\":\"Example North Services\",\"region\":\"North\",\"enabled\":true},{\"_id\":\"org-target-200\",\"organization_code\":\"ORG-S\",\"name\":\"Example South Services\",\"region\":\"South\",\"enabled\":true}]}}",
+                "bytes": 295,
+                "sha256": "ddf2598ece35ea3343607ac70c5f3d8695a0721c37b01aa50b5afc3f3ebf3dd7"
+              }
+            }
+          ]
+        },
+        {
+          "id": "people",
+          "partitions": [
+            {
+              "id": "all",
+              "pages": [
+                {
+                  "request": {
+                    "cursor": 0,
+                    "limit": 100,
+                    "exclude_remaining": false,
+                    "selectionSha256": "27eb084d6eec743a4d5e5874067542941cbc462f54a93fa6306dd6d01d7d300e"
+                  },
+                  "status": 200,
+                  "receivedAt": "2026-10-13T00:11:00Z",
+                  "body": "{\"response\":{\"cursor\":0,\"count\":2,\"remaining\":0,\"results\":[{\"_id\":\"person-target-100\",\"member_code\":\"P-001\",\"name\":\"Example Person A\",\"organization\":\"org-target-100\",\"allowed_organizations\":[\"org-target-100\",\"org-target-200\"],\"email\":null,\"created_at\":\"2026-10-01T09:00:00Z\"},{\"_id\":\"person-target-200\",\"member_code\":\"P-002\",\"name\":\"Example Person B\",\"organization\":\"org-target-200\",\"allowed_organizations\":[\"org-target-200\"],\"created_at\":\"2026-10-02T10:00:00Z\"}]}}",
+                  "bytes": 465,
+                  "sha256": "e64fa60ce5d5d06e9bc04c8d269dd271462acc6c9319dd37a3e2959cf8bfc837"
+                }
+              ],
+              "countBefore": {
+                "request": {
+                  "cursor": 0,
+                  "limit": 100,
+                  "exclude_remaining": false,
+                  "selectionSha256": "27eb084d6eec743a4d5e5874067542941cbc462f54a93fa6306dd6d01d7d300e"
+                },
+                "status": 200,
+                "receivedAt": "2026-10-13T00:11:00Z",
+                "body": "{\"response\":{\"cursor\":0,\"count\":2,\"remaining\":0,\"results\":[{\"_id\":\"person-target-100\",\"member_code\":\"P-001\",\"name\":\"Example Person A\",\"organization\":\"org-target-100\",\"allowed_organizations\":[\"org-target-100\",\"org-target-200\"],\"email\":null,\"created_at\":\"2026-10-01T09:00:00Z\"},{\"_id\":\"person-target-200\",\"member_code\":\"P-002\",\"name\":\"Example Person B\",\"organization\":\"org-target-200\",\"allowed_organizations\":[\"org-target-200\"],\"created_at\":\"2026-10-02T10:00:00Z\"}]}}",
+                "bytes": 465,
+                "sha256": "e64fa60ce5d5d06e9bc04c8d269dd271462acc6c9319dd37a3e2959cf8bfc837"
+              },
+              "countAfter": {
+                "request": {
+                  "cursor": 0,
+                  "limit": 100,
+                  "exclude_remaining": false,
+                  "selectionSha256": "27eb084d6eec743a4d5e5874067542941cbc462f54a93fa6306dd6d01d7d300e"
+                },
+                "status": 200,
+                "receivedAt": "2026-10-13T00:12:00Z",
+                "body": "{\"response\":{\"cursor\":0,\"count\":2,\"remaining\":0,\"results\":[{\"_id\":\"person-target-100\",\"member_code\":\"P-001\",\"name\":\"Example Person A\",\"organization\":\"org-target-100\",\"allowed_organizations\":[\"org-target-100\",\"org-target-200\"],\"email\":null,\"created_at\":\"2026-10-01T09:00:00Z\"},{\"_id\":\"person-target-200\",\"member_code\":\"P-002\",\"name\":\"Example Person B\",\"organization\":\"org-target-200\",\"allowed_organizations\":[\"org-target-200\"],\"created_at\":\"2026-10-02T10:00:00Z\"}]}}",
+                "bytes": 465,
+                "sha256": "e64fa60ce5d5d06e9bc04c8d269dd271462acc6c9319dd37a3e2959cf8bfc837"
+              }
+            }
+          ]
+        },
+        {
+          "id": "cases",
+          "partitions": [
+            {
+              "id": "all",
+              "pages": [
+                {
+                  "request": {
+                    "cursor": 0,
+                    "limit": 100,
+                    "exclude_remaining": false,
+                    "selectionSha256": "20d26f5f23b99489cb9a3cb4b077f315f8537b73c3230ad3406547bff3bc09cc"
+                  },
+                  "status": 200,
+                  "receivedAt": "2026-10-13T00:11:00Z",
+                  "body": "{\"response\":{\"cursor\":0,\"count\":2,\"remaining\":0,\"results\":[{\"_id\":\"case-target-100\",\"case_code\":\"CASE-001\",\"organization\":\"org-target-100\",\"person\":\"person-target-100\",\"amount\":\"1234.49\",\"status\":\"open\",\"opened_date\":\"2026-10-01\",\"closed_date\":null},{\"_id\":\"case-target-200\",\"case_code\":\"CASE-002\",\"organization\":\"org-target-200\",\"person\":\"person-target-200\",\"amount\":\"0.00\",\"status\":\"closed\",\"opened_date\":\"2026-10-02\",\"closed_date\":\"2026-10-10\"}]}}",
+                  "bytes": 450,
+                  "sha256": "8fc4a818304de52034752b3ebcd8871517164d19990ecffbcea74f79b000655b"
+                }
+              ],
+              "countBefore": {
+                "request": {
+                  "cursor": 0,
+                  "limit": 100,
+                  "exclude_remaining": false,
+                  "selectionSha256": "20d26f5f23b99489cb9a3cb4b077f315f8537b73c3230ad3406547bff3bc09cc"
+                },
+                "status": 200,
+                "receivedAt": "2026-10-13T00:11:00Z",
+                "body": "{\"response\":{\"cursor\":0,\"count\":2,\"remaining\":0,\"results\":[{\"_id\":\"case-target-100\",\"case_code\":\"CASE-001\",\"organization\":\"org-target-100\",\"person\":\"person-target-100\",\"amount\":\"1234.49\",\"status\":\"open\",\"opened_date\":\"2026-10-01\",\"closed_date\":null},{\"_id\":\"case-target-200\",\"case_code\":\"CASE-002\",\"organization\":\"org-target-200\",\"person\":\"person-target-200\",\"amount\":\"0.00\",\"status\":\"closed\",\"opened_date\":\"2026-10-02\",\"closed_date\":\"2026-10-10\"}]}}",
+                "bytes": 450,
+                "sha256": "8fc4a818304de52034752b3ebcd8871517164d19990ecffbcea74f79b000655b"
+              },
+              "countAfter": {
+                "request": {
+                  "cursor": 0,
+                  "limit": 100,
+                  "exclude_remaining": false,
+                  "selectionSha256": "20d26f5f23b99489cb9a3cb4b077f315f8537b73c3230ad3406547bff3bc09cc"
+                },
+                "status": 200,
+                "receivedAt": "2026-10-13T00:12:00Z",
+                "body": "{\"response\":{\"cursor\":0,\"count\":2,\"remaining\":0,\"results\":[{\"_id\":\"case-target-100\",\"case_code\":\"CASE-001\",\"organization\":\"org-target-100\",\"person\":\"person-target-100\",\"amount\":\"1234.49\",\"status\":\"open\",\"opened_date\":\"2026-10-01\",\"closed_date\":null},{\"_id\":\"case-target-200\",\"case_code\":\"CASE-002\",\"organization\":\"org-target-200\",\"person\":\"person-target-200\",\"amount\":\"0.00\",\"status\":\"closed\",\"opened_date\":\"2026-10-02\",\"closed_date\":\"2026-10-10\"}]}}",
+                "bytes": 450,
+                "sha256": "8fc4a818304de52034752b3ebcd8871517164d19990ecffbcea74f79b000655b"
+              }
+            }
+          ]
+        },
+        {
+          "id": "documents",
+          "partitions": [
+            {
+              "id": "all",
+              "pages": [
+                {
+                  "request": {
+                    "cursor": 0,
+                    "limit": 100,
+                    "exclude_remaining": false,
+                    "selectionSha256": "dfe806bcff9b121da5b414711e3f777fc27a410ab9721717feb82521fd4e8328"
+                  },
+                  "status": 200,
+                  "receivedAt": "2026-10-13T00:11:00Z",
+                  "body": "{\"response\":{\"cursor\":0,\"count\":2,\"remaining\":0,\"results\":[{\"_id\":\"doc-target-100\",\"document_code\":\"DOC-001\",\"case\":\"case-target-100\",\"name\":\"Example intake attachment\",\"asset\":{\"url\":\"https://example.org/authored/intake.pdf\",\"name\":\"intake.pdf\"},\"enabled\":true},{\"_id\":\"doc-target-200\",\"document_code\":\"DOC-002\",\"case\":\"case-target-200\",\"name\":\"Example closure attachment\",\"asset\":null,\"enabled\":false}]}}",
+                  "bytes": 406,
+                  "sha256": "5bd3680840505480c1e4906122aa8a2887a43c5819ed4aaec1993750d2431165"
+                }
+              ],
+              "countBefore": {
+                "request": {
+                  "cursor": 0,
+                  "limit": 100,
+                  "exclude_remaining": false,
+                  "selectionSha256": "dfe806bcff9b121da5b414711e3f777fc27a410ab9721717feb82521fd4e8328"
+                },
+                "status": 200,
+                "receivedAt": "2026-10-13T00:11:00Z",
+                "body": "{\"response\":{\"cursor\":0,\"count\":2,\"remaining\":0,\"results\":[{\"_id\":\"doc-target-100\",\"document_code\":\"DOC-001\",\"case\":\"case-target-100\",\"name\":\"Example intake attachment\",\"asset\":{\"url\":\"https://example.org/authored/intake.pdf\",\"name\":\"intake.pdf\"},\"enabled\":true},{\"_id\":\"doc-target-200\",\"document_code\":\"DOC-002\",\"case\":\"case-target-200\",\"name\":\"Example closure attachment\",\"asset\":null,\"enabled\":false}]}}",
+                "bytes": 406,
+                "sha256": "5bd3680840505480c1e4906122aa8a2887a43c5819ed4aaec1993750d2431165"
+              },
+              "countAfter": {
+                "request": {
+                  "cursor": 0,
+                  "limit": 100,
+                  "exclude_remaining": false,
+                  "selectionSha256": "dfe806bcff9b121da5b414711e3f777fc27a410ab9721717feb82521fd4e8328"
+                },
+                "status": 200,
+                "receivedAt": "2026-10-13T00:12:00Z",
+                "body": "{\"response\":{\"cursor\":0,\"count\":2,\"remaining\":0,\"results\":[{\"_id\":\"doc-target-100\",\"document_code\":\"DOC-001\",\"case\":\"case-target-100\",\"name\":\"Example intake attachment\",\"asset\":{\"url\":\"https://example.org/authored/intake.pdf\",\"name\":\"intake.pdf\"},\"enabled\":true},{\"_id\":\"doc-target-200\",\"document_code\":\"DOC-002\",\"case\":\"case-target-200\",\"name\":\"Example closure attachment\",\"asset\":null,\"enabled\":false}]}}",
+                "bytes": 406,
+                "sha256": "5bd3680840505480c1e4906122aa8a2887a43c5819ed4aaec1993750d2431165"
+              }
+            }
+          ]
+        }
+      ],
+      "observation": "AUTHORED EXAMPLE: bodies were created from the explicit fictional roster. No Bubble account was accessed."
+    }
+  },
+  "captureSha256": "ed63ccb59661a04d95362ec293b84c15a05d442d349aaaa05dde2bc907f1aeab",
+  "initialMapping": {
+    "schema": "bubble.mapping.v1",
+    "id": "authored-four-type-nonprofit-mapping",
+    "expectedBasis": "Separately authored destination capture with different native Bubble IDs, explicit reviewed business keys and one intentional 0.01 amount difference. This is a reusable example, not buyer data or a passed migration.",
+    "tables": [
+      {
+        "name": "organizations",
+        "sourceTypeId": "organizations",
+        "expectedTypeId": "organizations",
+        "primaryKey": [
+          "organization_code"
+        ],
+        "columns": [
+          {
+            "name": "organization_code",
+            "type": "text",
+            "nullable": false,
+            "source": {
+              "kind": "field",
+              "pointer": "/Organization Code",
+              "missing": {
+                "mode": "error"
+              }
+            },
+            "expected": {
+              "kind": "field",
+              "pointer": "/organization_code",
+              "missing": {
+                "mode": "error"
+              }
+            }
+          },
+          {
+            "name": "name",
+            "type": "text",
+            "nullable": false,
+            "source": {
+              "kind": "field",
+              "pointer": "/Name",
+              "missing": {
+                "mode": "error"
+              }
+            },
+            "expected": {
+              "kind": "field",
+              "pointer": "/name",
+              "missing": {
+                "mode": "error"
+              }
+            }
+          },
+          {
+            "name": "active",
+            "type": "boolean",
+            "nullable": false,
+            "source": {
+              "kind": "field",
+              "pointer": "/Active",
+              "missing": {
+                "mode": "error"
+              }
+            },
+            "expected": {
+              "kind": "field",
+              "pointer": "/enabled",
+              "missing": {
+                "mode": "error"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "name": "people",
+        "sourceTypeId": "people",
+        "expectedTypeId": "people",
+        "primaryKey": [
+          "person_code"
+        ],
+        "columns": [
+          {
+            "name": "person_code",
+            "type": "text",
+            "nullable": false,
+            "source": {
+              "kind": "field",
+              "pointer": "/Member Code",
+              "missing": {
+                "mode": "error"
+              }
+            },
+            "expected": {
+              "kind": "field",
+              "pointer": "/member_code",
+              "missing": {
+                "mode": "error"
+              }
+            }
+          },
+          {
+            "name": "name",
+            "type": "text",
+            "nullable": false,
+            "source": {
+              "kind": "field",
+              "pointer": "/Name",
+              "missing": {
+                "mode": "error"
+              }
+            },
+            "expected": {
+              "kind": "field",
+              "pointer": "/name",
+              "missing": {
+                "mode": "error"
+              }
+            }
+          },
+          {
+            "name": "organization_code",
+            "type": "text",
+            "nullable": false,
+            "source": {
+              "kind": "field",
+              "pointer": "/Organization",
+              "missing": {
+                "mode": "error"
+              },
+              "lookup": {
+                "typeId": "organizations",
+                "keyPointer": "/_id",
+                "valuePointer": "/Organization Code",
+                "missing": {
+                  "mode": "error"
+                }
+              }
+            },
+            "expected": {
+              "kind": "field",
+              "pointer": "/organization",
+              "missing": {
+                "mode": "error"
+              },
+              "lookup": {
+                "typeId": "organizations",
+                "keyPointer": "/_id",
+                "valuePointer": "/organization_code",
+                "missing": {
+                  "mode": "error"
+                }
+              }
+            }
+          },
+          {
+            "name": "email",
+            "type": "text",
+            "nullable": true,
+            "source": {
+              "kind": "field",
+              "pointer": "/Email",
+              "missing": {
+                "mode": "null"
+              }
+            },
+            "expected": {
+              "kind": "field",
+              "pointer": "/email",
+              "missing": {
+                "mode": "null"
+              }
+            }
+          },
+          {
+            "name": "created_at",
+            "type": "timestamp",
+            "nullable": false,
+            "source": {
+              "kind": "field",
+              "pointer": "/Created Date",
+              "missing": {
+                "mode": "error"
+              }
+            },
+            "expected": {
+              "kind": "field",
+              "pointer": "/created_at",
+              "missing": {
+                "mode": "error"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "name": "cases",
+        "sourceTypeId": "cases",
+        "expectedTypeId": "cases",
+        "primaryKey": [
+          "case_code"
+        ],
+        "columns": [
+          {
+            "name": "case_code",
+            "type": "text",
+            "nullable": false,
+            "source": {
+              "kind": "field",
+              "pointer": "/Case Code",
+              "missing": {
+                "mode": "error"
+              }
+            },
+            "expected": {
+              "kind": "field",
+              "pointer": "/case_code",
+              "missing": {
+                "mode": "error"
+              }
+            }
+          },
+          {
+            "name": "organization_code",
+            "type": "text",
+            "nullable": false,
+            "source": {
+              "kind": "field",
+              "pointer": "/Organization",
+              "missing": {
+                "mode": "error"
+              },
+              "lookup": {
+                "typeId": "organizations",
+                "keyPointer": "/_id",
+                "valuePointer": "/Organization Code",
+                "missing": {
+                  "mode": "error"
+                }
+              }
+            },
+            "expected": {
+              "kind": "field",
+              "pointer": "/organization",
+              "missing": {
+                "mode": "error"
+              },
+              "lookup": {
+                "typeId": "organizations",
+                "keyPointer": "/_id",
+                "valuePointer": "/organization_code",
+                "missing": {
+                  "mode": "error"
+                }
+              }
+            }
+          },
+          {
+            "name": "person_code",
+            "type": "text",
+            "nullable": false,
+            "source": {
+              "kind": "field",
+              "pointer": "/Person",
+              "missing": {
+                "mode": "error"
+              },
+              "lookup": {
+                "typeId": "people",
+                "keyPointer": "/_id",
+                "valuePointer": "/Member Code",
+                "missing": {
+                  "mode": "error"
+                }
+              }
+            },
+            "expected": {
+              "kind": "field",
+              "pointer": "/person",
+              "missing": {
+                "mode": "error"
+              },
+              "lookup": {
+                "typeId": "people",
+                "keyPointer": "/_id",
+                "valuePointer": "/member_code",
+                "missing": {
+                  "mode": "error"
+                }
+              }
+            }
+          },
+          {
+            "name": "amount",
+            "type": "decimal",
+            "nullable": false,
+            "source": {
+              "kind": "field",
+              "pointer": "/Amount",
+              "missing": {
+                "mode": "error"
+              }
+            },
+            "expected": {
+              "kind": "field",
+              "pointer": "/amount",
+              "missing": {
+                "mode": "error"
+              }
+            },
+            "precision": 18,
+            "scale": 2
+          },
+          {
+            "name": "status",
+            "type": "text",
+            "nullable": false,
+            "source": {
+              "kind": "field",
+              "pointer": "/Case Status",
+              "missing": {
+                "mode": "error"
+              }
+            },
+            "expected": {
+              "kind": "field",
+              "pointer": "/status",
+              "missing": {
+                "mode": "error"
+              }
+            }
+          },
+          {
+            "name": "opened_date",
+            "type": "date",
+            "nullable": false,
+            "source": {
+              "kind": "field",
+              "pointer": "/Opened Date",
+              "missing": {
+                "mode": "error"
+              }
+            },
+            "expected": {
+              "kind": "field",
+              "pointer": "/opened_date",
+              "missing": {
+                "mode": "error"
+              }
+            }
+          },
+          {
+            "name": "closed_date",
+            "type": "date",
+            "nullable": true,
+            "source": {
+              "kind": "field",
+              "pointer": "/Closed Date",
+              "missing": {
+                "mode": "error"
+              }
+            },
+            "expected": {
+              "kind": "field",
+              "pointer": "/closed_date",
+              "missing": {
+                "mode": "error"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "name": "documents",
+        "sourceTypeId": "documents",
+        "expectedTypeId": "documents",
+        "primaryKey": [
+          "document_code"
+        ],
+        "columns": [
+          {
+            "name": "document_code",
+            "type": "text",
+            "nullable": false,
+            "source": {
+              "kind": "field",
+              "pointer": "/Document Code",
+              "missing": {
+                "mode": "error"
+              }
+            },
+            "expected": {
+              "kind": "field",
+              "pointer": "/document_code",
+              "missing": {
+                "mode": "error"
+              }
+            }
+          },
+          {
+            "name": "case_code",
+            "type": "text",
+            "nullable": false,
+            "source": {
+              "kind": "field",
+              "pointer": "/Case",
+              "missing": {
+                "mode": "error"
+              },
+              "lookup": {
+                "typeId": "cases",
+                "keyPointer": "/_id",
+                "valuePointer": "/Case Code",
+                "missing": {
+                  "mode": "error"
+                }
+              }
+            },
+            "expected": {
+              "kind": "field",
+              "pointer": "/case",
+              "missing": {
+                "mode": "error"
+              },
+              "lookup": {
+                "typeId": "cases",
+                "keyPointer": "/_id",
+                "valuePointer": "/case_code",
+                "missing": {
+                  "mode": "error"
+                }
+              }
+            }
+          },
+          {
+            "name": "name",
+            "type": "text",
+            "nullable": false,
+            "source": {
+              "kind": "field",
+              "pointer": "/Name",
+              "missing": {
+                "mode": "error"
+              }
+            },
+            "expected": {
+              "kind": "field",
+              "pointer": "/name",
+              "missing": {
+                "mode": "error"
+              }
+            }
+          },
+          {
+            "name": "asset_metadata_json",
+            "type": "text",
+            "nullable": false,
+            "source": {
+              "kind": "field",
+              "pointer": "/Asset",
+              "missing": {
+                "mode": "error"
+              },
+              "encoding": "canonical-json"
+            },
+            "expected": {
+              "kind": "field",
+              "pointer": "/asset",
+              "missing": {
+                "mode": "error"
+              },
+              "encoding": "canonical-json"
+            }
+          },
+          {
+            "name": "active",
+            "type": "boolean",
+            "nullable": false,
+            "source": {
+              "kind": "field",
+              "pointer": "/Active",
+              "missing": {
+                "mode": "error"
+              }
+            },
+            "expected": {
+              "kind": "field",
+              "pointer": "/enabled",
+              "missing": {
+                "mode": "error"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "name": "person_organizations",
+        "sourceTypeId": "people",
+        "expectedTypeId": "people",
+        "sourceRows": {
+          "mode": "list",
+          "pointer": "/Allowed Organizations",
+          "missing": {
+            "mode": "value",
+            "value": []
+          }
+        },
+        "expectedRows": {
+          "mode": "list",
+          "pointer": "/allowed_organizations",
+          "missing": {
+            "mode": "value",
+            "value": []
+          }
+        },
+        "primaryKey": [
+          "person_code",
+          "organization_code"
+        ],
+        "columns": [
+          {
+            "name": "person_code",
+            "type": "text",
+            "nullable": false,
+            "source": {
+              "kind": "field",
+              "pointer": "/Member Code",
+              "missing": {
+                "mode": "error"
+              }
+            },
+            "expected": {
+              "kind": "field",
+              "pointer": "/member_code",
+              "missing": {
+                "mode": "error"
+              }
+            }
+          },
+          {
+            "name": "organization_code",
+            "type": "text",
+            "nullable": false,
+            "source": {
+              "kind": "list-item",
+              "pointer": "",
+              "lookup": {
+                "typeId": "organizations",
+                "keyPointer": "/_id",
+                "valuePointer": "/Organization Code",
+                "missing": {
+                  "mode": "error"
+                }
+              }
+            },
+            "expected": {
+              "kind": "list-item",
+              "pointer": "",
+              "lookup": {
+                "typeId": "organizations",
+                "keyPointer": "/_id",
+                "valuePointer": "/organization_code",
+                "missing": {
+                  "mode": "error"
+                }
+              }
+            }
+          }
+        ]
+      }
+    ],
+    "relationships": [
+      {
+        "id": "people_org",
+        "childTable": "people",
+        "childColumns": [
+          "organization_code"
+        ],
+        "parentTable": "organizations",
+        "parentColumns": [
+          "organization_code"
+        ],
+        "nulls": "reject"
+      },
+      {
+        "id": "case_org",
+        "childTable": "cases",
+        "childColumns": [
+          "organization_code"
+        ],
+        "parentTable": "organizations",
+        "parentColumns": [
+          "organization_code"
+        ],
+        "nulls": "reject"
+      },
+      {
+        "id": "case_person",
+        "childTable": "cases",
+        "childColumns": [
+          "person_code"
+        ],
+        "parentTable": "people",
+        "parentColumns": [
+          "person_code"
+        ],
+        "nulls": "reject"
+      },
+      {
+        "id": "document_case",
+        "childTable": "documents",
+        "childColumns": [
+          "case_code"
+        ],
+        "parentTable": "cases",
+        "parentColumns": [
+          "case_code"
+        ],
+        "nulls": "reject"
+      },
+      {
+        "id": "membership_person",
+        "childTable": "person_organizations",
+        "childColumns": [
+          "person_code"
+        ],
+        "parentTable": "people",
+        "parentColumns": [
+          "person_code"
+        ],
+        "nulls": "reject"
+      },
+      {
+        "id": "membership_org",
+        "childTable": "person_organizations",
+        "childColumns": [
+          "organization_code"
+        ],
+        "parentTable": "organizations",
+        "parentColumns": [
+          "organization_code"
+        ],
+        "nulls": "reject"
+      }
+    ],
+    "acceptance": {
+      "title": "Authored four-type migration: original keys, relationships and exact organization totals",
+      "controls": [
+        {
+          "id": "case_amount_by_org",
+          "objectId": "cases",
+          "groupBy": [
+            "organization_code"
+          ],
+          "measure": {
+            "kind": "sum",
+            "column": "amount",
+            "scale": 2
+          },
+          "nulls": "reject",
+          "acceptance": "required"
+        }
+      ]
+    }
+  },
+  "mapping": {
+    "schema": "bubble.mapping.v1",
+    "id": "authored-four-type-nonprofit-mapping",
+    "expectedBasis": "Separately authored destination capture with different native Bubble IDs, explicit reviewed business keys and one intentional 0.01 amount difference. This is a reusable example, not buyer data or a passed migration.",
+    "tables": [
+      {
+        "name": "organizations",
+        "sourceTypeId": "organizations",
+        "expectedTypeId": "organizations",
+        "primaryKey": [
+          "organization_code"
+        ],
+        "columns": [
+          {
+            "name": "organization_code",
+            "type": "text",
+            "nullable": false,
+            "source": {
+              "kind": "field",
+              "pointer": "/Organization Code",
+              "missing": {
+                "mode": "error"
+              }
+            },
+            "expected": {
+              "kind": "field",
+              "pointer": "/organization_code",
+              "missing": {
+                "mode": "error"
+              }
+            }
+          },
+          {
+            "name": "name",
+            "type": "text",
+            "nullable": false,
+            "source": {
+              "kind": "field",
+              "pointer": "/Name",
+              "missing": {
+                "mode": "error"
+              }
+            },
+            "expected": {
+              "kind": "field",
+              "pointer": "/name",
+              "missing": {
+                "mode": "error"
+              }
+            }
+          },
+          {
+            "name": "active",
+            "type": "boolean",
+            "nullable": false,
+            "source": {
+              "kind": "field",
+              "pointer": "/Active",
+              "missing": {
+                "mode": "error"
+              }
+            },
+            "expected": {
+              "kind": "field",
+              "pointer": "/enabled",
+              "missing": {
+                "mode": "error"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "name": "people",
+        "sourceTypeId": "people",
+        "expectedTypeId": "people",
+        "primaryKey": [
+          "person_code"
+        ],
+        "columns": [
+          {
+            "name": "person_code",
+            "type": "text",
+            "nullable": false,
+            "source": {
+              "kind": "field",
+              "pointer": "/Member Code",
+              "missing": {
+                "mode": "error"
+              }
+            },
+            "expected": {
+              "kind": "field",
+              "pointer": "/member_code",
+              "missing": {
+                "mode": "error"
+              }
+            }
+          },
+          {
+            "name": "name",
+            "type": "text",
+            "nullable": false,
+            "source": {
+              "kind": "field",
+              "pointer": "/Name",
+              "missing": {
+                "mode": "error"
+              }
+            },
+            "expected": {
+              "kind": "field",
+              "pointer": "/name",
+              "missing": {
+                "mode": "error"
+              }
+            }
+          },
+          {
+            "name": "organization_code",
+            "type": "text",
+            "nullable": false,
+            "source": {
+              "kind": "field",
+              "pointer": "/Organization",
+              "missing": {
+                "mode": "error"
+              },
+              "lookup": {
+                "typeId": "organizations",
+                "keyPointer": "/_id",
+                "valuePointer": "/Organization Code",
+                "missing": {
+                  "mode": "error"
+                }
+              }
+            },
+            "expected": {
+              "kind": "field",
+              "pointer": "/organization",
+              "missing": {
+                "mode": "error"
+              },
+              "lookup": {
+                "typeId": "organizations",
+                "keyPointer": "/_id",
+                "valuePointer": "/organization_code",
+                "missing": {
+                  "mode": "error"
+                }
+              }
+            }
+          },
+          {
+            "name": "email",
+            "type": "text",
+            "nullable": true,
+            "source": {
+              "kind": "field",
+              "pointer": "/Email",
+              "missing": {
+                "mode": "null"
+              }
+            },
+            "expected": {
+              "kind": "field",
+              "pointer": "/email",
+              "missing": {
+                "mode": "null"
+              }
+            }
+          },
+          {
+            "name": "created_at",
+            "type": "timestamp",
+            "nullable": false,
+            "source": {
+              "kind": "field",
+              "pointer": "/Created Date",
+              "missing": {
+                "mode": "error"
+              }
+            },
+            "expected": {
+              "kind": "field",
+              "pointer": "/created_at",
+              "missing": {
+                "mode": "error"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "name": "cases",
+        "sourceTypeId": "cases",
+        "expectedTypeId": "cases",
+        "primaryKey": [
+          "case_code"
+        ],
+        "columns": [
+          {
+            "name": "case_code",
+            "type": "text",
+            "nullable": false,
+            "source": {
+              "kind": "field",
+              "pointer": "/Case Code",
+              "missing": {
+                "mode": "error"
+              }
+            },
+            "expected": {
+              "kind": "field",
+              "pointer": "/case_code",
+              "missing": {
+                "mode": "error"
+              }
+            }
+          },
+          {
+            "name": "organization_code",
+            "type": "text",
+            "nullable": false,
+            "source": {
+              "kind": "field",
+              "pointer": "/Organization",
+              "missing": {
+                "mode": "error"
+              },
+              "lookup": {
+                "typeId": "organizations",
+                "keyPointer": "/_id",
+                "valuePointer": "/Organization Code",
+                "missing": {
+                  "mode": "error"
+                }
+              }
+            },
+            "expected": {
+              "kind": "field",
+              "pointer": "/organization",
+              "missing": {
+                "mode": "error"
+              },
+              "lookup": {
+                "typeId": "organizations",
+                "keyPointer": "/_id",
+                "valuePointer": "/organization_code",
+                "missing": {
+                  "mode": "error"
+                }
+              }
+            }
+          },
+          {
+            "name": "person_code",
+            "type": "text",
+            "nullable": false,
+            "source": {
+              "kind": "field",
+              "pointer": "/Person",
+              "missing": {
+                "mode": "error"
+              },
+              "lookup": {
+                "typeId": "people",
+                "keyPointer": "/_id",
+                "valuePointer": "/Member Code",
+                "missing": {
+                  "mode": "error"
+                }
+              }
+            },
+            "expected": {
+              "kind": "field",
+              "pointer": "/person",
+              "missing": {
+                "mode": "error"
+              },
+              "lookup": {
+                "typeId": "people",
+                "keyPointer": "/_id",
+                "valuePointer": "/member_code",
+                "missing": {
+                  "mode": "error"
+                }
+              }
+            }
+          },
+          {
+            "name": "amount",
+            "type": "decimal",
+            "nullable": false,
+            "source": {
+              "kind": "field",
+              "pointer": "/Amount",
+              "missing": {
+                "mode": "error"
+              }
+            },
+            "expected": {
+              "kind": "field",
+              "pointer": "/amount",
+              "missing": {
+                "mode": "error"
+              }
+            },
+            "precision": 18,
+            "scale": 2
+          },
+          {
+            "name": "status",
+            "type": "text",
+            "nullable": false,
+            "source": {
+              "kind": "field",
+              "pointer": "/Case Status",
+              "missing": {
+                "mode": "error"
+              }
+            },
+            "expected": {
+              "kind": "field",
+              "pointer": "/status",
+              "missing": {
+                "mode": "error"
+              }
+            }
+          },
+          {
+            "name": "opened_date",
+            "type": "date",
+            "nullable": false,
+            "source": {
+              "kind": "field",
+              "pointer": "/Opened Date",
+              "missing": {
+                "mode": "error"
+              }
+            },
+            "expected": {
+              "kind": "field",
+              "pointer": "/opened_date",
+              "missing": {
+                "mode": "error"
+              }
+            }
+          },
+          {
+            "name": "closed_date",
+            "type": "date",
+            "nullable": true,
+            "source": {
+              "kind": "field",
+              "pointer": "/Closed Date",
+              "missing": {
+                "mode": "error"
+              }
+            },
+            "expected": {
+              "kind": "field",
+              "pointer": "/closed_date",
+              "missing": {
+                "mode": "error"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "name": "documents",
+        "sourceTypeId": "documents",
+        "expectedTypeId": "documents",
+        "primaryKey": [
+          "document_code"
+        ],
+        "columns": [
+          {
+            "name": "document_code",
+            "type": "text",
+            "nullable": false,
+            "source": {
+              "kind": "field",
+              "pointer": "/Document Code",
+              "missing": {
+                "mode": "error"
+              }
+            },
+            "expected": {
+              "kind": "field",
+              "pointer": "/document_code",
+              "missing": {
+                "mode": "error"
+              }
+            }
+          },
+          {
+            "name": "case_code",
+            "type": "text",
+            "nullable": false,
+            "source": {
+              "kind": "field",
+              "pointer": "/Case",
+              "missing": {
+                "mode": "error"
+              },
+              "lookup": {
+                "typeId": "cases",
+                "keyPointer": "/_id",
+                "valuePointer": "/Case Code",
+                "missing": {
+                  "mode": "error"
+                }
+              }
+            },
+            "expected": {
+              "kind": "field",
+              "pointer": "/case",
+              "missing": {
+                "mode": "error"
+              },
+              "lookup": {
+                "typeId": "cases",
+                "keyPointer": "/_id",
+                "valuePointer": "/case_code",
+                "missing": {
+                  "mode": "error"
+                }
+              }
+            }
+          },
+          {
+            "name": "name",
+            "type": "text",
+            "nullable": false,
+            "source": {
+              "kind": "field",
+              "pointer": "/Name",
+              "missing": {
+                "mode": "error"
+              }
+            },
+            "expected": {
+              "kind": "field",
+              "pointer": "/name",
+              "missing": {
+                "mode": "error"
+              }
+            }
+          },
+          {
+            "name": "asset_metadata_json",
+            "type": "text",
+            "nullable": false,
+            "source": {
+              "kind": "field",
+              "pointer": "/Asset",
+              "missing": {
+                "mode": "error"
+              },
+              "encoding": "canonical-json"
+            },
+            "expected": {
+              "kind": "field",
+              "pointer": "/asset",
+              "missing": {
+                "mode": "error"
+              },
+              "encoding": "canonical-json"
+            }
+          },
+          {
+            "name": "active",
+            "type": "boolean",
+            "nullable": false,
+            "source": {
+              "kind": "field",
+              "pointer": "/Active",
+              "missing": {
+                "mode": "error"
+              }
+            },
+            "expected": {
+              "kind": "field",
+              "pointer": "/enabled",
+              "missing": {
+                "mode": "error"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "name": "person_organizations",
+        "sourceTypeId": "people",
+        "expectedTypeId": "people",
+        "sourceRows": {
+          "mode": "list",
+          "pointer": "/Allowed Organizations",
+          "missing": {
+            "mode": "value",
+            "value": []
+          }
+        },
+        "expectedRows": {
+          "mode": "list",
+          "pointer": "/allowed_organizations",
+          "missing": {
+            "mode": "value",
+            "value": []
+          }
+        },
+        "primaryKey": [
+          "person_code",
+          "organization_code"
+        ],
+        "columns": [
+          {
+            "name": "person_code",
+            "type": "text",
+            "nullable": false,
+            "source": {
+              "kind": "field",
+              "pointer": "/Member Code",
+              "missing": {
+                "mode": "error"
+              }
+            },
+            "expected": {
+              "kind": "field",
+              "pointer": "/member_code",
+              "missing": {
+                "mode": "error"
+              }
+            }
+          },
+          {
+            "name": "organization_code",
+            "type": "text",
+            "nullable": false,
+            "source": {
+              "kind": "list-item",
+              "pointer": "",
+              "lookup": {
+                "typeId": "organizations",
+                "keyPointer": "/_id",
+                "valuePointer": "/Organization Code",
+                "missing": {
+                  "mode": "error"
+                }
+              }
+            },
+            "expected": {
+              "kind": "list-item",
+              "pointer": "",
+              "lookup": {
+                "typeId": "organizations",
+                "keyPointer": "/_id",
+                "valuePointer": "/organization_code",
+                "missing": {
+                  "mode": "error"
+                }
+              }
+            }
+          }
+        ]
+      }
+    ],
+    "relationships": [
+      {
+        "id": "people_org",
+        "childTable": "people",
+        "childColumns": [
+          "organization_code"
+        ],
+        "parentTable": "organizations",
+        "parentColumns": [
+          "organization_code"
+        ],
+        "nulls": "reject"
+      },
+      {
+        "id": "case_org",
+        "childTable": "cases",
+        "childColumns": [
+          "organization_code"
+        ],
+        "parentTable": "organizations",
+        "parentColumns": [
+          "organization_code"
+        ],
+        "nulls": "reject"
+      },
+      {
+        "id": "case_person",
+        "childTable": "cases",
+        "childColumns": [
+          "person_code"
+        ],
+        "parentTable": "people",
+        "parentColumns": [
+          "person_code"
+        ],
+        "nulls": "reject"
+      },
+      {
+        "id": "document_case",
+        "childTable": "documents",
+        "childColumns": [
+          "case_code"
+        ],
+        "parentTable": "cases",
+        "parentColumns": [
+          "case_code"
+        ],
+        "nulls": "reject"
+      },
+      {
+        "id": "membership_person",
+        "childTable": "person_organizations",
+        "childColumns": [
+          "person_code"
+        ],
+        "parentTable": "people",
+        "parentColumns": [
+          "person_code"
+        ],
+        "nulls": "reject"
+      },
+      {
+        "id": "membership_org",
+        "childTable": "person_organizations",
+        "childColumns": [
+          "organization_code"
+        ],
+        "parentTable": "organizations",
+        "parentColumns": [
+          "organization_code"
+        ],
+        "nulls": "reject"
+      }
+    ],
+    "acceptance": {
+      "title": "Authored four-type migration: original keys, relationships and exact organization totals",
+      "controls": [
+        {
+          "id": "case_amount_by_org",
+          "objectId": "cases",
+          "groupBy": [
+            "organization_code"
+          ],
+          "measure": {
+            "kind": "sum",
+            "column": "amount",
+            "scale": 2
+          },
+          "nulls": "reject",
+          "acceptance": "required"
+        }
+      ]
+    }
+  },
+  "approval": null,
+  "history": [],
+  "operations": []
+}
