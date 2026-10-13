@@ -1,0 +1,11 @@
+{
+  "schema": "commons.connected-contact-private-configuration/v1",
+  "directory": "",
+  "coordinatorId": "",
+  "authority": {
+    "scope_id": "",
+    "accounts": []
+  },
+  "mailboxes": [],
+  "python": ""
+}
