@@ -27,6 +27,7 @@ Keep the whole received application, workspace and retained object tree. The ori
 | Review grant-specific source families and independent migration returns | [Grant migration](GRANT_MIGRATION.md) |
 | Build selected financial reports, reconcile exact original totals and record reviews/releases | [Financial reporting](FINANCIAL_REPORTING.md) |
 | Review property, lease and temporal continuity with its original programme | [Property continuity](PROPERTY_CONTINUITY.md) |
+| Commission property, tenancy, contractor and rent continuity together, then carry two independent recipient edits through complete returned workspaces | [Housing commissioning](HOUSING_COMMISSIONING.md) |
 | Review CRF source families, reporting periods, findings and the actual official workbook, then receive the editable reporting workspace | [CRF reporting](CRF_REPORTING.md) |
 | Exact original operation envelope, parsers, pagination, source profiles and snapshot contracts | [Core API](MIGRATION_CORE.md) |
 | Run the complete supplied-case programme, preserve interrupted requests and verify customer/return continuation | [Case receiving](CASE_RECEIVING.md) |
@@ -40,14 +41,15 @@ In the browser, retain complete original files in Sources. Then use the existing
     python3 migration_cli.py --workspace /absolute/path/to/workspace case list rehearsal --offset 0 --limit 100
     python3 migration_cli.py --workspace /absolute/path/to/workspace register schema
     python3 register_reference_example.py --directory /absolute/private/authored-register-example
+    python3 housing_reference_example.py --directory /absolute/private/authored-housing-example
 
 The complete CLI also retains source import, original request inspection/resume, complete CSV/NDJSON exports, report publication, delivery preparation/download and independent receiving. Mutation requests use actual operation IDs, recorded actors and the current reviewed revision; examples in the guides identify where supplied values are required.
 
 ## Complete handover and source selection
 
-New deliveries contain all 56 application files, the original SQLite snapshot, every retained object and earlier archive referenced by that snapshot, complete readable reports and full result exports. The current profile is commons.migration-workbench-application/v5. Complete historical 16-, 21-, 24-, 31-, 39- and 48-file deliveries remain inspectable and receivable under their original profiles and frozen bytes. Preparations already in progress retain their selected complete edition.
+New deliveries contain all 59 application files, the original SQLite snapshot, every retained object and earlier archive referenced by that snapshot, complete readable reports and full result exports. The current profile is commons.migration-workbench-application/v6. Complete historical 16-, 21-, 24-, 31-, 39-, 48- and 56-file deliveries remain inspectable and receivable under their original profiles and frozen bytes. Preparations already in progress retain their selected complete edition.
 
-Read reports/review.html, reports/case-review.html, reports/register-review.html and reports/crf-review.html in a prepared handover. Continue the same logical project in its separate received workspace, prepare a customer return, and independently reopen it. Re-receiving the original identical archive preserves later customer edits.
+Read reports/review.html, reports/case-review.html, reports/register-review.html, reports/property-review.html, reports/financial-review.html and reports/crf-review.html in a prepared handover. Continue the same logical project in its separate received workspace, prepare a customer return, and independently reopen it. Re-receiving the original identical archive preserves later customer edits.
 
 ## Evidence and execution scope
 
