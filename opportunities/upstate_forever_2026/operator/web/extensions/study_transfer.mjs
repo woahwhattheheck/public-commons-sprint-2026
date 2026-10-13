@@ -33,6 +33,12 @@ const ROOTS = [
   ['monitoring_observed_contexts', 'Monitoring observational context']
 ];
 const rootLabels = Object.fromEntries(ROOTS);
+const sourceWaterKinds = Object.freeze({
+  'receptor-networks':'network', 'receptor-scenario-areas':'source-areas',
+  'receptor-programmes':'programme', 'receptor-experiments':'comparison',
+  'receptor-inventories':'inventory', 'receptor-report-sources':'report-source'
+});
+
 const monitoringOpenKinds=new Set(['monitoring_networks','monitoring_plans','monitoring_heads','monitoring_observed_contexts']);
 const phases = {
   queued:'Queued', running:'Working', resolving:'Reading study dependencies',
@@ -69,7 +75,7 @@ export function attachStudyTransfer(host) {
   let exportsPage={items:[],total:0,offset:0,limit:50,next_offset:null};
   let selected=new Map(),title='Selected scientific study',kind='',query='',selectedOnly=false,offset=0;
   let related=true,plan=null,planSignature=null,busy=false,catalogueBusy=false,exportBusy=false;
-  let taskSignature='',lastError='',requestSerial=0,receivingRequest=0;
+  let taskSignature='',lastError='',requestSerial=0,receivingRequest=0,sourceWaterRequest=0;
   let pendingSubmission=null;
   let transferHandler=typeof host.openStudyTransfer==='function'?host.openStudyTransfer:
     typeof host.openExtension==='function'?
@@ -170,6 +176,24 @@ export function attachStudyTransfer(host) {
     for(const field of root.querySelectorAll('[data-study-action="open-monitoring"]'))field.disabled=Boolean(busy);
   }
 
+  function sourceWaterControl(row){
+    if(!Object.hasOwn(sourceWaterKinds,row?.kind)||!/^[0-9a-f]{64}$/.test(row?.id||'')||
+        row.state==='unreadable'||typeof host.openDesk!=='function')return '';
+    return button('open-source-water','Open in Source-water areas','data-study-kind="'+escapeHTML(row.kind)+'" data-study-id="'+escapeHTML(row.id)+'"');
+  }
+  async function openSourceWater(kind,id){
+    if(!Object.hasOwn(sourceWaterKinds,kind)||!/^[0-9a-f]{64}$/.test(id||''))
+      throw Error('Choose an original saved source-water study.');
+    if(typeof host.openDesk!=='function')throw Error('Open this study in the maintained Source-water areas desk.');
+    const available=[...visiblePage().items,...(plan?.nodes||[])].find(row=>row.kind===kind&&row.id===id);
+    if(!available||available.state==='unreadable')throw Error('Refresh this saved source-water study before opening it.');
+    const captured=stamp(),serial=++sourceWaterRequest,recordKind=sourceWaterKinds[kind];
+    const row=await request(endpoint('/api/receptors/'+recordKind,{id,workspace:captured.workspace}));
+    if(!current(captured)||serial!==sourceWaterRequest)return null;
+    if(row?.id!==id||row?._kind!==recordKind||row?.workspace_key!==captured.workspace)
+      throw Error('The source-water reply identifies another original study or workspace.');
+    return host.openDesk('receptors','openStudy',{workspace_key:captured.workspace,kind,id});
+  }
   function receivingControl(row){
     if(!['receiving-water-plans','receiving-water-analyses'].includes(row?.kind)||
         !/^[0-9a-f]{64}$/.test(row?.id||'')||row.state==='unreadable'||
@@ -208,7 +232,7 @@ export function attachStudyTransfer(host) {
             '<strong>'+escapeHTML(row.title||row.id.slice(0,12))+'</strong>'+
             '<small class="st-identity" title="'+escapeHTML(row.id)+'">'+escapeHTML(row.id.slice(0,16))+'</small>'+
             (scope?'<small>'+escapeHTML(scope)+'</small>':'')+
-            (row.error?.message?'<small class="st-row-error">'+escapeHTML(row.error.message)+'</small>':'')+receivingControl(row)+
+            (row.error?.message?'<small class="st-row-error">'+escapeHTML(row.error.message)+'</small>':'')+receivingControl(row)+sourceWaterControl(row)+
             (row.state!=='unreadable'&&monitoringOpenKinds.has(row.kind)&&typeof host.openDesk==='function'
               ?button('open-monitoring','Open in Monitoring','data-study-open="'+escapeHTML(key)+'"'):'')+
             '</td><td>'+escapeHTML(rootLabels[row.kind]||row.kind)+'</td>'+
@@ -265,7 +289,7 @@ export function attachStudyTransfer(host) {
       '<div class="st-table-scroll"><table class="st-table"><thead><tr><th scope="col">Record</th>'+
       '<th scope="col">Type</th><th scope="col">Reason included</th></tr></thead><tbody>'+
       plan.nodes.map(row=>'<tr><td><strong>'+escapeHTML(row.title)+'</strong><small class="st-identity">'+
-        escapeHTML(row.id.slice(0,16))+'</small>'+receivingControl(row)+'</td><td>'+escapeHTML(rootLabels[row.kind]||row.kind.replaceAll('-',' '))+
+        escapeHTML(row.id.slice(0,16))+'</small>'+receivingControl(row)+sourceWaterControl(row)+'</td><td>'+escapeHTML(rootLabels[row.kind]||row.kind.replaceAll('-',' '))+
         '</td><td>'+escapeHTML(row.reasons.join('; '))+'</td></tr>').join('')+'</tbody></table></div></details>';
     if(plan.related_result_issues?.length)html+='<details class="st-details"><summary>'+
       number(plan.related_result_issues.length)+' additional comparison records need repair</summary><ul>'+
@@ -446,7 +470,8 @@ export function attachStudyTransfer(host) {
     event.preventDefault();event.stopPropagation();
     const action=target.dataset.studyAction;
     try{
-      if(action==='open-receiving'){await openReceiving(target.dataset.studyKind,target.dataset.studyId);}
+      if(action==='open-source-water'){await openSourceWater(target.dataset.studyKind,target.dataset.studyId);}
+      else if(action==='open-receiving'){await openReceiving(target.dataset.studyKind,target.dataset.studyId);}
       else if(action==='open-monitoring'){
         const row=visiblePage().items.find(item=>keyOf(item)===target.dataset.studyOpen);
         if(!row||row.state==='unreadable'||!monitoringOpenKinds.has(row.kind))
