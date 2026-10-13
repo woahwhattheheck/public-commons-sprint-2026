@@ -62,12 +62,19 @@ export function createSourceWorkbench(host, configuration = {}) {
       if (!['all','active','attention','complete'].includes(operationView.status)) operationView.status = 'all';
     } catch { selectedMethod = ''; drafts = {}; requests = []; currentTask = null; }
   };
-  const save = () => {
-    try {
-      sessionStorage.setItem(local(), JSON.stringify({method:selectedMethod, drafts, merge:mergeDraft,
-        requests, task_id:currentTask, operation_view:operationView,
-        input_history:inputHistory, upload_receipts:uploadReceipts}));
-    } catch { /* Native tasks remain retained even when browser storage is unavailable. */ }
+  const stateDocument = (overrides={}) => ({method:selectedMethod,drafts,merge:mergeDraft,
+    requests,task_id:currentTask,operation_view:operationView,
+    input_history:inputHistory,upload_receipts:uploadReceipts,...overrides});
+  const retainState = value => {
+    const exact=JSON.stringify(value);sessionStorage.setItem(local(),exact);
+    if(sessionStorage.getItem(local())!==exact)throw new Error('The complete working state did not read back.');
+  };
+  const save = ({required=false}={}) => {
+    try { retainState(stateDocument());return true; }
+    catch (problem) {
+      if(required)throw new Error('Keep this original request and working inputs: browser storage could not retain them. No new operation was sent. Download working inputs or restore browser storage before continuing. '+problem.message);
+      return false; // Ordinary typing remains available; native dispatch always requires exact persistence.
+    }
   };
   const selected = () => list(catalog?.methods).find(method => method.id === selectedMethod);
   const draft = () => {
@@ -186,8 +193,7 @@ export function createSourceWorkbench(host, configuration = {}) {
     const retained={method:next.method,drafts:nextDrafts,merge:mergeDraft,requests:recoveredRequests,
       task_id:currentTask,operation_view:operationView,input_history:history,upload_receipts:recoveredUploads};
     // Retain one complete replacement before changing any live field.
-    const exact=JSON.stringify(retained);sessionStorage.setItem(local(),exact);
-    if(sessionStorage.getItem(local())!==exact)throw new Error('Complete working inputs could not be retained; current choices are unchanged.');
+    try{retainState(retained);}catch(problem){throw new Error('Complete working inputs could not be retained; current choices are unchanged. '+problem.message);}
     selectedMethod=next.method;drafts=nextDrafts;inputHistory=history;uploadReceipts=recoveredUploads;requests=recoveredRequests;editRevision++;openingRevision++;
     const select=container.querySelector('[data-sp-method]');if(select)select.value=selectedMethod;
     renderForm();message=reason+'. The previous complete selection remains in Working input history.';error='';notice();
@@ -664,7 +670,8 @@ export function createSourceWorkbench(host, configuration = {}) {
     const expected = workspace, version = generation, requestKey = canonical({action, payload, workspace:expected});
     let request = requests.find(row => row.key === requestKey);
     if (!request) { request = {key:requestKey, id:'sourceprep-' + crypto.randomUUID(), at:new Date().toISOString()}; requests.push(request); }
-    busy = true; error = ''; message = 'Saving this source operation in the native queue…'; save(); renderForm(); notice();
+    save({required:true});
+    busy = true; error = ''; message = 'Saving this source operation in the native queue…'; renderForm(); notice();
     try {
       const task = await host.api('/api/actions', {method:'POST', body:{workspace:expected, action, payload, operation_id:request.id}});
       if (workspace !== expected || version !== generation) return;
@@ -751,7 +758,7 @@ export function createSourceWorkbench(host, configuration = {}) {
     const row={id:crypto.randomUUID(),workspace:expected,method,field,filename:file.name,
       bytes:file.size,last_modified:file.lastModified,at:new Date().toISOString(),state:'receiving',
       selected_before:copy(draft().inputs[field]??null)};
-    save();saveUploadReceipt(row);uploadsInFlight.set(row.id,row);
+    save({required:true});saveUploadReceipt(row);uploadsInFlight.set(row.id,row);
     message='Retaining '+file.name+' ('+size(file.size)+')… You can review choices; changed choices will not be replaced by this response.';error='';renderForm();notice();
     try {
       const result=await host.api('/api/upload',{method:'POST',raw:file,filename:file.name});
@@ -761,7 +768,17 @@ export function createSourceWorkbench(host, configuration = {}) {
       if(!container || workspace!==expected || selectedMethod!==method || version!==generation)return;
       const latest=uploadReceipts.filter(item=>item.method===method&&item.field===field).at(-1);
       const unchanged=revision===editRevision&&canonical(draft().inputs[field]??null)===canonical(row.selected_before)&&latest?.id===row.id;
-      if(unchanged){draft().inputs[field]={upload_id:result.id};editRevision++;row.state='selected';save();saveUploadReceipt(row);}
+      if(unchanged){
+        const previous=currentSelection(),next=copy(previous);next.inputs[field]={upload_id:result.id};
+        const nextDrafts={...drafts,[method]:copy(next)};delete nextDrafts[method].method;
+        const nextHistory=canonical(previous)===canonical(next)?inputHistory:
+          [...inputHistory,{id:crypto.randomUUID(),at:new Date().toISOString(),reason:'Original uploaded file selected',selection:previous}];
+        const selectedReceipt={...row,state:'selected'},nextReceipts=uploadReceipts.map(item=>item.id===row.id?copy(selectedReceipt):item);
+        try{retainState(stateDocument({drafts:nextDrafts,input_history:nextHistory,upload_receipts:nextReceipts}));}
+        catch(problem){throw new Error('The uploaded original is retained, but its choice could not be saved. The previous selection is unchanged. Download its receipt and working inputs. '+problem.message);}
+        drafts=nextDrafts;inputHistory=nextHistory;uploadReceipts=nextReceipts;editRevision++;Object.assign(row,selectedReceipt);
+        container.dispatchEvent(new CustomEvent('source-selection-replaced',{bubbles:true,detail:{method:selectedMethod}}));
+      }
       else {row.state='retained';saveUploadReceipt(row);}
       await loadCatalog();
       if(container&&workspace===expected&&version===generation)
