@@ -235,11 +235,22 @@ def _feature_url(index, fid):
 
 
 def _save_capture(root, status, complete, ids):
-    status["features"] = [complete[key] for key in ids if key in complete]
-    status.update(updated_at=now(), complete_features=len(complete),
-                  selected_features=len(ids),
-                  state="complete" if len(complete) == len(ids) else "incomplete")
-    atomic_json(root / "capture.json", status)
+    candidate = {**status, "features": [complete[key] for key in ids if key in complete],
+                 "complete_features": len(complete), "selected_features": len(ids),
+                 "state": "complete" if len(complete) == len(ids) else "incomplete"}
+    path = root / "capture.json"
+    previous = read_json(path) if path.exists() else None
+    # A completed replay must not change the immutable preparation's source hash.
+    if previous is not None and (
+            {key: value for key, value in previous.items() if key != "updated_at"}
+            == {key: value for key, value in candidate.items() if key != "updated_at"}):
+        status.clear()
+        status.update(previous)
+        return
+    candidate["updated_at"] = now()
+    status.clear()
+    status.update(candidate)
+    atomic_json(path, status)
 
 
 def _reject_overlay(root, status, fid, uri, body, error, record, receipt_path=None):
@@ -703,13 +714,14 @@ def join_screen(index_directory, screen_path, output, *, county,
         return {"manifest": str(root / "sources.json"), "source_id": entry["id"], **summary}
 
 
-def receive_index(transfer_path, output, *, timeout=60.0):
+def receive_index(transfer_path, output, *, timeout=60.0, interval=1.0):
     """Materialize the existing original file bank from private temporary download URLs."""
-    transfer = read_json(transfer_path)
+    transfer = transfer_path if isinstance(transfer_path, dict) else read_json(transfer_path)
     if transfer.get("schema") != "upstate.thinkgis-original-index-transfer/v1":
         raise ValueError("Select the private original-index transfer descriptor")
-    if not math.isfinite(timeout) or timeout <= 0:
-        raise ValueError("Use a positive transfer timeout")
+    if (not math.isfinite(timeout) or timeout <= 0
+            or not math.isfinite(interval) or interval < 0):
+        raise ValueError("Use a positive transfer timeout and nonnegative request interval")
     manifest = transfer["manifest"]
     content = manifest["content"].encode("utf-8")
     if len(content) != manifest["bytes"] or hashlib.sha256(content).hexdigest() != manifest["sha256"]:
@@ -730,7 +742,7 @@ def receive_index(transfer_path, output, *, timeout=60.0):
     with held(root / "receive.lock", blocking=False):
         manifest_path = root / "mccormick-original-index-manifest.json"
         atomic_bytes(manifest_path, content, immutable=True)
-        results = []
+        results, last_request = [], 0.0
         for filename, page in expected.items():
             member = Path(filename)
             if member.name != filename or filename in ("", ".", "..") or "\\" in filename:
@@ -750,15 +762,21 @@ def receive_index(transfer_path, output, *, timeout=60.0):
                 parsed = urlsplit(url)
                 if parsed.scheme != "https" or not parsed.hostname or parsed.username or parsed.password:
                     raise ValueError("Use the original provider's HTTPS file download URL")
+                time.sleep(max(0.0, interval - (time.monotonic() - last_request)))
+                last_request = time.monotonic()
                 try:
                     with urlopen(Request(url, headers={"Accept-Encoding": "identity"}), timeout=timeout) as response:
-                        if response.status != 200:
-                            raise ValueError("Original file download did not return 200")
+                        if (response.status != 200 or transfer.get("mode") == "original-public-pages"
+                                and response.geturl() != url):
+                            raise ValueError("Original file response changed status or redirected")
                         body = response.read(page["bytes"] + 1)
                 except HTTPError as exc:
                     # A signed file URL is a temporary capability, never a log field.
+                    delay = exc.headers.get("Retry-After", "")
+                    delay = delay if re.fullmatch(r"\d{1,8}", delay) else "provider interval"
                     raise ValueError("Original file download returned HTTP " + str(exc.code)
-                                     + "; renew this file's existing transfer descriptor") from None
+                                     + "; retry after " + delay
+                                     + " or renew the original file descriptor") from None
                 except OSError as exc:
                     raise ValueError("Original file transfer failed: " + type(exc).__name__) from None
                 if len(body) != page["bytes"] or hashlib.sha256(body).hexdigest() != page["sha256"]:
@@ -780,6 +798,36 @@ def receive_index(transfer_path, output, *, timeout=60.0):
         return {"manifest": str(manifest_path), "original_root": str(root / "original"),
                 "received_pages": len(results), "records": len(decoded["records"]),
                 "state": "complete", "receipt": str(root / "received-index.json")}
+
+def receive_index_origin(manifest_path, output, *, timeout=60.0, interval=1.0):
+    """Receive public original pages only when all bytes still match the retained edition."""
+    body = Path(manifest_path).read_bytes()
+    original = json.loads(body)
+    if original.get("schema") != INDEX_SCHEMA:
+        raise ValueError("Select the original retained index manifest")
+    source = original["source"]
+    origin = _https_origin(source["county_viewer"])
+    dsid = str(_integer(source["county_dsid"], "Original DSID"))
+    files = []
+    for page in source["original_capture_pages"]:
+        url = page["source_url"]
+        parsed = urlsplit(url)
+        query = parse_qs(parsed.query, keep_blank_values=True)
+        expected = {"action": ["getFtrs"], "dsid": [dsid],
+                    "i1": [str(_integer(page["ordinal"], "First ordinal"))],
+                    "cnt": [str(_integer(page["count"], "Page count", 1))]}
+        if (parsed.scheme + "://" + parsed.netloc != origin or parsed.fragment
+                or parsed.path.lower() != "/tgis/index.ashx" or query != expected):
+            raise ValueError("Original page URL does not bind the exact retained county interval")
+        files.append({"filename": _source_name(page), "bytes": page["bytes"],
+                      "sha256": page["sha256"], "url": url})
+    transfer = {"schema": "upstate.thinkgis-original-index-transfer/v1",
+                "mode": "original-public-pages",
+                "manifest": {"content": body.decode("utf-8"), "bytes": len(body),
+                             "sha256": hashlib.sha256(body).hexdigest()},
+                "files": files}
+    return receive_index(transfer, output, timeout=timeout, interval=interval)
+
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
@@ -811,12 +859,17 @@ def main(argv=None):
     joining.add_argument("--reference-field", default="T_Map_Number")
     joining.add_argument("--county-field", default="County")
     receive = sub.add_parser("receive-index", help="Materialize the retained original index bank")
-    receive.add_argument("--transfer", required=True)
+    receive_input = receive.add_mutually_exclusive_group(required=True)
+    receive_input.add_argument("--transfer", help="Local private original-file transfer descriptor")
+    receive_input.add_argument("--manifest", help="Original manifest: fetch exact public page URLs and verify original hashes")
     receive.add_argument("--output", required=True)
     receive.add_argument("--timeout", type=float, default=60.0)
+    receive.add_argument("--interval", type=float, default=1.0)
     args = parser.parse_args(argv)
     if args.command == "receive-index":
-        result = receive_index(args.transfer, args.output, timeout=args.timeout)
+        result = (receive_index(args.transfer, args.output, timeout=args.timeout, interval=args.interval)
+                  if args.transfer else receive_index_origin(args.manifest, args.output,
+                      timeout=args.timeout, interval=args.interval))
     elif args.command == "index":
         result = prepare_index(args.manifest, args.original_root, args.output, vintage=args.vintage)
     elif args.command == "capture":

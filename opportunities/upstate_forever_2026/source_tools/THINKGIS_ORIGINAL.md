@@ -251,3 +251,20 @@ documents the format.
 Capture admission decodes the original world-pixel commands for every fresh response, receipt-backed response and body left by an interrupted receive. A valid XML `<overlay/>` without usable boundary paths is a failed source attempt. Its full bytes and response provenance are retained under `rejected/FID/`, and the ledger references them. The successful immutable body path remains available for a later attempt.
 
 On resume, an older completed empty or malformed overlay is demoted to the ordinary failure list after its original body and receipt have been preserved. Reuse of valid complete sources does not fetch a new edition. `capture --retry-failed` retries the selected failed FIDs. Both successful source originals and retained rejected attempts are carried as prepared source companions.
+
+A fully unchanged capture replay preserves the ledger's original timestamp and byte identity. This allows the same prepared geometry output to reopen and reuse its immutable captured-source selection after a successful retry or repeated command.
+
+## Receive matching originals directly from the public county endpoint
+
+When the receiving host has the retained original manifest, it can avoid temporary file-provider links:
+
+```bash
+python -m source_tools.thinkgis_original receive-index \\
+  --manifest /data/mccormick/mccormick-original-index-manifest.json \\
+  --output /data/mccormick/received-original \\
+  --interval 1
+```
+
+This explicit alternative sends each exact public URL already recorded in the original manifest. The URL must bind the original county origin, DSID and page interval. Redirects are rejected. Each returned page must match its retained original byte count and SHA-256 before it is admitted; a changed current source stops the receive instead of changing the source edition. Already verified local pages are reused. Completed output passes the same full record/FID/ordinal verification as private-file receiving.
+
+This mode obtains public response bodies and carries no authentication tokens. If a county page has changed, materialize that page from the retained original file bank using the receiving host's own temporary descriptor and resume. The original manifest and prepared source identity remain unchanged. A429/503 preserves completed pages and reports the provider retry interval. This is a source intake option; the original50-file bank remains the authoritative retained edition.
