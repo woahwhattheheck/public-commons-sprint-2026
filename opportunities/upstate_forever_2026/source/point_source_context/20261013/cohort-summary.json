@@ -1,0 +1,52 @@
+{
+  "schema": "upstate.point-source-cohort/v1",
+  "title": "Eighteenmile point-source discharge context",
+  "captured_at": "2026-10-13T01:22:10Z",
+  "source_banks": [
+    "F0C8K2W4B0D",
+    "F0C8Q6PADFC",
+    "F0C8J1E75FV"
+  ],
+  "original_2023_measurements": 2282,
+  "science_original_records": 980,
+  "shared_original_dmr_ids": 980,
+  "selected_quantity_records": 227,
+  "entity_equivalent_qualifier_fields": 607,
+  "substantive_source_field_variants": [],
+  "tables": {
+    "canonical_measurements_2023.csv": 2282,
+    "period_method_comparison_2023.csv": 230,
+    "annual_method_comparison_2023.csv": 20,
+    "outfall_history_context.csv": 6,
+    "annual_history_map_index.csv": 663,
+    "point_source_period_observations.csv": 230
+  },
+  "mapped_outfalls": 4,
+  "mapped_source_id": "scdes-eighteenmile-npdes-outfalls-2023",
+  "mapped_source_path": "observations/eighteenmile_2023/npdes/dmr_outfalls_2023.geojson",
+  "geometry_crs": "EPSG:26917",
+  "scientific_method": "Reported original MK/AVG standard mass or flow rate multiplied by actual calendar days; one populated quantity per permit/reporting-feature/parameter/location/period. Original record identities and parallel branches are retained.",
+  "science_source_ids": {
+    "period_loads": "upstate-eighteenmile-2023-dmr-period-loads-872d4183e2e5",
+    "annual_loads": "upstate-eighteenmile-2023-dmr-annual-loads-ef74ad35ef48"
+  },
+  "source_geometry": {
+    "metadata_path": "observations/eighteenmile_2023/npdes/originals/des_npdes_layer21_metadata.json",
+    "features_path": "observations/eighteenmile_2023/npdes/originals/des_four_npdes_outfall_features.json",
+    "native_response_crs": "EPSG:26917",
+    "service_source_crs": "EPSG:4269",
+    "object_id_field": "OBJECTID",
+    "permit_id_field": "PrmtPrmtNum",
+    "feature_id_field": "FeatrFeatrId",
+    "note": "Current mapped outfall 001 is retained separately from each EPA DMR reporting outfall. Milliken reports analytes at T1M and T1Q in the original ECHO records."
+  },
+  "source_units": "Each amount retains its source-specific kg or million US gallons basis; species and coverage remain explicit",
+  "period_comparison": {
+    "mass_rows": 182,
+    "unique_mass_source_matches": 182,
+    "flow_context_rows": 48
+  },
+  "original_period_history_rows": 6492,
+  "annual_query_n_rows": 663,
+  "annual_query_y_rows": 663
+}
