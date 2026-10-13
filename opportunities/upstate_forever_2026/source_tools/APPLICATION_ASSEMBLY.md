@@ -2,6 +2,47 @@
 
 The source assembler combines a retained application and selected component packages into one directory, one complete source map and one portable ZIP. It runs on Linux with Python 3.10 or later and uses the standard library. Use the same scientific workspace and its existing source, scenario and run identifiers after receiving the application.
 
+## Selected complete edition and original source closure
+
+The maintained assembler uses the complete `integration/application_components.json`
+inside the selected application. If an older source bank has no catalogue, the
+current receiver supplies its maintained catalogue and closure helper. Keep both
+members when transporting the application. The commands in this guide use that
+explicit catalogue automatically; the catalogue's `required_components` and
+transitive `requires` determine the requested edition.
+
+A component may declare `source_manifests` alongside its source `paths`. Each
+selected manifest uses the native `upstate.sources/v1` format. Closure follows
+every entry's primary `path` and each `companions[].path`, retains the native
+manifest-parent boundary, and checks any declared original SHA256 and byte count.
+The same checks apply to JSON/base64 source maps, embedded original input banks,
+installed directories and repeated receiving. A manifest self-companion is retained
+once as a file and remains a reference of each source entry that declares it.
+
+Use the original complete edition source, its complete component overlays and their
+declared predecessor hashes in the normal receiving command. Before publication,
+inspect the same composition to obtain exact missing source identities:
+
+```sh
+python3 -B source_tools/application_assembly.py /owned/current-application \
+  --overlay /owned/current-component-source.json \
+  --edition upper-savannah-complete \
+  --inspect
+```
+
+The component inventory report includes `source_manifests`, original source IDs and
+all source-primary/source-companion dependency edges. Missing files, invalid native
+paths and changed original bodies prevent complete-edition publication. Scientific
+inputs supplied as external datasets remain explicit external references unless the
+selected component declares their native manifest as part of this application.
+
+For an intentional partial edition, publish a catalogue with its own edition name
+and the desired `required_components`, retaining the available component definitions
+and dependency declarations. Compose that catalogue as an ordinary guarded source
+overlay. Its explicit selection travels with the resulting source; an older
+selection is never inferred from a later catalogue. Read-only `--inspect` remains
+available while a source family is being completed.
+
 ## Receive source and components
 
 Save the complete source carriers to ordinary files, retaining every numbered block. Read the application source first and apply the chosen overlays in source order:
