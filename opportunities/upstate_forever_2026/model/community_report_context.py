@@ -281,12 +281,13 @@ def prepare(workspace, report_id, *, report_sha256, delivery_id=None, import_sou
     if payload["plan"].get("context", {}).get("snapshot_sha256") != report.get("context_snapshot_sha256"):
         raise ValueError("The original Community report scientific context differs")
     revision = payload.get("plan_revision")
+    if report.get("plan_revision") != revision:
+        raise ValueError("The original Community revision register differs from its saved report")
     if revision:
         if (revision.get("schema") != "upstate.community-plan-revision/v1"
                 or revision.get("plan_id") != report.get("plan_id")
                 or revision.get("previous_plan_id") != payload["plan"].get("previous_plan_id")
-                or revision.get("table_id") != report.get("table_id")
-                or report.get("plan_revision") != revision):
+                or revision.get("table_id") != report.get("table_id")):
             raise ValueError("The original Community revision register differs from its saved plan")
         if not {"plan-revision-summary.json", "plan-revision-changes.csv", "previous-plan.json"} <= paths.keys():
             raise ValueError("The original Community revision register is missing its retained companions")
