@@ -19,7 +19,10 @@
         "operator/web/observation_editions.css",
         "operator/web/measured_observations.mjs",
         "operator/web/measured_observations_extension.mjs",
-        "operator/extensions/measured-observations.json"
+        "operator/extensions/measured-observations.json",
+        "measurement_workspace/OBSERVATION_EDITION_RECEIVING.md",
+        "measurement_workspace/engine/observation-edition-receiving.mjs",
+        "measurement_workspace/engine/reconciliation-receiving.mjs"
       ],
       "requires": [
         "measurement-source-reconciliation"
