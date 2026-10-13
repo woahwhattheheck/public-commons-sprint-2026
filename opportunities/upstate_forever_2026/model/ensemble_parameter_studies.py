@@ -34,7 +34,7 @@ def _option(value, name, default):
 
 
 def _axis(axis):
-    refs = [value if isinstance(value, str) else canonical(value)
+    refs = [value if isinstance(value, str) else canonical(value).decode("utf-8")
             for value in axis["references"]]
     return {"name": axis["id"], "parameters": list(axis["targets"]),
             "values": deepcopy(axis["values"]), "reason": axis["reason"],
