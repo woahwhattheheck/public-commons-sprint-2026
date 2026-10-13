@@ -1,0 +1,156 @@
+{
+  "schema": "upstate.operator-extension/v1",
+  "id": "economic-cost-ranges",
+  "title": "Sourced cost ranges",
+  "version": "1",
+  "order": 66,
+  "assets": [
+    "economic_cost_ranges.mjs",
+    "economic_cost_ranges.css"
+  ],
+  "backend": {
+    "module": "economic_cost_ranges",
+    "factory": {
+      "handler": "EconomicCostRanges",
+      "args": [
+        "operator",
+        "fault"
+      ]
+    },
+    "actions": [
+      "economic.cost-ranges.build"
+    ],
+    "invoke": {
+      "handler": "invoke",
+      "args": [
+        "task"
+      ]
+    },
+    "routes": [
+      {
+        "methods": [
+          "GET"
+        ],
+        "path": "/api/economic-cost-ranges/catalog",
+        "operation": "catalog",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "GET"
+        ],
+        "path": "/api/economic-cost-ranges/source",
+        "operation": "source",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "GET"
+        ],
+        "path": "/api/economic-cost-ranges/detail",
+        "operation": "detail",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "POST"
+        ],
+        "path": "/api/economic-cost-ranges/preview",
+        "operation": "preview",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "GET"
+        ],
+        "path": "/api/economic-cost-ranges/request",
+        "operation": "request",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      }
+    ],
+    "items": [
+      {
+        "kind": "economic-cost-ranges",
+        "operation": "detail",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      }
+    ],
+    "decorate_task": {
+      "handler": "decorate_task",
+      "args": [
+        "task"
+      ]
+    },
+    "verify_workspace": {
+      "handler": "verify_workspace",
+      "args": [
+        "workspace"
+      ]
+    },
+    "file_routes": [
+      {
+        "path": "/api/file/economic-cost-ranges/{workspace_key}/{range_id}/{member}",
+        "handler": "preview_file",
+        "args": [
+          "route.workspace_key",
+          "route.range_id",
+          "route.member"
+        ],
+        "response": "ticket_policy_pair"
+      }
+    ]
+  },
+  "client": {
+    "module": "/web/economic_cost_ranges.mjs",
+    "factory": "attachEconomicCostRanges",
+    "requires": [
+      "getState",
+      "api",
+      "endpoint",
+      "refresh"
+    ],
+    "styles": [
+      "/web/economic_cost_ranges.css"
+    ],
+    "view": {
+      "id": "economic-cost-ranges",
+      "title": "Sourced cost ranges",
+      "after": "economic-desk"
+    },
+    "lifecycle": {
+      "mount": "mount",
+      "update": "update",
+      "detach": "detach"
+    }
+  }
+}
