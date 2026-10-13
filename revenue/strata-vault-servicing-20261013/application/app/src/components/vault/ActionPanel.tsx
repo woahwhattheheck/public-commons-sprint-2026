@@ -1,0 +1,268 @@
+import {
+	AMOUNT_DECIMALS,
+	type Amount,
+	formatExact,
+	parseUnits,
+} from "@stellar-scaffold/app-lib"
+import React from "react"
+import typeStyles from "../../styles/type.module.css"
+import styles from "./ActionPanel.module.css"
+
+export type ActionPanelSide = "subscribe" | "redeem"
+
+export type ActionPanelEstimate = { label: string } & (
+	| { status: "empty"; reason: string }
+	| { status: "unavailable"; reason: string }
+	| { status: "ready"; value: string }
+)
+
+export type ActionBlock = {
+	kind: "action"
+	reason: string
+	label: string
+	onPress: () => void
+}
+
+export type MessageBlock = {
+	kind: "message"
+	reason: string
+	sides: ActionPanelSide[]
+}
+
+export type ActionPanelBlock = ActionBlock | MessageBlock
+
+export type ActionPanelProps = {
+	side: ActionPanelSide
+	onSideChange: (side: ActionPanelSide) => void
+	heading: string
+	note?: string
+	amount: string
+	onAmountChange: (amount: string) => void
+	amountLabel: string
+	ticker: string
+	balance: Amount | null
+	balanceLabel: string
+	estimate: ActionPanelEstimate
+	submitLabel: string
+	onSubmit: () => void
+	block?: ActionPanelBlock
+}
+
+const PanelActions: React.FC<{
+	block: ActionBlock | undefined
+	overBalance: string | undefined
+	submitLabel: string
+	canSubmit: boolean
+	onSubmit: () => void
+	onFillMax: () => void
+}> = ({ block, overBalance, submitLabel, canSubmit, onSubmit, onFillMax }) => {
+	if (block) {
+		return (
+			<div className={styles.actions}>
+				<button
+					type="button"
+					className={styles.actionPrimary}
+					onClick={block.onPress}
+				>
+					{block.label}
+				</button>
+			</div>
+		)
+	}
+
+	if (overBalance !== undefined) {
+		return (
+			<div className={styles.actions}>
+				<button
+					type="button"
+					className={styles.actionPrimary}
+					onClick={onFillMax}
+				>
+					{`Use ${overBalance}`}
+				</button>
+				<button type="button" className={styles.actionUnavailable} disabled>
+					{submitLabel}
+				</button>
+			</div>
+		)
+	}
+
+	return (
+		<div className={styles.actions}>
+			<button
+				type="button"
+				className={canSubmit ? styles.actionPrimary : styles.actionUnavailable}
+				disabled={!canSubmit}
+				onClick={onSubmit}
+			>
+				{submitLabel}
+			</button>
+		</div>
+	)
+}
+
+const ActionPanel: React.FC<ActionPanelProps> = ({
+	side,
+	onSideChange,
+	heading,
+	note,
+	amount,
+	onAmountChange,
+	amountLabel,
+	ticker,
+	balance,
+	balanceLabel,
+	estimate,
+	submitLabel,
+	onSubmit,
+	block,
+}) => {
+	const parsedAmount = parseUnits(amount, AMOUNT_DECIMALS)
+	const isOverBalance =
+		parsedAmount !== null &&
+		parsedAmount > 0n &&
+		balance !== null &&
+		parsedAmount > balance
+	const canSubmit = parsedAmount !== null && parsedAmount > 0n && !isOverBalance
+	const overBalance =
+		isOverBalance && balance !== null
+			? formatExact(balance, AMOUNT_DECIMALS)
+			: undefined
+	const fillMax = () => {
+		if (balance !== null) onAmountChange(formatExact(balance, AMOUNT_DECIMALS))
+	}
+	const actionBlock = block?.kind === "action" ? block : undefined
+	const messageBlock = block?.kind === "message" ? block : undefined
+	const blocksEverySide =
+		messageBlock !== undefined &&
+		messageBlock.sides.includes("subscribe") &&
+		messageBlock.sides.includes("redeem")
+	const blocksThisSide =
+		messageBlock !== undefined && messageBlock.sides.includes(side)
+
+	return (
+		<div className={styles.panel}>
+			<h2 className={`${typeStyles.sectionHead} ${styles.heading}`}>
+				{heading}
+			</h2>
+			{note && <p className={`${typeStyles.body} ${styles.note}`}>{note}</p>}
+			{blocksEverySide ? (
+				<p className={`${typeStyles.body} ${styles.blocked}`}>
+					{messageBlock.reason}
+				</p>
+			) : (
+				<>
+					{blocksThisSide && (
+						<p className={`${typeStyles.body} ${styles.blocked}`}>
+							{messageBlock.reason}
+						</p>
+					)}
+					{actionBlock && (
+						<p className={`${typeStyles.body} ${styles.blocked}`}>
+							{actionBlock.reason}
+						</p>
+					)}
+
+					<div className={styles.tabs} role="tablist">
+						<button
+							type="button"
+							role="tab"
+							aria-selected={side === "subscribe"}
+							className={`${styles.tab} ${
+								side === "subscribe" ? styles.tabActive : ""
+							}`}
+							onClick={() => onSideChange("subscribe")}
+						>
+							Subscribe
+						</button>
+						<button
+							type="button"
+							role="tab"
+							aria-selected={side === "redeem"}
+							className={`${styles.tab} ${
+								side === "redeem" ? styles.tabActive : ""
+							}`}
+							onClick={() => onSideChange("redeem")}
+						>
+							Redeem
+						</button>
+					</div>
+
+					{!blocksThisSide && (
+						<>
+							<div className={isOverBalance ? styles.fieldOver : styles.field}>
+								<div className={styles.amountRow}>
+									<label
+										htmlFor="action-panel-amount"
+										className={styles.srOnly}
+									>
+										{amountLabel}
+									</label>
+									<input
+										id="action-panel-amount"
+										className={`${typeStyles.amountInput} ${styles.amountInput}`}
+										value={amount}
+										onChange={(event) => onAmountChange(event.target.value)}
+										placeholder="0.00"
+										inputMode="decimal"
+									/>
+									<span className={styles.ticker}>{ticker}</span>
+									{balance !== null && (
+										<button
+											type="button"
+											className={styles.maxButton}
+											onClick={fillMax}
+										>
+											MAX
+										</button>
+									)}
+								</div>
+								<div className={styles.balanceRow}>
+									<span
+										className={`${typeStyles.footnote} ${styles.balanceLabel}`}
+									>
+										{balanceLabel}
+									</span>
+								</div>
+							</div>
+
+							<div className={styles.estimate}>
+								<span className={`${typeStyles.label} ${styles.estimateLabel}`}>
+									{estimate.label}
+								</span>
+								<span
+									className={`${
+										estimate.status === "ready"
+											? typeStyles.estimate
+											: typeStyles.body
+									} ${styles.estimateValue}`}
+								>
+									{estimate.status === "ready"
+										? estimate.value
+										: estimate.reason}
+								</span>
+							</div>
+
+							{overBalance !== undefined && (
+								<p className={`${typeStyles.body} ${styles.errorMessage}`}>
+									{`You have ${overBalance} ${ticker}. Enter ${overBalance} or less.`}
+								</p>
+							)}
+
+							<PanelActions
+								block={actionBlock}
+								overBalance={overBalance}
+								submitLabel={submitLabel}
+								canSubmit={canSubmit}
+								onSubmit={onSubmit}
+								onFillMax={fillMax}
+							/>
+						</>
+					)}
+				</>
+			)}
+		</div>
+	)
+}
+
+export default ActionPanel

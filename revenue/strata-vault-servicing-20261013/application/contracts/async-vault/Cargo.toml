@@ -1,0 +1,30 @@
+[package]
+name = "async-vault"
+version = "0.1.0"
+edition.workspace = true
+license.workspace = true
+publish = false
+
+[lib]
+crate-type = ["lib", "cdylib"]
+doctest = false
+
+[dependencies]
+soroban-sdk = { workspace = true }
+storage = { path = "../../crates/storage" }
+stellar-access = { workspace = true }
+stellar-macros = { workspace = true }
+stellar-contract-utils = { workspace = true }
+bindings = { path = "../../crates/bindings" }
+
+
+[dev-dependencies]
+soroban-sdk = { workspace = true, features = ["testutils"] }
+nav-oracle = { path = "../nav-oracle" }
+share-token = { path = "../share-token" }
+compliance = { path = "../compliance" }
+identity-verifier = { path = "../identity-verifier" }
+proptest = "1"
+
+[features]
+upgrade_wasm = []

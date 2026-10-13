@@ -1,0 +1,16 @@
+version: 1
+
+# Scaffold CLI Configuration
+config:
+  # Your Rust/Soroban contract source.
+  # contracts_dir: contracts
+
+  # The generated TypeScript contract layer. The CLI writes and regenerates
+  # everything here on build/redeploy, so you normally don't edit it by hand:
+  #   - app-lib/clients/<name>/   one generated Binding package per contract
+  #   - app-lib/clients/index.ts  one flattened file that instantiates every
+  #                               Contract Client, consumed by scripts/harness
+  # `app/` does not import this directory — it constructs its own contract
+  # clients at runtime (see app-lib/contracts.ts). Everything here is
+  # gitignored except .gitkeep.
+  # clients_dir: app-lib/clients
