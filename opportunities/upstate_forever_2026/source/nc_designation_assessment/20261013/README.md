@@ -14,6 +14,14 @@ The command uses Node's standard library, checks the retained original bodies an
 
 Import the root `nc_designation_assessment.sources.json` through the existing application's source import. Select the report titled **NC designated waters: published 2022 assessment context** in the maintained Scientific Report operator. The report uses its ordinary table, paragraph and source-link structures. Export the report/study with all source companions and reopen that same exported study.
 
+For a native saved edition in an existing Workspace:
+
+```sh
+python -B source/nc_designation_assessment/20261013/open_saved_report.py --workspace ORIGINAL_WORKSPACE --output NC_REPORT_OPENING
+```
+
+The helper imports the complete source manifest and invokes the maintained Scientific Report preview/render API. Its returned edition appears in Sources → Scientific report → Saved reports. Use the existing receiving course's actual Python environment and Workspace. The printed opening record contains the actual saved-edition result.
+
 ## What the join preserves
 
 - All 110 unique AU_IDs and their complete original layer 2 attributes, including historical IR labels and original AU_Length/AU_Units.

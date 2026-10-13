@@ -271,7 +271,7 @@ export function buildDesignationAssessment({registry, streams, polygons, paramet
         {kind:"table",columns:["Source-label reconciliation","Original row","Methodology"],rows:flags.map(f=>[
           f.parameter_original,"AU "+f.au_id+" / OBJECTID "+f.object_id,"Cyanide5µg/L, printed page6; original source label is retained unchanged."])},
         {kind:"links",items:[
-          {title:"Original NC 2022 assessment methodology",path:provenance.methodology.url},
+          {title:"Agency methodology citation and interpretation",path:provenance.output_root+"/README.md"},
           {title:"All 110 units with explicit source-review actions",path:provenance.output_root+"/source-review-queue.csv"},
           {title:"Source-label reconciliation details",path:provenance.output_root+"/source-label-reconciliation.json"}
         ]}
@@ -290,7 +290,7 @@ export function buildDesignationAssessment({registry, streams, polygons, paramet
       provenance.output_root+"/assessment-unit-join.csv",provenance.output_root+"/parameter-join.csv",
       provenance.output_root+"/legal-reach-rollup.csv",provenance.output_root+"/summary.json",
       provenance.output_root+"/provenance.json",provenance.output_root+"/README.md",
-      provenance.output_root+"/source-review-queue.csv",provenance.output_root+"/source-label-reconciliation.json",provenance.methodology.url])
+      provenance.output_root+"/source-review-queue.csv",provenance.output_root+"/source-label-reconciliation.json"])
   };
   return {summary,rows,rollups,report,reviewQueue,files:{
     "source-review-queue.csv":csv(reviewQueue,unionFields(reviewQueue)),

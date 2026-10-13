@@ -8,7 +8,8 @@
         "source/nc_designation_assessment/20261013/join.mjs",
         "source/nc_designation_assessment/20261013/reproduce.mjs",
         "source/nc_designation_assessment/20261013/README.md",
-        "integration/component_fragments/nc-designation-assessment-report.json"
+        "integration/component_fragments/nc-designation-assessment-report.json",
+        "source/nc_designation_assessment/20261013/open_saved_report.py"
       ],
       "source_manifests": [
         "nc_designation_assessment.sources.json"
