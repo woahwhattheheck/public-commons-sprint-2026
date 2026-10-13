@@ -193,3 +193,43 @@ Bryce also instructed: "also add that if u make a video use voice gen tts not ro
 Pass this rule to child/delegated workers and persist it in owner-controlled provider/project/cloud instruction copies. Record delivery and readback coverage; never claim every running session loaded it without evidence. This rule creates no hooks, watchers, restarts, approval queue, credential restrictions, or new publication authority. Preserve all existing owner rules, including no llama.cpp, no private GitHub repositories or Actions, focused validation, attribution, incident communication, personal meeting approval, contact holds, demo pauses, bounty restrictions, and owner cutoffs.
 
 Canonical local policy: `C:/Users/lucys/.commons/rendered-product-inspection-policy.md` and `.json`. Portable repository copy: `docs/policies/rendered-product-inspection-policy.md` and `.json` when present. Only Bryce can change this standing rule.
+
+
+## Include a saved Observation edition
+
+Use the same complete original reference and receiving process with this explicit option:
+
+~~~sh
+python -B STAGE/source/run_measured_chemistry_receiving.py \
+  --application COMPLETE_APPLICATION \
+  --workspace ACTUAL_RESTORED_WORKSPACE \
+  --output NEW_OWNED_EDITION_OUTPUT \
+  --save-observation-edition
+~~~
+
+This option requires the complete `measurement-observation-chemistry` component.
+It saves all 36 original reference records as independent retained observations
+through the original Observation edition API before preparing the Chemistry
+binding. It does not infer duplicate groups or introduce field measurements.
+The exact save request is retained before submission, so a lost reply recovers
+the same immutable edition through its original operation ID.
+
+The native fit, 28 fit/8 holdout roles, supplied error scales, model days and
+original accepted predictions use the same existing receiving comparisons.
+The complete edition and exact source-export text travel with the original
+binding and source companion. After the editable Chemistry ZIP is received,
+the original Measurements receiver restores the complete portable store; its
+dedicated edition reader must return the identical immutable source. Original
+binding adoption must preserve that source and the scientific native request.
+
+The saved edition freezes eligibility at authoring and intersects it with
+current reviews. Later acceptance cannot remove a saved exclusion: create a
+revised edition to adopt a changed review decision. For a field-data course,
+choose the scientist's actual saved edition and reviewed physical case through
+[the original Chemistry controls](../measurement_workspace/OBSERVATION_EDITION_CHEMISTRY.md).
+Do not substitute the constructed reference for actual field calibration.
+
+Without this flag the original receiving route remains unchanged. Use a new
+output directory for the edition-enabled request; do not alter a running or
+completed original course receipt. Successful source/controller checks alone
+do not establish native numerical, filesystem, browser or PDF completion.

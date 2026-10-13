@@ -25,7 +25,8 @@
         "operator/install_measurements.py",
         "integration/measurements/INSTALLATION.json",
         "operator/MEASUREMENTS_INSTALLATION.md",
-        "CURRENT_OWNER_DIRECTION.md"
+        "CURRENT_OWNER_DIRECTION.md",
+        "measurement_workspace/observation_edition_source.py"
       ],
       "requires": [
         "measurement-collections",
