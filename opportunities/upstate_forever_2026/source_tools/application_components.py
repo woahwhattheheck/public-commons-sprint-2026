@@ -257,6 +257,52 @@ def inspect(document, *, catalog=None, extra_components=(), allow_embedded=True)
 
     exports_cache = {}
 
+    def namespace_exports(module, function):
+        """Read literal exports from an original globals-namespace installer."""
+        result = set()
+        for candidate in _module_candidates(module, roots):
+            if candidate not in files:
+                continue
+            try:
+                tree = ast.parse(_text(files, metadata, candidate), filename=candidate)
+            except (SyntaxError, ValueError):
+                continue
+            declaration = next((item for item in tree.body
+                                if isinstance(item, ast.FunctionDef)
+                                and item.name == function), None)
+            if declaration is None:
+                continue
+            arguments = declaration.args
+            positional = [*arguments.posonlyargs, *arguments.args]
+            if (len(positional) != 1 or arguments.vararg or arguments.kwarg
+                    or arguments.kwonlyargs):
+                continue
+            namespace = positional[0].arg
+
+            def statements(items):
+                for item in items:
+                    if isinstance(item, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+                        continue
+                    if isinstance(item, ast.Expr) and isinstance(item.value, ast.Call):
+                        call = item.value
+                        if (isinstance(call.func, ast.Attribute)
+                                and isinstance(call.func.value, ast.Name)
+                                and call.func.value.id == namespace
+                                and call.func.attr == "update"
+                                and len(call.args) == 1 and not call.keywords
+                                and isinstance(call.args[0], ast.Dict)):
+                            result.update(key.value for key in call.args[0].keys
+                                          if isinstance(key, ast.Constant)
+                                          and isinstance(key.value, str)
+                                          and key.value.isidentifier())
+                    for child in ast.iter_child_nodes(item):
+                        if isinstance(child, ast.stmt):
+                            statements([child])
+                        elif isinstance(child, ast.ExceptHandler):
+                            statements(child.body)
+            statements(declaration.body)
+        return result
+
     def module_exports(name, visiting=()):
         if name in exports_cache:
             return exports_cache[name]
@@ -270,6 +316,8 @@ def inspect(document, *, catalog=None, extra_components=(), allow_embedded=True)
                 tree = ast.parse(_text(files, metadata, candidate), filename=candidate)
             except (SyntaxError, ValueError):
                 continue
+
+            installers = {}
 
             def names(target):
                 if isinstance(target, ast.Name):
@@ -287,7 +335,7 @@ def inspect(document, *, catalog=None, extra_components=(), allow_embedded=True)
                         exported.update(alias.asname or alias.name.split(".")[0] for alias in item.names)
                     elif isinstance(item, ast.ImportFrom):
                         exported.update(alias.asname or alias.name for alias in item.names if alias.name != "*")
-                        if any(alias.name == "*" for alias in item.names) and item.module:
+                        if item.module:
                             package = list(PurePosixPath(candidate).parent.parts)
                             if item.level and item.level <= len(package):
                                 target = ".".join([*package[:len(package) - item.level + 1],
@@ -297,13 +345,26 @@ def inspect(document, *, catalog=None, extra_components=(), allow_embedded=True)
                             else:
                                 target = None
                             if target:
-                                exported.update(module_exports(target, (*visiting, name)))
+                                installers.update({alias.asname or alias.name: (target, alias.name)
+                                                   for alias in item.names if alias.name != "*"})
+                                if any(alias.name == "*" for alias in item.names):
+                                    exported.update(module_exports(target, (*visiting, name)))
                     elif isinstance(item, (ast.Assign, ast.AnnAssign)):
                         targets = item.targets if isinstance(item, ast.Assign) else [item.target]
                         for target in targets:
                             exported.update(names(target))
                     elif isinstance(item, (ast.For, ast.AsyncFor)):
                         exported.update(names(item.target))
+                    elif isinstance(item, ast.Expr) and isinstance(item.value, ast.Call):
+                        call = item.value
+                        if (isinstance(call.func, ast.Name) and call.func.id in installers
+                                and len(call.args) == 1 and not call.keywords
+                                and isinstance(call.args[0], ast.Call)
+                                and isinstance(call.args[0].func, ast.Name)
+                                and call.args[0].func.id == "globals"
+                                and not call.args[0].args and not call.args[0].keywords
+                                and "globals" not in exported):
+                            exported.update(namespace_exports(*installers[call.func.id]))
                     # Conditional imports and declarations still belong to the
                     # module; function and class locals were excluded above.
                     for child in ast.iter_child_nodes(item):
