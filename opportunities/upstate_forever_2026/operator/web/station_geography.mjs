@@ -506,7 +506,9 @@ export function attachStationGeography(host) {
   }
   async function submit(action,payload) {
     if(busy)return;
-    const key=workspace,requestKey=canonical({workspace:key,action,payload});
+    const key=workspace,requestKey=canonical({workspace:key,action,payload,
+      ...(action==='station.geography.utility-microbial'?{source_context:list(catalog?.sources).map(source=>
+        [source.collection_id,source.source_id,source.source_sha256||source.sha256||null]).sort((a,b)=>canonical(a).localeCompare(canonical(b)))}:{})});
     let request=requests.find(r=>r.key===requestKey);
     if(!request){request={id:'station-geography-'+crypto.randomUUID(),key:requestKey};requests.push(request);}
     busy=true;error='';message='Saving the selected original inputs in the operator queue…';save();renderForm();renderPresets();notice();
