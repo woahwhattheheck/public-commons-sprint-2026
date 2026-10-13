@@ -63,8 +63,12 @@ def _required_nodes(project_id, roster):
         source = row["source"]
         nodes.add(("sources", source["collection_id"]))
         if row["native_project_id"] == project_id:
-            kind = ("multivariate-control-outcomes" if row["native_family"] == "control_outcomes"
-                    else "terrain-conditioning-report-sources")
+            kinds = {"control_outcomes": "multivariate-control-outcomes",
+                     "terrain_response": "terrain-conditioning-report-sources",
+                     "conservation_portfolio": "conservation-report-sources"}
+            if row["native_family"] not in kinds:
+                raise ValueError("Choose a supported retained Sampling native evidence family")
+            kind = kinds[row["native_family"]]
             nodes.add((kind, row["native_id"]))
             for run_id in row["run_ids"]:
                 nodes.add(("runs", run_id))
