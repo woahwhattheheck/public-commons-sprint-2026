@@ -8,7 +8,7 @@
       "title": "Utility-focus microbial observations: temporal, calendar-support and same-station flow context",
       "kind": "document",
       "path": "source/ecoli_temporal_analysis/20261013/observed-report.json",
-      "sha256": "24fc6c3521a35e271a6a5d16077411196e1121a5963672f65fe4b82868afa125",
+      "sha256": "47d0e07cca07832bbf502cbdc7d8ce7ffa4bf761f68e18c5151e366a8d87292a",
       "metadata": {
         "report_schema": "upstate.observed-report/v1",
         "source_operation": "ECO-MICROBIAL-EXPLORER-20261013",
@@ -137,7 +137,7 @@
         },
         {
           "path": "source/ecoli_temporal_analysis/20261013/build-publication-figures.mjs",
-          "sha256": "4c80b5a902d1ab0216d3a4758ad0ba5f27da21d3e15410320981a61c48916af0"
+          "sha256": "5cff009450b0ed86d9948be632eded9f7e181439c5e021f74fd0aa39f751405f"
         },
         {
           "path": "source/ecoli_temporal_analysis/20261013/publication-figures.json",
@@ -196,7 +196,7 @@
           "sha256": "faa682e3e430941f958d26180458f5934a62f58dac4d70ccdd15608c15d0f884"
         }
       ],
-      "uri": "https://github.com/woahwhattheheck/public-commons-sprint-2026/blob/eb3c23cff9d7462229ad47a205972b7831da8498/opportunities/upstate_forever_2026/source/ecoli_temporal_analysis/20261013/observed-report.json",
+      "uri": "https://github.com/woahwhattheheck/public-commons-sprint-2026/blob/fd8cc79f97b62bbe8885aac68eef4daac4bb4b64/opportunities/upstate_forever_2026/source/ecoli_temporal_analysis/20261013/observed-report.json",
       "vintage": "2026-10-13"
     }
   ]

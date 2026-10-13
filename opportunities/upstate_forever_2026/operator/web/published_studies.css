@@ -68,3 +68,18 @@
 .ps-raw-cells dt{font-weight:600}
 @media(max-width:1000px){.ps-header,.ps-study-control{flex-direction:column;align-items:stretch}.ps-filter-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.ps-counts{grid-template-columns:repeat(3,minmax(90px,1fr))}.ps-support{grid-template-columns:1fr;gap:4px}}
 @media(max-width:600px){.published-studies-desk{padding:14px}.ps-form-grid,.ps-filter-grid{grid-template-columns:1fr}.ps-builtin{flex-direction:column;align-items:stretch}.ps-counts{grid-template-columns:repeat(2,minmax(90px,1fr))}.ps-source-list li{flex-direction:column;gap:2px}.ps-raw-cells{grid-template-columns:1fr}.ps-raw-cells dt{border-bottom:0;padding-bottom:0}}
+
+.ps-reviews{border:1px solid var(--ps-line);background:var(--ps-panel);padding:18px;margin:16px 0}
+.ps-review-open{display:flex;align-items:flex-end;gap:10px;flex-wrap:wrap}
+.ps-review-open>label{flex:1;min-width:220px}
+.ps-reviews form[data-ps-review-editor]{display:grid;gap:12px;margin-top:14px}
+.published-studies-desk textarea{font:inherit;border:1px solid #aeb6bd;border-radius:3px;background:white;color:var(--ps-ink);padding:8px 10px;width:100%;resize:vertical;min-height:90px}
+.ps-review-binding{display:grid;grid-template-columns:140px minmax(0,1fr);font-size:12px;margin:10px 0}
+.ps-review-binding dt,.ps-review-binding dd{padding:5px 8px;margin:0;border-bottom:1px solid var(--ps-line);overflow-wrap:anywhere}
+.ps-review-binding dt{font-weight:600}
+.ps-review-selection{overflow-wrap:anywhere}
+.ps-review-notice{border-left:3px solid var(--ps-strong);padding-left:10px}
+.ps-review-snapshot{white-space:pre-wrap;overflow-wrap:anywhere;max-height:240px;overflow:auto;font-size:12px;padding:12px;background:white;border:1px solid var(--ps-line)}
+.ps-filter-grid select[multiple]{min-height:104px}
+.ps-filter-grid label>.ps-link-button{align-self:flex-start;font-size:12px;font-weight:400}
+@media(max-width:600px){.ps-review-open{align-items:stretch;flex-direction:column}.ps-review-open>label{min-width:0;width:100%}.ps-review-binding{grid-template-columns:1fr}.ps-review-binding dt{border-bottom:0;padding-bottom:0}}

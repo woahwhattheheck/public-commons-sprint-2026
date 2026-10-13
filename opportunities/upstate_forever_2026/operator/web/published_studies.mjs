@@ -44,6 +44,128 @@ export function createPublishedStudiesDesk(host) {
   let selection = {site_ids: [], parameters: [], strata: [], year: null, months: []};
   const requests = new Set(), operationIds = new Map(), pending = new Map();
 
+
+  const copy = value => value == null ? value : JSON.parse(JSON.stringify(value));
+  const emptySelection = () => ({site_ids:[], parameters:[], strata:[], year:null, months:[]});
+  const tableIds = new Set(["seasonal","continuous","observed","wqp","flow","figures","ranges","stations","sources"]);
+  const drafts = new Map();
+  let editGeneration = 0, savedReview = null, reviewChoice = "", reviewTitle = "", reviewNotes = "";
+  let loadedStudy = null, loadedSelection = null, reviewLoading = false, reviewRequest = 0, interpretationMatches = true;
+  let catalogPreference = null;
+
+  function remember() {
+    if (!node || !workspace) return;
+    drafts.set(workspace, copy({selected, selection, tab, savedReview, reviewChoice, reviewTitle, reviewNotes, interpretationMatches}));
+  }
+  function edited() { ++editGeneration; remember(); renderReview(); }
+  function sameSource(review = savedReview) {
+    const binding = review?.content?.binding, record = activeRecord();
+    return Boolean(binding && record && binding.study_id === record.study_id && binding.version_id === record.version_id);
+  }
+  function reviewValue() {
+    return {title:reviewTitle.trim(), notes:reviewNotes, table:tab, selection:copy(selection)};
+  }
+  function reviewChanged() {
+    if (!savedReview || !sameSource()) return true;
+    const value = savedReview.content;
+    return canonical(reviewValue()) !== canonical({title:value.title, notes:value.notes || "", table:value.table, selection:value.selection});
+  }
+  function selectionReady() {
+    return Boolean(selected && complete && loadedStudy === selected &&
+      loadedSelection === canonical(currentPayload()));
+  }
+  function selectValues(control, values) {
+    const selectedValues = new Set(values.map(String));
+    for (const option of control.options) option.selected = selectedValues.has(option.value);
+  }
+  function renderReview() {
+    if (!node) return;
+    const control = find("[data-ps-review]");
+    const reviews = arr(catalog?.reviews);
+    control.innerHTML = '<option value="">Choose a saved review</option>' + reviews.map(item =>
+      '<option value="' + esc(item.id) + '">' + esc(item.title + " · " + item.study_id + " · " + item.version_id.slice(-8) +
+        (item.saved_at ? " · " + item.saved_at : "")) + '</option>').join("");
+    if (!reviews.some(item => item.id === reviewChoice)) reviewChoice = savedReview?.id || "";
+    control.value = reviewChoice;
+    find('[data-ps-action="open-review"]').disabled = !reviewChoice || reviewLoading;
+    const title = find('[name="review_title"]'), notes = find('[name="review_notes"]');
+    if (title.value !== reviewTitle) title.value = reviewTitle;
+    if (notes.value !== reviewNotes) notes.value = reviewNotes;
+    const ready = selectionReady() && !busy && !reviewLoading;
+    find('[data-ps-action="report"]').disabled = !ready;
+    find('[data-ps-action="export"]').disabled = !complete || loadedStudy !== selected || busy || reviewLoading;
+    for (const button of node.querySelectorAll('[data-ps-action="save-review"],[data-ps-action="save-new-review"]')) button.disabled = !ready;
+    find('[data-ps-action="export-review"]').disabled = !savedReview || busy;
+    const binding = savedReview?.content?.binding;
+    find("[data-ps-review-identity]").innerHTML = savedReview
+      ? '<p><strong>' + (reviewChanged() ? "Draft changes to saved review" : "Saved review") + '</strong> · ' +
+        esc(savedReview.saved_at || "") + '</p><dl class="ps-review-binding"><dt>Review</dt><dd>' + esc(savedReview.id) +
+        '</dd><dt>Study edition</dt><dd>' + esc(binding.study_id) + " / " + esc(binding.version_id) +
+        '</dd>' + (savedReview.content.parent_review_id ? '<dt>Previous review</dt><dd>' + esc(savedReview.content.parent_review_id) + '</dd>' : "") +
+        '</dl><p class="ps-help">Save review creates a new immutable revision. Export saved review uses the selected saved revision, including its original study and report files.</p>'
+      : '<p class="ps-help">Save the exact study edition, station and parameter selections, table, and notes together. Saved reviews remain in this workspace and can be reopened or exported as a complete ZIP.</p>';
+    if (savedReview) find("[data-ps-review-identity]").innerHTML +=
+      (interpretationMatches ? "" : '<p class="ps-review-notice" role="status">The original source edition and saved filters are retained. Current interpretation differs from the saved coverage or temporal-support snapshot.</p>') +
+      '<details><summary>Saved coverage and temporal support</summary><pre class="ps-review-snapshot">' +
+      esc(JSON.stringify({coverage:savedReview.content.coverage, temporal_support:savedReview.content.temporal_support}, null, 2)) + '</pre></details>';
+    const parameterText = selection.parameters.length ? selection.parameters.map(label).join(", ") : "All parameters";
+    const strataText = selection.strata.length ? selection.strata.join(", ") : "All strata";
+    const monthsText = selection.months.length ? selection.months.map(month => MONTHS[Number(month)-1] || month).join(", ") : "All months";
+    find("[data-ps-review-selection]").textContent = activeRecord()
+      ? (selection.site_ids.length ? selection.site_ids.join(", ") : "All stations") + " · " + parameterText +
+        " · " + strataText + " · " + (selection.year || "All years") + " · " + monthsText + " · Table: " + label(tab)
+      : "Choose a retained study to create a review.";
+    for (const rootControl of node.querySelectorAll('form[data-ps-review-import] select[name="root_id"]')) {
+      const prior = rootControl.value;
+      rootControl.innerHTML = arr(catalog?.source_roots).map(root => '<option value="' + esc(root.id) + '">' + esc(root.label) + '</option>').join("");
+      if (arr(catalog?.source_roots).some(root => root.id === prior)) rootControl.value = prior;
+    }
+  }
+  async function openReview(reviewId) {
+    if (!reviewId || !node) return;
+    const id = ++request, opening = ++reviewRequest, expectedWorkspace = workspace, expectedView = viewGeneration;
+    const expectedEdit = ++editGeneration;
+    const active = () => Boolean(node) && workspace === expectedWorkspace && host.getWorkspace() === expectedWorkspace &&
+      viewGeneration === expectedView && request === id && editGeneration === expectedEdit;
+    reviewLoading = true; renderReview(); status("Opening saved study review…");
+    try {
+      const result = await api("/api/published-studies/review", {review_id:reviewId});
+      if (!active()) return;
+      const review = result.review, content = review?.content, binding = content?.binding;
+      if (!binding?.study_id || !binding?.version_id || !tableIds.has(content.table)) throw new Error("Saved review has an unsupported source binding or table.");
+      const study = await api("/api/published-studies/study", {study_id:binding.study_id, version_id:binding.version_id});
+      if (!active()) return;
+      if (!arr(catalog?.studies).some(item => item.study_id === binding.study_id && item.version_id === binding.version_id)) {
+        throw new Error("The saved review's exact source edition is unavailable in the study catalogue. Refresh the catalogue and reopen the review.");
+      }
+      selected = binding.study_id + "|" + binding.version_id;
+      interpretationMatches = result.interpretation_matches_snapshot !== false;
+      selection = copy(content.selection); tab = content.table;
+      reviewTitle = content.title; reviewNotes = content.notes || ""; savedReview = copy(review); reviewChoice = review.id;
+      complete = study; loadedStudy = selected; loadedSelection = canonical(currentPayload());
+      renderCatalog(); renderSummary(); renderTables(result.context); renderReview(); remember();
+      status("Saved review opened with its exact study edition and selection.");
+    } catch (error) { if (active()) showError(error); }
+    finally {
+      if (node && workspace === expectedWorkspace && viewGeneration === expectedView && opening === reviewRequest) {
+        reviewLoading = false; renderReview();
+      }
+    }
+  }
+  function saveReview(asNew = false) {
+    if (!selectionReady() || busy || reviewLoading) { status("Wait for the selected source tables to finish loading.", true); return; }
+    if (!reviewTitle.trim() || reviewTitle.trim().length > 200 || reviewNotes.length > 12000) {
+      status("Enter a review title of 1–200 characters and notes of at most 12,000 characters.", true); return;
+    }
+    const payload = {...currentPayload(), ...reviewValue()};
+    if (!asNew && sameSource()) payload.parent_review_id = savedReview.id;
+    queue("published-study.review.save", payload);
+  }
+  function newReview() {
+    savedReview = null; reviewChoice = ""; reviewTitle = activeRecord()?.title || ""; reviewNotes = "";
+    edited(); status("New review draft uses the current source edition and filters.");
+  }
+
   function find(selector) { return node?.querySelector(selector); }
   function status(message, error = false) {
     const target = find("[data-ps-status]");
@@ -84,15 +206,30 @@ export function createPublishedStudiesDesk(host) {
       '<section class="ps-study-control"><label>Retained study<select data-ps-study aria-label="Retained study"></select></label>' +
       '<div class="ps-actions"><button type="button" data-ps-action="report" disabled>Export selected report</button>' +
       '<button type="button" data-ps-action="export" disabled>Export complete study</button></div></section>' +
+
+      '<section class="ps-reviews" aria-label="Saved study reviews"><h2>Study reviews</h2>' +
+      '<div class="ps-review-open"><label>Saved review<select data-ps-review><option value="">Choose a saved review</option></select></label>' +
+      '<button type="button" data-ps-action="open-review" disabled>Open review</button>' +
+      '<button type="button" data-ps-action="new-review">New review</button></div>' +
+      '<div data-ps-review-identity></div><p class="ps-help ps-review-selection" data-ps-review-selection></p>' +
+      '<form data-ps-review-editor><label>Review title<input name="review_title" maxlength="200" required autocomplete="off"></label>' +
+      '<label>Review notes<textarea name="review_notes" rows="4" maxlength="12000"></textarea></label>' +
+      '<div class="ps-actions"><button type="submit" data-ps-action="save-review" disabled>Save review</button>' +
+      '<button type="button" data-ps-action="save-new-review" disabled>Save as new review</button>' +
+      '<button type="button" data-ps-action="export-review" disabled>Export saved review ZIP</button></div></form>' +
+      '<details><summary>Import a complete review ZIP</summary><form data-ps-review-import><div class="ps-form-grid">' +
+      '<label>Source folder<select name="root_id" required></select></label><label>Review ZIP path<input name="relative_path" required placeholder="reviews/study-review.zip"></label></div>' +
+      '<p class="ps-help">Import restores the saved review and its exact original study edition from a previously exported review ZIP.</p>' +
+      '<button type="submit">Import review</button></form></details></section>' +
       '<div data-ps-summary></div>' +
       '<form class="ps-filters" data-ps-filters hidden><fieldset><legend>Stations</legend><div data-ps-sites></div></fieldset>' +
-      '<div class="ps-filter-grid"><label>Parameter<select name="parameter"><option value="">All parameters</option>' +
+      '<div class="ps-filter-grid"><label>Parameter<select name="parameter" multiple size="4" aria-describedby="ps-filter-help">' +
       Object.entries(PARAMETERS).map(([key, value]) => '<option value="' + key + '">' + esc(value) + "</option>").join("") +
-      '</select></label><label>Depth stratum<select name="stratum"><option value="">All strata</option><option value="surface">Surface</option><option value="mid">Mid-water</option><option value="bottom">Bottom</option></select></label>' +
+      '</select><button type="button" class="ps-link-button" data-ps-clear-filter="parameter">All parameters</button></label><label>Depth stratum<select name="stratum" multiple size="3" aria-describedby="ps-filter-help"><option value="surface">Surface</option><option value="mid">Mid-water</option><option value="bottom">Bottom</option></select><button type="button" class="ps-link-button" data-ps-clear-filter="stratum">All strata</button></label>' +
       '<label><span data-ps-year-label>Continuous year</span><select name="year"><option value="">All years</option></select></label>' +
-      '<label><span data-ps-month-label>Continuous month</span><select name="month"><option value="">All months</option>' +
+      '<label><span data-ps-month-label>Continuous month</span><select name="month" multiple size="4" aria-describedby="ps-filter-help">' +
       MONTHS.map((month, index) => '<option value="' + (index + 1) + '">' + month + "</option>").join("") +
-      '</select></label></div><p class="ps-help" data-ps-calendar-help>Month and year select continuous summaries. Seasonal tables retain their full published sampling campaign. Surface field ranges and continuous sensors retain their reported depths.</p></form>' +
+      '</select><button type="button" class="ps-link-button" data-ps-clear-filter="month">All months</button></label></div><p class="ps-help" id="ps-filter-help">Select one or more values with Ctrl or Command. No selected parameter, stratum or month means all values. Use the All buttons to clear a filter.</p><p class="ps-help" data-ps-calendar-help>Month and year select continuous summaries. Seasonal tables retain their full published sampling campaign. Surface field ranges and continuous sensors retain their reported depths.</p></form>' +
       '<nav class="ps-tabs" aria-label="Study tables">' +
       [["seasonal","Seasonal"],["continuous","Continuous"],["observed","Report comparison"],["wqp","WQP source context"],["flow","Upstream flow"],["figures","Scientific figures"],["ranges","Field ranges"],["stations","Stations"],["sources","Sources and methods"]]
         .map(([id, title]) => '<button type="button" data-ps-tab="' + id + '" aria-pressed="' + (id === tab) + '">' + title + "</button>").join("") +
@@ -121,7 +258,8 @@ export function createPublishedStudiesDesk(host) {
         : esc(study.counts.seasonal_summary_rows) + " seasonal summaries") + "</p></div>" +
       '<button type="button" data-ps-builtin="' + esc(study.id) + '">Import installed study</button></div>'
     ).join("");
-    for (const button of node.querySelectorAll('[data-ps-action="report"],[data-ps-action="export"]')) button.disabled = !selected || busy;
+    for (const button of node.querySelectorAll('[data-ps-action="report"],[data-ps-action="export"]')) button.disabled = !selected || busy || !complete || loadedStudy !== selected;
+    renderReview();
   }
 
   function renderSummary() {
@@ -150,31 +288,32 @@ export function createPublishedStudiesDesk(host) {
     find("[data-ps-calendar-help]").textContent = sourceCohort
       ? "Year and month select original sampling dates. Fractions, analytical methods, result types and original units remain separate series."
       : "Month and year select continuous summaries. Seasonal tables retain their full published sampling campaign. Surface field ranges and continuous sensors retain their reported depths.";
-    find('select[name="stratum"]').closest("label").hidden = sourceCohort;
-    if (sourceCohort) selection.strata = [];
+    find('select[name="stratum"]').closest("label").hidden = sourceCohort && !selection.strata.length;
     for (const button of node.querySelectorAll("[data-ps-tab]")) {
       const id = button.dataset.psTab;
       button.hidden = sourceCohort && ["seasonal", "continuous", "flow", "figures", "ranges"].includes(id);
       if (id === "observed") button.textContent = sourceCohort ? "Observed series" : "Report comparison";
     }
-    if (sourceCohort && ["seasonal", "continuous", "flow", "figures", "ranges"].includes(tab)) tab = "observed";
-    const availableSites = arr(complete.available_stations || complete.tables.stations).map(row => row.site_id);
-    selection.site_ids = selection.site_ids.filter(id => availableSites.includes(id));
-    if (!selection.site_ids.length) selection.site_ids = availableSites;
+    if (sourceCohort && ["seasonal", "continuous", "flow", "figures", "ranges"].includes(tab) && !savedReview) tab = "observed";
+    // A saved table remains visible even when a source study normally hides that tab.
+    for (const button of node.querySelectorAll("[data-ps-tab]")) if (button.dataset.psTab === tab) button.hidden = false;
+    const availableSites = [...new Set([...arr(complete.available_stations || complete.tables.stations).map(row => row.site_id), ...selection.site_ids])];
     find("[data-ps-sites]").innerHTML = availableSites.map(id => '<label class="ps-check"><input type="checkbox" name="site" value="' +
-      esc(id) + '"' + (selection.site_ids.includes(id) ? " checked" : "") + ">" + esc(id) + "</label>").join("");
+      esc(id) + '"' + (!selection.site_ids.length || selection.site_ids.includes(id) ? " checked" : "") + ">" + esc(id) + "</label>").join("");
     const years = [...new Set(sourceCohort ? arr(complete.observation_rows).map(row => Number(row.date.slice(0,4))) : [...arr(complete.tables.monthly_do),...arr(complete.tables.monthly_ph)].map(row => row.year))].sort();
-    if (selection.year != null && !years.includes(selection.year)) selection.year = null;
+    if (selection.year != null && !years.includes(selection.year)) { years.push(selection.year); years.sort(); }
     const yearControl = find('form[data-ps-filters] select[name="year"]');
     yearControl.innerHTML = '<option value="">All years</option>' + years.map(year => '<option value="' + year + '">' + year + "</option>").join("");
     yearControl.value = selection.year || "";
     const parameterControl = find('form[data-ps-filters] select[name="parameter"]');
     const parameterOptions = [...new Set([...(sourceCohort ? [] : Object.keys(PARAMETERS)), ...arr(complete.original_measurements).map(row => row.parameter)])].sort((a,b) => label(a).localeCompare(label(b)));
-    selection.parameters = selection.parameters.filter(value => parameterOptions.includes(value));
-    parameterControl.innerHTML = '<option value="">All parameters</option>' + parameterOptions.map(value => '<option value="' + esc(value) + '">' + esc(label(value)) + "</option>").join("");
-    parameterControl.value = selection.parameters[0] || "";
-    find('form[data-ps-filters] select[name="stratum"]').value = selection.strata[0] || "";
-    find('form[data-ps-filters] select[name="month"]').value = selection.months[0] || "";
+    for (const value of selection.parameters) if (!parameterOptions.includes(value)) parameterOptions.push(value);
+    parameterControl.innerHTML = parameterOptions.map(value => '<option value="' + esc(value) + '">' + esc(label(value)) + "</option>").join("");
+    selectValues(parameterControl, selection.parameters);
+    const stratumControl = find('form[data-ps-filters] select[name="stratum"]');
+    stratumControl.innerHTML = [...new Set(["surface","mid","bottom",...selection.strata])].map(value => '<option value="' + esc(value) + '">' + esc(label(value)) + "</option>").join("");
+    selectValues(stratumControl, selection.strata);
+    selectValues(find('form[data-ps-filters] select[name="month"]'), selection.months);
     find("[data-ps-filters]").hidden = false;
   }
 
@@ -404,38 +543,79 @@ export function createPublishedStudiesDesk(host) {
     find("[data-ps-tables]").innerHTML = output;
   }
 
+
   async function loadSelection() {
-    const payload = currentPayload(); if (!payload || !node) return;
-    const id = ++request; status("Loading published table selection…");
+    const payload = currentPayload(); if (!payload || !node || loadedStudy !== selected) return;
+    const id = ++request, expectedWorkspace = workspace, expectedView = viewGeneration;
+    const active = () => id === request && Boolean(node) && workspace === expectedWorkspace &&
+      host.getWorkspace() === expectedWorkspace && viewGeneration === expectedView;
+    loadedSelection = null; renderReview(); status("Loading published table selection…");
+    find("[data-ps-tables]").innerHTML = '<p class="ps-empty-row">Loading the selected source tables…</p>';
     try {
       const result = await api("/api/published-studies/context", payload);
-      if (id !== request || !node) return;
-      renderTables(result); status("Published source tables loaded.");
-    } catch (error) { if (id === request) showError(error); }
+      if (!active()) return;
+      loadedSelection = canonical(payload); renderTables(result); renderReview(); remember(); status("Published source tables loaded.");
+    } catch (error) { if (active()) showError(error); }
   }
   async function loadStudy() {
-    const record = activeRecord(); ++request;
-    if (!record) { complete = null; renderSummary(); return; }
-    const id = request; status("Opening retained study…");
+    const record = activeRecord(), id = ++request, expectedWorkspace = workspace, expectedView = viewGeneration;
+    const key = selected;
+    const active = () => id === request && Boolean(node) && workspace === expectedWorkspace &&
+      host.getWorkspace() === expectedWorkspace && viewGeneration === expectedView && selected === key;
+    complete = null; loadedStudy = null; loadedSelection = null; renderSummary(); renderReview();
+    if (!record) return;
+    status("Opening retained study…");
     try {
       const result = await api("/api/published-studies/study", {study_id: record.study_id, version_id: record.version_id});
-      if (id !== request || !node) return;
-      complete = result; renderSummary(); await loadSelection();
-    } catch (error) { if (id === request) showError(error); }
+      if (!active()) return;
+      complete = result; loadedStudy = key;
+      if (!reviewTitle && !savedReview) reviewTitle = record.title;
+      renderSummary(); renderReview(); await loadSelection();
+    } catch (error) { if (active()) showError(error); }
   }
   async function refreshCatalog(prefer = null) {
-    const id = ++catalogRequest;
+    if (prefer) catalogPreference = {result:prefer, workspace, view:viewGeneration, edit:editGeneration};
+    if (catalogPreference && (catalogPreference.workspace !== workspace || catalogPreference.view !== viewGeneration ||
+        catalogPreference.edit !== editGeneration)) catalogPreference = null;
+    const preferred = catalogPreference;
+    const id = ++catalogRequest, expectedWorkspace = workspace, expectedView = viewGeneration, expectedEdit = editGeneration;
+    const active = () => id === catalogRequest && Boolean(node) && workspace === expectedWorkspace &&
+      host.getWorkspace() === expectedWorkspace && viewGeneration === expectedView;
     try {
       const result = await api("/api/published-studies/catalog", {});
-      if (id !== catalogRequest || !node) return;
-      const previous = selected;
+      if (!active()) return;
+      const previous = selected, acceptPreference = expectedEdit === editGeneration;
+      prefer = acceptPreference ? preferred?.result || null : null;
+      if (catalogPreference === preferred) catalogPreference = null;
       catalog = result;
-      if (prefer?.study_id && prefer?.version_id) selected = prefer.study_id + "|" + prefer.version_id;
+      if (acceptPreference && prefer?.study_id && prefer?.version_id) selected = prefer.study_id + "|" + prefer.version_id;
       renderCatalog();
-      if (selected !== previous || !complete || prefer) await loadStudy();
-    } catch (error) { if (id === catalogRequest) showError(error); }
+      if (acceptPreference && prefer?.review?.id) {
+        await openReview(prefer.review.id);
+      } else if (selected !== previous || !complete || (prefer && acceptPreference)) {
+        await loadStudy();
+      }
+      if (active()) { renderReview(); remember(); }
+    } catch (error) { if (active()) showError(error); }
   }
 
+  function taskCanSelect(entry) {
+    return Boolean(node) && workspace === entry.workspace && host.getWorkspace() === entry.workspace &&
+      viewGeneration === entry.view && editGeneration === entry.edit;
+  }
+  async function finishTasks(completions) {
+    let relevant = false, preferred = null;
+    for (const {task,entry} of completions) {
+      pending.delete(task.id); operationIds.delete(entry.key);
+      if (!node || workspace !== entry.workspace || host.getWorkspace() !== entry.workspace) continue;
+      relevant = true;
+      if (taskCanSelect(entry) && !["published-study.export","published-study.report","published-study.review.export"].includes(entry.action)) preferred = task.result;
+    }
+    if (!relevant) return;
+    status("Study task completed. " + (preferred ? "" : "Saved results are available in the catalogue and task."));
+    await refreshCatalog(preferred);
+  }
+  async function finishTask(task, entry) { return finishTasks([{task,entry}]); }
   async function queue(action, payload) {
     if (busy) return;
     const expectedWorkspace = workspace, expectedView = viewGeneration;
@@ -443,13 +623,15 @@ export function createPublishedStudiesDesk(host) {
       viewGeneration === expectedView && host.getWorkspace() === expectedWorkspace;
     const key = canonical({workspace,action,payload});
     if (!operationIds.has(key)) operationIds.set(key, "published-study-" + crypto.randomUUID());
-    busy = true; renderCatalog(); status("Queueing study task…");
+    if (!["published-study.export","published-study.report","published-study.review.export"].includes(action)) ++editGeneration;
+    const entry = {action,key,workspace:expectedWorkspace,view:expectedView,edit:editGeneration};
+    busy = true; renderCatalog(); renderReview(); status("Queueing study task…");
     try {
-      const task = await host.api("/api/actions", {method:"POST",body:{workspace,action,payload,operation_id:operationIds.get(key)}});
-      pending.set(task.id,{action,key});
+      const task = await host.api("/api/actions", {method:"POST",body:{workspace:expectedWorkspace,action,payload:copy(payload),operation_id:operationIds.get(key)}});
+      pending.set(task.id,entry); taskStamp = "";
       if (!active()) return;
       if (task.state === "complete" || task.state === "completed") {
-        pending.delete(task.id); operationIds.delete(key); await refreshCatalog(task.result);
+        await finishTask(task, entry);
         if (!active()) return;
       }
       await host.refresh({force:true});
@@ -458,7 +640,7 @@ export function createPublishedStudiesDesk(host) {
       status("Study task " + task.id + " is " + task.state + ".");
       update(host.getState());
     } catch (error) { if (active()) showError(error); }
-    finally { if (active()) { busy = false; renderCatalog(); } }
+    finally { if (active()) { busy = false; renderCatalog(); renderReview(); } }
   }
   function detail(id) {
     const rows = [...Object.values(complete?.tables || {}).flat(), ...arr(complete?.observation_rows), ...arr(complete?.original_measurements), ...arr(complete?.wqp_coverage), ...arr(complete?.flow_rows)];
@@ -480,19 +662,27 @@ export function createPublishedStudiesDesk(host) {
     }
     target.hidden = false; target.scrollIntoView({block:"nearest",behavior:"smooth"});
   }
+
   function filters() {
     const form = find("[data-ps-filters]"), data = new FormData(form), sites = data.getAll("site");
-    if (!sites.length) { status("Select at least one station.",true); return; }
-    selection = {site_ids:sites,parameters:data.get("parameter") ? [data.get("parameter")] : [],
-      strata:data.get("stratum") ? [data.get("stratum")] : [],year:data.get("year") ? Number(data.get("year")) : null,
-      months:data.get("month") ? [Number(data.get("month"))] : []};
-    loadSelection();
+    if (!sites.length) {
+      for (const input of form.querySelectorAll('input[name="site"]')) input.checked = !selection.site_ids.length || selection.site_ids.includes(input.value);
+      status("Select at least one station. The previous station selection has been restored.",true); return;
+    }
+    selection = {site_ids:sites, parameters:data.getAll("parameter").filter(Boolean),
+      strata:data.getAll("stratum").filter(Boolean), year:data.get("year") ? Number(data.get("year")) : null,
+      months:data.getAll("month").filter(Boolean).map(Number)};
+    edited(); loadSelection();
   }
   function click(event) {
     const button = event.target.closest("button"); if (!button || !node.contains(button)) return;
     if (button.dataset.psBuiltin) queue("published-study.import",{builtin_id:button.dataset.psBuiltin});
-    if (button.dataset.psTab) { tab = button.dataset.psTab; loadSelection(); }
+    if (button.dataset.psTab) { tab = button.dataset.psTab; edited(); loadSelection(); }
     if (button.dataset.psRow) detail(button.dataset.psRow);
+    if (button.dataset.psClearFilter) {
+      const control = find('form[data-ps-filters] select[name="' + button.dataset.psClearFilter + '"]');
+      selectValues(control, []); filters();
+    }
     const action = button.dataset.psAction;
     if (action === "refresh") refreshCatalog();
     if (action === "close-detail") find("[data-ps-detail]").hidden = true;
@@ -500,9 +690,20 @@ export function createPublishedStudiesDesk(host) {
     if (action === "export" && currentPayload()) {
       const {study_id,version_id} = currentPayload(); queue("published-study.export",{study_id,version_id});
     }
+    if (action === "open-review") openReview(reviewChoice);
+    if (action === "new-review") newReview();
+    if (action === "save-new-review") saveReview(true);
+    if (action === "export-review" && savedReview) queue("published-study.review.export",{review_id:savedReview.id});
   }
   function submit(event) {
     if (event.target.matches("[data-ps-filters]")) { event.preventDefault(); return; }
+    if (event.target.matches("[data-ps-review-editor]")) { event.preventDefault(); saveReview(); return; }
+    if (event.target.matches("[data-ps-review-import]")) {
+      event.preventDefault();
+      const data = new FormData(event.target);
+      queue("published-study.review.import", {source:{root_id:data.get("root_id"),relative_path:String(data.get("relative_path") || "").trim()}});
+      return;
+    }
     if (!event.target.matches("[data-ps-import]")) return;
     event.preventDefault();
     const data = new FormData(event.target), root_id = data.get("root_id");
@@ -519,36 +720,57 @@ export function createPublishedStudiesDesk(host) {
     const relevant = tasksFrom(state).filter(task => String(task.action || "").startsWith("published-study."));
     const stamp = relevant.map(task => task.id + ":" + task.state).sort().join("|");
     if (stamp === taskStamp) return; taskStamp = stamp;
-    let completed = null;
+    const completed = [];
     for (const task of relevant) {
-      if (!pending.has(task.id)) continue;
+      const entry = pending.get(task.id);
+      if (!entry || entry.workspace !== workspace) continue;
       if (task.state === "complete" || task.state === "completed") {
-        const entry = pending.get(task.id); pending.delete(task.id); operationIds.delete(entry.key);
-        completed = task.result; status("Study task completed.");
+        completed.push({task,entry});
       } else if (["failed","interrupted","cancelled"].includes(task.state)) {
         pending.delete(task.id); status(task.error?.message || ("Study task " + task.state + ". Open the task to resume."),true);
       }
     }
-    if (completed) refreshCatalog(completed);
+    // Each completion retains its accepted operation and source-selection generation.
+    // Do not let an older queued operation select over a later edit or opened review.
+    if (completed.length) {
+      const expectedWorkspace = workspace, expectedView = viewGeneration;
+      finishTasks(completed).catch(error => {
+        if (node && workspace === expectedWorkspace && host.getWorkspace() === expectedWorkspace && viewGeneration === expectedView) showError(error);
+      });
+    }
   }
   function mount(target, state = host.getState()) {
     detach();
     node = target; workspace = host.getWorkspace(); events = new AbortController();
     if (!workspace) { node.textContent = "Choose a workspace to inspect published studies."; return; }
-    busy = false; taskStamp = ""; catalog = null; complete = null; selected = null; selection = {site_ids:[],parameters:[],strata:[],year:null,months:[]};
+    busy = false; reviewLoading = false; taskStamp = ""; catalog = null; complete = null; loadedStudy = null; loadedSelection = null;
+    const draft = drafts.get(workspace);
+    selected = draft?.selected || null; selection = copy(draft?.selection || emptySelection()); tab = draft?.tab || "seasonal";
+    savedReview = copy(draft?.savedReview || null); reviewChoice = draft?.reviewChoice || "";
+    reviewTitle = draft?.reviewTitle || ""; reviewNotes = draft?.reviewNotes || ""; interpretationMatches = draft?.interpretationMatches !== false;
+    ++editGeneration;
     frame();
     node.addEventListener("click",click,{signal:events.signal});
     node.addEventListener("submit",submit,{signal:events.signal});
+    node.addEventListener("input",event => {
+      if (event.target.name === "review_title") { reviewTitle = event.target.value; edited(); }
+      if (event.target.name === "review_notes") { reviewNotes = event.target.value; edited(); }
+    },{signal:events.signal});
     node.addEventListener("change",event => {
       if (event.target.matches("[data-ps-study]")) {
-        selected = event.target.value; selection.site_ids = []; find("[data-ps-detail]").hidden = true; loadStudy();
+        selected = event.target.value; selection = emptySelection(); savedReview = null; reviewChoice = "";
+        reviewTitle = activeRecord()?.title || ""; reviewNotes = "";
+        find("[data-ps-detail]").hidden = true; edited(); loadStudy();
+      } else if (event.target.matches("[data-ps-review]")) {
+        reviewChoice = event.target.value; edited();
       } else if (event.target.closest("[data-ps-filters]")) filters();
     },{signal:events.signal});
-    update(state); refreshCatalog();
+    renderReview(); update(state); refreshCatalog();
   }
   function detach() {
+    remember();
     events?.abort(); for (const controller of requests) controller.abort(); requests.clear();
-    ++request; ++catalogRequest; ++viewGeneration;
+    ++request; ++catalogRequest; ++viewGeneration; ++reviewRequest; catalogPreference = null;
     if (node) node.classList.remove("published-studies-desk");
     node = null; events = null;
   }
