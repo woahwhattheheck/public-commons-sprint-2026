@@ -156,6 +156,22 @@ def _selected(catalog, extra):
     return sorted(selected)
 
 
+def selected_contexts(catalog, selected):
+    """Use identical selected source roles in maps and directory loading."""
+    contexts, retained_only, templates = {}, {}, {}
+    for component_name in selected:
+        component = catalog["components"][component_name]
+        for key, target, identity in (("python_contexts", contexts, "prefix"),
+                                      ("retained_only", retained_only, "path"),
+                                      ("html_templates", templates, "path")):
+            for row in component.get(key, []):
+                name = row[identity]
+                if name in target and target[name] != row:
+                    raise ValueError("Selected source contexts conflict: " + name)
+                target[name] = row
+    return contexts, retained_only, templates
+
+
 def _text(files, metadata, path):
     content = files[path]
     if not isinstance(content, str):
@@ -252,6 +268,18 @@ def local_resource(owner, value):
         target = posixpath.normpath(posixpath.join(posixpath.dirname(owner), value))
     return relative(target)
 
+
+def template_resource(owner, value, templates):
+    """Resolve a selected template identically in maps and directories."""
+    for binding in templates.get(owner, {}).get("bindings", []):
+        token = binding["token"]
+        if value == token or value.startswith(token + "/"):
+            suffix = unquote(urlsplit(value[len(token):]).path).lstrip("/")
+            if not suffix:
+                raise ValueError("HTML template asset needs a member below its route")
+            relative(suffix)
+            return relative(posixpath.join(binding["asset_root"], suffix))
+    return local_resource(owner, value)
 
 def source_manifest_members(path, value):
     """Resolve the exact native Workspace.import_sources member contract."""
@@ -358,17 +386,7 @@ def inspect(document, *, catalog=None, extra_components=(), allow_embedded=True)
     for name in selected:
         roots.extend(root for root in catalog["components"][name].get("import_roots", [])
                      if root not in roots)
-    contexts, retained_only, templates = {}, {}, {}
-    for component_name in selected:
-        component = catalog["components"][component_name]
-        for key, target, identity in (("python_contexts", contexts, "prefix"),
-                                      ("retained_only", retained_only, "path"),
-                                      ("html_templates", templates, "path")):
-            for row in component.get(key, []):
-                name = row[identity]
-                if name in target and target[name] != row:
-                    raise ValueError("Selected source contexts conflict: " + name)
-                target[name] = row
+    contexts, retained_only, templates = selected_contexts(catalog, selected)
     context_roots = list(dict.fromkeys([*roots, *(root for row in contexts.values()
                                                 for root in row.get("import_roots", []))]))
 
@@ -402,17 +420,6 @@ def inspect(document, *, catalog=None, extra_components=(), allow_embedded=True)
     def module_candidates(name):
         candidates = _module_candidates(name, roots)
         return next(([path] for path in candidates if path in files), candidates)
-
-    def template_resource(owner, value):
-        for binding in templates.get(owner, {}).get("bindings", []):
-            token = binding["token"]
-            if value == token or value.startswith(token + "/"):
-                suffix = unquote(urlsplit(value[len(token):]).path).lstrip("/")
-                if not suffix:
-                    raise ValueError("HTML template asset needs a member below its route")
-                relative(suffix)
-                return relative(posixpath.join(binding["asset_root"], suffix))
-        return local_resource(owner, value)
 
     module_names = set()
     for path in files:
@@ -742,7 +749,7 @@ def inspect(document, *, catalog=None, extra_components=(), allow_embedded=True)
             parser.feed(content)
             for value in parser.references:
                 try:
-                    target = template_resource(path, value)
+                    target = template_resource(path, value, templates)
                     if target is not None:
                         require(target, path, "html-asset")
                 except ValueError as error:
@@ -822,6 +829,7 @@ def inspect_directory(root, *, required=False, allow_embedded=False):
     declared = {path for component in catalog["components"].values() for path in component["paths"]}
     declared.update(fragment["path"] for fragment in fragment_records)
     selected = _selected(catalog, ())
+    _, retained_only, templates = selected_contexts(catalog, selected)
     declared.update(row["path"] for name in selected
                     for key in ("retained_only", "html_templates")
                     for row in catalog["components"][name].get(key, []))
@@ -885,10 +893,12 @@ def inspect_directory(root, *, required=False, allow_embedded=False):
                 files[name] = base64.b64encode(body).decode("ascii")
                 record["encoding"] = "base64"
             metadata[name] = record
-    # Load only resources actually referenced by retained HTML. This keeps a
-    # figure present on disk from appearing absent in the source-map inspection,
+    # Load only resources referenced by selected runtime HTML. Retained-only
+    # historical pages remain hash-covered without importing their old assets.
+    # This keeps an original on-disk figure present in source-map inspection,
     # without reading unrelated original geospatial payloads.
-    pending = [name for name in files if name.endswith(".html")]
+    pending = [name for name in files
+               if name.endswith(".html") and name not in retained_only]
     scanned = set()
     while pending:
         name = pending.pop()
@@ -898,7 +908,11 @@ def inspect_directory(root, *, required=False, allow_embedded=False):
         parser = _WebReferences()
         parser.feed(_text(files, metadata, name))
         for value in parser.references:
-            target = local_resource(name, value)
+            try:
+                target = template_resource(name, value, templates)
+            except ValueError:
+                # inspect() reports the same exact malformed-resource issue.
+                continue
             if target is None or target in files:
                 continue
             path = root.joinpath(*PurePosixPath(target).parts)
@@ -920,7 +934,7 @@ def inspect_directory(root, *, required=False, allow_embedded=False):
                 files[target] = base64.b64encode(body).decode("ascii")
                 record["encoding"] = "base64"
             metadata[target] = record
-            if target.endswith(".html"):
+            if target.endswith(".html") and target not in retained_only:
                 pending.append(target)
     document = {"files": files, "file_metadata": metadata}
     return (require_complete(document, allow_embedded=allow_embedded) if required
