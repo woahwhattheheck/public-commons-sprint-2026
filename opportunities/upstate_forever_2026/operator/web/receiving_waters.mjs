@@ -69,6 +69,7 @@ export function attachReceivingWaters(context){
   }
   async function transferStudy(value){
     const kind=value?.kind,id=value?.id,workspace=currentWorkspace(),marker=version,request=++studyRequest;
+    const view=typeof context.getView==='function'?context.getView():undefined;
     if(!workspace||!['plan','analysis'].includes(kind)||!/^[0-9a-f]{64}$/.test(id||''))
       throw Error('Choose an original saved receiving-water plan or analysis.');
     if(value.workspace_key!==undefined&&value.workspace_key!==workspace)
@@ -76,7 +77,8 @@ export function attachReceivingWaters(context){
     if(typeof context.openStudyTransfer!=='function'&&typeof context.openExtension!=='function')
       throw Error('Open the maintained Study transfer desk to transfer this saved study.');
     const row=await api(endpoint('/api/receiving-waters/'+kind,{[kind+'_id']:id}));
-    if(workspace!==currentWorkspace()||marker!==version||request!==studyRequest)
+    if(workspace!==currentWorkspace()||marker!==version||request!==studyRequest||
+        (view!==undefined&&view!==context.getView?.()))
       throw Error('The workspace or Receiving view changed. Choose the saved study again.');
     if(row?.id!==id||row?.schema!=='upstate.receiving-water-'+kind+'/v1'||row?.state!=='complete')
       throw Error('Choose the complete original receiving-water '+kind+' before transferring it.');
