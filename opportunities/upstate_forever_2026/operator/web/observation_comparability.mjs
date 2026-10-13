@@ -45,6 +45,47 @@ export function renderComparablePeriods(data,{yearA,yearB,station='',series='',t
   return {html:detail+content,rows:exportRows};
 }
 
+export function renderActivityContributions(ledger,{station='',series='',yearA=null,yearB=null}={}){
+  if(!ledger)return '';
+  if(ledger.schema!=='upstate.cohort-activity-contributions/v1')throw Error('Reopen the original activity contribution source.');
+  const pairs=list(ledger.comparisons).filter(row=>(!station||row.series_identity.station===station)&&
+    (!series||row.series_id===series)&&(yearA===null||row.year_a===yearA)&&(yearB===null||row.year_b===yearB));
+  if(!pairs.length)return '';
+  const grid=(heads,rows,label)=>table(heads,rows).replace('<div class="oc-scroll">',
+    '<div class="oc-scroll" tabindex="0" role="region" aria-label="'+esc(label)+'">');
+  return '<details class="oc-contributions"><summary>How the original activities contribute ('+pairs.length+' series)</summary>'+
+    '<p>'+esc(ledger.method)+'</p><p>'+esc(ledger.interpretation)+'</p>'+
+    pairs.map(pair=>{
+      const source=pair.series_identity,label=source.characteristic+' · '+source.station+' / '+source.project;
+      if(!pair.reconciled)return '<section><h3>'+esc(label)+'</h3><p>'+esc(pair.reason)+'</p></section>';
+      const identity='<details><summary>Exact analytical identity</summary><dl>'+originalFields.map(field=>
+        '<dt>'+esc(field)+'</dt><dd class="oc-raw">'+esc(source[field])+'</dd>').join('')+'</dl></details>';
+      const months=grid(['Month',pair.year_a+' activities',pair.year_b+' activities',
+        pair.year_a+' mean contribution',pair.year_b+' mean contribution','Signed B − A contribution'],
+        list(pair.months).map(row=>'<tr>'+[row.month,row.activities_a,row.activities_b,interval(row.mean_contribution_a),
+          interval(row.mean_contribution_b),interval(row.change_contribution)].map(value=>'<td>'+esc(value)+'</td>').join('')+'</tr>').join(''),
+        'Original common-month contributions');
+      const activities=grid(['Year / source date','Original activity / result IDs','Original interval',
+        'Month × activity = year-mean weight','Year-mean contribution','Signed change weight','B − A contribution','Original source'],
+        list(pair.activities).map(row=>{
+          const detail='<details><summary>All '+esc(row.original_row_count)+' original rows</summary>'+
+            list(row.source_rows).map(original=>'<h4>'+esc(original.result_id)+'</h4><dl>'+
+              Object.entries(original).map(([name,value])=>'<dt>'+esc(name)+'</dt><dd class="oc-raw">'+esc(value)+'</dd>').join('')+'</dl>').join('')+'</details>';
+          return '<tr>'+[row.year+' / '+row.date,row.activity_id+' / '+list(row.original_result_ids).join(', '),
+            interval(row.original_interval),row.month_weight_exact+' × '+row.within_month_weight_exact+' = '+row.mean_weight_exact,
+            interval(row.mean_contribution),row.signed_change_weight_exact,interval(row.change_contribution)]
+            .map(value=>'<td class="oc-raw">'+esc(value)+'</td>').join('')+
+            '<td>'+button('contribution','Inspect original results','data-series="'+esc(pair.series_id)+'" data-activity="'+esc(row.activity_id)+'"')+detail+'</td></tr>';
+        }).join(''),'Every original activity and exact signed weight');
+      return '<section><h3>'+esc(label)+' · '+esc(pair.year_b+' versus '+pair.year_a)+'</h3>'+identity+
+        '<p>Original interval: '+esc(interval(pair.original_mean_a))+' → '+esc(interval(pair.original_mean_b))+
+        '; change '+esc(interval(pair.original_change))+' '+esc(source.unit)+'. '+esc(pair.direction)+
+        '. Complete exact contribution sums reconcile to these unchanged source intervals.</p>'+months+
+        '<details><summary>Every original activity ('+esc(list(pair.activities).length)+')</summary>'+activities+'</details></section>';
+    }).join('')+'</details>';
+}
+
+
 export function attachObservationComparability(host){
   const {getState,api,endpoint,toast,openForm,submitAction,openScientificReport,openDesk}=host;
   let root=null,workspace='',epoch=0,contentRead=0,catalogRead=0,events=null,catalog=null,loaded=null,opened=null,renderedRows=[];
@@ -115,7 +156,7 @@ export function attachObservationComparability(host){
       (opened?'<p>Saved original edition '+esc(opened.edition.id.slice(0,16))+'. Full originals and the report source are retained in this Workspace.</p>':'<p>Original source opened. Save this selection to retain its report source, full offline desk and portable source package.</p>')+sourceContext();
     find('[data-oc-view]').hidden=false;
     const result=renderComparablePeriods(data,{yearA:c.yearA,yearB:c.yearB,station:c.station,series:c.series,tab:c.tab,query:c.query,page:c.page});
-    renderedRows=result.rows;find('[data-oc-result]').innerHTML=result.html+savedFigures(data,c);
+    renderedRows=result.rows;find('[data-oc-result]').innerHTML=result.html+savedFigures(data,c)+(opened?renderActivityContributions(opened._contributions,{station:c.station,series:c.series,yearA:c.yearA,yearB:c.yearB}):'');
     find('[data-oc-action="compose"]').disabled=!opened;
     find('[data-oc-action="append"]').disabled=!opened;
     find('[data-oc-downloads]').innerHTML=list(opened?._downloads).map(row=>{
@@ -255,6 +296,7 @@ export function attachObservationComparability(host){
     if(name==='csv')return download();
     const c=context(workspace);
     if(name==='series'){c.series=node.dataset.series;c.tab='calendar';c.page=0;}
+    else if(name==='contribution'){c.series=node.dataset.series;c.tab='originals';c.query=node.dataset.activity;c.page=0;}
     else if(name==='previous')c.page=Math.max(0,c.page-1);
     else if(name==='next')c.page++;
     else throw Error('Choose an original comparison action.');
