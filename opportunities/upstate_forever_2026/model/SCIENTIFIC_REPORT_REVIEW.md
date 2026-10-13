@@ -169,7 +169,7 @@ review records, not a copied parallel store.
 
 A selected saved scientific report also includes its linked Customer reviews
 when **Include related results** is enabled. This association requires the
-original \`SCIENTIFIC_REPORT_REVIEW\` source identity, project and saved edition.
+original `SCIENTIFIC_REPORT_REVIEW` source identity, project and saved edition.
 Imported reports from another project retain their captured source files without
 resolving the other project's producer IDs locally. Turning related results off
 leaves the report selection narrower; explicitly selecting a Customer review
@@ -196,8 +196,8 @@ caches and sender-local operator export directories are recreated through their
 original controls on the receiving computer; they are not substituted for the
 retained original review archive, source records or feedback.
 
-Implementation: \`model/customer_review_study_transfer.py\` composes the original
-\`model.reviews\`, \`review_handback\`, \`review_receiving\` and
-\`review_reconciliation\` validators. Source resolution reads existing CAS members
+Implementation: `model/customer_review_study_transfer.py` composes the original
+`model.reviews`, `review_handback`, `review_receiving` and
+`review_reconciliation` validators. Source resolution reads existing CAS members
 without creating source-view links. The original Workspace and reconciliation
 locks protect capture. No native model or report rendering is run during transfer.
