@@ -77,7 +77,7 @@ export const VENDOR_SECTIONS = [
           },
           {
             "name": "cvPublicEvidence",
-            "label": "Outward CV / biography link (optional)",
+            "label": "Outward CV link or attachment:filename (optional)",
             "type": "text",
             "optional": true
           }
@@ -276,7 +276,7 @@ export const VENDOR_SECTIONS = [
           },
           {
             "name": "publicEvidence",
-            "label": "Outward evidence link (optional)",
+            "label": "Outward evidence link or attachment:filename (optional)",
             "type": "text",
             "optional": true
           },

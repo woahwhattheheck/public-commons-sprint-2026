@@ -1,3 +1,4 @@
+import {attachmentName} from "./vendor-attachments.mjs";
 const ISSUER = 'https://www.opentech.fund/news/open-technology-fund-requests-proposals-for-the-rapid-response-fund/';
 const DEADLINE = '2026-11-23 23:59 EST';
 const SERVICE_LABELS = Object.freeze({
@@ -41,8 +42,8 @@ const warnings = [];
 function required(path,value) {if(!asString(value)) needs.push(path); return asString(value);}
 function evidence(path,value) {
   const str = required(path,value);
-  if (str && !/^https:\/\/[^\s/]+(?:\/[^\s]*)?$/.test(str) && !/^internal:[^\s].{2,}$/.test(str)) {
-    warnings.push(`${path}: evidence must be an https URL or an internal:<stable-id> custody reference`);
+  if (str && !/^https:\/\/[^\s/]+(?:\/[^\s]*)?$/.test(str) && !/^internal:[^\s].{2,}$/.test(str) && !/^attachment:.+/.test(str)) {
+    warnings.push(`${path}: evidence must be an HTTPS URL, an internal:<stable-id> custody reference or an included attachment:<filename>`);
   }
   return str;
 }
@@ -85,15 +86,20 @@ function evidence(path,value) {
   if(doc.caseBudget||doc.caseAuthorization) warnings.push('Do not include per-case budget/approval in vendor proposal. Case approval is subsequent, in writing, by OTF Program Manager.');
   return {needs:[...new Set(needs)],warnings};
 }
-export function render(doc,quality,{audience='internal'}={}){
+export function render(doc,quality,{audience='internal',attachments=[]}={}){
   if(!['internal','submission'].includes(audience))throw Error('Unknown proposal audience');
   if(audience==='submission'&&(quality.needs.length||quality.warnings.length))throw Error('Complete required proposal fields before rendering submission edition');
   const a=obj(doc.applicant),c=obj(doc.contact),q=obj(doc.qualifications),s=obj(doc.supportServices),att=obj(doc.attestations);
   const evidenceFor=(value,originalKey,publicKey,label)=>{
     const item=obj(value);
     const selected=audience==='submission'?(asString(item[publicKey])||asString(item[originalKey])):asString(item[originalKey]);
+    if(audience==='submission'&&selected.startsWith('attachment:')){
+      const name=attachmentName(selected),included=attachments.find(file=>file.name===name);
+      if(!included||!Number.isSafeInteger(included.bytes)||included.bytes<1||!/^[a-f0-9]{64}$/.test(included.sha256))throw Error(label+': selected attachment must be validated and included in this proposal package');
+      return 'Included attachment: '+safe(name);
+    }
     if(audience==='submission'&&(!/^https:\/\/[^\s/]+(?:\/[^\s]*)?$/.test(selected)||privateCustody(selected))){
-      throw Error(label+': provide an outward HTTPS evidence reference; retain private custody in '+originalKey);
+      throw Error(label+': provide an outward HTTPS link or a validated included attachment; retain private custody in '+originalKey);
     }
     return safe(selected);
   };

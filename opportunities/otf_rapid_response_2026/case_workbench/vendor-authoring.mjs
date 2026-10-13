@@ -1,7 +1,8 @@
 /* MIT. Original-preserving authoring for the maintained OTF vendor schema. */
 import {check,render} from "../vendor_submission_20261011/vendor-core.mjs";
 import {VENDOR_SECTIONS} from "./vendor-authoring-forms.mjs";
-import {buildVendorBudget} from "./issuer-budget-browser.mjs";
+import {buildVendorBudget,sha256} from "./issuer-budget-browser.mjs";
+import {validateVendorAttachmentsAsync} from "../vendor_submission_20261011/vendor-attachments.mjs";
 const fields=VENDOR_SECTIONS.flatMap(section=>section.fields);
 const has=(value,key)=>Object.prototype.hasOwnProperty.call(value,key);
 function object(value,label){if(!value||typeof value!=="object"||Array.isArray(value))throw new Error(label+" must be an object");return value;}
@@ -60,21 +61,25 @@ export function applyVendorFields(draft,values){
  for(const field of fields)if(has(values,field.name))result[field.name]=applyField(result[field.name],values[field.name],field,field.name);
  return copy(result);
 }
-export function exportVendorDraft(draft){return JSON.stringify(object(draft,"Vendor draft"),null,2)+"\n";}
+export function exportVendorDraft(draft){const text=JSON.stringify(object(draft,"Vendor draft"),null,2)+"\n";if(new TextEncoder().encode(text).length>25165824)throw new Error("Complete editable vendor input exceeds the case workbook’s 24 MiB source-file capacity; reduce selected attachment bytes before exporting");return text;}
 export async function reviewVendorDraft(draft){
  const input=copy(object(draft,"Vendor draft")),base=check(input);let budget=null,budgetError=null;
  try{budget=await buildVendorBudget(input);}catch(error){budgetError=error.message;}
  const quality={needs:[...new Set([...base.needs,...(budget?.mapping.missing??[])])],warnings:[...base.warnings,...(budgetError?["Original issuer workbook: "+budgetError]:[])]};
- const internalMarkdown=render(input,quality,{audience:"internal"}),submissionIssues=[];let submissionMarkdown=null;
+ const submissionIssues=[];let submissionMarkdown=null,attachmentResult={files:[],manifest:[]};
+ try{attachmentResult=await validateVendorAttachmentsAsync(input,sha256);}catch(error){quality.warnings.push("Outgoing attachment: "+error.message);}
+ const internalMarkdown=render(input,quality,{audience:"internal"});
  if(quality.needs.length||quality.warnings.length)submissionIssues.push(...quality.needs,...quality.warnings);
- else{try{submissionMarkdown=render(input,quality,{audience:"submission"});}catch(error){submissionIssues.push(error.message);}}
- return {quality,internalMarkdown,submissionMarkdown,submissionIssues,budget,budgetError,contentComplete:quality.needs.length===0&&quality.warnings.length===0,submissionComplete:submissionMarkdown!==null};
+ else if(submissionIssues.length===0){try{submissionMarkdown=render(input,quality,{audience:"submission",attachments:attachmentResult.manifest});}catch(error){submissionIssues.push(error.message);}}
+ return {quality,internalMarkdown,submissionMarkdown,submissionIssues,budget,budgetError,attachmentResult,contentComplete:quality.needs.length===0&&quality.warnings.length===0,submissionComplete:submissionMarkdown!==null};
 }
 export async function prepareVendorDraft(draft){
  const input=copy(object(draft,"Vendor draft")),review=await reviewVendorDraft(input),encoder=new TextEncoder();
  const textFile=(name,type,text)=>({name,media_type:type,bytes:encoder.encode(text)});
  const files=[textFile("vendor-input.json","application/json",exportVendorDraft(input)),textFile("proposal-review.md","text/markdown",review.internalMarkdown),textFile("readiness.json","application/json",JSON.stringify({schema:"commons.otf-vendor-authoring-readiness.v1",quality:review.quality,contentComplete:review.contentComplete,submissionComplete:review.submissionComplete,submissionIssues:review.submissionIssues},null,2)+"\n")];
  if(review.budget){files.push({name:review.budget.mapping.output.file,media_type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",bytes:review.budget.bytes},textFile("budget-mapping.json","application/json",JSON.stringify(review.budget.mapping,null,2)+"\n"));}
+ for(const attachment of review.attachmentResult.files)files.push({name:attachment.name,media_type:attachment.media_type,bytes:attachment.bytes});
  if(review.submissionMarkdown)files.push(textFile("proposal-submission.md","text/markdown",review.submissionMarkdown));
- return {draft:input,review,files};
+ const submissionFiles=review.submissionComplete?files.filter(file=>file.name==="proposal-submission.md"||file.name===review.budget.mapping.output.file||review.attachmentResult.files.some(attachment=>attachment.name===file.name)):[];
+ return {draft:input,review,files,submissionFiles};
 }
