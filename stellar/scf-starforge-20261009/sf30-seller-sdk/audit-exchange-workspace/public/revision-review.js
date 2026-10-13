@@ -14,27 +14,40 @@ export function mountRevisionReview(host){
     tx.oncomplete=()=>resolve(result);tx.onabort=tx.onerror=()=>reject(tx.error||new Error("The complete working copy could not be saved."));
     fn(tx.objectStore("drafts"),v=>result=v);});}
   function raw(value){const text=JSON.stringify(value);if(new TextEncoder().encode(text).length>128*1024*1024)throw new Error("The whole working copy exceeds 128 MiB; preserve it and choose fewer reviews.");return text;}
-  async function list(){const rows=await transaction("readonly",(s,done)=>{const q=s.getAll();q.onsuccess=()=>done(q.result);});
+  async function list(){const rows=await transaction("readonly",(s,done)=>{const rows=[],q=s.openCursor();q.onsuccess=()=>{const cursor=q.result;if(!cursor){done(rows);return;}const r=cursor.value;if(r.workspaceId===workspace)rows.push({id:r.id,workspaceId:r.workspaceId,updatedAt:r.updatedAt,title:r.body.title});cursor.continue();};});
     const select=$("revision-review-working"),held=select.value;select.replaceChildren(new Option("Choose a saved unfinished working copy",""));
-    for(const row of rows.filter(r=>r.workspaceId===workspace).sort((a,b)=>b.updatedAt.localeCompare(a.updatedAt)))select.add(new Option(row.body.title+" · "+row.updatedAt+" · "+row.id.slice(0,8),row.id));
+    for(const row of rows.filter(r=>r.workspaceId===workspace).sort((a,b)=>b.updatedAt.localeCompare(a.updatedAt)))select.add(new Option(row.title+" · "+row.updatedAt+" · "+row.id.slice(0,8),row.id));
     if(Array.from(select.options).some(r=>r.value===held))select.value=held;
   }
+  let dirtyGeneration=0,savedGeneration=0,writing=null;
   function persist(){
-    if(!draft)return serial;const body=clone(draft),wid=workspace;raw(body);pending++;syncControls();
-    serial=serial.then(async()=>{const id=draftId||auditRequestId(),expected=draftVersion;
-      const result=await transaction("readwrite",(s,done)=>{const q=s.get(id);q.onsuccess=()=>{const old=q.result;
-        const target=old&&old.version!==expected?auditRequestId():id;
-        const row={id:target,workspaceId:wid,version:target===id?expected+1:1,updatedAt:new Date().toISOString(),body};
-        s.put(row);done(row);};});
-      if(workspace===wid){if(result.id!==id)host.notice("Both competing working copies were kept. This tab now uses its own copy.");draftId=result.id;draftVersion=result.version;error=null;}
+    if(!draft)return serial;dirtyGeneration++;error=null;
+    if(writing)return writing;
+    pending=1;syncControls();
+    // At most one frozen complete body exists for an active transaction. Further
+    // typing changes only the live draft + generation; the next write captures
+    // the latest whole state after this transaction drains.
+    writing=Promise.resolve().then(async()=>{
+      while(savedGeneration<dirtyGeneration){
+        const generation=dirtyGeneration,body=clone(draft),wid=workspace;
+        raw(body);const id=draftId||auditRequestId(),expected=draftVersion;
+        const result=await transaction("readwrite",(s,done)=>{const q=s.get(id);q.onsuccess=()=>{const old=q.result;
+          const target=old&&old.version!==expected?auditRequestId():id;
+          const row={id:target,workspaceId:wid,version:target===id?expected+1:1,updatedAt:new Date().toISOString(),body};
+          s.put(row);done({id:row.id,version:row.version});};});
+        if(workspace!==wid)throw new Error("Preserve the original working workspace before switching.");
+        if(result.id!==id)host.notice("Both competing working copies were kept. This tab now uses its own copy.");
+        draftId=result.id;draftVersion=result.version;savedGeneration=generation;
+      }
     }).catch(e=>{error=e;host.notice("Browser save failed. Download the complete working copy before closing. "+e.message,"error");})
-      .finally(()=>{pending--;syncControls();});return serial;
+      .finally(()=>{pending=0;writing=null;syncControls();});
+    serial=writing;return writing;
   }
-  async function flush(){await persist();await serial;if(error)throw error;}
+  async function flush(){await serial;if(error)throw error;if(savedGeneration<dirtyGeneration)throw new Error("Preserve the complete unsaved working copy before continuing.");}
   function fresh(){
     draft={format:FORMAT,workspaceId:workspace,title:"Revision impact review",sourceId:"",reviewIds:[],
       preview:null,decisions:[],note:"",activeReviewId:null,receipts:[]};
-    draftId=null;draftVersion=0;error=null;inventory="";render();
+    draftId=null;draftVersion=0;dirtyGeneration=0;savedGeneration=0;error=null;inventory="";render();
   }
   function applied(){return Boolean(draft?.preview&&(host.state()?.exports||[]).some(r=>r.kind==="review-transition"&&!r.receivedFrom&&r.transition?.workspaceId===workspace&&r.transition?.previewSha256===draft.preview.previewSha256));}
   function syncControls(){
@@ -92,12 +105,12 @@ export function mountRevisionReview(host){
   function renderEditor(){
     const preview=draft?.preview,row=preview?.reviews.find(r=>r.review.id===draft.activeReviewId);
     const form=$("revision-review-decision");form.hidden=!row;if(!row)return;
-    const choice=draft.decisions.find(d=>d.reviewId===row.review.id),review=choice.review||row.review;
+    const choice=draft.decisions.find(d=>d.reviewId===row.review.id),review=choice.review||draft.editedReviews?.[row.review.id]||row.review;
     $("revision-review-title").textContent=row.review.title;
     $("revision-review-mode").value=choice.mode;$("revision-review-reason").value=choice.reason;
     const select=$("revision-review-entity");select.replaceChildren(new Option("Choose the current entity explicitly","__choose__"),new Option("Whole document",""));
     for(const entity of preview.targetEntities)select.add(new Option(entity.label+" · "+entity.path,entity.key));
-    select.value=choice.review?.entityKey??"__choose__";
+    select.value=(choice.review||draft.editedReviews?.[row.review.id])?.entityKey??"__choose__";
     for(const field of ["status","title","note","assignee","dueDate"])$("revision-review-field-"+field).value=review[field]||"";
     $("revision-review-field-evidence").value=(review.evidence||[]).map(v=>v.label+" | "+v.url).join("\n");
     $("revision-review-fields").disabled=choice.mode!=="update";
@@ -118,7 +131,7 @@ export function mountRevisionReview(host){
     if(row.mode==="update"){row.review={entityKey:$("revision-review-entity").value};
       for(const field of ["status","title","note","assignee","dueDate"])row.review[field]=$("revision-review-field-"+field).value;
       draft.evidenceText??={};draft.evidenceText[row.reviewId]=$("revision-review-field-evidence").value;
-      try{row.review.evidence=evidence(draft.evidenceText[row.reviewId]);}catch{row.review.evidence=[];}}
+      try{row.review.evidence=evidence(draft.evidenceText[row.reviewId]);}catch{row.review.evidence=[];}draft.editedReviews??={};draft.editedReviews[row.reviewId]=clone(row.review);}
     else delete row.review;
     $("revision-review-fields").disabled=row.mode!=="update";
   }
@@ -128,7 +141,7 @@ export function mountRevisionReview(host){
   for(const [id,key] of [["revision-review-name","title"],["revision-review-note","note"]])$(id).oninput=()=>{draft[key]=$(id).value;persist();};
   $("revision-review-decision").addEventListener("input",()=>{captureEditor();persist();});
   $("revision-review-decision").addEventListener("change",()=>{captureEditor();persist();renderDecisionList();});
-  $("revision-review-decision").onsubmit=e=>{e.preventDefault();host.run("Keep complete decision",async()=>{captureEditor();await flush();renderDecisionList();host.notice("Decision retained. Apply the complete selection when every reason and update is reviewed.");});};
+  $("revision-review-decision").onsubmit=e=>{e.preventDefault();host.run("Keep complete decision",async()=>{captureEditor();await persist();await flush();renderDecisionList();host.notice("Decision retained. Apply the complete selection when every reason and update is reviewed.");});};
   $("revision-review-new").onclick=()=>host.run("Start another revision review",async()=>{await flush();fresh();await persist();await list();});
   $("revision-review-preview").onclick=()=>host.run("Preview current XML impact",async()=>{
     await flush();const source=host.state().sources.find(s=>s.id===draft.sourceId);
@@ -165,7 +178,9 @@ export function mountRevisionReview(host){
   async function validateWorking(body){
     raw(body);if(body?.format!==FORMAT||body.workspaceId!==workspace||typeof body.title!=="string"||typeof body.note!=="string"||typeof body.sourceId!=="string"||!Array.isArray(body.reviewIds)||!body.reviewIds.every(x=>typeof x==="string")||!Array.isArray(body.decisions)||!Array.isArray(body.receipts))throw new Error("Select a complete working copy for this original workspace.");
     if(body.preview&&(body.preview.format!=="commons.audit-review-transition.v1"||body.preview.workspaceId!==workspace||!Array.isArray(body.preview.reviews)||!Array.isArray(body.preview.targetEntities)))throw new Error("The retained original preview is incomplete.");
-    if(body.preview){const original=clone(body.preview);delete original.previewSha256;
+    if(body.preview){const p=body.preview;
+      if(!p.selection||!Array.isArray(p.selection.reviewIds)||!p.fromRevisions||!p.toRevision||typeof p.previewSha256!=="string"||!p.reviews.every(r=>r?.review&&typeof r.review.id==="string"&&r.impact?.counts&&p.fromRevisions[r.fromRevisionId])||!p.targetEntities.every(e=>typeof e.key==="string"&&typeof e.label==="string"&&typeof e.path==="string"))throw new Error("The complete original preview tables and source bindings are absent.");
+      const original=clone(body.preview);delete original.previewSha256;
       function canonical(value){if(Array.isArray(value))return "["+value.map(canonical).join(",")+"]";if(value!==null&&typeof value==="object")return "{"+Object.keys(value).sort((a,b)=>{const x=Array.from(a),y=Array.from(b);for(let i=0;i<Math.min(x.length,y.length);i++){const d=x[i].codePointAt(0)-y[i].codePointAt(0);if(d)return d;}return x.length-y.length;}).map(k=>JSON.stringify(k)+":"+canonical(value[k])).join(",")+"}";return JSON.stringify(value);}
       if(await auditSha256(new TextEncoder().encode(canonical(original)+"\n"))!==body.preview.previewSha256)throw new Error("The complete original preview changed; its hash does not match. Preserve the file and obtain a new native preview.");
     }
@@ -176,5 +191,6 @@ export function mountRevisionReview(host){
     if(file.size>128*1024*1024)throw new Error("The complete working copy exceeds 128 MiB.");const body=JSON.parse(await file.text());await validateWorking(body);
     draft=body;draftId=null;draftVersion=0;await persist();await list();render();});};
   window.addEventListener("beforeunload",event=>{if(pending||error){event.preventDefault();event.returnValue="";}});
-  return {sync,recovered};
+  async function open(){await serial;if(draft){render();await list();}}
+  return {sync,recovered,open};
 }
