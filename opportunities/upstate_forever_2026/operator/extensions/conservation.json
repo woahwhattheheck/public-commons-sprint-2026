@@ -2,7 +2,7 @@
   "schema": "upstate.operator-extension/v1",
   "id": "conservation",
   "title": "Conservation plans",
-  "version": "5",
+  "version": "6",
   "order": 50,
   "assets": [
     "retained_desks.mjs",
@@ -11,7 +11,9 @@
     "conservation_optimization_bridge.mjs",
     "conservation_optimization.mjs",
     "conservation_optimization.css",
-    "conservation_joint_choices.mjs"
+    "conservation_joint_choices.mjs",
+    "conservation_working.mjs",
+    "conservation_working_view.mjs"
   ],
   "backend": {
     "module": "conservation",
