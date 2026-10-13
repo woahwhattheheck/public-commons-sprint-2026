@@ -212,7 +212,7 @@ def read(workspace, selection, *, spatial=None):
         "reference": _header(reference, reference_subject),
         "candidate": _header(candidate, candidate_subject), "presence": present,
         "title": "Receiving-water geography / " + subject_id,
-        "view": {"crs": reference["analysis_crs"], "bounds": view_bounds},
+        "view": {"crs": target.to_string(), "bounds": view_bounds},
         "geometry_bounds": exact,
         "extent_method": "Bounds of actual retained feature vertices in the reference plan CRS; 3% or 1 metre display padding",
         "overlays": overlays, "bindings": bindings,
