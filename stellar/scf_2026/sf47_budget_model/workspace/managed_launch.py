@@ -30,6 +30,8 @@ BOOT_FILES = (
     "source-tables-cli.mjs",
     "SOURCE_TABLES.md",
     "../../../../stellar-forge/developer-site/dist/source-table-workspace.mjs",
+    "../../../../stellar-forge/developer-site/dist/source-delimited.mjs",
+    "../../../../stellar-forge/developer-site/dist/source-table-corrections.mjs",
     "../../../../stellar-forge/developer-site/dist/source-document-tables.mjs",
     "../../../../stellar-forge/developer-site/dist/source-table-intake.mjs",
     "../../../../stellar-forge/developer-site/dist/onboarding.mjs",
