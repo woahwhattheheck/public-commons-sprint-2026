@@ -61,7 +61,11 @@ def _compare(first, second):
         candidate_statistics = b.GetStatistics(False, False)
         baseline_valid = a.GetMetadataItem("STATISTICS_VALID_PERCENT")
         candidate_valid = b.GetMetadataItem("STATISTICS_VALID_PERCENT")
-        if baseline_statistics != candidate_statistics or baseline_valid != candidate_valid:
+        same_statistics = (baseline_statistics == candidate_statistics or
+                           (baseline_statistics is not None and candidate_statistics is not None
+                            and numpy.array_equal(baseline_statistics, candidate_statistics,
+                                                  equal_nan=True)))
+        if not same_statistics or baseline_valid != candidate_valid:
             raise ValueError("Original statistics values or valid percentage differ")
         return {"pixels_compared": pixels, "differing_cells": differences,
                 "statistics_equal": True, "statistics": baseline_statistics,
@@ -81,6 +85,16 @@ def compare_original_masks(rasters, output):
     if len(inputs) != 4 or len({row["path"] for row in inputs}) != 4:
         raise ValueError("Select four distinct retained aligned SDR rasters: DEM, LULC, R and K")
     root = Path(output).resolve()
+    owned_names = ("original-mask.tif", "bounded-mask.tif",
+                   "original-masked-dem.tif", "bounded-masked-dem.tif",
+                   "selection.json", "comparison.json", ".statistics-comparison.lock")
+    for name in owned_names:
+        target = root / name
+        resolved = target.resolve()
+        for record in inputs:
+            original = Path(record["path"])
+            if resolved == original or (target.exists() and target.samefile(original)):
+                raise ValueError("Comparison output aliases an original input: " + str(target))
     root.mkdir(parents=True, exist_ok=True)
     with held(root / ".statistics-comparison.lock", blocking=False):
         selection = {"schema": "upstate.native-statistics-comparison/v1",
