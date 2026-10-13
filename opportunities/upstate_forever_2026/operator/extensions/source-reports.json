@@ -2,7 +2,7 @@
   "schema": "upstate.operator-extension/v1",
   "id": "source-reports",
   "title": "Retained source reports",
-  "version": "2.6.0",
+  "version": "2.7.0",
   "order": 56,
   "assets": [
     "source_reports.mjs",
@@ -10,7 +10,10 @@
     "source_report_editions.mjs",
     "scientific_source_reader.mjs",
     "published_original_reports.mjs",
-    "published_studies.css"
+    "published_studies.css",
+    "scientific_synthesis.mjs",
+    "scientific_synthesis_core.mjs",
+    "scientific_synthesis.css"
   ],
   "backend": {
     "module": "source_reports",
@@ -191,6 +194,58 @@
           "operation",
           "payload"
         ]
+      },
+      {
+        "methods": [
+          "GET"
+        ],
+        "path": "/api/source-reports/synthesis-catalog",
+        "operation": "synthesis-catalog",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "POST"
+        ],
+        "path": "/api/source-reports/synthesis-references",
+        "operation": "synthesis-references",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "GET"
+        ],
+        "path": "/api/source-reports/synthesis-edition",
+        "operation": "synthesis-edition",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "POST"
+        ],
+        "path": "/api/source-reports/synthesis-operation",
+        "operation": "synthesis-operation",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
       }
     ],
     "file_routes": [
@@ -251,7 +306,8 @@
       "source-reports.export",
       "source-reports.briefing",
       "source-reports.review",
-      "source-reports.adopt"
+      "source-reports.adopt",
+      "source-reports.synthesis-save"
     ],
     "invoke": {
       "handler": "invoke",
