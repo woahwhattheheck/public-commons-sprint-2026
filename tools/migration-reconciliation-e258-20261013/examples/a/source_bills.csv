@@ -1,0 +1,4 @@
+"bill_id","account_id","canonical_account","tariff_id","bill_date","currency","water_charge"
+"B001","A001","A001","T001","2025-06-30","GBP","120.25"
+"B002","A002","A002","T001","2025-06-30","GBP","40.00"
+"B003","A003","A003","T002","2025-12-31","GBP","10.50"
