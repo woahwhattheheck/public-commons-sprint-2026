@@ -41,9 +41,10 @@ const selectedOutputsComplete = run => !!run && run.state === 'complete' &&
   modelsOf(run.selection).every(model => Object.hasOwn(run.stages || run.stage_summary || {}, model) &&
     modelOutputs[model].every(name => !!run.artifacts?.[name]));
 const reusableStage = (run, model) => {
-  const stage = run?.stages?.[model];
+  const stage = run?.stages?.[model] || run?.stage_summary?.[model];
+  const fileCount = stage?.files ? Object.keys(stage.files).length : stage?.file_count;
   return !activeStates.has(run?.state) && modelsOf(run?.selection).includes(model) &&
-    !!stage?.completed_at && Object.keys(stage.files || {}).length > 0;
+    !!stage?.completed_at && Number.isInteger(fileCount) && fileCount > 0;
 };
 const fullOutputsComplete = run => selectedOutputsComplete(run) &&
   modelKey(run.selection) === 'ndr+sdr' && allOutputs.every(name => !!run.artifacts?.[name]);
