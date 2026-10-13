@@ -6,7 +6,9 @@
   "order": 26,
   "assets": [
     "multivariate_control_outcomes.mjs",
-    "multivariate_control_outcomes_core.mjs"
+    "multivariate_control_outcomes_core.mjs",
+    "multivariate_control.css",
+    "multivariate_control_core.mjs"
   ],
   "backend": {
     "module": "multivariate_control_outcomes_operator",
