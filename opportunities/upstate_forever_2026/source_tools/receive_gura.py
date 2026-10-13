@@ -193,7 +193,17 @@ def _same_raster(left: Path, right: Path) -> bool:
     return True
 
 
+def _validate_selection(args):
+    """Validate physical selections before retaining any original input copies."""
+    if not math.isfinite(args.upstream_buffer_m) or args.upstream_buffer_m < 0:
+        raise ValueError("--upstream-buffer-m must retain a nonnegative finite model-context selection")
+    resolution = getattr(args, "expected_resolution_m", None)
+    if resolution is not None and (not math.isfinite(resolution) or resolution <= 0):
+        raise ValueError("--expected-resolution-m must retain the positive finite native source cell size")
+
+
 def receive(args) -> dict:
+    _validate_selection(args)
     source = args.source_directory.resolve()
     source.mkdir(parents=True, exist_ok=True)
     copies = {
@@ -234,18 +244,22 @@ def receive(args) -> dict:
                 or x_resolution <= 0 or y_resolution <= 0
                 or not math.isclose(x_resolution, y_resolution, rel_tol=1e-9, abs_tol=1e-8)):
             raise ValueError("Original Gura land cover must retain finite square metre cells")
-        if (not math.isclose(x_resolution, args.expected_resolution_m, rel_tol=1e-9, abs_tol=1e-8)
-                or not math.isclose(y_resolution, args.expected_resolution_m, rel_tol=1e-9, abs_tol=1e-8)):
+        expected_resolution = getattr(args, "expected_resolution_m", None)
+        resolution_m = x_resolution if expected_resolution is None else float(expected_resolution)
+        if not math.isfinite(resolution_m) or resolution_m <= 0:
+            raise ValueError("Select a positive finite native source cell size")
+        if (not math.isclose(x_resolution, resolution_m, rel_tol=1e-9, abs_tol=1e-8)
+                or not math.isclose(y_resolution, resolution_m, rel_tol=1e-9, abs_tol=1e-8)):
             raise ValueError("Original Gura land-cover resolution differs from the selected source edition: "
-                             + str(reference.res) + "; expected " + str(args.expected_resolution_m) + " metres")
+                             + str(reference.res) + "; expected " + str(resolution_m) + " metres")
         affine = reference.transform
         native_grid = {
-            "resolution_m": args.expected_resolution_m,
+            "resolution_m": resolution_m,
             "source_resolution_m": [x_resolution, y_resolution],
             "source_transform": list(affine)[:6],
             "source_crs": str(reference.crs),
             "source_pixel_area_ha": abs(affine.a * affine.e - affine.b * affine.d) / 10000,
-            "pixel_area_ha": args.expected_resolution_m * args.expected_resolution_m / 10000,
+            "pixel_area_ha": resolution_m * resolution_m / 10000,
             "upstream_buffer_m": args.upstream_buffer_m,
         }
     # The two model archives must describe the same original terrain/land cover.
@@ -325,18 +339,18 @@ def receive(args) -> dict:
         "title": TITLE + ": original land cover", "reason": "Receive the original native example into the maintained product",
         "kind": "baseline", "source_collection_id": collection["id"], "patches": []})
     grid_spec = {
-        "title": TITLE + ": retained native " + format(args.expected_resolution_m, "g") + " m grid",
+        "title": TITLE + ": retained native " + format(resolution_m, "g") + " m grid",
         "source_collection_id": collection["id"],
         "input_sources": {role: "GURA_" + role for role in actual},
         "reporting_area": {"source_id": "GURA_WATERSHED"},
         "model_domain": {"source_id": "GURA_WATERSHED"},
         "upstream_buffer_m": args.upstream_buffer_m,
     }
-    # Omitted resolution preserves the original 30 m project identity. The
-    # original Gura example explicitly binds 300 m cells (9 ha), independently
-    # of the model-context buffer. Its native flow threshold remains unchanged.
-    if args.expected_resolution_m != 30.0:
-        grid_spec["resolution_m"] = args.expected_resolution_m
+    # Omitted resolution preserves the original 30 m project identity.
+    # Other editions retain their actual source cell size independently of
+    # the model-context buffer. The native flow threshold remains unchanged.
+    if resolution_m != 30.0:
+        grid_spec["resolution_m"] = resolution_m
     grid = ws.prepare_grid(grid_spec)
     selection = {
         "schema": "upstate.compute-programme-selection/v1", "title": TITLE,
@@ -377,14 +391,15 @@ def main(argv=None):
     parser.add_argument("--sdr-source-uri", default=ARCHIVE_URLS["sdr"])
     parser.add_argument("--source-edition", default="Original Gura rasters, watersheds and separate biophysical CSV sources referenced by tagged InVEST 3.20.0 datastacks")
     parser.add_argument("--source-reference", required=True)
-    parser.add_argument("--expected-resolution-m", type=float, default=300.0,
-                        help="Actual nominal cell size of the selected original Gura source (default: 300)")
-    parser.add_argument("--upstream-buffer-m", type=float, required=True)
+    parser.add_argument("--expected-resolution-m", type=float,
+                        help="Optional expected native cell size; otherwise read the original land-cover raster")
+    parser.add_argument("--upstream-buffer-m", type=float, required=True,
+                        help="Original nonnegative context distance; zero adds no upstream buffer")
     args = parser.parse_args(argv)
-    if not math.isfinite(args.upstream_buffer_m) or args.upstream_buffer_m <= 0:
-        parser.error("--upstream-buffer-m must retain a positive finite model-context selection")
-    if not math.isfinite(args.expected_resolution_m) or args.expected_resolution_m <= 0:
-        parser.error("--expected-resolution-m must retain the positive finite native source cell size")
+    try:
+        _validate_selection(args)
+    except ValueError as error:
+        parser.error(str(error))
     try:
         print(json.dumps(receive(args), ensure_ascii=False, sort_keys=True, allow_nan=False))
         return 0

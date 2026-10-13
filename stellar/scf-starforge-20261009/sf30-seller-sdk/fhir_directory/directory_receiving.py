@@ -88,6 +88,9 @@ class DirectoryReceiving:
         from directory_operating_plans import retained_operating_files
         for record in records.get("operatingPlans",[]):
             for descriptor in retained_operating_files(record):add(descriptor)
+        from directory_operating_returns import retained_return_files
+        for record in records.get("operatingPlanReturns",[]):
+            for descriptor in retained_return_files(record):add(descriptor)
         return result
 
     def _directory_write_packet(self,output,registry,members,packet_schema,handoff_id=None):
@@ -268,7 +271,8 @@ class DirectoryReceiving:
         present=set(registry.get("records",{}));current=schema.KINDS-{"receives"}
         # Preserve exact historical registry bytes. The previous complete product
         # did not yet have the four additive conformance collections.
-        if present not in (current,current-{"operatingPlans"},current-{"operatingPlans"}-CONFORMANCE_KINDS):
+        prior=current-{"operatingPlanReturns"}
+        if present not in (current,prior,prior-{"operatingPlans"},prior-{"operatingPlans"}-CONFORMANCE_KINDS):
             raise InputError("Complete receiving must retain every original directory collection")
         from directory_workspace import clean_record
         for kind,rows in registry["records"].items():
@@ -328,6 +332,7 @@ class DirectoryReceiving:
 
         self._verify_conformance_received(registry)
         self._verify_operating_plans_received(registry)
+        self._verify_operating_returns_received(registry)
 
     def _receive_directory(self,packet_path,packet_schema):
         path,_,archive_id=file_info(packet_path)

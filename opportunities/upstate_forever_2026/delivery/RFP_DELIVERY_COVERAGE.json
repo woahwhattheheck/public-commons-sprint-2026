@@ -1,0 +1,377 @@
+{
+  "schema": "upstate.rfp-delivery-coverage/v1",
+  "title": "Upper Savannah RFP to retained product and client report",
+  "prepared_for": "Ecosystem Sciences internal proposal and delivery work",
+  "source": {
+    "url": "https://www.upstateforever.org/files/files/20261002_FINAL_EC-SDC%20Mapping%20RFP%20APPENDIX%20COMBINED.pdf",
+    "pages": 18,
+    "bytes": 7504118,
+    "sha256": "a519d33190eefaef7ec082c19642fc6b8ef89329ad3c648a561699c7dd277e74",
+    "slack_canvas_id": "F0C8R8BCGJ0"
+  },
+  "prior_source": {
+    "bytes": 7470549,
+    "sha256": "04313cdda0b19f98b4081ef1eeec2f52707437759f9058f8d0e5abc8d83d6dbf",
+    "relationship": "Distinct earlier retained edition; preserved as the original application reference."
+  },
+  "requirements": [
+    {
+      "id": "scope-reporting",
+      "page": 2,
+      "requirement": "Provide the map, GIS and metadata deliverables for the Upper Savannah River Basin in South Carolina.",
+      "implementation": "Retained reporting-area selection separate from modeling domain and utility-focus selections.",
+      "report_sections": [
+        "study",
+        "current",
+        "sources"
+      ]
+    },
+    {
+      "id": "scope-buffer",
+      "page": 2,
+      "requirement": "Include a buffer outside the Upper Savannah River Basin in modeling; publication maps may mask that area.",
+      "implementation": "Original grid specification and model-domain geometry; report labels reporting-mask totals and retained upstream buffer.",
+      "report_sections": [
+        "study",
+        "methods"
+      ]
+    },
+    {
+      "id": "input-editions",
+      "page": 1,
+      "requirement": "Use the most recent GIS data available for the listed land cover, protected lands, parcels, hydrography, precipitation, R, K, LS and wetlands inputs.",
+      "implementation": "Existing source inventory, original editions, preparation lineage and selected profile.",
+      "report_sections": [
+        "sources",
+        "methods"
+      ]
+    },
+    {
+      "id": "model-suite",
+      "page": 2,
+      "requirement": "Use InVEST or an equivalent recommended ecosystem-service modeling package.",
+      "implementation": "Current retained original InVEST NDR/SDR source route; selected runtime/profile recorded.",
+      "report_sections": [
+        "methods",
+        "study"
+      ]
+    },
+    {
+      "id": "grid-30m",
+      "page": 2,
+      "requirement": "Prepare all map data on a 30 m by 30 m raster grid.",
+      "implementation": "Original grid alignment and reporting-mask annual-mass artifacts; valid-cell support retained.",
+      "report_sections": [
+        "study",
+        "current",
+        "alternatives"
+      ]
+    },
+    {
+      "id": "map-future_sediment_loss",
+      "page": 2,
+      "requirement": "Most important lands to reduce or prevent future sediment loss",
+      "canonical_map_role": "future_sediment_loss",
+      "implementation": "Existing selected publication map and its physical/source/scenario context, linked from report atlas.",
+      "report_sections": [
+        "atlas",
+        "alternatives"
+      ]
+    },
+    {
+      "id": "map-future_nutrient_runoff",
+      "page": 2,
+      "requirement": "Most important lands to reduce nutrient runoff",
+      "canonical_map_role": "future_nutrient_runoff",
+      "implementation": "Existing selected publication map and its physical/source/scenario context, linked from report atlas.",
+      "report_sections": [
+        "atlas",
+        "alternatives"
+      ]
+    },
+    {
+      "id": "map-critical_drinking_water",
+      "page": 2,
+      "requirement": "Most important lands to protect drinking-water sources",
+      "canonical_map_role": "critical_drinking_water",
+      "implementation": "Existing selected publication map and its physical/source/scenario context, linked from report atlas.",
+      "report_sections": [
+        "atlas",
+        "current"
+      ]
+    },
+    {
+      "id": "map-high_quality_waters",
+      "page": 2,
+      "requirement": "Most important lands to protect high-quality water resources",
+      "canonical_map_role": "high_quality_waters",
+      "implementation": "Existing selected publication map and its physical/source/scenario context, linked from report atlas.",
+      "report_sections": [
+        "atlas",
+        "current"
+      ]
+    },
+    {
+      "id": "map-current_nutrient_export",
+      "page": 2,
+      "requirement": "Current nitrogen and phosphorus exports to waterways",
+      "canonical_map_role": "current_nutrient_export",
+      "implementation": "Existing selected publication map and its physical/source/scenario context, linked from report atlas.",
+      "report_sections": [
+        "atlas",
+        "current"
+      ]
+    },
+    {
+      "id": "map-current_sediment_export",
+      "page": 2,
+      "requirement": "Current sediment exports to waterways",
+      "canonical_map_role": "current_sediment_export",
+      "implementation": "Existing selected publication map and its physical/source/scenario context, linked from report atlas.",
+      "report_sections": [
+        "atlas",
+        "current"
+      ]
+    },
+    {
+      "id": "map-combined_pollutant_export",
+      "page": 2,
+      "requirement": "Combined pollutant exports to waterways",
+      "canonical_map_role": "combined_pollutant_export",
+      "implementation": "Existing selected publication map and its physical/source/scenario context, linked from report atlas.",
+      "report_sections": [
+        "atlas",
+        "priorities"
+      ]
+    },
+    {
+      "id": "cartography",
+      "page": 2,
+      "requirement": "High-resolution maps fit for online and print publication, with legend, scale and north arrow.",
+      "implementation": "Existing cartography/map PDFs retained by actual state paths; report links every selected alternative map.",
+      "report_sections": [
+        "atlas"
+      ]
+    },
+    {
+      "id": "final-date",
+      "page": 2,
+      "requirement": "Complete and incorporate all maps, GIS data and associated metadata by November 1, 2027.",
+      "implementation": "Prime schedule and complete delivery package; original engineering schedule is a proposed active-work allowance.",
+      "report_sections": [
+        "handoff"
+      ]
+    },
+    {
+      "id": "final-report",
+      "page": 2,
+      "requirement": "Final report suitable for internal and external distribution; thorough methods and outcomes clear to a lay reader.",
+      "implementation": "New client report compiler emits PDF, HTML, Markdown and structured report from retained result identities.",
+      "report_sections": [
+        "decisions",
+        "study",
+        "current",
+        "alternatives",
+        "atlas",
+        "priorities",
+        "parcels",
+        "methods",
+        "observations",
+        "sources",
+        "handoff"
+      ]
+    },
+    {
+      "id": "fgdc-metadata",
+      "page": 2,
+      "requirement": "All created geospatial data must be consistent with FGDC-endorsed standards.",
+      "implementation": "Existing file-level geospatial metadata and lineage remain in delivery; report references source editions and selected methods.",
+      "report_sections": [
+        "sources",
+        "methods"
+      ]
+    },
+    {
+      "id": "working-files",
+      "page": 3,
+      "requirement": "Provide final and working files in high-resolution PDF and GIS formats by the final project period.",
+      "implementation": "Existing complete scientific workspace backup and portable package, with editable report companions added to project_assets.",
+      "report_sections": [
+        "handoff"
+      ]
+    },
+    {
+      "id": "presentation",
+      "page": 3,
+      "requirement": "Present the deliverables to Upstate Forever and partners.",
+      "implementation": "Seven-map reading sequence and source-bound report support the prime's final presentation.",
+      "report_sections": [
+        "decisions",
+        "atlas",
+        "handoff"
+      ]
+    },
+    {
+      "id": "review-intervals",
+      "page": 2,
+      "requirement": "Meet with UF at predetermined intervals for deliverable review and feedback.",
+      "implementation": "Prime schedule integrates source/method review, modeled draft, consolidated comments and final presentation.",
+      "report_sections": [
+        "handoff"
+      ]
+    },
+    {
+      "id": "proposal-experience",
+      "page": 3,
+      "requirement": "Three to five relevant project descriptions from the last five years; maximum two pages per project.",
+      "implementation": "Actual prime/team qualifications in complete proposal; narrative identifies this assembly requirement."
+    },
+    {
+      "id": "proposal-team",
+      "page": 3,
+      "requirement": "Organizational chart and biographies or resumes; one page per person.",
+      "implementation": "Actual named prime/team roles in complete proposal."
+    },
+    {
+      "id": "proposal-references",
+      "page": 3,
+      "requirement": "References from two comparable organizations, maximum one page, with stated prior-UF-work exception.",
+      "implementation": "Actual references in complete prime proposal."
+    },
+    {
+      "id": "proposal-schedule",
+      "page": 3,
+      "requirement": "Proposed schedule demonstrating November 1, 2027 completion; maximum two pages.",
+      "implementation": "Full client schedule with retained engineering allowance and review intervals."
+    },
+    {
+      "id": "proposal-fee",
+      "page": 3,
+      "requirement": "Fee and anticipated expenses at or below USD 50,000 total, inclusive of specified project categories; maximum ten pages.",
+      "implementation": "Prime's full price and costs, using existing proposed USD 18,600 engineering workshare as one cost component."
+    },
+    {
+      "id": "proposal-contacts",
+      "page": 3,
+      "requirement": "At least two proposal contacts with contact details plus firm name, physical address and website; one page.",
+      "implementation": "Actual prime contact and firm information in assembled proposal."
+    },
+    {
+      "id": "proposal-submission",
+      "page": 3,
+      "requirement": "One complete PDF received by November 6, 2026 at 5 p.m. ET, labeled Response to EC-SDC Mapping RFP and addressed to Josie Newton.",
+      "implementation": "Existing prime proposal path; internal assembly retains exact source requirements."
+    }
+  ],
+  "report_outputs": [
+    "report.pdf",
+    "report.html",
+    "report.md",
+    "report-model.json"
+  ],
+  "source_roles": [
+    "NLCD",
+    "PROTECTED_LANDS",
+    "PARCEL",
+    "NHD",
+    "PRECIPITATION",
+    "R_FACTOR",
+    "K_FACTOR",
+    "LS_FACTOR",
+    "NWI"
+  ],
+  "quantity_contract": {
+    "baseline_scope": "Original reporting-mask annual-mass artifact valid cells; native NoData retained",
+    "nitrogen": "kg/pixel/year; sum already kg/year",
+    "phosphorus": "kg/pixel/year; sum already kg/year",
+    "sediment": "metric_tonnes/pixel/year; sum already annual metric tonnes",
+    "current_support": "Use each artifact's own valid_cells and pixel_area_ha",
+    "scenario_direction": "alternative minus baseline",
+    "scenario_support": "Paired valid cells in both original compared outputs",
+    "percentage_rule": "Show percentage reduction only when paired support equals both full run supports and baseline is positive",
+    "combined_priority": "Dimensionless index; saved normalization and nonnegative weights accompany separate physical pollutant layers",
+    "parcel_summary": "Original compact top list contains feature_id, priority_mean, source_water and protected_fraction; complete physical quantities are in original CSV/GPKG and scenario CSV",
+    "empty_support": "Display No valid data for own-support totals with valid_cells=0, and No paired valid data when joint support is zero.",
+    "actual_study": "Use the retained title, reporting/model-domain selections and affine-derived resolution; Upper Savannah 30 m and four-HUC statements are separate target-project context."
+  },
+  "appendix_context": {
+    "utilities": {
+      "source_pdf_page": 6,
+      "ARJWS_residents_served_approx": 210000,
+      "PRWD_residents_served_approx": 7000
+    },
+    "source_watershed_block_groups": {
+      "source_pdf_page": 16,
+      "whole_block_group_population_total": 27448
+    },
+    "population_relationship": "Utility-service populations and listed source-watershed whole-block-group populations have different geographic definitions.",
+    "sampling": {
+      "source_pdf_page": 9,
+      "additional_sites_per_utility": 3,
+      "role": "Broader program context and potential observation input; mapping minimum deliverables remain on PDF page 2."
+    }
+  },
+  "commercial_basis": {
+    "source": "Original WORKSHARE.md",
+    "sha256": "9fed9b28b744b3b5cd5fc896d70ff2efd29c800b75bed45dbb05f3224a4d9b85",
+    "price_status": "PROPOSED",
+    "currency": "USD",
+    "engineering_fee": 18600,
+    "milestone_fees": [
+      4650,
+      9300,
+      4650
+    ],
+    "active_engineering_business_days": 30,
+    "baseline_allowance": 1,
+    "alternative_allowance": 2,
+    "reusable_product_capability": "All selected alternatives and later delivery editions",
+    "total_rfp_ceiling": 50000,
+    "remaining_prime_cost_allocation": 31400
+  },
+  "integration": {
+    "owner_hook": "Existing model/delivery.py report branch",
+    "new_module": "model/client_report.py",
+    "companion_assets": [
+      "report_html",
+      "report_markdown",
+      "report_model"
+    ],
+    "preserved_state_keys": [
+      "report",
+      "maps",
+      "priority",
+      "parcel_priorities",
+      "receptor_inventory"
+    ],
+    "scenario_summary_schema": "upstate.scenario-summary/v1",
+    "parcel_inventory_schema": "upstate.parcel-priorities/v1",
+    "client_report_edition": "2026-10-13-client-report-2",
+    "current_delivery_source": {
+      "message_ts": "1791854739.041429",
+      "predecessor_canvas_id": "F0C88M8KM55",
+      "bytes": 43307,
+      "sha256": "2601fc8eef83d128637d29334a26242e666f1722900d01016eec41e44f4294a9"
+    },
+    "map_index": "One actual publication file per row; seven decision-guide rows remain compact for unbounded selected alternative lists.",
+    "source_water_label": "Use the actual nonempty selected overlay label; source-neutral default Drinking-water source areas.",
+    "composed_companion_assets": [
+      "client_report",
+      "client_report_html",
+      "client_report_markdown",
+      "client_report_model"
+    ],
+    "composed_hook": {
+      "output_stem": "client-report",
+      "file_key_prefix": "client_",
+      "primary_report": "Preserve the current scientific_report canonical report.pdf/report.html/report-data.json route.",
+      "companion_registration": "Append all four client report state paths to project_assets; use the same delivery directory for map links."
+    }
+  },
+  "composed_report_outputs": [
+    "client-report.pdf",
+    "client-report.html",
+    "client-report.md",
+    "client-report-model.json"
+  ]
+}

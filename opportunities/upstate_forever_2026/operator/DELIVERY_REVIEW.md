@@ -166,3 +166,5 @@ A requested complete delivery binds the exact current application file inventory
 ## Composed current scientific report
 
 The normal application uses its maintained `scientific_report` PDF/HTML/Markdown/JSON producer, including source-bound scenario analysis, original economic decisions, receiving-water quantities and the current map guide. The delivery review accepts its `report_data` binding and the earlier retained `report_model` format. The selected native alternatives use the application's original `scenario_run_ids` field. The current extension registry remains the sole Conservation action and browser owner.
+
+The same delivery also builds the separate ED6E client companion under `client-report.*`. Its current edition3 science formatting composes the original edition2 namespacing API; the scientific report's four canonical filenames remain intact. Both reports open through the authenticated review endpoint, and all eight report files are included in the working snapshot and delivery assets.

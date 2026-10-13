@@ -128,10 +128,16 @@ class _LinkedReport(HTMLParser):
         self.output.append("<!--" + data + "-->")
 
 
-def read(operator, workspace, delivery_id, *, preview=False):
+def read(operator, workspace, delivery_id, *, preview=False, report="scientific"):
+    if report not in {"scientific", "client"}:
+        raise ValueError("Choose the retained scientific report or client companion.")
     record = operator.item(workspace, "deliveries", delivery_id)
     files = _files(record)
     selection = record.get("selection") or {}
+    prefix = "client_" if report == "client" else ""
+    selected_files = {role: files[prefix + role] for role in
+                      ("report", "report_html", "report_markdown", "report_data", "report_model")
+                      if prefix + role in files}
     result = {
         "schema": "upstate.delivery-review/v1",
         "id": record["id"],
@@ -140,14 +146,18 @@ def read(operator, workspace, delivery_id, *, preview=False):
         "current_report_edition": REPORT_EDITION,
         "report_edition": ((selection.get("client_report_edition") or record.get("report_edition") or "")
                            + "|" + (selection.get("report_renderer_version") or
-                                      record.get("report_renderer_version") or "")),
+                                      record.get("report_renderer_version") or "") + "|" +
+                           (selection.get("client_companion_edition") or
+                            record.get("client_companion_edition") or "")),
         "files": files,
+        "selected_files": selected_files,
+        "report_kind": report,
         "preview_url": None,
     }
     model = None
-    report_role = "report_data" if files.get("report_data") else "report_model"
-    if files.get(report_role):
-        model = json.loads(_retained_bytes(operator, files[report_role]))
+    report_role = "report_data" if selected_files.get("report_data") else "report_model"
+    if selected_files.get(report_role):
+        model = json.loads(_retained_bytes(operator, selected_files[report_role]))
         if not isinstance(model, dict):
             raise ValueError("The retained file is not a report model.")
         if isinstance(model.get("schema"), str) and model["schema"].startswith("upstate.scientific-report/v"):
@@ -160,9 +170,9 @@ def read(operator, workspace, delivery_id, *, preview=False):
         if report_delivery != record["id"]:
             raise ValueError("The report belongs to another retained delivery.")
         result["title"] = model.get("title") or result["title"]
-    if files.get("report_html") and model is not None:
+    if selected_files.get("report_html") and model is not None:
         result["preview_url"] = "/api/file/delivery-report?" + urlencode(
-            {"workspace": workspace, "id": record["id"]})
+            {"workspace": workspace, "id": record["id"], "report": report})
     if preview:
         if not result["preview_url"]:
             raise ValueError("Create the current report edition before opening the report preview.")
@@ -173,22 +183,22 @@ def read(operator, workspace, delivery_id, *, preview=False):
                 relative = _relative(descriptor.get("path")) if isinstance(descriptor, dict) else None
                 if item and relative:
                     paths[relative] = item
-        report_path = _relative(files["report_html"].get("relative_path")) or "report.html"
+        report_path = _relative(selected_files["report_html"].get("relative_path")) or "report.html"
         report_directory = posixpath.dirname(report_path)
         links = {
             posixpath.relpath(path, report_directory or "."): item
             for path, item in paths.items()
         }
         parser = _LinkedReport(links)
-        parser.feed(_retained_bytes(operator, files["report_html"]).decode("utf-8"))
+        parser.feed(_retained_bytes(operator, selected_files["report_html"]).decode("utf-8"))
         parser.close()
         result["html"] = "".join(parser.output)
     return result
 
 
-def send_preview(handler, workspace, delivery_id):
+def send_preview(handler, workspace, delivery_id, *, report="scientific"):
     """The original handler authorizes its scoped file cookie before this call."""
-    report = read(handler.app, workspace, delivery_id, preview=True)
+    report = read(handler.app, workspace, delivery_id, preview=True, report=report)
     body = report["html"].encode("utf-8")
     handler.close_connection = True
     handler.send_response(200)
