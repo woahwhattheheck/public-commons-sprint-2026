@@ -278,9 +278,11 @@ class Caller:
     def __init__(self, config):
         self.config, self.native = config, Native(config)
     def submit(self, body, principal, group):
-        need(isinstance(body, dict) and set(body) <= {"command_json", "resume_interrupted"} and
-             "command_json" in body and type(body.get("resume_interrupted", False)) is bool,
-             "BODY", "Supply command_json and an explicit boolean resume_interrupted.")
+        need(isinstance(body, dict) and set(body) <= {"workspace_id", "command_json", "resume_interrupted"} and
+             {"workspace_id", "command_json"} <= set(body) and type(body.get("resume_interrupted", False)) is bool,
+             "BODY", "Supply the expected workspace_id, command_json and an explicit boolean resume_interrupted.")
+        need(body["workspace_id"] == self.config["workspace_id"], "WORKSPACE_CHANGED",
+             "The selected caller belongs to another original workspace.", 409)
         groups = {"capture": {"capture"}, "prepare": {"mapping", "reconcile", "target-review", "export"},
                   "delivery": {"deliver", "recover", "continue-delivery"}}
         original, raw = command(body["command_json"], principal, groups[group])

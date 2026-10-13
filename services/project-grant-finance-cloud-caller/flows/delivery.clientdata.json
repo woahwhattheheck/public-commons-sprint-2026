@@ -71,7 +71,8 @@
             },
             "parameters": {
               "body/command_json": "@triggerBody()?['command_json']",
-              "body/resume_interrupted": "@triggerBody()?['resume_interrupted']"
+              "body/resume_interrupted": "@triggerBody()?['resume_interrupted']",
+              "body/workspace_id": "__WORKSPACE_ID__"
             },
             "authentication": "@parameters('$authentication')",
             "retryPolicy": {
