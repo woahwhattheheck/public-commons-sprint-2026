@@ -9,6 +9,8 @@ import threading
 
 from model.common import atomic_json
 from model.spatial_regions import SpatialRegions, csv_exports
+from model.spatial_region_extract import RegionExtracts
+from model.common import verify_file
 
 
 class RegionOperations:
@@ -25,14 +27,19 @@ class RegionOperations:
             return self.models[workspace]
 
     def invoke(self, task):
-        if task.get("action") != "spatial.region.analyze":
-            raise self.fault("REGION_ACTION", "Choose the native region analysis action.")
+        if task.get("action") not in {"spatial.region.analyze", "spatial.region.extract"}:
+            raise self.fault("REGION_ACTION", "Choose a saved Area calculation or native-grid extraction.")
         def progress(value):
             with self.operator.lock:
                 task["region_progress"] = value
                 atomic_json(self.operator.root / "tasks" / (task["id"] + ".json"), task)
-        result = self.model(task["workspace"]).analyze(task["payload"], progress=progress)
-        progress({"stage": "complete", "region_id": result["id"]})
+        model = self.model(task["workspace"])
+        if task["action"] == "spatial.region.extract":
+            result = RegionExtracts(model.workspace, regions=model).export(task["payload"], progress=progress)
+            progress({"stage": "complete", "extraction_id": result["id"], "region_id": result["analysis_id"]})
+        else:
+            result = model.analyze(task["payload"], progress=progress)
+            progress({"stage": "complete", "region_id": result["id"]})
         return result
 
     def catalogue(self, workspace):
@@ -53,13 +60,34 @@ class RegionOperations:
             return {"workspace_key": workspace, "analyses": self.catalogue(workspace)}
         if operation == "result":
             return {"workspace_key": workspace, **self.item(workspace, payload)}
-        raise self.fault("REGION_READ", "Choose a saved region analysis.")
+        if operation == "extract":
+            return {"workspace_key": workspace, **self.extract_item(workspace, payload)}
+        if operation == "extracts":
+            model = self.model(workspace)
+            return {"workspace_key": workspace, "extractions":
+                    RegionExtracts(model.workspace, regions=model).catalog(payload.get("analysis_id"))}
+        raise self.fault("REGION_READ", "Choose a saved region analysis or extraction.")
 
     def item(self, workspace, payload):
         model = self.model(workspace)
         result = model.inspect(payload.get("id"))
         result["_downloads"] = self.downloads(workspace, result)
+        result["_extractions"] = RegionExtracts(model.workspace, regions=model).catalog(result["id"])
         return result
+
+    def extract_item(self, workspace, payload):
+        model = self.model(workspace)
+        value = RegionExtracts(model.workspace, regions=model).inspect(payload.get("id"))
+        directory = model.workspace.root / "spatial-region-extractions" / value["id"]
+        value["_downloads"] = [
+            self.operator._ticket(workspace, verify_file(directory, item),
+                {**item, "filename": Path(item["path"]).name},
+                {"editable_gis": "Complete editable GIS ZIP", "report": "Area extraction report",
+                 "analysis": "Original Area analysis", "provenance": "Extraction source and method"}.get(
+                     label, label.replace("_", " ").replace("-", " ")))
+            for label, item in value["files"].items()
+            if label not in {"qgis_project", "gis_open"}]
+        return value
 
     def downloads(self, workspace, result):
         ws = self.operator.ws(workspace)
@@ -98,11 +126,16 @@ class RegionOperations:
 
     def decorate_task(self, task):
         if task.get("state") == "complete" and task.get("result", {}).get("id"):
-            task["_downloads"] = self.item(task["workspace"], {"id": task["result"]["id"]})["_downloads"]
+            getter = self.extract_item if task.get("action") == "spatial.region.extract" else self.item
+            task["_downloads"] = getter(task["workspace"], {"id": task["result"]["id"]})["_downloads"]
         return task
 
     def state(self, workspace):
         return self.catalogue(workspace)
 
     def verify_workspace(self, workspace):
-        return SpatialRegions(workspace).verify()
+        original = SpatialRegions(workspace).verify()
+        extracts = RegionExtracts(workspace)
+        for item in extracts.catalog():
+            extracts.inspect(item["id"])
+        return original

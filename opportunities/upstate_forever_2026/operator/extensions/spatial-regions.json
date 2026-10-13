@@ -17,7 +17,8 @@
       ]
     },
     "actions": [
-      "spatial.region.analyze"
+      "spatial.region.analyze",
+      "spatial.region.extract"
     ],
     "invoke": {
       "handler": "invoke",
@@ -53,12 +54,48 @@
           "operation",
           "payload"
         ]
+      },
+      {
+        "path": "/api/spatial/regions/extract",
+        "methods": [
+          "GET",
+          "POST"
+        ],
+        "operation": "extract",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "path": "/api/spatial/regions/extracts",
+        "methods": [
+          "GET",
+          "POST"
+        ],
+        "operation": "extracts",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
       }
     ],
     "items": [
       {
         "kind": "spatial_regions",
         "handler": "item",
+        "args": [
+          "workspace_key",
+          "payload"
+        ]
+      },
+      {
+        "kind": "spatial_region_extractions",
+        "handler": "extract_item",
         "args": [
           "workspace_key",
           "payload"

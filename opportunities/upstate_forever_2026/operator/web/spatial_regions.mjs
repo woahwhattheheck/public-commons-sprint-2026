@@ -23,9 +23,9 @@ export function regionFeatureButton(group,index,feature){
 }
 
 export function createRegionAnalysis({root,model,workspace,request,alive,getSelection,getSources,refreshState,showTask,reopen,selectionChanged}){
-  model.operations||={};model.items||=[];model.tasks||=[];model.title||='';model.notes||='';
+  model.operations||={};model.extractOperations||={};model.extractTasks||=[];model.items||=[];model.tasks||=[];model.title||='';model.notes||='';
   model.bins||=32;model.inclusion||='centre';model.search||='';model.page||=0;model.categoryPages||={};
-  const events=new AbortController(),reads=new Set();let disposed=false,features=[],opening=null,lastSignature='';
+  const events=new AbortController(),reads=new Set();let disposed=false,features=[],opening=null,extractOpening=null,lastSignature='';
   const current=()=>!disposed&&alive();
   const node=selector=>root.querySelector(selector);
   const panel=node('.spatial-regions');
@@ -74,6 +74,15 @@ export function createRegionAnalysis({root,model,workspace,request,alive,getSele
     return '<section><h4>'+esc(row.label)+' · category counts</h4><div class="region-table"><table><thead><tr><th>Native category</th><th>Cells</th><th>Share of valid cells</th></tr></thead><tbody>'+entries.slice(start,start+50).map(item=>'<tr><td>'+esc(item.value)+'</td><td>'+number(item.count)+'</td><td>'+number(item.fraction_of_valid*100)+'%</td></tr>').join('')+'</tbody></table></div>'+
       (entries.length>50?'<div class="region-pagination">'+button('categories-prev','Previous','data-series="'+esc(row.key)+'" '+(!page?'disabled':''))+'<span>'+number(start+1)+'–'+number(Math.min(start+50,entries.length))+' of '+number(entries.length)+'</span>'+button('categories-next','Next','data-series="'+esc(row.key)+'" '+(start+50>=entries.length?'disabled':''))+'</div>':'')+'</section>';
   }
+  function extractionMarkup(value){
+    const rows=value._extractions||[],selected=model.extraction;
+    const relevant=selected?.analysis_id===value.id?selected:null;
+    const files=(relevant?._downloads||[]).filter(file=>/^\/api\/file\/[a-f0-9]{64}$/.test(file.url||''));
+    return '<section class="region-extraction"><h4>Editable native-grid GIS</h4><p class="note">Create a full-resolution working extract of this saved area. Original cells, units, grid and source identities stay intact; separate masks distinguish the selected area from original nodata. This does not run a model or prepare a new hydrologic domain.</p>'+
+      button('extract','Create editable GIS extract','data-analysis="'+esc(value.id)+'"')+
+      (rows.length?'<div class="region-history">'+rows.map(row=>'<div><span>'+esc(row.title)+'</span>'+button('open-extract','Open GIS extract','data-id="'+esc(row.id)+'" data-analysis="'+esc(value.id)+'"')+'</div>').join(''):'')+
+      (relevant?'<h4>'+esc(relevant.title)+'</h4><div class="region-table"><table><thead><tr><th>Series</th><th>State</th><th>Selected cells</th><th>Original valid cells in area</th></tr></thead><tbody>'+Object.entries(relevant.rasters||{}).map(([name,row])=>'<tr><th>'+esc(name)+'</th><td>'+esc(row.state)+'</td><td>'+number(row.selected_cells)+'</td><td>'+number(row.valid_cells)+'</td></tr>').join('')+'</tbody></table></div><p class="note">'+(relevant.difference?.available?'Aligned physical difference: comparison minus primary on '+number(relevant.difference.common_valid_cells)+' common valid cells.':esc(relevant.difference?.reason||'No paired difference selected.'))+'</p><p class="note">Download the complete ZIP, extract it, then open OPEN_GIS.html or project.qgz. The QGIS file needs its packaged relative data files. Individual GeoTIFFs and masks remain available below.</p><div class="region-downloads">'+files.map(file=>'<a class="button" href="'+esc(file.url)+'?download=1" download>'+esc(file.label||file.filename)+'</a>').join('')+'</div>':'')+'</section>';
+  }
   function renderResult(){
     if(!current())return;
     const target=node('[data-region-result]'),value=model.result;
@@ -91,7 +100,7 @@ export function createRegionAnalysis({root,model,workspace,request,alive,getSele
       (continuous.length?'<label>Histogram series<select data-region-input="histogram">'+continuous.map(row=>'<option value="'+row.key+'"'+(row.key===model.histogramSeries?' selected':'')+'>'+esc(row.label)+'</option>').join('')+'</select></label><div data-region-histogram>'+histogram(continuous.find(row=>row.key===model.histogramSeries))+'</div>':'')+
       rows.filter(row=>row.stats.kind==='categorical').map(categories).join('')+
       '<div class="region-downloads">'+files.map(file=>'<a class="button" href="'+esc(file.url)+'?download=1" download>'+esc(file.label||file.filename)+'</a>').join('')+'</div>'+
-      '<details><summary>Original selections and calculation</summary><pre>'+esc(JSON.stringify({id:value.id,request:value.request,sampling:value.sampling},null,2))+'</pre></details></article>';
+      extractionMarkup(value)+'<details><summary>Original selections and calculation</summary><pre>'+esc(JSON.stringify({id:value.id,request:value.request,sampling:value.sampling},null,2))+'</pre></details></article>';
   }
   function renderHistory(){
     if(!current())return;
@@ -102,8 +111,8 @@ export function createRegionAnalysis({root,model,workspace,request,alive,getSele
   }
   function renderTasks(){
     if(!current())return;
-    const tasks=model.tasks.slice(0,25);
-    node('[data-region-tasks]').innerHTML=tasks.length?tasks.map(task=>'<div class="region-task"><span>'+esc(task.payload?.title||'Region analysis')+'</span><span>'+esc(task.state)+(task.state==='running'&&task.region_progress?' · '+esc(task.region_progress.stage)+(task.region_progress.windows?' · '+number(task.region_progress.windows)+' windows':''):'')+'</span>'+button('task','Open task','data-id="'+esc(task.id)+'"')+(task.state==='complete'&&task.result?.id?button('open','View result','data-id="'+esc(task.result.id)+'"'):'')+'</div>').join(''):'<p class="note">Region calculations appear in the original workspace task queue.</p>';
+    const tasks=[...model.tasks,...model.extractTasks].sort((a,b)=>String(b.created_at||'').localeCompare(String(a.created_at||''))).slice(0,25);
+    node('[data-region-tasks]').innerHTML=tasks.length?tasks.map(task=>'<div class="region-task"><span>'+esc(task.payload?.title||(task.action==='spatial.region.extract'?'Native-grid GIS extract':'Region analysis'))+'</span><span>'+esc(task.state)+(task.state==='running'&&task.region_progress?' · '+esc(task.region_progress.stage)+(task.region_progress.windows?' · '+number(task.region_progress.windows)+' windows':''):'')+'</span>'+button('task','Open task','data-id="'+esc(task.id)+'"')+(task.state==='complete'&&task.result?.id?button(task.action==='spatial.region.extract'?'open-extract':'open','View result','data-id="'+esc(task.result.id)+'" data-analysis="'+esc(task.result.analysis_id||'')+'"'):'')+'</div>').join(''):'<p class="note">Region calculations appear in the original workspace task queue.</p>';
   }
   async function openResult(id){
     if(opening===id)return;opening=id;
@@ -112,9 +121,43 @@ export function createRegionAnalysis({root,model,workspace,request,alive,getSele
       const value=await request('/api/spatial/regions/result',{method:'POST',body:{workspace,id},signal:control.signal});
       if(!current()||control.signal.aborted||opening!==id)return;
       if(value.workspace_key!==workspace||value.id!==id||value.schema!=='upstate.spatial-regions/v1')throw Error('The region result belongs to a different selection.');
-      model.result=value;model.categoryPages={};renderResult();status('Saved native region result opened.');
+      model.result=value;model.categoryPages={};extractOpening=null;renderResult();status('Saved native region result opened.');
     }catch(e){if(e.name!=='AbortError')error(e);}
     finally{reads.delete(control);if(opening===id)opening=null;}
+  }
+  async function openExtract(id,analysisId){
+    if(!id||!analysisId)return;
+    const token={id,analysisId};extractOpening=token;
+    const control=new AbortController();reads.add(control);
+    try{
+      const value=await request('/api/spatial/regions/extract',{method:'POST',body:{workspace,id},signal:control.signal});
+      if(!current()||control.signal.aborted||extractOpening!==token)return;
+      if(value.workspace_key!==workspace||value.id!==id||value.analysis_id!==analysisId||value.schema!=='upstate.spatial-region-extraction/v1')throw Error('The GIS extraction belongs to a different saved area.');
+      if(model.result?.id!==analysisId){status('GIS extraction completed for another saved area. Open that area to inspect its files.');return;}
+      model.extraction=value;
+      const row={id:value.id,analysis_id:value.analysis_id,title:value.title,algorithm:value.algorithm,state:value.state};
+      model.result._extractions=[...(model.result._extractions||[]).filter(item=>item.id!==value.id),row];
+      renderResult();status('Original-grid GIS extraction opened. Download the complete editable ZIP or individual retained files.');
+    }catch(e){if(e.name!=='AbortError'&&extractOpening===token&&model.result?.id===analysisId)error(e);}
+    finally{reads.delete(control);if(extractOpening===token)extractOpening=null;}
+  }
+  async function extract(analysisId){
+    if(!model.result||model.result.id!==analysisId)throw Error('Open the saved area before exporting its original cells.');
+    const payload={analysis_id:analysisId},key=JSON.stringify(payload);
+    let operation=model.extractOperations[key];
+    if(!operation)operation=model.extractOperations[key]={operation_id:crypto.randomUUID(),payload};
+    if(operation.task_id){await showTask(operation.task_id);return;}
+    if(operation.sending)return;
+    operation.sending=true;status('Retaining this native-grid extraction in the original workspace queue…');
+    try{
+      const task=await request('/api/actions',{method:'POST',body:{workspace,action:'spatial.region.extract',operation_id:operation.operation_id,payload:operation.payload}});
+      if(!task.id||task.workspace!==workspace||task.action!=='spatial.region.extract')throw Error('The original workspace did not return this extraction task. Retry the same saved area.');
+      operation.task_id=task.id;model.autoOpenExtract={taskId:task.id,analysisId};
+      if(!current())return;
+      await refreshState({force:true});
+      if(current())await showTask(task.id);
+    }catch(e){if(current()&&model.result?.id===analysisId){status('This original extraction request remains retained. Retry the same area.');error(e);}}
+    finally{operation.sending=false;}
   }
   async function calculate(){
     clearError();const chosen=getSelection();
@@ -145,10 +188,13 @@ export function createRegionAnalysis({root,model,workspace,request,alive,getSele
     cohorts.setState(state);
     model.items=state.data?.spatial_regions||[];
     model.tasks=(state.tasks||[]).filter(task=>task.action==='spatial.region.analyze'&&task.workspace===workspace);
-    const signature=JSON.stringify([model.items,model.tasks.map(task=>[task.id,task.state,task.region_progress,task.result?.id])]);
+    model.extractTasks=(state.tasks||[]).filter(task=>task.action==='spatial.region.extract'&&task.workspace===workspace);
+    const signature=JSON.stringify([model.items,[...model.tasks,...model.extractTasks].map(task=>[task.id,task.state,task.region_progress,task.result?.id])]);
     if(signature!==lastSignature){lastSignature=signature;renderHistory();renderTasks();}
     const completed=model.tasks.find(task=>task.id===model.autoOpenTask&&task.state==='complete'&&task.result?.id);
     if(completed){model.autoOpenTask=null;openResult(completed.result.id);}
+    const extraction=model.extractTasks.find(task=>task.id===model.autoOpenExtract?.taskId&&task.state==='complete'&&task.result?.id);
+    if(extraction){const chosen=model.autoOpenExtract;model.autoOpenExtract=null;if(model.result?.id===chosen.analysisId)openExtract(extraction.result.id,chosen.analysisId);}
   }
   function restoreFields(){
     const bins=node('[data-region-input="bins"]');
@@ -163,6 +209,15 @@ export function createRegionAnalysis({root,model,workspace,request,alive,getSele
     if(name==='visible')return visible();
     if(name==='clear'){model.selection=null;selection();return;}
     if(name==='analyze')return calculate();
+    if(name==='extract')return extract(target.dataset.analysis);
+    if(name==='open-extract'){
+      model.autoOpenExtract=null;
+      const analysisId=target.dataset.analysis;
+      if(!analysisId)throw Error('This extraction has no original saved area.');
+      if(model.result?.id!==analysisId)await openResult(analysisId);
+      if(current()&&model.result?.id===analysisId)return openExtract(target.dataset.id,analysisId);
+      return;
+    }
     if(name==='open'){model.autoOpenTask=null;return openResult(target.dataset.id);}
     if(name==='task')return showTask(target.dataset.id);
     if(name==='reopen'&&model.result){

@@ -1,0 +1,35 @@
+{
+  "schema": "upstate.application-component-fragment/v1",
+  "id": "spatial-region-extraction",
+  "extend_components": {
+    "spatial-regions": {
+      "paths": [
+        "model/spatial_region_extract.py",
+        "model/SPATIAL_REGION_EXTRACTION.md",
+        "operator/spatial_region_operations.py",
+        "operator/web/spatial_regions.mjs",
+        "source_tools/receive_spatial_region_extract.py",
+        "source_tools/receive_spatial_region_extract_browser.mjs",
+        "model/spatial_regions.py",
+        "model/spatial.py",
+        "model/common.py",
+        "model/verified_files.py",
+        "model/gis_project.py",
+        "model/gis_vector_metadata.py",
+        "model/fgdc_metadata.py",
+        "model/gis_project_view.html",
+        "model/gis_project_cli.py",
+        "model/gis_project_native.py",
+        "model/gis_workspace.py",
+        "AGENTS.md",
+        "CURRENT_OWNER_DIRECTION.md"
+      ],
+      "requires": [
+        "gis-projects"
+      ]
+    }
+  },
+  "required_components": [
+    "spatial-regions"
+  ]
+}
