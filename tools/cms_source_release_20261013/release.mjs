@@ -3,6 +3,8 @@ import fs from "node:fs";
 import path from "node:path";
 import {fileURLToPath} from "node:url";
 import {createHash} from "node:crypto";
+import {gzipSync,gunzipSync} from "node:zlib";
+import {renderComparisonHtml} from "./comparison_html.mjs";
 import {buildRelease,stable,csv,parseCsv,REVIEW_COLUMNS,applyReview} from "./release_core.mjs";
 import {CSV_RELEASE_VERSION,buildCsvRelease,makeTransfer,receiveTransfer,compareEditions,newChangeReview,applyChangeReview,comparisonCSV,CHANGE_REVIEW_COLUMNS} from "./release_csv.mjs";
 const hash=s=>createHash("sha256").update(s,"utf8").digest("hex");
@@ -55,10 +57,11 @@ function comparisonPacket(before,after){
   const a=receiveTransfer(before,hash),b=receiveTransfer(after,hash),comparison=compareEditions(a,b,hash);
   return{schema:"source-comparison-bundle/1",before,after,comparison,review:applyChangeReview(comparison,newChangeReview(comparison))};
 }
-function renderComparison(packet){
-  const template=read(path.join(own,"comparison-template.html")),token="__CMS_COMPARISON_SOURCE__";
-  if(template.split(token).length!==2)throw Error("Comparison template marker differs");
-  return template.replace(token,JSON.stringify(packet).replaceAll("<","\\u003c"));
+function renderComparison(packet,compact=false){
+  return renderComparisonHtml(read(path.join(own,"comparison-template.html")),packet,{
+    compact,gzip:bytes=>gzipSync(bytes,{level:9}),gunzip:bytes=>gunzipSync(bytes),
+    sha256:bytes=>createHash("sha256").update(bytes).digest("hex")
+  });
 }
 function comparisonFiles(packet,destination){
   freshDirectory(destination,staging=>{
@@ -100,8 +103,8 @@ try{
     const checked=comparisonPacket(packet.before,packet.after);if(stable(checked.comparison)!==stable(packet.comparison))throw Error("Comparison differs from original sources");
     const payload=input.toLowerCase().endsWith(".csv")?(()=>{const parsed=parseCsv(read(input));if(stable(parsed.fields)!==stable(CHANGE_REVIEW_COLUMNS))throw Error("Change review CSV columns differ");return{schema:"source-change-review/1",comparison_id:packet.comparison.comparison_id,decisions:parsed.rows};})():json(input);
     const reviewed=applyChangeReview(packet.comparison,payload);write(output,JSON.stringify({...checked,review:reviewed},null,2)+"\n");console.log(JSON.stringify(reviewed.summary));
-  }else if(command==="render-comparison"&&args.length===2){
+  }else if(command==="render-comparison"&&(args.length===2||(args.length===3&&args[2]==="--compact"))){
     const packet=json(args[0]),checked=comparisonPacket(packet.before,packet.after);if(stable(packet.comparison)!==stable(checked.comparison))throw Error("Comparison source changed");
-    checked.review=applyChangeReview(checked.comparison,packet.review||checked.review);write(args[1],renderComparison(checked));console.log("Complete reviewed source comparison rendered");
-  }else throw Error("Usage: verify RELEASE | rebuild RELEASE NEW_DIR | ingest SOURCE_DIR REQUEST NEW_DIR | ingest-csv ORIGINAL_CSV REQUEST NEW_DIR | bundle RELEASE NEW_JSON | receive TRANSFER NEW_DIR | review RELEASE REVIEW NEW_JSON | compare BEFORE AFTER NEW_JSON | comparison BEFORE AFTER NEW_DIR | review-changes COMPLETE_BUNDLE REVIEW NEW_BUNDLE | render-comparison COMPLETE_BUNDLE NEW_HTML");
+    checked.review=applyChangeReview(checked.comparison,packet.review||checked.review);write(args[1],renderComparison(checked,args[2]==="--compact"));console.log("Complete reviewed source comparison rendered"+(args[2]==="--compact"?" with verified compact sources":""));
+  }else throw Error("Usage: verify RELEASE | rebuild RELEASE NEW_DIR | ingest SOURCE_DIR REQUEST NEW_DIR | ingest-csv ORIGINAL_CSV REQUEST NEW_DIR | bundle RELEASE NEW_JSON | receive TRANSFER NEW_DIR | review RELEASE REVIEW NEW_JSON | compare BEFORE AFTER NEW_JSON | comparison BEFORE AFTER NEW_DIR | review-changes COMPLETE_BUNDLE REVIEW NEW_BUNDLE | render-comparison COMPLETE_BUNDLE NEW_HTML [--compact]");
 }catch(error){console.error(error.message);process.exitCode=1;}

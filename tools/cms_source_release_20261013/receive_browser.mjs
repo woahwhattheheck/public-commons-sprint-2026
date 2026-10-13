@@ -21,12 +21,12 @@ const need=(value,message)=>{if(!value)throw Error(message);};
 const args={};
 for(let i=2;i<process.argv.length;i++){
   const key=process.argv[i];
-  if(key==='--help'){console.log('node receive_browser.mjs --viewer review-desk.html [--archive /actual/publisher.zip | --prior-source /actual/complete-original-source.json] --request /actual/reviewed-request.json --output /owned/receiving --chromium /existing/chromium [--playwright /existing/playwright/index.mjs] [--page-url https://chatgpt.com/space/page_ID --cdp-url http://127.0.0.1:9222] [--published-fragment /actual/Page-app.html --published-sha SHA256] [--archive-sha SHA256] [--csv-sha SHA256] [--reviewer NAME] [--recipient-brief /actual/outgoing-brief.txt] [--recipient-csv /actual/outgoing.csv]');process.exit(0);}
+  if(key==='--help'){console.log('node receive_browser.mjs --viewer review-desk.html [--archive /actual/publisher.zip | --prior-source /actual/complete-original-source.json] --request /actual/reviewed-request.json --output /owned/receiving --chromium /existing/chromium [--playwright /existing/playwright/index.mjs] [--page-url https://chatgpt.com/space/page_ID --cdp-url http://127.0.0.1:9222] [--published-fragment /actual/Page-app.html --published-sha SHA256] [--archive-sha SHA256] [--csv-sha SHA256] [--reviewer NAME] [--recipient-brief /actual/outgoing-brief.txt] [--recipient-csv /actual/outgoing.csv] [--paired-review /actual/complete-comparison.html]');process.exit(0);}
   need(key.startsWith('--')&&i+1<process.argv.length&&!process.argv[i+1].startsWith('--'),'Use --name value arguments');
   need(!Object.hasOwn(args,key.slice(2)),'Duplicate option '+key);
   args[key.slice(2)]=process.argv[++i];
 }
-const allowed=new Set(['viewer','archive','prior-source','request','output','chromium','playwright','page-url','cdp-url','published-fragment','published-sha','archive-sha','csv-sha','reviewer','timeout','recipient-brief','recipient-csv']);
+const allowed=new Set(['viewer','archive','prior-source','request','output','chromium','playwright','page-url','cdp-url','published-fragment','published-sha','archive-sha','csv-sha','reviewer','timeout','recipient-brief','recipient-csv','paired-review']);
 for(const key of Object.keys(args))need(allowed.has(key),'Unknown option --'+key);
 for(const key of ['viewer','request','output','chromium'])need(args[key],'Required --'+key);
 need(!!args.archive!==!!args['prior-source'],'Choose exactly one --archive or --prior-source input');
@@ -184,7 +184,7 @@ async function actualCurrentReview(page,root,current,prefix){
   return{data,transfer,review};
 }
 async function comparisonDownloads(page,root,expected,prefix){
-  await visible(root,'#identity');
+  await visible(root,'#interactive');await visible(root,'#identity');
   const comparisonPath=await download(page,root,'#download-comparison',prefix+'-comparison.json');
   need(same(await json(comparisonPath),expected),'Exported changes differ from actual editions');
   const csvPath=await download(page,root,'#download-changes',prefix+'-all-changes.csv');
@@ -229,6 +229,7 @@ try{
     ...(originalArchive?{archive_members:originalArchive.inventory.length}:{}),prior_release_id:expected.release.manifest.release_id,
     prior_rows:expected.release.records.length,prior_fields:expected.release.manifest.field_count,
     date_metadata:request.metadata,comparison_id:comparison.comparison_id,comparison_summary:comparison.summary,
+    ...(args['paired-review']?{paired_review:await fileDescriptor(args['paired-review'])}:{}),
     ...(args['recipient-brief']?{recipient_brief:await fileDescriptor(args['recipient-brief'])}:{}),
     ...(args['recipient-csv']?{recipient_csv:await fileDescriptor(args['recipient-csv'])}:{}),
     ...(publishedFragment?{published_fragment:await fileDescriptor(args['published-fragment'])}:{})};
@@ -301,29 +302,35 @@ try{
     compareBundle(await json(bundle),comparison);return html;
   });
   await context.close();
-  const second=await browser.newContext({acceptDownloads:true,viewport:{width:1440,height:900},colorScheme:'light'});
-  const reopened=await second.newPage();reopened.setDefaultTimeout(timeout);reopened.on('pageerror',error=>errors.push(error.message));
-  await step('Recipient cold reopen, complete change review and downloads',async()=>{
-    await reopened.goto(pathToFileURL(comparisonHtml).href);await visible(reopened,'#identity');
-    const receipt=await comparisonDownloads(reopened,reopened,comparison,'recipient-comparison');
+  const comparisonInputs=[{file:comparisonHtml,prefix:'recipient-comparison'},...(args['paired-review']?[{file:path.resolve(args['paired-review']),prefix:'supplied-paired-review'}]:[])];
+  for(const {file,prefix} of comparisonInputs){
+  const receivingContext=await browser.newContext({acceptDownloads:true,viewport:{width:1440,height:900},colorScheme:'light'});
+  const reopened=await receivingContext.newPage();reopened.setDefaultTimeout(timeout);reopened.on('pageerror',error=>errors.push(error.message));
+  await step(prefix+': cold reopen, complete change review and downloads',async()=>{
+    await reopened.goto(pathToFileURL(file).href);await visible(reopened,'#identity');
+    const receipt=await comparisonDownloads(reopened,reopened,comparison,prefix);
     await reopened.locator('details').evaluateAll(items=>{for(const item of items)item.open=true;});
     const sourceButtons=reopened.locator('#source-before button,#source-after button');
     const originals=[{side:'before',...expected.packet.release},{side:'after',...currentPacket}].flatMap(p=>p.originals.map(o=>({side:p.side,...o})));
     need(await sourceButtons.count()===originals.length,'Recipient original-source download controls differ');
     for(let i=0;i<originals.length;i++){
       const event=reopened.waitForEvent('download',{timeout});await sourceButtons.nth(i).click();const d=await event;
-      const target=path.join(downloads,'recipient-original-'+i+'-'+path.basename(originals[i].path));await d.saveAs(target);
+      const target=path.join(downloads,prefix+'-original-'+i+'-'+path.basename(originals[i].path));await d.saveAs(target);
       need(hash(await fs.readFile(target))===hash(originals[i].text),'Recipient original source download differs');
       record.downloads.push({...await fileDescriptor(target),original_source:originals[i].path,side:originals[i].side});
     }
-    await visual(reopened,reopened,'recipient-comparison');
+    await visual(reopened,reopened,prefix);
     await reopened.reload();await visible(reopened,'#identity');
     await reopened.locator('#import-review').setInputFiles(receipt.reviewPath);
     await reopened.waitForFunction(()=>document.querySelector('#status').textContent==='Complete source-bound review received.',{},{timeout});
-    const reexport=await download(reopened,reopened,'#download-review','recipient-reopened-review.json');
+    const reexport=await download(reopened,reopened,'#download-review',prefix+'-reopened-review.json');
     need(same(await json(reexport),await json(receipt.reviewPath)),'Reopened recipient review differs');
     return receipt;
   });
+  await receivingContext.close();
+  }
+  const second=await browser.newContext({acceptDownloads:true,viewport:{width:1440,height:900},colorScheme:'light'});
+  const reopened=await second.newPage();reopened.setDefaultTimeout(timeout);reopened.on('pageerror',error=>errors.push(error.message));
   await step(originalArchive?'Fresh browser archive intake replay and original current review import':'Fresh browser complete prior-source replay and original current review import',async()=>{
     await reopened.goto(pathToFileURL(path.resolve(args.viewer)).href);await ready(reopened);
     await reopened.locator('#import-review').setInputFiles(currentFiles.review);
