@@ -18,7 +18,7 @@ The coupled core files are:
 
 REGISTER_MIGRATION.md documents the complete register contract. REGISTER_OPERATOR.md describes the mounted interface. REGISTER_RECEIVING.md covers the native CLI, full delivery/customer-return programme and authored seven-register example.
 
-The full application also includes the maintained server, interfaces, portable/report modules and guides. Delivery selects the complete 48-file APPLICATION_FILES roster in migration_portable.py under commons.migration-workbench-application/v4. This cumulative edition retains file evidence, cases, grants, financial reporting and property continuity, and adds typed register migration and its complete receiving programme. The original 16-, case 21-, grant 24-, financial 31- and property 39-file editions remain valid under their exact historical profiles; an already frozen preparation retains its selected roster. Use the whole selected application when receiving or continuing its original workspace.
+The full application also includes the maintained server, interfaces, portable/report modules and guides. Delivery selects the complete 56-file APPLICATION_FILES roster in migration_portable.py under commons.migration-workbench-application/v5. This cumulative edition retains file evidence, cases, grants, financial reporting and property continuity, and adds typed register migration and CRF reporting with their complete receiving programmes. The original 16-, case 21-, grant 24-, financial 31-, property 39- and register 48-file editions remain valid under their exact historical profiles; an already frozen preparation retains its selected roster. Use the whole selected application when receiving or continuing its original workspace.
 
 The core uses the Python standard library on Linux, Python 3.10 or later. It uses fcntl for the original exclusive owner lock and a held /proc/self/fd path to inspect exact SQLite snapshot bytes. Browser clients do not need Python. No package download is required by the core.
 
@@ -383,3 +383,8 @@ The complete original source carrier and machine-readable Microsoft evidence con
 - [Purview scanner operation and reports](https://learn.microsoft.com/en-us/purview/deploy-scanner-manage)
 
 Documented headings are format contracts, not evidence that a customer export was received. Actual provider/customer bytes, runtime receiving, reviewer decisions and commercial outcomes must be reported from their own retained operations.
+
+
+## Outgoing product inspection
+
+The complete owner-directed rendered-product instruction is retained in [OPERATING_WORKBENCH.md](OPERATING_WORKBENCH.md#standing-lab-rule-inspect-the-rendered-product-before-presenting-it). Read and apply it before presenting the exact outgoing application or its attachments; open the actual product, operate its controls, view its rendered results and reopen its downloads. Include the instruction in delegated operating assignments.
