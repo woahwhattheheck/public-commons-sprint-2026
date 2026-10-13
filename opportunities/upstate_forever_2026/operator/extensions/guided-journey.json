@@ -2,13 +2,15 @@
   "schema": "upstate.operator-extension/v1",
   "id": "guided-journey",
   "title": "Guided operating journey",
-  "version": "4",
+  "version": "5",
   "order": 10,
   "assets": [
     "journey.mjs",
     "journey.css",
     "regional_journey.mjs",
-    "regional_journey.css"
+    "regional_journey.css",
+    "operator_reference.mjs",
+    "operator_reference.css"
   ],
   "requires_actions": [
     "source.import",
@@ -53,7 +55,8 @@
       "openExtension"
     ],
     "styles": [
-      "/web/journey.css"
+      "/web/journey.css",
+      "/web/operator_reference.css"
     ],
     "view": {
       "id": "journey",
