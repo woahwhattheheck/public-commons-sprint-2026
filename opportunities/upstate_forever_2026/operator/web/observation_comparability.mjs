@@ -74,6 +74,19 @@ export function attachObservationComparability(host){
       '<p class="oc-method">Later year minus earlier year. Every agreeing analytical activity has one weight within its month; each shared complete month has one weight. Complete support means complete among retained source measurements, not continuous calendar coverage. Original reporting-limit bounds remain bounds.</p>'+
       '<div data-oc-downloads class="oc-downloads"></div><div data-oc-result></div></div></section>';
   }
+  function sourceContext(){
+    const value=opened?.source_origin||loaded?.source_origin;
+    if(!value)return '';
+    const native=value.native_origin,foreign=value.relationship==='external_project';
+    return (foreign?'<p>'+(opened?'This local comparison uses an original cohort received from another project.':'Saving retains a comparison in this Workspace with your selected years. The received report and original cohort remain unchanged.')+'</p>':'')+
+      '<details><summary>Original cohort source</summary><dl>'+
+      '<dt>Source title</dt><dd>'+esc(value.title)+'</dd>'+
+      '<dt>Source collection</dt><dd><code>'+esc(value.source.source_collection_id)+'</code></dd>'+
+      '<dt>Source</dt><dd>'+esc(value.source.source_id)+'</dd>'+
+      '<dt>Original recipe SHA256</dt><dd><code>'+esc(value.source.source_sha256)+'</code></dd>'+
+      (native?'<dt>Original project</dt><dd>'+esc(native.project_id)+'</dd><dt>Original saved comparison</dt><dd><code>'+esc(native.selection_id)+'</code></dd>':'')+
+      '</dl></details>';
+  }
   function display(){
     const data=opened?.data||loaded?.data;if(!data)return;
     const c=context(workspace),stations=[...new Set(list(data.series).map(row=>row.station))].sort();
@@ -86,7 +99,7 @@ export function attachObservationComparability(host){
     const title=opened?.edition.title||c.title||loaded?.presentation?.title||'Original observation cohort';
     const counts=data.counts;
     find('[data-oc-summary]').innerHTML='<h3>'+esc(title)+'</h3><p>'+esc(data.period.start+' through '+data.period.end)+' · '+esc(counts.original_result_ids)+' original result IDs · '+esc(counts.activities)+' activities · '+esc(counts.analytical_series)+' exact analytical series.</p>'+
-      (opened?'<p>Saved original edition '+esc(opened.edition.id.slice(0,16))+'. Full originals and the report source are retained in this Workspace.</p>':'<p>Original source opened. Save this selection to retain its report source, full offline desk and portable source package.</p>');
+      (opened?'<p>Saved original edition '+esc(opened.edition.id.slice(0,16))+'. Full originals and the report source are retained in this Workspace.</p>':'<p>Original source opened. Save this selection to retain its report source, full offline desk and portable source package.</p>')+sourceContext();
     find('[data-oc-view]').hidden=false;
     const result=renderComparablePeriods(data,{yearA:c.yearA,yearB:c.yearB,station:c.station,series:c.series,tab:c.tab,query:c.query,page:c.page});
     renderedRows=result.rows;find('[data-oc-result]').innerHTML=result.html;
@@ -116,10 +129,10 @@ export function attachObservationComparability(host){
     persist(w);
     if(!catalog.sources.length)note('No comparable-period cohort is retained here. Import its complete model-sources.json through Sources, or receive the original application index and publisher responses.');
   }
-  async function loadSource({retain=false}={}){
+  async function loadSource({retain=false,source=null}={}){
     const w=workspace,g=epoch,c=context(w),ticket=++contentRead,chosen=c.source,titleEdit=c.titleEdit,yearEdit=c.yearEdit;
-    const row=list(catalog?.sources).find(item=>key(item.choice)===chosen);
-    if(!row)throw Error('Choose one retained original cohort.');
+    const row=source?{choice:source}:list(catalog?.sources).find(item=>key(item.choice)===chosen);
+    if(!row||key(row.choice)!==chosen)throw Error('Choose one retained original cohort.');
     loaded=null;opened=null;renderedRows=[];find('[data-oc-view]').hidden=true;find('[data-oc-summary]').textContent='';
     find('[data-oc-action="save"]').disabled=true;note('Reading the original index, complete publisher responses and source selectors…');
     const result=await api(endpoint('/api/observation-comparability/inputs',{workspace:w}),{method:'POST',body:{source:clone(row.choice)}});
@@ -150,6 +163,22 @@ export function attachObservationComparability(host){
         return result;
       });
   }
+  async function openSource(payload){
+    const w=current(),source=payload?.source;
+    if(!w||payload?.workspace_key!==w)throw Error('Reopen the received cohort in its selected Workspace.');
+    if(source?.kind!=='retained'||!validId(source.source_collection_id)||!validId(source.source_sha256)||
+       typeof source.source_id!=='string'||!source.source_id||
+       key(Object.keys(source).sort())!==key(['kind','source_collection_id','source_id','source_sha256']))
+      throw Error('Choose the received cohort’s complete original source identity.');
+    if(!root||workspace!==w)return openDesk('observation-comparability','openSource',clone(payload));
+    const c=context(w),choice=clone(source);c.edit++;c.source=key(choice);c.lastOpened='';c.page=0;
+    // A just-received source can precede the mounted catalogue. Native inputs
+    // verifies its complete original inventory before enabling Save.
+    if(!list(catalog?.sources).some(row=>key(row.choice)===c.source))
+      field('source').innerHTML+=option(c.source,'Received original cohort',c.source);
+    field('source').value=c.source;field('edition').value='';persist(w);
+    return loadSource({source:choice});
+  }
   async function openSaved(id){
     if(!validId(id))throw Error('Choose a complete saved comparison.');
     const w=current();if(!root||workspace!==w)return openDesk('observation-comparability','openSaved',id);
@@ -162,7 +191,8 @@ export function attachObservationComparability(host){
     const c=context(w),s=result.edition.selection;c.edit++;c.source=key(s.source);c.yearA=s.year_a;c.yearB=s.year_b;c.title=s.title;c.lastOpened=id;
     loaded={source:clone(s.source),binding:clone(result.edition.identity.binding),
       binding_sha256:s.binding_sha256,producers:clone(s.producers),data:result.data,
-      defaults:result.data.default_comparison,presentation:result.data.presentation};
+      defaults:result.data.default_comparison,presentation:result.data.presentation,
+      source_origin:result.source_origin};
     years(result.data,result.data.default_comparison,true);field('title').value=c.title;
     if(list(catalog?.sources).some(row=>key(row.choice)===c.source))field('source').value=c.source;
     field('edition').value=id;persist(w);display();
@@ -237,5 +267,5 @@ export function attachObservationComparability(host){
       const w=workspace,g=epoch;refresh().catch(error=>{if(alive(w,g))note('Saved result retained. Catalogue refresh: '+error.message,true);});
     }
   }
-  return {mount,update,detach,taskActions,dispatch,openSaved};
+  return {mount,update,detach,taskActions,dispatch,openSaved,openSource};
 }
