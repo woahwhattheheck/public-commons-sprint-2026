@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Recover an interrupted MCP operation</title><style>:root{color-scheme:light}*{box-sizing:border-box}body{margin:0;background:#eee;color:#171717;font:17px/1.6 system-ui,-apple-system,Segoe UI,sans-serif}main{max-width:920px;margin:32px auto;background:#fff;padding:48px 60px;border:1px solid #ccc}h1{font-size:35px;line-height:1.18;margin:0 0 24px;letter-spacing:-.025em}h2{font-size:24px;line-height:1.3;margin:36px 0 12px}h3{font-size:19px;margin:24px 0 8px}p,ul{margin:14px 0}a{color:#222;text-decoration-thickness:1px;text-underline-offset:3px;overflow-wrap:anywhere}code{font:14px/1.5 ui-monospace,monospace}pre{white-space:pre-wrap;overflow-wrap:anywhere;padding:16px;border:1px solid #bbb;background:#f7f7f7}.table-wrap{overflow-x:auto}table{border-collapse:collapse;width:100%;font-size:14px}th,td{text-align:left;vertical-align:top;border:1px solid #bbb;padding:10px}th{background:#f2f2f2}footer{border-top:1px solid #bbb;padding-top:16px;margin-top:40px;color:#555;font-size:13px}@media(max-width:640px){body{font-size:16px}main{margin:0;border:0;padding:28px 20px}h1{font-size:28px}h2{font-size:22px}}@media print{body{background:white;font-size:10.5pt}main{margin:0;border:0;max-width:none;padding:0}h1{font-size:24pt}h2{font-size:15pt;break-after:avoid}h3{break-after:avoid}p{orphans:3;widows:3}tr{break-inside:avoid}table{font-size:9pt}pre{break-inside:avoid}a{color:inherit}footer{font-size:8pt}@page{size:A4;margin:18mm 17mm}} li{margin:8px 0}td,th{overflow-wrap:anywhere} ol{padding-left:24px}</style></head><body><main><h1>After an MCP timeout, recover the operation before repeating it</h1>
+<p><em>A support guide for teams connecting an MCP client to an existing business application.</em></p>
+<p>A user asks an assistant to create a record. The client sends the request, waits, and eventually shows a timeout. The natural next step is to try again. That can be the wrong next step: the application may already have created the record, while the reply failed to reach the client.</p>
+<p>The support task is to reconstruct what happened to that one operation. A useful handover preserves the original request, distinguishes a missing response from a confirmed rejection, finds any resulting record, and records the decision that makes a later action safe. This guide proposes that operating approach; it is an editorial specimen grounded in published protocol and service documentation.</p>
+<h2>Start with the actual service contract</h2>
+<p>TeselaGen documents a remote MCP service with Markdown tool responses and additive writes. Its documentation explicitly says a multi-step write can leave partial records after a timeout and tells users to inspect LIMS before retrying. Its connector also distinguishes deployment, plan and backend availability. Those facts make an operation-focused recovery guide useful alongside the existing setup and reference material. [1]</p>
+<p>The following procedure is a proposed support practice. It does not assume that the service offers an idempotency key, an automatic rollback, a transaction status endpoint, or a stable machine-readable result schema. Those capabilities must come from the actual selected operation's contract.</p>
+<h2>1. Keep the original attempt together</h2>
+<p>Create one support record before investigating. Retain the tool name, approved inputs, selected deployment, client version, start time, request identifier if available, and the complete returned message. Reference sensitive original inputs in their existing authorized store; a support note need not copy their contents.</p>
+<p>Keep observations separate from conclusions. “The client stopped waiting at 10:32” describes something observed. “The application did not create the record” requires a separate application observation. This distinction helps the next operator choose a useful check without repeating an uncertain mutation.</p>
+<p>A compact working record can be maintained in the customer's existing ticket or project system:</p>
+<p>| Field | What to retain |</p>
+<p>| --- | --- |</p>
+<p>| Operation | The original task and selected tool |</p>
+<p>| Context | Deployment, account role, client and relevant release |</p>
+<p>| Intended result | The record or business state the operator expected |</p>
+<p>| Attempt | Original approved inputs or their authorized source reference |</p>
+<p>| Returned information | Complete message, status and available record/job identifiers |</p>
+<p>| Inspection | Where the operator looked, what was found and when |</p>
+<p>| Decision | Adopt a result, resolve a partial result, or authorize a later attempt |</p>
+<p>| Owner | The person responsible for the next action and customer communication |</p>
+<p>This is a documentation pattern, not a new API request format. Preserve the application's own identifiers.</p>
+<h2>2. Classify the failure at the right layer</h2>
+<p>MCP distinguishes protocol errors from tool-execution errors. A tool result can carry <code>isError: true</code>; unstructured content can include text, and structured results have their own optional field and schema contract. Preserve the actual envelope as well as the message displayed to the user. [2]</p>
+<p>That distinction changes the question support asks. If the client could not construct a valid request, investigate the request and connector. If the server returned a tool error, inspect its stated cause and the application outcome. If no conclusive response arrived, keep the operation unresolved until another observation establishes its state.</p>
+<p>Do not reduce these cases to a single “failed” flag in a handover. A concise heading such as “No final response received; result inspection pending” tells a colleague what remains unknown and what to do next.</p>
+<h2>3. Treat reconnection and repetition as different actions</h2>
+<p>The Streamable HTTP specification says a disconnected connection should not be interpreted as cancellation. It allows resumable streams, but that support is optional. Where the server supplies event IDs, a client can use its last received event ID when resuming the stream. This concerns delivery of protocol messages; it does not establish application-level duplicate protection for a newly submitted write. [3]</p>
+<p>Use the selected client's supported recovery behavior. Record whether it resumed an existing stream, established a new connection, or submitted another tool call. If the client hides that detail, say so in the support record and inspect the application's result before recommending another write.</p>
+<p>A restored connection proves that communication works again. It leaves the original business outcome to be reconciled.</p>
+<h2>4. Inspect the smallest complete business result</h2>
+<p>Look for the result the operator intended, using existing application views and documented read operations. Start with an identifier returned during the original attempt. If none was returned, use the original context to locate possible results, then compare the relevant fields rather than treating a matching label as sufficient.</p>
+<p>For a multi-step operation, inspect the complete expected set. A visible parent record does not necessarily establish that all its related work finished. Record each observed component and its state. If two plausible results exist, preserve that ambiguity for the application owner instead of selecting one by guesswork.</p>
+<p>The same discipline applies to an empty search. Record the selected deployment, scope, query and time. Absence from one limited view is different from a documented application check that establishes no result.</p>
+<h2>5. Make the decision explicit</h2>
+<p>Use one of four outcomes in the support note:</p>
+<ol>
+<li><strong>Complete result found.</strong> Link the existing result, compare it with the intended inputs, and continue from that result.</li>
+<li><strong>Partial result found.</strong> Describe the completed and unfinished components. Use the application's supported correction or completion procedure with the responsible owner.</li>
+<li><strong>No result established.</strong> Record the observations that support this conclusion and the basis for authorizing a later attempt.</li>
+<li><strong>Outcome remains uncertain.</strong> Preserve the original attempt and identify the specific application observation or owner response still needed.</li>
+</ol>
+<p>These outcomes are intended to make support work concrete. They are not permission categories imposed on every tool call. Routine actions continue under the customer's existing authorization; a new effect should be justified by the known state of the original one.</p>
+<h2>6. Keep authentication repair scoped to authentication</h2>
+<p>For HTTP authorization, the MCP specification requires access tokens in the authorization header rather than the URI query string, and binds token use to the intended resource. It describes distinct authorization errors and controlled recovery. [4]</p>
+<p>Keep credentials and token values out of a support export. The useful handover is the selected connector/deployment, the observed error, the authorized recovery action and its outcome. Reauthorization may repair access; it does not settle whether an earlier write completed.</p>
+<p>The documentation should give the customer one clear setup route for the selected client, link to the maintained provider instructions, and name which team owns account or deployment changes. This makes routine onboarding easier without embedding short-lived credentials into a guide.</p>
+<h2>7. Close with a usable continuation</h2>
+<p>A resolved support record should let a second operator continue without repeating the original investigation. Include the chosen result, any corrected work, the customer-facing explanation, and the source edition used to make the decision.</p>
+<p>For example, an adequate closure might say: “The original record was found in the selected workspace. Its fields match the approved request. The operator adopted that record and completed the remaining documented step. The retained request and application links are attached.” A partial outcome should name the unfinished step just as plainly.</p>
+<p>The final handover should be readable in the normal customer support system and downloadable in an ordinary format. Its links and attachments should open for the receiving operator under that operator's real access.</p>
+<h2>Maintain the guide with the product</h2>
+<p>A recovery guide ages when clients, tool schemas, error messages or application workflows change. Assign a documentation owner to each section and keep a small release register: source revision, affected procedure, reviewed example and publishing decision. On the next release, compare those items with the current service rather than copying an old procedure into a new guide.</p>
+<p>Good support documentation makes the next action easy to choose because it preserves the right facts. For an interrupted write, the most useful fact is what happened to the original operation.</p>
+<h2>Primary sources</h2>
+<ol>
+<li><a href="https://www.teselagen.com/documentation/mcp">TeselaGen MCP server documentation</a>, read October 13, 2026.</li>
+<li><a href="https://modelcontextprotocol.io/specification/2025-11-25/server/tools">MCP tools, specification 2025-11-25</a>, especially result content and error handling.</li>
+<li><a href="https://modelcontextprotocol.io/specification/2025-11-25/basic/transports">MCP Streamable HTTP, specification 2025-11-25</a>, especially disconnection, resumability and session management.</li>
+<li><a href="https://modelcontextprotocol.io/specification/2025-11-25/basic/authorization">MCP HTTP authorization, specification 2025-11-25</a>, especially access-token usage and error handling.</li>
+</ol>
+<p>Prepared by TokenJunkieLabs as an AI-assisted software documentation specimen. The commissioned edition is written against the selected customer's current product, approved source and support workflow.</p><footer>TokenJunkieLabs · October 13, 2026 · Editable original source accompanies this edition.</footer></main></body></html>
