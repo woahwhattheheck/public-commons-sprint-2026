@@ -43,6 +43,14 @@ python -B -m source_tools.usgs_annual inventory \
 
 The inventory contains the original headers, delimiters, archive-member CRCs and hashes, national record counts, selected full source rows, exact paired station rows, published chosen method, numeric value, standard error and source dates. Blank or unusable original estimator records retain their reason. Water-quality station IDs and flow-station IDs are joined exactly and preserve their leading zeros.
 
+### Undeclared text encoding and original bytes
+
+The retained publisher dictionary calls these CSV text files without declaring a character encoding. The original TN, TP and TSS load members each contain one literal `0xFF` in each of two station names: Whitewood Creek (`sd460685`) and White River (`sd460842`). Those bytes are not valid UTF-8. The reader does not infer a different encoding or discard them.
+
+Every table's `decoding` metadata identifies the UTF-8 parser, any original BOM, zero-based member byte offsets and exact hexadecimal values of undecodable bytes. Valid UTF-8 text remains unchanged. In an affected row, `undecodable_cells` retains each complete parsed field value as `content_base64`, with its original byte count, SHA256 and zero-based field byte offsets. This is the field value after ordinary CSV delimiter/quote parsing; the exact member, including all original CSV syntax, remains in its retained archive with its own CRC, length and SHA256.
+
+The JSON-safe row text displays each unknown byte as literal `\xHH`, for example `Whitewood Creek\xFF near Deadwood (WQM 85)`. This notation is a byte representation, not an inferred character or a corrected station name. Decode the affected cell's `content_base64` to recover its exact bytes; do not interpret arbitrary backslashes in unaffected cells. No unpaired Unicode surrogate is written to inventory, preparation or observation JSON. The original source/member identities, record IDs, numerical tokens and estimator choice remain unchanged.
+
 Omit the HUC arguments to inspect all original published station rows. Neither a regional station prefix nor a guessed site name selects observations.
 
 ## Prepare actual selected records and upstream basins
