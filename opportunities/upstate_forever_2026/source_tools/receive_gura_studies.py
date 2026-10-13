@@ -95,7 +95,7 @@ def parser():
 
 
 def _copy_exports(workspace, directory, state, *, exports=None, build_archive=True, progress=None):
-    from model.common import atomic_bytes, atomic_json, describe_file
+    from model.common import atomic_bytes, atomic_json, describe_file, digest, read_json
     from model.parameter_exports import write_archive
     from model.parameter_suite_exports import SuiteExports
     exports = exports or SuiteExports(workspace, directory, state["id"])
@@ -131,6 +131,26 @@ def _copy_exports(workspace, directory, state, *, exports=None, build_archive=Tr
             "Original baseline parameters, all case values, spatial support and source references are retained."
         ),
     }
+    # Keep one truthful publication-time observation for identical scientific
+    # contents. Live counters continue in state.packaging.cache, not in the
+    # archive's identity on every retry.
+    previous_path = directory / "results.json"
+    if previous_path.is_file():
+        try:
+            previous = read_json(previous_path)
+            scientific = lambda row: {key: value for key, value in row.items()
+                                      if key != "export_cache"}
+            if (isinstance(previous, dict)
+                    and digest(scientific(previous)) == digest(scientific(result))
+                    and isinstance(previous.get("export_cache"), dict)
+                    and all(previous["export_cache"].get(key) == result["export_cache"].get(key)
+                            for key in ("flat_studies", "nested_studies",
+                                        "logical_bytes_selected", "logical_bytes_avoided"))):
+                result["export_cache"] = previous["export_cache"]
+        except (OSError, ValueError, TypeError):
+            # A new original-source publication replaces an unreadable derived
+            # snapshot; its scientific study records remain authoritative.
+            pass
     atomic_json(directory / "results.json", result)
     fields = [
         "study_id", "model_scope", "landscape_run_id", "landscape",
