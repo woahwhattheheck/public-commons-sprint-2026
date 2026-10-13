@@ -1,0 +1,149 @@
+{
+  "schema": "upstate.operator-extension/v1",
+  "id": "gis-review-decisions",
+  "title": "Source review decisions",
+  "version": "1",
+  "order": 78,
+  "requires_actions": [
+    "gis.vector.review"
+  ],
+  "assets": [
+    "gis-review-decisions.mjs",
+    "gis-review-decisions.css"
+  ],
+  "backend": {
+    "module": "gis_review_decisions",
+    "factory": {
+      "handler": "GISReviewDecisions",
+      "args": [
+        "operator",
+        "fault"
+      ]
+    },
+    "actions": [
+      "gis.review.decisions.save",
+      "gis.review.decisions.receive"
+    ],
+    "invoke": {
+      "handler": "invoke",
+      "args": [
+        "task"
+      ]
+    },
+    "routes": [
+      {
+        "methods": [
+          "GET"
+        ],
+        "path": "/api/gis-review-decisions/catalog",
+        "operation": "catalog",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "GET"
+        ],
+        "path": "/api/gis-review-decisions/view",
+        "operation": "view",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "GET"
+        ],
+        "path": "/api/gis-review-decisions/feature",
+        "operation": "feature",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "GET"
+        ],
+        "path": "/api/gis-review-decisions/inspect",
+        "operation": "inspect",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "GET"
+        ],
+        "path": "/api/gis-review-decisions/receive-preview",
+        "operation": "receive-preview",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      }
+    ],
+    "items": [
+      {
+        "kind": "gis_review_decisions",
+        "operation": "inspect",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      }
+    ],
+    "decorate_task": {
+      "handler": "decorate_task",
+      "args": [
+        "task"
+      ]
+    },
+    "verify_workspace": {
+      "handler": "verify_workspace",
+      "args": [
+        "workspace"
+      ]
+    }
+  },
+  "client": {
+    "module": "/web/gis-review-decisions.mjs",
+    "factory": "attachGISReviewDecisions",
+    "requires": [
+      "getState",
+      "api",
+      "refreshState",
+      "showTask",
+      "toast"
+    ],
+    "styles": [
+      "/web/gis-review-decisions.css"
+    ],
+    "view": {
+      "id": "gis-review-decisions",
+      "title": "Source review decisions",
+      "after": "gis-projects"
+    },
+    "lifecycle": {
+      "mount": "mount",
+      "update": "update",
+      "detach": "detach"
+    }
+  }
+}
