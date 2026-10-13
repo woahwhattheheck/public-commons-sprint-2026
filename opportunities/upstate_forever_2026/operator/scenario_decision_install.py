@@ -17,6 +17,16 @@ def integrate(application):
     body = target.read_text(encoding="utf-8")
     original_sha256 = file_digest(target)
     changes = []
+    dependencies = {}
+    producer = application / "model/scenario_decisions.py"
+    producer_source = producer.read_text(encoding="utf-8")
+    if "from .native_versions import" in producer_source:
+        for name in ("model/native_versions.py", "model/model_selection.py"):
+            dependency = application / name
+            if not dependency.is_file():
+                raise ValueError("Receive the complete current watershed component; missing " + name)
+            compile(dependency.read_bytes(), str(dependency), "exec")
+            dependencies[name] = file_digest(dependency)
 
     if "from extension_registry import ExtensionRegistry" not in body:
         raise ValueError("Install the shared operator extensions first with project-root install_extensions.py")
@@ -120,7 +130,8 @@ def integrate(application):
             raise ValueError("Operator source changed during composition; reopen its current source")
         atomic_bytes(target, body.encode("utf-8"))
     return {"path": str(target), "changed": changes, "sha256": file_digest(target),
-            "registration": "operator/extensions/scenario_reports.json", "transport": transport}
+            "registration": "operator/extensions/scenario_reports.json", "transport": transport,
+            "runtime_dependencies": dependencies}
 
 
 def main(argv=None):

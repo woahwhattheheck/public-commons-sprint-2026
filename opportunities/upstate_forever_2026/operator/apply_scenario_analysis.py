@@ -8,6 +8,7 @@ import binascii
 import hashlib
 import json
 import os
+import re
 from pathlib import Path, PurePosixPath
 import runpy
 import tempfile
@@ -79,8 +80,40 @@ def source_packet(value):
     return packet
 
 
+def native_version_closure(packet):
+    """Keep current component source independently installable without peer desks."""
+    files = packet["files"]
+    python = []
+    browser = []
+    for name, source in files.items():
+        if name.endswith(".py") and name != "model/native_versions.py":
+            tree = ast.parse(source, filename=name)
+            if any(isinstance(node, ast.ImportFrom) and (
+                    node.module == "native_versions" and node.level == 1 or
+                    node.module == "model.native_versions" and node.level == 0)
+                   for node in ast.walk(tree)):
+                python.append(name)
+        elif name.endswith(".mjs") and name != "operator/web/native_versions.mjs":
+            if re.search(r"""(?m)^\s*import\s+[^;\n]*?\bfrom\s*['"]\./native_versions\.mjs['"]""", source):
+                browser.append(name)
+    for dependency, consumers in (("model/native_versions.py", python),
+                                  ("operator/web/native_versions.mjs", browser)):
+        if consumers and dependency not in files:
+            raise ValueError("The complete current component needs " + dependency +
+                             "; imported by " + ", ".join(sorted(consumers)))
+    for name, source in files.items():
+        if not name.startswith("operator/extensions/") or not name.endswith(".json"):
+            continue
+        descriptor = json.loads(source)
+        assets = descriptor.get("assets", [])
+        consumers = [asset for asset in assets if "operator/web/" + asset in browser]
+        if consumers and "native_versions.mjs" not in assets:
+            raise ValueError("The current component must declare native_versions.mjs in " + name)
+
+
 def apply(root, packet, integration="auto"):
     packet = source_packet(packet)
+    native_version_closure(packet)
     root = Path(root).resolve(strict=True)
     prefix = packet["prefix"].rstrip("/") + "/"
     application = root if (root / "model" / "workspace.py").is_file() else root / packet["prefix"]
@@ -178,6 +211,23 @@ def apply(root, packet, integration="auto"):
             if body.count(old) != 1:
                 raise ValueError("Compose this scenario edit against current source: " + entry["path"])
             changes[path] = body.replace(old, new, 1).encode("utf-8")
+
+    if integration == "legacy" and "operator/web/native_versions.mjs" in packet["files"]:
+        # Legacy operators use an explicit static allowlist rather than assets
+        # from extension descriptors. Extend only that original literal.
+        path = application / "operator/server.py"
+        body = current(path).decode("utf-8")
+        matches = list(re.finditer(r"if selected not in (\{[^{}\n]*\}):", body))
+        if len(matches) != 1:
+            raise ValueError("Compose the original static asset allowlist with native_versions.mjs")
+        match = matches[0]
+        assets = ast.literal_eval(match.group(1))
+        if (not isinstance(assets, set) or not all(isinstance(name, str) for name in assets)
+                or not {"index.html", "app.mjs", "style.css"} <= assets):
+            raise ValueError("The original static asset allowlist differs; preserve its current source")
+        if "native_versions.mjs" not in assets:
+            literal = match.group(1)[:-1].rstrip().rstrip(",") + ', "native_versions.mjs"}'
+            changes[path] = (body[:match.start(1)] + literal + body[match.end(1):]).encode("utf-8")
 
     for path, body in changes.items():
         if body is not None and path.suffix == ".py":

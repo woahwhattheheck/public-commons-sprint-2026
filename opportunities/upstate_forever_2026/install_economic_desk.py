@@ -13,6 +13,7 @@ import tempfile
 
 FILES = (
     "install_economic_desk.py",
+    "model/native_versions.py",
     "operator/economic_workbench.py",
     "operator/web/economic_desk.mjs",
     "operator/web/economic_cost_worksheet.mjs",
@@ -44,7 +45,7 @@ def run(application, source_root, *, dry_run=False):
     source_root = Path(source_root).resolve(strict=True)
     needed = ("operator/server.py", "operator/extension_registry.py",
               "operator/web/extension_host.mjs", "model/decision_analysis.py",
-              "model/decision_cli.py", "model/decision_desk.html")
+              "model/decision_cli.py", "model/decision_desk.html", "model/model_selection.py")
     for name in needed:
         if not (application / name).is_file():
             raise ValueError("Receive the existing extension host and decision companion; missing " + name)
@@ -91,7 +92,7 @@ def run(application, source_root, *, dry_run=False):
                 current = target.read_bytes() if target.exists() else None
                 if current != original[name]:
                     raise RuntimeError("Current authored changes were preserved at " + name + "; rerun from those bytes.")
-            # The shared ECSA host owns routing. This installer replaces only its own files.
+            # The shared ECSA host owns routing. Install the current desk and its explicit shared version dependency.
             order = sorted(changed, key=lambda name: (name.endswith("economic-desk.json"), name))
             for name in order:
                 target = application / name
