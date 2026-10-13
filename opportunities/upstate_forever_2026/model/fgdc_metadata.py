@@ -123,12 +123,12 @@ def source_information(lineage, source):
         interval = ET.SubElement(timing, "rngdates")
         _child(interval, "begdate", calendar_date(start))
         _child(interval, "enddate", calendar_date(finish, ending=True))
-        current = current or "Ground-condition period declared in the original source metadata."
+        current = current or "Period declared in original source metadata; its ground-condition/publication reference was not supplied."
     else:
         original_date = _first(values, "content_date", "observation_date")
         content = calendar_date(original_date)
         if original_date is not None:
-            current = current or "Ground-condition date declared in the original source metadata."
+            current = current or "Date declared in original source metadata; its ground-condition/publication reference was not supplied."
         elif current and current.lower() == "publication date" and publication not in {"Unknown", "Unpublished material"}:
             content = publication
         else:
@@ -154,7 +154,7 @@ def contact_information(parent, contact):
         if organization:
             _child(primary, "cntorg", organization)
     else:
-        _child(ET.SubElement(info, "cntorgp"), "cntorg", organization or "None")
+        _child(ET.SubElement(info, "cntorgp"), "cntorg", organization or "Unknown")
     if text(contact.get("position")):
         _child(info, "cntpos", contact["position"])
     addresses = contact.get("addresses")
@@ -164,16 +164,16 @@ def contact_information(parent, contact):
     for address in addresses:
         address = address if isinstance(address, dict) else {"address": address}
         node = ET.SubElement(info, "cntaddr")
-        _child(node, "addrtype", text(_first(address, "address_type", "type", "addrtype")) or "None")
+        _child(node, "addrtype", text(_first(address, "address_type", "type", "addrtype")) or "Unknown")
         for line in _strings(_first(address, "lines", "address")):
             _child(node, "address", line)
         for name, keys in (("city", ("city",)), ("state", ("state", "state_or_province")),
                            ("postal", ("postal_code", "postal", "zip"))):
-            _child(node, name, text(_first(address, *keys)) or "None")
+            _child(node, name, text(_first(address, *keys)) or "Unknown")
         if text(address.get("country")):
             _child(node, "country", address["country"])
     voices = _strings(_first(contact, "phone", "telephone", "voice", "cntvoice"))
-    for voice in voices or ["None"]:
+    for voice in voices or ["Unknown"]:
         _child(info, "cntvoice", voice)
     for key, tag in (("tdd", "cnttdd"), ("fax", "cntfax"), ("email", "cntemail")):
         for value in _strings(contact.get(key)):
@@ -182,6 +182,6 @@ def contact_information(parent, contact):
         _child(info, "hours", contact["hours"])
     instructions = text(contact.get("instructions"))
     _child(info, "cntinst", (instructions + " " if instructions else "") +
-           "None in a required contact field means that detail was not supplied in the retained contact; "
+           "Unknown in a required contact field means that detail was not supplied in the retained contact; "
            "it does not assert that the person or organization has no such contact method.")
     return info
