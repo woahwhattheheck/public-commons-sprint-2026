@@ -409,6 +409,20 @@
       ]
     ],
     [
+      "/grant-form-workbook-workspace.mjs",
+      [
+        "grant-form-workbook-workspace.mjs",
+        "text/javascript; charset=utf-8"
+      ]
+    ],
+    [
+      "/grant-form-workbook.mjs",
+      [
+        "grant-form-workbook.mjs",
+        "text/javascript; charset=utf-8"
+      ]
+    ],
+    [
       "/grant-handover-core.mjs",
       [
         "grant-handover-core.mjs",
@@ -447,6 +461,13 @@
       "/grant-issuer-workspace.mjs",
       [
         "grant-issuer-workspace.mjs",
+        "text/javascript; charset=utf-8"
+      ]
+    ],
+    [
+      "/grant-offline-package.mjs",
+      [
+        "grant-offline-package.mjs",
         "text/javascript; charset=utf-8"
       ]
     ],
@@ -587,6 +608,13 @@
       "/grant-submission-core.mjs",
       [
         "grant-submission-core.mjs",
+        "text/javascript; charset=utf-8"
+      ]
+    ],
+    [
+      "/grant-submission-working-copy.mjs",
+      [
+        "grant-submission-working-copy.mjs",
         "text/javascript; charset=utf-8"
       ]
     ],
@@ -790,6 +818,13 @@
       "/setup.mjs",
       [
         "setup.mjs",
+        "text/javascript; charset=utf-8"
+      ]
+    ],
+    [
+      "/source-delimited.mjs",
+      [
+        "source-delimited.mjs",
         "text/javascript; charset=utf-8"
       ]
     ],
