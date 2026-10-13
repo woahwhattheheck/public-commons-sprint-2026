@@ -56,6 +56,14 @@ project preserves its producer relationship. The selected imported edition and
 the producer's original source collection are both retained, with the report
 body and complete companion inventory compared by their original identities.
 
+Report source editions `conservation-saved-plan-report/1`, `/2` and `/3` are
+retained with their original identities. Optimization and geographic editions
+keep the complete saved analysis, candidate table and report. The saved
+request, engine, normalization, solver result and selected IDs must agree with
+the portfolio's original optimization reference. Geographic figures and their
+complete source companions follow the producer's declared input inventory.
+Historical edition 1 remains transferable without later optimization companions.
+
 ## Original records and locking
 
 All four public roots extend the maintained model.study_transfer closure.

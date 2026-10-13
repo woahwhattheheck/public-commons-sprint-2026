@@ -1,0 +1,647 @@
+[
+  {
+    "source_id": "usgs_flow_02186702_2020_2020",
+    "role": "daily_flow",
+    "site": "02186702",
+    "parameter": "00060",
+    "statistic": "00003",
+    "unit": "ft3/s",
+    "method_id": "126695",
+    "value_count": 366,
+    "source_info": {
+      "siteName": "EIGHTEENMILE CREEK BELOW PENDLETON, SC",
+      "siteCode": [
+        {
+          "value": "02186702",
+          "network": "NWIS",
+          "agencyCode": "USGS"
+        }
+      ],
+      "timeZoneInfo": {
+        "defaultTimeZone": {
+          "zoneOffset": "-05:00",
+          "zoneAbbreviation": "EST"
+        },
+        "daylightSavingsTimeZone": {
+          "zoneOffset": "-04:00",
+          "zoneAbbreviation": "EDT"
+        },
+        "siteUsesDaylightSavingsTime": true
+      },
+      "geoLocation": {
+        "geogLocation": {
+          "srs": "EPSG:4326",
+          "latitude": 34.645,
+          "longitude": -82.8005556
+        },
+        "localSiteXY": []
+      },
+      "note": [],
+      "siteType": [],
+      "siteProperty": [
+        {
+          "value": "ST",
+          "name": "siteTypeCd"
+        },
+        {
+          "value": "03060101",
+          "name": "hucCd"
+        },
+        {
+          "value": "45",
+          "name": "stateCd"
+        },
+        {
+          "value": "45007",
+          "name": "countyCd"
+        }
+      ]
+    },
+    "variable": {
+      "variableCode": [
+        {
+          "value": "00060",
+          "network": "NWIS",
+          "vocabulary": "NWIS:UnitValues",
+          "variableID": 45807197,
+          "default": true
+        }
+      ],
+      "variableName": "Streamflow, ft\u00b3/s",
+      "variableDescription": "Discharge, cubic feet per second",
+      "valueType": "Derived Value",
+      "unit": {
+        "unitCode": "ft3/s"
+      },
+      "options": {
+        "option": [
+          {
+            "value": "Mean",
+            "name": "Statistic",
+            "optionCode": "00003"
+          }
+        ]
+      },
+      "note": [],
+      "noDataValue": -999999,
+      "variableProperty": [],
+      "oid": "45807197"
+    },
+    "methods": [
+      {
+        "methodDescription": "",
+        "methodID": 126695
+      }
+    ],
+    "qualifier_definitions": [
+      {
+        "qualifierCode": "A",
+        "qualifierDescription": "Approved for publication -- Processing and review completed.",
+        "qualifierID": 0,
+        "network": "NWIS",
+        "vocabulary": "uv_rmk_cd"
+      }
+    ]
+  },
+  {
+    "source_id": "usgs_flow_02186702_2021_2021",
+    "role": "daily_flow",
+    "site": "02186702",
+    "parameter": "00060",
+    "statistic": "00003",
+    "unit": "ft3/s",
+    "method_id": "126695",
+    "value_count": 365,
+    "source_info": {
+      "siteName": "EIGHTEENMILE CREEK BELOW PENDLETON, SC",
+      "siteCode": [
+        {
+          "value": "02186702",
+          "network": "NWIS",
+          "agencyCode": "USGS"
+        }
+      ],
+      "timeZoneInfo": {
+        "defaultTimeZone": {
+          "zoneOffset": "-05:00",
+          "zoneAbbreviation": "EST"
+        },
+        "daylightSavingsTimeZone": {
+          "zoneOffset": "-04:00",
+          "zoneAbbreviation": "EDT"
+        },
+        "siteUsesDaylightSavingsTime": true
+      },
+      "geoLocation": {
+        "geogLocation": {
+          "srs": "EPSG:4326",
+          "latitude": 34.645,
+          "longitude": -82.8005556
+        },
+        "localSiteXY": []
+      },
+      "note": [],
+      "siteType": [],
+      "siteProperty": [
+        {
+          "value": "ST",
+          "name": "siteTypeCd"
+        },
+        {
+          "value": "03060101",
+          "name": "hucCd"
+        },
+        {
+          "value": "45",
+          "name": "stateCd"
+        },
+        {
+          "value": "45007",
+          "name": "countyCd"
+        }
+      ]
+    },
+    "variable": {
+      "variableCode": [
+        {
+          "value": "00060",
+          "network": "NWIS",
+          "vocabulary": "NWIS:UnitValues",
+          "variableID": 45807197,
+          "default": true
+        }
+      ],
+      "variableName": "Streamflow, ft\u00b3/s",
+      "variableDescription": "Discharge, cubic feet per second",
+      "valueType": "Derived Value",
+      "unit": {
+        "unitCode": "ft3/s"
+      },
+      "options": {
+        "option": [
+          {
+            "value": "Mean",
+            "name": "Statistic",
+            "optionCode": "00003"
+          }
+        ]
+      },
+      "note": [],
+      "noDataValue": -999999,
+      "variableProperty": [],
+      "oid": "45807197"
+    },
+    "methods": [
+      {
+        "methodDescription": "",
+        "methodID": 126695
+      }
+    ],
+    "qualifier_definitions": [
+      {
+        "qualifierCode": "e",
+        "qualifierDescription": "Value has been estimated.",
+        "qualifierID": 0,
+        "network": "NWIS",
+        "vocabulary": "uv_rmk_cd"
+      },
+      {
+        "qualifierCode": "A",
+        "qualifierDescription": "Approved for publication -- Processing and review completed.",
+        "qualifierID": 1,
+        "network": "NWIS",
+        "vocabulary": "uv_rmk_cd"
+      }
+    ]
+  },
+  {
+    "source_id": "usgs_flow_02186702_2022_2022",
+    "role": "daily_flow",
+    "site": "02186702",
+    "parameter": "00060",
+    "statistic": "00003",
+    "unit": "ft3/s",
+    "method_id": "126695",
+    "value_count": 365,
+    "source_info": {
+      "siteName": "EIGHTEENMILE CREEK BELOW PENDLETON, SC",
+      "siteCode": [
+        {
+          "value": "02186702",
+          "network": "NWIS",
+          "agencyCode": "USGS"
+        }
+      ],
+      "timeZoneInfo": {
+        "defaultTimeZone": {
+          "zoneOffset": "-05:00",
+          "zoneAbbreviation": "EST"
+        },
+        "daylightSavingsTimeZone": {
+          "zoneOffset": "-04:00",
+          "zoneAbbreviation": "EDT"
+        },
+        "siteUsesDaylightSavingsTime": true
+      },
+      "geoLocation": {
+        "geogLocation": {
+          "srs": "EPSG:4326",
+          "latitude": 34.645,
+          "longitude": -82.8005556
+        },
+        "localSiteXY": []
+      },
+      "note": [],
+      "siteType": [],
+      "siteProperty": [
+        {
+          "value": "ST",
+          "name": "siteTypeCd"
+        },
+        {
+          "value": "03060101",
+          "name": "hucCd"
+        },
+        {
+          "value": "45",
+          "name": "stateCd"
+        },
+        {
+          "value": "45007",
+          "name": "countyCd"
+        }
+      ]
+    },
+    "variable": {
+      "variableCode": [
+        {
+          "value": "00060",
+          "network": "NWIS",
+          "vocabulary": "NWIS:UnitValues",
+          "variableID": 45807197,
+          "default": true
+        }
+      ],
+      "variableName": "Streamflow, ft\u00b3/s",
+      "variableDescription": "Discharge, cubic feet per second",
+      "valueType": "Derived Value",
+      "unit": {
+        "unitCode": "ft3/s"
+      },
+      "options": {
+        "option": [
+          {
+            "value": "Mean",
+            "name": "Statistic",
+            "optionCode": "00003"
+          }
+        ]
+      },
+      "note": [],
+      "noDataValue": -999999,
+      "variableProperty": [],
+      "oid": "45807197"
+    },
+    "methods": [
+      {
+        "methodDescription": "",
+        "methodID": 126695
+      }
+    ],
+    "qualifier_definitions": [
+      {
+        "qualifierCode": "A",
+        "qualifierDescription": "Approved for publication -- Processing and review completed.",
+        "qualifierID": 0,
+        "network": "NWIS",
+        "vocabulary": "uv_rmk_cd"
+      }
+    ]
+  },
+  {
+    "source_id": "usgs_flow_02186702_2023_2023",
+    "role": "daily_flow",
+    "site": "02186702",
+    "parameter": "00060",
+    "statistic": "00003",
+    "unit": "ft3/s",
+    "method_id": "126695",
+    "value_count": 365,
+    "source_info": {
+      "siteName": "EIGHTEENMILE CREEK BELOW PENDLETON, SC",
+      "siteCode": [
+        {
+          "value": "02186702",
+          "network": "NWIS",
+          "agencyCode": "USGS"
+        }
+      ],
+      "timeZoneInfo": {
+        "defaultTimeZone": {
+          "zoneOffset": "-05:00",
+          "zoneAbbreviation": "EST"
+        },
+        "daylightSavingsTimeZone": {
+          "zoneOffset": "-04:00",
+          "zoneAbbreviation": "EDT"
+        },
+        "siteUsesDaylightSavingsTime": true
+      },
+      "geoLocation": {
+        "geogLocation": {
+          "srs": "EPSG:4326",
+          "latitude": 34.645,
+          "longitude": -82.8005556
+        },
+        "localSiteXY": []
+      },
+      "note": [],
+      "siteType": [],
+      "siteProperty": [
+        {
+          "value": "ST",
+          "name": "siteTypeCd"
+        },
+        {
+          "value": "03060101",
+          "name": "hucCd"
+        },
+        {
+          "value": "45",
+          "name": "stateCd"
+        },
+        {
+          "value": "45007",
+          "name": "countyCd"
+        }
+      ]
+    },
+    "variable": {
+      "variableCode": [
+        {
+          "value": "00060",
+          "network": "NWIS",
+          "vocabulary": "NWIS:UnitValues",
+          "variableID": 45807197,
+          "default": true
+        }
+      ],
+      "variableName": "Streamflow, ft\u00b3/s",
+      "variableDescription": "Discharge, cubic feet per second",
+      "valueType": "Derived Value",
+      "unit": {
+        "unitCode": "ft3/s"
+      },
+      "options": {
+        "option": [
+          {
+            "value": "Mean",
+            "name": "Statistic",
+            "optionCode": "00003"
+          }
+        ]
+      },
+      "note": [],
+      "noDataValue": -999999,
+      "variableProperty": [],
+      "oid": "45807197"
+    },
+    "methods": [
+      {
+        "methodDescription": "",
+        "methodID": 126695
+      }
+    ],
+    "qualifier_definitions": [
+      {
+        "qualifierCode": "A",
+        "qualifierDescription": "Approved for publication -- Processing and review completed.",
+        "qualifierID": 0,
+        "network": "NWIS",
+        "vocabulary": "uv_rmk_cd"
+      }
+    ]
+  },
+  {
+    "source_id": "usgs_flow_02186702_2024_2024",
+    "role": "daily_flow",
+    "site": "02186702",
+    "parameter": "00060",
+    "statistic": "00003",
+    "unit": "ft3/s",
+    "method_id": "126695",
+    "value_count": 366,
+    "source_info": {
+      "siteName": "EIGHTEENMILE CREEK BELOW PENDLETON, SC",
+      "siteCode": [
+        {
+          "value": "02186702",
+          "network": "NWIS",
+          "agencyCode": "USGS"
+        }
+      ],
+      "timeZoneInfo": {
+        "defaultTimeZone": {
+          "zoneOffset": "-05:00",
+          "zoneAbbreviation": "EST"
+        },
+        "daylightSavingsTimeZone": {
+          "zoneOffset": "-04:00",
+          "zoneAbbreviation": "EDT"
+        },
+        "siteUsesDaylightSavingsTime": true
+      },
+      "geoLocation": {
+        "geogLocation": {
+          "srs": "EPSG:4326",
+          "latitude": 34.645,
+          "longitude": -82.8005556
+        },
+        "localSiteXY": []
+      },
+      "note": [],
+      "siteType": [],
+      "siteProperty": [
+        {
+          "value": "ST",
+          "name": "siteTypeCd"
+        },
+        {
+          "value": "03060101",
+          "name": "hucCd"
+        },
+        {
+          "value": "45",
+          "name": "stateCd"
+        },
+        {
+          "value": "45007",
+          "name": "countyCd"
+        }
+      ]
+    },
+    "variable": {
+      "variableCode": [
+        {
+          "value": "00060",
+          "network": "NWIS",
+          "vocabulary": "NWIS:UnitValues",
+          "variableID": 45807197,
+          "default": true
+        }
+      ],
+      "variableName": "Streamflow, ft\u00b3/s",
+      "variableDescription": "Discharge, cubic feet per second",
+      "valueType": "Derived Value",
+      "unit": {
+        "unitCode": "ft3/s"
+      },
+      "options": {
+        "option": [
+          {
+            "value": "Mean",
+            "name": "Statistic",
+            "optionCode": "00003"
+          }
+        ]
+      },
+      "note": [],
+      "noDataValue": -999999,
+      "variableProperty": [],
+      "oid": "45807197"
+    },
+    "methods": [
+      {
+        "methodDescription": "",
+        "methodID": 126695
+      }
+    ],
+    "qualifier_definitions": [
+      {
+        "qualifierCode": "A",
+        "qualifierDescription": "Approved for publication -- Processing and review completed.",
+        "qualifierID": 0,
+        "network": "NWIS",
+        "vocabulary": "uv_rmk_cd"
+      }
+    ]
+  },
+  {
+    "source_id": "usgs_flow_02186702_2025_2025",
+    "role": "daily_flow",
+    "site": "02186702",
+    "parameter": "00060",
+    "statistic": "00003",
+    "unit": "ft3/s",
+    "method_id": "126695",
+    "value_count": 365,
+    "source_info": {
+      "siteName": "EIGHTEENMILE CREEK BELOW PENDLETON, SC",
+      "siteCode": [
+        {
+          "value": "02186702",
+          "network": "NWIS",
+          "agencyCode": "USGS"
+        }
+      ],
+      "timeZoneInfo": {
+        "defaultTimeZone": {
+          "zoneOffset": "-05:00",
+          "zoneAbbreviation": "EST"
+        },
+        "daylightSavingsTimeZone": {
+          "zoneOffset": "-04:00",
+          "zoneAbbreviation": "EDT"
+        },
+        "siteUsesDaylightSavingsTime": true
+      },
+      "geoLocation": {
+        "geogLocation": {
+          "srs": "EPSG:4326",
+          "latitude": 34.645,
+          "longitude": -82.8005556
+        },
+        "localSiteXY": []
+      },
+      "note": [],
+      "siteType": [],
+      "siteProperty": [
+        {
+          "value": "ST",
+          "name": "siteTypeCd"
+        },
+        {
+          "value": "03060101",
+          "name": "hucCd"
+        },
+        {
+          "value": "45",
+          "name": "stateCd"
+        },
+        {
+          "value": "45007",
+          "name": "countyCd"
+        }
+      ]
+    },
+    "variable": {
+      "variableCode": [
+        {
+          "value": "00060",
+          "network": "NWIS",
+          "vocabulary": "NWIS:UnitValues",
+          "variableID": 45807197,
+          "default": true
+        }
+      ],
+      "variableName": "Streamflow, ft\u00b3/s",
+      "variableDescription": "Discharge, cubic feet per second",
+      "valueType": "Derived Value",
+      "unit": {
+        "unitCode": "ft3/s"
+      },
+      "options": {
+        "option": [
+          {
+            "value": "Mean",
+            "name": "Statistic",
+            "optionCode": "00003"
+          }
+        ]
+      },
+      "note": [],
+      "noDataValue": -999999,
+      "variableProperty": [],
+      "oid": "45807197"
+    },
+    "methods": [
+      {
+        "methodDescription": "",
+        "methodID": 126695
+      }
+    ],
+    "qualifier_definitions": [
+      {
+        "qualifierCode": "e",
+        "qualifierDescription": "Value has been estimated.",
+        "qualifierID": 0,
+        "network": "NWIS",
+        "vocabulary": "uv_rmk_cd"
+      },
+      {
+        "qualifierCode": "A",
+        "qualifierDescription": "Approved for publication -- Processing and review completed.",
+        "qualifierID": 1,
+        "network": "NWIS",
+        "vocabulary": "uv_rmk_cd"
+      },
+      {
+        "qualifierCode": "P",
+        "qualifierDescription": "Provisional data subject to revision.",
+        "qualifierID": 2,
+        "network": "NWIS",
+        "vocabulary": "uv_rmk_cd"
+      }
+    ]
+  }
+]

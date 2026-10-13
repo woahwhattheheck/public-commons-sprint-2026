@@ -291,6 +291,7 @@ function implementationSourceRefs(row){
   const refs=[];
   for(const key of ['source_link_id','audit_source_link_id','source_ref','custody_ref'])if(typeof row[key]==='string')refs.push(row[key]);
   if(Array.isArray(row.evidence_refs))refs.push(...row.evidence_refs);
+  if(Array.isArray(row.source_link_ids))refs.push(...row.source_link_ids);
   for(const key of ['original_source','lab_source']){const source=row[key];if(source&&typeof source==='object')for(const field of ['source_link_id','audit_source_link_id','source_ref'])if(typeof source[field]==='string')refs.push(source[field]);}
   const response=row.form_response,fields=response?.template?.fields,answers=response?.answers;
   if(Array.isArray(fields)&&answers&&typeof answers==='object')for(const field of fields){if(!field||typeof field!=='object')continue;const answer=answers[field.key];if(field.type==='attachment_ref'&&typeof answer==='string')refs.push(answer);if(field.type==='attachment_refs'){if(Array.isArray(answer))refs.push(...answer);else if(Array.isArray(answer?.references))refs.push(...answer.references);}}
@@ -299,7 +300,7 @@ function implementationSourceRefs(row){
 function deleteRow(plan,collection,id){
   if(collection==='source_links'){
     const linked=[];
-    for(const name of [...COLLECTIONS,'field12_lab_imports'])for(const [index,row] of (Array.isArray(plan[name])?plan[name]:[]).entries())if(implementationSourceRefs(row).includes(id))linked.push(name+'.'+(row.id||index));
+    for(const name of [...COLLECTIONS,'field12_lab_imports','field12_site_visit_imports'])for(const [index,row] of (Array.isArray(plan[name])?plan[name]:[]).entries())if(implementationSourceRefs(row).includes(id))linked.push(name+'.'+(row.id||index));
     if(linked.length)throw Error('This source is still linked. Update its original associations first.\n'+linked.join('\n'));
   }
   const p=clone(plan);p[collection]=p[collection].filter(x=>x.id!==id);
@@ -542,8 +543,8 @@ function openImplementationDialog(kind,id){
       const r=row||{kind:'budget',label:'',task_id:'',amount_minor:0,date:today(),reference:''};
       body=sel('Ledger','kind',[['budget','Budget estimate'],['commitment','Commitment'],['actual','Actual cost']],r.kind)+f('Description','label',r.label,'text','required')+sel('Task','task_id',refs('tasks'),r.task_id)+f('USD amount','amount',(r.amount_minor/100).toFixed(2),'text','required inputmode="decimal"')+f('Date','date',r.date,'date')+f('Invoice, quote or funding reference','reference',r.reference);
     }else if(kind==='sites'){
-      const r=row||{label:'',candidate_id:'',latitude:null,longitude:null,source_ref:''};
-      body=f('Site label','label',r.label,'text','required')+sel('Candidate','candidate_id',refs('candidates'),r.candidate_id)+f('Latitude (WGS84)','latitude',r.latitude,'number','min="-90" max="90" step="any"')+f('Longitude (WGS84)','longitude',r.longitude,'number','min="-180" max="180" step="any"')+sel('Original source reference','source_ref',refs('source_links'),r.source_ref||'')+'<small>Add a source reference in this plan before linking it to a site.</small>';
+      const r=row||{label:'',candidate_id:'',latitude:null,longitude:null,coordinate_reference_system:'EPSG:4326',source_ref:''};
+      body=f('Site label','label',r.label,'text','required')+sel('Candidate','candidate_id',refs('candidates'),r.candidate_id)+f('Latitude (original geographic degrees)','latitude',r.latitude,'number','min="-90" max="90" step="any"')+f('Longitude (original geographic degrees)','longitude',r.longitude,'number','min="-180" max="180" step="any"')+sel('Declared coordinate reference system','coordinate_reference_system',[['EPSG:4326','EPSG:4326 · WGS84'],['EPSG:4269','EPSG:4269 · NAD83'],['EPSG:4267','EPSG:4267 · NAD27'],['EPSG:4258','EPSG:4258 · ETRS89'],...(!['EPSG:4326','EPSG:4269','EPSG:4267','EPSG:4258','',undefined,null].includes(r.coordinate_reference_system)?[[r.coordinate_reference_system,r.coordinate_reference_system+' · original declaration']]:[])],r.coordinate_reference_system||'')+'<small>Keep the original declared datum. Blank means unstated; it does not mean WGS84. Changing coordinate numbers requires an explicit geographic declaration. No coordinate transformation is performed here.</small>'+sel('Original source reference','source_ref',refs('source_links'),r.source_ref||'')+'<small>Add a source reference in this plan before linking it to a site.</small>';
     }else if(kind==='monitoring_plans'){
       const r=row||{title:'',objective:'',site_ids:[],parameters:[],method_ref:'',frequency:'',notes:''};
       body=f('Title','title',r.title,'text','required')+ta('Monitoring question','objective',r.objective)+ta('Site IDs','site_ids',(r.site_ids||[]).join('\n'))+'<small>'+p.sites.map(s=>esc(s.id+' — '+s.label)).join('<br>')+'</small>'+ta('Parameters','parameters',(r.parameters||[]).join('\n'),'One parameter per line; preserve commas and chemical basis in the original name.')+f('Method reference','method_ref',textObject(r.method_ref))+f('Frequency / planned window','frequency',textObject(r.frequency))+ta('Notes','notes',r.notes);
@@ -631,7 +632,14 @@ async function saveImplementationForm(form){
     if(kind==='tasks')Object.assign(row,{title:v('title').trim(),candidate_id:v('candidate_id')||null,phase:v('phase'),assignee:v('assignee'),status:v('status'),duration_days:v('duration_days')===''?null:finite(v('duration_days'),'Duration'),depends_on:list(v('depends_on')),progress_pct:finite(v('progress_pct'),'Progress')??0,notes:v('notes'),evidence_refs:row.evidence_refs||[]});
     if(kind==='tasks'){if(v('start_not_before'))row.start_not_before=v('start_not_before');else delete row.start_not_before;if(row.status==='complete')row.progress_pct=100;}
     if(kind==='budget_lines')Object.assign(row,{kind:v('kind'),label:v('label'),task_id:v('task_id')||null,amount_minor:parseMoney(v('amount')),date:v('date')||null,reference:optionalText(v('reference'))});
-    if(kind==='sites')Object.assign(row,{label:v('label'),candidate_id:v('candidate_id')||null,latitude:finite(v('latitude'),'Latitude'),longitude:finite(v('longitude'),'Longitude'),source_ref:v('source_ref')||null});
+    if(kind==='sites'){
+      const latitude=finite(v('latitude'),'Latitude'),longitude=finite(v('longitude'),'Longitude'),crs=v('coordinate_reference_system');
+      const changed=!existing||latitude!==(existing.latitude??null)||longitude!==(existing.longitude??null);
+      if((latitude!==null||longitude!==null)&&changed&&!['EPSG:4326','EPSG:4269','EPSG:4267','EPSG:4258'].includes(crs))throw Error('Declare the original geographic coordinate system before changing coordinate values. No datum is inferred or transformed.');
+      if(existing?.coordinate_reference_system&&!crs&&(latitude!==null||longitude!==null))throw Error('Preserve the original coordinate declaration while its coordinate values remain.');
+      Object.assign(row,{label:v('label'),candidate_id:v('candidate_id')||null,latitude,longitude,source_ref:v('source_ref')||null});
+      if(crs)row.coordinate_reference_system=crs;else delete row.coordinate_reference_system;
+    }
     if(kind==='monitoring_plans')Object.assign(row,{title:v('title'),objective:v('objective'),site_ids:list(v('site_ids')),parameters:lines(v('parameters')),method_ref:v('method_ref'),frequency:v('frequency'),notes:v('notes')});
     if(kind==='visits')Object.assign(row,{site_id:v('site_id'),monitoring_plan_id:v('monitoring_plan_id')||null,planned_date:v('planned_date')||null,visited_at:v('visited_at')||null,observer:v('observer'),status:v('status'),notes:v('notes'),evidence_refs:lines(v('evidence_refs'))});
     if(kind==='activities'){const visit=this.plan.visits.find(x=>x.id===v('visit_id'));if(!visit)throw Error('Select an existing visit for this activity.');Object.assign(row,{visit_id:visit.id,site_id:visit.site_id,kind:v('kind'),sample_id:optionalText(v('sample_id')),collected_at:v('collected_at')||null,method:optionalText(v('method')),custody_ref:optionalText(v('custody_ref')),notes:v('notes')});}
@@ -871,7 +879,7 @@ function current(w,s,turn){return !w.gone&&w.briefingIntake===s&&w.generation===
 function changed(w,s){s.preview=null;s.stage='selecting';s.result=null;s.operation_id=null;w.cache();}
 function payload(w,s){
  const out={plan_id:w.plan.id,revision:w.plan.revision,notes_upload_id:s.notes?.id};
- if(s.mode==='saved')out.delivery_id=s.delivery_id;
+ if(s.mode==='saved'){if(s.delivery_id.startsWith('scientific-briefing:'))out.scientific_briefing_id=s.delivery_id.slice(20);else if(s.delivery_id.startsWith('source-context:'))out.source_export_id=s.delivery_id.slice(15);else out.delivery_id=s.delivery_id;}
  else{out.report_upload_id=s.report?.id;out.index_upload_id=s.index?.id;}
  if(s.selected_entry_ids!==null)out.selected_entry_ids=s.selected_entry_ids;
  return out;
@@ -891,8 +899,8 @@ function render(w){
  const file=(role,label)=>'<label class="iw-field"><span>'+esc(label)+'</span><input type="file" accept=".json,application/json" data-briefing-file="'+role+'" '+(disabled?'disabled':'')+'><small>'+esc(s[role]?.filename||'Choose original JSON')+'</small></label>';
  let out='<section class="iw-notice"><div class="iw-section-head"><h3>Report review follow-up</h3>'+button('close','Close receiving form',disabled)+'</div><p>The original report and page index identify each note. Due dates remain source deadlines; working durations and costs are entered separately.</p>'+
  '<label class="iw-field"><span>Original report</span><select data-briefing-field="mode" '+(disabled?'disabled':'')+'><option value="saved" '+(s.mode==='saved'?'selected':'')+'>Saved report in this workspace</option><option value="uploaded" '+(s.mode==='uploaded'?'selected':'')+'>Report from an exported delivery</option></select></label>';
- if(s.mode==='saved')out+='<label class="iw-field"><span>Saved client report</span><select data-briefing-field="delivery_id" '+(disabled?'disabled':'')+'><option value="">Choose original report</option>'+(s.reports||[]).map(r=>'<option value="'+esc(r.id)+'" '+(r.id===s.delivery_id?'selected':'')+' '+(!r.available?'disabled':'')+'>'+esc(r.title+(r.available?'':' — '+r.reason))+'</option>').join('')+'</select></label>'+button('refresh','Refresh saved reports',disabled);
- else out+=file('report','Original client-report-model.json')+file('index','Original client-report-briefing.json');
+ if(s.mode==='saved')out+='<label class="iw-field"><span>Saved report or scientific briefing</span><select data-briefing-field="delivery_id" '+(disabled?'disabled':'')+'><option value="">Choose original report</option>'+(s.reports||[]).map(r=>'<option value="'+esc(r.choice_key||r.id)+'" '+((r.choice_key||r.id)===s.delivery_id?'selected':'')+' '+(!r.available?'disabled':'')+'>'+esc(r.title+(r.available?'':' — '+r.reason))+'</option>').join('')+'</select></label>'+button('refresh','Refresh saved reports',disabled);
+ else out+=file('report','Original report model JSON')+file('index','Original briefing page index JSON');
  out+=file('notes','Exported meeting-notes JSON')+'<div class="iw-actions">'+button('preview',w.dirty||!w.nativePlan?'Save plan and preview follow-up':'Preview follow-up',disabled)+'</div>';
  const p=s.preview;
  if(p){
@@ -1270,22 +1278,21 @@ async function openEvidenceVault(options = {}) {
 }
 async function captureEvidence(plan, file, options = {}) {
   const limits=limitsFrom(options.limits), vault=assertVault(options.vault);
-  const links=collectLocalLinks(plan,limits), id=planIdentifier(plan);
+  collectLocalLinks(plan,limits);
+  const id=planIdentifier(plan);
   if (!file || typeof file.arrayBuffer !== "function") fail("Choose an original file from this device");
   const filename=originalName(file.name), bytes=await readBytes(file,limits.maxFileBytes);
   if (typeof file.size === "number" && bytes.length !== file.size) fail("Original file size changed during capture");
   const hash=await evidenceSha256(bytes), sourceId="file_"+hash.slice(0,24);
   const existing=plan.source_links.find(source=>source.id===sourceId);
   if (existing && (existing.kind!=="local_file" || existing.sha256!==hash || existing.size_bytes!==bytes.length)) fail("An existing source ID conflicts with these original bytes");
-  if (!existing) {
-    if (links.length >= limits.maxFiles) fail("Too many evidence files");
-    integer(links.reduce((sum,row)=>sum+row.size_bytes,0)+bytes.length,"Total evidence size",limits.maxTotalBytes);
-  }
   const link=existing || {
     id:sourceId,kind:"local_file",label:options.label || filename,
     reference:canonicalReference(id,hash,filename),sha256:hash,size_bytes:bytes.length,
     original_filename:filename,media_type:mediaType(file.type)
   };
+  // Apply the archive's unique-member accounting to the proposed source list.
+  if (!existing) collectLocalLinks({...plan,source_links:[...plan.source_links,link]},limits);
   await vault.putMany([{sha256:hash,size_bytes:bytes.length,bytes}]);
   return {source_link:JSON.parse(JSON.stringify(link)),deduplicated:!!existing};
 }
@@ -1470,7 +1477,7 @@ return {EVIDENCE_SCHEMA,EVIDENCE_LIMITS,evidenceSafeBasename,evidenceSha256,evid
 })();
 const IMPLEMENTATION_EVIDENCE_UI = (() => {
 const {clone,esc,validatePlan,implementationSourceRefs} = IMPLEMENTATION_CORE;
-const {openEvidenceVault,captureEvidence,inspectEvidence,getEvidenceFile,createEvidencePreview,exportEvidenceBundle,importEvidenceBundle,downloadEvidenceBlob} = IMPLEMENTATION_EVIDENCE;
+const {openEvidenceVault,captureEvidence,inspectEvidence,getEvidenceFile,createEvidencePreview,exportEvidenceBundle,importEvidenceBundle,downloadEvidenceBlob,evidenceSha256} = IMPLEMENTATION_EVIDENCE;
 const button=(action,label,extra='')=>'<button type="button" data-iw-evidence="'+esc(action)+'" '+extra+'>'+esc(label)+'</button>';
 const byId=(plan,id)=>(plan.source_links||[]).find(row=>row.id===id);
 const fileRows=plan=>(plan.source_links||[]).filter(row=>row.kind==='local_file');
@@ -1513,6 +1520,7 @@ class EvidencePanel {
   references(id){
     const result=[];for(const collection of ['tasks','visits','activities','observations','sites','monitoring_plans','candidates'])for(const row of this.w.plan[collection]||[])if(implementationSourceRefs(row).includes(id))result.push(collection.replaceAll('_',' ')+' · '+(row.label||row.title||row.sample_id||row.id));
     for(const row of this.w.plan.field12_lab_imports||[])if(implementationSourceRefs(row).includes(id))result.push('Original laboratory import · '+(row.operation_id||row.id||'retained revision'));
+    for(const row of this.w.plan.field12_site_visit_imports||[])if(implementationSourceRefs(row).includes(id))result.push('Original site / visit CSV import · '+(row.operation_id||'retained draft'));
     return result;
   }
   openCapture(collection='',id=''){
@@ -1581,16 +1589,19 @@ class EvidencePanel {
     if(links.some(link=>!downloads.some(row=>row.sha256===link.sha256&&row.bytes===link.size_bytes))){
       const detail=await w.read('/api/implementation/detail',{id:stamp.plan.id,...(stamp.plan.revision>0?{revision:stamp.plan.revision}:{})});this.requireUnchanged(stamp);downloads=detail._downloads||[];w.downloads=downloads;
     }
-    const vault=await this.vault();
+    const vault=await this.vault(),hydrated=new Set();
     for(const link of links){
+      const fileKey=link.sha256+':'+link.size_bytes;
+      if(hydrated.has(fileKey)){this.available.set(link.id,true);continue;}
       const ticket=downloads.find(row=>row.sha256===link.sha256&&row.bytes===link.size_bytes);
       if(!ticket||typeof ticket.url!=='string'||!/^\/api\/file\/[A-Za-z0-9_-]+$/.test(ticket.url))throw Error('Original file needed: '+(link.original_filename||link.id)+'. Open its complete ZIP or attach the matching original.');
       let response=await fetch(ticket.url,{credentials:'same-origin'});if(response.status===401){await w.host.api('/api/session',{method:'POST',body:{}});this.requireUnchanged(stamp);response=await fetch(ticket.url,{credentials:'same-origin'});}if(!response.ok)throw Error('The native original file could not be downloaded ('+response.status+'). Reopen the authenticated workspace and try again.');
       const bytes=await response.arrayBuffer();this.requireUnchanged(stamp);
       if(bytes.byteLength!==link.size_bytes)throw Error('The downloaded file size differs from its original source record.');
-      const captured=await captureEvidence(stamp.plan,new File([bytes],link.original_filename,{type:link.media_type||'application/octet-stream'}),{vault});
-      if(captured.source_link.sha256!==link.sha256||captured.source_link.size_bytes!==link.size_bytes)throw Error('The downloaded file differs from its original source record.');
-      this.available.set(link.id,true);
+      const checksum=await evidenceSha256(bytes);this.requireUnchanged(stamp);
+      if(checksum!==link.sha256)throw Error('The downloaded file differs from its original source record.');
+      await vault.putMany([{sha256:checksum,size_bytes:bytes.byteLength,bytes}]);this.requireUnchanged(stamp);
+      hydrated.add(fileKey);this.available.set(link.id,true);
     }
   }
   async saveNative(){
@@ -1614,10 +1625,645 @@ class EvidencePanel {
 
 return {attachImplementationEvidence};
 })();
+const IMPLEMENTATION_SITE_VISIT_CSV = (() => {
+const {clone,validatePlan,civil} = IMPLEMENTATION_CORE;
+const {evidenceSha256,evidenceSafeBasename} = IMPLEMENTATION_EVIDENCE;
+const SITE_VISIT_MAPPING_SCHEMA='upstate.implementation-site-visit-mapping/v1';
+const SITE_VISIT_EDITION='site-visit-portable-intake-20261013-v1';
+const SITE_VISIT_FIELDS=Object.freeze({
+ sites:['id','label','candidate_id','source_ref','latitude','longitude','coordinate_reference_system','notes'],
+ visits:['id','site_id','monitoring_plan_id','planned_date','visited_at','visited_date','visited_time','utc_offset','observer','status','notes']
+});
+const ID=/^[A-Za-z0-9][A-Za-z0-9_-]{0,95}$/;
+const encodings=['utf-8-sig','utf-8','utf-16','cp1252','latin-1'];
+const defined=(o,k)=>Object.prototype.hasOwnProperty.call(o,k);
+const plain=v=>v!==null&&typeof v==='object'&&!Array.isArray(v);
+function stableSiteVisitJSON(value){
+ const compare=(left,right)=>{const a=Array.from(left),b=Array.from(right);for(let i=0;i<Math.min(a.length,b.length);i++){const d=a[i].codePointAt(0)-b[i].codePointAt(0);if(d)return d;}return a.length-b.length;};
+ const encode=v=>Array.isArray(v)?'['+v.map(x=>x===undefined?'null':encode(x)).join(',')+']':plain(v)?'{'+Object.keys(v).filter(k=>v[k]!==undefined).sort(compare).map(k=>JSON.stringify(k)+':'+encode(v[k])).join(',')+'}':JSON.stringify(v);
+ return encode(value);
+}
+const utf8=value=>new TextEncoder().encode(value);
+const hashJSON=async value=>evidenceSha256(utf8(stableSiteVisitJSON(value)));
+const nonblank=value=>typeof value==='string'&&value.trim()!=='';
+function fail(message){throw Error(message);}
+function bytesOf(value){if(value instanceof Uint8Array)return value;if(value instanceof ArrayBuffer)return new Uint8Array(value);fail('Use original CSV bytes.');}
+function decodeSiteVisitCSV(value,encoding='utf-8-sig'){
+ const bytes=bytesOf(value);if(bytes.length>64*1024*1024)fail('Keep each original CSV within 64 MiB.');
+ if(!encodings.includes(encoding))fail('Choose a supported original CSV encoding.');
+ if(encoding==='latin-1'){let out='';for(let i=0;i<bytes.length;i+=8192)out+=String.fromCharCode(...bytes.subarray(i,i+8192));if(out.includes('\0'))fail('The original CSV contains a NUL character.');return out;}
+ if(encoding==='utf-16'){
+  if(bytes.length<2||!((bytes[0]===255&&bytes[1]===254)||(bytes[0]===254&&bytes[1]===255)))fail('The original UTF-16 CSV needs its byte-order mark.');
+  const text=new TextDecoder(bytes[0]===255?'utf-16le':'utf-16be',{fatal:true}).decode(bytes);if(text.includes('\0'))fail('The original CSV contains a NUL character.');return text;
+ }
+ if(encoding==='cp1252'&&bytes.some(x=>[129,141,143,144,157].includes(x)))fail('The selected Windows-1252 source contains undefined byte values.');
+ const text=new TextDecoder(encoding==='cp1252'?'windows-1252':'utf-8',{fatal:true,ignoreBOM:encoding==='utf-8'}).decode(bytes);
+ if(text.includes('\0'))fail('The original CSV contains a NUL character.');
+ return encoding==='utf-8-sig'?text.replace(/^\uFEFF/,''):text;
+}
+function parseSiteVisitCSV(text,delimiter=','){
+ if(typeof text!=='string'||typeof delimiter!=='string'||delimiter.length!==1||['"','\r','\n','\0'].includes(delimiter))fail('Choose one actual CSV delimiter.');
+ const records=[];let cells=[],cell='',quoted=false,closed=false,line=1,start=1,touched=false;
+ const endCell=()=>{cells.push(cell);cell='';closed=false;};
+ const endRow=()=>{if(touched||cells.length||cell!==''){endCell();records.push({cells,line_start:start,line_end:line});}cells=[];cell='';closed=false;touched=false;};
+ for(let i=0;i<text.length;i++){
+  const ch=text[i];
+  if(quoted){
+   if(ch==='"'){if(text[i+1]==='"'){cell+='"';i++;}else{quoted=false;closed=true;}}
+   else if(ch==='\r'||ch==='\n'){if(ch==='\r'&&text[i+1]==='\n'){cell+='\r\n';i++;}else cell+=ch;line++;}
+   else cell+=ch;
+   continue;
+  }
+  if(ch===delimiter){endCell();touched=true;continue;}
+  if(ch==='\r'||ch==='\n'){endRow();if(ch==='\r'&&text[i+1]==='\n')i++;line++;start=line;continue;}
+  if(closed)fail('Unexpected text after a closing CSV quote at line '+line+'.');
+  if(ch==='"'){if(cell!==''){cell+=ch;touched=true;continue;}quoted=true;touched=true;continue;}
+  cell+=ch;touched=true;
+ }
+ if(quoted)fail('The original CSV has an unclosed quoted field beginning near line '+start+'.');
+ endRow();if(!records.length)fail('The CSV needs its original header row.');
+ const headers=records.shift().cells;
+ if(headers.some(h=>!h.trim())||new Set(headers).size!==headers.length)fail('Original CSV headers must be nonblank and unique.');
+ if(headers.length>1000)fail('Use a CSV within 1,000 original columns.');
+ if(records.length>100000)fail('Use a reviewed batch within 100,000 original data records.');
+ return {headers,rows:records.map((r,i)=>({record:i+1,line_start:r.line_start,line_end:r.line_end,cell_count:r.cells.length,extra_cells:r.cells.slice(headers.length),values:Object.fromEntries(headers.map((h,j)=>[h,r.cells[j]??'']))}))};
+}
+async function inspectPortableSiteVisitCSV(bytes,{delimiter=',',encoding='utf-8-sig',filename='original.csv'}={}){
+ bytes=bytesOf(bytes);const parsed=parseSiteVisitCSV(decodeSiteVisitCSV(bytes,encoding),delimiter);
+ return {source:{filename,bytes:bytes.length,sha256:await evidenceSha256(bytes)},headers:parsed.headers,row_count:parsed.rows.length,sample_rows:parsed.rows.slice(0,25),sample_rows_truncated:parsed.rows.length>25};
+}
+function blankSiteVisitMapping(kind){
+ if(!SITE_VISIT_FIELDS[kind])fail('Choose sites or visits.');
+ return {schema:SITE_VISIT_MAPPING_SCHEMA,columns:{},constants:{},fallback_columns:{},delimiter:',',encoding:'utf-8-sig',decimal_separator:'.',id_mode:'native',namespace:'',coordinate_mode:'retain_only',crs_values:{},date_format:'iso',time_zone_values:{},status_values:{},site_binding:'native_id',row_actions:{}};
+}
+function normalizeSiteVisitMapping(kind,value,headers,count=Infinity){
+ if(!plain(value))fail('Supply an explicit original site/visit mapping.');
+ const defaults=blankSiteVisitMapping(kind);
+ if(Object.keys(value).some(k=>!defined(defaults,k))||value.schema!==undefined&&value.schema!==SITE_VISIT_MAPPING_SCHEMA)fail('The mapping schema or fields differ from the original site/visit contract.');
+ const result={...defaults,...clone(value),columns:{},constants:{},fallback_columns:{},row_actions:{}},fields=SITE_VISIT_FIELDS[kind];
+ for(const name of ['columns','constants','fallback_columns','crs_values','time_zone_values','status_values','row_actions'])if(!plain(value[name]??{}))fail(name+' must be an explicit mapping object.');
+ for(const [field,header] of Object.entries(value.columns||{})){
+  if(!fields.includes(field))fail('Unknown '+kind+' field '+field+'.');
+  if(header===''||header===null)continue;
+  if(typeof header!=='string'||!headers.includes(header))fail('Mapped '+field+' must name one actual original header.');result.columns[field]=header;
+ }
+ for(const [field,text] of Object.entries(value.constants||{})){
+  if(!fields.includes(field)||field==='id'||typeof text!=='string'||text.includes('\0')||defined(result.columns,field))fail('Choose one original column or non-ID text constant for '+field+'.');result.constants[field]=text;
+ }
+ for(const [field,list] of Object.entries(value.fallback_columns||{})){
+  if(!defined(result.columns,field)||defined(result.constants,field)||!Array.isArray(list)||list.some(h=>typeof h!=='string'||!headers.includes(h))||new Set(list).size!==list.length||list.includes(result.columns[field]))fail('Fallback '+field+' must list distinct original headers after its mapped primary column.');
+  if(list.length)result.fallback_columns[field]=clone(list);
+ }
+ if(!['native','stable','source_record'].includes(result.id_mode)||result.id_mode!=='native'&&!nonblank(result.namespace))fail('Stable or source-record IDs require a declared namespace.');
+ if(typeof result.namespace!=='string'||result.namespace.includes('\0'))fail('Use the original source namespace as text.');
+ if(result.id_mode!=='source_record'&&!defined(result.columns,'id'))fail('Map the original ID, or explicitly choose IDs from exact source records.');
+ if(!['geographic','retain_only'].includes(result.coordinate_mode)||!['iso','mdy','dmy'].includes(result.date_format)||!['native_id','source_id'].includes(result.site_binding)||!['.',','].includes(result.decimal_separator))fail('Choose the declared coordinate, calendar, site-ID and decimal conventions.');
+ for(const [name,allowed] of [['crs_values',['EPSG:4326','EPSG:4269','EPSG:4267','EPSG:4258']],['status_values',['planned','complete','cancelled']]])if(Object.values(result[name]).some(v=>!allowed.includes(v)))fail('Choose explicit supported '+name+' aliases.');
+ for(const [name,value] of Object.entries(result.time_zone_values)){if(typeof value!=='string'||value!==value.trim())fail('A fixed-offset alias must use its exact explicit offset.');result.time_zone_values[name]=offsetCell(value,{});}
+ if(!encodings.includes(result.encoding))fail('Choose a supported CSV encoding.');
+ if(typeof result.delimiter!=='string'||result.delimiter.length!==1||['"','\r','\n','\0'].includes(result.delimiter))fail('Use a single actual delimiter.');
+ for(const [key,raw] of Object.entries(value.row_actions||{})){
+  if(!/^[1-9][0-9]*$/.test(key)||Number(key)>count||!plain(raw)||Object.keys(raw).some(k=>!['action','reason','id','target_id','site_id'].includes(k)))fail('Each row decision must identify an original data record.');
+  const row={action:raw.action??'import',reason:raw.reason??''},overrides=['id','target_id','site_id'].filter(k=>defined(raw,k));
+  if(!['import','skip','replace'].includes(row.action)||typeof row.reason!=='string'||(row.action!=='import'||overrides.length)&&!row.reason.trim())fail('An explicit row override, skip or replacement needs its reason.');
+  for(const field of overrides){if(typeof raw[field]!=='string'||!ID.test(raw[field])||field==='site_id'&&kind!=='visits')fail('Select an exact valid native '+field+'.');row[field]=raw[field];}
+  if(row.action==='replace'&&!defined(row,'target_id')||row.action!=='replace'&&defined(row,'target_id')||row.action==='replace'&&defined(row,'id')&&row.id!==row.target_id)fail('An explicit replacement needs one matching original target ID.');
+  result.row_actions[key]=row;
+ }
+ return result;
+}
+function selectedCell(mapping,source,field,selected){
+ const header=mapping.columns[field];let value=header===undefined?undefined:source.values[header];
+ if(header!==undefined)selected[field]={column:header};
+ if(!nonblank(value))for(const fallback of mapping.fallback_columns[field]||[])if(nonblank(source.values[fallback])){value=source.values[fallback];selected[field]={column:fallback};break;}
+ if(!nonblank(value)&&defined(mapping.constants,field)){value=mapping.constants[field];selected[field]={constant:value};}
+ return value;
+}
+function numberCell(value,decimal){
+ if(!nonblank(value))return null;const text=value.trim();
+ if(decimal===','&&text.includes('.')||decimal==='.'&&text.includes(','))fail('Use the declared decimal separator without thousands separators.');
+ const normalized=decimal===','?text.replace(',','.'):text;
+ if(!/^[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?$/.test(normalized)||!Number.isFinite(Number(normalized)))fail('Use an actual finite coordinate value.');
+ return Number(normalized);
+}
+function dateCell(value,format){
+ if(!nonblank(value))return null;const text=value.trim();let iso=text;
+ if(format!=='iso'){const m=/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec(text);if(!m)fail('Use the declared slash-separated date with a four-digit year.');iso=m[3]+'-'+String(format==='mdy'?m[1]:m[2]).padStart(2,'0')+'-'+String(format==='mdy'?m[2]:m[1]).padStart(2,'0');}
+ civil(iso);return iso;
+}
+function offsetCell(value,aliases){
+ if(typeof value!=='string')fail('Select an explicit UTC offset.');
+ const text=aliases[value]??value.trim();
+ if(text==='Z')return 'Z';
+ if(!/^[+-](?:0\d|1[0-4]):[0-5]\d$/.test(text)||text.slice(1,3)==='14'&&text.slice(4)!=='00')fail('Supply an explicit UTC offset Z or ±HH:MM within 14 hours.');
+ return text;
+}
+function timestampCell(value){
+ const text=value.trim(),m=/^(\d{4}-\d{2}-\d{2})T(\d{2}):(\d{2})(?::(\d{2})(?:\.(\d+))?)?(Z|[+-]\d{2}:\d{2})$/.exec(text);
+ if(!m)fail('An actual visit timestamp needs an ISO date, time and explicit timezone offset.');
+ civil(m[1]);if(Number(m[2])>23||Number(m[3])>59||Number(m[4]||0)>59)fail('Actual visit time is outside its clock range.');offsetCell(m[6],{});return text;
+}
+function visitTime(values,mapping){
+ const full=(values.visited_at||'').trim(),day=(values.visited_date||'').trim(),clock=(values.visited_time||'').trim(),rawOffset=values.utc_offset||'';
+ const declaredOffset=mapping.time_zone_values[rawOffset]??rawOffset.trim(),offset=declaredOffset?offsetCell(declaredOffset,{}):null;
+ let value;
+ if(full){
+  if(day||clock)fail('Choose full visited_at or separate original date/time fields, not both.');
+  value=full;
+  if(!/(?:Z|[+-]\d{2}:\d{2})$/.test(value)){
+   if(!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?$/.test(value))fail('The original actual timestamp is not an ISO date/time.');
+   if(!offset)return undefined;value+=offset;
+  }
+ }else if(day||clock){
+  if(day)dateCell(day,mapping.date_format);
+  if(!day||!clock||!offset)return undefined;
+  value=dateCell(day,mapping.date_format)+'T'+clock+offset;
+ }else return null;
+ const result=timestampCell(value);
+ if(offset){
+  const actual=result.endsWith('Z')?'Z':result.slice(-6),minutes=v=>v==='Z'?0:(v[0]==='-'?-1:1)*(Number(v.slice(1,3))*60+Number(v.slice(4)));
+  if(minutes(actual)!==minutes(offset))fail('The timestamp and separate original UTC offset disagree.');
+ }
+ return result;
+}
+
+function sourceLink(plan,kind,source,mappingHash,sourceId){
+ return {id:sourceId,kind:'local_file',label:'Original '+kind+' CSV — '+source.filename,reference:'implementation/plans/'+plan.id+'/attachments/'+source.sha256+'-'+kind+'-original.csv',sha256:source.sha256,size_bytes:source.bytes,original_filename:source.filename};
+}
+function recordIssue(severity,code,message,kind,record){return {severity,code,message,kind,record:record.record,line_start:record.line_start,line_end:record.line_end};}
+function plainRowSource(row){const copy=clone(row);delete copy.original_source;delete copy.original_station;delete copy.original_visit;return copy;}
+async function previewPortableSiteVisits(plan,inputs){
+ const originalIssues=validatePlan(plan);if(originalIssues.length)fail('Open a valid original plan before importing.\n'+originalIssues.map(x=>x.path+': '+x.message).join('\n'));
+ if(!Array.isArray(inputs)||!inputs.length||inputs.length>2||new Set(inputs.map(x=>x.kind)).size!==inputs.length||inputs.some(x=>!SITE_VISIT_FIELDS[x.kind]))fail('Choose one original sites CSV, visits CSV or both.');
+ const original=clone(plan),candidate=clone(plan),sources=[],mappings={},decisions=[],issues=[],siteSources=new Map(),seenBatch={sites:new Set(),visits:new Set()};
+ const addSite=(id,native)=>{if(!siteSources.has(id))siteSources.set(id,new Set());siteSources.get(id).add(native);};
+ for(const row of candidate.sites)if(nonblank(row.original_source?.original_identifier))addSite(row.original_source.original_identifier,row.id);
+ const summary={record_count:0,source_count:inputs.length,sites:{append:0,replace:0,identical:0,skip:0,error:0},visits:{append:0,replace:0,identical:0,skip:0,error:0},error_count:0,warning_count:0,site_count_before:plan.sites.length,site_count_after:plan.sites.length,visit_count_before:plan.visits.length,visit_count_after:plan.visits.length};
+ const retained=[],sourceRows=[];
+ for(const input of [...inputs].sort((a,b)=>a.kind==='sites'?-1:b.kind==='sites'?1:0)){
+  const kind=input.kind,raw=bytesOf(input.bytes),mappingInput=input.mapping||blankSiteVisitMapping(kind),parsed=parseSiteVisitCSV(decodeSiteVisitCSV(raw,mappingInput.encoding||'utf-8-sig'),mappingInput.delimiter||','),mapping=normalizeSiteVisitMapping(kind,mappingInput,parsed.headers,parsed.rows.length);
+  const source={filename:input.filename||kind+'-original.csv',bytes:raw.length,sha256:await evidenceSha256(raw)};
+  if(!source.filename||/[\\/\0]/.test(source.filename)||source.filename.length>1024)fail('Use the original ordinary CSV filename.');
+  const mappingHash=await hashJSON(mapping),sourceId='field_csv_'+(await hashJSON([plan.id,kind,source.sha256,mapping])).slice(0,24),link=sourceLink(plan,kind,source,mappingHash,sourceId);
+  const priorLink=candidate.source_links.find(x=>x.id===sourceId);
+  if(priorLink&&stableSiteVisitJSON(priorLink)!==stableSiteVisitJSON(link))fail('An original CSV source ID has different retained metadata.');
+  if(!priorLink)candidate.source_links.push(link);
+  sources.push({kind,source,headers:parsed.headers,source_link_id:sourceId});mappings[kind]=mapping;retained.push({kind,bytes:raw,link});sourceRows.push({kind,source,headers:clone(parsed.headers),rows:clone(parsed.rows)});
+  if(!parsed.rows.length)issues.push({severity:'error',code:'empty_source',message:'The '+kind+' CSV contains no data records.',kind});
+  for(const key of Object.keys(mapping.row_actions))if(Number(key)>parsed.rows.length)issues.push({severity:'error',code:'unknown_record',message:'Row choice '+key+' is not in the original '+kind+' CSV.',kind,record:Number(key)});
+  for(const record of parsed.rows){
+   const choice=mapping.row_actions[String(record.record)],selected={},local=[],values={},decision={kind,record:record.record,line_start:record.line_start,line_end:record.line_end,status:'error',native_id:null,original_identifier:null,row:null,selected_columns:selected,issues:local};
+   summary.record_count++;
+   try{
+    for(const field of SITE_VISIT_FIELDS[kind])values[field]=selectedCell(mapping,record,field,selected);
+    decision.original_identifier=values.id??'';decision.action=clone(choice||{action:'import',reason:''});
+    if(choice?.action==='skip'){decision.status='skip';decisions.push(decision);summary[kind].skip++;continue;}
+    if(record.cell_count!==parsed.headers.length)fail('The record has '+record.cell_count+' cells; its original header has '+parsed.headers.length+'.');
+    const originalId=values.id;decision.original_identifier=originalId??'';
+    let id;
+    if(choice?.id)id=choice.id;
+    else if(choice?.action==='replace'&&choice.target_id)id=choice.target_id;
+    else if(mapping.id_mode==='source_record')id=(kind==='sites'?'site_':'visit_')+(await hashJSON([kind,mapping.namespace,source.sha256,record.record])).slice(0,24);
+    else{
+     if(!nonblank(originalId))fail('Map the actual original ID or choose IDs from this exact source row.');
+     id=mapping.id_mode==='stable'?(kind==='sites'?'site_':'visit_')+(await hashJSON([kind,mapping.namespace,originalId])).slice(0,24):originalId;
+    }
+    if(!ID.test(id))fail('The selected native ID must contain 1–96 letters, digits, underscores or hyphens and begin with a letter or digit.');
+    decision.native_id=id;
+    const existing=original[kind].find(row=>row.id===id),earlier=candidate[kind].find(row=>row.id===id);
+    if(choice?.action==='replace'&&!existing)fail('The explicitly selected replacement ID is not in the current plan.');
+    if(choice?.target_id&&choice.action!=='replace')fail('A target replacement ID requires the explicit Replace action.');
+    const row=existing?clone(existing):kind==='sites'?{id,label:'',latitude:null,longitude:null,notes:''}:{id,site_id:'',observer:'',notes:'',evidence_refs:[],status:''};
+    const touched=new Set(['id']);row.id=id;
+    const set=(field,value)=>{row[field]=value;touched.add(field);};
+    if(kind==='sites'){
+     for(const field of ['label','notes'])if(values[field]!==undefined)set(field,values[field]);
+     for(const field of ['candidate_id','source_ref'])if(values[field]!==undefined)set(field,values[field]||null);
+     if(!existing&&!defined(selected,'source_ref'))set('source_ref',sourceId);
+     if(!nonblank(row.label))fail('Every new site needs its actual label.');
+     if(mapping.coordinate_mode==='geographic'){
+      const latSupplied=values.latitude!==undefined,lonSupplied=values.longitude!==undefined;
+      if(values.coordinate_reference_system!==undefined&&(!latSupplied||!lonSupplied))fail('Map the original latitude and longitude together with their CRS.');
+      if(latSupplied!==lonSupplied)fail('Map both original latitude and longitude together.');
+      if(latSupplied){
+       const lat=numberCell(values.latitude,mapping.decimal_separator),lon=numberCell(values.longitude,mapping.decimal_separator);
+       if((lat===null)!==(lon===null))fail('Supply latitude and longitude together.');
+       if(lat!==null&&(lat< -90||lat>90||lon< -180||lon>180))fail('Geographic source coordinates are outside the native degree ranges.');
+       if(lat!==null){
+        const declared=values.coordinate_reference_system,crs=mapping.crs_values[declared]??(typeof declared==='string'?declared.trim():'');
+        if(!['EPSG:4326','EPSG:4269','EPSG:4267','EPSG:4258'].includes(crs))fail('Declare the original geographic CRS or choose Retain source coordinates only. No datum is inferred or transformed.');
+        set('coordinate_reference_system',crs);
+       }else{delete row.coordinate_reference_system;touched.add('coordinate_reference_system');local.push(recordIssue('warning','missing_coordinates','Both original coordinates are blank.',kind,record));}
+       set('latitude',lat);set('longitude',lon);
+      }else if(values.coordinate_reference_system!==undefined&&nonblank(values.coordinate_reference_system)&&row.latitude!==null&&row.latitude!==undefined){
+       const declared=values.coordinate_reference_system,crs=mapping.crs_values[declared]??mapping.crs_values[declared.trim()]??declared.trim();
+       if(crs!==row.coordinate_reference_system)fail('A changed CRS needs the paired original source coordinates; it cannot relabel existing coordinates.');
+      }
+     }else if(nonblank(values.latitude)||nonblank(values.longitude))local.push(recordIssue('warning','coordinates_retained_only','Source coordinate cells remain in the original row; native coordinates are not assigned or changed.',kind,record));
+    }else{
+     const selectedSite=choice?.site_id||values.site_id;
+     if(choice?.site_id||mapping.site_binding==='native_id'){
+      if(selectedSite!==undefined)set('site_id',selectedSite);
+     }else if(selectedSite!==undefined||!existing){
+      if(!nonblank(selectedSite))fail('Map the exact original source site identifier.');
+      const candidates=[...(siteSources.get(selectedSite)||[])];if(candidates.length!==1)fail(candidates.length?'The original source site identifier is ambiguous. Choose its exact native site ID.':'No accepted site matches the original source site identifier. Include its sites CSV or choose an existing native site ID.');
+      set('site_id',candidates[0]);
+     }
+     if(!ID.test(row.site_id)||!candidate.sites.some(x=>x.id===row.site_id))fail('The visit needs one actual site in this reviewed plan.');
+     for(const field of ['observer','notes'])if(values[field]!==undefined)set(field,values[field]);
+     if(values.monitoring_plan_id!==undefined)set('monitoring_plan_id',values.monitoring_plan_id||null);
+     if(values.planned_date!==undefined)set('planned_date',dateCell(values.planned_date,mapping.date_format));
+     if(values.status!==undefined){
+      const rawStatus=values.status,tag=mapping.status_values[rawStatus]??rawStatus.trim();
+      if(!['planned','complete','cancelled'].includes(tag))fail('Map the actual visit status or enter an explicit planned, complete or cancelled constant.');
+      set('status',tag);
+     }
+     const hasTime=['visited_at','visited_date','visited_time','utc_offset'].some(field=>values[field]!==undefined),visited=hasTime?visitTime(values,mapping):undefined;
+     if(hasTime)set('visited_at',visited??null);
+     if(hasTime&&visited===undefined)local.push(recordIssue('warning','partial_actual_time','Incomplete actual date/time context stays in the original source. No collection time or timezone is invented.',kind,record));
+     if(!['planned','complete','cancelled'].includes(row.status))fail('Select the actual visit status explicitly.');
+     if(row.status==='complete'&&!row.visited_at)fail('A completed visit needs its actual timestamp with timezone.');
+    }
+    const definition=plainRowSource(row),originalDefinition=existing?plainRowSource(existing):null;
+    if(seenBatch[kind].has(id)&&stableSiteVisitJSON(plainRowSource(earlier))!==stableSiteVisitJSON(definition))fail('Another source record already selects this native ID with different values. Skip one row or explicitly assign a different ID.');
+    if(seenBatch[kind].has(id)||existing&&stableSiteVisitJSON(originalDefinition)===stableSiteVisitJSON(definition)){decision.status='identical';if(seenBatch[kind].has(id))local.push(recordIssue('warning','duplicate_identical','This original record repeats identical selected values; both source rows remain in the audit.',kind,record));}
+    else if(existing&&choice?.action!=='replace'){decision.row=clone(row);fail('This native ID already exists with different mapped values. Review and explicitly replace it, keep it by skipping this row, or assign a new ID.');}
+    else decision.status=existing?'replace':'append';
+    if(decision.status!=='identical'){
+     row.original_source={schema:'upstate.implementation-field-csv-row/v1',source_link_id:sourceId,csv_sha256:source.sha256,mapping_sha256:mappingHash,namespace:mapping.namespace,kind,record:record.record,line_start:record.line_start,line_end:record.line_end,original_headers:clone(parsed.headers),original_row:clone(record.values),cell_count:record.cell_count,extra_cells:clone(record.extra_cells),original_identifier:originalId??'',selected_columns:clone(selected),...(choice?{decision:clone(choice)}:{})};
+     row[kind==='sites'?'original_station':'original_visit']=clone(record.values);
+     if(kind==='sites')Object.assign(row.original_source,{original_latitude:values.latitude||'',original_longitude:values.longitude||'',original_coordinate_reference_system:values.coordinate_reference_system||'',coordinate_mode:mapping.coordinate_mode});
+     const rowIndex=candidate[kind].findIndex(x=>x.id===id);if(rowIndex<0)candidate[kind].push(row);else candidate[kind][rowIndex]=row;
+    }
+    decision.row=clone(decision.status==='identical'?(earlier||existing):row);seenBatch[kind].add(id);
+    if(kind==='sites'&&nonblank(originalId))addSite(originalId,id);
+    summary[kind][decision.status]++;
+   }catch(error){decision.status='error';local.push(recordIssue('error','row_review',error.message||String(error),kind,record));summary[kind].error++;}
+   issues.push(...local);decisions.push(decision);
+  }
+ }
+ const validation=validatePlan(candidate);for(const error of validation)issues.push({severity:'error',code:'plan_validation',message:error.path+': '+error.message});
+ summary.error_count=issues.filter(x=>x.severity==='error').length;summary.warning_count=issues.filter(x=>x.severity==='warning').length;summary.site_count_after=candidate.sites.length;summary.visit_count_after=candidate.visits.length;
+ const planHash=await hashJSON(original),identity={edition:SITE_VISIT_EDITION,plan_id:original.id,base_revision:original.revision,base_document_digest:planHash,sources:sources.map(x=>({kind:x.kind,sha256:x.source.sha256})),mappings};
+ const operationId=await hashJSON(identity);
+ for(const kind of ['sites','visits'])for(const row of candidate[kind])if(row.original_source&&sources.some(x=>x.source_link_id===row.original_source.source_link_id)&&!original[kind].some(x=>x.id===row.id&&stableSiteVisitJSON(x)===stableSiteVisitJSON(row)))row.original_source.operation_id=operationId;
+ for(const d of decisions)if(d.row?.original_source&&['append','replace'].includes(d.status))d.row.original_source.operation_id=operationId;
+ return {schema:'upstate.implementation-site-visit-preview/v1',edition:SITE_VISIT_EDITION,operation_id:operationId,plan:{id:plan.id,revision:plan.revision,sha256:planHash,title:plan.title},sources,mappings,summary,decisions,issues,can_import:summary.error_count===0,_candidate:candidate,_retained:retained,_sourceRows:sourceRows,_identity:identity};
+}
+async function applyPortableSiteVisits(plan,inputs,{expected_operation_id,vault}={}){
+ const preview=await previewPortableSiteVisits(plan,inputs);
+ if(!preview.can_import)fail('Resolve all original batch errors before applying.');
+ if(preview.operation_id!==expected_operation_id)fail('The plan, original CSV or mapping changed. Preview the complete batch again.');
+ const next=clone(preview._candidate),history=next.field12_site_visit_imports||[];
+ if(!Array.isArray(history))fail('The original site/visit import history must remain a list.');
+ const existing=history.find(x=>x.operation_id===preview.operation_id);
+ if(existing)fail('This exact portable import is already retained. Reopen its original plan rather than replaying it as another batch.');
+ const audit={schema:'upstate.implementation-site-visit-audit/v1',edition:SITE_VISIT_EDITION,operation_id:preview.operation_id,identity:preview._identity,summary:preview.summary,sources:preview._sourceRows,mappings:preview.mappings,decisions:preview.decisions,issues:preview.issues};
+ const auditBytes=utf8(JSON.stringify(audit,null,2)+'\n'),auditHash=await evidenceSha256(auditBytes),auditId='field_csv_audit_'+preview.operation_id.slice(0,24);
+ if(auditBytes.length>64*1024*1024)fail('The complete decision audit exceeds the original evidence file limit.');
+ const auditLink={id:auditId,kind:'local_file',label:'Site and visit CSV review',reference:'implementation/plans/'+plan.id+'/attachments/'+auditHash+'-site-visit-row-decisions.json',sha256:auditHash,size_bytes:auditBytes.length,original_filename:'site-visit-row-decisions.json',media_type:'application/json'};
+ if(next.source_links.some(x=>x.id===auditId))fail('The native source register already contains this portable audit identity.');
+ next.source_links.push(auditLink);
+ next.field12_site_visit_imports=[...history,{operation_id:preview.operation_id,edition:SITE_VISIT_EDITION,base_revision:plan.revision,base_document_digest:preview.plan.sha256,applied_revision:null,portable_draft:true,source_link_ids:preview.sources.map(x=>x.source_link_id),audit_source_link_id:auditId,mapping_sha256:await hashJSON(preview.mappings),source_sha256:Object.fromEntries(preview.sources.map(x=>[x.kind,x.source.sha256]))}];
+ const errors=validatePlan(next);if(errors.length)fail('The complete portable plan is invalid.\n'+errors.map(x=>x.path+': '+x.message).join('\n'));
+ const planBytes=utf8(JSON.stringify(next));if(planBytes.length>16*1024*1024)fail('The resulting native-compatible plan exceeds 16 MiB; split the source intake into reviewed plans.');
+ if(!vault||typeof vault.putMany!=='function')fail('Open the existing original-file vault before applying this batch.');
+ const allLocal=next.source_links.filter(x=>x.kind==='local_file'),unique=new Map();
+ for(const x of allLocal)unique.set('evidence/'+x.sha256+'/'+evidenceSafeBasename(x.original_filename),x);
+ if(allLocal.length>128||[...unique.values()].some(x=>x.size_bytes>64*1024*1024)||[...unique.values()].reduce((a,x)=>a+x.size_bytes,0)>128*1024*1024)fail('The complete original-file package exceeds its retained file/count limits.');
+ await vault.putMany([...preview._retained.map(x=>({sha256:x.link.sha256,size_bytes:x.bytes.length,bytes:x.bytes})),{sha256:auditHash,size_bytes:auditBytes.length,bytes:auditBytes}]);
+ return {schema:'upstate.implementation-site-visit-import/v1',operation_id:preview.operation_id,status:'portable_draft',plan:next,base_revision:plan.revision,applied_revision:null,current_revision:plan.revision,source_link_ids:Object.fromEntries(preview.sources.map(x=>[x.kind,x.source_link_id])),audit_source_link_id:auditId,summary:preview.summary};
+}
+
+return {SITE_VISIT_MAPPING_SCHEMA,SITE_VISIT_EDITION,SITE_VISIT_FIELDS,stableSiteVisitJSON,decodeSiteVisitCSV,parseSiteVisitCSV,inspectPortableSiteVisitCSV,blankSiteVisitMapping,normalizeSiteVisitMapping,previewPortableSiteVisits,applyPortableSiteVisits};
+})();
+const IMPLEMENTATION_SITE_VISIT = (() => {
+const {clone,esc,validatePlan} = IMPLEMENTATION_CORE;
+const {evidenceSha256} = IMPLEMENTATION_EVIDENCE;
+const {SITE_VISIT_FIELDS,blankSiteVisitMapping,inspectPortableSiteVisitCSV,previewPortableSiteVisits,applyPortableSiteVisits,stableSiteVisitJSON} = IMPLEMENTATION_SITE_VISIT_CSV;
+const button=(action,label,disabled=false,extra='')=>'<button type="button" data-sv-action="'+action+'"'+(disabled?' disabled':'')+' '+extra+'>'+esc(label)+'</button>';
+const option=(value,label,selected)=>'<option value="'+esc(value)+'"'+(String(value)===String(selected)?' selected':'')+'>'+esc(label)+'</option>';
+const field=(label,body)=>'<label><span>'+esc(label)+'</span>'+body+'</label>';
+const uid=()=>globalThis.crypto?.randomUUID?.()||'site-visit-'+Date.now()+'-'+Math.random().toString(36).slice(2);
+const sha=/^[a-f0-9]{64}$/;
+const sourceKinds=['sites','visits'];
+const styles='.iw-site-visit{width:min(1320px,96vw);max-width:none;max-height:94vh;border:1px solid #777;padding:0;background:#fff;color:#222;font:14px/1.5 system-ui,sans-serif}.iw-site-visit::backdrop{background:#0007}.iw-site-visit header{padding:18px;position:sticky;top:0;z-index:2;border-bottom:1px solid #ccc;background:#fff;display:flex;justify-content:space-between;gap:15px}.iw-site-visit main{padding:18px}.iw-site-visit h2{font-size:23px;margin:0}.iw-site-visit h3{margin:0 0 10px}.iw-site-visit p{margin:8px 0}.iw-site-visit button,.iw-site-visit input,.iw-site-visit select,.iw-site-visit textarea{font:inherit;border:1px solid #888;border-radius:3px;background:#fff;color:inherit;padding:8px}.iw-site-visit button{cursor:pointer}.iw-site-visit button:disabled{opacity:.5;cursor:default}.iw-site-visit label{display:block}.iw-site-visit label>span{display:block;font-weight:600;margin-bottom:4px}.iw-site-visit input:not([type=checkbox]),.iw-site-visit select,.iw-site-visit textarea{box-sizing:border-box;width:100%}.iw-site-visit textarea{min-height:90px;font-family:ui-monospace,monospace}.iw-site-visit .sv-actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:12px 0}.iw-site-visit .sv-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}.iw-site-visit .sv-three{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}.iw-site-visit .sv-box{border:1px solid #ccc;padding:14px;margin:14px 0}.iw-site-visit .sv-note{padding:12px;background:#f2f2f2;border-left:3px solid #777}.iw-site-visit .sv-error{padding:12px;background:#f6f6f6;border:1px solid #777;white-space:pre-wrap}.iw-site-visit .sv-meta{font-size:12px;color:#444;overflow-wrap:anywhere}.iw-site-visit .sv-table{overflow:auto}.iw-site-visit table{width:100%;border-collapse:collapse}.iw-site-visit th,.iw-site-visit td{text-align:left;vertical-align:top;border-bottom:1px solid #ccc;padding:8px;overflow-wrap:anywhere}.iw-site-visit th{background:#f2f2f2}.iw-site-visit details{margin:10px 0}.iw-site-visit pre{white-space:pre-wrap;overflow-wrap:anywhere;max-height:440px;overflow:auto;padding:10px;background:#f7f7f7}.iw-site-visit .sv-primary{background:#303030;color:#fff}.iw-site-visit a{color:#202020}@media(max-width:760px){.iw-site-visit .sv-grid,.iw-site-visit .sv-three{grid-template-columns:1fr}.iw-site-visit header{display:block}.iw-site-visit main{padding:12px}}';
+function download(name,value){const body=JSON.stringify(value,null,2)+'\n',url=URL.createObjectURL(new Blob([body],{type:'application/json'})),a=document.createElement('a');a.href=url;a.download=name;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),30000);}
+function publicPreview(value){if(!value)return null;const r={...value};for(const key of Object.keys(r))if(key.startsWith('_'))delete r[key];return clone(r);}
+function mappingDraft(kind,value){if(!value||typeof value!=='object'||Array.isArray(value)||value.schema!=='upstate.implementation-site-visit-mapping/v1')throw Error('Choose an original site/visit mapping.');const draft={...blankSiteVisitMapping(kind),...clone(value)};for(const key of ['columns','constants','fallback_columns','crs_values','time_zone_values','status_values','row_actions'])if(!draft[key]||typeof draft[key]!=='object'||Array.isArray(draft[key]))throw Error('Mapping '+key+' must be a keyed object.');return draft;}
+function pendingValid(p,id){return p&&p.action==='implementation.site-visit.import'&&typeof p.operation_id==='string'&&/^[A-Za-z0-9_-]{16,100}$/.test(p.operation_id)&&p.payload?.id===id&&Number.isSafeInteger(p.payload.revision)&&sha.test(p.payload.document_digest||'')&&sha.test(p.payload.expected_operation_id||'')&&Array.isArray(p.payload.inputs)&&p.payload.inputs.length>0&&p.payload.inputs.every(x=>sourceKinds.includes(x.kind)&&typeof x.upload_id==='string'&&x.mapping?.schema==='upstate.implementation-site-visit-mapping/v1');}
+
+class SiteVisitIntake {
+ constructor(w){
+  this.w=w;this.host=w.host;this.workspace=w.workspace;this.planId=w.plan.id;this.generation=w.generation;this.snapshot=clone(w.native?w.nativePlan:w.plan);this.planStamp=stableSiteVisitJSON(w.plan);this.native=!!w.native;
+  this.savedPlan=this.native?clone(w.nativePlan):null;this.digest=null;this.closed=false;this.busy=false;this.turn=0;this.controllers=new Set();this.timer=null;this.files={};this.pending=null;this.receipt=null;this.preview=null;this.analysis=null;this.actor='';this.error='';this.notice='';this.storageIssue='';this.activeKind='sites';this.query='';this.filter='all';this.page=0;this.selectedRecord=null;
+  this.storageKey='upstate.site-visit-intake/v1/'+(this.native?this.workspace:'portable')+'/'+this.planId;
+  try{
+   const saved=JSON.parse(localStorage.getItem(this.storageKey)||'null');
+   if(saved?.plan_id===this.planId&&saved.native===this.native&&(!this.native||saved.workspace_key===this.workspace)){
+    this.files=saved.files||{};this.actor=saved.actor||'';this.receipt=saved.receipt||null;
+    if(saved.pending){if(!pendingValid(saved.pending,this.planId))throw Error('The retained batch request has changed. Recover its original native task before starting another import.');this.pending=saved.pending;}
+   }
+  }catch(e){this.storageIssue=e.message||String(e);this.restoreBlocked=true;}
+  this.node=document.createElement('dialog');this.node.className='iw-site-visit';this.node.setAttribute('aria-label','Import sites and visits from original CSVs');
+  this.node.addEventListener('click',e=>{const b=e.target.closest('[data-sv-action]');if(!b||!this.node.contains(b))return;e.preventDefault();e.stopPropagation();this.action(b).catch(x=>this.fail(x));});
+  this.node.addEventListener('change',e=>this.change(e.target).catch(x=>this.fail(x)));
+  this.node.addEventListener('input',e=>{if(e.target.dataset.sv==='query'){this.query=e.target.value;this.page=0;this.renderRows();}});
+  this.node.addEventListener('cancel',e=>{e.preventDefault();this.close();});
+  w.root.append(this.node);this.render();this.node.showModal();
+ }
+ alive(){return !this.closed&&!this.w.gone&&this.w.generation===this.generation&&this.w.plan?.id===this.planId&&stableSiteVisitJSON(this.w.plan)===this.planStamp&&(!this.native||this.host.getState?.()?.workspace_key===this.workspace)&&this.node.isConnected;}
+ requireCurrent(){if(!this.alive())throw new DOMException('The original plan changed while its CSV batch was open.','AbortError');}
+ locked(){return this.busy||!!this.pending||this.restoreBlocked;}
+ persist(){if(this.closed||this.restoreBlocked)return;try{localStorage.setItem(this.storageKey,JSON.stringify({schema:'upstate.site-visit-intake/v1',workspace_key:this.workspace,plan_id:this.planId,native:this.native,files:this.files,actor:this.actor,pending:this.pending,receipt:this.receipt}));this.storageIssue='';}catch{this.storageIssue='Browser draft storage is unavailable. Download the mapping and original request before closing.';}}
+ fail(error){if(!this.closed){this.error=error?.message||String(error);this.busy=false;this.render();}}
+ close(){if(this.closed)return;this.persist();this.closed=true;this.turn++;clearTimeout(this.timer);for(const c of this.controllers)c.abort();this.controllers.clear();this.node.close();this.node.remove();if(this.w.siteVisitEditor===this)this.w.siteVisitEditor=null;}
+ async request(path,values={},body){
+  this.requireCurrent();const controller=new AbortController();this.controllers.add(controller);
+  try{const result=await this.host.api(this.host.endpoint(path,values),{...(body===undefined?{}:{method:'POST',body}),signal:controller.signal});this.requireCurrent();return result;}finally{this.controllers.delete(controller);}
+ }
+ async start(){
+  if(this.restoreBlocked)return;
+  if(this.native){
+   const r=await this.request('/api/implementation/detail',{id:this.planId,revision:this.savedPlan.revision});
+   if(r.workspace_key!==this.workspace||stableSiteVisitJSON(r.plan)!==stableSiteVisitJSON(this.savedPlan)||!sha.test(r.document_digest||''))throw Error('The original saved plan binding changed. Reopen the saved revision.');
+   this.digest=r.document_digest;
+   if(this.pending?.id)await this.poll();else if(this.receipt?.task_id)await this.refreshReceipt();
+  }
+  this.render();
+ }
+ invalidate(){this.preview=null;this.analysis=null;this.selectedRecord=null;this.page=0;this.error='';this.persist();}
+ async chooseFile(kind,file){
+  if(!file)return;if(this.locked())throw Error('Finish or recover the original batch before changing its files.');
+  if(file.size>64*1024*1024)throw Error('Choose an original CSV within 64 MiB.');
+  this.busy=true;this.error='';this.preview=null;this.analysis=null;this.render();const previous=this.files[kind],mapping=previous?.mapping||blankSiteVisitMapping(kind);
+  try{
+   let entry;
+   if(this.native){
+    const controller=new AbortController();this.controllers.add(controller);let ticket;
+    try{ticket=await this.host.api('/api/upload',{method:'POST',raw:file,filename:file.name,signal:controller.signal});this.requireCurrent();}finally{this.controllers.delete(controller);}
+    if(!ticket?.id||!sha.test(ticket.sha256||'')||ticket.bytes!==file.size)throw Error('The original upload receipt is incomplete.');
+    entry={kind,upload_id:ticket.id,filename:ticket.filename||file.name,sha256:ticket.sha256,bytes:ticket.bytes,mapping};
+   }else{
+    const bytes=new Uint8Array(await file.arrayBuffer());this.requireCurrent();const hash=await evidenceSha256(bytes),vault=await this.w.evidence.vault();this.requireCurrent();await vault.putMany([{sha256:hash,size_bytes:bytes.length,bytes}]);this.requireCurrent();
+    entry={kind,filename:file.name,sha256:hash,bytes:bytes.length,mapping};
+   }
+   this.files[kind]=entry;this.activeKind=kind;this.persist();await this.inspect(kind);this.notice='Original '+kind+' CSV retained. Select its actual columns and source conventions.';
+  }finally{if(!this.closed){this.busy=false;this.render();}}
+ }
+ async bytes(kind){
+  const input=this.files[kind];if(!input)throw Error('Choose the original '+kind+' CSV.');
+  const vault=await this.w.evidence.vault(),stored=await vault.get(input.sha256);this.requireCurrent();const bytes=stored?.bytes??stored;
+  if(!(bytes instanceof Uint8Array)||bytes.length!==input.bytes||await evidenceSha256(bytes)!==input.sha256)throw Error('Reselect the original '+kind+' CSV; its exact bytes are unavailable in this browser.');
+  return bytes;
+ }
+ async inspect(kind){
+  const input=this.files[kind];if(!input)return;
+  const result=this.native?await this.request('/api/implementation/site-visit-inspect',{}, {kind,upload_id:input.upload_id,delimiter:input.mapping.delimiter,encoding:input.mapping.encoding}):await inspectPortableSiteVisitCSV(await this.bytes(kind),{filename:input.filename,delimiter:input.mapping.delimiter,encoding:input.mapping.encoding});
+  this.requireCurrent();
+  if(result.source?.sha256!==input.sha256||result.source?.bytes!==input.bytes)throw Error('The inspected CSV differs from its original retained bytes.');
+  input.inspection=result;this.persist();
+ }
+ async portableInputs(){const inputs=[];for(const kind of sourceKinds)if(this.files[kind])inputs.push({kind,bytes:await this.bytes(kind),filename:this.files[kind].filename,mapping:clone(this.files[kind].mapping)});return inputs;}
+ nativePayload(){if(!this.digest)throw Error('Read the exact saved native revision first.');return {id:this.planId,revision:this.savedPlan.revision,document_digest:this.digest,inputs:sourceKinds.filter(k=>this.files[k]).map(kind=>({kind,upload_id:this.files[kind].upload_id,mapping:clone(this.files[kind].mapping)}))};}
+ async prepare(){
+  if(this.locked())throw Error('Finish or recover the original batch request first.');
+  if(!Object.keys(this.files).length)throw Error('Choose an original sites CSV, visits CSV or both.');
+  this.busy=true;this.preview=null;this.error='';this.render();
+  try{
+   const result=this.native?await this.request('/api/implementation/site-visit-preview',{},this.nativePayload()):await previewPortableSiteVisits(this.snapshot,await this.portableInputs());this.requireCurrent();
+   if(result.plan?.id!==this.planId||this.native&&(result.workspace_key!==this.workspace||result.document_digest!==this.digest||result.plan.revision!==this.savedPlan.revision))throw Error('The reviewed CSV batch belongs to a different original plan.');
+   this.preview=result;this.analysis=result;this.page=0;this.selectedRecord=null;this.notice='The complete batch is reviewed. Resolve all errors before applying.';this.persist();
+  }finally{if(!this.closed){this.busy=false;this.render();}}
+ }
+
+ mappingHtml(kind){
+  const input=this.files[kind];if(!input)return '<p>Select the original '+kind+' CSV to map its actual columns.</p>';
+  const m=input.mapping,headers=input.inspection?.headers||[],locked=this.locked();
+  const select=(name,rows,value)=>'<select data-sv-setting="'+name+'" data-kind="'+kind+'"'+(locked?' disabled':'')+'>'+rows.map(x=>option(x[0],x[1],value)).join('')+'</select>';
+  let html='<p><strong>'+esc(input.filename)+'</strong> · '+input.bytes.toLocaleString()+' original bytes</p><p class="sv-meta">SHA-256 '+esc(input.sha256)+'</p><div class="sv-three">'+
+   field('Delimiter',select('delimiter',[[',','Comma'],[';','Semicolon'],['\t','Tab'],['|','Pipe']],m.delimiter))+
+   field('Encoding',select('encoding',[['utf-8-sig','UTF-8 (optional BOM)'],['utf-8','UTF-8'],['utf-16','UTF-16 with BOM'],['cp1252','Windows-1252'],['latin-1','Latin-1']],m.encoding))+
+   field('Record IDs',select('id_mode',[['native','Original native IDs'],['stable','Stable IDs from original identifiers'],['source_record','IDs from this exact source row']],m.id_mode))+
+   field('Declared source namespace','<input data-sv-setting="namespace" data-kind="'+kind+'" value="'+esc(m.namespace)+'"'+(locked?' disabled':'')+'>')+
+   (kind==='sites'?field('Coordinate admission',select('coordinate_mode',[['retain_only','Retain original cells only'],['geographic','Declared geographic coordinates']],m.coordinate_mode))+field('Decimal separator',select('decimal_separator',[['.','Decimal point'],[',','Decimal comma']],m.decimal_separator)):
+   field('Site identifiers',select('site_binding',[['native_id','Exact native site IDs'],['source_id','Exact original source site IDs']],m.site_binding))+field('Source date convention',select('date_format',[['iso','ISO: YYYY-MM-DD'],['mdy','Month/day/year'],['dmy','Day/month/year']],m.date_format)))+'</div>'+
+   '<p class="sv-meta">'+(kind==='sites'?'Geographic coordinates retain the explicit source datum. No datum transformation or projection is performed. Retain-only preserves source cells and leaves native coordinates unchanged.':'Planned dates are calendar dates. An actual visit time needs its source date, clock and explicit offset. No midnight, timezone or daylight-saving rule is inferred.')+'</p>'+
+   '<div class="sv-actions">'+button('inspect','Read original headers',locked,'data-kind="'+kind+'"')+button('map-native','Map matching native field names',locked,'data-kind="'+kind+'"')+button('remove-file','Remove this input',locked,'data-kind="'+kind+'"')+'</div>'+
+   (input.inspection?'<p>'+input.inspection.row_count+' original data records · '+headers.length+' columns</p>':'<p>Read the original headers after choosing its delimiter and encoding.</p>')+
+   '<div class="sv-table"><table><thead><tr><th>Plan field</th><th>Original source column</th><th>Explicit constant (instead of column)</th></tr></thead><tbody>'+SITE_VISIT_FIELDS[kind].map(name=>'<tr><td>'+esc(name)+'</td><td><select data-sv-column="'+name+'" data-kind="'+kind+'"'+(locked?' disabled':'')+'>'+option('','Not mapped',m.columns[name]||'')+headers.map(h=>option(h,h,m.columns[name])).join('')+'</select></td><td><input data-sv-constant="'+name+'" data-kind="'+kind+'" value="'+esc(m.constants[name]??'')+'"'+(locked||name==='id'?' disabled':'')+'></td></tr>').join('')+'</tbody></table></div>'+
+   '<details><summary>Explicit aliases, fallback columns and complete mapping JSON</summary><p>Use crs_values, status_values and time_zone_values for documented source labels; fallback_columns names actual headers in order. Row choices require a recorded reason. Mapping JSON also keeps every selected source convention.</p><textarea rows="16" data-sv-mapping="'+kind+'"'+(locked?' disabled':'')+'>'+esc(JSON.stringify(m,null,2))+'</textarea><div class="sv-actions">'+button('mapping-apply','Apply mapping JSON',locked,'data-kind="'+kind+'"')+button('mapping-download','Download mapping',false,'data-kind="'+kind+'"')+button('mapping-open','Open mapping JSON',locked,'data-kind="'+kind+'"')+'</div></details>'+
+   '<details><summary>Original source sample</summary><pre>'+esc(JSON.stringify(input.inspection?.sample_rows?.slice(0,5)||[],null,2))+'</pre><p class="sv-meta">Up to five original records shown. The full CSV is retained unchanged.</p></details>';
+  return html;
+ }
+ matched(){
+  const q=this.query.toLocaleLowerCase();
+  return (this.analysis?.decisions||[]).filter(row=>(this.filter==='all'||row.status===this.filter)&&(!q||JSON.stringify(row).toLocaleLowerCase().includes(q)));
+ }
+ renderRows(){
+  const target=this.node.querySelector('[data-sv-rows]');if(!target)return;const rows=this.matched(),pages=Math.max(1,Math.ceil(rows.length/30));this.page=Math.max(0,Math.min(pages-1,this.page));
+  target.innerHTML='<p>'+rows.length+' matching decisions of '+(this.analysis?.decisions?.length||0)+' · page '+(this.page+1)+' of '+pages+'</p><div class="sv-actions">'+button('previous','Previous',this.page===0)+button('next','Next',this.page===pages-1)+'</div><div class="sv-table"><table><thead><tr><th>Original row</th><th>Native record</th><th>Definition</th><th>Decision</th><th>Source issues</th><th></th></tr></thead><tbody>'+rows.slice(this.page*30,(this.page+1)*30).map(row=>'<tr><td>'+esc(row.kind)+' '+esc(row.record)+'<br><span class="sv-meta">lines '+esc(row.line_start)+'–'+esc(row.line_end)+'</span></td><td>'+esc(row.native_id||'Unresolved')+'<br><span class="sv-meta">'+esc(row.original_identifier||'No external ID')+'</span></td><td>'+esc(row.kind==='sites'?(row.row?.label||''):(row.row?.site_id||''))+'<br><span class="sv-meta">'+esc(row.kind==='sites'?[row.row?.latitude,row.row?.longitude,row.row?.coordinate_reference_system].filter(x=>x!==null&&x!==undefined&&x!=='').join(' · '):[row.row?.planned_date,row.row?.visited_at,row.row?.observer].filter(Boolean).join(' · '))+'</span></td><td>'+esc(row.status)+'</td><td>'+esc((row.issues||[]).map(x=>x.message).join(' · '))+'</td><td>'+button('record','Review row',this.locked(),'data-kind="'+esc(row.kind)+'" data-record="'+row.record+'"')+'</td></tr>').join('')+'</tbody></table></div>'+(rows.length?'':'<p>No original records match this view.</p>');
+ }
+ rowEditor(){
+  const selected=this.selectedRecord;if(!selected)return '';const row=(this.analysis?.decisions||[]).find(x=>x.kind===selected.kind&&x.record===selected.record);if(!row)return '';
+  const action=this.files[row.kind].mapping.row_actions[String(row.record)]||{},locked=this.locked();
+  return '<section class="sv-box"><h3>Resolve '+esc(row.kind)+' source record '+row.record+'</h3><p>The original CSV row stays unchanged. Select a deliberate action and record its reason; preview the whole batch again afterwards.</p><div class="sv-three">'+field('Action','<select data-sv-resolution="action">'+[['import','Import with explicit overrides'],['skip','Skip this original row'],['replace','Replace an existing record']].map(x=>option(x[0],x[1],action.action||'import')).join('')+'</select>')+
+   field('Explicit new native ID','<input data-sv-resolution="id" value="'+esc(action.id||'')+'">')+
+   field('Existing replacement target','<select data-sv-resolution="target_id">'+option('','Choose an original record',action.target_id||'')+this.snapshot[row.kind].map(x=>option(x.id,x.id+' · '+(x.label||x.planned_date||x.site_id||''),action.target_id)).join('')+'</select>')+
+   (row.kind==='visits'?field('Explicit existing or reviewed site ID','<input data-sv-resolution="site_id" value="'+esc(action.site_id||'')+'" list="sv-review-site-ids"><datalist id="sv-review-site-ids">'+[...new Set([...this.snapshot.sites.map(x=>x.id),...(this.analysis.decisions||[]).filter(x=>x.kind==='sites'&&x.row).map(x=>x.native_id)])].map(id=>'<option value="'+esc(id)+'"></option>').join('')+'</datalist>'):'')+
+   field('Reason for this decision','<textarea data-sv-resolution="reason">'+esc(action.reason||'')+'</textarea>')+'</div><div class="sv-actions">'+button('resolve','Keep this explicit decision',locked)+button('resolve-clear','Clear this row override',locked)+button('record-download','Download complete original row review')+'</div><details><summary>Full original record and proposed native definition</summary><pre>'+esc(JSON.stringify(row,null,2))+'</pre></details></section>';
+ }
+ render(){
+  if(this.closed)return;const locked=this.locked(),analysis=this.analysis;
+  this.node.innerHTML='<style>'+styles+'</style><header><div><h2>Import sites and visits</h2><p>'+esc(this.snapshot.title)+' · '+(this.native?'saved native revision '+this.savedPlan.revision:'portable draft')+'</p></div>'+button('close','Close and retain selection')+'</header><main>'+
+   (this.error?'<div class="sv-error" role="alert">'+esc(this.error)+'</div>':'')+(this.storageIssue?'<div class="sv-error">'+esc(this.storageIssue)+'</div>':'')+
+   (this.notice?'<div class="sv-note" role="status">'+esc(this.notice)+'</div>':'')+
+   '<p>Choose the original sites CSV, visits CSV or both. Map actual source columns and conventions, resolve duplicate IDs and site links, then review the entire batch. Original CSVs and the complete decision audit travel with the plan and its file package.</p>'+
+   (this.native&&this.w.dirty?'<p class="sv-note">Your unsaved browser edits remain retained. Native import applies to the saved revision shown above; opening the latest plan later preserves this draft separately.</p>':'')+
+   '<div class="sv-actions">'+button('choose-sites','Choose sites CSV',locked)+button('choose-visits','Choose visits CSV',locked)+button('batch-download','Download all mappings')+button('batch-open','Open batch mappings',locked)+'</div>'+
+   (this.busy?'<p role="status">Reading and verifying the original batch…</p>':'')+
+   '<div class="sv-actions">'+sourceKinds.filter(k=>this.files[k]).map(kind=>button('kind',kind==='sites'?'Sites mapping':'Visits mapping',false,'data-kind="'+kind+'"')).join('')+'</div>'+
+   '<section class="sv-box"><h3>'+esc(this.activeKind==='sites'?'Sites and station definitions':'Visits and sampling schedule')+'</h3>'+this.mappingHtml(this.activeKind)+'</section>'+
+   '<div class="sv-actions">'+button('preview','Preview complete batch',locked||!Object.keys(this.files).length,'class="sv-primary"')+(analysis?button('preview-download','Download complete batch review'):'')+'</div>'+
+   (analysis?'<section class="sv-box"><h3>Whole-batch review</h3><div class="sv-table"><table><thead><tr><th>Table</th><th>Append</th><th>Replace</th><th>Identical</th><th>Skipped</th><th>Errors</th></tr></thead><tbody>'+sourceKinds.map(kind=>'<tr><td>'+kind+'</td>'+['append','replace','identical','skip','error'].map(name=>'<td>'+esc(analysis.summary?.[kind]?.[name]||0)+'</td>').join('')+'</tr>').join('')+'</tbody></table></div><p>'+esc(analysis.summary?.record_count)+' original records; '+esc(analysis.summary?.error_count)+' errors; '+esc(analysis.summary?.warning_count)+' warnings.</p><div class="sv-grid">'+field('Find source IDs, records or values','<input type="search" data-sv="query" value="'+esc(this.query)+'">')+field('Decision filter','<select data-sv="filter">'+['all','append','replace','identical','skip','error'].map(x=>option(x,x==='all'?'All original decisions':x,this.filter)).join('')+'</select>')+'</div><div data-sv-rows></div>'+
+   this.rowEditor()+'<details'+((analysis.issues||[]).length?' open':'')+'><summary>All source and plan issues ('+(analysis.issues?.length||0)+')</summary><ul>'+(analysis.issues||[]).map(x=>'<li>'+esc([x.severity,x.kind,x.record?'record '+x.record:'',x.message].filter(Boolean).join(' · '))+'</li>').join('')+'</ul></details>'+field('Reviewer (optional)','<input data-sv="actor" maxlength="800" value="'+esc(this.actor)+'"'+(locked?' disabled':'')+'>')+
+   '<div class="sv-actions">'+button('apply',this.native?'Save reviewed batch as one native revision':'Apply reviewed batch to portable draft',locked||!this.preview?.can_import,'class="sv-primary"')+'</div><p class="sv-meta">'+(this.native?'The saved plan revision, original bytes and mappings are pinned by the native preview. A changed plan requires a new review.':'The complete draft is validated before its original files and audit are retained and the draft is replaced once. Its native revision number is unchanged.')+'</p></section>':'')+
+   this.pendingHtml()+this.receiptHtml()+
+   '<input hidden type="file" data-sv="file-sites" accept=".csv,.tsv,text/csv,text/tab-separated-values"><input hidden type="file" data-sv="file-visits" accept=".csv,.tsv,text/csv,text/tab-separated-values"><input hidden type="file" data-sv="mapping-file" accept=".json,application/json"></main>';
+  this.renderRows();
+ }
+ pendingHtml(){
+  const p=this.pending;if(!p)return '';
+  return '<section class="sv-box"><h3>Original native batch request</h3><p>'+esc(p.operation_id)+' · '+esc(p.state||'response unconfirmed')+'</p><div class="sv-actions">'+
+   (p.id?button('poll','Refresh original task',this.busy)+button('task','Open original task'):button('recover','Recover original request',this.busy))+
+   (p.state==='interrupted'?button('resume','Resume original task',this.busy):'')+
+   (['failed','cancelled'].includes(p.state)?button('retire','Retain failed request and review again',this.busy):'')+button('request-download','Download original request')+'</div></section>';
+ }
+ receiptHtml(){
+  const r=this.receipt;if(!r)return '';
+  return '<section class="sv-note"><h3>Retained batch</h3><p>'+esc(r.status)+' · '+(r.status==='portable_draft'?'Portable revision retained without a native save':'applied revision '+esc(r.applied_revision)+' · current native revision '+esc(r.current_revision))+'</p><div class="sv-actions">'+button('receipt-download','Download batch receipt')+(this.native?button('open-current','Open latest saved plan',this.locked()):'')+(r.task_id?button('receipt-refresh','Refresh receipt downloads',this.locked()):'')+'</div>'+(this.native?this.w.nativeDownloads(r._downloads||[]):'<p>Use Handover → Export plan + files ZIP to carry the complete original CSVs and decision audit with this draft.</p>')+'</section>';
+ }
+
+ async change(target){
+  const name=target.dataset.sv;
+  if(name==='file-sites'||name==='file-visits'){await this.chooseFile(name.slice(5),target.files?.[0]);return;}
+  if(name==='filter'){this.filter=target.value;this.page=0;this.renderRows();return;}
+  if(name==='actor'){this.actor=target.value;this.persist();return;}
+  if(name==='mapping-file'){
+   const file=target.files?.[0];if(!file)return;if(this.locked())throw Error('Recover the original batch first.');
+   if(file.size>4*1024*1024)throw Error('Choose a mapping JSON within 4 MiB.');
+   const value=JSON.parse(await file.text());this.requireCurrent();
+   if(this.mappingFileKind){
+    const kind=this.mappingFileKind;if(!this.files[kind])throw Error('Choose its original CSV first.');
+    if(value.schema!=='upstate.implementation-site-visit-mapping/v1')throw Error('Choose an original site/visit mapping.');
+    this.files[kind].mapping=mappingDraft(kind,value);this.invalidate();this.busy=true;this.render();
+    try{await this.inspect(kind);}finally{this.busy=false;this.render();}
+   }else{
+    if(value.schema!=='upstate.implementation-site-visit-mappings/v1'||!value.mappings||typeof value.mappings!=='object')throw Error('Choose the complete batch mapping JSON.');
+    for(const kind of sourceKinds)if(value.mappings[kind]&&!this.files[kind])throw Error('Choose the original '+kind+' CSV before applying its mapping.');
+    const reviewed=Object.fromEntries(sourceKinds.filter(kind=>value.mappings[kind]).map(kind=>[kind,mappingDraft(kind,value.mappings[kind])]));
+    for(const kind of sourceKinds)if(value.mappings[kind])this.files[kind].mapping=reviewed[kind];
+    this.invalidate();this.busy=true;this.render();try{for(const kind of sourceKinds)if(this.files[kind])await this.inspect(kind);}finally{this.busy=false;this.render();}
+   }return;
+  }
+  const kind=target.dataset.kind,input=this.files[kind];if(!input)return;
+  if(this.locked())throw Error('Recover the original batch before changing its mapping.');
+  const column=target.dataset.svColumn,constant=target.dataset.svConstant,setting=target.dataset.svSetting;
+  if(column){if(target.value){input.mapping.columns[column]=target.value;delete input.mapping.constants[column];}else{delete input.mapping.columns[column];delete input.mapping.fallback_columns[column];}}
+  else if(constant){if(target.value!==''){input.mapping.constants[constant]=target.value;delete input.mapping.columns[constant];delete input.mapping.fallback_columns[constant];}else delete input.mapping.constants[constant];}
+  else if(setting)input.mapping[setting]=target.value;
+  else return;
+  this.invalidate();
+  if(setting==='delimiter'||setting==='encoding'){this.busy=true;this.render();try{await this.inspect(kind);}finally{this.busy=false;this.render();}}else this.render();
+ }
+ async submit(){
+  const p=this.pending;if(!p||this.busy)return;
+  this.busy=true;this.error='';this.persist();this.render();
+  try{
+   if(p.id){await this.poll();return;}
+   const r=await this.request('/api/actions',{}, {workspace:this.workspace,action:p.action,payload:p.payload,operation_id:p.operation_id});
+   if(this.pending!==p)return;const task=r.task||r;
+   if(task.workspace&&task.workspace!==this.workspace)throw Error('The original task belongs to another Workspace.');
+   if(!task.id)throw Error('No original task ID was returned. Recover the same request.');
+   p.id=task.id;p.state=task.state||'queued';this.persist();await this.poll();
+  }catch(e){if(this.alive()&&this.pending===p&&!p.id){p.state='response_unconfirmed';this.persist();}throw e;}
+  finally{if(this.alive()){this.busy=false;this.render();}}
+ }
+ async poll(){
+  clearTimeout(this.timer);const p=this.pending;if(!p?.id||!this.alive())return;
+  const r=await this.request('/api/task',{id:p.id}),task=r.task||r;if(this.pending!==p)return;
+  if(task.workspace!==this.workspace||task.action!==p.action||task.operation_id!==p.operation_id||stableSiteVisitJSON(task.payload)!==stableSiteVisitJSON(p.payload))throw Error('The native task differs from the original reviewed batch request.');
+  p.state=task.state;this.persist();
+  if(task.state==='complete'){
+   const result=task.result||{};
+   if(result.plan?.id!==this.planId||result.operation_id!==p.payload.expected_operation_id||result.base_revision!==p.payload.revision)throw Error('The applied batch differs from its original saved revision and preview.');
+   this.receipt={...clone(result),task_id:task.id||p.id,_downloads:clone(task._downloads||result._downloads||[])};delete this.receipt.plan;
+   this.pending=null;this.preview=null;this.analysis=null;this.notice='The original CSVs, audit and reviewed rows are saved in one native revision. Your open browser draft remains unchanged.';this.persist();
+   await(this.host.refresh?.({force:true})||this.host.refreshState?.({force:true}));if(this.alive())this.render();return;
+  }
+  if(['failed','cancelled','interrupted'].includes(task.state)){this.error=task.error?.message||'The original batch task '+task.state+'.';this.render();return;}
+  this.render();this.timer=setTimeout(()=>this.poll().catch(e=>this.fail(e)),2000);
+ }
+ async refreshReceipt(){
+  const prior=this.receipt;if(!prior?.task_id||this.pending||this.busy)return;
+  this.busy=true;this.error='';this.render();
+  try{
+   const r=await this.request('/api/task',{id:prior.task_id}),task=r.task||r,result=task.result||{};
+   if(this.receipt!==prior)return;
+   if(task.id!==prior.task_id||task.workspace!==this.workspace||task.action!=='implementation.site-visit.import'||task.state!=='complete'||result.plan?.id!==this.planId||result.operation_id!==prior.operation_id)throw Error('The completed native task differs from this retained batch receipt.');
+   this.receipt={...clone(result),task_id:task.id,_downloads:clone(task._downloads||result._downloads||[])};delete this.receipt.plan;this.persist();
+  }finally{if(this.alive()){this.busy=false;this.render();}}
+ }
+ async apply(){
+  if(this.locked()||this.w.pending)throw Error('Finish or recover the original plan operation first.');
+  const preview=this.preview;if(!preview?.can_import||!sha.test(preview.operation_id||''))throw Error('Review the entire valid batch before applying it.');
+  this.requireCurrent();this.w.cache();
+  if(this.native){
+   const payload={...this.nativePayload(),expected_operation_id:preview.operation_id,actor:this.actor};
+   this.pending={action:'implementation.site-visit.import',operation_id:uid(),payload,state:'submitting'};this.persist();await this.submit();return;
+  }
+  this.busy=true;this.error='';this.render();
+  try{
+   const inputs=await this.portableInputs(),vault=await this.w.evidence.vault();this.requireCurrent();
+   const result=await applyPortableSiteVisits(this.snapshot,inputs,{expected_operation_id:preview.operation_id,vault,actor:this.actor});this.requireCurrent();
+   const plan=result.plan;this.receipt=clone(result);delete this.receipt.plan;this.preview=null;this.analysis=null;this.persist();
+   const w=this.w;this.close();w.plan=plan;w.dirty=true;w.cache();w.message='Reviewed sites and visits applied together to the portable draft. Original CSVs and the complete audit are retained for Export plan + files ZIP; no native revision was issued.';w.render();
+  }finally{if(this.alive()){this.busy=false;this.render();}}
+ }
+ async action(b){
+  const a=b.dataset.svAction,kind=b.dataset.kind;
+  if(a==='close'){this.close();return;}
+  if(a==='previous'||a==='next'){this.page+=a==='previous'?-1:1;this.renderRows();return;}
+  if(a==='kind'){this.activeKind=kind;this.render();return;}
+  if(a==='choose-sites'||a==='choose-visits'){if(this.locked())throw Error('Recover the original batch first.');this.node.querySelector('[data-sv="file-'+a.slice(7)+'"]').click();return;}
+  if(a==='batch-download'){download(this.planId+'-site-visit-mappings.json',{schema:'upstate.implementation-site-visit-mappings/v1',mappings:Object.fromEntries(sourceKinds.filter(k=>this.files[k]).map(k=>[k,clone(this.files[k].mapping)])),sources:Object.fromEntries(sourceKinds.filter(k=>this.files[k]).map(k=>[k,{filename:this.files[k].filename,sha256:this.files[k].sha256,bytes:this.files[k].bytes}]))});return;}
+  if(a==='batch-open'||a==='mapping-open'){if(this.locked())throw Error('Recover the original batch first.');this.mappingFileKind=a==='mapping-open'?kind:null;this.node.querySelector('[data-sv="mapping-file"]').click();return;}
+  if(a==='mapping-download'){download(this.planId+'-'+kind+'-mapping.json',this.files[kind].mapping);return;}
+  if(a==='mapping-apply'){
+   if(this.locked())throw Error('Recover the original batch first.');
+   const value=JSON.parse(this.node.querySelector('[data-sv-mapping="'+kind+'"]').value);
+   if(value.schema!=='upstate.implementation-site-visit-mapping/v1')throw Error('Choose the original mapping schema.');
+   this.files[kind].mapping=mappingDraft(kind,value);this.invalidate();this.busy=true;this.render();
+   try{await this.inspect(kind);}finally{this.busy=false;this.render();}return;
+  }
+  if(a==='inspect'){if(this.locked())throw Error('Recover the original batch first.');this.busy=true;this.invalidate();this.render();try{await this.inspect(kind);}finally{this.busy=false;this.render();}return;}
+  if(a==='map-native'){
+   if(this.locked())throw Error('Recover the original batch first.');
+   const input=this.files[kind],headers=input?.inspection?.headers||[];
+   for(const field of SITE_VISIT_FIELDS[kind])if(headers.includes(field)){input.mapping.columns[field]=field;delete input.mapping.constants[field];delete input.mapping.fallback_columns[field];}
+   this.invalidate();this.render();return;
+  }
+  if(a==='remove-file'){if(this.locked())throw Error('Recover the original batch first.');delete this.files[kind];this.activeKind=sourceKinds.find(k=>this.files[k])||'sites';this.invalidate();this.render();return;}
+  if(a==='preview'){await this.prepare();return;}
+  if(a==='preview-download'){if(this.analysis)download(this.planId+'-complete-site-visit-review.json',publicPreview(this.analysis));return;}
+  if(a==='record'){this.selectedRecord={kind,record:Number(b.dataset.record)};this.render();return;}
+  if(a==='record-download'){const selected=this.selectedRecord,row=this.analysis?.decisions?.find(x=>x.kind===selected?.kind&&x.record===selected?.record);if(row)download(this.planId+'-'+row.kind+'-record-'+row.record+'.json',row);return;}
+  if(a==='resolve'||a==='resolve-clear'){
+   if(this.locked())throw Error('Recover the original batch first.');const selected=this.selectedRecord;if(!selected)return;
+   const m=this.files[selected.kind].mapping;
+   if(a==='resolve-clear')delete m.row_actions[String(selected.record)];
+   else{
+    const read=name=>this.node.querySelector('[data-sv-resolution="'+name+'"]')?.value||'',action=read('action'),reason=read('reason');
+    if(!reason.trim())throw Error('Record the reason for this deliberate row decision.');
+    const row={action,reason};
+    if(action!=='skip'){for(const name of ['id','site_id'])if(read(name))row[name]=read(name);if(action==='replace'){if(!read('target_id'))throw Error('Choose the exact original replacement target.');row.target_id=read('target_id');}}
+    m.row_actions[String(selected.record)]=row;
+   }
+   this.preview=null;this.persist();this.notice='Row decision retained. Preview the complete batch again to validate all site and activity relationships.';this.render();return;
+  }
+  if(a==='apply'){await this.apply();return;}
+  if(a==='recover'){await this.submit();return;}
+  if(a==='poll'){await this.poll();return;}
+  if(a==='task'){if(this.pending?.id)await this.host.showTask?.(this.pending.id);return;}
+  if(a==='resume'){const p=this.pending;if(!p?.id||p.state!=='interrupted')throw Error('Choose the original interrupted task.');const r=await this.request('/api/task/resume',{}, {id:p.id});if(this.pending!==p)return;p.state=(r.task||r).state||'queued';this.persist();await this.poll();return;}
+  if(a==='retire'){if(!this.pending||!['failed','cancelled'].includes(this.pending.state))throw Error('Retain the original request until its actual task status is known.');download(this.planId+'-original-failed-site-visit-request.json',this.pending);this.pending=null;this.invalidate();this.render();return;}
+  if(a==='request-download'){if(this.pending)download(this.planId+'-original-site-visit-request.json',this.pending);return;}
+  if(a==='receipt-download'){if(this.receipt)download(this.planId+'-site-visit-receipt.json',this.receipt);return;}
+  if(a==='receipt-refresh'){await this.refreshReceipt();return;}
+  if(a==='open-current'){
+   if(this.pending||this.w.pending||this.busy)throw Error('Finish or recover the original native operation first.');
+   const w=this.w,id=this.planId,workspace=this.workspace;this.close();await w.openPlan(id,true);
+   if(!w.gone&&w.workspace===workspace&&w.plan?.id===id){w.tab='sites';w.message='Opened the latest native plan; any previous browser draft remains retained separately.';w.render();}return;
+  }
+ }
+}
+async function openSiteVisitIntake(w){
+ if(w.gone||!w.plan?.id)throw Error('Open the original implementation plan first.');
+ if(w.pending)throw Error('Finish or recover its original plan operation first.');
+ if(w.native&&(!w.nativePlan?.revision||w.host.getState?.()?.workspace_key!==w.workspace))throw Error('Save the native plan before importing its reviewed CSV batch.');
+ if(w.root.querySelector('dialog[open]'))throw Error('Close the current plan editor before opening a CSV batch.');
+ detachSiteVisitIntake(w);w.cache();const editor=new SiteVisitIntake(w);w.siteVisitEditor=editor;
+ try{await editor.start();}catch(error){if(error.name!=='AbortError')editor.fail(error);}return editor;
+}
+function detachSiteVisitIntake(w){w.siteVisitEditor?.close();w.siteVisitEditor=null;}
+
+return {SiteVisitIntake,openSiteVisitIntake,detachSiteVisitIntake};
+})();
 const IMPLEMENTATION_UI = (() => {
 const {SCHEMA,COLLECTIONS,clone,esc,today,uid,makePlan,parseMoney,money,validatePlan,schedulePlan,summarize,applyMethod,updateRow,deleteRow,csvPlan,reportHtml,fieldSheetHtml,safeLink} = IMPLEMENTATION_CORE;
 const {openImplementationDialog,saveImplementationForm,implementationSourceChoices,previewImplementationSource,syncImplementationSource} = IMPLEMENTATION_FORMS;
 const {attachImplementationEvidence} = IMPLEMENTATION_EVIDENCE_UI;
+const {openSiteVisitIntake,detachSiteVisitIntake} = IMPLEMENTATION_SITE_VISIT;
 const {briefingFollowup} = IMPLEMENTATION_BRIEFING;
 const {normalizeResultsView,reviewResults,renderResults,resultInspectionHtml,inspectResult,matchingResultsCsv,matchingResultsDocument} = IMPLEMENTATION_RESULTS;
 const TABS=[['overview','Overview'],['tasks','Work plan'],['budget','Costs'],['sites','Sites & monitoring'],['field','Field records'],['outcomes','Outcomes'],['sources','Source selections'],['handover','Handover']];
@@ -1640,7 +2286,7 @@ function parseOptionalObject(value){const s=String(value||'').trim();if(!s)retur
 function docEqual(a,b){return JSON.stringify(a)===JSON.stringify(b);}
 class ImplementationWorkbench {
   constructor(root,host={},catalog=null){
-    this.root=root;this.host=host;this.native=typeof host.api==='function';this.catalog=catalog;this.plan=null;this.nativePlan=null;this.tab='overview';this.asOf=today();this.dirty=false;this.pending=null;this.importedFile=false;this.filter='';this.gone=false;this.generation=0;this.message='';this.error='';this.offlineCopies={};this.planList=[];this.selectionDraft=null;this.selectionPreviewTurn=0;this.observationFlow=null;this.observationReceipts=[];this.labIntake=null;this.labModule=null;this.briefingIntake=null;this.outcomeController=null;this.outcomeModule=null;this.qcModule=null;this.qcEditor=null;this.returnReviewModule=null;this.returnReviewEditor=null;this.labDispatch=null;this.dispatchModule=null;this.resultView=normalizeResultsView();this.planReportSource=null;
+    this.root=root;this.host=host;this.native=typeof host.api==='function';this.catalog=catalog;this.plan=null;this.nativePlan=null;this.tab='overview';this.asOf=today();this.dirty=false;this.pending=null;this.importedFile=false;this.filter='';this.gone=false;this.generation=0;this.message='';this.error='';this.offlineCopies={};this.planList=[];this.selectionDraft=null;this.selectionPreviewTurn=0;this.observationFlow=null;this.observationReceipts=[];this.labIntake=null;this.labModule=null;this.briefingIntake=null;this.outcomeController=null;this.outcomeModule=null;this.qcModule=null;this.qcEditor=null;this.returnReviewModule=null;this.returnReviewEditor=null;this.labDispatch=null;this.dispatchModule=null;this.resultView=normalizeResultsView();this.planReportSource=null;this.fieldDeployment=null;this.deploymentModule=null;
     this.onClick=e=>{const b=e.target.closest('[data-impl]');if(!b||!this.root.contains(b))return;this.act(b).catch(x=>this.fail(x));};
     this.onChange=e=>this.change(e).catch(x=>this.fail(x));
     this.onInput=e=>{if(e.target.name==='source_filter')this.syncSourceSelection();};
@@ -1734,6 +2380,16 @@ class ImplementationWorkbench {
     }
   }
 
+  closeCostReview(){this.costReviewEditor?.close();this.costReviewEditor=null;}
+  async openCostReview(){
+    if(!this.native||!this.nativePlan?.revision)throw Error('Save or reopen the original native plan before reviewing Economic costs.');
+    if(this.pending)throw Error('Finish the retained plan operation before opening its cost review.');
+    if(this.root.querySelector('dialog[open]'))throw Error('Finish the current field editor before opening its cost review.');
+    const turn=this.generation,selected=this.plan.id,revision=this.nativePlan.revision,workspace=this.workspace;
+    if(!this.costReviewModule)this.costReviewModule=await import('./implementation_cost_review.mjs');
+    if(this.gone||turn!==this.generation||this.plan?.id!==selected||this.nativePlan?.revision!==revision||this.workspace!==workspace||this.host.getState?.()?.workspace_key!==workspace)return;
+    await this.costReviewModule.openImplementationCostReview(this);
+  }
   closeSampleQC(){if(this.qcModule)this.qcModule.detachImplementationQC(this);else{this.qcEditor?.close();this.qcEditor=null;}}
   async openSampleQC(){
     if(!this.native||!this.nativePlan?.revision)throw Error('Save or reopen the original native plan before reviewing sample quality control.');
@@ -1743,6 +2399,16 @@ class ImplementationWorkbench {
     if(!this.qcModule)this.qcModule=await import('./implementation_qc.mjs');
     if(this.gone||turn!==this.generation||this.plan?.id!==selected||this.nativePlan?.revision!==revision||this.workspace!==workspace||this.host.getState?.()?.workspace_key!==workspace)return;
     await this.qcModule.openImplementationQC(this);
+  }
+  async deploymentCapability(){
+    if(!this.native)throw Error('Open the original native workspace to prepare field crew packets.');
+    if(!this.deploymentModule)this.deploymentModule=await import('./implementation_deployment.mjs');
+    return this.deploymentModule;
+  }
+  deploymentPanel(){
+    if(!this.native)return '';
+    if(this.deploymentModule)return this.deploymentModule.render(this);
+    return '<section class="iw-notice"><h3>Field crew packets</h3><p>Retain a saved visit selection with crew sheets, protocols, calendar, site geometry and the complete offline field editor.</p>'+button('deployment-open','Prepare or reopen crew packet')+'</section>';
   }
   async dispatchCapability(){
     if(!this.native)throw Error('Open the original native workspace to prepare retained laboratory requests.');
@@ -1876,7 +2542,7 @@ class ImplementationWorkbench {
   }
 
   readLocal(){try{const data=JSON.parse(localStorage.getItem(this.storageKey)||'{"plans":{}}');this.offlineCopies=data.plans||{};}catch(e){this.message='Browser storage could not be read. Export JSON to retain your work.';}}
-  cache(){if(!this.plan)return;this.offlineCopies[this.plan.id]={document:clone(this.plan),dirty:this.dirty,pending:this.pending?clone(this.pending):null,observationFlow:this.observationFlow?clone(this.observationFlow):null,observationReceipts:clone(this.observationReceipts||[]),labIntake:this.labIntake?clone(this.labIntake):null,briefingIntake:this.briefingIntake?clone(this.briefingIntake):null,labDispatch:this.labDispatch?clone(this.labDispatch):null,planReportSource:this.planReportSource?clone(this.planReportSource):null,resultView:normalizeResultsView(this.resultView),updated_at:new Date().toISOString()};try{localStorage.setItem(this.storageKey,JSON.stringify({schema:'upstate.implementation-drafts/v1',plans:this.offlineCopies}));}catch(e){this.message='Browser storage is full or unavailable. Use Export JSON to save the current plan.';}}
+  cache(){if(!this.plan)return;this.offlineCopies[this.plan.id]={document:clone(this.plan),dirty:this.dirty,pending:this.pending?clone(this.pending):null,observationFlow:this.observationFlow?clone(this.observationFlow):null,observationReceipts:clone(this.observationReceipts||[]),labIntake:this.labIntake?clone(this.labIntake):null,briefingIntake:this.briefingIntake?clone(this.briefingIntake):null,labDispatch:this.labDispatch?clone(this.labDispatch):null,planReportSource:this.planReportSource?clone(this.planReportSource):null,fieldDeployment:this.fieldDeployment?.plan_id===this.plan.id?clone(this.fieldDeployment):null,resultView:normalizeResultsView(this.resultView),updated_at:new Date().toISOString()};try{localStorage.setItem(this.storageKey,JSON.stringify({schema:'upstate.implementation-drafts/v1',plans:this.offlineCopies}));}catch(e){this.message='Browser storage is full or unavailable. Use Export JSON to save the current plan.';}}
   status(message){this.message=message;this.error='';this.render();}
   fail(error){if(this.gone)return;this.error=error?.message||String(error);const dialog=this.root.querySelector('dialog[open]');if(dialog){let notice=dialog.querySelector('.iw-form-error');if(!notice){notice=document.createElement('pre');notice.className='iw-error iw-form-error';notice.setAttribute('role','alert');dialog.querySelector('[data-impl-dialog]').prepend(notice);}notice.textContent=this.error;}else this.render();this.host.toast?.(this.error.slice(0,180));}
   async outcomeCapability(){
@@ -1901,7 +2567,7 @@ class ImplementationWorkbench {
   async read(path,args={}){return this.host.api(this.host.endpoint?this.host.endpoint(path,args):path+'?'+new URLSearchParams({workspace:this.workspace,...args}));}
   async reloadList(){if(this.native){const r=await this.read('/api/implementation/list');if(this.gone)return;this.planList=r.plans||r.implementation_plans||[];}else this.planList=Object.values(this.offlineCopies).map(x=>x.document);}
   async openPlan(id,preferNative=false,revision=null){
-    this.closeReturnReview();this.closeSampleQC();
+    detachSiteVisitIntake(this);this.closeReturnReview();this.closeSampleQC();this.closeCostReview();
     const turn=++this.generation;this.cache();let remote=null,history=[],downloads=[],reports=[];
     if(this.native){try{const r=await this.read('/api/implementation/detail',{id,...(revision===null?{}:{revision})});remote=r.plan||r.document||null;history=r.history||[];downloads=r._downloads||[];reports=r.reports||[];}catch(e){if(preferNative||!this.offlineCopies[id])throw e;}}
     if(this.gone||turn!==this.generation)return;
@@ -1911,7 +2577,7 @@ class ImplementationWorkbench {
     else if(remote){this.plan=clone(remote);this.dirty=false;}
     else if(local){this.plan=clone(local.document);this.dirty=!!local.dirty;}
     else throw Error('This plan is not available in the selected workspace.');
-    this.history=history;this.downloads=downloads;this.reports=reports;this.nativePlan=remote?clone(remote):null;this.importedFile=!remote&&this.native&&this.plan.revision>0;this.pending=local?.pending||null;this.observationFlow=local?.observationFlow||null;this.observationReceipts=local?.observationReceipts||[];this.labIntake=local?.labIntake||null;this.briefingIntake=local?.briefingIntake||null;if(['uploading','opening','previewing'].includes(this.briefingIntake?.stage)){this.briefingIntake.stage='selecting';this.briefingIntake.preview=null;}this.planReportSource=local?.planReportSource||null;if(this.planReportSource?.stage==='previewing')this.planReportSource=null;this.labDispatch=local?.labDispatch||null;if(['loading','previewing','reconciling','opening','report-previewing'].includes(this.labDispatch?.stage)){this.labDispatch.stage='editing';this.labDispatch.preview=null;this.labDispatch.reconciliation=null;if(this.labDispatch.reportFlow?.stage==='previewing'){this.labDispatch.reportFlow.preview=null;this.labDispatch.reportFlow.stage='idle';}}this.resultView=normalizeResultsView(local?.resultView);if(['uploading','inspecting','previewing'].includes(this.labIntake?.stage)){this.labIntake.stage='mapping';this.labIntake.preview=null;}if(this.observationFlow?.stage==='previewing')this.observationFlow=null;this.error='';this.message=remote&&local?.dirty&&remote.revision!==local.document.revision?'A newer native revision exists. Your browser draft is retained; export it before choosing Reopen native.':'';this.cache();this.render();
+    this.history=history;this.downloads=downloads;this.reports=reports;this.nativePlan=remote?clone(remote):null;this.importedFile=!remote&&this.native&&this.plan.revision>0;this.pending=local?.pending||null;this.observationFlow=local?.observationFlow||null;this.observationReceipts=local?.observationReceipts||[];this.labIntake=local?.labIntake||null;this.briefingIntake=local?.briefingIntake||null;if(['uploading','opening','previewing'].includes(this.briefingIntake?.stage)){this.briefingIntake.stage='selecting';this.briefingIntake.preview=null;}this.fieldDeployment=local?.fieldDeployment||null;if(this.fieldDeployment&&['previewing','opening'].includes(this.fieldDeployment.stage)){this.fieldDeployment.stage='selecting';this.fieldDeployment.preview=null;}this.planReportSource=local?.planReportSource||null;if(this.planReportSource?.stage==='previewing')this.planReportSource=null;this.labDispatch=local?.labDispatch||null;if(['loading','previewing','reconciling','opening','report-previewing'].includes(this.labDispatch?.stage)){this.labDispatch.stage='editing';this.labDispatch.preview=null;this.labDispatch.reconciliation=null;if(this.labDispatch.reportFlow?.stage==='previewing'){this.labDispatch.reportFlow.preview=null;this.labDispatch.reportFlow.stage='idle';}}this.resultView=normalizeResultsView(local?.resultView);if(['uploading','inspecting','previewing'].includes(this.labIntake?.stage)){this.labIntake.stage='mapping';this.labIntake.preview=null;}if(this.observationFlow?.stage==='previewing')this.observationFlow=null;this.error='';this.message=remote&&local?.dirty&&remote.revision!==local.document.revision?'A newer native revision exists. Your browser draft is retained; export it before choosing Reopen native.':'';this.cache();this.render();
   }
   async receiveSavedPlan(payload){
     if(!this.native||this.gone||payload?.workspace_key!==this.workspace||this.host.getState?.()?.workspace_key!==this.workspace)throw Error('Open the saved plan in its received workspace.');
@@ -2062,6 +2728,7 @@ class ImplementationWorkbench {
       if(this.labDispatch?.operation_id===pending.operation_id){this.labDispatch.stage=this.labDispatch.preview?'review':'editing';this.labDispatch.operation_id=null;this.labDispatch.after_save=null;}
       if(this.labDispatch?.reportFlow?.operation_id===pending.operation_id){this.labDispatch.reportFlow.operation_id=null;this.labDispatch.reportFlow.stage=this.labDispatch.reportFlow.preview?'review':'idle';this.labDispatch.stage='editing';}
       if(pending.action==='implementation.report-source.import'&&this.planReportSource)this.planReportSource.stage='review';
+      if(pending.action==='implementation.field-deployment.prepare'&&this.fieldDeployment)this.fieldDeployment.stage=this.fieldDeployment.preview?'review':'selecting';
       this.pending=null;this.cache();if(!this.root.querySelector('dialog[open]'))this.render();return;
     }
     if(task.state!=='complete')return;
@@ -2070,6 +2737,7 @@ class ImplementationWorkbench {
     this.resolvingOperation=pending.operation_id;const turn=this.generation;
     const current=()=>!this.gone&&turn===this.generation&&this.plan?.id===pending.plan_id&&this.pending?.operation_id===pending.operation_id;
     try{
+      if(pending.action==='implementation.field-deployment.prepare'){const deployment=await this.deploymentCapability();if(!current())return;deployment.finish(this,pending,task.result);return;}
       if(pending.action==='implementation.report-source.import'){if(!current())return;this.finishPlanReportSource(pending,task.result);return;}
       if(pending.action==='implementation.observations.import'){
         if(!current())return;
@@ -2093,9 +2761,9 @@ class ImplementationWorkbench {
       if(current()){this.error=e?.message||String(e);this.message='The completed native operation remains retained. Retry reopening its saved result.';this.cache();if(!this.root.querySelector('dialog[open]'))this.render();}
     }finally{if(this.resolvingOperation===pending.operation_id)this.resolvingOperation=null;}
   }
-  detach(){if(this.gone)return;this.closeReturnReview();this.closeSampleQC();this.evidence?.detach();this.outcomeController?.detach();this.cache();this.gone=true;this.generation++;this.root.removeEventListener('click',this.onClick);this.root.removeEventListener('change',this.onChange);this.root.removeEventListener('input',this.onInput);this.root.removeEventListener('keydown',this.onResultsKey);this.root.removeEventListener('submit',this.onSubmit);this.root.removeEventListener('input',this.onOutcomeInput);window.removeEventListener('beforeunload',this.beforeUnload);}
+  detach(){if(this.gone)return;detachSiteVisitIntake(this);this.closeReturnReview();this.closeSampleQC();this.closeCostReview();this.evidence?.detach();this.outcomeController?.detach();this.cache();this.gone=true;this.generation++;this.root.removeEventListener('click',this.onClick);this.root.removeEventListener('change',this.onChange);this.root.removeEventListener('input',this.onInput);this.root.removeEventListener('keydown',this.onResultsKey);this.root.removeEventListener('submit',this.onSubmit);this.root.removeEventListener('input',this.onOutcomeInput);window.removeEventListener('beforeunload',this.beforeUnload);}
   render(){
-    if(this.gone)return;this.closeReturnReview();this.closeSampleQC();this.evidence?.beforeRender();const p=this.plan;
+    if(this.gone)return;detachSiteVisitIntake(this);this.closeReturnReview();this.closeSampleQC();this.closeCostReview();this.evidence?.beforeRender();const p=this.plan;
     if(!p){this.root.innerHTML='<section class="iw"><h2>Implementation & fieldwork</h2><p>Opening retained plans…</p>'+(this.error?'<pre role="alert">'+esc(this.error)+'</pre>':'')+'</section>';return;}
     let stats=null,validation=validatePlan(p);try{if(!validation.length)stats=summarize(p,this.asOf);}catch(e){validation=[{path:'calendar',message:e.message}];}
     const plans=new Map([...this.planList.map(x=>[x.id,x]),...Object.values(this.offlineCopies).map(x=>[x.document.id,x.document]),[p.id,p]]);
@@ -2117,15 +2785,15 @@ class ImplementationWorkbench {
       return '<div class="iw-section-head"><h3>Assigned work and dependencies</h3><div class="iw-actions">'+this.addButton('tasks')+button('method','Add method workflow')+button('csv','Export tasks','data-collection="tasks"')+'</div></div><p class="iw-muted">Durations are working days on this plan’s calendar. Enter zero for a milestone. A blank duration stays open until estimated.</p>'+this.table(['Task / candidate','Phase','Owner','Status','Days','Scheduled dates','Progress',''],p.tasks.map(t=>{const s=schedule.get(t.id);return ['<b>'+esc(t.title)+'</b><small>'+esc(p.candidates.find(c=>c.id===t.candidate_id)?.label||'')+'</small>',esc(t.phase||''),esc(t.assignee||'Unassigned'),'<span class="iw-state">'+esc(t.status.replaceAll('_',' '))+'</span>',esc(t.duration_days??'Estimate'),s?.start?esc(s.start)+(s.last_work_date&&s.last_work_date!==s.start?'<br>'+esc(s.last_work_date):'')+(s.overdue?'<small>Overdue</small>':''):esc('Awaiting predecessor dates'),'<progress max="100" value="'+t.progress_pct+'"></progress><small>'+t.progress_pct+'%</small>',this.editButton('tasks',t.id)+this.evidence.recordButton('tasks',t.id)];}));
     }
     if(this.tab==='budget'){
-      return '<div class="iw-section-head"><h3>Cost ledger · USD</h3><div class="iw-actions">'+this.addButton('budget_lines')+button('csv','Export costs','data-collection="budget_lines"')+'</div></div><p class="iw-muted">Record budget estimates, contractual commitments and actual costs in separate ledger rows. Amounts are preserved as exact cents.</p>'+(stats?'<div class="iw-stats">'+[['Budget',money(stats.budget.budget)],['Committed',money(stats.budget.commitment)],['Actual cost',money(stats.budget.actual)],['Budget less actual',money(stats.budget.remaining)]].map(([l,v])=>'<div><span>'+l+'</span><strong>'+v+'</strong></div>').join('')+'</div>':'')+this.table(['Kind','Description','Task','Amount','Date','Reference',''],p.budget_lines.map(b=>[esc(b.kind),esc(b.label),esc(p.tasks.find(t=>t.id===b.task_id)?.title||''),money(b.amount_minor),esc(b.date||''),esc(b.reference||''),this.editButton('budget_lines',b.id)]));
+      return '<div class="iw-section-head"><h3>Cost ledger · USD</h3><div class="iw-actions">'+this.addButton('budget_lines')+button('csv','Export costs','data-collection="budget_lines"')+(this.native?button('cost-review','Review economic costs'):'')+'</div></div><p class="iw-muted">Record budget estimates, contractual commitments and actual costs in separate ledger rows. Amounts are preserved as exact cents.</p>'+(stats?'<div class="iw-stats">'+[['Budget',money(stats.budget.budget)],['Committed',money(stats.budget.commitment)],['Actual cost',money(stats.budget.actual)],['Budget less actual',money(stats.budget.remaining)]].map(([l,v])=>'<div><span>'+l+'</span><strong>'+v+'</strong></div>').join('')+'</div>':'')+this.table(['Kind','Description','Task','Amount','Date','Reference',''],p.budget_lines.map(b=>[esc(b.kind),esc(b.label),esc(p.tasks.find(t=>t.id===b.task_id)?.title||''),money(b.amount_minor),esc(b.date||''),esc(b.reference||''),this.editButton('budget_lines',b.id)]));
     }
     if(this.tab==='sites'){
-      return '<div class="iw-section-head"><h3>Sites</h3>'+this.addButton('sites')+'</div>'+this.table(['Site','Coordinates','Candidate',''],p.sites.map(s=>[esc(s.label),esc(s.latitude===null||s.latitude===undefined?'':s.latitude+', '+s.longitude),esc(p.candidates.find(c=>c.id===s.candidate_id)?.label||''),this.editButton('sites',s.id)]))+'<div class="iw-section-head"><h3>Monitoring questions</h3>'+this.addButton('monitoring_plans')+'</div>'+this.table(['Plan','Objective','Sites','Parameters','Frequency',''],p.monitoring_plans.map(m=>[esc(m.title),esc(m.objective),(m.site_ids||[]).map(id=>esc(p.sites.find(s=>s.id===id)?.label||id)).join('<br>'),esc((m.parameters||[]).join(', ')),esc(m.frequency||''),this.editButton('monitoring_plans',m.id)]));
+      return '<div class="iw-section-head"><h3>Sites</h3><div class="iw-actions">'+button('site-visit-import','Import sites / visits CSV')+this.addButton('sites')+'</div>'+'</div>'+this.table(['Site','Coordinates','Candidate',''],p.sites.map(s=>[esc(s.label),esc(s.latitude===null||s.latitude===undefined?'':s.latitude+', '+s.longitude+' · '+(s.coordinate_reference_system||'Source datum unstated')),esc(p.candidates.find(c=>c.id===s.candidate_id)?.label||''),this.editButton('sites',s.id)]))+'<div class="iw-section-head"><h3>Monitoring questions</h3>'+this.addButton('monitoring_plans')+'</div>'+this.table(['Plan','Objective','Sites','Parameters','Frequency',''],p.monitoring_plans.map(m=>[esc(m.title),esc(m.objective),(m.site_ids||[]).map(id=>esc(p.sites.find(s=>s.id===id)?.label||id)).join('<br>'),esc((m.parameters||[]).join(', ')),esc(m.frequency||''),this.editButton('monitoring_plans',m.id)]));
     }
     if(this.tab==='outcomes')return this.outcomePanel();
     if(this.tab==='field'){
       const show=(collection,heads,cells,label)=>'<div class="iw-section-head"><h3>'+label+'</h3><div class="iw-actions">'+this.addButton(collection)+button('csv','Export','data-collection="'+collection+'"')+'</div></div>'+this.table(heads,p[collection].map(cells));
-      return this.dispatchPanel()+this.labPanel()+this.fieldObservationPanel()+'<div class="iw-section-head"><h3>Field capture</h3>'+button('field-form','Use a structured field form','','iw-primary')+(this.native?button('sample-qc','Sample quality control'):'')+'</div>'+show('visits',['Planned','Site','Observer','Status','Actual time',''],v=>[esc(v.planned_date||''),esc(p.sites.find(s=>s.id===v.site_id)?.label||v.site_id),esc(v.observer||''),esc(v.status),esc(v.visited_at||''),this.editButton('visits',v.id)+this.evidence.recordButton('visits',v.id)+button('field-sheet','Field sheet','data-id="'+esc(v.id)+'"')],'Field visits')+show('activities',['Activity','Visit','Kind','Sample ID','Collected',''],a=>[esc(a.id),esc(a.visit_id),esc(a.kind),esc(a.sample_id||''),esc(a.collected_at||''),this.editButton('activities',a.id)+this.evidence.recordButton('activities',a.id)],'Samples and activities')+renderResults(this);
+      return '<div class="iw-actions">'+button('site-visit-import','Import sites / visits CSV')+'</div>'+this.deploymentPanel()+this.dispatchPanel()+this.labPanel()+this.fieldObservationPanel()+'<div class="iw-section-head"><h3>Field capture</h3>'+button('field-form','Use a structured field form','','iw-primary')+(this.native?button('sample-qc','Sample quality control'):'')+'</div>'+show('visits',['Planned','Site','Observer','Status','Actual time',''],v=>[esc(v.planned_date||''),esc(p.sites.find(s=>s.id===v.site_id)?.label||v.site_id),esc(v.observer||''),esc(v.status),esc(v.visited_at||''),this.editButton('visits',v.id)+this.evidence.recordButton('visits',v.id)+button('field-sheet','Field sheet','data-id="'+esc(v.id)+'"')],'Field visits')+show('activities',['Activity','Visit','Kind','Sample ID','Collected',''],a=>[esc(a.id),esc(a.visit_id),esc(a.kind),esc(a.sample_id||''),esc(a.collected_at||''),this.editButton('activities',a.id)+this.evidence.recordButton('activities',a.id)],'Samples and activities')+renderResults(this);
     }
     if(this.tab==='sources'){
       return briefingFollowup.render(this)+'<div class="iw-section-head"><h3>Conservation and intervention selections</h3><div class="iw-actions">'+(this.native?button('source-import','Import native selection','','iw-primary'):'')+this.addButton('candidates','Add source-linked candidate')+'</div></div><p class="iw-muted">Selected rows retain the original scientific source and model references. Community-area totals stay with their original area; source snapshots can be inspected below.</p>'+this.table(['Candidate','Whole area (ha)','Source / native identity','Retained quantities',''],p.candidates.map(c=>[esc(c.label),esc(c.area_ha??''),'<code>'+esc(textObject(c.source))+'</code>','<code>'+esc(textObject(c.modeled_benefits||[]))+'</code>',button('inspect','Inspect source','data-collection="candidates" data-id="'+esc(c.id)+'"')]))+'<div class="iw-section-head"><h3>Source register</h3>'+this.addButton('source_links')+'</div>'+this.table(['Reference','Kind','Location',''],p.source_links.map(s=>{const link=safeLink(s.reference);return [esc(s.label),esc(s.kind),link?'<a href="'+esc(link)+'" target="_blank" rel="noopener noreferrer">'+esc(s.reference)+'</a>':esc(format(s.reference)),button('inspect','Inspect','data-collection="source_links" data-id="'+esc(s.id)+'"')];}));
@@ -2141,10 +2809,13 @@ class ImplementationWorkbench {
   async act(b){
     if(b.dataset.impl.startsWith('briefing-')){await briefingFollowup.act(this,b);return;}
     const action=b.dataset.impl;
+    if(action==='site-visit-import'){await openSiteVisitIntake(this);return;}
+    if(action.startsWith('deployment-')){const turn=this.generation,selected=this.plan?.id;const deployment=await this.deploymentCapability();if(!this.gone&&turn===this.generation&&this.plan?.id===selected)await deployment.act(this,b);return;}
     if(action==='plan-report-preview'){await this.previewPlanReportSource(b.dataset.reportId);return;}
     if(action==='plan-report-register'){await this.registerPlanReportSource();return;}
     if(action==='plan-report-open'){await this.openPlanReportSource();return;}
     if(action==='plan-report-dismiss'){if(this.pending)throw Error('Finish the retained report operation first.');this.planReportSource=null;this.cache();this.render();return;}
+    if(action==='cost-review'){await this.openCostReview();return;}
     if(action==='sample-qc'){await this.openSampleQC();return;}
     if(action==='return-review'){await this.openReturnReview();return;}
     if(action.startsWith('outcomes-')){const controller=await this.outcomeCapability();if(!this.gone)await controller.act(b);return;}
@@ -2204,6 +2875,7 @@ class ImplementationWorkbench {
     if(action==='delete'){const collection=b.dataset.collection,id=b.dataset.id;this.commitLocal(deleteRow(this.plan,collection,id),'Record removed from this draft; native revision history remains retained.');return;}
   }
   async change(e){
+    if(e.target.matches('[data-deployment-filter],[data-deployment-title],[data-deployment-visit]')){const turn=this.generation,selected=this.plan?.id;const deployment=await this.deploymentCapability();if(!this.gone&&turn===this.generation&&this.plan?.id===selected)await deployment.change(this,e);return;}
     if(e.target.matches('[data-outcome-control]')){const controller=await this.outcomeCapability();if(!this.gone)controller.change(e);return;}
     if(e.target.dataset.resultFilter){const key=e.target.dataset.resultFilter;this.resultView=normalizeResultsView({...this.resultView,[key]:key==='page_size'?Number(e.target.value):e.target.value,page:0});this.cache();this.render();return;}
     if(e.target.matches('[data-briefing-file],[data-briefing-field],[data-briefing-entry]')){await briefingFollowup.change(this,e);return;}

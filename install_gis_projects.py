@@ -10,7 +10,7 @@ from pathlib import Path
 import shutil
 import tempfile
 
-MODEL_FILES = ('gis_project.py', 'gis_workspace.py', 'gis_project_cli.py',
+MODEL_FILES = ('gis_project.py', 'gis_workspace.py', 'gis_edition_review.py', 'gis_project_cli.py',
                'gis_project_native.py', 'gis_project_view.html', 'GIS_PROJECTS.md', 'requirements-gis.txt')
 OWN_FILES = tuple('model/' + x for x in MODEL_FILES) + (
     'operator/gis_projects.py', 'operator/web/gis-projects.mjs', 'operator/web/gis-projects.css',

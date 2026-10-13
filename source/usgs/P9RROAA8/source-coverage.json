@@ -1,0 +1,509 @@
+{
+  "schema": "upstate.original-source-coverage/v1",
+  "release_doi": "10.5066/P9RROAA8",
+  "original_filename": "Seasonal_time_step_estimates_southeastern_US_2001_2014.txt",
+  "original_url": "https://www.sciencebase.gov/catalog/file/get/60ec83fad34e3bf20b41d3c8?f=__disk__dd%2F81%2F8e%2Fdd818e189cc21f05a10692f6bc08f12ac35e0cfc",
+  "license": "CC0",
+  "original": {
+    "bytes": 5261599,
+    "publisher_md5": "68e071d788c38f1c3f3bb671160b6648",
+    "sha256": "8af8604360dfca267804f9252773d43022b250a4f8fa4f9e9fb63e5942296f93",
+    "repository": "woahwhattheheck/public-commons-sprint-2026",
+    "git_blob": "9631e51ca2e1f412e2f5669bc65dd6e081cea941"
+  },
+  "rows": 16056,
+  "columns": 45,
+  "fields": [
+    "COMID",
+    "Timestep",
+    "Station_ID",
+    "Station_name",
+    "HUC8",
+    "Lat_dd",
+    "Lon_dd",
+    "Area_sq_km",
+    "SeasMeanTotQ_Mon_cfs",
+    "SeasMeanBaseQ_Mon_cfs",
+    "SeasMeanTotQ_Mon_sd_cfs",
+    "SeasMeanBaseQ_Mon_sd_cfs",
+    "n_wq_obs_00600",
+    "Station_id_600",
+    "Flow_station_id600",
+    "Lat_600_dd",
+    "Lon_600_dd",
+    "DA_ratio_600",
+    "Dist_sitetogage_600_m",
+    "SeasTotN_Mon_kg_per_seas",
+    "SeasBaseN_Mon_kg_per_seas",
+    "SeasTotN_Mon_sd_kg_per_seas",
+    "SeasBaseN_Mon_sd_kg_per_seas",
+    "n_wq_obs_00665",
+    "Station_id_665",
+    "Flow_station_id665",
+    "Lat_665_dd",
+    "Lon_665_dd",
+    "DA_ratio_665",
+    "Dist_sitetogage_665_m",
+    "SeasTotP_Mon_kg_per_seas",
+    "SeasBaseP_Mon_kg_per_seas",
+    "SeasTotP_Mon_sd_kg_per_seas",
+    "SeasBaseP_Mon_sd_kg_per_seas",
+    "n_wq_obs_00530",
+    "Station_id_530",
+    "Flow_station_id530",
+    "Lat_530_dd",
+    "Lon_530_dd",
+    "DA_ratio_530",
+    "Dist_sitetogage_530_m",
+    "SeasTotS_Mon_kg_per_seas",
+    "SeasBaseS_Mon_kg_per_seas",
+    "SeasTotS_Mon_sd_kg_per_seas",
+    "SeasBaseS_Mon_sd_kg_per_seas"
+  ],
+  "unique_comids": 320,
+  "identifier_counts": {
+    "Station_ID": 172,
+    "Flow_station_id600": 135,
+    "Flow_station_id665": 141,
+    "Flow_station_id530": 104,
+    "Station_id_600": 217,
+    "Station_id_665": 225,
+    "Station_id_530": 136,
+    "all_flow_identifiers_union": 185
+  },
+  "timesteps": [
+    "200102",
+    "200103",
+    "200104",
+    "200201",
+    "200202",
+    "200203",
+    "200204",
+    "200301",
+    "200302",
+    "200303",
+    "200304",
+    "200401",
+    "200402",
+    "200403",
+    "200404",
+    "200501",
+    "200502",
+    "200503",
+    "200504",
+    "200601",
+    "200602",
+    "200603",
+    "200604",
+    "200701",
+    "200702",
+    "200703",
+    "200704",
+    "200801",
+    "200802",
+    "200803",
+    "200804",
+    "200901",
+    "200902",
+    "200903",
+    "200904",
+    "201001",
+    "201002",
+    "201003",
+    "201004",
+    "201101",
+    "201102",
+    "201103",
+    "201104",
+    "201201",
+    "201202",
+    "201203",
+    "201204",
+    "201301",
+    "201302",
+    "201303",
+    "201304",
+    "201401",
+    "201402",
+    "201403"
+  ],
+  "seasonal_total_load_coverage": {
+    "nitrogen": {
+      "field": "SeasTotN_Mon_kg_per_seas",
+      "populated": 10330,
+      "negative": 0,
+      "nonfinite": 0,
+      "sites": 217,
+      "reach_year_quarter_counts": {
+        "1": 162,
+        "2": 3,
+        "3": 450,
+        "4": 2192
+      },
+      "full4ReachYears2002to2013": 2192
+    },
+    "phosphorus": {
+      "field": "SeasTotP_Mon_kg_per_seas",
+      "populated": 10766,
+      "negative": 0,
+      "nonfinite": 0,
+      "sites": 225,
+      "reach_year_quarter_counts": {
+        "1": 162,
+        "2": 3,
+        "3": 466,
+        "4": 2289
+      },
+      "full4ReachYears2002to2013": 2289
+    },
+    "suspended_solids": {
+      "field": "SeasTotS_Mon_kg_per_seas",
+      "populated": 6388,
+      "negative": 0,
+      "nonfinite": 0,
+      "sites": 136,
+      "reach_year_quarter_counts": {
+        "1": 122,
+        "2": 1,
+        "3": 300,
+        "4": 1330
+      },
+      "full4ReachYears2002to2013": 1330
+    }
+  },
+  "nonempty_huc8_count": 47,
+  "huc8_inventory": [
+    {
+      "original_HUC8": "",
+      "normalized_HUC8": null,
+      "COMID_count": 1,
+      "rows": 50
+    },
+    {
+      "original_HUC8": "3040101",
+      "normalized_HUC8": "03040101",
+      "COMID_count": 14,
+      "rows": 744
+    },
+    {
+      "original_HUC8": "3040102",
+      "normalized_HUC8": "03040102",
+      "COMID_count": 3,
+      "rows": 162
+    },
+    {
+      "original_HUC8": "3040103",
+      "normalized_HUC8": "03040103",
+      "COMID_count": 7,
+      "rows": 368
+    },
+    {
+      "original_HUC8": "3040104",
+      "normalized_HUC8": "03040104",
+      "COMID_count": 2,
+      "rows": 108
+    },
+    {
+      "original_HUC8": "3040105",
+      "normalized_HUC8": "03040105",
+      "COMID_count": 14,
+      "rows": 698
+    },
+    {
+      "original_HUC8": "3040201",
+      "normalized_HUC8": "03040201",
+      "COMID_count": 14,
+      "rows": 740
+    },
+    {
+      "original_HUC8": "3040202",
+      "normalized_HUC8": "03040202",
+      "COMID_count": 5,
+      "rows": 250
+    },
+    {
+      "original_HUC8": "3040203",
+      "normalized_HUC8": "03040203",
+      "COMID_count": 5,
+      "rows": 268
+    },
+    {
+      "original_HUC8": "3040204",
+      "normalized_HUC8": "03040204",
+      "COMID_count": 3,
+      "rows": 162
+    },
+    {
+      "original_HUC8": "3040205",
+      "normalized_HUC8": "03040205",
+      "COMID_count": 2,
+      "rows": 108
+    },
+    {
+      "original_HUC8": "3040206",
+      "normalized_HUC8": "03040206",
+      "COMID_count": 2,
+      "rows": 100
+    },
+    {
+      "original_HUC8": "3100101",
+      "normalized_HUC8": "03100101",
+      "COMID_count": 18,
+      "rows": 944
+    },
+    {
+      "original_HUC8": "3100102",
+      "normalized_HUC8": "03100102",
+      "COMID_count": 13,
+      "rows": 570
+    },
+    {
+      "original_HUC8": "3100103",
+      "normalized_HUC8": "03100103",
+      "COMID_count": 2,
+      "rows": 60
+    },
+    {
+      "original_HUC8": "3100201",
+      "normalized_HUC8": "03100201",
+      "COMID_count": 4,
+      "rows": 146
+    },
+    {
+      "original_HUC8": "3100202",
+      "normalized_HUC8": "03100202",
+      "COMID_count": 11,
+      "rows": 536
+    },
+    {
+      "original_HUC8": "3100203",
+      "normalized_HUC8": "03100203",
+      "COMID_count": 11,
+      "rows": 520
+    },
+    {
+      "original_HUC8": "3100204",
+      "normalized_HUC8": "03100204",
+      "COMID_count": 16,
+      "rows": 846
+    },
+    {
+      "original_HUC8": "3100205",
+      "normalized_HUC8": "03100205",
+      "COMID_count": 18,
+      "rows": 916
+    },
+    {
+      "original_HUC8": "3100206",
+      "normalized_HUC8": "03100206",
+      "COMID_count": 39,
+      "rows": 1746
+    },
+    {
+      "original_HUC8": "3100207",
+      "normalized_HUC8": "03100207",
+      "COMID_count": 12,
+      "rows": 586
+    },
+    {
+      "original_HUC8": "3100208",
+      "normalized_HUC8": "03100208",
+      "COMID_count": 19,
+      "rows": 928
+    },
+    {
+      "original_HUC8": "3150101",
+      "normalized_HUC8": "03150101",
+      "COMID_count": 6,
+      "rows": 324
+    },
+    {
+      "original_HUC8": "3150102",
+      "normalized_HUC8": "03150102",
+      "COMID_count": 6,
+      "rows": 324
+    },
+    {
+      "original_HUC8": "3150103",
+      "normalized_HUC8": "03150103",
+      "COMID_count": 4,
+      "rows": 216
+    },
+    {
+      "original_HUC8": "3150104",
+      "normalized_HUC8": "03150104",
+      "COMID_count": 11,
+      "rows": 594
+    },
+    {
+      "original_HUC8": "3150105",
+      "normalized_HUC8": "03150105",
+      "COMID_count": 10,
+      "rows": 540
+    },
+    {
+      "original_HUC8": "3150106",
+      "normalized_HUC8": "03150106",
+      "COMID_count": 2,
+      "rows": 108
+    },
+    {
+      "original_HUC8": "3150108",
+      "normalized_HUC8": "03150108",
+      "COMID_count": 1,
+      "rows": 54
+    },
+    {
+      "original_HUC8": "3150109",
+      "normalized_HUC8": "03150109",
+      "COMID_count": 2,
+      "rows": 108
+    },
+    {
+      "original_HUC8": "3150110",
+      "normalized_HUC8": "03150110",
+      "COMID_count": 2,
+      "rows": 108
+    },
+    {
+      "original_HUC8": "3150201",
+      "normalized_HUC8": "03150201",
+      "COMID_count": 2,
+      "rows": 108
+    },
+    {
+      "original_HUC8": "3150202",
+      "normalized_HUC8": "03150202",
+      "COMID_count": 12,
+      "rows": 576
+    },
+    {
+      "original_HUC8": "3160102",
+      "normalized_HUC8": "03160102",
+      "COMID_count": 1,
+      "rows": 54
+    },
+    {
+      "original_HUC8": "3160103",
+      "normalized_HUC8": "03160103",
+      "COMID_count": 2,
+      "rows": 108
+    },
+    {
+      "original_HUC8": "3160107",
+      "normalized_HUC8": "03160107",
+      "COMID_count": 1,
+      "rows": 54
+    },
+    {
+      "original_HUC8": "3160108",
+      "normalized_HUC8": "03160108",
+      "COMID_count": 2,
+      "rows": 108
+    },
+    {
+      "original_HUC8": "3160109",
+      "normalized_HUC8": "03160109",
+      "COMID_count": 2,
+      "rows": 108
+    },
+    {
+      "original_HUC8": "3160110",
+      "normalized_HUC8": "03160110",
+      "COMID_count": 1,
+      "rows": 54
+    },
+    {
+      "original_HUC8": "3160111",
+      "normalized_HUC8": "03160111",
+      "COMID_count": 8,
+      "rows": 432
+    },
+    {
+      "original_HUC8": "3160112",
+      "normalized_HUC8": "03160112",
+      "COMID_count": 1,
+      "rows": 54
+    },
+    {
+      "original_HUC8": "3160113",
+      "normalized_HUC8": "03160113",
+      "COMID_count": 1,
+      "rows": 44
+    },
+    {
+      "original_HUC8": "3160201",
+      "normalized_HUC8": "03160201",
+      "COMID_count": 1,
+      "rows": 46
+    },
+    {
+      "original_HUC8": "3160202",
+      "normalized_HUC8": "03160202",
+      "COMID_count": 1,
+      "rows": 54
+    },
+    {
+      "original_HUC8": "3160203",
+      "normalized_HUC8": "03160203",
+      "COMID_count": 1,
+      "rows": 54
+    },
+    {
+      "original_HUC8": "3160204",
+      "normalized_HUC8": "03160204",
+      "COMID_count": 2,
+      "rows": 108
+    },
+    {
+      "original_HUC8": "3160205",
+      "normalized_HUC8": "03160205",
+      "COMID_count": 3,
+      "rows": 162
+    }
+  ],
+  "blank_huc8": {
+    "rows": 50,
+    "first_original_row": {
+      "COMID": "16944504",
+      "Timestep": "200102",
+      "Station_ID": "",
+      "Station_name": "Withlacoochee-6",
+      "Lat_dd": "",
+      "Lon_dd": "",
+      "Station_id_600": "comb600_16944504",
+      "Flow_station_id600": "02313250",
+      "Lat_600_dd": "29.0083333",
+      "Lon_600_dd": "-82.758333",
+      "Station_id_665": "comb665_16944504",
+      "Flow_station_id665": "02313250",
+      "Lat_665_dd": "29.0083333",
+      "Lon_665_dd": "-82.758333",
+      "Station_id_530": "",
+      "Flow_station_id530": "",
+      "Lat_530_dd": "",
+      "Lon_530_dd": ""
+    }
+  },
+  "project_huc8_comparison": {
+    "huc8": [
+      "03060101",
+      "03060102",
+      "03060103",
+      "03060104",
+      "03060105",
+      "03060106",
+      "03060107"
+    ],
+    "matching_rows": 0,
+    "method": "Comparison left-pads nonempty original HUC8 text to eight digits; blank source HUC8 stays blank. Original fields and table bytes are unchanged."
+  },
+  "transport": {
+    "observed_bytes": 5261997,
+    "observed_sha256": "bf56584220a3c5c58a3e035297ed58cb9ac2bfca1c2d7a65e1d7b28ef8b9c5fc",
+    "format": "html",
+    "html_amp_entities": 100,
+    "decoded": "100 &amp; entities to original ampersands",
+    "restored_terminal": "CRLF"
+  }
+}

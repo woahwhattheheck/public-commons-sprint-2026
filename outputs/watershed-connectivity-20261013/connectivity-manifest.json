@@ -1,0 +1,31 @@
+{
+  "schema": "upstate.watershed-connectivity-artifact/v1",
+  "source_context_id": "watershed-4592eb077b7164d59ba4",
+  "source_report_sha256": "54374a5b1feae5afda7217b27b7c796616d8654de8cc1fd8fc92831780e86e34",
+  "source_carrier": "https://tokenjunkielabs.slack.com/docs/T0BRETUB5TK/F0C8NMPGQ78",
+  "native_topology": {
+    "repository": "woahwhattheheck/public-commons-sprint-2026",
+    "ref": "b66b2a2f5ad5617ef4118ffd0240414b420040df",
+    "path": "opportunities/upstate_forever_2026/source/receptor-topology/20261013/usgs-wbd-savannah-original-topology-20261013.json",
+    "bytes": 71787,
+    "sha256": "2e57f86d1725526f00f16870b1b03d9168b41ea94de6d0016b20dfe15e89bcac",
+    "query_uri": "https://hydro.nationalmap.gov/arcgis/rest/services/wbd/MapServer/6/query?f=json&where=huc12%20LIKE%20'030601%25'&outFields=objectid%2Chuc12%2Cname%2Ctohuc%2Careasqkm%2Careaacres%2Cstates%2Chutype%2Chumod%2Cnoncontributingareasqkm&returnGeometry=false&orderByFields=huc12&resultRecordCount=2000"
+  },
+  "files": {
+    "WATERSHED_CONNECTIVITY.md": {
+      "path": "WATERSHED_CONNECTIVITY.md",
+      "bytes": 9026,
+      "sha256": "d6ed85cab75d9f1f1e036532ab2b0a6e6190e468181588cd6fb83babbc18ba59"
+    },
+    "watershed-connectivity-217.csv": {
+      "path": "watershed-connectivity-217.csv",
+      "bytes": 111728,
+      "sha256": "3f25af3b660a0949d01218c7cfb1fcb48be7e5092641f35da3be2921c47debfc"
+    },
+    "watershed-connectivity-summary.json": {
+      "path": "watershed-connectivity-summary.json",
+      "bytes": 36440,
+      "sha256": "00a94474c5b24370b05b3c1dd22afd5313b84563b5da02d030b3979976212b44"
+    }
+  }
+}

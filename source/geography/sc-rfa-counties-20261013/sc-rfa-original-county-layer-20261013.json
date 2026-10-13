@@ -1,0 +1,537 @@
+{
+  "currentVersion" : 12, 
+  "id" : 4, 
+  "name" : "County_Polygons_Status_CBApp", 
+  "type" : "Feature Layer", 
+  "serviceItemId" : "4d6b75823d5a4ddbb42e859f90a298e9", 
+  "cacheMaxAge" : 3600, 
+  "displayField" : "CountyName", 
+  "description" : "Each county boundary will be re-established through the South Carolina Geodetic Survey. As each line is updated through the code of law and subitted by a sealed plat that represents the true boundary, these boundaries will be updated per their updated geometries. For more infomriaotin please visit the URL. Last update 5/3/23(https://www.scstatehouse.gov/query.php?search=DOC&amp;searchtext=County%20Boundary&amp;category=CODEOFLAWS&amp;conid=37508785&amp;result_pos=0&amp;keyval=449&amp;numrows=10)", 
+  "copyrightText" : "Revenue and Fiscal Affairs Office, South Carolina Geodetic Survey, GIS Section, Mapping and Operations", 
+  "defaultVisibility" : true, 
+  "editingInfo" : {
+    "lastEditDate" : 1773347788925, 
+    "schemaLastEditDate" : 1773347788925, 
+    "dataLastEditDate" : 1773347788925
+  }, 
+  "relationships" : [], 
+  "isDataVersioned" : false, 
+  "hasContingentValuesDefinition" : false, 
+  "supportsAppend" : true, 
+  "supportsCalculate" : true, 
+  "supportsASyncCalculate" : true, 
+  "supportsTruncate" : true, 
+  "supportsAttachmentsByUploadId" : true, 
+  "supportsAttachmentsResizing" : true, 
+  "supportsRollbackOnFailureParameter" : true, 
+  "supportsStatistics" : true, 
+  "supportsExceedsLimitStatistics" : true, 
+  "supportsAdvancedQueries" : true, 
+  "supportsValidateSql" : true, 
+  "supportsCoordinatesQuantization" : true, 
+  "supportsLayerOverrides" : true, 
+  "supportsTilesAndBasicQueriesMode" : true, 
+  "supportsFieldDescriptionProperty" : true, 
+  "supportsQuantizationEditMode" : true, 
+  "supportsColumnStoreIndex" : true, 
+  "supportsApplyEditsWithGlobalIds" : false, 
+  "supportsMultiScaleGeometry" : true, 
+  "supportsReturningQueryGeometry" : true, 
+  "enableNullGeometry" : false, 
+  "hasGeometryProperties" : true, 
+  "geometryProperties" : 
+  {
+    "shapeAreaFieldName" : "Shape__Area", 
+    "shapeLengthFieldName" : "Shape__Length", 
+    "units" : "esriFeet"
+  }, 
+  "advancedQueryCapabilities" : {
+    "supportsPagination" : true, 
+    "supportsPaginationOnAggregatedQueries" : true, 
+    "supportsQueryRelatedPagination" : true, 
+    "supportsQueryWithDistance" : true, 
+    "supportsOutDistance" : true, 
+    "supportsReturningQueryExtent" : true, 
+    "supportsStatistics" : true, 
+    "supportsOrderBy" : true, 
+    "supportsDistinct" : true, 
+    "supportsQueryWithResultType" : true, 
+    "supportsSqlExpression" : true, 
+    "supportsTimeRelation" : true, 
+    "supportsAdvancedQueryRelated" : true, 
+    "supportsCountDistinct" : true, 
+    "supportsPercentileStatistics" : true, 
+    "supportsApproxPercentileStatistics" : true, 
+    "supportsSpatialAggregationStatistics" : true, 
+    "supportsTrueCurve" : true, 
+    "supportedSpatialAggregationStatistics" : [
+      "EnvelopeAggregate", 
+      "CentroidAggregate", 
+      "ConvexHullAggregate"
+    ], 
+    "supportsLod" : true, 
+    "supportsQueryWithLodSR" : false, 
+    "supportedLodTypes" : [
+      "geohash"
+    ], 
+    "supportsReturningGeometryCentroid" : true, 
+    "supportsReturningGeometryEnvelope" : true, 
+    "supportsReturningGeometryProperties" : true, 
+    "supportsQueryWithDatumTransformation" : true, 
+    "supportsCurrentUserQueries" : true, 
+    "supportsHavingClause" : true, 
+    "supportsOutFieldSQLExpression" : true, 
+    "supportsMaxRecordCountFactor" : true, 
+    "supportsTopFeaturesQuery" : true, 
+    "supportsDisjointSpatialRel" : true, 
+    "supportsQueryWithCacheHint" : true, 
+    "supportedOperationsWithCacheHint" : [
+      "query", 
+      "queryTopFilter", 
+      "queryAnalytics", 
+      "queryAttachments", 
+      "queryRelated", 
+      "queryBins", 
+      "queryPivot"
+    ], 
+    "supportsQueryAnalytic" : true, 
+    "supportsQueryPivot" : true, 
+    "supportsQueryBins" : true, 
+    "supportsDefaultSR" : true, 
+    "supportsTranslations" : false, 
+    "supportsAggIds" : true, 
+    "supportsQueryWithCollation" : true, 
+    "supportsISODOW" : true, 
+    "supportsISOWeek" : true, 
+    "supportsFullTextSearch" : true, 
+    "fullTextSearchCapabilities" : {
+      "supportsAccentSensitivity" : true, 
+      "supportsStopWords" : true, 
+      "supportsSearchOperator" : true, 
+      "supportsOperator" : true
+    }
+  }, 
+  "advancedQueryAnalyticCapabilities" : {
+    "supportsLinearRegression" : true, 
+    "supportsTrendlineRegression" : true, 
+    "supportsAsync" : true, 
+    "supportsPercentileAnalytic" : true
+  }, 
+  "queryBinsCapabilities" : {
+    "supportsAsync" : true, 
+    "supportsAutoIntervalBin" : true, 
+    "supportsFixedIntervalBin" : true, 
+    "supportsFixedBoundariesBin" : true, 
+    "supportsDateBin" : true, 
+    "supportsClassificationBin" : true, 
+    "supportsStackBy" : true, 
+    "supportsSplitBy" : true, 
+    "supportsFirstDayOfWeek" : true, 
+    "supportsSnapToData" : true, 
+    "supportsReturnFullIntervalBin" : true, 
+    "supportsReturnStackValueRange" : true, 
+    "supportsNormalization" : true, 
+    "supportedStatisticTypes" : [
+      "COUNT", 
+      "SUM", 
+      "AVG", 
+      "VAR", 
+      "STDDEV", 
+      "MIN", 
+      "MAX", 
+      "PERCENTILE_CONT", 
+      "PERCENTILE_DISC", 
+      "APPROX_PERCENTILE_CONT", 
+      "APPROX_PERCENTILE_DISC", 
+      "CentroidAggregate", 
+      "EnvelopeAggregate", 
+      "ConvexHullAggregate"
+    ], 
+    "supportedNormalizationTypes" : [
+      "boxCox", 
+      "field", 
+      "inverse", 
+      "log", 
+      "naturalLog", 
+      "percentOfTotal", 
+      "squareRoot"
+    ]
+  }, 
+  "supportedOperationsWithCollation" : "query,addField,updateField", 
+  "advancedEditingCapabilities" : {
+    "supportedSqlFormatsInCalculate" : [
+      "standard"
+    ], 
+    "supportsAsyncApplyEdits" : true, 
+    "supportsReturnEditResults" : true, 
+    "supportsApplyEditsbyUploadID" : true, 
+    "supportedApplyEditsUploadIDFormats" : "JSON,PBF", 
+    "supportsTranslation" : false, 
+    "supportsMaxTranslations" : 10
+  }, 
+  "infoInEstimates" : [
+    "extent", 
+    "count"
+  ], 
+  "useStandardizedQueries" : true, 
+  "geometryType" : "esriGeometryPolygon", 
+  "minScale" : 14743050, 
+  "maxScale" : 249270, 
+  "extent" : {
+    "xmin" : 1292512.9255249351, 
+    "ymin" : 56353.008530184627, 
+    "xmax" : 2759373.4274934381, 
+    "ymax" : 1233454.068241477, 
+    "spatialReference" : {
+      "wkid" : 103146, 
+      "latestWkid" : 6570
+    }
+  }, 
+  "spatialReference" : {
+    "wkid" : 103146, 
+    "latestWkid" : 6570
+  }, 
+  "drawingInfo":{"renderer":{"type":"uniqueValue","field1":"BoundaryComplete","uniqueValueGroups":[{"heading":"BoundaryComplete","classes":[{"label":"<Null>","description":"<Null>","symbol":{"type":"esriSFS","style":"esriSFSSolid","color":[255,255,255,102],"outline":{"type":"esriSLS","style":"esriSLSSolid","color":[110,110,110,255],"width":0.7}},"values":[["<Null>"]]},{"label":"1","description":"1","symbol":{"type":"esriSFS","style":"esriSFSSolid","color":[211,255,190,102],"outline":{"type":"esriSLS","style":"esriSLSSolid","color":[110,110,110,255],"width":0.7}},"values":[["1"]]}]}],"uniqueValueInfos":[{"symbol":{"type":"esriSFS","style":"esriSFSSolid","color":[255,255,255,102],"outline":{"type":"esriSLS","style":"esriSLSSolid","color":[110,110,110,255],"width":0.7}},"value":"<Null>","label":"<Null>"},{"symbol":{"type":"esriSFS","style":"esriSFSSolid","color":[211,255,190,102],"outline":{"type":"esriSLS","style":"esriSLSSolid","color":[110,110,110,255],"width":0.7}},"value":"1","label":"1"}],"fieldDelimiter":",","authoringInfo":{"colorRamp":{"type":"multipart","colorRamps":[{"type":"algorithmic","algorithm":"esriCIELabAlgorithm","fromColor":[193,252,187,255],"toColor":[193,252,187,255]},{"type":"algorithmic","algorithm":"esriCIELabAlgorithm","fromColor":[216,179,252,255],"toColor":[216,179,252,255]},{"type":"algorithmic","algorithm":"esriCIELabAlgorithm","fromColor":[252,201,187,255],"toColor":[252,201,187,255]},{"type":"algorithmic","algorithm":"esriCIELabAlgorithm","fromColor":[187,235,252,255],"toColor":[187,235,252,255]},{"type":"algorithmic","algorithm":"esriCIELabAlgorithm","fromColor":[252,241,184,255],"toColor":[252,241,184,255]},{"type":"algorithmic","algorithm":"esriCIELabAlgorithm","fromColor":[238,215,252,255],"toColor":[238,215,252,255]},{"type":"algorithmic","algorithm":"esriCIELabAlgorithm","fromColor":[192,252,229,255],"toColor":[192,252,229,255]},{"type":"algorithmic","algorithm":"esriCIELabAlgorithm","fromColor":[252,182,207,255],"toColor":[252,182,207,255]},{"type":"algorithmic","algorithm":"esriCIELabAlgorithm","fromColor":[192,204,252,255],"toColor":[192,204,252,255]},{"type":"algorithmic","algorithm":"esriCIELabAlgorithm","fromColor":[233,252,215,255],"toColor":[233,252,215,255]},{"type":"algorithmic","algorithm":"esriCIELabAlgorithm","fromColor":[252,234,210,255],"toColor":[252,234,210,255]},{"type":"algorithmic","algorithm":"esriCIELabAlgorithm","fromColor":[252,184,240,255],"toColor":[252,184,240,255]},{"type":"algorithmic","algorithm":"esriCIELabAlgorithm","fromColor":[252,215,225,255],"toColor":[252,215,225,255]}]}}},"scaleSymbols":true,"transparency":0,"labelingInfo":null}, 
+  "allowGeometryUpdates" : true, 
+  "trueCurveSupportMode" : "OGC", 
+  "supportedCurveTypes" : [
+    "esriGeometryCircularArc"
+  ], 
+  "supportedTrueCurvePbfFeatureEncodings" : [
+    "esriCompressedShapeBuffer", 
+    "esriDefault"
+  ], 
+  "allowTrueCurvesUpdates" : true, 
+  "onlyAllowTrueCurveUpdatesByTrueCurveClients" : false, 
+  "hasAttachments" : false, 
+  "htmlPopupType" : "esriServerHTMLPopupTypeAsHTMLText", 
+  "hasMetadata" : true, 
+  "hasM" : false, 
+  "hasZ" : false, 
+  "objectIdField" : "OBJECTID", 
+  "uniqueIdField" : 
+  {
+    "name" : "OBJECTID", 
+    "isSystemMaintained" : true
+  }, 
+  "globalIdField" : "", 
+  "typeIdField" : "BoundaryComplete", 
+  "collation" : {
+    "locale" : "neutral", 
+    "caseSensitive" : false, 
+    "accentSensitive" : true
+  }, 
+  "fields" : [
+    {
+      "name" : "OBJECTID", 
+      "type" : "esriFieldTypeOID", 
+      "alias" : "OBJECTID", 
+      "sqlType" : "sqlTypeOther", 
+      "nullable" : false, 
+      "editable" : false, 
+      "domain" : null, 
+      "defaultValue" : null
+    }, 
+    {
+      "name" : "CountyName", 
+      "type" : "esriFieldTypeString", 
+      "alias" : "CountyName", 
+      "sqlType" : "sqlTypeOther", 
+      "length" : 35, 
+      "nullable" : true, 
+      "editable" : true, 
+      "domain" : null, 
+      "defaultValue" : null
+    }, 
+    {
+      "name" : "ID", 
+      "type" : "esriFieldTypeSmallInteger", 
+      "alias" : "ID", 
+      "sqlType" : "sqlTypeOther", 
+      "nullable" : true, 
+      "editable" : true, 
+      "domain" : null, 
+      "defaultValue" : null
+    }, 
+    {
+      "name" : "FIPS", 
+      "type" : "esriFieldTypeString", 
+      "alias" : "FIPS", 
+      "sqlType" : "sqlTypeOther", 
+      "length" : 5, 
+      "nullable" : true, 
+      "editable" : true, 
+      "domain" : null, 
+      "defaultValue" : null
+    }, 
+    {
+      "name" : "DateUpdate", 
+      "type" : "esriFieldTypeDateOnly", 
+      "alias" : "DateUpdate", 
+      "sqlType" : "sqlTypeOther", 
+      "nullable" : true, 
+      "editable" : true, 
+      "domain" : null, 
+      "defaultValue" : null
+    }, 
+    {
+      "name" : "State", 
+      "type" : "esriFieldTypeString", 
+      "alias" : "State", 
+      "sqlType" : "sqlTypeOther", 
+      "length" : 15, 
+      "nullable" : true, 
+      "editable" : true, 
+      "domain" : null, 
+      "defaultValue" : null
+    }, 
+    {
+      "name" : "BoundaryComplete", 
+      "type" : "esriFieldTypeInteger", 
+      "alias" : "BoundaryComplete", 
+      "sqlType" : "sqlTypeOther", 
+      "nullable" : true, 
+      "editable" : true, 
+      "domain" : null, 
+      "defaultValue" : null
+    }, 
+    {
+      "name" : "Projects_Associated_With_County", 
+      "type" : "esriFieldTypeString", 
+      "alias" : "Projects Associated With County", 
+      "sqlType" : "sqlTypeOther", 
+      "length" : 255, 
+      "nullable" : true, 
+      "editable" : true, 
+      "domain" : null, 
+      "defaultValue" : null
+    }, 
+    {
+      "name" : "url2", 
+      "type" : "esriFieldTypeString", 
+      "alias" : "url2", 
+      "sqlType" : "sqlTypeOther", 
+      "length" : 255, 
+      "nullable" : true, 
+      "editable" : true, 
+      "domain" : null, 
+      "defaultValue" : null
+    }, 
+    {
+      "name" : "url3", 
+      "type" : "esriFieldTypeString", 
+      "alias" : "url3", 
+      "sqlType" : "sqlTypeOther", 
+      "length" : 255, 
+      "nullable" : true, 
+      "editable" : true, 
+      "domain" : null, 
+      "defaultValue" : null
+    }, 
+    {
+      "name" : "url4", 
+      "type" : "esriFieldTypeString", 
+      "alias" : "url4", 
+      "sqlType" : "sqlTypeOther", 
+      "length" : 255, 
+      "nullable" : true, 
+      "editable" : true, 
+      "domain" : null, 
+      "defaultValue" : null
+    }, 
+    {
+      "name" : "url5", 
+      "type" : "esriFieldTypeString", 
+      "alias" : "url5", 
+      "sqlType" : "sqlTypeOther", 
+      "length" : 255, 
+      "nullable" : true, 
+      "editable" : true, 
+      "domain" : null, 
+      "defaultValue" : null
+    }, 
+    {
+      "name" : "url6", 
+      "type" : "esriFieldTypeString", 
+      "alias" : "url6", 
+      "sqlType" : "sqlTypeOther", 
+      "length" : 255, 
+      "nullable" : true, 
+      "editable" : true, 
+      "domain" : null, 
+      "defaultValue" : null
+    }, 
+    {
+      "name" : "url7", 
+      "type" : "esriFieldTypeString", 
+      "alias" : "url7", 
+      "sqlType" : "sqlTypeOther", 
+      "length" : 255, 
+      "nullable" : true, 
+      "editable" : true, 
+      "domain" : null, 
+      "defaultValue" : null
+    }, 
+    {
+      "name" : "Shape__Area", 
+      "type" : "esriFieldTypeDouble", 
+      "alias" : "Shape__Area", 
+      "sqlType" : "sqlTypeDouble", 
+      "nullable" : true, 
+      "editable" : false, 
+      "domain" : null, 
+      "defaultValue" : null
+    }, 
+    {
+      "name" : "Shape__Length", 
+      "type" : "esriFieldTypeDouble", 
+      "alias" : "Shape__Length", 
+      "sqlType" : "sqlTypeDouble", 
+      "nullable" : true, 
+      "editable" : false, 
+      "domain" : null, 
+      "defaultValue" : null
+    }
+  ], 
+  "indexes" : [
+    {
+      "name" : "PK__COUNTY_P__F4B70D85DF07FAB8", 
+      "fields" : "OBJECTID", 
+      "isAscending" : true, 
+      "isUnique" : true, 
+      "description" : "", 
+      "indexType" : "Attribute"
+    }, 
+    {
+      "name" : "user_62915.COUNTY_POLYGONS_CBAPP_COUNTY_POLYGONS_CBAPP2_Shape_sidx", 
+      "fields" : "Shape", 
+      "isAscending" : true, 
+      "isUnique" : false, 
+      "description" : "", 
+      "indexType" : "Spatial"
+    }, 
+    {
+      "name" : "Shape__Area_Index", 
+      "fields" : "Shape__Area", 
+      "isAscending" : true, 
+      "isUnique" : false, 
+      "description" : "", 
+      "indexType" : "Attribute"
+    }, 
+    {
+      "name" : "Shape__Length_Index", 
+      "fields" : "Shape__Length", 
+      "isAscending" : true, 
+      "isUnique" : false, 
+      "description" : "", 
+      "indexType" : "Attribute"
+    }
+  ], 
+  "dateFieldsTimeReference" : {
+    "timeZone" : "UTC", 
+    "timeZoneIANA" : "Etc/UTC", 
+    "respectsDaylightSaving" : false
+  }, 
+  "preferredTimeReference" : {
+    "timeZone" : "Eastern Standard Time", 
+    "timeZoneIANA" : "America/New_York", 
+    "respectsDaylightSaving" : true
+  }, 
+  "types" : [
+    {
+      "id" : null, 
+      "name" : "\u003cNull\u003e", 
+      "domains" : 
+      {
+      }, 
+      "templates" : [
+        {
+          "name" : "\u003cNull\u003e", 
+          "description" : "", 
+          "drawingTool" : "esriFeatureEditToolPolygon", 
+          "prototype" : {
+            "attributes" : {
+              "url7" : null, 
+              "CountyName" : null, 
+              "ID" : null, 
+              "FIPS" : null, 
+              "DateUpdate" : null, 
+              "State" : null, 
+              "BoundaryComplete" : null, 
+              "Projects_Associated_With_County" : null, 
+              "url2" : null, 
+              "url3" : null, 
+              "url4" : null, 
+              "url5" : null, 
+              "url6" : null
+            }
+          }
+        }
+      ]
+    }, 
+    {
+      "id" : 1, 
+      "name" : "1", 
+      "domains" : 
+      {
+      }, 
+      "templates" : [
+        {
+          "name" : "1", 
+          "description" : "", 
+          "drawingTool" : "esriFeatureEditToolPolygon", 
+          "prototype" : {
+            "attributes" : {
+              "State" : null, 
+              "url7" : null, 
+              "CountyName" : null, 
+              "ID" : null, 
+              "FIPS" : null, 
+              "DateUpdate" : null, 
+              "BoundaryComplete" : 1, 
+              "Projects_Associated_With_County" : null, 
+              "url2" : null, 
+              "url3" : null, 
+              "url4" : null, 
+              "url5" : null, 
+              "url6" : null
+            }
+          }
+        }
+      ]
+    }
+  ], 
+  "templates" : [], 
+  "supportedQueryFormats" : "JSON, geoJSON, PBF", 
+  "supportedAppendFormats" : "sqlite,geoPackage,shapefile,filegdb,featureCollection,geojson,csv,excel,jsonl,featureService,pbf", 
+  "supportedAppendSourceFilterFormats" : "sqlite,geoPackage,shapefile,filegdb,featureService", 
+  "supportedExportFormats" : "csv,shapefile,sqlite,geoPackage,filegdb,featureCollection,geojson,kml,excel,parquet", 
+  "supportedConvertFileFormats" : "JSON,PBF,Parquet", 
+  "supportedConvertContentFormats" : "LayerEditCollection,FeatureCollection", 
+  "supportedSpatialRelationships" : [
+    "esriSpatialRelIntersects", 
+    "esriSpatialRelContains", 
+    "esriSpatialRelCrosses", 
+    "esriSpatialRelEnvelopeIntersects", 
+    "esriSpatialRelIndexIntersects", 
+    "esriSpatialRelOverlaps", 
+    "esriSpatialRelTouches", 
+    "esriSpatialRelWithin", 
+    "esriSpatialRelDisjoint", 
+    "esriSpatialRelRelation"
+  ], 
+  "guidFormat" : "", 
+  "supportsContingentValues" : true, 
+  "supportsEditingContingentValues" : true, 
+  "supportedContingentValuesFormats" : "JSON, PBF", 
+  "supportsFieldGroups" : true, 
+  "supportedSyncDataOptions" : 260, 
+  "hasStaticData" : false, 
+  "maxRecordCount" : 2000, 
+  "standardMaxRecordCount" : 2000, 
+  "maxIdsCount" : 1000000, 
+  "standardMaxRecordCountNoGeometry" : 32000, 
+  "tileMaxRecordCount" : 4000, 
+  "maxRecordCountFactor" : 1, 
+  "capabilities" : "Query,Extract"
+}

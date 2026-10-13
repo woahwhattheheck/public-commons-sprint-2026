@@ -1,0 +1,116 @@
+{
+  "schema": "upstate.parcel-criteria-interval-integration/v1",
+  "id": "ES-ORIGINAL-SOURCE-PARCEL-INTERVALS-20261013",
+  "created_at": "2026-10-13T01:55:13Z",
+  "repository": "woahwhattheheck/public-commons-sprint-2026",
+  "base_path": "opportunities/upstate_forever_2026",
+  "complete_acquisition_predecessor": "F0C8K43TMEH",
+  "complete_conservation_predecessor": "F0C8TUMU328",
+  "predecessor_files": {
+    "source_tools/parcel_criteria.py": {
+      "bytes": 69645,
+      "sha256": "07710f48afcf7e5725c058fe82498669110081144846a3555ed707ec839b9f41"
+    },
+    "model/keowee_priority.py": {
+      "bytes": 34855,
+      "sha256": "cb7c6f9aa1d193c594b9427cb80ddedc9a209924e4347f5759a54e51151341dd"
+    },
+    "source/parcel-criteria-sources-20261013.json": {
+      "bytes": 18204,
+      "sha256": "4b2276fb7c976f08ac11d6d95a96af0ed806a914442deda5126c30916f3b57a0"
+    }
+  },
+  "successor_files": {
+    "source_tools/parcel_criteria.py": {
+      "bytes": 75726,
+      "sha256": "9b4881b0a6da0dcedfa9f2a4bb2125c216971e38479c91f0527b1497b11f76b9"
+    },
+    "model/keowee_priority.py": {
+      "bytes": 40803,
+      "sha256": "f83004ffaf97a2f5182fffb632d8ece6570d117983e210b084ccf41da1000d7f"
+    },
+    "source/parcel-criteria-sources-20261013.json": {
+      "bytes": 21136,
+      "sha256": "f4e925fc839f5c814ecaf785aa4ad8762f950ee94d4f431d269b6a545656f79a"
+    },
+    "source_tools/PARCEL_CRITERIA_INTERVALS.md": {
+      "bytes": 15899,
+      "sha256": "fadf7251a0e0bcce5c95a0d49d5dd2ecbf41e720d5054671bd6c8ccb823f9fab"
+    }
+  },
+  "acquisition": {
+    "paths": [
+      "source_tools/soil_floodplain_sources.py",
+      "source/soil-floodplain-source-profile-20261013.json",
+      "source_tools/SOIL_FLOODPLAIN_SOURCES.md",
+      "source/soil-floodplain-integration-20261013.json"
+    ],
+    "callable": "source_tools.soil_floodplain_sources.capture(workspace, selection_or_operation_id)",
+    "resume": "capture(workspace, operation_id, retry_failed=True)",
+    "criteria_handoff": "source_tools.parcel_criteria.prepare(workspace, capture_result['parcel_criteria_selection'])",
+    "source_roles": [
+      "HYDRIC_SOILS",
+      "FLOODPLAIN_ONE_PERCENT"
+    ],
+    "external_dependency": "source_tools/soil_sources.py from the current cumulative original soil component F0C8MNY5RN2",
+    "operation_root": "soil-floodplain-sources/<id>"
+  },
+  "compatible_api": {
+    "parcel_criteria_prepare": "prepare(workspace, {'study_id': actual_id, 'sources': actual_role_choices}) or prepare(workspace, saved_operation_id)",
+    "criteria_table_schema": "upstate.parcel-criteria/v1",
+    "row_extension": "rows[].metric_bounds",
+    "result_extension": "numeric_intervals and coverage.fields.<metric> interval counts/limits",
+    "point_extension": "candidate.point_score.metric_bounds",
+    "criterion_extension": [
+      "value_interval",
+      "evaluation",
+      "points_determined_by_interval"
+    ],
+    "source_context": "Existing original parcel/reporting geometry-context binding is retained.",
+    "candidate_and_portfolio": "Existing eligible, score, score_components, rank, selected_ids and selected_union contracts remain usable.",
+    "selected_models": "Current selected NDR-only, SDR-only and combined model quantities remain on their maintained conservation path."
+  },
+  "interval_method": {
+    "geometry": "lower = area(P intersection O); upper = lower + area(P outside (O union C)), capped at area(P)",
+    "P": "Bound original full parcel for parcel_acres; retained reporting-parcel intersection for hydric/riparian acreage.",
+    "O": "Unioned positively selected original source footprint.",
+    "C": "Actual selected certainty geometry, separate from an original query mask.",
+    "closed_endpoints": true,
+    "full_parcel_size": true,
+    "hydric_component_percentage_allocation": false,
+    "riparian_partial_union": "Keep any positively mapped constant-buffer or variable-riparian component as a subset of the published union.",
+    "threshold_application": "Evaluate endpoints and every published step inside the interval. Exact points follow if all attainable values receive the same contribution."
+  },
+  "artifact_flow": {
+    "canonical": "criteria.json retains exact IDs, null unresolved acreage, intervals, evidence and original geometry binding.",
+    "csv": "Numeric <metric>_lower/<metric>_upper columns and full metric_bounds JSON.",
+    "geopackage": "Original and reporting parcel layers contain numeric endpoints and full interval descriptor.",
+    "workspace_import": "Entry scope retains numeric_intervals alongside study_id, geometry_context and coverage."
+  },
+  "source_references": [
+    {
+      "uri": "https://www.des.sc.gov/sites/des/files/Documents/BOW/WaterQuality/WPLakeKeowee.pdf",
+      "printed_pages": [
+        139,
+        140,
+        142
+      ]
+    },
+    {
+      "uri": "https://sdmdataaccess.sc.egov.usda.gov/documents/TableColumnDescriptionsReport.pdf"
+    },
+    {
+      "uri": "https://sdmdataaccess.sc.egov.usda.gov/documents/AdvancedQueries.html"
+    }
+  ],
+  "receiving": {
+    "install": "Decode the complete files, compile the Python sources before replacing their exact maintained predecessors, and preserve the existing current soil transport/overlay dependencies.",
+    "current_work": "Run the actual retained original source operation, prepare its parcel criteria, then build the selected published-practice study through the existing Conservation operator.",
+    "return_artifacts": [
+      "original acquisition operation/result and imported collection identities",
+      "actual criteria table, coverage and two-layer GeoPackage",
+      "saved point study and criterion intervals/points in candidate details"
+    ],
+    "implementation_identity": "Successor source bytes create a distinct preparation identity; completed prior studies remain retained and newly submitted requests use the successor."
+  }
+}

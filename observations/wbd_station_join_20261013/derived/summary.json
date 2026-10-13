@@ -1,0 +1,157 @@
+{
+  "schema": "upstate.current-wbd-observation-join/v1",
+  "input_point_count": 197,
+  "unique_input_geometries": 196,
+  "captured_geometry_count": 196,
+  "completed_point_count": 197,
+  "pending_point_ids": [],
+  "retained_domain_count": 217,
+  "matched_feature_count": 197,
+  "unique_current_match_count": 197,
+  "no_current_match_points": [],
+  "multiple_current_match_points": [],
+  "listed_huc_differences": [],
+  "unique_matches_outside_retained_domain": [
+    "usgs_gauge:USGS-02196690",
+    "usgs_gauge:USGS-02196835",
+    "usgs_gauge:USGS-021968385",
+    "usgs_gauge:USGS-02197000",
+    "usgs_gauge:USGS-02197020",
+    "usgs_gauge:USGS-021973269",
+    "usgs_gauge:USGS-02197500",
+    "usgs_gauge:USGS-02196690:nldi_indexed",
+    "usgs_gauge:USGS-02196835:nldi_indexed",
+    "usgs_gauge:USGS-021968385:nldi_indexed",
+    "usgs_gauge:USGS-02197000:nldi_indexed",
+    "usgs_gauge:USGS-02197020:nldi_indexed",
+    "usgs_gauge:USGS-021973269:nldi_indexed",
+    "usgs_gauge:USGS-02197500:nldi_indexed"
+  ],
+  "outfall_coordinate_comparisons": [
+    {
+      "entity_id": "SC0000477:001",
+      "completed_variants": 3,
+      "variants": [
+        {
+          "point_id": "npdes_outfall:SC0000477:001:agency_projected",
+          "variant": "agency_projected",
+          "current_huc12s": [
+            "030601010602"
+          ],
+          "response_sha256": "ff8cb4907e7bcef2b0ad417ea77d52908426d5265a966db03e8b6a5cec4408fc"
+        },
+        {
+          "point_id": "npdes_outfall:SC0000477:001:nldi_indexed",
+          "variant": "nldi_indexed",
+          "current_huc12s": [
+            "030601010602"
+          ],
+          "response_sha256": "ff8cb4907e7bcef2b0ad417ea77d52908426d5265a966db03e8b6a5cec4408fc"
+        },
+        {
+          "point_id": "npdes_outfall:SC0000477:001:original_state",
+          "variant": "original_state",
+          "current_huc12s": [
+            "030601010602"
+          ],
+          "response_sha256": "ff8cb4907e7bcef2b0ad417ea77d52908426d5265a966db03e8b6a5cec4408fc"
+        }
+      ],
+      "all_three_unique_agree": true
+    },
+    {
+      "entity_id": "SC0035700:001",
+      "completed_variants": 3,
+      "variants": [
+        {
+          "point_id": "npdes_outfall:SC0035700:001:agency_projected",
+          "variant": "agency_projected",
+          "current_huc12s": [
+            "030601010602"
+          ],
+          "response_sha256": "ff8cb4907e7bcef2b0ad417ea77d52908426d5265a966db03e8b6a5cec4408fc"
+        },
+        {
+          "point_id": "npdes_outfall:SC0035700:001:nldi_indexed",
+          "variant": "nldi_indexed",
+          "current_huc12s": [
+            "030601010602"
+          ],
+          "response_sha256": "ff8cb4907e7bcef2b0ad417ea77d52908426d5265a966db03e8b6a5cec4408fc"
+        },
+        {
+          "point_id": "npdes_outfall:SC0035700:001:original_state",
+          "variant": "original_state",
+          "current_huc12s": [
+            "030601010602"
+          ],
+          "response_sha256": "ff8cb4907e7bcef2b0ad417ea77d52908426d5265a966db03e8b6a5cec4408fc"
+        }
+      ],
+      "all_three_unique_agree": true
+    },
+    {
+      "entity_id": "SC0042994:001",
+      "completed_variants": 3,
+      "variants": [
+        {
+          "point_id": "npdes_outfall:SC0042994:001:agency_projected",
+          "variant": "agency_projected",
+          "current_huc12s": [
+            "030601010601"
+          ],
+          "response_sha256": "11f965047bc98abc930fa04e5023beb9d308bf6d039e9b0fbfbf726c8cf8ea37"
+        },
+        {
+          "point_id": "npdes_outfall:SC0042994:001:nldi_indexed",
+          "variant": "nldi_indexed",
+          "current_huc12s": [
+            "030601010601"
+          ],
+          "response_sha256": "11f965047bc98abc930fa04e5023beb9d308bf6d039e9b0fbfbf726c8cf8ea37"
+        },
+        {
+          "point_id": "npdes_outfall:SC0042994:001:original_state",
+          "variant": "original_state",
+          "current_huc12s": [
+            "030601010601"
+          ],
+          "response_sha256": "11f965047bc98abc930fa04e5023beb9d308bf6d039e9b0fbfbf726c8cf8ea37"
+        }
+      ],
+      "all_three_unique_agree": true
+    },
+    {
+      "entity_id": "SC0047856:001",
+      "completed_variants": 3,
+      "variants": [
+        {
+          "point_id": "npdes_outfall:SC0047856:001:agency_projected",
+          "variant": "agency_projected",
+          "current_huc12s": [
+            "030601010602"
+          ],
+          "response_sha256": "ff8cb4907e7bcef2b0ad417ea77d52908426d5265a966db03e8b6a5cec4408fc"
+        },
+        {
+          "point_id": "npdes_outfall:SC0047856:001:nldi_indexed",
+          "variant": "nldi_indexed",
+          "current_huc12s": [
+            "030601010602"
+          ],
+          "response_sha256": "ff8cb4907e7bcef2b0ad417ea77d52908426d5265a966db03e8b6a5cec4408fc"
+        },
+        {
+          "point_id": "npdes_outfall:SC0047856:001:original_state",
+          "variant": "original_state",
+          "current_huc12s": [
+            "030601010602"
+          ],
+          "response_sha256": "ff8cb4907e7bcef2b0ad417ea77d52908426d5265a966db03e8b6a5cec4408fc"
+        }
+      ],
+      "all_three_unique_agree": true
+    }
+  ],
+  "interpretation": "Dated current USGS point intersections retain all returned polygon matches. They do not replace published assessment HUC values or establish identity with older retained domain polygon geometry. Exact CRS/x/y matches alone reuse a source query; every cohort identity is retained."
+}

@@ -29,25 +29,33 @@ from . import calibration_study_transfer as calibration_transfer
 from . import ensemble_study_transfer as ensemble_transfer, gauge_study_transfer as gauge_transfer
 from . import community_study_transfer as community_transfer
 from . import conservation_study_transfer as conservation_transfer
+from . import conservation_design_study_transfer as design_transfer
 from . import native_process_study_transfer as process_transfer
+from . import receptor_study_transfer as receptor_transfer
+from . import customer_review_study_transfer as customer_review_transfer
+from . import implementation_report_transfer as implementation_transfer
+
+from . import chemistry_study_transfer as chemistry_transfer
 
 SELECTION_SCHEMA = "upstate.study-selection/v1"
 PLAN_SCHEMA = "upstate.study-transfer-plan/v1"
 RECEIPT_SCHEMA = "upstate.study-transfer/v1"
 ROOT_KINDS = ("experiment-diagnostics", "experiments", "runs", "robust-decisions",
+              "receiving-water-plans", "receiving-water-analyses",
               *monitoring_transfer.ROOT_KINDS, *report_editions.ROOT_KINDS,
-              *community_transfer.ROOT_KINDS, *conservation_transfer.ROOT_KINDS)
+              *community_transfer.ROOT_KINDS, *receptor_transfer.ROOT_KINDS, *conservation_transfer.ROOT_KINDS,
+              *customer_review_transfer.ROOT_KINDS)
 IMMUTABLE_KINDS = ("sources", "profiles", "scenarios", "observations",
                    "observation-comparisons", *delivery_transfer.IMMUTABLE_KINDS,
                    *monitoring_transfer.IMMUTABLE_KINDS, *calibration_transfer.IMMUTABLE_KINDS,
-                   *community_transfer.IMMUTABLE_KINDS)
+                   *community_transfer.IMMUTABLE_KINDS, *customer_review_transfer.IMMUTABLE_KINDS)
 DOCUMENTS = {
     "grids": "grid.json", "runs": "run.json", "experiments": "plan.json",
     "experiment-diagnostics": "manifest.json", "comparisons": "comparison.json",
     **delivery_transfer.DOCUMENTS,
     **monitoring_transfer.DOCUMENTS,
     **report_editions.DOCUMENTS,
-    **conservation_transfer.DOCUMENTS,
+    **receptor_transfer.DOCUMENTS, **conservation_transfer.DOCUMENTS,
 }
 LOCKS = {
     "grids": ".grid.lock", "runs": ".run.lock",
@@ -55,7 +63,7 @@ LOCKS = {
     "comparisons": ".comparison.lock",
     **delivery_transfer.LOCKS,
     **report_editions.LOCKS,
-    **conservation_transfer.LOCKS,
+    **receptor_transfer.LOCKS, **conservation_transfer.LOCKS,
 }
 LABELS = {
     "experiment-diagnostics": "Scientific analyses", "experiments": "Experiment programmes",
@@ -69,8 +77,15 @@ LABELS = {
     **report_editions.LABELS,
     **calibration_transfer.LABELS,
     **community_transfer.LABELS,
-    **conservation_transfer.LABELS,
+    **receptor_transfer.LABELS, **conservation_transfer.LABELS,
+    **customer_review_transfer.LABELS,
 }
+
+# Chemistry selected-study lineage: v1
+IMMUTABLE_KINDS = (*IMMUTABLE_KINDS, *chemistry_transfer.IMMUTABLE_KINDS)
+DOCUMENTS = {**DOCUMENTS, **chemistry_transfer.DOCUMENTS}
+LOCKS = {**LOCKS, **chemistry_transfer.LOCKS}
+LABELS = {**LABELS, **chemistry_transfer.LABELS}
 
 
 def _study_key(kind, value):
@@ -146,7 +161,9 @@ def _record_path(kind, key):
 
 
 class _Closure:
-    def __init__(self, workspace, selection, *, decision_database=None, report_lineage=True):
+    def __init__(self, workspace, selection, *, decision_database=None, report_lineage=True,
+                 implementation_lineage=True, customer_review_lineage=True,
+                 report_source_keys=None):
         self.workspace = workspace
         self.root = Path(workspace.root).resolve()
         self.selection = normalise(selection)
@@ -165,6 +182,10 @@ class _Closure:
         self.report_source_records = {}
         self.scientific_report_records = {}
         self.report_lineage_enabled = report_lineage
+        self.report_source_keys = None if report_source_keys is None else frozenset(report_source_keys)
+        self.customer_review_records = {}
+        self.customer_review_lineage_enabled = customer_review_lineage
+        self.implementation_lineage_enabled = implementation_lineage
         self.external_decision_dependencies = []
 
     def add_file(self, relative, expected=None):
@@ -425,11 +446,17 @@ class _Closure:
         node = {"kind": kind, "id": key, "title": title, "state": value.get("state"),
                 "reasons": [reason]}
         self.nodes[(kind, key)] = node
-        if report_editions.visit(self, kind, key, value):
+        if customer_review_transfer.visit(self, kind, key, value):
+            pass
+        elif report_editions.visit(self, kind, key, value):
+            pass
+        elif chemistry_transfer.visit(self, kind, key, value, reason):
             pass
         elif calibration_transfer.visit(self, kind, key, value, reason):
             pass
         elif community_transfer.visit(self, kind, key, value):
+            pass
+        elif receptor_transfer.visit(self, kind, key, value, reason):
             pass
         elif conservation_transfer.visit(self, kind, key, value):
             pass
@@ -520,6 +547,8 @@ class _Closure:
                 monitoring_transfer.related(self)
                 community_transfer.related(self)
                 conservation_transfer.related(self)
+                receptor_transfer.related(self)
+                customer_review_transfer.related(self)
                 while self.pending:
                     self._visit(*self.pending.popleft())
                 if len(self.nodes) == count:
@@ -583,6 +612,8 @@ class _Closure:
             "monitoring_history": monitoring_transfer.receipt(self),
             "scientific_report_sources": report_transfer.receipt(self),
             "scientific_report_editions": report_editions.receipt(self),
+            "customer_reviews": customer_review_transfer.receipt(self),
+            "implementation_report_sources": implementation_transfer.receipt(self),
             "decision_history": {"studies": len(self.decision_records),
                                  "revisions": sum(len(row["revisions"]) for row in self.decision_records.values()),
                                  "calculations": sum(len(row["runs"]) for row in self.decision_records.values())},
@@ -596,9 +627,15 @@ def preview(workspace, selection):
 
 
 def _capture_locks(stack, closure, already):
+    for relative in chemistry_transfer.lock_paths(closure):
+        token = ("original-study-owner-lock", relative)
+        if token not in already:
+            stack.enter_context(held(closure.root / relative, blocking=False))
+            already.add(token)
+    implementation_transfer.capture_locks(stack, closure, already)
     for relative in (*monitoring_transfer.lock_paths(closure), *calibration_transfer.lock_paths(closure),
-                     *community_transfer.lock_paths(closure), *conservation_transfer.lock_paths(closure),
-                     *process_transfer.lock_paths(closure), *ensemble_transfer.lock_paths(closure),
+                     *community_transfer.lock_paths(closure), *conservation_transfer.lock_paths(closure), *receptor_transfer.lock_paths(closure),
+                     *process_transfer.lock_paths(closure), *customer_review_transfer.lock_paths(closure), *ensemble_transfer.lock_paths(closure),
                      *gauge_transfer.lock_paths(closure)):
         token = ("original-study-owner-lock", relative)
         if token not in already:
@@ -775,6 +812,8 @@ def export_study(workspace, destination, selection, *, progress=None, investigat
             from . import decision_study_transfer as decisions
             decision_database = stack.enter_context(decisions.source_snapshot(
                 workspace, directory=root.parent))
+        design_database = stack.enter_context(design_transfer.source_snapshot(
+            workspace, directory=root.parent))
         closure = _Closure(workspace, normal, decision_database=decision_database).resolve()
         original_plan = closure.plan()
         # Freeze the initially selected conversation cohort once, before its
@@ -825,7 +864,10 @@ def export_study(workspace, destination, selection, *, progress=None, investigat
             investigations, investigation_members = _captured_investigations(
                 staged, investigation_snapshot(staged, plan))
             closure.assert_unchanged()
-        snapshot_members = {**decision_members, **investigation_members}
+        design_history, design_members = design_transfer.capture(
+            workspace, staged, closure, database=design_database)
+        closure.assert_unchanged()
+        snapshot_members = {**decision_members, **investigation_members, **design_members}
         additional = {path: value for path, value in snapshot_members.items() if path not in closure.files}
         source_files = plan["files"] + len(additional)
         source_bytes = plan["bytes"] + sum(value["bytes"] for value in additional.values())
@@ -839,8 +881,13 @@ def export_study(workspace, destination, selection, *, progress=None, investigat
         }
         if closure.report_source_records:
             identity["scientific_report_sources"] = report_transfer.receipt(closure)
+        if closure.customer_review_records:
+            identity["customer_reviews"] = customer_review_transfer.receipt(closure)
         if closure.scientific_report_records:
             identity["scientific_report_editions"] = report_editions.receipt(closure)
+        implementation_sources = implementation_transfer.receipt(closure)
+        if implementation_sources:
+            identity["implementation_report_sources"] = implementation_sources
         if closure.delivery_records:
             identity["completed_deliveries"] = delivery_transfer.receipt(closure)
         if closure.monitoring_records or closure.monitoring_reports:
@@ -852,6 +899,8 @@ def export_study(workspace, destination, selection, *, progress=None, investigat
         if decision_history is not None:
             identity["decision_history"] = decision_history
             identity["external_decision_dependencies"] = plan["external_decision_dependencies"]
+        if design_history is not None:
+            identity["conservation_design_history"] = design_history
         transfer_id = digest(identity)
         receipt = {
             "schema": RECEIPT_SCHEMA, "id": transfer_id, "identity": identity,
@@ -872,9 +921,11 @@ def export_study(workspace, destination, selection, *, progress=None, investigat
             for member in [
                 *(investigations or {}).get("members", []),
                 *(decision_history or {}).get("members", []),
+                *(design_history or {}).get("members", []),
             ]
             if member["path"] in {"intelligence/investigations.sqlite3",
-                                   "robust_decisions/robust_decisions.sqlite3"}
+                                   "robust_decisions/robust_decisions.sqlite3",
+                                   "conservation-design/editor/projects.sqlite"}
         }
         result = portable.backup(
             staged, archive_path, include_intermediates=True, include_deliveries=True,
@@ -910,13 +961,21 @@ def verify_received_studies(workspace):
                 or receipt["identity"]["project_id"] != workspace.project["id"]):
             raise ValueError("The received scientific study has a different original identity.")
         closure = _Closure(workspace, receipt["identity"]["selection"],
-                           report_lineage="scientific_report_sources" in receipt["identity"]).resolve(
+                           report_lineage="scientific_report_sources" in receipt["identity"],
+                           implementation_lineage="implementation_report_sources" in receipt["identity"],
+                           customer_review_lineage="customer_reviews" in receipt["identity"],
+                           report_source_keys={(row["source_collection_id"], row["source_id"])
+                                               for row in receipt["identity"].get("scientific_report_sources", [])}).resolve(
             receipt["identity"].get("investigation_dependencies", ()))
         delivery_transfer.verify_receipt(closure, receipt["identity"].get("completed_deliveries", []))
         monitoring_history = monitoring_transfer.verify_receipt(
             closure, receipt["identity"].get("monitoring_history"))
         report_transfer.verify_receipt(closure, receipt["identity"].get("scientific_report_sources", []))
         report_editions.verify_receipt(closure, receipt["identity"].get("scientific_report_editions", []))
+        customer_reviews = customer_review_transfer.verify_receipt(
+            closure, receipt["identity"].get("customer_reviews", []))
+        implementation_sources = receipt["identity"].get("implementation_report_sources", [])
+        implementation_transfer.verify_receipt(closure, implementation_sources)
         present = set(closure.nodes)
         required = {(row["kind"], row["id"]) for row in receipt["identity"]["nodes"]}
         if not required.issubset(present):
@@ -930,23 +989,33 @@ def verify_received_studies(workspace):
         if receipt["identity"].get("decision_history") is not None:
             from .decision_study_transfer import verify_received
             decision_history = verify_received(workspace, receipt["identity"]["decision_history"])
+        design_history = design_transfer.verify(
+            workspace, receipt["identity"].get("conservation_design_history"))
         result.append({"id": receipt["id"], "title": receipt["title"],
                        "retained_records": len(required), "identity": "MATCH",
                        "investigations": history, "decision_history": decision_history,
                        "monitoring_history": monitoring_history,
+                       "conservation_design_history": design_history,
+                       "customer_reviews": customer_reviews,
+                       "implementation_report_sources": copy.deepcopy(implementation_sources),
                        "scientific_report_editions": len(receipt["identity"].get("scientific_report_editions", []))})
     return result
 
 
 def catalog(workspace, *, kind=None, query="", offset=0, limit=200):
     if kind not in (None, "", *ROOT_KINDS):
-        raise ValueError("Choose saved scientific, Monitoring, Community or Conservation studies.")
+        raise ValueError("Choose saved scientific studies or customer reviews.")
     if type(offset) is not int or offset < 0 or type(limit) is not int or limit < 1 or limit > 1000:
         raise ValueError("Use a nonnegative offset and a page size from 1 to 1000.")
     query = str(query).strip().casefold()
     rows = []
     for selected_kind in ROOT_KINDS:
         if kind and selected_kind != kind:
+            continue
+        if selected_kind in customer_review_transfer.ROOT_KINDS:
+            for row in customer_review_transfer.catalogue(workspace, selected_kind):
+                if not query or query in canonical(row).decode("utf-8").casefold():
+                    rows.append(row)
             continue
         if selected_kind in report_editions.ROOT_KINDS:
             for row in report_editions.catalogue(workspace):
@@ -961,6 +1030,11 @@ def catalog(workspace, *, kind=None, query="", offset=0, limit=200):
         if selected_kind in community_transfer.ROOT_KINDS or selected_kind in conservation_transfer.ROOT_KINDS:
             provider = community_transfer if selected_kind in community_transfer.ROOT_KINDS else conservation_transfer
             for row in provider.catalogue(workspace, selected_kind):
+                if not query or query in canonical(row).decode("utf-8").casefold():
+                    rows.append(row)
+            continue
+        if selected_kind in receptor_transfer.ROOT_KINDS:
+            for row in receptor_transfer.catalogue(workspace, selected_kind):
                 if not query or query in canonical(row).decode("utf-8").casefold():
                     rows.append(row)
             continue
@@ -982,6 +1056,8 @@ def catalog(workspace, *, kind=None, query="", offset=0, limit=200):
                 elif selected_kind == "experiments":
                     selection = value["selection"]
                     state = read_json(_member(workspace.root, selected_kind + "/" + key + "/state.json"))
+                elif selected_kind in ("receiving-water-plans", "receiving-water-analyses"):
+                    selection, state = value["identity"]["selection"], value
                 else:
                     selection, state = value["selection"], value
                 row = {"kind": selected_kind, "id": key,

@@ -1,0 +1,108 @@
+{
+  "schema": "upstate.eighteenmile-outfall-routing-capture/v1",
+  "operation_id": "UPSTATE-EIGHTEENMILE-2023-DMR-GAUGE-ROUTING-20261013",
+  "source_capture_date": "2026-10-13",
+  "load_calendar_year": 2023,
+  "gauge_id": "USGS-02186702",
+  "gauge_reported_drainage_area_sqmi": 48.6,
+  "source_files": [
+    {
+      "path": "routing/originals/gauge_reference.json",
+      "bytes": 601,
+      "sha256": "4ba9c663f4734dae1216d99564d9ae2392e7e139b5208aeaa174fa63489cb0c8",
+      "url": "https://api.water.usgs.gov/nldi/linked-data/nwissite/USGS-02186702?f=json",
+      "retained_source": "F0C8QAH0AQ2"
+    },
+    {
+      "path": "routing/originals/gauge_whole_basin.geojson",
+      "bytes": 13935,
+      "sha256": "097050d2b09e371feb2dbcf3fe1d2fba90730086db45d4a90be514706145dc88",
+      "url": "https://api.water.usgs.gov/nldi/linked-data/nwissite/USGS-02186702/basin?f=json&simplified=false&splitCatchment=false",
+      "retained_source": "F0C8QAH0AQ2",
+      "splitCatchment": false
+    },
+    {
+      "path": "routing/originals/gauge_upstream_flowlines.json",
+      "bytes": 2889,
+      "sha256": "6ce13adba6daeae9aad3c0df882fe45b387c1a9dc924ecbce46871e811f4b9ac",
+      "url": "https://api.water.usgs.gov/nldi/linked-data/nwissite/USGS-02186702/navigation/UT/flowlines?f=json&distance=100&excludeGeometry=true",
+      "upload_id": "3f8dd772-3100-8131-9fea-00b23b5f9369"
+    },
+    {
+      "path": "routing/originals/state_outfalls_wgs84.json",
+      "bytes": 1124,
+      "sha256": "ea36ea9293d44b5de33db11d7da48c6cc2b22eee016a1b8d6ddf61afdd5b15d4",
+      "url": "https://gis.des.sc.gov/gisserver/rest/services/water/Water_Permits/MapServer/21/query?objectIds=1812,2027,2036,2038&outFields=OBJECTID,PrmtPrmtNum&outSR=4326&returnGeometry=true&f=pjson",
+      "upload_id": "3f8dd772-3100-816a-b74e-00b2d3580d76"
+    },
+    {
+      "path": "routing/originals/SC0000477_hydrolocation.json",
+      "bytes": 738,
+      "sha256": "7dda475f10cd9aeec371dcb0bf460b1e02234575a9bf7965a189dd5811ac25e0",
+      "url": "https://api.water.usgs.gov/nldi/linked-data/hydrolocation?coords=POINT(-82.80060378973512%2034.65670668728633)",
+      "upload_id": "3f8dd772-3100-816d-a879-00b2fc7ea124",
+      "coordinate_basis": "Original agency-projected WGS84 outfall geometry"
+    },
+    {
+      "path": "routing/originals/SC0035700_hydrolocation.json",
+      "bytes": 725,
+      "sha256": "65416857dc18cc941edba4a1f1ac437923331464227ee281fb66f8d29cedf9ad",
+      "url": "https://api.water.usgs.gov/nldi/linked-data/hydrolocation?f=json&coords=POINT(-82.8015049%2034.6354424)",
+      "upload_id": "3f8dd772-3100-81ec-b5e0-00b2cf4cc806",
+      "coordinate_basis": "Original DES FeatrLongitude/FeatrLatitude database attributes; projected geometry retained separately"
+    },
+    {
+      "path": "routing/originals/SC0042994_hydrolocation.json",
+      "bytes": 738,
+      "sha256": "03c8e90fa588799fb51e7eb7ba870febd46b8a800cbdb753b4645e727dc03adf",
+      "url": "https://api.water.usgs.gov/nldi/linked-data/hydrolocation?f=json&coords=POINT(-82.68280376094303%2034.76220671414326)",
+      "upload_id": "3f8dd772-3100-8154-b687-00b29bbf65ad",
+      "coordinate_basis": "Original agency-projected WGS84 outfall geometry"
+    },
+    {
+      "path": "routing/originals/SC0047856_hydrolocation.json",
+      "bytes": 727,
+      "sha256": "b67163f914768c4918677625ed05f3985c21a67604858aedccc3d25ce557e4e5",
+      "url": "https://api.water.usgs.gov/nldi/linked-data/hydrolocation?coords=POINT%28-82.77138822%2034.68916633%29",
+      "upload_id": "3f8dd772-3100-81d9-b07c-00b2d1c927bf",
+      "coordinate_basis": "Original DES FeatrLongitude/FeatrLatitude database attributes; projected geometry retained separately"
+    },
+    {
+      "path": "derived/summary.json",
+      "bytes": 35142,
+      "sha256": "50d2234bc42a369ec4da7b5de1e2b045fe061ae92f0e4c6716be3eaf98722969",
+      "retained_source": "F0C8J1E75FV existing39-file edition"
+    },
+    {
+      "path": "derived/annual_loads.csv",
+      "bytes": 13416,
+      "sha256": "ef74ad35ef4882ae41f9ce0b80c17d6c37dec5af1a45f4cd7be5cb0e1351294e",
+      "retained_source": "F0C8J1E75FV existing39-file edition"
+    },
+    {
+      "path": "dmr_outfalls_2023.geojson",
+      "bytes": 11329,
+      "sha256": "07b42387abb0398e5be468fce3f28f72ce654ce4abf35fb7a2184e522c65fdf7",
+      "retained_source": "F0C8J1E75FV existing39-file edition"
+    },
+    {
+      "path": "originals/des_four_npdes_outfall_features.json",
+      "bytes": 19462,
+      "sha256": "46505b3448322549e2939e431cd4fe6b095eebbd5369c20e0612dac546c6c50e",
+      "retained_source": "F0C8J1E75FV existing39-file edition"
+    }
+  ],
+  "coordinate_basis": {
+    "SC0000477": "Original agency-projected WGS84 outfall geometry",
+    "SC0042994": "Original agency-projected WGS84 outfall geometry",
+    "SC0047856": "Original DES FeatrLongitude/FeatrLatitude database attributes; projected geometry retained separately",
+    "SC0035700": "Original DES FeatrLongitude/FeatrLatitude database attributes; projected geometry retained separately"
+  },
+  "method_sources": [
+    "https://pubs.usgs.gov/fs/2012/3068/FS12-3068.pdf",
+    "https://api.water.usgs.gov/docs/nldi/navigation/"
+  ],
+  "network_scope": "100km upstream with tributaries, original32-flowline response; whole local catchment retained separately from same-reach point ordering",
+  "delivery_scope": "Agency outfalls joined to EPA reporting features by permit; point location methods and verified flag remain original metadata",
+  "mass_scope": "Reported original effluent quantities, no river delivery or attenuation transformation"
+}

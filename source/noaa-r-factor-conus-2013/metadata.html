@@ -1,0 +1,2481 @@
+<!doctype html>
+<html lang="en">
+
+
+<head>
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-44FQGBN8G1"></script>
+  <script>
+    globalThis.dataLayer = globalThis.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-44FQGBN8G1');
+  </script>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>R-Factor for the Conterminous United States | InPort</title>
+  <meta name="description" content="The rainfall-runoff erosivity factor (R-Factor) quantifies the effects of raindrop impacts and reflects the amount and rate of runoff associated with the rai...">
+  
+  <link href="//fonts.googleapis.com/css?family=Open+Sans:400,700" rel="stylesheet">
+  <link href="//fonts.googleapis.com/css?family=Montserrat:400,600" rel="stylesheet">
+  <link rel="icon" type="image/png" href="/inport/images/inport-icon-32.png">
+  <link href="/inport/css/inport-rd.css?v=6.0.9"
+        rel="stylesheet">
+
+  
+  
+    
+  <link rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css"
+        integrity="sha512-Zcn6bjR/8RZbLEpLIeOwNtzREBAJnUKESxces60Mpoj+2okopSAcSUIUOseddDm0cxnGQzxIR7vJgsLZbdLE3w=="
+        crossorigin="anonymous"
+        referrerpolicy="no-referrer" />
+
+  
+
+  
+  
+    <script type="application/ld+json">
+    {
+      "@context" : "http://schema.org/",
+      "@type" : "Dataset",
+      "name" : "R-Factor for the Conterminous United States",
+      "description" : "The rainfall-runoff erosivity factor (R-Factor) quantifies the effects of raindrop impacts and reflects the amount and rate of runoff associated with the rain. The R-factor is one of the parameters used by the Revised Unified Soil Loss Equation (RUSLE) to estimate annual rates of erosion. This product is a raster representation of R-Factor derived from isoerodent maps published in the Agricultu...",
+      "url" : "https://www.fisheries.noaa.gov/inport/item/48224",
+      
+        "keywords" : [
+          
+            "EARTH SCIENCE > AGRICULTURE > SOILS > SOIL EROSION",
+            "EARTH SCIENCE > LAND SURFACE > EROSION/SEDIMENTATION > EROSION",
+            "EARTH SCIENCE > TERRESTRIAL HYDROSPHERE > SURFACE WATER > SURFACE WATER PROCESSES/MEASUREMENTS > RUNOFF",
+            "climatologyMeteorologyAtmosphere",
+            "Environmental Monitoring",
+            "Erosion",
+            "R-Factor",
+            "Rainfall-Runoff Erosivity",
+            "Revised Universal Soil Loss Equation",
+            "RUSLE",
+            "RUSLE2"
+          
+        ],
+      
+      "alternateName" : "R-Factor_metadata_for_CONUS",
+      
+      
+      "datePublished" : "2013-12-26",
+      
+      
+      "identifier" : [
+        {
+          "@type" : "PropertyValue",
+          "value" : "48224",
+          "propertyID" : "InPort Catalog ID"
+        }
+        
+      ],
+      
+        "temporalCoverage" : [
+          
+            "1975/1997"
+          
+        ],
+      
+      
+        "spatialCoverage" : [
+          
+            
+            
+              {
+                "@type" : "Place",
+                "geo" : {
+                  
+                  
+                    "@type" : "GeoShape",
+                    "box" : "24.5562065906 -125.325871714 48.4453282747 -66.4104121711"
+                  
+                }
+              }
+            
+            ,
+            
+              "CONTINENT > NORTH AMERICA > UNITED STATES OF AMERICA"
+            
+            
+            ,
+            
+              "Coterminous United States"
+            
+            
+            
+          
+        ],
+      
+      
+        "distribution" : [
+          
+            {
+              "@type" : "DataDownload",
+              
+              
+              
+              
+                "provider" : {
+                  "@type" : "Organization",
+                  "name" : "NOAA Office for Coastal Management (NOAA/OCM)"
+                },
+              
+              "contentUrl" : "https://coast.noaa.gov/data/digitalcoast/zip/R-Factor-CONUS.zip"
+            }
+          
+        ],
+      
+      "sourceOrganization" : {
+        "@type" : "Organization",
+        "name" : "Office for Coastal Management"
+      },
+      
+      "includedInDataCatalog" : {
+        "@type" : "DataCatalog",
+        "name" : "InPort",
+        "url" : "https://www.fisheries.noaa.gov/inport"
+      }
+    }
+  </script>
+  
+
+  
+    <!-- We participate in the US government's analytics program. See the data at analytics.usa.gov. -->
+    <script id="_fed_an_ua_tag" src="https://dap.digitalgov.gov/Universal-Federated-Analytics-Min.js?agency=DOC&subagency=NOAA&pua=UA-23806328-1&yt=true&exts=aac,arc,arj,asf,asx,bin,flv,gif,gzip,hqx,jar,mp2,msp,phps,qt,qutm,mxd,ram,sea,sit,tar,torrent,tsv,wav,wpd,xml,z"></script>
+  
+</head>
+<body>
+
+<header>
+  <div class="system-notices">
+    <div class="fixed-page-fit">
+      
+      
+    </div>
+  </div>
+
+  <div class="fixed-page-fit fixed-header-style cf">
+    <div class="logo-bar">
+      <div class="left">
+        <a href="/inport/"><img
+            class="logo" src="/inport/images/inport-logo.png"
+            width="126" height="64" alt="InPort"
+            title="InPort - NMFS Enterprise Data Management Program"></a>
+      </div>
+      <div class="right">
+
+        <div class="mobile-header-icons">
+          
+          <a href="/inport/search"><img
+              class="mobile-header-icon"
+              src="/inport/images/icons/icon-nav-search.png" width="60" height="60" alt="Search"></a>
+          <a href="/inport/help"><img
+              class="mobile-header-icon"
+              src="/inport/images/icons/icon-nav-help.png" width="60" height="60" alt="Help"></a>
+          <span id="mobileNavToggle"><img
+              class="mobile-header-icon"
+              src="/inport/images/icons/icon-nav-hamburger.png" width="60" height="60" alt="Show/Hide Menu"></span>
+        </div>
+
+        <form class="header-search-form"
+              method="get" action="/inport/q">
+          <input type="text" class="field header-search-field"
+                 aria-label="Search the InPort Catalog"
+                 name="keywords" id="quickKeywords" placeholder="Enter Keywords / Cat ID...">
+          <input type="submit" class="button small-button" value="Search">
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <nav class="fixed-page-fit fixed-header-style">
+    <div id="mobileNav" style="display: none;">
+      <ul>
+        
+        <li><a
+            href="/inport/login">Login</a></li>
+
+        
+        
+        <li>
+          <a href="/inport/organizations/nmfs">NMFS</a>
+        </li>
+
+        
+        
+        <li>
+          <a href="/inport/organizations/nos">NOS</a>
+        </li>
+
+        
+        
+        <li>
+          <a href="/inport/organizations/partners">Partners</a>
+        </li>
+
+        <li><a href="/inport/stats">Stats</a></li>
+        
+        
+        
+        <li><a
+            href="/inport/about">About InPort</a></li>
+        <li><a href="/inport/contact">Contact</a></li>
+        
+      </ul>
+    </div>
+
+    <div id="nav" class="header-bar cf">
+      <ul class="sf-menu left">
+        
+        <li>
+          <a href="/inport/login">Login</a>
+        </li>
+        <li><span>Catalog</span>
+          <ul class="submenu">
+            
+            <li>
+              <a href="/inport/organizations/nmfs">NMFS</a>
+            </li>
+            
+            <li>
+              <a href="/inport/organizations/nos">NOS</a>
+            </li>
+            
+            <li>
+              <a href="/inport/organizations/partners">Partners</a>
+            </li>
+            <li><a href="/inport/organizations">All Organizations</a></li>
+          </ul>
+        </li>
+        
+        <li><a href="/inport/search">Search</a></li>
+        <li><a href="/inport/stats">Stats</a></li>
+
+        
+
+        <li><a href="/inport/help">Help</a>
+          <ul class="submenu">
+            <li><a href="/inport/about">About InPort</a></li>
+            <li><a href="/inport/contact">Contact / Support / Training</a></li>
+            <li><a href="/inport/help">Help Guides</a></li>
+            <li><a href="/inport/help/xml-loader">InPort XML Loader</a></li>
+            <li><a href="/inport/help/components">Components</a></li>
+          </ul>
+        </li>
+
+        
+      </ul>
+
+      <div class="user-display right">
+        
+      </div>
+    </div>
+  </nav>
+</header>
+
+<main>
+  <div class="fixed-page-fit fixed-page-main">
+
+    
+  <header class="page-header">
+    
+      <div class="stat right" style="margin-left: 0.625rem; clear: right;">
+        
+          
+  <div class="stat-label">Completion Rubric</div>
+  <div class="stat-main">
+    
+    
+      <a href="/inport/item/48224/rubric/data-set-completion"
+         title="View the full Data Set Completion Rubric for this item"><span>86</span>%</a>
+    
+  </div>
+  <div class="stat-secondary">
+    <span>30.17</span> / <span>35</span>
+  </div>
+  
+  <div class="stat-secondary">
+    <a href="/inport/item/48224/rubric/data-set-completion" class="icon icon-score">View Report</a>
+  </div>
+
+        
+        
+      </div>
+    
+
+    <div class="breadcrumbs">
+      
+        
+          <a href="/inport/item/37112"
+             class="icon icon-mprj">OCM Metadata Library</a> &gt;
+        
+          <a href="/inport/item/37234"
+             class="icon icon-prj">OpenNSPECT</a> &gt;
+        
+      
+      
+    </div>
+
+    <h1 class="force-break" style="margin-top: 2px;">R-Factor for the Conterminous United States</h1>
+    <strong><span class="icon icon-ds">
+          <span>Data Set</span>
+          (<span>DS</span>)</span></strong>&nbsp;
+    |&nbsp; <strong><span>Office for Coastal Management</span>
+    (<span>OCM</span>)</strong><br>
+    <span title="The Globally Unique IDentifier (GUID) uniquely identifies InPort records in external systems. It is derived from the InPort namespace and the Catalog Item ID.">GUID: <span>gov.noaa.nmfs.inport:48224</span></span>&nbsp;
+    |&nbsp; Updated: <span>February 20, 2024</span>&nbsp;
+    
+    |&nbsp; <span>Published / External</span>&nbsp;
+    
+
+  </header>
+
+
+    
+  <div class="page-header-bar cf">
+    <ul class="page-header-options left">
+      
+      <li>
+        <span id="viewAsButton"><span class="icon icon-menu-arrow">View As</span></span>
+        <ul class="options-menu" id="viewAsMenu" style="display: none;">
+          <li>
+            <a href="/inport/item/48224/full-list" title="View Catalog Item in Full List format"><span class="icon icon-full-list">Full List View</span></a>
+          </li>
+          
+          
+          <li><span class="menu-item"><strong>EXPORTS</strong></span></li>
+          <li><a href="/inport/item/48224/inport-xml" title="View the InPort XML format"><span class="icon icon-xml">InPort XML</span></a></li>
+          <li>
+            <a href="/inport/item/48224/iso19115" title="View in ISO 19115 format"><span class="icon icon-xml">ISO 19115</span></a>
+          </li>
+          
+          
+            
+            <li>
+              <a href="/inport/item/48224/waf" title="View the WAF files for this catalog item"><span class="icon icon-waf">WAF Files</span></a>
+            </li>
+          
+        </ul>
+      </li>
+      
+    
+    <li>
+      <a href="/inport/hierarchy?select=48224"><span class="icon icon-tree" title="View this Catalog Item within the Catalog Hierarchy">View in Hierarchy</span></a>
+    </li>
+    
+  
+    </ul>
+  </div>
+
+
+    <div class="col-1">
+
+      
+  
+
+
+      
+
+      <div class="tabbed-header">
+        <div id="summaryTab" class="tabbed-header-tab">Summary</div>
+        <div id="itemIdentificationTab" class="tabbed-header-tab">Item Identification</div>
+        <div id="keywordsSectionTab"
+             class="tabbed-header-tab">Keywords</div>
+        <div id="physicalLocationTab"
+             class="tabbed-header-tab">Physical Location</div>
+        <div id="dataSetTab"
+             class="tabbed-header-tab">Data Set Info</div>
+        
+        
+        
+        
+        
+        
+        <div id="supportRolesTab"
+             class="tabbed-header-tab">Support Roles</div>
+        <div id="extentsTab"
+             class="tabbed-header-tab">Extents</div>
+        <div id="spatialInfoTab"
+             class="tabbed-header-tab">Spatial Info</div>
+        <div id="accessInfoTab"
+             class="tabbed-header-tab">Access Info</div>
+        <div id="distributionInfoTab"
+             class="tabbed-header-tab">Distribution Info</div>
+        
+        <div id="urlsTab"
+             class="tabbed-header-tab">URLs</div>
+        <div id="activityLogTab"
+             class="tabbed-header-tab">Activity Log</div>
+        
+        <div id="technicalEnvironmentTab"
+             class="tabbed-header-tab">Tech Environment</div>
+        <div id="dataQualityTab"
+             class="tabbed-header-tab">Data Quality</div>
+        
+        <div id="lineageTab"
+             class="tabbed-header-tab">Lineage</div>
+        
+        
+        
+        
+        <div id="childItemsTab"
+             class="tabbed-header-tab">Child Items</div>
+        
+        <div id="catalogDetailsTab" class="tabbed-header-tab">Catalog Details</div>
+      </div>
+
+      
+
+      <!-- Item Summary -->
+      <div id="summary" class="section metadataSection">
+
+        
+
+        <div class="section__header sh">
+          <h2 class="sh__main">Summary</h2>
+        </div>
+        <div class="section__content">
+          
+
+          
+            <p class="small">
+              <strong>Short Citation</strong><br>
+              <span>Office for Coastal Management, 2026: R-Factor for the Conterminous United States, https://www.fisheries.noaa.gov/inport/item/48224.</span><br>
+              <a href="/inport/item/48224/citation">Full Citation Examples</a>
+            </p>
+          
+
+          
+
+          
+            
+              <strong>Abstract</strong><br>
+            
+            
+            <div class="small">
+              
+  <p>The rainfall-runoff erosivity factor (R-Factor) quantifies the effects of raindrop impacts and reflects the amount and rate of runoff associated with the rain. The R-factor is one of the parameters used by the Revised Unified Soil Loss Equation (RUSLE) to estimate annual rates of erosion. This product is a raster representation of R-Factor derived from isoerodent maps published in the Agriculture Handbook Number 703 (Renard et al.,1997). Lines connecting points of equal rainfall ersoivity are called isoerodents. The iserodents plotted on a map of the coterminous U.S. were digitized, then values between these lines were obtained by linear interpolation. The final R-Factor data are in raster GeoTiff format at 800 meter resolution in Albers Conic Equal Area, GRS80, NAD83.</p>
+
+            </div>
+          
+
+          
+            <strong>Purpose</strong><br>
+            <div class="small">
+              
+  <p>These data are represented in raster format for use with the Open source Nonpoint Source Pollution and Erosion Comparison Tool (OpenNSPECT).</p>
+
+            </div>
+          
+
+          
+
+          <div class="cf"></div><!-- needed to clear browse image float -->
+
+          <div class="inner-col-2">
+            <div class="inner-col-2__main">
+
+              <!-- Entity Information -->
+              
+
+              <!-- Project Information -->
+              
+
+              <!-- Document Information -->
+              
+
+              <!-- Procedure Information -->
+              
+
+              <!-- Publication Information -->
+              
+
+              <!-- Data Access & Downloads -->
+              
+                <div class="inner-col-section">
+                  <div class="inner-col-section__header inner-col-sh">
+                    <h3 class="inner-col-sh__main">Data Access &amp; Downloads</h3>
+                  </div>
+                  <div class="inner-col-section__content">
+                    
+                      <ul class="content-list">
+                        <li>
+                          <div class="force-break">
+                            
+                              <a href="https://coast.noaa.gov/data/digitalcoast/zip/R-Factor-CONUS.zip" rel="noopener" target="_blank">https://coast.noaa.gov/data/digitalcoast/zip/R-Factor-CONUS.zip</a>
+                            
+                            
+                          </div>
+                          
+                          
+                        </li>
+                      </ul>
+                    
+                    
+                    
+                      <strong>Access Constraints:</strong>
+                      <div class="small">
+                        
+  <p>None</p>
+
+                      </div>
+                    
+                    
+                      <strong>Use Constraints:</strong>
+                      <div class="small">
+                        
+  <p>None</p>
+
+                      </div>
+                    
+                  </div>
+                </div>
+              
+
+              <!-- Controlled Theme Keywords -->
+              
+                <div class="inner-col-section">
+                  <div class="inner-col-section__header inner-col-sh">
+                    <h3 class="inner-col-sh__main">Controlled Theme Keywords</h3>
+                  </div>
+                  <div class="inner-col-section__content">
+                    <p>
+                      
+                        <span>climatologyMeteorologyAtmosphere</span>, 
+                      
+                        <span>EROSION</span>, 
+                      
+                        <span>RUNOFF</span>, 
+                      
+                        <span>SOIL EROSION</span>
+                      
+                    </p>
+                  </div>
+                </div>
+              
+
+              <!-- Tags -->
+              
+
+              <!-- URLs -->
+              
+                <div class="inner-col-section">
+                  <div class="inner-col-section__header inner-col-sh">
+                    <h3 class="inner-col-sh__main">URLs</h3>
+                  </div>
+                  <div class="inner-col-section__content">
+                    <ul class="content-list">
+                      
+                        <li>
+                          <div class="force-break">
+                            <a href="https://coast.noaa.gov/digitalcoast/tools/qnspect.html" rel="noopener" target="_blank">QNSPECT</a>
+                          </div>
+                          
+                        </li>
+                      
+                    </ul>
+                  </div>
+                </div>
+              
+
+              <!-- Child Items -->
+              
+                <div class="inner-col-section">
+                  <div class="inner-col-section__header inner-col-sh">
+                    <h3 class="inner-col-sh__main">Child Items</h3>
+                  </div>
+                  
+                    <table class="header-table" aria-label="Child Items">
+                      <thead>
+                      <tr>
+                        <th scope="col" style="width: 9rem;">Type</th>
+                        <th scope="col">Title</th>
+                      </tr>
+                      </thead>
+                      <tbody>
+                      <tr class="ellipsisize">
+                        <td><span class="icon icon-ent">Entity</span></td>
+                        <td><strong><a href="/inport/item/49185">R-Factor map for the U.S.</a></strong></td>
+                      </tr>
+                      </tbody>
+                    </table>
+                  
+                  
+                </div>
+              
+
+            </div><!-- inner-col-2__main -->
+
+            <div class="inner-col-2__sidebar">
+
+              <!-- Contact Information -->
+              <div class="inner-col-section">
+                <div class="inner-col-section__header inner-col-sh">
+                  <h3 class="inner-col-sh__main">Contact Information</h3>
+                </div>
+                <div class="inner-col-section__content force-break">
+                  
+                  
+                    
+                      <p>
+                        <strong>Point of Contact</strong><br>
+                        <span>NOAA Office for Coastal Management (NOAA/OCM)</span><br>
+                        
+  
+  
+  
+    <span>coastal.info@noaa.gov</span><br>
+  
+  
+    <span>(843) 740-1202</span><br>
+  
+  
+  <a href="https://coast.noaa.gov"
+     rel="noopener" target="_blank">https://coast.noaa.gov</a>
+
+
+                      </p>
+                    
+                      <p>
+                        <strong>Metadata Contact</strong><br>
+                        <span>NOAA Office for Coastal Management (NOAA/OCM)</span><br>
+                        
+  
+  
+  
+    <span>coastal.info@noaa.gov</span><br>
+  
+  
+    <span>(843) 740-1202</span><br>
+  
+  
+  <a href="https://coast.noaa.gov"
+     rel="noopener" target="_blank">https://coast.noaa.gov</a>
+
+
+                      </p>
+                    
+                  
+                </div>
+              </div>
+
+              <!-- Extents -->
+              
+                <div class="inner-col-section">
+                  <div class="inner-col-section__header inner-col-sh">
+                    <h3 class="inner-col-sh__main">Extents</h3>
+                  </div>
+                  <div class="inner-col-section__content">
+                    
+                      
+                        <div class="add-bottom-grid-margin">
+                          <strong>Geographic Area <span>1</span></strong><br>
+                          
+                            <div id="summaryGeoBoundsMap625543"
+                                 class="geo-bounds-display geo-bounds-small-display"></div>
+                            <p>
+                              <span>-125.325871714</span>&deg; W,
+                              <span>-66.4104121711</span>&deg; E,
+                              <span>48.4453282747</span>&deg; N,
+                              <span>24.5562065906</span>&deg; S<br>
+                            </p>
+                          
+                          
+                        </div>
+                      
+                    
+                    
+                      <div class="add-bottom-pad">
+                        <strong>Time Frame <span>1</span></strong><br>
+                        <span>1975 - 1997</span><br>
+                        <div class="small">
+                          
+  
+
+                        </div>
+                      </div>
+                    
+                  </div>
+                </div>
+              
+
+            </div><!-- inner-col-2__sidebar -->
+          </div><!-- inner-col-2 -->
+
+        </div><!-- section__content -->
+      </div><!-- .section: Summary -->
+
+      
+  <!-- Section: Item Identification -->
+  <div id="itemIdentification" class="section metadataSection">
+    <div class="section__header sh">
+  <h2 class="sh__main" id="headerItemIdentification">Item Identification</h2>
+  
+  
+  
+  
+  
+
+</div>
+    <div class="section__content">
+      
+  
+
+      <table class="name-value-table" aria-labelledby="headerItemIdentification">
+        <tr>
+  <th scope="col">
+    Title:
+  </th>
+  <td class="ellipsisize">R-Factor for the Conterminous United States</td>
+</tr>
+        <tr>
+  <th scope="col">
+    Short Name:
+  </th>
+  <td class="ellipsisize">R-Factor_metadata_for_CONUS</td>
+</tr>
+        <tr>
+  <th scope="col">
+    Status:
+  </th>
+  <td class="ellipsisize">Completed</td>
+</tr>
+        
+        
+          
+        
+        
+        
+          
+        
+        
+        
+          <tr>
+  <th scope="col">
+    Publication Date:
+  </th>
+  <td class="ellipsisize">2013-12-26</td>
+</tr>
+        
+        <tr>
+  <th scope="col">
+    Abstract:
+  </th>
+  <td class="small">
+    
+  <p>The rainfall-runoff erosivity factor (R-Factor) quantifies the effects of raindrop impacts and reflects the amount and rate of runoff associated with the rain. The R-factor is one of the parameters used by the Revised Unified Soil Loss Equation (RUSLE) to estimate annual rates of erosion. This product is a raster representation of R-Factor derived from isoerodent maps published in the Agriculture Handbook Number 703 (Renard et al.,1997). Lines connecting points of equal rainfall ersoivity are called isoerodents. The iserodents plotted on a map of the coterminous U.S. were digitized, then values between these lines were obtained by linear interpolation. The final R-Factor data are in raster GeoTiff format at 800 meter resolution in Albers Conic Equal Area, GRS80, NAD83.</p>
+
+  </td>
+</tr>
+        <tr>
+  <th scope="col">
+    Purpose:
+  </th>
+  <td class="small">
+    
+  <p>These data are represented in raster format for use with the Open source Nonpoint Source Pollution and Erosion Comparison Tool (OpenNSPECT).</p>
+
+  </td>
+</tr>
+        <tr>
+  <th scope="col">
+    Notes:
+  </th>
+  <td class="small">
+    
+  <p>10840</p>
+
+  </td>
+</tr>
+        <tr>
+  <th scope="col">
+    Other Citation Details:
+  </th>
+  <td class="small">
+    
+  <p>Renard, K.G., Foster, C.R., Weesies, G.A., McCool, D.K., Yoder, D.C., (1997). Predicting Soil Erosion by Water: A Guide to Conservation Planning with the Revised Universal Soil Loss Equation (RUSLE). US Department of Agriculture, Agriculture Handbook Number 703, Government Printing Office, Washington, DC, p.47-51.</p>
+
+  </td>
+</tr>
+        <tr>
+  <th scope="col">
+    Supplemental Information:
+  </th>
+  <td class="small">
+    
+  <p>These data are derived from isoerodent maps published in the Agriculture Handbook number 703 (Renard et al., 1997). Renard, K.G., Foster, C.R., Weesies, G.A., McCool, D.K., Yoder, D.C., (1997). Predicting Soil Erosion by Water: A Guide to Conservation Planning with the Revised Universal Soil Loss Equation (RUSLE). US Department of Agriculture, Agriculture Handbook Number 703, Government Printing Office, Washington, DC, p. 47-51.</p>
+
+  </td>
+</tr>
+        
+        
+        
+      </table>
+    </div>
+  </div><!-- .section Item Identification -->
+
+
+
+      <!-- Section: Keywords -->
+      
+        <div id="keywordsSection" class="section metadataSection">
+          <div class="section__header sh">
+  <h2 class="sh__main" id="headerKeywords">Keywords</h2>
+  
+  
+  
+  
+  
+
+</div>
+          <div class="section__content">
+            
+  
+
+            
+            
+  
+  <h3 class="record-block-section-header"><span>Theme</span> Keywords</h3>
+  <div class="record-block">
+    <table class="header-table">
+      <caption class="visually-hidden"><span>Theme</span> Keywords</caption>
+      <tr>
+        <th scope="col">Thesaurus</th>
+        <th scope="col">Keyword</th>
+      </tr>
+      <tr>
+        <td>Global Change Master Directory (GCMD) Science Keywords</td>
+        <td class="force-break">
+          <div>
+  <span>EARTH SCIENCE &gt; AGRICULTURE &gt; SOILS &gt; SOIL EROSION</span>
+  
+  
+</div>
+        </td>
+      </tr>
+      <tr>
+        <td>Global Change Master Directory (GCMD) Science Keywords</td>
+        <td class="force-break">
+          <div>
+  <span>EARTH SCIENCE &gt; LAND SURFACE &gt; EROSION/SEDIMENTATION &gt; EROSION</span>
+  
+  
+</div>
+        </td>
+      </tr>
+      <tr>
+        <td>Global Change Master Directory (GCMD) Science Keywords</td>
+        <td class="force-break">
+          <div>
+  <span>EARTH SCIENCE &gt; TERRESTRIAL HYDROSPHERE &gt; SURFACE WATER &gt; SURFACE WATER PROCESSES/MEASUREMENTS &gt; RUNOFF</span>
+  
+  
+</div>
+        </td>
+      </tr>
+      <tr>
+        <td>ISO 19115 Topic Category</td>
+        <td class="force-break">
+          <div>
+  <span>climatologyMeteorologyAtmosphere</span>
+  
+  
+</div>
+        </td>
+      </tr>
+      
+        <tr class="secondary-header">
+          <th colspan="2" class="small" scope="col"><strong>UNCONTROLLED</strong></th>
+        </tr>
+        <tr>
+          
+          <td class="subdued">None</td>
+          <td class="force-break">Environmental Monitoring</td>
+        </tr>
+        <tr>
+          
+          <td class="subdued">None</td>
+          <td class="force-break">Erosion</td>
+        </tr>
+        <tr>
+          
+          <td class="subdued">None</td>
+          <td class="force-break">R-Factor</td>
+        </tr>
+        <tr>
+          
+          <td class="subdued">None</td>
+          <td class="force-break">Rainfall-Runoff Erosivity</td>
+        </tr>
+        <tr>
+          
+          <td class="subdued">None</td>
+          <td class="force-break">Revised Universal Soil Loss Equation</td>
+        </tr>
+        <tr>
+          
+          <td class="subdued">None</td>
+          <td class="force-break">RUSLE</td>
+        </tr>
+        <tr>
+          
+          <td class="subdued">None</td>
+          <td class="force-break">RUSLE2</td>
+        </tr>
+      
+    </table>
+  </div>
+
+  
+  
+  <h3 class="record-block-section-header"><span>Spatial</span> Keywords</h3>
+  <div class="record-block">
+    <table class="header-table">
+      <caption class="visually-hidden"><span>Spatial</span> Keywords</caption>
+      <tr>
+        <th scope="col">Thesaurus</th>
+        <th scope="col">Keyword</th>
+      </tr>
+      <tr>
+        <td>Global Change Master Directory (GCMD) Location Keywords</td>
+        <td class="force-break">
+          <div>
+  <span>CONTINENT &gt; NORTH AMERICA &gt; UNITED STATES OF AMERICA</span>
+  
+  
+</div>
+        </td>
+      </tr>
+      
+        <tr class="secondary-header">
+          <th colspan="2" class="small" scope="col"><strong>UNCONTROLLED</strong></th>
+        </tr>
+        <tr>
+          
+          <td class="subdued">None</td>
+          <td class="force-break">Coterminous United States</td>
+        </tr>
+      
+    </table>
+  </div>
+
+  
+  
+  
+
+          </div>
+        </div><!-- .section Keywords -->
+      
+
+      <!-- Section: Physical Location -->
+      
+        <div id="physicalLocation" class="section metadataSection">
+          <div class="section__header sh">
+  <h2 class="sh__main" id="headerPhysicalLocation">Physical Location</h2>
+  
+  
+  
+  
+  
+
+</div>
+          <div class="section__content">
+            
+  
+
+            
+            
+  <table class="name-value-table" aria-labelledby="headerPhysicalLocation">
+    <tr>
+  <th scope="col">
+    Organization:
+  </th>
+  <td class="ellipsisize">Office for Coastal Management</td>
+</tr>
+    
+      <tr>
+  <th scope="col">
+    City:
+  </th>
+  <td class="ellipsisize">Charleston</td>
+</tr>
+      <tr>
+  <th scope="col">
+    State/Province:
+  </th>
+  <td class="ellipsisize">SC</td>
+</tr>
+      
+    
+    
+  </table>
+
+          </div>
+        </div><!-- .section Physical Location -->
+      
+
+      <!-- Section: Data Set -->
+      
+        <div id="dataSet" class="section metadataSection">
+          <div class="section__header sh">
+  <h2 class="sh__main" id="headerDataSetInformation">Data Set Information</h2>
+  
+  
+  
+  
+  
+
+</div>
+          <div class="section__content">
+            
+            
+              
+  
+
+              <table class="name-value-table" aria-labelledby="headerDataSetInformation">
+                
+  <tr>
+  <th scope="col">
+    Data Set Scope Code:
+  </th>
+  <td class="ellipsisize">Data Set</td>
+</tr>
+  
+  <tr>
+  <th scope="col">
+    Maintenance Frequency:
+  </th>
+  <td class="ellipsisize">None Planned</td>
+</tr>
+  
+  <tr>
+  <th scope="col">
+    Data Presentation Form:
+  </th>
+  <td class="ellipsisize">Map (digital)</td>
+</tr>
+  
+  
+  
+  <tr>
+  <th scope="col">
+    Distribution Liability:
+  </th>
+  <td class="small">
+    
+  <p>Any conclusions drawn from the analysis of this information are not the responsibility of NOAA, the Office for Coastal Management or its partners.</p>
+
+  </td>
+</tr>
+  <tr>
+  <th scope="col">
+    Data Set Credit:
+  </th>
+  <td class="ellipsisize">Acknowledgement of the NOAA Office for Coastal Management and Renard et al. (1997) would be appreciated in products derived from these data.</td>
+</tr>
+
+              </table>
+            
+          </div>
+        </div><!-- .section Data Set -->
+      
+
+      <!-- Section: Document -->
+      
+
+      <!-- Section: Entity -->
+      
+
+      <!-- Section: Data Attributes -->
+      
+
+      <!-- Section: Procedure -->
+      
+
+      <!-- Section: Project -->
+      
+
+      <!-- Section: Publication Info -->
+      
+
+      <!-- Section: Support Roles -->
+      
+        <div id="supportRoles" class="section metadataSection">
+          <div class="section__header sh">
+  <h2 class="sh__main" id="headerSupportRoles">Support Roles</h2>
+  
+  
+  
+  
+  
+
+</div>
+          <div class="section__content">
+            
+            
+  
+  
+    
+      <div class="record-block">
+        <div class="record-block-header cf">
+          <h3 class="left">Data Steward</h3>
+          <div class="x-small right">CC ID: <span>625537</span></div>
+        </div>
+        
+  <table class="name-value-table" aria-label="Data Steward">
+    <tr>
+  <th scope="col">
+    Date Effective From:
+  </th>
+  <td class="ellipsisize">2013-12-26</td>
+</tr>
+    <tr>
+      <th scope="row">Date Effective To:</th>
+      <td>
+              <span></span>
+        
+      </td>
+    </tr>
+    <tr>
+  <th scope="col">
+    Contact (Organization):
+  </th>
+  <td class="ellipsisize">NOAA Office for Coastal Management (NOAA/OCM)</td>
+</tr>
+    <tr>
+  <th scope="col">Address:</th>
+  <td>
+    
+      2234 South Hobson Ave<br>
+    
+    
+      Charleston, SC 29405-2413<br>
+    
+    
+  </td>
+</tr>
+    
+    
+    <tr>
+  <th scope="col">
+    Email Address:
+  </th>
+  <td class="ellipsisize">coastal.info@noaa.gov</td>
+</tr>
+    <tr>
+  <th scope="col">
+    Phone:
+  </th>
+  <td class="ellipsisize">(843) 740-1202</td>
+</tr>
+    
+    
+    <tr class="ellipsisize">
+  <th scope="col">
+    URL:
+  </th>
+  <td>
+    <a href="https://coast.noaa.gov" rel="noopener" target="_blank">https://coast.noaa.gov</a>
+  </td>
+</tr>
+    
+    
+  </table>
+
+      </div><!-- .record-block -->
+    
+      <div class="record-block">
+        <div class="record-block-header cf">
+          <h3 class="left">Distributor</h3>
+          <div class="x-small right">CC ID: <span>625539</span></div>
+        </div>
+        
+  <table class="name-value-table" aria-label="Distributor">
+    <tr>
+  <th scope="col">
+    Date Effective From:
+  </th>
+  <td class="ellipsisize">2013-12-26</td>
+</tr>
+    <tr>
+      <th scope="row">Date Effective To:</th>
+      <td>
+              <span></span>
+        
+      </td>
+    </tr>
+    <tr>
+  <th scope="col">
+    Contact (Organization):
+  </th>
+  <td class="ellipsisize">NOAA Office for Coastal Management (NOAA/OCM)</td>
+</tr>
+    <tr>
+  <th scope="col">Address:</th>
+  <td>
+    
+      2234 South Hobson Ave<br>
+    
+    
+      Charleston, SC 29405-2413<br>
+    
+    
+  </td>
+</tr>
+    
+    
+    <tr>
+  <th scope="col">
+    Email Address:
+  </th>
+  <td class="ellipsisize">coastal.info@noaa.gov</td>
+</tr>
+    <tr>
+  <th scope="col">
+    Phone:
+  </th>
+  <td class="ellipsisize">(843) 740-1202</td>
+</tr>
+    
+    
+    <tr class="ellipsisize">
+  <th scope="col">
+    URL:
+  </th>
+  <td>
+    <a href="https://coast.noaa.gov" rel="noopener" target="_blank">https://coast.noaa.gov</a>
+  </td>
+</tr>
+    
+    
+  </table>
+
+      </div><!-- .record-block -->
+    
+      <div class="record-block">
+        <div class="record-block-header cf">
+          <h3 class="left">Metadata Contact</h3>
+          <div class="x-small right">CC ID: <span>625540</span></div>
+        </div>
+        
+  <table class="name-value-table" aria-label="Metadata Contact">
+    <tr>
+  <th scope="col">
+    Date Effective From:
+  </th>
+  <td class="ellipsisize">2013-12-26</td>
+</tr>
+    <tr>
+      <th scope="row">Date Effective To:</th>
+      <td>
+              <span></span>
+        
+      </td>
+    </tr>
+    <tr>
+  <th scope="col">
+    Contact (Organization):
+  </th>
+  <td class="ellipsisize">NOAA Office for Coastal Management (NOAA/OCM)</td>
+</tr>
+    <tr>
+  <th scope="col">Address:</th>
+  <td>
+    
+      2234 South Hobson Ave<br>
+    
+    
+      Charleston, SC 29405-2413<br>
+    
+    
+  </td>
+</tr>
+    
+    
+    <tr>
+  <th scope="col">
+    Email Address:
+  </th>
+  <td class="ellipsisize">coastal.info@noaa.gov</td>
+</tr>
+    <tr>
+  <th scope="col">
+    Phone:
+  </th>
+  <td class="ellipsisize">(843) 740-1202</td>
+</tr>
+    
+    
+    <tr class="ellipsisize">
+  <th scope="col">
+    URL:
+  </th>
+  <td>
+    <a href="https://coast.noaa.gov" rel="noopener" target="_blank">https://coast.noaa.gov</a>
+  </td>
+</tr>
+    
+    
+  </table>
+
+      </div><!-- .record-block -->
+    
+      <div class="record-block">
+        <div class="record-block-header cf">
+          <h3 class="left">Point of Contact</h3>
+          <div class="x-small right">CC ID: <span>625538</span></div>
+        </div>
+        
+  <table class="name-value-table" aria-label="Point of Contact">
+    <tr>
+  <th scope="col">
+    Date Effective From:
+  </th>
+  <td class="ellipsisize">2013-12-26</td>
+</tr>
+    <tr>
+      <th scope="row">Date Effective To:</th>
+      <td>
+              <span></span>
+        
+      </td>
+    </tr>
+    <tr>
+  <th scope="col">
+    Contact (Organization):
+  </th>
+  <td class="ellipsisize">NOAA Office for Coastal Management (NOAA/OCM)</td>
+</tr>
+    <tr>
+  <th scope="col">Address:</th>
+  <td>
+    
+      2234 South Hobson Ave<br>
+    
+    
+      Charleston, SC 29405-2413<br>
+    
+    
+  </td>
+</tr>
+    
+    
+    <tr>
+  <th scope="col">
+    Email Address:
+  </th>
+  <td class="ellipsisize">coastal.info@noaa.gov</td>
+</tr>
+    <tr>
+  <th scope="col">
+    Phone:
+  </th>
+  <td class="ellipsisize">(843) 740-1202</td>
+</tr>
+    
+    
+    <tr class="ellipsisize">
+  <th scope="col">
+    URL:
+  </th>
+  <td>
+    <a href="https://coast.noaa.gov" rel="noopener" target="_blank">https://coast.noaa.gov</a>
+  </td>
+</tr>
+    
+    
+  </table>
+
+      </div><!-- .record-block -->
+    
+  
+  
+
+          </div>
+        </div><!-- .section Support Roles -->
+      
+
+      <!-- Section: Extents -->
+      
+        <div id="extents" class="section metadataSection">
+          <div class="section__header sh">
+  <h2 class="sh__main" id="headerExtents">Extents</h2>
+  
+  
+  
+  
+  
+
+</div>
+          <div class="section__content">
+            
+  
+
+            
+            
+  <table class="name-value-table" aria-labelledby="headerExtents">
+    <tr>
+  <th scope="col">
+    Currentness Reference:
+  </th>
+  <td class="ellipsisize">Ground Condition</td>
+</tr>
+  </table>
+  
+    
+    <h3 class="record-block-section-header">Extent Group <span>1</span></h3>
+
+    
+    
+
+      
+
+      <!-- Geographic Areas -->
+      
+        
+        <div class="record-block">
+          <div class="record-block-header cf">
+            <h3 class="left">Extent Group <span>1</span> / Geographic Area <span>1</span></h3>
+            <div class="x-small right">CC ID: <span>625543</span></div>
+          </div>
+          <table class="name-value-table" aria-label="Extent Group 1 / Geographic Area 1">
+            
+              <tr class="extra-cols">
+                <th scope="row"><strong>W&deg; Bound:</strong></th>
+                <td>-125.325871714</td>
+                <td class="geo-bounds-cell" rowspan="4">
+                  <div id="geoBoundsMap625543" class="geo-bounds-display geo-bounds-full-display"></div>
+                </td>
+              </tr>
+              <tr>
+                <th scope="row"><strong>E&deg; Bound:</strong></th>
+                <td>-66.4104121711</td>
+              </tr>
+              <tr>
+                <th scope="row"><strong>N&deg; Bound:</strong></th>
+                <td>48.4453282747</td>
+              </tr>
+              <tr>
+                <th scope="row"><strong>S&deg; Bound:</strong></th>
+                <td>24.5562065906</td>
+              </tr>
+            
+            
+          </table>
+        </div><!-- .record-block -->
+      
+
+      <!-- Vertical Extents -->
+      
+
+      <!-- Time Frames -->
+      
+        <div class="record-block">
+          <div class="record-block-header cf">
+            <h3 class="left">Extent Group <span>1</span> / Time Frame <span>1</span></h3>
+            <div class="x-small right">CC ID: <span>625542</span></div>
+          </div>
+          <table class="name-value-table" aria-label="Extent Group 1 / Time Frame 1">
+            
+            <tr>
+  <th scope="col">
+    Time Frame Type:
+  </th>
+  <td class="ellipsisize">Range</td>
+</tr>
+            <tr>
+  <th scope="col">
+    Start:
+  </th>
+  <td class="ellipsisize">1975</td>
+</tr>
+            <tr>
+  <th scope="col">
+    End:
+  </th>
+  <td class="ellipsisize">1997</td>
+</tr>
+            
+            
+            
+          </table>
+        </div><!-- .record-block -->
+      
+
+    
+  
+
+          </div>
+        </div><!-- .section Extents -->
+      
+
+      <!-- Section: Spatial Info -->
+      
+        <div id="spatialInfo" class="section metadataSection">
+          <div class="section__header sh">
+  <h2 class="sh__main" id="headerSpatialInformation">Spatial Information</h2>
+  
+  
+  
+  
+  
+
+</div>
+          <div class="section__content">
+            
+
+            
+              
+  <!-- Subsection: Spatial Resolution Info -->
+  
+
+  <!-- Subsection: Spatial Representation -->
+  
+    <h3 class="record-block-section-header">Spatial Representation</h3>
+
+    <!-- Sub-Subsection: Spatial Representation Info -->
+    
+      <div class="record-block">
+        <div class="record-block-header cf">
+          <h3 class="left">Representations Used</h3>
+        </div>
+        <table class="name-value-table" aria-label="Representations Used">
+          <tr>
+  <th scope="col">
+    Grid:
+  </th>
+  <td>
+    Yes
+    
+  </td>
+</tr>
+          
+          
+          
+          
+          
+        </table>
+      </div>
+    
+
+    <!-- Sub-Subsection: Grid Representations -->
+    
+
+    <!-- Sub-Subsection: Vector Representations -->
+    
+  <!-- end Spatial Representation -->
+
+  <!-- Subsection: Reference Systems -->
+  <!-- end Reference Systems -->
+
+
+            <!-- end spatialInfo != null -->
+          </div><!-- .section__content -->
+        </div><!-- .section Spatial Info -->
+      
+
+      <!-- Section: Access Info -->
+      
+        <div id="accessInfo" class="section metadataSection">
+          <div class="section__header sh">
+  <h2 class="sh__main" id="headerAccessInformation">Access Information</h2>
+  
+  
+  
+  
+  
+
+</div>
+          <div class="section__content">
+            
+  
+
+            
+            
+              
+  <table class="name-value-table" aria-labelledby="headerAccessInformation">
+    
+      
+      
+        
+        
+        
+      
+    
+    <tr>
+  <th scope="col">
+    Security Class:
+  </th>
+  <td class="ellipsisize">Unclassified</td>
+</tr>
+    
+    
+    
+    
+    <tr>
+  <th scope="col">
+    Data Access Constraints:
+  </th>
+  <td class="small">
+    
+  <p>None</p>
+
+  </td>
+</tr>
+    <tr>
+  <th scope="col">
+    Data Use Constraints:
+  </th>
+  <td class="small">
+    
+  <p>None</p>
+
+  </td>
+</tr>
+    
+    
+  </table>
+
+            
+          </div>
+        </div><!-- .section Access Info -->
+      
+
+      <!-- Section: Distribution Info -->
+      
+        <div id="distributionInfo" class="section metadataSection">
+          <div class="section__header sh">
+  <h2 class="sh__main" id="headerDistributionInformation">Distribution Information</h2>
+  
+  
+  
+  
+  
+
+</div>
+          <div class="section__content">
+            
+            
+  
+    <div class="record-block">
+      <div class="record-block-header cf">
+        <h3 class="left">Distribution <span>1</span></h3>
+        <div class="x-small right">CC ID: <span>1326324</span></div>
+      </div>
+      <table class="name-value-table" aria-label="Distribution 1">
+        <tr class="ellipsisize">
+  <th scope="col">
+    Download URL:
+  </th>
+  <td><a href="https://coast.noaa.gov/data/digitalcoast/zip/R-Factor-CONUS.zip" rel="noopener" target="_blank">https://coast.noaa.gov/data/digitalcoast/zip/R-Factor-CONUS.zip</a></td>
+</tr>
+        <tr>
+  <th scope="col">
+    Distributor:
+  </th>
+  <td class="ellipsisize">NOAA Office for Coastal Management (NOAA/OCM) (2013-12-26 - Present)</td>
+</tr>
+        
+        
+        
+        
+        
+        
+        
+        
+        
+      </table>
+    </div>
+  
+
+          </div>
+        </div><!-- .section Distribution Info -->
+      
+
+      <!-- Section: Archive Info -->
+      
+
+      <!-- Section: URLs -->
+      
+        <div id="urls" class="section metadataSection">
+          <div class="section__header sh">
+  <h2 class="sh__main" id="headerUrls">URLs</h2>
+  
+  
+  
+  
+  
+
+</div>
+          <div class="section__content">
+            
+  
+
+            
+            
+  
+    <div class="record-block">
+      <div class="record-block-header cf">
+        <h3 class="left">URL <span>1</span></h3>
+        <div class="x-small right">CC ID: <span>625535</span></div>
+      </div>
+      <table class="name-value-table" aria-label="URL 1">
+        <tr class="ellipsisize">
+  <th scope="col">
+    URL:
+  </th>
+  <td><a href="https://coast.noaa.gov/digitalcoast/tools/qnspect.html" rel="noopener" target="_blank">https://coast.noaa.gov/digitalcoast/tools/qnspect.html</a></td>
+</tr>
+        <tr>
+  <th scope="col">
+    Name:
+  </th>
+  <td class="ellipsisize">QNSPECT</td>
+</tr>
+        
+          <tr>
+            <th scope="row">URL Type:</th>
+            <td>
+              <div>Online Resource</div>
+              
+            </td>
+          </tr>
+        
+        
+        
+      </table>
+    </div>
+  
+
+          </div>
+        </div><!-- .section URLs -->
+      
+
+      <!-- Section: Activity Log -->
+      
+        <div id="activityLog" class="section metadataSection">
+          <div class="section__header sh">
+  <h2 class="sh__main" id="headerActivityLog">Activity Log</h2>
+  
+  
+  
+  
+  
+
+</div>
+          <div class="section__content">
+            
+            
+  
+    <div class="record-block">
+      <div class="record-block-header cf">
+        <h3 class="left">Activity Log <span>1</span></h3>
+        <div class="x-small right">CC ID: <span>625558</span></div>
+      </div>
+      <table class="name-value-table" aria-label="Activity Log 1">
+        <tr>
+  <th scope="col">
+    Activity Date/Time:
+  </th>
+  <td class="ellipsisize">2016-05-23</td>
+</tr>
+        
+        
+        <tr>
+  <th scope="col">
+    Description:
+  </th>
+  <td class="small">
+    
+  <p>Date that the source FGDC record was last modified.</p>
+
+  </td>
+</tr>
+      </table>
+    </div>
+  
+    <div class="record-block">
+      <div class="record-block-header cf">
+        <h3 class="left">Activity Log <span>2</span></h3>
+        <div class="x-small right">CC ID: <span>625557</span></div>
+      </div>
+      <table class="name-value-table" aria-label="Activity Log 2">
+        <tr>
+  <th scope="col">
+    Activity Date/Time:
+  </th>
+  <td class="ellipsisize">2017-11-14</td>
+</tr>
+        
+        
+        <tr>
+  <th scope="col">
+    Description:
+  </th>
+  <td class="small">
+    
+  <p>Converted from FGDC Content Standard for Digital Geospatial Metadata (version FGDC-STD-001-1998) using &#39;fgdc_to_inport_xml.pl&#39; script. Contact Tyler Christensen (NOS) for details.</p>
+
+  </td>
+</tr>
+      </table>
+    </div>
+  
+    <div class="record-block">
+      <div class="record-block-header cf">
+        <h3 class="left">Activity Log <span>3</span></h3>
+        <div class="x-small right">CC ID: <span>717491</span></div>
+      </div>
+      <table class="name-value-table" aria-label="Activity Log 3">
+        <tr>
+  <th scope="col">
+    Activity Date/Time:
+  </th>
+  <td class="ellipsisize">2018-02-08</td>
+</tr>
+        
+        
+        <tr>
+  <th scope="col">
+    Description:
+  </th>
+  <td class="small">
+    
+  <p>Partial upload of Positional Accuracy fields only.</p>
+
+  </td>
+</tr>
+      </table>
+    </div>
+  
+
+          </div>
+        </div><!-- .section Activity Logs -->
+      
+
+      <!-- Section: Issues -->
+      
+
+      <!-- Section: Technical Environment -->
+      
+        <div id="technicalEnvironment" class="section metadataSection">
+          <div class="section__header sh">
+  <h2 class="sh__main" id="headerTechnicalEnvironment">Technical Environment</h2>
+  
+  
+  
+  
+  
+
+</div>
+          <div class="section__content">
+            
+  
+
+            
+            
+            
+            <table class="name-value-table" aria-labelledby="headerTechnicalEnvironment">
+              <tr>
+  <th scope="col">
+    Description:
+  </th>
+  <td class="small">
+    
+  <p>MapWindow GIS 8.x</p>
+
+  </td>
+</tr>
+            </table>
+            
+          </div>
+        </div><!-- .section Technical Environment -->
+      
+
+      <!-- Section: Data Quality -->
+      
+        <div id="dataQuality" class="section metadataSection">
+          <div class="section__header sh">
+  <h2 class="sh__main" id="headerDataQuality">Data Quality</h2>
+  
+  
+  
+  
+  
+
+</div>
+          <div class="section__content">
+            
+  
+
+            
+            
+              
+  <table class="name-value-table" aria-labelledby="headerDataQuality">
+    
+    <tr>
+  <th scope="col">
+    Accuracy:
+  </th>
+  <td class="small">
+    
+  <p>The cell values in this product represent R-Factor which is an erosivity index for rainfall and runoff. The units are (hundreds ft-tonf-in)/(ac-h-yr).</p>
+
+  </td>
+</tr>
+    
+    <tr>
+  <th scope="col">
+    Horizontal Positional Accuracy:
+  </th>
+  <td class="small">
+    
+  <p>This map is an approximation of spatial rainfall-runoff values</p>
+
+  </td>
+</tr>
+    <tr>
+  <th scope="col">
+    Vertical Positional Accuracy:
+  </th>
+  <td class="small">
+    
+  <p>None</p>
+
+  </td>
+</tr>
+    
+    
+    
+    <tr>
+  <th scope="col">
+    Completeness Measure:
+  </th>
+  <td class="small">
+    
+  <p>Cloud Cover: 0</p>
+
+  </td>
+</tr>
+    
+    
+    
+    
+    
+    <tr>
+  <th scope="col">
+    Completeness Report:
+  </th>
+  <td class="small">
+    
+  <p>All pixels within the coterminous U.S. boundary contain R-Factor values.</p>
+
+  </td>
+</tr>
+    <tr>
+  <th scope="col">
+    Conceptual Consistency:
+  </th>
+  <td class="small">
+    
+  <p>Tests for logical consistency indicate that all row and column positions in the selected latitude/longitude window contain data.  Conversion and integration with vector files indicates that all positions are consistent with earth coordinates covering the same area.</p>
+
+  </td>
+</tr>
+    
+  </table>
+
+            
+          </div>
+        </div><!-- .section Data Quality -->
+      
+
+      <!-- Section: Data Management -->
+      
+
+      <!-- Section: Lineage -->
+      
+        <div id="lineage" class="section metadataSection">
+          <div class="section__header sh">
+  <h2 class="sh__main" id="headerLineage">Lineage</h2>
+  
+  
+  
+  
+  
+
+</div>
+          <div class="section__content">
+            
+            
+  <table class="name-value-table" aria-labelledby="headerLineage">
+    
+  </table>
+
+  
+    <h3 class="record-block-section-header">Sources</h3>
+    
+      <div class="record-block">
+        <div class="record-block-header cf">
+          <h3 class="left force-break">R-Factor for the Coterminous United States</h3>
+          <div class="x-small right">CC ID: <span>625531</span></div>
+        </div>
+        <table class="name-value-table" aria-label="R-Factor for the Coterminous United States">
+          
+          
+          <tr>
+  <th scope="col">
+    Contact Name:
+  </th>
+  <td class="ellipsisize">NOAA, National Ocean Service, Office for Coastal Management</td>
+</tr>
+          
+          <tr>
+  <th scope="col">
+    Extent Type:
+  </th>
+  <td class="ellipsisize">Range</td>
+</tr>
+          <tr>
+  <th scope="col">
+    Extent Start Date/Time:
+  </th>
+  <td class="ellipsisize">1975</td>
+</tr>
+          <tr>
+  <th scope="col">
+    Extent End Date/Time:
+  </th>
+  <td class="ellipsisize">1997</td>
+</tr>
+          <tr>
+  <th scope="col">
+    Scale Denominator:
+  </th>
+  <td class="ellipsisize">250000000</td>
+</tr>
+          
+          
+          
+          <tr>
+  <th scope="col">
+    Source Contribution:
+  </th>
+  <td class="small">
+    
+  <p>Derived from isoerodent maps (Renard et al., 1997) | Source Geospatial Form: raster digital data | Type of Source Media: disc</p>
+
+  </td>
+</tr>
+        </table>
+      </div>
+    
+  
+
+  
+    <h3 class="record-block-section-header">Process Steps</h3>
+    
+      <div class="record-block">
+        <div class="record-block-header cf">
+          <h3 class="left">Process Step <span>1</span></h3>
+          <div class="x-small right">CC ID: <span>625532</span></div>
+        </div>
+        <table class="name-value-table" aria-label="Process Step 1">
+          <tr>
+  <th scope="col">
+    Description:
+  </th>
+  <td class="small">
+    
+  <p>The rainfall-funoff erosivity factor was estimated from the R-Factor maps for the coterminous U.S. given in the Agriculture Handbook number 703. A line shapefile approximation of the printed map was generated via &quot;heads-up&quot; digitizing. The final raster map was produced using the Topo to Raster command in ESRI ArcGIS 10.x.</p>
+
+  </td>
+</tr>
+          <tr>
+  <th scope="col">
+    Process Date/Time:
+  </th>
+  <td class="ellipsisize">2013-01-01 00:00:00</td>
+</tr>
+          
+          
+          
+          
+          
+          
+        </table>
+      </div>
+    
+  
+
+          </div>
+        </div><!-- .section Lineage -->
+      
+
+      <!-- Section: Acquisition Info -->
+      
+
+      <!-- Section: Acronyms -->
+      
+
+      <!-- Section: Glossary -->
+      
+
+      <!-- Section: FAQs -->
+      
+
+      <!-- Section: Child Items -->
+      
+        <div id="childItems" class="section metadataSection">
+          <div class="section__header sh">
+            <h2 id="headerChildItems" class="sh__main">Child Items</h2>
+          </div>
+          <div class="section__content">
+            <p class="xx-small subdued add-left-grid-margin">Rubric scores updated every 15m</p>
+            
+  <table class="header-table" aria-labelledby="headerChildItems">
+    <thead>
+    <tr>
+      <th class="hide-bp-narrow" title="Rubric Score" style="width: 5rem;" scope="col">
+        <img class="centered-block" src="/inport/images/icons/icon-score.png" alt="Rubric Score">
+      </th>
+      <th style="width: 9rem;" scope="col">Type</th>
+      <th scope="col">Title</th>
+    </tr>
+    </thead>
+    <tbody>
+    <tr class="ellipsisize">
+      <td class="hide-bp-narrow">
+        
+      </td>
+      <td><span class="icon icon-ent">Entity</span></td>
+      <td><strong><a href="/inport/item/49185">R-Factor map for the U.S.</a></strong></td>
+    </tr>
+    </tbody>
+  </table>
+
+          </div>
+        </div><!-- .section Child Items -->
+      
+
+      <!-- Section: Related Items -->
+      
+
+      <!-- Section: Catalog Details -->
+      <div id="catalogDetails" class="section metadataSection">
+        <div class="section__header sh">
+  <h2 class="sh__main" id="headerCatalogDetails">Catalog Details</h2>
+  
+  
+  
+  
+  
+
+</div>
+        <div class="section__content">
+          
+  
+
+          
+  <table class="name-value-table" aria-labelledby="headerCatalogDetails">
+    <tr>
+  <th scope="col">
+    Catalog Item ID:
+  </th>
+  <td class="ellipsisize">48224</td>
+</tr>
+    <tr>
+  <th scope="col">
+    <span title="The Globally Unique IDentifier (GUID) uniquely identifies InPort records in external systems. It is derived from the InPort namespace and the Catalog Item ID.">GUID:</span>
+  </th>
+  <td class="ellipsisize">gov.noaa.nmfs.inport:48224</td>
+</tr>
+    <tr>
+  <th scope="col">
+    Metadata Record Created By:
+  </th>
+  <td class="ellipsisize">Anne Ball</td>
+</tr>
+    <tr>
+  <th scope="col">
+    Metadata Record Created:
+  </th>
+  <td class="ellipsisize">2017-11-14 14:28+0000</td>
+</tr>
+    <tr>
+  <th scope="col">
+    Metadata Record Last Modified By:
+  </th>
+  <td class="ellipsisize">Brianna Key</td>
+</tr>
+    <tr>
+  <th scope="col">
+    Metadata Record Last Modified:
+  </th>
+  <td class="ellipsisize">2024-02-20 21:54+0000</td>
+</tr>
+    <tr>
+  <th scope="col">
+    Metadata Record Published:
+  </th>
+  <td class="ellipsisize">2018-02-08</td>
+</tr>
+    <tr>
+  <th scope="col">
+    Owner Org:
+  </th>
+  <td class="ellipsisize">OCM</td>
+</tr>
+    <tr>
+  <th scope="col">
+    Metadata Publication Status:
+  </th>
+  <td class="ellipsisize">Published Externally</td>
+</tr>
+    
+    <tr>
+  <th scope="col">
+    Do Not Publish?:
+  </th>
+  <td class="ellipsisize">N</td>
+</tr>
+    <tr>
+  <th scope="col">
+    Metadata Last Review Date:
+  </th>
+  <td class="ellipsisize">2018-02-08</td>
+</tr>
+    <tr>
+  <th scope="col">
+    Metadata Review Frequency:
+  </th>
+  <td class="ellipsisize">1 Year</td>
+</tr>
+    <tr>
+  <th scope="col">
+    Metadata Next Review Date:
+  </th>
+  <td class="ellipsisize">2019-02-08</td>
+</tr>
+  </table>
+  
+
+        </div>
+      </div><!-- .section Catalog Details -->
+
+    </div>
+  </div>
+</main>
+
+
+  <footer>
+    <div class="fixed-page-fit">
+      <nav>
+        <a href="/inport/about">About InPort</a>&nbsp;&nbsp;|&nbsp;&nbsp;<a
+          href="/inport/contact">Contact</a>&nbsp;&nbsp;|&nbsp;&nbsp;<a
+          href="/inport/release-notes">Release Notes</a>&nbsp;&nbsp;|&nbsp;&nbsp;<a
+          href="/inport/system-availability">System Availability</a>&nbsp;&nbsp;|&nbsp;&nbsp;<a
+          href="/inport/privacy">Privacy</a>&nbsp;&nbsp;|&nbsp;&nbsp;<a
+          href="/inport/security">Security</a>&nbsp;&nbsp;|&nbsp;&nbsp;<a
+          href="/inport/pra">Paperwork Reduction Act</a>
+      </nav>
+      <div class="cf">
+        <div class="org-seals">
+          <ul>
+            <li><a href="https://www.fisheries.noaa.gov/national/commercial-fishing/fisheries-information-system-program" title="Fisheries Information System"
+                   rel="noopener" target="_blank"><img
+                src="/inport/images/fis-seal.png" width="52" height="53" alt="FIS"/></a></li>
+            <li><a href="https://www.fisheries.noaa.gov/" title="NOAA Fisheries"
+                   rel="noopener" target="_blank"><img
+                class="footerSeal" src="/inport/images/noaa-fisheries-seal.png"
+                width="52" height="53" alt="NOAA Fisheries"/></a></li>
+            <li><a href="https://www.noaa.gov/" title="National Oceanic &amp; Atmospheric Administration"
+                   rel="noopener" target="_blank"><img
+                class="footerSeal" src="/inport/images/noaa-seal.png"
+                width="52" height="53" alt="NOAA"/></a></li>
+            <li><a href="https://www.commerce.gov/" title="U.S. Department of Commerce"
+                   rel="noopener" target="_blank"><img
+                class="footerSeal" src="/inport/images/doc-seal.png"
+                width="52" height="53" alt="Department of Commerce"/></a></li>
+          </ul>
+        </div>
+        <div class="app-info">
+          <img src="/inport/images/inport-logo-footer.png" width="94" height="48" alt="InPort Logo">
+          <div class="release-info">
+            <strong class="x-small">Release 6.0.9</strong><br>
+            <span class="xx-small">Build FINAL (2026-08-19 18:52 UTC)</span>
+          </div>
+        </div>
+      </div>
+    </div> <!-- .fixed-page-fit -->
+  </footer>
+
+  <!-- Script Includes -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"
+          integrity="sha512-v2CJ7UaYy4JwqLDIrZUI/4hqeoQieOmAZNXBeQyjo21dadnwR+8ZaIJVT8EE2iyI61OV8e6M8PP2/4hpQINQ/g=="
+          crossorigin="anonymous"
+          referrerpolicy="no-referrer"></script>
+  <script src="/inport/js/inport.js?v=6.0.9"></script>
+
+
+
+  <script>
+  const viewAsMenu = $('#viewAsMenu').hide();
+   const itemMenu = $('#itemMenu').hide(); 
+   const rolesMenu = $('#rolesMenu').hide(); 
+
+  $(function() {
+    $('#viewAsButton').on('click', function() {
+       itemMenu.hide(); 
+      viewAsMenu.toggle();
+       rolesMenu.hide(); 
+      $(document).one('click', function() {
+        viewAsMenu.hide();
+      });
+      return false;
+    });
+
+    
+    $('#itemButton').on('click', function() {
+      itemMenu.toggle();
+      viewAsMenu.hide();
+       rolesMenu.hide(); 
+      $(document).one('click', function() {
+        itemMenu.hide();
+      });
+      return false;
+    });
+    
+
+    
+    $('#rolesButton').on('click', function() {
+       itemMenu.hide(); 
+      rolesMenu.toggle();
+      viewAsMenu.hide();
+      $(document).one('click', function() {
+        rolesMenu.hide();
+      });
+      return false;
+    });
+    
+  });
+</script>
+
+
+<script>
+  $(function() {
+    registerTab('summary');
+    
+    
+      registerTab('itemIdentification');
+       registerTab('keywordsSection'); 
+       registerTab('physicalLocation'); 
+       registerTab('dataSet'); 
+      
+      
+      
+      
+      
+      
+       registerTab('supportRoles'); 
+       registerTab('extents'); 
+       registerTab('spatialInfo'); 
+       registerTab('accessInfo'); 
+       registerTab('distributionInfo'); 
+      
+       registerTab('urls'); 
+       registerTab('activityLog'); 
+      
+       registerTab('technicalEnvironment'); 
+       registerTab('dataQuality'); 
+      
+       registerTab('lineage'); 
+      
+      
+      
+      
+       registerTab('childItems'); 
+    
+    
+    registerTab('catalogDetails');
+
+    function registerTab(sectionId) {
+      $('#' + sectionId + 'Tab').on('click', function() {
+        activateTab(sectionId);
+        return false;
+      });
+    }
+
+    function activateTab(sectionId) {
+      hideAllElementsWithClass('metadataSection');
+      removeClassFromAllElements('tabbed-header-tab', 'selected');
+      document.getElementById(sectionId).style.display = 'block';
+      document.getElementById(sectionId + 'Tab').classList.add('selected');
+    }
+
+    const anchoredSection = globalThis.location.hash.substring(1);
+    // verify that the hash corresponds to an actual section in the page
+    if (document.getElementById(anchoredSection) == null) {
+      // Have the Summary tab selected by default
+      activateTab("summary");
+    } else {
+      activateTab(anchoredSection);
+    }
+  });
+</script>
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"
+          integrity="sha512-BwHfrr4c9kmRkLw6iXFdzcdWV/PGkVgiIyIWLLlTSXzWQzxuSg4DiQUCpauz/EWjgk5TYQqX/kvn9pG1NpYfqg=="
+          crossorigin="anonymous"
+          referrerpolicy="no-referrer"></script>
+
+  <script src="/inport/js/geobounds.js?v=6.0.9"></script>
+
+  <script>
+    
+      
+        
+          loadGeoBoundsMap(summaryGeoBoundsMap625543,
+              24.5562065906,
+              -125.325871714,
+              48.4453282747,
+              -66.4104121711);
+        
+      
+
+      
+        
+          
+            loadGeoBoundsMap(geoBoundsMap625543,
+                24.5562065906,
+                -125.325871714,
+                48.4453282747,
+                -66.4104121711);
+          
+        
+      
+    
+  </script>
+
+
+<script>
+  $(function() {
+    // CRS expand links
+    $(document).on('click', '.crs-more-link', function() {
+      const $link = $(this);
+      $($link.data('contentId')).show();
+      $($link.data('moreRowId')).hide();
+      return false;
+    });
+  });
+</script>
+
+<script src="/inport/js/species.js?v=6.0.9"></script>
+
+</body>
+</html>

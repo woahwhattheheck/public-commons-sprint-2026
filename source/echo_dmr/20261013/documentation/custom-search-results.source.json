@@ -1,0 +1,214 @@
+{
+  "url": "https://echo.epa.gov/help/loading-tool/custom-search/custom-search-results-help",
+  "final_url": "https://echo.epa.gov/help/loading-tool/custom-search/custom-search-results-help",
+  "title": "Custom Search Results Help | ECHO | US EPA",
+  "description": null,
+  "language": "en",
+  "text": {
+    "type": "document",
+    "children": [
+      {
+        "type": "heading",
+        "level": 1,
+        "text": "Custom Search Results Help"
+      },
+      {
+        "type": "paragraph",
+        "text": "Users can generate customized downloads of loadings data using the Custom Search. On the results page, the Loading Tool generates a comma separated value (CSV) file of the data. The CSV results file can be transferred to an offline database program or spreadsheet program for further analysis. The Custom Search can provide pollutants loadings at three levels of detail: annual, facility, or monitoring period."
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "text": "Instructions"
+      },
+      {
+        "type": "paragraph",
+        "text": "The results page displays your selected search criteria and results column available for download. Uncheck any fields that you do not want to be included in your data file. Note that some fields are required and cannot be unchecked. For background information about pollutants loadings data and calculations, refer to the Technical Support Document or the Loading Tool Frequently Asked Questions (FAQs)."
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "text": "Results Guide"
+      },
+      {
+        "type": "heading",
+        "level": 3,
+        "text": "Basic Record Information — Required Fields"
+      },
+      {
+        "type": "list",
+        "ordered": false,
+        "items": [
+          "The end date of the monitoring period for the pollutant discharge.",
+          "A nine-character code used to uniquely identify a permitted NPDES facility (NPDES ID). The NPDES permit program regulates the direct discharge of pollutants into US waters. A NPDES ID is provided for every facility.",
+          "The primary name used to identify a facility."
+        ]
+      },
+      {
+        "type": "heading",
+        "level": 3,
+        "text": "Facility Information"
+      },
+      {
+        "type": "list",
+        "ordered": false,
+        "items": [
+          "Four-digit code that describes the primary activity of the facility as part of the U.S. Standard Industrial Classification System (SIC). The two-digit code defines a major business sector; the four-digit code contains two additional numbers that denote a facility's specialty within the major sector. See the U.S. Department of Labor website for more information. Note: SIC codes are not required to be reported in ICIS-NPDES.",
+          "Six-digit code that identifies NAICS industries and has replaced the U.S. Standard Industrial Classification (SIC) system. The first two-digits represent the industry sector, in which there exist 20 broad sectors. The third digit represents the industry subsector, the fourth digit represents the industry group, the fifth digit represents the industry, and the sixth digit specifies the country (i.e. U.S., Canada, or Mexico). See the U.S. Census website for more information. NAICS codes are not required in ICIS-NPDES.",
+          "FRS ID is the 12-character code used to uniquely identify a facility site within the EPA Facility Registry System (FRS) database. The code is also known as the UIN (Unique Identification Number). A FRS ID is assigned to every facility in ICIS-NPDES.",
+          "15-character code used to uniquely identify facilities in EPA's TRI database.",
+          "A unique identifier for facilities in EPA's Clean Watershed Needs Survey (CWNS) database. Most facilities identified are publicly owned treatment works (POTWs). Every four years the EPA and states conduct the survey to determine the capital needs for municipal wastewater treatment facilities to meet the goals in the Clean Water Act. Only municipal wastewater treatment plants report to CWNS. This field is not displayed for industrial dischargers.",
+          "Facility ownership classification derived from codes in ICIS-NPDES. Facilities can be classified as publicly-owned treatment works (POTW), non-POTW, federal, or state.",
+          "The permit classification in the Water Pollutant Loading Tool. These classifications include the following: NPDES Individual Permit (NPD), NPDES Master General Permit (NGP), General Permit Covered Facility (GPC), Individual IU Permit (IUU), Individual State Issued Permit (SIN).",
+          "The date the most recent permit in the selected date range became effective.",
+          "The date the most recently issued permit in the selected date range expires.",
+          "The street address of the facility.",
+          "The city name for the facility location. City names can be blank in FRS and ICSI-NPDES.",
+          "The two-character state abbreviation for the facility location.",
+          "The 5-digit mail code for the facility address. Zip codes are not required in FRS or ICIS-NPDES.",
+          "The county name for the facility location. County names can be blank in FRS or ICIS-NPDES.",
+          "The EPA-designated area that U.S. States, territories, and tribes are assigned to. The U.S. is divided into 10 EPA Regions.",
+          "An electoral constituency that elects a single member of a congress. There are 435 congressional districts in the U.S. Congressional District information can be blank in FRS.",
+          "The latitude coordinate for the facility location in units of decimal degrees. Latitude and longitude coordinates are not required to be entered in FRS or ICIS-NPDES.",
+          "The longitude coordinate for the facility location in units of decimal degrees. Latitude and longitude coordinates are not required to be entered in FRS or ICIS-NPDES.",
+          "Displays “Y” if a facility is flagged as being located in Indian Country, based on information from the EPA's Facility Registry Service (FRS). Displays “N” if a facility is not located in Indian Country.",
+          "Displays “Y” if a facility is flagged as being located in Indian Country, based on information from the EPA's Integrated Compliance Information System (ICIS). Displays “N” if a facility is not located in Indian Country.",
+          "Displays “Y” if a facility is located within 25 miles of a tribal spatial boundary as defined by the U.S. Census Bureau tribal boundary layer data for tribes in the lower 48 states and Bureau of Land Management Alaska State Office data for tribes in Alaska. Displays “N” if a facility is not located within or near a tribal spatial boundary. Data Quality Caveat.",
+          "The tribes or tribal territories located within 25 miles of the facility's location. EPA compares the facility location in its Facility Registry Service to the U.S. Census Bureau tribal boundary layer data for tribes in the lower 48 states and Bureau of Land Management Alaska State Office data for tribes in Alaska. The tribal boundary locations identified are suitable only for general spatial reference and do not necessarily reflect EPA's position on any Indian country locations or boundaries, or the land status of any specific location. Data Quality Caveat.",
+          "A facility classification from the NPDES permitting authorities based on: toxic pollutant potential, ratio of discharge flow/stream flow volume, conventional pollutant loading, public health impact, water quality factors, and proximity to coastal waters. Major facilities, if not controlled, have a larger impact on receiving waters than non-major facilities; therefore, they receive more regulatory attention than non-major facilities.",
+          "Code assigned by the US Geological Survey used to classify watersheds in the United States and the Caribbean. Code consists of twelve digits which correspond to six levels of classification: Region (first-level, 2-digit HUC), Subregion (second-level, 4- digit HUC), Accounting unit (third-level, 6-digit HUC), Cataloguing unit (fourth-level, 8-digit HUC), Watershed (fifth-level, 10-digit HUC), and Subwatershed (sixth-level, 12-digit HUC).",
+          "The Loading Tool links facilities with hydrologic unit codes (HUC-12) using a WATERS web service. Not all NPDES IDs have a matching HUC-12 in the Watershed Boundary Dataset. For more information see Overview of Watershed Data.",
+          "Name of the watershed, which is linked to the watershed ID, a 12-digit code assigned by the US Geological Survey.",
+          "The State Water Body Name for the receiving stream of the pollutant discharges from the facility. The Loading Tool obtains this data element using a Watershed Assessment Tracking and Environmental ResultS (WATERS) web service (REACH_to_GNIS) which extracts the water body name from USGS's Geographic Names Information System (GNIS). Not all receiving water bodies are named in the GNIS, which means the user may have the text \"Not found\" displayed. Additionally, this WATERS web service uses the medium resolution NHD and the GNIS data for this resolution is variable. For example, areas around the Great Lakes are sparsely labeled and parts of Lake Michigan are mislabeled as \"Techny Reservoir\".",
+          "The Loading Tool links facilities with REACH Codes and water body names using a WATERS web service. Not all NPDES IDs have a matching REACH Code in the REACH Address Database or water body name in the Geographic Names Information System. For more information see Overview of Watershed Data.",
+          "A unique code assigned to each segment of a stream contained within the US Geological Survey (USGS) hydrography. This 14-digit code has two parts: the first 8 digits are the hydrologic unit code for the subbasin in which the reach exists; the last 6 digits are assigned in sequential order, and arbitrarily among the reaches. The Loading Tool obtains this data element using a Watershed Assessment Tracking and Environmental ResultS (WATERS) web service (OWRAD/PCS_WMERC) which obtains REACH codes from EPA's REACH Address Database (RAD).",
+          "The Loading Tool links facilities with REACH Codes using a WATERS web service. Not all NPDES IDs have a matching REACH Code in the REACH Address Database. For more information see Overview of Watershed Data.",
+          "Displays \"Y\" for \"Yes\" if the water body nearest to or associated with the facility location is listed for impairment.",
+          "Under section 303(d) of the CWA, states, territories, and authorized tribes are required to develop lists of impaired waters. These are waters that are too polluted or otherwise degraded to meet the water quality standards set by states, territories, or authorized tribes. The law requires that states establish priority rankings for waters on the lists and develop Total Maximum Daily Loads (TMDLs), for these waters. A TMDL is a calculation of the maximum amount of a pollutant that a water body can receive and still safely meet water quality standards. For more information about impaired waters or TMDLs, please visit EPA's Overview of Impaired Waters and TMDLs Program.",
+          "The impairment class or category of the water body in which the facility is permitted to discharge directly.",
+          "5. Impaired - Total Maximum Daily Loads (TMDLs) needed. Available information indicates that at least one designated use is not being supported and a TMDL is needed (also known as the 303(d) listed waters). 4. Impaired - TMDL not needed. Available information indicates that at least one designated use is not being supported, but a TMDL is not needed (see subcategories). 4a. TMDL completed. A TMDL has been completed, but impairment still exists. 4b. TMDL alternative. Impairment is being addressed by a method other than a TMDL (e.g., stream bank improvements). 4c. Non-pollutant causes. Cause of impairment is not a pollutant (e.g., habitat destruction).",
+          "Detailed information on the categorization of waters can be found in Section V of the 2006 Integrated Report Guidance.",
+          "The number of CSO outfalls included in the NPDES permit. A combined sewer system (CSS) is a wastewater collection system owned by a municipality which conveys sanitary wastewater (domestic, commercial, and industrial) and stormwater through a single pipe system to a publicly owned treatment works. A combined sewer overflow (CSO) is the discharge from a CSS at a point prior to the treatment plant. CSO outfalls are point sources subject to NPDES permit requirements including both technology-based and water quality-based requirements of the Clean Water Act. An Active CSO Outfall in ICIS-NPDES is defined as an external permitted feature with either of the following characteristic codes: CSO = Untreated CSO TCS = Treated CSO"
+        ]
+      },
+      {
+        "type": "list",
+        "ordered": false,
+        "items": [
+          "The daily rate of wastewater flow that a facility is designed to discharge (in units of millions of gallons per day), as reported on the most recent permit application. Design flow information is not required to be entered in ICIS-NPDES.",
+          "The daily rate of wastewater flow that a facility actually discharges (in units of millions of gallons per day), as reported on the most recent permit application. Actual average facility flow information is not required to be entered in ICIS-NPDES."
+        ]
+      },
+      {
+        "type": "heading",
+        "level": 3,
+        "text": "Community"
+      },
+      {
+        "type": "list",
+        "ordered": false,
+        "items": [
+          "Percent People of Color (3 mi)",
+          "Percent People of Color is the percentage of the population of the given area that consists of people of color, based on the 2018-2022 ACS 5-Year Summary. The field is calculated by subtracting the number of persons who are white (and not of Hispanic origin) from the total persons. This number is then divided by the total persons and multiplied by one hundred to determine the percentage.",
+          "Percent Low Income is the percentage of the population of the given area that has an income less than two times the poverty level, based on the 2018-2022 ACS 5-Year Summary.",
+          "Statistics are shown for the area within a 3-mile radius of each facility. The radius is measured from the best available lat/long coordinate. Users should be aware that demographic data are derived based upon the reported latitude and longitude of the facility or permit holder. Surrounding populations and other statistics were estimated by retrieving the data for Census block groups within three miles of each facility."
+        ]
+      },
+      {
+        "type": "heading",
+        "level": 3,
+        "text": "Discharge Identification Information"
+      },
+      {
+        "type": "list",
+        "ordered": false,
+        "items": [
+          "A three-character code in ICIS-NPDES that identifies the point of discharge (e.g., outfall) for a facility. A NPDES permit may have multiple points of discharge. An outfall number (permit feature number) is provided for each DMR measurement and limit in ICIS-NPDES. See About the Loading Tool Data for more information.",
+          "A single-character code in ICIS-NPDES that indicates the sampling location for each pollutant measurement. The Loading Tool only includes locations for effluent sampling points. These include: 1 - Effluent gross discharge; 2: Effluent net discharge; A - After Disinfection; B - Before Disinfection and; SC - See Comments. A monitoring location code is provided for each DMR measurement and limit in ICIS-NPDES. See About the Loading Tool Data for more information.",
+          "A single-character code in ICIS-NPDES that groups limits that are set on a similar basis (e.g., monthly vs. annual limits, seasonal limits). A limit set designator code is provided for each DMR measurement and limit. See About the Loading Tool Data for more information.",
+          "Flag indicating if seasonal parameter limits are applicable. '0' indicates that seasonal parameter limits are not applicable, and '1' indicates that seasonal parameter limits are applicable.",
+          "The number of months in the monitoring periods for the DMRs for the limit set (e.g., monthly = 1, quarterly = 3, semi-annually = 6).",
+          "The horizontal position coordinate for the point of discharge location in units of decimal degrees. Latitude and longitude coordinates are not required to be entered into ICIS-NPDES. Searching on coordinates will only return results for permit features that have latitude and longitude data in ICIS-NPDES.",
+          "The vertical position coordinate for the point of discharge location in units of decimal degrees. ICIS-NPDES does not require Latitude and longitude coordinates to be entered. Searching on coordinates will only return results for permit features that have latitude and longitude data in ICIS-NPDES.",
+          "A five-character code in ICIS-NDPES that identifies the regulated pollutant parameter in a NPDES permit and specifies both the pollutant name and pollutant form (e.g., dissolved or suspended). Multiple parameters can apply to a single pollutant or CAS number. A parameter code is provided for each DMR measurement and limit in ICIS-NPDES. See About the Loading Tool Data for more information.",
+          "Description/parameter name that corresponds to the five-digit parameter code. A parameter description is provided for each DMR measurement and limit in ICIS-NPDES. See About the Loading Tool Data for more information.",
+          "Chemical Abstract Service (CAS) Number assigned by the American Chemical Society that uniquely identifies a chemical. Not all pollutants have a Chemical Abstract Service (CAS) Number (for example, Total Suspended Solids).",
+          "EPA developed TWFs for use in its effluent limitations guidelines and standards (ELGs) development program to allow comparison of pollutants with varying toxicities. TWF is used to convert pollutant loadings into Toxic Weighted Pounds Equivalent (TWPE). Not all pollutants have a toxic weighting factor (for example, Total Suspended Solids), which means that these pollutants do not have a toxicity score (i.e., TWPE = 0). See Technical Support Documents for more information about TWFs.",
+          "Unique identification number assigned to substances, such as chemicals, biological organisms, physical properties, and miscellaneous objects by EPA's Substance Registry Services, to provide a common substance identification method across multiple regulatory programs. Not all pollutants have a Chemical Abstract Service (CAS) Number; and therefore, do not have an SRS ID (for example, Total Suspended Solids)."
+        ]
+      },
+      {
+        "type": "heading",
+        "level": 3,
+        "text": "Permit and DMR Data"
+      },
+      {
+        "type": "heading",
+        "level": 3,
+        "text": "Facility Data Availability"
+      },
+      {
+        "type": "list",
+        "ordered": false,
+        "items": [
+          "Number of facility permits that meet search criteria but do not have permit limits or DMR data in ICIS-NPDES.",
+          "If Pollutant criteria are specified in a query, then this result will be zero. This is because pollutant identification information is stored in permit limit data and DMR data in ICIS-NPDES, and for a facility to be identified based on pollutant criteria, the facility must have either permit limit data or DMR data. If a pollutant is not specified, then this field will display the number of facilities that meet the Location, Watershed, or Industry search criteria, but do not have permit limit data or DMR data in ICIS-NPDES.",
+          "Number of facility permits that have numeric pollutant discharge limits in ICIS-NPDES.",
+          "Some facilities' NPDES permits require monitoring and reporting for a particular pollutant, but do not include a numeric limit for the pollutant discharge. The Water Pollution Search will count these facilities in the \"With DMR Data\" field, but will not count them in the \"With Permit Limits\" field. Only facilities with numeric permit limits are counted in the \"With Permit Limits\" field.",
+          "A Yes/No field indicating if pollutant loadings were calculated in the Loading Tool."
+        ]
+      },
+      {
+        "type": "heading",
+        "level": 3,
+        "text": "Pollutant Loadings Data"
+      },
+      {
+        "type": "list",
+        "ordered": false,
+        "items": [
+          "The amount (in kg) of pollutant released during the specified monitoring period or year.",
+          "The total wastewater volume discharged per year or specified period of time (in units of millions of gallons).",
+          "The average mass discharge (in units of kilograms per day) for a calendar year calculated as the arithmetic average of the average daily loads for all monitoring periods in the calendar year.",
+          "The average pollutant concentration for a calendar year calculated as the arithmetic average of the average pollutant concentrations for all monitoring periods in the calendar year.",
+          "The average daily rate of flow that a facility discharges for a monitoring period (in units of millions of gallons per day).",
+          "The average wastewater temperature for a monitoring period.",
+          "The average wastewater pH for a monitoring period.",
+          "The difference between the Mass Discharge and the Mass Limit (\"Load-over-Limit\") calculated using the methodology described in the Technical Support Document. If the difference is positive, the discharge exceeded the limit. If the difference is zero, the discharge is below the limit. The Custom Search will only display results if the pollutant load is higher than the limit. The limit can refer to either the permit limit or enforcement action limit.",
+          "The difference between the Mass Discharge and the Mass Limit (\"Load-over-Limit\") calculated using the methodology described in the Technical Support Document. If the difference is positive, the discharge exceeded the limit. If the difference is negative, the discharge was below the limit. The Custom Search will only display results if the pollutant load corresponds to a numeric limit. The limit can refer to either the permit limit or the enforcement action limit.",
+          "Flag indicating whether the calculated pollutant load includes one or more pollutant measurements below the detection limit. The Custom Search identifies pollutant measurements that are not detected using data qualifiers in ICIS-NPDES. If the search finds a qualifier for the monitoring period measurement, then the search will display \"Yes\" in this field. If the search does not find a qualifier, then it will display \"No\".",
+          "The no data indicator (NODI) provides the reason that a parameter's sample measurement data for an expected DMR were not reported by the permittee during a monitoring period.",
+          "The indication of the measurement value type (e.g., Average Quantity, Minimum Concentration) selected to calculate the pollutant load.",
+          "A Yes/No field to indicate that a pollutant load is calculated using data flagged as potential outliers or data errors. The Technical Users Background Document describes how the Loading Tool flags potential outliers. Y = Yes; Blank = No.",
+          "The annual amount (in kilograms) of pollutant released by a facility, based on calculations of DMR data.",
+          "The calculated total flow a facility discharged for a given period (in units of millions of gallons per year).",
+          "A calculated annual quantity allowed to be discharged, based on the facility’s pollutant permit limit and where applicable, average daily flow (from flow data reported on DMRs) for each monitoring period within a year. The maximum allowable load is not calculated for pollutants for which only monitoring is required or numeric limits are not provided.",
+          "The maximum allowable load is presented for comparative purposes and is not a determination of compliance.",
+          "Weighting factor used when the estimation function is applied to account for periods of missing data during a reporting year. This is calculated by dividing 12 by the sum of the number of months with DMR data and the number of months with no discharge. If all periods for the calendar year are accounted for in the annual load, then the Estimation Factor will equal 1. This estimation factor is not applied to monitoring periods where the facility indicated that no discharge occurred."
+        ]
+      },
+      {
+        "type": "heading",
+        "level": 3,
+        "text": "TRI Release Data"
+      },
+      {
+        "type": "paragraph",
+        "text": "TRI release data are only displayed for NPDES permits that link to a TRI ID and reported the similar chemical on both DMRs and to TRI in the same reporting year. For more information about how EPA associates DMR and TRI data and how they may be used for comparisons, see Linking DMR and TRI Data."
+      },
+      {
+        "type": "list",
+        "ordered": false,
+        "items": [
+          "The name associated with chemicals that are reported to EPA's TRI Program.",
+          "The amount of TRI chemical(s) released directly to surface water bodies, reported as pounds per year.",
+          "The amount of TRI chemical(s) released to sewage treatment plants. For indirect releases, the Loading Tool adjusts the reported facility release to account for removals at the POTW. POTWs can treat and remove some or all of the chemicals from TRI indirect releases before releasing the treated wastewater to the environment. EPA estimates chemical removal rates based on a percent removal and subtracts the percent removed from the reported indirect release. The POTW chemical removal spreadsheet is available in Technical Support Documentation."
+        ]
+      }
+    ]
+  },
+  "author": null,
+  "published_date": null,
+  "latency_ms": 1168.7646160007716,
+  "format": "json"
+}

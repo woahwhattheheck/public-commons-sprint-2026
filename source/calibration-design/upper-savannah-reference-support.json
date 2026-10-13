@@ -1,0 +1,230 @@
+{
+  "basis": "Actual seven published source-target constituent incidence; reference grouping uses each supplied reach as one group. Runtime review consumes actual native spatial groups.",
+  "targets": [
+    {
+      "id": "reference-unit-e0d1faa8072f0bfae19487d5dc528742d29ec2794ba72bc347da19765b0d90c5",
+      "catchment_id": "6269342",
+      "group_id": "6269342",
+      "parameter": "nitrogen",
+      "observed_annual_mass": 270438.4381,
+      "units": "kg/year",
+      "observation_record_ids": [
+        "e0d1faa8072f0bfae19487d5dc528742d29ec2794ba72bc347da19765b0d90c5"
+      ],
+      "periods": [
+        {
+          "start": "1999-10-01",
+          "end": "2014-10-01",
+          "weight": 15
+        }
+      ],
+      "temporal_weighting": "whole_years",
+      "station_ids": [
+        "comb600_6269342"
+      ]
+    },
+    {
+      "id": "reference-unit-14d3a73da05bc4e73c32459d1c2745524bc01371acca63c43b1ef7962a1664cb",
+      "catchment_id": "11730084",
+      "group_id": "11730084",
+      "parameter": "nitrogen",
+      "observed_annual_mass": 139789.3642,
+      "units": "kg/year",
+      "observation_record_ids": [
+        "14d3a73da05bc4e73c32459d1c2745524bc01371acca63c43b1ef7962a1664cb"
+      ],
+      "periods": [
+        {
+          "start": "1999-10-01",
+          "end": "2014-10-01",
+          "weight": 15
+        }
+      ],
+      "temporal_weighting": "whole_years",
+      "station_ids": [
+        "scSV-354"
+      ]
+    },
+    {
+      "id": "reference-unit-4da871fa12c4c241517247fdf5c8a716b28cc535b43fa3b66d1ab38c529e5832",
+      "catchment_id": "6269342",
+      "group_id": "6269342",
+      "parameter": "phosphorus",
+      "observed_annual_mass": 96111.0042,
+      "units": "kg/year",
+      "observation_record_ids": [
+        "4da871fa12c4c241517247fdf5c8a716b28cc535b43fa3b66d1ab38c529e5832"
+      ],
+      "periods": [
+        {
+          "start": "1999-10-01",
+          "end": "2014-10-01",
+          "weight": 15
+        }
+      ],
+      "temporal_weighting": "whole_years",
+      "station_ids": [
+        "comb665_6269342"
+      ]
+    },
+    {
+      "id": "reference-unit-5b67145912004c1a36a5522692734fe6c4c17652f6a3d912e1b5e499c9f1fc23",
+      "catchment_id": "6280111",
+      "group_id": "6280111",
+      "parameter": "phosphorus",
+      "observed_annual_mass": 223025.1307,
+      "units": "kg/year",
+      "observation_record_ids": [
+        "5b67145912004c1a36a5522692734fe6c4c17652f6a3d912e1b5e499c9f1fc23"
+      ],
+      "periods": [
+        {
+          "start": "1999-10-01",
+          "end": "2014-10-01",
+          "weight": 15
+        }
+      ],
+      "temporal_weighting": "whole_years",
+      "station_ids": [
+        "02192000"
+      ]
+    },
+    {
+      "id": "reference-unit-bfd82b95e4db783510093abddadde207f11d2f1d035a4cabc16e728b47b9b856",
+      "catchment_id": "11730084",
+      "group_id": "11730084",
+      "parameter": "phosphorus",
+      "observed_annual_mass": 19086.9896,
+      "units": "kg/year",
+      "observation_record_ids": [
+        "bfd82b95e4db783510093abddadde207f11d2f1d035a4cabc16e728b47b9b856"
+      ],
+      "periods": [
+        {
+          "start": "1999-10-01",
+          "end": "2014-10-01",
+          "weight": 15
+        }
+      ],
+      "temporal_weighting": "whole_years",
+      "station_ids": [
+        "scSV-354"
+      ]
+    },
+    {
+      "id": "reference-unit-4322744b8bd02e236fabecf82058f598648d55a941ddf717b4fb9a13a5a896a8",
+      "catchment_id": "6269342",
+      "group_id": "6269342",
+      "parameter": "sediment",
+      "observed_annual_mass": 7201.8484,
+      "units": "metric tonnes/year",
+      "observation_record_ids": [
+        "4322744b8bd02e236fabecf82058f598648d55a941ddf717b4fb9a13a5a896a8"
+      ],
+      "periods": [
+        {
+          "start": "1999-10-01",
+          "end": "2014-10-01",
+          "weight": 15
+        }
+      ],
+      "temporal_weighting": "whole_years",
+      "station_ids": [
+        "02177000"
+      ]
+    },
+    {
+      "id": "reference-unit-cbf8a90194107357661f410b608e6a581af8940d493a28051ce1b037441bec55",
+      "catchment_id": "6280111",
+      "group_id": "6280111",
+      "parameter": "sediment",
+      "observed_annual_mass": 141611.9058,
+      "units": "metric tonnes/year",
+      "observation_record_ids": [
+        "cbf8a90194107357661f410b608e6a581af8940d493a28051ce1b037441bec55"
+      ],
+      "periods": [
+        {
+          "start": "1999-10-01",
+          "end": "2014-10-01",
+          "weight": 15
+        }
+      ],
+      "temporal_weighting": "whole_years",
+      "station_ids": [
+        "02192000"
+      ]
+    }
+  ],
+  "allTraining": [
+    {
+      "held": "6269342",
+      "trainingReady": true,
+      "heldoutComplete": true,
+      "heldoutMissing": []
+    },
+    {
+      "held": "11730084",
+      "trainingReady": true,
+      "heldoutComplete": false,
+      "heldoutMissing": [
+        "sediment"
+      ]
+    },
+    {
+      "held": "6280111",
+      "trainingReady": true,
+      "heldoutComplete": false,
+      "heldoutMissing": [
+        "nitrogen"
+      ]
+    }
+  ],
+  "chattoogaValidation": {
+    "trainingReady": true,
+    "validationComplete": true,
+    "folds": [
+      {
+        "held": "11730084",
+        "trainingReady": false,
+        "missing": [
+          "nitrogen"
+        ]
+      },
+      {
+        "held": "6280111",
+        "trainingReady": false,
+        "missing": [
+          "sediment"
+        ]
+      }
+    ]
+  },
+  "schema": "upstate.calibration-source-support-reference/v1",
+  "source_id": "430f1c2185f2cf14a88c992f270b729e81d9de5cecd20ec67def1c26ff86cc03",
+  "source_release": "https://doi.org/10.5066/P9A682GW",
+  "source_tables": [
+    {
+      "path": "nitrogen-calibration.json",
+      "layer": 37,
+      "sha256": "f7e2bb7c22c644bf618d48e8fbb0729b44ab5c1f5343fb4a61261fd460911f48",
+      "bytes": 139120,
+      "uri": "https://gis1.wim.usgs.gov/server/rest/services/Sparrow/SparrowSoutheast/MapServer/37"
+    },
+    {
+      "path": "phosphorus-calibration.json",
+      "layer": 36,
+      "sha256": "6e70bccc5666d8e4bd3389026bfc1242516817c462e4149c063b5e678c8a1ec0",
+      "bytes": 136921,
+      "uri": "https://gis1.wim.usgs.gov/server/rest/services/Sparrow/SparrowSoutheast/MapServer/36"
+    },
+    {
+      "path": "sediment-calibration.json",
+      "layer": 39,
+      "sha256": "81b0ee67b2898e4b3c9c95a04253eb98a9f3dabc29bb5a41f463ee609041b91e",
+      "bytes": 107033,
+      "uri": "https://gis1.wim.usgs.gov/server/rest/services/Sparrow/SparrowSoutheast/MapServer/39"
+    }
+  ],
+  "interpretation": "One annual target per original catchment and pollutant over the published source-global WY2000–2014 horizon, referenced to2012. The values are not multiplied by15. Source incidence is calculated from original ACTUAL/ACTUAL_MT. Geographic independence and any merges in the operational review come from actual native preview geometry groups."
+}

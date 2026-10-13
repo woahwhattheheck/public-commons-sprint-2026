@@ -75,22 +75,24 @@
     },
     {
       "path": "operator/web/monitoring-observed.mjs",
-      "bytes": 24516,
-      "sha256": "ead60a60b44adc80e0495ba988a337ac11afa92a9af26b12734528d94ee1114e",
+      "bytes": 25250,
+      "sha256": "0226a65719bea63020a69e41bf0b9efc68ff27ff0c5dc11fe6b55066ec367f0b",
       "predecessor_sha256": [
         "7ebb4f2d5f1fe2505f085c6e7b9472339cfc8dc2e3871bbfe985d228d8cf3ebe",
         "d9e01600e859b91ca5a881ad6d844874938c99f8ebc618e4d6ac5ca37896c21f",
-        "b892173baf305692e3b4fcb1b108cc47bcd5a747de32e99beed51f3667d6c9b8"
+        "b892173baf305692e3b4fcb1b108cc47bcd5a747de32e99beed51f3667d6c9b8",
+        "ead60a60b44adc80e0495ba988a337ac11afa92a9af26b12734528d94ee1114e"
       ]
     },
     {
       "path": "model/MONITORING_OBSERVED_CONTEXT.md",
-      "bytes": 19011,
-      "sha256": "b345444db93018843e8d3dd736429ddbd32f649ba6733c969314f3c2248d3363",
+      "bytes": 19887,
+      "sha256": "62ec7d4c2bc092d00f862b40115ad345135e728db268a6508c9746de2a1db7fb",
       "predecessor_sha256": [
         "18a222a0269cd333713041854d4be2a9811912664c7b082589f5c9ae6e319992",
         "7c8189909d6fae3e917e7e4549ad0fc788aeb2e1684ce2268a2fc1d4f04e301c",
-        "f1b55f73e8bb0d15f6f8ee48e628d87d80683e0f0e8932478e6c0db8a4d07858"
+        "f1b55f73e8bb0d15f6f8ee48e628d87d80683e0f0e8932478e6c0db8a4d07858",
+        "b345444db93018843e8d3dd736429ddbd32f649ba6733c969314f3c2248d3363"
       ]
     },
     {
@@ -114,13 +116,14 @@
     },
     {
       "path": "model/monitoring_workspace.py",
-      "bytes": 34549,
-      "sha256": "74a3fc5638dc937687b25cde2be50d3116766519a04797b03e58369c1dd23e51",
+      "bytes": 34937,
+      "sha256": "8f5dbb9a50311e8e63574561ebb44921f3bfcd7fb19320c053e35c6a3227a97e",
       "predecessor_sha256": [
         "3cbe9008882a748880c394a480a32c0b68beaf66be85599fb2061484cfff7d1c",
         "fe465c33f8a4faf95d01c8ac3e189306639614fb5ce9079031a3c6e6f7096340",
         "bd5946b4f758bbe6ad1ecafb45bd0c04273092178451c16c9dbd3f529f790cbc",
-        "deed9680682b32f71131800c7d04dd06569ce380124643c88029f7a7fc784076"
+        "deed9680682b32f71131800c7d04dd06569ce380124643c88029f7a7fc784076",
+        "74a3fc5638dc937687b25cde2be50d3116766519a04797b03e58369c1dd23e51"
       ]
     },
     {
@@ -151,8 +154,8 @@
     },
     {
       "path": "operator/web/monitoring.mjs",
-      "bytes": 8855,
-      "sha256": "3e25982a207cb20a4493dee22cab03ec399b8c59941beb89b9c78408dfb17deb",
+      "bytes": 13110,
+      "sha256": "fc32b32ac15149e72e564a110f1e04fb8a1fa4c1241662171df69701111479cc",
       "predecessor_sha256": [
         "4997a2652034fae1708455f742b72b68dcc7d3a405c0ff303c7c69828b6ab9ea",
         "1728c22d5b2c9ffaf572b9cea8d9f9dcc4a3e28edd81c5125d7af9d227b124be",
@@ -161,17 +164,20 @@
         "0a76feed9d9bd4ac929fa8e9ad0f28f95205fa705c9f6314ef79e3f095e4b895",
         "f24ec9690b5aefc8e85c9792a55ef311e4933371688d83ce4f5f108d1ea32919",
         "dd73d9da22fe3b9b1199dc9c3f824401b98b4fa94bbd10d180698e8a4c50084a",
-        "61806854947e01183f0e160a6ae808346c9b794b5b6ac7210372ae97ab7ffe49"
+        "61806854947e01183f0e160a6ae808346c9b794b5b6ac7210372ae97ab7ffe49",
+        "3e25982a207cb20a4493dee22cab03ec399b8c59941beb89b9c78408dfb17deb"
       ]
     },
     {
       "path": "operator/web/monitoring-component.mjs",
-      "bytes": 23901,
-      "sha256": "064d50959afc32411df87e9cd1479dc1d0802ad9e83ada549de0d9e1ac654949",
+      "bytes": 24189,
+      "sha256": "af53661a464cfc5f838dbeae1552806a047544bdeb57e3aa1a0bc0af7566d1cd",
       "predecessor_sha256": [
         "46747a23fb5d77dac210eb16fa0894774956e5a1776c5a48c278b1a26a47a288",
         "52cc07c29bde345efbe305ad0b47a7835c75af16649a8d7c548a80f849d575be",
-        "74733636160383214ead70221766e622cb9b2940bb12ef238adbcdb9cc5edd6d"
+        "74733636160383214ead70221766e622cb9b2940bb12ef238adbcdb9cc5edd6d",
+        "064d50959afc32411df87e9cd1479dc1d0802ad9e83ada549de0d9e1ac654949",
+        "7cddac64d34641eb339e52029d7125cf03b908f1b8fc54852280799f45598bb0"
       ]
     },
     {
@@ -182,8 +188,8 @@
     },
     {
       "path": "integrations/monitoring/source_adoption.json",
-      "bytes": 37370,
-      "sha256": "b68327b81b539cce4f9f5a2931fd6f3cefd6bebe756fceb8d165495ea65d7221",
+      "bytes": 47827,
+      "sha256": "283aa8d4caaa6985ebbf8c807c705822cffa56bbbc4b27a897016e05ab6a2f26",
       "predecessor_sha256": [
         "830e35b5d5b8929ef6ea238935b96bd7148c1224fab04802a89c9b52234f98a7",
         "785ffefbacf24579a9d6d138797ea50874e42a9ce75b7db5282c24f36d42be19",
@@ -196,7 +202,15 @@
         "53b7ff0e49b95bee66cf537625ff6b941851ffe386d3165b672353f6dae94a5c",
         "f410679ab2882516ecfb31e90778bd136984ab08518d35d7f903c3945c0d2550",
         "4b2afe0f7086c3fdee29f8962b4197dbbb32915ecd702e055be726b23ad5513a",
-        "7f1e2886a331d75ce1def4c5d4a0a91a551573ad72931efeddd3933c42e214e8"
+        "7f1e2886a331d75ce1def4c5d4a0a91a551573ad72931efeddd3933c42e214e8",
+        "b68327b81b539cce4f9f5a2931fd6f3cefd6bebe756fceb8d165495ea65d7221",
+        "4942337e1f4a1656f968beefd45bbc510b0892d78dbadfa2d4f9d1ec0cc1c47c",
+        "4d8b61f2524d7a9c8ac904d815cebe44212d72b27c8cf4fecc822783955fad8c",
+        "f9028e320191ee1db5e3a38d08dfdd31ba90a19a940daeb900c94e55e2308e46",
+        "58c75066edd2c2ac89db95bb19dde29a73af50a38445b2564302fdf5da03e4a4",
+        "1baf0d24f4e3d2535ae176050b1d8c8f56775ec6e3039a82c5fa16c9d0dc018e",
+        "3414a3bd83fa7dc19a2562620e47f94dc44888cf0886b4ec17dbf533fa6f03d0",
+        "abed78f2dfc5f2ec468804c19c50f59b0edbbe5c1759a885e80bcdc5495d01fd"
       ]
     },
     {
@@ -332,18 +346,21 @@
     },
     {
       "path": "model/monitoring_study_transfer.py",
-      "bytes": 27108,
-      "sha256": "a2507f876f2e7ba5ed3be5e5df413b726eeec7840097cbdc60f18da47f7daae9",
+      "bytes": 30930,
+      "sha256": "f3a9da48bbb9865c60b8aacf846ab20f1da0a664002227a3ea7e484a67bbee51",
       "predecessor_sha256": [
-        "7580e5f6bde6cf27c320ada33691fd046b5eef72e643db22df37b0e9bda29ad3"
+        "7580e5f6bde6cf27c320ada33691fd046b5eef72e643db22df37b0e9bda29ad3",
+        "a2507f876f2e7ba5ed3be5e5df413b726eeec7840097cbdc60f18da47f7daae9"
       ]
     },
     {
       "path": "model/MONITORING_STUDY_TRANSFER.md",
-      "bytes": 8459,
-      "sha256": "5732615fb82ebb0b29f2264f692f679006758c3cd6e8d40bc4be5d9696c14224",
+      "bytes": 12999,
+      "sha256": "4b163903f3e69610cc53150e1064af3bbd375fe7b5dcad8797071310305ff8c7",
       "predecessor_sha256": [
-        "0095d0ca255e9989c35146f801561c82a327e02445850dd2bf3a4ae316570692"
+        "0095d0ca255e9989c35146f801561c82a327e02445850dd2bf3a4ae316570692",
+        "5732615fb82ebb0b29f2264f692f679006758c3cd6e8d40bc4be5d9696c14224",
+        "7065cd1f35b2536f4b7157a9da37504a7c9a7e3cdb4c1490ae64f1da845e38ce"
       ]
     },
     {
@@ -582,9 +599,11 @@
     },
     {
       "path": "model/MONITORING_BUDGET_COMPARISON.md",
-      "bytes": 6508,
-      "sha256": "0de09d942e2e60832b61489ab8da0edbc49769dc025fee51eaeefabab6aa8790",
-      "predecessor_sha256": []
+      "bytes": 7176,
+      "sha256": "6986fd948b0f4eaab9a1a70564c1d3c1df59dfae87b0557637ecb38b82c3865a",
+      "predecessor_sha256": [
+        "0de09d942e2e60832b61489ab8da0edbc49769dc025fee51eaeefabab6aa8790"
+      ]
     },
     {
       "path": "model/monitoring_field_return.py",
@@ -594,15 +613,19 @@
     },
     {
       "path": "model/monitoring_frontier_comparison.py",
-      "bytes": 25919,
-      "sha256": "1d12423cefad54a458f063c6a20d534b95a75d6587715fad654caae6c793a51b",
-      "predecessor_sha256": []
+      "bytes": 31679,
+      "sha256": "148f17fc82afc5b472e56d0d60b5d9ee8eee7932e82669d15eb5b548d6a8b73e",
+      "predecessor_sha256": [
+        "1d12423cefad54a458f063c6a20d534b95a75d6587715fad654caae6c793a51b"
+      ]
     },
     {
       "path": "operator/MONITORING_BUDGET_CHOICES.md",
-      "bytes": 6953,
-      "sha256": "774b203ed4a533b1ecac8029927478b17858a45fb7f8faad6040e2609304ceab",
-      "predecessor_sha256": []
+      "bytes": 7564,
+      "sha256": "6662691dc5356db34233b8247bf07c9716f4d8fb31541165d3307411c96f3c34",
+      "predecessor_sha256": [
+        "774b203ed4a533b1ecac8029927478b17858a45fb7f8faad6040e2609304ceab"
+      ]
     },
     {
       "path": "operator/web/monitoring-frontiers.css",
@@ -612,9 +635,11 @@
     },
     {
       "path": "operator/web/monitoring-frontiers.mjs",
-      "bytes": 24139,
-      "sha256": "827fbf9f1985b373aebac8d441eb31640a14c85bfe12ddfdc3676113b9d3cfc0",
-      "predecessor_sha256": []
+      "bytes": 25764,
+      "sha256": "44907cdc2646358490a6d24130f13864b9c674120c41485fb1d6e430c393f466",
+      "predecessor_sha256": [
+        "827fbf9f1985b373aebac8d441eb31640a14c85bfe12ddfdc3676113b9d3cfc0"
+      ]
     },
     {
       "path": "operator/web/monitoring_field_return.mjs",
@@ -636,19 +661,27 @@
     },
     {
       "path": "integrations/monitoring/PREDECESSORS.json",
-      "bytes": 23474,
-      "sha256": "437135fc0db7e7949d3f239ae2694cc7fe64cf7baf98459e66b8dbeaf2988c4f",
+      "bytes": 58210,
+      "sha256": "31e68ed827cd3ba454a4dcd2af6067f78b5bdaa7013aea1f138152524a72bf11",
       "predecessor_sha256": [
         "9fef2b526d6fd30ffcb226cfef642c53f9cbabd01dc47a2923dadbbe62a6e9d2",
-        "bed954a59d000b22ae24bb71f2a23359975d1099031aeb3b8d54106e9542c91f"
+        "bed954a59d000b22ae24bb71f2a23359975d1099031aeb3b8d54106e9542c91f",
+        "437135fc0db7e7949d3f239ae2694cc7fe64cf7baf98459e66b8dbeaf2988c4f",
+        "d7d8033709de17a8a48738479d613dfdb600d7ac63d24ffc03c20559fd6482d4",
+        "98a60aaf35fb7bc52858eafad3951b0ffee6b72e6ca31e1a7f9cc2c08bf95382",
+        "a661e90baf70cfa20f039a3e5fa24948019413a5331115554e52e6e339b90151",
+        "892f93ffe9b5a6337b5fa0fe8501c376ef50b9287912132d0c19e9f0c929bcf1"
       ]
     },
     {
       "path": "integrations/monitoring/current_application_files.json",
-      "bytes": 4828,
-      "sha256": "c5d45e0f5ad3ac532b7ed086ca749b59669749eecab25253926fe8bb8b1513a7",
+      "bytes": 6889,
+      "sha256": "ef6a3db77688fb9980b2922e6efa6da9e2f355b380bf7fdcc3298af728440022",
       "predecessor_sha256": [
-        "57adcfadab949fdf637f6eb231cdbf05ac2a346d6be265441217c05e224b3439"
+        "57adcfadab949fdf637f6eb231cdbf05ac2a346d6be265441217c05e224b3439",
+        "c5d45e0f5ad3ac532b7ed086ca749b59669749eecab25253926fe8bb8b1513a7",
+        "0bc6877b7cc5b490b30aed9b32b9a7792b34bfbaa88f58733db515d8134894eb",
+        "5a8e911526d10e80942c32756a22a7555d316925a062177940c45df4ce5d1900"
       ]
     },
     {
@@ -660,16 +693,19 @@
     {
       "path": "model/MONITORING_REPORT_SOURCE.md",
       "predecessor_sha256": [
-        "fbb0a7ac1b01240cf0e1c1a6b43cbb2279b835ba656b3308b701acf74d5be2cc"
+        "fbb0a7ac1b01240cf0e1c1a6b43cbb2279b835ba656b3308b701acf74d5be2cc",
+        "a7fef96467937e4b6ad4e45dc9714ea6046b90dbd23bacd08f4b8466377e6d8c"
       ],
-      "bytes": 14393,
-      "sha256": "a7fef96467937e4b6ad4e45dc9714ea6046b90dbd23bacd08f4b8466377e6d8c"
+      "bytes": 15794,
+      "sha256": "f6782ea83fc1aaaa6c9fcb24bb7d9649175f48446bd81cd3b383ad26103a060a"
     },
     {
       "path": "model/monitoring_comparison_report.py",
-      "predecessor_sha256": [],
-      "bytes": 16352,
-      "sha256": "59b9f49ec4bccc5ec543d06c9e3da3533be05048f9cdd3372693b616720487ae"
+      "predecessor_sha256": [
+        "59b9f49ec4bccc5ec543d06c9e3da3533be05048f9cdd3372693b616720487ae"
+      ],
+      "bytes": 25249,
+      "sha256": "71f6d2c545283a7afb146bedcfcc3432738f4a943864f53afa3b384efc9f3217"
     },
     {
       "path": "model/monitoring_report_cli.py",
@@ -682,10 +718,11 @@
     {
       "path": "model/monitoring_report_source.py",
       "predecessor_sha256": [
-        "ad8d184856aa4f4526af40a9a0b3927a1c07bd9ce1a9d3568b823726b51985bf"
+        "ad8d184856aa4f4526af40a9a0b3927a1c07bd9ce1a9d3568b823726b51985bf",
+        "8a76c5bea0fe9a3b2341a4ce434b0aa2455cdca3a6bdc6181038d5dc27b2c9d0"
       ],
-      "bytes": 37333,
-      "sha256": "8a76c5bea0fe9a3b2341a4ce434b0aa2455cdca3a6bdc6181038d5dc27b2c9d0"
+      "bytes": 38381,
+      "sha256": "7fd4c62fa756db94a9134f14ea54f1085f54dd119f3f27d9c82506094e49951c"
     },
     {
       "path": "model/observed_context.py",
@@ -697,25 +734,30 @@
     },
     {
       "path": "operator/MONITORING_COMPARISON_REPORT.md",
-      "predecessor_sha256": [],
-      "bytes": 3357,
-      "sha256": "3ce6bc39fd1fabdff5f6850a6ecd610dae269dccbd0374558fa9cf780ea3cced"
+      "predecessor_sha256": [
+        "3ce6bc39fd1fabdff5f6850a6ecd610dae269dccbd0374558fa9cf780ea3cced"
+      ],
+      "bytes": 3963,
+      "sha256": "5a3a39de3947f18b909cd729c46d4245994a51216c6a858ec5ca4d251bc69478"
     },
     {
       "path": "operator/web/monitoring-report.mjs",
       "predecessor_sha256": [
-        "001b86db437657395273b507fb185939c84b7e1d8d222d769102fe0435e4ecdc"
+        "001b86db437657395273b507fb185939c84b7e1d8d222d769102fe0435e4ecdc",
+        "73f6045e3c87b098d83818b398ad975519fb51e239fe9bfb8434bfc241103fae"
       ],
-      "bytes": 18702,
-      "sha256": "73f6045e3c87b098d83818b398ad975519fb51e239fe9bfb8434bfc241103fae"
+      "bytes": 19572,
+      "sha256": "9c5a5375901acd3912fc8b475087ec0b8d3bc6cba4fb491f3a5a6892c79c19ff"
     },
     {
       "path": "operator/install_receiving_waters.py",
       "predecessor_sha256": [
-        "2612306f9a422af0175600b7d1d492cd534469741186aaa81ccb7bca7cf7cd71"
+        "2612306f9a422af0175600b7d1d492cd534469741186aaa81ccb7bca7cf7cd71",
+        "dc204ec56df02c93658a77a6e28802fb2150f5e93d5c529953a3fecfef1c1c32",
+        "17d9436bbad3f111313fa2503d4f5bce338a2edd7b392cb36d1c8b0b5a95d458"
       ],
-      "bytes": 46653,
-      "sha256": "dc204ec56df02c93658a77a6e28802fb2150f5e93d5c529953a3fecfef1c1c32"
+      "bytes": 49860,
+      "sha256": "6221255d84b339fd54bb67f4256e26a865e088e3430524b8eadbc65da473e606"
     },
     {
       "path": "operator/extensions/monitoring-report.json",
@@ -724,6 +766,48 @@
       ],
       "bytes": 1021,
       "sha256": "87bee20cea4caf7b1e5427c09bf2668766ef3b1cee83fe641ffc8476d103b0db"
+    },
+    {
+      "path": "integrations/monitoring/install_monitoring.py",
+      "predecessor_sha256": [],
+      "bytes": 12373,
+      "sha256": "62164e9fbe593e845c8b4d095914da82a817d53d7de86b997e2813bab8f32575"
+    },
+    {
+      "path": "integrations/monitoring/install_native_monitoring.py",
+      "predecessor_sha256": [],
+      "bytes": 6256,
+      "sha256": "fba4efc487ba27aa9271273e1e8841b2f66641903887734523d40036d5e537b5"
+    },
+    {
+      "path": "model/scientific_figures.py",
+      "predecessor_sha256": [],
+      "bytes": 13833,
+      "sha256": "927331dade754525ae4f72b73385661fbfa8c14845ca2c54d0d0426480299465"
+    },
+    {
+      "path": "model/scientific_map_figures.py",
+      "predecessor_sha256": [],
+      "bytes": 15526,
+      "sha256": "d672b36181131605d8844f77508b58b37157a2c95b8f1cc99ff64366e1887302"
+    },
+    {
+      "path": "model/utility_monitoring.py",
+      "predecessor_sha256": [],
+      "bytes": 24973,
+      "sha256": "39e91bf5e74340efc7254af53f75c4f0049fb98662da0a941cb00f7c33ea52bc"
+    },
+    {
+      "path": "model/utility_monitoring_report.py",
+      "predecessor_sha256": [],
+      "bytes": 31602,
+      "sha256": "37d63a3f80bf0486fd9c488c1db260ab49b2e159ba5ec6cfbed4055eb461cb15"
+    },
+    {
+      "path": "integration/component_fragments/monitoring-study-transfer.json",
+      "predecessor_sha256": [],
+      "bytes": 1980,
+      "sha256": "27a54cb4773c6e7f6a10691616dcf63200837b3bd114704c48ab3a576968e85b"
     }
   ],
   "requires": [
@@ -823,7 +907,9 @@
     "source_publication": "a92980a492604e6cb7684d13c84afdbbdbefb1d9",
     "source_collection": "monitoring_frontier_comparisons",
     "guide": "model/MONITORING_BUDGET_COMPARISON.md",
-    "component_fragment": "integration/component_fragments/monitoring-budget-comparison.json"
+    "component_fragment": "integration/component_fragments/monitoring-budget-comparison.json",
+    "export_edition": 2,
+    "export_entrypoint": "index.html"
   },
   "scientific_report_comparison": {
     "source_reference": "https://github.com/woahwhattheheck/public-commons-sprint-2026/pull/3593",
@@ -832,5 +918,78 @@
     "report_descriptor": "operator/extensions/monitoring-report.json",
     "component": "integration/component_fragments/monitoring-comparison-report.json",
     "behavior": "Exact saved budget choices enter the existing ordered scientific report with every original plan, source-bound observed context and retained comparison packet. Single-study report enrichment stays unchanged outside this explicit compound report kind."
+  },
+  "saved_record_opening": {
+    "route": "Study transfer → Open in Monitoring",
+    "host_method": "openDesk('monitoring', 'openStudy', selection)",
+    "selection_fields": [
+      "workspace_key",
+      "kind",
+      "id"
+    ],
+    "kinds": [
+      "monitoring_networks",
+      "monitoring_plans",
+      "monitoring_heads",
+      "monitoring_observed_contexts"
+    ],
+    "context_calendar": "Original immutable context; current campaign revision is not substituted",
+    "network_only_context": true
+  },
+  "scoped_upgrade": {
+    "operation_id": "ECO13-MONITORING-SCOPED-UPGRADE-DD6B-20261013",
+    "inventory": "integrations/monitoring/current_application_files.json",
+    "installer": "integrations/monitoring/install_monitoring.py",
+    "command": "python STAGE/integrations/monitoring/install_monitoring.py APPLICATION --source-root STAGE",
+    "custody_files": [
+      "integrations/monitoring/current_application_files.json",
+      "integrations/monitoring/PREDECESSORS.json",
+      "integrations/monitoring/source_adoption.json",
+      "integration/monitoring_observed_sources.json",
+      "integration/monitoring_study_transfer_sources.json"
+    ],
+    "shared_renderers": [
+      "model/scientific_figures.py",
+      "model/scientific_map_figures.py"
+    ],
+    "utility_report_dependencies": [
+      "model/utility_monitoring.py",
+      "model/utility_monitoring_report.py"
+    ],
+    "base_dependencies": [
+      "model/common.py",
+      "model/decision_study_transfer.py",
+      "model/implementation.py",
+      "model/implementation_reporting.py",
+      "model/implementation_schema.py",
+      "model/portable_implementation.py",
+      "model/portable_parameter_studies.py",
+      "model/receiving_water_monitoring.py",
+      "model/receiving_waters.py",
+      "model/study_delivery_transfer.py",
+      "model/study_transfer.py",
+      "model/study_transfer_cli.py",
+      "model/utility_microbial_study.py",
+      "model/workspace.py",
+      "operator/STUDY_TRANSFER.md",
+      "operator/extension_registry.py",
+      "operator/extensions/implementation.json",
+      "operator/extensions/study-transfer.json",
+      "operator/monitoring_report_native.py",
+      "operator/study_transfer.py",
+      "operator/web/extensions/study_transfer.css",
+      "operator/web/extensions/study_transfer.mjs",
+      "source_tools/receive_implementation.py"
+    ],
+    "source_reference": {
+      "source_base": "1528b5f1c52e2eb999e4567f6a930c27eeb84fc4",
+      "report_figures_merge": "4c5fbd132086b864de44f8cc7ac987c9373d42c4",
+      "scientific_composer_merge": "4c3c470cd078b473d7720e7f13c4060728f014ea",
+      "scientific_browser_merge": "3f132ec823503d8b105278fcc6e22b674dbc0250",
+      "progression_merge": "9e3ecec8b74302ae82978bd9127b6f3f860e3355",
+      "shared_renderer_adoption": "Exact complete original bodies through the unchanged Monitoring file inventory and predecessor guard.",
+      "current_utility_report": "e844c828a98530efae611182081ad59b10b4844e"
+    },
+    "preserves": "Original optimizer, source editions, fieldwork return, microbial context, saved-record opening, editable comparison transfer, original utility context, current shared Study transfer and scientific report composer."
   }
 }

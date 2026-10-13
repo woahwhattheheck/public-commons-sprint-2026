@@ -1,0 +1,1786 @@
+L0000@PDF01: Regulation 61-69
+L0001@PDF01: Classified Waters
+L0002@PDF01: Disclaimer
+L0003@PDF01: SCDES provides this copy of the regulation for the convenience of
+L0004@PDF01: the public and makes every effort to ensure its accuracy. However,
+L0005@PDF01: this is an unofficial version of the regulation. The regulation's most
+L0006@PDF01: recent final publication in the South Carolina State Register presents
+L0007@PDF01: the official, legal version of the regulation.Statutory Authority: S.C. Code Sections 48-1-10 et seq.
+L0008@PDF02: Table of Contents
+L0009@PDF02: A. Criteria for Classes. ................................................................................................................... 1
+L0010@PDF02: B. Tributaries to Classified Waters. .............................................................................................. 1
+L0011@PDF02: C. Status of Classifications and Reviews. ..................................................................................... 1
+L0012@PDF02: D. No Discharge Zone Designations. ........................................................................................... 1
+L0013@PDF02: E. Class Abbreviations. .................................................................................................................. 1
+L0014@PDF02: F. Notations for Site-Specific Standards and Previous Class. .................................................... 1
+L0015@PDF02: G. County Abbreviations. .............................................................................................................. 2
+L0016@PDF02: Regulation History as Published in State Register
+L0017@PDF02: Date Document Number Volume Issue
+L0018@PDF02: December 12, 1977 - 1 16
+L0019@PDF02: August 1, 1979 - 3 17
+L0020@PDF02: April 11, 1980 - 4 6, Part 1
+L0021@PDF02: July 27, 1984 411 8 7
+L0022@PDF02: June 28, 1985 458, 459, 460 9 6
+L0023@PDF02: March 27, 1987 653 11 3
+L0024@PDF02: January 22, 1988 778 12 1
+L0025@PDF02: April 22, 1988 859 12 4
+L0026@PDF02: May 27, 1988 830 12 5
+L0027@PDF02: June 24, 1988 855 12 6
+L0028@PDF02: February 24, 1989 936 13 2
+L0029@PDF02: March 24, 1989 984 13 3
+L0030@PDF02: April 28, 1989 989 13 4
+L0031@PDF02: June 23, 1989 863 and 1052 13 6
+L0032@PDF02: April 27, 1990 1039 14 5
+L0033@PDF02: April 24, 1992 1385 and 1402 16 4
+L0034@PDF02: May 28, 1993 1466 17 5, Part 1
+L0035@PDF02: May 23, 1997 1928 21 5
+L0036@PDF02: June 26, 1998 2178 and 2221 22 6, Part 2
+L0037@PDF02: May 26, 2000 2455 and 2456 24 5
+L0038@PDF02: May 24, 2002 2637 26 5, Part 1
+L0039@PDF02: May 28, 2004 2854 28 5
+L0040@PDF02: June 23, 2006 3025 30 6
+L0041@PDF02: June 22, 2012 4212 36 6
+L0042@PDF02: June 26, 2020 4885 44 6
+L0043@PDF02: May 26, 2023 5116 47 5H. List of Waterbody Names, County(ies), Classes, and Descriptions....................................... 31 | Regulation 61-69
+L0044@PDF04: A. Criteria for Classes.
+L0045@PDF04: All adopted classifications must conform to the standards and rules contained within R.61-68, Water
+L0046@PDF04: Classifications and Standards, or site-specific standards listed within this regulation. Unless noted,
+L0047@PDF04: site- specific standards apply only to the water named and not to tributary or downstream waters.
+L0048@PDF04: B. Tributaries to Classified Waters.
+L0049@PDF04: Where surface waters are not classified by name (unlisted) in this regulation, the use classification and
+L0050@PDF04: numeric standards of the class of the stream to which they are tributary apply, disregarding any site-specific
+L0051@PDF04: numeric standards for the named waterbody. In tidal areas, where an unlisted tributary may affect or flows
+L0052@PDF04: between two differently classified waterbodies, regardless of whether the location is upstream or
+L0053@PDF04: downstream, the more stringent numeric standards of the classified waters apply to the unlisted tributary,
+L0054@PDF04: disregarding any site-specific numeric standards for those waterbodies.
+L0055@PDF04: C. Status of Classifications and Reviews.
+L0056@PDF04: The classification for all bodies of water contained herein supersedes all previous classifications. The
+L0057@PDF04: classifications listed within this regulation shall be open to review to ensure that the classification use is
+L0058@PDF04: still valid and justified.
+L0059@PDF04: D. No Discharge Zone Designations.
+L0060@PDF04: The Department may determine in accordance with Section 312 of the Clean Water Act that for some
+L0061@PDF04: waterbodies (or portions of waterbodies), the designation of No Discharge Zone (NDZ) for Marine
+L0062@PDF04: Sanitation Devices (MSDs) shall be enacted with application of the existing classified standards of the
+L0063@PDF04: waterbody. The designation is listed in this regulation as an NDZ following the waterbody name.
+L0064@PDF04: E. Class Abbreviations.
+L0065@PDF04: Class Abbreviations Used in R.61-69
+L0066@PDF04: Outstanding National Resource Waters ONRW (previous class)
+L0067@PDF04: Outstanding Resource Waters ORW (previous class)
+L0068@PDF04: Shellfish Harvesting Waters SFH
+L0069@PDF04: Trout - Natural TN
+L0070@PDF04: Trout – Put, Grow, and Take TPGT
+L0071@PDF04: Trout – Put and Take TPT
+L0072@PDF04: Freshwaters FW
+L0073@PDF04: Class SA (saltwaters) SA
+L0074@PDF04: Class SB (saltwaters) SB
+L0075@PDF04: F. Notations for Site-Specific Standards and Previous Class.
+L0076@PDF04: An “sp” by the Class means the Department has established site-specific standards for certain parameters
+L0077@PDF04: for that waterbody. The site-specific standards are listed in parentheses after the waterbody description. For
+L0078@PDF04: convenience, on both ONRW and ORW waterbodies, the previous classification for the specific waterbody
+L0079@PDF04: is given in parentheses after the Class listing.2 | Regulation 61-69
+L0080@PDF05: G. County Abbreviations.
+L0081@PDF05: County Abbreviation
+L0082@PDF05: Abbeville Abvl
+L0083@PDF05: Aiken Aikn
+L0084@PDF05: Allendale Aldl
+L0085@PDF05: Anderson Andn
+L0086@PDF05: Bamberg Bmbg
+L0087@PDF05: Barnwell Brwl
+L0088@PDF05: Beaufort Bfrt
+L0089@PDF05: Berkeley Bkly
+L0090@PDF05: Calhoun Clhn
+L0091@PDF05: Charleston Chtn
+L0092@PDF05: Cherokee Chke
+L0093@PDF05: Chester Cstr
+L0094@PDF05: Chesterfield Cfld
+L0095@PDF05: Clarendon Clrn
+L0096@PDF05: Colleton Cltn
+L0097@PDF05: Darlington Drln
+L0098@PDF05: Dillon Diln
+L0099@PDF05: Dorchester Dchr
+L0100@PDF05: Edgefield Efld
+L0101@PDF05: Fairfield Ffld
+L0102@PDF05: Florence Flrn
+L0103@PDF05: Georgetown Gtwn
+L0104@PDF05: Greenville Gnvl
+L0105@PDF05: Greenwood Gnwd
+L0106@PDF05: Hampton Hmpt
+L0107@PDF05: Horry Hory
+L0108@PDF05: Jasper Jspr
+L0109@PDF05: Kershaw Krsh
+L0110@PDF05: Lancaster Lctr
+L0111@PDF05: Laurens Lrns
+L0112@PDF05: Lee Lee
+L0113@PDF05: Lexington Lxtn
+L0114@PDF05: McCormick Mcmk
+L0115@PDF05: Marion Marn
+L0116@PDF05: Marlboro Mrlb
+L0117@PDF05: Newberry Nbry
+L0118@PDF05: Oconee Ocne
+L0119@PDF05: Orangeburg Orbg
+L0120@PDF05: Pickens Pkns
+L0121@PDF05: Richland Rlnd
+L0122@PDF05: Saluda Slda
+L0123@PDF05: Spartanburg Spbg
+L0124@PDF05: Sumter Smtr
+L0125@PDF05: Union Unin
+L0126@PDF05: Williamsburg Wmbg
+L0127@PDF05: York York3 | Regulation 61-69
+L0128@PDF06: H. List of Waterbody Names, County(ies), Classes, and Descriptions.
+L0129@PDF06: Waterbody Name County(ies) Class Waterbody Description and
+L0130@PDF06: (Site-Specific Standard)
+L0131@PDF06: Abner Creek Pkns ORW(FW) The entire creek tributary to Eastatoe Creek
+L0132@PDF06: Adams Creek Chtn ORW(SFH) The entire creek tributary to Bohicket Creek
+L0133@PDF06: Allan Creek (also
+L0134@PDF06: called Allen Creek)
+L0135@PDF06: Spbg FW The entire creek tributary to Enoree River
+L0136@PDF06: Alligator Creek Cltn ORW(SFH) The entire creek tributary to South Edisto River
+L0137@PDF06: Allison Creek York FW The entire creek tributary to Lake Wylie
+L0138@PDF06: Alston Creek Chtn SFH The entire creek tributary to Wando River
+L0139@PDF06: Anderson Reservoir Andn FW The entire reservoir on Beaverdam Creek
+L0140@PDF06: Archers Creek Bfrt SA That portion of the creek from Port Royal to U.S.
+L0141@PDF06: Government Parris Island Bridge
+L0142@PDF06: Archers Creek Bfrt SFH That portion of the creek from the U.S.
+L0143@PDF06: Government Parris Island Bridge to Broad River
+L0144@PDF06: Ashepoo River Cltn FW That portion of the river to saltwater intrusion
+L0145@PDF06: Ashepoo River Cltn SFH That portion of the river from saltwater intrusion
+L0146@PDF06: to the Atlantic Ocean
+L0147@PDF06: Ashley River Chtn, Dchr FW That portion of the river from its beginning at
+L0148@PDF06: Cypress Swamp to the confluence with Popper
+L0149@PDF06: Dam Creek
+L0150@PDF06: Ashley River Chtn, Dchr SA That portion of the river from the confluence with
+L0151@PDF06: Popper Dam Creek to Church Creek
+L0152@PDF06: Ashley River Chtn SAsp That portion of the river from Church Creek to
+L0153@PDF06: Orangegrove Creek
+L0154@PDF06: (Dissolved Oxygen (D.O.) not less than 4 mg/L)
+L0155@PDF06: Ashley River Chtn SA That portion of the river from Orangegrove Creek
+L0156@PDF06: to Charleston Harbor
+L0157@PDF06: Ashpole Swamp Dill, Marn FWsp The entire swamp tributary to Lumber River
+L0158@PDF06: (D.O. not less than 4 mg/L, pH 5.0 – 8.5)
+L0159@PDF06: Atlantic Intracoastal
+L0160@PDF06: Waterway
+L0161@PDF06: Hory SA That portion of the waterway from the North
+L0162@PDF06: Carolina line to S.C. Hwy 9
+L0163@PDF06: Atlantic Intracoastal
+L0164@PDF06: Waterway
+L0165@PDF06: Hory FW That portion of the waterway from S.C. Hwy 9 to
+L0166@PDF06: its confluence with Waccamaw River
+L0167@PDF06: Atlantic Intracoastal
+L0168@PDF06: Waterway
+L0169@PDF06: Gtwn, Hory FWsp That portion of the waterway from its confluence
+L0170@PDF06: with Waccamaw River to Thoroughfare Creek
+L0171@PDF06: (D.O. not less than 4 mg/L, pH 5.0 – 8.5)
+L0172@PDF06: Atlantic Intracoastal
+L0173@PDF06: Waterway
+L0174@PDF06: Gtwn SAsp That portion of the waterway from Thoroughfare
+L0175@PDF06: Creek to the headwaters of Winyah Bay
+L0176@PDF06: (D.O. not less than 4 mg/L)
+L0177@PDF06: Atlantic Intracoastal
+L0178@PDF06: Waterway
+L0179@PDF06: Gtwn SB That portion of the waterway from the
+L0180@PDF06: headwaters of Winyah Bay to South Santee River
+L0181@PDF06: Atlantic Intracoastal
+L0182@PDF06: Waterway
+L0183@PDF06: Chtn SFH That portion of the waterway from South Santee
+L0184@PDF06: River to its confluence with Venning Creek
+L0185@PDF06: Atlantic Intracoastal
+L0186@PDF06: Waterway
+L0187@PDF06: Chtn ORW(SFH) That portion of the waterway from its confluence
+L0188@PDF06: with Venning Creek to its confluence with
+L0189@PDF06: Morgan Creek
+L0190@PDF06: Atlantic Intracoastal
+L0191@PDF06: Waterway
+L0192@PDF06: Chtn SFH That portion of the waterway from its confluence
+L0193@PDF06: with Morgan Creek to the Ben Sawyer Bridge4 | Regulation 61-69
+L0194@PDF07: Waterbody Name County(ies) Class Waterbody Description and
+L0195@PDF07: (Site-Specific Standard)
+L0196@PDF07: Atlantic Intracoastal
+L0197@PDF07: Waterway
+L0198@PDF07: Chtn SB That portion of the waterway from the Ben
+L0199@PDF07: Sawyer Bridge through Charleston Harbor to the
+L0200@PDF07: confluence of Elliott Cut and Stono River
+L0201@PDF07: Atlantic Intracoastal
+L0202@PDF07: Waterway
+L0203@PDF07: Chtn SFH That portion of the waterway from the confluence
+L0204@PDF07: of Elliott Cut and Stono River to the S.C.L.
+L0205@PDF07: Railroad Bridge over Stono River
+L0206@PDF07: Atlantic Intracoastal
+L0207@PDF07: Waterway
+L0208@PDF07: Chtn SFH That portion of the waterway from the S.C.L.
+L0209@PDF07: Railroad Bridge over Stono River to the
+L0210@PDF07: confluence of Wadmalaw Sound and Stono River
+L0211@PDF07: Atlantic Intracoastal
+L0212@PDF07: Waterway
+L0213@PDF07: Chtn ORW(SFH) That portion of the waterway from the confluence
+L0214@PDF07: of Wadmalaw Sound and Stono River to Gibson
+L0215@PDF07: Creek
+L0216@PDF07: Atlantic Intracoastal
+L0217@PDF07: Waterway
+L0218@PDF07: Chtn ORW(SFH) That portion of the waterway from Gibson Creek
+L0219@PDF07: along Wadmalaw River and Dawho River to
+L0220@PDF07: North Creek
+L0221@PDF07: Atlantic Intracoastal
+L0222@PDF07: Waterway
+L0223@PDF07: Chtn ORW(SFH) That portion of the waterway from North Creek
+L0224@PDF07: through Watts Cut to South Edisto River
+L0225@PDF07: Atlantic Intracoastal
+L0226@PDF07: Waterway
+L0227@PDF07: Chtn, Cltn ORW(SFH) That portion of the waterway from South Edisto
+L0228@PDF07: River at Watts Cut to South Edisto River at
+L0229@PDF07: Fenwick Cut
+L0230@PDF07: Atlantic Intracoastal
+L0231@PDF07: Waterway
+L0232@PDF07: Cltn SFH That portion of the waterway from South Edisto
+L0233@PDF07: River at Fenwick Cut along the Ashepoo River to
+L0234@PDF07: the confluence with St. Helena Sound
+L0235@PDF07: Atlantic Intracoastal
+L0236@PDF07: Waterway
+L0237@PDF07: Bfrt, Cltn SFH That portion of the waterway from the confluence
+L0238@PDF07: with St. Helena Sound through the Sound to the
+L0239@PDF07: confluence with Coosaw River
+L0240@PDF07: Atlantic Intracoastal
+L0241@PDF07: Waterway
+L0242@PDF07: Bfrt SFH That portion of the waterway from the confluence
+L0243@PDF07: with Coosaw River along Brickyard Creek to the
+L0244@PDF07: confluence with Albergottie Creek
+L0245@PDF07: Atlantic Intracoastal
+L0246@PDF07: Waterway
+L0247@PDF07: Bfrt SA That portion of the waterway from the confluence
+L0248@PDF07: of Brickyard and Albergottie Creeks to become
+L0249@PDF07: the Beaufort River to a boundary drawn along
+L0250@PDF07: Beaufort River between the upper banks of
+L0251@PDF07: Battery Creek and Cat Island Creek
+L0252@PDF07: Atlantic Intracoastal
+L0253@PDF07: Waterway
+L0254@PDF07: Bfrt SFH That portion of the waterway from a boundary
+L0255@PDF07: drawn along Beaufort River between the upper
+L0256@PDF07: bank of Battery Creek and Cat Island through
+L0257@PDF07: Port Royal Sound to the confluence with Skull
+L0258@PDF07: Creek
+L0259@PDF07: Atlantic Intracoastal
+L0260@PDF07: Waterway
+L0261@PDF07: Bfrt SFH That portion of the waterway from the confluence
+L0262@PDF07: with Skull Creek through Calibogue Sound,
+L0263@PDF07: along Cooper River and Ramshorn Creek, to the
+L0264@PDF07: confluence with New River
+L0265@PDF07: Atlantic Intracoastal
+L0266@PDF07: Waterway
+L0267@PDF07: Jspr SA That portion of the waterway from the confluence
+L0268@PDF07: of Ramshorn Creek with New River to Watts Cut
+L0269@PDF07: and Wright River
+L0270@PDF07: Atlantic Intracoastal
+L0271@PDF07: Waterway
+L0272@PDF07: Jspr SA That portion of the waterway from Wright River
+L0273@PDF07: to Mud River to Savannah River5 | Regulation 61-69
+L0274@PDF08: Waterbody Name County(ies) Class Waterbody Description and
+L0275@PDF08: (Site-Specific Standard)
+L0276@PDF08: Back River Bkly FW The entire river tributary to Cooper River
+L0277@PDF08: Bad Creek Ocne ORW(FW) That portion of the creek from the North Carolina
+L0278@PDF08: line to Chattooga River
+L0279@PDF08: Bad Creek Reservoir Ocne FW The entire reservoir
+L0280@PDF08: Bailey Creek Andn FW The entire creek tributary to Rocky Creek
+L0281@PDF08: Bailey Creek Chtn ORW(SFH) The entire creek tributary to St. Pierre Creek
+L0282@PDF08: Baker Creek Mcmk FW The entire creek tributary to J. Strom Thurmond
+L0283@PDF08: Lake
+L0284@PDF08: Ballast Creek Bfrt SA That portion of the creek from the tidal node to
+L0285@PDF08: Beaufort River
+L0286@PDF08: Ballast Creek Bfrt SFH That portion of the creek from the tidal node to
+L0287@PDF08: Broad River
+L0288@PDF08: Bartons Branch (also
+L0289@PDF08: called Summerhouse
+L0290@PDF08: Branch and
+L0291@PDF08: Johnsons Swamp)
+L0292@PDF08: Gtwn, Wmbg FWsp The entire branch tributary to Horse Pen Swamp
+L0293@PDF08: (D.O. not less than 4 mg/L, pH 5.0 – 8.5)
+L0294@PDF08: Bass Creek Bfrt ORW(SFH) The entire creek tributary to May River
+L0295@PDF08: Bass Hole Bay Gtwn ORW(SFH) The entire bay between Old Man Creek and
+L0296@PDF08: Debidue Creek
+L0297@PDF08: Bates Old River Rlnd ORW(FW) The entire river within the boundary of the
+L0298@PDF08: Congaree National Park to the confluence with
+L0299@PDF08: Congaree River
+L0300@PDF08: Battery Creek Bfrt SA That portion of the creek from the two unnamed
+L0301@PDF08: headwater creeks down to a point 1000 feet below
+L0302@PDF08: their confluence at Rabbit Island
+L0303@PDF08: Battery Creek Bfrt SFH That portion of the creek from a point 1000 feet
+L0304@PDF08: below the headwater creeks’ confluence at Rabbit
+L0305@PDF08: Island to the confluence with Beaufort River
+L0306@PDF08: Battle Creek Ocne TPGT The entire creek tributary to Tugaloo River
+L0307@PDF08: Bear Creek Andn FW The entire creek tributary to Rocky Creek
+L0308@PDF08: Bear Creek Lctr FW The entire creek tributary to Cane Creek
+L0309@PDF08: Bear Creek Newb, Lxtn FW The entire creek tributary to Lake Murray
+L0310@PDF08: Bear Swamp Diln FWsp The entire swamp tributary to Ashpole Swamp
+L0311@PDF08: (D.O. not less than 4 mg/L, pH 5.0 – 8.5)
+L0312@PDF08: Beards Fork Creek Lrns FW The entire creek tributary to Duncan Creek
+L0313@PDF08: Beaufort River Bfrt SA That portion of the river from the confluence of
+L0314@PDF08: Albergottie Creek and Brickyard Creek to a
+L0315@PDF08: boundary drawn between the upper bank of
+L0316@PDF08: Battery Creek and Cat Island Creek
+L0317@PDF08: Beaufort River Bfrt SFH That portion of the river from a boundary drawn
+L0318@PDF08: between the upper bank of Battery Creek and Cat
+L0319@PDF08: Island Creek to the confluence with Port Royal
+L0320@PDF08: Sound
+L0321@PDF08: Beaver Creek Andn FW The entire creek tributary to Rocky River
+L0322@PDF08: Beaver Creek Krsh FW The entire creek tributary to Wateree Lake
+L0323@PDF08: Beaverdam Creek Andn FW The entire creek tributary to Rocky River
+L0324@PDF08: Beaverdam Creek Drln, Cfld FW The entire creek tributary to Black Creek
+L0325@PDF08: Beaverdam Creek Efld FW The entire creek tributary to Turkey Creek6 | Regulation 61-69
+L0326@PDF09: Waterbody Name County(ies) Class Waterbody Description and
+L0327@PDF09: (Site-Specific Standard)
+L0328@PDF09: Beaverdam Creek Gnvl ORW(FW) That portion of the creek from its headwaters to
+L0329@PDF09: Secondary Road 563
+L0330@PDF09: Beaverdam Creek Gnvl FW That portion of the creek from Secondary Road
+L0331@PDF09: 563 to Enoree River
+L0332@PDF09: Beaverdam Creek Lrns FW The entire creek tributary to Enoree River
+L0333@PDF09: Beaverdam Creek Mrlb FW The entire creek tributary to Little Pee Dee River
+L0334@PDF09: Beaverdam Creek York FW The entire creek tributary to Crowders Creek
+L0335@PDF09: Beaverdam Creek
+L0336@PDF09: (also called Irene
+L0337@PDF09: Creek)
+L0338@PDF09: Chke FW The entire creek tributary to Thicketty Creek
+L0339@PDF09: Beaverdam Creek
+L0340@PDF09: (also called Big
+L0341@PDF09: Beaverdam Creek)
+L0342@PDF09: Andn FW The entire creek tributary to Rocky River
+L0343@PDF09: Bees Creek Jspr SB The entire creek tributary to Coosawhatchie
+L0344@PDF09: River
+L0345@PDF09: Bell Swamp Creek Diln FW The entire creek tributary to Little Pee Dee River
+L0346@PDF09: Beresford Creek Bkly SFH That portion of the creek from Wando River to a
+L0347@PDF09: point 4 miles from Wando River
+L0348@PDF09: Beresford Creek Bkly SA That portion of the creek from a point 4 miles
+L0349@PDF09: from Wando River to Clouter Creek
+L0350@PDF09: Betsy Creek Andn FW The entire creek tributary to Beaver Creek
+L0351@PDF09: Big Bay Creek Chtn ORW(SFH) The entire creek tributary to South Edisto River
+L0352@PDF09: Big Boggy Swamp Drln FW The entire swamp tributary to McIntosh Mill
+L0353@PDF09: Stream
+L0354@PDF09: Big Creek Andn FW The entire creek tributary to Saluda River
+L0355@PDF09: Big Dutchmans
+L0356@PDF09: Creek
+L0357@PDF09: Ffld FW The entire creek tributary to Wateree Lake
+L0358@PDF09: Big Dutchmans
+L0359@PDF09: Creek
+L0360@PDF09: York FW The entire creek tributary to Catawba-Wateree
+L0361@PDF09: River
+L0362@PDF09: Big Generostee
+L0363@PDF09: Creek
+L0364@PDF09: Andn FW The entire creek tributary to Savannah River
+L0365@PDF09: Big Lake Rlnd ORW(FW) The entire lake within the boundaries of
+L0366@PDF09: Congaree National Park
+L0367@PDF09: Big Pine Tree Creek Krsh FW The entire creek tributary to Wateree River
+L0368@PDF09: Big Rock Creek Gnwd FW The entire creek tributary to Wilson Creek
+L0369@PDF09: Big Swamp Flrn FWsp The entire swamp tributary to Lynches River
+L0370@PDF09: (D.O. not less than 4 mg/L, pH 5.0 – 8.5)
+L0371@PDF09: Black Creek Cfld FW That portion of the creek from its headwaters to
+L0372@PDF09: S.C. Hwy 145
+L0373@PDF09: Black Creek Cfld, Drln FWsp That portion of the creek from S.C. Hwy 145
+L0374@PDF09: through Lake Robinson and Lake Prestwood to
+L0375@PDF09: U.S. Rte 52
+L0376@PDF09: (D.O. not less than 4 mg/L, pH 5.0 – 8.5)
+L0377@PDF09: Black Creek Drln, Flrn FW That portion of the creek from U.S. Rte 52 to
+L0378@PDF09: Great Pee Dee River
+L0379@PDF09: Black River Clrn, Gtwn,
+L0380@PDF09: Lee, Smtr,
+L0381@PDF09: Wmbg
+L0382@PDF09: FWsp That portion of the creek from its headwaters to
+L0383@PDF09: U.S. Rte 701
+L0384@PDF09: (D.O. not less than 4 mg/L, pH 5.0 – 8.5)7 | Regulation 61-69
+L0385@PDF10: Waterbody Name County(ies) Class Waterbody Description and
+L0386@PDF10: (Site-Specific Standard)
+L0387@PDF10: Black River Gtwn SA That portion of the river from U.S. Rte 701 to Pee
+L0388@PDF10: Dee River
+L0389@PDF10: Blue Hill Creek Abvl FW The entire creek tributary to Norris Creek
+L0390@PDF10: Bly Creek Gtwn ORW(SFH) The entire creek tributary to Old Man Creek
+L0391@PDF10: Bob’s Garden Creek Gtwn ORW(SFH) The entire creek tributary to Jones Creek
+L0392@PDF10: Boggy Swamp Gtwn FWsp That portion of the river from the headwaters to
+L0393@PDF10: saltwater intrusion
+L0394@PDF10: (D.O. not less than 4 mg/L, pH 5.0 – 8.5)
+L0395@PDF10: Bohicket Creek Chtn ORW(SFH) The entire creek tributary from North Edisto
+L0396@PDF10: River to Church Creek
+L0397@PDF10: Boone Hall Creek Chtn SFH The entire creek tributary to Horlbeck Creek
+L0398@PDF10: Boor Creek Gtwn ORW(SFH) The entire creek between Jones Creek and Wood
+L0399@PDF10: Creek
+L0400@PDF10: Brasstown Creek Ocne TPGT That portion of the creek from its headwaters to
+L0401@PDF10: Tugaloo River
+L0402@PDF10: Bread and Butter
+L0403@PDF10: Creek
+L0404@PDF10: Gtwn ORW(SFH) The entire creek tributary to Town Creek
+L0405@PDF10: Brickyard Creek Chtn SB The entire creek tributary to Ashley River
+L0406@PDF10: Brickyard Creek Bfrt SFH The entire creek tributary to Beaufort River
+L0407@PDF10: Broad Creek (NDZ) Bfrt SFH The entire creek tributary to Calibogue Sound
+L0408@PDF10: Broad River Bfrt, Jspr SFH The entire river tributary to Port Royal Sound
+L0409@PDF10: Broad River (Main
+L0410@PDF10: Stem)
+L0411@PDF10: Chke, Cstr,
+L0412@PDF10: Ffld, Nbry,
+L0413@PDF10: Rlnd, Unin,
+L0414@PDF10: York
+L0415@PDF10: FW The entire river tributary to Congaree River
+L0416@PDF10: Broadmouth Creek Abvl, Andn FW The entire creek tributary to Saluda River
+L0417@PDF10: Broadway Creek Andn FW The entire creek tributary to Rocky Creek
+L0418@PDF10: Brown Swamp Hory, Marn FWsp The entire swamp tributary to Little Pee Dee
+L0419@PDF10: River
+L0420@PDF10: (D.O. not less than 4 mg/L, pH 5.0 – 8.5)
+L0421@PDF10: Brunson Swamp Hory FW The entire swamp tributary to Little Pee Dee
+L0422@PDF10: River
+L0423@PDF10: Brushy Creek Gnvl FW That portion of the creek from its headwaters
+L0424@PDF10: northeast of Greenville to Enoree River
+L0425@PDF10: Brushy Creek Gnvl FW The entire creek tributary to Reedy River
+L0426@PDF10: Brushy Creek Pkns FW The entire creek tributary to Saluda River
+L0427@PDF10: Buck Creek Brwl FW The entire creek tributary to Salkehatchie River
+L0428@PDF10: Buck Creek Spbg FW The entire creek tributary to Pacolet River
+L0429@PDF10: Buck Hollow Gnvl TN The entire tributary to Middle Saluda River
+L0430@PDF10: Buck Swamp Diln, Marn,
+L0431@PDF10: Mrlb
+L0432@PDF10: FWsp The entire swamp tributary to Little Pee Dee
+L0433@PDF10: River
+L0434@PDF10: (D.O. not less than 4 mg/L, pH 5.0 – 8.5)
+L0435@PDF10: Buckhorn Creek Gnvl ORW(FW) That portion of the creek from its headwaters,
+L0436@PDF10: including Buckhorn Lake, to Tanyard Road
+L0437@PDF10: Buckhorn Creek Gnvl FW That portion of the creek from Tanyard Road to
+L0438@PDF10: Enoree River
+L0439@PDF10: Buffalo Creek Unin FW The entire creek tributary to Fairforest Creek8 | Regulation 61-69
+L0440@PDF11: Waterbody Name County(ies) Class Waterbody Description and
+L0441@PDF11: (Site-Specific Standard)
+L0442@PDF11: Buffalo Creek Chke FW The entire creek tributary to Broad River
+L0443@PDF11: Bull Branch Mrlb FW The entire branch tributary to Hagins Prong
+L0444@PDF11: Bull Creek Bfrt ORW(SFH) The entire creek tributary to Cooper River and
+L0445@PDF11: May River
+L0446@PDF11: Bull Creek Hory FW The entire creek tributary to Pee Dee River to
+L0447@PDF11: Waccamaw River
+L0448@PDF11: Bull Run Branch Cstr FW The entire branch within Chester County
+L0449@PDF11: Bull Swamp Orbg FWsp The entire swamp tributary to Four Hole Swamp
+L0450@PDF11: (D.O. not less than 4 mg/L, pH 5.0 – 8.5)
+L0451@PDF11: Bull Swamp Creek Lxtn, Orbg FW The entire creek tributary to North Fork Edisto
+L0452@PDF11: River
+L0453@PDF11: Bullock Creek York FW The entire creek tributary to Broad River
+L0454@PDF11: Bull’s Bay Chtn ORW(SFH) The entire bay
+L0455@PDF11: Bulls Creek Chtn SAsp The entire creek tributary to Ashley River
+L0456@PDF11: (D.O. not less than 4 mg/L)
+L0457@PDF11: Bullyard Sound Chtn ORW(SFH) The entire sound
+L0458@PDF11: Burdine Creek Pkns FW The entire creek tributary to Georges Creek
+L0459@PDF11: Burgess Creek Ocne TN That portion of the creek from its headwaters to
+L0460@PDF11: Mill Creek
+L0461@PDF11: Burnetts Creek Slda FW The entire creek tributary to Little Saluda River
+L0462@PDF11: Burnt Gin Lake Smtr FW The entire lake located on the western reaches of
+L0463@PDF11: Cane Savannah Creek
+L0464@PDF11: Bush Creek (or
+L0465@PDF11: River)
+L0466@PDF11: Lrns, Nbry FW The entire creek tributary to Lake Murray
+L0467@PDF11: Byrum’s Creek
+L0468@PDF11: (Branch from
+L0469@PDF11: Appleton Mill to
+L0470@PDF11: Whitner Creek)
+L0471@PDF11: Andn FW The entire creek tributary to Whitner Creek
+L0472@PDF11: Calhoun Creek Abvl FW The entire creek tributary to Little River
+L0473@PDF11: Calibogue Sound Bfrt SFH The entire sound tributary to the Atlantic Ocean
+L0474@PDF11: Callawassie Creek Bfrt ORW(SFH) The entire creek tributary to Colleton River
+L0475@PDF11: Camp Branch Ocne FW The entire branch tributary to Opossum Creek
+L0476@PDF11: Cane Creek Lctr FW The entire creek tributary to Catawba River
+L0477@PDF11: Cane Creek Pkns TN The entire creek tributary to Lake Keowee
+L0478@PDF11: Cannons Creek Nbry FW The entire creek tributary to Broad River
+L0479@PDF11: Canoe Creek Andn FW The entire creek tributary to Little Generostee
+L0480@PDF11: Creek
+L0481@PDF11: Cantrell Creek Ocne TN That portion of the creek from its headwaters to
+L0482@PDF11: Lake Cheohee
+L0483@PDF11: Cape Romain
+L0484@PDF11: Harbor
+L0485@PDF11: Chtn ORW(SFH) The entire harbor
+L0486@PDF11: Caper’s Inlet Chtn ORW(SFH) The entire inlet tributary to the Atlantic Ocean
+L0487@PDF11: Captain Bill’s Creek Jspr FW The entire creek tributary to Bee’s Creek
+L0488@PDF11: Carrick Creek Pkns ORW(FW) That portion of the creek from its headwaters to
+L0489@PDF11: Pinnacle Lake9 | Regulation 61-69
+L0490@PDF12: Waterbody Name County(ies) Class Waterbody Description and
+L0491@PDF12: (Site-Specific Standard)
+L0492@PDF12: Carrick Creek Pkns FW That portion of the creek from the dam at
+L0493@PDF12: Pinnacle Lake to the end of Table Rock State Park
+L0494@PDF12: land
+L0495@PDF12: Carter Creek Flrn FW The entire creek tributary to Lynches River
+L0496@PDF12: Cat Island Creek Bfrt SFH The entire creek from Beaufort River to Chowan
+L0497@PDF12: Creek
+L0498@PDF12: Catawba-Wateree
+L0499@PDF12: River
+L0500@PDF12: Cstr, Ffld,
+L0501@PDF12: Krsh, Lctr,
+L0502@PDF12: Rlnd, Smtr,
+L0503@PDF12: York
+L0504@PDF12: FW The entire river tributary to Santee River
+L0505@PDF12: Catfish Creek Marn FWsp The entire creek tributary to Pee Dee River
+L0506@PDF12: (D.O. not less than 4 mg/L, pH 5.0 – 8.5)
+L0507@PDF12: Causeway Branch Smtr FW The entire branch tributary to Second Mill Pond
+L0508@PDF12: Caw Caw Swamp Aldl, Hmpt FWsp The entire swamp tributary to Whippy Swamp
+L0509@PDF12: (D.O. not less than 4 mg/L, pH 5.0 – 8.5)
+L0510@PDF12: Cedar Creek Cfld, Drln FW The entire creek tributary to Pee Dee River
+L0511@PDF12: Cedar Creek Ffld, Rlnd FW The entire creek tributary to Broad River
+L0512@PDF12: Cedar Creek Rlnd FW That portion of the creek outside the boundary of
+L0513@PDF12: Congaree National Park
+L0514@PDF12: Cedar Creek Rlnd ORW(FW) That portion of the creek beginning at the
+L0515@PDF12: boundary of Congaree National Park to Wise
+L0516@PDF12: Lake
+L0517@PDF12: Cedar Creek Rlnd ONRW(FW) That portion of the creek beginning at Wise Lake
+L0518@PDF12: to its confluence with Congaree River
+L0519@PDF12: Cedar Creek
+L0520@PDF12: Reservoir
+L0521@PDF12: Cstr, Ffld,
+L0522@PDF12: Lctr
+L0523@PDF12: FW The entire lake on Catawba River
+L0524@PDF12: Cemetery Creek
+L0525@PDF12: (also called Silver
+L0526@PDF12: Brook Creek)
+L0527@PDF12: Andn FW The entire creek tributary to Rocky River
+L0528@PDF12: Charleston Harbor Chtn SB From Battery to the Atlantic Ocean
+L0529@PDF12: Charlies Creek Abvl FW The entire creek tributary to Rocky River
+L0530@PDF12: Chattooga River Ocne FW That portion of the river from its confluence with
+L0531@PDF12: Opossum Creek to Tugaloo River
+L0532@PDF12: Chattooga River Ocne ORW(FW) That portion of the river from the North Carolina
+L0533@PDF12: line to its confluence with Opossum Creek
+L0534@PDF12: Chauga Creek (also
+L0535@PDF12: called Jerry Creek)
+L0536@PDF12: Ocne FW The entire creek tributary to Chauga River
+L0537@PDF12: Chauga River Ocne ORW(FW) That portion of the river from its headwaters to 1
+L0538@PDF12: mile above U.S. Rte 76
+L0539@PDF12: Chauga River Ocne FW That portion of the river from 1 mile above U.S.
+L0540@PDF12: Rte 76 to Tugaloo River
+L0541@PDF12: Chechessee Creek Bfrt ORW(SFH) The entire creek tributary to Colleton River and
+L0542@PDF12: Chechessee River
+L0543@PDF12: Chechessee River Bfrt SFH The entire river tributary to Port Royal Sound
+L0544@PDF12: Chehaw River Cltn SFH The entire river tributary to Combahee River
+L0545@PDF12: Cheohee Creek Ocne ORW(FW) That portion of the creek from its headwaters to
+L0546@PDF12: end of U.S. Forest Service Land10 | Regulation 61-69
+L0547@PDF13: Waterbody Name County(ies) Class Waterbody Description and
+L0548@PDF13: (Site-Specific Standard)
+L0549@PDF13: Cheohee Creek Ocne FW That portion of the creek from U.S. Forest
+L0550@PDF13: Service Land to its confluence with Tamassee
+L0551@PDF13: Creek
+L0552@PDF13: Cherokee Creek Andn FW The entire creek tributary to Hencoop Creek
+L0553@PDF13: Cherokee Creek Chke FW The entire creek tributary to Broad River
+L0554@PDF13: Chickasaw Creek Abvl FW The entire creek tributary to Little River
+L0555@PDF13: Chinners Swamp Hory FWsp The entire swamp tributary to Brunson Swamp
+L0556@PDF13: (D.O. not less than 4 mg/L, pH 5.0 – 8.5)
+L0557@PDF13: Choestoea Creek Ocne FW The entire creek tributary to Hartwell Lake
+L0558@PDF13: Chowan Creek (also
+L0559@PDF13: called Cowen Creek)
+L0560@PDF13: Bfrt SFH The entire creek tributary to Beaufort River
+L0561@PDF13: Church Creek Chtn ORW(SFH) That portion of the creek from Wadmalaw Sound
+L0562@PDF13: to Ravens Point
+L0563@PDF13: Church Creek Chtn SFH That portion of the creek from Ravens Point to
+L0564@PDF13: Hoopstick Island
+L0565@PDF13: Clambank Creek Gtwn ORW(SFH) The entire creek tributary to Town Creek
+L0566@PDF13: Clark Creek Flrn, Wmbg FWsp The entire creek tributary to Pee Dee River
+L0567@PDF13: (D.O. not less than 4 mg/L, pH 5.0 – 8.5)
+L0568@PDF13: Clark Creek York FW The entire creek tributary to Bullock Creek
+L0569@PDF13: Clark(s) Hill
+L0570@PDF13: Reservoir (NDZ)
+L0571@PDF13: (also called J. Strom
+L0572@PDF13: Thurmond Lake)
+L0573@PDF13: Abvl, Mcmk FW The entire reservoir on Savannah River
+L0574@PDF13: Clark Sound Chtn SB The entire sound tributary to Charleston Harbor
+L0575@PDF13: Clouds Creek Slda FW The entire creek tributary to Lake Murray
+L0576@PDF13: Coastal Waters Bfrt, Chtn,
+L0577@PDF13: Gtwn, Hory,
+L0578@PDF13: Jspr
+L0579@PDF13: SFH From the land to the 3-mile limit of State
+L0580@PDF13: jurisdiction in the Atlantic Ocean
+L0581@PDF13: Coastal Waters SFH Coastal waters offshore from the land to the
+L0582@PDF13: 3-mile limit of State jurisdiction in the Atlantic
+L0583@PDF13: Ocean
+L0584@PDF13: Coastal Waters SFH From the land to the 3-mile limit of State
+L0585@PDF13: jurisdiction in the Atlantic Ocean
+L0586@PDF13: Coldspring Branch Gnvl ORW(FW) The entire branch tributary to Middle Saluda
+L0587@PDF13: River
+L0588@PDF13: Colleton River Bfrt ORW(SFH) The entire river tributary to Chechessee River
+L0589@PDF13: Combahee
+L0590@PDF13: River
+L0591@PDF13: Bfrt, Cltn,
+L0592@PDF13: Hmpt
+L0593@PDF13: FW That portion of the river from its confluence of
+L0594@PDF13: Salkehatchie River with Little Salkehatchie River
+L0595@PDF13: to saltwater intrusion at U.S. Hwy 17
+L0596@PDF13: Combahee River Bfrt, Cltn SFH That portion of the river from saltwater intrusion
+L0597@PDF13: at U.S. Hwy 17 to St. Helena Sound
+L0598@PDF13: Coneross Creek Ocne FW That portion of the creek through Negro Fork
+L0599@PDF13: Creek
+L0600@PDF13: Congaree Creek Lxtn FW The entire creek tributary to Congaree River
+L0601@PDF13: Congaree River Clhn, Lxtn,
+L0602@PDF13: Rlnd
+L0603@PDF13: FW The entire river tributary to Santee River
+L0604@PDF13: Contrary Swamp Diln FW The entire swamp from its headwaters to the
+L0605@PDF13: North Carolina line near South of the Border11 | Regulation 61-69
+L0606@PDF14: Waterbody Name County(ies) Class Waterbody Description and
+L0607@PDF14: (Site-Specific Standard)
+L0608@PDF14: Cooks Creek Gtwn ORW(SFH) The entire creek between Old Man Creek and
+L0609@PDF14: Debidue Creek
+L0610@PDF14: Cooper River Bkly, Chtn FW That portion of the river from the confluence of
+L0611@PDF14: West Branch Cooper River and East Branch
+L0612@PDF14: Cooper River (the Tee) to a point approximately
+L0613@PDF14: 30 miles above the junction of Ashley and Cooper
+L0614@PDF14: Rivers
+L0615@PDF14: Cooper River Bkly, Chtn SB That portion of the river below a point
+L0616@PDF14: approximately 30 miles above the junction of
+L0617@PDF14: Ashley and Cooper Rivers to the junction of
+L0618@PDF14: Ashley and Cooper Rivers
+L0619@PDF14: Cooper River Bfrt ORW(SFH) That portion of the river from New River to
+L0620@PDF14: Ramshorn Creek
+L0621@PDF14: Cooper River Bfrt SFH That portion of the river from Ramshorn Creek to
+L0622@PDF14: Calibogue Sound
+L0623@PDF14: Coosaw River Bfrt SFH The entire river tributary to St. Helena Sound
+L0624@PDF14: Coosawhatchie
+L0625@PDF14: River
+L0626@PDF14: Aldl, Hmpt,
+L0627@PDF14: Jspr
+L0628@PDF14: FW That portion of the river from its headwaters to
+L0629@PDF14: saltwater intrusion
+L0630@PDF14: Coosawhatchie
+L0631@PDF14: River
+L0632@PDF14: Aldl, Hmpt,
+L0633@PDF14: Jspr
+L0634@PDF14: SFH That portion of the river from saltwater intrusion
+L0635@PDF14: to Broad River
+L0636@PDF14: Copahee Sound Chtn ORW(SFH) The entire sound
+L0637@PDF14: Corbin Creek Ocne ORW(TPGT) The entire creek tributary to Devils Fork
+L0638@PDF14: Corner Creek Abvl FW The entire creek tributary to Little River
+L0639@PDF14: Coronaca Creek Gnwd FW The entire creek tributary to Wilson Creek
+L0640@PDF14: Cowpen Swamp Diln FWsp The entire swamp tributary to Bear Swamp
+L0641@PDF14: (D.O. not less than 4 mg/L, pH 5.0 – 8.5)
+L0642@PDF14: Cowpens Creek Chke FW The entire creek tributary to Little Thicketty
+L0643@PDF14: Creek
+L0644@PDF14: Cox Branch Bmbg FW The entire branch tributary to Lemon Creek
+L0645@PDF14: Cox Creek Andn FW The entire creek tributary to Rocky Creek
+L0646@PDF14: Cox Camp Creek Gnvl TN The entire creek tributary to Middle Saluda River
+L0647@PDF14: Crab Haul Creek Gtwn ORW(SFH) The entire creek tributary to Old Man Creek
+L0648@PDF14: Crane Creek Rlnd FW The entire creek tributary to Broad River
+L0649@PDF14: Crims Creek Nbry FW The entire creek tributary to Broad River
+L0650@PDF14: Crooked Creek Mrlb FW The entire creek tributary to Pee Dee River
+L0651@PDF14: Crowders Creek York FW The entire creek tributary to Lake Wylie
+L0652@PDF14: Cutoff Creek Gtwn SFH The entire creek between Oyster Bay and Town
+L0653@PDF14: Creek
+L0654@PDF14: Cypress Branch Flrn, Smtr FWsp The entire branch tributary to Douglas Swamp
+L0655@PDF14: (D.O. not less than 4 mg/L, pH 5.0 – 8.5)
+L0656@PDF14: Cypress Swamp Dchr FW The entire swamp tributary to Ashley River
+L0657@PDF14: Dark Creek Ocne ORW(FW) The entire creek tributary to East Fork Chattooga
+L0658@PDF14: River
+L0659@PDF14: Darrell Creek Chtn SFH The entire creek tributary to Wando River
+L0660@PDF14: Dawho River Chtn ORW(SFH) The entire river from South Edisto River to North
+L0661@PDF14: Edisto River12 | Regulation 61-69
+L0662@PDF15: Waterbody Name County(ies) Class Waterbody Description and
+L0663@PDF15: (Site-Specific Standard)
+L0664@PDF15: Debidue Creek Gtwn SFH That portion of the creek from its headwaters to
+L0665@PDF15: its confluence with Cooks Creek, but not
+L0666@PDF15: including tidal creeks on western shore between
+L0667@PDF15: Bass Hole Bay and Cooks Creek
+L0668@PDF15: Debidue Creek Gtwn ORW(SFH) That portion of the creek from its confluence with
+L0669@PDF15: Cooks Creek to North Inlet and all tidal creeks
+L0670@PDF15: including those on western shore between Bass
+L0671@PDF15: Hole Bay and Cooks Creek
+L0672@PDF15: Debordieu Channel Gtwn SFH The entire channel tributary to Debidue Creek
+L0673@PDF15: Deep Creek Flrn FW The entire creek tributary to Lynches River
+L0674@PDF15: Devils Fork Ocne TN That portion of the creek from its confluence of
+L0675@PDF15: Corbin Creek and Howard Creek to Lake
+L0676@PDF15: Jocassee
+L0677@PDF15: Dewee’s Inlet Chtn SFH The entire inlet tributary to the Atlantic Ocean
+L0678@PDF15: Diversion Canal Bkly FW The entire canal between Lake Marion and Lake
+L0679@PDF15: Moultrie
+L0680@PDF15: Doolittle Creek Chke FW The entire creek tributary to Broad River
+L0681@PDF15: Double Branch Abvl FW The entire branch tributary to Long Cane Creek
+L0682@PDF15: Double Branch Lxtn FW The entire branch tributary to Saluda River
+L0683@PDF15: Douglas Swamp Clrn, Flrn,
+L0684@PDF15: Smtr
+L0685@PDF15: FWsp The entire swamp tributary to Pudding Swamp
+L0686@PDF15: (D.O. not less than 4 mg/L, pH 5.0 – 8.5)
+L0687@PDF15: Dry Branch Rlnd ORW(FW) That portion of the stream beginning at the
+L0688@PDF15: boundary of the Congaree National Park to
+L0689@PDF15: Weston Lake
+L0690@PDF15: Dry Branch Rlnd FW That portion of the branch outside the boundary
+L0691@PDF15: of the Congaree National Park
+L0692@PDF15: Dry Fork Cstr FW The entire fork tributary to Sandy River
+L0693@PDF15: Duck Creek Aldl FW The entire creek tributary to Coosawhatchie
+L0694@PDF15: River
+L0695@PDF15: Duck Creek Gtwn ORW(SFH) The entire creek tributary to Jones Creek
+L0696@PDF15: Duck Island Channel Chtn SAsp The entire channel connecting two segments of
+L0697@PDF15: the Ashley River
+L0698@PDF15: (D.O. not less than 4 mg/L)
+L0699@PDF15: Duncan Creek Lrns, Nbry FW The entire creek tributary to Enoree River
+L0700@PDF15: Duncan Creek Lxtn FW The entire creek tributary to Chinquapin Creek
+L0701@PDF15: Dunn Sound Hory SFH The entire sound
+L0702@PDF15: Durbin Creek Gnvl, Lrns FW The entire creek tributary to Enoree River
+L0703@PDF15: Dye Branch (also
+L0704@PDF15: called Dry Branch)
+L0705@PDF15: York FW The entire branch tributary to Jones Branch
+L0706@PDF15: Eagle Creek Chtn SB The entire creek tributary to Ashley River
+L0707@PDF15: Eastatoe Creek Pkns ORW(FW) That portion of the creek from its headwaters to
+L0708@PDF15: its confluence with Laurel Creek
+L0709@PDF15: Eastatoe Creek Pkns TPGT That portion of the creek from its confluence with
+L0710@PDF15: Laurel Creek to Lake Keowee
+L0711@PDF15: East Beards Creek Andn FW The entire creek tributary to Wilson Creek
+L0712@PDF15: East Fork (also
+L0713@PDF15: called Fork Creek)
+L0714@PDF15: Cfld FW The entire creek tributary to Lynches River13 | Regulation 61-69
+L0715@PDF16: Waterbody Name County(ies) Class Waterbody Description and
+L0716@PDF16: (Site-Specific Standard)
+L0717@PDF16: East Fork Chattooga
+L0718@PDF16: River
+L0719@PDF16: Ocne ORW(FW) That portion of the river from the North Carolina
+L0720@PDF16: line to its confluence with Indian Camp Branch
+L0721@PDF16: East Fork Chattooga
+L0722@PDF16: River
+L0723@PDF16: Ocne TN That portion of the river from its confluence with
+L0724@PDF16: Indian Camp Branch to Chattooga River
+L0725@PDF16: East Rock Creek Andn FW The entire creek tributary to Broadway Creek
+L0726@PDF16: Edisto River Chtn, Cltn ORW(FW) That portion of the river from U.S. Hwy 17 to its
+L0727@PDF16: confluence with Dawho River and South Edisto
+L0728@PDF16: River
+L0729@PDF16: Edisto River (Main
+L0730@PDF16: Stem)
+L0731@PDF16: Orbg, Bmbg,
+L0732@PDF16: Dchr, Cltn,
+L0733@PDF16: Chtn
+L0734@PDF16: FW That portion of the river from the confluence of
+L0735@PDF16: North and South Forks to U.S. Hwy 17
+L0736@PDF16: Eighteen Mile Creek Pkns, Andn FW The entire creek tributary to Hartwell Lake
+L0737@PDF16: Emory Creek Pkns ORW(FW) That portion of the creek from its headwaters to
+L0738@PDF16: the northern boundary of Table Rock Resort
+L0739@PDF16: property
+L0740@PDF16: Emory Creek Pkns TN That portion of the creek from northern boundary
+L0741@PDF16: of Table Rock Resort property to its confluence
+L0742@PDF16: with Oolenoy River
+L0743@PDF16: Enoree River Gnvl, Spbg,
+L0744@PDF16: Lrns, Unin,
+L0745@PDF16: Nbry
+L0746@PDF16: FW The entire river tributary to Broad River
+L0747@PDF16: Fairforest Creek Spbg, Unin FW The entire creek tributary to Tyger River
+L0748@PDF16: Fall Creek Ocne FW The entire creek tributary to Chattooga River
+L0749@PDF16: Falls Creek Gnvl ORW(FW) That portion of the creek from its headwaters to
+L0750@PDF16: Lake Trammell
+L0751@PDF16: Falls Creek Gnvl TN That portion of the creek from the dam at Lake
+L0752@PDF16: Trammell to Gap Creek
+L0753@PDF16: Fields Cut Jspr SA The entire stream
+L0754@PDF16: Filbin Creek Chtn FW That portion of the creek from its headwaters to
+L0755@PDF16: the tide gates at Virginia Avenue
+L0756@PDF16: Filbin Creek Chtn SB That portion of the creek from the tide gates at
+L0757@PDF16: Virginia Avenue to Cooper River
+L0758@PDF16: First Creek Lxtn FW The entire creek tributary to Congaree Creek
+L0759@PDF16: Fishing Creek Cstr, York FW The entire creek tributary to Catawba River
+L0760@PDF16: Fishing Creek Chtn ORW(SA) That portion of the creek from its headwaters to a
+L0761@PDF16: point 2 miles from its mouth
+L0762@PDF16: Fishing Creek Chtn ORW(SFH) That portion of the creek from a point 2 miles
+L0763@PDF16: from its mouth to its confluence with St. Pierre
+L0764@PDF16: Creek
+L0765@PDF16: Fishing Creek Chtn ORW(SFH) The entire creek tributary to Dawho River
+L0766@PDF16: Fishing Creek Lake Cstr, Lctr FW The entire lake on Catawba River
+L0767@PDF16: Fishtrap Branch Ocne FW The entire branch tributary to Chattooga River
+L0768@PDF16: Five Fathom Creek Chtn SFH The entire creek tributary to Bull’s Bay
+L0769@PDF16: Flagreed Creek Abvl FW The entire creek tributary to Calhoun Creek
+L0770@PDF16: Folly River Chtn SFH The entire river tributary to Stono River
+L0771@PDF16: Fork Creek Cfld FW The entire creek tributary to Lynches River
+L0772@PDF16: Foster Creek Chtn SFH The entire creek tributary to Wando River 14 | Regulation 61-69
+L0773@PDF17: Waterbody Name County(ies) Class Waterbody Description and
+L0774@PDF17: (Site-Specific Standard)
+L0775@PDF17: Four Hole Swamp Orbg, Dchr,
+L0776@PDF17: Bkly, Clhn
+L0777@PDF17: FWsp The entire swamp tributary to Edisto River
+L0778@PDF17: (D.O. not less than 4 mg/L, pH 5.0 – 8.5)
+L0779@PDF17: Four Mile Creek Orbg FW The entire creek tributary to North Fork Edisto
+L0780@PDF17: River
+L0781@PDF17: Fourteenmile Creek Lxtn FW The entire creek tributary to Twelvemile Creek
+L0782@PDF17: Frampton Creek Chtn ORW(SFH) The entire creek tributary to Frampton Inlet
+L0783@PDF17: Frampton Inlet Chtn ORW(SFH) The entire inlet tributary to the Atlantic Ocean
+L0784@PDF17: Fripps Inlet Bfrt ORW(SFH) The entire inlet tributary to the Atlantic Ocean
+L0785@PDF17: Frohawk Creek Spbg FW The entire creek tributary to South Tyger River
+L0786@PDF17: Gaffney Creek Chke FW The entire creek tributary to Broad River
+L0787@PDF17: Gap Creek Gnvl TN The entire creek tributary to its confluence with
+L0788@PDF17: Middle Saluda River
+L0789@PDF17: Garden Creek Chtn ORW(SFH) The entire creek tributary to Toogoodoo Creek
+L0790@PDF17: Georges Creek (and
+L0791@PDF17: branch from Easley)
+L0792@PDF17: Pkns FW The entire creek tributary to Saluda River
+L0793@PDF17: Gibson Creek Chtn ORW(SFH) The entire creek tributary to Wadmalaw River
+L0794@PDF17: Gilder Creek (also
+L0795@PDF17: called Gillard Creek)
+L0796@PDF17: Gnvl FW The entire creek tributary to Enoree River
+L0797@PDF17: Gills Creek Rlnd FW The entire creek tributary to Congaree River
+L0798@PDF17: Golden Creek Pkns FW The entire creek tributary to Twelvemile Creek
+L0799@PDF17: Goose Creek Bkly FW That portion of the creek from its headwaters to
+L0800@PDF17: Goose Creek Reservoir dam
+L0801@PDF17: Goose Creek Bkly SB That portion of the creek from Goose Creek
+L0802@PDF17: Reservoir dam to Cooper River
+L0803@PDF17: Graham Creek Chtn SFH The entire creek tributary to Bull’s Bay
+L0804@PDF17: Gramling Creek Orbg FWsp The entire creek tributary to Little Bull Swamp
+L0805@PDF17: (D.O. not less than 4 mg/L, pH 5.0 – 8.5)
+L0806@PDF17: Granny’s Quarter
+L0807@PDF17: Creek
+L0808@PDF17: Krsh FW The entire creek tributary to Wateree River
+L0809@PDF17: Grapevine Branch Bmbg FW The entire branch tributary to Lemon Creek
+L0810@PDF17: Grassy Run Branch Cstr FW The entire branch tributary to Rocky Creek
+L0811@PDF17: Grays Sound Chtn SFH The entire sound
+L0812@PDF17: Great Falls
+L0813@PDF17: Reservoir
+L0814@PDF17: Cstr, Lctr FW The entire reservoir on Catawba River
+L0815@PDF17: Great Pee Dee River Cfld, Diln,
+L0816@PDF17: Drln, Flrn,
+L0817@PDF17: Marn, Mrlb,
+L0818@PDF17: Wmbg
+L0819@PDF17: FW That portion of the river from North Carolina line
+L0820@PDF17: to its confluence with Thoroughfare Creek
+L0821@PDF17: Great Pee Dee River Gtwn SBsp That portion of the river from its confluence with
+L0822@PDF17: Thoroughfare Creek to Winyah Bay
+L0823@PDF17: (D.O. not less than daily average 5 mg/L and
+L0824@PDF17: minimum 4 mg/L)
+L0825@PDF17: Green Creek Pkns ORW(FW) The entire creek tributary to Carrick Creek
+L0826@PDF17: Green Swamp Smtr FWsp The entire swamp tributary to Pocotaligo River
+L0827@PDF17: (D.O. not less than 4 mg/L, pH 5.0 – 8.5)
+L0828@PDF17: Groundwaters All GB The entire groundwaters of the State (unless
+L0829@PDF17: otherwise listed)15 | Regulation 61-69
+L0830@PDF18: Waterbody Name County(ies) Class Waterbody Description and
+L0831@PDF18: (Site-Specific Standard)
+L0832@PDF18: Guerin Creek Bkly, Chtn SFH The entire creek tributary to Wando River
+L0833@PDF18: Gulley Branch Flrn FW The entire branch tributary to Jeffries Creek
+L0834@PDF18: Gum Branch Dchr FWsp The entire branch tributary to Indian Field
+L0835@PDF18: Swamp
+L0836@PDF18: (D.O. not less than 4 mg/L, pH 5.0 – 8.5)
+L0837@PDF18: Haile Gold Mine
+L0838@PDF18: Creek
+L0839@PDF18: Lctr FW The entire creek tributary to Little Lynches River
+L0840@PDF18: Halfmoon Branch Bmbg FW The entire branch tributary to Ghents Branch
+L0841@PDF18: Hamlin Sound Chtn SFH The entire sound
+L0842@PDF18: Hanging Rock Creek Lctr, Krsh FW The entire creek tributary to Little Lynches River
+L0843@PDF18: Harbor River Bfrt ORW(SFH) The entire river tributary to St. Helena Sound and
+L0844@PDF18: Fripps Inlet
+L0845@PDF18: Hard Labor Creek Gnwd, Mcmk FW The entire creek tributary to Stevens Creek
+L0846@PDF18: Harris Mill Branch Gnwd FW The entire branch tributary to Rocky Creek
+L0847@PDF18: Hartwell Lake
+L0848@PDF18: (NDZ)
+L0849@PDF18: Andn, Ocne,
+L0850@PDF18: Pkns
+L0851@PDF18: FW All that portion within South Carolina
+L0852@PDF18: Haulover Creek Gtwn SB The entire creek between Mud Bay and Jones
+L0853@PDF18: Creek
+L0854@PDF18: Hawe Creek Mcmk FW The entire creek tributary to J. Strom Thurmond
+L0855@PDF18: Lake
+L0856@PDF18: Hayes Swamp Diln FWsp The entire swamp tributary to Little Pee Dee
+L0857@PDF18: River
+L0858@PDF18: (D.O. not less than 4 mg/L, pH 5.0 – 8.5)
+L0859@PDF18: Head Foremost
+L0860@PDF18: Creek
+L0861@PDF18: Gnvl ORW(FW) The entire creek tributary to Middle Saluda River
+L0862@PDF18: Hellhole Creek Lxtn FW The entire creek tributary to Lightwood Knot
+L0863@PDF18: Creek
+L0864@PDF18: Hembree Creek Andn FW The entire creek tributary to Hartwell Lake
+L0865@PDF18: Hemedy Creek (also
+L0866@PDF18: called Ramsey
+L0867@PDF18: Creek)
+L0868@PDF18: Ocne FW The entire creek tributary to Chauga River
+L0869@PDF18: Hencoop Creek Andn FW The entire creek tributary to Rocky Creek
+L0870@PDF18: Hobcaw Creek Chtn SFH The entire creek tributary to Wando River
+L0871@PDF18: Hog Inlet/Cherry
+L0872@PDF18: Grove Inlet
+L0873@PDF18: Hory SFH The entire inlet
+L0874@PDF18: Hollow Creek Lxtn FW The entire creek tributary to Lake Murray
+L0875@PDF18: Horlbeck Creek Chtn SFH The entire creek tributary to Wando River
+L0876@PDF18: Horse Creek Aikn FW The entire creek tributary to Savannah River
+L0877@PDF18: Howard Creek Ocne ORW(TPGT) That portion of the creek from its headwaters to
+L0878@PDF18: 0.3 mile below S.C. Hwy 130 above the flow
+L0879@PDF18: augmentation system at the Bad Creek pumped
+L0880@PDF18: storage station dam
+L0881@PDF18: Howard Creek Ocne TN That portion of the creek from just above the flow
+L0882@PDF18: augmentation system at the Bad Creek pumped
+L0883@PDF18: storage station dam to Devils Fork
+L0884@PDF18: Hunting Swamp Hory FW The entire swamp tributary to Little Pee Dee
+L0885@PDF18: River
+L0886@PDF18: Husbands Creek Mrlb FW The entire creek tributary to Pee Dee River16 | Regulation 61-69
+L0887@PDF19: Waterbody Name County(ies) Class Waterbody Description and
+L0888@PDF19: (Site-Specific Standard)
+L0889@PDF19: Indian Camp
+L0890@PDF19: Branch
+L0891@PDF19: Ocne ORW(FW) The entire branch tributary to East Fork
+L0892@PDF19: Chattooga River
+L0893@PDF19: Indian Creek Lrns FW The entire creek tributary to Enoree River
+L0894@PDF19: Indian Field Swamp Dchr, Orbg FWsp The entire swamp tributary to Polk Swamp
+L0895@PDF19: (D.O. not less than 4 mg/L, pH 5.0 – 8.5)
+L0896@PDF19: Ira Branch Ocne ORW(FW) The entire branch tributary to the Chattooga
+L0897@PDF19: River
+L0898@PDF19: Irene Creek Chke FW The entire creek tributary to Thicketty Creek
+L0899@PDF19: J. Strom Thurmond
+L0900@PDF19: Lake (also called
+L0901@PDF19: Clarks Hill
+L0902@PDF19: Reservoir) (NDZ)
+L0903@PDF19: Abvl, Mcmk FW The entire lake on Savannah River
+L0904@PDF19: Jackies Branch Pkns TN The entire branch tributary to the confluence with
+L0905@PDF19: Laurel Fork Creek
+L0906@PDF19: Jacks Creek Ocne ORW(FW) The entire creek tributary to the East Fork
+L0907@PDF19: Chattooga River
+L0908@PDF19: Jackson Branch Aldl, Hmpt FW The entire branch tributary to Whippy Swamp
+L0909@PDF19: Jackson Creek Ffld FW The entire creek tributary to Little River
+L0910@PDF19: Jackson Creek Rlnd FW The entire creek tributary to Gills Creek
+L0911@PDF19: Jacobs Creek Lrns FW The entire creek tributary to Sand Creek
+L0912@PDF19: Jeffries Creek Drln, Flrn FWsp The entire creek tributary to Pee Dee River
+L0913@PDF19: (D.O. not less than 4 mg/L, pH 5.0 – 8.5)
+L0914@PDF19: Jeremy Inlet Chtn ORW(SFH) The entire inlet tributary to the Atlantic Ocean
+L0915@PDF19: Jericho Creek Bfrt SA The entire creek tributary to Battery Creek
+L0916@PDF19: Jerry Creek Ocne FW The entire creek tributary to Chauga River
+L0917@PDF19: Jimmies Creek Spbg FW The entire creek tributary to the Tyger River
+L0918@PDF19: Johnson Creek Bfrt ORW(SFH) The entire creek tributary to Harbor River and the
+L0919@PDF19: Atlantic Ocean
+L0920@PDF19: Johnsons Swamp
+L0921@PDF19: (also called
+L0922@PDF19: Summerhouse
+L0923@PDF19: Branch and Bartons
+L0924@PDF19: Branch)
+L0925@PDF19: Gtwn, Wmbg FWsp The entire swamp tributary to Horse Pen Swamp
+L0926@PDF19: (D.O. not less than 4 mg/L, pH 5.0 – 8.5)
+L0927@PDF19: Jones Creek Gtwn SB That portion of the creek from its confluence with
+L0928@PDF19: Mud Bay to its confluence with Nancy Creek
+L0929@PDF19: Jones Creek Gtwn SFH That portion of the creek from its confluence with
+L0930@PDF19: Nancy Creek to a point midway between its
+L0931@PDF19: confluence with Duck Creek and Noble Slough
+L0932@PDF19: Jones Creek Gtwn ORW(SFH) That portion of the creek from a point midway
+L0933@PDF19: between its confluence with Duck Creek and
+L0934@PDF19: Noble Slough to North Inlet
+L0935@PDF19: Jordan Branch Brwl FW The entire branch tributary to Toby Creek
+L0936@PDF19: Julian Creek Gnvl ORW(FW) The entire creek tributary to Matthews Creek
+L0937@PDF19: Jumping Branch Ocne TN That portion of the branch from its headwaters to
+L0938@PDF19: Lake Cherokee
+L0939@PDF19: Kate Fowler Branch Gnwd FW The entire branch tributary to Ninety Six Creek
+L0940@PDF19: Kellers Creek Abvl FW The entire creek tributary to McCord Creek
+L0941@PDF19: Kelsey Creek Spbg FW The entire creek tributary to Fairforest Creek17 | Regulation 61-69
+L0942@PDF20: Waterbody Name County(ies) Class Waterbody Description and
+L0943@PDF20: (Site-Specific Standard)
+L0944@PDF20: Kilgore Branch Drln FW The entire branch tributary to Black Creek
+L0945@PDF20: King Creek Ocne ORW(FW) The entire creek tributary to Chattooga River
+L0946@PDF20: Kinley Creek Lxtn FW The entire creek tributary to Saluda River
+L0947@PDF20: Knox Creek Ocne FW That portion of the creek from Lake Cheohee
+L0948@PDF20: Dam to the confluence with Cheohee Creek
+L0949@PDF20: Koon Branch Lxtn FW The entire branch tributary to Rawls Creek
+L0950@PDF20: Lake Cheohee Ocne FW The entire lake
+L0951@PDF20: Lake Cherokee (also
+L0952@PDF20: called Lake
+L0953@PDF20: Isaquenna)
+L0954@PDF20: Ocne FW The entire lake
+L0955@PDF20: Lake Greenwood Gnwd, Lrns,
+L0956@PDF20: Nbry
+L0957@PDF20: FW The entire lake on Saluda River
+L0958@PDF20: Lake Hartwell
+L0959@PDF20: (NDZ)
+L0960@PDF20: Ocne, Pkns,
+L0961@PDF20: Andn
+L0962@PDF20: FW All that portion within South Carolina
+L0963@PDF20: Lake Jocassee Ocne TPGT The entire lake
+L0964@PDF20: Lake Keowee (NDZ) Andn, Pkns FW The entire lake
+L0965@PDF20: Lake Lanier Gnvl FW The entire lake on Vaughn Creek
+L0966@PDF20: Lake Marion Bkly, Clrn,
+L0967@PDF20: Orbg, Smtr
+L0968@PDF20: FW The entire lake
+L0969@PDF20: Lake Moultrie Bkly FW The entire lake
+L0970@PDF20: Lake Murray (NDZ) Lxtn, Nbry,
+L0971@PDF20: Rlnd, Slda
+L0972@PDF20: FW The entire lake on Saluda River
+L0973@PDF20: Lake Rabon Lrns FW The entire lake on Rabon Creek, North Rabon
+L0974@PDF20: Creek, and South Rabon Creek
+L0975@PDF20: Lake Richard B.
+L0976@PDF20: Russell
+L0977@PDF20: Abvl, Andn FW The entire lake
+L0978@PDF20: Lake Rotary Gnvl FW The entire lake
+L0979@PDF20: Lake Secession Abvl, Andn FW The entire lake on Rocky River
+L0980@PDF20: Lake Sudy Gnvl FW The entire lake
+L0981@PDF20: Lake Swamp Drln, Flrn FWsp The entire lake tributary to Sparrow Swamp
+L0982@PDF20: (D.O. not less than 4 mg/L, pH 5.0 – 8.5)
+L0983@PDF20: Lake Swamp (also
+L0984@PDF20: called Lynches Lake)
+L0985@PDF20: Flrn FWsp The entire lake
+L0986@PDF20: (D.O. not less than 4 mg/L, pH 5.0 – 8.5)
+L0987@PDF20: Lake Swamp Hory FWsp The entire lake tributary to Little Pee Dee River
+L0988@PDF20: (D.O. not less than 4 mg/L, pH 5.0 – 8.5)
+L0989@PDF20: Lake Trammell Gnvl TN The entire lake
+L0990@PDF20: Lake Tugaloo Ocne TPGT The entire lake
+L0991@PDF20: Lake Wylie (NDZ) York FW The entire lake on Catawba River
+L0992@PDF20: Langston Creek
+L0993@PDF20: (unnamed Creek to
+L0994@PDF20: Reedy River 1 1/2
+L0995@PDF20: miles above Long
+L0996@PDF20: Branch)
+L0997@PDF20: Gnvl FW The entire creek tributary to Reedy River
+L0998@PDF20: Laurel Branch Pkns ORW(FW) The entire branch tributary to Eastatoe Creek
+L0999@PDF20: Laurel Creek Gnvl FW The entire creek tributary to Reedy River
+L1000@PDF20: Laurel Creek Pkns ORW(FW) The entire creek tributary to Eastatoe Creek
+L1001@PDF20: Laurel Fork Creek Pkns TN The entire creek tributary to Lake Jocassee18 | Regulation 61-69
+L1002@PDF21: Waterbody Name County(ies) Class Waterbody Description and
+L1003@PDF21: (Site-Specific Standard)
+L1004@PDF21: Lawsons Fork Creek Spbg FW The entire creek tributary to Pacolet River
+L1005@PDF21: Leadenwah Creek Chtn ORW(SFH) The entire creek tributary to North Edisto River
+L1006@PDF21: Lee Swamp Smtr FWsp The entire swamp tributary to Rocky Bluff
+L1007@PDF21: Swamp
+L1008@PDF21: (D.O. not less than 4 mg/L, pH 5.0 – 8.5)
+L1009@PDF21: Lemon Creek Bmbg FWsp The entire creek tributary to Little Salkehatchie
+L1010@PDF21: River
+L1011@PDF21: (D.O. not less than 4 mg/L, pH 5.0 – 8.5)
+L1012@PDF21: Lick Creek Lrns FW The entire creek tributary to North Rabon Creek
+L1013@PDF21: Lick Log Creek Ocne FW That portion of the creek from its headwaters
+L1014@PDF21: through Thrift Lake
+L1015@PDF21: Lick Log Creek Ocne ORW(FW) That portion of the creek from Thrift Lake to
+L1016@PDF21: Chattooga River
+L1017@PDF21: Lightwood Knot
+L1018@PDF21: Creek
+L1019@PDF21: Lxtn FW The entire creek tributary to North Fork Edisto
+L1020@PDF21: River
+L1021@PDF21: Limber Pole Creek Ocne TN The entire creek tributary to Devils Fork
+L1022@PDF21: Limestone Creek Chke FW The entire creek tributary to Broad River
+L1023@PDF21: Little Beaverdam
+L1024@PDF21: Creek
+L1025@PDF21: Andn FW The entire creek tributary to Rocky River
+L1026@PDF21: Little Boggy Swamp Drln FW The entire swamp tributary to Big Boggy Swamp
+L1027@PDF21: Little Eastatoe
+L1028@PDF21: Creek
+L1029@PDF21: Pkns TPGT That portion of the creek from its headwaters to
+L1030@PDF21: its confluence with Eastatoe Creek
+L1031@PDF21: Little Fork Creek Cfld FW The entire creek tributary to East Fork or Fork
+L1032@PDF21: Creek
+L1033@PDF21: Little Horse Creek Aikn FW The entire creek tributary to Horse Creek
+L1034@PDF21: Little Jones Creek Gtwn SFH The entire creek tributary to Jones Creek
+L1035@PDF21: Little Lynches River
+L1036@PDF21: (also called Lynches
+L1037@PDF21: Creek)
+L1038@PDF21: Krsh, Lctr FW The entire river tributary to Lynches River
+L1039@PDF21: Little Pee Dee River Diln, Marn,
+L1040@PDF21: Mrlb
+L1041@PDF21: FW That portion from its headwaters to the
+L1042@PDF21: confluence with Lumber River
+L1043@PDF21: Little Pee Dee River Hory, Marn ORW(FW) That portion of the river from the confluence with
+L1044@PDF21: Lumber River to the confluence with Great Pee
+L1045@PDF21: Dee River
+L1046@PDF21: Little Pine Tree
+L1047@PDF21: Creek
+L1048@PDF21: Krsh FW The entire creek tributary to Big Pine Tree Creek
+L1049@PDF21: Little River Abvl, Mcmk FW The entire river tributary to J. Strom Thurmond
+L1050@PDF21: Lake
+L1051@PDF21: Little River Ffld FW The entire river tributary to Broad River
+L1052@PDF21: Little River Lrns, Nbry FW The entire river tributary to Saluda River
+L1053@PDF21: Little River Ocne FW The entire river tributary to Lake Hartwell
+L1054@PDF21: Little River Inlet Hory SFH The entire inlet from its confluence with the
+L1055@PDF21: Atlantic Intracoastal Waterway to its confluence
+L1056@PDF21: with the Atlantic Ocean
+L1057@PDF21: Little Salkehatchie
+L1058@PDF21: River
+L1059@PDF21: Bmbg, Cltn FW The entire river tributary to Salkehatchie River
+L1060@PDF21: Little Saluda River Slda FW The entire river tributary to Lake Murray
+L1061@PDF21: Little Sandy River Cstr FW The entire river tributary to Sandy River19 | Regulation 61-69
+L1062@PDF22: Waterbody Name County(ies) Class Waterbody Description and
+L1063@PDF22: (Site-Specific Standard)
+L1064@PDF22: Little Thicketty
+L1065@PDF22: Creek
+L1066@PDF22: Chke FW The entire creek tributary to Thicketty Creek
+L1067@PDF22: Long Branch Abvl, Andn FW The entire branch tributary to Rocky River
+L1068@PDF22: Long Cane Creek Abvl, Mcmk FW The entire creek tributary to J. Strom Thurmond
+L1069@PDF22: Lake
+L1070@PDF22: Long Creek Chtn ORW(SFH) The entire creek tributary to Steamboat Creek
+L1071@PDF22: Long Creek Ocne FW The entire creek tributary to Chattooga River
+L1072@PDF22: Lorick Branch Lxtn FW The entire branch tributary to Saluda River
+L1073@PDF22: Lower Toogoodoo
+L1074@PDF22: Creek
+L1075@PDF22: Chtn SFH That portion of the creek from its headwaters to a
+L1076@PDF22: point 3 miles from its mouth
+L1077@PDF22: Lower Toogoodoo
+L1078@PDF22: Creek
+L1079@PDF22: Chtn ORW(SFH) That portion of the creek from a point 3 miles
+L1080@PDF22: from its mouth to its confluence with Toogoodoo
+L1081@PDF22: Creek
+L1082@PDF22: Ludlow Branch Mcmk FW The entire branch tributary to J. Strom Thurmond
+L1083@PDF22: Lake
+L1084@PDF22: Lumber River Diln, Hory,
+L1085@PDF22: Marn
+L1086@PDF22: FW The entire river tributary to Little Pee Dee River
+L1087@PDF22: Lynches Lake (also
+L1088@PDF22: called Lake Swamp)
+L1089@PDF22: Flrn FWsp The entire lake
+L1090@PDF22: (D.O. not less than 4 mg/L, pH 5.0 – 8.5)
+L1091@PDF22: Lynches River Cfld, Diln,
+L1092@PDF22: Flrn, Krsh,
+L1093@PDF22: Lctr, Lee,
+L1094@PDF22: Smtr
+L1095@PDF22: FW The entire river tributary to Pee Dee River
+L1096@PDF22: Mad Dog Branch Pkns FW The entire branch tributary to Georges Creek
+L1097@PDF22: Maidendown Swamp Marn FWsp The entire swamp tributary to Buck Swamp
+L1098@PDF22: (D.O. not less than 4 mg/L, pH 5.0 – 8.5)
+L1099@PDF22: Maple Creek Spbg FW The entire creek tributary to South Tyger River
+L1100@PDF22: Maple Swamp Diln FWsp The entire swamp tributary to Little Pee Dee
+L1101@PDF22: River
+L1102@PDF22: (D.O. not less than 4 mg/L, pH 5.0 – 8.5)
+L1103@PDF22: Mark Bay Chtn ORW(SFH) The entire bay
+L1104@PDF22: Martin Creek Ocne FW The entire creek tributary to Lake Hartwell
+L1105@PDF22: Matthews Creek Gnvl ORW(FW) That portion of the Creek from its headwaters to
+L1106@PDF22: the end of State land in the Mountain Bridge area
+L1107@PDF22: Matthews Creek Gnvl TN That portion of the creek from the end of State
+L1108@PDF22: land in the Mountain Bridge area to its confluence
+L1109@PDF22: with South Saluda River
+L1110@PDF22: May River Bfrt ORW(SFH) The entire river tributary to Calibogue Sound
+L1111@PDF22: McAlpine Creek Lctr FW The entire creek tributary to Sugar Creek
+L1112@PDF22: McCall Branch Flrn FW The entire branch tributary to Lynches River
+L1113@PDF22: McCord Creek Abvl FW The entire creek tributary to Long Cane Creek
+L1114@PDF22: McIntosh Mill
+L1115@PDF22: Stream
+L1116@PDF22: Drln FW The entire stream tributary to Black Creek
+L1117@PDF22: McKenzie Creek Rlnd FW That portion of the creek outside the boundary of
+L1118@PDF22: the Congaree National Park
+L1119@PDF22: McKenzie Creek Rlnd ORW(FW) That portion of the creek beginning at the
+L1120@PDF22: boundary of the Congaree National Park to its
+L1121@PDF22: confluence with Toms Creek20 | Regulation 61-69
+L1122@PDF23: Waterbody Name County(ies) Class Waterbody Description and
+L1123@PDF23: (Site-Specific Standard)
+L1124@PDF23: McKinneys Creek Ocne TN That portion of the creek from its headwaters to
+L1125@PDF23: S.C. Hwy 25
+L1126@PDF23: McKinneys Creek Ocne FW That portion of the creek from S.C. Hwy 25 to
+L1127@PDF23: Lake Keowee
+L1128@PDF23: McLeod Creek (also
+L1129@PDF23: called Tom Point
+L1130@PDF23: Creek)
+L1131@PDF23: Chtn ORW(SFH) The entire creek tributary to North Edisto River
+L1132@PDF23: Meings Creek (also
+L1133@PDF23: called Meng Creek)
+L1134@PDF23: Unin FW The entire creek tributary to Broad River
+L1135@PDF23: Middle Branch Flrn FWsp The entire branch tributary to Jeffries Creek
+L1136@PDF23: (D.O. not less than 4 mg/L, pH 5.0 – 8.5)
+L1137@PDF23: Middle Pen Swamp Orbg FWsp The entire swamp tributary to Four Hole Swamp
+L1138@PDF23: (D.O. not less than 4 mg/L, pH 5.0 – 8.5)
+L1139@PDF23: Middle Saluda River Gnvl ORW(FW) That portion of the river from its headwaters to
+L1140@PDF23: the end of State Land at Jones Gap State Park land
+L1141@PDF23: Middle Saluda River Gnvl TN That portion of the river from Jones Gap State
+L1142@PDF23: Park land to Oil Camp Creek
+L1143@PDF23: Middle Swamp Drln, Flrn FWsp The entire swamp tributary to Jeffries Creek
+L1144@PDF23: (D.O. not less than 4 mg/L, pH 5.0 – 8.5)
+L1145@PDF23: Middle Tyger River Gnvl, Spbg FW The entire river tributary to North Tyger River
+L1146@PDF23: Mill Branch Orbg FW The entire branch tributary to North Fork Edisto
+L1147@PDF23: River
+L1148@PDF23: Mill Creek Chke FW The entire creek tributary to Limestone Creek
+L1149@PDF23: Mill Creek Ffld FW The entire creek tributary to Little River
+L1150@PDF23: Mill Creek Gnvl FW That portion of the creek from its headwaters to
+L1151@PDF23: the end of Pleasant Ridge State Park land
+L1152@PDF23: including the unnamed lake
+L1153@PDF23: Mill Creek Ocne TN That portion of the creek from its headwaters to
+L1154@PDF23: Burgess Creek
+L1155@PDF23: Mill Creek Pkns TPGT The entire creek tributary to Eastatoe Creek
+L1156@PDF23: Mill Creek Rlnd FW The entire creek tributary to Congaree River
+L1157@PDF23: Mill Creek Spbg FW The entire creek tributary to Enoree River
+L1158@PDF23: Mill Creek Smtr FW The entire creek tributary to Lake Marion
+L1159@PDF23: Millpond Branch Flrn FW The entire branch tributary to Lynches River
+L1160@PDF23: Milton Creek Chtn ORW(SFH) The entire creek tributary to Shingle Creek
+L1161@PDF23: Mine Creek Slda FW The entire creek tributary to Little Saluda River
+L1162@PDF23: Mitchell Creek Unin FW The entire creek tributary to Fairforest Creek
+L1163@PDF23: Molasses Creek Chtn SFH The entire creek tributary to Wando River
+L1164@PDF23: Moody Creek Ocne TN That portion of the creek from its headwaters to
+L1165@PDF23: its confluence with Cantrell Creek
+L1166@PDF23: Morgan River Bfrt SFH The entire river tributary to St. Helena Sound
+L1167@PDF23: Mosquito Creek Cltn ORW(SFH) That portion of the creek from Bull Cut to South
+L1168@PDF23: Edisto River
+L1169@PDF23: Moss Mill Creek Ocne ORW(FW) The entire creek tributary to Chattooga River
+L1170@PDF23: Mountain Creek Gnvl FW The entire creek tributary to Enoree River
+L1171@PDF23: Mountain Creek Lrns FW The entire creek tributary to North Rabon Creek
+L1172@PDF23: Mud Creek Chtn ORW(SFH) The entire creek tributary to South Edisto River21 | Regulation 61-69
+L1173@PDF24: Waterbody Name County(ies) Class Waterbody Description and
+L1174@PDF24: (Site-Specific Standard)
+L1175@PDF24: Mud Creek Gtwn SFH The entire creek between Oyster Bay and Town
+L1176@PDF24: Creek
+L1177@PDF24: Mud River (also
+L1178@PDF24: called Fields Cut)
+L1179@PDF24: Jspr SA The entire river between Savannah River and
+L1180@PDF24: Wright River
+L1181@PDF24: Muddy Creek Flrn, Wmbg FWsp The entire creek tributary to Clark Creek
+L1182@PDF24: (D.O. not less than 4 mg/L, pH 5.0 – 8.5)
+L1183@PDF24: Murrells Inlet Gtwn SFH The entire inlet tributary to the Atlantic Ocean
+L1184@PDF24: Myers Creek Rlnd FW That portion of the creek outside the boundary of
+L1185@PDF24: the Congaree National Park
+L1186@PDF24: Myers Creek Rlnd ORW(FW) That portion of the creek beginning at the
+L1187@PDF24: boundary of the Congaree National Park to its
+L1188@PDF24: confluence with Cedar Creek
+L1189@PDF24: Naked Creek Mrlb FW The entire creek tributary to Pee Dee River
+L1190@PDF24: Nancy Creek Gtwn SB The entire creek tributary to Jones Creek
+L1191@PDF24: New Chehaw River Cltn SFH The entire river tributary to St. Helena Sound
+L1192@PDF24: New Cut Chtn SFH The entire cut between Church Creek and Stono
+L1193@PDF24: River
+L1194@PDF24: New River Bfrt, Jspr SA The entire river tributary to the Atlantic Ocean
+L1195@PDF24: Newman Swamp Drln FWsp The entire swamp tributary to Sparrow Swamp
+L1196@PDF24: (D.O. not less than 4 mg/L, pH 5.0 – 8.5)
+L1197@PDF24: Ninety Six Creek Gnwd FW The entire creek tributary to Wilson Creek
+L1198@PDF24: No Mans Friend
+L1199@PDF24: Creek
+L1200@PDF24: Gtwn SB The entire creek between Mud Bay and Oyster
+L1201@PDF24: Bay
+L1202@PDF24: Noble Slough Gtwn SB The entire slough between Oyster Bay and Jones
+L1203@PDF24: Creek
+L1204@PDF24: Norris Creek Abvl FW The entire creek tributary to Long Cane Creek
+L1205@PDF24: North Edisto River Chtn ORW(SFH) That portion of the river from its headwaters to
+L1206@PDF24: the Atlantic Intracoastal Waterway
+L1207@PDF24: North Edisto River Chtn SFH That portion of the river from the Atlantic
+L1208@PDF24: Intracoastal Waterway to Steamboat Creek
+L1209@PDF24: North Edisto River Chtn ORW(SFH) That portion of the river from Steamboat Creek to
+L1210@PDF24: the Atlantic Ocean
+L1211@PDF24: North Fork Edisto
+L1212@PDF24: River
+L1213@PDF24: Aikn, Lxtn,
+L1214@PDF24: Orbg
+L1215@PDF24: FW The entire river tributary to Edisto River
+L1216@PDF24: North Fork Little
+L1217@PDF24: River
+L1218@PDF24: Ocne TPGT That portion of the river from the confluence of
+L1219@PDF24: Mill Creek and Burgess Creek to S.C. Hwy 11
+L1220@PDF24: North Fork Little
+L1221@PDF24: River
+L1222@PDF24: Ocne FW That portion of the river from S.C. Hwy 11 to its
+L1223@PDF24: confluence with Little River
+L1224@PDF24: North Inlet Gtwn ORW(SFH) The entire inlet tributary to the Atlantic Ocean
+L1225@PDF24: North Pacolet River Spbg FW The entire river tributary to Pacolet River
+L1226@PDF24: North Rabon Creek Lrns FW The entire creek tributary to Rabon Creek
+L1227@PDF24: North Saluda River Gnvl ORW(FW) That portion of the river from its headwaters to
+L1228@PDF24: S.C. Hwy 42
+L1229@PDF24: North Saluda River Gnvl FW That portion of the river from S.C. Hwy 42 to
+L1230@PDF24: Saluda River
+L1231@PDF24: North Santee River Gtwn FW That fresh water portion of the river
+L1232@PDF24: North Santee River Gtwn SA That portion of the river from U.S. Hwy 17 to
+L1233@PDF24: 1000 ft below the Atlantic Intracoastal Waterway22 | Regulation 61-69
+L1234@PDF25: Waterbody Name County(ies) Class Waterbody Description and
+L1235@PDF25: (Site-Specific Standard)
+L1236@PDF25: North Santee River Gtwn ORW(SFH) That portion of the river from U.S. Hwy 17 from
+L1237@PDF25: 1000 feet below the Atlantic Intracoastal
+L1238@PDF25: Waterway to the Atlantic Ocean
+L1239@PDF25: North Tyger River Spbg FW The entire river tributary to Tyger River
+L1240@PDF25: Ocella Creek Chtn ORW(SFH) The entire creek tributary to South Creek
+L1241@PDF25: Oil Camp Creek Gnvl ORW(FW) That portion of the creek from its headwaters to
+L1242@PDF25: the end of State land at Caesars Head State Park
+L1243@PDF25: Oil Camp Creek Gnvl TN That portion of the creek from Caesars Head State
+L1244@PDF25: Park land to Middle Saluda River
+L1245@PDF25: Okatie River Bfrt ORW(SFH) The entire river tributary to Colleton River
+L1246@PDF25: Old Chehaw River Cltn SFH The entire river tributary to Combahee River
+L1247@PDF25: Old Dead River Rlnd ORW(FW) The entire river within the boundary of the
+L1248@PDF25: Congaree National Park
+L1249@PDF25: Old House Creek Bfrt SFH The entire creek tributary to Fripps Inlet
+L1250@PDF25: Old Man Creek Gtwn ORW(SFH) The entire creek tributary to Town Creek
+L1251@PDF25: Olive Branch Lxtn FW The entire branch tributary to Duncan Creek
+L1252@PDF25: Oolenoy River Pkns TPGT That portion of the river from its headwaters to
+L1253@PDF25: Emory Creek
+L1254@PDF25: Oolenoy River Pkns FW That portion of the river from Emory Creek to its
+L1255@PDF25: confluence with South Saluda River
+L1256@PDF25: Opossum Creek Ocne FW The entire creek tributary to Chattooga River
+L1257@PDF25: Oyster Bay Gtwn SB The entire bay between No Mans Friend Creek
+L1258@PDF25: and Noble Slough
+L1259@PDF25: Oyster House Creek Chtn ORW(SFH) The entire creek tributary to Wadmalaw River
+L1260@PDF25: Pacolet River Chke, Spbg,
+L1261@PDF25: Unin
+L1262@PDF25: FW The entire river tributary to Broad River
+L1263@PDF25: Palmetto Swamp Hory FW The entire swamp tributary to Little Pee Dee
+L1264@PDF25: River
+L1265@PDF25: Panther Creek Mrlb FW The entire creek tributary to Beaverdam Creek
+L1266@PDF25: Park Creek Abvl FW The entire creek tributary to Little River
+L1267@PDF25: Payne Branch Gnvl FW The entire branch tributary to South Rabon Creek
+L1268@PDF25: Pen Branch Orbg FW The entire branch tributary to North Fork Edisto
+L1269@PDF25: River
+L1270@PDF25: Peoples Creek (also
+L1271@PDF25: called Gaffney Creek
+L1272@PDF25: and Town Creek)
+L1273@PDF25: Chke FW The entire creek tributary to Broad River
+L1274@PDF25: Pig Pen Branch Ocne ORW(FW) The entire branch tributary to Lick Log Creek
+L1275@PDF25: Pinckney Branch Ocne FW The entire branch tributary to Chattooga River
+L1276@PDF25: Pinnacle Lake Pkns ORW(FW) The entire lake
+L1277@PDF25: Pleasant Meadow
+L1278@PDF25: Swamp
+L1279@PDF25: Hory FWsp The entire swamp tributary to Lake Swamp
+L1280@PDF25: (D.O. not less than 4 mg/L, pH 5.0 – 8.5)
+L1281@PDF25: Pocalla Creek Smtr FWsp The entire creek tributary to Pocotaligo River
+L1282@PDF25: (D.O. not less than 4 mg/L, pH 5.0 – 8.5)
+L1283@PDF25: Pocotaligo River Clrn, Smtr FWsp The entire river tributary to Black River
+L1284@PDF25: (D.O. not less than 4 mg/L, pH 5.0 – 8.5)
+L1285@PDF25: Polk Swamp Dchr, Orbg FWsp The entire swamp tributary to Edisto River
+L1286@PDF25: (D.O. not less than 4 mg/L, pH 5.0 – 8.5)23 | Regulation 61-69
+L1287@PDF26: Waterbody Name County(ies) Class Waterbody Description and
+L1288@PDF26: (Site-Specific Standard)
+L1289@PDF26: Port Royal Sound Bfrt SFH The entire sound tributary to the Atlantic Ocean
+L1290@PDF26: Price Inlet Chtn ORW(SFH) The entire inlet tributary to the Atlantic Ocean
+L1291@PDF26: Privateer Creek Chtn ORW(SFH) The entire creek tributary to North Edisto River
+L1292@PDF26: Providence Branch Chke FW That portion of the branch below County Road
+L1293@PDF26: 793 to Cherokee Creek
+L1294@PDF26: Pudding Swamp Clrn, Smtr,
+L1295@PDF26: Wmbg
+L1296@PDF26: FWsp The entire swamp tributary to Black River
+L1297@PDF26: (D.O. not less than 4 mg/L, pH 5.0 – 8.5)
+L1298@PDF26: Pye Branch Flrn FWsp The entire branch tributary to Jeffries Creek
+L1299@PDF26: (D.O. not less than 4 mg/L, pH 5.0 – 8.5)
+L1300@PDF26: Rabon Creek Lrns FW That portion of the creek from the confluence of
+L1301@PDF26: North Rabon Creek and South Rabon Creek, in
+L1302@PDF26: Lake Rabon, to its confluence with Lake
+L1303@PDF26: Greenwood
+L1304@PDF26: Ralston Creek Bkly SFH The entire creek tributary to Wando River
+L1305@PDF26: Ramsey Creek Ocne FW The entire creek tributary to Chauga River
+L1306@PDF26: Ramshorn Creek Bfrt SFH The entire creek between New River and Cooper
+L1307@PDF26: River
+L1308@PDF26: Rathall Creek Chtn SFH The entire creek tributary to Wando River
+L1309@PDF26: Rawls Creek Lxtn, Rlnd FW The entire creek tributary to Saluda River
+L1310@PDF26: Red Bank Creek Lxtn FW The entire creek tributary to Congaree River
+L1311@PDF26: Red Bank Creek Slda FW The entire creek tributary to Mine Creek
+L1312@PDF26: Reedy Branch Ocne FW The entire branch tributary to Chattooga River
+L1313@PDF26: Reedy Cove Creek Pkns FW The entire creek tributary to Eastatoe Creek
+L1314@PDF26: Reedy Fork Branch Lrns FW The entire branch tributary to Little River
+L1315@PDF26: Reedy River Gnvl, Lrns FW The entire river tributary to Lake Greenwood
+L1316@PDF26: Rices Creek Pkns FW The entire creek tributary to Twelvemile Creek
+L1317@PDF26: Richardson Branch Aldl FW The entire branch tributary to Coosawhatchie
+L1318@PDF26: River
+L1319@PDF26: Robb Senn Branch Lxtn FW The entire branch tributary to Saluda River
+L1320@PDF26: Rock Creek Pkns TN That portion of the creek within South Carolina
+L1321@PDF26: Rocky Bluff Swamp Lee, Smtr FWsp The entire swamp tributary to Scape Ore Swamp
+L1322@PDF26: (D.O. not less than 4 mg/L, pH 5.0 – 8.5)
+L1323@PDF26: Rocky Bottom Creek Pkns ORW(FW) The entire creek tributary to Eastatoe Creek
+L1324@PDF26: Rocky Branch Gnvl TN The entire branch tributary to Middle Saluda
+L1325@PDF26: River
+L1326@PDF26: Rocky Creek Cstr FW The entire creek (including Little Rocky Creek)
+L1327@PDF26: tributary to Cedar Creek Reservoir
+L1328@PDF26: Rocky Creek Mcmk FW The entire creek tributary to Hard Labor Creek
+L1329@PDF26: Rocky Creek (also
+L1330@PDF26: called Rock Creek)
+L1331@PDF26: Gnwd FW The entire creek tributary to Coronaca Creek
+L1332@PDF26: Rocky River Abvl, Andn FW The entire river tributary to Savannah River
+L1333@PDF26: Rose Branch Drln FW The entire branch tributary to Lynches River
+L1334@PDF26: Rosemary Creek Brwl FW The entire creek tributary to Salkehatchie River
+L1335@PDF26: Running Lake Rlnd ORW(FW) The entire creek within the boundary of the
+L1336@PDF26: Congaree National Park, including Big Lake and
+L1337@PDF26: Little Lake to its confluence with Toms Creek
+L1338@PDF26: Russel Creek Chtn ORW(SFH) The entire creek tributary to Steamboat Creek24 | Regulation 61-69
+L1339@PDF27: Waterbody Name County(ies) Class Waterbody Description and
+L1340@PDF27: (Site-Specific Standard)
+L1341@PDF27: St. Helena Sound Bfrt, Cltn SFH The entire sound tributary to the Atlantic Ocean
+L1342@PDF27: Salkehatchie River Aldl, Bmbg,
+L1343@PDF27: Brwl, Cltn,
+L1344@PDF27: Hmpt
+L1345@PDF27: FW That portion of the river from its headwaters to
+L1346@PDF27: the confluence with the Little Salkehatchie River
+L1347@PDF27: Salt Water Creek Jspr SB The entire creek tributary to Wright Creek
+L1348@PDF27: Saluda Lake Gnvl FW The entire lake on Saluda River
+L1349@PDF27: Saluda River (Main
+L1350@PDF27: stem)
+L1351@PDF27: Abvl, Andn,
+L1352@PDF27: Gnvl, Gnwd,
+L1353@PDF27: Lrns, Lxtn,
+L1354@PDF27: Nbry, Pkns,
+L1355@PDF27: Rlnd, Slda
+L1356@PDF27: FW The entire river tributary to Lake Murray
+L1357@PDF27: Saluda River (Main
+L1358@PDF27: stem)
+L1359@PDF27: Lxtn, Rlnd TPGTsp That portion from the Lake Murray Dam to the
+L1360@PDF27: confluence with Broad River
+L1361@PDF27: (D.O. not less than daily average 5 mg/L, a
+L1362@PDF27: running thirty-day (30) average of 5.5 mg/L, with
+L1363@PDF27: a low of 4.0 mg/L)
+L1364@PDF27: Saluda River (Main
+L1365@PDF27: stem) Unnamed
+L1366@PDF27: Tributaries
+L1367@PDF27: Lxtn, Rlnd FW All tributaries to the main stem of Saluda River
+L1368@PDF27: from the Lake Murray Dam to the confluence
+L1369@PDF27: with Broad River
+L1370@PDF27: Sampit River Gtwn SB The entire river from saltwater intrusion to
+L1371@PDF27: Winyah Bay
+L1372@PDF27: Sampson Island
+L1373@PDF27: Creek
+L1374@PDF27: Cltn ORW(SFH) The entire creek tributary to Mosquito Creek
+L1375@PDF27: Sand Creek Ffld FW The entire creek tributary to Jackson Creek
+L1376@PDF27: Sand Creek Lrns FW The entire creek tributary to Millers Fork
+L1377@PDF27: Sand Creek Chtn ORW(SFH) The entire creek tributary to Steamboat Creek
+L1378@PDF27: Sanders Branch Hmpt FWsp The entire branch tributary to Coosawhatchie
+L1379@PDF27: River
+L1380@PDF27: (D.O. not less than 4 mg/L, pH 5.0 – 8.5)
+L1381@PDF27: Sanders Creek Krsh FW The entire creek tributary to Wateree River
+L1382@PDF27: Sandy River Cstr FW The entire creek tributary to Broad River
+L1383@PDF27: Santee River Bkly, Clrn,
+L1384@PDF27: Gtwn, Wmbg
+L1385@PDF27: FW That portion of the river below Lake Marion to
+L1386@PDF27: North and South Santee Rivers
+L1387@PDF27: Santee River Clhn, Smtr FW From junction of Congaree and Wateree Rivers
+L1388@PDF27: to Lake Marion
+L1389@PDF27: Santee River (North
+L1390@PDF27: and South)
+L1391@PDF27: Bkly, Chtn,
+L1392@PDF27: Gtwn
+L1393@PDF27: See North Santee River and South Santee River
+L1394@PDF27: (Berkeley, Charleston, and Georgetown
+L1395@PDF27: Counties)
+L1396@PDF27: Savannah Creek Bmbg, Cltn FW The entire creek tributary to Salkehatchie River
+L1397@PDF27: Savannah Creek Hory FW The entire creek tributary to Chinners Swamp
+L1398@PDF27: Savannah River Abvl, Andn TPGT That portion of the river from Lake Hartwell Dam
+L1399@PDF27: to the headwaters of Lake Richard B. Russell
+L1400@PDF27: Savannah River Abvl, Aikn,
+L1401@PDF27: Aldl, Andn,
+L1402@PDF27: Brwl, Efld,
+L1403@PDF27: Hmpt, Mcmk
+L1404@PDF27: FW That portion of the river from the headwaters of
+L1405@PDF27: Lake Richard B. Russell to Seaboard Coastline
+L1406@PDF27: Railroad25 | Regulation 61-69
+L1407@PDF28: Waterbody Name County(ies) Class Waterbody Description and
+L1408@PDF28: (Site-Specific Standard)
+L1409@PDF28: Savannah River Hmpt, Jspr SB sp That portion of the river from Seaboard Coastline
+L1410@PDF28: Railroad to Ft. Pulaski
+L1411@PDF28: (D.O. not less than daily average of 5 mg/L and
+L1412@PDF28: minimum 4 mg/L)
+L1413@PDF28: Savannah River Jspr SA That portion of the river from Ft. Pulaski to the
+L1414@PDF28: Atlantic Ocean
+L1415@PDF28: Sawhead Branch Ocne FW The entire branch tributary to Opossum Creek
+L1416@PDF28: Sawmill Branch Bkly, Dchr FW The entire branch tributary to Dorchester Creek
+L1417@PDF28: Sawmill Creek Bfrt ORW(SFH) The entire creek tributary to Colleton River
+L1418@PDF28: Sawney Creek Abvl, Mcmk FW The entire creek tributary to Little River
+L1419@PDF28: Sawneys Creek Ffld, Krsh FW The entire creek tributary to Wateree River
+L1420@PDF28: Schewbough Branch
+L1421@PDF28: (also called Skeebo
+L1422@PDF28: Branch)
+L1423@PDF28: Hory FWsp The entire branch tributary to the North Carolina
+L1424@PDF28: line
+L1425@PDF28: (D.O. not less than 4 mg/L, pH 5.0 – 8.5)
+L1426@PDF28: Scott Creek Nbry FW The entire creek tributary to Bush River
+L1427@PDF28: Scott Creek Chtn ORW(SFH) The entire creek from Big Bay Creek to Jeremy
+L1428@PDF28: Inlet
+L1429@PDF28: Scouter Creek Lxtn FW The entire creek tributary to Congaree Creek
+L1430@PDF28: Sea Creek Bay Gtwn ORW(SFH) The entire bay tributary to Old Man Creek
+L1431@PDF28: Second Creek Lxtn FW The entire creek tributary to First Creek
+L1432@PDF28: Sewee Bay Chtn ORW(SFH) The entire bay
+L1433@PDF28: Shanklin Creek Andn FW The entire creek tributary to Three and Twenty
+L1434@PDF28: Creek
+L1435@PDF28: Shaver Creek (also
+L1436@PDF28: called Cheves Creek)
+L1437@PDF28: Efld FW The entire creek tributary to Stevens Creek
+L1438@PDF28: Shaw Creek Aikn, Efld FW The entire creek tributary to South Fork Edisto
+L1439@PDF28: River
+L1440@PDF28: Shell Creek Lrns FW The entire creek tributary to Bush River
+L1441@PDF28: Shem Creek Chtn SB The entire creek tributary to Charleston Harbor
+L1442@PDF28: Shingle Creek Chtn ORW(SFH) The entire creek tributary to St. Pierre Creek
+L1443@PDF28: Shoulder Bone
+L1444@PDF28: Branch
+L1445@PDF28: Ocne FW The entire branch tributary to Sawhead Branch
+L1446@PDF28: Side of Mountain
+L1447@PDF28: Creek
+L1448@PDF28: Pkns ORW(FW) The entire creek tributary to Eastatoe Creek
+L1449@PDF28: Silver Brook Creek Andn FW The entire creek tributary to Rocky River
+L1450@PDF28: Six Mile Creek Lxtn FW The entire creek tributary to Congaree Creek
+L1451@PDF28: Six and Twenty
+L1452@PDF28: Creek
+L1453@PDF28: Andn FW The entire creek tributary to Lake Hartwell
+L1454@PDF28: Sixty Bass Creek Gtwn SFH That portion of the creek from its confluence with
+L1455@PDF28: Town Creek to a point 0.4 miles from its
+L1456@PDF28: confluence with Town Creek
+L1457@PDF28: Sixty Bass Creek Gtwn ORW(SFH) That portion of the creek from a point 0.4 miles
+L1458@PDF28: from its confluence with Town Creek to North
+L1459@PDF28: Inlet
+L1460@PDF28: Skeebo Branch Hory FWsp The entire branch tributary to the North Carolina
+L1461@PDF28: line
+L1462@PDF28: (D.O. not less than 4 mg/L, pH 5.0 – 8.5)26 | Regulation 61-69
+L1463@PDF29: Waterbody Name County(ies) Class Waterbody Description and
+L1464@PDF29: (Site-Specific Standard)
+L1465@PDF29: Slatten Branch Ocne ORW(FW) The entire branch tributary to East Fork
+L1466@PDF29: Chattooga River
+L1467@PDF29: Smeltzer Creek Ocne TN That portion of the creek from its headwaters to
+L1468@PDF29: S.C. Hwy 130
+L1469@PDF29: Smeltzer Creek Ocne TPGT That portion of the creek from S.C. Hwy 130 to
+L1470@PDF29: North Fork Little River
+L1471@PDF29: Smith Branch Rlnd FW The entire branch tributary to Broad River
+L1472@PDF29: Smith Swamp Marn FWsp The entire swamp tributary to Catfish Creek
+L1473@PDF29: (D.O. not less than 4 mg/L, pH 5.0 – 8.5)
+L1474@PDF29: South Creek Chtn ORW(SFH) The entire creek tributary to North Edisto River
+L1475@PDF29: South Edisto River Chtn, Cltn ORW(SFH) That portion of the river from Dawho River to
+L1476@PDF29: Mud Creek
+L1477@PDF29: South Edisto River Chtn, Cltn SFH That portion of the river from Mud Creek to the
+L1478@PDF29: Atlantic Ocean
+L1479@PDF29: South Fork Edisto
+L1480@PDF29: River
+L1481@PDF29: Aikn, Bmbg,
+L1482@PDF29: Brwl, Efld,
+L1483@PDF29: Orbg
+L1484@PDF29: FW The entire river tributary to North Fork Edisto
+L1485@PDF29: River
+L1486@PDF29: South Fork Kings
+L1487@PDF29: Creek
+L1488@PDF29: Nbry FW The entire creek tributary to Enoree River
+L1489@PDF29: South Pacolet River Gnvl TN That portion of the river from its headwaters to
+L1490@PDF29: S.C. Hwy 116
+L1491@PDF29: South Pacolet River Gnvl, Spbg FW That portion of the river from S.C. Hwy 116 to
+L1492@PDF29: Pacolet River
+L1493@PDF29: South Rabon Creek Gnvl, Lrns FW The entire creek tributary to Rabon Creek
+L1494@PDF29: South Saluda River Gnvl, Pkns ORW(FW) That portion of the river from its headwaters to
+L1495@PDF29: Table Rock Reservoir Dam
+L1496@PDF29: South Saluda River Gnvl, Pkns TPGT That portion of the river from Table Rock
+L1497@PDF29: Reservoir Dam to Hwy 8
+L1498@PDF29: South Saluda River Gnvl, Pkns FW That portion of the river from S.C. Hwy 8 to
+L1499@PDF29: junction with North Saluda River
+L1500@PDF29: South Santee River Bkly, Chtn,
+L1501@PDF29: Gtwn
+L1502@PDF29: FW That freshwater portion of the river
+L1503@PDF29: South Santee River Bkly, Chtn,
+L1504@PDF29: Gtwn
+L1505@PDF29: SA That portion of the river from U.S. Hwy 17 to
+L1506@PDF29: 1000 feet below the Atlantic Intracoastal
+L1507@PDF29: Waterway
+L1508@PDF29: South Santee River Bkly, Chtn,
+L1509@PDF29: Gtwn
+L1510@PDF29: ORW(SFH) That portion of the river from U.S. Hwy 17 from
+L1511@PDF29: 1000 feet below the Atlantic Intracoastal
+L1512@PDF29: Waterway to the Atlantic Ocean
+L1513@PDF29: South Tyger River Gnvl, Spbg FW The entire river tributary to Tyger River
+L1514@PDF29: Spain Creek Gnvl FW The entire creek tributary to Saluda River
+L1515@PDF29: Sparrow Swamp Drln, Flrn,
+L1516@PDF29: Lee
+L1517@PDF29: FWsp The entire swamp tributary to Lynches River
+L1518@PDF29: (D.O. not less than 4 mg/L, pH 5.0 – 8.5)
+L1519@PDF29: Spears Creek Krsh, Rlnd FW The entire creek (and its tributaries) from its
+L1520@PDF29: headwaters to its confluence with Wateree River
+L1521@PDF29: St. Pierre Creek Chtn ORW(SFH) The entire creek tributary to South Edisto River
+L1522@PDF29: Steamboat Creek Chtn ORW(SFH) The entire creek tributary to North Edisto River
+L1523@PDF29: Steele Creek York FW The entire creek tributary to Sugar Creek
+L1524@PDF29: Stevens Creek Efld, Mcmk FW The entire creek tributary to Savannah River27 | Regulation 61-69
+L1525@PDF30: Waterbody Name County(ies) Class Waterbody Description and
+L1526@PDF30: (Site-Specific Standard)
+L1527@PDF30: Stitt Branch Ffld FW The entire branch tributary to Jackson Creek
+L1528@PDF30: Stoddard Creek Gnvl, Lrns FW The entire creek tributary to North Rabon Creek
+L1529@PDF30: Stono River Chtn SFH That portion of the river extending eastward to
+L1530@PDF30: S.C.L. Railroad Bridge
+L1531@PDF30: Stono River Chtn SFH That portion of the river from the S.C.L. Railroad
+L1532@PDF30: Bridge to Abbapoola Creek
+L1533@PDF30: Stono River Chtn SFH That portion of the river from Abbapoola Creek
+L1534@PDF30: to Folly River
+L1535@PDF30: Stoops Creek Lxtn, Rlnd FW The entire creek tributary to Saluda River
+L1536@PDF30: Store Creek Chtn ORW(SFH) The entire creek tributary to St. Pierre Creek
+L1537@PDF30: Story River Bfrt SFH The entire river to Trenchards Inlet and Fripps
+L1538@PDF30: Inlet
+L1539@PDF30: Stuart Creek Ffld FW The entire creek tributary to Jackson Creek
+L1540@PDF30: Sugar Creek Lctr, York FW The entire creek tributary to Catawba River
+L1541@PDF30: Summerhouse
+L1542@PDF30: Branch (also called
+L1543@PDF30: Bartons Branch and
+L1544@PDF30: Johnsons Swamp)
+L1545@PDF30: Gtwn, Wmbg FWsp The entire branch tributary to Horse Pen Swamp
+L1546@PDF30: (D.O. not less than 4 mg/L, pH 5.0 – 8.5)
+L1547@PDF30: Swaford Creek Ocne TN The entire creek tributary to Whetstone Creek
+L1548@PDF30: Sweetwater Branch Efld FW The entire branch tributary to Stevens Creek
+L1549@PDF30: Swift Creek Krsh, Smtr FW The entire creek tributary to Wateree River
+L1550@PDF30: Swinton Creek Chtn ORW(SFH) The entire creek tributary to Lower Toogoodoo
+L1551@PDF30: Creek
+L1552@PDF30: Tailrace Canal Bkly FW That portion of the canal from Lake Moultrie
+L1553@PDF30: Dam to Biggin Creek
+L1554@PDF30: Tamassee Creek Ocne ORW(FW) That portion of the creek from its headwaters to
+L1555@PDF30: end of U.S. Forest Service Land
+L1556@PDF30: Tamassee Creek Ocne FW That portion of the creek from U.S. Forest
+L1557@PDF30: Service Land to its confluence with Cheohee
+L1558@PDF30: Creek
+L1559@PDF30: Thicketty Creek Chke FW That portion of the creek below the Cowpens
+L1560@PDF30: discharge tributary to Broad River
+L1561@PDF30: Thompson Creek Cfld FW The entire creek tributary to Pee Dee River
+L1562@PDF30: Thompson River Ocne TN That portion of the river from the State line to
+L1563@PDF30: Lake Jocassee
+L1564@PDF30: Three Creeks Mrlb FW The entire creek tributary to Pee Dee River
+L1565@PDF30: Tilly Branch Ocne FW The entire branch tributary to Chattooga River
+L1566@PDF30: Timothy Creek Nbry FW The entire creek tributary to Bush River
+L1567@PDF30: Tinker Creek Unin FW The entire creek tributary to Tyger River
+L1568@PDF30: Tinkers Creek Cstr FW The entire creek tributary to Fishing Creek
+L1569@PDF30: Toby Creek Brwl FW The entire creek tributary to Salkehatchie River
+L1570@PDF30: Todds Branch Lctr FW The entire branch tributary to Little Lynches
+L1571@PDF30: River
+L1572@PDF30: Tom Point Creek
+L1573@PDF30: (also called McLeod
+L1574@PDF30: Creek)
+L1575@PDF30: Chtn ORW(SFH) The entire creek tributary to Wadmalaw River
+L1576@PDF30: Toms Branch Lxtn FW The entire branch tributary to Congaree River28 | Regulation 61-69
+L1577@PDF31: Waterbody Name County(ies) Class Waterbody Description and
+L1578@PDF31: (Site-Specific Standard)
+L1579@PDF31: Toms Creek Rlnd FW That portion of the creek outside the boundary of
+L1580@PDF31: the Congaree National Park
+L1581@PDF31: Toms Creek Rlnd ORW(FW) That portion of the creek beginning at the
+L1582@PDF31: boundary of the Congaree National Park to its
+L1583@PDF31: confluence with Cedar Creek
+L1584@PDF31: Toogoodoo Creek Chtn ORW(SFH) The entire creek tributary to Wadmalaw River
+L1585@PDF31: Toomer Creek Chtn SFH The entire creek tributary to Wando River
+L1586@PDF31: Town Creek Chke FW The entire creek tributary to Broad Creek
+L1587@PDF31: Town Creek Krsh FW The entire creek tributary to Wateree Creek
+L1588@PDF31: Town Creek Pkns FW The entire creek tributary to Twelvemile Creek
+L1589@PDF31: Town Creek Gtwn SB That portion of the creek from its confluence with
+L1590@PDF31: No Mans Friend Creek and Oyster Bay to its
+L1591@PDF31: western confluence with Clambank Creek.
+L1592@PDF31: Town Creek Gtwn SFH That portion of the creek from its western
+L1593@PDF31: confluence with Clambank Creek to its eastern
+L1594@PDF31: confluence with Clambank Creek
+L1595@PDF31: Town Creek Gtwn ORW(SFH) That portion of the creek from its eastern
+L1596@PDF31: confluence with Clambank Creek to North Inlet
+L1597@PDF31: Townes Creek Ocne TN That portion of the creek from the confluence of
+L1598@PDF31: West Fork and Crane Creek to Lake Cherokee
+L1599@PDF31: Townsend River Chtn ORW(SFH) The entire river tributary to Frampton Creek
+L1600@PDF31: Trenchards Inlet Bfrt SFH The entire inlet tributary to the Atlantic Ocean
+L1601@PDF31: Tugaloo River Ocne FW That portion of the river from Tugaloo Dam to
+L1602@PDF31: Lake Hartwell
+L1603@PDF31: Turkey Creek Brwl FW The entire creek tributary to Salkehatchie River
+L1604@PDF31: Turkey Creek Cstr, York FW The entire creek tributary to Broad River
+L1605@PDF31: Turkey Creek Efld, Mcmk FW The entire creek tributary to Stevens Creek
+L1606@PDF31: Turkey Creek Gnwd FW The entire creek tributary to Saluda River
+L1607@PDF31: Turkey Creek Smtr FWsp The entire creek tributary to Pocotaligo River
+L1608@PDF31: (D.O. not less than 4 mg/L, pH 5.0 – 8.5)
+L1609@PDF31: Turkey Creek (also
+L1610@PDF31: called Turkey
+L1611@PDF31: Quarter Creek)
+L1612@PDF31: Lctr FW The entire creek tributary to Cane Creek
+L1613@PDF31: Turpin Branch Ocne FW The entire branch tributary to Chattooga River
+L1614@PDF31: Twelvemile Creek Lxtn FW The entire creek tributary to Saluda River
+L1615@PDF31: Twelvemile Creek Pkns FW The entire creek tributary to Lake Hartwell
+L1616@PDF31: Twentyfive Mile
+L1617@PDF31: Creek
+L1618@PDF31: Krsh FW The entire creek tributary to Wateree River
+L1619@PDF31: Three and Twenty
+L1620@PDF31: Creek
+L1621@PDF31: Andn FW The entire creek tributary to Lake Hartwell
+L1622@PDF31: Tyger River (Main
+L1623@PDF31: Stem)
+L1624@PDF31: Nbry, Spbg,
+L1625@PDF31: Unin
+L1626@PDF31: FW The entire river tributary to Broad River
+L1627@PDF31: Unnamed Creek Gnvl FW The unnamed creek which enters Reedy River on
+L1628@PDF31: the west bank 1 1/4 miles below Conestee Lake
+L1629@PDF31: Unnamed Creek Gnvl See Langston Creek (Greenville County)
+L1630@PDF31: Unnamed Creek Ocne FW The unnamed creek which enters Little River at
+L1631@PDF31: Newry29 | Regulation 61-69
+L1632@PDF32: Waterbody Name County(ies) Class Waterbody Description and
+L1633@PDF32: (Site-Specific Standard)
+L1634@PDF32: Unnamed Creek Mill
+L1635@PDF32: Creek
+L1636@PDF32: Unin FW The unnamed creek which originates in
+L1637@PDF32: Jonesville and flows north-northeast to Mill
+L1638@PDF32: Creek
+L1639@PDF32: Unnamed Creek
+L1640@PDF32: Tributary to
+L1641@PDF32: Beaverdam Creek
+L1642@PDF32: Gnvl ORW(FW) That portion of the creek from its headwaters,
+L1643@PDF32: including the reservoir, to Secondary Road 22
+L1644@PDF32: Unnamed Creek
+L1645@PDF32: Tributary to
+L1646@PDF32: Beaverdam Creek
+L1647@PDF32: Gnvl FW That portion of the creek from Secondary Road
+L1648@PDF32: 22 to Beaverdam Creek
+L1649@PDF32: Unnamed Creek to
+L1650@PDF32: Mountain Creek
+L1651@PDF32: Gnvl ORW(FW) That portion of the creek from its headwaters,
+L1652@PDF32: including Mountain Lake, to Mountain Creek
+L1653@PDF32: Unnamed Creek
+L1654@PDF32: (Located near
+L1655@PDF32: Altamont Forest Rd)
+L1656@PDF32: Tributary to an
+L1657@PDF32: Unnamed Tributary
+L1658@PDF32: to Mountain Creek
+L1659@PDF32: Gnvl FW The entire creek
+L1660@PDF32: Unnamed Creek
+L1661@PDF32: (Fripps Island)
+L1662@PDF32: Tributary to Fripps
+L1663@PDF32: Inlet
+L1664@PDF32: Bfrt SFH The entire creek tributary to Fripps Inlet
+L1665@PDF32: Unnamed Creek
+L1666@PDF32: (Old Island)
+L1667@PDF32: Tributary to Fripps
+L1668@PDF32: Inlet
+L1669@PDF32: Bfrt SFH The entire creek tributary to Fripps Inlet
+L1670@PDF32: Unnamed Creek (St.
+L1671@PDF32: Helena Island)
+L1672@PDF32: Tributary to Harbor
+L1673@PDF32: River
+L1674@PDF32: Bfrt SFH The entire creek tributary to Harbor River
+L1675@PDF32: Unnamed Creek
+L1676@PDF32: (Harbor River)
+L1677@PDF32: Tributary to St.
+L1678@PDF32: Helena Sound
+L1679@PDF32: Bfrt SFH The entire creek tributary to St. Helena Sound
+L1680@PDF32: Unnamed Creeks,
+L1681@PDF32: Ponds, or Lakes
+L1682@PDF32: Rlnd FW Any portions tributary to waters unnamed or
+L1683@PDF32: named located within the boundary of the
+L1684@PDF32: Congaree National Park to the boundary of the
+L1685@PDF32: Congaree National Park
+L1686@PDF32: Unnamed Creeks,
+L1687@PDF32: Ponds, or Lakes
+L1688@PDF32: Rlnd ORW(FW) All portions of waters and waters located wholly
+L1689@PDF32: within the boundary of the Congaree National
+L1690@PDF32: Park
+L1691@PDF32: Unnamed Swamp
+L1692@PDF32: (Near North, S.C.)
+L1693@PDF32: Orbg FWsp The entire swamp tributary to North Fork Edisto
+L1694@PDF32: River
+L1695@PDF32: (D.O. not less than 4 mg/L, pH 5.0 – 8.5)
+L1696@PDF32: Vaughn Creek Gnvl ORW(FW) The entire creek tributary to Lake Lanier
+L1697@PDF32: Waccamaw River Gtwn, Hory FWsp That portion of the river from North Carolina line
+L1698@PDF32: to its confluence with Thoroughfare Creek
+L1699@PDF32: (D.O. not less than 4 mg/L, pH 5.0 – 8.5)30 | Regulation 61-69
+L1700@PDF33: Waterbody Name County(ies) Class Waterbody Description and
+L1701@PDF33: (Site-Specific Standard)
+L1702@PDF33: Waccamaw River Gtwn SAsp That portion of the river from its confluence with
+L1703@PDF33: Thoroughfare Creek to Winyah Bay
+L1704@PDF33: (D.O. not less than 4 mg/L)
+L1705@PDF33: Wadmalaw River Chtn ORW(SFH) The entire river from Wadmalaw Sound to North
+L1706@PDF33: Edisto River
+L1707@PDF33: Wadmalaw Sound Chtn ORW(SFH) The entire sound
+L1708@PDF33: Wagner Creek Chtn SFH The entire creek tributary to Wando River
+L1709@PDF33: Walker Branch Ffld FW The entire branch tributary to Big Dutchman
+L1710@PDF33: Creek
+L1711@PDF33: Wando River Bkly, Chtn SFH That portion from its headwaters to a point 2.5
+L1712@PDF33: miles north of its confluence with Cooper River
+L1713@PDF33: Wando River Bkly, Chtn SA That portion from a point 2.5 miles north of its
+L1714@PDF33: confluence with Cooper River to its confluence
+L1715@PDF33: with Cooper River
+L1716@PDF33: Wapoo Creek Chtn SB The entire creek tributary to Stono River
+L1717@PDF33: Ward Creek Bfrt SFH The entire creek tributary to Harbor River
+L1718@PDF33: Warrior Creek Lrns FW The entire creek tributary to Enoree River
+L1719@PDF33: Wateree Lake Ffld, Krsh,
+L1720@PDF33: Lctr
+L1721@PDF33: FW The entire lake on Catawba-Wateree River
+L1722@PDF33: Wateree River Cstr, Ffld,
+L1723@PDF33: Krsh, Lctr,
+L1724@PDF33: Rlnd, Smtr,
+L1725@PDF33: York
+L1726@PDF33: FW See Catawba-Wateree River
+L1727@PDF33: Watts Mill Branch Lrns FW The entire branch tributary to Little River
+L1728@PDF33: West Branch Cooper
+L1729@PDF33: River
+L1730@PDF33: Bkly FW The entire river from Biggin Creek to its
+L1731@PDF33: confluence with East Branch Cooper River (the
+L1732@PDF33: Tee)
+L1733@PDF33: West Fork (also
+L1734@PDF33: called Little Fork
+L1735@PDF33: Creek)
+L1736@PDF33: Cfld FW The entire stream tributary to East Fork or Fork
+L1737@PDF33: Creek
+L1738@PDF33: West Fork Ocne TN That portion from its headwaters to its confluence
+L1739@PDF33: with Crane Creek
+L1740@PDF33: Westbank Creek Chtn ORW(SFH) The entire creek tributary to North Edisto River
+L1741@PDF33: Weston Lake Rlnd ORW(FW) The entire lake within the boundary of the
+L1742@PDF33: Congaree National Park
+L1743@PDF33: Whale Branch Bfrt SFH The entire branch between Broad River and
+L1744@PDF33: Coosaw River
+L1745@PDF33: Whetstone Creek Ocne TN The entire creek tributary to Chattooga River
+L1746@PDF33: White Oak Creek Krsh FW The entire creek tributary to Wateree Lake
+L1747@PDF33: White Oak Creek Marn FWsp The entire creek tributary to River Swamp of
+L1748@PDF33: Little Pee Dee River
+L1749@PDF33: (D.O. not less than 4 mg/L, pH 5.0 – 8.5)
+L1750@PDF33: White Oak Creek Ocne TN That portion of the creek from its headwaters to
+L1751@PDF33: Knox Creek
+L1752@PDF33: Whitewater River Ocne ORW(TPGT) That portion of the river from State line to Lake
+L1753@PDF33: Jocassee
+L1754@PDF33: Whitner Creek Andn FW The entire creek tributary to Big Generostee
+L1755@PDF33: Creek31 | Regulation 61-69
+L1756@PDF34: Waterbody Name County(ies) Class Waterbody Description and
+L1757@PDF34: (Site-Specific Standard)
+L1758@PDF34: Whooping Island
+L1759@PDF34: Creek
+L1760@PDF34: Chtn ORW(SFH) The entire creek tributary to Sand Creek
+L1761@PDF34: Wildcat Creek Rlnd FW The entire creek tributary to Gills Creek
+L1762@PDF34: Wildcat Creek York FW The entire creek tributary to Fishing Creek
+L1763@PDF34: Wilkerson Creek Aikn FW The entire creek tributary to Horse Creek
+L1764@PDF34: Willis Creek Pkns ORW(FW) That portion of the creek from its headwaters to
+L1765@PDF34: the northern boundary of Table Rock Resort
+L1766@PDF34: property
+L1767@PDF34: Willis Creek Pkns TN That portion of the creek from the northern
+L1768@PDF34: boundary of Table Rock Resort property to its
+L1769@PDF34: confluence with Oolenoy River
+L1770@PDF34: Willow Swamp Orbg FWsp The entire swamp tributary to Little River
+L1771@PDF34: (D.O. not less than 4 mg/L, pH 5.0 – 8.5)
+L1772@PDF34: Wilson Branch Abvl, Andn FW The entire branch tributary to Rocky River
+L1773@PDF34: Wilson Branch Gnvl FW The entire branch tributary to Durbin Creek
+L1774@PDF34: Wilson Creek Gnwd FW The entire creek tributary to Saluda River
+L1775@PDF34: Windy Hill Creek Bmbg, Brwl FW The entire creek tributary to South Fork Edisto
+L1776@PDF34: River
+L1777@PDF34: Winyah Bay Gtwn SB The entire bay tributary to the Atlantic Ocean
+L1778@PDF34: Wise Lake Rlnd ORW(FW) The entire lake within the boundary of the
+L1779@PDF34: Congaree National Park
+L1780@PDF34: Wolf Creek Pkns FW The entire creek tributary to Twelvemile Creek
+L1781@PDF34: Wood Creek Gtwn ORW(SFH) The entire creek between Boor Creek and Jones
+L1782@PDF34: Creek
+L1783@PDF34: Wright Creek Ocne ORW(TPGT) The entire creek tributary to Lake Jocassee
+L1784@PDF34: Wright River Jspr SA The entire river tributary to the Atlantic Ocean
+L1785@PDF34: Zekial Creek Chke, Spbg FW The entire creek tributary to Island Creek

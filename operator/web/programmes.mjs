@@ -1,3 +1,4 @@
+import {attachNativeCaseConsole} from './parameter_case_console.mjs';
 /* Retained native execution control, shared by programme and experiment callers. */
 const escapeHTML = value => String(value ?? '').replace(/[&<>"']/g, character => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[character]));
 const short = value => value ? String(value).slice(0, 12) : '—';
@@ -12,9 +13,12 @@ const methodLink = '<a href="https://storage.googleapis.com/releases.naturalcapi
 
 export function attachProgrammes(context) {
   const {api, endpoint, getState, openForm, submitAction, detail, fileList, showTask, toast, openItem} = context;
+  const caseConsole = attachNativeCaseConsole({...context, executeAction: sendAction}, 'programme');
   let host = null, controller = null, selected = null, currentWorkspace = null;
   let catalogue = null, record = null, loading = false, generation = 0;
   let subset = new Set(), latestError = '', activeRequest = false;
+  let pageOffset = 0, pageFilter = 'all', pageQuery = '', pageQueryDraft = '', pageRequest = null;
+  let pairedResult = null, pairedObservation = null;
   const selectionByWorkspace = new Map();
 
   function workspaceKey() { return getState()?.workspace_key; }
@@ -282,16 +286,45 @@ export function attachProgrammes(context) {
       });
   }
 
+  function pageControls() {
+    const page = record?.page || {offset: 0, total: 0, limit: 100};
+    return '<div class="programme-controls"><label>Cases<select data-programme-filter>' +
+      [['all','All cases'],['unfinished','Unfinished cases'],['failed','Failed cases'],['complete','Completed cases']]
+        .map(([value,label]) => '<option value="' + value + '"' + (pageFilter === value ? ' selected' : '') +
+          '>' + label + '</option>').join('') + '</select></label>' +
+      '<label>Find case<input data-programme-query value="' + escapeHTML(pageQueryDraft) +
+      '" placeholder="Case key, title or native ID"></label>' +
+      actionButton('page-search','Find') + actionButton('page-previous','Previous cases','',page.offset === 0 ? 'disabled' : '') +
+      actionButton('page-next','Next cases','',page.offset + asArray(record.runs).length >= page.total ? 'disabled' : '') +
+      '<span role="status">' + (page.total ? (page.offset + 1) + '–' + (page.offset + asArray(record.runs).length) : '0') +
+      ' of ' + printable(page.total) + ' matching cases · <span data-programme-selection-count>' + subset.size + '</span> selected across pages</span></div>';
+  }
+  async function movePage(offset = 0) {
+    generation++; pageRequest?.abort(); pageRequest = null; loading = false;
+    pageOffset = Math.max(0, offset);
+    return refreshRecord(false);
+  }
+  async function originalSelection() {
+    const key = record?.id, owner = workspaceKey();
+    if (!key) throw new Error('Open the original saved programme.');
+    const value = await api(query('selection', {programme_id: key}));
+    if (owner !== workspaceKey() || record?.id !== key || value.programme_id !== key)
+      throw new Error('The original programme changed while reading its selections.');
+    return value.selection;
+  }
   function programmeHTML() {
     if (!selected) return '<section class="section"><h2>Original calculations, continued together</h2><p>A programme may contain a single baseline or an expanded list of prepared cases. The existing native engine validates every input and executes each saved selection. Completed model stages remain available when another case needs attention.</p></section>';
     if (!record) return '<section class="section" role="status"><h2>Opening saved programme…</h2></section>';
     const counts = record.counts || {}, rows = asArray(record.runs), task = activeTask(record.id);
-    const nativeActive = Boolean(task) || Boolean(record.active) || rows.some(row => row.active || row.state === 'running');
+    const nativeActive = Boolean(task) || Boolean(record.active) || Boolean(record.native_active) || rows.some(row => row.active || row.state === 'running');
     const complete = Number(counts.complete || 0), total = Number(counts.total ?? rows.length);
     const canPause = nativeActive && !record.pause_requested;
     const runRows = rows.map(row => {
       const error = row.error?.message || (typeof row.error === 'string' ? row.error : '');
-      const native = row.run_id ? actionButton('native', 'Inspect run', row.run_id) + actionButton('log', 'Log', row.run_id) : '<small>Prepared when executed</small>';
+      const native = row.run_id ? (row.native_state !== 'missing'
+        ? actionButton('case-console', 'Native case console', row.run_id) : '') +
+        actionButton('native', 'Inspect run', row.run_id) + actionButton('log', 'Log', row.run_id)
+        : '<small>Prepared when executed</small>';
       const sources = ['ndr', 'sdr'].map(model => {
         const id = row.stages?.[model]?.reused_from?.run_id || row.source_runs?.[model];
         return id ? actionButton('native', model.toUpperCase() + ' source', id, 'title="' + escapeHTML(id) + '"') : '';
@@ -326,13 +359,15 @@ export function attachProgrammes(context) {
       actionButton('selection', 'Download selections', record.id) + actionButton('clone', 'Copy selections', record.id) +
       (task ? actionButton('task', 'Inspect active operation', task.id) : '') + '</div>' +
       '<p class="note">Resume reuses the original run identities and completed native stages. Selecting cases limits this request; the saved programme retains every case.</p>' +
-      table(['Select', 'Case', 'Profile / land cover', 'Native state', 'Target run', ''], runRows) +
-      '<div class="programme-controls">' + actionButton('select-pending', 'Select unfinished') + actionButton('clear-selection', 'Clear selection') + '</div>' +
+      pageControls() + table(['Select', 'Case', 'Profile / land cover', 'Native state', 'Target run', ''], runRows) +
+      '<div class="programme-controls">' + actionButton('select-pending', 'Select all unfinished cases') + actionButton('clear-selection', 'Clear selection') + '</div>' +
       '<section class="programme-output"><header class="section-header"><div><h3>Result catalogue</h3><p>Open the original quantities, units, geographic coverage and result files retained for these runs.</p></div>' +
       actionButton('open-report', 'Open saved catalogue', record.id, report || files.length ? '' : 'disabled') + '</header>' +
       (files.length ? fileList(files) : '<p class="note">Build the catalogue after a run finishes. Completed cases can be reported while other cases remain in the programme.</p>') + '</section>' +
-      interactionProgrammeHTML(record) + studyDeliveriesHTML(record) + ensembleCandidatesHTML(record) +
-      '<details class="technical" data-programme-details="' + escapeHTML('selection:' + record.id) + '"><summary>Complete saved selections and provenance</summary><pre class="json-view">' +
+      interactionProgrammeHTML(record) + studyDeliveriesHTML(record) + (pairedResult ? ensembleCandidatesHTML({...record, ...pairedResult}) :
+        '<section class="programme-output"><h3>Paired scenario maps</h3><p>Prepare pairs from every original case in this programme.</p>' +
+        actionButton('load-pairs', 'Review all paired scenarios') + '</section>') +
+      '<details class="technical" data-programme-details="' + escapeHTML('selection:' + record.id) + '"><summary>Programme selection and provenance</summary><pre class="json-view">' +
       escapeHTML(JSON.stringify(record.selection, null, 2)) + '</pre></details></section>';
   }
   function draw() {
@@ -352,26 +387,30 @@ export function attachProgrammes(context) {
       node.open = expanded.has(node.dataset.programmeDetails);
     }
   }
-  async function refreshRecord() {
+  async function refreshRecord(refreshCatalog = true) {
     if (!host || loading) return;
     loading = true;
     const requestedWorkspace = workspaceKey(), currentGeneration = ++generation;
+    pageRequest = new AbortController();
+    const signal = pageRequest.signal;
     try {
-      const nextCatalogue = await api(query('catalog'));
+      const nextCatalogue = refreshCatalog || !catalogue ? await api(query('catalog'), {signal}) : catalogue;
       if (!host || currentGeneration !== generation || requestedWorkspace !== workspaceKey()) return;
       catalogue = nextCatalogue;
       if (selected && !asArray(catalogue.programmes).some(row => row.id === selected)) {
         selected = null; rememberSelection(requestedWorkspace, null); record = null; subset.clear();
       }
       if (selected) {
-        const nextRecord = await api(query('detail', {programme_id: selected}));
+        const nextRecord = await api(query('page', {programme_id: selected, offset: pageOffset,
+          limit: 100, case_filter: pageFilter, query: pageQuery}), {signal});
         if (!host || currentGeneration !== generation || requestedWorkspace !== workspaceKey()) return;
-        record = nextRecord;
+        record = nextRecord; pageOffset = nextRecord.page.offset;
+        if (pairedObservation !== record.observation_id) { pairedResult = null; pairedObservation = null; }
       }
       draw();
     } catch (error) {
-      if (host && requestedWorkspace === workspaceKey()) showError(error);
-    } finally { if (currentGeneration === generation) loading = false; }
+      if (host && currentGeneration === generation && requestedWorkspace === workspaceKey() && error.name !== 'AbortError') showError(error);
+    } finally { if (currentGeneration === generation) { loading = false; pageRequest = null; } }
   }
   function mount(element, state = getState()) {
     const key = state?.workspace_key;
@@ -380,6 +419,7 @@ export function attachProgrammes(context) {
       detach();
       host = element; currentWorkspace = key; selected = rememberedSelection(key);
       catalogue = null; record = null; latestError = ''; subset.clear();
+      pageOffset = 0; pageFilter = 'all'; pageQuery = ''; pageQueryDraft = ''; pairedResult = null; pairedObservation = null;
       controller = new AbortController();
       host.addEventListener('click', event => {
         const button = event.target.closest('[data-programme-action]');
@@ -387,10 +427,18 @@ export function attachProgrammes(context) {
         event.preventDefault();
         dispatchLocal(button.dataset.programmeAction, button.dataset.value, button).catch(showError);
       }, {signal: controller.signal});
+      host.addEventListener('input', event => {
+        if (event.target.matches('[data-programme-query]')) pageQueryDraft = event.target.value;
+      }, {signal: controller.signal});
       host.addEventListener('change', event => {
+        if (event.target.matches('[data-programme-filter]')) {
+          pageFilter = event.target.value; movePage(0).catch(showError); return;
+        }
         const key = event.target.dataset.programmeRun;
         if (!key) return;
         if (event.target.checked) subset.add(key); else subset.delete(key);
+        const count = host.querySelector('[data-programme-selection-count]');
+        if (count) count.textContent = String(subset.size);
       }, {signal: controller.signal});
     }
     draw();
@@ -399,10 +447,14 @@ export function attachProgrammes(context) {
   function detach() {
     generation++;
     controller?.abort(); controller = null;
+    pageRequest?.abort(); pageRequest = null;
     host = null; loading = false;
   }
   async function select(id) {
-    if (selected !== id) { generation++; loading = false; subset.clear(); record = null; }
+    if (selected !== id) {
+      generation++; pageRequest?.abort(); loading = false; subset.clear(); record = null;
+      pageOffset = 0; pageFilter = 'all'; pageQuery = ''; pageQueryDraft = ''; pairedResult = null; pairedObservation = null;
+    }
     selected = id; rememberSelection(workspaceKey(), id);
     await refreshRecord();
   }
@@ -1083,16 +1135,36 @@ export function attachProgrammes(context) {
     if (action === 'interaction') return fromInteraction();
     if (action === 'attach-interaction') return attachInteraction(value);
     if (action === 'sync-interaction') return sendAction('compute.programme.sync-interaction', {programme_id: value});
-    if (action === 'clone') return createForm(record);
+    if (action === 'clone') return createForm({...record, selection: await originalSelection()});
     if (action === 'paired-results') return context.navigate?.('paired-ensemble');
     if (action === 'ensemble') return buildProgrammeEnsemble(value);
     if (action === 'pair-completion') return preparePairCompletion(value);
-    if (action === 'select-pending') { subset = new Set(asArray(record?.runs).filter(row => row.state !== 'complete').map(row => row.key)); draw(); return; }
+    if (action === 'page-previous') return movePage(pageOffset - 100);
+    if (action === 'page-next') return movePage(pageOffset + 100);
+    if (action === 'page-search') {
+      pageQuery = host.querySelector('[data-programme-query]').value.trim(); pageQueryDraft = pageQuery; return movePage(0);
+    }
+    if (action === 'load-pairs') {
+      const key = record?.id, owner = workspaceKey(), observation = record?.observation_id;
+      const value = await api(query('paired', {programme_id: key}));
+      if (owner !== workspaceKey() || record?.id !== key || record.observation_id !== observation) return;
+      pairedResult = value; pairedObservation = observation; draw(); return;
+    }
+    if (action === 'select-pending') {
+      const key = record?.id, owner = workspaceKey();
+      const value = await api(query('keys', {programme_id: key, case_filter: 'unfinished'}));
+      if (owner !== workspaceKey() || record?.id !== key || value.programme_id !== key) return;
+      subset = new Set(value.keys); draw(); return;
+    }
     if (action === 'clear-selection') { subset.clear(); draw(); return; }
+    if (action === 'case-console') {
+      if (!record?.id) throw new Error('Open the original saved programme before its native case.');
+      return caseConsole.open(record.id, value);
+    }
     if (action === 'native') return openItem('runs', value);
     if (action === 'log') return showLog(value);
     if (action === 'task') return showTask(value);
-    if (action === 'selection') return downloadJSON(record.selection, 'programme-' + short(record.id) + '.json');
+    if (action === 'selection') return downloadJSON(await originalSelection(), 'programme-' + short(record.id) + '.json');
     if (action === 'open-report') return showReport(value);
     if (action === 'study-export') return studyExportForm(value);
     if (action === 'delivery') return openItem('deliveries', value);
@@ -1108,7 +1180,10 @@ export function attachProgrammes(context) {
     }
   }
   async function open(id) {
-    if (id) { selected = id; rememberSelection(workspaceKey(), id); record = null; subset.clear(); }
+    if (id) {
+      selected = id; rememberSelection(workspaceKey(), id); record = null; subset.clear();
+      pageOffset = 0; pageFilter = 'all'; pageQuery = ''; pageQueryDraft = ''; pairedResult = null; pairedObservation = null;
+    }
     context.closeDetail?.();
     await context.navigate?.('programmes');
     if (host) await refreshRecord();

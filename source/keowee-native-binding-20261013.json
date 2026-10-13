@@ -1,0 +1,1542 @@
+{
+  "schema": "upstate.keowee-native-profile-binding/v1",
+  "id": "keowee-native-final-profile-20261013",
+  "package_revision": "1.0.2",
+  "profile": {
+    "id": "lake-keowee-wbp-2020",
+    "version": "1.0.0",
+    "path": "source/keowee/20261013/lake-keowee-methodology.json",
+    "bytes": 78447,
+    "sha256": "388f9f7ae3246dd156fad446c616bbf8d3440a09b2edd524c45cef1d6c299da0"
+  },
+  "evaluator": {
+    "path": "source/keowee/20261013/keowee-evaluator.mjs",
+    "sha256": "8267a1b4d90e15d05f089191be25894bac179f53b0568514a1e071f23128c5e1",
+    "bytes": 24920,
+    "original_source_sha256": "5b766947caf409026b4ea141a17b3c0a376021bf3ac51701ec94f5eb83f2cd65",
+    "original_source_bytes": 20040,
+    "implementation_edition": "closed-source-intervals-20261013",
+    "observation_extension": {
+      "path": "observations.<numeric_field>.interval",
+      "closed": true,
+      "fields": [
+        "lower",
+        "upper",
+        "unit",
+        "method",
+        "reference"
+      ],
+      "exact_value": "Remains null when source coverage establishes only a numeric interval",
+      "scope": "Original numeric source bins; full source profile and thresholds unchanged"
+    }
+  },
+  "current_native_method_id": "lake-keowee-2020-published-scorecards",
+  "category_ids": {
+    "agricultural_bmps": "agricultural_bmp",
+    "stormwater_bmps": "stormwater_bmp",
+    "pet_waste_stations": "pet_waste",
+    "land_protection": "land_protection",
+    "wetland_restoration": "wetland_restoration",
+    "riparian_restoration": "riparian_restoration",
+    "voluntary_dam_removal": "voluntary_dam_removal",
+    "shoreline_management": "shoreline_management"
+  },
+  "metric_profile_criteria": {
+    "cwa_priority": "protection_cwa",
+    "nitrogen_export_priority": "nitrogen_export",
+    "phosphorus_export_priority": "phosphorus_export",
+    "sediment_export_priority": "sediment_export",
+    "sensitive_riparian_acres": "protection_sensitive_buffer",
+    "hydric_soil_acres": "protection_hydric_soils",
+    "parcel_acres": "protection_parcel_size"
+  },
+  "fields": [
+    {
+      "profile_field": "already_protected",
+      "type": "boolean",
+      "unit": null,
+      "enum": null,
+      "native_metric": "already_protected",
+      "evidence_role": "protected_lands",
+      "resolution": "existing_table_quantity"
+    },
+    {
+      "profile_field": "cwa_mean",
+      "type": "number",
+      "unit": "dimensionless_index",
+      "enum": null,
+      "native_metric": "critical_watershed_area.mean",
+      "evidence_role": "critical_watershed_area",
+      "resolution": "existing_table_quantity"
+    },
+    {
+      "profile_field": "stream_orders",
+      "type": "integer[]",
+      "unit": null,
+      "enum": null,
+      "native_metric": "stream_orders",
+      "evidence_role": "stream_orders",
+      "resolution": "existing_table_quantity"
+    },
+    {
+      "profile_field": "stream_classes",
+      "type": "string[]",
+      "unit": null,
+      "enum": [
+        "ORW",
+        "TN",
+        "TGPT",
+        "FW"
+      ],
+      "native_metric": "water_classifications",
+      "evidence_role": "classifications",
+      "resolution": "existing_table_quantity"
+    },
+    {
+      "profile_field": "fw_stream_has_impairment",
+      "type": "boolean",
+      "unit": null,
+      "enum": null,
+      "native_metric": null,
+      "evidence_role": "impairments",
+      "resolution": "requires_separate_original_observation"
+    },
+    {
+      "profile_field": "sensitive_buffer_acres",
+      "type": "number",
+      "unit": "acre",
+      "enum": null,
+      "native_metric": "sensitive_riparian_acres",
+      "evidence_role": "sensitive_riparian",
+      "resolution": "existing_table_quantity"
+    },
+    {
+      "profile_field": "forested_sensitive_buffer_present",
+      "type": "boolean",
+      "unit": null,
+      "enum": null,
+      "native_metric": "forested_sensitive_riparian_present",
+      "evidence_role": "land_cover",
+      "resolution": "existing_table_quantity"
+    },
+    {
+      "profile_field": "wetland_classes",
+      "type": "string[]",
+      "unit": null,
+      "enum": [
+        "freshwater_forested_shrub",
+        "freshwater_emergent",
+        "riverine",
+        "freshwater_pond",
+        "lake",
+        "other"
+      ],
+      "native_metric": "wetland_types",
+      "evidence_role": "wetlands",
+      "resolution": "existing_table_quantity"
+    },
+    {
+      "profile_field": "hydric_soil_acres",
+      "type": "number",
+      "unit": "acre",
+      "enum": null,
+      "native_metric": "hydric_soil_acres",
+      "evidence_role": "hydric_soils",
+      "resolution": "existing_table_quantity"
+    },
+    {
+      "profile_field": "floodplain_intersects",
+      "type": "boolean",
+      "unit": null,
+      "enum": null,
+      "native_metric": "floodplain_present",
+      "evidence_role": "floodplains",
+      "resolution": "existing_table_quantity"
+    },
+    {
+      "profile_field": "developed_land_present",
+      "type": "boolean",
+      "unit": null,
+      "enum": null,
+      "native_metric": "developed_land_present",
+      "evidence_role": "land_cover",
+      "resolution": "existing_table_quantity"
+    },
+    {
+      "profile_field": "source_water_protection_area_intersects",
+      "type": "boolean",
+      "unit": null,
+      "enum": null,
+      "native_metric": "source_water_protection_area_present",
+      "evidence_role": "source_water_protection",
+      "resolution": "existing_table_quantity"
+    },
+    {
+      "profile_field": "stream_length_miles",
+      "type": "number",
+      "unit": "mile",
+      "enum": null,
+      "native_metric": "stream_length_m",
+      "evidence_role": "streams",
+      "resolution": "existing_table_quantity"
+    },
+    {
+      "profile_field": "watershed_mean_stream_length_miles",
+      "type": "number",
+      "unit": "mile",
+      "enum": null,
+      "native_metric": null,
+      "evidence_role": "streams",
+      "resolution": "requires_separate_original_observation"
+    },
+    {
+      "profile_field": "adjacent_protected_land",
+      "type": "boolean",
+      "unit": null,
+      "enum": null,
+      "native_metric": "adjacent_to_protected_land",
+      "evidence_role": "protected_lands",
+      "resolution": "existing_table_quantity"
+    },
+    {
+      "profile_field": "parcel_area_acres",
+      "type": "number",
+      "unit": "acre",
+      "enum": null,
+      "native_metric": "parcel_acres",
+      "evidence_role": "parcels",
+      "resolution": "existing_table_quantity"
+    },
+    {
+      "profile_field": "bacterial_impairment_relation",
+      "type": "string[]",
+      "unit": null,
+      "enum": [
+        "includes",
+        "adjacent",
+        "upstream",
+        "none"
+      ],
+      "native_metric": null,
+      "evidence_role": "impairments",
+      "resolution": "requires_separate_original_observation"
+    },
+    {
+      "profile_field": "agricultural_fraction",
+      "type": "number",
+      "unit": "fraction",
+      "enum": null,
+      "native_metric": "land_cover.class_area_m2",
+      "evidence_role": "land_cover",
+      "resolution": "existing_table_quantity"
+    },
+    {
+      "profile_field": "agricultural_land_adjacent_to_stream",
+      "type": "boolean",
+      "unit": null,
+      "enum": null,
+      "native_metric": null,
+      "evidence_role": "streams",
+      "resolution": "requires_separate_original_observation"
+    },
+    {
+      "profile_field": "agricultural_land_contains_impoundment",
+      "type": "boolean",
+      "unit": null,
+      "enum": null,
+      "native_metric": null,
+      "evidence_role": "waterbodies",
+      "resolution": "requires_separate_original_observation"
+    },
+    {
+      "profile_field": "known_logging_operation",
+      "type": "boolean",
+      "unit": null,
+      "enum": null,
+      "native_metric": "known_logging_operation",
+      "evidence_role": "logging",
+      "resolution": "existing_table_quantity"
+    },
+    {
+      "profile_field": "nitrogen_export_mean",
+      "type": "number",
+      "unit": "kg/pixel/year",
+      "enum": null,
+      "native_metric": "point_score.metric_values.nitrogen_export_priority.value",
+      "evidence_role": "native_baseline",
+      "resolution": "explicit_source_profile_band_value"
+    },
+    {
+      "profile_field": "phosphorus_export_mean",
+      "type": "number",
+      "unit": "kg/pixel/year",
+      "enum": null,
+      "native_metric": "point_score.metric_values.phosphorus_export_priority.value",
+      "evidence_role": "native_baseline",
+      "resolution": "explicit_source_profile_band_value"
+    },
+    {
+      "profile_field": "sediment_export_mean",
+      "type": "number",
+      "unit": "tons/pixel/year",
+      "enum": null,
+      "native_metric": "point_score.metric_values.sediment_export_priority.value",
+      "evidence_role": "native_baseline",
+      "resolution": "explicit_source_profile_band_value"
+    },
+    {
+      "profile_field": "nitrogen_export_class",
+      "type": "string",
+      "unit": null,
+      "enum": [
+        "low",
+        "medium",
+        "high"
+      ],
+      "native_metric": "nitrogen_export_priority",
+      "evidence_role": "native_baseline",
+      "resolution": "native_adaptation_retained_separately_from_original_class"
+    },
+    {
+      "profile_field": "phosphorus_export_class",
+      "type": "string",
+      "unit": null,
+      "enum": [
+        "low",
+        "medium",
+        "high"
+      ],
+      "native_metric": "phosphorus_export_priority",
+      "evidence_role": "native_baseline",
+      "resolution": "native_adaptation_retained_separately_from_original_class"
+    },
+    {
+      "profile_field": "sediment_export_class",
+      "type": "string",
+      "unit": null,
+      "enum": [
+        "low",
+        "medium",
+        "high"
+      ],
+      "native_metric": "sediment_export_priority",
+      "evidence_role": "native_baseline",
+      "resolution": "native_adaptation_retained_separately_from_original_class"
+    },
+    {
+      "profile_field": "unpermitted_agricultural_source",
+      "type": "boolean",
+      "unit": null,
+      "enum": null,
+      "native_metric": "agricultural_unpermitted_source",
+      "evidence_role": "agricultural_unpermitted",
+      "resolution": "existing_table_quantity"
+    },
+    {
+      "profile_field": "permitted_agricultural_source",
+      "type": "boolean",
+      "unit": null,
+      "enum": null,
+      "native_metric": "agricultural_permitted_source",
+      "evidence_role": "agricultural_permitted",
+      "resolution": "existing_table_quantity"
+    },
+    {
+      "profile_field": "unpermitted_stormwater_source",
+      "type": "boolean",
+      "unit": null,
+      "enum": null,
+      "native_metric": "stormwater_unpermitted_source",
+      "evidence_role": "stormwater_unpermitted",
+      "resolution": "existing_table_quantity"
+    },
+    {
+      "profile_field": "permitted_stormwater_source",
+      "type": "boolean",
+      "unit": null,
+      "enum": null,
+      "native_metric": "stormwater_permitted_source",
+      "evidence_role": "stormwater_permitted",
+      "resolution": "existing_table_quantity"
+    },
+    {
+      "profile_field": "modified_wetland_present",
+      "type": "boolean",
+      "unit": null,
+      "enum": null,
+      "native_metric": "modified_wetland_present",
+      "evidence_role": "wetlands",
+      "resolution": "existing_table_quantity"
+    },
+    {
+      "profile_field": "historic_wetland_present",
+      "type": "boolean",
+      "unit": null,
+      "enum": null,
+      "native_metric": "historic_wetland_present",
+      "evidence_role": "historic_wetlands",
+      "resolution": "existing_table_quantity"
+    },
+    {
+      "profile_field": "dam_present",
+      "type": "boolean",
+      "unit": null,
+      "enum": null,
+      "native_metric": "dam_present",
+      "evidence_role": "dams",
+      "resolution": "existing_table_quantity"
+    },
+    {
+      "profile_field": "sensitive_buffer_intersects",
+      "type": "boolean",
+      "unit": null,
+      "enum": null,
+      "native_metric": "sensitive_riparian_present",
+      "evidence_role": "sensitive_riparian",
+      "resolution": "existing_table_quantity"
+    },
+    {
+      "profile_field": "adjacent_drinking_water_reservoir_or_intake",
+      "type": "boolean",
+      "unit": null,
+      "enum": null,
+      "native_metric": "adjacent_to_drinking_water",
+      "evidence_role": "drinking_waterbodies",
+      "resolution": "existing_table_quantity"
+    },
+    {
+      "profile_field": "adjacent_other_waterway",
+      "type": "boolean",
+      "unit": null,
+      "enum": null,
+      "native_metric": "adjacent_to_other_water",
+      "evidence_role": "waterbodies",
+      "resolution": "existing_table_quantity"
+    },
+    {
+      "profile_field": "private_boat_ramp_present",
+      "type": "boolean",
+      "unit": null,
+      "enum": null,
+      "native_metric": "private_boat_ramp_present",
+      "evidence_role": "private_boat_ramps",
+      "resolution": "existing_table_quantity"
+    },
+    {
+      "profile_field": "private_dock_present",
+      "type": "boolean",
+      "unit": null,
+      "enum": null,
+      "native_metric": "private_dock_present",
+      "evidence_role": "private_docks",
+      "resolution": "existing_table_quantity"
+    },
+    {
+      "profile_field": "high_traffic_pet_business_present",
+      "type": "boolean",
+      "unit": null,
+      "enum": null,
+      "native_metric": "pet_traffic_business_present",
+      "evidence_role": "pet_businesses",
+      "resolution": "existing_table_quantity"
+    },
+    {
+      "profile_field": "public_land_open_to_people",
+      "type": "boolean",
+      "unit": null,
+      "enum": null,
+      "native_metric": "public_access_land",
+      "evidence_role": "public_access",
+      "resolution": "existing_table_quantity"
+    },
+    {
+      "profile_field": "home_sewer_distance_ft",
+      "type": "number",
+      "unit": "foot",
+      "enum": null,
+      "native_metric": null,
+      "evidence_role": "sewer",
+      "resolution": "requires_separate_original_observation"
+    },
+    {
+      "profile_field": "home_surface_water_distance_ft",
+      "type": "number",
+      "unit": "foot",
+      "enum": null,
+      "native_metric": null,
+      "evidence_role": "waterbodies",
+      "resolution": "requires_separate_original_observation"
+    },
+    {
+      "profile_field": "oldest_residence_year_built",
+      "type": "integer",
+      "unit": "year",
+      "enum": null,
+      "native_metric": null,
+      "evidence_role": "residences",
+      "resolution": "requires_separate_original_observation"
+    },
+    {
+      "profile_field": "septic_soil_class",
+      "type": "string",
+      "unit": null,
+      "enum": [
+        "not_limited",
+        "somewhat_limited",
+        "very_limited",
+        "not_rated"
+      ],
+      "native_metric": null,
+      "evidence_role": "septic_soils",
+      "resolution": "requires_separate_original_observation"
+    },
+    {
+      "profile_field": "septic_soil_limitation_rating",
+      "type": "number",
+      "unit": "fraction",
+      "enum": null,
+      "native_metric": null,
+      "evidence_role": "septic_soils",
+      "resolution": "requires_separate_original_observation"
+    }
+  ],
+  "source_semantics": {
+    "original_raster_pixel_area_m2": null,
+    "pixel_area_reference": "The printed per-pixel export table does not establish pixel area.",
+    "sediment_ton_definition": "Not explicit in the printed export-bin table; retain native source unit before conversion.",
+    "whole_parcel_size_field": "parcel_acres",
+    "bacterial_impairment": "Do not turn a generic selected-impairment boolean into a bacterial relation without its source-specific binding.",
+    "stream_class_provider_adapter": "scdes-h2oclass-to-keowee-2020",
+    "stream_class_completeness": "Original classification selection must cover all four scoring classes and the native group-presence observations must be known; geometric coverage alone does not establish FW absence.",
+    "export_mean_binding": "Only an explicitly retained profile_band classification with matching profile identity supplies the original-bin scalar; current-study tertiles and independent priority levels retain their native interpretation."
+  },
+  "criteria": [
+    {
+      "profile_criterion": "protection_cwa",
+      "profile_max_points": 4,
+      "profile_fields": [
+        "cwa_mean"
+      ],
+      "native_targets": [
+        {
+          "category": "land_protection",
+          "path": "critical_watershed_area",
+          "metrics": [
+            "cwa_priority"
+          ]
+        }
+      ],
+      "references": [
+        {
+          "source_id": "keowee-wbp-2020",
+          "printed_pages": [
+            138
+          ],
+          "detail": "CWA parcel-mean classes"
+        }
+      ]
+    },
+    {
+      "profile_criterion": "protection_stream_order",
+      "profile_max_points": 4,
+      "profile_fields": [
+        "stream_orders"
+      ],
+      "native_targets": [
+        {
+          "category": "land_protection",
+          "path": "headwater_stream",
+          "metrics": [
+            "headwater_stream"
+          ]
+        }
+      ],
+      "references": [
+        {
+          "source_id": "keowee-wbp-2020",
+          "printed_pages": [
+            47,
+            138
+          ],
+          "detail": "Table 31 permits first/second order; Appendix D permits first order only"
+        }
+      ]
+    },
+    {
+      "profile_criterion": "protection_stream_class",
+      "profile_max_points": 4,
+      "profile_fields": [
+        "stream_classes",
+        "fw_stream_has_impairment"
+      ],
+      "native_targets": [
+        {
+          "category": "land_protection",
+          "path": "stream_classification",
+          "metrics": [
+            "stream_orw_or_tn",
+            "stream_tpgt",
+            "stream_fw_without_listed_impairment",
+            "stream_fw_with_listed_impairment"
+          ]
+        }
+      ],
+      "references": [
+        {
+          "source_id": "keowee-wbp-2020",
+          "printed_pages": [
+            139
+          ],
+          "detail": "ORW/TN = 4; TGPT = 3; unimpaired FW = 2; impaired FW = 1; no stream = 0"
+        }
+      ]
+    },
+    {
+      "profile_criterion": "protection_sensitive_buffer",
+      "profile_max_points": 4,
+      "profile_fields": [
+        "sensitive_buffer_acres"
+      ],
+      "native_targets": [
+        {
+          "category": "land_protection",
+          "path": "sensitive_riparian_area",
+          "metrics": [
+            "sensitive_riparian_acres"
+          ]
+        }
+      ],
+      "references": [
+        {
+          "source_id": "keowee-wbp-2020",
+          "printed_pages": [
+            139
+          ],
+          "detail": "Sensitive-buffer acreage; original labels have two decimal places"
+        }
+      ]
+    },
+    {
+      "profile_criterion": "forested_sensitive_buffer_present",
+      "profile_max_points": 1,
+      "profile_fields": [
+        "forested_sensitive_buffer_present"
+      ],
+      "native_targets": [
+        {
+          "category": "land_protection",
+          "path": "forested_riparian_area",
+          "metrics": [
+            "forested_sensitive_riparian_present"
+          ]
+        }
+      ],
+      "references": [
+        {
+          "source_id": "keowee-wbp-2020",
+          "printed_pages": [
+            140
+          ],
+          "detail": "Forested cover intersects the sensitive buffer"
+        }
+      ]
+    },
+    {
+      "profile_criterion": "protection_wetland_class",
+      "profile_max_points": 3,
+      "profile_fields": [
+        "wetland_classes"
+      ],
+      "native_targets": [
+        {
+          "category": "land_protection",
+          "path": "wetland_type",
+          "metrics": [
+            "wetland_forested_shrub_emergent_or_riverine",
+            "wetland_pond_or_lake"
+          ]
+        }
+      ],
+      "references": [
+        {
+          "source_id": "keowee-wbp-2020",
+          "printed_pages": [
+            140
+          ],
+          "detail": "Wetland type"
+        }
+      ]
+    },
+    {
+      "profile_criterion": "protection_hydric_soils",
+      "profile_max_points": 3,
+      "profile_fields": [
+        "hydric_soil_acres"
+      ],
+      "native_targets": [
+        {
+          "category": "land_protection",
+          "path": "hydric_soil_area",
+          "metrics": [
+            "hydric_soil_acres"
+          ]
+        }
+      ],
+      "references": [
+        {
+          "source_id": "keowee-wbp-2020",
+          "printed_pages": [
+            140
+          ],
+          "detail": "Hydric-soil acreage"
+        }
+      ]
+    },
+    {
+      "profile_criterion": "protection_floodplain",
+      "profile_max_points": 2,
+      "profile_fields": [
+        "floodplain_intersects",
+        "developed_land_present"
+      ],
+      "native_targets": [
+        {
+          "category": "land_protection",
+          "path": "floodplain",
+          "metrics": [
+            "floodplain_without_development",
+            "floodplain_with_development"
+          ]
+        }
+      ],
+      "references": [
+        {
+          "source_id": "keowee-wbp-2020",
+          "printed_pages": [
+            141
+          ],
+          "detail": "Floodplain without developed land = 2; with developed land = 1; outside = 0"
+        }
+      ]
+    },
+    {
+      "profile_criterion": "source_water_protection_area_intersects",
+      "profile_max_points": 2,
+      "profile_fields": [
+        "source_water_protection_area_intersects"
+      ],
+      "native_targets": [
+        {
+          "category": "land_protection",
+          "path": "source_water_area",
+          "metrics": [
+            "source_water_protection_area_present"
+          ]
+        }
+      ],
+      "references": [
+        {
+          "source_id": "keowee-wbp-2020",
+          "printed_pages": [
+            141
+          ],
+          "detail": "Source-water protection area"
+        }
+      ]
+    },
+    {
+      "profile_criterion": "protection_stream_length",
+      "profile_max_points": 2,
+      "profile_fields": [
+        "stream_length_miles",
+        "watershed_mean_stream_length_miles"
+      ],
+      "native_targets": [
+        {
+          "category": "land_protection",
+          "path": "stream_length",
+          "metrics": [
+            "stream_length_above_study_mean"
+          ]
+        }
+      ],
+      "references": [
+        {
+          "source_id": "keowee-wbp-2020",
+          "printed_pages": [
+            141
+          ],
+          "detail": "Above watershed average stream length"
+        }
+      ]
+    },
+    {
+      "profile_criterion": "adjacent_protected_land",
+      "profile_max_points": 1,
+      "profile_fields": [
+        "adjacent_protected_land"
+      ],
+      "native_targets": [
+        {
+          "category": "land_protection",
+          "path": "protected_adjacency",
+          "metrics": [
+            "adjacent_to_protected_land"
+          ]
+        }
+      ],
+      "references": [
+        {
+          "source_id": "keowee-wbp-2020",
+          "printed_pages": [
+            142
+          ],
+          "detail": "Adjacency to existing protected land"
+        }
+      ]
+    },
+    {
+      "profile_criterion": "protection_parcel_size",
+      "profile_max_points": 1,
+      "profile_fields": [
+        "parcel_area_acres"
+      ],
+      "native_targets": [
+        {
+          "category": "land_protection",
+          "path": "parcel_size",
+          "metrics": [
+            "parcel_acres"
+          ]
+        }
+      ],
+      "references": [
+        {
+          "source_id": "keowee-wbp-2020",
+          "printed_pages": [
+            142
+          ],
+          "detail": "UF 50-acre conservation-easement criterion"
+        }
+      ]
+    },
+    {
+      "profile_criterion": "bacterial_impairment",
+      "profile_max_points": 3,
+      "profile_fields": [
+        "bacterial_impairment_relation"
+      ],
+      "native_targets": [
+        {
+          "category": "agricultural_bmps",
+          "path": "impairment_relation",
+          "metrics": [
+            "associated_with_selected_impairment"
+          ]
+        },
+        {
+          "category": "wetland_restoration",
+          "path": "impairment_relation",
+          "metrics": [
+            "associated_with_selected_impairment"
+          ]
+        },
+        {
+          "category": "riparian_restoration",
+          "path": "impairment_relation",
+          "metrics": [
+            "associated_with_selected_impairment"
+          ]
+        },
+        {
+          "category": "voluntary_dam_removal",
+          "path": "impairment_relation",
+          "metrics": [
+            "associated_with_selected_impairment"
+          ]
+        },
+        {
+          "category": "stormwater_bmps",
+          "path": "impairment_relation",
+          "metrics": [
+            "associated_with_selected_impairment"
+          ]
+        }
+      ],
+      "references": [
+        {
+          "source_id": "keowee-wbp-2020",
+          "printed_pages": [
+            59,
+            142
+          ],
+          "detail": "Relation to known bacterial impairment"
+        }
+      ],
+      "interpretation": "Native selected-impairment scope stays explicit; it becomes the original bacterial criterion only with a retained bacterial source binding."
+    },
+    {
+      "profile_criterion": "agricultural_cover_share",
+      "profile_max_points": 2,
+      "profile_fields": [
+        "agricultural_fraction"
+      ],
+      "native_targets": [
+        {
+          "category": "agricultural_bmps",
+          "path": "agricultural_land.majority_agriculture",
+          "metrics": [
+            "agricultural_cover_at_least_half"
+          ]
+        }
+      ],
+      "references": [
+        {
+          "source_id": "keowee-wbp-2020",
+          "printed_pages": [
+            143
+          ],
+          "detail": "Pasture/hay and cultivated-crop share"
+        }
+      ]
+    },
+    {
+      "profile_criterion": "agricultural_water_connection",
+      "profile_max_points": 2,
+      "profile_fields": [
+        "agricultural_land_adjacent_to_stream",
+        "agricultural_land_contains_impoundment"
+      ],
+      "native_targets": [
+        {
+          "category": "agricultural_bmps",
+          "path": "agricultural_land.agricultural_water_adjacency",
+          "metrics": [
+            "agriculture_adjacent_to_water"
+          ]
+        }
+      ],
+      "references": [
+        {
+          "source_id": "keowee-wbp-2020",
+          "printed_pages": [
+            142,
+            143
+          ],
+          "detail": "Agricultural land touches stream or includes impoundment"
+        }
+      ],
+      "interpretation": "The native combined water-adjacency flag cannot recover separate stream versus impoundment observations; retain the combined criterion and its source evidence."
+    },
+    {
+      "profile_criterion": "developed_land_present",
+      "profile_max_points": 2,
+      "profile_fields": [
+        "developed_land_present"
+      ],
+      "native_targets": [
+        {
+          "category": "stormwater_bmps",
+          "path": "land_activity.developed",
+          "metrics": [
+            "developed_land_present"
+          ]
+        }
+      ],
+      "references": [
+        {
+          "source_id": "keowee-wbp-2020",
+          "printed_pages": [
+            143
+          ],
+          "detail": "Urban/developed land"
+        }
+      ]
+    },
+    {
+      "profile_criterion": "known_logging_operation",
+      "profile_max_points": 1,
+      "profile_fields": [
+        "known_logging_operation"
+      ],
+      "native_targets": [
+        {
+          "category": "stormwater_bmps",
+          "path": "land_activity.logging",
+          "metrics": [
+            "known_logging_operation"
+          ]
+        }
+      ],
+      "references": [
+        {
+          "source_id": "keowee-wbp-2020",
+          "printed_pages": [
+            143
+          ],
+          "detail": "Known logging operation"
+        }
+      ]
+    },
+    {
+      "profile_criterion": "nitrogen_export",
+      "profile_max_points": 3,
+      "profile_fields": [
+        "nitrogen_export_mean"
+      ],
+      "native_targets": [
+        {
+          "category": "agricultural_bmps",
+          "path": "current_nitrogen_export",
+          "metrics": [
+            "nitrogen_export_priority"
+          ]
+        },
+        {
+          "category": "wetland_restoration",
+          "path": "current_nitrogen_export",
+          "metrics": [
+            "nitrogen_export_priority"
+          ]
+        },
+        {
+          "category": "riparian_restoration",
+          "path": "current_nitrogen_export",
+          "metrics": [
+            "nitrogen_export_priority"
+          ]
+        },
+        {
+          "category": "shoreline_management",
+          "path": "current_nitrogen_export",
+          "metrics": [
+            "nitrogen_export_priority"
+          ]
+        },
+        {
+          "category": "stormwater_bmps",
+          "path": "current_nitrogen_export",
+          "metrics": [
+            "nitrogen_export_priority"
+          ]
+        }
+      ],
+      "references": [
+        {
+          "source_id": "keowee-wbp-2020",
+          "printed_pages": [
+            143
+          ],
+          "detail": "Current annual nitrogen export parcel mean"
+        }
+      ]
+    },
+    {
+      "profile_criterion": "phosphorus_export",
+      "profile_max_points": 3,
+      "profile_fields": [
+        "phosphorus_export_mean"
+      ],
+      "native_targets": [
+        {
+          "category": "agricultural_bmps",
+          "path": "current_phosphorus_export",
+          "metrics": [
+            "phosphorus_export_priority"
+          ]
+        },
+        {
+          "category": "wetland_restoration",
+          "path": "current_phosphorus_export",
+          "metrics": [
+            "phosphorus_export_priority"
+          ]
+        },
+        {
+          "category": "riparian_restoration",
+          "path": "current_phosphorus_export",
+          "metrics": [
+            "phosphorus_export_priority"
+          ]
+        },
+        {
+          "category": "shoreline_management",
+          "path": "current_phosphorus_export",
+          "metrics": [
+            "phosphorus_export_priority"
+          ]
+        },
+        {
+          "category": "stormwater_bmps",
+          "path": "current_phosphorus_export",
+          "metrics": [
+            "phosphorus_export_priority"
+          ]
+        }
+      ],
+      "references": [
+        {
+          "source_id": "keowee-wbp-2020",
+          "printed_pages": [
+            143
+          ],
+          "detail": "Current annual phosphorus export parcel mean"
+        }
+      ]
+    },
+    {
+      "profile_criterion": "sediment_export",
+      "profile_max_points": 3,
+      "profile_fields": [
+        "sediment_export_mean"
+      ],
+      "native_targets": [
+        {
+          "category": "agricultural_bmps",
+          "path": "current_sediment_export",
+          "metrics": [
+            "sediment_export_priority"
+          ]
+        },
+        {
+          "category": "wetland_restoration",
+          "path": "current_sediment_export",
+          "metrics": [
+            "sediment_export_priority"
+          ]
+        },
+        {
+          "category": "riparian_restoration",
+          "path": "current_sediment_export",
+          "metrics": [
+            "sediment_export_priority"
+          ]
+        },
+        {
+          "category": "shoreline_management",
+          "path": "current_sediment_export",
+          "metrics": [
+            "sediment_export_priority"
+          ]
+        },
+        {
+          "category": "stormwater_bmps",
+          "path": "current_sediment_export",
+          "metrics": [
+            "sediment_export_priority"
+          ]
+        }
+      ],
+      "references": [
+        {
+          "source_id": "keowee-wbp-2020",
+          "printed_pages": [
+            143
+          ],
+          "detail": "Current annual sediment export parcel mean"
+        }
+      ]
+    },
+    {
+      "profile_criterion": "unpermitted_agricultural_source",
+      "profile_max_points": 1,
+      "profile_fields": [
+        "unpermitted_agricultural_source"
+      ],
+      "native_targets": [
+        {
+          "category": "agricultural_bmps",
+          "path": "agricultural_point_sources.unpermitted",
+          "metrics": [
+            "agricultural_unpermitted_source"
+          ]
+        }
+      ],
+      "references": [
+        {
+          "source_id": "keowee-wbp-2020",
+          "printed_pages": [
+            144
+          ],
+          "detail": "Known agricultural source below permit threshold"
+        }
+      ]
+    },
+    {
+      "profile_criterion": "permitted_agricultural_source",
+      "profile_max_points": 1,
+      "profile_fields": [
+        "permitted_agricultural_source"
+      ],
+      "native_targets": [
+        {
+          "category": "agricultural_bmps",
+          "path": "agricultural_point_sources.permitted",
+          "metrics": [
+            "agricultural_permitted_source"
+          ]
+        }
+      ],
+      "references": [
+        {
+          "source_id": "keowee-wbp-2020",
+          "printed_pages": [
+            144
+          ],
+          "detail": "Agricultural permitted source"
+        }
+      ]
+    },
+    {
+      "profile_criterion": "unpermitted_stormwater_source",
+      "profile_max_points": 1,
+      "profile_fields": [
+        "unpermitted_stormwater_source"
+      ],
+      "native_targets": [
+        {
+          "category": "stormwater_bmps",
+          "path": "unpermitted_sources",
+          "metrics": [
+            "stormwater_unpermitted_source"
+          ]
+        }
+      ],
+      "references": [
+        {
+          "source_id": "keowee-wbp-2020",
+          "printed_pages": [
+            144
+          ],
+          "detail": "Original stormwater below-threshold point-source inventory"
+        }
+      ]
+    },
+    {
+      "profile_criterion": "permitted_stormwater_source",
+      "profile_max_points": 1,
+      "profile_fields": [
+        "permitted_stormwater_source"
+      ],
+      "native_targets": [
+        {
+          "category": "stormwater_bmps",
+          "path": "permitted_sources",
+          "metrics": [
+            "stormwater_permitted_source"
+          ]
+        }
+      ],
+      "references": [
+        {
+          "source_id": "keowee-wbp-2020",
+          "printed_pages": [
+            144
+          ],
+          "detail": "Non-agricultural permitted point source"
+        }
+      ]
+    },
+    {
+      "profile_criterion": "modified_wetland_present",
+      "profile_max_points": 2,
+      "profile_fields": [
+        "modified_wetland_present"
+      ],
+      "native_targets": [
+        {
+          "category": "wetland_restoration",
+          "path": "restorable_wetlands.modified",
+          "metrics": [
+            "modified_wetland_present"
+          ]
+        }
+      ],
+      "references": [
+        {
+          "source_id": "keowee-wbp-2020",
+          "printed_pages": [
+            144
+          ],
+          "detail": "Wetland with excavated, spoil, artificial-substrate, diked/impounded, managed, farmed, drained/ditched or beaver modifier"
+        }
+      ]
+    },
+    {
+      "profile_criterion": "historic_wetland_present",
+      "profile_max_points": 2,
+      "profile_fields": [
+        "historic_wetland_present"
+      ],
+      "native_targets": [
+        {
+          "category": "wetland_restoration",
+          "path": "restorable_wetlands.historic",
+          "metrics": [
+            "historic_wetland_present"
+          ]
+        }
+      ],
+      "references": [
+        {
+          "source_id": "keowee-wbp-2020",
+          "printed_pages": [
+            144
+          ],
+          "detail": "Historical wetland"
+        }
+      ]
+    },
+    {
+      "profile_criterion": "dam_present",
+      "profile_max_points": 2,
+      "profile_fields": [
+        "dam_present"
+      ],
+      "native_targets": [
+        {
+          "category": "wetland_restoration",
+          "path": "dam",
+          "metrics": [
+            "dam_present"
+          ]
+        },
+        {
+          "category": "voluntary_dam_removal",
+          "path": "dam",
+          "metrics": [
+            "dam_present"
+          ]
+        }
+      ],
+      "references": [
+        {
+          "source_id": "keowee-wbp-2020",
+          "printed_pages": [
+            145
+          ],
+          "detail": "Mapped dam"
+        }
+      ]
+    },
+    {
+      "profile_criterion": "sensitive_buffer_intersects",
+      "profile_max_points": 4,
+      "profile_fields": [
+        "sensitive_buffer_intersects"
+      ],
+      "native_targets": [
+        {
+          "category": "riparian_restoration",
+          "path": "sensitive_riparian",
+          "metrics": [
+            "sensitive_riparian_present"
+          ]
+        },
+        {
+          "category": "shoreline_management",
+          "path": "sensitive_riparian",
+          "metrics": [
+            "sensitive_riparian_present"
+          ]
+        }
+      ],
+      "references": [
+        {
+          "source_id": "keowee-wbp-2020",
+          "printed_pages": [
+            145
+          ],
+          "detail": "Full or partial overlap with the sensitive riparian layer"
+        }
+      ]
+    },
+    {
+      "profile_criterion": "restoration_stream_order",
+      "profile_max_points": 4,
+      "profile_fields": [
+        "stream_orders"
+      ],
+      "native_targets": [
+        {
+          "category": "riparian_restoration",
+          "path": "headwater_stream",
+          "metrics": [
+            "headwater_stream"
+          ]
+        }
+      ],
+      "references": [
+        {
+          "source_id": "keowee-wbp-2020",
+          "printed_pages": [
+            145,
+            146
+          ],
+          "detail": "First and second order streams"
+        }
+      ]
+    },
+    {
+      "profile_criterion": "waterway_adjacency",
+      "profile_max_points": 4,
+      "profile_fields": [
+        "adjacent_drinking_water_reservoir_or_intake",
+        "adjacent_other_waterway"
+      ],
+      "native_targets": [
+        {
+          "category": "riparian_restoration",
+          "path": "water_adjacency",
+          "metrics": [
+            "adjacent_to_drinking_water",
+            "adjacent_to_other_water"
+          ]
+        },
+        {
+          "category": "shoreline_management",
+          "path": "drinking_water_adjacency",
+          "metrics": [
+            "adjacent_to_drinking_water"
+          ]
+        }
+      ],
+      "references": [
+        {
+          "source_id": "keowee-wbp-2020",
+          "printed_pages": [
+            146
+          ],
+          "detail": "Drinking-water reservoir/intake = 4; other waterway = 2; neither = 0"
+        }
+      ],
+      "interpretation": "The shoreline category requires drinking-water adjacency; its native shoreline criterion uses that same prerequisite."
+    },
+    {
+      "profile_criterion": "floodplain_intersects",
+      "profile_max_points": 2,
+      "profile_fields": [
+        "floodplain_intersects"
+      ],
+      "native_targets": [
+        {
+          "category": "riparian_restoration",
+          "path": "floodplain",
+          "metrics": [
+            "floodplain_present"
+          ]
+        }
+      ],
+      "references": [
+        {
+          "source_id": "keowee-wbp-2020",
+          "printed_pages": [
+            146
+          ],
+          "detail": "Restoration floodplain criterion"
+        }
+      ]
+    },
+    {
+      "profile_criterion": "private_boat_ramp_present",
+      "profile_max_points": 2,
+      "profile_fields": [
+        "private_boat_ramp_present"
+      ],
+      "native_targets": [
+        {
+          "category": "shoreline_management",
+          "path": "private_access.boat_ramp",
+          "metrics": [
+            "private_boat_ramp_present"
+          ]
+        }
+      ],
+      "references": [
+        {
+          "source_id": "keowee-wbp-2020",
+          "printed_pages": [
+            146
+          ],
+          "detail": "Private ramp along drinking-water reservoir"
+        }
+      ]
+    },
+    {
+      "profile_criterion": "private_dock_present",
+      "profile_max_points": 1,
+      "profile_fields": [
+        "private_dock_present"
+      ],
+      "native_targets": [
+        {
+          "category": "shoreline_management",
+          "path": "private_access.dock",
+          "metrics": [
+            "private_dock_present"
+          ]
+        }
+      ],
+      "references": [
+        {
+          "source_id": "keowee-wbp-2020",
+          "printed_pages": [
+            146
+          ],
+          "detail": "Private dock along drinking-water reservoir"
+        }
+      ]
+    },
+    {
+      "profile_criterion": "high_traffic_pet_business_present",
+      "profile_max_points": 1,
+      "profile_fields": [
+        "high_traffic_pet_business_present"
+      ],
+      "native_targets": [
+        {
+          "category": "pet_waste_stations",
+          "path": "pet_business",
+          "metrics": [
+            "pet_traffic_business_present"
+          ]
+        }
+      ],
+      "references": [
+        {
+          "source_id": "keowee-wbp-2020",
+          "printed_pages": [
+            147
+          ],
+          "detail": "High traffic pet-related business"
+        }
+      ]
+    },
+    {
+      "profile_criterion": "public_land_open_to_people",
+      "profile_max_points": 1,
+      "profile_fields": [
+        "public_land_open_to_people"
+      ],
+      "native_targets": [
+        {
+          "category": "pet_waste_stations",
+          "path": "public_access",
+          "metrics": [
+            "public_access_land"
+          ]
+        }
+      ],
+      "references": [
+        {
+          "source_id": "keowee-wbp-2020",
+          "printed_pages": [
+            147
+          ],
+          "detail": "Existing park, preserve or other publicly open land"
+        }
+      ]
+    }
+  ],
+  "adapter_revision": "1.0.1"
+}

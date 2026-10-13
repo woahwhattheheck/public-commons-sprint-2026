@@ -14,11 +14,19 @@ import tempfile
 COMPONENT_FILES = (
     "model/profile_editions.py",
     "model/profile_customer_review.py",
+    "model/biophysical_evidence.py",
+    "model/BIOPHYSICAL_EVIDENCE.md",
     "source_tools/receive_profile_customer_review.py",
+    "source_tools/receive_biophysical_evidence.py",
+    "source/regional-studies-20261013/albright-2023-biophysical-evidence.csv",
+    "source/upper-flint-2024/biophysical-evidence-combined.csv",
+    "source/upper-flint-2024/biophysical-evidence-ndr.csv",
+    "source/upper-flint-2024/biophysical-evidence-sdr.csv",
     "source_tools/PROFILE_CUSTOMER_REVIEW.md",
     "operator/profile_workbench.py",
     "operator/web/profile_workbench.mjs",
     "operator/web/profile_customer_review.mjs",
+    "operator/web/biophysical_evidence.mjs",
     "operator/web/profile_workbench.css",
     "operator/extensions/profile-workbench.json",
     "operator/PROFILE_WORKBENCH.md",
@@ -99,6 +107,23 @@ def retain_launchers(source):
     return source
 
 
+
+def retain_biophysical_evidence(source):
+    # Join the current receiving source rather than replacing concurrent extensions.
+    verification = (
+        '        if (restored._list("biophysical-evidence") or restored._list("biophysical-ranges")):\n'
+        '            from .biophysical_evidence import verify_all as verify_biophysical_evidence\n'
+        '            verify_biophysical_evidence(restored)\n'
+    )
+    if verification in source:
+        return source
+    anchor = '        if restored._list("planning-inventories"):\n'
+    source = replace_once(source, anchor, verification + anchor,
+                          "coefficient evidence semantic receiving")
+    ast.parse(source)
+    return source
+
+
 def app_join(source):
     # Applied to the current core source, preserving every other extension join.
     source = replace_once(source,
@@ -146,10 +171,22 @@ def _install_locked(application, source_root, *, dry_run=False):
     if sha(profile_original) == PROFILE_BASE and sha(profile_source) != PROFILE_SELECTED_MODELS:
         raise ValueError("The selected-model join differs from its retained original postimage.")
     originals[profile_name], pending[profile_name] = profile_original, profile_source
-    for name, join in (("model/portable.py", retain_launchers),
+    for name, join in (("model/portable.py", lambda source: retain_biophysical_evidence(retain_launchers(source))),
                        ("operator/web/app.mjs", app_join)):
         body = (application / name).read_bytes()
         originals[name], pending[name] = body, join(body.decode("utf-8")).encode("utf-8")
+    policy_name = "operator/team_route_policy.json"
+    policy_path = application / policy_name
+    policy_original = policy_path.read_bytes()
+    policy = json.loads(policy_original)
+    read_paths = ["/api/profile-workbench/biophysical/catalog","/api/profile-workbench/biophysical/template","/api/profile-workbench/biophysical/evidence-preview","/api/profile-workbench/biophysical/evidence-inspect","/api/profile-workbench/biophysical/ranges-preview","/api/profile-workbench/biophysical/ranges-inspect"]
+    for path in read_paths:
+        if path in policy.get("writePosts", []) or path in policy.get("adminRoutes", []):
+            raise ValueError("Keep the current route access classification at " + path)
+        if path not in policy["safeViewerPosts"]:
+            policy["safeViewerPosts"].append(path)
+    originals[policy_name] = policy_original
+    pending[policy_name] = (json.dumps(policy, indent=2) + "\n").encode("utf-8")
     changed = [name for name in pending if originals[name] != pending[name]]
     result = {"schema": "upstate.profile-workbench-install/v1",
               "operation_id": "ECO-PROFILES-DD6B", "application": str(application),

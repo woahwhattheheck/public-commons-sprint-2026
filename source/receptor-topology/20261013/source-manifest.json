@@ -1,0 +1,95 @@
+{
+  "schema": "upstate.sources/v1",
+  "title": "Upper Savannah original utility-focus source topology — 2026-10-13",
+  "captured_at": "2026-10-13",
+  "scope": {
+    "original_domain_huc12_count": 217,
+    "captured_savannah_huc12_count": 303,
+    "utility_memberships": 36,
+    "geographic_basis": "Whole original WBD HUC12 units and their original upstream relationship.",
+    "area_basis": "Sum of the publisher's original areasqkm and areaacres values once per distinct HUC12, including retained upstream context across state lines."
+  },
+  "entries": [
+    {
+      "id": "usgs-wbd-savannah-original-topology-20261013",
+      "title": "USGS original Savannah subwatershed topology",
+      "kind": "table",
+      "role": "watershed_topology",
+      "path": "usgs-wbd-savannah-original-topology-20261013.json",
+      "uri": "https://hydro.nationalmap.gov/arcgis/rest/services/wbd/MapServer/6/query?f=json&where=huc12%20LIKE%20'030601%25'&outFields=objectid%2Chuc12%2Cname%2Ctohuc%2Careasqkm%2Careaacres%2Cstates%2Chutype%2Chumod%2Cnoncontributingareasqkm&returnGeometry=false&orderByFields=huc12&resultRecordCount=2000",
+      "vintage": "2026-10-13",
+      "sha256": "2e57f86d1725526f00f16870b1b03d9168b41ea94de6d0016b20dfe15e89bcac",
+      "companions": [
+        {
+          "path": "usgs-wbd-subwatershed-metadata-20261013.json",
+          "sha256": "e156e8d83bc5d8d93c5fe7eea282bce47480f0fde07989056c90562672223b25"
+        },
+        {
+          "path": "usgs-wbd-savannah-topology-count-20261013.json",
+          "sha256": "817de0de49923e6e7b6b1c308459ee73b07b85b10d75b5757f45c1f1cf201a0d"
+        },
+        {
+          "path": "usgs-wbd-domain217-external-incoming-count-20261013.json",
+          "sha256": "618de7d9f46f3f697d827a1b6d84974760d5deda62e4e592adaa3c646602a94c"
+        },
+        {
+          "path": "domain-huc12s.json",
+          "sha256": "ec0cb3d05a0ede9da1b9238b7c7bff2fa495d94e5a6a0451890b54233edfbd52"
+        }
+      ]
+    },
+    {
+      "id": "usgs-wbd-domain217-original-links-20261013",
+      "title": "Original links and attributes for the retained 217-HUC domain",
+      "kind": "table",
+      "role": "watershed_topology",
+      "path": "domain217-original-links.csv",
+      "uri": "https://hydro.nationalmap.gov/arcgis/rest/services/wbd/MapServer/6",
+      "vintage": "2026-10-13",
+      "sha256": "3e6942dcd0fc9f99b045321cefead772214b7dd618e35245ee1b9bf59612065c",
+      "companions": []
+    },
+    {
+      "id": "utility-focus-upstream-memberships-20261013",
+      "title": "Utility-focus original upstream memberships and paths",
+      "kind": "table",
+      "role": "drinking_water_membership",
+      "path": "utility-memberships.csv",
+      "uri": "https://hydro.nationalmap.gov/arcgis/rest/services/wbd/MapServer/6",
+      "vintage": "2026-10-13",
+      "sha256": "2eee66822d755219958c1eef11fdeca2ee6c8e6ea9e8aa0d032cdeea2b44f945",
+      "companions": [
+        {
+          "path": "utility-focus-profile.json",
+          "sha256": "93abaaf736c66a7ca971ca931da2a3d81d939ecdeb830c7892267153c4413da7"
+        },
+        {
+          "path": "utility-area-summary.csv",
+          "sha256": "4d709083bcbda3d96da7b56464c7ea7590499e241d1eddd850fe53281f95498d"
+        }
+      ]
+    },
+    {
+      "id": "utility-focus-source-topology-analysis-20261013",
+      "title": "Completed original source-water topology calculation",
+      "kind": "document",
+      "role": "drinking_water_topology_analysis",
+      "path": "utility-topology-results.json",
+      "uri": "https://hydro.nationalmap.gov/arcgis/rest/services/wbd/MapServer/6",
+      "vintage": "2026-10-13",
+      "sha256": "827cbab0789efb67206a980ae00a69fe9df31e2f03c57802fc483c4b24429b66",
+      "companions": [
+        {
+          "path": "README.md",
+          "sha256": "5cfeb78e3039671d4614262d813f3a3df81def450ebeca4ad91e632b4168769f"
+        }
+      ]
+    }
+  ],
+  "notes": [
+    "Original WBD source records and query metadata are retained alongside the exact original 217-HUC acquisition selection.",
+    "Whole-HUC area values retain original cross-state context. Native raster inventories use their retained South Carolina reporting mask.",
+    "The original model-domain polygon source supplies geographic rendering and native grid source matching.",
+    "The receptor profile retains the issuer's source PDF, exact focus HUC anchors and documented geographic basis."
+  ]
+}

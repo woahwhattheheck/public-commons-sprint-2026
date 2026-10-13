@@ -2,7 +2,7 @@
   "schema": "upstate.operator-extension/v1",
   "id": "gis-projects",
   "title": "Editable GIS projects",
-  "version": "1.4.0",
+  "version": "1.5.0",
   "order": 75,
   "assets": [
     "gis-projects.mjs",
@@ -13,7 +13,8 @@
     "actions": [
       "gis.project.export",
       "gis.project.receive",
-      "gis.project.adopt-sources"
+      "gis.project.adopt-sources",
+      "gis.project.review"
     ],
     "invoke": {
       "handler": "invoke",

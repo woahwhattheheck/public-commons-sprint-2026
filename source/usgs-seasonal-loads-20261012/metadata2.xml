@@ -1,0 +1,573 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<metadata>
+  <idinfo>
+    <citation>
+      <citeinfo>
+        <origin>Scott W. Ator</origin>
+        <origin>David A. Saad</origin>
+        <origin>Lauren E. Koenig Snyder</origin>
+        <origin>Zachary C. Johnson</origin>
+        <origin>Gretchen P. Oelsner</origin>
+        <pubdate>20241015</pubdate>
+        <title>Estimated seasonal nitrogen and phosphorus loads in selected streams of the conterminous United States, 1999 - 2020</title>
+        <geoform>tabular digital data</geoform>
+        <othercit>Any use of trade, firm, or product names is for descriptive purposes only and does not imply endorsement by the U.S. Government.</othercit>
+        <onlink>https://doi.org/10.5066/P13YSTHM</onlink>
+      </citeinfo>
+    </citation>
+    <descript>
+      <abstract>Estimated seasonal total nitrogen and total phosphorus loads during 1999 through 2020 in selected streams of the conterminous United States and water-quality and stream flow data used to generate those estimates are presented in this dataset. Loads were generated as part of the Integrated Water-Availability Assessment (IWAA) Program of the U.S. Geological Survey (www.usgs.gov/mission-areas/water-resources/science/integrated-water-availability-assessments#overview) using Fluxmaster (Schwarz and others, 2006, https://doi.org/10.3133/tm6B3) and Weighted Regression on Time, Discharge, and Season (WRTDS) (Hirsch and De Cicco, 2015, https://doi.org/10.1016/j.envsoft.2015.07.017). Loads were estimated initially for the Illinois River Basin (IRB) and later for the wider conterminous United States (including the IRB). Along with the water-quality data, streamflow data, and estimated nitrogen and phosphorus loads, this release also includes computer code that can be run to recreate the load estimates or modified for similar applications.</abstract>
+      <purpose>Nutrient load estimates were generated for use in calibrating seasonal dynamic spatially referenced regression (SPARROW) models (Smith and others, 1997, https://doi.org/10.1029/97WR02171, Schwarz and others, 2006, https://doi.org/10.3133/tm6B3) for the Illinois River Basin and for large regions of the conterminous United States. This data release is intended to allow users to recreate the load estimates using included input data and computer code and to support other potential uses of the estimates and data inputs. The estimated loads were generated specifically for use as a group in calibrating SPARROW models over larger areas and multiple decades. The loads may be useful for other purposes; however, the thousands of individual FLUXMASTER and WRTDS models included have not been thoroughly reviewed for each individual stream location. Consequently, estimated loads for any particular individual stream may be substantially incorrect or unreasonable due to poor model fit or to unique local conditions such as backwater or tidal influences. Users interested in loads specifically at a small number of streams may be best served by using included data to recalibrate WRTDS or FLUXMASTER models which can then be thoroughly reviewed to evaluate their usefulness for intended purposes.</purpose>
+      <supplinf>The structure and contents of the data release are described in a data dictionary (dataDictionary.csv). At the highest level, site lists are stored within a "master_site_list" folder and model inputs, outputs, and code are stored in folders named for each modeling tool ("fluxmaster" and "wrtds"). Within each of the model folders, additional folders include model inputs, outputs, and code for the IRB and the CONUS. Data files are generally in comma-delimited or tab-delimited format, while code is written in R (for WRTDS) or SAS (www.sas.com) (for Fluxmaster).
+
+References Cited
+
+Goodling, P.J., Oelsner, G.P., Hecht, J.S., Cherry, M.L., Johnson, Z.C., Koenig, L. E., and Headman, A.O., 2024, Long-term water-quality trends for rivers and streams within the contiguous United States using Weighted Regressions on Time, Discharge, and Season (WRTDS): U.S. Geological Survey data release, https://doi.org/10.5066/P914BQYS.
+
+Hirsch, R. M. and L. A. De Cicco, 2015. User Guide to Exploration and Graphics for River Trends (Egret) and Dataretrieval: R Packages for Hydrologic Data.  Report 4-A10, 104 p. http://pubs.er.usgs.gov/publication/tm4A10.
+
+Murphy, J. and J. Chanat, 2023. Leveraging Machine Learning to Automate Regression Model Evaluations for Large Multi-Site Water-Quality Trend Studies. Environmental Modelling &amp; Software 170:105864. https://doi.org/10.1016/j.envsoft.2023.105864.
+
+Saad, D. A., G. E. Schwarz, D. M. Argue, D. W. Anning, S. W. Ator, A. B. Hoos, S. D. Preston, D. M. Robertson and D. R. Wise, 2019. Estimates of Long-Term Mean Daily Streamflow and Annual Nutrient and Suspended-Sediment Loads Considered for Use in Regional Sparrow Models of the Conterminous United States, 2012 Base Year. U.S. Geological Survey Scientific Investigations Report 2019-5069, 51 p. https://dx.doi.org/10.3133/sir20195069.
+
+Schwarz, G. E., A. B. Hoos, R. B. Alexander and R. A. Smith, 2006. Section 3. The Sparrow Surface Water-Quality Model: Theory, Application and User Documentation. USGS Techniques and Methods 6-B3, 248 p. https://doi.org/10.3133/tm6B3.
+
+Smith, R. A., G. E. Schwarz and R. B. Alexander, 1997. Regional Interpretation of Water-Quality Monitoring Data. Water Resources Research 33 (12):2781-2798. https://doi.org/10.1029/97WR02171.</supplinf>
+    </descript>
+    <timeperd>
+      <timeinfo>
+        <rngdates>
+          <begdate>19991201</begdate>
+          <enddate>20201130</enddate>
+        </rngdates>
+      </timeinfo>
+      <current>publication date</current>
+    </timeperd>
+    <status>
+      <progress>Complete</progress>
+      <update>None planned</update>
+    </status>
+    <spdom>
+      <bounding>
+        <westbc>-125.3320</westbc>
+        <eastbc>-65.5664</eastbc>
+        <northbc>49.6107</northbc>
+        <southbc>24.3671</southbc>
+      </bounding>
+    </spdom>
+    <keywords>
+      <theme>
+        <themekt>ISO 19115 Topic Category</themekt>
+        <themekey>inlandWaters</themekey>
+      </theme>
+      <theme>
+        <themekt>None</themekt>
+        <themekey>nitrogen</themekey>
+        <themekey>phosphorus</themekey>
+        <themekey>stream load</themekey>
+        <themekey>United States</themekey>
+      </theme>
+      <theme>
+        <themekt>USGS Metadata Identifier</themekt>
+        <themekey>USGS:6675b4dbd34e6f159fd10baf</themekey>
+      </theme>
+      <place>
+        <placekt>U.S. Geological Survey</placekt>
+        <placekey>United States</placekey>
+        <placekey>water quality</placekey>
+        <placekey>nitrogen</placekey>
+        <placekey>phosphorus</placekey>
+      </place>
+    </keywords>
+    <accconst>None.  Please see 'Distribution Info' for details.</accconst>
+    <useconst>These data are in the public domain in accordance with Creative Commons Zero v1.0 Universal Public Domain Dedication (CC0-1.0) and have no use constraints. Users are advised to read the dataset's metadata thoroughly to understand appropriate use and data limitations.</useconst>
+    <ptcontac>
+      <cntinfo>
+        <cntperp>
+          <cntper>Scott W Ator</cntper>
+          <cntorg>U.S. Geological Survey, Northeast Region</cntorg>
+        </cntperp>
+        <cntpos>Hydrologist</cntpos>
+        <cntaddr>
+          <addrtype>mailing address</addrtype>
+          <address>5522 Research Park Drive</address>
+          <city>Catonsville</city>
+          <state>MD</state>
+          <postal>21228</postal>
+          <country>US</country>
+        </cntaddr>
+        <cntvoice>443-498-5564</cntvoice>
+        <cntfax>443-498-5510</cntfax>
+        <cntemail>swator@usgs.gov</cntemail>
+      </cntinfo>
+    </ptcontac>
+    <datacred>We appreciate the assistance of Philip J. Goodling and Mikaela L. Cherry (both of USGS) with the compilation and processing of these data and of Andrew E. LaMotte of USGS for a thorough review of this product.</datacred>
+    <native>The estimates were produced using SAS and the R programming language on a Microsoft Windows platform. Estimated seasonal nitrogen and phosphorus loads and model inputs are included in more than 5,500 individual files totaling 2.21 GB.
+
+Any use of trade, firm, or product names is for descriptive purposes only and does not imply endorsement by the U.S. Government.</native>
+  </idinfo>
+  <dataqual>
+    <attracc>
+      <attraccr>unknown</attraccr>
+    </attracc>
+    <logic>No formal logical accuracy tests were conducted</logic>
+    <complete>Data are considered complete for the information presented, as described. Users are advised to read the rest of the metadata record for additional details.</complete>
+    <lineage>
+      <srcinfo>
+        <srccite>
+          <citeinfo>
+            <origin>Water Quality Portal</origin>
+            <pubdate></pubdate>
+            <title>Water-quality data downloaded from the Water-Quality Portal</title>
+            <geoform>tabular digital data</geoform>
+            <onlink>www.waterqualitydata.us</onlink>
+          </citeinfo>
+        </srccite>
+        <typesrc>Digital</typesrc>
+        <srctime>
+          <timeinfo>
+            <rngdates>
+              <begdate>19991001</begdate>
+              <enddate>20201231</enddate>
+            </rngdates>
+          </timeinfo>
+          <srccurr>Data are current as of 9/1/2023 for CONUS and 1/4/2022 for the IRB.</srccurr>
+        </srctime>
+        <srccitea>WQP</srccitea>
+        <srccontr>Contributed to water-quality data included in "net_conus" and "net_irb" folders in the data release.</srccontr>
+      </srcinfo>
+      <srcinfo>
+        <srccite>
+          <citeinfo>
+            <origin>David A. Saad</origin>
+            <origin>Gregory E. Schwarz</origin>
+            <origin>Denise M. Argue</origin>
+            <origin>David W. Anning</origin>
+            <origin>Scott W. Ator</origin>
+            <origin>Anne B. Hoos</origin>
+            <origin>Stephen D. Preston</origin>
+            <origin>Dale M. Robertson</origin>
+            <origin>Daniel Wise</origin>
+            <pubdate>20190819</pubdate>
+            <title>Estimates of long-term mean daily streamflow and annual nutrient and suspended-sediment loads considered for use in regional SPARROW models of the conterminous United States, 2012 base year</title>
+            <geoform>tabular digital data</geoform>
+            <onlink>doi.org/10.5066/F7DN436B</onlink>
+          </citeinfo>
+        </srccite>
+        <typesrc>Digital</typesrc>
+        <srctime>
+          <timeinfo>
+            <rngdates>
+              <begdate>19991001</begdate>
+              <enddate>20140930</enddate>
+            </rngdates>
+          </timeinfo>
+          <srccurr>Data are current as of the original publication date.</srccurr>
+        </srctime>
+        <srccitea>Saad and others (2019)</srccitea>
+        <srccontr>Contributed to water-quality data included in the folder, "saad2019".</srccontr>
+      </srcinfo>
+      <srcinfo>
+        <srccite>
+          <citeinfo>
+            <origin>Texas Commission for Environmental Quality</origin>
+            <pubdate>20230206</pubdate>
+            <title>Water-quality data from the Texas Commission for Environmental Quality</title>
+            <geoform>tabular digital data</geoform>
+            <onlink>https://www.tceq.texas.gov/</onlink>
+          </citeinfo>
+        </srccite>
+        <typesrc>Digital</typesrc>
+        <srctime>
+          <timeinfo>
+            <rngdates>
+              <begdate>19990104</begdate>
+              <enddate>20201230</enddate>
+            </rngdates>
+          </timeinfo>
+          <srccurr>Data are current as of 6 February 2023</srccurr>
+        </srctime>
+        <srccitea>TCEQ</srccitea>
+        <srccontr>Contributed to water-quality data included in the folder, "net_conus".</srccontr>
+      </srcinfo>
+      <srcinfo>
+        <srccite>
+          <citeinfo>
+            <origin>U.S. Geological Survey</origin>
+            <pubdate>20230417</pubdate>
+            <title>Water-quality data from the USGS Upper Midwest Environmental Science Center</title>
+            <geoform>tabular digital data</geoform>
+            <othercit>https://www.usgs.gov/centers/upper-midwest-environmental-sciences-center</othercit>
+            <onlink>https://www.usgs.gov/centers/upper-midwest-environmental-sciences-center</onlink>
+          </citeinfo>
+        </srccite>
+        <typesrc>Digital</typesrc>
+        <srctime>
+          <timeinfo>
+            <rngdates>
+              <begdate>19991001</begdate>
+              <enddate>20201231</enddate>
+            </rngdates>
+          </timeinfo>
+          <srccurr>Data are current as of 17 April 2023.</srccurr>
+        </srctime>
+        <srccitea>UMESC</srccitea>
+        <srccontr>Contributed to water-quality data included in "net_irb" folders in the data release.</srccontr>
+      </srcinfo>
+      <srcinfo>
+        <srccite>
+          <citeinfo>
+            <origin>U.S. Geological Survey</origin>
+            <pubdate>20240930</pubdate>
+            <title>Water-quality data compiled for the conterminous United States</title>
+            <geoform>tabular digital data</geoform>
+          </citeinfo>
+        </srccite>
+        <typesrc>Digital</typesrc>
+        <srctime>
+          <timeinfo>
+            <rngdates>
+              <begdate>19991031</begdate>
+              <enddate>20201231</enddate>
+            </rngdates>
+          </timeinfo>
+          <srccurr>Data are current as of the date retrieved from original sources.</srccurr>
+        </srctime>
+        <srccitea>QW Data</srccitea>
+        <srccontr>Data are in this current data release in the folders: 1) wrtds/net_conus/wrtds_wq_files and 2) wrtds/net_irb/wrtds_wq_files; and in the files: 1) fluxmaster/net_irb/input_wq_data.csv, 2) fluxmaster/net_conus/input_wq_data_TN.csv, 3) fluxmaster/net_conus/input_wq_data_TP.csv, 4) fluxmaster/saad2019/input_wq_data.csv</srccontr>
+      </srcinfo>
+      <srcinfo>
+        <srccite>
+          <citeinfo>
+            <origin>U.S. Geological Survey</origin>
+            <pubdate>20231018</pubdate>
+            <title>Streamflow data from the USGS National Water Information System</title>
+            <geoform>tabular digital data</geoform>
+            <onlink>http://waterdata.usgs.gov</onlink>
+          </citeinfo>
+        </srccite>
+        <typesrc>Digital</typesrc>
+        <srctime>
+          <timeinfo>
+            <rngdates>
+              <begdate>19991001</begdate>
+              <enddate>20231231</enddate>
+            </rngdates>
+          </timeinfo>
+          <srccurr>Varies, but generally current as of 18 April, 2022, 27 July 2023, or 18-20 October 2023.</srccurr>
+        </srctime>
+        <srccitea>NWIS</srccitea>
+        <srccontr>Contributed to all streamflow data.</srccontr>
+      </srcinfo>
+      <srcinfo>
+        <srccite>
+          <citeinfo>
+            <origin>U.S. Geological Survey</origin>
+            <pubdate>20240930</pubdate>
+            <title>Streamflow data compiled for use in seasonal load estimates</title>
+            <geoform>tabular digital data</geoform>
+          </citeinfo>
+        </srccite>
+        <typesrc>Digital</typesrc>
+        <srctime>
+          <timeinfo>
+            <rngdates>
+              <begdate>18730602</begdate>
+              <enddate>20231018</enddate>
+            </rngdates>
+          </timeinfo>
+          <srccurr>Varies, but generally current as of 18 April, 2022, 27 July 2023, or 18-20 October 2023.</srccurr>
+        </srctime>
+        <srccitea>Q Data</srccitea>
+        <srccontr>Streamflow data are in this current data release.</srccontr>
+      </srcinfo>
+      <srcinfo>
+        <srccite>
+          <citeinfo>
+            <origin>U.S. Geological Survey</origin>
+            <pubdate>20240930</pubdate>
+            <title>Matches between water-quality sampling locations and stream gages</title>
+            <geoform>tabular digital data</geoform>
+          </citeinfo>
+        </srccite>
+        <typesrc>Digital</typesrc>
+        <srctime>
+          <timeinfo>
+            <sngdate>
+              <caldate></caldate>
+            </sngdate>
+          </timeinfo>
+          <srccurr>Data are current as of date of publication.</srccurr>
+        </srctime>
+        <srccitea>Gage Matches</srccitea>
+        <srccontr>Data are in this current data release</srccontr>
+      </srcinfo>
+      <srcinfo>
+        <srccite>
+          <citeinfo>
+            <origin>U.S. Geological Survey</origin>
+            <pubdate>20240930</pubdate>
+            <title>Estimated seasonal nitrogen and phosphorus loads in selected streams</title>
+            <geoform>tabular digital data</geoform>
+          </citeinfo>
+        </srccite>
+        <typesrc>Digital</typesrc>
+        <srctime>
+          <timeinfo>
+            <rngdates>
+              <begdate>19991201</begdate>
+              <enddate>20201130</enddate>
+            </rngdates>
+          </timeinfo>
+          <srccurr>Data are current as of date of publication.</srccurr>
+        </srctime>
+        <srccitea>Loads</srccitea>
+        <srccontr>Data are in this current data release in the folders: 1) wrtds_output_eLists and the files 1) seasonalFluxes_dataRelease.csv, 2) MCMResults_dataRelease.csv, 3) output_predict_all_sub_periods_TN.csv, 4) output_predict_all_sub_periods_TP.csv, 5) output_wq_summary_betaest_all_TN.csv, 6) output_wq_summary_betaest_all_TP.csv, 7) output_predict_flux_all_sub_periods.csv, and 8) output_wq_summary_betaest_all.csv.</srccontr>
+      </srcinfo>
+      <procstep>
+        <procdesc>Water-quality data used for seasonal nutrient load estimates were retrieved from numerous sources. Data were retrieved from the Water Quality Portal (WQP) on 4 January 2022 for streams in the Illinois River Basin (IRB) and on 1 September 2023 for streams in the wider conterminous United States (CONUS). Additional data for streams in the IRB were retrieved from the USGS Upper Midwest Environmental Science Center (UMESC) on 17 April 2023. Data for streams in Texas were retrieved from the Texas Commission on Environmental Quality (TCEQ) on 6 February 2023. All data were screened and standardized following methods adapted from Saad and others (2019) and Goodling and others (2024). For example, data were screened to limit observations to those of total (unfiltered) nitrogen or phosphorus under ambient conditions in non-tidal streams and to remove observations with insufficient metadata to reasonably verify such conditions. Where not reported directly, concentrations of total nitrogen were computed where possible from reported concentrations of individual nitrogen species. Data previously compiled to support annual nutrient load estimates for the CONUS by Saad and others (2019) were compiled in March 2015.</procdesc>
+        <srcused>WQP</srcused>
+        <srcused>Saad and others (2019)</srcused>
+        <srcused>TCEQ</srcused>
+        <srcused>UMESC</srcused>
+        <procdate>20230901</procdate>
+        <srcprod>QW Data</srcprod>
+      </procstep>
+      <procstep>
+        <procdesc>Streamflow data used to estimate seasonal loads for 1999 through 2020 were downloaded from the USGS National Water Information System on 10 December 2021, 27 July 2023, and 18 October 2023.</procdesc>
+        <srcused>NWIS</srcused>
+        <procdate>20231018</procdate>
+        <srcprod>Q Data</srcprod>
+      </procstep>
+      <procstep>
+        <procdesc>Water-quality data and streamflow observations were linked spatially to support load estimation. Load estimation requires observations of water quality and streamflow, ideally from the same location. Observed streamflow observations from nearby locations were adjusted to approximate streamflow at water-quality sampling locations lacking direct streamflow observations using methods adapted from Saad and others (2019) (https://doi.org/10.3133/sir20195069). Specifically, streamflow data were area-adjusted to represent conditions at water-quality sampling locations with similar drainage areas and within 40 kilometers along stream flow (if nested) or in straight-line distance (if not).</procdesc>
+        <srcused>QW Data</srcused>
+        <srcused>Q Data</srcused>
+        <procdate>20231011</procdate>
+        <srcprod>Gage Matches</srcprod>
+      </procstep>
+      <procstep>
+        <procdesc>Seasonal nitrogen and phosphorus loads were estimated using Fluxmaster (Schwarz and others, 2006) and WRTDS (Hirsch and De Cicco, 2015). Fluxmaster runs in the SAS computing environment (https://www.sas.com/en_us/home.html), version SAS 9.4 TS Level 1M7, X64_10PRO platform.  Fluxmaster was used to estimate loads using a 5-parameter regression method and requires three input files: 1) measures of discrete constituent concentration at a site, 2) measures of daily flow at a site, and 3) a file describing the water-quality/flow site drainage area relationship. WRTDS runs within the R computing environment and was completed using Kalman smoothing. Both modeling tools were executed using computer code that was written specifically for that purpose and is included in this data release (see below).
+
+Fluxmaster results for CONUS can be reproduced as follows:
+1. Read into the SAS Program Editor:
+a.data_release/fluxmaster/net_conus/z_fluxmaster_WQP_CONUS_00_20_seas_5pk_TN.sas: for CONUS nitrogen estimates
+b.data_release/fluxmaster/net_conus/ z_fluxmaster_WQP_CONUS_00_20_seas_5pk_TP. sas: for CONUS phosphorus estimates
+2. Update the "DIRECTORY SETTINGS" in the provided Fluxmaster scripts to your local computer pathnames.  
+3. Import to SAS datasets:
+a: data_release/fluxmaster/net_conus/input_sitegage_TN.csv
+b. data_release/fluxmaster/net_conus/input_sitegage_TP.csv
+c: data_release/fluxmaster/net_conus/input_wq_data_TN.csv
+d. data_release/fluxmaster/net_conus/input_wq_data_TP.csv
+4. Run the .sas code in the Program Editor by clicking on the "running person" icon. The code will use code within the zipped directory: Fluxmaster_program_2018_10_04.zip. This will produce multiple output files:
+a.output_predict_flux_all_sub_periods_TN.csv
+b. output_wq_summary_betaest_all_TN.csv
+c.output_predict_flux_all_sub_periods_TP.csv
+d. output_wq_summary_betaest_all_TP.csv
+
+Fluxmaster results for the IRB can be reproduced as follows:
+1.Read  z_fluxmaster_IRB_00_20_seas_5pk.sas into the SAS Program Editor:
+2. Update the "DIRECTORY SETTINGS" in the provided Fluxmaster scripts to your local computer pathnames.  
+3. Import to SAS datasets:
+a.data_release/fluxmaster/net_irb/input_sitegage.csv
+b data_release/fluxmaster/net_irb/input_wq_data.csv
+4. Run the .sas code in the Program Editor by clicking on the "running person" icon. The code will use code within the zipped directory: Fluxmaster_program_2018_10_04.zip. This will produce multiple output files, including:
+a.output_predict_flux_all_sub_periods.csv
+b. output_wq_summary_betaest_all.csv
+
+Fluxmaster results for the 2012 extended records can be reproduced as follows:
+1.  Read  z_fluxmaster_2012_CONUS_00_20_seas_5pk.sas into the SAS Program Editor:
+2. Update the "DIRECTORY SETTINGS" in the provided Fluxmaster scripts to your local computer pathnames.  
+3. Import to SAS datasets:
+a: in data_release/fluxmaster/saad2019/input_sitegage.csv
+b. in data_release/fluxmaster/saad2019/input_wq_data.csv
+4. Run the .sas code in the Program Editor by clicking on the "running person" icon. The code will use code within the zipped directory: Fluxmaster_program_2018_10_04.zip. This will produce multiple output files, including:
+a. output_predict_flux_all_sub_periods.csv
+b. output_wq_summary_betaest_all.csv
+
+WRTDS results for the IRB can be reproduced as follows:
+1. To run WRTDS and recreate results in wrtds_output_eLists: 
+a. from the code directory, read RunWRTDS_IRB_Step1.R into RStudio.
+b. modify line 37 to assign log file (in quotes) and lines 41, 68, and 69 to note the correct paths (in quotes) to the files from this data release.
+c. modify line 123 to note the directory (in quotes) to hold WRTDS output
+d. run (source) the modified RunWRTDS_IRB_Step1.R code.
+
+WRTDS results for CONUS and seasonal fluxes for CONUS and IRB can be reproduced as follows:
+1. in RStudio, open wrtds/net_conus/code/workFlow.R
+2. To recreate WRTDS models for CONUS (WARNING: This will likely require many days on a PC if all station_ids are requested.):
+a. in workFlow.R, modify line 4 to note the full path (in quotes) to the directory holding files from this data release
+b. in workFlow.R, modify line 5 to note the full path (in quotes) of a directory to hold WRTDS output
+c. (optional): modify line(s) 7 and/or 15 to include as a vector a list of station_ids to exclude from model runs. This can be accomplished by replacing "vector()" with "c("station_id1", "station_id2", ....).
+d. run (source) f.runWRTDS.R. This will load this function into RStudio.
+e. run (source) lines 1 through 21 in workFlow.R.
+3. To recreate seasonal fluxes for both CONUS and IRB (in seasonalFluxes_dataRelease.csv): 
+a. in f.sumFluxes.R, modify line 21 to note the path (in quotes) to "net_conus/wrtds_output_eLists/" folder from this data release.
+b. in f.sumFluxes.R, modify line 22 to note the path (in quotes) to "net_irb/wrtds_output_eLists/" folder from this data release.
+c. run (source) f.sumFluxes.R. This will load this function into RStudio.
+d. run (source) line 24 in workFlow.R.
+4. To recreate model-checking model results for CONUS (in MCMResults_dataRelease.csv):
+a. in runMCM.R, modify line 15 to note the directory (in quotes) containing code from the web site noted on line 18.
+b. in runMCM.R, modify line 27 to note the path (in quotes) to "net_conus/wrtds_output_eLists/" folder from this data release.
+c. place the .rds file noted on line 32 from the website noted on line 30 into the folder noted on line 15
+d. in workFlow.R, modify line 27 to add the full path name (in quotes) for the file runMCM.R to the specified file name.
+e. in workFlow.R, modify line 29 to note the full path and filename (in quotes) of a desired .csv output file.
+f. run (source) lines 27 through 31 in workFlow.R.</procdesc>
+        <srcused>QW Data</srcused>
+        <srcused>Q Data</srcused>
+        <srcused>Gage Matches</srcused>
+        <procdate>20231208</procdate>
+        <srcprod>Loads</srcprod>
+      </procstep>
+    </lineage>
+  </dataqual>
+  <eainfo>
+    <detailed>
+      <enttyp>
+        <enttypl>dataDictionary.csv</enttypl>
+        <enttypd>Comma Separated Value (CSV) file containing data describing the files in the data release.</enttypd>
+        <enttypds>U.S. Geological Survey</enttypds>
+      </enttyp>
+      <attr>
+        <attrlabl>folderName</attrlabl>
+        <attrdef>The name of the folder or folders holding the file or files within the data release</attrdef>
+        <attrdefs>U.S. Geological Survey</attrdefs>
+        <attrdomv>
+          <udom></udom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>fileName</attrlabl>
+        <attrdef>the name of the file</attrdef>
+        <attrdefs>U.S. Geological Survey</attrdefs>
+        <attrdomv>
+          <udom></udom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>fileDesc</attrlabl>
+        <attrdef>a description of the file</attrdef>
+        <attrdefs>U.S. Geological Survey</attrdefs>
+        <attrdomv>
+          <udom></udom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>varName</attrlabl>
+        <attrdef>the name of the variable within the file</attrdef>
+        <attrdefs>U.S. Geological Survey</attrdefs>
+        <attrdomv>
+          <udom></udom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>varDef</attrlabl>
+        <attrdef>a description of the variable within the file</attrdef>
+        <attrdefs>U.S. Geological Survey</attrdefs>
+        <attrdomv>
+          <udom></udom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>varDomMin</attrlabl>
+        <attrdef>the minimum value of the variable, if numeric or date</attrdef>
+        <attrdefs>U.S. Geological Survey</attrdefs>
+        <attrdomv>
+          <udom></udom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>varDomMax</attrlabl>
+        <attrdef>the maximum value of the variable, if numeric or date</attrdef>
+        <attrdefs>U.S. Geological Survey</attrdefs>
+        <attrdomv>
+          <udom></udom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>varUnits</attrlabl>
+        <attrdef>the units of the variable, if applicable</attrdef>
+        <attrdefs>U.S. Geological Survey</attrdefs>
+        <attrdomv>
+          <udom></udom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>varCharVal</attrlabl>
+        <attrdef>individual character value of the variable, if a character variable</attrdef>
+        <attrdefs>U.S. Geological Survey</attrdefs>
+        <attrdomv>
+          <udom></udom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>varCharValDef</attrlabl>
+        <attrdef>definition of the character value</attrdef>
+        <attrdefs>U.S. Geological Survey</attrdefs>
+        <attrdomv>
+          <udom></udom>
+        </attrdomv>
+      </attr>
+    </detailed>
+  </eainfo>
+  <distinfo>
+    <distrib>
+      <cntinfo>
+        <cntperp>
+          <cntper>GS ScienceBase</cntper>
+          <cntorg>U.S. Geological Survey</cntorg>
+        </cntperp>
+        <cntaddr>
+          <addrtype>mailing address</addrtype>
+          <address>Denver Federal Center, Building 810, Mail Stop 302</address>
+          <city>Denver</city>
+          <state>CO</state>
+          <postal>80225</postal>
+          <country>United States</country>
+        </cntaddr>
+        <cntvoice>1-888-275-8747</cntvoice>
+        <cntemail>sciencebase@usgs.gov</cntemail>
+      </cntinfo>
+    </distrib>
+    <distliab>Unless otherwise stated, all data, metadata and related materials are considered to satisfy the quality standards relative to the purpose for which the data were collected. Although these data and associated metadata have been reviewed for accuracy and completeness and approved for release by the U.S. Geological Survey (USGS), no warranty expressed or implied is made regarding the display or utility of the data for other purposes, nor on all computer systems, nor shall the act of distribution constitute any such warranty.</distliab>
+    <stdorder>
+      <digform>
+        <digtinfo>
+          <formname>Digital Data</formname>
+        </digtinfo>
+        <digtopt>
+          <onlinopt>
+            <computer>
+              <networka>
+                <networkr>https://doi.org/10.5066/P13YSTHM</networkr>
+              </networka>
+            </computer>
+          </onlinopt>
+        </digtopt>
+      </digform>
+      <fees>None</fees>
+    </stdorder>
+  </distinfo>
+  <metainfo>
+    <metd>20241015</metd>
+    <metc>
+      <cntinfo>
+        <cntorgp>
+          <cntorg>U.S. Geological Survey</cntorg>
+          <cntper>Scott W. Ator</cntper>
+        </cntorgp>
+        <cntpos>Hydrologist</cntpos>
+        <cntaddr>
+          <addrtype>mailing and physical</addrtype>
+          <address>5522 Research Park Drive</address>
+          <city>Baltimore</city>
+          <state>Maryland</state>
+          <postal>21228</postal>
+        </cntaddr>
+        <cntvoice>4434985564</cntvoice>
+        <cntemail>swator@usgs.gov</cntemail>
+      </cntinfo>
+    </metc>
+    <metstdn>FGDC Content Standard for Digital Geospatial Metadata</metstdn>
+    <metstdv>FGDC-STD-001-1998</metstdv>
+  </metainfo>
+</metadata>

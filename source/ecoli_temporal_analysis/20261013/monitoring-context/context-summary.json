@@ -1,0 +1,32 @@
+{
+  "schema": "upstate.monitoring-observed-source-summary/v1",
+  "source_edition": "utility-microbial-2021-2025-monitoring-v1",
+  "stations": 36,
+  "observations": 730,
+  "activities": 730,
+  "routine_observations": 729,
+  "field_replicates": 1,
+  "gauge_days": 365,
+  "gauge_station_id": "USGS-02177000",
+  "gauge_routine_activities": 16,
+  "p95_cfs": 1284.0000000000005,
+  "high_flow_days": 19,
+  "high_flow_episodes": 9,
+  "unsampled_same_station_episodes": 9,
+  "datums": {
+    "NAD83": 2,
+    "WGS84": 34
+  },
+  "interpretation": [
+    "The original utility cohort contains 730 observations at 36 stations: 729 routine results and 1 original field replicate. Activity types remain separate.",
+    "Original station identifiers, activity identifiers, analytical methods, result and limit units, censoring bounds, comments, sample clocks and source rows remain attached.",
+    "Daily mean discharge and annual-P95 episodes apply only to the same original station USGS-02177000. The other 35 stations have no site-specific discharge established by this source.",
+    "The daily-flow series contains all 365 dates of 2022. Other dates remain outside the received series, including future saved calendar dates.",
+    "None of the 16 original same-station microbial sample dates reaches the 2022 daily-flow P95. High-flow episodes are consecutive received calendar days at or above that annual threshold.",
+    "The threshold uses linear interpolation at rank(n−1)×0.95 over 365 original daily means. Flow qualifiers and record indices are retained.",
+    "Two stations retain original NAD83 coordinates and 34 retain WGS84. Station-ID matching does not change coordinates or datum; cross-datum distance diagnostics require a separately defined transformation.",
+    "Whole-cohort sampling counts describe the selected 36 stations. Hydrologic episode sample counts describe only routine activities at the original gauge station.",
+    "Information-only and analysis-interruption comments remain visible. Monitoring support preserves the original results; the accompanying analysis offers explicit comment sensitivity.",
+    "Censoring bounds describe reported numerical support. They are not confidence intervals. Native plan dates, station bindings, costs and priorities retain their original choices."
+  ]
+}

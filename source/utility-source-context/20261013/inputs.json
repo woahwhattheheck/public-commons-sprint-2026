@@ -1,0 +1,26 @@
+{
+  "schema": "upstate.utility-source-context-inputs/v1",
+  "title": "Original utility topology joined to original NRCS and SCDES regional context",
+  "sources": {
+    "topology": {
+      "path": "source/receptor-topology/20261013/utility-topology-results.json",
+      "bytes": 36847,
+      "sha256": "827cbab0789efb67206a980ae00a69fe9df31e2f03c57802fc483c4b24429b66"
+    },
+    "context": {
+      "path": "source/water_context/20261013/full-domain-water-context.json",
+      "bytes": 152659,
+      "sha256": "d607c93912102fbb8f28139a5d57b01b0e1886b0155ede16fc1a19d654323566"
+    },
+    "coverage": {
+      "path": "source/water_context/20261013/scdes-domain217-source-coverage.json",
+      "bytes": 7043,
+      "sha256": "2ed2f1bd402437d91aa8c1544d583dd5ceaf7da7e202aed1252f1b3ea47b3bcb"
+    },
+    "network": {
+      "path": "source/receptor-topology/20261013/usgs-wbd-savannah-original-topology-20261013.json",
+      "bytes": 71787,
+      "sha256": "2e57f86d1725526f00f16870b1b03d9168b41ea94de6d0016b20dfe15e89bcac"
+    }
+  }
+}

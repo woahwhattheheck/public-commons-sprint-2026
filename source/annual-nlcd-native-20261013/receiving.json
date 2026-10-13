@@ -1,0 +1,263 @@
+{
+  "schema": "upstate.nlcd-native-receiving/v1",
+  "source_time": "2025-01-01T00:00:00.000Z",
+  "grid": {
+    "schema": "upstate.nlcd-wms-native-grid/v1",
+    "crs": "EPSG:5070",
+    "source_origin": [
+      -2415585,
+      3314805
+    ],
+    "source_offsets": [
+      29.999999995403137,
+      -30.000000026127967
+    ],
+    "domain_buffer_m": 1000,
+    "buffered_domain_bounds": [
+      1114884.4671420595,
+      1238657.614564179,
+      1308131.2716092442,
+      1428180.0626974022
+    ],
+    "window": {
+      "col": 117682,
+      "row": 62887,
+      "width": 6443,
+      "height": 6319
+    },
+    "bounds": [
+      1114859.9994590343,
+      1238639.998191801,
+      1308149.9994294168,
+      1428209.9983569037
+    ],
+    "transform": [
+      29.999999995403137,
+      0,
+      1114859.9994590343,
+      0,
+      -30.000000026127967,
+      1428209.9983569037
+    ],
+    "tile_size": 1024,
+    "tiles": 49
+  },
+  "allowed_classes": [
+    11,
+    12,
+    21,
+    22,
+    23,
+    24,
+    31,
+    41,
+    42,
+    43,
+    52,
+    71,
+    81,
+    82,
+    90,
+    95,
+    250
+  ],
+  "class_counts": {
+    "11": 1105669,
+    "21": 3509200,
+    "22": 1822272,
+    "23": 605923,
+    "24": 212075,
+    "31": 89408,
+    "41": 10025616,
+    "42": 8130872,
+    "43": 4204909,
+    "52": 1072801,
+    "71": 1551681,
+    "81": 7010479,
+    "82": 243722,
+    "90": 1105091,
+    "95": 23599
+  },
+  "raster": {
+    "bytes": 9443751,
+    "sha256": "3fa517b4cc3251b9e1bd31e51b54b036a875c09e5f1075511da7c8e951656670",
+    "strip_offsets": [
+      672,
+      1743282,
+      3254088,
+      4739521,
+      6193348,
+      7661959,
+      9174913
+    ]
+  },
+  "header": {
+    "bytes": 672,
+    "sha256": "fab4049d8a585cd87ce6620a71795bc1bfb1fd9c772cb30a51af3332894e85d1",
+    "base64": "SUkqAAgAAAARAAABBAABAAAAKxkAAAEBBAABAAAArxgAAAIBAwABAAAACAAAAAMBAwABAAAACAAAAAYBAwABAAAAAQAAAA4BAgDPAAAA4AAAABEBBAAHAAAAsAEAABUBAwABAAAAAQAAABYBBAABAAAAAAQAABcBBAAHAAAA0AEAABwBAwABAAAAAQAAADEBAgA3AAAA8AEAAFMBAwABAAAAAQAAAA6DDAADAAAAKAIAAIKEDAAGAAAAQAIAAK+HAwAYAAAAcAIAAIGkAgAEAAAAMjUwAAAAAAAAAAAAAABVU0dTIEFubnVhbCBOTENEMjAyNSBuYXRpdmUgY2xhc3Mgc291cmNlOyBleGFjdCB5ZWFyMjAyNS0wMS0wMVQwMDowMDowMC4wMDBaOyBFUFNHNTA3MDsgbmF0aXZlMzBtIGdyaWQ7IGZ1bGwyMTdIVUMgVXBwZXIgU2F2YW5uYWggYnVmZmVyMTAwMG07IGV4cGxpY2l0IGRpc2NyZXRlIFdNUyBjbGFzcyBtYXBwaW5nIHdpdGhvdXQgc3BhdGlhbCByZXNhbXBsaW5nLgAAoAIAALKZGgBIpzEAwVFIAMSAXgCH6XQAgf+LAAAAAAASlxoAlg0XAHmqFgADLxYAw2gWAPoVFwAmGgQAAAAAAFVwcGVyIFNhdmFubmFoIG5hdGl2ZSBjbGFzcyBzb3VyY2UgcmVjZWl2ZXIgMjAyNi0xMC0xMwAAskHs////PUABOHAAAAA+QAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAGozc/+sCMUFrUZT/8co1QQAAAAAAAAAAAQABAAAABQAABAAAAQABAAEEAAABAAEAAAgAAAEArRAADAAAAQDOEwQMAAABACkj"
+  },
+  "strips": [
+    {
+      "row": 0,
+      "bytes": 1742610,
+      "sha256": "0ecaa88f05f9fa50d8d2c2f6da671778e4e0e91b147ea866fe8d1408f1cc0f24",
+      "pixel_bytes": 6597632,
+      "pixel_sha256": "1e1f8e8169acdc707ba86e3160fd18793b19bbf749e604af0e2d742b3b49f8fd",
+      "height": 1024
+    },
+    {
+      "row": 1,
+      "bytes": 1510806,
+      "sha256": "ebd2d4ab38238629f1d6a4d84b925422b382f6a6f5c8f69c0dea518d294b9f4f",
+      "pixel_bytes": 6597632,
+      "pixel_sha256": "418ccbf2d9d4051e32bc074bde47abc27b888be392734b441b382fb06d23fec8",
+      "height": 1024
+    },
+    {
+      "row": 2,
+      "bytes": 1485433,
+      "sha256": "39d26ff00d75e0778006436bbec8e6b20d59c716a637d07d66b619c540cbfe88",
+      "pixel_bytes": 6597632,
+      "pixel_sha256": "ebf2a506d4ca9962128078f7b445aa656ab0cdb54e453b9b8969130651d3e6fc",
+      "height": 1024
+    },
+    {
+      "row": 3,
+      "bytes": 1453827,
+      "sha256": "48de22ebae2882d6c6eb4efab241fee50a85aeeca0d18625ea9a8a098360d1f8",
+      "pixel_bytes": 6597632,
+      "pixel_sha256": "5af74e68597677c4429f6b5bc51f4537d03e2ada0d40f8566bb15d2a78aa71cd",
+      "height": 1024
+    },
+    {
+      "row": 4,
+      "bytes": 1468611,
+      "sha256": "d8c489846bac3c689a930fe71c8e00901dab626ae32940896b4c363f24ec9635",
+      "pixel_bytes": 6597632,
+      "pixel_sha256": "392b89615435bcb09e7c3472d0d6c769bf96f52129d8e9e8a19b3a439bd172c1",
+      "height": 1024
+    },
+    {
+      "row": 5,
+      "bytes": 1512954,
+      "sha256": "50d214c56c5cded38253a2b831168f50169511e1684ba0114c427c22769cdc12",
+      "pixel_bytes": 6597632,
+      "pixel_sha256": "f32bc110f66b848fa89a2a4d487e4883278c9850e78a777ece191d4ab60ef534",
+      "height": 1024
+    },
+    {
+      "row": 6,
+      "bytes": 268838,
+      "sha256": "b00cf6c8e636af6c2470f41b7acb6773d3cc7aaec1ba0d14db129192dd261eb6",
+      "pixel_bytes": 1127525,
+      "pixel_sha256": "300b472808a02f0c2cfec42f133da715572f29fea81b307547da1ddb50abc948",
+      "height": 175
+    }
+  ],
+  "source_volumes": [],
+  "companion_names": [
+    "plan.json",
+    "validation.json",
+    "class-area.csv",
+    "style.sld"
+  ],
+  "source_entry": {
+    "id": "usgs-annual-nlcd-2025-native-region-3fa517b4cc3251b9",
+    "title": "USGS Annual NLCD2025 native classes - complete Upper Savannah model source",
+    "kind": "raster",
+    "role": "NLCD",
+    "units": "class",
+    "resampling": "nearest",
+    "uri": "https://dmsdata.cr.usgs.gov/geoserver/mrlc_Land-Cover-Native_conus_year_data/wms",
+    "vintage": "USGS published Annual NLCD native time2025-01-01T00:00:00.000Z; captured2026-10-13",
+    "source_crs": "EPSG:5070",
+    "path": "land-cover.tif",
+    "bytes": 9443751,
+    "sha256": "3fa517b4cc3251b9e1bd31e51b54b036a875c09e5f1075511da7c8e951656670",
+    "source_time": "2025-01-01T00:00:00.000Z",
+    "preparation_sha256": "2379619824566b5c4e47d6b6e953ccabaad861508455f7736e9bb2f5cb9b6917",
+    "source_description_sha256": "1a3cba52dca82969d46c0f08aa02f5f2047b5c94edb87bc476c8d172bbad0ff9",
+    "domain_feature_count": 217,
+    "buffer_m": 1000,
+    "native_grid": {
+      "schema": "upstate.nlcd-wms-native-grid/v1",
+      "crs": "EPSG:5070",
+      "source_origin": [
+        -2415585,
+        3314805
+      ],
+      "source_offsets": [
+        29.999999995403137,
+        -30.000000026127967
+      ],
+      "domain_buffer_m": 1000,
+      "buffered_domain_bounds": [
+        1114884.4671420595,
+        1238657.614564179,
+        1308131.2716092442,
+        1428180.0626974022
+      ],
+      "window": {
+        "col": 117682,
+        "row": 62887,
+        "width": 6443,
+        "height": 6319
+      },
+      "bounds": [
+        1114859.9994590343,
+        1238639.998191801,
+        1308149.9994294168,
+        1428209.9983569037
+      ],
+      "transform": [
+        29.999999995403137,
+        0,
+        1114859.9994590343,
+        0,
+        -30.000000026127967,
+        1428209.9983569037
+      ],
+      "tile_size": 1024,
+      "tiles": 49
+    },
+    "derivation": "Original WMS GetMap, unchanged published EPSG5070 cell edges and dimensions, explicit source time and nearest-neighbour request, discrete ColorMap type=values with each class encoded as opaque (class,0,0,255); transparent source cells normalize to published NoData250. Source PNG chunk CRCs, palette and alpha are decoded exactly; no image resampling or approximate colour matching.",
+    "metadata": {
+      "width": 6443,
+      "height": 6319,
+      "dtype": "uint8",
+      "nodata": 250,
+      "cell_count": 40713317,
+      "nodata_cells": 0,
+      "class_counts_scope": "Entire rectangular native source grid; polygon-domain and per-HUC totals are calculated by the receiving model using the original217feature domain.",
+      "provider_png_bytes": 11252658,
+      "provider_tiles": 49,
+      "assembly_revision": "original-png-cell-verified-20261013",
+      "serialized_original_matched_cells": 40713317,
+      "unexpected_zero_cells": 0
+    },
+    "companions": [
+      {
+        "path": "plan.json",
+        "bytes": 147290,
+        "sha256": "bb1b47bb1836ef856af60085834e6c4b7e7be2fe5ab0c94f3fc4fe8e39f66494"
+      },
+      {
+        "path": "validation.json",
+        "bytes": 26965,
+        "sha256": "f41bad26fb452d8db29b340bacad02b75fc7e4d94bb1173c0f3a6c01b14cbeaf"
+      },
+      {
+        "path": "class-area.csv",
+        "bytes": 923,
+        "sha256": "9e9d30c18b24ba605a8b53d7387b26910ef20561e55539b4f5c3a2b1f4ec1404"
+      },
+      {
+        "path": "style.sld",
+        "bytes": 1149,
+        "sha256": "73395f174359f4ac32ec7bfa33c3a729c7b8d8dc2aef93fd35cabc395304fefb"
+      }
+    ],
+    "model_domain_decoded_sha256": "2300d9b32a513d70503222a5d2e782e032107297214036a58e8b444a312169af"
+  },
+  "transport": "The adjacent checked-in complete GeoTIFF, or an exact downloaded copy. Earlier Page-strip source was superseded by original-cell verification."
+}

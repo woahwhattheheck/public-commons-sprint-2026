@@ -773,7 +773,11 @@
         "model/gis_workspace.py",
         "model/GIS_PROJECTS.md",
         "operator/web/gis-projects.mjs",
-        "operator/web/delivery_inspection.mjs"
+        "operator/web/delivery_inspection.mjs",
+        "model/gis_edition_review.py",
+        "operator/gis_projects.py",
+        "model/gis_project_cli.py",
+        "install_gis_projects.py"
       ],
       "requires": [
         "core",
@@ -4527,7 +4531,7 @@
         "operator/extensions/native-run-desk.json",
         "operator/extensions/project-continuity.json",
         "operator/extensions/project-transfer.json",
-        "operator/extensions/robust-decisions.json",
+        "operator/extensions/robust-decisions.json.retired-ECO13-RELEASE-20261013",
         "operator/extensions/scenario_reports.json",
         "operator/extensions/source-preparation.json",
         "operator/extensions/station-geography.json",
@@ -5465,7 +5469,8 @@
         "source_tools/RECEIVE_SCIENTIFIC_REPORT_REVIEW.md",
         "source_tools/receive_observed_scientific_review.py",
         "source_tools/RECEIVE_OBSERVED_SCIENTIFIC_REVIEW.md",
-        "observations/eighteenmile_2023/scientific-review.request.json"
+        "observations/eighteenmile_2023/scientific-review.request.json",
+        "source/water_context/20261013/regional-scientific-review.request.json"
       ],
       "requires": [
         "eco13",

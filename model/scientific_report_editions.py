@@ -76,6 +76,54 @@ def preview(workspace, payload):
     return {**result, "id": key, "existing": (directory(workspace, key) / "edition.json").is_file()}
 
 
+
+def validate_request(workspace, payload, identity):
+    """Match an original report request without binding it to today's renderer."""
+    supplied = payload.get("sources")
+    if not isinstance(supplied, list) or not supplied:
+        raise ValueError("Choose one or more retained scientific report sources")
+    choices = observed_context.source_choices({"observed_context_sources": supplied})
+    if choices != observed_context.source_choices(identity["selection"]):
+        raise PreviewChanged("The retained report belongs to another ordered source selection.")
+    titles = []
+    for choice in choices:
+        _, entry = workspace.source_file(choice["source_collection_id"], choice["source_id"])
+        titles.append(entry["title"])
+    title = payload.get("title")
+    if title is not None and (not isinstance(title, str) or not title.strip()):
+        raise ValueError("Enter a nonempty report title")
+    resolved = title.strip() if title is not None else (
+        titles[0] if len(titles) == 1 else "Observed science: " + "; ".join(titles))
+    contact = payload.get("contact")
+    if contact is None:
+        contact = {}
+    if (not isinstance(contact, dict)
+            or any(not isinstance(contact.get(name, ""), str)
+                   for name in ("name", "organization", "email"))):
+        raise ValueError("Report contact details must be text")
+    if identity.get("title") != resolved or identity.get("contact") != contact:
+        raise PreviewChanged("The retained report belongs to another title or contact.")
+    if observed_context.bind(workspace, identity["selection"]) != identity.get("binding"):
+        raise PreviewChanged("The retained report's original scientific source edition changed.")
+    return choices
+
+
+def _save_edition(workspace, identity, result):
+    """Publish the edition from the original completed native operation."""
+    key = digest(identity)
+    selected = directory(workspace, key)
+    value = {"schema": SCHEMA, "id": key, "project_id": workspace.project["id"],
+             "title": identity["title"], "render_identity": identity,
+             **{name: result[name] for name in (
+                 "state", "operation_id", "source_count", "section_count",
+                 "figure_count", "sources", "files")}}
+    atomic_json(selected / "edition.json", value, immutable=True)
+    inspect(workspace, key)
+    return {"scientific_report_edition_id": key, "title": value["title"],
+            "state": "complete", "source_count": value["source_count"],
+            "operation_id": value["operation_id"]}
+
+
 def render_prepared(workspace, prepared):
     """Complete a retained original preview through the existing native renderer.
 
@@ -102,20 +150,36 @@ def render_prepared(workspace, prepared):
     # source retention, figure drawing and its installed-code identity checks.
     with held(workspace.root / ".workspace.lock"):
         result = renderer.render(workspace, prepared, selected)
-        value = {"schema": SCHEMA, "id": key, "project_id": workspace.project["id"],
-                 "title": prepared["title"], "render_identity": identity,
-                 **{name: result[name] for name in (
-                     "state", "operation_id", "source_count", "section_count",
-                     "figure_count", "sources", "files")}}
-        atomic_json(selected / "edition.json", value, immutable=True)
-    inspect(workspace, key)
-    return {"scientific_report_edition_id": key, "title": value["title"],
-            "state": "complete", "source_count": value["source_count"],
-            "operation_id": value["operation_id"]}
+        return _save_edition(workspace, identity, result)
 
 
 def render(workspace, payload):
-    """Verify the explicit preview ID, then save its complete native edition."""
+    """Reopen completed original output, or render the explicitly reviewed preview."""
+    key = payload.get("preview_id")
+    if key is not None:
+        selected = directory(workspace, key)
+        # Rendering publishes operation.json before edition.json and the queue's
+        # completion record. Reconcile that exact completed effect first, even
+        # when installed formatting source has advanced since this request.
+        if (selected / "operation.json").is_file():
+            with held(workspace.root / ".workspace.lock"):
+                identity = read_json(selected / "selection.json")
+                result = read_json(selected / "operation.json")
+                if (identity.get("schema") != "upstate.observed-report-native/v1"
+                        or digest(identity) != key
+                        or result.get("state") != "complete"
+                        or result.get("operation_id") != "observed-report-" + key[:20]
+                        or any(result.get(name) != value for name, value in identity.items())):
+                    raise ValueError("The retained completed report differs from its original preview")
+                choices = validate_request(workspace, payload, identity)
+                if (result.get("source_count") != len(choices)
+                        or [{"source_collection_id": row["source_collection_id"],
+                             "source_id": row["source_id"]} for row in result.get("sources", [])]
+                        != choices):
+                    raise ValueError("The completed report changed its ordered original sources")
+                for item in result["files"].values():
+                    verify_file(selected, item)
+                return _save_edition(workspace, identity, result)
     prepared = preview(workspace, payload)
     if payload.get("preview_id") != prepared["id"]:
         raise PreviewChanged("Preview this exact ordered study selection before preparing its report.")

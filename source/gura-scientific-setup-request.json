@@ -1,0 +1,31 @@
+{
+  "schema": "upstate.gura-setup-request/v1",
+  "title": "Gura original-source setup: agriculture, forest and agroforestry contrasts",
+  "question": "Within the original Gura reporting watershed, how do the two explicitly selected land-cover contrasts—general agriculture (original class 5) to forest (class 8), and general agriculture (class 5) to agroforestry (class 19)—change the selected native models' outputs relative to the saved original baseline, while retaining the same source edition, parameter profile, aligned grid and reporting support?",
+  "domain_rationale": "Retain the original saved reporting selection and model-domain definition from the Gura receiving record. Copy their actual source IDs, geometry selections, prepared extent, aligned cell size and upstream buffer into the specification. Any model-domain area outside the reporting boundary supplies flow-routing context and is excluded from reporting-area totals. The original selected grid determines resolution; this request does not substitute the separate Upper Savannah 30 m study specification.",
+  "validation": {
+    "method": "Trace each prepared input and coefficient row to its retained original source. Compare the saved baseline and each explicit alternative over the same aligned grid, reporting mask, valid-data support and selected model version. Preserve the native output's actual units and aggregation convention. Check the changed-cell footprint against the original class-5 reporting cells; retain unchanged cells and mask semantics. Review spatial and aggregate differences together before interpreting intervention effects.",
+    "intended_comparison": "Pair each class-5 substitution separately with the same original baseline and profile. Inspect the original coefficient differences for classes 5, 8 and 19 and the actual reporting-mask class counts. Reopen the captured source inventory, grid, profile, baseline, alternatives and review on the receiving operator's project. Use any subsequently selected measured observations with their original site, parameter, period and units to assess an appropriate comparison.",
+    "limitations": "These two source-class substitutions are explicit analytical counterfactuals using the original Gura example data and coefficients. They do not estimate an Upper Savannah intervention. Applicability depends on the actual observed class-5 footprint, original grid and selected model support. Original classes 8 and 19 must be present in the retained coefficient profile. Field validation and a regional parameter review remain separate scientific activities."
+  },
+  "roles": {
+    "scientific_reviewer": {
+      "name": "",
+      "role": "Scientific reviewer",
+      "organization": ""
+    },
+    "receiving_operator": {
+      "name": "ECO13-6A4E scientific source arm",
+      "role": "Setup preparation",
+      "organization": ""
+    }
+  },
+  "source_collection_ids": [],
+  "observation_ids": [],
+  "expected_alternative_count": 2,
+  "notes": [
+    "Analytical question proposed by the ECO13-6A4E scientific source arm for an original-source receiving exercise.",
+    "Use this request with the explicitly selected class pairs --convert 5:8 --convert 5:19; the maintained catalog verifies actual class-5 support before scenarios are saved.",
+    "The captured specification retains the actual model and coefficient profile. Scientific review responses use the existing customer-review workflow."
+  ]
+}

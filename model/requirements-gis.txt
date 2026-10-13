@@ -6,4 +6,6 @@ fiona>=1.10,<2
 pyproj>=3.7,<4
 shapely>=2.0,<3
 Pillow>=10
+# Resolves the original atlas color lookup only when exporting delivery legends.
+matplotlib
 # Native QGIS receiving uses the Python shipped with QGIS, not a pip qgis package.

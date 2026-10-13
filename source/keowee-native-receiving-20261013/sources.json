@@ -1,0 +1,37 @@
+{
+  "schema": "upstate.sources/v1",
+  "title": "Original Greenwood parcel for native source-profile receiving",
+  "captured_at": "2026-10-13",
+  "scope": {
+    "provider_id": "greenwood-county-parcels-search-select",
+    "original_object_id": 1,
+    "original_PIN": "6913-674-230"
+  },
+  "entries": [
+    {
+      "id": "greenwood-native-parcel-1-20261013",
+      "title": "Original Greenwood parcel OBJECTID 1",
+      "kind": "vector",
+      "uri": "https://www.greenwoodsc.gov/arcgis/rest/services/Operational_Layers/Parcels_Search_and_Select/MapServer/0",
+      "vintage": "Original county query captured 2026-10-13T01:16:41.587Z",
+      "path": "greenwood-native-feature.json",
+      "sha256": "e4fd893f7ab655d1a9fd8e2944d9122a7786abb26d55ec85310b04ed39f49fab",
+      "source_crs": "EPSG:3361",
+      "id_field": "PIN",
+      "label_field": "PIN",
+      "metadata": {
+        "original_oid_field": "OBJECTID",
+        "original_county": "Greenwood",
+        "original_provider": "greenwood-county-parcels-search-select",
+        "original_source_carrier": "F0C8NA49K46",
+        "receiving_role": "Actual original source geometry and typed parcel selection"
+      },
+      "companions": [
+        {
+          "path": "capture.json",
+          "sha256": "be7c4d7c7f26a0ed7fad83e7b1aee81743bd6687f9963dece63e9b4ffd88142f"
+        }
+      ]
+    }
+  ]
+}

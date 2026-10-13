@@ -1,0 +1,14 @@
+source_row,lulc_label,load_n,eff_n,crit_len_n,load_p,eff_p,crit_len_p,usle_c,usle_p,proportion_subsurface_n
+water,Water,0,0,0,0,0,0,0,1,0
+developed-very-low,"Developed, very low imperviousness",2.6,0.1,30,0.18,0.05,30,0.15,1,0
+developed-low,"Developed, low imperviousness",4.97,0.09,30,0.53,0.05,30,0.12,1,0
+developed-medium,"Developed, medium imperviousness",7.43,0.085,30,1.35,0.05,30,0.09,1,0
+developed-high,"Developed, high imperviousness",12.76,0.08,30,4.85,0.05,30,0.05,1,0
+developed-very-high,"Developed, very high imperviousness",14.95,0.07,30,4.85,0.05,30,0.001,1,0
+barren,Barren,1,0.05,30,0.1,0.05,30,0.29,1,0
+deciduous-mixed,Deciduous/Mixed Forest,2.1,0.84,30,0.286,0.8,30,0.002,1,0
+evergreen,Evergreen Forest,2.38,0.8,30,0.298,0.8,30,0.002,1,0
+shrub-herbaceous,Shrubland/Herbaceous,3,0.65,30,0.15,0.4,30,0.04,1,0
+hay-pasture,Hay/Pasture,6.28,0.1,30,1.35,0.25,30,0.07,1,0
+cultivated,Cultivated crop,12.42,0.25,30,2.21,0.25,30,0.17,1,0
+woody-wetland,Woody wetlands,1.3,0.7,30,0.07,0.8,30,0.001,1,0

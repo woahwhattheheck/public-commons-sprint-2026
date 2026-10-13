@@ -1,0 +1,571 @@
+{
+  "schema": "upstate.sources/v1",
+  "title": "Eighteenmile stream calendar and high-flow coverage",
+  "captured_at": "2026-10-13",
+  "scope": {
+    "results": 589,
+    "activities": 153,
+    "sampling_dates": 106,
+    "gauge_days": 2192,
+    "extreme_episodes": 65,
+    "unsampled_extreme_episodes": 58
+  },
+  "entries": [
+    {
+      "id": "eighteenmile-stream-activity-flow",
+      "title": "activity flow.csv",
+      "kind": "table",
+      "role": "observed_context_analysis",
+      "path": "activity-flow.csv",
+      "bytes": 115732,
+      "sha256": "7b7acb8c3a08a64ef2f56dbb0376d7aa33cdc656342711040021a6952db3a21e",
+      "uri": "https://github.com/woahwhattheheck/public-commons-sprint-2026/blob/main/opportunities/upstate_forever_2026/source/eighteenmile-stream-nutrients-20261013/flow-analysis/activity-flow.csv",
+      "vintage": "Original samples/daily flow 2020–2025; retained 2026-10-13",
+      "metadata": {
+        "schema": "upstate.stream-flow-coverage/v1",
+        "stations": 4,
+        "activities": 153,
+        "original_results": 589,
+        "gauge": "02186702",
+        "flow_role": "regional_daily_context"
+      },
+      "companions": [
+        {
+          "path": "input-manifest.json",
+          "bytes": 6447,
+          "sha256": "14ebc9403b179493438f6413c4e63d91f708ee1f605ad200bfe550d71f9e0707"
+        },
+        {
+          "path": "README.md",
+          "bytes": 13711,
+          "sha256": "55bacd2064788179dab3be93c6fe9e5687e98a8cbc094ac8217192ba2358b2c3"
+        }
+      ]
+    },
+    {
+      "id": "eighteenmile-stream-nutrient-flow",
+      "title": "Original stream measurements with regional flow context",
+      "kind": "table",
+      "role": "original_point_measurements",
+      "path": "nutrient-flow.csv",
+      "bytes": 368719,
+      "sha256": "c88cc19c675b5ead6a8d4175b8984bb34ee089f9aebb2b2dc5047eb95ae23b92",
+      "uri": "https://github.com/woahwhattheheck/public-commons-sprint-2026/blob/main/opportunities/upstate_forever_2026/source/eighteenmile-stream-nutrients-20261013/flow-analysis/nutrient-flow.csv",
+      "vintage": "Original samples/daily flow 2020–2025; retained 2026-10-13",
+      "metadata": {
+        "schema": "upstate.stream-flow-coverage/v1",
+        "stations": 4,
+        "activities": 153,
+        "original_results": 589,
+        "gauge": "02186702",
+        "flow_role": "regional_daily_context"
+      },
+      "companions": [
+        {
+          "path": "input-manifest.json",
+          "bytes": 6447,
+          "sha256": "14ebc9403b179493438f6413c4e63d91f708ee1f605ad200bfe550d71f9e0707"
+        },
+        {
+          "path": "README.md",
+          "bytes": 13711,
+          "sha256": "55bacd2064788179dab3be93c6fe9e5687e98a8cbc094ac8217192ba2358b2c3"
+        }
+      ]
+    },
+    {
+      "id": "eighteenmile-stream-nitrogen-components",
+      "title": "Same-activity nitrogen component diagnostic",
+      "kind": "table",
+      "role": "derived_source_component_diagnostic",
+      "path": "nitrogen-components.csv",
+      "bytes": 51672,
+      "sha256": "e94474a10e7dc0e39a711c5439b415002b39d6196a9674ffec4d48806a6f6c48",
+      "uri": "https://github.com/woahwhattheheck/public-commons-sprint-2026/blob/main/opportunities/upstate_forever_2026/source/eighteenmile-stream-nutrients-20261013/flow-analysis/nitrogen-components.csv",
+      "vintage": "Original samples/daily flow 2020–2025; retained 2026-10-13",
+      "metadata": {
+        "schema": "upstate.stream-flow-coverage/v1",
+        "stations": 4,
+        "activities": 153,
+        "original_results": 589,
+        "gauge": "02186702",
+        "flow_role": "regional_daily_context"
+      },
+      "companions": [
+        {
+          "path": "input-manifest.json",
+          "bytes": 6447,
+          "sha256": "14ebc9403b179493438f6413c4e63d91f708ee1f605ad200bfe550d71f9e0707"
+        },
+        {
+          "path": "README.md",
+          "bytes": 13711,
+          "sha256": "55bacd2064788179dab3be93c6fe9e5687e98a8cbc094ac8217192ba2358b2c3"
+        }
+      ]
+    },
+    {
+      "id": "eighteenmile-stream-component-consistency",
+      "title": "component consistency.csv",
+      "kind": "table",
+      "role": "observed_context_analysis",
+      "path": "component-consistency.csv",
+      "bytes": 3383,
+      "sha256": "a1b0fd31cbdb3823d4c699b7b50949be4aef6cb8e66926b67ac6adbc772ae09d",
+      "uri": "https://github.com/woahwhattheheck/public-commons-sprint-2026/blob/main/opportunities/upstate_forever_2026/source/eighteenmile-stream-nutrients-20261013/flow-analysis/component-consistency.csv",
+      "vintage": "Original samples/daily flow 2020–2025; retained 2026-10-13",
+      "metadata": {
+        "schema": "upstate.stream-flow-coverage/v1",
+        "stations": 4,
+        "activities": 153,
+        "original_results": 589,
+        "gauge": "02186702",
+        "flow_role": "regional_daily_context"
+      },
+      "companions": [
+        {
+          "path": "input-manifest.json",
+          "bytes": 6447,
+          "sha256": "14ebc9403b179493438f6413c4e63d91f708ee1f605ad200bfe550d71f9e0707"
+        },
+        {
+          "path": "README.md",
+          "bytes": 13711,
+          "sha256": "55bacd2064788179dab3be93c6fe9e5687e98a8cbc094ac8217192ba2358b2c3"
+        }
+      ]
+    },
+    {
+      "id": "eighteenmile-stream-network-year-flow-coverage",
+      "title": "network year flow coverage.csv",
+      "kind": "table",
+      "role": "observed_context_analysis",
+      "path": "network-year-flow-coverage.csv",
+      "bytes": 1421,
+      "sha256": "987a960c15b9659af3643c7962c9e239ef9371712fd1ceb23c4714f6b20bf967",
+      "uri": "https://github.com/woahwhattheheck/public-commons-sprint-2026/blob/main/opportunities/upstate_forever_2026/source/eighteenmile-stream-nutrients-20261013/flow-analysis/network-year-flow-coverage.csv",
+      "vintage": "Original samples/daily flow 2020–2025; retained 2026-10-13",
+      "metadata": {
+        "schema": "upstate.stream-flow-coverage/v1",
+        "stations": 4,
+        "activities": 153,
+        "original_results": 589,
+        "gauge": "02186702",
+        "flow_role": "regional_daily_context"
+      },
+      "companions": [
+        {
+          "path": "input-manifest.json",
+          "bytes": 6447,
+          "sha256": "14ebc9403b179493438f6413c4e63d91f708ee1f605ad200bfe550d71f9e0707"
+        },
+        {
+          "path": "README.md",
+          "bytes": 13711,
+          "sha256": "55bacd2064788179dab3be93c6fe9e5687e98a8cbc094ac8217192ba2358b2c3"
+        }
+      ]
+    },
+    {
+      "id": "eighteenmile-stream-station-year-flow-coverage",
+      "title": "station year flow coverage.csv",
+      "kind": "table",
+      "role": "observed_context_analysis",
+      "path": "station-year-flow-coverage.csv",
+      "bytes": 3762,
+      "sha256": "4d4f1b8dab0bc1ac9ab9d68a9626dfc6f6e41cb0e1bc0cefd9bcb75ef7773716",
+      "uri": "https://github.com/woahwhattheheck/public-commons-sprint-2026/blob/main/opportunities/upstate_forever_2026/source/eighteenmile-stream-nutrients-20261013/flow-analysis/station-year-flow-coverage.csv",
+      "vintage": "Original samples/daily flow 2020–2025; retained 2026-10-13",
+      "metadata": {
+        "schema": "upstate.stream-flow-coverage/v1",
+        "stations": 4,
+        "activities": 153,
+        "original_results": 589,
+        "gauge": "02186702",
+        "flow_role": "regional_daily_context"
+      },
+      "companions": [
+        {
+          "path": "input-manifest.json",
+          "bytes": 6447,
+          "sha256": "14ebc9403b179493438f6413c4e63d91f708ee1f605ad200bfe550d71f9e0707"
+        },
+        {
+          "path": "README.md",
+          "bytes": 13711,
+          "sha256": "55bacd2064788179dab3be93c6fe9e5687e98a8cbc094ac8217192ba2358b2c3"
+        }
+      ]
+    },
+    {
+      "id": "eighteenmile-stream-monthly-flow-coverage",
+      "title": "monthly flow coverage.csv",
+      "kind": "table",
+      "role": "observed_context_analysis",
+      "path": "monthly-flow-coverage.csv",
+      "bytes": 44734,
+      "sha256": "b1b81a1ca070a470b886f4dd806ea22153e3641b93c9e2a49e35605029001f55",
+      "uri": "https://github.com/woahwhattheheck/public-commons-sprint-2026/blob/main/opportunities/upstate_forever_2026/source/eighteenmile-stream-nutrients-20261013/flow-analysis/monthly-flow-coverage.csv",
+      "vintage": "Original samples/daily flow 2020–2025; retained 2026-10-13",
+      "metadata": {
+        "schema": "upstate.stream-flow-coverage/v1",
+        "stations": 4,
+        "activities": 153,
+        "original_results": 589,
+        "gauge": "02186702",
+        "flow_role": "regional_daily_context"
+      },
+      "companions": [
+        {
+          "path": "input-manifest.json",
+          "bytes": 6447,
+          "sha256": "14ebc9403b179493438f6413c4e63d91f708ee1f605ad200bfe550d71f9e0707"
+        },
+        {
+          "path": "README.md",
+          "bytes": 13711,
+          "sha256": "55bacd2064788179dab3be93c6fe9e5687e98a8cbc094ac8217192ba2358b2c3"
+        }
+      ]
+    },
+    {
+      "id": "eighteenmile-stream-flow-stratum-concentrations",
+      "title": "flow stratum concentrations.csv",
+      "kind": "table",
+      "role": "observed_context_analysis",
+      "path": "flow-stratum-concentrations.csv",
+      "bytes": 7140,
+      "sha256": "a6988b834171bdf7be727542982d258fcc586bcbe538a62f3be891455410eae4",
+      "uri": "https://github.com/woahwhattheheck/public-commons-sprint-2026/blob/main/opportunities/upstate_forever_2026/source/eighteenmile-stream-nutrients-20261013/flow-analysis/flow-stratum-concentrations.csv",
+      "vintage": "Original samples/daily flow 2020–2025; retained 2026-10-13",
+      "metadata": {
+        "schema": "upstate.stream-flow-coverage/v1",
+        "stations": 4,
+        "activities": 153,
+        "original_results": 589,
+        "gauge": "02186702",
+        "flow_role": "regional_daily_context"
+      },
+      "companions": [
+        {
+          "path": "input-manifest.json",
+          "bytes": 6447,
+          "sha256": "14ebc9403b179493438f6413c4e63d91f708ee1f605ad200bfe550d71f9e0707"
+        },
+        {
+          "path": "README.md",
+          "bytes": 13711,
+          "sha256": "55bacd2064788179dab3be93c6fe9e5687e98a8cbc094ac8217192ba2358b2c3"
+        }
+      ]
+    },
+    {
+      "id": "eighteenmile-stream-high-flow-episodes",
+      "title": "high flow episodes.csv",
+      "kind": "table",
+      "role": "observed_context_analysis",
+      "path": "high-flow-episodes.csv",
+      "bytes": 27241,
+      "sha256": "f54d358774504e8ac8462ca3b1e8394da026908f888c4d297fcad3467afea5ab",
+      "uri": "https://github.com/woahwhattheheck/public-commons-sprint-2026/blob/main/opportunities/upstate_forever_2026/source/eighteenmile-stream-nutrients-20261013/flow-analysis/high-flow-episodes.csv",
+      "vintage": "Original samples/daily flow 2020–2025; retained 2026-10-13",
+      "metadata": {
+        "schema": "upstate.stream-flow-coverage/v1",
+        "stations": 4,
+        "activities": 153,
+        "original_results": 589,
+        "gauge": "02186702",
+        "flow_role": "regional_daily_context"
+      },
+      "companions": [
+        {
+          "path": "input-manifest.json",
+          "bytes": 6447,
+          "sha256": "14ebc9403b179493438f6413c4e63d91f708ee1f605ad200bfe550d71f9e0707"
+        },
+        {
+          "path": "README.md",
+          "bytes": 13711,
+          "sha256": "55bacd2064788179dab3be93c6fe9e5687e98a8cbc094ac8217192ba2358b2c3"
+        }
+      ]
+    },
+    {
+      "id": "eighteenmile-stream-flow-thresholds",
+      "title": "flow thresholds.csv",
+      "kind": "table",
+      "role": "observed_context_analysis",
+      "path": "flow-thresholds.csv",
+      "bytes": 467,
+      "sha256": "bd370ee458fd03b8bb5c1d3ce7edbd45e8806dee319ecf37f1553093a98c7a44",
+      "uri": "https://github.com/woahwhattheheck/public-commons-sprint-2026/blob/main/opportunities/upstate_forever_2026/source/eighteenmile-stream-nutrients-20261013/flow-analysis/flow-thresholds.csv",
+      "vintage": "Original samples/daily flow 2020–2025; retained 2026-10-13",
+      "metadata": {
+        "schema": "upstate.stream-flow-coverage/v1",
+        "stations": 4,
+        "activities": 153,
+        "original_results": 589,
+        "gauge": "02186702",
+        "flow_role": "regional_daily_context"
+      },
+      "companions": [
+        {
+          "path": "input-manifest.json",
+          "bytes": 6447,
+          "sha256": "14ebc9403b179493438f6413c4e63d91f708ee1f605ad200bfe550d71f9e0707"
+        },
+        {
+          "path": "README.md",
+          "bytes": 13711,
+          "sha256": "55bacd2064788179dab3be93c6fe9e5687e98a8cbc094ac8217192ba2358b2c3"
+        }
+      ]
+    },
+    {
+      "id": "eighteenmile-stream-analysis-summary",
+      "title": "analysis summary.json",
+      "kind": "document",
+      "role": "observed_context_analysis",
+      "path": "analysis-summary.json",
+      "bytes": 7980,
+      "sha256": "fa642b714aab1c132e8e55c9eedfa87de9f10193842d3dd97b34d1470eb07925",
+      "uri": "https://github.com/woahwhattheheck/public-commons-sprint-2026/blob/main/opportunities/upstate_forever_2026/source/eighteenmile-stream-nutrients-20261013/flow-analysis/analysis-summary.json",
+      "vintage": "Original samples/daily flow 2020–2025; retained 2026-10-13",
+      "metadata": {
+        "schema": "upstate.stream-flow-coverage/v1",
+        "stations": 4,
+        "activities": 153,
+        "original_results": 589,
+        "gauge": "02186702",
+        "flow_role": "regional_daily_context"
+      },
+      "companions": []
+    },
+    {
+      "id": "eighteenmile-stream-flow-duration",
+      "title": "flow duration.svg",
+      "kind": "document",
+      "role": "observed_context_analysis",
+      "path": "flow-duration.svg",
+      "bytes": 47236,
+      "sha256": "04ed5dc9a09afda5650a9dc7bd6cf693c3d47479051d4d10e39f72e066116fdf",
+      "uri": "https://github.com/woahwhattheheck/public-commons-sprint-2026/blob/main/opportunities/upstate_forever_2026/source/eighteenmile-stream-nutrients-20261013/flow-analysis/flow-duration.svg",
+      "vintage": "Original samples/daily flow 2020–2025; retained 2026-10-13",
+      "metadata": {
+        "schema": "upstate.stream-flow-coverage/v1",
+        "stations": 4,
+        "activities": 153,
+        "original_results": 589,
+        "gauge": "02186702",
+        "flow_role": "regional_daily_context"
+      },
+      "companions": []
+    },
+    {
+      "id": "eighteenmile-stream-report",
+      "title": "Eighteenmile sampling calendar and high-flow coverage",
+      "kind": "document",
+      "role": "observed_water_quality_report",
+      "path": "report.html",
+      "bytes": 69261,
+      "sha256": "1b338fe2e488fed6f32426d265214b3c23ab07ef788159ccbccb6de06f16fd11",
+      "uri": "https://github.com/woahwhattheheck/public-commons-sprint-2026/blob/main/opportunities/upstate_forever_2026/source/eighteenmile-stream-nutrients-20261013/flow-analysis/report.html",
+      "vintage": "Original samples/daily flow 2020–2025; retained 2026-10-13",
+      "metadata": {
+        "schema": "upstate.stream-flow-coverage/v1",
+        "stations": 4,
+        "activities": 153,
+        "original_results": 589,
+        "gauge": "02186702",
+        "flow_role": "regional_daily_context"
+      },
+      "companions": [
+        {
+          "path": "activity-flow.csv",
+          "bytes": 115732,
+          "sha256": "7b7acb8c3a08a64ef2f56dbb0376d7aa33cdc656342711040021a6952db3a21e"
+        },
+        {
+          "path": "nutrient-flow.csv",
+          "bytes": 368719,
+          "sha256": "c88cc19c675b5ead6a8d4175b8984bb34ee089f9aebb2b2dc5047eb95ae23b92"
+        },
+        {
+          "path": "nitrogen-components.csv",
+          "bytes": 51672,
+          "sha256": "e94474a10e7dc0e39a711c5439b415002b39d6196a9674ffec4d48806a6f6c48"
+        },
+        {
+          "path": "component-consistency.csv",
+          "bytes": 3383,
+          "sha256": "a1b0fd31cbdb3823d4c699b7b50949be4aef6cb8e66926b67ac6adbc772ae09d"
+        },
+        {
+          "path": "network-year-flow-coverage.csv",
+          "bytes": 1421,
+          "sha256": "987a960c15b9659af3643c7962c9e239ef9371712fd1ceb23c4714f6b20bf967"
+        },
+        {
+          "path": "station-year-flow-coverage.csv",
+          "bytes": 3762,
+          "sha256": "4d4f1b8dab0bc1ac9ab9d68a9626dfc6f6e41cb0e1bc0cefd9bcb75ef7773716"
+        },
+        {
+          "path": "monthly-flow-coverage.csv",
+          "bytes": 44734,
+          "sha256": "b1b81a1ca070a470b886f4dd806ea22153e3641b93c9e2a49e35605029001f55"
+        },
+        {
+          "path": "flow-stratum-concentrations.csv",
+          "bytes": 7140,
+          "sha256": "a6988b834171bdf7be727542982d258fcc586bcbe538a62f3be891455410eae4"
+        },
+        {
+          "path": "high-flow-episodes.csv",
+          "bytes": 27241,
+          "sha256": "f54d358774504e8ac8462ca3b1e8394da026908f888c4d297fcad3467afea5ab"
+        },
+        {
+          "path": "flow-thresholds.csv",
+          "bytes": 467,
+          "sha256": "bd370ee458fd03b8bb5c1d3ce7edbd45e8806dee319ecf37f1553093a98c7a44"
+        },
+        {
+          "path": "analysis-summary.json",
+          "bytes": 7980,
+          "sha256": "fa642b714aab1c132e8e55c9eedfa87de9f10193842d3dd97b34d1470eb07925"
+        },
+        {
+          "path": "flow-duration.svg",
+          "bytes": 47236,
+          "sha256": "04ed5dc9a09afda5650a9dc7bd6cf693c3d47479051d4d10e39f72e066116fdf"
+        },
+        {
+          "path": "analyze-stream-flow.mjs",
+          "bytes": 29802,
+          "sha256": "72cb4506ccc6c1509bbc7c0376e18d190bca1ae548de1fc42a55d32cc6942b76"
+        },
+        {
+          "path": "input-manifest.json",
+          "bytes": 6447,
+          "sha256": "14ebc9403b179493438f6413c4e63d91f708ee1f605ad200bfe550d71f9e0707"
+        },
+        {
+          "path": "README.md",
+          "bytes": 13711,
+          "sha256": "55bacd2064788179dab3be93c6fe9e5687e98a8cbc094ac8217192ba2358b2c3"
+        },
+        {
+          "path": "import_into_workspace.py",
+          "bytes": 8291,
+          "sha256": "adc64ba3278f73f5f94509d8aaa87f5319dc11fd815c84368be93687bce96256"
+        },
+        {
+          "path": "render_flow_figures.py",
+          "bytes": 5733,
+          "sha256": "24083efe6c385543642c221df971893760cd4bc488040e69c497a0c115abc547"
+        }
+      ]
+    },
+    {
+      "id": "eighteenmile-stream-analyze-stream-flow",
+      "title": "analyze stream flow.mjs",
+      "kind": "document",
+      "role": "observed_context_analysis",
+      "path": "analyze-stream-flow.mjs",
+      "bytes": 29802,
+      "sha256": "72cb4506ccc6c1509bbc7c0376e18d190bca1ae548de1fc42a55d32cc6942b76",
+      "uri": "https://github.com/woahwhattheheck/public-commons-sprint-2026/blob/main/opportunities/upstate_forever_2026/source/eighteenmile-stream-nutrients-20261013/flow-analysis/analyze-stream-flow.mjs",
+      "vintage": "Original samples/daily flow 2020–2025; retained 2026-10-13",
+      "metadata": {
+        "schema": "upstate.stream-flow-coverage/v1",
+        "stations": 4,
+        "activities": 153,
+        "original_results": 589,
+        "gauge": "02186702",
+        "flow_role": "regional_daily_context"
+      },
+      "companions": []
+    },
+    {
+      "id": "eighteenmile-stream-input-manifest",
+      "title": "input manifest.json",
+      "kind": "document",
+      "role": "observed_context_analysis",
+      "path": "input-manifest.json",
+      "bytes": 6447,
+      "sha256": "14ebc9403b179493438f6413c4e63d91f708ee1f605ad200bfe550d71f9e0707",
+      "uri": "https://github.com/woahwhattheheck/public-commons-sprint-2026/blob/main/opportunities/upstate_forever_2026/source/eighteenmile-stream-nutrients-20261013/flow-analysis/input-manifest.json",
+      "vintage": "Original samples/daily flow 2020–2025; retained 2026-10-13",
+      "metadata": {
+        "schema": "upstate.stream-flow-coverage/v1",
+        "stations": 4,
+        "activities": 153,
+        "original_results": 589,
+        "gauge": "02186702",
+        "flow_role": "regional_daily_context"
+      },
+      "companions": []
+    },
+    {
+      "id": "eighteenmile-stream-readme",
+      "title": "README.md",
+      "kind": "document",
+      "role": "observed_context_analysis",
+      "path": "README.md",
+      "bytes": 13711,
+      "sha256": "55bacd2064788179dab3be93c6fe9e5687e98a8cbc094ac8217192ba2358b2c3",
+      "uri": "https://github.com/woahwhattheheck/public-commons-sprint-2026/blob/main/opportunities/upstate_forever_2026/source/eighteenmile-stream-nutrients-20261013/flow-analysis/README.md",
+      "vintage": "Original samples/daily flow 2020–2025; retained 2026-10-13",
+      "metadata": {
+        "schema": "upstate.stream-flow-coverage/v1",
+        "stations": 4,
+        "activities": 153,
+        "original_results": 589,
+        "gauge": "02186702",
+        "flow_role": "regional_daily_context"
+      },
+      "companions": []
+    },
+    {
+      "id": "eighteenmile-stream-import-into-workspace",
+      "title": "import_into_workspace.py",
+      "kind": "document",
+      "role": "observed_context_analysis",
+      "path": "import_into_workspace.py",
+      "bytes": 8291,
+      "sha256": "adc64ba3278f73f5f94509d8aaa87f5319dc11fd815c84368be93687bce96256",
+      "uri": "https://github.com/woahwhattheheck/public-commons-sprint-2026/blob/main/opportunities/upstate_forever_2026/source/eighteenmile-stream-nutrients-20261013/flow-analysis/import_into_workspace.py",
+      "vintage": "Original samples/daily flow 2020–2025; retained 2026-10-13",
+      "metadata": {
+        "schema": "upstate.stream-flow-coverage/v1",
+        "stations": 4,
+        "activities": 153,
+        "original_results": 589,
+        "gauge": "02186702",
+        "flow_role": "regional_daily_context"
+      },
+      "companions": []
+    },
+    {
+      "id": "eighteenmile-stream-render-flow-figures",
+      "title": "render_flow_figures.py",
+      "kind": "document",
+      "role": "observed_context_analysis",
+      "path": "render_flow_figures.py",
+      "bytes": 5733,
+      "sha256": "24083efe6c385543642c221df971893760cd4bc488040e69c497a0c115abc547",
+      "uri": "https://github.com/woahwhattheheck/public-commons-sprint-2026/blob/main/opportunities/upstate_forever_2026/source/eighteenmile-stream-nutrients-20261013/flow-analysis/render_flow_figures.py",
+      "vintage": "Original samples/daily flow 2020–2025; retained 2026-10-13",
+      "metadata": {
+        "schema": "upstate.stream-flow-coverage/v1",
+        "stations": 4,
+        "activities": 153,
+        "original_results": 589,
+        "gauge": "02186702",
+        "flow_role": "regional_daily_context"
+      },
+      "companions": []
+    }
+  ]
+}

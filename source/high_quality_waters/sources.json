@@ -1,0 +1,59 @@
+{
+  "schema": "upstate.sources/v1",
+  "title": "SC current classified-water regulatory source tables",
+  "captured_at": "2026-10-12",
+  "scope": {
+    "reporting": "Upper Savannah; spatial membership uses retained reporting and HUC geometry"
+  },
+  "notes": [
+    "Selected structured rows are derivative transcriptions of the complete captured text; original regulatory PDF bytes are retained by the native capture command.",
+    "The registry contains current classes and a separately labeled proposed local revision."
+  ],
+  "entries": [
+    {
+      "id": "sc-r61-69-current-reach-registry",
+      "title": "SC R.61-69 current selected reach records",
+      "kind": "table",
+      "path": "r61-69-current.selected-reaches.json",
+      "uri": "https://des.sc.gov/sites/des/files/Library/Regulations/R.61-69.pdf",
+      "sha256": "a55388d8edfceb587d7d37b5e9a20f43a1f44d37f6ecd70001806528bbc767f1",
+      "bytes": 60479,
+      "vintage": "2023 state publication; CWA effective 2023-12-12",
+      "observed_at": "2026-10-12",
+      "role": "CURRENT_WATER_CLASSIFICATIONS",
+      "source_format": "JSON",
+      "representation": "Derived regulatory transcription",
+      "designation_status": "current"
+    },
+    {
+      "id": "sc-r61-69-current-reaches-csv",
+      "title": "SC R.61-69 current selected reach records",
+      "kind": "table",
+      "path": "r61-69-current.selected-reaches.csv",
+      "uri": "https://des.sc.gov/sites/des/files/Library/Regulations/R.61-69.pdf",
+      "sha256": "95a8c8d9700f92a291466f7952b436a08a0d3ec9fa018b731812786ed8805b58",
+      "bytes": 15658,
+      "vintage": "2023 state publication; CWA effective 2023-12-12",
+      "observed_at": "2026-10-12",
+      "role": "CURRENT_WATER_CLASSIFICATIONS",
+      "source_format": "CSV",
+      "representation": "Derived regulatory transcription",
+      "designation_status": "current"
+    },
+    {
+      "id": "sc-r61-69-current-complete-text",
+      "title": "SC R.61-69 complete source-indexed regulation text",
+      "kind": "document",
+      "path": "r61-69-current.fulltext.txt",
+      "uri": "https://des.sc.gov/sites/des/files/Library/Regulations/R.61-69.pdf",
+      "sha256": "4488edcba67f6054ac553530e70fb4f5f7064a05452757de560e62ba09f964d2",
+      "bytes": 100308,
+      "vintage": "2023 state publication; CWA effective 2023-12-12",
+      "observed_at": "2026-10-12",
+      "role": "CURRENT_WATER_CLASSIFICATIONS",
+      "source_format": "Source-indexed extracted PDF text",
+      "representation": "Derived regulatory transcription",
+      "designation_status": "current"
+    }
+  ]
+}

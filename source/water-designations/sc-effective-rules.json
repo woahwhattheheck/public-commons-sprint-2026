@@ -1,0 +1,288 @@
+{
+  "schema": "upstate.designation-rules/v1",
+  "revision": "2026-10-13-crosswalk-1.2.3",
+  "jurisdiction": {
+    "country": "US",
+    "state": "SC"
+  },
+  "effective_edition": {
+    "id": "sc-r61-69-2023",
+    "status": "effective",
+    "state_publication": "2023-05-26",
+    "epa_approval": "2023-12-12",
+    "source_ids": [
+      "sc_des_standards",
+      "sc_r61_69",
+      "sc_r61_68"
+    ],
+    "accessed": "2026-10-12",
+    "associated_standards_regulation": "R.61-68",
+    "associated_standards_edition_id": "sc-r61-68-2025"
+  },
+  "associated_standards_edition": {
+    "id": "sc-r61-68-2025",
+    "regulation": "R.61-68",
+    "status": "effective",
+    "state_publication": "2025-05-23",
+    "state_register_document": "5333",
+    "state_register_volume": 49,
+    "state_register_issue": 5,
+    "source_ids": [
+      "sc_r61_68"
+    ],
+    "accessed": "2026-10-13"
+  },
+  "class_codes": [
+    "ONRW",
+    "ORW",
+    "SFH",
+    "TN",
+    "TPGT",
+    "TPT",
+    "FW",
+    "SA",
+    "SB"
+  ],
+  "numeric_criteria_basis": {
+    "ONRW": "previous_class",
+    "ORW": "previous_class",
+    "TPT": "FW"
+  },
+  "rules": [
+    {
+      "id": "R.61-69.A",
+      "role": "site_specific_extent",
+      "meaning": "Named site-specific standards apply to the named water unless an extension is stated.",
+      "source_id": "sc_r61_69",
+      "section": "A"
+    },
+    {
+      "id": "R.61-69.B",
+      "role": "unlisted_tributary",
+      "meaning": "Unlisted tributaries receive the receiving stream's use class and class numeric standards; named site-specific numeric standards are excluded.",
+      "source_id": "sc_r61_69",
+      "section": "B",
+      "implementation_scope": "nontidal SC water-reach nodes explicitly recorded as unlisted"
+    },
+    {
+      "id": "R.61-69.E-F",
+      "role": "classification_notation",
+      "meaning": "Parentheses on ONRW and ORW identify a previous class; sp marks site-specific standards.",
+      "source_id": "sc_r61_69",
+      "section": "E-F"
+    },
+    {
+      "id": "R.61-68.G.2",
+      "role": "receiving_water_context",
+      "meaning": "Tributary water quality protects the standards of higher-class receiving waters.",
+      "source_id": "sc_r61_68",
+      "section": "G.2"
+    },
+    {
+      "id": "R.61-68.G.4-G.6",
+      "role": "resource_numeric_class",
+      "meaning": "ONRW and ORW retain numeric and narrative criteria from the prior classification.",
+      "source_id": "sc_r61_68",
+      "section": "G.4 and G.6"
+    },
+    {
+      "id": "R.61-68.G.8",
+      "role": "trout_numeric_class",
+      "meaning": "TPT uses freshwater standards; the trout classes retain separate designated-use meanings.",
+      "source_id": "sc_r61_68",
+      "section": "G.8"
+    }
+  ],
+  "proposed_editions": [
+    {
+      "id": "sc-r61-69-proposed-2026-5474",
+      "status": "proposed",
+      "publication": "2026-09-25",
+      "comment_closes": "2026-10-26",
+      "source_id": "sc_des_standards",
+      "default_context_selected": false
+    }
+  ],
+  "source_roles": {
+    "water_classification": {
+      "source_uri": "https://gis.des.sc.gov/gisserver/rest/services/water/SCHydroClass/MapServer/2",
+      "discovery_uri": "https://gis.des.sc.gov/stormwater/js/a_settings.js",
+      "published_status": "provisional",
+      "source_layer_id": 2,
+      "feature_id_field": "OBJECTID",
+      "native_class_field": "H2OCLASS",
+      "native_class_field_width": 6,
+      "native_crs": "EPSG:3857",
+      "publisher_huc_field": "HUC_12",
+      "publisher_huc_is_model_membership": false,
+      "source_geometry_length_field": "Shape_Length",
+      "analytical_length_crs": "EPSG:26917",
+      "dataset_edition": null,
+      "capture_date": "2026-10-12",
+      "source_id": "scdes-classified-streams-upper-savannah-20261012",
+      "capture_filter": "(HUC_12 LIKE '03060101%' OR HUC_12 LIKE '03060102%' OR HUC_12 LIKE '03060103%') AND H2OCLASS IN ('ORW','ONRW','TN','TPGT','TPT')",
+      "captured_feature_count": 1886,
+      "captured_class_counts": {
+        "ORW": 1040,
+        "TN": 247,
+        "TPGT": 599
+      },
+      "metadata_sha256": "6b2e4b063d9e4af73c724853c7097fd0bf960be0d97f89493d9cca866d9e54c4",
+      "field_dictionary_source": "source/water_context/20261012/source-dictionary.json",
+      "field_dictionary_sha256": "d6f6f883dd90f091747d82ed4cc6bdbdcadb214d50c86769cda781b899c2296b",
+      "interpretation": "The active map layer retains its provisional publisher status beside the adopted named-reach registry."
+    },
+    "surface_intake": {
+      "source_uri": "https://gis.des.sc.gov/gisserver/rest/services/water/Public_Water_Supply/MapServer/0",
+      "native_crs": "EPSG:26917",
+      "geometry_role": "intake_location"
+    },
+    "surface_protection_area": {
+      "source_uri": "https://gis.des.sc.gov/gisserver/rest/services/water/Public_Water_Supply/MapServer/2",
+      "native_crs": "EPSG:26917",
+      "geometry_role": "published_surface_source_water_protection_area",
+      "upstream_published_distance_miles": 15
+    },
+    "groundwater_protection_zone": {
+      "source_uri": "https://gis.des.sc.gov/gisserver/rest/services/water/Public_Water_Supply/MapServer/3",
+      "native_crs": "EPSG:26917",
+      "geometry_role": "groundwater_travel_time_zone",
+      "published_travel_time_years": [
+        1,
+        5,
+        10
+      ]
+    },
+    "water_classification_previous_capture": {
+      "source_uri": "https://gis.des.sc.gov/gisserver/rest/services/water/Water_Classifications/MapServer/0",
+      "published_status": "provisional",
+      "source_layer_id": 0,
+      "feature_id_field": "OBJECTID_1",
+      "native_class_field": "H2OCLASS",
+      "native_class_field_width": 6,
+      "native_crs": "EPSG:26917",
+      "interpretation": "GIS geometry and attributes are retained alongside the effective regulation crosswalk.",
+      "role": "retained_earlier_capture",
+      "same_source_identity_as_active_layer": false
+    }
+  },
+  "sources": [
+    {
+      "id": "sc_des_standards",
+      "title": "South Carolina DES water quality standards and review status",
+      "url": "https://des.sc.gov/programs/bureau-water/water-quality-standards",
+      "accessed": "2026-10-12"
+    },
+    {
+      "id": "sc_r61_69",
+      "title": "R.61-69, Classified Waters",
+      "url": "https://www.scstatehouse.gov/coderegs/Chapter%2061-69.pdf",
+      "accessed": "2026-10-12"
+    },
+    {
+      "id": "sc_r61_68",
+      "title": "R.61-68, Water Classifications and Standards",
+      "url": "https://des.sc.gov/sites/des/files/Library/Regulations/R.61-68.pdf",
+      "accessed": "2026-10-13",
+      "edition_id": "sc-r61-68-2025",
+      "state_publication": "2025-05-23",
+      "state_register_document": "5333",
+      "history_locator": "SCDES PDF page 2; South Carolina Code of Regulations PDF page 28"
+    },
+    {
+      "id": "retained_overlay_capture",
+      "title": "Original retained overlay capture contract",
+      "source_path": "source/OVERLAY_CAPTURE.md",
+      "scope": "published GIS role/field metadata supplied by existing original capture"
+    },
+    {
+      "id": "existing_crosswalk",
+      "title": "Current classified-water capture and crosswalk",
+      "source_path": "source_tools/high_quality_water_crosswalk.py",
+      "schema": "upstate.classified-water-crosswalk/v1",
+      "provenance_schema": "upstate.classified-water-crosswalk-provenance/v1",
+      "consumed_version": "1.1.0",
+      "consumed_source_sha256": "6884cac97df100627ad5dc9d105d1e54f622d253eff0f1890553610221226585"
+    },
+    {
+      "id": "active_classified_streams",
+      "title": "SCDES classified streams — Upper Savannah capture",
+      "url": "https://gis.des.sc.gov/gisserver/rest/services/water/SCHydroClass/MapServer/2",
+      "source_path": "source/water_context/20261012/source-dictionary.json",
+      "accessed": "2026-10-12"
+    }
+  ],
+  "existing_registry": {
+    "source_id": "sc-r61-69-current-reach-registry",
+    "source_path": "source/high_quality_waters/r61-69-current.selected-reaches.json",
+    "schema": "upstate.classified-water-registry/v1",
+    "record_count": 105,
+    "priority_candidate_count": 66,
+    "class_counts": {
+      "ORW": 31,
+      "FW": 39,
+      "TPGT": 12,
+      "TN": 23
+    },
+    "raw_class_counts": {
+      "ORW(FW)": 27,
+      "ORW(TPGT)": 4,
+      "FW": 39,
+      "TPGT": 12,
+      "TN": 23
+    },
+    "coverage": "Selected source records; source absence does not establish unlisted status.",
+    "sha256": "a55388d8edfceb587d7d37b5e9a20f43a1f44d37f6ecd70001806528bbc767f1"
+  },
+  "review_status": "Needs expert review",
+  "delivery_integration": {
+    "entrypoint": "source_tools/designation_crosswalk.py",
+    "source_role": "HIGH_QUALITY_WATERS",
+    "map_family": "high_quality_waters",
+    "source_schema": "upstate.sources/v1",
+    "native_id_namespace": "captured layer id + '-native'; layer_id null; original oid_field and typed value",
+    "grouping_key": "feature_id",
+    "model_huc_membership": "counted positive-dimensional huc12 crosswalk rows",
+    "mapped_resource_kind": "mapped_classified_water",
+    "named_resource_kind": "designated_water",
+    "legal_extent_relation": "explicit-binding with coextensive geometry",
+    "partial_and_candidate_relations": "retained with their original extent relation",
+    "native_resource_default_selection": "rfp_high_quality_candidate equals true",
+    "legal_resource_default_selection": "rfp_high_quality_candidate equals true",
+    "choice_fields": [
+      "source_collection_id",
+      "source_id"
+    ],
+    "selection_paths": [
+      "overlays.high_quality_waters",
+      "source_roles.HIGH_QUALITY_WATERS"
+    ],
+    "selection_merger": "prepare_delivery_selection",
+    "native_build_entrypoint": "Workspace.build_delivery",
+    "desk_source_fields": {
+      "id_field": "feature_id",
+      "class_field": "class_code",
+      "expected_source_sha256": "actual imported entry.body.sha256"
+    },
+    "desk_choice_factory": "make_water_designation_choice",
+    "desk_choice_file": "water-designation-choice.json",
+    "optional_desk_save": "--save-desk-selection calls model.water_designations.save",
+    "crosswalk_input": "Actual completed output_dir, or --crosswalk-result with original returned JSON and run_id",
+    "source_metadata_references": "Original compact per-layer references and provenance.json companion filename are retained",
+    "saved_selection_merger": "model.water_designations.apply_to_delivery, followed by the same retained overlay in source_roles.HIGH_QUALITY_WATERS",
+    "desk_source_context": [
+      "rule_profile",
+      "source_catalog",
+      "source_labels",
+      "interpretation"
+    ],
+    "saved_choice_fields": [
+      "source_collection_id",
+      "source_id",
+      "layer",
+      "selection_id",
+      "rule_reference",
+      "native_source_sha256"
+    ]
+  }
+}

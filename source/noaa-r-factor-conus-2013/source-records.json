@@ -1,0 +1,35 @@
+{
+  "schema": "upstate.noaa-original-source-records/v1",
+  "operation_id": "ECO-178D-NOAA-SOURCE-JOIN-20261013",
+  "original_operation_id": "DBC61-UPSTATE-NOAA-R-ORIGINAL-20261012",
+  "source_url": "https://coast.noaa.gov/data/digitalcoast/zip/R-Factor-CONUS.zip",
+  "metadata_url": "https://www.fisheries.noaa.gov/inport/item/48224",
+  "original_archive": {
+    "file_id": "F0C9BC7MKME",
+    "bytes": 47143128,
+    "sha256": "157bbcaa54b445f96506fb1caffda4bbaea6b28f71bc7199235705e69cd00596",
+    "permalink": "https://tokenjunkielabs.slack.com/files/U0BR9670G2H/F0C9BC7MKME/noaa-r-factor-conus-original.zip"
+  },
+  "physical_conversion": {
+    "source_units": "hundreds*ft*tonf*in/(acre*h*year)",
+    "target_units": "MJ*mm/(ha*h*year)",
+    "unit_factor": "17.02",
+    "stored_value_formula": "stored original value * original band scale * 17.02",
+    "reference": "https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.20.0/userguide/en/sdr.html#rainfall-erosivity-index-r",
+    "application": "Once in model.rasters.align_source; climate_region emits SI pixels without another top-level conversion."
+  },
+  "records": {
+    "source/noaa-r-factor-conus-2013/metadata.html": {
+      "bytes": 65357,
+      "sha256": "71c5fdb6f6aa4285fe77c48331eb4cc35789bcfdab4be0ba3560df9f4798d5be"
+    },
+    "source/noaa-r-factor-conus-2013/metadata.html.capture.json": {
+      "bytes": 491,
+      "sha256": "12b170be2ad60abaa048b6b3bdf3cffe6ce43d03a602eadac379e156cf871cb7"
+    },
+    "source/noaa-r-factor-conus-2013/source-transfer.json": {
+      "bytes": 2741,
+      "sha256": "2d35dd182aac3efc65287efe717846b88b43e993eb701d5e6e13b68c9c07ee88"
+    }
+  }
+}

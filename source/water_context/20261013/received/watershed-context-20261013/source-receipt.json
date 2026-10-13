@@ -1,0 +1,33 @@
+{
+  "operation_id": "ECO-WATERSHED13-20261013",
+  "carrier_file_id": "F0C8JV7PJUV",
+  "model_carrier_file_id": "F0C8S4K0N01",
+  "source_bank_sha256": "5d4d952292aa889cc5870591c117d52f89fecaf2a8d7bb10e1208cdfdc79f7dc",
+  "files": [
+    {
+      "path": "model/watershed_context.py",
+      "bytes": 43245,
+      "sha256": "3ef89ad3e237fb0f13b7ba410cbc347d9dcb38bf99209290c27067cbd89c5571"
+    },
+    {
+      "path": "model/watershed_context_cli.py",
+      "bytes": 394,
+      "sha256": "8390515a940f6d2cde24cc0705ad7f8688142eecfc2fa3d7bb0fc6e18e840de4"
+    },
+    {
+      "path": "model/WATERSHED_CONTEXT.md",
+      "bytes": 8182,
+      "sha256": "2e5be4ac1a9dac4ab2697894b38788cd34fc6ea3df5be4c9b586603330707fd4"
+    },
+    {
+      "path": "source/water_context/20261013/full-domain-water-context.json",
+      "bytes": 152659,
+      "sha256": "d607c93912102fbb8f28139a5d57b01b0e1886b0155ede16fc1a19d654323566"
+    },
+    {
+      "path": "source/water_context/20261013/scdes-domain217-source-coverage.json",
+      "bytes": 7043,
+      "sha256": "2ed2f1bd402437d91aa8c1544d583dd5ceaf7da7e202aed1252f1b3ea47b3bcb"
+    }
+  ]
+}

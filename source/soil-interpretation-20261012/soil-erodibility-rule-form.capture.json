@@ -1,0 +1,22 @@
+{
+  "schema": "upstate.public-post-capture/v1",
+  "url": "https://sdmdataaccess.sc.egov.usda.gov/Tabular/post.rest",
+  "method": "POST",
+  "wire_content_type": "application/x-www-form-urlencoded",
+  "request": {
+    "query": "SELECT * FROM sdvattribute WHERE attributename LIKE '%K Factor%' OR attributename LIKE '%Erodibility%'",
+    "format": "JSON+COLUMNNAME+METADATA"
+  },
+  "request_sha256": "668603680ffc65106ffc28499e4310cbdb270d12d79fc9fa629258522f3e17fa",
+  "requested_at": "2026-10-12T05:45:02.941860+00:00",
+  "status": 200,
+  "final_url": "https://sdmdataaccess.sc.egov.usda.gov/Tabular/post.rest",
+  "headers": {
+    "Date": "Mon, 12 Oct 2026 05:45:08 GMT",
+    "Content-Type": "application/json; charset=utf-8",
+    "Content-Length": "22972"
+  },
+  "observed_at": "2026-10-12T05:45:08.842832+00:00",
+  "bytes": 22972,
+  "sha256": "8c66678db4e2e1ef3806db50f9c5f29cb0d809a50501717d55f55ff2cb677b18"
+}

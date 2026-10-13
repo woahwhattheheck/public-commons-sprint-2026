@@ -362,7 +362,7 @@ The saved report and operator show each original edition reference as its own so
 
 Open the exact saved assessment context. Under **Scientific and client report**, select **Use saved assessment context in report**. The original task queue retains the operation. After it completes, **Open scientific report** opens the existing ordered scientific composer with this exact retained source. Review the source order, title and contact, preview the report, then use the composer’s normal generation and download controls. This source-only report can be published from the completed assessment or parcel context without selecting a regional model run.
 
-To retain an existing map delivery’s native runs, map settings and previously selected scientific studies, choose that saved delivery before preparing the context. **Open Maps and delivery** opens its original full selection. **Open scientific report** passes that selection’s ordered scientific source choices into the composer, where the existing draft order and nonempty title/contact remain under the operator’s control. The two buttons use the same original completed report-source task.
+To retain an existing map delivery’s native runs, map settings and previously selected scientific studies, choose that saved delivery before preparing the context. **Open Maps and delivery** opens its original full selection. **Open scientific report** restores that selection’s exact ordered scientific source choices and prepared title in the composer, retaining the operator’s contact details. It replaces the previous composer draft’s source selection. The two buttons use the same original completed report-source task.
 
 The same controls appear below an opened parcel association. **Use saved parcel and assessment context in report** includes its exact original context, parcel study, reporting boundary, parcel attributes, relationship rows and complete packages. A received parcel association keeps its original context identity and the destination context binding separately. Its retained values can be reported directly without recalculating them.
 
@@ -386,7 +386,7 @@ python -B -m model.assessment_report_context \
 
 Omit `--parcel-id` for assessment context alone. Omit `--delivery-id` for a new report selection. `--prepare-only` writes the complete recipe, source manifest and retained companion files without importing them; it cannot be combined with a selected delivery.
 
-The result includes the original context/parcel IDs, immutable report operation ID, manifest and recipe descriptors, native source collection/document IDs, exact observed-context binding and `delivery_selection`. Pass its source choices to `host.openScientificReport({workspace_key, sources, title})` for the standalone scientific composer, or pass the full selection to the existing delivery form or maintained delivery API. Its ordered source list preserves previously selected studies and adds this exact document once; the delivery binds the resulting full selection before generating its normal reports.
+The result includes the original context/parcel IDs, immutable report operation ID, manifest and recipe descriptors, native source collection/document IDs, exact observed-context binding and `delivery_selection`. Pass its source choices to `host.openScientificReport({workspace_key, sources, title, selection_mode: 'replace'})` for the standalone scientific composer, or pass the full selection to the existing delivery form or maintained delivery API. Its ordered source list preserves previously selected studies and adds this exact document once; the delivery binds the resulting full selection before generating its normal reports.
 
 Native operator action:
 
@@ -401,7 +401,7 @@ Native operator action:
 }
 ```
 
-The optional parcel and delivery IDs may be omitted. The action uses the original supervised queue and upload/download permissions. Its completed task includes direct links to the recipe, manifest and complete context/parcel ZIPs. The desk and global task list open the scientific composer or Maps and delivery only in the task's original Workspace. The descriptor declares `openScientificReport` and `openDelivery`; install this client with the maintained host that exposes both capabilities. The shared source composer validates the actual collection/document choices and keeps its preview and original-source checks. Before changing any source file, the station-family installer checks the installed app callback and both maintained composer modules, and records their source hashes in its receipt. An older application must receive the maintained Scientific reports implementation before this client is installed.
+The optional parcel and delivery IDs may be omitted. The action uses the original supervised queue and upload/download permissions. Its completed task includes direct links to the recipe, manifest and complete context/parcel ZIPs. The desk and global task list open the scientific composer or Maps and delivery only in the task's original Workspace. The descriptor declares `openScientificReport` and `openDelivery`; install this client with the maintained host that exposes both capabilities. The shared source composer validates the actual collection/document choices and keeps its preview and original-source checks. Before changing any source file, the station-family installer checks the installed app callback and Sources bridge together with the exact staged composer, and records the staged and original destination hashes in its receipt. The family installs the updated composer in the same pass, upgrading an existing composer without the prepared-selection mode while preserving backups and concurrent-source checks.
 
 For a focused receiving check, use the same actual saved context, prepare and import its report source, bind and collect it through `model.observed_context`, and verify every delivered companion against the original source member descriptor. Archive/restore the current Workspace through its normal operation and reopen the same saved source and delivery. Preserve actual context, parcel, collection, document, report and receiving IDs in the existing operation receipt.
 
@@ -416,3 +416,21 @@ The additive assessment scientific-report component declaration names the existi
 ### NLDI station source extension
 
 The station installer composes the original WBD catalogue with its maintained `observed-station-wbd-nldi-197` extension before selecting files. The extension contributes the original NLDI point file and all 13 original WBD responses, retaining 197 coordinate-specific context rows and both gauge-coordinate variants. The existing component fragment reader validates the declaration; all selected source members and declared hashes are checked before any application file changes. Geographic source context remains separate from the assessment cause and use inventory.
+
+
+### Geographic context and assessment inventories
+
+Saved observed-station studies retain their original WBD point and watershed tables. Assessment context displays these under **Geographic source context**, with the source title, vintage, row count, original link and retained identity. These tables remain part of the saved station study and portable source package. They do not supply assessment cause, use, support or publication records.
+
+The assessment selector uses the producer’s explicit geographic source type to keep those tables out of automatic inventory selection. The backend applies the same distinction before normalizing selected fields and extracting original records, including manually supplied selections. Untyped custom assessment tables remain available with their original field mappings. Existing 87-, 159- and 164-station assessment inventories preserve all original 293 edition-specific records.
+
+Opening **Use saved study in assessment context** always adopts that exact saved study in its original Workspace. When an observed-station study contains geographic context only, its original geographic sources are displayed and the assessment build action stays disabled. Choose a saved assessment study or use **Open Station geography** to prepare the assessment study from its original sources. Saved assessment results and their report, parcel and portable receiving controls remain available below the form.
+
+The complete standalone installation also retains the current native assessment review provider, client and guide, so the maintained station desk can accept its original source-bound station selection without a missing module or browser asset.
+
+
+### Open the exact prepared scientific source selection
+
+**Open scientific report** restores the prepared report's complete source list in its saved reading order and sets its prepared title. It replaces the current composer draft's source selection; the same operator's contact details remain available. Ordinary additions from Sources continue to append a selected study to the existing draft. Pending report operations must complete or be recovered before either action changes a selection.
+
+This family includes and installs the maintained Scientific reports composer with its `replace-v1` prepared-source contract in `operator/web/source_report_editions.mjs`. Before any writes, the station installer checks the exact staged composer together with the existing complete application's callback and Sources bridge. It preserves the original destination bytes in the installation receipt and rechecks them before replacement. An existing composer without the new selection mode upgrades in this same installation; backups and concurrent-source checks apply to the composer as to every changed family member.

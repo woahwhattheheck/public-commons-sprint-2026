@@ -1,0 +1,562 @@
+{
+  "schema": "upstate.sources/v1",
+  "title": "Eighteenmile observed scientific report context",
+  "captured_at": "2026-10-13",
+  "entries": [
+    {
+      "id": "eighteenmile-observed-report-20261013",
+      "title": "Eighteenmile observed water quality, hydrology and source context",
+      "kind": "document",
+      "path": "scientific-context.json",
+      "bytes": 34975,
+      "sha256": "9c8b18a8a204649e9ac97191b24e7274263d3ab4cfe2969e9c7feb70fc92212b",
+      "uri": "https://des.sc.gov/sites/des/files/Documents/BOW/WaterQuality/2023LakeProgramFinalReport.pdf",
+      "vintage": "2023 water quality and discharge; 2020–2025 observed hydrology; source recovery 2026-10-13",
+      "metadata": {
+        "report_schema": "upstate.observed-report/v1",
+        "source_year": 2023,
+        "context_layer": true,
+        "original_chlorophyll_activities": 75,
+        "original_water_quality_results": 920,
+        "original_daily_flow_records": 2192
+      },
+      "companions": [
+        {
+          "path": "study.json",
+          "bytes": 2697,
+          "sha256": "7163a6048615600c98e42ebb1d6f8ba6f4dd39e90c2eddce2fc34a285fb866a8"
+        },
+        {
+          "path": "stations.csv",
+          "bytes": 2246,
+          "sha256": "ca4c5eda792a42c4eb1bd222e37d7ba5217e4610feefa22f5090b4b2332a7dd4"
+        },
+        {
+          "path": "stations.json",
+          "bytes": 4331,
+          "sha256": "15e547413181c92ca55cbc196703f8583bd2e7032ade302c376be4bc38d0193e"
+        },
+        {
+          "path": "seasonal_summaries.csv",
+          "bytes": 8170,
+          "sha256": "f4c30f642a8c276715953326ff69c6848136f21bb99122553fc90391d28f7b3a"
+        },
+        {
+          "path": "surface_ranges.csv",
+          "bytes": 1234,
+          "sha256": "78d12cc0231041dd07395ebffdeea2ab5a3bbaa86ca7657ea19785c6ad02f44b"
+        },
+        {
+          "path": "continuous_monthly_do.csv",
+          "bytes": 2338,
+          "sha256": "cb238e309d54620160b87ffa5e27b7a53de93bc002800bb5c084129e051b565b"
+        },
+        {
+          "path": "continuous_monthly_ph.csv",
+          "bytes": 2166,
+          "sha256": "696f7436e4af095677dab397c1854395656cb0f385219ecf9c69b234c846fa05"
+        },
+        {
+          "path": "reported_npdes_permits.csv",
+          "bytes": 769,
+          "sha256": "d59fa0ccc847d0d26342f3d6ab727c84acee6188933f82ab3635b7fc0b1ff1c2"
+        },
+        {
+          "path": "source_notes.json",
+          "bytes": 3408,
+          "sha256": "158a2f46a71bfbb2d6d25f8cde7c5ffea9d54904d671bef43948180c57642efb"
+        },
+        {
+          "path": "README.md",
+          "bytes": 2360,
+          "sha256": "e2325c6f6807e337c2871d57c708f063b3e999e317c2ab4cd139fd57ee873b8d"
+        },
+        {
+          "path": "study_sites_wgs84.geojson",
+          "bytes": 4456,
+          "sha256": "16490d2df05ad7309f736c0aa08473c8ff837a65f26ae98fb1f02e7549386c95"
+        },
+        {
+          "path": "study_sites_nad83.geojson",
+          "bytes": 6449,
+          "sha256": "b9975a274834087c9de2e9d296576e57b75f1e216c9d20771c71aca75bfddad9"
+        },
+        {
+          "path": "map-layer-capture.json",
+          "bytes": 3819,
+          "sha256": "5f40f20af1258b0bf26b3301c28678472742bc3b2a92756bc0fedcf898e4d01d"
+        },
+        {
+          "path": "original-study-model-sources.json",
+          "bytes": 62644,
+          "sha256": "061f23a74dc5c73e11321284b4bfc45610f66d5439a467b9dc0ea5dc20094a5e"
+        },
+        {
+          "path": "NATIVE_IMPORT.md",
+          "bytes": 2049,
+          "sha256": "63d1bb4a80ded270809627177fb27acd884bfa3dcb90593687be0d4267df8b13"
+        },
+        {
+          "path": "wqp/originals/SV-375-2023.csv",
+          "bytes": 71625,
+          "sha256": "7ae46d3bfce566dd955b890089e33566379292b818f72042f00d6072e3f41ff4"
+        },
+        {
+          "path": "wqp/originals/SV-245-2023.csv",
+          "bytes": 11724,
+          "sha256": "ce029dbc57c609f2c07337f4072fe610dd2ea01cfecd3ee6d0a846bbf271eff3"
+        },
+        {
+          "path": "wqp/originals/SV-591-2023.csv",
+          "bytes": 1754,
+          "sha256": "86a29ee0c9323c0dec6b90ee30afffe5c8a0ba4853ff6dc8d350f54430e3450f"
+        },
+        {
+          "path": "wqp/originals/SV-376-2023.csv",
+          "bytes": 71632,
+          "sha256": "0e41e681bcd58bf582e4ff85164fd6392e4992281e82aabe877c74217c46f541"
+        },
+        {
+          "path": "wqp/originals/SV-268-2023.csv",
+          "bytes": 92801,
+          "sha256": "0c9b8e6051b697937d9fcc035b3ce958aea56d082d3188d332570e4ac9961b4b"
+        },
+        {
+          "path": "wqp/originals/SV-374-2023.csv",
+          "bytes": 92708,
+          "sha256": "9b242799e822559b52404f0a0e5a888959b5ea4c537de15f2907eb09fa50a4a4"
+        },
+        {
+          "path": "wqp/originals/SV-838-2023.csv",
+          "bytes": 16829,
+          "sha256": "85e7be4eafff695ce2ae3095d343471fa9d4fd502e32a5644e4a82a497d76f3d"
+        },
+        {
+          "path": "wqp/originals/SV-839-2023.csv",
+          "bytes": 17299,
+          "sha256": "aec400eed27db53d435a0e9b7cfd387eeb828379802358c01bf933965057de92"
+        },
+        {
+          "path": "wqp/originals/SV-840-2023.csv",
+          "bytes": 16792,
+          "sha256": "a7039fb099d4fda958923f986169dabfa17168ac66d57f36d9720c7ccffa3af0"
+        },
+        {
+          "path": "wqp/originals/SV-591-legacy-org-2023.csv",
+          "bytes": 1754,
+          "sha256": "86a29ee0c9323c0dec6b90ee30afffe5c8a0ba4853ff6dc8d350f54430e3450f"
+        },
+        {
+          "path": "wqp/capture.json",
+          "bytes": 6595,
+          "sha256": "e2a8d3b289ee9326ec8e6c9d67c5b949600f99a3453bb585bd527590e7be1cc5"
+        },
+        {
+          "path": "wqp/normalize_core.mjs",
+          "bytes": 12817,
+          "sha256": "8d3df90d42bdb591d347a3867c25806d5064dbdf6240c549b50bb2d654f0dd6f"
+        },
+        {
+          "path": "wqp/normalize.mjs",
+          "bytes": 1230,
+          "sha256": "d02ee49937434105b49ae859a0747140bd34d562dbc6c49ffc4ed42fd68e6bcc"
+        },
+        {
+          "path": "wqp/derived/measurements.csv",
+          "bytes": 863082,
+          "sha256": "20600293095da71c25ffa104e84f07289b2ef1a86123342801512614eb4b0b7a"
+        },
+        {
+          "path": "wqp/derived/activities.csv",
+          "bytes": 181411,
+          "sha256": "012586eb5453a79aea3f60877a93ef84aab17a8353f7da90eb251a940bc7fd1d"
+        },
+        {
+          "path": "wqp/derived/coverage.csv",
+          "bytes": 92908,
+          "sha256": "798f24919a39aba6f7556367594e33775ecfef66247636c2b581e0ae96bf0633"
+        },
+        {
+          "path": "wqp/derived/calendar.csv",
+          "bytes": 6430,
+          "sha256": "0e5908a5ee82185d58836b8497d2d7378b0b22499f1e7be7b41df2e88a562f01"
+        },
+        {
+          "path": "wqp/derived/selected_chlorophyll.csv",
+          "bytes": 98672,
+          "sha256": "7f8f82328b3df2d939813e8a4666c1bdd1c0e93c913e64543849a05db2598e3d"
+        },
+        {
+          "path": "wqp/derived/chlorophyll_summary.csv",
+          "bytes": 10709,
+          "sha256": "512a91643b24f0eef21a2b320267d2d3fc1a209b48ebe2119065e17e0c9c2e70"
+        },
+        {
+          "path": "wqp/derived/summary.json",
+          "bytes": 2993,
+          "sha256": "e086a6d73b00df8914e098fabfc43eb9221b6bcebfaf7753790afb312310f916"
+        },
+        {
+          "path": "wqp/observed_chlorophyll_wgs84.geojson",
+          "bytes": 4172,
+          "sha256": "779996f6dc7d12623d65bf85189a98a5d7748d17f6c05ee972b10a46e6558fda"
+        },
+        {
+          "path": "wqp/observed_chlorophyll_nad83.geojson",
+          "bytes": 6096,
+          "sha256": "afb8c63edf5d4021edfd72f4f4425a8f88f2ab24233a50312b936d1903e653d7"
+        },
+        {
+          "path": "wqp/README.md",
+          "bytes": 3362,
+          "sha256": "a1325d2ac5ad78768ef0975737bc30a1bc6e924899bd5ce17a5b12c138356afa"
+        },
+        {
+          "path": "wqp/flow_context.mjs",
+          "bytes": 4678,
+          "sha256": "2d53a3b41a2a8a8032f1c05a2245c798b7c69a3c6cf761a3c5e922044607a3da"
+        },
+        {
+          "path": "wqp/build_flow_context.mjs",
+          "bytes": 2495,
+          "sha256": "f7504dd68a817b929597034c519c10fa931cf0aa10b60b1be759374362efb68f"
+        },
+        {
+          "path": "wqp/study_flow_dates.csv",
+          "bytes": 27050,
+          "sha256": "0ccb737025dc99a5534ccfc7ae0202451fd2b031e028f2eea0480e7d28c4df67"
+        },
+        {
+          "path": "wqp/flow_context_methods.json",
+          "bytes": 3338,
+          "sha256": "17494a60c978952e8a2acf8128663df3c0364337384a203e78ef7fbfce491bda"
+        },
+        {
+          "path": "wqp/FLOW_CONTEXT_README.md",
+          "bytes": 3553,
+          "sha256": "e1f7884d510e1620772e4e80a260ff974f7eeed682372a42c5b27c1bc031c2b6"
+        },
+        {
+          "path": "wqp/flow-context-sources.json",
+          "bytes": 2514,
+          "sha256": "1c846c4016acc44ab27b4e67bd5dd5a72115dd5d4fa88b07334ccd25e7a5cfde"
+        },
+        {
+          "path": "figures/chlorophyll_time_series.svg",
+          "bytes": 30745,
+          "sha256": "895f4cc0246535fa2280b9dfe2e98dfc69d51e923ccab7b5c7264f48b93244b0"
+        },
+        {
+          "path": "figures/chlorophyll_distributions.svg",
+          "bytes": 23969,
+          "sha256": "c958f42af36013efceb018e53d8a62ec365db91f465a32b23f8f9076f1fc8ba4"
+        },
+        {
+          "path": "figures/sampling_flow_context.svg",
+          "bytes": 13003,
+          "sha256": "7840ea3d5d846801ed9bf7971c2ee405ac4af5a68bcde4083445051deb9f258b"
+        },
+        {
+          "path": "figures/chlorophyll_antecedent_context.svg",
+          "bytes": 30211,
+          "sha256": "435b67f3bc27fa4c6b4e047da0bc0b377acd481e26a5ad0b1a8117a5a721130c"
+        },
+        {
+          "path": "figures/plot-data.csv",
+          "bytes": 109654,
+          "sha256": "a4a39b47b16fb38709ea1057ddbc56c934d90f96c9f429695ca2767c68b3f66a"
+        },
+        {
+          "path": "figures/distribution-statistics.csv",
+          "bytes": 828,
+          "sha256": "f2a7fdb675a74f82985773e958b77d81835c1ea20ad5addd07d99f531c06866c"
+        },
+        {
+          "path": "figures/figure-spec.json",
+          "bytes": 416117,
+          "sha256": "02adae24859bd08e785d235d3988b923beb6405bff59f9fc17ef7dc4e984bde8"
+        },
+        {
+          "path": "figures/figure_core.mjs",
+          "bytes": 22714,
+          "sha256": "bc72e5744f1799d828dc8b6964ecd0c902b65f8574bf1719b1e4bea32dfc2bd0"
+        },
+        {
+          "path": "figures/rebuild_figures.mjs",
+          "bytes": 3050,
+          "sha256": "dd7c99b782e766c8aa428f55e36179671081ee60123434816a96d5867a79aa5a"
+        },
+        {
+          "path": "figures/vendor/d3-path.cjs",
+          "bytes": 2433,
+          "sha256": "28d70841c60f313c3e6411fe0831e539ed6cea51eaee951d62d88908c40619c2"
+        },
+        {
+          "path": "figures/vendor/d3-path.LICENSE.txt",
+          "bytes": 731,
+          "sha256": "a09b0d6d76e768fca2085fad05743ee81ddd11946bcda160a3cf5e1081a479aa"
+        },
+        {
+          "path": "figures/vendor/d3-array.cjs",
+          "bytes": 17204,
+          "sha256": "80aa70d0cd17dabddf6d056494ea17926a45a69da8b7850220aace331bad671d"
+        },
+        {
+          "path": "figures/vendor/d3-array.LICENSE.txt",
+          "bytes": 731,
+          "sha256": "3e6849627f74ff73c257a3ae1efb574015d94fc1035c05ec3c15805165efcbc4"
+        },
+        {
+          "path": "figures/vendor/d3-shape.cjs",
+          "bytes": 30898,
+          "sha256": "49236896e989f251dd36679ea4a879538e9ca2ece3a90a82740f953cac4a3fa5"
+        },
+        {
+          "path": "figures/vendor/d3-shape.LICENSE.txt",
+          "bytes": 731,
+          "sha256": "faa682e3e430941f958d26180458f5934a62f58dac4d70ccdd15608c15d0f884"
+        },
+        {
+          "path": "figures/figure-sources.json",
+          "bytes": 5064,
+          "sha256": "983baa0dd5f0f75edb50246bf5de11c3d3ebbcc1ad3def1a883abf7df4fd0d90"
+        },
+        {
+          "path": "figures/README.md",
+          "bytes": 4468,
+          "sha256": "4db229474aa9be4beb7e2aecf6683d56d3b46f382ca0af849819c8602f54836a"
+        },
+        {
+          "path": "figures/model-sources.json",
+          "bytes": 23349,
+          "sha256": "b7648d7b768584ea1d90b414a66a923e0aafbf00e5eff6e9d49e76f491d73324"
+        },
+        {
+          "path": "npdes/flow_context/inputs/period_loads.csv",
+          "bytes": 141817,
+          "sha256": "872d4183e2e55706c031c6d60438963660f6fb56e8312eaa9da1b75473b44648"
+        },
+        {
+          "path": "npdes/flow_context/inputs/outfall_gauge_relations.csv",
+          "bytes": 3398,
+          "sha256": "6d76f4cc627de9acaa79de11af9df936e6ee3a941e19dceccc5c5d778ae501b2"
+        },
+        {
+          "path": "npdes/flow_context/inputs/usgs_02186702_2023_original.json",
+          "bytes": 29226,
+          "sha256": "973897d3813100b498482b4acf88ba705da50dcf6e28baea5fe7fe818e76d3f9"
+        },
+        {
+          "path": "npdes/flow_context/derived/facility_monthly.csv",
+          "bytes": 232814,
+          "sha256": "167f05866888f290d19385a6eb06a9c33e7c071ca5a7d523c0d7db7b8cef1252"
+        },
+        {
+          "path": "npdes/flow_context/derived/upstream_monthly.csv",
+          "bytes": 25897,
+          "sha256": "2978b536683e51bf0962ed24ebf7deca75e8092d0eef5e3c9d75f1554db25430"
+        },
+        {
+          "path": "npdes/flow_context/derived/upstream_annual.csv",
+          "bytes": 1373,
+          "sha256": "791e1f2fdbf9ef7b96b8f94a1463bdcdb4ddca139e7eca5839a37f23921887f0"
+        },
+        {
+          "path": "npdes/flow_context/derived/gauge_monthly.csv",
+          "bytes": 1502,
+          "sha256": "2839d45b09f54c3525fcf370aa60d17d97263eae51c8ec251772852356869bee"
+        },
+        {
+          "path": "npdes/flow_context/monthly_flow_core.mjs",
+          "bytes": 11375,
+          "sha256": "308d1b9ee0b13653b0dd285569d5eacd79eb6e215c7dc62a42bc8aaf1cb590a0"
+        },
+        {
+          "path": "npdes/flow_context/derived/summary.json",
+          "bytes": 7039,
+          "sha256": "2b5d1e55ee3c39646fc4867d9e5105d5509bd46130a8db8fa7089cf8e5afecb6"
+        },
+        {
+          "path": "npdes/flow_context/README.md",
+          "bytes": 5960,
+          "sha256": "f5265db21f936204d267db0130930809ca9a7b487f0692d72c8169ea5ac76f4d"
+        },
+        {
+          "path": "npdes/flow_context/inputs.json",
+          "bytes": 2215,
+          "sha256": "89b565d43e67b665a27254e778351eb20e80dfbcbfda3707accf3b20df9426a4"
+        },
+        {
+          "path": "npdes/flow_context/rebuild_monthly_flow.mjs",
+          "bytes": 8530,
+          "sha256": "cd388d37dcc6522a16ac9c0c4879a7f7a06b9eec72ced694bb75f5a85c0d8e51"
+        },
+        {
+          "path": "npdes/flow_context/model-sources.json",
+          "bytes": 6154,
+          "sha256": "2fdd6c67ff73bf41b7838275a764fbc434cf099bd7d4b7476877345709f33d58"
+        },
+        {
+          "path": "hydrology/original/eighteenmile_nldi_reference.json",
+          "bytes": 601,
+          "sha256": "4ba9c663f4734dae1216d99564d9ae2392e7e139b5208aeaa174fa63489cb0c8"
+        },
+        {
+          "path": "hydrology/original/eighteenmile_station_metadata.json",
+          "bytes": 3671,
+          "sha256": "24585cb3c63a1e92e38e371d3741628abd8cb7f8e08a8a84f205e35e0c407a56"
+        },
+        {
+          "path": "hydrology/original/eighteenmile_nldi_whole_basin.geojson",
+          "bytes": 13935,
+          "sha256": "097050d2b09e371feb2dbcf3fe1d2fba90730086db45d4a90be514706145dc88"
+        },
+        {
+          "path": "hydrology/original/daily/usgs_02186702_2020_2020.json",
+          "bytes": 29226,
+          "sha256": "9e2e9bb3ea640d84bca1b1cf1a90b1073ec5506f58461cf8012330dfad4fbd4c"
+        },
+        {
+          "path": "hydrology/original/daily/usgs_02186702_2021_2021.json",
+          "bytes": 29353,
+          "sha256": "8fb74ba84877b38995350ecd4120c8437ada515893d12af7d52d6d93a23bc933"
+        },
+        {
+          "path": "hydrology/original/daily/usgs_02186702_2022_2022.json",
+          "bytes": 29216,
+          "sha256": "8428422778feb5b07534db9b49f55ec4eab19b1297451b8a82ff41b094e07b32"
+        },
+        {
+          "path": "hydrology/original/daily/usgs_02186702_2023_2023.json",
+          "bytes": 29226,
+          "sha256": "973897d3813100b498482b4acf88ba705da50dcf6e28baea5fe7fe818e76d3f9"
+        },
+        {
+          "path": "hydrology/original/daily/usgs_02186702_2024_2024.json",
+          "bytes": 29295,
+          "sha256": "03f7561b6e5a41948e97934a74c300645ba70f10b574148b56050115e4e98650"
+        },
+        {
+          "path": "hydrology/original/daily/usgs_02186702_2025_2025.json",
+          "bytes": 29522,
+          "sha256": "2247249df5fe769f9cec48479e61646d0b3fd5d90398c46a9ad4f35099bb848e"
+        },
+        {
+          "path": "hydrology/original/usgs_nldi_basin_method.html",
+          "bytes": 4962,
+          "sha256": "3eea0f5fa49dc48e1b650adad82daa06ce0f6daf7a319b2c3de7efed4c9ca2de"
+        },
+        {
+          "path": "hydrology/original/series_seneca_tugaloo.rdb",
+          "bytes": 10347,
+          "sha256": "cc8866b8fd3a5a224346b1b1696b16c0673d76d616e9ee67f05be48f482c9707"
+        },
+        {
+          "path": "hydrology/original/series_upper_savannah_broad.rdb",
+          "bytes": 7811,
+          "sha256": "c22ce4ce0219d11366d256cea880526ec01627f599e9ea35abbc49b54ddb4fbb"
+        },
+        {
+          "path": "hydrology/original/sites_seneca_tugaloo.rdb",
+          "bytes": 9026,
+          "sha256": "c32e2e296a92464471a09a4c5275af31252d99782be2b3cc68757e6425834f32"
+        },
+        {
+          "path": "hydrology/original/sites_upper_savannah_broad.rdb",
+          "bytes": 12446,
+          "sha256": "df6fdf7ffc31001e93dc739c4989c233c136c75ce02ebda269943c9bfef5c994"
+        },
+        {
+          "path": "hydrology/derived/daily_flow.csv",
+          "bytes": 150412,
+          "sha256": "ce896c8d6c8d5b4ff029a2e760d01b20bb1cb6dcc91f30f27d7483158098982c"
+        },
+        {
+          "path": "hydrology/derived/calendar_year_flow.csv",
+          "bytes": 2322,
+          "sha256": "5cc70fe9a99ac9ca4c1c6936d836ad81f6502c0ef97c1c3203fdfaf06433094f"
+        },
+        {
+          "path": "hydrology/derived/calendar_month_flow.csv",
+          "bytes": 22152,
+          "sha256": "728b138141f2a248c85eb7a696b068763eddeee2dcceb99fb3634cd7d1394b9b"
+        },
+        {
+          "path": "hydrology/derived/study_period_flow.csv",
+          "bytes": 816,
+          "sha256": "fdd98b5838ae47cd6f1b78fff5151880c5cca7228770a7149de1103cb8779a4d"
+        },
+        {
+          "path": "hydrology/derived/daily_stage.csv",
+          "bytes": 1,
+          "sha256": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b"
+        },
+        {
+          "path": "hydrology/derived/calendar_year_stage.csv",
+          "bytes": 1,
+          "sha256": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b"
+        },
+        {
+          "path": "hydrology/derived/monitoring_stations_nad83.geojson",
+          "bytes": 154681,
+          "sha256": "632fb6f37af51854f90fc75d3a4ce29a9add25d392da3120b879bb88dc371d2a"
+        },
+        {
+          "path": "hydrology/derived/eighteenmile_gage_whole_catchments.geojson",
+          "bytes": 41692,
+          "sha256": "8f19b120756c1a2822f8f0a2b977279cd0caa8f76c9002f3921cf176b8da3691"
+        },
+        {
+          "path": "hydrology/derived/nutrient_results_with_flow.csv",
+          "bytes": 1,
+          "sha256": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b"
+        },
+        {
+          "path": "hydrology/derived/nutrient_source_coverage.csv",
+          "bytes": 1,
+          "sha256": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b"
+        },
+        {
+          "path": "hydrology/derived/nutrient_activity_total_nitrogen.csv",
+          "bytes": 1,
+          "sha256": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b"
+        },
+        {
+          "path": "hydrology/derived/nutrient_concentration_summary.csv",
+          "bytes": 1,
+          "sha256": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b"
+        },
+        {
+          "path": "hydrology/derived/coverage.json",
+          "bytes": 2083,
+          "sha256": "988259122f0d202cde185cb73ea5a1a6aac099f5e9f4150ce374a97d32dfeb38"
+        },
+        {
+          "path": "hydrology/derived/original_series_metadata.json",
+          "bytes": 15114,
+          "sha256": "a9eee4fdcf7bb4e8b9e27f70b3dd687e73481760f82f01c9d5592ed08ef34b2d"
+        },
+        {
+          "path": "hydrology/hydrology_core.mjs",
+          "bytes": 22803,
+          "sha256": "789d5d515e8eae2b9860d5291acb80d6923a88a8dfb805386304fdc027ef9bde"
+        },
+        {
+          "path": "hydrology/rebuild_hydrology.mjs",
+          "bytes": 2411,
+          "sha256": "19ecc87b71a3e74c4ee714015e0885cd0d62a4570e1ff61fd60d9a88160354bc"
+        },
+        {
+          "path": "hydrology/inputs.json",
+          "bytes": 9691,
+          "sha256": "972bc2fb7ccc387e39fe6c998e84198dc0b17a2f55d99c42ee26991fdd2d71b7"
+        },
+        {
+          "path": "paired_station_observations.csv",
+          "bytes": 503,
+          "sha256": "f1bf9a6459b64cb4161e67be0ef5d5a0aeee6597f31b11748cb76f85d05ea971"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,162 @@
+{
+  "schema": "upstate-published-biophysical-table/v1",
+  "source_url": "https://www.mdpi.com/2076-3298/6/5/52",
+  "doi": "10.3390/environments6050052",
+  "source": {
+    "requested_url": "https://www.mdpi.com/2076-3298/6/5/52/xml",
+    "final_url": "https://www.mdpi.com/2076-3298/6/5/52/xml",
+    "status": 200,
+    "requested_at": "2026-10-12T04:10:40.218024+00:00",
+    "observed_at": "2026-10-12T04:10:47.751027+00:00",
+    "headers": {
+      "Content-Type": "text/html; charset=UTF-8",
+      "x-frame-options": "SAMEORIGIN",
+      "x-xss-protection": "1; mode=block",
+      "Access-Control-Allow-Origin": "*.mdpi.com",
+      "Access-Control-Allow-Credentials": "true",
+      "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+      "Access-Control-Allow-Headers": "DNT,X-CustomHeader,Keep-Alive,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type",
+      "X-Akamai-Transformed": "9 - 0 pmb=mRUM,1",
+      "Expires": "Mon, 12 Oct 2026 04:10:47 GMT",
+      "Cache-Control": "max-age=0, no-cache, no-store",
+      "Pragma": "no-cache",
+      "Date": "Mon, 12 Oct 2026 04:10:47 GMT",
+      "Transfer-Encoding": "chunked",
+      "Connection": "close",
+      "Server-Timing": "cdn-cache; desc=MISS",
+      "Strict-Transport-Security": "max-age=31536000",
+      "Akamai-GRN": "0.b03a2f17.1791778246.6d464d1c"
+    },
+    "bytes": 583229,
+    "sha256": "8d0155febcbc8979d91064aac15fb28a98a29f57faead05194a29cd1cfa667a6",
+    "file": "georgia-ndr-2019.original.html.gz",
+    "encoding": "gzip",
+    "content_format": "html",
+    "stored_bytes": 86841,
+    "stored_sha256": "24b972c2c810dc0897f14a42209ef2689fba667d6a02c218248db6d2f8431df3"
+  },
+  "bibliography": {
+    "citation_issn": [
+      "2076-3298"
+    ],
+    "citation_journal_title": [
+      "Environments"
+    ],
+    "citation_publisher": [
+      "Multidisciplinary Digital Publishing Institute"
+    ],
+    "citation_title": [
+      "Does Quantification of Ecosystem Services Depend Upon Scale (Resolution and Extent)? A Case Study Using the InVEST Nutrient Delivery Ratio Model in Georgia, United States"
+    ],
+    "citation_publication_date": [
+      "2019/5"
+    ],
+    "citation_online_date": [
+      "2019/05/15"
+    ],
+    "citation_volume": [
+      "6"
+    ],
+    "citation_issue": [
+      "5"
+    ],
+    "citation_firstpage": [
+      "52"
+    ],
+    "citation_author": [
+      "Benez-Secanho, Fabio Jose",
+      "Dwivedi, Puneet"
+    ],
+    "citation_doi": [
+      "10.3390/environments6050052"
+    ],
+    "citation_id": [
+      "mdpi-environments6050052"
+    ],
+    "citation_abstract_html_url": [
+      "https://www.mdpi.com/2076-3298/6/5/52"
+    ],
+    "citation_pdf_url": [
+      "https://www.mdpi.com/2076-3298/6/5/52/pdf?version=1557915953"
+    ],
+    "citation_fulltext_html_url": [
+      "https://www.mdpi.com/2076-3298/6/5/52/htm"
+    ],
+    "citation_xml_url": [
+      "https://www.mdpi.com/2076-3298/6/5/52/xml"
+    ]
+  },
+  "tables": [
+    {
+      "file": "georgia-2019-nlcd-biophysical.csv",
+      "table": "Table A1",
+      "rows": 15,
+      "sha256": "6c9f7c9ec6f0b4baf265bd9fdccc07761d565360b9ca4ae947203d4f1263bec9",
+      "bytes": 640,
+      "source_sha256": "8d0155febcbc8979d91064aac15fb28a98a29f57faead05194a29cd1cfa667a6",
+      "source_headers": [
+        "Lucode",
+        "LULC_desc",
+        "load_n",
+        "eff_n",
+        "load_p",
+        "eff_p"
+      ],
+      "published_constants": {
+        "crit_len_n": 30,
+        "crit_len_p": 30,
+        "proportion_subsurface_n": 0
+      }
+    },
+    {
+      "file": "georgia-2019-globcover-biophysical.csv",
+      "table": "Table A2",
+      "rows": 21,
+      "sha256": "5ab83cab7cbd7155be8d1fae204a1201fc900893cecbb4340881d71319e45a0f",
+      "bytes": 1394,
+      "source_sha256": "8d0155febcbc8979d91064aac15fb28a98a29f57faead05194a29cd1cfa667a6",
+      "source_headers": [
+        "Lucode",
+        "LULC_desc",
+        "load_n",
+        "eff_n",
+        "load_p",
+        "eff_p"
+      ],
+      "published_constants": {
+        "crit_len_n": 290,
+        "crit_len_p": 290,
+        "proportion_subsurface_n": 0
+      }
+    }
+  ],
+  "load_units": "kg/ha/year",
+  "efficiency_units": "ratio",
+  "original_model_version": "InVEST 3.4.2",
+  "published_nlcd_edition": "NLCD 2006",
+  "constant_units": {
+    "crit_len_n": "m",
+    "crit_len_p": "m",
+    "proportion_subsurface_n": "ratio"
+  },
+  "study_scope": "Published Georgia study of 57 watersheds; source parameters are a regional reference edition for operator selection.",
+  "adoption": "Keep as a named published reference. Preserve every value and original source class. Current project land-cover mapping, parameter selection, calibration observations and model version are separate retained choices.",
+  "source_distinctions": [
+    "These are the 2019 Georgia paper values, not the original 2016 Upper Savannah project input files.",
+    "The paper lists constants in Appendix A1 and A2; its spatial-resolution experiments also discuss changing retention length with land-cover pixel size.",
+    "Both original tables are preserved independently, including different forest and water efficiencies."
+  ],
+  "published_constants_by_table": {
+    "Table A1": {
+      "crit_len_n": 30,
+      "crit_len_p": 30,
+      "proportion_subsurface_n": 0
+    },
+    "Table A2": {
+      "crit_len_n": 290,
+      "crit_len_p": 290,
+      "proportion_subsurface_n": 0
+    }
+  },
+  "constant_source_note": "Exact original appendix footnotes: A1 NLCD uses 30 m; A2 GlobCover uses 290 m. Both original tables and source HTML remain unchanged."
+}

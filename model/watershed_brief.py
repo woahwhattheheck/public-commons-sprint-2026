@@ -365,6 +365,8 @@ def render_selection_brief(selection):
     lines.extend(["", *_utility_lines(selection)])
     from .utility_observed_context import brief_lines
     lines.extend(["", *brief_lines(selection, _table, _number)])
+    from .watershed_observation_context import brief_lines as evidence_lines
+    lines.extend(["", *evidence_lines(selection, _table, _number)])
     lines.extend(["", "## Selected watersheds", ""])
     lines.extend(_table(
         ["HUC12", "Watershed", "Area (acres)", "States", "NRCS priority states", "Selected-class records"],

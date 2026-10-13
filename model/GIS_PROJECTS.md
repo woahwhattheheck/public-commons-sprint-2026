@@ -27,7 +27,7 @@ Each retained delivery dataset becomes one logical GIS layer. A priority raster 
 
 Physical exports and signed differences retain the engine's original metric/units/purpose style grouping. Signed differences retain alternative-minus-baseline direction and common valid support. Dimensionless priorities carry their own normalization and geographic-support identity, so unrelated priority methods do not acquire a shared scientific metric merely because they have the same units.
 
-The existing GIS engine derives its grayscale legends from complete finite native-cell ranges. Those GIS display ranges are distinct from the original atlas percentile limits; the original map display_scale remains in each layer's retained source metadata.
+Completed atlas layers retain their original saved display limits, units, percentile method and map relationships. The original map renderer’s Greys palette applies to physical exports and priorities; its RdBu_r palette applies to signed alternative-minus-baseline changes. Other source/run exports keep the existing shared full-native-cell grayscale policy. The original map display_scale remains in each layer’s retained source metadata.
 
 Every layer.source retains the complete original dataset record: grid and profile IDs, baseline and alternative run/scenario records, producing-model provenance, source editions, original comparison identity, physical header, support method, derivation and atlas map relationships.
 
@@ -63,6 +63,75 @@ The selection JSON includes the actual delivery_id, a project title and optional
 Omitting project_crs selects the original delivery grid CRS. An explicitly supplied project_crs changes the project's display coordinates through the existing builder while preserving each working dataset's native coordinates.
 
 The same request/result identities, complete GIS inventory, QGS/QGZ references, original file transport, desktop edit sealing and received-source adoption govern this continuation. Its operation is ES-20261013-DELIVERY-GIS-PROJECT; source is contained in the existing gis_workspace, GIS desk and delivery inspector paths.
+
+
+## Review the actual changes in a received GIS edition
+
+In **Editable GIS projects**, open the received edition's **Compare exported and received working editions** section. Select the retained **Original exported GIS project** and choose **Build complete edition comparison**. Only exports with the same original GIS selection are offered. The queued operation verifies the actual original request, both inventory fingerprints, logical layer IDs, retained source identities and complete working files.
+
+This comparison uses the original exported working data and the actual received working data. The existing **Working vector changes** control separately compares received vectors with their original retained source features; its original-source/Fiona identity reference remains available. Choose the comparison whose original reference matches the question. The received edition's seal history remains available as additional provenance; a file-hash history alone does not supply the old geometry or raster values.
+
+The normal task result opens the completed report and its full ZIP, JSON and layer-summary CSV. The received card retains the exact original export choice through refresh and displays completed reviews with their actual edition identities and report creation time. Changing the selected original export clears an incompatible optional adoption review, while preserving the separate adoption title, reason, working-layer and original table/document choices.
+
+### What the report contains
+
+Vector layers are paired using their original collision-safe source identity field, without converting identifiers such as 001 into numbers. The comparison streams complete properties and geometries through a disk-backed index. It distinguishes typed attribute changes, coordinate changes, topologically equivalent geometry, added and removed features, and missing or duplicate identities. Ambiguous rows are retained as individual unpaired records. They are not silently overwritten or matched by row position.
+
+Each vector layer has a complete changes.jsonl file with original and received properties and geometry for every changed or unpaired row, plus a compact changes.csv. Only a small example set enters the report summary; the full change records remain downloadable. Header/schema and CRS changes are retained even when ordinary attribute values are unchanged. A changed CRS leaves geometric comparison unpaired while the exact original coordinates and attributes remain in the records.
+
+Raster review concerns the original logical GIS layer's selected band. The complete before/after all-band header, data types, nodata, scale, offset, descriptions, mask flags and units remain in the report. Native cells are paired only when the actual CRS, dimensions, six affine values and selected band agree. A changed grid is reported as an unpaired structural change; it is not resampled to manufacture cell comparisons.
+
+On a matching grid, 512-by-512 windows retain counts for common finite-valid cells, added/removed valid support, neither-valid cells and nonfinite unmasked values. The support-change.tif codes are:
+
+| Code | Meaning |
+|---|---|
+| 0 | Neither edition has a finite-valid selected-band value |
+| 1 | Both editions have a finite-valid selected-band value |
+| 2 | The received edition adds a finite-valid value |
+| 3 | The received edition removes a finite-valid value |
+
+The value-change.tif is **received minus exported**, in the original declared physical units, on common support. Raw encoding changes are counted separately. The comparison applies each original band scale and offset, cancels equal offsets before subtraction, and uses exact scalar input arithmetic when large integers or changed encoding parameters require it. Float64 output cannot represent every mathematically possible difference; such cells have an explicit unrepresentable count and NoData instead of a misleading zero. Exact change counts and the retained native input editions remain available. Summary mean and RMSE concern the representable difference cells.
+
+Categorical layers and layers with different declared units retain raw-change and support counts without assigning an arithmetic physical difference across categories or different units. Working-file and actual companion changes remain separate from the selected-band numeric result; the report does not describe other bands as numerically unchanged.
+
+### Portable report and recovery
+
+The complete review ZIP opens through **REVIEW.html** and includes both original project manifests, review.json, layers.csv and every layer's full change records or derived support/value rasters. The report preserves the exact exported/received project and edition IDs, original source/run/scenario provenance, inventory fingerprints and subtraction direction. Keep the complete ZIP contents together so its relative links resolve.
+
+Review output is retained under:
+
+~~~text
+gis-received/<receipt_id>/reviews/<review_id>/
+~~~
+
+The received project and its inventory remain immutable. A failed operation continues from completed layer checkpoints whose native files and companions were checked against the original input inventory. A changed-input failure invalidates the affected attempt's reusable checkpoints. Completion rechecks the complete original input fingerprints before retaining its final report.
+
+The normal full scientific Workspace backup and restore carry the received project, original export and review together. The portable review ZIP supplies the change report and its data; the complete GIS project ZIP supplies the independently editable original/received working layers.
+
+### Retain a review with an adopted source edition
+
+In the existing received-source adoption form, **Retain a change review with this source edition** is an explicit choice. It offers complete reviews matching the selected original export and the exact current received fingerprint. Selecting a review retains its complete report context with the new original source collection and makes that review identity part of the adoption selection.
+
+The original adoption path also supports received working layers or selected original tables and documents without attaching a review. Working-layer selections still retain all required original attachments. Independent table/document selection, native types, units, dates, geography, companions and original queued-task recovery stay available.
+
+The full application CLI uses the same backend:
+
+~~~sh
+python model/gis_project_cli.py workspace-review "$WORKSPACE" gis-review-selection.json
+~~~
+
+A selection file contains actual retained IDs:
+
+~~~json
+{
+  "receipt_id": "ACTUAL_RECEIVED_GIS_ID",
+  "export_id": "ACTUAL_ORIGINAL_EXPORTED_GIS_ID"
+}
+~~~
+
+For optional reviewed adoption, add the actual review_id to the existing workspace-adopt-sources selection. Omit that field for the original adoption path. Standalone GIS seal/pack/receive tools remain usable independently; Workspace review uses the installed scientific application's gis_edition_review module.
+
+Operation: ES-20261013-RECEIVED-GIS-REVIEW.
 
 ## Open and continue a delivery
 
@@ -315,11 +384,10 @@ sources, prepared grids, coefficients, scenarios and numerical results stay inta
 A new source edition is available for the operator's normal selection and preparation
 workflow; adopting it does not silently rerun or replace an existing model.
 
-In **Editable GIS projects**, open the received edition's **Use edited working
-layers as new study sources** section. Select its layers, enter the title and reason,
+In **Editable GIS projects**, open the received edition's **Use received layers, tables or documents as study sources** section. Select its layers, enter the title and reason,
 and click **Adopt selected study sources**. The original task records the received
 edition, selected working layers and resulting source collection. In **Adopted study
-source editions**, **Select this source edition for export** opens that same native
+source editions**, **Select this source edition for GIS export** opens that same native
 collection for another complete handover. The retained source catalogue also exposes
 it to the rest of the scientific application.
 
@@ -332,8 +400,11 @@ python model/gis_project_cli.py workspace-catalogue "$WORKSPACE"
 python model/gis_project_cli.py workspace-export "$WORKSPACE" continued-selection.json
 ```
 
-`adoption.json` contains `receipt_id`, `title`, `reason` and a nonempty `layer_ids`
-array, using the actual IDs from the received project's `project.json`. The returned
+`adoption.json` contains `receipt_id`, `title`, `reason` and actual `layer_ids`
+and/or `attachment_ids` from the received project's `project.json`. Select at least
+one working layer, original table or document. A working-layer selection retains all
+original attachments; an attachment-only selection can choose tables/documents
+independently. An optional `review_id` retains the matching edition-comparison context. The returned
 `source_collection_id` belongs to the original Workspace. Its `sources` array maps
 each received layer ID to the native source ID. The next export selection can use
 that collection and the same retained native source IDs.
@@ -355,3 +426,58 @@ attribute edit, and exported all five layers to a second independent receiver.
 The 305 county features, two 3,252 by 3,273 rasters, original file identities and
 attribution all survived the complete cycle. The native programme also removed
 its final adoption response and recovered the same immutable source collection.
+
+## Original atlas legends in desktop and offline views
+
+A completed delivery can use the same numerical dataset in several map panels.
+The GIS export retains each distinct saved scale as a named QGIS layer style.
+It keeps one working GeoTIFF and one logical layer; the styles do not copy or
+recalculate the dataset. Each style records its original map key and panel,
+complete saved scale, units, color lookup, and the native band scale/offset.
+
+In **OPEN_GIS.html**, open a layer's **Details** and choose **Atlas view**.
+The map overview and legend change together. **Save view** retains that choice
+with the existing layer visibility, extent and source-table selection; its view
+address reopens the same choice for this exact edition. The matching native
+**QGIS layer style** download is a relative QML file inside the complete project.
+
+In QGIS, use the layer's **Styles** menu to choose the same named map view.
+The project also retains the style files under **styles/**. Every named style
+uses the original saved limits, the same resolved 256-color palette used by the
+maintained atlas renderer, and endpoint colors outside the display limits.
+Signed changes retain the original negative/zero/positive interpretation.
+The full physical cell values, validity masks, declared CRS and companions are
+unchanged. Band scale/offset are applied once in both the provider legend and
+the offline display; original raw scale values remain in the style metadata.
+
+The exporter stores the resolved palette and its Matplotlib version.
+Only building a new atlas legend needs Matplotlib, already used by the original
+atlas producer. Receiving a complete package and switching its styles use the
+retained lookup. The QGIS shader encodes adjacent representable class boundaries
+so its interpolated renderer follows the atlas's discrete color lookup instead
+of inventing a new continuous stretch. Display reprojection and overview sampling
+still use their declared native QGIS or nearest-cell display methods. Floating-point
+normalization immediately beside a color-bin boundary can choose an adjacent
+lookup color; the saved legend limits, units and resolved palette are retained.
+
+Desktop edits remain authoritative in the selected QGS/QGZ. When sealing an
+edition, a recognized original atlas style also selects its matching offline
+overview. If the desktop renderer cannot be recognized, the package retains that native
+renderer and explicitly labels the offline view as an original atlas view.
+Recognition is conservative: native QGIS may add neutral pipe stages when saving,
+which remain retained even when they are outside this original-style matcher.
+It does not overwrite the recipient's native styling or describe an original
+overview as a reproduction of an unrecognized desktop renderer.
+
+The existing native receiving helper now selects every retained named style
+in QGIS, compares its actual range and color stops, restores the selected style,
+then renders, saves and independently reopens the project. On an edited edition,
+it records which original styles still match while preserving the recipient's
+additional changes. This uses the same complete-package native receiving command
+documented above.
+
+Serialization follows the original QGIS implementation:
+- https://api.qgis.org/api/3.44/qgsmaplayerstylemanager_8cpp_source.html
+- https://api.qgis.org/api/3.44/qgsmaplayerstyle_8cpp_source.html
+- https://api.qgis.org/api/3.44/qgscolorrampshader_8cpp_source.html
+- https://github.com/qgis/QGIS/blob/final-3_44_0/src/core/raster/qgssinglebandpseudocolorrenderer.cpp

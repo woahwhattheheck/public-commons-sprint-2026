@@ -1,0 +1,57 @@
+{
+  "schema": "upstate.eighteenmile-monthly-flow-inputs/v1",
+  "inputs": [
+    {
+      "role": "period_csv",
+      "path": "inputs/period_loads.csv",
+      "source_path": "observations/eighteenmile_2023/npdes/derived/period_loads.csv",
+      "bytes": 141817,
+      "sha256": "872d4183e2e55706c031c6d60438963660f6fb56e8312eaa9da1b75473b44648",
+      "uri": "https://tokenjunkielabs.slack.com/docs/T0BRETUB5TK/F0C8J1E75FV"
+    },
+    {
+      "role": "routing_csv",
+      "path": "inputs/outfall_gauge_relations.csv",
+      "source_path": "observations/eighteenmile_2023/npdes/routing/derived/outfall_gauge_relations.csv",
+      "bytes": 3398,
+      "sha256": "6d76f4cc627de9acaa79de11af9df936e6ee3a941e19dceccc5c5d778ae501b2",
+      "uri": "https://tokenjunkielabs.slack.com/docs/T0BRETUB5TK/F0C8J1E75FV"
+    },
+    {
+      "role": "daily_original",
+      "path": "inputs/usgs_02186702_2023_original.json",
+      "source_path": "observations/observed_hydrology_20261013/original/daily/usgs_02186702_2023_2023.json",
+      "bytes": 29226,
+      "sha256": "973897d3813100b498482b4acf88ba705da50dcf6e28baea5fe7fe818e76d3f9",
+      "uri": "https://waterservices.usgs.gov/nwis/dv/?format=json&sites=02186702&startDT=2023-01-01&endDT=2023-12-31&parameterCd=00060&statCd=00003&siteStatus=all"
+    }
+  ],
+  "core_sha256": "308d1b9ee0b13653b0dd285569d5eacd79eb6e215c7dc62a42bc8aaf1cb590a0",
+  "expected_outputs": [
+    {
+      "path": "derived/facility_monthly.csv",
+      "bytes": 232814,
+      "sha256": "167f05866888f290d19385a6eb06a9c33e7c071ca5a7d523c0d7db7b8cef1252"
+    },
+    {
+      "path": "derived/upstream_monthly.csv",
+      "bytes": 25897,
+      "sha256": "2978b536683e51bf0962ed24ebf7deca75e8092d0eef5e3c9d75f1554db25430"
+    },
+    {
+      "path": "derived/upstream_annual.csv",
+      "bytes": 1373,
+      "sha256": "791e1f2fdbf9ef7b96b8f94a1463bdcdb4ddca139e7eca5839a37f23921887f0"
+    },
+    {
+      "path": "derived/gauge_monthly.csv",
+      "bytes": 1502,
+      "sha256": "2839d45b09f54c3525fcf370aa60d17d97263eae51c8ec251772852356869bee"
+    },
+    {
+      "path": "derived/summary.json",
+      "bytes": 7039,
+      "sha256": "2b5d1e55ee3c39646fc4867d9e5105d5509bd46130a8db8fa7089cf8e5afecb6"
+    }
+  ]
+}

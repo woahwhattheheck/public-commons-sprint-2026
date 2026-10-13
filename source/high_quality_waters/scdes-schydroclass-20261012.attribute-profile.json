@@ -1,0 +1,706 @@
+{
+  "schema": "upstate.classified-water-inventory/v1",
+  "source_id": "scdes-classified-streams-upper-savannah-20261012",
+  "layer_id": "scdes-classified-75805b84d89a256d",
+  "source_uri": "https://gis.des.sc.gov/gisserver/rest/services/water/SCHydroClass/MapServer/2",
+  "source_capture_date": "2026-10-12",
+  "data_status": "provisional",
+  "legal_edition_status": "current",
+  "inputs": {
+    "classified_csv": {
+      "path": "source/water_context/20261012/classified-reaches.csv",
+      "bytes": 168811,
+      "sha256": "ce95ef233822d1205f5fda534e95e361a933147301f787906b509f8b4525cf18"
+    },
+    "legal_registry": {
+      "path": "source/high_quality_waters/r61-69-current.selected-reaches.json",
+      "bytes": 60479,
+      "sha256": "a55388d8edfceb587d7d37b5e9a20f43a1f44d37f6ecd70001806528bbc767f1"
+    }
+  },
+  "source_selection": {
+    "where": "(HUC_12 LIKE '03060101%' OR HUC_12 LIKE '03060102%' OR HUC_12 LIKE '03060103%') AND H2OCLASS IN ('ORW','ONRW','TN','TPGT','TPT')",
+    "class_codes": [
+      "ORW",
+      "ONRW",
+      "TN",
+      "TPGT",
+      "TPT"
+    ],
+    "publisher_huc_prefixes": [
+      "03060101",
+      "03060102",
+      "03060103"
+    ],
+    "scope_note": "This edition preselects five class codes and three publisher HUC8 prefixes. Spatial intersections with retained current WBD polygons establish reporting and HUC membership. Features outside this capture selection are not evaluated."
+  },
+  "identity": {
+    "native_oid_field": "OBJECTID",
+    "native_oid_type": "esriFieldTypeOID",
+    "oid_alias": "OBJECTID_1",
+    "separate_nullable_attribute": "OBJECTID_1",
+    "source_identity": "Exact source layer URL plus original OBJECTID"
+  },
+  "feature_count": 1886,
+  "distinct_native_id_count": 1886,
+  "publisher_huc_count": 19,
+  "nonblank_literal_name_count": 135,
+  "blank_name_count": 872,
+  "blank_county_count": 174,
+  "class_counts": {
+    "ORW": 1040,
+    "TN": 247,
+    "TPGT": 599
+  },
+  "hydro_type_counts": {
+    " ": 1,
+    "APPARENT LIMIT": 28,
+    "CLOSURE LINE": 15,
+    "DAM/WEIR": 20,
+    "FALLS": 1,
+    "MANMADE SHORELINE": 7,
+    "RAPIDS": 19,
+    "SHORELINE": 183,
+    "SHORELINE/SUBMERGED": 38,
+    "STREAM": 791,
+    "STREAM/INTERMITTENT": 414,
+    "STREAM/LEFT BANK": 258,
+    "STREAM/RIGHT BANK": 111
+  },
+  "class_identifier_coverage": {
+    "TPGT": {
+      "feature_count": 599,
+      "blank_name_count": 295,
+      "blank_county_count": 17
+    },
+    "ORW": {
+      "feature_count": 1040,
+      "blank_name_count": 438,
+      "blank_county_count": 155
+    },
+    "TN": {
+      "feature_count": 247,
+      "blank_name_count": 139,
+      "blank_county_count": 2
+    }
+  },
+  "hydro_type_class_counts": [
+    {
+      "hydro_type_raw": " ",
+      "class_raw": "TPGT",
+      "feature_count": 1,
+      "blank_name_count": 1,
+      "blank_county_count": 0
+    },
+    {
+      "hydro_type_raw": "APPARENT LIMIT",
+      "class_raw": "ORW",
+      "feature_count": 28,
+      "blank_name_count": 28,
+      "blank_county_count": 8
+    },
+    {
+      "hydro_type_raw": "CLOSURE LINE",
+      "class_raw": "ORW",
+      "feature_count": 7,
+      "blank_name_count": 7,
+      "blank_county_count": 3
+    },
+    {
+      "hydro_type_raw": "CLOSURE LINE",
+      "class_raw": "TPGT",
+      "feature_count": 8,
+      "blank_name_count": 0,
+      "blank_county_count": 0
+    },
+    {
+      "hydro_type_raw": "DAM/WEIR",
+      "class_raw": "ORW",
+      "feature_count": 10,
+      "blank_name_count": 10,
+      "blank_county_count": 0
+    },
+    {
+      "hydro_type_raw": "DAM/WEIR",
+      "class_raw": "TN",
+      "feature_count": 2,
+      "blank_name_count": 2,
+      "blank_county_count": 0
+    },
+    {
+      "hydro_type_raw": "DAM/WEIR",
+      "class_raw": "TPGT",
+      "feature_count": 8,
+      "blank_name_count": 6,
+      "blank_county_count": 0
+    },
+    {
+      "hydro_type_raw": "FALLS",
+      "class_raw": "ORW",
+      "feature_count": 1,
+      "blank_name_count": 1,
+      "blank_county_count": 0
+    },
+    {
+      "hydro_type_raw": "MANMADE SHORELINE",
+      "class_raw": "TN",
+      "feature_count": 3,
+      "blank_name_count": 3,
+      "blank_county_count": 0
+    },
+    {
+      "hydro_type_raw": "MANMADE SHORELINE",
+      "class_raw": "TPGT",
+      "feature_count": 4,
+      "blank_name_count": 0,
+      "blank_county_count": 0
+    },
+    {
+      "hydro_type_raw": "RAPIDS",
+      "class_raw": "ORW",
+      "feature_count": 19,
+      "blank_name_count": 19,
+      "blank_county_count": 8
+    },
+    {
+      "hydro_type_raw": "SHORELINE",
+      "class_raw": "ORW",
+      "feature_count": 60,
+      "blank_name_count": 38,
+      "blank_county_count": 3
+    },
+    {
+      "hydro_type_raw": "SHORELINE",
+      "class_raw": "TN",
+      "feature_count": 9,
+      "blank_name_count": 8,
+      "blank_county_count": 0
+    },
+    {
+      "hydro_type_raw": "SHORELINE",
+      "class_raw": "TPGT",
+      "feature_count": 114,
+      "blank_name_count": 29,
+      "blank_county_count": 11
+    },
+    {
+      "hydro_type_raw": "SHORELINE/SUBMERGED",
+      "class_raw": "TPGT",
+      "feature_count": 38,
+      "blank_name_count": 0,
+      "blank_county_count": 0
+    },
+    {
+      "hydro_type_raw": "STREAM",
+      "class_raw": "ORW",
+      "feature_count": 346,
+      "blank_name_count": 129,
+      "blank_county_count": 4
+    },
+    {
+      "hydro_type_raw": "STREAM",
+      "class_raw": "TN",
+      "feature_count": 198,
+      "blank_name_count": 99,
+      "blank_county_count": 0
+    },
+    {
+      "hydro_type_raw": "STREAM",
+      "class_raw": "TPGT",
+      "feature_count": 247,
+      "blank_name_count": 128,
+      "blank_county_count": 3
+    },
+    {
+      "hydro_type_raw": "STREAM/INTERMITTENT",
+      "class_raw": "ORW",
+      "feature_count": 237,
+      "blank_name_count": 206,
+      "blank_county_count": 4
+    },
+    {
+      "hydro_type_raw": "STREAM/INTERMITTENT",
+      "class_raw": "TN",
+      "feature_count": 31,
+      "blank_name_count": 27,
+      "blank_county_count": 0
+    },
+    {
+      "hydro_type_raw": "STREAM/INTERMITTENT",
+      "class_raw": "TPGT",
+      "feature_count": 146,
+      "blank_name_count": 131,
+      "blank_county_count": 0
+    },
+    {
+      "hydro_type_raw": "STREAM/LEFT BANK",
+      "class_raw": "ORW",
+      "feature_count": 224,
+      "blank_name_count": 0,
+      "blank_county_count": 73
+    },
+    {
+      "hydro_type_raw": "STREAM/LEFT BANK",
+      "class_raw": "TN",
+      "feature_count": 2,
+      "blank_name_count": 0,
+      "blank_county_count": 1
+    },
+    {
+      "hydro_type_raw": "STREAM/LEFT BANK",
+      "class_raw": "TPGT",
+      "feature_count": 32,
+      "blank_name_count": 0,
+      "blank_county_count": 3
+    },
+    {
+      "hydro_type_raw": "STREAM/RIGHT BANK",
+      "class_raw": "ORW",
+      "feature_count": 108,
+      "blank_name_count": 0,
+      "blank_county_count": 52
+    },
+    {
+      "hydro_type_raw": "STREAM/RIGHT BANK",
+      "class_raw": "TN",
+      "feature_count": 2,
+      "blank_name_count": 0,
+      "blank_county_count": 1
+    },
+    {
+      "hydro_type_raw": "STREAM/RIGHT BANK",
+      "class_raw": "TPGT",
+      "feature_count": 1,
+      "blank_name_count": 0,
+      "blank_county_count": 0
+    }
+  ],
+  "publisher_huc_class_counts": [
+    {
+      "publisher_huc12": "030601010102",
+      "class_raw": "TN",
+      "feature_count": 22,
+      "blank_name_count": 7,
+      "blank_county_count": 0
+    },
+    {
+      "publisher_huc12": "030601010102",
+      "class_raw": "TPGT",
+      "feature_count": 20,
+      "blank_name_count": 2,
+      "blank_county_count": 2
+    },
+    {
+      "publisher_huc12": "030601010103",
+      "class_raw": "TPGT",
+      "feature_count": 25,
+      "blank_name_count": 2,
+      "blank_county_count": 5
+    },
+    {
+      "publisher_huc12": "030601010104",
+      "class_raw": "ORW",
+      "feature_count": 40,
+      "blank_name_count": 18,
+      "blank_county_count": 3
+    },
+    {
+      "publisher_huc12": "030601010104",
+      "class_raw": "TN",
+      "feature_count": 20,
+      "blank_name_count": 8,
+      "blank_county_count": 2
+    },
+    {
+      "publisher_huc12": "030601010104",
+      "class_raw": "TPGT",
+      "feature_count": 64,
+      "blank_name_count": 17,
+      "blank_county_count": 1
+    },
+    {
+      "publisher_huc12": "030601010105",
+      "class_raw": "TPGT",
+      "feature_count": 56,
+      "blank_name_count": 12,
+      "blank_county_count": 0
+    },
+    {
+      "publisher_huc12": "030601010201",
+      "class_raw": "TN",
+      "feature_count": 54,
+      "blank_name_count": 29,
+      "blank_county_count": 0
+    },
+    {
+      "publisher_huc12": "030601010201",
+      "class_raw": "TPGT",
+      "feature_count": 1,
+      "blank_name_count": 1,
+      "blank_county_count": 0
+    },
+    {
+      "publisher_huc12": "030601010202",
+      "class_raw": "ORW",
+      "feature_count": 79,
+      "blank_name_count": 40,
+      "blank_county_count": 0
+    },
+    {
+      "publisher_huc12": "030601010202",
+      "class_raw": "TPGT",
+      "feature_count": 243,
+      "blank_name_count": 157,
+      "blank_county_count": 0
+    },
+    {
+      "publisher_huc12": "030601010301",
+      "class_raw": "ORW",
+      "feature_count": 42,
+      "blank_name_count": 24,
+      "blank_county_count": 0
+    },
+    {
+      "publisher_huc12": "030601010301",
+      "class_raw": "TN",
+      "feature_count": 23,
+      "blank_name_count": 8,
+      "blank_county_count": 0
+    },
+    {
+      "publisher_huc12": "030601010302",
+      "class_raw": "TN",
+      "feature_count": 57,
+      "blank_name_count": 44,
+      "blank_county_count": 0
+    },
+    {
+      "publisher_huc12": "030601010302",
+      "class_raw": "TPGT",
+      "feature_count": 36,
+      "blank_name_count": 22,
+      "blank_county_count": 0
+    },
+    {
+      "publisher_huc12": "030601020204",
+      "class_raw": "ORW",
+      "feature_count": 169,
+      "blank_name_count": 34,
+      "blank_county_count": 68
+    },
+    {
+      "publisher_huc12": "030601020204",
+      "class_raw": "TN",
+      "feature_count": 6,
+      "blank_name_count": 4,
+      "blank_county_count": 0
+    },
+    {
+      "publisher_huc12": "030601020209",
+      "class_raw": "ORW",
+      "feature_count": 171,
+      "blank_name_count": 56,
+      "blank_county_count": 63
+    },
+    {
+      "publisher_huc12": "030601020209",
+      "class_raw": "TN",
+      "feature_count": 65,
+      "blank_name_count": 39,
+      "blank_county_count": 0
+    },
+    {
+      "publisher_huc12": "030601020210",
+      "class_raw": "ORW",
+      "feature_count": 28,
+      "blank_name_count": 0,
+      "blank_county_count": 21
+    },
+    {
+      "publisher_huc12": "030601020210",
+      "class_raw": "TPGT",
+      "feature_count": 12,
+      "blank_name_count": 3,
+      "blank_county_count": 1
+    },
+    {
+      "publisher_huc12": "030601020301",
+      "class_raw": "ORW",
+      "feature_count": 163,
+      "blank_name_count": 89,
+      "blank_county_count": 0
+    },
+    {
+      "publisher_huc12": "030601020302",
+      "class_raw": "ORW",
+      "feature_count": 199,
+      "blank_name_count": 106,
+      "blank_county_count": 0
+    },
+    {
+      "publisher_huc12": "030601020304",
+      "class_raw": "ORW",
+      "feature_count": 149,
+      "blank_name_count": 71,
+      "blank_county_count": 0
+    },
+    {
+      "publisher_huc12": "030601020403",
+      "class_raw": "TPGT",
+      "feature_count": 40,
+      "blank_name_count": 8,
+      "blank_county_count": 1
+    },
+    {
+      "publisher_huc12": "030601030402",
+      "class_raw": "TPGT",
+      "feature_count": 2,
+      "blank_name_count": 1,
+      "blank_county_count": 0
+    },
+    {
+      "publisher_huc12": "030601030404",
+      "class_raw": "TPGT",
+      "feature_count": 2,
+      "blank_name_count": 0,
+      "blank_county_count": 0
+    },
+    {
+      "publisher_huc12": "030601030405",
+      "class_raw": "TPGT",
+      "feature_count": 97,
+      "blank_name_count": 70,
+      "blank_county_count": 7
+    },
+    {
+      "publisher_huc12": "030601030410",
+      "class_raw": "TPGT",
+      "feature_count": 1,
+      "blank_name_count": 0,
+      "blank_county_count": 0
+    }
+  ],
+  "literal_join_counts": {
+    "blank_native_name": 872,
+    "literal_name_class_blank_county": 148,
+    "literal_name_class_county": 528,
+    "literal_name_class_different_county": 22,
+    "literal_name_different_class": 26,
+    "no_literal_registry_name": 290
+  },
+  "selected_registry_record_count": 105,
+  "literal_name_registry_record_count": 59,
+  "literal_name_class_county_registry_record_count": 50,
+  "name_or_county_review_groups": [
+    {
+      "waterbody_name_raw": "LAKE JOCASSEE",
+      "class_raw": "TPGT",
+      "county_raw": "Pickens",
+      "literal_join_status": "literal_name_class_different_county",
+      "object_ids": [
+        "281697",
+        "281750",
+        "281793",
+        "281794",
+        "281795",
+        "281895",
+        "281923",
+        "281924",
+        "281928",
+        "281959",
+        "281974",
+        "282028",
+        "282057",
+        "282071",
+        "282169",
+        "282171",
+        "284797",
+        "286783"
+      ],
+      "literal_registry_record_ids": [
+        "sc-r61-69-2023-L0963"
+      ]
+    },
+    {
+      "waterbody_name_raw": "BAD CREEK",
+      "class_raw": "TN",
+      "county_raw": "Pickens",
+      "literal_join_status": "literal_name_different_class",
+      "object_ids": [
+        "281751"
+      ],
+      "literal_registry_record_ids": [
+        "sc-r61-69-2023-L0277"
+      ]
+    },
+    {
+      "waterbody_name_raw": "THOMPSON RIVER",
+      "class_raw": "TPGT",
+      "county_raw": "Oconee",
+      "literal_join_status": "literal_name_different_class",
+      "object_ids": [
+        "281789",
+        "281864",
+        "281955",
+        "282020",
+        "282021"
+      ],
+      "literal_registry_record_ids": [
+        "sc-r61-69-2023-L1562"
+      ]
+    },
+    {
+      "waterbody_name_raw": "WHITEWATER RIVER",
+      "class_raw": "TPGT",
+      "county_raw": "Oconee",
+      "literal_join_status": "literal_name_different_class",
+      "object_ids": [
+        "281801",
+        "281879",
+        "282093",
+        "282094",
+        "284791"
+      ],
+      "literal_registry_record_ids": [
+        "sc-r61-69-2023-L1752"
+      ]
+    },
+    {
+      "waterbody_name_raw": "MILL CREEK",
+      "class_raw": "TPGT",
+      "county_raw": "Oconee",
+      "literal_join_status": "literal_name_class_different_county",
+      "object_ids": [
+        "281804"
+      ],
+      "literal_registry_record_ids": [
+        "sc-r61-69-2023-L1153",
+        "sc-r61-69-2023-L1155"
+      ]
+    },
+    {
+      "waterbody_name_raw": "BAD CREEK",
+      "class_raw": "TPGT",
+      "county_raw": "Oconee",
+      "literal_join_status": "literal_name_different_class",
+      "object_ids": [
+        "282123"
+      ],
+      "literal_registry_record_ids": [
+        "sc-r61-69-2023-L0277"
+      ]
+    },
+    {
+      "waterbody_name_raw": "LITTLE RIVER",
+      "class_raw": "TPGT",
+      "county_raw": "Oconee",
+      "literal_join_status": "literal_name_different_class",
+      "object_ids": [
+        "282589",
+        "282591",
+        "283174",
+        "283221",
+        "283230"
+      ],
+      "literal_registry_record_ids": [
+        "sc-r61-69-2023-L1053"
+      ]
+    },
+    {
+      "waterbody_name_raw": "MILL CREEK",
+      "class_raw": "ORW",
+      "county_raw": "Oconee",
+      "literal_join_status": "literal_name_different_class",
+      "object_ids": [
+        "285299",
+        "285333",
+        "285338",
+        "285447",
+        "289028"
+      ],
+      "literal_registry_record_ids": [
+        "sc-r61-69-2023-L1153",
+        "sc-r61-69-2023-L1155"
+      ]
+    },
+    {
+      "waterbody_name_raw": "LAUREL CREEK",
+      "class_raw": "ORW",
+      "county_raw": "Oconee",
+      "literal_join_status": "literal_name_class_different_county",
+      "object_ids": [
+        "285971",
+        "286009",
+        "290892"
+      ],
+      "literal_registry_record_ids": [
+        "sc-r61-69-2023-L1000"
+      ]
+    },
+    {
+      "waterbody_name_raw": "LAKE JOCASSEE",
+      "class_raw": "TN",
+      "county_raw": "Oconee",
+      "literal_join_status": "literal_name_different_class",
+      "object_ids": [
+        "295582"
+      ],
+      "literal_registry_record_ids": [
+        "sc-r61-69-2023-L0963"
+      ]
+    },
+    {
+      "waterbody_name_raw": "LAKE JOCASSEE",
+      "class_raw": "ORW",
+      "county_raw": "Oconee",
+      "literal_join_status": "literal_name_different_class",
+      "object_ids": [
+        "295618",
+        "299111"
+      ],
+      "literal_registry_record_ids": [
+        "sc-r61-69-2023-L0963"
+      ]
+    },
+    {
+      "waterbody_name_raw": "BEAR CREEK",
+      "class_raw": "TN",
+      "county_raw": "Oconee",
+      "literal_join_status": "literal_name_different_class",
+      "object_ids": [
+        "295684"
+      ],
+      "literal_registry_record_ids": [
+        "sc-r61-69-2023-L0307"
+      ]
+    }
+  ],
+  "index_columns": [
+    "object_id",
+    "hydro_type_raw",
+    "class_raw",
+    "publisher_huc12",
+    "name_blank",
+    "county_blank",
+    "literal_join_status",
+    "literal_registry_record_ids"
+  ],
+  "metric_labels": {
+    "feature_count": "Native classified source features",
+    "line_length": "Classified source linework",
+    "nonblank_literal_name_count": "Distinct nonblank source names",
+    "publisher_huc_count": "Publisher HUC12 codes in captured source"
+  },
+  "interpretation": [
+    "HYDTYPE values are retained exactly; linework includes banks, shorelines, closure lines and structures as well as stream lines.",
+    "Separate banks and shorelines cannot be summarized as stream centerline length; a lake shoreline does not provide lake area.",
+    "Source Shape_Length is a Web Mercator source attribute. Native spatial analysis calculates suitable projected lengths separately.",
+    "A blank name or county does not remove positively classified source geometry.",
+    "Literal registry predicates normalize Unicode, case and whitespace only; they do not infer aliases, receiving waters or legal extent.",
+    "literal_registry_record_ids includes all selected legal rows with the same literal normalized name, before class and county comparison.",
+    "The selected registry is a scoped 105-row legal source. Absence from it is not a finding that a source water is legally unlisted.",
+    "Literal class or county differences are source-review context, not declarations that either source is erroneous.",
+    "All source objects remain provisional; explicit legal geometry bindings and the spatial crosswalk retain their separate roles.",
+    "Publisher HUC_12 values remain source attributes. Retained native WBD intersection determines current model HUC membership."
+  ]
+}

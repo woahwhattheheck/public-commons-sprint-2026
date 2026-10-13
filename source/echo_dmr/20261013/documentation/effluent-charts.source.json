@@ -1,0 +1,233 @@
+{
+  "url": "https://echo.epa.gov/help/reports/effluent-charts-help",
+  "final_url": "https://echo.epa.gov/help/reports/effluent-charts-help",
+  "title": "Effluent Charts Help | ECHO | US EPA",
+  "description": null,
+  "language": "en",
+  "text": {
+    "type": "document",
+    "children": [
+      {
+        "type": "heading",
+        "level": 1,
+        "text": "Effluent Charts Help"
+      },
+      {
+        "type": "paragraph",
+        "text": "The Effluent Charts page presents dynamic charts and tables of permitted limits, reported releases (discharge monitoring reports), and violations over time for Clean Water Act (CWA) wastewater discharge permits issued under the National Pollutant Discharge Elimination System (NPDES). Note: Information about NPDES discharge measurements is available under \"CWA/NPDES Compliance Status\" in the Detailed Facility Report Data Dictionary."
+      },
+      {
+        "type": "paragraph",
+        "text": "Here you can find help with the following topics:"
+      },
+      {
+        "type": "list",
+        "ordered": false,
+        "items": [
+          "Accessing Effluent Charts",
+          "Navigating Effluent Charts",
+          "Reporting Errors",
+          "Data Considerations",
+          "Data Dictionary"
+        ]
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "text": "Accessing Effluent Charts"
+      },
+      {
+        "type": "paragraph",
+        "text": "There are several ways to access effluent charts:"
+      },
+      {
+        "type": "list",
+        "ordered": true,
+        "items": [
+          "From Facility Search Results (All Media Programs, Wastewater/Stormwater/Biosolids, and Hazardous Waste Searches) Facilities with Effluent Charts available have an \"E\" icon in the Reports column of the Results table. An \"E\" icon indicates that one set (i.e., one NPDES permit ID) of charts is available. Clicking the \"E\" icon opens the Effluent Charts page in a new tab.",
+          "From the Detailed Facility Report The Three Year Compliance Status by Quarter table in the Enforcement and Compliance section of the Detailed Facility Report provides CWA compliance status information by pollutant (violations only). Clicking the hyperlinked pollutant name opens a new tab with pollutant-specific effluent charts available for selection. The Effluent Charts page pre-selects and loads the charts for the specified pollutant. From this page you can choose to view a different chart set for any pollutant monitored at the facility."
+        ]
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "text": "Navigating Effluent Charts"
+      },
+      {
+        "type": "heading",
+        "level": 3,
+        "text": "Summary Matrix"
+      },
+      {
+        "type": "paragraph",
+        "text": "The top of the Effluent Charts page displays a chart summary that allows you to further refine the universe of effluent data presented. You can specify a date range of interest, view the compliance tracking status, and select or deselect (via checkbox) one or more of the following compliance status values of interest:"
+      },
+      {
+        "type": "list",
+        "ordered": false,
+        "items": [
+          "Red - Significant/Category I Noncompliance",
+          "Yellow - Violation Identified",
+          "Blue - No Violation Identified",
+          "Light Gray - No DMR Data Available"
+        ]
+      },
+      {
+        "type": "paragraph",
+        "text": "By default, data representing the overall compliance status which identifies the most severe compliance status during the selected date range for each pollutant/outfall combination is presented. Your selections control the display of the summary matrix of pollutants discharged at a facility by individual outfalls. The summary matrix provides both a quick, high-level view for the facility, as well as a means to select a pollutant/outfall of interest to graphically view effluent data."
+      },
+      {
+        "type": "paragraph",
+        "text": "To view the summary matrix in table form, select \"Download Summary Data\" at the top of the Summary Matrix to download a .CSV file. This download will allow you to save and analyze the compliance status for all of the outfalls and pollutants for a NPDES permit based on the selected date range. Note: In some browsers, the file may download without an extension. Manually adding \".csv\" to the filename will allow the file to open as a CSV. Select \"Download All Data\" to download data that includes all of the parameters/permitted features selected to display from the summary table."
+      },
+      {
+        "type": "paragraph",
+        "text": "Click on any cell in the matrix to display concentration and quantity charts for the selected pollutant/outfall combination. The charts are displayed on the same page below the summary matrix. There are three ways to view multiple charts at one time:"
+      },
+      {
+        "type": "list",
+        "ordered": true,
+        "items": [
+          "Selecting the left-most cell in the All Outfalls column in a chemical row in the summary matrix displays charts for all outfalls where the selected pollutant is monitored.",
+          "Selecting a cell from the All Chemicals row (top row on the matrix) displays charts for all pollutants monitored at the selected outfall.",
+          "Selecting the intersection cell for All Outfalls and All Chemicals displays all charts for the facility for the specified NPDES ID."
+        ]
+      },
+      {
+        "type": "heading",
+        "level": 3,
+        "text": "Chart Data"
+      },
+      {
+        "type": "paragraph",
+        "text": "Each effluent chart displays all of the influent and effluent measures, permitted limits, and effluent violations for the given dates, for a single permit, discharge point, parameter, monitoring location, and sampling period. The charts show different violation data for ICIS-NPDES permits, reflecting the different information stored about violations in the system."
+      },
+      {
+        "type": "paragraph",
+        "text": "Basic chart information is displayed in the chart header, including:"
+      },
+      {
+        "type": "list",
+        "ordered": false,
+        "items": [
+          "Discharge Point: 3- or 4-character code that uniquely identifies a single permitted discharge point (also called a pipe or outfall), as well as a description of the type of discharge point (e.g., external outfall, sum). These correspond to permit feature code and permit feature type description fields in the source database.",
+          "Parameter: The pollutant measured.",
+          "Monitoring Location: Describes the location at which sampling for the parameter occurred (e.g., effluent gross)"
+        ]
+      },
+      {
+        "type": "paragraph",
+        "text": "Two effluent charts may be available for each pollutant and discharge point at a facility:"
+      },
+      {
+        "type": "list",
+        "ordered": true,
+        "items": [
+          "Concentration Chart: Displays the maximum, average, and minimum concentration measurements and effluent limits.",
+          "Quantity Chart: Displays the maximum, average, and total quantity measurements and effluent limits."
+        ]
+      },
+      {
+        "type": "paragraph",
+        "text": "The chart series are defined by the Statistical Base Codes corresponding to the parameter measurements."
+      },
+      {
+        "type": "paragraph",
+        "text": "By default, the charts present data for the past three years on a monthly scale, but the past five years may be displayed by adjusting the date range above the summary matrix."
+      },
+      {
+        "type": "paragraph",
+        "text": "The chart symbols identify the measurement's general statistical basis (i.e., maximum, average, minimum or total) and change color if the measurement is in violation of the effluent limit. At times, the percent exceedance calculated is \"2,147,483,650\" or \"99,999\" percent from the source system (ICIS-NPDES) but the effluent charts will display \"LIMIT VIOLATION\" because these values are not representative of the actual measured percent exceedance and should not be interpreted this way. The Water Compliance Status section of the Detailed Facility Report Data Dictionary defines the CWA violation categories. A timeline at the top of the chart flags time periods when the facility is in violation of its reporting requirements. The violation flag icons identify the corresponding statistical basis associated with the reporting violation. When a No Data Indicator (NODI) Code was reported, black square icons appear along the timeline at the top of the chart. When users hover over the icon, the popup displays the NODI description."
+      },
+      {
+        "type": "heading",
+        "level": 3,
+        "text": "Chart Legend"
+      },
+      {
+        "type": "heading",
+        "level": 3,
+        "text": "Interacting with Charts"
+      },
+      {
+        "type": "paragraph",
+        "text": "Effluent charts are interactive. Useful features include:"
+      },
+      {
+        "type": "list",
+        "ordered": false,
+        "items": [
+          "Data Point Value: Hover your mouse pointer over any data point or limit line to view an attribute bubble containing detail about the DMR measurement and limit.",
+          "Data Series Displayed: Use the chart legend shown below the chart to control which data series are shown on the chart. Click to enable (or disable) data series displayed.",
+          "Zoom: Using your mouse pointer, drag out a rectangle in the chart. The chart will adjust to zoom into the selected area. Click \"Reset zoom\" to return to the default chart view.",
+          "Download Chart: Click the \"Download Chart\" button in the upper-right corner of the chart to print or download the current view of the effluent chart. Select from one of the following options: Print Chart Download PNG image Download JPEG image Download PDF document Download SVG vector image"
+        ]
+      },
+      {
+        "type": "heading",
+        "level": 3,
+        "text": "View Chart Data in a Table"
+      },
+      {
+        "type": "paragraph",
+        "text": "Effluent chart data are also available to view in a tabular format. Click the \"Show/Hide Table\" button to display a detailed data table below the chart. Use the vertical and horizontal scrollbars to view data. Sort columns by clicking on the column heading. The Data Dictionary describes the contents of effluent data tables and downloads."
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "text": "Reporting Errors"
+      },
+      {
+        "type": "paragraph",
+        "text": "If you believe that some of the information in an effluent chart or table is in error, you may report your findings from the Effluent Charts page. Click the \"Report an Error\" button at the top of the page and a \"Report an Error\" button will appear above each chart. Click \"Report an Error\" for the chart where you believe the error is to open an error reporting form specifically for that chart. Error reporting is also demonstrated in the Effluent Charts Video Tutorial."
+      },
+      {
+        "type": "paragraph",
+        "text": "The error reporting form will ask for your contact information, in order to keep you informed of progress in addressing your report, and a description of the problem. Please include enough information to allow EPA to identify the data in question and to evaluate your comment."
+      },
+      {
+        "type": "paragraph",
+        "text": "Once you submit the report, it will be entered into EPA's Integrated Error Correction Process. You will receive an immediate acknowledgement on the webpage, and status updates as EPA determines how to address the report (see Error Correction Performance Standards)."
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "text": "Data Considerations"
+      },
+      {
+        "type": "paragraph",
+        "text": "The CWA Effluent Charts show discharge monitoring report (DMR) data, effluent violations, and monitoring violations (late or missing DMRs). They do not show single-event violations or other types of permit violations, often the result of inspection findings."
+      },
+      {
+        "type": "paragraph",
+        "text": "Under certain circumstances, Effluent Charts may appear to be missing effluent, limit, or violation data. There are several reasons for this apparent lack of information, which may be broken into the following cases:"
+      },
+      {
+        "type": "list",
+        "ordered": false,
+        "items": [
+          "Numeric limits are present without measurement data or violations. This can occur in some cases for non-major permits. Without this functionality, missing measurements will not result in violations.",
+          "Effluent measurements are present without corresponding numeric limits. This may reflect a condition where \"monitoring only\" is either optional or required.",
+          "No limit or measurement data are shown for a specific time period. Lack of limit or measurement data may be due to seasonal limits or optional monitoring. Lack of measurement data for required monitoring will generate violations, unless DMR non-receipt tracking is turned off."
+        ]
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "text": "Data Dictionary"
+      },
+      {
+        "type": "paragraph",
+        "text": "This section describes the format and contents of the Effluent Charts data table and data download. For more information about CWA/NPDES discharge measurements, please see the Detailed Facility Report Data Dictionary."
+      },
+      {
+        "type": "paragraph",
+        "text": "Table 1 lists the data fields that are displayed for each Effluent Charts data table. Table 2 lists the data fields included in the Download All Data file, which captures all discharge monitoring report (DMR) data for the selected NPDES permit and data range."
+      }
+    ]
+  },
+  "author": null,
+  "published_date": null,
+  "latency_ms": 1598.8833230003365,
+  "format": "json"
+}

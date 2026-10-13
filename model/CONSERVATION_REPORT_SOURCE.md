@@ -37,10 +37,10 @@ The completed regional plan uses 12 of the original 217 watershed units and the 
 model.conservation_report_source.prepare(workspace, spec) accepts:
 
 ~~~json
-{"plan_id":"ORIGINAL_64_HEX_PLAN_ID","title":"Optional report source title"}
+{"plan_id":"ORIGINAL_64_HEX_PLAN_ID","title":"Optional report source title","include_maps":true}
 ~~~
 
-The completed receipt has schema upstate.conservation-report-source/v1 and edition conservation-saved-plan-report/2. It returns id, state, plan_id, study_id, title, source, files, packet and created_at. Its source is exactly {source_collection_id, source_id}, naming the actual imported document. Its files.recipe, files.manifest and files.source_bundle are original Workspace-relative descriptors with path, bytes and sha256. The receipt additionally retains its full immutable selection, every source companion descriptor and the observed-context binding.
+The completed receipt has schema upstate.conservation-report-source/v1 and edition conservation-saved-plan-report/3. It returns id, state, plan_id, study_id, title, source, files, packet and created_at. Its source is exactly {source_collection_id, source_id}, naming the actual imported document. Its files.recipe, files.manifest and files.source_bundle are original Workspace-relative descriptors with path, bytes and sha256. The receipt additionally retains its full immutable selection, every source companion descriptor and the observed-context binding.
 
 get(workspace, report_source_id) verifies and reopens that same receipt, its recipe, manifest, source ZIP and every companion. It verifies the actual imported source document and exact companion membership, then checks the existing observed_context.bind result against the saved binding.
 
@@ -99,3 +99,16 @@ For native-model studies, retained N/P/sediment outputs keep their original unit
 On the actual equipped Workspace, prepare the completed original plan once, inspect the returned report source, then call the existing observed_report_render.prepare(workspace, [result["source"]], title=result["title"]) and its maintained render entrypoint. Verify its original source choice, complete HTML/PDF and copied companions. Reopen the original Workspace and the report-source receipt; IDs, selected units and original source hashes must match.
 
 Use the existing native scientific-report/archive receiving course for the resulting report. Source-context receiving requires no NDR/SDR execution. Native-model reports consume the already-completed original runs and paired quantities. The current browser course remains attached to the same original plan and Workspace.
+
+
+## Geographic figures in edition 3
+
+Edition 3 includes the original portfolio's geographic panels by default. The existing Scientific Reports composer and PDF/HTML renderer consume the same retained map specification and SVG companions. Install the maintained scientific-map-figures component, including its optional role-label support, with this producer. The geographic implementation and source hashes form part of the report-source identity; earlier edition 1/2 receipts remain independently reopenable.
+
+The default figures show the complete reporting inventory with selected original units, whole-unit versus reporting-clipped unions, each declared context against the selected footprint, and its separate selected intersection. A context is drawn only when it was bound in the original study. High-quality line features preserve their original contact length separately from their zero areal coverage. The original source selector, feature filter, declared buffer, projected CRS and geometry interpretation are retained. Geographic context does not create a modeled quantity or hydrologic connection.
+
+The source receipt adds maps.summary, maps.figure_spec and maps.figures, with verified geographic files available through the existing downloads. Original geometric inputs, full feature properties, source identities, area agreement checks, specifications and actual SVGs are all ordinary hashed source companions and travel with the complete report source. The optimizer's original analysis, full table, HTML and packet remain included.
+
+Use include_maps:false in the original prepare dictionary, or append --no-maps to the CLI prepare command, to retain a source-only edition. This choice produces its own immutable source identity. It does not modify an existing mapped report or any original portfolio. Invalid geometry or missing source editions are surfaced by the maintained native readers; they are not silently repaired by the map renderer.
+
+See CONSERVATION_REPORT_MAPS.md for the exact geographic interfaces, retained-coordinate semantics, native receiving course and area distinctions.

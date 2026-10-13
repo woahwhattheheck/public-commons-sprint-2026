@@ -1,0 +1,16 @@
+lucode,land_use_class_name,usle_c,usle_p
+11,Open Water,0.001,1
+21,Developed Open Space,0.1,0.5
+22,Developed Low Intensity,0.1,0.5
+23,Developed Medium Intensity,0.1,0.5
+24,Developed High Intensity,0.1,0.5
+31,Barren Land,0.45,1
+41,Deciduous Forest,0.001,1
+42,Evergreen Forest,0.001,1
+43,Mixed Forest,0.001,1
+52,Shrub/Scrub,0.01,1
+71,Grassland/Herbaceous,0.01,1
+81,Pasture/Hay,0.01,1
+82,Cultivated Crops,0.2,1
+90,Woody Wetlands,0.001,1
+95,Emergent Herbaceous Wetlands,0.001,1

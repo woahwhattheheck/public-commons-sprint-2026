@@ -1,0 +1,193 @@
+{
+  "schema": "upstate.source-file-manifest/v1",
+  "created_at": "2026-10-12T05:07:06.985Z",
+  "source_root": "opportunities/upstate_forever_2026/source",
+  "files": [
+    {
+      "path": "geography/wbd_20261012/capture.json",
+      "bytes": 5072,
+      "sha256": "e0649e67ab8a84c01f593b4773392c4dca099e16b483efbfe8156839e0db3f27",
+      "git_sha": "8e6ba2cf97bd975d03017db687573cc6d4f93872"
+    },
+    {
+      "path": "geography/wbd_20261012/census-states-layer.json.gz",
+      "bytes": 1740,
+      "sha256": "3d641cd47f8d7f33456be1f3cd267b5958c324291c24ce59c87f4665a1b44bd3",
+      "git_sha": "dffc098d36fd80412ed43e2f13d671abc70d5e30"
+    },
+    {
+      "path": "geography/wbd_20261012/hierarchy-capture.json",
+      "bytes": 13121,
+      "sha256": "7c820a99f5c72967da25ab5762fc21c27f73fc7fa9ab45b1ee9587592ce3b826",
+      "git_sha": "325e25cc54a9d742da8b7abf2db3697037488159"
+    },
+    {
+      "path": "geography/wbd_20261012/layer-3.json.gz",
+      "bytes": 2364,
+      "sha256": "3526aee8d5f7f06aa3b98f37752e5bf76a5a32c0f99d4f7717d2a234773bccb3",
+      "git_sha": "983d25e2ec1b0eb4f6ee88e1da497e84cffb8aca"
+    },
+    {
+      "path": "geography/wbd_20261012/layer-4.json.gz",
+      "bytes": 2368,
+      "sha256": "df51a5ae0fd68099fcd84cadb9b28a7ea25b494d7453026b8ce9d4f477eb30cb",
+      "git_sha": "5447dcefa0cd9de4af049d0922d02d6cb8ea3131"
+    },
+    {
+      "path": "geography/wbd_20261012/layer-6.json.gz",
+      "bytes": 2570,
+      "sha256": "1d19d8452f609e6fe732f2e0974cc82b776dfe0332457054151310e54d240375",
+      "git_sha": "96d2dbf8c9114181a9b12e25f54faf2fb6d74457"
+    },
+    {
+      "path": "geography/wbd_20261012/named-area-lookup.json.gz",
+      "bytes": 1395,
+      "sha256": "8991dfc7bdfc5ae77047d5f508a621b2ea76854c65e5483ec52930fde565aed8",
+      "git_sha": "00a5cc0ba5902786d94c701688938b0ad9046960"
+    },
+    {
+      "path": "geography/wbd_20261012/savannah-huc6.json.gz",
+      "bytes": 35656,
+      "sha256": "920393ed651561aa35913e0956a56d7d6081f4055bf97bd4d1be835dd57a2b0a",
+      "git_sha": "91faa0b06e0e9912dfae2dcdbcebc2c2e16cc2b0"
+    },
+    {
+      "path": "geography/wbd_20261012/savannah-huc8-hierarchy.json.gz",
+      "bytes": 1154817,
+      "sha256": "513c59bf8d9aea559aea5ad3b01e1866b4b0fb9c28910b4a20fd052bc1567a54",
+      "git_sha": "ead622a0fb9cf2fbb1f62e82c67355f806c16eea"
+    },
+    {
+      "path": "geography/wbd_20261012/sc-dnr-gis-services.json.gz",
+      "bytes": 281,
+      "sha256": "e0ee6113160685199e791ca2673f9d69d5f8edbd091bd65301ee44d14e40df4e",
+      "git_sha": "ef27b03a5fbf4186c831d81ae506fb742a98a1cf"
+    },
+    {
+      "path": "geography/wbd_20261012/selected-four-huc12.json.gz",
+      "bytes": 82479,
+      "sha256": "c5e0af7bd6fb8aa72ebb7283ceae6bb694bc203ce98ef0a0e33ce200800c6806",
+      "git_sha": "6e319d7b72c59a346b805442ebecbdb53acaab83"
+    },
+    {
+      "path": "geography/wbd_20261012/selection.json",
+      "bytes": 2406,
+      "sha256": "2a7c8168fac88acde44d7faf8112cfe8fbf999b9be2229658754db468f1aaf3a",
+      "git_sha": "4d417606f8d35c851f27c1b612173ddbcd2d24f5"
+    },
+    {
+      "path": "geography/wbd_20261012/service.json.gz",
+      "bytes": 1998,
+      "sha256": "7785b993e20fd192dae5f2da7e89edbf63e0c26fe7d7ab3022c1ec44d6d61d89",
+      "git_sha": "159990a850d4fea26f8c8b74af628c125cda30d2"
+    },
+    {
+      "path": "geography/wbd_20261012/south-carolina-state-2026.json.gz",
+      "bytes": 236992,
+      "sha256": "d8f418b4fac1c4c18aa0fff5ae345567a3a6ab862b9765a8574e12182cba5112",
+      "git_sha": "455c124e8a4f217c12c547ffc3a435e55aaa9a6b"
+    },
+    {
+      "path": "geography/wbd_20261012/upper-savannah-arcgis-item.json.gz",
+      "bytes": 2993,
+      "sha256": "dc92f39021cf86c8cd317b0e583c6ea148f23d87daaf8f5df20c756996c888b8",
+      "git_sha": "a555faf82f758f86a02a004a4f1942d7121fc463"
+    },
+    {
+      "path": "geography/planning_basins2023/PlanningBasins2023.dbf",
+      "bytes": 874,
+      "sha256": "0c792056dcaff94eaa9fb5a22d576a6c42bcce763a885a289f4cdd15434b4dba",
+      "git_sha": "ac7d93c9a2c275075b7b0925e89cab232578c8e7"
+    },
+    {
+      "path": "geography/planning_basins2023/PlanningBasins2023.prj",
+      "bytes": 424,
+      "sha256": "16375a22022b8b34455292d576c5ebb590083e406d754a9abbcca6994c3e3261",
+      "git_sha": "8e8ddec5f053171e12f9be56b79b6680c608cc41"
+    },
+    {
+      "path": "geography/planning_basins2023/PlanningBasins2023.shp",
+      "bytes": 1600228,
+      "sha256": "133bc5369bd0d68bfdb53c61e3df24f9445f799b0d68b301f321d2c49d71eab6",
+      "git_sha": "8411945334e9099c2af5ca5ee702a146f5edb1cb"
+    },
+    {
+      "path": "geography/planning_basins2023/PlanningBasins2023.shp.xml",
+      "bytes": 12530,
+      "sha256": "95776aa0ff34820f077e04695975af1eb73a3f21d03642c827623324e47a73ec",
+      "git_sha": "d542e4681d738fab433a22a34f75212206b4e8dd"
+    },
+    {
+      "path": "geography/planning_basins2023/PlanningBasins2023.shx",
+      "bytes": 164,
+      "sha256": "60572d5c75694110fceab00c24ba9b3607756838585f2b315c5abcbeac0034c6",
+      "git_sha": "327ba0f01151d2a2614b7cd9da6d0cd9ce8cfedc"
+    },
+    {
+      "path": "geography/planning_basins2023/capture.json",
+      "bytes": 9832,
+      "sha256": "033f60acebf743683d9b93c2e6fff2fbaf24b118c14d3473ae48c1a188141a8d",
+      "git_sha": "723785f02329fd5d611c4dc445b85c83f3679ec9"
+    },
+    {
+      "path": "geography/planning_basins2023/inspection.json",
+      "bytes": 4351,
+      "sha256": "b4b3bbc35923f7b2674f29aa27591369203a7558b3db0b8e14bb66bacccd6dd5",
+      "git_sha": "b63113696a0e33c982313e05f11711a35461e758"
+    },
+    {
+      "path": "parameters/georgia-2019-nlcd-biophysical.csv",
+      "bytes": 640,
+      "sha256": "6c9f7c9ec6f0b4baf265bd9fdccc07761d565360b9ca4ae947203d4f1263bec9",
+      "git_sha": "1005b2ed6492456561f4ecd7374fbbda369d99d9"
+    },
+    {
+      "path": "parameters/georgia-2019-globcover-biophysical.csv",
+      "bytes": 1394,
+      "sha256": "5ab83cab7cbd7155be8d1fae204a1201fc900893cecbb4340881d71319e45a0f",
+      "git_sha": "67be73ed4d38c78b0c81c183cd27b39659ad9ecf"
+    },
+    {
+      "path": "parameters/georgia-ndr-2019.original.html.gz",
+      "bytes": 86841,
+      "sha256": "24b972c2c810dc0897f14a42209ef2689fba667d6a02c218248db6d2f8431df3",
+      "git_sha": "45f5aae9983f932218c722a6fa6c537dea51ca83"
+    },
+    {
+      "path": "parameters/georgia-ndr-2019.source.json",
+      "bytes": 1435,
+      "sha256": "e4f498f4dde4a4657fcf9189dff3091d6602815dcb39255a651253df144dbcac",
+      "git_sha": "4a01989113b22e3bd7d6ecba69fff497848ac132"
+    },
+    {
+      "path": "parameters/georgia-ndr-2019.tables.json",
+      "bytes": 15095,
+      "sha256": "0c6442aa74ccce88605e076ca0398948b21fb2f0065fdbbe9db2cf1ea95cb747",
+      "git_sha": "da2a2ebf7fdef739ae640deec607acee2726306a"
+    },
+    {
+      "path": "parameters/georgia-2019-biophysical-provenance.json",
+      "bytes": 5552,
+      "sha256": "efae10c020b5c6dccfa363aa25128753de4da87695cb5d87ce94c841a16994e4",
+      "git_sha": "06cf51751c0304ff1e2df2d152d9813d2a77e431"
+    },
+    {
+      "path": "parameters/usgs-3dep-service.json.gz",
+      "bytes": 2736,
+      "sha256": "9dc5970d6d27e776b47b7c428b31ed5e14bed0e6ebc18851d3d5bd81593389f6",
+      "git_sha": "38a18fbdf143c05eb33c3261ea4daae9362de419"
+    },
+    {
+      "path": "parameters/usgs-3dep-service.json.capture.json",
+      "bytes": 1384,
+      "sha256": "555b268e6979fed7fbe1505a156e2f08c7f51ee460d6b6dc91cd4c63ac592c86",
+      "git_sha": "18f9e46cf8124c2ec4bd1e31278141f2b63090b8"
+    }
+  ],
+  "retained_files": 30,
+  "retained_bytes": 3289732,
+  "original_file_sha256_semantics": "SHA256 and bytes describe the exact stored file; each original response receipt separately records decoded body and storage encoding.",
+  "source_methods": "SOURCE_METHODS.md",
+  "source_catalog": "SOURCE_CATALOG.json",
+  "native_import_manifest": "sources.json"
+}

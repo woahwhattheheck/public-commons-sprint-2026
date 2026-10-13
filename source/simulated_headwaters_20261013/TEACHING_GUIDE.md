@@ -53,7 +53,7 @@ The restoration case is an experiment under the declared assumptions. Explain th
 1. “Here is the simulated catchment and the source edition used by this saved study.”
 2. “These are the terrain, land cover, rainfall and soil inputs, and this table defines the selected model assumptions.”
 3. “This is the baseline. In the alternative, the selected pasture and cropland inside this raster mask becomes forest.”
-4. “Both cases use this same grid and profile. These logs and stage times show the calculations that produced their outputs.”
+4. “These runs use the same original grid. Here are their actual profiles and any selected parameter changes. These logs and stage times show the calculations that produced their outputs.”
 5. “The comparison displays the actual annual quantities and the common area used to calculate their change.”
 6. “This map shows the selected physical quantity and its unit. The report retains the inputs and interpretation alongside it.”
 7. “I am downloading the working archive, receiving it into a separate directory and reopening the same project and saved results.”
@@ -71,6 +71,18 @@ Inspect a normal desktop width and a narrow layout. Fix obscured controls, unrea
 ## Timing
 
 Report three actual intervals separately: input generation/preparation; native baseline/alternative calculation; export/transfer/reopen. The existing task and native stage records supply their starts, ends and states. Browser interaction time is the walkthrough time, not a model benchmark. A repeated request that reuses a completed native stage remains a reused result.
+
+## Read the actual frozen selection
+
+The rehearsal binder first opens the maintained native teaching capture. It checks the original source and grid, baseline scenario, selected profiles, complete model artifacts, and the comparison and delivery's exact ordered run IDs before freezing `input.json`. A same-grid parameter sensitivity run retains its own profile; it is described explicitly alongside the land-cover alternatives.
+
+Open `uploads/simulated-headwaters/selected-case.md` for the actual selected-case table. It lists each saved scenario and profile, original run ID, and the net changed cells and hectares from that run's selected footprint edition. The original baseline, riparian restoration and matched-area control recipes above remain the definitions of those particular scenarios. Additional selected scenarios use their own retained patches, transitions and footprint values.
+
+The same page lists each native pollutant change with its original unit and common valid-cell count. It reads the actual alternative-minus-baseline artifact directly. It does not subtract full-run totals that may cover different valid areas. The companion `selected-case.json` preserves the exact scenario patches, coefficient-profile identities, native artifact descriptors and comparison rows used by the explanation.
+
+When the receipt includes the retained parameter course, the binder reads that existing ensemble and its original course result. Its grid, baseline, base profile and ordered alternatives must match the teaching scenarios. The page displays the original native-run completion and course state. Each parameter member retains its own baseline and alternative runs. Paired ensemble products retain their **baseline-minus-alternative** convention and per-metric support; their members remain in the existing parameter course. The ordinary native run list and its **alternative-minus-baseline** comparison keep their original identities.
+
+The binder performs no scientific calculation. Existing task, browser, transfer and archive operations continue through the same rehearsal receiver. Both selected-case companions travel in its existing teaching uploads and final package.
 
 ## Bind the actual result to the teaching programme
 
@@ -101,6 +113,34 @@ python -B operator/rehearsal_receiving.py \
 ~~~
 
 When the model executes on a different host, first receive its completed scientific archive on the browser host and bind the receipt to that receiving Workspace. The teaching run opens those saved native results; it does not recalculate the models. Reuse the original source and actual receiving identity when selecting the Workspace.
+
+## Explore the saved parameter study and siting decision
+
+After opening the three original runs, open their retained parameter study, **Simulated headwaters: routing and slope-length sensitivity**. Read its actual ensemble ID from the case receipt. This is the existing `routing-lmax-v1` study; the driver prepares it from the same grid, original profile, baseline, riparian restoration and matched-area control.
+
+| Selected setting | Retained choices | Interpretation |
+| --- | --- | --- |
+| Native flow routing | `mfd` and `d8`, linked in NDR and SDR for each member | Compare the two supported ways of routing flow through the same retained terrain. |
+| SDR maximum L factor | 122 and 333 | Compare the catalogue's declared dimensionless cap values. These are separate from cell size and the restoration distance. |
+| Original working profile | Retained as the reference member | Keep its actual source table, grid and original run selections visible beside the explored choices. |
+
+Open the study's saved specification and source references before its summary. The source catalogue states the meaning and provenance of these choices. The actual member inventory shows which unique profile/run selections were materialized and which original completed stages were reused. The displayed planned and completed counts explain the current scope.
+
+Each parameter member compares its own unchanged baseline with both restoration alternatives. This keeps the selected model assumptions aligned within that comparison. Open the retained profile assignments, original native logs and outputs from a member whose result differs visibly from the reference. Read the physical units and actual shared valid area beside the numbers.
+
+The L-factor cap is used by SDR. Changing only that setting can therefore repeat nutrient outputs while changing sediment outputs. Show that relationship using the saved assignments and actual results. A range across these explicitly chosen settings describes this study's explored cases; it has no probability or confidence level attached to it.
+
+### Read the paired maps and joint decision
+
+Open the study's paired raster product for the selected pollutant and alternative. It retains its original support, case IDs and printed difference direction. Then open the saved joint siting decision from the course result. Its complete output is recorded in `ensemble_results/<ensemble_id>/headwaters-results.json`; `joint_decisions.support_group_reports` lists the retained report indexes, native package paths and reference comparison/profile for each supported group.
+
+The decision compares both restoration alternatives on actual common finite cells. If the available support differs among parameter members, the course retains separate support-group reports. Open each relevant group and its reported pending-member count before summarizing whether the preferred alternative changes. The saved decision selection starts with empty costs and targets, so its physical comparison should be explained through the actual exported quantities and selected support. Enter any later project costs or targets as their own explicit sourced inputs in the maintained application.
+
+The mapped scientific report also includes the retained treatment response. Read its net final changed area, annual mass difference, and supported benefit per treated hectare. The two restoration cases both select 57.15 hectares, while their locations and terrain differ. Explain any reported eligibility reason or unequal common support beside the normalized value. Follow the underlying scenario summary and source tables when a result needs explanation.
+
+For this chapter, say: “These are the same two siting choices under the displayed model settings. Each has a matching baseline. We can see whether their ordering changes, where the supported map comparison applies, and which original outputs support that judgment.”
+
+Retain one actual screen showing profile assignments, member progress and paired physical results, plus one of the selected joint decision's support and source links. Record the native parameter-course interval separately from the three initial case runs; the course keeps its own start, completion and interrupted-state records. Continue an unfinished course through its saved ensemble ID rather than creating another study.
 
 ## Continue into the same field and laboratory case
 
@@ -165,6 +205,64 @@ Add three actual screenshot frames to the same teaching packet: original laborat
 ### Primary method reference
 
 [EPA Method 365.1, Revision 2.0 (August 1993)](https://www.epa.gov/sites/default/files/2015-08/documents/method_365-1_1993.pdf), sections 1.3 and 3.12–3.15, defines the method scope and phosphorus forms, including total phosphorus and reporting as P. The entered 20% precision criterion and five-times-limit applicability are authored project choices retained with this case. The source method label and exact total-phosphorus basis remain visible with every laboratory result.
+
+## Continue into customer requests and engineering handback
+
+The same completed field campaign can be taught through **Customer reviews** and its **Worklist**. This uses the retained laboratory, QC and corrective-action evidence. The reviewer wording, engineer names, assignments and engineering dispositions are explicitly labelled **SIMULATED TEACHING INPUT** in the original records and visible titles.
+
+Start from the completed field operation returned by the driver. The maintained consumer is `model.simulated_customer_review`; its full guide is [SIMULATED_CUSTOMER_REVIEW.md](../../docs/SIMULATED_CUSTOMER_REVIEW.md). It advances the same project through three phases:
+
+| Phase | What Bryce opens | What to explain |
+| --- | --- | --- |
+| Request | **SIMULATED TEACHING INPUT — initial field quality review**, its original response, then the filtered **Worklist**. | The original QC and open corrective-action reports support two authored requests: explain the follow-up evidence, and preserve the original laboratory records and source flags. |
+| Planning | The original review's **Handbacks** tab and saved planning edition. | Each original request has an assigned engineer and a documented plan. Requested assignee and current engineering owner remain separate fields. |
+| Ready | **SIMULATED TEACHING INPUT — revised field evidence and engineering closeout**, then the ready handback. | The actual revised artifacts come from all five saved field source editions. Follow each request to its replacement evidence and original requirement. |
+
+Open the original observation context, initial and repeat QC reports, and both closeout action reports from the revised review. The original response and planning edition remain available in history. Read the engineering explanation beside its selected evidence; the application's separate customer-response controls let the reviewer decide what to do with the handback.
+
+For an interactive explanation, advance one phase at a time from the same application:
+
+~~~sh
+python -B -m model.simulated_customer_review \
+  --workspace /owned/simulated-headwaters-workspace \
+  continue --field-operation ACTUAL_FIELDWORK_OPERATION_ID --through request
+~~~
+
+Repeat with `--through planning` and then `--through ready`. The complete driver may already have prepared all three; in that case open the saved historical editions. The returned `original_review_id`, `response_id`, `planning_handback_id`, `revised_review_id` and `handback_id` identify them exactly. `operation_id` identifies this same customer continuation. An earlier phase reopens retained work without rolling it back. If a new human response has arrived before a new phase, continue that current request in the ordinary review editor.
+
+### Open the complete review packages
+
+The maintained export uses an ordinary delivery directory outside the application and scientific Workspace:
+
+~~~sh
+python -B -m model.simulated_customer_review \
+  --workspace /owned/simulated-headwaters-workspace \
+  export --operation ACTUAL_CUSTOMER_OPERATION_ID \
+  --output /owned/demo-output/customer-review-case
+~~~
+
+Open `original-review/index.html` for the selected original review and its authored response. Then open `engineering-handback/index.html` for the ready engineering edition and its linked original/revised evidence. These complete offline desks are useful on a browser that supports local HTML. Use actual application navigation when showing the live Worklist or editing a response.
+
+The accompanying `original-review.zip` and `engineering-handback.zip` are the maintained native packages. `current-worklist.json` and `.csv` contain every matching request at their stated captured snapshot, including owners, wording, dispositions and replacement IDs. `selection.json` retains the project, field operation and all selected review generations. `case-manifest.json` binds the original package identities and companion bytes.
+
+Create the scientific project archive after this customer continuation reaches ready. Its selected edition must include the customer operation and all five review/response/handback IDs, plus the saved `06-ready-handback.result.json` under the returned operation directory. The integrated driver uses those identities to distinguish this complete handback from its earlier field-only archive.
+
+### Reopen the same customer case after project transfer
+
+Keep the complete `customer-review-case` directory beside the scientific project archive. Restore the original project using the maintained portable receiver, then run from the **received application**:
+
+~~~sh
+python -B -m model.simulated_customer_review \
+  --workspace /owned/received-headwaters/workspace \
+  receive --source /owned/delivered/customer-review-case \
+  --output /owned/received-customer-review
+~~~
+
+Use the returned `receipt_id` in **Customer reviews → Received packages**. Open the retained incoming generation and its local viewer, then the original ready handback and revised evidence. The receive result also returns the current filtered Worklist; later local responses can appear there while the historical teaching IDs remain unchanged. Repeating the same receive command verifies and reopens the same package identity.
+
+For a short spoken handoff: “We started with the saved quality finding. The reviewer asked for follow-up evidence and original laboratory context. Engineering assigned the work, linked the five actual closeout documents, and returned a revised review. This received copy opens those same records, and the next response continues their history.”
+
+Add two actual frames to the same teaching packet: the original request beside its assigned engineering work; and the independently received ready handback with its revised source evidence. Retain their exact review, response and handback IDs and the measured preparation/receive times alongside the existing model and field frames.
 
 ## Retained handoff
 

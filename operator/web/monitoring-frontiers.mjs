@@ -16,7 +16,7 @@ function details(title,value) {const node=element('details'),heading=element('su
 export function attachMonitoringFrontiers(node,host,workspaceKey) {
   const panel=element('section',undefined,'monitoring-frontiers');
   panel.dataset.monitoringFrontiers='';
-  panel.innerHTML='<h3>Saved budget choices</h3><p class="small">Reopen a completed budget frontier, choose a baseline and compare its original plans. Each plan keeps its own selected search areas, calendar and source objective.</p><div class="row"><label>Saved frontier<select data-frontier-picker><option value="">Choose a saved budget frontier</option></select></label><label>Saved comparison<select data-comparison-picker><option value="">Open a saved comparison</option></select></label></div><div class="row"><button type="button" data-frontier-refresh>Refresh saved choices</button></div><div data-frontier-editor hidden><div class="row"><label>Comparison title<input data-comparison-title value="Saved monitoring budget comparison"></label><label>Baseline plan<select data-frontier-baseline></select></label></div><div data-frontier-contexts></div><div class="row"><button type="button" data-frontier-preview>Preview comparison</button><button type="button" data-frontier-save>Save comparison</button><button type="button" data-frontier-export disabled>Download complete comparison</button></div></div><p data-frontier-status class="small" role="status"></p><div data-frontier-downloads class="downloads"></div><div data-frontier-result></div>';
+  panel.innerHTML='<h3>Saved budget choices</h3><p class="small">Reopen a completed budget frontier, choose a baseline and compare its original plans. Each plan keeps its own selected search areas, calendar and source objective.</p><div class="row"><label>Saved frontier<select data-frontier-picker><option value="">Choose a saved budget frontier</option></select></label><label>Saved comparison<select data-comparison-picker><option value="">Open a saved comparison</option></select></label></div><div class="row"><button type="button" data-frontier-refresh>Refresh saved choices</button></div><div data-frontier-editor hidden><div class="row"><label>Comparison title<input data-comparison-title value="Saved monitoring budget comparison"></label><label>Baseline plan<select data-frontier-baseline></select></label></div><div data-frontier-contexts></div><div class="row"><button type="button" data-frontier-preview>Preview comparison</button><button type="button" data-frontier-save>Save comparison</button><button type="button" data-frontier-export disabled>Download complete comparison</button><button type="button" data-frontier-transfer disabled>Transfer editable comparison</button></div></div><p data-frontier-status class="small" role="status"></p><div data-frontier-downloads class="downloads"></div><div data-frontier-result></div>';
   const q=selector=>panel.querySelector(selector);
   const state={frontiers:[],comparisons:[],contexts:[],campaigns:[],frontier:null,plans:[],network:null,comparison:null,contextByPlan:{},catalogReady:false,networkId:node.network?.id||null};
   let epoch=0,attached=false,refreshing=null,operation=0;
@@ -35,6 +35,7 @@ export function attachMonitoringFrontiers(node,host,workspaceKey) {
     q('[data-frontier-preview]').disabled=!ready||node.busy;
     q('[data-frontier-save]').disabled=!ready||node.busy;
     q('[data-frontier-export]').disabled=!state.comparison?.id||node.busy;
+    q('[data-frontier-transfer]').disabled=!state.comparison?.id||node.busy;
   }
   function selection() {
     if(!state.frontier)throw Error('Open an original saved frontier.');
@@ -251,6 +252,27 @@ export function attachMonitoringFrontiers(node,host,workspaceKey) {
       status('The saved HTML report, CSV, native plans and full source/context family are ready. Full Workspace backup retains the editable saved comparison.');
     },'Preparing the complete original comparison package…');
   }
+  async function transferComparison() {
+    return run(async guard=>{
+      const chosen=state.comparison;
+      if(!chosen?.id)throw Error('Save or reopen the original comparison before transferring it.');
+      if(typeof host.openDesk!=='function')throw Error('Use the current operator Study transfer desk.');
+      const identity=chosen.id;
+      const retained=await node.api('comparison.get',{comparison_id:identity});
+      if(!guard()||state.comparison!==chosen)return;
+      if(retained.id!==identity||retained.project_id!==chosen.project_id||
+        retained.frontier_id!==chosen.frontier_id||
+        retained.baseline_plan_id!==chosen.baseline_plan_id||
+        JSON.stringify(retained.selection?.context_ids)!==JSON.stringify(chosen.selection?.context_ids))
+        throw Error('The saved comparison returned a different original scientific selection.');
+      await host.openDesk('study-transfer','openForStudies',{workspace_key:workspaceKey,roots:[{
+        kind:'monitoring_frontier_comparisons',id:identity,
+        title:retained.title||'Saved Monitoring budget choices',state:'Saved'
+      }]});
+      if(guard()&&state.comparison===chosen)
+        status('Original comparison selected for editable transfer, including its baseline, saved plans and exact per-plan observed contexts.');
+    },'Opening the original saved comparison in Study transfer…');
+  }
   q('[data-frontier-picker]').onchange=()=>{const id=q('[data-frontier-picker]').value;if(id)openFrontier(id);};
   q('[data-comparison-picker]').onchange=()=>{const id=q('[data-comparison-picker]').value;if(id)openComparison(id);};
   q('[data-frontier-refresh]').onclick=()=>run(async guard=>{if(await refreshCatalog()&&guard()){if(state.comparison)renderResult();status('Saved frontiers, comparisons, exact campaign heads and observed contexts refreshed. Your comparison choices are preserved.');}},'Refreshing saved Monitoring records…');
@@ -258,6 +280,7 @@ export function attachMonitoringFrontiers(node,host,workspaceKey) {
   q('[data-frontier-preview]').onclick=()=>run(guard=>calculate(false,guard),'Reading original plans and observed contexts…');
   q('[data-frontier-save]').onclick=()=>run(guard=>calculate(true,guard),'Saving the comparison of original Monitoring plans…');
   q('[data-frontier-export]').onclick=exportComparison;
+  q('[data-frontier-transfer]').onclick=transferComparison;
   const originalRender=node.render.bind(node);
   node.render=function(){originalRender();networkChanged(node.network?.id||null);};
   node.$('frontier').onclick=()=>run(async guard=>{
@@ -287,5 +310,5 @@ export function attachMonitoringFrontiers(node,host,workspaceKey) {
     try {await promise;}finally{if(refreshing===promise)refreshing=null;}
   }
   function detach(){attached=false;epoch++;refreshing=null;}
-  return {mount,update,detach,networkChanged,openFrontier,openComparison};
+  return {mount,update,detach,networkChanged,openFrontier,openComparison,transferComparison};
 }

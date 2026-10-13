@@ -1,0 +1,377 @@
+{
+  "schema": "upstate.sources/v1",
+  "title": "Upper Savannah observation station studies",
+  "vintage": "Original retained 2020–2025 observations; captured 2026-10-13",
+  "notes": [
+    "Prepared study source definitions retain original point coordinates, station and permit identities, source qualifiers and complete-period quantity fields.",
+    "Original measurement and reporting-period bytes are unchanged. Dataset-specific lineage columns and preserved original observation families accompany the shared application."
+  ],
+  "entries": [
+    {
+      "id": "observed-station-context-gauges",
+      "title": "USGS regional gauge inventory",
+      "kind": "vector",
+      "path": "observed_hydrology_20261013/derived/monitoring_stations_nad83.geojson",
+      "bytes": 155365,
+      "sha256": "b42d862f55d4dbf20dab9852f4f6ede927ae3977e80053a84ba17b588759b45e",
+      "uri": "https://waterservices.usgs.gov/nwis/site/?format=rdb&huc=03060101,03060102,03060103,03060104&siteType=ST&siteOutput=expanded&hasDataTypeCd=dv&siteStatus=all",
+      "vintage": "2020–2025 observations; originals retrieved 2026-10-13",
+      "station_id_field": "monitoring_location_id",
+      "native_id_field": "site_no",
+      "source_crs": "EPSG:4269",
+      "metadata": {
+        "original_application_path": "observations/observed_hydrology_20261013/derived/monitoring_stations_nad83.geojson",
+        "original_family_entry_id": "usgs-savannah-observed-gauges-2020-2025",
+        "prepared_station_recipe_key": "gauges"
+      }
+    },
+    {
+      "id": "observed-station-context-basin",
+      "title": "Eighteenmile original upstream whole catchments",
+      "kind": "vector",
+      "path": "observed_hydrology_20261013/derived/eighteenmile_gage_whole_catchments.geojson",
+      "bytes": 41692,
+      "sha256": "8f19b120756c1a2822f8f0a2b977279cd0caa8f76c9002f3921cf176b8da3691",
+      "uri": "https://api.water.usgs.gov/nldi/linked-data/nwissite/USGS-02186702/basin?f=json&simplified=false&splitCatchment=false",
+      "vintage": "USGS NLDI source geometry retrieved 2026-10-13",
+      "id_field": "gauge_id",
+      "source_crs": "EPSG:4326",
+      "metadata": {
+        "original_application_path": "observations/observed_hydrology_20261013/derived/eighteenmile_gage_whole_catchments.geojson",
+        "original_family_entry_id": "usgs-eighteenmile-whole-catchments-20261013",
+        "prepared_station_recipe_key": "basin"
+      }
+    },
+    {
+      "id": "observed-station-context-year-flow",
+      "title": "Calendar-year observed flow",
+      "kind": "table",
+      "path": "observed_hydrology_20261013/derived/calendar_year_flow.csv",
+      "bytes": 29200,
+      "sha256": "79dd0fbc02203ec2994b971613376147fd02fd6905e3cf8f77a0559923d5b9bf",
+      "uri": "https://waterservices.usgs.gov/nwis/dv/",
+      "vintage": "2020–2025 observations; originals retrieved 2026-10-13",
+      "station_id_field": "site",
+      "metadata": {
+        "original_application_path": "observations/observed_hydrology_20261013/derived/calendar_year_flow.csv",
+        "original_family_entry_id": "observed-hydrology-calendar-year-flow-20261013",
+        "prepared_station_recipe_key": "year_flow"
+      }
+    },
+    {
+      "id": "observed-station-context-month-flow",
+      "title": "Calendar-month observed flow",
+      "kind": "table",
+      "path": "observed_hydrology_20261013/derived/calendar_month_flow.csv",
+      "bytes": 334352,
+      "sha256": "0ea7464700941ae5ff747629cde13f1ac003710e3ee7225b55ad0fa1f439995f",
+      "uri": "https://waterservices.usgs.gov/nwis/dv/",
+      "vintage": "2020–2025 observations; originals retrieved 2026-10-13",
+      "station_id_field": "site",
+      "metadata": {
+        "original_application_path": "observations/observed_hydrology_20261013/derived/calendar_month_flow.csv",
+        "original_family_entry_id": "observed-hydrology-calendar-month-flow-20261013",
+        "prepared_station_recipe_key": "month_flow"
+      }
+    },
+    {
+      "id": "observed-station-context-study-flow",
+      "title": "Observed flow during the 2023 lake study",
+      "kind": "table",
+      "path": "observed_hydrology_20261013/derived/study_period_flow.csv",
+      "bytes": 5385,
+      "sha256": "df954baa0926a635bccb727f119cef8869328913ec2d7e892a25ae4b440e53d0",
+      "uri": "https://waterservices.usgs.gov/nwis/dv/",
+      "vintage": "2020–2025 observations; originals retrieved 2026-10-13",
+      "station_id_field": "site",
+      "metadata": {
+        "original_application_path": "observations/observed_hydrology_20261013/derived/study_period_flow.csv",
+        "original_family_entry_id": "observed-hydrology-study-period-flow-20261013",
+        "prepared_station_recipe_key": "study_flow"
+      }
+    },
+    {
+      "id": "observed-station-context-year-stage",
+      "title": "Chauga calendar-year stage",
+      "kind": "table",
+      "path": "observed_hydrology_20261013/derived/calendar_year_stage.csv",
+      "bytes": 650,
+      "sha256": "6035eacca48b465688d4edf1a39c236456a695c83b754b8687706cc8e7f8db64",
+      "uri": "https://waterservices.usgs.gov/nwis/dv/",
+      "vintage": "2020–2025 observations; originals retrieved 2026-10-13",
+      "station_id_field": "site",
+      "metadata": {
+        "original_application_path": "observations/observed_hydrology_20261013/derived/calendar_year_stage.csv",
+        "original_family_entry_id": "observed-hydrology-calendar-year-stage-20261013",
+        "prepared_station_recipe_key": "year_stage"
+      }
+    },
+    {
+      "id": "observed-station-context-lake-wgs84",
+      "title": "Original lake study WGS84 sites",
+      "kind": "vector",
+      "path": "eighteenmile_2023/study_sites_wgs84.geojson",
+      "bytes": 4456,
+      "sha256": "16490d2df05ad7309f736c0aa08473c8ff837a65f26ae98fb1f02e7549386c95",
+      "uri": "https://www.des.sc.gov/sites/des/files/Documents/BOW/WaterQuality/2023LakeProgramFinalReport.pdf",
+      "vintage": "2023-12",
+      "station_id_field": "site_id",
+      "native_id_field": "monitoring_location_id",
+      "source_crs": "EPSG:4326",
+      "metadata": {
+        "original_application_path": "observations/eighteenmile_2023/study_sites_wgs84.geojson",
+        "original_family_entry_id": "scdes-eighteenmile-study-2023-wgs84",
+        "prepared_station_recipe_key": "lake_wgs84"
+      }
+    },
+    {
+      "id": "observed-station-context-lake-nad83",
+      "title": "Original lake study NAD83 sites",
+      "kind": "vector",
+      "path": "eighteenmile_2023/study_sites_nad83.geojson",
+      "bytes": 6449,
+      "sha256": "b9975a274834087c9de2e9d296576e57b75f1e216c9d20771c71aca75bfddad9",
+      "uri": "https://www.des.sc.gov/sites/des/files/Documents/BOW/WaterQuality/2023LakeProgramFinalReport.pdf",
+      "vintage": "2023-12",
+      "station_id_field": "site_id",
+      "native_id_field": "monitoring_location_id",
+      "source_crs": "EPSG:4269",
+      "metadata": {
+        "original_application_path": "observations/eighteenmile_2023/study_sites_nad83.geojson",
+        "original_family_entry_id": "scdes-eighteenmile-study-2023-nad83",
+        "prepared_station_recipe_key": "lake_nad83"
+      }
+    },
+    {
+      "id": "observed-station-context-outfalls-native",
+      "title": "Original state outfall coordinates",
+      "kind": "vector",
+      "path": "eighteenmile_2023/npdes/dmr_outfalls_2023.geojson",
+      "bytes": 11329,
+      "sha256": "07b42387abb0398e5be468fce3f28f72ce654ce4abf35fb7a2184e522c65fdf7",
+      "uri": "https://gis.des.sc.gov/gisserver/rest/services/water/Water_Permits/MapServer/21",
+      "vintage": "Original 2023 study context; source retrieved 2026-10-13",
+      "station_id_field": "permit_id",
+      "native_id_field": "state_objectid",
+      "source_crs": "EPSG:26917",
+      "metadata": {
+        "original_application_path": "observations/eighteenmile_2023/npdes/dmr_outfalls_2023.geojson",
+        "original_family_entry_id": null,
+        "prepared_station_recipe_key": "outfalls_native"
+      }
+    },
+    {
+      "id": "observed-station-context-outfalls-agency",
+      "title": "Agency-projected WGS84 outfall locations",
+      "kind": "vector",
+      "path": "eighteenmile_2023/npdes/routing/derived/outfalls_state_geometry_wgs84.geojson",
+      "bytes": 8562,
+      "sha256": "b5baceee2122c703325f4bb19692740e24b46aaa0eb30593e0e3c7cabfad52d4",
+      "uri": "https://gis.des.sc.gov/gisserver/rest/services/water/Water_Permits/MapServer/21",
+      "vintage": "Original 2023 study context; source retrieved 2026-10-13",
+      "station_id_field": "permit_id",
+      "native_id_field": "state_objectid",
+      "source_crs": "EPSG:4326",
+      "metadata": {
+        "original_application_path": "observations/eighteenmile_2023/npdes/routing/derived/outfalls_state_geometry_wgs84.geojson",
+        "original_family_entry_id": null,
+        "prepared_station_recipe_key": "outfalls_agency"
+      }
+    },
+    {
+      "id": "observed-station-context-outfalls-indexed",
+      "title": "NLDI indexed flowline locations",
+      "kind": "vector",
+      "path": "eighteenmile_2023/npdes/routing/derived/outfalls_nldi_indexed_geometry.geojson",
+      "bytes": 8502,
+      "sha256": "3d719668f1e4e6f2de37186f8ebd03e37de01bc045f42782b5de3b437b8ce10e",
+      "uri": "https://gis.des.sc.gov/gisserver/rest/services/water/Water_Permits/MapServer/21",
+      "vintage": "Original 2023 study context; source retrieved 2026-10-13",
+      "station_id_field": "permit_id",
+      "native_id_field": "state_objectid",
+      "source_crs": "EPSG:4326",
+      "metadata": {
+        "original_application_path": "observations/eighteenmile_2023/npdes/routing/derived/outfalls_nldi_indexed_geometry.geojson",
+        "original_family_entry_id": null,
+        "prepared_station_recipe_key": "outfalls_indexed"
+      }
+    },
+    {
+      "id": "observed-station-context-chlorophyll",
+      "title": "Individual CHLA study chlorophyll observations",
+      "kind": "table",
+      "path": "eighteenmile_2023/wqp/derived/selected_chlorophyll.csv",
+      "bytes": 98672,
+      "sha256": "7f8f82328b3df2d939813e8a4666c1bdd1c0e93c913e64543849a05db2598e3d",
+      "uri": "https://www.waterqualitydata.us/",
+      "vintage": "2023",
+      "station_id_field": "station_id",
+      "record_id_field": "record_id",
+      "metadata": {
+        "original_application_path": "observations/eighteenmile_2023/wqp/derived/selected_chlorophyll.csv",
+        "original_family_entry_id": "scdes-eighteenmile-2023-wqp-selected-chlorophyll",
+        "prepared_station_recipe_key": "chlorophyll"
+      }
+    },
+    {
+      "id": "observed-station-context-seasonal",
+      "title": "Published seasonal study summaries",
+      "kind": "table",
+      "path": "eighteenmile_2023/seasonal_summaries.csv",
+      "bytes": 8170,
+      "sha256": "f4c30f642a8c276715953326ff69c6848136f21bb99122553fc90391d28f7b3a",
+      "uri": "https://www.des.sc.gov/sites/des/files/Documents/BOW/WaterQuality/2023LakeProgramFinalReport.pdf",
+      "vintage": "2023-12",
+      "station_id_field": "site_id",
+      "metadata": {
+        "original_application_path": "observations/eighteenmile_2023/seasonal_summaries.csv",
+        "original_family_entry_id": "scdes-eighteenmile-study-2023-seasonal-summary",
+        "prepared_station_recipe_key": "seasonal"
+      }
+    },
+    {
+      "id": "observed-station-context-continuous-ph",
+      "title": "Published monthly continuous pH",
+      "kind": "table",
+      "path": "eighteenmile_2023/continuous_monthly_ph.csv",
+      "bytes": 2166,
+      "sha256": "696f7436e4af095677dab397c1854395656cb0f385219ecf9c69b234c846fa05",
+      "uri": "https://www.des.sc.gov/sites/des/files/Documents/BOW/WaterQuality/2023LakeProgramFinalReport.pdf",
+      "vintage": "2023-12",
+      "station_id_field": "site_id",
+      "metadata": {
+        "original_application_path": "observations/eighteenmile_2023/continuous_monthly_ph.csv",
+        "original_family_entry_id": "scdes-eighteenmile-study-2023-continuous-ph",
+        "prepared_station_recipe_key": "continuous_ph"
+      }
+    },
+    {
+      "id": "observed-station-context-continuous-do",
+      "title": "Published monthly continuous dissolved oxygen",
+      "kind": "table",
+      "path": "eighteenmile_2023/continuous_monthly_do.csv",
+      "bytes": 2338,
+      "sha256": "cb238e309d54620160b87ffa5e27b7a53de93bc002800bb5c084129e051b565b",
+      "uri": "https://www.des.sc.gov/sites/des/files/Documents/BOW/WaterQuality/2023LakeProgramFinalReport.pdf",
+      "vintage": "2023-12",
+      "station_id_field": "site_id",
+      "metadata": {
+        "original_application_path": "observations/eighteenmile_2023/continuous_monthly_do.csv",
+        "original_family_entry_id": "scdes-eighteenmile-study-2023-continuous-do",
+        "prepared_station_recipe_key": "continuous_do"
+      }
+    },
+    {
+      "id": "observed-station-context-surface",
+      "title": "Published surface observation ranges",
+      "kind": "table",
+      "path": "eighteenmile_2023/surface_ranges.csv",
+      "bytes": 1234,
+      "sha256": "78d12cc0231041dd07395ebffdeea2ab5a3bbaa86ca7657ea19785c6ad02f44b",
+      "uri": "https://www.des.sc.gov/sites/des/files/Documents/BOW/WaterQuality/2023LakeProgramFinalReport.pdf",
+      "vintage": "2023-12",
+      "station_id_field": "site_id",
+      "metadata": {
+        "original_application_path": "observations/eighteenmile_2023/surface_ranges.csv",
+        "original_family_entry_id": "scdes-eighteenmile-study-2023-surface-ranges",
+        "prepared_station_recipe_key": "surface"
+      }
+    },
+    {
+      "id": "observed-station-context-gauge-months",
+      "title": "Eighteenmile original 2023 gauge months",
+      "kind": "table",
+      "path": "eighteenmile_2023/npdes/flow_context/derived/gauge_monthly.csv",
+      "bytes": 1502,
+      "sha256": "2839d45b09f54c3525fcf370aa60d17d97263eae51c8ec251772852356869bee",
+      "uri": "https://tokenjunkielabs.slack.com/docs/T0BRETUB5TK/F0C8QAH0AQ2",
+      "vintage": "2023",
+      "station_id_field": "gauge_id",
+      "metadata": {
+        "original_application_path": "observations/eighteenmile_2023/npdes/flow_context/derived/gauge_monthly.csv",
+        "original_family_entry_id": "upstate-eighteenmile-dmr-gauge-monthly-flow-2023",
+        "prepared_station_recipe_key": "gauge_months"
+      }
+    },
+    {
+      "id": "observed-station-context-facility-months",
+      "title": "Facility monthly discharge context",
+      "kind": "table",
+      "path": "eighteenmile_2023/npdes/flow_context/derived/facility_monthly.csv",
+      "bytes": 232814,
+      "sha256": "167f05866888f290d19385a6eb06a9c33e7c071ca5a7d523c0d7db7b8cef1252",
+      "uri": "https://tokenjunkielabs.slack.com/docs/T0BRETUB5TK/F0C8QAH0AQ2",
+      "vintage": "2023",
+      "station_id_field": "permit_id",
+      "metadata": {
+        "original_application_path": "observations/eighteenmile_2023/npdes/flow_context/derived/facility_monthly.csv",
+        "original_family_entry_id": "upstate-eighteenmile-dmr-facility-monthly-flow-2023",
+        "prepared_station_recipe_key": "facility_months"
+      }
+    },
+    {
+      "id": "observed-station-context-dmr-periods",
+      "title": "Original DMR reporting-period quantities",
+      "kind": "table",
+      "path": "eighteenmile_2023/npdes/flow_context/inputs/period_loads.csv",
+      "bytes": 141817,
+      "sha256": "872d4183e2e55706c031c6d60438963660f6fb56e8312eaa9da1b75473b44648",
+      "uri": "https://echo.epa.gov/trends/loading-tool/resources/loading-calculations",
+      "vintage": "Original 2023 study context; source retrieved 2026-10-13",
+      "station_id_field": "permit_id",
+      "metadata": {
+        "original_application_path": "observations/eighteenmile_2023/npdes/flow_context/inputs/period_loads.csv",
+        "original_family_entry_id": null,
+        "prepared_station_recipe_key": "dmr_periods"
+      }
+    },
+    {
+      "id": "observed-station-context-routes",
+      "title": "Original outfall-to-gauge network relations",
+      "kind": "table",
+      "path": "eighteenmile_2023/npdes/flow_context/inputs/outfall_gauge_relations.csv",
+      "bytes": 3398,
+      "sha256": "6d76f4cc627de9acaa79de11af9df936e6ee3a941e19dceccc5c5d778ae501b2",
+      "uri": "https://gis.des.sc.gov/gisserver/rest/services/water/Water_Permits/MapServer/21",
+      "vintage": "Original 2023 study context; source retrieved 2026-10-13",
+      "station_id_field": "permit_id",
+      "metadata": {
+        "original_application_path": "observations/eighteenmile_2023/npdes/flow_context/inputs/outfall_gauge_relations.csv",
+        "original_family_entry_id": null,
+        "prepared_station_recipe_key": "routes"
+      }
+    },
+    {
+      "id": "observed-station-context-nutrients",
+      "title": "Routine SWS nutrient observations and same-date upstream flow",
+      "kind": "table",
+      "path": "observed_hydrology_20261013/derived/nutrient_results_with_flow.csv",
+      "bytes": 36518,
+      "sha256": "67b8349bf110ff2ca012bb92a20a67894213d7a65d1f0bb62c6da6fdf87c7831",
+      "uri": "https://www.waterqualitydata.us/data/Result/search",
+      "vintage": "2020–2025 observations; originals retrieved 2026-10-13",
+      "station_id_field": "monitoring_location_id",
+      "metadata": {
+        "original_application_path": "observations/observed_hydrology_20261013/derived/nutrient_results_with_flow.csv",
+        "original_family_entry_id": "observed-hydrology-nutrient-results-with-flow-20261013",
+        "prepared_station_recipe_key": "nutrients"
+      }
+    },
+    {
+      "id": "observed-station-context-nitrogen",
+      "title": "Same-activity total nitrogen with censor bounds",
+      "kind": "table",
+      "path": "observed_hydrology_20261013/derived/nutrient_activity_total_nitrogen.csv",
+      "bytes": 6639,
+      "sha256": "abdd1ddee9852679dd2c6c174f4aed3e8602885f371a18ab765e65c720dfde04",
+      "uri": "https://www.waterqualitydata.us/data/Result/search",
+      "vintage": "2020–2025 observations; originals retrieved 2026-10-13",
+      "station_id_field": "monitoring_location_id",
+      "metadata": {
+        "original_application_path": "observations/observed_hydrology_20261013/derived/nutrient_activity_total_nitrogen.csv",
+        "original_family_entry_id": "observed-hydrology-nutrient-activity-total-nitrogen-20261013",
+        "prepared_station_recipe_key": "nitrogen"
+      }
+    }
+  ]
+}

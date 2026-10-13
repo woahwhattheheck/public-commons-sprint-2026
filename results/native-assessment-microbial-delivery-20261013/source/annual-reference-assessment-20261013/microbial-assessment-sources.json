@@ -1,0 +1,134 @@
+{
+  "schema": "upstate.sources/v1",
+  "title": "Upper Savannah assessment stations and original utility microbial observations",
+  "captured_at": "2026-10-13T07:30:38Z",
+  "notes": "Complete original source join: 36 observation stations / 730 records and 159 assessment stations / 192 records; four shared stations / 132 routine observations. Original coordinates, namespaces, source rows, analytical methods, limits and field replicate retained.",
+  "scope": {
+    "microbial_requested_dates": [
+      "2021-01-01",
+      "2025-12-31"
+    ],
+    "assessment_editions": [
+      "2024",
+      "2026-07-28"
+    ],
+    "geometry": "Copied from the 159 original retained station points; utility membership from the completed 217-HUC join"
+  },
+  "entries": [
+    {
+      "id": "assessment-microbial-geography159-20261013",
+      "kind": "vector",
+      "role": "ASSESSMENT_MICROBIAL_GEOGRAPHY",
+      "title": "Assessment stations with retained microbial measurement coverage",
+      "path": "assessment-microbial-context.geojson",
+      "sha256": "4728c6ca2943821bbe2dc6cee30fa530708f4b8d0587ce7b311d93cb58533fc8",
+      "bytes": 198864,
+      "uri": "https://github.com/woahwhattheheck/public-commons-sprint-2026/tree/main/opportunities/upstate_forever_2026/source/annual-reference-assessment-20261013",
+      "vintage": "Original microbial samples 2021–2025; assessment editions 2024 and July 2026; association 2026-10-13",
+      "companions": [
+        {
+          "path": "microbial-assessment-coverage.mjs",
+          "bytes": 12715,
+          "sha256": "edc4a9c9f3546eaf60bfd724055a2e3db6df9bc7fd502d4ac0d597003a93ed6a"
+        },
+        {
+          "path": "microbial-assessment-overlap.json",
+          "bytes": 277647,
+          "sha256": "f53df7b5a31d1f1eb8e28d0b1f23158fbd0d3962ae4483fca7b2ee1cc1751b1d"
+        },
+        {
+          "path": "MICROBIAL_COVERAGE.md",
+          "bytes": 8566,
+          "sha256": "89ff8ac8ff8c6690c572ef4b5bc7e4c09067ba91e51071f01e84dea5212a77a7"
+        }
+      ],
+      "id_field": "station_id",
+      "station_id_field": "station_id",
+      "source_crs": "EPSG:4326"
+    },
+    {
+      "id": "assessment-microbial-observations730-20261013",
+      "kind": "table",
+      "role": "ASSESSMENT_MICROBIAL_OBSERVATIONS",
+      "title": "All 730 original microbial records with exact assessment identity",
+      "path": "microbial-assessment-observations.csv",
+      "sha256": "72814c13c14624e4f800f9b23a40264f212a4c568d30ad5b42033eee8e9b88ba",
+      "bytes": 240366,
+      "uri": "https://github.com/woahwhattheheck/public-commons-sprint-2026/tree/main/opportunities/upstate_forever_2026/source/annual-reference-assessment-20261013",
+      "vintage": "Original microbial samples 2021–2025; assessment editions 2024 and July 2026; association 2026-10-13",
+      "companions": [
+        {
+          "path": "microbial-assessment-coverage.mjs",
+          "bytes": 12715,
+          "sha256": "edc4a9c9f3546eaf60bfd724055a2e3db6df9bc7fd502d4ac0d597003a93ed6a"
+        },
+        {
+          "path": "microbial-assessment-overlap.json",
+          "bytes": 277647,
+          "sha256": "f53df7b5a31d1f1eb8e28d0b1f23158fbd0d3962ae4483fca7b2ee1cc1751b1d"
+        },
+        {
+          "path": "MICROBIAL_COVERAGE.md",
+          "bytes": 8566,
+          "sha256": "89ff8ac8ff8c6690c572ef4b5bc7e4c09067ba91e51071f01e84dea5212a77a7"
+        }
+      ]
+    },
+    {
+      "id": "assessment-microbial-observed-stations36-20261013",
+      "kind": "table",
+      "role": "ASSESSMENT_MICROBIAL_STATIONS",
+      "title": "All 36 observed stations and assessment associations",
+      "path": "microbial-assessment-observed-stations.csv",
+      "sha256": "048ef5ff9302beed0d049247f1d4732afb2d684e616aff989d4da943db6b9f97",
+      "bytes": 16755,
+      "uri": "https://github.com/woahwhattheheck/public-commons-sprint-2026/tree/main/opportunities/upstate_forever_2026/source/annual-reference-assessment-20261013",
+      "vintage": "Original microbial samples 2021–2025; assessment editions 2024 and July 2026; association 2026-10-13",
+      "companions": [
+        {
+          "path": "microbial-assessment-coverage.mjs",
+          "bytes": 12715,
+          "sha256": "edc4a9c9f3546eaf60bfd724055a2e3db6df9bc7fd502d4ac0d597003a93ed6a"
+        },
+        {
+          "path": "microbial-assessment-overlap.json",
+          "bytes": 277647,
+          "sha256": "f53df7b5a31d1f1eb8e28d0b1f23158fbd0d3962ae4483fca7b2ee1cc1751b1d"
+        },
+        {
+          "path": "MICROBIAL_COVERAGE.md",
+          "bytes": 8566,
+          "sha256": "89ff8ac8ff8c6690c572ef4b5bc7e4c09067ba91e51071f01e84dea5212a77a7"
+        }
+      ]
+    },
+    {
+      "id": "assessment-microbial-coverage159-20261013",
+      "kind": "table",
+      "role": "ASSESSMENT_MICROBIAL_COVERAGE",
+      "title": "Complete 159-station assessment measurement coverage",
+      "path": "microbial-assessment-coverage.csv",
+      "sha256": "b663ea6b56132632681a3a215357dc81d833c4532a6508b10a7b5e36e02789e1",
+      "bytes": 34741,
+      "uri": "https://github.com/woahwhattheheck/public-commons-sprint-2026/tree/main/opportunities/upstate_forever_2026/source/annual-reference-assessment-20261013",
+      "vintage": "Original microbial samples 2021–2025; assessment editions 2024 and July 2026; association 2026-10-13",
+      "companions": [
+        {
+          "path": "microbial-assessment-coverage.mjs",
+          "bytes": 12715,
+          "sha256": "edc4a9c9f3546eaf60bfd724055a2e3db6df9bc7fd502d4ac0d597003a93ed6a"
+        },
+        {
+          "path": "microbial-assessment-overlap.json",
+          "bytes": 277647,
+          "sha256": "f53df7b5a31d1f1eb8e28d0b1f23158fbd0d3962ae4483fca7b2ee1cc1751b1d"
+        },
+        {
+          "path": "MICROBIAL_COVERAGE.md",
+          "bytes": 8566,
+          "sha256": "89ff8ac8ff8c6690c572ef4b5bc7e4c09067ba91e51071f01e84dea5212a77a7"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,157 @@
+{
+  "schema": "upstate.soil-floodplain-integration/v1",
+  "operation_id": "ES-ORIGINAL-HYDRIC-FLOODPLAIN-SOURCES-20261013",
+  "source_root": "opportunities/upstate_forever_2026",
+  "entry_points": {
+    "capture": "source_tools.soil_floodplain_sources.capture(workspace, selection_or_operation_id, retry_failed=False)",
+    "prepare": "source_tools.soil_floodplain_sources.prepare(workspace, selection)",
+    "inspect": "source_tools.soil_floodplain_sources.inspect(workspace, operation_id)",
+    "overview": "source_tools.soil_floodplain_sources.overview(workspace)"
+  },
+  "operator": {
+    "action": "conservation.sources.capture",
+    "selected_read": "source-capture",
+    "overview_field": "source_acquisitions",
+    "criterion_action": "conservation.criteria.prepare",
+    "criterion_source_parameter": "source_operation_id",
+    "continuation": "Read the retained parcel_criteria_selection from the actual acquisition result and call parcel_criteria.prepare.",
+    "owned_by": "Existing parent Conservation operator/browser/installer integration"
+  },
+  "states": [
+    "prepared",
+    "running",
+    "partial",
+    "complete",
+    "failed"
+  ],
+  "overview_row_fields": [
+    "id",
+    "title",
+    "state",
+    "created_at",
+    "updated_at",
+    "study_id",
+    "families",
+    "progress",
+    "source_collection_id",
+    "original_source_collection_id"
+  ],
+  "progress_fields": [
+    "stage",
+    "completed",
+    "total",
+    "details"
+  ],
+  "result_fields": [
+    "schema",
+    "id",
+    "title",
+    "state",
+    "created_at",
+    "study_id",
+    "source_collection_id",
+    "original_source_collection_id",
+    "source_ids",
+    "builder_sources",
+    "parcel_criteria_selection",
+    "coverage",
+    "families",
+    "domain",
+    "query_domain_sha256",
+    "counts",
+    "files",
+    "references"
+  ],
+  "model_contracts": {
+    "study_domain": "Reporting geometry union full original geometries of every selected parcel, preserving original parcel/reporting binding and geometry context.",
+    "soil_reuse": "Existing SOIL_K_NATIVE original vector or actual completed native soil capture, original MUKEY/AOI geometry and query masks.",
+    "soil_extension": "Query actual acquisition-domain difference from retained original AOI coverage; retain overlapping fragments with native identity and union downstream.",
+    "default_hydric": "hydclprs=100 with only Yes among positive/unknown-weight components; certainty also retains hydclprs=0 with No components.",
+    "predominant": "Original hydclprs >=66, an explicit whole-map-unit interpretation.",
+    "floodplain": "Original FEMA NFHL28 metadata and native ID/CRS, selected exact SFHA_TF=T, known-negative F zones excluding D/unmapped/unknown.",
+    "empty_selections": "Actual features=[] selected source is consumable with actual nonempty certainty coverage. Zero certainty count emits no certainty binding.",
+    "native_mass_metrics": "Existing NDR/SDR quantities and selected model-family contracts are consumed through the maintained Conservation workflow."
+  },
+  "dependencies": [
+    "model/common.py",
+    "model/conservation.py",
+    "model/keowee_priority.py",
+    "model/rasters.py",
+    "model/workspace.py",
+    "source_tools/parcel_criteria.py",
+    "source_tools/soil_sources.py",
+    "source/capture_original_overlays.py",
+    "source/capture_upstream_network.py"
+  ],
+  "existing_compatibility": {
+    "parcel_criteria": {
+      "bytes": 69645,
+      "sha256": "07710f48afcf7e5725c058fe82498669110081144846a3555ed707ec839b9f41",
+      "canvas": "F0C8TUMU328"
+    },
+    "current_soil_component": {
+      "canvas": "F0C8MNY5RN2",
+      "reuse": "Current maintained soil_sources.Sda transport/table API and original soil_region geometry-capture companions"
+    },
+    "source_manifest_schema": "upstate.sources/v1",
+    "operation_lock": "Independent .capture.lock; Workspace owns each import transaction",
+    "source_resume": "Complete original family files and provider responses are reused. Actual source edition IDs and edition-specific manifests remain retained."
+  },
+  "authored_source": {
+    "path": "source_tools/soil_floodplain_sources.py",
+    "bytes": 81128,
+    "sha256": "f88ba0144a3c15c9d09d65a286af440d22c2d423b5c30422068cf3179033376b",
+    "declared_functions": [
+      "_overlays",
+      "_copy",
+      "_key",
+      "_in",
+      "_number",
+      "_body",
+      "_hash_file",
+      "_write_geojson",
+      "_domain",
+      "_tiles",
+      "_esri_mask",
+      "_hydric",
+      "_capture_binding",
+      "_capture_polygons",
+      "_soil_polygons_base",
+      "_queried_soil_coverage",
+      "_soil_polygons",
+      "_soils",
+      "_empty_original",
+      "_native_polygon_rows",
+      "_field_name",
+      "_floodplains",
+      "_reuse_candidates",
+      "_source_spec",
+      "_file",
+      "_companions",
+      "_original_manifest",
+      "_criteria_manifest",
+      "_implementation",
+      "_verify_family",
+      "_family_record",
+      "_bindings",
+      "inspect",
+      "_state_summary",
+      "overview",
+      "capture",
+      "prepare",
+      "parser",
+      "main"
+    ]
+  },
+  "native_receiving": {
+    "execution": "Invoke the source acquisition on the actual current study/domain and reuse the original soil vector/capture when present.",
+    "outputs": [
+      "Actual source collection IDs",
+      "Original soil/FEMA response files",
+      "Original query/known-certainty coverage",
+      "Prepared original parcel-criteria table and coverage",
+      "Existing Conservation point/portfolio outputs"
+    ],
+    "routing": "Current source owners ASTRA-GIS12/ECO-SOURCE12/ESI-178D through the existing native source work thread"
+  }
+}

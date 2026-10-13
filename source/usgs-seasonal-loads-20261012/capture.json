@@ -1,0 +1,114 @@
+{
+  "schema": "upstate.usgs-seasonal-loads-source-capture/v1",
+  "operation_id": "UPSTATE-ORIGINAL-SOURCES-DBC61",
+  "original_request": {
+    "channel_id": "C0C1F274SGH",
+    "thread_ts": "1791760162.728339",
+    "message_ts": "1791786233.773519",
+    "parent_source_request": "1791782642.900689"
+  },
+  "doi": "10.5066/P13YSTHM",
+  "sciencebase_item_id": "6675b4dbd34e6f159fd10baf",
+  "retained_at": "2026-10-12T13:34:28Z",
+  "retained_at_basis": "assembly time; individual original responses were acquired earlier in the same session",
+  "collection_url": "https://app.notion.com/p/3f7dd77231008147bfb0d97e296fda3b",
+  "method": {
+    "loader": "mcp__codex_apps__notion_notion_create_attachment",
+    "readback": "mcp__codex_apps__notion_notion_download_attachment",
+    "file_status": "uploaded",
+    "head_get_status_not_exposed": true,
+    "byte_basis": "SHA256 of exact returned UTF-8 content; source attachment byte lengths matched the provider upload and download receipts"
+  },
+  "files": [
+    {
+      "path": "catalog-metadata.xml",
+      "bytes": 31466,
+      "sha256": "d9b926a79a126e307f8b58dcf1f3b9af7b9d2e7e50734cfb33ce9fbfe76888b2",
+      "url": "https://data.usgs.gov/datacatalog/metadata/USGS.6675b4dbd34e6f159fd10baf.xml",
+      "file_upload_id": "3f7dd772-3100-812c-8a92-00b23b092e9a",
+      "content_type": "application/xml",
+      "role": "metadata",
+      "retained_file_uri": "file-upload://3f7dd772-3100-812c-8a92-00b23b092e9a"
+    },
+    {
+      "path": "sciencebase-item.json",
+      "bytes": 14766,
+      "sha256": "2c4bc4a73994c86e46dc882bbc4b4d625650fdc3f720b5458cb587b4db66ee9d",
+      "url": "https://www.sciencebase.gov/catalog/item/6675b4dbd34e6f159fd10baf?format=json",
+      "file_upload_id": "3f7dd772-3100-81e2-91ba-00b2408c6144",
+      "content_type": "application/json; charset=utf-8",
+      "role": "file_inventory",
+      "retained_file_uri": "file-upload://3f7dd772-3100-81e2-91ba-00b2408c6144"
+    },
+    {
+      "path": "metadata2.xml",
+      "bytes": 32059,
+      "sha256": "a1caa97c038d6b716490925c03a165aa1af3cbb8b45760b3ee560e7594fb7e95",
+      "url": "https://www.sciencebase.gov/catalog/file/get/6675b4dbd34e6f159fd10baf?f=__disk__8a%2Faa%2F45%2F8aaa450a9d37e44fd4ccd24013238a6279d1b6c5",
+      "file_upload_id": "3f7dd772-3100-8131-b8ad-00b22e0cb37c",
+      "content_type": "application/xml",
+      "role": "original_metadata_attachment",
+      "retained_file_uri": "file-upload://3f7dd772-3100-8131-b8ad-00b22e0cb37c"
+    },
+    {
+      "path": "download-response.html",
+      "bytes": 13974,
+      "sha256": "e3fc5db2d1f21899dffd5b69b9ccdc819d4957f80f232137ecd33d2707af8550",
+      "url": "https://www.sciencebase.gov/catalog/item/requestDownload/6675b4dbd34e6f159fd10baf?filePath=__disk__f8%2F3d%2F95%2Ff83d95e645907f5b7073c129a6581810e3acc81b",
+      "file_upload_id": "3f7dd772-3100-8141-9a89-00b20f739c14",
+      "content_type": "text/html; charset=utf-8",
+      "role": "captcha_response",
+      "retained_file_uri": "file-upload://3f7dd772-3100-8141-9a89-00b20f739c14"
+    }
+  ],
+  "original_archive": {
+    "name": "data_release3.zip",
+    "bytes": 1897877062,
+    "publisher_checksum": {
+      "value": "2dc4d81994c4fcbf7d27728eb16fdaef",
+      "type": "MD5"
+    },
+    "date_uploaded": "2024-10-15T14:22:48Z",
+    "url": "https://www.sciencebase.gov/catalog/file/get/6675b4dbd34e6f159fd10baf?f=__disk__f8%2F3d%2F95%2Ff83d95e645907f5b7073c129a6581810e3acc81b",
+    "request_download_url": "https://www.sciencebase.gov/catalog/item/requestDownload/6675b4dbd34e6f159fd10baf?filePath=__disk__f8%2F3d%2F95%2Ff83d95e645907f5b7073c129a6581810e3acc81b",
+    "publisher_s3_copy": {
+      "dateUploaded": "2024-10-16T14:32:17Z",
+      "size": 1897877062,
+      "s3SourceBucket": null,
+      "bucket": "prod-is-s3-service",
+      "version": null,
+      "s3SourcePath": null,
+      "title": "S3 bucket copy of file data_release3.zip",
+      "filePath": "6675b4dbd34e6f159fd10baf/f83d95e645907f5b7073c129a6581810e3acc81b/data_release3.zip",
+      "name": "data_release3.zip",
+      "uploadedBy": "system",
+      "status": "Complete",
+      "contentType": "application/zip",
+      "s3Source": null
+    },
+    "cuid": null,
+    "key": null,
+    "published": false,
+    "body_acquired": false,
+    "local_md5_verified": false,
+    "local_sha256": null
+  },
+  "archive_access": {
+    "state": "HUMAN_CAPTCHA_REQUIRED_AT_PUBLISHED_DOWNLOAD_REQUEST",
+    "response": "download-response.html",
+    "automated_challenge_completion": false,
+    "bypass_attempted": false,
+    "archive_body_request_dispatched": false
+  },
+  "source_period": {
+    "start": "1999-12-01",
+    "end": "2020-11-30",
+    "metadata_publication_date": "2024-10-15"
+  },
+  "load_state": {
+    "station_inventory_retained": false,
+    "numeric_load_rows_retained": false,
+    "annual_aggregation_performed": false,
+    "catchment_comparison_performed": false
+  }
+}

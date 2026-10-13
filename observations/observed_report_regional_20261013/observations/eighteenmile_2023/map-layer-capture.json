@@ -1,0 +1,87 @@
+{
+  "schema": "upstate.published-study-map-companion/v1",
+  "study_id": "scdes-eighteenmile-lake-2023",
+  "operation_id": "UPSTATE-EIGHTEENMILE-2023-OBSERVED-CONTEXT-20261013",
+  "source_report_url": "https://www.des.sc.gov/sites/des/files/Documents/BOW/WaterQuality/2023LakeProgramFinalReport.pdf",
+  "original_files": [
+    {
+      "path": "observations/eighteenmile_2023/study.json",
+      "bytes": 2697,
+      "sha256": "7163a6048615600c98e42ebb1d6f8ba6f4dd39e90c2eddce2fc34a285fb866a8"
+    },
+    {
+      "path": "observations/eighteenmile_2023/stations.csv",
+      "bytes": 2246,
+      "sha256": "ca4c5eda792a42c4eb1bd222e37d7ba5217e4610feefa22f5090b4b2332a7dd4"
+    },
+    {
+      "path": "observations/eighteenmile_2023/stations.json",
+      "bytes": 4331,
+      "sha256": "15e547413181c92ca55cbc196703f8583bd2e7032ade302c376be4bc38d0193e"
+    },
+    {
+      "path": "observations/eighteenmile_2023/seasonal_summaries.csv",
+      "bytes": 8170,
+      "sha256": "f4c30f642a8c276715953326ff69c6848136f21bb99122553fc90391d28f7b3a"
+    },
+    {
+      "path": "observations/eighteenmile_2023/surface_ranges.csv",
+      "bytes": 1234,
+      "sha256": "78d12cc0231041dd07395ebffdeea2ab5a3bbaa86ca7657ea19785c6ad02f44b"
+    },
+    {
+      "path": "observations/eighteenmile_2023/continuous_monthly_do.csv",
+      "bytes": 2338,
+      "sha256": "cb238e309d54620160b87ffa5e27b7a53de93bc002800bb5c084129e051b565b"
+    },
+    {
+      "path": "observations/eighteenmile_2023/continuous_monthly_ph.csv",
+      "bytes": 2166,
+      "sha256": "696f7436e4af095677dab397c1854395656cb0f385219ecf9c69b234c846fa05"
+    },
+    {
+      "path": "observations/eighteenmile_2023/reported_npdes_permits.csv",
+      "bytes": 769,
+      "sha256": "d59fa0ccc847d0d26342f3d6ab727c84acee6188933f82ab3635b7fc0b1ff1c2"
+    },
+    {
+      "path": "observations/eighteenmile_2023/source_notes.json",
+      "bytes": 3408,
+      "sha256": "158a2f46a71bfbb2d6d25f8cde7c5ffea9d54904d671bef43948180c57642efb"
+    },
+    {
+      "path": "observations/eighteenmile_2023/README.md",
+      "bytes": 2360,
+      "sha256": "e2325c6f6807e337c2871d57c708f063b3e999e317c2ab4cd139fd57ee873b8d"
+    }
+  ],
+  "derivation": {
+    "geometry": "Exact Water Quality Portal station longitude/latitude coordinates from stations.json, grouped by each recorded EPSG code.",
+    "properties": "Scalar station identity and source URLs from stations.json; surface-stratum means/sample counts from seasonal_summaries.csv; field ranges from surface_ranges.csv.",
+    "data_join": "site_id; surface-stratum rows where applicable",
+    "geometric_transformation": "Native coordinates retained in two explicit CRS layers; the existing Workspace reader performs display projection.",
+    "sampling_period_start": "2023-04-05",
+    "sampling_period_end": "2023-10-17",
+    "surface_depth_m": 0.3,
+    "huc_context": "study_huc10 is the published whole-study watershed, 0306010106. Native point-to-domain membership is computed by the existing domain join.",
+    "source_notes": "The two published chlorophyll counts of 4 are preserved together with the methods' 15-sample context. source_notes.json retains published discrepancies and detection-limit substitutions."
+  },
+  "vectors": [
+    {
+      "source_id": "scdes-eighteenmile-study-2023-wgs84",
+      "epsg": 4326,
+      "path": "observations/eighteenmile_2023/study_sites_wgs84.geojson",
+      "bytes": 4456,
+      "sha256": "16490d2df05ad7309f736c0aa08473c8ff837a65f26ae98fb1f02e7549386c95",
+      "feature_count": 2
+    },
+    {
+      "source_id": "scdes-eighteenmile-study-2023-nad83",
+      "epsg": 4269,
+      "path": "observations/eighteenmile_2023/study_sites_nad83.geojson",
+      "bytes": 6449,
+      "sha256": "b9975a274834087c9de2e9d296576e57b75f1e216c9d20771c71aca75bfddad9",
+      "feature_count": 3
+    }
+  ]
+}

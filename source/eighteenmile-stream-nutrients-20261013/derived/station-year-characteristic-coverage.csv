@@ -1,0 +1,60 @@
+station_id,year,characteristic,sample_fraction,records,numeric_records,below_quantification_records,activities,units,limits,methods,gauge_network_relation
+21SC60WQ_WQX-SV-233,2020,Ammonia,Unfiltered,11,0,11,11,,0.050 mg/L,21SC60WQ_WQX:LACHAT 10-107-06-1-C,downstream_same_reach
+21SC60WQ_WQX-SV-233,2020,Kjeldahl nitrogen,Unfiltered,12,12,0,12,mg/L,0.10 mg/L,LACHAT:10-107-06-2-E,downstream_same_reach
+21SC60WQ_WQX-SV-233,2020,Nitrate + Nitrite,Unfiltered,12,12,0,12,mg/L,0.020 mg/L,LACHAT:10-107-04-1-C,downstream_same_reach
+21SC60WQ_WQX-SV-233,2020,Phosphorus,Unfiltered,12,12,0,12,mg/L,0.020 mg/L,21SC60WQ_WQX:LACHAT 10-115-01-1-E,downstream_same_reach
+21SC60WQ_WQX-SV-233,2021,Ammonia,Unfiltered,12,0,12,12,,0.050 mg/L,21SC60WQ_WQX:LACHAT 10-107-06-1-C,downstream_same_reach
+21SC60WQ_WQX-SV-233,2021,Kjeldahl nitrogen,Unfiltered,12,9,3,12,mg/L,0.10 mg/L,LACHAT:10-107-06-2-E,downstream_same_reach
+21SC60WQ_WQX-SV-233,2021,Nitrate + Nitrite,Unfiltered,12,12,0,12,mg/L,0.020 mg/L,LACHAT:10-107-04-1-C,downstream_same_reach
+21SC60WQ_WQX-SV-233,2021,Phosphorus,Unfiltered,12,12,0,12,mg/L,0.020 mg/L,21SC60WQ_WQX:LACHAT 10-115-01-1-E,downstream_same_reach
+21SC60WQ_WQX-SV-233,2022,Ammonia,Unfiltered,9,1,8,9,mg/L,0.050 mg/L,21SC60WQ_WQX:LACHAT 10-107-06-1-C,downstream_same_reach
+21SC60WQ_WQX-SV-233,2022,Kjeldahl nitrogen,Unfiltered,10,7,3,10,mg/L,0.1 mg/L | 0.10 mg/L,LACHAT:10-107-06-2-E,downstream_same_reach
+21SC60WQ_WQX-SV-233,2022,Nitrate + Nitrite,Unfiltered,10,10,0,10,mg/L,0.02 mg/L | 0.020 mg/L,LACHAT:10-107-04-1-C,downstream_same_reach
+21SC60WQ_WQX-SV-233,2022,Phosphorus,Unfiltered,10,10,0,10,mg/L,0.02 mg/L | 0.020 mg/L,21SC60WQ_WQX:LACHAT 10-115-01-1-E,downstream_same_reach
+21SC60WQ_WQX-SV-233,2023,Ammonia,Unfiltered,12,5,7,12,mg/L,0.05 mg/L | 0.050 mg/L,21SC60WQ_WQX:LACHAT 10-107-06-1-C,downstream_same_reach
+21SC60WQ_WQX-SV-233,2023,Kjeldahl nitrogen,Unfiltered,12,10,2,12,mg/L,0.1 mg/L | 0.10 mg/L,LACHAT:10-107-06-2-E,downstream_same_reach
+21SC60WQ_WQX-SV-233,2023,Nitrate + Nitrite,Unfiltered,12,12,0,12,mg/L,0.02 mg/L | 0.020 mg/L,LACHAT:10-107-04-1-C,downstream_same_reach
+21SC60WQ_WQX-SV-233,2023,Phosphorus,Unfiltered,12,12,0,12,mg/L,0.02 mg/L | 0.020 mg/L,21SC60WQ_WQX:LACHAT 10-115-01-1-E,downstream_same_reach
+21SC60WQ_WQX-SV-233,2024,Ammonia,Unfiltered,12,1,11,12,mg/L,0.050 mg/L,21SC60WQ_WQX:LACHAT 10-107-06-1-C,downstream_same_reach
+21SC60WQ_WQX-SV-233,2024,Kjeldahl nitrogen,Unfiltered,12,10,2,12,mg/L,0.10 mg/L,LACHAT:10-107-06-2-E,downstream_same_reach
+21SC60WQ_WQX-SV-233,2024,Nitrate + Nitrite,Unfiltered,12,12,0,12,mg/L,0.02 mg/L | 0.020 mg/L,LACHAT:10-107-04-1-C,downstream_same_reach
+21SC60WQ_WQX-SV-233,2024,Phosphorus,Unfiltered,12,12,0,12,mg/L,0.02 mg/L | 0.020 mg/L,21SC60WQ_WQX:LACHAT 10-115-01-1-E,downstream_same_reach
+21SC60WQ_WQX-SV-233,2024,Nitrogen,Unfiltered,2,2,0,2,mg/L,0.12 mg/L,21SC60WQ_WQX:Total Nitrogen,downstream_same_reach
+21SC60WQ_WQX-SV-233,2025,Ammonia,Unfiltered,1,0,1,1,,0.050 mg/L,21SC60WQ_WQX:LACHAT 10-107-06-1-C,downstream_same_reach
+21SC60WQ_WQX-SV-233,2025,Kjeldahl nitrogen,Unfiltered,10,10,0,10,mg/L,0.1 mg/L,LACHAT:10-107-06-2-E,downstream_same_reach
+21SC60WQ_WQX-SV-233,2025,Nitrate + Nitrite,Unfiltered,10,10,0,10,mg/L,0.02 mg/L,LACHAT:10-107-04-1-C,downstream_same_reach
+21SC60WQ_WQX-SV-233,2025,Phosphorus,Unfiltered,10,10,0,10,mg/L,0.02 mg/L,21SC60WQ_WQX:LACHAT 10-115-01-1-E,downstream_same_reach
+21SC60WQ_WQX-SV-245,2023,Ammonia,Unfiltered,1,1,0,1,mg/L,0.050 mg/L,21SC60WQ_WQX:LACHAT 10-107-06-1-C,indexed_upstream_reach
+21SC60WQ_WQX-SV-245,2023,Kjeldahl nitrogen,Unfiltered,1,1,0,1,mg/L,0.10 mg/L,LACHAT:10-107-06-2-E,indexed_upstream_reach
+21SC60WQ_WQX-SV-245,2023,Nitrate + Nitrite,Unfiltered,1,1,0,1,mg/L,0.020 mg/L,LACHAT:10-107-04-1-C,indexed_upstream_reach
+21SC60WQ_WQX-SV-245,2023,Phosphorus,Unfiltered,1,1,0,1,mg/L,0.020 mg/L,21SC60WQ_WQX:LACHAT 10-115-01-1-E,indexed_upstream_reach
+21SC60WQ_WQX-SV-375,2022,Ammonia,Unfiltered,12,2,10,12,mg/L,0.05 mg/L | 0.050 mg/L,21SC60WQ_WQX:LACHAT 10-107-06-1-C,indexed_upstream_reach
+21SC60WQ_WQX-SV-375,2022,Kjeldahl nitrogen,Unfiltered,12,10,2,12,mg/L,0.1 mg/L | 0.10 mg/L,LACHAT:10-107-06-2-E,indexed_upstream_reach
+21SC60WQ_WQX-SV-375,2022,Nitrate + Nitrite,Unfiltered,12,12,0,12,mg/L,0.02 mg/L | 0.020 mg/L,LACHAT:10-107-04-1-C,indexed_upstream_reach
+21SC60WQ_WQX-SV-375,2022,Phosphorus,Unfiltered,12,4,8,12,mg/L,0.02 mg/L | 0.020 mg/L,21SC60WQ_WQX:LACHAT 10-115-01-1-E,indexed_upstream_reach
+21SC60WQ_WQX-SV-375,2023,Ammonia,Unfiltered,12,1,11,12,mg/L,0.05 mg/L | 0.050 mg/L,21SC60WQ_WQX:LACHAT 10-107-06-1-C,indexed_upstream_reach
+21SC60WQ_WQX-SV-375,2023,Kjeldahl nitrogen,Unfiltered,12,6,6,12,mg/L,0.1 mg/L | 0.10 mg/L,LACHAT:10-107-06-2-E,indexed_upstream_reach
+21SC60WQ_WQX-SV-375,2023,Nitrate + Nitrite,Unfiltered,12,12,0,12,mg/L,0.02 mg/L | 0.020 mg/L,LACHAT:10-107-04-1-C,indexed_upstream_reach
+21SC60WQ_WQX-SV-375,2023,Phosphorus,Unfiltered,12,6,6,12,mg/L,0.02 mg/L | 0.020 mg/L,21SC60WQ_WQX:LACHAT 10-115-01-1-E,indexed_upstream_reach
+21SC60WQ_WQX-SV-375,2024,Ammonia,Unfiltered,12,2,10,12,mg/L,0.050 mg/L,21SC60WQ_WQX:LACHAT 10-107-06-1-C,indexed_upstream_reach
+21SC60WQ_WQX-SV-375,2024,Kjeldahl nitrogen,Unfiltered,12,8,4,12,mg/L,0.1 mg/L | 0.10 mg/L,LACHAT:10-107-06-2-E,indexed_upstream_reach
+21SC60WQ_WQX-SV-375,2024,Nitrate + Nitrite,Unfiltered,12,12,0,12,mg/L,0.02 mg/L | 0.020 mg/L,LACHAT:10-107-04-1-C,indexed_upstream_reach
+21SC60WQ_WQX-SV-375,2024,Phosphorus,Unfiltered,12,5,7,12,mg/L,0.02 mg/L | 0.020 mg/L,21SC60WQ_WQX:LACHAT 10-115-01-1-E,indexed_upstream_reach
+21SC60WQ_WQX-SV-375,2024,Nitrogen,Unfiltered,2,2,0,2,mg/L,0.12 mg/L,21SC60WQ_WQX:Total Nitrogen,indexed_upstream_reach
+21SC60WQ_WQX-SV-375,2025,Ammonia,Unfiltered,3,1,2,3,mg/L,0.05 mg/L | 0.050 mg/L,21SC60WQ_WQX:LACHAT 10-107-06-1-C,indexed_upstream_reach
+21SC60WQ_WQX-SV-375,2025,Kjeldahl nitrogen,Unfiltered,12,5,7,12,mg/L,0.1 mg/L | 0.10 mg/L,LACHAT:10-107-06-2-E,indexed_upstream_reach
+21SC60WQ_WQX-SV-375,2025,Nitrate + Nitrite,Unfiltered,12,12,0,12,mg/L,0.02 mg/L,LACHAT:10-107-04-1-C,indexed_upstream_reach
+21SC60WQ_WQX-SV-375,2025,Phosphorus,Unfiltered,12,2,10,12,mg/L,0.02 mg/L | 0.020 mg/L,21SC60WQ_WQX:LACHAT 10-115-01-1-E,indexed_upstream_reach
+21SC60WQ_WQX-SV-376,2023,Ammonia,Unfiltered,12,3,9,12,mg/L,0.05 mg/L | 0.050 mg/L,21SC60WQ_WQX:LACHAT 10-107-06-1-C,indexed_upstream_reach
+21SC60WQ_WQX-SV-376,2023,Kjeldahl nitrogen,Unfiltered,12,8,4,12,mg/L,0.1 mg/L | 0.10 mg/L,LACHAT:10-107-06-2-E,indexed_upstream_reach
+21SC60WQ_WQX-SV-376,2023,Nitrate + Nitrite,Unfiltered,12,12,0,12,mg/L,0.02 mg/L | 0.020 mg/L,LACHAT:10-107-04-1-C,indexed_upstream_reach
+21SC60WQ_WQX-SV-376,2023,Phosphorus,Unfiltered,12,9,3,12,mg/L,0.02 mg/L | 0.020 mg/L,21SC60WQ_WQX:LACHAT 10-115-01-1-E,indexed_upstream_reach
+21SC60WQ_WQX-SV-376,2024,Ammonia,Unfiltered,12,1,11,12,mg/L,0.050 mg/L,21SC60WQ_WQX:LACHAT 10-107-06-1-C,indexed_upstream_reach
+21SC60WQ_WQX-SV-376,2024,Kjeldahl nitrogen,Unfiltered,12,8,4,12,mg/L,0.1 mg/L | 0.10 mg/L,LACHAT:10-107-06-2-E,indexed_upstream_reach
+21SC60WQ_WQX-SV-376,2024,Nitrate + Nitrite,Unfiltered,12,12,0,12,mg/L,0.02 mg/L | 0.020 mg/L,LACHAT:10-107-04-1-C,indexed_upstream_reach
+21SC60WQ_WQX-SV-376,2024,Phosphorus,Unfiltered,12,12,0,12,mg/L,0.02 mg/L | 0.020 mg/L,21SC60WQ_WQX:LACHAT 10-115-01-1-E,indexed_upstream_reach
+21SC60WQ_WQX-SV-376,2024,Nitrogen,Unfiltered,2,2,0,2,mg/L,0.12 mg/L,21SC60WQ_WQX:Total Nitrogen,indexed_upstream_reach
+21SC60WQ_WQX-SV-376,2025,Ammonia,Unfiltered,3,1,2,3,mg/L,0.05 mg/L | 0.050 mg/L,21SC60WQ_WQX:LACHAT 10-107-06-1-C,indexed_upstream_reach
+21SC60WQ_WQX-SV-376,2025,Kjeldahl nitrogen,Unfiltered,12,8,4,12,mg/L,0.1 mg/L | 0.10 mg/L,LACHAT:10-107-06-2-E,indexed_upstream_reach
+21SC60WQ_WQX-SV-376,2025,Nitrate + Nitrite,Unfiltered,12,12,0,12,mg/L,0.02 mg/L,LACHAT:10-107-04-1-C,indexed_upstream_reach
+21SC60WQ_WQX-SV-376,2025,Phosphorus,Unfiltered,12,11,1,12,mg/L,0.02 mg/L | 0.020 mg/L,21SC60WQ_WQX:LACHAT 10-115-01-1-E,indexed_upstream_reach

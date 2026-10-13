@@ -1,0 +1,448 @@
+{
+  "schema": "upstate.regional-biophysical-join/v1",
+  "title": "Georgia 2019 A1 nutrients and Duke Forest 2022 Table 4 sediment — NLCD regional reference",
+  "output": {
+    "path": "regional-biophysical.csv",
+    "bytes": 1748,
+    "sha256": "b2b5778c5d8c71b2b0c6db370f29a60e987d1be3d491cec91493a0b975b8b9e4",
+    "rows": 15,
+    "columns": [
+      "lucode",
+      "load_n",
+      "load_p",
+      "load_type_n",
+      "load_type_p",
+      "eff_n",
+      "eff_p",
+      "crit_len_n",
+      "crit_len_p",
+      "proportion_subsurface_n",
+      "usle_c",
+      "usle_p",
+      "georgia_land_cover_label",
+      "duke_land_cover_label"
+    ]
+  },
+  "sources": [
+    {
+      "path": "georgia-2019-table-a1.csv",
+      "bytes": 640,
+      "sha256": "6c9f7c9ec6f0b4baf265bd9fdccc07761d565360b9ca4ae947203d4f1263bec9",
+      "git_blob": "1005b2ed6492456561f4ecd7374fbbda369d99d9"
+    },
+    {
+      "path": "duke-forest-2022-table4.csv",
+      "bytes": 473,
+      "sha256": "80640168c165188cc56f278195fb2ac2a7171dbd59a9eba09381f5f57c54d25e",
+      "git_blob": "6129dba36fd1e10fc8e2c88f82e5c8f52d577290"
+    }
+  ],
+  "row_lineage": [
+    {
+      "lucode": 11,
+      "nutrients": {
+        "source": "georgia-2019-table-a1.csv",
+        "csv_line": 16,
+        "table": "A1",
+        "source_fields": [
+          "load_n",
+          "load_p",
+          "eff_n",
+          "eff_p"
+        ]
+      },
+      "sediment": {
+        "source": "duke-forest-2022-table4.csv",
+        "csv_line": 2,
+        "table": "4",
+        "source_fields": [
+          "usle_c",
+          "usle_p"
+        ]
+      }
+    },
+    {
+      "lucode": 21,
+      "nutrients": {
+        "source": "georgia-2019-table-a1.csv",
+        "csv_line": 9,
+        "table": "A1",
+        "source_fields": [
+          "load_n",
+          "load_p",
+          "eff_n",
+          "eff_p"
+        ]
+      },
+      "sediment": {
+        "source": "duke-forest-2022-table4.csv",
+        "csv_line": 3,
+        "table": "4",
+        "source_fields": [
+          "usle_c",
+          "usle_p"
+        ]
+      }
+    },
+    {
+      "lucode": 22,
+      "nutrients": {
+        "source": "georgia-2019-table-a1.csv",
+        "csv_line": 7,
+        "table": "A1",
+        "source_fields": [
+          "load_n",
+          "load_p",
+          "eff_n",
+          "eff_p"
+        ]
+      },
+      "sediment": {
+        "source": "duke-forest-2022-table4.csv",
+        "csv_line": 4,
+        "table": "4",
+        "source_fields": [
+          "usle_c",
+          "usle_p"
+        ]
+      }
+    },
+    {
+      "lucode": 23,
+      "nutrients": {
+        "source": "georgia-2019-table-a1.csv",
+        "csv_line": 3,
+        "table": "A1",
+        "source_fields": [
+          "load_n",
+          "load_p",
+          "eff_n",
+          "eff_p"
+        ]
+      },
+      "sediment": {
+        "source": "duke-forest-2022-table4.csv",
+        "csv_line": 5,
+        "table": "4",
+        "source_fields": [
+          "usle_c",
+          "usle_p"
+        ]
+      }
+    },
+    {
+      "lucode": 24,
+      "nutrients": {
+        "source": "georgia-2019-table-a1.csv",
+        "csv_line": 2,
+        "table": "A1",
+        "source_fields": [
+          "load_n",
+          "load_p",
+          "eff_n",
+          "eff_p"
+        ]
+      },
+      "sediment": {
+        "source": "duke-forest-2022-table4.csv",
+        "csv_line": 6,
+        "table": "4",
+        "source_fields": [
+          "usle_c",
+          "usle_p"
+        ]
+      }
+    },
+    {
+      "lucode": 31,
+      "nutrients": {
+        "source": "georgia-2019-table-a1.csv",
+        "csv_line": 15,
+        "table": "A1",
+        "source_fields": [
+          "load_n",
+          "load_p",
+          "eff_n",
+          "eff_p"
+        ]
+      },
+      "sediment": {
+        "source": "duke-forest-2022-table4.csv",
+        "csv_line": 7,
+        "table": "4",
+        "source_fields": [
+          "usle_c",
+          "usle_p"
+        ]
+      }
+    },
+    {
+      "lucode": 41,
+      "nutrients": {
+        "source": "georgia-2019-table-a1.csv",
+        "csv_line": 12,
+        "table": "A1",
+        "source_fields": [
+          "load_n",
+          "load_p",
+          "eff_n",
+          "eff_p"
+        ]
+      },
+      "sediment": {
+        "source": "duke-forest-2022-table4.csv",
+        "csv_line": 8,
+        "table": "4",
+        "source_fields": [
+          "usle_c",
+          "usle_p"
+        ]
+      }
+    },
+    {
+      "lucode": 42,
+      "nutrients": {
+        "source": "georgia-2019-table-a1.csv",
+        "csv_line": 10,
+        "table": "A1",
+        "source_fields": [
+          "load_n",
+          "load_p",
+          "eff_n",
+          "eff_p"
+        ]
+      },
+      "sediment": {
+        "source": "duke-forest-2022-table4.csv",
+        "csv_line": 9,
+        "table": "4",
+        "source_fields": [
+          "usle_c",
+          "usle_p"
+        ]
+      }
+    },
+    {
+      "lucode": 43,
+      "nutrients": {
+        "source": "georgia-2019-table-a1.csv",
+        "csv_line": 11,
+        "table": "A1",
+        "source_fields": [
+          "load_n",
+          "load_p",
+          "eff_n",
+          "eff_p"
+        ]
+      },
+      "sediment": {
+        "source": "duke-forest-2022-table4.csv",
+        "csv_line": 10,
+        "table": "4",
+        "source_fields": [
+          "usle_c",
+          "usle_p"
+        ]
+      }
+    },
+    {
+      "lucode": 52,
+      "nutrients": {
+        "source": "georgia-2019-table-a1.csv",
+        "csv_line": 8,
+        "table": "A1",
+        "source_fields": [
+          "load_n",
+          "load_p",
+          "eff_n",
+          "eff_p"
+        ]
+      },
+      "sediment": {
+        "source": "duke-forest-2022-table4.csv",
+        "csv_line": 11,
+        "table": "4",
+        "source_fields": [
+          "usle_c",
+          "usle_p"
+        ]
+      }
+    },
+    {
+      "lucode": 71,
+      "nutrients": {
+        "source": "georgia-2019-table-a1.csv",
+        "csv_line": 6,
+        "table": "A1",
+        "source_fields": [
+          "load_n",
+          "load_p",
+          "eff_n",
+          "eff_p"
+        ]
+      },
+      "sediment": {
+        "source": "duke-forest-2022-table4.csv",
+        "csv_line": 12,
+        "table": "4",
+        "source_fields": [
+          "usle_c",
+          "usle_p"
+        ]
+      }
+    },
+    {
+      "lucode": 81,
+      "nutrients": {
+        "source": "georgia-2019-table-a1.csv",
+        "csv_line": 5,
+        "table": "A1",
+        "source_fields": [
+          "load_n",
+          "load_p",
+          "eff_n",
+          "eff_p"
+        ]
+      },
+      "sediment": {
+        "source": "duke-forest-2022-table4.csv",
+        "csv_line": 13,
+        "table": "4",
+        "source_fields": [
+          "usle_c",
+          "usle_p"
+        ]
+      }
+    },
+    {
+      "lucode": 82,
+      "nutrients": {
+        "source": "georgia-2019-table-a1.csv",
+        "csv_line": 4,
+        "table": "A1",
+        "source_fields": [
+          "load_n",
+          "load_p",
+          "eff_n",
+          "eff_p"
+        ]
+      },
+      "sediment": {
+        "source": "duke-forest-2022-table4.csv",
+        "csv_line": 14,
+        "table": "4",
+        "source_fields": [
+          "usle_c",
+          "usle_p"
+        ]
+      }
+    },
+    {
+      "lucode": 90,
+      "nutrients": {
+        "source": "georgia-2019-table-a1.csv",
+        "csv_line": 13,
+        "table": "A1",
+        "source_fields": [
+          "load_n",
+          "load_p",
+          "eff_n",
+          "eff_p"
+        ]
+      },
+      "sediment": {
+        "source": "duke-forest-2022-table4.csv",
+        "csv_line": 15,
+        "table": "4",
+        "source_fields": [
+          "usle_c",
+          "usle_p"
+        ]
+      }
+    },
+    {
+      "lucode": 95,
+      "nutrients": {
+        "source": "georgia-2019-table-a1.csv",
+        "csv_line": 14,
+        "table": "A1",
+        "source_fields": [
+          "load_n",
+          "load_p",
+          "eff_n",
+          "eff_p"
+        ]
+      },
+      "sediment": {
+        "source": "duke-forest-2022-table4.csv",
+        "csv_line": 16,
+        "table": "4",
+        "source_fields": [
+          "usle_c",
+          "usle_p"
+        ]
+      }
+    }
+  ],
+  "adoption": {
+    "nutrient_load_units": "kg/ha/year",
+    "efficiency_units": "ratio",
+    "critical_length_units": "m",
+    "usle_factors": "dimensionless",
+    "crit_len_n": "30",
+    "crit_len_p": "30",
+    "proportion_subsurface_n": "0",
+    "constants_source": "Georgia paper Appendix A1 NLCD footnote",
+    "load_type_n": "measured-runoff",
+    "load_type_p": "measured-runoff",
+    "load_type_basis": "The retained Georgia inputs are land-cover nutrient export coefficients; modern InVEST field values describe that published input basis.",
+    "land_cover_join": "Exact integer NLCD code; preserve both publications' class labels.",
+    "parameter_provenance": "Original numeric CSV strings are retained without rounding or interpolation.",
+    "model_parameters": "Native NDR/SDR algorithm parameters and local calibration remain named choices in the saved model profile."
+  },
+  "study_context": {
+    "georgia": {
+      "year": 2019,
+      "doi": "10.3390/environments6050052",
+      "table": "A1",
+      "published_land_cover": "NLCD 2006",
+      "original_model_version": "InVEST 3.4.2",
+      "scope": "57 Georgia watersheds"
+    },
+    "duke": {
+      "year": 2022,
+      "title": "Ecosystem Service Analysis of Duke Forest",
+      "authors": [
+        "Shouta Hayashi",
+        "Eamon Horrigan"
+      ],
+      "table": "4",
+      "classification": "NLCD",
+      "report_url": "https://dukespace.lib.duke.edu/bitstreams/57c6d8cb-9ce3-4740-b1d5-39c92bda284c/download",
+      "author_story_date": "2022-03-29",
+      "author_story_url": "https://storymaps.arcgis.com/stories/ae40930c3caa4ba38005a1ab7da083a7",
+      "advisor_bibliography_url": "https://sites.nicholas.duke.edu/nicolettecagle/cagle-lab/people/",
+      "table_attribution": "Hamel et al. 2015",
+      "attributed_doi": "10.1016/j.scitotenv.2015.04.027"
+    }
+  },
+  "source_comparison": [
+    {
+      "parameter": "usle_c",
+      "lucode": 82,
+      "selected_value": "0.2",
+      "selected_source": "Duke Forest 2022 Table 4",
+      "other_value": "0.25",
+      "other_context": "Agricultural corn in the Cape Fear discussion of Hamel et al. 2017",
+      "other_doi": "10.1016/j.scitotenv.2016.12.103",
+      "other_source_url": "https://repository.library.noaa.gov/view/noaa/57797/noaa_57797_DS1.pdf",
+      "treatment": "Retain Duke's published 0.2 in this edition; keep the Cape Fear value as a separately attributable sensitivity choice."
+    }
+  ],
+  "references": [
+    "https://doi.org/10.3390/environments6050052",
+    "https://dukespace.lib.duke.edu/bitstreams/57c6d8cb-9ce3-4740-b1d5-39c92bda284c/download",
+    "https://doi.org/10.1016/j.scitotenv.2015.04.027",
+    "https://repository.library.noaa.gov/view/noaa/57797/noaa_57797_DS1.pdf"
+  ]
+}

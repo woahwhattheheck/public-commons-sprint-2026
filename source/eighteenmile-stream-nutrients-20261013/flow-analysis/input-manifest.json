@@ -1,0 +1,130 @@
+{
+  "schema": "upstate.stream-flow-analysis-inputs/v1",
+  "edition": "eighteenmile-four-streams-20261013",
+  "source_application": "opportunities/upstate_forever_2026",
+  "input_revisions": {
+    "stream_source": "bd85c1993ca4351c7efa16bead8f91dbf54dbf06",
+    "hydrology_source": "904ac1340507365a897ca846e7cfab3577898507"
+  },
+  "inputs": [
+    {
+      "role": "nutrients",
+      "path": "source/eighteenmile-stream-nutrients-20261013/derived/nutrient-results.csv",
+      "bytes": 199318,
+      "sha256": "3e899a8cbce5330102b1ce2a8ff2af2eae3517a2ccd96f6b546c2bfb45def5a0"
+    },
+    {
+      "role": "stations",
+      "path": "source/eighteenmile-stream-nutrients-20261013/derived/station-basin-join.csv",
+      "bytes": 2297,
+      "sha256": "9d87038d44d15937982c09c98205dcbaf99ae14d75b4885412b17fd544d1dec7"
+    },
+    {
+      "role": "original_2020_2022",
+      "path": "source/eighteenmile-stream-nutrients-20261013/original/nutrient-results-2020-2022.csv",
+      "bytes": 69221,
+      "sha256": "90ca40a8697c6bc301e97e394452235ecf0ea0653024b93a2dc61f60ef1f6733"
+    },
+    {
+      "role": "original_2023_2025",
+      "path": "source/eighteenmile-stream-nutrients-20261013/original/nutrient-results-2023-2025.csv",
+      "bytes": 153018,
+      "sha256": "6c36b486618b4569454ecc8e531c4b4adbd739c5f6f726f97f8e5ceafe7a7f03"
+    },
+    {
+      "role": "daily",
+      "path": "observations/observed_hydrology_20261013/derived/daily_flow.csv",
+      "bytes": 2273280,
+      "sha256": "59df488cc9820a6eef7750d6938cf91573f701c8ad4683a6c102ec26c7a04863"
+    }
+  ],
+  "references": [
+    {
+      "title": "Original stream source and normalization",
+      "uri": "https://github.com/woahwhattheheck/public-commons-sprint-2026/pull/3064"
+    },
+    {
+      "title": "Original gauge",
+      "uri": "https://waterdata.usgs.gov/monitoring-location/USGS-02186702/"
+    },
+    {
+      "title": "EPA nitrogen components and mass basis",
+      "uri": "https://echo.epa.gov/trends/loading-tool/resources/technical-background-methodology/nutrient-aggregation"
+    },
+    {
+      "title": "USGS NHD linear referencing",
+      "uri": "https://pubs.usgs.gov/fs/2012/3068/"
+    }
+  ],
+  "original_source_entities": [
+    {
+      "path": "source/eighteenmile-stream-nutrients-20261013/original/seneca-nutrient-stations.csv",
+      "uri": "https://www.waterqualitydata.us/data/Station/search?huc=03060101&startDateLo=01-01-2020&startDateHi=12-31-2025&characteristicType=Nutrient&mimeType=csv&zip=no",
+      "bytes": 14616,
+      "sha256": "c27a0e7fcd486c17634c71f1f2ac8e29b7d6eaec29bf08c22c0c47d186b5708c"
+    },
+    {
+      "path": "source/eighteenmile-stream-nutrients-20261013/original/nutrient-results-2020-2022.csv",
+      "uri": "https://www.waterqualitydata.us/data/Result/search?siteid=21SC60WQ_WQX-SV-233%3B21SC60WQ_WQX-SV-245%3B21SC60WQ_WQX-SV-375%3B21SC60WQ_WQX-SV-376&startDateLo=01-01-2020&startDateHi=12-31-2022&characteristicType=Nutrient&mimeType=csv&zip=no",
+      "bytes": 69221,
+      "sha256": "90ca40a8697c6bc301e97e394452235ecf0ea0653024b93a2dc61f60ef1f6733"
+    },
+    {
+      "path": "source/eighteenmile-stream-nutrients-20261013/original/nutrient-results-2023-2025.csv",
+      "uri": "https://www.waterqualitydata.us/data/Result/search?siteid=21SC60WQ_WQX-SV-233%3B21SC60WQ_WQX-SV-245%3B21SC60WQ_WQX-SV-375%3B21SC60WQ_WQX-SV-376&startDateLo=01-01-2023&startDateHi=12-31-2025&characteristicType=Nutrient&mimeType=csv&zip=no",
+      "bytes": 153018,
+      "sha256": "6c36b486618b4569454ecc8e531c4b4adbd739c5f6f726f97f8e5ceafe7a7f03"
+    },
+    {
+      "path": "source/eighteenmile-stream-nutrients-20261013/original/eighteenmile-whole-reach-basin.geojson",
+      "uri": "https://api.water.usgs.gov/nldi/linked-data/nwissite/USGS-02186702/basin?f=json&simplified=false&splitCatchment=false",
+      "bytes": 13935,
+      "sha256": "097050d2b09e371feb2dbcf3fe1d2fba90730086db45d4a90be514706145dc88"
+    },
+    {
+      "path": "source/eighteenmile-stream-nutrients-20261013/original/eighteenmile-upstream-wqp.json",
+      "uri": "https://api.water.usgs.gov/nldi/linked-data/nwissite/USGS-02186702/navigation/UT/wqp?f=json&distance=100",
+      "bytes": 3746,
+      "sha256": "675be5c87e358a776bb61eb0f2a46a973ca79dc662105e175cdb23e887c6a96d"
+    },
+    {
+      "path": "source/eighteenmile-stream-nutrients-20261013/original/eighteenmile-gauge-network-location.json",
+      "uri": "https://api.water.usgs.gov/nldi/linked-data/nwissite/USGS-02186702?f=json",
+      "bytes": 601,
+      "sha256": "4ba9c663f4734dae1216d99564d9ae2392e7e139b5208aeaa174fa63489cb0c8"
+    },
+    {
+      "path": "source/eighteenmile-stream-nutrients-20261013/original/eighteenmile-sv233-hydrolocation.json",
+      "uri": "https://api.water.usgs.gov/nldi/linked-data/hydrolocation?f=json&coords=POINT(-82.80447251%2034.63478373)",
+      "bytes": 727,
+      "sha256": "32c6c233907b984f49631df17f454313db24158ae4b8f9381665375fb5720378"
+    },
+    {
+      "path": "source/eighteenmile-stream-nutrients-20261013/original/eighteenmile-sv245-hydrolocation.json",
+      "uri": "https://api.water.usgs.gov/nldi/linked-data/hydrolocation?f=json&coords=POINT(-82.69169936%2034.74190271)",
+      "bytes": 725,
+      "sha256": "817d7a5d5e30a71d1d4ce963f126625740ac4ce94cdbb7acb82b8057b892b86c"
+    },
+    {
+      "path": "source/eighteenmile-stream-nutrients-20261013/original/eighteenmile-sv375-hydrolocation.json",
+      "uri": "https://api.water.usgs.gov/nldi/linked-data/hydrolocation?f=json&coords=POINT(-82.649218%2034.791084)",
+      "bytes": 723,
+      "sha256": "23e9f9c65d2bc1c087bf0adb1845db5f2b570c6ecbf938e4ac58eed4a141f718"
+    },
+    {
+      "path": "source/eighteenmile-stream-nutrients-20261013/original/eighteenmile-sv376-hydrolocation.json",
+      "uri": "https://api.water.usgs.gov/nldi/linked-data/hydrolocation?f=json&coords=POINT(-82.73586%2034.71909)",
+      "bytes": 720,
+      "sha256": "9126f3a127a60fa92bab3d7c57451e8018a1f2f0815829637df45cd2f6803b80"
+    }
+  ],
+  "network_method": {
+    "gauge": "USGS-02186702",
+    "query_distance_km": 100,
+    "original_responses": 6,
+    "method": "Original station coordinate hydrolocation and gauge ReachCode/measure; original UT/WQP station identities for different-reach upstream context.",
+    "measure_definition": "https://pubs.usgs.gov/fs/2012/3068/FS12-3068.pdf",
+    "navigation_definition": "https://api.water.usgs.gov/docs/nldi/navigation/",
+    "same_reach_downstream_station": "21SC60WQ_WQX-SV-233"
+  }
+}

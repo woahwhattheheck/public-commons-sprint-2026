@@ -1247,7 +1247,9 @@ class Handler(BaseHTTPRequestHandler):
                 programme_reads = {"/api/programmes/" + name: name for name in PROGRAMME_READS}
                 if url.path in programme_reads:
                     return self.send_json(200, self.app.programmes.read(workspace, programme_reads[url.path],
-                        {"programme_id": one("programme_id"), "include_sources": one("include_sources")}))
+                        {name: one(name) for name in ("programme_id", "include_sources", "run_id",
+                            "attempt_id", "stream", "log_offset", "expected_attempt_id",
+                            "history_offset", "limit", "offset", "case_filter", "query")}))
                 review_reads = {"/api/reviews/" + name: name for name in CUSTOMER_REVIEW_READS}
                 if url.path in review_reads:
                     return self.send_json(200, self.app.customer_reviews.read(workspace, review_reads[url.path],
@@ -1298,7 +1300,7 @@ class Handler(BaseHTTPRequestHandler):
                         {name: values[0] for name, values in query.items()}))
                 raise Fault("ROUTE_MISSING", "This operator route does not exist.", 404)
             selected = "index.html" if url.path == "/" else url.path.removeprefix("/web/")
-            if selected not in (({'app.mjs', 'community.css', 'community.mjs', 'conservation.css', 'conservation.mjs', 'conservation_optimization.css', 'conservation_optimization.mjs', 'conservation_optimization_bridge.mjs', 'experiments.css', 'experiments.mjs', 'index.html', 'jobs.css', 'jobs.mjs', 'observed_series.mjs', 'parameter_studies.css', 'parameter_studies.mjs', 'portfolio.css', 'portfolio.mjs', 'programmes.css', 'programmes.mjs', 'receiving_water_spatial.mjs', 'receiving_waters.css', 'receiving_waters.mjs', 'reviews.css', 'reviews.mjs', 'spatial.mjs', 'style.css', 'observation_support.mjs', 'observed_reports.mjs'} | self.app.extensions.web_assets | {"delivery_review.mjs", "delivery_review.css"} | {"rehearsal.mjs", "rehearsal.css", "team.html", "team.mjs", "team.css"})):
+            if selected not in (({'app.mjs', 'scenario_input_review.mjs', 'community.css', 'community.mjs', 'conservation.css', 'conservation.mjs', 'conservation_optimization.css', 'conservation_optimization.mjs', 'conservation_optimization_bridge.mjs', 'experiments.css', 'experiments.mjs', 'index.html', 'jobs.css', 'jobs.mjs', 'observed_series.mjs', 'parameter_studies.css', 'parameter_studies.mjs', 'portfolio.css', 'portfolio.mjs', 'programmes.css', 'programmes.mjs', 'receiving_water_spatial.mjs', 'receiving_waters.css', 'receiving_waters.mjs', 'reviews.css', 'reviews.mjs', 'spatial.mjs', 'style.css', 'observation_support.mjs', 'observed_reports.mjs'} | self.app.extensions.web_assets | {"delivery_review.mjs", "delivery_review.css"} | {"rehearsal.mjs", "rehearsal.css", "team.html", "team.mjs", "team.css"})):
                 raise Fault("PAGE_MISSING", "This operator page does not exist.", 404)
             data = (Path(__file__).parent / "web" / selected).read_bytes()
             self.close_connection = True

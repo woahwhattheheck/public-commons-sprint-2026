@@ -1,0 +1,62 @@
+{
+  "schema": "upstate.sources/v1",
+  "title": "SCDES published water-quality assessments — native publisher files",
+  "captured_at": "2026-10-13T01:01:04.370Z",
+  "notes": "Original publisher PDF and XLSX captured through the existing ECO-SOURCE12 page and downloaded without conversion; SHA256 calculated from the native retained bytes. Draft 2026 records retain a separate edition.",
+  "scope": {
+    "publisher_scope": "South Carolina",
+    "intended_domain_source_id": "upstate-wbd-upstream-domain-20261012",
+    "selected_domain_huc12_count": 217
+  },
+  "entries": [
+    {
+      "id": "scdes-tmdl-attainment-20260728",
+      "title": "Sites covered under approved TMDLs and use support status",
+      "uri": "https://des.sc.gov/sites/des/files/Documents/BOW/WaterQuality/TMDLAttainmentStatus.pdf",
+      "vintage": "2026-07-28",
+      "status_date": "2026-07-28",
+      "kind": "document",
+      "role": "WATER_QUALITY_ASSESSMENT",
+      "evidence_kind": "tmdl_attainment",
+      "publication_status": "published",
+      "path": "scdes-tmdl-attainment-status-20260728.pdf",
+      "sha256": "c26a79441d22e8a4a302c9094640654c199c88ec6171875e00bf6cde4a0c0dd7",
+      "bytes": 614545,
+      "retained_source": "notion-file-block://c422c518-73d8-448e-9456-5de9698cc13c/ce214e8c-e968-4f03-bdf4-eb68e4e4a0ff?space_id=cb7dd772-3100-81c5-a704-000397aad4c6&name=scdes-tmdl-attainment-status-20260728.pdf"
+    },
+    {
+      "id": "scdes-303d-published-2024",
+      "title": "South Carolina 2024 303(d) list",
+      "uri": "https://www.des.sc.gov/sites/des/files/Documents/BOW/WaterQuality/303dList2024.xlsx",
+      "vintage": "2024",
+      "kind": "table",
+      "role": "WATER_QUALITY_ASSESSMENT",
+      "evidence_kind": "303d_listing",
+      "publication_status": "published",
+      "assessment_period": "2018-2022",
+      "publisher_index": "https://www.des.sc.gov/programs/bureau-water/south-carolina-303d-list-impaired-waters-tmdls",
+      "path": "scdes-303d-list-2024.xlsx",
+      "sha256": "2b78525514c2044278ed170b5587a1a231cf0c99f2aae5f7fef2d2dc18e5e3dc",
+      "bytes": 96620,
+      "retained_source": "notion-file-block://92520cfb-ed79-417e-b348-6e55008d466e/51b11881-9001-4a71-b557-8a44c1ff2887?space_id=cb7dd772-3100-81c5-a704-000397aad4c6&name=scdes-303d-list-2024.xlsx",
+      "cause_encoding": "scdes_303d_codes",
+      "cause_code_guide_uri": "https://www.des.sc.gov/sites/des/files/Documents/BOW/WaterQuality/303dList2024.pdf",
+      "cause_code_guide_pages": [
+        8,
+        9
+      ],
+      "table_defaults": {
+        "sheet": "303D LIST FOR WEB",
+        "header_row": 1,
+        "bindings": {
+          "site": "SITE",
+          "huc12": "HUC 12",
+          "cause": "CAUSE",
+          "description": "DESCRIPTION",
+          "county": "COUNTY",
+          "use": "IMPAIRED USE"
+        }
+      }
+    }
+  ]
+}

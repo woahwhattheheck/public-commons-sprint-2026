@@ -1,0 +1,177 @@
+{
+  "schema": "upstate.profile-report-sources/v1",
+  "original_source_commit": "933dd4d0a927d31883f3772ec9de6c760d85c767",
+  "inputs": [
+    {
+      "path": "observations/landcover_2023_2025/annual-2023.json",
+      "bytes": 477495,
+      "sha256": "1e4bea16ffb1ccaf8361972a042bb2b71a2320b36aea069d9a2282954e005836"
+    },
+    {
+      "path": "observations/landcover_2023_2025/annual-2025.json",
+      "bytes": 477860,
+      "sha256": "21a9d49dc2811778ef86d5bd05114530e52bdd2cabb60e8eb4857dd8fd40adc8"
+    },
+    {
+      "path": "observations/landcover_2023_2025/huc12-change-summary.csv",
+      "bytes": 23193,
+      "sha256": "6d703c75b24eb9dc38a1d868bcd0b43e976e6e94bbb7a8eeef25bf69328c4bec"
+    },
+    {
+      "path": "observations/landcover_2023_2025/huc12-transitions.csv",
+      "bytes": 2729737,
+      "sha256": "275fd764bc637f3f0b9dfc633438f078703eecf05f8b983476ccfa1152fdf815"
+    },
+    {
+      "path": "observations/landcover_observation_profiles_20261013/README.md",
+      "bytes": 12203,
+      "sha256": "90bf1464f91e56090483127739cba75adfc03941bf006151f5b224fd51a9d087"
+    },
+    {
+      "path": "observations/landcover_observation_profiles_20261013/input-manifest.json",
+      "bytes": 2563,
+      "sha256": "191f454d939d6d1cf156a27bec1d2bd0da2e9b848fd9529e5e0bdda0f3098a78"
+    },
+    {
+      "path": "observations/landcover_observation_profiles_20261013/landcover-groups.csv",
+      "bytes": 286138,
+      "sha256": "ddfdae193d347b4389aa71d4dfe586189e62346a13b131b42f455f9907315b1d"
+    },
+    {
+      "path": "observations/landcover_observation_profiles_20261013/original-location-context.csv",
+      "bytes": 219832,
+      "sha256": "63fd8fb2de83c0f7f04b8ecbb1500037173851aebe0ca70432f1fc9cc776f92e"
+    },
+    {
+      "path": "observations/landcover_observation_profiles_20261013/profiles_core.mjs",
+      "bytes": 14173,
+      "sha256": "f4579c9394c64d78a38d676f0a370eb6ac0fc08a3c6644a6ce36ca51f1e5fbbc"
+    },
+    {
+      "path": "observations/landcover_observation_profiles_20261013/rebuild.mjs",
+      "bytes": 2970,
+      "sha256": "b7ad41368e2a0d5588fd87320950bdf658aed7a7805660153b99165fbd4dfb24"
+    },
+    {
+      "path": "observations/landcover_observation_profiles_20261013/summary.json",
+      "bytes": 230282,
+      "sha256": "8cdd9f1c3b9bd9eb9b4a331f1ade646f75bf3b81ca152840bb1cd833d9092471"
+    },
+    {
+      "path": "observations/landcover_observation_profiles_20261013/watershed-profiles.csv",
+      "bytes": 115090,
+      "sha256": "9e999756fb01b84a4d88784dae5030e0658d5eef922e771825c5a40a6b925d62"
+    },
+    {
+      "path": "observations/wbd_station_join_20261013/derived/point_watersheds.csv",
+      "bytes": 254495,
+      "sha256": "4dae939207751422d63620d5fff17d0a6eb04e70743f8636e704db5363b5e8a4"
+    },
+    {
+      "path": "observations/wbd_station_join_20261013/query-plan.json",
+      "bytes": 813824,
+      "sha256": "498652d776ff4eef2fac4c94f0bf62742c8441b12beb9bebaaf08375f943aad7"
+    },
+    {
+      "path": "outputs/watershed-connectivity-20261013/watershed-connectivity-217.csv",
+      "bytes": 111728,
+      "sha256": "3f25af3b660a0949d01218c7cfb1fcb48be7e5092641f35da3be2921c47debfc"
+    },
+    {
+      "path": "outputs/watershed-connectivity-20261013/watershed-connectivity-summary.json",
+      "bytes": 36440,
+      "sha256": "00a94474c5b24370b05b3c1dd22afd5313b84563b5da02d030b3979976212b44"
+    },
+    {
+      "path": "source/receptor-topology/20261013/utility-focus-profile.json",
+      "bytes": 2169,
+      "sha256": "93abaaf736c66a7ca971ca931da2a3d81d939ecdeb830c7892267153c4413da7"
+    }
+  ],
+  "vendor": [
+    {
+      "module": "d3-path",
+      "path": "observations/eighteenmile_2023/sampling_flow_coverage/vendor/d3-path.cjs",
+      "bytes": 2433,
+      "sha256": "28d70841c60f313c3e6411fe0831e539ed6cea51eaee951d62d88908c40619c2"
+    },
+    {
+      "module": "d3-array",
+      "path": "observations/eighteenmile_2023/sampling_flow_coverage/vendor/d3-array.cjs",
+      "bytes": 17204,
+      "sha256": "80aa70d0cd17dabddf6d056494ea17926a45a69da8b7850220aace331bad671d"
+    },
+    {
+      "module": "d3-shape",
+      "path": "observations/eighteenmile_2023/sampling_flow_coverage/vendor/d3-shape.cjs",
+      "bytes": 30898,
+      "sha256": "49236896e989f251dd36679ea4a879538e9ca2ece3a90a82740f953cac4a3fa5"
+    }
+  ],
+  "licenses": [
+    {
+      "path": "observations/eighteenmile_2023/sampling_flow_coverage/vendor/d3-array.LICENSE.txt",
+      "bytes": 731,
+      "sha256": "3e6849627f74ff73c257a3ae1efb574015d94fc1035c05ec3c15805165efcbc4"
+    },
+    {
+      "path": "observations/eighteenmile_2023/sampling_flow_coverage/vendor/d3-path.LICENSE.txt",
+      "bytes": 731,
+      "sha256": "a09b0d6d76e768fca2085fad05743ee81ddd11946bcda160a3cf5e1081a479aa"
+    },
+    {
+      "path": "observations/eighteenmile_2023/sampling_flow_coverage/vendor/d3-shape.LICENSE.txt",
+      "bytes": 731,
+      "sha256": "faa682e3e430941f958d26180458f5934a62f58dac4d70ccdd15608c15d0f884"
+    }
+  ],
+  "outputs": [
+    {
+      "path": "observations/landcover_observation_profiles_20261013/report/utility-context.json",
+      "bytes": 33781,
+      "sha256": "716fae36267d6f0251f6c0a3ee18d7e5d38dafd9b7c8e0337047769f1718859f"
+    },
+    {
+      "path": "observations/landcover_observation_profiles_20261013/report/utility-scope-summary.csv",
+      "bytes": 1688,
+      "sha256": "e197f2f6356c23e9c67455b5177c503799d5e3b66d6014dbd384c3bf3ae995aa"
+    },
+    {
+      "path": "observations/landcover_observation_profiles_20261013/report/utility-group-balances.csv",
+      "bytes": 9527,
+      "sha256": "c725453955e0af83aeaef673f124c80bed5e0bdab6e690067468cf425c1e817e"
+    },
+    {
+      "path": "observations/landcover_observation_profiles_20261013/report/utility-focus-upstream-context.svg",
+      "bytes": 9741,
+      "sha256": "663b9ae633a103fb71311f1ef7e0404e1fc14d58c81fc725c0c2d3c935eaf208"
+    },
+    {
+      "path": "observations/landcover_observation_profiles_20261013/report/scientific-context.json",
+      "bytes": 23697,
+      "sha256": "c18ec10b060c0e719c45b082200a5badd8121a0bc04dba6abac9df0179331552"
+    },
+    {
+      "path": "observations/landcover_observation_profiles_20261013/report/figure-spec.json",
+      "bytes": 98878,
+      "sha256": "2af68f4588c13e19032ae7d3ac6c85a50b194aa32b09a635e22983c26f8c7100"
+    },
+    {
+      "path": "observations/landcover_observation_profiles_20261013/report/regional-classification-and-point-evidence.svg",
+      "bytes": 75030,
+      "sha256": "4a0bec1b1d800e69595815086537e537372a018b3c51110cfc8ba5b8c7a3e48e"
+    },
+    {
+      "path": "observations/landcover_observation_profiles_20261013/report/forest-point-evidence.csv",
+      "bytes": 18035,
+      "sha256": "ae00ffbee5d561549d2df4049ea8b78644ae1a02c9d4fbd706fa530fd838ad3e"
+    },
+    {
+      "path": "observations/landcover_observation_profiles_20261013/report/domain-group-balances.csv",
+      "bytes": 974,
+      "sha256": "9287ce3fa99e2528777877ada1d298e30ca17dc0d402d5d2e9928234064c9530"
+    }
+  ],
+  "original_profile_report_commit": "c7ff3b39ac5ff7fcc959535acaa62b65bcfa79aa",
+  "utility_sources": "Original issuer utility profile and retained original ToHUC network; replayed reverse traversal"
+}

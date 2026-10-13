@@ -1,0 +1,52 @@
+{
+  "schema": "upstate.sources/v1",
+  "title": "Upper Savannah published assessment station inventory — 2024 and July 2026",
+  "scope": "The retained 217-HUC upstream model domain, filtered by each assessment edition's original published HUC12.",
+  "notes": [
+    "192 original assessment records at 159 distinct station IDs. Each record preserves its own source edition, cause, use and publisher HUC12.",
+    "The 2024 published 303(d) listing and July 28, 2026 TMDL attainment status are separate source editions.",
+    "For RS-06190, retain both original publisher HUC12 assignments; station polygon membership is determined independently by the original coordinates.",
+    "This inventory selects stations for the existing station.geography.build operation. Original geometry is supplied by the retained SCDES705, WQP8 and additional WQP2 sources; all 192 original assessment records remain distinct."
+  ],
+  "entries": [
+    {
+      "id": "upstate-published-assessment-station-inventory-2024-20260728-domain217",
+      "title": "192 assessment records at 159 Upper Savannah station IDs",
+      "uri": "https://www.des.sc.gov/sites/des/files/Documents/BOW/WaterQuality/303dList2024.pdf",
+      "vintage": "2024 published 303(d) listing; July 28, 2026 TMDL attainment status",
+      "kind": "table",
+      "path": "assessment-records-domain217.csv",
+      "sha256": "01f1a0262bb719f39d4b6c8b6e690bbf670d9aea83cbe0f532daf81b0c6a09f7",
+      "role": "STUDY_STATION_INVENTORY",
+      "station_id_field": "site",
+      "publication_status": "published",
+      "source_editions": [
+        {
+          "id": "scdes-303d-published-2024-pdf-table-text",
+          "vintage": "2024",
+          "evidence_kind": "303d_listing",
+          "record_count": 108,
+          "station_count": 94,
+          "uri": "https://www.des.sc.gov/sites/des/files/Documents/BOW/WaterQuality/303dList2024.pdf"
+        },
+        {
+          "id": "scdes-tmdl-attainment-20260728",
+          "vintage": "2026-07-28",
+          "evidence_kind": "tmdl_attainment",
+          "record_count": 84,
+          "station_count": 84,
+          "uri": "https://des.sc.gov/sites/des/files/Documents/BOW/WaterQuality/TMDLAttainmentStatus.pdf"
+        }
+      ],
+      "provenance": {
+        "source_bank": "https://tokenjunkielabs.slack.com/docs/T0BRETUB5TK/F0C8KECMA4V",
+        "source_path": "results/assessment-records-domain217.csv",
+        "source_sha256": "01f1a0262bb719f39d4b6c8b6e690bbf670d9aea83cbe0f532daf81b0c6a09f7",
+        "source_bytes": 111624,
+        "publisher_huc_field": "huc12",
+        "source_vintage_field": "source_vintage",
+        "cause_field": "cause_code"
+      }
+    }
+  ]
+}

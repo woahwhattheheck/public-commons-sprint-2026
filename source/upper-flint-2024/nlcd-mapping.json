@@ -1,0 +1,106 @@
+{
+  "schema": "upstate.published-coefficient-mapping/v1",
+  "study": "https://doi.org/10.3390/land13060893",
+  "source_table_url": "https://www.researchgate.net/publication/381634619_land-2997438-supplementarypdf",
+  "nlcd_legend": "https://www.mrlc.gov/data/legends/national-land-cover-database-class-legend-and-description",
+  "mapped_lucodes": [
+    31,
+    41,
+    42,
+    43,
+    52,
+    71,
+    81,
+    82,
+    90
+  ],
+  "mappings": [
+    {
+      "source_row": "barren",
+      "lucodes": [
+        31
+      ],
+      "basis": "Barren land"
+    },
+    {
+      "source_row": "deciduous-mixed",
+      "lucodes": [
+        41,
+        43
+      ],
+      "basis": "Published combined deciduous and mixed forest"
+    },
+    {
+      "source_row": "evergreen",
+      "lucodes": [
+        42
+      ],
+      "basis": "Evergreen forest"
+    },
+    {
+      "source_row": "shrub-herbaceous",
+      "lucodes": [
+        52,
+        71
+      ],
+      "basis": "Published combined shrubland and herbaceous cover"
+    },
+    {
+      "source_row": "hay-pasture",
+      "lucodes": [
+        81
+      ],
+      "basis": "Pasture and hay"
+    },
+    {
+      "source_row": "cultivated",
+      "lucodes": [
+        82
+      ],
+      "basis": "Cultivated crops"
+    },
+    {
+      "source_row": "woody-wetland",
+      "lucodes": [
+        90
+      ],
+      "basis": "Woody wetlands"
+    }
+  ],
+  "additional_source_rows": [
+    {
+      "source_row": "developed-very-low",
+      "label": "Developed, very low imperviousness",
+      "mapping_status": "The five published urban categories require their original imperviousness thresholds."
+    },
+    {
+      "source_row": "developed-low",
+      "label": "Developed, low imperviousness",
+      "mapping_status": "The five published urban categories require their original imperviousness thresholds."
+    },
+    {
+      "source_row": "developed-medium",
+      "label": "Developed, medium imperviousness",
+      "mapping_status": "The five published urban categories require their original imperviousness thresholds."
+    },
+    {
+      "source_row": "developed-high",
+      "label": "Developed, high imperviousness",
+      "mapping_status": "The five published urban categories require their original imperviousness thresholds."
+    },
+    {
+      "source_row": "developed-very-high",
+      "label": "Developed, very high imperviousness",
+      "mapping_status": "The five published urban categories require their original imperviousness thresholds."
+    }
+  ],
+  "baseline_rows_retained": [
+    11,
+    21,
+    22,
+    23,
+    24,
+    95
+  ],
+  "water_source_critical_length": 0
+}

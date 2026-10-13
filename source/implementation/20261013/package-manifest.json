@@ -1,0 +1,156 @@
+{
+  "schema": "upstate.implementation-package/v1",
+  "operation_id": "ES-FIELD12",
+  "edition": "20261013-e7a1-field12-complete-consumer-v1",
+  "created_at": "2026-10-13T03:25:45Z",
+  "source_index": "SOURCE_INDEX.json",
+  "source_index_sha256": "1ed6b1f7e3455dd57dec040cba1e8b19d256ad09c48a4ef72618edd5c766517c",
+  "source_canvas": "F0C8JGLRKQB",
+  "source_payload_sha256": "31618b7f7bb2174c482186b27b881c7dd688fd1a09e1f53466758a3c950fc675",
+  "source_files": 23,
+  "source_bytes": 439465,
+  "generated_html_bytes": 142886,
+  "manifest_path": "PACKAGE_MANIFEST.json",
+  "archive_member_count": 26,
+  "compression": {
+    "method": "DEFLATE",
+    "level": 9,
+    "deterministic_zip_date": "1980-01-01T00:00:00",
+    "library": {
+      "repository": "nodeca/pako",
+      "ref": "2.1.0",
+      "path": "dist/pako.min.js",
+      "git_blob": "2535eafcc30cfc6bf138e8861723cdb8fd491a80",
+      "source_sha256": "ede2693a4a6a5126b9d35669062b358ecab6ae7b9b86a1cf302feb45a8514907",
+      "bytes": 46859
+    }
+  },
+  "files": [
+    {
+      "path": "IMPLEMENTATION_SOURCE_IMPORT.md",
+      "bytes": 23712,
+      "sha256": "5fdb4dbbe1ef043326b7799ecacc5bb458843a58bec09ae8215c14af3f5ea13c"
+    },
+    {
+      "path": "SOURCE_INDEX.json",
+      "bytes": 9626,
+      "sha256": "1ed6b1f7e3455dd57dec040cba1e8b19d256ad09c48a4ef72618edd5c766517c"
+    },
+    {
+      "path": "build_implementation_offline.py",
+      "bytes": 4911,
+      "sha256": "50a229d5dec8c19f8b8b50c46c39708fd3f62d777d47197ea123993e262ac08f"
+    },
+    {
+      "path": "docs/IMPLEMENTATION_FIELD_CAPTURE.md",
+      "bytes": 3708,
+      "sha256": "9ceb50bdbdc56d038bc5b548cf8a468aef1442c14dd7895fad204dce4f41ab21"
+    },
+    {
+      "path": "docs/IMPLEMENTATION_WORKBENCH.md",
+      "bytes": 7438,
+      "sha256": "95056434ec3848f26c05e6479d7568d9596e2199d3aeb0a04badeb95fc0f6107"
+    },
+    {
+      "path": "docs/implementation-native-guide.md",
+      "bytes": 17408,
+      "sha256": "f60c2b6e8db73d5f71fb2d25ec3b26192f94ede41792cd9aed4f793fe0a3ba0e"
+    },
+    {
+      "path": "docs/implementation-operator-guide.md",
+      "bytes": 19356,
+      "sha256": "7f0f2a07a8f17ffb3f1ea913f15732e64ca548ace750f8d623a8546203b209d9"
+    },
+    {
+      "path": "implementation-data-contract.md",
+      "bytes": 13223,
+      "sha256": "b7ea79b18e17f4b9f371defe7646a242eb6be4a88213caddf1e00d4587e76a56"
+    },
+    {
+      "path": "implementation-empty-plan.json",
+      "bytes": 7807,
+      "sha256": "b7a37b6de3e62c7ed06fb8b30d1d6cc4d89a12d78e2a91e79496bcc1d224c63c"
+    },
+    {
+      "path": "implementation-operating-guide.md",
+      "bytes": 18727,
+      "sha256": "21fbb87fe47dae2a4f1d26e826203da480dd16439161e7aa6702fe4c1d7caa72"
+    },
+    {
+      "path": "install_implementation.py",
+      "bytes": 15491,
+      "sha256": "54454b04fdaeff44dd01295c83744728164a56593e518067180ce3094418de26"
+    },
+    {
+      "path": "model/IMPLEMENTATION_CONSERVATION.md",
+      "bytes": 3860,
+      "sha256": "7876e1ed168a85fe5053c81e96d1bf61c6c81839b925342330eeee941627a892"
+    },
+    {
+      "path": "model/implementation.py",
+      "bytes": 29556,
+      "sha256": "aee90f7519d328a1584aa930e0ab8a740c5e89d8f3fe25a22c2bb1fed447802e"
+    },
+    {
+      "path": "model/implementation_cli.py",
+      "bytes": 17670,
+      "sha256": "b5afdf7109835b51b33fdee47cd7ebb89b023f19e70673dc3234edfe0cb544ae"
+    },
+    {
+      "path": "model/implementation_reporting.py",
+      "bytes": 17107,
+      "sha256": "10e0a56cdf7d1c9486482963d3dcfbf699cbeb4f8fa7b50a9d47b0b0fee013af"
+    },
+    {
+      "path": "model/implementation_schema.py",
+      "bytes": 32934,
+      "sha256": "461f6ee3ebffbb886c7614533f03e43dde38f982f649f3a3188700ba792261bc"
+    },
+    {
+      "path": "model/implementation_sources.py",
+      "bytes": 30408,
+      "sha256": "ba2bfc78a3d334993f18479fd41e25071ae9270aa2785ea98c21f26340d4fb63"
+    },
+    {
+      "path": "operator/extensions/implementation.json",
+      "bytes": 3520,
+      "sha256": "ea8e39f2e47dcb68ee5ab072c1c2a03bf59de4b6bf426fb6c4032e8a6753b2bd"
+    },
+    {
+      "path": "operator/implementation_operator.py",
+      "bytes": 30812,
+      "sha256": "12a9023a36c50c8f3b3dd666769ffaca9b8f65828006abfda9c22364c5db67be"
+    },
+    {
+      "path": "operator/web/implementation.css",
+      "bytes": 6702,
+      "sha256": "b975972f47ed5815bd1ca2b64ef72bd07568f5e8eeb5e32fb7ab9d136b503a67"
+    },
+    {
+      "path": "operator/web/implementation.mjs",
+      "bytes": 31789,
+      "sha256": "11e8d7b804eef07b8e5f1953bf67a65ad4fe5ad739c9cb101615b34dd406c0ae"
+    },
+    {
+      "path": "operator/web/implementation_catalog.json",
+      "bytes": 44274,
+      "sha256": "832608281c790335691d332f381fe742e9984264750ab731a8a4c311f45242c4"
+    },
+    {
+      "path": "operator/web/implementation_core.mjs",
+      "bytes": 34911,
+      "sha256": "f82e83611437bf6cfd28eae5aab6b835b4e63a8c3c5b38effedc4b951a8254ca"
+    },
+    {
+      "path": "operator/web/implementation_forms.mjs",
+      "bytes": 24141,
+      "sha256": "fb8ab19a485bf42478280f18040a15f4ce4b7c6f590914a93316a574e0a1109f"
+    },
+    {
+      "path": "operator/web/implementation_workbench.html",
+      "bytes": 142886,
+      "sha256": "eccf2e93b43cbe1c98191f184d28135ae0003cf782dc0c9fb0efdd635139102a"
+    }
+  ],
+  "install_command": "python -B install_implementation.py --application /mnt/data/eco12-delivery/opportunities/upstate_forever_2026 --source-root ."
+}

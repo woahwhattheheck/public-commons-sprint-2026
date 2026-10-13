@@ -1,5 +1,5 @@
 import {clone,esc,validatePlan,implementationSourceRefs} from './implementation_core.mjs';
-import {openEvidenceVault,captureEvidence,inspectEvidence,getEvidenceFile,createEvidencePreview,exportEvidenceBundle,importEvidenceBundle,downloadEvidenceBlob} from './implementation_evidence.mjs';
+import {openEvidenceVault,captureEvidence,inspectEvidence,getEvidenceFile,createEvidencePreview,exportEvidenceBundle,importEvidenceBundle,downloadEvidenceBlob,evidenceSha256} from './implementation_evidence.mjs';
 
 const button=(action,label,extra='')=>'<button type="button" data-iw-evidence="'+esc(action)+'" '+extra+'>'+esc(label)+'</button>';
 const byId=(plan,id)=>(plan.source_links||[]).find(row=>row.id===id);
@@ -43,6 +43,7 @@ class EvidencePanel {
   references(id){
     const result=[];for(const collection of ['tasks','visits','activities','observations','sites','monitoring_plans','candidates'])for(const row of this.w.plan[collection]||[])if(implementationSourceRefs(row).includes(id))result.push(collection.replaceAll('_',' ')+' · '+(row.label||row.title||row.sample_id||row.id));
     for(const row of this.w.plan.field12_lab_imports||[])if(implementationSourceRefs(row).includes(id))result.push('Original laboratory import · '+(row.operation_id||row.id||'retained revision'));
+    for(const row of this.w.plan.field12_site_visit_imports||[])if(implementationSourceRefs(row).includes(id))result.push('Original site / visit CSV import · '+(row.operation_id||'retained draft'));
     return result;
   }
   openCapture(collection='',id=''){
@@ -111,16 +112,19 @@ class EvidencePanel {
     if(links.some(link=>!downloads.some(row=>row.sha256===link.sha256&&row.bytes===link.size_bytes))){
       const detail=await w.read('/api/implementation/detail',{id:stamp.plan.id,...(stamp.plan.revision>0?{revision:stamp.plan.revision}:{})});this.requireUnchanged(stamp);downloads=detail._downloads||[];w.downloads=downloads;
     }
-    const vault=await this.vault();
+    const vault=await this.vault(),hydrated=new Set();
     for(const link of links){
+      const fileKey=link.sha256+':'+link.size_bytes;
+      if(hydrated.has(fileKey)){this.available.set(link.id,true);continue;}
       const ticket=downloads.find(row=>row.sha256===link.sha256&&row.bytes===link.size_bytes);
       if(!ticket||typeof ticket.url!=='string'||!/^\/api\/file\/[A-Za-z0-9_-]+$/.test(ticket.url))throw Error('Original file needed: '+(link.original_filename||link.id)+'. Open its complete ZIP or attach the matching original.');
       let response=await fetch(ticket.url,{credentials:'same-origin'});if(response.status===401){await w.host.api('/api/session',{method:'POST',body:{}});this.requireUnchanged(stamp);response=await fetch(ticket.url,{credentials:'same-origin'});}if(!response.ok)throw Error('The native original file could not be downloaded ('+response.status+'). Reopen the authenticated workspace and try again.');
       const bytes=await response.arrayBuffer();this.requireUnchanged(stamp);
       if(bytes.byteLength!==link.size_bytes)throw Error('The downloaded file size differs from its original source record.');
-      const captured=await captureEvidence(stamp.plan,new File([bytes],link.original_filename,{type:link.media_type||'application/octet-stream'}),{vault});
-      if(captured.source_link.sha256!==link.sha256||captured.source_link.size_bytes!==link.size_bytes)throw Error('The downloaded file differs from its original source record.');
-      this.available.set(link.id,true);
+      const checksum=await evidenceSha256(bytes);this.requireUnchanged(stamp);
+      if(checksum!==link.sha256)throw Error('The downloaded file differs from its original source record.');
+      await vault.putMany([{sha256:checksum,size_bytes:bytes.byteLength,bytes}]);this.requireUnchanged(stamp);
+      hydrated.add(fileKey);this.available.set(link.id,true);
     }
   }
   async saveNative(){

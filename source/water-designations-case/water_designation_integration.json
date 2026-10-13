@@ -1,0 +1,246 @@
+{
+  "schema_version": "1.0",
+  "retrieved_at": "2026-10-13T00:08:59.118Z",
+  "source_layer": "https://gis.des.sc.gov/gisserver/rest/services/water/Water_Classifications/MapServer/0",
+  "source_layer_name": "Water Classification - Provisional",
+  "acquisition_method": "read-only TinyFish fetch of official public ArcGIS JSON/GeoJSON",
+  "representation": "The retained JSON text was extracted verbatim from the fetch result code block; HTTP wire-byte identity was not supplied by the fetch provider.",
+  "layer_native_crs": "EPSG:26917",
+  "export_crs": "EPSG:4326",
+  "oid_field": "OBJECTID_1",
+  "display_name_field": "HYDNAME",
+  "class_field": "H2OCLASS",
+  "unique_codes": [
+    "FW",
+    "FW-SP",
+    "ONRW",
+    "ORW",
+    "ORW-D",
+    "SA",
+    "SA-SP",
+    "SB",
+    "SB-SP",
+    "SFH",
+    "TN",
+    "TPGT"
+  ],
+  "class_counts": [
+    {
+      "H2OCLASS": "FW",
+      "FEATURE_COUNT": 336651
+    },
+    {
+      "H2OCLASS": "FW-SP",
+      "FEATURE_COUNT": 15020
+    },
+    {
+      "H2OCLASS": "ONRW",
+      "FEATURE_COUNT": 35
+    },
+    {
+      "H2OCLASS": "ORW",
+      "FEATURE_COUNT": 32472
+    },
+    {
+      "H2OCLASS": "ORW-D",
+      "FEATURE_COUNT": 6
+    },
+    {
+      "H2OCLASS": "SA",
+      "FEATURE_COUNT": 11436
+    },
+    {
+      "H2OCLASS": "SA-SP",
+      "FEATURE_COUNT": 520
+    },
+    {
+      "H2OCLASS": "SB",
+      "FEATURE_COUNT": 9245
+    },
+    {
+      "H2OCLASS": "SB-SP",
+      "FEATURE_COUNT": 213
+    },
+    {
+      "H2OCLASS": "SFH",
+      "FEATURE_COUNT": 58860
+    },
+    {
+      "H2OCLASS": "TN",
+      "FEATURE_COUNT": 402
+    },
+    {
+      "H2OCLASS": "TPGT",
+      "FEATURE_COUNT": 729
+    }
+  ],
+  "service_limits": {
+    "maxRecordCount": 2000,
+    "supportedQueryFormats": "JSON, geoJSON, PBF",
+    "capabilities": {
+      "useStandardizedQueries": true,
+      "supportsStatistics": true,
+      "supportsPercentileStatistics": true,
+      "supportsHavingClause": true,
+      "supportsOrderBy": true,
+      "supportsDistinct": true,
+      "supportsCountDistinct": true,
+      "supportsAdvancedQueryRelated": true,
+      "supportsQueryRelatedPagination": true,
+      "supportsPagination": true,
+      "supportsLod": false,
+      "supportsQueryWithLodSR": false,
+      "supportsTrueCurve": true,
+      "supportsQueryWithDatumTransformation": true,
+      "supportsReturningQueryExtent": true,
+      "supportsQueryWithDistance": true,
+      "supportsSqlExpression": true,
+      "supportsTimeRelation": true,
+      "supportsSqlFormat": false,
+      "supportsQueryAnalytic": true,
+      "supportsCurrentUserQueries": true
+    }
+  },
+  "renderer_labels": [
+    {
+      "code": "ONRW",
+      "label": "Outstanding National Resource Waters (ONRW)"
+    },
+    {
+      "code": "ORW",
+      "label": "Outstanding Resource Waters (ORW)"
+    },
+    {
+      "code": "FW",
+      "label": "Freshwater (FW)"
+    },
+    {
+      "code": "FW-SP",
+      "label": "Freshwater - Special Conditions (FW*)"
+    },
+    {
+      "code": "SA",
+      "label": "Salt Water - Class A (SA)"
+    },
+    {
+      "code": "SA-SP",
+      "label": "SA-Special Conditions (SA*)"
+    },
+    {
+      "code": "SB",
+      "label": "Salt Water - Class B (SB)"
+    },
+    {
+      "code": "SB-SP",
+      "label": "SB-Special Conditions (SB*)"
+    },
+    {
+      "code": "SFH",
+      "label": "Shellfish Harvest (SFH)"
+    },
+    {
+      "code": "TN",
+      "label": "Trout Natural (TN)"
+    },
+    {
+      "code": "TPGT",
+      "label": "Trout:  Put, Grow and Take (TPGT)"
+    }
+  ],
+  "unrecognized_renderer_codes": [
+    "ORW-D"
+  ],
+  "notes": {
+    "ORW-D": "Six observed features in Charleston/Santee HUCs 030502090202 and 030502090203; official renderer has no definition. Preserve the exact value without assigning an inferred legal meaning.",
+    "TPT": "Trout Put and Take is a listed legal class in R.61-69 but absent from the observed distinct H2OCLASS values.",
+    "geographic_selection": "Use AOI intersection or explicit HUC membership. Basin, Cnty_Name, and MainStem may contain a single space even on valid named-river records.",
+    "geometry_metrics": "Named-river records comprise left/right banks and shorelines. Any summed geometry length describes mapped linework, not river centerline length.",
+    "regulation_label_semantics": "In R.61-69, an sp annotation denotes site-specific standards. Parentheses after ORW/ONRW show the previous class; they do not replace the current ORW/ONRW designation.",
+    "regulatory_geometry": "R.61-69 reach descriptions can subdivide one named waterbody into multiple classes. Preserve original feature geometry and raw class values.",
+    "dataset_edition": "Service metadata supplies no dataset edition or last-edit timestamp. ArcGIS 11.5 and documentInfo.Version 2.6.0 are software/document values, not asserted data editions."
+  },
+  "regulation_sources": [
+    {
+      "url": "https://des.sc.gov/sites/des/files/Library/Regulations/R.61-69.pdf",
+      "edition": "Last amendment history entry May 26, 2023; document 5116, vol47 issue5",
+      "relevant_pdf_pages": [
+        4,
+        12,
+        28
+      ],
+      "sections": [
+        "B",
+        "C",
+        "E",
+        "F",
+        "H"
+      ]
+    },
+    {
+      "url": "https://des.sc.gov/sites/des/files/Library/Regulations/R.61-68.pdf",
+      "relevant_pdf_pages": [
+        28,
+        29,
+        30,
+        31,
+        32
+      ],
+      "sections": [
+        "F.1.e",
+        "G.2",
+        "G.4-G.10"
+      ]
+    }
+  ],
+  "named_river_export": {
+    "url": "https://gis.des.sc.gov/gisserver/rest/services/water/Water_Classifications/MapServer/0/query?where=HYDNAME%20IN%20(%27CHATTOOGA%20RIVER%27%2C%27CHAUGA%20RIVER%27)&outFields=*&returnGeometry=true&outSR=4326&orderByFields=OBJECTID_1&f=geojson",
+    "filename": "chattooga_chauga_classified_water.geojson",
+    "feature_count": 377,
+    "exact_feature_groups": {
+      "CHATTOOGA RIVER | ORW": 248,
+      "CHATTOOGA RIVER | FW": 3,
+      "CHAUGA RIVER | ORW": 84,
+      "CHAUGA RIVER | FW": 42
+    },
+    "hydro_type_counts": {
+      "STREAM/RIGHT BANK": 112,
+      "STREAM/LEFT BANK": 233,
+      "SHORELINE": 10,
+      "SHORELINE/SUBMERGED": 22
+    },
+    "selection_sql": "HYDNAME IN ('CHATTOOGA RIVER','CHAUGA RIVER')",
+    "scope": "Exact named-river bank and shoreline records only; the source layer additionally contains composite-name and tributary records that this export does not select.",
+    "authoritative_reaches": [
+      {
+        "name": "Chattooga River",
+        "current_class": "ORW",
+        "prior_class": "FW",
+        "legal_label": "ORW(FW)",
+        "from": "North Carolina state line",
+        "to": "Confluence with Opossum Creek"
+      },
+      {
+        "name": "Chattooga River",
+        "current_class": "FW",
+        "legal_label": "FW",
+        "from": "Confluence with Opossum Creek",
+        "to": "Tugaloo River"
+      },
+      {
+        "name": "Chauga River",
+        "current_class": "ORW",
+        "prior_class": "FW",
+        "legal_label": "ORW(FW)",
+        "from": "Headwaters",
+        "to": "One mile above U.S. Route 76"
+      },
+      {
+        "name": "Chauga River",
+        "current_class": "FW",
+        "legal_label": "FW",
+        "from": "One mile above U.S. Route 76",
+        "to": "Tugaloo River"
+      }
+    ]
+  }
+}

@@ -14,6 +14,10 @@ import sys
 import tempfile
 
 FILES = (
+    "operator/web/source_report_editions.mjs",
+    "model/native_assessment_review.py",
+    "operator/web/native_assessment_review.mjs",
+    "operator/NATIVE_ASSESSMENT_REVIEW.md",
     "source_tools/component_fragments.py",
     "integration/component_fragments/observed-station-wbd-nldi-197.json",
     "integration/component_fragments/assessment-scientific-report-consumer.json",
@@ -166,8 +170,8 @@ def installation_files(source_root):
         raise ValueError("The station geography source requires its original WBD context module")
     return tuple(names)
 
-def scientific_report_host(application):
-    """Require the maintained standalone composer before installing its consumer."""
+def scientific_report_host(application, pending, previous):
+    """Check existing host callbacks and the exact composer staged for installation."""
     contracts = {
         "operator/web/app.mjs": (
             r"\bfunction\s+openScientificReport\s*\(",
@@ -183,18 +187,27 @@ def scientific_report_host(application):
             r"\bfunction\s+attachScientificReportEditions\s*\(",
             r"\bfunction\s+openForSources\s*\(",
             r"\borderedReportSources\s*\(",
+            r"\bSCIENTIFIC_REPORT_SOURCE_SELECTION\s*=\s*['\"]replace-v1['\"]",
         ),
     }
     checked = []
     for name, patterns in contracts.items():
-        path = application / name
-        if not path.is_file():
-            raise ValueError("Receive the maintained Scientific reports application before installing assessment report controls: " + name)
-        body = path.read_bytes()
+        staged = name == "operator/web/source_report_editions.mjs"
+        if staged:
+            if name not in pending:
+                raise ValueError("Retain the complete prepared-source composer in this family: " + name)
+            body, original = pending[name], previous[name]
+        else:
+            path = application / name
+            if not path.is_file():
+                raise ValueError("Receive the maintained Scientific reports application before installing assessment report controls: " + name)
+            body = original = path.read_bytes()
         source = body.decode("utf-8")
         if any(re.search(pattern, source) is None for pattern in patterns):
-            raise ValueError("The installed Scientific reports host does not expose its original openForSources workflow: " + name)
-        checked.append({"path": name, "bytes": len(body), "sha256": sha(body)})
+            raise ValueError("The selected Scientific reports source does not expose its original prepared-source workflow: " + name)
+        checked.append({"path": name, "source": "staged" if staged else "installed",
+                        "bytes": len(body), "sha256": sha(body),
+                        "previous_sha256": sha(original) if original is not None else None})
     return checked
 
 def install(application, source_root, *, dry_run=False):
@@ -203,7 +216,6 @@ def install(application, source_root, *, dry_run=False):
                  "operator/web/app.mjs", "operator/extension_registry.py", "operator/web/extension_host.mjs"):
         if not (application / name).is_file():
             raise ValueError("Receive the complete existing application before adding station geography: " + name)
-    report_host = scientific_report_host(application)
     files = installation_files(source_root)
     pending, previous = {}, {}
     for name in files:
@@ -216,6 +228,7 @@ def install(application, source_root, *, dry_run=False):
                 raise ValueError("The station geography descriptor schema differs")
         pending[name] = body
         previous[name] = (application / name).read_bytes() if (application / name).exists() else None
+    report_host = scientific_report_host(application, pending, previous)
     original_sources = {name: source_members(pending, name) for name in (
         "source/station-assessment-context/sources.json",
         "source/ecoli_utility_context/20261013/source-manifest.json",
@@ -243,7 +256,9 @@ def install(application, source_root, *, dry_run=False):
             target.parent.mkdir(parents=True, exist_ok=True)
             target.write_bytes(pending[name])
         for member in report_host:
-            if sha((application / member["path"]).read_bytes()) != member["sha256"]:
+            destination = application / member["path"]
+            current = destination.read_bytes() if destination.exists() else None
+            if (sha(current) if current is not None else None) != member["previous_sha256"]:
                 raise RuntimeError("Scientific reports host changed during station installation: " + member["path"])
         for name in changed:
             target = application / name

@@ -67,6 +67,19 @@ def _source(closure, choice, expected_source):
                                    for field in ("bytes", "sha256")):
             raise ValueError("The scientific report lost an original source input: " + name)
     closure.need("sources", collection_id, "Ordered scientific report source " + entry["id"])
+    if getattr(closure, "implementation_lineage_enabled", True):
+        from . import implementation_report_transfer
+        implementation_report_transfer.include_source(closure, collection_id, entry)
+    captured_sources = getattr(closure, "report_source_keys", None)
+    if captured_sources is not None and (collection_id, entry["id"]) not in captured_sources:
+        # Earlier archives retain the ordered source bytes without later-added
+        # editable producer records. Reopen precisely that captured dependency set.
+        return {
+            "schema": "upstate.observed-report-binding/v1", "edition": observed_context.EDITION,
+            "source_collection_id": collection_id, "source_id": entry["id"],
+            "body_sha256": entry["body"]["sha256"],
+            "member_sha256": {name: members[name]["sha256"] for name in sorted(members)},
+        }
     # These producer contracts apply only to explicitly ordered saved-edition
     # sources. Older archive selections keep their original dependency semantics.
     from . import monitoring_study_transfer, study_report_transfer, receiving_water_report_transfer
@@ -76,11 +89,19 @@ def _source(closure, choice, expected_source):
     study_report_transfer.include_calibration(closure, collection_id, entry)
     receiving_water_report_transfer.include_source(closure, collection_id, entry)
     native_process_study_transfer.include_source(closure, collection_id, entry)
+    from . import published_review_study_transfer
+    published_review_study_transfer.include_source(closure, collection_id, entry)
     ensemble_study_transfer.include_source(closure, collection_id, entry)
     gauge_study_transfer.include_source(closure, collection_id, entry)
     from . import community_study_transfer, conservation_study_transfer
     community_study_transfer.include_source(closure, collection_id, entry)
     conservation_study_transfer.include_source(closure, collection_id, entry)
+    from . import receptor_study_transfer
+    receptor_study_transfer.include_source(closure, collection_id, entry)
+    from . import landcover_study_transfer
+    landcover_study_transfer.include_source(closure, collection_id, entry)
+    from . import chemistry_study_transfer
+    chemistry_study_transfer.include_source(closure, collection_id, entry)
     return {
         "schema": "upstate.observed-report-binding/v1", "edition": observed_context.EDITION,
         "source_collection_id": collection_id, "source_id": entry["id"],

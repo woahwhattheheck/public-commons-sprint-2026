@@ -1,0 +1,74 @@
+{
+  "schema": "upstate.sources/v1",
+  "title": "Upper Savannah complete 217-HUC source-water context",
+  "captured_at": "2026-10-13",
+  "scope": {
+    "huc12_count": 217,
+    "huc12_sha256": "ec0cb3d05a0ede9da1b9238b7c7bff2fa495d94e5a6a0451890b54233edfbd52",
+    "huc8": [
+      "03060101",
+      "03060102",
+      "03060103",
+      "03060104",
+      "03060105",
+      "03060106",
+      "03060107"
+    ]
+  },
+  "notes": [
+    "Computed from all original selected domain IDs using the unchanged retained source core. The separate classified-feature capture is being expanded over the same domain."
+  ],
+  "entries": [
+    {
+      "id": "nrcs-fy26-upper-savannah-domain217-20261013",
+      "title": "NRCS FY26 state-specific source-water priorities: actual 217-HUC domain",
+      "kind": "table",
+      "role": "SOURCE_WATER_PRIORITY_CONTEXT",
+      "uri": "https://services.arcgis.com/SXbDpmb7xQkk44JV/ArcGIS/rest/services/Source_Water_Protection_Resource_Concern_FY26/FeatureServer/7",
+      "vintage": "FY26; original public source capture 2026-10-12; exact domain join 2026-10-13",
+      "path": "nrcs-domain-fy26.csv",
+      "sha256": "478c36af3e01178b788ead7f474d94c1f3ae58d6ad5f1fa896b3d90e09766be5",
+      "units": {
+        "st_ac": "acres of the state portion",
+        "huc12_ac": "acres of the whole HUC"
+      },
+      "companions": [
+        {
+          "path": "domain-huc12s.json",
+          "sha256": "ec0cb3d05a0ede9da1b9238b7c7bff2fa495d94e5a6a0451890b54233edfbd52"
+        },
+        {
+          "path": "source-context-run.json",
+          "sha256": "72d3b701930d5b23e4bbf6d06db8ca769749bc174e2ef9b213802956edfc1388"
+        }
+      ],
+      "derivation": {
+        "input_sha256": "8a5d612f0869eab7011ceeaf116c3150b4717788ae6fe30617ec260c4eca3dcd",
+        "operation": "Exact HUC12 membership filter, preserving complete state-HUC rows",
+        "implementation_sha256": "45d2485d7dc0613d7fc227316e660e9a43643622358e63bb727da378d9137fbe"
+      }
+    },
+    {
+      "id": "upper-savannah-water-context-domain217-20261013",
+      "title": "Upper Savannah 217-HUC joined source-water context",
+      "kind": "document",
+      "role": "SOURCE_WATER_CONTEXT",
+      "uri": "https://tokenjunkielabs.slack.com/archives/C0BTTA66TK3/p1791850636130089",
+      "vintage": "2026-10-13 full-domain source-core execution",
+      "path": "full-domain-water-context.json",
+      "sha256": "d607c93912102fbb8f28139a5d57b01b0e1886b0155ede16fc1a19d654323566",
+      "companions": [
+        {
+          "path": "source-context-run.json",
+          "sha256": "72d3b701930d5b23e4bbf6d06db8ca769749bc174e2ef9b213802956edfc1388"
+        },
+        {
+          "path": "classified-full-domain-query.json"
+        },
+        {
+          "path": "README.md"
+        }
+      ]
+    }
+  ]
+}

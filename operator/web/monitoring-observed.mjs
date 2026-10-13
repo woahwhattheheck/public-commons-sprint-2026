@@ -242,13 +242,27 @@ export function attachObservedContext(host) {
   q('[data-source]').onchange=()=>{sequence++;current=null;q('[data-downloads]').replaceChildren();q('[data-result]').replaceChildren();sourceDetails();render();};
   q('[data-preview]').onclick=()=>host.run(()=>calculate(false),'Reading the retained original station and daily-flow support…');
   q('[data-save]').onclick=()=>host.run(()=>calculate(true),'Saving original observational support…');
+  function showSavedContext(result) {
+    if (!result?.id || result.network_id !== host.network?.id)
+      throw Error('Open this saved context in its original monitoring network.');
+    sequence++; current=result; q('[data-downloads]').replaceChildren();
+    if (!saved.some(row=>row.id===result.id)) saved=saved.concat(result);
+    q('[data-status]').textContent='Opened the exact retained context, including its original calendar when present. Preview uses the network, design or campaign currently selected above.';
+    q('[data-title]').value=result.title;
+    q('[data-mapping]').value=escapeJson(result.station_mapping);
+    const sourceKey=result.source_binding.source_collection_id+'::'+result.source_binding.source_id;
+    const sourceNode=q('[data-source]');
+    if (![...sourceNode.options].some(option=>option.value===sourceKey))
+      sourceNode.add(new Option(result.source_binding.title||result.source_binding.source_id,sourceKey));
+    sourceNode.value=sourceKey;sourceDetails();render();q('[data-saved]').value=result.id;
+    return {context_id:result.id,network_id:result.network_id};
+  }
+  host.openSavedObservedContextRecord=showSavedContext;
   q('[data-saved]').onchange=()=>host.run(async()=>{
     const identity=q('[data-saved]').value;if(!identity)return;
     const ticket=++sequence,key=stateKey(),result=await host.api('context.get',{context_id:identity});
     if(ticket!==sequence||key!==stateKey())return;
-    current=result;q('[data-downloads]').replaceChildren();q('[data-status]').textContent='Opened the exact retained context. Its network and plan IDs remain visible in complete details.';
-    q('[data-title]').value=result.title;q('[data-mapping]').value=escapeJson(result.station_mapping);
-    q('[data-source]').value=result.source_binding.source_collection_id+'::'+result.source_binding.source_id;sourceDetails();render();q('[data-saved]').value=identity;
+    showSavedContext(result);
   });
   q('[data-context-export]').onclick=()=>host.run(async()=>{
     if(!current?.id)throw Error('Save or open an original context first.');

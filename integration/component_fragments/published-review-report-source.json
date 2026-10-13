@@ -1,0 +1,36 @@
+{
+  "schema": "upstate.application-component-fragment/v1",
+  "id": "published-review-report-source",
+  "source_reference": "https://github.com/woahwhattheheck/public-commons-sprint-2026/tree/work/published-review-report-source-20261013",
+  "extend_components": {
+    "published-studies": {
+      "paths": [
+        "model/published_review_report_source.py",
+        "model/published_review_study_transfer.py",
+        "model/PUBLISHED_REVIEW_REPORT_SOURCE.md",
+        "model/observed_context.py"
+      ]
+    },
+    "study-transfer": {
+      "paths": [
+        "model/published_review_report_source.py",
+        "model/published_review_study_transfer.py",
+        "model/PUBLISHED_REVIEW_REPORT_SOURCE.md"
+      ],
+      "requires": [
+        "published-studies"
+      ]
+    },
+    "scientific-report-editions": {
+      "paths": [
+        "model/published_review_report_source.py",
+        "model/published_review_study_transfer.py",
+        "model/PUBLISHED_REVIEW_REPORT_SOURCE.md"
+      ],
+      "requires": [
+        "study-transfer"
+      ]
+    }
+  },
+  "required_components": []
+}

@@ -1,0 +1,142 @@
+{
+  "schema": "upstate.sources/v1",
+  "title": "Original 2023 lake-study dates and antecedent observed flow",
+  "captured_at": "2026-10-13T02:29:00Z",
+  "scope": {
+    "gauge": "USGS-02186702",
+    "laboratory_stations": [
+      "SV-838",
+      "SV-839",
+      "SV-840"
+    ],
+    "laboratory_records": 88,
+    "distinct_dates": 16,
+    "chlorophyll_dates": 15
+  },
+  "entries": [
+    {
+      "id": "eighteenmile-study-dates-observed-flow-2023",
+      "title": "Same-date and antecedent observed Eighteenmile flow at original study dates",
+      "kind": "table",
+      "uri": "https://waterservices.usgs.gov/nwis/dv/?format=json&sites=02186702&startDT=2023-01-01&endDT=2023-12-31&parameterCd=00060&statCd=00003&siteStatus=all",
+      "vintage": "2023 original observations; retrieved 2026-10-13",
+      "path": "study_flow_dates.csv",
+      "bytes": 27050,
+      "sha256": "0ccb737025dc99a5534ccfc7ae0202451fd2b031e028f2eea0480e7d28c4df67",
+      "metadata": {
+        "row_count": 16,
+        "date_field": "sampling_date",
+        "same_date_discharge_field": "same_date_mean_cfs",
+        "flow_unit": "ft3/s",
+        "temporal_support": "Original reporting date; preceding three or seven calendar dates excluding that date",
+        "measurement_support": "Upstream USGS gauge context for separate original lake sampling activities"
+      },
+      "companions": [
+        {
+          "path": "originals/SV-838-2023.csv",
+          "bytes": 16829,
+          "sha256": "85e7be4eafff695ce2ae3095d343471fa9d4fd502e32a5644e4a82a497d76f3d"
+        },
+        {
+          "path": "originals/SV-839-2023.csv",
+          "bytes": 17299,
+          "sha256": "aec400eed27db53d435a0e9b7cfd387eeb828379802358c01bf933965057de92"
+        },
+        {
+          "path": "originals/SV-840-2023.csv",
+          "bytes": 16792,
+          "sha256": "a7039fb099d4fda958923f986169dabfa17168ac66d57f36d9720c7ccffa3af0"
+        },
+        {
+          "path": "flow_context.mjs",
+          "bytes": 4678,
+          "sha256": "2d53a3b41a2a8a8032f1c05a2245c798b7c69a3c6cf761a3c5e922044607a3da"
+        },
+        {
+          "path": "reproduce_study_flow.mjs",
+          "bytes": 3827,
+          "sha256": "74aa69ebe47b46833c7801692f384d0c918487b41c9a8a40c6ddb2ffa73d2dc5"
+        },
+        {
+          "path": "flow_context_methods.public.json",
+          "bytes": 4562,
+          "sha256": "6d3127bec00175f656b07a13807baf6a0b6e6e9f21b05b0965411b8191cc8b28"
+        },
+        {
+          "path": "FLOW_CONTEXT_PUBLIC.md",
+          "bytes": 5480,
+          "sha256": "000714744a41caba9d0823f42e50895befca77b57144e575df5a6500420e9503"
+        },
+        {
+          "path": "originals/usgs_02186702_2023_2023.json",
+          "bytes": 29226,
+          "sha256": "973897d3813100b498482b4acf88ba705da50dcf6e28baea5fe7fe818e76d3f9"
+        },
+        {
+          "path": "flow_original_source.mjs",
+          "bytes": 2370,
+          "sha256": "3c1a40457a4b87d677395f2b2bd4a19485f97062d7df248edc8836bc19b4476f"
+        }
+      ]
+    },
+    {
+      "id": "eighteenmile-lake-laboratory-sv838-2023",
+      "title": "Original WQP laboratory response SV-838 / 2023",
+      "kind": "table",
+      "uri": "https://www.waterqualitydata.us/data/Result/search?siteid=21SC60WQ_WQX-SV-838&startDateLo=01-01-2023&startDateHi=12-31-2023&mimeType=csv&zip=no",
+      "vintage": "2023 original observations; retrieved 2026-10-13",
+      "path": "originals/SV-838-2023.csv",
+      "bytes": 16829,
+      "sha256": "85e7be4eafff695ce2ae3095d343471fa9d4fd502e32a5644e4a82a497d76f3d",
+      "metadata": {
+        "original_station_id": "SV-838",
+        "source_role": "original_laboratory_response"
+      }
+    },
+    {
+      "id": "eighteenmile-lake-laboratory-sv839-2023",
+      "title": "Original WQP laboratory response SV-839 / 2023",
+      "kind": "table",
+      "uri": "https://www.waterqualitydata.us/data/Result/search?siteid=21SC60WQ_WQX-SV-839&startDateLo=01-01-2023&startDateHi=12-31-2023&mimeType=csv&zip=no",
+      "vintage": "2023 original observations; retrieved 2026-10-13",
+      "path": "originals/SV-839-2023.csv",
+      "bytes": 17299,
+      "sha256": "aec400eed27db53d435a0e9b7cfd387eeb828379802358c01bf933965057de92",
+      "metadata": {
+        "original_station_id": "SV-839",
+        "source_role": "original_laboratory_response"
+      }
+    },
+    {
+      "id": "eighteenmile-lake-laboratory-sv840-2023",
+      "title": "Original WQP laboratory response SV-840 / 2023",
+      "kind": "table",
+      "uri": "https://www.waterqualitydata.us/data/Result/search?siteid=21SC60WQ_WQX-SV-840&startDateLo=01-01-2023&startDateHi=12-31-2023&mimeType=csv&zip=no",
+      "vintage": "2023 original observations; retrieved 2026-10-13",
+      "path": "originals/SV-840-2023.csv",
+      "bytes": 16792,
+      "sha256": "a7039fb099d4fda958923f986169dabfa17168ac66d57f36d9720c7ccffa3af0",
+      "metadata": {
+        "original_station_id": "SV-840",
+        "source_role": "original_laboratory_response"
+      }
+    },
+    {
+      "id": "usgs_flow_02186702_2023_2023",
+      "title": "Original USGS 02186702 daily mean discharge / 2023",
+      "kind": "document",
+      "uri": "https://waterservices.usgs.gov/nwis/dv/?format=json&sites=02186702&startDT=2023-01-01&endDT=2023-12-31&parameterCd=00060&statCd=00003&siteStatus=all",
+      "vintage": "2023 original observations; retrieved 2026-10-13",
+      "path": "originals/usgs_02186702_2023_2023.json",
+      "bytes": 29226,
+      "sha256": "973897d3813100b498482b4acf88ba705da50dcf6e28baea5fe7fe818e76d3f9",
+      "metadata": {
+        "site": "02186702",
+        "parameter": "00060",
+        "statistic": "00003",
+        "unit": "ft3/s",
+        "source_record_count": 365
+      }
+    }
+  ]
+}

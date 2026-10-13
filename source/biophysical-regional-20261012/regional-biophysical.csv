@@ -1,0 +1,16 @@
+lucode,load_n,load_p,load_type_n,load_type_p,eff_n,eff_p,crit_len_n,crit_len_p,proportion_subsurface_n,usle_c,usle_p,georgia_land_cover_label,duke_land_cover_label
+11,0,0,measured-runoff,measured-runoff,0,0,30,30,0,0.001,1,Water,Open Water
+21,2.6,0.18,measured-runoff,measured-runoff,0.1,0.05,30,30,0,0.1,0.5,"Developed, Open Space",Developed Open Space
+22,4.97,0.53,measured-runoff,measured-runoff,0.09,0.05,30,30,0,0.1,0.5,"Developed, Low intensity",Developed Low Intensity
+23,12.78,4.17,measured-runoff,measured-runoff,0.08,0.05,30,30,0,0.1,0.5,Developed Medium intensity,Developed Medium Intensity
+24,14.95,4.85,measured-runoff,measured-runoff,0.07,0.05,30,30,0,0.1,0.5,"Developed, High intensity",Developed High Intensity
+31,1,0.1,measured-runoff,measured-runoff,0.05,0.05,30,30,0,0.45,1,Bare rock/Sand/Clay,Barren Land
+41,2,0.25,measured-runoff,measured-runoff,0.85,0.8,30,30,0,0.001,1,Deciduous forest,Deciduous Forest
+42,2.38,0.298,measured-runoff,measured-runoff,0.8,0.8,30,30,0,0.001,1,Evergreen forest,Evergreen Forest
+43,2.2,0.275,measured-runoff,measured-runoff,0.83,0.8,30,30,0,0.001,1,Mixed forest,Mixed Forest
+52,3,0.15,measured-runoff,measured-runoff,0.65,0.4,30,30,0,0.01,1,Shrub/Scrub,Shrub/Scrub
+71,5.67,0.15,measured-runoff,measured-runoff,0.6,0.4,30,30,0,0.01,1,Grasslands/Herbaceous,Grassland/Herbaceous
+81,6.28,1.35,measured-runoff,measured-runoff,0.1,0.25,30,30,0,0.01,1,Pasture/Hay,Pasture/Hay
+82,12.42,2.21,measured-runoff,measured-runoff,0.25,0.25,30,30,0,0.2,1,Cultivated crops,Cultivated Crops
+90,1.3,0.07,measured-runoff,measured-runoff,0.7,0.8,30,30,0,0.001,1,Woody wetlands,Woody Wetlands
+95,1.5,0.08,measured-runoff,measured-runoff,0.6,0.8,30,30,0,0.001,1,Emergent herbaceous wetlands,Emergent Herbaceous Wetlands
