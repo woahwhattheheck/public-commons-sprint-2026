@@ -1,6 +1,6 @@
 {
   "schema": "upstate.measurements-installation/v1",
-  "edition": "complete-measurements-source-returns-benchmarks-and-receiving-20261013",
+  "edition": "complete-measurements-source-returns-edition2-benchmarks-and-receiving-20261013",
   "source_reference": {
     "repository": "woahwhattheheck/public-commons-sprint-2026",
     "original_core_commit": "a81e07284183a2008a413198714759488c2d2c9d",
@@ -59,7 +59,12 @@
       "original_claim": "1791911098.400589",
       "original_complete_source": "F0C8GJ12S31",
       "browser_source": "F0C8XNG07QA",
-      "cohort_rows": 533
+      "cohort_rows": 533,
+      "delivery_edition": 2,
+      "repair_base_commit": "f31f6ceb600f6c40cc1248e8e31e25af7f4201ec",
+      "repair_original_merge": "29c09501a136a9ee88d0bb0d2cabaae5cc080b7c",
+      "repair_source_bank": "F0C8T37NX6H",
+      "delivery_context": "Complete project, native context and matching original collection inventory; exact legacy receiving retained"
     },
     "observed_benchmarks": {
       "operation_id": "ECO-OBSERVED-BENCHMARKS-3459-20261013",
@@ -391,8 +396,8 @@
     },
     {
       "path": "measurement_workspace/engine/source_handback.mjs",
-      "bytes": 24201,
-      "sha256": "698946f6bdc505296d9a891d161efdeb1a3942e675a1868abbda7e80ca68a962"
+      "bytes": 28600,
+      "sha256": "edf7eff2c1fe20c9b4d0a5fa4efb2f857e8987290a1138236c23b40a38fbb4bd"
     },
     {
       "path": "measurement_workspace/engine/source_reconciliation.mjs",
@@ -461,13 +466,13 @@
     },
     {
       "path": "measurement_workspace/SOURCE_HANDBACK_BROWSER.md",
-      "bytes": 17423,
-      "sha256": "d239ceb84bee136b4f39858b6b52441783db311713e5b75e8bddc3698b2ea3a8"
+      "bytes": 18440,
+      "sha256": "8c09ee3f5720d16cff8cfed86fde6baeae28fe1c5da287dc7bbe8fde85de1ee2"
     },
     {
       "path": "measurement_workspace/SOURCE_HANDBACK.md",
-      "bytes": 11272,
-      "sha256": "8722d8da1ef7406a2f345941227aefc3ebeda011ae81d3620d05c80f889be682"
+      "bytes": 12815,
+      "sha256": "946736b70c4f1da6084732c4130db5884a3a58ad23ef725e55ab305100dc2a39"
     },
     {
       "path": "measurement_workspace/SOURCE_RECONCILIATION.md",
@@ -536,8 +541,8 @@
     },
     {
       "path": "measurement_workspace/web/source_handback.mjs",
-      "bytes": 34561,
-      "sha256": "5699ccfb2c392927a5385c8ae8f78434e41f0ac274a2267cff1968780dc7431b"
+      "bytes": 37868,
+      "sha256": "79d939c471010c53ecb3407d97c1a437ff559bd1fa301b19ddfbc500c982e58f"
     },
     {
       "path": "measurement_workspace/web/source_reconciliation.css",
@@ -681,8 +686,8 @@
     },
     {
       "path": "operator/web/source_handback.mjs",
-      "bytes": 34561,
-      "sha256": "5699ccfb2c392927a5385c8ae8f78434e41f0ac274a2267cff1968780dc7431b"
+      "bytes": 37868,
+      "sha256": "79d939c471010c53ecb3407d97c1a437ff559bd1fa301b19ddfbc500c982e58f"
     },
     {
       "path": "operator/web/source_reconciliation.css",
@@ -1003,7 +1008,8 @@
       "7fcf6463e8d141b5087b820587dfb6fc8f2c5eac4d101975be98376b46c8748a",
       "02dd78e1d5a3efbb361344677f7e2dbc3499f4069d5a94dac8a026248e7716a0",
       "6362435703fc01930e44426162e73866b0703cb582d6e676c5415180891f7a08",
-      "5aed00039a416d079fbc561edd20f0427b6fa6a92eeb32056392d3cd4e08de87"
+      "5aed00039a416d079fbc561edd20f0427b6fa6a92eeb32056392d3cd4e08de87",
+      "f20740c3b339a2583f54245006b8bc742ed3de39e426c5419a865fd614dc367a"
     ],
     "CURRENT_OWNER_DIRECTION.md": [
       "57945ea0e6eca762011e9f7e6febd39255359143d454fd3aa58a3a849ec14fc9",
@@ -1235,6 +1241,21 @@
     ],
     "source_tools/flow_editions.mjs": [
       "dcbbb98d9a5ac7238203d4477f4ce405c7aa484ab1e2abe690b4582b0b95987b"
+    ],
+    "measurement_workspace/engine/source_handback.mjs": [
+      "698946f6bdc505296d9a891d161efdeb1a3942e675a1868abbda7e80ca68a962"
+    ],
+    "measurement_workspace/web/source_handback.mjs": [
+      "5699ccfb2c392927a5385c8ae8f78434e41f0ac274a2267cff1968780dc7431b"
+    ],
+    "operator/web/source_handback.mjs": [
+      "5699ccfb2c392927a5385c8ae8f78434e41f0ac274a2267cff1968780dc7431b"
+    ],
+    "measurement_workspace/SOURCE_HANDBACK_BROWSER.md": [
+      "d239ceb84bee136b4f39858b6b52441783db311713e5b75e8bddc3698b2ea3a8"
+    ],
+    "measurement_workspace/SOURCE_HANDBACK.md": [
+      "8722d8da1ef7406a2f345941227aefc3ebeda011ae81d3620d05c80f889be682"
     ]
   },
   "requires": [

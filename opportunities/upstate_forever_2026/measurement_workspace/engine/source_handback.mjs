@@ -4,7 +4,7 @@ import path from 'node:path';
 import os from 'node:os';
 import {randomUUID} from 'node:crypto';
 import {crc32} from 'node:zlib';
-import {hash,stable} from './normalise.mjs';
+import {hash,stable,parseSource} from './normalise.mjs';
 import {InputError} from './parse.mjs';
 import {installLargeFileReads} from './large_intake.mjs';
 import {MeasurementWorkspace} from './workspace.mjs';
@@ -34,8 +34,26 @@ function selection(input,publish=false){
  }
  return out;
 }
-function snapshot(w,request){const value=w.fullSnapshot({expected_revision:request.expectedRevision});return {...value,nativeDomainBound:w.nativeDomain!==null};}
-function viewOf(s,input){const view=buildSourceHandback(s,input);return {...view,previewSha256:hash(stable(view))};}
+const DELIVERY_EDITION=2;
+function snapshot(w,request){
+ const value=w.fullSnapshot({expected_revision:request.expectedRevision}),collections=captureCollections(w,request.sourceIds,value.portable);
+ return {...value,nativeDomainBound:w.nativeDomain!==null,companionInventory:collections.inventory,companionMembers:collections.members};
+}
+function deliveryContext(s){
+ // portableDocument.createdAt is generated afresh by the original exporter. All
+ // scientific tables, intake history and actual source timestamps remain bound.
+ const project={...s.portable};delete project.createdAt;
+ const context={revision:s.revision,total:s.total,records:s.records,summary:s.summary,nativeDomainBound:s.nativeDomainBound};
+ return {projectSha256:hash(stable(project)),contextSha256:hash(stable(context)),
+  project:{revision:s.portable.revision,imports:s.portable.tables.imports.length,records:s.portable.tables.records.length,
+   savedResults:s.portable.tables.exports.length,intakeEditions:s.portable.intake?.editions?.length||0},
+  collections:s.companionInventory||[],
+  bindingNote:'Complete included project and native context are bound. Only the freshly generated portable export createdAt is excluded from the project digest; original source, event, intake and result timestamps remain included. Every matching collection and companion file is bound by its original identity and exact bytes.'};
+}
+function viewOf(s,input,edition=DELIVERY_EDITION){
+ const original=buildSourceHandback(s,input),view=edition===1?original:{...original,deliveryEdition:DELIVERY_EDITION,deliveryContext:deliveryContext(s)};
+ return {...view,previewSha256:hash(stable(view))};
+}
 export function previewHandback(w,input){const request=selection(input);return viewOf(snapshot(w,request),request);}
 function manifests(w){const dir=root(w);if(!fs.existsSync(dir))return [];return fs.readdirSync(dir).filter(identity).map(id=>readManifest(w,id)).sort((a,b)=>b.createdAt.localeCompare(a.createdAt));}
 export function handbackCatalog(w){
@@ -45,6 +63,7 @@ export function handbackCatalog(w){
 function requestId(request){return hash(stable({format:HANDBACK_FORMAT,request}));}
 function checkManifest(m){
  need(m?.format===HANDBACK_FORMAT&&identity(m.id)&&m.requestFingerprint===m.id,'Unknown source return manifest');
+ need(m.deliveryEdition===undefined||m.deliveryEdition===1||m.deliveryEdition===DELIVERY_EDITION,'Unsupported source return delivery edition');
  const request=selection(m.selection,true);need(requestId(request)===m.id&&m.revision===request.expectedRevision&&m.title===request.title&&m.note===request.note,'Handback selection differs from its identity');
  need(typeof m.createdAt==='string'&&Number.isFinite(Date.parse(m.createdAt))&&Array.isArray(m.files),'Incomplete return manifest');
  const names=new Set();for(const f of m.files){safeName(f.name);need(f.name!=='manifest.json'&&!names.has(f.name)&&identity(f.sha256)&&Number.isSafeInteger(f.bytes)&&f.bytes>=0,'Invalid retained member');names.add(f.name);}
@@ -69,24 +88,58 @@ export function handbackBundle(w,id){
  members.push({name:'manifest.json',data:Buffer.from(json(m))});const data=zipMembers(members);
  return {filename:'source-return-'+id.slice(0,16)+'.zip',bytes:data.length,sha256:hash(data),contentBase64:data.toString('base64')};
 }
-function companions(w,selected){
- const dir=path.join(w.directory,'collections'),out=[];if(!fs.existsSync(dir))return out;
- for(const id of fs.readdirSync(dir).filter(identity)){
-  const base=path.join(dir,id);if(!fs.existsSync(path.join(base,'complete.json')))continue;
-  const doc=readJSON(path.join(base,'collection.json'));need(hash(stable(doc))===id,'Retained source collection changed');
-  if(!doc.files.some(f=>selected.includes(f.importId)))continue;
-  out.push({name:'collections/'+id+'/collection.json',data:Buffer.from(json(doc))});
-  // Retain the entire selected collection, including original workbooks and companion files.
-  for(const f of doc.files){const name=safeName(f.path),data=fs.readFileSync(path.join(base,'sources',name));need(data.length===f.bytes&&hash(data)===f.sha256,'Original collection member changed: '+name);
-   out.push({name:'collections/'+id+'/sources/'+name,data});}
+function validateCollection(id,doc,read,selected,project){
+ need(doc?.format==='upper-savannah-measurement-collection/v1'&&typeof doc.title==='string'&&doc.title.trim()&&
+  Array.isArray(doc.files)&&doc.files.length>0&&hash(stable(doc))===id,'Retain the complete original collection definition');
+ const seen=new Set(),files=[];let matched=false;
+ for(const f of doc.files){
+  safeName(f.path);need(!seen.has(f.path)&&['wqp','stations','usgs-daily','companion'].includes(f.kind)&&identity(f.sha256)&&Number.isSafeInteger(f.bytes)&&f.bytes>=0,'Invalid original collection member');seen.add(f.path);
+  const data=read(f.path);need(data&&data.length===f.bytes&&hash(data)===f.sha256,'Original collection member changed: '+f.path);
+  if(f.kind==='companion')need(f.importId===undefined||f.importId===null,'A companion cannot assert a scientific import identity');
+  else{
+   const text=new TextDecoder('utf-8',{fatal:true,ignoreBOM:true}).decode(data),parsed=parseSource({kind:f.kind,text,mapping:f.mapping});
+   const importId=hash(stable([f.kind,f.sha256,parsed.mapping])),original=project.tables.imports.find(x=>x.id===importId);
+   need(f.importId===importId&&stable(parsed.mapping)===stable(f.mapping),'Original collection import identity differs from its actual source interpretation');
+   need(original&&original.kind===f.kind&&original.sha===f.sha256&&stable(JSON.parse(original.mapping))===stable(parsed.mapping)&&
+    Buffer.from(original.content).equals(data),'Original collection source differs from the included native project');
+   if(selected.includes(importId))matched=true;
+  }
+  files.push({path:f.path,kind:f.kind,importId:f.importId??null,bytes:f.bytes,sha256:f.sha256});
  }
- return out;
+ need(matched,'Original collection does not belong to selected sources');
+ return {id,title:doc.title,files};
+}
+function captureCollections(w,selected,project){
+ const dir=path.join(w.directory,'collections'),members=[],inventory=[];if(!fs.existsSync(dir))return {members,inventory};
+ for(const id of fs.readdirSync(dir).filter(identity).sort()){
+  const base=path.join(dir,id);if(!fs.existsSync(path.join(base,'complete.json')))continue;
+  const doc=readJSON(path.join(base,'collection.json'));need(hash(stable(doc))===id&&Array.isArray(doc.files),'Retained source collection changed');
+  if(!doc.files.some(f=>selected.includes(f.importId)))continue;
+  const bodies=new Map();for(const f of doc.files)bodies.set(safeName(f.path),fs.readFileSync(path.join(base,'sources',f.path)));
+  inventory.push(validateCollection(id,doc,name=>bodies.get(name),selected,project));
+  members.push({name:'collections/'+id+'/collection.json',data:Buffer.from(json(doc))});
+  for(const f of doc.files)members.push({name:'collections/'+id+'/sources/'+f.path,data:bodies.get(f.path)});
+ }
+ return {members,inventory};
+}
+function receivedCollections(m,members,project){
+ const collectionIds=[...new Set(m.files.filter(f=>f.name.startsWith('collections/')).map(f=>f.name.split('/')[1]))].sort(),inventory=[],retained=[];
+ for(const id of collectionIds){
+  need(identity(id),'Invalid retained collection identity');const prefix='collections/'+id+'/',raw=members.get(prefix+'collection.json');need(raw,'Original collection manifest is absent');
+  const doc=JSON.parse(raw),expected=new Set([prefix+'collection.json']);
+  const value=validateCollection(id,doc,name=>members.get(prefix+'sources/'+name),m.selection.sourceIds,project);
+  for(const f of doc.files)expected.add(prefix+'sources/'+f.path);
+  for(const f of m.files.filter(f=>f.name.startsWith(prefix)))need(expected.has(f.name),'Unlisted original companion file');
+  inventory.push(value);for(const name of expected)retained.push({name,data:members.get(name)});
+ }
+ return {inventory,members:retained};
 }
 const escape=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 function report(view,request,sourceFiles,workbook){
+ const attribution=view.deliveryEdition===DELIVERY_EDITION?'<p>Prepared by TokenJunkieLabs</p>':'';
  const sources=view.sources.map((s,i)=>'<tr><td>'+escape(s.label)+'</td><td>'+s.counts.rows+'</td><td>'+s.counts.linkedRows+'</td><td>'+s.counts.rejectedRows+'</td><td>'+s.counts.unmatchedRows+'</td><td><a href="'+sourceFiles[i].originalPath+'">Original</a> · <a href="'+sourceFiles[i].returnedPath+'">Returned CSV</a> · <a href="'+sourceFiles[i].rowsPath+'">Complete rows</a></td></tr>').join('');
  const records=view.records.map(r=>'<tr><td>'+escape(r.stationId)+'<br><code>'+escape(r.sourceResultId||r.id)+'</code></td><td>'+escape(r.sampledDate)+'<br>'+escape(r.sampledAt)+'<br>'+escape(r.timeZone)+'</td><td>'+escape(r.characteristic)+'<br>'+escape(r.basis)+' / '+escape(r.fraction)+'</td><td>'+escape(r.reportedValue)+' '+escape(r.reportedUnit)+'</td><td>'+escape(r.value??'')+' '+escape(r.unit)+'<br>'+escape(r.censor)+' ['+escape(r.lower??'')+', '+escape(r.upper??'')+']</td><td>'+escape(r.mapping?.reachId||'Unassigned')+'</td><td>'+escape(r.review.state)+'<br>'+escape(r.eligible.reasons.join(', ')||'Eligible measured input')+'</td></tr>').join('');
- return '<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>'+escape(request.title)+'</title><style>body{font:15px/1.5 system-ui,sans-serif;margin:0;color:#222;background:#fff}main{max-width:1280px;margin:auto;padding:24px}h1{font-size:28px;line-height:1.25}h2{font-size:20px;margin-top:28px}a{color:inherit;text-decoration:underline}p{max-width:90ch;white-space:pre-wrap}table{border-collapse:collapse;width:100%;min-width:750px}th,td{padding:10px;border:1px solid #ccc;text-align:left;vertical-align:top}th{background:#eee}code{overflow-wrap:anywhere}.scroll{overflow:auto}small{color:#555}@media(max-width:600px){main{padding:14px}h1{font-size:24px}}</style><main><h1>'+escape(request.title)+'</h1><p>'+escape(request.note)+'</p><p>Measurements revision '+view.revision+' · '+view.counts.sourceRows+' source rows · '+view.counts.records+' native records · '+view.counts.savedResults+' selected saved results.</p><p>'+(workbook?'<a href="returned-workbook.xlsx">Open returned workbook</a> · ':'')+'<a href="source-return.json">Complete row return</a> · <a href="project.json">Editable native project</a> · <a href="README.md">Working instructions</a></p><p>Original files remain unchanged. Return columns contain the current native review, mapping and eligibility. Selected saved results retain their own original revision. Workbook values are literal text; CSV formula-like fields carry an apostrophe for safe spreadsheet opening.</p><h2>Original sources and complete returns</h2><div class="scroll"><table><thead><tr><th>Source</th><th>Rows</th><th>Linked</th><th>Rejected</th><th>Unmatched</th><th>Files</th></tr></thead><tbody>'+sources+'</tbody></table></div><h2>Native measurements and reviews</h2><div class="scroll"><table><thead><tr><th>Station / result</th><th>Source date / time</th><th>Constituent</th><th>Reported</th><th>Normalized / bounds</th><th>Reach</th><th>Review / eligibility</th></tr></thead><tbody>'+records+'</tbody></table></div><h2>Saved scientific results</h2><ul>'+view.results.map((r,i)=>'<li><a href="results/'+i+'.json">'+escape(r.kind)+'</a> · original revision '+r.revision+' · '+escape(r.id)+'</li>').join('')+'</ul></main></html>';
+ return '<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>'+escape(request.title)+'</title><style>body{font:15px/1.5 system-ui,sans-serif;margin:0;color:#222;background:#fff}main{max-width:1280px;margin:auto;padding:24px}h1{font-size:28px;line-height:1.25}h2{font-size:20px;margin-top:28px}a{color:inherit;text-decoration:underline}p{max-width:90ch;white-space:pre-wrap}table{border-collapse:collapse;width:100%;min-width:750px}th,td{padding:10px;border:1px solid #ccc;text-align:left;vertical-align:top}th{background:#eee}code{overflow-wrap:anywhere}.scroll{overflow:auto}small{color:#555}@media(max-width:600px){main{padding:14px}h1{font-size:24px}}</style><main>'+attribution+'<h1>'+escape(request.title)+'</h1><p>'+escape(request.note)+'</p><p>Measurements revision '+view.revision+' · '+view.counts.sourceRows+' source rows · '+view.counts.records+' native records · '+view.counts.savedResults+' selected saved results.</p><p>'+(workbook?'<a href="returned-workbook.xlsx">Open returned workbook</a> · ':'')+'<a href="source-return.json">Complete row return</a> · <a href="project.json">Editable native project</a> · <a href="README.md">Working instructions</a></p><p>Original files remain unchanged. Return columns contain the current native review, mapping and eligibility. Selected saved results retain their own original revision. Workbook values are literal text; CSV formula-like fields carry an apostrophe for safe spreadsheet opening.</p><h2>Original sources and complete returns</h2><div class="scroll"><table><thead><tr><th>Source</th><th>Rows</th><th>Linked</th><th>Rejected</th><th>Unmatched</th><th>Files</th></tr></thead><tbody>'+sources+'</tbody></table></div><h2>Native measurements and reviews</h2><div class="scroll"><table><thead><tr><th>Station / result</th><th>Source date / time</th><th>Constituent</th><th>Reported</th><th>Normalized / bounds</th><th>Reach</th><th>Review / eligibility</th></tr></thead><tbody>'+records+'</tbody></table></div><h2>Saved scientific results</h2><ul>'+view.results.map((r,i)=>'<li><a href="results/'+i+'.json">'+escape(r.kind)+'</a> · original revision '+r.revision+' · '+escape(r.id)+'</li>').join('')+'</ul></main></html>';
 }
 function buildMembers(w,s,view,request){
  const members=[],add=(name,data)=>members.push({name:safeName(name),data:Buffer.isBuffer(data)?data:Buffer.from(data)}),sourceFiles=[],tables=[];
@@ -97,19 +150,28 @@ function buildMembers(w,s,view,request){
   add(paths.originalPath,original.content);const table=returnedTable(source);tables.push({...table,label:source.label});add(paths.returnedPath,handbackCsv(table));add(paths.rowsPath,json(source));sourceFiles.push(paths);
  }
  for(let i=0;i<view.results.length;i++)add('results/'+i+'.json',json(view.results[i]));
- if(w)for(const item of companions(w,request.sourceIds))add(item.name,item.data);
+ if(w)for(const item of s.companionMembers||[])add(item.name,item.data);
  let workbook=null,workbookNote='';
  try{const value=textWorkbook(tables);add('returned-workbook.xlsx',value.data);workbook=value.sheets;}catch(e){if(!(e instanceof InputError))throw e;workbookNote=e.message;}
- const instructions='# '+request.title+'\n\n'+request.note+'\n\n## Open and use this return\n\nOpen report.html for the complete source inventory and native reviews. returned-workbook.xlsx keeps original columns first and appends current native review/result columns. All workbook cells are literal text, preserving leading zeros, source dates, timezone strings and formula text. Individual returns/*.csv contain the same rows. Spreadsheet-formula-like CSV cells are prefixed with an apostrophe; the unchanged originals and exact row JSON retain the original strings. Malformed surplus cells are retained in explicit extra columns. Blank source rows and rejected/unmatched rows remain visible.\n\nEach selected source is retained byte-for-byte under originals/. All members of its retained source collection, including companion workbooks, formulas, merged cells and cached values, remain unchanged under collections/. The returned workbook is a separate review file; original workbook cells are never rewritten.\n\nsource-return.json and returns/*.json retain complete row identities, original values, native records, reviews, eligibility, rejection reasons and saved-result associations. Results/*.json keep complete saved results with their original workspace revision, input, temporal support, rationale and assumptions. No result is recalculated or annualized by this return operation.\n\n## Continue scientific work\n\nproject.json is the complete original Measurements portable project, including all original imports and their reviews. Reopen it through the existing Measurements receive operation into an empty native Measurements workspace. It may include other imports needed for the original complete project. native-context.json retains the complete corresponding native display and domain context. Use the original mapping/review/calculation controls for scientific changes.\n\nTo reopen this exact return on another installation, use Receive returned ZIP in Source returns, or the source-handback-receive CLI. Receiving a return retains its self-contained edition without replacing the current scientific project. Original companions and this edition can be inspected independently.\n\nThis edition pins measurements revision '+view.revision+'. Current eligibility and a selected older saved result can differ because the result keeps its own revision. Discrete sample concentration and daily-flow pairing retain their original support; native annual model loads remain separate. Source dates/timezones, censoring, constituents, fractions, units and review choices are not inferred by the exporter.\n\n'+(workbookNote?'## Workbook capacity\n\n'+workbookNote+'\n':'');
+ const instructions='# '+request.title+'\n\n'+(view.deliveryEdition===DELIVERY_EDITION?'Prepared by TokenJunkieLabs.\n\n':'')+request.note+'\n\n## Open and use this return\n\nOpen report.html for the complete source inventory and native reviews. returned-workbook.xlsx keeps original columns first and appends current native review/result columns. All workbook cells are literal text, preserving leading zeros, source dates, timezone strings and formula text. Individual returns/*.csv contain the same rows. Spreadsheet-formula-like CSV cells are prefixed with an apostrophe; the unchanged originals and exact row JSON retain the original strings. Malformed surplus cells are retained in explicit extra columns. Blank source rows and rejected/unmatched rows remain visible.\n\nEach selected source is retained byte-for-byte under originals/. All members of its retained source collection, including companion workbooks, formulas, merged cells and cached values, remain unchanged under collections/. The returned workbook is a separate review file; original workbook cells are never rewritten.\n\nsource-return.json and returns/*.json retain complete row identities, original values, native records, reviews, eligibility, rejection reasons and saved-result associations. Results/*.json keep complete saved results with their original workspace revision, input, temporal support, rationale and assumptions. No result is recalculated or annualized by this return operation.\n\n## Continue scientific work\n\nproject.json is the complete original Measurements portable project, including all original imports and their reviews. Reopen it through the existing Measurements receive operation into an empty native Measurements workspace. It may include other imports needed for the original complete project. native-context.json retains the complete corresponding native display and domain context. Use the original mapping/review/calculation controls for scientific changes.\n\nTo reopen this exact return on another installation, use Receive returned ZIP in Source returns, or the source-handback-receive CLI. Receiving a return retains its self-contained edition without replacing the current scientific project. Original companions and this edition can be inspected independently.\n\nThis edition pins measurements revision '+view.revision+'. Current eligibility and a selected older saved result can differ because the result keeps its own revision. Discrete sample concentration and daily-flow pairing retain their original support; native annual model loads remain separate. Source dates/timezones, censoring, constituents, fractions, units and review choices are not inferred by the exporter.\n\n'+(workbookNote?'## Workbook capacity\n\n'+workbookNote+'\n':'');
  add('README.md',instructions);add('report.html',report(view,request,sourceFiles,workbook));
  return {members,sourceFiles,workbook,workbookNote};
 }
-function publishMembers(w,manifest,members){
+function publishMembers(w,manifest,members,{receiving=false}={}){
+ const existing=()=>{
+  const old=readManifest(w,manifest.id);need(stable(old.selection)===stable(manifest.selection),'A different return occupies this identity');
+  if(receiving){
+   const facts=v=>({...v,files:[...v.files].sort((a,b)=>a.name<b.name?-1:a.name>b.name?1:0)});
+   need(stable(facts(old))===stable(facts(manifest)),'This return identity already retains a different complete manifest; preserve both original ZIPs and inspect the source editions');
+   for(const item of members){const original=handbackMember(w,old.id,item.name).data;need(original.equals(item.data),'This return identity already retains different member bytes: '+item.name);}
+  }
+  return old;
+ };
  fs.mkdirSync(root(w),{recursive:true});const target=fileRoot(w,manifest.id);
- if(fs.existsSync(path.join(target,'manifest.json')))return readManifest(w,manifest.id);
+ if(fs.existsSync(path.join(target,'manifest.json')))return existing();
  const stage=fs.mkdtempSync(path.join(root(w),'.build-'));
  try{for(const {name,data}of [...members,{name:'manifest.json',data:Buffer.from(json(manifest))}]){const file=path.join(stage,safeName(name));fs.mkdirSync(path.dirname(file),{recursive:true});const fd=fs.openSync(file,'wx');try{fs.writeFileSync(fd,data);fs.fsyncSync(fd);}finally{fs.closeSync(fd);}}
-  try{fs.renameSync(stage,target);}catch(e){if(!fs.existsSync(path.join(target,'manifest.json')))throw e;const old=readManifest(w,manifest.id);need(stable(old.selection)===stable(manifest.selection),'A different return occupies this identity');}
+  try{fs.renameSync(stage,target);}catch(e){if(!fs.existsSync(path.join(target,'manifest.json')))throw e;existing();}
   return readManifest(w,manifest.id);
  }finally{fs.rmSync(stage,{recursive:true,force:true});}
 }
@@ -117,7 +179,7 @@ export function publishHandback(w,input){
  const request=selection(input,true),id=requestId(request);
  if(fs.existsSync(path.join(fileRoot(w,id),'manifest.json')))return readManifest(w,id);
  const s=snapshot(w,request),view=viewOf(s,request);need(view.previewSha256===request.previewSha256,'Original source view changed after inspection. Preview it again.');
- const built=buildMembers(w,s,view,request),manifest={format:HANDBACK_FORMAT,id,requestFingerprint:id,revision:s.revision,createdAt:new Date().toISOString(),title:request.title,note:request.note,selection:request,counts:view.counts,sources:built.sourceFiles,workbook:built.workbook,workbookNote:built.workbookNote,files:built.members.map(m=>({name:m.name,bytes:m.data.length,sha256:hash(m.data)}))};
+ const built=buildMembers(w,s,view,request),manifest={format:HANDBACK_FORMAT,deliveryEdition:DELIVERY_EDITION,id,requestFingerprint:id,revision:s.revision,createdAt:new Date().toISOString(),title:request.title,note:request.note,selection:request,counts:view.counts,sources:built.sourceFiles,workbook:built.workbook,workbookNote:built.workbookNote,files:built.members.map(m=>({name:m.name,bytes:m.data.length,sha256:hash(m.data)}))};
  return publishMembers(w,checkManifest(manifest),built.members);
 }
 /** Only the exact ordinary stored ZIP emitted above is accepted; no path extraction or executable processing. */
@@ -157,20 +219,16 @@ export function receiveHandbackBytes(w,data){
  for(const f of m.files){const b=members.get(f.name);need(b&&b.length===f.bytes&&hash(b)===f.sha256,'Source return file differs: '+f.name);}
  const project=JSON.parse(members.get('project.json')),context=JSON.parse(members.get('native-context.json')),returned=JSON.parse(members.get('source-return.json'));
  validateNativeContext(project,context);
- const rebuilt=viewOf({...context,portable:project},m.selection);need(rebuilt.previewSha256===m.selection.previewSha256&&stable(rebuilt)===stable(returned),'Returned rows differ from their complete native sources');
+ const collections=receivedCollections(m,members,project),edition=m.deliveryEdition??1;
+ const rebuilt=viewOf({...context,portable:project,companionInventory:collections.inventory},m.selection,edition);need(rebuilt.previewSha256===m.selection.previewSha256&&stable(rebuilt)===stable(returned),'Returned rows differ from their complete native sources');
  need(Array.isArray(m.sources)&&stable(m.sources.map(x=>x.id))===stable(rebuilt.sourceIds),'Return source inventory differs');
  const generated=buildMembers(null,{...context,portable:project},rebuilt,m.selection);
  need(stable(m.sources)===stable(generated.sourceFiles)&&stable(m.workbook)===stable(generated.workbook)&&m.workbookNote===generated.workbookNote&&stable(m.counts)===stable(rebuilt.counts),'Return inventory or workbook definition differs');
  const allowed=new Set(generated.members.map(x=>x.name));
  for(const x of generated.members)need(members.get(x.name)?.equals(x.data),'Derived return file differs from its original native values: '+x.name);
  for(const f of m.files)if(!allowed.has(f.name))need(/^collections\/[a-f0-9]{64}\/(collection\.json|sources\/.+)$/.test(f.name),'Unknown extra return member');
- const collectionIds=[...new Set(m.files.filter(f=>f.name.startsWith('collections/')).map(f=>f.name.split('/')[1]))];
- for(const id of collectionIds){const prefix='collections/'+id+'/',docBytes=members.get(prefix+'collection.json');need(docBytes,'Original collection manifest is absent');const doc=JSON.parse(docBytes);need(hash(stable(doc))===id&&Array.isArray(doc.files)&&doc.files.some(f=>rebuilt.sourceIds.includes(f.importId)),'Original collection does not belong to selected sources');
-  const expected=new Set([prefix+'collection.json']);for(const f of doc.files){const name=prefix+'sources/'+safeName(f.path),b=members.get(name);need(b&&b.length===f.bytes&&hash(b)===f.sha256,'Original companion file differs');expected.add(name);}
-  for(const f of m.files.filter(f=>f.name.startsWith(prefix)))need(expected.has(f.name),'Unlisted original companion file');
- }
  for(const s of m.sources){const source=project.tables.imports.find(x=>x.id===s.id),b=members.get(s.originalPath);need(source&&b&&hash(b)===source.sha&&b.equals(Buffer.from(source.content)),'Original source bytes differ in returned edition');}
- return publishMembers(w,m,m.files.map(f=>({name:f.name,data:members.get(f.name)})));
+ return publishMembers(w,m,m.files.map(f=>({name:f.name,data:members.get(f.name)})),{receiving:true});
 }
 export function receiveHandback(w,input){
  need(typeof input?.contentBase64==='string'&&input.contentBase64.length%4===0&&/^[A-Za-z0-9+/]*={0,2}$/.test(input.contentBase64)&&identity(input.sha256),'Receive the complete ZIP and its checksum',400);
