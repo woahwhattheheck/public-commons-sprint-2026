@@ -32,7 +32,7 @@ Review exact scalar values and source relationships. A field correction records 
 
 Save a review with its title, state, owner, due date, note and evidence. Each review names an exact source revision and optional native entity. Link an existing Haystack, LDA or turnover record through an explicit sidecar. Save an edition to freeze source revisions together with the current review, sidecar and analysis state.
 
-OPERATOR.md contains the complete browser workflow.
+OPERATOR.md contains the complete browser workflow. CORRECTIONS.md describes the complete colleague-return flow: proven source ancestry, original/current/returned native comparison, explicit field or full-document choices, selected returned reviews, an atomic original-project save and complete onward handover.
 
 ## Native standards and identities
 
