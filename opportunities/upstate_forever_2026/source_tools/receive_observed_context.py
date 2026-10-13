@@ -34,6 +34,8 @@ def _selection(args, application):
             ("lake_paired_analysis", "eighteenmile_lake_paired_analysis.sources.json"),
             ("nutrient_flow", "eighteenmile_routine_nutrient_flow.sources.json"),
             ("calibration_hydrology", "source/hydrology-huc05-07-20261013/model-sources.json"),
+            ("calibration_basins", "source/hydrology-huc05-07-20261013/nldi/model-sources.json"),
+            ("calibration_geographic_support", "source/hydrology-huc05-07-20261013/nldi/geographic-support-sources.json"),
             ("study_figures", "eighteenmile_scientific_figures.sources.json"),
             ("flow_report", "observed_hydrology_context.sources.json")):
         context_manifest = application / relative
@@ -156,6 +158,44 @@ def _nutrient_flow(workspace, manifest, collection_id, application, output):
     return receipt
 
 
+def _physical_support(workspace, application, manifests, collections, output, state):
+    """Extend the same source intake with original routed discharge quantities."""
+    from source.import_observation_support import import_sources, MANIFEST, BASE_MANIFEST
+    selected = {item["role"]: item for item in manifests
+                if item["role"] in {"reported_discharge", "discharge_routing"}}
+    if len(selected) != 2:
+        return False
+    retained = {item["role"]: item for item in collections
+                if item["role"] in selected}
+    if len(retained) != 2:
+        raise ValueError("Import both original discharge and network source editions first")
+    receipt = import_sources(
+        workspace.root, application, output / "physical-support-observations.json",
+        manifest_paths={BASE_MANIFEST: selected["reported_discharge"]["path"],
+                        MANIFEST: selected["discharge_routing"]["path"]})
+    if (receipt.get("project_id") != workspace.project["id"]
+            or receipt["source_collection_id"] != retained["discharge_routing"]["source_collection_id"]
+            or receipt["original_source_collection_id"] != retained["reported_discharge"]["source_collection_id"]
+            or receipt["source_manifest_sha256"] != selected["discharge_routing"]["sha256"]
+            or receipt["original_manifest_sha256"] != selected["reported_discharge"]["sha256"]):
+        raise ValueError("Physical support intake returned another selected source edition")
+    rows = receipt["observations"]
+    if len(rows) != 2 or any(item["admitted_count"] for item in rows):
+        raise ValueError("Retain both original outfall quantity views as source context")
+    summary = state["observation_import"]
+    ids = summary["observation_ids"]
+    for item in rows:
+        if item["id"] not in ids:
+            ids.append(item["id"])
+            summary["rows_across_views"] += item["rows"]
+            summary["context_rows_across_views"] += item["context_count"]
+    summary["views"] = len(ids)
+    summary["additional_receipts"] = list(dict.fromkeys([
+        *summary.get("additional_receipts", []), "physical-support-observations.json"]))
+    state["physical_support_import"] = receipt
+    return True
+
+
 def _source_inventory(workspace, collections, output):
     """Describe original retained tables and point to their complete original bodies."""
     from model.common import file_digest
@@ -229,6 +269,8 @@ th{background:#f1f1f1}small{overflow-wrap:anywhere}code{overflow-wrap:anywhere}s
     document += "<h2>Dated observation views</h2><p>The existing Observed water quality desk now contains " + e(observation_import.get("views", 0)) + " retained views of original measurements, discharge, stage and available effluent source context. Choose a view, station and parameter to inspect original dated values, censor bounds and coverage. <a href=\"observations.json\">Open the observation import record</a>.</p>"
     if state.get("nutrient_flow_import"):
         document += '<p><a href="nutrient-flow-observations.json">Routine nutrient interval views</a> retain the paired lower and upper endpoints of the same original records, alongside their sampling calendar and flow contrasts.</p>'
+    if state.get("physical_support_import"):
+        document += '<p><a href="physical-support-observations.json">Original outfall quantities and source calendar</a> retains complete annual and quantified-period quantities, original EPA reporting features, mapped outfalls, species, actual gauge relationships and unknown days in the same observation desk.</p>'
     document += "<h2>Maps and geographic joins</h2>"
     if assessment:
         document += "<ul>" + "".join(packs) + "</ul>"
@@ -265,6 +307,32 @@ def receive(args):
             from model.common import verify_file
             for item in previous.get("files", []):
                 verify_file(workspace.root, item)
+            if not previous.get("physical_support_import"):
+                upgraded = copy.deepcopy(previous)
+                if _physical_support(workspace, application, manifests,
+                                     upgraded["source_imports"], output, upgraded):
+                    inventory = read_json(output / "source-inventory.json")["sources"]
+                    assessment = read_json(output / "assessment" / "operation.json")
+                    _index(output, upgraded, inventory, assessment, workspace)
+                    receipt = describe_file(workspace.root, output / "physical-support-observations.json")
+                    index = describe_file(workspace.root, output / "index.html")
+                    upgraded["files"] = [item for item in upgraded["files"]
+                                         if item["path"] != index["path"]] + [index, receipt]
+                    phase = upgraded.setdefault("source_phase", {
+                        "state": "complete", "completed_at": previous.get("updated_at", now()),
+                        "sources": len(inventory),
+                        "tables": sum(item["kind"] == "table" for item in inventory),
+                        "vectors": sum(item["kind"] == "vector" for item in inventory),
+                        "files": [item for item in previous["files"] if Path(item["path"]).name in {
+                            "source-inventory.json", "observations.json", "nutrient-flow-observations.json"}],
+                    })
+                    phase["files"].append(receipt)
+                    phase["observation_views"] = upgraded["observation_import"]["views"]
+                    upgraded["observed_context"]["observation_views"] = phase["observation_views"]
+                    upgraded.update(updated_at=now(), application=str(application),
+                                    workspace=str(workspace.root))
+                    atomic_json(state_path, upgraded)
+                    previous = upgraded
             return {**previous, "application": str(application), "workspace": str(workspace.root),
                     "directory": str(output), "index": str(output / "index.html")}
         attempts = copy.deepcopy(previous.get("attempts", []))
@@ -352,6 +420,7 @@ def receive(args):
                     item["rows"] for item in nutrient["observations"])
                 observation_summary["context_rows_across_views"] += sum(
                     item["context_count"] for item in nutrient["observations"])
+            _physical_support(workspace, application, manifests, collections, output, state)
             state["updated_at"] = now()
             atomic_json(state_path, state)
             inventory = _source_inventory(workspace, collections, output)
@@ -361,6 +430,8 @@ def receive(args):
             source_files = ["source-inventory.json", "observations.json"]
             if state.get("nutrient_flow_import"):
                 source_files.append("nutrient-flow-observations.json")
+            if state.get("physical_support_import"):
+                source_files.append("physical-support-observations.json")
             state["source_phase"] = {
                 "state": "complete", "completed_at": now(),
                 "observation_views": state["observation_import"]["views"],
@@ -416,6 +487,9 @@ def receive(args):
             if state.get("nutrient_flow_import"):
                 state["files"].append(describe_file(
                     workspace.root, output / "nutrient-flow-observations.json"))
+            if state.get("physical_support_import"):
+                state["files"].append(describe_file(
+                    workspace.root, output / "physical-support-observations.json"))
             state["attempts"][-1].update(state="complete", completed_at=now())
             atomic_json(state_path, state)
         except BaseException as error:
