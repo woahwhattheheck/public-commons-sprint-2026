@@ -13,6 +13,7 @@ import logging
 import os
 from pathlib import Path
 import shutil
+import stat
 import subprocess
 import time
 import uuid
@@ -217,6 +218,36 @@ def _native_batch_lock(path):
         os.close(fd)
 
 
+def _supervisor_custody(workspace_root):
+    """Keep the actual inherited operation lease through nested native children."""
+    raw_fd = os.environ.get("GURA_OPERATION_LOCK_FD")
+    raw_path = os.environ.get("GURA_OPERATION_LOCK_PATH")
+    if raw_fd is None and raw_path is None:
+        return ()
+    if raw_fd is None or raw_path is None:
+        raise ValueError("The supervised operation requires its inherited descriptor and lock path")
+    try:
+        fd = int(raw_fd)
+    except (TypeError, ValueError) as error:
+        raise ValueError("The inherited operation lock descriptor must be an integer") from error
+    path = Path(raw_path)
+    if fd < 3 or not path.is_absolute() or path.name != "operation.lock":
+        raise ValueError("The supervised operation lock descriptor or path is invalid")
+    inherited = os.fstat(fd)
+    retained = os.stat(path, follow_symlinks=False)
+    if (not stat.S_ISREG(inherited.st_mode) or not stat.S_ISREG(retained.st_mode)
+            or (inherited.st_dev, inherited.st_ino) != (retained.st_dev, retained.st_ino)):
+        raise ValueError("The inherited operation descriptor differs from its retained lock file")
+    manifest = json.loads(path.with_name("operation.json").read_text(encoding="utf-8"))
+    if (manifest.get("schema") != "commons.gura-complete-operation/v1"
+            or manifest.get("workspace") != str(Path(workspace_root).resolve())):
+        raise ValueError("The inherited operation lease belongs to a different scientific Workspace")
+    # The inherited descriptor shares the supervisor's open-file description.
+    # Reasserting its existing lock does not release or replace that lease.
+    fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    return (fd,)
+
+
 _NATIVE_CASE_CHILD = r'''
 import json, pathlib, sys
 request = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
@@ -355,7 +386,7 @@ def main(argv=None):
 
     with _native_batch_lock(receiving / ".parameter-suite.lock") as suite_fd, _native_batch_lock(
             root / ".native-model-batch.lock") as batch_fd:
-        custody_fds = (suite_fd, batch_fd)
+        custody_fds = tuple(dict.fromkeys((suite_fd, batch_fd, *_supervisor_custody(root))))
         try:
             baseline_id = args.baseline_run_id
             recorded = receiving / "gura-receiving-state.json"
