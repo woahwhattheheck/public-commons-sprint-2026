@@ -60,6 +60,7 @@ OWNED = frozenset({
     "operator/web/conservation_optimization_bridge.mjs",
     "operator/web/keowee-method-view.mjs",
     "operator/web/retained_desks.mjs",
+    "source/capture_original_overlays.py",
     "source/conservation-documentation-integration-20261013.json",
     "source/conservation-reporting-joins-20261013.json",
     "source/keowee-native-binding-20261013.json",
@@ -92,6 +93,7 @@ OWNED = frozenset({
     "source_tools/keowee_interval_receiving.mjs",
     "source_tools/parcel_criteria.py",
     "source_tools/soil_floodplain_sources.py",
+    "source_tools/source_response_reuse.py",
 })
 SCHEMA = "upstate.conservation-addon/v1"
 KNOWN_PRIOR = {
@@ -173,7 +175,8 @@ KNOWN_PRIOR = {
         "5662e0ee4c342dbd8ec50a8d3cdf74b7af10841680b46559f6eb6ad2f40ab8eb",
         "1bf6aa847d00df9b1e5a5bf8d9bc347f4ae73604e1f9e36abcfac827576f2256",
         "1929be639e1ed2297e63611ce96115949b56d71e8c5a2cd58e91ed98d9b189f1",
-        "2ee13bbb8b21d84a1b0267021ddb0915c6f24623f4b1d553773eb50d8f1dd195"
+        "2ee13bbb8b21d84a1b0267021ddb0915c6f24623f4b1d553773eb50d8f1dd195",
+        "56e0e5a3a45c44c3bdbddc8725b7e62f3d15af7242e36240b4f34c70b31b2b5c"
     ],
     "operator/conservation_regional_receiving.py": [
         "a4326a019784fdb0bd03aa071ee5f01e40694d3063d0a8b6da70caed5ce9daf7",
@@ -426,6 +429,9 @@ KNOWN_PRIOR = {
     ],
     "operator/web/keowee-method-view.mjs": [
         "f2af6b30c30daa61b0bfcde2d91551628390bcc89ffe7c6dc8f5f036a609a698"
+    ],
+    "source/capture_original_overlays.py": [
+        "c6a055ef211c2e5b03f8f2607fed153d61d5e0ce5ca2689f6de6cfb34351159a"
     ]
 }
 
@@ -892,6 +898,7 @@ def read_packet(path):
         "operator/web/conservation_optimization_bridge.mjs",
         "operator/web/keowee-method-view.mjs",
         "operator/web/retained_desks.mjs",
+        "source/capture_original_overlays.py",
         "source/conservation-documentation-integration-20261013.json",
         "source/conservation-reporting-joins-20261013.json",
         "source/keowee-native-binding-20261013.json",
@@ -920,6 +927,7 @@ def read_packet(path):
         "source_tools/keowee_interval_receiving.mjs",
         "source_tools/parcel_criteria.py",
         "source_tools/soil_floodplain_sources.py",
+        "source_tools/source_response_reuse.py",
     }
     if needed - set(files):
         raise ValueError("The complete backend, CLI and operator source must travel together")

@@ -146,7 +146,10 @@ The returned continuation metadata exposes:
 |---|---|
 | `continuation.previous_operation_id` | Original predecessor operation. |
 | `continuation.previous_implementation`, `current_implementation` | Source-processing identities on each side of the continuation. |
-| `continuation.reused_requests`, `reused_bytes` | Actual original response reuse recorded by the successor. |
+| `continuation.reused_requests`, `reused_bytes` | Actual reused request count and original HTTP body bytes recorded by the successor. |
+| `continuation.reused_stored_bytes` | Retained compressed response storage reused. |
+| `continuation.successful_responses`, `retained_failures` | Successful responses and preserved failed attempts, reported separately. |
+| `continuation.donor_directory` | Original predecessor directory, relative to the workspace. |
 | `continuation.families` | Reuse quantities for each source family. |
 | `continued_as` | Successors found from their own retained continuation records; the predecessor is not rewritten. |
 | `implementation_changed` | Whether the currently installed source-processing implementation differs from this operation's retained selection. |
