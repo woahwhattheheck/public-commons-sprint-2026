@@ -550,31 +550,34 @@ class Run:
         for name, expected in cfg["library_helper_sha256"].items():
             need(file_digest(helper_dir/name)["sha256"] == expected, "CURRENT_LIBRARY_HELPER_CHANGED")
         need(shutil.which("azcopy") is not None, "ORIGINAL_TRANSFER_EXECUTABLE_UNAVAILABLE")
-        donor = Path(cfg["dependency_donor"]); donor_lock_bytes = (donor / "package-lock.json").read_bytes()
-        need(digest_bytes(donor_lock_bytes) == cfg["dependency_lock_sha256"], "ORIGINAL_DEPENDENCY_LOCK_CHANGED")
-        locks, lock_bytes = [json.loads(donor_lock_bytes)], [donor_lock_bytes]
-        for leaf in cfg["leaf_packages"]:
-            raw = leaf["originalLock"].encode()
-            need(git_blob(raw) == leaf["originalLockGitBlob"], "ORIGINAL_LEAF_LOCK_CHANGED")
-            value = json.loads(raw); entries = {p:v for p,v in value["packages"].items() if p}
-            need(list(entries) == ["node_modules/"+leaf["name"]], "ORIGINAL_LEAF_NOT_SINGLE_PACKAGE")
-            row = entries["node_modules/"+leaf["name"]]
-            need(row["version"] == leaf["version"] and row["integrity"] == leaf["integrity"], "ORIGINAL_LEAF_IDENTITY_CHANGED")
-            locks.append(value); lock_bytes.append(raw)
-        sys.path.insert(0, cfg["native_host"])
-        import node_package_cache as package_cache
-        import node_lockfile_cache as lock_cache
-        cached = []
-        for leaf in cfg["leaf_packages"]:
-            if leaf.get("installedDonor"):
-                cached.append(inspect_installed_leaf(leaf)); continue
-            args = SimpleNamespace(cache_root=leaf["cacheRoot"], package=leaf["name"], version=leaf["version"],
-                integrity=package_cache.integrity(leaf["integrity"]), destination=None, max_archive_bytes=32*1024*1024,
-                max_tar_bytes=128*1024*1024, max_members=20000, scratch_root=str(self.work/"tmp"), capture_paths=False)
-            report = {"outcome":"error","source":None,"archive":None,"package":None,"destination":None}
-            need(package_cache.run(args, report) == 0 and report["outcome"] == "verified", "EXACT_LEAF_CACHE_UNAVAILABLE")
-            cached.append(report)
-        save_json(self.output/"leaf-cache-inspection.json", cached)
+        dependency_mode = cfg.get("dependency_mode", "retained-graph")
+        need(dependency_mode in ("retained-graph", "maintained-install"), "ORIGINAL_RUNTIME_MODE_INVALID")
+        if dependency_mode == "retained-graph":
+            donor = Path(cfg["dependency_donor"]); donor_lock_bytes = (donor / "package-lock.json").read_bytes()
+            need(digest_bytes(donor_lock_bytes) == cfg["dependency_lock_sha256"], "ORIGINAL_DEPENDENCY_LOCK_CHANGED")
+            locks, lock_bytes = [json.loads(donor_lock_bytes)], [donor_lock_bytes]
+            for leaf in cfg["leaf_packages"]:
+                raw = leaf["originalLock"].encode()
+                need(git_blob(raw) == leaf["originalLockGitBlob"], "ORIGINAL_LEAF_LOCK_CHANGED")
+                value = json.loads(raw); entries = {p:v for p,v in value["packages"].items() if p}
+                need(list(entries) == ["node_modules/"+leaf["name"]], "ORIGINAL_LEAF_NOT_SINGLE_PACKAGE")
+                row = entries["node_modules/"+leaf["name"]]
+                need(row["version"] == leaf["version"] and row["integrity"] == leaf["integrity"], "ORIGINAL_LEAF_IDENTITY_CHANGED")
+                locks.append(value); lock_bytes.append(raw)
+            sys.path.insert(0, cfg["native_host"])
+            import node_package_cache as package_cache
+            import node_lockfile_cache as lock_cache
+            cached = []
+            for leaf in cfg["leaf_packages"]:
+                if leaf.get("installedDonor"):
+                    cached.append(inspect_installed_leaf(leaf)); continue
+                args = SimpleNamespace(cache_root=leaf["cacheRoot"], package=leaf["name"], version=leaf["version"],
+                    integrity=package_cache.integrity(leaf["integrity"]), destination=None, max_archive_bytes=32*1024*1024,
+                    max_tar_bytes=128*1024*1024, max_members=20000, scratch_root=str(self.work/"tmp"), capture_paths=False)
+                report = {"outcome":"error","source":None,"archive":None,"package":None,"destination":None}
+                need(package_cache.run(args, report) == 0 and report["outcome"] == "verified", "EXACT_LEAF_CACHE_UNAVAILABLE")
+                cached.append(report)
+            save_json(self.output/"leaf-cache-inspection.json", cached)
         source_incoming = [*cfg["incoming"], *self.receive_remaining_sources(inputs)]
         self.checkpoint("ORIGINAL_SOURCE_RECEIVING")
         git_cache, source = self.work/"git-cache", self.work/"source"
@@ -620,46 +623,88 @@ class Run:
         prepared = self.node("runtime-prepare", {"action":"prepare","sourceRoot":str(source),"directory":str(installation),
           "archive":str(archive),"sha256":archive_identity["sha256"],"python":cfg["python"]})
         need(prepared["status"] == "PREPARED" and prepared["sourceCommit"] == cfg["commit"], "ORIGINAL_RUNTIME_PREPARATION_CHANGED")
-        pkg = json.loads((installation/"package.json").read_text()); composed = compose_lock(locks, pkg)
-        original_dir = self.output/"original-locks"; original_dir.mkdir(mode=0o700)
-        names = ["fe85-package-lock.json", "re2js-package-lock.json", "yaml-package-lock.json"]
-        for name, raw in zip(names, lock_bytes): save(original_dir/name, raw)
-        graph = copy_retained_graph(donor/"node_modules", installation/"node_modules", self.output/"dependency-files.json")
-        need((donor/"package-lock.json").read_bytes() == donor_lock_bytes, "ORIGINAL_GRAPH_LOCK_CHANGED_DURING_COPY")
-        leaf_results = []
-        for leaf in cfg["leaf_packages"]:
-            target = installation/"node_modules"/leaf["name"]; need(not os.path.lexists(target), "LEAF_COLLIDES_WITH_ORIGINAL_GRAPH")
-            if leaf.get("installedDonor"):
-                report = inspect_installed_leaf(leaf)
-                inventory = self.output / ("installed-leaf-" + leaf["name"] + ".json")
-                copied = copy_retained_graph(Path(leaf["installedDonor"]["path"]), target, inventory)
-                received = json.loads(inventory.read_text())
-                need(received["files"] == leaf["installedDonor"]["files"],
-                     "RECEIVED_INSTALLED_LEAF_BYTES_CHANGED")
-                inspect_installed_leaf(leaf)
-                report = {**report, "destination": str(target), "received": copied}
-            else:
-                args = SimpleNamespace(cache_root=leaf["cacheRoot"], package=leaf["name"], version=leaf["version"],
-                    integrity=package_cache.integrity(leaf["integrity"]), destination=str(target), max_archive_bytes=32*1024*1024,
-                    max_tar_bytes=128*1024*1024, max_members=20000, scratch_root=str(self.work/"tmp"), capture_paths=False)
-                report = {"outcome":"error","source":None,"archive":None,"package":None,
-                          "destination":{"path":str(target),"created":False,"complete":False,"files_written":0,"bytes_written":0}}
-                need(package_cache.run(args, report) == 0 and report["destination"]["complete"], "ORIGINAL_LEAF_MATERIALIZATION_FAILED")
-            actual = json.loads((target/"package.json").read_text())
-            bins = lock_cache.create_bins(installation/"node_modules", {"path":"node_modules/"+leaf["name"],"kind":"archive"}, actual)
-            leaf_results.append({"result":report,"bins":bins})
-        save_json(installation/"package-lock.json", composed)
-        lock_check = self.node("runtime-lock", {"action":"validate-lock","sourceRoot":str(source),"directory":str(installation)})
-        provenance = {"schema":"starforge.composed-runtime-lock.v1","kind":"COMPOSED_TARGET_LOCK","sourceCommit":cfg["commit"],
-            "profileId":prepared["profileId"],"target":file_digest(installation/"package-lock.json"),
-            "rootPackage":file_digest(installation/"package.json"),
-            "originalLocks":[{"name":name,"sha256":digest_bytes(raw)} for name,raw in zip(names,lock_bytes)],
-            "originalEntriesPreserved":sum(1 for p in locks[0]["packages"] if p),
-            "addedOriginalLeafEntries":[{"name":x["name"],"version":x["version"],"gitBlob":x["originalLockGitBlob"]} for x in cfg["leaf_packages"]],
-            "graph":graph,"lockValidation":{"supported":lock_check["supported"],"packageLocations":lock_check["packageLocations"]}}
-        save_json(self.output/"dependency-receiving.json", {"provenance":provenance,"leafResults":leaf_results})
-        ready = self.node("runtime-adopt", {"action":"adopt","sourceRoot":str(source),"directory":str(installation)})
-        need(ready["status"] == "READY" and ready["ready"] and ready["adoptedRetainedDependencies"], "ORIGINAL_RUNTIME_NOT_READY")
+        if dependency_mode == "maintained-install":
+            selected_install = cfg["maintained_install"]
+            need(type(selected_install.get("offline")) is bool and
+                 isinstance(selected_install.get("npm"), str) and
+                 Path(selected_install["npm"]).is_absolute(),
+                 "ORIGINAL_MAINTAINED_INSTALL_SELECTION_REQUIRED")
+            npm_path = Path(selected_install["npm"])
+            need(npm_path.is_file() and os.access(npm_path, os.X_OK),
+                 "ORIGINAL_NPM_EXECUTABLE_UNAVAILABLE")
+            cache = selected_install.get("cache") or str(self.work/"npm-cache")
+            need(Path(cache).is_absolute() and Path(cache).resolve(strict=True) == Path(cache),
+                 "ORIGINAL_NPM_CACHE_PATH_CHANGED")
+            ready = self.node("runtime-install", {"action":"install","sourceRoot":str(source),
+                "directory":str(installation),"npm":str(npm_path),
+                "cache":cache,"offline":selected_install["offline"]}, timeout=1800)
+            need(ready["status"] == "READY" and ready["ready"] and
+                 ready["sourceCommit"] == cfg["commit"],
+                 "ORIGINAL_MAINTAINED_RUNTIME_NOT_READY")
+            lock_check = self.node("runtime-lock", {"action":"validate-lock",
+                "sourceRoot":str(source),"directory":str(installation)})
+            names, lock_bytes = [], []
+            for name, relative in (
+                ("re2js-package-lock.json","stellar-forge/payment-auto-catalog/package-lock.json"),
+                ("yaml-package-lock.json","stellar/scf-starforge-20261009/sf61-openapi-seller-import/package-lock.json")):
+                original_bytes = (source/relative).read_bytes()
+                need(git_blob(original_bytes) == expected[relative]["sha"],
+                     "ORIGINAL_SELECTED_DEPENDENCY_LOCK_CHANGED")
+                names.append(name);lock_bytes.append(original_bytes)
+                save(self.output/"original-locks"/name,original_bytes)
+            provenance = {"schema":"starforge.runtime-install-lock-provenance.v1",
+                "kind":"MAINTAINED_INSTALL","sourceCommit":cfg["commit"],
+                "profileId":prepared["profileId"],"offline":selected_install["offline"],
+                "target":file_digest(installation/"package-lock.json"),
+                "rootPackage":file_digest(installation/"package.json"),
+                "originalSourceLocks":[{"name":name,"sha256":digest_bytes(raw)}
+                    for name,raw in zip(names,lock_bytes)],
+                "installationState":file_digest(installation/"install-state.json"),
+                "lockValidation":{"supported":lock_check["supported"],
+                    "packageLocations":lock_check["packageLocations"]}}
+            save_json(self.output/"dependency-receiving.json",
+                {"provenance":provenance,"maintainedInstallation":ready})
+        else:
+            pkg = json.loads((installation/"package.json").read_text()); composed = compose_lock(locks, pkg)
+            original_dir = self.output/"original-locks"; original_dir.mkdir(mode=0o700)
+            names = ["fe85-package-lock.json", "re2js-package-lock.json", "yaml-package-lock.json"]
+            for name, raw in zip(names, lock_bytes): save(original_dir/name, raw)
+            graph = copy_retained_graph(donor/"node_modules", installation/"node_modules", self.output/"dependency-files.json")
+            need((donor/"package-lock.json").read_bytes() == donor_lock_bytes, "ORIGINAL_GRAPH_LOCK_CHANGED_DURING_COPY")
+            leaf_results = []
+            for leaf in cfg["leaf_packages"]:
+                target = installation/"node_modules"/leaf["name"]; need(not os.path.lexists(target), "LEAF_COLLIDES_WITH_ORIGINAL_GRAPH")
+                if leaf.get("installedDonor"):
+                    report = inspect_installed_leaf(leaf)
+                    inventory = self.output / ("installed-leaf-" + leaf["name"] + ".json")
+                    copied = copy_retained_graph(Path(leaf["installedDonor"]["path"]), target, inventory)
+                    received = json.loads(inventory.read_text())
+                    need(received["files"] == leaf["installedDonor"]["files"],
+                         "RECEIVED_INSTALLED_LEAF_BYTES_CHANGED")
+                    inspect_installed_leaf(leaf)
+                    report = {**report, "destination": str(target), "received": copied}
+                else:
+                    args = SimpleNamespace(cache_root=leaf["cacheRoot"], package=leaf["name"], version=leaf["version"],
+                        integrity=package_cache.integrity(leaf["integrity"]), destination=str(target), max_archive_bytes=32*1024*1024,
+                        max_tar_bytes=128*1024*1024, max_members=20000, scratch_root=str(self.work/"tmp"), capture_paths=False)
+                    report = {"outcome":"error","source":None,"archive":None,"package":None,
+                              "destination":{"path":str(target),"created":False,"complete":False,"files_written":0,"bytes_written":0}}
+                    need(package_cache.run(args, report) == 0 and report["destination"]["complete"], "ORIGINAL_LEAF_MATERIALIZATION_FAILED")
+                actual = json.loads((target/"package.json").read_text())
+                bins = lock_cache.create_bins(installation/"node_modules", {"path":"node_modules/"+leaf["name"],"kind":"archive"}, actual)
+                leaf_results.append({"result":report,"bins":bins})
+            save_json(installation/"package-lock.json", composed)
+            lock_check = self.node("runtime-lock", {"action":"validate-lock","sourceRoot":str(source),"directory":str(installation)})
+            provenance = {"schema":"starforge.composed-runtime-lock.v1","kind":"COMPOSED_TARGET_LOCK","sourceCommit":cfg["commit"],
+                "profileId":prepared["profileId"],"target":file_digest(installation/"package-lock.json"),
+                "rootPackage":file_digest(installation/"package.json"),
+                "originalLocks":[{"name":name,"sha256":digest_bytes(raw)} for name,raw in zip(names,lock_bytes)],
+                "originalEntriesPreserved":sum(1 for p in locks[0]["packages"] if p),
+                "addedOriginalLeafEntries":[{"name":x["name"],"version":x["version"],"gitBlob":x["originalLockGitBlob"]} for x in cfg["leaf_packages"]],
+                "graph":graph,"lockValidation":{"supported":lock_check["supported"],"packageLocations":lock_check["packageLocations"]}}
+            save_json(self.output/"dependency-receiving.json", {"provenance":provenance,"leafResults":leaf_results})
+            ready = self.node("runtime-adopt", {"action":"adopt","sourceRoot":str(source),"directory":str(installation)})
+            need(ready["status"] == "READY" and ready["ready"] and ready["adoptedRetainedDependencies"], "ORIGINAL_RUNTIME_NOT_READY")
         checked = self.node("runtime-inspect", {"action":"inspect","sourceRoot":str(source),"directory":str(installation),"python":cfg["python"]})
         need(checked["status"] == "READY" and checked["ready"] and checked["sourceVerified"], "FRESH_ORIGINAL_RUNTIME_INSPECTION_FAILED")
         self.checkpoint("INSTALLED_APPLICATION_RECEIVING")
@@ -689,10 +734,11 @@ class Run:
         guide = (
             "# GeoCat catalogue receiving\n\nSource: " + cfg["commit"] + "\n\n"
             "This package contains the complete maintained geocat-catalogue source distribution, "
-            "its exact runtime profile and composed target lock, the customer workshare/intake, "
-            "and the actual installed application receiving result. All original lock entries "
-            "retain their resolved URLs, integrity values, optional/platform flags and layout. "
-            "The target root comes from the source-selected runtime package.json. "
+            "its exact runtime profile and installed dependency lock, the customer workshare/intake, "
+            "and the actual installed application receiving result. Runtime provenance identifies "
+            "whether the complete dependency graph was received or installed through the maintained "
+            "installer. The complete actual lock is included; its root comes from the source-selected "
+            "runtime package.json. "
             "Normal installation obtains the selected dependency archives from npm or an existing cache.\n\n"
             "## Install\n\nUse Linux, Node 22.16+, Python 3.11+, npm and flock. "
             "Extract the original source TGZ into a new directory. Its "
@@ -763,6 +809,15 @@ class Run:
         rows = result.get("results",[])
         need(len(rows)==1 and rows[0].get("status")=="succeeded","FINAL_PACKAGE_SAVE_NOT_SUCCEEDED")
         selected = rows[0]
+        need(selected.get("local_path") == str(final_persistent) and
+             selected.get("purpose") == "create_library_file" and
+             all(isinstance(selected.get(key),str) and selected[key]
+                 for key in ("file_id","library_file_id")),
+             "FINAL_PACKAGE_SAVE_IDENTITY_CHANGED")
+        if "current_version_number" in selected:
+            need(type(selected["current_version_number"]) is int and
+                 selected["current_version_number"] >= 0,
+                 "FINAL_PACKAGE_SAVE_VERSION_INVALID")
         saved = {k:selected[k] for k in ("status","file_id","library_file_id","file_name",
                  "current_version_number","local_metadata_applied") if k in selected}
         completion = {**self.state,"phase":"COMPLETED","completedAt":now(),"package":{**identity,

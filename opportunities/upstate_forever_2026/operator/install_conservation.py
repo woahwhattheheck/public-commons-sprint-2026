@@ -31,6 +31,8 @@ OWNED = frozenset({
     "operator/CONSERVATION_OPTIMIZATION.md",
     "operator/conservation.py",
     "operator/conservation_browser_receiving.py",
+    "operator/conservation_experiment_browser_receiving.py",
+    "operator/CONSERVATION_EXPERIMENT_BROWSER.md",
     "operator/conservation_optimization.py",
     "operator/conservation_regional_receiving.py",
     "operator/extensions/conservation-optimization.json",
@@ -97,6 +99,8 @@ PREVIOUS_SOURCES = {
         "d39ab0132a9c32639883943994ece1c7819ae23b73d13c5957af6211d904c277": 22899
     },
     "operator/install_conservation.py": {
+        "30492615ba6f862f7f676183ee293eb0252a59a159830e9976875aa2ab450bda": 20002,
+        "76e556f53783d6379a53a775651415541306d9b23ba80d4eec1ff2dfb22a3644": 30753,
         "c9aaa958816139e151fd99cc194deac931186783563738119e7b4ae69a413696": 17382,
         "b7250a44731d3f421a6779e7c236d132e6b446166c8eaab5d34523a8553957b0": 19888,
         "833aed492f04532201544e5f959ca852fe730d79969a6bc009a754f0f14dc42d": 22965,
@@ -266,7 +270,32 @@ def patch_server(text):
     return text
 
 
+def conservation_lifecycle(text):
+    """Detach the current host's other desks before replacing their shared root."""
+    opening = "  if(view==='conservation'){\n"
+    start = text.find(opening)
+    end = text.find("conservation.mount($('#content'),state)", start)
+    if start < 0 or end < 0:
+        raise ValueError("Expected the installed original Conservation render branch")
+    current = text[start:end]
+    lifecycle = (
+        "    if(typeof extensions!=='undefined')extensions.detach();\n",
+        "    if(typeof experiments!=='undefined')experiments.detach();\n",
+        "    if(typeof experimentDiagnostics!=='undefined')experimentDiagnostics.detach();\n",
+        "    if(typeof programmes!=='undefined')programmes.detach();\n",
+        "    if(typeof receivingWaters!=='undefined')receivingWaters.detach();\n",
+        "    if(typeof rehearsal!=='undefined')rehearsal.detach();\n",
+        "    if(typeof journey!=='undefined'){journey.detach();journey.updateRail(view);}\n",
+        "    if(typeof scenarioAnalysis!=='undefined')scenarioAnalysis.detach();\n",
+    )
+    addition = "".join(line for line in lifecycle if line.strip() not in current)
+    position = start + len(opening)
+    return text[:position] + addition + text[position:]
+
+
 def patch_app(text):
+    text = text.replace("for(const node of $('[data-view]'))",
+                        "for(const node of $$('[data-view]'))")
     text = text.replace("parameter('sdr','l_max','Maximum slope length','Metres.','min=\"0\"')", "parameter('sdr','l_max','Maximum L factor','Dimensionless maximum for the LS slope-length factor.','min=\"0\"')")
     if "import {attachConservation}" not in text:
         text = "import {attachConservation} from './conservation.mjs';\n" + text
@@ -310,31 +339,18 @@ def patch_app(text):
     )
     text = once(text, "function render(){\n  if(!state)return;\n", branch,
                 "Conservation mounted view", marker="conservation.mount($('#content'),state)")
-    text = once(text, "  if(view==='conservation'){\n",
-                "  if(view==='conservation'){\n"
-                "    if(typeof extensions!=='undefined')extensions.detach();\n"
-                "    if(typeof programmes!=='undefined')programmes.detach();\n",
-                "Conservation registered-desk transition",
-                marker="if(view==='conservation'){\n    if(typeof extensions!=='undefined')extensions.detach();")
-    direct_exit = (
-        "    if(typeof experiments!=='undefined')experiments.detach();\n"
-        "    if(typeof experimentDiagnostics!=='undefined')experimentDiagnostics.detach();\n"
-        "    if(typeof scenarioAnalysis!=='undefined')scenarioAnalysis.detach();\n"
-        "    if(typeof receivingWaters!=='undefined')receivingWaters.detach();\n"
-    )
-    conservation_content = "    $('#content').innerHTML=conservation.render(state);\n"
-    text = once(text, conservation_content, direct_exit + conservation_content,
-                "Conservation direct-desk transition",
-                marker=direct_exit + conservation_content)
+    text = conservation_lifecycle(text)
     text = once(text, "async function dispatch(button){\n",
                 "async function dispatch(button){\n"
                 " if(button.dataset.action?.startsWith('conservation-')){\n"
                 "  if(['conservation-open-study','conservation-open-plan'].includes(button.dataset.action)){\n"
-                "   detailDialog.close(); await navigate('conservation');\n"
+                "   detailDialog.close(); detailContext=null; await navigate('conservation');\n"
                 "  }\n"
                 "  return conservation.dispatch(button);\n"
                 " }\n",
                 "Conservation controls", marker="return conservation.dispatch(button)")
+    text = text.replace("detailDialog.close(); await navigate('conservation');",
+                        "detailDialog.close(); detailContext=null; await navigate('conservation');")
     text = text.replace(
         "['conservation-open-study','conservation-open-plan'].includes(button.dataset.action)",
         "['conservation-open-study','conservation-open-plan','conservation-use-criteria',"

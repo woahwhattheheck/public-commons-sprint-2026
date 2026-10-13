@@ -371,6 +371,8 @@ export function createSourceWorkbench(host) {
       (observed.error ? '<p class="sp-inline-error">'+escapeHTML(observed.error.message || observed.error)+'</p>' : '') +
       '<div class="sp-actions">'+textButton('result-refresh','Refresh result',resultBusy ? 'disabled' : '')+
       (collectionId ? textButton('open-source','Open imported edition','data-sp-id="'+escapeHTML(collectionId)+'"') : '')+
+      (collectionId && (result.method || task?.payload?.method) === 'classified-waters'
+        ? textButton('open-water-review','Open water source review','data-sp-id="'+escapeHTML(collectionId)+'"','primary') : '')+
       (status === 'complete' ? textButton('select-prepared','Use in combined edition','data-sp-id="'+escapeHTML(resultTask)+'"','primary') : '')+
       (!task?.restored && task ? textButton('open-task','Task history','data-sp-id="'+escapeHTML(resultTask)+'"') : '')+'</div>'+
       '<section><h3>Original files</h3>'+(fileRows || '<p class="sp-help">'+
@@ -625,6 +627,15 @@ export function createSourceWorkbench(host) {
       if(action==='browse')return await openBrowser(button.dataset.spField);
       if(action==='clear-input'){draft().inputs[button.dataset.spField]=null;renderForm();return;}
       if(action==='open-source'){closeResult();return host.openItem('sources',id);}
+      if(action==='open-water-review'){
+        const selectedWorkspace=workspace, selectedCollection=id;
+        if(!selectedCollection || host.getWorkspace()!==selectedWorkspace)return;
+        closeResult();
+        return await host.openExtension('water-source-review','openSource',{
+          workspace_key:selectedWorkspace,collection_id:selectedCollection,
+          source_id:'classified-water-crosswalk',load_native:true
+        });
+      }
       if(action==='open-task'){closeResult();return host.showTask(id);}
       if(action==='open-result'){currentTask=id;progress=null;save();renderTasks();renderProgress();return await openResult(id);}
       if(action==='result-close')return closeResult();

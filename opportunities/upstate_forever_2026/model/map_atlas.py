@@ -10,11 +10,11 @@ import textwrap
 from .common import MAP_IDS, atomic_bytes, atomic_json, describe_file, finite, verify_file
 from . import cartography
 
-ATLAS_VERSION = "seven-family-atlas/v1"
+ATLAS_VERSION = "seven-family-atlas/v3"
 PAPER = {"letter": (11.0, 8.5), "a4": (297 / 25.4, 210 / 25.4),
          "a3": (420 / 25.4, 297 / 25.4)}
 INDEX_ROWS = 14
-FILE_KEYS = ("map_atlas", "map_atlas_index", "map_atlas_csv")
+FILE_KEYS = ("map_atlas", "map_atlas_index", "map_atlas_csv", "map_atlas_sources")
 
 
 def _text(value, label, limit, *, default=""):
@@ -53,6 +53,31 @@ def settings(value=None):
         "family_titles": {key: _text(title, "Map-family title", 110)
                           for key, title in titles.items() if title},
     }
+
+
+
+def bind_water_selections(workspace, selection):
+    """Retain complete saved-designation identity before constructing a release."""
+    bindings = {}
+    for role, choice in selection.get("overlays", {}).items():
+        if not isinstance(choice, dict):
+            raise ValueError("Each atlas overlay must name its original source")
+        selection_id = choice.get("selection_id")
+        if not selection_id:
+            continue
+        from .water_designations import get
+        saved = get(workspace, selection_id)
+        expected = saved["delivery_overlay"]
+        if (role != saved["purpose"] or
+                any(choice.get(key) != value for key, value in expected.items()) or
+                choice.get("where")):
+            raise ValueError("Saved water designation " + selection_id +
+                             " differs from the selected source or field filter; apply that saved designation again")
+        bindings[role] = {key: saved[key] for key in (
+            "id", "title", "purpose", "selection", "source", "summary",
+            "rule_reference", "delivery_overlay", "files")}
+        bindings[role]["workspace_path"] = "water-designations/" + selection_id
+    return bindings
 
 
 def _sheet(plt, options, title, page_number, page_count):
@@ -137,6 +162,13 @@ def _index_row(page, number, root, options):
     }
 
 
+def _csv_value(value):
+    if isinstance(value, str) and (value.startswith(("\t", "\r")) or
+            value.lstrip().startswith(("=", "+", "-", "@"))):
+        return "\'" + value
+    return value
+
+
 def _csv(rows):
     output = io.StringIO(newline="")
     columns = ("atlas_page", "family", "map_key", "scenario_run_id", "title",
@@ -147,19 +179,20 @@ def _csv(rows):
     for row in rows:
         for panel in row["panels"]:
             scale = panel["display_scale"] or {}
-            writer.writerow({
+            values = {
                 "atlas_page": row["page"], "family": row["family"], "map_key": row["map_key"],
                 "scenario_run_id": row["scenario_run_id"], "title": row["title"],
                 "map_pdf": row["file"]["path"], "panel": panel["title"],
                 "units": panel["units"], "signed": panel["signed"],
                 "scale_minimum": scale.get("minimum"), "scale_maximum": scale.get("maximum"),
                 "scale_method": scale.get("label"), "source_raster": panel["source_raster"],
-            })
+            }
+            writer.writerow({key: _csv_value(value) for key, value in values.items()})
     return output.getvalue().encode("utf-8-sig")
 
 
 def write(directory, pages, *, workspace, selection, grid, boundary, crs,
-          footer, state, state_path):
+          footer, state, state_path, water_links=None):
     """Write standalone maps and an ordered atlas from the same rendered figures.
 
     The caller retains scientific panel selection, overlays and shared scales.
@@ -167,6 +200,8 @@ def write(directory, pages, *, workspace, selection, grid, boundary, crs,
     rendered again only to reconstruct an interrupted multi-page document.
     """
     options = settings(selection.get("map_settings"))
+    if water_links is None:
+        water_links = bind_water_selections(workspace, selection)
     pages = list(pages)
     if not pages or len({page["key"] for page in pages}) != len(pages):
         raise ValueError("Atlas map keys must be nonempty and distinct")
@@ -230,6 +265,22 @@ def write(directory, pages, *, workspace, selection, grid, boundary, crs,
             if pdf.get_pagecount() != total:
                 raise ValueError("Atlas page count differs from its retained map index")
         pending.replace(atlas_path)
+        source_context = {
+            "schema": "upstate.map-atlas-source-context/v1", "delivery_id": state["id"],
+            "baseline_run_id": selection["baseline_run_id"],
+            "scenario_run_ids": list(selection["scenario_run_ids"]),
+            "source_report_id": selection.get("source_report_id"),
+            "source_report_sha256": selection.get("source_report_sha256"),
+            "source_report": state.get("source_report"),
+            "source_roles": selection.get("source_roles", {}),
+            "overlays": selection.get("overlays", {}), "water_designations": water_links,
+            "receptor_spec": selection.get("receptor_spec"),
+            "receptor_profile_source": selection.get("receptor_profile_source"),
+            "resolved_receptor_network": state.get("receptor_inventory", {}).get("network_source"),
+            "rendered_overlay_sources": [
+                {"map_key": row["map_key"], "overlays": row["overlays"]} for row in rows
+            ],
+        }
         atlas = {
             "schema": "upstate.map-atlas/v1", "version": ATLAS_VERSION,
             "delivery_id": state["id"], "title": title, "settings": options,
@@ -238,12 +289,15 @@ def write(directory, pages, *, workspace, selection, grid, boundary, crs,
             "scenario_run_ids": list(selection["scenario_run_ids"]),
             "source_report_id": selection.get("source_report_id"),
             "grid_id": grid["id"], "grid": grid["grid"],
-            "file": describe_file(directory, atlas_path),
+            "file": describe_file(directory, atlas_path), "source_context": source_context,
         }
         index_path = directory / "maps" / "atlas-index.json"
         csv_path = directory / "maps" / "atlas-index.csv"
+        sources_path = directory / "maps" / "source-context.json"
         atomic_json(index_path, atlas)
         atomic_bytes(csv_path, _csv(rows))
+        atomic_json(sources_path, source_context)
+        state["files"]["map_atlas_sources"] = describe_file(directory, sources_path)
         state["files"]["map_atlas"] = atlas["file"]
         state["files"]["map_atlas_index"] = describe_file(directory, index_path)
         state["files"]["map_atlas_csv"] = describe_file(directory, csv_path)
