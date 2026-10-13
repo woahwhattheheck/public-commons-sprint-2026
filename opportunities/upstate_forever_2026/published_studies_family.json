@@ -1,6 +1,6 @@
 {
   "schema": "upstate.published-study-family/v1",
-  "version": "2.4.4",
+  "version": "2.4.5",
   "repository": "woahwhattheheck/public-commons-sprint-2026",
   "application_path": "opportunities/upstate_forever_2026",
   "source_reference_base": "0cd423ac3d94e3455a743dd3f17af084fa71a122",
@@ -1163,8 +1163,8 @@
     },
     {
       "path": "operator/PUBLISHED_REVIEW_REPORTS.md",
-      "bytes": 9369,
-      "sha256": "3817432aa78d94a979a421f3cfdfdb2fab4771005c2a33193f6af56edda4f4b8"
+      "bytes": 11203,
+      "sha256": "48c0783cc106507682bcb6e1a2384e5bae936b0ea4199c9e4af621e06a6f2429"
     },
     {
       "path": "operator/published_study_operator.py",
@@ -1178,8 +1178,8 @@
     },
     {
       "path": "operator/web/published_review_reports.mjs",
-      "bytes": 9328,
-      "sha256": "bbb0cceb979c715f3c47009aa30146a8bc35ae88c3ed50bb0e1b12f0395670e0"
+      "bytes": 10027,
+      "sha256": "ff27f5185c57822b8442e74249e9d14005c0ca67ef539414ad7b953dbf498438"
     },
     {
       "path": "operator/web/published_studies.css",
@@ -2252,6 +2252,14 @@
         "native_course": "source/observed-report-20261013/receive_operator.py",
         "restart": "Retain exact study version, original review export, scientific source and original queued report tasks; --resume continues the same receiving directory.",
         "original_station_geography": "20f1eb34d1edefd64340f8dea6f817a69e5fbe0880f0c349b2e1fd0b0ecfec8b"
+      },
+      "composer_selection": {
+        "modes": [
+          "replace",
+          "append"
+        ],
+        "contract": "Existing openScientificReport passes selection_mode through to source_report_editions.openForSources; replace uses only this immutable source/title, append preserves the ordered draft and deduplicates source choices.",
+        "controller": "operator/web/published_review_reports.mjs"
       }
     }
   }
