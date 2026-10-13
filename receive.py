@@ -86,6 +86,7 @@ def check(raw,size,digest,label):
 def main():
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--blob",required=True)
+    parser.add_argument("--transfer",type=Path,help="Read the exact retained public Git envelope from an ordinary local file; no connector client is initialized")
     parser.add_argument("--output",required=True)
     parser.add_argument("--source-sha256",required=True)
     parser.add_argument("--source-bytes",type=int,required=True)
@@ -99,17 +100,34 @@ def main():
     if root.is_symlink():
         raise ValueError("Use an owned ordinary receiving directory")
     root=root.resolve()
-    module=hosted(args.hosted_apps_helper or os.environ.get("COMMONS_HOSTED_APPS_HELPER"))
-    client=module.HostedAppsClient()
-    print(json.dumps({"stage":"NATIVE_SOURCE_STARTED","pid":os.getpid(),"output":str(root)}),flush=True)
-    connector,action=discover(client,module)
-    result=client.call_tool(connector,action,{"repository_full_name":"woahwhattheheck/public-commons-sprint-2026","blob_sha":args.blob})
-    value=payload(result)
-    if not isinstance(value.get("content"),str):
-        raise ValueError("Git connector returned no full UTF-8 source body")
-    raw=base64.b64decode(value["content"],validate=True) if value.get("encoding")=="base64" else value["content"].encode("utf-8")
+    print(json.dumps({"stage":"NATIVE_SOURCE_STARTED","pid":os.getpid(),"output":str(root),
+                      "receiving_method":"ordinary_file" if args.transfer is not None else "ordinary_connector"}),flush=True)
+    if args.transfer is not None:
+        transfer=args.transfer.expanduser().resolve(strict=True)
+        if not transfer.is_file():
+            raise ValueError("Select the complete ordinary source envelope file")
+        raw=transfer.read_bytes()
+    else:
+        module=hosted(args.hosted_apps_helper or os.environ.get("COMMONS_HOSTED_APPS_HELPER"))
+        client=module.HostedAppsClient()
+        connector,action=discover(client,module)
+        result=client.call_tool(connector,action,{"repository_full_name":"woahwhattheheck/public-commons-sprint-2026","blob_sha":args.blob})
+        value=payload(result)
+        if not isinstance(value.get("content"),str):
+            raise ValueError("Git connector returned no full UTF-8 source body")
+        raw=base64.b64decode(value["content"],validate=True) if value.get("encoding")=="base64" else value["content"].encode("utf-8")
+    transport_raw=raw
+    transport_normalization="none"
     if hashlib.sha1(b"blob "+str(len(raw)).encode()+b"\0"+raw).hexdigest()!=args.blob:
-        raise ValueError("Returned public Git blob bytes differ")
+        if args.transfer is None:
+            raise ValueError("Returned public Git blob bytes differ")
+        # Text-file exports may add a BOM, CRLF, or terminal empty lines.
+        # Accept their removal only when it recovers the exact original Git blob.
+        normalized=raw.decode("utf-8-sig").replace("\r\n","\n").rstrip("\n")+"\n"
+        raw=normalized.encode("utf-8")
+        if hashlib.sha1(b"blob "+str(len(raw)).encode()+b"\0"+raw).hexdigest()!=args.blob:
+            raise ValueError("Ordinary file does not contain the exact retained public Git envelope")
+        transport_normalization="UTF-8 BOM/CRLF/terminal newlines normalized to exact original Git blob"
     envelope=json.loads(raw)
     encoded=envelope.get("content_base64",envelope.get("base64"))
     if not isinstance(encoded,str):
@@ -145,6 +163,11 @@ def main():
             raise ValueError("Existing source member differs: "+name)
         pending.append((target,body))
     # All original source identities and paths pass before any member write.
+    if args.transfer is not None:
+        put(root/"source-transport.bin",transport_raw)
+        transport={"bytes":len(transport_raw),"sha256":hashlib.sha256(transport_raw).hexdigest(),
+                   "normalization":transport_normalization,"original_git_blob":args.blob}
+        put(root/"source-transport.json",(json.dumps(transport,indent=2,sort_keys=True)+"\n").encode())
     put(root/"source-envelope.json",raw)
     put(root/"source-bank.json.gz",compressed)
     put(root/"source-bank.json",decoded)
