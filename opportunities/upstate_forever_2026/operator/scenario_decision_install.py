@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 from pathlib import Path
 import re
 import sys
@@ -54,13 +55,6 @@ def integrate(application):
         raise ValueError("A previously edited watershed join requires composition against its current source")
 
     import_line = "from scenario_decision_reports import preview as scenario_report_preview\n"
-    if import_line not in body:
-        anchor = "from extension_registry import ExtensionRegistry\n"
-        if body.count(anchor) != 1:
-            raise ValueError("Current operator requires its original extension import join; source was preserved")
-        body = body.replace(anchor, anchor + import_line, 1)
-        changes.append("preview import")
-
     marker = '            if url.path.startswith("/api/file/scenario-report/"):'
     route = (
         marker + "\n"
@@ -71,14 +65,54 @@ def integrate(application):
         "                ticket, policy = scenario_report_preview(self.app, selected[0], selected[1], Fault)\n"
         "                return self.send_file(ticket[\"id\"], download=one(\"download\") == \"1\", content_security_policy=policy)\n"
     )
-    if marker not in body:
-        anchor = '            if url.path.startswith("/api/file/"):'
-        if body.count(anchor) != 1:
-            raise ValueError("Current operator requires the original verified file-route join; source was preserved")
-        body = body.replace(anchor, route + anchor, 1)
-        changes.append("authenticated report preview")
-    elif route not in body:
-        raise ValueError("The existing watershed preview differs; compose its current handler before writing")
+    registry_path = application / "operator" / "extension_registry.py"
+    registry_source = registry_path.read_text(encoding="utf-8")
+    shared_marker = "            if self.app.extensions.has_file_route(url.path):"
+    modern = shared_marker in body and "    def file_reply(self, path):" in registry_source
+    if modern:
+        if body.count(shared_marker) != 1:
+            raise ValueError("The current shared file transport repeats; source was preserved")
+        descriptor = json.loads((application / "operator" / "extensions" / "scenario_reports.json").read_text(encoding="utf-8"))
+        backend = descriptor.get("backend", {})
+        expected = {
+            "path": "/api/file/scenario-report/{workspace_key}/{report_id}",
+            "handler": "preview",
+            "args": ["operator", "route.workspace_key", "route.report_id", "fault"],
+            "response": "ticket_policy_pair",
+        }
+        selected = [row for row in backend.get("file_routes", []) if row.get("path") == expected["path"]]
+        if (backend.get("module") != "scenario_decision_reports" or len(selected) != 1
+                or any(selected[0].get(name) != value for name, value in expected.items())):
+            raise ValueError("Install the current scenario_reports.json with its four-argument module preview binding")
+        if marker in body:
+            if body.count(route) != 1 or body.count(marker) != 1:
+                raise ValueError("The existing watershed preview differs; compose its current handler before writing")
+            body = body.replace(route, "", 1)
+            changes.append("shared registry replaces authored preview route")
+        if import_line in body:
+            if body.count(import_line) != 1:
+                raise ValueError("The authored preview import repeats; source was preserved")
+            body = body.replace(import_line, "", 1)
+            changes.append("remove redundant authored preview import")
+        if "scenario_report_preview" in body:
+            raise ValueError("Another authored preview use needs composition against its current source")
+        transport = "shared_extension_registry"
+    else:
+        if import_line not in body:
+            anchor = "from extension_registry import ExtensionRegistry\n"
+            if body.count(anchor) != 1:
+                raise ValueError("Current operator requires its original extension import join; source was preserved")
+            body = body.replace(anchor, anchor + import_line, 1)
+            changes.append("preview import")
+        if marker not in body:
+            anchor = '            if url.path.startswith("/api/file/"):'
+            if body.count(anchor) != 1:
+                raise ValueError("Current operator requires the original verified file-route join; source was preserved")
+            body = body.replace(anchor, route + anchor, 1)
+            changes.append("authenticated report preview")
+        elif route not in body:
+            raise ValueError("The existing watershed preview differs; compose its current handler before writing")
+        transport = "authored_compatible_preview"
 
     compile(body, str(target), "exec")
     if changes:
@@ -86,7 +120,7 @@ def integrate(application):
             raise ValueError("Operator source changed during composition; reopen its current source")
         atomic_bytes(target, body.encode("utf-8"))
     return {"path": str(target), "changed": changes, "sha256": file_digest(target),
-            "registration": "operator/extensions/scenario_reports.json"}
+            "registration": "operator/extensions/scenario_reports.json", "transport": transport}
 
 
 def main(argv=None):

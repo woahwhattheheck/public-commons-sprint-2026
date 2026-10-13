@@ -10,7 +10,7 @@ Place model/scenario_decisions.py and operator/web/scenario_decisions.html in th
       --workspace /absolute/upper-savannah-study \
       --selection /absolute/decision-selection.json
 
-The selection document has schema upstate.scenario-decision-selection/v1, a title, run_ids in baseline-then-alternative order, optional zones, and optional pollutants selected from nitrogen, phosphorus and sediment. Select real, completed run IDs from the decision catalog. Every run must use the same retained grid. If pollutants are omitted, the report uses the completed native outputs shared by every selected run. An NDR-only cohort produces nitrogen and phosphorus; an SDR-only cohort produces sediment. The report and tradeoff table identify their actual objectives.
+The selection document has schema upstate.scenario-decision-selection/v1, a title, one or more run_ids in reference-then-alternative order, optional zones, and optional pollutants selected from nitrogen, phosphorus and sediment. Select real, completed run IDs from the decision catalog. Every run must use the same retained grid. If pollutants are omitted, the report uses the completed native outputs shared by every selected run. An NDR-only cohort produces nitrogen and phosphorus; an SDR-only cohort produces sediment. The report and tradeoff table identify their actual objectives.
 
 A zone source selects the existing source_collection_id and source_id, the original id_field, optional layer and exact where filter, an optional label_field, and optional complete string feature_ids. The source group also needs its own id and title. scope is whole by default or reporting_intersection when the question explicitly concerns only the reporting-basin part of a source polygon.
 
@@ -39,6 +39,10 @@ With an actual baseline ID returned by that catalog, include all completed land-
 
 Use repeated --alternative-run ACTUAL_RUN_ID to select particular alternatives, repeated --pollutant nitrogen / --pollutant phosphorus / --pollutant sediment to name available objectives, and --zones ACTUAL_ZONE_SELECTIONS.json for retained watershed choices. Omit these switches to use the matched native cohort and the two retained reporting/model zones. Parameter-change alternatives are allowed when explicitly selected and retain their separate comparison kind.
 
+A single completed reference run can produce its original annual watershed totals immediately. Use an explicit empty alternative_run_ids list through select_cohort, select no alternatives in the operator, or use --baseline-run ACTUAL_BASELINE_ID --reference-only on the CLI. The report retains the same native provenance and coverage contract. Its viewer emphasizes native totals; scenario change and tradeoff controls appear once alternatives are included. The automatic cohort also permits a single reference when no matched alternative has completed.
+
+Reporting-zone labels derive from the actual retained project title. Original reporting_area and model_domain role IDs stay stable across Upper Savannah and other native receiving cases.
+
 Reopen a saved report and verify its retained products:
 
     python -B -m model.scenario_decisions --workspace /absolute/study --report-id ACTUAL_REPORT_ID
@@ -54,7 +58,8 @@ The command prints the completed decision.json and writes its products under:
 | Product | Use |
 | --- | --- |
 | report.json | Complete quantitative data, source selections, coverage, scenario choices and run identities |
-| comparisons.csv | One row per zone, pollutant and alternative, using all-scenario common support |
+| comparisons.csv | One row per zone, pollutant and alternative, using all-scenario common support; header-only for a reference totals report |
+| annual-totals.csv | One row per zone, pollutant and selected native run, with original annual totals, common-footprint totals and coverage |
 | zones.geojson | The actual selected zone polygons in WGS84 with scope and area metadata |
 | index.html | Complete offline report with embedded data, watershed and pollutant selectors, support choice, sort, CSV/JSON downloads and print output |
 | decision.json | Original selection and exact product paths, byte counts and SHA-256 hashes |
@@ -83,13 +88,21 @@ Annual exports describe modeled hillslope/nonpoint contributions reaching stream
 
 ## Composition with the operator and other modules
 
-The complete operator adapter is operator/scenario_decision_reports.py. It supplies the original task action scenario.decision.build and catalog, selection and report reads through the maintained task queue and verified file-ticket API. The existing ECSA decision panel remains the operator surface; index.html is the portable receiving/export view.
+The maintained operator discovers this feature from operator/extensions/scenario_reports.json. Its backend uses the existing serial task queue, JSON routes, workspace state, verified download tickets and restore verification. The browser factory attachScenarioReports({getState, api, endpoint, toast}) uses the shared extension host lifecycle and adds a Watershed reports view.
 
-Compose its seven small route/registry joins into the current server, preserving every other adapter:
+Install the current joined extension host and source, then reconcile the report preview against that installed host:
 
+    python -B install_extensions.py \
+      --application /absolute/application --source-root /absolute/received-project-root
     python -B operator/scenario_decision_install.py --application /absolute/application
 
-The composer reads the current server, adds missing joins, verifies Python syntax and writes once. A repeated invocation reuses existing joins. If the current operator has moved an anchor, it preserves the whole existing source and names the exact join for the application integrator. It never installs an old complete server snapshot. Start the maintained operator from the resulting source.
+The current shared host supplies the action, JSON reads, metadata, item view, task completion and typed retained-file responses. The descriptor binds its file preview to the module-level preview(operator, workspace_key, report_id, fault) function. The host performs the existing file-cookie authorization and sends the returned verified ticket with its original content policy. The second command removes exact older authored preview joins when the typed host is installed, or installs the compatible one-route preview for an older host. It reads current source, preserves other adapters, compiles the resulting Python syntax and writes once under an unchanged-source check. Repeat installation is idempotent. The current composed seven-file host source bank is https://tokenjunkielabs.slack.com/docs/T0BRETUB5TK/F0C8TNEPZB6 .
+
+The operator controls list original completed reference runs and alternatives on the same grid. Same-profile land-cover alternatives with the reference outputs are selected by default. Parameter-change alternatives are available through an explicit switch and keep their comparison labels. Pollutant choices reflect the completed native outputs shared by the selected cohort.
+
+The retained reporting area and hydrologic model domain are included in every report. Additional zone selection opens the original vector layer metadata, then allows the original identity and name fields, all features, exact feature IDs, or the four utility focus HUC12 identifiers. Whole-watershed and reporting-area-intersection scopes remain distinct. The original geometry schema must describe polygon features.
+
+A report build enters the existing task queue. The same submitted draft retains its operation ID for request retries; browser drafts survive navigation and reconnects. Completed tasks and saved reports reopen the retained product without rerunning the model. The preview provides watershed and pollutant navigation, common/pairwise support, portable CSV/JSON/HTML products, and printing. The ECSA Scenario decisions view consumes the same saved common-support report.
 
 | Route or action | Result |
 | --- | --- |
@@ -109,7 +122,7 @@ Saved reports live in WORKSPACE/scenario-decisions/*/decision.json. The complete
 
 Top-level schema: upstate.scenario-decisions/v1.
 
-- id, title, project, grid_id, selection, baseline_run_id, created_at and implementation identify the product.
+- id, title, project, grid_id, selection, baseline_run_id, created_at and implementation identify the product. report_kind is reference_totals or scenario_comparison.
 - runs contains each id, original selection, scenario and profile titles, scenario specification, comparison_kind, actual landcover_edits, runtime and completion time.
 - outputs maps nitrogen, phosphorus and sediment to native registry IDs, physical annual units and titles.
 - zones contains id, title, scope, area_ha, original_area_ha, original source and pollutants.
@@ -137,14 +150,10 @@ The original regional requirement source is the Upstate Forever Emerging Contami
 
 https://www.upstateforever.org/files/files/20261002_FINAL_EC-SDC%20Mapping%20RFP%20APPENDIX%20COMBINED.pdf
 
-## Public application integration
+## Public source credit and review
 
-Prepared by TokenJunkieLabs from the original ES-20261012-ASTRA-S1 native report and operator delivery. This application source inherits the repository's MIT license; retain its LICENSE with redistributed source.
+Prepared by TokenJunkieLabs from the original ES-20261012-ASTRA-S1 watershed report delivery. This application source inherits the repository's MIT license; retain its LICENSE with redistributed source.
 
-**Needs expert review.** Watershed modeling, source-area interpretation and planning decisions require appropriate scientific review. The original native model, source identity, annual units and common-support basis remain in each report.
+**Needs expert review.** Native modeled exports, original source-area interpretation and planning decisions require appropriate scientific review. The report retains its actual study title, native model edition, annual units and common-support basis.
 
-The complete eight-file publication includes the native producer, portable viewer, this guide and the existing five-file operator companion. The current ECSA manifest registers generation, retained report reads, original verified downloads and workspace receiving through the maintained application.
-
-Two integration corrections accompany the original delivery: restored form controls use the plural query selector before iteration; the reporting-area label derives from the actual Workspace title. This preserves the selected study name when operating original publisher examples such as Gura.
-
-The original native producer and current browser source were inspected against their retained file bodies. The browser modules parse in the available JavaScript runtime. The equipped receiving application performs the complete native run and browser operation through its existing programme and queue.
+The operator restores saved form selections using the complete matching control collection. The current ECSA registry, typed verified preview and selected-native-model producer remain the maintained receiving interfaces.
