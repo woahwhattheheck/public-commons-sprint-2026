@@ -61,7 +61,13 @@ If execution stopped after the original renderer published its complete operatio
 
 The selected-study export likewise reuses its saved preview token and original request. Complete downloads use streaming byte and checksum verification. The original report identity retains its authoring Workspace path after receiving. Subsequent report editions use their own newly reviewed preview and retain this completed edition.
 
-**--timeout** sets the allowance for each original queued operation, default 1,800 seconds. **--upload-limit-gib** sets the original receiver's archive capacity, default 4 GiB. Use the capacity appropriate to the retained project.
+**--timeout** sets the allowance for each original queued operation and receiving phase, default 1,800 seconds. The same command runs each report in one owned native process. Its supervisor follows that process's original progress record and gives startup, each queue operation, shutdown and the optional browser course their own deadline. An expired native thread cannot keep the course waiting indefinitely inside executor shutdown.
+
+After expiry the supervisor stops that operation's process group, including its own native descendants, with a five-second termination grace before forced stop if needed. It preserves the child's exact failure record. If the supervisor detected the expiry first, it records the interrupted phase after the child releases the original operation lock; a newly resumed successor is never overwritten. **--resume** reopens the same output, task IDs, original preview and original source selection. Each independent ready course item can then continue in its own native process.
+
+The native `scientific-report-receiving.json` is written after the report and both requested receiving paths complete. The progress file records `closing` while the operator drains, `browser` while the selected browser course runs, and `complete` after those phases finish. A native complete receipt remains available when a later browser phase needs to resume.
+
+**--upload-limit-gib** sets the original receiver's archive capacity, default 4 GiB. Use the capacity appropriate to the retained project.
 
 ## Open the result
 
@@ -95,9 +101,11 @@ node source/observed-report-20261013/receive_browser.mjs \
 
 The browser selects the actual restored Workspace, opens the saved report and its live report frame, and downloads the original PDF, HTML, Markdown, data and complete ZIP. It then reuses the saved ordered studies, checks reorder previews, reloads the browser draft and reopens the report at desktop and phone widths. When the native record contains a selected-study restore, that independent Workspace is opened too.
 
-The browser journal includes the original edition, completed downloads, screenshots, optional video and any actual interface error. Its entire course reopens saved scientific work and prepares previews; it should produce no new queue submission.
+The browser journal includes the original edition, completed downloads, screenshots, optional video and any actual interface error. Its default course reopens saved scientific work and prepares previews; it should produce no new queue submission.
 
 If both native and browser execution are available on the same authorized host, pass **--browser-node /absolute/path/to/node** and optionally **--video** to the native command. It opens the original server over loopback, creates a private URL file with owner-only permissions, runs the adjacent browser continuation, and closes that server when finished. The private URL is omitted from the published journal.
+
+For the completed original assessment preparation, also pass **--assessment-preparation /path/to/assessment-preparation** with **--browser-node**. This joins the existing [assessment browser chapter](ASSESSMENT_BROWSER.md) in the same page and browser context before the saved Sources report course. Use the retained output from `prepare_assessment.py`; the chapter opens the original studies and saved contexts and uses their existing queued report preparation and exact composer handoff. The option belongs to one original report continuation, so use its completed report receipt rather than adding it to a multi-report **--course** invocation.
 
 The existing ASTRA13 operation0669 owns the native source/render/receiving course. Its original browser owner can run the browser continuation against the completed native record. Source preparation, model studies and their original report producers continue in their existing project operations.
 
