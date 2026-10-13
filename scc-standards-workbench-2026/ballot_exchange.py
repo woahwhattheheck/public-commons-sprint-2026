@@ -100,6 +100,8 @@ def normalize_return(raw, packet):
     if type(value["response_revision"]) is not int or not 1 <= value["response_revision"] <= 1000000:
         raise ValueError("Member response revision must be a positive integer.")
     previous = value["previous_response_sha256"]
+    if not isinstance(previous, str):
+        raise ValueError("Previous member return digest must be a string, empty only for the original response.")
     if previous:
         _sha(previous, "Previous member return")
     if bool(previous) != (value["response_revision"] > 1):
