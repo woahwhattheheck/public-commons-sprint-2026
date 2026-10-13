@@ -91,6 +91,8 @@ def recover(handoff, root):
                 active=state.get("active")
                 if not active or active.get("start")!=count or active.get("etag")!=ORIGINAL["etag"] or size>active["end"]+1:
                     raise ValueError("An unbound prefix restoration tail occupies the receiving path.")
+                state["responses"].append({**active,"received_bytes":size-count,
+                    "complete":False,"recovered_after_interruption":True})
                 state.update(bytes=size,sha256=sha(stage),active=None)
                 save(state_path,state)
         else:
@@ -146,6 +148,9 @@ def recover(handoff, root):
             raise ValueError("The complete source prefix does not match its original retained SHA256.")
         os.link(stage,target)
         stage.unlink()
+        directory_fd=os.open(inputs,os.O_RDONLY)
+        try: os.fsync(directory_fd)
+        finally: os.close(directory_fd)
         save(journal/"result.json",{"state":"ORIGINAL_PREFIX_RESTORED","prefix":str(target),"source":ORIGINAL,
             "handoff_sha256":HANDOFF_SHA,"restoration":str(state_path),"time":time.time()})
         print(json.dumps({"state":"ORIGINAL_PREFIX_RESTORED","prefix":str(target),"source":ORIGINAL,"reused":False}),flush=True)
