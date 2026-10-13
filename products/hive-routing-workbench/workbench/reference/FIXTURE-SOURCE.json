@@ -1,0 +1,305 @@
+{
+  "schema": "hive-desk-reference-source/v1",
+  "repository": "graphql-hive/router",
+  "commit": "28eafc1bceb3dce8600d0eeea2ce2c2ec9563bb6",
+  "release": "hive-router/v0.3.4",
+  "purpose": "Original public developer fixture; no customer data",
+  "subgraphs": [
+    "accounts",
+    "inventory",
+    "products",
+    "reviews"
+  ],
+  "fixture_package": {
+    "name": "subgraphs",
+    "version": "0.0.1",
+    "directory": "bench/subgraphs",
+    "language": "Rust",
+    "rust_toolchain": "1.98.1",
+    "full_upstream_checkout_required_for_build": true,
+    "dependency_note": "The unchanged subgraphs crate depends on the original hive-router workspace crate and its locked transitive source."
+  },
+  "command": [
+    "target/release/subgraphs"
+  ],
+  "cwd": ".",
+  "build": {
+    "command": [
+      "cargo",
+      "build",
+      "--locked",
+      "--release",
+      "-p",
+      "subgraphs"
+    ],
+    "cwd": ".",
+    "toolchain_file": "rust-toolchain.toml",
+    "lockfile": "Cargo.lock",
+    "existing_binary_requires_exact_build_receipt": true
+  },
+  "environment": {
+    "HOST": "127.0.0.1",
+    "PORT": "selected explicit receiving port"
+  },
+  "readiness": {
+    "method": "GET",
+    "path": "/health"
+  },
+  "source_population": {
+    "accounts": 6,
+    "products": 9,
+    "inventory": 9,
+    "reviews": 11,
+    "authority": "Unchanged Rust source constants, not a substituted dataset"
+  },
+  "selected_router_supergraph": "bin/router/fixture/products-example.supergraph.graphql",
+  "required_paths": [
+    ".cargo/config.toml",
+    "bench/README.md",
+    "bench/subgraphs/accounts.rs",
+    "bench/subgraphs/books.rs",
+    "bench/subgraphs/Cargo.toml",
+    "bench/subgraphs/catalog.rs",
+    "bench/subgraphs/content.rs",
+    "bench/subgraphs/favorites.rs",
+    "bench/subgraphs/graphql_with_subscriptions.rs",
+    "bench/subgraphs/inventory.rs",
+    "bench/subgraphs/lib.rs",
+    "bench/subgraphs/main.rs",
+    "bench/subgraphs/monolith.rs",
+    "bench/subgraphs/petsearch.rs",
+    "bench/subgraphs/products.rs",
+    "bench/subgraphs/ranking.rs",
+    "bench/subgraphs/reviews.rs",
+    "bench/subgraphs/search.rs",
+    "bin/router/Cargo.toml",
+    "bin/router/fixture/products-example.supergraph.graphql",
+    "bin/router/src/config/authorization.rs",
+    "bin/router/src/config/env_overrides.rs",
+    "bin/router/src/config/headers.rs",
+    "bin/router/src/config/http_server.rs",
+    "bin/router/src/config/jwt_auth.rs",
+    "bin/router/src/config/mod.rs",
+    "bin/router/src/config/persisted_documents.rs",
+    "bin/router/src/config/supergraph.rs",
+    "bin/router/src/lib.rs",
+    "bin/router/src/main.rs",
+    "Cargo.lock",
+    "Cargo.toml",
+    "LICENSE_MIT",
+    "README.md",
+    "rust-toolchain.toml"
+  ],
+  "files": [
+    {
+      "path": ".cargo/config.toml",
+      "git_blob": "8600de47991e0ebc622e92efc078ccb15242fbbe",
+      "bytes": 579,
+      "sha256": "94f7b333ff34b4b6f3ca89aecc648792cb6b6fa3cba02eb04d42f896eacdaba7"
+    },
+    {
+      "path": "bench/README.md",
+      "git_blob": "061c084ebabc5574b16035920444b5ff38edfd2a",
+      "bytes": 1678,
+      "sha256": "cf60b0129bb4cadad89f62ee4134fed4f93f6a57bf7b52c4add74ece43e8538f"
+    },
+    {
+      "path": "bench/subgraphs/accounts.rs",
+      "git_blob": "f6a016c49edbc8699cb4654e3d619e931c0c91ad",
+      "bytes": 6198,
+      "sha256": "a8874645f6a9e387eb1dfe7f1ad2927ad4579bc194d8d6bff56108f0f2a58e4c"
+    },
+    {
+      "path": "bench/subgraphs/books.rs",
+      "git_blob": "9ba2b852b62b1bee1231413f739ed7e46d2852e0",
+      "bytes": 8454,
+      "sha256": "c12a0615af9a1c927e8d5353f2fb76e0cdcde1721286091e4b89b91c8ee055dd"
+    },
+    {
+      "path": "bench/subgraphs/Cargo.toml",
+      "git_blob": "33dba89439f31792661d2af2df82fb9ff8b07bc1",
+      "bytes": 810,
+      "sha256": "0664f6b10b1b3e6b485180e39d2804820da14f65117d14fd3fddb1e966344984"
+    },
+    {
+      "path": "bench/subgraphs/catalog.rs",
+      "git_blob": "1f5eafa35f6d77250e38ea60975525b1ecf31f68",
+      "bytes": 2304,
+      "sha256": "63031c16c4f2c719479224ee65dd7e695bacac1dc88dcbb3c543f9e99bb53e11"
+    },
+    {
+      "path": "bench/subgraphs/content.rs",
+      "git_blob": "59c449f9b2900c9e4c921874b6852d1abde843f8",
+      "bytes": 1052,
+      "sha256": "2a887db07926e843af95fe73bc0ece7fa960fcba4fa10b7c0a260cdc1d33b351"
+    },
+    {
+      "path": "bench/subgraphs/favorites.rs",
+      "git_blob": "b3a4af093b9c7652efb561f368b55f8d5e9caf55",
+      "bytes": 863,
+      "sha256": "c6e7078de0dbcda8e57d7b5ccf243364c3fda68b1beefa015c0a4864bb286d82"
+    },
+    {
+      "path": "bench/subgraphs/graphql_with_subscriptions.rs",
+      "git_blob": "540e200437324c5a0847bab9086e2b26bcb54a3a",
+      "bytes": 16734,
+      "sha256": "c64f0a8b365168c664fc75c8a0cf48c86cd1e8b141f4964fd2e9ddf52c5f1a99"
+    },
+    {
+      "path": "bench/subgraphs/inventory.rs",
+      "git_blob": "c813e880e9fcf8d641220a28669e4333eed9dc08",
+      "bytes": 2894,
+      "sha256": "212e96b0f4035b8a6cb847d92b2b6a3d42c01c6329d1e48f8f05f608070f56bb"
+    },
+    {
+      "path": "bench/subgraphs/lib.rs",
+      "git_blob": "4beb32374dad9bfdf5e4d7d853a1f865e754df56",
+      "bytes": 5283,
+      "sha256": "bebbe239c69d744289e28bfc04c4d16e56b13e507d1cae3d1aa428c13a237975"
+    },
+    {
+      "path": "bench/subgraphs/main.rs",
+      "git_blob": "3e011a44e19c7ba2bd76f7a6d09ae097f48e9b96",
+      "bytes": 231,
+      "sha256": "1bef7fc040fe9efd5c3b0de01b6b1efd0d1641725c8ce54ffec0fcc5f1930f36"
+    },
+    {
+      "path": "bench/subgraphs/monolith.rs",
+      "git_blob": "c816086700b1c53a8462dd331ef886f83db80ac7",
+      "bytes": 11891,
+      "sha256": "e507d1199f95ca24adea5fef384d4ba843b4c9b220b04f78d5f4e28ca75394af"
+    },
+    {
+      "path": "bench/subgraphs/petsearch.rs",
+      "git_blob": "36e60c614f6f11bab8f1d1a0c9221d8960bc914f",
+      "bytes": 1281,
+      "sha256": "384d4a55250d439f1c31e69e4015c5cba75d6d84bd8e0f6de37c52f5649ad45d"
+    },
+    {
+      "path": "bench/subgraphs/products.rs",
+      "git_blob": "00379f387386e0bbd2ade95a5b37689051522506",
+      "bytes": 5663,
+      "sha256": "f4f55de2fc0c5140e8d9d2bb34668caecee3d4950b4e963132b1bebc62b849df"
+    },
+    {
+      "path": "bench/subgraphs/ranking.rs",
+      "git_blob": "578160a34be505c8fc54b3a116a9ed2d599f5c98",
+      "bytes": 1614,
+      "sha256": "07048ed346da746e744a288ea5c9826b5edf73e7f6e0560e6c27173bc6fab1ad"
+    },
+    {
+      "path": "bench/subgraphs/reviews.rs",
+      "git_blob": "29dda0e2ef4087988e16054620cd38f7ae2c1692",
+      "bytes": 11595,
+      "sha256": "a575c94d002a86b4119f28044eb0efa74f56932055b76c569565a77b51c7b938"
+    },
+    {
+      "path": "bench/subgraphs/search.rs",
+      "git_blob": "4caf305bccf6c9fed2a93810d3e646c8969d4265",
+      "bytes": 1417,
+      "sha256": "8484933544c477e7e4071780b12a69b46f3b9572f602aae167d08215f3e8056d"
+    },
+    {
+      "path": "bin/router/Cargo.toml",
+      "git_blob": "b1ccd89389a7265612e05e214c8abef6b4d2d07c",
+      "bytes": 5695,
+      "sha256": "5db21e35e5e9161bbcb77935ee97ef9ae78ad408ad00d54d6b49a621e01f2bfe"
+    },
+    {
+      "path": "bin/router/fixture/products-example.supergraph.graphql",
+      "git_blob": "631e291e2524ab10a6649656da7b21715afd4bfe",
+      "bytes": 3233,
+      "sha256": "15527f714d42acd08ab1670ae2ea11f5597bfad3a86299512616f267cece52b3"
+    },
+    {
+      "path": "bin/router/src/config/authorization.rs",
+      "git_blob": "a0b1219f76b9d5e8d499f2c8a2726cbaf56f0dce",
+      "bytes": 1235,
+      "sha256": "c41ee6b8f0121850e492320e946553c2aebe26d09997d044fd25a1060b27eefe"
+    },
+    {
+      "path": "bin/router/src/config/env_overrides.rs",
+      "git_blob": "3d7f89b0d3c4357b5212f26802e0707b5598b06d",
+      "bytes": 18323,
+      "sha256": "a5cf6a206b8a2df9897304fc8e6ed3602fc7cce6edbb72742df435e178aa092d"
+    },
+    {
+      "path": "bin/router/src/config/headers.rs",
+      "git_blob": "e1c180a808fe703a3bad6b95672a34afba74de3f",
+      "bytes": 16533,
+      "sha256": "446a17feadcf92aeeae4e79d1cd8e8eb1c050dbd657521404faea30045c5ddcb"
+    },
+    {
+      "path": "bin/router/src/config/http_server.rs",
+      "git_blob": "bd5e8e90d10108904516d0b33dc1a5bef49e2f3f",
+      "bytes": 4604,
+      "sha256": "da9d813172997b72e9b55c27cddcb4bfe640e52b40e2a8a065bff1c8a7c1748d"
+    },
+    {
+      "path": "bin/router/src/config/jwt_auth.rs",
+      "git_blob": "5c8d8e4ce44a09415d219f19a3df1837def125c8",
+      "bytes": 13558,
+      "sha256": "035f047548066a8c8d435b26242c1c5d38b5f2895efa230b901540274052feb6"
+    },
+    {
+      "path": "bin/router/src/config/mod.rs",
+      "git_blob": "3b8737aec2e12192ca5b20df2ecdcdd1f5d2c910",
+      "bytes": 14286,
+      "sha256": "0be68f8b4e73621df46ad7a31d3c75f40312ba3e88fa3958e5df52b51f6bb1fa"
+    },
+    {
+      "path": "bin/router/src/config/persisted_documents.rs",
+      "git_blob": "e0bbb5dd4f0cb1f7d34e2e20a5eb0abf8c5a59e3",
+      "bytes": 15183,
+      "sha256": "275f6ec910d957ec8d1d9dfc498fbba6c1b6badeb19d1e17177da9b1f277885f"
+    },
+    {
+      "path": "bin/router/src/config/supergraph.rs",
+      "git_blob": "fa682550151acf201aed3fdf907618ea6f0405d2",
+      "bytes": 7417,
+      "sha256": "bea2b84f671454a678fc5a37d3e9bd5cf6f4db61067cb2fe2cc7698d8622775c"
+    },
+    {
+      "path": "bin/router/src/lib.rs",
+      "git_blob": "2b4ab2f6e1ba36b4d16c0c19bd66472ce6726b16",
+      "bytes": 32105,
+      "sha256": "22b0f0a22f8580696982186a4a9d2602b0ae49f4acfeea4b892e3b38e4176256"
+    },
+    {
+      "path": "bin/router/src/main.rs",
+      "git_blob": "576f1315fe64f1fd387ad51bc41d9446bea51676",
+      "bytes": 446,
+      "sha256": "64d564cb6e0c4d950a5dfbac3faf3b3f3941814ef4f12aca8f608aa3560bcef6"
+    },
+    {
+      "path": "Cargo.lock",
+      "git_blob": "ab12fef9206706dc2e342dd5c8d41e77eae2cd04",
+      "bytes": 231898,
+      "sha256": "b8b0b7cce4d181edd5c73f6369e95d36b0b29b8b90112f10575f08b5de47f5de"
+    },
+    {
+      "path": "Cargo.toml",
+      "git_blob": "f1178ff907dd33fd21afa23f453cf597ce55d77b",
+      "bytes": 3841,
+      "sha256": "d9ac0d85a3bda62057bacb3db95ca9eb1b715209124dd48bbee681ba2d3badd9"
+    },
+    {
+      "path": "LICENSE_MIT",
+      "git_blob": "cf073e321f753c854fe7ce9599140bf71a1adce6",
+      "bytes": 1077,
+      "sha256": "3cef4f573bae2133919c37f13739ba81e5a617ecab87b3d8a6494086f1ecb2ac"
+    },
+    {
+      "path": "README.md",
+      "git_blob": "e872ff50e9404ae4930c41f9077d3d2559d33de7",
+      "bytes": 3143,
+      "sha256": "9c4b75a4d9c0e0e3301395d0df7f0458d116500b3d04ef0d19b3873d70792cca"
+    },
+    {
+      "path": "rust-toolchain.toml",
+      "git_blob": "c9901407d5fdc851007a5fd87852ec1efa418e52",
+      "bytes": 86,
+      "sha256": "7553618f800829444096beea3dce84c3d07585efda504c19adb6787369bbd9e8"
+    }
+  ]
+}
