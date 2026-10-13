@@ -28,6 +28,7 @@ from . import scientific_report_study_transfer as report_editions
 from . import paired_ensemble_study_transfer as paired_transfer
 from . import report_changes_study_transfer as report_changes_transfer
 from . import multivariate_control_study_transfer as control_transfer
+from . import climate_forcing_study_transfer as forcing_transfer
 from . import calibration_study_transfer as calibration_transfer
 from . import parameter_study_transfer as parameter_transfer
 from . import ensemble_study_transfer as ensemble_transfer, gauge_study_transfer as gauge_transfer
@@ -50,7 +51,7 @@ ROOT_KINDS = ("experiment-diagnostics", "experiments", "parameter-studies", "run
               *monitoring_transfer.ROOT_KINDS, *report_editions.ROOT_KINDS,
               *community_transfer.ROOT_KINDS, *receptor_transfer.ROOT_KINDS, *conservation_transfer.ROOT_KINDS,
               *customer_review_transfer.ROOT_KINDS, *paired_transfer.ROOT_KINDS,
-              *report_changes_transfer.ROOT_KINDS, *control_transfer.ROOT_KINDS)
+              *report_changes_transfer.ROOT_KINDS, *control_transfer.ROOT_KINDS, *forcing_transfer.ROOT_KINDS)
 IMMUTABLE_KINDS = ("sources", "profiles", "scenarios", "observations",
                    "observation-comparisons", *delivery_transfer.IMMUTABLE_KINDS,
                    *monitoring_transfer.IMMUTABLE_KINDS, *calibration_transfer.IMMUTABLE_KINDS,
@@ -61,7 +62,7 @@ DOCUMENTS = {
     **delivery_transfer.DOCUMENTS,
     **monitoring_transfer.DOCUMENTS,
     **report_editions.DOCUMENTS, **paired_transfer.DOCUMENTS,
-    **report_changes_transfer.DOCUMENTS, **control_transfer.DOCUMENTS,
+    **report_changes_transfer.DOCUMENTS, **control_transfer.DOCUMENTS, **forcing_transfer.DOCUMENTS,
     **receptor_transfer.DOCUMENTS, **conservation_transfer.DOCUMENTS,
 }
 LOCKS = {
@@ -69,7 +70,7 @@ LOCKS = {
     "experiments": ".experiment.lock", "experiment-diagnostics": ".diagnostics.lock",
     "comparisons": ".comparison.lock",
     **delivery_transfer.LOCKS,
-    **report_editions.LOCKS, **control_transfer.LOCKS,
+    **report_editions.LOCKS, **control_transfer.LOCKS, **forcing_transfer.LOCKS,
     **receptor_transfer.LOCKS, **conservation_transfer.LOCKS,
 }
 LABELS = {
@@ -83,7 +84,7 @@ LABELS = {
     **delivery_transfer.LABELS,
     **monitoring_transfer.LABELS,
     **report_editions.LABELS, **paired_transfer.LABELS,
-    **report_changes_transfer.LABELS, **control_transfer.LABELS,
+    **report_changes_transfer.LABELS, **control_transfer.LABELS, **forcing_transfer.LABELS,
     **calibration_transfer.LABELS,
     **community_transfer.LABELS,
     **receptor_transfer.LABELS, **conservation_transfer.LABELS,
@@ -175,7 +176,7 @@ class _Closure:
     def __init__(self, workspace, selection, *, decision_database=None, report_lineage=True,
                  implementation_lineage=True, customer_review_lineage=True,
                  report_source_keys=None, implementation_source_keys=None,
-                 geographic_native_studies=None):
+                 geographic_native_studies=None, climate_forcing_studies=None):
         self.workspace = workspace
         self.root = Path(workspace.root).resolve()
         self.selection = normalise(selection)
@@ -206,6 +207,8 @@ class _Closure:
         self.external_decision_dependencies = []
         self.geographic_native_selection = geographic_native_studies
         self.geographic_native_records = []
+        self.climate_forcing_selection = copy.deepcopy(climate_forcing_studies)
+        self.climate_forcing_records = {}
 
     def add_file(self, relative, expected=None):
         path = _member(self.root, relative)
@@ -493,7 +496,9 @@ class _Closure:
         node = {"kind": kind, "id": key, "title": title, "state": value.get("state"),
                 "reasons": [reason]}
         self.nodes[(kind, key)] = node
-        if control_transfer.visit(self, kind, key, value):
+        if forcing_transfer.visit(self, kind, key, value):
+            pass
+        elif control_transfer.visit(self, kind, key, value):
             pass
         elif customer_review_transfer.visit(self, kind, key, value):
             pass
@@ -671,6 +676,7 @@ class _Closure:
             "external_decision_dependencies": self.external_decision_dependencies,
             "completed_deliveries": delivery_transfer.receipt(self),
             "geographic_native_studies": copy.deepcopy(self.geographic_native_records),
+            "climate_forcing_studies": forcing_transfer.receipt(self),
             "parameter_studies": parameter_transfer.native_receipt(self),
             "monitoring_history": monitoring_transfer.receipt(self),
             "scientific_report_sources": report_transfer.receipt(self),
@@ -706,7 +712,8 @@ def _capture_locks(stack, closure, already):
                      *community_transfer.lock_paths(closure), *conservation_transfer.lock_paths(closure), *receptor_transfer.lock_paths(closure),
                      *process_transfer.lock_paths(closure), *customer_review_transfer.lock_paths(closure), *ensemble_transfer.lock_paths(closure),
                      *gauge_transfer.lock_paths(closure), *paired_transfer.lock_paths(closure),
-                     *report_changes_transfer.lock_paths(closure), *control_transfer.lock_paths(closure)):
+                     *report_changes_transfer.lock_paths(closure), *control_transfer.lock_paths(closure),
+                     *forcing_transfer.lock_paths(closure)):
         token = ("original-study-owner-lock", relative)
         if token not in already:
             stack.enter_context(held(closure.root / relative, blocking=False))
@@ -959,6 +966,8 @@ def export_study(workspace, destination, selection, *, progress=None, investigat
             identity["parameter_studies"] = parameter_transfer.native_receipt(closure)
         if closure.geographic_native_records:
             identity["geographic_native_studies"] = copy.deepcopy(closure.geographic_native_records)
+        if closure.climate_forcing_records:
+            identity["climate_forcing_studies"] = forcing_transfer.receipt(closure)
         if closure.report_source_records:
             identity["scientific_report_sources"] = report_transfer.receipt(closure)
         if closure.customer_review_records:
@@ -1046,6 +1055,7 @@ def verify_received_studies(workspace):
             raise ValueError("The received scientific study has a different original identity.")
         closure = _Closure(workspace, receipt["identity"]["selection"],
                            geographic_native_studies=receipt["identity"].get("geographic_native_studies", []),
+                           climate_forcing_studies=receipt["identity"].get("climate_forcing_studies", []),
                            report_lineage="scientific_report_sources" in receipt["identity"],
                            implementation_lineage="implementation_report_sources" in receipt["identity"],
                            customer_review_lineage="customer_reviews" in receipt["identity"],
@@ -1055,6 +1065,7 @@ def verify_received_studies(workspace):
                                                for row in receipt["identity"].get("scientific_report_sources", [])}).resolve(
             receipt["identity"].get("investigation_dependencies", ()))
         parameter_transfer.verify_native_receipt(closure, receipt["identity"].get("parameter_studies", []))
+        forcing_transfer.verify_receipt(closure, receipt["identity"].get("climate_forcing_studies", []))
         delivery_transfer.verify_receipt(closure, receipt["identity"].get("completed_deliveries", []))
         monitoring_history = monitoring_transfer.verify_receipt(
             closure, receipt["identity"].get("monitoring_history"))
@@ -1083,6 +1094,7 @@ def verify_received_studies(workspace):
             workspace, receipt["identity"].get("conservation_design_history"))
         result.append({"id": receipt["id"], "title": receipt["title"],
                        "retained_records": len(required), "identity": "MATCH",
+                       "climate_forcing_studies": forcing_transfer.receipt(closure),
                        "investigations": history, "decision_history": decision_history,
                        "monitoring_history": monitoring_history,
                        "conservation_design_history": design_history,
@@ -1104,6 +1116,11 @@ def catalog(workspace, *, kind=None, query="", offset=0, limit=200):
             continue
         if selected_kind == "parameter-studies":
             for row in parameter_transfer.catalogue(workspace):
+                if not query or query in canonical(row).decode("utf-8").casefold():
+                    rows.append(row)
+            continue
+        if selected_kind in forcing_transfer.ROOT_KINDS:
+            for row in forcing_transfer.catalogue(workspace):
                 if not query or query in canonical(row).decode("utf-8").casefold():
                     rows.append(row)
             continue

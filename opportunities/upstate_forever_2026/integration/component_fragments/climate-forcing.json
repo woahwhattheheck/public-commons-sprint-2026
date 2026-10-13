@@ -7,8 +7,10 @@
       "paths": [
         "integration/component_fragments/climate-forcing.json",
         "model/climate_forcing.py",
+        "model/climate_forcing_study_transfer.py",
         "model/forcing_sources.py",
         "operator/CLIMATE_FORCING.md",
+        "operator/CLIMATE_FORCING_STUDY_DELIVERY.md",
         "operator/climate_forcing.py",
         "operator/extensions/climate-forcing.json",
         "operator/web/climate_forcing.css",
@@ -19,7 +21,8 @@
       "requires": [
         "core",
         "parameter-studies",
-        "extension-startup"
+        "extension-startup",
+        "study-transfer"
       ],
       "import_roots": [
         "operator"
@@ -30,7 +33,7 @@
     "climate-forcing"
   ],
   "source_reference": {
-    "edition": "spatial-climate-forcing-20261013",
+    "edition": "spatial-climate-forcing-studies-20261013",
     "basis": "Original retained Workspace, explicit forcing editions, original native run supervisor"
   }
 }
