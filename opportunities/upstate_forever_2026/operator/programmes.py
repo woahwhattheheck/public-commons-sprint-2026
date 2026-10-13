@@ -145,13 +145,21 @@ class Programmes:
         payload = task.get("payload", {})
         result = task.get("result", {})
         key = payload.get("programme_id")
+        manager = self._manager(task["workspace"])
         if task["action"] == "compute.programme.pair-completion":
             key = result.get("id") or key
+            if not result.get("id") and key and payload.get("expected_preview_id"):
+                try:
+                    parent = manager.status(key, include_ensemble_candidates=False)
+                    continuation = parent.get("pair_completions", {}).get(payload["expected_preview_id"], {})
+                    key = continuation.get("programme_id") or key
+                except (FileNotFoundError, KeyError, ValueError):
+                    pass
         if not key and task["action"] in ("compute.programme.save", "compute.programme.experiment"):
             key = result.get("id")
         if key:
             try:
-                row = self._manager(task["workspace"]).status(key)
+                row = manager.status(key, include_ensemble_candidates=False)
                 task["programme"] = {
                     "id": row["id"], "title": row.get("title"),
                     "state": row.get("state"), "phase": row.get("phase"),
