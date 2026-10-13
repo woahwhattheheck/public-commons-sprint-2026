@@ -17,6 +17,8 @@ Set the four variables to the receiving interpreter, installed application, reta
 
 The completed-only Workspace adapter takes the original run lock and verifies every retained model artifact. It returns the existing run as reused and has no native execution branch. The maintained Programme owns its normal state transitions, paired comparisons, reports and delivery preview. A missing or unfinished native run produces an actionable error identifying that run.
 
+A repeated adoption reopens an already-complete Programme and verifies its original report, selected native rows and retained report files. It preserves that Programme's progress and comparisons instead of adding another execution attempt. A missing or incomplete report uses the original completed-output-only reconciliation path; an invalid retained report remains an error. The receiving record exposes `programme_reused` for this distinction.
+
 ## What appears in the operator
 
 Open **Programmes** in the same workspace and select the new programme ID printed in `programme-receiving.json`. The named baseline and conservation rows retain the original native run IDs, grid, profile, scenarios and source collection. The report exposes annual nitrogen and phosphorus in kilograms and sediment in metric tonnes, with the native common-cell change and its coverage.
@@ -35,19 +37,15 @@ The existing receiving owner can save that opening through its already-running m
 from source_tools.adopt_simulated_headwaters_programme import save_operator_opening
 
 opening = save_operator_opening(operator, workspace_key, programme_receiving)
-extra_checks.append({
-    "kind": "programme",
-    "programme_id": programme_receiving["programme_id"],
-    "report_id": programme_receiving["report"]["id"],
-    "operator_session": opening["operator_session"],
-})
 ```
 
 Here `operator` is the receiving workflow's existing live `Operator`, `workspace_key` is its original registered workspace key, and `programme_receiving` is the decoded adoption result. The helper uses the original session validator, revision conflict check and lock. An already-saved identical scientific selection is reused without replacing the operator's notes. When selecting this case from a different saved view, the original API retains prior notes in its existing history. The returned `operator_session` is the exact saved record; `operator_session_file` records the actual bytes and SHA-256 of `operator-session.json`.
 
-The maintained independent cold-reopen helper accepts the Programme check above after its companion receiving upgrade. Save the opening first, include the Programme and session in the final portable capture, then provide that exact saved record to the original cold-reopen operation. Its archived-application interpreter can check the original Programme/report and saved selection together.
+The complete headwaters driver freezes the original adoption input and result inside the Workspace and supplies their descriptors to the archived application's `compute_programme` receiving check. The teaching adapter then carries that saved adoption into the existing rehearsal. Its receiving workflow saves the opening through its live Operator before the browser course and final archive. After restoration and the normal Operator restart, it verifies the exact archived `operator-session.json` and selected Programme. Run `source_tools/simulated_headwaters_rehearsal.py` against the completed case to use that joined course; the manual helper above serves an already-owned receiving workflow.
 
 After the normal authenticated operator connection, open **Guided journey** (`#journey`). A fresh browser restores the saved project view and shows its selected native comparison, paired map and delivery; **Run programmes** contains the named adopted Programme. The private access token remains in the existing connection flow. An existing browser retains its local draft and can use the existing **Open saved project view** control to select the received case. The JSON under `operator_opening.journey` also uses the existing journey import format if an operator chooses to import it manually.
+
+Before handing over the received edition, the producing operator must open that exact application, inspect its rendered Guided journey and Programme report, operate the comparison, map and download controls, and save and reopen the selected view. Inspect the actual desktop and phone layouts and retain the resulting screen observations with the receiving record.
 
 ## Portable receiving order
 
