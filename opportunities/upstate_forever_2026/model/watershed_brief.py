@@ -15,7 +15,7 @@ import tempfile
 from typing import Mapping
 from urllib.parse import urlsplit
 
-BRIEF_FORMAT = "upstate.watershed-selection-brief/v4"
+BRIEF_FORMAT = "upstate.watershed-selection-brief/v5"
 BRIEF_FILENAME = "watershed-selection-brief.md"
 HTML_FILENAME = "watershed-selection-brief.html"
 
@@ -363,6 +363,8 @@ def render_selection_brief(selection):
         ["Cross-state watersheds", summary["cross_state_huc_count"]],
     ]))
     lines.extend(["", *_utility_lines(selection)])
+    from .utility_observed_context import brief_lines
+    lines.extend(["", *brief_lines(selection, _table, _number)])
     lines.extend(["", "## Selected watersheds", ""])
     lines.extend(_table(
         ["HUC12", "Watershed", "Area (acres)", "States", "NRCS priority states", "Selected-class records"],
@@ -495,7 +497,9 @@ def render_selection_html(selection):
             while index < len(lines) and lines[index].startswith("- "):
                 item = lines[index][2:]
                 link = re.fullmatch(r"\[(.+?)\]\(<(.+)>\)", item)
-                if link and urlsplit(link[2]).scheme in ("https", "http"):
+                source_link = (link and re.fullmatch(r"observed-sources/[A-Za-z0-9_./-]+", link[2])
+                               and ".." not in link[2].split("/"))
+                if link and (urlsplit(link[2]).scheme in ("https", "http") or source_link):
                     content = '<a href="' + html.escape(link[2], quote=True) + '">' + _inline_html(link[1]) + "</a>"
                 else:
                     content = _inline_html(item)
