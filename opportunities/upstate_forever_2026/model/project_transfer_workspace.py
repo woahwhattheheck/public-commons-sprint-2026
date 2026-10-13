@@ -98,7 +98,9 @@ class NativeProjectTransfer:
             record = record or {"schema": "upstate.project-transfer-native-restore/v1",
                                 "snapshot_id": snapshot_id, "destination": str(target), "state": "assembling"}
             _atomic(record_path, canonical(record) + b"\n", replace=record_path.exists())
-            archive = self.archives / (snapshot_id + ".received.zip")
+            # Earlier reconstructions omitted original Unix modes. Keep that cache
+            # file intact and rebuild the same immutable snapshot in the current edition.
+            archive = self.archives / (snapshot_id + ".received-modes-v2.zip")
             self.store.materialize_archive(snapshot_id, archive, progress=progress)
             if target.exists():
                 if record["state"] != "restoring":
