@@ -2,7 +2,6 @@
 from __future__ import annotations
 import contextlib
 import datetime as dt
-import fcntl
 import hashlib
 import json
 import math
@@ -13,6 +12,7 @@ import shutil
 import stat
 import tempfile
 from .verified_files import source_identity, verified_operation
+from .host_files import exclusive_file, open_regular, stat_regular, sync_directory
 
 SCHEMA = "upstate.scientific-workbench/v1"
 INVEST_VERSION = "3.20.0"
@@ -110,11 +110,7 @@ def atomic_bytes(path, data, *, immutable=False):
         else:
             os.replace(pending, path)
             pending = None
-        fd = os.open(path.parent, os.O_RDONLY | os.O_DIRECTORY)
-        try:
-            os.fsync(fd)
-        finally:
-            os.close(fd)
+        _sync_directory(path.parent)
     finally:
         if pending is not None:
             pending.unlink(missing_ok=True)
@@ -154,23 +150,15 @@ def finite(value, name, *, minimum=None, positive=False):
 def held(path, *, blocking=True):
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
-    fd = os.open(path, os.O_CREAT | os.O_RDWR | os.O_NOFOLLOW, 0o600)
-    try:
-        fcntl.flock(fd, fcntl.LOCK_EX | (0 if blocking else fcntl.LOCK_NB))
+    with exclusive_file(path, blocking=blocking):
         yield
-    finally:
-        os.close(fd)
 
 def _file_state(value):
     return (value.st_dev, value.st_ino, value.st_size,
             value.st_mtime_ns, value.st_ctime_ns)
 
 def _sync_directory(path):
-    fd = os.open(path, os.O_RDONLY | os.O_DIRECTORY)
-    try:
-        os.fsync(fd)
-    finally:
-        os.close(fd)
+    return sync_directory(path)
 
 def _stream_identity(stream, label, *, expected_state=None, output=None):
     before = os.fstat(stream.fileno())
@@ -191,7 +179,7 @@ def _stream_identity(stream, label, *, expected_state=None, output=None):
 
 def _retained_object_matches(path, checksum, size, *, verified_state=None):
     try:
-        descriptor = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
+        descriptor = open_regular(path, os.O_RDWR if os.name == "nt" else os.O_RDONLY)
     except FileNotFoundError:
         return False
     with os.fdopen(descriptor, "rb") as stream:
@@ -209,7 +197,7 @@ def _retained_object_matches(path, checksum, size, *, verified_state=None):
             # ctime. Recheck under the digest lock before any copy or repair.
             return False
         try:
-            current = path.lstat()
+            current = stat_regular(path)
         except FileNotFoundError:
             return False
         if _file_state(current) != state or not stat.S_ISREG(current.st_mode):
@@ -281,8 +269,8 @@ def retain_file(project, source, expected_sha256=None):
                 # Unlink an old alias before creating an independent inode:
                 # truncating a prior installed hard link would damage its object.
                 candidate.unlink(missing_ok=True)
-                descriptor = os.open(candidate, os.O_WRONLY | os.O_CREAT |
-                                     os.O_EXCL | os.O_NOFOLLOW, 0o600)
+                descriptor = open_regular(candidate, os.O_WRONLY | os.O_CREAT |
+                                          os.O_EXCL, 0o600)
                 pending = candidate
                 with os.fdopen(descriptor, "wb") as out:
                     copied, copied_size, _ = source_identity(
