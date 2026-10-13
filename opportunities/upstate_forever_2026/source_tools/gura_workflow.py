@@ -203,17 +203,18 @@ def _native_selection(args, grid=None):
         "upstream_buffer_m": getattr(args, "upstream_buffer_m", None),
     }
     for key, value in requested.items():
-        if value is not None and (not math.isfinite(float(value)) or float(value) <= 0):
-            raise ValueError("Select a positive finite " + key)
+        if value is not None and (not math.isfinite(float(value))
+                or (float(value) <= 0 if key == "resolution_m" else float(value) < 0)):
+            raise ValueError("Select a finite positive resolution and nonnegative context buffer")
     if grid is None:
         return (requested["resolution_m"],
-                requested["upstream_buffer_m"] if requested["upstream_buffer_m"] is not None else 300.0)
+                requested["upstream_buffer_m"] if requested["upstream_buffer_m"] is not None else 0.0)
     retained = {
         "resolution_m": float(grid["grid"]["resolution_m"]),
         "upstream_buffer_m": float(grid["spec"]["upstream_buffer_m"]),
     }
     for key, value in retained.items():
-        if not math.isfinite(value) or value <= 0:
+        if not math.isfinite(value) or (value <= 0 if key == "resolution_m" else value < 0):
             raise ValueError("The retained Gura grid has an invalid " + key)
         selected = requested[key]
         if selected is not None and not math.isclose(float(selected), value, rel_tol=1e-9, abs_tol=1e-8):
@@ -222,31 +223,51 @@ def _native_selection(args, grid=None):
     return retained["resolution_m"], retained["upstream_buffer_m"]
 
 
-def check_receiving(path, workspace, args=None):
+def check_receiving(path, workspace, args=None, *, expected_resolution_m=None, upstream_buffer_m=None):
+    from model.common import file_digest, selected_models
     from source_tools.gura_comparison import _context
-    original_path, receipt, ws, collection, grid, profile, baseline = _context(path)
+    original_path, receipt, ws, collection, grid, profile, baseline = _context(
+        path, workspace=workspace)
     if ws.root.resolve() != workspace.resolve():
-        raise ValueError("Select the original Workspace from receiving.json: " + str(ws.root))
-    resolution_m, upstream_buffer_m = _native_selection(args, grid)
-    for key, selected in (("resolution_m", resolution_m), ("upstream_buffer_m", upstream_buffer_m)):
-        if not math.isclose(float(receipt.get("native_grid", {}).get(key, -1)), selected,
-                            rel_tol=1e-9, abs_tol=1e-8):
-            raise ValueError("The Gura receiving record differs from its retained grid " + key)
-    for model in ("ndr", "sdr"):
+        raise ValueError("Select the actual receiving Workspace")
+    native = receipt.get("native_grid", {})
+    resolution = float(native.get("resolution_m", -1))
+    context = float(native.get("upstream_buffer_m", -1))
+    if (not math.isfinite(resolution) or resolution <= 0
+            or not math.isfinite(context) or context < 0):
+        raise ValueError("Retain the original finite native cell size and nonnegative context buffer")
+    if not math.isclose(context, float(grid["spec"]["upstream_buffer_m"]), rel_tol=1e-9, abs_tol=1e-8):
+        raise ValueError("The receiving record differs from its retained native context selection")
+    for name, chosen, actual in (("resolution", expected_resolution_m, resolution),
+                                ("upstream buffer", upstream_buffer_m, context)):
+        if chosen is not None and not math.isclose(float(chosen), actual, rel_tol=1e-9, abs_tol=1e-8):
+            raise ValueError("Continue this receipt's original " + name + ": " + str(actual) + " metres")
+    # Preserve the shared positional args contract and explicit receiving controls.
+    _native_selection(SimpleNamespace(
+        expected_resolution_m=(expected_resolution_m if expected_resolution_m is not None
+                               else getattr(args, "expected_resolution_m", None)),
+        upstream_buffer_m=(upstream_buffer_m if upstream_buffer_m is not None
+                           else getattr(args, "upstream_buffer_m", None))), grid)
+    source_ids = receipt.get("source_ids", {})
+    for model in selected_models(receipt):
         role = model + "_archive"
         archived = receipt.get("archives", {}).get(model, {})
-        retained_path, retained_entry = ws.source_file(
-            collection["id"], "GURA_ORIGINAL_" + model.upper() + "_ZIP")
-        retained = describe(retained_path)
-        if (retained["sha256"] != archived.get("sha256")
-                or retained["bytes"] != archived.get("bytes")
-                or retained["sha256"] != retained_entry.get("sha256")):
-            raise ValueError("The original " + model.upper() + " archive differs from its retained source collection")
+        if archived.get("sha256") != SOURCES[role]["sha256"]:
+            raise ValueError("The receiving record selects another original " + model.upper() + " source edition")
+        archive_id = "GURA_ORIGINAL_" + model.upper() + "_ZIP"
+        if archive_id in {entry["id"] for entry in collection["entries"]}:
+            retained_path, retained_entry = ws.source_file(collection["id"], archive_id)
+            retained = describe(retained_path)
+            if (retained["sha256"] != archived.get("sha256")
+                    or retained["bytes"] != archived.get("bytes")
+                    or retained["sha256"] != retained_entry["body"]["sha256"]):
+                raise ValueError("The original " + model.upper() + " archive differs from its retained source collection")
+        alias = "GURA_" + model.upper() + "_TABLE"
+        table_path, entry = ws.source_file(collection["id"], source_ids.get(alias, alias))
         table = receipt.get("original_tables", {}).get(model, {})
-        if table.get("sha256") != SOURCES[model + "_table"]["sha256"]:
-            raise ValueError("The receiving record selects another pinned original " + model.upper() + " table")
+        if table.get("sha256") != file_digest(table_path):
+            raise ValueError("The receiving record differs from its retained original " + model.upper() + " table")
     return receipt
-
 
 
 def capsule_directory(workspace):
@@ -254,8 +275,10 @@ def capsule_directory(workspace):
 
 
 def restore_workflow_paths(args):
-    """Bind a copied workflow to its restored scientific Workspace."""
+    """Reopen a copied workflow without changing its original receipt bytes."""
+    from model.common import atomic_bytes
     from model.workspace import Workspace
+    from source_tools.gura_comparison import _check_plan
     capsule = capsule_directory(args.workspace)
     metadata_path = capsule / "workflow-selection.json"
     if not metadata_path.exists():
@@ -271,6 +294,18 @@ def restore_workflow_paths(args):
     if (sha256(original_path) != metadata["original_receiving_sha256"]
             or sha256(selection_path) != metadata["programme_selection_sha256"]):
         raise ValueError("The copied Gura workflow inputs differ from their retained source selection")
+    plan_path = capsule / "comparison-plan.json"
+    saved_plan = read_json(plan_path)
+    expected_receipt = saved_plan["receiving"]["sha256"]
+    if sha256(original_path) != expected_receipt:
+        # The older capsule writer reformatted JSON. Recover the exact original
+        # record already retained by the completed or interrupted comparison.
+        candidates = [args.source_directory / "receiving.json"]
+        candidates.extend((ws.root / "gura-comparisons").glob("*/original-receiving.json"))
+        original_path = next((path for path in candidates
+                              if path.is_file() and sha256(path) == expected_receipt), None)
+        if original_path is None:
+            raise ValueError("Restore the original receipt retained with the comparison plan")
     receipt = read_json(original_path)
     collection = ws._get("sources", receipt["source_collection_id"])
     if collection["original_manifest"]["sha256"] != receipt["source_manifest_sha256"]:
@@ -278,7 +313,6 @@ def restore_workflow_paths(args):
     for name in ("source_collection_id", "grid_id", "profile_id", "scenario_id", "programme_id"):
         if receipt[name] != metadata[name]:
             raise ValueError("The copied Gura workflow changed its original " + name)
-    _native_selection(args, ws.get_grid(receipt["grid_id"]))
     stored_conversions = metadata["conversions"]
     if args.convert is None and stored_conversions is not None:
         args.convert = [str(left) + ":" + str(right) for left, right in stored_conversions]
@@ -290,22 +324,31 @@ def restore_workflow_paths(args):
         args.zone_id_field = selected_zone
     elif args.zone_id_field != selected_zone:
         raise ValueError("Resume the original watershed feature ID field " + selected_zone)
-    current_receiving = args.source_directory / "receiving.json"
-    if current_receiving.exists():
-        present = read_json(current_receiving)
-        if (Path(present["workspace"]).resolve() == args.workspace
-                and Path(present["selection_path"]).is_file()):
-            check_receiving(current_receiving, args.workspace, args)
-            # The capsule was verified above. A previous interrupted restore
-            # may already have rebound this receipt before saving progress.
-            return True
+    _check_plan(original_path, plan_path, workspace=ws)
     args.source_directory.mkdir(parents=True, exist_ok=True)
+    current_receiving = args.source_directory / "receiving.json"
+    if current_receiving.exists() and current_receiving.read_bytes() != original_path.read_bytes():
+        # Retain a previous path-rewritten copy, then restore the verified source
+        # record. A different scientific receipt is never overwritten.
+        prior = read_json(current_receiving)
+        relocatable = {"workspace", "source_directory", "selection_path"}
+        if ({key: value for key, value in prior.items() if key not in relocatable}
+                != {key: value for key, value in receipt.items() if key not in relocatable}):
+            raise ValueError("The receiving destination selects another original scientific receipt")
+        snapshot = args.source_directory / "receiving-locations" / (sha256(current_receiving) + ".json")
+        atomic_bytes(snapshot, current_receiving.read_bytes(), immutable=True)
+    atomic_bytes(current_receiving, original_path.read_bytes())
     relocated_selection = args.source_directory / "programme-selection.json"
-    atomic_json(relocated_selection, read_json(selection_path))
-    receipt.update(workspace=str(args.workspace), source_directory=str(args.source_directory),
-                   selection_path=str(relocated_selection))
-    atomic_json(current_receiving, receipt)
-    check_receiving(current_receiving, args.workspace, args)
+    atomic_bytes(relocated_selection, selection_path.read_bytes(), immutable=True)
+    restored_plan = args.source_directory / "gura-comparison-plan.json"
+    atomic_bytes(restored_plan, plan_path.read_bytes(), immutable=True)
+    progress = capsule / "workflow-progress.json"
+    current_progress = args.source_directory / "gura-workflow.json"
+    if progress.is_file() and not current_progress.exists():
+        atomic_bytes(current_progress, progress.read_bytes(), immutable=True)
+    check_receiving(current_receiving, args.workspace,
+                    expected_resolution_m=args.expected_resolution_m,
+                    upstream_buffer_m=args.upstream_buffer_m)
     event("copied_workflow_reopened", workspace_id=ws.project["id"],
           receiving=str(current_receiving), original_programme_id=receipt["programme_id"])
     return True
@@ -314,14 +357,29 @@ def restore_workflow_paths(args):
 def retain_workflow(args, receipt, plan, state):
     """Keep the source selection inside every complete Workspace archive."""
     from model.workspace import Workspace
+    from model.common import atomic_bytes
+    from model.compute_programme import ComputeProgrammes
     capsule = capsule_directory(args.workspace)
     capsule.mkdir(parents=True, exist_ok=True)
     original = capsule / "original-receiving.json"
     selection = capsule / "programme-selection.json"
-    if not original.exists():
-        atomic_json(original, receipt)
-    if not selection.exists():
-        atomic_json(selection, read_json(Path(receipt["selection_path"])))
+    receiving_path = args.source_directory / "receiving.json"
+    if original.exists() and original.read_bytes() != receiving_path.read_bytes():
+        prior = read_json(original)
+        relocatable = {"workspace", "source_directory", "selection_path"}
+        if ({key: value for key, value in prior.items() if key not in relocatable}
+                != {key: value for key, value in receipt.items() if key not in relocatable}):
+            raise ValueError("The retained capsule selects another original scientific receipt")
+        atomic_bytes(capsule / "receiving-locations" / (sha256(original) + ".json"),
+                     original.read_bytes(), immutable=True)
+    atomic_bytes(original, receiving_path.read_bytes())
+    original_selection = ComputeProgrammes(Workspace(args.workspace)).status(
+        receipt["programme_id"])["selection"]
+    if selection.exists():
+        if read_json(selection) != original_selection:
+            raise ValueError("The retained workflow has another original programme selection")
+    else:
+        atomic_json(selection, original_selection)
     saved = read_json(original)
     for name in ("source_collection_id", "grid_id", "profile_id", "scenario_id", "programme_id"):
         if saved[name] != receipt[name]:
@@ -350,23 +408,30 @@ def prepare(args, identity):
     restore_workflow_paths(args)
     receiving_path = args.source_directory / "receiving.json"
     if receiving_path.exists():
-        receipt = check_receiving(receiving_path, args.workspace, args)
+        receipt = check_receiving(receiving_path, args.workspace,
+                                  expected_resolution_m=args.expected_resolution_m,
+                                  upstream_buffer_m=args.upstream_buffer_m)
         event("original_workspace_reopened", receiving=str(receiving_path),
               programme_id=receipt["programme_id"], grid_id=receipt["grid_id"])
         return receipt
     inputs = original_inputs(args)
     selection_path = args.source_directory / "programme-selection.json"
     prior_selection = read_json(selection_path) if selection_path.exists() else None
-    retained_grid = None
-    if prior_selection is not None:
-        from model.workspace import Workspace
-        retained_grid = Workspace(args.workspace).get_grid(prior_selection["grid_id"])
-    resolution_m, upstream_buffer_m = _native_selection(args, retained_grid)
     source_reference = (prior_selection.get("source_reference") if prior_selection else None)
     source_reference = source_reference or getattr(args, "_retained_source_reference", None)
     if args.source_reference and source_reference and args.source_reference != source_reference:
         raise ValueError("Continue the saved original source reference: " + source_reference)
     source_reference = source_reference or args.source_reference or "retained-application-sha256:" + identity["sha256"]
+    retained_grid = None
+    if prior_selection is not None:
+        from model.workspace import Workspace
+        retained_reference = prior_selection.get("source_reference")
+        if not isinstance(retained_reference, str) or not retained_reference.strip():
+            raise ValueError("The retained original programme selection lacks its source reference")
+        retained_grid = Workspace(args.workspace).get_grid(prior_selection["grid_id"])
+        if retained_grid.get("state") != "complete":
+            raise ValueError("Complete the original partial-intake grid before preparing its programme")
+    resolution_m, buffer_m = _native_selection(args, retained_grid)
     selected = SimpleNamespace(
         workspace=args.workspace, source_directory=args.source_directory,
         ndr_archive=Path(inputs["ndr_archive"]["path"]),
@@ -376,13 +441,16 @@ def prepare(args, identity):
         ndr_table_source_uri=inputs["ndr_table"]["uri"], sdr_table_source_uri=inputs["sdr_table"]["uri"],
         source_edition=inputs["ndr_archive"]["edition"],
         source_reference=source_reference,
-        expected_resolution_m=resolution_m, upstream_buffer_m=upstream_buffer_m,
+        expected_resolution_m=resolution_m, upstream_buffer_m=buffer_m,
     )
     event("preparing_original_inputs", workspace=str(args.workspace),
           source_directory=str(args.source_directory), inputs=inputs,
-          expected_resolution_m=resolution_m, upstream_buffer_m=upstream_buffer_m)
+          expected_resolution_m=selected.expected_resolution_m,
+          upstream_buffer_m=selected.upstream_buffer_m)
     receipt = receive_gura.receive(selected)
-    check_receiving(receiving_path, args.workspace, args)
+    check_receiving(receiving_path, args.workspace,
+                    expected_resolution_m=selected.expected_resolution_m,
+                    upstream_buffer_m=selected.upstream_buffer_m)
     event("original_inputs_prepared", receiving=str(receiving_path),
           programme_id=receipt["programme_id"], grid_id=receipt["grid_id"],
           profile_id=receipt["profile_id"], scenario_id=receipt["scenario_id"],
@@ -408,20 +476,30 @@ def conversions(values):
 
 
 def plan_and_catalog(args):
+    from model.common import digest
     from source_tools import gura_comparison
     receiving = args.source_directory / "receiving.json"
     selected = conversions(args.convert)
     destination = args.source_directory / "gura-comparison-plan.json"
     candidate = gura_comparison.make_plan(receiving, conversions=selected,
-                                          zone_id_field=args.zone_id_field)
-    atomic_json(args.source_directory / "gura-source-catalog.json", candidate["inventory"])
+                                          zone_id_field=args.zone_id_field,
+                                          workspace=args.workspace)
     if destination.exists():
-        prior = read_json(destination)
+        # Validate the original receipt bytes and every retained scientific
+        # binding on this Workspace before normalizing its local copy name.
+        prior = gura_comparison._check_plan(
+            receiving, destination, workspace=args.workspace)[-1]
+        candidate["receiving"] = dict(prior["receiving"])
+        candidate["inventory"] = dict(prior["inventory"])
+        candidate.pop("id")
+        candidate["id"] = digest(candidate)
         if prior != candidate:
             raise ValueError("The retained comparison plan already selects a different cohort. "
                              "Resume it with its original --convert and --zone-id-field selections.")
+        candidate = prior
     else:
         atomic_json(destination, candidate)
+    atomic_json(args.source_directory / "gura-source-catalog.json", candidate["inventory"])
     event("comparison_plan_ready", path=str(destination), plan_id=candidate["id"],
           alternatives=len(candidate["cases"]),
           cases=[{"key": row["key"], "title": row["title"],
@@ -469,12 +547,15 @@ def run_original_programme(args, receipt, state, state_path):
 def build_reference_report(args, receipt, plan, state, state_path):
     """Publish the completed original reference before the broad alternatives."""
     from model.workspace import Workspace
+    from model.common import selected_models
     from model import scenario_decisions
 
     workspace = Workspace(args.workspace)
+    active = selected_models(receipt)
+    native_scope = {"models": active} if active != ["ndr", "sdr"] else {}
     original = workspace.prepare_run({"grid_id": receipt["grid_id"],
                                       "profile_id": receipt["profile_id"],
-                                      "scenario_id": receipt["scenario_id"]})
+                                      "scenario_id": receipt["scenario_id"], **native_scope})
     if original["state"] != "complete":
         raise ValueError("Complete the retained original reference before producing its annual totals")
     selection = scenario_decisions.select_cohort(
@@ -539,21 +620,52 @@ def status(args):
     return 0
 
 
+def bind_receiving_location(args, receipt, state, state_path):
+    from model.workspace import Workspace
+
+    ws = Workspace(args.workspace)
+    identity = {
+        "workspace_id": ws.project["id"],
+        "receiving_sha256": sha256(args.source_directory / "receiving.json"),
+        "source_collection_id": receipt["source_collection_id"],
+        "source_manifest_sha256": receipt["source_manifest_sha256"],
+        "grid_id": receipt["grid_id"], "profile_id": receipt["profile_id"],
+        "baseline_scenario_id": receipt["scenario_id"],
+        "original_programme_id": receipt["programme_id"],
+    }
+    if any(state.get(name) not in (None, receipt[name])
+           for name in ("grid_id", "profile_id")):
+        raise ValueError("The retained workflow has another original Gura grid or profile")
+    previous_identity = state.get("receiving_identity")
+    if previous_identity is not None and previous_identity != identity:
+        raise ValueError("The retained workflow selects another original Gura Workspace")
+    location = {"workspace": str(args.workspace),
+                "source_directory": str(args.source_directory)}
+    previous = {name: state.get(name) for name in location}
+    if previous != location:
+        history = state.setdefault("receiving_locations", [])
+        if not history or any(history[-1].get(name) != previous[name] for name in previous):
+            history.append({**previous, "moved_at": now()})
+        event("receiving_workspace_reopened", **location, workspace_id=ws.project["id"],
+              original_location=previous)
+    state.update(**location, receiving_identity=identity, updated_at=now())
+    atomic_json(state_path, state)
+
+
 def workflow(args):
     from source_tools import gura_comparison
     state_path = args.source_directory / "gura-workflow.json"
     with operation_lock(args.source_directory):
-        rebound = restore_workflow_paths(args)
+        restore_workflow_paths(args)
         state = read_json(state_path) if state_path.exists() else {
             "schema": SCHEMA, "operation_id": OPERATION_ID, "created_at": now(),
             "workspace": str(args.workspace), "source_directory": str(args.source_directory),
         }
-        if state.get("workspace") != str(args.workspace):
-            if not rebound:
-                raise ValueError("The retained workflow belongs to another Workspace")
-            state.update(previous_workspace=state.get("workspace"),
-                         workspace=str(args.workspace),
-                         source_directory=str(args.source_directory))
+        if state.get("schema") != SCHEMA or state.get("operation_id") != OPERATION_ID:
+            raise ValueError("Select the retained GURA-NATIVE-01 workflow")
+        if (state.get("workspace") != str(args.workspace)
+                or state.get("source_directory") != str(args.source_directory)):
+            check_receiving(args.source_directory / "receiving.json", args.workspace)
         previous_application = state.get("application", {}).get("sha256")
         args._retained_source_reference = state.get("source_reference") or (
             "retained-application-sha256:" + previous_application if previous_application else None)
@@ -580,13 +692,19 @@ def workflow(args):
             state.update(phase="original inputs", updated_at=now())
             atomic_json(state_path, state)
             receipt = prepare(args, identity)
-            saved_selection = read_json(Path(receipt["selection_path"]))
-            state.update(original_programme_id=receipt["programme_id"],
-                         source_reference=saved_selection.get("source_reference"),
+            bind_receiving_location(args, receipt, state, state_path)
+            from model.compute_programme import ComputeProgrammes
+            from model.workspace import Workspace
+            saved_selection = ComputeProgrammes(
+                Workspace(args.workspace)).status(receipt["programme_id"])["selection"]
+            state.setdefault("original_programme_id", receipt["programme_id"])
+            state.update(source_reference=saved_selection.get("source_reference"),
                          grid_id=receipt["grid_id"], profile_id=receipt["profile_id"],
                          phase="scenario catalogue", updated_at=now())
             atomic_json(state_path, state)
             plan_path, plan = plan_and_catalog(args)
+            if state.get("plan_id") not in (None, plan["id"]):
+                raise ValueError("The retained workflow names another original class-comparison plan")
             state.update(plan_id=plan["id"], alternative_count=len(plan["cases"]),
                          phase="inputs and scenarios prepared", updated_at=now())
             atomic_json(state_path, state)
@@ -604,7 +722,8 @@ def workflow(args):
             result = gura_comparison.execute(
                 args.source_directory / "receiving.json", plan_path,
                 output=args.source_directory / "gura-comparison-result.json",
-                build_economics=not args.physical_only, backup=args.backup)
+                build_economics=not args.physical_only, backup=args.backup,
+                workspace=args.workspace)
             state.update(state="complete", phase="native report and Workspace archive complete",
                          programme_id=result["programme_id"],
                          baseline_run_id=result["baseline_run_id"],
@@ -640,9 +759,9 @@ def main(argv=None):
                         default=APPLICATION_ROOT / "source" / "gura-original-tables-3.20")
     parser.add_argument("--source-reference")
     parser.add_argument("--expected-resolution-m", type=float,
-                        help="Optional expected source cell size; resume retains the original grid")
+                        help="Optional expected source cell size; new intake reads its original raster, resume retains its grid")
     parser.add_argument("--upstream-buffer-m", type=float,
-                        help="Independent context distance; new intake defaults to 300 m, resume retains the original")
+                        help="New original intake defaults to zero added context; an existing receipt retains its buffer")
     parser.add_argument("--convert", action="append",
                         help="Optional original FROM:TO class pair; repeat for a selected cohort")
     parser.add_argument("--zone-id-field",
@@ -665,10 +784,12 @@ def main(argv=None):
     args.operator_state = (args.operator_state or args.workspace.with_name(args.workspace.name + "-operator")).resolve()
     args.backup = (args.backup or args.workspace.with_name(
         args.workspace.name + ("-physical-complete.zip" if args.physical_only else "-complete.zip"))).resolve()
-    for option in ("expected_resolution_m", "upstream_buffer_m"):
-        value = getattr(args, option)
-        if value is not None and (not math.isfinite(value) or value <= 0):
-            parser.error("--" + option.replace("_", "-") + " must be positive and finite")
+    if args.expected_resolution_m is not None and (
+            not math.isfinite(args.expected_resolution_m) or args.expected_resolution_m <= 0):
+        parser.error("--expected-resolution-m must be positive and finite")
+    if args.upstream_buffer_m is not None and (
+            not math.isfinite(args.upstream_buffer_m) or args.upstream_buffer_m < 0):
+        parser.error("--upstream-buffer-m must be nonnegative and finite")
     if not 0 <= args.port <= 65535:
         parser.error("--port must be between 0 and 65535")
     if args.backup.is_relative_to(args.workspace):
