@@ -164,7 +164,7 @@ Comparison retains full before/after rows, uses the original resource-plus-tool 
 
 A response capture has a 30-second deadline and a 32MiB limit. Original request bodies are limited to 16MiB, matching the native handoff path. Receiving packets are limited to 1GiB decoded files. An over-limit or failed response remains an explicit failed request record. Redirects are retained for review; capture does not follow them.
 
-The Linux kernel serializes each directory's writer through `flock`; the lock releases when its owning process exits. Packaging and source-copy snapshots use that same lock, so they acquire a completed receiving edition before copying it. If another writer is active, the command reports that state and preserves its operation.
+The Linux kernel serializes each directory's writer through `flock`; the lock remains with the original native child if its parent is interrupted and releases when the last writer closes its descriptor. Packaging and source-copy snapshots use that same lock, so they acquire a completed receiving edition before copying it. If another writer is active, the command reports that state and preserves its operation.
 
 Only ordinary request headers enter this path. The original SF88 reserved-field contract keeps authentication, payment headers, HTTP framing and merchant ticket assembly with their original owners. The capture and native preparation retain those responsibilities.
 

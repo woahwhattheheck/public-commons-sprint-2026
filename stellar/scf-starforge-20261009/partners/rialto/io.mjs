@@ -26,21 +26,19 @@ export async function writeNew(file,data){
 export async function retain(file,data){if(await exists(file)){need((await read(file)).equals(Buffer.from(data)),'Retained original bytes differ: '+path.basename(file));return;}await writeNew(file,data);}
 export async function lock(dir,fn){
  dir=await privateDir(dir);const file=path.join(dir,'.receiving-lock');
- const descriptor=await fs.open(file,FC.O_WRONLY|FC.O_CREAT|FC.O_NOFOLLOW,0o600);
- try{const st=await descriptor.stat();need(st.isFile()&&(st.mode&0o077)===0,'Receiving lock must be a private ordinary file');}finally{await descriptor.close();}
- // Kernel advisory lock: the child holds it until its stdin closes, including
- // when this parent is interrupted. The lock file is never reaped or replaced.
- const code="process.stdout.write('locked\\n');process.stdin.resume();process.stdin.on('end',()=>process.exit(0));process.stdin.on('error',()=>process.exit(0));";
- const child=spawn(process.env.RIALTO_FLOCK??'flock',['--exclusive','--nonblock','--conflict-exit-code','75','--',file,process.execPath,'-e',code],{stdio:['pipe','pipe','pipe']});
- let failure='',output='',closed=false,ready=false;child.stdin.on('error',()=>{});
- const done=new Promise(resolve=>{child.once('close',(code,signal)=>{closed=true;resolve({code,signal});});});
- const acquired=new Promise((resolve,reject)=>{
-  child.once('error',reject);child.stderr.on('data',part=>{failure+=part.toString();});
-  child.stdout.on('data',part=>{output+=part.toString();if(output.includes('locked\n')){ready=true;resolve();}});
-  child.once('close',code=>{if(!ready)reject(new Error(code===75?'Receiving writer is active':'Linux flock could not acquire receiving directory: '+failure));});
- });
- try{await acquired;need(!closed,'Receiving lock holder ended unexpectedly');return await fn();}
- finally{child.stdin.end();await done;}
+ const descriptor=await fs.open(file,FC.O_RDWR|FC.O_CREAT|FC.O_NOFOLLOW,0o600);
+ try{
+  const st=await descriptor.stat();need(st.isFile()&&(st.mode&0o077)===0,'Receiving lock must be a private ordinary file');
+  // flock(2) belongs to the shared open-file description. The short acquisition
+  // child, this parent and any native writer all inherit that same descriptor.
+  // Closing this parent cannot release a surviving native writer's lock.
+  await new Promise((resolve,reject)=>{
+   const child=spawn(process.env.RIALTO_FLOCK??'flock',['--exclusive','--nonblock','--conflict-exit-code','75','3'],{stdio:['ignore','ignore','pipe',descriptor.fd]});let failure='';
+   child.stderr.on('data',part=>{failure+=part.toString();});child.once('error',reject);
+   child.once('close',code=>{if(code===0)resolve();else reject(new Error(code===75?'Receiving writer is active':'Linux flock could not acquire receiving directory: '+failure));});
+  });
+  return await fn(descriptor.fd);
+ }finally{await descriptor.close();}
 }
 // Follows the original SF88 request-headers.mjs reserved-field contract (MIT).
 export function ordinaryHeaders(input={}){
