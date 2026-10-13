@@ -77,3 +77,21 @@ For an original native receiving course, use the existing completed WQP or Monit
 ## Existing native receiving result
 
 The maintained WQP receiving course has already completed a whole-Workspace capture and fresh restored-application reopen with 88 original observations and activities, 48 visits, three sites, two saved revisions, the original attachments and complete field/scientific reports. Its replay produced a genuine new project beginning `dc92b8b9`; it remains distinct from the earlier project beginning `f4f731d7`. Continue this course using its actual retained source/report IDs and exact saved revision. The same native run found and repaired `ImplementationStore(Path)` path normalization; use current main with the original PathLike fix before verifying the native plan bank. The selected-study course adds the source-linked native history described above to the same existing receiving operation.
+
+## Laboratory requests and returned results
+
+A selected original `laboratory-report-*` scientific source now retains the same-project editable laboratory lineage. The resolver verifies the original source body and every companion against its saved laboratory operation, including the frozen reconciliation and result records. It captures the original request package, submission CSV and return template, original request revision, exact returned-results revision, native registration receipt, and complete saved delivery selection. Request and result revisions remain separately labelled.
+
+The source's inherited field recipe stays inside the original laboratory recipe. Native history behind that recipe is retained for reopening; no second field section is appended to the scientific report. Additional selected scientific sources remain in their original order. All exported report tables, figures, qualifiers, detection limits and source files stay byte-for-byte original.
+
+After receiving the selected Study, open **Received studies and original fieldwork → Open study → Open laboratory request and results**. The existing Implementation desk opens the original results revision with that request selected and its completed scientific-source operation available. The existing laboratory controls expose the original request and report files and hand the complete retained selection to the scientific or client Report desk. Later editable revisions remain separate.
+
+This is a read of the original committed operation. It does not rerun laboratory matching, recalculate results, generate a new source edition, or infer a dispatch from unmarked results. A foreign-project scientific source retains its contained original files without adopting an unrelated local plan.
+
+### Older selected Study archives
+
+Received Studies re-resolve only the Implementation source identities actually captured in their original transfer receipt. An older archive that retained a laboratory scientific source without its native dispatch files remains a valid historical scientific archive. It does not acquire an invented editable laboratory link merely because the receiving application now knows that producer. A new capture from the original complete Workspace includes the native lineage.
+
+### Inspect the populated outgoing product
+
+Continue the existing native receiving course with its actual completed dispatch/report IDs. Open the exact outgoing selected Study archive in a fresh receiving Workspace and browser. At desktop screenshare size and 390 px, view the actual rendered screens and screenshots; operate **Open study**, the original request/results link, scientific and client selection handoffs, every attachment/download, export and cold reopen. Confirm the original request revision, returned-results revision and complete source order remain readable. Open and use all delivered attachments. Correct any actual layout or control defect in the same maintained workflow before treating that outgoing product as client ready. Source review and a merged change do not substitute for this populated native/browser acceptance.
