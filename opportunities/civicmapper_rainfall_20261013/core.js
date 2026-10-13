@@ -140,6 +140,17 @@ function compare(before,after) {
   }
   return {before,after,rows,summary,sourceTransitions};
 }
+function intervalRows(release, sensorId=null) {
+  const m=release.metadata, ids=sensorId===null?m.sensors:[sensorId], result=[];
+  for(const id of ids) {
+    const series=release.grouped.get(id);if(!series)fail("Choose a retained sensor.");
+    for(let t=m.start_ms+m.step_ms;t<=m.end_ms;t+=m.step_ms) {
+      const p=series.get(t);
+      result.push({id,timestamp:new Date(t).toISOString(),raw_timestamp:p?.raw_timestamp??null,raw_value:p?.raw_value??null,value_in:p?.value_in??null,source:p?.source??"",status:p?.status??"absent"});
+    }
+  }
+  return result;
+}
 function csv(rows) {
   if(!rows.length)return "";
   const keys=Object.keys(rows[0]),cell=x=>{let v=x===null||x===undefined?"":typeof x==="object"?JSON.stringify(x):String(x);if(/^[=+@-]/.test(v)&&typeof x!=="number")v="'"+v;return '"'+v.replaceAll('"','""')+'"';};
@@ -160,6 +171,6 @@ function report(releases,notes="") {
   const change=comparison?"<section><h2>Release comparison</h2><p>Deltas use only intervals with a valid observation in both releases. Recovered and lost intervals are counted separately.</p>"+table(["Sensor","Matched intervals","Changed","Recovered","Lost","Source changed","Matched delta (in)"],comparison.summary.map(s=>[s.id,s.matched_valid,s.value_changed,s.recovered,s.lost,s.source_changed,s.matched_delta_in]))+"</section>":"";
   return '<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Rainfall release review</title><style>body{font:15px/1.55 system-ui,sans-serif;color:#202327;max-width:1120px;margin:40px auto;padding:0 24px}h1{font-size:28px}h2{font-size:20px;margin-top:32px}table{border-collapse:collapse;width:100%;font-size:13px}th,td{padding:10px 9px;text-align:left;border-bottom:1px solid #d5d7d9;vertical-align:top}th{background:#f0f1f2}.table{overflow:auto}.source{font-size:12px;overflow-wrap:anywhere;color:#52575d}section{break-inside:avoid}pre{white-space:pre-wrap;font:inherit}@media print{body{margin:0;max-width:none;padding:0}table{font-size:10px}th,td{padding:6px 4px}}</style><h1>Rainfall release review</h1><p>Rainfall accumulation and release changes for the selected sensors and time window.</p><p>Observed totals sum available valid intervals. Coverage below 100% means the total is incomplete. Missing observations remain missing; no rainfall is estimated.</p>'+cards+change+(notes?"<section><h2>Reviewer notes</h2><pre>"+escaped(notes)+"</pre></section>":"")+'<footer><p class="source">Prepared with Rainfall Release Review '+VERSION+'. Source data stays in its original capture. This report uses interval end times normalized to UTC and rainfall expressed in inches.</p></footer></html>';
 }
-const api={VERSION,SOURCES,instant,metadata,release,compare,csv,project,reopen,report,escaped,sha256Text:s=>sha256(utf8Encode(s))};
+const api={VERSION,SOURCES,instant,metadata,release,compare,intervalRows,csv,project,reopen,report,escaped,sha256Text:s=>sha256(utf8Encode(s))};
 root.RainfallReview=api;
 })(typeof globalThis!=="undefined"?globalThis:this);

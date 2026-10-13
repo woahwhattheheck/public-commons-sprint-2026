@@ -151,6 +151,17 @@ function compare(before,after) {
   }
   return {before,after,rows,summary,sourceTransitions};
 }
+function intervalRows(release, sensorId=null) {
+  const m=release.metadata, ids=sensorId===null?m.sensors:[sensorId], result=[];
+  for(const id of ids) {
+    const series=release.grouped.get(id);if(!series)fail("Choose a retained sensor.");
+    for(let t=m.start_ms+m.step_ms;t<=m.end_ms;t+=m.step_ms) {
+      const p=series.get(t);
+      result.push({id,timestamp:new Date(t).toISOString(),raw_timestamp:p?.raw_timestamp??null,raw_value:p?.raw_value??null,value_in:p?.value_in??null,source:p?.source??"",status:p?.status??"absent"});
+    }
+  }
+  return result;
+}
 function csv(rows) {
   if(!rows.length)return "";
   const keys=Object.keys(rows[0]),cell=x=>{let v=x===null||x===undefined?"":typeof x==="object"?JSON.stringify(x):String(x);if(/^[=+@-]/.test(v)&&typeof x!=="number")v="'"+v;return '"'+v.replaceAll('"','""')+'"';};
@@ -171,7 +182,7 @@ function report(releases,notes="") {
   const change=comparison?"<section><h2>Release comparison</h2><p>Deltas use only intervals with a valid observation in both releases. Recovered and lost intervals are counted separately.</p>"+table(["Sensor","Matched intervals","Changed","Recovered","Lost","Source changed","Matched delta (in)"],comparison.summary.map(s=>[s.id,s.matched_valid,s.value_changed,s.recovered,s.lost,s.source_changed,s.matched_delta_in]))+"</section>":"";
   return '<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Rainfall release review</title><style>body{font:15px/1.55 system-ui,sans-serif;color:#202327;max-width:1120px;margin:40px auto;padding:0 24px}h1{font-size:28px}h2{font-size:20px;margin-top:32px}table{border-collapse:collapse;width:100%;font-size:13px}th,td{padding:10px 9px;text-align:left;border-bottom:1px solid #d5d7d9;vertical-align:top}th{background:#f0f1f2}.table{overflow:auto}.source{font-size:12px;overflow-wrap:anywhere;color:#52575d}section{break-inside:avoid}pre{white-space:pre-wrap;font:inherit}@media print{body{margin:0;max-width:none;padding:0}table{font-size:10px}th,td{padding:6px 4px}}</style><h1>Rainfall release review</h1><p>Rainfall accumulation and release changes for the selected sensors and time window.</p><p>Observed totals sum available valid intervals. Coverage below 100% means the total is incomplete. Missing observations remain missing; no rainfall is estimated.</p>'+cards+change+(notes?"<section><h2>Reviewer notes</h2><pre>"+escaped(notes)+"</pre></section>":"")+'<footer><p class="source">Prepared with Rainfall Release Review '+VERSION+'. Source data stays in its original capture. This report uses interval end times normalized to UTC and rainfall expressed in inches.</p></footer></html>';
 }
-const api={VERSION,SOURCES,instant,metadata,release,compare,csv,project,reopen,report,escaped,sha256Text:s=>sha256(utf8Encode(s))};
+const api={VERSION,SOURCES,instant,metadata,release,compare,intervalRows,csv,project,reopen,report,escaped,sha256Text:s=>sha256(utf8Encode(s))};
 root.RainfallReview=api;
 })(typeof globalThis!=="undefined"?globalThis:this);
 </script><script>"use strict";
@@ -194,10 +205,10 @@ function linesFor(release,id,maxPoints=600){
 function chart(){
  const id=$("sensor").value;if(!releases.length||!id){$("chart").innerHTML="";return;}
  const data=releases.map(r=>linesFor(r,id));let max=0;for(const d of data)for(const p of d.points)if(p.value!==null)max=Math.max(max,p.value);
- max=max||1;const W=980,H=240,pad=45,n=Math.max(1,data[0].points.length-1),y=v=>H-pad-(v/max)*(H-pad*2),x=i=>pad+i/n*(W-pad*2);
+ max=max||1;const W=980,H=240,pad=45,expected=releases[0].metadata.expected,y=v=>H-pad-(v/max)*(H-pad*2),x=(i,stride)=>pad+Math.min(expected,(i+1)*stride)/expected*(W-pad*2);
  const paths=data.map((d,index)=>{
-  let path="",open=false;d.points.forEach((p,i)=>{if(p.value===null){open=false;return;}path+=(open?" L":" M")+x(i).toFixed(2)+","+y(p.value).toFixed(2);open=true;});
-  return '<path d="'+path+'" fill="none" stroke="'+(index?"#161b20":"#727b85")+'" stroke-width="'+(index?2.2:2.7)+'"'+(index?' stroke-dasharray="6 3"':"")+'/>';
+  let path="",open=false;d.points.forEach((p,i)=>{if(p.value===null){open=false;return;}path+=(open?" L":" M")+x(i,d.stride).toFixed(2)+","+y(p.value).toFixed(2);open=true;});
+  return '<path d="'+path+'" fill="none" stroke="'+(index?"#161b20":"#727b85")+'" stroke-width="'+(index?2.2:2.7)+'"'+(index?' stroke-dasharray="6 3"':"")+'/>'+d.points.map((p,i)=>p.value===null?'':'<circle cx="'+x(i,d.stride).toFixed(2)+'" cy="'+y(p.value).toFixed(2)+'" r="1.7" fill="'+(index?'#161b20':'#727b85')+'"/>').join('');
  }).join("");
  const m=releases[0].metadata;
  $("chart").innerHTML='<svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="Rainfall for sensor '+R.escaped(id)+'. Missing intervals break the line.">'+[0,.5,1].map(v=>'<line x1="'+pad+'" x2="'+(W-pad)+'" y1="'+y(max*v)+'" y2="'+y(max*v)+'" stroke="#dfe1e4"/><text x="3" y="'+(y(max*v)+4)+'" font-size="12" fill="#49515a">'+fmt(max*v,3)+'</text>').join("")+paths+'<text x="'+pad+'" y="'+(H-10)+'" font-size="12">'+R.escaped(new Date(m.start_ms).toISOString().slice(0,16))+' UTC</text><text x="'+(W-pad)+'" y="'+(H-10)+'" text-anchor="end" font-size="12">'+R.escaped(new Date(m.end_ms).toISOString().slice(0,16))+' UTC</text></svg><p class="help">Rainfall (inches) per '+(data[0].stride*m.interval_minutes)+'-minute display interval. A display interval with missing readings remains a gap. Exact original intervals are retained in the table and CSV.</p><p class="help">'+releases.map((r,i)=>(i?"Dashed: ":"Solid: ")+R.escaped(r.metadata.label)).join(" · ")+"</p>";
@@ -221,7 +232,7 @@ function render(){
  $("empty").hidden=loaded;$("review").hidden=!loaded;
  for(const id of ["save","report","csv","clear"])$(id).disabled=!loaded;
  $("cards").innerHTML=releases.map((r,i)=>{const sums=r.summaries,valid=sums.reduce((n,x)=>n+x.valid,0),expected=sums.reduce((n,x)=>n+x.expected,0);return '<section class="release"><h3>'+R.escaped(r.metadata.label)+'</h3><p>'+R.escaped(r.metadata.product+" · "+r.metadata.sensor_type+" · "+r.metadata.interval_minutes+" min")+'</p><strong>'+fmt(valid/expected*100,2)+'% valid coverage</strong><p>'+valid+' of '+expected+' expected sensor intervals</p><button type="button" data-remove="'+i+'">Remove release</button><details><summary>Source and coverage</summary><p class="mono">'+R.escaped(r.metadata.source_url)+'</p><p>Retrieved '+R.escaped(r.metadata.retrieved_at)+'</p><p class="mono">SHA-256 '+r.fingerprint+'</p>'+r.warnings.map(w=>'<p>'+R.escaped(w)+'</p>').join("")+'</details></section>';}).join("");
- for(const button of document.querySelectorAll("[data-remove]"))button.onclick=()=>{generation++;setReleases(releases.filter((_,i)=>i!==Number(button.dataset.remove)));say("Release removed.");};
+ for(const button of document.querySelectorAll("[data-remove]"))button.onclick=()=>{generation++;$("load").disabled=false;setReleases(releases.filter((_,i)=>i!==Number(button.dataset.remove)));say("Release removed.");};
  const old=$("sensor").value;$("sensor").innerHTML=(releases[0]?.metadata.sensors||[]).map(id=>'<option value="'+R.escaped(id)+'">'+R.escaped(id)+'</option>').join("");if([...$("sensor").options].some(o=>o.value===old))$("sensor").value=old;
  $("comparison").innerHTML=comparison?'<h2>Release changes</h2><div class="scroll"><table><thead><tr>'+["Sensor","Matched","Changed values","Recovered","Lost","Source changes","Matched delta (in)"].map(x=>"<th>"+x+"</th>").join("")+'</tr></thead><tbody>'+comparison.summary.map(s=>"<tr>"+[s.id,s.matched_valid,s.value_changed,s.recovered,s.lost,s.source_changed,fmt(s.matched_delta_in)].map(cell).join("")+"</tr>").join("")+"</tbody></table></div><p class=\"help\">Rainfall deltas use intervals valid in both releases. Recovered and lost observations are counted separately.</p>":"<p>Load a second release for the same sensors, interval, and window to compare changes.</p>";
  $("notes").value=notes;chart();table();
@@ -229,17 +240,17 @@ function render(){
 async function importFiles(files){
  const token=++generation;say("Reading rainfall files…");$("load").disabled=true;
  try{
-  let next=[...releases],nextNotes=notes;
+  let next=[...releases],nextNotes=notes,replaceNotes=false;
   for(const file of files){
    if(file.size>40*1024*1024)throw Error("Choose a file smaller than 40 MB, or use the command-line reviewer for larger captures.");
    const value=JSON.parse(await file.text());if(token!==generation)return;
-   if(value.schema==="rainfall-review-project/v1"){const reopened=R.reopen(value);next=reopened.releases;nextNotes=reopened.notes;}
+   if(value.schema==="rainfall-review-project/v1"){const reopened=R.reopen(value);next=reopened.releases;nextNotes=reopened.notes;replaceNotes=true;}
    else next.push(R.release(value));
    if(next.length>2)throw Error("The review holds two releases. Remove one before loading another.");
   }
   const result=next.length===2?R.compare(...next):null;
   if(token!==generation)return;
-  notes=nextNotes;releases=next;comparison=result;page=0;render();say("Loaded "+releases.length+" rainfall release"+(releases.length===1?".":"s."));
+  if(replaceNotes)notes=nextNotes;releases=next;comparison=result;page=0;render();say("Loaded "+releases.length+" rainfall release"+(releases.length===1?".":"s."));
  }catch(e){if(token===generation)say(e.message,true);}
  finally{if(token===generation)$("load").disabled=false;$("files").value="";}
 }
@@ -252,6 +263,6 @@ $("prev").onclick=()=>{page--;table();};$("next").onclick=()=>{page++;table();};
 $("notes").oninput=e=>{notes=e.target.value;};
 $("save").onclick=()=>{download("rainfall-review-project.json",JSON.stringify(R.project(releases,notes),null,2),"application/json");say("Saved review project. Reopen this file to restore both original releases and your notes.");};
 $("report").onclick=()=>download("rainfall-review-report.html",R.report(releases,notes),"text/html");
-$("csv").onclick=()=>{const rows=comparison?comparison.rows:releases[0].summaries;download(comparison?"rainfall-interval-comparison.csv":"rainfall-coverage.csv",R.csv(rows),"text/csv");};
+$("csv").onclick=()=>{const rows=comparison?comparison.rows:R.intervalRows(releases[0]);download(comparison?"rainfall-interval-comparison.csv":"rainfall-intervals.csv",R.csv(rows),"text/csv");};
 render();
 </script></body></html>
