@@ -469,12 +469,20 @@ def report_html(record):
     def table(rows, fields):
         return "<div class='table'><table><thead><tr>" + "".join("<th>"+esc(k.replace("_", " "))+"</th>" for k in fields) + "</tr></thead><tbody>" + "".join("<tr>" + "".join("<td>"+esc(json.dumps(r.get(k), ensure_ascii=False) if isinstance(r.get(k), (dict, list)) else r.get(k))+"</td>" for k in fields) + "</tr>" for r in rows) + "</tbody></table></div>"
     summary = table([record["summary"]], list(record["summary"]))
-    stations = table(record["station_matches"], ["source_station_id", "network_station_id", "match", "catchment_id", "selected_search_area", "original_datum", "coordinate_difference_m", "coordinate_review", "activities", "observations", "sampling_dates", "gauge_network_relation"])
+    station_fields = ["source_station_id", "network_station_id", "match", "catchment_id",
+                      "selected_search_area", "coordinate_difference_m", "coordinate_review",
+                      "activities", "sampling_dates", "gauge_network_relation"]
+    if "observations" in record:
+        station_fields.insert(station_fields.index("coordinate_difference_m"), "original_datum")
+        station_fields.insert(station_fields.index("sampling_dates"), "observations")
+    stations = table(record["station_matches"], station_fields)
     calendar = table(record["calendar"], ["visit_key", "date", "planned_network_station_id", "source_station_id", "station_basis", "original_flow_status", "mean_cfs", "flow_qualifiers", "at_or_above_annual_p95", "source_activity_ids_same_date"])
     episodes = table(record["high_flow_episodes"], ["event_id", "start_date", "end_date", "peak_cfs", "sampled_dates", "matching_network_station_activities", "saved_calendar_visit_keys"])
     pairs = table(record["paired_contrasts"], ["date", "analyte", "upstream_station_id", "downstream_station_id", "contrast_unit", "downstream_direction", "downstream_minus_upstream_lower", "downstream_minus_upstream_upper", "downstream_difference_lower_open", "downstream_difference_upper_open", "clock_separation_minutes", "both_stations_in_saved_network"])
     topology = table(record["topology"], ["station_a", "station_b", "relation", "relation_basis", "path"])
     observations = table(record.get("observations", []), ["observation_id", "station_id", "activity_id", "date", "activity_type", "characteristic", "status", "result_value", "limit_value", "lower", "upper", "upper_unbounded", "unit", "method", "source_comment_flags", "source_result_comment", "source_file", "source_row"])
+    observations_section = ("<h2>Original matched-station observations</h2>" + observations
+                            if "observations" in record else "")
     notes = "<ul>" + "".join("<li>"+esc(v)+"</li>" for v in record["interpretation"]) + "</ul>"
     return ("<!doctype html><html lang='en'><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'>"
             "<title>"+esc(record["title"])+"</title><style>body{font:15px/1.5 system-ui,sans-serif;color:#171717;max-width:1200px;margin:32px auto;padding:0 18px}h1,h2{line-height:1.2}.table{overflow:auto;margin:14px 0}table{border-collapse:collapse;font-size:13px}th,td{border:1px solid #ccc;padding:7px;text-align:left;vertical-align:top}th{background:#eee}pre{white-space:pre-wrap;overflow-wrap:anywhere}a{color:inherit}@media print{body{max-width:none;margin:0}.table{overflow:visible}table{font-size:8px}tr{break-inside:avoid}}</style>"
@@ -482,7 +490,7 @@ def report_html(record):
             "<p>Period "+esc(record["source_period"]["start_inclusive"])+" to "+esc(record["source_period"]["end_inclusive"])+". Network "+esc(record["network_id"])+". Plan "+esc(record.get("plan_id"))+". Campaign revision "+esc(record.get("campaign_revision_id"))+".</p>"
             "<h2>Interpretation</h2>"+notes+"<h2>Coverage summary</h2>"+summary+"<h2>Original station matches</h2>"+stations+
             "<h2>Source network relations</h2>"+topology+"<h2>Exact saved calendar dates</h2>"+calendar+
-            "<h2>Original high-flow episodes</h2>"+episodes+"<h2>Original matched-station observations</h2>"+observations+"<h2>Same-date concentration intervals in downstream order</h2>"+pairs+
+            "<h2>Original high-flow episodes</h2>"+episodes+observations_section+"<h2>Same-date concentration intervals in downstream order</h2>"+pairs+
             "<h2>Complete source and selection</h2><pre>"+esc(json.dumps({k: record[k] for k in ("source_binding", "source_schema", "source_edition", "station_mapping", "flow_scope") if k in record}, indent=2, ensure_ascii=False))+"</pre></html>")
 
 
@@ -496,7 +504,8 @@ def _export_members(workspace, record):
     for key in ("station_matches", "calendar", "high_flow_episodes", "annual_coverage",
                 "station_year_coverage", "monthly_coverage", "topology", "paired_contrasts"):
         yield "observed-context/" + key.replace("_", "-") + ".csv", bytes_member(_csv(record[key]))
-    yield "observed-context/observations.csv", bytes_member(_csv(record.get("observations", [])))
+    if "observations" in record:
+        yield "observed-context/observations.csv", bytes_member(_csv(record.get("observations", [])))
     yield from source_export_members(workspace, "monitoring-observations", record["source_binding"])
 
 
@@ -521,7 +530,8 @@ def export_files(workspace, context_id, *, plan_id=None, network_id=None):
     for key in ("station_matches", "calendar", "high_flow_episodes", "annual_coverage",
                 "station_year_coverage", "monthly_coverage", "topology", "paired_contrasts"):
         files["observed-context/" + key.replace("_", "-") + ".csv"] = _csv(record[key])
-    files["observed-context/observations.csv"] = _csv(record.get("observations", []))
+    if "observations" in record:
+        files["observed-context/observations.csv"] = _csv(record.get("observations", []))
     originals = export_source(workspace, "monitoring-observations", record["source_binding"])
     files.update(originals)
     return files
