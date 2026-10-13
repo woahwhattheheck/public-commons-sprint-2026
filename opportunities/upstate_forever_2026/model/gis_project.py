@@ -24,9 +24,14 @@ import uuid
 import xml.etree.ElementTree as ET
 import zipfile
 
+try:
+    from . import gis_vector_metadata
+except ImportError:
+    import gis_vector_metadata
+
 SCHEMA = "upstate.editable-gis/v1"
 REQUEST_SCHEMA = "upstate.gis-request/v1"
-VERSION = "1.5.0"
+VERSION = "1.6.0"
 CHUNK = 1024 * 1024
 
 
@@ -619,6 +624,35 @@ def atlas_desktop_binding(layer, map_layer):
     layer["atlas_desktop_binding"] = binding
 
 
+def vector_metadata_binding(layer, map_layer):
+    """Link the current FGDC/provenance edition without replacing QGIS styles."""
+    descriptor = layer.get("vector_metadata")
+    if not descriptor:
+        return
+    metadata = map_layer.find("resourceMetadata")
+    if metadata is None:
+        metadata = _element(map_layer, "resourceMetadata")
+    links = metadata.find("links")
+    if links is None:
+        links = _element(metadata, "links")
+    for link in list(links):
+        if link.get("name") in {"FGDC vector metadata", "Exact vector provenance"}:
+            links.remove(link)
+    for key, title, mime in (("xml", "FGDC vector metadata", "application/xml"),
+                             ("json", "Exact vector provenance", "application/json")):
+        _element(links, "link", name=title, type="metadata",
+                 url="./"+descriptor[key]["path"], description="Retained created-vector dataset metadata",
+                 format=mime)
+    properties = map_layer.find("customproperties")
+    if properties is None:
+        properties = _element(map_layer, "customproperties")
+    for item in list(properties):
+        if item.get("key") == "TokenJunkieLabs/vector_metadata":
+            properties.remove(item)
+    _element(properties, "property", key="TokenJunkieLabs/vector_metadata",
+             value=json.dumps(descriptor, ensure_ascii=False, sort_keys=True))
+
+
 def qgis_project(root: Path, manifest: dict) -> None:
     """Write documented QGS layer references, CRS, styles, metadata and grouping."""
     from pyproj import CRS
@@ -671,6 +705,8 @@ def qgis_project(root: Path, manifest: dict) -> None:
         _element(metadata, "abstract", json.dumps({"source": layer.get("source", {}),
                     "units": d["units"], "purpose": layer.get("purpose"),
                     "run_id": layer.get("run_id"), "source_files": layer["originals"]}, ensure_ascii=False))
+        if d["kind"] == "vector":
+            vector_metadata_binding(layer, m)
         if d["kind"] == "raster" and layer.get("atlas_styles"):
             _atlas_renderer(m, d, layer["style"])
             for variant, body in _atlas_named_styles(m, layer):
@@ -775,7 +811,8 @@ def source_table_preview(root: Path, attachment: dict) -> dict | None:
 
 def catalogue(root: Path, manifest: dict) -> None:
     columns = ["id", "title", "group", "kind", "purpose", "units", "run_id", "scenario_id", "profile_id",
-               "crs", "feature_count", "valid_cells", "working_path", "original_sha256"]
+               "crs", "feature_count", "valid_cells", "working_path", "original_sha256",
+               "fgdc_metadata_path", "vector_provenance_path"]
     with (root / "layers.csv").open("w", newline="", encoding="utf-8-sig") as out:
         writer = csv.DictWriter(out, fieldnames=columns)
         writer.writeheader()
@@ -783,6 +820,9 @@ def catalogue(root: Path, manifest: dict) -> None:
             row = {k: l.get(k, "") for k in columns}
             row.update({k:l["data"].get(k, "") for k in ("kind", "units", "crs", "feature_count", "valid_cells")})
             row["original_sha256"] = l["originals"][0]["sha256"]
+            metadata = l.get("vector_metadata", {})
+            row["fgdc_metadata_path"] = metadata.get("xml", {}).get("path", "")
+            row["vector_provenance_path"] = metadata.get("json", {}).get("path", "")
             # Protect spreadsheet consumers without modifying the scientific data.
             writer.writerow({k:("'"+v if isinstance(v,str) and v.startswith(("=","+","-","@")) else v) for k,v in row.items()})
     # Embed generated map overviews and literal table display rows for file:// use.
@@ -813,6 +853,11 @@ def catalogue(root: Path, manifest: dict) -> None:
         "Vector working copies are in layers/; original files and companions are retained under originals/. "
         "The source_row_id field maps each working feature to its native original. Raster cells and CRS "
         "are preserved; browser overviews are display products, not replacement numerical inputs.\n\n"
+        "Created vector layers have FGDC XML and exact provenance JSON under metadata/vectors/. "
+        "Open their links in Layer details or QGIS layer metadata. They bind the working GeoPackage "
+        "bytes, actual fields, source identities and selection. Unknown coordinate precision is explicit; "
+        "the full native CRS remains in the XML and JSON. Sealing a saved edit creates a new metadata "
+        "edition and keeps earlier metadata files unchanged.\n\n"
         "Toggle baseline/alternative groups rather than comparing unrelated legend ranges. Atlas layers retain their saved "
         "map ranges and palettes; choose the matching named style in QGIS or the offline Atlas view field. Other matching physical "
         "metric/units/purpose layers share a native-cell range. Dimensionless priorities, categorical codes, "
@@ -888,6 +933,9 @@ def verify(root: Path | str, *, native: bool = True) -> dict:
         checked(root,r)
     for attachment in manifest.get("attachments", []):
         attachment_metadata(manifest, attachment)
+    for layer in manifest["layers"]:
+        if layer["data"]["kind"] == "vector" and (manifest.get("vector_metadata_version") or layer.get("vector_metadata")):
+            gis_vector_metadata.verify_metadata(root, manifest, layer)
     tree = ET.parse(root/"project.qgs")
     byid = {l["key"]:l for l in manifest["layers"]}
     maps = tree.findall("./projectlayers/maplayer")
@@ -904,6 +952,13 @@ def verify(root: Path | str, *, native: bool = True) -> dict:
         local(root,path)
         if options != (["layername="+layer["data"]["layer"]] if layer["data"]["kind"]=="vector" else []):
             raise ValueError("Unexpected QGIS datasource options")
+        descriptor = layer.get("vector_metadata")
+        if descriptor:
+            links = m.findall("./resourceMetadata/links/link")
+            for key, title in (("xml", "FGDC vector metadata"), ("json", "Exact vector provenance")):
+                actual = [link.get("url") for link in links if link.get("name") == title]
+                if actual != ["./"+descriptor[key]["path"]]:
+                    raise ValueError("QGIS vector metadata link differs from its retained edition")
     with zipfile.ZipFile(root/"project.qgz") as z:
         qgs = [n for n in z.namelist() if n.endswith(".qgs")]
         if len(qgs)!=1 or z.read(qgs[0]) != (root/"project.qgs").read_bytes():
@@ -1054,13 +1109,18 @@ def build(spec: dict, source_root: Path | str, destination: Path | str,
                       "edition_id":selection_id,"title":spec["title"],"project_crs":project_crs,
                       "extent":_bounds_union(focus or layers),"layers":layers,"attachments":attachments,
                       "provenance":spec.get("provenance",{}),"history":[],
-                      "source_request":spec,"elapsed_seconds":round(time.monotonic()-started,4)}
+                      "source_request":spec,"elapsed_seconds":round(time.monotonic()-started,4),
+                      "vector_metadata_version":gis_vector_metadata.VERSION}
+            for layer in layers:
+                if layer["data"]["kind"] == "vector":
+                    layer["vector_metadata"] = gis_vector_metadata.write_metadata(stage, manifest, layer)
             qgis_project(stage,manifest)
             catalogue(stage,manifest)
             save(stage/"project.json",manifest)
             tools=stage/"tools"/"model"
             tools.mkdir(parents=True,exist_ok=True)
-            for name in ("gis_project.py","gis_project_cli.py","gis_project_view.html","gis_project_native.py","gis_workspace.py"):
+            for name in ("gis_project.py","gis_project_cli.py","gis_project_view.html","gis_project_native.py","gis_workspace.py",
+                         "gis_vector_metadata.py","fgdc_metadata.py"):
                 shutil.copyfile(Path(__file__).with_name(name),tools/name)
             (stage/"progress.json").unlink(missing_ok=True)
             inventory(stage)
@@ -1164,6 +1224,9 @@ def seal(root: Path | str, reason: str, *, project_file: str | None=None) -> dic
         for attachment in manifest.get("attachments",[]):
             for original in attachment["files"]:
                 checked(root,original)
+        for layer in manifest["layers"]:
+            if layer.get("vector_metadata"):
+                gis_vector_metadata.verify_metadata(root, manifest, layer, check_dataset=False)
         for wal in root.glob("layers/**/*.gpkg-wal"):
             if wal.stat().st_size:
                 raise ValueError("Save and close the active GeoPackage edit before sealing its file edition")
@@ -1193,7 +1256,8 @@ def seal(root: Path | str, reason: str, *, project_file: str | None=None) -> dic
                 z.writestr("project.qgs",(root/"project.qgs").read_bytes())
                 for name,data in aux.items():
                     z.writestr(name,data)
-        maps=ET.parse(root/"project.qgs").findall("./projectlayers/maplayer")
+        project_tree=ET.parse(root/"project.qgs")
+        maps=project_tree.findall("./projectlayers/maplayer")
         expected={l["key"]:l for l in manifest["layers"]}
         if len(maps)!=len(expected) or {m.findtext("id") for m in maps}!=set(expected):
             raise ValueError("Import added/removed layers as a new explicit GIS selection before sealing")
@@ -1225,8 +1289,24 @@ def seal(root: Path | str, reason: str, *, project_file: str | None=None) -> dic
             else:
                 layer["data"]=inspect_raster(p,layer,manifest["project_crs"])
         styles(manifest["layers"])
+        if manifest.get("vector_metadata_version"):
+            for layer in manifest["layers"]:
+                if layer["data"]["kind"] == "vector":
+                    layer["vector_metadata"] = gis_vector_metadata.write_metadata(root, manifest, layer, reason=reason)
         for map_layer in maps:
             atlas_desktop_binding(expected[map_layer.findtext("id")], map_layer)
+            vector_metadata_binding(expected[map_layer.findtext("id")], map_layer)
+        if manifest.get("vector_metadata_version"):
+            # Preserve the recipient\'s complete QGIS tree and auxiliary members;
+            # update only the two owned metadata links/custom property above.
+            project_bytes=ET.tostring(project_tree.getroot(),encoding="utf-8",xml_declaration=True)
+            (root/"project.qgs").write_bytes(project_bytes)
+            with zipfile.ZipFile(root/"project.qgz") as archive:
+                auxiliary=[(entry,archive.read(entry)) for entry in archive.infolist() if not entry.filename.endswith(".qgs")]
+            with zipfile.ZipFile(root/"project.qgz","w",compression=zipfile.ZIP_DEFLATED) as archive:
+                archive.writestr("project.qgs",project_bytes)
+                for entry,body in auxiliary:
+                    archive.writestr(entry,body)
         for layer in manifest["layers"]:
             layer["preview"]=(preview_vector if layer["data"]["kind"]=="vector" else preview_raster)(root,layer,manifest["project_crs"])
         changed=[]
