@@ -224,7 +224,15 @@ def get(workspace, operation_id):
 def latest(workspace, ensemble_id):
     key = identifier(ensemble_id)
     path = workspace.root / "ensemble_results" / key / "latest-parameter-studies.json"
-    return get(workspace, read_json(path)["operation_id"]) if path.exists() else None
+    if not path.exists():
+        return None
+    pointer = read_json(path)
+    if pointer.get("ensemble_id") != key:
+        raise ValueError("The saved continuation pointer names another original ensemble")
+    value = get(workspace, pointer["operation_id"])
+    if value["ensemble_id"] != key:
+        raise ValueError("The saved continuation belongs to another original ensemble")
+    return value
 
 
 def continue_studies(workspace, value):
@@ -245,6 +253,12 @@ def continue_studies(workspace, value):
             "selection": identity["selection"], "created_at": now(), "state": "preparing", "studies": []}
         if state["identity"] != identity:
             raise ValueError("Retain the original ensemble continuation selection")
+        state.update(state="preparing", updated_at=now())
+        atomic_json(path, state)
+        # Publish the pointer before derived work so the original preview can
+        # reopen completed studies even if a later summary/report is interrupted.
+        atomic_json(workspace.root / "ensemble_results" / state["ensemble_id"] /
+                    "latest-parameter-studies.json", {"operation_id": key, "ensemble_id": state["ensemble_id"]})
         try:
             by_key = {row["key"]: row for row in state["studies"]}
             for design in identity["designs"]:
@@ -280,7 +294,8 @@ def continue_studies(workspace, value):
                         row["source_operation_id"] = prepared["id"]
                 row["updated_at"] = now()
                 atomic_json(path, state)
-            state.update(state="complete", active_study=None, updated_at=now(), completed_at=now())
+            state.update(state="complete", active_study=None, updated_at=now())
+            state.setdefault("completed_at", now())
             state.pop("error", None)
             state["files"] = {"selection": describe_file(workspace.root, directory / "selection.json")}
             atomic_json(path, state)
