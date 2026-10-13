@@ -321,8 +321,10 @@ def copy_exact(source, destination, rows):
         raise WaterError("The complete copied tree differs from its selected source.")
 
 def decode_text(raw, fallback=None):
-    if raw.startswith(b"\xff\xfe") or raw.startswith(b"\xfe\xff"):
-        encoding = "utf-16"
+    if raw.startswith(b"\xff\xfe"):
+        encoding = "utf-16-le"
+    elif raw.startswith(b"\xfe\xff"):
+        encoding = "utf-16-be"
     elif raw.startswith(b"\xef\xbb\xbf"):
         encoding = "utf-8-sig"
     else:
