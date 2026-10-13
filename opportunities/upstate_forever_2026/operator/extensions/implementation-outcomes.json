@@ -2,7 +2,7 @@
   "schema": "upstate.operator-extension/v1",
   "id": "implementation-outcomes",
   "title": "Implementation outcomes",
-  "version": "1",
+  "version": "2",
   "order": 71,
   "assets": [
     "implementation_outcomes.mjs"
@@ -17,7 +17,8 @@
       ]
     },
     "actions": [
-      "implementation.outcomes.build"
+      "implementation.outcomes.build",
+      "implementation.outcomes.report-import"
     ],
     "invoke": {
       "handler": "invoke",
@@ -58,6 +59,19 @@
         ],
         "path": "/api/implementation-outcomes/detail",
         "operation": "detail",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "POST"
+        ],
+        "path": "/api/implementation-outcomes/report-preview",
+        "operation": "report-preview",
         "handler": "read",
         "args": [
           "workspace_key",
