@@ -1,0 +1,61 @@
+{
+  "schema": "upstate.operator-extension/v1",
+  "id": "receiving-water-report",
+  "title": "Receiving-water scientific report sources",
+  "version": "1.0.0",
+  "order": 87,
+  "requires_actions": [
+    "receiving.water.plan"
+  ],
+  "assets": [
+    "receiving_water_report.mjs"
+  ],
+  "backend": {
+    "module": "receiving_water_report_native",
+    "actions": [
+      "receiving.water.report.prepare"
+    ],
+    "invoke": {
+      "handler": "perform",
+      "args": [
+        "operator",
+        "task"
+      ]
+    },
+    "routes": [
+      {
+        "methods": [
+          "GET"
+        ],
+        "path": "/api/receiving-water-report",
+        "handler": "read",
+        "args": [
+          "operator",
+          "workspace_key",
+          "payload"
+        ]
+      }
+    ],
+    "state": {
+      "key": "receiving_water_reports",
+      "handler": "snapshot",
+      "args": [
+        "operator",
+        "workspace_key"
+      ]
+    },
+    "decorate_task": {
+      "handler": "decorate_task",
+      "args": [
+        "operator",
+        "task"
+      ]
+    },
+    "verify_workspace": {
+      "handler": "verify_workspace",
+      "args": [
+        "workspace"
+      ]
+    }
+  }
+}
