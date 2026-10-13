@@ -106,7 +106,7 @@ function choices(name,rows,selected) {
 }
 const cohortLinked = selection => Boolean(selection.source_report_id || selection.source_report_sha256 ||
  selection.economic_edition_id || selection.economic_edition_sha256 ||
- selection.source_scenario_analysis_id || selection.source_scenario_analysis_sha256);
+ selection.source_scenario_analysis_id || selection.source_scenario_analysis_sha256 || selection.source_decision);
 function defaultSelection(data) {
  return {delivery_mode:'regional_rfp',native_study:{title:'',purpose:'',reference:''},title:data?.project?.title||'',baseline_run_id:'',scenario_run_ids:[],source_roles:{},overlays:{},
   map_settings:{paper:'a4',dpi:220,display_percentile:98,weights:Object.fromEntries(MASS.map(k=>[k,1]))},
@@ -337,10 +337,10 @@ export function attachMapAtlas(host) {
   return '<div class="atlas-grid">'+field('Delivery mode',select('delivery_mode',[['regional_rfp','Regional RFP · complete seven-family specification'],['native_study','Original native study · original grid and source domain']],draft.delivery_mode||'regional_rfp','required'),'The original study retains its actual grid and source coverage. Regional RFP requirements remain unchanged.',true)+
    (isStudy(draft)?field('Original study title',input('study_title',draft.native_study?.title||draft.title,'required maxlength="140"'),'',true)+field('Study purpose',textarea('study_purpose',draft.native_study?.purpose||'','required rows="3"'),'State the intended scientific question and geographic scope.',true)+field('Study reference',input('study_reference',draft.native_study?.reference||''),'Original source, publication or release reference.',true):'')+
    field('Release title',input('title',draft.title,'required maxlength="140"'),'',true)+
-   field('Completed baseline',select('baseline',complete.map(r=>[r.id,runName(data(),r.id)]),draft.baseline_run_id,'required'+(linked?' disabled':'')),linked?'The saved report or economic edition supplies this ordered run selection.':'',true)+'</div>'+
+   field('Completed baseline',select('baseline',complete.map(r=>[r.id,runName(data(),r.id)]),draft.baseline_run_id,'required'+(linked?' disabled':'')),linked?'The attached saved analysis supplies this ordered run selection.':'',true)+'</div>'+
    '<h3>Future land-cover alternatives</h3><p class="atlas-note">The first selected alternative supplies the principal future maps. Additional alternatives receive their own sheets. Each uses the baseline grid and parameter profile.</p>'+
    (rows.length?table(['Include','Scientific pairing',''],rows):'<p class="atlas-note">Complete a compatible land-cover alternative in the Native run desk to add it here.</p>')+
-   (linked?'<div class="atlas-linked"><p>The saved watershed report, scenario analysis or economic edition supplies this exact baseline and ordered alternatives. Choose a different run cohort to remove these retained result links from this draft and edit the runs.</p>'+
+   (linked?'<div class="atlas-linked"><p>The attached saved analysis supplies this exact baseline and ordered alternatives. Choose a different run cohort to remove these retained result links from this draft and edit the runs.</p>'+
     '<div class="atlas-actions">'+(draft.source_report_id?button('source-report','Open source report','data-id="'+esc(draft.source_report_id)+'"'):'')+
     button('independent-release','Choose a different run cohort')+'</div></div>':'');
  }
@@ -474,6 +474,17 @@ export function attachMapAtlas(host) {
   }
  }
 
+ function decisionSummary(selection=draft){
+  const decision=selection?.source_decision;if(!decision)return '';
+  const profile=rowBy(data(),'profiles',decision.profile_id);
+  const attributes='data-study-id="'+esc(decision.study_id)+'" data-run-id="'+esc(decision.run_id)+'" data-revision="'+esc(decision.revision)+'" data-profile-id="'+esc(decision.profile_id)+'"'+
+   (Number.isInteger(decision.point_index)?' data-point-index="'+decision.point_index+'"':'');
+  return '<section class="atlas-summary"><h3>Saved Decision calculation</h3>'+
+   '<p>These maps show the chosen modeled alternative under '+esc(profile?.title||decision.profile_id)+'. The attached Decision report retains its complete comparison across scientific profiles, economic inputs, objective and calculation.</p>'+
+   '<p>Study revision '+esc(decision.revision)+(Number.isInteger(decision.point_index)?' · selected budget point '+(decision.point_index+1):'')+'</p>'+
+   (typeof host.openDesk==='function'?'<div class="atlas-actions">'+button('source-decision','Open saved Decision calculation',attributes)+'</div>':'')+'</section>';
+ }
+
  function reviewStep(){
   const included=[draft.baseline_run_id,...(draft.scenario_run_ids||[])],c=draft.contact||{};
   return '<div class="atlas-grid">'+field('Responsible contact',input('contact_name',c.name||'',isStudy(draft)?'':'required'))+
@@ -487,7 +498,7 @@ export function attachMapAtlas(host) {
    '<div class="atlas-summary"><h3>Complete release</h3><p>'+esc(draft.title||'Untitled release')+'</p><p>'+esc(runName(data(),draft.baseline_run_id))+' · '+(draft.scenario_run_ids||[]).length+' alternatives</p>'+
    '<p>'+releaseFamilies(draft).length+' selected map families'+(draft.receiving_waters?' plus the selected receiving-water analysis families':'')+', combined atlas, separate map PDFs, JSON/CSV page index, physical GeoTIFFs, metadata, PDF/HTML/Markdown report and editable working archive.</p>'+
    '</div><section class="atlas-summary" data-atlas-economics>'+economicPanel()+'</section>'+
-   sourceSummary(draft)+
+   decisionSummary(draft)+sourceSummary(draft)+
    '<div data-atlas-problems></div>';
  }
 
@@ -575,6 +586,8 @@ export function attachMapAtlas(host) {
    button('clone','Revise this selection')+button('item','Open complete record','data-kind="deliveries" data-id="'+esc(opened.id)+'"')+'</div>'+
    '<p class="atlas-note">For offline map review, extract the complete GIS package and open <code>index.html</code>.</p>'+
    (opened.error?'<p class="atlas-error">'+esc(opened.error.message||opened.error)+'</p>':'')+
+   decisionSummary(opened.selection||{})+
+   '<div class="atlas-actions">'+Object.entries(opened.files||{}).filter(([name])=>name.startsWith('decision_')).map(([name,record])=>downloadLink(retainedFile(record),'Download '+human(name.replace(/^decision_/,'')))).join('')+'</div>'+
    sourceSummary(opened.selection||{},atlas?.source_context?.water_designations||{})+
    (['complete','received_snapshot'].includes(opened.state)&&atlas?'<section class="atlas-pair atlas-source" data-atlas-pair-controls>'+pairControls()+'</section>':'')+
    (opened.atlas&&['complete','received_snapshot'].includes(opened.state)?'<section class="atlas-source" data-atlas-review-collection></section>':'')+
@@ -793,8 +806,13 @@ export function attachMapAtlas(host) {
    else if(action==='open')await open(b.dataset.id);
    else if(action==='clone'){const selection=clone(opened.selection);await create({workspace_key:atWorkspace,selection});}
    else if(action==='source-report')await host.openExtension('scenario-reports','open',b.dataset.id,{workspace_key:atWorkspace});
+   else if(action==='source-decision'){
+    const selected={workspace_key:atWorkspace,study_id:b.dataset.studyId,revision:Number(b.dataset.revision),run_id:b.dataset.runId,profile_id:b.dataset.profileId};
+    if(b.dataset.pointIndex!==undefined)selected.point_index=Number(b.dataset.pointIndex);
+    await host.openDesk('robust-workbench','openForCalculation',selected);
+   }
    else if(action==='independent-release'){
-    collect();for(const key of ['source_report_id','source_report_sha256','economic_edition_id','economic_edition_sha256','source_scenario_analysis_id','source_scenario_analysis_sha256'])delete draft[key];
+    collect();for(const key of ['source_report_id','source_report_sha256','economic_edition_id','economic_edition_sha256','source_scenario_analysis_id','source_scenario_analysis_sha256','source_decision'])delete draft[key];
     operationId=null;step=0;mode='prepare';persist();render();
    }else if(action==='remove-economics'){
     collect();delete draft.economic_edition_id;delete draft.economic_edition_sha256;
