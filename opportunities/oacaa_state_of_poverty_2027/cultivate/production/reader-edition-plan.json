@@ -1,0 +1,2959 @@
+{
+  "schema": "tjl.oacaa.reader-edition-plan.v1",
+  "id": "oacaa-reader-edition-2026-v1",
+  "version": 1,
+  "sourceDocumentId": "oacaa-ohio-saipe-2024-working",
+  "title": "Poverty and economic security in Ohio",
+  "description": "Additive reader manuscript and complete ordering of the existing sourcebook. All original sections, figures, dataset bindings and source identities remain in the same report.",
+  "sourcePlanNames": [
+    "acs-working-plan.json",
+    "family-working-plan.json",
+    "county-working-plan.json",
+    "rental-working-plan.json",
+    "household-method-plan.json",
+    "longitudinal-working-plan.json",
+    "food-working-plan.json",
+    "measurement-working-plan.json",
+    "asset-working-plan.json"
+  ],
+  "expectedExistingSectionIds": [
+    "understanding",
+    "state",
+    "county-rates",
+    "county-counts",
+    "county-directory-1",
+    "county-directory-2",
+    "county-directory-3",
+    "county-directory-4",
+    "uncertainty",
+    "acs-context",
+    "acs-age-depth",
+    "acs-seniors",
+    "acs-race-summary",
+    "acs-age-all",
+    "acs-age-white_non_hispanic",
+    "acs-age-black",
+    "acs-age-asian",
+    "acs-age-multiracial",
+    "acs-age-hispanic",
+    "acs-primary-1",
+    "acs-primary-2",
+    "family-overview",
+    "family-all",
+    "family-white-nonhispanic",
+    "family-black",
+    "family-asian",
+    "family-multiracial",
+    "family-hispanic",
+    "family-work-married",
+    "family-work-male",
+    "family-work-female",
+    "work-experience",
+    "work-employment-status",
+    "county-acs5-overview",
+    "county-acs5-all",
+    "county-acs5-child",
+    "county-acs5-adult",
+    "county-acs5-senior",
+    "rental-gap",
+    "rental-thresholds",
+    "rental-burdens",
+    "household-budget-method",
+    "household-assumptions",
+    "longitudinal-overview",
+    "longitudinal-history",
+    "longitudinal-annual-ohio",
+    "longitudinal-annual-us",
+    "longitudinal-counties",
+    "food-ohio",
+    "food-county-counts",
+    "food-county-income",
+    "food-county-cost",
+    "food-source-revision",
+    "food-history",
+    "measurement-overview",
+    "measurement-thresholds",
+    "measurement-guidelines",
+    "measurement-methods",
+    "measurement-dynamics-summary",
+    "measurement-dynamics-24",
+    "measurement-dynamics-36",
+    "asset-cushion-overview",
+    "asset-latest-comparison",
+    "asset-history-series",
+    "asset-source-reconciliation"
+  ],
+  "documentPresentation": {
+    "title": "Poverty and economic security in Ohio",
+    "subtitle": "Working report · Statewide findings and complete county evidence",
+    "periodLabel": "Principal estimates: 2024 and 2020–2024; other source years stated"
+  },
+  "sections": [
+    {
+      "id": "reader-opening",
+      "title": "Poverty and economic security in Ohio",
+      "summary": "A guide to the statewide findings and the complete county evidence",
+      "breakBefore": true,
+      "blocks": [
+        {
+          "id": "reader-opening-purpose",
+          "type": "paragraph",
+          "text": "Ohio’s poverty statistics describe several connected conditions: income below a defined threshold, the cost of essential goods and services, and the resources available when income falls. This edition brings those measures together so Community Action agencies and their partners can use statewide findings alongside evidence for every Ohio county. Each chapter identifies the population, measurement period and source behind its figures.",
+          "sourceIds": [
+            "census-saipe-2024-ohio",
+            "acs-2024-primary",
+            "rental-gap-2026",
+            "food-mmg-2026",
+            "asset-scorecard-method"
+          ]
+        },
+        {
+          "id": "reader-opening-income",
+          "type": "paragraph",
+          "text": "The 2024 American Community Survey one-year estimates identify 1,467,983 Ohio residents below the poverty threshold, or 12.7% of the population for whom poverty status was determined. A broader income measure places 3,308,461 residents below twice the threshold, or 28.6%. The narrower group is included in the broader group. These measures describe different depths of limited income and must not be added together.",
+          "sourceIds": [
+            "acs-2024-details"
+          ]
+        },
+        {
+          "id": "reader-opening-needs",
+          "type": "paragraph",
+          "text": "The basic-needs measures add a different view. Feeding America estimates that 1,822,930 Ohio residents lived in food-insecure households in 2024, including 534,640 children under 18. NLIHC’s 2024 housing data identify 37 affordable and available rental homes for every 100 extremely low-income renter households in Ohio. Each measure has its own definition and population; their counts are not an unduplicated total of people needing assistance.",
+          "sourceIds": [
+            "food-mmg-2026",
+            "rental-gap-2026",
+            "rental-gap-method"
+          ]
+        },
+        {
+          "id": "reader-opening-route",
+          "type": "paragraph",
+          "text": "The main chapters explain the findings and practical planning questions. The appendices preserve the complete county directories, demographic tables, household-cost methodology, historical series and statistical source directory. Principal income and food series describe 2024; county ACS profiles describe the full 2020–2024 period. Housing figures use 2024 data published in 2026, household-cost methods come from the 2025 technical brief, and the selected asset estimates are labelled 2021 by their provider.",
+          "sourceIds": [
+            "county-acs-periods",
+            "rental-gap-method",
+            "household-cww-method-2025",
+            "asset-scorecard-current"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "reader-statewide",
+      "title": "1. Income poverty and the statewide picture",
+      "summary": "Read the estimate with its source, population and period",
+      "breakBefore": true,
+      "blocks": [
+        {
+          "id": "reader-statewide-acs",
+          "type": "paragraph",
+          "text": "The 2024 ACS one-year poverty universe contains 11,583,778 Ohio residents. Of these, 1,467,983 are below the poverty threshold and 738,620 are below half the threshold. The corresponding rates are 12.7% and 6.4%. The below-half group is contained within the below-poverty group. Reporting both shows the depth of low income as well as its overall extent.",
+          "sourceIds": [
+            "acs-2024-details"
+          ]
+        },
+        {
+          "id": "reader-statewide-saipe",
+          "type": "paragraph",
+          "text": "For the consistent state-and-county comparison used in the following tables, the Census Bureau’s 2024 Small Area Income and Poverty Estimates programme reports 1,463,705 Ohio residents in poverty, a rate of 12.6%, and 415,575 children aged 0–17 in poverty, a rate of 16.4%. Its median household income estimate is $72,259. SAIPE and ACS are distinct estimation programmes; each remains attached to its own figures throughout this edition.",
+          "sourceIds": [
+            "census-saipe-2024-ohio"
+          ]
+        },
+        {
+          "id": "reader-statewide-benchmark",
+          "type": "paragraph",
+          "text": "A poverty threshold varies with family size and composition. For 2024, the official Census threshold for a four-person family with two related children under 18 is $31,812. The 2024 HHS guideline for a four-person family in the contiguous states is $31,200. The Census threshold is a statistical benchmark; the HHS schedule is used in administrative eligibility rules. The source tables retain these separately.",
+          "sourceIds": [
+            "measurement-cps2024",
+            "measurement-hhs2024"
+          ]
+        },
+        {
+          "id": "reader-statewide-use",
+          "type": "paragraph",
+          "text": "For local planning, choose the series that answers the question and keep it consistent across places and years. SAIPE supplies the complete 2024 county comparison. ACS adds demographic detail and a separate five-year view for all counties. Published confidence intervals and margins of error belong with the estimates; a difference between two displayed point estimates alone does not establish a statistically significant difference.",
+          "sourceIds": [
+            "census-saipe-2024-ohio",
+            "county-acs-periods",
+            "longitudinal-comparison-guide"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "reader-ages",
+      "title": "2. Children, working-age adults and older residents",
+      "summary": "Distinct populations, with differences within each group",
+      "breakBefore": true,
+      "blocks": [
+        {
+          "id": "reader-ages-comparison",
+          "type": "paragraph",
+          "text": "In Ohio’s 2024 ACS one-year estimates, the poverty rate is 16.5% for children under 18, 12.0% for adults aged 18–64 and 10.4% for residents aged 65 and over. These disjoint age groups account for the full displayed poverty population. The separate under-six estimate, 17.7%, describes children already included in the under-18 group.",
+          "sourceIds": [
+            "acs-2024-details"
+          ]
+        },
+        {
+          "id": "reader-ages-depth",
+          "type": "paragraph",
+          "text": "Income below twice the poverty threshold affects 36.9% of children under 18, 25.8% of adults aged 18–64 and 27.6% of older residents in this same source. The below-twice-poverty population includes people below poverty and people between the poverty threshold and twice that threshold. Reading it alongside the below-poverty rate shows the broader reach of low income. They do not establish eligibility for a specific assistance programme.",
+          "sourceIds": [
+            "acs-2024-details",
+            "measurement-hhs2024"
+          ]
+        },
+        {
+          "id": "reader-ages-seniors",
+          "type": "paragraph",
+          "text": "Among people aged 65 and over, the estimates identify 140,282 women and 89,286 men below poverty, with rates of 11.6% and 9.0%, respectively. The combined senior denominator is 2,198,505 people, including those below poverty. These figures describe the source’s sex categories and retain the same age and poverty universe.",
+          "sourceIds": [
+            "acs-2024-details"
+          ]
+        },
+        {
+          "id": "reader-ages-race",
+          "type": "paragraph",
+          "text": "The 2024 ACS one-year all-age poverty estimates also differ across the source’s race and Hispanic-origin categories: 9.9% for White alone, non-Hispanic residents; 24.4% for Black or African American alone residents; 13.3% for Asian alone residents; 18.9% for residents of two or more races; and 19.1% for Hispanic or Latino residents of any race. Each rate uses its own category’s population. Hispanic origin overlaps race, and these displayed categories do not form a complete partition. Appendix C retains the counts and age-specific detail.",
+          "sourceIds": [
+            "acs-2024-race"
+          ]
+        },
+        {
+          "id": "reader-ages-planning",
+          "type": "paragraph",
+          "text": "For programme planning, read these age profiles alongside household composition, housing costs and access to food. The evidence supports asking different service questions for families with young children, adults facing unstable work and older residents with limited income. The tables describe populations; decisions about a particular household require its own circumstances.",
+          "sourceIds": [
+            "acs-2024-details",
+            "family-work-acs-2024",
+            "rental-gap-2026",
+            "food-mmg-2026"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "reader-families-work",
+      "title": "3. Families, work and economic security",
+      "summary": "Work experience and family composition add context to income",
+      "breakBefore": true,
+      "blocks": [
+        {
+          "id": "reader-work-full",
+          "type": "paragraph",
+          "text": "In the 2024 ACS one-year source, 93,568 Ohio people aged 16 and over who worked full-time, year-round during the past 12 months were below poverty, a rate of 2.2%. Among people who worked part-time or part-year, the estimate is 341,047, or 16.5%. Among those who did not work during that period, it is 661,100, or 21.6%. The source describes work experience during the past 12 months, not an unemployment rate.",
+          "sourceIds": [
+            "family-work-acs-2024"
+          ]
+        },
+        {
+          "id": "reader-work-family",
+          "type": "paragraph",
+          "text": "Family measures count families rather than individual residents. Among married-couple families in which both spouses worked during the past 12 months, the poverty estimate is 13,398 families, or 1.1%. The corresponding rates are 6.2% when one spouse worked and 9.9% when neither spouse worked. These categories concern the householder and spouse; they do not count every possible wage earner in the household.",
+          "sourceIds": [
+            "family-work-acs-2024"
+          ]
+        },
+        {
+          "id": "reader-work-householder",
+          "type": "paragraph",
+          "text": "For families with a female householder and no spouse present, the poverty rate is 8.2% when the householder worked full-time, year-round, 42.2% with part-time or part-year work, and 39.9% with no work during the past 12 months. For families with a male householder and no spouse present, the corresponding rates are 2.8%, 22.5% and 25.9%. These are descriptive source estimates. The Census category ‘no spouse present’ does not by itself establish marital status.",
+          "sourceIds": [
+            "family-work-acs-2024"
+          ]
+        },
+        {
+          "id": "reader-work-education",
+          "type": "paragraph",
+          "text": "Among Ohio adults aged 25 and over for whom poverty status was determined, the published 2024 S1701 rates are 26.8% for people without a high-school diploma, 13.9% for high-school graduates or equivalent, 10.3% for people with some college or an associate degree, and 4.1% for people with a bachelor’s degree or higher. These descriptive associations do not measure the effect of education independently of other circumstances.",
+          "sourceIds": [
+            "acs-2024-primary"
+          ]
+        },
+        {
+          "id": "reader-work-meaning",
+          "type": "paragraph",
+          "text": "The practical questions extend beyond whether a person worked: the continuity of work, available hours, care responsibilities and the household’s essential costs can all matter to a service plan. The source tables support examining work and family circumstances together; they do not estimate the causal effect of employment, family composition or a particular programme. Appendix D preserves the complete family, work-experience and civilian-employment tables.",
+          "sourceIds": [
+            "family-work-acs-2024",
+            "work-employment-acs-2024",
+            "household-cww-method-2025"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "reader-basic-needs",
+      "title": "4. Food, housing and the cost of essentials",
+      "summary": "Income measures and basic-needs measures answer complementary questions",
+      "breakBefore": true,
+      "blocks": [
+        {
+          "id": "reader-needs-food",
+          "type": "paragraph",
+          "text": "Feeding America’s 2024 estimates place Ohio’s overall food-insecurity rate at 15.3% and its child rate at 20.8%. The child count is 534,640; these children are included in the overall count of 1,822,930 residents. Food insecurity describes limited or uncertain access to adequate food, and its modelled estimates are distinct from the income-poverty series.",
+          "sourceIds": [
+            "food-mmg-2026",
+            "food-mmg-method-2026"
+          ]
+        },
+        {
+          "id": "reader-needs-food-threshold",
+          "type": "paragraph",
+          "text": "Among Ohio children estimated to be food insecure, the source places 33% above 185% of the federal poverty level and 67% at or below that threshold. The denominator is food-insecure children, not all children. These categories describe income; they do not establish actual enrolment or every eligibility rule for nutrition assistance.",
+          "sourceIds": [
+            "food-mmg-2026",
+            "food-mmg-method-2026"
+          ]
+        },
+        {
+          "id": "reader-needs-rental",
+          "type": "paragraph",
+          "text": "NLIHC identifies 422,098 extremely low-income renter households in Ohio and 156,593 rental homes affordable and available to them in its 2024 data. The difference is a shortage of 265,505 homes, with a published ratio of 37 homes per 100 households. Extremely low income means at or below the federal poverty guideline or 30% of area median family income, whichever is higher. ‘Available’ accounts for whether an affordable home is vacant or occupied by a household within the relevant income group.",
+          "sourceIds": [
+            "rental-gap-2026",
+            "rental-gap-method"
+          ]
+        },
+        {
+          "id": "reader-needs-burden",
+          "type": "paragraph",
+          "text": "For Ohio’s extremely low-income renter households, the source reports that 87% spend more than 30% of income on housing and utilities, while 73% spend more than 50%. The severely burdened group is included in the cost-burdened group. These percentages cannot be added. The detailed tables retain both cumulative income thresholds for availability and separate income bands for cost burden.",
+          "sourceIds": [
+            "rental-gap-2026",
+            "rental-gap-method"
+          ]
+        },
+        {
+          "id": "reader-needs-budget",
+          "type": "paragraph",
+          "text": "The 2025 Self-Sufficiency Standard technical brief provides a structured way to examine essential household costs: housing, child care, food, transportation, health care, other necessities and taxes, with applicable tax credits. Broadband and mobile service are included in miscellaneous necessities, and school-age child care accounts for summer as well as the school term. Emergency savings is a separate calculation. This edition retains those methods; county-specific dollar budgets require the selected household and the original workbook cells.",
+          "sourceIds": [
+            "household-cww-method-2025"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "reader-financial-resilience",
+      "title": "5. The financial cushion behind income",
+      "summary": "Household assets and the duration of poverty",
+      "breakBefore": true,
+      "blocks": [
+        {
+          "id": "reader-resilience-assets",
+          "type": "paragraph",
+          "text": "The Prosperity Now Scorecard labels its selected Ohio household asset estimates 2021. In that source, 20% of Ohio households are asset poor and 29% are liquid asset poor; the corresponding US estimates are 19% and 27%. Asset poverty compares household net worth with a benchmark of three months at the poverty threshold without income. Liquid asset poverty applies the provider’s narrower definition of financial assets. These are household measures and historical source years.",
+          "sourceIds": [
+            "asset-scorecard-current",
+            "asset-scorecard-method"
+          ]
+        },
+        {
+          "id": "reader-resilience-interpretation",
+          "type": "paragraph",
+          "text": "The asset measures add information about the resources available during a loss of income. Their percentages cannot be added to person-based poverty or food-insecurity rates, and they do not show which individual households appear in more than one measure. The provider’s precision fields and missing years remain in Appendix G without an invented confidence interval or interpolated value.",
+          "sourceIds": [
+            "asset-scorecard-current",
+            "asset-scorecard-history",
+            "asset-scorecard-method"
+          ]
+        },
+        {
+          "id": "reader-resilience-dynamics",
+          "type": "paragraph",
+          "text": "National SIPP research shows why the observation period also matters. In the published 2017–2019 series, 27.1% of people experienced poverty in at least two consecutive months and 3.3% experienced poverty in every month of the 36-month period. Those experiencing poverty throughout the period are included in the episodic group. These are national historical estimates, not Ohio rates.",
+          "sourceIds": [
+            "measurement-sipp2022"
+          ]
+        },
+        {
+          "id": "reader-resilience-release",
+          "type": "paragraph",
+          "text": "The SIPP appendix keeps the published source editions and their full observation windows. Later Census corrections concern income processing and separately released annual and monthly tables. A revision to those rates cannot simply be applied as an adjustment to the published episodic or chronic estimates. The source notes retain that distinction alongside the historical results.",
+          "sourceIds": [
+            "measurement-correctedIndex",
+            "measurement-correction",
+            "measurement-sipp2019",
+            "measurement-sipp2022"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "reader-place",
+      "title": "6. Reading local need across all 88 counties",
+      "summary": "Rates describe prevalence; counts describe the number of people",
+      "breakBefore": true,
+      "blocks": [
+        {
+          "id": "reader-place-scales",
+          "type": "paragraph",
+          "text": "A county with a high poverty rate and a county with a large number of residents in poverty may present different planning needs. The following SAIPE charts show those two perspectives separately using the same 2024 source. Their selections describe point estimates; they do not establish statistically distinct rankings between counties.",
+          "sourceIds": [
+            "census-saipe-2024-ohio"
+          ]
+        },
+        {
+          "id": "reader-place-period",
+          "type": "paragraph",
+          "text": "The county age profiles use 2020–2024 ACS five-year estimates to retain every Ohio county in a common source. This is a five-year measurement period, not a snapshot of 2024 alone. Statewide figures from that same release provide the appropriate within-series comparison. The 2024 ACS one-year statewide demographic figures remain separately labelled.",
+          "sourceIds": [
+            "county-acs-periods",
+            "county-acs5-b17001-part1",
+            "county-acs5-b17001-part2"
+          ]
+        },
+        {
+          "id": "reader-place-directory",
+          "type": "paragraph",
+          "text": "Appendix B contains the full alphabetical SAIPE county directory, all-age and age-specific ACS county tables, and the below-twice-poverty county series. Appendix F preserves every county’s child food-insecurity estimates, income-threshold shares and food-cost measures. Read the relevant denominator and period before combining a local narrative across those sources.",
+          "sourceIds": [
+            "census-saipe-2024-ohio",
+            "county-acs5-b17001-part1",
+            "county-acs5-b17001-part2",
+            "longitudinal-current-c17002",
+            "food-mmg-2026"
+          ]
+        },
+        {
+          "id": "reader-place-application",
+          "type": "paragraph",
+          "text": "For a local needs assessment, begin with the county’s count, rate and uncertainty; then examine age composition and the relevant housing, food or household-cost evidence. A high rate can identify concentrated need, while a large count can inform the scale of service demand. These are planning interpretations to examine alongside local service records and community knowledge.",
+          "sourceIds": []
+        }
+      ]
+    },
+    {
+      "id": "reader-change",
+      "title": "7. Change over time",
+      "summary": "Compare like periods and preserve gaps in the record",
+      "breakBefore": true,
+      "blocks": [
+        {
+          "id": "reader-change-annual",
+          "type": "paragraph",
+          "text": "Ohio’s ACS one-year poverty rate is 13.9% in 2018 and 12.7% in 2024 in the retained annual series. The US rates are 13.1% and 12.1%. The intervening published observations remain in the following tables. The standard 2020 ACS one-year release is absent; the gap is shown explicitly rather than filled with zero or a different release.",
+          "sourceIds": [
+            "longitudinal-annual-ohio-2018",
+            "longitudinal-annual-ohio-2024",
+            "longitudinal-annual-us-2018",
+            "longitudinal-annual-us-2024",
+            "longitudinal-standard-gap"
+          ]
+        },
+        {
+          "id": "reader-change-counts",
+          "type": "paragraph",
+          "text": "Between the 2019 and 2024 ACS one-year observations, Ohio’s poverty-universe population increases from 11,362,386 to 11,583,778, while the estimated number below poverty changes from 1,484,862 to 1,467,983. The latter is a descriptive decrease of 16,879 people. This comparison uses the same annual source type and does not by itself establish statistical significance or explain the cause of the change.",
+          "sourceIds": [
+            "longitudinal-annual-ohio-2019",
+            "longitudinal-annual-ohio-2024",
+            "longitudinal-comparison-guide"
+          ]
+        },
+        {
+          "id": "reader-change-broader",
+          "type": "paragraph",
+          "text": "For the broader below-twice-poverty measure, Ohio’s five-year ACS estimates are 3,561,514 people, or 31.8%, in 2006–2010 and 3,372,969, or 29.3%, in 2020–2024. The difference is 188,545 fewer people and 2.5 percentage points in the displayed rates. The separate Census 2000 benchmark describes income in 1999 and remains labelled with that period in Appendix G.",
+          "sourceIds": [
+            "longitudinal-acs-2010",
+            "longitudinal-current-c17002",
+            "longitudinal-sf3-1999",
+            "longitudinal-comparison-guide"
+          ]
+        },
+        {
+          "id": "reader-change-release",
+          "type": "paragraph",
+          "text": "A new source release can also revise an estimate for the same year. Feeding America’s current release corrects previous 2023 county estimates after an input-year error; this is distinct from a change between 2023 and 2024. Appendix F preserves the comparison and the original year labels. The same principle applies throughout the report: identify both the measured period and the edition of the source.",
+          "sourceIds": [
+            "food-mmg-method-2026",
+            "food-hcn-history"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "reader-action",
+      "title": "8. Using the evidence in Community Action",
+      "summary": "Practical questions for service planning and local discussion",
+      "breakBefore": true,
+      "blocks": [
+        {
+          "id": "reader-action-purpose",
+          "type": "paragraph",
+          "text": "These findings support a practical sequence for local discussion: establish the scale of limited income, identify the population and essential costs involved, and then examine how local services respond. The statewide evidence can frame that discussion; the complete county and demographic tables allow it to be made specific.",
+          "sourceIds": []
+        },
+        {
+          "id": "reader-action-family",
+          "type": "paragraph",
+          "text": "For families with children, examine the child poverty and food-insecurity measures alongside work experience and the cost of care. For older residents, use the senior poverty universe and housing costs. For households near or above a poverty threshold, consider the broader income range and the costs represented by the household-budget method. These are proposed planning questions, rather than estimates of programme demand or of a service’s causal effect.",
+          "sourceIds": [
+            "acs-2024-details",
+            "family-work-acs-2024",
+            "food-mmg-2026",
+            "household-cww-method-2025",
+            "rental-gap-2026"
+          ]
+        },
+        {
+          "id": "reader-action-local",
+          "type": "paragraph",
+          "text": "When preparing a county briefing, present the count and rate together, keep the source year visible, and retain the confidence interval or margin of error when supplied. Compare the same programme and period across places. When discussing participation in an assistance programme, use its own administrative source and actual reporting month; an income threshold or a food-insecurity estimate does not establish enrolment.",
+          "sourceIds": [
+            "census-saipe-2024-ohio",
+            "county-acs-periods",
+            "food-mmg-method-2026"
+          ]
+        },
+        {
+          "id": "reader-action-followthrough",
+          "type": "paragraph",
+          "text": "The report is accompanied by editable source tables and the original figure mappings. An agency can select the relevant county or population, review the underlying definition, and use the same selected data in a briefing or member communication. A revised source should update the affected figures and their narrative together, preserving a clear record of the prior edition.",
+          "sourceIds": []
+        },
+        {
+          "id": "reader-action-appendices",
+          "type": "paragraph",
+          "text": "The appendices are part of the full report. They retain every statistical source section and provide the detail needed to interpret a headline, examine a local question or follow a source correction. Their labels distinguish income measurement, county profiles, demographic and family tables, household costs, food evidence and historical financial resilience.",
+          "sourceIds": []
+        }
+      ]
+    },
+    {
+      "id": "appendix-a",
+      "title": "Appendix A · Income measures, definitions and uncertainty",
+      "summary": "The statistical framework and complete reference tables",
+      "breakBefore": true,
+      "blocks": [
+        {
+          "id": "appendix-a-scope",
+          "type": "paragraph",
+          "text": "This appendix retains the sourcebook’s original reading notes, the demographic source context, official threshold and administrative guideline schedules, and the comparison of official and supplemental poverty measures. The confidence-interval chapter preserves the distinction between a point estimate and its uncertainty.",
+          "sourceIds": [
+            "census-saipe-2024-ohio",
+            "acs-2024-primary",
+            "measurement-cps2024",
+            "measurement-hhs2024"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "appendix-b",
+      "title": "Appendix B · Complete Ohio county income profiles",
+      "summary": "All 88 counties remain in their original statistical series",
+      "breakBefore": true,
+      "blocks": [
+        {
+          "id": "appendix-b-scope",
+          "type": "paragraph",
+          "text": "The alphabetical SAIPE directory uses 2024 estimates. The age-specific ACS profiles and the below-twice-poverty directory use 2020–2024 five-year estimates. Each set preserves its own state comparison, population universe and uncertainty. The two sources remain separate throughout the county tables.",
+          "sourceIds": [
+            "census-saipe-2024-ohio",
+            "county-acs-periods",
+            "county-acs5-b17001-part1",
+            "county-acs5-b17001-part2",
+            "longitudinal-current-c17002"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "appendix-c",
+      "title": "Appendix C · Age, race, Hispanic origin and education",
+      "summary": "Complete demographic detail from the 2024 ACS one-year source",
+      "breakBefore": true,
+      "blocks": [
+        {
+          "id": "appendix-c-scope",
+          "type": "paragraph",
+          "text": "The detailed age tables retain their original population definitions. The under-six subgroup is included in children under 18; Hispanic origin overlaps race. The two S1701 source tables retain all captured published rows, including educational attainment and work measures, with their original margins of error.",
+          "sourceIds": [
+            "acs-2024-primary",
+            "acs-2024-details",
+            "acs-2024-race"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "appendix-d",
+      "title": "Appendix D · Family structure and work",
+      "summary": "Families, individual work experience and civilian employment status",
+      "breakBefore": true,
+      "blocks": [
+        {
+          "id": "appendix-d-scope",
+          "type": "paragraph",
+          "text": "These tables keep family observations separate from person observations. Race and Hispanic origin in the family tables classify the householder. Work during the past 12 months and current civilian employment status answer different questions; the original universes and nested categories remain visible.",
+          "sourceIds": [
+            "family-work-acs-2024",
+            "work-employment-acs-2024"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "appendix-e",
+      "title": "Appendix E · Household costs and rental thresholds",
+      "summary": "The household-budget method and complete income-threshold comparison",
+      "breakBefore": true,
+      "blocks": [
+        {
+          "id": "appendix-e-scope",
+          "type": "paragraph",
+          "text": "The household-cost chapter records the 2025 technical methodology and assumptions. It provides definitions for selecting a household and interpreting workbook results; the method rows are not county dollar estimates. The rental threshold table retains the complete source comparison and its cumulative income definitions.",
+          "sourceIds": [
+            "household-cww-method-2025",
+            "rental-gap-2026",
+            "rental-gap-method"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "appendix-f",
+      "title": "Appendix F · Complete county food evidence",
+      "summary": "Current child estimates, geography-wide costs and historical source revisions",
+      "breakBefore": true,
+      "blocks": [
+        {
+          "id": "appendix-f-scope",
+          "type": "paragraph",
+          "text": "The full county directory preserves each 2024 child estimate and its income-threshold shares. The cost chapter records geography-wide meal costs and annual food-budget shortfalls. The remaining chapters distinguish a corrected source release for 2023 from a change in measurement year and retain the historical county observations.",
+          "sourceIds": [
+            "food-mmg-2026",
+            "food-mmg-method-2026",
+            "food-hcn-history"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "appendix-g",
+      "title": "Appendix G · Historical income and financial resilience",
+      "summary": "Actual periods, original source editions and explicit gaps",
+      "breakBefore": true,
+      "blocks": [
+        {
+          "id": "appendix-g-scope",
+          "type": "paragraph",
+          "text": "The historical chapters preserve the 1999 Census benchmark and the later ACS measurement periods. National SIPP estimates retain their 24- and 36-month observation windows and published editions. Household asset series retain provider-labelled years and missing observations. Their different populations and measures remain separate.",
+          "sourceIds": [
+            "longitudinal-sf3-1999",
+            "longitudinal-acs-2010",
+            "longitudinal-current-c17002",
+            "measurement-sipp2019",
+            "measurement-sipp2022",
+            "measurement-correction",
+            "asset-scorecard-history"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "appendix-h",
+      "title": "Appendix H · Statistical sources and dataset directory",
+      "summary": "Every retained dataset and source family",
+      "breakBefore": true,
+      "blocks": [
+        {
+          "id": "reader-directory-scope",
+          "type": "paragraph",
+          "text": "This directory identifies all 27 datasets in the source edition used for this manuscript. Rows across datasets can overlap, and several datasets contain reference amounts or definitions. They must not be summed as independent people, households or statistical observations. Each dataset retains its full source, field definitions and measurement period.",
+          "sourceIds": []
+        },
+        {
+          "id": "reader-directory-1",
+          "type": "table",
+          "caption": "Income and demographic estimates",
+          "columns": [
+            {
+              "key": "dataset",
+              "label": "Dataset",
+              "widthPercent": 38
+            },
+            {
+              "key": "period",
+              "label": "Measurement period",
+              "widthPercent": 26
+            },
+            {
+              "key": "coverage",
+              "label": "Coverage",
+              "widthPercent": 36
+            }
+          ],
+          "rows": [
+            {
+              "dataset": "Poverty, child poverty and median income",
+              "period": "2024",
+              "coverage": "Ohio and all 88 counties"
+            },
+            {
+              "dataset": "Published S1701 population groups",
+              "period": "2024 ACS one-year",
+              "coverage": "Ohio; 28 retained source rows"
+            },
+            {
+              "dataset": "Income-to-poverty ratios by age",
+              "period": "2024 ACS one-year",
+              "coverage": "Ohio; disjoint ages plus nested under-six group"
+            },
+            {
+              "dataset": "Poverty by race, origin and age",
+              "period": "2024 ACS one-year",
+              "coverage": "Ohio; overlapping race/origin groups"
+            },
+            {
+              "dataset": "Senior poverty by sex",
+              "period": "2024 ACS one-year",
+              "coverage": "Ohio; people aged 65 and over"
+            }
+          ],
+          "sourceIds": [
+            "census-saipe-2024-ohio",
+            "acs-2024-primary",
+            "acs-2024-details",
+            "acs-2024-race"
+          ]
+        },
+        {
+          "id": "reader-directory-2",
+          "type": "table",
+          "caption": "Family and work estimates",
+          "columns": [
+            {
+              "key": "dataset",
+              "label": "Dataset",
+              "widthPercent": 38
+            },
+            {
+              "key": "period",
+              "label": "Measurement period",
+              "widthPercent": 26
+            },
+            {
+              "key": "coverage",
+              "label": "Coverage",
+              "widthPercent": 36
+            }
+          ],
+          "rows": [
+            {
+              "dataset": "Family composition and householder race",
+              "period": "2024 ACS one-year",
+              "coverage": "Ohio families; nested family types"
+            },
+            {
+              "dataset": "Family work experience",
+              "period": "2024 ACS one-year",
+              "coverage": "Ohio families; past 12 months"
+            },
+            {
+              "dataset": "Individual work experience",
+              "period": "2024 ACS one-year",
+              "coverage": "Ohio people aged 16 and over; past 12 months"
+            },
+            {
+              "dataset": "Civilian employment status",
+              "period": "2024 ACS one-year",
+              "coverage": "Ohio civilian people aged 16 and over"
+            }
+          ],
+          "sourceIds": [
+            "family-work-acs-2024",
+            "work-employment-acs-2024"
+          ]
+        },
+        {
+          "id": "reader-directory-3",
+          "type": "table",
+          "caption": "County income and change over time",
+          "columns": [
+            {
+              "key": "dataset",
+              "label": "Dataset",
+              "widthPercent": 38
+            },
+            {
+              "key": "period",
+              "label": "Measurement period",
+              "widthPercent": 26
+            },
+            {
+              "key": "coverage",
+              "label": "Coverage",
+              "widthPercent": 36
+            }
+          ],
+          "rows": [
+            {
+              "dataset": "Poverty by age, all counties",
+              "period": "2020–2024 ACS five-year",
+              "coverage": "Ohio and all 88 counties"
+            },
+            {
+              "dataset": "State comparison by age",
+              "period": "2020–2024 ACS five-year",
+              "coverage": "Ohio; four displayed age rows"
+            },
+            {
+              "dataset": "County income-to-poverty ratios",
+              "period": "2020–2024 ACS five-year",
+              "coverage": "Ohio and all 88 counties"
+            },
+            {
+              "dataset": "Historical income benchmarks",
+              "period": "1999; 2006–2010; 2020–2024",
+              "coverage": "Ohio; three distinct sources/periods"
+            },
+            {
+              "dataset": "Annual income-to-poverty ratios",
+              "period": "2018–2019 and 2021–2024",
+              "coverage": "Ohio and US; explicit standard-series gaps for 2020"
+            }
+          ],
+          "sourceIds": [
+            "county-acs5-b17001-part1",
+            "county-acs5-b17001-part2",
+            "longitudinal-current-c17002",
+            "longitudinal-acs-2010",
+            "longitudinal-sf3-1999",
+            "longitudinal-annual-ohio-2024",
+            "longitudinal-annual-us-2024"
+          ]
+        },
+        {
+          "id": "reader-directory-4",
+          "type": "table",
+          "caption": "Housing and household costs",
+          "columns": [
+            {
+              "key": "dataset",
+              "label": "Dataset",
+              "widthPercent": 38
+            },
+            {
+              "key": "period",
+              "label": "Measurement period",
+              "widthPercent": 26
+            },
+            {
+              "key": "coverage",
+              "label": "Coverage",
+              "widthPercent": 36
+            }
+          ],
+          "rows": [
+            {
+              "dataset": "Affordable and available rental homes",
+              "period": "2024 data; 2026 publication",
+              "coverage": "Ohio and Cincinnati, Cleveland and Columbus metros"
+            },
+            {
+              "dataset": "Rental cost burden by income band",
+              "period": "2024 data; 2026 publication",
+              "coverage": "Same four overlapping geographies"
+            },
+            {
+              "dataset": "Household-cost method definitions",
+              "period": "2025 technical methodology",
+              "coverage": "13 method rows; separate input-year notes"
+            }
+          ],
+          "sourceIds": [
+            "rental-gap-2026",
+            "rental-gap-method",
+            "household-cww-method-2025"
+          ]
+        },
+        {
+          "id": "reader-directory-5",
+          "type": "table",
+          "caption": "Food insecurity",
+          "columns": [
+            {
+              "key": "dataset",
+              "label": "Dataset",
+              "widthPercent": 38
+            },
+            {
+              "key": "period",
+              "label": "Measurement period",
+              "widthPercent": 26
+            },
+            {
+              "key": "coverage",
+              "label": "Coverage",
+              "widthPercent": 36
+            }
+          ],
+          "rows": [
+            {
+              "dataset": "State food insecurity",
+              "period": "2024",
+              "coverage": "Ohio overall and children under 18"
+            },
+            {
+              "dataset": "County child food insecurity",
+              "period": "2024",
+              "coverage": "All 88 counties; source thresholds and overall costs"
+            },
+            {
+              "dataset": "Historical child food insecurity",
+              "period": "2013–2024",
+              "coverage": "Nine Northeast Ohio counties; 108 observations"
+            },
+            {
+              "dataset": "Same-year source revision comparison",
+              "period": "2023, compared across releases",
+              "coverage": "Nine Northeast Ohio counties"
+            }
+          ],
+          "sourceIds": [
+            "food-mmg-2026",
+            "food-mmg-method-2026",
+            "food-hcn-history"
+          ]
+        },
+        {
+          "id": "reader-directory-6",
+          "type": "table",
+          "caption": "Measurement reference",
+          "columns": [
+            {
+              "key": "dataset",
+              "label": "Dataset",
+              "widthPercent": 38
+            },
+            {
+              "key": "period",
+              "label": "Measurement period",
+              "widthPercent": 26
+            },
+            {
+              "key": "coverage",
+              "label": "Coverage",
+              "widthPercent": 36
+            }
+          ],
+          "rows": [
+            {
+              "dataset": "Official Census threshold grid",
+              "period": "2024",
+              "coverage": "US; 48 applicable amounts in 11 family-unit rows"
+            },
+            {
+              "dataset": "HHS administrative guideline schedules",
+              "period": "2024 historical reference",
+              "coverage": "Contiguous states/DC, Alaska and Hawaii"
+            },
+            {
+              "dataset": "Official and supplemental definitions",
+              "period": "2024 methodology",
+              "coverage": "Eight method definitions; US"
+            },
+            {
+              "dataset": "Published episodic/chronic poverty",
+              "period": "2011–2012; 2013–2014; 2017–2019",
+              "coverage": "US; distinct 24- and 36-month periods"
+            }
+          ],
+          "sourceIds": [
+            "measurement-cps2024",
+            "measurement-hhs2024",
+            "measurement-sipp2019",
+            "measurement-sipp2022",
+            "measurement-correction"
+          ]
+        },
+        {
+          "id": "reader-directory-7",
+          "type": "table",
+          "caption": "Household financial resilience",
+          "columns": [
+            {
+              "key": "dataset",
+              "label": "Dataset",
+              "widthPercent": 38
+            },
+            {
+              "key": "period",
+              "label": "Measurement period",
+              "widthPercent": 26
+            },
+            {
+              "key": "coverage",
+              "label": "Coverage",
+              "widthPercent": 36
+            }
+          ],
+          "rows": [
+            {
+              "dataset": "Household asset and liquid asset poverty",
+              "period": "Provider-labelled 2013–2021",
+              "coverage": "Ohio and US; 24 observations and 12 explicit gaps"
+            },
+            {
+              "dataset": "Asset measure definitions",
+              "period": "Retained provider metadata",
+              "coverage": "Four method rows; dated 2020 example"
+            }
+          ],
+          "sourceIds": [
+            "asset-scorecard-current",
+            "asset-scorecard-history",
+            "asset-scorecard-method"
+          ]
+        },
+        {
+          "id": "reader-directory-originals",
+          "type": "paragraph",
+          "text": "The source edition preserves exact selected provider responses and statistical definitions alongside the original report’s retained table transcriptions. A transcription discrepancy is recorded separately from a visually confirmed error in an original page. Published estimates remain associated with their own source release; later source corrections are retained with their actual dates.",
+          "sourceIds": [
+            "oacaa-report-2026",
+            "food-mmg-method-2026",
+            "measurement-correction",
+            "asset-issuer-transcription"
+          ]
+        }
+      ]
+    }
+  ],
+  "groups": [
+    {
+      "id": "reading-opening",
+      "kind": "reading",
+      "title": "Opening",
+      "sectionIds": [
+        "reader-opening"
+      ]
+    },
+    {
+      "id": "reading-income",
+      "kind": "reading",
+      "title": "1. Statewide income",
+      "sectionIds": [
+        "reader-statewide",
+        "state"
+      ]
+    },
+    {
+      "id": "reading-age",
+      "kind": "reading",
+      "title": "2. Age and demographic differences",
+      "sectionIds": [
+        "reader-ages",
+        "acs-age-depth",
+        "acs-seniors",
+        "acs-race-summary"
+      ]
+    },
+    {
+      "id": "reading-work",
+      "kind": "reading",
+      "title": "3. Families and work",
+      "sectionIds": [
+        "reader-families-work",
+        "family-all",
+        "work-experience"
+      ]
+    },
+    {
+      "id": "reading-needs",
+      "kind": "reading",
+      "title": "4. Food and housing",
+      "sectionIds": [
+        "reader-basic-needs",
+        "food-ohio",
+        "rental-gap",
+        "rental-burdens"
+      ]
+    },
+    {
+      "id": "reading-assets",
+      "kind": "reading",
+      "title": "5. Financial resilience",
+      "sectionIds": [
+        "reader-financial-resilience",
+        "asset-latest-comparison"
+      ]
+    },
+    {
+      "id": "reading-place",
+      "kind": "reading",
+      "title": "6. Local need",
+      "sectionIds": [
+        "reader-place",
+        "county-rates",
+        "county-counts"
+      ]
+    },
+    {
+      "id": "reading-change",
+      "kind": "reading",
+      "title": "7. Change over time",
+      "sectionIds": [
+        "reader-change",
+        "longitudinal-annual-ohio",
+        "longitudinal-annual-us"
+      ]
+    },
+    {
+      "id": "reading-use",
+      "kind": "reading",
+      "title": "8. Community Action planning",
+      "sectionIds": [
+        "reader-action"
+      ]
+    },
+    {
+      "id": "appendix-a",
+      "kind": "appendix",
+      "title": "Appendix A · Income measures, definitions and uncertainty",
+      "sectionIds": [
+        "appendix-a",
+        "understanding",
+        "acs-context",
+        "measurement-overview",
+        "measurement-thresholds",
+        "measurement-guidelines",
+        "measurement-methods",
+        "uncertainty"
+      ]
+    },
+    {
+      "id": "appendix-b",
+      "kind": "appendix",
+      "title": "Appendix B · Complete Ohio county income profiles",
+      "sectionIds": [
+        "appendix-b",
+        "county-directory-1",
+        "county-directory-2",
+        "county-directory-3",
+        "county-directory-4",
+        "county-acs5-overview",
+        "county-acs5-all",
+        "county-acs5-child",
+        "county-acs5-adult",
+        "county-acs5-senior",
+        "longitudinal-counties"
+      ]
+    },
+    {
+      "id": "appendix-c",
+      "kind": "appendix",
+      "title": "Appendix C · Age, race, Hispanic origin and education",
+      "sectionIds": [
+        "appendix-c",
+        "acs-age-all",
+        "acs-age-white_non_hispanic",
+        "acs-age-black",
+        "acs-age-asian",
+        "acs-age-multiracial",
+        "acs-age-hispanic",
+        "acs-primary-1",
+        "acs-primary-2"
+      ]
+    },
+    {
+      "id": "appendix-d",
+      "kind": "appendix",
+      "title": "Appendix D · Family structure and work",
+      "sectionIds": [
+        "appendix-d",
+        "family-overview",
+        "family-white-nonhispanic",
+        "family-black",
+        "family-asian",
+        "family-multiracial",
+        "family-hispanic",
+        "family-work-married",
+        "family-work-male",
+        "family-work-female",
+        "work-employment-status"
+      ]
+    },
+    {
+      "id": "appendix-e",
+      "kind": "appendix",
+      "title": "Appendix E · Household costs and rental thresholds",
+      "sectionIds": [
+        "appendix-e",
+        "household-budget-method",
+        "household-assumptions",
+        "rental-thresholds"
+      ]
+    },
+    {
+      "id": "appendix-f",
+      "kind": "appendix",
+      "title": "Appendix F · Complete county food evidence",
+      "sectionIds": [
+        "appendix-f",
+        "food-county-counts",
+        "food-county-income",
+        "food-county-cost",
+        "food-source-revision",
+        "food-history"
+      ]
+    },
+    {
+      "id": "appendix-g",
+      "kind": "appendix",
+      "title": "Appendix G · Historical income and financial resilience",
+      "sectionIds": [
+        "appendix-g",
+        "longitudinal-overview",
+        "longitudinal-history",
+        "measurement-dynamics-summary",
+        "measurement-dynamics-24",
+        "measurement-dynamics-36",
+        "asset-cushion-overview",
+        "asset-history-series",
+        "asset-source-reconciliation"
+      ]
+    },
+    {
+      "id": "appendix-h",
+      "kind": "appendix",
+      "title": "Appendix H · Statistical sources and dataset directory",
+      "sectionIds": [
+        "appendix-h"
+      ]
+    }
+  ],
+  "sectionOrder": [
+    "reader-opening",
+    "reader-statewide",
+    "state",
+    "reader-ages",
+    "acs-age-depth",
+    "acs-seniors",
+    "acs-race-summary",
+    "reader-families-work",
+    "family-all",
+    "work-experience",
+    "reader-basic-needs",
+    "food-ohio",
+    "rental-gap",
+    "rental-burdens",
+    "reader-financial-resilience",
+    "asset-latest-comparison",
+    "reader-place",
+    "county-rates",
+    "county-counts",
+    "reader-change",
+    "longitudinal-annual-ohio",
+    "longitudinal-annual-us",
+    "reader-action",
+    "appendix-a",
+    "understanding",
+    "acs-context",
+    "measurement-overview",
+    "measurement-thresholds",
+    "measurement-guidelines",
+    "measurement-methods",
+    "uncertainty",
+    "appendix-b",
+    "county-directory-1",
+    "county-directory-2",
+    "county-directory-3",
+    "county-directory-4",
+    "county-acs5-overview",
+    "county-acs5-all",
+    "county-acs5-child",
+    "county-acs5-adult",
+    "county-acs5-senior",
+    "longitudinal-counties",
+    "appendix-c",
+    "acs-age-all",
+    "acs-age-white_non_hispanic",
+    "acs-age-black",
+    "acs-age-asian",
+    "acs-age-multiracial",
+    "acs-age-hispanic",
+    "acs-primary-1",
+    "acs-primary-2",
+    "appendix-d",
+    "family-overview",
+    "family-white-nonhispanic",
+    "family-black",
+    "family-asian",
+    "family-multiracial",
+    "family-hispanic",
+    "family-work-married",
+    "family-work-male",
+    "family-work-female",
+    "work-employment-status",
+    "appendix-e",
+    "household-budget-method",
+    "household-assumptions",
+    "rental-thresholds",
+    "appendix-f",
+    "food-county-counts",
+    "food-county-income",
+    "food-county-cost",
+    "food-source-revision",
+    "food-history",
+    "appendix-g",
+    "longitudinal-overview",
+    "longitudinal-history",
+    "measurement-dynamics-summary",
+    "measurement-dynamics-24",
+    "measurement-dynamics-36",
+    "asset-cushion-overview",
+    "asset-history-series",
+    "asset-source-reconciliation",
+    "appendix-h"
+  ],
+  "claimReferences": [
+    {
+      "sectionId": "reader-opening",
+      "blockId": "reader-opening-purpose",
+      "sourceIds": [
+        "census-saipe-2024-ohio",
+        "acs-2024-primary",
+        "rental-gap-2026",
+        "food-mmg-2026",
+        "asset-scorecard-method"
+      ],
+      "datasetCells": []
+    },
+    {
+      "sectionId": "reader-opening",
+      "blockId": "reader-opening-income",
+      "sourceIds": [
+        "acs-2024-details"
+      ],
+      "datasetCells": [
+        {
+          "datasetId": "ohio-acs1-age-ratios-2024",
+          "rowId": "all",
+          "column": "below100",
+          "value": "1467983"
+        },
+        {
+          "datasetId": "ohio-acs1-age-ratios-2024",
+          "rowId": "all",
+          "column": "below100_rate",
+          "value": "12.7"
+        },
+        {
+          "datasetId": "ohio-acs1-age-ratios-2024",
+          "rowId": "all",
+          "column": "below200",
+          "value": "3308461"
+        },
+        {
+          "datasetId": "ohio-acs1-age-ratios-2024",
+          "rowId": "all",
+          "column": "below200_rate",
+          "value": "28.6"
+        }
+      ]
+    },
+    {
+      "sectionId": "reader-opening",
+      "blockId": "reader-opening-needs",
+      "sourceIds": [
+        "food-mmg-2026",
+        "rental-gap-2026",
+        "rental-gap-method"
+      ],
+      "datasetCells": [
+        {
+          "datasetId": "ohio-food-state-2024",
+          "rowId": "food-39000-overall",
+          "column": "count",
+          "value": "1822930"
+        },
+        {
+          "datasetId": "ohio-food-state-2024",
+          "rowId": "food-39000-child",
+          "column": "count",
+          "value": "534640"
+        },
+        {
+          "datasetId": "ohio-nlihc-rental-availability-2024",
+          "rowId": "ohio-eli",
+          "column": "units",
+          "value": "37"
+        }
+      ]
+    },
+    {
+      "sectionId": "reader-opening",
+      "blockId": "reader-opening-route",
+      "sourceIds": [
+        "county-acs-periods",
+        "rental-gap-method",
+        "household-cww-method-2025",
+        "asset-scorecard-current"
+      ],
+      "datasetCells": []
+    },
+    {
+      "sectionId": "reader-statewide",
+      "blockId": "reader-statewide-acs",
+      "sourceIds": [
+        "acs-2024-details"
+      ],
+      "datasetCells": [
+        {
+          "datasetId": "ohio-acs1-age-ratios-2024",
+          "rowId": "all",
+          "column": "denominator",
+          "value": "11583778"
+        },
+        {
+          "datasetId": "ohio-acs1-age-ratios-2024",
+          "rowId": "all",
+          "column": "below100",
+          "value": "1467983"
+        },
+        {
+          "datasetId": "ohio-acs1-age-ratios-2024",
+          "rowId": "all",
+          "column": "below100_rate",
+          "value": "12.7"
+        },
+        {
+          "datasetId": "ohio-acs1-age-ratios-2024",
+          "rowId": "all",
+          "column": "below50",
+          "value": "738620"
+        },
+        {
+          "datasetId": "ohio-acs1-age-ratios-2024",
+          "rowId": "all",
+          "column": "below50_rate",
+          "value": "6.4"
+        }
+      ]
+    },
+    {
+      "sectionId": "reader-statewide",
+      "blockId": "reader-statewide-saipe",
+      "sourceIds": [
+        "census-saipe-2024-ohio"
+      ],
+      "datasetCells": [
+        {
+          "datasetId": "ohio-saipe-2024",
+          "rowId": "saipe-2024-39000",
+          "column": "all_poverty_count_estimate",
+          "value": "1463705"
+        },
+        {
+          "datasetId": "ohio-saipe-2024",
+          "rowId": "saipe-2024-39000",
+          "column": "all_poverty_percent_estimate",
+          "value": "12.6"
+        },
+        {
+          "datasetId": "ohio-saipe-2024",
+          "rowId": "saipe-2024-39000",
+          "column": "child_poverty_count_estimate",
+          "value": "415575"
+        },
+        {
+          "datasetId": "ohio-saipe-2024",
+          "rowId": "saipe-2024-39000",
+          "column": "child_poverty_percent_estimate",
+          "value": "16.4"
+        },
+        {
+          "datasetId": "ohio-saipe-2024",
+          "rowId": "saipe-2024-39000",
+          "column": "median_household_income_estimate",
+          "value": "72259"
+        }
+      ]
+    },
+    {
+      "sectionId": "reader-statewide",
+      "blockId": "reader-statewide-benchmark",
+      "sourceIds": [
+        "measurement-cps2024",
+        "measurement-hhs2024"
+      ],
+      "datasetCells": [
+        {
+          "datasetId": "us-official-poverty-thresholds-2024",
+          "rowId": "four",
+          "column": "family_size",
+          "value": "4"
+        },
+        {
+          "datasetId": "us-official-poverty-thresholds-2024",
+          "rowId": "four",
+          "column": "children_2",
+          "value": "31812"
+        },
+        {
+          "datasetId": "us-hhs-poverty-guidelines-2024",
+          "rowId": "contiguous-4",
+          "column": "persons",
+          "value": "4"
+        },
+        {
+          "datasetId": "us-hhs-poverty-guidelines-2024",
+          "rowId": "contiguous-4",
+          "column": "annual_guideline",
+          "value": "31200"
+        }
+      ]
+    },
+    {
+      "sectionId": "reader-statewide",
+      "blockId": "reader-statewide-use",
+      "sourceIds": [
+        "census-saipe-2024-ohio",
+        "county-acs-periods",
+        "longitudinal-comparison-guide"
+      ],
+      "datasetCells": []
+    },
+    {
+      "sectionId": "reader-ages",
+      "blockId": "reader-ages-comparison",
+      "sourceIds": [
+        "acs-2024-details"
+      ],
+      "datasetCells": [
+        {
+          "datasetId": "ohio-acs1-age-ratios-2024",
+          "rowId": "under18",
+          "column": "below100_rate",
+          "value": "16.5"
+        },
+        {
+          "datasetId": "ohio-acs1-age-ratios-2024",
+          "rowId": "adult",
+          "column": "below100_rate",
+          "value": "12.0"
+        },
+        {
+          "datasetId": "ohio-acs1-age-ratios-2024",
+          "rowId": "senior",
+          "column": "below100_rate",
+          "value": "10.4"
+        },
+        {
+          "datasetId": "ohio-acs1-age-ratios-2024",
+          "rowId": "under6",
+          "column": "below100_rate",
+          "value": "17.7"
+        }
+      ]
+    },
+    {
+      "sectionId": "reader-ages",
+      "blockId": "reader-ages-depth",
+      "sourceIds": [
+        "acs-2024-details",
+        "measurement-hhs2024"
+      ],
+      "datasetCells": [
+        {
+          "datasetId": "ohio-acs1-age-ratios-2024",
+          "rowId": "under18",
+          "column": "below200_rate",
+          "value": "36.9"
+        },
+        {
+          "datasetId": "ohio-acs1-age-ratios-2024",
+          "rowId": "adult",
+          "column": "below200_rate",
+          "value": "25.8"
+        },
+        {
+          "datasetId": "ohio-acs1-age-ratios-2024",
+          "rowId": "senior",
+          "column": "below200_rate",
+          "value": "27.6"
+        }
+      ]
+    },
+    {
+      "sectionId": "reader-ages",
+      "blockId": "reader-ages-seniors",
+      "sourceIds": [
+        "acs-2024-details"
+      ],
+      "datasetCells": [
+        {
+          "datasetId": "ohio-acs1-senior-sex-2024",
+          "rowId": "female",
+          "column": "poverty",
+          "value": "140282"
+        },
+        {
+          "datasetId": "ohio-acs1-senior-sex-2024",
+          "rowId": "female",
+          "column": "rate",
+          "value": "11.6"
+        },
+        {
+          "datasetId": "ohio-acs1-senior-sex-2024",
+          "rowId": "male",
+          "column": "poverty",
+          "value": "89286"
+        },
+        {
+          "datasetId": "ohio-acs1-senior-sex-2024",
+          "rowId": "male",
+          "column": "rate",
+          "value": "9.0"
+        },
+        {
+          "datasetId": "ohio-acs1-senior-sex-2024",
+          "rowId": "all",
+          "column": "denominator",
+          "value": "2198505"
+        }
+      ]
+    },
+    {
+      "sectionId": "reader-ages",
+      "blockId": "reader-ages-race",
+      "sourceIds": [
+        "acs-2024-race"
+      ],
+      "datasetCells": [
+        {
+          "datasetId": "ohio-acs1-race-age-2024",
+          "rowId": "white_non_hispanic-all",
+          "column": "rate",
+          "value": "9.9"
+        },
+        {
+          "datasetId": "ohio-acs1-race-age-2024",
+          "rowId": "black-all",
+          "column": "rate",
+          "value": "24.4"
+        },
+        {
+          "datasetId": "ohio-acs1-race-age-2024",
+          "rowId": "asian-all",
+          "column": "rate",
+          "value": "13.3"
+        },
+        {
+          "datasetId": "ohio-acs1-race-age-2024",
+          "rowId": "multiracial-all",
+          "column": "rate",
+          "value": "18.9"
+        },
+        {
+          "datasetId": "ohio-acs1-race-age-2024",
+          "rowId": "hispanic-all",
+          "column": "rate",
+          "value": "19.1"
+        }
+      ]
+    },
+    {
+      "sectionId": "reader-ages",
+      "blockId": "reader-ages-planning",
+      "sourceIds": [
+        "acs-2024-details",
+        "family-work-acs-2024",
+        "rental-gap-2026",
+        "food-mmg-2026"
+      ],
+      "datasetCells": []
+    },
+    {
+      "sectionId": "reader-families-work",
+      "blockId": "reader-work-full",
+      "sourceIds": [
+        "family-work-acs-2024"
+      ],
+      "datasetCells": [
+        {
+          "datasetId": "ohio-acs1-work-experience-2024",
+          "rowId": "full",
+          "column": "poverty",
+          "value": "93568"
+        },
+        {
+          "datasetId": "ohio-acs1-work-experience-2024",
+          "rowId": "full",
+          "column": "rate",
+          "value": "2.2"
+        },
+        {
+          "datasetId": "ohio-acs1-work-experience-2024",
+          "rowId": "part",
+          "column": "poverty",
+          "value": "341047"
+        },
+        {
+          "datasetId": "ohio-acs1-work-experience-2024",
+          "rowId": "part",
+          "column": "rate",
+          "value": "16.5"
+        },
+        {
+          "datasetId": "ohio-acs1-work-experience-2024",
+          "rowId": "none",
+          "column": "poverty",
+          "value": "661100"
+        },
+        {
+          "datasetId": "ohio-acs1-work-experience-2024",
+          "rowId": "none",
+          "column": "rate",
+          "value": "21.6"
+        }
+      ]
+    },
+    {
+      "sectionId": "reader-families-work",
+      "blockId": "reader-work-family",
+      "sourceIds": [
+        "family-work-acs-2024"
+      ],
+      "datasetCells": [
+        {
+          "datasetId": "ohio-acs1-family-work-2024",
+          "rowId": "married-both",
+          "column": "poverty",
+          "value": "13398"
+        },
+        {
+          "datasetId": "ohio-acs1-family-work-2024",
+          "rowId": "married-both",
+          "column": "rate",
+          "value": "1.1"
+        },
+        {
+          "datasetId": "ohio-acs1-family-work-2024",
+          "rowId": "married-one",
+          "column": "rate",
+          "value": "6.2"
+        },
+        {
+          "datasetId": "ohio-acs1-family-work-2024",
+          "rowId": "married-neither",
+          "column": "rate",
+          "value": "9.9"
+        }
+      ]
+    },
+    {
+      "sectionId": "reader-families-work",
+      "blockId": "reader-work-householder",
+      "sourceIds": [
+        "family-work-acs-2024"
+      ],
+      "datasetCells": [
+        {
+          "datasetId": "ohio-acs1-family-work-2024",
+          "rowId": "female-full",
+          "column": "rate",
+          "value": "8.2"
+        },
+        {
+          "datasetId": "ohio-acs1-family-work-2024",
+          "rowId": "female-part",
+          "column": "rate",
+          "value": "42.2"
+        },
+        {
+          "datasetId": "ohio-acs1-family-work-2024",
+          "rowId": "female-none",
+          "column": "rate",
+          "value": "39.9"
+        },
+        {
+          "datasetId": "ohio-acs1-family-work-2024",
+          "rowId": "male-full",
+          "column": "rate",
+          "value": "2.8"
+        },
+        {
+          "datasetId": "ohio-acs1-family-work-2024",
+          "rowId": "male-part",
+          "column": "rate",
+          "value": "22.5"
+        },
+        {
+          "datasetId": "ohio-acs1-family-work-2024",
+          "rowId": "male-none",
+          "column": "rate",
+          "value": "25.9"
+        }
+      ]
+    },
+    {
+      "sectionId": "reader-families-work",
+      "blockId": "reader-work-education",
+      "sourceIds": [
+        "acs-2024-primary"
+      ],
+      "datasetCells": [
+        {
+          "datasetId": "ohio-acs1-s1701-indexed-state-2024",
+          "rowId": "row-023",
+          "column": "poverty_rate",
+          "value": "26.8"
+        },
+        {
+          "datasetId": "ohio-acs1-s1701-indexed-state-2024",
+          "rowId": "row-024",
+          "column": "poverty_rate",
+          "value": "13.9"
+        },
+        {
+          "datasetId": "ohio-acs1-s1701-indexed-state-2024",
+          "rowId": "row-025",
+          "column": "poverty_rate",
+          "value": "10.3"
+        },
+        {
+          "datasetId": "ohio-acs1-s1701-indexed-state-2024",
+          "rowId": "row-026",
+          "column": "poverty_rate",
+          "value": "4.1"
+        }
+      ]
+    },
+    {
+      "sectionId": "reader-families-work",
+      "blockId": "reader-work-meaning",
+      "sourceIds": [
+        "family-work-acs-2024",
+        "work-employment-acs-2024",
+        "household-cww-method-2025"
+      ],
+      "datasetCells": []
+    },
+    {
+      "sectionId": "reader-basic-needs",
+      "blockId": "reader-needs-food",
+      "sourceIds": [
+        "food-mmg-2026",
+        "food-mmg-method-2026"
+      ],
+      "datasetCells": [
+        {
+          "datasetId": "ohio-food-state-2024",
+          "rowId": "food-39000-overall",
+          "column": "count",
+          "value": "1822930"
+        },
+        {
+          "datasetId": "ohio-food-state-2024",
+          "rowId": "food-39000-overall",
+          "column": "rate",
+          "value": "15.3"
+        },
+        {
+          "datasetId": "ohio-food-state-2024",
+          "rowId": "food-39000-child",
+          "column": "count",
+          "value": "534640"
+        },
+        {
+          "datasetId": "ohio-food-state-2024",
+          "rowId": "food-39000-child",
+          "column": "rate",
+          "value": "20.8"
+        }
+      ]
+    },
+    {
+      "sectionId": "reader-basic-needs",
+      "blockId": "reader-needs-food-threshold",
+      "sourceIds": [
+        "food-mmg-2026",
+        "food-mmg-method-2026"
+      ],
+      "datasetCells": [
+        {
+          "datasetId": "ohio-food-state-2024",
+          "rowId": "food-39000-child",
+          "column": "above_threshold",
+          "value": "33"
+        },
+        {
+          "datasetId": "ohio-food-state-2024",
+          "rowId": "food-39000-child",
+          "column": "below_threshold",
+          "value": "67"
+        },
+        {
+          "datasetId": "ohio-food-state-2024",
+          "rowId": "food-39000-child",
+          "column": "threshold_fpl",
+          "value": "185"
+        }
+      ]
+    },
+    {
+      "sectionId": "reader-basic-needs",
+      "blockId": "reader-needs-rental",
+      "sourceIds": [
+        "rental-gap-2026",
+        "rental-gap-method"
+      ],
+      "datasetCells": [
+        {
+          "datasetId": "ohio-nlihc-rental-availability-2024",
+          "rowId": "ohio-eli",
+          "column": "renters",
+          "value": "422098"
+        },
+        {
+          "datasetId": "ohio-nlihc-rental-availability-2024",
+          "rowId": "ohio-eli",
+          "column": "available",
+          "value": "156593"
+        },
+        {
+          "datasetId": "ohio-nlihc-rental-availability-2024",
+          "rowId": "ohio-eli",
+          "column": "deficit",
+          "value": "-265505"
+        },
+        {
+          "datasetId": "ohio-nlihc-rental-availability-2024",
+          "rowId": "ohio-eli",
+          "column": "units",
+          "value": "37"
+        }
+      ]
+    },
+    {
+      "sectionId": "reader-basic-needs",
+      "blockId": "reader-needs-burden",
+      "sourceIds": [
+        "rental-gap-2026",
+        "rental-gap-method"
+      ],
+      "datasetCells": [
+        {
+          "datasetId": "ohio-nlihc-rental-burden-2024",
+          "rowId": "ohio-eli",
+          "column": "cost_burden",
+          "value": "87"
+        },
+        {
+          "datasetId": "ohio-nlihc-rental-burden-2024",
+          "rowId": "ohio-eli",
+          "column": "severe_burden",
+          "value": "73"
+        }
+      ]
+    },
+    {
+      "sectionId": "reader-basic-needs",
+      "blockId": "reader-needs-budget",
+      "sourceIds": [
+        "household-cww-method-2025"
+      ],
+      "datasetCells": []
+    },
+    {
+      "sectionId": "reader-financial-resilience",
+      "blockId": "reader-resilience-assets",
+      "sourceIds": [
+        "asset-scorecard-current",
+        "asset-scorecard-method"
+      ],
+      "datasetCells": [
+        {
+          "datasetId": "ohio-us-scorecard-asset-history",
+          "rowId": "ohio-asset-2021",
+          "column": "percent",
+          "value": "20"
+        },
+        {
+          "datasetId": "ohio-us-scorecard-asset-history",
+          "rowId": "ohio-asset-2021",
+          "column": "period",
+          "value": "2021"
+        },
+        {
+          "datasetId": "ohio-us-scorecard-asset-history",
+          "rowId": "ohio-liquid-2021",
+          "column": "percent",
+          "value": "29"
+        },
+        {
+          "datasetId": "ohio-us-scorecard-asset-history",
+          "rowId": "ohio-liquid-2021",
+          "column": "period",
+          "value": "2021"
+        },
+        {
+          "datasetId": "ohio-us-scorecard-asset-history",
+          "rowId": "us-asset-2021",
+          "column": "percent",
+          "value": "19"
+        },
+        {
+          "datasetId": "ohio-us-scorecard-asset-history",
+          "rowId": "us-asset-2021",
+          "column": "period",
+          "value": "2021"
+        },
+        {
+          "datasetId": "ohio-us-scorecard-asset-history",
+          "rowId": "us-liquid-2021",
+          "column": "percent",
+          "value": "27"
+        },
+        {
+          "datasetId": "ohio-us-scorecard-asset-history",
+          "rowId": "us-liquid-2021",
+          "column": "period",
+          "value": "2021"
+        }
+      ]
+    },
+    {
+      "sectionId": "reader-financial-resilience",
+      "blockId": "reader-resilience-interpretation",
+      "sourceIds": [
+        "asset-scorecard-current",
+        "asset-scorecard-history",
+        "asset-scorecard-method"
+      ],
+      "datasetCells": []
+    },
+    {
+      "sectionId": "reader-financial-resilience",
+      "blockId": "reader-resilience-dynamics",
+      "sourceIds": [
+        "measurement-sipp2022"
+      ],
+      "datasetCells": [
+        {
+          "datasetId": "us-sipp-published-poverty-dynamics",
+          "rowId": "sipp-2017-2019-all",
+          "column": "episodic_pct",
+          "value": "27.1"
+        },
+        {
+          "datasetId": "us-sipp-published-poverty-dynamics",
+          "rowId": "sipp-2017-2019-all",
+          "column": "chronic_pct",
+          "value": "3.3"
+        },
+        {
+          "datasetId": "us-sipp-published-poverty-dynamics",
+          "rowId": "sipp-2017-2019-all",
+          "column": "months",
+          "value": "36"
+        },
+        {
+          "datasetId": "us-sipp-published-poverty-dynamics",
+          "rowId": "sipp-2017-2019-all",
+          "column": "period",
+          "value": "2017–2019"
+        }
+      ]
+    },
+    {
+      "sectionId": "reader-financial-resilience",
+      "blockId": "reader-resilience-release",
+      "sourceIds": [
+        "measurement-correctedIndex",
+        "measurement-correction",
+        "measurement-sipp2019",
+        "measurement-sipp2022"
+      ],
+      "datasetCells": []
+    },
+    {
+      "sectionId": "reader-place",
+      "blockId": "reader-place-scales",
+      "sourceIds": [
+        "census-saipe-2024-ohio"
+      ],
+      "datasetCells": []
+    },
+    {
+      "sectionId": "reader-place",
+      "blockId": "reader-place-period",
+      "sourceIds": [
+        "county-acs-periods",
+        "county-acs5-b17001-part1",
+        "county-acs5-b17001-part2"
+      ],
+      "datasetCells": []
+    },
+    {
+      "sectionId": "reader-place",
+      "blockId": "reader-place-directory",
+      "sourceIds": [
+        "census-saipe-2024-ohio",
+        "county-acs5-b17001-part1",
+        "county-acs5-b17001-part2",
+        "longitudinal-current-c17002",
+        "food-mmg-2026"
+      ],
+      "datasetCells": []
+    },
+    {
+      "sectionId": "reader-place",
+      "blockId": "reader-place-application",
+      "sourceIds": [],
+      "datasetCells": []
+    },
+    {
+      "sectionId": "reader-change",
+      "blockId": "reader-change-annual",
+      "sourceIds": [
+        "longitudinal-annual-ohio-2018",
+        "longitudinal-annual-ohio-2024",
+        "longitudinal-annual-us-2018",
+        "longitudinal-annual-us-2024",
+        "longitudinal-standard-gap"
+      ],
+      "datasetCells": [
+        {
+          "datasetId": "ohio-us-annual-poverty-ratios-2018-2024",
+          "rowId": "ohio-2018",
+          "column": "below100_rate",
+          "value": "13.9"
+        },
+        {
+          "datasetId": "ohio-us-annual-poverty-ratios-2018-2024",
+          "rowId": "ohio-2018",
+          "column": "year",
+          "value": "2018"
+        },
+        {
+          "datasetId": "ohio-us-annual-poverty-ratios-2018-2024",
+          "rowId": "ohio-2024",
+          "column": "below100_rate",
+          "value": "12.7"
+        },
+        {
+          "datasetId": "ohio-us-annual-poverty-ratios-2018-2024",
+          "rowId": "ohio-2024",
+          "column": "year",
+          "value": "2024"
+        },
+        {
+          "datasetId": "ohio-us-annual-poverty-ratios-2018-2024",
+          "rowId": "us-2018",
+          "column": "below100_rate",
+          "value": "13.1"
+        },
+        {
+          "datasetId": "ohio-us-annual-poverty-ratios-2018-2024",
+          "rowId": "us-2018",
+          "column": "year",
+          "value": "2018"
+        },
+        {
+          "datasetId": "ohio-us-annual-poverty-ratios-2018-2024",
+          "rowId": "us-2024",
+          "column": "below100_rate",
+          "value": "12.1"
+        },
+        {
+          "datasetId": "ohio-us-annual-poverty-ratios-2018-2024",
+          "rowId": "us-2024",
+          "column": "year",
+          "value": "2024"
+        }
+      ]
+    },
+    {
+      "sectionId": "reader-change",
+      "blockId": "reader-change-counts",
+      "sourceIds": [
+        "longitudinal-annual-ohio-2019",
+        "longitudinal-annual-ohio-2024",
+        "longitudinal-comparison-guide"
+      ],
+      "datasetCells": [
+        {
+          "datasetId": "ohio-us-annual-poverty-ratios-2018-2024",
+          "rowId": "ohio-2019",
+          "column": "population",
+          "value": "11362386"
+        },
+        {
+          "datasetId": "ohio-us-annual-poverty-ratios-2018-2024",
+          "rowId": "ohio-2019",
+          "column": "below100",
+          "value": "1484862"
+        },
+        {
+          "datasetId": "ohio-us-annual-poverty-ratios-2018-2024",
+          "rowId": "ohio-2024",
+          "column": "population",
+          "value": "11583778"
+        },
+        {
+          "datasetId": "ohio-us-annual-poverty-ratios-2018-2024",
+          "rowId": "ohio-2024",
+          "column": "below100",
+          "value": "1467983"
+        }
+      ]
+    },
+    {
+      "sectionId": "reader-change",
+      "blockId": "reader-change-broader",
+      "sourceIds": [
+        "longitudinal-acs-2010",
+        "longitudinal-current-c17002",
+        "longitudinal-sf3-1999",
+        "longitudinal-comparison-guide"
+      ],
+      "datasetCells": [
+        {
+          "datasetId": "ohio-poverty-ratio-history",
+          "rowId": "ohio-2006-2010",
+          "column": "below200",
+          "value": "3561514"
+        },
+        {
+          "datasetId": "ohio-poverty-ratio-history",
+          "rowId": "ohio-2006-2010",
+          "column": "below200_rate",
+          "value": "31.8"
+        },
+        {
+          "datasetId": "ohio-poverty-ratio-history",
+          "rowId": "ohio-2006-2010",
+          "column": "period",
+          "value": "2006–2010"
+        },
+        {
+          "datasetId": "ohio-poverty-ratio-history",
+          "rowId": "ohio-2020-2024",
+          "column": "below200",
+          "value": "3372969"
+        },
+        {
+          "datasetId": "ohio-poverty-ratio-history",
+          "rowId": "ohio-2020-2024",
+          "column": "below200_rate",
+          "value": "29.3"
+        },
+        {
+          "datasetId": "ohio-poverty-ratio-history",
+          "rowId": "ohio-2020-2024",
+          "column": "period",
+          "value": "2020–2024"
+        }
+      ]
+    },
+    {
+      "sectionId": "reader-change",
+      "blockId": "reader-change-release",
+      "sourceIds": [
+        "food-mmg-method-2026",
+        "food-hcn-history"
+      ],
+      "datasetCells": []
+    },
+    {
+      "sectionId": "reader-action",
+      "blockId": "reader-action-purpose",
+      "sourceIds": [],
+      "datasetCells": []
+    },
+    {
+      "sectionId": "reader-action",
+      "blockId": "reader-action-family",
+      "sourceIds": [
+        "acs-2024-details",
+        "family-work-acs-2024",
+        "food-mmg-2026",
+        "household-cww-method-2025",
+        "rental-gap-2026"
+      ],
+      "datasetCells": []
+    },
+    {
+      "sectionId": "reader-action",
+      "blockId": "reader-action-local",
+      "sourceIds": [
+        "census-saipe-2024-ohio",
+        "county-acs-periods",
+        "food-mmg-method-2026"
+      ],
+      "datasetCells": []
+    },
+    {
+      "sectionId": "reader-action",
+      "blockId": "reader-action-followthrough",
+      "sourceIds": [],
+      "datasetCells": []
+    },
+    {
+      "sectionId": "reader-action",
+      "blockId": "reader-action-appendices",
+      "sourceIds": [],
+      "datasetCells": []
+    },
+    {
+      "sectionId": "appendix-a",
+      "blockId": "appendix-a-scope",
+      "sourceIds": [
+        "census-saipe-2024-ohio",
+        "acs-2024-primary",
+        "measurement-cps2024",
+        "measurement-hhs2024"
+      ],
+      "datasetCells": []
+    },
+    {
+      "sectionId": "appendix-b",
+      "blockId": "appendix-b-scope",
+      "sourceIds": [
+        "census-saipe-2024-ohio",
+        "county-acs-periods",
+        "county-acs5-b17001-part1",
+        "county-acs5-b17001-part2",
+        "longitudinal-current-c17002"
+      ],
+      "datasetCells": []
+    },
+    {
+      "sectionId": "appendix-c",
+      "blockId": "appendix-c-scope",
+      "sourceIds": [
+        "acs-2024-primary",
+        "acs-2024-details",
+        "acs-2024-race"
+      ],
+      "datasetCells": []
+    },
+    {
+      "sectionId": "appendix-d",
+      "blockId": "appendix-d-scope",
+      "sourceIds": [
+        "family-work-acs-2024",
+        "work-employment-acs-2024"
+      ],
+      "datasetCells": []
+    },
+    {
+      "sectionId": "appendix-e",
+      "blockId": "appendix-e-scope",
+      "sourceIds": [
+        "household-cww-method-2025",
+        "rental-gap-2026",
+        "rental-gap-method"
+      ],
+      "datasetCells": []
+    },
+    {
+      "sectionId": "appendix-f",
+      "blockId": "appendix-f-scope",
+      "sourceIds": [
+        "food-mmg-2026",
+        "food-mmg-method-2026",
+        "food-hcn-history"
+      ],
+      "datasetCells": []
+    },
+    {
+      "sectionId": "appendix-g",
+      "blockId": "appendix-g-scope",
+      "sourceIds": [
+        "longitudinal-sf3-1999",
+        "longitudinal-acs-2010",
+        "longitudinal-current-c17002",
+        "measurement-sipp2019",
+        "measurement-sipp2022",
+        "measurement-correction",
+        "asset-scorecard-history"
+      ],
+      "datasetCells": []
+    },
+    {
+      "sectionId": "appendix-h",
+      "blockId": "reader-directory-scope",
+      "sourceIds": [],
+      "datasetCells": []
+    },
+    {
+      "sectionId": "appendix-h",
+      "blockId": "reader-directory-1",
+      "sourceIds": [
+        "census-saipe-2024-ohio",
+        "acs-2024-primary",
+        "acs-2024-details",
+        "acs-2024-race"
+      ],
+      "datasetCells": []
+    },
+    {
+      "sectionId": "appendix-h",
+      "blockId": "reader-directory-2",
+      "sourceIds": [
+        "family-work-acs-2024",
+        "work-employment-acs-2024"
+      ],
+      "datasetCells": []
+    },
+    {
+      "sectionId": "appendix-h",
+      "blockId": "reader-directory-3",
+      "sourceIds": [
+        "county-acs5-b17001-part1",
+        "county-acs5-b17001-part2",
+        "longitudinal-current-c17002",
+        "longitudinal-acs-2010",
+        "longitudinal-sf3-1999",
+        "longitudinal-annual-ohio-2024",
+        "longitudinal-annual-us-2024"
+      ],
+      "datasetCells": []
+    },
+    {
+      "sectionId": "appendix-h",
+      "blockId": "reader-directory-4",
+      "sourceIds": [
+        "rental-gap-2026",
+        "rental-gap-method",
+        "household-cww-method-2025"
+      ],
+      "datasetCells": []
+    },
+    {
+      "sectionId": "appendix-h",
+      "blockId": "reader-directory-5",
+      "sourceIds": [
+        "food-mmg-2026",
+        "food-mmg-method-2026",
+        "food-hcn-history"
+      ],
+      "datasetCells": []
+    },
+    {
+      "sectionId": "appendix-h",
+      "blockId": "reader-directory-6",
+      "sourceIds": [
+        "measurement-cps2024",
+        "measurement-hhs2024",
+        "measurement-sipp2019",
+        "measurement-sipp2022",
+        "measurement-correction"
+      ],
+      "datasetCells": []
+    },
+    {
+      "sectionId": "appendix-h",
+      "blockId": "reader-directory-7",
+      "sourceIds": [
+        "asset-scorecard-current",
+        "asset-scorecard-history",
+        "asset-scorecard-method"
+      ],
+      "datasetCells": []
+    },
+    {
+      "sectionId": "appendix-h",
+      "blockId": "reader-directory-originals",
+      "sourceIds": [
+        "oacaa-report-2026",
+        "food-mmg-method-2026",
+        "measurement-correction",
+        "asset-issuer-transcription"
+      ],
+      "datasetCells": []
+    }
+  ],
+  "datasetDirectory": [
+    {
+      "datasetId": "ohio-saipe-2024",
+      "path": "datasets/ohio-saipe-2024.json",
+      "title": "Ohio poverty and income — 2024 SAIPE",
+      "period": "2024 annual estimates",
+      "geography": "Ohio and all88 counties; Census state FIPS39",
+      "rowCount": 89,
+      "sourceIds": [
+        "census-saipe-2024-ohio",
+        "acs-2024-primary",
+        "acs-2024-details",
+        "acs-2024-race"
+      ]
+    },
+    {
+      "datasetId": "ohio-acs1-s1701-indexed-state-2024",
+      "path": "datasets/ohio-acs1-s1701-state-2024.json",
+      "title": "Ohio poverty status — published 2024 ACS one-year S1701 table",
+      "period": "2024 ACS one-year estimates",
+      "geography": "Ohio (state FIPS 39)",
+      "rowCount": 28,
+      "sourceIds": [
+        "census-saipe-2024-ohio",
+        "acs-2024-primary",
+        "acs-2024-details",
+        "acs-2024-race"
+      ]
+    },
+    {
+      "datasetId": "ohio-acs1-age-ratios-2024",
+      "path": "datasets/ohio-acs1-age-ratios-2024.json",
+      "title": "Ohio income-to-poverty ratios by age,2024",
+      "period": "2024 ACS one-year estimates",
+      "geography": "Ohio (state FIPS 39); retained county FIPS when present",
+      "rowCount": 5,
+      "sourceIds": [
+        "census-saipe-2024-ohio",
+        "acs-2024-primary",
+        "acs-2024-details",
+        "acs-2024-race"
+      ]
+    },
+    {
+      "datasetId": "ohio-acs1-race-age-2024",
+      "path": "datasets/ohio-acs1-race-age-2024.json",
+      "title": "Ohio poverty by race, ethnicity and age, 2024",
+      "period": "2024 ACS one-year estimates",
+      "geography": "Ohio (state FIPS 39); retained county FIPS when present",
+      "rowCount": 30,
+      "sourceIds": [
+        "census-saipe-2024-ohio",
+        "acs-2024-primary",
+        "acs-2024-details",
+        "acs-2024-race"
+      ]
+    },
+    {
+      "datasetId": "ohio-acs1-senior-sex-2024",
+      "path": "datasets/ohio-acs1-senior-sex-2024.json",
+      "title": "Ohio senior poverty by sex,2024",
+      "period": "2024 ACS one-year estimates",
+      "geography": "Ohio (state FIPS 39); retained county FIPS when present",
+      "rowCount": 3,
+      "sourceIds": [
+        "census-saipe-2024-ohio",
+        "acs-2024-primary",
+        "acs-2024-details",
+        "acs-2024-race"
+      ]
+    },
+    {
+      "datasetId": "ohio-acs1-family-type-race-2024",
+      "path": "datasets/ohio-acs1-family-type-race-2024.json",
+      "title": "Ohio family poverty by family type and householder race, 2024",
+      "period": "2024 ACS one-year estimates",
+      "geography": "Ohio (state FIPS 39)",
+      "rowCount": 60,
+      "sourceIds": [
+        "family-work-acs-2024",
+        "work-employment-acs-2024"
+      ]
+    },
+    {
+      "datasetId": "ohio-acs1-family-work-2024",
+      "path": "datasets/ohio-acs1-family-work-2024.json",
+      "title": "Ohio family poverty by householder and spouse work experience, 2024",
+      "period": "2024 ACS one-year estimates",
+      "geography": "Ohio (state FIPS 39)",
+      "rowCount": 13,
+      "sourceIds": [
+        "family-work-acs-2024",
+        "work-employment-acs-2024"
+      ]
+    },
+    {
+      "datasetId": "ohio-acs1-work-experience-2024",
+      "path": "datasets/ohio-acs1-work-experience-2024.json",
+      "title": "Ohio poverty by work experience, 2024",
+      "period": "2024 ACS one-year estimates",
+      "geography": "Ohio (state FIPS 39)",
+      "rowCount": 4,
+      "sourceIds": [
+        "family-work-acs-2024",
+        "work-employment-acs-2024"
+      ]
+    },
+    {
+      "datasetId": "ohio-acs1-employment-status-2024",
+      "path": "datasets/ohio-acs1-employment-status-2024.json",
+      "title": "Ohio poverty by civilian employment status and sex, 2024",
+      "period": "2024 ACS one-year estimates",
+      "geography": "Ohio (state FIPS 39)",
+      "rowCount": 15,
+      "sourceIds": [
+        "family-work-acs-2024",
+        "work-employment-acs-2024"
+      ]
+    },
+    {
+      "datasetId": "ohio-acs5-county-poverty-age-2024",
+      "path": "datasets/ohio-acs5-county-poverty-age-2024.json",
+      "title": "Ohio and 88 counties: poverty by age, 2020–2024",
+      "period": "2020–2024 ACS five-year estimates",
+      "geography": "Ohio state and all 88 Ohio counties; original state FIPS 39 and county GEOIDs retained.",
+      "rowCount": 89,
+      "sourceIds": [
+        "county-acs5-b17001-part1",
+        "county-acs5-b17001-part2",
+        "longitudinal-current-c17002",
+        "longitudinal-acs-2010",
+        "longitudinal-sf3-1999",
+        "longitudinal-annual-ohio-2024",
+        "longitudinal-annual-us-2024"
+      ]
+    },
+    {
+      "datasetId": "ohio-acs5-state-poverty-age-2024",
+      "path": "datasets/ohio-acs5-state-poverty-age-2024.json",
+      "title": "Ohio: poverty by age, 2020–2024",
+      "period": "2020–2024 ACS five-year estimates",
+      "geography": "Ohio; state FIPS 39.",
+      "rowCount": 4,
+      "sourceIds": [
+        "county-acs5-b17001-part1",
+        "county-acs5-b17001-part2",
+        "longitudinal-current-c17002",
+        "longitudinal-acs-2010",
+        "longitudinal-sf3-1999",
+        "longitudinal-annual-ohio-2024",
+        "longitudinal-annual-us-2024"
+      ]
+    },
+    {
+      "datasetId": "ohio-acs5-poverty-ratios-2024",
+      "path": "datasets/ohio-acs5-poverty-ratios-2024.json",
+      "title": "Ohio county poverty and near-poverty ratios",
+      "period": "2020–2024",
+      "geography": "Ohio and all 88 counties",
+      "rowCount": 89,
+      "sourceIds": [
+        "county-acs5-b17001-part1",
+        "county-acs5-b17001-part2",
+        "longitudinal-current-c17002",
+        "longitudinal-acs-2010",
+        "longitudinal-sf3-1999",
+        "longitudinal-annual-ohio-2024",
+        "longitudinal-annual-us-2024"
+      ]
+    },
+    {
+      "datasetId": "ohio-poverty-ratio-history",
+      "path": "datasets/ohio-poverty-ratio-history.json",
+      "title": "Ohio poverty-ratio history with corrected source periods",
+      "period": "1999;2006–2010;2020–2024",
+      "geography": "Ohio",
+      "rowCount": 3,
+      "sourceIds": [
+        "county-acs5-b17001-part1",
+        "county-acs5-b17001-part2",
+        "longitudinal-current-c17002",
+        "longitudinal-acs-2010",
+        "longitudinal-sf3-1999",
+        "longitudinal-annual-ohio-2024",
+        "longitudinal-annual-us-2024"
+      ]
+    },
+    {
+      "datasetId": "ohio-us-annual-poverty-ratios-2018-2024",
+      "path": "datasets/ohio-us-annual-poverty-ratios-2018-2024.json",
+      "title": "Ohio and United States annual poverty ratios",
+      "period": "2018–2019; 2021–2024; explicit 2020 standard-series gap",
+      "geography": "Ohio and United States",
+      "rowCount": 14,
+      "sourceIds": [
+        "county-acs5-b17001-part1",
+        "county-acs5-b17001-part2",
+        "longitudinal-current-c17002",
+        "longitudinal-acs-2010",
+        "longitudinal-sf3-1999",
+        "longitudinal-annual-ohio-2024",
+        "longitudinal-annual-us-2024"
+      ]
+    },
+    {
+      "datasetId": "ohio-nlihc-rental-availability-2024",
+      "path": "datasets/ohio-nlihc-rental-availability-2024.json",
+      "title": "Rental availability in Ohio and three metropolitan areas",
+      "period": "2024 ACS and ACS Public Use Microdata Sample",
+      "geography": "Ohio and the Cincinnati, Cleveland and Columbus metropolitan areas",
+      "rowCount": 16,
+      "sourceIds": [
+        "rental-gap-2026",
+        "rental-gap-method",
+        "household-cww-method-2025"
+      ]
+    },
+    {
+      "datasetId": "ohio-nlihc-rental-burden-2024",
+      "path": "datasets/ohio-nlihc-rental-burden-2024.json",
+      "title": "Rental cost burdens by income band",
+      "period": "2024 ACS and ACS Public Use Microdata Sample",
+      "geography": "Ohio and the Cincinnati, Cleveland and Columbus metropolitan areas",
+      "rowCount": 16,
+      "sourceIds": [
+        "rental-gap-2026",
+        "rental-gap-method",
+        "household-cww-method-2025"
+      ]
+    },
+    {
+      "datasetId": "ohio-self-sufficiency-method-2025",
+      "path": "datasets/ohio-self-sufficiency-method-2025.json",
+      "title": "Ohio household-cost standard: 2025 methods",
+      "period": "2025 methodological edition; individual input years retained in source notes",
+      "geography": "Ohio household-cost production; national model with state and county inputs",
+      "rowCount": 13,
+      "sourceIds": [
+        "rental-gap-2026",
+        "rental-gap-method",
+        "household-cww-method-2025"
+      ]
+    },
+    {
+      "datasetId": "ohio-food-state-2024",
+      "path": "datasets/ohio-food-state-2024.json",
+      "title": "Ohio food insecurity and income thresholds — 2024",
+      "period": "2024",
+      "geography": "Ohio",
+      "rowCount": 2,
+      "sourceIds": [
+        "food-mmg-2026",
+        "food-mmg-method-2026",
+        "food-hcn-history"
+      ]
+    },
+    {
+      "datasetId": "ohio-food-child-counties-2024",
+      "path": "datasets/ohio-food-child-counties-2024.json",
+      "title": "Child food insecurity — all 88 Ohio counties, 2024",
+      "period": "2024",
+      "geography": "All 88 Ohio counties",
+      "rowCount": 88,
+      "sourceIds": [
+        "food-mmg-2026",
+        "food-mmg-method-2026",
+        "food-hcn-history"
+      ]
+    },
+    {
+      "datasetId": "ohio-food-child-history-ne-2013-2024",
+      "path": "datasets/ohio-food-child-history-ne-2013-2024.json",
+      "title": "Child food insecurity history — nine Northeast Ohio counties",
+      "period": "2013–2024; each row carries its own year",
+      "geography": "Ashland, Ashtabula, Cuyahoga, Geauga, Lake, Lorain, Medina, Portage and Summit counties",
+      "rowCount": 108,
+      "sourceIds": [
+        "food-mmg-2026",
+        "food-mmg-method-2026",
+        "food-hcn-history"
+      ]
+    },
+    {
+      "datasetId": "ohio-food-county-revision-2023",
+      "path": "datasets/ohio-food-county-revision-2023.json",
+      "title": "Revised 2023 county child estimates — original report comparison",
+      "period": "2023, compared across releases",
+      "geography": "Nine Northeast Ohio counties",
+      "rowCount": 9,
+      "sourceIds": [
+        "food-mmg-2026",
+        "food-mmg-method-2026",
+        "food-hcn-history"
+      ]
+    },
+    {
+      "datasetId": "us-official-poverty-thresholds-2024",
+      "path": "datasets/us-official-poverty-thresholds-2024.json",
+      "title": "Official poverty thresholds, 2024",
+      "period": "Calendar year 2024",
+      "geography": "United States; thresholds do not vary geographically",
+      "rowCount": 11,
+      "sourceIds": [
+        "measurement-cps2024",
+        "measurement-hhs2024",
+        "measurement-sipp2019",
+        "measurement-sipp2022",
+        "measurement-correction"
+      ]
+    },
+    {
+      "datasetId": "us-hhs-poverty-guidelines-2024",
+      "path": "datasets/us-hhs-poverty-guidelines-2024.json",
+      "title": "HHS poverty guidelines, 2024",
+      "period": "2024 guideline edition",
+      "geography": "Three separately published geographic schedules; Ohio uses the contiguous-states/DC schedule",
+      "rowCount": 24,
+      "sourceIds": [
+        "measurement-cps2024",
+        "measurement-hhs2024",
+        "measurement-sipp2019",
+        "measurement-sipp2022",
+        "measurement-correction"
+      ]
+    },
+    {
+      "datasetId": "us-poverty-measure-comparison-2024",
+      "path": "datasets/us-poverty-measure-comparison-2024.json",
+      "title": "How the official and supplemental measures differ",
+      "period": "2024 methodology",
+      "geography": "United States",
+      "rowCount": 8,
+      "sourceIds": [
+        "measurement-cps2024",
+        "measurement-hhs2024",
+        "measurement-sipp2019",
+        "measurement-sipp2022",
+        "measurement-correction"
+      ]
+    },
+    {
+      "datasetId": "us-sipp-published-poverty-dynamics",
+      "path": "datasets/us-sipp-published-poverty-dynamics.json",
+      "title": "Published SIPP poverty dynamics and source editions",
+      "period": "2011–2012; 2013–2014; 2017–2019, separately identified",
+      "geography": "United States; national longitudinal samples, not Ohio estimates",
+      "rowCount": 44,
+      "sourceIds": [
+        "measurement-cps2024",
+        "measurement-hhs2024",
+        "measurement-sipp2019",
+        "measurement-sipp2022",
+        "measurement-correction"
+      ]
+    },
+    {
+      "datasetId": "ohio-us-scorecard-asset-history",
+      "path": "datasets/ohio-us-scorecard-asset-history.json",
+      "title": "Ohio and US asset poverty: original Scorecard history",
+      "period": "Source-labelled years 2013–2021",
+      "geography": "Ohio and United States",
+      "rowCount": 36,
+      "sourceIds": [
+        "asset-scorecard-current",
+        "asset-scorecard-history",
+        "asset-scorecard-method"
+      ]
+    },
+    {
+      "datasetId": "scorecard-asset-measure-definitions",
+      "path": "datasets/scorecard-asset-measure-definitions.json",
+      "title": "Asset-poverty measurement definitions",
+      "period": "Source metadata and explicitly dated 2020 example",
+      "geography": "Provider measure definitions",
+      "rowCount": 4,
+      "sourceIds": [
+        "asset-scorecard-current",
+        "asset-scorecard-history",
+        "asset-scorecard-method"
+      ]
+    }
+  ],
+  "derivedClaims": [
+    {
+      "sectionId": "reader-change",
+      "blockId": "reader-change-counts",
+      "kind": "difference",
+      "description": "2024 minus 2019 estimated Ohio population below poverty",
+      "left": {
+        "datasetId": "ohio-us-annual-poverty-ratios-2018-2024",
+        "rowId": "ohio-2024",
+        "column": "below100",
+        "value": "1467983"
+      },
+      "right": {
+        "datasetId": "ohio-us-annual-poverty-ratios-2018-2024",
+        "rowId": "ohio-2019",
+        "column": "below100",
+        "value": "1484862"
+      },
+      "result": "-16879",
+      "unit": "people"
+    },
+    {
+      "sectionId": "reader-change",
+      "blockId": "reader-change-broader",
+      "kind": "difference",
+      "description": "2020–2024 minus 2006–2010 estimated Ohio population below twice poverty",
+      "left": {
+        "datasetId": "ohio-poverty-ratio-history",
+        "rowId": "ohio-2020-2024",
+        "column": "below200",
+        "value": "3372969"
+      },
+      "right": {
+        "datasetId": "ohio-poverty-ratio-history",
+        "rowId": "ohio-2006-2010",
+        "column": "below200",
+        "value": "3561514"
+      },
+      "result": "-188545",
+      "unit": "people"
+    },
+    {
+      "sectionId": "reader-change",
+      "blockId": "reader-change-broader",
+      "kind": "difference",
+      "description": "Difference between displayed one-decimal five-year Ohio below-twice-poverty rates",
+      "left": {
+        "datasetId": "ohio-poverty-ratio-history",
+        "rowId": "ohio-2020-2024",
+        "column": "below200_rate",
+        "value": "29.3"
+      },
+      "right": {
+        "datasetId": "ohio-poverty-ratio-history",
+        "rowId": "ohio-2006-2010",
+        "column": "below200_rate",
+        "value": "31.8"
+      },
+      "result": "-2.5",
+      "unit": "percentage points; displayed-rate subtraction"
+    },
+    {
+      "sectionId": "reader-basic-needs",
+      "blockId": "reader-needs-rental",
+      "kind": "difference",
+      "description": "Affordable-and-available homes minus extremely-low-income renter households",
+      "left": {
+        "datasetId": "ohio-nlihc-rental-availability-2024",
+        "rowId": "ohio-eli",
+        "column": "available",
+        "value": "156593"
+      },
+      "right": {
+        "datasetId": "ohio-nlihc-rental-availability-2024",
+        "rowId": "ohio-eli",
+        "column": "renters",
+        "value": "422098"
+      },
+      "result": "-265505",
+      "unit": "rental homes"
+    }
+  ],
+  "sourceNotes": [
+    {
+      "sourceId": "measurement-sipp2022",
+      "url": "https://www.census.gov/content/dam/Census/library/publications/2022/demo/p70br-179.pdf",
+      "locator": "Printed/physical pages 1–2, introduction and Poverty measures used in this report, plus page7 Figure5",
+      "note": "The manuscript’s consecutive-month definition was checked in the original report introduction; episodic means at least two consecutive months in the 36-month period and chronic means every month."
+    }
+  ],
+  "operatingGuide": "READER_EDITION.md",
+  "manuscript": "READER_MANUSCRIPT.md",
+  "preservation": {
+    "existingSectionIds": "unchanged",
+    "existingBlockIds": "unchanged",
+    "existingMappings": "unchanged",
+    "sourcePlans": "unchanged",
+    "reportIdentity": "actual commissioned report",
+    "newClaims": "exact source cells retained; prose reviewed with source correction",
+    "unknownLaterSections": "compose a successor that retains them; never omit"
+  }
+}
