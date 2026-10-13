@@ -17,7 +17,7 @@ const defaults = () => ({title:'',baseline:'',alternatives:[],models:['ndr','sdr
 const fileURL = value => {if(typeof value!=='string'||!/^\/api\/file\//.test(value)||/[\u0000-\u001f]/.test(value))throw Error('Use an original operator download.');return value;};
 
 export function attachNativeProcesses({getState,getWorkspace,api,endpoint,toast,refreshState,
-    openItem,openDelivery,navigate,closeDetail,showTask,openDesk}) {
+    openItem,openDelivery,navigate,closeDetail,showTask,openDesk,openScientificReport}) {
   let root=null,workspace=null,epoch=0,intent=0,request=0,busy=false,error='',draft=defaults(),pendingOpen=null;
   let catalogue={native_runs:[],reports:[]},proposed=null,product=null,rows=null,pollSignature='';
   const memories=new Map();
@@ -76,7 +76,7 @@ export function attachNativeProcesses({getState,getWorkspace,api,endpoint,toast,
       (product.error?'<p role="alert" class="np-error">'+esc(product.error.message)+'</p>':'')+executionMarkup()+
       (product.state!=='complete'||!product.rendered?'<p>'+button('resume-report','Preview and continue original report','',busy)+'</p>':'')+'</section>'+
       (product.source_choice?'<section class="np-section"><h2>Continue with this scientific source</h2>'+metadata({'Source collection':product.source_choice.source_collection_id,'Source':product.source_choice.source_id})+
-      '<div class="np-actions">'+button('source','Open original source collection')+'</div><p>This recipe is available in the existing ordered scientific-report picker. To revise an existing delivery, choose its original saved selection below; this report is appended once and the earlier report order is preserved.</p>'+
+      '<div class="np-actions">'+(typeof openScientificReport==='function'?button('scientific-report','Open scientific report','',busy):'')+button('source','Open original source collection')+'</div><p>This recipe is available in the existing ordered scientific-report picker. To revise an existing delivery, choose its original saved selection below; this report is appended once and the earlier report order is preserved.</p>'+
       '<label>Saved delivery<select data-np-field="deliveryId">'+options(deliveries.map(row=>[row.id,row.selection?.title||row.title||short(row.id)]),draft.deliveryId,'Choose a retained delivery')+'</select></label>'+button('delivery','Open delivery with this report','',busy||!draft.deliveryId)+'</section>':'')+
       downloadsMarkup()+(product.tables?.length?tableMarkup():'');
   }
@@ -144,7 +144,7 @@ export function attachNativeProcesses({getState,getWorkspace,api,endpoint,toast,
     while(valid(m)){
       const found=getState()?.data?.sources?.some(row=>row.id===choice.source_collection_id&&row.entries?.some(entry=>entry.id===choice.source_id));
       if(found)return true;
-      if(Date.now()>deadline)throw Error('The original source is retained. Refresh the Workspace before opening the delivery form.');
+      if(Date.now()>deadline)throw Error('The original source is retained. Refresh the Workspace before opening the scientific source.');
       await refreshState({force:true});
       if(!valid(m))return false;
       await new Promise(resolve=>setTimeout(resolve,250));
@@ -179,10 +179,19 @@ export function attachNativeProcesses({getState,getWorkspace,api,endpoint,toast,
       else if(action==='resume-report'){useSelection(product.selection,false);await preview(m);}
       else if(action==='package')await enqueue('native.process.package',{id:product.id},m);
       else if(action==='previous'||action==='next'){draft.offset=action==='previous'?Math.max(0,draft.offset-100):rows.next_offset;await loadTable(m);}
+      else if(action==='scientific-report'){
+        if(typeof openScientificReport!=='function')throw Error('Receive the maintained scientific-report composer in this application.');
+        const report=copy(product),choice=copy(report.source_choice);
+        if(!valid(m)||!(await waitForSource(choice,m)))return;
+        if(!valid(m))return;
+        closeDetail();
+        await openScientificReport({workspace_key:m.workspace,sources:[choice],title:report.title});
+      }
       else if(action==='delivery'){
         const report=copy(product),delivery=draft.deliveryId;
         const value=await api(url('delivery'),{method:'POST',body:{id:report.id,delivery_id:delivery}});
         if(!valid(m)||!(await waitForSource(value.source_choice,m)))return;
+        if(!valid(m))return;
         closeDetail();await openDelivery(value.selection);
       }
     });
