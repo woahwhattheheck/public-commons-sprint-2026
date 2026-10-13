@@ -30,6 +30,23 @@ async function run(directory) {
     launch.cwd === request.homeDirectory && JSON.stringify(launch.args) === JSON.stringify(argv),
   'MANAGED_COMMAND_LAUNCH_CHANGED');
   let child, timer, outcome, observing, stopping = false;
+  let childError, childClosed = false, observerClosed = false, observerError = null;
+  const errorValue = error => ({ code: error?.code ?? 'MANAGED_COMMAND_ERROR',
+    message: String(error?.message ?? error).slice(0, 2000) });
+  const closeObserver = async () => {
+    if (!observing || observerClosed) return;
+    if (typeof observing.closeResult === 'function') {
+      const value = await observing.closeResult();
+      need(plain(value) && value.schema === 'stellar-forge.application-output-closure.v1' &&
+        value.closed === true && value.settled === true &&
+        Object.hasOwn(value, 'error'), 'MANAGED_COMMAND_OBSERVER_CLOSURE_CHANGED');
+      observerClosed = true;
+      if (value.error) observerError = errorValue(value.error);
+    } else {
+      // Providers without the explicit settled-result ABI must close successfully.
+      await observing.close(); observerClosed = true;
+    }
+  };
   const stopped = async () => Boolean(await readJSON(join(directory, 'stop.json'), true));
   const stop = () => { stopping = true; if (child) child.kill(pythonManagedStopSignal(request)); };
   let result;
@@ -41,14 +58,22 @@ async function run(directory) {
       // Both ordinary and terminal commands inherit the original held worker
       // lease. The optional PTY is only an input/output adapter for this child.
       child = spawn(launchCommand.executable, launchCommand.args, launchCommand.options);
+      // Errors report failure; only close proves that this actual child ended.
+      // Install both observations before output-owner acquisition can throw.
+      outcome = new Promise(accept => {
+        child.on('error', error => { childError ??= error; });
+        child.once('close', (exitCode, signal) => {
+          childClosed = true; accept({ exitCode, signal });
+        });
+      });
+      const spawned = new Promise((accept, reject) => {
+        child.once('spawn', accept); child.once('error', reject);
+      });
+      spawned.catch(() => {});
       observing = observeApplicationOutput(request, directory, { pid: child.pid });
       if (child.stdout) child.stdout.on('data', bytes => { process.stdout.write(bytes); observing.write(bytes); });
       if (child.stderr) child.stderr.on('data', bytes => process.stderr.write(bytes));
-      outcome = new Promise((accept, reject) => {
-        child.once('error', reject); child.once('close', (exitCode, signal) => accept({ exitCode, signal }));
-      });
-      outcome.catch(() => {});
-      await new Promise((accept, reject) => { child.once('spawn', accept); child.once('error', reject); });
+      await spawned;
       await saveJSON(join(directory, 'command-process.json'), {
         startedAt: now(), runner: { pid: process.pid, processStart: await processIdentity() },
         original: { pid: child.pid, processStart: await processIdentity(child.pid), executable: launchCommand.executable,
@@ -64,7 +89,9 @@ async function run(directory) {
       }, 250);
       process.on('SIGTERM', stop); process.on('SIGINT', stop);
       const completed = await outcome;
-      await observing.close();
+      if (childError) throw childError;
+      await closeObserver();
+      if (observerError) throw Object.assign(new Error(observerError.message), { code: observerError.code });
       if (request.terminal) {
         const terminal = await readJSON(join(directory, 'terminal-exit.json'), true);
         if (Number.isInteger(terminal?.exitCode)) {
@@ -77,9 +104,12 @@ async function run(directory) {
         stopped: stopping, launched: true };
     }
   } catch (error) {
-    if (child) child.kill(pythonManagedStopSignal(request));
-    if (outcome) await outcome.catch(() => {});
-    if (observing) await observing.close().catch(() => {});
+    if (child && !childClosed) {
+      try { child.kill(pythonManagedStopSignal(request)); }
+      catch (stopError) { process.stderr.write('Original child stop pending: ' + stopError.message + '\n'); }
+    }
+    if (outcome) await outcome;
+    await closeObserver();
     result = { exitCode: null, signal: null, state: 'LAUNCH_FAILED', stopped: stopping,
       error: runtimeWorkspaceError(error, 'MANAGED_COMMAND_ERROR') };
   } finally {
@@ -87,6 +117,10 @@ async function run(directory) {
   }
   const recorded = { operation: 'original-command', releaseId: request.releaseId, digest: request.releaseDigest,
     command: request.command, args: request.args, cwd: launch.cwd, completedAt: now(),
+    closure: { schema: 'stellar-forge.managed-command-closure.v1',
+      childCreated: Boolean(child), childClosed: !child || childClosed,
+      observerCreated: Boolean(observing), observerClosed: !observing || observerClosed,
+      observerError },
     ...(request.pythonCommand ? { pythonInstallation: request.pythonCommand.installationId,
       pythonBindingFingerprint: request.pythonCommand.fingerprint } : {}), ...result };
   await saveJSON(join(directory, 'command-result.json'), recorded);

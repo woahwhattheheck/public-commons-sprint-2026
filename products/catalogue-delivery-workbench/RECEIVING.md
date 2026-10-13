@@ -426,3 +426,19 @@ They use the selected preparation3, root managed/client/Applications source,
 the complete49-tool provider and the maintained Runtime Workspace/file reader.
 Publish the generic product together. Supply the private application and
 original native results through their existing authorized internal custody.
+
+## Positive Applications closure and saved dispatch recovery
+
+Each managed launch keeps its original application ID, review ID and request ID. The receiving journal records `selected` before dispatch, `dispatching` before entering the maintained Start call, and `entered` after that call returns. If the same receiving owner failed before dispatch and the native Applications record is absent, it saves an explicit `CANCELLED_BEFORE_DISPATCH` proof without starting the application. A saved request whose dispatch may have occurred is reconciled with that exact original Start request before Stop; it is never replaced with a fresh ID.
+
+Stop saves one immutable `intents/<host>-<request>-closed.json` proof before marking the launch closed. Closure is established by either the exact application/operation cancellation receipt (`stellar-forge.application-run-cancellation.v1`, `CANCELLED`, `launched:false`), or an inactive `SUCCEEDED` observation containing the dated original-command result. The latter must record a stopped, completed or exited child with its actual exit/signal, a positively stopped never-launched command, or `LAUNCH_FAILED` with explicit confirmed child and observer closure under `stellar-forge.managed-command-closure.v1`. A launch failure remains a failed course outcome; the closure record establishes only that its owners have ended.
+
+Inactive `PENDING`, `QUEUED`, `INTERRUPTED`, `RECEIVED_HISTORY` and unavailable observations are not closure. The same saved owner and receiving lease remain held while the original operation is unresolved. On interruption, resume first reopens the exact saved close proof and restores its artifact descriptor; it does not replace that proof with a later observation. A saved host absent from the current immutable agent configuration does not block shutdown: the actual Applications receipt controls closure, and only currently configured connected aliases are disconnected. Concurrent close calls join the same pending close operation; diagnostic-save failures do not release unfinished owners.
+
+Use the coherent selected Merchant package, including its maintained shared command runner and application observer. The Installation profile records the exact receiving source and guide for this correction. Preserve existing completed results and their original source identities. An already-started receiving course continues through its existing source-selection or explicit source-adoption contract; do not overwrite its installed files, alter its saved selection, revive an owner-stopped operation or launch a second native programme to apply this maintenance.
+
+## Original request authority and failed-response replay
+
+Request history is selected using the current original workspace and actor authority before pagination. A reused configured alias does not expose requests retained under its previous authority. Every full response remains an immutable observation. An earlier failed HTTP response does not prevent an operation with native safe replay from reconciling its exact saved request; an already successful original response is returned unchanged. Operations without that safe replay contract continue to return their retained observation for deliberate reconciliation.
+
+Artifact metadata, range and HTTP download failures retain the complete original response through the same file catalogue. A failed response is never exported as a completed artifact or silently discarded after cleanup. Preserve the selected URI, route/query, original request and full error bytes when reopening the existing operation.

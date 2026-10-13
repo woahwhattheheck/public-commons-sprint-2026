@@ -132,7 +132,7 @@ export class MerchantCatalogueDeliveryWorkspaces{
  async #invoke(s,operation,requestId,intent,send,{safeReplay=false,source=null}={}){
   const access=await this.#access(s),record=await this.#requests.prepare(s.alias,access,operation,requestId,intent,source);
   const old=await this.#requests.observations(record);
-  if(old.length){const selected=old.find(row=>row.ok===true&&row.responseFile)??old.find(row=>row.responseFile)??old[0];if(selected.responseFile)return{...selected.responseFile,workspace:s.alias,requestId,state:'HTTP_OBSERVED',ok:selected.ok,status:selected.originalStatus,replayed:true,observations:old,originalRequest:record.originalRequest};}
+  if(old.length){const selected=old.find(row=>row.ok===true&&row.responseFile)??(!safeReplay?(old.find(row=>row.responseFile)??old[0]):null);if(selected?.responseFile)return{...selected.responseFile,workspace:s.alias,requestId,state:'HTTP_OBSERVED',ok:selected.ok,status:selected.originalStatus,replayed:true,observations:old,originalRequest:record.originalRequest};}
   const dispatch=await this.#requests.begin(record,{operation,selection:intent});
   if(!dispatch.fresh&&!safeReplay)return{workspace:s.alias,requestId,state:'DISPATCH_UNCERTAIN',originalRequest:record.originalRequest,dispatch:dispatch.value,
    recovery:'Inspect the original saved job/review/implementation and native operation. A missing response is not permission to repeat this request. Use the explicit original reconciliation operation where available.'};
@@ -169,21 +169,27 @@ export class MerchantCatalogueDeliveryWorkspaces{
  async #artifact(s,a){
   const access=await this.#access(s);need(Boolean(a.uri)!==Boolean(a.route),'CATALOGUE_DELIVERY_ARTIFACT','Select either an original catalogue URI or an original returned HTTP download route.');
   if(a.uri){
-   const response=await this.#client(s).call('catalogue_artifact_info',{uri:a.uri});need(response.ok!==false,'CATALOGUE_DELIVERY_ARTIFACT','The original artifact descriptor could not be read.',response.status??409);
+   const response=await this.#client(s).call('catalogue_artifact_info',{uri:a.uri});if(response.ok===false)return this.#response(s,response,'native-artifact-error',{uri:a.uri});
    const d=response.value;digest(d.sha256);integer(d.bytes,'complete artifact bytes',MAX_FILE);
-   return this.#files.capture(s.alias,{access,operation:'native-artifact',uri:a.uri},async sink=>{
+   let retainedError;const stopCapture=new Error('Original artifact response retained.');
+   try{return await this.#files.capture(s.alias,{access,operation:'native-artifact',uri:a.uri},async sink=>{
     let offset=0;const h=createHash('sha256');
     while(offset<d.bytes){
      const result=await this.#client(s).call('catalogue_download_chunk',{uri:a.uri,offset,length:196608,expected_sha256:d.sha256});
-     need(result.ok!==false,'CATALOGUE_DELIVERY_ARTIFACT','The original complete artifact range failed.',result.status??409);
+     if(result.ok===false){retainedError=await this.#response(s,result,'native-artifact-range-error',{uri:a.uri,offset});throw stopCapture;}
      const v=result.value,b=Buffer.from(v.data,'base64');
      need(v.encoding==='base64'&&typeof v.data==='string'&&b.toString('base64')===v.data&&v.length===b.length&&v.offset===offset&&v.sha256===d.sha256&&v.bytes===d.bytes&&hash(b)===v.chunk_sha256&&b.length>0&&offset+b.length<=d.bytes&&v.next_offset===offset+b.length,'CATALOGUE_DELIVERY_ARTIFACT_RANGE','The original range does not match its complete selected artifact.',409);
      h.update(b);await sink(b);offset+=b.length;need(v.eof===(offset===d.bytes),'CATALOGUE_DELIVERY_ARTIFACT_RANGE','The native range EOF differs.',409);
     }
     return{bytes:offset,sha256:h.digest('hex'),filename:d.filename,mediaType:d.mimeType};
-   },{sha256:a.expectedSha256??d.sha256,bytes:a.expectedBytes??d.bytes,filename:a.filename??d.filename});
+   },{sha256:a.expectedSha256??d.sha256,bytes:a.expectedBytes??d.bytes,filename:a.filename??d.filename});}catch(e){if(e===stopCapture)return retainedError;throw e;}
   }
-  return this.#files.capture(s.alias,{access,operation:'http-artifact',route:a.route,query:a.query??{}},sink=>this.#client(s).download(a.route,{query:a.query??{},sink}),{sha256:a.expectedSha256,bytes:a.expectedBytes,filename:a.filename});
+  let retainedError;const stopCapture=new Error('Original HTTP artifact response retained.');
+  try{return await this.#files.capture(s.alias,{access,operation:'http-artifact',route:a.route,query:a.query??{}},async sink=>{
+   const response=await this.#client(s).download(a.route,{query:a.query??{},sink});
+   if(response.ok===false){retainedError=await this.#response(s,response,'http-artifact-error',{route:a.route,query:a.query??{}});throw stopCapture;}
+   return response;
+  },{sha256:a.expectedSha256,bytes:a.expectedBytes,filename:a.filename});}catch(e){if(e===stopCapture)return retainedError;throw e;}
  }
  async #implementation(s,suffix,a){
   if(suffix==='implementation_receive'){
@@ -219,7 +225,7 @@ export class MerchantCatalogueDeliveryWorkspaces{
   if(suffix==='file')return this.#files.read(s.alias,args);
   if(suffix==='file_release')return this.#files.release(s.alias,args.readId);
   if(suffix==='file_inspect')return this.#files.inspect(s.alias,args);
-  if(suffix==='requests'){await this.#access(s);return this.#requests.list(s.alias,args);}
+  if(suffix==='requests'){const access=await this.#access(s);return this.#requests.list(s.alias,args,access);}
   if(suffix==='artifact')return this.#artifact(s,args);
   if(suffix.startsWith('implementation_'))return this.#implementation(s,suffix,args);
   need(false,'CATALOGUE_DELIVERY_TOOL','Unknown installed operation.',404);

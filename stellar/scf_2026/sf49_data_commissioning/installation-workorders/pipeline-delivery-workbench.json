@@ -121,6 +121,22 @@
     {
       "path": "products/pipeline-delivery-workbench/original-programme/browser-workflow.mjs",
       "blob": "5f3ffbe65ec5e81cd1f0457fd8c2e43d8c2a7e7a"
+    },
+    {
+      "path": "products/pipeline-delivery-workbench/receiving.mjs",
+      "blob": "ae79f24feeb432d20b5fd9a47813c8c692f18d1a"
+    },
+    {
+      "path": "products/pipeline-delivery-workbench/RECEIVING.md",
+      "blob": "e7c726d78ca4bbb628495923f5e4c924be5787cd"
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/distribution/runtime-workspace/managed-command.mjs",
+      "blob": "2d38b113cc68d4361454d71fd77c0384d253a9f0"
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/distribution/runtime-workspace/application-provider.mjs",
+      "blob": "cb4bb8faed61f87567b5fca22da4d46aec98db6d"
     }
   ]
 }

@@ -121,6 +121,22 @@
     {
       "path": "products/clickhouse-acceptance-workbench/workbench/reference/fixture.py",
       "blob": "7bfced0020153acc6c63efc058b25223ebe456a5"
+    },
+    {
+      "path": "products/clickhouse-acceptance-workbench/receiving.mjs",
+      "blob": "b629684871390fd63417e2f8ad2da55e52d81c18"
+    },
+    {
+      "path": "products/clickhouse-acceptance-workbench/RECEIVING.md",
+      "blob": "2435308ad9bede8904144baac5edfd9358c7f70c"
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/distribution/runtime-workspace/managed-command.mjs",
+      "blob": "2d38b113cc68d4361454d71fd77c0384d253a9f0"
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/distribution/runtime-workspace/application-provider.mjs",
+      "blob": "cb4bb8faed61f87567b5fca22da4d46aec98db6d"
     }
   ]
 }

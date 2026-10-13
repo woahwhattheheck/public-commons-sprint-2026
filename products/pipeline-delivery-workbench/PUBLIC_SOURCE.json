@@ -677,6 +677,20 @@
         "bytes": 16353,
         "sha256": "18cc85894858de486dce6318c23267be24b9c92297da0a95b37b75f65c398dc7"
       }
+    },
+    {
+      "path": "products/pipeline-delivery-workbench/receiving.mjs",
+      "before": {
+        "gitBlob": "c8221f97cbd052b90588597dd39bb8fb490fbcad",
+        "bytes": 69963,
+        "sha256": "cff73d67163d47f1ab4d2b87323d1addf36f50892697a71ada0eb3016c763e11"
+      },
+      "after": {
+        "gitBlob": "ae79f24feeb432d20b5fd9a47813c8c692f18d1a",
+        "bytes": 72183,
+        "sha256": "c160395492008b260b80ae1c6cd79dc7b6a3404a7267e3807bf1b5d408e17cfd"
+      },
+      "reason": "Retain exact positive child/observer closure, selected-before-dispatch cancellation and same-request recovery while preserving public readiness and independent cleanup."
     }
   ],
   "packaging": {
@@ -808,5 +822,25 @@
     "channel": "C0BTTA66TK3",
     "parent": "1791813865.717809",
     "continuation": "Keep original source/runtime/request/result and selected writer; use the existing native receiving operation."
+  },
+  "receivingClosureSource": {
+    "repository": "woahwhattheheck/tjlabs-stellar-merchant-workspace",
+    "commit": "b08d3bb3f2a4fba3829968a2b5d2023df4271118",
+    "fullSourceBlob": "a577ec6b49ddd8f1727527a1cf9cf1417fbf7542",
+    "publicSharedFiles": [
+      {
+        "path": "stellar/scf-starforge-20261009/distribution/runtime-workspace/managed-command.mjs",
+        "gitBlob": "2d38b113cc68d4361454d71fd77c0384d253a9f0",
+        "bytes": 7664,
+        "sha256": "51cff7b0bce06156f6690b02e53f2da275478d7cff1ecdbe090ecb3a823bfba9"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/distribution/runtime-workspace/application-provider.mjs",
+        "gitBlob": "cb4bb8faed61f87567b5fca22da4d46aec98db6d",
+        "bytes": 7522,
+        "sha256": "6de5e8de411425927aef22267504808841bc7d2c9dffa0e66c51f032eb440853"
+      }
+    ],
+    "preservation": "Existing selected native source, original application bodies, business records and completed receipts remain unchanged. Select this coherent public package through the existing receiving/source-adoption contract; do not rewrite an active installed selection."
   }
 }
