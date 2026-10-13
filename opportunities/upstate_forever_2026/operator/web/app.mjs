@@ -388,24 +388,29 @@ function sourceForm(){
  '<div id="source-selection-body" class="full"></div><div id="source-preview" class="full"></div></div>','Preview source',
  async()=>{
   if(sourcePreview)return submitAction('source.import',{preview_id:sourcePreview.id});
+  const context=formContext,generation=context.sourcePreviewGeneration,selectedWorkspace=workspace;
+  const currentDraft=()=>{if(formContext!==context||workspace!==selectedWorkspace||context.sourcePreviewGeneration!==generation)throw Error('The source selection changed while it was being checked. Preview the current selection again.');};
   const mode=val('source_mode');let data;
   if(mode==='registered')data={registered_id:val('registered_id')};
   else{
-   const uploaded=await uploadFile(form.elements.namedItem('source_file').files[0]);
-   data={upload_id:uploaded.id};
+   const file=form.elements.namedItem('source_file').files[0];
+   data={};
    if(mode==='archive'&&val('manifest_member').trim())data.manifest_member=val('manifest_member').trim();
    if(mode==='file'){
     data.file_metadata={title:val('source_title'),uri:val('source_uri'),vintage:val('source_vintage'),kind:val('source_kind')};
     for(const [name,key] of [['source_units','units'],['source_role','role'],['source_layer','layer']])if(val(name).trim())data.file_metadata[key]=val(name).trim();
     data.notes=lines(val('source_notes'));
    }
+   const uploaded=await uploadFile(file);currentDraft();data.upload_id=uploaded.id;
   }
-  sourcePreview=await api('/api/source-preview',{method:'POST',body:data});
+  const preview=await api('/api/source-preview',{method:'POST',body:data});
+  currentDraft();sourcePreview=preview;
   $('#source-preview').innerHTML='<h3 class="subheading">'+esc(sourcePreview.title)+'</h3><p class="note">'+sourcePreview.entries.length+' original sources · manifest <span class="mono">'+esc(short(sourcePreview.manifest_sha256))+'</span></p>'+table(['Source','Kind / role','Original URI','Vintage / units'],sourcePreview.entries.map(x=>'<tr><td>'+esc(x.title)+'<small>'+esc(x.path)+'</small></td><td>'+esc(x.kind)+'<br>'+esc(x.role||'')+'</td><td>'+external(x.uri)+'</td><td>'+esc(x.vintage)+'<br>'+esc(x.units||'')+'</td></tr>'));
   $('#form-submit').textContent='Import this source edition';
   $('#form-progress').textContent='Preview retained. Review the exact source selection before import.';
  },()=>{
   const renderSource=()=>{
+   formContext.sourcePreviewGeneration=(formContext.sourcePreviewGeneration||0)+1;
    sourcePreview=null;$('#source-preview').innerHTML='';$('#form-submit').textContent='Preview source';
    const mode=val('source_mode');
    $('#source-selection-body').innerHTML=mode==='registered'?field('Registered manifest',select('registered_id',registered.map(x=>[x.id,x.title+' · '+x.entries+' sources'])),'',true):
@@ -418,8 +423,9 @@ function sourceForm(){
  });
 }
 function sourceDraftChanged(event){
- if(formContext?.sourcePreviewLocked)return;
- if(sourcePreview&&event.target.closest('#source-selection-body')){sourcePreview=null;$('#source-preview').innerHTML='';$('#form-submit').textContent='Preview source';}
+ if(!formContext||!event.target.closest('#source-selection-body'))return;
+ formContext.sourcePreviewGeneration=(formContext.sourcePreviewGeneration||0)+1;
+ sourcePreview=null;$('#source-preview').innerHTML='';$('#form-submit').textContent='Preview source';
 }
 function nativeModels(record){
  const chosen=record?.models??['ndr','sdr'];
