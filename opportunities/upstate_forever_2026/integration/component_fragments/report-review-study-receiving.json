@@ -1,0 +1,25 @@
+{
+  "schema": "upstate.application-component-fragment/v1",
+  "id": "report-review-study-receiving",
+  "extend_components": {
+    "study-transfer": {
+      "paths": [
+        "model/report_review_study_receiving.py",
+        "model/study_receiving.py",
+        "model/customer_review_study_transfer.py",
+        "model/scientific_report_review.py",
+        "model/scientific_report_editions.py",
+        "operator/study_receiving.py",
+        "operator/web/study_report_navigation.mjs",
+        "operator/web/received_studies.mjs",
+        "operator/web/extensions/study_transfer.mjs",
+        "operator/web/reviews.mjs",
+        "operator/web/source_reports.mjs",
+        "operator/web/source_report_editions.mjs",
+        "operator/REPORT_REVIEW_STUDY_RECEIVING.md"
+      ],
+      "requires": []
+    }
+  },
+  "required_components": []
+}
