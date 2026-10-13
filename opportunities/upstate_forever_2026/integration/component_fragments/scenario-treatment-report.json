@@ -1,0 +1,24 @@
+{
+  "schema": "upstate.application-component-fragment/v1",
+  "id": "scenario-treatment-report",
+  "source_reference": "https://tokenjunkielabs.slack.com/archives/C0BTTA66TK3/p1791878349295369",
+  "components": {
+    "scenario-treatment-report": {
+      "title": "Retained scenario treatment area and normalized response reporting",
+      "paths": [
+        "model/scenario_treatment_report.py"
+      ],
+      "requires": [
+        "core"
+      ],
+      "source_reference": {
+        "operation": "UPSTATE-DEMO-SIMULATED-INPUTS-20261013T140000Z",
+        "quantity_producer": "model/scenario_summary.py",
+        "coordination": "https://tokenjunkielabs.slack.com/archives/C0BTTA66TK3/p1791878349295369"
+      }
+    }
+  },
+  "required_components": [
+    "scenario-treatment-report"
+  ]
+}
