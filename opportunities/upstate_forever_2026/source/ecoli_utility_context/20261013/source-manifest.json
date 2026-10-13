@@ -44,7 +44,7 @@
         },
         {
           "path": "build_ecoli_report.mjs",
-          "sha256": "e8934aeff2126ea766d50812c2915a16a3f5b7e092b41abab4e9dacacf4bf8d7"
+          "sha256": "2c0db644337c27a874aba3107ffe42fa1a3d7ce6d5517ee344b0d88c71dbd45b"
         },
         {
           "path": "index.html",
@@ -140,7 +140,7 @@
         },
         {
           "path": "build_ecoli_report.mjs",
-          "sha256": "e8934aeff2126ea766d50812c2915a16a3f5b7e092b41abab4e9dacacf4bf8d7"
+          "sha256": "2c0db644337c27a874aba3107ffe42fa1a3d7ce6d5517ee344b0d88c71dbd45b"
         },
         {
           "path": "index.html",
@@ -234,7 +234,7 @@
         },
         {
           "path": "build_ecoli_report.mjs",
-          "sha256": "e8934aeff2126ea766d50812c2915a16a3f5b7e092b41abab4e9dacacf4bf8d7"
+          "sha256": "2c0db644337c27a874aba3107ffe42fa1a3d7ce6d5517ee344b0d88c71dbd45b"
         },
         {
           "path": "index.html",
@@ -328,7 +328,7 @@
         },
         {
           "path": "build_ecoli_report.mjs",
-          "sha256": "e8934aeff2126ea766d50812c2915a16a3f5b7e092b41abab4e9dacacf4bf8d7"
+          "sha256": "2c0db644337c27a874aba3107ffe42fa1a3d7ce6d5517ee344b0d88c71dbd45b"
         },
         {
           "path": "index.html",
@@ -424,7 +424,7 @@
         },
         {
           "path": "build_ecoli_report.mjs",
-          "sha256": "e8934aeff2126ea766d50812c2915a16a3f5b7e092b41abab4e9dacacf4bf8d7"
+          "sha256": "2c0db644337c27a874aba3107ffe42fa1a3d7ce6d5517ee344b0d88c71dbd45b"
         },
         {
           "path": "index.html",
@@ -520,7 +520,7 @@
         },
         {
           "path": "build_ecoli_report.mjs",
-          "sha256": "e8934aeff2126ea766d50812c2915a16a3f5b7e092b41abab4e9dacacf4bf8d7"
+          "sha256": "2c0db644337c27a874aba3107ffe42fa1a3d7ce6d5517ee344b0d88c71dbd45b"
         },
         {
           "path": "raw/arjws-results-2021-2025-original.csv",
@@ -605,6 +605,6 @@
     "Each source entry retains the complete relative source directory as companions, including the independent offline report and its linked original files.",
     "Censored and not-reported source measurements remain blank; their source condition and actual detection/quantitation limits are separate fields.",
     "Exact numerical summaries separate station, year, analytical method, activity type and original unit spelling.",
-    "The source-comments presentation retains all original records by default; its optional information-only filter records the selected cohort in print and downloadable selection metadata."
+    "The source-comments presentation applies no comment-based exclusion by default; its optional information-only filter records the selected cohort in print and downloadable selection metadata."
   ]
 }
