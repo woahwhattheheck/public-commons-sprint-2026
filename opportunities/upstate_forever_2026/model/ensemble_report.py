@@ -15,7 +15,7 @@ from .common import (atomic_bytes, atomic_json, canonical, describe_file, digest
 from .ensembles import Ensembles
 
 SCHEMA = "upstate.ensemble-report-release/v1"
-RENDERER_VERSION = 5
+RENDERER_VERSION = 6
 POLLUTANTS = {"nitrogen_export": "Nitrogen", "phosphorus_export": "Phosphorus",
               "sediment_export": "Sediment"}
 PAIR_FIELDS = (
@@ -123,6 +123,154 @@ def summarize_ranges(rows):
                                      r["alternative_only_cells"] == 0 for r in members)})
     return result
 
+
+ALTERNATIVE_FIELDS = (
+    "member_id", "member_label", "profile_id", "pollutant", "total_units",
+    "reference_run_id", "reference_common", "common_cells", "common_support_sha256",
+    "alternative_a_scenario_id", "alternative_a_label", "alternative_a_run_id",
+    "alternative_a_comparison_id", "alternative_a_common",
+    "alternative_b_scenario_id", "alternative_b_label", "alternative_b_run_id",
+    "alternative_b_comparison_id", "alternative_b_common",
+    "b_minus_a", "b_vs_a_percent", "reduction_a", "reduction_b",
+    "reduction_b_over_a", "comparison_status", "reason", "ratio_status",
+    "a_reference_run_id", "b_reference_run_id", "a_reference_common",
+    "b_reference_common", "a_common_cells", "b_common_cells",
+    "a_common_support_sha256", "b_common_support_sha256")
+
+
+def compare_alternatives(rows):
+    """Compare saved scalar totals only after proving identical paired support.
+
+    These are presentation quantities from retained annual totals. Native direct
+    scenario comparisons and their original difference rasters are unchanged.
+    """
+    groups = defaultdict(list)
+    for row in rows:
+        groups[(row["member_id"], row["profile_id"], row["pollutant"],
+                row["total_units"])].append(row)
+    comparisons = []
+    for key, members in sorted(groups.items()):
+        ordered = sorted(members, key=lambda row: row["scenario_id"])
+        if len({row["scenario_id"] for row in ordered}) != len(ordered):
+            raise ValueError("A parameter case has repeated alternative scenario rows")
+        for index, first in enumerate(ordered):
+            for second in ordered[index + 1:]:
+                a, b = first, second
+                result = dict(zip(("member_id", "profile_id", "pollutant", "total_units"), key))
+                result["member_label"] = a["member_label"]
+                for prefix, row in (("alternative_a", a), ("alternative_b", b)):
+                    result.update({
+                        prefix + "_scenario_id": row["scenario_id"],
+                        prefix + "_label": row["scenario_label"],
+                        prefix + "_run_id": row["alternative_run_id"],
+                        prefix + "_comparison_id": row.get("comparison_id"),
+                        prefix + "_common": row["alternative_common"]})
+                for prefix, row in (("a", a), ("b", b)):
+                    result.update({
+                        prefix + "_reference_run_id": row["baseline_run_id"],
+                        prefix + "_reference_common": row["baseline_common"],
+                        prefix + "_common_cells": row["common_cells"],
+                        prefix + "_common_support_sha256": row.get("common_support_sha256")})
+                result.update({name: None for name in (
+                    "reference_run_id", "reference_common", "common_cells",
+                    "common_support_sha256", "b_minus_a", "b_vs_a_percent",
+                    "reduction_a", "reduction_b", "reduction_b_over_a")})
+                reason = None
+                if a["baseline_run_id"] != b["baseline_run_id"]:
+                    reason = "Different retained reference runs"
+                elif not a["common_cells"] or not b["common_cells"]:
+                    reason = "No shared valid result cells"
+                elif not a.get("common_support_sha256") or not b.get("common_support_sha256"):
+                    reason = "Exact common-support mask identity is unavailable"
+                elif a["common_support_sha256"] != b["common_support_sha256"]:
+                    reason = "Different common-support masks"
+                elif a["common_cells"] != b["common_cells"]:
+                    reason = "Common-support cell counts differ"
+                elif a["baseline_common"] != b["baseline_common"]:
+                    reason = "Reference totals on the stated common support differ"
+                elif any(row[field] is None for row in (a, b)
+                         for field in ("baseline_common", "alternative_common")):
+                    reason = "A retained common-support total is unavailable"
+                result["comparison_status"] = "comparable" if reason is None else "not comparable"
+                result["reason"] = reason or "Identical retained reference and common-support mask"
+                result["ratio_status"] = "No comparable common-support reduction ratio"
+                if reason is None:
+                    reference = a["baseline_common"]
+                    av, bv = a["alternative_common"], b["alternative_common"]
+                    result.update({
+                        "reference_run_id": a["baseline_run_id"],
+                        "reference_common": reference, "common_cells": a["common_cells"],
+                        "common_support_sha256": a["common_support_sha256"],
+                        "b_minus_a": bv - av,
+                        "b_vs_a_percent": 100 * (bv - av) / av if av != 0 else None,
+                        "reduction_a": reference - av, "reduction_b": reference - bv})
+                    if reference - av > 0 and reference - bv >= 0:
+                        ratio = (reference - bv) / (reference - av)
+                        result["reduction_b_over_a"] = _number(ratio)
+                        result["ratio_status"] = "B reduction divided by A reduction"
+                    elif reference - av <= 0:
+                        result["ratio_status"] = "A has no positive reduction from the reference"
+                    else:
+                        result["ratio_status"] = "B increases export above the reference"
+                    for field in ("b_minus_a", "b_vs_a_percent", "reduction_a", "reduction_b"):
+                        result[field] = _number(result[field])
+                comparisons.append(result)
+    return comparisons
+
+
+def _alternative_tables(rows, reference_word):
+    comparisons = compare_alternatives(rows)
+    if not comparisons:
+        return ""
+    eligible = [row for row in comparisons if row["comparison_status"] == "comparable"]
+    unavailable = [row for row in comparisons if row["comparison_status"] != "comparable"]
+    body = (
+        "<h2>Compare alternatives on identical support</h2>"
+        "<p>Read the named A and B alternatives within each parameter case. "
+        "Their totals below share the same retained reference run, pollutant, annual unit "
+        "and exact common-valid mask. B minus A subtracts those two annual totals directly. "
+        "Negative change means B has lower modeled export than A. The percentage divides by "
+        "A's export on those same cells; it is undefined when that value is zero.</p>"
+        "<p>The reduction ratio is (" + _h(reference_word.lower()) + " minus B) divided by ("
+        + _h(reference_word.lower()) + " minus A). It is shown only when A reduces export "
+        "and B does not increase it. A value above one means B removes more annual mass "
+        "relative to this reference. It does not include costs. These saved scalar "
+        "comparisons leave the original native direct-comparison maps and runs intact.</p>")
+    if eligible:
+        body += _table(
+            ["Parameter case", "Pollutant / units", reference_word + " total",
+             "Alternative A", "A total", "Alternative B", "B total", "Common cells"],
+            [(row["member_label"], POLLUTANTS[row["pollutant"]] + " / " + row["total_units"],
+              _n(row["reference_common"]), row["alternative_a_label"],
+              _n(row["alternative_a_common"]), row["alternative_b_label"],
+              _n(row["alternative_b_common"]), format(row["common_cells"], ","))
+             for row in eligible])
+        body += "<h3>Additional difference and reduction ratio</h3>"
+        body += _table(
+            ["Parameter case", "Pollutant / units", "B minus A", "B vs A (%)",
+             reference_word + " minus A", reference_word + " minus B",
+             "B / A reduction ratio", "Ratio meaning"],
+            [(row["member_label"], POLLUTANTS[row["pollutant"]] + " / " + row["total_units"],
+              _n(row["b_minus_a"]), _n(row["b_vs_a_percent"]),
+              _n(row["reduction_a"]), _n(row["reduction_b"]),
+              _n(row["reduction_b_over_a"]), row["ratio_status"])
+             for row in eligible])
+    if unavailable:
+        body += "<h3>Alternatives kept separate</h3>"
+        body += _table(
+            ["Parameter case", "Pollutant", "Alternative A", "Alternative B", "Reason"],
+            [(row["member_label"], POLLUTANTS[row["pollutant"]],
+              row["alternative_a_label"], row["alternative_b_label"], row["reason"])
+             for row in unavailable])
+    body += (
+        "<p>Matching masks identify the geographic cells used here; they do not establish "
+        "complete reporting-area coverage. Cases with different routing support stay "
+        "separate. Full-precision totals, ratios, mask identities, original native run IDs "
+        "and any unavailable comparisons are in alternatives.csv and report.json.</p>"
+        '<p><a href="alternatives.csv" download>Download alternative comparisons CSV</a> · '
+        '<a href="report.json" download>Download complete report JSON</a></p>')
+    return body
+
 def _csv(rows, fields):
     output = io.StringIO(newline="")
     writer = csv.DictWriter(output, fieldnames=fields, extrasaction="ignore",
@@ -222,6 +370,7 @@ def render_html(report, rows, ranges, sensitivity, release_id):
             "<p>Ranges describe the explicitly selected parameter choices. The report groups "
             "matching geographic masks together. Identical pair masks do not establish complete reporting-area coverage. It preserves cases with different coverage "
             "as separate groups. A percentage requires a nonzero baseline on the same cells.</p>")
+    body += _alternative_tables(rows, reference_word)
     if rows:
         body += "<h2>Direction across the selected parameter choices</h2>"
         body += _table(
@@ -306,7 +455,8 @@ def render_html(report, rows, ranges, sensitivity, release_id):
     body += '<footer><p>Report release <code>' + _h(release_id) + (
         "</code></p><p>Use pairs.csv for land-cover contrasts, sensitivity.csv for the baseline "
         "parameter comparison, robustness.csv for grouped land-cover ranges, and report.json for "
-        "the original retained report. Transfer the entire working project with "
+        "the original retained report. alternatives.csv holds same-support alternative-to-alternative "
+        "totals and explicitly labeled reduction ratios. Transfer the entire working project with "
         "the operator's Back up workspace action.</p></footer>")
     style = """
 :root{color-scheme:light;font:15px/1.55 system-ui,-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif;color:#202326;background:#fff}
@@ -360,9 +510,11 @@ def _build(workspace, report, *, publish_pointer=True):
     rows = _pairs(report)
     sensitivity = _pairs(report, "sensitivity")
     ranges = summarize_ranges(rows)
+    alternatives = compare_alternatives(rows)
     content = {"schema": SCHEMA, "renderer_version": RENDERER_VERSION,
                "ensemble_id": ensemble_id, "report": report,
-               "paired_rows": rows, "parameter_rows": sensitivity, "support_groups": ranges}
+               "paired_rows": rows, "parameter_rows": sensitivity, "support_groups": ranges,
+               "alternative_comparisons": alternatives}
     release_id = digest(content)
     directory = workspace.root / "ensemble_reports" / release_id
     directory.mkdir(parents=True, exist_ok=True)
@@ -421,6 +573,18 @@ def _build(workspace, report, *, publish_pointer=True):
                            "Workspace transfer for editable native inputs, spatial masks, logs and "
                            "difference rasters. The original design and baseline reports retain "
                            "their own source identities.\n")
+            methods += (
+                "\n## Comparisons between alternatives\n\n"
+                "alternatives.csv and report.json retain named A/B alternatives within one parameter "
+                "member/profile and physical unit. Numerical comparison requires the same original "
+                "reference run, nonempty identical common-support mask, cell count and reference "
+                "mass. B minus A subtracts their original common-support annual totals directly. "
+                "Percentage change is 100 * (B-A)/A and is undefined for zero A mass. "
+                "The reduction ratio (reference-B)/(reference-A) requires a positive A reduction "
+                "and a nonnegative B reduction. It is a physical mass ratio, without cost assumptions. "
+                "Unavailable combinations retain their original IDs/support and an explicit reason. "
+                "Matching masks do not imply full reporting coverage. Existing direct native "
+                "scenario comparisons and difference rasters remain unchanged.\n")
             contents = {
                 "report.html": render_html(report, rows, ranges, sensitivity, release_id),
                 "pairs.csv": _csv(rows, PAIR_FIELDS + (
@@ -428,6 +592,7 @@ def _build(workspace, report, *, publish_pointer=True):
                     if report.get("scenario_reference") else ())),
                 "sensitivity.csv": _csv(sensitivity, SENSITIVITY_FIELDS),
                 "robustness.csv": _csv(ranges, RANGE_FIELDS),
+                "alternatives.csv": _csv(alternatives, ALTERNATIVE_FIELDS),
                 "report.json": canonical(content) + b"\n",
                 "METHODS.md": methods.encode("utf-8")}
             files = {}
@@ -458,7 +623,7 @@ def _build(workspace, report, *, publish_pointer=True):
             result = {**package_manifest, "files": files, "created_at": now(),
                       "title": report.get("title"), "state": report.get("state"),
                       "paired_results": len(rows), "parameter_results": len(sensitivity),
-                      "support_groups": len(ranges)}
+                      "support_groups": len(ranges), "alternative_comparisons": len(alternatives)}
             atomic_json(state_path, result, immutable=True)
         if publish_pointer:
             pointer = workspace.root / "ensemble_results" / ensemble_id / "latest-report.json"
