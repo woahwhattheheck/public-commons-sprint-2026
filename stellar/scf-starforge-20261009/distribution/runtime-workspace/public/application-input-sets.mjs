@@ -1,4 +1,5 @@
 // MIT. Complete companion-file sets use the same original upload and Applications selection.
+import {createApplicationInputSetEditionsView} from './application-input-set-editions.mjs';
 import {APPLICATION_INPUT_SET_SCHEMA,APPLICATION_INPUT_SET_LIMITS as LIMITS,
   normalizeApplicationInputSet,applicationInputSetPath} from './application-input-set-format.mjs';
 const node=(tag,text,cls)=>{const n=document.createElement(tag);if(text!==undefined)n.textContent=text;if(cls)n.className=cls;return n;};
@@ -10,7 +11,7 @@ export function createApplicationInputSetsView({root,api,getToken,getWorkspaceId
     const css=document.createElement('link');css.rel='stylesheet';css.href='/application-input-sets.css';
     css.setAttribute('data-application-input-sets','');document.head.append(css);
   }
-  let workspace=getWorkspaceId(),epoch=0,listing=0,busy=false,selected=[],directories=[],offset=0,workingOffset=0,opened=null;
+  let workspace=getWorkspaceId(),epoch=0,listing=0,busy=false,selected=[],directories=[],offset=0,workingOffset=0,opened=null,sourceChoice=0;
   const panel=node('details',undefined,'panel');panel.id='application-input-sets';
   panel.append(node('summary','Companion file sets'));
   const intro=node('p','Keep an entry file and every companion in one original source set. Prepare one editable working folder, then select its entry file or folder in the normal application review.','note');
@@ -38,7 +39,9 @@ export function createApplicationInputSetsView({root,api,getToken,getWorkspaceId
   panel.append(intro,nameLabel,folderLabel,filesLabel,sourceSummary,controls,status,search,
     button('Refresh source sets',()=>void refresh()),list,pageControls,details,pathLabel,prepareButton,
     node('h3','Retained working sets'),copies,workingControls);
+  const editionRoot=node('section',undefined,'application-input-set-editions');panel.append(editionRoot);
   root.replaceChildren(panel);
+  const editions=createApplicationInputSetEditionsView({root:editionRoot,api,getWorkspaceId,readSaved,saveSaved,onError,onMessage,openSet,getSourceChoice:()=>sourceChoice});
   const scope=()=>({epoch,workspace:getWorkspaceId()});
   const current=s=>s.epoch===epoch&&s.workspace===workspace&&s.workspace===getWorkspaceId();
   function notice(text){status.textContent=text;onMessage(text);}
@@ -57,7 +60,7 @@ export function createApplicationInputSetsView({root,api,getToken,getWorkspaceId
     finally{if(current(own)){busy=false;enabled();await refresh();}}
   }
   function acceptSelection(items,label) {
-    selected=items;directories=[];opened=null;details.replaceChildren();member.replaceChildren();name.value=label;
+    sourceChoice++;selected=items;directories=[];opened=null;details.replaceChildren();member.replaceChildren();name.value=label;
     sourceSummary.textContent=items.length+' complete file(s), '+human(items.reduce((sum,x)=>sum+x.file.size,0))+' bytes.';
     status.textContent='Relative names are retained exactly. Select every required companion; use CLI directory intake when empty directories are part of the source.';
     enabled();
@@ -135,8 +138,8 @@ export function createApplicationInputSetsView({root,api,getToken,getWorkspaceId
     enabled();
   }
   async function openSet(setId) {
-    const own=scope(),value=await api('/api/application-input-sets/inspect?'+new URLSearchParams({setId}));
-    if(current(own))show(value);
+    const own=scope(),choice=++sourceChoice,value=await api('/api/application-input-sets/inspect?'+new URLSearchParams({setId}));
+    if(current(own)&&choice===sourceChoice)show(value);
   }
   async function prepare(resume) {
     const own=scope(),chosen=target();let request=resume?pending():null;
@@ -173,7 +176,8 @@ export function createApplicationInputSetsView({root,api,getToken,getWorkspaceId
       copies.replaceChildren(...result.working.items.map(item=>{
         const row=node('article',undefined,'operation');row.append(node('h4',item.manifest.name),
           node('p',item.kind+' → '+item.field+' · '+item.phase,'note'),node('code',item.path));
-        if(item.phase==='PREPARED')row.append(button('Use current working set',()=>perform(()=>useWorking(item.requestId))));
+        if(item.phase==='PREPARED')row.append(button('Use current working set',()=>perform(()=>useWorking(item.requestId))),
+          button('Review edited source edition',()=>perform(()=>editions.open(item))));
         else row.append(button('Continue original working set',()=>perform(async()=>{
           if(!remember({requestId:item.requestId,setId:item.setId,kind:item.kind,field:item.field,memberPath:item.memberPath}))
             throw Error('Retain the original selection request before continuing.');
@@ -184,16 +188,16 @@ export function createApplicationInputSetsView({root,api,getToken,getWorkspaceId
           if(current(own))downloadJSON(value,'application-working-set-'+item.requestId+'.json');
         })));return row;
       }));
-      workingBack.disabled=workingOffset===0;workingNext.disabled=workingOffset+10>=result.working.total;enabled();
+      workingBack.disabled=workingOffset===0;workingNext.disabled=workingOffset+10>=result.working.total;enabled();await editions.refresh();
     }catch(error){if(current(own)&&version===listing)onError(error);}
   }
   function reset() {
-    epoch++;listing++;workspace=getWorkspaceId();busy=false;selected=[];directories=[];offset=workingOffset=0;opened=null;
+    epoch++;listing++;sourceChoice++;workspace=getWorkspaceId();busy=false;selected=[];directories=[];offset=workingOffset=0;opened=null;
     folder.value=files.value=name.value=search.value='';sourceSummary.textContent=status.textContent='';list.replaceChildren();
-    details.replaceChildren();copies.replaceChildren();member.replaceChildren();enabled();
+    details.replaceChildren();copies.replaceChildren();member.replaceChildren();editions.reset();enabled();
   }
   search.addEventListener('input',()=>{offset=0;void refresh();});
   panel.addEventListener('toggle',()=>{if(panel.open)void refresh();});enabled();
-  return {refresh,reset,update(){if(workspace!==getWorkspaceId())reset();enabled();},
+  return {refresh,reset,update(){if(workspace!==getWorkspaceId())reset();enabled();editions.update();},
     show(){panel.open=true;enabled();void refresh();}};
 }
