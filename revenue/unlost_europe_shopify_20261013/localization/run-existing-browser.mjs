@@ -92,6 +92,19 @@ const programme=async()=>{
   const sourceFile=await download(f.kind,'source','#download-source');const source=JSON.parse(sourceFile.bytes.toString('utf8'));
   if(source.schema!=='tjlabs.localization-application-source.v1'||source.files.length!==6)throw Error('Complete application source download differs');for(const sf of source.files)if(Buffer.byteLength(sf.content)!==sf.bytes||sha(Buffer.from(sf.content))!==sf.sha256)throw Error('Downloaded source member differs');
   const working=await download(f.kind,'working','#export-working');const bundle=JSON.parse(working.bytes.toString('utf8'));if(bundle.workspace.selection.kind!==f.kind||bundle.workspace.merchants[bundle.workspace.selection.leadIds[0]].snapshots.length!==1)throw Error('Whole working download differs');
+  await page.evaluate(()=>{
+   window.unlostOriginalFileText=File.prototype.text;
+   window.unlostFileReadStarted=false;
+   File.prototype.text=async function(){const text=await window.unlostOriginalFileText.call(this);window.unlostFileReadStarted=true;await new Promise(resolve=>window.unlostReleaseFileRead=resolve);return text;};
+  });
+  try{
+   await page.locator('#import-working').setInputFiles(working.path);
+   await page.waitForFunction(()=>window.unlostFileReadStarted);
+   await page.locator('#handover-form [name=title]').fill('Keep this name entered while the file was reading');
+   await page.evaluate(()=>window.unlostReleaseFileRead());
+   await page.waitForFunction(()=>document.querySelector('#message').textContent.includes('workspace changed while this file was reading'));
+   if(await page.locator('#handover-form [name=title]').inputValue()!=='Keep this name entered while the file was reading')throw Error('Whole-file receiving discarded an edit entered during the read');
+  }finally{await page.evaluate(()=>{File.prototype.text=window.unlostOriginalFileText;delete window.unlostOriginalFileText;delete window.unlostReleaseFileRead;});}
   const otherTab=await context.newPage();otherTab.setDefaultTimeout(12000);otherTab.on('pageerror',e=>report.errors.push(e.message));await otherTab.goto(origin+f.name,{waitUntil:'load'});await otherTab.locator('[data-tab=pilot]').click();await otherTab.locator('#pilot-form [name=notes]').fill('Saved by the second browser tab.');await otherTab.locator('#pilot-form button:not([type])').first().click();await page.locator('#import-working').setInputFiles(working.path);await page.waitForFunction(()=>document.querySelector('#message').textContent.includes('Another tab changed the browser copy'));
   const currentStored=await page.evaluate(key=>JSON.parse(localStorage.getItem(key)),'tjlabs-localization:'+bundle.workspace.selection.editionId);if(currentStored.workspace.revision!==bundle.workspace.revision+1)throw Error('Stale working-file open overwrote the newer browser copy');await otherTab.close();await page.locator('#reopen-browser').click();
   await page.locator('#import-working').setInputFiles(working.path);await page.waitForFunction(()=>document.querySelector('#message').textContent.includes('Complete working file opened'));
@@ -131,6 +144,12 @@ const programme=async()=>{
   if(JSON.parse(await page.evaluate(key=>localStorage.getItem(key),storageName)).workspace.revision!==reconciled.workspace.revision)throw Error('Declining the saved-base replacement altered current work');
   await page.locator('#recover-saved').click();
   if(JSON.stringify(JSON.parse(await page.evaluate(key=>localStorage.getItem(key),storageName)))!==JSON.stringify(recovery.working)||await page.locator('#unit-form [name=translation]').inputValue()!==draftTranslation)throw Error('Explicit saved-base recovery did not preserve the original full working state and unfinished text');
+  await page.evaluate(()=>{window.unlostOriginalStorageSet=Storage.prototype.setItem;Storage.prototype.setItem=function(){throw new DOMException('Authored receiving storage refusal','QuotaExceededError');};});
+  try{
+   await page.locator('#recover-saved').click();
+   if(!await page.locator('#message').textContent().then(text=>text.includes('Browser storage is unavailable')))throw Error('Recovery hid the complete working-file storage warning');
+   if(await page.locator('#unit-form [name=translation]').inputValue()!==draftTranslation)throw Error('Recovery storage refusal lost unfinished translation');
+  }finally{await page.evaluate(()=>{Storage.prototype.setItem=window.unlostOriginalStorageSet;delete window.unlostOriginalStorageSet;});}
   await page.locator('#import-working').setInputFiles(recoveredWorking.path);await page.waitForFunction(()=>document.querySelector('#message').textContent.includes('Complete working file opened'));
   await page.setViewportSize({width:1440,height:1000});
 

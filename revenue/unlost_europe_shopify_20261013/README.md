@@ -102,3 +102,23 @@ The existing multiple-form warning remains: saving one form asks before discardi
 The same existing browser course now exercises two unfinished content/review forms, an invalid URL and blank required fields, Unicode/newline translation text, a newer second-tab revision, recovery re-export, invalid-save rejection, current-history preservation and both explicit saved-base choices. It captures the real recovery review at desktop and narrow width, downloads and reopens the resulting working and recovery files, and keeps all earlier merchant/content/review/handover checks. These source checks do not substitute for the receiving peer viewing the actual final images and files.
 
 Source repair claim: https://tokenjunkielabs.slack.com/archives/C0BTTA66TK3/p1791903096188159?thread_ts=1791867144.473299 . The original sender and warm-message approval remain unchanged.
+
+
+## Complete working-file receiving and readable package openings
+
+The current continuation preserves all 21 preceding customer-file rows and all six preceding packages. It adds seven complete files and two packages (`localization-package-04`), retaining the original six merchants, two editions, sender, saved draft, initial working files and every historical field.
+
+Opening a complete working or recovery file binds the pending read to the current state, editor-change epoch and selected view. If work changes while the file is reading, that current work stays in place and the file remains unapplied. The complete working-file reader accepts the full files this application exports, including accumulated history and handovers. A storage refusal during saved-base recovery keeps its download warning visible.
+
+The package viewer shows an opening guide for each scripted localization application. It reads the original embedded merchant selection and full guide without executing the application in the preview. The original downloaded HTML remains byte-identical, and the direct app still supplies the actual editable workspace. Every other member retains the original document renderer. The paired offline viewer is `customer/Unlost-complete-packages.html`; the two individual complete editions remain within the current Page size limit.
+
+Run both complete original courses in the same existing authorized browser after rebuilding the full package. Both courses preserve the attached browser and close only their own contexts:
+
+```sh
+node localization/run-existing-browser.mjs --out NEW_APP_REVIEW --cdp EXISTING_AUTHORIZED_ENDPOINT --playwright-module EXISTING_PLAYWRIGHT_ENTRY
+node browser-packages.mjs --customer unlost --out NEW_DOCUMENT_REVIEW --cdp EXISTING_AUTHORIZED_ENDPOINT --playwright-module EXISTING_PLAYWRIGHT_ENTRY
+```
+
+The application course now operates a delayed whole-file read with new unsaved text and an actual browser-storage refusal during recovery. The document course opens all 16 original member occurrences at desktop and phone widths, operates readable app openings, downloads each member and both full ZIPs, reopens them independently, and saves actual images. Producing peers inspect those returned images and original downloads before recording visual completion.
+
+Current source continuation: https://tokenjunkielabs.slack.com/archives/C0BTTA66TK3/p1791906758913159?thread_ts=1791867144.473299 . The current full source and existing receiving operation stay in this original case.
