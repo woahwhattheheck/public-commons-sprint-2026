@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import argparse
+import csv
 import json
+import re
 from pathlib import Path
 import sys
 import time
@@ -102,6 +104,34 @@ def receive(application, workspace, source_collection_id, state_directory, timeo
             manifest = gis.load(directory / "project.json")
             return directory, manifest, checked
 
+        def source_browser(directory, manifest):
+            html = (directory / "OPEN_GIS.html").read_text(encoding="utf-8")
+            selected = re.search(r'<script type="application/json" id="project-data">([\s\S]*?)</script>', html)
+            if selected is None or 'id="source-workspace"' not in html:
+                raise AssertionError("The offline GIS source desk is missing.")
+            embedded = json.loads(selected.group(1))
+            if embedded["edition_id"] != manifest["edition_id"]:
+                raise AssertionError("The offline source desk belongs to another GIS edition.")
+            tables = {}
+            originals = {row["id"]: row for row in manifest.get("attachments", [])}
+            for row in embedded.get("attachments", []):
+                original = originals[row["id"]]
+                if gis.attachment_metadata(manifest, original)["kind"] != "table":
+                    continue
+                primary = original["files"][0]
+                with gis.local(directory, primary["path"]).open("r", encoding="utf-8-sig", newline="") as stream:
+                    literal = list(csv.reader(stream))
+                preview = row.get("browser_table") or {}
+                if (not preview.get("complete") or preview.get("columns") != literal[0]
+                        or preview.get("rows") != literal[1:]
+                        or preview.get("source_sha256") != primary["sha256"]
+                        or preview.get("source_bytes") != primary["bytes"]):
+                    raise AssertionError("The offline source desk changed or omitted original county table values.")
+                tables[row["id"]] = {"rows": len(preview["rows"]), "columns": preview["columns"]}
+            if len(tables) < 2:
+                raise AssertionError("The offline source desk omitted an original county table.")
+            return tables
+
         def originals(manifest):
             rows = []
             for layer in manifest["layers"]:
@@ -125,6 +155,7 @@ def receive(application, workspace, source_collection_id, state_directory, timeo
         exported = complete("export", "gis.project.export", payload)
         export_view = adapter.describe(key, "export", exported["result"]["id"])
         exported_root, exported_project, exported_check = project("export", exported["result"]["id"])
+        source_browser_tables = source_browser(exported_root, exported_project)
         selected = {row["id"]: (row, row["originals"]) for row in exported_project["layers"]}
         selected.update({row["id"]: (row, row["files"]) for row in exported_project.get("attachments", [])})
         if set(selected) != set(source_expected):
@@ -243,6 +274,7 @@ def receive(application, workspace, source_collection_id, state_directory, timeo
             "notes": ["Continue received county layers with their automatically retained original files and dated source context."]})
         reexport_view = adapter.describe(key, "export", reexported["result"]["id"])
         reexport_root, reexport_project, reexport_check = project("export", reexported["result"]["id"])
+        reexport_browser_tables = source_browser(reexport_root, reexport_project)
         # The original adopter associates retained context with the selected working
         # layer; selecting that layer alone must include every original file.
         required = {(row["bytes"], row["sha256"]) for row in originals(exported_project)}
@@ -284,6 +316,9 @@ def receive(application, workspace, source_collection_id, state_directory, timeo
             "original_county_geometries": True,
             "typed_context_tables": typed_tables,
             "typed_context_profiles_reopened": True,
+            "offline_source_browser_tables": source_browser_tables,
+            "offline_reexport_browser_tables": reexport_browser_tables,
+            "literal_original_table_values_in_offline_browser": True,
             "selected_working_layer_reexports_full_context": True,
             "native_tasks": {phase: row["task_id"] for phase, row in receipt["phases"].items()},
             "delivery": {"path": str(gis.local(native.root, reexport_view["archive"]["path"])),
