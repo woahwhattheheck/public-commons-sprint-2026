@@ -55,6 +55,25 @@ It installs no runtime, starts no browser, and closes only its own page/context.
 
 The successor preserves the complete original companies, immutable editions, withdrawal/delivery histories and customer body bytes. Fresh-read the current shared root before receiving the whole successor. The exact original pack plus this successor has already received and re-exported equal through the unchanged maintained engine. Preserve later concurrent work; apply only the missing original file/package selection to the current case.
 
+## Complete customer archives and document view
+
+Open `VentCRM-complete-packages.html` to inspect the complete free and paid packages, download either ZIP, or receive any original member individually. Each archive contains its selected profile CSV, HTML and JSON, the complete editable commissioning HTML, the blank working JSON and START-HERE.md. The free and five-operator editions remain separate.
+
+The document viewer previews HTML with scripts disabled. To operate a selected commissioning desk, download its complete package, extract it, and open its commissioning HTML; then open the corresponding working JSON. The separate interactive desk on the private review Page supports the same original workflow. Keep the authored receiving exercise separate from these blank customer starters.
+
+Build from the same complete private input, then make the exact package view:
+
+```sh
+node build.cjs --input COMPLETE_PRIVATE_INPUT.json /absolute/new-customer-delivery
+node build-package-viewer.mjs /absolute/new-customer-delivery /absolute/new-package-view
+node browser-packages.mjs --delivery /absolute/new-customer-delivery --out /absolute/new-package-review --cdp EXISTING_AUTHORIZED_ENDPOINT --playwright-module EXISTING_ENTRY
+node browser-receiving.mjs --delivery /absolute/new-customer-delivery --out /absolute/new-operated-review --cdp EXISTING_AUTHORIZED_ENDPOINT --playwright-module EXISTING_ENTRY
+```
+
+The first browser course opens the complete view and all twelve selected document occurrences at 1440 and 390 pixels, downloads both ZIPs and every selected file, checks their original bytes, and cold-reopens. The original operating course then uses both scoped desks and completes the visible acceptance, export/reopen and changed-scope workflow. They use separate private contexts in an existing authorized browser and leave that browser running. Preserve both result directories and personally inspect the actual rendered outputs.
+
+The maintained `host/connected_zip.cjs` and unchanged original 6A62 `vendor/customer-package-panel.mjs` are the same components consumed by the complete BilledOK delivery. The deterministic STORE writer uses 2026-10-13T00:00:00Z and mode 0644 in both the customer builder and viewer. All twelve selected member occurrences reopen byte-for-byte; the complete eight-company record, original two editions, eleven unique customer files and actual delivery history remain unchanged. Package information and private working inputs stay in the original case; public source provides the complete reusable application and the outgoing scoped documents.
+
 ## Current owner instruction
 
 
