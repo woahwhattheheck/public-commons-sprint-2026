@@ -106,10 +106,20 @@ def receive(workspace, state_directory, ensemble_id, operation_id, directory):
             request = read_json(folder / "request.json")
             if request["ensemble_context"] != original_execution["ensemble_context"]:
                 raise ValueError("The restarted worker changed its original ensemble binding")
-            journal["reconnected"] = read_json(folder / "reconnected.json")
-            if journal["reconnected"]["task_id"] != task["id"]:
+            reconnected_path = folder / "reconnected.json"
+            journal["reconnected"] = (read_json(reconnected_path)
+                                       if reconnected_path.exists() else None)
+            if journal["reconnected"] and journal["reconnected"]["task_id"] != task["id"]:
                 raise ValueError("The original worker was reconnected by another task")
-            journal["original_worker_result"] = read_json(folder / "result.json")
+            receipts = {}
+            for name in ("result.json", "failure.json", "supervision.json", "finished.json"):
+                path = folder / name
+                if path.exists():
+                    receipts[name] = read_json(path)
+            journal["original_worker_receipts"] = receipts
+            journal["original_worker_result"] = receipts.get("result.json")
+            journal["original_worker_result_available"] = "result.json" in receipts
+            journal["original_completed_run"] = records[original_execution["run_id"]]
         # Use the original report writer and its full original downloadable files.
         report_operation = operation_id + "-report"
         if len(report_operation) > 100:
@@ -126,12 +136,15 @@ def receive(workspace, state_directory, ensemble_id, operation_id, directory):
                 raise RuntimeError("The retained native report needs recovery: "
                                    + json.dumps(report.get("error"), ensure_ascii=False))
             time.sleep(0.4)
+        recovery_observed = bool(journal.get("operator_reopened")
+                                 and journal.get("reconnected"))
         journal.update(state="complete", task=app.task_view(task["id"]),
                        ensemble=result, runs=records, report_task=app.task_view(report["id"]),
-                       recovery_observed=bool(original_execution),
+                       recovery_observed=recovery_observed,
                        recovery_note=("Original worker reconnected after operator restart"
-                                      if original_execution else
-                                      "All selected cases completed before a live worker restart"))
+                                      if recovery_observed else
+                                      "Original results received; no complete restart/reconnection "
+                                      "was retained before the selected cases finished"))
         atomic_json(journal_path, journal)
         atomic_json(directory / "original-ensemble.json", plan, immutable=True)
         atomic_json(directory / "original-run-results.json", records)

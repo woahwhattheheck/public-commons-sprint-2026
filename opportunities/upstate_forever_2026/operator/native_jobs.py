@@ -240,7 +240,10 @@ class NativeJobs:
             self.processes[request["execution_id"]] = process
             if task["id"] in self.pending_stops:
                 self._stop_record(execution)
-                self.pending_stops.discard(task["id"])
+                # A coordinator Stop also applies between members, even if this
+                # just-started worker finishes before it observes the signal.
+                if task.get("action") not in {"ensemble.run", "parameter-study.run"}:
+                    self.pending_stops.discard(task["id"])
         return execution, process
 
     def _complete(self, execution):
