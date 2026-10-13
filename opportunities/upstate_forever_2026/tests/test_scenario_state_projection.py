@@ -32,7 +32,7 @@ class Owner:
 
 class Projection(unittest.TestCase):
     def setUp(self):
-        self.temporary = tempfile.TemporaryDirectory(dir='/dev/shm')
+        self.temporary = tempfile.TemporaryDirectory()
         self.root = Path(self.temporary.name)
         self.workspace = Workspace(self.root / 'workspace', create=True, title='Source projection fixture')
         self.descriptor = json.loads((SOURCE / 'operator/extensions/scenario-analysis.json').read_text())
