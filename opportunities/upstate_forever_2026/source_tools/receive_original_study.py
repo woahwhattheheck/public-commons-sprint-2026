@@ -101,12 +101,18 @@ def reconcile_receiving_locations(workspace, output, state_path, specification):
     store = PublishedStudyStore(workspace, workspace.root / "published_studies")
     retained = store.get_study(imported["study_id"], imported["version_id"])
     record = retained["record"]
+    version_root = store._version_root(imported["study_id"], imported["version_id"])
+    expected_manifest = phases["original_rows"]["source_manifest"]
+    actual_manifest = file_identity(version_root / "sources.json")
+    # The original store rebinds the source-manifest path to this Workspace.
+    # Its content identity, not the former host's absolute path, is immutable.
     if (record["source_collection_id"] != imported["source_collection_id"]
-            or record["source_manifest"] != phases["original_rows"]["source_manifest"]
+            or any(record["source_manifest"].get(key) != value
+                   for key, value in expected_manifest.items() if key != "path")
+            or any(actual_manifest[key] != expected_manifest[key] for key in ("bytes", "sha256"))
             or len({row["original_result_identifier"] for row in retained["observation_rows"]})
             != phases["original_rows"]["result_identifiers"]):
         raise ValueError("The relocated Workspace does not retain the exact original study source and result cohort.")
-    version_root = store._version_root(imported["study_id"], imported["version_id"])
     preserved = [
         workspace.root / "sources" / (imported["source_collection_id"] + ".json"),
         version_root / "record.json", version_root / "sources.json",
