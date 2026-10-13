@@ -1,0 +1,48 @@
+{
+  "schema": "commons.portable-customer-review-source.v1",
+  "distribution": "customer-lead-review",
+  "source_policy": "The eight maintained modules are reproduced byte-for-byte at their original relative paths. The CLI and documentation are additive distribution files.",
+  "license": "Apache-2.0 with original explicit MIT and bundled MIT/Zlib notices preserved",
+  "modules": [
+    {
+      "path": "tools/revenue_owner_console_20261010/lead_customer_package_portable.mjs",
+      "bytes": 22237,
+      "sha256": "a1b7c14dcd819e9302fcf26a909338375c2be45973e91a83d223bef5ed0f1ad8"
+    },
+    {
+      "path": "tools/revenue_owner_console_20261010/lead_customer_review.cjs",
+      "bytes": 10613,
+      "sha256": "a4df21dadf86e203da1fb8e777819e3d9f5f6a668b123d851296e0a94c1d7727"
+    },
+    {
+      "path": "tools/revenue_owner_console_20261010/lead_customer_review_ui.mjs",
+      "bytes": 24452,
+      "sha256": "a89e8f6ea202c4aac34c5e987150c439913c94201fc830d243da4d841748a1dd"
+    },
+    {
+      "path": "tools/revenue_owner_console_20261010/lead_customer_archive_core.cjs",
+      "bytes": 5922,
+      "sha256": "551422229c93505d9eb9afd913424b52ba884fc463b76e1995bc8756219e4d3f"
+    },
+    {
+      "path": "host/connected_sha256.cjs",
+      "bytes": 18336,
+      "sha256": "023b01f089168605a6153b9e5f3ccd7a66a0d0487fab3e79522897a1df226cc2"
+    },
+    {
+      "path": "host/connected_zip.cjs",
+      "bytes": 12090,
+      "sha256": "857c79f789e9cf4f6321bf22804e1c8d55af6758495ae1ba09d4fa72fd97bb26"
+    },
+    {
+      "path": "host/connected_inline_payload.mjs",
+      "bytes": 7428,
+      "sha256": "d911d4e815d2ce0330a6221bb4fc92ceb7bc7e18050cbfffe1244b4d3bc5b8f4"
+    },
+    {
+      "path": "host/connected_gzip.cjs",
+      "bytes": 47127,
+      "sha256": "1fc9f3b218c60d029c96bf9f1c1e4de5fcb86918ed5a0570586dc81488440119"
+    }
+  ]
+}
