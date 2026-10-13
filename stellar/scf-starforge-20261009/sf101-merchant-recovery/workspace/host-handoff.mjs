@@ -8,6 +8,7 @@ import { runLocalCapture, readCapturedBundle } from './local.mjs';
 import { readRecoveryConfiguration, readRecoveryWorkspaceIdentity, openRecoveryWorkspace } from './model.mjs';
 import { recoveryHostPaths, observeRecoveryPath } from './host-profile-paths.mjs';
 import { recoveryRequestPaths } from './host-request-paths.mjs';
+import { inspectHostAdoption, openHostAdoption, readHostAdoption } from './host-adoption-files.mjs';
 import { readObjectRecoveryPlan } from '../../sf88-operator-buyer-cli/object-session.mjs';
 import { inspectObjectSessionRecovery } from '../../sf88-operator-buyer-cli/workspace-recovery.mjs';
 import { acquireDeliveryLease, inspectDeliveryLease } from '../../sf98-merchant-delivery/delivery-lock.mjs';
@@ -948,11 +949,57 @@ export async function restoreHostHandoff(input = {}) {
     originalRestore: ctx.originalRestore, verifiedExistingRestore: ctx.originalRestore === null,
     application: clone(ctx.profile.application), roots: clone(ctx.profile.roots) };
 }
+
+function adoptionControls(profile, input) {
+  if (input.operationDirectory === undefined) {
+    need(input.python === undefined, 'HOST_HANDOFF_ADOPTION_OPERATION_REQUIRED',
+      'Select the original adoption operation directory when choosing its Python executable.');
+    return null;
+  }
+  absolute(input.operationDirectory, 'private adoption operation');
+  const python = input.python ?? '/usr/bin/python3';
+  absolute(python, 'adoption publication Python');
+  const reservedPaths = [...new Set([
+    input.bundleDirectory, input.restoreDirectory, input.targetFile,
+    ...profile.roots.map(row => row.path),
+    ...profile.externalFiles.map(row => row.path),
+    ...profile.absentOriginalInputs.map(row => row.path),
+    ...(profile.pathInventory?.paths ?? []).filter(row => !row.exists).map(row => row.path)
+  ])];
+  for (const path of reservedPaths)
+    need(!overlap(input.operationDirectory, path), 'HOST_HANDOFF_ADOPTION_CONTROL_OVERLAP',
+      'Keep the receiving operation outside every original root, private file, absent input and receiving control.');
+  return { directory: input.operationDirectory, python, reservedPaths };
+}
+function adoptionOptions(ctx, input, selected) {
+  const controls = adoptionControls(ctx.profile, input);
+  return controls ? { ...controls, binding: selected.review, roots: selected.review.roots,
+    ...(input.signal ? { signal: input.signal } : {}) } : null;
+}
+function retainedAdoptionResult(value, selected) {
+  need(value?.schema === HOST_HANDOFF_RESULT_SCHEMA && value.status === 'HOST_HANDOFF_ADOPTED' &&
+    value.reviewSha256 === selected.reviewSha256 &&
+    value.manifestSha256 === selected.review.manifestSha256 &&
+    value.planSha256 === selected.review.planSha256 &&
+    value.workspaceId === selected.review.workspaceId &&
+    value.operationId === selected.review.operationId,
+    'HOST_HANDOFF_ADOPTION_RESULT_CHANGED');
+  return value;
+}
+/** Read only the original saved receiving operation; this does not reauthenticate its native bundle. */
+export async function inspectHostHandoffAdoption({ operationDirectory, expectedReviewSha256, python } = {}) {
+  absolute(operationDirectory, 'original adoption operation');
+  need(HASH.test(expectedReviewSha256 ?? ''), 'HOST_HANDOFF_RECEIVING_REVIEW_REQUIRED');
+  return readHostAdoption({ directory: operationDirectory, expectedReviewSha256, python });
+}
+
 async function targetContext(ctx, input) {
   need(!ctx.legacyIncomplete, 'HOST_HANDOFF_COMPLETE_PATH_REVIEW_REQUIRED',
     'The previous handoff remains restored; prepare a complete Object and Support path review before adoption.');
   await checkAbsentInputs(ctx.profile);
   absolute(input.targetFile, 'private receiving selection');
+  const adoption = adoptionControls(ctx.profile, input);
+  if (adoption) await realSource(dirname(adoption.directory), 'directory');
   const raw = await readPrivate(input.targetFile, MAX_PLAN), target = JSON.parse(raw.toString('utf8'));
   fields(target, ['schema', 'workspaceId', 'manifestSha256', 'mappings', 'externalFiles'], 'receiving target');
   need(target.schema === HOST_HANDOFF_TARGET_SCHEMA && target.workspaceId === ctx.profile.workspace.workspaceId &&
@@ -1005,6 +1052,7 @@ async function targetContext(ctx, input) {
     manifestSha256: ctx.manifestSha256, planSha256: ctx.planSha256,
     bundleDirectory: input.bundleDirectory, restoreDirectory: input.restoreDirectory,
     targetFile: input.targetFile, targetSha256: digest(raw),
+    ...(adoption ? { adoption: { directory: adoption.directory, python: adoption.python } } : {}),
     originalWorkspaceDirectory: ctx.profile.workspace.directory, originalConfigFile: ctx.profile.workspace.configFile,
     application: clone(ctx.profile.application), roots, externalFiles,
     originalRecords: clone(ctx.profile.originalRecords), absentOriginalInputs: clone(ctx.profile.absentOriginalInputs),
@@ -1014,7 +1062,8 @@ async function targetContext(ctx, input) {
 export async function inspectRestoredHostHandoff(input = {}) {
   const ctx = await restoredContext(input), selected = await targetContext(ctx, input);
   return { schema: HOST_HANDOFF_RESULT_SCHEMA, status: 'HOST_HANDOFF_REVIEW',
-    ...selected, passphraseEnvironments: ctx.profile.passphraseEnvironments.map(name => ({
+    ...selected, ...(input.operationDirectory ? { receivingOperation: await inspectHostAdoption(
+      adoptionOptions(ctx, input, selected)) } : {}), passphraseEnvironments: ctx.profile.passphraseEnvironments.map(name => ({
       name, available: typeof process.env[name] === 'string' && process.env[name].length > 0
     })), runtimeStatus: 'SOURCE_AND_STATE_REVIEWED_NO_SERVICE_STARTED' };
 }
@@ -1023,6 +1072,38 @@ export async function adoptRestoredHostHandoff(input = {}) {
     'HOST_HANDOFF_RECEIVING_REVIEW_REQUIRED', 'Review the exact receiving map and keep the original and receiving writers stopped.');
   const ctx = await restoredContext(input), selected = await targetContext(ctx, input);
   need(selected.reviewSha256 === input.expectedReviewSha256, 'HOST_HANDOFF_RECEIVING_REVIEW_CHANGED');
+  const operationOptions = adoptionOptions(ctx, input, selected);
+  if (operationOptions) {
+    need(input.signal === undefined || input.signal instanceof AbortSignal, 'HOST_HANDOFF_SIGNAL_INVALID');
+    input.signal?.throwIfAborted();
+    const operation = await openHostAdoption(operationOptions);
+    try {
+      const saved = await operation.readResult();
+      if (saved) retainedAdoptionResult(saved, selected);
+      for (const root of selected.review.roots) {
+        input.signal?.throwIfAborted();
+        const entries = rootEntries(ctx.manifest, root.name);
+        if (await exists(root.destination)) {
+          await matchTree(root.destination, entries, ctx.sourceModes);
+          continue;
+        }
+        await operation.publishRoot(root, { entries });
+        await matchTree(root.destination, entries, ctx.sourceModes);
+      }
+      // A prior rename may have completed before its parent fsync or receipt.
+      // Flush exact existing roots as well as roots published in this call.
+      for (const root of selected.review.roots)
+        await syncAdoptedRoot(root, rootEntries(ctx.manifest, root.name), input.signal);
+      input.signal?.throwIfAborted();
+      const observed = await finishAdoption(ctx, selected, input);
+      input.signal?.throwIfAborted();
+      const retained = await operation.complete(saved ?? observed);
+      retainedAdoptionResult(retained, selected);
+      return { ...retained, reopened: Boolean(saved),
+        receivingOperation: { directory: input.operationDirectory, reviewSha256: selected.reviewSha256,
+          status: 'COMPLETE', currentOriginalStateVerified: true } };
+    } finally { await operation.close(); }
+  }
   // Existing root reuse is permitted only after the complete authenticated
   // inventory matches. Node's exclusive copy creates missing roots; a partial
   // target is retained and never treated as a resumable or completed journal.
@@ -1061,9 +1142,33 @@ export async function adoptRestoredHostHandoff(input = {}) {
       await syncDirectory(row.relative ? join(root.destination, ...row.relative.split('/')) : root.destination);
     await syncDirectory(dirname(root.destination));
   }
+  return finishAdoption(ctx, selected, input);
+}
+async function syncAdoptedRoot(root, entries, signal) {
+  for (const row of entries.filter(row => row.kind === 'file')) {
+    signal?.throwIfAborted();
+    const path = row.relative ? join(root.destination, ...row.relative.split('/')) : root.destination;
+    const handle = await open(path, constants.O_RDONLY | constants.O_NOFOLLOW | constants.O_NONBLOCK);
+    try {
+      const stat = await handle.stat();
+      need(stat.isFile() && stat.nlink === 1 && stat.size === row.bytes,
+        'HOST_HANDOFF_RECEIVING_FILE_CHANGED');
+      await handle.sync();
+    } finally { await handle.close(); }
+  }
+  for (const row of entries.filter(row => row.kind === 'directory')
+    .sort((a, b) => (b.relative ? b.relative.split('/').length : 0) - (a.relative ? a.relative.split('/').length : 0))) {
+    signal?.throwIfAborted();
+    await syncDirectory(row.relative ? join(root.destination, ...row.relative.split('/')) : root.destination);
+  }
+  signal?.throwIfAborted();
+  await syncDirectory(dirname(root.destination));
+}
+async function finishAdoption(ctx, selected, input) {
   // State stays private. Reapply the original package's declared file modes
   // behind private receiving directories so its original verifier still works.
   for (const [path, mode] of ctx.sourceModes) {
+    input.signal?.throwIfAborted();
     await chmod(path, mode);
     const handle = await open(path, constants.O_RDONLY | constants.O_NOFOLLOW);
     try { await handle.sync(); } finally { await handle.close(); }

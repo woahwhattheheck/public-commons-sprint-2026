@@ -1,0 +1,54 @@
+{
+  "schema": "hocuspocus.upstream-receiving.v1",
+  "operation": "TIPTAP-HOCUSPOCUS-APPLICATION-WORKSHARE-0C7A-20261012",
+  "manifest_sha256": "3c741b6e7a25898abd8deaacc8ad44dbc1e4ebfa2260669e1dbbaa73a0d82f9c",
+  "directory": "/workspace/scratch/64b7f381b23e/tiptap-runtime-20261012/original-upstreams",
+  "complete": true,
+  "received_at": "2026-10-12T21:39:23.340992+00:00",
+  "repositories": [
+    {
+      "repository": "ueberdosis/hocuspocus",
+      "tag": "v4.7.1",
+      "commit": "bd288a4441fb60a663bbaf34660a490eb59dd6ea",
+      "directory": "/workspace/scratch/64b7f381b23e/tiptap-runtime-20261012/original-upstreams/source/hocuspocus/bd288a4441fb60a663bbaf34660a490eb59dd6ea",
+      "files": 271,
+      "bytes": 1600054,
+      "archive_sha256": "a1112a66c7193391fc6a236d0806ed2d1b790fae12cd4581f455077e660e774b",
+      "provider": {
+        "url": "https://codeload.github.com/ueberdosis/hocuspocus/tar.gz/bd288a4441fb60a663bbaf34660a490eb59dd6ea",
+        "started_at": "2026-10-12T21:39:06.392691+00:00",
+        "partial": "/workspace/scratch/64b7f381b23e/tiptap-runtime-20261012/original-upstreams/archives/hocuspocus-bd288a4441fb60a663bbaf34660a490eb59dd6ea.tar.gz-vsg9zw1w.partial",
+        "status": 200,
+        "final_url": "https://codeload.github.com/ueberdosis/hocuspocus/tar.gz/bd288a4441fb60a663bbaf34660a490eb59dd6ea",
+        "etag": "\"b7f7ed97475d15a6e2d869562d6a805481a0e37ee8528b3167c0f719882f9fd1\"",
+        "last_modified": null,
+        "finished_at": "2026-10-12T21:39:15.560304+00:00",
+        "bytes": 362485,
+        "sha256": "a1112a66c7193391fc6a236d0806ed2d1b790fae12cd4581f455077e660e774b",
+        "path": "/workspace/scratch/64b7f381b23e/tiptap-runtime-20261012/original-upstreams/archives/hocuspocus-bd288a4441fb60a663bbaf34660a490eb59dd6ea.tar.gz"
+      }
+    },
+    {
+      "repository": "ueberdosis/tiptap",
+      "tag": "v3.31.4",
+      "commit": "d9af9c6a16e17438b06b2266765b9c1a21a3d7a0",
+      "directory": "/workspace/scratch/64b7f381b23e/tiptap-runtime-20261012/original-upstreams/source/tiptap/d9af9c6a16e17438b06b2266765b9c1a21a3d7a0",
+      "files": 2214,
+      "bytes": 10671171,
+      "archive_sha256": "928b91daa79ad6b5cb9772f9dd30fe46caa5abf904d7c2013f6970d50b094b7f",
+      "provider": {
+        "url": "https://codeload.github.com/ueberdosis/tiptap/tar.gz/d9af9c6a16e17438b06b2266765b9c1a21a3d7a0",
+        "started_at": "2026-10-12T21:39:16.208055+00:00",
+        "partial": "/workspace/scratch/64b7f381b23e/tiptap-runtime-20261012/original-upstreams/archives/tiptap-d9af9c6a16e17438b06b2266765b9c1a21a3d7a0.tar.gz-qs_8vf11.partial",
+        "status": 200,
+        "final_url": "https://codeload.github.com/ueberdosis/tiptap/tar.gz/d9af9c6a16e17438b06b2266765b9c1a21a3d7a0",
+        "etag": "\"0bc97b05e0e6adcdda9b5d6f991b0218db51ecf508d90bde952d16d1af662773\"",
+        "last_modified": null,
+        "finished_at": "2026-10-12T21:39:20.640570+00:00",
+        "bytes": 2190556,
+        "sha256": "928b91daa79ad6b5cb9772f9dd30fe46caa5abf904d7c2013f6970d50b094b7f",
+        "path": "/workspace/scratch/64b7f381b23e/tiptap-runtime-20261012/original-upstreams/archives/tiptap-d9af9c6a16e17438b06b2266765b9c1a21a3d7a0.tar.gz"
+      }
+    }
+  ]
+}

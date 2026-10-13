@@ -1,0 +1,804 @@
+package main
+
+import (
+	"context"
+	"embed"
+	"net/http"
+	"os"
+	"os/signal"
+	"runtime"
+	"runtime/debug"
+	"strings"
+	"syscall"
+	"time"
+
+	"github.com/getsentry/sentry-go"
+	"github.com/samber/lo"
+	"github.com/slingdata-io/sling-cli/core"
+	"github.com/slingdata-io/sling-cli/core/env"
+	"github.com/slingdata-io/sling-cli/core/sling"
+	"github.com/slingdata-io/sling-cli/core/sling/assist"
+	"github.com/slingdata-io/sling-cli/core/store"
+
+	"github.com/flarco/g"
+	"github.com/flarco/g/net"
+	"github.com/integrii/flaggy"
+	"github.com/slingdata-io/sling-cli/core/dbio/database"
+	"github.com/spf13/cast"
+)
+
+//go:embed resource/*
+var slingResources embed.FS
+
+var (
+	examples    = ``
+	ctx         = g.NewContext(context.Background())
+	telemetry   = true
+	interrupted = false
+	machineID   = ""
+)
+
+func init() {
+	env.InitLogger()
+	store.InitDB()
+}
+
+var cliRunFlags = []g.Flag{
+	{
+		Name:        "replication",
+		ShortName:   "r",
+		Type:        "string",
+		Description: "The replication config file to use (JSON or YAML).\n",
+	},
+	{
+		Name:        "pipeline",
+		ShortName:   "p",
+		Type:        "string",
+		Description: "The pipeline config file to use (JSON or YAML).\n",
+	},
+	{
+		Name:        "directory",
+		Type:        "string",
+		Description: "The directory path file to use to run nested replications/pipelines.\n",
+	},
+	{
+		Name:        "job",
+		ShortName:   "j",
+		Type:        "string",
+		Description: "The job key from the project manifest (sling_project.yml) to run locally.\n",
+	},
+	{
+		Name:        "src-conn",
+		ShortName:   "",
+		Type:        "string",
+		Description: "The source database / storage connection (name, conn string or URL).",
+	},
+	{
+		Name:        "src-stream",
+		ShortName:   "",
+		Type:        "string",
+		Description: "The source table (schema.table), local / cloud file path.\n                       Can also be the path of sql file or in-line text to use as query. Use `file://` for local paths.",
+	},
+	{
+		Name:        "src-options",
+		Type:        "string",
+		Description: "in-line options to further configure source (JSON or YAML).\n",
+	},
+	{
+		Name:        "tgt-conn",
+		ShortName:   "",
+		Type:        "string",
+		Description: "The target database connection (name, conn string or URL).",
+	},
+	{
+		Name:        "tgt-object",
+		ShortName:   "",
+		Type:        "string",
+		Description: "The target table (schema.table) or local / cloud file path. Use `file://` for local paths.",
+	},
+	{
+		Name:        "tgt-options",
+		Type:        "string",
+		Description: "in-line options to further configure target (JSON or YAML).\n",
+	},
+	{
+		Name:        "select",
+		ShortName:   "s",
+		Type:        "string",
+		Description: "Select or exclude specific columns from the source stream. (comma separated). Use '-' prefix to exclude.",
+	},
+	{
+		Name:        "where",
+		Type:        "string",
+		Description: "Specify the WHERE clause to filter (if not providing custom SQL)",
+	},
+	{
+		Name:        "transforms",
+		ShortName:   "",
+		Type:        "string",
+		Description: "An object/map, or array/list of built-in transforms to apply to records (JSON or YAML).",
+	},
+	{
+		Name:        "columns",
+		ShortName:   "",
+		Type:        "string",
+		Description: "An object/map to specify the type that a column should be cast as (JSON or YAML).",
+	},
+	{
+		Name:        "cdc-options",
+		Type:        "string",
+		Description: "in-line CDC options to configure change-capture mode (JSON or YAML).\n",
+	},
+	{
+		Name:        "streams",
+		ShortName:   "",
+		Type:        "string",
+		Description: "Only run specific streams from a replication. (comma separated)",
+	},
+	{
+		Name:        "stdout",
+		ShortName:   "",
+		Type:        "bool",
+		Description: "Output the stream to standard output (STDOUT).",
+	},
+	{
+		Name:        "env",
+		ShortName:   "",
+		Type:        "string",
+		Description: "in-line environment variable object/map to pass in (JSON or YAML).",
+	},
+	{
+		Name:        "mode",
+		ShortName:   "m",
+		Type:        "string",
+		Description: "The target load mode to use: backfill, incremental, truncate, snapshot, full-refresh.\n                       Default is full-refresh. For incremental, must provide `update-key` and `primary-key` values.\n                       All modes load into a new temp table on tgtConn prior to final load.",
+	},
+	{
+		Name:        "limit",
+		ShortName:   "l",
+		Type:        "string",
+		Description: "The maximum number of rows to pull.",
+	},
+	{
+		Name:        "offset",
+		ShortName:   "o",
+		Type:        "string",
+		Description: "The number of rows to offset by.",
+	},
+	{
+		Name:        "range",
+		ShortName:   "",
+		Type:        "string",
+		Description: "The range to use for backfill mode, separated by a single comma. Example: `2021-01-01,2021-02-01` or `1,10000`",
+	},
+	{
+		Name:        "primary-key",
+		ShortName:   "",
+		Type:        "string",
+		Description: "The primary key to use for incremental. For composite key, put comma delimited values.",
+	},
+	{
+		Name:        "update-key",
+		ShortName:   "",
+		Type:        "string",
+		Description: "The update key to use for incremental.\n",
+	},
+	{
+		Name:        "debug",
+		ShortName:   "d",
+		Type:        "bool",
+		Description: "Set logging level to DEBUG.",
+	},
+	{
+		Name:        "trace",
+		Type:        "bool",
+		Description: "Set logging level to TRACE (do not use in production).",
+	},
+	{
+		Name:        "examples",
+		ShortName:   "e",
+		Type:        "bool",
+		Description: "Shows some examples.",
+	},
+	{
+		Name:        "home-dir",
+		Type:        "string",
+		Description: "Specify the sling home directory to use.",
+	},
+}
+
+var cliRun = &g.CliSC{
+	Name:                  "run",
+	Description:           "Execute a replication or pipeline run",
+	AdditionalHelpPrepend: "\nSee more examples and configuration details at https://docs.slingdata.io/sling-cli/",
+	Flags:                 cliRunFlags,
+	PosFlags: []g.Flag{
+		{
+			Name:        "path",
+			Type:        "string",
+			Description: "The path file or directory to use to run replications/pipelines.\n",
+			Required:    false,
+		},
+	},
+	ExecProcess: processRun,
+}
+
+var cliUpdate = &g.CliSC{
+	Name:        "update",
+	Description: "Update Sling to the latest version",
+	ExecProcess: updateCLI,
+}
+
+var cliConns = &g.CliSC{
+	Name:                  "conns",
+	Singular:              "local connection",
+	Description:           "Manage and interact with local connections",
+	AdditionalHelpPrepend: "\nSee more details at https://docs.slingdata.io/sling-cli/",
+	SubComs: []*g.CliSC{
+		{
+			Name:        "discover",
+			Description: "list available streams in connection",
+			PosFlags: []g.Flag{
+				{
+					Name:        "name",
+					ShortName:   "",
+					Type:        "string",
+					Description: "The name of the connection to test",
+				},
+			},
+			Flags: []g.Flag{
+				{
+					Name:        "pattern",
+					ShortName:   "p",
+					Type:        "string",
+					Description: "filter stream name by glob pattern (e.g. schema.prefix_*, dir/*.csv, dir/**/*.json, */*/*.parquet)",
+				},
+				{
+					Name:        "recursive",
+					ShortName:   "",
+					Type:        "bool",
+					Description: "List all files recursively.",
+				},
+				{
+					Name:        "columns",
+					ShortName:   "",
+					Type:        "bool",
+					Description: "Show column level metadata.",
+				},
+				{
+					Name:        "output",
+					ShortName:   "o",
+					Type:        "string",
+					Description: "Output format: text (default), csv, json. Overrides SLING_OUTPUT.",
+				},
+				{
+					Name:        "debug",
+					ShortName:   "d",
+					Type:        "bool",
+					Description: "Set logging level to DEBUG.",
+				},
+				{
+					Name:        "trace",
+					Type:        "bool",
+					Description: "Set logging level to TRACE (do not use in production).",
+				},
+				{
+					Name:        "home-dir",
+					Type:        "string",
+					Description: "Specify the sling home directory to use.",
+				},
+			},
+		},
+		{
+			Name:        "list",
+			Description: "list local connections detected",
+			Flags: []g.Flag{
+				{
+					Name:        "home-dir",
+					Type:        "string",
+					Description: "Specify the sling home directory to use.",
+				},
+			},
+		},
+		{
+			Name:        "test",
+			Description: "test a local connection",
+			PosFlags: []g.Flag{
+				{
+					Name:        "name",
+					ShortName:   "",
+					Type:        "string",
+					Description: "The name of the connection to test",
+				},
+			},
+			Flags: []g.Flag{
+				{
+					Name:        "debug",
+					ShortName:   "d",
+					Type:        "bool",
+					Description: "Set logging level to DEBUG.",
+				},
+				{
+					Name:        "trace",
+					Type:        "bool",
+					Description: "Set logging level to TRACE (do not use in production).",
+				},
+				{
+					Name:        "endpoints",
+					Type:        "string",
+					Description: "The endpoint(s) to test, for API connections only",
+				},
+				{
+					Name:        "home-dir",
+					Type:        "string",
+					Description: "Specify the sling home directory to use.",
+				},
+			},
+		},
+		{
+			Name:        "unset",
+			Description: "remove a connection from the sling env file",
+			PosFlags: []g.Flag{
+				{
+					Name:        "name",
+					ShortName:   "",
+					Type:        "string",
+					Description: "The name of the connection to remove",
+				},
+			},
+			Flags: []g.Flag{
+				{
+					Name:        "home-dir",
+					Type:        "string",
+					Description: "Specify the sling home directory to use.",
+				},
+			},
+		},
+		{
+			Name:        "set",
+			Description: "set a connection in the sling env file",
+			PosFlags: []g.Flag{
+				{
+					Name:        "name",
+					ShortName:   "",
+					Type:        "string",
+					Description: "The name of the connection to set",
+				},
+				{
+					Name:        "key=value properties...",
+					ShortName:   "",
+					Type:        "string",
+					Description: "The key=value properties to set. Secret fields omitted with --type are written as ${NAME_KEY} refs. See https://docs.slingdata.io/sling-cli/environment#set-connections",
+				},
+			},
+			Flags: []g.Flag{
+				{
+					Name:        "type",
+					Type:        "string",
+					Description: "Connection type (postgres, s3, api, ...).",
+				},
+				{
+					Name:        "output",
+					ShortName:   "o",
+					Type:        "string",
+					Description: "Output format: text (default), json. Overrides SLING_OUTPUT.",
+				},
+				{
+					Name:        "stdin",
+					Type:        "bool",
+					Description: "Read a YAML or JSON property map from stdin.",
+				},
+				{
+					Name:        "home-dir",
+					Type:        "string",
+					Description: "Specify the sling home directory to use.",
+				},
+			},
+		},
+		{
+			Name:        "exec",
+			Description: "execute a SQL query on a Database connection",
+			PosFlags: []g.Flag{
+				{
+					Name:        "name",
+					ShortName:   "",
+					Type:        "string",
+					Description: "The name of the connection to set",
+				},
+				{
+					Name:        "queries...",
+					ShortName:   "",
+					Type:        "string",
+					Description: "The SQL queries to execute. Can be in-line text or a file",
+				},
+			},
+			Flags: []g.Flag{
+				{
+					Name:        "output",
+					ShortName:   "o",
+					Type:        "string",
+					Description: "Output format: text (default), csv, json, arrow. Overrides SLING_OUTPUT.",
+				},
+				{
+					Name:        "limit",
+					ShortName:   "l",
+					Type:        "string",
+					Description: "Maximum number of rows to return. Default 100. Use 0 for no limit.",
+				},
+				{
+					Name:        "debug",
+					ShortName:   "d",
+					Type:        "bool",
+					Description: "Set logging level to DEBUG.",
+				},
+				{
+					Name:        "trace",
+					Type:        "bool",
+					Description: "Set logging level to TRACE (do not use in production).",
+				},
+				{
+					Name:        "home-dir",
+					Type:        "string",
+					Description: "Specify the sling home directory to use.",
+				},
+			},
+		},
+	},
+	ExecProcess: processConns,
+}
+
+func init() {
+
+	if val := os.Getenv("SLING_DISABLE_TELEMETRY"); val != "" {
+		telemetry = !cast.ToBool(val)
+	}
+
+	// collect examples
+	examplesBytes, _ := slingResources.ReadFile("resource/examples.sh")
+	examples = string(examplesBytes)
+
+	cliConns.Make().Add()
+	cliRun.Make().Add()
+	cliUpdate.Make().Add()
+
+	if projectID == "" {
+		projectID = os.Getenv("SLING_PROJECT_ID")
+	}
+}
+
+func Track(event string, props ...map[string]interface{}) {
+	if !telemetry {
+		g.Trace("skipping telemetry report (SLING_DISABLE_TELEMETRY=true)")
+		return
+	} else if core.Version == "dev" {
+		return
+	}
+
+	machineID = store.GetMachineID()
+	if projectID != "" {
+		machineID = g.MD5(projectID) // hashed
+	}
+
+	properties := g.M(
+		"package", getSlingPackage(),
+		"emit_time", time.Now().UnixMicro(),
+		"user_id", machineID,
+	)
+
+	for k, v := range core.TelProps {
+		properties[k] = v
+	}
+
+	env.TelMux.Lock()
+	for k, v := range env.TelMap {
+		properties[k] = v
+	}
+	env.TelMux.Unlock()
+
+	if len(props) > 0 {
+		for k, v := range props[0] {
+			properties[k] = v
+		}
+	}
+
+	properties["command"] = g.CliObj.Name
+	if g.CliObj != nil {
+		if g.CliObj.UsedSC() != "" {
+			properties["sub-command"] = g.CliObj.UsedSC()
+		}
+	}
+
+	if env.PlausibleURL != "" {
+		propsPayload := g.Marshal(properties)
+		payload := map[string]string{
+			"name":     event,
+			"url":      "http://events.slingdata.io/sling-cli",
+			"props":    propsPayload,
+			"referrer": "http://" + getSlingPackage(),
+		}
+		h := map[string]string{
+			"Content-Type": "application/json",
+			"User-Agent":   g.F("sling-cli/%s (%s) %s", core.Version, runtime.GOOS, machineID),
+		}
+		body := strings.NewReader(g.Marshal(payload))
+		net.ClientDo(http.MethodPost, env.PlausibleURL, body, h, 5)
+	}
+}
+
+func main() {
+
+	exitCode := 11
+	done := make(chan struct{})
+	interrupt := make(chan os.Signal, 1)
+	kill := make(chan os.Signal, 1)
+	signal.Notify(interrupt, os.Interrupt)
+	signal.Notify(kill, syscall.SIGTERM)
+
+	if val := os.Getenv("SLING_SHOW_PROGRESS"); val != "" {
+		sling.ShowProgress = cast.ToBool(os.Getenv("SLING_SHOW_PROGRESS"))
+	}
+	database.UseBulkExportFlowCSV = cast.ToBool(os.Getenv("SLING_BULK_EXPORT_FLOW_CSV"))
+
+	exit := func() {
+		time.Sleep(50 * time.Millisecond) // so logger can flush
+		os.Exit(exitCode)
+	}
+
+	go func() {
+		select {
+		case <-kill:
+			env.Println("\nkilling process...")
+			exitCode = 111
+			env.KillChildProcs() // some are not in our process group, so the signal does not reach them
+			exit()
+		case <-interrupt:
+			g.SentryClear()
+			if cliRun.Sc.Used {
+				env.Println("\ninterrupting...")
+				interrupted = true
+				dumpRuntimeStack()
+				ctx.Cancel()
+				select {
+				case <-done:
+				case <-time.After(10 * time.Second):
+				}
+			}
+			env.KillChildProcs() // some are not in our process group, so the signal does not reach them
+			exit()
+			return
+		case <-done:
+			exit()
+		}
+	}()
+
+	exitCode = cliInit(done)
+	if !interrupted {
+		g.SentryFlush(time.Second * 2)
+	}
+	time.Sleep(50 * time.Millisecond) // so logger can flush
+
+	os.Exit(exitCode)
+}
+
+// startAssistLogCapture buffers the run log tail for the assist failure
+// snapshot. Only for commands that write one (see writeFailure below).
+// Reads os.Args: g.CliObj is not populated until g.CliProcess runs.
+func startAssistLogCapture() {
+	cmd, sub := "", ""
+	for _, a := range os.Args[1:] {
+		if strings.HasPrefix(a, "-") {
+			continue
+		}
+		if cmd == "" {
+			cmd = a
+			continue
+		}
+		sub = a
+		break
+	}
+	if cmd == "run" || (cmd == "conns" && g.In(sub, "test", "discover")) {
+		env.StartLogCapture()
+	}
+}
+
+func cliInit(done chan struct{}) int {
+	defer close(done)
+
+	// recover from panic
+	defer func() {
+		if r := recover(); r != nil {
+			info := string(debug.Stack())
+			env.SetTelVal("error", g.F("panic occurred! %#v\n%s", r, info))
+			g.Warn(g.F("panic occurred! %#v\n%s", r, info))
+		}
+	}()
+
+	// Set your program's name and description.  These appear in help output.
+	flaggy.SetName("sling")
+	flaggy.SetDescription("An Extract-Load tool | https://slingdata.io")
+	flaggy.DefaultParser.ShowHelpOnUnexpected = true
+	flaggy.DefaultParser.AdditionalHelpPrepend = "Slings data from a data source to a data target.\nVersion " + core.Version
+
+	flaggy.SetVersion(core.Version)
+	for _, cli := range g.CliArr {
+		flaggy.AttachSubcommand(cli.Sc, 1)
+	}
+
+	// patch subcommands for backwards compatibility
+	switch {
+	// 'sling mcp' into 'sling serve mcp'
+	case len(os.Args) >= 2 && os.Args[1] == "mcp":
+		os.Args = append([]string{os.Args[0], "serve"}, os.Args[1:]...)
+	// 'sling agent' into 'sling runner'
+	case len(os.Args) == 2 && os.Args[1] == "agent":
+		os.Args = []string{os.Args[0], "runner"}
+	case len(os.Args) > 2 && os.Args[1] == "agent":
+		os.Args = append([]string{os.Args[0], "runner"}, os.Args[2:]...)
+	// 'sling project' into 'sling platform'
+	case len(os.Args) == 2 && os.Args[1] == "project":
+		os.Args = []string{os.Args[0], "platform"}
+	case len(os.Args) > 2 && os.Args[1] == "project":
+		os.Args = append([]string{os.Args[0], "platform"}, os.Args[2:]...)
+	}
+
+	os.Args = padAssistResumeFlag(os.Args)
+
+	flaggy.ShowHelpOnUnexpectedDisable()
+	flaggy.Parse()
+
+	setSentry()
+	startAssistLogCapture()
+	ok, err := g.CliProcess()
+
+	if err != nil || env.TelMap["error"] != nil {
+		if err == nil && env.TelMap["error"] != nil {
+			err = g.Error(cast.ToString(env.TelMap["error"]))
+		}
+
+		if g.In(g.CliObj.Name, "conns", "update", "build", "assist", "validate") || env.TelMap["error"] == nil {
+			env.SetTelVal("error", getErrString(err))
+
+			eventName := g.CliObj.Name
+			if g.CliObj.UsedSC() != "" {
+				eventName = g.CliObj.Name + "_" + g.CliObj.UsedSC()
+			}
+			Track(eventName)
+		}
+
+		// print main error
+		env.PrintFatal(err)
+
+		// append failure hint
+		if g.CliObj != nil && (g.In(g.CliObj.Name, "run", "build") || g.In(g.CliObj.UsedSC(), "test", "discover")) {
+			errMsg := getErrString(err)
+			snap := assist.FailureSnapshot{
+				ExecID:   env.ExecID,
+				ErrMsg:   errMsg,
+				RunLog:   env.RecentLogs(),
+				SignMeta: assist.MakeSignMeta(),
+			}
+			if g.CliObj != nil && g.CliObj.Name == "conns" {
+				snap.ConnName = cast.ToString(g.CliObj.Vals["name"])
+			} else if g.CliObj != nil {
+				for _, key := range []string{"replication", "pipeline", "path"} {
+					if v, ok := g.CliObj.Vals[key]; ok {
+						snap.ConfigPath = cast.ToString(v)
+						break
+					}
+				}
+			}
+
+			assist.WriteFailureSnapshot(snap)
+			assist.PrintFailureFooter(assist.FailureFooterOpts{
+				ExecID:   env.ExecID,
+				ErrMsg:   errMsg,
+				SignMeta: snap.SignMeta,
+			})
+		}
+		return 1
+	} else if !ok {
+		// Always print classic help.
+		flaggy.ShowHelp("")
+	}
+
+	switch {
+	case g.CliObj.Name == "conns" && g.In(g.CliObj.UsedSC(), "test", "discover", "exec"):
+		Track("conns_" + g.CliObj.UsedSC())
+	case g.CliObj.Name == "update":
+		Track("update")
+	case g.In(g.CliObj.Name, "build", "assist", "validate"):
+		eventName := g.CliObj.Name
+		if g.CliObj.UsedSC() != "" {
+			eventName = g.CliObj.Name + "_" + g.CliObj.UsedSC()
+		}
+		Track(eventName)
+	}
+
+	return 0
+}
+
+func getErrString(err error) string {
+	if err == nil {
+		return ""
+	}
+	if eg, ok := err.(*g.ErrorGroup); ok {
+		parts := make([]string, 0, len(eg.Errors))
+		for i, child := range eg.Errors {
+			s := getErrString(child)
+			if s == "" {
+				continue
+			}
+			if i < len(eg.Names) && eg.Names[i] != "" {
+				s = g.F("--------------------------- %s ---------------------------\n%s", eg.Names[i], s)
+			}
+			parts = append(parts, s)
+		}
+		return strings.Join(parts, "\n")
+	}
+	if d := g.ErrMsgDebug(err); d != "" {
+		return d
+	}
+	return err.Error()
+}
+
+func setSentry() {
+
+	if telemetry {
+		g.SentryRelease = g.F("sling@%s", core.Version)
+		g.SentryDsn = env.SentryDsn
+		g.SentryConfigureFunc = func(se *g.SentryEvent) bool {
+			if se.Exception.Err == "context canceled" {
+				return false
+			}
+
+			// set transaction
+			taskMap, _ := g.UnmarshalMap(cast.ToString(env.TelMap["task"]))
+			sourceType := lo.Ternary(taskMap["source_type"] == nil, "unknown", cast.ToString(taskMap["source_type"]))
+			targetType := lo.Ternary(taskMap["target_type"] == nil, "unknown", cast.ToString(taskMap["target_type"]))
+			se.Event.Transaction = "cli"
+
+			// format telMap
+			telMap, _ := g.UnmarshalMap(g.Marshal(env.TelMap))
+			if val, ok := telMap["task"]; ok {
+				telMap["task"], _ = g.UnmarshalMap(cast.ToString(val))
+			}
+			if val, ok := telMap["task_options"]; ok {
+				telMap["task_options"], _ = g.UnmarshalMap(cast.ToString(val))
+			}
+			if val, ok := telMap["task_stats"]; ok {
+				telMap["task_stats"], _ = g.UnmarshalMap(cast.ToString(val))
+			}
+			delete(telMap, "error")
+			bars := "--------------------------------------------------------"
+			se.Event.Message = se.Exception.Debug() + "\n\n" + bars + "\n\n" + g.Pretty(telMap)
+
+			e := se.Event.Exception[0]
+			se.Event.Exception[0].Type = e.Stacktrace.Frames[len(e.Stacktrace.Frames)-1].Function
+			se.Event.Exception[0].Value = g.F("%s [%s]", se.Exception.LastCaller(), se.Exception.CallerStackMD5())
+
+			se.Scope.SetUser(sentry.User{ID: machineID})
+			if g.CliObj.Name == "conns" {
+				se.Scope.SetTag("run_mode", "conns")
+				se.Scope.SetTag("target_type", targetType)
+			} else {
+				se.Scope.SetTag("source_type", sourceType)
+				se.Scope.SetTag("target_type", targetType)
+				se.Scope.SetTag("stage", cast.ToString(env.TelMap["stage"]))
+				se.Scope.SetTag("run_mode", cast.ToString(env.TelMap["run_mode"]))
+				if val := cast.ToString(taskMap["mode"]); val != "" {
+					se.Scope.SetTag("mode", val)
+				}
+				if val := cast.ToString(taskMap["type"]); val != "" {
+					se.Scope.SetTag("type", val)
+				}
+				se.Scope.SetTag("package", getSlingPackage())
+				if projectID != "" {
+					se.Scope.SetTag("project_id", projectID)
+				}
+			}
+
+			return true
+		}
+		g.SentryInit()
+	}
+}

@@ -29,12 +29,14 @@
       "import": "./source/stellar-forge/mcp-paid-agent/native-analysis-events-installation.mjs"
     },
     "./buyer/mcp/analysis-events-installation-core": "./source/stellar-forge/mcp-paid-agent/native-analysis-events-installation-core.mjs",
-    "./buyer/event-workbook-columns": "./source/stellar/scf-starforge-20261009/sf88-operator-buyer-cli/event-feed/workbook-columns.mjs"
+    "./buyer/event-workbook-columns": "./source/stellar/scf-starforge-20261009/sf88-operator-buyer-cli/event-feed/workbook-columns.mjs",
+    "./buyer/event-workbook-editor": "./source/stellar/scf-starforge-20261009/sf88-operator-buyer-cli/event-feed/workbook-editor.mjs"
   },
   "supportFiles": [
     "stellar-forge/mcp-paid-agent/ANALYSIS_EVENTS.md",
     "stellar/scf_2026/sf49_data_commissioning/installation-workorders/webhook-event-analysis.json",
     "stellar/scf_2026/sf49_data_commissioning/installation-workorders/WEBHOOK_EVENT_ANALYSIS.md",
-    "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/python/EVENT_WORKBOOK_COLUMNS.md"
+    "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/python/EVENT_WORKBOOK_COLUMNS.md",
+    "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/event-feed/workbook-editor.js"
   ]
 }

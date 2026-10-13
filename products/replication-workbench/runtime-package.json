@@ -1,0 +1,10 @@
+{
+  "name": "@stellar-forge/replication-workbench-runtime",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=24 <25"
+  },
+  "license": "MIT"
+}

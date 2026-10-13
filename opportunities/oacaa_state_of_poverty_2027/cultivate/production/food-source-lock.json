@@ -50,8 +50,8 @@
     },
     {
       "path": "food_plan.cjs",
-      "bytes": 14424,
-      "sha256": "422f16d3765e9d29bbf5ce01e8449725554546360542dc4fa69b635e360ece4d"
+      "bytes": 14809,
+      "sha256": "4423ff11c4b0395642cb68a9b765473a3549126d967e8f7f4f61c8a31b9f4286"
     },
     {
       "path": "food_reporting.cjs",
@@ -65,13 +65,13 @@
     },
     {
       "path": "FOOD_SOURCE_GUIDE.md",
-      "bytes": 7664,
-      "sha256": "75915060b90af8e18bb5b289963200dd59ecf9a6b4cba615e0838dd0d5454704"
+      "bytes": 8285,
+      "sha256": "aebbf56dcd6ff212f6704b34def21441cde985e20f750c14d814d7f44c2ab0bd"
     },
     {
       "path": "FOOD_SOURCE_MANIFEST.json",
-      "bytes": 63834,
-      "sha256": "f53f88f4c4aa801fdaac8e2ae6e650b808a1041bd6d1447075f035834652a755"
+      "bytes": 64264,
+      "sha256": "2f61497d70f9222f5c024bb485ea6165a0c7e83f0f7f61438c38d4983b632428"
     },
     {
       "path": "food-working-plan.json",

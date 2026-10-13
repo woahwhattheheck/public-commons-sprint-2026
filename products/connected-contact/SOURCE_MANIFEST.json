@@ -10,7 +10,7 @@
   "manifest_self_excluded": true,
   "previous_public_source": {
     "repository": "woahwhattheheck/public-commons-sprint-2026",
-    "commit": "8b9f2dc493d7c0c8881d538605d4f3e54c238468"
+    "commit": "ebf8f8d9d91acf4e1082ee10d2d47dac7ae6927a"
   },
   "operational_boundary": {
     "live_adoption": false,
@@ -23,6 +23,12 @@
       "bytes": 7593,
       "sha256": "27e178ba2e5769624667016941c40c8eca9b202752c64c6283ca0be92184da9c",
       "git_blob": "46be323017be913780d0d2850b7658861744508d"
+    },
+    {
+      "path": "FOREGROUND_PREPARATION_BRIDGE.md",
+      "bytes": 21809,
+      "sha256": "9b2dd2f794ad5020691117161cab79b4b27f53c7c8ae2e546580a32d38d52e0a",
+      "git_blob": "95f8756cd22c3409e91c292c610779b970ac3f20"
     },
     {
       "path": "LICENSE",
@@ -50,9 +56,9 @@
     },
     {
       "path": "README.md",
-      "bytes": 14637,
-      "sha256": "5751755c7f26a7520e74676f96c7c5edbdfc60c2e2dcc2d55de5490111f9716f",
-      "git_blob": "5e1abe6cdbaa0827e3778d55fa9ebbaf62f49d6a"
+      "bytes": 17266,
+      "sha256": "e344ed76138c6a0207b4d96582ac0d3d26abf4077fce5253ff951024cfc79171",
+      "git_blob": "bf4531673e9858ad9d5fa02a7451320fedeb6056"
     },
     {
       "path": "commons-publication-policy.cjs",
@@ -65,6 +71,18 @@
       "bytes": 6235,
       "sha256": "1b082a852694d125bb85dc3934002889c3d29532d1a897b455372a8faa85327d",
       "git_blob": "00e91a76bb18d758dc4fa8ef4217810048d0c25e"
+    },
+    {
+      "path": "connected_contact_operator_bridge.cjs",
+      "bytes": 18074,
+      "sha256": "db840bb01995c66d17cc751ccf870e6106cb16227e3b532b878604c1b0c20eba",
+      "git_blob": "890cdd046c652113f7e7cd47854859ffe6de759d"
+    },
+    {
+      "path": "connected_contact_operator_relay.cjs",
+      "bytes": 21938,
+      "sha256": "a4afb742162b4b0c84d5e4c8ca1d64c9c20d15d04df5858d48e1919cb882939d",
+      "git_blob": "fb85c7890c3363cba8ab7c8b553a61186495a0b8"
     },
     {
       "path": "connected_contact_product.cjs",

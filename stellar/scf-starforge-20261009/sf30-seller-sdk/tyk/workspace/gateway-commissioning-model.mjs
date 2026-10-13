@@ -47,9 +47,36 @@ export function createTykGatewayCommissioningMethods({store,lookupConnection,rep
     return {...value,state:progress.state,summary:progress.summary,manuscript:await store.putJSON(manuscript)};
   }
   async function finish(record,value){return store.revise(record,await completedValue(record,value));}
+  function expectedTargetBindings(input,staging,production){
+    if(input.expectedTargets===undefined)return undefined;
+    const selected=input.expectedTargets,phases=['staging','production'];
+    const exactKeys=(value,keys)=>value&&typeof value==='object'&&!Array.isArray(value)&&
+      Object.keys(value).length===keys.length&&keys.every(key=>Object.hasOwn(value,key));
+    need(exactKeys(selected,phases),'TYK_GATEWAY_EXPECTATIONS_INVALID',
+      'Select complete staging and production target expectations.');
+    const retained={};
+    for(const [phase,target]of [['staging',staging],['production',production]]){
+      const expected=selected[phase],record=expected?.record;
+      need(exactKeys(expected,['record','configurationSha256'])&&
+        exactKeys(record,['kind','id','revision','sha256'])&&record.kind==='connection'&&
+        typeof record.id==='string'&&/^[a-f0-9]{24}$/.test(record.id)&&
+        Number.isSafeInteger(record.revision)&&record.revision>=1&&
+        typeof record.sha256==='string'&&/^[a-f0-9]{64}$/.test(record.sha256)&&
+        typeof expected.configurationSha256==='string'&&/^[a-f0-9]{64}$/.test(expected.configurationSha256),
+        'TYK_GATEWAY_EXPECTATIONS_INVALID','Select a complete '+phase+' connection reference and configuration SHA256.');
+      need(record.kind===target.record.kind&&record.id===target.record.id&&
+        record.revision===target.record.revision&&record.sha256===target.record.sha256&&
+        expected.configurationSha256===target.record.value.configurationSha256,
+        'TYK_GATEWAY_TARGET_CHANGED','The selected '+phase+' Gateway edition changed; preserve the original preparation and select its current complete source.',409);
+      retained[phase]={record:ref(target.record),configurationSha256:expected.configurationSha256};
+    }
+    return retained;
+  }
   async function createGatewayCommissioning(input){
     const {prior}=await replay(input,'createGatewayCommissioning',true);if(prior)return prior;
     const staging=await lookupConnection(input.stagingConnectionId),production=await lookupConnection(input.productionConnectionId);
+    // The existing workspace write queue and store lease cover lookup, comparison and initial commit.
+    const expectedTargets=expectedTargetBindings(input,staging,production);
     need(staging.connection.kind==='gateway'&&production.connection.kind==='gateway','TYK_GATEWAY_REQUIRED');
     need(staging.record.id!==production.record.id&&staging.connection.baseUrl!==production.connection.baseUrl,
       'TYK_TWO_GATEWAYS_REQUIRED','Select distinct original staging and production Gateway endpoints.');
@@ -67,7 +94,7 @@ export function createTykGatewayCommissioningMethods({store,lookupConnection,rep
       sourceSha256:createHash('sha256').update(Buffer.from(input.workshare.contentBase64,'base64')).digest('hex'),targets,cohortSource:source,checkNames:[...checkNames]}:null;
     const manuscript=await store.putJSON(createGatewayPlan({id:'gateway-'+idFor(input.requestId),label,customer,operator,entries,checks:checkNames,sourceFile,workshare,savedAt:now()}));
     return initial('gatewayCommissioning',input,'createGatewayCommissioning',{schema:TYK_GATEWAY_COMMISSIONING_SCHEMA,
-      label,customer,operator,connectionId:staging.record.id,targets,entries,checkNames,reload,source,workshare,manuscript,
+      label,customer,operator,connectionId:staging.record.id,targets,...(expectedTargets?{expectedTargets}:{}),entries,checkNames,reload,source,workshare,manuscript,
       bindings:{},captures:{},reviews:{},supportingFiles:{},pending:null,state:'IN_PROGRESS',
       summary:{apis:entries.length,steps:entries.length*2+6,completed:0,checks:entries.length*checkNames.length*2}});
   }

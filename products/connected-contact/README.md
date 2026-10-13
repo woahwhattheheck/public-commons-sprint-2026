@@ -51,6 +51,24 @@ The selection file contains the complete explicit accounts, contacts, checkpoint
 
 The whole batch is one SQLite transaction. Reusing its ID with any different selected record, ordering or bytes is rejected. Its complete immutable result is reconstructed from the retained revision references on replay. An account missing from the local store is never synthesized from an empty model.
 
+## Foreground preparation with the existing connected tools
+
+The complete product includes connected_contact_operator_bridge.cjs and connected_contact_operator_relay.cjs. They connect the existing prepare CLI to seven scoped original Git read tools through one foreground process and its retained framed journal. See FOREGROUND_PREPARATION_BRIDGE.md for the complete original configuration, exact input/runtime pins, synchronous SHA callbacks, launch/transport contract and same-session recovery.
+
+The original equipped owner supplies the existing Linux/WSL host, immutable source directory, shared coordinator configuration/authority, explicit private selection, journal directory and actual Node executable. The relay launches the unchanged prepare command with --operator pointing to the included bridge. It retains full native returns before streaming them, keeps the CLI's separate application completion, and requires the original response acknowledgments and actual exit status. A missing or uncertain tool/transport return does not authorize another provider call or process.
+
+This preparation bridge has no Gmail capability. Constructor-required Gmail and provider-write functions are local throwing stubs, so source preparation cannot turn into draft creation, account admission or a send. Original saved-draft reading still uses the existing actual list_drafts/read_email bindings described in ORIGINAL_SAVED_DRAFTS.md; it is not dispatched by this preparation-only bridge.
+
+The complete source capsule contains both unchanged bridge bodies in received.sources. In an existing connected orchestration, load them without touching the Node-only tools getter:
+
+    const bridgeModule = {exports:{}}, relayModule = {exports:{}};
+    new Function('module','exports',received.sources['connected_contact_operator_bridge.cjs'])(bridgeModule,bridgeModule.exports);
+    new Function('module','exports',received.sources['connected_contact_operator_relay.cjs'])(relayModule,relayModule.exports);
+
+Then call relayModule.exports.runConnectedContactOperator with bridge:bridgeModule.exports and the original selected configuration, actual tools, synchronous maintained hashes and retained loadState/saveState callbacks from the guide. This loads no process by itself. Keep the original foreground pump and yielded native session under the existing operator; do not start a second listener, controller or coordinator.
+
+The bridge's source and complete-return codec have been reviewed. Actual host acceptance, native preparation and resulting state receiving are separate execution results and remain unclaimed by source publication.
+
 ## Original controller and queue drain adoption
 
 The existing controller integrates through:

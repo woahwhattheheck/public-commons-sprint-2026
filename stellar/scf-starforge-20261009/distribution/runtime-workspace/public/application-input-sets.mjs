@@ -83,7 +83,7 @@ export function createApplicationInputSetsView({root,api,getToken,getWorkspaceId
       // Keep the previous complete selection while every incoming member is read.
       const review=await inspectApplicationInputSetArchive({bytes:file.size,
         read:(offset,length)=>file.slice(offset,offset+length).arrayBuffer(),sha256:digest,
-        onProgress:({path,files,total})=>{if(current(own))status.textContent='Reviewing complete archive '+(files+1)+' of '+total+' · '+path;}});
+        onProgress:({path,files,total})=>{if(current(own)&&choice===sourceChoice)status.textContent='Reviewing complete archive '+(files+1)+' of '+total+' · '+path;}});
       if(!current(own)||choice!==sourceChoice)return;
       sourceChoice++;archiveReview=review;directories=[...review.manifest.directories];name.value=review.manifest.name;
       selected=review.files.map(row=>({path:row.path,file:{size:row.bytes,

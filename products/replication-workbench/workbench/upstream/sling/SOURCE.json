@@ -1,0 +1,150 @@
+{
+  "schema": "tjlabs.original-source-selection.v1",
+  "repository": "slingdata-io/sling-cli",
+  "sourceRef": "7641892e24a7023c8012069596698970c7b3e041",
+  "tag": "v1.6.5",
+  "retrieval": {
+    "provider": "original connected GitHub App",
+    "method": "github_fetch_file",
+    "encoding": "utf-8",
+    "verified_against": "complete returned 1625-entry selected source tree",
+    "http_envelope": "not supplied by this connector"
+  },
+  "runtimeAsset": {
+    "filename": "sling_linux_amd64.tar.gz",
+    "url": "https://github.com/slingdata-io/sling-cli/releases/download/v1.6.5/sling_linux_amd64.tar.gz",
+    "bytes": 121317497,
+    "sha256": "e4e386c7d4429b33a213c146594be0bf6efa38f4732035dd67e307616fcb9c66",
+    "status": "release metadata retained; binary not acquired"
+  },
+  "files": [
+    {
+      "path": "upstream/sling/LICENSE",
+      "originalPath": "LICENSE",
+      "url": "https://github.com/slingdata-io/sling-cli/blob/7641892e24a7023c8012069596698970c7b3e041/LICENSE",
+      "gitBlob": "f288702d2fa16d3cdf0035b15a9fcbc552cd88e7",
+      "bytes": 35149,
+      "sha256": "3972dc9744f6499f0f9b2dbf76696f2ae7ad8af9b23dde66d6af86c9dfb36986"
+    },
+    {
+      "path": "upstream/sling/README.md",
+      "originalPath": "README.md",
+      "url": "https://github.com/slingdata-io/sling-cli/blob/7641892e24a7023c8012069596698970c7b3e041/README.md",
+      "gitBlob": "0f8f915b8f9312aa7f366cba8e84a567cac17dfd",
+      "bytes": 14339,
+      "sha256": "96b73898402429c4bff37ba5ad91bbe1ab3a2222514ea9bc0e0b6dc32dbcb635"
+    },
+    {
+      "path": "upstream/sling/go.mod",
+      "originalPath": "go.mod",
+      "url": "https://github.com/slingdata-io/sling-cli/blob/7641892e24a7023c8012069596698970c7b3e041/go.mod",
+      "gitBlob": "8020cef2828c9e42058fee85e62b74a8615be2cc",
+      "bytes": 22513,
+      "sha256": "997aadafdfd4d6cf562f5f9b804d97dc4126878947542bcfd8950fb767433c93"
+    },
+    {
+      "path": "upstream/sling/cmd/sling/sling_cli.go",
+      "originalPath": "cmd/sling/sling_cli.go",
+      "url": "https://github.com/slingdata-io/sling-cli/blob/7641892e24a7023c8012069596698970c7b3e041/cmd/sling/sling_cli.go",
+      "gitBlob": "d3bbdf9570b6970263cf8760976c81b1add77ad7",
+      "bytes": 21422,
+      "sha256": "4ad7c48cda8f78e573df69648c2f83ea5612df244da8ed1934f7929a570e1dc7"
+    },
+    {
+      "path": "upstream/sling/cmd/sling/sling_run.go",
+      "originalPath": "cmd/sling/sling_run.go",
+      "url": "https://github.com/slingdata-io/sling-cli/blob/7641892e24a7023c8012069596698970c7b3e041/cmd/sling/sling_run.go",
+      "gitBlob": "782ef2568f13de0d42b383a0ece2fefbf1977e1e",
+      "bytes": 30204,
+      "sha256": "d25d5bac135a20dd4da13a409e709c2a49f8a144aae41ddcf339feecd810855e"
+    },
+    {
+      "path": "upstream/sling/cmd/sling/sling_validate.go",
+      "originalPath": "cmd/sling/sling_validate.go",
+      "url": "https://github.com/slingdata-io/sling-cli/blob/7641892e24a7023c8012069596698970c7b3e041/cmd/sling/sling_validate.go",
+      "gitBlob": "df0da9f34221c14e8144aadc04c6b8fad1b8868e",
+      "bytes": 4233,
+      "sha256": "93fd9fdf930867fe6c8c15974319d66f2c950ffb5f52e6e54a0df32fba866418"
+    },
+    {
+      "path": "upstream/sling/core/sling/validate/dto.go",
+      "originalPath": "core/sling/validate/dto.go",
+      "url": "https://github.com/slingdata-io/sling-cli/blob/7641892e24a7023c8012069596698970c7b3e041/core/sling/validate/dto.go",
+      "gitBlob": "364e44e821e85f32f9ba94e3370ef8a872a8a279",
+      "bytes": 10400,
+      "sha256": "fc5e246a0e389db79866506831aa0c86788e6b316e6f1aa9af59b710237a8d9a"
+    },
+    {
+      "path": "upstream/sling/core/sling/task_func.go",
+      "originalPath": "core/sling/task_func.go",
+      "url": "https://github.com/slingdata-io/sling-cli/blob/7641892e24a7023c8012069596698970c7b3e041/core/sling/task_func.go",
+      "gitBlob": "e2d989cc3cdd31c394a754b5585530d642337d93",
+      "bytes": 8869,
+      "sha256": "c6876782a44bee9f5950f1e83b3e456a327689aed1158bd5105a06bf3542baf5"
+    },
+    {
+      "path": "upstream/sling/cmd/sling/resource/llm_REPLICATION.md",
+      "originalPath": "cmd/sling/resource/llm_REPLICATION.md",
+      "url": "https://github.com/slingdata-io/sling-cli/blob/7641892e24a7023c8012069596698970c7b3e041/cmd/sling/resource/llm_REPLICATION.md",
+      "gitBlob": "d3e39a89e1778ab9524a6c7cebcf2df892e23139",
+      "bytes": 37859,
+      "sha256": "0abaab164b01c6b7f1ef9a576655480f45bbfbf1c83eff1d0532b89975c5e7e9"
+    },
+    {
+      "path": "upstream/sling/tests/files/test1.csv",
+      "originalPath": "tests/files/test1.csv",
+      "url": "https://github.com/slingdata-io/sling-cli/blob/7641892e24a7023c8012069596698970c7b3e041/tests/files/test1.csv",
+      "gitBlob": "f5835da5c07f7e0790ab337b107444fc90906639",
+      "bytes": 115474,
+      "sha256": "822b7a39c8ef7ecff1539429ae1dcaa40cc2d66069e45a5718de1d579f084977"
+    },
+    {
+      "path": "upstream/sling/tests/files/test1.upsert.csv",
+      "originalPath": "tests/files/test1.upsert.csv",
+      "url": "https://github.com/slingdata-io/sling-cli/blob/7641892e24a7023c8012069596698970c7b3e041/tests/files/test1.upsert.csv",
+      "gitBlob": "c8ca2c93b5ee76c52a8fdee9006d434f82f0e867",
+      "bytes": 1289,
+      "sha256": "065a26bc8c53c50ebbf0b9602fb225d5aa0d4aaa17a13002e51118059f8aec5c"
+    },
+    {
+      "path": "upstream/sling/core/sling/config.go",
+      "originalPath": "core/sling/config.go",
+      "url": "https://github.com/slingdata-io/sling-cli/blob/7641892e24a7023c8012069596698970c7b3e041/core/sling/config.go",
+      "gitBlob": "3fd2665a50de1d7f48c0e38a5d51e06a238221fd",
+      "bytes": 73660,
+      "sha256": "74d18f122025b059e7cd7f7da0b59bee65bb82c944a5a02d7c59f21321deeea0"
+    },
+    {
+      "path": "upstream/sling/core/sling/replication.go",
+      "originalPath": "core/sling/replication.go",
+      "url": "https://github.com/slingdata-io/sling-cli/blob/7641892e24a7023c8012069596698970c7b3e041/core/sling/replication.go",
+      "gitBlob": "1cbc8023aa373c7da223e332cd706f1974b2c15b",
+      "bytes": 71318,
+      "sha256": "e5ef1e81ce2095e97b39ebb7d82ef2c8bff7fabdc1f3fdaadb8e04577fd6dd35"
+    },
+    {
+      "path": "upstream/sling/core/sling/types.go",
+      "originalPath": "core/sling/types.go",
+      "url": "https://github.com/slingdata-io/sling-cli/blob/7641892e24a7023c8012069596698970c7b3e041/core/sling/types.go",
+      "gitBlob": "cc621fa3a302e50bfcb0ab388f1c7a49ca036873",
+      "bytes": 5914,
+      "sha256": "7cb96d3d0ce5f87599067b629b3633ef6c8d3fdf7a74e65637e196438e249917"
+    },
+    {
+      "path": "upstream/sling/cmd/sling/sling_conns.go",
+      "originalPath": "cmd/sling/sling_conns.go",
+      "url": "https://github.com/slingdata-io/sling-cli/blob/7641892e24a7023c8012069596698970c7b3e041/cmd/sling/sling_conns.go",
+      "gitBlob": "0b982225bd30be180f39d2090a305b750469b851",
+      "bytes": 12703,
+      "sha256": "a0226849f846df42276cf068ede53d4158e4fa30da8f1e3e602314c83f139d20"
+    },
+    {
+      "path": "upstream/sling/core/env/env.go",
+      "originalPath": "core/env/env.go",
+      "gitBlob": "1638034fb3161d99e2c2320101683cbaed60803a",
+      "url": "https://github.com/slingdata-io/sling-cli/blob/7641892e24a7023c8012069596698970c7b3e041/core/env/env.go",
+      "bytes": 14542,
+      "sha256": "3ea36cba030efe4461adf35d4955133a58b64dc7dca914cc1731b32d138e80ef"
+    }
+  ]
+}
