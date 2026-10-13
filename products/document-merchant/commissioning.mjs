@@ -136,7 +136,8 @@ async function selectedSource(raw){
   const protectedDirectories=account?[]:[options.commerceDirectory,operator];
   need(protectedDirectories.every(path=>customer.directory!==path&&
       !separate(customer.directory,path)&&!separate(path,customer.directory))&&
-    customer.directory!==options.directory&&!separate(customer.directory,options.directory),
+    customer.directory!==options.directory&&!separate(customer.directory,options.directory)&&
+    !separate(options.directory,customer.directory),
     'DOCUMENT_COMMISSION_CUSTOMER_DIRECTORY_CONFLICT');
   if(account)need(protectedDirectories.every(path=>options.directory!==path&&!separate(options.directory,path)&&
     !separate(path,options.directory)),'DOCUMENT_COMMISSION_DIRECTORIES_MUST_DIFFER');
