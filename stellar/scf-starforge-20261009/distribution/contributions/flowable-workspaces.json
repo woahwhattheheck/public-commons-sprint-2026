@@ -6,13 +6,15 @@
     "flowable-workspace": "stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/cli.mjs",
     "flowable-process-programme": "stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/compile-process-programme.mjs",
     "flowable-decision-programme": "stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/compile-decision-programme.mjs",
-    "flowable-history-analysis": "stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/history-cli.mjs"
+    "flowable-history-analysis": "stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/history-cli.mjs",
+    "flowable-document-capture": "stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/capture-alfresco-document.mjs"
   },
   "commandDescriptions": {
     "flowable-workspace": "Open, operate, receive and export native Flowable process, case and decision workspaces.",
     "flowable-process-programme": "Compile a complete original-source BPMN commissioning programme for the existing Flowable operator.",
     "flowable-decision-programme": "Compile complete original DMN sources and typed cases into the existing Flowable operator programme.",
-    "flowable-history-analysis": "Analyse an exact saved process-history cohort and receive its complete source into an independent workspace."
+    "flowable-history-analysis": "Analyse an exact saved process-history cohort and receive its complete source into an independent workspace.",
+    "flowable-document-capture": "Retain a selected Alfresco version and complete content for reviewed native document process intake."
   },
   "exports": {
     "./seller/flowable/native": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/native.mjs",
@@ -38,7 +40,11 @@
     "./seller/flowable/workspace/history-analysis": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/history-analysis.mjs",
     "./seller/flowable/workspace/history-report": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/history-report.mjs",
     "./seller/flowable/workspace/history-delivery": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/history-delivery.mjs",
-    "./seller/flowable/workspace/history-xes": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/history-xes.mjs"
+    "./seller/flowable/workspace/history-xes": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/history-xes.mjs",
+    "./seller/flowable/workspace/document-intake": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/document-intake.mjs",
+    "./seller/flowable/workspace/document-process": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/document-process.mjs",
+    "./seller/flowable/workspace/document-receiving": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/document-receiving.mjs",
+    "./seller/flowable/workspace/alfresco-document": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/alfresco-document.mjs"
   },
   "supportFiles": [
     "stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/README.md",
@@ -103,7 +109,15 @@
     "products/flowable-merchant/HISTORY_ANALYSIS.md",
     "stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/history-source-contract.json",
     "products/flowable-merchant/HISTORY_XES.md",
-    "stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/history-xes-source-contract.json"
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/history-xes-source-contract.json",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/examples/documents/authored-capture.json",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/examples/documents/reference-supplier-information.txt",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/examples/documents/document-profile.json",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/examples/documents/capture.example.json",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/examples/documents/document-review-v1.bpmn20.xml",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/examples/documents/document-review-v2.bpmn20.xml",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/document-source-contract.json",
+    "products/flowable-merchant/DOCUMENT_INTAKE.md"
   ],
   "browserAssets": [
     {
