@@ -332,7 +332,7 @@ def _sections(project, result, request, report, add):
                ("Evaluations", result.get("evaluations")), ("Fit records", info["fit_records"]),
                ("Held-out records", info["held_out_records"]), ("Below-limit records", info["below_limit_records"]),
                ("Interval records", sum(row.get("qualifier") == "interval" for row in result["observations"])),
-               ("Compound records", sum("components" in row for row in result["observations"])),
+               ("Compound records", sum("components" in row and "species" not in row for row in result["observations"])),
                ("Local identifiability", result.get("identifiability"))])
         table_section("fit-parameters", "Original fitted parameters and bounds",
                       "Parameter order, original physical values, fitted values and active-bound status are retained.",

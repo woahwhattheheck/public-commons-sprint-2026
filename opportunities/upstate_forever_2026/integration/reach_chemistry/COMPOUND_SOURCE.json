@@ -52,8 +52,8 @@
     },
     {
       "path": "model/chemistry_report_source.py",
-      "bytes": 43650,
-      "sha256": "5b5940571a3667e4a09fcd1c4459d82316295a8286f6f30a4050409531989bba"
+      "bytes": 43675,
+      "sha256": "3dbdd1490fb7c7ffa8ec493ff023bec7117f8606683c26fec7e655342e39fb2c"
     },
     {
       "path": "model/CHEMISTRY_REPORT_SOURCE.md",
@@ -177,8 +177,8 @@
     },
     {
       "path": "operator/install_chemistry.py",
-      "bytes": 15162,
-      "sha256": "5a9a29b0aaf12b5af6e4f2c34cdedc7f522950e72fb6ac010330b06ef72b9a18"
+      "bytes": 15605,
+      "sha256": "916af699e3271bf452d95d958e92cbe92d829dc6e774c5947e82506f783cf631"
     },
     {
       "path": "integration/reach_chemistry/install_chemistry_legacy.py",
