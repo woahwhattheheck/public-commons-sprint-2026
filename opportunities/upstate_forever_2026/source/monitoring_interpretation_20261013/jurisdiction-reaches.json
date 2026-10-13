@@ -1,0 +1,39 @@
+{
+  "schema": "tjl.monitoring-jurisdiction-reaches.v1",
+  "sourceId": "ga-wqs-2022",
+  "locator": "Rule391-3-6-.03(14), Savannah River Basin, PDF27",
+  "automaticStationAssignment": false,
+  "reaches": [
+    {
+      "waterbody": "Tugaloo River / Lake Hartwell",
+      "from": "Confluence of Prather Creek near Georgia State Route184",
+      "to": "Lake Hartwell Dam",
+      "designatedUses": [
+        "Recreation",
+        "Drinking Water Supplies"
+      ],
+      "note": "Analyst must verify actual regulated reach and state jurisdiction; a station/lake-name match alone is insufficient."
+    },
+    {
+      "waterbody": "Savannah River / Lake Russell and Clarks Hill Lake",
+      "from": "Georgia Highway368 / South Carolina Highway184",
+      "to": "Clarks Hill Dam, river mile238",
+      "designatedUses": [
+        "Recreation",
+        "Drinking Water Supplies"
+      ],
+      "note": "Use the original geographic description; no coordinates or automatic boundary are invented."
+    },
+    {
+      "waterbody": "Tugaloo River",
+      "from": "Confluence of Tallulah and Chattooga Rivers",
+      "to": "Yonah Dam",
+      "designatedUses": [
+        "Recreation",
+        "Drinking Water Supplies"
+      ],
+      "note": "Confirm exact station location and current designation before applying."
+    }
+  ],
+  "chlorophyllCaution": "The selected Georgia section17 lake-specific numeric chlorophyll list does not include Hartwell, Russell or Clarks Hill. This reach selector does not create a chlorophyll limit."
+}

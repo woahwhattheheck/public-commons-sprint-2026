@@ -1,0 +1,212 @@
+{
+  "schema": "tjl.monitoring-source-index.v1",
+  "retrievedAt": "2026-10-13",
+  "sources": [
+    {
+      "id": "sc-r61-68-2025",
+      "title": "South Carolina Regulation 61-68: Water Classifications and Standards",
+      "publisher": "South Carolina Department of Environmental Services",
+      "url": "https://des.sc.gov/sites/des/files/Library/Regulations/R.61-68.pdf",
+      "edition": "Agency convenience copy; revision history ends May 23, 2025, Document 5333",
+      "authorityKind": "state_adopted_publisher_text",
+      "approvalStatus": "This capture does not independently establish EPA approval of every provision in this edition.",
+      "locators": [
+        "E.11.b(1)-(3), E.11.e; printed15 / PDF18",
+        "G.8-G.10; printed27-30 / PDF30-33",
+        "E.14.c(8); NPDES only",
+        "E.14.d(7)-(8); total-microcystins advisory/listing provisions"
+      ],
+      "notes": [
+        "The agency labels the PDF an unofficial convenience copy; the official State Register controls.",
+        "Do not substitute the NPDES daily maximum/monthly mean for the ambient G.9/G.10 sampling rule.",
+        "Historical samples compared against this selected edition are reference comparisons, not proof that this edition applied on the sample date."
+      ],
+      "retrievedAt": "2026-10-13",
+      "captureKind": "primary agency web/PDF text retrieval; original PDF binary not downloaded or hashed"
+    },
+    {
+      "id": "ga-wqs-index",
+      "title": "Georgia Water Quality Standards",
+      "publisher": "Georgia Environmental Protection Division",
+      "url": "https://epd.georgia.gov/watershed-protection-branch/watershed-planning-and-monitoring-program/georgia-water-quality",
+      "edition": "Current agency index retrieved October 13, 2026",
+      "authorityKind": "agency_index",
+      "locators": [
+        "Current EPA-approved standards link and distinction between state adoption and EPA approval"
+      ],
+      "notes": [
+        "The index links the August 31, 2022 EPA-approved rule. State-adopted or proposed revisions are not treated as automatically EPA-approved."
+      ],
+      "retrievedAt": "2026-10-13",
+      "captureKind": "primary agency web/PDF text retrieval; original PDF binary not downloaded or hashed"
+    },
+    {
+      "id": "ga-wqs-2022",
+      "title": "Georgia Rule 391-3-6-.03, Water Use Classifications and Water Quality Standards",
+      "publisher": "Georgia Environmental Protection Division",
+      "url": "https://epd.georgia.gov/document/document/georgia-water-quality-standardsaug-2022pdf/download",
+      "edition": "Adopted January 28, 2022; approved by EPA Region IV August 31, 2022",
+      "authorityKind": "state_adopted_epa_approved",
+      "locators": [
+        "(6)(a)(i), drinking-water supply bacteria, PDF14-15",
+        "(6)(b)(i)2, freshwater Recreation bacteria, PDF16",
+        "(6)(c)(i)2, freshwater Fishing bacteria, PDF16-17",
+        "(14), Savannah Basin reach classifications, PDF27",
+        "(17)(a)-(h), lake-specific chlorophyll a, PDF46-52"
+      ],
+      "notes": [
+        "The actual winter E. coli STV is 861 counts/100 mL.",
+        "Some lake-specific cross-references print Fishing (6)(c)(iii); the actual bacteria heading in this edition is (6)(c)(i). Locators here follow the heading and numeric text.",
+        "The catalog does not assume a station's designated use from its name or a lake's name alone."
+      ],
+      "retrievedAt": "2026-10-13",
+      "captureKind": "primary agency web/PDF text retrieval; original PDF binary not downloaded or hashed"
+    },
+    {
+      "id": "ga-epa-approval-2022",
+      "title": "EPA action on Georgia 2019-2022 triennial review",
+      "publisher": "U.S. EPA Region IV, hosted by Georgia EPD",
+      "url": "https://epd.georgia.gov/document/document/georgia-2019-2022-triennial-review-letter-finalpdf/download",
+      "edition": "August 31, 2022",
+      "authorityKind": "epa_approval_letter",
+      "locators": [
+        "Letter and linked approved rule"
+      ],
+      "notes": [
+        "Approval is attached to the selected 2022 rule, not to later draft material."
+      ],
+      "retrievedAt": "2026-10-13",
+      "captureKind": "primary agency web/PDF text retrieval; original PDF binary not downloaded or hashed"
+    },
+    {
+      "id": "epa-rwqc-2012",
+      "title": "2012 Recreational Water Quality Criteria",
+      "publisher": "U.S. Environmental Protection Agency",
+      "url": "https://www.epa.gov/sites/default/files/2015-10/documents/rwqc2012.pdf",
+      "edition": "2012; read with October 27, 2014 errata",
+      "authorityKind": "federal_recommendation",
+      "locators": [
+        "3.6.5, frequency of monitoring, printed42 / PDF48",
+        "4, Table4, recommended criteria, printed43 / PDF49",
+        "5.1, Table5, beach action values, printed44 / PDF50"
+      ],
+      "notes": [
+        "Two alternative illness-rate options are complete pairs; do not combine one option's GM with the other's STV.",
+        "There is no minimum sample number prescribed as an EPA criterion element. Weekly monitoring is recommended; representativeness still matters.",
+        "E. coli values are culture-based CFU/100 mL for fresh recreational water. EPA Method1603 or another equivalent culture method is the reference.",
+        "These recommendations are not automatically state standards."
+      ],
+      "retrievedAt": "2026-10-13",
+      "captureKind": "primary agency web/PDF text retrieval; original PDF binary not downloaded or hashed"
+    },
+    {
+      "id": "epa-rwqc-errata-2014",
+      "title": "Errata Sheet for 2012 Recreational Water Quality Criteria",
+      "publisher": "U.S. Environmental Protection Agency",
+      "url": "https://www.epa.gov/sites/default/files/2015-11/documents/erratasheet-rwqc.pdf",
+      "edition": "October 27, 2014",
+      "authorityKind": "federal_recommendation_errata",
+      "locators": [
+        "Page1; correction to section3.6.2, printed39 of main document"
+      ],
+      "notes": [
+        "Geometric mean equals ten raised to the arithmetic mean of base-ten logs of the positive sample values."
+      ],
+      "retrievedAt": "2026-10-13",
+      "captureKind": "primary agency web/PDF text retrieval; original PDF binary not downloaded or hashed"
+    },
+    {
+      "id": "epa-rwqc-current-index",
+      "title": "Recreational Water Quality Criteria and Methods",
+      "publisher": "U.S. Environmental Protection Agency",
+      "url": "https://www.epa.gov/wqc/recreational-water-quality-criteria-and-methods",
+      "edition": "Current agency index retrieved October 13, 2026",
+      "authorityKind": "agency_index",
+      "locators": [
+        "2012 RWQC, errata, and 2019 cyanotoxin criteria sections"
+      ],
+      "notes": [
+        "Current agency catalog of the selected final publications."
+      ],
+      "retrievedAt": "2026-10-13",
+      "captureKind": "primary agency web/PDF text retrieval; original PDF binary not downloaded or hashed"
+    },
+    {
+      "id": "epa-cyano-2019",
+      "title": "Recommended Human Health Recreational Ambient Water Quality Criteria or Swimming Advisories for Microcystins and Cylindrospermopsin",
+      "publisher": "U.S. Environmental Protection Agency",
+      "url": "https://www.epa.gov/sites/default/files/2019-05/documents/hh-rec-criteria-habs-document-2019.pdf",
+      "alternateUrl": "https://nepis.epa.gov/Exe/ZyPURL.cgi?Dockey=P100WX86.TXT",
+      "edition": "May 2019; EPA822-R-19-001",
+      "authorityKind": "federal_recommendation",
+      "locators": [
+        "6.3, duration/frequency for criteria, printed73-75",
+        "6.4, advisory duration/frequency, printed75",
+        "6.5 Table6-1, printed76"
+      ],
+      "notes": [
+        "A 10-day assessment period containing any concentration above the magnitude is an excursion; do not average concentrations over ten days.",
+        "EPA allows different state-selected implementations of assessment-period timing. Record the actual approved assessment-period rule rather than inventing an anchor.",
+        "A pattern of more than three excursions per recreation season recurring in more than one year is the stated pattern; the state chooses the upper-bound assessment years.",
+        "The advisory and water-quality-criterion uses are different applications."
+      ],
+      "retrievedAt": "2026-10-13",
+      "captureKind": "primary agency web/PDF text retrieval; original PDF binary not downloaded or hashed"
+    },
+    {
+      "id": "epa-cyano-current",
+      "title": "Protecting Human Health from Cyanotoxin Exposure During Recreation",
+      "publisher": "U.S. Environmental Protection Agency",
+      "url": "https://www.epa.gov/habs/protecting-human-health-cyanotoxin-exposure-during-recreation",
+      "edition": "Page last updated June 24, 2026; retrieved October 13, 2026",
+      "authorityKind": "federal_recommendation_summary",
+      "locators": [
+        "Microcystins and cylindrospermopsin tables; footnotes a-b"
+      ],
+      "notes": [
+        "Microcystins8 and cylindrospermopsin15 µg/L, with distinct one-day advisory and ten-day-assessment applications."
+      ],
+      "retrievedAt": "2026-10-13",
+      "captureKind": "primary agency web/PDF text retrieval; original PDF binary not downloaded or hashed"
+    },
+    {
+      "id": "epa-cyano-tsd-2021",
+      "title": "Final Technical Support Document: Implementing the 2019 Recommended Cyanotoxin Criteria or Swimming Advisories",
+      "publisher": "U.S. Environmental Protection Agency",
+      "url": "https://www.epa.gov/system/files/documents/2021-08/final-tsd-implement-2019-rwqc.pdf.pdf",
+      "edition": "July 2021; EPA823-R-21-002",
+      "authorityKind": "federal_implementation_guidance",
+      "locators": [
+        "Footnote2, PDF2: microcystins means total unless specified",
+        "Questions7-10, PDF15-21: monitoring, interpretation, methods and locations",
+        "Question4, PDF11: cell density is not toxin concentration"
+      ],
+      "notes": [
+        "No single analytical method is required by this guidance; choose adequate sensitivity and documented analyte coverage.",
+        "Results from specific-congener methods cannot silently stand for total microcystins.",
+        "Do not average samples from different days to determine a cyanotoxin excursion."
+      ],
+      "retrievedAt": "2026-10-13",
+      "captureKind": "primary agency web/PDF text retrieval; original PDF binary not downloaded or hashed"
+    },
+    {
+      "id": "epa-hab-methods",
+      "title": "HAB Methods",
+      "publisher": "U.S. Environmental Protection Agency",
+      "url": "https://www.epa.gov/habs/hab-methods",
+      "edition": "Current agency page retrieved October 13, 2026",
+      "authorityKind": "analytical_guidance",
+      "locators": [
+        "Analytical Methods for Toxin Analysis; EPA Methods544,545,546 and ambient-water methods"
+      ],
+      "notes": [
+        "Method546 measures total microcystins and nodularins by ADDA ELISA.",
+        "ELISA cross-reactivity and congener-specific LC/MS coverage differ; preserve the actual measured analyte and method.",
+        "Semi-quantitative field screens require an explicitly appropriate interpretation, not an assumed exact concentration."
+      ],
+      "retrievedAt": "2026-10-13",
+      "captureKind": "primary agency web/PDF text retrieval; original PDF binary not downloaded or hashed"
+    }
+  ],
+  "captureLimit": "Canonical primary URLs and text-derived facts are retained. No original PDF binary hash is claimed; review exact agency originals for legal action."
+}
