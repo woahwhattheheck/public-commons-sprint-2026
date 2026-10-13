@@ -266,6 +266,7 @@ def _analysis_impact(workspace, analysis, refresh):
                     if (result := _binding_impact(row, refresh, changes)) is not None]
         runs.append({"id": run_id, "role": "baseline" if run_id == analysis["baseline_run_id"] else "alternative",
                      "state": native["state"], "bindings": bindings,
+                     "original_selection": native["selection"],
                      "captured_by_refresh": run_id in affected,
                      "saved_refresh_assessment": deepcopy(affected.get(run_id)),
                      "recorded_successor_id": mappings.get(run_id),
@@ -293,6 +294,11 @@ def _check_successors(workspace, analysis, refresh):
             native = workspace.inspect_run(identifier(target))
             if native.get("state") != "complete":
                 raise ValueError("The current retained run is " + str(native.get("state")))
+            for kind, field in (("grids", "grid_id"), ("profiles", "profile_id"), ("scenarios", "scenario_id")):
+                original_dependency = original["original_selection"][field]
+                expected_dependency = (refresh["mappings"].get(kind) or {}).get(original_dependency, original_dependency)
+                if native["selection"].get(field) != expected_dependency:
+                    raise ValueError("Recorded successor differs from the saved refresh " + kind + " mapping")
             # Native selection identity and completed-model record validation are
             # Workspace authority; retain its exact current selection in output.
             candidates.append(target)

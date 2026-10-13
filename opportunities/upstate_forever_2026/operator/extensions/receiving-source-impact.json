@@ -33,7 +33,8 @@
       "getState",
       "api",
       "endpoint",
-      "openExtension"
+      "openExtension",
+      "navigate"
     ],
     "styles": [
       "/web/receiving_source_impact.css"
