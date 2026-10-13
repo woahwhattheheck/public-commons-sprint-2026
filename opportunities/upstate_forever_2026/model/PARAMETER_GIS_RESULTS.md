@@ -7,7 +7,8 @@ retained comparison output, with the original comparison and model-grid records.
 ## Receive the complete application
 
 Use a cumulative checkout containing `model/parameter_exports.py`,
-`model/parameter_studies.py` and `source_tools/receive_gura_studies.py`.
+`model/parameter_studies.py`, `model/parameter_suite_exports.py` and
+`source_tools/receive_gura_studies.py`.
 The maintained parameter-study operator uses the same backend. Source provenance
 for this integration is the complete three-file contribution
 UPSTATE-PARAMETER-GIS-DELIVERY-7F24-20261013, Canvas F0C8V85UKHA, composed with
@@ -51,6 +52,29 @@ copy is reusable when packaging continues. ZIP64 members stream in 1 MiB blocks,
 checking original bytes, SHA256 and the opened file identity; the prior complete
 archive stays published until its complete replacement is ready. TIFFs and nested
 ZIPs are stored without redundant ZIP compression.
+
+The broad suite refreshes its report, CSV, JSON and individual-study links after
+each study. It builds the aggregate suite ZIP once when the selected cohort
+finishes as complete or partial. During native execution the current reports and
+individual study ZIPs remain available; the suite's packaging record reports
+that its aggregate archive is pending. An earlier complete ZIP stays on disk
+until the next final archive is atomically published.
+
+Each study's export-checkpoint.json binds its current saved record and artifact
+descriptors to the independently verified copies under studies/<study-id>.
+Unchanged local file identities let interim report refreshes avoid reading all
+prior GeoTIFFs and archives again. Changed study records, missing files, changed
+local bodies, updated exporter source and relocated files invalidate that
+shortcut and use the original copy verification. A new final archive always
+streams and hashes every selected member again.
+
+The retained suite state exposes packaging status and export_progress during
+archive creation: current_member, current_member_bytes, members_completed,
+members_total, source_bytes_processed, source_bytes_total and elapsed_seconds.
+Counts describe the original member bytes, before ZIP compression. Cache
+statistics report actual reuse checks, refreshes and verified logical bytes.
+These records travel in the existing workflow events and receiving state, so the
+same operation can be followed through a large final archive.
 
 If the filesystem fills, the original native/suite error and completed cases
 remain available through the continuation implemented in
