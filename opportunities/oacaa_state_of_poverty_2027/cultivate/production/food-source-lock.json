@@ -1,0 +1,87 @@
+{
+  "schema": "tjl.oacaa.food-source-lock.v1",
+  "retrievedAt": "2026-10-13",
+  "measurementPeriod": "2024 with separately labeled historical years",
+  "files": [
+    {
+      "path": "datasets/ohio-food-child-counties-2024.csv",
+      "bytes": 15706,
+      "sha256": "5f03388247a2bd97f3734a130a24f641956404906f482c3b2ebcf79a02cd7349"
+    },
+    {
+      "path": "datasets/ohio-food-child-counties-2024.json",
+      "bytes": 106014,
+      "sha256": "6b7a01afd90e0140f048e9a95e1686254766a9eabe9798abedefcfd1138a7ebc"
+    },
+    {
+      "path": "datasets/ohio-food-child-history-ne-2013-2024.csv",
+      "bytes": 12685,
+      "sha256": "29e920886998d4e92db2b8805ef67ede23f4f51f9ecd81fcec32718c2bdc87f7"
+    },
+    {
+      "path": "datasets/ohio-food-child-history-ne-2013-2024.json",
+      "bytes": 62338,
+      "sha256": "41a6ce16f5ad3656fbce399fbef577a20753a6df357cb32289f8dcef66b0bc0f"
+    },
+    {
+      "path": "datasets/ohio-food-county-revision-2023.csv",
+      "bytes": 532,
+      "sha256": "8563a1a0447bc46097ee8c98df560b410e44bc23e095992cbd6ab1b7119f27a0"
+    },
+    {
+      "path": "datasets/ohio-food-county-revision-2023.json",
+      "bytes": 7551,
+      "sha256": "f2b1b2fb91eda2704348d92888229e989c017d091ff75e33914985465f8b38e1"
+    },
+    {
+      "path": "datasets/ohio-food-state-2024.csv",
+      "bytes": 451,
+      "sha256": "4a540fd2582e7bc9293dedb0a96b9333842e9e771476f3ad8e59ba8d00285ab9"
+    },
+    {
+      "path": "datasets/ohio-food-state-2024.json",
+      "bytes": 7041,
+      "sha256": "343ab02e81f195f205a83e071f4bc73a37e9c827215fe313aef1cbc1270cdae8"
+    },
+    {
+      "path": "food_member_graphics.py",
+      "bytes": 5802,
+      "sha256": "b3bbb38be12c68d811faa31fe4069836750c5fd9ad9014312188a99b58f317ac"
+    },
+    {
+      "path": "food_plan.cjs",
+      "bytes": 14424,
+      "sha256": "422f16d3765e9d29bbf5ce01e8449725554546360542dc4fa69b635e360ece4d"
+    },
+    {
+      "path": "food_reporting.cjs",
+      "bytes": 20984,
+      "sha256": "dec45a97087cc571abb2271c67c5ab2da5c77511467dbe1c7aa4d2469603e34f"
+    },
+    {
+      "path": "FOOD_SOURCE_CONCORDANCE.json",
+      "bytes": 7387,
+      "sha256": "597ad7af5ee27044d28c6b8e7f736fd516d28eaf62cec740d8fae9e58b2c0095"
+    },
+    {
+      "path": "FOOD_SOURCE_GUIDE.md",
+      "bytes": 7664,
+      "sha256": "75915060b90af8e18bb5b289963200dd59ecf9a6b4cba615e0838dd0d5454704"
+    },
+    {
+      "path": "FOOD_SOURCE_MANIFEST.json",
+      "bytes": 63834,
+      "sha256": "f53f88f4c4aa801fdaac8e2ae6e650b808a1041bd6d1447075f035834652a755"
+    },
+    {
+      "path": "food-working-plan.json",
+      "bytes": 30011,
+      "sha256": "9bf94e19ef776a94fc6fc97d88cc946101179e37e5e445d69a82876c754e20df"
+    },
+    {
+      "path": "sources/FOOD_ORIGINALS.json",
+      "bytes": 131016,
+      "sha256": "ef0f98cc0d1b79875a887e7a3b194140e0908932a4684ec15ac691d0194bbe59"
+    }
+  ]
+}

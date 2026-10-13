@@ -75,9 +75,42 @@ export async function receiveManagedConfiguration({ page, model, outputDirectory
   check(paths.every((path, index) => entered.files.some(file => file.path === path && file.content === initial[index].content + '\n')),
     'Downloaded entered-file set omitted original drafts.');
   downloads.push(draftPath);
+  // Hold only the response to this actual first native save. The original
+  // worker remains authoritative while the operator switches to another file.
+  let releaseReply, acceptedResolve, acceptedReject, finishedResolve;
+  const replyGate = new Promise(resolve => { releaseReply = resolve; });
+  const admission = new Promise((resolve, reject) => { acceptedResolve = resolve; acceptedReject = reject; });
+  const finished = new Promise(resolve => { finishedResolve = resolve; });
+  let held = false;
+  const routePattern = '**/api/operation';
+  const holdReply = async route => {
+    const request = route.request().postDataJSON();
+    if (held || request.operation !== 'managed-config-save' || request.homeId !== homeId || request.path !== paths[0])
+      return route.continue();
+    held = true;
+    try {
+      const response = await route.fetch(), value = await response.json();
+      check(response.ok() && value.operationId, 'Actual first native save was not admitted.');
+      acceptedResolve(value.operationId);
+      await replyGate; await route.fulfill({ response });
+    } catch (error) { acceptedReject(error); throw error; }
+    finally { finishedResolve(); }
+  };
+  let firstId;
+  await page.route(routePattern, holdReply);
+  try {
+    await pane.locator('[data-act="save"]').click(); firstId = await admission;
+    await openFile(paths[1]);
+    check(await pane.locator('[data-field="content"]').isEnabled() &&
+      await pane.locator('[data-field="content"]').inputValue() === initial[1].content + '\n',
+    'Switching during a pending original save disabled or replaced the other file draft.');
+  } finally {
+    releaseReply(); if (held) await finished;
+    await page.unroute(routePattern, holdReply);
+  }
   for (let index = 0; index < paths.length; index++) {
     await openFile(paths[index]);
-    const id = await completeSelected(await submitClick(pane.locator('[data-act="save"]')));
+    const id = await completeSelected(index === 0 ? firstId : await submitClick(pane.locator('[data-act="save"]')));
     const entry = await model.managedConfigurationHistory({ homeId, operationId: id });
     check(entry.intent.before.sha256 === initial[index].sha256 &&
       entry.intent.before.content === initial[index].content &&

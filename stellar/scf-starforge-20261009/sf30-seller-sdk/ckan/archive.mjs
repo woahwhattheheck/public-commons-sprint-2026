@@ -15,6 +15,11 @@ import { compileQueries } from './declaration.mjs';
 import { readCkanRefreshComparison } from './refresh.mjs';
 import { inspectCkanMerchantPackage } from './publisher/release.mjs';
 import { CKAN_SOURCE_LOCATIONS_SCHEMA, ckanWorkspaceMember } from './source-locations.mjs';
+import { validateDcatState, validateDcatWorkspaceFiles } from './dcat-workspace.mjs';
+import { dcatSemanticSummary } from './dcat-semantic.mjs';
+
+import { validateCkanCapturePlans, validateCkanCapturePlanFiles } from './capture-plans.mjs';
+import { validateCkanRemoteState, validateCkanRemoteFiles, ckanRemoteSummary } from './remote-workspace.mjs';
 
 export const CKAN_WORKSPACE_ARCHIVE_SCHEMA = 'stellar-forge.ckan-workspace-archive.v1';
 export const CKAN_WORKSPACE_RECEIVE_SCHEMA = 'stellar-forge.ckan-workspace-receive.v1';
@@ -23,7 +28,7 @@ const HASH = /^[a-f0-9]{64}$/;
 const UUID = /^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/;
 const RELEASE_ID = /^[a-z0-9][a-z0-9_-]{0,63}$/;
 const ROOTS = new Set(['editions', 'sources', 'publications', 'datasets', 'merchant-packages',
-  'buyer-requests', 'seller-releases', 'transfers', 'refreshes']);
+  'buyer-requests', 'seller-releases', 'transfers', 'refreshes', 'dcat', 'remote', 'capture-plans']);
 const INTERNAL = new Set(['publisher.lock', '.ckan-receive.json', 'workspace-archives', 'workspace-incoming']);
 const PATH_KEYS = new Set(['directory', 'file', 'out', 'path', 'sourceFile', 'targetDirectory', 'root', 'packageDirectory']);
 const exists = async path => { try { return await lstat(path); } catch (error) { if (error.code === 'ENOENT') return null; throw error; } };
@@ -48,6 +53,9 @@ function projectState(value) {
       ids.add(item.id);
     }
   }
+  validateDcatState(value.dcat);
+  validateCkanRemoteState(value.remote);
+  validateCkanCapturePlans(value.capturePlans, value);
   if (value.operation?.state === 'RUNNING') throw fault('CKAN_PROJECT_BUSY', 'Finish the current project operation before exporting its snapshot.', 409);
   return value;
 }
@@ -150,7 +158,21 @@ async function quiesce(directory, state) {
   } catch (error) { for (const finish of close.reverse()) await finish(); throw error; }
 }
 function summary(state) {
-  return { catalogOrigin: state.catalogOrigin, projectCreatedAt: state.createdAt,
+  return { catalogOrigin: state.catalogOrigin, projectCreatedAt: state.createdAt, sourceKind: state.sourceKind ?? 'ckan',
+    ...(state.remote ? { remote: ckanRemoteSummary(state.remote) } : {}),
+    ...(state.capturePlans ? { capturePlans: structuredClone(state.capturePlans) } : {}),
+    ...(state.dcat ? { dcat: { schema: state.dcat.schema, activeReleaseId: state.dcat.activeReleaseId,
+      ...(state.dcat.semantic ? { semantic: dcatSemanticSummary(state.dcat) } : {}),
+      catalogs: state.dcat.catalogs.map(({ id, sha256, bytes, profile }) => ({ id, sha256, bytes, profile })),
+      reviews: state.dcat.reviews.map(({ id, sourceId, comparisonId, candidateId, status, reportSha256, candidateSha256, reviewSha256 }) =>
+        ({ id, sourceId, comparisonId, candidateId, status, reportSha256, candidateSha256, reviewSha256 })),
+      releases: state.dcat.releases.map(({ id, reviewId, previousReleaseId, restoredFromReleaseId, sha256, reviewSha256 }) =>
+        ({ id, reviewId, previousReleaseId, restoredFromReleaseId, sha256, reviewSha256 })),
+      sources: (state.dcat.sources ?? []).map(({ id, sourceSha256, enabled, latestCatalogId, latestAcquisitionId, nextCheckAt, retryNotBefore, versions }) =>
+        ({ id, sourceSha256, enabled, latestCatalogId, latestAcquisitionId, nextCheckAt, retryNotBefore,
+          versions: versions.map(({ sourceSha256 }) => sourceSha256) })),
+      acquisitions: (state.dcat.acquisitions ?? []).map(({ id, sourceId, sourceSha256, status, catalogId, receiptSha256, responseSha256 }) =>
+        ({ id, sourceId, sourceSha256, status, catalogId, receiptSha256, responseSha256 })) } } : {}),
     editions: state.editions.map(item => ({ id: item.id, state: item.state, manifestSha256: item.manifestSha256 ?? null })),
     sources: state.sources.map(item => ({ id: item.id, editionId: item.editionId, sha256: item.sha256, semanticReview: item.semanticReview ?? null })),
     publications: state.publications.map(item => ({ id: item.id, sourceId: item.sourceId, planId: item.planId,
@@ -181,6 +203,9 @@ export async function createCkanWorkspaceArchive({ directory, out, workbenchByte
     const rawState = workbenchBytes ?? await readPrivate(join(directory, 'workbench.json'), 16777216);
     if (!Buffer.isBuffer(rawState)) throw fault('CKAN_ARCHIVE_STATE_INVALID');
     const state = projectState(JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(rawState)));
+    await validateDcatWorkspaceFiles(directory, state.dcat);
+    await validateCkanRemoteFiles(directory, state.remote);
+    await validateCkanCapturePlanFiles(directory, state.capturePlans, state);
     stores = await quiesce(directory, state);
     const items = await inventory(directory, rawState, budget, signal);
     const manifest = { schema: CKAN_WORKSPACE_ARCHIVE_SCHEMA, createdAt: stamp(),
@@ -393,6 +418,11 @@ async function relocate(root, archive, history, signal) {
       initial.createdAt !== archive.manifest.source.projectCreatedAt || initial.catalogOrigin !== archive.manifest.source.catalogOrigin)
     throw fault('CKAN_RECEIVE_PROJECT_CHANGED');
   const state = rebase(initial, archive.manifest.source.directory, root), rewritten = [];
+  // Semantic paths are relative and historical native values are immutable evidence.
+  if (initial.dcat?.semantic) state.dcat.semantic = initial.dcat.semantic;
+  await validateDcatWorkspaceFiles(root, state.dcat);
+  await validateCkanRemoteFiles(root, state.remote);
+  await validateCkanCapturePlanFiles(root, state.capturePlans, state);
   const locations = { schema: CKAN_SOURCE_LOCATIONS_SCHEMA, projectCreatedAt: initial.createdAt,
     catalogOrigin: initial.catalogOrigin, sources: [] };
   const originals = new Map(archive.manifest.files.map(file => [file.path, file])), sourceConfigs = new Map();

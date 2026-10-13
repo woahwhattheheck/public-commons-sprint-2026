@@ -811,20 +811,33 @@ class Ensembles:
             atomic_json(path, result)
             return result
 
-    def run(self, key, continue_on_error=True):
+    def run(self, key, continue_on_error=True, *, member_ids=None):
         plan, directory = self._directory(key)
+        selected_members = plan["members"]
+        if member_ids is not None:
+            if (not isinstance(member_ids, (list, tuple)) or not member_ids
+                    or any(not isinstance(value, str) for value in member_ids)
+                    or len(member_ids) != len(set(member_ids))):
+                raise ValueError("Choose distinct original native ensemble member IDs")
+            available = {member["id"] for member in plan["members"]}
+            if not set(member_ids).issubset(available):
+                raise ValueError("Choose members of this retained native ensemble")
+            selected_members = [member for member in plan["members"] if member["id"] in member_ids]
         directory.mkdir(parents=True, exist_ok=True)
         with held(directory / ".execute.lock", blocking=False):
             state_path = directory / "state.json"
             state = read_json(state_path) if state_path.exists() else {"created_at": now()}
+            retained_errors = ([] if member_ids is None else
+                               [error for error in state.get("errors", [])
+                                if error.get("member_id") not in member_ids])
             state.update(schema="upstate.ensemble-state/v1", ensemble_id=key, state="running",
                          started_at=state.get("started_at", now()), updated_at=now(),
-                         errors=[], comparisons=state.get("comparisons", {}))
+                         errors=retained_errors, comparisons=state.get("comparisons", {}))
             state.pop("completed_at", None)
             state.pop("execution_error", None)
             atomic_json(state_path, state)
             try:
-                for member in plan["members"]:
+                for member in selected_members:
                     for selected in member["runs"]:
                         state.update(active={"member_id": member["id"], "profile_id": member["profile_id"],
                                              "scenario_id": selected["scenario_id"], "run_id": selected["run_id"]},

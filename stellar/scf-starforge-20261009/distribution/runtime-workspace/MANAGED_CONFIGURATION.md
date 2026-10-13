@@ -6,7 +6,7 @@ Open **Managed releases → Configuration files and editions** in the original R
 
 Each file has a separate entered draft in the current browser window. Editing one file and opening another keeps both complete drafts, their original reviewed file digests and any submitted requests. **Entered files in this window** reopens them. Reopening the same browser window and Runtime server restores that shelf. **Download entered drafts** exports every retained file, original comparison, pending request and earlier failed request. Keep that private file with the corresponding host configuration.
 
-The old single-file browser draft is received once into its individual file entry; its original storage record remains intact. Browser storage failure is reported while the visible entered text remains available. Closing a browser window can remove its session storage; download entered drafts before moving to another window or host.
+The old single-file browser draft is received once into its individual file entry. The new entry retains the exact original legacy record before the unchanged old slot is retired; a changed old slot is preserved for its own receiving. Browser storage failure is reported while the visible entered text remains available. Closing a browser window can remove its session storage; download entered drafts before moving to another window or host.
 
 **Compare with current file** reads the actual native file and displays both complete texts and the changed line span. It leaves the entered draft and its reviewed digest unchanged. A native edit made since the draft was opened makes the original save fail its digest comparison.
 

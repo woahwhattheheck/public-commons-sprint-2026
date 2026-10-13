@@ -115,6 +115,101 @@ function stationInput(station) {
  * navigation.body is the untouched DM flowline collection returned from the
  * declared origin WQP feature; no feature-order or nearest-other-edge inference.
  */
+
+function polygonInventory(geometry,label,{allowEmpty=false}={}) {
+  check(geometry && ["Polygon","MultiPolygon"].includes(geometry.type),"Expected original polygon geometry: "+label);
+  const polygons=geometry.type==="Polygon"?[geometry.coordinates]:geometry.coordinates;
+  check(Array.isArray(polygons)&&(allowEmpty||polygons.length>0),"Empty original basin: "+label);
+  let vertices=0,rings=0,holes=0;const orientations=[],all=[];
+  for(const polygon of polygons){
+    check(Array.isArray(polygon)&&polygon.length>0,"A polygon must retain its outer ring: "+label);
+    holes+=Math.max(0,polygon.length-1);
+    for(let j=0;j<polygon.length;j++){
+      const ring=polygon[j];check(Array.isArray(ring)&&ring.length>=4,"Retain complete closed basin rings: "+label);
+      const xy=ring.map((p,i)=>point(p,label+" ring coordinate "+i));
+      check(nodeKey(xy[0])===nodeKey(xy.at(-1)),"Original basin ring is not closed: "+label);
+      let twice=0;for(let i=1;i<xy.length;i++)twice+=xy[i-1][0]*xy[i][1]-xy[i][0]*xy[i-1][1];
+      orientations.push({ring_index:rings,position:j===0?"outer":"hole",coordinate_order:twice>0?"counterclockwise":twice<0?"clockwise":"degenerate"});
+      rings++;vertices+=ring.length;all.push(...xy);
+    }
+  }
+  return {polygon_count:polygons.length,ring_count:rings,hole_count:holes,vertex_count:vertices,
+    bbox:all.length?[Math.min(...all.map(p=>p[0])),Math.min(...all.map(p=>p[1])),Math.max(...all.map(p=>p[0])),Math.max(...all.map(p=>p[1]))]:null,ring_orientations:orientations};
+}
+function equalSource(a,b) {return a.path===b.path&&a.sha256===b.sha256&&a.bytes===b.bytes;}
+function catchmentContext(input,result) {
+  if(!input.catchments){check(!input.catchment_analysis,"A native catchment result requires its original basin sources.");return result;}
+  check(Array.isArray(input.catchments)&&input.catchments.length===result.stations.length,"Retain one original basin response for every study station.");
+  const seen=new Set();
+  const catchments=input.catchments.map(packet=>{
+    const station=result.stations.find(s=>s.station_id===packet.station_id);
+    check(station&&!seen.has(station.station_id),"Unknown or repeated station catchment.");seen.add(station.station_id);
+    const original=features(packet,station.station_id+" whole catchment");
+    check(original.length>0,"An original catchment collection is empty.");
+    const inventory=original.map((feature,i)=>{
+      check(feature?.type==="Feature","Retain original basin GeoJSON features.");
+      return polygonInventory(feature.geometry,station.station_id+"/"+i);
+    });
+    const coordinates=inventory.map(x=>x.bbox);
+    return {station_id:station.station_id,comid:station.indexed_comid,source:source(packet.source,"whole catchment"),
+      features:copy(original),feature_count:original.length,
+      polygon_count:inventory.reduce((n,r)=>n+r.polygon_count,0),ring_count:inventory.reduce((n,r)=>n+r.ring_count,0),
+      hole_count:inventory.reduce((n,r)=>n+r.hole_count,0),vertex_count:inventory.reduce((n,r)=>n+r.vertex_count,0),
+      bbox:[Math.min(...coordinates.map(x=>x[0])),Math.min(...coordinates.map(x=>x[1])),
+        Math.max(...coordinates.map(x=>x[2])),Math.max(...coordinates.map(x=>x[3]))],
+      ring_inventory:inventory,scope:"Original whole contributing catchment for the indexed NLDI reach; splitCatchment=false"};
+  });
+  catchments.sort((a,b)=>result.stations.findIndex(s=>s.station_id===a.station_id)-result.stations.findIndex(s=>s.station_id===b.station_id));
+  result.catchments=catchments;
+  result.sources=[...new Map([...result.sources,...catchments.map(c=>c.source)].map(s=>[s.path,s])).values()];
+  result.methods.catchments="Original full-catchment Polygon/MultiPolygon rings remain unchanged. Outlet reach catchments are whole; these polygons are not clipped at the monitoring point, regional model domain, South Carolina mask or utility support.";
+  if(!input.catchment_analysis)return result;
+  const packet=input.catchment_analysis,native=packet.body,ref=source(packet.source,"native catchment analysis");
+  check(native?.schema==="upstate.four-station-catchment-analysis/v1"&&native.measurement_crs==="EPSG:5070","Use the retained native EPSG:5070 catchment analysis.");
+  check(Array.isArray(native.source_inputs)&&native.source_inputs.length===catchments.length,"Native catchment input census differs.");
+  for(const basin of catchments){
+    const refs=native.source_inputs.filter(s=>s.station_id===basin.station_id);
+    check(refs.length===1&&String(refs[0].comid)===basin.comid&&equalSource(refs[0],basin.source),"Native catchment source identity differs: "+basin.station_id);
+  }
+  const binding=native.network_binding;
+  check(binding&&equalSource(binding.source||{},result.navigation.source),"Native catchment result has different original downstream network.");
+  const ordered=result.stations.slice().sort((a,b)=>a.distance_from_origin_m-b.distance_from_origin_m);
+  check(ordered.every(s=>s.position_status==="located_on_declared_reach"),"Native catchment order needs resolved original station positions.");
+  check(JSON.stringify(binding.station_order)===JSON.stringify(ordered.map(s=>s.station_id))&&
+    Array.isArray(binding.ordered_station_comids)&&JSON.stringify(binding.ordered_station_comids.map(String))===JSON.stringify(ordered.map(s=>s.indexed_comid)),
+    "Native catchment station order or COMIDs differ.");
+  check(Array.isArray(binding.ordered_reach_comids)&&JSON.stringify(binding.ordered_reach_comids.map(String))===JSON.stringify(result.reaches.slice().sort((a,b)=>a.order-b.order).map(r=>r.comid)),
+    "Native catchment topology differs from the retained original mainstem.");
+  check(Array.isArray(binding.station_sources)&&binding.station_sources.length===ordered.length,"Native indexed station source census differs.");
+  for(const station of ordered){const refs=binding.station_sources.filter(s=>s.station_id===station.station_id);
+    check(refs.length===1&&String(refs[0].comid)===station.indexed_comid&&equalSource(refs[0],station.indexed_source),"Native indexed station source differs.");}
+  check(Array.isArray(native.stations)&&native.stations.length===ordered.length&&
+    new Set(native.stations.map(s=>s.station_id)).size===ordered.length,"Native station area census differs.");
+  for(const station of ordered){const row=native.stations.find(s=>s.station_id===station.station_id);check(row&&number(row.area_m2)&&row.area_m2>=0,"Invalid native catchment area.");}
+  check(Array.isArray(native.pairs)&&native.pairs.length===ordered.length-1,"Native consecutive catchment pair census differs.");
+  for(let i=1;i<ordered.length;i++){
+    const rows=native.pairs.filter(p=>p.upstream_station_id===ordered[i-1].station_id&&p.downstream_station_id===ordered[i].station_id);
+    check(rows.length===1,"Native incremental catchments differ from the original downstream order.");
+    for(const field of ["upstream_outside_downstream_m2","incremental_area_m2","intersection_area_m2"])
+      check(number(rows[0][field])&&rows[0][field]>=0,"Invalid native catchment measure: "+field);
+  }
+  check(native.incremental_geojson?.type==="FeatureCollection"&&Array.isArray(native.incremental_geojson.features),"Retain native incremental GeoJSON.");
+  const increments=native.incremental_geojson.features;
+  check(increments.length===native.pairs.length&&new Set(increments.map(f=>f.properties?.id)).size===increments.length,"Incremental feature identities differ.");
+  const incrementPairs=new Set();
+  for(const feature of increments){
+    const p=feature.properties||{},pair=native.pairs.find(r=>r.upstream_station_id===p.upstream_station_id&&r.downstream_station_id===p.downstream_station_id);
+    check(feature.type==="Feature"&&typeof p.id==="string"&&p.id&&pair,"Incremental polygon has no original station-pair binding.");
+    const pairKey=p.upstream_station_id+"→"+p.downstream_station_id;
+    check(!incrementPairs.has(pairKey),"Repeated native incremental station pair.");incrementPairs.add(pairKey);
+    if(feature.geometry)polygonInventory(feature.geometry,"native incremental catchment");
+    else check(pair.incremental_area_m2===0,"A positive native increment needs its original difference geometry.");
+  }
+  result.catchment_native={...copy(native),source:ref};
+  result.methods.catchment_area="Native pyproj/Shapely computation in EPSG:5070; actual polygon intersections and differences preserve source-bound station order. Any upstream-outside-downstream area is retained as a geometric residual, not hidden by scalar area subtraction.";
+  return result;
+}
+
 export function analyzeStationNetwork(input) {
   check(input?.navigation?.mode==="DM","This analysis requires original downstream-mainstem (DM) navigation.");
   check(number(input.navigation.distance_km)&&input.navigation.distance_km>0,"Retain the requested navigation distance.");
@@ -206,7 +301,7 @@ export function analyzeStationNetwork(input) {
     ...stations.flatMap(s=>[s.original_source,s.indexed_source,s.hydrolocation_source]),
     input.navigation.source,...(input.upstream?[input.upstream.source]:[])
   ].map(s=>[s.path,s])).values()].map(s=>copy(s));
-  return {
+  const result = {
     schema:"upstate.four-station-hydrologic-context/v1",title:"Three and Twenty Creek — station network context",
     captured_at:input.captured_at||"2026-10-13",
     navigation:{mode:"DM",origin_station_id:origin.station_id,origin_comid:origin.indexed_comid,
@@ -237,6 +332,7 @@ export function analyzeStationNetwork(input) {
       {title:"USGS NLDI basin and hydrolocation",uri:"https://api.water.usgs.gov/docs/nldi/basin/"}
     ]
   };
+  return catchmentContext(input,result);
 }
 export function rowsToCsv(rows) {
   if(!rows.length)return "";

@@ -28,13 +28,21 @@ export function configurationDrafts(storage, workspaceId, homeId) {
     storage.removeItem(key(path));
   }
   function migrate() {
-    const legacy = JSON.parse(storage.getItem('starforge-managed-config-' + workspaceId + '-' + homeId) ?? 'null');
-    if (legacy?.homeId === homeId && typeof legacy.path === 'string' && typeof legacy.draftContent === 'string' && !read(legacy.path)) {
-      write({ schema: 'stellar-forge.managed-configuration-draft.v1', workspaceId, homeId, path: legacy.path,
+    const legacyKey = 'starforge-managed-config-' + workspaceId + '-' + homeId;
+    const encoded = storage.getItem(legacyKey), legacy = JSON.parse(encoded ?? 'null');
+    if (legacy?.homeId !== homeId || typeof legacy.path !== 'string' || typeof legacy.draftContent !== 'string') return;
+    const existing = read(legacy.path);
+    const next = existing ? { ...existing, legacySources: [...new Set([...(existing.legacySources ?? []), encoded])] } :
+      { schema: 'stellar-forge.managed-configuration-draft.v1', workspaceId, homeId, path: legacy.path,
         base: { homeId, path: legacy.path, exists: legacy.exists ?? legacy.sha256 !== null,
           sha256: legacy.sha256, content: legacy.content ?? '', bytes: legacy.bytes ?? 0 },
-        content: legacy.draftContent, pending: null, migrated: true });
-    }
+        content: legacy.draftContent, pending: null, migrated: true, legacySources: [encoded] };
+    write(next);
+    // Retain every old byte in the new per-file record before retiring the
+    // matching old slot. A changed original slot is never removed.
+    if (JSON.stringify(read(legacy.path)) !== JSON.stringify(next))
+      throw new Error('The received per-file legacy draft did not reopen exactly.');
+    if (storage.getItem(legacyKey) === encoded) storage.removeItem(legacyKey);
   }
   return { read, write, list, remove, migrate };
 }

@@ -62,6 +62,7 @@ export function createManagedConfigurationDesk({ element, api, message, error })
   }
   async function openFile(path, fresh = false) {
     const scope = { epoch, workspaceId, homeId }, sequence = ++fileEpoch;
+    busy = false; selected = null; state();
     historyEpoch++; restoring = null; cursor = null;
     q('comparison').replaceChildren(); q('history').replaceChildren(); q('edition').replaceChildren(); button('more').hidden = true;
     const held = !fresh && drafts.read(path);

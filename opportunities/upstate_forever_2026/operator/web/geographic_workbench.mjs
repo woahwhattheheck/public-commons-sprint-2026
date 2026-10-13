@@ -1,5 +1,6 @@
 /** Geographic source/assumption workflow on the existing native source desk. */
 import {createSourceWorkbench} from "./source_workbench.mjs";
+import {allocationMarkup} from "./geographic_allocation.mjs";
 
 const esc = value => String(value ?? "").replace(/[&<>"']/g, x => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[x]));
 const canonical = value => Array.isArray(value) ? "["+value.map(canonical).join(",")+"]" :
@@ -21,7 +22,7 @@ export function readGeographicForm(form) {
 }
 
 export function createGeographicWorkbench(host) {
-  let container=null,workspace=null,version=0,catalog=null,preview=null,previewKey=null,previewBusy=false,abort=null,openedCase=null,choiceRevision=0,importGeneration=0,caseGeneration=0,topologyTimer=null;
+  let container=null,workspace=null,version=0,catalog=null,preview=null,previewKey=null,previewBusy=false,abort=null,openedCase=null,choiceRevision=0,importGeneration=0,caseGeneration=0,topologyTimer=null,allocationGeneration=0,allocationResult=null,allocationChoice={},activeAllocationId=null;
   const active=(key,own)=>container&&workspace===key&&version===own&&host.getWorkspace()===key;
   const body=()=>readGeographicForm(container?.querySelector("[data-sp-form]"));
   const status=(message,error=false)=>{const node=container?.querySelector("[data-geo-notice]");if(node){node.textContent=message;node.classList.toggle("geo-error",error);}};
@@ -150,17 +151,58 @@ export function createGeographicWorkbench(host) {
     catch(error){if(active(key,own))status(error.message,true);}
     finally{if(active(key,own))previewBusy=false;}
   }
+  function renderAllocation(){
+    const target=container?.querySelector("[data-geo-allocation-body]");
+    if(!target||!allocationResult)return;
+    const rendered=allocationMarkup(allocationResult,allocationChoice);
+    allocationChoice={scope:rendered.selection.scope,group:rendered.selection.group,region:rendered.selection.region,physicalClass:rendered.selection.physicalClass};
+    target.innerHTML=rendered.html;
+  }
+  async function loadAllocation(id){
+    if(!openedCase?.case)return;
+    const key=workspace,own=version,caseId=openedCase.case.id,caseOwn=caseGeneration,generation=++allocationGeneration;
+    activeAllocationId=id;allocationResult=null;
+    const target=container.querySelector("[data-geo-allocation-body]");
+    if(target)target.innerHTML='<p role="status">Opening the saved local allocation…</p>';
+    try{
+      const result=await read("allocation",{case_id:caseId,allocation_id:id},key);
+      if(!active(key,own)||caseGeneration!==caseOwn||allocationGeneration!==generation||openedCase?.case.id!==caseId)return;
+      if(result.case_id!==caseId||result.allocation_id!==id)throw new Error("The returned allocation belongs to a different saved case.");
+      allocationResult=result;renderAllocation();
+    }catch(error){
+      if(active(key,own)&&caseGeneration===caseOwn&&allocationGeneration===generation){
+        const current=container.querySelector("[data-geo-allocation-body]");
+        if(current)current.innerHTML='<p class="geo-error" role="alert">'+esc(error.message)+'</p>';
+      }
+    }
+  }
+  function allocationSection(result){
+    const editions=list(result.allocation_editions);
+    const controls=editions.length?'<label>Saved allocation edition<select data-geo-allocation-edition>'+
+      editions.map(x=>'<option value="'+esc(x.id)+'">'+esc(x.created_at)+" · "+esc(x.region_count)+' regions</option>').join("")+'</select></label>'+
+      '<button type="button" data-geo-allocation-refresh>Reload this allocation</button>':"";
+    return '<section class="geo-allocation"><h3>Local restoration and control</h3><p>Inspect the actual changed land inside each original watershed, utility footprint and quantity scope.</p>'+
+      '<div class="geo-allocation-controls">'+controls+'<button type="button" data-geo-allocation-refresh-case>Refresh saved results</button></div>'+
+      '<div data-geo-allocation-body>'+(editions.length?'<p role="status">Opening the saved local allocation…</p>':
+      '<p>The saved geographic case has no completed allocation report yet. Its existing native receiving course will publish these results here after the original scenario outputs are complete.</p>')+'</div></section>';
+  }
   async function openCase(id){
     const key=workspace,own=version,generation=++caseGeneration;
+    allocationGeneration++;allocationResult=null;activeAllocationId=null;
+    const pendingDetail=container.querySelector("[data-geo-case-detail]");
+    pendingDetail.innerHTML='<p role="status">Opening the saved geographic case…</p>';pendingDetail.hidden=false;
     let result;
     try {result=await read("case",{case_id:id},key);}
-    catch(error){if(active(key,own)&&generation===caseGeneration)status(error.message,true);return;}
-    if(!active(key,own)||generation!==caseGeneration)return;openedCase=result;
+    catch(error){if(active(key,own)&&generation===caseGeneration){status(error.message,true);pendingDetail.innerHTML='<p class="geo-error" role="alert">'+esc(error.message)+'</p>';}return;}
+    if(!active(key,own)||generation!==caseGeneration)return;
+    if(result.case?.id!==id){pendingDetail.innerHTML='<p class="geo-error" role="alert">The returned case differs from the saved selection.</p>';return;}
+    openedCase=result;allocationChoice={};
     const target=container.querySelector("[data-geo-case-detail]");
     target.innerHTML='<h3>'+esc(result.case.selection.title)+'</h3><p>The full original selection, input receipts and declared assumptions are available below.</p>'+
       '<div class="geo-actions">'+list(result._downloads).filter(f=>String(f.url).startsWith("/api/file/")).map(f=>'<a href="'+esc(f.url+(f.url.includes("?")?"&":"?")+"download=1")+'" download>'+esc(f.label||f.filename)+'</a>').join("")+'</div>'+
-      '<details><summary>Complete prepared case</summary><pre>'+esc(JSON.stringify(result.case,null,2))+'</pre></details>';
+      '<details><summary>Complete prepared case</summary><pre>'+esc(JSON.stringify(result.case,null,2))+'</pre></details>'+allocationSection(result);
     target.hidden=false;target.scrollIntoView({block:"start"});
+    if(list(result.allocation_editions).length)await loadAllocation(result.allocation_editions[0].id);
   }
   async function click(event){
     const button=event.target.closest("button");if(!button||!container?.contains(button))return;
@@ -170,6 +212,8 @@ export function createGeographicWorkbench(host) {
         const payload=body();download({schema:"upstate.geographic-operator-selection/v1",workspace_key:workspace,project_id:catalog?.project_id,payload,preview:previewKey===canonical(payload)?preview:null},"geographic-selection.json");status("Complete source choices and current matching preview downloaded.");return;
       }
       if(button.dataset.geoCase)return await openCase(button.dataset.geoCase);
+      if(button.hasAttribute("data-geo-allocation-refresh-case")&&openedCase?.case)return await openCase(openedCase.case.id);
+      if(button.hasAttribute("data-geo-allocation-refresh")&&activeAllocationId)return await loadAllocation(activeAllocationId);
       if(button.dataset.geoEdit){const c=list(catalog?.native_cases).find(c=>c.id===button.dataset.geoEdit);if(!c)throw new Error("Refresh the saved geographic cases.");applyPayload(payloadFromSelection(c.selection));container.querySelector("[data-sp-form]").scrollIntoView({block:"start"});return;}
       if(button.dataset.geoItem)return host.openItem(button.dataset.geoItem,button.dataset.geoId);
       if(button.hasAttribute("data-geo-recovery")){
@@ -189,6 +233,20 @@ export function createGeographicWorkbench(host) {
       '<div data-geo-original></div><section class="geo-saved"><h2>Saved geographic studies</h2><div data-geo-cases></div><div data-geo-case-detail hidden></div></section></div>';
     abort=new AbortController();const signal=abort.signal;
     target.addEventListener("click",click,{signal});
+    target.addEventListener("change",event=>{
+      const node=event.target;
+      if(node.hasAttribute("data-geo-allocation-edition")){allocationChoice={};void loadAllocation(node.value);return;}
+      const names={scope:"scope",group:"group",region:"region",physical:"physicalClass"};
+      for(const [attribute,key] of Object.entries(names)){
+        if(node.hasAttribute("data-geo-allocation-"+attribute)&&allocationResult){
+          allocationChoice[key]=node.value;
+          if(key==="scope"||key==="group")allocationChoice.region=null;
+          renderAllocation();
+          container?.querySelector("[data-geo-allocation-"+attribute+"]")?.focus();
+          return;
+        }
+      }
+    },{signal});
     target.querySelector("[data-geo-filter]").addEventListener("input",renderTopology,{signal});
     const choicesChanged=event=>{
       if(event.target.matches("[data-sp-input],[data-sp-option],[data-sp-title]")){
@@ -217,6 +275,6 @@ export function createGeographicWorkbench(host) {
     original.mount(target.querySelector("[data-geo-original]"),current);renderPreview();renderCases();
   }
   function update(current=host.getState()){if(!container||workspace!==host.getWorkspace())return;original.update(current);renderCases();renderTopology();}
-  function suspend(){clearTimeout(topologyTimer);topologyTimer=null;importGeneration++;caseGeneration++;original.suspend();abort?.abort();abort=null;container=null;workspace=null;catalog=null;openedCase=null;version++;previewBusy=false;}
+  function suspend(){clearTimeout(topologyTimer);topologyTimer=null;importGeneration++;caseGeneration++;allocationGeneration++;allocationResult=null;allocationChoice={};activeAllocationId=null;original.suspend();abort?.abort();abort=null;container=null;workspace=null;catalog=null;openedCase=null;version++;previewBusy=false;}
   return {mount,update,suspend};
 }

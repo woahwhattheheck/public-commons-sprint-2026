@@ -1,4 +1,5 @@
 // MIT. Tab-scoped setup drafts for the original Applications Review/Save workflow.
+import { createApplicationSetupLibrary } from './application-setup-library.mjs';
 const SCHEMA = 'stellar-forge.application-setup-drafts.v1';
 const node = (tag, text, className) => {
   const value = document.createElement(tag);
@@ -28,7 +29,7 @@ function validEntry(value, workspaceId) {
 }
 export function createApplicationDrafts({
   root, controls, getWorkspaceId, getCatalog, getApplications, getRuntimes, selectedRuntime,
-  renderSettings, reviewButton, onContext, onChange, onNotice,
+  renderSettings, reviewButton, onContext, onChange, onNotice, readApplications, onOpen = () => {},
 }) {
   const { label, runtime, kind, settings } = controls;
   const caches = new Map();
@@ -59,6 +60,7 @@ export function createApplicationDrafts({
     const app = getApplications().find(value => value.id === current?.applicationId);
     if (!app || app.error) return;
     current.baseRevision = app.revision; current.baseline = baseline(app, current.kind);
+    current.applicationBaseline = applicationSource(app);
     onChange(); capture(); renderStatus();
     onNotice('Your draft fields are retained against the current saved revision. Review the application to inspect their current inputs.');
   });
@@ -78,7 +80,12 @@ export function createApplicationDrafts({
   const inspect = node('details'), inspectText = node('pre');
   inspect.append(node('summary', 'Inspect the complete retained setup'), inspectText);
   buttons.append(resume, discard, download, keep, reload, useFields);
-  root.replaceChildren(status, pickerLabel, buttons, inspect);
+  const setupRoot = node('div');
+  root.replaceChildren(status, pickerLabel, buttons, inspect, setupRoot);
+  const setups = createApplicationSetupLibrary({
+    root: setupRoot, getWorkspaceId, getCatalog, getApplications, getRuntimes, readApplications,
+    getFamily, receiveFamily, matches, applyReconciled, onNotice,
+  });
 
   function cache(workspaceId = getWorkspaceId()) {
     if (!string(workspaceId) || !workspaceId) return null;
@@ -113,6 +120,10 @@ export function createApplicationDrafts({
       value.error = 'Browser draft storage is unavailable. Your current fields remain in this page; download the current draft before closing it.';
       return false;
     }
+  }
+  function applicationSource(app) {
+    return app && !app.error ? { id: app.id, revision: app.revision, kind: app.kind,
+      label: app.label, runtimeId: app.runtimeId, settings: copy(app.settings ?? {}) } : null;
   }
   function type() { return getCatalog().find(value => value.id === current?.kind); }
   function availableApplication() { return getApplications().find(value => value.id === current?.applicationId); }
@@ -165,6 +176,10 @@ export function createApplicationDrafts({
   function capture() {
     if (!current || changing) return;
     current.form = readForm();
+    const app = availableApplication();
+    if (!current.applicationBaseline && app && !app.error && app.revision === current.baseRevision)
+      current.applicationBaseline = applicationSource(app);
+    current.sourceCatalog ??= copy(type() ?? null);
     const value = cache(current.workspaceId);
     if (!value) return;
     if (!same(current.form, current.baseline)) {
@@ -188,7 +203,9 @@ export function createApplicationDrafts({
     const workspaceId = getWorkspaceId();
     return { workspaceId, contextId, id: contextId + '/' + selectedKind,
       applicationId: app?.id ?? null, kind: selectedKind, baseRevision: app?.revision ?? null,
-      baseline: copy(original), form: copy(original), updatedAt: new Date().toISOString() };
+      baseline: copy(original), form: copy(original), updatedAt: new Date().toISOString(),
+      applicationBaseline: applicationSource(app),
+      sourceCatalog: copy(getCatalog().find(value => value.id === selectedKind) ?? null) };
   }
   function edit(app, { kind: selectedKind, runtimeId, label: displayName, values, restore = true, initial = false } = {}) {
     capture();
@@ -197,7 +214,7 @@ export function createApplicationDrafts({
       .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))[0] : null;
     selectedKind ??= previous?.kind ?? app?.kind ?? kind.value ?? getCatalog()[0]?.id;
     if (!selectedKind) selectedKind = getCatalog()[0]?.id ?? '';
-    const contextId = app ? 'application:' + app.id : 'new:' + crypto.randomUUID();
+    const contextId = app ? 'application:' + app.id + (restore ? '' : ':opened:' + crypto.randomUUID()) : 'new:' + crypto.randomUUID();
     const original = baseline(app, selectedKind);
     if (!app) original.runtimeId = runtimeId ?? selectedRuntime() ?? getRuntimes().find(value => value.phase === 'READY')?.id ?? '';
     const retained = restore && app ? [...owner.entries.values()]
@@ -226,6 +243,8 @@ export function createApplicationDrafts({
     const app = availableApplication(), original = baseline(app, selectedKind);
     const meta = newMeta(app ?? null, selectedKind, previous.contextId, original);
     meta.applicationId = previous.applicationId; meta.baseRevision = previous.baseRevision;
+    meta.applicationBaseline = copy(previous.applicationBaseline ?? null);
+    if (previous.portableHistory) meta.portableHistory = copy(previous.portableHistory);
     const form = { ...original, label: inherited.label, runtimeId: inherited.runtimeId, kind: selectedKind };
     if (!app) meta.baseline.kind = previous.kind;
     mount(meta, form);
@@ -247,12 +266,13 @@ export function createApplicationDrafts({
     const entries = [...(owner?.entries.values() ?? [])].sort((a, b) =>
       b.updatedAt.localeCompare(a.updatedAt) || a.id.localeCompare(b.id));
     const selected = picker.value;
-    const signature = JSON.stringify(entries.map(value => [value.id, value.form.label, value.kind, value.applicationId]));
+    const signature = JSON.stringify(entries.map(value => [value.id, value.form.label, value.kind, value.applicationId, value.retainedReason]));
     if (picker.dataset.signature !== signature) {
       picker.dataset.signature = signature;
       picker.replaceChildren(new Option(entries.length ? 'Choose a retained draft' : 'No retained setup drafts', ''),
         ...entries.map(value => new Option((value.form.label || getCatalog().find(item => item.id === value.kind)?.title || value.kind) +
-          ' · ' + (value.applicationId ? 'saved application' : 'new application') + ' · ' + value.kind, value.id)));
+          ' · ' + (value.applicationId ? 'saved application' : 'new application') + ' · ' + value.kind +
+          (value.retainedReason ? ' · ' + value.retainedReason : ''), value.id)));
       picker.value = entries.some(value => value.id === selected) ? selected : entries.some(value => value.id === current?.id) ? current.id : '';
     }
     resume.disabled = !picker.value; discard.disabled = !current; download.disabled = !current;
@@ -261,7 +281,7 @@ export function createApplicationDrafts({
     if (owner?.error) parts.push(owner.error);
     else if (dirty) parts.push('Setup draft kept in this tab. It will return after a refresh or a change of view.');
     else parts.push(current?.applicationId ? 'These fields match the saved application.' : 'Choose a tool and enter its setup.');
-    if (issue.changed) parts.push('This application has a newer saved revision. Keep your fields against that revision or load its saved settings before review.');
+    if (issue.changed) parts.push('This application has a newer saved revision. Compare the saved changes below, keep your complete draft, or load the current settings before review.');
     if (issue.missingApplication) parts.push('The saved application is currently unavailable. Its full draft is retained here.');
     if (issue.missingType) parts.push('The selected tool is absent from the current catalog. Its full draft is retained here.');
     if (issue.missingRuntime) parts.push('Choose a ready runtime for this setup.');
@@ -272,6 +292,7 @@ export function createApplicationDrafts({
     useFields.hidden = !issue.obsolete?.length || issue.missingType;
     reviewButton.disabled = !!(issue.changed || issue.missingApplication || issue.missingType || issue.missingRuntime || issue.obsolete?.length);
     inspectText.textContent = current ? JSON.stringify(current, null, 2) : '';
+    setups.setAvailable(!!current, !!issue.changed && !issue.missingApplication);
   }
   function refresh() {
     const workspaceId = getWorkspaceId(), owner = cache(workspaceId);
@@ -301,7 +322,7 @@ export function createApplicationDrafts({
     } else if (catalogSignature !== JSON.stringify(type() ?? null)) {
       capture(); mount(copy(current), current.form, true);
     }
-    renderStatus();
+    renderStatus(); setups.refresh();
   }
   function snapshot() {
     capture(); return current ? copy(current) : null;
@@ -327,6 +348,7 @@ export function createApplicationDrafts({
         // The returned native revision belongs to this save. Later typed fields
         // continue the same application, including its first successful save.
         const next = { ...copy(retained), applicationId: submitted.id, baseRevision: submitted.revision,
+          applicationBaseline: null,
           baseline: retained.kind === ticket.kind ? copy(ticket.form) : { ...copy(retained.baseline),
             label: submitted.label, runtimeId: submitted.runtimeId, kind: submitted.kind } };
         value.entries.set(id, next);
@@ -341,6 +363,84 @@ export function createApplicationDrafts({
       current = null; label.value = ''; onContext(null);
     }
     renderStatus(); return selected;
+  }
+  function getFamily() {
+    capture();
+    if (!current) return null;
+    const entries = [...(cache(current.workspaceId)?.entries.values() ?? [])]
+      .filter(entry => entry.contextId === current.contextId && entry.id !== current.id).map(copy);
+    entries.push(copy(current));
+    return { schema: SCHEMA, workspaceId: current.workspaceId, active: current.id, entries };
+  }
+  function receiveFamily(family, document, asNew) {
+    capture();
+    const workspaceId = getWorkspaceId(), owner = cache(workspaceId);
+    if (!owner) throw new Error('Open a workspace before receiving a setup.');
+    if (!asNew && family.workspaceId !== workspaceId) throw new Error('Receive a copy for this workspace.');
+    const active = family.entries.find(entry => entry.id === family.active);
+    if (!active) throw new Error('The setup has no selected draft.');
+    const contextId = (asNew || !active.applicationId ? 'new:' : 'application:' + active.applicationId + ':setup:') + crypto.randomUUID();
+    const now = new Date().toISOString();
+    let selected;
+    for (const source of family.entries) {
+      const entry = copy(source);
+      entry.workspaceId = workspaceId; entry.contextId = contextId; entry.id = contextId + '/' + entry.kind;
+      entry.updatedAt = now;
+      entry.portableHistory = { catalog: copy(document.catalog), receivedFrom: copy(document.receivedFrom),
+        reconciliations: copy(document.reconciliations), title: document.title ?? document.configuration.label };
+      if (asNew) {
+        entry.applicationId = null; entry.baseRevision = null; entry.applicationBaseline = null;
+        entry.form.runtimeId = '';
+        entry.baseline = { label: '', runtimeId: '', kind: '', settings: {} };
+      }
+      owner.entries.set(entry.id, entry);
+      if (source.id === family.active) selected = entry;
+    }
+    owner.active = selected.id; persist(owner); mount(selected, selected.form, true); onOpen();
+  }
+  function rawConfiguration(value) {
+    const declaration = getCatalog().find(item => item.id === value.kind);
+    return { label: value.label, runtimeId: value.runtimeId, kind: value.kind,
+      settings: Object.fromEntries(Object.entries(value.settings ?? {}).map(([name, item]) => {
+        const boolean = typeof item === 'boolean' || declaration?.fields.find(field => field.name === name)?.type === 'boolean';
+        return [name, { value: boolean ? 'on' : String(item ?? ''), checked: boolean && item === true }];
+      })) };
+  }
+  function applyReconciled(ticket, document, app) {
+    if (!matches(ticket)) throw new Error('The active draft changed. Compare its current fields again.');
+    const meta = copy(current);
+    meta.kind = document.configuration.kind; meta.id = meta.contextId + '/' + meta.kind;
+    meta.baseRevision = app.revision; meta.applicationBaseline = applicationSource(app);
+    meta.baseline = rawConfiguration(app);
+    meta.portableHistory = { catalog: copy(document.catalog), receivedFrom: copy(document.receivedFrom),
+      reconciliations: copy(document.reconciliations), title: document.title ?? document.configuration.label };
+    meta.sourceCatalog = copy(getCatalog().find(value => value.id === meta.kind) ?? meta.sourceCatalog ?? null);
+    const form = rawConfiguration(document.configuration);
+    const owner = cache(current.workspaceId);
+    const retainedDestination = meta.id !== current.id ? owner?.entries.get(meta.id) : null;
+    if (retainedDestination) {
+      // Preserve original IDs for retained drafts and in-flight save tickets.
+      // The reconciled family gets its own context when another draft already
+      // occupies the destination type.
+      const retainedSource = copy(retainedDestination);
+      delete retainedSource.portableHistory;
+      const history = meta.portableHistory.reconciliations.at(-1);
+      if (history) history.retainedVariants = [...(history.retainedVariants ?? []), retainedSource];
+      const family = getFamily(), contextId = 'reconciled:' + crypto.randomUUID();
+      for (const entry of family.entries) {
+        const retained = { ...copy(entry), contextId, id: contextId + '/' + entry.kind };
+        owner.entries.set(retained.id, retained);
+      }
+      owner.entries.set(retainedDestination.id, { ...copy(retainedDestination), retainedReason: 'Before reconciliation' });
+      meta.contextId = contextId; meta.id = contextId + '/' + meta.kind;
+      persist(owner);
+    }
+    delete meta.retainedReason;
+    if (meta.id !== current.id) {
+      // Preserve the previous type as another retained variant before switching.
+      cache(current.workspaceId)?.entries.set(current.id, copy(current));
+    }
+    mount(meta, form, true); onOpen();
   }
   function downloadJSON(value, name) {
     const url = URL.createObjectURL(new Blob([JSON.stringify(value, null, 2) + '\n'], { type: 'application/json' }));
@@ -377,7 +477,7 @@ export function createApplicationDrafts({
       capture();
     },
     reset() {
-      current = null; catalogSignature = '';
+      current = null; catalogSignature = ''; setups.reset();
       delete runtime.dataset.draftSignature; delete kind.dataset.draftSignature;
       delete picker.dataset.signature; picker.replaceChildren(); status.textContent = ''; inspectText.textContent = '';
     },

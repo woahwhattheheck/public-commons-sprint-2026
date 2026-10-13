@@ -6,11 +6,16 @@ reconstructs the exact original banks and a separate complete source directory.
 Use --bank for one complete bank or its original gzip+base64 artifact envelope.
 Existing differing files are preserved; installation into a working application
 remains an explicit composition of the original source and current local edits.
+
+--carrier receives one complete JSON/gzip/Canvas source bank into a separate
+staging tree after every source hash, path and Python body passes preflight.
 """
 from __future__ import annotations
 
 import argparse
 import base64
+import ctypes
+import errno
 import gzip
 import hashlib
 import io
@@ -18,6 +23,9 @@ import json
 import os
 from pathlib import Path, PurePosixPath
 import re
+import shutil
+import stat
+import sys
 import tempfile
 
 
@@ -393,31 +401,504 @@ def receive_bank(bank_path, output, *, operation_id=None, expected_bytes=None, e
     return result
 
 
+# Complete local carrier intake. This path never installs or executes its sources.
+CARRIER_LIMIT = 512 * 1024 * 1024
+CARRIER_FILES = 10000
+SOURCE_SCHEMAS = {
+    "commons.source-bank/v1", "commons.source-text-bank/v1", "upstate.source-bank/v1",
+    "commons.source-map/1", "upstate.source-files/v1", "commons.source-files.v1",
+    "upstate.complete-application-transport/v1",
+}
+
+
+def _carrier_pairs(pairs):
+    result = {}
+    for key, value in pairs:
+        if key in result:
+            raise ValueError("Duplicate carrier JSON key: " + key)
+        result[key] = value
+    return result
+
+
+def _carrier_json(text):
+    return json.loads(_json_whitespace(text.lstrip("\ufeff")),
+                      object_pairs_hook=_carrier_pairs,
+                      parse_constant=lambda value: (_ for _ in ()).throw(
+                          ValueError("Nonfinite carrier JSON number: " + value)))
+
+
+def _carrier_size(value, label):
+    if type(value) is not int or not 0 <= value <= CARRIER_LIMIT:
+        raise ValueError("Invalid original byte length: " + label)
+    return value
+
+
+def _carrier_check(data, size, checksum, label):
+    _carrier_size(size, label)
+    if not isinstance(checksum, str) or not re.fullmatch(r"[0-9a-f]{64}", checksum):
+        raise ValueError("Expected original SHA256: " + label)
+    return checked(data, size, checksum, label)
+
+
+def _carrier_base64(value):
+    if not isinstance(value, str):
+        raise ValueError("Expected complete base64 carrier text")
+    value = re.sub(r"[ \t\r\n]", "", value)
+    if len(value) > (CARRIER_LIMIT * 4 // 3) + 4:
+        raise ValueError("Encoded carrier exceeds the source receiving limit")
+    decoded = base64.b64decode(value, validate=True)
+    if base64.b64encode(decoded).decode("ascii") != value:
+        raise ValueError("Expected canonical base64 carrier text")
+    return decoded
+
+
+def _carrier_gzip(data):
+    if data[:2] != b"\x1f\x8b":
+        raise ValueError("Expected the original gzip carrier")
+    with gzip.GzipFile(fileobj=io.BytesIO(data), mode="rb") as stream:
+        decoded = stream.read(CARRIER_LIMIT + 1)
+    if len(decoded) > CARRIER_LIMIT:
+        raise ValueError("Decoded source bank exceeds the receiving limit")
+    return decoded
+
+
+def _carrier_envelope(value):
+    schema = value.get("schema")
+    if schema not in ("commons.compressed-source-carrier/v1", "commons.artifact-base64/v1"):
+        raise ValueError("Unsupported encoded source carrier")
+    if value.get("encoding") not in ("gzip+base64", "base64"):
+        raise ValueError("Unsupported original carrier encoding")
+    if schema == "commons.compressed-source-carrier/v1" and value["encoding"] != "gzip+base64":
+        raise ValueError("The compressed source carrier needs its original gzip")
+    fields = [key for key in ("data", "content_base64") if key in value]
+    if len(fields) != 1:
+        raise ValueError("Choose one complete encoded carrier body")
+    encoded = _carrier_base64(value[fields[0]])
+    if ("gzip_bytes" in value) != ("gzip_sha256" in value):
+        raise ValueError("Retain both original gzip identity fields")
+    if "gzip_bytes" in value:
+        _carrier_check(encoded, value["gzip_bytes"], value["gzip_sha256"], "original gzip")
+    identities = []
+    for size_key, hash_key in (("bytes", "sha256"), ("original_bytes", "original_sha256"),
+                               ("decoded_bytes", "decoded_sha256")):
+        if (size_key in value) != (hash_key in value):
+            raise ValueError("Retain both original bank identity fields: " + size_key)
+        if size_key in value:
+            identities.append((value[size_key], value[hash_key]))
+    if not identities or any(pair != identities[0] for pair in identities[1:]):
+        raise ValueError("Retain one consistent complete decoded bank identity")
+    decoded = _carrier_gzip(encoded) if value["encoding"] == "gzip+base64" else encoded
+    _carrier_check(decoded, identities[0][0], identities[0][1], "original source bank")
+    if "decoded_schema" in value:
+        original = _carrier_json(decoded.decode("utf-8-sig"))
+        if not isinstance(original, dict) or value["decoded_schema"] != original.get("schema"):
+            raise ValueError("Original decoded bank schema differs")
+    for key in ("source_git_blob", "original_git_blob"):
+        if key in value:
+            actual = hashlib.sha1(b"blob " + str(len(decoded)).encode("ascii") + b"\0" + decoded).hexdigest()
+            if not isinstance(value[key], str) or value[key] != actual:
+                raise ValueError("Original source-bank Git identity differs")
+    return decoded, value
+
+def _carrier_parts(items):
+    if not items or len(items) > CARRIER_FILES:
+        raise ValueError("Choose every original source carrier part")
+    first = items[0]
+    if not isinstance(first, dict):
+        raise ValueError("Expected original numbered source part objects")
+    schema = first.get("schema")
+    conventions = {"commons.compressed-source-part/v1": 1,
+                   "commons.source-base64-part.v1": 0}
+    if schema not in conventions:
+        raise ValueError("Unsupported original source part schema")
+    start = conventions[schema]
+    total = first.get("total")
+    if type(total) is not int or not 1 <= total <= CARRIER_FILES:
+        raise ValueError("Invalid original source part total")
+    common = {key: value for key, value in first.items() if key not in ("index", "data")}
+    for item in items:
+        if (not isinstance(item, dict)
+                or item.get("schema") != schema
+                or type(item.get("index")) is not int
+                or not isinstance(item.get("data"), str)
+                or {key: value for key, value in item.items()
+                    if key not in ("index", "data")} != common):
+            raise ValueError("Original source parts have different identities")
+    ordered = sorted(items, key=lambda item: item["index"])
+    if len(ordered) != total or [item["index"] for item in ordered] != list(range(start, start + total)):
+        raise ValueError("Missing or duplicated original source carrier part")
+    carrier = {key: value for key, value in common.items() if key not in ("schema", "total")}
+    if schema == "commons.compressed-source-part/v1":
+        carrier.update(schema="commons.compressed-source-carrier/v1", encoding="gzip+base64")
+    else:
+        carrier.update(schema="commons.artifact-base64/v1", encoding="base64",
+                       bytes=first.get("decoded_bytes"), sha256=first.get("decoded_sha256"))
+    carrier["data"] = "".join(item["data"] for item in ordered)
+    return _carrier_envelope(carrier)
+
+
+def _carrier_decode(data, depth=0, expected_sha256=None):
+    """Return the exact inner JSON bytes, never a reserialized original bank."""
+    if depth > 16 or len(data) > CARRIER_LIMIT:
+        raise ValueError("Carrier nesting or bytes exceed the receiving limit")
+    if data[:2] == b"\x1f\x8b":
+        return _carrier_decode(_carrier_gzip(data), depth + 1, expected_sha256)
+    body = data.decode("utf-8-sig")
+    stripped = body.lstrip()
+    if stripped.startswith(("{", "[")):
+        value = _carrier_json(body)
+        if isinstance(value, dict) and (value.get("isError") is True or value.get("error_code") or value.get("error")):
+            raise ValueError("Saved provider response reports an error")
+        if isinstance(value, dict) and value.get("schema") in SOURCE_SCHEMAS and "files" in value:
+            if (expected_sha256 is not None and data.startswith(b"\xef\xbb\xbf")
+                    and sha(data) != expected_sha256 and sha(data[3:]) == expected_sha256):
+                return data[3:], {}
+            return data, {}
+        if isinstance(value, dict) and value.get("schema") in (
+                "commons.compressed-source-carrier/v1", "commons.artifact-base64/v1"):
+            raw, declaration = _carrier_envelope(value)
+            nested, _ = _carrier_decode(raw, depth + 1)
+            if nested != raw:
+                raise ValueError("Encoded source carrier must contain the original JSON bank directly")
+            return raw, declaration
+        if isinstance(value, list):
+            return _carrier_parts(value)
+        if not isinstance(value, dict):
+            raise ValueError("Expected a complete original source bank")
+        if value.get("isError") is True or value.get("error") or value.get("error_code"):
+            raise ValueError("Saved provider response reports an error")
+        candidates = []
+        for key in ("markdown_content", "text_content"):
+            if isinstance(value.get(key), str):
+                candidates.append(value[key].encode("utf-8"))
+        if isinstance(value.get("structuredContent"), (dict, list)):
+            candidates.append(json.dumps(value["structuredContent"], ensure_ascii=False,
+                                         allow_nan=False).encode("utf-8"))
+        content = value.get("content")
+        looks_like_payload = lambda text: (
+            text.lstrip("\ufeff \t\r\n\u00a0").startswith(("{", "["))
+            or chr(96) * 3 + "json" in text)
+        if isinstance(content, str):
+            if value.get("encoding") == "base64":
+                candidates.append(_carrier_base64(content))
+            elif looks_like_payload(content):
+                candidates.append(content.encode("utf-8"))
+        elif isinstance(content, list):
+            texts = [item["text"] for item in content if isinstance(item, dict)
+                     and item.get("type") == "text" and isinstance(item.get("text"), str)]
+            candidates.extend(text.encode("utf-8") for text in texts if looks_like_payload(text))
+        if not candidates:
+            raise ValueError("Saved provider response contains no complete source payload")
+        recovered = [_carrier_decode(candidate, depth + 1, expected_sha256) for candidate in candidates]
+        if any(item[0] != recovered[0][0] for item in recovered[1:]):
+            raise ValueError("Saved provider response contains conflicting source payloads")
+        return recovered[0]
+    fences = re.findall(r"(?m)^[ \t]*" + chr(96) * 3 +
+                        r"json[ \t]*\r?\n([\s\S]*?)^[ \t]*" + chr(96) * 3 +
+                        r"[ \t]*\r?$", body)
+    if not fences:
+        raise ValueError("Save the complete JSON source bank or all JSON parts in its Canvas")
+    items = [_carrier_json(fence) for fence in fences]
+    if all(isinstance(item, dict) and item.get("schema") in (
+            "commons.compressed-source-part/v1", "commons.source-base64-part.v1")
+           for item in items):
+        return _carrier_parts(items)
+    if len(fences) == 1:
+        fenced = fences[0].encode("utf-8")
+        # A closing Markdown fence contributes one framing newline. Remove it
+        # only when the supplied original bank hash proves that exact boundary.
+        if (expected_sha256 is not None and isinstance(items[0], dict)
+                and items[0].get("schema") in SOURCE_SCHEMAS
+                and "files" in items[0] and sha(fenced) != expected_sha256):
+            trim = 2 if fenced.endswith(b"\r\n") else 1 if fenced.endswith(b"\n") else 0
+            candidates = [fenced[:-trim]] if trim else []
+            if fenced.startswith(b"\xef\xbb\xbf"):
+                candidates.append(fenced[3:])
+                if trim:
+                    candidates.append(fenced[3:-trim])
+            matches = [candidate for candidate in candidates if sha(candidate) == expected_sha256]
+            if matches:
+                fenced = matches[0]
+        return _carrier_decode(fenced, depth + 1, expected_sha256)
+    raise ValueError("Choose one original bank or one complete numbered carrier per input")
+
+
+def _carrier_inventory(source):
+    if (not isinstance(source, dict) or source.get("schema") not in SOURCE_SCHEMAS
+            or not isinstance(source.get("files"), (dict, list))):
+        raise ValueError("Unexpected complete source-bank schema")
+    raw, metadata = source["files"], source.get("file_metadata", {})
+    if isinstance(raw, dict):
+        if raw and all(isinstance(value, dict) for value in raw.values()):
+            if metadata:
+                raise ValueError("Choose one source member metadata representation")
+            entries = [{**value, "path": name} for name, value in raw.items()]
+        else:
+            if not isinstance(metadata, dict) or set(raw) != set(metadata):
+                raise ValueError("Complete source-map metadata differs")
+            entries = [{**metadata[name], "path": name, "content": value}
+                       for name, value in raw.items()]
+    else:
+        entries = raw
+    binary = source.get("binary_files", [])
+    if not isinstance(binary, list):
+        raise ValueError("Original binary source members must be a list")
+    entries = [*entries, *binary]
+    if not 1 <= len(entries) <= CARRIER_FILES:
+        raise ValueError("Invalid complete source member count")
+    normalized, seen, modes, source_bytes = [], {}, {}, 0
+    for item in entries:
+        if not isinstance(item, dict):
+            raise ValueError("Expected a complete original source member")
+        name = item.get("path")
+        target(Path("/"), name)
+        folded = name.casefold()
+        if folded in seen:
+            raise ValueError("Repeated or aliased original source path: " + name)
+        seen[folded] = name
+        if (item.get("mode") is not None and item.get("git_mode") is not None
+                and item["mode"] != item["git_mode"]):
+            raise ValueError("Conflicting original source file modes: " + name)
+        mode = next((item[field] for field in ("mode", "git_mode")
+                     if item.get(field) is not None), "100644")
+        if mode not in ("100644", "100755"):
+            raise ValueError("Original source mode must be a regular file: " + name)
+        if "content_base64" in item:
+            data = _carrier_base64(item["content_base64"])
+            if "content" in item and (not isinstance(item["content"], str)
+                                      or item["content"].encode("utf-8") != data):
+                raise ValueError("Conflicting original source body representations: " + name)
+        elif item.get("encoding", "utf-8") == "base64":
+            data = _carrier_base64(item.get("content"))
+        elif item.get("encoding", "utf-8") in ("utf-8", "utf8") and isinstance(item.get("content"), str):
+            data = item["content"].encode("utf-8")
+        else:
+            raise ValueError("Retain the complete original member body: " + name)
+        _carrier_check(data, item.get("bytes"), item.get("sha256"), name)
+        actual_git = hashlib.sha1(b"blob " + str(len(data)).encode("ascii") + b"\0" + data).hexdigest()
+        for field in ("git_blob", "git_blob_sha", "git_sha"):
+            if item.get(field) is not None and item[field] != actual_git:
+                raise ValueError("Declared original Git body differs: " + name)
+        source_bytes += len(data)
+        if source_bytes > CARRIER_LIMIT:
+            raise ValueError("Source members exceed the receiving limit")
+        normalized.append({**item, "path": name, "bytes": len(data), "sha256": sha(data),
+                           "git_blob": actual_git, "mode": mode,
+                           "content_base64": base64.b64encode(data).decode("ascii")})
+        normalized[-1].pop("content", None)
+        normalized[-1]["encoding"] = "base64"
+        modes[name] = mode
+    for name in seen.values():
+        for parent in PurePosixPath(name).parents:
+            if str(parent) != "." and str(parent).casefold() in seen:
+                raise ValueError("A source file is also a parent directory: " + name)
+    for field, actual in (("file_count", len(normalized)), ("source_file_count", len(normalized)),
+                          ("source_bytes", source_bytes)):
+        if field in source and (type(source[field]) is not int or source[field] != actual):
+            raise ValueError("Original source-bank inventory differs: " + field)
+    bank = {**source, "schema": "commons.source-bank/v1", "files": normalized,
+            "file_count": len(normalized), "source_bytes": source_bytes}
+    bank.pop("file_metadata", None)
+    bank.pop("binary_files", None)
+    inventory = source_inventory(bank)
+    compiled = []
+    for name, data, _ in inventory:
+        if name.endswith(".py"):
+            compile(data, name, "exec", dont_inherit=True)
+            compiled.append(name)
+    return bank, inventory, modes, compiled
+
+
+def _carrier_plain_path(path):
+    path = Path(path).absolute()
+    for part in [path, *path.parents]:
+        if part.is_symlink():
+            raise ValueError("Carrier staging must not use a symlink: " + str(part))
+    return path
+
+
+def _carrier_roots(output, application, workspace):
+    output = _carrier_plain_path(output)
+    if not output.parent.is_dir():
+        raise ValueError("Create the owned staging parent before receiving sources")
+    for selected in (application, workspace):
+        protected = _carrier_plain_path(selected).resolve(strict=False)
+        if protected.exists() and not protected.is_dir():
+            raise ValueError("An existing protected application or Workspace root must be a directory")
+        resolved = output.resolve(strict=False)
+        if resolved == protected or resolved.is_relative_to(protected) or protected.is_relative_to(resolved):
+            raise ValueError("Source staging must be outside and separate from application and Workspace")
+    return output
+
+
+def _carrier_original(path):
+    path = _carrier_plain_path(path)
+    initial = path.lstat()
+    if not stat.S_ISREG(initial.st_mode):
+        raise ValueError("Choose a retained regular source carrier")
+    descriptor = os.open(path, os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0))
+    with os.fdopen(descriptor, "rb") as stream:
+        before = os.fstat(stream.fileno())
+        if not stat.S_ISREG(before.st_mode) or before.st_size > CARRIER_LIMIT:
+            raise ValueError("Choose a retained regular source carrier within the receiving limit")
+        body = stream.read(CARRIER_LIMIT + 1)
+        after = os.fstat(stream.fileno())
+    signature = lambda value: (value.st_dev, value.st_ino, value.st_size,
+                               value.st_mtime_ns, value.st_ctime_ns)
+    if (len(body) > CARRIER_LIMIT or signature(initial) != signature(before)
+            or signature(before) != signature(after)
+            or signature(after) != signature(_carrier_plain_path(path).lstat())):
+        raise ValueError("Original source carrier changed during reading")
+    return body
+
+
+def _carrier_verify(root, expected, modes):
+    root = _carrier_plain_path(root)
+    if not root.is_dir():
+        raise ValueError("Expected the original complete staging directory")
+    found = set()
+    for parent, directories, files in os.walk(root, followlinks=False):
+        for name in directories:
+            if (Path(parent) / name).is_symlink():
+                raise ValueError("A source staging directory became a symlink")
+        for name in files:
+            path = Path(parent) / name
+            relative = path.relative_to(root).as_posix()
+            if relative not in expected or _carrier_original(path) != expected[relative]:
+                raise ValueError("Source staging differs from the original bank: " + relative)
+            wanted = modes.get(relative, "100644")
+            if stat.S_IMODE(path.stat().st_mode) != (0o755 if wanted == "100755" else 0o644):
+                raise ValueError("Original source file mode differs: " + relative)
+            found.add(relative)
+    if found != set(expected):
+        raise ValueError("Source staging is missing original members")
+
+
+def _carrier_publish_directory(pending, output):
+    # Same Linux no-replace operation used by application_assembly.py.
+    libc = ctypes.CDLL(None, use_errno=True)
+    rename = getattr(libc, "renameat2", None)
+    if rename is None:
+        raise OSError(errno.ENOSYS, "Linux renameat2 is required for atomic source staging")
+    rename.argtypes = [ctypes.c_int, ctypes.c_char_p, ctypes.c_int, ctypes.c_char_p, ctypes.c_uint]
+    rename.restype = ctypes.c_int
+    if rename(-100, os.fsencode(pending), -100, os.fsencode(output), 1) != 0:
+        failure = ctypes.get_errno()
+        raise OSError(failure, os.strerror(failure), str(output))
+
+
+def receive_carrier(carrier_path, output, *, application, workspace, expected_sha256=None):
+    raw_carrier = _carrier_original(carrier_path)
+    original, declaration = _carrier_decode(raw_carrier, expected_sha256=expected_sha256)
+    if expected_sha256 is not None:
+        _carrier_check(original, len(original), expected_sha256, "selected original source bank")
+    source = _carrier_json(original.decode("utf-8"))
+    normalized, inventory, modes, compiled = _carrier_inventory(source)
+    for field, actual in (("file_count", len(inventory)),
+                          ("source_bytes", sum(len(data) for _, data, _ in inventory))):
+        if field in declaration and (type(declaration[field]) is not int or declaration[field] != actual):
+            raise ValueError("Original carrier inventory differs: " + field)
+    output = _carrier_roots(output, application, workspace)
+    normalized["original_bank"] = {"bytes": len(original), "sha256": sha(original),
+                                   "schema": source["schema"]}
+    encoded = (json.dumps(normalized, ensure_ascii=False, sort_keys=True, indent=2,
+                          allow_nan=False) + "\n").encode("utf-8")
+    if len(encoded) > CARRIER_LIMIT:
+        raise ValueError("Normalized complete source bank exceeds the receiving limit")
+    result = {"schema": "commons.source-bank-receiving/v1", "state": "complete",
+              "operation_id": source.get("operation_id") or "source-" + sha(original),
+              "directory": str(output), "source": str(output / "source"),
+              "file_count": len(inventory),
+              "source_bytes": sum(len(data) for _, data, _ in inventory),
+              "banks": [{"name": "original", "bytes": len(original),
+                         "sha256": sha(original), "files": len(inventory)}],
+              "files": [{**metadata, "mode": modes[name]} for name, _, metadata in inventory],
+              "original_bank": "banks/original.json", "source_bank": "source-bank.json",
+              "carrier": {"bytes": len(raw_carrier), "sha256": sha(raw_carrier)},
+              "python_compiled": compiled, "installation_requested": False}
+    expected = {"source/" + name: data for name, data, _ in inventory}
+    expected["banks/original.json"] = original
+    expected["source-bank.json"] = encoded
+    expected["receiving.json"] = (json.dumps(result, ensure_ascii=False, sort_keys=True,
+                                           indent=2) + "\n").encode("utf-8")
+    expected_modes = {"source/" + name: mode for name, mode in modes.items()}
+    if output.exists():
+        _carrier_verify(output, expected, expected_modes)
+        return {**result, "reused": True}
+    pending = Path(tempfile.mkdtemp(prefix=".source-carrier-", dir=output.parent))
+    try:
+        for name, data in expected.items():
+            path = target(pending, name)
+            retain(path, data)
+            path.chmod(0o755 if expected_modes.get(name) == "100755" else 0o644)
+        _carrier_verify(pending, expected, expected_modes)
+        for directory, _, _ in os.walk(pending, topdown=False):
+            descriptor = os.open(directory, os.O_RDONLY | getattr(os, "O_DIRECTORY", 0))
+            try:
+                os.fsync(descriptor)
+            finally:
+                os.close(descriptor)
+        _carrier_publish_directory(pending, output)
+        pending = None
+        descriptor = os.open(output.parent, os.O_RDONLY | getattr(os, "O_DIRECTORY", 0))
+        try:
+            os.fsync(descriptor)
+        finally:
+            os.close(descriptor)
+    finally:
+        if pending is not None:
+            shutil.rmtree(pending)
+    return {**result, "reused": False}
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     selection = parser.add_mutually_exclusive_group(required=True)
     selection.add_argument("--manifest", type=Path, help="Original multipart source-transfer manifest")
     selection.add_argument("--bank", type=Path, help="Complete source bank or gzip+base64 artifact envelope")
+    selection.add_argument("--carrier", type=Path, help="Complete local JSON/gzip bank or Canvas Markdown/provider export")
     parser.add_argument("--parts", type=Path, help="Original part JSON directory; required with --manifest")
     parser.add_argument("--output", required=True, type=Path)
     parser.add_argument("--operation", help="Existing receiving operation ID for --bank; defaults to the exact bank digest")
     parser.add_argument("--bank-bytes", type=int, help="Expected complete input-file byte count")
     parser.add_argument("--bank-sha256", help="Expected complete input-file SHA-256")
+    parser.add_argument("--application", type=Path, help="Protected existing or intended application root for --carrier")
+    parser.add_argument("--workspace", type=Path, help="Protected existing or intended Workspace root for --carrier")
+    parser.add_argument("--expect-source-sha256", help="Exact decoded original-bank SHA256 for --carrier")
     args = parser.parse_args()
+    bank_options = (args.operation, args.bank_bytes, args.bank_sha256)
+    carrier_options = (args.application, args.workspace, args.expect_source_sha256)
     if args.manifest is not None:
         if args.parts is None:
             parser.error("--manifest requires --parts")
-        if any(value is not None for value in (args.operation, args.bank_bytes, args.bank_sha256)):
+        if any(value is not None for value in bank_options):
             parser.error("--operation, --bank-bytes and --bank-sha256 belong to --bank")
+        if any(value is not None for value in carrier_options):
+            parser.error("--application, --workspace and --expect-source-sha256 belong to --carrier")
         result = receive(args.manifest, args.parts, args.output)
-    else:
+    elif args.bank is not None:
         if args.parts is not None:
             parser.error("--parts belongs to --manifest")
+        if any(value is not None for value in carrier_options):
+            parser.error("--application, --workspace and --expect-source-sha256 belong to --carrier")
         result = receive_bank(args.bank, args.output, operation_id=args.operation,
                               expected_bytes=args.bank_bytes, expected_sha256=args.bank_sha256)
+    else:
+        if args.parts is not None or any(value is not None for value in bank_options):
+            parser.error("--carrier does not use --parts or the --bank options")
+        if args.application is None or args.workspace is None:
+            parser.error("--carrier requires --application and --workspace protected roots")
+        try:
+            result = receive_carrier(args.carrier, args.output, application=args.application,
+                                     workspace=args.workspace, expected_sha256=args.expect_source_sha256)
+        except (OSError, ValueError, TypeError, KeyError, SyntaxError, UnicodeError, EOFError) as error:
+            print(json.dumps({"state": "error", "type": type(error).__name__,
+                              "message": str(error)}, ensure_ascii=False), file=sys.stderr)
+            return 1
     print(json.dumps({key: value for key, value in result.items() if key != "files"},
                      ensure_ascii=False, sort_keys=True, indent=2))
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())

@@ -1,0 +1,6 @@
+Semantic Interoperability Operator
+Copyright 2026 Token Junkie Labs contributors
+
+The private record, artifact and recovery foundation is adapted from the authored Collaboration Operator at Commons revision 098776d03b609bec3cbecfc8c1c0793ed1aa629c, including the completed portable SQLite image fix in blob 9246c1e6c5ffeeb1b75c4105ac3e6fa4142c80fa. That source is Apache-2.0 licensed; the included license is unchanged.
+
+RDFLib, pySHACL and PyLD are separately installed maintained dependencies. Their licenses remain with their distributions. Included original reference vocabularies and shapes retain their individual upstream notices and source pins in reference/SOURCE-MANIFEST.json; they are not relicensed by this project's Apache-2.0 license.
