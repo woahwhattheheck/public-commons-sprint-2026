@@ -63,3 +63,9 @@ ordinary backup and restore workflow carries execution history and existing
 completed results. Saved programme selections retain their original application
 source contract; adopt a new application through the programme's normal copied
 selection workflow while reusing the retained native run identities.
+
+Storage observations carry their own `storage_recorded_at` timestamp. A failure
+retains the measurement taken before reserve release in `error.storage_at_failure`;
+the attempt also records storage after releasing that capacity. Allocation uses a
+private staging name until its identity header and capacity have been flushed, so
+continuation can recover a process killed while that reserve was still being written.

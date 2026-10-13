@@ -107,7 +107,7 @@ function sourceName(collection,id){return state?.data.sources.find(x=>x.id===col
 function sumCell(artifact){return artifact?number(artifact.sum)+' <small>'+esc(artifact.sum_units||artifact.units||'')+'</small>':'—';}
 function render(){
   if(!state)return;
-  for(const node of $('[data-view]'))node.setAttribute('aria-current',node.dataset.view===view?'page':'false');
+  for(const node of $$('[data-view]'))node.setAttribute('aria-current',node.dataset.view===view?'page':'false');
   if(view==='experiments'){extensions.detach();programmes.detach();spatialWorkspace.suspend();community.detach();customerReviews.detach();experiments.mount($('#content'),state);return;}
   experiments.detach();
   if(extensions.render(view,$('#content'),state)){community.detach();customerReviews.detach();spatialWorkspace.suspend();if(typeof programmes!=='undefined')programmes.detach();return;}
@@ -432,17 +432,17 @@ function bindNativeModelFields(){
  const control=form.elements.namedItem('models');
  const update=()=>{
   const chosen=control.value.split(',');
-  for(const node of $('[data-native-models]',form)){
+  for(const node of $$('[data-native-models]',form)){
    const active=node.dataset.nativeModels.split(' ').some(name=>chosen.includes(name));
    node.hidden=!active;
-   for(const input of $('input,select,textarea,button',node))input.disabled=!active;
+   for(const input of $$('input,select,textarea,button',node))input.disabled=!active;
   }
  };
  control.addEventListener('change',update);update();
 }
 function fullNativeRun(row){
  return row?.state==='complete'&&nativeModels(row.selection).length===2&&
-  ['ndr','sdr'].every(name=>row.stages?.[name])&&
+  ['ndr','sdr'].every(name=>Object.hasOwn(row.stages||row.stage_summary||{},name))&&
   ['nitrogen_export','phosphorus_export','sediment_export'].every(name=>row.artifacts?.[name]);
 }
 function nativeOutputCell(row,model,artifact){
@@ -553,15 +553,18 @@ function runForm(){
   form.elements.namedItem('grid').addEventListener('change',update);form.elements.namedItem('profile').addEventListener('change',update);update();
  });
 }
+function completedModelStage(row,model){
+ const stage=row?.stages?.[model]||row?.stage_summary?.[model];
+ return stage?.completed_at&&(stage.file_count??Object.keys(stage.files||{}).length)>0?stage:null;
+}
 function completedModelSources(target,model){
  const rows=(state?.data?.runs||[]).filter(row=>nativeModels(row.selection).includes(model)&&
-  !['running','queued'].includes(row.state)&&row.stages?.[model]?.completed_at&&
-  Object.keys(row.stages[model].files||{}).length);
+  !['running','queued'].includes(row.state)&&completedModelStage(row,model));
  const rank=row=>(row.selection.scenario_id===target.selection.scenario_id?4:0)+
   (row.selection.grid_id===target.selection.grid_id?2:0)+
   (row.selection.profile_id===target.selection.profile_id?1:0);
  return rows.slice().sort((a,b)=>rank(b)-rank(a)||
-  String(b.stages[model].completed_at).localeCompare(String(a.stages[model].completed_at))||
+  String(completedModelStage(b,model).completed_at).localeCompare(String(completedModelStage(a,model).completed_at))||
   a.id.localeCompare(b.id));
 }
 function canSelectCompletedModels(row){
@@ -620,7 +623,7 @@ async function completedModelsForm(id){
     return '<tr><td>'+esc(model.toUpperCase())+'</td><td>'+esc(named('scenarios',row.selection.scenario_id))+
      '</td><td>'+esc(named('grids',row.selection.grid_id))+'</td><td>'+
      esc(named('profiles',row.selection.profile_id))+'</td><td>'+
-     esc(when(row.stages[model].completed_at))+'</td></tr>';
+     esc(when(completedModelStage(row,model)?.completed_at))+'</td></tr>';
    });
    $('#completed-model-selection').innerHTML=table(['Model','Scenario','Grid','Parameters','Completed'],rows);
   };

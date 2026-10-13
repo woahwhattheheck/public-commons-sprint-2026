@@ -4,7 +4,7 @@ TokenJunkieLabs. This source follows the public repository's MIT license; origin
 
 Needs expert review: interpret native model parameters, land-cover alternatives, planning weights and source-water priorities with the project's domain specialists. The saved cohort retains the original inputs, model scope, units and geographic coverage for that review.
 
-This command launches the fixed-scale planning analysis and the existing native watershed decision report from the same retained source collection and the same ordered baseline and alternative runs. It produces a joined ARJWS/Pioneer comparison table while preserving each producer's original outputs.
+This command launches the fixed-scale planning analysis and the existing native watershed decision report from the same retained source collection and selected original runs. A single completed regional native reference produces ARJWS/Pioneer annual export totals, yields, source-area priorities and planning-weight sensitivity. Adding actual alternative runs produces the complete common-support scenario comparison. Each producer retains its original outputs.
 
 The entry point is `model/utility_scenario_cohort.py`. The source belongs alongside the current `model/scenario_analysis.py` and S1's `model/scenario_decisions.py`. S1's viewer remains at `operator/web/scenario_decisions.html`.
 
@@ -25,13 +25,30 @@ The native SYSTEM field omits the SC prefix retained in the PWS identifier. Sele
 
 The two published buffer levels form separate rank groups. Within each group, the existing analysis ranks mean fixed-cap planning priority; the original source polygons determine area. The full reporting area receives its own physical summary and has no utility rank.
 
+## Select the original regional study
+
+These four fixed receptor polygons belong to ARJWS and Pioneer in South Carolina. Use their actual Upper Savannah or South Carolina scientific workspace, its imported original protection source, and native runs on that study's retained grid. Before either producer starts, the runner intersects every original polygon with the selected run's retained reporting geometry and requires positive overlap with at least one of them. A reporting area outside all four source-water polygons receives a concrete selection correction. A regional subarea may cover only some polygons; the remaining original polygons stay visible with zero intersection and null outcomes.
+
+The original Gura programme is a separate Kenyan watershed with its own publisher inputs and 300 m grid. Its completed runs feed the general scenario analysis and S1 report using Gura's original reporting geometry. The regional utility workflow continues with the South Carolina source collection and the actual regional grid; Upper Savannah's existing selections use 30 m cells. Original study, grid and run IDs remain bound throughout receiving, calculation and reopening.
+
 ## Run the complete calculation
 
 First use the existing `source_tools/prepare_public_water.py` command to import the current utility source package and the original 2,389,556-byte four-polygon response. Its returned source_collection_id is the collection for this command; the importer also saves that value in public-water-preparation.json. The exact protection source ID is scdes-arjws-prwd-swpa-20261012. The source role is `SOURCE_WATER_PROTECTION_AREAS`; the runner finds the actual imported entry by role. An explicit `--source-id` selects an entry if the collection contains more than one edition.
 
-Select the actual completed baseline and alternatives from the current scientific workspace. Each selected run must complete its declared native models under InVEST 3.20.0. The current model-selection contract resolves the intersection of completed annual-mass outputs across every selected run. The runner verifies the corresponding native export and stream descriptors, annual-mass units, common grid and model edition. NDR-only cohorts compare nitrogen and phosphorus; SDR-only cohorts compare sediment; combined cohorts compare every pollutant shared by all runs. Repeat `--scenario-run` for every selected alternative.
+Select the actual completed regional reference run from that South Carolina scientific workspace. Alternatives are optional; when selected, the first run remains their baseline. Each selected run must complete its declared native models under InVEST 3.20.0. The current model-selection contract resolves the intersection of completed annual-mass outputs across every selected run. The runner verifies the corresponding native export and stream descriptors, annual-mass units, common grid and model edition. NDR-only cohorts compare nitrogen and phosphorus; SDR-only cohorts compare sediment; combined cohorts compare every pollutant shared by all runs. Repeat `--scenario-run` for every selected alternative. Omit that option to calculate the first completed native reference immediately. This path requires the current S1 v4 producer, which accepts one run and writes its native annual-totals.csv.
 
-The variables in this shell example contain actual values from that workspace and the source importer:
+For the first completed reference, the actual workspace, imported source collection and completed run are sufficient:
+
+```sh
+python -B -m model.utility_scenario_cohort \
+  --workspace "$UPSTATE_STUDY_WORKSPACE" \
+  --source-collection "$UPSTATE_PUBLIC_WATER_COLLECTION_ID" \
+  --baseline-run "$UPSTATE_BASELINE_RUN_ID"
+```
+
+The resulting `report_kind` is `reference_totals`. It preserves the native per-source-area mass, yield, valid coverage, structural stream counts and selected planning priorities. The existing analysis and native report provide the physical and planning products on the same original source geography.
+
+To add the complete alternative cohort, use actual values from that same workspace:
 
 ```sh
 python -B -m model.utility_scenario_cohort \
@@ -58,16 +75,16 @@ The command creates `utility-scenario-cohorts/<id>/` with:
 | --- | --- |
 | analysis-selection.json | Exact baseline, alternatives, source-bound regions and planning weights passed to the fixed-cap analysis |
 | decisions-selection.json | Same ordered run cohort and matched original feature selections passed to the native watershed producer |
-| utility-comparisons.csv | Joined physical change, selected planning priority, rank changes and weight sensitivity for each region/run/pollutant |
+| utility-comparisons.csv | Complete reference totals or scenario changes, native coverage, selected planning priority and weight sensitivity for each region/run/pollutant |
 | cohort.json | Complete source bindings, selections, operation state, joined rows and both products' artifact references |
 
 The original products remain in `analyses/<analysis-id>/` and `scenario-decisions/<decision-id>/`. The cohort JSON links all original output descriptors, including the fixed-cap maps, native decision viewer, source geography and both producers' original tables. The CLI result adds a separate descriptor for cohort.json.
 
-The CSV includes the full reporting area and all four utility regions for the resolved shared pollutants. `comparison_pollutants` retains the exact artifact-key intersection, and partial S1 selections name the matching native pollutants explicitly. Physical columns use the existing native decision producer's annual masses, baseline changes and common valid support. Planning columns use the existing fixed-cap analysis's selected mean priority, mean-score change, rank change and sensitivity across declared weights. Each physical pollutant and the planning score retain their own common-support counts and coverage fractions.
+The CSV includes the full reporting area and all four utility regions for the resolved shared pollutants. `comparison_pollutants` retains the exact artifact-key intersection, and partial S1 selections name the matching native pollutants explicitly. Physical columns use the existing native decision producer's annual masses, yields, baseline changes and common valid support. The record identifies `reference_totals` for one run and `scenario_comparison` for a cohort with alternatives. Native coverage columns retain each run's all-valid mass, valid area/cell count, structural stream cells, unexpected missing cells, unknown stream cells and original complete-support flag. Common-support counts remain separate from each run's own support. Planning columns use the existing fixed-cap analysis's selected mean priority, mean-score change, rank change and sensitivity across declared weights. Each physical pollutant and the planning score retain their own common-support counts and coverage fractions.
 
 Both producer selections use identical region IDs. The runner compares their per-pollutant common valid cell counts before joining. An actual disagreement names the region, run, pollutant and both counts; completed producer outputs remain retained for direct correction and resumption. Native float64 rate aggregation and original float32 annual-mass rasters preserve their own rounding.
 
-A utility polygon with zero intersection with the selected reporting area remains represented with zero area and null physical/priority results. Its original source binding is retained. The cohort does not replace that polygon with a nearby or broader area.
+After positive overlap is established for the regional cohort, any individual utility polygon with zero intersection with its reporting area remains represented with zero area and null physical/priority results. Its original source binding is retained. A study with zero overlap across all four original polygons must select the correct regional run before calculation.
 
 ## Reading the comparison
 
@@ -90,7 +107,7 @@ requested = {
     "title": "Utility scenario priorities",
     "source_collection_id": actual_imported_collection_id,
     "baseline_run_id": actual_baseline_run_id,
-    "scenario_run_ids": actual_alternative_run_ids,
+    "scenario_run_ids": actual_alternative_run_ids,  # [] for the first native reference
     "weight_grid": 4,
     "planning": existing_planning_selection,
 }
@@ -117,13 +134,14 @@ The desk uses the existing workspace selector, original authenticated HTTP trans
 
 ### Select, calculate and reopen
 
-1. Open Utility cohorts and select the imported protection-area source edition.
-2. Select a completed baseline and at least one alternative on the same native grid. The run list shows the pollutants available from each actual run. Same-profile choices appear by default; the explicit parameter-profile option reveals the other compatible runs.
+1. Open Utility cohorts in the original South Carolina scientific workspace and select the imported protection-area source edition.
+2. Select a completed reference run. It can be calculated immediately; optional completed alternatives on the same native grid turn the result into a scenario comparison. The run list shows the pollutants available from each actual run. Same-profile alternatives appear by default; the parameter-profile option reveals other compatible runs.
 3. Enter the planning weights for the resolved shared outputs. Choose the baseline percentile or retained physical caps. The optional quarter-step grid declares every available planning ratio.
-4. Use Inspect source areas to read the exact four retained polygons, their original areas and their reporting intersections. The source geometry keeps its native intake, SYSTEM and BUFFER_FT identity.
-5. Build the utility cohort. The original operation queue retains the request and its resume path. The desk preserves the same operation ID when a transport failure causes the browser to retry an unchanged submission.
-6. Open the retained cohort. Filter by source area, actual run or available pollutant. Physical outcomes show annual masses, signed changes, avoided export, percentage state, common area and common coverage. Planning priorities show selected scores, rank changes and sensitivity ranges, with each source-area/run pair appearing once.
-7. Download the complete joined CSV, exact selections, full cohort JSON and the original analysis/native-report products from the retained product groups.
+4. Use Inspect source areas to read the exact four retained polygons, their original areas, reporting intersections and count of overlapping source areas. At least one original polygon must overlap the selected study. The source geometry keeps its native intake, SYSTEM and BUFFER_FT identity.
+5. Choose Build reference totals or Build scenario comparison, as shown for the current run selection. The original operation queue retains the request and its resume path. The desk preserves the same operation ID when a transport failure causes the browser to retry an unchanged submission.
+6. Open the retained cohort. Filter by source area, actual run or available pollutant. A reference displays annual export, yield per valid hectare, valid area and coverage. Scenario comparisons display baseline/current masses, signed changes, avoided export, percentage state and common support. Planning priorities display selected scores, ranks and sensitivity ranges, with change columns when alternatives are present. Each source-area/run pair appears once in the priority view.
+7. Select Native coverage to inspect selected cells, native valid cells, structural streams, unexpected missing and unknown stream cells, own valid hectares/mass and common native support. Those counts come from the original S1 report; the view retains pollutant-specific support and the original complete-support flag.
+8. Download the complete joined CSV, exact selections, full cohort JSON and the original analysis/native-report products from the retained product groups.
 
 The result table pages 100 retained rows at a time. Paging affects only the browser transport; the CSV and full cohort JSON contain the complete calculation. Priority display deduplicates the pollutant-repeated planning rows before paging, since each planning score belongs to its source area and run.
 
@@ -145,7 +163,9 @@ The provider returns a compact task result and lightweight overview summaries. F
 | /api/utility-cohorts/preview | POST | Exact source-bound selection preparation and original polygon areas |
 | /api/utility-cohorts/status | GET | Lightweight retained phase for one cohort |
 | /api/utility-cohorts/cohort | GET | Reopen source bindings, normalization, product references and verified download links |
-| /api/utility-cohorts/rows | GET | Filtered physical or deduplicated priority rows |
+| /api/utility-cohorts/rows | GET | Filtered physical, native coverage or deduplicated priority rows |
+
+The rows endpoint accepts `view=physical`, `view=priority` or `view=coverage`. Reference totals and full comparisons use the same retained source/run/pollutant filters and downloads. Historical cohorts retain their saved values; when a historical joined row predates the additional native-coverage fields, its original native report remains available in the product downloads.
 
 GET calls use the original workspace query parameter. The preview POST body contains workspace and selection. Queued actions use the original /api/actions endpoint with workspace, action, payload.selection and operation_id.
 

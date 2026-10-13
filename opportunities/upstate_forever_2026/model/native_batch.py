@@ -19,6 +19,40 @@ PROGRESS_SCHEMA = "upstate.native-model-progress/v1"
 HANDOFF_SCHEMA = "upstate.native-model-receiving/v1"
 NAME = re.compile(r"[A-Za-z0-9][A-Za-z0-9._-]{0,63}\Z")
 
+def load_receiving(path, workspace_override=None):
+    original = Path(path).read_bytes()
+    value = json.loads(original)
+    if value.get("schema") != "upstate.native-model-receiving/v1":
+        raise ValueError("Select the actual original native-model receiving result")
+    for field in ("workspace_id", "source_collection_id", "grid_id", "profiles", "scenarios",
+                  "runs", "comparison_id", "delivery_selection"):
+        if field not in value:
+            raise ValueError("The original native handoff lacks " + field)
+    workspace = Workspace(workspace_override or value["workspace_path"])
+    if workspace.project["id"] != value["workspace_id"]:
+        raise ValueError("The original native workspace identity differs")
+    overview = workspace.overview()
+    workspace._get("sources", value["source_collection_id"])
+    workspace.get_grid(value["grid_id"])
+    for kind in ("profiles", "scenarios"):
+        for key in value[kind].values():
+            workspace._get(kind, key)
+    if len(set(value["runs"].values())) < 2:
+        raise ValueError("Complete the original baseline and at least one alternative")
+    for key in value["runs"].values():
+        run = workspace.inspect_run(key)
+        if run["state"] != "complete" or run["selection"]["grid_id"] != value["grid_id"]:
+            raise ValueError("The selected original model run is incomplete or uses another grid")
+    if not any(x["id"] == value["comparison_id"] for x in overview["comparisons"]):
+        raise ValueError("The original paired run comparison is absent")
+    selected = value["delivery_selection"]
+    if selected["baseline_run_id"] not in value["runs"].values():
+        raise ValueError("The delivery baseline differs from the native handoff")
+    if not selected["scenario_run_ids"] or any(x not in value["runs"].values() for x in selected["scenario_run_ids"]):
+        raise ValueError("The delivery alternatives differ from the native handoff")
+    return value, workspace, original
+
+
 def _named(value, label):
     if not isinstance(value, dict) or not value:
         raise ValueError(label + " must be a nonempty named object")
@@ -299,10 +333,24 @@ def main(argv=None):
                         help="The exact immutable application source selected by the native caller")
     parser.add_argument("--handoff", type=Path,
                         help="Also retain the completed native selection at this original receiving path")
+    parser.add_argument("--complete-delivery", type=Path,
+                        help="Continue native runs into seven map families and a received editable project")
+    parser.add_argument("--receive-directory", type=Path,
+                        help="New receiving directory; defaults beneath the complete-delivery output")
     args = parser.parse_args(argv)
+    if args.receive_directory and not args.complete_delivery:
+        parser.error("--receive-directory requires --complete-delivery")
     try:
         result = execute(args.workspace, args.plan, source_reference=args.source_reference,
                          handoff_path=args.handoff)
+        if args.complete_delivery:
+            from .regional_delivery import complete_delivery
+            original = (args.handoff or Path(result["workspace_path"]) / "native-model" /
+                        result["native_selection_id"] / "receiving.json")
+            completed = complete_delivery(original, output=args.complete_delivery,
+                workspace_path=args.workspace, receive_directory=args.receive_directory)
+            print(json.dumps(completed, indent=2, ensure_ascii=False, sort_keys=True, allow_nan=False))
+            return 0
         print(json.dumps({"schema": result["schema"], "workspace_id": result["workspace_id"],
                           "native_selection_id": result["native_selection_id"], "runs": result["runs"],
                           "comparison_id": result["comparison_id"],

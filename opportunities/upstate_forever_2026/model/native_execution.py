@@ -17,6 +17,7 @@ from .reuse import verify_stage
 
 RESERVE_HEADER = b"upstate.native-recovery-reserve/v1\n"
 RESERVE_NAME = ".native-recovery-reserve"
+RESERVE_PENDING_NAME = RESERVE_NAME + ".allocating"
 
 
 def storage_status(directory):
@@ -75,28 +76,41 @@ class NativeExecution:
         self.directory = Path(directory)
         self.path = self.directory / "run.json"
         self.reserve = self.directory / RESERVE_NAME
+        self.pending_reserve = self.directory / RESERVE_PENDING_NAME
         self.state = state
         self.reserve_owned = False
+        self.pending_owned = False
 
     def _release(self):
-        if self.reserve_owned:
-            self.reserve.unlink(missing_ok=True)
-            self.reserve_owned = False
+        for flag, path in (("reserve_owned", self.reserve),
+                           ("pending_owned", self.pending_reserve)):
+            if getattr(self, flag):
+                path.unlink(missing_ok=True)
+                setattr(self, flag, False)
+
+    def _discard_reserve(self, path, *, incomplete=False):
+        if not (path.exists() or path.is_symlink()):
+            return
+        if path.is_symlink() or not path.is_file():
+            raise ValueError("Native recovery reserve is not an original regular file")
+        with path.open("rb") as original:
+            header = original.read(len(RESERVE_HEADER))
+        if header != RESERVE_HEADER and not (incomplete and RESERVE_HEADER.startswith(header)):
+            raise ValueError("Native recovery reserve has an unrecognized identity")
+        path.unlink()
 
     def _allocate(self):
-        # A reserve surviving an interrupted process is released only after the
-        # original run lock has been reacquired, and only with our exact header.
-        if self.reserve.exists() or self.reserve.is_symlink():
-            if self.reserve.is_symlink() or not self.reserve.is_file():
-                raise ValueError("Native recovery reserve is not an original regular file")
-            with self.reserve.open("rb") as original:
-                if original.read(len(RESERVE_HEADER)) != RESERVE_HEADER:
-                    raise ValueError("Native recovery reserve has an unrecognized identity")
-            self.reserve.unlink()
+        # The original run lock also protects these two private reserve names.
+        # Only the staging name may have an incomplete header after a killed
+        # allocation; a published reserve must retain its complete identity.
+        self._discard_reserve(self.pending_reserve, incomplete=True)
+        self.pending_owned = False
+        self._discard_reserve(self.reserve)
+        self.reserve_owned = False
         size = max(256 * 1024, 2 * len(canonical(self.state)) + 65536)
         flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW
-        fd = os.open(self.reserve, flags, 0o600)
-        self.reserve_owned = True
+        fd = os.open(self.pending_reserve, flags, 0o600)
+        self.pending_owned = True
         with os.fdopen(fd, "wb") as out:
             out.write(RESERVE_HEADER)
             left = size - len(RESERVE_HEADER)
@@ -107,7 +121,15 @@ class NativeExecution:
                 left -= len(body)
             out.flush()
             os.fsync(out.fileno())
+        self.reserve_owned = True
+        os.replace(self.pending_reserve, self.reserve)
+        self.pending_owned = False
         self.state["execution"]["recovery_reserve_capacity_bytes"] = size
+
+    def _record_storage(self):
+        current = self.state["execution"]
+        current["storage"] = storage_status(self.directory)
+        current["storage_recorded_at"] = now()
 
     def __enter__(self):
         previous = self.state.get("execution")
@@ -135,6 +157,7 @@ class NativeExecution:
         self.state.pop("validation", None)
         try:
             self._allocate()
+            self._record_storage()
             self.save()
         except BaseException as exc:
             self.fail(exc)
@@ -157,16 +180,18 @@ class NativeExecution:
                 current.pop(field, None)
             else:
                 current[field] = value
-        current["storage"] = storage_status(self.directory)
+        self._record_storage()
         self.save()
         logging.getLogger(__name__).info("Native run %s: %s%s%s", self.state["id"], name,
             " " + model if model else "", " " + artifact if artifact else "")
 
     def finish(self):
         current = self.state["execution"]
-        current.update(state="complete", phase="complete", completed_at=now())
+        stamp = now()
+        current.update(state="complete", phase="complete", phase_started_at=stamp, completed_at=stamp)
         current.pop("model", None)
         current.pop("artifact", None)
+        self._record_storage()
         self.save()
 
     def fail(self, exc):
@@ -177,13 +202,14 @@ class NativeExecution:
             if name in self.state["execution"]:
                 failure[name] = self.state["execution"][name]
         failure["storage_at_failure"] = storage_status(self.directory)
+        failure["storage_recorded_at"] = now()
         try:
             self._release()
         except OSError as release_error:
             failure["reserve_release_error"] = _error(release_error)
         self.state.update(state="failed", updated_at=now(), error=failure)
-        self.state["execution"].update(state="failed", failed_at=now(),
-                                       storage=storage_status(self.directory))
+        self.state["execution"].update(state="failed", failed_at=now())
+        self._record_storage()
         self.state["model_scope"] = run_scope(self.state)
         try:
             self.save()
