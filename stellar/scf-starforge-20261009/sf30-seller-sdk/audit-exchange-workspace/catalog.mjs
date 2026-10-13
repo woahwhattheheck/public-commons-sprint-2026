@@ -1678,7 +1678,179 @@ export const tools = [
       "destructiveHint": false,
       "openWorldHint": false
     }
+  },
+{
+  "action": "recipient.queue.get",
+  "name": "audit_recipient_queue_get",
+  "description": "Read a complete saved recipient queue and all preceding editions.",
+  "mutation": false,
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "exportId": {
+        "type": "string"
+      }
+    },
+    "required": [
+      "exportId"
+    ],
+    "additionalProperties": false
+  },
+  "annotations": {
+    "readOnlyHint": true,
+    "idempotentHint": true,
+    "destructiveHint": false,
+    "openWorldHint": false
   }
+},
+{
+  "action": "recipient.queue.inspect",
+  "name": "audit_recipient_queue_inspect",
+  "description": "Inspect exact original accepted review requests and custody for a retained return.",
+  "mutation": false,
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "returnId": {
+        "type": "string"
+      }
+    },
+    "required": [
+      "returnId"
+    ],
+    "additionalProperties": false
+  },
+  "annotations": {
+    "readOnlyHint": true,
+    "idempotentHint": true,
+    "destructiveHint": false,
+    "openWorldHint": false
+  }
+},
+{
+  "action": "recipient.queue.save",
+  "name": "audit_recipient_queue_save",
+  "description": "Save one complete ordered queue edition under the original author request and version; earlier selections remain retained.",
+  "mutation": true,
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "requestId": {
+        "type": "string"
+      },
+      "expectedVersion": {
+        "type": "integer",
+        "minimum": 0
+      },
+      "actor": {
+        "type": "string"
+      },
+      "note": {
+        "type": "string"
+      },
+      "queueId": {
+        "type": "string"
+      },
+      "expectedQueueSha256": {},
+      "title": {
+        "type": "string"
+      },
+      "entries": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "returnId": {
+              "type": "string"
+            },
+            "returnSha256": {
+              "type": "string"
+            },
+            "note": {
+              "type": "string"
+            },
+            "disposition": {
+              "type": "string",
+              "enum": [
+                "review",
+                "deferred"
+              ]
+            },
+            "previewSha256": {}
+          },
+          "required": [
+            "returnId",
+            "returnSha256",
+            "note",
+            "disposition",
+            "previewSha256"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "selectedReturnSha256": {}
+    },
+    "required": [
+      "requestId",
+      "expectedVersion",
+      "actor",
+      "note",
+      "queueId",
+      "expectedQueueSha256",
+      "title",
+      "entries",
+      "selectedReturnSha256"
+    ],
+    "additionalProperties": false
+  },
+  "annotations": {
+    "readOnlyHint": false,
+    "idempotentHint": true,
+    "destructiveHint": false,
+    "openWorldHint": false
+  }
+},
+{
+  "action": "recipient.queue.export",
+  "name": "audit_recipient_queue_export",
+  "description": "Export the complete selected queue history, every original return from every edition and original acceptance custody.",
+  "mutation": true,
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "requestId": {
+        "type": "string"
+      },
+      "expectedVersion": {
+        "type": "integer",
+        "minimum": 0
+      },
+      "actor": {
+        "type": "string"
+      },
+      "note": {
+        "type": "string"
+      },
+      "exportId": {
+        "type": "string"
+      }
+    },
+    "required": [
+      "requestId",
+      "expectedVersion",
+      "actor",
+      "note",
+      "exportId"
+    ],
+    "additionalProperties": false
+  },
+  "annotations": {
+    "readOnlyHint": false,
+    "idempotentHint": true,
+    "destructiveHint": false,
+    "openWorldHint": false
+  }
+}
 ];
 
 export function validateValue(value,schema,where="arguments") {
