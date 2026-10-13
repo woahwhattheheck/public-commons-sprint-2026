@@ -64,8 +64,11 @@ def render_handoff(package_index, audit):
     audit.json. All customer-provided values become escaped text or a validated,
     URL-encoded link to a captured file under delivery/ or the known audit.json.
     """
-    if not isinstance(package_index, dict) or package_index.get('schema') != 'upstate-ec-sdc-2026/package-v1':
+    if not isinstance(package_index, dict) or package_index.get('schema') not in (
+            'upstate-ec-sdc-2026/package-v1', 'commons.native-study-package/v1'):
         raise ValueError('handoff view requires an upstate package-v1 index')
+    native_study = package_index['schema'] == 'commons.native-study-package/v1'
+    package_label = 'Original native study' if native_study else 'Upstate EC-SDC'
     artifacts = package_index.get('artifacts', [])
     missing = package_index.get('missing', [])
     if not isinstance(artifacts, list) or not isinstance(missing, list):
@@ -85,7 +88,9 @@ def render_handoff(package_index, audit):
     disposition = package_index.get('disposition', 'PACKAGE_STATUS_UNAVAILABLE')
     disposition_class = 'failed' if disposition == 'PACKAGED_FOR_REMEDIATION' else 'pending'
     disposition_detail = {
-        'PACKAGED_HUMAN_REVIEW_REQUIRED': 'The captured package still needs qualified-prime human review.',
+        'PACKAGED_HUMAN_REVIEW_REQUIRED': (
+            'The captured original study is ready for scientific interpretation and map review.' if native_study
+            else 'The captured package still needs qualified-prime human review.'),
         'PACKAGED_FOR_REMEDIATION': 'Resolve the package dependencies and technical findings before treating this as a complete handoff.',
         'PACKAGED_AUDIT_UNAVAILABLE': 'The native technical audit was unavailable. Open audit.json for the cause and inspect missing references below.',
     }.get(disposition, 'The package disposition is unavailable. Inspect package.json before relying on the handoff.')
@@ -119,7 +124,7 @@ def render_handoff(package_index, audit):
 <style>
 :root{font-family:system-ui,sans-serif;line-height:1.5;color:#242424;background:#f4f4f4}*{box-sizing:border-box}body{margin:0}header{background:#262626;color:#fff;padding:30px max(22px,calc((100vw - 1240px)/2))}header p{color:#e4e4e4;max-width:820px;margin-bottom:0}h1{font-size:clamp(27px,4vw,38px);line-height:1.15;margin:8px 0}header small{text-transform:uppercase;letter-spacing:.12em;color:#d0d0d0}main{max-width:1284px;padding:24px 22px;margin:auto}h2{font-size:20px;margin:0 0 12px}a{color:#333333;text-underline-offset:3px}a:focus-visible,summary:focus-visible{outline:3px solid #555555;outline-offset:3px}.card{background:#fff;border:1px solid #c8c8c8;border-radius:9px;padding:20px;margin-bottom:20px}.toolbar{display:flex;align-items:center;gap:12px;flex-wrap:wrap}.toolbar a{display:inline-block;padding:9px 12px;border:1px solid #999999;border-radius:5px;text-decoration:none;font-weight:600}.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:20px 0}.stat{background:#fff;border:1px solid #c8c8c8;border-radius:7px;padding:14px 17px}.stat b{display:block;font-size:25px;color:#262626}.stat span,.muted{color:#626262;font-size:13px}.table-wrap{overflow:auto}table{width:100%;border-collapse:collapse;font-size:13px}th{text-align:left;background:#eeeeee;color:#555555;font-size:11px;text-transform:uppercase;letter-spacing:.05em}th,td{padding:12px 10px;border-bottom:1px solid #d8d8d8;vertical-align:top}code{font-family:ui-monospace,monospace;font-size:12px;overflow-wrap:anywhere}.role{display:block;font-size:12px;margin-bottom:4px;overflow-wrap:anywhere}.size,.action{white-space:nowrap}.action a{font-weight:650}details{margin-top:7px}summary{cursor:pointer;font-size:12px;color:#555555}.hash{display:block;max-width:760px;word-break:break-all;margin-top:8px}.level{display:inline-block;padding:4px 7px;border-radius:4px;font-size:11px;font-weight:650}.passed{background:#eeeeee;color:#333333}.pending{background:#e8e8e8;color:#333333}.failed{background:#dedede;color:#222222}.neutral{background:#f0f0f0;color:#555555}.attention{color:#222222}.boundary{font-size:13px;border-left:4px solid #777777;padding:9px 13px;background:#f0f0f0;margin:15px 0 0}.missing{padding-left:20px}.missing li{padding:9px 0;border-bottom:1px solid #dddddd}.missing p{margin:5px 0;font-size:13px}footer{max-width:1284px;margin:auto;padding:0 22px 28px;color:#626262;font-size:12px}@media(max-width:600px){main{padding:16px 12px}.card{padding:14px}.stats{gap:7px}.stat{padding:11px}.stat b{font-size:22px}th,td{padding:10px 7px}.toolbar a{width:100%}}
 </style></head><body>
-<header><small>Upstate EC-SDC · Local handoff</small><h1>Captured GIS delivery</h1><p>Open the captured deliverables by role. Keep this whole folder together so its file links and portable manifest continue to work.</p></header>
+<header><small>''' + _text(package_label) + ''' · Local handoff</small><h1>Captured GIS delivery</h1><p>Open the captured deliverables by role. Keep this whole folder together so its file links and portable manifest continue to work.</p></header>
 <main><section class="card"><h2>Start here</h2><p><span class="level ''' + disposition_class + '">' + _text(disposition) + '</span></p><p>' + disposition_detail + '</p><p class="muted">Human review: ' + _text(package_index.get('humanReview', 'Not recorded')) + '</p><div class="toolbar">' + manifest_link + atlas_browser_link + '''
 <a href="package.json" download>File inventory</a><a href="audit.json" download>Original audit result</a></div>
 <p class="muted">PDF maps open in a separate tab. Save other formats for your local GIS or text tools. This page does not load remote content or render customer HTML/SVG.</p>
@@ -128,7 +133,7 @@ def render_handoff(package_index, audit):
 <section class="card"><h2>Captured deliverables</h2><div class="table-wrap"><table><thead><tr><th>Manifest role</th><th>Packaged file</th><th>Size</th><th>Open locally</th></tr></thead><tbody>''' + artifact_rows + '''</tbody></table></div></section>
 <section class="card"><h2>Missing references</h2>''' + missing_block + '''</section>
 <section class="card"><h2>Original technical audit</h2><p><span class="level ''' + status_class + '">' + _text(status) + '</span> <span class="muted">' + str(fail_count) + ''' failed findings</span></p>
-<p class="boundary">A technical precheck does not establish environmental model correctness, cartographic quality or issuer acceptance. Human review findings remain work for the qualified prime.</p>
+<p class="boundary">''' + ('Review the original study assumptions, common valid-cell support and rendered maps alongside the reported physical and economic results.' if native_study else 'A technical precheck does not establish environmental model correctness, cartographic quality or issuer acceptance. Human review findings remain work for the qualified prime.') + '''</p>
 <div class="table-wrap"><table><thead><tr><th>Level</th><th>Check</th><th>Finding</th></tr></thead><tbody>''' + finding_rows + '''</tbody></table></div></section>
 </main><footer>Private local delivery package. The original source folder is not modified. Moving individual files can break links; transfer the complete package.</footer>
 </body></html>

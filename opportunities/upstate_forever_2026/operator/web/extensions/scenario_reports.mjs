@@ -339,6 +339,7 @@ export function attachScenarioReports(context) {
     return '<section class="sr-release" aria-label="Map releases from this report"><h4>Map release</h4>'+
       '<p>Use this saved reference and every alternative for the map atlas. The original report, annual totals, comparison tables and watershed geometry travel with the release.</p>'+
       (issues.length?'<ul>'+issues.map(item=>'<li>'+esc(item.message)+'</li>').join(''):'')+
+      (release.ready?'<label>Delivery mode<select name="release_delivery_mode">'+option('regional_rfp','Regional RFP · seven map families')+option('native_study','Original native study · retain original grid and domain')+'</select></label>':'')+
       (release.ready&&editions.length?'<label>Economic decision edition<select name="release_economic_edition">'+
         option('','Physical report and maps')+editions.map(item=>option(item.id,item.title+' / '+item.zone_title+' / '+item.costed_count+' costed alternatives')).join('')+
         '</select></label><p class="sr-note">Include this completed edition’s selected-zone costs, budgets, physical response and original decision package in the client report.</p>':'')+
@@ -354,7 +355,7 @@ export function attachScenarioReports(context) {
     assertWorkspace();
     if(typeof openExtension!=='function')throw Error('Install the current map-atlas desk to open this report selection.');
     const key=workspaceKey;
-    const economicEditionId=val('release_economic_edition');
+    const economicEditionId=val('release_economic_edition'),deliveryMode=val('release_delivery_mode')||'regional_rfp';
     message('Opening the map release for this saved report…');
     const release=await call('/api/scenario-reports/release',{report_id:id});
     if(disposed||key!==currentWorkspace()||selectedReport!==id)return;
@@ -364,7 +365,9 @@ export function attachScenarioReports(context) {
       message((release.issues||[]).map(item=>item.message).join(' ')||'Reopen the report selection before building the map release.',true);
       return;
     }
-    await openExtension('map-atlas','create',{workspace_key:key,selection:economicReleaseSelection(release,economicEditionId)});
+    const selection={...economicReleaseSelection(release,economicEditionId),delivery_mode:deliveryMode};
+    if(deliveryMode==='native_study')selection.native_study={title:selection.title||'Original native watershed study',purpose:'Interpret the retained baseline and land-cover alternatives on their original study grid and reporting domain.',reference:''};
+    await openExtension('map-atlas','create',{workspace_key:key,selection});
   }
   async function openLinkedRelease(id) {
     assertWorkspace();
