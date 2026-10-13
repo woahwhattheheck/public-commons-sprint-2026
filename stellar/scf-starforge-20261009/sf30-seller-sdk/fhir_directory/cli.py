@@ -35,7 +35,10 @@ def main(argv=None):
     common.add_argument("--workspace");common.add_argument("--credentials-file")
     def command(name):
         c=sub.add_parser(name,parents=[common]);return c
-    command("init");command("state");command("catalogue");command("guidance")
+    command("init");command("state");command("catalogue");command("guidance");command("operating-plan-catalog")
+    for name in ["operating-plan-document","operating-plan-draft","operating-plan-input","operating-plan-basis"]:
+        c=command(name);c.add_argument("--id",required=True)
+        if name=="operating-plan-draft":c.add_argument("--revision",type=int)
     operations={a["id"]:(a["python"],a["input"])for a in source.json_value((HERE/"directory-schema.json").read_bytes())["actions"]}
     operations.update({"connection-save":("directory_connection","connection"),"request-save":("directory_request","request"),
         "edition-save":("directory_edition","edition"),"edition-compare":("directory_compare","comparison"),"import-profile-save":("save_directory_import","import")})
@@ -62,6 +65,10 @@ def main(argv=None):
     with Workspace(root,create=args.command in {"init","receive-workspace","receive-handoff"}and not root.exists(),credentials_file=args.credentials_file)as ws:
         name=args.command
         if name in {"init","state"}:result=ws.state()
+        elif name=="operating-plan-catalog":result=ws.directory_operating_catalogue()
+        elif name=="operating-plan-draft":result=ws.directory_operating_plan_draft(args.id,args.revision)
+        elif name in {"operating-plan-document","operating-plan-input","operating-plan-basis"}:
+            result=getattr(ws,{"operating-plan-document":"directory_operating_plan_document","operating-plan-input":"directory_operating_plan_input","operating-plan-basis":"directory_operating_plan_basis"}[name])(args.id)
         elif name in operations:result=getattr(ws,operations[name][0])(input_file(args.input))
         elif name in {"discover","acquire"}:
             raw=input_file(args.input)
