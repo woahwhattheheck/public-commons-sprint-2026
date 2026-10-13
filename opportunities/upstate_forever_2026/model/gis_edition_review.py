@@ -4,6 +4,7 @@ from __future__ import annotations
 import base64
 from collections.abc import Mapping
 from copy import deepcopy
+from datetime import datetime, timezone
 import csv
 import html
 import json
@@ -395,6 +396,8 @@ def _raster(before_root, before, after_root, after, folder):
                 "mean": stats["mean"] if count else None,
                 "rmse": stats["rms"] if count else None}
         else:
+            counts.pop("physical_changed_common", None)
+            counts.pop("unrepresentable_difference_cells", None)
             result["physical_comparison"] = "Raw category/encoding changes and valid support; arithmetic differences are not assigned across categories or different units."
         return result
 
@@ -417,6 +420,10 @@ def _report_html(report):
         details = row["comparison"]
         counts = details.get("counts") or {}
         summary = "; ".join(key.replace("_", " ") + ": " + str(value) for key, value in counts.items())
+        if details.get("reason") or details.get("physical_comparison"):
+            summary += "; " + (details.get("reason") or details["physical_comparison"])
+        if row.get("metadata_changed"):
+            summary += "; metadata changed: " + ", ".join(row["metadata_changed"])
         links = " ".join('<a href="'+esc(rec["path"])+'">'+esc(Path(rec["path"]).name)+'</a>'
                          for rec in row["files"])
         rows.append("<tr><th>"+esc(row["title"])+"</th><td>"+esc(row["kind"])+"</td><td>"+
@@ -455,6 +462,7 @@ def review(workspace, selection, *, progress=None):
     folder.mkdir(parents=True, exist_ok=True)
     with gis.locked(folder / ".review.lock"):
         state_path = folder / "review-state.json"
+        old = {}
         if state_path.exists():
             old = gis.load(state_path)
             if old["selection"] != binding:
@@ -462,7 +470,9 @@ def review(workspace, selection, *, progress=None):
             if old["state"] == "complete":
                 return read(workspace, binding["receipt_id"], key)[1]
         state = {"schema": SCHEMA, "id": key, "state": "running", "selection": binding,
-                 "title": received[2]["title"] + " · received edition review", "layers": [], "files": {}}
+                 "title": received[2]["title"] + " · received edition review",
+                 "created_at": old.get("created_at") or datetime.now(timezone.utc).isoformat(),
+                 "layers": [], "files": {}}
         gis.save(state_path, state)
         try:
             left, right = {x["id"]: x for x in original[2]["layers"]}, {x["id"]: x for x in received[2]["layers"]}
@@ -495,6 +505,12 @@ def review(workspace, selection, *, progress=None):
                         "comparison": comparison,
                         "files": [gis.record(folder, p) for p in sorted(directory.iterdir()) if p.is_file()]}
                     value["working_files_changed"] = value["exported_working_files"] != value["received_working_files"]
+                    headers = comparison.get("headers", {})
+                    old_header, new_header = headers.get("exported", {}), headers.get("received", {})
+                    value["metadata_changed"] = sorted(name for name in old_header.keys() | new_header.keys()
+                        if _json(old_header.get(name)) != _json(new_header.get(name)))
+                    if before["data"]["units"] != after["data"]["units"]:
+                        value["metadata_changed"].append("declared units")
                     gis.save(checkpoint, value)
                 state["layers"].append(value)
                 gis.save(state_path, state)

@@ -64,6 +64,75 @@ Omitting project_crs selects the original delivery grid CRS. An explicitly suppl
 
 The same request/result identities, complete GIS inventory, QGS/QGZ references, original file transport, desktop edit sealing and received-source adoption govern this continuation. Its operation is ES-20261013-DELIVERY-GIS-PROJECT; source is contained in the existing gis_workspace, GIS desk and delivery inspector paths.
 
+
+## Review the actual changes in a received GIS edition
+
+In **Editable GIS projects**, open the received edition's **Review received data changes** section. Select the retained **Original exported GIS project** and choose **Build complete change review**. Only exports with the same original GIS selection are offered. The queued operation verifies the actual original request, both inventory fingerprints, logical layer IDs, retained source identities and complete working files.
+
+This comparison uses the original exported working data and the actual received working data. The received edition's seal history remains available as additional provenance; a file-hash history alone does not supply the old geometry or raster values.
+
+The normal task result opens the completed report and its full ZIP, JSON and layer-summary CSV. The received card retains the exact original export choice through refresh and displays completed reviews with their actual edition identities and report creation time. Changing the selected original export clears an incompatible optional adoption review, while preserving the separate adoption title, reason, working-layer and original table/document choices.
+
+### What the report contains
+
+Vector layers are paired using their original collision-safe source identity field, without converting identifiers such as 001 into numbers. The comparison streams complete properties and geometries through a disk-backed index. It distinguishes typed attribute changes, coordinate changes, topologically equivalent geometry, added and removed features, and missing or duplicate identities. Ambiguous rows are retained as individual unpaired records. They are not silently overwritten or matched by row position.
+
+Each vector layer has a complete changes.jsonl file with original and received properties and geometry for every changed or unpaired row, plus a compact changes.csv. Only a small example set enters the report summary; the full change records remain downloadable. Header/schema and CRS changes are retained even when ordinary attribute values are unchanged. A changed CRS leaves geometric comparison unpaired while the exact original coordinates and attributes remain in the records.
+
+Raster review concerns the original logical GIS layer's selected band. The complete before/after all-band header, data types, nodata, scale, offset, descriptions, mask flags and units remain in the report. Native cells are paired only when the actual CRS, dimensions, six affine values and selected band agree. A changed grid is reported as an unpaired structural change; it is not resampled to manufacture cell comparisons.
+
+On a matching grid, 512-by-512 windows retain counts for common finite-valid cells, added/removed valid support, neither-valid cells and nonfinite unmasked values. The support-change.tif codes are:
+
+| Code | Meaning |
+|---|---|
+| 0 | Neither edition has a finite-valid selected-band value |
+| 1 | Both editions have a finite-valid selected-band value |
+| 2 | The received edition adds a finite-valid value |
+| 3 | The received edition removes a finite-valid value |
+
+The value-change.tif is **received minus exported**, in the original declared physical units, on common support. Raw encoding changes are counted separately. The comparison applies each original band scale and offset, cancels equal offsets before subtraction, and uses exact scalar input arithmetic when large integers or changed encoding parameters require it. Float64 output cannot represent every mathematically possible difference; such cells have an explicit unrepresentable count and NoData instead of a misleading zero. Exact change counts and the retained native input editions remain available. Summary mean and RMSE concern the representable difference cells.
+
+Categorical layers and layers with different declared units retain raw-change and support counts without assigning an arithmetic physical difference across categories or different units. Working-file and actual companion changes remain separate from the selected-band numeric result; the report does not describe other bands as numerically unchanged.
+
+### Portable report and recovery
+
+The complete review ZIP opens through **REVIEW.html** and includes both original project manifests, review.json, layers.csv and every layer's full change records or derived support/value rasters. The report preserves the exact exported/received project and edition IDs, original source/run/scenario provenance, inventory fingerprints and subtraction direction. Keep the complete ZIP contents together so its relative links resolve.
+
+Review output is retained under:
+
+~~~text
+gis-received/<receipt_id>/reviews/<review_id>/
+~~~
+
+The received project and its inventory remain immutable. A failed operation continues from completed layer checkpoints whose native files and companions were checked against the original input inventory. A changed-input failure invalidates the affected attempt's reusable checkpoints. Completion rechecks the complete original input fingerprints before retaining its final report.
+
+The normal full scientific Workspace backup and restore carry the received project, original export and review together. The portable review ZIP supplies the change report and its data; the complete GIS project ZIP supplies the independently editable original/received working layers.
+
+### Retain a review with an adopted source edition
+
+In the existing received-source adoption form, **Retain a change review with this source edition** is an explicit choice. It offers complete reviews matching the selected original export and the exact current received fingerprint. Selecting a review retains its complete report context with the new original source collection and makes that review identity part of the adoption selection.
+
+The original adoption path also supports received working layers or selected original tables and documents without attaching a review. Working-layer selections still retain all required original attachments. Independent table/document selection, native types, units, dates, geography, companions and original queued-task recovery stay available.
+
+The full application CLI uses the same backend:
+
+~~~sh
+python model/gis_project_cli.py workspace-review "$WORKSPACE" gis-review-selection.json
+~~~
+
+A selection file contains actual retained IDs:
+
+~~~json
+{
+  "receipt_id": "ACTUAL_RECEIVED_GIS_ID",
+  "export_id": "ACTUAL_ORIGINAL_EXPORTED_GIS_ID"
+}
+~~~
+
+For optional reviewed adoption, add the actual review_id to the existing workspace-adopt-sources selection. Omit that field for the original adoption path. Standalone GIS seal/pack/receive tools remain usable independently; Workspace review uses the installed scientific application's gis_edition_review module.
+
+Operation: ES-20261013-RECEIVED-GIS-REVIEW.
+
 ## Open and continue a delivery
 
 Extract the complete archive into a new directory. Open **OPEN_GIS.html** for the
