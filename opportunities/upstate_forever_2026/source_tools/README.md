@@ -2,6 +2,10 @@
 
 These commands prepare the original public inputs for the same `model.workspace.Workspace` used by the operator. Run them from the product root with the equipped GIS interpreter. They retain original response bytes, request URLs, response metadata and SHA256s; completed exact responses are reused after interruption.
 
+## Open the received application
+
+Use [Open and reopen the original workbench](OPEN_RECEIVED_WORKBENCH.md) for the maintained recipient launcher, portable project selection, explicit native interpreter, private authenticated session reuse and an already-running original operator. It retains the original application, queue and completed scientific identities. A cloud loopback address is identified as local to its owning machine; the guide keeps the actual recipient route with the existing receiver.
+
 ## Recover complete source archives
 
 Use [Source archive recovery](SOURCE_BANK_RECOVERY.md) to inspect and extract original ZIPs, gzip source banks and exported Slack source documents. The pure JavaScript decoder works without a native executor. Its Node command verifies the complete archive before recovering files into a new directory and retains the original carrier and full member inventory. The guide includes commands for the actual completed 217-HUC run and the 19-file water-source bank.

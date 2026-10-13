@@ -1,0 +1,29 @@
+{
+  "schema": "upstate.application-component-fragment/v1",
+  "id": "recipient-workbench-opening",
+  "source_reference": "ECO-SOURCE-ROUTE/recipient-workbench-opening/2026-10-13",
+  "components": {
+    "recipient-workbench-opening": {
+      "paths": [
+        "source_tools/open_received_study.py",
+        "source_tools/workbench_session.py",
+        "source_tools/OPEN_RECEIVED_WORKBENCH.md",
+        "tests/test_workbench_session.py",
+        "integration/component_fragments/recipient-workbench-opening.json"
+      ],
+      "requires": [
+        "core",
+        "native-runtime-invocation"
+      ],
+      "retained_only": [
+        {
+          "path": "tests/test_workbench_session.py",
+          "reason": "Focused standard-library original-protocol launch/reuse/relocation course; authored fixture, not scientific output or rendered acceptance."
+        }
+      ]
+    }
+  },
+  "required_components": [
+    "recipient-workbench-opening"
+  ]
+}
