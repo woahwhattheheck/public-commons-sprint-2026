@@ -66,7 +66,21 @@ collect or dispatch only the work they actually consume, and use each yielded
 run_id through the original native programme. Source-linked profile builders can
 supply their retained IDs through the existing profile_ids selection.
 
-After external programme execution, invoke the existing experiment run action.
-It reuses completed native runs and computes the corresponding paired summaries.
-Completed experiment cases are reused directly; an interrupted experiment
-continues through unfinished cases.
+After native programme completion, the current operator and programme CLI call
+programme_experiments.sync_completed after releasing native execution locks.
+The adapter verifies each exact case and paired baseline through public indexed
+pages, then calls experiments.execute with completed_only=True. That mode
+collects completed native outputs and computes the paired summaries without
+starting an unfinished native run. Explicit CLI synchronization is available as
+model.experiment_cli sync EXPERIMENT_ID. Normal experiment execution continues
+unfinished native cases through Workspace.run.
+
+Saved older partial-model experiments retain their experiment and case IDs.
+When the reader recovers their actual selected-model native bindings, it keeps
+prior case records, marks remaining cases pending, and invalidates summaries
+from the previous bindings. Current summaries reflect the selected NDR/SDR
+families and actual paired-result progress. The native case drawer reopens the
+case through expanded_cases at its stored ordinal before linking its run.
+
+The full programme and command-line path is documented in
+model/EXPERIMENT_PROGRAMME_CONTINUATION.md.
