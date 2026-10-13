@@ -1,0 +1,92 @@
+{
+  "schema": "commons.source-bank-transfer/v1",
+  "operation_id": "ECO-SCI-ROOT-OBSERVED-STATIONS-20261013-9BCB-source",
+  "repository": "woahwhattheheck/public-commons-sprint-2026",
+  "file_count": 319,
+  "source_bytes": 11278856,
+  "banks": [
+    {
+      "name": "original-nine-studies-source",
+      "original_git_blob": "1d1873941be46abd0f9961eca814cfa20e268916",
+      "original_bytes": 4735445,
+      "original_sha256": "b8987e9e62ff38cba6e57f4443310139e70e18c6902a972dd040acdceeeaa0fa",
+      "gzip_bytes": 459541,
+      "gzip_sha256": "75520597c49a1bd7d05cbe686d630e1c0d3aa4ccf4d7d77d5a8c7fa6385e9213",
+      "parts": [
+        {
+          "git_blob": "9b337caf8352f69d355acbe2bdc6ae3e25caea59",
+          "json_bytes": 533562,
+          "json_sha256": "4663e980c8937fa9fdc0b6c8811d7c365e81f5d9cba38e62920153148cdaaa02",
+          "index": 0,
+          "offset": 0,
+          "bytes": 400000,
+          "sha256": "70fc109181b98f1d034c741904ae812ba6e6007ff401f5d7d036a7a8883ee486"
+        },
+        {
+          "git_blob": "058ca474fdb356cb9e9f5dfa61a42ecf5f2caf53",
+          "json_bytes": 79618,
+          "json_sha256": "399460908b796163419e84f5e07ec517bebe9a39b23ed33ef0430875cc1a05df",
+          "index": 1,
+          "offset": 400000,
+          "bytes": 59541,
+          "sha256": "e556aa71df4eda1a9837b202107c035ab1ad690560563594a723282465ecfec4"
+        }
+      ]
+    },
+    {
+      "name": "original-nine-studies-inputs",
+      "original_git_blob": "3986c66fc13d993b4d7b59d9d2dca8a3042f7ed4",
+      "original_bytes": 7301694,
+      "original_sha256": "b3607acff16b1bfbb4bf6e5b1dfb41c6ccf11a51394960075d307ff4e88db945",
+      "gzip_bytes": 1707230,
+      "gzip_sha256": "1ffc28b4ba0e0ad877483b5052d3f1ebfe706857f535b29a720c97a86be875eb",
+      "parts": [
+        {
+          "git_blob": "8864a79303efedb95561482d06d6a5db2193a189",
+          "json_bytes": 533562,
+          "json_sha256": "17a5236516b60f22ac5fd13eb38f69ccae6e22ef09dead0f1b9c196b9fed60aa",
+          "index": 0,
+          "offset": 0,
+          "bytes": 400000,
+          "sha256": "7cfd453f2f3dd6e10f28ce16a55adb7bc2e10f04e699379d6093eecc21b3b7c4"
+        },
+        {
+          "git_blob": "263349f571c22bc14c3ccf9b41f485b72b79e1a8",
+          "json_bytes": 533567,
+          "json_sha256": "fcbdf2ce5cb8fbd7b9231ebbe32c41a3332551927f1355ac760d2de9b6fb55f5",
+          "index": 1,
+          "offset": 400000,
+          "bytes": 400000,
+          "sha256": "57befd5132170ba684f085b5091b0351d396606af1d34f94de7a2ecd61dddc3f"
+        },
+        {
+          "git_blob": "70e3a0a3a9d83b36757f9494a4bc289645a29129",
+          "json_bytes": 533567,
+          "json_sha256": "87e34774dc1dbb4b9383454b78e1630f1283def6a13298bd206e10eedfaece7e",
+          "index": 2,
+          "offset": 800000,
+          "bytes": 400000,
+          "sha256": "b63c75cdc04e0125e2f4180f5c2b1f4acc56f1dc06de3465f0fdb6a003072140"
+        },
+        {
+          "git_blob": "67e26de759bd4766cd3cb30115ebeca5de1833c6",
+          "json_bytes": 533568,
+          "json_sha256": "80ba6c88749bd77fb610fbfef5380f83b9149e82c2fcdd7d53d75467dbd25da5",
+          "index": 3,
+          "offset": 1200000,
+          "bytes": 400000,
+          "sha256": "281df7c2cec7018d434db1a5fc11af05797bb3775da4ec941d8142bdebf0939e"
+        },
+        {
+          "git_blob": "0953241dc563775c263409111d9703ba9859a7de",
+          "json_bytes": 143208,
+          "json_sha256": "2b853cfe67a9931a0191912a7426f21d38af90106fa832c6ac12f0371ee629d1",
+          "index": 4,
+          "offset": 1600000,
+          "bytes": 107230,
+          "sha256": "c0545f608ae331a9e1400cc3312f6bd75adc59efaca28fd16a76fd4818748d79"
+        }
+      ]
+    }
+  ]
+}
