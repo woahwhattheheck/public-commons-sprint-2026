@@ -54,6 +54,8 @@ All calls use its separate bearer plus X-Eco-Connector-Instance, persisted acros
 
 The native journal persists executing before the single upstream write. It must never replay an uncertain native mutation. The existing connector reads the original native task identity to reconcile /api/actions where possible. Response metadata and original binary response spools are retained before transmission, allowing a lost public download to reopen the same result from offset0 without executing the original request again. Only one active result reader is allowed per ID. Native204/205/304 use a null Response body. Range, Content-Range, ETag, disposition and original response status are retained. The public body uses Cloudflare FixedLengthStream with manual encoding, preserving its declared Content-Length and original identity bytes instead of chunked or automatically compressed output.
 
+Original retained review-desk member paths may contain URI-encoded spaces or Unicode, as emitted by the native application. The edge validates every decoded path segment once, rejects separators, control characters, empty and dot traversal segments, and forwards the unchanged original wire path for native authorization/file resolution.
+
 Selected headers exclude original authorization and cookies. The edge's fixed route mapping, exact origin checks and recipient scope prevent arbitrary host forwarding. Changing ECO_RECIPIENT_TOKEN_SHA256 revokes prior edge cookies. Cookie mutations require the exact edge Origin; scoped bearer clients may omit Origin, but any supplied Origin must match. Input and response chunk hashes are checked at each side; native whole-body identity remains a separate check.
 
 ## Actual receiving sequence
