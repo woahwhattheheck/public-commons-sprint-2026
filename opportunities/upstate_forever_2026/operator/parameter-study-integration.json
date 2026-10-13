@@ -29,7 +29,17 @@
       "result_field": "difference_maps",
       "artifacts_field": "artifacts",
       "archive": "experiment-results.zip",
-      "refresh_completed_without_native_execution": true
+      "refresh_completed_without_native_execution": true,
+      "suite": {
+        "module": "model.parameter_suite_exports",
+        "checkpoint": "studies/<study-id>/export-checkpoint.json",
+        "intermediate_reports": true,
+        "aggregate_archive_at": "final complete or partial cohort",
+        "final_member_verification": "original SHA256 and byte length",
+        "progress_field": "export_progress",
+        "packaging_field": "packaging",
+        "resume": "same original suite and study selections"
+      }
     }
   },
   "preserve": {
