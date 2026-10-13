@@ -47,7 +47,7 @@ export function createSourceWorkbench(host) {
   const save = () => {
     try {
       sessionStorage.setItem(local(), JSON.stringify({method:selectedMethod, drafts, merge:mergeDraft,
-        requests:requests.slice(-24), task_id:currentTask}));
+        requests, task_id:currentTask}));
     } catch { /* Native tasks remain retained even when browser storage is unavailable. */ }
   };
   const selected = () => list(catalog?.methods).find(method => method.id === selectedMethod);
