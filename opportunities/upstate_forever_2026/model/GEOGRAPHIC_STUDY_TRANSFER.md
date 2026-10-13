@@ -219,6 +219,51 @@ recipient-facing tools. Repair unreadable, clipped, broken or unstyled output.
 Source/DOM/HTTP checks and peer review do not replace this inspection. Use the
 existing original course, not a broad new validation suite.
 
+## Retain the already-saved Geographic Programme
+
+With the original **Include related results** option enabled, selecting a saved
+Geographic scientific report also retains each already-saved Programme adopted
+from that exact preparation. The source binding includes both the original
+preparation ID and the SHA-256 of its captured `prepared.json`. The three named
+cases must retain the original baseline, restoration and matched-control run
+IDs, grid, profile and scenario selections. A different programme that happens
+to reuse the same prose reference is not treated as this original cohort.
+
+The selection uses the existing `compute-programmes` typed dependency visitor.
+It keeps the same immutable `programme.json`, current `progress.json`, attempts,
+controls, complete report editions and original report files. It follows the
+Programme's native producing-stage donors, retained comparisons, mapped
+deliveries and declared pair-completion children through their existing typed
+visitors. The original Programme, execution and control locks protect this
+snapshot during export. This adds no model execution, Programme creation,
+report rendering or source-view materialization.
+
+In the existing Study preview, the adopted Programme appears as a retained
+`compute-programmes` dependency with its original ID and title. After restoring
+the selected Study, open the original **Programmes** desk and select that same
+saved Programme. Its retained report, original case roster and ordinary
+continuation controls remain available. The Geographic case and original
+sensitivity ensemble are still separate saved objects: the reference Programme
+can be complete while the remaining sensitivity cases are pending. Neither
+state is rewritten to make the other complete.
+
+A preparation with no adopted Programme continues to export normally. Turning
+off **Include related results** keeps the original narrower selection. Older
+selected-report archives that never contained this Programme remain readable.
+No changing progress hash or extra lineage field is added to the source
+receipt; captured Programme IDs remain required dependencies, and normal later
+history can grow through the original APIs.
+
+The original receiver may also carry `delivery/geographic-programme.json` and
+the corresponding `handover-record.json` field. Those are the original caller's
+returned adoption record and are preserved by its full handover path. This
+selected-study join discovers and retains the actual saved native Programme
+directly; it does not invent a missing caller admission or external receipt.
+Original input receipts remain byte-exact, including descriptors for runtime
+locks that the maintained portable writer intentionally omits. The Programme
+owner's cold-reopen verification must follow that existing runtime-lock rule.
+
+
 ## Complete current owner direction
 
 # Current owner direction: Ecosystem Sciences demonstration
