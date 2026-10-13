@@ -7,7 +7,21 @@
         "model/fgdc_metadata.py",
         "model/FGDC_METADATA.md",
         "source/fgdc-metadata/receive_metadata.py",
-        "source/fgdc/fgdc-std-001-1998.dtd"
+        "source/fgdc/fgdc-std-001-1998.dtd",
+        "source/fgdc-metadata/schema/fgdc-std-001-1998.xsd",
+        "source/fgdc-metadata/schema/fgdc-std-001-1998-sect01.xsd",
+        "source/fgdc-metadata/schema/fgdc-std-001-1998-sect02.xsd",
+        "source/fgdc-metadata/schema/fgdc-std-001-1998-sect03.xsd",
+        "source/fgdc-metadata/schema/fgdc-std-001-1998-sect04.xsd",
+        "source/fgdc-metadata/schema/fgdc-std-001-1998-sect05.xsd",
+        "source/fgdc-metadata/schema/fgdc-std-001-1998-sect06.xsd",
+        "source/fgdc-metadata/schema/fgdc-std-001-1998-sect07.xsd",
+        "source/fgdc-metadata/schema/fgdc-std-001-1998-sect08.xsd",
+        "source/fgdc-metadata/schema/fgdc-std-001-1998-sect09.xsd",
+        "source/fgdc-metadata/schema/fgdc-std-001-1998-sect10.xsd",
+        "source/fgdc-metadata/schema/fgdc-std-001-1998.dtd",
+        "source/fgdc-metadata/schema/capture-manifest.json",
+        "source/fgdc-metadata/schema/README.md"
       ]
     },
     "delivery-datasets": {
@@ -15,7 +29,21 @@
         "model/fgdc_metadata.py",
         "model/FGDC_METADATA.md",
         "source/fgdc-metadata/receive_metadata.py",
-        "source/fgdc/fgdc-std-001-1998.dtd"
+        "source/fgdc/fgdc-std-001-1998.dtd",
+        "source/fgdc-metadata/schema/fgdc-std-001-1998.xsd",
+        "source/fgdc-metadata/schema/fgdc-std-001-1998-sect01.xsd",
+        "source/fgdc-metadata/schema/fgdc-std-001-1998-sect02.xsd",
+        "source/fgdc-metadata/schema/fgdc-std-001-1998-sect03.xsd",
+        "source/fgdc-metadata/schema/fgdc-std-001-1998-sect04.xsd",
+        "source/fgdc-metadata/schema/fgdc-std-001-1998-sect05.xsd",
+        "source/fgdc-metadata/schema/fgdc-std-001-1998-sect06.xsd",
+        "source/fgdc-metadata/schema/fgdc-std-001-1998-sect07.xsd",
+        "source/fgdc-metadata/schema/fgdc-std-001-1998-sect08.xsd",
+        "source/fgdc-metadata/schema/fgdc-std-001-1998-sect09.xsd",
+        "source/fgdc-metadata/schema/fgdc-std-001-1998-sect10.xsd",
+        "source/fgdc-metadata/schema/fgdc-std-001-1998.dtd",
+        "source/fgdc-metadata/schema/capture-manifest.json",
+        "source/fgdc-metadata/schema/README.md"
       ]
     }
   },
