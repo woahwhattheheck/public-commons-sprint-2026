@@ -1,0 +1,22 @@
+{
+  "schema": "upstate.application-component-fragment/v1",
+  "id": "geographic-receiving-context",
+  "components": {
+    "geographic-receiving-context": {
+      "title": "Original utility comparisons from completed geographic native scenarios",
+      "paths": [
+        "model/geographic_receiving_context.py",
+        "model/GEOGRAPHIC_RECEIVING_CONTEXT.md",
+        "source/water_context/20261012/public-water/receiving-waters.public-spec.json",
+        "CURRENT_OWNER_DIRECTION.md"
+      ],
+      "requires": [
+        "receiving-water-report",
+        "scientific-map-figures"
+      ]
+    }
+  },
+  "required_components": [
+    "geographic-receiving-context"
+  ]
+}
