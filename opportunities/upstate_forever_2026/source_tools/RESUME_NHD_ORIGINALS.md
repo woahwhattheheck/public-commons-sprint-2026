@@ -99,7 +99,7 @@ When the source holder already supplied the verified bounds JSON, use that file 
 
 The bounds producer preserves original decimal coordinate tokens. Its JSON and CSV contain the typed native object ID, HUC12, all-ring bounds and ring/vertex counts for each original feature. Only the comparison with the original summary reproduces that composer's documented historical float serialization; query extrema remain original numbers. See [ORIGINAL_HUC12_BOUNDS.md](ORIGINAL_HUC12_BOUNDS.md) for the complete source reduction contract.
 
-Omit both `--huc-bounds` flags to retain the original 4-by-4 rectangular coverage mode. The new mode does not change the declared source bank, native layer, original geometry handling or final polygon selection.
+An explicit `--huc-bounds` input takes precedence. When both flags are omitted, source banks with the optional `domain_query_bounds` descriptor use their verified original-domain reduced-grid plan; older banks keep the original four-by-four rectangular mode. The reduced-grid planner retains original Decimal extrema, skips cells containing no original HUC envelope, and preserves every previously completed broad query and geometry body. See [NHD_DOMAIN_QUERIES.md](NHD_DOMAIN_QUERIES.md) for its complete source and plan-inspection command. All modes keep the declared source bank, native layer, original geometry and final polygon selection.
 
 A running capture remains pinned to its original bank hash. Resume with the same bank, output directory, original domain ZIP and edition path. To adopt a different published bank snapshot, select another output directory and reuse the already downloaded original bodies through `--download-directory` or `--downloads`. Keep the previous operation and source edition intact.
 
