@@ -2,11 +2,12 @@
   "schema": "upstate.operator-extension/v1",
   "id": "source-reports",
   "title": "Retained source reports",
-  "version": "1.1.0",
+  "version": "2.0.0",
   "order": 56,
   "assets": [
     "source_reports.mjs",
-    "source_reports.css"
+    "source_reports.css",
+    "source_report_editions.mjs"
   ],
   "backend": {
     "module": "source_reports",
@@ -57,6 +58,45 @@
           "operation",
           "payload"
         ]
+      },
+      {
+        "methods": [
+          "GET"
+        ],
+        "path": "/api/source-reports/scientific-catalog",
+        "operation": "scientific-catalog",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "POST"
+        ],
+        "path": "/api/source-reports/scientific-preview",
+        "operation": "scientific-preview",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "GET"
+        ],
+        "path": "/api/source-reports/scientific-edition",
+        "operation": "scientific-edition",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
       }
     ],
     "file_routes": [
@@ -70,7 +110,58 @@
           "route.entry_key",
           "route.member"
         ]
+      },
+      {
+        "path": "/api/file/scientific-reports/{workspace_key}/{edition_id}/{member...}",
+        "response": "ticket_policy_pair",
+        "handler": "scientific_member",
+        "args": [
+          "route.workspace_key",
+          "route.edition_id",
+          "route.member"
+        ]
       }
-    ]
+    ],
+    "actions": [
+      "source-reports.render",
+      "source-reports.export"
+    ],
+    "invoke": {
+      "handler": "invoke",
+      "args": [
+        "task"
+      ]
+    },
+    "state": {
+      "key": "scientific_reports",
+      "handler": "state",
+      "args": [
+        "workspace_key"
+      ]
+    },
+    "items": [
+      {
+        "kind": "scientific-report-editions",
+        "operation": "scientific-edition",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      }
+    ],
+    "decorate_task": {
+      "handler": "decorate_task",
+      "args": [
+        "task"
+      ]
+    },
+    "verify_workspace": {
+      "handler": "verify_workspace",
+      "args": [
+        "workspace"
+      ]
+    }
   }
 }

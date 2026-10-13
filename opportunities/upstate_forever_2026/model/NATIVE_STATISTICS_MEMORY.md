@@ -28,6 +28,26 @@ A failed worker signals the blocked producer instead of allowing an indefinite q
 
 The queued-block metric covers pending float64 statistics arrays. It excludes the currently consumed block, raster arithmetic arrays, GDAL caches, Python overhead and unrelated shared-host files. It is not a measurement of total process or cgroup memory.
 
+## Install the complete native adapter
+
+The selected application retains `model/native.py` in
+`retained-application-source`. Its import of `model.native_stats` requires
+the helper to travel with every assembled or cumulative installation.
+`integration/component_fragments/native-statistics.json` extends that same
+component with the helper, this guide and the original-input comparison command.
+
+Keep the fragment and its three declared files in the application source map or
+directory when using the existing assembler and cumulative installer. Their
+ordinary component inspection composes the fragment before selecting files and
+retains its exact source identity. No new component selection or installer flag
+is required. Portable application exports retain the fragment alongside those
+selected sources.
+
+For an explicit catalogue override, include the same three paths in its retained
+application component; explicit overrides deliberately do not discover fragments.
+See `integration/COMPONENT_FRAGMENTS.md` for the existing source-map and directory
+installation contracts.
+
 ## Compare on the actual retained SDR inputs
 
 The receiving command uses the four original aligned SDR rasters already present in the same native operation. It runs the published SDR mutual-mask and masked-DEM operations through the original handoff and then through the bounded handoff. The masked DEM exercises statistics on varying original elevations. It compares every output cell, geometry, type, nodata, exact stored statistics and valid percentage for both outputs. It records original input hashes before and after and preserves all four complete outputs. It does not launch another NDR/SDR model or replace the native run.

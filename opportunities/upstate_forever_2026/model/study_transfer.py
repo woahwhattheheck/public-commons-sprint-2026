@@ -22,18 +22,22 @@ import zipfile
 
 from .common import (atomic_json, canonical, digest, held, identifier, now,
                      read_json)
-from . import portable, study_delivery_transfer as delivery_transfer, study_report_transfer as report_transfer
+from . import portable, study_delivery_transfer as delivery_transfer
+from . import monitoring_study_transfer as monitoring_transfer, study_report_transfer as report_transfer
 
 SELECTION_SCHEMA = "upstate.study-selection/v1"
 PLAN_SCHEMA = "upstate.study-transfer-plan/v1"
 RECEIPT_SCHEMA = "upstate.study-transfer/v1"
-ROOT_KINDS = ("experiment-diagnostics", "experiments", "runs", "robust-decisions")
+ROOT_KINDS = ("experiment-diagnostics", "experiments", "runs", "robust-decisions",
+              *monitoring_transfer.ROOT_KINDS)
 IMMUTABLE_KINDS = ("sources", "profiles", "scenarios", "observations",
-                   "observation-comparisons", *delivery_transfer.IMMUTABLE_KINDS)
+                   "observation-comparisons", *delivery_transfer.IMMUTABLE_KINDS,
+                   *monitoring_transfer.IMMUTABLE_KINDS)
 DOCUMENTS = {
     "grids": "grid.json", "runs": "run.json", "experiments": "plan.json",
     "experiment-diagnostics": "manifest.json", "comparisons": "comparison.json",
     **delivery_transfer.DOCUMENTS,
+    **monitoring_transfer.DOCUMENTS,
 }
 LOCKS = {
     "grids": ".grid.lock", "runs": ".run.lock",
@@ -49,6 +53,7 @@ LABELS = {
     "observations": "Observation editions", "observation-comparisons": "Observation comparisons",
     "comparisons": "Native comparisons",
     **delivery_transfer.LABELS,
+    **monitoring_transfer.LABELS,
 }
 
 
@@ -69,11 +74,11 @@ def normalise(selection):
         raise ValueError("Select an original scientific study selection.")
     roots = selection.get("roots")
     if not isinstance(roots, list) or not roots:
-        raise ValueError("Select at least one scientific analysis, programme, native run or decision study.")
+        raise ValueError("Select at least one scientific analysis, programme, native run, decision study or Monitoring study.")
     unique = set()
     for item in roots:
         if not isinstance(item, dict) or set(item) != {"kind", "id"} or item["kind"] not in ROOT_KINDS:
-            raise ValueError("Study roots must name a saved scientific analysis, programme, native run or decision study.")
+            raise ValueError("Study roots must name a saved scientific or Monitoring study.")
         unique.add((item["kind"], _study_key(item["kind"], item["id"])))
     related = selection.get("include_related_results", True)
     if type(related) is not bool:
@@ -117,7 +122,7 @@ def _record_path(kind, key):
     if kind == "robust-decisions":
         from .decision_study_transfer import MEMBER
         return MEMBER
-    if kind in IMMUTABLE_KINDS:
+    if kind in IMMUTABLE_KINDS or kind in monitoring_transfer.MUTABLE_KINDS:
         return kind + "/" + key + ".json"
     if kind in DOCUMENTS:
         return kind + "/" + key + "/" + DOCUMENTS[kind]
@@ -139,6 +144,8 @@ class _Closure:
         self.decision_database = decision_database
         self.decision_records = {}
         self.delivery_records = {}
+        self.monitoring_records = {}
+        self.monitoring_reports = {}
         self.report_source_records = {}
         self.report_lineage_enabled = report_lineage
         self.external_decision_dependencies = []
@@ -401,7 +408,9 @@ class _Closure:
         node = {"kind": kind, "id": key, "title": title, "state": value.get("state"),
                 "reasons": [reason]}
         self.nodes[(kind, key)] = node
-        if delivery_transfer.visit(self, kind, key, value):
+        if monitoring_transfer.visit(self, kind, key, value):
+            pass
+        elif delivery_transfer.visit(self, kind, key, value):
             pass
         elif kind in IMMUTABLE_KINDS:
             self._immutable(kind, key, value, reason)
@@ -483,6 +492,7 @@ class _Closure:
                 count = len(self.nodes)
                 self._related()
                 delivery_transfer.related(self)
+                monitoring_transfer.related(self)
                 while self.pending:
                     self._visit(*self.pending.popleft())
                 if len(self.nodes) == count:
@@ -514,7 +524,7 @@ class _Closure:
             byte_totals[kind] += item["bytes"]
             parts = relative.split("/")
             if len(parts) >= 2:
-                key = parts[1][:-5] if kind in IMMUTABLE_KINDS and parts[1].endswith(".json") else parts[1]
+                key = parts[1][:-5] if (kind in IMMUTABLE_KINDS or kind in monitoring_transfer.MUTABLE_KINDS) and parts[1].endswith(".json") else parts[1]
                 node_files[(kind, key)] += 1
                 node_sizes[(kind, key)] += item["bytes"]
         nodes = []
@@ -543,6 +553,7 @@ class _Closure:
             "related_result_issues": self.related_issues,
             "external_decision_dependencies": self.external_decision_dependencies,
             "completed_deliveries": delivery_transfer.receipt(self),
+            "monitoring_history": monitoring_transfer.receipt(self),
             "scientific_report_sources": report_transfer.receipt(self),
             "decision_history": {"studies": len(self.decision_records),
                                  "revisions": sum(len(row["revisions"]) for row in self.decision_records.values()),
@@ -557,6 +568,11 @@ def preview(workspace, selection):
 
 
 def _capture_locks(stack, closure, already):
+    for relative in monitoring_transfer.lock_paths(closure):
+        token = ("monitoring-owner-lock", relative)
+        if token not in already:
+            stack.enter_context(held(closure.root / relative, blocking=False))
+            already.add(token)
     for kind, key in sorted(closure.nodes):
         if kind not in LOCKS or (kind, key) in already:
             continue
@@ -794,6 +810,8 @@ def export_study(workspace, destination, selection, *, progress=None, investigat
             identity["scientific_report_sources"] = report_transfer.receipt(closure)
         if closure.delivery_records:
             identity["completed_deliveries"] = delivery_transfer.receipt(closure)
+        if closure.monitoring_records or closure.monitoring_reports:
+            identity["monitoring_history"] = monitoring_transfer.receipt(closure)
         if dependencies:
             identity["investigation_dependencies"] = dependencies
         if investigations is not None:
@@ -862,6 +880,8 @@ def verify_received_studies(workspace):
                            report_lineage="scientific_report_sources" in receipt["identity"]).resolve(
             receipt["identity"].get("investigation_dependencies", ()))
         delivery_transfer.verify_receipt(closure, receipt["identity"].get("completed_deliveries", []))
+        monitoring_history = monitoring_transfer.verify_receipt(
+            closure, receipt["identity"].get("monitoring_history"))
         report_transfer.verify_receipt(closure, receipt["identity"].get("scientific_report_sources", []))
         present = set(closure.nodes)
         required = {(row["kind"], row["id"]) for row in receipt["identity"]["nodes"]}
@@ -878,19 +898,25 @@ def verify_received_studies(workspace):
             decision_history = verify_received(workspace, receipt["identity"]["decision_history"])
         result.append({"id": receipt["id"], "title": receipt["title"],
                        "retained_records": len(required), "identity": "MATCH",
-                       "investigations": history, "decision_history": decision_history})
+                       "investigations": history, "decision_history": decision_history,
+                       "monitoring_history": monitoring_history})
     return result
 
 
 def catalog(workspace, *, kind=None, query="", offset=0, limit=200):
     if kind not in (None, "", *ROOT_KINDS):
-        raise ValueError("Choose analyses, programmes, native runs or decision studies.")
+        raise ValueError("Choose scientific or Monitoring studies.")
     if type(offset) is not int or offset < 0 or type(limit) is not int or limit < 1 or limit > 1000:
         raise ValueError("Use a nonnegative offset and a page size from 1 to 1000.")
     query = str(query).strip().casefold()
     rows = []
     for selected_kind in ROOT_KINDS:
         if kind and selected_kind != kind:
+            continue
+        if selected_kind in monitoring_transfer.ROOT_KINDS:
+            for row in monitoring_transfer.catalogue(workspace, selected_kind):
+                if not query or query in canonical(row).decode("utf-8").casefold():
+                    rows.append(row)
             continue
         if selected_kind == "robust-decisions":
             from .decision_study_transfer import catalogue

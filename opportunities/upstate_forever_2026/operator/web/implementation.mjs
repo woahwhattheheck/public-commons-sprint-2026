@@ -1,5 +1,6 @@
 import {SCHEMA,COLLECTIONS,clone,esc,today,uid,makePlan,parseMoney,money,validatePlan,schedulePlan,summarize,applyMethod,updateRow,deleteRow,csvPlan,reportHtml,fieldSheetHtml,safeLink} from './implementation_core.mjs';
-import {openImplementationDialog,saveImplementationForm} from './implementation_forms.mjs';
+import {openImplementationDialog,saveImplementationForm,implementationSourceChoices,previewImplementationSource,syncImplementationSource} from './implementation_forms.mjs';
+import {attachImplementationEvidence} from './implementation_evidence_ui.mjs';
 import {briefingFollowup} from './implementation_briefing.mjs';
 import {normalizeResultsView,reviewResults,renderResults,resultInspectionHtml,inspectResult,matchingResultsCsv,matchingResultsDocument} from './implementation_results.mjs';
 
@@ -23,15 +24,16 @@ function parseOptionalObject(value){const s=String(value||'').trim();if(!s)retur
 function docEqual(a,b){return JSON.stringify(a)===JSON.stringify(b);}
 export class ImplementationWorkbench {
   constructor(root,host={},catalog=null){
-    this.root=root;this.host=host;this.native=typeof host.api==='function';this.catalog=catalog;this.plan=null;this.nativePlan=null;this.tab='overview';this.asOf=today();this.dirty=false;this.pending=null;this.importedFile=false;this.filter='';this.gone=false;this.generation=0;this.message='';this.error='';this.offlineCopies={};this.planList=[];this.observationFlow=null;this.observationReceipts=[];this.labIntake=null;this.labModule=null;this.briefingIntake=null;this.outcomeController=null;this.outcomeModule=null;this.qcModule=null;this.qcEditor=null;this.labDispatch=null;this.dispatchModule=null;this.resultView=normalizeResultsView();
+    this.root=root;this.host=host;this.native=typeof host.api==='function';this.catalog=catalog;this.plan=null;this.nativePlan=null;this.tab='overview';this.asOf=today();this.dirty=false;this.pending=null;this.importedFile=false;this.filter='';this.gone=false;this.generation=0;this.message='';this.error='';this.offlineCopies={};this.planList=[];this.selectionDraft=null;this.selectionPreviewTurn=0;this.observationFlow=null;this.observationReceipts=[];this.labIntake=null;this.labModule=null;this.briefingIntake=null;this.outcomeController=null;this.outcomeModule=null;this.qcModule=null;this.qcEditor=null;this.labDispatch=null;this.dispatchModule=null;this.resultView=normalizeResultsView();
     this.onClick=e=>{const b=e.target.closest('[data-impl]');if(!b||!this.root.contains(b))return;this.act(b).catch(x=>this.fail(x));};
     this.onChange=e=>this.change(e).catch(x=>this.fail(x));
+    this.onInput=e=>{if(e.target.name==='source_filter')this.syncSourceSelection();};
     this.onOutcomeInput=e=>{if(e.target.matches('[data-outcome-control]'))this.outcomeController?.capture();};
     this.onResultsKey=e=>{if(e.key==='Enter'&&e.target.matches('[data-result-filter="query"]')){e.preventDefault();this.change(e).catch(x=>this.fail(x));}};
     this.onSubmit=e=>{if(e.target.matches('[data-impl-form]')){e.preventDefault();this.saveForm(e.target).catch(x=>this.fail(x));}};
-    this.root.addEventListener('click',this.onClick);this.root.addEventListener('change',this.onChange);this.root.addEventListener('keydown',this.onResultsKey);this.root.addEventListener('submit',this.onSubmit);this.root.addEventListener('input',this.onOutcomeInput);
+    this.root.addEventListener('click',this.onClick);this.root.addEventListener('change',this.onChange);this.root.addEventListener('input',this.onInput);this.root.addEventListener('keydown',this.onResultsKey);this.root.addEventListener('submit',this.onSubmit);this.root.addEventListener('input',this.onOutcomeInput);
     this.beforeUnload=e=>{if(this.dirty){e.preventDefault();e.returnValue='';}};window.addEventListener('beforeunload',this.beforeUnload);
-    this.workspace=host.getState?.()?.workspace_key||'offline';this.storageKey='upstate.implementation.drafts/v1/'+this.workspace;this.readLocal();this.readEconomic();
+    this.workspace=host.getState?.()?.workspace_key||'offline';this.storageKey='upstate.implementation.drafts/v1/'+this.workspace;this.readLocal();this.evidence=attachImplementationEvidence(this);this.readEconomic();
   }
   async start(){
     this.render();
@@ -305,6 +307,7 @@ export class ImplementationWorkbench {
     this.plan=clone(next);this.plan.updated_at=new Date().toISOString();this.dirty=true;this.cache();this.message=message;this.error='';this.render();
   }
   async queue(action,payload){
+    if(['implementation.plan.create','implementation.plan.save','implementation.plan.import'].includes(action)&&this.evidence&&await this.evidence.saveIfNeeded())return;
     if(this.pending)throw Error('The previous plan operation is still retained. Open its task or retry its original operation before starting another.');
     const issues=validatePlan(this.plan);if(issues.length)throw Error(issues.map(x=>x.path+': '+x.message).join('\n'));
     this.pending={id:null,operation_id:uid('implementation-op'),action,payload:clone(payload),snapshot:clone(this.plan),plan_id:this.plan.id};
@@ -396,9 +399,9 @@ export class ImplementationWorkbench {
       if(current()){this.error=e?.message||String(e);this.message='The completed native operation remains retained. Retry reopening its saved result.';this.cache();if(!this.root.querySelector('dialog[open]'))this.render();}
     }finally{if(this.resolvingOperation===pending.operation_id)this.resolvingOperation=null;}
   }
-  detach(){if(this.gone)return;this.closeSampleQC();this.outcomeController?.detach();this.cache();this.gone=true;this.generation++;this.root.removeEventListener('click',this.onClick);this.root.removeEventListener('change',this.onChange);this.root.removeEventListener('keydown',this.onResultsKey);this.root.removeEventListener('submit',this.onSubmit);this.root.removeEventListener('input',this.onOutcomeInput);window.removeEventListener('beforeunload',this.beforeUnload);}
+  detach(){if(this.gone)return;this.closeSampleQC();this.evidence?.detach();this.outcomeController?.detach();this.cache();this.gone=true;this.generation++;this.root.removeEventListener('click',this.onClick);this.root.removeEventListener('change',this.onChange);this.root.removeEventListener('input',this.onInput);this.root.removeEventListener('keydown',this.onResultsKey);this.root.removeEventListener('submit',this.onSubmit);this.root.removeEventListener('input',this.onOutcomeInput);window.removeEventListener('beforeunload',this.beforeUnload);}
   render(){
-    if(this.gone)return;this.closeSampleQC();const p=this.plan;
+    if(this.gone)return;this.closeSampleQC();this.evidence?.beforeRender();const p=this.plan;
     if(!p){this.root.innerHTML='<section class="iw"><h2>Implementation & fieldwork</h2><p>Opening retained plans…</p>'+(this.error?'<pre role="alert">'+esc(this.error)+'</pre>':'')+'</section>';return;}
     let stats=null,validation=validatePlan(p);try{if(!validation.length)stats=summarize(p,this.asOf);}catch(e){validation=[{path:'calendar',message:e.message}];}
     const plans=new Map([...this.planList.map(x=>[x.id,x]),...Object.values(this.offlineCopies).map(x=>[x.document.id,x.document]),[p.id,p]]);
@@ -417,7 +420,7 @@ export class ImplementationWorkbench {
     }
     if(this.tab==='tasks'){
       const schedule=new Map((stats?.schedule.tasks||[]).map(t=>[t.id,t]));
-      return '<div class="iw-section-head"><h3>Assigned work and dependencies</h3><div class="iw-actions">'+this.addButton('tasks')+button('method','Add method workflow')+button('csv','Export tasks','data-collection="tasks"')+'</div></div><p class="iw-muted">Durations are working days on this plan’s calendar. Enter zero for a milestone. A blank duration stays open until estimated.</p>'+this.table(['Task / candidate','Phase','Owner','Status','Days','Scheduled dates','Progress',''],p.tasks.map(t=>{const s=schedule.get(t.id);return ['<b>'+esc(t.title)+'</b><small>'+esc(p.candidates.find(c=>c.id===t.candidate_id)?.label||'')+'</small>',esc(t.phase||''),esc(t.assignee||'Unassigned'),'<span class="iw-state">'+esc(t.status.replaceAll('_',' '))+'</span>',esc(t.duration_days??'Estimate'),s?.start?esc(s.start)+(s.last_work_date&&s.last_work_date!==s.start?'<br>'+esc(s.last_work_date):'')+(s.overdue?'<small>Overdue</small>':''):esc('Awaiting predecessor dates'),'<progress max="100" value="'+t.progress_pct+'"></progress><small>'+t.progress_pct+'%</small>',this.editButton('tasks',t.id)];}));
+      return '<div class="iw-section-head"><h3>Assigned work and dependencies</h3><div class="iw-actions">'+this.addButton('tasks')+button('method','Add method workflow')+button('csv','Export tasks','data-collection="tasks"')+'</div></div><p class="iw-muted">Durations are working days on this plan’s calendar. Enter zero for a milestone. A blank duration stays open until estimated.</p>'+this.table(['Task / candidate','Phase','Owner','Status','Days','Scheduled dates','Progress',''],p.tasks.map(t=>{const s=schedule.get(t.id);return ['<b>'+esc(t.title)+'</b><small>'+esc(p.candidates.find(c=>c.id===t.candidate_id)?.label||'')+'</small>',esc(t.phase||''),esc(t.assignee||'Unassigned'),'<span class="iw-state">'+esc(t.status.replaceAll('_',' '))+'</span>',esc(t.duration_days??'Estimate'),s?.start?esc(s.start)+(s.last_work_date&&s.last_work_date!==s.start?'<br>'+esc(s.last_work_date):'')+(s.overdue?'<small>Overdue</small>':''):esc('Awaiting predecessor dates'),'<progress max="100" value="'+t.progress_pct+'"></progress><small>'+t.progress_pct+'%</small>',this.editButton('tasks',t.id)+this.evidence.recordButton('tasks',t.id)];}));
     }
     if(this.tab==='budget'){
       return '<div class="iw-section-head"><h3>Cost ledger · USD</h3><div class="iw-actions">'+this.addButton('budget_lines')+button('csv','Export costs','data-collection="budget_lines"')+'</div></div><p class="iw-muted">Record budget estimates, contractual commitments and actual costs in separate ledger rows. Amounts are preserved as exact cents.</p>'+(stats?'<div class="iw-stats">'+[['Budget',money(stats.budget.budget)],['Committed',money(stats.budget.commitment)],['Actual cost',money(stats.budget.actual)],['Budget less actual',money(stats.budget.remaining)]].map(([l,v])=>'<div><span>'+l+'</span><strong>'+v+'</strong></div>').join('')+'</div>':'')+this.table(['Kind','Description','Task','Amount','Date','Reference',''],p.budget_lines.map(b=>[esc(b.kind),esc(b.label),esc(p.tasks.find(t=>t.id===b.task_id)?.title||''),money(b.amount_minor),esc(b.date||''),esc(b.reference||''),this.editButton('budget_lines',b.id)]));
@@ -428,16 +431,19 @@ export class ImplementationWorkbench {
     if(this.tab==='outcomes')return this.outcomePanel();
     if(this.tab==='field'){
       const show=(collection,heads,cells,label)=>'<div class="iw-section-head"><h3>'+label+'</h3><div class="iw-actions">'+this.addButton(collection)+button('csv','Export','data-collection="'+collection+'"')+'</div></div>'+this.table(heads,p[collection].map(cells));
-      return this.dispatchPanel()+this.labPanel()+this.fieldObservationPanel()+'<div class="iw-section-head"><h3>Field capture</h3>'+button('field-form','Use a structured field form','','iw-primary')+(this.native?button('sample-qc','Sample quality control'):'')+'</div>'+show('visits',['Planned','Site','Observer','Status','Actual time',''],v=>[esc(v.planned_date||''),esc(p.sites.find(s=>s.id===v.site_id)?.label||v.site_id),esc(v.observer||''),esc(v.status),esc(v.visited_at||''),this.editButton('visits',v.id)+button('field-sheet','Field sheet','data-id="'+esc(v.id)+'"')],'Field visits')+show('activities',['Activity','Visit','Kind','Sample ID','Collected',''],a=>[esc(a.id),esc(a.visit_id),esc(a.kind),esc(a.sample_id||''),esc(a.collected_at||''),this.editButton('activities',a.id)],'Samples and activities')+renderResults(this);
+      return this.dispatchPanel()+this.labPanel()+this.fieldObservationPanel()+'<div class="iw-section-head"><h3>Field capture</h3>'+button('field-form','Use a structured field form','','iw-primary')+(this.native?button('sample-qc','Sample quality control'):'')+'</div>'+show('visits',['Planned','Site','Observer','Status','Actual time',''],v=>[esc(v.planned_date||''),esc(p.sites.find(s=>s.id===v.site_id)?.label||v.site_id),esc(v.observer||''),esc(v.status),esc(v.visited_at||''),this.editButton('visits',v.id)+this.evidence.recordButton('visits',v.id)+button('field-sheet','Field sheet','data-id="'+esc(v.id)+'"')],'Field visits')+show('activities',['Activity','Visit','Kind','Sample ID','Collected',''],a=>[esc(a.id),esc(a.visit_id),esc(a.kind),esc(a.sample_id||''),esc(a.collected_at||''),this.editButton('activities',a.id)+this.evidence.recordButton('activities',a.id)],'Samples and activities')+renderResults(this);
     }
     if(this.tab==='sources'){
       return briefingFollowup.render(this)+'<div class="iw-section-head"><h3>Conservation and intervention selections</h3><div class="iw-actions">'+(this.native?button('source-import','Import native selection','','iw-primary'):'')+this.addButton('candidates','Add source-linked candidate')+'</div></div><p class="iw-muted">Selected rows retain the original scientific source and model references. Community-area totals stay with their original area; source snapshots can be inspected below.</p>'+this.table(['Candidate','Whole area (ha)','Source / native identity','Retained quantities',''],p.candidates.map(c=>[esc(c.label),esc(c.area_ha??''),'<code>'+esc(textObject(c.source))+'</code>','<code>'+esc(textObject(c.modeled_benefits||[]))+'</code>',button('inspect','Inspect source','data-collection="candidates" data-id="'+esc(c.id)+'"')]))+'<div class="iw-section-head"><h3>Source register</h3>'+this.addButton('source_links')+'</div>'+this.table(['Reference','Kind','Location',''],p.source_links.map(s=>{const link=safeLink(s.reference);return [esc(s.label),esc(s.kind),link?'<a href="'+esc(link)+'" target="_blank" rel="noopener noreferrer">'+esc(s.reference)+'</a>':esc(format(s.reference)),button('inspect','Inspect','data-collection="source_links" data-id="'+esc(s.id)+'"')];}));
     }
     if(this.tab==='handover'){
-      return '<h3>Save and hand over the complete plan</h3><p>Export JSON carries every original record, source snapshot, native revision and additional field. The HTML report is self-contained and printable. CSV tables preserve all original columns and protect spreadsheet text fields.</p><div class="iw-actions">'+button('export-json','Complete plan JSON','','iw-primary')+button('report','Print-ready HTML report')+(this.native?button('native-report','Native report package'):'')+'</div><h3>Field package</h3><p>Open the portable workbench, import the same plan JSON, and record visits offline. Its JSON export retains the source revision for the native return. When a newer native revision exists, both versions are preserved for reconciliation.</p><div class="iw-actions">'+COLLECTIONS.map(c=>button('csv',c.replaceAll('_',' '),'data-collection="'+c+'"')).join('')+'</div>'+this.retainedReports()+'<h3>Plan history</h3>'+this.table(['Revision','When','Action'],(this.history||[]).map(h=>[esc(h.revision??h.event?.revision??''),esc(h.committed_at??h.created_at??h.event?.at??h.updated_at??''),esc(h.operation??h.action??h.event?.action??'')]),this.native?'Save this plan to start its native revision history.':'Native revision history accompanies the receiving workspace; browser drafts preserve the originating revision.')+'<h3>Methods</h3>'+this.table(['Method','Purpose'],(this.catalog?.method_templates||[]).map(m=>[esc(m.label),esc(m.purpose)]));
+      return this.evidence.body()+'<h3>Save and hand over the complete plan</h3><p>Export JSON carries every original record, source snapshot, native revision and additional field. The HTML report is self-contained and printable. CSV tables preserve all original columns and protect spreadsheet text fields.</p><div class="iw-actions">'+button('export-json','Complete plan JSON','','iw-primary')+button('report','Print-ready HTML report')+(this.native?button('native-report','Native report package'):'')+'</div><h3>Field package</h3><p>Open the portable workbench, import the same plan JSON, and record visits offline. Its JSON export retains the source revision for the native return. When a newer native revision exists, both versions are preserved for reconciliation.</p><div class="iw-actions">'+COLLECTIONS.map(c=>button('csv',c.replaceAll('_',' '),'data-collection="'+c+'"')).join('')+'</div>'+this.retainedReports()+'<h3>Plan history</h3>'+this.table(['Revision','When','Action'],(this.history||[]).map(h=>[esc(h.revision??h.event?.revision??''),esc(h.committed_at??h.created_at??h.event?.at??h.updated_at??''),esc(h.operation??h.action??h.event?.action??'')]),this.native?'Save this plan to start its native revision history.':'Native revision history accompanies the receiving workspace; browser drafts preserve the originating revision.')+'<h3>Methods</h3>'+this.table(['Method','Purpose'],(this.catalog?.method_templates||[]).map(m=>[esc(m.label),esc(m.purpose)]));
     }
     return '';
   }
+  sourceChoices(){return implementationSourceChoices.call(this);}
+  async previewSourceSelection(choice){return previewImplementationSource.call(this,choice);}
+  syncSourceSelection(){return syncImplementationSource.call(this);}
   async act(b){
     if(b.dataset.impl.startsWith('briefing-')){await briefingFollowup.act(this,b);return;}
     const action=b.dataset.impl;
@@ -466,18 +472,32 @@ export class ImplementationWorkbench {
     if(action==='refresh-result'){await this.update(this.lastState||this.host.getState?.()||{});return;}
     if(action==='tab'){this.tab=b.dataset.tab;this.render();return;}
     if(action==='new'){this.cache();this.generation++;this.history=[];this.downloads=[];this.reports=[];this.plan=makePlan();this.briefingIntake=null;this.labIntake=null;this.labDispatch=null;this.resultView=normalizeResultsView();this.observationFlow=null;this.observationReceipts=[];this.nativePlan=null;this.importedFile=false;this.dirty=true;this.pending=null;this.message='New plan created. Choose Plan settings, then import a selection or add a method workflow.';this.cache();this.render();return;}
-    if(action==='save'){if(this.native){const kind=this.importedFile?'implementation.plan.import':this.nativePlan?'implementation.plan.save':'implementation.plan.create';await this.queue(kind,{document:this.plan,expected_revision:this.plan.revision});}else{this.cache();this.status('Draft saved in this browser. Export JSON for a portable copy.');}return;}
+    if(action==='save'){if(await this.evidence.saveIfNeeded())return;if(this.native){const kind=this.importedFile?'implementation.plan.import':this.nativePlan?'implementation.plan.save':'implementation.plan.create';await this.queue(kind,{document:this.plan,expected_revision:this.plan.revision});}else{this.cache();this.status('Draft saved in this browser. Export JSON for a portable copy.');}return;}
     if(action==='export-json'){download(this.plan.id+'.json',JSON.stringify(this.plan,null,2)+'\n','application/json');this.message='Complete plan JSON exported.';this.render();return;}
     if(action==='report'){download(this.plan.id+'-report-'+this.asOf+'.html',reportHtml(this.plan,this.asOf),'text/html');return;}
     if(action==='csv'){download(this.plan.id+'-'+b.dataset.collection+'.csv',csvPlan(this.plan,b.dataset.collection,this.asOf),'text/csv;charset=utf-8');return;}
     if(action==='field-sheet'){download(this.plan.id+'-'+b.dataset.id+'-field-sheet.html',fieldSheetHtml(this.plan,b.dataset.id),'text/html');return;}
     if(action==='import'){this.root.querySelector('[data-impl-file]').click();return;}
     if(action==='reopen'){await this.openPlan(this.plan.id,true);return;}
-    if(action==='close-dialog'){this.root.querySelector('dialog').close();if(this.native)await this.update(this.lastState||this.host.getState?.()||{});return;}
+    if(action==='close-dialog'){this.selectionPreviewTurn++;this.root.querySelector('dialog').close();if(this.native)await this.update(this.lastState||this.host.getState?.()||{});return;}
     if(action==='settings'){this.openDialog('settings');return;}
     if(action==='method'){if(!this.catalog)throw Error('The methods catalog is still loading. Reopen this view after it is available.');this.openDialog('method');return;}
     if(action==='field-form'){if(!this.catalog)throw Error('The field forms catalog is still loading.');this.openDialog('field-form');return;}
-    if(action==='source-import'){const turn=this.generation,id=this.plan.id,choices=await this.read('/api/implementation/selections');if(this.gone||turn!==this.generation||this.plan.id!==id||this.root.querySelector('dialog[open]'))return;this.selectionChoices=choices;this.openDialog('source-import');return;}
+    if(action==='source-import'){
+      if(!this.native)throw Error('Native source selections are available in their original workspace.');
+      if(this.dirty||!this.nativePlan)throw Error('Save this plan’s native revision before attaching a native source selection.');
+      if(this.pending)throw Error('Finish the retained plan operation before importing another source selection.');
+      const turn=this.generation,id=this.plan.id,choices=await this.read('/api/implementation/selections');
+      if(this.gone||turn!==this.generation||this.plan.id!==id||this.root.querySelector('dialog[open]'))return;
+      this.selectionChoices=choices;this.selectionDraft=null;
+      await this.previewSourceSelection(this.sourceChoices()[0]?.choice||'');return;
+    }
+    if(action==='source-preview-retry'){await this.previewSourceSelection(this.selectionDraft?.choice||'');return;}
+    if(action==='source-select-visible'||action==='source-clear'){
+      const form=this.root.querySelector('dialog[open] [data-impl-form="source-import"]');if(!form)return;
+      for(const row of form.querySelectorAll('[data-source-row]')){const input=row.querySelector('input[name="source_row"]');if(input&&(action==='source-clear'||!row.hidden))input.checked=action!=='source-clear';}
+      this.syncSourceSelection();return;
+    }
     if(action==='native-report'){if(this.dirty)throw Error('Save the native revision before creating its report package.');await this.queue('implementation.plan.report',{id:this.plan.id,revision:this.plan.revision,as_of:this.asOf});return;}
     if(action==='add'||action==='edit'){this.openDialog(b.dataset.collection,b.dataset.id);return;}
     if(action==='inspect'){const row=this.plan[b.dataset.collection].find(x=>x.id===b.dataset.id);this.dialog('<h3>Retained original record</h3><pre class="iw-json">'+esc(JSON.stringify(row,null,2))+'</pre><div class="iw-actions">'+button('close-dialog','Close')+'</div>');return;}
@@ -497,6 +517,8 @@ export class ImplementationWorkbench {
     }
     if(e.target.dataset.implChange==='plan'){await this.openPlan(e.target.value);return;}
     if(e.target.dataset.implChange==='asof'){this.asOf=e.target.value||today();this.render();return;}
+    if(e.target.name==='source_choice'){await this.previewSourceSelection(e.target.value);return;}
+    if(e.target.name==='source_row'||e.target.name==='source_filter'){this.syncSourceSelection();return;}
     if(e.target.name==='fieldform_template'){this.activeFormId=e.target.value;this.openDialog('field-form');return;}
     if(e.target.name==='result_type'){
       const form=e.target.form,value=form.elements.value;if(value){value.disabled=e.target.value!=='numeric';if(value.disabled)value.value='';}

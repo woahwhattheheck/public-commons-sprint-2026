@@ -182,6 +182,9 @@ def _receive(workspace, selection_path, output):
     selection = read_json(selection_path)
     if not isinstance(selection, dict):
         raise ValueError("Selection must be an original Monitoring selection object")
+    archive_scope = selection.get("archive_scope", "complete")
+    if archive_scope not in {"complete", "selected"}:
+        raise ValueError("archive_scope must be complete or selected")
     service = MonitoringWorkspace(workspace, export_root=output / "exports")
     receipt_path = output / "receiving.json"
     identity = digest({"project": workspace.project, "workspace": str(workspace.root), "selection": selection})
@@ -218,7 +221,18 @@ def _receive(workspace, selection_path, output):
     saved("field_package_verification", _export_members(
         state["field_package"], "eco.monitoring.export/1", context=context, campaign=campaign["revision"]))
     if "workspace_archive" not in state:
-        saved("workspace_archive", service.export(**export_selection, format="workspace"))
+        if archive_scope == "selected":
+            from model.study_transfer import export_study
+            roots = [{"kind": "monitoring_heads", "id": state["campaign_id"]}]
+            if context:
+                roots.append({"kind": "monitoring_observed_contexts", "id": context["id"]})
+            exported = export_study(workspace, output / "selected-monitoring-study.zip", {
+                "title": selection.get("title", plan["title"]),
+                "roots": roots, "include_related_results": True,
+            })
+            saved("workspace_archive", exported)
+        else:
+            saved("workspace_archive", service.export(**export_selection, format="workspace"))
     archive = _download(state["workspace_archive"])
     manifest = portable.inspect_archive(archive, verify=True)
     if "received" not in state:
@@ -255,6 +269,9 @@ def _receive(workspace, selection_path, output):
             "source_binding": restored_context["source_binding"],
             "campaign_revision_id": restored_context["campaign_revision_id"],
         })
+    if archive_scope == "selected":
+        from model.study_transfer import verify_received_studies
+        saved("selected_study_verification", verify_received_studies(received_workspace))
     reopened = recipient.campaign(state["campaign_id"])
     if "independent_revision" not in state:
         request = state.get("independent_request") or {
@@ -275,6 +292,8 @@ def _receive(workspace, selection_path, output):
         # after the receiving campaign appends an independently editable revision.
         if observed.inspect(received_workspace, context["id"]) != context:
             raise ValueError("Original observed context changed after receiving continuation")
+    if archive_scope == "selected":
+        saved("continued_study_verification", verify_received_studies(received_workspace))
     saved("summary", {
         "source_catchments": len(network["nodes"]), "source_stations": len(network["stations"]),
         "selected_ids": plan["selected_ids"], "scheduled_visits": len(plan["calendar"]["visits"]),
@@ -282,7 +301,8 @@ def _receive(workspace, selection_path, output):
         "original_project": workspace.project, "original_campaign_revision_id": original_revision,
         "observed_context_id": context["id"] if context else None,
         "observed_context_summary": context["summary"] if context else None,
-        "received_independent_revision_id": state["independent_revision"], "complete": True,
+        "received_independent_revision_id": state["independent_revision"],
+        "archive_scope": archive_scope, "complete": True,
     })
     return state
 

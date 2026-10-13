@@ -1,4 +1,4 @@
-"""Scientific diagnostics for original Upper Savannah InVEST 3.20.0 runs.
+"""Scientific diagnostics for original Upper Savannah native model runs.
 
 The input is an explicit cohort of Workspace run IDs.  No model is run, no
 profile is changed, and no experiment design is silently generated.  Raster
@@ -24,12 +24,14 @@ import time
 from pathlib import Path
 
 from .common import (
-    atomic_json, canonical, describe_file, digest, held, identifier,
+    INVEST_VERSION, atomic_json, canonical, describe_file, digest, held, identifier,
     now, read_json, verify_file,
 )
+from .native_versions import POLICY as NATIVE_VERSION_POLICY
+from .native_versions import comparison_versions, model_versions, version_label
 
 SCHEMA = "upstate.experiment-diagnostics/v1"
-ENGINE_VERSION = "ES26-diagnostics-2"
+ENGINE_VERSION = "ES26-diagnostics-3"
 OPERATION_ID = "UPSTATE-SCIENTIFIC-EXPERIMENTS-ES26-20261012"
 METRICS = {
     "nitrogen_export": ("nitrogen", "kg/year"),
@@ -90,6 +92,8 @@ def _source(ws):
         ("observations", __package__ + ".observations"),
         ("rasters", __package__ + ".rasters"),
         ("common", __package__ + ".common"),
+        ("native_versions", __package__ + ".native_versions"),
+        ("model_selection", __package__ + ".model_selection"),
     ):
         module = importlib.import_module(name)
         path = getattr(module, "__file__", None)
@@ -105,7 +109,8 @@ def _source(ws):
             runtime_dependencies[name] = None
     result = {
         "operation_id": OPERATION_ID, "engine_version": ENGINE_VERSION,
-        "invest_version": "3.20.0", "modules": modules,
+        "application_invest_version": INVEST_VERSION, "modules": modules,
+        "native_version_policy": NATIVE_VERSION_POLICY,
         "runtime_dependencies": runtime_dependencies,
     }
     result["sha256"] = digest(result)
@@ -182,8 +187,8 @@ def _normalize(ws, selection):
     if len(grids) != 1:
         raise ValueError("All diagnostic runs must use the same original grid")
     grid_id = next(iter(grids))
-    if any(run["selection"].get("invest_version") != "3.20.0" for run in runs):
-        raise ValueError("All diagnostic runs must select InVEST 3.20.0")
+    # Requested-version text is part of the immutable original selection. Actual
+    # compatibility is checked separately for each metric using producing stages.
     keys = [(run["selection"]["profile_id"], run["selection"]["scenario_id"]) for run in runs]
     if len(set(keys)) != len(keys):
         raise ValueError("Only one original run may occupy each profile/scenario cell")
@@ -392,6 +397,41 @@ def _csv(path, rows, diagnostic_id, source_stamp, empty_fields=()):
     temporary.replace(path)
 
 
+def _producing_versions(run, models):
+    """Retain the original policy, including explicitly labeled legacy fallback."""
+    if not run or not models:
+        return {}
+    try:
+        return model_versions(run, models)
+    except Exception as exc:
+        return {
+            model: {"model": model, "comparison_version": None, "basis": "unavailable",
+                    "error": {"type": type(exc).__name__, "message": str(exc)}}
+            for model in models
+        }
+
+
+def _version_cohort(runs, model):
+    """Compare every supplied complete applicable run; never pick a subset."""
+    runs = sorted(runs, key=lambda row: row["id"])
+    result = {
+        "policy": NATIVE_VERSION_POLICY, "models": [model],
+        "run_ids": [run["id"] for run in runs],
+        "runs": {run["id"]: _producing_versions(run, [model]) for run in runs},
+        "versions": {}, "state": "unavailable",
+        "reason": "No completed applicable native runs are available",
+    }
+    if not runs:
+        return result
+    try:
+        compared = comparison_versions(runs, [model])
+    except Exception as exc:
+        result.update(state="incompatible", reason=str(exc), error_type=type(exc).__name__)
+        return result
+    result.update(compared, state="compatible", reason=None)
+    return result
+
+
 def _run_matrix(selection, snapshots):
     by_cell = {
         (row["selection"]["profile_id"], row["selection"]["scenario_id"]): row
@@ -404,11 +444,18 @@ def _run_matrix(selection, snapshots):
             scope = snapshots["run_model_scopes"][run["id"]] if run else {
                 "models": None, "source": "missing run",
             }
+            versions = _producing_versions(run, scope["models"])
             rows.append({
                 "profile_id": profile_id, "scenario_id": scenario_id,
                 "run_id": run["id"] if run else None,
+                "selection": copy.deepcopy(run["selection"]) if run else None,
                 "models": scope["models"], "models_source": scope["source"],
                 "models_error": scope.get("error"),
+                "model_versions": versions,
+                "native_version_summary": "; ".join(
+                    model.upper() + ": " + version_label(info)
+                    for model, info in versions.items()
+                ),
                 "state": run.get("state", "unknown") if run else "missing",
                 "is_reference": profile_id == selection["reference_profile_id"],
                 "is_baseline": scenario_id == selection["baseline_scenario_id"],
@@ -424,6 +471,7 @@ def _shared_support(ws, folder, diagnostic_id, source_stamp, metric, snapshots):
     raster datasets open at once regardless of the number of design profiles.
     """
     records, errors, selected_run_ids, not_selected = [], [], [], []
+    completed_selected_runs = []
     model = METRIC_MODELS[metric]
     for run in snapshots["runs"]:
         scope = snapshots["run_model_scopes"][run["id"]]
@@ -445,6 +493,12 @@ def _shared_support(ws, folder, diagnostic_id, source_stamp, metric, snapshots):
         selected_run_ids.append(run["id"])
         if run.get("state") != "complete":
             continue
+        completed_selected_runs.append(run)
+        if model not in (run.get("stages") or {}):
+            errors.append({"stage": "metric-source", "run_id": run["id"],
+                           "metric": metric, "model": model,
+                           "message": "Complete run lacks its selected native model stage"})
+            continue
         artifact = run.get("artifacts", {}).get(metric)
         if not artifact:
             errors.append({"stage": "metric-source", "run_id": run["id"],
@@ -464,13 +518,31 @@ def _shared_support(ws, folder, diagnostic_id, source_stamp, metric, snapshots):
             records.append({"run": run, "artifact": artifact, "path": path})
         except Exception as exc:
             errors.append(_error("metric-source", exc, run_id=run["id"], metric=metric))
+    versions = _version_cohort(completed_selected_runs, model)
     model_coverage = {
+        "native_versions": versions,
+        "native_version_state": versions["state"],
+        "native_version_reason": versions["reason"],
+        "available_artifact_run_ids": [record["run"]["id"] for record in records],
         "model": model, "selected_run_ids": selected_run_ids,
         "selected_run_count": len(selected_run_ids),
         "model_not_selected_run_ids": [row["run_id"] for row in not_selected],
         "model_not_selected": not_selected,
         "model_not_selected_run_count": len(not_selected),
     }
+    if versions["state"] == "incompatible":
+        errors.append({
+            "stage": "native-version-cohort", "metric": metric, "model": model,
+            "run_ids": versions["run_ids"], "message": versions["reason"],
+        })
+        return {
+            "metric": metric, "values": [], "errors": errors,
+            "common_support": {
+                "metric": metric, "run_ids": [], "valid_cells": None,
+                "state": "incompatible_native_versions", "units": METRICS[metric][1],
+                **model_coverage,
+            },
+        }
     if not records:
         inactive = not selected_run_ids and not errors
         return {
@@ -559,6 +631,8 @@ def _shared_support(ws, folder, diagnostic_id, source_stamp, metric, snapshots):
             "units": METRICS[metric][1], "model": model,
             "models": snapshots["run_model_scopes"][run["id"]]["models"],
             "models_source": snapshots["run_model_scopes"][run["id"]]["source"],
+            "model_version": versions["runs"][run["id"]][model],
+            "native_version_label": version_label(versions["runs"][run["id"]][model]),
             "run_id": run["id"], "profile_id": run["selection"]["profile_id"],
             "scenario_id": run["selection"]["scenario_id"],
             "grid_id": run["selection"]["grid_id"],
@@ -600,7 +674,9 @@ def _shared_support(ws, folder, diagnostic_id, source_stamp, metric, snapshots):
         "interpretation": (
             "Every common-mass total and paired contrast for this metric uses "
             "this same intersection of finite valid pixels across the listed runs. "
-            "The footprint can change in a later completion snapshot."
+            "The footprint can change in a later completion snapshot. "
+            "The producing version is compatible across every complete applicable run; "
+            "recorded legacy fallbacks remain labeled as fallbacks."
         ),
     }
     return {"metric": metric, "values": values, "common_support": support, "errors": errors}
@@ -1057,6 +1133,10 @@ def _observations(ws, folder, diagnostic_id, source_stamp, selection, snapshots,
                         "request_id": request_id, "profile_id": profile_id,
                         "run_id": run["id"], "comparison_id": comparison.get("id"),
                         **_comparison_mass_row(row),
+                        "model_version": _producing_versions(
+                            run, [parameter_models[row["parameter"]]]
+                        ).get(parameter_models[row["parameter"]])
+                        if row.get("parameter") in parameter_models else None,
                     })
             except Exception as exc:
                 failure_profiles[profile_id] = str(exc)
@@ -1106,6 +1186,16 @@ def _observations(ws, folder, diagnostic_id, source_stamp, selection, snapshots,
                 key: row for key, row in expected_rows.items()
                 if row["parameter"] == parameter and row["units"] == units
             }
+            # Observation fits compare only the applicable baseline runs. A
+            # hypothetical scenario version must not invalidate a compatible
+            # baseline-only observation cohort, and failed comparisons must not
+            # silently remove an incompatible baseline from this check.
+            native_versions = _version_cohort([
+                run for key, run in baseline_runs.items()
+                if key in parameter_expected_profiles and baseline_models.get(key) is not None
+                and model in baseline_models[key]
+            ], model)
+            version_blocked = native_versions["state"] == "incompatible"
             maps, all_keys = {}, set(expected_parameter_rows)
             key_metadata = {
                 key: {field: row.get(field) for field in (
@@ -1158,6 +1248,12 @@ def _observations(ws, folder, diagnostic_id, source_stamp, selection, snapshots,
                 maps[profile_id] = admitted
             if not all_keys:
                 continue
+            if version_blocked:
+                output["errors"].append({
+                    "stage": "observation-native-versions", "request_id": request_id,
+                    "parameter": parameter, "model": model,
+                    "run_ids": native_versions["run_ids"], "message": native_versions["reason"],
+                })
             common = set.intersection(*(set(value) for value in maps.values())) if maps else set()
             inconsistent = {
                 key for key in common
@@ -1175,7 +1271,7 @@ def _observations(ws, folder, diagnostic_id, source_stamp, selection, snapshots,
             })
             complete = (
                 bool(parameter_expected_profiles) and len(maps) == len(parameter_expected_profiles)
-                and set(common) == all_keys and not inconsistent
+                and set(common) == all_keys and not inconsistent and not version_blocked
             )
             cohort = {
                 "parameter": parameter, "units": units,
@@ -1193,14 +1289,18 @@ def _observations(ws, folder, diagnostic_id, source_stamp, selection, snapshots,
                 "model_not_selected_profile_ids": not_selected_profiles,
                 "compared_profile_ids": sorted(maps),
                 "missing_profile_ids": sorted(set(parameter_expected_profiles) - set(maps)),
+                "native_versions": native_versions,
+                "native_version_state": native_versions["state"],
+                "native_version_reason": native_versions["reason"],
                 "coverage_state": "model_not_selected" if not parameter_expected_profiles else (
+                    "incompatible_native_versions" if version_blocked else
                     "complete" if complete else "incomplete"
                 ),
             }
             request_report["cohorts"].append(cohort)
             for profile_id in parameter_expected_profiles:
                 rows = [maps[profile_id][key] for key in common] if profile_id in maps else []
-                score = _observation_score(rows)
+                score = _observation_score(rows) if not version_blocked else None
                 result = {
                     "request_id": request_id, "parameter": parameter, "units": units,
                     "profile_id": profile_id,
@@ -1213,6 +1313,12 @@ def _observations(ws, folder, diagnostic_id, source_stamp, selection, snapshots,
                     "n_expected_observations": len(all_keys),
                     "n_common_observations": len(common),
                     "profile_available": profile_id in maps,
+                    "native_versions": native_versions,
+                    "native_version_state": native_versions["state"],
+                    "native_version_reason": native_versions["reason"],
+                    "score_state": "incompatible_native_versions" if version_blocked else (
+                        "available" if profile_id in maps and common else "unavailable"
+                    ),
                     "full_expected_cohort_complete": complete,
                     "common_cohort_score": score if profile_id in maps else None,
                     "full_expected_cohort_score": score if complete else None,
@@ -1341,6 +1447,9 @@ def _observation_coverage_rows(report):
                 "expected_profile_ids": cohort["expected_profile_ids"],
                 "model_not_selected_profile_ids": cohort["model_not_selected_profile_ids"],
                 "coverage_state": cohort["coverage_state"],
+                "native_versions": cohort.get("native_versions"),
+                "native_version_state": cohort.get("native_version_state"),
+                "native_version_reason": cohort.get("native_version_reason"),
                 "error": None,
             })
     return rows
@@ -1373,7 +1482,8 @@ def _html_fit_tables(report, render_table):
             shared_rows.append({**base, **{key: shared.get(key) for key in metric_fields}})
         else:
             available = record.get("profile_available") is True
-            reason = failures.get(record.get("request_id"), {}).get(record.get("profile_id"))
+            reason = record.get("native_version_reason") if record.get("score_state") == "incompatible_native_versions" else None
+            reason = reason or failures.get(record.get("request_id"), {}).get(record.get("profile_id"))
             if not reason:
                 notes = shared.get("undefined_reasons", []) if isinstance(shared, dict) else []
                 reason = "; ".join(notes) if notes else (
@@ -1382,7 +1492,9 @@ def _html_fit_tables(report, render_table):
                 )
             unavailable_rows.append({
                 **base,
-                "fit_state": "No shared observation pairs" if available else "Baseline comparison unavailable",
+                "fit_state": "Incompatible producing versions" if record.get("score_state") == "incompatible_native_versions" else (
+                    "No shared observation pairs" if available else "Baseline comparison unavailable"
+                ),
                 "reason": reason,
             })
     fields = [
@@ -1464,7 +1576,10 @@ def _html_report(report):
         "The reported envelope, quartiles, sign fractions, and ranking fractions "
         "describe the distinct sampled profiles. A later completion snapshot can "
         "use a different shared footprint. Explicitly inactive models are listed as "
-        "model_not_selected; the completeness assessment covers selected model outputs.</p>",
+        "model_not_selected; the completeness assessment covers selected model outputs. "
+        "Producing versions are checked independently for each metric. Incompatible versions "
+        "leave that full declared metric cohort unavailable; another compatible model remains usable. "
+        "Requested legacy and observed-run fallbacks are explicitly labeled in the run matrix.</p>",
         "<dl><dt>Reference profile</dt><dd>" + identity("profile_id", selection["reference_profile_id"])
         + "</dd><dt>Baseline scenario</dt><dd>"
         + identity("scenario_id", selection["baseline_scenario_id"]) + "</dd><dt>Diagnostic snapshot</dt><dd><code>"
@@ -1473,7 +1588,8 @@ def _html_report(report):
         "<h2>Shared spatial support</h2>",
         table(report["common_support"], [
             "metric", "state", "valid_cells", "grid_cells", "selected_run_count",
-            "model_not_selected_run_count", "run_ids", "model_not_selected_run_ids",
+            "model_not_selected_run_count", "native_version_state", "native_version_reason",
+            "run_ids", "model_not_selected_run_ids",
         ]),
         "<h2>Scenario response and sampled envelope</h2>",
         table(report["scenario_summaries"], [
@@ -1510,7 +1626,9 @@ def _html_report(report):
         ]),
         "<h2>Observed annual-load diagnostics</h2>",
         "<p>Only baseline scenarios are compared with observations. Full expected-cohort "
-        "scores require all declared baseline profiles and comparable observation rows. "
+        "scores require all baseline profiles selected for that pollutant, comparable observation rows, "
+        "and compatible producing versions. Raw per-profile observation comparisons remain retained "
+        "when cross-profile fit scores are unavailable. "
         "Common-cohort scores retain the fixed subset hash and omitted membership. "
         "Repeated periods within a catchment remain repeated diagnostics of the "
         "mean-annual modeled value.</p>",
@@ -1520,10 +1638,12 @@ def _html_report(report):
             "n_expected_observations", "n_common_observations",
             "full_expected_cohort_complete", "omitted_observation_ids",
             "missing_profile_ids", "model_not_selected_profile_ids", "coverage_state",
+            "native_version_state", "native_version_reason",
         ]),
         _html_fit_tables(report, table),
         "<h2>Run matrix</h2>",
-        table(report["run_matrix"], ["profile_id", "scenario_id", "run_id", "models", "models_source", "state", "error"]),
+        table(report["run_matrix"], ["profile_id", "scenario_id", "run_id", "models", "models_source",
+                                     "native_version_summary", "state", "error"]),
         "<h2>Files</h2><ul>",
     ]
     for name, artifact in sorted(report["artifacts"].items()):
@@ -1778,6 +1898,10 @@ def analyze(ws, selection):
                     if any(row["models"] is not None and model in row["models"] for row in run_matrix)
                 ],
                 "model_selection_complete": all(row["models"] is not None for row in run_matrix),
+                "metric_native_version_states": {
+                    support["metric"]: support.get("native_version_state", "unavailable")
+                    for support in supports
+                },
                 "selected_metric_support_complete": all(
                     support.get("state") in ("complete", "model_not_selected")
                     for support in supports
@@ -1807,6 +1931,11 @@ def analyze(ws, selection):
                     "structural_groups": "routing algorithms, model period, and declared model scopes; table changes remain parameter provenance",
                     "model_selection": "retained native run selection; prepared subsets are pinned and omitted models mean both",
                     "inactive_models": "model_not_selected is separate from missing selected outputs; unknown expected cells remain expected",
+                    "native_versions": (
+                        "each metric compares its producing model across every completed applicable original run; "
+                        "completed-stage runtime precedes observed-run and labeled requested-legacy fallbacks; "
+                        "an incompatible version cohort is unavailable without selecting a smaller subset"
+                    ),
                     "scientific_status": "working diagnostic",
                 },
             }

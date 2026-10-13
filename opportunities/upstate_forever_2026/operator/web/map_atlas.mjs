@@ -1,6 +1,7 @@
 /** Native-study and regional delivery planner with retained PDF atlas viewer. */
 import {createSpatialWorkspace} from './spatial.mjs';
 import {createAtlasReviewCollection} from './atlas_review_collection.mjs';
+import {mountObservedReports,selectedObservedReports} from './observed_reports.mjs';
 const FAMILIES = [
  ['future_sediment_loss','Potential future sediment export'],
  ['future_nutrient_runoff','Potential future nitrogen and phosphorus export'],
@@ -113,8 +114,26 @@ function defaultSelection(data) {
   contact:{name:'',organization:'',email:''},notes:[],observation_comparison_ids:[],spatial_review_ids:[],spatial_export_ids:[]};
 }
 
+
+function reportSelectionKey(value) {
+ if(Array.isArray(value))return '['+value.map(reportSelectionKey).join(',')+']';
+ if(value&&typeof value==='object')return '{'+Object.keys(value).sort().map(key=>JSON.stringify(key)+':'+reportSelectionKey(value[key])).join(',')+'}';
+ return JSON.stringify(value);
+}
+
+export function retainObservedReports(selection, rows) {
+ const next=clone(selection),before=selectedObservedReports(next);
+ const normalized=selectedObservedReports({observed_context_sources:rows});
+ next.source_roles={...(next.source_roles||{})};
+ if(normalized.length)next.source_roles.OBSERVED_CONTEXT=clone(normalized[0]);
+ else delete next.source_roles.OBSERVED_CONTEXT;
+ next.observed_context_sources=normalized;
+ if(reportSelectionKey(before)!==reportSelectionKey(normalized))delete next.observed_context_binding;
+ return next;
+}
+
 export function attachMapAtlas(host) {
- let root=null, state=host.getState(), workspace='', draft=null, step=0, mode='prepare';
+ let root=null, state=host.getState(), workspace='', draft=null, step=0, mode='prepare', observedReports=null;
  let opened=null, error='', busy=false, operationId=null, generation=0, storageWarned=false, handoff=0, draftEdits=0;
  const drafts=new Map(), sourcePreview=new Map();
  let sourceContext=null, contextLoading=false, contextError='', inspection=null, inspectionRequest=0;
@@ -190,7 +209,7 @@ export function attachMapAtlas(host) {
  }
  function collect(options={}) {
   const f=form();if(!f)return clone(draft);
-  const next=clone(draft);
+  let next=clone(draft);
   if(step===0){
    next.title=value('title').trim();
    if(!cohortLinked(next)){next.baseline_run_id=value('baseline');next.scenario_run_ids=selected('alternatives');}
@@ -206,6 +225,7 @@ export function attachMapAtlas(host) {
   if(step===1){
    for(const [group,items] of [['source_roles',[...ROLES.map(r=>[...r,true]),...OPTIONAL_ROLES.map(r=>[...r,false])]],['overlays',OVERLAYS]]){
     next[group]??={};for(const [key,,required] of items){
+     if(group==='source_roles'&&key==='OBSERVED_CONTEXT')continue;
      const name=group+'__'+key,enabled=(!isStudy(next)&&required)||f.elements.namedItem(name+'__enabled')?.checked;
      if(!enabled){delete next[group][key];continue;}
      const previous=next[group][key]||{};
@@ -222,6 +242,7 @@ export function attachMapAtlas(host) {
      next[group][key]=choice;
     }
    }
+   if(observedReports)next=retainObservedReports(next,observedReports.selection());
    const receptorField=f.elements.namedItem('receptor_json');
    if(receptorField&&!options.replaceReceptors){
     let spec;try{spec=JSON.parse(receptorField.value);}catch{throw Error('Enter valid JSON for the original contributing-area profile.');}
@@ -257,6 +278,9 @@ export function attachMapAtlas(host) {
     else if(!entry)out.push(label+': the retained source is unavailable.');
     else if(group==='overlays'&&entry.kind!=='vector')out.push(label+': choose a vector source.');}
   }
+  try{for(const choice of selectedObservedReports(selection)){const entry=sourceEntry(choice);
+   if(!entry||entry.kind!=='document'||entry.metadata?.report_schema!=='upstate.observed-report/v1')out.push('Observed report '+choice.source_id+': restore its original source collection or remove that selection.');}}
+  catch(error){out.push(error.message);}
   if(!isStudy(selection))for(const k of ['name','organization','email'])if(!selection.contact?.[k]?.trim())out.push('Enter the contact '+k+'.');
   if(isStudy(selection)){if(!selection.native_study?.title?.trim())out.push('Enter the original study title.');if(!selection.native_study?.purpose?.trim())out.push('Describe the original study purpose.');}
   if(selection.receptor_spec){
@@ -498,10 +522,19 @@ export function attachMapAtlas(host) {
    '<div class="atlas-summary"><h3>Complete release</h3><p>'+esc(draft.title||'Untitled release')+'</p><p>'+esc(runName(data(),draft.baseline_run_id))+' · '+(draft.scenario_run_ids||[]).length+' alternatives</p>'+
    '<p>'+releaseFamilies(draft).length+' selected map families'+(draft.receiving_waters?' plus the selected receiving-water analysis families':'')+', combined atlas, separate map PDFs, JSON/CSV page index, physical GeoTIFFs, metadata, PDF/HTML/Markdown report and editable working archive.</p>'+
    '</div><section class="atlas-summary" data-atlas-economics>'+economicPanel()+'</section>'+
-   decisionSummary(draft)+sourceSummary(draft)+
+   decisionSummary(draft)+sourceSummary(draft)+observedSummary(draft)+
    '<div data-atlas-problems></div>';
  }
 
+ function observedSummary(selection){
+  let rows;try{rows=selectedObservedReports(selection);}catch(error){return '<p class="atlas-error">'+esc(error.message)+'</p>';}
+  return '<section class="atlas-summary"><h3>Ordered scientific study reports</h3>'+
+   (rows.length?table(['Order','Original report','Retained source'],rows.map((choice,index)=>{
+    const entry=sourceEntry(choice),collection=rowBy(data(),'sources',choice.source_collection_id);
+    return '<tr><td>'+String(index+1)+'</td><td>'+esc(entry?.title||choice.source_id)+'</td><td>'+
+     esc(collection?.title||choice.source_collection_id)+'<small>'+esc(choice.source_id)+'</small></td></tr>';
+   })):'<p>No observed study report is selected.</p>')+'</section>';
+ }
  function renderProblems(){
   const node=root?.querySelector('[data-atlas-problems]');if(!node)return;
   const issues=problems();
@@ -619,6 +652,7 @@ export function attachMapAtlas(host) {
   if(!root)return;
   reviews.detach();
   inspector.suspend();
+  observedReports=null;
   root.innerHTML='<section class="map-atlas"><header class="atlas-header"><div><p class="atlas-eyebrow">SCIENTIFIC WORKBENCH</p>'+
    '<h1>Map atlas and delivery</h1><p>Prepare regional or original-study releases, compare scenario maps on shared legends, and open the complete GIS package.</p></div>'+
    '<div class="atlas-actions">'+button('prepare','Prepare release')+button('releases','Saved releases')+'</div></header>'+
@@ -626,12 +660,20 @@ export function attachMapAtlas(host) {
    (mode==='inspect'&&inspection?inspectionPanel():mode==='outputs'?outputPanel():
    '<nav class="atlas-steps" aria-label="Delivery preparation">'+STEPS.map((label,i)=>'<button type="button" data-atlas-action="step" data-step="'+i+'" '+(i===step?'aria-current="step"':'')+'>'+String(i+1)+'. '+esc(label)+'</button>').join('')+'</nav>'+
    '<form data-atlas-form data-atlas-workspace="'+esc(workspace)+'"><h2>'+STEPS[step]+'</h2>'+
-   (step===0?runStep():step===1?'<p class="atlas-note">Use the original source editions and selected legal or operating geography. Source titles, native fields and saved designation bindings travel with the release.</p>'+ROLES.map(([k,l])=>sourceCard('source_roles',k,l,!isStudy(draft))).join('')+OPTIONAL_ROLES.map(([k,l])=>sourceCard('source_roles',k,l,false)).join('')+OVERLAYS.map(([k,l,r])=>sourceCard('overlays',k,l,r&&!isStudy(draft))).join('')+receptorPanel():step===2?settingsStep():reviewStep())+
+   (step===0?runStep():step===1?'<p class="atlas-note">Use the original source editions and selected legal or operating geography. Source titles, native fields and saved designation bindings travel with the release.</p>'+ROLES.map(([k,l])=>sourceCard('source_roles',k,l,!isStudy(draft))).join('')+ '<div data-atlas-observed-reports></div>'+OVERLAYS.map(([k,l,r])=>sourceCard('overlays',k,l,r&&!isStudy(draft))).join('')+receptorPanel():step===2?settingsStep():reviewStep())+
    '<footer class="atlas-footer"><div class="atlas-actions">'+(step?button('previous','Back'):'')+
     (step<3?'<button type="submit">Continue</button>':'<button type="submit" class="atlas-primary" '+(busy?'disabled':'')+'>'+(busy?'Submitting…':'Build atlas and complete GIS delivery')+'</button>')+
     '</div><div class="atlas-actions">'+button('download-selection','Download selection')+
     '<label class="atlas-file-button">Load selection JSON<input type="file" data-atlas-import accept=".json,application/json"></label>'+
     button('refresh','Refresh choices')+'</div></footer></form>')+'</section>';
+  const observedRoot=root.querySelector('[data-atlas-observed-reports]');
+  if(observedRoot){
+   observedReports=mountObservedReports(observedRoot,data().sources||[],draft);
+   observedRoot.addEventListener('click',event=>{
+    const control=event.target.closest('[data-observed-action]');if(!control||control.disabled)return;
+    try{draftEdits++;collect();persist();renderProblems();}catch(error){showError(error);}
+   });
+  }
   renderProblems();
   if(mode==='inspect'&&inspection)inspector.mount(root.querySelector('[data-atlas-spatial]'),state);
   const reviewRoot=root.querySelector('[data-atlas-review-collection]');if(reviewRoot)reviews.mount(reviewRoot);
@@ -904,10 +946,45 @@ export function attachMapAtlas(host) {
   if(root){try{if(mode==='prepare'){collect();persist();}}catch{}
    root.removeEventListener('click',click);root.removeEventListener('change',change);
    root.removeEventListener('input',edit);root.removeEventListener('submit',submit);}
-  root=null;busy=false;generation++;
+  root=null;observedReports=null;busy=false;generation++;
  }
  function requireWorkspace(origin){
   if(origin!=null&&origin!==workspace)throw Error('The originating workspace changed. Open this atlas from its original project.');
+ }
+ function reportSelection(args={}){
+  ensure();requireWorkspace(args.workspace_key);
+  if(mode==='prepare'){collect();persist();}
+  const selected=clone(draft),eligibility=deliveryEligibility(data(),selected);
+  return {workspace_key:workspace,selection:selected,cohort_ready:eligibility.ready,cohort_issues:eligibility.reasons};
+ }
+ async function acceptReportContext(args={}){
+  ensure();requireWorkspace(args.workspace_key);
+  if(!args.expected_selection||typeof args.expected_selection!=='object'||Array.isArray(args.expected_selection))
+   throw Error('Reopen the original report-selection preview before adding this observed source.');
+  const atWorkspace=workspace,expected=reportSelectionKey(args.expected_selection);
+  const current=()=>{const snapshot=reportSelection({workspace_key:atWorkspace});if(reportSelectionKey(snapshot.selection)!==expected)
+   throw Error('The report selection changed after this preview. Preview the saved outcome again to preserve the newer choices.');return snapshot;};
+  current();
+  if(!args.selection||typeof args.selection!=='object'||Array.isArray(args.selection))throw Error('Choose the retained report selection.');
+  const incoming=clone(args.selection);
+  const withoutObserved=value=>{const clean=clone(value);delete clean.observed_context_sources;delete clean.observed_context_binding;clean.source_roles={...(clean.source_roles||{})};delete clean.source_roles.OBSERVED_CONTEXT;return clean;};
+  if(reportSelectionKey(withoutObserved(incoming))!==reportSelectionKey(withoutObserved(args.expected_selection)))
+   throw Error('An observed report handoff cannot replace the original cohort, study, maps, economics or contact.');
+  const observed=Object.prototype.hasOwnProperty.call(incoming,'observed_context_sources')?incoming.observed_context_sources:
+   (incoming.source_roles?.OBSERVED_CONTEXT?[incoming.source_roles.OBSERVED_CONTEXT]:[]);
+  if(!Array.isArray(observed)||!observed.length)throw Error('The handoff needs its actual imported observed report.');
+  for(const choice of observed){
+   const entry=sourceEntry(choice);
+   if(!entry||entry.kind!=='document'||entry.metadata?.report_schema!=='upstate.observed-report/v1')
+    throw Error('Refresh the original source collection before opening this observed report.');
+  }
+  const request=++handoff;
+  await host.navigate?.('map-atlas');
+  ensure();requireWorkspace(atWorkspace);requireWorkspace(args.workspace_key);
+  if(request!==handoff)return false;
+  current();
+  draft=incoming;operationId=null;mode='prepare';step=1;opened=null;error='';draftEdits++;
+  persist();render();return {view:'map-atlas',workspace_key:workspace,selection:clone(draft)};
  }
  async function create(args={}){
   ensure();const atWorkspace=workspace,request=++handoff;
@@ -934,5 +1011,5 @@ export function attachMapAtlas(host) {
   opened=result;mode='outputs';error='';render();return result;
  }
  ensure();
- return {mount,update,detach,create,open};
+ return {mount,update,detach,create,open,reportSelection,acceptReportContext};
 }

@@ -109,15 +109,18 @@ def grid_definition(reference, model_geometry, *, resolution=None):
                 or observed.a <= 0 or observed.e >= 0):
             raise ValueError("Reference grid must be finite, north-up and unrotated")
         source_x, source_y = observed.a, -observed.e
-        if not math.isclose(source_x, source_y, rel_tol=1e-9, abs_tol=1e-12):
+        nominal_30 = (
+            math.isclose(source_x, RESOLUTION, rel_tol=1e-9, abs_tol=1e-12)
+            and math.isclose(source_y, RESOLUTION, rel_tol=1e-9, abs_tol=1e-12))
+        # Publisher rounding can put the two nominal-30 axes on opposite
+        # sides of 30 while each meets the existing normalization tolerance.
+        # Recognize that established source case before the generic square test.
+        if not nominal_30 and not math.isclose(source_x, source_y, rel_tol=1e-9, abs_tol=1e-12):
             raise ValueError("Select the original nominally square reference grid")
         if requested is not None and (
                 not math.isclose(source_x, requested, rel_tol=1e-9, abs_tol=1e-12)
                 or not math.isclose(source_y, requested, rel_tol=1e-9, abs_tol=1e-12)):
             raise ValueError("Requested resolution differs from the original reference grid")
-        nominal_30 = (
-            math.isclose(source_x, RESOLUTION, rel_tol=1e-9, abs_tol=1e-12)
-            and math.isclose(source_y, RESOLUTION, rel_tol=1e-9, abs_tol=1e-12))
         if nominal_30:
             # Preserve the established Upstate grid, its provenance and cache key.
             # Published coverage coefficients can round nominal 30 m spacing.

@@ -20,6 +20,128 @@ RESERVE_NAME = ".native-recovery-reserve"
 RESERVE_PENDING_NAME = RESERVE_NAME + ".allocating"
 
 
+def resource_status():
+    """Keep optional observations from replacing a model or storage failure."""
+    try:
+        return _resource_status()
+    except Exception as error:
+        return {"read_errors": [{"source": "native-resources",
+                                 "type": type(error).__name__}]}
+
+
+def _resource_status():
+    """Observe this process and its visible cgroup without changing execution.
+
+    Memory and cache observations belong to execution records, never scientific
+    stage identities. Cgroup counters include other processes in the group;
+    memory.stat's shmem is included in file, so these values are not additive.
+    """
+    result = {"recorded_at": now(), "pid": os.getpid()}
+    names = ("GDAL_CACHEMAX", "GDAL_NUM_THREADS", "GDAL_MAX_DATASET_POOL_RAM_USAGE",
+             "VSI_CACHE", "VSI_CACHE_SIZE", "OMP_NUM_THREADS",
+             "OPENBLAS_NUM_THREADS", "MKL_NUM_THREADS", "MALLOC_ARENA_MAX")
+    result["environment"] = {name: os.environ.get(name) for name in names}
+    errors = []
+
+    def problem(name, error):
+        errors.append({"source": name, "type": type(error).__name__,
+                       "message": str(error)})
+
+    try:
+        fields = {}
+        for line in Path("/proc/self/status").read_text().splitlines():
+            name, _, value = line.partition(":")
+            if name in ("VmRSS", "VmHWM", "VmSize"):
+                amount, unit = value.split()
+                if unit == "kB":
+                    fields[name + "_bytes"] = int(amount) * 1024
+            elif name == "Threads":
+                fields["threads"] = int(value)
+        result["process"] = fields
+    except (OSError, ValueError) as error:
+        problem("/proc/self/status", error)
+
+    try:
+        membership = next((line.split(":", 2)[2]
+                           for line in Path("/proc/self/cgroup").read_text().splitlines()
+                           if line.startswith("0::")), None)
+        if membership is not None:
+            def unescape(value):
+                for before, after in (("\\040", " "), ("\\011", "\t"),
+                                      ("\\012", "\n"), ("\\134", "\\")):
+                    value = value.replace(before, after)
+                return value
+
+            candidates = []
+            for line in Path("/proc/self/mountinfo").read_text().splitlines():
+                left, separator, right = line.partition(" - ")
+                if not separator or right.split()[0] != "cgroup2":
+                    continue
+                fields = left.split()
+                root, mount = Path(unescape(fields[3])), Path(unescape(fields[4]))
+                try:
+                    relative = Path(membership).relative_to(root)
+                except ValueError:
+                    continue
+                if ".." not in relative.parts:
+                    candidates.append((len(root.parts), mount / relative))
+            if candidates:
+                directory = max(candidates, key=lambda row: row[0])[1]
+                group = {"version": 2, "membership": membership, "path": str(directory)}
+                for name in ("memory.current", "memory.peak", "memory.max", "memory.high",
+                             "memory.swap.current", "memory.swap.max"):
+                    try:
+                        value = (directory / name).read_text().strip()
+                        group[name] = value if value == "max" else int(value)
+                    except FileNotFoundError:
+                        continue
+                    except (OSError, ValueError) as error:
+                        problem(str(directory / name), error)
+                for name in ("memory.events", "memory.events.local", "memory.stat"):
+                    try:
+                        values = {key: int(value) for key, value in
+                                  (line.split() for line in (directory / name).read_text().splitlines())}
+                        if name == "memory.stat":
+                            selected = ("anon", "file", "shmem", "kernel", "file_mapped",
+                                        "file_dirty", "file_writeback", "slab", "sock",
+                                        "active_anon", "inactive_anon", "active_file", "inactive_file")
+                            values = {key: values[key] for key in selected if key in values}
+                        group[name] = values
+                    except FileNotFoundError:
+                        continue
+                    except (OSError, ValueError) as error:
+                        problem(str(directory / name), error)
+                result["cgroup"] = group
+            else:
+                result["cgroup"] = {"version": 2, "membership": membership,
+                                    "state": "mount_not_resolved"}
+    except (OSError, ValueError, IndexError) as error:
+        problem("cgroup2", error)
+
+    # GetCacheMax initializes GDAL's cache on its first call. Read it only
+    # after actual cached blocks establish that the engine already initialized
+    # the cache. Resource observation must not choose that initialization time.
+    gdal = sys.modules.get("osgeo.gdal")
+    if gdal is not None:
+        values = {}
+        for name in ("GetCacheUsed", "GetUsablePhysicalRAM"):
+            function = getattr(gdal, name, None)
+            if function is not None:
+                try:
+                    values[name] = int(function())
+                except Exception as error:
+                    problem("osgeo.gdal." + name, error)
+        if values.get("GetCacheUsed", 0) > 0:
+            try:
+                values["GetCacheMax"] = int(gdal.GetCacheMax())
+            except Exception as error:
+                problem("osgeo.gdal.GetCacheMax", error)
+        result["gdal_bytes"] = values
+    if errors:
+        result["read_errors"] = errors
+    return result
+
+
 def storage_status(directory):
     """Report space available to this process on the actual run filesystem."""
     try:
@@ -145,6 +267,7 @@ class NativeExecution:
         current = self.state["execution"]
         current["storage"] = storage_status(self.directory)
         current["storage_recorded_at"] = now()
+        current["resources"] = resource_status()
 
     def __enter__(self):
         previous = self.state.get("execution")
@@ -222,6 +345,7 @@ class NativeExecution:
             if name in self.state["execution"]:
                 failure[name] = self.state["execution"][name]
         failure["storage_at_failure"] = storage_status(self.directory)
+        failure["resources_at_failure"] = resource_status()
         failure["storage_recorded_at"] = now()
         try:
             self._release()

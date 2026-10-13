@@ -424,6 +424,26 @@ def _load_inputs(workspace, request):
                      else sign * row["scenario_changes"][metric])
             for metric in METRICS
         }
+        precision = json.loads(original.get("scenario_precision") or "{}")
+        if not isinstance(precision, dict):
+            raise ValueError("Planning-unit encoding bounds must contain original scenario IDs")
+        selected_precision = precision.get(scenario_id, {}) if scenario_id else {}
+        if not isinstance(selected_precision, dict):
+            raise ValueError("Planning-unit scenario encoding bounds must contain metric values")
+        row["scenario_precision"] = {
+            metric: _number(selected_precision.get(metric), metric + " encoding bound",
+                            minimum=0, optional=True) for metric in METRICS}
+        row["scoring_metrics"] = {}
+        row["within_encoding_precision"] = []
+        for metric in METRICS:
+            value = row["physical_metrics"][metric]
+            bound = row["scenario_precision"][metric]
+            if (request["objective"]["kind"] != "current-export" and value is not None
+                    and bound is not None and abs(value) <= bound):
+                row["scoring_metrics"][metric] = 0.0
+                row["within_encoding_precision"].append(metric)
+            else:
+                row["scoring_metrics"][metric] = value
         rows.append(row)
     if not rows:
         raise ValueError("The original planning unit CSV contains no planning units")
@@ -450,6 +470,7 @@ def _load_inputs(workspace, request):
         "parcel_inventory": describe_file(workspace.root, inventory_path),
         "inventory_coverage": deepcopy(inventory.get("coverage", inventory.get("parcel_coverage"))),
         "inventory_overlap_handling": inventory.get("overlap_handling"),
+        "inventory_precision_method": inventory.get("precision_method"),
         "cost_source": cost_identity,
         "cost_join": {
             "method": "Exact original string feature_id; no inferred price or currency conversion",
@@ -496,7 +517,7 @@ def _qualify(rows, request):
                 reasons.append("Outside " + field.replace("_", " ") + " selection")
         objective_values = {}
         for metric in METRICS:
-            value = row["physical_metrics"][metric]
+            value = row.get("scoring_metrics", row["physical_metrics"])[metric]
             if value is not None and request["objective"]["basis"] == "per-reporting-hectare":
                 value = value / row["area_ha"] if row["area_ha"] > 0 else None
             if value is not None and not math.isfinite(value):
@@ -936,6 +957,8 @@ def preview(workspace, selection):
             "current_priority": "Original priority_mean is retained separately; planning unit objective weighting is a distinct decision calculation",
             "restoration_scope": "Avoided-conversion and restoration use different explicitly selected native alternatives",
             "numerics": "Budget arithmetic uses integer USD cents; ranking and area arithmetic use finite double precision",
+            "native_encoding_precision": context.get("inventory_precision_method") or
+                "This original inventory does not provide per-feature raster encoding bounds; raw objectives are retained.",
         },
     }
 
@@ -961,6 +984,7 @@ def save_portfolio(workspace, selection):
             "feature_id", "rank", "selected", "eligible", "score", "area_ha", "original_area_ha",
             "coverage_fraction", "protected_fraction", "source_water", "high_quality_context",
             "cost_usd", "priority_mean", "baseline_metrics", "scenario_changes", "physical_metrics",
+            "scenario_precision", "scoring_metrics", "within_encoding_precision",
             "objective_values", "normalized_metrics", "rank_stability", "exclusions", "original_attributes",
         ]
         atomic_bytes(directory / "candidate-ranking.csv",
@@ -1393,7 +1417,7 @@ def _report_html(record, analysis, evaluation, title):
         ".identity{font-family:ui-monospace,monospace;font-size:12px;overflow-wrap:anywhere}"
         "@media print{body{padding:0}.summary{display:block}.summary div{display:inline-block;width:20%;margin:0 1% 8px 0}"
         "thead{display:table-header-group}tr{break-inside:avoid}a{text-decoration:none}}"
-        "</style><header><p class=\"label\">UPPER SAVANNAH · CONSERVATION PORTFOLIO</p><h1>" + esc(title) +
+        "</style><header><p class=\"label\">CONSERVATION PLANNING PORTFOLIO</p><h1>" + esc(title) +
         "</h1><p>" + esc(record["purpose"]) + "</p><p class=\"identity\">Portfolio " + esc(record["id"]) +
         "</p></header><section class=\"summary\"><div><span class=\"label\">Selected planning units</span><strong>" +
         esc(selection["count"]) + "</strong></div><div><span class=\"label\">Reporting hectares</span><strong>" +

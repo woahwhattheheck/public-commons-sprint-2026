@@ -209,3 +209,8 @@ archive identity and actual report paths. The original report's
 `operation.json` remains unchanged. Packaging without
 `--receive-directory` can be followed later by the same command with that
 option to complete independent reopening.
+
+
+## Saved standalone reports in the operator
+
+The existing Sources desk now selects retained typed scientific sources in reading order, previews their original bindings and prepares PDF, HTML, Markdown and source data through the original task queue. Saved editions reopen with the complete Workspace after receiving. See [Scientific report editions](../../operator/SCIENTIFIC_REPORT_EDITIONS.md). This native command delegates its original rendering and archive implementation to `model/observed_report_render.py`; receive that module with the command and the existing observed-context family. All current CLI arguments and the historical default single-report identity are preserved.

@@ -464,6 +464,8 @@ async function reopenReceivedStudy(receipt) {
     'The received Decision desk did not reopen the exact completed original calculation.');
   await opened(saved);
   await page.locator('#rw-results').waitFor({ state: 'visible' });
+  journal.objective = run.objective || null;
+  journal.mode = 'received_saved_calculation';
   journal.received_calculation = { study_id: saved.id, revision: saved.revision, run_id: run.id,
     result_sha256: pin.result_sha256, delivery_id: release.id };
   await exerciseNativeDelivery(saved, null, 0, { run, pin });

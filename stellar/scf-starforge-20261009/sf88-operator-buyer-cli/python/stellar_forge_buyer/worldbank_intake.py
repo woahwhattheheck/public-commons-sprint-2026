@@ -91,7 +91,9 @@ class WorldBankIntake:
     def __init__(self, workspace, *, core):
         self.workspace = workspace
         self.database = workspace.database
-        self.core = Path(core).expanduser().resolve(strict=True)
+        # Generic Analysis can open without the separately installed seller core.
+        # The original importer validates that executable source on registration.
+        self.core = Path(core).expanduser().absolute()
         need(self.core.name == "core.py", "ORIGINAL_INSTALLED_CORE_REQUIRED")
         self.directory = private_directory(self.database.directory / "worldbank-intake", create=True)
         self._mutex = threading.RLock()
@@ -280,6 +282,8 @@ class WorldBankIntake:
 
     def _run(self, intake_id, handover):
         try:
+            need(self.core.is_file() and (self.core.parent / "source.py").is_file(),
+                 "INSTALLED_ORIGINAL_CORE_REQUIRED")
             def progress(event):
                 with self._mutex:
                     value = self._load(intake_id)
