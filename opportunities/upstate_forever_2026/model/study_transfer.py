@@ -26,6 +26,7 @@ from . import portable, study_delivery_transfer as delivery_transfer
 from . import monitoring_study_transfer as monitoring_transfer, study_report_transfer as report_transfer
 from . import scientific_report_study_transfer as report_editions
 from . import paired_ensemble_study_transfer as paired_transfer
+from . import report_changes_study_transfer as report_changes_transfer
 from . import calibration_study_transfer as calibration_transfer
 from . import ensemble_study_transfer as ensemble_transfer, gauge_study_transfer as gauge_transfer
 from . import community_study_transfer as community_transfer
@@ -45,7 +46,8 @@ ROOT_KINDS = ("experiment-diagnostics", "experiments", "runs", "robust-decisions
               "receiving-water-plans", "receiving-water-analyses",
               *monitoring_transfer.ROOT_KINDS, *report_editions.ROOT_KINDS,
               *community_transfer.ROOT_KINDS, *receptor_transfer.ROOT_KINDS, *conservation_transfer.ROOT_KINDS,
-              *customer_review_transfer.ROOT_KINDS, *paired_transfer.ROOT_KINDS)
+              *customer_review_transfer.ROOT_KINDS, *paired_transfer.ROOT_KINDS,
+              *report_changes_transfer.ROOT_KINDS)
 IMMUTABLE_KINDS = ("sources", "profiles", "scenarios", "observations",
                    "observation-comparisons", *delivery_transfer.IMMUTABLE_KINDS,
                    *monitoring_transfer.IMMUTABLE_KINDS, *calibration_transfer.IMMUTABLE_KINDS,
@@ -56,6 +58,7 @@ DOCUMENTS = {
     **delivery_transfer.DOCUMENTS,
     **monitoring_transfer.DOCUMENTS,
     **report_editions.DOCUMENTS, **paired_transfer.DOCUMENTS,
+    **report_changes_transfer.DOCUMENTS,
     **receptor_transfer.DOCUMENTS, **conservation_transfer.DOCUMENTS,
 }
 LOCKS = {
@@ -76,6 +79,7 @@ LABELS = {
     **delivery_transfer.LABELS,
     **monitoring_transfer.LABELS,
     **report_editions.LABELS, **paired_transfer.LABELS,
+    **report_changes_transfer.LABELS,
     **calibration_transfer.LABELS,
     **community_transfer.LABELS,
     **receptor_transfer.LABELS, **conservation_transfer.LABELS,
@@ -183,6 +187,7 @@ class _Closure:
         self.report_source_records = {}
         self.scientific_report_records = {}
         self.paired_ensemble_records = {}
+        self.report_comparison_records = {}
         self.report_lineage_enabled = report_lineage
         self.report_source_keys = None if report_source_keys is None else frozenset(report_source_keys)
         self.customer_review_records = {}
@@ -454,6 +459,8 @@ class _Closure:
             pass
         elif paired_transfer.visit(self, kind, key, value):
             pass
+        elif report_changes_transfer.visit(self, kind, key, value):
+            pass
         elif chemistry_transfer.visit(self, kind, key, value, reason):
             pass
         elif calibration_transfer.visit(self, kind, key, value, reason):
@@ -554,6 +561,7 @@ class _Closure:
                 receptor_transfer.related(self)
                 customer_review_transfer.related(self)
                 paired_transfer.related(self)
+                report_changes_transfer.related(self)
                 while self.pending:
                     self._visit(*self.pending.popleft())
                 if len(self.nodes) == count:
@@ -618,6 +626,7 @@ class _Closure:
             "scientific_report_sources": report_transfer.receipt(self),
             "scientific_report_editions": report_editions.receipt(self),
             "paired_ensembles": paired_transfer.receipt(self),
+            "report_comparisons": report_changes_transfer.receipt(self),
             "customer_reviews": customer_review_transfer.receipt(self),
             "implementation_report_sources": implementation_transfer.receipt(self),
             "decision_history": {"studies": len(self.decision_records),
@@ -642,7 +651,8 @@ def _capture_locks(stack, closure, already):
     for relative in (*monitoring_transfer.lock_paths(closure), *calibration_transfer.lock_paths(closure),
                      *community_transfer.lock_paths(closure), *conservation_transfer.lock_paths(closure), *receptor_transfer.lock_paths(closure),
                      *process_transfer.lock_paths(closure), *customer_review_transfer.lock_paths(closure), *ensemble_transfer.lock_paths(closure),
-                     *gauge_transfer.lock_paths(closure), *paired_transfer.lock_paths(closure)):
+                     *gauge_transfer.lock_paths(closure), *paired_transfer.lock_paths(closure),
+                     *report_changes_transfer.lock_paths(closure)):
         token = ("original-study-owner-lock", relative)
         if token not in already:
             stack.enter_context(held(closure.root / relative, blocking=False))
@@ -893,6 +903,8 @@ def export_study(workspace, destination, selection, *, progress=None, investigat
             identity["scientific_report_editions"] = report_editions.receipt(closure)
         if closure.paired_ensemble_records:
             identity["paired_ensembles"] = paired_transfer.receipt(closure)
+        if closure.report_comparison_records:
+            identity["report_comparisons"] = report_changes_transfer.receipt(closure)
         implementation_sources = implementation_transfer.receipt(closure)
         if implementation_sources:
             identity["implementation_report_sources"] = implementation_sources
@@ -981,6 +993,7 @@ def verify_received_studies(workspace):
         report_transfer.verify_receipt(closure, receipt["identity"].get("scientific_report_sources", []))
         report_editions.verify_receipt(closure, receipt["identity"].get("scientific_report_editions", []))
         paired_transfer.verify_receipt(closure, receipt["identity"].get("paired_ensembles", []))
+        report_changes_transfer.verify_receipt(closure, receipt["identity"].get("report_comparisons", []))
         customer_reviews = customer_review_transfer.verify_receipt(
             closure, receipt["identity"].get("customer_reviews", []))
         implementation_sources = receipt["identity"].get("implementation_report_sources", [])
@@ -1028,6 +1041,11 @@ def catalog(workspace, *, kind=None, query="", offset=0, limit=200):
             continue
         if selected_kind in paired_transfer.ROOT_KINDS:
             for row in paired_transfer.catalogue(workspace, selected_kind):
+                if not query or query in canonical(row).decode("utf-8").casefold():
+                    rows.append(row)
+            continue
+        if selected_kind in report_changes_transfer.ROOT_KINDS:
+            for row in report_changes_transfer.catalogue(workspace, selected_kind):
                 if not query or query in canonical(row).decode("utf-8").casefold():
                     rows.append(row)
             continue
