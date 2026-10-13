@@ -375,6 +375,159 @@
           "sha256": "fc0c0a530d73410cb1f2b2a6479d5ce2253f503c8e0a73336cee317b720dd31a"
         }
       ]
+    },
+    {
+      "id": "analysis-report-editorial-model",
+      "label": "Original report issue, attributed return and current-author reconciliation",
+      "repository": "woahwhattheheck/tjlabs-stellar-merchant-workspace",
+      "kind": "blob",
+      "path": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/python/stellar_forge_buyer/analysis_report_reviews.py",
+      "commit": "219b2810a37f625ea13bd65f5eb169deb10a09dc",
+      "required": false,
+      "editions": [
+        {
+          "commit": "219b2810a37f625ea13bd65f5eb169deb10a09dc",
+          "git_blob": "11590b0213570e0144eaee530d1b7913c18628b7",
+          "bytes": 24415,
+          "sha256": "6f5fd0cb4adecdc28d283d50d7c3b36e2d9722b775d677d5f6e0fcd75d920692"
+        }
+      ]
+    },
+    {
+      "id": "analysis-report-editorial-interface",
+      "label": "Complete offline recipient and original author review interfaces",
+      "repository": "woahwhattheheck/tjlabs-stellar-merchant-workspace",
+      "kind": "blob",
+      "path": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/python/stellar_forge_buyer/_analysis_report_reviews_ui.py",
+      "commit": "219b2810a37f625ea13bd65f5eb169deb10a09dc",
+      "required": false,
+      "editions": [
+        {
+          "commit": "219b2810a37f625ea13bd65f5eb169deb10a09dc",
+          "git_blob": "b6f8d3bf103a3974265780463cc7a2698402c006",
+          "bytes": 46432,
+          "sha256": "87bb7392bb0cd01347001ff7ee2291e9b1f46eda3768aa61c5ec7bc72bc64f25"
+        }
+      ]
+    },
+    {
+      "id": "analysis-report-editorial-http",
+      "label": "Original Analysis capability and complete editorial HTTP routes",
+      "repository": "woahwhattheheck/tjlabs-stellar-merchant-workspace",
+      "kind": "blob",
+      "path": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/python/stellar_forge_buyer/report_reviews_http.py",
+      "commit": "219b2810a37f625ea13bd65f5eb169deb10a09dc",
+      "required": false,
+      "editions": [
+        {
+          "commit": "219b2810a37f625ea13bd65f5eb169deb10a09dc",
+          "git_blob": "fbc3f00487b09d4c93fa8ca53b64cc444d98bab2",
+          "bytes": 3615,
+          "sha256": "1cb4996f581de7eac5da3316e46a3c2049b990b982f86cd82899ad34f3e4551a"
+        }
+      ]
+    },
+    {
+      "id": "analysis-report-editorial-client",
+      "label": "Installed original-workspace editorial client and durable request files",
+      "repository": "woahwhattheheck/tjlabs-stellar-merchant-workspace",
+      "kind": "blob",
+      "path": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/python/stellar_forge_buyer/report_review_client.py",
+      "commit": "219b2810a37f625ea13bd65f5eb169deb10a09dc",
+      "required": false,
+      "editions": [
+        {
+          "commit": "219b2810a37f625ea13bd65f5eb169deb10a09dc",
+          "git_blob": "a4d0c2d77445d9ed4112797bab8d8f9532fdcced",
+          "bytes": 8154,
+          "sha256": "2310bb371d1bcaa16231699d48fb164dfe30c7b9811127bb40237a8841abd271"
+        }
+      ]
+    },
+    {
+      "id": "analysis-report-editorial-workspace",
+      "label": "Existing Analysis owner integration for complete report editorial delivery",
+      "repository": "woahwhattheheck/tjlabs-stellar-merchant-workspace",
+      "kind": "blob",
+      "path": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/python/stellar_forge_buyer/analysis_workspace.py",
+      "commit": "219b2810a37f625ea13bd65f5eb169deb10a09dc",
+      "required": false,
+      "editions": [
+        {
+          "commit": "219b2810a37f625ea13bd65f5eb169deb10a09dc",
+          "git_blob": "6c94397a9a986f0e948bcf2e02c73143959dc4dd",
+          "bytes": 70764,
+          "sha256": "06a650fb5467b0a71a436ec9a4d64a96f750e7db639d856c7da11699d2b0f2c5"
+        }
+      ]
+    },
+    {
+      "id": "analysis-report-editorial-navigation",
+      "label": "Installed original Analysis navigation to editorial reviews",
+      "repository": "woahwhattheheck/tjlabs-stellar-merchant-workspace",
+      "kind": "blob",
+      "path": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/python/stellar_forge_buyer/_analysis_ui.py",
+      "commit": "219b2810a37f625ea13bd65f5eb169deb10a09dc",
+      "required": false,
+      "editions": [
+        {
+          "commit": "219b2810a37f625ea13bd65f5eb169deb10a09dc",
+          "git_blob": "6e187feecc19e5428eb38ecdfebac980e62ae184",
+          "bytes": 62026,
+          "sha256": "fc01f88f9afaeedf53e36fb6b0b11e1601d740dfa1305419b6191fff5afefa53"
+        }
+      ]
+    },
+    {
+      "id": "analysis-report-editorial-guide",
+      "label": "Complete report editorial customer and operating guide",
+      "repository": "woahwhattheheck/tjlabs-stellar-merchant-workspace",
+      "kind": "blob",
+      "path": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/python/REPORT_EDITORIAL_REVIEWS.md",
+      "commit": "219b2810a37f625ea13bd65f5eb169deb10a09dc",
+      "required": false,
+      "editions": [
+        {
+          "commit": "219b2810a37f625ea13bd65f5eb169deb10a09dc",
+          "git_blob": "99dd51721110635dce2777b53d6eb75b4e4410ae",
+          "bytes": 16291,
+          "sha256": "6039ba2a0ab87d63f3c3279f15d0ee0477d5f1102379c43e0225da13b694d2ed"
+        }
+      ]
+    },
+    {
+      "id": "analysis-report-editorial-course",
+      "label": "Full caller-owned recipient, author and restored-workspace course",
+      "repository": "woahwhattheheck/tjlabs-stellar-merchant-workspace",
+      "kind": "blob",
+      "path": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/python/receiving/report_editorial_course.mjs",
+      "commit": "219b2810a37f625ea13bd65f5eb169deb10a09dc",
+      "required": false,
+      "editions": [
+        {
+          "commit": "219b2810a37f625ea13bd65f5eb169deb10a09dc",
+          "git_blob": "53d40b509025893b033fae9ebbfd464c19a8a2eb",
+          "bytes": 41688,
+          "sha256": "d25390167f6ac1bbe1e9640228833244bd033b9aa1ea7a73d8219187cf7abfd9"
+        }
+      ]
+    },
+    {
+      "id": "analysis-report-editorial-receiving",
+      "label": "Complete original receiving inputs, continuation and rendered review guide",
+      "repository": "woahwhattheheck/tjlabs-stellar-merchant-workspace",
+      "kind": "blob",
+      "path": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/python/receiving/REPORT_EDITORIAL_COURSE.md",
+      "commit": "219b2810a37f625ea13bd65f5eb169deb10a09dc",
+      "required": false,
+      "editions": [
+        {
+          "commit": "219b2810a37f625ea13bd65f5eb169deb10a09dc",
+          "git_blob": "3039ea562ab8a75efed2eb0b04600c6bb6d6154f",
+          "bytes": 14047,
+          "sha256": "76ea59d49068e6586e3e6007570c334599ec21ac346f3cead45e45434570c07d"
+        }
+      ]
     }
   ]
 }
