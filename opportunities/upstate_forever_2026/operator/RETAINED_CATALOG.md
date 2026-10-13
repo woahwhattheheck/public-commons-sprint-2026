@@ -32,9 +32,13 @@ original operator/workspace context.
 
 A delivery catalogue row retains its ID, state, complete selection, dates, error,
 package metadata and other top-level metadata. It replaces the detailed maps with
-their exact keys, and adds `map_count` and `file_count`. Full file descriptors,
-manifest, priority and parcel-priority inventories are opened through the original
-detail or dedicated delivery-inspection endpoints. The row carries
+their exact keys, and adds `map_count` and `file_count`. The original
+`parcel_priorities.features` count and, when present, the single original
+`files.parcel_csv` descriptor remain available to the conservation portfolio
+picker. Its selected delivery ID and complete scenario selection still enter the
+original native inventory API. All remaining file descriptors, manifest,
+priority and parcel feature inventories are opened through the original detail
+or dedicated delivery-inspection endpoints. The row carries
 `_catalogue.schema = upstate.operator-record-summary/v1` and
 `full_record_available = true`.
 

@@ -93,6 +93,15 @@ def delivery_summary(record):
     result["maps"] = dict.fromkeys(maps)
     result["map_count"] = len(maps)
     result["file_count"] = len(files)
+    # The original conservation portfolio picker uses this producer count.
+    # Keep its legacy single-file eligibility path without the full inventory.
+    parcels = record.get("parcel_priorities")
+    if isinstance(parcels, dict):
+        result["parcel_priorities"] = (
+            {"features": parcels["features"]} if "features" in parcels else {}
+        )
+        if files.get("parcel_csv"):
+            result["files"] = {"parcel_csv": files["parcel_csv"]}
     result["_catalogue"] = {
         "schema": "upstate.operator-record-summary/v1",
         "kind": "deliveries", "full_record_available": True,
