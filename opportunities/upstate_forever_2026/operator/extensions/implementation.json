@@ -2,7 +2,7 @@
   "schema": "upstate.operator-extension/v1",
   "id": "implementation",
   "title": "Implementation & fieldwork",
-  "version": "6",
+  "version": "7",
   "order": 70,
   "assets": [
     "implementation.mjs",
@@ -12,7 +12,8 @@
     "implementation_workbench.html",
     "implementation_lab.mjs",
     "implementation_results.mjs",
-    "implementation_dispatch.mjs"
+    "implementation_dispatch.mjs",
+    "implementation_briefing.mjs"
   ],
   "backend": {
     "module": "implementation_operator",
@@ -34,7 +35,8 @@
       "implementation.selection.import",
       "implementation.observations.import",
       "implementation.lab.import",
-      "implementation.lab.dispatch"
+      "implementation.lab.dispatch",
+      "implementation.briefing.import"
     ],
     "invoke": {
       "handler": "invoke",
@@ -361,6 +363,45 @@
         ],
         "path": "/api/implementation/dispatch",
         "operation": "dispatch",
+        "handler": "queue",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "GET"
+        ],
+        "path": "/api/implementation/briefing-catalog",
+        "operation": "briefing-catalog",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "POST"
+        ],
+        "path": "/api/implementation/briefing-preview",
+        "operation": "briefing-preview",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "POST"
+        ],
+        "path": "/api/implementation/briefing-import",
+        "operation": "briefing-import",
         "handler": "queue",
         "args": [
           "workspace_key",
