@@ -16,6 +16,7 @@ from .implementation_schema import make_plan, validate_plan, document_digest
 from .monitoring_common import ContractError, canonical_bytes, digest, file_sha256, held
 from .monitoring_sources import source_export_members
 from .monitoring_packet import add_member, bytes_member, file_member, retain_packet
+from . import monitoring_sampling_protocol as sampling_protocol
 
 FORMAT = "upstate.monitoring-fieldwork/v1"
 MAPPED = ("sites", "monitoring_plans", "visits", "tasks", "activities", "budget_lines")
@@ -52,9 +53,35 @@ def _selection(service, campaign_id, revision_id):
     return_cache = {}
     returned = {event["id"]: binding for event in events
                 if (binding := source_binding(service.workspace, event, return_cache)) is not None}
+    protocols = {}
+    for key, original in retained_plans.items():
+        protocol = sampling_protocol.selection(service.workspace, original)
+        if protocol is not None:
+            protocols[key] = protocol
     return {"revision": selected, "plan": plan, "network": network,
             "events": events, "fieldwork_returns": returned, "history": retained_history,
-            "retained_plans": retained_plans, "retained_networks": retained_networks}
+            "retained_plans": retained_plans, "retained_networks": retained_networks,
+            "sampling_protocols": protocols}
+
+
+def _protocol_key(selected):
+    protocols = selected.get("sampling_protocols") or {}
+    return digest(protocols) if protocols else None
+
+
+def _packet_path(workspace, selected):
+    root = workspace.root / "monitoring_fieldwork" / selected["revision"]["id"]
+    key = _protocol_key(selected)
+    if key is not None:
+        root = root / ("sampling-" + key)
+    return root / "monitoring-field-package.zip"
+
+
+def _source_id(selected):
+    revision_id = selected["revision"]["id"]
+    key = _protocol_key(selected)
+    return _id("campaign", [revision_id, "sampling-requirements/v1", key]
+               if key is not None else revision_id)
 
 
 def _packet(workspace, selected):
@@ -70,6 +97,9 @@ def _packet(workspace, selected):
             if binding:
                 for name, member in source_export_members(workspace, label, binding):
                     add_member(files, "network_sources/" + key + "/" + name, member)
+    for key, protocol in selected.get("sampling_protocols", {}).items():
+        for name, member in sampling_protocol.export_members(workspace, protocol).items():
+            add_member(files, "sampling/" + key + "/" + name, member)
     retained_returns = {binding["request_id"]: binding
                         for binding in selected.get("fieldwork_returns", {}).values()}
     for binding in retained_returns.values():
@@ -83,8 +113,7 @@ def _packet(workspace, selected):
         "files": [{"path": name, "bytes": member["bytes"], "sha256": member["sha256"]}
                   for name, member in sorted(files.items())]})
     add_member(files, "manifest.json", bytes_member(manifest))
-    packet = (workspace.root / "monitoring_fieldwork" / selected["revision"]["id"]
-              / "monitoring-field-package.zip")
+    packet = _packet_path(workspace, selected)
     return retain_packet(packet, files)
 
 def _rows(selected, source_id):
@@ -120,6 +149,13 @@ def _rows(selected, source_id):
         "site_ids": list(site_ids.values()), "parameters": [],
         "method_ref": source_id, "frequency": "Original saved campaign rounds",
         "monitoring_design_id": plan["id"], "source_revision_id": revision["id"]})
+    protocol = selected.get("sampling_protocols", {}).get(plan["id"])
+    if protocol is not None:
+        monitor = result["monitoring_plans"][0]
+        monitor["sampling_requirements"] = deepcopy(protocol)
+        monitor["parameters"] = sampling_protocol.parameter_labels(protocol)
+        monitor["notes"] += (" Parameters describe the complete saved Sampling programme. "
+                             "Each visit retains its own target applicability and actual station scope.")
     recent = {}
     for event in selected["events"]:
         if event["plan_id"] == plan["id"] and event["status"] != "note":
@@ -144,6 +180,13 @@ def _rows(selected, source_id):
                  "monitoring_visit_key": key, "source_status": native_status,
                  "original_calendar": deepcopy(original),
                  "source_event_id": event["id"] if event else None}
+        if protocol is not None:
+            actual_station = next(row["monitoring_station_id"] for row in result["sites"]
+                                  if row["id"] == actual_site)
+            binding = sampling_protocol.visit_binding(protocol, key, actual_station)
+            visit["sampling_requirements"] = binding
+            notes += sampling_protocol.visit_note(protocol, binding)
+            visit["notes"] = notes
         if status == "complete":
             visit["visited_at"] = event["occurred_at"]
         result["visits"].append(visit)
@@ -191,6 +234,13 @@ def _rows(selected, source_id):
                               visited_at=activity["collected_at"],
                               source_event_id=activity["source_event_id"],
                               source_status="collected", notes=activity["notes"])
+            if protocol is not None:
+                actual_station = next(row["monitoring_station_id"] for row in result["sites"]
+                                      if row["id"] == activity["site_id"])
+                binding = sampling_protocol.visit_binding(
+                    protocol, historical["monitoring_visit_key"], actual_station)
+                historical["sampling_requirements"] = binding
+                historical["notes"] += sampling_protocol.visit_note(protocol, binding)
             result["visits"].append(historical)
             activity["visit_id"] = historical["id"]
     if plan["cost"]["currency"] != "USD":
@@ -387,7 +437,7 @@ def receive(service, *, campaign_id, expected_revision_id, operation_id):
         selected = _selection(service, campaign_id, expected_revision_id)
         revision, source_plan = selected["revision"], selected["plan"]
         plan_id = _id("monitoring", campaign_id)
-        source_id = _id("campaign", revision["id"])
+        source_id = _source_id(selected)
         store = ImplementationStore(service.workspace)
         retained = store.history(plan_id) if (store.base / plan_id).is_dir() else []
         current = store.get(plan_id) if retained else None
@@ -408,11 +458,17 @@ def receive(service, *, campaign_id, expected_revision_id, operation_id):
                 target_date=calendar["end_date"], description="Fieldwork from the original saved monitoring campaign.",
                 working_days=sorted(set(day + 1 for day in calendar.get("weekdays", [0, 1, 2, 3, 4]))),
                 holidays=sorted(set(calendar.get("blackout_dates", []))))
+            incoming = _rows(selected, source_id)
             snapshot = {"campaign_revision": deepcopy(revision), "design_id": source_plan["id"],
                         "network_id": selected["network"]["id"],
                         "source_bindings": deepcopy(selected["network"]["source_bindings"]),
                         "packet": {"sha256": packet_sha, "bytes": packet_bytes},
                         "calendar_basis": source_plan["calendar"]["scheduling_basis"]}
+            if selected.get("sampling_protocols"):
+                snapshot["sampling_protocols"] = deepcopy(selected["sampling_protocols"])
+                snapshot["sampling_visit_bindings"] = {
+                    row["id"]: deepcopy(row["sampling_requirements"])
+                    for row in incoming["visits"] if "sampling_requirements" in row}
             document["source_links"].append({
                 "id": source_id, "kind": "monitoring_campaign", "label": revision["title"] +
                 " · source revision " + str(revision["revision"]),
@@ -424,7 +480,7 @@ def receive(service, *, campaign_id, expected_revision_id, operation_id):
                 returned_baselines = {binding["activity"]["id"]: binding["activity"]
                                       for binding in selected.get("fieldwork_returns", {}).values()
                                       if binding["activity"] is not None}
-                managed, conflicts = _merge(document, _rows(selected, source_id), revision["id"],
+                managed, conflicts = _merge(document, incoming, revision["id"],
                                             fieldwork_baselines=returned_baselines)
                 calendar_fields, calendar_conflicts = _merge_calendar(document, selected, origin)
                 conflicts.extend(calendar_conflicts)
@@ -434,13 +490,16 @@ def receive(service, *, campaign_id, expected_revision_id, operation_id):
                     "network_id": selected["network"]["id"],
                     "managed_fields": managed, "calendar_fields": calendar_fields,
                     "preserved_fieldwork_changes": conflicts}
+                if selected.get("sampling_protocols"):
+                    document["monitoring_origin"]["sampling_protocol_ids"] = {
+                        key: value["id"] for key, value in selected["sampling_protocols"].items()}
             document = validate_plan(document)
             current = (store.save(document, current["revision"], actor=actor) if current else
                        store.create(document, actor=actor))
         attachment = next((row for row in current["source_links"]
                            if row.get("kind") == "local_file" and row.get("sha256") == packet_sha), None)
         if attachment is None:
-            packet = service.root / "monitoring_fieldwork" / revision["id"] / "monitoring-field-package.zip"
+            packet = _packet_path(service.workspace, selected)
             if not packet.is_file() or packet.stat().st_size != packet_bytes:
                 raise ContractError("Resume with the original retained monitoring field package")
             if file_sha256(packet) != packet_sha:
