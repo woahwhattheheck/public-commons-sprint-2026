@@ -530,6 +530,7 @@ def backup(workspace, destination, *, include_intermediates=True, include_delive
         excluded.add(pending)
         with contextlib.ExitStack() as stack:
             stack.enter_context(held(root / ".workspace.lock", blocking=False))
+            stack.enter_context(held(root / ".programme-source-updates.lock", blocking=False))
             stack.enter_context(held(root / ".receiving-water-report-source.lock", blocking=False))
             stack.enter_context(held(root / ".monitoring-report-source.lock", blocking=False))
             stack.enter_context(held(root / ".receiving-water-monitoring.lock", blocking=False))
@@ -1054,6 +1055,10 @@ def _verify_restored_workspace(manifest, destination):
     if any((restored.root / "compute-programmes").glob("*/interaction-links/*.json")):
         from .programme_interactions import validate_workspace as validate_programme_interactions
         validate_programme_interactions(restored, verified_members=manifest["members"])
+    # Verify retained Programme source-update relationships before publication.
+    if any((restored.root / "programme-source-updates").glob("*.json")):
+        from .programme_source_updates import verify_workspace as verify_programme_source_updates
+        details["programme_source_updates"] = verify_programme_source_updates(restored)
     # Verify retained Scenario analysis source context before publication.
     if any((restored.root / "scenario-source-contexts").glob("*.json")):
         from .analysis_source_context import verify_workspace as verify_analysis_source_context
