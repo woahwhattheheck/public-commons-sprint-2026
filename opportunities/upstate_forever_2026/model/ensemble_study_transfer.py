@@ -225,6 +225,9 @@ def _captured(closure, entry):
                     or row["baseline_run_id"] not in runs or row["alternative_run_id"] not in runs):
                 raise ValueError("The native study report changed its original paired comparison")
     _captured_comparisons(comparisons, runs)
+    if basis.get("coefficient_evidence") is not None:
+        from . import ensemble_coefficient_evidence
+        ensemble_coefficient_evidence.include_source(closure, None, entry, retain_editable=False)
     return basis, operation_id, recipe, members, selected, plan, runs, grid, collections, comparisons, content
 
 
@@ -402,6 +405,9 @@ def include_source(closure, collection_id, entry):
      collections, comparisons, content) = _captured(closure, entry)
     local = basis["workspace_id"] == closure.workspace.project["id"]
     required = []
+    if local and basis.get("coefficient_evidence") is not None:
+        from . import ensemble_coefficient_evidence
+        ensemble_coefficient_evidence.include_source(closure, collection_id, entry)
     if local:
         key, project = plan["id"], basis["workspace_id"]
         original_plan = closure.read("ensembles/" + key + ".json")
