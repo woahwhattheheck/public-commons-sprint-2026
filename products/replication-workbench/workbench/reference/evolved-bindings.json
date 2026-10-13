@@ -1,0 +1,53 @@
+{
+  "sourceConnection": "SOURCE_DB",
+  "targetConnection": "PARALLEL_DB",
+  "sourceDialect": "sqlite",
+  "targetDialect": "sqlite",
+  "targetDistinctFromPrevious": true,
+  "streamBindings": {
+    "[\"main\",\"test1\"]": {
+      "sourceRelation": [
+        "main",
+        "test1"
+      ],
+      "previousRelation": [
+        "main",
+        "test1"
+      ],
+      "parallelRelation": [
+        "main",
+        "test1_parallel"
+      ]
+    }
+  },
+  "businessColumns": {
+    "[\"main\",\"test1\"]": [
+      "id",
+      "first_name",
+      "last_name",
+      "email",
+      "target",
+      "create_dt",
+      "date",
+      "rating",
+      "code",
+      "update_dt",
+      "json_data"
+    ]
+  },
+  "nativeStreamOverrides": {
+    "[\"main\",\"test1\"]": {
+      "reason": "Use original Sling incremental primary-key upsert and permit the explicitly reviewed json_data source-column addition. The unchanged original 14-row file advances every create_dt cursor value beyond the baseline maximum.",
+      "config": {
+        "mode": "incremental",
+        "primary_key": [
+          "id"
+        ],
+        "update_key": "create_dt",
+        "target_options": {
+          "add_new_columns": true
+        }
+      }
+    }
+  }
+}
