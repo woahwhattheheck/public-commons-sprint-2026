@@ -31,7 +31,8 @@
         "model/observed_context.py",
         "model/observed_report_render.py",
         "model/scientific_figures.py",
-        "model/scientific_report.py"
+        "model/scientific_report.py",
+        "model/scientific_tables.py"
       ],
       "requires": [
         "core",
