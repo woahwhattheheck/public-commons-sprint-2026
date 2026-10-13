@@ -12,6 +12,7 @@
     "observed-station-wbd": {
       "title": "Original WBD source context in saved observation station studies",
       "paths": [
+        "integration/component_fragments/observed-station-wbd.json",
         "integration/observed-station-wbd-components.json",
         "model/observed_station_studies.json",
         "model/observed_station_studies.py",
@@ -231,7 +232,8 @@
         "operator/observed_station_wbd_hooks.json"
       ],
       "requires": [
-        "station-geography"
+        "station-geography",
+        "observed-station-studies"
       ],
       "source_manifests": [
         "observations/wbd_station_join_20261013/station-context.sources.json"

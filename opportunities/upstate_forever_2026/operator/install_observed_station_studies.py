@@ -10,13 +10,15 @@ from pathlib import Path, PurePosixPath
 import tempfile
 
 FILES = (
+    "model/observed_station_studies.py",
     "model/station_wbd_context.py",
     "operator/observed_station_wbd_hooks.json",
     "observations/wbd_station_join_20261013/station-context.sources.json",
     "observations/wbd_station_join_20261013/station_context.mjs",
     "observations/wbd_station_join_20261013/rebuild_station_context.mjs",
     "observations/wbd_station_join_20261013/STATION_CONTEXT.md",
-    "model/observed_station_studies.py",
+    "integration/component_fragments/observed-station-wbd.json",
+    "integration/observed-station-wbd-components.json",
     "model/observed_station_studies.json",
     "observations/station_context.sources.json",
     "calibration_station_geography.sources.json",
