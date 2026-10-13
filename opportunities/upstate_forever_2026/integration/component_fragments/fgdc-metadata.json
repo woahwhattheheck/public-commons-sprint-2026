@@ -6,14 +6,16 @@
       "paths": [
         "model/fgdc_metadata.py",
         "model/FGDC_METADATA.md",
-        "source/fgdc-metadata/receive_metadata.py"
+        "source/fgdc-metadata/receive_metadata.py",
+        "source/fgdc/fgdc-std-001-1998.dtd"
       ]
     },
     "delivery-datasets": {
       "paths": [
         "model/fgdc_metadata.py",
         "model/FGDC_METADATA.md",
-        "source/fgdc-metadata/receive_metadata.py"
+        "source/fgdc-metadata/receive_metadata.py",
+        "source/fgdc/fgdc-std-001-1998.dtd"
       ]
     }
   },
