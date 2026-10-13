@@ -28,6 +28,7 @@ APPLICATION = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(APPLICATION))
 from model.common import atomic_json, canonical, digest, file_digest, held, now, read_json
 from model.workspace import Workspace
+from model.record_catalog import ProjectedFileCache, task_summary
 from model import portable
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -119,6 +120,7 @@ class Operator:
         self.spatial_exports = {}
         self.gates = {}
         self.downloads = {}
+        self.task_catalog = ProjectedFileCache()
         self.rehearsals = Rehearsals(self, Fault)
         self.customer_reviews = CustomerReviews(self, Fault)
         self.experiments = ExperimentOperator(self, Fault)
@@ -281,8 +283,13 @@ class Operator:
     def task(self, key):
         return read_json(self.root / "tasks" / (token(key) + ".json"))
 
-    def task_list(self, workspace=None):
-        items = [read_json(p) for p in (self.root / "tasks").glob("*.json")]
+    def task_list(self, workspace=None, *, compact=False):
+        paths = list((self.root / "tasks").glob("*.json"))
+        if compact:
+            self.task_catalog.retain_paths(paths)
+            items = [self.task_catalog.read(path, task_summary) for path in paths]
+        else:
+            items = [read_json(path) for path in paths]
         if workspace:
             items = [x for x in items if x["workspace"] == workspace]
         return sorted(items, key=lambda x: x["created_at"], reverse=True)
@@ -665,11 +672,11 @@ class Operator:
         if kind not in KINDS:
             raise Fault("ITEM_KIND", "Choose a retained item type.")
         ws = self.ws(workspace)
-        records = ws.overview().get(kind, [])
-        item = next((x for x in records if x["id"] == token(key)), None)
-        if item is None:
-            raise Fault("ITEM_MISSING", "The selected retained item is absent.", 404)
-        result = json.loads(json.dumps(item))
+        key = token(key)
+        try:
+            result = ws.retained_item(kind, key)
+        except FileNotFoundError as error:
+            raise Fault("ITEM_MISSING", "The selected retained item is absent.", 404) from error
         if kind == "sources":
             downloads = []
             for row in result["entries"]:
@@ -771,9 +778,9 @@ class Operator:
                               native_tags=original.tags())
         return result
 
-    def state(self, workspace):
+    def state(self, workspace, *, compact=False):
         ws = self.ws(workspace)
-        state = ws.overview()
+        state = ws.operator_overview() if compact else ws.overview()
         try:
             state["operator_session"] = self.operator_session(workspace)
         except (Fault, OSError, ValueError) as error:
@@ -792,7 +799,7 @@ class Operator:
                                     for k, stage in row.get("stages", {}).items()}
             row.pop("stages", None)
         return {"workspace_key": workspace, "workspaces": self.public_workspaces(), "data": state,
-                "tasks": self.task_list(workspace), "registered_sources": [
+                "tasks": self.task_list(workspace, compact=compact), "registered_sources": [
                     {k: v for k, v in row.items() if k != "path"} for row in self.registered.values()],
                 "limits": {"upload_bytes": self.upload_limit, "source_extraction_bytes": self.extraction_limit},
                 "closing": self.closing}
@@ -961,7 +968,7 @@ class Handler(BaseHTTPRequestHandler):
                     return self.send_json(200, self.app.experiments.read(workspace, experiment_reads[url.path],
                         {name: one(name) for name in ("experiment_id", "offset", "limit", "case_ids")}))
                 if url.path == "/api/state":
-                    return self.send_json(200, self.app.state(workspace))
+                    return self.send_json(200, self.app.state(workspace, compact=one("compact") == "1"))
                 programme_reads = {"/api/programmes/" + name: name for name in PROGRAMME_READS}
                 if url.path in programme_reads:
                     return self.send_json(200, self.app.programmes.read(workspace, programme_reads[url.path],
