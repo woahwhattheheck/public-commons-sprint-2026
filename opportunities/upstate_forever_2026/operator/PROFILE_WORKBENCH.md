@@ -119,3 +119,11 @@ Primary references:
 - [Publisher-provided full text and tables](https://www.researchgate.net/publication/372675263_Patterns_of_land_use_change_land_governance_and_the_supply_of_ecosystem_services_in_a_multifunctional_landscape_A_case_study_from_Upstate_SC_USA)
 - [Original InVEST 3.9 NDR load calculation](https://github.com/natcap/invest/blob/3.9.0/src/natcap/invest/ndr/ndr.py)
 - [Current InVEST 3.20 NDR load calculation](https://github.com/natcap/invest/blob/3.20.0/src/natcap/invest/ndr/ndr.py)
+
+## Continue from Open my data
+
+A completed biophysical intake offers **Prepare parameter profile** beside each retained table. The original collection, projected CSV hash and confirmed native model scope select this desk's existing new-profile draft. Workbook filename, worksheet and unchanged raw original remain attached through the saved source edition. The source citation, period and notes initialize a new draft; native algorithm parameters and the preparer's identity remain explicit choices.
+
+If that exact source/model draft already exists, the desk reopens its original title, parameters, references and unfinished values. Other drafts remain in the library. A delayed handoff cannot overwrite edits made while its source is loading or reopen a view after navigation. The handoff validates retained source lineage only; the existing new-table, revision and manual scientific-review workflows remain available.
+
+Choose **Review changes**, correct any named native error, then **Save working profile**. Saved profiles and their exact table identities use the normal profile engine, operation recovery and Workspace export/restore. No model starts when a profile is prepared, and a working profile makes no scientist-reviewed or regional-calibration claim.
