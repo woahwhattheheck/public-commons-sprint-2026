@@ -7,7 +7,7 @@ import sys
 
 from .common import read_json
 from .workspace import Workspace
-from . import ensemble_consumers as consumers, ensemble_references, ensemble_flow_support
+from . import ensemble_consumers as consumers, ensemble_references, ensemble_flow_support, ensemble_scientific_source
 
 
 def parser():
@@ -64,6 +64,16 @@ def parser():
     calibrate = commands.add_parser("calibration-resume", help="Continue the original calibration plan and source uncertainty")
     calibrate.add_argument("--consumer-id", required=True)
     calibrate.add_argument("--standard-errors", type=float)
+    scientific = commands.add_parser("scientific-source",
+        help="Register and render a saved calibration, its original references and exact flow support")
+    scientific.add_argument("--consumer-id", required=True)
+    scientific.add_argument("--source-only", action="store_true",
+                            help="Register the complete typed source without rendering PDF/HTML")
+    source_selection = commands.add_parser("scientific-selection",
+        help="Append the prepared scientific source to an existing delivery selection")
+    source_selection.add_argument("--consumer-id", required=True)
+    source_selection.add_argument("--selection", help="Existing ordered delivery selection JSON")
+    source_selection.add_argument("--output", help="Write the composed selection to this path")
     return top
 
 
@@ -71,7 +81,20 @@ def main(argv=None):
     args = parser().parse_args(argv)
     try:
         workspace = Workspace(args.workspace)
-        if args.command == "annual-references":
+        if args.command == "scientific-source":
+            result = ensemble_scientific_source.prepare(workspace, args.consumer_id,
+                                                       render=not args.source_only)
+        elif args.command == "scientific-selection":
+            retained = ensemble_scientific_source.latest(workspace, args.consumer_id)
+            if not retained or not retained.get("source"):
+                raise ValueError("Prepare the saved scientific source first")
+            result = ensemble_scientific_source.delivery_selection(retained["source"],
+                read_json(args.selection) if args.selection else None)
+            if args.output:
+                from pathlib import Path
+                from .common import atomic_json
+                atomic_json(Path(args.output), result, immutable=True)
+        elif args.command == "annual-references":
             result = ensemble_references.catalog(workspace, include_records=True)
         elif args.command == "flow-support":
             result = ensemble_flow_support.prepare(workspace, args.annual_import_id,

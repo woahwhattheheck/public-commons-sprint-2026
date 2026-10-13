@@ -29,7 +29,7 @@ const choices = (name, rows, empty) => rows.length ? rows.map(row =>
   '</small></span></label>').join('') : '<p class="note">'+escapeHTML(empty)+'</p>';
 
 export function attachEnsembles(context) {
-  const {getState, api, endpoint, openForm, submitAction, detail, toast, openItem} = context;
+  const {getState, api, endpoint, openForm, submitAction, detail, toast, openItem, refresh, openDelivery} = context;
   let root=null, generation=0, controller=null, catalog=null, axisCounter=0;
   let mountedWorkspace=null, rowSignature='', designVersion=0;
   if(!document.querySelector('[data-view="ensembles"]')) {
@@ -431,6 +431,18 @@ export function attachEnsembles(context) {
       html+='<p>Avoided export is baseline minus alternative. Positive values mean lower modeled export. '+
         'The original decision report includes its shared geographic support, units and supplied costs.</p>';
     }
+    if(plan.mode==='calibration' && result.calibration_id) {
+      const scientific=value.scientific_source;
+      html+='<section class="section"><h3>Scientific report and original source package</h3>'+
+        '<p>Publish this saved calibration with its original observations, physical quantities, source-error sensitivity, '+
+        'daily-flow dates and qualifiers. The same typed content appears in PDF, HTML, Markdown and structured data.</p>'+
+        '<div class="page-actions">'+button('scientific-prepare',
+          scientific?.state==='complete'?'Refresh scientific report':'Prepare scientific report',id,true)+
+        (scientific?.source?button('scientific-delivery','Include in delivery',id):'')+'</div>'+
+        (scientific?.error?'<div class="notice error">'+escapeHTML(scientific.error.message)+'</div>':'')+
+        (scientific?.source?'<p>Registered scientific source: '+escapeHTML(scientific.source.source_id)+
+          ' · '+escapeHTML(label(scientific.state))+'.</p>':'')+'</section>';
+    }
     html+=annualReferenceHTML(plan.annual_reference);
     html+=flowSupportHTML(plan.flow_support);
     html+=downloadsHTML(value.downloads);
@@ -439,6 +451,28 @@ export function attachEnsembles(context) {
     detail(plan.selection.title||'Saved scientific result',html,{kind:'ensemble-consumer',id});
   }
 
+
+  async function scientificDelivery(selection={}) {
+    const workspace=currentWorkspace(), version=++designVersion;
+    if(selection.workspace_key && selection.workspace_key!==workspace)
+      throw Error('Open the saved scientific source in its original workspace.');
+    const value=await api(endpoint('/api/ensembles/scientific-source',{consumer_id:selection.consumer_id}));
+    if(workspace!==currentWorkspace() || version!==designVersion)return;
+    const previous=JSON.parse(JSON.stringify(selection.delivery_selection||{}));
+    const primary=previous.source_roles?.OBSERVED_CONTEXT;
+    const choices=previous.observed_context_sources!==undefined?previous.observed_context_sources:(primary?[primary]:[]);
+    if(!Array.isArray(choices))throw Error('The existing report selection needs an ordered scientific source list.');
+    const source=value.source.source;
+    const joined=[...choices];
+    if(!joined.some(row=>row.source_collection_id===source.source_collection_id && row.source_id===source.source_id))
+      joined.push(source);
+    previous.observed_context_sources=joined;
+    previous.source_roles={...(previous.source_roles||{}),OBSERVED_CONTEXT:joined[0]};
+    delete previous.observed_context_binding;
+    await refresh({force:true});
+    if(workspace!==currentWorkspace() || version!==designVersion)return;
+    return openDelivery(previous);
+  }
 
   function annualReferenceHTML(reference) {
     if(!reference)return '';
@@ -738,6 +772,12 @@ export function attachEnsembles(context) {
     if(action==='consumer-decision')return consumerForm(id,'decision');
     if(action==='consumer-calibration')return consumerForm(id,'calibration',{annual_import_id:node.dataset.annualImport});
     if(action==='consumer-open')return openConsumer(id);
+    if(action==='scientific-prepare') {
+      const task=await submitAction('ensemble.scientific-source',{consumer_id:id});
+      toast('The saved scientific report is queued. Reopen this result for PDF, original sources and Include in delivery.');
+      return task;
+    }
+    if(action==='scientific-delivery')return scientificDelivery({consumer_id:id});
     if(action==='flow-prepare'){
       const choice=form()?.elements.namedItem('consumer_saved_references')?.value||'';
       if(!choice.startsWith('annual:'))throw Error('Choose an original annual-reference import first.');
@@ -768,5 +808,5 @@ export function attachEnsembles(context) {
     }
     throw Error('Choose an available scenario-sensitivity action.');
   }
-  return {mount,update,detach,dispatch,prepare:newDesign,annualReference:openAnnualReference};
+  return {mount,update,detach,dispatch,prepare:newDesign,annualReference:openAnnualReference,scientificDelivery};
 }
