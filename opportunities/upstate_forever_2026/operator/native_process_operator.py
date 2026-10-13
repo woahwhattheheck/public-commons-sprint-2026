@@ -91,6 +91,12 @@ def _product(operator, workspace_key, key):
             ticket = operator._ticket(workspace_key, relative_file(ws.root, item["path"]), item, name)
             result["_downloads"].append({**ticket, "member": name})
     result["tables"] = [name for name, member in TABLES.items() if member in files]
+    result["watershed_labels"] = {}
+    if "processes.json" in files:
+        processes = read_json(verify_file(ws.root, files["processes.json"]))
+        for packet in processes.get("packets", []):
+            for watershed in packet.get("watersheds", []):
+                result["watershed_labels"].setdefault(watershed["key"], producer._watershed_label(watershed))
     return result
 
 
@@ -104,40 +110,97 @@ def _integer(value, name, minimum=0, maximum=None):
     return value
 
 
-def _table(ws, payload):
-    directory, record, unused = _record(ws, payload.get("id"))
+TABLE_FILTERS = ("model", "run_id", "baseline_run_id", "alternative_run_id",
+                 "watershed", "quantity", "field", "units")
+REVIEW_SCHEMA = "upstate.native-process-table-review/v1"
+MAX_REVIEW_BYTES = 32 * 1024 * 1024
+MAX_REVIEW_ROWS = 100000
+TABLE_BASES = {
+    "quantities": "Native model-domain watershed quantities and explicitly named derivations.",
+    "support": "Original per-quantity finite-cell support and reconstructed pixel-centre masses.",
+    "changes": "Native watershed quantities; change is alternative minus baseline.",
+    "paired-support": "Identical finite cells for each quantity; paired masses and support changes.",
+}
+
+
+def _table(ws, payload, *, complete=False):
+    directory, record, identity = _record(ws, payload.get("id"))
     name = payload.get("table", "quantities")
     if name not in TABLES:
         raise ValueError("Choose an original process quantity or support table")
-    offset = _integer(payload.get("offset", 0), "Row offset")
-    limit = _integer(payload.get("limit", 100), "Page size", 1, 250)
+    offset = 0 if complete else _integer(payload.get("offset", 0), "Row offset")
+    limit = MAX_REVIEW_ROWS if complete else _integer(payload.get("limit", 100), "Page size", 1, 250)
     member = TABLES[name]
     files = _descriptors(ws, directory, record)
     if member not in files:
         raise ValueError("Finish this original process table before opening it")
-    path = verify_file(ws.root, files[member])
-    filters = {field: payload.get(field, "") for field in ("model", "run_id", "watershed")}
+    source = files[member]
+    expected = payload.get("expected_source")
+    if expected is not None and expected != source:
+        raise ValueError("This table selection belongs to a different original CSV edition")
+    path = verify_file(ws.root, source)
+    filters = {field: payload.get(field, "") for field in TABLE_FILTERS}
     if any(not isinstance(value, str) for value in filters.values()):
         raise ValueError("Choose original string table selectors")
-    rows, options, total, matched = [], {field: set() for field in filters}, 0, 0
+    rows, row_numbers, options, total, matched = [], [], {}, 0, 0
+    estimated_bytes = 0
+    labels = {}
     with path.open(newline="", encoding="utf-8") as stream:
         reader = csv.DictReader(stream)
         columns = reader.fieldnames or []
+        if len(set(columns)) != len(columns):
+            raise ValueError("The original table contains duplicate column names")
+        if any(value and field not in columns for field, value in filters.items()):
+            raise ValueError("This selector is not a column in the chosen original table")
+        filters = {field: value for field, value in filters.items() if field in columns}
+        options = {field: set() for field in filters}
         for row in reader:
             total += 1
+            if None in row or any(value is None for value in row.values()):
+                raise ValueError("The original table has an incomplete or extra CSV cell")
             for field in options:
-                if row.get(field):
+                if row[field]:
                     options[field].add(row[field])
-            if any(value and row.get(field, "") != value for field, value in filters.items()):
+            if row.get("quantity") and row.get("label"):
+                labels.setdefault("quantity", {})[row["quantity"]] = row["label"]
+            if any(value and row[field] != value for field, value in filters.items()):
                 continue
             if offset <= matched < offset + limit:
+                if complete:
+                    estimated_bytes += len(canonical(row)) + 32
+                    if estimated_bytes > MAX_REVIEW_BYTES:
+                        raise ValueError("Narrow the table selection before saving; the complete original CSV remains available")
                 rows.append(row)
+                row_numbers.append(total)
             matched += 1
-    return {"report_id": record["id"], "table": name, "columns": columns, "rows": rows,
-            "offset": offset, "limit": limit, "total_rows": total, "selected_rows": matched,
-            "next_offset": offset + len(rows) if offset + len(rows) < matched else None,
-            "filters": filters, "options": {key: sorted(value) for key, value in options.items()},
-            "source": files[member]}
+        if complete and matched > MAX_REVIEW_ROWS:
+            raise ValueError("Narrow the table selection to at most 100000 rows; the complete original CSV remains available")
+    if any(value and value not in options[field] for field, value in filters.items()):
+        raise ValueError("A selected value is absent from this original table")
+    result = {
+        "report_id": record["id"], "table": name, "columns": columns, "rows": rows,
+        "row_numbers": row_numbers, "offset": offset, "limit": limit,
+        "total_rows": total, "selected_rows": matched,
+        "next_offset": offset + len(rows) if offset + len(rows) < matched else None,
+        "filters": filters, "options": {key: sorted(value) for key, value in options.items()},
+        "option_labels": labels, "source": source,
+        "scope": "original_native_model_domain_watersheds", "basis": TABLE_BASES[name],
+    }
+    if complete:
+        review = {
+            "schema": REVIEW_SCHEMA, "project_id": ws.project["id"],
+            "report_id": record["id"], "report_title": record["title"],
+            "grid_id": identity["grid"]["id"], "run_selection": record["selection"],
+            "table": name, "source": deepcopy(source), "scope": result["scope"],
+            "basis": result["basis"], "filters": filters, "columns": columns,
+            "total_rows": total, "selected_rows": matched,
+            "row_numbers": row_numbers, "rows": rows,
+        }
+        review["review_id"] = digest(review)
+        if len(canonical(review)) > MAX_REVIEW_BYTES:
+            raise ValueError("Narrow the table selection before saving; the complete original CSV remains available")
+        return review
+    return result
 
 
 def read(operator, workspace_key, operation, payload):
@@ -150,6 +213,8 @@ def read(operator, workspace_key, operation, payload):
         return _product(operator, workspace_key, payload.get("id"))
     if operation == "table":
         return _table(ws, payload)
+    if operation == "table-selection":
+        return _table(ws, payload, complete=True)
     if operation == "delivery":
         key = identifier(payload.get("id"))
         # Read the ORIGINAL saved selection rather than accept a browser reconstruction.
