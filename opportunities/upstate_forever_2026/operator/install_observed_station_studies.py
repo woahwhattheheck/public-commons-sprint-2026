@@ -18,6 +18,7 @@ FILES = (
     "observations/wbd_station_join_20261013/rebuild_station_context.mjs",
     "observations/wbd_station_join_20261013/STATION_CONTEXT.md",
     "integration/component_fragments/observed-station-wbd.json",
+    "integration/component_fragments/observed-station-wbd-nldi-197.json",
     "integration/observed-station-wbd-components.json",
     "model/observed_station_studies.json",
     "observations/station_context.sources.json",
@@ -65,6 +66,58 @@ AUTHORED_BINDINGS = {
 }
 
 
+
+# Accept only these recorded generated-source transitions from the 184-point
+# WBD edition to the complete 197-point edition. Direction and both identities
+# are fixed: unrelated edits, newer bodies and reverse replacement still fail.
+# Original publisher responses and point inputs are never upgrade candidates.
+WBD_SOURCE_UPGRADES = {
+    "observations/wbd_station_join_20261013/query-plan.json": (
+        "cfe27b718fd572bd8c08066a79b0f69c872c9247b2dda8bbfcf16ae801920aad",
+        "498652d776ff4eef2fac4c94f0bf62742c8441b12beb9bebaaf08375f943aad7",
+    ),
+    "observations/wbd_station_join_20261013/capture-index.json": (
+        "f339aa0fbc24cd0441d3cacc2b2d55714ae1d397f7d20187e9c80808ff327573",
+        "d3f9579edd3e708c63c9d2d4805207a2ff0e744c363524238d161783d40c7cf7",
+    ),
+    "observations/wbd_station_join_20261013/watershed_join.mjs": (
+        "a2bb5fd9341dfc71f2561809ca118c30134897f78502485df00879e245df203b",
+        "aee840c8a9ecc26b69b04168422cc31716df6857a6fde7f0dfc431564f2bf1fb",
+    ),
+    "observations/wbd_station_join_20261013/README.md": (
+        "14353aad3ff1565862a89850c592b07e40f1ee1e144e8dcbc23c1a1ada4a37be",
+        "a1ee3a6b77ec75fdd64256ca3525e1119fc2faa7aece4efc089e99cb32266a17",
+    ),
+    "observations/wbd_station_join_20261013/derived/point_watersheds.csv": (
+        "6767a61912146ade1496a72a4704c00085aa02523d8e92c97e5124792354c28f",
+        "4dae939207751422d63620d5fff17d0a6eb04e70743f8636e704db5363b5e8a4",
+    ),
+    "observations/wbd_station_join_20261013/derived/polygon_matches.csv": (
+        "0f34b1d5d958e3cdac5a1fe6c7a7de9b01e9634751947fb4e6a065d2d5a2d0a9",
+        "cc766b49806106e311fb5f198fc06de1745f1acfbd2587d5a612b195b2ab84cc",
+    ),
+    "observations/wbd_station_join_20261013/derived/summary.json": (
+        "9891b4879db81ed99a691ab56e3e630fe7f6e3b56e0a5d381fb6e4eea63b85da",
+        "f46a7dba0d4e03e93b2a95ce8253b26581cd5c414a0c54bac7ef770b9a2739ec",
+    ),
+    "observations/wbd_station_join_20261013/model-sources.json": (
+        "59b64d22d1db2549da27a24cbc38f37fb0d9b79927d5dba149ba6229bc5be2c8",
+        "147ef394e32a49d55e93c2231e4eba22110ee10fd0aefdff3e29f0185afa85b6",
+    ),
+    "observations/wbd_station_join_20261013/derived/station_context.csv": (
+        "31488b1b105906240c779db7c268d69ec76c4252440d09d1aee373f09b841f0e",
+        "af6e61b78ef6d3f666e43f9770cafa477f6667487d75fa9db9dc1394146004f7",
+    ),
+    "observations/wbd_station_join_20261013/rebuild_station_context.mjs": (
+        "4eec160655adbd504e6064b8de540571ec8d1e456e56da609799ef5b556ccdeb",
+        "3ba2b8902dcc59ee60ea4a4771ac97878cdbb32f13d964b327fec7d10f3efc4c",
+    ),
+    "observations/wbd_station_join_20261013/STATION_CONTEXT.md": (
+        "7ec7d097380ee247b8d35a6c48fc912fde26eaffdaf83ad48fab94da44d306d9",
+        "65db7cd29bd66ff2d03ac5b7362c9365c875f9271dd4d0493b0bf0fe5e85005d",
+    ),
+}
+
 def _relative(value):
     if not isinstance(value, str) or not value or "\\" in value:
         raise ValueError("Select an original relative POSIX source path")
@@ -90,9 +143,12 @@ def _source_body(application, source_root, name, definition):
             or hashlib.sha256(body).hexdigest() != expected_sha
             or (definition.get("bytes") is not None and len(body) != definition["bytes"])):
         raise ValueError("Original observation source differs: " + name)
-    if (current.is_file() and current.read_bytes() != body
-            and name not in AUTHORED_BINDINGS):
-        raise ValueError("Preserve the newer source already at " + name + " and reconcile its study recipe")
+    if current.is_file():
+        previous_body = current.read_bytes()
+        if previous_body != body and name not in AUTHORED_BINDINGS:
+            edition_pair = (hashlib.sha256(previous_body).hexdigest(), expected_sha)
+            if WBD_SOURCE_UPGRADES.get(name) != edition_pair:
+                raise ValueError("Preserve the newer source already at " + name + " and reconcile its study recipe")
     return body
 
 

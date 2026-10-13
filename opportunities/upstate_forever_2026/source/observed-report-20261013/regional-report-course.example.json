@@ -1,0 +1,95 @@
+{
+  "schema": "upstate.scientific-report-receiving-course/v1",
+  "operation_id": "ECO-INTEGRATE-ASTRA13-20261012",
+  "project_id": "b9d5d257-c6bb-4f07-b975-8e8c63705db3",
+  "steps": [
+    {
+      "id": "eighteenmile-observed",
+      "origin": "https://tokenjunkielabs.slack.com/archives/C0C1F274SGH/p1791876537838339 (original0669)",
+      "output": "/mnt/data/eco-cohort-resume/astra13-observed-report/operator-receiving",
+      "manifest": [
+        "/mnt/data/eco-cohort-resume/received/application/observations/eighteenmile_2023/report_context/model-sources.json"
+      ],
+      "selected_study": true
+    },
+    {
+      "id": "source-water-geography",
+      "origin": "https://tokenjunkielabs.slack.com/archives/C0BTTA66TK3/p1791876180058129",
+      "source_receipt": {
+        "path": "/mnt/data/eco-cohort-resume/source-water-scientific-report/source-preparation.json",
+        "sources_path": [
+          "source_choice"
+        ],
+        "title_path": [
+          "title"
+        ],
+        "checks": [
+          {
+            "path": [
+              "state"
+            ],
+            "equals": "complete"
+          },
+          {
+            "path": [
+              "workspace_id"
+            ],
+            "equals": "b9d5d257-c6bb-4f07-b975-8e8c63705db3"
+          },
+          {
+            "path": [
+              "preparation_id"
+            ],
+            "equals": "10e3fd4fb59c10dfcd4bb3e3b32aacaed003bac941144e9b6985ff9bf6143f26"
+          }
+        ]
+      },
+      "output_from_receipt": {
+        "directory": "/mnt/data/eco-cohort-resume/source-water-scientific-report",
+        "prefix": "operator-",
+        "path": [
+          "id"
+        ]
+      },
+      "selected_study": true
+    },
+    {
+      "id": "receiving-water-plan",
+      "origin": "https://tokenjunkielabs.slack.com/archives/C0BTTA66TK3/p1791877322864939 (original4072)",
+      "source_receipt": {
+        "path": "/mnt/data/eco-cohort-resume/public-water-report-source.json",
+        "sources_path": [
+          "source"
+        ],
+        "title_path": [
+          "title"
+        ],
+        "checks": [
+          {
+            "path": [
+              "state"
+            ],
+            "equals": "complete"
+          },
+          {
+            "path": [
+              "identity",
+              "workspace_id"
+            ],
+            "equals": "b9d5d257-c6bb-4f07-b975-8e8c63705db3"
+          },
+          {
+            "path": [
+              "identity",
+              "study",
+              "plan_id"
+            ],
+            "equals": "c42b411feba8fb3df0d4f4e5c9a8a02c0c7885cbf91ddcda4a9d539ccc7f28a6"
+          }
+        ]
+      },
+      "output": "/mnt/data/eco-cohort-resume/public-water-scientific-receiving",
+      "selected_study": true
+    }
+  ]
+}

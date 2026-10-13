@@ -17,10 +17,17 @@ FOOTER = "Original source records and selected scientific report editions"
 
 
 def _rendering_paths():
-    return {"model/observed_report_render.py": Path(__file__),
-               "model/scientific_report.py": Path(scientific_report.__file__),
-               "model/scientific_figures.py": Path(scientific_report.__file__).with_name("scientific_figures.py"),
-               "model/observed_context.py": Path(observed_context.__file__)}
+    paths = {"model/observed_report_render.py": Path(__file__),
+             "model/scientific_report.py": Path(scientific_report.__file__),
+             "model/scientific_figures.py": Path(scientific_report.__file__).with_name("scientific_figures.py"),
+             "model/observed_context.py": Path(observed_context.__file__)}
+    # Geographic panels dispatch lazily to this actual drawing implementation.
+    # Bind its installed body in every new preview while retaining the original
+    # four-source contract for older applications that have no map component.
+    map_renderer = Path(scientific_report.__file__).with_name("scientific_map_figures.py")
+    if map_renderer.is_file():
+        paths["model/scientific_map_figures.py"] = map_renderer
+    return paths
 
 
 def _rendering_sources():

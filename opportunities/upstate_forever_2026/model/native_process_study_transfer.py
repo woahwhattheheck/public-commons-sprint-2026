@@ -182,14 +182,17 @@ def _local_run(closure, captured, models):
         if any(item not in companions for item in before["companions"]):
             raise ValueError("The original native stage lost a report companion")
         basis = before["version"].get("basis")
-        producing = stage.get("runtime") if basis == "completed_stage_runtime" else run.get("runtime")
+        producing = stage.get("runtime")
+        if basis != "completed_stage_runtime" and not producing:
+            producing = run.get("runtime")
         retained = before.get("runtime") or {}
         if basis == "completed_stage_runtime":
             matches = producing == retained
         elif basis in ("observed_run_fallback", "observed_runtime"):
-            # A different model can finish later on the same parent run. Keep
-            # the captured fallback basis while validating this model's actual
-            # observed version and implementation, not unrelated runtime fields.
+            # Native continuation promotes the prior observed runtime onto an
+            # already completed stage before another model changes run.runtime.
+            # Use that retained stage proof when available without rewriting the
+            # report's original fallback basis or unrelated runtime fields.
             producing = producing or {}
             matches = (producing.get("version") == retained.get("version")
                        and producing.get("modules", {}).get(model)
@@ -279,3 +282,13 @@ def include_source(closure, collection_id, entry):
     }
     _register(closure, binding)
     return True
+
+
+def lock_paths(closure):
+    """Hold each original producer lock while staging its editable capture."""
+    return sorted({
+        ROOT + "/" + identifier(value["native_process_report_id"]) + "/.operation.lock"
+        for value in closure.report_source_records.values()
+        if value.get("report_context_kind") == "native_process_report"
+        and value.get("relationship") == "same_project"
+    })
