@@ -108,13 +108,16 @@ class GISProjects:
                 'created_at': record.get('created_at'),
                 'selection': record['selection'], 'layers': layers, 'downloads': downloads}
 
-    def catalogue(self, workspace, native_study_collection=None, native_study_source=None):
+    def catalogue(self, workspace, native_study_collection=None, native_study_source=None,
+                  scientific_report_id=None, execution_history_id=None):
         ws = self.operator.ws(workspace)
         if native_study_collection:
             from model import gis_native_study
             return {'workspace_key': workspace, 'native_study': gis_native_study.preview(ws, {
                 'source_collection_id': native_study_collection,
-                'source_id': native_study_source or 'saved-native-ensemble-study'})}
+                'source_id': native_study_source or 'saved-native-ensemble-study',
+                'scientific_report_id': scientific_report_id,
+                'execution_history_id': execution_history_id})}
         from model import gis_edition_review
         result = gis_workspace.catalogue(ws)
         from model import gis_native_study
@@ -186,7 +189,8 @@ def read(operator, workspace_key, operation, payload):
     adapter = GISProjects(operator)
     if operation == 'catalogue':
         return adapter.catalogue(workspace_key, payload.get('native_study_collection'),
-                                 payload.get('native_study_source'))
+                                 payload.get('native_study_source'), payload.get('scientific_report_id'),
+                                 payload.get('execution_history_id'))
     raise ValueError('Choose the GIS catalogue operation')
 
 
