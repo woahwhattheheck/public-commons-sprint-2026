@@ -2,19 +2,21 @@
   "schema": "upstate.operator-extension/v1",
   "id": "observed-landcover",
   "title": "Observed watershed change",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "order": 58,
   "assets": [
     "observed_landcover.mjs",
     "observed_landcover.css",
     "observed_landcover_selection.mjs",
-    "observed_landcover_groups.mjs"
+    "observed_landcover_groups.mjs",
+    "observed_landcover_handover.mjs"
   ],
   "backend": {
     "module": "observed_landcover_operator",
     "actions": [
       "observed.landcover.import",
-      "observed.landcover.save"
+      "observed.landcover.save",
+      "observed.landcover.handover"
     ],
     "invoke": {
       "handler": "invoke",
@@ -67,12 +69,51 @@
           "operation",
           "payload"
         ]
+      },
+      {
+        "methods": [
+          "GET"
+        ],
+        "path": "/api/observed-landcover/handover-catalog",
+        "operation": "handover-catalog",
+        "handler": "read",
+        "args": [
+          "operator",
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "GET"
+        ],
+        "path": "/api/observed-landcover/handover",
+        "operation": "handover",
+        "handler": "read",
+        "args": [
+          "operator",
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
       }
     ],
     "items": [
       {
         "kind": "observed-landcover-selections",
         "operation": "edition",
+        "handler": "read",
+        "args": [
+          "operator",
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "kind": "observed-landcover-handovers",
+        "operation": "handover",
         "handler": "read",
         "args": [
           "operator",

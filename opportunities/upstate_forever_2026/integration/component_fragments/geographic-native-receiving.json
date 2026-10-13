@@ -1,0 +1,42 @@
+{
+  "schema": "upstate.application-component-fragment/v1",
+  "id": "geographic-native-receiving",
+  "components": {
+    "geographic-native-receiving": {
+      "title": "Complete original geographic native study and archived application handover",
+      "paths": [
+        "source_tools/receive_geographic_headwaters.py",
+        "source_tools/geographic_headwaters_reopen.py",
+        "source_tools/geographic_archive.py",
+        "source_tools/geographic_headwaters_handover.py",
+        "source_tools/simulated_headwaters_receiving.py",
+        "source_tools/simulated_headwaters_handover.py",
+        "source_tools/demo_deadline.py",
+        "docs/GEOGRAPHIC_NATIVE_RECEIVING.md",
+        "docs/GEOGRAPHIC_HEADWATERS_HANDOVER.md",
+        "CURRENT_OWNER_DIRECTION.md",
+        "model/geographic_headwaters.py",
+        "source/geographic_headwaters_20261013/arjws-selection.json",
+        "source/geographic_headwaters_20261013/pioneer-selection.json",
+        "source/geographic_headwaters_20261013/four-anchor-selection.json",
+        "source/geographic_headwaters_20261013/README.md",
+        "source_tools/geographic_matched_control.py",
+        "source_tools/regional_matched_control.py",
+        "source/receptor-topology/20261013/usgs-wbd-savannah-original-topology-20261013.json",
+        "source_tools/REGIONAL_MATCHED_CONTROL.md",
+        "source/geographic_headwaters_20261013/PREPARE.md"
+      ],
+      "requires": [
+        "core",
+        "headwaters-parameter-course",
+        "simulated-headwaters-demo",
+        "geographic-receiving-context",
+        "ensembles",
+        "study-transfer"
+      ]
+    }
+  },
+  "required_components": [
+    "geographic-native-receiving"
+  ]
+}

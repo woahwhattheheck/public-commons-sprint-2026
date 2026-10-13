@@ -260,7 +260,7 @@ export function attachStationGeography(host) {
     const studies=list(catalog?.prepared_studies);
     target.innerHTML=studies.length?'<section class="sg-presets"><h2>Prepared study selections</h2>'+studies.map(study=>
       '<article><div><h3>'+esc(study.title||study.id)+'</h3><p>'+
-      (study.ready?'The exact original station inventory, point sources and retained watershed geometry are selected.':
+      (study.ready?esc(study.description||'The exact original station inventory, point sources and retained watershed geometry are selected.'):
         'Original sources to import: '+esc(list(study.missing).join('; ')))+'</p></div>'+
       (study.ready?button('build-preset','Build this study','data-sg-preset="'+esc(study.id)+'"'+(busy?' disabled':'')):
         button('go-sources','Open original sources'))+'</article>').join('')+'</section>':'';

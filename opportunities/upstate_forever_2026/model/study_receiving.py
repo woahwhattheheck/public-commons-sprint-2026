@@ -23,6 +23,7 @@ from . import economic_comparison_study_transfer as economic_comparison_transfer
 from . import observed_landcover_receiving
 from . import received_published_reviews
 from . import study_report_transfer
+from . import assessment_study_transfer
 
 HEX = re.compile(r"[0-9a-f]{64}")
 SCHEMA = "upstate.study-receiving-view/v1"
@@ -64,6 +65,7 @@ def _summary(value):
         **economic_comparison_transfer.summary(identity),
         **observed_landcover_receiving.summary(identity),
         **received_published_reviews.summary(identity),
+        **assessment_study_transfer.summary(identity),
     }
 
 
@@ -190,6 +192,7 @@ def detail(workspace, key):
     economic_comparison_transfer.augment(closure, retained, result)
     observed_landcover_receiving.augment(closure, retained, result)
     received_published_reviews.augment(closure, retained, result)
+    assessment_study_transfer.augment(closure, retained, result)
     # Validate the resolved file identities again after constructing this read.
     # The existing ticket service verifies actual member bytes when downloaded.
     closure.assert_unchanged()

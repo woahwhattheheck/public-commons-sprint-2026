@@ -180,6 +180,7 @@
         "integration/ensemble-parameter-core-joins.json",
         "model/delivery_catalogue.py",
         "model/ensemble_parameter_studies.py",
+        "model/ensemble_study_scope.py",
         "model/parameter_case_status.py",
         "model/parameter_report_source.py",
         "model/parameter_result_query.py",
@@ -388,6 +389,7 @@
     "parameter_scientific_figures": "40b31d03f412eee4e74ac497f2589ab6ef72438f",
     "ensemble_study_scope": "6531fa308c8f2f32216680a80ad810e0cde479f3",
     "ensemble_parameter_continuation": "3e0b76ddf5aa883d2ea7de229897e6c692b2ada2",
+    "parameter_source_scope": "1d850a127295ccd32252e3f43169e806f32856fe",
     "watershed_review_native": {
       "source_edition": "4b2efdbd79bce5f9327f7c2a94e46d41bd6a975dcd10c2739b66f284c394365e",
       "original_source_sha256": "ca15acb3f68dc0a202c8a158fa6a97c721d6ea53f91e8403cfdf930443da00fc",

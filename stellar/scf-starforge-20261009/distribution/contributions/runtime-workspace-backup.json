@@ -1,7 +1,7 @@
 {
   "schema": "stellar-forge.merchant-distribution-contribution.v1",
   "id": "runtime-workspace-backup",
-  "description": "Complete coherent Runtime workspace backups, streamed archive intake and explicit original-location receiving with preserved source/history identities and external binding review.",
+  "description": "Complete coherent Runtime workspace backups, streamed archive intake and explicit original-location or reviewed new-host receiving with preserved source/history identities and external binding review.",
   "components": [
     "stellar/scf-starforge-20261009/distribution/runtime-workspace"
   ],
