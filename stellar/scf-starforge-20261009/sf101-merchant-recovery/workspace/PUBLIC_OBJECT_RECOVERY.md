@@ -12,6 +12,12 @@ The existing `merchant-recovery` contribution continues to register the original
 
 The Node package's existing root and `./workspace-recovery` exports expose `ObjectSessionRecovery`, its complete results/errors and comparison API. The original `WorkspaceRecovery` API and all public preapproval interfaces remain intact. Native comparison uses the existing private result-file channel rather than the ordinary log-size bound.
 
+## Whole host custody and Applications review
+
+The selected installed Runtime must include the complete host-path helper beside its original workspace model. Applications records the configured Object, Support, fleet, archive and original recovery paths with their actual presence or absence. Reviewing or starting the workspace never creates an absent native Object source to make a declaration appear ready.
+
+Use [the original host handoff](HOST_HANDOFF.md) to move the complete installed application and host state. The handoff also reads retained request selections, preserves complete workspace evidence and Support stores, binds prepared Object state including lease/restoration history, and checks original absences on the cold host. It retains the original encrypted snapshot engine and canonical receiving paths. A whole-host handoff is distinct from a standalone Object backup or a comparison Support attachment.
+
 ## Complete operating sequence
 
 1. Declare the original standalone session in the chosen host profile. Its canonical source directory, canonical state root, explicit included paths, encrypted bundle and allowed actions remain host choices. The browser and agent tool choose the declared ID. Keep the original passphrase in its separately provisioned environment variable.

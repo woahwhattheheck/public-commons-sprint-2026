@@ -23,6 +23,36 @@ The source check preserves the whole original distribution manifest inventory. I
 
 The command captures the full original inventory; it does not infer a smaller application from imports. Dynamic import(), CommonJS require(), private plugin inputs, installed third-party modules and native dependencies still belong to their original declared runtime/dependency workflow. The import result explicitly reports the unscanned module kinds. A source match is not a native-readiness or provider-connectivity result.
 
+## Complete current and retained host paths
+
+Applications reads the normalized host through the selected installed runtime's original model and its adjacent `workspace/host-profile-paths.mjs`. Its saved command review includes every current profile path, its role and its observed presence or absence. This includes Object state roots, session directories, explicit includes, encrypted bundles and archive files; both Support case stores; fleet receiving journals and private targets; and publisher/fleet restores. An absent nested source is bound to its nearest existing canonical ancestor. Review does not create that source or an empty case store. A changed path observation requires a fresh original Applications review.
+
+Choose an updated complete Runtime when its original source lacks the shared helper. The provider does not substitute a helper from another installed edition. The maintained distribution follows the helper imports and retains their exact source with the original model, provider and handoff modules.
+
+A new handoff plan records `pathInventory` in the original v1 plan. Current declarations and complete saved workspace requests both contribute paths. Historical rows come from the original request's hash-bound review, including frozen Object selections, comparison pairs, encrypted bundle selections and prepared fleet roots. Removing a declaration from the current profile does not remove a retained request's path from the handoff review. An original generic capture plan contributes historical roots only when its live bytes still match the original reviewed digest. Missing or changed original plans are listed in `unavailablePlans`; their old roots are not inferred from replacement contents. Typed captures retain their exact embedded plan roots in the original request.
+
+Present captured paths must be covered by the chosen roots. A pending or historical input may be absent where its original workflow permits this; that absence is retained explicitly. A completed output required by an original request cannot be treated as an optional future path. Provider configuration and fleet target files from retained requests remain external private custody, including files no longer named by today's profile.
+
+Keep the **whole workspace root**. It contains requests, saved Object reviews and evidence, comparison JSON/HTML/Markdown artifacts and ordered history, frozen encrypted-transfer preparations and native reports, and Support transfer selections, original case revision bindings and exported packages. Include the complete configured `casesDirectory` and `caseSourceDirectory` when present. A small selection of visible JSON summaries cannot replace those stores.
+
+### Original Object state
+
+Include each complete selected `stateRoot`, including its `.sf88-object-restorations` history. This retains session definitions, every configuration, original inbox attempts and outcomes, all native lease history, policy/signer/evidence dependencies and recorded assemblies. Explicit external credential files remain excluded; a root overlapping such a file is rejected.
+
+For a prepared standalone source, the original SF88 read-only recovery inspector validates its zero-cap history, configured dependencies, recorded assemblies, absent ledger and native lock status. Any unreleased native lock, including a stale or other-host lock, must be reconciled by its original owner before handoff. The handoff does not acquire a native BACKUP lease or manufacture a sealed native backup claim. Keep all selected writers stopped for the complete operation.
+
+The plan binds the complete Object state-root tree. Capture must match that tree, including native lease and restoration records. Cold receiving uses `readObjectRecoveryPlan(originalDirectory, { storageDirectory: stagedDirectory })` to validate the original definition/configurations/assemblies without rewriting canonical paths or inspecting an unrelated live session. The outer handoff remains the existing SF101 encrypted snapshot; it is not labelled as a separately produced Object-native snapshot.
+
+A declared source or backup may not exist yet. Such declarations are preserved without creating them. Receiving review and adoption check each original absent path on the receiving host, including absence outside all captured roots. Unrelated pre-existing state at an originally absent path prevents adoption.
+
+### Older handoffs and durable adoption
+
+Existing completed handoffs remain authenticatable and restorable into staging. A legacy plan without the complete path inventory cannot adopt a newer Object or Support configuration whose whole source selection it did not review. Preserve that original archive and prepare a new complete handoff from its original host. Ordinary older host configurations keep their original canonical-path workflow.
+
+New directory roots are still created exclusively; partial or unrelated receiving trees are preserved and rejected. Before reporting adoption, the receiver synchronizes copied file contents, each new nested directory from children to parent, receiving root parents and restored application file modes. Reopening remains read-only and starts no listener, acquisition, payment, comparison or restore request.
+
+These source changes have source-level and reference-filesystem validation. Installed native execution and actual viewed browser output remain separate observations owned by the original receiving programme.
+
 ## Original path rule
 
 Version 1 cold adoption uses the captured absolute paths. Each target mapping must explicitly repeat its original path.

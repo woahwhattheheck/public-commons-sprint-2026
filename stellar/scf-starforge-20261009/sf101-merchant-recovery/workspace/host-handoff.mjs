@@ -6,6 +6,10 @@ import { createHash } from 'node:crypto';
 import { inspectSnapshotPlan, run as recover } from '../recover.mjs';
 import { runLocalCapture, readCapturedBundle } from './local.mjs';
 import { readRecoveryConfiguration, readRecoveryWorkspaceIdentity, openRecoveryWorkspace } from './model.mjs';
+import { recoveryHostPaths, observeRecoveryPath } from './host-profile-paths.mjs';
+import { recoveryRequestPaths } from './host-request-paths.mjs';
+import { readObjectRecoveryPlan } from '../../sf88-operator-buyer-cli/object-session.mjs';
+import { inspectObjectSessionRecovery } from '../../sf88-operator-buyer-cli/workspace-recovery.mjs';
 import { acquireDeliveryLease, inspectDeliveryLease } from '../../sf98-merchant-delivery/delivery-lock.mjs';
 import { retainedSourceSelectionId } from '../../distribution/source-selection.mjs';
 import { readDistributionSpecification } from '../../distribution/specification.mjs';
@@ -272,7 +276,192 @@ function pointPath(roots, point) {
   return path;
 }
 function manifestPath(point) { return point.root + (point.relative ? '/' + point.relative : ''); }
-async function sourceSelection(selection, { checkLeases = true } = {}) {
+
+const PATH_INVENTORY_SCHEMA = 'stellar-forge.recovery-workspace-host-paths.v1';
+function pathRows(host, requests) {
+  return [...recoveryHostPaths(host), ...requests.flatMap(({ request, path }) =>
+    recoveryRequestPaths(request, { path }).map(row => ({ ...row, selectionId: null,
+      custody: ['provider-configuration', 'fleet-target-private'].includes(row.role) ? 'external' : 'captured' })))]
+    .sort((a, b) => JSON.stringify(a).localeCompare(JSON.stringify(b)));
+}
+
+async function expandedPathRows(host, requests, readPlan, hasPath) {
+  const rows = pathRows(host, requests), planSources = [], unavailablePlans = [], cache = new Map();
+  const originalRows = [...rows];
+  for (const row of originalRows.filter(row => row.role === 'capture-plan')) {
+    const request = row.operationId ? requests.find(item => item.request.review.profileId === row.profileId &&
+      item.request.review.operationId === row.operationId)?.request : null;
+    const expectedSha256 = request?.review.options.expectedPlanSha256;
+    const embedded = !!request && originalRows.some(item => item.role === 'capture-source' &&
+      item.profileId === row.profileId && item.operationId === row.operationId);
+    const present = await hasPath(row.path);
+    if (!present) {
+      if (request) unavailablePlans.push({ path: row.path, profileId: row.profileId, operationId: row.operationId,
+        expectedSha256, actualSha256: null, rootsRetainedInRequest: embedded, reason: 'ORIGINAL_PLAN_MISSING' });
+      continue;
+    }
+    let found = cache.get(row.path);
+    if (!found) { found = await readPlan(row.path); cache.set(row.path, found); }
+    if (request && found.sha256 !== expectedSha256) {
+      unavailablePlans.push({ path: row.path, profileId: row.profileId, operationId: row.operationId,
+        expectedSha256, actualSha256: found.sha256, rootsRetainedInRequest: embedded, reason: 'ORIGINAL_PLAN_CHANGED' });
+      continue;
+    }
+    const plan = found.value;
+    need(plan?.schema === PLAN_SCHEMA && Array.isArray(plan.roots) && plan.roots.length > 0 &&
+      plan.roots.length <= 20 && new Set(plan.roots.map(root => root.name)).size === plan.roots.length,
+    'HOST_HANDOFF_CAPTURE_PLAN_INVALID');
+    for (const root of plan.roots) {
+      need(ROOT.test(root.name ?? ''), 'HOST_HANDOFF_CAPTURE_PLAN_INVALID');
+      absolute(root.path, 'original capture source');
+    }
+    if (!planSources.some(item => item.path === row.path))
+      planSources.push({ path: row.path, bytes: found.bytes, sha256: found.sha256,
+        roots: plan.roots.map(({ name, path }) => ({ name, path })) });
+    if (!embedded) for (const root of plan.roots) rows.push({ path: root.path, kind: 'entry', required: false,
+      role: 'capture-source', profileId: row.profileId, ...(row.operationId ? { operationId: row.operationId } : {}),
+      selectionId: row.selectionId, custody: 'captured' });
+  }
+  return { rows: rows.sort((a, b) => JSON.stringify(a).localeCompare(JSON.stringify(b))), planSources, unavailablePlans };
+}
+async function exactTreeIdentity(path) {
+  const stat = await realSource(path, 'directory'), rows = [{ relative: '', kind: 'directory' }];
+  for (const row of await inventoryNames(path)) {
+    const file = row.kind === 'file' ? await regular(join(path, ...row.path.split('/'))) : null;
+    rows.push({ relative: row.path, kind: row.kind,
+      ...(file ? { bytes: file.bytes, sha256: file.sha256 } : {}) });
+  }
+  const current = await lstat(path);
+  need(current.dev === stat.dev && current.ino === stat.ino, 'HOST_HANDOFF_OBJECT_ROOT_CHANGED');
+  return identity(rows.sort((a, b) => a.relative.localeCompare(b.relative)));
+}
+function capturedTreeIdentity(profile, manifest, path) {
+  const prefix = manifestPath(sourcePoint(profile.roots, path));
+  return identity(manifest.entries.filter(row => row.path === prefix || row.path.startsWith(prefix + '/'))
+    .map(row => ({ relative: row.path === prefix ? '' : row.path.slice(prefix.length + 1), kind: row.kind,
+      ...(row.kind === 'file' ? { bytes: row.size, sha256: row.sha256 } : {}) }))
+    .sort((a, b) => a.relative.localeCompare(b.relative)));
+}
+async function completePathInventory(host, requests, roots, external, requiredPaths, absentOriginalInputs) {
+  const paths = [], expanded = await expandedPathRows(host, requests, path => jsonSource(path, MAX_PLAN), exists);
+  for (const row of expanded.rows) {
+    const observed = await observeRecoveryPath(row);
+    need(!row.required || observed.exists, 'HOST_HANDOFF_REQUIRED_INPUT_MISSING',
+      'The original required input is missing: ' + row.path);
+    if (row.custody === 'external') {
+      need(observed.exists && observed.actualKind === 'file', 'HOST_HANDOFF_EXTERNAL_INPUT_MISSING');
+      external.set(row.path, 'Original ' + row.role + '; private receiving custody');
+    } else if (observed.exists) {
+      requireCovered(roots, row.path, row.role); requiredPaths.add(row.path);
+    } else absentOriginalInputs.push({ profileId: row.profileId, ...(row.operationId ? { operationId: row.operationId } : {}),
+      path: row.path, kind: row.role });
+    paths.push({ ...row, exists: observed.exists, ...(observed.exists ? { actualKind: observed.actualKind } : {}) });
+  }
+  const objectSources = [], seen = new Set();
+  for (const row of paths.filter(row => row.role === 'object-directory' && row.exists)) {
+    const rootsForObject = paths.filter(root => root.role === 'object-state-root' &&
+      root.profileId === row.profileId && root.operationId === row.operationId &&
+      root.selectionId === row.selectionId && inside(root.path, row.path) && root.path !== row.path);
+    need(rootsForObject.length > 0, 'HOST_HANDOFF_OBJECT_STATE_ROOT_REQUIRED');
+    for (const root of rootsForObject) {
+      const key = identity({ directory: row.path, stateRoot: root.path });
+      if (seen.has(key)) continue; seen.add(key);
+      const sessionFile = join(row.path, 'session.json'), present = await observeRecoveryPath({ path: sessionFile, kind: 'file' });
+      if (!present.exists) {
+        absentOriginalInputs.push({ profileId: row.profileId, path: sessionFile, kind: 'unprepared-object-session' });
+        objectSources.push({ directory: row.path, stateRoot: root.path, prepared: false }); continue;
+      }
+      // The native reader owns standalone/zero-cap, original configuration,
+      // dependency/assembly and all unreleased native lease validation.
+      const before = await inspectObjectSessionRecovery({ directory: row.path, stateRoot: root.path, include: [] });
+      need(root.exists && before.objectSession.directory === row.path, 'HOST_HANDOFF_OBJECT_SOURCE_CHANGED');
+      const declared = row.operationId ? null : host.profiles.find(item => item.id === row.profileId)?.objectSessions
+        .find(item => item.id === row.selectionId);
+      if (declared) need(before.objectSession.sessionId === declared.sessionId, 'HOST_HANDOFF_OBJECT_SESSION_CHANGED');
+      const treeSha256 = await exactTreeIdentity(root.path);
+      const after = await inspectObjectSessionRecovery({ directory: row.path, stateRoot: root.path, include: [] });
+      need(before.reviewSha256 === after.reviewSha256, 'HOST_HANDOFF_OBJECT_SOURCE_CHANGED');
+      for (const path of before.missing) absentOriginalInputs.push({ profileId: row.profileId, path, kind: 'native-object-absent-ledger' });
+      objectSources.push({ directory: row.path, stateRoot: root.path, prepared: true,
+        treeSha256, nativeReviewSha256: before.reviewSha256, objectSession: clone(before.objectSession),
+        assemblies: clone(before.assemblies), absentLedger: clone(before.absentLedger),
+        restoreMode: before.restoreMode, walletEnvironmentExported: before.walletEnvironmentExported });
+    }
+  }
+  for (const path of external.keys()) need(!roots.some(root => overlap(root.path, path)),
+    'HOST_HANDOFF_PRIVATE_CUSTODY_OVERLAP', 'Keep private receiving credentials outside captured roots: ' + path);
+  return { schema: PATH_INVENTORY_SCHEMA, paths, objectSources, planSources: expanded.planSources, unavailablePlans: expanded.unavailablePlans };
+}
+function validatePathInventory(profile) {
+  const inventory = profile.pathInventory;
+  if (inventory === undefined) return;
+  need(inventory?.schema === PATH_INVENTORY_SCHEMA && Array.isArray(inventory.paths) &&
+    inventory.paths.length <= 10000 && Array.isArray(inventory.objectSources) &&
+    inventory.objectSources.length <= 2048 && Array.isArray(inventory.planSources) &&
+    inventory.planSources.length <= 2048 && Array.isArray(inventory.unavailablePlans) &&
+    inventory.unavailablePlans.length <= 2048, 'HOST_HANDOFF_PATH_INVENTORY_INVALID');
+  const external = new Set(profile.externalFiles.map(row => row.path));
+  for (const row of inventory.paths) {
+    absolute(row.path, 'original path inventory');
+    need(['file', 'directory', 'entry'].includes(row.kind) && typeof row.required === 'boolean' &&
+      typeof row.exists === 'boolean' && typeof row.role === 'string' &&
+      ID.test(row.profileId ?? '') && ['captured', 'external'].includes(row.custody),
+    'HOST_HANDOFF_PATH_INVENTORY_INVALID');
+    if (row.custody === 'external') need(row.exists && external.has(row.path), 'HOST_HANDOFF_PLAN_PRIVATE_BINDING_CHANGED');
+    else if (row.exists) {
+      need(['file', 'directory'].includes(row.actualKind) &&
+        (row.kind === 'entry' || row.actualKind === row.kind) && profile.requiredPaths.includes(row.path),
+      'HOST_HANDOFF_PATH_INVENTORY_INVALID');
+      requireCovered(profile.roots, row.path, row.role);
+    } else need(!row.required && profile.absentOriginalInputs.some(item => item.path === row.path),
+      'HOST_HANDOFF_PATH_INVENTORY_INVALID');
+  }
+  for (const row of inventory.unavailablePlans) {
+    absolute(row.path, 'original unavailable capture plan');
+    need(ID.test(row.profileId ?? '') && ID.test(row.operationId ?? '') && HASH.test(row.expectedSha256 ?? '') &&
+      (row.actualSha256 === null || HASH.test(row.actualSha256 ?? '')) &&
+      typeof row.rootsRetainedInRequest === 'boolean' &&
+      row.reason === (row.actualSha256 === null ? 'ORIGINAL_PLAN_MISSING' : 'ORIGINAL_PLAN_CHANGED'),
+    'HOST_HANDOFF_CAPTURE_PLAN_INVALID');
+  }
+  for (const row of inventory.planSources) {
+    absolute(row.path, 'original capture plan');
+    need(HASH.test(row.sha256 ?? '') && Number.isSafeInteger(row.bytes) && row.bytes > 0 &&
+      row.bytes <= MAX_PLAN && Array.isArray(row.roots) && row.roots.length <= 20,
+    'HOST_HANDOFF_CAPTURE_PLAN_INVALID');
+    requireCovered(profile.roots, row.path, 'original capture plan');
+  }
+  for (const row of inventory.objectSources) {
+    absolute(row.directory, 'native Object directory'); absolute(row.stateRoot, 'native Object state root');
+    need(inside(row.stateRoot, row.directory) && row.directory !== row.stateRoot &&
+      typeof row.prepared === 'boolean', 'HOST_HANDOFF_OBJECT_SOURCE_CHANGED');
+    requireCovered(profile.roots, row.directory, 'native Object directory');
+    if (row.prepared) {
+      requireCovered(profile.roots, row.stateRoot, 'complete native Object state root');
+      need(HASH.test(row.treeSha256 ?? '') && HASH.test(row.nativeReviewSha256 ?? '') &&
+        row.objectSession?.directory === row.directory && HASH.test(row.objectSession.definitionSha256 ?? '') &&
+        HASH.test(row.objectSession.configurationsSha256 ?? '') && Array.isArray(row.assemblies) &&
+        row.absentLedger?.state === 'ABSENT' && row.restoreMode === 'ORIGINAL_CANONICAL_STATE_ROOT' &&
+        row.walletEnvironmentExported === false, 'HOST_HANDOFF_OBJECT_SOURCE_CHANGED');
+    }
+  }
+}
+async function checkAbsentInputs(profile) {
+  for (const row of profile.absentOriginalInputs) {
+    const observed = await observeRecoveryPath({ path: row.path, kind: 'entry' });
+    need(!observed.exists, 'HOST_HANDOFF_ORIGINAL_ABSENCE_CHANGED',
+      'The original absent input is now present: ' + row.path);
+  }
+}
+function legacyPathsSupported(host, requests) {
+  need(!host.profiles.some(row => row.objectSessions.length || row.objectBundleArchives.length ||
+    row.casesDirectory || row.caseSourceDirectory) &&
+    !requests.some(({ request }) => /^(?:object-)/.test(request.review.command)),
+  'HOST_HANDOFF_COMPLETE_PATH_REVIEW_REQUIRED',
+  'Preserve the previous handoff and prepare a complete path review for this newer host configuration.');
+}
+
+async function sourceSelection(selection, { checkLeases = true, completePaths = true } = {}) {
   fields(selection, ['schema', 'operationId', 'configFile', 'workspaceDirectory', 'application', 'roots', 'externalFiles'], 'handoff selection');
   need(selection.schema === HOST_HANDOFF_SELECTION_SCHEMA && ID.test(selection.operationId ?? '') &&
     Array.isArray(selection.roots) && selection.roots.length > 0 && selection.roots.length <= 19,
@@ -344,7 +533,7 @@ async function sourceSelection(selection, { checkLeases = true } = {}) {
     const lease = await inspectDeliveryLease(path);
     need(!lease.active, 'HOST_HANDOFF_ORIGINAL_WRITER_ACTIVE', 'Stop the existing writer before capturing: ' + path);
   }
-  const originalRecords = [];
+  const originalRecords = [], requests = [];
   const requestsDirectory = join(workspaceDirectory, 'requests');
   if (await exists(requestsDirectory)) for (const name of (await readdir(requestsDirectory)).sort()) {
     if (!/^[a-f0-9]{64}\.json$/.test(name)) continue;
@@ -352,6 +541,7 @@ async function sourceSelection(selection, { checkLeases = true } = {}) {
     need(row.value.schema === 'stellar-forge.recovery-workspace-request.v1' &&
       ID.test(row.value.review?.operationId ?? '') && ID.test(row.value.review?.profileId ?? ''),
       'HOST_HANDOFF_ORIGINAL_REQUEST_INVALID');
+    requests.push({ request: row.value, path });
     originalRecords.push({ kind: 'workspace-request', path, bytes: row.bytes, sha256: row.sha256,
       profileId: row.value.review.profileId, operationId: row.value.review.operationId,
       command: row.value.review.command, phase: row.value.phase });
@@ -376,6 +566,11 @@ async function sourceSelection(selection, { checkLeases = true } = {}) {
       }
     }
   }
+  let pathInventory;
+  if (completePaths) {
+    pathInventory = await completePathInventory(configuration.host, requests, roots, external, requiredPaths, absentOriginalInputs);
+    await checkAbsentInputs({ absentOriginalInputs });
+  } else legacyPathsSupported(configuration.host, requests);
   const externalFiles = [];
   for (const [path, purpose] of [...external].sort(([a], [b]) => a.localeCompare(b))) {
     await realSource(path, 'file');
@@ -393,7 +588,7 @@ async function sourceSelection(selection, { checkLeases = true } = {}) {
     originalRecords: originalRecords.map(row => ({ ...row, source: sourcePoint(roots, row.path) })),
     requiredPaths: [...requiredPaths].sort(), externalFiles,
     passphraseEnvironments: [...passphraseEnvironments].sort(), absentOriginalInputs,
-    leases: [...leases].sort() };
+    leases: [...leases].sort(), ...(pathInventory ? { pathInventory } : {}) };
 }
 async function withOriginalLeases(profile, action) {
   const held = [];
@@ -474,6 +669,7 @@ function typedPlan(raw) {
       ID.test(row.profileId ?? '') && pointPath(profile.roots, row.source) === row.path,
     'HOST_HANDOFF_PLAN_RECORD_BINDING_CHANGED');
   }
+  validatePathInventory(profile);
   return { plan, profile };
 }
 function inspectCaptured(raw, manifest) {
@@ -515,13 +711,27 @@ function inspectCaptured(raw, manifest) {
     if (rootFor(profile.roots, row.path)) need(!byPath.has(manifestPath(sourcePoint(profile.roots, row.path))),
       'HOST_HANDOFF_CAPTURE_ABSENCE_CHANGED', 'An original absent input appeared after review.');
   }
+  for (const plan of profile.pathInventory?.unavailablePlans ?? []) if (plan.actualSha256 !== null) {
+    const row = byPath.get(manifestPath(sourcePoint(profile.roots, plan.path)));
+    need(row?.kind === 'file' && row.sha256 === plan.actualSha256, 'HOST_HANDOFF_CAPTURE_PLAN_CHANGED');
+  }
+  for (const plan of profile.pathInventory?.planSources ?? []) {
+    const row = byPath.get(manifestPath(sourcePoint(profile.roots, plan.path)));
+    need(row?.kind === 'file' && row.sha256 === plan.sha256 && row.size === plan.bytes,
+      'HOST_HANDOFF_CAPTURE_PLAN_CHANGED');
+  }
+  for (const row of profile.pathInventory?.objectSources ?? []) if (row.prepared)
+    need(capturedTreeIdentity(profile, manifest, row.stateRoot) === row.treeSha256,
+      'HOST_HANDOFF_NATIVE_OBJECT_CAPTURE_CHANGED',
+      'The captured complete Object root must preserve the reviewed source, inbox, lease and restoration history.');
   return { profile, planSha256 };
 }
 export async function prepareHostHandoffPlan({ selection, planFile, quiesced = false } = {}) {
   need(quiesced === true, 'HOST_HANDOFF_QUIESCENCE_REQUIRED', 'Stop the original workspace and selected source writers through export.');
   absolute(planFile, 'new handoff plan'); await privateDirectory(dirname(planFile));
   const selected = await sourceSelection(selection);
-  need(!selected.roots.some(root => overlap(root.path, planFile)), 'HOST_HANDOFF_PLAN_OVERLAP');
+  need(!selected.roots.some(root => overlap(root.path, planFile)) &&
+    !selected.absentOriginalInputs.some(row => overlap(row.path, planFile)), 'HOST_HANDOFF_PLAN_OVERLAP');
   return withOriginalLeases(selected, async () => {
     const current = await sourceSelection(selection, { checkLeases: false });
     need(identity(current) === identity(selected), 'HOST_HANDOFF_SOURCE_CHANGED_AFTER_REVIEW');
@@ -535,7 +745,8 @@ export async function prepareHostHandoffPlan({ selection, planFile, quiesced = f
       operationId: profile.operationId, planFile, planSha256: digest(raw),
       workspaceId: profile.workspace.workspaceId, application: clone(profile.application),
       roots: clone(profile.roots), externalFiles: clone(profile.externalFiles),
-      originalRecords: clone(profile.originalRecords), absentOriginalInputs: clone(profile.absentOriginalInputs) };
+      originalRecords: clone(profile.originalRecords), absentOriginalInputs: clone(profile.absentOriginalInputs),
+      pathInventory: clone(profile.pathInventory) };
   });
 }
 export async function exportHostHandoff({ planFile, bundleDirectory, operationDirectory,
@@ -552,7 +763,8 @@ export async function exportHostHandoff({ planFile, bundleDirectory, operationDi
   need(profile.planFile === planFile && !overlap(bundleDirectory, operationDirectory) &&
     !overlap(bundleDirectory, planFile) && !overlap(operationDirectory, planFile) &&
     !profile.roots.some(root => overlap(root.path, operationDirectory) || overlap(root.path, bundleDirectory)) &&
-    !profile.externalFiles.some(row => overlap(row.path, operationDirectory) || overlap(row.path, bundleDirectory)),
+    !profile.externalFiles.some(row => overlap(row.path, operationDirectory) || overlap(row.path, bundleDirectory)) &&
+    !profile.absentOriginalInputs.some(row => overlap(row.path, operationDirectory) || overlap(row.path, bundleDirectory)),
   'HOST_HANDOFF_CAPTURE_PATH_OVERLAP');
   await privateDirectory(dirname(operationDirectory));
   if (!await exists(operationDirectory)) await mkdir(operationDirectory, { mode: 0o700 });
@@ -578,11 +790,11 @@ export async function exportHostHandoff({ planFile, bundleDirectory, operationDi
     if (await readCapturedBundle(options)) result = await capture();
     else {
       need(quiesced === true, 'HOST_HANDOFF_QUIESCENCE_REQUIRED');
-      const selected = await sourceSelection(profile.selection);
+      const selected = await sourceSelection(profile.selection, { completePaths: profile.pathInventory !== undefined });
       const { createdAt, planFile: ignoredPlan, ...expected } = profile;
       need(identity(selected) === identity(expected), 'HOST_HANDOFF_SOURCE_CHANGED_AFTER_REVIEW');
       result = await withOriginalLeases(profile, async () => {
-        const current = await sourceSelection(profile.selection, { checkLeases: false });
+        const current = await sourceSelection(profile.selection, { checkLeases: false, completePaths: profile.pathInventory !== undefined });
         need(identity(current) === identity(expected), 'HOST_HANDOFF_SOURCE_CHANGED_AFTER_REVIEW');
         await inspectSnapshotPlan({ plan: planFile, out: bundleDirectory, expectedPlanSha256 });
         await save();
@@ -592,6 +804,7 @@ export async function exportHostHandoff({ planFile, bundleDirectory, operationDi
     need(result.status === 'COMPLETE' && result.verified === true, 'HOST_HANDOFF_CAPTURE_INCOMPLETE');
     const found = await readCapturedBundle(options);
     inspectCaptured(raw, found.manifest);
+    if (profile.pathInventory && quiesced) await checkAbsentInputs(profile);
     return { schema: HOST_HANDOFF_RESULT_SCHEMA, status: 'HOST_HANDOFF_EXPORTED',
       operationId: profile.operationId, workspaceId: profile.workspace.workspaceId,
       bundleDirectory, operationDirectory, manifestSha256: found.snapshotId,
@@ -667,6 +880,41 @@ async function restoredContext(input, { restore = false } = {}) {
     state.configFile === profile.workspace.configFile &&
     configuration.sha256 === profile.workspace.configurationSha256,
   'HOST_HANDOFF_RESTORED_WORKSPACE_IDENTITY_CHANGED');
+  const requests = [];
+  for (const row of profile.originalRecords.filter(row => row.kind === 'workspace-request')) {
+    const saved = await jsonSource(sourcePath(row.source), 2 * 1024 * 1024);
+    requests.push({ path: row.path, request: saved.value });
+  }
+  if (profile.pathInventory) {
+    const recordedRows = profile.pathInventory.paths.map(({ exists, actualKind, ...row }) => row);
+    const expanded = await expandedPathRows(configuration.host, requests,
+      path => jsonSource(sourcePath(sourcePoint(profile.roots, path)), MAX_PLAN),
+      path => profile.pathInventory.paths.some(row => row.path === path && row.exists));
+    need(identity(recordedRows) === identity(expanded.rows) &&
+      identity(expanded.planSources) === identity(profile.pathInventory.planSources) &&
+      identity(expanded.unavailablePlans) === identity(profile.pathInventory.unavailablePlans),
+      'HOST_HANDOFF_RESTORED_PATH_BINDING_CHANGED');
+    for (const row of profile.pathInventory.paths.filter(row => row.custody === 'captured' && row.exists)) {
+      const actual = await observeRecoveryPath({ path: sourcePath(sourcePoint(profile.roots, row.path)), kind: row.kind });
+      need(actual.exists && actual.actualKind === row.actualKind, 'HOST_HANDOFF_RESTORED_PATH_BINDING_CHANGED');
+    }
+    for (const row of profile.pathInventory.objectSources) {
+      const directory = sourcePath(sourcePoint(profile.roots, row.directory));
+      if (!row.prepared) {
+        need(!await exists(join(directory, 'session.json')), 'HOST_HANDOFF_RESTORED_OBJECT_CHANGED'); continue;
+      }
+      const native = await readObjectRecoveryPlan(row.directory, { storageDirectory: directory });
+      need(native.definition.sessionId === row.objectSession.sessionId &&
+        native.definitionSha256 === row.objectSession.definitionSha256 &&
+        native.configurationsSha256 === row.objectSession.configurationsSha256 &&
+        identity(native.assemblies.map(({ destination, bytes, sha256, chunkManifestSha256 }) =>
+          ({ destination, bytes, sha256, chunkManifestSha256 }))) === identity(row.assemblies),
+      'HOST_HANDOFF_RESTORED_OBJECT_CHANGED');
+    }
+  }
+  const legacyIncomplete = !profile.pathInventory && (configuration.host.profiles.some(row =>
+    row.objectSessions.length || row.objectBundleArchives.length || row.casesDirectory || row.caseSourceDirectory) ||
+    requests.some(({ request }) => request.review.command.startsWith('object-')));
   const expectedLeases = new Set([profile.workspace.directory]), external = new Set(profile.externalFiles.map(row => row.path));
   for (const row of configuration.host.profiles) {
     expectedLeases.add(row.operations);
@@ -688,7 +936,7 @@ async function restoredContext(input, { restore = false } = {}) {
     sourceModes.set(join(profile.application.packageDirectory, path), 0o644);
   for (const row of app.manifest.files)
     sourceModes.set(join(profile.application.sourceDirectory, ...row.path.split('/')), row.mode === '100755' ? 0o755 : 0o644);
-  return { ...auth, profile, planSha256, sourcePath, originalRestore, sourceModes, applicationManifest: app.manifest };
+  return { ...auth, profile, planSha256, sourcePath, originalRestore, sourceModes, applicationManifest: app.manifest, legacyIncomplete };
 
 }
 export async function restoreHostHandoff(input = {}) {
@@ -701,6 +949,9 @@ export async function restoreHostHandoff(input = {}) {
     application: clone(ctx.profile.application), roots: clone(ctx.profile.roots) };
 }
 async function targetContext(ctx, input) {
+  need(!ctx.legacyIncomplete, 'HOST_HANDOFF_COMPLETE_PATH_REVIEW_REQUIRED',
+    'The previous handoff remains restored; prepare a complete Object and Support path review before adoption.');
+  await checkAbsentInputs(ctx.profile);
   absolute(input.targetFile, 'private receiving selection');
   const raw = await readPrivate(input.targetFile, MAX_PLAN), target = JSON.parse(raw.toString('utf8'));
   fields(target, ['schema', 'workspaceId', 'manifestSha256', 'mappings', 'externalFiles'], 'receiving target');
@@ -756,7 +1007,8 @@ async function targetContext(ctx, input) {
     targetFile: input.targetFile, targetSha256: digest(raw),
     originalWorkspaceDirectory: ctx.profile.workspace.directory, originalConfigFile: ctx.profile.workspace.configFile,
     application: clone(ctx.profile.application), roots, externalFiles,
-    originalRecords: clone(ctx.profile.originalRecords), absentOriginalInputs: clone(ctx.profile.absentOriginalInputs) };
+    originalRecords: clone(ctx.profile.originalRecords), absentOriginalInputs: clone(ctx.profile.absentOriginalInputs),
+    ...(ctx.profile.pathInventory ? { pathInventory: clone(ctx.profile.pathInventory) } : {}) };
   return { review, reviewSha256: identity(review), availability };
 }
 export async function inspectRestoredHostHandoff(input = {}) {
@@ -803,11 +1055,20 @@ export async function adoptRestoredHostHandoff(input = {}) {
       try { await handle.sync(); } finally { await handle.close(); }
     }
     await matchTree(root.destination, entries, ctx.sourceModes);
+    // Each newly published directory owns child entries; flush children first.
+    for (const row of entries.filter(row => row.kind === 'directory')
+      .sort((a, b) => (b.relative ? b.relative.split('/').length : 0) - (a.relative ? a.relative.split('/').length : 0)))
+      await syncDirectory(row.relative ? join(root.destination, ...row.relative.split('/')) : root.destination);
     await syncDirectory(dirname(root.destination));
   }
   // State stays private. Reapply the original package's declared file modes
   // behind private receiving directories so its original verifier still works.
-  for (const [path, mode] of ctx.sourceModes) await chmod(path, mode);
+  for (const [path, mode] of ctx.sourceModes) {
+    await chmod(path, mode);
+    const handle = await open(path, constants.O_RDONLY | constants.O_NOFOLLOW);
+    try { await handle.sync(); } finally { await handle.close(); }
+  }
+  await checkAbsentInputs(ctx.profile);
   for (const root of selected.review.roots)
     await matchTree(root.destination, rootEntries(ctx.manifest, root.name), ctx.sourceModes);
   const receivedIdentity = await readRecoveryWorkspaceIdentity({
@@ -831,6 +1092,7 @@ export async function adoptRestoredHostHandoff(input = {}) {
     need(digest(await readPrivate(row.path, 2 * 1024 * 1024)) === row.receivingSha256,
       'HOST_HANDOFF_RECEIVING_PRIVATE_FILE_CHANGED');
   }
+  await checkAbsentInputs(ctx.profile);
   return { schema: HOST_HANDOFF_RESULT_SCHEMA, status: 'HOST_HANDOFF_ADOPTED',
     operationId: ctx.profile.operationId, workspaceId: state.id, createdAt: state.createdAt,
     manifestSha256: ctx.manifestSha256, planSha256: ctx.planSha256,
