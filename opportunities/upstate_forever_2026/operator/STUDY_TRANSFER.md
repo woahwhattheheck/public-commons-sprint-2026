@@ -157,3 +157,13 @@ After restore, the original study can gain revisions and calculations. Immutable
 A decision received independently through **Receive project JSON** keeps the donor workspace's scientific references and retained numerical gains. The preview lists those original-workspace references separately. Its complete decision history remains editable and recalculable using the saved gains; open the original scientific workspace for ecological model runs associated with those references. Whole-workspace restore retains the original project identity and provides the full local scientific dependency closure.
 
 The existing **Complete project JSON** export and receive workflow remains available for an independent decision study. **Transfer editable study** uses the original workspace archive and preserves the selected study's original identities.
+
+## Transfer a Decision study prepared from saved common-support diagnostics
+
+A decision prepared from a saved diagnostic keeps its original report revision under `robust_decisions/diagnostic-revisions/<diagnostic-id>/<report-sha256>/`. Both `report.json` and `manifest.json` are included in selected-study transfer, even when the decision has no Investigation conversation. Their paths, sizes and SHA256 identities remain bound to the saved Decision revision.
+
+Every selected Decision revision follows the declared `ES26/diagnostic-common-support/v1` source contract. The transfer includes its original diagnostic selection and the complete native run roster that established common support, as well as the selected grid, profiles, scenarios, baseline and alternative runs. This preserves the shared support used for the saved numerical gains when it is larger than the chosen Decision matrix.
+
+The current diagnostic object may have a newer report. Its current state travels as part of the editable scientific workspace; the Decision's retained report revision remains the source of its saved numbers. Reopening and receiving the Decision verifies that pinned report and manifest. Revisions prepared from a donor workspace stay explicit external scientific references when imported through standalone project JSON; restoring the original whole or selected scientific workspace keeps the local source closure.
+
+After receiving, open the saved Decision, inspect its diagnostic source revision and calculate using its original gains. Then revise costs, constraints or objectives through the normal Decision workbench, preserving the earlier input and calculation history. Prepare a further Decision study explicitly when a new ecological analysis changes the physical gains. The saved earlier study continues to use its own report revision.

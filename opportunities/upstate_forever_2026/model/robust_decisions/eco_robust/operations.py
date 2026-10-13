@@ -41,6 +41,18 @@ class DecisionWorkspace:
         return self.store.create(from_experiment(summary, configuration),
                                  operation_id=operation_id, operation_request=request)
 
+    def import_diagnostic(self, diagnostic_id, report_sha256, configuration, *, operation_id=None):
+        if self.native_workspace is None:
+            raise ValueError("Pass the original model.Workspace to import saved diagnostics")
+        request = {"kind": "native_diagnostic", "diagnostic_id": diagnostic_id,
+                   "report_sha256": report_sha256, "configuration": configuration}
+        previous = self._created_operation(request, operation_id)
+        if previous is not None:
+            return previous
+        from .diagnostics import from_workspace as from_diagnostic
+        study = from_diagnostic(self.native_workspace, diagnostic_id, report_sha256, configuration)
+        return self.store.create(study, operation_id=operation_id, operation_request=request)
+
     def recover(self, sid=None):
         """A process-death releases its OS lock. Never interrupt a held live lock."""
         recovered = []

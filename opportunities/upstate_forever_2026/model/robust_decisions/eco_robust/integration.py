@@ -12,7 +12,7 @@ from .schema import Study
 
 ACTION_NAMES = frozenset({
     'robust.study.list', 'robust.study.read', 'robust.study.create', 'robust.study.revise',
-    'robust.experiment.prepare', 'robust.summary.prepare', 'robust.solve', 'robust.frontier',
+    'robust.experiment.prepare', 'robust.summary.prepare', 'robust.diagnostic.prepare', 'robust.solve', 'robust.frontier',
     'robust.project.export', 'robust.project.receive', 'robust.selection.export', 'robust.report.export',
 })
 
@@ -57,6 +57,7 @@ def dispatch(original_workspace, action: str, payload: dict, *, operation_id=Non
     if action == 'robust.study.revise': return ws.store.revise(payload['study_id'], payload['study'], payload['expected_revision'], operation_id=operation_id)
     if action == 'robust.experiment.prepare': return ws.import_experiment(payload['experiment_id'], payload['configuration'], operation_id=operation_id)
     if action == 'robust.summary.prepare': return ws.import_summary(payload['summary'], payload['configuration'], operation_id=operation_id)
+    if action == 'robust.diagnostic.prepare': return ws.import_diagnostic(payload['diagnostic_id'], payload['report_sha256'], payload['configuration'], operation_id=operation_id)
     if action == 'robust.solve': return ws.solve(payload['study_id'], payload['revision'], payload.get('objective','worst_case'), time_limit=payload.get('time_limit',60), mip_rel_gap=payload.get('mip_rel_gap',0), operation_id=operation_id)
     if action == 'robust.frontier': return ws.frontier(payload['study_id'], payload['revision'], payload['budgets'], payload.get('objective','worst_case'), time_limit=payload.get('time_limit',60), operation_id=operation_id)
     if action == 'robust.project.export': return ws.store.export(payload['study_id'])

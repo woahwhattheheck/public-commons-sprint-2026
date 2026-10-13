@@ -26,7 +26,7 @@ const label = key => labelMap[key] ?? title(key).replace(/^./,x=>x.toUpperCase()
 const pollutant = key => labelMap[key] ?? label(key);
 const members = value => Array.isArray(value) ? value : value && typeof value==='object' ? Object.entries(value).map(([key,row])=>({metric:key,...(row&&typeof row==='object'?row:{value:row})})) : [];
 
-export function attachExperimentDiagnostics({getState,api,endpoint,openForm,submitAction,detail,fileList,showTask,openItem,toast,refreshState,navigate,closeDetail,openInvestigation,openStudy}){
+export function attachExperimentDiagnostics({getState,api,endpoint,openForm,submitAction,detail,fileList,showTask,openItem,toast,refreshState,navigate,closeDetail,openInvestigation,openStudy,openDecision}){
   let mounted=null,activeId=null,activeReport=null,activeTab='summary',generation=0,query='',activeWorkspace=null,reportVersion=null;
   const state = () => getState();
   const workspace = () => state()?.workspace_key;
@@ -221,7 +221,7 @@ export function attachExperimentDiagnostics({getState,api,endpoint,openForm,subm
         '<details class="technical"><summary>Selected study and actual source identities</summary><pre class="json-view">'+esc(pretty({selection:report.selection,source_stamp:report.source_stamp}))+'</pre></details>'+
         note('Continue in a transferred workspace','Choose Transfer study to include this analysis and its original scientific dependencies in an editable study archive. Use Back up workspace in the sidebar when transferring the complete project.');
     }
-    return '<div class="diagnostic-report-header"><div><h2>'+esc(report.title??selection.title??'Scientific analysis')+'</h2><p>'+esc(selection.purpose??'')+'</p><small>'+esc(date(report.created_at??report.generated_at))+' · <span class="mono">'+esc(short(report.id))+'</span></small></div><div class="page-actions">'+button('revise','New edition',report.id)+button('downloads','Export reports',report.id)+(typeof openStudy==='function'?button('study','Transfer study',report.id):'')+(typeof openInvestigation==='function'&&report.artifacts?.report_json?button('investigate','Investigate this analysis',report.id):'')+'</div></div>'+
+    return '<div class="diagnostic-report-header"><div><h2>'+esc(report.title??selection.title??'Scientific analysis')+'</h2><p>'+esc(selection.purpose??'')+'</p><small>'+esc(date(report.created_at??report.generated_at))+' · <span class="mono">'+esc(short(report.id))+'</span></small></div><div class="page-actions">'+button('revise','New edition',report.id)+button('downloads','Export reports',report.id)+(typeof openStudy==='function'?button('study','Transfer study',report.id):'')+(typeof openInvestigation==='function'&&report.artifacts?.report_json?button('investigate','Investigate this analysis',report.id):'')+(typeof openDecision==='function'&&report.artifacts?.report_json?button('decision','Prepare Decision study',report.id,false,'data-report-sha="'+esc(report.artifacts.report_json.sha256)+'"'):'')+'</div></div>'+
       processingStatus+(report.results_state==='partial'?'<p class="diagnostic-status" role="status">This cohort is incomplete. Read each result with its included runs and observation counts.</p>':'')+issuesHTML+'<nav class="diagnostic-tabs" aria-label="Scientific analysis views">'+tabs.map(([key,text])=>'<button type="button" data-action="diagnostic-tab" data-tab="'+key+'" aria-current="'+(activeTab===key?'page':'false')+'">'+text+'</button>').join('')+'</nav><div class="diagnostic-results">'+body+'</div>';
   }
 
@@ -434,6 +434,16 @@ export function attachExperimentDiagnostics({getState,api,endpoint,openForm,subm
       return openStudy([{kind:'experiment-diagnostics',id:report.id,
         title:report.selection?.title??report.title??'Scientific analysis',state:report.state}]);
     }
+    if(action==='decision'){
+      if(typeof openDecision!=='function')throw Error('Open Decision studies to prepare this saved analysis.');
+      const selectedWorkspace=workspace(),selectedGeneration=generation,expectedSHA=node.dataset.reportSha;
+      if(!/^[0-9a-f]{64}$/.test(expectedSHA??''))throw Error('Reopen the saved scientific report before preparing its Decision study.');
+      const report=await read('item',{diagnostic_id:id});
+      if(generation!==selectedGeneration||workspace()!==selectedWorkspace)return;
+      if(report.id!==id||report.artifacts?.report_json?.sha256!==expectedSHA)
+        throw Error('This scientific report has advanced. Reopen the analysis to prepare its current saved revision.');
+      return openDecision({workspace_key:selectedWorkspace,diagnostic_id:report.id,report_sha256:expectedSHA});
+    }
     if(action==='investigate'){
       if(typeof openInvestigation!=='function')throw Error('Connect Scientific investigations to open this analysis there.');
       const report=await read('item',{diagnostic_id:id});
@@ -459,5 +469,11 @@ export function attachExperimentDiagnostics({getState,api,endpoint,openForm,subm
     const target=mounted?$('#diagnostic-workspace',mounted):null;
     if(target&&activeReport)target.innerHTML=reportHTML(activeReport);
   }
-  return {render,mount,detach,dispatch,taskActions,openAnalysis,beginAnalysis,setInvestigationHandler,openAnalysisForExperiment:id=>beginAnalysis(null,id)};
+  function setDecisionHandler(callback){
+    if(callback!==null&&typeof callback!=='function')throw TypeError('The decision handler must be a function or null.');
+    openDecision=callback;
+    const target=mounted?$('#diagnostic-workspace',mounted):null;
+    if(target&&activeReport)target.innerHTML=reportHTML(activeReport);
+  }
+  return {render,mount,detach,dispatch,taskActions,openAnalysis,beginAnalysis,setInvestigationHandler,setDecisionHandler,openAnalysisForExperiment:id=>beginAnalysis(null,id)};
 }
