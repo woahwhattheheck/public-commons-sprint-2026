@@ -9,6 +9,7 @@ import { Readable } from 'node:stream';
 import { createRuntimeWorkspace, openRuntimeWorkspace } from '../model.mjs';
 import { startRuntimeWorkspace } from '../server.mjs';
 import { readJSON, saveJSON, privateDirectory, operationLease } from '../storage.mjs';
+import { receiveCompanionArchiveBrowser } from './APPLICATION_INPUT_SET_ARCHIVE_RECEIVE.mjs';
 import { receiveOperationHistory } from './OPERATION_HISTORY_RECEIVE.mjs';
 import { APPLICATION_INPUT_CHUNK_BYTES } from '../application-inputs.mjs';
 import { readApplicationInputSetDirectory,runApplicationInputSetCommand } from '../application-input-sets-cli.mjs';
@@ -311,6 +312,23 @@ try {
       return await receiveOperationHistory({page,model,outputDirectory:outputs});
     } finally {
       await browser.close();browser=null;await server.close();server=null;
+    }
+  });
+  await step('browser_complete_archive_handover',async()=>{
+    state.ids.archiveSelection??=randomUUID();state.archiveLabel??=state.label+' complete archive';await checkpoint();
+    const {chromium}=await import(pathToFileURL(join(options['--playwright-root'],'playwright','index.mjs')));
+    server=await startRuntimeWorkspace({directory:paths.workspace,port:0});
+    const receivingServer=await startRuntimeWorkspace({directory:paths.control,port:0});
+    const tmp=join(root,'browser-tmp');await mkdir(tmp,{recursive:true,mode:0o700});
+    try{
+      browser=await chromium.launch({executablePath:options['--chromium'],headless:true,
+        env:{...process.env,TMPDIR:tmp},args:['--no-sandbox','--disable-dev-shm-usage']});
+      return await receiveCompanionArchiveBrowser({browser,sourceURL:server.url,sourceModel:model,
+        receivingURL:receivingServer.url,receivingModel:control,setId:begun.setId,manifest:state.source,
+        outputDirectory:join(outputs,'complete-archive'),memberPath:options['--member'],
+        selectionRequestId:state.ids.archiveSelection,applicationLabel:state.archiveLabel,runtimeDirectory:options['--runtime']});
+    }finally{
+      if(browser){await browser.close();browser=null;}await receivingServer.close();await server.close();server=null;
     }
   });
   attempt.phase='COMPLETE';attempt.completedAt=new Date().toISOString();await checkpoint();
