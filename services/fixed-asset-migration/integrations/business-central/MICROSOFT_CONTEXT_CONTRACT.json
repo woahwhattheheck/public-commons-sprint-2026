@@ -1,0 +1,405 @@
+{
+  "schema": "tjlabs.business-central-microsoft-context-contract.v1",
+  "edition": "2026-10-13",
+  "purpose": "Configure original source acquisition and review for prepare-master.mjs, prepare-work-orders.mjs and the existing six-domain/work-order migration engine. This file performs no network request or posting.",
+  "sourceIndex": "MICROSOFT_SOURCE_INDEX.json",
+  "originalInterfaces": {
+    "master": "prepareMasterCapture(capture)",
+    "workOrders": "prepareWorkOrderCapture(capture)",
+    "workOrderSchema": "tjlabs.business-central-work-order-capture.v1",
+    "financialDomains": [
+      "assets",
+      "books",
+      "balances",
+      "events",
+      "journals",
+      "controls"
+    ],
+    "workOrderModule": "prepare-work-orders.mjs",
+    "workOrderOperatingGuide": "WORK_ORDER_SOURCE.md"
+  },
+  "deploymentSelection": {
+    "tenantId": null,
+    "environment": null,
+    "apiRoot": null,
+    "companyId": null,
+    "canonicalCompanyId": null,
+    "companyName": null,
+    "companySystemVersion": null,
+    "dynawayVersion": null,
+    "metadataSourceReference": null
+  },
+  "unconfiguredMeaning": "Null selections are deliberately unconfigured. Use actual authorized environment/company and retained installed metadata; never use documentation example IDs.",
+  "companyContext": {
+    "requiredWhen": "selection.expenseLineCostField selects an LCY line amount",
+    "acceptedResource": "generalLedgerSetup",
+    "uriTemplate": "/api/v2.0/companies({companyId})/generalLedgerSetup({setupId})",
+    "responseShape": "single object",
+    "captureFields": {
+      "url": "exact credential-free original HTTPS GET URL",
+      "status": 200,
+      "bodyText": "complete original UTF-8 response text",
+      "sha256": "optional expected SHA-256 of bodyText"
+    },
+    "bindings": [
+      {
+        "selection": "companyId",
+        "source": "company GUID in original response request path",
+        "rule": "same actual company as the selected Dynaway response"
+      },
+      {
+        "selection": "setupId",
+        "sourcePointer": "/id",
+        "rule": "native response GUID equals setup GUID in request URI"
+      },
+      {
+        "selection": "selection.lcyCode",
+        "sourcePointer": "/localCurrencyCode",
+        "rule": "exact original code; must also satisfy the current engine's three-uppercase-letter currency constraint"
+      },
+      {
+        "selection": "selection.lcySourceReference",
+        "source": "retained actual response descriptor and /localCurrencyCode",
+        "rule": "retain reviewer reference plus computed response bytes/SHA/pointer; a free-text code alone is insufficient"
+      }
+    ],
+    "retainedFile": "originals/general-ledger-setup.json",
+    "excludedInferences": [
+      "currency symbol",
+      "company display name",
+      "assumed country currency",
+      "companyInformation.currencyCode without accounting setup",
+      "documentation example currency"
+    ],
+    "sources": [
+      "MS-GLSETUP",
+      "MS-GLSETUP-GET",
+      "MS-CURRENCY-BASIS"
+    ]
+  },
+  "readPlan": [
+    {
+      "resource": "company",
+      "uriTemplate": "/api/v2.0/companies({companyId})",
+      "fields": [
+        "id",
+        "name",
+        "displayName",
+        "systemVersion",
+        "timestamp",
+        "systemCreatedAt",
+        "systemModifiedAt"
+      ],
+      "identity": [
+        "tenantId",
+        "environment",
+        "id"
+      ],
+      "sources": [
+        "MS-ENDPOINT",
+        "MS-COMPANY"
+      ]
+    },
+    {
+      "resource": "generalLedgerSetup",
+      "uriTemplate": "/api/v2.0/companies({companyId})/generalLedgerSetup({setupId})",
+      "fields": [
+        "id",
+        "localCurrencyCode",
+        "localCurrencySymbol",
+        "additionalReportingCurrency",
+        "allowPostingFrom",
+        "allowPostingTo",
+        "shortcutDimension1Code",
+        "shortcutDimension2Code",
+        "shortcutDimension3Code",
+        "shortcutDimension4Code",
+        "shortcutDimension5Code",
+        "shortcutDimension6Code",
+        "shortcutDimension7Code",
+        "shortcutDimension8Code",
+        "lastModifiedDateTime"
+      ],
+      "identity": [
+        "companyId",
+        "id"
+      ],
+      "sources": [
+        "MS-GLSETUP",
+        "MS-GLSETUP-GET"
+      ]
+    },
+    {
+      "resource": "currency",
+      "uriTemplate": "/api/v2.0/companies({companyId})/currencies({currencyId})",
+      "fields": [
+        "id",
+        "code",
+        "displayName",
+        "symbol",
+        "amountDecimalPlaces",
+        "amountRoundingPrecision",
+        "lastModifiedDateTime"
+      ],
+      "identity": [
+        "companyId",
+        "id"
+      ],
+      "sources": [
+        "MS-CURRENCY"
+      ],
+      "limits": "Currencies list is not the LCY authority; LCY rounding may require a separately retained setup export because standard generalLedgerSetup lists no amount-rounding field."
+    },
+    {
+      "resource": "dimension",
+      "uriTemplate": "/api/v2.0/companies({companyId})/dimensions({dimensionId})",
+      "fields": [
+        "id",
+        "code",
+        "displayName",
+        "consolidationCode",
+        "lastModifiedDateTime"
+      ],
+      "identity": [
+        "companyId",
+        "id"
+      ],
+      "sources": [
+        "MS-DIMENSION"
+      ]
+    },
+    {
+      "resource": "dimensionValue",
+      "uriTemplate": "/api/v2.0/companies({companyId})/dimensions({dimensionId})/dimensionValues({valueId})",
+      "fields": [
+        "id",
+        "dimensionId",
+        "code",
+        "displayName",
+        "consolidationCode",
+        "lastModifiedDateTime"
+      ],
+      "identity": [
+        "companyId",
+        "dimensionId",
+        "id"
+      ],
+      "sources": [
+        "MS-DIMENSION-VALUE"
+      ]
+    },
+    {
+      "resource": "dimensionSetLine",
+      "uriTemplate": "/api/v2.0/companies({companyId})/generalLedgerEntries({entryId})/dimensionSetLines({lineId})",
+      "fields": [
+        "id",
+        "parentId",
+        "parentType",
+        "code",
+        "valueId",
+        "valueCode",
+        "displayName",
+        "valueDisplayName"
+      ],
+      "identity": [
+        "companyId",
+        "parentType",
+        "parentId",
+        "id"
+      ],
+      "sources": [
+        "MS-DIMENSION-SET",
+        "MS-DIMENSION-SET-GET"
+      ],
+      "limits": "These are G/L parent dimension lines, not an inferred Dynaway order-to-G/L link; retain actual linkage evidence."
+    },
+    {
+      "resource": "defaultDimension",
+      "uriTemplate": "/api/v2.0/companies({companyId})/defaultDimensions({defaultDimensionId})",
+      "fields": [
+        "id",
+        "parentId",
+        "parentType",
+        "dimensionId",
+        "dimensionCode",
+        "dimensionValueId",
+        "dimensionValueCode",
+        "postingValidation",
+        "lastModifiedDateTime"
+      ],
+      "identity": [
+        "companyId",
+        "parentType",
+        "parentId",
+        "id"
+      ],
+      "sources": [
+        "MS-DEFAULT-DIMENSION",
+        "MS-DEFAULT-DIMENSION-GET"
+      ],
+      "limits": "Resolve supported collection/key routes against installed metadata. Default dimensions are not proof of posted dimensions."
+    },
+    {
+      "resource": "generalLedgerEntry",
+      "uriTemplate": "/api/v2.0/companies({companyId})/generalLedgerEntries({entryId})",
+      "fields": [
+        "id",
+        "entryNumber",
+        "postingDate",
+        "documentNumber",
+        "documentType",
+        "accountId",
+        "accountNumber",
+        "debitAmount",
+        "creditAmount",
+        "additionalCurrencyDebitAmount",
+        "additionalCurrencyCreditAmount",
+        "lastModifiedDateTime"
+      ],
+      "identity": [
+        "companyId",
+        "id"
+      ],
+      "sources": [
+        "MS-GLENTRY",
+        "MS-CURRENCY-BASIS"
+      ]
+    },
+    {
+      "resource": "fixedAsset",
+      "uriTemplate": "/api/v2.0/companies({companyId})/fixedAssets({fixedAssetId})",
+      "fields": [
+        "id",
+        "number",
+        "displayName",
+        "fixedAssetLocationCode",
+        "fixedAssetLocationId",
+        "classCode",
+        "subclassCode",
+        "blocked",
+        "serialNumber",
+        "employeeNumber",
+        "employeeId",
+        "underMaintenance",
+        "lastModifiedDateTime"
+      ],
+      "identity": [
+        "companyId",
+        "id"
+      ],
+      "businessKey": [
+        "companyId",
+        "number"
+      ],
+      "sources": [
+        "MS-FA"
+      ]
+    }
+  ],
+  "dimensions": {
+    "canonicalMappings": [
+      {
+        "target": "dimension_1",
+        "source": "valueCode for the dimension whose code equals captured shortcutDimension1Code",
+        "require": "same company and actual original cost/posted parent binding"
+      },
+      {
+        "target": "dimension_2",
+        "source": "valueCode for the dimension whose code equals captured shortcutDimension2Code",
+        "require": "same company and actual original cost/posted parent binding"
+      },
+      {
+        "target": "dimension_set_id",
+        "source": "explicit original source field or approved export only",
+        "require": "do not substitute dimensionSetLine.id, parentId, dimensionId or concatenated values"
+      }
+    ],
+    "retain": "All returned dimension lines and native references, including dimensions beyond canonical dimension_1/dimension_2.",
+    "readback": "Compare exact company + parent + dimension/value identity sets after target import; retain supported target IDs separately from original IDs.",
+    "allocation": "A dimension labels an accounting classification. It does not establish a split percentage or monetary amount. Existing allocation review retains exact signed cost and quantity conservation independently.",
+    "postingPolicy": "Retain actual defaults, priorities, allowed values and blocked combinations when available; unresolved policy stays an explicit cutover input.",
+    "sources": [
+      "MS-DIMENSION",
+      "MS-DIMENSION-VALUE",
+      "MS-DIMENSION-SET",
+      "MS-DEFAULT-DIMENSION",
+      "MS-DIMENSION-POLICY"
+    ]
+  },
+  "exactAmounts": {
+    "preserve": "original numeric token in bodyText; exact-decimal canonical engine value separately",
+    "prohibit": [
+      "JSON Number round-trip for money or quantities",
+      "implicit two-decimal rounding",
+      "unit-price multiplication to invent posted cost",
+      "absolute-value sign removal",
+      "combining LCY and additional reporting currency",
+      "automatic FX conversion"
+    ],
+    "currencyResourceTypes": {
+      "amountDecimalPlaces": "string",
+      "amountRoundingPrecision": "decimal"
+    },
+    "engineConstraint": "Canonical currency is exactly three uppercase letters; unsupported original codes remain source evidence until an attributed explicit mapping is approved. No automatic code normalization.",
+    "roundingPolicy": "Retain amount rounding, display decimals, quantity/UoM and any conversion policy independently. A source value is not changed merely to match display precision.",
+    "sources": [
+      "MS-CURRENCY",
+      "MS-CURRENCY-BASIS",
+      "MS-GLENTRY"
+    ]
+  },
+  "readback": {
+    "sourceRecordKey": [
+      "tenantId",
+      "environment",
+      "companyId",
+      "resource",
+      "nativeId"
+    ],
+    "fields": [
+      "operation_id",
+      "source_response_sha256",
+      "source_pointer",
+      "original_native_id",
+      "target_native_id",
+      "target_business_number",
+      "request_url",
+      "request_payload_sha256",
+      "before_etag",
+      "after_etag",
+      "response_status",
+      "request_or_correlation_id",
+      "response_sha256",
+      "observed_at",
+      "reviewed_fields",
+      "posted_entry_ids",
+      "dimension_links"
+    ],
+    "updateRule": "Use the exact original ETag for a reviewed PATCH. A mismatch requires fresh read/reconciliation; do not replace with wildcard to suppress the conflict.",
+    "successRule": "Retain actual response and independent target readback for selected fields and posted effects. A200 or matching record count alone is insufficient.",
+    "limits": "GET/master CRUD does not establish historical ledger import or posting support. Resolve actual supplier-approved import action and installed API metadata.",
+    "sources": [
+      "MS-FA-PATCH",
+      "MS-SYSTEMID",
+      "MS-API"
+    ]
+  },
+  "historicalFinance": {
+    "requiredOriginals": [
+      "complete asset master and maintenance-to-financial links",
+      "depreciation books and integration settings",
+      "opening balances by company/book/asset/date/currency/measure",
+      "original financial events and posting dates",
+      "FA and G/L ledger readbacks",
+      "independently sourced control totals",
+      "supplier-approved opening-vs-detailed-history migration decision"
+    ],
+    "rule": "Retain acquisition cost, accumulated depreciation, adjustments and net book value as separate declared measures. Avoid replaying costs already included in opening balances or capitalized assets.",
+    "workOrderBoundary": "Maintenance expense/history and fixed-asset acquisition/depreciation remain separate domains until explicit original source linkage and accounting classification support a reconciliation.",
+    "sources": [
+      "MS-FA-OPENING",
+      "MS-FA-REPORTS",
+      "MS-GLENTRY"
+    ]
+  }
+}
