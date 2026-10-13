@@ -8,7 +8,10 @@ import csv
 import json
 import math
 from pathlib import Path
+import stat
+import subprocess
 import sys
+import zipfile
 
 _bootstrap = argparse.ArgumentParser(add_help=False)
 _bootstrap.add_argument("--application", type=Path)
@@ -21,7 +24,8 @@ from model.common import atomic_json, describe_file, digest, file_digest, held, 
 from model.workspace import Workspace
 from model.chemistry import Chemistry, ENGINE_VERSION
 from model import chemistry_reports, chemistry_report_source, scientific_report_editions
-from model.portable import backup, restore, inspect_archive
+from model import portable
+from model.portable import backup, restore
 from model.reach_chemistry.model import Project
 from model.reach_chemistry.inference import Parameters, tangent_predictions, observation_key
 
@@ -155,7 +159,179 @@ def operator_checks(project, parameters, observations):
     return errors
 
 
+
+def verified_complete_archive(path, workspace, previous):
+    """Read, verify and identify one original full archive edition."""
+    with path.open("rb") as stream:
+        before = portable._archive_identity(stream)
+        with zipfile.ZipFile(stream) as archive:
+            manifest = portable._inspect_archive(archive, verify=True)
+        checksum = portable._archive_digest(stream, before)
+        current = path.lstat()
+        require(stat.S_ISREG(current.st_mode)
+                and (current.st_dev, current.st_ino, current.st_size,
+                     current.st_mtime_ns, current.st_ctime_ns) == before,
+                "The complete archive pathname changed during verification")
+    require(manifest["project"] == workspace.project,
+            "The completed archive belongs to another original project")
+    require(manifest.get("selection") == {"include_intermediates": True, "include_deliveries": True},
+            "Retain the original complete Workspace archive selection")
+    record = {"path": path.name, "bytes": before[2], "sha256": checksum}
+    if previous is not None:
+        require(previous == record, "The completed archive differs from its original saved bytes")
+    return manifest, record
+
+
+def reopen_received_application(receiving, manifest, retained, prior_reports, output):
+    """Open the delivered Chemistry product through its actual archived app."""
+    application = Path(receiving["application"]).resolve(strict=True)
+    workspace = Path(receiving["workspace"]).resolve(strict=True)
+    producer_paths = {
+        "model.common": "model/common.py",
+        "model.workspace": "model/workspace.py",
+        "model.chemistry": "model/chemistry.py",
+        "model.reach_chemistry.model": "model/reach_chemistry/model.py",
+        "model.reach_chemistry.inference": "model/reach_chemistry/inference.py",
+        "model.reach_chemistry.solver": "model/reach_chemistry/solver.py",
+        "model.reach_chemistry.service": "model/reach_chemistry/service.py",
+        "model.reach_chemistry.io": "model/reach_chemistry/io.py",
+        "model.reach_chemistry.reporting": "model/reach_chemistry/reporting.py",
+        "model.chemistry_reports": "model/chemistry_reports.py",
+        "model.chemistry_report_source": "model/chemistry_report_source.py",
+        "model.scientific_report_editions": "model/scientific_report_editions.py",
+        "server": "operator/server.py",
+        "chemistry": "operator/chemistry.py",
+        "source_report_editions": "operator/source_report_editions.py",
+    }
+    request = {
+        "application": str(application), "workspace": str(workspace),
+        "operator_state": str(output / "received-operator-state"),
+        "output": str(output / "cold-receiving.json"),
+        "archive_sha256": receiving["archive_sha256"],
+        "project_id": receiving["project"]["id"],
+        "retained": retained, "prior_reports": prior_reports,
+        "producers": {name: {"path": path, **manifest["members"]["application/" + path]}
+                      for name, path in producer_paths.items()},
+    }
+    request_path = output / "cold-receiving-request.json"
+    atomic_json(request_path, request, immutable=True)
+    child = r'''
+import importlib
+import json
+from pathlib import Path
+import sys
+
+request = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+application = Path(request["application"]).resolve(strict=True)
+sys.path[:0] = [str(application), str(application / "operator")]
+from model.common import atomic_json, digest, file_digest
+from model.workspace import Workspace
+from model.chemistry import Chemistry
+from model import chemistry_reports, chemistry_report_source, scientific_report_editions
+import server
+
+loaded = {}
+for name, expected in request["producers"].items():
+    module = importlib.import_module(name)
+    path = Path(module.__file__).resolve(strict=True)
+    if path != application / expected["path"]:
+        raise ValueError("Received producer loaded outside its archived application: " + name)
+    actual = {"bytes": path.stat().st_size, "sha256": file_digest(path)}
+    if any(actual[key] != expected[key] for key in ("bytes", "sha256")):
+        raise ValueError("Received producer differs from the original archive: " + name)
+    loaded[name] = {"path": str(path), **actual}
+workspace = Workspace(Path(request["workspace"]), create=False)
+if workspace.project["id"] != request["project_id"]:
+    raise ValueError("Cold receiving opened another scientific project")
+service = Chemistry(workspace)
+retained = request["retained"]
+if service.get_case(retained["case"]["id"]) != retained["case"]:
+    raise ValueError("Cold receiving changed the selected authored case")
+runs = {**retained["original_runs"], **retained["runs"]}
+for rid, expected in runs.items():
+    actual = service.get_run(rid)
+    if actual != expected:
+        raise ValueError("Cold receiving changed an original native run: " + rid)
+    service._verified_artifacts(rid, actual)
+for rid, expected in retained["reports"].items():
+    if chemistry_reports.inspect(workspace, rid) != expected:
+        raise ValueError("Cold receiving changed a saved scientific report: " + rid)
+for sid, expected in retained["sources"].items():
+    if chemistry_report_source.inspect(workspace, sid) != expected:
+        raise ValueError("Cold receiving changed a scientific source: " + sid)
+edition, directory, operation = scientific_report_editions.inspect(workspace, retained["edition"]["id"])
+if edition != retained["edition"]:
+    raise ValueError("Cold receiving changed the rendered scientific edition")
+for rid, expected in request["prior_reports"]["reports"].items():
+    if digest(chemistry_reports.inspect(workspace, rid)) != expected:
+        raise ValueError("Cold receiving changed a prior saved report: " + rid)
+for sid, expected in request["prior_reports"]["sources"].items():
+    if digest(chemistry_report_source.inspect(workspace, sid)) != expected:
+        raise ValueError("Cold receiving changed a prior scientific source: " + sid)
+
+operator = server.Operator(workspace.root, Path(request["operator_state"]), create=False)
+opened = []
+try:
+    actions = ["chemistry.case.get", "chemistry.run.get", "chemistry.report.get",
+               "chemistry.report.source.get", "chemistry.export",
+               "source-reports.render", "source-reports.export"]
+    for action in actions:
+        if not operator.extensions.handles_action(action):
+            raise ValueError("Received application lacks its original action: " + action)
+    selections = [("/api/chemistry/case", {"case_id": retained["case"]["id"]}, retained["case"])]
+    selections += [("/api/chemistry/run", {"run_id": rid}, value) for rid, value in runs.items()]
+    selections += [("/api/chemistry/report", {"report_id": rid}, value)
+                   for rid, value in retained["reports"].items()]
+    selections += [("/api/chemistry/report-source", {"source_record_id": sid}, value)
+                   for sid, value in retained["sources"].items()]
+    for route, payload, expected in selections:
+        if not operator.extensions.has_route("GET", route):
+            raise ValueError("Received application lacks its original route: " + route)
+        value = operator.extensions.read("GET", route, operator.primary, payload)
+        if not isinstance(value, dict) or any(value.get(key) != item for key, item in expected.items()):
+            raise ValueError("Received route changed its original saved record: " + route)
+        opened.append({"route": route, "selection": payload})
+    route = "/api/source-reports/scientific-edition"
+    if not operator.extensions.has_route("GET", route):
+        raise ValueError("Received application lacks its scientific edition route")
+    value = operator.extensions.read("GET", route, operator.primary, {"id": edition["id"]})
+    if not isinstance(value, dict) or value.get("edition") != edition:
+        raise ValueError("Received route changed the original scientific edition")
+    opened.append({"route": route, "selection": {"id": edition["id"]}})
+finally:
+    operator.close()
+result = {
+    "schema": "upstate.chemistry-compound-cold-receiving/v1", "state": "complete",
+    "application": str(application), "workspace": str(workspace.root),
+    "project_id": workspace.project["id"], "archive_sha256": request["archive_sha256"],
+    "retained_science_sha256": digest(retained), "loaded_producers": loaded,
+    "case_id": retained["case"]["id"], "run_ids": sorted(runs),
+    "report_ids": sorted(retained["reports"]), "source_ids": sorted(retained["sources"]),
+    "edition_id": edition["id"], "accepted_actions": actions, "opened_routes": opened,
+    "scientific_files": scientific_report_editions.files(edition, directory),
+}
+atomic_json(Path(request["output"]), result)
+print(json.dumps(result, sort_keys=True))
+'''
+    with (output / "cold-receiving.stdout.log").open("w", encoding="utf-8") as stdout, (
+            output / "cold-receiving.stderr.log").open("w", encoding="utf-8") as stderr:
+        result = subprocess.run([sys.executable, "-I", "-B", "-c", child, str(request_path)],
+                                cwd=application, stdout=stdout, stderr=stderr, check=False)
+    require(result.returncode == 0,
+            "The received application failed to reopen; see cold-receiving.stderr.log (exit "
+            + str(result.returncode) + ")")
+    completed = read_json(output / "cold-receiving.json")
+    require(completed.get("state") == "complete"
+            and completed.get("application") == str(application)
+            and completed.get("archive_sha256") == receiving["archive_sha256"]
+            and completed.get("retained_science_sha256") == digest(retained),
+            "The received application's result differs from this original course")
+    return completed
+
+
 def run_course(args):
+    require(callable(getattr(portable, "resume_restore", None)),
+            "Install the maintained portable.resume_restore before starting this complete receiving course")
     workspace = Workspace(args.workspace.resolve(strict=True), create=False)
     output = args.output.resolve()
     require(not output.is_relative_to(workspace.root), "Keep receiving output outside the scientific Workspace")
@@ -393,9 +569,11 @@ def run_course(args):
         else:
             save("archive_intent", archive_intent)
         if not complete_archive.exists():
+            require("workspace_archive" not in state["steps"],
+                    "Restore the original completed archive before resuming this receiving course")
             backup(workspace, complete_archive, include_intermediates=True, include_deliveries=True)
-        manifest = inspect_archive(complete_archive, verify=True)
-        require(manifest["project"] == workspace.project, "The completed archive belongs to another original project")
+        manifest, archive_record = verified_complete_archive(
+            complete_archive, workspace, state["steps"].get("workspace_archive"))
         # On a lost response, adopt only an archive that already holds these exact
         # immutable saved scientific outputs, then continue its original restore.
         selected_files = []
@@ -417,16 +595,17 @@ def run_course(args):
                     and manifest["members"][member]["sha256"] == file_digest(path)
                     and manifest["members"][member]["bytes"] == path.stat().st_size,
                     "Complete archive differs from the retained selected scientific file: " + member)
-        archive_record = describe_file(output, complete_archive)
         save("workspace_archive", archive_record)
         destination = output / "received"
         if not destination.exists():
             receiving = restore(complete_archive, destination)
-            save("workspace_receiving", receiving)
         else:
-            require((destination / "workspace/workspace.json").is_file(),
-                    "Existing receiving destination is not the original published Workspace")
-        received = Workspace(destination / "workspace", create=False)
+            receiving = portable.resume_restore(
+                complete_archive, destination, expected_archive_sha256=archive_record["sha256"])
+        require(receiving["archive_sha256"] == archive_record["sha256"],
+                "Receiving used another original complete archive")
+        save("workspace_receiving", receiving)
+        received = Workspace(Path(receiving["workspace"]), create=False)
         reopened = Chemistry(received)
         require(received.project == workspace.project and reopened.get_case(case["id"]) == retained["case"],
                 "Whole receiving changed the original project or case")
@@ -448,11 +627,15 @@ def run_course(args):
         for sid, expected in state["steps"]["prior_reports"]["sources"].items():
             require(digest(chemistry_report_source.inspect(received, sid)) == expected,
                     "Whole receiving changed a prior scientific-source edition")
+        cold_receiving = reopen_received_application(
+            receiving, manifest, retained, state["steps"]["prior_reports"], output)
+        save("cold_receiving", cold_receiving)
         summary = {"complete": True, "project_id": workspace.project["id"], "case_id": case["id"],
                    "native_runs": {name: run["id"] for name, run in completed.items()},
                    "scientific_report_edition_id": edition_id, "report_ids": report_ids,
                    "source_ids": source_ids, "receiving_workspace": str(received.root),
-                   "whole_archive": archive_record, **state["steps"]["numerical_summary"],
+                   "whole_archive": archive_record, "cold_receiving": cold_receiving,
+                   **state["steps"]["numerical_summary"],
                    "original_source_record_ids": [row["id"] for row in calibration["observations"]]}
         save("summary", summary)
         return summary
