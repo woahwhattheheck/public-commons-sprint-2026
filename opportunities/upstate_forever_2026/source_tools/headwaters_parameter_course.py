@@ -346,7 +346,9 @@ def _continue_course(workspace, ensemble_id, *, execute=False, raster_products=T
                 workspace, record, plan, directory, previous, raster_products)
             if retained is not None:
                 return retained
-        if previous.get("state") == "complete":
+        if (previous.get("state") == "complete"
+                or (previous.get("state") == "partial"
+                    and previous.get("reference_report_basis", {}).get("reference_ready") is True)):
             atomic_json(directory / "headwaters-result-editions" / (digest(previous) + ".json"),
                         previous, immutable=True)
         result = {"schema": SCHEMA, "project_id": workspace.project["id"],
@@ -417,6 +419,18 @@ def _reference_files(workspace, result):
         validate_completed_run(run)
         for descriptor in run.get("artifacts", {}).values():
             verify_file(workspace.root / "runs" / key, descriptor)
+    from model.native_versions import validate_run_comparison
+    for selected in result["joint_decisions"].get("comparisons", []):
+        comparison = workspace.retained_item("comparisons", selected["comparison_id"])
+        validate_run_comparison(workspace, comparison, expected_id=selected["comparison_id"])
+        if (comparison["baseline_run_id"] != selected["baseline_run_id"]
+                or [row["run_id"] for row in comparison["alternatives"]]
+                   != selected["alternative_run_ids"]):
+            raise ValueError("The retained reference decision changed its original run comparison")
+        directory = workspace.root / "comparisons" / comparison["id"]
+        for alternative in comparison["alternatives"]:
+            for descriptor in alternative["artifacts"].values():
+                verify_file(directory, descriptor)
     operation = result["operation"]
     report = operation.get("report") or {}
     if report.get("state") != "complete":
