@@ -11,6 +11,7 @@ import "./catalogue.js";
 import "./core.js";
 const execute=promisify(execFile),args={},words=process.argv.slice(2);
 for(let i=0;i<words.length;i+=2){if(!words[i]?.startsWith("--")||!words[i+1])throw Error("Use --option value pairs.");args[words[i].slice(2)]=words[i+1];}
+if(args.dir&&args.catalogue)throw Error("Choose one receiving mode: --dir or --catalogue.");
 if((!args.dir&&!args.catalogue)||!args.out)throw Error("Use --dir HANDOVER_DIRECTORY or --catalogue SOURCE_DIRECTORY, plus --out NEW_RECEIVING_DIRECTORY [--playwright MODULE_PATH] [--chromium EXECUTABLE] [--python PYTHON].");
 const root=path.resolve(args.dir||args.catalogue),output=path.resolve(args.out),sha=data=>createHash("sha256").update(data).digest("hex");
 await fs.mkdir(output,{recursive:false});
@@ -34,6 +35,27 @@ async function saveResult(status,error=null){
  const result={schema:"rainfall-native-receiving/v1",started_at:started,completed_at:new Date().toISOString(),status,source_directory:root,steps,images,downloads,page_errors:errors,error,visual_inspection:"Producer must open and personally view all listed PNGs and actual outgoing files before presentation."};
  await fs.writeFile(path.join(output,"receiving.json"),JSON.stringify(result,null,2)+"\n");return result;
 }
+async function extractExactArchive(archivePath,destination,names){
+ await execute(args.python||"python3",["-c","import pathlib,sys,zipfile,json\np=pathlib.Path(sys.argv[2]);p.mkdir()\nwith zipfile.ZipFile(sys.argv[1]) as z:\n expected=set(json.loads(sys.argv[3]))\n if set(z.namelist())!=expected or len(z.namelist())!=len(expected): raise ValueError('archive roster differs')\n for n in z.namelist():\n  q=pathlib.PurePosixPath(n)\n  if q.is_absolute() or '..' in q.parts or '\\\\' in n: raise ValueError('unsafe archive path')\n z.extractall(p)\n",archivePath,destination,JSON.stringify(names)]);
+}
+async function receiveCatalogueArchive(directory){
+ let build;try{build=JSON.parse(await fs.readFile(path.join(directory,"BUILD.json"),"utf8"));}catch(e){if(e.code==="ENOENT")return directory;throw e;}
+ const archive=build.archive;
+ assert(archive&&archive.file==="gauge-catalogue-handover.zip","Catalogue package BUILD.json must identify its original archive. Use --dir for a rainfall handover.");
+ const raw=await fs.readFile(path.join(directory,archive.file));
+ assert(raw.length===archive.bytes&&sha(raw)===archive.sha256,"The original catalogue ZIP differs from BUILD.json.");
+ const manifestText=await fs.readFile(path.join(directory,"manifest.json"),"utf8"),manifest=JSON.parse(manifestText);
+ assert(manifest.schema==="gauge-catalogue-delivery/v1"&&manifest.files&&typeof manifest.files==="object"&&!Array.isArray(manifest.files),"Unknown catalogue package manifest.");
+ const names=Object.keys(manifest.files);
+ assert(names.length>0&&!names.includes("manifest.json"),"Invalid catalogue package roster.");
+ for(const name of names)assert(!name.startsWith("/")&&!name.includes("\\")&&!name.split("/").some(p=>!p||p==="."||p===".."),"Invalid source archive member.");
+ const received=path.join(output,"received-catalogue");
+ await extractExactArchive(path.join(directory,archive.file),received,[...names,"manifest.json"]);
+ assert(await fs.readFile(path.join(received,"manifest.json"),"utf8")===manifestText,"Received catalogue manifest differs.");
+ for(const [name,item] of Object.entries(manifest.files)){const member=await fs.readFile(path.join(received,name));assert(member.length===item.bytes&&sha(member)===item.sha256,"Received catalogue member differs: "+name);}
+ record("independent_catalogue_zip_receive",{members:names.length+1,archive_sha256:archive.sha256});
+ return received;
+}
 async function receiveCatalogue(page,directory,projectFile){
  const originalProject=JSON.parse(await fs.readFile(projectFile,"utf8")),original=GaugeCatalogue.reopen(originalProject);
  await page.setViewportSize({width:1365,height:950});await page.goto(pathToFileURL(path.join(directory,"catalogue.html")).href);
@@ -55,7 +77,7 @@ async function receiveCatalogue(page,directory,projectFile){
  assert(saved.before.source.content===original.before.source.content&&saved.after.source.content===original.after.source.content,"Saved catalogue changed original source text.");
  assert(JSON.stringify([...(savedProject.selected_web_ids||[])].sort())===JSON.stringify(activeIds),"Saved catalogue selection differs.");
  const sourceCsv=await getDownload(page,"#csv","downloaded-gauge-records.csv");
- assert(sourceCsv.includes("original_feature")&&sourceCsv.includes(original.before.source.sha256)&&sourceCsv.includes(original.after.source.sha256),"Source CSV must retain both original editions.");
+ assert(sourceCsv===GaugeCatalogue.csv(GaugeCatalogue.recordRows(original.comparison)),"Source CSV must retain every original record from both editions.");
  const sourceReport=await getDownload(page,"#report","downloaded-catalogue-report.html");
  assert(sourceReport===GaugeCatalogue.report(original.comparison,{notes,selected_web_ids:selection.web_ids}),"Downloaded catalogue report differs.");
  await page.setViewportSize({width:390,height:844});await fit(page,"catalogue narrow");await snapshot(page,"13-catalogue-narrow.png");
@@ -68,6 +90,17 @@ async function receiveCatalogue(page,directory,projectFile){
  assert(await page.locator("#notes").inputValue()===notes,"Saved catalogue project did not reopen.");
  await snapshot(page,"15-catalogue-reopened-narrow.png");
  await page.goto(pathToFileURL(path.join(output,"downloaded-catalogue-report.html")).href);await fit(page,"source report narrow");await snapshot(page,"16-catalogue-report-narrow.png");
+ const reportProject=JSON.parse(await getDownload(page,'[data-export="project"]',"report-catalogue-project.json"));
+ assert(GaugeCatalogue.canonical(reportProject)===GaugeCatalogue.canonical(savedProject),"Report saved project differs from the edited catalogue.");
+ const reportComparison=JSON.parse(await getDownload(page,'[data-export="comparison"]',"report-catalogue-comparison.json"));
+ assert(GaugeCatalogue.canonical(reportComparison)===GaugeCatalogue.canonical(original.comparison),"Report comparison differs from the original source calculation.");
+ for(const which of ["before","after"]){const raw=await getDownload(page,'[data-export="'+which+'"]',"report-"+which+".geojson");assert(raw===original[which].source.content,"Report original GeoJSON differs: "+which);}
+ const reportCsv=await getDownload(page,'[data-export="csv"]',"report-catalogue-records.csv");
+ assert(reportCsv===sourceCsv,"Report all-record CSV differs from the editor export.");
+ const reportSelection=GaugeCatalogue.validateSelection(JSON.parse(await getDownload(page,'[data-export="selection"]',"report-catalogue-selection.json")));
+ assert(GaugeCatalogue.canonical(reportSelection)===GaugeCatalogue.canonical(selection),"Report request selection differs.");
+ record("source_report_download_controls");
+
  await page.setViewportSize({width:1365,height:950});await snapshot(page,"17-catalogue-report-desktop.png");
  record("catalogue_selection_save_report_and_reopen",{original_reference_sha256:original.before.source.sha256,original_retrieved_sha256:original.after.source.sha256,selected_web_ids:activeIds,source_records:original.before.records.length+original.after.records.length});
  return {originalProject,savedProject};
@@ -82,8 +115,9 @@ try{
   let projectPath=path.join(root,"catalogue-project.json");try{await fs.access(projectPath);}catch(e){if(e.code!=="ENOENT")throw e;projectPath=path.join(root,"source/20261013/gauge-catalogue-project.json");}
   const result=await receiveCatalogue(page,root,projectPath);
   await context.close();
+  const coldRoot=await receiveCatalogueArchive(root);
   const cold=await browser.newContext({acceptDownloads:true,viewport:{width:390,height:844}}),fresh=await cold.newPage();fresh.on("pageerror",e=>errors.push(e.message));
-  await fresh.goto(pathToFileURL(path.join(root,"catalogue.html")).href);await fresh.locator("#review").waitFor({state:"visible"});
+  await fresh.goto(pathToFileURL(path.join(coldRoot,"catalogue.html")).href);await fresh.locator("#review").waitFor({state:"visible"});
   await fresh.locator("#files").setInputFiles(path.join(output,"downloaded-catalogue-project.json"));
   await fresh.waitForFunction(()=>document.querySelector("#status").textContent.startsWith("Loaded both"));
   const reopened=JSON.parse(await getDownload(fresh,"#save","cold-catalogue-project.json"));
@@ -146,7 +180,7 @@ try{
  const received=path.join(output,"received");
  const zipBytes=await fs.readFile(path.join(root,"rainfall-handover.zip")),build=JSON.parse(await fs.readFile(path.join(root,"BUILD.json"),"utf8"));
  assert(zipBytes.length===build.zip.bytes&&sha(zipBytes)===build.zip.sha256,"The full original ZIP differs from its build receipt.");
- await execute(args.python||"python3",["-c","import pathlib,sys,zipfile\np=pathlib.Path(sys.argv[2]);p.mkdir()\nwith zipfile.ZipFile(sys.argv[1]) as z:\n import json\n expected=set(json.loads(sys.argv[3]))\n if set(z.namelist())!=expected or len(z.namelist())!=len(expected): raise ValueError(\u0027archive roster differs\u0027)\n for n in z.namelist():\n  q=pathlib.PurePosixPath(n)\n  if q.is_absolute() or '..' in q.parts or '\\\\' in n: raise ValueError('unsafe archive path')\n z.extractall(p)\n",path.join(root,"rainfall-handover.zip"),received,JSON.stringify([...manifest.files.map(x=>x.path),"manifest.json"])]);
+ await extractExactArchive(path.join(root,"rainfall-handover.zip"),received,[...manifest.files.map(x=>x.path),"manifest.json"]);
  const receivedManifest=await fs.readFile(path.join(received,"manifest.json"),"utf8");assert(receivedManifest===manifestText,"ZIP manifest differs.");
  for(const item of manifest.files){const data=await fs.readFile(path.join(received,item.path));assert(data.length===item.bytes&&sha(data)===item.sha256,"Received member differs: "+item.path);}
  record("independent_zip_receive",{members:manifest.files.length+1});

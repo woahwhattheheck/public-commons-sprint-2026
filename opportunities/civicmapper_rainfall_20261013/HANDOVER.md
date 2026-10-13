@@ -57,3 +57,5 @@ The source catalogue course can run independently of a rainfall capture:
     node receive_handover.mjs --catalogue /absolute/application/directory --out /new/catalogue-receiving-directory
 
 It opens the included actual source catalogues, operates record filters and selection, downloads and reopens the original-source project, inspects the source report at desktop/narrow widths, and repeats the saved review in a fresh browser context. Use the existing Playwright/Chromium paths as in the full receiving command. This starts no rainfall request. The producing worker then views the actual pages, every relevant image and the downloaded attachments.
+
+The catalogue-only archive is received independently when BUILD.json is present: the course checks its exact ZIP identity and member roster, extracts with Python's standard ZIP reader, verifies every extracted file, then opens the extracted catalogue in a fresh browser context. It also operates all report-page exports, including both exact original GeoJSON files. The CLI checks both saved and embedded source projects against the same 40 MB reopening limit as the browser.
