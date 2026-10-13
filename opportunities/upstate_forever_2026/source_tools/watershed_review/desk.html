@@ -84,7 +84,42 @@ $('rows').onclick=e=>{const b=e.target.closest('[data-open]');if(b)setActive(b.d
 $('detail').addEventListener('input',e=>{if(e.target.id.startsWith('note')){saveNote();$('noteSaved').textContent='Decision updated. Save a project file for a durable handoff.';if(e.target.type==='checkbox')render();}});
 $('detail').addEventListener('change',e=>{if(e.target.id==='noteStatus'){saveNote();render();}});
 $('saveProject').onclick=()=>{download('Upper_Savannah_Review_Project.json',JSON.stringify(snapshot(),null,2)+'\n','application/json');say('Saved the current settings and review decisions for independent reopening.');};
-$('openProject').onclick=()=>$('projectFile').click();$('projectFile').onchange=async()=>{const f=$('projectFile').files[0];if(!f)return;try{if(f.size>20000000)throw Error('Saved project is too large. Open a review JSON, not the application or source archive.');const incoming=restoreProject(JSON.parse(await f.text()),DATA);state=incoming.state;notes=incoming.notes;active=incoming.active||DATA.rows[0].huc12;syncControls();render();persist();say('Reopened the saved settings and review decisions against their original source edition.');}catch(e){say('Project was not opened: '+e.message,true);}finally{$('projectFile').value='';}};
+let projectOpenSequence=0;
+function workingReview(){
+ return JSON.stringify({state,notes,active,controls:Object.fromEntries(
+  ['scope','basis','topK','evidence','query','onlyQueued','w0','w1','w2'].map(id=>
+   [id,id==='onlyQueued'?$(id).checked:$(id).value]))});
+}
+$('openProject').onclick=()=>$('projectFile').click();
+$('projectFile').onchange=async()=>{
+ const request=++projectOpenSequence,f=$('projectFile').files[0];
+ if(!f)return;
+ // Opening a file replaces the selected review. Freeze the state at that explicit
+ // action, and let later local edits or a newer selected file take precedence.
+ try{
+  if(f.size>20000000)throw Error('Saved project is too large. Open a review JSON, not the application or source archive.');
+  // Commit a query already typed before opening. If the file fails, the visible
+  // controls, current results and saved state still describe that same review.
+  const pendingControls=readControls();
+  clearTimeout(queryTimer);state=pendingControls;render();persist();
+  const before=workingReview();
+  const body=await f.text();
+  if(request!==projectOpenSequence||$('projectFile').files[0]!==f)return;
+  if(workingReview()!==before){
+   say('The review changed while this project was opening. Your current decisions are preserved; select the saved project again when ready.',true);
+   return;
+  }
+  const incoming=restoreProject(JSON.parse(body),DATA);
+  clearTimeout(queryTimer);
+  state=incoming.state;notes=incoming.notes;active=incoming.active||DATA.rows[0].huc12;
+  syncControls();render();persist();
+  say('Reopened the saved settings and review decisions against their original source edition.');
+ }catch(e){
+  if(request===projectOpenSequence&&$('projectFile').files[0]===f)say('Project was not opened: '+e.message,true);
+ }finally{
+  if(request===projectOpenSequence&&$('projectFile').files[0]===f)$('projectFile').value='';
+ }
+};
 $('exportCSV').onclick=()=>{download('Upper_Savannah_Current_View.csv',csv(exportRows(DATA,state,notes)),'text/csv;charset=utf-8');say('Exported the complete current view with weights, original values, sensitivity and recorded review decisions. Import HUC12 as text to preserve its leading zero.');};
 $('exportQueue').onclick=()=>{const q={...state,scope:'all',evidence:'all',query:'',onlyQueued:true};const rs=exportRows(DATA,q,notes);if(!rs.length){say('Queue at least one watershed before exporting queued work.');return;}download('Upper_Savannah_Queued_Work.csv',csv(rs),'text/csv;charset=utf-8');say('Exported every queued watershed across all scopes. Ranks in this file compare only the queued selection.');};
 $('exportGeo').onclick=()=>{const rs=exportRows(DATA,state,notes),m=new Map(rs.map(r=>[r.huc12,r]));const features=DATA.geojson.features.filter(f=>m.has(f.properties.huc12)).map(f=>({type:'Feature',geometry:f.geometry,properties:{...f.properties,...m.get(f.properties.huc12)}}));download('Upper_Savannah_Current_View.geojson',JSON.stringify({type:'FeatureCollection',name:'Upper Savannah analyst review',source_edition:DATA.edition,coordinate_operation:DATA.geojson.coordinate_operation,features})+'\n','application/geo+json');say('Exported the current selection as full-vertex longitude/latitude GeoJSON with original source IDs and review attributes.');};
