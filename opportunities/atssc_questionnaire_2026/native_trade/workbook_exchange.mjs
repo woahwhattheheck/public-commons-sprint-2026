@@ -82,6 +82,10 @@ const wording={
 const t=value=>authoredText(value,wording[value]);
 const root = document.querySelector('#exchange');
 const pendingRequests = new Map();
+let activeAction = false;
+function actionControls() {
+  for(const control of root.querySelectorAll('button,input,select,textarea')) control.disabled=activeAction;
+}
 const model = {status:null, book:null, sheet:null, definition:null, edits:[], cells:{}, source:null};
 function node(tag, props={}, ...children) {
   const n=document.createElement(tag);
@@ -92,14 +96,25 @@ function node(tag, props={}, ...children) {
     else if(value!==null && value!==undefined) setDisplayAttribute(n,key,value);
   }
   for(const child of children.flat()) if(child!==null && child!==undefined) (child instanceof Node?n.append(child):appendDisplay(n,child));
+  if(activeAction && ['BUTTON','INPUT','SELECT','TEXTAREA'].includes(n.tagName)) n.disabled=true;
   return n;
 }
 const text=value=>node('p',{},value);
 function select(items,value) {const n=node('select');for(const [key,label] of items)n.append(node('option',{value:key},label));if(value!==undefined)n.value=value;return n;}
 const input=(value='',type='text')=>node('input',{type,value});
 const field=(label,n,hint)=>node('label',{class:'field'},node('span',{},label),n,hint?node('small',{},hint):null);
-function error(err) {document.querySelector('#notice').replaceChildren(text(err.message||JSON.stringify(err)));}
-async function guard(fn) {try {document.querySelector('#notice')?.replaceChildren();await fn();}catch(err){error(err);}}
+function error(err) {
+  let notice=document.querySelector('#notice');
+  if(!notice){notice=node('div',{id:'notice',role:'status','aria-live':'polite'});root.prepend(notice);}
+  notice.replaceChildren(text(err.message||JSON.stringify(err)));
+}
+async function guard(fn) {
+  if(activeAction)return;
+  activeAction=true;actionControls();
+  try {document.querySelector('#notice')?.replaceChildren();return await fn();}
+  catch(err){error(err);}
+  finally {activeAction=false;actionControls();}
+}
 const button=(label,fn)=>node('button',{type:'button',onclick:()=>guard(fn)},label);
 async function api(method,params={}) {
   const signature=JSON.stringify({method,params});
@@ -136,9 +151,9 @@ function stateText(cell) {
 async function refresh() {
   model.status=await api('status');
   if(!model.book && model.status.workbooks.length)model.book=model.status.workbooks[0].sha;
-  render();
+  await render();
 }
-function render() {
+async function render() {
   root.replaceChildren(node('header',{},node('div',{},node('h1',{},t('Workbook Exchange')),text(t('Original cells, questionnaire mappings and editable Excel editions.'))),node('nav',{},node('a',{href:'/operator'},t('Questionnaire workspace')),button(t('Refresh'),refresh))));
   mountLanguageControl(root.querySelector('header nav'));
   root.append(node('div',{id:'notice',role:'status','aria-live':'polite'}));
@@ -158,7 +173,9 @@ function render() {
         model.book=result.sha256;model.edits=[];await refresh();await inspect();
       })));
   root.append(source,node('section',{class:'panel',id:'source-inspector'}),node('section',{class:'panel',id:'mapping-panel'}),node('section',{class:'panel',id:'editions-panel'}));
-  guard(async()=>{if(model.book)await inspect();await mappings();});
+  actionControls();
+  if(model.book)await inspect();
+  await mappings();
 }
 async function inspect() {
   if(!model.book)return;
@@ -271,6 +288,6 @@ async function start() {
     root.replaceChildren(node('h1',{},t('Workbook Exchange')),text(t('Open the operator workspace to work with original workbooks.')),node('a',{href:'/operator'},t('Open operator session')));return;
   }
   await initializeLanguage(api,session);
-  await refresh();
+  await guard(refresh);
 }
 start().catch(err=>{root.replaceChildren(node('h1',{},t('Workbook Exchange')),node('div',{id:'notice'}));error(err);});

@@ -757,6 +757,10 @@ class WorkbookExchange:
         return file_result("Workbook_Source_Extraction.zip", package.getvalue(), manifest, "application/zip")
 
     def op_exchange_export_answers(self, p):
+        if p.get("retain", True):
+            cached = self._cached_mutation("exchange_export_answers")
+            if cached is not None:
+                return cached
         from questionnaire_workspace import is_calculated, scalar, table_rows
         from workbook_calculation import _answer_record
         definition, _ = self._exchange_definition(p)
