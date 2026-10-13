@@ -25,7 +25,7 @@ export function attachMonitoring({getState, api, endpoint, showTask, toast}) {
       try { sessionStorage.removeItem(key); } catch {}
     }
   };
-  let active = null, generation = 0, updating = false;
+  let active = null, generation = 0, updating = false, networkOpening = 0;
   const completedByWorkspace = new Map();
   function workspace() {const key = getState()?.workspace_key;if(!key)throw Error('Select an original workspace.');return key;}
   async function transport(key, action, payload={}) {
@@ -57,6 +57,26 @@ export function attachMonitoring({getState, api, endpoint, showTask, toast}) {
     storage.remove(storedKey);
     return task.result;
   }
+  async function openNetwork(selection) {
+    const key=workspace(), id=typeof selection==='string'?selection:selection?.network_id;
+    if(!/^[0-9a-f]{64}$/.test(id||''))throw Error('Choose a retained monitoring network.');
+    if(selection?.workspace_key && selection.workspace_key!==key)throw Error('Open this network in its original workspace.');
+    const ticket=++networkOpening;
+    await component();
+    const network=await transport(key,'get',{kind:'networks',record_id:id});
+    if(ticket!==networkOpening || workspace()!==key)throw Error('The workspace or network selection changed. Open the selected network again.');
+    if(network.id!==id)throw Error('The retained monitoring network identity changed.');
+    let node=nodes.get(key);
+    if(!node){node=document.createElement('eco-monitoring');node.transport=(action,payload)=>transport(key,action,payload);nodes.set(key,node);}
+    if(node.busy)throw Error('Finish the current monitoring operation before opening another network.');
+    node.network=network;node.plan=null;node.campaign=null;
+    const select=node.$('networks');
+    if(![...select.options].some(option=>option.value===id))select.add(new Option(network.title||id,id));
+    select.value=id;node.$('plans').value='';node.$('campaigns').value='';
+    node.$('frontier-results').replaceChildren();node.$('downloads').replaceChildren();
+    node.render();
+    return {network_id:id,workspace_key:key};
+  }
   async function mount(root) {
     const key=workspace(), ticket=++generation;
     await component();
@@ -65,6 +85,7 @@ export function attachMonitoring({getState, api, endpoint, showTask, toast}) {
     if(!node){node=document.createElement('eco-monitoring');node.transport=(action,payload)=>transport(key,action,payload);nodes.set(key,node);}
     if(active===node && node.parentNode===root)return;
     active=node;root.replaceChildren(node);
+    await node.ready;
   }
   async function update() {
     if (!active?.isConnected || active.busy || updating) return;
@@ -72,7 +93,7 @@ export function attachMonitoring({getState, api, endpoint, showTask, toast}) {
     const current = () => active === node && generation === version &&
       node.isConnected && workspace() === key;
     const completed = JSON.stringify((getState()?.tasks || []).filter(task =>
-      task.state === 'complete' && (task.action?.startsWith('monitoring.') || task.action?.startsWith('source.'))
+      task.state === 'complete' && (task.action?.startsWith('monitoring.') || task.action?.startsWith('source.') || task.action==='receiving.water.monitoring')
     ).map(task => task.id).sort());
     if (completed === completedByWorkspace.get(key)) return;
     updating = true;
@@ -83,6 +104,6 @@ export function attachMonitoring({getState, api, endpoint, showTask, toast}) {
       if (current()) completedByWorkspace.set(key, completed);
     } finally { updating = false; }
   }
-  function detach(){generation++;if(active)active.remove();active=null;}
-  return {mount,update,detach,render:()=>'',dispatch:()=>false};
+  function detach(){generation++;networkOpening++;if(active)active.remove();active=null;}
+  return {mount,update,detach,openNetwork,render:()=>'',dispatch:()=>false};
 }

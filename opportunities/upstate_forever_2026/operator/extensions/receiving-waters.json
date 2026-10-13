@@ -2,13 +2,14 @@
   "schema": "upstate.operator-extension/v1",
   "id": "receiving-waters",
   "title": "Receiving waters",
-  "version": "4",
+  "version": "5",
   "order": 52,
   "assets": [
     "receiving_waters.mjs",
     "receiving_waters_extension.mjs",
     "receiving_waters.css",
-    "receiving_water_spatial.mjs"
+    "receiving_water_spatial.mjs",
+    "receiving_water_monitoring.mjs"
   ],
   "backend": {
     "module": "receiving_water_actions",
@@ -23,7 +24,8 @@
       "receiving.water.catalog",
       "receiving.water.plan",
       "receiving.water.profile",
-      "receiving.water.analyze"
+      "receiving.water.analyze",
+      "receiving.water.monitoring"
     ],
     "invoke": {
       "handler": "invoke",
@@ -77,6 +79,19 @@
         ],
         "path": "/api/receiving-waters/designation-catalog",
         "operation": "designation-catalog",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "GET"
+        ],
+        "path": "/api/receiving-waters/monitoring",
+        "operation": "monitoring",
         "handler": "read",
         "args": [
           "workspace_key",
