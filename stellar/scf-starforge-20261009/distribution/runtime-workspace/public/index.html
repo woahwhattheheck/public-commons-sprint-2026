@@ -24,7 +24,7 @@
     <dl id="runtime-facts" class="facts"></dl>
     <div class="panel"><h3>Inspect and resume</h3><p class="note">Inspection uses the original profile and installer. Installation progress and npm logs are retained in the runtime directory.</p>
       <div class="checks"><label><input id="inspect-load" type="checkbox" checked>Import selected dependencies</label><label><input id="inspect-source" type="checkbox">Check complete original source</label></div>
-      <div class="actions"><button id="inspect" type="button" disabled>Inspect runtime</button><button id="install" type="button" disabled>Install / resume</button><button id="install-log" type="button" disabled>Open npm log</button></div>
+      <div class="actions"><button id="inspect" type="button" disabled>Inspect runtime</button><button id="install" type="button" disabled>Install / resume</button><button id="install-log" type="button" disabled>Read installation attempts</button></div>
       <details><summary>npm cache and native adapter options</summary><div class="checks"><label><input id="offline" type="checkbox">Use existing cache only</label></div><label>Cache directory (optional)<input id="npm-cache" placeholder="/srv/starforge/npm-cache" autocomplete="off"></label><label>Local Node headers (optional, for offline native adapters)<input id="node-headers" placeholder="/srv/starforge/node-headers" autocomplete="off"></label></details>
       <div id="inspection" class="result" hidden></div>
     </div>
@@ -58,7 +58,7 @@
     <div class="section-title"><div><p class="eyebrow">RETAINED WORK</p><h2>Installation and recovery operations</h2></div><span id="operation-count" class="count">0</span></div>
     <p class="muted">Operations run in separate local workers. Closing this browser or restarting its server preserves the original installation and its progress.</p>
     <div id="operations" class="operation-list"></div>
-    <div class="panel" id="log-panel" hidden><div class="section-title"><h3 id="log-title">Selected log</h3><button id="refresh-log" type="button">Refresh log</button></div><p id="log-detail" class="note"></p><pre id="log-text" tabindex="0"></pre></div>
+    <div class="panel" id="log-panel" hidden aria-label="Original Runtime output"></div>
   </section>
   <section data-pane="deployment" hidden>
     <div class="section-title"><div><p class="eyebrow">EXISTING DEPLOYMENT CONTROLS</p><h2>Hand off a ready runtime</h2></div></div>
