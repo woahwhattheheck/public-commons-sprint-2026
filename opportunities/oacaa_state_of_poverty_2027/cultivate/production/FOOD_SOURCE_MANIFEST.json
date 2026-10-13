@@ -1466,6 +1466,12 @@
     "measurementPeriod": "2013–2024",
     "rows": 108,
     "counties": 9,
+    "comparability": {
+      "sourceUrl": "https://embed-cuyahoga.thehcn.net/indicators/index/view?indicatorId=2108&localeId=38",
+      "locator": "Changes Over Time: Change in methodology for 2018",
+      "retrievedDate": "2026-10-13",
+      "note": "The source states that methodology changes made in 2020 mean 2018 estimates should not be compared with earlier periods. The selected 2023/2024 comparison is unaffected."
+    },
     "bytes": 29270,
     "sha256": "ddc43bc5f2c1cd0effa2d7a98448358bafc6b0fbdd3cfc8226114fb72b24f68a"
   },
