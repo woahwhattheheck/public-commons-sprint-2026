@@ -9,7 +9,7 @@ const queryURL = (path, value) => path + '?' + new URLSearchParams(value);
 export function createOperationHistoryView({ root, count, api, getState, renderCards, openLog, error }) {
   let workspaceId = null, scope = 0, sequence = 0, options = { query: '', filter: 'all', runtimeId: null, limit: 20, cursor: null };
   let trail = [], selectedId = null, detail = null, selectedVersion = null, rendered = '', pending = null;
-  let preferenceError = false, detailNotice = '', lastLogSelection = null, requestedVersion = null;
+  let preferenceError = false, detailNotice = '', lastLogSelection = null, requestedVersion = null, recordFailure = null;
   const form = make('form', undefined, 'panel'), fields = make('div', undefined, 'columns');
   const queryLabel = make('label', 'Find an operation'), search = make('input'); search.type = 'search'; search.maxLength = 500;
   search.placeholder = 'Operation, original request, runtime or application';
@@ -59,9 +59,14 @@ export function createOperationHistoryView({ root, count, api, getState, renderC
       }));
     detailPanel.replaceChildren(heading, make('p', selectedId, 'muted'), actions);
     if (note) detailPanel.append(make('p', note, 'note'));
+    if (recordFailure) {
+      const failure = make('details'), label = make('summary', 'Current original-record read error');
+      failure.open = true; failure.append(label, make('pre', JSON.stringify(recordFailure, null, 2))); detailPanel.append(failure);
+    }
     if (detail) {
       const record = make('details'), summary = make('summary', 'Complete original fields, result and observation');
-      record.open = true; record.append(summary, make('pre', JSON.stringify(detail, null, 2))); detailPanel.append(record);
+      const body = make('pre', JSON.stringify(detail, null, 2)); body.dataset.operationRecord = detail.id;
+      record.open = true; record.append(summary, body); detailPanel.append(record);
     }
   }
   function readSelected(force = false) {
@@ -78,7 +83,13 @@ export function createOperationHistoryView({ root, count, api, getState, renderC
         const value = await api(queryURL('/api/operation-status', { operationId: ownId }));
         if (!current()) return;
         if (value.id !== ownId) throw new Error('The operation read returned a different original request.');
-        detail = value; selectedVersion = version; detailNotice = ''; renderDetail();
+        selectedVersion = version;
+        if (value.observation?.status === 'UNAVAILABLE' && value.observation?.source === 'RECORD') {
+          recordFailure = value;
+          detailNotice = 'The current original record could not be read. Any previously opened complete operation remains available below.';
+          renderDetail(); return;
+        }
+        detail = value; recordFailure = null; detailNotice = ''; renderDetail();
       } catch (failure) {
         if (current()) { selectedVersion = version; detailNotice = 'The current read failed. Any previously opened complete operation remains available below.'; renderDetail(); error(failure); }
       } finally {
@@ -95,7 +106,7 @@ export function createOperationHistoryView({ root, count, api, getState, renderC
   function choose(id) {
     if (typeof id !== 'string' || !/^[a-f0-9-]{36}$/.test(id)) throw new Error('Choose an original retained operation.');
     if (selectedId !== id) {
-      sequence++; pending = null; selectedId = id; detail = null; detailNotice = ''; requestedVersion = null;
+      sequence++; pending = null; selectedId = id; detail = null; detailNotice = ''; requestedVersion = null; recordFailure = null;
       selectedVersion = null;
     }
     preferences(); render(); detailPanel.scrollIntoView({ block: 'nearest' }); return readSelected();
@@ -104,7 +115,7 @@ export function createOperationHistoryView({ root, count, api, getState, renderC
     scope++; sequence++; workspaceId = null; pending = null;
     options = { query: '', filter: 'all', runtimeId: null, limit: 20, cursor: null };
     trail = []; selectedId = null; detail = null; selectedVersion = null; rendered = ''; preferenceError = false;
-    detailNotice = ''; lastLogSelection = null; requestedVersion = null;
+    detailNotice = ''; lastLogSelection = null; requestedVersion = null; recordFailure = null;
     search.value = ''; filter.value = 'all'; runtime.replaceChildren(new Option('All runtimes', ''));
     cards.replaceChildren(); navigation.replaceChildren(); status.textContent = ''; count.textContent = '0'; renderDetail();
   }

@@ -93,8 +93,8 @@ export async function receiveOperationHistory({ page, model, outputDirectory }) 
     try {
       await row.getByRole('button', { name: 'Open complete operation', exact: true }).click();
       const detail = pane.getByRole('region', { name: 'Complete original operation', exact: true });
-      await detail.locator('pre').waitFor();
-      selected = JSON.parse(await detail.locator('pre').innerText());
+      await detail.locator('pre[data-operation-record]').waitFor();
+      selected = JSON.parse(await detail.locator('pre[data-operation-record]').innerText());
       check(selected.id === candidate.id, 'Selected original operation changed.');
       const waiting = page.waitForEvent('download');
       await detail.getByRole('button', { name: 'Download complete operation JSON', exact: true }).click();
@@ -118,7 +118,7 @@ export async function receiveOperationHistory({ page, model, outputDirectory }) 
         await delayed.fulfill({ status: 503, contentType: 'application/json',
           body: JSON.stringify({ error: 'RECEIVING_READ_UNAVAILABLE', message: 'The receiving course interrupted this read.' }) });
         await detail.getByText('The current read failed. Any previously opened complete operation remains available below.', { exact: true }).waitFor();
-        errorState = JSON.parse(await detail.locator('pre').innerText());
+        errorState = JSON.parse(await detail.locator('pre[data-operation-record]').innerText());
         check(withoutObservationTime(errorState) === withoutObservationTime(selected) ||
           originalReads.some(item => withoutObservationTime(item) === withoutObservationTime(errorState)),
           'Failed refresh displaced the last complete operation.');
@@ -133,15 +133,15 @@ export async function receiveOperationHistory({ page, model, outputDirectory }) 
       const receivedRefresh = await (await refreshed).json();
       await page.waitForFunction(value => {
         const panel = document.querySelector('#operations section[aria-label="Complete original operation"]');
-        if (!panel?.querySelector('pre')) return false;
-        let original; try { original = JSON.parse(panel.querySelector('pre').textContent); } catch { return false; }
+        if (!panel?.querySelector('pre[data-operation-record]')) return false;
+        let original; try { original = JSON.parse(panel.querySelector('pre[data-operation-record]').textContent); } catch { return false; }
         return original.id === value.id && (original.observation?.checkedAt ?? '') >= (value.observation?.checkedAt ?? '') &&
           !panel.textContent.includes('Refreshing the same original operation.') &&
           !panel.textContent.includes('The current read failed.');
       }, receivedRefresh);
       await page.reload();
-      await pane.getByRole('region', { name: 'Complete original operation', exact: true }).locator('pre').waitFor();
-      const reopened = JSON.parse(await pane.getByRole('region', { name: 'Complete original operation', exact: true }).locator('pre').innerText());
+      await pane.getByRole('region', { name: 'Complete original operation', exact: true }).locator('pre[data-operation-record]').waitFor();
+      const reopened = JSON.parse(await pane.getByRole('region', { name: 'Complete original operation', exact: true }).locator('pre[data-operation-record]').innerText());
       check(reopened.id === candidate.id, 'Reopening lost the selected original operation.');
       await page.setViewportSize({ width: 390, height: 844 });
       await screen('phone-original-operation');
