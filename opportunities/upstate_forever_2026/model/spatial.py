@@ -524,7 +524,11 @@ class SpatialReview:
     def _source_categories(self, record):
         """Read class descriptions from retained tables in this source edition."""
         public = record["public"]
-        if not public.get("categorical") or public.get("role") == "reporting_mask":
+        role = str(public.get("role") or "").strip().lower()
+        # A binary contribution mask can carry the same run/profile identity as
+        # land cover. Biophysical class names belong only to land-cover roles.
+        if (not public.get("categorical")
+                or role not in {"nlcd", "landcover", "lulc", "scenario_lulc"}):
             return {"labels": {}, "sources": [], "conflicts": []}
         ws = self.workspace
         collection_id = public.get("source_collection_id")
