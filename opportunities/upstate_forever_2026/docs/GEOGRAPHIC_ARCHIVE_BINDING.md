@@ -128,3 +128,14 @@ Pass this rule to child/delegated workers and persist it in owner-controlled pro
 Canonical local policy: `C:/Users/lucys/.commons/rendered-product-inspection-policy.md` and `.json`. Portable repository copy: `docs/policies/rendered-product-inspection-policy.md` and `.json` when present. Only Bryce can change this standing rule.
 <!-- bryce-rendered-product-inspection:end -->
 
+
+
+## Completed report-phase receiving
+
+The geographic caller reopens the maintained scientific producer's current complete edition with `latest(..., verify=True)` before considering `prepare`. A complete current edition returns its original operation and verifies all recorded source/report members. This prevents a report-only retry from changing the original operation's `updated_at` after an immutable archive binding has already captured that file. Changed source helpers or native report signatures still go through the original producer and create their own source edition.
+
+Each prior and selected scientific snapshot is retained under `scientific-editions/<source-operation-id>/<snapshot-digest>.json` before `scientific-source.json` advances. The receiving record names that exact generation. Original archive bindings and all already-published archive bytes remain authoritative; a source verification error is returned against the original attempt rather than silently replacing it.
+
+Use the maintained completed parameter-course source (original reviewed blob `72ddf5f72531f31a0887d288726ebbce7b749174` or its compatible successor). Its `_retained_complete` already checks the saved project/ensemble/selection, completed member and comparison identities, original raster products and report files, then returns the original result before timestamp writes. There is no new native solve or second parameter-course implementation in this caller change.
+
+The actual equipped course remains the same receiving operation. At a saved boundary, adopt the cumulative source and continue its original command (or the existing explicit `--report-only --adopt-handover` source-adoption route). Reopen an interrupted archive stage using the original completed sources, and retain the final immutable archive, independent archived-application result and original outgoing-file inspection.
