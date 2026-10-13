@@ -20,8 +20,10 @@ import tempfile
 
 FILES = ("model/calibration.py", "model/CALIBRATION.md",
          "model/calibration_uncertainty.py", "model/CALIBRATION_UNCERTAINTY.md",
-         "model/calibration_maps.py", "model/CALIBRATION_MAPS.md", "operator/calibration.py",
-         "operator/web/calibration.mjs", "operator/web/calibration_maps.mjs", "operator/web/calibration.css",
+         "model/calibration_maps.py", "model/CALIBRATION_MAPS.md",
+         "model/calibration_review.py", "model/CALIBRATION_REVIEW.md", "operator/calibration.py",
+         "operator/web/calibration.mjs", "operator/web/calibration_maps.mjs",
+         "operator/web/calibration_review.mjs", "operator/web/calibration.css",
          "operator/extensions/calibration.json", "operator/CALIBRATION.md",
          "operator/install_calibration.py", "source_tools/calibration_assembly.py")
 SHARED = ("operator/server.py", "operator/web/app.mjs", "operator/web/index.html")
@@ -48,6 +50,7 @@ PREDECESSORS = {
         "c93bc426673d7489ce14b11921c2093e867aa09b4aaa73f33aff322c7d88e776",
     },
     "operator/web/calibration.mjs": {
+        "b8e08775f1aec0b16c701857363bdfdc6a31c460f5cec39f9bf8c028750307e1",
         "d62b47ff8248083c231e61d2aaddc609ff7a66b2b8e9f02c5c3100a47503f5c7",
         "b70e352a1d601bab075fa1f6e97f5bd3b0f093ff3e09cb91ca1f5caff7ec98a2",
         "8dbb74a4ab4ebc26de2fc2391be9175ca84aa8ef5d3e5cebe09dec2760ed0e71",
@@ -67,6 +70,7 @@ PREDECESSORS = {
         "a2865a0fd8429f5e684e5111e61e5edac7be4dbd8a03956654cba79595e6b8b9",
     },
     "operator/CALIBRATION.md": {
+        "e9a139100b382867c5afdfccf3a5691318cc34886f40227a508f6bba9403eaca",
         "a531f22fa04bf1c2ea6476866246b1d09751f9f393846280ec1c5d923a7dcb64",
         "6b9eff4d235c967ba1e7329c426d9c66599858e350fa341decffdd7c0945a3a3",
         "db602932eca8dfcb5b2feb008246a388a236657339baa70fb522a82520d533cd",
@@ -75,6 +79,7 @@ PREDECESSORS = {
         "4b475c00a806812548da18d54fe3885e7e73a01daaad49e5709212718b9624ad",
     },
     "operator/install_calibration.py": {
+        "88e464da584ec4f34c9f71d0a0211ebfa25e90ab3e10f021613a73157ca4764d",
         "7aef9208344921e01033c548a9420b60eeccf596c104dc8f6486c0837de6b35c",
         "4a3a1b816c20d75f034b82bacbda5388c784e4b2cf12852e222260707015acea",
         "3092eef2818fea214527923f040ef035e9bd4c7c5a323876d6fe665eb72cf748",
