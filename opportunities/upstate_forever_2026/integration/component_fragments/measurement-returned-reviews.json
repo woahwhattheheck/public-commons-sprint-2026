@@ -1,7 +1,7 @@
 {
   "schema": "upstate.application-component-fragment/v1",
   "id": "measurement-returned-reviews",
-  "source_reference": "ASTRA-MEASURE-RECOVERY13 complete three-way native review receiving 1.0.2",
+  "source_reference": "ASTRA-MEASURE-RECOVERY13 complete three-way native review receiving 1.0.3",
   "components": {
     "measurement-returned-reviews": {
       "title": "Returned measurement review comparison and independently editable incorporation",

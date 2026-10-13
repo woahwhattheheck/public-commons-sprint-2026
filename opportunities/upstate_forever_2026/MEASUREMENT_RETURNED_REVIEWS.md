@@ -1,6 +1,6 @@
 # Measurements: incorporate returned review work
 
-Version 1.0.2. This extends the existing Measurements 1.2 large-file and original
+Version 1.0.3. This extends the existing Measurements 1.2 large-file and original
 MeasurementWorkspace workflows. It does not introduce another measurement store,
 model scheduler, scientific calculator or HTTP controller.
 
