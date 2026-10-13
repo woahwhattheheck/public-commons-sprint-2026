@@ -2,10 +2,10 @@
 from __future__ import annotations
 
 from model.common import identifier
-from model import scenario_decisions
+from model import scenario_decisions, report_release
 
 ACTIONS = frozenset({"scenario.decision.build"})
-READS = frozenset({"catalog", "selection", "report"})
+READS = frozenset({"catalog", "selection", "report", "release"})
 PREVIEW_POLICY = ("default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; "
                   "img-src data:; connect-src 'none'; object-src 'none'; base-uri 'none'; "
                   "form-action 'none'; sandbox allow-scripts allow-downloads allow-modals")
@@ -46,6 +46,11 @@ class ScenarioDecisionReports:
             return scenario_decisions.select_cohort(
                 ws, baseline, alternative_run_ids=alternatives, pollutants=pollutants,
                 title=value.get("title"), zones=value.get("zones"))
+        if operation == "release":
+            report_id = self._id(value, "report_id")
+            result = report_release.describe(ws, report_id)
+            result["workspace_key"] = workspace
+            return result
         if operation == "report":
             report_id = self._id(value, "report_id")
             packet = scenario_decisions.inspect(ws, report_id)
@@ -53,6 +58,11 @@ class ScenarioDecisionReports:
             packet["preview_url"] = self.preview_url(workspace, report_id)
             packet["_downloads"] = self.operator._files(
                 workspace, packet["summary"], ws.root / "scenario-decisions" / report_id)
+            try:
+                packet["release"] = report_release.describe(ws, report_id, packet=packet)
+            except (ValueError, OSError, KeyError, TypeError) as error:
+                packet["release"] = {"ready": False, "selection": None, "releases": [],
+                    "issues": [{"code": "release_selection", "message": str(error)}]}
             return packet
         raise self.Fault("DECISION_READ", "Choose a supported watershed report view.", 404)
 

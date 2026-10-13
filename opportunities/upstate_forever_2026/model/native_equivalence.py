@@ -10,6 +10,7 @@ from .common import (INVEST_SOURCE, INVEST_VERSION, describe_file, file_digest, 
                      output_models, required_roles, selected_models, verify_file)
 from .profiles import inspect_table
 from . import rasters
+from .reuse import dataset_companions
 
 _COLUMNS = {
     "ndr": ("lucode", "load_n", "load_p", "load_type_n", "load_type_p",
@@ -107,21 +108,20 @@ class NativeInputMatcher:
             self._tables[key] = tuple(sorted(rows))
         return self._tables[key]
 
-    def _raster_identity(self, path, item):
-        """Account for GDAL masks and PAM metadata outside the main TIFF."""
+    def _dataset_identity(self, path, item):
+        """Use the cache's actual external masks, georeferencing and journals."""
         companions = []
-        for suffix in (".aux.xml", ".msk", ".ovr"):
-            candidate = Path(str(path) + suffix)
-            if candidate.is_file():
-                descriptor = describe_file(self.workspace.root, candidate)
-                companions.append((suffix, descriptor["bytes"], descriptor["sha256"]))
+        for candidate in dataset_companions(path):
+            descriptor = describe_file(self.workspace.root, candidate)
+            suffix = candidate.name[len(path.stem):]
+            companions.append((suffix, descriptor["bytes"], descriptor["sha256"]))
         return item["sha256"], tuple(companions)
 
     def _same_raster(self, left, right):
         a_path, a_item = left
         b_path, b_item = right
-        a_identity = self._raster_identity(a_path, a_item)
-        b_identity = self._raster_identity(b_path, b_item)
+        a_identity = self._dataset_identity(a_path, a_item)
+        b_identity = self._dataset_identity(b_path, b_item)
         if a_identity == b_identity:
             return True
         key = tuple(sorted((a_identity, b_identity)))
@@ -158,9 +158,11 @@ class NativeInputMatcher:
     def _same_domain(self, left, right):
         a_path, a_item = self._grid_file(left, "model_domain")
         b_path, b_item = self._grid_file(right, "model_domain")
-        if a_item["sha256"] == b_item["sha256"]:
+        a_identity = self._dataset_identity(a_path, a_item)
+        b_identity = self._dataset_identity(b_path, b_item)
+        if a_identity == b_identity:
             return True
-        key = tuple(sorted((a_item["sha256"], b_item["sha256"])))
+        key = tuple(sorted((a_identity, b_identity)))
         if key not in self._vector_pairs:
             from pyproj import CRS
             crs = CRS.from_user_input(left["grid"]["grid"]["crs"])

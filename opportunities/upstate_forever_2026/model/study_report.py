@@ -288,39 +288,58 @@ render();
 
 
 def build(workspace, experiment_id, *, profiles=None):
-    """Render only values supplied by the retained experiment engine."""
+    """Render values from one locked summary and register the retained outputs."""
     from model import experiments
     from model.common import atomic_bytes, atomic_json, describe_file, held, identifier
     experiment_id = identifier(experiment_id)
-    summary = experiments.read_summary(workspace, experiment_id)
-    if summary is None:
-        raise ValueError("Execute at least one case in the selected experiment before building its report")
-    if summary["id"] != experiment_id or summary["workspace_id"] != workspace.project["id"]:
-        raise ValueError("Select the current workspace's original experiment")
-    rows = _source_rows(summary, profiles)
-    directory = workspace.root / "experiments" / experiment_id / "study-report"
-    directory.mkdir(parents=True, exist_ok=True)
-    with held(directory / ".report.lock", blocking=False):
-        data = {
-            "schema": "upstate.published-study-report/v1",
-            "experiment_id": experiment_id, "workspace_id": workspace.project["id"],
-            "grid_id": summary["grid_id"], "state": summary["state"],
-            "generated_at": summary["generated_at"], "comparisons": rows,
-            "counts": summary["counts"], "progress": summary["progress"],
-            "materialized_case_states": dict(Counter(row["state"] for row in summary["rows"])),
-            "sensitivity": summary.get("sensitivity", []),
-            "source_profiles": profiles or {},
-        }
-        atomic_json(directory / "study-summary.json", data)
-        atomic_bytes(directory / "study-comparisons.csv", _csv(rows))
-        atomic_bytes(directory / "index.html", _render(summary, rows, profiles).encode("utf-8"))
-        return {
-            "experiment_id": experiment_id, "state": summary["state"],
-            "files": {
-                name: describe_file(workspace.root, directory / name)
-                for name in ("index.html", "study-summary.json", "study-comparisons.csv")},
-        }
-
+    scope = workspace.root / "experiments" / experiment_id
+    # The same lock guards summary publication in the experiment engine and
+    # generic operator report. A marker therefore names one complete snapshot.
+    with held(scope / ".experiment.lock", blocking=False):
+        summary = experiments.read_summary(workspace, experiment_id)
+        if summary is None:
+            raise ValueError("Execute at least one case in the selected experiment before building its report")
+        if summary["id"] != experiment_id or summary["workspace_id"] != workspace.project["id"]:
+            raise ValueError("Select the current workspace's original experiment")
+        summary_source = describe_file(scope, scope / "summary.json")
+        rows = _source_rows(summary, profiles)
+        directory = scope / "study-report"
+        directory.mkdir(parents=True, exist_ok=True)
+        with held(directory / ".report.lock", blocking=False):
+            data = {
+                "schema": "upstate.published-study-report/v1",
+                "experiment_id": experiment_id, "workspace_id": workspace.project["id"],
+                "grid_id": summary["grid_id"], "state": summary["state"],
+                "generated_at": summary["generated_at"], "comparisons": rows,
+                "counts": summary["counts"], "progress": summary["progress"],
+                "materialized_case_states": dict(Counter(row["state"] for row in summary["rows"])),
+                "sensitivity": summary.get("sensitivity", []),
+                "source_profiles": profiles or {},
+                "experiment_summary": summary_source,
+            }
+            atomic_json(directory / "study-summary.json", data)
+            atomic_bytes(directory / "study-comparisons.csv", _csv(rows))
+            atomic_bytes(directory / "index.html", _render(summary, rows, profiles).encode("utf-8"))
+            names = ("index.html", "study-summary.json", "study-comparisons.csv")
+            files = {name: describe_file(workspace.root, directory / name) for name in names}
+            marker = {
+                "schema": "upstate.study-report-downloads/v1",
+                "experiment_id": experiment_id, "workspace_id": workspace.project["id"],
+                "summary_sha256": summary_source["sha256"],
+                "summary": summary_source, "generated_at": summary["generated_at"],
+                "files": {
+                    label: {**files[name], "path": "study-report/" + name}
+                    for label, name in (("Study report", "index.html"),
+                                        ("Study summary", "study-summary.json"),
+                                        ("Study comparison CSV", "study-comparisons.csv"))},
+            }
+            # Publish the marker after all three complete files. The operator's
+            # existing download tickets verify their exact lengths and hashes.
+            atomic_json(scope / "study-report.json", marker)
+            return {
+                "experiment_id": experiment_id, "state": summary["state"],
+                "summary_sha256": summary_source["sha256"], "files": files,
+            }
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)

@@ -63,7 +63,9 @@ def inspect_archive(path, *, expected_package_sha256=None, verify=True):
 def package_archive(directory, package_root, package):
     """Wrap the existing exact package, streaming original files without re-encoding."""
     directory, package_root = Path(directory).resolve(), Path(package_root).resolve()
-    destination = directory / "delivery-package.zip"
+    destination = directory / (
+        "delivery-package.zip" if package_root == directory / "package"
+        else "delivery-package-" + package["packageSha256"] + ".zip")
     if destination.exists():
         manifest = inspect_archive(destination, expected_package_sha256=package["packageSha256"])
         return describe_file(directory, destination, package_sha256=package["packageSha256"],

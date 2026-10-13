@@ -51,6 +51,9 @@ def _name(value, label):
 
 
 def _error(exc):
+    failure = getattr(exc, "native_failure", None)
+    if isinstance(failure, dict):
+        return _copy(failure)
     return {"type": type(exc).__name__, "message": str(exc)}
 
 
@@ -58,7 +61,8 @@ def _engine_sources():
     root = Path(__file__).resolve().parent
     names = list(ENGINE_FILES)
     # These selected-model and reuse helpers participate in native execution.
-    names.extend(name for name in ("model_selection.py", "reuse.py", "grid_reuse.py", "stage_cache.py")
+    names.extend(name for name in ("model_selection.py", "reuse.py", "grid_reuse.py",
+                                  "stage_cache.py", "native_execution.py")
                  if (root / name).is_file())
     return [describe_file(root, root / name) for name in names]
 
@@ -129,6 +133,8 @@ def _run_snapshot(run):
                    if key in value} for name, value in run.get("stages", {}).items()},
         "artifacts": run.get("artifacts", {}),
         "reuse_observations": run.get("reuse_observations", {}),
+        "execution": run.get("execution"),
+        "execution_history": run.get("execution_history", []),
     }
     # The original runner retains historical validation details after recovery.
     # Display them as current failure details only while the run is failed.
@@ -351,6 +357,8 @@ class ComputeProgrammes:
         return self.status(key)
 
     def status(self, key):
+        from .native_execution import inspect_execution
+
         record = self._load(key)
         state = self._state(key)
         active = self._active(key)
@@ -363,13 +371,25 @@ class ComputeProgrammes:
                 if native["selection"] != binding["native_selection"]:
                     raise ValueError("Native run differs from the saved programme binding")
                 row = {**binding, **_run_snapshot(native)}
+                observed = inspect_execution(self.workspace, binding["run_id"], log_bytes=0)
+                row.update({name: observed[name] for name in
+                            ("state", "recorded_state", "active", "execution",
+                             "execution_history", "storage")})
+                if observed["state"] == "failed":
+                    row["error"] = observed["error"]
+                else:
+                    row.pop("error", None)
             except (ValueError, OSError, KeyError) as exc:
                 row = {**binding, "state": "missing", "stages": {}, "artifacts": {}, "error": _error(exc)}
             row["native_state"] = row["state"]
             row["attempts"] = state["attempts"].get(binding["key"], [])
-            if row["attempts"] and row["attempts"][-1]["state"] == "failed":
-                row.update(state="failed", error=row["attempts"][-1].get("error"),
+            if (row["attempts"] and row["attempts"][-1]["state"] == "failed"
+                    and not row.get("active")):
+                programme_error = row["attempts"][-1].get("error")
+                row.update(state="failed", programme_error=programme_error,
                            failure_stage="programme execution or output verification")
+                if not row.get("error"):
+                    row["error"] = programme_error
             count_key = row["state"] if row["state"] in ("complete", "failed", "running") else "pending"
             counts[count_key] += 1
             rows.append(row)

@@ -133,24 +133,38 @@ export function attachProgrammes(context) {
   function executionHTML(row) {
     const execution = row.execution, summary = executionSummary(execution);
     const storage = storageText(execution?.storage);
-    const checkpoint = execution?.phase_started_at || execution?.started_at || execution?.updated_at;
+    const checkpoint = execution?.storage_recorded_at || execution?.phase_started_at || execution?.started_at || execution?.updated_at;
     let html = summary ? '<small>' + escapeHTML(summary) + '</small>' : '';
     if (storage) {
-      html += '<small>Storage at phase checkpoint' +
+      html += '<small>Storage recorded' +
         (checkpoint ? ' · ' + escapeHTML(new Date(checkpoint).toLocaleString()) : '') +
         ': ' + escapeHTML(storage) + '</small>';
     }
-    const failureStorage = storageText(row.error?.storage_at_failure);
-    if (failureStorage) html += '<small>Storage at failure: ' + escapeHTML(failureStorage) + '</small>';
-    if (typeof row.error?.recovery === 'string' && row.error.recovery) {
-      html += '<p class="programme-run-error">' + escapeHTML(row.error.recovery) + '</p>';
-    }
+    html += failureRecoveryHTML(row.error);
     const history = asArray(row.execution_history);
     if (history.length) {
-      html += '<details><summary>Previous execution attempts</summary><ul>' + history.map(item =>
-        '<li>' + escapeHTML(executionSummary(item)) +
-        (item.updated_at ? ' · ' + escapeHTML(new Date(item.updated_at).toLocaleString()) : '') + '</li>'
-      ).join('') + '</ul></details>';
+      html += '<details data-programme-details="' + escapeHTML('execution:' + record.id + ':' + row.key) +
+        '"><summary>Previous execution attempts</summary><ul>' + history.map(item => {
+          const message = item?.error?.message || (typeof item?.error === 'string' ? item.error : '');
+          return '<li>' + escapeHTML(executionSummary(item)) +
+            (item?.updated_at ? ' · ' + escapeHTML(new Date(item.updated_at).toLocaleString()) : '') +
+            (message ? '<p class="programme-run-error">' + escapeHTML(message) + '</p>' : '') +
+            failureRecoveryHTML(item?.error) + '</li>';
+        }).join('') + '</ul></details>';
+    }
+    return html;
+  }
+  function failureRecoveryHTML(error) {
+    let html = '';
+    const storage = storageText(error?.storage_at_failure);
+    if (storage) {
+      const recorded = error?.storage_recorded_at;
+      html += '<small>Storage at failure' +
+        (recorded ? ' · ' + escapeHTML(new Date(recorded).toLocaleString()) : '') +
+        ': ' + escapeHTML(storage) + '</small>';
+    }
+    if (typeof error?.recovery === 'string' && error.recovery) {
+      html += '<p class="programme-run-error">' + escapeHTML(error.recovery) + '</p>';
     }
     return html;
   }
@@ -197,18 +211,23 @@ export function attachProgrammes(context) {
       '<section class="programme-output"><header class="section-header"><div><h3>Result catalogue</h3><p>Open the original quantities, units, geographic coverage and result files retained for these runs.</p></div>' +
       actionButton('open-report', 'Open saved catalogue', record.id, report || files.length ? '' : 'disabled') + '</header>' +
       (files.length ? fileList(files) : '<p class="note">Build the catalogue after a run finishes. Completed cases can be reported while other cases remain in the programme.</p>') + '</section>' +
-      '<details class="technical"><summary>Complete saved selections and provenance</summary><pre class="json-view">' +
+      '<details class="technical" data-programme-details="' + escapeHTML('selection:' + record.id) + '"><summary>Complete saved selections and provenance</summary><pre class="json-view">' +
       escapeHTML(JSON.stringify(record.selection, null, 2)) + '</pre></details></section>';
   }
   function draw() {
     if (!host) return;
     const preserveScroll = host.scrollTop;
+    const expanded = new Set(Array.from(host.querySelectorAll('details[data-programme-details][open]'),
+      node => node.dataset.programmeDetails));
     host.innerHTML = '<div class="programme-workbench"><header class="page-header"><div><p class="eyebrow">UPPER SAVANNAH SCIENTIFIC WORKBENCH</p><h1>Run programmes</h1><p>Run saved native cases, inspect progress, pause between calculations and continue the same work after reopening.</p></div>' +
       '<div class="page-actions">' + actionButton('create', 'Create programme') + actionButton('import', 'Import selections') +
       (catalogue?.experiments_available ? actionButton('experiment', 'Use saved experiment') : '') +
       '<button type="button" data-view="runs">Native model runs</button></div></header><div class="notice error" data-programme-error role="alert"' +
       (latestError ? '' : ' hidden') + '>' + escapeHTML(latestError) + '</div>' + catalogueHTML() + programmeHTML() +
       '<p class="programme-method">Parameter designs and interpretation use the selected experiment and scientific profile. ' + methodLink + '.</p></div>';
+    for (const node of host.querySelectorAll('details[data-programme-details]')) {
+      node.open = expanded.has(node.dataset.programmeDetails);
+    }
     host.scrollTop = preserveScroll;
   }
   async function refreshRecord() {
@@ -459,29 +478,47 @@ export function attachProgrammes(context) {
   }
 
   function importForm() {
-    let form, selection = null;
+    const requestedWorkspace = workspaceKey();
+    let form, input, selection = null, requestGeneration = 0, pending = false;
+    const isCurrent = (request, file) => request === requestGeneration &&
+      workspaceKey() === requestedWorkspace && input?.isConnected && input.files[0] === file;
     openForm('Import expanded programme selections',
       'Use a saved programme JSON or the expanded case list from the experiment planner. The programme refers to inputs already retained in this workspace.',
       '<div class="programme-form"><label>Programme JSON file<input type="file" name="programme_file" accept=".json,application/json" required></label>' +
       '<div data-programme-import-summary role="status">Choose the complete selection file.</div></div>',
       'Validate and save programme', async () => {
-        if (!selection) throw new Error('Choose a readable programme JSON file.');
-        const preview = await api('/api/programmes/preview', {method: 'POST', body: {workspace: workspaceKey(), selection}});
+        if (!selection) throw new Error(pending ? 'Wait for the selected programme file to finish validation.' : 'Choose a readable programme JSON file.');
+        const request = requestGeneration, file = input.files[0], selected = selection;
+        if (!isCurrent(request, file)) throw new Error('Reopen the programme import in the intended workspace.');
+        const preview = await api('/api/programmes/preview', {method: 'POST', body: {workspace: requestedWorkspace, selection: selected}});
+        if (!isCurrent(request, file)) throw new Error('The selected programme file changed. Review its current preview and save again.');
         return submitAction('compute.programme.save', {selection: preview.selection});
       }, () => {
         form = document.querySelector('#operation-form');
-        form.elements.namedItem('programme_file').addEventListener('change', async event => {
-          selection = null; const summary = form.querySelector('[data-programme-import-summary]');
+        input = form.elements.namedItem('programme_file');
+        input.addEventListener('change', async event => {
+          const request = ++requestGeneration, file = event.target.files[0];
+          const summary = form.querySelector('[data-programme-import-summary]');
+          selection = null; pending = Boolean(file);
+          summary.textContent = file ? 'Reading and checking ' + file.name + '…' : 'Choose the complete selection file.';
+          if (!file) return;
           try {
-            const file = event.target.files[0]; if (!file) return;
             if (file.size > 3 * 1024 * 1024) throw new Error('This JSON exceeds the operator request size. Import its selections in the native CLI.');
-            const value = JSON.parse(await file.text()); selection = value.selection || value;
-            if (!selection || typeof selection !== 'object' || Array.isArray(selection)) throw new Error('The selected file must contain a programme selection object.');
-            const preview = await api('/api/programmes/preview', {method: 'POST', body: {workspace: workspaceKey(), selection}});
+            const value = JSON.parse(await file.text());
+            if (!isCurrent(request, file)) return;
+            const candidate = value.selection || value;
+            if (!candidate || typeof candidate !== 'object' || Array.isArray(candidate)) throw new Error('The selected file must contain a programme selection object.');
+            const preview = await api('/api/programmes/preview', {method: 'POST', body: {workspace: requestedWorkspace, selection: candidate}});
+            if (!isCurrent(request, file)) return;
             selection = preview.selection;
             summary.textContent = (selection.title || 'Programme') + ': ' + (preview.run_count ?? preview.runs?.length ?? 0) +
               ' named cases on the retained model grid. ' + (preview.unique_run_count ?? preview.run_count ?? preview.runs?.length ?? 0) + ' distinct native selections.';
-          } catch (error) { selection = null; summary.textContent = error.message || String(error); }
+          } catch (error) {
+            if (!isCurrent(request, file)) return;
+            selection = null; summary.textContent = error.message || String(error);
+          } finally {
+            if (isCurrent(request, file)) pending = false;
+          }
         });
       });
   }

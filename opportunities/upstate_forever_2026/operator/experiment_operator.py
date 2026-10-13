@@ -278,6 +278,22 @@ class ExperimentOperator:
                 extra = self.app._files(workspace, {"files": {"report": retained["report"]}}, scope)
                 seen = {row["id"] for row in result["_downloads"]}
                 result["_downloads"].extend(row for row in extra if row["id"] not in seen)
+        study_marker = scope / "study-report.json"
+        if study_marker.is_file() and summary_path.is_file():
+            retained = read_json(study_marker)
+            if (retained.get("schema") == "upstate.study-report-downloads/v1"
+                    and retained.get("experiment_id") == key
+                    and retained.get("workspace_id") == ws.project["id"]):
+                current = retained.get("summary_sha256") == file_digest(summary_path)
+                result["study_report"] = {
+                    "state": "current" if current else "stale",
+                    "generated_at": retained.get("generated_at"),
+                    "summary_sha256": retained.get("summary_sha256"),
+                }
+                if current:
+                    extra = self.app._files(workspace, retained, scope)
+                    seen = {row["id"] for row in result["_downloads"]}
+                    result["_downloads"].extend(row for row in extra if row["id"] not in seen)
         return result
 
     def read(self, workspace, operation, value):
