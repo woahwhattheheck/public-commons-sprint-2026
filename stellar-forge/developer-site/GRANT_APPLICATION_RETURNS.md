@@ -103,6 +103,8 @@ Before the first **Save as separate draft**, the helper saves a unique internal 
 
 An unchanged preceding record permits its original UI action. An already-saved exact successor resumes from that result. A different saved successor preserves the current work and reports the exact mismatched stage instead of overwriting it. Complete working checkpoints reopen through the existing working-copy importer with their original native expected revision; ordinary portable colleague files continue to clear writer references through the maintained editor.
 
+Each cold branch import waits for the original editor to install a new working identity and finish its file operation. The helper then downloads that complete reopened draft and compares every native field with the selected original branch before recording its screen.
+
 The final `application-return-result.json` binds all stage files, full downloads and actual screenshots. Reopening a completed result verifies those complete files before returning it. Keep the entire directory with the browser profile and application source. Do not copy only the final result or remove an earlier attempt. The previous unjournaled helper's output is historical source: this successor will not interpret an unrelated or differently bound result as one of its completed stages.
 
 An operated result retains `OPERATED_AWAITING_PIXEL_INSPECTION` until the producing peer actually views the desktop/narrow images and opens every complete attachment in its normal receiving application. Continue the existing original receiving and durable saved-case operation with that actual observation.

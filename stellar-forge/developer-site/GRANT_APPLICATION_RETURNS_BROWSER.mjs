@@ -262,7 +262,16 @@ export async function receiveApplicationReturns({page,baseUrl,draftId,directory}
    for(const [branch,label]of [['baseline','issued baseline'],['current','author before acceptance'],['returned','returned application'],['result','accepted result']]){
     const file=await download(page,card.getByRole('button',{name:'Download '+label,exact:true}),branch+'-application.json'),packet=JSON.parse((await verified(file)).toString('utf8'));
     exports[branch]=packet.draft;files.push(file);
-    await colleague.locator('#file-input').setInputFiles(path.join(directory,file.name));await ready(colleague);
+    const precedingWorkingId=await colleague.locator('#workspace-root').getAttribute('data-working-id');
+    await colleague.locator('#file-input').setInputFiles(path.join(directory,file.name));
+    await colleague.waitForFunction(({previous,id})=>{
+     const root=document.getElementById('workspace-root');
+     return root?.dataset.draftId===id&&root.dataset.workingId&&root.dataset.workingId!==previous&&!root.inert&&
+      document.getElementById('status')?.textContent.startsWith('Opened the complete draft, including ');
+    },{previous:precedingWorkingId,id:packet.draft.id});
+    const reopened=await download(colleague,colleague.getByRole('button',{name:'Download full draft',exact:true}),branch+'-reopened-application.json');
+    const reopenedDraft=JSON.parse((await verified(reopened)).toString('utf8')).draft;
+    need(same(reopenedDraft,packet.draft),'The complete '+branch+' received application differs from its original export.');files.push(reopened);
     await colleague.locator('#view').selectOption('answers');await colleague.locator('[data-grant-answer-id="project"]').click();
     need(await colleague.getByLabel('Draft answer',{exact:true}).inputValue()===packet.draft.answers.find(x=>x.id==='project').text,'The complete '+branch+' application did not reopen.');
     const image=await screen(colleague,branch+'-reopened.png',branch==='returned'?390:1360);files.push(image);screenshots.push(image);
