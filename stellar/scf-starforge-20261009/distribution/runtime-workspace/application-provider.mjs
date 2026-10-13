@@ -121,6 +121,14 @@ export function observeApplicationStartup(request, directory, readLine, { lineLi
       }).catch(error => { if (error.code !== 'EEXIST') saveError = error; });
     }
   }
+  // Closure and persistence have distinct outcomes. Both public closing methods
+  // drain this same original decoder/save chain; close retains its throwing ABI.
+  async function closeResult() {
+    if (!closed) { closed = true; buffer += decoder.end(); if (buffer) line(buffer); }
+    await saving;
+    return { schema: 'stellar-forge.application-output-closure.v1',
+      closed: true, settled: true, error: saveError };
+  }
   return {
     write(bytes) {
       if (!request.applicationId || seen || closed) return;
@@ -130,8 +138,9 @@ export function observeApplicationStartup(request, directory, readLine, { lineLi
       if (buffer.length > lineLimit) buffer = buffer.slice(-lineLimit);
     },
     async close() {
-      if (!closed) { closed = true; buffer += decoder.end(); if (buffer) line(buffer); }
-      await saving; if (saveError) throw saveError;
+      const result = await closeResult();
+      if (result.error) throw result.error;
     },
+    closeResult,
   };
 }
