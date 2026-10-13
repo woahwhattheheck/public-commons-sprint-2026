@@ -1,0 +1,369 @@
+{
+  "schema": "stellar-forge.public-product-source.v1",
+  "product": "catalogue-delivery-workbench",
+  "publication": {
+    "repository": "woahwhattheheck/public-commons-sprint-2026",
+    "scope": "Public generic integration and package source only; no private application, authority, customer/native records or credentials."
+  },
+  "origin": {
+    "repository": "woahwhattheheck/tjlabs-stellar-merchant-workspace",
+    "mergeCommit": "e5411594e51029256cfeffcc56f5c04c61ff37f2",
+    "sourceCommit": "6434828d9b1c5be3114a7af033ebe81a52e1bf7c",
+    "fileCount": 27,
+    "bytes": 446311,
+    "files": [
+      {
+        "path": "products/catalogue-delivery-workbench/OPERATING.md",
+        "bytes": 33790,
+        "sha256": "b609d434185bd8247ac5bf551c82ee3504cab8670cebe73d94764296f4b8dcb4"
+      },
+      {
+        "path": "products/catalogue-delivery-workbench/PREPARING.md",
+        "bytes": 22225,
+        "sha256": "06dec4d45f8e431215dfc4a59f0a81adb3c6432dae185ac79665773630993f45"
+      },
+      {
+        "path": "products/catalogue-delivery-workbench/RECEIVING.md",
+        "bytes": 24504,
+        "sha256": "38d572a2f9112461fea358302aeddf1d724fee7c61cda029b4c110278d1885a7"
+      },
+      {
+        "path": "products/catalogue-delivery-workbench/application-provider.mjs",
+        "bytes": 6349,
+        "sha256": "ff75778c2de51ac4027c9761ffbeecc3d74c9f7fec05b28d87d08fc109ef0da0"
+      },
+      {
+        "path": "products/catalogue-delivery-workbench/cli.mjs",
+        "bytes": 6158,
+        "sha256": "5417cac5c86419f173de309c339a25dd6e053aec4ea4b8d83f785f08730b93d0"
+      },
+      {
+        "path": "products/catalogue-delivery-workbench/connection.mjs",
+        "bytes": 23084,
+        "sha256": "69bedbea2770611ab5cdceac2499b3bec11b3caf8a761c2785c57c0a742f53a2"
+      },
+      {
+        "path": "products/catalogue-delivery-workbench/files.mjs",
+        "bytes": 11682,
+        "sha256": "a66c99c14e1d0c0b4c23f3bd86ca47602424fa4224d85aaf2cc8afc29ef13e7b"
+      },
+      {
+        "path": "products/catalogue-delivery-workbench/managed.mjs",
+        "bytes": 15276,
+        "sha256": "44f054c404b59c190f1caafcd99dde2beb838309318d7a8551b8826d2abab2b7"
+      },
+      {
+        "path": "products/catalogue-delivery-workbench/managed_host.py",
+        "bytes": 18004,
+        "sha256": "679c84516fb9e08b9319921e6fdf37bfed1e75d0b493cb9b11b48cf4b7178956"
+      },
+      {
+        "path": "products/catalogue-delivery-workbench/mcp.mjs",
+        "bytes": 25763,
+        "sha256": "073c61db5fed27b3cf031c4c1770c7f49248c791d7c8ea926218d60ec2957958"
+      },
+      {
+        "path": "products/catalogue-delivery-workbench/merchant-provider.mjs",
+        "bytes": 3936,
+        "sha256": "f71d0a40b5e65891866613b8d3316fd4bf2f1a83cc19d0e96c7604489c0e889b"
+      },
+      {
+        "path": "products/catalogue-delivery-workbench/preparation.py",
+        "bytes": 41085,
+        "sha256": "846cc18f088404638a139aa22fbed1c18b3dff9d4c75f2d3f200d9277c8aab0e"
+      },
+      {
+        "path": "products/catalogue-delivery-workbench/prepare.mjs",
+        "bytes": 6806,
+        "sha256": "8377ad17ca8d7a833fc72ec0672c41454adaf2c0e487c2849dfd6e413f9e5020"
+      },
+      {
+        "path": "products/catalogue-delivery-workbench/receive.mjs",
+        "bytes": 451,
+        "sha256": "a3356135dacc0add9446eafc6ec88b5c7d8cdc1b3ad3a6bd221858dc4016e8d9"
+      },
+      {
+        "path": "products/catalogue-delivery-workbench/receiving-browser.mjs",
+        "bytes": 30741,
+        "sha256": "ca59c803bf7ec331b2dabac654cc17e279ff952c16a32216ca2072f618f7dc73"
+      },
+      {
+        "path": "products/catalogue-delivery-workbench/receiving-original.py",
+        "bytes": 42573,
+        "sha256": "8ff4d19f623c5c4c60f1a7c5a9c09946771873f13837c01b0f87ff3f9bb0f02a"
+      },
+      {
+        "path": "products/catalogue-delivery-workbench/receiving.mjs",
+        "bytes": 50603,
+        "sha256": "e23e7482829a909f48a7e74ee2859a54e91abf472e7be5e4685523982a2a5443"
+      },
+      {
+        "path": "products/catalogue-delivery-workbench/requests.mjs",
+        "bytes": 6452,
+        "sha256": "ae4d0c6d0009e74f08337458168184aa5c4bd167ab42953629c70945a86efaae"
+      },
+      {
+        "path": "products/catalogue-delivery-workbench/runtime-package.json",
+        "bytes": 173,
+        "sha256": "a88d8f6afb41d2e0cf2131bcec095d880b7606222ee0a7ca8d99d159e0806ed5"
+      },
+      {
+        "path": "products/catalogue-delivery-workbench/setup.mjs",
+        "bytes": 3643,
+        "sha256": "5191074f8290290ffe3a8d8483c4cd85c781317a202354e65ecb286b071eafbb"
+      },
+      {
+        "path": "products/catalogue-delivery-workbench/source-manifest.schema.json",
+        "bytes": 1341,
+        "sha256": "05e4c9b3bc323025ff92b1f8bca79213d53c3609a67e6791bdfc07420045fef4"
+      },
+      {
+        "path": "products/catalogue-delivery-workbench/tools.mjs",
+        "bytes": 21598,
+        "sha256": "b34a96ede7cc58b89912561abd99e7d37a66355bd2c531a7a1e1917794abe4f9"
+      },
+      {
+        "path": "stellar-forge/developer-site/GRANT_CATALOGUE_DELIVERY_WORKBENCH.md",
+        "bytes": 19656,
+        "sha256": "f7593c0e015f2aac71fce870aa8253a4fa6d1a0efc9b70f1b6681f32b49e661f"
+      },
+      {
+        "path": "stellar-forge/developer-site/grant-products/catalogue-delivery-workbench.json",
+        "bytes": 3604,
+        "sha256": "edc9c3106ec1e9ed8e424f7fbd3edd8fca03afefa9b6867f0a734fabb72d0eb8"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/distribution/contributions/catalogue-delivery-workbench.json",
+        "bytes": 3963,
+        "sha256": "4454169b596c1f642a6b5749c1034eb46d28545eb6e7ff448d71a1dd6b9cb417"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/distribution/selections/catalogue-delivery-workbench.json",
+        "bytes": 11065,
+        "sha256": "fc91ee5826eb40b159f16340e6fcf6a4ff31a4ec6ee4860f631adc8f2ffc4dfe"
+      },
+      {
+        "path": "stellar/scf_2026/sf49_data_commissioning/installation-workorders/catalogue-delivery-workbench.json",
+        "bytes": 11786,
+        "sha256": "e421885515ee884b27da2c394116bf0eca08ecabd61e7ce5419e262cd122d529"
+      }
+    ]
+  },
+  "privateApplication": {
+    "included": false,
+    "authoritySchema": "stellar-forge.catalogue-delivery-workbench-source.v1",
+    "admission": "Supply the exact complete external manifest and separate SHA-256 through original private custody. Preparation verifies complete source copies and actual Python imports. No private edition digest or body is embedded here.",
+    "engine": "Original Store, ApprovalStore, native MCP and implementation archive readers remain external authority."
+  },
+  "adapterMaintenance": [
+    {
+      "path": "products/catalogue-delivery-workbench/receiving.mjs",
+      "before": {
+        "bytes": 50603,
+        "sha256": "e23e7482829a909f48a7e74ee2859a54e91abf472e7be5e4685523982a2a5443"
+      },
+      "after": {
+        "gitBlob": "9d29d1a7b6b2f72ce9409a1f587f72d4b4edba0b",
+        "bytes": 51004,
+        "sha256": "a07e05c341fab58842d46b97f3d29187ec6feeaf5fdbb8a06469bdb980812736"
+      },
+      "reason": "Require actual public release and connection readiness before Start; retain independently attempted course cleanup."
+    },
+    {
+      "path": "products/catalogue-delivery-workbench/managed.mjs",
+      "before": {
+        "bytes": 15276,
+        "sha256": "44f054c404b59c190f1caafcd99dde2beb838309318d7a8551b8826d2abab2b7"
+      },
+      "after": {
+        "gitBlob": "da2e21f4343dd848ba6643fc5c4894f03f6af9e8",
+        "bytes": 16403,
+        "sha256": "8e79e029155c6e72353b01567749f34c46f929a8b6472b50b223b0e2a7c7f138"
+      },
+      "reason": "Independently close owned child/log/file resources after failures."
+    }
+  ],
+  "packaging": {
+    "ownedPaths": [
+      "stellar/scf-starforge-20261009/distribution/selections/catalogue-delivery-workbench.json",
+      "products/catalogue-delivery-workbench/PACKAGE_README.md",
+      "products/catalogue-delivery-workbench/PUBLIC_SOURCE.json",
+      "products/catalogue-delivery-workbench/AGENTS.md"
+    ],
+    "selectionBefore": {
+      "bytes": 11065,
+      "sha256": "fc91ee5826eb40b159f16340e6fcf6a4ff31a4ec6ee4860f631adc8f2ffc4dfe"
+    },
+    "selectionAfter": {
+      "bytes": 11245,
+      "sha256": "bb9a20926a1fb694c02da9f587ff1fdb756366cd7cec46aeca06742ef59231ed"
+    },
+    "packageReadme": {
+      "bytes": 14740,
+      "sha256": "dba931cb289e43b7c01dc1b42d070290320726f10bc6114cadcff783355fdd29"
+    },
+    "scopedInstructions": {
+      "bytes": 9387,
+      "sha256": "e24a94eda0d4805c46b739396d1adb9f6fe7ecddb60998eb501d9251790e0462"
+    }
+  },
+  "sharedContracts": {
+    "repository": "woahwhattheheck/public-commons-sprint-2026",
+    "commit": "11712303457c8b027fcac416bea3412bcdd71506",
+    "files": [
+      {
+        "path": "stellar/scf-starforge-20261009/distribution/source-selection.mjs",
+        "gitBlob": "4f1e18e25e7bfd2858e9891a5cd170e6f9d8c65b",
+        "bytes": 9798,
+        "sha256": "cbedb50a90a1fd9bd7194c9f2a7b4182cf23db9b9e89bec67c9085c377cb673a"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/distribution/build.mjs",
+        "gitBlob": "763119823cc0b495a2724cd62e1e85dc5d5873dc",
+        "bytes": 31327,
+        "sha256": "50f4eef964d748c64de61d31850a60113d76deb36fada39ea3fb3d3eafbd7d27"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/distribution/contributions/grant-workspace.json",
+        "gitBlob": "111eaf35654275e188958356e4594902ce706963",
+        "bytes": 1262,
+        "sha256": "89d3ea2c9b386c9807a182756c1c57af3715d3e6c152a8fd00225bcaf2077c66"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/distribution/runtime-workspace/application-providers.mjs",
+        "gitBlob": "ee1049fc3340f08988e9510c7b32f721cca435aa",
+        "bytes": 15004,
+        "sha256": "48993e55cf18b3fe8f647c6b567931be7c52eb4019b2ae8d806dd73c44a13050"
+      },
+      {
+        "path": "stellar-forge/mcp-merchant-operator/providers.mjs",
+        "gitBlob": "d0d1984bca7de72769cb35822339551bc42ea423",
+        "bytes": 2114,
+        "sha256": "1ce9aefa6b92fc293b73dda7fee34b95f75b203e08c9a29bd80e66253a0da57f"
+      },
+      {
+        "path": "AGENTS.md",
+        "gitBlob": "96d3752dc5277b2015178a03d9c124fdf9568d5a",
+        "bytes": 7844,
+        "sha256": "e728a4f43551cf369548497d8891cfa114f0b9f54354f204e7aab8bfce08ccc8"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/distribution/distribution.json",
+        "gitBlob": "9015c2283f26710496509069313cfbe347e7060b",
+        "bytes": 79313,
+        "sha256": "d69e41fbefa5b37aab2644ffca147429e1e183c7550b92b590182b43a034285a"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/distribution/specification.mjs",
+        "gitBlob": "0422b080e20ac88f3c1bc18c87ab8a02257361df",
+        "bytes": 24900,
+        "sha256": "74d7501b70dc78f9059890ca1a4eba16832af9038efbeb20651a9d0bf0b72e7a"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/distribution/product-package.mjs",
+        "gitBlob": "2c668933f214f201137ac6d3c6b7410525955c9b",
+        "bytes": 3764,
+        "sha256": "e1f33fd1940b62c7ede90288ff2ad36da529a197b06e059e8b3b6e27fba1e76d"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/distribution/contributions/merchant-provider-tools.json",
+        "gitBlob": "ef9552d29cd899b60e5f9317bb0f8398cb8dd0da",
+        "bytes": 737,
+        "sha256": "64b29c1293acb077c3f318a0dee1b6dd17985d61de07755e49996d7d2673995c"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/distribution/contributions/merchant-console-browser-assets.json",
+        "gitBlob": "d4990d79b5da6803fe6f507cf0d119adf1c92581",
+        "bytes": 416,
+        "sha256": "380fe3b4eed9172b6e69fad28a275f4dcd1bb981b822358bf0551da423cde809"
+      },
+      {
+        "path": "stellar-forge/mcp-merchant-operator/provider-registry.mjs",
+        "gitBlob": "048d04e52090fbc0ae23926e9cab7c31a858faa7",
+        "bytes": 4369,
+        "sha256": "c03d9590b17f52e08b68ddb1bc8fd10a665fd0dd1f19b7b6eefa9601d59bd890"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/distribution/runtime-workspace/model.mjs",
+        "gitBlob": "d177369a8219b1992f3e2ad8503a402060e896de",
+        "bytes": 56702,
+        "sha256": "f78ef445197df5af81ab919ac015239dd8003d2bb5ec1c0ecadd338a26775261"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/distribution/runtime-workspace/applications-core.mjs",
+        "gitBlob": "a790d75cc112b2c85673aab506458c27da5ecd39",
+        "bytes": 34550,
+        "sha256": "b67f9948b80b98d8970acb8c24aea2dcd2feada5ed3b0c801cf151b5d0f01803"
+      }
+    ],
+    "mutation": "None; existing builder, contribution/provider registries, Installation and current Grant source are selected unchanged."
+  },
+  "sourceComposition": {
+    "publicCommit": "11712303457c8b027fcac416bea3412bcdd71506",
+    "components": 12,
+    "declaredSupport": 144,
+    "commands": 15,
+    "initialSelectedFiles": 951,
+    "initialSourceBytes": 16119092,
+    "missing": [],
+    "missingOriginal": [],
+    "missingComponents": [],
+    "grantDefault": true,
+    "grantCLI": true,
+    "method": "Executed the exact maintained product-package/source-selection/specification composition in V8 and applied the maintained initial source filter to complete nontruncated public Git subtrees plus all generic product postimages.",
+    "qualification": "Initial source selection and registration closure only. The native builder retains final static-module/browser dependency closure, packaged archive and actual runtime/browser receiving.",
+    "initialSourceBytesNote": "Measured at the original reviewed package checkpoint; final generic guide wording is selected by the distribution manifest."
+  },
+  "registrations": {
+    "commands": {
+      "installation": "stellar/scf-starforge-20261009/sf46-release/package-cli.mjs",
+      "runtime-profile": "stellar/scf-starforge-20261009/distribution/runtime-profile-cli.mjs",
+      "runtime-install": "stellar/scf-starforge-20261009/distribution/runtime-install-cli.mjs",
+      "runtime-workspace": "stellar/scf-starforge-20261009/distribution/runtime-workspace/cli.mjs",
+      "runtime-transfer": "stellar/scf-starforge-20261009/distribution/runtime-transfer-cli.mjs",
+      "releases": "stellar/scf-starforge-20261009/sf82-seller-pilot/release-cli.mjs",
+      "merchant-mcp": "stellar-forge/mcp-merchant-operator/serve.mjs",
+      "merchant-mcp-stdio": "stellar-forge/mcp-merchant-operator/stdio.mjs",
+      "merchant-mcp-client-config": "stellar-forge/mcp-merchant-operator/client-config.mjs",
+      "grant-workspace": "stellar/scf_2026/sf47_budget_model/workspace/launcher.mjs",
+      "catalogue-delivery-workbench": "products/catalogue-delivery-workbench/cli.mjs",
+      "catalogue-delivery-workbench-prepare": "products/catalogue-delivery-workbench/prepare.mjs",
+      "catalogue-delivery-workbench-managed": "products/catalogue-delivery-workbench/managed.mjs",
+      "catalogue-delivery-workbench-receive": "products/catalogue-delivery-workbench/receive.mjs",
+      "merchant-providers": "stellar-forge/mcp-merchant-operator/provider-cli.mjs"
+    },
+    "applicationProviders": {
+      "catalogue-delivery-workbench": "products/catalogue-delivery-workbench/application-provider.mjs",
+      "grant-workspace": "stellar/scf-starforge-20261009/distribution/runtime-workspace/providers/grant-workspace.mjs"
+    },
+    "merchantProviders": {
+      "catalogue-delivery-workbench": "products/catalogue-delivery-workbench/merchant-provider.mjs"
+    },
+    "runtimePackageManifests": {
+      "schema": "stellar-forge/payment-auto-catalog/package.json",
+      "openapi": "stellar/scf-starforge-20261009/sf61-openapi-seller-import/package.json",
+      "mcp": "stellar-forge/mcp-paid-agent/package.json",
+      "catalogue-delivery-workbench": "products/catalogue-delivery-workbench/runtime-package.json"
+    },
+    "browserAssets": [
+      {
+        "server": "stellar-forge/mcp-merchant-operator/console/service.mjs",
+        "manifest": "stellar-forge/mcp-merchant-operator/console/browser-assets.json"
+      },
+      {
+        "server": "stellar/scf_2026/sf47_budget_model/workspace/operations_http.py",
+        "manifest": "stellar/scf_2026/sf47_budget_model/workspace/portfolio-browser-assets.json"
+      }
+    ]
+  },
+  "deliveryParts": [
+    "Public selected distribution and manifest",
+    "Complete authorized private source transfer and actual interpreter/import records",
+    "Original complete implementation and two native approval archives with literal phase results"
+  ],
+  "existingNativeOperation": {
+    "custody": "Preserve the original equipped provider owner and complete private source. Public installation consumes actual original donor outputs without redispatching native approval.",
+    "installedContinuation": "Any existing installed receiving directory resumes its exact bound source manifest and helper/browser selection. Public adoption does not rewrite that predecessor.",
+    "readiness": "Source publication is not native destination acceptance or producer visual inspection."
+  }
+}

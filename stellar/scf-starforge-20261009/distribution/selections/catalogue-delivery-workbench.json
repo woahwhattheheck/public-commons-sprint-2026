@@ -172,7 +172,10 @@
     "stellar/scf_2026/sf49_data_commissioning/installation-workorders/catalogue-delivery-workbench.json",
     "products/catalogue-delivery-workbench/OPERATING.md",
     "stellar-forge/developer-site/GRANT_CATALOGUE_DELIVERY_WORKBENCH.md",
-    "stellar-forge/developer-site/grant-products/catalogue-delivery-workbench.json"
+    "stellar-forge/developer-site/grant-products/catalogue-delivery-workbench.json",
+    "products/catalogue-delivery-workbench/PACKAGE_README.md",
+    "products/catalogue-delivery-workbench/PUBLIC_SOURCE.json",
+    "products/catalogue-delivery-workbench/AGENTS.md"
   ],
   "excludeFiles": [
     "stellar/scf-starforge-20261009/distribution/index.mjs"
@@ -180,12 +183,12 @@
   "product": {
     "schema": "stellar-forge.merchant-product-package.v1",
     "description": "TJLabs Catalogue Delivery Workbench: original catalogue delivery, native approval, complete customer-agent operation and independent receiving with private full source.",
-    "readme": "products/catalogue-delivery-workbench/OPERATING.md",
+    "readme": "products/catalogue-delivery-workbench/PACKAGE_README.md",
     "bin": {
       "starforge": "stellar/scf-starforge-20261009/distribution/cli.mjs"
     },
     "repository": {
-      "url": "https://github.com/woahwhattheheck/tjlabs-stellar-merchant-workspace",
+      "url": "https://github.com/woahwhattheheck/public-commons-sprint-2026",
       "directory": ""
     }
   }
