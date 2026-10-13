@@ -1,5 +1,5 @@
 import * as E from './engine.mjs';
-import {sha256Utf8} from './sha256.mjs';
+import {sha256Utf8,utf8Length} from './sha256.mjs';
 
 /** Work-order migration is a companion of the original financial workspace.
  * Every mutation is one original import-supporting operation; original CSV bytes
@@ -12,7 +12,7 @@ const plain=x=>x!==null&&typeof x==='object'&&!Array.isArray(x);
 function need(ok,message,code='WORK_ORDER_INPUT'){if(!ok){const e=Error(message);e.code=code;throw e;}}
 const stable=x=>x===null||typeof x!=='object'?JSON.stringify(x):Array.isArray(x)?'['+x.map(stable).join(',')+']':'{'+Object.keys(x).sort().map(k=>JSON.stringify(k)+':'+stable(x[k])).join(',')+'}';
 const hash=x=>sha256Utf8(stable(x)).sha256;
-const txt=(v,label,max=1000,empty=false)=>{need(typeof v==='string'&&v.length<=max&&(empty||v.length>0),'Supply '+label+'.');sha256Utf8(v);return v;};
+const txt=(v,label,max=1000,empty=false)=>{need(typeof v==='string'&&v.length<=max&&(empty||v.length>0),'Supply '+label+'.');utf8Length(v);return v;};
 const ident=(v,label)=>{txt(v,label,200);need(!/[\u0000-\u001f]/.test(v),'Use a complete printable '+label+'.');return v;};
 const key=(...v)=>JSON.stringify(v);
 const f=(name,type='text',required=false)=>({name,type,required,label:name.replaceAll('_',' ')});
@@ -28,7 +28,7 @@ const encoder=()=>{
  return {
  encode(s){const bytes=[];for(const c of s){const n=c.codePointAt(0);if(n<128)bytes.push(n);else if(n<2048)bytes.push(192|(n>>6),128|(n&63));else if(n<65536){need(n<55296||n>57343,'Retain valid UTF-8 original text.');bytes.push(224|(n>>12),128|((n>>6)&63),128|(n&63));}else bytes.push(240|(n>>18),128|((n>>12)&63),128|((n>>6)&63),128|(n&63));}
  let out='';for(let i=0;i<bytes.length;i+=3){const a=bytes[i],b=bytes[i+1],c=bytes[i+2],v=(a<<16)|((b||0)<<8)|(c||0);out+=alphabet[v>>>18]+alphabet[(v>>>12)&63]+(b===undefined?'=':alphabet[(v>>>6)&63])+(c===undefined?'=':alphabet[v&63]);}return out;},
- decode(s){need(typeof s==='string'&&s.length%4===0&&/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(s),'Retain the complete canonical Base64 operation.');
+ decode(s){need(typeof s==='string'&&s.length%4===0&&!/[^A-Za-z0-9+/=]/.test(s)&&(!s.includes('=')||s.indexOf('=')>=s.length-2&&/^={1,2}$/.test(s.slice(s.indexOf('=')))),'Retain the complete canonical Base64 operation.');
  const bytes=[];for(let i=0;i<s.length;i+=4){const v=(alphabet.indexOf(s[i])<<18)|(alphabet.indexOf(s[i+1])<<12)|((s[i+2]==='='?0:alphabet.indexOf(s[i+2]))<<6)|(s[i+3]==='='?0:alphabet.indexOf(s[i+3]));bytes.push((v>>>16)&255);if(s[i+2]!=='=')bytes.push((v>>>8)&255);if(s[i+3]!=='=')bytes.push(v&255);}
  let out='';for(let i=0;i<bytes.length;){const a=bytes[i++];let n=a,count=0,min=0;if(a>=194&&a<=223){n=a&31;count=1;min=128;}else if(a>=224&&a<=239){n=a&15;count=2;min=2048;}else if(a>=240&&a<=244){n=a&7;count=3;min=65536;}else need(a<128,'Invalid UTF-8 operation.');for(let j=0;j<count;j++){const b=bytes[i++];need(b!==undefined&&(b&192)===128,'Incomplete UTF-8 operation.');n=(n<<6)|(b&63);}need(n>=min&&n<=1114111&&(n<55296||n>57343),'Invalid UTF-8 operation.');out+=String.fromCodePoint(n);}return out;}
  };
@@ -123,13 +123,14 @@ function apply(s,action,input,event){
  }
  need(false,'Unknown work-order operation: '+action);
 }
-export function read(workspace){
- const ws=E.validateWorkspace(workspace),s=blank(ws),files=new Map(ws.supportingFiles.map(f=>[f.id,f])),seen=new Set();
+export function read(workspace){return readValidated(E.validateWorkspace(workspace));}
+function readValidated(ws){
+ const s=blank(ws),files=new Map(ws.supportingFiles.map(f=>[f.id,f])),seen=new Set();
  for(const op of ws.operations){if(op.kind!=='import-supporting')continue;const file=files.get(op.supportingInputId);if(!file||file.purpose!==PURPOSE||seen.has(file.id))continue;
-  seen.add(file.id);const event=JSON.parse(codec.decode(file.base64));
+  seen.add(file.id);const eventText=codec.decode(file.base64),event=JSON.parse(eventText);
   need(event.schema===SCHEMA&&event.workspaceId===ws.id&&event.sequence===s.eventCount+1&&event.previous===s.head,'The complete work-order event chain differs.','WORK_ORDER_HISTORY_CHANGED');
   need(event.operationId===op.id&&event.requestSha256===hash(event.input),'The saved work-order request identity differs.','WORK_ORDER_HISTORY_CHANGED');
-  apply(s,event.action,event.input,event);s.head=sha256Utf8(codec.decode(file.base64)).sha256;s.eventCount++;
+  apply(s,event.action,event.input,event);s.head=sha256Utf8(eventText).sha256;s.eventCount++;
  }
  return s;
 }
@@ -142,7 +143,7 @@ export function run(workspace,action,input){
   return{workspace,receipt:clone(old),replayed:true};
  }
  need(input.expectedRevision===workspace.revision,'The original workspace revision changed.','REVISION_CONFLICT');
- const state=read(workspace),at=input.at||new Date().toISOString(),event={schema:SCHEMA,workspaceId:workspace.id,sequence:state.eventCount+1,previous:state.head,operationId:input.operationId,at,action,input:clone(input),requestSha256:hash(input)};
+ const state=readValidated(workspace),at=input.at||new Date().toISOString(),event={schema:SCHEMA,workspaceId:workspace.id,sequence:state.eventCount+1,previous:state.head,operationId:input.operationId,at,action,input:clone(input),requestSha256:hash(input)};
  const result=apply(state,action,input,event),text=JSON.stringify(event);
  const saved=E.importSupportingFile(workspace,{operationId:input.operationId,expectedRevision:input.expectedRevision,at,filename:'work-order-'+String(event.sequence).padStart(4,'0')+'-'+action+'.json',mimeType:'application/json',purpose:PURPOSE,base64:codec.encode(text)});
  return{...saved,workOrderResult:result};
