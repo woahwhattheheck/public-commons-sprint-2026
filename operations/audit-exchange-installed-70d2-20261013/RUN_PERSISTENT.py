@@ -282,8 +282,9 @@ def drain():
 
 
 class Course:
-    def __init__(self, args, guard, root, payload):
+    def __init__(self, args, guard, root, payload, controller_root):
         self.args, self.guard, self.root, self.payload = args, guard, root, payload
+        self.controller_root = controller_root
         self.attempt = directory(root / "attempts" / (time.strftime("%Y%m%dT%H%M%S") + "-" + uuid.uuid4().hex[:12]))
         self.events = []
         self.env = dict(os.environ)
@@ -294,7 +295,7 @@ class Course:
         held = os.fstat(guard)
         self.env["AUDIT_INSTALLED_LEASE_FD"] = str(guard)
         self.env["AUDIT_INSTALLED_LEASE_ID"] = json.dumps({"path":str(root / "operation.lock"),"dev":str(held.st_dev),"ino":str(held.st_ino)})
-        preload = root / "controller-source" / "inherited-lease.mjs"
+        preload = controller_root / "inherited-lease.mjs"
         self.env["NODE_OPTIONS"] = self.env.get("NODE_OPTIONS", "") + " --import=" + json.dumps(preload.as_uri())
 
     def event(self, stage, **data):
@@ -399,9 +400,11 @@ class Course:
         closed = drain()
         self.event("original-children-drained", children=closed)
         report = {"schema":SCHEMA,"operation":OPERATION,"state":state,"attempt":str(self.attempt),"finishedAt":now(),"error":error,"events":self.events}
-        retain(self.attempt/"report.json",report)
+        report_hash=sha(encoded(report))
+        report_path=self.attempt/"reports"/(report_hash+".json")
+        retain(report_path,report)
         archives = directory(self.root / "archives")
-        name = self.attempt.name + ".zip"
+        name = self.attempt.name + "-" + report_hash[:16] + ".zip"
         pending, target = archives/(name+".pending"), archives/name
         members=[]
         # Complete private source, all generations, installs, customer projects,
@@ -439,7 +442,7 @@ class Course:
         with pending.open("rb") as saved:
             os.fsync(saved.fileno())
         os.link(pending,target);sync_directory(archives);pending.unlink();sync_directory(archives)
-        pointer={"operation":OPERATION,"state":state,"path":str(target),**file_identity(target),"members":len(members),"report":str(self.attempt/"report.json")}
+        pointer={"operation":OPERATION,"state":state,"path":str(target),**file_identity(target),"members":len(members),"report":str(report_path)}
         retain(archives/(name+".json"),pointer)
         print(json.dumps({"completeCase":pointer}),flush=True)
         return pointer
@@ -457,12 +460,16 @@ def main():
     parser.add_argument("--browser-module")
     parser.add_argument("--browser-executable")
     parser.add_argument("--prepare-only",action="store_true",help="Prepare a later generation without changing the original customer input.")
+    parser.add_argument("--adopt-controller",action="store_true",help="Retain and explicitly select this complete following launcher/controller generation.")
     parser.add_argument("--original-input",help="Adopt the existing complete original input at its existing paths.")
     args=parser.parse_args()
     def interrupted(signum, frame):
         raise KeyboardInterrupt("Original operation received signal "+str(signum))
     signal.signal(signal.SIGTERM, interrupted)
     root=directory(Path(args.root).absolute())
+    root_stat=root.stat()
+    need(root!=Path(root.anchor) and root_stat.st_uid==os.getuid() and (stat.S_IMODE(root_stat.st_mode)&0o077)==0,
+         "Select the original UID-owned private custody directory (mode0700), not a shared or filesystem root.")
     marker=root/"persistent-operation.json"
     if marker.exists():
         need(load(marker)=={"schema":SCHEMA,"operation":OPERATION,"root":str(root)}, "Select the existing original persistent root.")
@@ -484,21 +491,29 @@ def main():
         retain(root/"original-source"/"source-packet.json",raw)
         retain(root/"original-source"/"payload.json",full)
         controller=corrected_controller(payload["operationSource"]).encode()
-        for filename,body in (("INSTALLED_OPERATION.mjs",controller),("INSTALLED_BROWSER.mjs",payload["browser"].encode()),
-                              ("ORIGINAL_OPERATING.md",payload["guide"].encode())):
-            retain(root/"controller-source"/filename,body)
-        own=ordinary(Path(__file__).absolute())
-        retain(root/"controller-source"/"RUN_PERSISTENT.py",own)
-        lease=ordinary(Path(__file__).absolute().with_name("inherited-lease.mjs"))
-        retain(root/"controller-source"/"inherited-lease.mjs",lease)
+        bodies={"INSTALLED_OPERATION.mjs":controller,"INSTALLED_BROWSER.mjs":payload["browser"].encode(),
+                "ORIGINAL_OPERATING.md":payload["guide"].encode(),
+                "RUN_PERSISTENT.py":ordinary(Path(__file__).absolute()),
+                "inherited-lease.mjs":ordinary(Path(__file__).absolute().with_name("inherited-lease.mjs"))}
+        identities={name:{"bytes":len(body),"sha256":sha(body)} for name,body in sorted(bodies.items())}
+        controller_id=sha(encoded(identities))
+        generations=directory(root/"controller-generations")
+        controller_root=generations/controller_id
+        existing=[path for path in generations.iterdir() if path.is_dir()]
+        need(not existing or controller_root.exists() or args.adopt_controller,
+             "Use --adopt-controller to retain this explicit complete following source generation.")
+        directory(controller_root)
+        for filename,body in bodies.items():
+            retain(controller_root/filename,body)
+        retain(controller_root/"SOURCE.json",{"schema":SCHEMA,"operation":OPERATION,"id":controller_id,"files":identities})
         selected_original = load(args.original_input) if args.original_input else (
             load(root/"installed-operation-input.json") if (root/"installed-operation-input.json").exists() else None)
         selected_python = selected_original["pythonExecutable"] if selected_original and not args.prepare_only else os.environ.get("AUDIT_PYTHON",sys.executable)
         if args.python and selected_original and not args.prepare_only:
             need(executable(args.python,"Python")==executable(selected_python,"Python"),"Preserve the original customer Python selection.")
         args.python = executable(args.python or selected_python,"Python")
-        course=Course(args,guard,root,payload)
-        course.event("original-operation-admitted",root=str(root),commit=args.commit,originalPayloadSha256=PAYLOAD_SHA)
+        course=Course(args,guard,root,payload,controller_root)
+        course.event("original-operation-admitted",root=str(root),commit=args.commit,controllerGeneration=controller_id,originalPayloadSha256=PAYLOAD_SHA)
         version=course.run("node-version",[course.node,"--version"],30).decode().strip()
         need(tuple(map(int,version.lstrip("v").split(".")[:2]))>=(22,16),"Original Runtime requires Node22.16+.")
         course.run("python-dependency",[args.python,"-c","import lxml.etree; print(lxml.etree.LXML_VERSION)"],30)
@@ -526,15 +541,15 @@ def main():
             original={"operation":OPERATION,"sourceCommit":args.commit,"directory":str(root/"complete-installed-case"),
                 "sourceRoot":ready["sourceRoot"],"runtimeDirectory":ready["runtimeDirectory"],
                 "pythonExecutable":str(Path(args.python).resolve()),"operator":args.operator,
-                "browserDriver":str(root/"controller-source/INSTALLED_BROWSER.mjs")}
+                "browserDriver":str(controller_root/"INSTALLED_BROWSER.mjs")}
             browser={}
             if args.browser_module:browser["module"]=str(Path(args.browser_module).resolve())
             if args.browser_executable:browser["executablePath"]=str(Path(args.browser_executable).resolve())
             if browser:original["browser"]=browser
             retain(input_path,original)
-        course.run("controller-syntax",[course.node,"--check",root/"controller-source/INSTALLED_OPERATION.mjs"],30)
+        course.run("controller-syntax",[course.node,"--check",controller_root/"INSTALLED_OPERATION.mjs"],30)
         course.run("original-browser-syntax",[course.node,"--check",original["browserDriver"]],30)
-        course.run("complete-installed-operation",[course.node,root/"controller-source/INSTALLED_OPERATION.mjs","--input",input_path],2400)
+        course.run("complete-installed-operation",[course.node,controller_root/"INSTALLED_OPERATION.mjs","--input",input_path],2400)
         result=load(Path(original["directory"])/"result.json")
         need(result.get("state")=="COMPLETE" and result.get("operation")==OPERATION,"Complete the original installed customer course.")
         course.capture("COMPLETE")
