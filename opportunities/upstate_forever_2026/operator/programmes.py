@@ -9,6 +9,7 @@ import json
 import re
 
 from model.compute_programme import ComputeProgrammes
+from model.programme_views import DEFAULT_VIEWS
 
 ACTIONS = {
     "compute.programme.save",
@@ -21,7 +22,7 @@ ACTIONS = {
     "compute.programme.report",
     "compute.programme.delivery",
 }
-READS = {"catalog", "detail", "report", "pair-completion-preview", "execution"}
+READS = {"catalog", "detail", "report", "pair-completion-preview", "execution", "page", "selection", "paired", "keys"}
 
 
 class Programmes:
@@ -42,7 +43,7 @@ class Programmes:
         from model.programme_experiments import catalog
         from model.programme_interactions import catalog as interaction_catalog
         ws = self.operator.ws(workspace)
-        return {**self._manager(workspace).catalog(include_completed_sources=include_completed_sources),
+        return {**DEFAULT_VIEWS.catalog(ws, include_completed_sources=include_completed_sources),
                 **catalog(ws), **interaction_catalog(ws)}
 
     def _decorate(self, workspace, result):
@@ -69,6 +70,23 @@ class Programmes:
                     **{name: payload[name] for name in (
                         "attempt_id", "stream", "log_offset", "expected_attempt_id",
                         "history_offset", "limit") if payload.get(name) not in (None, "")})}
+        if operation == "page":
+            return {"workspace_key": workspace, **self._decorate(workspace,
+                    DEFAULT_VIEWS.read(manager.workspace, key,
+                        offset=payload.get("offset"), limit=payload.get("limit"),
+                        case_filter=payload.get("case_filter") or "all",
+                        query=payload.get("query") or ""))}
+        if operation == "selection":
+            return {"workspace_key": workspace, "programme_id": key,
+                    "selection": manager._load(key)["selection"]}
+        if operation == "keys":
+            return {"workspace_key": workspace, **DEFAULT_VIEWS.keys(manager.workspace, key,
+                    case_filter=payload.get("case_filter") or "unfinished")}
+        if operation == "paired":
+            current = manager.status(key)
+            return {"workspace_key": workspace, "programme_id": key,
+                    **{name: current[name] for name in
+                       ("ensemble_candidates", "ensemble_candidate_issues", "pair_completion", "pair_completions")}}
         if operation == "pair-completion-preview":
             return {"workspace_key": workspace, **manager.pair_completion_preview(key)}
         if operation == "detail":
@@ -219,7 +237,7 @@ class Programmes:
         downloads = list(task.get("_downloads") or [])
         if key:
             try:
-                row = manager.status(key, include_ensemble_candidates=False)
+                row = DEFAULT_VIEWS.read(manager.workspace, key, limit=0, include_cases=False)
                 task["programme"] = {
                     "id": row["id"], "title": row.get("title"),
                     "state": row.get("state"), "phase": row.get("phase"),
