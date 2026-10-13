@@ -282,8 +282,10 @@ places its ReportLab vector drawings with the original title and caption. The
 numeric specification retains original axes, tick labels, series and panel data.
 It supports the maintained line, scatter and boxplot figures, including open
 markers and the source's minimum/q1/median/q3/maximum/mean fields.
-HTML and Markdown embed the original SVG. Structured report data retains the
-entire figure block and numeric specification. No extra SVG-conversion dependency
+HTML embeds the verified original SVG bytes in each image's data URL, so opening
+the HTML by itself does not require authenticated image requests or a neighboring
+asset folder. Markdown links to the original package-relative SVG. Structured
+report data retains the entire figure block and numeric specification. No extra SVG-conversion dependency
 is introduced.
 
 The producer and numeric drawing module are part of this same source contribution:
@@ -294,4 +296,16 @@ figures, open PDF and offline HTML, and retain their complete source context and
 package with the selected original Workspace.
 
 
-The combined v8 formatter preserves the current v7 source, coefficient, economic and delivery coverage tables. It verifies each retained SVG against its byte length and SHA256 before PDF or companion generation. PDF panels retain the supplied numeric coordinates and units; the offline HTML and Markdown resolve the same original SVG through package-relative paths. The observed context is bound before delivery identity is computed and every retained companion is included in the original package asset inventory.
+The combined v8 formatter preserves the current v7 source, coefficient, economic and delivery coverage tables. It verifies each retained SVG against its byte length and SHA256 before PDF or companion generation. PDF panels retain the supplied numeric coordinates and units; the offline HTML carries the exact SVG bytes and Markdown resolves the original SVG through its package-relative path. The observed context is bound before delivery identity is computed and every retained companion is included in the original package asset inventory.
+
+## Self-contained scientific HTML figures (v10)
+
+The HTML writer verifies the resolved SVG remains inside the delivery directory,
+then reads its original bytes once and checks their byte length and SHA256 against
+the figure descriptor before encoding them. Its image data URLs are derived only
+for HTML rendering. The ordered report blocks retain their original paths, hashes,
+source specifications, captions and alt text, and every original SVG remains an
+ordinary retained package asset. PDF drawings, Markdown links and report-data JSON
+continue to use the original figure contract. The report version changes the
+normal delivery identity so a completed older report can be regenerated with this
+self-contained image representation through the existing selection workflow.
