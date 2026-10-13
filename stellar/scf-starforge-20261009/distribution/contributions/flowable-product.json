@@ -1,7 +1,7 @@
 {
   "schema": "stellar-forge.merchant-distribution-contribution.v1",
   "id": "flowable-product",
-  "description": "Complete installed Flowable process and decision operations, original managed workspace, typed SDK and complete native customer receiving",
+  "description": "Complete installed Flowable process, case and decision operations, original managed workspace, typed SDK and complete native customer receiving",
   "components": [
     "products/flowable-merchant",
     "stellar/scf-starforge-20261009/sf30-seller-sdk/flowable"
@@ -10,7 +10,7 @@
     "flowable-product": "products/flowable-merchant/cli.mjs"
   },
   "commandDescriptions": {
-    "flowable-product": "Open native process and decision portfolios, deploy BPMN and DMN, operate human tasks, evaluate rules and receive complete source/history handovers."
+    "flowable-product": "Open process, case and decision portfolios, deploy BPMN/CMMN/DMN, operate case and human work, evaluate rules and receive complete source/history."
   },
   "exports": {
     "./products/flowable-merchant": "./source/products/flowable-merchant/workspace.mjs",
@@ -24,6 +24,7 @@
     "flowable-product": "products/flowable-merchant/application-provider.mjs"
   },
   "supportFiles": [
-    "stellar/scf-starforge-20261009/distribution/selections/FLOWABLE_MERCHANT.md"
+    "stellar/scf-starforge-20261009/distribution/selections/FLOWABLE_MERCHANT.md",
+    "products/flowable-merchant/CASES.md"
   ]
 }

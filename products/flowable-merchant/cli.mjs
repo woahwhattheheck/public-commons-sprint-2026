@@ -9,14 +9,14 @@ import { privateBytes, decode, need, HASH, UUID } from './common.mjs';
 import { FLOWABLE_MAX_JSON_BYTES, FLOWABLE_OPERATION_KINDS } from '../../stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/actions.mjs';
 
 const HELP = [
-  'Flowable process and decision operations product',
+  'Flowable process, case and decision operations product',
   '',
   '  flowable-product init --dir PRIVATE_PRODUCT [--workspace ORIGINAL_WORKSPACE] [--name NAME] [--connections PRIVATE_JSON]',
   '  flowable-product inspect --dir PRIVATE_PRODUCT',
   '  flowable-product review|open --dir PRIVATE_PRODUCT [--port 0] [--expected-binding SHA256]',
   '  flowable-product actions [--name ORIGINAL_METHOD]',
   '  flowable-product status --dir PRIVATE_PRODUCT',
-  '  flowable-product records --dir PRIVATE_PRODUCT [--kind connection|portfolio|release|process|task|migration|decisionPortfolio|decisionRelease|decisionEvaluation|delivery|receiving]',
+  '  flowable-product records --dir PRIVATE_PRODUCT [--kind connection|portfolio|release|process|task|migration|decisionPortfolio|decisionRelease|decisionEvaluation|casePortfolio|caseRelease|caseInstance|casePlanItem|caseTask|delivery|receiving]',
   '       [--offset 0 --limit 50 --snapshot SHA256]',
   '  flowable-product record --dir PRIVATE_PRODUCT --kind KIND --id RECORD_ID [--revision NUMBER --offset 0 --limit 50]',
   '  flowable-product portfolio --dir PRIVATE_PRODUCT --id PORTFOLIO_ID --collection NATIVE_COLLECTION [--revision NUMBER --offset 0 --limit 50]',
@@ -25,15 +25,19 @@ const HELP = [
   '  flowable-product decision-definition --dir PRIVATE_PRODUCT --portfolio PORTFOLIO_ID --definition NATIVE_DEFINITION_ID [--revision NUMBER]',
   '  flowable-product decision-execution --dir PRIVATE_PRODUCT --portfolio PORTFOLIO_ID --execution NATIVE_EXECUTION_ID [--revision NUMBER]',
   '  flowable-product capture-decisions --dir PRIVATE_PRODUCT --request UUID --connection RECORD_ID [--label LABEL]',
-  '  flowable-product review-operation --dir PRIVATE_PRODUCT --kind release|process|task|migration|decisionRelease|decisionEvaluation --id RECORD_ID [--revision NUMBER]',
+  '  flowable-product case-portfolio --dir PRIVATE_PRODUCT --id PORTFOLIO_ID --collection NATIVE_COLLECTION [--revision NUMBER --offset 0 --limit 50]',
+  '  flowable-product case-definition --dir PRIVATE_PRODUCT --portfolio PORTFOLIO_ID --definition NATIVE_DEFINITION_ID [--revision NUMBER]',
+  '  flowable-product case-instance --dir PRIVATE_PRODUCT --portfolio PORTFOLIO_ID --case NATIVE_CASE_ID [--revision NUMBER]',
+  '  flowable-product capture-cases --dir PRIVATE_PRODUCT --request UUID --connection RECORD_ID [--label LABEL]',
+  '  flowable-product review-operation --dir PRIVATE_PRODUCT --kind release|process|task|migration|decisionRelease|decisionEvaluation|caseRelease|caseInstance|casePlanItem|caseTask --id RECORD_ID [--revision NUMBER]',
   '  flowable-product call --dir PRIVATE_PRODUCT --method ORIGINAL_METHOD [--input PRIVATE_ARGUMENTS_JSON] [--out PRIVATE_JSON]',
   '  flowable-product download-source --dir PRIVATE_PRODUCT --reference PRIVATE_REFERENCE_JSON --out PRIVATE_FILE',
   '  flowable-product capture --dir PRIVATE_PRODUCT --request UUID --connection RECORD_ID [--label LABEL]',
-  '  flowable-product prepare --dir PRIVATE_PRODUCT --kind release|process|task|migration|decisionRelease|decisionEvaluation --request UUID',
+  '  flowable-product prepare --dir PRIVATE_PRODUCT --kind release|process|task|migration|decisionRelease|decisionEvaluation|caseRelease|caseInstance|casePlanItem|caseTask --request UUID',
   '       --connection RECORD_ID --selection PRIVATE_SELECTION_JSON [--label LABEL --note TEXT]',
-  '  flowable-product dispatch --dir PRIVATE_PRODUCT --kind release|process|task|migration|decisionRelease|decisionEvaluation --request UUID',
+  '  flowable-product dispatch --dir PRIVATE_PRODUCT --kind release|process|task|migration|decisionRelease|decisionEvaluation|caseRelease|caseInstance|casePlanItem|caseTask --request UUID',
   '       --id RECORD_ID --revision NUMBER --plan-sha256 SHA256',
-  '  flowable-product reconcile --dir PRIVATE_PRODUCT --kind release|process|task|migration|decisionRelease|decisionEvaluation --request UUID --id RECORD_ID [--revision NUMBER]',
+  '  flowable-product reconcile --dir PRIVATE_PRODUCT --kind release|process|task|migration|decisionRelease|decisionEvaluation|caseRelease|caseInstance|casePlanItem|caseTask --request UUID --id RECORD_ID [--revision NUMBER]',
   '  flowable-product export --dir PRIVATE_PRODUCT --request UUID [--label LABEL]',
   '  flowable-product download --dir PRIVATE_PRODUCT --id ORIGINAL_DELIVERY_ID --out PRIVATE_FILE [--sha256 SHA256]',
   '  flowable-product receive --dir PRIVATE_PRODUCT --request UUID --file ORIGINAL_NDJSON [--label LABEL]',
@@ -121,6 +125,10 @@ export async function main(args = process.argv.slice(2)) {
     'decision-definition':['--dir','--portfolio','--definition','--revision'],
     'capture-decisions':['--dir','--request','--connection','--label'],
     'decision-execution':['--dir','--portfolio','--execution','--revision'],
+    'case-portfolio':['--dir','--id','--collection','--revision','--offset','--limit'],
+    'case-definition':['--dir','--portfolio','--definition','--revision'],
+    'case-instance':['--dir','--portfolio','--case','--revision'],
+    'capture-cases':['--dir','--request','--connection','--label'],
     'review-operation':['--dir','--kind','--id','--revision'],
     'download-source':['--dir','--reference','--out'],
     call:['--dir','--method','--input','--out'],
@@ -135,7 +143,7 @@ export async function main(args = process.argv.slice(2)) {
   need(allowed,HELP,'ARGUMENTS');const options=parse(rest,allowed),controller=new AbortController();
   const stop=()=>controller.abort();process.once('SIGINT',stop);process.once('SIGTERM',stop);
   const revision=()=>options.has('--revision')?{revision:number(options,'--revision')}:{};
-  const selectedKind=()=>{const value=required(options,'--kind');need(FLOWABLE_OPERATION_KINDS.includes(value),'Select an original process or decision operation kind.','ARGUMENTS');return value;};
+  const selectedKind=()=>{const value=required(options,'--kind');need(FLOWABLE_OPERATION_KINDS.includes(value),'Select an original process, case or decision operation kind.','ARGUMENTS');return value;};
   let client;
   try{
     client=new FlowableProductClient({directory:required(options,'--dir'),signal:controller.signal});let result;
@@ -148,6 +156,10 @@ export async function main(args = process.argv.slice(2)) {
     if(command==='decision-definition')result=await client.readDecisionDefinition({portfolioId:required(options,'--portfolio'),definitionId:required(options,'--definition'),...revision()});
     if(command==='decision-execution')result=await client.readDecisionExecution({portfolioId:required(options,'--portfolio'),executionId:required(options,'--execution'),...revision()});
     if(command==='capture-decisions')result=await client.captureDecisionPortfolio({...request(options),connectionId:required(options,'--connection'),...optional(options,'--label')});
+    if(command==='case-portfolio')result=await client.readCasePortfolio({id:required(options,'--id'),collection:required(options,'--collection'),...paging(options),...revision()});
+    if(command==='case-definition')result=await client.readCaseDefinition({portfolioId:required(options,'--portfolio'),definitionId:required(options,'--definition'),...revision()});
+    if(command==='case-instance')result=await client.readCaseInstance({portfolioId:required(options,'--portfolio'),caseInstanceId:required(options,'--case'),...revision()});
+    if(command==='capture-cases')result=await client.captureCasePortfolio({...request(options),connectionId:required(options,'--connection'),...optional(options,'--label')});
     if(command==='review-operation')result=await client.readReview({kind:selectedKind(),id:required(options,'--id'),...revision()});
     if(command==='download-source')result=await client.downloadSource({reference:await inputFile(required(options,'--reference')),path:resolve(required(options,'--out'))});
     if(command==='call'){const method=required(options,'--method'),input=options.has('--input')?await inputFile(options.get('--input')):{};result=options.has('--out')?await client.callToFile(method,input,{path:resolve(options.get('--out'))}):await client.call(method,input);}
