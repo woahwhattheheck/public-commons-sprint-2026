@@ -323,3 +323,51 @@ The report producer's current version is1.1.0. New report packages use that
 version in their immutable identity, while **Open saved report** also resolves
 the previous1.0.0 whole-source report directory. Existing source/report/download
 identities remain usable after installation of this complete successor.
+
+
+## Compose a scientific report from the saved Gauge edition
+
+The maintained Gauge desk uses the existing Sources → Scientific reports composer. This continues the saved Gauge edition and its original prepared report source; its geometry, numeric flow coverage, reporting/upstream/utility scopes and source method remain unchanged.
+
+1. Open **Gauge support** in the original Workspace and select the saved support report.
+2. To include the scientific sources from an existing mapped delivery, select that saved delivery under **Include sources from saved mapped delivery (optional)**. Leave **Gauge source only** selected for the current Gauge source alone.
+3. Choose **Use in scientific report**. The existing `gauge.support.report` queue prepares the source, maps and original companions with `render:false`. Its operation ID remains in **Saved operations** and **Tasks**.
+4. After the operation completes, choose **Compose scientific report** on that saved operation, or **Open scientific report composer** on the support report. An immediately completed request opens the same composer directly.
+5. The existing composer opens under **Sources**. Its current sources retain their order; incoming sources are appended once, in the saved delivery's original order, followed by the Gauge source when it was not already present. A current nonempty title and contact remain in the composer draft. Review the actual source choices and choose **Preview**, then the existing report rendering action.
+6. Reopen the resulting saved report edition to download its original HTML/PDF and complete source archive. Its current publisher owns report version, render identity and original member verification.
+7. Use the existing Workspace backup and restore course to retain the Gauge edition, prepared source, original geometry/flow companions and the saved scientific report together. Open that same saved edition and report after restoration.
+
+**Download scientific report** continues the Gauge-specific direct PDF, HTML, Markdown, data and complete source ZIP from the saved support edition. **Use in mapped delivery** continues the existing delivery form with its original native runs, overlays and other selected studies. **Open prepared mapped delivery** reopens that retained selection. These actions preserve the same original source IDs.
+
+A source operation accepted by the queue remains accepted when a subsequent state refresh, composer navigation or rendering screen fails. Its task ID is retained and displayed. Reopen that saved operation in **Tasks** or **Saved operations**; it can open the prepared source or actual completed downloads without submitting another operation. Workspace and view-generation checks protect a project or dialog opened while an earlier request was finishing.
+
+### Current host and receiving contracts
+
+The maintained application supplies:
+
+```javascript
+host.openScientificReport({
+  workspace_key: actualOperatorWorkspaceKey,
+  sources: [{source_collection_id: actualCollectionID, source_id: actualSourceID}],
+  title: originalSourceTitle
+});
+```
+
+The Gauge provider exposes this exact selection as `scientific_report_selection` on newly completed source operations, reopened direct reports and decorated original saved tasks. It derives the source list through the maintained `observed_context.source_choices` reader and the source title from the original Workspace entry. The original Gauge source must be in that ordered list. It does not convert source IDs into entry hashes or replace the scientific publisher.
+
+For an existing host-controlled receiving or demo journey, the same desk provides:
+
+```javascript
+await host.openExtension('gauge-support', 'scientificReport', {
+  workspace_key: actualOperatorWorkspaceKey,
+  edition_id: actualSavedGaugeEditionID
+});
+```
+
+This opens the retained edition, reuses its prepared report source when available, or submits the original source-preparation action. It uses the current Workspace rather than creating a demonstration project implicitly. `model.gauge_report_context` and `source_tools.receive_gauge_support` keep their existing CLI syntax and original source-choice contracts.
+
+Receive this complete eleven-file family above merged PR3374 and the native recovery successor PR3461 and the application's maintained SourceReports modules. The existing installer now declares `operator/source_reports.py`, `operator/source_report_editions.py`, `operator/web/source_reports.mjs` and `operator/web/source_report_editions.mjs` as application dependencies. The descriptor requires the actual `openScientificReport` host capability. Keep the current shared app, extension host and report publisher; no second host or report engine is installed.
+
+The owned `integration/component_fragments/gauge-scientific-composer.json` extends the existing `gauge-support` component with these complete eleven paths and its maintained `scientific-report-editions` dependency. The fragment uses the current append-only component loader; retain the shared canonical catalogue and all peer fragments. The Gauge installer copies only its own eleven declared files and records/reverts its original postimages on a failed installation.
+
+The full family preserves the independently reviewed native receiving recovery from PR3461: `source_tools/receive_gauge_support.py` and `source_tools/GAUGE_SUPPORT_RECEIVING_RECOVERY.md`. The same original operation lock, selected-source continuation, adopted existing archive and verified independent reopen remain in that receiver. Continue its saved output directory and selections; opening the scientific composer does not start another Gauge geometry build or replace its receiving checkpoint.

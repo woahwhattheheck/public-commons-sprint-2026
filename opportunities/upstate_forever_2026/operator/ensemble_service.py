@@ -32,6 +32,22 @@ class EnsembleService:
         return [self.operator._ticket(workspace, relative_file(directory, item["path"]),
                     item, labels.get(name, name)) for name, item in report["files"].items()]
 
+    def _scientific_report_selection(self, workspace, prepared):
+        """Offer the original registered source to the shared ordered composer."""
+        if not prepared or not prepared.get("source"):
+            return None
+        source = prepared["source"]
+        ws = self.operator.ws(workspace)
+        collection = ws._get("sources", identifier(source["source_collection_id"]))
+        matches = [row for row in collection["entries"] if row["id"] == source["source_id"]]
+        if len(matches) != 1:
+            raise self.Fault("ENSEMBLE_SCIENTIFIC_SOURCE",
+                             "The original registered scientific source is unavailable.", 409)
+        entry = matches[0]
+        return {"workspace_key": workspace,
+                "sources": [{"source_collection_id": collection["id"], "source_id": entry["id"]}],
+                "title": entry.get("title") or "Saved annual-load calibration"}
+
     def _consumer(self, workspace, key):
         ws = self.operator.ws(workspace)
         plan = ws._get(ensemble_consumers.KIND, identifier(key))
@@ -74,7 +90,8 @@ class EnsembleService:
                                           item, labels.get(name, name))
                      for name, item in files.items()]
         return {"workspace_key": workspace, "plan": plan, "result": result,
-                "scientific_source": scientific, "downloads": downloads}
+                "scientific_source": scientific, "downloads": downloads,
+                "scientific_report_selection": self._scientific_report_selection(workspace, scientific)}
 
     def _consumer_rows(self, ws, ensemble_id):
         rows = []
@@ -133,6 +150,7 @@ class EnsembleService:
             if not source or not source.get("source"):
                 raise self.Fault("ENSEMBLE_SCIENTIFIC_SOURCE", "Prepare the saved scientific report source first.", 409)
             return {"workspace_key": workspace, "source": source,
+                    "scientific_report_selection": self._scientific_report_selection(workspace, source),
                     "delivery_selection": ensemble_scientific_source.delivery_selection(source["source"])}
         if operation == "consumer":
             return self._consumer(workspace, payload.get("consumer_id"))
@@ -208,7 +226,9 @@ class EnsembleService:
         if action == "ensemble.scientific-source":
             result = ensemble_scientific_source.prepare(ws, identifier(payload.get("consumer_id")),
                                                        render=payload.get("render", True))
-            return {**result, "downloads": [
+            return {**result, "workspace_key": workspace,
+                    "scientific_report_selection": self._scientific_report_selection(workspace, result),
+                    "downloads": [
                 self.operator._ticket(workspace, relative_file(ws.root, item["path"]), item, name.replace("_", " "))
                 for name, item in result.get("files", {}).items()]}
         if action == "ensemble.flow-support":
