@@ -17,6 +17,7 @@ import { inspectCkanMerchantPackage } from './publisher/release.mjs';
 import { CKAN_SOURCE_LOCATIONS_SCHEMA, ckanWorkspaceMember } from './source-locations.mjs';
 import { validateDcatState, validateDcatWorkspaceFiles } from './dcat-workspace.mjs';
 import { dcatSemanticSummary } from './dcat-semantic.mjs';
+import { validateDcatCorrections, validateDcatCorrectionFiles, dcatCorrectionsSummary } from './dcat-corrections.mjs';
 
 import { validateCkanCapturePlans, validateCkanCapturePlanFiles } from './capture-plans.mjs';
 import { validateCkanRemoteState, validateCkanRemoteFiles, ckanRemoteSummary } from './remote-workspace.mjs';
@@ -54,6 +55,7 @@ function projectState(value) {
     }
   }
   validateDcatState(value.dcat);
+  validateDcatCorrections(value.dcat);
   validateCkanRemoteState(value.remote);
   validateCkanCapturePlans(value.capturePlans, value);
   if (value.operation?.state === 'RUNNING') throw fault('CKAN_PROJECT_BUSY', 'Finish the current project operation before exporting its snapshot.', 409);
@@ -163,6 +165,7 @@ function summary(state) {
     ...(state.capturePlans ? { capturePlans: structuredClone(state.capturePlans) } : {}),
     ...(state.dcat ? { dcat: { schema: state.dcat.schema, activeReleaseId: state.dcat.activeReleaseId,
       ...(state.dcat.semantic ? { semantic: dcatSemanticSummary(state.dcat) } : {}),
+      ...(state.dcat.corrections ? { corrections: dcatCorrectionsSummary(state.dcat) } : {}),
       catalogs: state.dcat.catalogs.map(({ id, sha256, bytes, profile }) => ({ id, sha256, bytes, profile })),
       reviews: state.dcat.reviews.map(({ id, sourceId, comparisonId, candidateId, status, reportSha256, candidateSha256, reviewSha256 }) =>
         ({ id, sourceId, comparisonId, candidateId, status, reportSha256, candidateSha256, reviewSha256 })),
@@ -204,6 +207,7 @@ export async function createCkanWorkspaceArchive({ directory, out, workbenchByte
     if (!Buffer.isBuffer(rawState)) throw fault('CKAN_ARCHIVE_STATE_INVALID');
     const state = projectState(JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(rawState)));
     await validateDcatWorkspaceFiles(directory, state.dcat);
+    await validateDcatCorrectionFiles(directory, state.dcat);
     await validateCkanRemoteFiles(directory, state.remote);
     await validateCkanCapturePlanFiles(directory, state.capturePlans, state);
     stores = await quiesce(directory, state);
@@ -420,7 +424,9 @@ async function relocate(root, archive, history, signal) {
   const state = rebase(initial, archive.manifest.source.directory, root), rewritten = [];
   // Semantic paths are relative and historical native values are immutable evidence.
   if (initial.dcat?.semantic) state.dcat.semantic = initial.dcat.semantic;
+  if (initial.dcat?.corrections) state.dcat.corrections = initial.dcat.corrections;
   await validateDcatWorkspaceFiles(root, state.dcat);
+  await validateDcatCorrectionFiles(root, state.dcat);
   await validateCkanRemoteFiles(root, state.remote);
   await validateCkanCapturePlanFiles(root, state.capturePlans, state);
   const locations = { schema: CKAN_SOURCE_LOCATIONS_SCHEMA, projectCreatedAt: initial.createdAt,

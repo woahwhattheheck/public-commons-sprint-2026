@@ -16,6 +16,8 @@ import { readPrivate, hashPrivate, privateDirectory, syncDirectory, fault } from
 const assets = new Map([['/', ['index.html', 'text/html; charset=utf-8']],
   ['/app.mjs', ['app.mjs', 'text/javascript; charset=utf-8']],
   ['/dcat-json.mjs', ['dcat-json.mjs', 'text/javascript; charset=utf-8']],
+  ['/dcat-correction-json.mjs', ['dcat-correction-json.mjs', 'text/javascript; charset=utf-8']],
+  ['/dcat-corrections.mjs', ['dcat-corrections.mjs', 'text/javascript; charset=utf-8']],
   ['/remote-publication.mjs', ['remote-publication.mjs', 'text/javascript; charset=utf-8']],
   ['/capture-plans.mjs', ['capture-plans.mjs', 'text/javascript; charset=utf-8']],
   ['/dcat-sources.mjs', ['dcat-sources.mjs', 'text/javascript; charset=utf-8']],
@@ -178,6 +180,26 @@ export async function startCkanServer({ workbench, port = 0, token = randomBytes
               schema: state.schema, createdAt: state.createdAt, catalogOrigin: state.catalogOrigin, sourceKind: state.sourceKind ?? 'ckan',
               ...(state.authTokenEnv ? { authTokenEnv: state.authTokenEnv } : {}),
             } });
+        }
+        if (parts[0] === 'dcat' && parts[1] === 'corrections') {
+          if (parts[2] === 'guide' && parts.length === 3) {
+            response.writeHead(200, { 'content-type': 'text/markdown; charset=utf-8',
+              'content-disposition': 'attachment; filename="CORRECTION_WORKBENCH.md"' });
+            response.end(await readFile(fileURLToPath(new URL('./CORRECTION_WORKBENCH.md', import.meta.url)))); return;
+          }
+          if (parts.length === 2) return json(response, workbench.listDcatCorrections({
+            offset: Number(url.searchParams.get('offset') ?? 0), limit: Number(url.searchParams.get('limit') ?? 50),
+            query: url.searchParams.get('query') ?? '' }));
+          if (parts.length === 3) return json(response, await workbench.dcatCorrection(parts[2]));
+          const selected = { correctionId: parts[2],
+            ...(url.searchParams.has('revisionId') ? { revisionId: url.searchParams.get('revisionId') } : {}) };
+          if (parts.length === 4 && parts[3] === 'inspect')
+            return json(response, await workbench.inspectDcatCorrection({ ...selected,
+              pointer: url.searchParams.get('pointer') ?? '', offset: Number(url.searchParams.get('offset') ?? 0),
+              limit: Number(url.searchParams.get('limit') ?? 50), query: url.searchParams.get('query') ?? '' }));
+          if (parts.length === 4 && parts[3] === 'download')
+            return await downloadWorkspaceArchive(response, await workbench.dcatCorrectionDownload({
+              ...selected, kind: url.searchParams.get('kind') ?? 'document' }));
         }
         if (parts[0] === 'dcat' && parts[1] === 'semantic') {
           if (parts[2] === 'comparisons') {
@@ -378,7 +400,9 @@ export async function startCkanServer({ workbench, port = 0, token = randomBytes
       }
       if (request.method === 'POST') {
         if (uploading) throw fault('CKAN_PROJECT_BUSY', 'Finish the current upload before starting another project operation.', 409);
-        const input = await body(request, ['remote', 'capture-plans', 'capture-plan-runs'].includes(parts[0]) || parts[0] === 'dcat' && parts[1] !== 'semantic', ['remote', 'capture-plans', 'capture-plan-runs'].includes(parts[0]) ? 4194304 : parts[0] === 'dcat' && parts[1] === 'semantic' ? 50331648 : 131072);
+        const input = await body(request, ['remote', 'capture-plans', 'capture-plan-runs'].includes(parts[0]) || parts[0] === 'dcat' && parts[1] !== 'semantic', ['remote', 'capture-plans', 'capture-plan-runs'].includes(parts[0]) ? 4194304 : parts[0] === 'dcat' && parts[1] === 'semantic' ? 50331648 : parts[0] === 'dcat' && parts[1] === 'corrections' ? 16777216 : 131072);
+        if (parts[0] === 'dcat' && parts[1] === 'corrections' && parts[2] === 'preview' && parts.length === 3)
+          return json(response, await workbench.previewDcatCorrection(input));
         if (parts[0] === 'capture-plans' && parts[1] === 'preview' && parts.length === 2)
           return json(response, await workbench.previewCapturePlan(input), 200, true);
         if (parts[0] === 'editions' && parts[2] === 'semantics' && parts.length === 3)
@@ -404,6 +428,12 @@ export async function startCkanServer({ workbench, port = 0, token = randomBytes
           result = workbench.publishRemotePublication(parts[2], input);
         else if (parts[0] === 'remote' && parts[1] === 'publications' && parts[3] === 'reconcile' && parts.length === 4)
           result = workbench.reconcileRemotePublication(parts[2]);
+        else if (parts[0] === 'dcat' && parts[1] === 'corrections' && parts.length === 3 &&
+            ['create', 'save', 'restore', 'materialize'].includes(parts[2])) {
+          const method = { create: 'createDcatCorrection', save: 'saveDcatCorrection',
+            restore: 'restoreDcatCorrection', materialize: 'materializeDcatCorrection' }[parts[2]];
+          result = workbench[method](input);
+        }
         else if (parts[0] === 'dcat' && parts[1] === 'semantic' && parts[2] === 'comparisons' && parts.length === 3)
           result = workbench.startDcatSemanticComparison(input);
         else if (parts[0] === 'dcat' && parts[1] === 'semantic' && parts[2] === 'comparisons' && parts[3] === 'reviews' && parts.length === 4)
@@ -441,6 +471,9 @@ export async function startCkanServer({ workbench, port = 0, token = randomBytes
         else if (parts[0] === 'cancel' && parts.length === 1) return json(response, workbench.cancel());
         else throw fault('CKAN_ROUTE_NOT_FOUND', 'The requested project action does not exist.', 404);
         return json(response, { operationId: result.id,
+          ...(result.correctionId ? { correctionId: result.correctionId } : {}),
+          ...(result.revisionId ? { revisionId: result.revisionId } : {}),
+          ...(result.catalogId ? { catalogId: result.catalogId } : {}),
           ...(result.profileId ? { profileId: result.profileId } : {}),
           ...(result.runId ? { runId: result.runId } : {}),
           ...(result.semanticReviewId ? { semanticReviewId: result.semanticReviewId } : {}),
