@@ -41,7 +41,12 @@ async function run(){
      }
      await capture(selected.kind+'-'+member.name.replace(/[^A-Za-z0-9_.-]/g,'_'));await download(section.getByRole('button',{name:'Download document',exact:true}),selected.kind+'-'+member.name,f);await page.locator('#close-preview').click();
     }
-    await page.reload();await page.locator('#downloads section').waitFor();
+    if(supplied){
+     const previous=page;page=await context.newPage();page.on('pageerror',e=>result.errors.push(e.message));await previous.close();
+     await page.setContent(selected.html,{waitUntil:'load'});if(page.url()!=='about:blank')throw Error('The reopened original viewer left its permitted blank document.');
+     result.documents.push({kind:selected.kind,width,bytes:Buffer.byteLength(selected.html),sha256:hash(selected.html),pageSource,operation:'independent_fresh_document_reopen'});save();
+    }else await page.reload();
+    await page.locator('#downloads section').waitFor();await capture(selected.kind+'-reopened-packages');
    }
    await context.close();owned.delete(context);
   }
