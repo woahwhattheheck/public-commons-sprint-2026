@@ -1,0 +1,250 @@
+{
+  "schema": "upstate.sources/v1",
+  "title": "Big Creek: original sample roles, laboratory sensitivity and historical assessment",
+  "captured_at": "2026-10-13",
+  "scope": {
+    "station_id": "21NC03WQ-H3200000",
+    "original_results": 943,
+    "selected_characteristics": [
+      "Arsenic",
+      "Beryllium",
+      "Cadmium",
+      "Copper",
+      "Cyanide",
+      "Lead",
+      "Mercury",
+      "Nickel",
+      "Turbidity",
+      "Zinc"
+    ],
+    "collection_dates": [
+      "2011-02-03",
+      "2012-12-11"
+    ],
+    "edition": "nc-big-creek-selected-originals-20261013"
+  },
+  "entries": [
+    {
+      "id": "nc-big-creek-sensitivity-observed-report",
+      "title": "Big Creek: original sample roles, laboratory sensitivity and historical assessment",
+      "kind": "document",
+      "role": "OBSERVED_CONTEXT",
+      "path": "source/nc_big_creek_sensitivity/20261013/observed-report.json",
+      "bytes": 20798,
+      "sha256": "e4db06d2c5df4a434e966fb7001200123d6f6cb077ef400fa07825656cb76e4f",
+      "source_format": "JSON",
+      "uri": "urn:upstate:nc-big-creek-sensitivity:20261013",
+      "vintage": "Original NCDEQ 2011–2012 selected-analyte WQX3 records; captured 13 October 2026",
+      "metadata": {
+        "report_schema": "upstate.observed-report/v1",
+        "measurement_schema": "upstate.nc-big-creek-sensitivity/v1",
+        "edition": "nc-big-creek-selected-originals-20261013",
+        "result_rows": 943,
+        "source_semantics": "Observed original samples with separate blank/replicate roles, fractions and reporting limits",
+        "source_station_crs": "EPSG:4269"
+      },
+      "companions": [
+        {
+          "path": "source/nc_big_creek_sensitivity/20261013/NATIVE_OPENING.md",
+          "bytes": 14474,
+          "sha256": "69e7b4bfbf7c5efc440df89621988b29b9c1b056694fe2498c13dd82b17418fd"
+        },
+        {
+          "path": "source/nc_big_creek_sensitivity/20261013/README.md",
+          "bytes": 4762,
+          "sha256": "59731a278d7f576aa46e1725883e4b45e158a39da95d7930ccaf6f246c9c7fe8"
+        },
+        {
+          "path": "source/nc_big_creek_sensitivity/20261013/comparison-groups.csv",
+          "bytes": 28606,
+          "sha256": "cbfb2ce7d24818fbd7fe1c09c2bc1210e3a7298600140c2f1c8fe12fb317f331"
+        },
+        {
+          "path": "source/nc_big_creek_sensitivity/20261013/comparison-groups.json",
+          "bytes": 59439,
+          "sha256": "41a1c6ac85666d6fc904c0dcdd8f6efb88050d91d4fd181e42a404bbc1c9c6ae"
+        },
+        {
+          "path": "source/nc_big_creek_sensitivity/20261013/derive.mjs",
+          "bytes": 15374,
+          "sha256": "de9759fca2a41ee9517df993efdabfed18bbc4ed1adb31b3a84b7ed8a9d2cf36"
+        },
+        {
+          "path": "source/nc_big_creek_sensitivity/20261013/explorer.mjs",
+          "bytes": 3040,
+          "sha256": "663d655ab1962ed6b0d845c24f4b5e623ca98065e28e8f62e9b45c7b40d06d6c"
+        },
+        {
+          "path": "source/nc_big_creek_sensitivity/20261013/figure-spec.json",
+          "bytes": 38058,
+          "sha256": "fb95a58e7c3503e246901f4c7db33a988c523ff3998f388cdd4b446c7a39783c"
+        },
+        {
+          "path": "source/nc_big_creek_sensitivity/20261013/figures/big-creek-cadmium.svg",
+          "bytes": 9305,
+          "sha256": "4297c0709f79dc3f6f6c1429190b98d77e74a25624be30b873a5e526a8985f73"
+        },
+        {
+          "path": "source/nc_big_creek_sensitivity/20261013/figures/big-creek-cyanide.svg",
+          "bytes": 6341,
+          "sha256": "fe92120d86da1e54ee884794839db5ff1390e373819a20be088fbea7fa4ab336"
+        },
+        {
+          "path": "source/nc_big_creek_sensitivity/20261013/figures/big-creek-mercury.svg",
+          "bytes": 9259,
+          "sha256": "53a93868e9819a3c964fe3125a0a0c58eb662d45a8c3fded4271e8b5eb28ce96"
+        },
+        {
+          "path": "source/nc_big_creek_sensitivity/20261013/measurement-explorer.html",
+          "bytes": 2104629,
+          "sha256": "f2bd0afba22ee1013d22aa06059e2769220afd039289cca2ed2d068d00514dfe"
+        },
+        {
+          "path": "source/nc_big_creek_sensitivity/20261013/observations.csv",
+          "bytes": 1207376,
+          "sha256": "35aea4971dbd8f723a25f01247cd5caed6a88497a69ad5bbcb67469ee8043b4e"
+        },
+        {
+          "path": "source/nc_big_creek_sensitivity/20261013/observations.json",
+          "bytes": 2725251,
+          "sha256": "e74127c1c6559087215e3973ce042a889222ef3afd5498069ff9a664d07493b3"
+        },
+        {
+          "path": "source/nc_big_creek_sensitivity/20261013/original/arsenic-wqx3-fullphyschem.csv",
+          "bytes": 139243,
+          "sha256": "1b3de0ee083341f67136f36baa891545c42adb057b713cdf6702244e65e63494"
+        },
+        {
+          "path": "source/nc_big_creek_sensitivity/20261013/original/beryllium-wqx3-fullphyschem.csv",
+          "bytes": 138999,
+          "sha256": "989bb0ff8535764c1c26547bd530760c51c97c74d3379d0bce8dd58c7d3da1fe"
+        },
+        {
+          "path": "source/nc_big_creek_sensitivity/20261013/original/big-creek-station-original.csv",
+          "bytes": 1263,
+          "sha256": "3e1742f232e7c7e8f92fe4645bb852ee89ffbbdc9392845f288ac79383166ba9"
+        },
+        {
+          "path": "source/nc_big_creek_sensitivity/20261013/original/cadmium-wqx3-fullphyschem.csv",
+          "bytes": 138755,
+          "sha256": "6343be886c2885a97117dfa1a78766b31fed3a4ec388fcfb10252868be665b0f"
+        },
+        {
+          "path": "source/nc_big_creek_sensitivity/20261013/original/copper-wqx3-fullphyschem.csv",
+          "bytes": 138633,
+          "sha256": "afa8fc605bf835defe172456acedad490745c8c30e53b3281547f47e79de820e"
+        },
+        {
+          "path": "source/nc_big_creek_sensitivity/20261013/original/cyanide-wqx3-fullphyschem.csv",
+          "bytes": 19147,
+          "sha256": "704127c2d7024c4fef9409c83fbd2a77e6e49c6b0b4087314e602814c4b68ec6"
+        },
+        {
+          "path": "source/nc_big_creek_sensitivity/20261013/original/lead-wqx3-fullphyschem.csv",
+          "bytes": 138369,
+          "sha256": "161bba004c04944dcd579f0aea6974aca9ddbf6d83e85d7c85402a1cd3f56c1e"
+        },
+        {
+          "path": "source/nc_big_creek_sensitivity/20261013/original/mercury-wqx3-fullphyschem.csv",
+          "bytes": 57390,
+          "sha256": "932590e5f01762b07108eb93d4926938268f00938a8d253bae2eb6ffb0d39da6"
+        },
+        {
+          "path": "source/nc_big_creek_sensitivity/20261013/original/nc-savannah-classification-registry.json",
+          "bytes": 198292,
+          "sha256": "6e9e1d02581ddff49fb09e9a56fdb61436c6cab50f62cf05610c2ba3efbda84b"
+        },
+        {
+          "path": "source/nc_big_creek_sensitivity/20261013/original/ncdeq-final2022-layer2-all-attributes-original.json",
+          "bytes": 64862,
+          "sha256": "3a2b24e991b13fb827846de6e287b99bd2031a9a1215c536cddddf6198090ba6"
+        },
+        {
+          "path": "source/nc_big_creek_sensitivity/20261013/original/ncdeq-final2022-table4-selected-parameters-original.json",
+          "bytes": 36279,
+          "sha256": "f80256ead2c1640b0423661f01399f0563eb6af3e2a3d8e80550e1aa33e64384"
+        },
+        {
+          "path": "source/nc_big_creek_sensitivity/20261013/original/nickel-wqx3-fullphyschem.csv",
+          "bytes": 138613,
+          "sha256": "fcc884f03cbd56e2ac3b2fa46295735f60863f036948519cfb45a1c0923228ab"
+        },
+        {
+          "path": "source/nc_big_creek_sensitivity/20261013/original/selected-field-wqx3-fullphyschem.csv",
+          "bytes": 27097,
+          "sha256": "adecdf28a0015aa105b7d710ec0506cfb4ef0baba58e72cce4550c1ec9e5e051"
+        },
+        {
+          "path": "source/nc_big_creek_sensitivity/20261013/original/zinc-wqx3-fullphyschem.csv",
+          "bytes": 138145,
+          "sha256": "458cfe89d1796eb6448381884458df0497700c6ecda5f666cc73486eea17778b"
+        },
+        {
+          "path": "source/nc_big_creek_sensitivity/20261013/plot-data.csv",
+          "bytes": 12958,
+          "sha256": "4858d5a50c70f0930a52292104c642eebcebc01003935978003ebde2e7b3baef"
+        },
+        {
+          "path": "source/nc_big_creek_sensitivity/20261013/present.mjs",
+          "bytes": 17683,
+          "sha256": "61660d08f25589fd2b00ebe323dc9d349ef867d800701ce6eed2afe0ab8c0bf0"
+        },
+        {
+          "path": "source/nc_big_creek_sensitivity/20261013/provenance.json",
+          "bytes": 5850,
+          "sha256": "afbd6e5ef278c9811e7ac618a3d084e4ef2e2995d35a50393f830d2356173394"
+        },
+        {
+          "path": "source/nc_big_creek_sensitivity/20261013/quality-control-records.csv",
+          "bytes": 498999,
+          "sha256": "5c1d7d466293cd0ac9db5965c6d0beb6b0dd03078e1452874baa7e2afd22a3a0"
+        },
+        {
+          "path": "source/nc_big_creek_sensitivity/20261013/reference-comparisons.csv",
+          "bytes": 3427,
+          "sha256": "9c340c4792281944d4ca655daf6cccf8fd18887f76a2b498480b5fa6e6262bcf"
+        },
+        {
+          "path": "source/nc_big_creek_sensitivity/20261013/reference-comparisons.json",
+          "bytes": 440413,
+          "sha256": "67a32852bea206fe93d18f502a6800998e54e20b4dcde5a52775eb66b57c1048"
+        },
+        {
+          "path": "source/nc_big_creek_sensitivity/20261013/regulatory-context.json",
+          "bytes": 2311,
+          "sha256": "363102b28cfdc9a7a7cdf822b570fcb9d8caa8eb14a79e597ee3193a4a7d7963"
+        },
+        {
+          "path": "source/nc_big_creek_sensitivity/20261013/report.html",
+          "bytes": 38411,
+          "sha256": "db20d563e5c72424b1b82c3672133ff40d7b81c2419f743eca993c7b29400bbe"
+        },
+        {
+          "path": "source/nc_big_creek_sensitivity/20261013/reproduce.mjs",
+          "bytes": 2423,
+          "sha256": "4b1d40162f331e261873a07fbaffb639cd4f88f54f05a0ef811b33d538880a98"
+        },
+        {
+          "path": "source/nc_big_creek_sensitivity/20261013/sampling-coverage.csv",
+          "bytes": 6542,
+          "sha256": "13c999fe4f131669e4771770149056746206e4ef2680ab6c46635e71ee345a37"
+        },
+        {
+          "path": "source/nc_big_creek_sensitivity/20261013/source-inventory.json",
+          "bytes": 4073,
+          "sha256": "3457aaccfbc11fbba850d0cbd74f7a8ec8b60d1555dd55d7dd5b93ba16fa8205"
+        },
+        {
+          "path": "source/nc_big_creek_sensitivity/20261013/source_manifest.mjs",
+          "bytes": 1281,
+          "sha256": "18846a6a87d06a09f60258cb082eb55632e04eeb8838ccbbcf50fbda737c0ed7"
+        },
+        {
+          "path": "source/nc_big_creek_sensitivity/20261013/summary.json",
+          "bytes": 893,
+          "sha256": "30a0d7f5d4bf5b991c64a696ffd71f14ea2c69213919fe74e369906ecc8675c2"
+        }
+      ]
+    }
+  ]
+}

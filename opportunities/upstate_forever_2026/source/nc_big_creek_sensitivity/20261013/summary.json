@@ -1,0 +1,42 @@
+{
+  "schema": "upstate.nc-big-creek-sensitivity/v1",
+  "captured_at": "2026-10-13",
+  "station_id": "21NC03WQ-H3200000",
+  "original_result_rows": 943,
+  "original_files": 10,
+  "original_characteristics": [
+    "Arsenic",
+    "Beryllium",
+    "Cadmium",
+    "Copper",
+    "Cyanide",
+    "Lead",
+    "Mercury",
+    "Nickel",
+    "Turbidity",
+    "Zinc"
+  ],
+  "activity_roles": {
+    "equipment_blank": 336,
+    "field_blank": 24,
+    "field_replicate": 19,
+    "routine_environmental": 564
+  },
+  "exact_comparison_groups": 36,
+  "distinct_activity_ids": 943,
+  "first_date": "2011-02-03",
+  "last_date": "2012-12-11",
+  "sampling_dates": 24,
+  "numeric_results": 27,
+  "censored_results": 915,
+  "other_detection_conditions": {
+    "Not Reported": 1
+  },
+  "original_method_unspecified": 943,
+  "quality_codes": {
+    "Q2": 2,
+    "U": 915,
+    "Z2": 1
+  },
+  "routine_sampling_dates": 24
+}
