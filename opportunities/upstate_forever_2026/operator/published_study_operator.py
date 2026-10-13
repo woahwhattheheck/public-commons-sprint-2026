@@ -60,6 +60,8 @@ class PublishedStudyProvider:
                 retain(path)
         manifests = (
             self.builtin / "model-sources.json",
+            self.builtin / "wqp" / "flow-context-sources.json",
+            self.builtin / "wqp" / "flow-context-public-sources.json",
             self.builtin / "wqp_20261013" / "source-manifest.json",
             self.builtin.parent.parent / "eighteenmile_chlorophyll_reconciled.sources.json",
         )
