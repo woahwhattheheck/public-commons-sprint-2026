@@ -1,11 +1,11 @@
 {
   "format": "upper-savannah-measurements-large-file-source/v1",
-  "version": "1.2.2",
+  "version": "1.2.3",
   "files": [
     {
       "path": "MEASUREMENT_LARGE_FILES.md",
-      "bytes": 23552,
-      "sha256": "d59ebeb7d3bbd30d6ab20fd74c8b513d6310b21649f5dd0665ff45a5732922e5",
+      "bytes": 25710,
+      "sha256": "aeba1e147047bde9011e9dd6c6a3151485bd694bde80114c01400bc42c0b4589",
       "role": "addition"
     },
     {
@@ -70,8 +70,8 @@
     },
     {
       "path": "measurement_workspace/engine/large_cli.mjs",
-      "bytes": 3008,
-      "sha256": "d64245d07e20feb65b6099a5ebc407060fa5a9547a1d8a6c4cdf3f2ad8299762",
+      "bytes": 3060,
+      "sha256": "9b3a49e8ae9a93ce7cebc853dc0c682d3c314e6b6052093dce6e114d447db8bf",
       "role": "addition"
     },
     {
@@ -88,8 +88,8 @@
     },
     {
       "path": "measurement_workspace/engine/large_intake.mjs",
-      "bytes": 19455,
-      "sha256": "34e7518208949bba903b7fac72e93c61f01c95c42a393be8b6e265c917e0d706",
+      "bytes": 25755,
+      "sha256": "fef1d0540005f843722591c5b0da650545f251e1d529327332b4c7cd2656d0be",
       "role": "addition"
     },
     {
@@ -255,6 +255,13 @@
       "panel_commit": "0b93b60b53318c2a996b24e5cf965921bea4ced7",
       "note": "Original returned-review engine is unchanged; the original registered operator mounts a native queue panel.",
       "database_capture_commit": "03c7623983d0437f0fc2c8eab9bf91800caee055"
+    },
+    "local_original_receiving": {
+      "operation_id": "CEDAR-10212-ECO-LOCAL-INTAKE-20261013",
+      "original_intake_blob": "e2fa8060afcca35f72a70f5032aca6a3788e2a31",
+      "source": "measurement_workspace/engine/large_intake.mjs",
+      "guide": "MEASUREMENT_LARGE_FILES.md",
+      "behavior": "The original intake lease covers complete staged local copying, acknowledged-prefix comparison, exact complete-source replay and recovery of the retained publication intent. Scientific normalization and the native import transaction remain unchanged."
     }
   }
 }
