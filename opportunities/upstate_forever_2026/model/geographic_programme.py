@@ -228,6 +228,21 @@ def _verified_report(ws, manager, programme_id, binding, selection):
     return status, report
 
 
+def _verify_inputs(ws, geographic_id, inputs):
+    """Verify retained science while omitting portable runtime lock markers."""
+    from .portable import member_name
+    directory = ws.root / "geographic-headwaters" / identifier(geographic_id) / "inputs"
+    for item in inputs["files"]:
+        relative = member_name(item["path"])
+        if relative.name.endswith(".lock"):
+            # held() creates empty runtime markers; portable backup omits them.
+            # Keep their original receipt entries, without requiring recreation.
+            if item.get("bytes") != 0 or item.get("sha256") != hashlib.sha256(b"").hexdigest():
+                raise ValueError("A declared runtime lock contains retained input data")
+            continue
+        verify_file(directory, item)
+
+
 def adopt(workspace, geographic_id, *, delivery_id=None, expected_preview_id=None, previous=None):
     """Create or reopen the existing Programme around three completed originals."""
     ws = _workspace(workspace)
@@ -255,8 +270,7 @@ def adopt(workspace, geographic_id, *, delivery_id=None, expected_preview_id=Non
         if current_binding != binding or current_selection != selection:
             raise ValueError("The original geographic preparation changed during adoption")
         started = time.perf_counter()
-        for item in inputs["files"]:
-            verify_file(directory / "inputs", item)
+        _verify_inputs(ws, binding["geographic_id"], inputs)
         for run_id in binding["run_ids"]:
             ws.run(run_id)
         native_verification_seconds = time.perf_counter() - started
@@ -308,8 +322,7 @@ def verify(workspace, value):
             or value.get("original_ensemble_id") != prepared["ensemble_id"]
             or value.get("native_runs") != cases):
         raise ValueError("Geographic Programme lineage differs in the received project")
-    for item in inputs["files"]:
-        verify_file(ws.root / "geographic-headwaters" / binding["geographic_id"] / "inputs", item)
+    _verify_inputs(ws, binding["geographic_id"], inputs)
     for run_id in binding["run_ids"]:
         ws.run(run_id)
     status, report = _verified_report(ws, ComputeProgrammes(ws),
