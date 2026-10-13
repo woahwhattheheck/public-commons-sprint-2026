@@ -213,3 +213,56 @@ tables. Keep this inspection attached to the original receiving operation;
 it does not create another model run, watcher or broad test system. Record
 the actual source revision, visible results and repaired first error with
 the same delivery receipt.
+
+
+## Continue the complete pair from a received Study
+
+Open **Study transfer → Received studies and original sources**, then open the
+saved Study. Its **Report comparisons** count describes only comparisons
+retained by that receipt. **Original report comparisons** presents each exact
+pair, earlier and later local report editions, complete change count and the
+original record-matching choices. Original table headings, selected column
+names, earlier/later row counts and position-change choices remain visible.
+
+**Open report comparison** returns to the existing Report changes desk with
+that exact comparison ID. The desk retains its filters, original matching
+engine, full paged change register, export operation and both frozen originals.
+**Open original report** beside either edition returns to its original saved
+Sources edition; the original customer-review control remains available there.
+The Study preview also opens an included comparison when it is reached through
+an explicitly selected report rather than selected as its own root.
+
+**View complete comparison** and **View retained report** use the existing
+comparison member route. That route preserves relative CSS, image, table-page
+and original report paths. These viewers read the exact frozen pair. The
+editable saved-edition controls use the corresponding local edition identities.
+Individual downloads retain their complete relative labels, such as
+`left/report.pdf`, `right/report.pdf` and `pages/page-00001.html`, so identically
+named members from different editions remain distinguishable.
+
+For a usable offline handover, download the **complete comparison ZIP**, extract
+it, and open `index.html` within the extracted folder. The ZIP includes both
+original report trees, every change page, the full CSV register, SQLite change
+database and structured identities. Its folder structure is needed for linked
+HTML assets. When the original Study captured a ZIP, the receiving screen labels
+it as retained with that Study. If the ZIP was produced later by the original
+export operation, it is labelled as prepared after capture. The receipt stays
+unchanged in both cases. If no ZIP is present, open the comparison and use
+**Prepare full comparison ZIP** through its existing queue.
+
+The receiver calls the original `verify_receipt`, projects only captured
+comparison IDs and resolves both original local edition nodes. It does not
+invent a comparison from whichever two reports happen to be present. A later
+comparison discovered through a current report is not added to this receipt's
+received-comparison list. The provider issues original authenticated file
+tickets with their retained byte counts and hashes and uses
+`ReportChanges._url` for connected HTML viewing.
+
+During the original native/browser receiving course, operate the received pair,
+earlier/later saved editions, original matching display and paged register;
+download the complete ZIP and reopen its extracted index and both report trees.
+Inspect the actual populated desktop and narrow views, all outgoing report/PDF
+attachments, an empty comparison list and a current failure state. Repair visible
+layout or file-navigation defects in the producing source before presenting the
+outgoing version. A JSON or controller replay does not replace opening and
+viewing the actual received application and exported documents.
