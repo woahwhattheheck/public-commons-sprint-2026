@@ -10,6 +10,10 @@ export default defineMerchantProvider({
   tools:tykWorkspaceTools,
   instructions:[{prefix:'merchant_tyk_',order:180,text:
     'Use the declared original Tyk workspace. Capture its complete native portfolio and save explicit cohorts from that capture. '+
+    'For a Dashboard cohort, create_commissioning binds the complete saved Classic selection to its operating-plan history. '+
+    'Read commissioning progress; prepare only its ready conversion, staging or promotion step, then use the original dispatch tool for that exact rollout. '+
+    'Accept native conversion only after reviewing every original and converted definition. Capture current staged definitions, record every API/check result against the returned context SHA, then review and dispatch the original promotion. '+
+    'Never mark a missing operational check passed. Refresh the final portfolio and retain the complete commissioning history in the workspace handover. '+
     'Prepare the complete native request, read its exact saved revision and plan SHA, then dispatch that reviewed request with a stable requestId. '+
     'Gateway writes require a separately prepared native reload before activation; Dashboard migration uses its native dryRun, stage, promote or direct operation. '+
     'Read original responses and current native definitions together. Recover an interrupted reply by reading its saved record or replaying the same requestId and input. '+

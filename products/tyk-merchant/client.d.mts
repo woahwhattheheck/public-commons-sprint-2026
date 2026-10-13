@@ -1,7 +1,7 @@
 /** Complete installed client of the original Tyk workspace, its immutable records and native deliveries. */
 export type Json = null | boolean | number | string | Json[] | { [key: string]: Json };
-export type RecordKind = 'connection' | 'capture' | 'cohort' | 'rollout' | 'delivery' | 'receiving';
-export type TykState = 'SAVED' | 'CAPTURING' | 'CAPTURED' | 'PREPARING' | 'PREPARED' | 'DISPATCHED' | 'READBACK'
+export type RecordKind = 'connection' | 'capture' | 'cohort' | 'commissioning' | 'rollout' | 'delivery' | 'receiving';
+export type TykState = 'IN_PROGRESS' | 'COMPLETE' | 'SAVED' | 'CAPTURING' | 'CAPTURED' | 'PREPARING' | 'PREPARED' | 'DISPATCHED' | 'READBACK'
   | 'CONFIRMED' | 'ACCEPTED' | 'PARTIAL' | 'UNCHANGED' | 'DIVERGED' | 'ABSENT' | 'UNKNOWN' | 'STALE'
   | 'PREPARE_FAILED' | 'INTERRUPTED' | 'EXPORTED' | 'INSPECTED' | 'ADOPTING' | 'ADOPTED';
 export interface TykConnection {
@@ -107,6 +107,82 @@ export interface CreateCohortInput extends RequestIdentity {
   id?: string;
   expectedRevision?: number;
 }
+export type CommissioningNativeStep = 'conversion' | 'staging' | 'promotion';
+export type CommissioningReviewStep = 'conversion-review' | 'production-review';
+export type CommissioningStep = CommissioningNativeStep | CommissioningReviewStep | 'staged-capture' | 'final-capture';
+export interface CreateCommissioningInput extends RequestIdentity {
+  cohortId: string; cohortRevision: number; label: string;
+  customer?: string; operator?: string; checkNames: string[];
+  /** Complete original customer-selected source; terms remain source, not native or commercial acceptance. */
+  workshare?: CommissioningSupportingFile;
+  abortOnFailure?: boolean; overrideStaged?: boolean;
+}
+export interface PrepareCommissioningStepInput extends RequestIdentity {
+  id: string; expectedRevision: number; stepId: CommissioningNativeStep;
+}
+export interface CommissioningCheck {
+  apiId: string; name: string; outcome: 'passed' | 'failed'; note: string;
+}
+export interface CommissioningSupportingFile {
+  name: string; mediaType: string; contentBase64: string; note?: string;
+}
+export interface RecordCommissioningReviewInput extends RequestIdentity {
+  id: string; expectedRevision: number; stepId: CommissioningReviewStep;
+  contextSha256: string; reviewer: string; note: string;
+  checks?: CommissioningCheck[]; files?: CommissioningSupportingFile[];
+}
+export interface RefreshCommissioningInput extends RequestIdentity {
+  id: string; expectedRevision: number; phase: 'staged' | 'final';
+}
+export interface CommissioningWorkshare {
+  source: { id: string; name: string; mediaType: string; bytes: number;
+    encoding: 'base64'; content: string; note: string };
+  sourceSha256: string; cohort: RecordReference; connectionId: string;
+  configurationSha256: string; checkNames: string[];
+}
+export interface CommissioningValue {
+  schema: 'stellar-forge.tyk-commissioning.v1';
+  label: string; customer: string; operator: string;
+  cohort: RecordReference; connectionId: string; configurationSha256: string;
+  checkNames: string[]; abortOnFailure: boolean; overrideStaged: boolean;
+  manuscript: SourceReference;
+  /** Original source binding returned by the same workspace. */
+  workshare: CommissioningWorkshare | null;
+  bindings: Partial<Record<CommissioningNativeStep, RecordReference>>;
+  reviews: Partial<Record<CommissioningReviewStep, {
+    reviewer: string; note: string; checks: CommissioningCheck[]; accepted: boolean;
+    contextSha256: string; context: Record<string, unknown>; recordedAt: string;
+  }>>;
+  supportingFiles: Record<string, unknown[]>;
+  observation: RecordReference | null; finalObservation: RecordReference | null;
+  pending: Record<string, unknown> | null;
+  state: 'IN_PROGRESS' | 'COMPLETE';
+  summary: { apis: number; steps: number; completed: number; checks: number };
+}
+export interface CommissioningObservation {
+  phase: 'staged' | 'final'; capture: RecordReference;
+  apis: { apiId: string; stagedApiId: string; sha256: string; bytes?: number;
+    definitionRef: SourceReference | null; summary: Record<string, unknown> | null }[];
+}
+export interface CommissioningView {
+  record: TykRecord<CommissioningValue>;
+  progress: {
+    schema: 'stellar-forge.tyk-commissioning.v1'; state: 'IN_PROGRESS' | 'COMPLETE';
+    next: CommissioningStep | null;
+    summary: { apis: number; steps: number; completed: number; checks: number };
+    steps: { id: CommissioningStep; title: string; instruction: string;
+      status: 'planned' | 'in-progress' | 'completed'; ready: boolean; complete: boolean;
+      record: RecordReference | null; nativeState: TykState | null }[];
+  };
+  cohort: TykRecord;
+  workshare: CommissioningWorkshare | null;
+  rollouts: Record<CommissioningNativeStep, TykRecord<RolloutValue> | null>;
+  observation: CommissioningObservation | null; finalObservation: CommissioningObservation | null;
+  reviewContexts: Partial<Record<CommissioningReviewStep, { context: Record<string, unknown>; sha256: string }>>;
+  /** Full original OperatingPlan with every revision and complete supporting file. */
+  plan: { schema: 'stellar-forge.operating-plan.v1'; id: string; revisions: unknown[]; [key: string]: unknown };
+}
+
 export type MigrationSelection = {
   operation: 'migrate';
   apiIds: string[];
@@ -226,6 +302,11 @@ export interface ActionInputs {
   capture: CaptureInput;
   importCapture: ImportCaptureInput;
   createCohort: CreateCohortInput;
+  createCommissioning: CreateCommissioningInput;
+  readCommissioning: { id: string; revision?: number };
+  prepareCommissioningStep: PrepareCommissioningStepInput;
+  recordCommissioningReview: RecordCommissioningReviewInput;
+  refreshCommissioning: RefreshCommissioningInput;
   prepareRollout: PrepareRolloutInput;
   dispatchRollout: DispatchRolloutInput;
   reconcileRollout: ReconcileRolloutInput;
@@ -245,6 +326,11 @@ export interface ActionResults {
   capture: TykRecord;
   importCapture: TykRecord;
   createCohort: TykRecord;
+  createCommissioning: TykRecord<CommissioningValue>;
+  readCommissioning: CommissioningView;
+  prepareCommissioningStep: TykRecord<CommissioningValue>;
+  recordCommissioningReview: TykRecord<CommissioningValue>;
+  refreshCommissioning: TykRecord<CommissioningValue>;
   prepareRollout: TykRecord<RolloutValue>;
   dispatchRollout: TykRecord<RolloutValue>;
   reconcileRollout: TykRecord<RolloutValue>;
@@ -320,6 +406,11 @@ export class TykProductClient {
   capture(input: CaptureInput): Promise<TykRecord>;
   importCapture(input: ImportCaptureInput): Promise<TykRecord>;
   createCohort(input: CreateCohortInput): Promise<TykRecord>;
+  createCommissioning(input: CreateCommissioningInput): Promise<TykRecord<CommissioningValue>>;
+  readCommissioning(input: ActionInputs['readCommissioning']): Promise<CommissioningView>;
+  prepareCommissioningStep(input: PrepareCommissioningStepInput): Promise<TykRecord<CommissioningValue>>;
+  recordCommissioningReview(input: RecordCommissioningReviewInput): Promise<TykRecord<CommissioningValue>>;
+  refreshCommissioning(input: RefreshCommissioningInput): Promise<TykRecord<CommissioningValue>>;
   prepareRollout(input: PrepareRolloutInput): Promise<TykRecord<RolloutValue>>;
   dispatchRollout(input: DispatchRolloutInput): Promise<TykRecord<RolloutValue>>;
   reconcileRollout(input: ReconcileRolloutInput): Promise<TykRecord<RolloutValue>>;
