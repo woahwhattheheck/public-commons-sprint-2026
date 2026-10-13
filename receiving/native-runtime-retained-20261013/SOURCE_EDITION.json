@@ -13,8 +13,8 @@
   "changes": [
     {
       "path": "native_foreground.py",
-      "source": "84DF complete correction F0C9P9W347J",
-      "reason": "Return the retained command outcome after successful foreground supervision."
+      "source": "Maintained foreground command-result correction",
+      "reason": "Return the retained command outcome after successful foreground supervision, including retryable status for pending finalization on resume."
     },
     {
       "path": "NATIVE_ARTIFACT_RETENTION.md",
@@ -40,9 +40,9 @@
     },
     {
       "path": "native_foreground.py",
-      "bytes": 21697,
-      "sha256": "6a03f33c6dda1dc3924792a22d21726509d6abad9e18156264b97ca4c2246c55",
-      "gitBlob": "993ba3d72e840704e76abd81299f76d60d9e2649",
+      "bytes": 21762,
+      "sha256": "b5689866d8665a0a80caadcacbe1ae8748f46bc763d0bad729f3e665829420d6",
+      "gitBlob": "36eaad3e3562f16227614b947ea9ddf578f92e4a",
       "sourceGitBlob": "a62c465f2a6a023bc3d8bc01768ef0f7f0ca235e",
       "mode": "100644"
     },
