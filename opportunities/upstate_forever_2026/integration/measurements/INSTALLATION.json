@@ -1,6 +1,6 @@
 {
   "schema": "upstate.measurements-installation/v1",
-  "edition": "complete-measurements-chiques-nutrients-20261013",
+  "edition": "complete-measurements-original-workbook-returns-20261013",
   "source_reference": {
     "repository": "woahwhattheheck/public-commons-sprint-2026",
     "original_core_commit": "a81e07284183a2008a413198714759488c2d2c9d",
@@ -184,6 +184,12 @@
       "guide": "measurement_workspace/CHIQUES_NUTRIENT_SOURCES.md",
       "native_rendered": false,
       "preserves": "Original Chiques source files and complete existing Measurements, scientific reviews, source collections, result handbacks, sediment studies, flow comparisons and same-file interpretation comparison."
+    },
+    "original_workbook_returns": {
+      "operation_id": "ECO-ORIGINAL-WORKBOOK-RESULTS-20261013",
+      "base_commit": "bf109b4a0cddafe6434c7d0cf4ee9c57ec1ff48c",
+      "original_claim": "1791919621.914169",
+      "delivery_edition": 3
     }
   },
   "files": [
@@ -419,13 +425,13 @@
     },
     {
       "path": "measurement_workspace/SOURCE_HANDBACK.md",
-      "bytes": 12815,
-      "sha256": "946736b70c4f1da6084732c4130db5884a3a58ad23ef725e55ab305100dc2a39"
+      "bytes": 20100,
+      "sha256": "307efafb343e4c969f6adaf9df91b6b184a0cbf25395499403b3ad04240b86cc"
     },
     {
       "path": "measurement_workspace/SOURCE_HANDBACK_BROWSER.md",
-      "bytes": 18440,
-      "sha256": "8c09ee3f5720d16cff8cfed86fde6baeae28fe1c5da287dc7bbe8fde85de1ee2"
+      "bytes": 19420,
+      "sha256": "3e10f811e2e68a300ae1badf87d784b784cf157fba81f016826684c1d9de8386"
     },
     {
       "path": "measurement_workspace/SOURCE_RECONCILIATION.md",
@@ -699,8 +705,8 @@
     },
     {
       "path": "measurement_workspace/engine/source_handback.mjs",
-      "bytes": 28600,
-      "sha256": "edf7eff2c1fe20c9b4d0a5fa4efb2f857e8987290a1138236c23b40a38fbb4bd"
+      "bytes": 32261,
+      "sha256": "7c7fb777aea899a035303c6ab57c4c7e6ea6cea313d1192266cf2aad8eff285f"
     },
     {
       "path": "measurement_workspace/engine/source_handback_cli.mjs",
@@ -731,6 +737,26 @@
       "path": "measurement_workspace/engine/source_reconciliation.mjs",
       "bytes": 18043,
       "sha256": "3e1812e964df450f3cd357d8fa0b3ff4d770d7329ea1d93894a98abeb18eaad7"
+    },
+    {
+      "path": "measurement_workspace/engine/source_workbook_append.py",
+      "bytes": 20420,
+      "sha256": "465eef1ca7f13e18f9da3fd95f5c92342f3a423b7d888d9beca640f96a24c693"
+    },
+    {
+      "path": "measurement_workspace/engine/source_workbook_browser.mjs",
+      "bytes": 7716,
+      "sha256": "6d8902072c21ebbc81fe5387ae634c19b0d7f95e6ebbd0467a377626e46c2856"
+    },
+    {
+      "path": "measurement_workspace/engine/source_workbook_course.mjs",
+      "bytes": 7299,
+      "sha256": "bd8833a3929d501d326f19faae8cbe712bdac0f3f1b2c1803cee7ad96c3d8ef0"
+    },
+    {
+      "path": "measurement_workspace/engine/source_workbook_returns.mjs",
+      "bytes": 8393,
+      "sha256": "649b436017a31b447bd3d96af538c128fb3fb98d8aa4d94375fdd157e3805c0a"
     },
     {
       "path": "measurement_workspace/engine/stream_csv.mjs",
@@ -954,8 +980,8 @@
     },
     {
       "path": "measurement_workspace/web/source_handback.mjs",
-      "bytes": 37868,
-      "sha256": "79d939c471010c53ecb3407d97c1a437ff559bd1fa301b19ddfbc500c982e58f"
+      "bytes": 41413,
+      "sha256": "e66f656dc6f8e851d5d64602480a4595f36f44cdcc010f5d7ac6dd7e39838d1f"
     },
     {
       "path": "measurement_workspace/web/source_reconciliation.css",
@@ -1469,8 +1495,8 @@
     },
     {
       "path": "operator/web/source_handback.mjs",
-      "bytes": 37868,
-      "sha256": "79d939c471010c53ecb3407d97c1a437ff559bd1fa301b19ddfbc500c982e58f"
+      "bytes": 41413,
+      "sha256": "e66f656dc6f8e851d5d64602480a4595f36f44cdcc010f5d7ac6dd7e39838d1f"
     },
     {
       "path": "operator/web/source_reconciliation.css",
@@ -1880,7 +1906,9 @@
       "9573bc894b059ed561f83020772692a595e4e123bad947457e1f219c6eeacc97",
       "f7430cd088b0096849106a842e5d233c2beb05d04770383bf75a8924c97d2ae9",
       "78d53d543baae6649d457c2a3d2f1a7bdf9a66a16b6ec7892f15d5965bdb81bd",
-      "cb69030f24e8c74cf103bf1894c7cb34246ff2fc9b187585ce77cc9857057777"
+      "cb69030f24e8c74cf103bf1894c7cb34246ff2fc9b187585ce77cc9857057777",
+      "766f9e8642cb7ef3f7d883a7ae83e63077b095703769ef84220b1a952033baae",
+      "228c1a99bd0f5b337db50d827a299a3050da2a74bef826e8e6442b7e7d0d98a5"
     ],
     "CURRENT_OWNER_DIRECTION.md": [
       "57945ea0e6eca762011e9f7e6febd39255359143d454fd3aa58a3a849ec14fc9",
@@ -2146,19 +2174,24 @@
       "dcbbb98d9a5ac7238203d4477f4ce405c7aa484ab1e2abe690b4582b0b95987b"
     ],
     "measurement_workspace/engine/source_handback.mjs": [
-      "698946f6bdc505296d9a891d161efdeb1a3942e675a1868abbda7e80ca68a962"
+      "698946f6bdc505296d9a891d161efdeb1a3942e675a1868abbda7e80ca68a962",
+      "edf7eff2c1fe20c9b4d0a5fa4efb2f857e8987290a1138236c23b40a38fbb4bd"
     ],
     "measurement_workspace/web/source_handback.mjs": [
-      "5699ccfb2c392927a5385c8ae8f78434e41f0ac274a2267cff1968780dc7431b"
+      "5699ccfb2c392927a5385c8ae8f78434e41f0ac274a2267cff1968780dc7431b",
+      "79d939c471010c53ecb3407d97c1a437ff559bd1fa301b19ddfbc500c982e58f"
     ],
     "operator/web/source_handback.mjs": [
-      "5699ccfb2c392927a5385c8ae8f78434e41f0ac274a2267cff1968780dc7431b"
+      "5699ccfb2c392927a5385c8ae8f78434e41f0ac274a2267cff1968780dc7431b",
+      "79d939c471010c53ecb3407d97c1a437ff559bd1fa301b19ddfbc500c982e58f"
     ],
     "measurement_workspace/SOURCE_HANDBACK_BROWSER.md": [
-      "d239ceb84bee136b4f39858b6b52441783db311713e5b75e8bddc3698b2ea3a8"
+      "d239ceb84bee136b4f39858b6b52441783db311713e5b75e8bddc3698b2ea3a8",
+      "8c09ee3f5720d16cff8cfed86fde6baeae28fe1c5da287dc7bbe8fde85de1ee2"
     ],
     "measurement_workspace/SOURCE_HANDBACK.md": [
-      "8722d8da1ef7406a2f345941227aefc3ebeda011ae81d3620d05c80f889be682"
+      "8722d8da1ef7406a2f345941227aefc3ebeda011ae81d3620d05c80f889be682",
+      "946736b70c4f1da6084732c4130db5884a3a58ad23ef725e55ab305100dc2a39"
     ],
     "model/client_source_files.py": [
       "b06aa9fbdd6550c9b170332e73c0e05491f221adaab96597d4c7e8932140caab",
