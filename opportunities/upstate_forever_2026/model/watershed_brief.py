@@ -2,6 +2,8 @@
 from __future__ import annotations
 
 import argparse
+import csv
+import io
 import hashlib
 import html
 import json
@@ -13,9 +15,227 @@ import tempfile
 from typing import Mapping
 from urllib.parse import urlsplit
 
-BRIEF_FORMAT = "upstate.watershed-selection-brief/v1"
+BRIEF_FORMAT = "upstate.watershed-selection-brief/v2"
 BRIEF_FILENAME = "watershed-selection-brief.md"
 HTML_FILENAME = "watershed-selection-brief.html"
+
+
+CONTRIBUTING_FILENAME = "watershed-contributing-hucs.csv"
+CONTRIBUTING_COLUMNS = (
+    "huc12", "name", "area_acres", "states", "priority", "priority_states",
+    "selected_classification_count", "class_counts", "is_selected",
+    "contributes_to_huc12s",
+)
+CLASS_LABELS = {
+    "ORW": "Outstanding Resource Waters",
+    "ONRW": "Outstanding National Resource Waters",
+    "TN": "Trout Natural",
+    "TPGT": "Trout Put, Grow, and Take",
+    "TPT": "Trout Put and Take",
+}
+
+
+def _upstream_ids(focal, values, domain):
+    if not isinstance(values, (list, tuple)) or any(
+            not isinstance(key, str) or not re.fullmatch(r"[0-9]{12}", key)
+            for key in values):
+        raise ValueError("Contributing membership requires original twelve-digit HUC12s")
+    if len(values) != len(set(values)) or focal in values or set(values) - domain:
+        raise ValueError("Upstream membership must be distinct model-domain ancestors")
+    return sorted(values)
+
+
+def load_completed_connectivity(report, report_sha256, csv_path, summary_path):
+    """Bind an existing completed connectivity output to its exact source report."""
+    csv_path, summary_path = Path(csv_path), Path(summary_path)
+    csv_body, summary_body = csv_path.read_bytes(), summary_path.read_bytes()
+    summary = json.loads(summary_body)
+    original = summary.get("sources", {}).get("original_regional_report", {})
+    if (summary.get("schema") != "upstate.watershed-connectivity/v1"
+            or summary.get("source_context_id") != report["id"]
+            or original.get("sha256") != report_sha256):
+        raise ValueError("Completed connectivity must bind to this exact original report file")
+    by_huc = {row["huc12"]: row for row in report["hucs"]}
+    rows = list(csv.DictReader(io.StringIO(csv_body.decode("utf-8-sig"), newline="")))
+    indexed = {row["huc12"]: row for row in rows}
+    if (len(indexed) != len(rows) or set(indexed) != set(by_huc)
+            or summary.get("domain_huc_count") != len(by_huc)):
+        raise ValueError("Completed connectivity must retain every original model-domain HUC")
+    upstream = {}
+    for key, row in indexed.items():
+        original_row = by_huc[key]
+        if (row["focal_priority"] != str(original_row["priority"]).lower()
+                or int(row["focal_selected_classifications"]) != original_row["selected_classification_count"]
+                or not math.isclose(float(row["focal_area_acres"]), original_row["area_acres"],
+                                    rel_tol=1e-10, abs_tol=1e-6)):
+            raise ValueError("Completed connectivity focal attributes differ from the original report")
+        members = _upstream_ids(key, row["upstream_huc12s"].split("|")
+                                if row["upstream_huc12s"] else [], set(by_huc))
+        contributing = [original_row, *(by_huc[item] for item in members)]
+        area = math.fsum(item["area_acres"] for item in contributing)
+        if (int(row["upstream_domain_huc_count"]) != len(members)
+                or int(row["contributing_huc_count"]) != len(contributing)
+                or int(row["contributing_priority_huc_count"]) !=
+                    sum(item["priority"] is True for item in contributing)
+                or int(row["contributing_selected_classifications"]) !=
+                    sum(item["selected_classification_count"] for item in contributing)
+                or not math.isclose(float(row["contributing_area_acres"]), area,
+                                    rel_tol=1e-10, abs_tol=1e-6)):
+            raise ValueError("Completed connectivity quantities differ from its retained membership")
+        upstream[key] = members
+    source = {
+        "kind": "completed_connectivity",
+        "source_context_id": report["id"],
+        "original_report_sha256": report_sha256,
+        "calculated_on": summary.get("calculated_on"),
+        "source_status": summary.get("source_status"),
+        "sources": summary.get("sources", {}),
+        "files": [
+            {"name": path.name, "bytes": len(body), "sha256": hashlib.sha256(body).hexdigest()}
+            for path, body in ((csv_path, csv_body), (summary_path, summary_body))
+        ],
+    }
+    return upstream, source
+
+
+def add_contributing_context(selection, report, *, upstream_by_huc=None, source=None):
+    """Count the union of original member rows once, retaining each focal set."""
+    from .watershed_context import selected_watershed_export, _summary
+    focal = selected_watershed_export(report, selection["selected_huc12s"])
+    if (selection.get("context_id") != focal["context_id"]
+            or selection.get("context_canonical_sha256") != focal["context_canonical_sha256"]):
+        raise ValueError("Contributing context must use the saved selection's original report")
+    indexed = {row["huc12"]: row for row in report["hucs"]}
+    chosen = focal["selected_huc12s"]
+    if upstream_by_huc is None:
+        if not all(isinstance(indexed[key].get("network"), Mapping) for key in chosen):
+            return dict(selection)
+        upstream_by_huc = {
+            key: indexed[key]["network"].get("known_upstream_domain_huc12s")
+            for key in chosen
+        }
+        source = {"kind": "retained_report_network",
+                  "context_canonical_sha256": focal["context_canonical_sha256"],
+                  "network": report.get("network"), "sources": report.get("sources", [])}
+    membership, per_focal = {}, []
+    for key in chosen:
+        members = [key, *_upstream_ids(key, upstream_by_huc.get(key), set(indexed))]
+        member_summary = _summary([indexed[item] for item in members])
+        for member in members:
+            membership.setdefault(member, []).append(key)
+        per_focal.append({
+            "huc12": key, "name": indexed[key].get("name"),
+            "member_huc12s": sorted(members), "summary": member_summary,
+        })
+    union_rows = [indexed[key] for key in sorted(membership)]
+    rows = [
+        {**{field: row.get(field) for field in CONTRIBUTING_COLUMNS
+            if field not in {"is_selected", "contributes_to_huc12s"}},
+         "is_selected": row["huc12"] in chosen,
+         "contributes_to_huc12s": membership[row["huc12"]]}
+        for row in union_rows
+    ]
+    repeated = [row for row in rows if len(row["contributes_to_huc12s"]) > 1]
+    complete_area = all(row["area_acres"] is not None for row in rows)
+    individual_area = (math.fsum(item["summary"]["area_acres"] for item in per_focal)
+                       if complete_area else None)
+    repeated_area = (math.fsum(row["area_acres"] * (len(row["contributes_to_huc12s"]) - 1)
+                              for row in repeated) if complete_area else None)
+    context = {
+        "schema": "upstate.watershed-contributing-union/v1",
+        "context_id": focal["context_id"],
+        "context_canonical_sha256": focal["context_canonical_sha256"],
+        "selected_huc12s": chosen,
+        "member_huc12s": sorted(membership), "summary": _summary(union_rows),
+        "per_focal": per_focal, "hucs": rows,
+        "sum_individual_contributing_acres": individual_area,
+        "repeated_area_acres": repeated_area,
+        "repeated_member_huc12s": [row["huc12"] for row in repeated],
+        "source": source,
+    }
+    return {**selection, "contributing_context": context}
+
+
+def selection_with_contributing_context(report, selected_huc12s, report_sha256,
+                                        completed_directory=None):
+    """Use native report membership or an installed, exactly bound completed result."""
+    from .watershed_context import selected_watershed_export
+    selection = selected_watershed_export(report, selected_huc12s)
+    enriched = add_contributing_context(selection, report)
+    if "contributing_context" in enriched or completed_directory is None:
+        return enriched
+    directory = Path(completed_directory)
+    csv_path = directory / "watershed-connectivity-217.csv"
+    summary_path = directory / "watershed-connectivity-summary.json"
+    if not csv_path.is_file() or not summary_path.is_file():
+        return enriched
+    summary = json.loads(summary_path.read_bytes())
+    if (summary.get("source_context_id") != report["id"]
+            or summary.get("sources", {}).get("original_regional_report", {}).get("sha256")
+            != report_sha256):
+        return enriched
+    upstream, source = load_completed_connectivity(report, report_sha256, csv_path, summary_path)
+    return add_contributing_context(selection, report, upstream_by_huc=upstream, source=source)
+
+
+def _contributing_lines(selection):
+    context = selection.get("contributing_context")
+    if context is None:
+        return []
+    if (context.get("schema") != "upstate.watershed-contributing-union/v1"
+            or context.get("context_id") != selection["context_id"]
+            or context.get("context_canonical_sha256") != selection["context_canonical_sha256"]
+            or context.get("selected_huc12s") != sorted(selection["selected_huc12s"])):
+        raise ValueError("Saved contributing membership differs from its selected report")
+    summary = context["summary"]
+    rows = context["hucs"]
+    if ([row["huc12"] for row in rows] != context["member_huc12s"]
+            or len(rows) != summary["huc_count"]):
+        raise ValueError("Saved contributing rows differ from their retained union")
+    lines = ["## Contributing-area union", "",
+             f"The distinct union of the focal watersheds and their known upstream model-domain "
+             f"watersheds contains **{summary['huc_count']} HUC12s** covering "
+             f"**{_number(summary['area_acres'])} acres**. Each member is counted once. "
+             f"The union contains **{summary['priority_huc_count']} NRCS priority watersheds** "
+             f"and **{summary['selected_classification_count']:,} selected-class source records**.", ""]
+    lines.extend(_table(
+        ["Focal HUC12", "Watershed", "Contributing HUCs", "Contributing acres",
+         "Priority HUCs", "Selected-class records"],
+        ([item["huc12"], item["name"], item["summary"]["huc_count"],
+          _number(item["summary"]["area_acres"]), item["summary"]["priority_huc_count"],
+          item["summary"]["selected_classification_count"]] for item in context["per_focal"]),
+    ))
+    lines.extend(["", "The individual contributing areas sum to "
+                  + _number(context["sum_individual_contributing_acres"]) + " acres. "
+                  "Repeated memberships account for "
+                  + _number(context["repeated_area_acres"]) + " acres in that sum.", ""])
+    repeated = [row for row in rows if row["huc12"] in context["repeated_member_huc12s"]]
+    if repeated:
+        lines.extend(_table(
+            ["Shared HUC12", "Watershed", "Area (acres)", "Contributes to focal HUC12s"],
+            ([row["huc12"], row["name"], _number(row["area_acres"]),
+              row["contributes_to_huc12s"]] for row in repeated),
+        ))
+        lines.append("")
+    priority = [row for row in rows if row["priority"] is True]
+    if priority:
+        lines.extend(["### Priority watersheds in the union", "", *_table(
+            ["HUC12", "Watershed", "Whole area (acres)", "Designated priority states"],
+            ([row["huc12"], row["name"], _number(row["area_acres"]), row["priority_states"]]
+             for row in priority),
+        ), ""])
+    lines.extend(["### Classified-water records in the union", "", *_table(
+        ["Publisher class", "Publisher label", "Source records"],
+        ([code, CLASS_LABELS.get(code, code), count]
+         for code, count in sorted(summary["class_counts"].items())),
+    ), "", "The union follows original HUC12 drainage membership. Stream classifications retain "
+        "their publisher-assigned HUC12 and named-reach meaning. A drainage connection does not "
+        "extend a legal stream classification to every water in the contributing watershed.", "",
+        "- [USGS Watershed Boundary Dataset](<https://hydro.nationalmap.gov/arcgis/rest/services/wbd/MapServer/6>)",
+        "- [SCDES classified-stream service](<https://gis.des.sc.gov/gisserver/rest/services/water/SCHydroClass/MapServer/2>)",
+        "- [SCDES R.61-68 classification definitions](<https://des.sc.gov/sites/des/files/Library/Regulations/R.61-68.pdf>)",
+        "- [South Carolina R.61-69 named classified waters](<https://www.scstatehouse.gov/coderegs/Chapter%2061-69.pdf>)", ""])
+    return lines
 
 
 def _text(value):
@@ -169,11 +389,13 @@ def render_selection_brief(selection):
             if external:
                 lines.append("- Additional upstream source HUC12s outside the model domain: " + _text(external) + ".")
         lines.append("")
+    lines.extend(_contributing_lines(selection))
     lines.extend(["## Interpretation", ""])
     for key in ("priority", "state_area", "roles", "geometry"):
         if methods.get(key):
             lines.extend([_text(methods[key]), ""])
-    lines.extend(["## Original sources", "", *_source_links(selection.get("sources", [])), "",
+    lines.extend(["## Original sources", "", *_source_links(list(selection.get("sources", []))
+                               + list(selection.get("supporting_source_references", []))), "",
                   "## Saved selection identity", ""])
     identities = [
         ["Regional context", selection["context_id"]],
@@ -284,6 +506,10 @@ def write_selection_brief(directory, selection):
         BRIEF_FILENAME: (render_selection_brief(selection).encode("utf-8"), "text/markdown"),
         HTML_FILENAME: (render_selection_html(selection).encode("utf-8"), "text/html"),
     }
+    if selection.get("contributing_context") is not None:
+        from .watershed_context import _csv_bytes
+        bodies[CONTRIBUTING_FILENAME] = (
+            _csv_bytes(selection["contributing_context"]["hucs"], CONTRIBUTING_COLUMNS), "text/csv")
     files = {}
     for name, (body, media_type) in bodies.items():
         path = directory / name
@@ -308,10 +534,16 @@ def main(argv=None):
     inputs.add_argument("--report", help="Original retained watershed-context.json")
     inputs.add_argument("--selection", help="Original saved selected-watersheds.json")
     parser.add_argument("--huc12", action="append", help="Selected HUC12; repeat for each watershed")
+    parser.add_argument("--connectivity-csv", help="Original completed connectivity CSV")
+    parser.add_argument("--connectivity-summary", help="Its source-bound connectivity summary JSON")
     parser.add_argument("--output-dir", required=True)
     args = parser.parse_args(argv)
     if args.selection and args.huc12:
         parser.error("--huc12 selects rows from --report; --selection already retains membership")
+    if bool(args.connectivity_csv) != bool(args.connectivity_summary):
+        parser.error("Use --connectivity-csv and --connectivity-summary together")
+    if args.selection and args.connectivity_csv:
+        parser.error("Completed connectivity enriches --report; --selection already retains its context")
     input_path = Path(args.report or args.selection)
     body = input_path.read_bytes()
     value = json.loads(body)
@@ -321,12 +553,19 @@ def main(argv=None):
             parser.error("Choose at least one --huc12 from the retained regional report")
         selection = selected_watershed_export(value, args.huc12)
         selection["report_sha256"] = hashlib.sha256(body).hexdigest()
+        if args.connectivity_csv:
+            upstream, source = load_completed_connectivity(
+                value, selection["report_sha256"], args.connectivity_csv, args.connectivity_summary)
+            selection = add_contributing_context(selection, value, upstream_by_huc=upstream, source=source)
+        else:
+            selection = add_contributing_context(selection, value)
     else:
         selection = value
     files = write_selection_brief(args.output_dir, selection)
     print(json.dumps({
         "schema": BRIEF_FORMAT, "context_id": selection["context_id"],
         "selected_huc12s": selection["selected_huc12s"], "summary": selection["summary"],
+        "contributing_context": selection.get("contributing_context"),
         "input_path": str(input_path), "input_sha256": hashlib.sha256(body).hexdigest(),
         "files": files,
     }, ensure_ascii=False, allow_nan=False, sort_keys=True, indent=2))
