@@ -39,7 +39,7 @@ def build(workspace, selection):
             priority_path = verify_file(delivery_root, delivery["files"]["combined_priority"])
         product = build_inventory(workspace, source["receptor_spec"], grid, baseline, alternatives,
                                   directory, priority_path=priority_path)
-        result = {"id": key, **product["inventory"]}
+        result = {"id": key, **product["inventory"], "build_selection": source}
         result["files"] = {**result["files"],
                            "inventory": describe_file(directory, directory / "inventory.json")}
         atomic_json(state_path, result)
