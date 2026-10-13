@@ -432,6 +432,11 @@ def _plan(workspace, key):
 
 def _state(workspace, key):
     value = read_json(_directory(workspace, key) / "state.json")
+    return _check_state(workspace, key, value)
+
+
+def _check_state(workspace, key, value):
+    """Use the same original checkpoint identity in full and catalogue reads."""
     if (value.get("schema") != STATE_SCHEMA or value.get("id") != key
             or value.get("workspace_id") != workspace.project["id"]):
         raise ValueError("The retained experiment state belongs to another selection")
