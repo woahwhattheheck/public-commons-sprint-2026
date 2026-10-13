@@ -14,16 +14,30 @@ from datetime import datetime, timezone
 FILES = (
     "model/watershed_context.py",
     "model/watershed_brief.py",
+    "operator/receive_watershed_context.py",
     "source_tools/prepare_watershed_context.py",
+    "source_tools/receive_watershed_context.py",
     "operator/watershed_context.py",
     "operator/web/watershed_context.mjs",
     "operator/web/watershed_context.css",
     "operator/extensions/watershed-context.json",
-    "operator/receive_watershed_context.py",
     "operator/install_watershed_context.py",
     "operator/WATERSHED_CONTEXT.md",
 )
-OPTIONAL = ("model/watershed_context_cli.py", "model/WATERSHED_CONTEXT.md")
+OPTIONAL = (
+    "integration/watershed_completed_receiving.json",
+    "model/WATERSHED_BRIEF.md",
+    "model/WATERSHED_CONTEXT.md",
+    "model/watershed_context_cli.py",
+    "outputs/watershed-connectivity-20261013/WATERSHED_CONNECTIVITY.md",
+    "outputs/watershed-connectivity-20261013/connectivity-manifest.json",
+    "outputs/watershed-connectivity-20261013/watershed-connectivity-217.csv",
+    "outputs/watershed-connectivity-20261013/watershed-connectivity-summary.json",
+    "source/water_context/20261013/completed-run.package.json",
+    "source/water_context/20261013/full-domain-water-context.json",
+    "source/water_context/20261013/scdes-domain217-source-coverage.json",
+    "source_tools/WATERSHED_SOURCE_IMPORT.md",
+)
 
 
 def digest(body):
