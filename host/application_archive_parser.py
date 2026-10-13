@@ -51,7 +51,11 @@ def main():
     try:
         # Audit only the original bridge's process factory; no selected application loads.
         original.subprocess = ParserProcesses()
-        code = original.main(sys.argv[3:])
+        if sys.argv[3] == "tar-inspect":
+            import application_tar_source
+            code = application_tar_source.main(sys.argv[4:])
+        else:
+            code = original.main(sys.argv[3:])
     except KeyboardInterrupt:
         code = 130
     finally:

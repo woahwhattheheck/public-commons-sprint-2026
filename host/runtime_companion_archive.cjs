@@ -50,7 +50,10 @@ function decodeInput(raw,expectedSha256){
  const compressed=raw[0]===31&&raw[1]===139;
  const decoded=compressed?zlib.gunzipSync(raw,{maxOutputLength:MAX_PACKET}):raw;
  need(decoded.length<=MAX_PACKET,'The complete decoded source packet exceeds 256 MiB.');
- const packet=parse(decoded),bound=archive.inspectBinding(packet);
+ const packet=parse(decoded),decodedBinding=archive.decodeBinding(packet);
+ const bound=decodedBinding.format==='zip'?archive.inspectBinding(packet):decodedBinding;
+ // TAR metadata is a bounded preview here. The owned original receiver must
+ // verify the complete raw archive before upload and on every cold reopen.
  return{raw,decoded,packet,bound,compressed};
 }
 function manifestFor(source,name,format){
@@ -139,14 +142,24 @@ async function verifySet(model,binding,api,signal){
  }
  return set;
 }
-async function verifiedBinding(model,result,api,signal){
+async function verifiedBinding(model,result,api,signal,receiving){
  need(result?.schema===SCHEMA&&result.state==='RECEIVED'&&result.applicationExecution===false,'Open the complete original receiving result.');
  const bindingRaw=await downloaded(model,result.bindingUpload.uploadId,result.bindingUpload,{signal});
  const binding=parse(bindingRaw);
  need(binding.schema===BINDING&&binding.workspaceId===result.workspaceId&&binding.setId===result.setId&&
   equal(binding,result.binding),'The retained complete association differs.');
  const raw=await downloaded(model,binding.inputUpload.uploadId,binding.inputUpload,{signal});
- const decoded=decodeInput(raw,binding.inputUpload.sha256),manifest=manifestFor(decoded.bound.source,binding.manifest.name,api.format);
+ const decoded=decodeInput(raw,binding.inputUpload.sha256);
+ if(decoded.bound.format!=='zip'){
+  need(receiving&&path.isAbsolute(receiving.root)&&path.isAbsolute(receiving.python)&&path.isAbsolute(receiving.node),
+   'TAR verification requires the original owned receiving directory and retained parser executables.');
+  const held=path.join(receiving.root,decoded.compressed?'original-source.json.gz':'original-source.json');
+  await exactFile(held,raw);
+  const reopened=await archive.receive({input:held,directory:path.join(receiving.root,'archive-source'),python:receiving.python,node:receiving.node,signal});
+  need(reopened.status==='COMPLETE'&&equal(reopened.packet,id(decoded.decoded))&&equal(reopened.binding,decoded.bound.binding),
+   'Original TAR receiving did not reproduce the exact complete packet/binding.');
+ }
+ const manifest=manifestFor(decoded.bound.source,binding.manifest.name,api.format);
  need(equal(id(decoded.decoded),binding.packet)&&equal(id(decoded.bound.archive),binding.archive)&&
   equal(decoded.bound.binding,binding.archiveBinding)&&equal(manifest,binding.manifest)&&
   equal(decoded.bound.source.coverage,binding.coverage),'The retained packet no longer describes this exact Companion set.');
@@ -175,7 +188,7 @@ async function receive({input,expectedSha256,directory,runtimeSource,workspace,w
  const inputName=decoded.compressed?'original-source.json.gz':'original-source.json',heldInput=path.join(root,inputName);
  await publish(heldInput,raw);
  const received=await archive.receive({input:heldInput,directory:path.join(root,'archive-source'),python,node,signal});
- need(received.status==='COMPLETE'&&equal(received.packet,id(decoded.decoded)),'The unchanged original source receiver did not complete.');
+ need(received.status==='COMPLETE'&&equal(received.packet,id(decoded.decoded))&&equal(received.binding,decoded.bound.binding),'The unchanged original source receiver did not complete.');
  const source=await api.readApplicationInputSetDirectory({directory:received.sourceDirectory,name});
  need(equal(source.manifest,manifest),'The received source tree differs from the retained complete source packet.');
  // The original receiver verified executable identity. Companion copies are private
@@ -198,7 +211,7 @@ async function receive({input,expectedSha256,directory,runtimeSource,workspace,w
    bindingUpload:{uploadId:saved.uploadId,...id(bindingRaw)},binding,applicationExecution:false};
  });
  // Close and reopen the original Runtime model before accepting its complete inputs.
- await withRuntime(api,target,workspaceId,model=>verifiedBinding(model,result,api,signal));
+ await withRuntime(api,target,workspaceId,model=>verifiedBinding(model,result,api,signal,{root,python,node}));
  cancelled(signal);await exactFile(heldInput,raw);
  await publish(path.join(root,'complete.json'),json(result));
  return{...result,receivingDirectory:root,sourceDirectory:received.sourceDirectory};
@@ -217,11 +230,11 @@ async function openResult(directory,runtimeSource,workspace,workspaceId){
   'Explicitly select the same original Runtime workspace and UUID; received metadata is not mutation authority.');
  const api=await runtimeAPI(runtimeSource,[root,target]);
  need(api.root===result.runtimeSource&&equal(api.original,intent.runtimeEntries),'Use the same retained Runtime source edition for this receiving operation.');
- return{root,result,api};
+ return{root,result,api,receiving:{root,python:intent.python,node:intent.node}};
 }
 async function review({directory,runtimeSource,workspace,workspaceId,signal}={}){
- const {root,result,api}=await openResult(directory,runtimeSource,workspace,workspaceId);
- await withRuntime(api,result.workspace,result.workspaceId,model=>verifiedBinding(model,result,api,signal));
+ const {root,result,api,receiving}=await openResult(directory,runtimeSource,workspace,workspaceId);
+ await withReceivingOwner(api,root,()=>withRuntime(api,result.workspace,result.workspaceId,model=>verifiedBinding(model,result,api,signal,receiving)));
  return{schema:SCHEMA,state:'VERIFIED',workspaceId:result.workspaceId,setId:result.setId,
   receivingDirectory:root,packet:result.binding.packet,originalFiles:result.binding.manifest.files.length,
   applicationExecution:false};
@@ -229,7 +242,7 @@ async function review({directory,runtimeSource,workspace,workspaceId,signal}={})
 async function prepare({directory,runtimeSource,workspace,workspaceId,requestId,kind,field,memberPath='',signal}={}){
  need(UUID.test(requestId??'')&&typeof kind==='string'&&kind&&typeof field==='string'&&field,
   'Supply the original preparation UUID and existing application kind/path setting.');
- const {root,result,api}=await openResult(directory,runtimeSource,workspace,workspaceId);
+ const {root,result,api,receiving}=await openResult(directory,runtimeSource,workspace,workspaceId);
  if(memberPath)api.format.applicationInputSetPath(memberPath);
  need(!memberPath||result.binding.manifest.files.some(row=>row.path===memberPath),'Select an actual original source member, or the whole folder.');
  const input={requestId,setId:result.setId,kind,field,memberPath};
@@ -237,7 +250,7 @@ async function prepare({directory,runtimeSource,workspace,workspaceId,requestId,
  const requests=path.join(root,'working-selections');await io.privateDirectory(requests,true);
  await publish(path.join(requests,requestId+'.json'),json(input));
  const selection=await withRuntime(api,result.workspace,result.workspaceId,async model=>{
-  await verifiedBinding(model,result,api,signal);cancelled(signal);
+  await verifiedBinding(model,result,api,signal,receiving);cancelled(signal);
   const value=await model.applicationInputSetPrepare(input);
   need(value.phase==='PREPARED'&&value.requestId===requestId&&value.setId===result.setId&&
    value.workspaceId===result.workspaceId,'Original working selection did not complete.');
@@ -249,7 +262,7 @@ async function prepare({directory,runtimeSource,workspace,workspaceId,requestId,
  });
 }
 async function exportReceived({directory,runtimeSource,workspace,workspaceId,output,signal}={}){
- const {root,result,api}=await openResult(directory,runtimeSource,workspace,workspaceId);
+ const {root,result,api,receiving}=await openResult(directory,runtimeSource,workspace,workspaceId);
  need(typeof output==='string'&&path.isAbsolute(output),'Select the independent private export directory.');
  const destination=path.resolve(output);
  for(const original of [root,path.resolve(result.workspace),api.root])need(!within(destination,original)&&!within(original,destination),
@@ -258,7 +271,7 @@ async function exportReceived({directory,runtimeSource,workspace,workspaceId,out
  const target=await intentDirectory(destination,{schema:SCHEMA,command:'export',workspaceId:result.workspaceId,
   setId:result.setId,bindingUpload:result.bindingUpload,packet:result.binding.packet});
  const exported=await withRuntime(api,result.workspace,result.workspaceId,async model=>{
-  const value=await verifiedBinding(model,result,api,signal);
+  const value=await verifiedBinding(model,result,api,signal,receiving);
   const filename=value.binding.inputUpload.encoding==='gzip'?'original-source.json.gz':'original-source.json';
   await publish(path.join(target,filename),value.inputRaw);await publish(path.join(target,'association.json'),value.bindingRaw);
   const outputArchive=path.join(target,'companion-source-set.zip');
