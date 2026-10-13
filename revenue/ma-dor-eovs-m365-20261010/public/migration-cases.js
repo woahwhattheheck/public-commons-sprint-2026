@@ -197,7 +197,7 @@ function create(context){
     }
   }
   function policy(value){
-    return note("Cutoff "+value.cutoff_at+" · Live statuses: "+pretty(value.live_statuses)+" · Closed statuses: "+pretty(value.closed_statuses)+" · Source capture allowance: "+(value.max_snapshot_age_seconds??0)+" seconds · Document identity: "+value.document_identity+" · Shared documents: "+value.multi_case_policy);
+    return note("Cutoff "+value.cutoff_at+" · Live statuses: "+pretty(value.live_statuses)+" · Closed statuses: "+pretty(value.closed_statuses)+" · Source capture allowance: "+(value.max_snapshot_age_seconds??0)+" seconds · Document identity: "+value.document_identity+" · Shared documents: "+value.multi_case_policy+" · Destinations: "+pretty(value.destination_policy||{live_cases:"dynamics",live_documents:"sharepoint",closed_cases:"archive",closed_documents:"archive"})+" · Relation rules: "+(value.relation_rules||[]).length);
   }
   function metrics(summary){
     return el("div",{class:"case-metrics"},Object.entries(summary?.counts||summary||{}).filter(([,v])=>typeof v==="number").map(([key,value])=>el("div",{class:"metric"},el("strong",{},value),el("span",{},key))));
@@ -266,14 +266,18 @@ function create(context){
         columns[fieldList[i]]={[type]:value};
       }
       const value_maps=cleanMap(JSON.parse(data.value_maps||"{}"),"Value mappings");
-      return {source_id:data.source_id,kind:data.kind,side:data.side,destination:data.side==="source"?null:data.destination,columns,value_maps};
+      return {source_id:data.source_id,kind:data.kind,side:data.side,destination:data.side==="source"?null:data.destination,columns,value_maps,
+        ...(data.record_family?{record_family:data.record_family}:{}),
+        ...(data.identity_scopes?.trim()?{identity_scopes:cleanMap(JSON.parse(data.identity_scopes),"Identity scopes")}:{})};
     }
     const preview=el("div",{class:"stack"});
     const form=draftForm(key,[
       field("Dataset title",input("title","",{required:true})),
       exactId("Retained original source","source_id","","Import the complete file in Sources first. Use its retained source ID."),
       field("Record family",select("kind",kinds,"cases")),field("Source role",select("side",[["source","Original source"],["target","Independent target capture"],["receipt","Loader's reported result"]],"source")),
-      field("Target destination",select("destination",["dynamics","sharepoint","archive"],"dynamics"),"Applied only to target captures and loader receipts."),
+      field("Target destination",input("destination","dynamics"),"Exact reviewed destination identifier; applied only to target captures and loader receipts."),
+      field("Business record family",input("record_family"),"Optional explicit family, such as applications, reviews or payments. It does not infer a vendor table."),
+      field("Identity scopes (JSON)",area("identity_scopes",""),'Optional explicit scopes, such as {"case_id":"applications"}. Original IDs stay retained; use matching scopes for target records and relation rules.',true),
       optionalId("Previous mapping edition","parent_dataset_id"),
       el("div",{class:"full"},note("Enable each field you explicitly mapped. Original IDs, dates and values remain available alongside every converted value."),mapRows),
       customControls,
@@ -305,21 +309,28 @@ function create(context){
       field("Documents linked across destinations",select("multi_case_policy",[["require_single_destination","Require one destination"],["copy_per_destination","Explicit copy at each destination"]],"require_single_destination")),
       field("Case fields to compare",area("case_checks"),"One explicitly mapped field per line. Identity, destination, relationships and lifecycle are always checked."),
       field("Document fields to compare",area("document_checks"),"One explicitly mapped field per line, for example content_sha256, size_bytes or principals."),
+      field("Destination policy (JSON)",area("destination_policy",""),'Optional complete policy: {"live_cases":"omnistar","live_documents":"omnistar","closed_cases":"historical","closed_documents":"historical"}. Blank keeps the original Dynamics/SharePoint/archive policy.',true),
+      field("Fields by business family (JSON)",area("family_checks",""),'Optional exact mapped fields by family, such as {"payments":["amount","currency","payment_kind"]}. A family entry selects its checks instead of the broad case/document list.',true),
+      field("Reviewed relation rules (JSON)",area("relation_rules",""),"Optional complete rule array. Use the advertised case schema and operating guide; rules preserve original relation IDs and require referenced target records.",true),
       field("Policy review note",area("review_note","",{required:true}),null,true),
       field("Additional plan note",area("note"),null,true)
     ],"Freeze complete destination plan",data=>{
       const age=Number(data.max_snapshot_age_seconds);
       if(!Number.isSafeInteger(age)||age<0)throw new Error("Capture age must be a nonnegative whole number of seconds.");
-      return {operation:"case.plan.create",payload:{title:data.title,source_dataset_ids:ids(data.source_dataset_ids),cutoff_at:data.cutoff_at,max_snapshot_age_seconds:age,live_statuses:lines(data.live_statuses),closed_statuses:lines(data.closed_statuses),document_identity:data.document_identity,multi_case_policy:data.multi_case_policy,checks:{cases:ids(data.case_checks),documents:ids(data.document_checks)},review_note:data.review_note,note:data.note,...(data.parent_plan_id?{parent_plan_id:data.parent_plan_id}:{})}};
+      return {operation:"case.plan.create",payload:{title:data.title,source_dataset_ids:ids(data.source_dataset_ids),cutoff_at:data.cutoff_at,max_snapshot_age_seconds:age,live_statuses:lines(data.live_statuses),closed_statuses:lines(data.closed_statuses),document_identity:data.document_identity,multi_case_policy:data.multi_case_policy,checks:{cases:ids(data.case_checks),documents:ids(data.document_checks)},
+        ...(data.destination_policy?.trim()?{destination_policy:cleanMap(JSON.parse(data.destination_policy),"Destination policy")}:{}),
+        ...(data.family_checks?.trim()?{family_checks:cleanMap(JSON.parse(data.family_checks),"Family checks")}:{}),
+        ...(data.relation_rules?.trim()?{relation_rules:JSON.parse(data.relation_rules)}:{}),
+        review_note:data.review_note,note:data.note,...(data.parent_plan_id?{parent_plan_id:data.parent_plan_id}:{})}};
     },null,async result=>{s.selected.plan=result.id;await persist();await readRecord("plan",result.id,results);});
-    return el("div",{class:"stack"},panel("Cutoff and routing policy",note("Live cases go to Dynamics and their documents to SharePoint. Closed cases and their documents go to the designated archive. The plan retains unknown statuses, unresolved links and duplicate identities for review."),form),
+    return el("div",{class:"stack"},panel("Cutoff and routing policy",note("The default policy retains the original Dynamics/SharePoint/archive routing. An explicit destination policy records another reviewed destination contract. Unknown statuses, unresolved original relationships and duplicate identities remain findings; this plan does not dispatch a loader."),form),
       panel("Frozen destination plan",basicForm([exactId("Plan ID","id",s.selected.plan||"")],"Open complete plan",data=>readRecord("plan",data.id,results)),results));
   }
   function rehearsalView(){
     const results=el("div",{class:"stack"}),comparison=el("div",{class:"stack"});
     const form=draftForm("rehearsal",[
       field("Rehearsal title",input("title","",{required:true})),exactId("Frozen destination plan","plan_id",s.selected.plan||""),
-      field("Independent target dataset IDs",area("target_dataset_ids","",{required:true}),"One ID per line. Select the actual Dynamics, SharePoint and archive captures needed for the complete population.",true),
+      field("Independent target dataset IDs",area("target_dataset_ids","",{required:true}),"One ID per line. Select the actual independent captures for every reviewed destination and complete population.",true),
       field("Loader receipt dataset IDs",area("receipt_dataset_ids"),"Optional separate reports of attempted loads. Target comparisons use the independent target captures.",true),
       optionalId("Previous rehearsal","parent_rehearsal_id"),
       field("Rehearsal note",area("note","",{required:true}),"Record this run's purpose, capture and correction context.",true)

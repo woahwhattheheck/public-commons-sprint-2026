@@ -14,6 +14,7 @@ VERSION = "ma-dor.case-migration/v1"
 KINDS = ("cases", "documents", "links")
 SIDES = ("source", "target", "receipt")
 DESTINATIONS = ("dynamics", "sharepoint", "archive")
+# Additional destinations are explicit operator-owned identifiers, not connector routes.
 STATUSES = ("MATCH", "DIFFERENT", "UNKNOWN", "AMBIGUOUS", "MISSING", "UNEXPECTED")
 FIELDS = ("case_id", "document_id", "version_id", "status", "deleted", "target_id", "path",
           "size_bytes", "content_sha256", "principals", "label", "modified_at")
@@ -64,6 +65,10 @@ def ensure(store):
 def schema():
     return {"schema":VERSION,"kinds":list(KINDS),"sides":list(SIDES),"destinations":list(DESTINATIONS),
             "fields":list(FIELDS),"statuses":list(STATUSES),"mutations":list(MUTATIONS),"reads":list(READS),
+            "custom_destinations":True,"destination_policy_fields":["live_cases","live_documents","closed_cases","closed_documents"],
+            "dataset_optional":["record_family","identity_scopes"],"plan_optional":["destination_policy","relation_rules","family_checks"],
+            "identity_scopes":"Explicit canonical [scope, original ID] normalization; raw source identities remain retained",
+            "relation_rule_fields":["id","source_family","field","target_family","target_kind","target_scope","cardinality","required"],
             "dataset_columns":"Explicit {field:{column:original CSV heading}|{pointer:RFC6901 JSON pointer}}",
             "value_maps":"Explicit exact original-string replacements; no inferred identity or status conversion",
             "document_identity":["document_id","document_version"],
@@ -145,7 +150,7 @@ def config(store, p):
     if role:need(source["context"]["role"]==role,"CASE_SOURCE_ROLE","Use the original independent "+role)
     else:need(source["context"]["role"] in ("migration_items","migration_failures"),"CASE_SOURCE_ROLE","Receipts must remain reported migration attempts")
     destination=p.get("destination")
-    need((side=="source" and destination is None) or (side!="source" and destination in DESTINATIONS),
+    need((side=="source" and destination is None) or (side!="source" and isinstance(destination,str) and identifier(destination)==destination),
          "CASE_DESTINATION","Declare the actual target destination; source rows have no observed destination")
     cols=p.get("columns")
     need(isinstance(cols,dict) and cols and len(cols)<=128,"CASE_COLUMNS","Select explicit original fields")
@@ -162,7 +167,17 @@ def config(store, p):
         need(isinstance(items,dict) and len(items)<=100000,"CASE_VALUE_MAP","Use an explicit original-string mapping")
         for key,value in items.items():
             need(isinstance(key,str) and isinstance(value,(str,bool)),"CASE_VALUE_MAP","Mappings retain exact text or an explicit boolean")
+    family=p.get("record_family")
+    if family is not None:identifier(family)
+    scopes=p.get("identity_scopes",{})
+    need(isinstance(scopes,dict) and set(scopes)<={"case_id","document_id","version_id"},
+         "CASE_IDENTITY_SCOPE","Scope only explicit case/document/version identity fields")
+    for key,value in scopes.items():
+        need(key in cols and isinstance(value,str) and FIELD_NAME.fullmatch(value),
+             "CASE_IDENTITY_SCOPE","Scope a mapped identity with an ordinary explicit namespace name")
     return {"source":source,"kind":kind,"side":side,"destination":destination,
+            **({"record_family":family} if family is not None else {}),
+            **({"identity_scopes":dict(scopes)} if scopes else {}),
             "columns":json.loads(canonical(cols)),"value_maps":json.loads(canonical(maps)),
             "scope_id":source["context"]["scope_id"],"identity_namespace":source["context"]["identity_namespace"]}
 
@@ -240,6 +255,10 @@ def project(row, cfg, dataset_id):
         if isinstance(raw,str) and raw in maps:
             mapped=maps[raw];conversions[field]={"original":raw,"selected":mapped}
         value,seen,error=normalized(field,mapped)
+        scope=cfg.get("identity_scopes",{}).get(field)
+        if scope and seen=="value":
+            value=scoped_identity(value,scope)
+            conversions[field]={**conversions.get(field,{}),"identity_scope":scope,"scoped":value}
         values[field],presence[field]=value,seen
         if error:issues.append({"code":error,"field":field})
     required={"cases":["case_id"],"documents":["document_id"],"links":["case_id","document_id"]}[cfg["kind"]]
@@ -349,8 +368,9 @@ def case_destination(rows,policy):
     if presence.get("deleted")=="invalid":return [],check("UNKNOWN","Case deletion marker is not an explicit boolean")
     state=values.get("status")
     if presence.get("status")!="value":return [],check("UNKNOWN","Original case lifecycle state is unavailable")
-    if state in policy["live_statuses"]:return ["dynamics"],check("MATCH","Explicit live status",original_status=state)
-    if state in policy["closed_statuses"]:return ["archive"],check("MATCH","Explicit closed status",original_status=state)
+    route=policy.get("destination_policy",DEFAULT_DESTINATION_POLICY)
+    if state in policy["live_statuses"]:return [route["live_cases"]],check("MATCH","Explicit live status",original_status=state)
+    if state in policy["closed_statuses"]:return [route["closed_cases"]],check("MATCH","Explicit closed status",original_status=state)
     return [],check("UNKNOWN","Original state has no selected live/closed rule",original_status=state)
 
 def logical(row,policy):
@@ -416,6 +436,19 @@ def plan_create(store,op):
         need(set(fields[kind])<=available and not set(fields[kind])&IDENTITIES,"CASE_CHECKS","Comparison fields must be explicitly mapped nonidentity fields")
     policy={"cutoff_at":p["cutoff_at"],"live_statuses":live,"closed_statuses":closed,"document_identity":document_identity,
             "multi_case_policy":multi,"checks":fields,"max_snapshot_age_seconds":integer(p.get("max_snapshot_age_seconds",0),"max_snapshot_age_seconds",maximum=31536000)}
+    if "destination_policy" in p:policy["destination_policy"]=destination_policy(p["destination_policy"])
+    if "relation_rules" in p:policy["relation_rules"]=relation_rules(p["relation_rules"],selected)
+    if "family_checks" in p:
+        configured=p["family_checks"]
+        need(isinstance(configured,dict),"CASE_CHECKS","Select an explicit family-to-fields comparison object")
+        policy["family_checks"]={}
+        for family,names in configured.items():
+            members=[ds for ds in selected if ds.get("record_family")==family]
+            need(members,"CASE_CHECKS","Comparison family is not selected")
+            names=unique_strings(names,"family checks")
+            available=set().union(*(set(ds["fields"]) for ds in members))
+            need(set(names)<=available and not set(names)&IDENTITIES,"CASE_CHECKS","Family checks must select mapped nonidentity fields")
+            policy["family_checks"][family]=names
     earlier=parent(store,"case_plan",p.get("parent_plan_id"),selected[0]["scope_id"])
     if earlier:need(earlier["identity_namespace"]==selected[0]["identity_namespace"],"CASE_PLAN_PARENT","Keep original logical identity namespace")
     by_id={ds["id"]:ds for ds in selected};count=0;counts={v:0 for v in STATUSES}
@@ -443,7 +476,7 @@ def plan_create(store,op):
                             intrinsic["relationship:"+str(index)]=assessment
                             for case_row in case_rows:intrinsic.update(source_evidence(case_row,by_id,policy))
                             if rel["row"]["dataset_id"] in by_id:intrinsic.update(source_evidence(rel["row"],by_id,policy))
-                            all_dest += ["sharepoint" if x=="dynamics" else "archive" for x in dest]
+                            all_dest += destinations_for_documents(case_rows,policy)
                         destinations=sorted(set(all_dest))
                         if len(destinations)>1 and multi=="require_single_destination":
                             intrinsic["destination_policy"]=check("UNKNOWN","The same document belongs to cases requiring different destinations; select an explicit copy policy")
@@ -460,9 +493,11 @@ def plan_create(store,op):
                 if link["values"].get("deleted") is True or link["presence"].get("deleted")=="invalid":
                     intrinsic["lifecycle"]=check("UNKNOWN","The original link is a tombstone or has an invalid deletion marker")
                     case_dest=[]
-                destinations=["sharepoint" if d=="dynamics" else "archive" for d in case_dest]
+                destinations=destinations_for_documents(case_rows,policy) if case_dest else []
                 relations=[{"case_id":case_id,"document_id":doc_id,"version_id":link["values"].get("version_id"),"row":link,"basis":"original_link"}]
-            for row in rows:intrinsic.update(source_evidence(row,by_id,policy))
+            for row in rows:
+                intrinsic.update(source_evidence(row,by_id,policy))
+                intrinsic.update(relation_source_checks(store,row,selected,by_id,policy))
             item={"kind":kind,"key":key,"source_rows":[row_ref(r) for r in rows],"expected_destinations":destinations,
                   "observed_rows":[],"reported_rows":[],"relations":[{k:(row_ref(v) if k=="row" else v) for k,v in rel.items()} for rel in relations],
                   "checks":intrinsic,"issues":[]}
@@ -555,7 +590,10 @@ def rehearsal_create(store,op):
         if not expected_dest:checks["destination"]=check("UNKNOWN","No resolved expected destination at this cutoff")
         for destination in expected_dest:
             candidates=[r for r in observed if r["destination"]==destination]
-            coverage=[ds for ds in target if ds["kind"]==kind and ds["destination"]==destination]
+            source_profiles=[ds for ds in plan["datasets"] if ds["id"] in {row["dataset_id"] for row in item["source_rows"]}]
+            coverage=[ds for ds in target if ds["kind"]==kind and ds["destination"]==destination and
+                      any(ds.get("record_family")==original_ds.get("record_family") and
+                          ds.get("identity_scopes",{})==original_ds.get("identity_scopes",{}) for original_ds in source_profiles)]
             if not candidates:
                 absent=source_usable and bool(coverage) and all(complete(ds,policy) and clock_check(ds,policy,True)["status"]=="MATCH" for ds in coverage)
                 checks["presence:"+destination]=check("MISSING" if absent else "UNKNOWN","Independent target coverage controls absence conclusions",destination=destination,selected_dataset_ids=[ds["id"] for ds in coverage])
@@ -569,8 +607,15 @@ def rehearsal_create(store,op):
                 if candidate["issues"]:checks["target_projection:"+candidate["id"]]=check("UNKNOWN","Target projection has unresolved issues",issues=candidate["issues"])
                 if candidate["values"].get("deleted") is True:checks["target_lifecycle:"+candidate["id"]]=check("DIFFERENT" if usable else "UNKNOWN","Observed target is marked deleted; cutoff-valid evidence is required")
                 if len(item["source_rows"])==1:
-                    for field,assessment in fields_compare(item["source_rows"][0],candidate,policy["checks"].get(kind,[])).items():
+                    source_family=next(ds.get("record_family") for ds in plan["datasets"] if ds["id"]==item["source_rows"][0]["dataset_id"])
+                    selected_checks=policy.get("family_checks",{}).get(source_family,policy["checks"].get(kind,[]))
+                    for field,assessment in fields_compare(item["source_rows"][0],candidate,selected_checks).items():
                         checks["field:"+destination+":"+field]=assessment if usable else check("UNKNOWN","The observed field comparison lacks valid cutoff/identity evidence",original_comparison=assessment)
+                if len(item["source_rows"])==1:
+                    relations=relation_target_checks(store,item["source_rows"][0],candidate,plan["datasets"],target,
+                        {ds["id"]:ds for ds in plan["datasets"]},target_by_id,policy)
+                    for name,assessment in relations.items():
+                        checks[name+":"+destination]=assessment if usable else check("UNKNOWN","Cutoff/identity evidence for this relation is unresolved",original_comparison=assessment)
                 if kind=="documents":
                     expected_links={rel["case_id"] for rel in item["relations"] if isinstance(rel["case_id"],str)}
                     # Only case relationships belonging in this document destination are required.
@@ -578,7 +623,7 @@ def rehearsal_create(store,op):
                     for rel in item["relations"]:
                         case_rows=list(query_rows(store,plan["datasets"],"cases",case_id=rel["case_id"])) if isinstance(rel["case_id"],str) else []
                         case_dest,_=case_destination(case_rows,policy)
-                        if destination in ["sharepoint" if x=="dynamics" else "archive" for x in case_dest]:wanted.add(rel["case_id"])
+                        if case_dest and destination in destinations_for_documents(case_rows,policy):wanted.add(rel["case_id"])
                     association=target_relationships(store,target,target_by_id,candidate,policy,destination,expected_links,wanted)
                     checks["relationships:"+destination]=association if source_usable else check("UNKNOWN","The source relationship basis at the selected cutoff is unresolved",original_comparison=association)
         extras=[r for r in observed if r["destination"] not in expected_dest]
@@ -594,11 +639,16 @@ def rehearsal_create(store,op):
         for key,rows in grouped(store,target,kind,policy):
             known=store.conn.execute("SELECT 1 FROM case_items WHERE owner_id=? AND kind=? AND identity_key=?",(plan["id"],kind,key)).fetchone()
             if known:continue
-            baseline=[ds for ds in plan["datasets"] if ds["kind"]==kind]
+            observed_profiles=[target_by_id[row["dataset_id"]] for row in rows]
+            baselines=[[ds for ds in plan["datasets"] if ds["kind"]==kind and
+                        ds.get("record_family")==observed_ds.get("record_family") and
+                        ds.get("identity_scopes",{})==observed_ds.get("identity_scopes",{})]
+                       for observed_ds in observed_profiles]
+            baseline=[ds for selected_baseline in baselines for ds in selected_baseline]
             valid_identity=all(logical(row,policy)==key for row in rows)
             active_observed=any(not row["issues"] and row["values"].get("deleted") is not True and
                                 clock_check(target_by_id[row["dataset_id"]],policy,True)["status"]=="MATCH" for row in rows)
-            absent=valid_identity and active_observed and bool(baseline) and all(complete(ds,policy) and clock_check(ds,policy)["status"]=="MATCH" for ds in baseline)
+            absent=valid_identity and active_observed and all(baselines) and bool(baseline) and all(complete(ds,policy) and clock_check(ds,policy)["status"]=="MATCH" for ds in baseline)
             checks={"baseline_presence":check("UNEXPECTED" if absent else "UNKNOWN","Independent target identity is absent from the selected original population; completeness controls the conclusion")}
             for row in rows:checks["target_capture:"+row["id"]]=clock_check(target_by_id[row["dataset_id"]],policy,True)
             item={"kind":kind,"key":key,"source_rows":[],"expected_destinations":[],"observed_rows":[row_ref(r)|{"destination":r["destination"]} for r in rows],
@@ -747,3 +797,151 @@ def read(store,operation,p):
         if operation=="case."+kind+".get":return store.get_entity("case_"+kind,p.get("id"))
     raise MigrationError("UNKNOWN_OPERATION","Unknown case reader")
 
+
+# Reviewed relation semantics share the original projections and stored plan.
+DEFAULT_DESTINATION_POLICY = {"live_cases":"dynamics","live_documents":"sharepoint",
+                              "closed_cases":"archive","closed_documents":"archive"}
+
+def destination_policy(value):
+    if value is None:return dict(DEFAULT_DESTINATION_POLICY)
+    need(isinstance(value,dict) and set(value)==set(DEFAULT_DESTINATION_POLICY),
+         "CASE_DESTINATION_POLICY","Select all four explicit live/closed case/document destinations")
+    return {key:identifier(value[key]) for key in DEFAULT_DESTINATION_POLICY}
+
+def destinations_for_documents(rows,policy):
+    if len(rows)!=1:return []
+    row=rows[0]
+    if row["presence"].get("status")!="value" or row["values"].get("deleted") is True or row["presence"].get("deleted")=="invalid":return []
+    route=policy.get("destination_policy",DEFAULT_DESTINATION_POLICY)
+    state=row["values"]["status"]
+    if state in policy["live_statuses"]:return [route["live_documents"]]
+    if state in policy["closed_statuses"]:return [route["closed_documents"]]
+    return []
+
+def scoped_identity(value,scope):
+    return canonical([scope,value]) if scope else value
+
+def relation_rules(value,selected):
+    if value is None:return []
+    need(isinstance(value,list) and len(value)<=256,"CASE_RELATIONS","Use at most 256 complete reviewed relation rules")
+    result=[];seen=set()
+    for rule in value:
+        need(isinstance(rule,dict) and set(rule)=={"id","source_family","field","target_family","target_kind","target_scope","cardinality","required"},
+             "CASE_RELATIONS","Retain every explicit relation rule field")
+        rule=dict(rule)
+        for key in ("id","source_family","field","target_family"):identifier(rule[key])
+        need(rule["id"] not in seen,"CASE_RELATIONS","Relation rule IDs must be unique");seen.add(rule["id"])
+        need(rule["target_kind"] in ("cases","documents") and rule["cardinality"] in ("one","many") and type(rule["required"]) is bool,
+             "CASE_RELATIONS","Declare target cases/documents, one/many and an explicit required boolean")
+        need(rule["target_scope"] is None or isinstance(rule["target_scope"],str) and FIELD_NAME.fullmatch(rule["target_scope"]),
+             "CASE_RELATIONS","Target scope must be the explicit identity scope or null")
+        origin=[ds for ds in selected if ds.get("record_family")==rule["source_family"]]
+        target=[ds for ds in selected if ds.get("record_family")==rule["target_family"] and ds["kind"]==rule["target_kind"]]
+        need(origin and target,"CASE_RELATIONS","Select the complete source and target record families for every rule")
+        need(all(rule["field"] in ds["fields"] for ds in origin),"CASE_RELATIONS","Map each relation field on its whole selected source family")
+        key="case_id" if rule["target_kind"]=="cases" else "document_id"
+        need(all(ds.get("identity_scopes",{}).get(key)==rule["target_scope"] for ds in target),
+             "CASE_RELATIONS","Relation target scope must match every referenced family identity")
+        result.append(rule)
+    return result
+
+def relation_ids(row,rule):
+    present=row["presence"].get(rule["field"],"missing")
+    value=row["values"].get(rule["field"])
+    if present in ("missing","invalid"):return None,"Original relation field is missing or invalid"
+    if present in ("null","empty"):
+        return (None,"Required relation is empty") if rule["required"] else ([],"Explicitly empty optional relation")
+    def scalar(v):
+        if isinstance(v,str):return v
+        if isinstance(v,dict) and v.get("type")=="string" and set(v)=={"type","value"} and isinstance(v["value"],str):return v["value"]
+        return None
+    if rule["cardinality"]=="one":
+        value=scalar(value)
+        if value is None or not value:return None,"A single original text identity is required"
+        return [value],"Original single relation"
+    if isinstance(value,dict) and value.get("type")=="array":value=value.get("items")
+    if not isinstance(value,list):return None,"An explicit original array of text identities is required"
+    values=[scalar(item) for item in value]
+    if any(item is None or not item for item in values) or len(values)!=len(set(values)):
+        return None,"Relation array contains invalid or repeated identities"
+    if not values and rule["required"]:return None,"Required relation array is empty"
+    return values,"Original relation array"
+
+def related_rows(store,selected,rule,value):
+    identity_field="case_id" if rule["target_kind"]=="cases" else "document_id"
+    selected=[ds for ds in selected if ds.get("record_family")==rule["target_family"] and ds["kind"]==rule["target_kind"] and
+              ds.get("identity_scopes",{}).get(identity_field)==rule["target_scope"]]
+    key=scoped_identity(value,rule["target_scope"])
+    return list(query_rows(store,selected,rule["target_kind"],**{"case_id" if rule["target_kind"]=="cases" else "document_id":key}))
+
+def relation_source_checks(store,row,selected,by_id,policy):
+    checks={}
+    family=by_id[row["dataset_id"]].get("record_family")
+    for rule in policy.get("relation_rules",[]):
+        if rule["source_family"]!=family:continue
+        ids,reason=relation_ids(row,rule);key="relation:"+rule["id"]+":"+row["id"]
+        if ids is None:
+            checks[key]=check("UNKNOWN",reason,field=rule["field"],source_row_id=row["source_row_id"]);continue
+        references=[];states=[]
+        for value in ids:
+            found=related_rows(store,selected,rule,value)
+            valid=len(found)==1
+            assessment=check("MATCH" if valid else "AMBIGUOUS" if found else "UNKNOWN",
+                             "Original relation must identify one retained record in its declared family",
+                             original_id=value,scoped_id=scoped_identity(value,rule["target_scope"]),
+                             rows=[row_ref(item) for item in found])
+            states.append(assessment["status"])
+            references.append(assessment)
+            for item in found:checks.update(source_evidence(item,by_id,policy))
+        checks[key]=check("AMBIGUOUS" if "AMBIGUOUS" in states else "UNKNOWN" if "UNKNOWN" in states else "MATCH",
+                          reason,rule=rule,references=references)
+    return checks
+
+def relation_target_checks(store,source,target,source_selected,target_selected,source_by_id,target_by_id,policy):
+    checks={};family=source_by_id[source["dataset_id"]].get("record_family")
+    target_family=target_by_id[target["dataset_id"]].get("record_family")
+    original_scopes=source_by_id[source["dataset_id"]].get("identity_scopes",{})
+    returned_scopes=target_by_id[target["dataset_id"]].get("identity_scopes",{})
+    if original_scopes!=returned_scopes:
+        checks["identity_scopes"]=check("DIFFERENT","Independent target identity scopes must equal the selected original scopes",
+                                        expected=original_scopes,observed=returned_scopes)
+    if target_family!=family:
+        checks["record_family"]=check("DIFFERENT","Independent target occurrence belongs to another declared record family",
+                                      expected=family,observed=target_family)
+    for rule in policy.get("relation_rules",[]):
+        if rule["source_family"]!=family:continue
+        left,reason=relation_ids(source,rule);right,other=relation_ids(target,rule);key="relation:"+rule["id"]
+        if left is None or right is None:
+            checks[key]=check("UNKNOWN","Original or returned relationship is unresolved",source_reason=reason,target_reason=other);continue
+        # Ordering is retained in original values; relation membership is explicit.
+        equal=set(left)==set(right)
+        evidence=[];outcomes=[]
+        for value in right:
+            original=related_rows(store,source_selected,rule,value)
+            found=related_rows(store,target_selected,rule,value)
+            expected=[]
+            for original_row in original:
+                if rule["target_kind"]=="cases":expected.extend(case_destination([original_row],policy)[0])
+                else:
+                    for rel in original_links(store,source_selected,original_row,policy):
+                        parent_rows=list(query_rows(store,source_selected,"cases",case_id=rel["case_id"])) if isinstance(rel["case_id"],str) else []
+                        expected.extend(destinations_for_documents(parent_rows,policy))
+            expected=sorted(set(expected))
+            required=[];unknown=len(original)!=1 or not expected
+            for destination in expected:
+                candidates=[item for item in found if item["destination"]==destination]
+                state="MATCH" if len(candidates)==1 else "AMBIGUOUS" if candidates else "UNKNOWN"
+                for item in candidates:
+                    captured=clock_check(target_by_id[item["dataset_id"]],policy,True)
+                    valid=(captured["status"]=="MATCH" and not item["issues"] and
+                           item["values"].get("deleted") is not True and item["presence"].get("deleted")!="invalid")
+                    if not valid:state="UNKNOWN"
+                    required.append({"destination":destination,"row":row_ref(item),"capture":captured,"usable":valid})
+                outcomes.append(state)
+            if unknown:outcomes.append("UNKNOWN")
+            evidence.append({"original_id":value,"expected_destinations":expected,"observed":required,
+                             "source_rows":[row_ref(item) for item in original]})
+        state="DIFFERENT" if not equal else "AMBIGUOUS" if "AMBIGUOUS" in outcomes else "UNKNOWN" if "UNKNOWN" in outcomes else "MATCH"
+        checks[key]=check(state,"Compare original relation membership and independently observed referenced records",
+                          expected=left,observed=right,rule=rule,references=evidence)
+    return checks
