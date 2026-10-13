@@ -108,10 +108,17 @@ class GISProjects:
                 'created_at': record.get('created_at'),
                 'selection': record['selection'], 'layers': layers, 'downloads': downloads}
 
-    def catalogue(self, workspace):
+    def catalogue(self, workspace, native_study_collection=None, native_study_source=None):
         ws = self.operator.ws(workspace)
+        if native_study_collection:
+            from model import gis_native_study
+            return {'workspace_key': workspace, 'native_study': gis_native_study.preview(ws, {
+                'source_collection_id': native_study_collection,
+                'source_id': native_study_source or 'saved-native-ensemble-study'})}
         from model import gis_edition_review
         result = gis_workspace.catalogue(ws)
+        from model import gis_native_study
+        result['native_studies'] = gis_native_study.choices(ws)
         result['exports'] = [self.describe(workspace, 'export', r['id']) for r in result['exports']]
         result['received'] = [self.describe(workspace, 'received', gis.load(p)['id'])
                               for p in sorted((ws.root / 'gis-received').glob('*/receipt.json'))]
@@ -178,7 +185,8 @@ def invoke(operator, workspace_key, action, payload):
 def read(operator, workspace_key, operation, payload):
     adapter = GISProjects(operator)
     if operation == 'catalogue':
-        return adapter.catalogue(workspace_key)
+        return adapter.catalogue(workspace_key, payload.get('native_study_collection'),
+                                 payload.get('native_study_source'))
     raise ValueError('Choose the GIS catalogue operation')
 
 
