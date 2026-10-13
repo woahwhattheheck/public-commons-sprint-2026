@@ -253,9 +253,9 @@ remain pinned until their owner explicitly receives this later complete edition.
 Run the installed `carbon-customer-agent-receiving` command, or the complete source module:
 
 ```sh
-node stellar/scf-starforge-20261009/partners/carbon-customer-workspaces/receiving.mjs \\
-  --source /private/original-stellarcarbon-edition.json \\
-  --output /private/new-carbon-agent-receiving \\
+node stellar/scf-starforge-20261009/partners/carbon-customer-workspaces/receiving.mjs \
+  --source /private/original-stellarcarbon-edition.json \
+  --output /private/new-carbon-agent-receiving \
   --from 2025-11-01 --before 2025-12-01
 ```
 
