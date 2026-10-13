@@ -38,6 +38,26 @@ The human HTML handover includes visible field-label/answer tables, original num
 
 Source-native modeled quantities remain with their original imported candidate and source snapshots. Capturing implementation work or monitoring results does not recompute those quantities.
 
-## Applying the report patch
+## Installing the complete current field workbench
 
-Replace only `export function reportHtml(...)` in `operator/web/implementation_core.mjs` with the supplied `reportHtml.replacement.mjs`. Keep the validator, scheduler, other exports and any later source-preservation changes. Root may place report functions in a separate module while preserving the existing public exports.
+Use the current complete application checkout and its original implementation installer:
+
+```sh
+python -B install_implementation.py --application /absolute/path/to/current-application --source-root /absolute/path/to/current-source
+```
+
+The complete source includes the current validator, forms, report renderer, native provider, extension descriptor and prepared offline HTML. Keep those files together so field-record reporting, saved report editions and native source bindings use one source edition.
+
+To regenerate the portable workbench after an authored browser or report change, run the maintained builder from the same source root:
+
+```sh
+python -B build_implementation_offline.py
+```
+
+Use the builder's `--help` for an explicit output path. The installer uses the supplied `operator/web/implementation_workbench.html` when present. This HTML preserves field editing, complete plan JSON return and the client-readable implementation report without a server.
+
+## Laboratory CSV and observed-data continuation
+
+The native **Field records** view includes **Import laboratory CSV**. Choose the original file, explicitly map its columns to existing sample/activity identities and result fields, preview every conflict, then use **Import reviewed results in one native revision**. The original CSV, reviewed mapping and row decisions are retained with that plan revision. See [Laboratory results intake](IMPLEMENTATION_LAB_RESULTS.md) for censored values, replacement decisions and timestamp handling.
+
+After importing actual results, use **Review saved field observations** and **Register saved field observations** to publish the saved revision to the existing Observed water quality view. **Prepare client report** opens the original delivery preparation form with the retained field source selected. See [Saved field observations](IMPLEMENTATION_OBSERVATIONS.md) for the source and report relationship.

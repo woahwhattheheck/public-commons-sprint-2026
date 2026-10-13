@@ -2,14 +2,15 @@
   "schema": "upstate.operator-extension/v1",
   "id": "implementation",
   "title": "Implementation & fieldwork",
-  "version": "3",
+  "version": "4",
   "order": 70,
   "assets": [
     "implementation.mjs",
     "implementation_core.mjs",
     "implementation_forms.mjs",
     "implementation.css",
-    "implementation_workbench.html"
+    "implementation_workbench.html",
+    "implementation_lab.mjs"
   ],
   "backend": {
     "module": "implementation_operator",
@@ -29,7 +30,8 @@
       "implementation.source.attach",
       "implementation.source.import",
       "implementation.selection.import",
-      "implementation.observations.import"
+      "implementation.observations.import",
+      "implementation.lab.import"
     ],
     "invoke": {
       "handler": "invoke",
@@ -252,6 +254,45 @@
         ],
         "path": "/api/implementation/observations-import",
         "operation": "observations-import",
+        "handler": "queue",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "POST"
+        ],
+        "path": "/api/implementation/lab-inspect",
+        "operation": "lab-inspect",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "POST"
+        ],
+        "path": "/api/implementation/lab-preview",
+        "operation": "lab-preview",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "POST"
+        ],
+        "path": "/api/implementation/lab-import",
+        "operation": "lab-import",
         "handler": "queue",
         "args": [
           "workspace_key",
