@@ -172,6 +172,18 @@ async function taskResult(stage) {
       stage.result = task.result; stage.completed_at = task.completed_at || new Date().toISOString();
       await checkpoint(); return task;
     }
+    if (task.state === 'interrupted' && stage.request
+        && stage.resume_attempt !== report.attempts.length) {
+      assert.equal(task.action, stage.action);
+      assert.deepEqual(task.payload, stage.request.payload);
+      stage.resume_attempt = report.attempts.length;
+      stage.resumed_at = new Date().toISOString();
+      await checkpoint();
+      const resumed = await api('/api/task/resume', {id: task.id});
+      assert.equal(resumed.id, task.id);
+      assert.equal(resumed.workspace, workspace);
+      continue;
+    }
     if (!['queued', 'running'].includes(task.state)) {
       stage.error = task.error; await checkpoint();
       throw Error('Original ' + stage.action + ' task ' + task.id + ' is ' + task.state + ': ' + JSON.stringify(task.error));
