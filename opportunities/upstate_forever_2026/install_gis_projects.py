@@ -10,13 +10,15 @@ from pathlib import Path
 import shutil
 import tempfile
 
-MODEL_FILES = ('gis_project.py', 'gis_workspace.py', 'gis_edition_review.py', 'gis_review_raster.py', 'gis_review_raster_view.html',
+MODEL_FILES = ('gis_native_study.py', 'gis_project.py', 'gis_workspace.py', 'gis_edition_review.py', 'gis_review_raster.py', 'gis_review_raster_view.html',
                'gis_vector_review.py', 'gis_project_cli.py',
                'gis_project_native.py', 'gis_project_view.html', 'GIS_PROJECTS.md', 'requirements-gis.txt')
 OWN_FILES = tuple('model/' + x for x in MODEL_FILES) + (
     'operator/gis_projects.py', 'operator/web/gis-projects.mjs', 'operator/web/gis-projects.css',
     'operator/extensions/gis-projects.json', 'operator/gis_vector_reviews.py',
-    'operator/extensions/gis-vector-reviews.json')
+    'operator/extensions/gis-vector-reviews.json',
+    'source_tools/receive_native_study_gis.py', 'source/GIS_NATIVE_STUDY.md',
+    'integration/component_fragments/gis-native-study.json')
 MARKER = '# Editable GIS integration: ASTRA-GIS12/v1'
 
 
@@ -116,8 +118,17 @@ def _vector_server_source(text):
     return text
 
 
+NATIVE_STUDY_CATALOGUE = ('                    return self.send_json(200, GISProjects(self.app).catalogue('
+                          'workspace, one("native_study_collection"), one("native_study_source")))\n')
+ORIGINAL_CATALOGUE = '                    return self.send_json(200, GISProjects(self.app).catalogue(workspace))\n'
+
+
 def server_source(text):
-    return _vector_server_source(_base_server_source(text))
+    # Normalize our exact earlier direct route before the existing vector joins.
+    if NATIVE_STUDY_CATALOGUE in text:
+        text = once(text, NATIVE_STUDY_CATALOGUE, ORIGINAL_CATALOGUE, 'native-study direct route')
+    text = _vector_server_source(_base_server_source(text))
+    return once(text, ORIGINAL_CATALOGUE, NATIVE_STUDY_CATALOGUE, 'native-study selected read')
 
 
 def _remove_vector_server_source(text):
@@ -160,6 +171,8 @@ def index_source(text):
 
 def legacy_server_source(text):
     """Remove only the exact former GIS-owned joins before shared registration."""
+    if NATIVE_STUDY_CATALOGUE in text:
+        text = once(text, NATIVE_STUDY_CATALOGUE, ORIGINAL_CATALOGUE, 'native-study registered route')
     text = _remove_vector_server_source(text)
     if MARKER not in text:
         return text
@@ -266,6 +279,10 @@ def install(application, source, dry_run=False):
     application, source = Path(application).resolve(strict=True), Path(source).resolve(strict=True)
     if not (application / 'model/workspace.py').is_file():
         raise ValueError('Receive the original scientific application before this additive component')
+    for dependency in ('model/ensemble_study_transfer.py', 'model/native_versions.py'):
+        target = application / dependency
+        if not target.is_file() or target.is_symlink():
+            raise ValueError('Receive the complete native-study component dependency before GIS installation: ' + dependency)
     transform, dependencies, integration = registration_plan(application)
     before={};planned={}
     for name, fn in transform.items():
