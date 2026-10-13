@@ -17,6 +17,20 @@ python source_tools/receive_geographic_headwaters.py \
   --adopt-handover
 ~~~
 
+For an original twelve-member ensemble whose first baseline/restoration/control trio is complete while the other nine members remain unexecuted, continue the same admitted receiving directory with the maintained reference-report mode:
+
+~~~sh
+python source_tools/receive_geographic_headwaters.py \
+  --workspace ACTUAL_WS \
+  --selection ORIGINAL_SELECTION \
+  --output ORIGINAL_OUTPUT \
+  --report-only \
+  --adopt-reference-report \
+  --reference-handover
+~~~
+
+This uses the exact completed reference trio, builds its separately scoped report and editable archive, and cold-reopens that reference handover. The full twelve-member course retains its actual partial state. A return with `reference_independent_reopen` and a completed `reference_handover_editions` entry supplies the reference delivery; the receiver's exit status 2 still describes the larger course's partial state. Continue the same reference operation after a report error; additional sensitivity members retain their separately selected execution mode. An existing direct-Workspace admission owner keeps its current supported caller and original prepared object.
+
 Replace the placeholders with that operation's existing paths; use its actual Python interpreter. The completed-case continuation reuses original results and adds the current geographic context and allocation source. The original full course retains its existing --run mode. Do not start a second native run merely to make this report. The receiving course's maintained instructions remain [GEOGRAPHIC_NATIVE_RECEIVING.md](../docs/GEOGRAPHIC_NATIVE_RECEIVING.md).
 
 The geographic context's original prepare path adds the allocation result, and its append_sources path adds the exact resulting collection/document choice to the ordered report selection. Existing retained contexts without the new field remain readable. Open the resulting source in the existing Sources report composer; preserve the original source order and existing review requirements. An existing native report-only continuation may render a new report edition, while the three completed native model runs remain unchanged.
