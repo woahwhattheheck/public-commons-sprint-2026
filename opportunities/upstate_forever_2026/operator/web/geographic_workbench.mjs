@@ -15,7 +15,8 @@ export function readGeographicForm(form) {
   for (const input of form.querySelectorAll("[data-sp-input]")) if(input.value) payload.inputs[input.dataset.spInput]=JSON.parse(input.value);
   for (const input of form.querySelectorAll("[data-sp-option]")) if(input.value!=="") {
     let value=input.value;
-    if(input.type==="number") {value=Number(value);if(!Number.isFinite(value))throw new Error("Use a finite value for "+input.dataset.spOption+".");}
+    if(input.type==="checkbox")value=input.checked;
+    else if(input.type==="number") {value=Number(value);if(!Number.isFinite(value))throw new Error("Use a finite value for "+input.dataset.spOption+".");}
     payload.options[input.dataset.spOption]=value;
   }
   return payload;
@@ -139,11 +140,11 @@ export function createGeographicWorkbench(host) {
         ...(Object.hasOwn(s,"max_working_bytes")?{max_working_bytes:s.max_working_bytes}:{})},import_sources:true};
   }
   function applyPayload(payload){
-    if(payload?.method!=="geographic-headwaters"||!payload.inputs||!payload.options)throw new Error("Open a complete geographic operator selection.");
-    setField("[data-sp-title]",payload.title||"");
-    for(const node of container.querySelectorAll("[data-sp-input]"))setField('[data-sp-input="'+node.dataset.spInput+'"]',payload.inputs[node.dataset.spInput]??"");
-    for(const node of container.querySelectorAll("[data-sp-option]"))setField('[data-sp-option="'+node.dataset.spOption+'"]',payload.options[node.dataset.spOption]??"");
-    preview=null;previewKey=null;renderPreview();renderTopology();status("Original source and assumption choices reopened. Review the preview before preparing another edition.");
+    // The shared desk validates and retains the entire replacement before it
+    // changes one live field, preserving its prior complete working selection.
+    original.replaceSelection(payload,{reason:'Original geographic choices reopened'});
+    choiceRevision++;preview=null;previewKey=null;renderPreview();renderTopology();
+    status("Original source and assumption choices reopened. The prior complete choice remains in Working input history. Preview before preparing another edition.");
   }
   async function previewCurrent(){
     if(previewBusy)return;
@@ -415,6 +416,7 @@ export function createGeographicWorkbench(host) {
       '<div data-geo-original></div><section class="geo-saved"><h2>Saved geographic studies</h2><div data-geo-cases></div><div data-geo-case-detail hidden></div></section></div>';
     abort=new AbortController();const signal=abort.signal;
     target.addEventListener("click",click,{signal});
+    target.addEventListener("source-selection-replaced",()=>{choiceRevision++;preview=null;previewKey=null;renderPreview();renderTopology();},{signal});
     target.addEventListener("change",event=>{
       const node=event.target;
       if(node.hasAttribute("data-geo-programme-delivery")){programmeDelivery=node.value;void loadProgramme();return;}
@@ -448,7 +450,7 @@ export function createGeographicWorkbench(host) {
       }
     },{signal});
     target.querySelector("[data-geo-reopen]").addEventListener("change",async event=>{
-      const file=event.target.files[0],key=workspace,own=version,generation=++importGeneration,revision=choiceRevision;if(!file)return;
+      const input=event.target,file=input.files[0],key=workspace,own=version,generation=++importGeneration,revision=choiceRevision;input.value='';if(!file)return;
       try{const data=JSON.parse(new TextDecoder("utf-8",{fatal:true}).decode(await file.arrayBuffer()));if(!active(key,own)||generation!==importGeneration)return;
         if(revision!==choiceRevision){status("Source choices changed while this file was opening. Select the file again to apply it.");return;}
         if(data.schema!=="upstate.geographic-operator-selection/v1"||data.project_id!==catalog?.project_id)throw new Error("Receive these original source collections into this study before reopening another project's selection.");
