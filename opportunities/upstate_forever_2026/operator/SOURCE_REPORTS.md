@@ -192,3 +192,41 @@ scientific.openForSources({
 ```
 
 The incoming source list is validated against the original current scientific catalogue. Current Workspace and generation guards reject stale selections. Existing saved-edition `openForStudy` navigation, report draft recovery, source import ownership and HTML member transport remain intact.
+
+
+## Transfer a complete retained document edition
+
+**Retained source editions** lists typed document collections already present in the Workspace. It reads the retained source records, so this list remains usable after restoring a project without the original installed publisher directory. The available-edition discovery list and original HTML report previews remain separate.
+
+For a document-only assessment recipe or any other listed original document edition:
+
+1. Choose **Inspect retained edition** to inspect its original collection and source records.
+2. Choose **Download complete source edition**. The original archive writer exports every entry and companion in that collection at its original manifest-relative `source_path`, plus the exact retained original manifest bytes. The response is admitted only when it matches the chosen Workspace, collection, manifest hash and declared source roster.
+3. Keep the ZIP and its displayed SHA256. Expand **Original import identity** and retain the exact manifest member name and original manifest SHA256. If an original source already occupies top-level `sources.json`, the writer selects a distinct top-level manifest filename; no source path or manifest body is rewritten.
+4. Extract and open the actual documents and source files as part of outgoing inspection. Use the existing source import in the receiving Workspace, or choose **Reimport downloaded edition** to open that form in archive mode with the correct manifest member already selected.
+5. Upload the downloaded ZIP, inspect the exact original metadata, then queue **Import source edition** through the existing operation. Check the returned source entry IDs, kinds, roles, vintages, manifest hash and every retained original body/companion identity. A receiving collection ID may legitimately differ with its import record; retain the actual returned collection rather than substituting the donor ID.
+6. In the receiving Workspace, reopen the retained edition and use **Add source studies to report**. This uses its actual receiving collection/source choices in the original ordered composer. Existing saved report and selected/full Workspace continuation remain the original course.
+
+The download contains the complete source edition. It does not claim to contain unrelated model runs or editable study histories; use the existing selected Study or complete Workspace transfer when those objects are required.
+
+A download request that finishes after leaving or switching the Sources view does not change the current screen or start an unrelated download. Returning to the same collection can repeat the same deterministic archive request and reuse its original archive identity. The current view shows source identity errors beside the selected edition. Existing pending scientific report writes and draft fields are unaffected.
+
+### Archive API compatibility
+
+The existing `POST /api/source-reports/archive` now supports collection-based export with:
+
+```json
+{"collection_id":"<actual retained collection ID>"}
+```
+
+Its original `collection_id` plus `entry_key` request still uses the original HTML-entry admission, even when a supplied entry key is empty or malformed. HTML preview, member and detail routes continue to require a real retained HTML report. Collection-only export uses the same existing writer, path checks, original manifest, whole companion inventory, streaming byte/hash verification, ZIP64 handling, deterministic cache selection and download ticket.
+
+The response adds `collection_id`, `original_manifest_sha256` and the complete original `source_ids` roster. `source_id` remains the chosen report ID for original report callers and is null for a whole-collection request. `manifest_member` and `download` retain their established meaning. There is no synthesized replacement manifest and no new archive format.
+
+The existing catalogue additionally returns `retained_editions` for actual source collections containing documents. Rows include exact collection and original-manifest identity, original document metadata and native scientific source choices. This requires an ordinary retained original manifest; it does not infer a source edition from an arbitrary file directory.
+
+### Producing-owner receiving and inspection
+
+Continue the same accepted source intake with its actual donor/receiving Workspaces and original files. Exercise document-only NC2022/GA2024 export and reimport after their actual original source import, plus an existing HTML report export to confirm the original path still operates. When a retained edition is restored without the installed publisher folder, use **Retained source editions** directly. Return actual archive bytes/SHA, manifest member, original and receiving collection/source IDs, completed import task and any first exception.
+
+The producing owner must OPEN and LOOK at the exact outgoing Sources and import views at desktop/screenshare and narrow/mobile widths. Operate ready/empty/search/loading/error states, download, import and reopen; inspect long identifiers and document titles for clipping or overflow. Download and extract the actual ZIP, compare its complete declared inventory through the original import, and literally open the contained scientific documents, data and final report. Code/V8 checks, HTTP success and screenshots that nobody viewed do not satisfy this inspection. Repair visible or functional defects in the original source and retain the actual result in the existing operation.
