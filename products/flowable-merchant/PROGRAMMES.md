@@ -90,7 +90,7 @@ case-programme.mjs exports buildFlowableCaseProgramme. Pass the complete origina
 
 Each member supplies text, contentBase64, bytes, sha256 and mediaType. text is a compiler input only. The portable output carries the complete original Base64 member. Its intake verifies size, SHA-256 and canonical Base64 before saving.
 
-The compiler accepts the maintained three-family reference catalogue and the existing partner cohort shape with resources and ordinary/exception cases. It operates both original source editions. The existing Onwelo three-family/two-scenario cohort compiles to 127 native steps. Company-specific programmes remain with their original private company case.
+The compiler accepts the maintained three-family reference catalogue and the existing partner cohort shape with resources and ordinary/exception cases. It operates both original source editions. A complete three-family/two-scenario partner cohort compiles to 127 native steps. Company-specific programmes remain with their original private company case.
 
 The compiler carries native definition, case, plan-item and task identifiers through original confirmed results. All declarations and selections remain reviewable in the ordinary native workspace. It does not start an engine or dispatch a request during compilation.
 
