@@ -24,6 +24,19 @@ function metrics(rows){
     number(row.nash_sutcliffe_efficiency)+'</td></tr>'))+
     '<p>Errors retain each constituent’s original annual mass units and catchment support. Training and held-out results stay separate.</p>';
 }
+function originalPeriods(observation){
+  const rows=list(observation.periods);
+  if(!rows.length)return '';
+  const method=value=>value===null||value===undefined||value===''?'Not recorded':
+    typeof value==='string'?value:JSON.stringify(value);
+  return '<details class="st-details"><summary>Original observation periods and methods</summary>'+
+    table(['Constituent','Original units','Period start','Period end','Original method','Source qualifier','Records'],
+      rows.map(row=>'<tr><td>'+esc(human(row.parameter))+'</td><td>'+esc(row.source_unit)+
+        '</td><td>'+esc(row.period_start||'Not recorded')+'</td><td>'+esc(row.period_end||'Not recorded')+
+        '</td><td>'+esc(method(row.method))+'</td><td>'+esc(row.qualifier||'None recorded')+
+        '</td><td>'+count(row.record_count)+'</td></tr>'))+
+    '<p>These periods, methods and qualifiers describe the original table. Evaluation eligibility, geographic groups and held-out assignments remain in the saved design.</p></details>';
+}
 export function receivedCalibrationStudiesHTML(detail,disabled=false){
   const rows=list(detail?.calibration_studies);
   if(!rows.length)return '';
@@ -46,7 +59,7 @@ export function receivedCalibrationStudiesHTML(detail,disabled=false){
         '<div class="st-actions">'+(local&&report?button('result','Open original evaluation',index,disabled):'')+
         (local&&plan?button('plan','Open editable design',index,disabled):'')+
         (local&&validID(row.selected_run_id)?button('run','Open selected native run',index,disabled):'')+'</div>'+
-        metrics(list(row.selected_metrics))+
+        metrics(list(row.selected_metrics))+originalPeriods(observation)+
         (row.history?.evaluation_count>1?'<p><strong>Selected-profile history:</strong> '+count(row.history.evaluation_count)+
           ' evaluations retained. Open the evaluation to compare physical errors on unchanged original references and inspect changed support.</p>':'')+
         (list(row.supplements).length?'<details class="st-details"><summary>Retained maps and scientific reviews</summary>'+
