@@ -14,6 +14,10 @@ def _validate_figure(figure):
     if not isinstance(figure, dict) or not isinstance(figure.get("panels"), list):
         raise ValueError("Scientific figures require their original panel specifications")
     for panel in figure["panels"]:
+        if panel.get("kind") == "projected_geometry_map":
+            from .scientific_map_figures import validate_panel
+            validate_panel(panel, figure.get("geometries"))
+            continue
         for axis in ("x", "y"):
             spec = panel[axis]
             lo, hi = map(_number, spec["domain"])
@@ -237,4 +241,11 @@ def panel_drawings(figure, width):
     _validate_figure(figure)
     if not math.isfinite(float(width)) or float(width) < 300:
         raise ValueError("Scientific report figures need a usable page width")
-    return [panel_drawing(panel, float(width)) for panel in figure["panels"]]
+    result = []
+    for panel in figure["panels"]:
+        if panel.get("kind") == "projected_geometry_map":
+            from .scientific_map_figures import panel_drawing as map_drawing
+            result.append(map_drawing(panel, figure["geometries"], float(width), validated=True))
+        else:
+            result.append(panel_drawing(panel, float(width)))
+    return result
