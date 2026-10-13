@@ -233,13 +233,24 @@ function renderOperation() {
 }
 async function render() {
   const epoch = ++renderEpoch, host = $('#content');
-  $('#navigation').replaceChildren(...['sources', 'layers', 'maps', 'editions', 'field', 'parcels', 'transfers', 'history'].map(tab =>
-    button(tab[0].toUpperCase() + tab.slice(1), async () => { currentTab = tab; setDraft('tab', tab); await render(); },
-      {'aria-current': currentTab === tab ? 'page' : undefined})));
-  const result = await ({sources: sourcesPane, layers: layersPane, maps: mapsPane, editions: editionsPane,
-    field: fieldPane, parcels: parcelsPane, transfers: transfersPane, history: historyPane})[currentTab]();
-  if (epoch === renderEpoch) host.replaceChildren(...(Array.isArray(result) ? result : [result]));
-  renderOperation();
+  // A reopened form must not accept edits into the previous draft while its
+  // current source and saved decision are still being read.
+  host.inert = true;
+  host.setAttribute('aria-busy', 'true');
+  try {
+    $('#navigation').replaceChildren(...['sources', 'layers', 'maps', 'editions', 'field', 'parcels', 'transfers', 'history'].map(tab =>
+      button(tab[0].toUpperCase() + tab.slice(1), async () => { currentTab = tab; setDraft('tab', tab); await render(); },
+        {'aria-current': currentTab === tab ? 'page' : undefined})));
+    const result = await ({sources: sourcesPane, layers: layersPane, maps: mapsPane, editions: editionsPane,
+      field: fieldPane, parcels: parcelsPane, transfers: transfersPane, history: historyPane})[currentTab]();
+    if (epoch === renderEpoch) host.replaceChildren(...(Array.isArray(result) ? result : [result]));
+    renderOperation();
+  } finally {
+    if (epoch === renderEpoch) {
+      host.inert = false;
+      host.setAttribute('aria-busy', 'false');
+    }
+  }
 }
 
 
