@@ -57,7 +57,8 @@
     "watershed-context",
     "utility-microbial-study",
     "native-interactions",
-    "station-assessment"
+    "station-assessment",
+    "extension-startup"
   ],
   "components": {
     "core": {
@@ -492,13 +493,20 @@
       ]
     },
     "guided-journey": {
-      "title": "guided journey",
+      "title": "Guided operating journey",
       "paths": [
-        "operator/extensions/guided-journey.json"
+        "operator/GUIDED_JOURNEY.md",
+        "operator/Guided_Journey_Source.json",
+        "operator/extensions/guided-journey.json",
+        "operator/install_guided_journey.py",
+        "operator/web/journey.css",
+        "operator/web/journey.mjs",
+        "operator/web/regional_journey.mjs"
       ],
       "requires": [
         "core"
-      ]
+      ],
+      "source_reference": "Current regional journey and saved project handoff from PR3100."
     },
     "investigations": {
       "title": "investigations",
@@ -591,22 +599,49 @@
       ]
     },
     "project-continuity": {
-      "title": "project continuity",
+      "title": "Complete project continuity",
       "paths": [
-        "operator/extensions/project-continuity.json"
+        "operator/PROJECT_CONTINUITY.md",
+        "operator/PROJECT_CONTINUITY_REGISTRY.md",
+        "operator/extension_modules/project_continuity.py",
+        "operator/extension_modules/project_transfer.py",
+        "operator/extensions/project-continuity.json",
+        "operator/project_continuity.py",
+        "operator/project_continuity_cli.py",
+        "operator/project_continuity_registry.py",
+        "operator/project_transfer_cli.py",
+        "operator/web/project_continuity.mjs",
+        "source_tools/install_project_continuity.py"
       ],
       "requires": [
-        "core"
-      ]
+        "core",
+        "extension-startup",
+        "project-transfer"
+      ],
+      "source_reference": "PR3100 c57f6d2e16956ffb14fc2e1526551437e6733777 plus maintained historical entrypoint delegation."
     },
     "project-transfer": {
-      "title": "project transfer",
+      "title": "Original incremental transfer and restore",
       "paths": [
-        "operator/extensions/project-transfer.json"
+        "model/PROJECT_TRANSFER.md",
+        "model/project_transfer.py",
+        "model/project_transfer_cli.py",
+        "model/project_transfer_desk.py",
+        "model/project_transfer_install.py",
+        "model/project_transfer_workspace.py",
+        "operator/PROJECT_TRANSFER_EXTENSION.md",
+        "operator/extensions/project-transfer.json",
+        "operator/project_transfer.py",
+        "operator/web/project_transfer.css",
+        "operator/web/project_transfer_desk.mjs",
+        "operator/web/transfer_desk.css",
+        "operator/web/transfer_desk.html",
+        "operator/web/transfer_desk.mjs"
       ],
       "requires": [
         "core"
-      ]
+      ],
+      "source_reference": "Current original ASTRA-TRANSFER12/ES26 descriptor v2 and single provider; current source e1571ba9592a0bc2600f6f83a62d6345a60e51fe."
     },
     "published-studies": {
       "title": "published studies",
@@ -886,13 +921,23 @@
       ]
     },
     "water-quality": {
-      "title": "water quality",
+      "title": "Native water-quality context",
       "paths": [
-        "operator/extensions/water-quality.json"
+        "operator/extension_modules/water_quality.py",
+        "operator/extensions/water-quality.json",
+        "operator/web/water_quality.css",
+        "operator/web/water_quality.mjs",
+        "source/water-quality-context/catalog.json",
+        "source/water-quality-context/inventory.json",
+        "source/water-quality-context/native-inputs-sources.json",
+        "source_tools/WATER_QUALITY_CONTEXT.md",
+        "source_tools/source_priority_assessment.py",
+        "source_tools/water_quality_context.py"
       ],
       "requires": [
         "core"
-      ]
+      ],
+      "source_reference": "Full ten-file feature: PR2793 105733729b85998952d0aaf46827f1617d34d68a plus PR3011 b38dafdcc7c45c0679c82a42e17a8dcf418a8d90. Source inputs are selected separately."
     },
     "water_source_review": {
       "title": "water source review",
@@ -1389,6 +1434,18 @@
           }
         }
       }
+    },
+    "extension-startup": {
+      "title": "Maintained extension startup",
+      "paths": [
+        "operator/EXTENSION_STARTUP.md",
+        "operator/extension_registry.py",
+        "source_tools/apply_dependency_startup.py"
+      ],
+      "requires": [
+        "core"
+      ],
+      "source_reference": "PR3039 73d703b3d04f69a96a8f3556385b9c1c2069676c."
     }
   }
 }
