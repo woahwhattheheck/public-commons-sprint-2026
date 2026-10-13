@@ -62,6 +62,129 @@ The additive operator extension registers `monitoring.field-assignment.save`, it
 
 A selected implementation Study retains its native plan/history/reports and managed original attachments. The original assignment catalogue and source collection also travel in the complete Workspace archive produced by this receiver. Use that full project for the complete source desk and assignment catalogue, and the Implementation desk for a selected-plan Study.
 
+## Execute the same browser leg without a separate driver
+
+If the original RIVER owner has no retained field browser driver, the maintained
+`source_tools/receive_monitoring_field_assignment_browser.mjs` supplies the
+same chapter's complete caller. Use the ALREADY-RUNNING Operator and the owner's
+installed Node, Playwright and Chromium; it does not start another server.
+
+Keep the connection file private (its Operator URL contains the existing access
+token). Use exact paths from that original native process:
+
+```json
+{
+  "operator_url": "THE_ORIGINAL_LOCAL_OPERATOR_URL_WITH_TOKEN",
+  "workspace": "THE_ORIGINAL_OPERATOR_WORKSPACE_KEY",
+  "application": "/absolute/original/application",
+  "workspace_path": "/absolute/original/workspace",
+  "playwright_module": "/absolute/installed/playwright/index.mjs",
+  "executable": "/absolute/installed/chromium",
+  "cutoff": "2026-10-13T14:00:00Z",
+  "field_assignment": {
+    "project_id": "THE_ORIGINAL_PROJECT",
+    "selection_record_id": "THE_ACTUAL_SAVED_SELECTION",
+    "title": "THE_ORIGINAL_ASSIGNMENT_TITLE",
+    "mode": "create_or_reopen",
+    "edit_note": "THE_ACTUAL_RECEIVING_REVIEW_NOTE"
+  }
+}
+```
+
+```bash
+ACTUAL_NODE APP/source_tools/receive_monitoring_field_assignment_browser.mjs \
+  --input PRIVATE_CONNECTION_JSON \
+  --output EXISTING_FIELD_COURSE/browser
+```
+
+Use one outside-application/Workspace output for this SAME field course. The
+caller freezes the non-secret selection, verifies existing completed artifacts
+on replay, retains exact caller/chapter source per attempt, saves actual original
+downloads with their lengths/SHA256, and writes complete browser events and
+desktop/narrow screenshots. It reconnects the chosen Workspace through the
+actual Operator selector. It never logs the connection token. The original
+owner personally reads the captured screens and outgoing artifacts. The full
+Workspace/report/archive leg remains the existing Python receiver described
+above; this browser step exercises its actual saved state.
+
+The native selection reader determines the exact historical source collection.
+Do not replace that source with a newer 226-companion manifest merely because it
+exists. A newly imported complete source is a distinct choice; existing saved
+selections continue to identify their original edition.
+
+
+## Browser chapter in the existing receiving course
+
+The complete `source_tools/monitoring_field_assignment_browser.mjs` exports
+`operateMonitoringFieldAssignment(options)`. Import it in the current RIVER/DD6B
+browser driver after the same project and its saved native field selection are
+open. The driver keeps its existing browser, authentication, immutable admission,
+output directory, journal and cutoff. This chapter starts no server or model.
+
+Freeze the input in that original admission:
+
+```json
+{
+  "project_id": "ACTUAL_ORIGINAL_PROJECT",
+  "selection_record_id": "ACTUAL_RETAINED_SELECTION_ID",
+  "title": "THE_ORIGINAL_ASSIGNMENT_TITLE",
+  "mode": "create_or_reopen",
+  "edit_note": "THE_ACTUAL_RECEIVING_REVIEW_NOTE"
+}
+```
+
+The note is optional. When supplied, it is appended once to the plan's Purpose
+through Plan settings and Save native revision. It is a planning review note.
+It creates no visit, sample, result, commitment or expenditure. `inspect` opens
+an existing assignment; when none exists, it returns the completed preview.
+
+Pass the existing page and selected `workspace`, plus the driver's normal
+`api(path, query)` authenticated GET, `navigate(desk)`,
+`waitFor(predicate, label, timeout)`, `check()`, `closeDialog()`,
+`saveRecord(name, value)`, `screenshot(page, name, width)`,
+`download(locator, name, descriptor?)`, `readJSON(file)` and `action(name, detail)`.
+The ordinary download helper returns `{file}` and verifies the original
+descriptor's length/SHA when supplied. Supply
+`saveBytes(name, bytes, originalDescriptor)` to verify BOTH original length and
+SHA256 and retain those exact bytes in the existing receiving output.
+Do not log the authenticated Operator URL or bearer token.
+
+```javascript
+import {operateMonitoringFieldAssignment}
+  from './monitoring_field_assignment_browser.mjs';
+
+const fieldAssignment = await operateMonitoringFieldAssignment({
+  page, input: originalCourse.field_assignment, workspace,
+  api, navigate, waitFor, check, closeDialog, saveRecord, saveBytes,
+  screenshot, download, readJSON, action
+});
+```
+
+The chapter operates the actual Saved native selection and Preview controls,
+compares the full original raw JSON/source binding, and queues Create only when
+that exact assignment has neither a completed record nor an existing task.
+An existing accepted task is followed by its ID. A failed/interrupted task is
+returned to its original owner for the ordinary Resume control, without a second
+operation. The same rule applies to an interrupted original plan-note save.
+
+It opens every native original report/selection link. The actual inline HTML
+opens through its displayed link and is captured at 1440px and 390px; its original
+response bytes are retained. Other original attachments use the browser download
+event. It opens the same editable plan through the delivered button, operates
+Work plan, Sites & monitoring, Field records, Source selections and Handover,
+exports the saved native plan, reloads the real application, and reopens both
+the unchanged original assignment/report and the current edited plan.
+Original station-family/coordinate/calendar/budget values stay in the saved
+preview and original report. Existing scientific source/run IDs must remain
+present; unrelated concurrent additions and natural native progress are allowed.
+
+Keep this chapter in the same native course as
+`receive_monitoring_field_assignment.py` and its full archive/cold reopen.
+If the original CLI already created the exact assignment, the browser reuses it.
+The existing receiving owner must still personally inspect the resulting
+screenshots and actual outgoing reports before delivery.
+
+
 ## Producing-peer handover
 
 Follow the existing RIVER/DD6B receiving operation. Use the complete installed app to load the actual saved field selection, review both station families and raw coordinate columns, save, open the report and editable plan, edit a note and save a new native revision, then reopen the original report and independent received project. Exercise desktop and 390-pixel layouts, keyboard access, locally scrolling tables and every outgoing report/CSV/JSON/archive link. Personally open and inspect the actual artifacts before calling the recipient package ready. Preserve the active regional GIS/native computation and the original owner's 14:00 UTC checkpoint.
