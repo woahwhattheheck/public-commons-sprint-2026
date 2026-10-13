@@ -173,3 +173,19 @@ An already completed reference group can receive a new report/source implementat
 All three reference-aware APIs receive the SAME unmodified ECHO basis: opening-page `prepare(reference_basis=...)`, archive `retain_binding(reference_basis=...)`, and independent `cold_reopen(reference_basis=...)`. The maintained archive explicitly captures the full original plan, actual pending run records and their sources, selected completed NDR+SDR reference outputs, course/report/decision products, exact review and immutable opening-page basis. The cold child imports the actual archived application and checks those same members. Omitting the basis retains the original strict all-member behavior. Reference snapshots retain their original scope; later complete products get their own source/binding/archive identity.
 
 The native-first and report-only continuations both retain the original `native_parameter_course` phase name. Its first-completed timing therefore remains identical on an unchanged reference replay, instead of changing the opening-page identity just because the operator switched modes. The selected reference basis and original operation request carry the actual execution choice.
+
+
+## Continue an already admitted preparation after a source correction
+
+An earlier `--prepare-only` admission retains its original caller and producer hashes. Installing a corrected receiver must not recreate the geography or change its saved run IDs. Use the explicit prepared-execution adoption on the SAME Workspace, original selection bytes and receiving output:
+
+```sh
+"$PYTHON" -Bu "$APP/source_tools/receive_geographic_headwaters.py" --workspace "$WORKSPACE" --selection "$SELECTION" --output "$RECEIVING" --adopt-prepared --run-reference
+"$PYTHON" -Bu "$APP/source_tools/receive_geographic_headwaters.py" --workspace "$WORKSPACE" --selection "$SELECTION" --output "$RECEIVING" --adopt-prepared --run
+```
+
+The first command executes or reuses only the original reference member and receives its complete separately scoped product. The second is the explicit later full-design continuation. Choose the existing operation's actual command and owned execution boundary; these examples do not authorize a concurrent second writer. Preserve the current solver and the original deadline.
+
+`retained_execution_prepared` verifies the complete original admission/selection bytes, project, receiving record and identical prepared record in the Workspace, then validates its current original parameter plan and native run bindings without requiring completion. The receiver skips `geographic.prepare`, retains the original operation ID, and records an immutable `upstate.geographic-prepared-execution-adoption/v1` source edition with the requested reference/full mode and actual current caller/course/ensemble/native support hashes. Earlier admissions, preparations, source adoptions and returned native errors remain intact. The same native locks, version checks and saved-run execution remain authoritative.
+
+`--adopt-prepared` is valid only with explicit `--run-reference` or `--run` and is mutually exclusive with the two report/handover adoption options. It is not a way to retarget geography, choose a different source selection, normalize changed selection bytes, or bypass the current prepared/run identity. Existing `--adopt-handover` still requires the full original course complete; `--adopt-reference-report` still requires the completed original reference group and never executes a model.

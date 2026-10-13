@@ -309,6 +309,13 @@
         "managed-configuration.css",
         "text/css; charset=utf-8"
       ]
+    ],
+    [
+      "/grant-application-handoff.mjs",
+      [
+        "grant-application-handoff.mjs",
+        "text/javascript; charset=utf-8"
+      ]
     ]
   ]
 }

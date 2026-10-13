@@ -87,3 +87,7 @@ The owner approves a relocation and a new asset, requests correction of the two 
 The application retains the original comparator from public-commons-sprint-2026 PR481 unchanged as `cmdb-qa/cmdb_qa.mjs`. The browser adapter uses the same parser, validation, comparison and exception CSV bodies with a browser-compatible SHA-256 binding. The operating core adds original-file retention, explicit mappings, review decisions, correction lineage and complete receiving around that comparator.
 
 The source distribution also includes the headless operating interface and a complete native receiving example. Use the source README for command syntax and the exact run result delivered with your edition.
+
+## Browsers with local storage disabled
+
+When this browser cannot open its local working database, a permanent Temporary session message appears. The same original imports, mapping, comparison, review and acceptance controls remain available in memory. Session edition means the work is held only in the open view. Download the complete private workspace or handover before closing or reloading. Open the downloaded JSON in this application to continue, or open the complete handover HTML in a normal browser. Earlier browser-saved work is left intact. A save failure after browser storage has opened remains an error; it does not silently switch the existing workspace to temporary memory.

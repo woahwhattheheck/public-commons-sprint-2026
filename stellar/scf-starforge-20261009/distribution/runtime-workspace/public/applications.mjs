@@ -7,6 +7,7 @@ import { createApplicationOutputReader } from './application-output.mjs';
 import { createApplicationLibrary } from './application-library.mjs';
 import { createApplicationInputsView } from './application-inputs.mjs';
 import { createApplicationDrafts } from './application-drafts.mjs';
+import { createGrantApplicationHandoffView } from './grant-application-handoff.mjs';
 import { createWorkbookResultsView, renderWorkbookReview, workbookFormFromDescriptor, isWorkbookApplication } from './workbook-results.mjs';
 const element = (tag, text, className) => {
   const node = document.createElement(tag);
@@ -93,6 +94,7 @@ export function createApplicationsWorkspaceView({ root, api, getState, getToken,
   const inputLibrary=createApplicationInputsView({root:inputRoot,api,getToken,
     getWorkspaceId:()=>getState()?.workspaceId,onError:error,onMessage:message,readSaved,saveSaved});
   const draftRoot = element('div'); draftRoot.id = 'application-setup-drafts';
+  const grantHandoffRoot = element('div'); grantHandoffRoot.id = 'grant-application-handoff';
   const configuration = element('details'); configuration.open = true;
   configuration.append(element('summary', 'Configure application'));
   const form = element('form'), grid = element('div', undefined, 'columns');
@@ -210,7 +212,15 @@ export function createApplicationsWorkspaceView({ root, api, getState, getToken,
   outputPanel.append(outputDescription, outputReaderRoot, inputForm, workbookResults.root);
   const outputReader = createApplicationOutputReader({ root: outputReaderRoot, api,
     getWorkspaceId: () => getState()?.workspaceId, error, output });
-  root.replaceChildren(header, intro, libraryRoot, inputRoot, configuration, selectedPanel, history, outputPanel);
+  root.replaceChildren(header, intro, libraryRoot, inputRoot, configuration, grantHandoffRoot, selectedPanel, history, outputPanel);
+  const grantHandoff = createGrantApplicationHandoffView({
+    root: grantHandoffRoot, api, getState, getApplications: () => data?.applications ?? [], message, error,
+    async onApplicationSaved(id) {
+      const own = scope;
+      await refresh(); if (own !== scope) return;
+      await selectApplication(id); if (own === scope) await refreshWorkspace();
+    },
+  });
   const drafts = createApplicationDrafts({
     root: draftRoot, controls: { label, runtime, kind, settings }, reviewButton,
     getWorkspaceId: () => getState()?.workspaceId,
@@ -728,7 +738,7 @@ export function createApplicationsWorkspaceView({ root, api, getState, getToken,
       }
       drafts.refresh();
       if (!data.applications.some(item => item.id === selectedId)) { selectedId = data.applications[0]?.id ?? null; resetHistory(selectedId); }
-      library.update(data, selectedId); inputLibrary.update();
+      library.update(data, selectedId); inputLibrary.update(); grantHandoff.update();
       recoverRequest.hidden = !readSaved('pending');
       if (data.applications.length && editingId === null && !configurationReview && !label.value && !drafts.hasDraft())
         configuration.open = false;
@@ -789,7 +799,7 @@ export function createApplicationsWorkspaceView({ root, api, getState, getToken,
       scope++; navigationVersion++; data = null; selectedId = selectedRun = editingId = null; configurationReview = startReview = null;
       resetHistory(null); outputReader.reset(); initial = true; drafts.reset(); library.reset(); label.value = ''; kind.replaceChildren(); runtime.replaceChildren();
       selectedPanel.hidden = history.hidden = outputPanel.hidden = reviewResult.hidden = true; configuration.open = true;
-      openapiSetup.reset(); inputLibrary.reset(); workbookResults.reset();
+      openapiSetup.reset(); inputLibrary.reset(); workbookResults.reset(); grantHandoff.reset();
     },
   };
 }

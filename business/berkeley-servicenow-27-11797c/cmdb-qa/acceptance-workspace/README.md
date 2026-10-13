@@ -73,3 +73,9 @@ With no CDP endpoint, the original owned Chromium launch and local serving path 
 ### Inspect the actual outgoing result
 
 Bryce's standing October 13 instruction applies to the complete application and every attachment: the producing peer must open and use the exact outgoing version, actually look at its desktop and narrow/mobile views, operate important controls and open/reopen its downloads. View the real screenshots returned by this course and the actual guide/report/package as a recipient would. Fix unreadable, clipped, crowded or broken output in the existing application. Capturing images or obtaining a passing course result does not replace seeing the product. Preserve the plain industrial interface, original data and computation; this course supports the delivery and is not a separate review product. Return the exact source/output identities, images actually viewed and any concrete correction into the original Alcor case.
+
+## Directly openable review and browser storage
+
+The maintained application now supports browsers which refuse IndexedDB: an explicit temporary-session store retains the complete original workflow and revision checks in the open view, while a permanent banner requires the normal complete-file save before reload. The existing browser database remains the preferred store and keeps its original atomic books/pending transaction. Current embedded and standalone editions consume the same full source and engine; no imported source rows, findings or decision history are omitted.
+
+The same full browser course also denies IndexedDB in one separate owned phone context, operates the complete authored example, downloads it, reloads the empty temporary session, imports the original revision-14 received case and downloads it unchanged. Actual screenshots retain both this storage condition and the persistent original course.

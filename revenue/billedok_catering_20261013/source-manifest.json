@@ -9,8 +9,8 @@
     },
     {
       "path": "build.cjs",
-      "bytes": 4604,
-      "sha256": "4c871ac0b12c6e4b4b992c2793baeaeeda43aa77532c3958cb2db9643b92d407"
+      "bytes": 3641,
+      "sha256": "b1970225938bc779d90ee78b8a6138e883f597fdf0d2dc4ee4fd1cdf00b71740"
     },
     {
       "path": "receive.cjs",
@@ -59,8 +59,8 @@
     },
     {
       "path": "README.md",
-      "bytes": 5885,
-      "sha256": "b941fc14cd062deff130b4f8d6a1bb47bdf2003df9ac363700ce09b95e7f6833"
+      "bytes": 8324,
+      "sha256": "2a713ce3b91e3fb8c042ffa4dd18f5bc477b29efea5f389f7e7e856ec2882ff8"
     },
     {
       "path": "customer/sample.csv",
@@ -161,6 +161,41 @@
       "path": "buyer-contact.json",
       "bytes": 440,
       "sha256": "24616a524de4aa1b255fed5524b2e0da1f0ba3a173bfc02040f56edd7e8b5fc9"
+    },
+    {
+      "path": "host/connected_zip.cjs",
+      "bytes": 12090,
+      "sha256": "857c79f789e9cf4f6321bf22804e1c8d55af6758495ae1ba09d4fa72fd97bb26"
+    },
+    {
+      "path": "vendor/customer-package-panel.mjs",
+      "bytes": 11168,
+      "sha256": "ee435860b2359b2c422a5aee582c795fbbcfc5279e6d07893e44ac3f8c35b0b9"
+    },
+    {
+      "path": "package-viewer.mjs",
+      "bytes": 3294,
+      "sha256": "85e12505965366cd18cab641a5dbcfa7be0718b7256894ad9ea695b3109b9975"
+    },
+    {
+      "path": "package-viewer-input.json",
+      "bytes": 35173,
+      "sha256": "d20a7bde9b52156a01aca370834eb217784199f1e24fb7b01345fe0f4a05d018"
+    },
+    {
+      "path": "build-package-viewer.mjs",
+      "bytes": 5781,
+      "sha256": "880d3399fd81256d1eecf266cfda3f8dd13acbaad68ab7c46aee9a6a79f60882"
+    },
+    {
+      "path": "browser-packages.mjs",
+      "bytes": 9495,
+      "sha256": "c870978f3a0c5e37d51b82a77d7148a30fa54508b1b9800edef7f732d4c2ea97"
+    },
+    {
+      "path": "BilledOK-complete-packages.html",
+      "bytes": 46621,
+      "sha256": "44557338bc04d3d3fa7344cddcf764512738ce859f80f1d5961a08b12a23cd6a"
     }
   ]
 }

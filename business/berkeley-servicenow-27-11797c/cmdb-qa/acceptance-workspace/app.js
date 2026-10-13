@@ -7,11 +7,11 @@ let db,workspace=null,activeKey=null,tab="overview",busy=false,pending=null,sele
 const readable=stamp=>new Date(stamp).toLocaleString("en-US",{dateStyle:"medium",timeStyle:"short"});
 const uid=()=>crypto.randomUUID();
 const note=(message,error=false)=>{$("notice").hidden=!message;$("notice").textContent=message;$("notice").className="notice"+(error?" error":"");};
-function openDb(){return new Promise((resolve,reject)=>{const r=indexedDB.open("tjlabs-cmdb-acceptance",1);r.onupgradeneeded=()=>{for(const name of ["books","meta","pending"])r.result.createObjectStore(name);};r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error);});}
-function read(store,key){return new Promise((resolve,reject)=>{const r=db.transaction(store,"readonly").objectStore(store).get(key);r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error);});}
-function put(store,key,value){return new Promise((resolve,reject)=>{const t=db.transaction(store,"readwrite");t.objectStore(store).put(value,key);t.oncomplete=resolve;t.onerror=()=>reject(t.error);t.onabort=()=>reject(t.error||Error("The browser could not save this operation."));});}
+const openDb=()=>CmdbStore.open();
+const read=(name,key)=>db.get(name,key);
+const put=(name,key,value)=>db.put(name,key,value);
 async function refreshPicker(){
- const rows=await new Promise((resolve,reject)=>{const r=db.transaction("books","readonly").objectStore("books").getAll();r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error);});
+ const rows=await db.list("books");
  $("workspace-select").innerHTML=rows.map(r=>'<option value="'+esc(r.key)+'" '+(r.key===activeKey?"selected":"")+'>'+esc(r.workspace.label+" · "+r.workspace.customer+" · edition "+r.workspace.revision)+'</option>').join("");
 }
 async function select(key){
@@ -30,12 +30,7 @@ function command(action,payload){return {requestId:uid(),expectedRevision:worksp
 async function commit(cmd){
  if(!activeKey||!workspace)throw Error("Create or open a workspace first.");
  const key=activeKey;pending=cmd;$("retry").hidden=false;await put("pending",key,cmd);
- const result=await new Promise((resolve,reject)=>{
-  const tx=db.transaction(["books","pending"],"readwrite"),books=tx.objectStore("books");let value,error;
-  const r=books.get(key);
-  r.onsuccess=()=>{try{if(!r.result)throw Error("The original saved workspace is missing.");value=C.transition(r.result.workspace,cmd);books.put({key,workspace:value.workspace},key);tx.objectStore("pending").delete(key);}catch(e){error=e;tx.abort();}};
-  tx.oncomplete=()=>resolve(value);tx.onerror=()=>reject(error||tx.error);tx.onabort=()=>reject(error||tx.error||Error("The complete save did not finish."));
- });
+ const result=await db.commit(key,cmd);
  workspace=result.workspace;pending=null;$("retry").hidden=true;
  await refreshPicker();return result;
 }
@@ -115,7 +110,7 @@ function guide(){
 function render(){
  document.querySelectorAll("nav [data-tab]").forEach(b=>b.setAttribute("aria-current",b.dataset.tab===tab?"page":"false"));
  $("save-file").disabled=$("package").disabled=!workspace;
- $("save-state").textContent=workspace?"Saved edition "+workspace.revision+" · "+readable(workspace.updatedAt):"No workspace open";
+ $("save-state").textContent=workspace?(db?.mode==="temporary"?"Session edition ":"Saved edition ")+workspace.revision+" · "+readable(workspace.updatedAt):"No workspace open";
  $("content").innerHTML=tab==="guide"?guide():workspace?({overview,intake,mapping,comparison,receiving,history,guide}[tab]||overview)():'<section class="empty"><h2>Open a complete operating workspace</h2><p>Create a workspace for authorized customer exports, receive an existing handover, or open the included worked example.</p><div class="actions"><button data-action="new">New workspace</button><button data-action="example">Open worked example</button></div></section>';
 }
 function download(name,body,type="application/json"){
@@ -164,7 +159,7 @@ async function act(action,button){
  if(action==="exceptions"){download("exceptions.csv",C.exceptionsCsv(workspace,selected().id),"text/csv");return;}
  if(action==="audit"){download("audit.json",json(selected().audit));return;}
 }
-async function run(fn){if(busy)return;busy=true;document.body.dataset.busy="true";try{note("");await fn();}catch(e){note(e.message,true);}finally{busy=false;delete document.body.dataset.busy;}}
+async function run(fn){if(busy)return;busy=true;$("cmdb-root").dataset.busy="true";try{note("");await fn();}catch(e){note(e.message,true);}finally{busy=false;delete $("cmdb-root").dataset.busy;}}
 document.addEventListener("click",event=>{
  const b=event.target.closest("[data-action],[data-tab]");if(!b)return;event.preventDefault();
  if(b.dataset.tab){if(busy)return;tab=b.dataset.tab;render();return;}
@@ -184,5 +179,5 @@ $("workspace-select").onchange=()=>run(()=>select($("workspace-select").value));
 $("actor").onchange=()=>run(()=>put("meta","actor",$("actor").value));
 $("open-file").onchange=()=>run(async()=>{const f=$("open-file").files[0];if(!f)return;if(f.size>128*1024*1024)throw Error("The complete workspace exceeds 128 MiB.");const w=C.receive(await f.text());await addBook(w);$("open-file").value="";note("Received the complete original workspace in a separate saved copy.");});
 $("new-form").onsubmit=event=>{event.preventDefault();run(async()=>{const p=Object.fromEntries(new FormData(event.target));const w=C.create({...p,id:uid(),at:new Date().toISOString()});await addBook(w);$("new-dialog").close();note("Created the acceptance workspace.");});};
-(async()=>{try{db=await openDb();$("actor").value=await read("meta","actor")||"";const active=await read("meta","active");if(active&&await read("books",active))await select(active);else if(included)await addBook(C.receive(included));else{await refreshPicker();render();}}catch(e){note("Browser working storage could not open: "+e.message+". Keep the original workspace file and open this application in a browser with local storage enabled.",true);}})();
+(async()=>{try{db=await openDb();$("storage-mode").hidden=db.mode!=="temporary";$("actor").value=await read("meta","actor")||"";const active=await read("meta","active");if(active&&await read("books",active))await select(active);else if(included)await addBook(C.receive(included));else{await refreshPicker();render();}}catch(e){note("Browser working storage could not open: "+e.message+". Keep the original workspace file and open this application in a browser with local storage enabled.",true);}})();
 })();

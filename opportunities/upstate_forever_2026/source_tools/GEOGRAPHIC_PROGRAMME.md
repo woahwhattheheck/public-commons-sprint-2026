@@ -66,6 +66,26 @@ For a cold-reopen check, use the **restored application's** Python module and ac
 
 The verification reopens the exact original geographic preparation, input files, native output bytes and saved Programme/report in the received project. It returns the original Programme/report/run identities with `identity: MATCH`.
 
+## Open the original comparison in the existing live Operator
+
+Use `model.geographic_programme.operator_opening(workspace, adoption)` to derive the original grid, profile, scenario, run, baseline, comparison and mapped delivery selections. It chooses the first alternative in the retained delivery's order and retains the saved Programme/source edition in the Guided journey context.
+
+The existing live Operator can save that opening with `save_operator_opening(operator, workspace_key, adoption, expected_revision=observed_revision)`. Capture the revision when the operator explicitly requests this opening, before an asynchronous adoption starts. Pass `None` only when that observed session was absent. Retain the same revision with the original request; do not reread and substitute a newer revision during retry.
+
+```python
+from model.geographic_programme import save_operator_opening
+
+opening = save_operator_opening(
+    operator, workspace_key, programme,
+    expected_revision=original_opening_request["expected_revision"],
+)
+atomic_json(output / "geographic-operator-opening.json", opening)
+```
+
+This extends the maintained session API. It creates no server, model run, queue or alternate session store. A successful save retains existing regional/community views and the API's notes history. Repeating the same selected opening returns `already_selected`. If the user changed that opening's selections or another view was saved after the observed revision, the helper returns `preserved_current` and leaves the current view intact. `selection_applied` says whether this original comparison is selected; a preserved view is not presented as an applied opening. An actual concurrent save during the API call keeps the original revision conflict behavior.
+
+Keep this optional session result separate from the immutable scientific adoption. Include the exact returned session and file descriptor with the existing receiving handover. The original Workspace archive already captures `operator-session.json`. The restored child can call `verify_operator_opening(restored_workspace, adoption, opening)`; it verifies both the original geographic Programme and the exact saved or deliberately preserved session, returning its state, original IDs and `identity: MATCH`. A manual change after capture belongs to a later view; it does not rewrite the original scientific report.
+
 ## Source updates and native reuse
 
 The existing **Update sources** control uses this saved Programme. Preview one actual retained source-refresh plan, review original-to-successor run/dependency mappings, and create its explicit successor. The original programme/report remains available. Equivalent native input stages can use the existing candidate mechanism; changed scientific inputs retain their original native execution decisions.

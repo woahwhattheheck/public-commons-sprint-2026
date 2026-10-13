@@ -74,6 +74,31 @@ The original source-bound cost audit distinguishes budget, commitments and actua
 
 The implementation is reviewed against the maintained server/provider contracts. Native Python execution and actual product inspection must be recorded by the assigned receiving worker; source review alone is not an execution result.
 
+## Optional complete editable work-plan handoff
+
+Choose this at the start of a **new native phased journey** by adding:
+
+```sh
+  --include-implementation-plan \
+  --implementation-report-as-of 2026-10-13
+```
+
+The date is an explicit report cutoff, not a claim of completed fieldwork or actual expenditure. If omitted, the report uses the accepted cost review's explicit `as_of` date. The option and date are pinned in `native-input.json` before the first queue action. A completed comparison-only journey is not silently changed into a different report selection. Its existing command and result remain usable.
+
+The native course invokes the existing `implementation.plan.report` action at the exact plan ID, revision and document digest used by the cost review. It registers that saved report through the original `implementation.report-source.import` provider, then selects two ordered scientific sources: the Economic comparison followed by the whole-plan report. No new report producer or plan importer is introduced.
+
+The whole-plan source carries the original plan report, source-linked candidates, work tasks and dependencies, separate budget/commitment/actual ledgers, field records and retained evidence. The maintained Study transfer includes the complete native plan history and its captured current revision. The selected report revision remains explicitly distinct from a later current revision. After fresh restoration, the native course checks the selected revision and full original JSON, then separately checks the actual current revision captured in the Study. It does not save an edit or require a browser.
+
+On the existing browser host, the same journey opens the **actual Received Study plan card**, its Work plan and Costs views at desktop and 390 px, and its original Save native revision and Reopen native controls. It adds one plainly labeled receiving note to the first existing task in the independently restored plan. It does not change duration, dependencies, progress, candidate identity, modeled quantities, money, ledger classification or source metadata. The whole document is compared before and after, allowing only that note and the original store's revision/update timestamps.
+
+The receiving intent records the exact current plan and document digest before editing. The browser's actual outer queue request is captured and durably journaled **before** its POST is allowed through. A response loss or interrupted continuation rejoins that same saved request and task; it does not click Save a second time or create another operation. A concurrent unrelated plan edit is preserved and blocks a stale overwrite. Once completed, the exact applied revision is reopened from history while later received edits remain intact.
+
+The sender's selected revision is never altered. On the original operator, the course checks both the sender's selected and current revisions before and after the receiving edit. On a different browser operator, it verifies the retained native capture and explicitly records that live sender access is unavailable; the original native worker must supply any subsequent live sender check. If a different operator reuses the same localhost origin, only an actual HTTP 404 for the original sender Workspace or plan is treated as unavailable live access; that response, browser origin and receiving key are retained. Authentication and other server errors remain visible. It never claims a cross-host check it could not perform.
+
+Additional retained outputs include `implementation-plan-source.json`, its preview and source identity, `implementation-plan-captured-current.json`, `cold-received-implementation-plan.json`, `received-plan-edit-intent.json`, the exact native save request/task, `received-plan-edited-revision.json`, and desktop/narrow work-plan/cost screenshots. The producing worker must **open and LOOK** at those exact views and saved files; capture alone remains insufficient.
+
+The native phase, including this optional handoff, can complete while Chromium is unavailable. The optional browser save belongs only to the independent receiving Workspace. No existing NDR/SDR run, sender plan, Economic forecast, comparison, report or Study export is repeated by browser continuation.
+
 ## Full current owner direction (unchanged source)
 
 Original path: `opportunities/upstate_forever_2026/CURRENT_OWNER_DIRECTION.md`; Git blob `8cd1c1f3d371a2fb75471813844e31f489aa8272`, read at original reviewed source head `469fa80cf5f75880baa4b59d1eec866ac7b16b3f`.

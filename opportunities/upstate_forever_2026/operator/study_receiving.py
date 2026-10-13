@@ -55,5 +55,7 @@ def read(operator, workspace_key, operation, value):
     received_published_reviews.decorate(operator, workspace_key, result)
     import assessment_receiving
     assessment_receiving.decorate(operator, workspace_key, result)
+    import geographic_receiving
+    geographic_receiving.decorate(operator, workspace_key, result)
     result["workspace_key"] = workspace_key
     return result
