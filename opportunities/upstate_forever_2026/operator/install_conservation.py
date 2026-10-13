@@ -16,6 +16,12 @@ import re
 import tempfile
 
 OWNED = frozenset({
+    "AGENTS.md",
+    "CURRENT_OWNER_DIRECTION.md",
+    "operator/web/conservation_working.mjs",
+    "operator/web/conservation_working_view.mjs",
+    "operator/CONSERVATION_WORKING_FILES.md",
+    "integration/component_fragments/conservation-working-files.json",
     "integration/component_fragments/conservation-joint-choices.json",
     "model/conservation_joint_choices.py",
     "operator/web/conservation_joint_choices.mjs",
@@ -165,6 +171,7 @@ KNOWN_PRIOR = {
         "5e9c5259ec989f3ee0bbe7c3a324e398e37ec6acd6bb1985b6c5f7e2b7629481"
     ],
     "operator/web/conservation.mjs": [
+        "b468abef8f1c8ad7f75545bca7c67240b68fa212e26ca8226b0e0196451c43bd",
         "ba982dccfa2fc2395d7a2da8dc09e1810f2cb1f0e5978ef36b2c5af3760adf26",
         "7f0125d0000352f5d4c08171439300fecec098210b7f8fde2278831c73caa40b",
         "939a9a7b882c04d2b2715b6c0eedcd4bef33ab6a0c5bdb52c4e2db57ea333e49",
@@ -438,6 +445,7 @@ KNOWN_PRIOR = {
         "e79a634aa44a5f4061d4123590a5ad3c4f592bb3eb196f0c4bb377665511c788"
     ],
     "operator/extensions/conservation.json": [
+        "797f3dfe1e627ad6a84f1d9f5e1680fd4ab9687fb7aa2dede18b86f2f14ad355",
         "bf37aef817918dfb337a00867e65b452e07c6264aa3375832861b7c09efa882e",
         "749b35c774827e15e732d31a11766afb5a05f6bf3abd3bb33d2118e5afdd0550",
         "3211e501743819a2d25e7c47e499d4705e57009db297ef476b09e8c19f722093"
@@ -1092,6 +1100,17 @@ def read_packet(path):
         descriptor = json.loads(files.get("operator/extensions/conservation.json", "{}"))
         if "conservation_joint_choices.mjs" not in descriptor.get("assets", []):
             raise ValueError("Receive the registered joint Conservation web asset with its original descriptor.")
+    working_requested = "./conservation_working_view.mjs" in files.get("operator/web/conservation.mjs", "")
+    if working_requested:
+        needed.update({"AGENTS.md", "CURRENT_OWNER_DIRECTION.md",
+                       "operator/web/conservation_working.mjs",
+                       "operator/web/conservation_working_view.mjs",
+                       "operator/CONSERVATION_WORKING_FILES.md",
+                       "integration/component_fragments/conservation-working-files.json",
+                       "operator/extensions/conservation.json"})
+        descriptor = json.loads(files.get("operator/extensions/conservation.json", "{}"))
+        if not {"conservation_working.mjs", "conservation_working_view.mjs"} <= set(descriptor.get("assets", [])):
+            raise ValueError("Receive both registered Conservation working-file assets.")
     if needed - set(files):
         raise ValueError("The complete backend, CLI and operator source must travel together")
     return value
