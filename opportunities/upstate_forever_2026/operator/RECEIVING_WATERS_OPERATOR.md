@@ -186,3 +186,45 @@ The receiving-workbench helper and extension wrapper share the same complete con
 Revision 3 composes receiving-water task controls at the original customer-review task term. Current programme and experiment controls can appear between that term and the ordinary file downloads; they remain in their existing order. This supports the complete scientific-workbench application as well as the earlier operator layout. The receiving-water browser and registry interface are unchanged from revision 2.
 
 The installer retains its single-anchor and original-file checks before any application files are replaced. Its normal first and repeated invocation uses the same --root argument. Run it against the current full application after receiving the current scientific, source and shared-host components.
+
+## Receiving-water maps and original spatial reviews
+
+Revision 4 joins saved receiving-water plans and completed analysis layers directly
+to the existing **Spatial review** catalog. Run the maintained installer after
+receiving the complete scientific and browser sources:
+
+    python -B operator/install_receiving_waters.py --root ACTUAL_APPLICATION
+
+The complete public application carries the resulting registry, map and archive
+joins. The installer also upgrades the original version-2 receiving descriptor and
+retains its existing source preimages.
+
+Open a saved source plan and choose **Boundaries** for the desired water. The map
+opens its published feature and contributing geometry together, using the plan's
+retained coordinate system. The contributing boundary supplies the initial extent.
+Both layers retain their original plan, source and relationship metadata.
+
+Open a completed analysis and choose **Review receiving areas** for its full
+GeoPackage. Each result row also opens the selected water's priority raster.
+Choosing an alternative and increased or avoided export selects that same saved
+run and statistic. In the detailed physical comparison, **Signed change** opens
+the exact pollutant change raster for its named alternative.
+
+Priority maps start with the recorded dimensionless range of zero to one.
+Contribution masks are categorical. Physical-change maps retain their original
+per-pixel mass units and the spatial workbench's normal physical-scale controls.
+The selected analysis feature uses both its exact subject ID and individual-water
+or family-union kind.
+
+Use the existing map controls to inspect native pixels and feature properties,
+add review markers, save the view, and export or print the retained review. The
+saved binding includes the receiving plan and analysis, selected water, run,
+quantity domain, statistic and normalization identity. Reopening and workspace
+receiving resolve the same retained artifacts through the original GIS file
+reader and archive member checks.
+
+The native catalog watches plan and analysis manifests, so a completed operation
+appears when spatial sources refresh. It reads compact original metadata for the
+catalog and verifies a layer's file when that layer is actually opened. Original
+source selections, full classifications, relationship records and numerical
+summaries remain in their saved plan and analysis records.
