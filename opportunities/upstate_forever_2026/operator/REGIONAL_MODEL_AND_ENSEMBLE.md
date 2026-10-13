@@ -9,13 +9,95 @@ Use the maintained cumulative application and its current component catalogue, w
 
 The selected source identity passed to the commands below comes from the delivered source package. Keep that identity with the prepared plan, Workspace, model handoff and received package.
 
+## Current owner direction: Ecosystem Sciences demonstration
+
+Version: `2026-10-13.3`. Owner: Bryce / TokenJunkieLabs. Direction for the Upper Savannah application, demonstration, presentation and work orders. Continue the broad build without arbitrary feature/scenario caps. Preserve today's cutoff: **October 13, 2026, 10:00 a.m. Eastern / 14:00 UTC**. Do not pause work or extend the sprint.
+
+### Direct owner instructions
+
+> do the simulated model
+
+> just make sure that what we put infront of him is something he would need and want and he will be blown away how relevant it is to him and how he wants it,a nd also the speed we produced it
+
+> just checking dont pause anythi g
+
+> and make sure wherever the fleet is coordinating in slack or github or wherever on this demo / presentation / ecosystem gets that update toand passes it along to other agents because the feed may be moving fast
+
+### Build for an experienced scientific practice
+
+Ecosystem Sciences lists GIS, hydrology/monitoring, ecological modeling, watershed assessment, statistics, visualization, optimization and publishing. Tim Maguire's practice includes GIS, modeling and water resources. Its South Platte work assembled data, mapped natural capital and produced watershed investment decision support. Do not assume it lacks these capabilities. Its unmet tooling, InVEST or production-capacity gap is unknown until the call. Sources: [Services](https://www.ecosystemsciences.com/read-me), [Firm](https://www.ecosystemsciences.com/firm), [South Platte](https://www.ecosystemsciences.com/).
+
+Show concrete delivery and engineering offload on the actual Upper Savannah RFP workflow: source assembly, reproducible native calculations, editable scenarios, useful decisions and a complete working handoff. The prime retains scientific direction, method choices, interpretation/review and the client relationship. Relevance comes from useful work they can inspect, adapt and receive; do not promise Tim's reaction or claim an unconfirmed need.
+
+### Execute the prepared simulated case now
+
+Native execution is the immediate hard priority. Issue the prepared simulated case on the verified scientific runtime, retain its actual run identity and progress, and obtain the real native outputs. Continue the source/runtime/application integration needed to make that happen. Further plans, stock demonstrations, policy reviews and cosmetic inspection do not replace execution. Do not introduce a bid decision or a prime's yes as a gate.
+
+Demonstrate the scientific operation in the actual application:
+
+1. Use the RFP's 30 m GIS selection. Keep the upstream contributing model domain distinct from the South Carolina reporting mask and the four existing utility focus anchors; retain their actual source geometries and identities.
+2. Run the baseline, a realistic riparian alternative and its matched control with explicit, editable source editions, assumptions, parameters and scenario changes.
+3. Show active run/progress/logs and completed native annual NDR/SDR results: nitrogen and phosphorus in **kg/year**, sediment in **tonnes/year**, representing delivery to streams. Do not present these modeled stream loads as intake concentrations.
+4. Compare the actual maps, tables and report, preserving matched scientific support and original units. Keep source/assumption edits and their consequences inspectable.
+5. Export the editable GIS/project and complete scientific working package. Cold-reopen the delivered application/project and show the retained sources, selections, results and useful controls.
+
+Identify the simulated case as modeled. Never invent measurements, completion or customer acceptance.
+
+### Present the real work and real speed
+
+Actually open, see and use the outgoing app and every attachment as its recipient would. Repair defects and ship a plain, readable product. Apply the standing inspection rule without review/test theatre or parallel bureaucracy.
+
+If producing video, record the actual working application and use available natural generative voice/TTS. Watch and listen to the final export. Generated frames must never pretend to be a working app. Explain speed using actual elapsed start, commit, run and package history; do not invent delivery times or guaranteed reactions.
+
+### Carry this direction with the work
+
+Pass this complete brief into every current child, provider and cloud work order and handoff. Include its durable path and version `2026-10-13.3` with the next result. Relay it at the actual coordination surface and onward to participating workers; fast feeds can bury an update. Acknowledgment alone is not delivery.
+
+Preserve active compute and existing implementation ownership. Do not force worker restarts, drop an active run or create a new controller. Keep lab attribution, source/copyright, incident and contact controls, personal-meeting approval, no private GitHub/Actions, no llama.cpp and focused internal validation. No new approval gate or broad test sweep is authorized.
+
+Canonical current brief: [CURRENT_OWNER_DIRECTION.md](../CURRENT_OWNER_DIRECTION.md), version `2026-10-13.3`.
+
+## Inspect the actual outgoing product
+
+Owner instruction, October13,2026; repository policy version2026-10-13.1.
+Source: https://tokenjunkielabs.slack.com/archives/C0BTTA66TK3/p1791881463183449
+
+Before presenting a client-facing application, demonstration, report or export
+as ready, open and run the exact outgoing version. Look at its rendered screen
+or the actual screenshots and operate the important controls. Use the populated
+scientific Workspace and its completed reports, with both the intended screenshare
+width and a narrow layout. Exercise relevant empty, loading and error states,
+downloads, exports and reopening.
+
+Repair clipped tables, unreadable figures, overflow, broken controls, missing
+styles or confusing labels in the same product before presenting it. Screenshot
+capture, source review, HTTP success and unit checks do not replace looking at
+the rendered result. Use plain industrial layouts with readable tables, clear
+hierarchy, consistent spacing and useful controls.
+
+This includes every outgoing attachment: open downloaded HTML and relevant
+PDF/report pages, maps, images, spreadsheets, archives and projects in the normal
+recipient-facing viewer, and exercise their usable contents. Play and inspect
+outgoing audiovisual media. For video narration, use the available high-quality
+generative voice/TTS with natural delivery; listen to the final export for
+pronunciation, pacing and alignment. Use the existing authorized services and
+preserve attribution and license controls. Focus this inspection on the actual
+delivered result and repair what it reveals.
+
+Include this requirement in delegated receiving work and the active instructions
+that those workers read. Preserve existing owner controls and third-party or
+historical policies. Focus inspection on the actual outgoing workflows and repair
+what it reveals; continue implementation and integration without broad test
+suites or repeated checking. The current sprint cutoff remains October13,2026,
+14:00UTC.
+
 ## 1. Open the existing receiving environment
 
 Run from the directory containing model/, operator/, source_tools/ and source/. Set UPSTATE_PYTHON to the accepting host's equipped interpreter and use it consistently for every stage below. Keep the complete original source and prepared input archives available beside the working project. Use an ordinary disk-backed operation directory for retained national archives, working rasters and the final archive.
 
 The demonstrated paired receiving operation uses its original authored-array computational case, application root `/workspace/scratch/790ee23f7efd/ensemble-recovery-operation` and interpreter `/workspace/scratch/790ee23f7efd/ensemble-recovery-venv/bin/python`. Its completed archive receive, inspect, export and independent reopen retained 51 files and 36 original GeoTIFF identities. Use the paths supplied by the currently accepting process when continuing on another host.
 
-The native InVEST operation and its actual prepared grid remain on the existing GURA-NATIVE-01 continuation. Gura is the separate original Kenya model case used for native pipeline commissioning. Upper Savannah calibration selects its actual regional grid, native runs, observation catchments and source periods; its USGS annual references belong to that regional cohort. The completed profile-only receiver establishes profile/source receiving for its selected inputs. Regional model outputs and physical calibration results come from the corresponding regional native operation. Source comparison and completed watershed adoption can execute with the standard-library application before the GIS/native dependency environment is ready. Native model execution uses the saved original grid, source edition and required InVEST 3.20 environment. Read the selected raster’s own resolution and CRS; the Gura source owners are reconciling distinct original archive editions, so a resolution from one edition must not be applied to another.
+The simulated headwaters demonstration has its own retained baseline, riparian restoration, matched-area control, field campaign and parameter course. Its maintained driver now continues through the saved scientific report, selected editable Study and complete-project archive receiving described in section24. GURA-NATIVE-01 remains the separate original Kenya case used for native pipeline commissioning. Upper Savannah calibration selects its actual regional grid, native runs, observation catchments and source periods; its USGS annual references belong to that regional cohort. The completed profile-only receiver establishes profile/source receiving for its selected inputs. Regional model outputs and physical calibration results come from the corresponding regional native operation. Source comparison and completed watershed adoption can execute with the standard-library application before the GIS/native dependency environment is ready. Native model execution uses the saved original grid, source edition and required InVEST 3.20 environment. Read the selected raster’s own resolution and CRS; the Gura source owners are reconciling distinct original archive editions, so a resolution from one edition must not be applied to another.
 
 Continue these existing operations:
 - Paired/source operator receiving: https://tokenjunkielabs.slack.com/archives/C0BTTA66TK3/p1791857208632589
@@ -991,17 +1073,22 @@ the entrypoints; no separate plotting operation or Workspace is needed.
 
 ### Complete source installation
 
-The current inventory contains 299 paths in 14 full families. The study consumer
-has 23 files, Gauge support 14, source/profile comparison 12, regional reporting 110,
+The current inventory contains 371 paths in 16 full families. The study consumer
+has 33 files, Gauge support 18, source/profile comparison 12, regional reporting 157,
 and original native land-cover receiving 13. Gauge support includes its original
 receiving recovery guide; land-cover receiving includes the maintained PNG replay.
 The regional family includes the original utility-observation manifest and all
 its physical companions, plus the native utility-source receiver's own input
 manifest, original topology result and original USGS topology network. Its
 regional context, coverage and utility profile remain the same selected originals.
-The complete regional family also retains the maintained utility Monitoring
-opening, source briefing, their declared source helpers and complete original
-microbial source edition, including its station geometry and original summaries.
+The complete regional family retains the current utility Monitoring reports,
+receiving modules, source briefing and watershed-observation exports. Its157
+members include all91 distinct data members referenced164 times by the five
+installed source manifests, including the original land-cover transitions,
+station-location profiles, classified-stream geometry and historical completed
+regional archive. All original source bodies and archive-member identities remain
+attached to the same declared selections. The shared Monitoring and core
+application components are installed through their existing dependencies.
 
 Compose these full families with the current `integration/application_components.json`
 and its retained `integration/component_fragments/` declarations. The owned
@@ -1010,6 +1097,14 @@ to their maintained components. It retains the original annual-reference
 assessment manifest, regional soil preparation, original NLCD receiver and
 current Gauge report source without replacing the shared baseline catalogue.
 The current loader discovers the declarations before native source collection.
+
+Use the complete current application for executable code. A retained source bank
+identifies its own immutable source edition; use its original data and companions
+to recover the selected inputs, preserving newer shared code already installed
+in the current application. For example, the regional157 bank is the complete
+3739 source edition, while the received Gauge and native model navigation joins the later3790 and3842
+application. The maintained installer can compare the actual current application
+against the selected full source directory before applying a change.
 
 The master source package contains this guide, the exact file inventory,
 the current baseline catalogue and all retained fragment declarations. Keep any newer peer
@@ -1273,8 +1368,17 @@ Geography, regional report, original geographic and daily-flow sources, retained
 maps and complete native packages. The selected whole-catchment, indexed split
 or coordinate-delineated support remains the original scientific method.
 
-Restore the exported study into a separate destination, open its saved scientific
-report, and reopen the associated native design or Gauge analysis. Reports
+Restore the exported study into a separate destination and open **Study transfer**.
+In its received-study section, open the retained Study. Its Gauge panel shows the
+selected catchment method and reporting-area context, with controls for **Open
+Gauge support**, **Open Station Geography**, **Open regional report** and **Add
+source to report**. The scientific composer receives the historical source chosen
+in this Study. Its report, geographic outputs and original companions remain
+available through the existing file downloads. Technical source and build
+identities are grouped under **Source details**.
+
+Open the saved scientific report and its associated native design or Gauge
+analysis from this same received application. Reports
 imported from a different project retain their complete contained source history
 with their original project identity. The two full guides cover source and
 receiving details: [Native study transfer](../model/ENSEMBLE_STUDY_TRANSFER.md)
@@ -1288,11 +1392,35 @@ application catalogue.
 
 ### Continue the actual regional source operations
 
-The annual-reference/assessment family includes its eight original source files
-and the maintained `source_tools/operate_annual_assessment_context.py` receiver.
-Its existing command imports the native manifest, prepares the geographic study
-and report, and retains the actual selected-source archive and independent
-reopen. Continue the same regional Workspace using its real domain selection.
+The annual-reference/assessment family contains all17 maintained members: the
+original eight annual/assessment files, eight original microbial context files
+and the current `source_tools/operate_annual_assessment_context.py` receiver.
+The existing receiver imports both native manifests, saves and exports five
+selected map views, captures their source/task history, receives the full project
+into an independent operator and reopens every saved view with its original
+geographic selection. Continue the same regional Workspace and output directory.
+
+For an already registered original domain, its actual command is:
+
+```sh
+"$UPSTATE_PYTHON" -B source_tools/operate_annual_assessment_context.py \
+  --application "$UPSTATE_APPLICATION" \
+  --workspace "$UPSTATE_WORKSPACE" \
+  --output "$UPSTATE_CONTEXT_OUTPUT" \
+  --project-id "$UPSTATE_PROJECT_ID" \
+  --domain-collection "$UPSTATE_DOMAIN_COLLECTION_ID"
+```
+
+Use the retained values from the current native operation. The default manifests
+are `source/annual-reference-assessment-20261013/sources.json` and its adjacent
+`microbial-assessment-sources.json`. An original domain archive can instead be
+selected with `--domain-archive`. The receiver retains its task IDs in
+`working-project-progress.json` and its completed source, map, export and
+independent receiving results in `working-project-native-result.json`.
+
+The annual and microbial sources retain their distinct collection periods and
+station/assessment geography. Their overlap tables preserve all original
+observations, qualifiers, selected membership decisions and source pointers.
 
 Regional soil capture now accepts `--page-workers 2` to overlap at most two
 original polygon-page requests. Original page IDs, request SQL, response caches
@@ -1301,3 +1429,83 @@ remains one worker. On failure, the receiver preserves completed page caches,
 stops admission of later pages and rolls back the incomplete tile so its normal
 resume can continue. Preparation still uses the corrected original land-cover
 raster and native source geometry described in section21.
+
+### Complete the original demonstration and Gauge receiving courses
+
+Use the same application, native interpreter, Workspace and output directory for
+the existing demonstration command. The driver completes the selected native
+parameter course before it builds the final mapped delivery. It appends that
+course's retained scientific source to the existing native-process and field
+chapters, then publishes their ordered scientific report as a saved edition.
+
+The driver exports that saved report through the ordinary Study transfer engine.
+A separate Python process loads the archive's own application and opens its
+original design, run results, source recipes, report and parameter course. The
+complete project archive is then reopened through the existing customer, field,
+map, native-run and report checks. Both archived applications remain available
+for the normal operator.
+
+| Retained demonstration output | Opening path |
+| --- | --- |
+| Saved scientific report | `scientific-report-edition.json`; open the same edition in Scientific reports. |
+| Editable selected Study | `selected-study-transfer.json` and `selected-study-archives/<edition>.zip`; open the restored application's Study receiving desk. |
+| Complete project | The existing `archives/<edition>.zip` and `reopened/<edition>/` directories; open its retained Workspace with the embedded application. |
+| Independent receiving details | `selected-study-cold-reopen/` and `cold-reopen/`, with each actual process result and log. |
+
+The Gauge receiver follows the same product flow for its original selected
+catchment method. It registers the exact Gauge source, previews and saves the
+scientific report, exports its selected editable Study and starts an isolated
+receiving process from the archived application. The reopened report retains
+its Gauge, Station Geography, regional report, original source selection and
+source-body identities. An older completed Workspace snapshot stays available;
+a newer saved scientific edition receives its own report-bearing snapshot.
+
+Install the complete18-member Gauge family with its maintained installer and
+declared dependencies. The installer includes the Gauge Study transfer and receiving helpers, their
+operating guides, the connected browser and component declaration. It checks the
+actual saved-report publisher, Study engine and shared receiving host before
+applying changes.
+
+Continue an interrupted operation using its same command and retained output
+directory. The existing receivers reuse their original completed phases and
+archive identities. The full phase and output details are in
+[Native study scientific reports](../model/NATIVE_STUDY_SCIENTIFIC_REPORT.md) and
+[Gauge receiving recovery](../source_tools/GAUGE_SUPPORT_RECEIVING_RECOVERY.md).
+
+### Open the original native model study from a received report
+
+In the restored Workspace, open **Study transfer**, select its entry under
+**Received studies and original sources**, and choose **View saved model results**.
+The existing Scenario sensitivity desk opens the physical report captured with
+that particular source: its land-cover contrasts, baseline parameter sensitivity,
+original annual units, common-cell coverage and original undefined comparisons.
+
+Use **Open editable study** to continue the retained local design, or **Native run**
+to open one of its original model runs. A source originating in another project
+opens its captured results and source package in the receiving Workspace. Its
+original project identity remains visible with the scientific choices.
+
+**Add original source to report** opens the ordered scientific report composer
+with the retained source. The report and CSV download controls use the original
+authenticated file service; source figures and full numerical releases remain
+with that report's companions. The captured result keeps the same report ID even
+when the editable design later advances.
+
+Continue the existing headwaters receiving case after its selected Study restore.
+Open these controls at the intended screenshare width and a narrow width, inspect
+the physical tables and figures, and download and reopen the HTML, CSV and
+scientific report. The existing run and report actions remain available when the
+operator deliberately starts further analysis. Detailed opening and installation
+instructions are in [Native study receiving](../model/NATIVE_STUDY_RECEIVING.md).
+
+## 25. Carry the original jurisdiction assessments into a saved report and Study
+
+The North Carolina final-2022 and Georgia approved-2024 source family retains 91 complete original and maintained source members. The same Workspace can import the jurisdiction tables, attach their original reach geography and publish them in one ordered scientific report. The source receivers preserve distinct reach identities, assessment parameters, designated uses, original categories and the actual Upper Savannah geographic selection.
+
+Use [State assessment source receiving](../integration/STATE_ASSESSMENT_SOURCE_RECEIVING.md) for the complete original source layout, native geometry input and source-import commands. Once either or both original operations are complete, continue their saved operation records with [Assessment report receiving](../source_tools/ASSESSMENT_REPORT_RECEIVING.md). Its maintained helper reads the actual imported source IDs and reuses the Scientific Reports publisher, report-file export and selected Study transfer.
+
+The original source receivers accept `--report` to continue immediately after their native source import. For already completed imports, run `python -B -m source_tools.assessment_report_receiving` from the installed application, with the existing application, Workspace, output directory and each original `--operation` JSON. Repeating `--operation` sets the jurisdiction order. An existing `--selection` retains its ordered source choices and appends these sources once. The full command and exact output fields are in the receiving guide.
+
+Keep the same receiving directory after interruption. The saved report edition, original report-file ZIP, selected Study and independent reopening have separate retained phases. The cold reopening uses the application carried by that selected Study. Open the resulting report and restored operator, follow the source geography and use the actual report and archive downloads. View the outgoing PDF pages, maps, HTML and original attachments at their intended presentation size. Repair visible or operational defects in the maintained product before delivery.
+
+The entire Georgia publisher Savannah basin and the actual Upper Savannah intersection remain separate quantities. Original assessment categories and parameter measurements retain their source meaning and units alongside the model's physical outputs. The complete family is listed as `jurisdiction_assessment_receiving` in the receiving inventory.

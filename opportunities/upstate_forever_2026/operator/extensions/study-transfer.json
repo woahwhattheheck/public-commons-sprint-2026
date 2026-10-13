@@ -7,7 +7,13 @@
   "assets": [
     "extensions/study_transfer.mjs",
     "extensions/study_transfer.css",
-    "received_studies.mjs"
+    "received_studies.mjs",
+    "gauge_received_studies.mjs",
+    "ensemble_received_studies.mjs",
+    "observed_landcover_received.mjs",
+    "observed_landcover_received.css",
+    "study_report_navigation.mjs",
+    "economic_received_comparisons.mjs"
   ],
   "requires_actions": [
     "workspace.restore"
@@ -132,10 +138,15 @@
       "api",
       "refreshState",
       "showTask",
-      "navigate"
+      "navigate",
+      "openExtension",
+      "openItem",
+      "openScientificReport",
+      "openDesk"
     ],
     "styles": [
-      "/web/extensions/study_transfer.css"
+      "/web/extensions/study_transfer.css",
+      "/web/observed_landcover_received.css"
     ],
     "view": {
       "id": "study-transfer",

@@ -1,4 +1,5 @@
 // MIT. Pure original profile archive validation shared by receiving and offline clients.
+import { validateWorldBankCustomerRecord } from './worldbank-customer-records.mjs';
 import { validateOpenApiCustomerRecord } from './openapi-customer-records.mjs';
 import { validateGrpcCustomerRecord } from './grpc-customer-records.mjs';
 import { validateHostComposition } from '../host-profile.mjs';
@@ -6,6 +7,7 @@ import { canonical, digest, fail,
   plainConsoleRecord as plain, consoleIdentifier as id, consoleRecordTitle as title, consoleRevision as revision, consoleSha256 as sha } from './records.mjs';
 import { validateWorkflowRows } from './workflow-records.mjs';
 import { validateWorkflowRecipeRows } from './workflow-recipes.mjs';
+import { validateSeriesRows } from './workflow-series-records.mjs';
 
 export const ARCHIVE_SCHEMA = 'stellar-forge.merchant-operator-profile.v1';
 export const HOST_BINDING_SCHEMA = 'stellar-forge.merchant-host-binding.v1';
@@ -99,12 +101,13 @@ export function validateConsoleArchive(packet) {
     id(value.id); id(value.workspaceId); sha(value.identitySha256); timestamp(value.startedAt); timestamp(value.updatedAt);
     if (deliveryKeys.has(value.id) || !['DOWNLOADING','PAUSED','FAILED','COMPLETE'].includes(value.state)) throw fail('CONSOLE_ARCHIVE','Receive unique customer records with their original receiving state.',400);
     deliveryKeys.add(value.id);
-    if(value.profileId!==profile.id||!plain(value.identity)||value.identity.profileId!==profile.id||!['core','opensearch','openapi','grant-reviewer','grpc'].includes(value.identity.family)||!value.identity.exportId||digest(canonical(value.identity))!==value.identitySha256)
+    if(value.profileId!==profile.id||!plain(value.identity)||value.identity.profileId!==profile.id||!['core','opensearch','openapi','grant-reviewer','grpc','worldbank-programme'].includes(value.identity.family)||!value.identity.exportId||digest(canonical(value.identity))!==value.identitySha256)
       throw fail('CONSOLE_ARCHIVE_CHANGED','The retained customer selection changed.',400);
     id(value.identity.exportId); sha(value.identity.expectedManifestSha256); sha(value.identity.hostFingerprint);
     if(value.identity.family==='opensearch') id(value.identity.workspace);
     if(value.identity.family==='openapi') validateOpenApiCustomerRecord(value);
     if(value.identity.family==='grpc') validateGrpcCustomerRecord(value);
+    if(value.identity.family==='worldbank-programme') validateWorldBankCustomerRecord(value);
     if(value.identity.family==='grant-reviewer'){
       if(typeof value.identity.workspace!=='string'||!/^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/.test(value.identity.workspace))
         throw fail('CONSOLE_ARCHIVE','Retain the original reviewer workspace alias.',400);
@@ -121,6 +124,7 @@ export function validateConsoleArchive(packet) {
   }
   const workflowData=validateWorkflowRows(packet.workflowData,{profile,drafts:packet.drafts,calls:packet.calls});
   const workflowRecipeData=validateWorkflowRecipeRows(packet.workflowRecipeData,{profile,drafts:packet.drafts,workflowData});
-  return {profile,contentSha256,workflowData,workflowRecipeData,bindings};
+  const workflowSeriesData=validateSeriesRows(packet.workflowSeriesData,{profile,workflowData});
+  return {profile,contentSha256,workflowData,workflowRecipeData,workflowSeriesData,bindings};
 }
 

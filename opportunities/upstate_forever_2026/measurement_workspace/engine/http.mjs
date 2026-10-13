@@ -48,6 +48,7 @@ export function createMeasurementHandler({directory,base=DEFAULT_BASE,fetcher=gl
         }
       }
       if(method==='GET'&&!parts.length){send(response,200,{...s.summary(),reaches:await reaches()});return;}
+      if(method==='GET'&&parts.length===1&&parts[0]==='snapshot'){send(response,200,s.fullSnapshot(query));return;}
       if(method==='GET'&&parts[0]==='records'){send(response,200,parts[1]?s.record(parts[1]):s.records(query));return;}
       if(method==='POST'&&parts[0]==='preview'){send(response,200,s.preview(await readBody(request)));return;}
       if(method==='POST'&&parts[0]==='imports'){send(response,201,s.import(await readBody(request)));return;}

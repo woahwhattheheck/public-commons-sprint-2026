@@ -156,3 +156,72 @@ The receiver keeps the original `request`, `operation_id`, source hash, and comp
 Use separate Workspace and receiving-output directories. Each new root must be identical to its corresponding original root or disjoint from the original roots; ancestor/child substitutions and swapping the original Workspace/output roots are rejected. The immutable input operation and specification must remain separate from the live receiving `operation.json`.
 
 Repeat the command with the same specification to resume accepted phases. Existing continuation artifacts resolve only through the two explicitly verified archive locations or the retained original Workspace/output roots, and their original byte lengths and hashes are checked again. Transfer any previously completed review export or continuation archive before resuming a partially completed continuation. New review results use their own review-ID paths; the two original archives retain their exact bytes. A newer legitimately selected study edition in the restored Workspace remains selected when the older saved review is received.
+
+
+## Continue both original and hydrology reviews through scientific reports
+
+The same original receiving command accepts an optional `--scientific-report SPEC.json` after `--saved-review`. It requires the original saved-review continuation to finish first. This does not reimport a builtin or substitute the newer hydrology edition for the original completed observation intake.
+
+The specification explicitly selects an already retained **second study edition** and its original typed hydrology report source(s), in reading order:
+
+```json
+{
+  "schema": "upstate.published-study-report-receiving/v1",
+  "title": "SV-833 observation and hydrology study",
+  "hydrology_version_id": "ACTUAL_RETAINED_HYDROLOGY_VERSION_ID",
+  "hydrology_sources": [
+    {
+      "source_collection_id": "ACTUAL_RETAINED_COLLECTION_ID",
+      "source_id": "ACTUAL_TYPED_HYDROLOGY_REPORT_SOURCE_ID",
+      "body_sha256": "ACTUAL_RETAINED_RECIPE_BODY_SHA256"
+    }
+  ]
+}
+```
+
+Read the IDs and recipe body hash from the actual completed native producer and original imported source record. The current source producer's corrected HTML, SVG, generator and source manifest belong to a new source-bound recipe edition; an older completed report remains its original edition.
+
+Continue the **same** existing Workspace/output/relocation specification:
+
+```sh
+"$PYTHON" -B "$APPLICATION/source_tools/receive_sv833_study.py" \
+  --application "$APPLICATION" --workspace "$WORKSPACE" \
+  --output "$ORIGINAL_SAVED_REVIEW_OUTPUT" \
+  --saved-review --relocate-receiving "$ORIGINAL_RELOCATION_SPEC" \
+  --scientific-report "$EXPLICIT_REPORT_SPEC"
+```
+
+Omit `--relocate-receiving` only when using the original operation's original Workspace/output paths. Keep the immutable report specification outside its generated receiving directories. The original AE11 operation remains `sv833-native-16486604c6a45729b99d0054` and its project remains `618c2faa-1464-4b9b-9234-4832116a1520`; a regional project is a different Workspace.
+
+The continuation retains two separately labeled reports:
+
+1. **Original selected observation review.** The exact review ID, original source edition and original saved filters from the completed `saved_review` phase are reused.
+2. **Hydrology and selected observations.** A separate review is saved against the explicitly selected hydrology study edition, using the original observation selection. It is a new review, not a parent revision across different source editions. The ordered report contains the explicit hydrology source(s) followed by this review's selected scientific source.
+
+Both source captures use the original `published_review_report_source` producer. Source counts, units, methods, censoring, sampling calendars and source-scope explanations remain that producer's original output. The new edition must retain all distinct original result identifiers, every original result CSV cell, its original file hash and row, and every original joined activity/reporting-limit cell and source reference. Only native collection selectors that change with the retained edition are excluded from this original-data comparison. The two reports preserve their distinct source bindings rather than merging or adding their observation counts.
+
+### Original operator and transfer sequence
+
+The maintained `source/observed-report-20261013/receive_operator.py --course` owns rendering, saved task identities, complete PDF/HTML/Markdown/data downloads, report ZIPs and complete Workspace backup/restore. Its own `--resume` runs against the existing output after interruption. Receive the current maintained recovery edition of that original receiver before continuing a task across renderer updates.
+
+After both reports complete, the original Study exporter selects both `scientific-report-editions` roots in one archive. Its typed saved-review adapter includes both complete original study editions, both immutable reviews, their captured scientific source families, and the complete saved report files. It retains explicit versions; an unrelated mutable current-study pointer is not needed for reopening them.
+
+The continuation then restores that archive and starts the **restored application's own** `source_tools/continue_study_report.py --cold-inspect` with the same native interpreter, from the restored application directory and without inherited `PYTHONPATH`. It verifies the original selected Study receipt, both study/source/review identities, both captured review sources and all retained report files. It renders no new report during this cold read.
+
+When the receiving directory already exists, the continuation uses the maintained `model.portable.resume_restore` API with the original archive SHA-256. That producer verifies the archive, project and receiving destination and recognizes its own completed registration, including delivery roles and derived navigation. Earlier successful receives are reconciled through its legacy compatibility path. The subsequent cold application read still checks the selected original study/review/source/report identities and complete retained report files. This preserves a valid existing receive after native delivery registration without overwriting the receiving directory. New destinations continue through the original `restore` API.
+
+The `editable_study_receiving` phase retains the complete original `restore` or `resume_restore` result. The separate `received_application` phase records the received application directory, original archive SHA-256 and exact required source descriptors, including `model/portable.py`. Those descriptors come from the original archive, so a later update to the authoring application does not substitute its code for the received edition. New cold-read expectations include that portable source directly; an already-started course keeps its original immutable expectation while the parent verifies the same archived portable source before launching the cold read.
+
+All additional phases are under `operation.json → continuations.scientific_report`. Original intake phases, original archives and the `saved_review` continuation remain separately retained. The new files live below an owned `scientific-review-<request digest>` directory:
+
+- `request.json` and `report-course.json`: immutable explicit source choices.
+- `report-*/scientific-report-receiving.json`: actual original operator task/result receipts and report downloads.
+- `editable-study-selection.json` and `observation-hydrology-reviews-study.zip`: both saved report roots and their editable source history.
+- `cold-reopen-expectation.json`, `cold-reopen.json` and complete subprocess logs: exact original receiving identities and the returned native read.
+- `cold-reopened-study/{application,workspace}`: independently received complete editable Study.
+
+A source or task failure retains the actual diagnostic and completed checkpoints. Resume the same original command and specification after repairing that source. Changing the selected hydrology source edition is a new request and needs a separate owned receiving operation; it does not rewrite a completed report.
+
+### Installation closure
+
+The complete Published Studies family includes `source_tools/continue_study_report.py` and the additive `published-study-report-receiving` component fragment. Scientific Reports already depends on Study transfer and Published Studies; the fragment retains the receiving helper/entrypoints in that existing direction. It adds no reverse Published Studies dependency on the report renderer. A standalone Published Studies installation keeps its original observation/review commands; the optional report continuation additionally needs the maintained Scientific Reports operator and original Study transfer dispatcher.

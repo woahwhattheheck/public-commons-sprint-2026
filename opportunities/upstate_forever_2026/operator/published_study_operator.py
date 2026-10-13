@@ -18,7 +18,7 @@ from measurement_workspace.published_studies import PublishedStudyStore, TABLE_T
 
 ACTIONS = ("published-study.import", "published-study.export", "published-study.report",
            "published-study.review.save", "published-study.review.export", "published-study.review.import",
-           "published-study.review.prepare-source")
+           "published-study.review.prepare-source", "published-study.microbial-selection.prepare")
 BUILTIN_ID = "scdes-eighteenmile-lake-2023"
 BUILTIN_DIRECTORIES = {
     BUILTIN_ID: "eighteenmile_2023",
@@ -49,6 +49,9 @@ class PublishedStudyProvider:
         self.builtin = Path(__file__).resolve().parent.parent / "observations" / "eighteenmile_2023"
 
     def _builtin_source(self, builtin_id=BUILTIN_ID):
+        if builtin_id == "scdes-eighteenmile-trace-metals-2023":
+            from measurement_workspace import trace_metal_observations as trace_metals
+            return trace_metals.builtin_companion(self.builtin.parent.parent)
         if builtin_id == rl18151.BUILTIN_ID:
             return rl18151.builtin_companion(self.builtin.parent.parent)
         if builtin_id == sv833.BUILTIN_ID:
@@ -269,6 +272,10 @@ class PublishedStudyProvider:
             self._fail("STUDY_REQUEST", "Study request must be an object.")
         ws, store = self._store(workspace_key)
         try:
+            if operation in ("microbial-selection-catalog", "microbial-selection-preview"):
+                from measurement_workspace import microbial_selection
+                return (microbial_selection.catalog(ws) if operation == "microbial-selection-catalog"
+                        else microbial_selection.preview(ws, payload))
             if operation == "catalog":
                 builtin = []
                 for builtin_id, directory in BUILTIN_DIRECTORIES.items():
@@ -289,6 +296,12 @@ class PublishedStudyProvider:
                 microbial_source = microbial.catalog_entry(self.builtin.parent.parent)
                 if microbial_source:
                     builtin.append(microbial_source)
+                trace_adapter = self.builtin.parent.parent / "measurement_workspace" / "trace_metal_observations.py"
+                if trace_adapter.is_file():
+                    from measurement_workspace import trace_metal_observations as trace_metals
+                    trace_source = trace_metals.catalog_entry(self.builtin.parent.parent)
+                    if trace_source:
+                        builtin.append(trace_source)
                 return {
                     **store.list_studies(),
                     "reviews": PublishedStudyReviews(store).catalog(),
@@ -336,6 +349,9 @@ class PublishedStudyProvider:
         if not isinstance(payload, dict):
             self._fail("STUDY_REQUEST", "Study task payload must be an object.")
         try:
+            if action == "published-study.microbial-selection.prepare":
+                from measurement_workspace import microbial_selection
+                return microbial_selection.prepare(ws, store, payload, operation_id=task["operation_id"])
             if action == "published-study.import":
                 evidence = {}
                 builtin_id = payload.get("builtin_id")

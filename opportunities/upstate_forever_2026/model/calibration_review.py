@@ -22,10 +22,10 @@ from .common import (atomic_bytes, atomic_json, canonical, describe_file, digest
                      held, identifier, read_json, verify_file)
 from . import calibration_uncertainty as uncertainty
 from . import calibration_maps as maps
-from . import observation_support
+from . import observation_support, catchment_interpretation
 
 VERSION = 1
-PRESENTATION_EDITION = "native-execution-reference-basis-v2"
+PRESENTATION_EDITION = "native-execution-reference-basis-catchment-yields-v3"
 KIND = "calibration-reviews"
 DIRECTORY = "calibration-review-exports"
 STYLE = """
@@ -199,7 +199,7 @@ def native_execution(report, plan):
     return value
 
 
-def _tables(report, plan, metadata=None):
+def _tables(report, plan, metadata=None, catchment_context=None):
     reference = {unit["id"]: unit for unit in report["reference_units"]}
     selected_rows = []
     for row in report["prediction_rows"]:
@@ -216,6 +216,10 @@ def _tables(report, plan, metadata=None):
         metric_rows.append({**values, "parameter": parameter, "partition": "validation",
                             "run_id": report["selected_run_id"], "profile_id": report["selected_profile_id"]})
     return {
+        "catchment-yields": (catchment_interpretation.FIELDS,
+                             (catchment_context or {}).get("rows", [])),
+        "catchment-relations": (catchment_interpretation.RELATION_FIELDS,
+                                (catchment_context or {}).get("relations", [])),
         "reference-basis": (
             ("reference_id", "parameter", "catchment_id", "station_id", "observation_record_ids",
              "reference_label", "parameter_codes", "reference_status", "interpretation",
@@ -348,6 +352,29 @@ def _html(selection, report, plan, observed, detail, atlas, tables, directory, f
                                          for parameter in report["objective"]) + "</div>" +
         "<details><summary>Complete held-out coverage and missing support</summary><pre>" + _escape(validation) +
         "</pre></details><p>" + _link("tables/physical-metrics.csv", "All candidate calibration metrics and selected-only validation") + "</p>"))
+    yield_rows = [row for row in tables["catchment-yields"][1]
+                  if row["run_id"] == report["selected_run_id"]]
+    sections.append(_section("catchment-yields", "Whole-catchment annual yields and shared support",
+        "<p>" + _escape(catchment_interpretation.MEANING) + "</p>" +
+        _table(("catchment_id", "parameter", "reference_label", "catchment_area_ha",
+                "yield_units", "reference_annual_yield", "native_annual_yield",
+                "external_annual_yield", "predicted_annual_yield", "yield_status"), yield_rows) +
+        "<p>Area is the complete original catchment polygon in the native comparison CRS. "
+        "Covered cell area remains a separate grid measure. Partial native totals are not "
+        "presented as complete modeled yields. Original estimator periods, constituent basis, "
+        "uncertainty and mass values accompany every row.</p>" +
+        '<div class="plots">' + "".join(
+            (directory / name).read_text(encoding="utf-8")
+            for name in sorted(files) if name.startswith("yield-figures/") and name.endswith(".svg")) +
+        "</div><h3>Original spatial connections</h3>" +
+        _table(("catchment_a", "catchment_b", "basis", "overlap_ha", "station_id",
+                "group_a", "partition_a"), tables["catchment-relations"][1]) +
+        "<p>These connections are the existing plan's shared polygon area and shared-station "
+        "relations. They do not establish upstream/downstream direction. Loads from overlapping "
+        "catchments are not independent parts of a regional sum.</p><p>" +
+        _link("tables/catchment-yields.csv", "All candidate whole-catchment yields") + " · " +
+        _link("tables/catchment-relations.csv", "Original spatial relationships") + " · " +
+        _link("catchment-interpretation.json", "Complete source-bound interpretation") + "</p>"))
     stability = report["group_stability"]
     sections.append(_section("stability", "Spatial-group stability and candidate variation",
         "<p>" + _escape(stability.get("method", stability.get("state"))) + "</p>" +
@@ -484,7 +511,9 @@ def prepare(workspace, calibration_id, *, uncertainty_id=None, map_id=None, titl
         for comparison_id in sorted(set(report["comparison_ids"].values())):
             value = workspace._get("observation-comparisons", identifier(comparison_id))
             add_record("records/observation-comparisons/" + comparison_id + ".json", value)
-        tables = _tables(report, plan, observed.get("metadata"))
+        catchment_context = catchment_interpretation.collect(workspace, report, plan, observed)
+        add_record("catchment-interpretation.json", catchment_context)
+        tables = _tables(report, plan, observed.get("metadata"), catchment_context)
         if detail:
             tables["source-error-pairs"] = (PAIR_FIELDS, detail["pairwise"])
             for name in ("source_records", "reference_units", "selected_validation", "candidate_scores"):
@@ -500,6 +529,14 @@ def prepare(workspace, calibration_id, *, uncertainty_id=None, map_id=None, titl
                 path = verify_file(source_root, expected)
                 name = "maps/" + _name(expected["path"])
                 files[name] = _copy(directory, path, name, expected)
+        # Reuse the original calibration scientific-figure renderer and schema.
+        from .calibration_report_source import _svg
+        yield_figures = catchment_interpretation.figures(catchment_context)
+        add_record("yield-figures/specification.json", {
+            "schema": "upstate.scientific-figure-spec/v1",
+            "calibration_id": report["id"], "figures": yield_figures})
+        for figure in yield_figures:
+            add_bytes("yield-figures/" + figure["id"] + ".svg", _svg(figure))
         add_record("review-selection.json", selection)
         add_bytes("index.html", _html(selection, report, plan, observed, detail, atlas, tables, directory, files))
         manifest = {"schema": "upstate.calibration-review/v1", "selection_id": selection_id,

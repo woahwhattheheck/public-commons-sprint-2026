@@ -1086,6 +1086,309 @@ export async function runInstalledFlowableJourney({
       nativeRoles:{operator:configuration.adminUserId,reviewer:reviewerUserId},sources:completedProgramme.sources};
     mark('Complete original BPMN programme and independent receiving',report.processProgramme);
 
+
+    // Commission the complete authored DMN course on the same installed native engine.
+    const [{describeFlowableDecisionProgramme},{verifyFlowableDecisionProgrammeOperation}]=await Promise.all([
+      load(SDK+'workspace/decision-programme.mjs'),load(SDK+'workspace/decision-programme-review.mjs')]);
+    const decisionProgrammeReferencePath=join(sourceRoot,SDK+'workspace/examples/decision-commissioning.programme.json');
+    const decisionProgrammeReferenceFile=await checkedFile(decisionProgrammeReferencePath);
+    const decisionProgrammeReferenceBytes=await readFile(decisionProgrammeReferencePath);
+    need(decisionProgrammeReferenceBytes.length===decisionProgrammeReferenceFile.bytes&&
+      hash(decisionProgrammeReferenceBytes)===decisionProgrammeReferenceFile.sha256,
+      'Read the same complete installed decision programme reference.');
+    const decisionProgrammeReference=JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(decisionProgrammeReferenceBytes));
+    need(decisionProgrammeReference.schema==='stellar-forge.flowable-programme.v1'&&
+      decisionProgrammeReference.steps.length===14&&decisionProgrammeReference.sources.length===7,
+      'Use all six original decision releases, eight typed evaluations and seven complete source members.');
+    const decisionProgrammeMembers=Object.create(null);
+    for(const member of decisionProgrammeReference.sources){
+      need(typeof member.name==='string'&&!Object.hasOwn(decisionProgrammeMembers,member.name)&&
+        /^(?:decision-catalog\.json|(?:grant-eligibility|vendor-review|onboarding-route)-v[12]\.dmn)$/.test(member.name),
+        'Retain the original decision catalogue and all six authored DMN source editions.');
+      const path=join(sourceRoot,SDK+'fixtures/decisions/'+member.name);
+      await checkedFile(path,member);
+      const bytes=await readFile(path);
+      need(bytes.length===member.bytes&&hash(bytes)===member.sha256&&bytes.toString('base64')===member.contentBase64,
+        'The installed original decision source differs from the complete programme: '+member.name);
+      decisionProgrammeMembers[member.name]={...member,text:new TextDecoder('utf-8',{fatal:true}).decode(bytes)};
+    }
+    const decisionProgrammeConnection=senderStatus.connections.find(item=>item.connection.id===configuration.dmnConnection.id);
+    need(decisionProgrammeConnection?.id===decisionConnectionId&&
+      decisionProgrammeConnection.connection.baseUrl===configuration.dmnConnection.baseUrl,
+      'The decision programme must use this original saved native DMN REST connection.');
+    const decisionDescription=describeFlowableDecisionProgramme({
+      catalogText:decisionProgrammeMembers['decision-catalog.json'].text,members:decisionProgrammeMembers,
+      operation:'NATIVE-DECISION-PROGRAMME-'+hash(configuration.operation).slice(0,24),
+      familyKeys:['d76c_grant_eligibility','d76c_vendor_review','d76c_onboarding_route']});
+    const decisionProgramme=decisionDescription.programme;
+    const decisionExpectations=new Map(decisionDescription.expectations.map(item=>[item.stepKey,item]));
+    need(decisionProgramme.steps.length===14&&decisionProgramme.sources.length===7&&decisionExpectations.size===14&&
+      decisionDescription.expectations.filter(item=>item.kind==='decisionRelease').length===6&&
+      decisionDescription.expectations.filter(item=>item.kind==='decisionEvaluation').length===8,
+      'Keep the complete three-family two-edition native decision course and every typed reference result.');
+    const decisionProgrammeText=JSON.stringify(decisionProgramme,null,2)+'\n';
+    const decisionProgrammeInput=await memo('decision-programme-input',{
+      requestId:request('decision-programme'),connectionId:decisionConnectionId,
+      referenceSha256:decisionProgrammeReferenceFile.sha256,programmeSha256:hash(decisionProgrammeText)},
+      async()=>({requestId:request('decision-programme'),connectionId:decisionConnectionId,programmeText:decisionProgrammeText}));
+    await publish('decision-commissioning.programme.json',decisionProgramme);
+    await publish('decision-commissioning.expectations.json',decisionDescription.expectations);
+    report.files.push(await checkedFile(join(directory,'decision-commissioning.programme.json'),
+      {bytes:Buffer.byteLength(decisionProgrammeText),sha256:hash(decisionProgrammeText)}));
+    report.files.push(await checkedFile(join(directory,'decision-commissioning.expectations.json')));
+    if(!state.decisionProgrammeReceiving){state.decisionProgrammeReceiving={};await save();}
+    if(!state.decisionProgrammeReviews){state.decisionProgrammeReviews={};await save();}
+    const reviewDecisionProgramme=async({step,operation,phase})=>{
+      const expectation=decisionExpectations.get(step.key);
+      need(expectation&&step.kind===expectation.kind,'Review exactly the selected original DMN programme step.');
+      const reviewed=await verifyFlowableDecisionProgrammeOperation({expectation,operation,phase,
+        readSource:async reference=>(await sender.readSource({reference})).value});
+      const key=phase+':'+operation.id+':'+operation.revision+':'+operation.sha256;
+      if(Object.hasOwn(state.decisionProgrammeReviews,key))
+        need(canonical(state.decisionProgrammeReviews[key])===canonical(reviewed),
+          'The same original decision review must preserve its exact selected source and native response.');
+      else{state.decisionProgrammeReviews[key]=reviewed;await save();}
+    };
+    const decisionProgrammeReceiving=await receiveFlowableProgramme({
+      client:sender,receiver,programmeInput:decisionProgrammeInput,
+      archivePath:join(directory,'complete-decision-programme-workspace.ndjson'),
+      state:state.decisionProgrammeReceiving,
+      retain:async value=>{state.decisionProgrammeReceiving=value;await save();},
+      reviewOperation:reviewDecisionProgramme,signal});
+    const completedDecisionProgramme=await sender.readProgramme({id:decisionProgrammeReceiving.programme});
+    need(decisionProgrammeReceiving.steps===14&&completedDecisionProgramme.connectionId===decisionConnectionId&&
+      completedDecisionProgramme.progress.state==='COMPLETED'&&completedDecisionProgramme.progress.total===14&&
+      completedDecisionProgramme.progress.confirmed===14&&
+      completedDecisionProgramme.progress.rows.every(row=>row.state==='CONFIRMED')&&
+      completedDecisionProgramme.programmeSha256===hash(decisionProgrammeText)&&
+      completedDecisionProgramme.basisSha256===decisionProgrammeReceiving.basisSha256,
+      'Every original decision programme operation must be source-verified and confirmed on the same native engine.');
+    report.files.push(await checkedFile(decisionProgrammeReceiving.download.path,decisionProgrammeReceiving.download));
+    report.decisionProgramme={...decisionProgrammeReceiving,record:completedDecisionProgramme.record,
+      sourceReference:decisionProgrammeReferenceFile,connectionId:decisionConnectionId,
+      sources:completedDecisionProgramme.sources,reviews:Object.values(state.decisionProgrammeReviews)};
+    mark('Complete original DMN programme and independent receiving',report.decisionProgramme);
+
+
+    // Operate the actual source authoring desk before the final complete export.
+    // The original browser generates its save request; retain it before forwarding unchanged.
+    const {compileProgrammeDraft,parseProgrammeDraft,refreshProgrammeCatalogueSources}=await load(SDK+'workspace/programme-authoring.mjs');
+    let authoredProgramme;
+    {
+      const imported=await import(pathToFileURL(configuration.playwrightModule).href);
+      const playwright=imported.chromium?imported:imported.default;
+      const browser=await playwright.chromium.launch({headless:true,executablePath:configuration.chromiumExecutable,
+        args:['--no-sandbox','--disable-dev-shm-usage']});
+      const browserErrors=[],authoringScreenshots=[],authoringExamples=[];
+      let routedError,selectedPreview;
+      try {
+        const page=await browser.newPage({viewport:{width:1440,height:1000}});
+        page.on('pageerror',error=>browserErrors.push(String(error)));
+        const authoring=page.locator('#programme-authoring');
+        const idle=async({error=false}={})=>{
+          await page.locator('#busy').waitFor({state:'hidden'});
+          if(routedError)throw routedError;
+          const level=await page.locator('#notice').getAttribute('data-level');
+          need(error?level==='error':level!=='error',
+            error?'The original authoring validation must show its error.':'The original authoring action must finish without an error.');
+        };
+        const click=async name=>{await authoring.getByRole('button',{name,exact:true}).click();await idle();};
+        async function screen(name){
+          const path=join(directory,name+'.png');await page.screenshot({path,fullPage:true});
+          const file=await checkedFile(path);report.files.push(file);authoringScreenshots.push(file);
+          return file;
+        }
+        async function download(name,filename){
+          const pending=page.waitForEvent('download',{timeout:180000});
+          await click(name);const result=await pending,path=join(directory,filename);
+          await result.saveAs(path);const file=await checkedFile(path);report.files.push(file);
+          return {file,bytes:await readFile(path)};
+        }
+        async function enter(kind,connectionId){
+          await page.locator('#engine-select').selectOption(connectionId);await idle();
+          await page.locator('[data-page="programmes"]').click();await idle();
+          need(await page.locator('#engine-select').inputValue()===connectionId,
+            'Author on the matching original saved '+kind+' native connection.');
+        }
+        await page.goto(liveSession.browserUrl,{waitUntil:'networkidle'});await idle();
+        await enter('process',processProgrammeConnection.id);
+        await screen('authoring-empty-wide');
+        await click('New source programme');
+        await authoring.getByRole('button',{name:'Build complete programme preview',exact:true}).click();
+        await idle({error:true});
+        need((await page.locator('#notice').innerText()).length>0,'Show the complete source error to the operator.');
+        await screen('authoring-source-error');
+
+        for(const [kind,connectionId,steps,sources] of [
+          ['process',processProgrammeConnection.id,29,10],['case',caseConnectionId,73,10],['decision',decisionConnectionId,14,7]]) {
+          await enter(kind,connectionId);
+          // Retain a real pending example fetch while capturing its visible loading controls.
+          if(kind==='process'){
+            let release;
+            const gate=new Promise(resolve=>{release=resolve;});
+            const route='**/programme-process.source-draft.json';
+            const requestStarted=page.waitForRequest(route,{timeout:180000});
+            const handler=async request=>{await gate;await request.continue();};
+            await page.route(route,handler,{times:1});
+            try{
+              await authoring.getByRole('button',{name:'Load process example',exact:true}).click();
+              await requestStarted;await page.locator('#busy').waitFor({state:'visible'});
+              await screen('authoring-loading');
+            } finally {release();}
+            await idle();
+          } else await click('Load '+kind+' example');
+          const operation='UI-'+kind.toUpperCase()+'-'+hash(configuration.operation).slice(0,24);
+          const title='Installed '+kind+' source authoring '+hash(configuration.operation).slice(0,12);
+          await authoring.getByLabel('Draft title',{exact:true}).fill(title);
+          await authoring.getByLabel('Stable operation key',{exact:true}).fill(operation);
+          if(kind==='process'){
+            await authoring.getByLabel('Operator identity',{exact:true}).fill(configuration.adminUserId);
+            await authoring.getByLabel('Reviewer identity',{exact:true}).fill(reviewerUserId);
+          }
+          if(kind==='case'){
+            await authoring.getByLabel('Reviewer identity',{exact:true}).fill('case-reviewer');
+            await authoring.getByLabel('Specialist identity',{exact:true}).fill('case-specialist');
+            await authoring.getByLabel('Approver identity',{exact:true}).fill('case-approver');
+          }
+          if(kind==='decision'){
+            const row=authoring.locator('tbody tr').filter({hasText:'grant-eligibility-v1.dmn'});
+            need(await row.count()===1,'Select the exact original decision model source.');
+            await row.getByRole('button',{name:'Open source',exact:true}).click();await idle();
+            const editor=authoring.getByLabel('Complete original source text',{exact:true});
+            const original=await editor.inputValue();
+            await editor.fill(original+'\n<!-- Installed source authoring review: '+operation+' -->\n');
+            await click('Inspect source identity');
+            const member=await download('Download source member','authoring-decision-edited-source.dmn');
+            need(member.bytes.toString('utf8')===await editor.inputValue(),'Download every edited original source byte.');
+            await authoring.getByRole('button',{name:'Build complete programme preview',exact:true}).click();
+            await idle({error:true});
+            await screen('authoring-decision-stale-catalogue');
+            await click('Update catalogue model identities');
+          }
+          await click('Build complete programme preview');
+          need((await authoring.innerText()).includes(steps+' native steps · '+sources+' complete sources'),
+            'Render the complete original '+kind+' programme preview.');
+          const compiled=await download('Download compiled programme','authoring-'+kind+'.programme.json');
+          const draftDownload=await download('Download complete draft','authoring-'+kind+'.source-draft.json');
+          const draft=parseProgrammeDraft(new TextDecoder('utf-8',{fatal:true}).decode(draftDownload.bytes));
+          need(draft.kind===kind&&draft.operation===operation&&draft.files.length===sources,
+            'Download the complete editable '+kind+' draft with its original source inventory.');
+          const expected=await compileProgrammeDraft(draft,{hash:async bytes=>hash(bytes)});
+          need(expected.programmeText===new TextDecoder('utf-8',{fatal:true}).decode(compiled.bytes)&&
+            expected.programme.steps.length===steps&&expected.programme.sources.length===sources,
+            'The actual browser download must equal the original complete source compiler.');
+          if(kind==='decision'){
+            const refreshed=await refreshProgrammeCatalogueSources(draft,{hash:async bytes=>hash(bytes)});
+            need(canonical(refreshed)===canonical(draft),'The saved decision catalogue names every exact edited model byte.');
+          }
+          await screen('authoring-'+kind+'-wide');
+          await page.setViewportSize({width:390,height:844});
+          await authoring.scrollIntoViewIfNeeded();
+          await screen('authoring-'+kind+'-narrow');
+          await page.setViewportSize({width:1440,height:1000});
+
+          // Reopen the complete received file, then the same local IndexedDB edition after reload.
+          await authoring.getByLabel('Reopen complete source-draft JSON',{exact:true}).setInputFiles(draftDownload.file.path);
+          await idle();
+          await click('Build complete programme preview');
+          const reopened=await download('Download complete draft','authoring-'+kind+'-reopened.source-draft.json');
+          const reopenedDraft=parseProgrammeDraft(new TextDecoder('utf-8',{fatal:true}).decode(reopened.bytes));
+          need(reopenedDraft.id!==draft.id&&canonical({...reopenedDraft,id:draft.id})===canonical(draft),
+            'Received source drafts retain all source and roles under a distinct local draft identity.');
+          const persistedTitle=title+' received';
+          await authoring.getByLabel('Draft title',{exact:true}).fill(persistedTitle);
+          await click('Build complete programme preview'); // flush the actual local source store before reload
+          await page.reload({waitUntil:'networkidle'});await idle();await enter(kind,connectionId);
+          const savedRow=authoring.locator('tbody tr').filter({hasText:persistedTitle});
+          need(await savedRow.count()===1,'Find the actual saved local source edition after browser reload.');
+          await savedRow.getByRole('button',{name:'Reopen draft',exact:true}).click();await idle();
+          await click('Build complete programme preview');
+          const persisted=await download('Download complete draft','authoring-'+kind+'-persisted.source-draft.json');
+          const persistedDraft=parseProgrammeDraft(new TextDecoder('utf-8',{fatal:true}).decode(persisted.bytes));
+          need(persistedDraft.id===reopenedDraft.id&&canonical({...persistedDraft,title:reopenedDraft.title})===canonical(reopenedDraft),
+            'The browser reopens the same complete workspace-scoped IndexedDB draft.');
+          const persistedPreview=await compileProgrammeDraft(persistedDraft,{hash:async bytes=>hash(bytes)});
+          need(persistedPreview.programmeText===expected.programmeText,
+            'Local draft labels and receiving identities must not change original native programme source.');
+          authoringExamples.push({kind,connectionId,operation,steps,sources,programme:compiled.file,
+            sourceDraft:draftDownload.file,reopened:reopened.file,persisted:persisted.file,
+            programmeSha256:expected.sha256,localDraftId:persistedDraft.id});
+          if(kind==='decision')selectedPreview=persistedPreview;
+        }
+        need(selectedPreview?.programme.steps.length===14,'Select the reviewed complete decision source for the one browser intake.');
+        await memo('authoring-intake-identity',{connectionId:decisionConnectionId,
+          programmeSha256:selectedPreview.sha256,operation:selectedPreview.programme.key},async()=>({selected:true}));
+        if(state.authoringSaveInput){
+          need(state.authoringSaveInput.connectionId===decisionConnectionId&&
+            state.authoringSaveInput.programmeText===selectedPreview.programmeText,
+            'Recover only the original browser-generated save request for these exact complete source bytes.');
+          // A lost response reuses the actual retained browser UUID in the original server journal.
+          authoredProgramme=await sender.saveProgramme(state.authoringSaveInput);
+          await page.locator('#refresh').click();await idle();
+        } else {
+          await page.route('**/api/action',async route=>{
+            let input;
+            try{input=route.request().postDataJSON();}catch{return route.continue();}
+            if(input?.method!=='saveProgramme')return route.continue();
+            try {
+              need(input.args.connectionId===decisionConnectionId&&input.args.programmeText===selectedPreview.programmeText&&
+                /^[a-f0-9-]{36}$/.test(input.args.requestId??''),
+                'Capture the original browser request only for the exact reviewed source programme.');
+              need(!state.authoringSaveInput,'Only one original authoring save is admitted in this journey.');
+              state.authoringSaveInput=input.args;await save();
+              await route.continue();
+            } catch(error){routedError=error;await route.abort();}
+          });
+          const response=page.waitForResponse(value=>{
+            if(new URL(value.url()).pathname!=='/api/action')return false;
+            try{return value.request().postDataJSON().method==='saveProgramme';}catch{return false;}
+          },{timeout:180000});
+          await authoring.getByRole('button',{name:'Save programme for native review',exact:true}).click();
+          const actual=await response;need(actual.ok(),'The actual browser source intake must return its original saved programme.');
+          authoredProgramme=await actual.json();await idle();
+        }
+        need(authoredProgramme.kind==='programme'&&authoredProgramme.value.connectionId===decisionConnectionId,
+          'The authoring desk saves one original programme on its selected native decision connection.');
+        const authored=await sender.readProgramme({id:authoredProgramme.id});
+        need(authored.programmeSha256===selectedPreview.sha256&&authored.progress.total===14&&authored.progress.confirmed===0&&
+          canonical(authored.programme)===canonical(selectedPreview.programme),
+          'Retain the complete authored source for native review without dispatching a second decision course.');
+        state.authoringSavedProgramme=ref(authoredProgramme);await save();
+        const recordTable=page.locator('#programme-records');
+        const previous=recordTable.getByRole('button',{name:'Previous',exact:true});
+        while(await previous.count()&&await previous.isEnabled())await previous.click();
+        let recordRow;
+        for(;;){
+          recordRow=recordTable.locator('tbody tr').filter({hasText:selectedPreview.programme.key});
+          if(await recordRow.count())break;
+          const next=recordTable.getByRole('button',{name:'Next',exact:true});
+          need(await next.count()&&await next.isEnabled(),'Show the original saved authoring programme in the current workspace.');
+          await next.click();
+        }
+        need(await recordRow.count()===1,'Select exactly the one original authored programme.');
+        await recordRow.getByRole('button',{name:'Open programme',exact:true}).click();await idle();
+        need((await page.locator('#programme-current').innerText()).includes(selectedPreview.programme.key),
+          'Open the actual saved programme and its original review controls.');
+        const fullDownload=page.waitForEvent('download');
+        await page.locator('#programme-current').getByRole('link',{name:'Download complete programme',exact:true}).click();
+        const delivered=await fullDownload,deliveredPath=join(directory,'authoring-saved-complete.programme.json');
+        await delivered.saveAs(deliveredPath);
+        const deliveredFile=await checkedFile(deliveredPath);
+        need(hash(await readFile(deliveredPath))===authored.programmeSha256,'Saved source downloads preserve the complete authored programme.');
+        report.files.push(deliveredFile);
+        await screen('authoring-saved-programme-wide');
+        await page.setViewportSize({width:390,height:844});await page.locator('#programme-current').scrollIntoViewIfNeeded();
+        await screen('authoring-saved-programme-narrow');
+        need(browserErrors.length===0,'The actual authoring browser produced a script error: '+browserErrors.join('\n'));
+        report.authoring={examples:authoringExamples,record:authored.record,connectionId:decisionConnectionId,
+          programmeSha256:authored.programmeSha256,basisSha256:authored.basisSha256,sources:authored.sources,
+          requestId:state.authoringSaveInput.requestId,savedDownload:deliveredFile,screenshots:authoringScreenshots,
+          rendered:true,visualReview:{state:'REQUIRES_PRODUCING_OWNER_INSPECTION',
+            instruction:'Open these exact wide and narrow screenshots, inspect readability and overflow, and repair defects before calling the customer-facing product ready.'}};
+        mark('Actual complete source authoring, downloads and browser reopen',report.authoring);
+      } finally {await browser.close();}
+    }
+
     const finalDecisionDelivery=await sender.exportWorkspace({requestId:request('export-complete-decision-continuation'),
       label:'Complete original process and decision operating history'});
     const finalDecisionExport=await mcp.tool('merchant_flowable_download',{workspace:'sender',kind:'delivery',id:finalDecisionDelivery.id});
@@ -1124,10 +1427,49 @@ export async function runInstalledFlowableJourney({
     report.processProgramme.coldReceiving={workspaceId:(await receiver.status()).workspaceId,
       record:coldProgramme.record,basisSha256:coldProgramme.basisSha256,steps:coldProgramme.progress.total};
 
+
+    const coldDecisionProgramme=await receiver.readProgramme({id:decisionProgrammeReceiving.programme});
+    need(coldDecisionProgramme.record.sha256===completedDecisionProgramme.record.sha256&&
+      coldDecisionProgramme.record.revision===completedDecisionProgramme.record.revision&&
+      coldDecisionProgramme.connectionId===decisionConnectionId&&
+      coldDecisionProgramme.progress.state==='COMPLETED'&&coldDecisionProgramme.progress.total===14&&
+      coldDecisionProgramme.progress.confirmed===14&&
+      coldDecisionProgramme.programmeSha256===completedDecisionProgramme.programmeSha256&&
+      coldDecisionProgramme.basisSha256===completedDecisionProgramme.basisSha256,
+      'Cold final receiving preserves all original DMN source editions, typed inputs and fourteen confirmed outcomes.');
+    const coldDecisionReviews=[];
+    for(const row of coldDecisionProgramme.progress.rows){
+      need(row.state==='CONFIRMED'&&row.record,'Each received decision step retains its original confirmed operation.');
+      const operation=await receiver.getRecord({kind:row.kind,id:row.record.id,revision:row.record.revision});
+      need(operation.sha256===row.record.sha256,'The received native decision operation must retain its exact revision.');
+      coldDecisionReviews.push(await verifyFlowableDecisionProgrammeOperation({
+        expectation:decisionExpectations.get(row.key),operation,phase:'confirmed',
+        readSource:async reference=>(await receiver.readSource({reference})).value}));
+    }
+    report.decisionProgramme.coldReceiving={workspaceId:(await receiver.status()).workspaceId,
+      record:coldDecisionProgramme.record,basisSha256:coldDecisionProgramme.basisSha256,
+      steps:coldDecisionProgramme.progress.total,reviews:coldDecisionReviews};
+
+
+    const coldAuthored=await receiver.readProgramme({id:authoredProgramme.id});
+    need(coldAuthored.record.sha256===report.authoring.record.sha256&&
+      coldAuthored.record.revision===report.authoring.record.revision&&
+      coldAuthored.connectionId===report.authoring.connectionId&&
+      coldAuthored.programmeSha256===report.authoring.programmeSha256&&
+      coldAuthored.basisSha256===report.authoring.basisSha256&&
+      canonical(coldAuthored.sources)===canonical(report.authoring.sources)&&
+      coldAuthored.progress.total===14&&coldAuthored.progress.confirmed===0&&
+      canonical(coldAuthored.programme)===canonical(JSON.parse(state.authoringSaveInput.programmeText)),
+      'Cold customer receiving preserves the exact authored source, saved review programme and original connection.');
+    report.authoring.coldReceiving={workspaceId:(await receiver.status()).workspaceId,
+      record:coldAuthored.record,programmeSha256:coldAuthored.programmeSha256,
+      sources:coldAuthored.sources,steps:coldAuthored.progress.total};
+
     report.completeWorkspace={delivery:ref(finalDecisionDelivery),receiving:ref(finalDecisionReopened),
       file:finalDecisionReceived.file,workspaceId:(await receiver.status()).workspaceId};
     need(CORE_KINDS.length===15 && CORE_KINDS.includes('programme') &&
-      completedInstalledCase?.work?.historicCase?.state==='completed' && coldProgramme.progress.state==='COMPLETED',
+      completedInstalledCase?.work?.historicCase?.state==='completed' && coldProgramme.progress.state==='COMPLETED' &&
+      coldDecisionProgramme.progress.state==='COMPLETED',
       'The final complete customer receiving includes all fifteen process, decision, case and programme record kinds.');
     preparedReport=report;
   } catch(error) {errors.push(error);}

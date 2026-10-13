@@ -3,6 +3,7 @@
  * Scientific selections and calculations remain in model.workspace/native.
  */
 import {attachRunAssembly} from './run_assembly_workbench.mjs';
+import {attachNativeRunHistory} from './native_run_history.mjs';
 
 const escapeHTML = value => String(value ?? '').replace(/[&<>"']/g, character =>
   ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[character]));
@@ -223,16 +224,61 @@ export function runDeskComparisons(snapshot, draft, rows = null, index = runDesk
   for (const profileId of draft.profile_ids || []) {
     for (const [scopeKey, family] of families.get(profileId) || []) {
       const base = family.find(row => row.scenario.id === baseline.id);
-      const alternatives = family.filter(row => row.scenario.id !== baseline.id && row.scenario.kind === 'landcover');
+      const alternatives = family.filter(row => row.scenario.id !== baseline.id);
       if (!base || !alternatives.length) continue;
       const complete = alternatives.filter(row => selectedOutputsComplete(row.run));
+      // Programmes and comparisons retain every checked scenario. The original
+      // mapped-delivery API requires explicit land-cover alternatives, so expose
+      // that separate selection instead of silently dropping controls upstream.
+      const deliveryAlternatives = alternatives.filter(row => row.scenario.kind === 'landcover');
+      const deliveryComplete = deliveryAlternatives.filter(row => fullOutputsComplete(row.run));
+      const deliveryRunIds = fullOutputsComplete(base.run) ?
+        [base.run.id, ...deliveryComplete.map(row => row.run.id)] : [];
       const runIds = selectedOutputsComplete(base.run) ? [base.run.id, ...complete.map(row => row.run.id)] : [];
       const key = runIds.length > 1 ? comparisonKey(runIds[0], runIds.slice(1)) : '';
       const retained = key ? index.comparisons.get(key) || null : null;
       const task = key ? index.activeComparisons.get(key) || null : null;
       groups.push({key: profileId + ':' + scopeKey, profileId, profile: base.profile, models: base.models,
         modelKey: scopeKey, baseline: base, alternatives, complete, runIds, retained, task,
-        canDeliver: runIds.length > 1 && fullOutputsComplete(base.run) && complete.every(row => fullOutputsComplete(row.run))});
+        deliveryAlternatives, deliveryComplete, deliveryRunIds,
+        canDeliver: deliveryRunIds.length > 1});
+    }
+  }
+  return groups;
+}
+
+export function runDeskProcessReports(snapshot, draft, rows = null, index = runDeskIndex(snapshot)) {
+  rows ||= runDeskRows(snapshot, draft, [], index);
+  const baseline = index.scenarios.get(draft.baseline_scenario_id);
+  if (!baseline || baseline.kind !== 'baseline') return [];
+  const families = selectedFamilies(rows), groups = [];
+  for (const profileId of draft.profile_ids || []) {
+    for (const [scopeKey, family] of families.get(profileId) || []) {
+      const base = family.find(row => row.scenario.id === baseline.id);
+      if (!base) continue;
+      const alternatives = family.filter(row => row.scenario.id !== baseline.id);
+      const selected = [base, ...alternatives];
+      const stages = selected.map(row => {
+        const completed = {};
+        for (const model of row.models) {
+          const stage = row.run?.stages?.[model] || row.run?.stage_summary?.[model];
+          // Compact state lists retain completion/counts; the destination reads
+          // the original stage registry before accepting the entire selection.
+          const retained = stage?.files ? !!stage.files['watershed_results_' + model] :
+            Number.isInteger(stage?.file_count) && stage.file_count > 0;
+          if (stage?.completed_at && retained) completed[model] = stage.completed_at;
+        }
+        return {row, completed};
+      });
+      const scopes = [base.models, ...base.models.map(model => [model])]
+        .filter((models, position, all) => all.findIndex(value => modelKey(value) === modelKey(models)) === position)
+        .map(models => {
+          const missing = stages.filter(value => !value.row.run || models.some(model => !value.completed[model]));
+          return {models, key: modelKey(models), ready: !missing.length, completed: selected.length - missing.length, missing};
+        });
+      groups.push({key: profileId + ':' + scopeKey, profileId, profile: base.profile, models: base.models,
+        modelKey: scopeKey, baseline: base, alternatives, selected, stages, scopes,
+        runIds: selected.map(row => row.run?.id || null)});
     }
   }
   return groups;
@@ -247,7 +293,7 @@ export function runDeskProgrammes(snapshot, draft, rows = null, index = runDeskI
     for (const [scopeKey, family] of families.get(profileId) || []) {
       const baseline = family.find(row => row.scenario.id === draft.baseline_scenario_id && row.scenario.kind === 'baseline');
       if (!baseline) continue;
-      const alternatives = family.filter(row => row.scenario.id !== baseline.scenario.id && row.scenario.kind === 'landcover');
+      const alternatives = family.filter(row => row.scenario.id !== baseline.scenario.id);
       const entry = (row, key) => ({
         key, title: title(row.scenario), profile_id: profileId, scenario_id: row.scenario.id,
         ...(scopeKey === 'ndr+sdr' ? {} : {models: [...row.models]})
@@ -266,7 +312,7 @@ export function runDeskProgrammes(snapshot, draft, rows = null, index = runDeskI
   return programmes;
 }
 
-export function attachRunWorkbench({getState, api, refreshState, openItem, showTask, showRunLog, openDelivery, openProgramme, getProgramme, openForm, submitAction, toast}) {
+export function attachRunWorkbench({getState, api, refreshState, openItem, showTask, showRunLog, openDelivery, openProgramme, getProgramme, openForm, submitAction, openDesk, toast}) {
   let host = null, current = null, workspaceKey = null, draft = null;
   let busy = false, notice = '', page = 0, filter = 'all', search = '';
   let storageMessage = '', submission = null;
@@ -276,6 +322,9 @@ export function attachRunWorkbench({getState, api, refreshState, openItem, showT
     attachRunAssembly({api, getState, openForm, submitAction, openItem}) : null;
   let programmeActivityMode = 'unknown', programmeActivityRecords = new Map();
   let sourceIndex = null, rowCache = null, selectionRevision = 0;
+  const runHistory = attachNativeRunHistory({getState, api, submitOriginal, openItem, showTask,
+    getRunIds: () => currentRows().filter(row => row.selected && row.run).map(row => row.run.id),
+    onChange: paint});
   function currentIndex() {
     if (!sourceIndex || sourceIndex.data !== current?.data || sourceIndex.taskSource !== current?.tasks ||
         sourceIndex.workspace !== current?.workspace_key) sourceIndex = runDeskIndex(current);
@@ -583,17 +632,23 @@ export function attachRunWorkbench({getState, api, refreshState, openItem, showT
   }
   function renderGroups(rows) {
     const groups = runDeskComparisons(current, draft, rows, currentIndex());
-    if (!groups.length) return '<p class="note">Select an unchanged baseline and at least one land-cover alternative under the same profile and native model selection.</p>';
+    if (!groups.length) return '<p class="note">Select an unchanged baseline and at least one other scenario under the same profile and native model selection.</p>';
     return groups.map(group => '<article class="rd-comparison"><div><h3>' + escapeHTML(title(group.profile)) + ' · ' +
       escapeHTML(modelLabel(group.models)) + '</h3><p>' +
       escapeHTML(title(group.baseline.scenario)) + ' → ' + group.complete.length + ' of ' + group.alternatives.length + ' selected alternatives complete.</p>' +
       '<small>' + (selectedOutputsComplete(group.baseline.run) ? 'Baseline complete. ' : 'Baseline awaiting completion. ') +
-      'Every pair uses the same grid, parameter profile and native models. Full delivery uses completed nitrogen, phosphorus and sediment exports.</small></div><div class="rd-row-actions">' +
+      'Every pair uses the same grid, parameter profile and native models. Checked unchanged controls are included.</small>' +
+      '<p class="note">Completed comparison selection: ' + escapeHTML(group.complete.length ?
+        group.complete.map(row => title(row.scenario)).join(' · ') : 'Awaiting an alternative') + '.</p>' +
+      '<p class="note">Land-cover delivery: ' + group.deliveryComplete.length + ' of ' +
+        group.deliveryAlternatives.length + ' checked land-cover alternatives have complete NDR + SDR exports' +
+        (group.deliveryComplete.length ? ' · ' + escapeHTML(group.deliveryComplete.map(row => title(row.scenario)).join(' · ')) : '') +
+        '. Unchanged controls remain in the programme, comparison and process report.</p></div><div class="rd-row-actions">' +
       (group.retained ? htmlButton('comparison-open', 'Open retained comparison', {id: group.retained.id}) :
         group.task ? htmlButton('task', 'Comparison ' + group.task.state, {id: group.task.id}) :
         htmlButton('compare', 'Compare ' + group.complete.length + ' completed alternative' + (group.complete.length === 1 ? '' : 's'),
           {profile: group.profileId, models: group.modelKey}, busy || group.runIds.length < 2)) +
-      htmlButton('delivery', 'Prepare full delivery', {profile: group.profileId, models: group.modelKey},
+      htmlButton('delivery', 'Prepare land-cover delivery (' + group.deliveryComplete.length + ')', {profile: group.profileId, models: group.modelKey},
         busy || !group.canDeliver) + '</div></article>').join('');
   }
   function renderProgrammes(rows, hasIssues) {
@@ -604,10 +659,30 @@ export function attachRunWorkbench({getState, api, refreshState, openItem, showT
       groups.map(group => '<article class="rd-comparison"><div><h3>' + escapeHTML(title(group.profile)) + ' · ' +
         escapeHTML(modelLabel(group.models)) + '</h3><p>' +
         group.selection.runs.length + ' selected native run' + (group.selection.runs.length === 1 ? '' : 's') +
-        ' · unchanged baseline: ' + escapeHTML(title(group.baseline.scenario)) + '</p><small>Uses this working grid, this profile and the checked land-cover alternatives.</small></div>' +
+        ' · unchanged baseline: ' + escapeHTML(title(group.baseline.scenario)) + '</p><small>Uses this working grid, this profile and every checked scenario, including unchanged controls.</small></div>' +
         '<div class="rd-row-actions">' + htmlButton('programme', 'Inspect execution programme',
           {profile: group.profileId, models: group.modelKey}, busy || hasIssues) +
         '</div></article>').join('') + '</div>';
+  }
+  function renderProcessReports(rows) {
+    if (typeof openDesk !== 'function') return '';
+    const groups = runDeskProcessReports(current, draft, rows, currentIndex());
+    return '<section class="section"><header class="section-header"><div><h2>4. Report completed model stages</h2><p>Open the baseline and every other checked scenario in their selected order. A baseline alone is supported.</p></div></header>' +
+      '<div class="section-body"><p class="note">A completed nutrient or sediment stage can be reported while its parent run continues. The process desk checks the original watershed files and producing versions before building the report.</p>' +
+      (groups.length ? groups.map(group => '<article class="rd-comparison"><div><h3>' +
+        escapeHTML(title(group.profile)) + ' · retained ' + escapeHTML(modelLabel(group.models)) + ' runs</h3><p>' +
+        group.selected.length + ' selected run' + (group.selected.length === 1 ? '' : 's') + ' · baseline first</p><ol>' +
+        group.stages.map(({row, completed}) => '<li><strong>' + escapeHTML(title(row.scenario)) + '</strong> · ' +
+          escapeHTML(row.run ? 'parent ' + row.run.state : 'awaiting run preparation') +
+          '<br><small>' + escapeHTML(row.run ? short(row.run.id) + ' · ' : '') +
+          escapeHTML(row.models.map(model => model.toUpperCase() + (completed[model] ? ' completed ' + completed[model] : ' awaiting completed watershed output')).join(' · ')) +
+          '</small></li>').join('') + '</ol><small>All checked alternatives stay in this cohort. Uncheck an unfinished alternative above to deliberately prepare a smaller report.</small></div>' +
+        '<div class="rd-row-actions">' + group.scopes.map(scope => htmlButton('process-report',
+          'Open ' + modelLabel(scope.models) + ' report (' + scope.completed + '/' + group.selected.length + ' ready)',
+          {profile: group.profileId, models: group.modelKey, 'report-models': scope.key, workspace: current.workspace_key},
+          busy || !scope.ready)).join('') + '</div></article>').join('') :
+        '<p class="note">Check an unchanged baseline under a selected profile to prepare a process report. Check its restoration, control or other scenarios to include them in the same original cohort.</p>') +
+      '</div></section>';
   }
   function paint() {
     if (!host || !current || !draft) return;
@@ -676,7 +751,7 @@ export function attachRunWorkbench({getState, api, refreshState, openItem, showT
       '</div>' + htmlButton('download-results', 'Download selected native totals', {},
         !selected.some(row => row.models.some(model => modelOutputs[model].some(name => !!row.run?.artifacts?.[name])))) + '</footer></section>' +
       '<section class="section"><header class="section-header"><div><h2>3. Compare and deliver completed pairs</h2><p>Signed comparison outputs use alternative minus baseline. The completed pairs below retain one common profile and grid.</p></div></header>' +
-      '<div class="section-body">' + renderGroups(rows) + '</div></section></div>';
+      '<div class="section-body">' + renderGroups(rows) + '</div></section>' + renderProcessReports(rows) + runHistory.render() + '</div>';
     for (const [key, left, top] of scroll) {
       const node = [...host.querySelectorAll('[data-rd-scroll]')].find(value => value.dataset.rdScroll === key);
       if (node) { node.scrollLeft = left; node.scrollTop = top; }
@@ -694,11 +769,13 @@ export function attachRunWorkbench({getState, api, refreshState, openItem, showT
   function update(snapshot) {
     sourceIndex = null; rowCache = null;
     synchronize(snapshot);
+    runHistory.update(snapshot);
     refreshProgrammeActivity().catch(error => { programmeMessage = error.message; paint(); });
     refreshAssemblyAvailability();
     paint();
   }
   function change(event) {
+    if (runHistory.change(event)) return;
     const node = event.target;
     if (node.dataset.rdField) {
       const field = node.dataset.rdField;
@@ -728,12 +805,13 @@ export function attachRunWorkbench({getState, api, refreshState, openItem, showT
       draft.excluded = [...excluded]; draft.included = [...included]; persist(); paint();
     }
   }
-  function input(event) { if (event.target.dataset.rdField === 'search') change(event); }
+  function input(event) { if (runHistory.change(event)) return; if (event.target.dataset.rdField === 'search') change(event); }
   function mount(node, snapshot = getState()) {
     if (host !== node) { detach(); host = node; host.addEventListener('change', change); host.addEventListener('input', input); }
     update(snapshot);
   }
   function detach() {
+    runHistory.detach();
     if (host) { host.removeEventListener('change', change); host.removeEventListener('input', input); }
     host = null;
     sourceIndex = null; rowCache = null;
@@ -891,10 +969,10 @@ export function attachRunWorkbench({getState, api, refreshState, openItem, showT
   async function compare(profileId, scopeKey, delivery = false) {
     synchronize(getState());
     const group = runDeskComparisons(current, draft).find(row => row.profileId === profileId && row.modelKey === scopeKey);
-    if (!group || group.runIds.length < 2) throw Error('Complete the selected baseline and at least one land-cover alternative under this profile and native model selection.');
+    if (!group || group.runIds.length < 2) throw Error('Complete the selected baseline and at least one other scenario under this profile and native model selection.');
     if (delivery) {
-      if (!group.canDeliver) throw Error('Full delivery requires the retained nitrogen, phosphorus and sediment exports for the baseline and each selected completed alternative.');
-      return openDelivery({baseline_run_id: group.runIds[0], scenario_run_ids: group.runIds.slice(1)});
+      if (!group.canDeliver) throw Error('Land-cover delivery requires complete nitrogen, phosphorus and sediment exports for the baseline and at least one checked explicit land-cover alternative.');
+      return openDelivery({baseline_run_id: group.deliveryRunIds[0], scenario_run_ids: group.deliveryRunIds.slice(1)});
     }
     if (group.retained) return openItem('comparisons', group.retained.id);
     if (group.task) return showTask(group.task.id);
@@ -910,6 +988,7 @@ export function attachRunWorkbench({getState, api, refreshState, openItem, showT
     } finally { busy = false; submission = null; paint(); }
   }
   async function dispatch(button) {
+    if (button.dataset.action?.startsWith('run-desk-history-')) return runHistory.dispatch(button);
     const action = button.dataset.action?.replace(/^run-desk-/, '');
     if (['prepare','start','cancel'].includes(action)) return operate(action);
     if (action === 'prepare-one' || action === 'start-one') return operate(action === 'prepare-one' ? 'prepare' : 'start', button.dataset.key);
@@ -918,6 +997,24 @@ export function attachRunWorkbench({getState, api, refreshState, openItem, showT
     if (action === 'record') return openItem('runs', button.dataset.id);
     if (action === 'task') return showTask(button.dataset.id);
     if (action === 'log') return showRunLog(button.dataset.id);
+    if (action === 'process-report') {
+      if (busy) return;
+      if (!host || typeof openDesk !== 'function') throw Error('Open Native runs in the current scientific application.');
+      if (button.dataset.workspace !== workspaceKey || button.dataset.workspace !== getState()?.workspace_key)
+        throw Error('Open this original run cohort in its selected Workspace.');
+      synchronize(getState());
+      const target = current.workspace_key;
+      assertWorkspace(target);
+      const group = runDeskProcessReports(current, draft, currentRows(), currentIndex()).find(row =>
+        row.profileId === button.dataset.profile && row.modelKey === button.dataset.models);
+      const scope = group?.scopes.find(value => value.key === button.dataset.reportModels);
+      if (!group || !scope?.ready || group.runIds.some(id => !idPattern.test(id || '')))
+        throw Error('Keep the original checked cohort and wait for every requested model stage, or deliberately change the checked runs.');
+      return openDesk('native-process-reports', 'createForRuns', {
+        workspace_key: target, run_ids: [...group.runIds], models: [...scope.models],
+        title: 'Native processes · ' + title(group.profile) + ' · ' + modelLabel(scope.models)
+      });
+    }
     if (action === 'comparison-open') return openItem('comparisons', button.dataset.id);
     if (action === 'programme') {
       if (busy) return;

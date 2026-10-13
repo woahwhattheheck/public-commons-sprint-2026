@@ -12,6 +12,23 @@ from pathlib import Path
 import tempfile
 
 FILES = (
+    "operator/web/economic_received_comparisons.mjs",
+    "docs/ECONOMIC_COMPARISON_STUDY_TRANSFER.md",
+    "operator/ECONOMIC_COMPARISON_REPORT.md",
+    "model/economic_comparison_source.py",
+    "model/economic_comparison_study_transfer.py",
+    "operator/economic_comparison_source.py",
+    "operator/extensions/economic-comparison-source.json",
+    "operator/web/economic_comparison_source.mjs",
+    "integration/component_fragments/economic-comparison-source.json",
+    "model/common.py",
+    "model/economic_comparison.py",
+    "model/economic_comparison_render.py",
+    "operator/economic_comparison.py",
+    "operator/extensions/economic-comparison.json",
+    "operator/web/economic_comparison.mjs",
+    "integration/component_fragments/economic-comparison.json",
+    "operator/web/economic_request_store.mjs",
     "install_economic_desk.py",
     "model/native_versions.py",
     "operator/economic_workbench.py",
@@ -21,7 +38,7 @@ FILES = (
     "operator/web/economic_desk.css",
     "operator/extensions/economic-desk.json",
 )
-OPTIONAL_FILES = ("operator/ECONOMIC_DESK.md", "operator/COST_WORKSHEETS.md", "operator/ECONOMIC_IMPLEMENTATION.md")
+OPTIONAL_FILES = ("operator/ECONOMIC_DESK.md", "operator/ECONOMIC_COMPARISON.md", "operator/COST_WORKSHEETS.md", "operator/ECONOMIC_IMPLEMENTATION.md")
 
 
 def sha(body):
@@ -67,8 +84,13 @@ def run(application, source_root, *, dry_run=False):
                 compile(data, name, "exec")
             if name.endswith(".json"):
                 manifest = json.loads(data)
-                if manifest.get("schema") != "upstate.operator-extension/v1" or manifest.get("id") != "economic-desk":
-                    raise ValueError("Choose the authored economic-desk registration.")
+                if name.startswith("operator/extensions/"):
+                    expected_id = Path(name).stem
+                    if manifest.get("schema") != "upstate.operator-extension/v1" or manifest.get("id") != expected_id:
+                        raise ValueError("Choose the authored " + expected_id + " registration.")
+                elif name.startswith("integration/component_fragments/"):
+                    if manifest.get("schema") != "upstate.application-component-fragment/v1" or manifest.get("id") != Path(name).stem:
+                        raise ValueError("Choose the authored complete Economic comparison component.")
             pending[name] = data
         changed = [name for name in pending if pending[name] != original[name]]
         result = {

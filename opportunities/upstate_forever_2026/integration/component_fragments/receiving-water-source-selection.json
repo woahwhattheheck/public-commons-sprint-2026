@@ -1,0 +1,13 @@
+{
+  "schema": "upstate.application-component-fragment/v1",
+  "id": "receiving-water-source-selection",
+  "source_reference": "https://github.com/woahwhattheheck/public-commons-sprint-2026",
+  "extend_components": {
+    "receiving-waters": {
+      "paths": [
+        "integration/component_fragments/receiving-water-source-selection.json",
+        "operator/web/receiving_water_sources.mjs"
+      ]
+    }
+  }
+}

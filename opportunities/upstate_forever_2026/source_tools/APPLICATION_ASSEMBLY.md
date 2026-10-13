@@ -2,6 +2,13 @@
 
 The source assembler combines a retained application and selected component packages into one directory, one complete source map and one portable ZIP. It runs on Linux with Python 3.10 or later and uses the standard library. Use the same scientific workspace and its existing source, scenario and run identifiers after receiving the application.
 
+The complete Python assembler, original complete-source receiver and JavaScript
+carrier decoder/composer accept at most 512 MiB of decoded carrier/source bytes
+and 10,000 source members. This bounded capacity includes the cumulative source
+edition's retained observation, GIS and component bodies. The same original
+member hashes, Git blob identities, source manifests and receiving checks apply;
+scientific input references keep their declared external status.
+
 ## Selected complete edition and original source closure
 
 The maintained assembler uses the complete `integration/application_components.json`
@@ -230,3 +237,83 @@ Supply `--receiver` with the retained receiver file and `--source-zip` with that
 The receiving outputs include the original result in `NATIVE_RESULT.json`, source use in `LOCAL_RECEIVING_SOURCE.json`, a full file inventory in `NATIVE_FILES.json`, the streaming `Upstate_Communities_Native_Workspace.zip`, and `PRESERVED_RESULT.json`. Use `--preserve-directory` to copy those completed artifacts to the chosen shared destination, where the result manifest is installed after artifact copy and readback.
 
 The original receiving workflow uses its matched source edition first. Apply the selected current application components through the application assembler and their maintained installers before continuing the current operator study.
+
+
+## Export one maintained component family
+
+The complete application snapshot and the component checker both compose the
+baseline catalogue with the original direct files in
+`integration/component_fragments/*.json`.
+This includes fragment-only native manifests and their original primary and
+companion bodies, even when a declared binary exceeds the ordinary 8 MiB inline
+threshold. The existing source inventory checks still detect changes during
+capture.
+
+Use the same assembler to export a focused family from a current source or
+installed application directory:
+
+```bash
+python -B source_tools/application_assembly.py CURRENT_APPLICATION \
+  --family-component station-assessment \
+  --family-component utility-microbial-study \
+  --family-component observed-station-wbd \
+  --edition upper-savannah-station-family-20261013 \
+  --operation-id ECO-GEO-0D0F \
+  --source-map station-family.json.gz
+```
+
+Repeat `--family-component` to select the actual entry points. The selection
+includes their declared `requires` dependencies, component fragment additions,
+native `source_manifests`, and transitive local Python imports, package
+initializers, extension providers and binding modules, JavaScript imports,
+stylesheets and mapped HTML resources. It does not run the application, install
+scientific packages, or discover data by sweeping unrelated scientific archives.
+Data loaded dynamically by a model remains the responsibility of its maintained
+component paths or native source manifests.
+
+`--inspect` returns the same component inventory and exact missing-member
+diagnostics without publishing a bank. Whole-application inspection and
+publication retain their existing behavior when no family is selected.
+
+The output is an ordinary `commons.source-bank/v1` source overlay. Every selected
+file carries its original bytes, SHA-256, encoding and executable mode. The
+complete original catalogue and fragment bodies travel in
+`family_selection.declaration_sources` as source provenance; they do not overwrite
+the receiver's maintained catalogue with a partial replacement. The receiving
+application must already carry the selected families' original runtime and data
+declarations. The assembler verifies those declarations and the family's closure
+again after composing all source layers.
+
+When updating an older application, include its actual retained directory to
+record exact predecessor hashes:
+
+```bash
+python -B source_tools/application_assembly.py CURRENT_SOURCE \
+  --family-component station-assessment \
+  --family-component utility-microbial-study \
+  --family-component observed-station-wbd \
+  --family-against RETAINED_RECEIVING_APPLICATION \
+  --edition upper-savannah-station-family-20261013 \
+  --source-map station-family.json.gz
+
+python -B source_tools/application_assembly.py RETAINED_RECEIVING_APPLICATION \
+  --overlay station-family.json.gz \
+  --edition ecosystem-with-current-station-family \
+  --output NEW_COMPOSED_APPLICATION \
+  --source-map ecosystem-with-current-station-family.json.gz
+```
+
+The existing source join rejects a changed predecessor. If the receiver's selected
+component declarations differ, receive the current original declaration layer
+from its author in the same operation before the family overlay. Shared host
+modules are retained through the same local dependency closure and original
+source guards; neither the installed source nor the scientific Workspace is
+changed during export.
+
+For integrations, `application_components.inspect(..., selected_components=[...])`
+uses the same resolver with explicit reachability, and
+`application_components.read_directory(..., selected_components=[...])`
+returns the original bodies used for inspection. `application_assembly.export_family`
+captures and verifies those selected bodies, while its regular `compose` API
+validates selected-family overlays before any directory, archive or source-map
+publication.

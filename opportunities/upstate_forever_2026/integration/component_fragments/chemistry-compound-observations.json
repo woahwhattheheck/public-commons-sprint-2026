@@ -1,0 +1,19 @@
+{
+  "schema": "upstate.application-component-fragment/v1",
+  "id": "chemistry-compound-observations",
+  "source_reference": "Maintained native reach chemistry 0.3.0 compound and interval observations; original immutable 0.1 source retained",
+  "extend_components": {
+    "chemistry": {
+      "paths": [
+        "model/reach_chemistry/OBSERVATIONS.md",
+        "operator/CHEMISTRY_COMPOUND_OBSERVATIONS.md",
+        "integration/component_fragments/chemistry-compound-observations.json",
+        "integration/reach_chemistry/COMPOUND_SOURCE.json",
+        "integration/reach_chemistry/SOURCE_MANIFEST.json"
+      ]
+    }
+  },
+  "required_components": [
+    "chemistry"
+  ]
+}

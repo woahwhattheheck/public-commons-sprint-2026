@@ -1,0 +1,78 @@
+{
+  "schema": "upstate.receptor-study-transfer-integration/v1",
+  "source_base": "2f20ac018168f1dda2d1a5c9994c772dbb1e1c96",
+  "shared_baseline": "2f6f3ac114b2aff9c1a465c2c390990957820ab5",
+  "helper": "model/receptor_study_transfer.py",
+  "core": {
+    "import": "from . import receptor_study_transfer as receptor_transfer",
+    "root_kinds": "*receptor_transfer.ROOT_KINDS",
+    "documents": "**receptor_transfer.DOCUMENTS",
+    "locks": "**receptor_transfer.LOCKS",
+    "labels": "**receptor_transfer.LABELS",
+    "visit": "elif receptor_transfer.visit(self, kind, key, value, reason): pass",
+    "related": "receptor_transfer.related(self)",
+    "lock_paths": "*receptor_transfer.lock_paths(closure)",
+    "catalogue": "if selected_kind in receptor_transfer.ROOT_KINDS: use receptor_transfer.catalogue(workspace, selected_kind)"
+  },
+  "saved_edition_source": {
+    "module": "model/scientific_report_study_transfer.py",
+    "scoped_call": "receptor_transfer.include_source(closure, collection_id, entry)",
+    "preserve_all_prior_helpers": true
+  },
+  "selector_kinds": [
+    "receptor-networks",
+    "receptor-scenario-areas",
+    "receptor-programmes",
+    "receptor-experiments",
+    "receptor-inventories",
+    "receptor-report-sources"
+  ],
+  "ui": {
+    "path": "operator/web/receptors.mjs",
+    "joins": [
+      {
+        "before": "let root=null, frame=null, workspace=null, generation=0, catalog=null, taskTarget=null;",
+        "after": "let root=null, frame=null, workspace=null, generation=0, catalog=null, taskTarget=null;\n  let transferVersion=0, transferring=false;"
+      },
+      {
+        "before": "  function renderSaved() {",
+        "after": "  const transferKinds = {\n    network:'receptor-networks', 'source-areas':'receptor-scenario-areas',\n    programme:'receptor-programmes', comparison:'receptor-experiments',\n    inventory:'receptor-inventories', 'report-source':'receptor-report-sources',\n  };\n  function studyTransferButton(kind,id) {\n    if(typeof openExtension!=='function'||!transferKinds[kind]||!/^[0-9a-f]{64}$/.test(id||''))return '';\n    return '<button type=\"button\" data-receptor-action=\"transfer-study\" data-kind=\"'+esc(kind)+\n      '\" data-id=\"'+esc(id)+'\" data-workspace=\"'+esc(workspace)+'\">Transfer editable study</button>';\n  }\n  async function transferStudy(target) {\n    const kind=target?.dataset?.kind,id=target?.dataset?.id,requested=target?.dataset?.workspace;\n    if(!transferKinds[kind]||!/^[0-9a-f]{64}$/.test(id||'')||\n       !requested||requested!==workspace||requested!==currentWorkspace())\n      throw Error('Open the saved source-water study in its original workspace.');\n    if(typeof openExtension!=='function')throw Error('The original selected-study desk is unavailable.');\n    if(transferring)return;\n    const context=viewContext(),epoch=generation,version=++transferVersion;\n    const current=()=>currentView(context)&&epoch===generation&&version===transferVersion;\n    transferring=true;\n    status('Reading the exact saved source-water study for editable transfer…');\n    try {\n      const retained=await api(endpoint('/api/receptors/'+kind,{id,workspace:requested}));\n      if(!current())return;\n      if(retained?.id!==id||retained?._kind!==kind)\n        throw Error('The saved source-water reply identifies another original study.');\n      const selected={kind:transferKinds[kind],id,title:retained.title||id};\n      if(typeof retained.state==='string')selected.state=retained.state;\n      await openExtension('study-transfer','openForStudies',{workspace_key:requested,roots:[selected]});\n    } catch(error) {\n      if(current())status(error.message||String(error),true);\n    } finally {\n      if(version===transferVersion)transferring=false;\n    }\n  }\n  function renderSaved() {"
+      },
+      {
+        "before": "data-id=\"'+esc(row.id)+'\">Open result</button></td></tr>",
+        "after": "data-id=\"'+esc(row.id)+'\">Open result</button>'+studyTransferButton(row.kind,row.id)+'</td></tr>"
+      },
+      {
+        "before": "  function renderResult() {\n    if(!result||!frame)return;",
+        "after": "  function renderResult() {\n    renderResultBody();\n    const header=node('[data-rc-result-header]');\n    if(result&&header&&!header.querySelector('[data-receptor-action=\"transfer-study\"]')){\n      const button=studyTransferButton(result._kind,result.id);\n      if(button)header.insertAdjacentHTML('beforeend','<div class=\"rc-toolbar\">'+button+'</div>');\n    }\n  }\n  function renderResultBody() {\n    if(!result||!frame)return;"
+      },
+      {
+        "before": "  async function act(action,target) {\n",
+        "after": "  async function act(action,target) {\n    if(action==='transfer-study')return transferStudy(target);\n"
+      },
+      {
+        "before": "    remember();generation++;root=null;frame=null;fetching=false;observing=false;",
+        "after": "    remember();generation++;transferVersion++;transferring=false;root=null;frame=null;fetching=false;observing=false;"
+      }
+    ],
+    "verification": [
+      "All six original kinds reread and hand off exact server-returned identity",
+      "A → B → A and detach invalidate pending transfer",
+      "Repeated click preserves one in-flight transfer",
+      "Mismatched result is rejected visibly",
+      "Missing host capability hides the transfer control"
+    ]
+  },
+  "receiving": "Use the same original source-water receiving operation and retained source Workspace. No new native model operation is requested.",
+  "original_report_editions": [
+    1,
+    2
+  ],
+  "r9_maps": {
+    "render": false,
+    "original_runtime_retained": true,
+    "source_member_inventory": "figures/source-water-map-members.json",
+    "geometry_reader": "figures/original-geometry-reader.json",
+    "specification": "figures/source-water-map-spec.json"
+  }
+}

@@ -14,6 +14,14 @@ MARKER = "ES-SUPERVISION-20261012"
 MEMBERS = ("model/native_execution.py", "model/native_worker.py",
            "operator/native_jobs.py", "operator/programme_jobs.py",
            "operator/parameter_study_jobs.py", "operator/parameter_study_api.py",
+           "model/parameter_case_status.py", "model/parameter_result_query.py",
+           "model/parameter_views.py", "model/parameter_report_source.py",
+           "model/parameter_scientific_figures.py",
+           "model/record_catalog.py", "model/delivery_catalogue.py",
+           "operator/web/parameter_case_console.mjs", "operator/web/parameter_studies.mjs",
+           "operator/web/parameter_studies.css", "docs/PARAMETER_CASE_CONSOLE.md",
+           "docs/PARAMETER_RESULT_QUERIES.md", "docs/PARAMETER_STUDY_PROCESS_RECOVERY.md",
+           "docs/PARAMETER_CASE_BROWSING.md", "docs/PARAMETER_SCIENTIFIC_REPORTS.md",
            "operator/web/jobs.mjs", "operator/web/jobs.css", "operator/NATIVE_JOBS.md",
            "install_native_supervision.py")
 PREVIOUS = {
@@ -90,6 +98,38 @@ PREVIOUS.setdefault("operator/parameter_study_api.py", []).extend(["a6eb20105e6f
 PREVIOUS.setdefault("install_native_supervision.py", []).extend(["1deba14b65ed046c7283cdeb9a97bd0702027eafc44e62993a8c54c6e1ab6e12"])
 PREVIOUS.setdefault("operator/NATIVE_JOBS.md", []).extend(["4f3c1dd30be3c78b585c0070662649e3c985fc56da383317e2c491b4f593b39e"])
 PREVIOUS.setdefault("operator/parameter_study_jobs.py", []).extend(["181b0dc0c401bbe4b44a6a106e0fe6236c1c776247398d5ee693532d8602217d", "7fa5a1a929c80251e75d0273722c73f83715b6ebe94c706dade354b4f0c62919"])
+
+# Installed source before the complete retained Parameter result/console join.
+PREVIOUS.setdefault("operator/parameter_study_api.py", []).append("4b74287a788429736026bd6a7e8c0f3f1a83d977ff51e06b9c7eaec913150ee5")
+PREVIOUS.setdefault("operator/web/parameter_studies.mjs", []).append("26be73f32614a1e9dabf25aea83dbb53bff243a379b5c6ed30d8b2265afa3a84")
+PREVIOUS.setdefault("operator/web/parameter_studies.mjs", []).append("ca146243fe69c861c36acbb202492eb01bcd9163fbaa7d00e2b5b56178da9a0b")
+PREVIOUS.setdefault("install_native_supervision.py", []).append("f3a0528a818641095969898b635e7c6324f6ab6842995cbe55f90f2079aee733")
+PREVIOUS.setdefault("operator/NATIVE_JOBS.md", []).append("fb4339debca8ab51cb97cdf076b16a0f61c86afcc5bef2a5a4383da6001a2b56")
+
+# Complete the received Parameter operating guide while accepting this original edition.
+PREVIOUS.setdefault("operator/NATIVE_JOBS.md", []).append("125bfb1e39c0a0c56f84c7d171e15b7c9e55ffd0d635381af1df8137002a68b8")
+PREVIOUS.setdefault("install_native_supervision.py", []).append("2badb6f90e9ff87475be475cf7f4551352e507c39ac24684623a4c9a2f1c6bef")
+
+
+# Exact installed source before compact saved-case navigation (PR3867).
+PREVIOUS.setdefault("install_native_supervision.py", []).append("273ea100d343c3665da104942758a4ecc79554f0c00b16149412be4a982c9927")
+PREVIOUS.setdefault("operator/NATIVE_JOBS.md", []).append("80ee50777b8c95ae725a1aff63c5bacabdfc385da29fb5f840d983ecd9eb0926")
+PREVIOUS.setdefault("operator/parameter_study_api.py", []).append("be0642a44fbb5e55a81184563675b9665333f1ca97cb7ec0f1926f5d29d7f4fe")
+PREVIOUS.setdefault("operator/web/parameter_studies.mjs", []).append("af524e4158c89dad72ea8d0a9c6ed636db10bab1f1c977e616ddf6988fae437a")
+PREVIOUS.setdefault("model/parameter_case_status.py", []).append("0fd189b233f6a10420b73946151e907caa49774feabccadf674ac14cda9b3b7d")
+
+
+# Exact installed source before the complete Parameter SourceReports continuation (PR3944).
+PREVIOUS.setdefault("install_native_supervision.py", []).append("9b08d1f5948f68755d1ea6e8669b5308415e2281be1927383134b22180bcd122")
+PREVIOUS.setdefault("operator/NATIVE_JOBS.md", []).append("688262affddfa5f272899f86a7493882f4edecdbf151c2690e11c3d740178577")
+PREVIOUS.setdefault("operator/parameter_study_api.py", []).append("8e4d1cd5a2bef6230f300ac464bb1571918ac26a1dd78611075fd51d7c7126ec")
+PREVIOUS.setdefault("operator/web/parameter_studies.mjs", []).append("969d015c10dd831c59612da02d999e4044117041f2c085a3e604e620cbef5d6a")
+
+# Exact published Parameter scientific-source editions before original-row figures (PR3991).
+PREVIOUS.setdefault("model/parameter_report_source.py", []).append("7f87a4e78b874c0fb8cde7adcb963ae55303aa8785f9c92df4fdfab35b1d27eb")
+PREVIOUS.setdefault("docs/PARAMETER_SCIENTIFIC_REPORTS.md", []).append("616d07853a6f08e9ac9521188ef196828bbe8ea79aec838f7cd852bff36bbd83")
+PREVIOUS.setdefault("install_native_supervision.py", []).append("f2f60806e318161e5d0a3db80913522b1850566166266524535b7401dcd1d6c3")
+PREVIOUS.setdefault("operator/NATIVE_JOBS.md", []).append("885d966bae05c7e5528ffc285bdf4128445f41b16c693aff86c6331f67f3a9e7")
 
 DETACH_DISPOSITION = ('            final_state = ("interrupted" if isinstance(error, NativeJobDetached) else\n'
                       '                           "cancelled" if isinstance(error, NativeJobCancelled) else "failed")\n')
@@ -370,13 +410,115 @@ def atomic_write(path, body, mode=0o644):
             pending.unlink(missing_ok=True)
 
 
+PARAMETER_QUERY_KEYS = (
+    "id", "baseline_run_id", "area_id", "pollutant", "offset", "limit",
+    "candidate_run_ids", "run_id", "attempt_id", "stream", "log_offset",
+    "expected_attempt_id", "history_offset", "range_offset", "range_limit",
+    "expected_artifact_sha256", "case_filter", "query", "source_id",
+)
+
+
+def parameter_result_server_patch(source):
+    """Compose current query fields and assets without narrowing peer routes."""
+    tree = ast.parse(source, filename="operator/server.py")
+    calls = [node for node in ast.walk(tree)
+             if isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute)
+             and node.func.attr == "read" and isinstance(node.func.value, ast.Attribute)
+             and node.func.value.attr == "parameter_studies"
+             and len(node.args) >= 3 and isinstance(node.args[1], ast.Subscript)
+             and isinstance(node.args[1].value, ast.Name)
+             and node.args[1].value.id == "parameter_study_reads"]
+    if len(calls) != 1 or len(calls[0].args) < 3:
+        raise ValueError("Parameter results: expected one maintained native read dispatcher.")
+    query = calls[0].args[2]
+    retained = {node.value for node in ast.walk(query)
+                if isinstance(node, ast.Constant) and isinstance(node.value, str)}
+    missing = [name for name in PARAMETER_QUERY_KEYS if name not in retained]
+    if missing:
+        # AST column positions are UTF-8 bytes. Preserve any preceding Unicode
+        # and every unknown peer query field exactly.
+        raw = source.encode("utf-8")
+        lines = raw.splitlines(keepends=True)
+        start = sum(map(len, lines[:query.lineno - 1])) + query.col_offset
+        end = sum(map(len, lines[:query.end_lineno - 1])) + query.end_col_offset
+        original = raw[start:end].decode("utf-8")
+        fields = ", ".join(json.dumps(name) + ": one(" + json.dumps(name) + ")"
+                           for name in missing)
+        replacement = "(" + original + " | {" + fields + "})"
+        source = (raw[:start] + replacement.encode("utf-8") + raw[end:]).decode("utf-8")
+    matches = list(re.finditer(r"if selected not in (\(*)(\{[^}\n]+\})([^:\n]*):", source))
+    if len(matches) != 1:
+        raise ValueError("Parameter results: expected the maintained static asset registry.")
+    match = matches[0]
+    members = ast.literal_eval(match.group(2))
+    if not isinstance(members, set) or not all(isinstance(item, str) for item in members):
+        raise ValueError("Parameter results: expected the original literal asset set.")
+    required_assets = {"parameter_case_console.mjs", "parameter_studies.mjs", "parameter_studies.css"}
+    if not required_assets <= members:
+        members.update(required_assets)
+        literal = "{" + ", ".join(json.dumps(item) for item in sorted(members)) + "}"
+        source = (source[:match.start(2)] + literal + source[match.end(2):])
+    ast.parse(source, filename="operator/server.py")
+    return source
+
+
+def parameter_report_server_patch(source):
+    """Retain exact prepared-source identity and renew its native download tickets."""
+    original = (
+        '        if task["action"] in PARAMETER_STUDY_ACTIONS and task["state"] == "complete" and result.get("id"):\n'
+        '            task["_item"] = {"kind": "parameter-studies", "id": result["id"]}\n'
+        '            task["_downloads"] = self.item(task["workspace"], "parameter-studies", result["id"])["_downloads"]\n')
+    joined = (
+        '        if task["action"] in PARAMETER_STUDY_ACTIONS and task["state"] == "complete" and result.get("id"):\n'
+        '            if task["action"] == "parameter-study.source.prepare":\n'
+        '                task["_item"] = {"kind": "parameter-studies", "id": result["experiment_id"]}\n'
+        '                prepared = self.parameter_studies.read(task["workspace"], "scientific-source",\n'
+        '                    {"source_id": result["id"]})\n'
+        '                task["result"] = {**result, **prepared}\n'
+        '                task["_downloads"] = prepared.get("downloads", [])\n'
+        '            else:\n'
+        '                task["_item"] = {"kind": "parameter-studies", "id": result["id"]}\n'
+        '                task["_downloads"] = self.item(task["workspace"], "parameter-studies", result["id"])["_downloads"]\n')
+    if joined not in source:
+        source = replace_one(source, original, joined, "Parameter saved scientific-source task")
+    ast.parse(source, filename="operator/server.py")
+    return source
+
+
+def parameter_report_browser_patch(source):
+    """Join the existing SourceReports host into the installed Parameter desk."""
+    if not re.search(r"(?:async\s+)?function\s+openScientificReport\s*\(", source):
+        raise ValueError("Receive the current shared SourceReports host before Parameter report navigation.")
+    matches = list(re.finditer(
+        r"^const parameterStudies\s*=\s*attachParameterStudies\(\{([^\n]*)\}\);", source, re.M))
+    if len(matches) != 1:
+        raise ValueError("Parameter report navigation needs its current host attachment.")
+    match = matches[0]
+    body = match.group(1)
+    if not re.search(r"\bopenScientificReport\b", body):
+        replacement = body.rstrip().rstrip(",") + ",openScientificReport"
+        source = source[:match.start(1)] + replacement + source[match.end(1):]
+    action = "parameter-study.source.prepare"
+    if not re.search(r"['\"]" + re.escape(action) + r"['\"]\s*:", source):
+        labels = list(re.finditer(r"^const actionLabels\s*=\s*\{[^\n]*\};", source, re.M))
+        if len(labels) != 1:
+            raise ValueError("Parameter report action needs the original action-label registry.")
+        end = labels[0].end()
+        source = (source[:end] + '\nObject.assign(actionLabels,{"parameter-study.source.prepare":'
+                  '"Prepare Parameter scientific source"});' + source[end:])
+    return source
+
+
 def parameter_study_dependency(body):
     """Keep the installed scientific engine and check the adapter's new API."""
     tree = ast.parse(body.decode("utf-8"))
     declarations = {node.name: node for node in tree.body if isinstance(node, ast.FunctionDef)}
     for name, arguments in (
             ("native_case_context", ("workspace", "key", "run_id")),
-            ("record_interruption", ("workspace", "key", "error"))):
+            ("record_interruption", ("workspace", "key", "error")),
+            ("_read", ("workspace", "key")),
+            ("_bind_state", ("workspace", "key", "spec", "state")),
+            ("_baseline_versions", ("run",))):
         node = declarations.get(name)
         if node is None:
             raise ValueError("Receive the current complete saved-study source before native supervision: "
@@ -389,9 +531,68 @@ def parameter_study_dependency(body):
                 or any(value is None for value in args.kw_defaults)):
             raise ValueError("Compose the current saved-study adapter with its scientific API: " + name)
     return {"bytes": len(body), "sha256": sha(body),
-            "functions": ["native_case_context", "record_interruption"],
+            "functions": ["native_case_context", "record_interruption", "_read", "_bind_state",
+                          "_baseline_versions"],
             "policy": "retain installed scientific source unchanged"}
 
+
+
+def retained_reader_dependencies(application):
+    """Validate and retain scientific/context modules used by the incoming readers."""
+    required = {
+        "model/common.py": ("canonical", "digest", "held", "identifier", "relative_file",
+                            "read_json", "file_digest"),
+        "model/model_selection.py": ("selected", "run_models", "validate_completed_run"),
+        "model/native_versions.py": ("model_versions", "version_label"),
+        "model/parameter_calibration.py": ("candidates",),
+        "model/parameter_exports.py": ("member_descriptors",),
+        "model/ensemble_scientific_source.py": ("_member", "_copy", "_text", "_render",
+                                               "delivery_selection"),
+        "model/observed_context.py": ("source_choices", "collect", "_figure_detail_tables"),
+        "model/ensemble_scientific_figures.py": ("_number", "_axis", "_domain", "_svg"),
+        "model/scientific_figures.py": ("_validate_figure",),
+        "model/observed_report_render.py": ("prepare", "render"),
+    }
+    bodies, records = {}, {}
+    for name, symbols in required.items():
+        path = application / name
+        if not path.is_file():
+            raise ValueError("Receive the complete current saved-study application first; missing " + name)
+        body = path.read_bytes()
+        tree = ast.parse(body.decode("utf-8"), filename=name)
+        declarations = {node.name for node in tree.body
+                        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef))}
+        missing = set(symbols) - declarations
+        if missing:
+            raise ValueError("Retained Parameter reader needs current " + name + ": " +
+                             ", ".join(sorted(missing)))
+        bodies[name] = body
+        records[name] = {"bytes": len(body), "sha256": sha(body),
+                         "functions": list(symbols),
+                         "policy": "retain installed scientific/context source unchanged"}
+    constants = {
+        "model/parameter_exports.py": ("MEMBER_SCHEMA",),
+        "model/ensemble_scientific_source.py": ("RECIPE_SCHEMA", "ROLE"),
+    }
+    for name, symbols in constants.items():
+        tree = ast.parse(bodies[name].decode("utf-8"), filename=name)
+        declared = {target.id for node in tree.body if isinstance(node, ast.Assign)
+                    for target in node.targets if isinstance(target, ast.Name)}
+        if not set(symbols) <= declared:
+            raise ValueError("Receive the original scientific-source constants in " + name)
+        records[name]["constants"] = list(symbols)
+    browser = "operator/web/source_reports.mjs"
+    path = application / browser
+    if not path.is_file():
+        raise ValueError("Receive the current shared SourceReports controller before Parameter report navigation.")
+    body = path.read_bytes()
+    if not re.search(r"\bopenForSources\b", body.decode("utf-8")):
+        raise ValueError("The retained SourceReports controller must expose openForSources.")
+    bodies[browser] = body
+    records[browser] = {"bytes": len(body), "sha256": sha(body),
+                       "functions": ["openForSources"],
+                       "policy": "retain installed shared SourceReports controller unchanged"}
+    return bodies, records
 
 def install(application, increment, *, retention=False):
     application, increment = Path(application).resolve(strict=True), Path(increment).resolve(strict=True)
@@ -400,9 +601,14 @@ def install(application, increment, *, retention=False):
     dependency = "model/parameter_studies.py"
     originals[dependency] = (application / dependency).read_bytes()
     retained_dependencies = {dependency: parameter_study_dependency(originals[dependency])}
+    reader_bodies, reader_records = retained_reader_dependencies(application)
+    originals.update(reader_bodies)
+    retained_dependencies.update(reader_records)
     changed = {
-        "operator/server.py": server_patch(originals["operator/server.py"].decode("utf-8"), retention=retention).encode("utf-8"),
-        "operator/web/app.mjs": browser_patch(originals["operator/web/app.mjs"].decode("utf-8")).encode("utf-8"),
+        "operator/server.py": parameter_report_server_patch(parameter_result_server_patch(server_patch(
+            originals["operator/server.py"].decode("utf-8"), retention=retention))).encode("utf-8"),
+        "operator/web/app.mjs": parameter_report_browser_patch(browser_patch(
+            originals["operator/web/app.mjs"].decode("utf-8"))).encode("utf-8"),
         "model/portable.py": portable_patch(originals["model/portable.py"].decode("utf-8")).encode("utf-8")}
     programme_path = application / "operator/programmes.py"
     if programme_path.exists():
@@ -444,8 +650,9 @@ def install(application, increment, *, retention=False):
         mode = destination.stat().st_mode & 0o777 if destination.exists() else 0o644
         if not destination.exists() or destination.read_bytes() != changed[name]:
             atomic_write(destination, changed[name], mode)
-    if (application / dependency).read_bytes() != originals[dependency]:
-        raise ValueError("The retained scientific source changed during native supervision installation")
+    for dependency in retained_dependencies:
+        if (application / dependency).read_bytes() != originals[dependency]:
+            raise ValueError("The retained scientific/context source changed during native supervision installation: " + dependency)
     receipt = {"schema": "upstate.native-supervision-install/v1", "operation_id": MARKER,
                "installed_at": dt.datetime.now(dt.timezone.utc).isoformat(),
                "edition": edition,

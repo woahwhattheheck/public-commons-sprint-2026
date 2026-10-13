@@ -7,6 +7,8 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import { inspectMerchantRuntime } from '../../stellar/scf-starforge-20261009/sf46-release/runtime-package.mjs';
 import { main as worldbank } from '../../stellar/scf-starforge-20261009/sf30-seller-sdk/worldbank/cli.mjs';
 
+import { mainCommissioning } from './commissioning-plan-cli.mjs';
+
 const here = dirname(fileURLToPath(import.meta.url));
 const sourceRoot = resolve(here, '../..');
 const pythonPackage = join(sourceRoot, 'stellar/scf-starforge-20261009/sf88-operator-buyer-cli/python');
@@ -14,6 +16,7 @@ const worldbankCore = join(sourceRoot, 'stellar/scf-starforge-20261009/sf30-sell
 const help = [
   'World Bank economic workspace',
   '',
+  '  starforge worldbank-product commissioning example|create --out NEW.json [--brief BRIEF.json]',
   '  starforge worldbank-product workspace --directory DIR [--port 0] [--python python3]',
   '  starforge worldbank-product status --directory DIR',
   '  starforge worldbank-product action ACTION --directory DIR [--input FILE]',
@@ -108,6 +111,7 @@ export async function receiveWorldBankProgramme({
 export async function main(argv = process.argv.slice(2)) {
   const args = [...argv], command = args.shift();
   if (!command || ['--help', '-h', 'help'].includes(command)) { console.log(help); return 0; }
+  if (command === 'commissioning') return mainCommissioning(args);
   if (['workspace', 'status', 'action'].includes(command)) return worldbank([command, ...args]);
   if (command === 'programme') {
     let python = process.env.PYTHON || 'python3';
@@ -142,7 +146,7 @@ export async function main(argv = process.argv.slice(2)) {
     const opts = pairs(args, ['--runtime', '--workspace', '--python', '--python-dependencies']);
     return receiveWorldBankProduct({ runtime: opts['--runtime'], workspace: opts['--workspace'], python: opts['--python'], pythonDependencies: opts['--python-dependencies'] });
   }
-  throw fail('Choose workspace, status, action, analysis, programme, receive or programme-receive; use --help.');
+  throw fail('Choose commissioning, workspace, status, action, analysis, programme, receive or programme-receive; use --help.');
 }
 if (process.argv[1] && await realpath(resolve(process.argv[1])).then(path => pathToFileURL(path).href === import.meta.url, () => false))
   main().then(code => { if (Number.isInteger(code)) process.exitCode = code; }).catch(error => {

@@ -17,6 +17,13 @@
       ]
     ],
     [
+      "/runtime-output.mjs",
+      [
+        "runtime-output.mjs",
+        "text/javascript; charset=utf-8"
+      ]
+    ],
+    [
       "/managed.mjs",
       [
         "managed.mjs",
@@ -195,6 +202,34 @@
       "/application-inputs.mjs",
       [
         "application-inputs.mjs",
+        "text/javascript; charset=utf-8"
+      ]
+    ],
+    [
+      "/application-input-sets.mjs",
+      [
+        "application-input-sets.mjs",
+        "text/javascript; charset=utf-8"
+      ]
+    ],
+    [
+      "/application-input-set-format.mjs",
+      [
+        "application-input-set-format.mjs",
+        "text/javascript; charset=utf-8"
+      ]
+    ],
+    [
+      "/application-input-sets.css",
+      [
+        "application-input-sets.css",
+        "text/css; charset=utf-8"
+      ]
+    ],
+    [
+      "/application-input-set-editions.mjs",
+      [
+        "application-input-set-editions.mjs",
         "text/javascript; charset=utf-8"
       ]
     ]

@@ -1,0 +1,37 @@
+[
+  {
+    "station_id": "21NC03WQ-H6000000",
+    "characteristic": "Fecal Coliform",
+    "total_records": 138,
+    "censored_records": 2,
+    "maximum_records_in_30_calendar_days": 2,
+    "example_window": [
+      {
+        "date": "2008-01-28",
+        "result_id": "STORET-92454491"
+      },
+      {
+        "date": "2008-02-20",
+        "result_id": "STORET-92464667"
+      }
+    ],
+    "consecutive_samples_required_by_referenced_criterion": 5,
+    "records_above_400_with_matching_units": [
+      {
+        "result_id": "STORET-92512068",
+        "date": "2008-08-25",
+        "value": 900,
+        "original_unit": "cfu/100mL",
+        "quality_codes": [
+          "Q1"
+        ],
+        "result_comment": "Q1; Holding time exceeded;  Holding time exceeded prior to receipt by lab.",
+        "source": {
+          "path": "source/nc_ambient_measurements/20261013/original/h600-2008-2009.csv",
+          "row": 123
+        }
+      }
+    ],
+    "interpretation": "Calendar windows include the starting date through its next 29 dates. Published holding-time and other comments remain attached. Sampling-frequency support is distinct from computing a recreational assessment."
+  }
+]

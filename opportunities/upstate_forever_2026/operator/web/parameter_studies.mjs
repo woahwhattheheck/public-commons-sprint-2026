@@ -154,10 +154,10 @@ export function parseParameterStudyValues(text) {
 export function attachParameterStudies(host) {
   const caseConsole = attachParameterCaseConsole(host);
   let root = null, controller = null, selected = null, currentWorkspace = null, pendingOpen = null;
-  let study = null, results = null, resultFilters = {area_id: '', pollutant: '', offset: 0};
-  let caseFilter = '', caseOffset = 0, draftCatalog = null, draftRoot = null;
+  let study = null, results = null, resultFilters = {area_id: '', pollutant: '', offset: 0, range_offset: 0};
+  let caseFilter = '', caseState = 'all', caseOffset = 0, caseSequence = 0, caseController = null, caseTimer = null, draftCatalog = null, draftRoot = null;
   let catalogSequence = 0, previewSequence = 0, resultSequence = 0, confirmedSelection = null;
-  let formSequence = 0, activeForm = null, draftSession = null;
+  let formSequence = 0, activeForm = null, draftSession = null, resultController = null;
   const state = () => host.getState();
   const data = () => state()?.data || {};
   const workspace = () => state()?.workspace_key;
@@ -231,7 +231,7 @@ export function attachParameterStudies(host) {
       activeForm?.current();
       currentWorkspace = workspace(); selected = null; study = null; results = null;
       if (pendingOpen?.workspace !== currentWorkspace) pendingOpen = null;
-      resultFilters = {area_id: '', pollutant: '', offset: 0}; caseFilter = ''; caseOffset = 0;
+      resultFilters = {area_id: '', pollutant: '', offset: 0, range_offset: 0}; caseFilter = ''; caseState = 'all'; caseOffset = 0;
     }
     const studies = data()['parameter-studies'] || [];
     if (pendingOpen?.workspace === workspace() && studies.some(row => row.id === pendingOpen.id)) {
@@ -260,20 +260,29 @@ export function attachParameterStudies(host) {
 
   function detach() {
     if (controller) controller.abort();
+    resultController?.abort(); resultController = null; resultSequence++;
+    caseController?.abort(); caseController = null; caseSequence++;
+    clearTimeout(caseTimer); caseTimer = null;
     controller = null; root = null;
   }
 
   function mount(node) {
     detach(); root = node; controller = new AbortController();
     root.addEventListener('change', event => {
+      if (event.target.matches('[data-parameter-study-case-state]')) {
+        caseState = event.target.value; caseOffset = 0; refreshCases().catch(showError); return;
+      }
       if (event.target.matches('[data-parameter-study-result-filter]')) {
         resultFilters[event.target.dataset.parameterStudyResultFilter] = event.target.value;
-        resultFilters.offset = 0; refreshResults().catch(showError);
+        resultFilters.offset = 0; resultFilters.range_offset = 0; refreshResults().catch(showError);
       }
     }, {signal: controller.signal});
     root.addEventListener('input', event => {
       if (event.target.matches('[data-parameter-study-case-filter]')) {
-        caseFilter = event.target.value; caseOffset = 0; renderCases();
+        caseFilter = event.target.value; caseOffset = 0;
+        caseController?.abort(); caseSequence++;
+        clearTimeout(caseTimer);
+        caseTimer = setTimeout(() => { caseTimer = null; refreshCases().catch(showError); }, 200);
       }
     }, {signal: controller.signal});
     if (selected && !pendingOpen) openStudy(selected).catch(showError);
@@ -289,36 +298,84 @@ export function attachParameterStudies(host) {
     if (panel) { panel.innerHTML = '<div class="notice error" role="alert">' + escapeHTML(error.message || error) + '</div>'; }
   }
 
-  async function openStudy(id) {
-    const thisRoot = root, selectedWorkspace = workspace(), signal = controller?.signal;
-    const item = await host.api(requested('/api/item', {kind: 'parameter-studies', id}), {signal});
-    if (!thisRoot || thisRoot !== root || selectedWorkspace !== workspace() || selected !== id) return;
-    study = item;
-    const progress = item.progress || {}, isBusy = busy(id);
+
+  function caseActions(item, id) {
+    const progress = item.progress || {}, isBusy = busy(id) || item.active || item.native_active;
     const canRun = item.state !== 'complete' && !isBusy;
-    const activeCase = (item.cases || []).find(row => row.id === item.active_case_id);
-    const actions = (canRun ? button('run', item.state === 'prepared' ? 'Run all cases' : 'Resume remaining cases', 'data-id="' + escapeHTML(id) + '"', true) : '') +
+    return (canRun ? button('run', item.state === 'prepared' ? 'Run all cases' : 'Resume remaining cases', 'data-id="' + escapeHTML(id) + '"', true) : '') +
       (!isBusy && Number(progress.completed) > 0 ? button('summarize', 'Refresh completed results', 'data-id="' + escapeHTML(id) + '"') : '') +
       button('revise', 'Use as new draft', 'data-id="' + escapeHTML(id) + '"') +
       button('calibration', 'Use completed cases in calibration', 'data-id="' + escapeHTML(id) + '"') +
-      (item.comparison_id ? '<button type="button" data-action="item" data-kind="comparisons" data-id="' + escapeHTML(item.comparison_id) + '">Open difference maps</button>' : '');
+      (item.artifacts?.results ? button('source-prepare', 'Prepare scientific source', 'data-id="' + escapeHTML(id) + '"') : '') +
+      (item.scientific_source ? button('source-open', 'Open prepared source in composer', 'data-id="' + escapeHTML(id) + '" data-source-id="' + escapeHTML(item.scientific_source.id) + '"') : '') +
+      (item.comparison_id ? '<button type="button" data-action="item" data-kind="comparisons" data-id="' + escapeHTML(item.comparison_id) + '">Open difference maps</button><button type="button" data-action="spatial-item" data-kind="comparisons" data-id="' + escapeHTML(item.comparison_id) + '">View difference maps</button>' : '');
+  }
+
+  function caseSummary(item) {
+    const progress = item.progress || {}, activeCase = item.active_case;
+    const isBusy = busy(item.id) || item.active || item.native_active;
+    return '<div class="parameter-study-summary"><div>' + status(item.state) +
+      '<p><strong>' + format(progress.completed || 0) + ' / ' + format(progress.total || item.case_count || 0) +
+      '</strong> cases complete' + (progress.failed ? ' · ' + format(progress.failed) + ' need recovery' : '') +
+      (progress.interrupted ? ' · ' + format(progress.interrupted) + ' interrupted' : '') +
+      '</p></div><progress max="' + escapeHTML(progress.total || item.case_count || 1) + '" value="' +
+      escapeHTML(progress.completed || 0) + '" aria-label="Native cases complete"></progress></div>' +
+      (activeCase && isBusy ? '<p class="note">Executing ' + escapeHTML(activeCase.label) + ' · native run ' +
+        escapeHTML(short(activeCase.run_id)) + '</p>' : '') +
+      aggregationProgress(item) + nativeFailureMarkup(item.error);
+  }
+
+  async function readCasePage(id) {
+    clearTimeout(caseTimer); caseTimer = null;
+    caseController?.abort();
+    const reading = new AbortController(); caseController = reading;
+    const thisRoot = root, selectedWorkspace = workspace(), sequence = ++caseSequence;
+    const current = () => thisRoot && thisRoot === root && selectedWorkspace === workspace() &&
+      selected === id && sequence === caseSequence && !reading.signal.aborted;
+    let value;
+    try {
+      value = await host.api(requested('/api/parameter-studies/view', {
+        id, offset: caseOffset, limit: 50, case_filter: caseState, query: caseFilter
+      }), {signal: reading.signal});
+    } catch (error) {
+      if (current()) throw error;
+      return null;
+    }
+    return current() ? value : null;
+  }
+
+  async function refreshCases() {
+    if (!root || !selected) return;
+    const item = await readCasePage(selected);
+    if (!item) return;
+    study = item; caseOffset = item.page.offset;
+    renderCases();
+    const summary = root.querySelector('[data-parameter-study-summary]');
+    if (summary) summary.innerHTML = caseSummary(item);
+    const actions = root.querySelector('[data-parameter-study-actions]');
+    if (actions) actions.innerHTML = caseActions(item, item.id);
+    if (item.artifacts?.results && results?.artifact_sha256 !== item.artifacts.results.sha256) {
+      await refreshResults();
+    }
+  }
+  async function openStudy(id) {
+    const thisRoot = root, item = await readCasePage(id);
+    if (!item || thisRoot !== root) return;
+    resultController?.abort(); resultSequence++;
+    study = item; caseOffset = item.page.offset;
+    const actions = caseActions(item, id);
     const detail = thisRoot.querySelector('[data-parameter-study-detail]');
     detail.innerHTML = '<section class="section"><header class="section-header"><div><h2>' + escapeHTML(item.selection.title) +
-      '</h2><p>' + escapeHTML(item.selection.purpose) + '</p></div><div class="page-actions">' + actions +
-      '</div></header><div class="section-body"><div class="parameter-study-summary"><div>' + status(item.state) +
-      '<p><strong>' + format(progress.completed || 0) + ' / ' + format(progress.total || item.cases.length) +
-      '</strong> cases complete' + (progress.failed ? ' · ' + format(progress.failed) + ' need recovery' : '') +
-      '</p></div><progress max="' + escapeHTML(progress.total || item.cases.length || 1) + '" value="' +
-      escapeHTML(progress.completed || 0) + '" aria-label="Native cases complete"></progress></div>' +
-      (activeCase && isBusy ? '<p class="note">Executing ' + escapeHTML(activeCase.label) + ' · native run ' + escapeHTML(short(activeCase.run_id)) + '</p>' : '') +
-      aggregationProgress(item) +
-      nativeFailureMarkup(item.error) +
+      '</h2><p>' + escapeHTML(item.selection.purpose) + '</p></div><div class="page-actions" data-parameter-study-actions>' + actions +
+      '</div></header><div class="section-body"><div data-parameter-study-summary>' + caseSummary(item) + '</div>' +
       '<dl class="parameter-study-provenance">' + provenance(item.baseline_selection) + '</dl>' + baselineExecution(item) +
       '<details class="technical"><summary>Selected axes and scientific rationale</summary>' + axesSummary(item.selection.axes) + '</details>' +
       '<div data-parameter-study-error></div></div></section>' +
-      '<section class="section"><header class="section-header"><div><h2>Native cases</h2><p>Each case uses the baseline grid and land-cover scenario with its selected parameter profile.</p></div><label class="parameter-study-filter">Find a case<input data-parameter-study-case-filter type="search" value="' + escapeHTML(caseFilter) + '" placeholder="Case, parameter, or run ID"></label></header><div data-parameter-study-cases></div></section>' +
+      '<section class="section"><header class="section-header"><div><h2>Native cases</h2><p>Each case uses the baseline grid and land-cover scenario with its selected parameter profile.</p></div><label class="parameter-study-filter">Case state<select data-parameter-study-case-state>' +
+      ['all', 'unfinished', 'failed', 'interrupted', 'complete'].map(value => option(value, label(value), caseState === value)).join('') +
+      '</select></label><label class="parameter-study-filter">Find a case<input data-parameter-study-case-filter type="search" value="' + escapeHTML(caseFilter) + '" placeholder="Case, parameter, or run ID"></label></header><div data-parameter-study-cases></div></section>' +
       '<section class="section"><header class="section-header"><div><h2>Results and downloads</h2><p>Signed changes are study case minus baseline, using the paired valid cells for each selected area.</p></div></header><div class="section-body"><div data-parameter-study-results></div>' +
-      host.fileList(item._downloads || []) + '</div></section>';
+      '<div data-parameter-study-downloads>' + host.fileList(item._downloads || []) + '</div></div></section>';
     renderCases();
     if (item.artifacts?.results) await refreshResults();
     else detail.querySelector('[data-parameter-study-results]').innerHTML = '<p class="note">Run the study to produce the comparison matrix, selected-case ranges, and downloadable report. Completed native cases can be summarized at any time.</p>';
@@ -334,10 +391,8 @@ export function attachParameterStudies(host) {
 
   function renderCases() {
     const panel = root?.querySelector('[data-parameter-study-cases]'); if (!panel || !study) return;
-    const query = caseFilter.trim().toLowerCase();
-    const matching = study.cases.filter(row => !query || [row.label, row.run_id, row.profile_id, pretty(row.overrides)].join(' ').toLowerCase().includes(query));
-    if (caseOffset >= matching.length) caseOffset = Math.max(0, Math.floor((matching.length - 1) / 50) * 50);
-    const page = matching.slice(caseOffset, caseOffset + 50);
+    const page = study.cases, total = study.page?.total ?? page.length;
+    caseOffset = study.page?.offset || 0;
     const rows = page.map(row => '<tr><td class="name-cell"><strong>' + escapeHTML(row.label) + '</strong><small class="mono">' +
       escapeHTML(short(row.run_id)) + '</small></td><td>' + status(row.state) + (row.error ? '<small>' +
       escapeHTML(row.error.message || row.error) + '</small>' : '') +
@@ -345,25 +400,66 @@ export function attachParameterStudies(host) {
       (row.native_version_labels ? '<small>' + Object.entries(row.native_version_labels).map(([model, value]) =>
         escapeHTML(model.toUpperCase() + ': ' + value)).join('<br>') + '</small>' : '') + '</td><td class="mono">' +
       (Object.entries(row.overrides || {}).map(([name, value]) => escapeHTML(name) + ' = ' + format(value)).join('<br>') || 'Baseline values') +
-      '</td><td class="actions-cell">' + button('case-console', 'Native case console', 'data-id="' + escapeHTML(selected) + '" data-run-id="' + escapeHTML(row.run_id) + '"') +
+      '</td><td class="actions-cell">' + (study.artifacts?.results && row.state === 'complete' ? button('source-prepare', 'Report this case', 'data-id="' + escapeHTML(selected) + '" data-case-id="' + escapeHTML(row.id) + '"') : '') + button('case-console', 'Native case console', 'data-id="' + escapeHTML(selected) + '" data-run-id="' + escapeHTML(row.run_id) + '"') +
       '<button type="button" data-action="item" data-kind="runs" data-id="' + escapeHTML(row.run_id) +
       '">Open native run</button><button type="button" data-action="run-log" data-id="' + escapeHTML(row.run_id) +
       '">Log</button><button type="button" data-action="item" data-kind="profiles" data-id="' + escapeHTML(row.profile_id) + '">Profile</button></td></tr>');
     panel.innerHTML = rows.length ? gridTable(['Case', 'State', 'Parameter changes', ''], rows) + '<div class="parameter-study-pager">' +
-      '<span>' + format(caseOffset + 1) + '–' + format(caseOffset + rows.length) + ' of ' + format(matching.length) + ' cases</span>' +
-      button('cases-prev', 'Previous', caseOffset ? '' : 'disabled') + button('cases-next', 'Next', caseOffset + rows.length < matching.length ? '' : 'disabled') + '</div>' :
+      '<span>' + format(caseOffset + 1) + '–' + format(caseOffset + rows.length) + ' of ' + format(total) + ' matching cases · ' + format(study.case_count) + ' in the original study</span>' +
+      button('cases-prev', 'Previous', caseOffset ? '' : 'disabled') + button('cases-next', 'Next', caseOffset + rows.length < total ? '' : 'disabled') +
+      (total > 50 ? '<label>Go to case<input data-parameter-study-case-row type="number" min="1" max="' +
+        escapeHTML(total) + '" step="1" value="' + escapeHTML(caseOffset + 1) + '"></label>' +
+        button('cases-go', 'Go to case') : '') + '</div>' :
       '<p class="note section-body">No cases match this filter.</p>';
   }
 
   async function refreshResults() {
     if (!root || !selected || !study?.artifacts?.results) return;
     const thisRoot = root, id = selected, selectedWorkspace = workspace(), sequence = ++resultSequence;
-    const values = {id, offset: resultFilters.offset, limit: 100};
+    resultController?.abort();
+    const reading = new AbortController(); resultController = reading;
+    const values = {id, offset: resultFilters.offset, limit: 100,
+      range_offset: resultFilters.range_offset || 0, range_limit: 100};
+    if (results?.experiment_id === id) values.expected_artifact_sha256 = results.artifact_sha256;
     if (resultFilters.area_id) values.area_id = resultFilters.area_id;
     if (resultFilters.pollutant) values.pollutant = resultFilters.pollutant;
-    const result = await host.api(requested('/api/parameter-studies/results', values), {signal: controller?.signal});
-    if (thisRoot !== root || id !== selected || selectedWorkspace !== workspace() || sequence !== resultSequence) return;
+    const current = () => thisRoot === root && id === selected && selectedWorkspace === workspace() &&
+      sequence === resultSequence && !reading.signal.aborted;
+    let result;
+    try {
+      result = await host.api(requested('/api/parameter-studies/results', values), {signal: reading.signal});
+    } catch (error) {
+      if (current()) throw error;
+      return;
+    }
+    if (!current()) return;
+    if (study?.artifacts?.results?.sha256 !== result.artifact_sha256) {
+      const downloads = root.querySelector('[data-parameter-study-downloads]');
+      if (downloads) downloads.innerHTML = '<p class="note">Refreshing downloads for this saved result edition…</p>';
+      let retained;
+      try {
+        retained = await host.api(requested('/api/parameter-studies/view', {
+          id, offset: caseOffset, limit: 50, case_filter: caseState, query: caseFilter
+        }), {signal: reading.signal});
+      } catch (error) {
+        if (current()) throw error;
+        return;
+      }
+      if (!current()) return;
+      if (retained?.artifacts?.results?.sha256 !== result.artifact_sha256) {
+        // The source advanced again during this item read. Resolve its current
+        // original edition before exposing either rows or download tickets.
+        return refreshResults();
+      }
+      study = retained;
+      if (downloads) downloads.innerHTML = host.fileList(retained._downloads || []);
+    }
     results = result; resultFilters.offset = result.offset;
+    const currentDownloads = root.querySelector('[data-parameter-study-downloads]');
+    if (currentDownloads) currentDownloads.innerHTML = host.fileList(study._downloads || []);
+    resultFilters.range_offset = result.range_offset || 0;
+    resultFilters.area_id = result.area_id ?? resultFilters.area_id;
+    resultFilters.pollutant = result.pollutant ?? resultFilters.pollutant;
     const panel = root.querySelector('[data-parameter-study-results]'); if (!panel) return;
     const controls = '<div class="filters"><label>Reporting area<select data-parameter-study-result-filter="area_id">' + option('', 'All reporting areas', !resultFilters.area_id) +
       result.areas.map(area => option(area.id, area.name, resultFilters.area_id === area.id)).join('') + '</select></label><label>Pollutant<select data-parameter-study-result-filter="pollutant">' +
@@ -380,18 +476,30 @@ export function attachParameterStudies(host) {
        ['Case full mass', row.case_full_mass], ['Parameter', row.parameter], ['Baseline parameter', row.baseline_parameter],
        ['Case parameter', row.case_parameter], ['Response per parameter unit', row.response_per_parameter_unit], ['Elasticity', row.elasticity]]
         .map(([name, value]) => '<dt>' + name + '</dt><dd>' + format(value) + '</dd>').join('') + '</dl></details></td></tr>');
-    panel.innerHTML = '<p class="note">' + escapeHTML(modelNames({models: result.models})) + ' · ' + escapeHTML(result.comparison_basis) + '</p>' +
+    panel.innerHTML = (result.edition_changed ? '<div class="notice">A newer saved scientific summary is available. Result and range pages now start from that original edition.</div>' : '') +
+      '<p class="note">' + escapeHTML(modelNames({models: result.models})) + ' · ' + escapeHTML(result.comparison_basis) + '</p>' +
       (result.mass_basis ? '<p class="note">' + escapeHTML(result.mass_basis) + '</p>' : '') + resultExecution(result) + controls +
       (rows.length ? gridTable(['Case and reporting area', 'Baseline mass', 'Case mass', 'Change', 'Valid-cell coverage'], rows) : '<p class="note">No completed rows match these filters.</p>') +
       '<div class="parameter-study-pager"><span>' + (rows.length ? format(result.offset + 1) + '–' + format(result.offset + rows.length) : '0') + ' of ' +
       format(result.filtered_rows) + ' result rows</span>' + button('results-prev', 'Previous', result.offset ? '' : 'disabled') +
-      button('results-next', 'Next', result.offset + rows.length < result.filtered_rows ? '' : 'disabled') + '</div>' +
+      button('results-next', 'Next', result.offset + rows.length < result.filtered_rows ? '' : 'disabled') +
+      (result.filtered_rows > 100 ? '<label>Go to result row<input data-parameter-study-result-row type="number" min="1" max="' +
+        escapeHTML(result.filtered_rows) + '" step="1" value="' + escapeHTML(result.offset + 1) + '"></label>' +
+        button('results-go', 'Go to row') : '') + '</div>' +
       (result.ranges.length ? '<details class="technical"><summary>Ranges across selected completed cases</summary><p class="note">' +
         escapeHTML(result.range_basis) + '</p>' + gridTable(['Area', 'Pollutant', 'Minimum mass', 'Maximum mass', 'Comparable cases'],
         result.ranges.map(row => '<tr><td>' + escapeHTML(row.area) + '</td><td>' + escapeHTML(label(row.pollutant)) +
           '<small>' + escapeHTML(row.units) + '</small></td><td class="number-cell">' + format(row.minimum_mass) +
           '</td><td class="number-cell">' + format(row.maximum_mass) + '</td><td>' + format(row.cases) +
-          (row.support_changed_cases ? '<small>' + format(row.support_changed_cases) + ' changed-coverage cases</small>' : '') + '</td></tr>')) + '</details>' : '');
+          (row.support_changed_cases ? '<small>' + format(row.support_changed_cases) + ' changed-coverage cases</small>' : '') + '</td></tr>')) +
+        '<div class="parameter-study-pager"><span>' + format((result.range_offset || 0) + 1) + '–' +
+        format((result.range_offset || 0) + result.ranges.length) + ' of ' +
+        format(result.filtered_ranges ?? result.ranges.length) + ' original ranges</span>' +
+        button('ranges-prev', 'Previous ranges', result.range_offset ? '' : 'disabled') +
+        button('ranges-next', 'Next ranges', (result.range_offset || 0) + result.ranges.length <
+          (result.filtered_ranges ?? result.ranges.length) ? '' : 'disabled') + '</div></details>' : '') +
+      '<p class="note">Result source <code style="overflow-wrap:anywhere">' + escapeHTML(result.artifact_sha256) +
+      '</code>. Full JSON, CSV and report downloads retain every original case, reporting area and range.</p>';
   }
 
   function axisEditor(axis = {}) {
@@ -525,7 +633,7 @@ export function attachParameterStudies(host) {
     if (!(data().runs || []).length) throw new Error('Prepare a native run before creating a parameter study.');
     const opening = formRequest(), originalWorkspace = opening.workspace;
     let initial = {}, editor = null;
-    if (id) initial = (await host.api(requested('/api/item', {kind: 'parameter-studies', id}))).selection;
+    if (id) initial = (await host.api(requested('/api/parameter-studies/view', {id, limit: 0}))).selection;
     if (!opening.current()) return;
     draftCatalog = null; confirmedSelection = null;
     const html = '<div class="parameter-study-draft"><div class="form-grid">' +
@@ -614,17 +722,133 @@ export function attachParameterStudies(host) {
     });
   }
 
+
+  async function openScientificSource(id, sourceId = '') {
+    const opening = formRequest(), originalWorkspace = opening.workspace;
+    const value = await host.api(requested('/api/parameter-studies/scientific-source',
+      sourceId ? {source_id: sourceId} : {id}));
+    if (!opening.current()) return;
+    const prepared = value?.scientific_report_selection;
+    if (value?.experiment_id !== id || prepared?.workspace_key !== originalWorkspace ||
+        !prepared?.sources?.length) throw new Error('Prepare the saved Parameter result source before opening its report composer.');
+    await host.refreshState();
+    if (!opening.current()) return;
+    if (workspace() !== originalWorkspace) throw new Error('Reopen the report in its original Workspace.');
+    if (typeof host.openScientificReport !== 'function') throw new Error('Open this application edition with its SourceReports composer.');
+    return host.openScientificReport(prepared);
+  }
+
+  async function openReportSource(id, initialCase = '') {
+    const opening = formRequest(), originalWorkspace = opening.workspace;
+    const packet = await host.api(requested('/api/parameter-studies/source-catalog', {id}));
+    if (!opening.current()) return;
+    if (packet.experiment_id !== id) throw new Error('The report catalog belongs to another saved study.');
+    let editor = null, casePage = 0, query = '';
+    const caseIds = new Set(packet.cases.map(row => row.id));
+    if (initialCase && !caseIds.has(initialCase)) throw new Error('Refresh completed results before selecting this case in a report.');
+    const chosen = new Set(initialCase ? [initialCase] : []);
+    const checkbox = (name, value, title) => '<label><input type="checkbox" name="' + name +
+      '" value="' + escapeHTML(value) + '" checked> ' + escapeHTML(title) + '</label>';
+    const body = '<div class="parameter-study-source">' +
+      field('parameter_source_title', 'Scientific report title', 'Parameter study: ' + packet.title, 'required') +
+      '<p>Choose the original cases, areas and pollutants to present. The source package retains the complete original study exports, including requested maps and native aggregation context.</p>' +
+      '<p><strong>' + format(packet.completed_cases) + ' of ' + format(packet.total_cases) +
+      '</strong> original cases have saved results. Selected values remain case minus baseline on paired valid cells.</p>' +
+      '<fieldset><legend>Parameter cases</legend><label>Selection<select name="parameter_source_case_mode">' +
+      option('all', 'All completed cases in this result', !initialCase) +
+      option('selected', 'Choose original cases', Boolean(initialCase)) + '</select></label>' +
+      '<label>Find original cases<input type="search" name="parameter_source_case_query" placeholder="Case, run, profile or parameter"></label>' +
+      '<div data-parameter-source-case-table></div><div class="page-actions">' +
+      '<button type="button" data-parameter-source-control="previous">Previous cases</button>' +
+      '<button type="button" data-parameter-source-control="next">Next cases</button>' +
+      '<button type="button" data-parameter-source-control="matching">Select matching cases</button>' +
+      '<button type="button" data-parameter-source-control="clear">Clear selected cases</button></div></fieldset>' +
+      '<fieldset><legend>Reporting areas</legend>' + packet.areas.map(row =>
+        checkbox('parameter_source_area', row.id, row.name)).join('') + '</fieldset>' +
+      '<fieldset><legend>Pollutants</legend>' + packet.pollutants.map(value =>
+        checkbox('parameter_source_pollutant', value, label(value))).join('') + '</fieldset>' +
+      '<p class="note">Original full-study ranges are included when all completed cases are selected. Choosing fewer cases preserves each original row and omits the full-cohort range from the selected presentation.</p>' +
+      '<p class="note">Spatial links open the retained full comparison extent. Choosing an area here does not clip its original GIS raster.</p>' +
+      '<details class="technical"><summary>Original result edition</summary><code>' +
+      escapeHTML(packet.artifact_sha256) + '</code></details></div>';
+    function matching() {
+      const needle = query.trim().toLowerCase();
+      return packet.cases.filter(row => !needle || [row.id, row.label, row.run_id, row.profile_id,
+        JSON.stringify(row.overrides || {})].join(' ').toLowerCase().includes(needle));
+    }
+    function mode() { return editor.anchor.querySelector('[name="parameter_source_case_mode"]').value; }
+    function paintCases() {
+      const rows = matching(), all = mode() === 'all';
+      casePage = Math.min(casePage, Math.max(0, Math.ceil(rows.length / 50) - 1));
+      const visible = rows.slice(casePage * 50, casePage * 50 + 50);
+      editor.anchor.querySelector('[data-parameter-source-case-table]').innerHTML =
+        '<p>' + format(all ? packet.cases.length : chosen.size) + ' selected · ' + format(rows.length) +
+        ' matching cases' + (rows.length ? ' · page ' + format(casePage + 1) + ' / ' + format(Math.ceil(rows.length / 50)) : '') + '</p>' +
+        (visible.length ? gridTable(['Use', 'Original case', 'Native profile and run', 'Parameters'], visible.map(row =>
+          '<tr><td><input type="checkbox" data-parameter-source-case="' + escapeHTML(row.id) + '"' +
+          ((all || chosen.has(row.id)) ? ' checked' : '') + (all ? ' disabled' : '') +
+          ' aria-label="Use ' + escapeHTML(row.label) + '"></td><td><strong>' + escapeHTML(row.label) +
+          '</strong><small class="mono">' + escapeHTML(row.id) + '</small></td><td class="mono">' +
+          escapeHTML(row.profile_id) + '<small>' + escapeHTML(row.run_id) + '</small></td><td>' +
+          escapeHTML(pretty(row.overrides || {})) + '</td></tr>')) : '<p>No original cases match.</p>');
+      editor.anchor.querySelector('[data-parameter-source-control="previous"]').disabled = casePage === 0;
+      editor.anchor.querySelector('[data-parameter-source-control="next"]').disabled = (casePage + 1) * 50 >= rows.length;
+    }
+    host.openForm('Prepare Parameter scientific source', 'Select the saved original result for reports and source delivery.',
+      body, 'Prepare scientific source', async () => {
+        editor.ensure();
+        const areas = [...editor.anchor.querySelectorAll('[name="parameter_source_area"]:checked')].map(node => node.value);
+        const pollutants = [...editor.anchor.querySelectorAll('[name="parameter_source_pollutant"]:checked')].map(node => node.value);
+        const cases = mode() === 'all' ? null : packet.cases.filter(row => chosen.has(row.id)).map(row => row.id);
+        if (!areas.length || !pollutants.length || (cases && !cases.length)) throw new Error('Choose at least one original case, reporting area and pollutant.');
+        await host.submitAction('parameter-study.source.prepare', {
+          experiment_id: id, expected_artifact_sha256: packet.artifact_sha256,
+          title: editor.anchor.querySelector('[name="parameter_source_title"]').value.trim(),
+          case_ids: cases, area_ids: areas, pollutants
+        });
+      }, () => {
+        editor = formSession('.parameter-study-source', originalWorkspace);
+        editor.listen(editor.anchor, 'change', event => {
+          if (event.target.name === 'parameter_source_case_mode') paintCases();
+          const key = event.target.dataset.parameterSourceCase;
+          if (key && caseIds.has(key)) {
+            event.target.checked ? chosen.add(key) : chosen.delete(key); paintCases();
+          }
+        });
+        editor.listen(editor.anchor, 'input', event => {
+          if (event.target.name === 'parameter_source_case_query') {
+            query = event.target.value; casePage = 0; paintCases();
+          }
+        });
+        editor.listen(editor.anchor, 'click', event => {
+          const control = event.target.closest('[data-parameter-source-control]')?.dataset.parameterSourceControl;
+          if (!control) return;
+          event.preventDefault();
+          if (control === 'previous') casePage = Math.max(0, casePage - 1);
+          if (control === 'next') casePage++;
+          if (control === 'matching' || control === 'clear') {
+            editor.anchor.querySelector('[name="parameter_source_case_mode"]').value = 'selected';
+            if (control === 'clear') chosen.clear(); else matching().forEach(row => chosen.add(row.id));
+          }
+          paintCases();
+        });
+        paintCases();
+      });
+  }
+
   async function dispatch(node) {
     const action = node.dataset.action.slice('parameter-study-'.length), id = node.dataset.id;
     if (node.dataset.workspace && node.dataset.workspace !== workspace()) {
       throw new Error('Open this task in its original Workspace before opening its parameter study.');
     }
+    if (action === 'source-prepare') return openReportSource(id, node.dataset.caseId || '');
+    if (action === 'source-open') return openScientificSource(id, node.dataset.sourceId || '');
     if (action === 'case-console') return caseConsole.open(id, node.dataset.runId);
     if (action === 'new' || action === 'revise') return newStudy(action === 'revise' ? id : null, node.dataset.baselineId);
     if (action === 'open') {
       currentWorkspace = workspace(); study = null; results = null;
       selected = id; pendingOpen = {workspace: currentWorkspace, id};
-      resultFilters = {area_id: '', pollutant: '', offset: 0}; caseFilter = ''; caseOffset = 0;
+      resultFilters = {area_id: '', pollutant: '', offset: 0, range_offset: 0}; caseFilter = ''; caseState = 'all'; caseOffset = 0;
       document.querySelector('#detail-dialog')?.close();
       host.navigate('parameter-studies');
       if (pendingOpen) await host.refreshState();
@@ -646,9 +870,30 @@ export function attachParameterStudies(host) {
       setAreaSources(draftRoot.querySelector('.parameter-study-area:last-child')); invalidatePreview(); return;
     }
     if (action === 'area-remove') { node.closest('.parameter-study-area').remove(); invalidatePreview(); return; }
-    if (action === 'cases-prev' || action === 'cases-next') { caseOffset = Math.max(0, caseOffset + (action === 'cases-prev' ? -50 : 50)); renderCases(); return; }
+    if (action === 'cases-prev' || action === 'cases-next') {
+      caseOffset = Math.max(0, caseOffset + (action === 'cases-prev' ? -50 : 50));
+      return refreshCases();
+    }
+    if (action === 'cases-go') {
+      const value = Number(root?.querySelector('[data-parameter-study-case-row]')?.value);
+      if (!Number.isSafeInteger(value) || value < 1 || value > (study?.page?.total || 0)) {
+        throw new Error('Choose a case within this original filtered study.');
+      }
+      caseOffset = Math.floor((value - 1) / 50) * 50; return refreshCases();
+    }
     if (action === 'results-prev' || action === 'results-next') {
       resultFilters.offset = Math.max(0, resultFilters.offset + (action === 'results-prev' ? -100 : 100)); return refreshResults();
+    }
+    if (action === 'ranges-prev' || action === 'ranges-next') {
+      resultFilters.range_offset = Math.max(0, (resultFilters.range_offset || 0) +
+        (action === 'ranges-prev' ? -100 : 100)); return refreshResults();
+    }
+    if (action === 'results-go') {
+      const value = Number(root?.querySelector('[data-parameter-study-result-row]')?.value);
+      if (!Number.isSafeInteger(value) || value < 1 || value > (results?.filtered_rows || 0)) {
+        throw new Error('Choose a result row within this original filtered table.');
+      }
+      resultFilters.offset = Math.floor((value - 1) / 100) * 100; return refreshResults();
     }
   }
 
@@ -658,13 +903,13 @@ export function attachParameterStudies(host) {
     if(!selection||selection.workspace_key!==selectedWorkspace||!/^[0-9a-f]{64}$/.test(id||'')) {
       throw new Error('Open a retained parameter study in its original workspace.');
     }
-    const retained=await host.api(requested('/api/item',{kind:'parameter-studies',id}));
+    const retained=await host.api(requested('/api/parameter-studies/view',{id,limit:0}));
     if(workspace()!==selectedWorkspace||retained.id!==id) {
       throw new Error('The workspace or saved parameter study changed while opening it.');
     }
     currentWorkspace=selectedWorkspace;selected=id;study=null;results=null;
     pendingOpen={workspace:selectedWorkspace,id};
-    resultFilters={area_id:'',pollutant:'',offset:0};caseFilter='';caseOffset=0;
+    resultFilters={area_id:'',pollutant:'',offset:0,range_offset:0};caseFilter='';caseState='all';caseOffset=0;
     await host.navigate('parameter-studies');
     if(workspace()!==selectedWorkspace)throw new Error('Reopen the retained study in its selected workspace.');
     if(pendingOpen)await host.refreshState();
@@ -673,6 +918,14 @@ export function attachParameterStudies(host) {
   }
 
   function taskActions(task) {
+    if (task.action === 'parameter-study.source.prepare' && task.result?.experiment_id && task.workspace) {
+      const result = task.result, attrs = 'data-id="' + escapeHTML(result.experiment_id) +
+        '" data-workspace="' + escapeHTML(task.workspace) + '"';
+      return '<div class="page-actions">' + button('open', 'Open original parameter study', attrs) +
+        (result.source ? button('source-open', 'Compose selected scientific report',
+          attrs + ' data-source-id="' + escapeHTML(result.id) + '"') : '') +
+        '</div>' + host.fileList(result.downloads || []);
+    }
     return task.action?.startsWith('parameter-study.') && task.result?.id && task.workspace ?
       (task.result.state === 'partial' ? '<div class="notice">Completed-case results are available. Resume the study to recover the remaining cases.</div>' : '') +
       '<div class="page-actions">' + button('open', 'Open parameter study', 'data-id="' + escapeHTML(task.result.id) + '" data-workspace="' + escapeHTML(task.workspace) + '"') + '</div>' : '';

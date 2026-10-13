@@ -2,7 +2,7 @@
   "schema": "upstate.operator-extension/v1",
   "id": "map-atlas",
   "title": "Map atlas and delivery",
-  "version": "6",
+  "version": "7",
   "order": 90,
   "assets": [
     "map_atlas.mjs",
@@ -109,6 +109,21 @@
         ],
         "path": "/api/map-atlas/source-context",
         "operation": "source-context",
+        "handler": "read",
+        "args": [
+          "operator",
+          "workspace_key",
+          "operation",
+          "payload",
+          "fault"
+        ]
+      },
+      {
+        "methods": [
+          "POST"
+        ],
+        "path": "/api/map-atlas/coefficient-evidence-catalog",
+        "operation": "coefficient-evidence-catalog",
         "handler": "read",
         "args": [
           "operator",

@@ -8,6 +8,7 @@ that same review package through the existing receiving API.
 from __future__ import annotations
 
 import argparse
+import hashlib
 from copy import deepcopy
 import json
 import os
@@ -98,7 +99,80 @@ def _verify_source(workspace, created):
             "member_identity_sha256": digest(actual)}
 
 
-def _reopen(workspace, edition_id, draft, preview, created, review, generation):
+def _verify_completed_capture(workspace, edition_id, proof):
+    """Reopen the captured bytes using the saved edition, including after transfer."""
+    from model import scientific_report_capture
+
+    if (not isinstance(proof, dict) or proof.get("schema") != SCHEMA + "/completed-capture"
+            or proof.get("project_id") != workspace.project["id"]
+            or proof.get("scientific_report_edition_id") != edition_id):
+        raise ValueError("The retained completed capture belongs to another report or project")
+    record, directory, _ = scientific_report_editions.inspect(workspace, edition_id)
+    if (record["render_identity"] != proof.get("render_identity")
+            or record["files"] != proof.get("files")
+            or record["operation_id"] != proof.get("operation_id")):
+        raise ValueError("The saved edition differs from the exact captured report bytes")
+    origin = proof.get("capture_origin")
+    if not isinstance(origin, dict):
+        raise ValueError("Retain the exact completed capture document")
+    # The native origin verifier reads the embedded capture document and the
+    # saved report files. A selected archive need not carry the donor directory.
+    scientific_report_capture.verify_origin(
+        workspace, {**record, "capture_origin": origin}, directory)
+    members = {row["path"]: row for row in record["files"].values()}
+    return {"capture_id": origin["capture_id"],
+            "capture_sha256": origin["capture"]["sha256"],
+            "scientific_report_edition_id": edition_id,
+            "member_count": len(members),
+            "member_identity_sha256": digest(members)}
+
+
+def receive_capture(workspace_path, capture_id, capture_sha256, edition_id,
+                    review_selection, output, *, created_at=None):
+    """Adopt one explicitly pinned completed render before the original course."""
+    from model import scientific_report_capture
+
+    workspace = Workspace(Path(workspace_path).resolve())
+    # Reject a missing/invalid authored request or unsafe output before adoption.
+    draft = read_json(_ordinary(Path(review_selection).resolve()))
+    if not isinstance(draft, dict):
+        raise ValueError("Supply the actual review request as a JSON object")
+    destination = Path(output).resolve()
+    if (destination.is_relative_to(workspace.root.resolve())
+            or destination.is_relative_to(APPLICATION.resolve())):
+        raise ValueError("Keep review exports and restored copies outside the original Workspace and application")
+    if created_at is not None:
+        reviews._date(created_at, "Review creation time")
+    value = scientific_report_capture._load(workspace, capture_id)
+    if (value["edition_id"] != edition_id
+            or value["capture_file"]["sha256"] != capture_sha256):
+        raise ValueError("Review the exact completed capture ID, SHA256 and saved edition ID again")
+    proof = {"schema": SCHEMA + "/completed-capture",
+             "project_id": workspace.project["id"],
+             "scientific_report_edition_id": edition_id,
+             "operation_id": value["result"]["operation_id"],
+             "render_identity": deepcopy(value["identity"]),
+             "files": deepcopy(value["result"]["files"]),
+             "capture_origin": {"schema": scientific_report_capture.ORIGIN_SCHEMA,
+                 "capture_id": value["capture_id"],
+                 "capture": {"content": value["capture_text"],
+                             "bytes": value["capture_file"]["bytes"],
+                             "sha256": value["capture_file"]["sha256"]}}}
+    _event("adopt-completed-report", capture_id=capture_id, edition_id=edition_id,
+           capture_sha256=capture_sha256)
+    adopted = scientific_report_capture.adopt(
+        workspace, capture_id, expected_capture_sha256=capture_sha256,
+        expected_edition_id=edition_id)
+    if (adopted.get("state") != "complete"
+            or adopted.get("scientific_report_edition_id") != edition_id
+            or adopted.get("capture_id") != capture_id):
+        raise ValueError("The original adoption did not return the selected saved edition")
+    _verify_completed_capture(workspace, edition_id, proof)
+    return receive(workspace_path, edition_id, review_selection, output,
+                   created_at=created_at, completed_capture=proof)
+
+
+def _reopen(workspace, edition_id, draft, preview, created, review, generation, completed_capture=None):
     actual_preview = scientific_report_review.preview_review(workspace, edition_id, draft)
     if actual_preview != preview:
         raise ValueError("Reopening changed the original scientific report or review preview")
@@ -113,12 +187,16 @@ def _reopen(workspace, edition_id, draft, preview, created, review, generation):
     source = _verify_source(workspace, created)
     if source["member_count"] != created["source_member_count"]:
         raise ValueError("The report source lost an original file")
-    return {"review_id": created["review_id"], "source": source,
+    result = {"review_id": created["review_id"], "source": source,
             "scientific_report_edition_id": edition_id,
             "review_sha256": digest(review), "files": packet["files"],
             "selected_response_ids": generation["response_ids"],
             "through_response_id": generation["through_response_id"],
             "source_identity": created["source_identity"]}
+    if completed_capture is not None:
+        result["completed_capture"] = _verify_completed_capture(
+            workspace, edition_id, completed_capture)
+    return result
 
 
 
@@ -261,15 +339,24 @@ def _restore(operation, archive, project):
     elif receipt_path.is_file():
         result = read_json(receipt_path)
     else:
-        # Published restore is atomic; recover only after verifying every
-        # original archived member against the directory left by that process.
-        manifest = portable.inspect_archive(archive["path"], verify=False)
-        for name, descriptor in manifest["members"].items():
-            verify_file(target, {"path": name, **descriptor})
-        result = {"workspace": str(target / "workspace"),
-                  "application": str(target / "application"),
-                  "archive_sha256": archive["sha256"],
-                  "project": project, "recovered_published_restore": True}
+        # The original restore may have published its complete receiving result
+        # before this course retained the acknowledgement. Reconcile that same
+        # archive and destination, including native registration and any later
+        # receiver-only work; never restore over the existing directory.
+        resume = getattr(portable, "resume_restore", None)
+        if callable(resume):
+            result = resume(archive["path"], target,
+                            expected_archive_sha256=archive["sha256"])
+        else:
+            # Earlier applications have no receiving-completion protocol.
+            # Admit their original output only after exact archived-byte checks.
+            manifest = portable.inspect_archive(archive["path"], verify=False)
+            for name, descriptor in manifest["members"].items():
+                verify_file(target, {"path": name, **descriptor})
+            result = {"workspace": str(target / "workspace"),
+                      "application": str(target / "application"),
+                      "archive_sha256": archive["sha256"],
+                      "project": project, "recovered_published_restore": True}
         atomic_json(receipt_path, result, immutable=True)
     if (result["archive_sha256"] != archive["sha256"]
             or Path(result["workspace"]).resolve() != (target / "workspace").resolve()
@@ -294,7 +381,8 @@ def list_editions(workspace):
     return rows
 
 
-def receive(workspace_path, edition_id, review_selection, output, *, created_at=None):
+def receive(workspace_path, edition_id, review_selection, output, *, created_at=None,
+            completed_capture=None):
     workspace = Workspace(Path(workspace_path).resolve())
     draft_path = _ordinary(Path(review_selection).resolve())
     draft = read_json(draft_path)
@@ -311,6 +399,12 @@ def receive(workspace_path, edition_id, review_selection, output, *, created_at=
                     module.__name__: file_digest(Path(module.__file__))
                     for module in (scientific_report_review, scientific_report_editions, reviews, portable)},
                 "receiver_source_sha256": file_digest(Path(__file__))}
+    if completed_capture is not None:
+        from model import scientific_report_capture
+        _verify_completed_capture(workspace, edition_id, completed_capture)
+        identity["completed_capture"] = deepcopy(completed_capture)
+        identity["consumer_source_sha256"][scientific_report_capture.__name__] = file_digest(
+            Path(scientific_report_capture.__file__))
     operation_id = digest(identity)
     output = Path(output).resolve()
     if (output.is_relative_to(workspace.root.resolve())
@@ -359,7 +453,7 @@ def receive(workspace_path, edition_id, review_selection, output, *, created_at=
                           "response_ids": [row["id"] for row in current["responses"]]}
             atomic_json(generation_path, generation, immutable=True)
         reopened = _reopen(workspace, edition_id, preview["review_selection"],
-                           preview, created, review, generation)
+                           preview, created, review, generation, completed_capture)
         atomic_json(retained / "reopened.json", reopened, immutable=True)
 
         _event("export-original-review", review_id=created["review_id"],
@@ -407,7 +501,7 @@ def receive(workspace_path, edition_id, review_selection, output, *, created_at=
                 verify_file(restored_retained, describe_file(retained, path))
         restored_result = _reopen(
             restored, edition_id, preview["review_selection"],
-            preview, created, review, generation)
+            preview, created, review, generation, completed_capture)
         if restored_result != reopened:
             raise ValueError("Original and restored report/review source identities differ")
 
@@ -441,7 +535,7 @@ def receive(workspace_path, edition_id, review_selection, output, *, created_at=
             raise ValueError("The received review receipt identifies another original request")
         _verified_packet(received_directory, review, generation)
         final = _reopen(restored, edition_id, preview["review_selection"],
-                        preview, created, review, generation)
+                        preview, created, review, generation, completed_capture)
         if final != reopened:
             raise ValueError("Joining the review package changed its original selected report")
         result = {
@@ -467,25 +561,262 @@ def receive(workspace_path, edition_id, review_selection, output, *, created_at=
         return result
 
 
+
+def continue_selected_review(workspace_path, receipt_path, *, response_path=None):
+    """Continue an existing completed course through the original Study exporter.
+
+    A separately supplied response is imported only into the independent received
+    Workspace. Existing original review requirements and customer decisions are
+    never generated or rewritten by this receiving command.
+    """
+    from model import study_transfer
+
+    workspace = Workspace(Path(workspace_path).resolve())
+    receipt_path = _ordinary(Path(receipt_path).resolve())
+    original = read_json(receipt_path)
+    original_id = original.get("operation_id")
+    if (original.get("schema") != SCHEMA + "/result" or original.get("state") != "complete"
+            or digest(original.get("identity")) != original_id
+            or original.get("project_id") != workspace.project["id"]
+            or original["identity"].get("project_id") != workspace.project["id"]):
+        raise ValueError("Continue the completed original scientific-report review receipt")
+    retained = workspace.root / "scientific-report-review-receiving" / original_id
+    if (original.get("retained_directory") != retained.relative_to(workspace.root).as_posix()
+            or read_json(retained / "identity.json") != original["identity"]):
+        raise ValueError("The original report receiving identity is not retained in this Workspace")
+    created = read_json(retained / "created.json")
+    review = read_json(retained / "original-review.json")
+    if (created["review_id"] != original["review_id"] or review["id"] != created["review_id"]
+            or created["scientific_report_edition_id"] != original["scientific_report_edition_id"]):
+        raise ValueError("The completed course names another saved report or review")
+    packet = reviews.show_review(workspace, review["id"], previews=False)
+    if _clean_review(packet["review"]) != review:
+        raise ValueError("The original saved review changed before editable transfer")
+    source = _verify_source(workspace, created)
+    edition_id = original["scientific_report_edition_id"]
+    scientific_report_editions.inspect(workspace, edition_id)
+    completed_capture = original["identity"].get("completed_capture")
+    capture_verification = (_verify_completed_capture(workspace, edition_id, completed_capture)
+                            if completed_capture is not None else None)
+    operation = receipt_path.parent / "selected-review"
+    if (operation.resolve().is_relative_to(workspace.root.resolve())
+            or operation.resolve().is_relative_to(APPLICATION.resolve())):
+        raise ValueError("Keep selected review receiving outside the original Workspace and application")
+    if operation.is_symlink() or operation.exists() and not operation.is_dir():
+        raise ValueError("Keep selected review receiving in its original ordinary directory")
+    operation.mkdir(parents=True, exist_ok=True)
+    selection = {"schema": "upstate.study-selection/v1",
+                 "title": review["title"] + " — editable customer review",
+                 "roots": [{"kind": "reviews", "id": review["id"]}],
+                 "include_related_results": True}
+    identity = {"schema": SCHEMA + "/selected-review", "version": 1,
+                "original_operation_id": original_id, "original_receipt": {
+                    "bytes": receipt_path.stat().st_size, "sha256": file_digest(receipt_path)},
+                "project_id": workspace.project["id"], "review_id": review["id"],
+                "scientific_report_edition_id": edition_id, "selection": selection}
+    with held(operation / "operation.lock"):
+        atomic_json(operation / "identity.json", identity, immutable=True)
+        _event("preview-selected-review", review_id=review["id"], edition_id=edition_id)
+        archive_path = operation / "editable-review.zip"
+        archive_receipt = operation / "study-export.json"
+        if archive_receipt.is_file():
+            archived = read_json(archive_receipt)
+            if (Path(archived["path"]).resolve() != archive_path.resolve()
+                    or _ordinary(archive_path).stat().st_size != archived["bytes"]
+                    or file_digest(archive_path) != archived["sha256"]):
+                raise ValueError("The retained selected-review archive changed")
+        else:
+            # The original exporter adopts its own already-published complete
+            # archive after a lost response, using the exact immutable selection.
+            if not archive_path.exists():
+                preview = study_transfer.preview(workspace, selection)
+                if not any(row["kind"] == "reviews" and row["id"] == review["id"]
+                           for row in preview["nodes"]):
+                    raise ValueError("Install the original Customer review Study transfer before continuing")
+                atomic_json(operation / "study-preview.json", preview)
+            _event("export-selected-review", review_id=review["id"])
+            archived = study_transfer.export_study(workspace, archive_path, selection,
+                progress=lambda value: _event("selected-review-progress", **value))
+            atomic_json(archive_receipt, archived, immutable=True)
+        checked = study_transfer.inspect_transfer_archive(archive_path, verify=True)
+        captured = checked["study"]
+        if (captured["id"] != archived["id"]
+                or checked["manifest"]["project"] != workspace.project
+                or captured["identity"]["selection"] != study_transfer.normalise(selection)):
+            raise ValueError("The selected archive identifies another original review selection")
+        required = {(row["kind"], row["id"]) for row in captured["identity"]["nodes"]}
+        if not {("reviews", review["id"]), ("scientific-report-editions", edition_id)}.issubset(required):
+            raise ValueError("The selected archive lost the original review or saved scientific report")
+        snapshots = [row for row in captured["identity"].get("customer_reviews", [])
+                     if row["id"] == review["id"]]
+        if len(snapshots) != 1 or snapshots[0]["review_sha256"] != digest(review):
+            raise ValueError("The selected archive lost its exact native customer-feedback receipt")
+        snapshot = snapshots[0]
+        _event("restore-selected-review", study_id=captured["id"])
+        restored_receipt, restored = _restore(operation, archived, workspace.project)
+        verification = study_transfer.verify_received_studies(restored)
+        if captured["id"] not in {row["id"] for row in verification}:
+            raise ValueError("The independent receiver did not reopen the selected review study")
+        received = reviews.show_review(restored, review["id"], previews=False)
+        if (_clean_review(received["review"]) != review
+                or [row["id"] for row in received["responses"]][:len(snapshot["response_ids"])]
+                != snapshot["response_ids"]
+                or _verify_source(restored, created) != source):
+            raise ValueError("The received selected review changed its original report or response prefix")
+        scientific_report_editions.inspect(restored, edition_id)
+        if (completed_capture is not None and _verify_completed_capture(
+                restored, edition_id, completed_capture) != capture_verification):
+            raise ValueError("The selected received report differs from its original completed capture")
+        complete = {"schema": SCHEMA + "/selected-review-result", "state": "complete",
+                    "identity": identity, "project_id": workspace.project["id"],
+                    "review_id": review["id"], "scientific_report_edition_id": edition_id,
+                    "study_id": captured["id"], "archive": archived, "restore": restored_receipt,
+                    "captured_review": snapshot,
+                    "report_source": source, "verification": verification,
+                    "receipt": str(operation / "result.json")}
+        if capture_verification is not None:
+            complete["completed_capture"] = capture_verification
+        result_path = operation / "result.json"
+        if result_path.is_file():
+            previous = read_json(result_path)
+            # Additional received responses may advance logical verification.
+            # Preserve the exact first receiving receipt rather than rewriting it.
+            for name in ("schema", "state", "identity", "project_id", "review_id",
+                         "scientific_report_edition_id", "study_id", "archive", "restore",
+                         "captured_review", "report_source", "completed_capture"):
+                if previous.get(name) != complete.get(name):
+                    raise ValueError("The original selected-review receiving result changed")
+            complete = previous
+        else:
+            atomic_json(result_path, complete, immutable=True)
+        if response_path is None:
+            _event("selected-review-complete", study_id=captured["id"], receipt=str(result_path))
+            return complete
+
+        _event("receive-supplied-customer-response", review_id=review["id"])
+        response_path = _ordinary(Path(response_path).resolve())
+        raw = response_path.read_bytes()
+        supplied = json.loads(raw)
+        if (not isinstance(supplied, dict) or supplied.get("review_id") != review["id"]
+                or supplied.get("project_id") != workspace.project["id"]):
+            raise ValueError("Supply the actual response for this original review and project")
+        checksum = hashlib.sha256(raw).hexdigest()
+        if response_path.stat().st_size != len(raw) or file_digest(response_path) != checksum:
+            raise ValueError("The supplied customer response changed while being received")
+        response_directory = operation / "feedback" / checksum
+        response_directory.mkdir(parents=True, exist_ok=True)
+        atomic_bytes(response_directory / "original-response.json", raw, immutable=True)
+        # Original import_response handles exact-request replay and predecessor
+        # checks. A divergent reply must use the maintained reconciliation UI.
+        imported = reviews.import_response(restored, supplied)
+        atomic_json(response_directory / "imported-response.json", imported, immutable=True)
+        verification = study_transfer.verify_received_studies(restored)
+        current = reviews.history(restored, review["id"])
+        if [row["id"] for row in current[:len(snapshot["response_ids"])]] != snapshot["response_ids"]:
+            raise ValueError("The actual reply lost original captured customer decisions")
+        if imported["id"] not in {row["id"] for row in current}:
+            raise ValueError("The original customer-response importer did not retain the supplied reply")
+        response_generation = reviews.response_prefix(current, imported["id"])
+        returned = response_directory / "review-package"
+        generation = {"through_response_id": imported["id"],
+                      "response_ids": [row["id"] for row in response_generation]}
+        if returned.exists() or returned.is_symlink():
+            if returned.is_symlink() or not returned.is_dir():
+                raise ValueError("Keep the returned review in its original ordinary package directory")
+            _verified_packet(returned, review, generation)
+        elif not _restore_package_controls(restored, returned, response_directory, review, generation):
+            reviews.export_review(restored, review["id"], returned,
+                                  through_response_id=imported["id"])
+        _retain_package_controls(returned, response_directory, review, generation)
+        archive = response_directory / "review-package.zip"
+        if not archive.exists() and not archive.is_symlink():
+            pending = response_directory / (".review-archive-" + archive.name + ".pending")
+            if _pending_archive(pending, reviews.inspect_packet,
+                    lambda unused: _verified_packet(pending, review, generation)):
+                os.link(pending, archive)
+                pending.unlink()
+            else:
+                reviews.archive_packet(returned, archive)
+        _verified_packet(archive, review, generation)
+        feedback = {"schema": SCHEMA + "/selected-review-feedback", "state": "complete",
+                    "project_id": workspace.project["id"], "study_id": captured["id"],
+                    "review_id": review["id"], "response_id": imported["id"],
+                    "response_source": {"bytes": len(raw), "sha256": checksum},
+                    "selected_review_receipt": str(result_path),
+                    "restored_workspace": str(restored.root),
+                    "export": reviews.describe_export(returned, archive=archive),
+                    "verification": verification, "receipt": str(response_directory / "result.json")}
+        feedback_path = response_directory / "result.json"
+        if feedback_path.is_file():
+            previous = read_json(feedback_path)
+            for name in ("schema", "state", "project_id", "study_id", "review_id",
+                         "response_id", "response_source", "export"):
+                if previous.get(name) != feedback.get(name):
+                    raise ValueError("The retained actual customer-response continuation changed")
+            return previous
+        atomic_json(feedback_path, feedback, immutable=True)
+        _event("supplied-customer-response-complete", response_id=imported["id"],
+               receipt=str(feedback_path))
+        return feedback
+
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--workspace", required=True, type=Path)
     parser.add_argument("--edition-id")
+    parser.add_argument("--capture-id",
+                        help="Exact completed original CLI capture to adopt before review")
+    parser.add_argument("--capture-sha256",
+                        help="Exact capture.json SHA256 returned by the original capture preview")
     parser.add_argument("--review-selection", type=Path)
     parser.add_argument("--output", type=Path)
     parser.add_argument("--created-at")
     parser.add_argument("--list", action="store_true", help="Inspect actual complete scientific editions")
+    parser.add_argument("--list-captures", action="store_true",
+                        help="List original completed CLI captures without adoption or rendering")
+    parser.add_argument("--selected-study", action="store_true",
+                        help="Continue through selected editable review export and independent receiving")
+    parser.add_argument("--continue-receipt", type=Path,
+                        help="Continue an existing completed original result.json without recreating its course")
+    parser.add_argument("--response", type=Path,
+                        help="Actual returned customer response; import only into the selected received copy")
     args = parser.parse_args(argv)
-    if args.list:
-        result = list_editions(Workspace(args.workspace.resolve()))
+    if args.list or args.list_captures:
+        if (args.list and args.list_captures or args.selected_study or args.continue_receipt
+                or args.response or args.capture_id or args.capture_sha256):
+            parser.error("Choose one read-only catalogue without a receiving or adoption request")
+        workspace = Workspace(args.workspace.resolve())
+        if args.list_captures:
+            from model import scientific_report_capture
+            result = scientific_report_capture.catalog(workspace)
+        else:
+            result = list_editions(workspace)
+    elif args.continue_receipt:
+        if (args.edition_id or args.review_selection or args.output or args.created_at
+                or args.capture_id or args.capture_sha256):
+            parser.error("--continue-receipt uses the exact retained review, selection and original output")
+        result = continue_selected_review(args.workspace, args.continue_receipt,
+                                          response_path=args.response)
     else:
         if not args.edition_id or not args.review_selection or not args.output:
             parser.error("--edition-id, --review-selection and --output are required for receiving")
-        result = receive(args.workspace, args.edition_id, args.review_selection, args.output,
-                         created_at=args.created_at)
+        if bool(args.capture_id) != bool(args.capture_sha256):
+            parser.error("--capture-id and --capture-sha256 must pin the same completed original report")
+        if args.response and not args.selected_study:
+            parser.error("--response requires --selected-study or --continue-receipt")
+        if args.capture_id:
+            result = receive_capture(args.workspace, args.capture_id, args.capture_sha256,
+                                     args.edition_id, args.review_selection, args.output,
+                                     created_at=args.created_at)
+        else:
+            result = receive(args.workspace, args.edition_id, args.review_selection, args.output,
+                             created_at=args.created_at)
+        if args.selected_study:
+            result = continue_selected_review(args.workspace, Path(result["receipt"]),
+                                              response_path=args.response)
     print(json.dumps(result, ensure_ascii=False, sort_keys=True, allow_nan=False, indent=2))
     return 0
-
 
 if __name__ == "__main__":
     raise SystemExit(main())

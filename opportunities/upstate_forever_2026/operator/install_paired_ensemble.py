@@ -47,9 +47,10 @@ def install(root, integration="auto"):
     expected_new = [root/'paired_ensemble.py', root/'web'/'paired_ensemble.html',
                     root/'web'/'paired_ensemble.mjs', root/'web'/'paired_ensemble.css']
     expected_new += [application/'model'/'paired_ensemble'/name for name in
-                     ('__init__.py', 'ensemble_cli.py', 'ensemble_portable.py',
+                     ('__init__.py', 'designs.py', 'ensemble_cli.py', 'ensemble_portable.py',
                       'ensemble_rasters.py', 'ensemble_report.py', 'ensemble_store.py',
                       'ensemble_workspace.py')]
+    expected_new += [application/'model'/'native_versions.py', application/'model'/'model_selection.py']
     expected_new += [root/'paired_ensemble_provider.py', root/'web'/'paired_ensemble_host.mjs', root/'web'/'paired_ensemble_host.css']
     manifest = root/'extensions'/'paired-ensemble.json'
     parked_manifest = manifest.with_suffix('.json.disabled')

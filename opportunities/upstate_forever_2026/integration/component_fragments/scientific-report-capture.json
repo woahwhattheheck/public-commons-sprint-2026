@@ -1,0 +1,31 @@
+{
+  "schema": "upstate.application-component-fragment/v1",
+  "id": "scientific-report-capture",
+  "extend_components": {
+    "scientific-report-editions": {
+      "paths": [
+        "model/scientific_report_capture.py",
+        "model/scientific_report_editions.py",
+        "operator/source_report_editions.py",
+        "operator/extensions/source-reports.json",
+        "operator/web/source_report_editions.mjs",
+        "operator/web/source_reports.mjs",
+        "operator/SCIENTIFIC_REPORT_CAPTURE.md",
+        "integration/component_fragments/scientific-report-capture.json"
+      ]
+    },
+    "scientific-report-review": {
+      "paths": [
+        "model/scientific_report_capture.py",
+        "model/scientific_report_editions.py"
+      ],
+      "requires": [
+        "scientific-report-editions"
+      ]
+    }
+  },
+  "required_components": [
+    "scientific-report-editions"
+  ],
+  "source_reference": "https://github.com/woahwhattheheck/public-commons-sprint-2026/tree/da642ce0ddf9c1039894953e71d8e87b4a705cac/opportunities/upstate_forever_2026"
+}

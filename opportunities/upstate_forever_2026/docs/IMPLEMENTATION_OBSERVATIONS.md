@@ -74,7 +74,7 @@ The serializable preview contains:
 ```json
 {
   "schema": "upstate.implementation-observation-context/v1",
-  "edition": "field-observations-20261013-v1",
+  "edition": "field-observations-20261013-v4-source-method-context",
   "plan": {"id": "original plan ID", "revision": 1, "sha256": "original digest", "title": "original title"},
   "operation_id": "digest of the original bound operation",
   "summary": {
@@ -147,7 +147,7 @@ Complete downloadable companions accompany the source and native report:
 - `quality/source-limits.csv`
 - `quality/metadata-availability.csv`
 
-These files retain the original observation identifiers and source pointers. The rendered tables show a manageable first set of records; the companions include all rows. The observation source edition is `field-observations-20261013-v2-quality`. Original earlier derived editions remain available. The Eighteenmile receiving command includes this observation edition in its operation identity, reconnects the same original laboratory-applied revision, and writes a separate derived receiving result for the new edition.
+These files retain the original observation identifiers and source pointers. The rendered tables show a manageable first set of records; the companions include all rows. The observation source edition is `field-observations-20261013-v4-source-method-context`. Original earlier derived editions remain available. The Eighteenmile receiving command includes this observation edition in its operation identity, reconnects the same original laboratory-applied revision, and writes a separate derived receiving result for the new edition.
 
 See [Results review](IMPLEMENTATION_RESULTS_REVIEW.md) for the editor and [Laboratory results](IMPLEMENTATION_LAB_RESULTS.md) for original CSV intake.
 
@@ -160,3 +160,51 @@ python source_tools/receive_wqp_field_results.py --workspace ACTUAL_DEDICATED_OB
 ```
 
 Its default workspace title is `Eighteenmile original field observations`; `--workspace-title` accepts an explicit alternative. Repeating the command retains the same workspace identity and reconnects the original applied laboratory revision and current observation edition. Without `--create-workspace`, select an already existing workspace.
+
+## Ordered original scientific sources
+
+Both field registration and laboratory reconciliation accept the complete current report selection through `existing_report_selection`. When `observed_context_sources` is present, its explicit order is authoritative; `source_roles.OBSERVED_CONTEXT` names the first entry. The complete binding covers every selected source, including sources that are not copied into the new producer's recipe.
+
+For a new field or laboratory edition, the first original report is retained inside the new recipe at `existing-context/`, including all of its original source files, links and numeric figure specification. The new recipe replaces that entry in the ordered list. Every other original report remains in its existing position, with its original collection and source ID. For example, a selected regional study followed by an outcome report becomes the composed regional-and-field report followed by that same outcome report. Independent sources are collected once by the existing report engine.
+
+Preparing the same saved field or laboratory edition again recognizes its own selected source even after it has been moved within the list. It verifies the producer's retained original selection, restores only the inherited source in that slot, and replaces the slot with the resulting source edition. Added or reordered independent sources remain selected. A producer that originally had no inherited report remains in its own insertion position. This prevents recursive copies of the same field or laboratory sections while retaining deliberate source-order changes.
+
+The original implicit single-source selection remains supported. Its completed source identities and receipts remain reusable. Explicit ordered selections record the original composition slot in the producer identity, so preview, queued import, reopen and restored-Workspace reads use the same deterministic selection. The producer does not change model runs, report/economic bindings, contact details, geography or other source roles.
+
+For the original Eighteenmile laboratory cycle, the laboratory recipe already contains the original field report. Appending a saved outcome therefore produces two selected source documents: the laboratory report with its retained field sections, then the outcome report with its figures and supporting records. All three scientific contexts remain available without adding the field report a second time.
+
+
+### Carry the current Report desk selection through field work
+
+In **Field records**, open **Preserve an existing report selection** and choose
+**Use current Report desk selection** before reviewing the saved field revision.
+The captured selection includes its complete original source order and unrelated
+report, model and geography settings. Saving a dirty field plan preserves this
+snapshot; preview and **Register saved field observations** use the same bound
+selection. **Register without preceding report selection** explicitly returns to
+the original source-only flow.
+
+For a laboratory request, the same **Use current Report desk selection** control
+is alongside the existing registered-field and original JSON choices. Review and
+register the request's scientific report source after choosing the intended
+selection. A later change to the Report desk does not silently replace that
+reviewed snapshot.
+
+**Prepare standalone scientific report** opens every source from the completed
+receipt in its original order. **Prepare client report** opens the complete
+retained delivery selection. Neither registration automatically replaces the
+current report draft. These are explicit handoffs; the saved source edition and
+its original revision remain available after further plan edits.
+
+
+### Inspect the outgoing populated workflow
+
+Before presenting this product as client-ready, use the existing native receiving
+operation to run this exact installed edition with its populated saved plan and
+ordered report sources. Open the real screen and view its actual screenshots at
+the screenshare width and 390 px. Operate selection capture, save/review,
+registration, both report handoffs, downloads and reopening; inspect the
+relevant empty, loading and error states. Fix clipped or unreadable content in
+the same workflow. Keep plain industrial presentation with readable tables,
+clear hierarchy, consistent spacing and useful labels. Source/API review and an
+empty-Workspace screen do not replace this actual rendered-product inspection.

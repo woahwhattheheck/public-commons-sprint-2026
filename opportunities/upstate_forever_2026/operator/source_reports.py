@@ -20,6 +20,7 @@ import zipfile
 
 from model.common import atomic_json, digest, file_digest, read_json
 from source_report_editions import ScientificReportEditions
+from source_archive_ingress import IncludedSourceArchives
 
 
 def member_name(value):
@@ -86,6 +87,10 @@ def document_policy(body):
 # These are ordinary source manifests shipped with the installed application.
 # Additional editions use the existing --source-manifest or --source-root options.
 BUNDLED_REPORT_MANIFESTS = (
+    "observations/landcover_2023_2025/report-2023/source-manifest.json",
+    "observations/landcover_2023_2025/report-2025/source-manifest.json",
+    "observations/landcover_2023_2025/scientific-report/source-manifest.json",
+    "observations/landcover_2023_2025/focal-report/source-manifest.json",
     "results/assessment-association-review-20261013/sources.json",
     "results/assessment-source-scope-review-20261013/sources.json",
     "results/assessment-association-review-20261013/observed-sources.json",
@@ -99,6 +104,10 @@ BUNDLED_REPORT_MANIFESTS = (
     "point_source_history.sources.json",
     "point_source_load_volume.sources.json",
     "point_source_scientific.sources.json",
+    "nc_assessment_history.sources.json",
+    "eighteenmile_trace_metals.sources.json",
+    "source/north-carolina-assessment-2022/sources.json",
+    "source/georgia-assessment-2024/publisher-savannah-20261013/sources.json",
 )
 
 
@@ -153,6 +162,27 @@ def manifest_reports(value):
     } for row, names in unique_report_entries(value["entries"])]
 
 
+def manifest_documents(value):
+    """Describe typed original documents without pretending they are HTML previews."""
+    return [{
+        "source_id": row["id"], "title": row["title"],
+        "kind": row["kind"], "role": row.get("role"),
+        "vintage": row["vintage"], "path": member_name(row["path"]),
+        "scientific_report": row.get("role") == "OBSERVED_CONTEXT"
+                             and row.get("kind") == "document",
+    } for row in value["entries"]
+      if row.get("kind") == "document" or row.get("role") == "OBSERVED_CONTEXT"]
+
+
+def retained_scientific_sources(collection):
+    """Keep exact original collection/source choices for the normal report composer."""
+    return [{
+        "source_collection_id": collection["id"], "source_id": entry["id"],
+        "title": entry["title"], "vintage": entry["vintage"],
+    } for entry in collection.get("entries", [])
+      if entry.get("role") == "OBSERVED_CONTEXT" and entry.get("kind") == "document"]
+
+
 def manifest_readiness(path, value):
     """Check installed member metadata; Workspace import verifies original bytes."""
     root = path.parent.resolve()
@@ -191,6 +221,8 @@ class SourceReports:
         self.scientific = ScientificReportEditions(operator, fault)
         self._archive_lock = threading.RLock()
         self._source_roots = tuple(source_roots)
+        self.included_archives = IncludedSourceArchives(
+            operator, fault, Path(__file__).resolve().parents[1], self._source_roots)
         self._managed_registered_ids = set()
         self._available_editions = []
         self._discovery_issues = []
@@ -254,9 +286,10 @@ class SourceReports:
                         continue
                     summary = self.operator._manifest_summary(value)
                     report_rows = manifest_reports(value)
+                    document_rows = manifest_documents(value)
                     regional = any(row.get("role") == "SOURCE_WATER_CONTEXT"
                                    for row in value["entries"])
-                    if not report_rows and not regional:
+                    if not report_rows and not document_rows and not regional:
                         continue
                     sha = hashlib.sha256(raw).hexdigest()
                     ready = manifest_readiness(path, value)
@@ -287,6 +320,7 @@ class SourceReports:
                         "manifest_sha256": sha, "manifest_name": path.name,
                         "title": summary["title"], "origin": origin,
                         "entry_count": len(value["entries"]), "reports": report_rows,
+                        "documents": document_rows,
                         "source_ids": [row["id"] for row in value["entries"]],
                         "regional_context": regional,
                         "vintages": list(dict.fromkeys(str(row["vintage"]) for row in value["entries"])),
@@ -297,15 +331,24 @@ class SourceReports:
             # Replace the dictionary atomically, retaining the original explicit order.
             self.operator.registered = registered
             self._managed_registered_ids = managed
+            archive_editions, archive_issues = self.included_archives.discover()
+            # A loose manifest already offers the same byte-identical import.
+            available_manifest_shas = {row["manifest_sha256"] for row in available if row["ready"]}
+            available.extend(row for row in archive_editions
+                             if row["manifest_sha256"] not in available_manifest_shas)
+            self._discovery_issues.extend(archive_issues)
             self._available_editions = available
 
 
-    def _entry(self, workspace, collection_id, selected_key):
+    def _collection(self, workspace, collection_id):
         if not re.fullmatch(r"[0-9a-f]{64}", str(collection_id or "")):
             raise self.Fault("SOURCE_REPORT_EDITION", "Choose a retained source edition.")
+        return self.operator.ws(workspace).retained_item("sources", collection_id)
+
+    def _entry(self, workspace, collection_id, selected_key):
+        collection = self._collection(workspace, collection_id)
         if not re.fullmatch(r"[0-9a-f]{64}", str(selected_key or "")):
             raise self.Fault("SOURCE_REPORT_ENTRY", "Choose a retained report source.")
-        collection = self.operator.ws(workspace).retained_item("sources", collection_id)
         matches = [row for row in collection["entries"] if entry_key(row["id"]) == selected_key]
         if len(matches) != 1 or not html_members(matches[0]):
             raise self.Fault("SOURCE_REPORT_ENTRY", "This source entry has no retained HTML report.", 404)
@@ -360,16 +403,40 @@ class SourceReports:
             retained_ids = {row["id"] for row in retained}
             editions.append({
                 **original,
+                "entry_count": (len(retained[0].get("entries", []))
+                                if original.get("entry_count") is None and retained
+                                else original.get("entry_count")),
                 "retained_collections": [{"id": row["id"], "title": row.get("title", row["id"])}
                                          for row in retained],
+                "retained_scientific_sources": [source for row in retained
+                                                for source in retained_scientific_sources(row)],
                 "retained_reports": [
                     {"collection_id": row["collection_id"], "entry_key": row["entry_key"],
                      "title": row["title"], "source_id": row["source_id"]}
                     for row in reports if row["collection_id"] in retained_ids
                 ],
             })
+        retained_editions = []
+        for collection in collections:
+            documents = [{
+                "source_id": entry["id"], "title": entry["title"],
+                "kind": entry["kind"], "role": entry.get("role"),
+                "vintage": entry["vintage"],
+                "scientific_report": entry.get("kind") == "document"
+                                     and entry.get("role") == "OBSERVED_CONTEXT",
+            } for entry in collection.get("entries", [])
+              if entry.get("kind") == "document" or entry.get("role") == "OBSERVED_CONTEXT"]
+            if documents:
+                retained_editions.append({
+                    "collection_id": collection["id"],
+                    "title": collection.get("title") or collection.get("scope") or collection["id"],
+                    "original_manifest_sha256": collection["original_manifest"]["sha256"],
+                    "entry_count": len(collection["entries"]), "documents": documents,
+                    "scientific_sources": retained_scientific_sources(collection),
+                })
         return {"workspace_key": workspace, "reports": reports,
-                "available_editions": editions, "discovery_issues": self._discovery_issues}
+                "available_editions": editions, "retained_editions": retained_editions,
+                "discovery_issues": self._discovery_issues}
 
     def detail(self, workspace, payload):
         collection, entry, members = self._entry(
@@ -413,8 +480,14 @@ class SourceReports:
         return ticket, policy
 
     def archive(self, workspace, payload):
-        collection, entry, members = self._entry(
-            workspace, payload.get("collection_id"), payload.get("entry_key"))
+        # Existing report callers keep their exact HTML-entry admission. A whole
+        # retained collection needs no HTML member and uses the same ZIP writer.
+        if "entry_key" in payload:
+            collection, entry, members = self._entry(
+                workspace, payload.get("collection_id"), payload["entry_key"])
+        else:
+            collection = self._collection(workspace, payload.get("collection_id"))
+            entry = None
         ws = self.operator.ws(workspace)
         original = collection["original_manifest"]
         manifest_path = self._path(workspace, original)
@@ -422,9 +495,10 @@ class SourceReports:
         if len(original_body) != original["bytes"] or hashlib.sha256(original_body).hexdigest() != original["sha256"]:
             raise self.Fault("SOURCE_REPORT_CHANGED", "The original source manifest changed.", 409)
         original_manifest = json.loads(original_body)
-        selected = [row for row in original_manifest["entries"] if row["id"] == entry["id"]]
-        if len(selected) != 1:
-            raise self.Fault("SOURCE_REPORT_MANIFEST", "The original manifest does not identify this report.", 409)
+        if entry is not None:
+            selected = [row for row in original_manifest["entries"] if row["id"] == entry["id"]]
+            if len(selected) != 1:
+                raise self.Fault("SOURCE_REPORT_MANIFEST", "The original manifest does not identify this report.", 409)
         # Export the complete original collection, so related scientific source
         # IDs remain registered after reimport. Restore source_path here; member
         # preview uses each entry's independently normalized view_path instead.
@@ -509,7 +583,10 @@ class SourceReports:
             record = read_json(metadata)
             if record.get("selection") != selection:
                 raise self.Fault("SOURCE_REPORT_ARCHIVE", "The retained portable report selection changed.", 409)
-        return {"workspace_key": workspace, "source_id": entry["id"],
+        return {"workspace_key": workspace, "source_id": entry["id"] if entry is not None else None,
+                "collection_id": collection["id"],
+                "original_manifest_sha256": original["sha256"],
+                "source_ids": [row["id"] for row in original_manifest["entries"]],
                 "manifest_member": record["manifest_member"],
                 "download": self.operator._ticket(workspace, destination, record, "Report and complete original source edition")}
 
@@ -518,6 +595,8 @@ class SourceReports:
             return self.scientific.read(workspace, operation, payload)
         if operation == "catalog":
             return self.catalog(workspace, refresh=str(payload.get("refresh", "")).lower() in {"1", "true"})
+        if operation == "included-archive-preview":
+            return self.included_archives.preview(workspace, payload.get("archive_id"))
         if operation == "detail":
             return self.detail(workspace, payload)
         if operation == "archive":

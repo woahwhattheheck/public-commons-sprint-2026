@@ -2,6 +2,29 @@
 
 Audit Exchange keeps a complete building audit document, its validation choices, and the work performed against each revision in one local workspace. The operator interface opens the server for that workspace. Every XML change creates a retained revision; reviews, explicit links, projections, analyses, and saved editions stay attached to their original source identities.
 
+
+## Owner instruction: inspect the actual outgoing product and every attachment
+
+This owner instruction applies to every current, future, resumed and delegated worker, across providers and local or cloud runtimes. Before calling a customer/prospect-facing application, website, dashboard, demo, report, presentation or export ready, open/run/render the exact outgoing version, look at the rendered screen or its actual screenshots, and operate the important user controls. Inspect the actual screenshare width and narrow/mobile width where relevant, populated/empty/loading/error states, downloads/exports and reopening. Capturing screenshots without viewing them is insufficient. Code review, DOM counts, HTTP 200, unit checks and another worker's approval do not replace seeing the actual product.
+
+The same requirement covers **every outgoing attachment**. Open the complete original file in the application the recipient will use. Inspect document pages, tables, slides, plots and printable/exported views; follow the useful controls and links; download and reopen the complete delivery. Watch final video and listen to final audio when those media are included, checking readable content, actual playback, intelligibility and natural voice quality. Keep the viewed or played edition tied to the exact file being delivered.
+
+Fix broken, unstyled, cramped, clipped, overflowing or unreadable output within the authorized work before presenting it. Use plain industrial software design: readable tables, clear hierarchy, consistent typography and spacing, restrained controls, useful labels and responsive layouts. Preserve real workflows, source data and computations. Inspection must lead directly to repairs and must not replace implementation/integration or become repeated checking. Keep validation focused on the actual remaining risk; do not run broad suites or build a verification product.
+
+Include this complete instruction in delegated assignments and the active owner-controlled policy, boot, build and receiving guidance those workers actually read. Preserve all other owner controls and original operation identities. Leave historical records and third-party/vendor policies intact. Do not force restarts, create watchers or revive owner-stopped work. When a runtime is unavailable, join the existing equipped receiver with the complete exact version and opening steps, review its actual rendered result, and continue independent implementation while it runs.
+
+Owner instruction and coordinated propagation: https://tokenjunkielabs.slack.com/archives/C0BU51F1PL3/p1791881496221999 . The all-attachments and final-media clarification is retained in that original owner thread. Project-specific deadlines continue to apply to their actual named projects.
+
+### Apply the instruction to the complete Audit operation
+
+Use the existing project and its exact selected application edition. Start or reopen it using **Open the workspace** below, or use the already running original application. Record the announced URL/workspace identity and the selected source/revision; keep the original controller and native analysis owners. Inspect the real rendered interface at the receiving screenshare width and a narrow view, such as 390 CSS pixels. A screenshot returned by an equipped receiver must be opened and viewed by the producing worker before delivery.
+
+Operate the original import and source-inspection controls, entity/field/time-series paging, correction draft, review, saved edition, native analysis, turnover, download and receiving flows. Include the actual populated project and a meaningful empty selection, loading state and reported error. Preserve unfinished forms and any original pending request. Repair concrete layout or control failures in the same product, then inspect the changed screens and affected downloads.
+
+For the outgoing attachments, open the complete XML in the intended source viewer, the HTML review in the browser, and all eight turnover CSVs in the receiving table workflow. Inspect native analytical plots and readable reports at their full delivered size, including units, time labels, legends and warnings. Follow retained model-output links and reopen the original data/object files through their documented native tools. Download the complete workspace/application archive, receive it into the designated independent project and open its saved source/review edition. If LDA is selected, follow the same delivered package through its current/fixed source and Brief receiving controls.
+
+A delegated receiver receives the complete exact source/application and project package, the full owner instruction above, original opening command or installed Applications entry, safe private configuration references, selected workspace/source/revision, actual output paths and the important controls to exercise. It returns the actual rendered images and opened-attachment outcomes to the producer for viewing and repair. Keep this inside the existing commissioning case and its complete archive.
+
 ## Open the workspace
 
 Start the installed Audit Exchange application with its original workspace directory. Open its local server URL in a browser, enter the server URL in **Open workspace**, and connect. A known workspace ID can be entered to pin the connection before its first read. Use the exact local URL announced by the running application; the default address is `http://127.0.0.1:8769/`.
@@ -15,6 +38,7 @@ The left navigation covers the complete workflow:
 | Workspace | Inspect retained sources, review workload, installed schemas and profiles. |
 | Source documents | Import complete original XML bytes and see each source's current revision. |
 | Inspect and correct | Browse entities, exact fields, local references, time series, validation, and the complete XML. Stage an atomic group of corrections or replace a complete document. |
+| Colleague corrections | Compare a complete colleague return with the original and current project, choose native corrections and returned reviews, and save one complete corrected edition. |
 | Compare revisions | Compare full field values and reference changes between two retained revisions of one source. |
 | Saved editions | Save and reopen a complete workspace selection with its source revisions and related work. |
 | Review work | Assign and maintain reviews tied to one source revision and, optionally, one entity. |
@@ -157,6 +181,10 @@ Choose the intended kind, select an edition where applicable, add a note, and pr
 To receive a case, select its complete exported workspace or application package. Review the original file's byte count and hash, add a receiving note, and choose **Receive complete case**. The native workspace receives the whole case in one transaction with distinct local identities and returns the received source, edition, review, and link counts together with the original-to-received source identity map and complete package SHA256.
 
 Large receiving packages use the same complete original request recovery as small XML imports. Their full bytes are retained in the browser's transactional request store before transmission.
+
+## Return a colleague's complete corrections
+
+Use **Colleague corrections** to send a complete editable project, open the colleague's full returned workspace/application ZIP, compare the original sent/current/returned revisions, and select the accepted native values and returned reviews. The original workspace validates and applies all selected sources in one retained mutation, keeps the complete returned project, and saves an edition. The complete operating, recovery and client workflow is in [CORRECTIONS.md](CORRECTIONS.md).
 
 ## Recover the original request
 
@@ -318,3 +346,36 @@ Use the same application, operation directory and complete input JSON after an i
 A native analysis whose retained metadata permits runtime recovery can continue after the actual reported condition is repaired. Add `--resume-analysis REPAIR_LABEL` to record that continuation against the same analysis ID and immutable original inputs. A deliberate application correction uses `--adopt-source`; the driver retains both complete source generations in the same case.
 
 The final case contains the original input files, source cohorts, all three native workspaces, full request and response files, browser recovery records, source models, projection, consumer result, observed weather, native outputs and complete exported application/workspaces. Each captured archive includes a complete member manifest and is reopened to verify every member's bytes and SHA256. The original operation's `-latest-archive.json` pointer identifies the complete retained archive beside the case directory. Preserve that archive with the operating deliverables.
+
+
+## Complete offline recipient review and native acceptance
+
+Use [AUDIT_RECIPIENT_REVIEW.md](AUDIT_RECIPIENT_REVIEW.md) for the following
+recipient course on this original Audit workspace. The complete application
+includes the standalone recipient editor, source-bound manuscript, all authored
+editions and the original-byte return packer. A recipient can inspect retained
+source revisions, save and reopen unfinished review fields, then return the
+whole original archive and complete manuscript.
+
+The author prepares that standalone delivery from an existing native
+workspace/application export:
+
+    python3 audit_recipient_review.py prepare --archive /absolute/original-application.zip --out /absolute/recipient
+
+The recipient opens Audit_Recipient_Review.html and retains every accompanying
+file. Native acceptance is explicit: run the helper's preview command against
+the same existing author workspace, inspect the full review proposals, then
+apply using that saved preview and the same original acceptance journal. The
+unchanged native review.save operation remains authoritative. Existing review
+head conflicts remain visible; complete accepted requests replay without a
+second review.
+
+AUDIT_RECIPIENT_RECEIVING.py operates the complete following course with an
+explicit review plan, actual original workspace/export and installed browser.
+It retains the source, complete recipient files and exact native requests,
+exports the full application, independently receives/reopens it through the
+original engine, and saves the resulting project. Current commissioning and
+native analysis stay with their original owner. Follow the full outgoing
+product/all-attachment rule above and in the recipient guide: producing peers
+must personally LOOK at actual renders and use the delivered attachments.
+Source publication is distinct from native and rendered completion.

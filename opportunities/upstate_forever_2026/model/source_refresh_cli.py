@@ -36,7 +36,7 @@ def _parser():
                                  help="Apply or resume one retained refresh plan")
     apply.add_argument("plan_id")
     apply.add_argument("--run-models", action="store_true",
-                       help="Execute affected full native domains for an edition plan")
+                       help="Complete refreshed native runs using verified original stages when inputs match")
     commands.add_parser("list", parents=[common],
                         help="List both saved formats with common engine and state fields")
     show = commands.add_parser("show", parents=[common],

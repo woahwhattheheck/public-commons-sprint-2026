@@ -15,12 +15,18 @@ let screen='targets', selectedTarget='application:application', viewedEdition=nu
 let incoming=null, comparison=null, initialCapture=null;
 const formDrafts=new Map(), carryChoices=new Map(), formContexts=new Map();
 let workingBase=newWorkingCopy(), workingRevision=0, workingGeneration=0, storedGeneration=0;
-let workingTimer=null, workingTail=Promise.resolve(), workingError=null, workingReady=false;
+let workingTimer=null, workingTail=Promise.resolve(), workingWrite=null, workingError=null, workingReady=false;
 let newFields={newTitle:'',newPerson:'',newFormat:'plain',newParticipant:''};
 function readStartFields(){
   for(const [name,id]of Object.entries({newTitle:'review-new-title',newPerson:'review-new-person',newFormat:'review-new-format',newParticipant:'review-new-participant'})){
     if($(id))newFields[name]=$(id).value;
   }
+}
+function workingMetadata(value){
+  // The live fields below have their own owners. Preserve any other original
+  // envelope members without pinning a superseded round or unfinished form graph.
+  const {round,incoming,initialCapture,ui,forms,contexts,carryChoices,native,...metadata}=value;
+  return metadata;
 }
 function workingSnapshot(){
   readStartFields();
@@ -41,16 +47,33 @@ function scheduleWorking(){
 }
 async function flushWorking(){
   clearTimeout(workingTimer);
+  // All callers join one writer. Capture only when that writer is ready, never
+  // while it is waiting for IndexedDB to commit a preceding complete copy.
+  if(workingWrite)return workingWrite;
   if(workingGeneration===storedGeneration&&workingRevision)return;
-  const value=workingSnapshot(),generation=workingGeneration,id=workingBase.id;
-  const task=workingTail.catch(()=>{}).then(async()=>{
-    const saved=await saveWorkingCopy(value,{recordId:id,revision:workingRevision});
-    workingRevision=saved.revision;storedGeneration=Math.max(storedGeneration,generation);workingError=null;
-    const url=new URL(location.href);url.searchParams.set('working',id);history.replaceState(null,'',url);
-    workingStatus();return saved;
+  const id=workingBase.id;
+  const task=Promise.resolve().then(async()=>{
+    try{
+      do{
+        if(workingBase.id!==id)throw new Error('The working selection changed before its complete save finished.');
+        clearTimeout(workingTimer);
+        const generation=workingGeneration;
+        // Keep the full snapshot immutable across the original asynchronous CAS.
+        // This block releases both it and the returned record before the next copy.
+        {
+          const value=workingSnapshot();
+          const saved=await saveWorkingCopy(value,{recordId:id,revision:workingRevision});
+          workingRevision=saved.revision;storedGeneration=generation;workingError=null;
+        }
+        const url=new URL(location.href);url.searchParams.set('working',id);history.replaceState(null,'',url);
+        workingStatus();
+      }while(workingGeneration!==storedGeneration);
+    }catch(error){workingError=error;workingStatus();throw error;}
   });
-  workingTail=task;
-  try{return await task;}catch(error){workingError=error;workingStatus();throw error;}
+  workingWrite=task;
+  // The settled tail deliberately returns no full record or source graph.
+  workingTail=task.finally(()=>{if(workingWrite===task)workingWrite=null;});
+  return workingTail;
 }
 function beginSelection(){
   clearTimeout(workingTimer);workingBase=newWorkingCopy();workingRevision=0;workingGeneration=0;storedGeneration=0;workingError=null;
@@ -59,7 +82,7 @@ function beginSelection(){
 }
 async function installWorking(value,{persist=true}={}){
   clearTimeout(workingTimer);await workingTail.catch(()=>{});
-  workingReady=true;workingBase=value;workingRevision=0;workingGeneration=1;storedGeneration=0;workingError=null;
+  workingReady=true;workingBase=workingMetadata(value);workingRevision=0;workingGeneration=1;storedGeneration=0;workingError=null;
   round=value.round;incoming=value.incoming;initialCapture=value.initialCapture;comparison=null;
   ({screen,selectedTarget,viewedEdition,actorId}=value.ui);
   newFields={newTitle:value.ui.newTitle,newPerson:value.ui.newPerson,newFormat:value.ui.newFormat,newParticipant:value.ui.newParticipant};

@@ -1,0 +1,107 @@
+{
+  "schema": "commons.civicmapper-rainfall-original-source.v1",
+  "original_operation": "CIVICMAPPER-RAINFALL-WORKSHARE-6334-20261013",
+  "observed_at": "2026-10-13 10:53:49 UTC",
+  "source_method": "Public HTTPS source_url imports followed by complete same-integration UTF-8 downloads",
+  "http_status": null,
+  "http_status_note": "Importer reported uploaded and complete matching lengths; original HTTP status/headers are not exposed by this route.",
+  "sources": [
+    {
+      "path": "latest-observations.json",
+      "url": "https://atlas.3riverswetweather.org/rainfall/v2/latest-observations/?format=json",
+      "bytes": 715,
+      "sha256": "a66157ed2360e00073e4828cf3219aa18a6a78111e199e9fd6633e1251b5642c",
+      "content": "{\"calibrated-radar\":\"2026-09-01T00:00:00-04:00\",\"calibrated-gauge\":\"2026-08-31T23:45:00-04:00\",\"realtime-radar\":\"2026-10-13T06:30:00-04:00\",\"realtime-gauge\":\"2026-10-13T06:45:00-04:00\",\"rainfall-events\":\"2026-08-22T14:00:00-04:00\",\"earliest-5min-calibrated-gauge\":\"2022-07-01T00:00:00-04:00\",\"latest-5min-calibrated-gauge\":\"2026-08-31T23:55:00-04:00\",\"earliest-5min-calibrated-radar\":\"2019-02-28T20:05:00-05:00\",\"latest-5min-calibrated-radar\":\"2026-09-01T00:00:00-04:00\",\"earliest-15min-calibrated-gauge\":\"2000-04-01T00:00:00-05:00\",\"latest-15min-calibrated-gauge\":\"2026-08-31T23:45:00-04:00\",\"earliest-15min-calibrated-radar\":\"2000-04-01T00:00:00-05:00\",\"latest-15min-calibrated-radar\":\"2026-09-01T00:00:00-04:00\"}"
+    },
+    {
+      "path": "gauges.json",
+      "url": "https://atlas.3riverswetweather.org/rainfall/gauges/",
+      "bytes": 13054,
+      "sha256": "921ed541a89c8f49a28fc8c1779295cfae7604d7000ebfa7e8f6b727f3629693",
+      "content": "{\"type\":\"FeatureCollection\",\"features\":[{\"id\":5,\"type\":\"Feature\",\"geometry\":{\"type\":\"Point\",\"coordinates\":[-80.01955833005286,40.49344443970921]},\"properties\":{\"web_id\":\"1\",\"ext_id\":\"2400\",\"nws_des\":\"OBSP1\",\"name\":\"PWSA (Observatory Hill)\",\"address\":\"Montana St. Pittsburgh, PA 15214\",\"ant_elev\":20.0,\"elev_ft\":1369.0,\"active\":true}},{\"id\":6,\"type\":\"Feature\",\"geometry\":{\"type\":\"Point\",\"coordinates\":[-80.05076944015752,40.418844440318935]},\"properties\":{\"web_id\":\"7\",\"ext_id\":\"2401\",\"nws_des\":\"GTBP1\",\"name\":\"Greentree\",\"address\":\"Greentree Borough Maintenance Garage Poplar St. Pgh. PA 15220\",\"ant_elev\":20.0,\"elev_ft\":1178.7,\"active\":true}},{\"id\":7,\"type\":\"Feature\",\"geometry\":{\"type\":\"Point\",\"coordinates\":[-79.85023055959255,40.44548889020035]},\"properties\":{\"web_id\":\"14\",\"ext_id\":\"2402\",\"nws_des\":\"CHHP1\",\"name\":\"Wilkinsburg-Penn Reservoir (Churchill)\",\"address\":\"2300 William Penn Hwy. Pgh. Pa. 15235\",\"ant_elev\":20.0,\"elev_ft\":1197.5,\"active\":true}},{\"id\":60,\"type\":\"Feature\",\"geometry\":{\"type\":\"Point\",\"coordinates\":[-80.049,40.34777800000012]},\"properties\":{\"web_id\":null,\"ext_id\":\"2541\",\"nws_des\":null,\"name\":\"South Hills Village\",\"address\":null,\"ant_elev\":null,\"elev_ft\":null,\"active\":false}},{\"id\":57,\"type\":\"Feature\",\"geometry\":{\"type\":\"Point\",\"coordinates\":[-80.01499999999987,40.358887]},\"properties\":{\"web_id\":null,\"ext_id\":\"2542\",\"nws_des\":null,\"name\":\"Castle Shannon\",\"address\":null,\"ant_elev\":null,\"elev_ft\":null,\"active\":false}},{\"id\":54,\"type\":\"Feature\",\"geometry\":{\"type\":\"Point\",\"coordinates\":[-79.726387,40.463]},\"properties\":{\"web_id\":null,\"ext_id\":\"2543\",\"nws_des\":null,\"name\":\"Holiday Park\",\"address\":null,\"ant_elev\":null,\"elev_ft\":null,\"active\":false}},{\"id\":53,\"type\":\"Feature\",\"geometry\":{\"type\":\"Point\",\"coordinates\":[-80.0259999999999,40.559998]},\"properties\":{\"web_id\":null,\"ext_id\":\"2544\",\"nws_des\":null,\"name\":\"North Hills\",\"address\":null,\"ant_elev\":null,\"elev_ft\":null,\"active\":false}},{\"id\":51,\"type\":\"Feature\",\"geometry\":{\"type\":\"Point\",\"coordinates\":[-79.933,40.583332]},\"properties\":{\"web_id\":null,\"ext_id\":\"2547\",\"nws_des\":null,\"name\":\"Hampton Twp. Mun.\",\"address\":null,\"ant_elev\":null,\"elev_ft\":null,\"active\":false}},{\"id\":58,\"type\":\"Feature\",\"geometry\":{\"type\":\"Point\",\"coordinates\":[-79.90499999999986,40.545]},\"properties\":{\"web_id\":null,\"ext_id\":\"2548\",\"nws_des\":null,\"name\":\"Beechwood Farms\",\"address\":null,\"ant_elev\":null,\"elev_ft\":null,\"active\":false}},{\"id\":52,\"type\":\"Feature\",\"geometry\":{\"type\":\"Point\",\"coordinates\":[-80.077,40.566109]},\"properties\":{\"web_id\":null,\"ext_id\":\"2549\",\"nws_des\":null,\"name\":\"Franklin Park\",\"address\":null,\"ant_elev\":null,\"elev_ft\":null,\"active\":false}},{\"id\":65,\"type\":\"Feature\",\"geometry\":{\"type\":\"Point\",\"coordinates\":[-80.01955833005286,40.49344443970921]},\"properties\":{\"web_id\":\"1\",\"ext_id\":\"2660\",\"nws_des\":\"OBSP1\",\"name\":\"PWSA (Observatory Hill)\",\"address\":\"Montana St. Pittsburgh, PA 15214\",\"ant_elev\":20.0,\"elev_ft\":1369.0,\"active\":false}},{\"id\":67,\"type\":\"Feature\",\"geometry\":{\"type\":\"Point\",\"coordinates\":[-80.04244999986742,40.476119440260106]},\"properties\":{\"web_id\":\"2\",\"ext_id\":\"2661\",\"nws_des\":\"PBWP1\",\"name\":\"Alcosan\",\"address\":\"3300 Preble Ave Pgh. Pa. 15233\",\"ant_elev\":6.0,\"elev_ft\":737.1,\"active\":true}},{\"id\":66,\"type\":\"Feature\",\"geometry\":{\"type\":\"Point\",\"coordinates\":[-79.96958889001507,40.52411943966058]},\"properties\":{\"web_id\":\"3\",\"ext_id\":\"2662\",\"nws_des\":\"STPP1\",\"name\":\"Shaler\",\"address\":\"300 Wetzel Rd. Glenshaw, Pa.15116\",\"ant_elev\":6.0,\"elev_ft\":945.4,\"active\":true}},{\"id\":62,\"type\":\"Feature\",\"geometry\":{\"type\":\"Point\",\"coordinates\":[-80.1135888900152,40.47536943984795]},\"properties\":{\"web_id\":\"4\",\"ext_id\":\"2663\",\"nws_des\":\"KYTP1\",\"name\":\"Kennedy TWP.\",\"address\":\"Diebold Pump Station Coraopolis, Pa. 15108\",\"ant_elev\":6.0,\"elev_ft\":997.4,\"active\":true}},{\"id\":61,\"type\":\"Feature\",\"geometry\":{\"type\":\"Point\",\"coordinates\":[-80.10980000036955,40.335049999857915]},\"properties\":{\"web_id\":\"5\",\"ext_id\":\"2664\",\"nws_des\":\"USCP1\",\"name\":\"Upper St. Clair\",\"address\":\"Upper St. Clair Community & Rec. Ctr. 1551 Mayview Rd. Upper St. Clair, PA 15241\",\"ant_elev\":6.0,\"elev_ft\":941.0,\"active\":true}},{\"id\":64,\"type\":\"Feature\",\"geometry\":{\"type\":\"Point\",\"coordinates\":[-80.09658889026491,40.400238889913]},\"properties\":{\"web_id\":\"6\",\"ext_id\":\"2665\",\"nws_des\":\"CNGP1\",\"name\":\"Carnegie T.T.\",\"address\":\"Hammond St Carnegie Pa.\",\"ant_elev\":6.0,\"elev_ft\":840.1,\"active\":true}},{\"id\":63,\"type\":\"Feature\",\"geometry\":{\"type\":\"Point\",\"coordinates\":[-80.05076944015752,40.418844440318935]},\"properties\":{\"web_id\":\"7\",\"ext_id\":\"2666\",\"nws_des\":\"GTBP1\",\"name\":\"Greentree\",\"address\":\"Greentree Borough Maintenance Garage Poplar St. Pgh. PA 15220\",\"ant_elev\":20.0,\"elev_ft\":1178.7,\"active\":false}},{\"id\":73,\"type\":\"Feature\",\"geometry\":{\"type\":\"Point\",\"coordinates\":[-79.96078056027454,40.46548888980067]},\"properties\":{\"web_id\":\"8\",\"ext_id\":\"2667\",\"nws_des\":\"LVHP1\",\"name\":\"ACHD Bldg.7 - 3RWW Office\",\"address\":\"3901 Penn Ave. Pgh. Pa. 15224\",\"ant_elev\":20.0,\"elev_ft\":830.2,\"active\":true}},{\"id\":72,\"type\":\"Feature\",\"geometry\":{\"type\":\"Point\",\"coordinates\":[-79.95841111018456,40.44378889004548]},\"properties\":{\"web_id\":\"9\",\"ext_id\":\"2668\",\"nws_des\":\"UOPP1\",\"name\":\"Univ of Pittsburgh (Posvar Hall)\",\"address\":\"230 S. Bouquet St, Pittsburgh, PA 15213\",\"ant_elev\":6.0,\"elev_ft\":984.6,\"active\":false}},{\"id\":2,\"type\":\"Feature\",\"geometry\":{\"type\":\"Point\",\"coordinates\":[-79.934409,40.438315]},\"properties\":{\"web_id\":\"9A\",\"ext_id\":\"2668\",\"nws_des\":\"\",\"name\":\"Bob O'Connor Golf Course\",\"address\":\"\",\"ant_elev\":null,\"elev_ft\":null,\"active\":true}},{\"id\":75,\"type\":\"Feature\",\"geometry\":{\"type\":\"Point\",\"coordinates\":[-79.92274999991241,40.479961110217175]},\"properties\":{\"web_id\":\"10\",\"ext_id\":\"2669\",\"nws_des\":\"HLPP1\",\"name\":\"Highland Park (PWSA)\",\"address\":\"Mellon & N. Negley Pgh. Pa. 15222\",\"ant_elev\":6.0,\"elev_ft\":915.0,\"active\":true}},{\"id\":74,\"type\":\"Feature\",\"geometry\":{\"type\":\"Point\",\"coordinates\":[-79.90524999958762,40.424269439583156]},\"properties\":{\"web_id\":\"11\",\"ext_id\":\"2670\",\"nws_des\":\"PGNP1\",\"name\":\"M-46 Access Shaft\",\"address\":\"9 mile run  Old Brownshill Rd.\",\"ant_elev\":6.0,\"elev_ft\":800.5,\"active\":true}},{\"id\":69,\"type\":\"Feature\",\"geometry\":{\"type\":\"Point\",\"coordinates\":[-79.95663888997274,40.3834694403626]},\"properties\":{\"web_id\":\"12\",\"ext_id\":\"2671\",\"nws_des\":\"BDWP1\",\"name\":\"Baldwin Boro\",\"address\":\"3344 Churchview Ave. Pgh. Pa. 15227\",\"ant_elev\":6.0,\"elev_ft\":1193.2,\"active\":true}},{\"id\":68,\"type\":\"Feature\",\"geometry\":{\"type\":\"Point\",\"coordinates\":[-79.86599999989988,40.394999999950244]},\"properties\":{\"web_id\":\"13\",\"ext_id\":\"2672\",\"nws_des\":\"BOKP1\",\"name\":\"M-59 Access Shaft\",\"address\":\"11th St.. Braddock, Pa.\",\"ant_elev\":6.0,\"elev_ft\":800.5,\"active\":true}},{\"id\":71,\"type\":\"Feature\",\"geometry\":{\"type\":\"Point\",\"coordinates\":[-79.85023055959255,40.44548889020035]},\"properties\":{\"web_id\":\"14\",\"ext_id\":\"2673\",\"nws_des\":\"CHHP1\",\"name\":\"Wilkinsburg-Penn Reservoir (Churchill)\",\"address\":\"2300 William Penn Hwy. Pgh. Pa. 15235\",\"ant_elev\":20.0,\"elev_ft\":1197.5,\"active\":false}},{\"id\":70,\"type\":\"Feature\",\"geometry\":{\"type\":\"Point\",\"coordinates\":[-79.76261944043472,40.38103889033272]},\"properties\":{\"web_id\":\"15\",\"ext_id\":\"2674\",\"nws_des\":\"TFFP1\",\"name\":\"Trafford\",\"address\":\"P.W. garage Brinton Ave. Trafford Pa.\",\"ant_elev\":6.0,\"elev_ft\":860.9,\"active\":true}},{\"id\":40,\"type\":\"Feature\",\"geometry\":{\"type\":\"Point\",\"coordinates\":[-80.00878055967496,40.36748888960079]},\"properties\":{\"web_id\":\"16\",\"ext_id\":\"2675\",\"nws_des\":\"CLGP1\",\"name\":\"Castle Shannon\",\"address\":\"3310 McRoberts Rd. Pgh. Pa. 15234\",\"ant_elev\":6.0,\"elev_ft\":1117.7,\"active\":true}},{\"id\":39,\"type\":\"Feature\",\"geometry\":{\"type\":\"Point\",\"coordinates\":[-80.12051111029939,40.365911110009904]},\"properties\":{\"web_id\":\"17\",\"ext_id\":\"2676\",\"nws_des\":\"BGVP1\",\"name\":\"Chartiers\",\"address\":\"1000 Presto-Sygan Rd. Bridgeville, Pa. 15017-1327\",\"ant_elev\":6.0,\"elev_ft\":899.0,\"active\":true}},{\"id\":42,\"type\":\"Feature\",\"geometry\":{\"type\":\"Point\",\"coordinates\":[-80.1765194403198,40.40078889009544]},\"properties\":{\"web_id\":\"18\",\"ext_id\":\"2677\",\"nws_des\":\"OKDP1\",\"name\":\"Oakdale\",\"address\":\"Oakdale Industrial Park Noblestown Rd. Oakdale Pa. 15071\",\"ant_elev\":6.0,\"elev_ft\":899.0,\"active\":true}},{\"id\":41,\"type\":\"Feature\",\"geometry\":{\"type\":\"Point\",\"coordinates\":[-79.8504611097922,40.48286110995247]},\"properties\":{\"web_id\":\"19\",\"ext_id\":\"2678\",\"nws_des\":\"PHNP1\",\"name\":\"Sandy Creek\",\"address\":\"Alcosan Pump station/Sandy Creek Rd.\",\"ant_elev\":6.0,\"elev_ft\":839.7,\"active\":true}},{\"id\":36,\"type\":\"Feature\",\"geometry\":{\"type\":\"Point\",\"coordinates\":[-79.79771110987974,40.453888889960524]},\"properties\":{\"web_id\":\"20\",\"ext_id\":\"2679\",\"nws_des\":\"PHSP1\",\"name\":\"Gascola\",\"address\":\"500 Thomson Run Rd. (Penn Hills Pump Station)\",\"ant_elev\":6.0,\"elev_ft\":941.2,\"active\":true}},{\"id\":35,\"type\":\"Feature\",\"geometry\":{\"type\":\"Point\",\"coordinates\":[-80.19369700041602,40.524122000030445]},\"properties\":{\"web_id\":\"21\",\"ext_id\":\"2680\",\"nws_des\":\"MFRP1\",\"name\":\"Moon\",\"address\":\"150 Fern Hollow Rd. Coraopolis, PA 15108\",\"ant_elev\":6.0,\"elev_ft\":1121.0,\"active\":true}},{\"id\":38,\"type\":\"Feature\",\"geometry\":{\"type\":\"Point\",\"coordinates\":[-80.22356110955747,40.41678056007498]},\"properties\":{\"web_id\":\"22\",\"ext_id\":\"2681\",\"nws_des\":\"NFTP1\",\"name\":\"North Fayette\",\"address\":\"400 N. Branch Rd. Oakdale Pa. 15071\",\"ant_elev\":6.0,\"elev_ft\":997.7,\"active\":true}},{\"id\":37,\"type\":\"Feature\",\"geometry\":{\"type\":\"Point\",\"coordinates\":[-80.29645000036714,40.489699999955235]},\"properties\":{\"web_id\":\"23\",\"ext_id\":\"2682\",\"nws_des\":\"FMBP1\",\"name\":\"Findlay\",\"address\":\"1271 RT. 30 Clinton Pa. 15026\",\"ant_elev\":6.0,\"elev_ft\":1197.5,\"active\":true}},{\"id\":48,\"type\":\"Feature\",\"geometry\":{\"type\":\"Point\",\"coordinates\":[-79.92999999970004,40.297500000325044]},\"properties\":{\"web_id\":\"24\",\"ext_id\":\"2683\",\"nws_des\":\"BRUP1\",\"name\":\"Jefferson Hills\",\"address\":\"Borough Building 925 Old Clairton Rd. Jefferson Hills, PA 15025\",\"ant_elev\":6.0,\"elev_ft\":1056.0,\"active\":true}},{\"id\":8,\"type\":\"Feature\",\"geometry\":{\"type\":\"Point\",\"coordinates\":[-79.773243,40.322334]},\"properties\":{\"web_id\":\"35\",\"ext_id\":\"2684\",\"nws_des\":\"2684\",\"name\":\"North Huntingdon\",\"address\":\"13900 Grinder Lane, North Huntingdon, PA 15642\",\"ant_elev\":0.0,\"elev_ft\":0.0,\"active\":true}},{\"id\":47,\"type\":\"Feature\",\"geometry\":{\"type\":\"Point\",\"coordinates\":[-79.79929999969511,40.33014999962302]},\"properties\":{\"web_id\":\"25\",\"ext_id\":\"2684\",\"nws_des\":\"WOWP1\",\"name\":\"White Oak\",\"address\":\"2280 Lincoln Way White Oak Pa. 15131\",\"ant_elev\":6.0,\"elev_ft\":936.5,\"active\":false}},{\"id\":50,\"type\":\"Feature\",\"geometry\":{\"type\":\"Point\",\"coordinates\":[-79.8226999996051,40.27151943987036]},\"properties\":{\"web_id\":\"26\",\"ext_id\":\"2685\",\"nws_des\":\"ETMP1\",\"name\":\"Elizabeth TWP.\",\"address\":\"522 Rock Run Rd. Elizabeth Pa. 15037\",\"ant_elev\":6.0,\"elev_ft\":1094.9,\"active\":true}},{\"id\":49,\"type\":\"Feature\",\"geometry\":{\"type\":\"Point\",\"coordinates\":[-80.11371110967974,40.65298889032522]},\"properties\":{\"web_id\":\"27\",\"ext_id\":\"2686\",\"nws_des\":\"MTBP1\",\"name\":\"Marshall\",\"address\":\"525 Pleasant Hills Rd. Warrendale Pa. 15086\",\"ant_elev\":6.0,\"elev_ft\":1197.5,\"active\":true}},{\"id\":44,\"type\":\"Feature\",\"geometry\":{\"type\":\"Point\",\"coordinates\":[-79.76198056025459,40.503461110242256]},\"properties\":{\"web_id\":\"28\",\"ext_id\":\"2687\",\"nws_des\":\"PMBP1\",\"name\":\"Plum\",\"address\":\"4555 New Texas Rd. Pgh. Pa. 15239\",\"ant_elev\":6.0,\"elev_ft\":997.4,\"active\":true}},{\"id\":59,\"type\":\"Feature\",\"geometry\":{\"type\":\"Point\",\"coordinates\":[-79.814698,40.614136]},\"properties\":{\"web_id\":\"34\",\"ext_id\":\"2688\",\"nws_des\":\"\",\"name\":\"West Deer\",\"address\":\"\",\"ant_elev\":0.0,\"elev_ft\":0.0,\"active\":true}},{\"id\":43,\"type\":\"Feature\",\"geometry\":{\"type\":\"Point\",\"coordinates\":[-80.16879444021117,40.59016111004735]},\"properties\":{\"web_id\":\"29\",\"ext_id\":\"2688\",\"nws_des\":\"BACP1\",\"name\":\"Bell Acres\",\"address\":\"Maintenance Bldg. 1153 Campmeeting Rd. Sewickley, PA 15143\",\"ant_elev\":6.0,\"elev_ft\":1195.0,\"active\":false}},{\"id\":46,\"type\":\"Feature\",\"geometry\":{\"type\":\"Point\",\"coordinates\":[-80.09669999970515,40.612580560244794]},\"properties\":{\"web_id\":\"30\",\"ext_id\":\"2689\",\"nws_des\":\"CGTP1\",\"name\":\"McCandless\",\"address\":\"Fish Run pump station rt.910 and Nickolson Rd.(279 Wexford Exit).\",\"ant_elev\":6.0,\"elev_ft\":1228.6,\"active\":true}},{\"id\":45,\"type\":\"Feature\",\"geometry\":{\"type\":\"Point\",\"coordinates\":[-79.96394999959273,40.56301110987499]},\"properties\":{\"web_id\":\"31\",\"ext_id\":\"2690\",\"nws_des\":\"HPTP1\",\"name\":\"Hampton\",\"address\":\"2536 Toner Ave. Allison Park Pa. 15101\",\"ant_elev\":6.0,\"elev_ft\":178.6,\"active\":true}},{\"id\":56,\"type\":\"Feature\",\"geometry\":{\"type\":\"Point\",\"coordinates\":[-79.7610388900327,40.577191670259595]},\"properties\":{\"web_id\":\"32\",\"ext_id\":\"2691\",\"nws_des\":\"ARNP1\",\"name\":\"Arnold\",\"address\":\"Valley Middle School 1701 Alcoa Dr. Arnold, PA 15068\",\"ant_elev\":6.0,\"elev_ft\":945.0,\"active\":true}},{\"id\":55,\"type\":\"Feature\",\"geometry\":{\"type\":\"Point\",\"coordinates\":[-79.95236110997718,40.6405500001826]},\"properties\":{\"web_id\":\"33\",\"ext_id\":\"2692\",\"nws_des\":\"RLTP1\",\"name\":\"Richland\",\"address\":\"4011 Dickey Rd. Gibsonia, Pa. 15044\",\"ant_elev\":6.0,\"elev_ft\":1195.3,\"active\":true}}]}"
+    }
+  ],
+  "selection": {
+    "sensor_type": "gauge",
+    "product": "historic15",
+    "earliest": "2000-04-01T00:00:00-05:00",
+    "latest": "2026-08-31T23:45:00-04:00",
+    "start": "2026-07-13T00:00:00Z",
+    "end": "2026-07-14T00:00:00Z",
+    "sensors": [
+      {
+        "api_sensor_id": "1",
+        "feature_id": 5,
+        "properties": {
+          "web_id": "1",
+          "ext_id": "2400",
+          "nws_des": "OBSP1",
+          "name": "PWSA (Observatory Hill)",
+          "address": "Montana St. Pittsburgh, PA 15214",
+          "ant_elev": 20,
+          "elev_ft": 1369,
+          "active": true
+        },
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            -80.01955833005286,
+            40.49344443970921
+          ]
+        }
+      },
+      {
+        "api_sensor_id": "2",
+        "feature_id": 67,
+        "properties": {
+          "web_id": "2",
+          "ext_id": "2661",
+          "nws_des": "PBWP1",
+          "name": "Alcosan",
+          "address": "3300 Preble Ave Pgh. Pa. 15233",
+          "ant_elev": 6,
+          "elev_ft": 737.1,
+          "active": true
+        },
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            -80.04244999986742,
+            40.476119440260106
+          ]
+        }
+      }
+    ],
+    "request": {
+      "start_dt": "2026-07-13T00:00:00Z",
+      "end_dt": "2026-07-14T00:00:00Z",
+      "f": "sensor_columnar",
+      "rollup": "15-minute",
+      "delivery": "artifact",
+      "gauges": "1,2"
+    },
+    "post_url": "https://atlas.3riverswetweather.org/rainfall/v2/gauge/historic15/",
+    "dispatched": false
+  },
+  "source_identity_rule": {
+    "repository": "3rww/rainfall",
+    "ref": "1e2d70abec7f7a7ede855cbb9baea15715e03565",
+    "transformer": {
+      "path": "src/store/utils/transformers.js",
+      "git_blob_sha": "4babc16d055494395775d475d4c18d7cb701ef19",
+      "meaning": "Active gauge properties.web_id is copied to option properties.id; raw GeoJSON feature.id is not the API query identifier."
+    },
+    "selector": {
+      "path": "src/components/sidebar/geomPicker.jsx",
+      "git_blob_sha": "c4cb0732fded825b12b47fcd345ca01878721eb6"
+    },
+    "request": {
+      "path": "src/store/features/rainfallThunks.js",
+      "git_blob_sha": "e2093a17ccdbd87fdcee3faf1cfc6a040d5c1388"
+    },
+    "bounds": {
+      "path": "src/store/utils/dateBounds.js",
+      "git_blob_sha": "e2f1470730f431a32a0f1735e3277d939d862bf8"
+    }
+  }
+}

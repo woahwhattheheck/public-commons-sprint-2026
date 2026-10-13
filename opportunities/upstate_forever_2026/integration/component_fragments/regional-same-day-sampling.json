@@ -1,0 +1,17 @@
+{
+  "schema": "upstate.application-component-fragment/v1",
+  "id": "regional-same-day-sampling",
+  "extend_components": {
+    "scientific-report-rendering": {
+      "paths": [
+        "source/synchronized_sampling_20261013/cosample.py",
+        "source/synchronized_sampling_20261013/review.html",
+        "source/synchronized_sampling_20261013/receive_report.py",
+        "source/synchronized_sampling_20261013/README.md"
+      ],
+      "requires": []
+    }
+  },
+  "required_components": [],
+  "source_reference": "Complete original 729-routine-activity / 36-station same-local-date and exact-method sampling analysis, offline review, full exports and native observed-report receiver. Preserves original 217-HUC project, complete 730-row source ledger and existing calendar/Monitoring plans. Source-only compiler is an additive scientific-report companion; report bodies are imported through the ordinary Sources workflow."
+}

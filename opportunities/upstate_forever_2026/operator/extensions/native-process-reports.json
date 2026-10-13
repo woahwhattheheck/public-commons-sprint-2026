@@ -2,7 +2,7 @@
   "schema": "upstate.operator-extension/v1",
   "id": "native-process-reports",
   "title": "Native process reports",
-  "version": "2",
+  "version": "5",
   "order": 42,
   "assets": [
     "native_processes.mjs",
@@ -72,6 +72,20 @@
         ],
         "path": "/api/native-processes/table",
         "operation": "table",
+        "handler": "read",
+        "args": [
+          "operator",
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "POST"
+        ],
+        "path": "/api/native-processes/table-selection",
+        "operation": "table-selection",
         "handler": "read",
         "args": [
           "operator",

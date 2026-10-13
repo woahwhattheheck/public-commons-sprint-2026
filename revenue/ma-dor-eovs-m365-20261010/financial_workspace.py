@@ -3,13 +3,16 @@ from __future__ import annotations
 import csv
 import io
 import json
+from collections import Counter
+from contextvars import ContextVar
+from functools import wraps
 from migration_store import MigrationError, canonical, identity, parse_json, text, digest, page, integer
 import financial_domain as domain
 
 KINDS = ("finance.dataset", "finance.definition", "finance.run", "finance.reconciliation",
          "finance.review", "finance.control", "finance.release")
 MUTATIONS = tuple(k + ".create" for k in KINDS)
-READS = ("finance.schema", "finance.list", "finance.get", "finance.rows", "finance.verify", "finance.preview")
+READS = ("finance.schema", "finance.list", "finance.get", "finance.rows", "finance.verify", "finance.preview", "finance.request_status")
 MAX_SOURCE_BYTES = 64 * 1024 * 1024
 DDL = """CREATE TABLE IF NOT EXISTS financial_rows(
  dataset_id TEXT NOT NULL,ordinal INTEGER NOT NULL,body_json TEXT NOT NULL,
@@ -27,19 +30,39 @@ def schema():
             "period_modes": ["movement", "balance"], "maximum_source_bytes": MAX_SOURCE_BYTES,
             "meaning": "Original export and native-definition evidence in the existing workspace. No tenant request, vendor deployment or financial approval is performed."}
 
+_EVIDENCE_CACHE = ContextVar("financial_evidence_cache", default=None)
+
+def with_evidence_cache(fn):
+    @wraps(fn)
+    def run(store, *args, **kwargs):
+        current = _EVIDENCE_CACHE.get()
+        if current is not None and current[0] is store:
+            return fn(store, *args, **kwargs)
+        token = _EVIDENCE_CACHE.set((store, {}))
+        try: return fn(store, *args, **kwargs)
+        finally: _EVIDENCE_CACHE.reset(token)
+    return run
+
 def file_refs(store, refs, *, required=False):
     domain.require(isinstance(refs, list) and (refs or not required), "FINANCE_FILES", "Select original retained evidence files.")
     selected = []
+    current = _EVIDENCE_CACHE.get()
+    cache = current[1] if current is not None and current[0] is store else {}
     for ref in refs:
-        domain.strict_object(ref, ("sha256", "filename"), ("purpose",))
-        info = store.file_info(digest(ref["sha256"]))
+        domain.strict_object(ref, ("sha256", "filename"), ("purpose", "bytes"))
+        sha = digest(ref["sha256"])
         text(ref["filename"], "filename", max_length=240)
-        with store.open_file(ref["sha256"]) as held:
-            from migration_store import file_hash
-            actual = file_hash(held)
-        domain.require(actual["sha256"] == info["sha256"] and actual["bytes"] == info["bytes"],
-                       "FINANCE_FILE_BYTES", "Retained evidence changed.")
-        selected.append({**ref, "bytes": info["bytes"]})
+        if sha not in cache:
+            info = store.file_info(sha)
+            # The original Store opens a held regular file and verifies its full
+            # SHA256 and length before returning this handle. Reuse only within
+            # this operation/read, never across calls or receiving workspaces.
+            with store.open_file(sha):
+                cache[sha] = info["bytes"]
+        domain.require("bytes" not in ref or
+                       (type(ref["bytes"]) is int and ref["bytes"] == cache[sha]),
+                       "FINANCE_FILE_LENGTH", "Retained evidence descriptor length differs.")
+        selected.append({**ref, "bytes": cache[sha]})
     return selected
 
 def request_body(op, fields):
@@ -189,39 +212,88 @@ def reconciliation_create(store, op):
                    "comparison_sha256": identity(value), "note": p.get("note", "")},
                   {"items": value["items"]})
 
-def review_create(store, op):
-    p = request_body(op, ("title", "reconciliation_id", "parent_id", "decisions", "reviewer_role", "note", "evidence_files"))
+def review_decisions(store, value):
+    """Legacy inline records retain their original bytes; new reviews use rows."""
+    if "decisions" in value:
+        domain.require(isinstance(value["decisions"], list), "FINANCE_VERIFY_DECISIONS",
+                       "The original inline review must retain its complete decision array.")
+        yield from value["decisions"]
+    else:
+        yield from iter_items(store, value["id"], "decisions")
+
+def review_input(store, p):
+    domain.require(("decisions" in p) != ("decisions_file" in p), "FINANCE_DECISION_INPUT",
+                   "Select either the complete decision array or one retained complete JSON decision file.")
+    selected = None
+    if "decisions_file" in p:
+        domain.strict_object(p["decisions_file"], ("sha256", "filename"))
+        selected = file_refs(store, [p["decisions_file"]], required=True)[0]
+        domain.require(selected["bytes"] <= MAX_SOURCE_BYTES, "FINANCE_DECISION_SIZE",
+                       "The complete decision file exceeds the explicit 64 MiB parser bound.")
+        with store.open_file(selected["sha256"]) as stream:
+            try:
+                decisions = json.loads(stream.read(MAX_SOURCE_BYTES + 1).decode("utf-8-sig"),
+                                       object_pairs_hook=domain.unique_pairs,
+                                       parse_constant=lambda x: (_ for _ in ()).throw(ValueError(x)))
+            except (ValueError, UnicodeError, RecursionError) as exc:
+                raise MigrationError("FINANCE_DECISION_JSON",
+                                     "Retain one complete JSON decision array with unique object keys.") from exc
+    else:
+        decisions = p.get("decisions")
+    domain.require(isinstance(decisions, list), "FINANCE_DECISIONS",
+                   "Retain an explicit decision for every unmatched original key.")
+    return decisions, selected
+
+def checked_review(store, op, *, check_parent=True):
+    p = request_body(op, ("title", "reconciliation_id", "parent_id", "decisions", "decisions_file",
+                          "reviewer_role", "note", "evidence_files"))
     reconciliation = get(store, "finance.reconciliation", p.get("reconciliation_id"))
-    previous(store, "finance.review", p.get("parent_id"), {"reconciliation_id": reconciliation["id"]})
+    if check_parent:
+        previous(store, "finance.review", p.get("parent_id"), {"reconciliation_id": reconciliation["id"]})
     text(p.get("reviewer_role"), "actual reviewer role"); text(p.get("note"), "review note")
     evidence = file_refs(store, p.get("evidence_files"), required=True)
-    items = {i["id"]: i for i in iter_items(store, reconciliation["id"], "items")}
-    decisions = p.get("decisions")
-    domain.require(isinstance(decisions, list), "FINANCE_DECISIONS", "Retain an explicit decision for every unmatched original key.")
-    checked, seen = [], set()
+    required = {i["id"] for i in iter_items(store, reconciliation["id"], "items") if i["status"] != "MATCH"}
+    decisions, decision_file = review_input(store, p)
+    checked, seen, corrected = [], set(), {}
     for decision in decisions:
         domain.strict_object(decision, ("item_id", "status", "owner", "note", "evidence_files"), ("correction_reconciliation_id",))
         item_id = decision["item_id"]
-        domain.require(item_id in items and item_id not in seen and items[item_id]["status"] != "MATCH",
+        domain.require(isinstance(item_id, str) and item_id in required and item_id not in seen,
                        "FINANCE_DECISION", "Decide each original nonmatching key once.")
         seen.add(item_id); text(decision["owner"], "discrepancy owner"); text(decision["note"], "discrepancy explanation")
         domain.require(decision["status"] in ("open", "accepted_variance", "resolved"), "FINANCE_DISPOSITION", "Use an explicit disposition.")
         refs = file_refs(store, decision["evidence_files"], required=decision["status"] != "open")
         if decision["status"] == "resolved":
-            correction = get(store, "finance.reconciliation", decision.get("correction_reconciliation_id"))
-            domain.require(correction["company"] == reconciliation["company"] and correction["family"] == reconciliation["family"] and
-                           correction["period"] == reconciliation["period"] and correction["definition_id"] == reconciliation["definition_id"] and correction["comparison"]["complete"],
-                           "FINANCE_CORRECTION_SCOPE", "Correction evidence must use the same exact definition and complete company/family/period.")
-            match = next((i for i in iter_items(store, correction["id"], "items") if i["id"] == item_id), None)
-            domain.require(match is not None and match["status"] == "MATCH", "FINANCE_CORRECTION", "The original key must actually match in the corrected result.")
+            correction_id = decision.get("correction_reconciliation_id")
+            domain.require(isinstance(correction_id, str), "FINANCE_CORRECTION",
+                           "Select the original complete corrected reconciliation.")
+            if correction_id not in corrected:
+                correction = get(store, "finance.reconciliation", correction_id)
+                domain.require(correction["company"] == reconciliation["company"] and correction["family"] == reconciliation["family"] and
+                               correction["period"] == reconciliation["period"] and correction["definition_id"] == reconciliation["definition_id"] and correction["comparison"]["complete"],
+                               "FINANCE_CORRECTION_SCOPE", "Correction evidence must use the same exact definition and complete company/family/period.")
+                # Keep only statuses for this original unresolved population.
+                # The first occurrence matches the original next(...) lookup.
+                matches = {}
+                for item in iter_items(store, correction["id"], "items"):
+                    if item["id"] in required: matches.setdefault(item["id"], item["status"])
+                corrected[correction_id] = matches
+            domain.require(corrected[correction_id].get(item_id) == "MATCH", "FINANCE_CORRECTION",
+                           "The original key must actually match in the corrected result.")
         checked.append({**decision, "evidence_files": refs})
-    required = {i["id"] for i in items.values() if i["status"] != "MATCH"}
     domain.require(seen == required, "FINANCE_REVIEW_POPULATION", "Review the entire nonmatching population.", missing=sorted(required-seen))
-    return record(store, op, "finance.review", p.get("title"),
-                  {"reconciliation_id": reconciliation["id"], "parent_id": p.get("parent_id"),
-                   "reviewer_role": p["reviewer_role"], "note": p["note"], "evidence_files": evidence,
-                   "decisions": checked, "ready": reconciliation["comparison"]["complete"] and
-                     all(d["status"] != "open" for d in checked)})
+    value = {"reconciliation_id": reconciliation["id"], "parent_id": p.get("parent_id"),
+             "reviewer_role": p["reviewer_role"], "note": p["note"], "evidence_files": evidence,
+             "ready": reconciliation["comparison"]["complete"] and all(d["status"] != "open" for d in checked)}
+    return value, checked, decision_file
+
+def review_create(store, op):
+    value, checked, decision_file = checked_review(store, op)
+    return record(store, op, "finance.review", op["request"].get("title"),
+                  {**value, "decision_count": len(checked),
+                   "decision_statuses": dict(Counter(x["status"] for x in checked)),
+                   "decisions_sha256": identity(checked), "decisions_file": decision_file},
+                  {"decisions": checked})
 
 def control_create(store, op):
     p = request_body(op, ("title", "category", "status", "owner", "note", "external_reference",
@@ -304,6 +376,7 @@ def release_create(store, op):
                    "acceptance_files": accepted_files, "parent_id": p.get("parent_id"), "note": p["note"],
                    "meaning": "Recorded external approvals and independent receiving evidence; this application does not grant tenant authority."})
 
+@with_evidence_cache
 def invoke(store, op):
     kind = op["operation"].removesuffix(".create")
     entity_id = kind.replace(".", "-") + "-" + identity({"op": op["id"], "sha": op["request_sha256"]})[:40]
@@ -317,6 +390,7 @@ HANDLERS = {"finance.dataset.create": dataset_create, "finance.definition.create
             "finance.review.create": review_create, "finance.control.create": control_create,
             "finance.release.create": release_create}
 
+@with_evidence_cache
 def verify(store, entity_id=None):
     # Recompute from full original object bytes. No provider request or native replay.
     selected = [parse_json(row[0]) for row in store.conn.execute(
@@ -343,6 +417,27 @@ def verify(store, entity_id=None):
             actual = domain.compare_output(definition["definition"], run, output, list(iter_rows(store, output["id"])))
             domain.require(identity(actual) == value["comparison_sha256"] and actual == {**value["comparison"], "items": list(iter_items(store, value["id"], "items"))},
                            "FINANCE_VERIFY_COMPARISON", "Received reconciliation differs.", id=value["id"])
+        elif kind == "finance.review":
+            op = store._operation(value["operation_id"])
+            domain.require(op["operation"] == "finance.review.create" and op["status"] == "SUCCEEDED" and
+                           op["result"] is not None and op["result"]["result"] == value,
+                           "FINANCE_VERIFY_COMPLETION", "Original review request, result and retained record differ.")
+            # Later review editions must not invalidate a historical review.
+            # Recompute decisions against its immutable original request/sources.
+            fields, actual, decision_file = checked_review(store, op, check_parent=False)
+            expected = {**base(op, kind, op["request"].get("title")), **fields}
+            if "decisions" in value:
+                expected["decisions"] = actual
+                domain.require(not list(iter_items(store, value["id"], "decisions")),
+                               "FINANCE_VERIFY_DECISIONS", "A legacy inline review has unexpected child decisions.")
+            else:
+                expected.update(decision_count=len(actual),
+                                decision_statuses=dict(Counter(x["status"] for x in actual)),
+                                decisions_sha256=identity(actual), decisions_file=decision_file)
+                domain.require(actual == list(review_decisions(store, value)),
+                               "FINANCE_VERIFY_DECISIONS", "Complete retained review decisions differ from the original request.")
+            domain.require(expected == value, "FINANCE_VERIFY_DECISIONS",
+                           "Review metadata, disposition or complete original decisions differ.")
         verified.append({"id": value["id"], "kind": kind})
     if entity_id:
         domain.require(any(r["id"] == entity_id for r in verified), "FINANCE_VERIFY_ID", "Selected original record was not found.")
@@ -350,7 +445,43 @@ def verify(store, entity_id=None):
             "revision": store.project["revision"], "records": verified, "count": len(verified),
             "provider_calls": 0, "meaning": "Recomputed retained datasets, calculations and reconciliations; approvals remain original evidence."}
 
+# Explicit input/selection errors from the actual local handlers. Unknown
+# infrastructure errors and any retained result keep the original recovery path.
+DRAFT_VALIDATION_CODES = frozenset(["ENTITY_NOT_FOUND","FILE_NOT_FOUND","FINANCE_AMOUNT","FINANCE_BASIS","FINANCE_CAPTURE_TIME","FINANCE_CHANGE","FINANCE_CHANGE_SUPERSEDED","FINANCE_COLUMN","FINANCE_COLUMNS","FINANCE_CONTROL","FINANCE_CONTROL_APPROVAL","FINANCE_CONTROL_APPROVED_SCOPE","FINANCE_CONTROL_RELEASE_SCOPE","FINANCE_CONTROL_SCOPE","FINANCE_CONTROL_STATUS","FINANCE_CONTROL_SUPERSEDED","FINANCE_CORRECTION","FINANCE_CORRECTION_SCOPE","FINANCE_COVERAGE","FINANCE_CURRENCY","FINANCE_DATE","FINANCE_DATE_BASIS","FINANCE_DECISION","FINANCE_DECISIONS","FINANCE_DECISION_INPUT","FINANCE_DECISION_JSON","FINANCE_DECISION_SIZE","FINANCE_DELIMITER","FINANCE_DIALECT","FINANCE_DIMENSIONS","FINANCE_DISPOSITION","FINANCE_DUPLICATE_KEY","FINANCE_ENCODING","FINANCE_EVIDENCE","FINANCE_EXPORT","FINANCE_FIELDS","FINANCE_FILES","FINANCE_FILE_LENGTH","FINANCE_FILTER","FINANCE_FILTERS","FINANCE_FORMAT","FINANCE_GROUPS","FINANCE_HEAD","FINANCE_HEADER","FINANCE_INDEPENDENT_RECEIVER","FINANCE_JSON","FINANCE_KEYS","FINANCE_KIND","FINANCE_MEASUREMENT","FINANCE_NATIVE_FILES","FINANCE_NESTING","FINANCE_OBJECT","FINANCE_OPENING","FINANCE_OUTPUT","FINANCE_OUTPUT_BINDING","FINANCE_OUTPUT_PERIOD","FINANCE_PARAMETERS","FINANCE_PARENT","FINANCE_PERIOD","FINANCE_PERIOD_MODE","FINANCE_POPULATION","FINANCE_READ","FINANCE_RELEASE_CONTROLS","FINANCE_RELEASE_COVERAGE","FINANCE_RELEASE_DUPLICATE","FINANCE_RELEASE_EVIDENCE","FINANCE_RELEASE_FAMILIES","FINANCE_RELEASE_PERIODS","FINANCE_RELEASE_REVIEW","FINANCE_REQUEST","FINANCE_REVIEW_POPULATION","FINANCE_REVIEW_SUPERSEDED","FINANCE_ROLE","FINANCE_ROUND","FINANCE_ROW_LIMIT","FINANCE_ROW_WIDTH","FINANCE_SCOPE","FINANCE_SECTION","FINANCE_SIGN","FINANCE_SOURCE_SIZE","FINANCE_STATUS","FINANCE_WINDOW","INVALID_FIELD","INVALID_FILENAME","INVALID_ID","INVALID_INTEGER","INVALID_SHA256"])
+
+def request_status(store, operation_id):
+    from migration_store import identifier
+    identifier(operation_id, "operation_id")
+    # One original SQLite snapshot checks the operation and every kind of owned
+    # financial output. This observation neither cancels nor rewrites the request.
+    with store.transaction():
+        op = store._operation(operation_id, required=False)
+        result = {"schema": "commons.financial-request-status/v1", "operation_id": operation_id,
+                  "workspace_id": store.project["id"], "revision": store.project["revision"],
+                  "found": op is not None, "can_return_to_draft": False}
+        if op is None:
+            return {**result, "status": None, "reason": "The original request is not admitted."}
+        result.update(operation=op["operation"], status=op["status"], request_sha256=op["request_sha256"],
+                      error=op["error"], original_request=op["request"])
+        if op["operation"] not in MUTATIONS:
+            return {**result, "reason": "Only original local financial requests use this disposition."}
+        kind = op["operation"].removesuffix(".create")
+        record_id = kind.replace(".", "-") + "-" + identity({"op": op["id"], "sha": op["request_sha256"]})[:40]
+        effects = {"record": store.get_entity(kind, record_id, required=False) is not None,
+                   "rows": store.conn.execute("SELECT count(*) FROM financial_rows WHERE dataset_id=?", (record_id,)).fetchone()[0],
+                   "items": store.conn.execute("SELECT count(*) FROM financial_items WHERE owner_id=?", (record_id,)).fetchone()[0],
+                   "result": op["result"] is not None, "checkpoint": op["checkpoint"] is not None}
+        code = op["error"].get("code") if isinstance(op["error"], dict) else None
+        known_validation = code in DRAFT_VALIDATION_CODES
+        allowed = op["status"] == "INTERRUPTED" and known_validation and not any(effects.values())
+        return {**result, "record_id": record_id, "effects": effects,
+                "known_validation_failure": known_validation, "can_return_to_draft": allowed,
+                "reason": ("The retained local validation rejection has no committed financial outputs; retain this observation and edit a new draft."
+                           if allowed else "Keep the original request recovery: its outcome is active, unknown, successful or has retained outputs."),
+                "meaning": "A read-only observation of the original transaction and owned rows. It does not cancel the original request or grant a platform action."}
+
 def read(store, operation, p):
+    if operation == "finance.request_status": return request_status(store, p.get("operation_id"))
     if operation == "finance.schema": return schema()
     if operation == "finance.preview": return source_preview(store, p)
     if operation == "finance.verify": return verify(store, p.get("id"))
@@ -362,16 +493,31 @@ def read(store, operation, p):
         return get(store, p.get("kind"), p.get("id"))
     if operation == "finance.rows":
         kind, entity_id = p.get("kind"), p.get("id")
-        get(store, kind, entity_id)
+        value = get(store, kind, entity_id)
         offset, limit = page(p)
-        if kind == "finance.dataset":
+        if kind == "finance.review":
+            domain.require(p.get("section", "decisions") == "decisions", "FINANCE_SECTION",
+                           "Select the complete retained review decisions.")
+            if p.get("status"):
+                domain.require(p["status"] in ("open", "accepted_variance", "resolved"),
+                               "FINANCE_STATUS", "Select an actual review disposition.")
+            if p.get("query"): text(p["query"], "query", max_length=2000)
+            if "decisions" in value:
+                # The original inline body is never rewritten for pagination.
+                rows = [r for r in review_decisions(store, value)
+                        if (not p.get("status") or r["status"] == p["status"]) and
+                           (not p.get("query") or p["query"].lower() in canonical(r).lower())]
+                return {"rows":rows[offset:offset+limit], "total":len(rows), "offset":offset, "limit":limit}
+            table, where, args = "financial_items", "owner_id=? AND kind=?", [entity_id, "decisions"]
+        elif kind == "finance.dataset":
             table, where, args = "financial_rows", "dataset_id=?", [entity_id]
         else:
             section = p.get("section", "items" if kind == "finance.reconciliation" else "rows")
             domain.require(section in ("rows", "population", "exclusions", "issues", "items"), "FINANCE_SECTION", "Select a complete result section.")
             table, where, args = "financial_items", "owner_id=? AND kind=?", [entity_id, section]
         if p.get("status"):
-            domain.require(p["status"] in ("MATCH", "DIFFERENT", "UNKNOWN", "AMBIGUOUS", "MISSING", "UNEXPECTED"),
+            domain.require(p["status"] in (("open", "accepted_variance", "resolved") if kind == "finance.review" else
+                                           ("MATCH", "DIFFERENT", "UNKNOWN", "AMBIGUOUS", "MISSING", "UNEXPECTED")),
                            "FINANCE_STATUS", "Select an actual reconciliation status.")
             where += " AND instr(body_json,?)>0"
             args.append('"status":' + canonical(p["status"]))
@@ -388,19 +534,27 @@ def read(store, operation, p):
 
 def iter_export(store, kind, entity_id, format_name="ndjson"):
     value = get(store, kind, entity_id)
-    if kind == "finance.dataset": rows = iter_rows(store, entity_id)
-    elif kind == "finance.run": rows = iter_items(store, entity_id, "rows")
-    elif kind == "finance.reconciliation": rows = iter_items(store, entity_id, "items")
-    else: rows = iter([value])
+    def rows():
+        if kind == "finance.dataset":
+            for row in iter_rows(store, entity_id): yield {"section":"rows", "value":row}
+        elif kind == "finance.run":
+            for section in ("rows", "population", "exclusions", "issues"):
+                for row in iter_items(store, entity_id, section): yield {"section":section, "value":row}
+        elif kind == "finance.reconciliation":
+            for row in iter_items(store, entity_id, "items"): yield {"section":"items", "value":row}
+        elif kind == "finance.review":
+            for row in review_decisions(store, value): yield {"section":"decisions", "value":row}
+        else:
+            yield {"section":"record", "value":value}
     if format_name == "ndjson":
         yield (canonical({"record": value}) + "\n").encode("utf-8")
-        for row in rows: yield (canonical(row) + "\n").encode("utf-8")
+        for row in rows(): yield (canonical(row) + "\n").encode("utf-8")
     else:
         domain.require(format_name == "csv", "FINANCE_EXPORT", "Use CSV or NDJSON.")
         buffer = io.StringIO(newline="")
         writer = csv.writer(buffer)
-        writer.writerow(["original_record", "ordinal", "complete_json"])
+        writer.writerow(["original_record", "section", "ordinal", "complete_json"])
         yield buffer.getvalue().encode("utf-8"); buffer.seek(0); buffer.truncate()
-        for i, row in enumerate(rows, 1):
-            writer.writerow([entity_id, i, canonical(row)])
+        for i, row in enumerate(rows(), 1):
+            writer.writerow([entity_id, row["section"], i, canonical(row["value"])])
             yield buffer.getvalue().encode("utf-8"); buffer.seek(0); buffer.truncate()

@@ -1,7 +1,7 @@
 {
   "schema": "upstate.application-component-fragment/v1",
   "id": "scientific-report-changes",
-  "source_reference": "ASTRA-REV13 complete saved scientific report edition comparison 1.0.0; original ScientificReportEditions and Workspace queue",
+  "source_reference": "ASTRA-REV13 complete saved scientific report edition comparison 1.0.0; original ScientificReportEditions and Workspace queue; original CustomerReviews complete-pair review and editable lineage",
   "components": {
     "scientific-report-changes": {
       "title": "Saved scientific report comparison and complete receiving",
@@ -13,7 +13,9 @@
         "operator/extensions/report-changes.json",
         "docs/SCIENTIFIC_REPORT_CHANGES.md",
         "integration/component_fragments/scientific-report-changes.json",
-        "install_report_changes.py"
+        "install_report_changes.py",
+        "model/report_changes_review.py",
+        "model/scientific_report_review.py"
       ],
       "import_roots": [
         "operator"
@@ -26,5 +28,20 @@
   },
   "required_components": [
     "scientific-report-changes"
-  ]
+  ],
+  "extend_components": {
+    "study-transfer": {
+      "paths": [
+        "model/report_changes_review.py",
+        "model/report_changes.py",
+        "model/scientific_report_review.py"
+      ]
+    },
+    "scientific-report-review": {
+      "paths": [
+        "model/report_changes_review.py",
+        "model/report_changes.py"
+      ]
+    }
+  }
 }

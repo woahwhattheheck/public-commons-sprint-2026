@@ -294,6 +294,9 @@ def request(workspace, selection: dict) -> dict:
     A source-only selection is fully usable before model execution. A selected run
     must be complete. No invented native-stage unit mappings are supplied here.
     """
+    if selection.get("native_study"):
+        from . import gis_native_study
+        return gis_native_study.request(workspace, selection)
     layers, attachments, grid_ids, run_ids = [], [], [], []
     delivery = delivery_layers(workspace, selection["delivery_id"]) if selection.get("delivery_id") else None
     if delivery is not None:
@@ -587,6 +590,12 @@ def adopt_sources(workspace, selection: dict) -> dict:
              'project_id':workspace.project['id'],'receipt_id':receipt['id'],
              'received_edition_id':project['edition_id'],'fingerprint':result['fingerprint'],
              'title':title,'reason':reason,'layer_ids':chosen,'attachment_ids':attachments}
+    review_context = None
+    if selection.get('review_id'):
+        from . import gis_edition_review
+        review_context = gis_edition_review.adoption_context(
+            workspace, receipt['id'], selection['review_id'], result['fingerprint'])
+        adopted['edition_review'] = review_context[2]
     key=gis.fingerprint(adopted)
     directory=workspace.root/'gis-source-adoptions'/key
     directory.mkdir(parents=True,exist_ok=True)
@@ -632,7 +641,9 @@ def adopt_sources(workspace, selection: dict) -> dict:
             entries.append(entry)
         seen_context=set()
         context_sources=[]
-        def context(title, records, *, context_id, context_role, metadata=None, source=None):
+        def context(title, records, *, context_id, context_role, metadata=None, source=None, context_root=None):
+            context_root = root if context_root is None else context_root
+            context_prefix = context_root.relative_to(parent).as_posix() + '/'
             metadata = deepcopy(metadata or {"kind": "document"})
             source = deepcopy(source or {})
             kind = metadata["kind"]
@@ -650,10 +661,10 @@ def adopt_sources(workspace, selection: dict) -> dict:
             code=gis.fingerprint(signature)
             if code in seen_context:return
             seen_context.add(code)
-            for rec in records:gis.checked(root,rec)
+            for rec in records:gis.checked(context_root,rec)
             entry={'id':'GIS_CONTEXT_'+code,'title':title,'kind':kind,
-                   'path':'project/'+records[0]['path'],'sha256':records[0]['sha256'],
-                   'companions':[{'path':'project/'+r['path'],'sha256':r['sha256']} for r in records[1:]],
+                   'path':context_prefix+records[0]['path'],'sha256':records[0]['sha256'],
+                   'companions':[{'path':context_prefix+r['path'],'sha256':r['sha256']} for r in records[1:]],
                    'uri':source.get('uri') or 'urn:upstate:received-gis:'+receipt['id']+':context:'+code,
                    'vintage':source.get('vintage') or 'Received GIS edition '+project['edition_id'],
                    'gis_context_group':key,'gis_required_context':bool(chosen) or context_role!='attachment',
@@ -685,6 +696,15 @@ def adopt_sources(workspace, selection: dict) -> dict:
             context(document['title'],document['files'],
                     context_id=document['id'],context_role='attachment',
                     metadata=gis.attachment_metadata(project,document),source=document.get('source'))
+        if review_context is not None:
+            review_root, review_state, review_binding = review_context
+            review_files = review_state['files']
+            records = [review_files['REVIEW.html']] + [review_files[name] for name in sorted(review_files)
+                       if name not in {'REVIEW.html', 'review.zip'}]
+            context('Received GIS edition change review', records,
+                    context_id=review_state['id'], context_role='edition_review',
+                    source={'kind': 'retained received-versus-exported GIS review',
+                            'review': review_binding}, context_root=review_root)
         history=[gis.record(root,p) for p in sorted((root/'history').rglob('*')) if p.is_file()]
         context('Received GIS edition provenance and retained history',
                 [gis.record(root,root/'project.json'),*history],

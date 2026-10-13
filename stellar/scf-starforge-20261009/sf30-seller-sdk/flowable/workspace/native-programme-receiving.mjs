@@ -7,10 +7,20 @@ const canonical=value=>JSON.stringify(value&&typeof value==='object'?(Array.isAr
 /**
  * Join an existing native receiving programme. Both clients already select their original workspace UUIDs.
  * state is the caller's retained checkpoint; retain(state) must atomically save it before returning.
+ * reviewOperation is an optional read-only domain check before dispatch and for every confirmed result.
+ * A failed check preserves the same saved request; it never authorizes a replacement mutation.
  * The original native owner chooses the complete source, engine scope and receiving archive path.
  */
-export async function receiveFlowableProgramme({client,receiver,programmeInput,archivePath,state,retain,signal}){
+export async function receiveFlowableProgramme({client,receiver,programmeInput,archivePath,state,retain,signal,reviewOperation}){
  need(client&&receiver&&typeof retain==='function'&&state&&typeof state==='object'&&typeof archivePath==='string','Supply the existing two client owners and original durable checkpoint.');
+ need(reviewOperation===undefined||typeof reviewOperation==='function','The optional native operation review must be callable.');
+ const reviewed=new Set();
+ async function review(step,operation,phase){
+  if(!reviewOperation)return;
+  const identity=phase+'\n'+operation.id+'\n'+operation.revision+'\n'+operation.sha256;
+  if(reviewed.has(identity))return;
+  await reviewOperation({step,operation,phase});reviewed.add(identity);
+ }
  const producer=await client.view(),destination=await receiver.view();
  need(producer.workspaceId!==destination.workspaceId,'Independent receiving needs another original workspace.');
  const identity={producer:producer.workspaceId,receiver:destination.workspaceId,programmeInputSha256:sha(canonical(programmeInput)),archivePath};
@@ -28,6 +38,11 @@ export async function receiveFlowableProgramme({client,receiver,programmeInput,a
  const programme=await receive('programme',()=>client.call('saveProgramme',programmeInput));
  for(;;){
   signal?.throwIfAborted();const current=await client.call('readProgramme',{id:programme.id});
+  // Recheck saved confirmed outcomes on every resumed lifetime before progressing or exporting.
+  if(reviewOperation)for(const saved of current.progress.rows.filter(item=>item.state==='CONFIRMED')){
+   const identity='confirmed\n'+saved.record.id+'\n'+saved.record.revision+'\n'+saved.record.sha256;
+   if(!reviewed.has(identity))await review(saved,await client.call('getRecord',{kind:saved.kind,id:saved.record.id}),'confirmed');
+  }
   const row=current.progress.rows.find(item=>item.state!=='CONFIRMED');if(!row)break;
   need(row.waitingFor.length===0,'The original dependency needs its saved outcome: '+row.waitingFor.join(', '));
   let operation;
@@ -42,6 +57,7 @@ export async function receiveFlowableProgramme({client,receiver,programmeInput,a
     state.inputs['prepare:'+row.key+':0'])).operation;
   }
   if(operation.value.phase==='PREPARED'){
+   await review(row,operation,'prepared');
    const label='dispatch:'+row.key+':'+operation.id;
    const input=await request(label,{id:operation.id,expectedRevision:operation.revision,planSha256:operation.value.planSha256});
    operation=await client.call('dispatch'+row.kind[0].toUpperCase()+row.kind.slice(1),input);

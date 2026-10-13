@@ -1,0 +1,231 @@
+{
+  "schema": "upstate.observed-report/v1",
+  "title": "Georgia approved 2024 assessment context",
+  "edition": "ga-final-2024-publisher-gis-20261013",
+  "vintage": "2024",
+  "interpretation_kind": "published_assessment_context",
+  "inputs": [
+    {
+      "path": "assessments.json",
+      "bytes": 1494882,
+      "sha256": "e0db400d3a53f9c01b7dad17f574fc912083e38260c89a1659e6e15da16f7249"
+    },
+    {
+      "path": "report-section.json",
+      "bytes": 4746,
+      "sha256": "85c2f64657b0525affff3127d06c87997f658df0547327a9d377d2305571fd80"
+    },
+    {
+      "path": "originals/georgia-2024-savannah-stream-attributes-001-original.json",
+      "bytes": 69093,
+      "sha256": "3ee2c87781d6b85d9c1e9d495cb45a93c52ec7e02ae3d573c189318cc0a8d8e9"
+    },
+    {
+      "path": "originals/georgia-2024-savannah-stream-attributes-002-original.json",
+      "bytes": 67382,
+      "sha256": "0b655ecca0c5cb18cf778448ebe2af4f75615411a97f3236caaef8634e7b89fb"
+    },
+    {
+      "path": "originals/georgia-2024-official-stream-layers-original.json",
+      "bytes": 11402,
+      "sha256": "fe34dc1d3dbfb72395cd9453ef3eb9f3c68f4d108a5f5fe1947e469f06ee430a"
+    },
+    {
+      "path": "originals/georgia-2024-savannah-stream-ids-original.json",
+      "bytes": 1415,
+      "sha256": "d9fad4b699e6261cdead9ccb3912054262c0e98b15c8e8cdb54c74d7ef04703f"
+    },
+    {
+      "path": "originals/georgia-2024-savannah-lake-attributes-original.json",
+      "bytes": 10265,
+      "sha256": "14d18f1536bdad18ae96fa365f0588ef644939a2e7363793ff3d11758731c8b8"
+    },
+    {
+      "path": "originals/georgia-2024-savannah-lake-ids-original.json",
+      "bytes": 85,
+      "sha256": "7c3182081b9e2f9326c91659ecb677b61171b368345af9de1363c09c6d1eed70"
+    },
+    {
+      "path": "originals/acquisition.public.json",
+      "bytes": 8206,
+      "sha256": "6dc8ada4876d62ec59fcf3223b3ae7532a626b2fdfdde47dc775db3cd15b54d6"
+    },
+    {
+      "path": "originals/selection.json",
+      "bytes": 8977,
+      "sha256": "87ba87322e3fecd298ef0a2db31a9b7bb0441c84dd26f8dbc0386b2cebdc1503"
+    },
+    {
+      "path": "published-document-context.json",
+      "bytes": 4607,
+      "sha256": "3037b203bc8cd4c185f4599347c23094670eeeddf1a97d42392047d5d4400dc0"
+    }
+  ],
+  "sections": [
+    [
+      "Georgia approved 2024 assessed reaches",
+      [
+        "Georgia approved 2024 assessment context: 295 source rows covering 295 assessed reaches. EPA approval:3 September 2024.",
+        "124 rows Supporting; 143 Not Supporting; 28 Assessment Pending.",
+        "Selection is the publisher Savannah River Basin. Study-domain membership is reported separately when original reach geometry is joined.",
+        "Original source format: arcgis_feature_response. GIS capture and workbook editions retain separate source identities.",
+        "The overall row assessment can summarize different designated uses and pollutants. Categories, causes, uses and original notes remain together; a mixed row does not mean every use fails.",
+        "Bacteria can retain an earlier fecal-coliform impairment while indicator-specific assessment is pending. These listing rows are separate from the current captured E. coli monitoring cohort.",
+        {
+          "kind": "table",
+          "columns": [
+            "Category",
+            "Publisher meaning",
+            "Source rows",
+            "Unique reaches",
+            "303(d)"
+          ],
+          "rows": [
+            [
+              "1",
+              "Supporting designated uses",
+              124,
+              124,
+              "No"
+            ],
+            [
+              "2",
+              "Some uses supported; other uses lack sufficient information",
+              4,
+              4,
+              "No"
+            ],
+            [
+              "3",
+              "Insufficient data or information",
+              16,
+              16,
+              "No"
+            ],
+            [
+              "5",
+              "Impaired; TMDL required",
+              50,
+              50,
+              "Yes"
+            ],
+            [
+              "3N",
+              "Natural conditions require additional assessment",
+              10,
+              10,
+              "No"
+            ],
+            [
+              "4a",
+              "Impaired; relevant TMDL completed",
+              102,
+              102,
+              "No"
+            ],
+            [
+              "4b",
+              "Impaired; other restoration actions expected to attain standards",
+              1,
+              1,
+              "No"
+            ],
+            [
+              "5R",
+              "Advanced restoration plan; TMDL deferred",
+              1,
+              1,
+              "Yes"
+            ]
+          ],
+          "widths": [
+            0.1,
+            0.5,
+            0.12,
+            0.16,
+            0.12
+          ]
+        },
+        "Category counts can overlap when one source row retains multiple categories; they do not sum to a unique total.",
+        "The publisher GIS text fields have a declared capacity. The following separately cited published-document summaries supply context beyond those captured fields; original GIS values and listing categories remain intact.",
+        {
+          "kind": "table",
+          "columns": [
+            "Original reach",
+            "Published document context",
+            "Original PDF page"
+          ],
+          "rows": [
+            [
+              "GAR030601080103 — Sweetwater Creek",
+              "Low-conductivity pH needs more observations; macroinvertebrate assessment awaits revised metrics.",
+              "274"
+            ],
+            [
+              "GAR030601060607 — Butler Creek",
+              "Macroinvertebrate assessment awaits revised metrics; pH remains pending because only six months of 2013 data were available.",
+              "253"
+            ],
+            [
+              "GAR030601020211 — Scott Creek",
+              "Potentially biased pH measurements require new sampling with the revised method, especially in low-conductivity water.",
+              "272"
+            ],
+            [
+              "GAR030601020209 — Warwoman Creek",
+              "pH remains pending after several months of faulty 2013 sonde measurements.",
+              "279"
+            ],
+            [
+              "GAR030601020104 — Coleman River",
+              "pH remains pending while EPD distinguishes possible 2017–2018 probe bias from actual impairment.",
+              "255"
+            ],
+            [
+              "GAR030601020113 — Charlies Creek",
+              "pH remains pending while EPD distinguishes possible 2017–2018 probe bias from actual impairment.",
+              "254"
+            ],
+            [
+              "GAR030601030410 — Tributary to Van Creek",
+              "A 2021 fish-community TMDL is recorded; pH remains pending during investigation of possible probe bias.",
+              "277"
+            ],
+            [
+              "GAR030601030201 — Hartwell Lake",
+              "Drinking Water and Recreation meet their uses; Fishing has a PCB impairment. Mercury remains in Category 3 because one site's trophic-weighted residue was 0.25–0.30 mg/kg.",
+              "9"
+            ]
+          ],
+          "widths": [
+            0.24,
+            0.64,
+            0.12
+          ]
+        },
+        {
+          "kind": "links",
+          "items": [
+            {
+              "title": "Complete original normalized assessment rows and notes",
+              "path": "assessments.json"
+            }
+          ]
+        }
+      ]
+    ]
+  ],
+  "source_links": [
+    "assessments.json",
+    "report-section.json",
+    "originals/georgia-2024-savannah-stream-attributes-001-original.json",
+    "originals/georgia-2024-savannah-stream-attributes-002-original.json",
+    "originals/georgia-2024-official-stream-layers-original.json",
+    "originals/georgia-2024-savannah-stream-ids-original.json",
+    "originals/georgia-2024-savannah-lake-attributes-original.json",
+    "originals/georgia-2024-savannah-lake-ids-original.json",
+    "originals/acquisition.public.json",
+    "originals/selection.json",
+    "published-document-context.json"
+  ]
+}

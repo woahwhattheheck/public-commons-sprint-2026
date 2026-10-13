@@ -2,11 +2,13 @@
   "schema": "upstate.operator-extension/v1",
   "id": "observed-landcover",
   "title": "Observed watershed change",
-  "version": "1.0.0",
+  "version": "1.2.0",
   "order": 58,
   "assets": [
     "observed_landcover.mjs",
-    "observed_landcover.css"
+    "observed_landcover.css",
+    "observed_landcover_selection.mjs",
+    "observed_landcover_groups.mjs"
   ],
   "backend": {
     "module": "observed_landcover_operator",

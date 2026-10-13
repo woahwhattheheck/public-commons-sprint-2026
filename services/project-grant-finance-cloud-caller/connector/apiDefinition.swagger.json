@@ -1,0 +1,558 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "title": "PMRS original finance caller",
+    "version": "1.0.0",
+    "description": "Private HTTPS caller for the original source, reconciliation, review and conditional delivery service. Exact command/result JSON remains text; original storage and identifiers remain authoritative."
+  },
+  "host": "pmrs-gateway.invalid",
+  "basePath": "/",
+  "schemes": [
+    "https"
+  ],
+  "consumes": [
+    "application/json"
+  ],
+  "produces": [
+    "application/json"
+  ],
+  "securityDefinitions": {
+    "basic_auth": {
+      "type": "basic"
+    }
+  },
+  "security": [
+    {
+      "basic_auth": []
+    }
+  ],
+  "paths": {
+    "/v1/capture": {
+      "post": {
+        "operationId": "SubmitCapture",
+        "summary": "Capture source using one original command",
+        "description": "Capture source using one original command",
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/CommandRequest"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Complete original result",
+            "schema": {
+              "$ref": "#/definitions/CommandResult"
+            }
+          },
+          "default": {
+            "description": "Original refusal or unresolved response; retain the same command",
+            "schema": {
+              "$ref": "#/definitions/Error"
+            }
+          }
+        },
+        "consumes": [
+          "application/json"
+        ]
+      }
+    },
+    "/v1/prepare": {
+      "post": {
+        "operationId": "SubmitPrepare",
+        "summary": "Prepare and review using one original command",
+        "description": "Prepare and review using one original command",
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/CommandRequest"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Complete original result",
+            "schema": {
+              "$ref": "#/definitions/CommandResult"
+            }
+          },
+          "default": {
+            "description": "Original refusal or unresolved response; retain the same command",
+            "schema": {
+              "$ref": "#/definitions/Error"
+            }
+          }
+        },
+        "consumes": [
+          "application/json"
+        ]
+      }
+    },
+    "/v1/delivery": {
+      "post": {
+        "operationId": "SubmitDelivery",
+        "summary": "Deliver or explicitly recover using one original command",
+        "description": "Deliver or explicitly recover using one original command",
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/CommandRequest"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Complete original result",
+            "schema": {
+              "$ref": "#/definitions/CommandResult"
+            }
+          },
+          "default": {
+            "description": "Original refusal or unresolved response; retain the same command",
+            "schema": {
+              "$ref": "#/definitions/Error"
+            }
+          }
+        },
+        "consumes": [
+          "application/json"
+        ]
+      }
+    },
+    "/v1/health": {
+      "get": {
+        "operationId": "ReadHealth",
+        "summary": "Read selected original workspace connection",
+        "description": "Read selected original workspace connection",
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Complete original result",
+            "schema": {
+              "$ref": "#/definitions/HealthResult"
+            }
+          },
+          "default": {
+            "description": "Original refusal or unresolved response; retain the same command",
+            "schema": {
+              "$ref": "#/definitions/Error"
+            }
+          }
+        }
+      }
+    },
+    "/v1/commands/{command_id}": {
+      "get": {
+        "operationId": "ReadCommand",
+        "summary": "Read the exact original command after submit or interruption",
+        "description": "Read the exact original command after submit or interruption",
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "name": "command_id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Complete original result",
+            "schema": {
+              "$ref": "#/definitions/CommandResult"
+            }
+          },
+          "default": {
+            "description": "Original refusal or unresolved response; retain the same command",
+            "schema": {
+              "$ref": "#/definitions/Error"
+            }
+          }
+        }
+      }
+    },
+    "/v1/deliveries/{delivery_id}": {
+      "get": {
+        "operationId": "ReadDelivery",
+        "summary": "Read all original delivery row states and recovery decisions",
+        "description": "Read all original delivery row states and recovery decisions",
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "name": "delivery_id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Complete original result",
+            "schema": {
+              "$ref": "#/definitions/NativeResult"
+            }
+          },
+          "default": {
+            "description": "Original refusal or unresolved response; retain the same command",
+            "schema": {
+              "$ref": "#/definitions/Error"
+            }
+          }
+        }
+      }
+    },
+    "/v1/records/{record_id}": {
+      "get": {
+        "operationId": "ReadRecord",
+        "summary": "Read an immutable original record",
+        "description": "Read an immutable original record",
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "name": "record_id",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Complete original result",
+            "schema": {
+              "$ref": "#/definitions/NativeResult"
+            }
+          },
+          "default": {
+            "description": "Original refusal or unresolved response; retain the same command",
+            "schema": {
+              "$ref": "#/definitions/Error"
+            }
+          }
+        }
+      }
+    },
+    "/v1/records/{record_id}/delivery": {
+      "get": {
+        "operationId": "ReadRecordDelivery",
+        "summary": "Read the original review's delivery ownership",
+        "description": "Read the original review's delivery ownership",
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "name": "record_id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Complete original result",
+            "schema": {
+              "$ref": "#/definitions/NativeResult"
+            }
+          },
+          "default": {
+            "description": "Original refusal or unresolved response; retain the same command",
+            "schema": {
+              "$ref": "#/definitions/Error"
+            }
+          }
+        }
+      }
+    },
+    "/v1/records/{record_id}/totals": {
+      "get": {
+        "operationId": "ReadTotals",
+        "summary": "Read a retained page of reconciliation totals",
+        "description": "Read a retained page of reconciliation totals",
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "name": "record_id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "type": "integer",
+            "minimum": 0,
+            "default": 0
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100,
+            "default": 25
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Complete original result",
+            "schema": {
+              "$ref": "#/definitions/NativeResult"
+            }
+          },
+          "default": {
+            "description": "Original refusal or unresolved response; retain the same command",
+            "schema": {
+              "$ref": "#/definitions/Error"
+            }
+          }
+        }
+      }
+    },
+    "/v1/records/{record_id}/findings": {
+      "get": {
+        "operationId": "ReadFindings",
+        "summary": "Read a retained page of reconciliation findings",
+        "description": "Read a retained page of reconciliation findings",
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "name": "record_id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "type": "integer",
+            "minimum": 0,
+            "default": 0
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100,
+            "default": 25
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Complete original result",
+            "schema": {
+              "$ref": "#/definitions/NativeResult"
+            }
+          },
+          "default": {
+            "description": "Original refusal or unresolved response; retain the same command",
+            "schema": {
+              "$ref": "#/definitions/Error"
+            }
+          }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "NativeResult": {
+      "type": "object",
+      "required": [
+        "workspace_id",
+        "native_sha256",
+        "native_json"
+      ],
+      "properties": {
+        "workspace_id": {
+          "type": "string",
+          "description": "Actual selected original workspace"
+        },
+        "native_sha256": {
+          "type": "string",
+          "description": "SHA-256 of exact original UTF-8 response"
+        },
+        "native_json": {
+          "type": "string",
+          "description": "Complete original JSON text. Keep as text when retaining exact decimals and native identifiers."
+        }
+      }
+    },
+    "CommandResult": {
+      "type": "object",
+      "required": [
+        "workspace_id",
+        "command_id",
+        "kind",
+        "state",
+        "stop_polling",
+        "native_json",
+        "native_sha256"
+      ],
+      "properties": {
+        "workspace_id": {
+          "type": "string",
+          "description": "Actual selected original workspace"
+        },
+        "native_sha256": {
+          "type": "string",
+          "description": "SHA-256 of exact original UTF-8 response"
+        },
+        "native_json": {
+          "type": "string",
+          "description": "Complete original JSON text. Keep as text when retaining exact decimals and native identifiers."
+        },
+        "command_id": {
+          "type": "string",
+          "description": "Original UUIDv4; retain across retries and restart"
+        },
+        "kind": {
+          "type": "string",
+          "description": "Original command kind"
+        },
+        "state": {
+          "type": "string",
+          "description": "Native command state"
+        },
+        "stop_polling": {
+          "type": "boolean"
+        },
+        "record_id": {
+          "type": "string",
+          "description": "Original immutable record SHA-256"
+        },
+        "delivery_id": {
+          "type": "string",
+          "description": "Original delivery UUID"
+        },
+        "delivery_state": {
+          "type": "string",
+          "description": "Native delivery state; AWAITING_OPERATOR requires original operator review"
+        },
+        "reconciliation_ready": {
+          "type": "boolean"
+        },
+        "error_code": {
+          "type": "string",
+          "description": "Original command error code"
+        },
+        "recovery": {
+          "type": "string",
+          "description": "Original continuation instruction"
+        }
+      }
+    },
+    "CommandRequest": {
+      "type": "object",
+      "required": [
+        "workspace_id",
+        "command_json"
+      ],
+      "properties": {
+        "command_json": {
+          "type": "string",
+          "description": "Complete original {id,kind,arguments} JSON as text. Never generate a new id after an uncertain response."
+        },
+        "resume_interrupted": {
+          "type": "boolean",
+          "default": false,
+          "description": "Explicitly resume the identical interrupted command after its provider retry time."
+        },
+        "workspace_id": {
+          "type": "string",
+          "description": "The expected original workspace UUID. The caller verifies it before any native dispatch."
+        }
+      }
+    },
+    "Error": {
+      "type": "object",
+      "properties": {
+        "ok": {
+          "type": "boolean"
+        },
+        "error": {
+          "type": "object",
+          "properties": {
+            "code": {
+              "type": "string",
+              "description": "Error code"
+            },
+            "message": {
+              "type": "string",
+              "description": "Actionable refusal"
+            },
+            "details": {
+              "type": "object"
+            }
+          }
+        }
+      }
+    },
+    "HealthResult": {
+      "type": "object",
+      "required": [
+        "workspace_id",
+        "version",
+        "state",
+        "native_workspace",
+        "native_state_sha256",
+        "native_state_bytes"
+      ],
+      "properties": {
+        "workspace_id": {
+          "type": "string"
+        },
+        "version": {
+          "type": "string"
+        },
+        "state": {
+          "type": "string"
+        },
+        "native_workspace": {
+          "type": "object",
+          "description": "Actual original native workspace identity; excludes historical command population."
+        },
+        "native_state_sha256": {
+          "type": "string",
+          "description": "SHA256 of the full original observed /api/state response"
+        },
+        "native_state_bytes": {
+          "type": "integer",
+          "description": "Complete original observed state byte count"
+        }
+      }
+    }
+  }
+}

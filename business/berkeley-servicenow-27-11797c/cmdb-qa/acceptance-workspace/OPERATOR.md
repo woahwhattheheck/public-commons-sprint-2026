@@ -2,7 +2,7 @@
 
 ## Open and continue work
 
-Open **Open_CMDB_Workspace.html** in a current browser. The complete application is inside that file, including its operating source and this guide. The workspace runs locally and does not call a ServiceNow instance or send your exports to a server.
+Open **Open_CMDB_Workspace.html** in a current browser. The complete application is inside that file, including its operating source and this guide. The workspace runs locally and does not call a ServiceNow instance or send your exports to a server. The **Operating guide** link in the footer opens this complete guide before or after you create a workspace.
 
 Enter the name of the **Operating person** before making changes. Use **New workspace** to name the customer, the CMDB class or agreed scope, and the responsible operating owner. The authored worked example can be opened separately to learn the workflow; its asset names, people, references and decisions are fictional.
 
@@ -43,7 +43,7 @@ Every finding begins open. Assign an owner and record the action required. Avail
 
 You can select multiple findings with the same disposition, owner and evidence. Use the detail view to inspect the original source and target values. The exported exception CSV contains value hashes alongside the finding, owner and review history fields; the private editable workspace retains the complete raw inputs.
 
-When a corrected target arrives, import it as a new edition and create a new comparison linked to the preceding comparison. **Carry identical accepted changes** copies only accepted reviews whose entire original finding is unchanged. It requires the same original baseline and complete canonical field/key mapping. If either changes, turn off carry and review the resulting findings anew. Changed values and newly detected differences require a new review. The comparison lineage separately shows findings absent from the corrected comparison.
+When a corrected target arrives, import it as a new edition and create a new comparison linked to the preceding comparison. **Carry accepted decisions only with the same baseline, field mapping and identical findings** copies only accepted reviews whose entire original finding is unchanged. It requires the same original baseline and complete canonical field/key mapping. If either changes, turn off carry and review the resulting findings anew. Changed values and newly detected differences require a new review. The comparison lineage separately shows findings absent from the corrected comparison.
 
 A disappearing difference is a result of the new compared inputs. It does not by itself establish that every upstream correction was authorized. The retained edition chain and receiving reference explain the correction.
 

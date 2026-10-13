@@ -2,7 +2,7 @@
   "schema": "upstate.operator-extension/v1",
   "id": "paired-ensemble",
   "title": "Paired raster analysis",
-  "version": "1.4.0",
+  "version": "1.5.0",
   "order": 55,
   "assets": [
     "paired_ensemble_desk.mjs",
@@ -223,7 +223,8 @@
       "showTask",
       "openItem",
       "navigate",
-      "openScientificReport"
+      "openScientificReport",
+      "openDesk"
     ],
     "styles": [
       "/web/paired_ensemble_desk.css"

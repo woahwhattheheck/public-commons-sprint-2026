@@ -14,17 +14,23 @@ import sys
 import tempfile
 
 FILES = (
+    "AGENTS.md",
+    "operator/web/source_report_editions.mjs",
     "model/native_assessment_review.py",
     "operator/web/native_assessment_review.mjs",
     "operator/NATIVE_ASSESSMENT_REVIEW.md",
     "source_tools/component_fragments.py",
     "integration/component_fragments/observed-station-wbd-nldi-197.json",
     "integration/component_fragments/assessment-scientific-report-consumer.json",
+    "integration/component_fragments/assessment-receiving-browser.json",
     "integration/observed-station-wbd-components.json",
     "model/station_geography.py",
     "model/station_inventory.py",
     "model/assessment_context.py",
     "model/assessment_report_context.py",
+    "model/assessment_map_context.py",
+    "model/scientific_map_figures.py",
+    "model/scientific_figures.py",
     "model/observed_station_studies.py",
     "model/observed_station_studies.json",
     "operator/assessment_context.py",
@@ -74,10 +80,11 @@ FILES = (
 def sha(body):
     return hashlib.sha256(body).hexdigest()
 
-def source_members(pending, manifest_name):
+def source_members(pending, manifest_name, *, read_member=None):
     """Verify every selected original source and companion before changing the app."""
     manifest = json.loads(pending[manifest_name])
-    if manifest.get("schema") != "upstate.sources/v1" or not isinstance(manifest.get("entries"), list):
+    if (not isinstance(manifest, dict) or manifest.get("schema") != "upstate.sources/v1"
+            or not isinstance(manifest.get("entries"), list)):
         raise ValueError("Retain the original source manifest: " + manifest_name)
     parent = PurePosixPath(manifest_name).parent
     checked, source_ids = [], set()
@@ -101,6 +108,8 @@ def source_members(pending, manifest_name):
             if path.is_absolute() or ".." in path.parts or path.as_posix() != name:
                 raise ValueError("Original source member escapes its manifest: " + name)
             target = (parent / path).as_posix()
+            if target not in pending and read_member is not None:
+                pending[target] = read_member(target)
             if target not in pending:
                 raise ValueError("Complete station source family omits original member: " + target)
             expected = member.get("sha256")
@@ -113,7 +122,7 @@ def source_members(pending, manifest_name):
 
 
 def installation_files(source_root):
-    """Compose the owned files with the original WBD producer's selected inventory."""
+    """Compose owned sources with the original WBD and receiving inventories."""
     names = list(FILES)
     catalogue_name = "integration/observed-station-wbd-components.json"
     catalogue = json.loads((source_root / catalogue_name).read_bytes())
@@ -165,12 +174,39 @@ def installation_files(source_root):
                 raise ValueError("WBD source path leaves its original application: " + name)
             if name not in names:
                 names.append(name)
+    workflow_name = "integration/component_fragments/assessment-receiving-browser.json"
+    workflow, _ = reader._load(
+        workflow_name, (source_root / workflow_name).read_text(encoding="utf-8"))
+    if workflow.get("components") or workflow.get("required_components"):
+        raise ValueError("The assessment receiving workflow must extend its existing components")
+    extensions = workflow.get("extend_components", {})
+    if set(extensions) != {"assessment-context", "station-assessment"}:
+        raise ValueError("Retain both original assessment receiving component declarations")
+    manifests = []
+    for component_id in ("assessment-context", "station-assessment"):
+        extension = extensions[component_id]
+        if set(extension) - {"paths", "source_manifests"} or not extension.get("paths"):
+            raise ValueError("The assessment receiving workflow needs its original source paths")
+        # The maintained fragment reader has already checked every portable path.
+        for name in extension["paths"]:
+            if name not in names:
+                names.append(name)
+        for name in extension.get("source_manifests", []):
+            if name not in manifests:
+                manifests.append(name)
+    for manifest_name in manifests:
+        originals = {manifest_name: (source_root / manifest_name).read_bytes()}
+        source_members(originals, manifest_name,
+                       read_member=lambda name: (source_root / name).read_bytes())
+        for name in originals:
+            if name not in names:
+                names.append(name)
     if "model/station_wbd_context.py" not in names:
         raise ValueError("The station geography source requires its original WBD context module")
     return tuple(names)
 
-def scientific_report_host(application):
-    """Require the maintained standalone composer before installing its consumer."""
+def scientific_report_host(application, pending, previous):
+    """Check existing host callbacks and the exact composer staged for installation."""
     contracts = {
         "operator/web/app.mjs": (
             r"\bfunction\s+openScientificReport\s*\(",
@@ -186,27 +222,37 @@ def scientific_report_host(application):
             r"\bfunction\s+attachScientificReportEditions\s*\(",
             r"\bfunction\s+openForSources\s*\(",
             r"\borderedReportSources\s*\(",
+            r"\bSCIENTIFIC_REPORT_SOURCE_SELECTION\s*=\s*['\"]replace-v1['\"]",
         ),
     }
     checked = []
     for name, patterns in contracts.items():
-        path = application / name
-        if not path.is_file():
-            raise ValueError("Receive the maintained Scientific reports application before installing assessment report controls: " + name)
-        body = path.read_bytes()
+        staged = name == "operator/web/source_report_editions.mjs"
+        if staged:
+            if name not in pending:
+                raise ValueError("Retain the complete prepared-source composer in this family: " + name)
+            body, original = pending[name], previous[name]
+        else:
+            path = application / name
+            if not path.is_file():
+                raise ValueError("Receive the maintained Scientific reports application before installing assessment report controls: " + name)
+            body = original = path.read_bytes()
         source = body.decode("utf-8")
         if any(re.search(pattern, source) is None for pattern in patterns):
-            raise ValueError("The installed Scientific reports host does not expose its original openForSources workflow: " + name)
-        checked.append({"path": name, "bytes": len(body), "sha256": sha(body)})
+            raise ValueError("The selected Scientific reports source does not expose its original prepared-source workflow: " + name)
+        checked.append({"path": name, "source": "staged" if staged else "installed",
+                        "bytes": len(body), "sha256": sha(body),
+                        "previous_sha256": sha(original) if original is not None else None})
     return checked
 
 def install(application, source_root, *, dry_run=False):
     application, source_root = Path(application).resolve(strict=True), Path(source_root).resolve(strict=True)
-    for name in ("model/workspace.py", "model/spatial_esri.py", "model/observed_context.py", "operator/server.py",
+    for name in ("model/workspace.py", "model/spatial_esri.py", "model/observed_context.py",
+                 "model/scientific_report.py", "model/scientific_report_editions.py",
+                 "model/observed_report_render.py", "operator/server.py",
                  "operator/web/app.mjs", "operator/extension_registry.py", "operator/web/extension_host.mjs"):
         if not (application / name).is_file():
             raise ValueError("Receive the complete existing application before adding station geography: " + name)
-    report_host = scientific_report_host(application)
     files = installation_files(source_root)
     pending, previous = {}, {}
     for name in files:
@@ -219,11 +265,14 @@ def install(application, source_root, *, dry_run=False):
                 raise ValueError("The station geography descriptor schema differs")
         pending[name] = body
         previous[name] = (application / name).read_bytes() if (application / name).exists() else None
-    original_sources = {name: source_members(pending, name) for name in (
-        "source/station-assessment-context/sources.json",
-        "source/ecoli_utility_context/20261013/source-manifest.json",
-        "observations/wbd_station_join_20261013/station-context.sources.json",
-    )}
+    report_host = scientific_report_host(application, pending, previous)
+    original_sources = {}
+    for name, body in pending.items():
+        if not name.endswith(".json"):
+            continue
+        value = json.loads(body)
+        if isinstance(value, dict) and value.get("schema") == "upstate.sources/v1":
+            original_sources[name] = source_members(pending, name)
     changed = [name for name in files if previous[name] != pending[name]]
     server = (application / "operator/server.py").read_text(encoding="utf-8")
     browser = (application / "operator/web/app.mjs").read_text(encoding="utf-8")
@@ -246,7 +295,9 @@ def install(application, source_root, *, dry_run=False):
             target.parent.mkdir(parents=True, exist_ok=True)
             target.write_bytes(pending[name])
         for member in report_host:
-            if sha((application / member["path"]).read_bytes()) != member["sha256"]:
+            destination = application / member["path"]
+            current = destination.read_bytes() if destination.exists() else None
+            if (sha(current) if current is not None else None) != member["previous_sha256"]:
                 raise RuntimeError("Scientific reports host changed during station installation: " + member["path"])
         for name in changed:
             target = application / name

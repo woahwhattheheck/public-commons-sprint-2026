@@ -17,6 +17,11 @@ COMPONENT_FILES = (
     "model/biophysical_evidence.py",
     "model/BIOPHYSICAL_EVIDENCE.md",
     "source_tools/receive_profile_customer_review.py",
+    "source_tools/receive_biophysical_evidence.py",
+    "source/regional-studies-20261013/albright-2023-biophysical-evidence.csv",
+    "source/upper-flint-2024/biophysical-evidence-combined.csv",
+    "source/upper-flint-2024/biophysical-evidence-ndr.csv",
+    "source/upper-flint-2024/biophysical-evidence-sdr.csv",
     "source_tools/PROFILE_CUSTOMER_REVIEW.md",
     "operator/profile_workbench.py",
     "operator/web/profile_workbench.mjs",
@@ -104,16 +109,27 @@ def retain_launchers(source):
 
 
 def retain_biophysical_evidence(source):
-    # Join the current receiving source rather than replacing concurrent extensions.
-    verification = (
-        '        if (restored._list("biophysical-evidence") or restored._list("biophysical-ranges")):\n'
-        '            from .biophysical_evidence import verify_all as verify_biophysical_evidence\n'
-        '            verify_biophysical_evidence(restored)\n'
-    )
-    if verification in source:
-        return source
-    anchor = '        if restored._list("planning-inventories"):\n'
-    source = replace_once(source, anchor, verification + anchor,
+    # The maintained receiver supports both its earlier inline restore checks
+    # and the extracted _verify_restored_workspace function.
+    def verification(indent):
+        return (
+            indent + 'if (restored._list("biophysical-evidence") or restored._list("biophysical-ranges")):\n'
+            + indent + '    from .biophysical_evidence import verify_all as verify_biophysical_evidence\n'
+            + indent + '    verify_biophysical_evidence(restored)\n'
+        )
+    for indent in ("    ", "        "):
+        if verification(indent) in source:
+            return source
+    anchors = [(indent, indent + 'if restored._list("planning-inventories"):\n')
+               for indent in ("    ", "        ")]
+    matches = [(indent, anchor) for indent, anchor in anchors
+               if any(line == anchor for line in source.splitlines(keepends=True))]
+    if len(matches) != 1:
+        raise ValueError("Compose coefficient evidence verification into the current original receiving function.")
+    indent, anchor = matches[0]
+    # Include the preceding newline so four-space matching cannot consume
+    # the suffix of an eight-space source line.
+    source = replace_once(source, "\n" + anchor, "\n" + verification(indent) + anchor,
                           "coefficient evidence semantic receiving")
     ast.parse(source)
     return source

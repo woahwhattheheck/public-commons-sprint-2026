@@ -21,6 +21,113 @@ import stat
 import tempfile
 
 ALLOWED = frozenset({
+    "model/report_changes_review.py",
+    "model/report_review_study_receiving.py",
+    "model/study_receiving.py",
+    "operator/study_receiving.py",
+    "model/gauge_study_receiving.py",
+    "model/ensemble_study_receiving.py",
+    "model/observed_landcover_receiving.py",
+    "operator/gauge_receiving.py",
+    "operator/ensemble_receiving.py",
+    "operator/observed_landcover_receiving.py",
+    "operator/study_transfer.py",
+    "operator/extensions/study-transfer.json",
+    "operator/web/extensions/study_transfer.css",
+    "operator/web/study_report_navigation.mjs",
+    "operator/web/received_studies.mjs",
+    "operator/web/gauge_received_studies.mjs",
+    "operator/web/ensemble_received_studies.mjs",
+    "operator/web/observed_landcover_received.mjs",
+    "operator/web/observed_landcover_received.css",
+    "model/observed_landcover.py",
+    "model/landcover_report_source.py",
+    "model/observation_comparability_study_transfer.py",
+    "model/observation_comparability_store.py",
+    "measurement_workspace/__init__.py",
+    "measurement_workspace/observation_comparability.py",
+    "measurement_workspace/observation_comparability_delivery.py",
+    "measurement_workspace/OBSERVATION_COMPARABILITY.md",
+    "measurement_workspace/observation_comparability.html",
+    "operator/observation_comparability_operator.py",
+    "operator/extensions/observation-comparability.json",
+    "operator/web/observation_comparability.mjs",
+    "operator/web/observation_comparability.css",
+    "operator/web/comparability_received_studies.mjs",
+    "integration/component_fragments/observation-comparability.json",
+    "operator/REPORT_REVIEW_STUDY_RECEIVING.md",
+    "integration/component_fragments/report-review-study-receiving.json",
+    "integration/scientific_report_capture_patch.json",
+    "model/scientific_report_capture.py",
+    "model/scientific_report_editions.py",
+    "operator/extensions/source-reports.json",
+    "operator/web/source_reports.mjs",
+    "operator/SCIENTIFIC_REPORT_CAPTURE.md",
+    "integration/component_fragments/scientific-report-capture.json",
+    "model/report_changes_study_transfer.py",
+    "model/REPORT_CHANGES_STUDY_TRANSFER.md",
+    "integration/component_fragments/report-changes-study-transfer.json",
+    "operator/web/report_changes.mjs",
+    "operator/extensions/report-changes.json",
+    "model/report_changes.py",
+    "operator/report_changes.py",
+    "operator/web/report_changes.css",
+    "docs/SCIENTIFIC_REPORT_CHANGES.md",
+    "install_report_changes.py",
+    "integration/component_fragments/scientific-report-changes.json",
+    "source_tools/receive_scientific_report_review.py",
+    "source_tools/RECEIVE_SCIENTIFIC_REPORT_REVIEW.md",
+    "integration/component_fragments/customer-review-receiving.json",
+    "integration/component_fragments/conservation-design-study-transfer.json",
+    "integration/conservation_design_study_transfer_composition.json",
+    "model/CONSERVATION_DESIGN_STUDY_TRANSFER.md",
+    "operator/CONSERVATION_DESIGN_BROWSER.md",
+    "operator/CONSERVATION_DESIGN_RECEIVING.md",
+    "operator/conservation_design_browser_receiving.py",
+    "operator/install_conservation_design.py",
+    "operator/conservation_browser_receiving.py",
+    "model/paired_ensemble_study_transfer.py",
+    "model/paired_ensemble_study_cli.py",
+    "model/PAIRED_ENSEMBLE_STUDY_TRANSFER.md",
+    "integration/component_fragments/paired-ensemble-study-transfer.json",
+    "operator/web/paired_ensemble_desk.mjs",
+    "operator/extensions/paired-ensemble.json",
+    "integration/component_fragments/study-transfer-native-lineage.json",
+    "model/customer_review_study_transfer.py",
+    "model/SCIENTIFIC_REPORT_REVIEW.md",
+    "operator/web/reviews.mjs",
+    "integration/customer-review-study-transfer.patch.json",
+    "integration/component_fragments/customer-review-study-transfer.json",
+    "model/conservation_design_study_transfer.py",
+    "model/chemistry_study_transfer.py",
+    "model/CHEMISTRY_STUDY_TRANSFER.md",
+    "source_tools/chemistry_study_composition.py",
+    "integration/component_fragments/chemistry_study_transfer.json",
+    "model/ensemble_study_transfer.py",
+    "model/ENSEMBLE_STUDY_TRANSFER.md",
+    "integration/component_fragments/ensemble-scientific-study-transfer.json",
+    "model/gauge_study_transfer.py",
+    "model/GAUGE_STUDY_TRANSFER.md",
+    "integration/component_fragments/gauge-study-transfer.json",
+    "model/landcover_study_transfer.py",
+    "integration/component_fragments/landcover-scientific-report.json",
+    "model/published_review_study_transfer.py",
+    "model/published_review_report_source.py",
+    "model/PUBLISHED_REVIEW_REPORT_SOURCE.md",
+    "integration/component_fragments/published-review-report-source.json",
+    "model/implementation_report_transfer.py",
+    "model/receptor_report_maps.py",
+    "model/scientific_figures.py",
+    "model/scientific_map_figures.py",
+    "model/spatial_esri.py",
+    "source/capture_upstream_network.py",
+    "model/receptor_study_transfer.py",
+    "model/RECEPTOR_STUDY_TRANSFER.md",
+    "operator/web/receptors.mjs",
+    "integration/receptor_study_transfer.json",
+    "integration/component_fragments/receptor-study-transfer.json",
+    "model/monitoring_frontier_comparison.py",
+    "model/monitoring_comparison_report.py",
     "model/community_study_transfer.py",
     "model/COMMUNITY_STUDY_TRANSFER.md",
     "operator/web/community.mjs",
@@ -79,6 +186,113 @@ ALLOWED = frozenset({
     "source/ROBUST_RECEIVING.md",
 })
 REQUIRED = ALLOWED - {
+    "model/report_changes_review.py",
+    "model/report_review_study_receiving.py",
+    "model/study_receiving.py",
+    "operator/study_receiving.py",
+    "model/gauge_study_receiving.py",
+    "model/ensemble_study_receiving.py",
+    "model/observed_landcover_receiving.py",
+    "operator/gauge_receiving.py",
+    "operator/ensemble_receiving.py",
+    "operator/observed_landcover_receiving.py",
+    "operator/study_transfer.py",
+    "operator/extensions/study-transfer.json",
+    "operator/web/extensions/study_transfer.css",
+    "operator/web/study_report_navigation.mjs",
+    "operator/web/received_studies.mjs",
+    "operator/web/gauge_received_studies.mjs",
+    "operator/web/ensemble_received_studies.mjs",
+    "operator/web/observed_landcover_received.mjs",
+    "operator/web/observed_landcover_received.css",
+    "model/observed_landcover.py",
+    "model/landcover_report_source.py",
+    "model/observation_comparability_study_transfer.py",
+    "model/observation_comparability_store.py",
+    "measurement_workspace/__init__.py",
+    "measurement_workspace/observation_comparability.py",
+    "measurement_workspace/observation_comparability_delivery.py",
+    "measurement_workspace/OBSERVATION_COMPARABILITY.md",
+    "measurement_workspace/observation_comparability.html",
+    "operator/observation_comparability_operator.py",
+    "operator/extensions/observation-comparability.json",
+    "operator/web/observation_comparability.mjs",
+    "operator/web/observation_comparability.css",
+    "operator/web/comparability_received_studies.mjs",
+    "integration/component_fragments/observation-comparability.json",
+    "operator/REPORT_REVIEW_STUDY_RECEIVING.md",
+    "integration/component_fragments/report-review-study-receiving.json",
+    "integration/scientific_report_capture_patch.json",
+    "model/scientific_report_capture.py",
+    "model/scientific_report_editions.py",
+    "operator/extensions/source-reports.json",
+    "operator/web/source_reports.mjs",
+    "operator/SCIENTIFIC_REPORT_CAPTURE.md",
+    "integration/component_fragments/scientific-report-capture.json",
+    "model/report_changes_study_transfer.py",
+    "model/REPORT_CHANGES_STUDY_TRANSFER.md",
+    "integration/component_fragments/report-changes-study-transfer.json",
+    "operator/web/report_changes.mjs",
+    "operator/extensions/report-changes.json",
+    "model/report_changes.py",
+    "operator/report_changes.py",
+    "operator/web/report_changes.css",
+    "docs/SCIENTIFIC_REPORT_CHANGES.md",
+    "install_report_changes.py",
+    "integration/component_fragments/scientific-report-changes.json",
+    "source_tools/receive_scientific_report_review.py",
+    "source_tools/RECEIVE_SCIENTIFIC_REPORT_REVIEW.md",
+    "integration/component_fragments/customer-review-receiving.json",
+    "integration/component_fragments/conservation-design-study-transfer.json",
+    "integration/conservation_design_study_transfer_composition.json",
+    "model/CONSERVATION_DESIGN_STUDY_TRANSFER.md",
+    "operator/CONSERVATION_DESIGN_BROWSER.md",
+    "operator/CONSERVATION_DESIGN_RECEIVING.md",
+    "operator/conservation_design_browser_receiving.py",
+    "operator/install_conservation_design.py",
+    "operator/conservation_browser_receiving.py",
+    "model/paired_ensemble_study_transfer.py",
+    "model/paired_ensemble_study_cli.py",
+    "model/PAIRED_ENSEMBLE_STUDY_TRANSFER.md",
+    "integration/component_fragments/paired-ensemble-study-transfer.json",
+    "operator/web/paired_ensemble_desk.mjs",
+    "operator/extensions/paired-ensemble.json",
+    "integration/component_fragments/study-transfer-native-lineage.json",
+    "model/customer_review_study_transfer.py",
+    "model/SCIENTIFIC_REPORT_REVIEW.md",
+    "operator/web/reviews.mjs",
+    "integration/customer-review-study-transfer.patch.json",
+    "integration/component_fragments/customer-review-study-transfer.json",
+    "model/conservation_design_study_transfer.py",
+    "model/chemistry_study_transfer.py",
+    "model/CHEMISTRY_STUDY_TRANSFER.md",
+    "source_tools/chemistry_study_composition.py",
+    "integration/component_fragments/chemistry_study_transfer.json",
+    "model/ensemble_study_transfer.py",
+    "model/ENSEMBLE_STUDY_TRANSFER.md",
+    "integration/component_fragments/ensemble-scientific-study-transfer.json",
+    "model/gauge_study_transfer.py",
+    "model/GAUGE_STUDY_TRANSFER.md",
+    "integration/component_fragments/gauge-study-transfer.json",
+    "model/landcover_study_transfer.py",
+    "integration/component_fragments/landcover-scientific-report.json",
+    "model/published_review_study_transfer.py",
+    "model/published_review_report_source.py",
+    "model/PUBLISHED_REVIEW_REPORT_SOURCE.md",
+    "integration/component_fragments/published-review-report-source.json",
+    "model/implementation_report_transfer.py",
+    "model/receptor_report_maps.py",
+    "model/scientific_figures.py",
+    "model/scientific_map_figures.py",
+    "model/spatial_esri.py",
+    "source/capture_upstream_network.py",
+    "model/receptor_study_transfer.py",
+    "model/RECEPTOR_STUDY_TRANSFER.md",
+    "operator/web/receptors.mjs",
+    "integration/receptor_study_transfer.json",
+    "integration/component_fragments/receptor-study-transfer.json",
+    "model/monitoring_frontier_comparison.py",
+    "model/monitoring_comparison_report.py",
     "model/community_study_transfer.py",
     "model/COMMUNITY_STUDY_TRANSFER.md",
     "operator/web/community.mjs",
@@ -284,7 +498,103 @@ def assembled_data(application, pending, name):
     return data
 
 
+def verify_received_study_dependencies(application, pending):
+    """Keep the original received-record readers and their native routes together."""
+    def source(name):
+        return pending[name] if name in pending else read_existing(application, name)
+
+    def require(names):
+        for name in names:
+            assembled_data(application, pending, name)
+
+    reader = source("model/study_receiving.py")
+    provider = source("operator/study_transfer.py")
+    view = source("operator/web/received_studies.mjs")
+    selector = source("operator/web/extensions/study_transfer.mjs")
+    has_navigation = any(data is not None and b"study_report_navigation.mjs" in data
+                         for data in (view, selector))
+    if has_navigation:
+        require((
+            "model/report_review_study_receiving.py", "model/study_receiving.py",
+            "model/customer_review_study_transfer.py", "model/scientific_report_review.py",
+            "model/scientific_report_editions.py", "operator/study_receiving.py",
+            "operator/study_transfer.py", "operator/extensions/study-transfer.json",
+            "operator/web/study_report_navigation.mjs", "operator/web/received_studies.mjs",
+            "operator/web/extensions/study_transfer.mjs", "operator/web/extensions/study_transfer.css",
+            "operator/web/reviews.mjs", "operator/web/source_reports.mjs",
+            "operator/web/source_report_editions.mjs", "operator/web/app.mjs",
+            "operator/REPORT_REVIEW_STUDY_RECEIVING.md",
+            "integration/component_fragments/report-review-study-receiving.json"))
+        if reader is None or b"report_review_study_receiving" not in reader:
+            raise ValueError("Receive the original saved-report and Customer review reader with its navigation")
+        if provider is None or b"import study_receiving" not in provider:
+            raise ValueError("Receive the original Study provider's retained-record read routes")
+        descriptor = json.loads(assembled_data(
+            application, pending, "operator/extensions/study-transfer.json"))
+        routes = {(row.get("path"), row.get("operation"))
+                  for row in descriptor.get("backend", {}).get("routes", [])
+                  if "GET" in row.get("methods", [])}
+        if not {("/api/study-transfer/received", "received"),
+                ("/api/study-transfer/received-detail", "received-detail")}.issubset(routes):
+            raise ValueError("Receive both original received-Study catalogue and detail routes")
+        if "study_report_navigation.mjs" not in descriptor.get("assets", []):
+            raise ValueError("Declare the original saved-record navigation asset in the Study descriptor")
+        app = assembled_data(application, pending, "operator/web/app.mjs")
+        if any(name not in app for name in
+               (b"openSavedScientificReport", b"openSavedCustomerReview")):
+            raise ValueError("Receive the original operator's saved-report and Customer review openers")
+    if reader is not None:
+        groups = {
+            b"report_review_study_receiving": (
+                "model/report_review_study_receiving.py", "model/customer_review_study_transfer.py",
+                "model/scientific_report_review.py", "model/scientific_report_editions.py"),
+            b"gauge_study_receiving": ("model/gauge_study_receiving.py",),
+            b"ensemble_study_receiving": ("model/ensemble_study_receiving.py",),
+            b"observed_landcover_receiving": (
+                "model/observed_landcover_receiving.py", "model/observed_landcover.py",
+                "model/landcover_report_source.py", "model/reuse.py"),
+            b"observation_comparability_study_transfer": (
+                "model/observation_comparability_study_transfer.py",
+                "model/observation_comparability_store.py",
+                "measurement_workspace/__init__.py",
+                "measurement_workspace/observation_comparability.py",
+                "measurement_workspace/observation_comparability_delivery.py",
+                "operator/observation_comparability_operator.py",
+                "operator/extensions/observation-comparability.json",
+                "operator/web/observation_comparability.mjs",
+                "operator/web/observation_comparability.css",
+                "operator/web/comparability_received_studies.mjs"),
+        }
+        for marker, names in groups.items():
+            if marker in reader:
+                require(names)
+        for module in ("scientific_report_study_transfer", "implementation_report_transfer",
+                       "portable_implementation", "study_report_transfer"):
+            if module.encode("ascii") in reader:
+                require(("model/" + module + ".py",))
+    ticket_reader = source("operator/study_receiving.py")
+    if ticket_reader is not None:
+        require(("model/study_receiving.py",))
+        for module in ("gauge_receiving", "ensemble_receiving", "observed_landcover_receiving"):
+            if module.encode("ascii") in ticket_reader:
+                require(("operator/" + module + ".py",))
+    assets = {
+        b"study_report_navigation.mjs": ("operator/web/study_report_navigation.mjs",),
+        b"gauge_received_studies.mjs": ("operator/web/gauge_received_studies.mjs",),
+        b"ensemble_received_studies.mjs": ("operator/web/ensemble_received_studies.mjs",),
+        b"observed_landcover_received.mjs": (
+            "operator/web/observed_landcover_received.mjs", "operator/web/observed_landcover_received.css"),
+        b"comparability_received_studies.mjs": ("operator/web/comparability_received_studies.mjs",),
+    }
+    for data in (view, selector):
+        if data is not None:
+            for marker, names in assets.items():
+                if marker in data:
+                    require(names)
+
+
 def verify_composition(application, pending):
+    verify_received_study_dependencies(application, pending)
     for name in REQUIRED:
         assembled_data(application, pending, name)
     for name in ("model/workspace.py", "model/experiments.py", "model/native_versions.py",
@@ -302,9 +612,55 @@ def verify_composition(application, pending):
         for module in ("scientific_report_study_transfer", "calibration_study_transfer",
                        "study_report_transfer", "monitoring_study_transfer",
                        "community_study_transfer", "conservation_study_transfer",
-                       "native_process_study_transfer"):
+                       "native_process_study_transfer", "receptor_study_transfer",
+                       "customer_review_study_transfer", "conservation_design_study_transfer",
+                       "paired_ensemble_study_transfer", "report_changes_study_transfer",
+                       "chemistry_study_transfer", "ensemble_study_transfer",
+                       "gauge_study_transfer", "landcover_study_transfer",
+                       "published_review_study_transfer", "implementation_report_transfer"):
             if module.encode("ascii") in transfer:
                 assembled_data(application, pending, "model/" + module + ".py")
+        if b"receptor_study_transfer" in transfer:
+            for dependency in ("model/compute_programme.py", "model/receptor_report_source.py",
+                               "model/receptor_network_cli.py", "model/receptor_scenarios.py",
+                               "model/receptor_programmes.py", "model/receptor_experiments.py",
+                               "model/receptor_cli.py", "model/receptor_execution.py",
+                               "model/receptors.py", "operator/web/receptors.mjs"):
+                assembled_data(application, pending, dependency)
+        if b"customer_review_study_transfer" in transfer:
+            for dependency in ("model/reviews.py", "model/review_handback.py",
+                               "model/review_receiving.py", "model/review_reconciliation.py",
+                               "model/review_worklist.py", "model/scientific_report_editions.py",
+                               "model/scientific_report_review.py",
+                               "model/scientific_report_study_transfer.py",
+                               "model/spatial_exports.py", "operator/review_app.html",
+                               "delivery_snapshot.py"):
+                assembled_data(application, pending, dependency)
+        if b"conservation_design_study_transfer" in transfer:
+            for dependency in ("model/conservation_design_editor.py",
+                               "model/conservation_design.py", "model/conservation_bindings.py",
+                               "model/conservation_scenarios.py", "model/portable_databases.py",
+                               "model/conservation_study_transfer.py",
+                               "scenario-design/__init__.py", "scenario-design/engine.py",
+                               "scenario-design/conservation.py", "scenario-design/server.py",
+                               "scenario-design/eco_bridge.py"):
+                assembled_data(application, pending, dependency)
+        if b"implementation_report_transfer" in transfer:
+            for dependency in ("model/implementation.py", "model/implementation_schema.py",
+                               "model/implementation_reporting.py", "model/portable_implementation.py",
+                               "model/implementation_outcomes.py", "model/implementation_outcome_figures.py",
+                               "model/implementation_observations.py", "model/field_deployment.py",
+                               "model/monitoring_packet.py", "model/monitoring_common.py"):
+                assembled_data(application, pending, dependency)
+        if b"receptor_study_transfer" in transfer:
+            producer = assembled_data(application, pending, "model/receptor_report_source.py")
+            if b"receptor_report_maps" in producer:
+                for dependency in ("model/receptor_report_maps.py", "model/scientific_figures.py",
+                                   "model/scientific_map_figures.py", "model/spatial_esri.py",
+                                   "source/capture_upstream_network.py"):
+                    assembled_data(application, pending, dependency)
+        if b"monitoring_study_transfer" in transfer:
+            assembled_data(application, pending, "model/monitoring_frontier_comparison.py")
         if b"community_study_transfer" in transfer:
             for dependency in ("model/communities.py", "model/community_reports.py",
                                "model/community_report_context.py", "model/community_revisions.py",
@@ -330,15 +686,127 @@ def verify_composition(application, pending):
                 assembled_data(application, pending, dependency)
             dispatcher = assembled_data(application, pending, "model/scientific_report_study_transfer.py")
             for module in ("community_study_transfer", "conservation_study_transfer",
-                           "native_process_study_transfer"):
+                           "native_process_study_transfer", "receptor_study_transfer",
+                           "customer_review_study_transfer", "conservation_design_study_transfer",
+                       "paired_ensemble_study_transfer",
+                           "chemistry_study_transfer", "ensemble_study_transfer",
+                           "gauge_study_transfer", "landcover_study_transfer",
+                           "published_review_study_transfer", "implementation_report_transfer"):
                 if module.encode("ascii") in dispatcher:
                     helper = assembled_data(application, pending, "model/" + module + ".py")
                     if b"def include_source(" not in helper:
                         raise ValueError("Receive the matching scoped scientific-report lineage helper: " + module)
+            if b"published_review_study_transfer" in dispatcher:
+                assembled_data(application, pending, "model/published_review_report_source.py")
             lineage = assembled_data(application, pending, "model/study_report_transfer.py")
             monitoring = assembled_data(application, pending, "model/monitoring_study_transfer.py")
             if b"def include_calibration(" not in lineage or b"def include_source(" not in monitoring:
                 raise ValueError("Receive the matching original calibration and Monitoring report lineage helpers")
+    # Optional original receiving companions travel through the same guarded
+    # layer format. Verify their native sources before replacing any file.
+    review_receiver = pending.get("source_tools/receive_scientific_report_review.py")
+    if review_receiver is None:
+        review_receiver = read_existing(application, "source_tools/receive_scientific_report_review.py")
+    if review_receiver is not None:
+        for dependency in ("model/common.py", "model/workspace.py", "model/portable.py",
+                           "model/reviews.py", "model/scientific_report_editions.py",
+                           "model/scientific_report_review.py"):
+            assembled_data(application, pending, dependency)
+        if b"def continue_selected_review(" in review_receiver:
+            if transfer is None or b"customer_review_study_transfer" not in transfer:
+                raise ValueError("Receive the original Customer review Study transfer before its selected receiver")
+            assembled_data(application, pending, "model/customer_review_study_transfer.py")
+            assembled_data(application, pending, "model/scientific_report_study_transfer.py")
+    design_receiver = pending.get("operator/conservation_design_browser_receiving.py")
+    if design_receiver is None:
+        design_receiver = read_existing(application, "operator/conservation_design_browser_receiving.py")
+    if design_receiver is not None:
+        for dependency in ("operator/conservation_browser_receiving.py",
+                           "operator/conservation_design.py", "model/conservation_design.py",
+                           "model/conservation_design_editor.py",
+                           "operator/extensions/conservation-design.json"):
+            assembled_data(application, pending, dependency)
+        if b"--selected-study" in design_receiver:
+            if transfer is None:
+                raise ValueError("Receive the original Study transfer before selected editor receiving")
+            study_tree = ast.parse(transfer.decode("utf-8"), filename="model/study_transfer.py")
+            aliases = {
+                item.asname or item.name
+                for node in ast.walk(study_tree) if isinstance(node, ast.ImportFrom)
+                for item in node.names if item.name == "conservation_design_study_transfer"
+            }
+            calls = {
+                node.func.attr for node in ast.walk(study_tree)
+                if isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute)
+                and isinstance(node.func.value, ast.Name) and node.func.value.id in aliases
+            }
+            if not {"source_snapshot", "capture", "verify"}.issubset(calls):
+                raise ValueError("Receive the complete original selected editor snapshot and receiving joins")
+            assembled_data(application, pending, "model/conservation_design_study_transfer.py")
+            databases = assembled_data(application, pending, "model/portable_databases.py")
+            portable = assembled_data(application, pending, "model/portable.py")
+            if (b"workspace/conservation-design/editor/projects.sqlite" not in databases
+                    or b"frozen_databases" not in portable):
+                raise ValueError("Receive original frozen editor-database support before selected editor receiving")
+    comparison_consumers = []
+    for name in ("model/customer_review_study_transfer.py", "operator/report_changes.py"):
+        data = pending.get(name)
+        if data is None:
+            data = read_existing(application, name)
+        if data is not None:
+            comparison_consumers.append(data)
+    if any(b"report_changes_review" in data for data in comparison_consumers):
+        for dependency in ("model/report_changes_review.py", "model/report_changes.py",
+                           "model/scientific_report_review.py", "model/reviews.py",
+                           "model/workspace.py"):
+            assembled_data(application, pending, dependency)
+    if transfer is not None and b"report_changes_study_transfer" in transfer:
+        for dependency in (
+                "model/report_changes_study_transfer.py", "model/report_changes.py",
+                "model/scientific_report_editions.py", "model/scientific_report_study_transfer.py",
+                "operator/report_changes.py", "operator/extensions/report-changes.json",
+                "operator/web/report_changes.mjs", "operator/web/report_changes.css",
+                "docs/SCIENTIFIC_REPORT_CHANGES.md", "install_report_changes.py",
+                "model/REPORT_CHANGES_STUDY_TRANSFER.md",
+                "integration/component_fragments/scientific-report-changes.json",
+                "integration/component_fragments/report-changes-study-transfer.json"):
+            assembled_data(application, pending, dependency)
+    if transfer is not None and b"paired_ensemble_study_transfer" in transfer:
+        for dependency in (
+                "model/paired_ensemble_study_transfer.py", "model/paired_ensemble_study_cli.py",
+                "model/paired_ensemble/__init__.py", "model/paired_ensemble/ensemble_store.py",
+                "model/paired_ensemble/ensemble_workspace.py", "model/paired_ensemble/ensemble_rasters.py",
+                "model/paired_ensemble/ensemble_report.py", "model/paired_ensemble/ensemble_portable.py",
+                "model/paired_ensemble/ensemble_cli.py", "model/paired_ensemble/designs.py",
+                "model/paired_ensemble/ensemble_report_source.py", "model/paired_ensemble/ensemble_report_cli.py",
+                "operator/paired_ensemble_service.py", "operator/paired_ensemble_report_native.py",
+                "operator/extensions/paired-ensemble.json", "operator/extensions/paired-ensemble-report.json",
+                "operator/web/paired_ensemble_desk.mjs", "operator/web/paired_ensemble_desk.css",
+                "operator/web/paired_ensemble_report_desk.mjs", "operator/web/paired_ensemble.html",
+                "operator/web/paired_ensemble.mjs", "operator/web/paired_ensemble.css",
+                "operator/web/paired_ensemble_host.mjs", "operator/web/paired_ensemble_host.css"):
+            assembled_data(application, pending, dependency)
+    monitoring_report = pending.get("model/monitoring_report_source.py")
+    if monitoring_report is None:
+        monitoring_report = read_existing(application, "model/monitoring_report_source.py")
+    if monitoring_report is not None:
+        assembled_data(application, pending, "model/monitoring_comparison_report.py")
+    saved_editions = pending.get("model/scientific_report_editions.py")
+    if saved_editions is None:
+        saved_editions = read_existing(application, "model/scientific_report_editions.py")
+    report_provider = pending.get("operator/source_report_editions.py")
+    if report_provider is None:
+        report_provider = read_existing(application, "operator/source_report_editions.py")
+    if any(source is not None and b"scientific_report_capture" in source
+           for source in (saved_editions, report_provider)):
+        for dependency in (
+                "model/scientific_report_capture.py", "model/scientific_report_editions.py",
+                "model/observed_report_render.py", "model/observed_context.py", "model/common.py",
+                "operator/source_report_editions.py", "operator/extensions/source-reports.json",
+                "operator/web/source_report_editions.mjs", "operator/web/source_reports.mjs",
+                "operator/SCIENTIFIC_REPORT_CAPTURE.md",
+                "integration/component_fragments/scientific-report-capture.json"):
+            assembled_data(application, pending, dependency)
     server = assembled_data(application, pending, "operator/server.py").decode("utf-8")
     client = assembled_data(application, pending, "operator/web/app.mjs").decode("utf-8")
     if "ExtensionRegistry" not in server or "self.extensions" not in server or "createExtensionHost" not in client:

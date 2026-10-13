@@ -6,6 +6,7 @@ const REPORT='upstate.implementation-lab-dispatch-report/v1';
 const PACKAGE='upstate.implementation-lab-dispatch/v1';
 const RECONCILIATION='upstate.implementation-lab-dispatch-reconciliation/v1';
 const same=(a,b)=>JSON.stringify(a)===JSON.stringify(b);
+const reportSelectionReads=new WeakMap();
 const button=(action,label,attrs='')=>'<button type="button" data-impl="dispatch-'+action+'" '+attrs+'>'+esc(label)+'</button>';
 const field=(label,body,help='')=>'<label class="iw-field"><span>'+esc(label)+'</span>'+body+(help?'<small>'+esc(help)+'</small>':'')+'</label>';
 const option=(value,label,selected)=>'<option value="'+esc(value)+'" '+(value===selected?'selected':'')+'>'+esc(label)+'</option>';
@@ -220,26 +221,89 @@ export function canRegisterReport(w){
  p.plan?.id===w.plan.id&&p.plan.revision===w.plan.revision&&!!p.plan.document_digest&&!!p.operation_id&&
  same(f.reviewed_selection,f.existing_report_selection);
 }
+
+const retainedReportCatalogues=new WeakMap();
+function retainedReportCatalogue(w,s){
+ const id=s.active_package?.dispatch_id,view=retainedReportCatalogues.get(s);
+ const c=view?.dispatch_id===id?view:null,disabled=busy(s)||w.pending?'disabled':'';
+ const rows=(c?.items||[]).map(item=>[
+  'Revision '+esc(item.plan.revision),
+  esc(item.source_count)+' original source'+(item.source_count===1?'':'s'),
+  '<code>'+esc(item.operation_id.slice(0,12))+'</code>',
+  button('report-open-saved',c.opening===item.operation_id?'Opening…':'Open retained selection','data-operation="'+esc(item.operation_id)+'" '+disabled)
+ ]);
+ return '<section aria-label="Saved laboratory report selections"><h5>Saved laboratory report selections</h5>'+
+ '<p>Recover a completed registration from this Workspace, including after transfer or in a fresh browser. Opening it restores the original report choices; your editable plan and request draft stay unchanged.</p>'+
+ button('report-load-saved',c?.loading?'Loading saved selections…':c?.loaded?'Refresh saved selections':'Load saved selections',(c?.loading?'disabled':disabled))+
+ (c?.error?'<p role="alert">'+esc(c.error)+'</p>':'')+
+ (c?.loaded?w.table(['Results revision','Report context','Original operation','Open'],rows,'No committed scientific report source is retained for this request.'):'')+'</section>';
+}
+async function loadRetainedReports(w){
+ editable(w);const s=w.labDispatch,id=s?.active_package?.dispatch_id;if(!id)throw Error('Open an original laboratory request first.');
+ const turn=w.generation,workspace=w.workspace,c={dispatch_id:id,loading:true,loaded:false,items:[],error:'',opening:null,openEpoch:0};
+ retainedReportCatalogues.set(s,c);w.render();
+ const isCurrent=()=>current(w,s,turn)&&w.workspace===workspace&&s.active_package?.dispatch_id===id&&retainedReportCatalogues.get(s)===c;
+ try{
+  const result=await w.read('/api/implementation/dispatch-report-catalogue',{plan_id:w.plan.id,dispatch_id:id});
+  if(!isCurrent())return false;
+  if(result?.schema!=='upstate.implementation-lab-dispatch-report-catalogue/v1'||result.workspace_key!==workspace||
+     result.plan_id!==w.plan.id||result.dispatch_id!==id||!Array.isArray(result.items)||
+     result.items.some(item=>!item||item.dispatch_id!==id||item.plan?.id!==w.plan.id||
+      !Number.isSafeInteger(item.plan.revision)||item.plan.revision<1||!/^[0-9a-f]{64}$/.test(item.operation_id||'')))
+   throw Error('The saved report catalogue differs from this original laboratory request.');
+  c.items=clone(result.items);c.loaded=true;return true;
+ }catch(error){if(isCurrent())c.error=error.message||String(error);return false;}
+ finally{if(isCurrent()){c.loading=false;w.render();}}
+}
+async function openSavedReport(w,operation){
+ editable(w);const s=w.labDispatch,c=retainedReportCatalogues.get(s),id=s?.active_package?.dispatch_id;
+ const item=c?.dispatch_id===id&&c.items.find(row=>row.operation_id===operation);
+ if(!item)throw Error('Load the original saved report catalogue and choose its retained selection.');
+ const turn=w.generation,workspace=w.workspace,epoch=++c.openEpoch,receipts=clone(s.report_receipts||[]);
+ c.opening=operation;c.error='';w.render();
+ const isCurrent=()=>current(w,s,turn)&&w.workspace===workspace&&s.active_package?.dispatch_id===id&&
+  retainedReportCatalogues.get(s)===c&&c.openEpoch===epoch&&!w.pending&&!busy(s)&&same(s.report_receipts||[],receipts);
+ try{
+  const r=await w.read('/api/implementation/dispatch-report-detail',{plan_id:w.plan.id,operation_id:operation});
+  if(!isCurrent())return false;
+  if(r?.schema!==REPORT||r.state!=='imported'||r.operation_id!==operation||r.workspace_key!==workspace||
+     r.plan_id!==w.plan.id||r.dispatch_id!==id||!same(r.plan,item.plan)||
+     r.report_source?.source_collection_id!==item.source_collection_id||r.report_source?.source_id!==item.source_id||
+     !r.delivery_selection||!same(r.delivery_selection,r.report_source?.delivery_selection))
+   throw Error('The saved laboratory report changed its original revision or source selection.');
+  s.report_receipts=[...(s.report_receipts||[]).filter(row=>row.operation_id!==operation),clone(r)];
+  w.message='Opened the original laboratory report selection from results revision '+r.plan.revision+
+   '. Your editable plan remains at revision '+w.plan.revision+'; the request draft is unchanged.';
+  w.cache();return true;
+ }catch(error){if(isCurrent())c.error=error.message||String(error);return false;}
+ finally{
+  if(current(w,s,turn)&&w.workspace===workspace&&s.active_package?.dispatch_id===id&&
+     retainedReportCatalogues.get(s)===c&&c.openEpoch===epoch){c.opening=null;w.render();}
+ }
+}
+
 function reportPanel(w,s){
  const id=s.active_package?.dispatch_id;if(!id)return '';
  const f=s.reportFlow?.dispatch_id===id?s.reportFlow:null,p=f?.preview;
  const receipt=(s.report_receipts||[]).filter(x=>x.dispatch_id===id).at(-1);
  const prior=(w.observationReceipts||[]).filter(x=>x.plan_id===w.plan.id&&x.report_source?.delivery_selection).at(-1);
- const disabled=busy(s)||w.pending?'disabled':'';
+ const disabled=busy(s)||w.pending||(f&&reportSelectionReads.has(f))?'disabled':'';
  const summary=p?'<p>Request revision '+esc(p.dispatch_plan?.revision)+' · compared saved revision '+esc(p.plan.revision)+'.</p>'+
  w.table(['Source coverage','Original count'],Object.entries(p.summary||{}).map(([key,value])=>[esc(key.replaceAll('_',' ')),esc(typeof value==='object'?JSON.stringify(value):value)]))+
  '<p>'+esc(p.interpretation||'')+'</p><div class="iw-actions">'+button('report-register','Register report source',canRegisterReport(w)?'':'disabled')+button('report-export-preview','Export report-source review')+'</div>':'';
  const ready=receipt?'<h5>Retained report source · saved revision '+esc(receipt.plan.revision)+'</h5><p>This source keeps its exact request and compared plan revision when later records change.</p><div class="iw-actions">'+button('report-source','Open retained report source')+
  (typeof w.host.openDelivery==='function'?button('report-delivery','Prepare client report'):'')+(receipt.report_source?.source_id&&typeof w.host.openScientificReport==='function'?button('report-publish','Prepare standalone scientific report'):'')+button('report-export-receipt','Export report-source metadata')+'</div><p>'+w.nativeDownloads(receipt._downloads||[])+'</p>':'';
  return '<section><h4>Use this request and its results in a scientific report</h4><p>Retain the complete original request, saved results, unresolved matches and sample context in the existing scientific report flow. Requests with no returned results remain reportable.</p>'+
- '<details><summary>Preserve an existing report selection</summary><p>Use an existing registered field report or choose its complete delivery-selection JSON to retain earlier report sections, figures and selected model/geography settings.</p>'+
+ '<details><summary>Preserve an existing report selection</summary><p>Use the current Report desk selection, a registered field report or its complete delivery-selection JSON. The full original source order, earlier sections and figures, and selected model/geography settings remain together.</p>'+
+ (typeof w.host.openExtension==='function'?button('report-use-current','Use current Report desk selection',disabled):'')+
  (prior?button('report-use-field','Use registered field report revision '+prior.revision,disabled):'')+
  field('Original delivery-selection JSON (optional)','<input type="file" accept=".json,application/json" data-dispatch-report-selection '+disabled+'>')+
  (f?.existing_report_selection?'<p>'+esc(f.selection_label||'Original report selection retained')+'</p><pre class="iw-json">'+esc(JSON.stringify(f.existing_report_selection,null,2))+'</pre>'+button('report-clear-selection','Clear preceding report selection',disabled):'<p>No preceding report selection chosen.</p>')+'</details>'+
- '<div class="iw-actions">'+button('report-review',w.dirty||!w.nativePlan?'Save and review report source':'Review scientific report source',disabled)+'</div>'+summary+ready+'</section>';
+ '<div class="iw-actions">'+button('report-review',w.dirty||!w.nativePlan?'Save and review report source':'Review scientific report source',disabled)+'</div>'+summary+ready+retainedReportCatalogue(w,s)+'</section>';
 }
 async function reviewReport(w){
  editable(w);const s=w.labDispatch,f=reportFlow(s);
+ if(reportSelectionReads.has(f))throw Error('Wait for the original Report desk selection to finish loading.');
  if(await saveFirst(w,s,'report-preview'))return;
  const turn=w.generation,selected=clone(w.plan),id=s.active_package.dispatch_id,selection=clone(f.existing_report_selection);
  s.stage='report-previewing';f.stage='previewing';f.preview=null;w.cache();w.render();
@@ -275,6 +339,8 @@ function selectedReportReceipt(w){
 }
 async function reportAction(w,action,b){
  const s=w.labDispatch;if(!s)return;
+ if(action==='report-load-saved')return loadRetainedReports(w);
+ if(action==='report-open-saved')return openSavedReport(w,b.dataset.operation);
  if(action==='report-review')return reviewReport(w);
  if(action==='report-register')return registerReport(w);
  if(action==='report-export-preview'){const p=s.reportFlow?.preview;if(!p)throw Error('Review the original report source first.');download(p.dispatch_id+'-report-source-review.json',p);return;}
@@ -291,7 +357,7 @@ async function reportAction(w,action,b){
   if(w.root.querySelector('dialog[open]'))throw Error('Finish the current field editor before opening the report publisher.');
   const module=await import('./implementation_source_reports.mjs');
   if(!current(w,s,turn))return;
-  await module.openImplementationSourceReport(w,[r.report_source],{title:'Laboratory request and results · saved revision '+r.plan.revision});return;
+  await module.openImplementationSourceReport(w,[r.report_source],{title:'Laboratory request and results · saved revision '+r.plan.revision,selection:r.delivery_selection});return;
  }
  if(action==='report-delivery'){
   const r=selectedReportReceipt(w);
@@ -302,6 +368,18 @@ async function reportAction(w,action,b){
  }
  editable(w);const f=reportFlow(s);
  if(action==='report-clear-selection'){f.selection_epoch=(f.selection_epoch||0)+1;f.existing_report_selection=null;f.selection_label='';f.preview=null;f.stage='idle';w.cache();w.render();return;}
+ if(action==='report-use-current'){
+  const turn=w.generation,epoch=(f.selection_epoch||0)+1;f.selection_epoch=epoch;f.preview=null;f.stage='idle';reportSelectionReads.set(f,epoch);w.cache();w.render();
+  const isCurrent=()=>current(w,s,turn)&&s.reportFlow===f&&f.selection_epoch===epoch&&!w.pending&&!busy(s);
+  try{
+   const module=await import('./implementation_source_reports.mjs');
+   if(!isCurrent())return;
+   const selection=await module.captureImplementationReportSelection(w);
+   if(!isCurrent()||selection===null)return;
+   f.existing_report_selection=selection;f.selection_label='Current Report desk selection, in its original source order';w.cache();w.render();
+  }catch(error){if(isCurrent())throw error;}
+  finally{if(reportSelectionReads.get(f)===epoch)reportSelectionReads.delete(f);if(current(w,s,turn)&&s.reportFlow===f)w.render();}return;
+ }
  if(action==='report-use-field'){
   const prior=(w.observationReceipts||[]).filter(x=>x.plan_id===w.plan.id&&x.workspace_key===w.workspace&&x.report_source?.delivery_selection).at(-1);
   if(!prior)throw Error('Register an original field-observation source for this plan first.');
@@ -315,4 +393,38 @@ async function reportSelectionFile(w,input){
  const value=JSON.parse(await file.text());if(!current(w,s,turn)||s.reportFlow!==f||f.selection_epoch!==epoch)return;
  if(!value||typeof value!=='object'||Array.isArray(value))throw Error('Choose the original delivery-selection JSON object.');
  f.existing_report_selection=value;f.selection_label=file.name;w.cache();w.render();
+}
+
+
+export async function openRetainedReport(w,payload){
+ active(w);editable(w);
+ const plan=clone(w.plan),turn=w.generation,prior=w.labDispatch,priorSnapshot=clone(prior),workspace=w.workspace;
+ const id=payload?.laboratory_dispatch_id,operation=payload?.laboratory_report_operation;
+ if(!/^[0-9a-f]{64}$/.test(id||'')||!/^[0-9a-f]{64}$/.test(operation||''))
+  throw Error('Choose the original retained laboratory request and report.');
+ const isCurrent=()=>!w.gone&&w.generation===turn&&w.workspace===workspace&&
+  w.host.getState?.()?.workspace_key===workspace&&w.labDispatch===prior&&same(w.labDispatch,priorSnapshot)&&same(w.plan,plan)&&!w.pending;
+ let packageResult,report;
+ try{
+  [packageResult,report]=await Promise.all([
+   w.read('/api/implementation/dispatch-detail',{plan_id:plan.id,dispatch_id:id}),
+   w.read('/api/implementation/dispatch-report-detail',{plan_id:plan.id,operation_id:operation})
+  ]);
+ }catch(error){if(isCurrent())throw error;return false;}
+ if(!isCurrent())return false;
+ if(packageResult?.dispatch_id!==id||packageResult.plan_id!==plan.id||
+    report?.schema!==REPORT||report.state!=='imported'||report.operation_id!==operation||
+    report.dispatch_id!==id||report.plan_id!==plan.id||report.plan?.revision!==plan.revision||
+    report.workspace_key!==workspace||!report.report_source?.delivery_selection||
+    !same(report.delivery_selection,report.report_source.delivery_selection))
+  throw Error('The returned laboratory report differs from its original saved selection.');
+ const selected=state(plan);
+ selected.active_package=clone(packageResult);
+ selected.report_receipts=[clone(report)];
+ selected.reportFlow={dispatch_id:id,stage:'complete',preview:null,existing_report_selection:null,
+  selection_label:'',operation_id:null};
+ w.labDispatch=selected;w.tab='field';
+ w.message='Opened the original laboratory request at revision '+packageResult.revision+
+  ' and its retained results/report selection at revision '+plan.revision+'. No comparison was recalculated.';
+ w.cache();w.render();return true;
 }

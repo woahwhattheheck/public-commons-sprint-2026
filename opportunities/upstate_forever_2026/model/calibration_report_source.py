@@ -14,13 +14,14 @@ import json
 from .common import (atomic_bytes, atomic_json, canonical, describe_file, digest,
                      held, identifier, read_json, verify_file)
 from . import calibration_review as reviews
-from . import observed_context, observation_support
+from . import observed_context, observation_support, catchment_interpretation
 from .scientific_figures import _validate_figure
 
 VERSION = 1
-EDITION = "native-calibration-review-report-v3-reference-basis"
+EDITION = "native-calibration-review-report-v4-catchment-yields"
 SUPPORTED_EDITIONS = frozenset({"native-calibration-review-report-v1",
-                               "native-calibration-review-report-v2", EDITION})
+                               "native-calibration-review-report-v2",
+                               "native-calibration-review-report-v3-reference-basis", EDITION})
 KIND = "calibration-report-sources"
 DIRECTORY = "calibration-report-source-exports"
 SOURCE_ID = "native-calibration-review"
@@ -154,6 +155,11 @@ def _svg(figure):
              '<rect width="700" height="635" fill="white"/>',
              '<g fill="#202020" font-family="Arial,Helvetica,sans-serif">',
              '<text x="95" y="30" font-size="19">' + esc(figure["title"]) + "</text>"]
+    if figure.get("reference_basis_label"):
+        basis_label = str(figure["reference_basis_label"])
+        if len(basis_label) > 102:
+            basis_label = basis_label[:99] + "..."
+        parts.append('<text x="95" y="49" font-size="10">' + esc(basis_label) + "</text>")
     for tick in panel["x"]["ticks"]:
         px, py = x(tick["value"]), y(tick["value"])
         parts.extend([
@@ -176,8 +182,8 @@ def _svg(figure):
                              '<title>%s</title></circle>' % (px, py, title))
     unit = esc(panel["x"]["unit"])
     parts.extend([
-        '<text x="315" y="556" text-anchor="middle" font-size="13">Original annual reference (' + unit + ")</text>",
-        '<text transform="translate(20 285) rotate(-90)" text-anchor="middle" font-size="13">Selected prediction (' + unit + ")</text>",
+        '<text x="315" y="556" text-anchor="middle" font-size="13">' + esc(panel["x"]["label"]) + ' (' + unit + ")</text>",
+        '<text transform="translate(20 285) rotate(-90)" text-anchor="middle" font-size="13">' + esc(panel["y"]["label"]) + ' (' + unit + ")</text>",
         '<circle cx="102" cy="585" r="3.5"/><text x="116" y="590" font-size="12">Calibration</text>',
         '<rect x="228" y="581" width="8" height="8" fill="white" stroke="#202020"/>'
         '<text x="245" y="590" font-size="12">Held-out spatial groups</text>',
@@ -188,7 +194,7 @@ def _svg(figure):
     return "".join(parts).encode("utf-8")
 
 
-def _sections(review, report, plan, observed, detail, atlas):
+def _sections(review, report, plan, observed, detail, atlas, catchment_context=None):
     chosen = next(row for row in report["ranked_candidates"] if row["run_id"] == report["selected_run_id"])
     refs = report["reference_units"]
     unit_by_parameter = {row["parameter"]: row["units"] for row in refs}
@@ -241,6 +247,16 @@ def _sections(review, report, plan, observed, detail, atlas):
         sections[-1][1].append({"kind": "links", "items": [{
             "title": "Complete original constituent identities and source fields",
             "path": "dossier/tables/reference-basis.csv"}]})
+    if catchment_context is not None:
+        yield_blocks = catchment_interpretation.blocks(catchment_context, selected_only=True)
+        links = [{"title": "Complete source-bound catchment interpretation",
+                  "path": "catchment-interpretation.json"}]
+        for name, title in (("catchment-yields", "All candidate annual-yield CSV"),
+                            ("catchment-relations", "Original spatial-relation CSV")):
+            if "tables/" + name + ".csv" in review["files"]:
+                links.append({"title": title, "path": "dossier/tables/" + name + ".csv"})
+        yield_blocks.append({"kind": "links", "items": links})
+        sections.append(["Whole-catchment annual yields and shared support", yield_blocks])
     execution = reviews.native_execution(report, plan)
     execution_rows = execution.get("rows", [])
     selected_execution = [row for row in execution_rows if row["run_id"] == report["selected_run_id"]]
@@ -408,7 +424,13 @@ def prepare(workspace, review_id):
             atomic_bytes(directory / name, data, immutable=True)
             files[name] = describe_file(directory, directory / name)
 
-        figures = _figures(report, observed.get("metadata"))
+        retained_context = review["files"].get("catchment-interpretation.json")
+        catchment_context = (read_json(verify_file(original, retained_context))
+                             if retained_context else
+                             catchment_interpretation.collect(workspace, report, plan, observed))
+        add("catchment-interpretation.json", canonical(catchment_context) + b"\n")
+        figures = (_figures(report, observed.get("metadata"))
+                   + catchment_interpretation.figures(catchment_context))
         add("figures/specification.json", canonical({
             "schema": "upstate.scientific-figure-spec/v1", "edition": EDITION,
             "review_id": review["id"], "selected_run_id": report["selected_run_id"],
@@ -424,7 +446,7 @@ def prepare(workspace, review_id):
                 "native_execution": reviews.native_execution(report, plan),
                 "uncertainty_id": review["uncertainty_id"], "map_id": review["map_id"],
             },
-            "sections": _sections(review, report, plan, observed, detail, atlas),
+            "sections": _sections(review, report, plan, observed, detail, atlas, catchment_context),
             "inputs": [{"path": name, "bytes": item["bytes"], "sha256": item["sha256"]}
                        for name, item in sorted(files.items())],
             "figure_spec": "figures/specification.json",

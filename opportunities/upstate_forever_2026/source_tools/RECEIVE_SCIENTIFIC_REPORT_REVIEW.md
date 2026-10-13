@@ -6,7 +6,7 @@ The result is a working reviewer package and a separate restored scientific proj
 
 ## Run the current complete application
 
-The entrypoint is source_tools/receive_scientific_report_review.py. It uses the existing saved scientific-report verifier, scientific-report review adapter, reviews engine and portable Workspace receiver. Install the current complete application before starting. The command requires an actual saved scientific edition; it does not select a model cohort or generate an outcome.
+The entrypoint is source_tools/receive_scientific_report_review.py. It uses the existing saved scientific-report verifier, scientific-report review adapter, reviews engine and portable Workspace receiver. Install the current complete application before starting. The ordinary command requires an actual saved scientific edition. The optional completed-capture mode first adopts one explicitly pinned original CLI report into that same saved-edition family. Neither mode selects a model cohort or generates a new scientific outcome.
 
 List verified saved editions in the existing Workspace:
 
@@ -138,3 +138,194 @@ This command belongs to the existing review/source-report workflow. Its saved so
 - model/reviews.py: original request, artifacts, package inspection, export, receiving and responses.
 - model/portable.py: complete Workspace backup and separate restore.
 - model/SCIENTIFIC_REPORT_REVIEW.md: operator workflow and adapter contract.
+
+
+## Transfer only the selected review and continue real feedback
+
+The existing whole-Workspace receiving course can now finish with the original
+Study transfer archive. Add `--selected-study` to its ordinary command. It
+selects the actual saved review as `{kind: "reviews", id: REVIEW_ID}`, follows
+its required saved report and native sources, captures the original response
+and engineering history, and restores an independent editable Workspace.
+
+When the original course already completed, reuse its existing result receipt:
+
+```sh
+"$PYTHON" -B "$APPLICATION/source_tools/receive_scientific_report_review.py" \
+  --workspace "$WORKSPACE" \
+  --continue-receipt "$ORIGINAL_OPERATION/result.json"
+```
+
+This does not recreate a report, review, native model case or completed
+whole-Workspace archive. The new leg stays under the original operation's
+`selected-review/` directory. It reuses a completed selected archive after a
+lost response, verifies the original project/review/edition and captured
+feedback receipt, and invokes the original selected-study receiving verifier.
+An interrupted restore is adopted only after checking every archived member;
+a recorded restore can later contain additional original customer responses.
+
+The actual receiver emits `selected-review/result.json`, including the
+selected Study ID, archive bytes/SHA, independent Workspace/application paths,
+exact captured review history and original source verification. Use the
+received application's original operator with that returned Workspace to open
+**Customer reviews**, **Read PDF**, **Current requests**, and engineering
+handbacks. Sender-local browser caches are rebuilt by those original controls.
+
+### Supply a real returned response
+
+A further invocation can supply an actual response document from the existing
+review package:
+
+```sh
+"$PYTHON" -B "$APPLICATION/source_tools/receive_scientific_report_review.py" \
+  --workspace "$WORKSPACE" \
+  --continue-receipt "$ORIGINAL_OPERATION/result.json" \
+  --response "$ACTUAL_RETURNED_CUSTOMER_RESPONSE_JSON"
+```
+
+The command retains the exact submitted JSON bytes. It imports them **only into
+the independent selected received Workspace**, using `reviews.import_response`.
+The original review ID, project ID and predecessor rules apply. Exact replay
+reuses the existing response. A divergent predecessor is rejected and must be
+reconciled through the maintained Customer review UI; this command does not
+invent decisions or choose between customer branches.
+
+After import, the original selected-study verifier runs again: the transferred
+response prefix, report files and engineering history must still be retained.
+The command exports the continued response generation as an ordinary offline
+review package and ZIP. Its receipt is
+`selected-review/feedback/<original-response-sha256>/result.json`.
+If an external package directory is lost after a completed export, its retained
+original control files rebuild that exact package before reopening the ZIP.
+The donor Workspace's customer responses remain untouched.
+
+The receiving source deliberately leaves the original `receive(...)` API and
+its complete-course result unchanged. The optional continuation is a separate
+phase of that same retained operation. Existing consumers such as
+`receive_observed_scientific_review.py` can finish their ordinary course first
+and pass its actual result receipt to this command. In that wrapper's completed
+result JSON, the correct nested receipt is `review.receipt`; the outer workflow
+receipt has a different schema. Use the nested path unchanged with
+`--continue-receipt`. Never substitute a fabricated edition, review or response ID. Install the current Customer review Study-transfer
+component and its original native review dependencies before enabling this leg.
+
+## Recover an interrupted restore acknowledgement
+
+The complete-workspace and selected-review receiving legs keep the original
+archive, destination and review request. If the original restore has published
+its destination but the course stopped before writing `workspace-restore.json`,
+the receiver uses the maintained `portable.resume_restore` API with the exact
+expected archive SHA256. This reopens the original atomic
+`receiving-complete.json` result and preserves native receiving registrations
+and work subsequently added by the recipient. It never restores over that
+directory or repeats report rendering.
+
+For a successful receiver created before the completion protocol existed, the
+same native API reconciles the original archived bytes and permitted native
+registration before retaining its completion record. Older application source
+without that API retains this course's strict archived-byte recovery. A failed
+native reconciliation is reported directly; it does not fall through to the
+older path. The existing project, saved-edition, review, original-response-prefix
+and selected-study checks still run after receiving.
+
+Continue the same retained operation/output. When continuing an already
+completed S1 result, use `--continue-receipt` with that exact result's receipt;
+in the observed-report wrapper this is its nested `review.receipt`.
+
+## Continue an already completed CLI report without rendering it again
+
+A completed original CLI report may already contain the exact reviewed PDF,
+HTML, Markdown, data, figures and source companions. Use the same receiver to
+adopt that capture and continue the Customer review course. This does not call
+the renderer, change the ordered report sources or replace any existing report
+bytes.
+
+List actual completed captures in the original Workspace:
+
+~~~sh
+"$PYTHON" -B "$APPLICATION/source_tools/receive_scientific_report_review.py" \
+  --workspace "$WORKSPACE" --list-captures
+~~~
+
+Each original catalogue row includes `capture_id`, `capture_sha256` and
+`edition_id`. They are distinct identities: the capture names the complete
+original render result; the edition names its original render selection.
+The shortened `observed-report-...` operation label is not either full ID.
+Do not reconstruct either identifier from a title, filename or operation prefix.
+
+Preview the exact chosen capture using the original adoption module:
+
+~~~sh
+"$PYTHON" -B -m model.scientific_report_capture \
+  --workspace "$WORKSPACE" preview "$ACTUAL_CAPTURE_ID"
+~~~
+
+Run this from the original application directory, or set its ordinary import
+path as the existing course does. The preview verifies all original member
+bytes, retained source bindings and render identity. Use its exact SHA and
+edition ID with the actual authored review selection:
+
+~~~sh
+"$PYTHON" -B "$APPLICATION/source_tools/receive_scientific_report_review.py" \
+  --workspace "$WORKSPACE" \
+  --capture-id "$ACTUAL_CAPTURE_ID" \
+  --capture-sha256 "$ACTUAL_CAPTURE_SHA256" \
+  --edition-id "$ACTUAL_CAPTURE_EDITION_ID" \
+  --review-selection "$ACTUAL_AUTHORED_REVIEW_SELECTION_JSON" \
+  --output "$ORIGINAL_COURSE_OUTPUT" \
+  --selected-study
+~~~
+
+Keep this within the original accepted report course. Do not run a second
+renderer, modelling process or receiving operation on another host. The output
+must be independent of the application and Workspace. A missing capture,
+changed SHA, changed edition identity or altered source is an explicit error.
+
+The receiver adopts through `scientific_report_capture.adopt`, then calls its
+original `receive` course. Identical completed adoption reopens the same saved
+edition. A stop after adoption but before review creation reuses that adoption
+on the same command; its transient `reused` flag is not part of the receiving
+identity. The capture proof, exact render selection, original role-to-file
+descriptors and original capture JSON bytes are retained in the existing
+receiving identity. Original review creation time and response generation keep
+the same persisted-request behavior.
+
+The full restored Workspace and selected-review restored Workspace must both
+reopen the exact saved-edition files and verify the embedded original capture
+with the maintained origin verifier. A selected archive does not have to carry
+the donor's entire `observed-reports/` directory. The full result's
+`restored_verification.completed_capture` and the selected result's
+`completed_capture` record the verified capture SHA and report member identity.
+The original result retains the complete proof in
+`identity.completed_capture`.
+
+After a course has completed, continue it using its exact `result.json` and
+`--continue-receipt`, as above. Do not turn an existing ordinary saved-edition
+course into a new capture course merely to resume it. Actual returned responses
+remain optional and are imported only into the independent received Workspace.
+No customer questions, decisions or replies are synthesized.
+
+This optional mode additionally needs the current
+`model/scientific_report_capture.py`, original saved-edition model and
+`model/observed_report_render.py` immutable-copy routine. The maintained
+Customer review receiving fragment carries those sources and requires the
+original scientific-report-editions component. Catalogue and adoption failures
+retain their original error rather than falling back to a render.
+
+### Inspect the exact outgoing artifact and important controls
+
+The producing peer must open and look at the exact outgoing PDF, HTML,
+Markdown, figures, tables and original downloads. Extract the actual review
+and Workspace archives and reopen their contained report and working project.
+Operate the restored Sources report, Read PDF, Customer review requirements,
+response controls, exports and reopen flow at the normal desktop/screenshare
+size and narrow/mobile sizes where relevant. Check populated, empty, loading
+and error states, plus long numbers, source labels, figure captions and links.
+A screenshot must be viewed; capturing it alone is not inspection.
+
+Repair clipped, cramped, unstyled or unreadable output on its maintained
+producer. Code review, DOM execution, HTTP checks or peer approval do not
+replace this visual and functional inspection. Keep numerical/source changes
+with the original scientific owner and preserve original captured bytes.
+If a corrected presentation is needed, its separately created original render
+has its own capture; this receiving mode never rewrites the earlier edition.

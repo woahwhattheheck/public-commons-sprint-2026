@@ -10,11 +10,15 @@ from pathlib import Path
 import shutil
 import tempfile
 
-MODEL_FILES = ('gis_project.py', 'gis_workspace.py', 'gis_project_cli.py',
+MODEL_FILES = ('gis_native_study.py', 'gis_project.py', 'gis_workspace.py', 'gis_edition_review.py', 'gis_review_raster.py', 'gis_review_raster_view.html',
+               'gis_vector_review.py', 'gis_project_cli.py',
                'gis_project_native.py', 'gis_project_view.html', 'GIS_PROJECTS.md', 'requirements-gis.txt')
 OWN_FILES = tuple('model/' + x for x in MODEL_FILES) + (
     'operator/gis_projects.py', 'operator/web/gis-projects.mjs', 'operator/web/gis-projects.css',
-    'operator/extensions/gis-projects.json')
+    'operator/extensions/gis-projects.json', 'operator/gis_vector_reviews.py',
+    'operator/extensions/gis-vector-reviews.json',
+    'source_tools/receive_native_study_gis.py', 'source/GIS_NATIVE_STUDY.md',
+    'integration/component_fragments/gis-native-study.json')
 MARKER = '# Editable GIS integration: ASTRA-GIS12/v1'
 
 
@@ -28,7 +32,7 @@ def once(text, old, new, label):
     return text.replace(old, new, 1)
 
 
-def server_source(text):
+def _base_server_source(text):
     if MARKER in text:
         return text
     text = once(text, 'class Operator:', MARKER + '\nfrom gis_projects import ACTIONS as GIS_ACTIONS, GISProjects\nACTIONS = set(ACTIONS) | GIS_ACTIONS\n\nclass Operator:', 'Operator declaration')
@@ -72,6 +76,76 @@ def server_source(text):
     return text
 
 
+
+VECTOR_MARKER = '# Working-vector review integration: ECO-264B/v1'
+VECTOR_PROVIDER = (VECTOR_MARKER + '\n'
+                   'from gis_vector_reviews import ACTION as GIS_VECTOR_ACTION, GISVectorReviews\n'
+                   'ACTIONS = set(ACTIONS) | {GIS_VECTOR_ACTION}\n\n')
+VECTOR_DISPATCH = ('        if action == GIS_VECTOR_ACTION:\n'
+                   '            return GISVectorReviews(self, Fault).invoke(task)\n')
+VECTOR_DECORATION = '        task = GISVectorReviews(self, Fault).decorate_task(task)\n'
+VECTOR_ITEM = ('        if kind == "gis_vector_reviews":\n'
+               '            return GISVectorReviews(self, Fault).read(workspace, "inspect", {"id": key})\n')
+VECTOR_ROUTES = ('                if url.path == "/api/gis-vector-reviews/catalog":\n'
+                 '                    return self.send_json(200, GISVectorReviews(self.app, Fault).read(workspace, "catalog"))\n'
+                 '                if url.path == "/api/gis-vector-reviews/inspect":\n'
+                 '                    return self.send_json(200, GISVectorReviews(self.app, Fault).read(workspace, "inspect", {"id": one("id")}))\n')
+
+
+def _vector_server_source(text):
+    """Upgrade an existing direct GIS installation without duplicating its hooks."""
+    if VECTOR_MARKER in text:
+        return text
+    text = once(text, 'class Operator:', VECTOR_PROVIDER + 'class Operator:', 'vector provider')
+    text = once(text, '        if action in GIS_ACTIONS:\n',
+                VECTOR_DISPATCH + '        if action in GIS_ACTIONS:\n', 'vector dispatch')
+    text = once(text, '        task = GISProjects(self).decorate_task(task)\n',
+                '        task = GISProjects(self).decorate_task(task)\n' + VECTOR_DECORATION,
+                'vector task decoration')
+    tree = ast.parse(text)
+    cls = next(x for x in tree.body if isinstance(x, ast.ClassDef) and x.name == 'Operator')
+    fn = next(x for x in cls.body if isinstance(x, ast.FunctionDef) and x.name == 'item')
+    lines = text.splitlines(keepends=True)
+    body = ''.join(lines[fn.lineno - 1:fn.end_lineno])
+    body = once(body, '        if kind not in KINDS:\n',
+                '        self.ws(workspace)\n' + VECTOR_ITEM + '        if kind not in KINDS:\n',
+                'vector retained item')
+    text = ''.join(lines[:fn.lineno - 1]) + body + ''.join(lines[fn.end_lineno:])
+    catalogue = ('                if url.path == "/api/gis/projects":\n'
+                 '                    return self.send_json(200, GISProjects(self.app).catalogue(workspace))\n')
+    text = once(text, catalogue, catalogue + VECTOR_ROUTES, 'vector authorized reads')
+    ast.parse(text)
+    return text
+
+
+NATIVE_STUDY_CATALOGUE = ('                    return self.send_json(200, GISProjects(self.app).catalogue('
+                          'workspace, one("native_study_collection"), one("native_study_source")))\n')
+ORIGINAL_CATALOGUE = '                    return self.send_json(200, GISProjects(self.app).catalogue(workspace))\n'
+
+
+def server_source(text):
+    # Normalize our exact earlier direct route before the existing vector joins.
+    if NATIVE_STUDY_CATALOGUE in text:
+        text = once(text, NATIVE_STUDY_CATALOGUE, ORIGINAL_CATALOGUE, 'native-study direct route')
+    text = _vector_server_source(_base_server_source(text))
+    return once(text, ORIGINAL_CATALOGUE, NATIVE_STUDY_CATALOGUE, 'native-study selected read')
+
+
+def _remove_vector_server_source(text):
+    if VECTOR_MARKER not in text:
+        return text
+    for old, label in (
+        (VECTOR_PROVIDER, 'vector provider'),
+        (VECTOR_DISPATCH, 'vector dispatch'),
+        (VECTOR_DECORATION, 'vector task decoration'),
+        ('        self.ws(workspace)\n' + VECTOR_ITEM, 'vector retained item'),
+        (VECTOR_ROUTES, 'vector authorized reads'),
+    ):
+        text = once(text, old, '', 'legacy ' + label)
+    ast.parse(text)
+    return text
+
+
 def browser_source(text):
     if "import {attachGISProjects}" in text:
         return text
@@ -97,6 +171,9 @@ def index_source(text):
 
 def legacy_server_source(text):
     """Remove only the exact former GIS-owned joins before shared registration."""
+    if NATIVE_STUDY_CATALOGUE in text:
+        text = once(text, NATIVE_STUDY_CATALOGUE, ORIGINAL_CATALOGUE, 'native-study registered route')
+    text = _remove_vector_server_source(text)
     if MARKER not in text:
         return text
     text = once(text, MARKER + '\nfrom gis_projects import ACTIONS as GIS_ACTIONS, GISProjects\nACTIONS = set(ACTIONS) | GIS_ACTIONS\n\n', '', 'legacy GIS provider')
@@ -173,16 +250,50 @@ def registration_plan(application):
     return transform, {host: body, registry: registry_body}, 'registry'
 
 
+
+def instruction_source(existing, source):
+    """Carry current owner instructions while retaining receiver-specific content."""
+    body = source.decode('utf-8').strip()
+    if not body:
+        raise ValueError('The application owner instruction file is empty')
+    text = existing.decode('utf-8') if existing is not None else ''
+    if body in text:
+        return existing
+    start = '<!-- BEGIN GIS application owner instructions -->'
+    end = '<!-- END GIS application owner instructions -->'
+    block = start + '\n' + body + '\n' + end
+    if start in text or end in text:
+        if text.count(start) != 1 or text.count(end) != 1 or text.index(end) < text.index(start):
+            raise ValueError('Retain and reconcile the existing GIS owner instruction boundaries')
+        first = text.index(start)
+        last = text.index(end) + len(end)
+        text = text[:first] + block + text[last:]
+    elif not text.strip():
+        text = body + '\n'
+    else:
+        text = text.rstrip() + '\n\n' + block + '\n'
+    return text.encode('utf-8')
+
+
 def install(application, source, dry_run=False):
     application, source = Path(application).resolve(strict=True), Path(source).resolve(strict=True)
     if not (application / 'model/workspace.py').is_file():
         raise ValueError('Receive the original scientific application before this additive component')
+    for dependency in ('model/ensemble_study_transfer.py', 'model/native_versions.py'):
+        target = application / dependency
+        if not target.is_file() or target.is_symlink():
+            raise ValueError('Receive the complete native-study component dependency before GIS installation: ' + dependency)
     transform, dependencies, integration = registration_plan(application)
     before={};planned={}
     for name, fn in transform.items():
         path=application/name
         if path.is_symlink(): raise ValueError('Original registration file is a symbolic link')
         before[name]=path.read_bytes();planned[name]=fn(before[name].decode('utf-8')).encode('utf-8')
+    instruction = application / 'AGENTS.md'
+    if instruction.is_symlink():
+        raise ValueError('Application owner instruction destination is a symbolic link')
+    before['AGENTS.md'] = instruction.read_bytes() if instruction.exists() else None
+    planned['AGENTS.md'] = instruction_source(before['AGENTS.md'], (source / 'AGENTS.md').read_bytes())
     for name in OWN_FILES:
         data=(source/name).read_bytes();target=application/name
         if target.is_symlink(): raise ValueError('Component destination is a symbolic link')

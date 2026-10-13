@@ -8,6 +8,7 @@ import fcntl
 import hashlib
 import json
 import os
+import stat
 from pathlib import Path
 import tempfile
 
@@ -44,7 +45,12 @@ FILES = [
     "requirements-chemistry.txt",
     "install_chemistry.py",
     "operator/install_chemistry.py",
-    "integration/reach_chemistry/install_chemistry_legacy.py"
+    "integration/reach_chemistry/install_chemistry_legacy.py",
+    "model/reach_chemistry/OBSERVATIONS.md",
+    "operator/CHEMISTRY_COMPOUND_OBSERVATIONS.md",
+    "integration/component_fragments/chemistry-compound-observations.json",
+    "integration/reach_chemistry/COMPOUND_SOURCE.json",
+    "integration/reach_chemistry/SOURCE_MANIFEST.json"
 ]
 ORIGINAL_SHA256 = {
     "model/chemistry.py": "12189fbe24b700815693ec9ae7d9f08484a1c1ebc67ba04fd825fad38386a6ed",
@@ -109,6 +115,43 @@ COMPOSITE_PREVIOUS_SHA256 = {
     "operator/install_chemistry.py": "a0d95e38263f6a7ad3a2850c1c4fe398125ac05910973165aa830496c2c50f3c"
 }
 
+# Exact maintained editions before native 0.3 compound/interval composition.
+INTERVAL_PREVIOUS_SHA256 = {
+    "model/chemistry.py": "2b18e2beacf8502a153e8165a0b9cd8f609f725511dc263cde75a2f7b4aa8227",
+    "model/chemistry_report_source.py": "3d220bf11a90d8b5847d538c0bf7ae46eae5663d2965c6161c341921cb2f7f19",
+    "model/CHEMISTRY_REPORT_SOURCE.md": "c6ca14075df5be717572b6dddaeff420c7f78813784214fcaa960a330be5ceeb",
+    "model/CHEMISTRY_REPORTS.md": "195b5cc99403f96fb61048c175bfd3ab32ea4a913f85986242d3d45cda6ed99c",
+    "model/reach_chemistry/reporting.py": "0fc43c3e115fff7fac4b0c52e13e19456d24175c5d65b8ead2f8be85891e7641",
+    "model/reach_chemistry/__init__.py": "a1c644213e39975b64f2e40485cb64ef14bd1b841d49714a33ce3af3767005c9",
+    "model/reach_chemistry/inference.py": "d44b9649541a8841466482810796e20497c8f7ed91ac3686b3be1eb75f668e69",
+    "model/reach_chemistry/io.py": "936c4931e102d1f565c1d5598a298d097a353db9c5ccc3a922b4f9c57c7c5d10",
+    "operator/web/chemistry.mjs": "9e3474fbf3c5ed4dd9a8b0ca5466f56c4e8f22f9be57c195724e8ce865735521",
+    "operator/install_chemistry.py": "94b636cc9f27d72b1e09ddd350d15bf163241c82bce7fbc2f77a2712e6874195",
+    "integration/component_fragments/chemistry_reports.json": "4b63a1d685ac1dee5165fd90d32b17a213d519077d1aa31d2c3ac11de240dd33"
+}
+PUBLISHED_INTERVAL_PREVIOUS_SHA256 = {
+    "model/reach_chemistry/reporting.py": "a44610ef9f5b6782b1732bf5265cbb81943033d24aa23a4f01183689f6d45d0d",
+    "model/chemistry_report_source.py": "c9ee409f00e34a77153a43bcc3566a5b9a81ff4bd446b5f5799161464209495f",
+    "operator/web/chemistry.mjs": "ba4cf205bada0325f496bfc9dc903c74c41dc29070870c2a9876b66b52e4fc22",
+    "model/CHEMISTRY_REPORTS.md": "549adb84f00167d2e2d3892c571126b1fcf3eaa5080b6e370a70227ea4c2555b",
+    "model/CHEMISTRY_REPORT_SOURCE.md": "cfeba48f9639d9c3626bdd4256dfdca4701aee6d57b53f02418f612f1e77e578",
+    "operator/install_chemistry.py": "a0d95e38263f6a7ad3a2850c1c4fe398125ac05910973165aa830496c2c50f3c"
+}
+
+COMPOSED_INTERVAL_PREVIOUS_SHA256 = {
+    "model/chemistry_report_source.py": "5b5940571a3667e4a09fcd1c4459d82316295a8286f6f30a4050409531989bba",
+    "operator/install_chemistry.py": "5a9a29b0aaf12b5af6e4f2c34cdedc7f522950e72fb6ac010330b06ef72b9a18",
+    "integration/reach_chemistry/COMPOUND_SOURCE.json": "75df65613e75aa3a505a5154ea451f4b88921ce75ffc36561308c42caaca4d4e"
+}
+
+LIFETIME_PREVIOUS_SHA256 = {
+    "operator/web/chemistry.mjs": "b89bfd259b7546e429be1ac68d3c790ec3913f6d2eec258ee8cf64c93f207ab3",
+    "operator/web/chemistry-native.mjs": "941e43e906fbc4d725abe9ac7aa70808eb821fe8e4943123ff94862e73b5be4a",
+    "operator/CHEMISTRY_OPERATOR.md": "6dca4cb3728149f889db4301eddbd48e2755f8cda5c96dab97a663acf5574f5c",
+    "operator/install_chemistry.py": "d41c4cedb3622b7d6740ff9ac691172262c14a6ac1f93e386ed24ec323ed1fa5",
+    "integration/reach_chemistry/COMPOUND_SOURCE.json": "d4af6b37bf397b1f98088ce0ef909eaeb999242e317e3d8af2d9d8b203e29264"
+}
+
 SHARED_STUDY_FILES = ("model/study_transfer.py", "model/scientific_report_study_transfer.py")
 
 SHARED_REPORT_FILES = [
@@ -123,106 +166,263 @@ SHARED_REPORT_FILES = [
     "operator/web/extension_host.mjs"
 ]
 
-def install(application, source_root=None, dry_run=False):
+BANK_PREVIOUS_SHA256 = {
+    "operator/install_chemistry.py": "94b636cc9f27d72b1e09ddd350d15bf163241c82bce7fbc2f77a2712e6874195",
+    "operator/CHEMISTRY_OPERATOR.md": "8a5de6422c30600f34ec83d8c27aa385dd1e27add258b1d0e30ef6a724f50938"
+}
+BANK_INTERVAL_PREVIOUS_SHA256 = {
+    "operator/install_chemistry.py": "5a9a29b0aaf12b5af6e4f2c34cdedc7f522950e72fb6ac010330b06ef72b9a18"
+}
+REPORT_SELECTION_PREVIOUS_SHA256 = {
+    "operator/install_chemistry.py": "916af699e3271bf452d95d958e92cbe92d829dc6e774c5947e82506f783cf631",
+    "operator/web/chemistry.mjs": "e0f8d00d07bace633eb81a22830961276b1840dbd0814743059ee91e3e4b64ae",
+    "operator/CHEMISTRY_OPERATOR.md": "8a5de6422c30600f34ec83d8c27aa385dd1e27add258b1d0e30ef6a724f50938",
+    "operator/CHEMISTRY_COMPOUND_OBSERVATIONS.md": "ba82be927a9fac599a8cf93bb2db57e4efe331228fdbb77ea908d633df766c2d",
+    "model/CHEMISTRY_REPORT_SOURCE.md": "cf3f23b24fa0c68735ecc10caf028b2f6e4101888df65b0ba358c9e671fe651d",
+    "integration/reach_chemistry/COMPOUND_SOURCE.json": "69f6be7b9e30ef6f76ab6bdbf2163ab1e0325fb6a606c84d359e75155236e65b"
+}
+STUDY_EDITION_PREVIOUS_SHA256 = {
+    "operator/install_chemistry.py": "9f9fbee45a3879a75376e2b1f0b0d628adf944724c4b9346b513d2c118126e9e",
+    "model/chemistry_study_transfer.py": "3e6d53d71fa6c1b737a7313704cb2c19cb89a20ec5ce4d254a615d07709b5c8c",
+    "model/CHEMISTRY_STUDY_TRANSFER.md": "60d62403f464e36ed02e652eaf3be4d18972ac0625f86df804db4e048f33a923",
+    "integration/reach_chemistry/COMPOUND_SOURCE.json": "9e10b404582297988923a69ed0adf86c31b1579dc223a620f9d0585d5a6681dd"
+}
+BANK_SCHEMA = "commons.source-bank/v1"
+BANK_LIMIT = 16 * 1024 * 1024
+
+
+def _plain_object(pairs):
+    result = {}
+    for key, value in pairs:
+        if key in result:
+            raise ValueError("Repeated source-bank JSON field: " + key)
+        result[key] = value
+    return result
+
+
+def read_source_bank(path):
+    """Read an already-decoded, complete UTF-8 Chemistry source bank."""
+    path = Path(path)
+    if path.is_symlink() or not path.is_file():
+        raise ValueError("Select the retained regular source-bank JSON file")
+    with path.open("rb") as stream:
+        data = stream.read(BANK_LIMIT + 1)
+    if len(data) > BANK_LIMIT:
+        raise ValueError("Chemistry source bank exceeds 16 MiB")
+    document = json.loads(data.decode("utf-8"), object_pairs_hook=_plain_object)
+    if not isinstance(document, dict) or document.get("schema") != BANK_SCHEMA:
+        raise ValueError("Select the complete decoded commons.source-bank/v1 JSON")
+    rows = document.get("files")
+    if not isinstance(rows, list) or not rows or len(rows) > len(FILES):
+        raise ValueError("Source bank must contain the authored Chemistry file members")
+    if document.get("repository_prefix", "opportunities/upstate_forever_2026") != "opportunities/upstate_forever_2026":
+        raise ValueError("Source bank belongs to a different application prefix")
+    members, identities = {}, {}
+    for row in rows:
+        if not isinstance(row, dict):
+            raise ValueError("Each source-bank member must be an object")
+        name = row.get("path")
+        if not isinstance(name, str) or name not in FILES or name in members:
+            raise ValueError("Unknown or repeated Chemistry source-bank path: " + str(name))
+        if row.get("encoding", "utf-8") != "utf-8" or not isinstance(row.get("content"), str):
+            raise ValueError("Source bank requires complete UTF-8 content: " + name)
+        body = row["content"].encode("utf-8")
+        if type(row.get("bytes")) is not int or row["bytes"] != len(body):
+            raise ValueError("Source-bank byte length differs: " + name)
+        digest = hashlib.sha256(body).hexdigest()
+        if row.get("sha256") != digest:
+            raise ValueError("Source-bank SHA-256 differs: " + name)
+        mode = row.get("mode")
+        if mode not in ("100644", "100755"):
+            raise ValueError("Source-bank member needs its original regular-file mode: " + name)
+        members[name] = (body, int(mode[-3:], 8))
+        identities[name] = {"bytes": len(body), "sha256": digest, "mode": mode}
+    receiver = "operator/install_chemistry.py"
+    if receiver not in members or members[receiver][0] != Path(__file__).read_bytes():
+        raise ValueError("Run the exact operator/install_chemistry.py retained in this source bank; "
+                         "a historical bank cannot replace a newer executing receiver")
+    return members, {
+        "schema": BANK_SCHEMA, "path": str(path.absolute()), "bytes": len(data),
+        "sha256": hashlib.sha256(data).hexdigest(), "edition": document.get("edition"),
+        "provided": identities,
+    }
+
+
+def _snapshot(root, name, *, required=False):
+    """Retain one ordinary member, rejecting aliased parents and special files."""
+    path = root
+    parts = Path(name).parts
+    if not parts or Path(name).is_absolute() or ".." in parts:
+        raise ValueError("Choose an application-relative member")
+    for index, part in enumerate(parts):
+        path = path / part
+        if path.is_symlink():
+            raise ValueError("Application member contains a symbolic link: " + name)
+        if path.exists() and index < len(parts) - 1 and not path.is_dir():
+            raise ValueError("Application member parent is not a directory: " + name)
+    if not path.exists():
+        if required:
+            raise ValueError("Complete reach-chemistry source is missing: " + name)
+        return None
+    before = path.stat()
+    if not stat.S_ISREG(before.st_mode):
+        raise ValueError("Application member is not a regular file: " + name)
+    body = path.read_bytes()
+    after = path.stat()
+    fingerprint = lambda value: (value.st_dev, value.st_ino, value.st_size,
+                                 value.st_mtime_ns, value.st_ctime_ns, value.st_mode)
+    if fingerprint(before) != fingerprint(after) or len(body) != after.st_size:
+        raise RuntimeError("Application source changed while reading: " + name)
+    return body, stat.S_IMODE(after.st_mode)
+
+
+def _validate_body(name, body):
+    if name.endswith(".py"):
+        ast.parse(body, filename=name)
+    elif name.endswith(".json"):
+        json.loads(body)
+
+
+def install(application, source_root=None, dry_run=False, *, source_bank=None):
+    if source_root is not None and source_bank is not None:
+        raise ValueError("Choose either --source-root or --source-bank")
     target = Path(application).resolve(strict=True)
-    source = Path(source_root or Path(__file__).resolve().parents[1]).resolve(strict=True)
+    bank, source_receipt = read_source_bank(source_bank) if source_bank is not None else (None, None)
+    source = target if bank is not None else Path(
+        source_root or Path(__file__).resolve().parents[1]).resolve(strict=True)
     if not (target / "model/workspace.py").is_file() or not (target / "operator/extension_registry.py").is_file():
         raise ValueError("Select the maintained scientific application with its original extension registry")
     lock = target / ".locks/extension-install.lock"
+    if lock.parent.is_symlink() or lock.is_symlink():
+        raise ValueError("Application extension lock contains a symbolic link")
     lock.parent.mkdir(parents=True, exist_ok=True)
     with lock.open("a+") as handle:
         fcntl.flock(handle, fcntl.LOCK_EX)
-        pending, preimages = {}, {}
-        shared = {}
+        pending, preimages, shared, inherited = {}, {}, {}, {}
         for name in [*SHARED_REPORT_FILES, *SHARED_STUDY_FILES]:
-            path = target / name
-            if not path.is_file() or path.is_symlink():
-                raise ValueError("Receive the maintained Scientific Reports component; missing " + name)
-            shared[name] = path.read_bytes()
+            shared[name] = _snapshot(target, name, required=True)
         for name in FILES:
-            path = source / name
-            if not path.is_file():
-                raise ValueError("Complete reach-chemistry source is missing: " + name)
-            body = path.read_bytes()
-            if name.endswith(".py"):
-                ast.parse(body, filename=name)
-            if name.endswith(".json"):
-                json.loads(body)
-            destination = target / name
-            current = destination.read_bytes() if destination.is_file() else None
-            if (current is not None and current != body
-                    and hashlib.sha256(current).hexdigest() not in
+            current = _snapshot(target, name)
+            if bank is None:
+                selected = _snapshot(source, name, required=True)
+            elif name in bank:
+                selected = bank[name]
+            else:
+                if current is None:
+                    raise ValueError("Source bank omits a required file absent from the installed application: " + name)
+                selected = current
+                inherited[name] = current
+            body, mode = selected
+            _validate_body(name, body)
+            if (current is not None and current[0] != body
+                    and hashlib.sha256(current[0]).hexdigest() not in
                     {ORIGINAL_SHA256.get(name), PREVIOUS_NATIVE_SHA256.get(name),
                      REPORT_PREVIOUS_SHA256.get(name), SOURCE_PREVIOUS_SHA256.get(name),
-                     STUDY_PREVIOUS_SHA256.get(name), COMPOSITE_PREVIOUS_SHA256.get(name)}):
+                     STUDY_PREVIOUS_SHA256.get(name), COMPOSITE_PREVIOUS_SHA256.get(name),
+                     BANK_PREVIOUS_SHA256.get(name), INTERVAL_PREVIOUS_SHA256.get(name),
+                     PUBLISHED_INTERVAL_PREVIOUS_SHA256.get(name), COMPOSED_INTERVAL_PREVIOUS_SHA256.get(name),
+                     BANK_INTERVAL_PREVIOUS_SHA256.get(name), REPORT_SELECTION_PREVIOUS_SHA256.get(name),
+                     STUDY_EDITION_PREVIOUS_SHA256.get(name), LIFETIME_PREVIOUS_SHA256.get(name)}):
                 raise ValueError("Reconcile the independently changed chemistry file: " + name)
-            pending[name], preimages[name] = body, current
+            pending[name], preimages[name] = (body, mode), current
         composer = "source_tools/chemistry_study_composition.py"
         namespace = {"__name__": "_chemistry_study_composition", "__file__": str(source / composer)}
-        exec(compile(pending[composer], composer, "exec"), namespace)
-        joined = namespace["compose"]({name: shared[name].decode("utf-8")
+        exec(compile(pending[composer][0], composer, "exec"), namespace)
+        joined = namespace["compose"]({name: shared[name][0].decode("utf-8")
                                        for name in SHARED_STUDY_FILES})
+        if set(joined) != set(SHARED_STUDY_FILES):
+            raise ValueError("Chemistry Study composer must preserve its exact shared member set")
         for name, body in joined.items():
             ast.parse(body, filename=name)
-            pending[name], preimages[name] = body.encode("utf-8"), shared[name]
-        descriptor = json.loads(pending["operator/extensions/chemistry.json"])
+            pending[name], preimages[name] = (body.encode("utf-8"), shared[name][1]), shared[name]
+        descriptor = json.loads(pending["operator/extensions/chemistry.json"][0])
         if (descriptor.get("schema") != "upstate.operator-extension/v1"
                 or descriptor.get("id") != "chemistry"
                 or descriptor["backend"]["factory"]["name"] != "ChemistryOperations"):
             raise ValueError("Select the original native chemistry registration")
         changed = [name for name in pending if pending[name] != preimages[name]]
+
+        def recheck():
+            # Include unchanged/inherited engines, not only outgoing changed members.
+            for name, before in {**shared, **preimages}.items():
+                if _snapshot(target, name) != before:
+                    raise RuntimeError("Concurrent application source change: " + name)
+
+        recheck()
         if not dry_run:
             with tempfile.TemporaryDirectory(prefix=".chemistry-install-", dir=target.parent) as temporary:
                 stage = Path(temporary)
                 for name in changed:
                     path = stage / name
                     path.parent.mkdir(parents=True, exist_ok=True)
-                    path.write_bytes(pending[name])
-                for name, before in shared.items():
-                    if (target / name).read_bytes() != before:
-                        raise RuntimeError("Concurrent scientific-report source change: " + name)
-                for name in changed:
-                    destination = target / name
-                    actual = destination.read_bytes() if destination.is_file() else None
-                    if actual != preimages[name]:
-                        raise RuntimeError("Concurrent application change: " + name)
+                    body, mode = pending[name]
+                    path.write_bytes(body)
+                    path.chmod(mode)
+                recheck()
                 committed = []
                 try:
                     for name in changed:
                         destination = target / name
                         destination.parent.mkdir(parents=True, exist_ok=True)
-                        current = destination.read_bytes() if destination.is_file() else None
-                        if current != preimages[name]:
-                            raise RuntimeError("Concurrent application change: " + name)
+                        if _snapshot(target, name) != preimages[name]:
+                            raise RuntimeError("Concurrent application source change: " + name)
                         os.replace(stage / name, destination)
                         committed.append(name)
-                except BaseException:
+                    # Retained engines and shared rendering dependencies must still match.
+                    for name, before in {**shared, **preimages}.items():
+                        expected = pending[name] if name in committed else before
+                        if _snapshot(target, name) != expected:
+                            raise RuntimeError("Concurrent application source change: " + name)
+                except BaseException as failure:
+                    rollback_conflicts = []
                     for name in reversed(committed):
                         destination = target / name
+                        try:
+                            actual = _snapshot(target, name)
+                        except (OSError, ValueError, RuntimeError):
+                            rollback_conflicts.append(name)
+                            continue
+                        if actual != pending[name]:
+                            rollback_conflicts.append(name)
+                            continue
                         previous = preimages[name]
                         if previous is None:
                             destination.unlink(missing_ok=True)
                         else:
+                            body, mode = previous
                             with tempfile.NamedTemporaryFile(dir=destination.parent, delete=False) as saved:
                                 rollback = Path(saved.name)
-                                saved.write(previous)
+                                saved.write(body)
                                 saved.flush()
                                 os.fsync(saved.fileno())
+                                os.fchmod(saved.fileno(), mode)
                             os.replace(rollback, destination)
+                    if rollback_conflicts:
+                        raise RuntimeError("Preserved independently edited installed files during rollback: "
+                                           + ", ".join(rollback_conflicts)) from failure
                     raise
+        if source_receipt is not None:
+            source_receipt["inherited"] = {
+                name: {"bytes": len(value[0]), "sha256": hashlib.sha256(value[0]).hexdigest(),
+                       "mode": oct(stat.S_IFREG | value[1])[2:]}
+                for name, value in inherited.items()}
         return {"schema": "upstate.chemistry-native-install/v1", "application": str(target),
                 "dry_run": dry_run, "changed": changed, "files": len(pending), "view": "chemistry",
-                "report_dependencies": {name: hashlib.sha256(body).hexdigest()
-                                        for name, body in shared.items()}}
+                "source_bank": source_receipt,
+                "report_dependencies": {name: hashlib.sha256(value[0]).hexdigest()
+                                        for name, value in shared.items()}}
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--application", required=True)
-    parser.add_argument("--source-root")
+    source = parser.add_mutually_exclusive_group()
+    source.add_argument("--source-root")
+    source.add_argument("--source-bank")
     parser.add_argument("--dry-run", action="store_true")
     args = parser.parse_args()
-    print(json.dumps(install(args.application, args.source_root, args.dry_run), indent=2))
+    print(json.dumps(install(args.application, args.source_root, args.dry_run,
+                             source_bank=args.source_bank), indent=2))
 
 
 if __name__ == "__main__":

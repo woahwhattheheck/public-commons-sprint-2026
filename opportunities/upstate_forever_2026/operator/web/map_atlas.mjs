@@ -138,6 +138,7 @@ export function attachMapAtlas(host) {
  const drafts=new Map(), sourcePreview=new Map();
  let sourceContext=null, contextLoading=false, contextError='', inspection=null, inspectionRequest=0;
  let economicChoices=null, economicLoading=false, economicError='', economicRequest=0, economicScope='';
+ let coefficientChoices=null, coefficientLoading=false, coefficientError='', coefficientRequest=0, coefficientChoiceScope='';
  const pairDrafts=new Map();
  const inspector=createSpatialWorkspace({
   request:(...args)=>host.api(...args),
@@ -162,12 +163,14 @@ export function attachMapAtlas(host) {
   inspector.suspend();inspection=null;inspectionRequest++;
   workspace=current;generation++;handoff++;opened=null;operationId=null;error='';busy=false;sourcePreview.clear();sourceContext=null;contextLoading=false;contextError='';
   economicChoices=null;economicLoading=false;economicError='';economicRequest++;
+  coefficientChoices=null;coefficientLoading=false;coefficientError='';coefficientRequest++;coefficientChoiceScope='';
   let saved=drafts.get(workspace);
   if(!saved){try{saved=JSON.parse(sessionStorage.getItem('upstate-atlas-draft:'+workspace)||'null');}catch{}}
   draft=clone(saved?.selection||defaultSelection(data()));step=saved?.step||0;operationId=saved?.operation_id||null;mode='prepare';
  }
  function persist() {
   draft=syncWaterOverlayRoles(draft);
+  syncCoefficientScope();
   const saved={selection:clone(draft),step,operation_id:operationId};drafts.set(workspace,saved);
   try{sessionStorage.setItem('upstate-atlas-draft:'+workspace,JSON.stringify(saved));}
   catch{if(!storageWarned){storageWarned=true;host.toast?.('Use Download selection to preserve this draft outside the tab.');}}
@@ -266,6 +269,11 @@ export function attachMapAtlas(host) {
    next.contact={...next.contact,name:value('contact_name').trim(),organization:value('contact_organization').trim(),email:value('contact_email').trim()};
    next.notes=value('notes').split('\n').map(s=>s.trim()).filter(Boolean);
    next.observation_comparison_ids=selected('observations');next.spatial_review_ids=selected('reviews');next.spatial_export_ids=selected('exports');
+   if(f.querySelector('[data-atlas-coefficients]')){
+    const chosen={evidence_ids:selected('coefficient_evidence'),range_ids:selected('coefficient_ranges')};
+    if(reportSelectionKey(chosen)!==reportSelectionKey(next.coefficient_evidence||{evidence_ids:[],range_ids:[]}))delete next.coefficient_evidence_binding;
+    next.coefficient_evidence=chosen;
+   }
   }
   draft=next;return next;
  }
@@ -293,6 +301,13 @@ export function attachMapAtlas(host) {
   const runs=[selection.baseline_run_id,...(selection.scenario_run_ids||[])];
   for(const id of selection.observation_comparison_ids||[]){const row=rowBy(data(),'observation_comparisons',id);
    if(!row||!runs.includes(row.run_id))out.push('Observed comparison '+short(id)+' must belong to a selected run.');}
+  if(coefficientChoices?.scope===coefficientScope(selection)){
+   const chosen=selection.coefficient_evidence||{};
+   for(const [key,rows,label] of [['evidence_ids',coefficientChoices.catalog.evidence,'Coefficient citation'],['range_ids',coefficientChoices.catalog.ranges,'Coefficient range']]){
+    const available=new Set((rows||[]).map(row=>row.id));
+    for(const id of chosen[key]||[])if(!available.has(id))out.push(label+' '+short(id)+' must match the selected native profile. Refresh its choices or remove that retained selection.');
+   }
+  }
   return out;
  }
 
@@ -509,6 +524,67 @@ export function attachMapAtlas(host) {
    (typeof host.openDesk==='function'?'<div class="atlas-actions">'+button('source-decision','Open saved Decision calculation',attributes)+'</div>':'')+'</section>';
  }
 
+ function coefficientScope(selection=draft){
+  const baseline=rowBy(data(),'runs',selection.baseline_run_id);
+  return reportSelectionKey([workspace,selection.baseline_run_id||'',baseline?.selection?.profile_id||'']);
+ }
+ function syncCoefficientScope(){
+  const scope=coefficientScope();
+  if(scope!==coefficientChoiceScope){
+   coefficientChoiceScope=scope;coefficientChoices=null;coefficientLoading=false;coefficientError='';coefficientRequest++;
+  }
+  return scope;
+ }
+ function coefficientRows(name,rows,ids,kind){
+  const available=new Set(rows.map(row=>row.id));
+  const all=[...rows,...ids.filter(id=>!available.has(id)).map(id=>({id,title:short(id)+' · retained selection',missing:true}))];
+  return all.map(row=>{
+   let note='';
+   if(!row.missing&&kind==='evidence'){
+    const coverage=row.coverage||{};
+    note=(coverage.documented??0)+' of '+(coverage.total??0)+' coefficient cells cited';
+    if(row.source?.title)note+=' · '+row.source.title;
+   }else if(!row.missing){
+    const positions=(row.matched_profiles||[]).flatMap(value=>value.positions||[]);
+    note=(row.parameter_count??0)+' selected coefficients · '+[...new Set(positions)].join(', ')+' profile';
+   }else note='Refresh choices to inspect its current profile match.';
+   return '<div class="atlas-summary">'+check(name,row.id,row.title||short(row.id),ids.includes(row.id))+
+    '<p class="atlas-note">'+esc(note)+'<br>'+esc(row.id)+'</p></div>';
+  }).join('')||'<p class="atlas-note">No saved '+(kind==='evidence'?'coefficient citations':'coefficient ranges')+' are listed for this profile.</p>';
+ }
+ function coefficientPanel(){
+  syncCoefficientScope();
+  const baseline=rowBy(data(),'runs',draft.baseline_run_id),profile=rowBy(data(),'profiles',baseline?.selection?.profile_id);
+  const chosen=draft.coefficient_evidence||{},catalog=coefficientChoices?.scope===coefficientScope()?coefficientChoices.catalog:null;
+  return '<h3>Coefficient sources and selected ranges</h3>'+
+   '<p>The report retains the original coefficient table for '+esc(titleOf(profile)||'the selected native profile')+
+   '. Choose saved citations and ranges to include their source tables and interpretation in this release.</p>'+
+   '<div class="atlas-actions">'+button('load-coefficients',coefficientLoading?'Loading…':'Refresh coefficient choices',coefficientLoading||!baseline?'disabled':'')+'</div>'+
+   (coefficientError?'<p class="atlas-error" role="alert">'+esc(coefficientError)+'</p>':'')+
+   '<h4>Saved coefficient citations</h4>'+coefficientRows('coefficient_evidence',catalog?.evidence||[],chosen.evidence_ids||[],'evidence')+
+   '<h4>Selected coefficient ranges</h4>'+coefficientRows('coefficient_ranges',catalog?.ranges||[],chosen.range_ids||[],'ranges')+
+   '<p class="atlas-note">A selected range includes its original central-profile citations. These parameter endpoints describe the retained study design; native model results provide the modeled export response.</p>';
+ }
+ function renderCoefficients(){
+  const node=root?.querySelector('[data-atlas-coefficients]');if(node)node.innerHTML=coefficientPanel();
+ }
+ async function loadCoefficientChoices(){
+  collect();persist();ensure();
+  const baseline=rowBy(data(),'runs',draft.baseline_run_id);
+  if(!baseline?.selection?.profile_id)throw Error('Choose the original baseline run before inspecting coefficient sources.');
+  const atWorkspace=workspace,epoch=generation,scope=syncCoefficientScope(),request=++coefficientRequest;
+  const runId=baseline.id,profileId=baseline.selection.profile_id;
+  coefficientLoading=true;coefficientError='';renderCoefficients();
+  try{
+   const result=await host.api('/api/map-atlas/coefficient-evidence-catalog',{method:'POST',body:{workspace:atWorkspace,baseline_run_id:runId}});
+   ensure();if(workspace!==atWorkspace||generation!==epoch||request!==coefficientRequest||scope!==coefficientScope())return;
+   if(result.workspace_key!==atWorkspace||result.baseline_run_id!==runId||result.profile_id!==profileId||
+      !result.catalog?.profiles?.some(row=>row.id===profileId))throw Error('The coefficient choices belong to another native profile. Refresh the original baseline selection.');
+   coefficientChoices={scope,catalog:result.catalog};
+  }catch(error){if(workspace===atWorkspace&&generation===epoch&&request===coefficientRequest&&scope===coefficientScope())coefficientError=error.message||String(error);}
+  finally{if(workspace===atWorkspace&&generation===epoch&&request===coefficientRequest){coefficientLoading=false;renderCoefficients();renderProblems();}}
+ }
+
  function reviewStep(){
   const included=[draft.baseline_run_id,...(draft.scenario_run_ids||[])],c=draft.contact||{};
   return '<div class="atlas-grid">'+field('Responsible contact',input('contact_name',c.name||'',isStudy(draft)?'':'required'))+
@@ -521,7 +597,8 @@ export function attachMapAtlas(host) {
    '<h4>Completed map exports</h4>'+choices('exports',(data().spatial_exports||[]).filter(r=>r.state==='complete'),draft.spatial_export_ids||[])+'</details>'+
    '<div class="atlas-summary"><h3>Complete release</h3><p>'+esc(draft.title||'Untitled release')+'</p><p>'+esc(runName(data(),draft.baseline_run_id))+' · '+(draft.scenario_run_ids||[]).length+' alternatives</p>'+
    '<p>'+releaseFamilies(draft).length+' selected map families'+(draft.receiving_waters?' plus the selected receiving-water analysis families':'')+', combined atlas, separate map PDFs, JSON/CSV page index, physical GeoTIFFs, metadata, PDF/HTML/Markdown report and editable working archive.</p>'+
-   '</div><section class="atlas-summary" data-atlas-economics>'+economicPanel()+'</section>'+
+   '</div><section class="atlas-summary" data-atlas-coefficients>'+coefficientPanel()+'</section>'+
+   '<section class="atlas-summary" data-atlas-economics>'+economicPanel()+'</section>'+
    decisionSummary(draft)+sourceSummary(draft)+observedSummary(draft)+
    '<div data-atlas-problems></div>';
  }
@@ -875,6 +952,7 @@ export function attachMapAtlas(host) {
    else if(action==='apply-designation')await applyDesignation(b.dataset.role);
    else if(action==='load-context')await loadSourceContext();
    else if(action==='load-economics')await loadEconomicChoices();
+   else if(action==='load-coefficients')await loadCoefficientChoices();
    else if(action==='apply-economics')await applyEconomicChoice();
    else if(action==='load-receptor')useReceptorProfile();
    else if(action==='remove-receptors'){collect({replaceReceptors:true});delete draft.receptor_spec;delete draft.receptor_profile_source;sourcePreview.delete('receptor-network');operationId=null;persist();render();}
@@ -947,6 +1025,7 @@ export function attachMapAtlas(host) {
    root.removeEventListener('click',click);root.removeEventListener('change',change);
    root.removeEventListener('input',edit);root.removeEventListener('submit',submit);}
   root=null;observedReports=null;busy=false;generation++;
+  coefficientLoading=false;coefficientRequest++;
  }
  function requireWorkspace(origin){
   if(origin!=null&&origin!==workspace)throw Error('The originating workspace changed. Open this atlas from its original project.');

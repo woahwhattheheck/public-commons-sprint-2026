@@ -1,0 +1,1947 @@
+{
+  "schema": "upstate.original-result-selection/v1",
+  "observation_index_sha256": "b85b7271d90181200a9f002e2cf1f5fbabfbb983958df4ce257370ed50fe0870",
+  "original_record_count": 766,
+  "record_count": 242,
+  "activity_count": 15,
+  "date_start": "2026-01-07",
+  "date_end": "2026-07-08",
+  "records": [
+    {
+      "original_source_path": "original/three-twenty-rs-26250-results-2026-original.csv",
+      "original_source_sha256": "f0295b0610cee9813c9e663618512923c88e5a321a8a6ee58ef872c9511f30f9",
+      "source_csv_row": 2,
+      "monitoring_location_id": "21SC60WQ_WQX-RS-26250",
+      "activity_id": "21SC60WQ_WQX-AF55657",
+      "original_result_identifier": "STORET-1125197879"
+    },
+    {
+      "original_source_path": "original/three-twenty-rs-26250-results-2026-original.csv",
+      "original_source_sha256": "f0295b0610cee9813c9e663618512923c88e5a321a8a6ee58ef872c9511f30f9",
+      "source_csv_row": 3,
+      "monitoring_location_id": "21SC60WQ_WQX-RS-26250",
+      "activity_id": "21SC60WQ_WQX-AF55657",
+      "original_result_identifier": "STORET-1118110777"
+    },
+    {
+      "original_source_path": "original/three-twenty-rs-26250-results-2026-original.csv",
+      "original_source_sha256": "f0295b0610cee9813c9e663618512923c88e5a321a8a6ee58ef872c9511f30f9",
+      "source_csv_row": 4,
+      "monitoring_location_id": "21SC60WQ_WQX-RS-26250",
+      "activity_id": "21SC60WQ_WQX-AF56319",
+      "original_result_identifier": "STORET-1118111979"
+    },
+    {
+      "original_source_path": "original/three-twenty-rs-26250-results-2026-original.csv",
+      "original_source_sha256": "f0295b0610cee9813c9e663618512923c88e5a321a8a6ee58ef872c9511f30f9",
+      "source_csv_row": 5,
+      "monitoring_location_id": "21SC60WQ_WQX-RS-26250",
+      "activity_id": "21SC60WQ_WQX-AF56319",
+      "original_result_identifier": "STORET-1125199664"
+    },
+    {
+      "original_source_path": "original/three-twenty-rs-26250-results-2026-original.csv",
+      "original_source_sha256": "f0295b0610cee9813c9e663618512923c88e5a321a8a6ee58ef872c9511f30f9",
+      "source_csv_row": 6,
+      "monitoring_location_id": "21SC60WQ_WQX-RS-26250",
+      "activity_id": "21SC60WQ_WQX-AF56319",
+      "original_result_identifier": "STORET-1118111971"
+    },
+    {
+      "original_source_path": "original/three-twenty-rs-26250-results-2026-original.csv",
+      "original_source_sha256": "f0295b0610cee9813c9e663618512923c88e5a321a8a6ee58ef872c9511f30f9",
+      "source_csv_row": 7,
+      "monitoring_location_id": "21SC60WQ_WQX-RS-26250",
+      "activity_id": "21SC60WQ_WQX-AF56319",
+      "original_result_identifier": "STORET-1125199669"
+    },
+    {
+      "original_source_path": "original/three-twenty-rs-26250-results-2026-original.csv",
+      "original_source_sha256": "f0295b0610cee9813c9e663618512923c88e5a321a8a6ee58ef872c9511f30f9",
+      "source_csv_row": 8,
+      "monitoring_location_id": "21SC60WQ_WQX-RS-26250",
+      "activity_id": "21SC60WQ_WQX-AF55657",
+      "original_result_identifier": "STORET-1125197873"
+    },
+    {
+      "original_source_path": "original/three-twenty-rs-26250-results-2026-original.csv",
+      "original_source_sha256": "f0295b0610cee9813c9e663618512923c88e5a321a8a6ee58ef872c9511f30f9",
+      "source_csv_row": 9,
+      "monitoring_location_id": "21SC60WQ_WQX-RS-26250",
+      "activity_id": "21SC60WQ_WQX-AF56319",
+      "original_result_identifier": "STORET-1118111970"
+    },
+    {
+      "original_source_path": "original/three-twenty-rs-26250-results-2026-original.csv",
+      "original_source_sha256": "f0295b0610cee9813c9e663618512923c88e5a321a8a6ee58ef872c9511f30f9",
+      "source_csv_row": 10,
+      "monitoring_location_id": "21SC60WQ_WQX-RS-26250",
+      "activity_id": "21SC60WQ_WQX-AF55657",
+      "original_result_identifier": "STORET-1125197875"
+    },
+    {
+      "original_source_path": "original/three-twenty-rs-26250-results-2026-original.csv",
+      "original_source_sha256": "f0295b0610cee9813c9e663618512923c88e5a321a8a6ee58ef872c9511f30f9",
+      "source_csv_row": 11,
+      "monitoring_location_id": "21SC60WQ_WQX-RS-26250",
+      "activity_id": "21SC60WQ_WQX-AF56319",
+      "original_result_identifier": "STORET-1125199661"
+    },
+    {
+      "original_source_path": "original/three-twenty-rs-26250-results-2026-original.csv",
+      "original_source_sha256": "f0295b0610cee9813c9e663618512923c88e5a321a8a6ee58ef872c9511f30f9",
+      "source_csv_row": 12,
+      "monitoring_location_id": "21SC60WQ_WQX-RS-26250",
+      "activity_id": "21SC60WQ_WQX-AF55657",
+      "original_result_identifier": "STORET-1118110779"
+    },
+    {
+      "original_source_path": "original/three-twenty-rs-26250-results-2026-original.csv",
+      "original_source_sha256": "f0295b0610cee9813c9e663618512923c88e5a321a8a6ee58ef872c9511f30f9",
+      "source_csv_row": 13,
+      "monitoring_location_id": "21SC60WQ_WQX-RS-26250",
+      "activity_id": "21SC60WQ_WQX-AF55657",
+      "original_result_identifier": "STORET-1118110782"
+    },
+    {
+      "original_source_path": "original/three-twenty-rs-26250-results-2026-original.csv",
+      "original_source_sha256": "f0295b0610cee9813c9e663618512923c88e5a321a8a6ee58ef872c9511f30f9",
+      "source_csv_row": 14,
+      "monitoring_location_id": "21SC60WQ_WQX-RS-26250",
+      "activity_id": "21SC60WQ_WQX-AF55657",
+      "original_result_identifier": "STORET-1118110776"
+    },
+    {
+      "original_source_path": "original/three-twenty-rs-26250-results-2026-original.csv",
+      "original_source_sha256": "f0295b0610cee9813c9e663618512923c88e5a321a8a6ee58ef872c9511f30f9",
+      "source_csv_row": 15,
+      "monitoring_location_id": "21SC60WQ_WQX-RS-26250",
+      "activity_id": "21SC60WQ_WQX-AF56319",
+      "original_result_identifier": "STORET-1125199671"
+    },
+    {
+      "original_source_path": "original/three-twenty-rs-26250-results-2026-original.csv",
+      "original_source_sha256": "f0295b0610cee9813c9e663618512923c88e5a321a8a6ee58ef872c9511f30f9",
+      "source_csv_row": 16,
+      "monitoring_location_id": "21SC60WQ_WQX-RS-26250",
+      "activity_id": "21SC60WQ_WQX-AF55657",
+      "original_result_identifier": "STORET-1118110780"
+    },
+    {
+      "original_source_path": "original/three-twenty-rs-26250-results-2026-original.csv",
+      "original_source_sha256": "f0295b0610cee9813c9e663618512923c88e5a321a8a6ee58ef872c9511f30f9",
+      "source_csv_row": 17,
+      "monitoring_location_id": "21SC60WQ_WQX-RS-26250",
+      "activity_id": "21SC60WQ_WQX-AF55657",
+      "original_result_identifier": "STORET-1125197871"
+    },
+    {
+      "original_source_path": "original/three-twenty-rs-26250-results-2026-original.csv",
+      "original_source_sha256": "f0295b0610cee9813c9e663618512923c88e5a321a8a6ee58ef872c9511f30f9",
+      "source_csv_row": 18,
+      "monitoring_location_id": "21SC60WQ_WQX-RS-26250",
+      "activity_id": "21SC60WQ_WQX-AF56319",
+      "original_result_identifier": "STORET-1118111975"
+    },
+    {
+      "original_source_path": "original/three-twenty-rs-26250-results-2026-original.csv",
+      "original_source_sha256": "f0295b0610cee9813c9e663618512923c88e5a321a8a6ee58ef872c9511f30f9",
+      "source_csv_row": 19,
+      "monitoring_location_id": "21SC60WQ_WQX-RS-26250",
+      "activity_id": "21SC60WQ_WQX-AF56319",
+      "original_result_identifier": "STORET-1118111972"
+    },
+    {
+      "original_source_path": "original/three-twenty-rs-26250-results-2026-original.csv",
+      "original_source_sha256": "f0295b0610cee9813c9e663618512923c88e5a321a8a6ee58ef872c9511f30f9",
+      "source_csv_row": 20,
+      "monitoring_location_id": "21SC60WQ_WQX-RS-26250",
+      "activity_id": "21SC60WQ_WQX-AF56319",
+      "original_result_identifier": "STORET-1118111974"
+    },
+    {
+      "original_source_path": "original/three-twenty-rs-26250-results-2026-original.csv",
+      "original_source_sha256": "f0295b0610cee9813c9e663618512923c88e5a321a8a6ee58ef872c9511f30f9",
+      "source_csv_row": 21,
+      "monitoring_location_id": "21SC60WQ_WQX-RS-26250",
+      "activity_id": "21SC60WQ_WQX-AF56319",
+      "original_result_identifier": "STORET-1125199663"
+    },
+    {
+      "original_source_path": "original/three-twenty-rs-26250-results-2026-original.csv",
+      "original_source_sha256": "f0295b0610cee9813c9e663618512923c88e5a321a8a6ee58ef872c9511f30f9",
+      "source_csv_row": 22,
+      "monitoring_location_id": "21SC60WQ_WQX-RS-26250",
+      "activity_id": "21SC60WQ_WQX-AF56319",
+      "original_result_identifier": "STORET-1118111977"
+    },
+    {
+      "original_source_path": "original/three-twenty-rs-26250-results-2026-original.csv",
+      "original_source_sha256": "f0295b0610cee9813c9e663618512923c88e5a321a8a6ee58ef872c9511f30f9",
+      "source_csv_row": 23,
+      "monitoring_location_id": "21SC60WQ_WQX-RS-26250",
+      "activity_id": "21SC60WQ_WQX-AF56319",
+      "original_result_identifier": "STORET-1125199667"
+    },
+    {
+      "original_source_path": "original/three-twenty-rs-26250-results-2026-original.csv",
+      "original_source_sha256": "f0295b0610cee9813c9e663618512923c88e5a321a8a6ee58ef872c9511f30f9",
+      "source_csv_row": 24,
+      "monitoring_location_id": "21SC60WQ_WQX-RS-26250",
+      "activity_id": "21SC60WQ_WQX-AF56319",
+      "original_result_identifier": "STORET-1118111978"
+    },
+    {
+      "original_source_path": "original/three-twenty-rs-26250-results-2026-original.csv",
+      "original_source_sha256": "f0295b0610cee9813c9e663618512923c88e5a321a8a6ee58ef872c9511f30f9",
+      "source_csv_row": 25,
+      "monitoring_location_id": "21SC60WQ_WQX-RS-26250",
+      "activity_id": "21SC60WQ_WQX-AF55657",
+      "original_result_identifier": "STORET-1125197876"
+    },
+    {
+      "original_source_path": "original/three-twenty-rs-26250-results-2026-original.csv",
+      "original_source_sha256": "f0295b0610cee9813c9e663618512923c88e5a321a8a6ee58ef872c9511f30f9",
+      "source_csv_row": 26,
+      "monitoring_location_id": "21SC60WQ_WQX-RS-26250",
+      "activity_id": "21SC60WQ_WQX-AF56319",
+      "original_result_identifier": "STORET-1118111973"
+    },
+    {
+      "original_source_path": "original/three-twenty-rs-26250-results-2026-original.csv",
+      "original_source_sha256": "f0295b0610cee9813c9e663618512923c88e5a321a8a6ee58ef872c9511f30f9",
+      "source_csv_row": 27,
+      "monitoring_location_id": "21SC60WQ_WQX-RS-26250",
+      "activity_id": "21SC60WQ_WQX-AF55657",
+      "original_result_identifier": "STORET-1125197878"
+    },
+    {
+      "original_source_path": "original/three-twenty-rs-26250-results-2026-original.csv",
+      "original_source_sha256": "f0295b0610cee9813c9e663618512923c88e5a321a8a6ee58ef872c9511f30f9",
+      "source_csv_row": 28,
+      "monitoring_location_id": "21SC60WQ_WQX-RS-26250",
+      "activity_id": "21SC60WQ_WQX-AF55657",
+      "original_result_identifier": "STORET-1125197877"
+    },
+    {
+      "original_source_path": "original/three-twenty-rs-26250-results-2026-original.csv",
+      "original_source_sha256": "f0295b0610cee9813c9e663618512923c88e5a321a8a6ee58ef872c9511f30f9",
+      "source_csv_row": 29,
+      "monitoring_location_id": "21SC60WQ_WQX-RS-26250",
+      "activity_id": "21SC60WQ_WQX-AF55657",
+      "original_result_identifier": "STORET-1118110781"
+    },
+    {
+      "original_source_path": "original/three-twenty-rs-26250-results-2026-original.csv",
+      "original_source_sha256": "f0295b0610cee9813c9e663618512923c88e5a321a8a6ee58ef872c9511f30f9",
+      "source_csv_row": 30,
+      "monitoring_location_id": "21SC60WQ_WQX-RS-26250",
+      "activity_id": "21SC60WQ_WQX-AF56319",
+      "original_result_identifier": "STORET-1118111976"
+    },
+    {
+      "original_source_path": "original/three-twenty-rs-26250-results-2026-original.csv",
+      "original_source_sha256": "f0295b0610cee9813c9e663618512923c88e5a321a8a6ee58ef872c9511f30f9",
+      "source_csv_row": 31,
+      "monitoring_location_id": "21SC60WQ_WQX-RS-26250",
+      "activity_id": "21SC60WQ_WQX-AF55657",
+      "original_result_identifier": "STORET-1118110783"
+    },
+    {
+      "original_source_path": "original/three-twenty-rs-26250-results-2026-original.csv",
+      "original_source_sha256": "f0295b0610cee9813c9e663618512923c88e5a321a8a6ee58ef872c9511f30f9",
+      "source_csv_row": 32,
+      "monitoring_location_id": "21SC60WQ_WQX-RS-26250",
+      "activity_id": "21SC60WQ_WQX-AF56319",
+      "original_result_identifier": "STORET-1125199662"
+    },
+    {
+      "original_source_path": "original/three-twenty-rs-26250-results-2026-original.csv",
+      "original_source_sha256": "f0295b0610cee9813c9e663618512923c88e5a321a8a6ee58ef872c9511f30f9",
+      "source_csv_row": 33,
+      "monitoring_location_id": "21SC60WQ_WQX-RS-26250",
+      "activity_id": "21SC60WQ_WQX-AF55657",
+      "original_result_identifier": "STORET-1118110778"
+    },
+    {
+      "original_source_path": "original/three-twenty-rs-26250-results-2026-original.csv",
+      "original_source_sha256": "f0295b0610cee9813c9e663618512923c88e5a321a8a6ee58ef872c9511f30f9",
+      "source_csv_row": 34,
+      "monitoring_location_id": "21SC60WQ_WQX-RS-26250",
+      "activity_id": "21SC60WQ_WQX-AF56319",
+      "original_result_identifier": "STORET-1125199670"
+    },
+    {
+      "original_source_path": "original/three-twenty-rs-26250-results-2026-original.csv",
+      "original_source_sha256": "f0295b0610cee9813c9e663618512923c88e5a321a8a6ee58ef872c9511f30f9",
+      "source_csv_row": 35,
+      "monitoring_location_id": "21SC60WQ_WQX-RS-26250",
+      "activity_id": "21SC60WQ_WQX-AF56319",
+      "original_result_identifier": "STORET-1125199665"
+    },
+    {
+      "original_source_path": "original/three-twenty-rs-26250-results-2026-original.csv",
+      "original_source_sha256": "f0295b0610cee9813c9e663618512923c88e5a321a8a6ee58ef872c9511f30f9",
+      "source_csv_row": 36,
+      "monitoring_location_id": "21SC60WQ_WQX-RS-26250",
+      "activity_id": "21SC60WQ_WQX-AF56319",
+      "original_result_identifier": "STORET-1125199672"
+    },
+    {
+      "original_source_path": "original/three-twenty-rs-26250-results-2026-original.csv",
+      "original_source_sha256": "f0295b0610cee9813c9e663618512923c88e5a321a8a6ee58ef872c9511f30f9",
+      "source_csv_row": 37,
+      "monitoring_location_id": "21SC60WQ_WQX-RS-26250",
+      "activity_id": "21SC60WQ_WQX-AF55657",
+      "original_result_identifier": "STORET-1125197872"
+    },
+    {
+      "original_source_path": "original/three-twenty-rs-26250-results-2026-original.csv",
+      "original_source_sha256": "f0295b0610cee9813c9e663618512923c88e5a321a8a6ee58ef872c9511f30f9",
+      "source_csv_row": 38,
+      "monitoring_location_id": "21SC60WQ_WQX-RS-26250",
+      "activity_id": "21SC60WQ_WQX-AF55657",
+      "original_result_identifier": "STORET-1125197880"
+    },
+    {
+      "original_source_path": "original/three-twenty-rs-26250-results-2026-original.csv",
+      "original_source_sha256": "f0295b0610cee9813c9e663618512923c88e5a321a8a6ee58ef872c9511f30f9",
+      "source_csv_row": 39,
+      "monitoring_location_id": "21SC60WQ_WQX-RS-26250",
+      "activity_id": "21SC60WQ_WQX-AF55657",
+      "original_result_identifier": "STORET-1125197874"
+    },
+    {
+      "original_source_path": "original/three-twenty-rs-26250-results-2026-original.csv",
+      "original_source_sha256": "f0295b0610cee9813c9e663618512923c88e5a321a8a6ee58ef872c9511f30f9",
+      "source_csv_row": 40,
+      "monitoring_location_id": "21SC60WQ_WQX-RS-26250",
+      "activity_id": "21SC60WQ_WQX-AF55657",
+      "original_result_identifier": "STORET-1118110775"
+    },
+    {
+      "original_source_path": "original/three-twenty-rs-26250-results-2026-original.csv",
+      "original_source_sha256": "f0295b0610cee9813c9e663618512923c88e5a321a8a6ee58ef872c9511f30f9",
+      "source_csv_row": 41,
+      "monitoring_location_id": "21SC60WQ_WQX-RS-26250",
+      "activity_id": "21SC60WQ_WQX-AF56319",
+      "original_result_identifier": "STORET-1125199666"
+    },
+    {
+      "original_source_path": "original/three-twenty-rs-26250-results-2026-original.csv",
+      "original_source_sha256": "f0295b0610cee9813c9e663618512923c88e5a321a8a6ee58ef872c9511f30f9",
+      "source_csv_row": 42,
+      "monitoring_location_id": "21SC60WQ_WQX-RS-26250",
+      "activity_id": "21SC60WQ_WQX-AF55657",
+      "original_result_identifier": "STORET-1125197870"
+    },
+    {
+      "original_source_path": "original/three-twenty-rs-26250-results-2026-original.csv",
+      "original_source_sha256": "f0295b0610cee9813c9e663618512923c88e5a321a8a6ee58ef872c9511f30f9",
+      "source_csv_row": 43,
+      "monitoring_location_id": "21SC60WQ_WQX-RS-26250",
+      "activity_id": "21SC60WQ_WQX-AF56319",
+      "original_result_identifier": "STORET-1118111980"
+    },
+    {
+      "original_source_path": "original/three-twenty-rs-26250-results-2026-original.csv",
+      "original_source_sha256": "f0295b0610cee9813c9e663618512923c88e5a321a8a6ee58ef872c9511f30f9",
+      "source_csv_row": 44,
+      "monitoring_location_id": "21SC60WQ_WQX-RS-26250",
+      "activity_id": "21SC60WQ_WQX-AF55657",
+      "original_result_identifier": "STORET-1118110774"
+    },
+    {
+      "original_source_path": "original/three-twenty-rs-26250-results-2026-original.csv",
+      "original_source_sha256": "f0295b0610cee9813c9e663618512923c88e5a321a8a6ee58ef872c9511f30f9",
+      "source_csv_row": 45,
+      "monitoring_location_id": "21SC60WQ_WQX-RS-26250",
+      "activity_id": "21SC60WQ_WQX-AF56319",
+      "original_result_identifier": "STORET-1125199668"
+    },
+    {
+      "original_source_path": "original/three-twenty-rs-26250-results-2026-original.csv",
+      "original_source_sha256": "f0295b0610cee9813c9e663618512923c88e5a321a8a6ee58ef872c9511f30f9",
+      "source_csv_row": 46,
+      "monitoring_location_id": "21SC60WQ_WQX-RS-26250",
+      "activity_id": "21SC60WQ_WQX-AF62418",
+      "original_result_identifier": "STORET-1125213598"
+    },
+    {
+      "original_source_path": "original/three-twenty-rs-26250-results-2026-original.csv",
+      "original_source_sha256": "f0295b0610cee9813c9e663618512923c88e5a321a8a6ee58ef872c9511f30f9",
+      "source_csv_row": 47,
+      "monitoring_location_id": "21SC60WQ_WQX-RS-26250",
+      "activity_id": "21SC60WQ_WQX-AF59743",
+      "original_result_identifier": "STORET-1118118377"
+    },
+    {
+      "original_source_path": "original/three-twenty-rs-26250-results-2026-original.csv",
+      "original_source_sha256": "f0295b0610cee9813c9e663618512923c88e5a321a8a6ee58ef872c9511f30f9",
+      "source_csv_row": 48,
+      "monitoring_location_id": "21SC60WQ_WQX-RS-26250",
+      "activity_id": "21SC60WQ_WQX-AF62418",
+      "original_result_identifier": "STORET-1125213597"
+    },
+    {
+      "original_source_path": "original/three-twenty-rs-26250-results-2026-original.csv",
+      "original_source_sha256": "f0295b0610cee9813c9e663618512923c88e5a321a8a6ee58ef872c9511f30f9",
+      "source_csv_row": 49,
+      "monitoring_location_id": "21SC60WQ_WQX-RS-26250",
+      "activity_id": "21SC60WQ_WQX-AF59743",
+      "original_result_identifier": "STORET-1125209009"
+    },
+    {
+      "original_source_path": "original/three-twenty-rs-26250-results-2026-original.csv",
+      "original_source_sha256": "f0295b0610cee9813c9e663618512923c88e5a321a8a6ee58ef872c9511f30f9",
+      "source_csv_row": 50,
+      "monitoring_location_id": "21SC60WQ_WQX-RS-26250",
+      "activity_id": "21SC60WQ_WQX-AF59743",
+      "original_result_identifier": "STORET-1118118380"
+    },
+    {
+      "original_source_path": "original/three-twenty-rs-26250-results-2026-original.csv",
+      "original_source_sha256": "f0295b0610cee9813c9e663618512923c88e5a321a8a6ee58ef872c9511f30f9",
+      "source_csv_row": 51,
+      "monitoring_location_id": "21SC60WQ_WQX-RS-26250",
+      "activity_id": "21SC60WQ_WQX-AF59743",
+      "original_result_identifier": "STORET-1125209013"
+    },
+    {
+      "original_source_path": "original/three-twenty-rs-26250-results-2026-original.csv",
+      "original_source_sha256": "f0295b0610cee9813c9e663618512923c88e5a321a8a6ee58ef872c9511f30f9",
+      "source_csv_row": 52,
+      "monitoring_location_id": "21SC60WQ_WQX-RS-26250",
+      "activity_id": "21SC60WQ_WQX-AF59743",
+      "original_result_identifier": "STORET-1118118375"
+    },
+    {
+      "original_source_path": "original/three-twenty-rs-26250-results-2026-original.csv",
+      "original_source_sha256": "f0295b0610cee9813c9e663618512923c88e5a321a8a6ee58ef872c9511f30f9",
+      "source_csv_row": 53,
+      "monitoring_location_id": "21SC60WQ_WQX-RS-26250",
+      "activity_id": "21SC60WQ_WQX-AF59743",
+      "original_result_identifier": "STORET-1118118378"
+    },
+    {
+      "original_source_path": "original/three-twenty-rs-26250-results-2026-original.csv",
+      "original_source_sha256": "f0295b0610cee9813c9e663618512923c88e5a321a8a6ee58ef872c9511f30f9",
+      "source_csv_row": 54,
+      "monitoring_location_id": "21SC60WQ_WQX-RS-26250",
+      "activity_id": "21SC60WQ_WQX-AF59743",
+      "original_result_identifier": "STORET-1125209006"
+    },
+    {
+      "original_source_path": "original/three-twenty-rs-26250-results-2026-original.csv",
+      "original_source_sha256": "f0295b0610cee9813c9e663618512923c88e5a321a8a6ee58ef872c9511f30f9",
+      "source_csv_row": 55,
+      "monitoring_location_id": "21SC60WQ_WQX-RS-26250",
+      "activity_id": "21SC60WQ_WQX-AF59743",
+      "original_result_identifier": "STORET-1125209005"
+    },
+    {
+      "original_source_path": "original/three-twenty-rs-26250-results-2026-original.csv",
+      "original_source_sha256": "f0295b0610cee9813c9e663618512923c88e5a321a8a6ee58ef872c9511f30f9",
+      "source_csv_row": 56,
+      "monitoring_location_id": "21SC60WQ_WQX-RS-26250",
+      "activity_id": "21SC60WQ_WQX-AF61673",
+      "original_result_identifier": "STORET-1118120156"
+    },
+    {
+      "original_source_path": "original/three-twenty-rs-26250-results-2026-original.csv",
+      "original_source_sha256": "f0295b0610cee9813c9e663618512923c88e5a321a8a6ee58ef872c9511f30f9",
+      "source_csv_row": 57,
+      "monitoring_location_id": "21SC60WQ_WQX-RS-26250",
+      "activity_id": "21SC60WQ_WQX-AF59743",
+      "original_result_identifier": "STORET-1125209012"
+    },
+    {
+      "original_source_path": "original/three-twenty-rs-26250-results-2026-original.csv",
+      "original_source_sha256": "f0295b0610cee9813c9e663618512923c88e5a321a8a6ee58ef872c9511f30f9",
+      "source_csv_row": 58,
+      "monitoring_location_id": "21SC60WQ_WQX-RS-26250",
+      "activity_id": "21SC60WQ_WQX-AF61673",
+      "original_result_identifier": "STORET-1118120153"
+    },
+    {
+      "original_source_path": "original/three-twenty-rs-26250-results-2026-original.csv",
+      "original_source_sha256": "f0295b0610cee9813c9e663618512923c88e5a321a8a6ee58ef872c9511f30f9",
+      "source_csv_row": 59,
+      "monitoring_location_id": "21SC60WQ_WQX-RS-26250",
+      "activity_id": "21SC60WQ_WQX-AF59743",
+      "original_result_identifier": "STORET-1125209011"
+    },
+    {
+      "original_source_path": "original/three-twenty-rs-26250-results-2026-original.csv",
+      "original_source_sha256": "f0295b0610cee9813c9e663618512923c88e5a321a8a6ee58ef872c9511f30f9",
+      "source_csv_row": 60,
+      "monitoring_location_id": "21SC60WQ_WQX-RS-26250",
+      "activity_id": "21SC60WQ_WQX-AF61673",
+      "original_result_identifier": "STORET-1125212164"
+    },
+    {
+      "original_source_path": "original/three-twenty-rs-26250-results-2026-original.csv",
+      "original_source_sha256": "f0295b0610cee9813c9e663618512923c88e5a321a8a6ee58ef872c9511f30f9",
+      "source_csv_row": 61,
+      "monitoring_location_id": "21SC60WQ_WQX-RS-26250",
+      "activity_id": "21SC60WQ_WQX-AF61673",
+      "original_result_identifier": "STORET-1125212170"
+    },
+    {
+      "original_source_path": "original/three-twenty-rs-26250-results-2026-original.csv",
+      "original_source_sha256": "f0295b0610cee9813c9e663618512923c88e5a321a8a6ee58ef872c9511f30f9",
+      "source_csv_row": 62,
+      "monitoring_location_id": "21SC60WQ_WQX-RS-26250",
+      "activity_id": "21SC60WQ_WQX-AF61673",
+      "original_result_identifier": "STORET-1125212169"
+    },
+    {
+      "original_source_path": "original/three-twenty-rs-26250-results-2026-original.csv",
+      "original_source_sha256": "f0295b0610cee9813c9e663618512923c88e5a321a8a6ee58ef872c9511f30f9",
+      "source_csv_row": 63,
+      "monitoring_location_id": "21SC60WQ_WQX-RS-26250",
+      "activity_id": "21SC60WQ_WQX-AF62418",
+      "original_result_identifier": "STORET-1125213591"
+    },
+    {
+      "original_source_path": "original/three-twenty-rs-26250-results-2026-original.csv",
+      "original_source_sha256": "f0295b0610cee9813c9e663618512923c88e5a321a8a6ee58ef872c9511f30f9",
+      "source_csv_row": 64,
+      "monitoring_location_id": "21SC60WQ_WQX-RS-26250",
+      "activity_id": "21SC60WQ_WQX-AF59743",
+      "original_result_identifier": "STORET-1118118376"
+    },
+    {
+      "original_source_path": "original/three-twenty-rs-26250-results-2026-original.csv",
+      "original_source_sha256": "f0295b0610cee9813c9e663618512923c88e5a321a8a6ee58ef872c9511f30f9",
+      "source_csv_row": 65,
+      "monitoring_location_id": "21SC60WQ_WQX-RS-26250",
+      "activity_id": "21SC60WQ_WQX-AF59743",
+      "original_result_identifier": "STORET-1125209008"
+    },
+    {
+      "original_source_path": "original/three-twenty-rs-26250-results-2026-original.csv",
+      "original_source_sha256": "f0295b0610cee9813c9e663618512923c88e5a321a8a6ee58ef872c9511f30f9",
+      "source_csv_row": 66,
+      "monitoring_location_id": "21SC60WQ_WQX-RS-26250",
+      "activity_id": "21SC60WQ_WQX-AF59743",
+      "original_result_identifier": "STORET-1118118374"
+    },
+    {
+      "original_source_path": "original/three-twenty-rs-26250-results-2026-original.csv",
+      "original_source_sha256": "f0295b0610cee9813c9e663618512923c88e5a321a8a6ee58ef872c9511f30f9",
+      "source_csv_row": 67,
+      "monitoring_location_id": "21SC60WQ_WQX-RS-26250",
+      "activity_id": "21SC60WQ_WQX-AF59743",
+      "original_result_identifier": "STORET-1125209010"
+    },
+    {
+      "original_source_path": "original/three-twenty-rs-26250-results-2026-original.csv",
+      "original_source_sha256": "f0295b0610cee9813c9e663618512923c88e5a321a8a6ee58ef872c9511f30f9",
+      "source_csv_row": 68,
+      "monitoring_location_id": "21SC60WQ_WQX-RS-26250",
+      "activity_id": "21SC60WQ_WQX-AF61673",
+      "original_result_identifier": "STORET-1118120151"
+    },
+    {
+      "original_source_path": "original/three-twenty-rs-26250-results-2026-original.csv",
+      "original_source_sha256": "f0295b0610cee9813c9e663618512923c88e5a321a8a6ee58ef872c9511f30f9",
+      "source_csv_row": 69,
+      "monitoring_location_id": "21SC60WQ_WQX-RS-26250",
+      "activity_id": "21SC60WQ_WQX-AF61673",
+      "original_result_identifier": "STORET-1125212165"
+    },
+    {
+      "original_source_path": "original/three-twenty-rs-26250-results-2026-original.csv",
+      "original_source_sha256": "f0295b0610cee9813c9e663618512923c88e5a321a8a6ee58ef872c9511f30f9",
+      "source_csv_row": 70,
+      "monitoring_location_id": "21SC60WQ_WQX-RS-26250",
+      "activity_id": "21SC60WQ_WQX-AF62418",
+      "original_result_identifier": "STORET-1125213595"
+    },
+    {
+      "original_source_path": "original/three-twenty-rs-26250-results-2026-original.csv",
+      "original_source_sha256": "f0295b0610cee9813c9e663618512923c88e5a321a8a6ee58ef872c9511f30f9",
+      "source_csv_row": 71,
+      "monitoring_location_id": "21SC60WQ_WQX-RS-26250",
+      "activity_id": "21SC60WQ_WQX-AF62418",
+      "original_result_identifier": "STORET-1125213592"
+    },
+    {
+      "original_source_path": "original/three-twenty-rs-26250-results-2026-original.csv",
+      "original_source_sha256": "f0295b0610cee9813c9e663618512923c88e5a321a8a6ee58ef872c9511f30f9",
+      "source_csv_row": 72,
+      "monitoring_location_id": "21SC60WQ_WQX-RS-26250",
+      "activity_id": "21SC60WQ_WQX-AF59743",
+      "original_result_identifier": "STORET-1118118379"
+    },
+    {
+      "original_source_path": "original/three-twenty-rs-26250-results-2026-original.csv",
+      "original_source_sha256": "f0295b0610cee9813c9e663618512923c88e5a321a8a6ee58ef872c9511f30f9",
+      "source_csv_row": 73,
+      "monitoring_location_id": "21SC60WQ_WQX-RS-26250",
+      "activity_id": "21SC60WQ_WQX-AF62418",
+      "original_result_identifier": "STORET-1125213593"
+    },
+    {
+      "original_source_path": "original/three-twenty-rs-26250-results-2026-original.csv",
+      "original_source_sha256": "f0295b0610cee9813c9e663618512923c88e5a321a8a6ee58ef872c9511f30f9",
+      "source_csv_row": 74,
+      "monitoring_location_id": "21SC60WQ_WQX-RS-26250",
+      "activity_id": "21SC60WQ_WQX-AF61673",
+      "original_result_identifier": "STORET-1118120155"
+    },
+    {
+      "original_source_path": "original/three-twenty-rs-26250-results-2026-original.csv",
+      "original_source_sha256": "f0295b0610cee9813c9e663618512923c88e5a321a8a6ee58ef872c9511f30f9",
+      "source_csv_row": 75,
+      "monitoring_location_id": "21SC60WQ_WQX-RS-26250",
+      "activity_id": "21SC60WQ_WQX-AF61673",
+      "original_result_identifier": "STORET-1125212166"
+    },
+    {
+      "original_source_path": "original/three-twenty-rs-26250-results-2026-original.csv",
+      "original_source_sha256": "f0295b0610cee9813c9e663618512923c88e5a321a8a6ee58ef872c9511f30f9",
+      "source_csv_row": 76,
+      "monitoring_location_id": "21SC60WQ_WQX-RS-26250",
+      "activity_id": "21SC60WQ_WQX-AF62418",
+      "original_result_identifier": "STORET-1125213599"
+    },
+    {
+      "original_source_path": "original/three-twenty-rs-26250-results-2026-original.csv",
+      "original_source_sha256": "f0295b0610cee9813c9e663618512923c88e5a321a8a6ee58ef872c9511f30f9",
+      "source_csv_row": 77,
+      "monitoring_location_id": "21SC60WQ_WQX-RS-26250",
+      "activity_id": "21SC60WQ_WQX-AF59743",
+      "original_result_identifier": "STORET-1125209007"
+    },
+    {
+      "original_source_path": "original/three-twenty-rs-26250-results-2026-original.csv",
+      "original_source_sha256": "f0295b0610cee9813c9e663618512923c88e5a321a8a6ee58ef872c9511f30f9",
+      "source_csv_row": 78,
+      "monitoring_location_id": "21SC60WQ_WQX-RS-26250",
+      "activity_id": "21SC60WQ_WQX-AF61673",
+      "original_result_identifier": "STORET-1118120152"
+    },
+    {
+      "original_source_path": "original/three-twenty-rs-26250-results-2026-original.csv",
+      "original_source_sha256": "f0295b0610cee9813c9e663618512923c88e5a321a8a6ee58ef872c9511f30f9",
+      "source_csv_row": 79,
+      "monitoring_location_id": "21SC60WQ_WQX-RS-26250",
+      "activity_id": "21SC60WQ_WQX-AF59743",
+      "original_result_identifier": "STORET-1125209004"
+    },
+    {
+      "original_source_path": "original/three-twenty-rs-26250-results-2026-original.csv",
+      "original_source_sha256": "f0295b0610cee9813c9e663618512923c88e5a321a8a6ee58ef872c9511f30f9",
+      "source_csv_row": 80,
+      "monitoring_location_id": "21SC60WQ_WQX-RS-26250",
+      "activity_id": "21SC60WQ_WQX-AF62418",
+      "original_result_identifier": "STORET-1125213594"
+    },
+    {
+      "original_source_path": "original/three-twenty-rs-26250-results-2026-original.csv",
+      "original_source_sha256": "f0295b0610cee9813c9e663618512923c88e5a321a8a6ee58ef872c9511f30f9",
+      "source_csv_row": 81,
+      "monitoring_location_id": "21SC60WQ_WQX-RS-26250",
+      "activity_id": "21SC60WQ_WQX-AF62418",
+      "original_result_identifier": "STORET-1125213596"
+    },
+    {
+      "original_source_path": "original/three-twenty-rs-26250-results-2026-original.csv",
+      "original_source_sha256": "f0295b0610cee9813c9e663618512923c88e5a321a8a6ee58ef872c9511f30f9",
+      "source_csv_row": 82,
+      "monitoring_location_id": "21SC60WQ_WQX-RS-26250",
+      "activity_id": "21SC60WQ_WQX-AF59743",
+      "original_result_identifier": "STORET-1118118372"
+    },
+    {
+      "original_source_path": "original/three-twenty-rs-26250-results-2026-original.csv",
+      "original_source_sha256": "f0295b0610cee9813c9e663618512923c88e5a321a8a6ee58ef872c9511f30f9",
+      "source_csv_row": 83,
+      "monitoring_location_id": "21SC60WQ_WQX-RS-26250",
+      "activity_id": "21SC60WQ_WQX-AF61673",
+      "original_result_identifier": "STORET-1125212171"
+    },
+    {
+      "original_source_path": "original/three-twenty-rs-26250-results-2026-original.csv",
+      "original_source_sha256": "f0295b0610cee9813c9e663618512923c88e5a321a8a6ee58ef872c9511f30f9",
+      "source_csv_row": 84,
+      "monitoring_location_id": "21SC60WQ_WQX-RS-26250",
+      "activity_id": "21SC60WQ_WQX-AF61673",
+      "original_result_identifier": "STORET-1125212167"
+    },
+    {
+      "original_source_path": "original/three-twenty-rs-26250-results-2026-original.csv",
+      "original_source_sha256": "f0295b0610cee9813c9e663618512923c88e5a321a8a6ee58ef872c9511f30f9",
+      "source_csv_row": 85,
+      "monitoring_location_id": "21SC60WQ_WQX-RS-26250",
+      "activity_id": "21SC60WQ_WQX-AF59743",
+      "original_result_identifier": "STORET-1118118373"
+    },
+    {
+      "original_source_path": "original/three-twenty-rs-26250-results-2026-original.csv",
+      "original_source_sha256": "f0295b0610cee9813c9e663618512923c88e5a321a8a6ee58ef872c9511f30f9",
+      "source_csv_row": 86,
+      "monitoring_location_id": "21SC60WQ_WQX-RS-26250",
+      "activity_id": "21SC60WQ_WQX-AF61673",
+      "original_result_identifier": "STORET-1118120154"
+    },
+    {
+      "original_source_path": "original/three-twenty-rs-26250-results-2026-original.csv",
+      "original_source_sha256": "f0295b0610cee9813c9e663618512923c88e5a321a8a6ee58ef872c9511f30f9",
+      "source_csv_row": 87,
+      "monitoring_location_id": "21SC60WQ_WQX-RS-26250",
+      "activity_id": "21SC60WQ_WQX-AF61673",
+      "original_result_identifier": "STORET-1125212168"
+    },
+    {
+      "original_source_path": "original/three-twenty-rs-26250-results-2026-original.csv",
+      "original_source_sha256": "f0295b0610cee9813c9e663618512923c88e5a321a8a6ee58ef872c9511f30f9",
+      "source_csv_row": 88,
+      "monitoring_location_id": "21SC60WQ_WQX-RS-26250",
+      "activity_id": "21SC60WQ_WQX-AF61673",
+      "original_result_identifier": "STORET-1118120157"
+    },
+    {
+      "original_source_path": "original/three-twenty-sv-735-results-2026-original.csv",
+      "original_source_sha256": "e831e4315bbc9eefbef1e7456fe711adc79a2cc37b61567f9f4fce3e8b9f7c54",
+      "source_csv_row": 2,
+      "monitoring_location_id": "21SC60WQ_WQX-SV-735",
+      "activity_id": "21SC60WQ_WQX-AF55438",
+      "original_result_identifier": "STORET-1118110482"
+    },
+    {
+      "original_source_path": "original/three-twenty-sv-735-results-2026-original.csv",
+      "original_source_sha256": "e831e4315bbc9eefbef1e7456fe711adc79a2cc37b61567f9f4fce3e8b9f7c54",
+      "source_csv_row": 3,
+      "monitoring_location_id": "21SC60WQ_WQX-SV-735",
+      "activity_id": "21SC60WQ_WQX-AF55438",
+      "original_result_identifier": "STORET-1118110479"
+    },
+    {
+      "original_source_path": "original/three-twenty-sv-735-results-2026-original.csv",
+      "original_source_sha256": "e831e4315bbc9eefbef1e7456fe711adc79a2cc37b61567f9f4fce3e8b9f7c54",
+      "source_csv_row": 4,
+      "monitoring_location_id": "21SC60WQ_WQX-SV-735",
+      "activity_id": "21SC60WQ_WQX-AF55438",
+      "original_result_identifier": "STORET-1118110477"
+    },
+    {
+      "original_source_path": "original/three-twenty-sv-735-results-2026-original.csv",
+      "original_source_sha256": "e831e4315bbc9eefbef1e7456fe711adc79a2cc37b61567f9f4fce3e8b9f7c54",
+      "source_csv_row": 5,
+      "monitoring_location_id": "21SC60WQ_WQX-SV-735",
+      "activity_id": "21SC60WQ_WQX-AF55438",
+      "original_result_identifier": "STORET-1125197320"
+    },
+    {
+      "original_source_path": "original/three-twenty-sv-735-results-2026-original.csv",
+      "original_source_sha256": "e831e4315bbc9eefbef1e7456fe711adc79a2cc37b61567f9f4fce3e8b9f7c54",
+      "source_csv_row": 6,
+      "monitoring_location_id": "21SC60WQ_WQX-SV-735",
+      "activity_id": "21SC60WQ_WQX-AF55438",
+      "original_result_identifier": "STORET-1125197324"
+    },
+    {
+      "original_source_path": "original/three-twenty-sv-735-results-2026-original.csv",
+      "original_source_sha256": "e831e4315bbc9eefbef1e7456fe711adc79a2cc37b61567f9f4fce3e8b9f7c54",
+      "source_csv_row": 7,
+      "monitoring_location_id": "21SC60WQ_WQX-SV-735",
+      "activity_id": "21SC60WQ_WQX-AF55438",
+      "original_result_identifier": "STORET-1125197322"
+    },
+    {
+      "original_source_path": "original/three-twenty-sv-735-results-2026-original.csv",
+      "original_source_sha256": "e831e4315bbc9eefbef1e7456fe711adc79a2cc37b61567f9f4fce3e8b9f7c54",
+      "source_csv_row": 8,
+      "monitoring_location_id": "21SC60WQ_WQX-SV-735",
+      "activity_id": "21SC60WQ_WQX-AF55438",
+      "original_result_identifier": "STORET-1118110480"
+    },
+    {
+      "original_source_path": "original/three-twenty-sv-735-results-2026-original.csv",
+      "original_source_sha256": "e831e4315bbc9eefbef1e7456fe711adc79a2cc37b61567f9f4fce3e8b9f7c54",
+      "source_csv_row": 9,
+      "monitoring_location_id": "21SC60WQ_WQX-SV-735",
+      "activity_id": "21SC60WQ_WQX-AF55438",
+      "original_result_identifier": "STORET-1125197329"
+    },
+    {
+      "original_source_path": "original/three-twenty-sv-735-results-2026-original.csv",
+      "original_source_sha256": "e831e4315bbc9eefbef1e7456fe711adc79a2cc37b61567f9f4fce3e8b9f7c54",
+      "source_csv_row": 10,
+      "monitoring_location_id": "21SC60WQ_WQX-SV-735",
+      "activity_id": "21SC60WQ_WQX-AF55438",
+      "original_result_identifier": "STORET-1118110481"
+    },
+    {
+      "original_source_path": "original/three-twenty-sv-735-results-2026-original.csv",
+      "original_source_sha256": "e831e4315bbc9eefbef1e7456fe711adc79a2cc37b61567f9f4fce3e8b9f7c54",
+      "source_csv_row": 11,
+      "monitoring_location_id": "21SC60WQ_WQX-SV-735",
+      "activity_id": "21SC60WQ_WQX-AF55438",
+      "original_result_identifier": "STORET-1118110485"
+    },
+    {
+      "original_source_path": "original/three-twenty-sv-735-results-2026-original.csv",
+      "original_source_sha256": "e831e4315bbc9eefbef1e7456fe711adc79a2cc37b61567f9f4fce3e8b9f7c54",
+      "source_csv_row": 12,
+      "monitoring_location_id": "21SC60WQ_WQX-SV-735",
+      "activity_id": "21SC60WQ_WQX-AF55438",
+      "original_result_identifier": "STORET-1118110484"
+    },
+    {
+      "original_source_path": "original/three-twenty-sv-735-results-2026-original.csv",
+      "original_source_sha256": "e831e4315bbc9eefbef1e7456fe711adc79a2cc37b61567f9f4fce3e8b9f7c54",
+      "source_csv_row": 13,
+      "monitoring_location_id": "21SC60WQ_WQX-SV-735",
+      "activity_id": "21SC60WQ_WQX-AF55438",
+      "original_result_identifier": "STORET-1118110483"
+    },
+    {
+      "original_source_path": "original/three-twenty-sv-735-results-2026-original.csv",
+      "original_source_sha256": "e831e4315bbc9eefbef1e7456fe711adc79a2cc37b61567f9f4fce3e8b9f7c54",
+      "source_csv_row": 14,
+      "monitoring_location_id": "21SC60WQ_WQX-SV-735",
+      "activity_id": "21SC60WQ_WQX-AF55438",
+      "original_result_identifier": "STORET-1125197328"
+    },
+    {
+      "original_source_path": "original/three-twenty-sv-735-results-2026-original.csv",
+      "original_source_sha256": "e831e4315bbc9eefbef1e7456fe711adc79a2cc37b61567f9f4fce3e8b9f7c54",
+      "source_csv_row": 15,
+      "monitoring_location_id": "21SC60WQ_WQX-SV-735",
+      "activity_id": "21SC60WQ_WQX-AF55438",
+      "original_result_identifier": "STORET-1125197326"
+    },
+    {
+      "original_source_path": "original/three-twenty-sv-735-results-2026-original.csv",
+      "original_source_sha256": "e831e4315bbc9eefbef1e7456fe711adc79a2cc37b61567f9f4fce3e8b9f7c54",
+      "source_csv_row": 16,
+      "monitoring_location_id": "21SC60WQ_WQX-SV-735",
+      "activity_id": "21SC60WQ_WQX-AF55438",
+      "original_result_identifier": "STORET-1125197323"
+    },
+    {
+      "original_source_path": "original/three-twenty-sv-735-results-2026-original.csv",
+      "original_source_sha256": "e831e4315bbc9eefbef1e7456fe711adc79a2cc37b61567f9f4fce3e8b9f7c54",
+      "source_csv_row": 17,
+      "monitoring_location_id": "21SC60WQ_WQX-SV-735",
+      "activity_id": "21SC60WQ_WQX-AF55438",
+      "original_result_identifier": "STORET-1125197325"
+    },
+    {
+      "original_source_path": "original/three-twenty-sv-735-results-2026-original.csv",
+      "original_source_sha256": "e831e4315bbc9eefbef1e7456fe711adc79a2cc37b61567f9f4fce3e8b9f7c54",
+      "source_csv_row": 18,
+      "monitoring_location_id": "21SC60WQ_WQX-SV-735",
+      "activity_id": "21SC60WQ_WQX-AF55438",
+      "original_result_identifier": "STORET-1118110478"
+    },
+    {
+      "original_source_path": "original/three-twenty-sv-735-results-2026-original.csv",
+      "original_source_sha256": "e831e4315bbc9eefbef1e7456fe711adc79a2cc37b61567f9f4fce3e8b9f7c54",
+      "source_csv_row": 19,
+      "monitoring_location_id": "21SC60WQ_WQX-SV-735",
+      "activity_id": "21SC60WQ_WQX-AF55438",
+      "original_result_identifier": "STORET-1125197327"
+    },
+    {
+      "original_source_path": "original/three-twenty-sv-735-results-2026-original.csv",
+      "original_source_sha256": "e831e4315bbc9eefbef1e7456fe711adc79a2cc37b61567f9f4fce3e8b9f7c54",
+      "source_csv_row": 20,
+      "monitoring_location_id": "21SC60WQ_WQX-SV-735",
+      "activity_id": "21SC60WQ_WQX-AF55438",
+      "original_result_identifier": "STORET-1125197321"
+    },
+    {
+      "original_source_path": "original/three-twenty-sv-111-results-2026-original.csv",
+      "original_source_sha256": "e39138bb326f7f5f4b3308c694e6246cf7ea214e1da81993bf1f9ea1b59dd848",
+      "source_csv_row": 2,
+      "monitoring_location_id": "21SC60WQ_WQX-SV-111",
+      "activity_id": "21SC60WQ_WQX-AF55101",
+      "original_result_identifier": "STORET-1125195696"
+    },
+    {
+      "original_source_path": "original/three-twenty-sv-111-results-2026-original.csv",
+      "original_source_sha256": "e39138bb326f7f5f4b3308c694e6246cf7ea214e1da81993bf1f9ea1b59dd848",
+      "source_csv_row": 3,
+      "monitoring_location_id": "21SC60WQ_WQX-SV-111",
+      "activity_id": "21SC60WQ_WQX-AF55101",
+      "original_result_identifier": "STORET-1118109633"
+    },
+    {
+      "original_source_path": "original/three-twenty-sv-111-results-2026-original.csv",
+      "original_source_sha256": "e39138bb326f7f5f4b3308c694e6246cf7ea214e1da81993bf1f9ea1b59dd848",
+      "source_csv_row": 4,
+      "monitoring_location_id": "21SC60WQ_WQX-SV-111",
+      "activity_id": "21SC60WQ_WQX-AF55101",
+      "original_result_identifier": "STORET-1125195698"
+    },
+    {
+      "original_source_path": "original/three-twenty-sv-111-results-2026-original.csv",
+      "original_source_sha256": "e39138bb326f7f5f4b3308c694e6246cf7ea214e1da81993bf1f9ea1b59dd848",
+      "source_csv_row": 5,
+      "monitoring_location_id": "21SC60WQ_WQX-SV-111",
+      "activity_id": "21SC60WQ_WQX-AF55101",
+      "original_result_identifier": "STORET-1118109629"
+    },
+    {
+      "original_source_path": "original/three-twenty-sv-111-results-2026-original.csv",
+      "original_source_sha256": "e39138bb326f7f5f4b3308c694e6246cf7ea214e1da81993bf1f9ea1b59dd848",
+      "source_csv_row": 6,
+      "monitoring_location_id": "21SC60WQ_WQX-SV-111",
+      "activity_id": "21SC60WQ_WQX-AF55101",
+      "original_result_identifier": "STORET-1125195694"
+    },
+    {
+      "original_source_path": "original/three-twenty-sv-111-results-2026-original.csv",
+      "original_source_sha256": "e39138bb326f7f5f4b3308c694e6246cf7ea214e1da81993bf1f9ea1b59dd848",
+      "source_csv_row": 7,
+      "monitoring_location_id": "21SC60WQ_WQX-SV-111",
+      "activity_id": "21SC60WQ_WQX-AF55101",
+      "original_result_identifier": "STORET-1125195691"
+    },
+    {
+      "original_source_path": "original/three-twenty-sv-111-results-2026-original.csv",
+      "original_source_sha256": "e39138bb326f7f5f4b3308c694e6246cf7ea214e1da81993bf1f9ea1b59dd848",
+      "source_csv_row": 8,
+      "monitoring_location_id": "21SC60WQ_WQX-SV-111",
+      "activity_id": "21SC60WQ_WQX-AF55101",
+      "original_result_identifier": "STORET-1125195688"
+    },
+    {
+      "original_source_path": "original/three-twenty-sv-111-results-2026-original.csv",
+      "original_source_sha256": "e39138bb326f7f5f4b3308c694e6246cf7ea214e1da81993bf1f9ea1b59dd848",
+      "source_csv_row": 9,
+      "monitoring_location_id": "21SC60WQ_WQX-SV-111",
+      "activity_id": "21SC60WQ_WQX-AF55101",
+      "original_result_identifier": "STORET-1118109639"
+    },
+    {
+      "original_source_path": "original/three-twenty-sv-111-results-2026-original.csv",
+      "original_source_sha256": "e39138bb326f7f5f4b3308c694e6246cf7ea214e1da81993bf1f9ea1b59dd848",
+      "source_csv_row": 10,
+      "monitoring_location_id": "21SC60WQ_WQX-SV-111",
+      "activity_id": "21SC60WQ_WQX-AF55101",
+      "original_result_identifier": "STORET-1118109638"
+    },
+    {
+      "original_source_path": "original/three-twenty-sv-111-results-2026-original.csv",
+      "original_source_sha256": "e39138bb326f7f5f4b3308c694e6246cf7ea214e1da81993bf1f9ea1b59dd848",
+      "source_csv_row": 11,
+      "monitoring_location_id": "21SC60WQ_WQX-SV-111",
+      "activity_id": "21SC60WQ_WQX-AF55101",
+      "original_result_identifier": "STORET-1125195699"
+    },
+    {
+      "original_source_path": "original/three-twenty-sv-111-results-2026-original.csv",
+      "original_source_sha256": "e39138bb326f7f5f4b3308c694e6246cf7ea214e1da81993bf1f9ea1b59dd848",
+      "source_csv_row": 12,
+      "monitoring_location_id": "21SC60WQ_WQX-SV-111",
+      "activity_id": "21SC60WQ_WQX-AF55101",
+      "original_result_identifier": "STORET-1125195693"
+    },
+    {
+      "original_source_path": "original/three-twenty-sv-111-results-2026-original.csv",
+      "original_source_sha256": "e39138bb326f7f5f4b3308c694e6246cf7ea214e1da81993bf1f9ea1b59dd848",
+      "source_csv_row": 13,
+      "monitoring_location_id": "21SC60WQ_WQX-SV-111",
+      "activity_id": "21SC60WQ_WQX-AF55101",
+      "original_result_identifier": "STORET-1125195689"
+    },
+    {
+      "original_source_path": "original/three-twenty-sv-111-results-2026-original.csv",
+      "original_source_sha256": "e39138bb326f7f5f4b3308c694e6246cf7ea214e1da81993bf1f9ea1b59dd848",
+      "source_csv_row": 14,
+      "monitoring_location_id": "21SC60WQ_WQX-SV-111",
+      "activity_id": "21SC60WQ_WQX-AF55101",
+      "original_result_identifier": "STORET-1125195695"
+    },
+    {
+      "original_source_path": "original/three-twenty-sv-111-results-2026-original.csv",
+      "original_source_sha256": "e39138bb326f7f5f4b3308c694e6246cf7ea214e1da81993bf1f9ea1b59dd848",
+      "source_csv_row": 15,
+      "monitoring_location_id": "21SC60WQ_WQX-SV-111",
+      "activity_id": "21SC60WQ_WQX-AF55101",
+      "original_result_identifier": "STORET-1125195692"
+    },
+    {
+      "original_source_path": "original/three-twenty-sv-111-results-2026-original.csv",
+      "original_source_sha256": "e39138bb326f7f5f4b3308c694e6246cf7ea214e1da81993bf1f9ea1b59dd848",
+      "source_csv_row": 16,
+      "monitoring_location_id": "21SC60WQ_WQX-SV-111",
+      "activity_id": "21SC60WQ_WQX-AF55101",
+      "original_result_identifier": "STORET-1118109635"
+    },
+    {
+      "original_source_path": "original/three-twenty-sv-111-results-2026-original.csv",
+      "original_source_sha256": "e39138bb326f7f5f4b3308c694e6246cf7ea214e1da81993bf1f9ea1b59dd848",
+      "source_csv_row": 17,
+      "monitoring_location_id": "21SC60WQ_WQX-SV-111",
+      "activity_id": "21SC60WQ_WQX-AF55101",
+      "original_result_identifier": "STORET-1118109630"
+    },
+    {
+      "original_source_path": "original/three-twenty-sv-111-results-2026-original.csv",
+      "original_source_sha256": "e39138bb326f7f5f4b3308c694e6246cf7ea214e1da81993bf1f9ea1b59dd848",
+      "source_csv_row": 18,
+      "monitoring_location_id": "21SC60WQ_WQX-SV-111",
+      "activity_id": "21SC60WQ_WQX-AF55101",
+      "original_result_identifier": "STORET-1118109636"
+    },
+    {
+      "original_source_path": "original/three-twenty-sv-111-results-2026-original.csv",
+      "original_source_sha256": "e39138bb326f7f5f4b3308c694e6246cf7ea214e1da81993bf1f9ea1b59dd848",
+      "source_csv_row": 19,
+      "monitoring_location_id": "21SC60WQ_WQX-SV-111",
+      "activity_id": "21SC60WQ_WQX-AF55101",
+      "original_result_identifier": "STORET-1125195697"
+    },
+    {
+      "original_source_path": "original/three-twenty-sv-111-results-2026-original.csv",
+      "original_source_sha256": "e39138bb326f7f5f4b3308c694e6246cf7ea214e1da81993bf1f9ea1b59dd848",
+      "source_csv_row": 20,
+      "monitoring_location_id": "21SC60WQ_WQX-SV-111",
+      "activity_id": "21SC60WQ_WQX-AF55101",
+      "original_result_identifier": "STORET-1118109632"
+    },
+    {
+      "original_source_path": "original/three-twenty-sv-111-results-2026-original.csv",
+      "original_source_sha256": "e39138bb326f7f5f4b3308c694e6246cf7ea214e1da81993bf1f9ea1b59dd848",
+      "source_csv_row": 21,
+      "monitoring_location_id": "21SC60WQ_WQX-SV-111",
+      "activity_id": "21SC60WQ_WQX-AF55101",
+      "original_result_identifier": "STORET-1125195690"
+    },
+    {
+      "original_source_path": "original/three-twenty-sv-111-results-2026-original.csv",
+      "original_source_sha256": "e39138bb326f7f5f4b3308c694e6246cf7ea214e1da81993bf1f9ea1b59dd848",
+      "source_csv_row": 22,
+      "monitoring_location_id": "21SC60WQ_WQX-SV-111",
+      "activity_id": "21SC60WQ_WQX-AF55101",
+      "original_result_identifier": "STORET-1118109637"
+    },
+    {
+      "original_source_path": "original/three-twenty-sv-111-results-2026-original.csv",
+      "original_source_sha256": "e39138bb326f7f5f4b3308c694e6246cf7ea214e1da81993bf1f9ea1b59dd848",
+      "source_csv_row": 23,
+      "monitoring_location_id": "21SC60WQ_WQX-SV-111",
+      "activity_id": "21SC60WQ_WQX-AF55101",
+      "original_result_identifier": "STORET-1118109631"
+    },
+    {
+      "original_source_path": "original/three-twenty-sv-111-results-2026-original.csv",
+      "original_source_sha256": "e39138bb326f7f5f4b3308c694e6246cf7ea214e1da81993bf1f9ea1b59dd848",
+      "source_csv_row": 24,
+      "monitoring_location_id": "21SC60WQ_WQX-SV-111",
+      "activity_id": "21SC60WQ_WQX-AF55101",
+      "original_result_identifier": "STORET-1118109634"
+    },
+    {
+      "original_source_path": "original/three-twenty-sv-111-results-2026-original.csv",
+      "original_source_sha256": "e39138bb326f7f5f4b3308c694e6246cf7ea214e1da81993bf1f9ea1b59dd848",
+      "source_csv_row": 25,
+      "monitoring_location_id": "21SC60WQ_WQX-SV-111",
+      "activity_id": "21SC60WQ_WQX-AF59879",
+      "original_result_identifier": "STORET-1118118799"
+    },
+    {
+      "original_source_path": "original/three-twenty-sv-111-results-2026-original.csv",
+      "original_source_sha256": "e39138bb326f7f5f4b3308c694e6246cf7ea214e1da81993bf1f9ea1b59dd848",
+      "source_csv_row": 26,
+      "monitoring_location_id": "21SC60WQ_WQX-SV-111",
+      "activity_id": "21SC60WQ_WQX-AF59879",
+      "original_result_identifier": "STORET-1125209681"
+    },
+    {
+      "original_source_path": "original/three-twenty-sv-111-results-2026-original.csv",
+      "original_source_sha256": "e39138bb326f7f5f4b3308c694e6246cf7ea214e1da81993bf1f9ea1b59dd848",
+      "source_csv_row": 27,
+      "monitoring_location_id": "21SC60WQ_WQX-SV-111",
+      "activity_id": "21SC60WQ_WQX-AF59879",
+      "original_result_identifier": "STORET-1125209684"
+    },
+    {
+      "original_source_path": "original/three-twenty-sv-111-results-2026-original.csv",
+      "original_source_sha256": "e39138bb326f7f5f4b3308c694e6246cf7ea214e1da81993bf1f9ea1b59dd848",
+      "source_csv_row": 28,
+      "monitoring_location_id": "21SC60WQ_WQX-SV-111",
+      "activity_id": "21SC60WQ_WQX-AF59879",
+      "original_result_identifier": "STORET-1118118801"
+    },
+    {
+      "original_source_path": "original/three-twenty-sv-111-results-2026-original.csv",
+      "original_source_sha256": "e39138bb326f7f5f4b3308c694e6246cf7ea214e1da81993bf1f9ea1b59dd848",
+      "source_csv_row": 29,
+      "monitoring_location_id": "21SC60WQ_WQX-SV-111",
+      "activity_id": "21SC60WQ_WQX-AF59879",
+      "original_result_identifier": "STORET-1125209680"
+    },
+    {
+      "original_source_path": "original/three-twenty-sv-111-results-2026-original.csv",
+      "original_source_sha256": "e39138bb326f7f5f4b3308c694e6246cf7ea214e1da81993bf1f9ea1b59dd848",
+      "source_csv_row": 30,
+      "monitoring_location_id": "21SC60WQ_WQX-SV-111",
+      "activity_id": "21SC60WQ_WQX-AF59879",
+      "original_result_identifier": "STORET-1125209678"
+    },
+    {
+      "original_source_path": "original/three-twenty-sv-111-results-2026-original.csv",
+      "original_source_sha256": "e39138bb326f7f5f4b3308c694e6246cf7ea214e1da81993bf1f9ea1b59dd848",
+      "source_csv_row": 31,
+      "monitoring_location_id": "21SC60WQ_WQX-SV-111",
+      "activity_id": "21SC60WQ_WQX-AF59879",
+      "original_result_identifier": "STORET-1125209677"
+    },
+    {
+      "original_source_path": "original/three-twenty-sv-111-results-2026-original.csv",
+      "original_source_sha256": "e39138bb326f7f5f4b3308c694e6246cf7ea214e1da81993bf1f9ea1b59dd848",
+      "source_csv_row": 32,
+      "monitoring_location_id": "21SC60WQ_WQX-SV-111",
+      "activity_id": "21SC60WQ_WQX-AF59879",
+      "original_result_identifier": "STORET-1118118800"
+    },
+    {
+      "original_source_path": "original/three-twenty-sv-111-results-2026-original.csv",
+      "original_source_sha256": "e39138bb326f7f5f4b3308c694e6246cf7ea214e1da81993bf1f9ea1b59dd848",
+      "source_csv_row": 33,
+      "monitoring_location_id": "21SC60WQ_WQX-SV-111",
+      "activity_id": "21SC60WQ_WQX-AF59879",
+      "original_result_identifier": "STORET-1118118798"
+    },
+    {
+      "original_source_path": "original/three-twenty-sv-111-results-2026-original.csv",
+      "original_source_sha256": "e39138bb326f7f5f4b3308c694e6246cf7ea214e1da81993bf1f9ea1b59dd848",
+      "source_csv_row": 34,
+      "monitoring_location_id": "21SC60WQ_WQX-SV-111",
+      "activity_id": "21SC60WQ_WQX-AF59879",
+      "original_result_identifier": "STORET-1118118796"
+    },
+    {
+      "original_source_path": "original/three-twenty-sv-111-results-2026-original.csv",
+      "original_source_sha256": "e39138bb326f7f5f4b3308c694e6246cf7ea214e1da81993bf1f9ea1b59dd848",
+      "source_csv_row": 35,
+      "monitoring_location_id": "21SC60WQ_WQX-SV-111",
+      "activity_id": "21SC60WQ_WQX-AF59879",
+      "original_result_identifier": "STORET-1125209679"
+    },
+    {
+      "original_source_path": "original/three-twenty-sv-111-results-2026-original.csv",
+      "original_source_sha256": "e39138bb326f7f5f4b3308c694e6246cf7ea214e1da81993bf1f9ea1b59dd848",
+      "source_csv_row": 36,
+      "monitoring_location_id": "21SC60WQ_WQX-SV-111",
+      "activity_id": "21SC60WQ_WQX-AF59879",
+      "original_result_identifier": "STORET-1125209675"
+    },
+    {
+      "original_source_path": "original/three-twenty-sv-111-results-2026-original.csv",
+      "original_source_sha256": "e39138bb326f7f5f4b3308c694e6246cf7ea214e1da81993bf1f9ea1b59dd848",
+      "source_csv_row": 37,
+      "monitoring_location_id": "21SC60WQ_WQX-SV-111",
+      "activity_id": "21SC60WQ_WQX-AF59879",
+      "original_result_identifier": "STORET-1118118802"
+    },
+    {
+      "original_source_path": "original/three-twenty-sv-111-results-2026-original.csv",
+      "original_source_sha256": "e39138bb326f7f5f4b3308c694e6246cf7ea214e1da81993bf1f9ea1b59dd848",
+      "source_csv_row": 38,
+      "monitoring_location_id": "21SC60WQ_WQX-SV-111",
+      "activity_id": "21SC60WQ_WQX-AF59879",
+      "original_result_identifier": "STORET-1118118794"
+    },
+    {
+      "original_source_path": "original/three-twenty-sv-111-results-2026-original.csv",
+      "original_source_sha256": "e39138bb326f7f5f4b3308c694e6246cf7ea214e1da81993bf1f9ea1b59dd848",
+      "source_csv_row": 39,
+      "monitoring_location_id": "21SC60WQ_WQX-SV-111",
+      "activity_id": "21SC60WQ_WQX-AF59879",
+      "original_result_identifier": "STORET-1125209682"
+    },
+    {
+      "original_source_path": "original/three-twenty-sv-111-results-2026-original.csv",
+      "original_source_sha256": "e39138bb326f7f5f4b3308c694e6246cf7ea214e1da81993bf1f9ea1b59dd848",
+      "source_csv_row": 40,
+      "monitoring_location_id": "21SC60WQ_WQX-SV-111",
+      "activity_id": "21SC60WQ_WQX-AF59879",
+      "original_result_identifier": "STORET-1125209676"
+    },
+    {
+      "original_source_path": "original/three-twenty-sv-111-results-2026-original.csv",
+      "original_source_sha256": "e39138bb326f7f5f4b3308c694e6246cf7ea214e1da81993bf1f9ea1b59dd848",
+      "source_csv_row": 41,
+      "monitoring_location_id": "21SC60WQ_WQX-SV-111",
+      "activity_id": "21SC60WQ_WQX-AF59879",
+      "original_result_identifier": "STORET-1118118797"
+    },
+    {
+      "original_source_path": "original/three-twenty-sv-111-results-2026-original.csv",
+      "original_source_sha256": "e39138bb326f7f5f4b3308c694e6246cf7ea214e1da81993bf1f9ea1b59dd848",
+      "source_csv_row": 42,
+      "monitoring_location_id": "21SC60WQ_WQX-SV-111",
+      "activity_id": "21SC60WQ_WQX-AF59879",
+      "original_result_identifier": "STORET-1125209683"
+    },
+    {
+      "original_source_path": "original/three-twenty-sv-111-results-2026-original.csv",
+      "original_source_sha256": "e39138bb326f7f5f4b3308c694e6246cf7ea214e1da81993bf1f9ea1b59dd848",
+      "source_csv_row": 43,
+      "monitoring_location_id": "21SC60WQ_WQX-SV-111",
+      "activity_id": "21SC60WQ_WQX-AF59879",
+      "original_result_identifier": "STORET-1118118795"
+    },
+    {
+      "original_source_path": "original/three-twenty-sv-111-results-2026-original.csv",
+      "original_source_sha256": "e39138bb326f7f5f4b3308c694e6246cf7ea214e1da81993bf1f9ea1b59dd848",
+      "source_csv_row": 44,
+      "monitoring_location_id": "21SC60WQ_WQX-SV-111",
+      "activity_id": "21SC60WQ_WQX-AF63564",
+      "original_result_identifier": "STORET-1125216898"
+    },
+    {
+      "original_source_path": "original/three-twenty-sv-111-results-2026-original.csv",
+      "original_source_sha256": "e39138bb326f7f5f4b3308c694e6246cf7ea214e1da81993bf1f9ea1b59dd848",
+      "source_csv_row": 45,
+      "monitoring_location_id": "21SC60WQ_WQX-SV-111",
+      "activity_id": "21SC60WQ_WQX-AF63564",
+      "original_result_identifier": "STORET-1125216903"
+    },
+    {
+      "original_source_path": "original/three-twenty-sv-111-results-2026-original.csv",
+      "original_source_sha256": "e39138bb326f7f5f4b3308c694e6246cf7ea214e1da81993bf1f9ea1b59dd848",
+      "source_csv_row": 46,
+      "monitoring_location_id": "21SC60WQ_WQX-SV-111",
+      "activity_id": "21SC60WQ_WQX-AF63564",
+      "original_result_identifier": "STORET-1125216905"
+    },
+    {
+      "original_source_path": "original/three-twenty-sv-111-results-2026-original.csv",
+      "original_source_sha256": "e39138bb326f7f5f4b3308c694e6246cf7ea214e1da81993bf1f9ea1b59dd848",
+      "source_csv_row": 47,
+      "monitoring_location_id": "21SC60WQ_WQX-SV-111",
+      "activity_id": "21SC60WQ_WQX-AF63564",
+      "original_result_identifier": "STORET-1125216904"
+    },
+    {
+      "original_source_path": "original/three-twenty-sv-111-results-2026-original.csv",
+      "original_source_sha256": "e39138bb326f7f5f4b3308c694e6246cf7ea214e1da81993bf1f9ea1b59dd848",
+      "source_csv_row": 48,
+      "monitoring_location_id": "21SC60WQ_WQX-SV-111",
+      "activity_id": "21SC60WQ_WQX-AF63564",
+      "original_result_identifier": "STORET-1125216900"
+    },
+    {
+      "original_source_path": "original/three-twenty-sv-111-results-2026-original.csv",
+      "original_source_sha256": "e39138bb326f7f5f4b3308c694e6246cf7ea214e1da81993bf1f9ea1b59dd848",
+      "source_csv_row": 49,
+      "monitoring_location_id": "21SC60WQ_WQX-SV-111",
+      "activity_id": "21SC60WQ_WQX-AF63564",
+      "original_result_identifier": "STORET-1125216899"
+    },
+    {
+      "original_source_path": "original/three-twenty-sv-111-results-2026-original.csv",
+      "original_source_sha256": "e39138bb326f7f5f4b3308c694e6246cf7ea214e1da81993bf1f9ea1b59dd848",
+      "source_csv_row": 50,
+      "monitoring_location_id": "21SC60WQ_WQX-SV-111",
+      "activity_id": "21SC60WQ_WQX-AF63564",
+      "original_result_identifier": "STORET-1125216901"
+    },
+    {
+      "original_source_path": "original/three-twenty-sv-111-results-2026-original.csv",
+      "original_source_sha256": "e39138bb326f7f5f4b3308c694e6246cf7ea214e1da81993bf1f9ea1b59dd848",
+      "source_csv_row": 51,
+      "monitoring_location_id": "21SC60WQ_WQX-SV-111",
+      "activity_id": "21SC60WQ_WQX-AF63564",
+      "original_result_identifier": "STORET-1125216902"
+    },
+    {
+      "original_source_path": "original/sv833-physical-narrow-result-identifiers-2021-20261013-original.csv",
+      "original_source_sha256": "712edf7bc92d9900b178f39db78ce7af7668da64a9d835107292d94863e128ed",
+      "source_csv_row": 288,
+      "monitoring_location_id": "21SC60WQ_WQX-SV-833",
+      "activity_id": "21SC60WQ_WQX-AF55437",
+      "original_result_identifier": "STORET-1118110493"
+    },
+    {
+      "original_source_path": "original/sv833-physical-narrow-result-identifiers-2021-20261013-original.csv",
+      "original_source_sha256": "712edf7bc92d9900b178f39db78ce7af7668da64a9d835107292d94863e128ed",
+      "source_csv_row": 289,
+      "monitoring_location_id": "21SC60WQ_WQX-SV-833",
+      "activity_id": "21SC60WQ_WQX-AF55437",
+      "original_result_identifier": "STORET-1125197330"
+    },
+    {
+      "original_source_path": "original/sv833-physical-narrow-result-identifiers-2021-20261013-original.csv",
+      "original_source_sha256": "712edf7bc92d9900b178f39db78ce7af7668da64a9d835107292d94863e128ed",
+      "source_csv_row": 290,
+      "monitoring_location_id": "21SC60WQ_WQX-SV-833",
+      "activity_id": "21SC60WQ_WQX-AF57985",
+      "original_result_identifier": "STORET-1125205099"
+    },
+    {
+      "original_source_path": "original/sv833-physical-narrow-result-identifiers-2021-20261013-original.csv",
+      "original_source_sha256": "712edf7bc92d9900b178f39db78ce7af7668da64a9d835107292d94863e128ed",
+      "source_csv_row": 291,
+      "monitoring_location_id": "21SC60WQ_WQX-SV-833",
+      "activity_id": "21SC60WQ_WQX-AF57985",
+      "original_result_identifier": "STORET-1125205091"
+    },
+    {
+      "original_source_path": "original/sv833-physical-narrow-result-identifiers-2021-20261013-original.csv",
+      "original_source_sha256": "712edf7bc92d9900b178f39db78ce7af7668da64a9d835107292d94863e128ed",
+      "source_csv_row": 292,
+      "monitoring_location_id": "21SC60WQ_WQX-SV-833",
+      "activity_id": "21SC60WQ_WQX-AF56404",
+      "original_result_identifier": "STORET-1118112185"
+    },
+    {
+      "original_source_path": "original/sv833-physical-narrow-result-identifiers-2021-20261013-original.csv",
+      "original_source_sha256": "712edf7bc92d9900b178f39db78ce7af7668da64a9d835107292d94863e128ed",
+      "source_csv_row": 293,
+      "monitoring_location_id": "21SC60WQ_WQX-SV-833",
+      "activity_id": "21SC60WQ_WQX-AF55437",
+      "original_result_identifier": "STORET-1125197339"
+    },
+    {
+      "original_source_path": "original/sv833-physical-narrow-result-identifiers-2021-20261013-original.csv",
+      "original_source_sha256": "712edf7bc92d9900b178f39db78ce7af7668da64a9d835107292d94863e128ed",
+      "source_csv_row": 294,
+      "monitoring_location_id": "21SC60WQ_WQX-SV-833",
+      "activity_id": "21SC60WQ_WQX-AF56404",
+      "original_result_identifier": "STORET-1125199903"
+    },
+    {
+      "original_source_path": "original/sv833-physical-narrow-result-identifiers-2021-20261013-original.csv",
+      "original_source_sha256": "712edf7bc92d9900b178f39db78ce7af7668da64a9d835107292d94863e128ed",
+      "source_csv_row": 295,
+      "monitoring_location_id": "21SC60WQ_WQX-SV-833",
+      "activity_id": "21SC60WQ_WQX-AF56404",
+      "original_result_identifier": "STORET-1125199898"
+    },
+    {
+      "original_source_path": "original/sv833-physical-narrow-result-identifiers-2021-20261013-original.csv",
+      "original_source_sha256": "712edf7bc92d9900b178f39db78ce7af7668da64a9d835107292d94863e128ed",
+      "source_csv_row": 296,
+      "monitoring_location_id": "21SC60WQ_WQX-SV-833",
+      "activity_id": "21SC60WQ_WQX-AF56404",
+      "original_result_identifier": "STORET-1118112184"
+    },
+    {
+      "original_source_path": "original/sv833-physical-narrow-result-identifiers-2021-20261013-original.csv",
+      "original_source_sha256": "712edf7bc92d9900b178f39db78ce7af7668da64a9d835107292d94863e128ed",
+      "source_csv_row": 297,
+      "monitoring_location_id": "21SC60WQ_WQX-SV-833",
+      "activity_id": "21SC60WQ_WQX-AF55437",
+      "original_result_identifier": "STORET-1125197337"
+    },
+    {
+      "original_source_path": "original/sv833-physical-narrow-result-identifiers-2021-20261013-original.csv",
+      "original_source_sha256": "712edf7bc92d9900b178f39db78ce7af7668da64a9d835107292d94863e128ed",
+      "source_csv_row": 298,
+      "monitoring_location_id": "21SC60WQ_WQX-SV-833",
+      "activity_id": "21SC60WQ_WQX-AF55437",
+      "original_result_identifier": "STORET-1125197335"
+    },
+    {
+      "original_source_path": "original/sv833-physical-narrow-result-identifiers-2021-20261013-original.csv",
+      "original_source_sha256": "712edf7bc92d9900b178f39db78ce7af7668da64a9d835107292d94863e128ed",
+      "source_csv_row": 299,
+      "monitoring_location_id": "21SC60WQ_WQX-SV-833",
+      "activity_id": "21SC60WQ_WQX-AF57985",
+      "original_result_identifier": "STORET-1125205095"
+    },
+    {
+      "original_source_path": "original/sv833-physical-narrow-result-identifiers-2021-20261013-original.csv",
+      "original_source_sha256": "712edf7bc92d9900b178f39db78ce7af7668da64a9d835107292d94863e128ed",
+      "source_csv_row": 300,
+      "monitoring_location_id": "21SC60WQ_WQX-SV-833",
+      "activity_id": "21SC60WQ_WQX-AF57985",
+      "original_result_identifier": "STORET-1118115678"
+    },
+    {
+      "original_source_path": "original/sv833-physical-narrow-result-identifiers-2021-20261013-original.csv",
+      "original_source_sha256": "712edf7bc92d9900b178f39db78ce7af7668da64a9d835107292d94863e128ed",
+      "source_csv_row": 301,
+      "monitoring_location_id": "21SC60WQ_WQX-SV-833",
+      "activity_id": "21SC60WQ_WQX-AF57985",
+      "original_result_identifier": "STORET-1118115673"
+    },
+    {
+      "original_source_path": "original/sv833-physical-narrow-result-identifiers-2021-20261013-original.csv",
+      "original_source_sha256": "712edf7bc92d9900b178f39db78ce7af7668da64a9d835107292d94863e128ed",
+      "source_csv_row": 302,
+      "monitoring_location_id": "21SC60WQ_WQX-SV-833",
+      "activity_id": "21SC60WQ_WQX-AF57985",
+      "original_result_identifier": "STORET-1125205093"
+    },
+    {
+      "original_source_path": "original/sv833-physical-narrow-result-identifiers-2021-20261013-original.csv",
+      "original_source_sha256": "712edf7bc92d9900b178f39db78ce7af7668da64a9d835107292d94863e128ed",
+      "source_csv_row": 303,
+      "monitoring_location_id": "21SC60WQ_WQX-SV-833",
+      "activity_id": "21SC60WQ_WQX-AF55437",
+      "original_result_identifier": "STORET-1125197334"
+    },
+    {
+      "original_source_path": "original/sv833-physical-narrow-result-identifiers-2021-20261013-original.csv",
+      "original_source_sha256": "712edf7bc92d9900b178f39db78ce7af7668da64a9d835107292d94863e128ed",
+      "source_csv_row": 304,
+      "monitoring_location_id": "21SC60WQ_WQX-SV-833",
+      "activity_id": "21SC60WQ_WQX-AF57985",
+      "original_result_identifier": "STORET-1118115672"
+    },
+    {
+      "original_source_path": "original/sv833-physical-narrow-result-identifiers-2021-20261013-original.csv",
+      "original_source_sha256": "712edf7bc92d9900b178f39db78ce7af7668da64a9d835107292d94863e128ed",
+      "source_csv_row": 305,
+      "monitoring_location_id": "21SC60WQ_WQX-SV-833",
+      "activity_id": "21SC60WQ_WQX-AF56404",
+      "original_result_identifier": "STORET-1118112181"
+    },
+    {
+      "original_source_path": "original/sv833-physical-narrow-result-identifiers-2021-20261013-original.csv",
+      "original_source_sha256": "712edf7bc92d9900b178f39db78ce7af7668da64a9d835107292d94863e128ed",
+      "source_csv_row": 306,
+      "monitoring_location_id": "21SC60WQ_WQX-SV-833",
+      "activity_id": "21SC60WQ_WQX-AF55437",
+      "original_result_identifier": "STORET-1118110491"
+    },
+    {
+      "original_source_path": "original/sv833-physical-narrow-result-identifiers-2021-20261013-original.csv",
+      "original_source_sha256": "712edf7bc92d9900b178f39db78ce7af7668da64a9d835107292d94863e128ed",
+      "source_csv_row": 307,
+      "monitoring_location_id": "21SC60WQ_WQX-SV-833",
+      "activity_id": "21SC60WQ_WQX-AF56404",
+      "original_result_identifier": "STORET-1125199900"
+    },
+    {
+      "original_source_path": "original/sv833-physical-narrow-result-identifiers-2021-20261013-original.csv",
+      "original_source_sha256": "712edf7bc92d9900b178f39db78ce7af7668da64a9d835107292d94863e128ed",
+      "source_csv_row": 308,
+      "monitoring_location_id": "21SC60WQ_WQX-SV-833",
+      "activity_id": "21SC60WQ_WQX-AF55437",
+      "original_result_identifier": "STORET-1118110487"
+    },
+    {
+      "original_source_path": "original/sv833-physical-narrow-result-identifiers-2021-20261013-original.csv",
+      "original_source_sha256": "712edf7bc92d9900b178f39db78ce7af7668da64a9d835107292d94863e128ed",
+      "source_csv_row": 309,
+      "monitoring_location_id": "21SC60WQ_WQX-SV-833",
+      "activity_id": "21SC60WQ_WQX-AF57985",
+      "original_result_identifier": "STORET-1118115674"
+    },
+    {
+      "original_source_path": "original/sv833-physical-narrow-result-identifiers-2021-20261013-original.csv",
+      "original_source_sha256": "712edf7bc92d9900b178f39db78ce7af7668da64a9d835107292d94863e128ed",
+      "source_csv_row": 310,
+      "monitoring_location_id": "21SC60WQ_WQX-SV-833",
+      "activity_id": "21SC60WQ_WQX-AF55437",
+      "original_result_identifier": "STORET-1118110490"
+    },
+    {
+      "original_source_path": "original/sv833-physical-narrow-result-identifiers-2021-20261013-original.csv",
+      "original_source_sha256": "712edf7bc92d9900b178f39db78ce7af7668da64a9d835107292d94863e128ed",
+      "source_csv_row": 311,
+      "monitoring_location_id": "21SC60WQ_WQX-SV-833",
+      "activity_id": "21SC60WQ_WQX-AF55437",
+      "original_result_identifier": "STORET-1125197332"
+    },
+    {
+      "original_source_path": "original/sv833-physical-narrow-result-identifiers-2021-20261013-original.csv",
+      "original_source_sha256": "712edf7bc92d9900b178f39db78ce7af7668da64a9d835107292d94863e128ed",
+      "source_csv_row": 312,
+      "monitoring_location_id": "21SC60WQ_WQX-SV-833",
+      "activity_id": "21SC60WQ_WQX-AF56404",
+      "original_result_identifier": "STORET-1118112182"
+    },
+    {
+      "original_source_path": "original/sv833-physical-narrow-result-identifiers-2021-20261013-original.csv",
+      "original_source_sha256": "712edf7bc92d9900b178f39db78ce7af7668da64a9d835107292d94863e128ed",
+      "source_csv_row": 313,
+      "monitoring_location_id": "21SC60WQ_WQX-SV-833",
+      "activity_id": "21SC60WQ_WQX-AF56404",
+      "original_result_identifier": "STORET-1118112183"
+    },
+    {
+      "original_source_path": "original/sv833-physical-narrow-result-identifiers-2021-20261013-original.csv",
+      "original_source_sha256": "712edf7bc92d9900b178f39db78ce7af7668da64a9d835107292d94863e128ed",
+      "source_csv_row": 314,
+      "monitoring_location_id": "21SC60WQ_WQX-SV-833",
+      "activity_id": "21SC60WQ_WQX-AF55437",
+      "original_result_identifier": "STORET-1118110488"
+    },
+    {
+      "original_source_path": "original/sv833-physical-narrow-result-identifiers-2021-20261013-original.csv",
+      "original_source_sha256": "712edf7bc92d9900b178f39db78ce7af7668da64a9d835107292d94863e128ed",
+      "source_csv_row": 315,
+      "monitoring_location_id": "21SC60WQ_WQX-SV-833",
+      "activity_id": "21SC60WQ_WQX-AF56404",
+      "original_result_identifier": "STORET-1125199894"
+    },
+    {
+      "original_source_path": "original/sv833-physical-narrow-result-identifiers-2021-20261013-original.csv",
+      "original_source_sha256": "712edf7bc92d9900b178f39db78ce7af7668da64a9d835107292d94863e128ed",
+      "source_csv_row": 316,
+      "monitoring_location_id": "21SC60WQ_WQX-SV-833",
+      "activity_id": "21SC60WQ_WQX-AF57985",
+      "original_result_identifier": "STORET-1125205100"
+    },
+    {
+      "original_source_path": "original/sv833-physical-narrow-result-identifiers-2021-20261013-original.csv",
+      "original_source_sha256": "712edf7bc92d9900b178f39db78ce7af7668da64a9d835107292d94863e128ed",
+      "source_csv_row": 317,
+      "monitoring_location_id": "21SC60WQ_WQX-SV-833",
+      "activity_id": "21SC60WQ_WQX-AF57985",
+      "original_result_identifier": "STORET-1125205097"
+    },
+    {
+      "original_source_path": "original/sv833-physical-narrow-result-identifiers-2021-20261013-original.csv",
+      "original_source_sha256": "712edf7bc92d9900b178f39db78ce7af7668da64a9d835107292d94863e128ed",
+      "source_csv_row": 318,
+      "monitoring_location_id": "21SC60WQ_WQX-SV-833",
+      "activity_id": "21SC60WQ_WQX-AF56404",
+      "original_result_identifier": "STORET-1125199897"
+    },
+    {
+      "original_source_path": "original/sv833-physical-narrow-result-identifiers-2021-20261013-original.csv",
+      "original_source_sha256": "712edf7bc92d9900b178f39db78ce7af7668da64a9d835107292d94863e128ed",
+      "source_csv_row": 319,
+      "monitoring_location_id": "21SC60WQ_WQX-SV-833",
+      "activity_id": "21SC60WQ_WQX-AF57985",
+      "original_result_identifier": "STORET-1118115675"
+    },
+    {
+      "original_source_path": "original/sv833-physical-narrow-result-identifiers-2021-20261013-original.csv",
+      "original_source_sha256": "712edf7bc92d9900b178f39db78ce7af7668da64a9d835107292d94863e128ed",
+      "source_csv_row": 320,
+      "monitoring_location_id": "21SC60WQ_WQX-SV-833",
+      "activity_id": "21SC60WQ_WQX-AF56404",
+      "original_result_identifier": "STORET-1125199895"
+    },
+    {
+      "original_source_path": "original/sv833-physical-narrow-result-identifiers-2021-20261013-original.csv",
+      "original_source_sha256": "712edf7bc92d9900b178f39db78ce7af7668da64a9d835107292d94863e128ed",
+      "source_csv_row": 321,
+      "monitoring_location_id": "21SC60WQ_WQX-SV-833",
+      "activity_id": "21SC60WQ_WQX-AF63274",
+      "original_result_identifier": "STORET-1125216199"
+    },
+    {
+      "original_source_path": "original/sv833-physical-narrow-result-identifiers-2021-20261013-original.csv",
+      "original_source_sha256": "712edf7bc92d9900b178f39db78ce7af7668da64a9d835107292d94863e128ed",
+      "source_csv_row": 322,
+      "monitoring_location_id": "21SC60WQ_WQX-SV-833",
+      "activity_id": "21SC60WQ_WQX-AF62342",
+      "original_result_identifier": "STORET-1125213534"
+    },
+    {
+      "original_source_path": "original/sv833-physical-narrow-result-identifiers-2021-20261013-original.csv",
+      "original_source_sha256": "712edf7bc92d9900b178f39db78ce7af7668da64a9d835107292d94863e128ed",
+      "source_csv_row": 323,
+      "monitoring_location_id": "21SC60WQ_WQX-SV-833",
+      "activity_id": "21SC60WQ_WQX-AF62342",
+      "original_result_identifier": "STORET-1125213531"
+    },
+    {
+      "original_source_path": "original/sv833-physical-narrow-result-identifiers-2021-20261013-original.csv",
+      "original_source_sha256": "712edf7bc92d9900b178f39db78ce7af7668da64a9d835107292d94863e128ed",
+      "source_csv_row": 324,
+      "monitoring_location_id": "21SC60WQ_WQX-SV-833",
+      "activity_id": "21SC60WQ_WQX-AF63274",
+      "original_result_identifier": "STORET-1125216201"
+    },
+    {
+      "original_source_path": "original/sv833-physical-narrow-result-identifiers-2021-20261013-original.csv",
+      "original_source_sha256": "712edf7bc92d9900b178f39db78ce7af7668da64a9d835107292d94863e128ed",
+      "source_csv_row": 325,
+      "monitoring_location_id": "21SC60WQ_WQX-SV-833",
+      "activity_id": "21SC60WQ_WQX-AF62342",
+      "original_result_identifier": "STORET-1125213533"
+    },
+    {
+      "original_source_path": "original/sv833-physical-narrow-result-identifiers-2021-20261013-original.csv",
+      "original_source_sha256": "712edf7bc92d9900b178f39db78ce7af7668da64a9d835107292d94863e128ed",
+      "source_csv_row": 326,
+      "monitoring_location_id": "21SC60WQ_WQX-SV-833",
+      "activity_id": "21SC60WQ_WQX-AF59308",
+      "original_result_identifier": "STORET-1125207851"
+    },
+    {
+      "original_source_path": "original/sv833-physical-narrow-result-identifiers-2021-20261013-original.csv",
+      "original_source_sha256": "712edf7bc92d9900b178f39db78ce7af7668da64a9d835107292d94863e128ed",
+      "source_csv_row": 327,
+      "monitoring_location_id": "21SC60WQ_WQX-SV-833",
+      "activity_id": "21SC60WQ_WQX-AF62342",
+      "original_result_identifier": "STORET-1125213532"
+    },
+    {
+      "original_source_path": "original/sv833-physical-narrow-result-identifiers-2021-20261013-original.csv",
+      "original_source_sha256": "712edf7bc92d9900b178f39db78ce7af7668da64a9d835107292d94863e128ed",
+      "source_csv_row": 328,
+      "monitoring_location_id": "21SC60WQ_WQX-SV-833",
+      "activity_id": "21SC60WQ_WQX-AF59308",
+      "original_result_identifier": "STORET-1118117567"
+    },
+    {
+      "original_source_path": "original/sv833-physical-narrow-result-identifiers-2021-20261013-original.csv",
+      "original_source_sha256": "712edf7bc92d9900b178f39db78ce7af7668da64a9d835107292d94863e128ed",
+      "source_csv_row": 329,
+      "monitoring_location_id": "21SC60WQ_WQX-SV-833",
+      "activity_id": "21SC60WQ_WQX-AF59308",
+      "original_result_identifier": "STORET-1125207853"
+    },
+    {
+      "original_source_path": "original/sv833-physical-narrow-result-identifiers-2021-20261013-original.csv",
+      "original_source_sha256": "712edf7bc92d9900b178f39db78ce7af7668da64a9d835107292d94863e128ed",
+      "source_csv_row": 330,
+      "monitoring_location_id": "21SC60WQ_WQX-SV-833",
+      "activity_id": "21SC60WQ_WQX-AF59308",
+      "original_result_identifier": "STORET-1118117568"
+    },
+    {
+      "original_source_path": "original/sv833-physical-narrow-result-identifiers-2021-20261013-original.csv",
+      "original_source_sha256": "712edf7bc92d9900b178f39db78ce7af7668da64a9d835107292d94863e128ed",
+      "source_csv_row": 331,
+      "monitoring_location_id": "21SC60WQ_WQX-SV-833",
+      "activity_id": "21SC60WQ_WQX-AF59308",
+      "original_result_identifier": "STORET-1125207854"
+    },
+    {
+      "original_source_path": "original/sv833-physical-narrow-result-identifiers-2021-20261013-original.csv",
+      "original_source_sha256": "712edf7bc92d9900b178f39db78ce7af7668da64a9d835107292d94863e128ed",
+      "source_csv_row": 332,
+      "monitoring_location_id": "21SC60WQ_WQX-SV-833",
+      "activity_id": "21SC60WQ_WQX-AF62342",
+      "original_result_identifier": "STORET-1125213529"
+    },
+    {
+      "original_source_path": "original/sv833-physical-narrow-result-identifiers-2021-20261013-original.csv",
+      "original_source_sha256": "712edf7bc92d9900b178f39db78ce7af7668da64a9d835107292d94863e128ed",
+      "source_csv_row": 333,
+      "monitoring_location_id": "21SC60WQ_WQX-SV-833",
+      "activity_id": "21SC60WQ_WQX-AF59308",
+      "original_result_identifier": "STORET-1118117562"
+    },
+    {
+      "original_source_path": "original/sv833-physical-narrow-result-identifiers-2021-20261013-original.csv",
+      "original_source_sha256": "712edf7bc92d9900b178f39db78ce7af7668da64a9d835107292d94863e128ed",
+      "source_csv_row": 334,
+      "monitoring_location_id": "21SC60WQ_WQX-SV-833",
+      "activity_id": "21SC60WQ_WQX-AF63274",
+      "original_result_identifier": "STORET-1125216200"
+    },
+    {
+      "original_source_path": "original/sv833-physical-narrow-result-identifiers-2021-20261013-original.csv",
+      "original_source_sha256": "712edf7bc92d9900b178f39db78ce7af7668da64a9d835107292d94863e128ed",
+      "source_csv_row": 335,
+      "monitoring_location_id": "21SC60WQ_WQX-SV-833",
+      "activity_id": "21SC60WQ_WQX-AF63274",
+      "original_result_identifier": "STORET-1125216196"
+    },
+    {
+      "original_source_path": "original/sv833-physical-narrow-result-identifiers-2021-20261013-original.csv",
+      "original_source_sha256": "712edf7bc92d9900b178f39db78ce7af7668da64a9d835107292d94863e128ed",
+      "source_csv_row": 336,
+      "monitoring_location_id": "21SC60WQ_WQX-SV-833",
+      "activity_id": "21SC60WQ_WQX-AF59308",
+      "original_result_identifier": "STORET-1125207850"
+    },
+    {
+      "original_source_path": "original/sv833-physical-narrow-result-identifiers-2021-20261013-original.csv",
+      "original_source_sha256": "712edf7bc92d9900b178f39db78ce7af7668da64a9d835107292d94863e128ed",
+      "source_csv_row": 337,
+      "monitoring_location_id": "21SC60WQ_WQX-SV-833",
+      "activity_id": "21SC60WQ_WQX-AF59308",
+      "original_result_identifier": "STORET-1125207856"
+    },
+    {
+      "original_source_path": "original/sv833-physical-narrow-result-identifiers-2021-20261013-original.csv",
+      "original_source_sha256": "712edf7bc92d9900b178f39db78ce7af7668da64a9d835107292d94863e128ed",
+      "source_csv_row": 338,
+      "monitoring_location_id": "21SC60WQ_WQX-SV-833",
+      "activity_id": "21SC60WQ_WQX-AF59308",
+      "original_result_identifier": "STORET-1125207852"
+    },
+    {
+      "original_source_path": "original/sv833-physical-narrow-result-identifiers-2021-20261013-original.csv",
+      "original_source_sha256": "712edf7bc92d9900b178f39db78ce7af7668da64a9d835107292d94863e128ed",
+      "source_csv_row": 339,
+      "monitoring_location_id": "21SC60WQ_WQX-SV-833",
+      "activity_id": "21SC60WQ_WQX-AF59308",
+      "original_result_identifier": "STORET-1118117564"
+    },
+    {
+      "original_source_path": "original/sv833-physical-narrow-result-identifiers-2021-20261013-original.csv",
+      "original_source_sha256": "712edf7bc92d9900b178f39db78ce7af7668da64a9d835107292d94863e128ed",
+      "source_csv_row": 340,
+      "monitoring_location_id": "21SC60WQ_WQX-SV-833",
+      "activity_id": "21SC60WQ_WQX-AF59308",
+      "original_result_identifier": "STORET-1118117563"
+    },
+    {
+      "original_source_path": "original/sv833-physical-narrow-result-identifiers-2021-20261013-original.csv",
+      "original_source_sha256": "712edf7bc92d9900b178f39db78ce7af7668da64a9d835107292d94863e128ed",
+      "source_csv_row": 341,
+      "monitoring_location_id": "21SC60WQ_WQX-SV-833",
+      "activity_id": "21SC60WQ_WQX-AF63274",
+      "original_result_identifier": "STORET-1125216195"
+    },
+    {
+      "original_source_path": "original/sv833-physical-narrow-result-identifiers-2021-20261013-original.csv",
+      "original_source_sha256": "712edf7bc92d9900b178f39db78ce7af7668da64a9d835107292d94863e128ed",
+      "source_csv_row": 342,
+      "monitoring_location_id": "21SC60WQ_WQX-SV-833",
+      "activity_id": "21SC60WQ_WQX-AF63274",
+      "original_result_identifier": "STORET-1125216198"
+    },
+    {
+      "original_source_path": "original/sv833-physical-narrow-result-identifiers-2021-20261013-original.csv",
+      "original_source_sha256": "712edf7bc92d9900b178f39db78ce7af7668da64a9d835107292d94863e128ed",
+      "source_csv_row": 343,
+      "monitoring_location_id": "21SC60WQ_WQX-SV-833",
+      "activity_id": "21SC60WQ_WQX-AF62342",
+      "original_result_identifier": "STORET-1125213528"
+    },
+    {
+      "original_source_path": "original/sv833-nutrient-narrow-result-identifiers-2021-20261013-original.csv",
+      "original_source_sha256": "8e59ef65aed6093df0df015d2f94bc7e3f0ba876b5497c6a5fc49cd9795aa519",
+      "source_csv_row": 190,
+      "monitoring_location_id": "21SC60WQ_WQX-SV-833",
+      "activity_id": "21SC60WQ_WQX-AF57985",
+      "original_result_identifier": "STORET-1118115670"
+    },
+    {
+      "original_source_path": "original/sv833-nutrient-narrow-result-identifiers-2021-20261013-original.csv",
+      "original_source_sha256": "8e59ef65aed6093df0df015d2f94bc7e3f0ba876b5497c6a5fc49cd9795aa519",
+      "source_csv_row": 191,
+      "monitoring_location_id": "21SC60WQ_WQX-SV-833",
+      "activity_id": "21SC60WQ_WQX-AF56404",
+      "original_result_identifier": "STORET-1125199901"
+    },
+    {
+      "original_source_path": "original/sv833-nutrient-narrow-result-identifiers-2021-20261013-original.csv",
+      "original_source_sha256": "8e59ef65aed6093df0df015d2f94bc7e3f0ba876b5497c6a5fc49cd9795aa519",
+      "source_csv_row": 192,
+      "monitoring_location_id": "21SC60WQ_WQX-SV-833",
+      "activity_id": "21SC60WQ_WQX-AF56404",
+      "original_result_identifier": "STORET-1118112179"
+    },
+    {
+      "original_source_path": "original/sv833-nutrient-narrow-result-identifiers-2021-20261013-original.csv",
+      "original_source_sha256": "8e59ef65aed6093df0df015d2f94bc7e3f0ba876b5497c6a5fc49cd9795aa519",
+      "source_csv_row": 193,
+      "monitoring_location_id": "21SC60WQ_WQX-SV-833",
+      "activity_id": "21SC60WQ_WQX-AF55437",
+      "original_result_identifier": "STORET-1125197333"
+    },
+    {
+      "original_source_path": "original/sv833-nutrient-narrow-result-identifiers-2021-20261013-original.csv",
+      "original_source_sha256": "8e59ef65aed6093df0df015d2f94bc7e3f0ba876b5497c6a5fc49cd9795aa519",
+      "source_csv_row": 194,
+      "monitoring_location_id": "21SC60WQ_WQX-SV-833",
+      "activity_id": "21SC60WQ_WQX-AF57985",
+      "original_result_identifier": "STORET-1118115676"
+    },
+    {
+      "original_source_path": "original/sv833-nutrient-narrow-result-identifiers-2021-20261013-original.csv",
+      "original_source_sha256": "8e59ef65aed6093df0df015d2f94bc7e3f0ba876b5497c6a5fc49cd9795aa519",
+      "source_csv_row": 195,
+      "monitoring_location_id": "21SC60WQ_WQX-SV-833",
+      "activity_id": "21SC60WQ_WQX-AF57985",
+      "original_result_identifier": "STORET-1125205094"
+    },
+    {
+      "original_source_path": "original/sv833-nutrient-narrow-result-identifiers-2021-20261013-original.csv",
+      "original_source_sha256": "8e59ef65aed6093df0df015d2f94bc7e3f0ba876b5497c6a5fc49cd9795aa519",
+      "source_csv_row": 196,
+      "monitoring_location_id": "21SC60WQ_WQX-SV-833",
+      "activity_id": "21SC60WQ_WQX-AF57985",
+      "original_result_identifier": "STORET-1125205098"
+    },
+    {
+      "original_source_path": "original/sv833-nutrient-narrow-result-identifiers-2021-20261013-original.csv",
+      "original_source_sha256": "8e59ef65aed6093df0df015d2f94bc7e3f0ba876b5497c6a5fc49cd9795aa519",
+      "source_csv_row": 197,
+      "monitoring_location_id": "21SC60WQ_WQX-SV-833",
+      "activity_id": "21SC60WQ_WQX-AF56404",
+      "original_result_identifier": "STORET-1125199896"
+    },
+    {
+      "original_source_path": "original/sv833-nutrient-narrow-result-identifiers-2021-20261013-original.csv",
+      "original_source_sha256": "8e59ef65aed6093df0df015d2f94bc7e3f0ba876b5497c6a5fc49cd9795aa519",
+      "source_csv_row": 198,
+      "monitoring_location_id": "21SC60WQ_WQX-SV-833",
+      "activity_id": "21SC60WQ_WQX-AF55437",
+      "original_result_identifier": "STORET-1118110486"
+    },
+    {
+      "original_source_path": "original/sv833-nutrient-narrow-result-identifiers-2021-20261013-original.csv",
+      "original_source_sha256": "8e59ef65aed6093df0df015d2f94bc7e3f0ba876b5497c6a5fc49cd9795aa519",
+      "source_csv_row": 199,
+      "monitoring_location_id": "21SC60WQ_WQX-SV-833",
+      "activity_id": "21SC60WQ_WQX-AF56404",
+      "original_result_identifier": "STORET-1118112187"
+    },
+    {
+      "original_source_path": "original/sv833-nutrient-narrow-result-identifiers-2021-20261013-original.csv",
+      "original_source_sha256": "8e59ef65aed6093df0df015d2f94bc7e3f0ba876b5497c6a5fc49cd9795aa519",
+      "source_csv_row": 200,
+      "monitoring_location_id": "21SC60WQ_WQX-SV-833",
+      "activity_id": "21SC60WQ_WQX-AF55437",
+      "original_result_identifier": "STORET-1118110492"
+    },
+    {
+      "original_source_path": "original/sv833-nutrient-narrow-result-identifiers-2021-20261013-original.csv",
+      "original_source_sha256": "8e59ef65aed6093df0df015d2f94bc7e3f0ba876b5497c6a5fc49cd9795aa519",
+      "source_csv_row": 201,
+      "monitoring_location_id": "21SC60WQ_WQX-SV-833",
+      "activity_id": "21SC60WQ_WQX-AF57985",
+      "original_result_identifier": "STORET-1118115677"
+    },
+    {
+      "original_source_path": "original/sv833-nutrient-narrow-result-identifiers-2021-20261013-original.csv",
+      "original_source_sha256": "8e59ef65aed6093df0df015d2f94bc7e3f0ba876b5497c6a5fc49cd9795aa519",
+      "source_csv_row": 202,
+      "monitoring_location_id": "21SC60WQ_WQX-SV-833",
+      "activity_id": "21SC60WQ_WQX-AF55437",
+      "original_result_identifier": "STORET-1118110494"
+    },
+    {
+      "original_source_path": "original/sv833-nutrient-narrow-result-identifiers-2021-20261013-original.csv",
+      "original_source_sha256": "8e59ef65aed6093df0df015d2f94bc7e3f0ba876b5497c6a5fc49cd9795aa519",
+      "source_csv_row": 203,
+      "monitoring_location_id": "21SC60WQ_WQX-SV-833",
+      "activity_id": "21SC60WQ_WQX-AF55437",
+      "original_result_identifier": "STORET-1125197338"
+    },
+    {
+      "original_source_path": "original/sv833-nutrient-narrow-result-identifiers-2021-20261013-original.csv",
+      "original_source_sha256": "8e59ef65aed6093df0df015d2f94bc7e3f0ba876b5497c6a5fc49cd9795aa519",
+      "source_csv_row": 204,
+      "monitoring_location_id": "21SC60WQ_WQX-SV-833",
+      "activity_id": "21SC60WQ_WQX-AF57985",
+      "original_result_identifier": "STORET-1125205096"
+    },
+    {
+      "original_source_path": "original/sv833-nutrient-narrow-result-identifiers-2021-20261013-original.csv",
+      "original_source_sha256": "8e59ef65aed6093df0df015d2f94bc7e3f0ba876b5497c6a5fc49cd9795aa519",
+      "source_csv_row": 205,
+      "monitoring_location_id": "21SC60WQ_WQX-SV-833",
+      "activity_id": "21SC60WQ_WQX-AF56404",
+      "original_result_identifier": "STORET-1118112186"
+    },
+    {
+      "original_source_path": "original/sv833-nutrient-narrow-result-identifiers-2021-20261013-original.csv",
+      "original_source_sha256": "8e59ef65aed6093df0df015d2f94bc7e3f0ba876b5497c6a5fc49cd9795aa519",
+      "source_csv_row": 206,
+      "monitoring_location_id": "21SC60WQ_WQX-SV-833",
+      "activity_id": "21SC60WQ_WQX-AF56404",
+      "original_result_identifier": "STORET-1125199902"
+    },
+    {
+      "original_source_path": "original/sv833-nutrient-narrow-result-identifiers-2021-20261013-original.csv",
+      "original_source_sha256": "8e59ef65aed6093df0df015d2f94bc7e3f0ba876b5497c6a5fc49cd9795aa519",
+      "source_csv_row": 207,
+      "monitoring_location_id": "21SC60WQ_WQX-SV-833",
+      "activity_id": "21SC60WQ_WQX-AF55437",
+      "original_result_identifier": "STORET-1125197336"
+    },
+    {
+      "original_source_path": "original/sv833-nutrient-narrow-result-identifiers-2021-20261013-original.csv",
+      "original_source_sha256": "8e59ef65aed6093df0df015d2f94bc7e3f0ba876b5497c6a5fc49cd9795aa519",
+      "source_csv_row": 208,
+      "monitoring_location_id": "21SC60WQ_WQX-SV-833",
+      "activity_id": "21SC60WQ_WQX-AF59308",
+      "original_result_identifier": "STORET-1118117566"
+    },
+    {
+      "original_source_path": "original/sv833-nutrient-narrow-result-identifiers-2021-20261013-original.csv",
+      "original_source_sha256": "8e59ef65aed6093df0df015d2f94bc7e3f0ba876b5497c6a5fc49cd9795aa519",
+      "source_csv_row": 209,
+      "monitoring_location_id": "21SC60WQ_WQX-SV-833",
+      "activity_id": "21SC60WQ_WQX-AF59308",
+      "original_result_identifier": "STORET-1125207855"
+    },
+    {
+      "original_source_path": "original/sv833-microbiological-narrow-result-identifiers-2021-20261013-original.csv",
+      "original_source_sha256": "8904954a791b97eb1b33fb488f250427376c77fe946426e6e70c0f82bf7c1870",
+      "source_csv_row": 52,
+      "monitoring_location_id": "21SC60WQ_WQX-SV-833",
+      "activity_id": "21SC60WQ_WQX-AF55437",
+      "original_result_identifier": "STORET-1125197331"
+    },
+    {
+      "original_source_path": "original/sv833-microbiological-narrow-result-identifiers-2021-20261013-original.csv",
+      "original_source_sha256": "8904954a791b97eb1b33fb488f250427376c77fe946426e6e70c0f82bf7c1870",
+      "source_csv_row": 53,
+      "monitoring_location_id": "21SC60WQ_WQX-SV-833",
+      "activity_id": "21SC60WQ_WQX-AF56404",
+      "original_result_identifier": "STORET-1118112180"
+    },
+    {
+      "original_source_path": "original/sv833-microbiological-narrow-result-identifiers-2021-20261013-original.csv",
+      "original_source_sha256": "8904954a791b97eb1b33fb488f250427376c77fe946426e6e70c0f82bf7c1870",
+      "source_csv_row": 54,
+      "monitoring_location_id": "21SC60WQ_WQX-SV-833",
+      "activity_id": "21SC60WQ_WQX-AF57985",
+      "original_result_identifier": "STORET-1125205092"
+    },
+    {
+      "original_source_path": "original/sv833-microbiological-narrow-result-identifiers-2021-20261013-original.csv",
+      "original_source_sha256": "8904954a791b97eb1b33fb488f250427376c77fe946426e6e70c0f82bf7c1870",
+      "source_csv_row": 55,
+      "monitoring_location_id": "21SC60WQ_WQX-SV-833",
+      "activity_id": "21SC60WQ_WQX-AF56404",
+      "original_result_identifier": "STORET-1125199899"
+    },
+    {
+      "original_source_path": "original/sv833-microbiological-narrow-result-identifiers-2021-20261013-original.csv",
+      "original_source_sha256": "8904954a791b97eb1b33fb488f250427376c77fe946426e6e70c0f82bf7c1870",
+      "source_csv_row": 56,
+      "monitoring_location_id": "21SC60WQ_WQX-SV-833",
+      "activity_id": "21SC60WQ_WQX-AF57985",
+      "original_result_identifier": "STORET-1118115671"
+    },
+    {
+      "original_source_path": "original/sv833-microbiological-narrow-result-identifiers-2021-20261013-original.csv",
+      "original_source_sha256": "8904954a791b97eb1b33fb488f250427376c77fe946426e6e70c0f82bf7c1870",
+      "source_csv_row": 57,
+      "monitoring_location_id": "21SC60WQ_WQX-SV-833",
+      "activity_id": "21SC60WQ_WQX-AF55437",
+      "original_result_identifier": "STORET-1118110489"
+    },
+    {
+      "original_source_path": "original/sv833-microbiological-narrow-result-identifiers-2021-20261013-original.csv",
+      "original_source_sha256": "8904954a791b97eb1b33fb488f250427376c77fe946426e6e70c0f82bf7c1870",
+      "source_csv_row": 58,
+      "monitoring_location_id": "21SC60WQ_WQX-SV-833",
+      "activity_id": "21SC60WQ_WQX-AF59308",
+      "original_result_identifier": "STORET-1125207849"
+    },
+    {
+      "original_source_path": "original/sv833-microbiological-narrow-result-identifiers-2021-20261013-original.csv",
+      "original_source_sha256": "8904954a791b97eb1b33fb488f250427376c77fe946426e6e70c0f82bf7c1870",
+      "source_csv_row": 59,
+      "monitoring_location_id": "21SC60WQ_WQX-SV-833",
+      "activity_id": "21SC60WQ_WQX-AF62342",
+      "original_result_identifier": "STORET-1125213530"
+    },
+    {
+      "original_source_path": "original/sv833-microbiological-narrow-result-identifiers-2021-20261013-original.csv",
+      "original_source_sha256": "8904954a791b97eb1b33fb488f250427376c77fe946426e6e70c0f82bf7c1870",
+      "source_csv_row": 60,
+      "monitoring_location_id": "21SC60WQ_WQX-SV-833",
+      "activity_id": "21SC60WQ_WQX-AF59308",
+      "original_result_identifier": "STORET-1118117565"
+    },
+    {
+      "original_source_path": "original/sv833-microbiological-narrow-result-identifiers-2021-20261013-original.csv",
+      "original_source_sha256": "8904954a791b97eb1b33fb488f250427376c77fe946426e6e70c0f82bf7c1870",
+      "source_csv_row": 61,
+      "monitoring_location_id": "21SC60WQ_WQX-SV-833",
+      "activity_id": "21SC60WQ_WQX-AF63274",
+      "original_result_identifier": "STORET-1125216197"
+    }
+  ]
+}

@@ -1,0 +1,21 @@
+{
+  "schema": "upstate.application-component-fragment/v1",
+  "id": "eighteenmile-point-source-native-receiving",
+  "source_reference": "Complete original Eighteenmile 212-file source bank PR3758 and existing native observed-report receiving",
+  "components": {
+    "eighteenmile-point-source-native-receiving": {
+      "title": "Eighteenmile original source and native report receiving",
+      "paths": [
+        "source_tools/receive_point_source_report.py",
+        "docs/EIGHTEENMILE_POINT_SOURCE_NATIVE_RECEIVING.md"
+      ],
+      "requires": [
+        "core",
+        "observed-context"
+      ]
+    }
+  },
+  "required_components": [
+    "eighteenmile-point-source-native-receiving"
+  ]
+}

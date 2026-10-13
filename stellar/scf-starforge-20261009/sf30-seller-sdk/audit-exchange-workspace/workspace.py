@@ -15,14 +15,16 @@ from pathlib import Path
 from urllib.parse import urlparse
 
 from common import AuditError, canonical, decode64, digest, key, now, require, text
+from correction_return import preview as preview_corrections, prepare as prepare_corrections
 from model import analysis_selection, asset_catalog, compare_models, patch_document, validate_document
 from exchange import (APPLICATION_ROOT, SNAPSHOT_FORMAT, application_members, package_bytes,
                       projection, projection_package, review_html, unpack_package)
 
 READ_ACTIONS = {"workspace.get", "source.get", "edition.get", "source.compare", "export.get",
-                "analysis.preview", "projection.preview", "source.page", "source.bytes", "export.read", "operation.get"}
+                "analysis.preview", "projection.preview", "source.page", "source.bytes", "export.read", "operation.get",
+                "return.preview", "return.plan"}
 WRITE_ACTIONS = {"source.import", "source.replace", "source.patch", "source.validate", "edition.save",
-                 "review.save", "link.save", "projection.save", "analysis.run", "analysis.resume", "export.create", "workspace.receive"}
+                 "review.save", "link.save", "projection.save", "analysis.run", "analysis.resume", "export.create", "workspace.receive", "return.apply"}
 APPLICATION_ID = 1096107080
 
 def identifier(prefix):
@@ -217,6 +219,10 @@ class Workspace:
         return {"ok": True, "result": result, "state": state}
 
     def _read(self, db, action, inputs):
+        if action == "return.preview":
+            return preview_corrections(self, db, inputs)
+        if action == "return.plan":
+            return prepare_corrections(self, db, inputs)["publicPlan"]
         if action == "workspace.get":
             return self._state(db)
         if action == "source.get":
@@ -292,6 +298,8 @@ class Workspace:
         return record
 
     def _write(self, db, action, inputs):
+        if action == "return.apply":
+            return self._apply_return(db, inputs)
         if action == "source.import":
             raw = decode64(inputs.get("contentBase64"))
             name = text(inputs.get("name"), "name", blank=False)
@@ -429,6 +437,68 @@ class Workspace:
         if action == "workspace.receive":
             return self._receive(db, decode64(inputs.get("contentBase64"), maximum=1024 * 1024 * 1024), inputs)
         raise AuditError("unknown_action", "The native action is unavailable")
+
+
+    def _apply_return(self, db, inputs):
+        prepared = prepare_corrections(self, db, inputs)
+        plan = prepared["publicPlan"]
+        require(inputs.get("acceptDiagnostics") is True, "return_validation",
+                "Review the complete native validation and accepted source decisions before applying")
+        require(inputs.get("expectedPlanSha256") == plan["planSha256"], "return_plan_changed",
+                "The complete correction plan changed; prepare and review it again",
+                {"planSha256": plan["planSha256"]}, 409)
+        actor = text(inputs.get("actor"), "actor", blank=False)
+        edition_name = text(inputs.get("editionName", "Colleague corrections: " + plan["archive"]["name"]),
+                            "editionName", blank=False)
+        archive = self._export_record(db, prepared["archiveRaw"], "colleague-return",
+            plan["archive"]["name"], actor=actor, note=inputs.get("note", ""),
+            original={"plan": copy.deepcopy(plan)})
+        applied = []
+        for item, selected in zip(prepared["preparedSources"], plan["sources"]):
+            source, previous = item["source"], item["previous"]
+            current = self._get(db, "source", source["id"])
+            require(current["currentRevisionId"] == previous["id"], "return_current_changed",
+                    "The selected original source changed before its correction was saved", status=409)
+            metadata = {"exportId": archive["id"], "packageSha256": archive["sha256"],
+                        "planSha256": plan["planSha256"], "original": copy.deepcopy(item["metadata"])}
+            if item["changed"]:
+                result = self._new_revision(db, source, item["raw"], {
+                    "actor": actor, "note": selected["note"], "patches": item["patches"],
+                    "selectedSchema": previous["selectedSchema"], "profileIds": previous["profileIds"]},
+                    previous)
+                revision_id = result["revisionId"]
+                revision = self._get(db, "revision", revision_id)
+                require(revision["sha256"] == selected["result"]["sha256"]
+                        and revision["bytes"] == selected["result"]["bytes"],
+                        "return_result_changed", "The saved correction differs from the complete reviewed source")
+                revision["colleagueReturn"] = copy.deepcopy(metadata)
+                self._put(db, "revision", revision)
+            else:
+                revision_id = previous["id"]
+            review_ids = []
+            for returned_review in item["returnedReviews"]:
+                result = self._write(db, "review.save", {
+                    **returned_review["fields"], "sourceId": source["id"], "revisionId": revision_id,
+                    "entityKey": returned_review["targetEntityKey"], "actor": actor})
+                review = self._get(db, "review", result["reviewId"])
+                review["colleagueReturn"] = copy.deepcopy(metadata)
+                review["original"] = {"returnedReview": copy.deepcopy(returned_review["original"]),
+                                      "provenance": copy.deepcopy(returned_review["provenance"]),
+                                      "entityMapping": copy.deepcopy(returned_review["mapping"])}
+                self._put(db, "review", review)
+                review_ids.append(review["id"])
+            applied.append({"sourceId": source["id"], "sourceName": source["name"],
+                            "revisionId": revision_id, "previousRevisionId": previous["id"],
+                            "changed": item["changed"], "sha256": selected["result"]["sha256"],
+                            "bytes": selected["result"]["bytes"], "reviewIds": review_ids})
+        edition = self._write(db, "edition.save", {
+            "name": edition_name, "actor": actor,
+            "note": inputs.get("note", "") or "Complete reviewed colleague return " + archive["sha256"]})
+        archive["editionId"] = edition["editionId"]
+        self._put(db, "export", archive)
+        return {"format": "commons.audit-exchange.correction-applied.v1",
+                "workspaceId": self._meta(db)["workspaceId"], "planSha256": plan["planSha256"],
+                "archive": archive, "sources": applied, "edition": edition}
 
     def _selected_details(self, db, edition_id=None):
         if edition_id:
@@ -643,7 +713,10 @@ class Workspace:
         for sha, data in objects.items():
             self._object(db, data)
 
-        preserved = {"original", "receivedFrom", "receivedHistory", "derivedHistory", "receivedValidation", "nativeIdentity"}
+        # Analytical selections identify immutable original input, including frozen editions.
+        # Remap their enclosing operating records while keeping the selected input digest intact.
+        preserved = {"original", "receivedFrom", "receivedHistory", "derivedHistory", "receivedValidation", "nativeIdentity",
+                     "selection", "selectionSummary"}
         def remap(value, field=None):
             if field in preserved:
                 return copy.deepcopy(value)

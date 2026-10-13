@@ -93,6 +93,9 @@ class MeasuredObservationExtension:
     def read(self, workspace, operation, payload):
         try:
             if operation == 'bind-domain': return self.bind_domain(workspace,payload)
+            if operation == 'chemistry':
+                from .chemistry import handle
+                return handle(workspace, self._service(workspace), payload)
             method=payload.get('method','GET');path=payload.get('path','')
             if method not in {'GET','POST','PUT'} or not isinstance(path,str):
                 raise ValueError('Unsupported measured-data operation')

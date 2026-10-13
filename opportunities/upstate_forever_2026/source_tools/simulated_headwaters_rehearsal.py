@@ -6,6 +6,7 @@ rehearsal input. operator/rehearsal_receiving.py owns tasks, media and receiving
 """
 from __future__ import annotations
 import argparse
+from datetime import datetime, timezone
 import hashlib
 import json
 from pathlib import Path
@@ -15,6 +16,7 @@ APP = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(APP))
 from model.common import atomic_bytes, atomic_json, file_digest, held, identifier, read_json
 from model.workspace import Workspace
+from source_tools.demo_deadline import CUTOFF, DemoDeadlineReached, cutoff_guard
 
 DEMO_ID = "upstate-simulated-piedmont-headwaters-v1"
 RECEIPT_SCHEMA = "upstate.simulated-demo-receiving/v1"
@@ -187,8 +189,29 @@ def selected_teaching_case(ws, receipt, selected):
             "progress": plan["progress"], "results": results,
             "course_sha256": file_digest(directory / "headwaters-course.json"),
             "result_sha256": file_digest(result_path) if results is not None else None,
-            "direction": "baseline minus alternative",
-            "support_basis": "Original paired-ensemble products and their per-metric common support",
+            "direction": "product-specific",
+            "product_conventions": {
+                "native_study_report": {
+                    "quantity": "signed annual export change",
+                    "direction": "alternative minus baseline",
+                    "reduction_sign": "negative",
+                    "parameter_direction": "varied-profile baseline minus reference-profile baseline",
+                    "support": "Original pairwise common-valid cells and exact mask identity",
+                },
+                "paired_raster_products": {
+                    "quantity": "annual export reduction",
+                    "direction": "baseline minus alternative",
+                    "reduction_sign": "positive",
+                    "support": "Original per-metric paired raster support",
+                },
+                "joint_siting_decisions": {
+                    "quantity": "avoided annual export",
+                    "direction": "baseline minus alternative",
+                    "reduction_sign": "positive",
+                    "support": "Common finite cells across baseline and all selected alternatives, per metric",
+                },
+            },
+            "support_basis": "Read each named product's retained support; pairwise and joint masks remain distinct",
         }
     return {
         "schema": "upstate.simulated-teaching-selection/v1",
@@ -234,9 +257,11 @@ def teaching_notes(case):
         course = case["parameter_course"]
         notes["parameters"] += " Retained parameter course: " + course["ensemble_id"] + "."
         notes["comparison"] += (
-            " The separate paired-ensemble course uses baseline minus alternative, so a positive "
-            "reduction has the opposite printed sign. Read that product's metric support and member "
-            "completion from its original result; its members remain within the ensemble.")
+            " The course's native study report uses alternative minus baseline; its parameter "
+            "contrasts use varied-profile baseline minus reference-profile baseline. Negative "
+            "change means lower export. Its paired raster reductions and joint siting avoided "
+            "exports use baseline minus alternative, so positive means reduction. Read each named "
+            "product's original metric support and native-run completion before comparing values.")
     return notes
 
 
@@ -276,28 +301,35 @@ def teaching_markdown(case):
         text += ("\n## Retained parameter course\n\nEnsemble: " + course["ensemble_id"]
                  + "\n\nNative runs complete: " + str(progress["complete"]) + " / "
                  + str(progress["total"]) + ". Course state: " + str(results.get("state", "prepared"))
-                 + ".\n\nThe paired-ensemble products use baseline minus alternative: positive means "
-                   "reduction. Read their original per-metric common support, profile members and "
-                   "joint decision products. These results remain separate from the ordinary native "
-                   "comparison above.\n")
+                 + ".\n\n"
+                 + table(["Retained product", "Quantity", "Printed direction", "Reduction sign", "Support"],
+                         [[name.replace("_", " "), value["quantity"], value["direction"],
+                           value["reduction_sign"], value["support"]]
+                          for name, value in course["product_conventions"].items()])
+                 + "\n\nThe native study's parameter contrasts hold land cover fixed and use "
+                   "varied-profile baseline minus reference-profile baseline. The ordinary native "
+                   "comparison above and the study's scalar pair report both use negative change "
+                   "for lower export. Paired raster reductions and joint siting avoided exports "
+                   "use positive reduction. Retain their separate masks, profile members and "
+                   "completion states when interpreting the full course.\n")
     return text
 
 
 def bind(receipt_path, output, *, workspace=None, browser=None, operation_id=OPERATION,
-         save_spatial_review=False):
+         save_spatial_review=False, customer_case=None):
     receipt_path = Path(receipt_path).resolve(strict=True)
     # This is the same native case's lock; source binding and receipt continuation
     # cannot overlap the runner's writes. The rehearsal run starts after release.
     if save_spatial_review:
         with held(receipt_path.parent / ".demo-operation.lock", blocking=False):
             return _bind(receipt_path, output, workspace=workspace, browser=browser,
-                         operation_id=operation_id, save_spatial_review=True)
+                         operation_id=operation_id, save_spatial_review=True, customer_case=customer_case)
     return _bind(receipt_path, output, workspace=workspace, browser=browser,
-                 operation_id=operation_id)
+                 operation_id=operation_id, customer_case=customer_case)
 
 
 def _bind(receipt_path, output, *, workspace=None, browser=None, operation_id=OPERATION,
-          save_spatial_review=False):
+          save_spatial_review=False, customer_case=None):
     receipt_path = Path(receipt_path).resolve(strict=True)
     receipt_bytes = receipt_path.read_bytes()
     receipt = json.loads(receipt_bytes)
@@ -382,6 +414,31 @@ def _bind(receipt_path, output, *, workspace=None, browser=None, operation_id=OP
         "fresh_run_ids": [], "step_notes": teaching_notes(case),
         "task_timeout_seconds": 7200, "browser": browser,
     }
+    if receipt.get("programme_id") is not None:
+        from model.common import verify_file
+        programme = receipt.get("programme")
+        if (not isinstance(programme, dict)
+                or programme.get("programme_id") != receipt["programme_id"]):
+            raise ValueError("Retain the selected Programme and its frozen adoption descriptor")
+        adopted = read_json(verify_file(ws.root, programme["adoption"]))
+        if (adopted.get("programme_id") != receipt["programme_id"]
+                or adopted.get("project_id") != ws.project["id"]
+                or not isinstance(adopted.get("operator_opening"), dict)):
+            raise ValueError("Retain the Programme's completed original operator opening")
+        value["programme_receiving"] = {
+            **programme["adoption"], "programme_id": receipt["programme_id"]}
+    from source_tools.simulated_customer_review_recording import bind_case
+    customer = bind_case(ws, receipt, output, source=customer_case)
+    if customer is not None:
+        value["customer_review"] = customer
+    from source_tools.simulated_fieldwork_recording import bind_campaign
+    fieldwork = bind_campaign(ws, receipt, output)
+    if fieldwork is not None:
+        value["fieldwork_receiving"] = fieldwork
+    from source_tools.simulated_qc_comparison_recording import bind_comparison
+    qc_comparison = bind_comparison(ws, receipt, output)
+    if qc_comparison is not None:
+        value["qc_comparison_receiving"] = qc_comparison
     # Use the maintained validator, preserving its current input contract.
     sys.path.insert(0, str(APP / "operator"))
     from rehearsal_receiving import validate
@@ -395,12 +452,88 @@ def _bind(receipt_path, output, *, workspace=None, browser=None, operation_id=OP
     atomic_bytes(teaching / "TEACHING_GUIDE.md", guide.read_bytes(), immutable=True)
     atomic_json(teaching / "selected-case.json", case, immutable=True)
     atomic_bytes(teaching / "selected-case.md", teaching_markdown(case).encode("utf-8"), immutable=True)
+    from source_tools.simulated_headwaters_narration import build_narration, narration_markdown
+    narration = build_narration(case, {"path": "uploads/simulated-headwaters/selected-case.json",
+        "bytes": (teaching / "selected-case.json").stat().st_size,
+        "sha256": file_digest(teaching / "selected-case.json")},
+        programme_id=receipt.get("programme_id"), fieldwork=fieldwork, customer=customer)
+    atomic_json(teaching / "narration-script.json", narration, immutable=True)
+    atomic_bytes(teaching / "narration-script.md", narration_markdown(narration).encode("utf-8"), immutable=True)
     return {"input": str(output / "input.json"), "project_id": ws.project["id"],
             "selection": selected, "receipt_sha256": receipt_sha256,
             "guide": str(teaching / "TEACHING_GUIDE.md"),
             "selected_case": str(teaching / "selected-case.json"),
             "selected_case_sha256": file_digest(teaching / "selected-case.json"),
             "selected_case_guide": str(teaching / "selected-case.md")}
+
+def retain_rehearsal_interruption(args, error, result):
+    """Retain the caller's actual bound selection without changing its source receipt."""
+    checkpoint = {
+        "schema": "upstate.simulated-rehearsal-checkpoint/v1",
+        "operation_id": args.operation_id,
+        "cutoff": CUTOFF.isoformat(),
+        "stopped_at": datetime.now(timezone.utc).isoformat(),
+        "state": "cutoff" if isinstance(error, DemoDeadlineReached) else "interrupted",
+        "stage": "recorded_rehearsal" if result is not None else "bind_recorded_rehearsal",
+        "source_receipt": str(args.receipt.resolve()),
+        "output_directory": str(args.output.resolve()),
+        "error": {"type": type(error).__name__, "message": str(error)},
+        "automatic_resume": False,
+        "continuation": ("Retain the original input, requests, recordings and saved Workspace. "
+                         "Continue only after an explicit new owner request."),
+    }
+    if result is None:
+        # Binding can be interrupted before a safe independent output is established.
+        # Keep that original exception; do not write into an unvalidated directory.
+        return checkpoint
+    input_path = Path(result["input"]).resolve(strict=True)
+    value = read_json(input_path)
+    output = Path(value["output_directory"]).resolve(strict=True)
+    if (input_path != output / "input.json"
+            or value["operation_id"] != args.operation_id
+            or output != args.output.resolve()):
+        raise ValueError("The original bound rehearsal output changed")
+    checkpoint["input"] = {"path": str(input_path), "sha256": file_digest(input_path)}
+    checkpoint["project_id"] = result["project_id"]
+    checkpoint["workspace_directory"] = value["workspace_directory"]
+    checkpoint["selection"] = result["selection"]
+    checkpoint["source_receipt_sha256"] = result["receipt_sha256"]
+    frozen_path = output / "uploads" / "simulated-headwaters" / "original-demo-receiving.json"
+    if file_digest(frozen_path) != result["receipt_sha256"]:
+        raise ValueError("The original teaching receipt changed")
+    frozen = read_json(frozen_path)
+    checkpoint["frozen_source_receipt"] = str(frozen_path.relative_to(output))
+    names = ("project_id", "source_collection_id", "grid_id", "profile_id",
+             "baseline_run_id", "alternative_run_ids", "comparison_id", "delivery_id",
+             "spatial_review_id", "spatial_review_ids", "fieldwork_operation_id",
+             "programme_id", "ensemble_id")
+    checkpoint["source_ids"] = {name: frozen[name] for name in names if name in frozen}
+    customer = frozen.get("customer_review")
+    if isinstance(customer, dict):
+        checkpoint["customer_review_ids"] = {
+            name: customer[name] for name in (
+                "operation_id", "original_review_id", "response_id",
+                "planning_handback_id", "revised_review_id", "handback_id")
+            if name in customer}
+    comparison = frozen.get("qc_comparison")
+    if isinstance(comparison, dict):
+        checkpoint["qc_comparison_ids"] = {
+            name: comparison[name] for name in (
+                "operation_id", "field_operation_id", "plan_id",
+                "comparison_report_id", "comparison_id") if name in comparison}
+    checkpoint["retained_progress"] = [
+        {"path": str(path.relative_to(output)), "bytes": path.stat().st_size,
+         "sha256": file_digest(path)}
+        for path in (output / "results" / "native.json",
+                     output / "results" / "complete.json",
+                     output / "browser" / "results" / "browser-progress.json",
+                     output / "browser" / "result.json")
+        if path.is_file()
+    ]
+    path = output / "results" / "demo-rehearsal-checkpoint.json"
+    atomic_json(path, checkpoint)
+    return checkpoint
+
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
@@ -412,6 +545,8 @@ def main():
     parser.add_argument("--browser-config", type=Path,
                         help="JSON with existing absolute node/playwright_module/executable paths")
     parser.add_argument("--operation-id", default=OPERATION)
+    parser.add_argument("--customer-case", type=Path,
+                        help="Current complete original customer export path after relocating the same case")
     parser.add_argument("--save-spatial-review", action="store_true",
                         help="Save the existing paired native map and retain its ID in this same case receipt")
     parser.add_argument("--run", action="store_true",
@@ -419,14 +554,25 @@ def main():
     parser.add_argument("--native-only", action="store_true",
                         help="Retain native phase before the configured authorized browser continuation")
     args = parser.parse_args()
-    browser = read_json(args.browser_config) if args.browser_config else None
-    result = bind(args.receipt, args.output, workspace=args.workspace,
-                  browser=browser, operation_id=args.operation_id,
-                  save_spatial_review=args.save_spatial_review)
-    if args.run:
-        from rehearsal_receiving import run
-        result["receiving"] = run(Path(result["input"]), skip_browser=args.native_only)
-    print(json.dumps(result, ensure_ascii=False, indent=2))
+    result = None
+    try:
+        with cutoff_guard():
+            browser = read_json(args.browser_config) if args.browser_config else None
+            result = bind(args.receipt, args.output, workspace=args.workspace,
+                          browser=browser, operation_id=args.operation_id,
+                          save_spatial_review=args.save_spatial_review, customer_case=args.customer_case)
+            if args.run:
+                from rehearsal_receiving import run
+                result["receiving"] = run(Path(result["input"]), skip_browser=args.native_only)
+            print(json.dumps(result, ensure_ascii=False, indent=2))
+    except KeyboardInterrupt as error:
+        try:
+            checkpoint = retain_rehearsal_interruption(args, error, result)
+            print(json.dumps(checkpoint, ensure_ascii=False, indent=2), file=sys.stderr)
+        except (OSError, ValueError, KeyError, TypeError) as save_error:
+            if hasattr(error, "add_note"):
+                error.add_note("Rehearsal interruption checkpoint could not be saved: " + str(save_error))
+        raise
 
 if __name__ == "__main__":
     main()

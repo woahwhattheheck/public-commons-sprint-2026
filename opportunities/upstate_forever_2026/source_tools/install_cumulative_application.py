@@ -113,6 +113,73 @@ def apply_function(root, transforms, label, records):
 
 def diagnostic_join(root, records):
     package = module(root, "operator/install_diagnostics.py")
+    descriptor_path = root / "operator/extensions/experiment-diagnostics.json"
+    if descriptor_path.is_file():
+        descriptor = json.loads(descriptor_path.read_text("utf-8"))
+        backend = descriptor.get("backend", {})
+        factory = backend.get("factory", {})
+        if (descriptor.get("schema") != "upstate.operator-extension/v1"
+                or descriptor.get("id") != "experiment-diagnostics"
+                or backend.get("module") != "experiment_diagnostics"
+                or factory.get("handler", factory.get("name")) != "ExperimentDiagnostics"
+                or factory.get("args") != ["operator", "fault"]
+                or "diagnostics.analyze" not in backend.get("actions", [])
+                or backend.get("invoke") != {"handler": "invoke", "args": ["task"]}
+                or backend.get("decorate_task") != {"handler": "decorate_task", "args": ["task"]}
+                or backend.get("state") != {"key": "experiment_diagnostics",
+                                             "handler": "summaries", "args": ["workspace_key"]}):
+            raise ValueError("Compose the current Scientific interpretation registration")
+        routes = backend.get("routes", [])
+        for operation in ("catalog", "item", "experiment"):
+            expected = {"methods": ["GET"], "path": "/api/diagnostics/" + operation,
+                        "operation": operation, "handler": "read",
+                        "args": ["workspace_key", "operation", "payload"]}
+            if routes.count(expected) != 1:
+                raise ValueError("Retain the original Scientific interpretation " + operation + " route")
+        client = descriptor.get("client", {})
+        if (client.get("module") != "/web/retained_desks.mjs"
+                or client.get("factory") != "attachDiagnosticsDesk"
+                or client.get("view", {}).get("id") != "experiment-diagnostics"
+                or client.get("dispatch") != "dispatch" or client.get("task_actions") != "taskActions"
+                or client.get("lifecycle") != {"mount": "mount", "update": "update", "detach": "detach"}):
+            raise ValueError("Retain the original registered Scientific interpretation browser")
+        server = (root / "operator/server.py").read_text("utf-8")
+        browser = (root / "operator/web/app.mjs").read_text("utf-8")
+        if ("ExtensionRegistry" not in server or "self.extensions.extend_state" not in server
+                or "createExtensionHost" not in browser
+                or "DIAGNOSTIC_ACTIONS" in server or "self.experiment_diagnostics" in server
+                or "const experimentDiagnostics=attachExperimentDiagnostics(" in browser):
+            raise ValueError("Compose the Scientific interpretation legacy joins with its registered host")
+        assets = descriptor.get("assets", [])
+        if (not isinstance(assets, list) or len(assets) != len(set(assets))
+                or "retained_desks.mjs" not in assets):
+            raise ValueError("Receive the complete registered Scientific interpretation assets")
+        asset_paths = []
+        for value in assets:
+            if (not isinstance(value, str) or not value or "\\" in value
+                    or Path(value).is_absolute() or ".." in Path(value).parts):
+                raise ValueError("Retain original Scientific interpretation web asset paths")
+            asset_paths.append("operator/web/" + value)
+        source_records = []
+        names = dict.fromkeys((*package["LEAVES"], "operator/extensions/experiment-diagnostics.json",
+                               *asset_paths))
+        for relative in names:
+            body = (root / relative).read_bytes()
+            if relative.endswith(".py"):
+                ast.parse(body, filename=relative)
+            source_records.append({"path": relative, "bytes": len(body), "sha256": sha(body)})
+        # The current author's report installer verifies its complete adapter,
+        # registry descriptor, scientific-edition host and source transfer joins.
+        # The earlier direct-host patch list belongs only to legacy applications.
+        report_installer = root / "operator/install_diagnostic_reports.py"
+        if "diagnostics.report.prepare" in backend.get("actions", []) and not report_installer.is_file():
+            raise ValueError("Receive the complete original Scientific interpretation report installer")
+        report_result = (module(root, "operator/install_diagnostic_reports.py")["install"](root, root)
+                         if report_installer.is_file() else None)
+        records.append({"component": "Scientific interpretation",
+                        "registration": "maintained extension registry",
+                        "source_files": source_records, "report_source": report_result})
+        return
     pending, changes = {}, []
     for item in package["PATCHES"]:
         path = item["path"]
@@ -183,7 +250,10 @@ def shared_lifecycle(root):
     # Normalize the older fallback before accepting the current one on replay.
     old_confirmation = "toast((actionLabels[action]||action)+' retained.');"
     confirmation = "toast((actionLabels[action] || action)+' retained.');"
-    if old_confirmation in text:
+    extension_installer = module(root, "install_extensions.py")
+    if "action_confirmation" in extension_installer:
+        text = extension_installer["action_confirmation"](text)
+    elif old_confirmation in text:
         text = replace(text, old_confirmation, confirmation,
                        "registered action completion label")
     else:
@@ -207,6 +277,50 @@ def robust_registry_join(root, records):
     if not (root / relative).is_file():
         return
     original = module(root, relative)
+    legacy = original["read_existing"](root, original["LEGACY"])
+    retained = original["read_existing"](root, original["RETIRED"])
+    if legacy is not None and retained is not None and legacy != retained:
+        known = original["LEGACY_PREDECESSORS"]
+        for name, body in ((original["LEGACY"], legacy), (original["RETIRED"], retained)):
+            if (len(body), sha(body)) not in known:
+                raise ValueError("Retain and compose the unknown Decision registration: " + name)
+        # Two known original editions need two retirement slots. Keep the
+        # existing archive untouched and move the active predecessor into its
+        # own byte-identified sibling before the owner's remaining preflight.
+        retired_name = original["RETIRED"] + "." + sha(legacy)
+        retired_body = original["read_existing"](root, retired_name)
+        if retired_body is not None and retired_body != legacy:
+            raise ValueError("Preserve the distinct Decision retirement record: " + retired_name)
+        old = original["target_path"](root, original["LEGACY"])
+        target = original["target_path"](root, retired_name)
+        original_mode = old.stat().st_mode & 0o777
+        if (original["read_existing"](root, original["LEGACY"]) != legacy
+                or original["read_existing"](root, original["RETIRED"]) != retained):
+            raise ValueError("Original Decision registrations changed during retirement")
+        created = False
+        try:
+            if retired_body is None:
+                os.link(old, target)
+                created = True
+            if target.read_bytes() != legacy:
+                raise ValueError("Original Decision retirement differs")
+            old.unlink()
+            original["prepare_legacy_retirement"](root, {})
+        except Exception:
+            # A failed owner preflight does not leave the active source retired.
+            if not old.exists() and target.read_bytes() == legacy:
+                os.link(target, old)
+            if created and old.read_bytes() == legacy and target.read_bytes() == legacy:
+                target.unlink()
+            raise
+        if (target.read_bytes() != legacy or target.stat().st_mode & 0o777 != original_mode
+                or original["read_existing"](root, original["RETIRED"]) != retained):
+            raise ValueError("Distinct original Decision retirement differs")
+        records.append({"component": "Original Decision action registration",
+                        "retained_as": retired_name, "sha256": sha(legacy),
+                        "preserved_retirement": {"path": original["RETIRED"],
+                                                 "bytes": len(retained), "sha256": sha(retained)}})
+        return
     legacy, retained = original["prepare_legacy_retirement"](root, {})
     old = original["target_path"](root, original["LEGACY"])
     target = original["target_path"](root, original["RETIRED"])
@@ -225,6 +339,112 @@ def robust_registry_join(root, records):
                     if legacy is not None or retained is not None else None})
 
 
+def scenario_state_join(root, records):
+    """Keep the current native catalogue as the sole scenario-state reader.
+
+    Earlier Workspaces delegated this list to the extension. The current
+    complete and compact readers share the original mutable-summary catalogue,
+    so installing the older state binding would claim an already populated key.
+    Only that proven duplicate binding is omitted; its full preimage is retained
+    in the installation record, and no Workspace source is changed.
+    """
+    relative = "operator/extensions/scenario-analysis.json"
+    descriptor_path = root / relative
+    if not descriptor_path.is_file():
+        return
+    workspace_path = root / "model/workspace.py"
+    workspace_body = workspace_path.read_bytes()
+    tree = ast.parse(workspace_body, filename="model/workspace.py")
+    classes = [node for node in tree.body
+               if isinstance(node, ast.ClassDef) and node.name == "Workspace"]
+    if len(classes) != 1:
+        raise ValueError("Retain one original scientific Workspace class")
+    methods = {node.name: node for node in classes[0].body
+               if isinstance(node, ast.FunctionDef)}
+
+    def delegates(name):
+        method = methods.get(name)
+        if method is None:
+            return False
+        returns = [node for node in method.body if isinstance(node, ast.Return)]
+        return (len(returns) == 1
+                and isinstance(returns[0].value, ast.Call)
+                and isinstance(returns[0].value.func, ast.Attribute)
+                and isinstance(returns[0].value.func.value, ast.Name)
+                and returns[0].value.func.value.id == "self"
+                and returns[0].value.func.attr == "_overview")
+
+    reader = methods.get("_overview")
+    owns_summary = False
+    if reader is not None:
+        for node in reader.body:
+            if not isinstance(node, ast.Assign) or not isinstance(node.value, ast.Dict):
+                continue
+            if not any(isinstance(target, ast.Name) and target.id == "result"
+                       for target in node.targets):
+                continue
+            for key, value in zip(node.value.keys, node.value.values):
+                if not isinstance(key, ast.Constant) or key.value != "scenario_analyses":
+                    continue
+                owns_summary = (isinstance(value, ast.Call)
+                                and isinstance(value.func, ast.Name)
+                                and value.func.id == "mutable"
+                                and not value.keywords
+                                and len(value.args) == 2
+                                and all(isinstance(arg, ast.Constant) for arg in value.args)
+                                and [arg.value for arg in value.args]
+                                == ["analyses", "summary.json"])
+    if not (owns_summary and delegates("overview") and delegates("operator_overview")):
+        return
+
+    original = descriptor_path.read_bytes()
+    descriptor = json.loads(original)
+    backend = descriptor.get("backend", {})
+    if (descriptor.get("schema") != "upstate.operator-extension/v1"
+            or descriptor.get("id") != "scenario-analysis"
+            or not isinstance(backend, dict)
+            or backend.get("module") != "scenario_analysis_operator"):
+        raise ValueError("Retain the original Scenario analysis registration")
+    state = backend.get("state")
+    if state is None:
+        records.append({"component": "Scenario analysis native state ownership",
+                        "state_key": "scenario_analyses", "changes": []})
+        return
+    conditional = {"key": "scenario_analyses", "handler": "overview",
+                   "args": ["workspace"], "when_missing": True}
+    if state == conditional:
+        # The maintained registry's conditional reader already preserves the
+        # native key and supplies it only to earlier Workspace catalogues.
+        registry = (root / "operator/extension_registry.py").read_bytes()
+        registry_text = registry.decode("utf-8")
+        required = (
+            'state_when_missing = specification.get("when_missing", False)',
+            '"state_when_missing": state_when_missing',
+            'if entry["state_when_missing"]:',
+        )
+        if any(value not in registry_text for value in required):
+            raise ValueError("Receive the maintained conditional extension-state reader")
+        records.append({"component": "Scenario analysis native state ownership",
+                        "state_key": "scenario_analyses", "changes": [],
+                        "conditional_state_binding": state,
+                        "workspace_sha256": sha(workspace_body),
+                        "registry_sha256": sha(registry)})
+        return
+    if state != {"key": "scenario_analyses", "handler": "overview", "args": ["workspace"]}:
+        raise ValueError("Compose the current Scenario analysis state binding with its native reader")
+    del backend["state"]
+    proposed = (json.dumps(descriptor, ensure_ascii=False, indent=2) + "\n").encode("utf-8")
+    if descriptor_path.read_bytes() != original or workspace_path.read_bytes() != workspace_body:
+        raise ValueError("Scenario state ownership changed during cumulative composition")
+    write(descriptor_path, proposed)
+    records.append({"component": "Scenario analysis native state ownership",
+                    "state_key": "scenario_analyses",
+                    "native_readers": ["Workspace.overview", "Workspace.operator_overview"],
+                    "workspace_sha256": sha(workspace_body),
+                    "retained_state_binding": state,
+                    "changes": [{"path": relative, "before": sha(original), "after": sha(proposed)}]})
+
+
 
 def compose(root, records=None, *, source_root=None, application_source=None):
     if records is None:
@@ -239,6 +459,7 @@ def compose(root, records=None, *, source_root=None, application_source=None):
         if retained_source is None or retained_source == root.resolve():
             raise ValueError("Pass the independent retained source_root when composing the Keowee and scientific-review families.")
     robust_registry_join(root, records)
+    scenario_state_join(root, records)
     diagnostic_join(root, records)
     experiments = module(root, "install_experiments.py")
     apply_function(root, [
@@ -685,6 +906,20 @@ def context_desks_join(root, records, *, application_source=None):
             "model/compute_programme.py", "operator/web/programmes.mjs"))
         result = module(root, programme_study_path)["install"](root, root)
         records.append({"component": "Native-study Programme export", "result": result})
+
+    programme_updates_path = "operator/install_programme_source_updates.py"
+    if (root / programme_updates_path).is_file():
+        programme_updates = module(root, programme_updates_path)
+        complete("Source-update Programme successors", programme_updates["FILES"])
+        result = programme_updates["install"](root, root)
+        records.append({"component": "Source-update Programme successors", "result": result})
+
+    programme_reuse_path = "operator/install_programme_reuse.py"
+    if (root / programme_reuse_path).is_file():
+        programme_reuse = module(root, programme_reuse_path)
+        complete("Original native reuse for Programme successors", programme_reuse["FILES"])
+        result = programme_reuse["install"](root, root)
+        records.append({"component": "Original native reuse for Programme successors", "result": result})
 
     point_source_path = "operator/install_point_source_context.py"
     if (root / point_source_path).is_file():

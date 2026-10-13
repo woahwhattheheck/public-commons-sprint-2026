@@ -12,6 +12,16 @@ For a case migration, import the actual originals in Sources, review the complet
 
 Expand the Cases working-file panel to download or restore complete form drafts and original pending commands. These browser drafts are separate from accepted SQLite records. A conflicting tab preserves its own downloadable work; load the selected saved edition explicitly.
 
+## Typed registers, financial reporting and property continuity
+
+**Registers** adds reviewed typed field mappings, original source/target populations, explicit relationship and financial-control selections, two-edition comparison, finding decisions and attributed cutover review. It uses this same project's source intake and original request history. [REGISTER_OPERATOR.md](REGISTER_OPERATOR.md) explains the complete interface; [REGISTER_MIGRATION.md](REGISTER_MIGRATION.md) gives its domain contract.
+
+Each register retains exact textual identity components and explicitly selected text, decimal, date, datetime, boolean or JSON fields. Signed measures stay separated by their selected currency/unit and period groups. Inspect population coverage and original source occurrences when interpreting a finding. A missing target inventory remains visible as unresolved evidence, including when it contains no observed rows.
+
+Expand the Registers working-file panel to download or restore unsubmitted forms and pending original operations. [REGISTER_RECEIVING.md](REGISTER_RECEIVING.md) covers complete CSV/NDJSON exports, readable reports, editable producer/customer returns and the authored seven-register programme.
+
+The header also links to the maintained [financial reporting](FINANCIAL_REPORTING.md) and [property continuity](PROPERTY_CONTINUITY.md) applications. All workflows preserve their original editions in the same SQLite workspace.
+
 ## Open an operating workspace
 
 Use Linux with Python 3.10 or later. The operating application uses the Python standard library. Node is only needed to run the existing standalone audit.
