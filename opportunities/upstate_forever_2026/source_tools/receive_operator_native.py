@@ -272,18 +272,69 @@ def run_locked(args, application, workspace, output, state, runs, deadline):
         receipt.update(changes, updated_at=utc())
         write(receipt_path, receipt)
 
+    keep_operator = False
+
     def checkpoint(task_id=None):
+        nonlocal keep_operator
         if dt.datetime.now(dt.timezone.utc) < deadline:
             return
-        save(state="deadline_reached", deadline=args.deadline)
+        task_id = task_id or receipt.get("active_task_id")
+        cutoff = DeadlineReached("The original task was checkpointed at the selected deadline; no automatic resume is scheduled.")
+        recording_error = None
+
+        def retain_cutoff(**values):
+            nonlocal recording_error
+            try:
+                save(**values)
+            except OSError as error:
+                recording_error = error
+
+        # Stop belongs to the existing supervisor. Receipt capacity must never
+        # prevent its request or detach its escalation monitor prematurely.
         if task_id:
-            task = operator.request("GET", "/api/task", query={"id": task_id})
-            if task["state"] in {"queued", "running"}:
+            keep_operator = True
+            if not operator.startup:
+                operator.start(args.startup_timeout)
+            observed = operator.view(task_id)
+            task, job = observed["task"], observed["native_job"]
+            if task["state"] in {"queued", "running"} or job.get("alive"):
                 result = operator.request("POST", "/api/task/cancel", {"id": task_id})
                 receipt["deadline_stop"] = {"requested_at": utc(), "task_id": task_id,
                                             "state": result.get("state")}
-                save()
-        raise DeadlineReached("The original task was checkpointed at the selected deadline; no automatic resume is scheduled.")
+                retain_cutoff(state="deadline_stopping", deadline=args.deadline)
+                # A reopened operator marks an old task interrupted. Reattach
+                # that same live, stop-marked child so its maintained monitor
+                # performs the original SIGINT/TERM/KILL escalation.
+                after_cancel = operator.view(task_id)
+                stopped_task, stopped_job = after_cancel["task"], after_cancel["native_job"]
+                if stopped_job.get("alive") and stopped_task["state"] not in {"queued", "running"}:
+                    if not stopped_job.get("stop_requested"):
+                        # Queued-task cancellation can race a retained live child.
+                        # The now-inactive original task admits its native Stop.
+                        operator.request("POST", "/api/task/cancel", {"id": task_id})
+                    operator.request("POST", "/api/task/resume", {"id": task_id})
+                end = time.monotonic() + args.stop_timeout
+                while True:
+                    observed = operator.view(task_id)
+                    task, job = observed["task"], observed["native_job"]
+                    receipt["deadline_stop"].update(observed_at=utc(), task_state=task["state"],
+                                                    native_job=public_job(job))
+                    if not job.get("alive") and task["state"] in TERMINAL:
+                        keep_operator = False
+                        break
+                    if time.monotonic() >= end:
+                        retain_cutoff(state="deadline_stop_pending", deadline=args.deadline)
+                        error = ReceivingError("The original supervisor is still stopping its owned worker. Its operator remains running; inspect this same task.")
+                        if recording_error:
+                            raise error from recording_error
+                        raise error
+                    time.sleep(min(args.poll_seconds, 1.0))
+            else:
+                keep_operator = False
+        retain_cutoff(state="deadline_reached", deadline=args.deadline)
+        if recording_error:
+            raise cutoff from recording_error
+        raise cutoff
 
     operator = LocalOperator(application, workspace, state, output, selection["python"], save)
     current = None
@@ -394,7 +445,7 @@ def run_locked(args, application, workspace, output, state, runs, deadline):
     finally:
         # An ordinary close detaches a still-active native child for the same task.
         # No unconditional SIGKILL or implicit fresh worker is introduced.
-        if operator.startup:
+        if operator.startup and not keep_operator:
             try:
                 operator.close(args.close_timeout)
             except Exception as close_error:
@@ -414,12 +465,14 @@ def main(argv=None):
     parser.add_argument("--deadline", required=True, help="Explicit ISO8601 cutoff, including UTC offset.")
     parser.add_argument("--startup-timeout", type=float, default=90)
     parser.add_argument("--close-timeout", type=float, default=60)
+    parser.add_argument("--stop-timeout", type=float, default=90,
+                        help="Time to observe the existing supervisor stop, at least 35 seconds.")
     parser.add_argument("--poll-seconds", type=float, default=1)
     parser.add_argument("--resume-failed", action="store_true",
                         help="Explicitly resume a retained failed/cancelled task once at entry.")
     args = parser.parse_args(argv)
-    if min(args.startup_timeout, args.close_timeout, args.poll_seconds) <= 0:
-        parser.error("Use positive startup/close/poll durations.")
+    if min(args.startup_timeout, args.close_timeout, args.poll_seconds) <= 0 or args.stop_timeout < 35:
+        parser.error("Use positive startup/close/poll durations and at least 35 seconds for the original stop drain.")
     def interrupt(*_):
         raise KeyboardInterrupt("The receiving client was interrupted; retain its original task.")
     previous_term = signal.signal(signal.SIGTERM, interrupt)
