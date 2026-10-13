@@ -7,11 +7,13 @@ from __future__ import annotations
 import argparse
 import base64
 import datetime
+import gzip
 import hashlib
 import json
 import urllib.parse
 import urllib.request
 from pathlib import Path, PurePosixPath
+from decimal import Decimal
 
 from source_tools.capture_water_sources import (
     DOMAIN_HASH, LAYERS, OPERATION, OriginalSource, capture_layer, dump,
@@ -74,18 +76,29 @@ def unpack_bank(bank_path, expected_sha, root):
     return manifest
 
 
-def bounds(envelope):
+def bounds(envelope, exact=False):
+    if exact:
+        from source_tools.original_huc12_bounds import parsed
     if isinstance(envelope, str):
         try:
-            envelope = json.loads(envelope)
+            envelope = parsed(envelope) if exact else json.loads(envelope)
         except json.JSONDecodeError:
-            envelope = [float(x) for x in envelope.split(",")]
-    if isinstance(envelope, list):
+            envelope = [Decimal(x) if exact else float(x) for x in envelope.split(",")]
+    if isinstance(envelope, (list, tuple)):
         result = tuple(envelope)
     else:
-        if envelope.get("spatialReference", {}).get("wkid", 3857) != 3857:
+        reference = envelope.get("spatialReference", {})
+        wkid = reference.get("latestWkid", reference.get("wkid", 3857))
+        if wkid not in ((3857, 102100, 102113) if exact else (3857,)):
             raise ValueError("Retained tile must use native EPSG:3857")
         result = tuple(envelope[key] for key in ("xmin", "ymin", "xmax", "ymax"))
+    if exact:
+        if any(isinstance(value, bool) for value in result):
+            raise ValueError("Native envelope coordinates must be numeric")
+        result = tuple(value if isinstance(value, Decimal) else Decimal(str(value))
+                       for value in result)
+        if any(not value.is_finite() for value in result):
+            raise ValueError("Native envelope coordinates must be finite")
     if len(result) != 4 or not result[0] < result[2] or not result[1] < result[3]:
         raise ValueError("Invalid native envelope")
     return result
@@ -133,7 +146,7 @@ def valid_ids(value):
     return set(value)
 
 
-def original_inventory(root, retained, entry):
+def original_inventory(root, retained, entry, exact=False):
     count_path = member(retained, entry["count"]["path"])
     ids_path = member(retained, entry["ids"]["path"])
     count, ids = json_file(count_path), json_file(ids_path)
@@ -163,8 +176,8 @@ def original_inventory(root, retained, entry):
             raise ValueError("A restricted attribute query cannot cover a whole grid tile")
         if parameters.get("geometryType") != "esriGeometryEnvelope" or str(parameters.get("inSR")) != "3857":
             raise ValueError("Inventory request has incompatible native geometry")
-        scope = bounds(parameters["geometry"])
-        if scope != bounds(entry["envelope"]) or (observed_scope and scope != observed_scope):
+        scope = bounds(parameters["geometry"], exact=exact)
+        if scope != bounds(entry["envelope"], exact=exact) or (observed_scope and scope != observed_scope):
             raise ValueError("Inventory metadata differs from its exact query envelope")
         if observed_relation is not None and parameters["spatialRel"] != observed_relation:
             raise ValueError("Original count and ID requests use different spatial relations")
@@ -179,6 +192,125 @@ def original_inventory(root, retained, entry):
         "ids": relative(root, ids_path),
         "request": requests[1],
     }, requests, observed_scope
+
+
+def load_huc_envelopes(path, expected_sha, archive_path, root):
+    """Verify the complete derived inventory against the unchanged original ZIP."""
+    from source_tools.original_huc12_bounds import extract, parsed, exact_json
+    raw = Path(path).read_bytes()
+    if sha(raw) != expected_sha:
+        raise ValueError("Selected HUC envelope table differs from its published SHA256")
+    report = parsed(raw)
+    if report.get("schema") != "upstate.original-huc12-native-bounds/v1":
+        raise ValueError("Select the original 217-HUC native bounds inventory")
+    actual = extract(Path(archive_path).resolve(strict=True))
+    # The same original ZIP may have been materialized with a different basename.
+    if isinstance(report.get("source"), dict):
+        actual["source"]["archive_name"] = report["source"].get("archive_name")
+    if report != actual:
+        raise ValueError("HUC envelope inventory differs from the original native polygons")
+    retained_path = root / "huc-envelopes" / expected_sha / "original-217-huc12-native-bounds.json"
+    retain(retained_path, raw)
+    grid = []
+    for row in report["rows"]:
+        envelope = {key: row[key] for key in ("xmin", "ymin", "xmax", "ymax")}
+        envelope["spatialReference"] = report["spatial_reference"]
+        grid.append({"id": "huc-" + row["huc12"], "huc12": row["huc12"],
+                     "native_object_id": row["object_id"],
+                     "envelope": exact_json(envelope)})
+    descriptor = {"path": relative(root, retained_path), "bytes": len(raw),
+                  "sha256": expected_sha, "feature_count": len(grid),
+                  "source": report["source"], "spatial_reference": report["spatial_reference"]}
+    # JSON-safe metadata retains original numerical SR fields inside a string.
+    descriptor["spatial_reference_json"] = exact_json(descriptor.pop("spatial_reference"))
+    return grid, descriptor
+
+
+def request_scope(record, kind, exact=False):
+    request = record.get("request", {})
+    if record.get("schema") != "upstate.original-http-response/v1":
+        raise ValueError("Resumed query requires its original HTTP response record")
+    url = urllib.parse.urlsplit(request.get("url", ""))
+    if urllib.parse.urlunsplit(url._replace(query="", fragment="")) != URI + "/query":
+        raise ValueError("Resumed inventory uses a different publisher layer")
+    params = request.get("parameters", {})
+    flag = "returnCountOnly" if kind == "count" else "returnIdsOnly"
+    allowed = {"where", "geometry", "geometryType", "inSR", "spatialRel", "f", flag}
+    if (set(params) - allowed or params.get("where") != "1=1"
+            or params.get("spatialRel") not in RELATIONS
+            or params.get("geometryType") != "esriGeometryEnvelope"
+            or str(params.get("inSR")) != "3857"
+            or str(params.get(flag)).lower() != "true"):
+        raise ValueError("Resumed inventory request is not a complete native envelope query")
+    return bounds(params["geometry"], exact=exact), params["spatialRel"]
+
+
+def prior_query_inventory(root, query, count_records, exact=False):
+    """Keep already completed original tile queries when switching coverage mode."""
+    decoded = {}
+    paths = {}
+    for kind in ("count", "ids"):
+        paths[kind] = member(root, query[kind])
+        raw = paths[kind].read_bytes()
+        decoded[kind] = gzip.decompress(raw) if raw.startswith(b"\x1f\x8b") else raw
+    count, ids = (json.loads(decoded[kind]) for kind in ("count", "ids"))
+    selected = valid_ids(ids.get("objectIds") or [])
+    if (count.get("error") or ids.get("error") or ids.get("exceededTransferLimit")
+            or count.get("count") != len(selected)
+            or ids.get("objectIdFieldName", "OBJECTID") != "OBJECTID"):
+        raise ValueError("Completed resumed inventory differs from its original count/IDs")
+    ids_record_path = member(root, query["request"])
+    ids_record = json_file(ids_record_path)
+    if (ids_record.get("response_sha256") != sha(decoded["ids"])
+            or ids_record.get("response_bytes") != len(decoded["ids"])):
+        raise ValueError("Resumed ID response differs from its original HTTP record")
+    scope, relation = request_scope(ids_record, "ids", exact=exact)
+    count_receipt = None
+    for path, record in count_records.get(sha(decoded["count"]), []):
+        if record.get("response_bytes") != len(decoded["count"]):
+            continue
+        try:
+            count_scope, count_relation = request_scope(record, "count", exact=exact)
+        except ValueError:
+            continue
+        if count_scope == scope and count_relation == relation:
+            count_receipt = path
+            break
+    if count_receipt is None:
+        raise ValueError("Completed count response has no matching original envelope request")
+    return selected, scope, [count_receipt, relative(root, ids_record_path)]
+
+
+def retained_partial_inventories(root, packet, descriptor, selected, covered, exact=False):
+    if packet is None:
+        return
+    if (packet.get("schema") != "upstate.water-context-capture/v1"
+            or packet.get("operation_id") != OPERATION):
+        raise ValueError("Previous capture belongs to a different original operation")
+    layers = [layer for layer in packet.get("layers", []) if layer.get("kind") == "stream_order"]
+    if len(layers) != 1 or layers[0].get("uri") != URI:
+        raise ValueError("Previous capture does not retain the original NHD layer")
+    previous = layers[0]
+    count_records = {}
+    for name in previous.get("companions", []):
+        if PurePosixPath(name).name != "request.json":
+            continue
+        record = json_file(member(root, name))
+        params = record.get("request", {}).get("parameters", {})
+        if (record.get("schema") == "upstate.original-http-response/v1"
+                and str(params.get("returnCountOnly")).lower() == "true"):
+            count_records.setdefault(record.get("response_sha256"), []).append((name, record))
+    known = {(query["count"], query["ids"], query["request"]) for query in descriptor["queries"]}
+    for query in previous.get("queries", []):
+        key = (query["count"], query["ids"], query["request"])
+        if key in known:
+            continue
+        ids, scope, receipts = prior_query_inventory(root, query, count_records, exact=exact)
+        selected.update(ids)
+        covered.add(scope)
+        descriptor["queries"].append(query)
+        descriptor["companions"].extend(receipts)
+        known.add(key)
 
 
 def verify_page(path, expected_ids, metadata):
@@ -240,6 +372,7 @@ def resume(args):
     retained = root / "retained"
     retained.mkdir(exist_ok=True)
     manifest = unpack_bank(args.bank, args.bank_sha256, retained)
+    previous_capture = json_file(root / "capture.json") if (root / "capture.json").is_file() else None
     summary, hucs = load_domain(args.domain_archive, root)
     if tuple(summary["native_bounds"]) != tuple(manifest["target"]["native_bounds_3857"]):
         raise ValueError("Actual original domain bounds differ from this acquisition")
@@ -250,19 +383,26 @@ def resume(args):
     metadata_oids = [f["name"] for f in metadata["fields"] if f["type"] == "esriFieldTypeOID"]
     if metadata_oids != ["OBJECTID"]:
         raise ValueError("Unexpected publisher native object-ID field")
-    grid = manifest["coverage_grid"]
-    target = tuple(summary["native_bounds"])
-    expected_grid = []
-    for row in range(4):
-        for column in range(4):
-            expected_grid.append((
-                target[0] + (target[2] - target[0]) * column / 4,
-                target[1] + (target[3] - target[1]) * row / 4,
-                target[2] if column == 3 else target[0] + (target[2] - target[0]) * (column + 1) / 4,
-                target[3] if row == 3 else target[1] + (target[3] - target[1]) * (row + 1) / 4,
-            ))
-    if [bounds(tile["envelope"]) for tile in grid] != expected_grid:
-        raise ValueError("Coverage grid must exactly cover the retained model-domain envelope")
+    huc_mode = bool(getattr(args, "huc_bounds", None))
+    huc_inventory = None
+    if huc_mode:
+        grid, huc_inventory = load_huc_envelopes(
+            args.huc_bounds, args.huc_bounds_sha256, args.domain_archive, root)
+        target = bounds(summary["native_bounds"], exact=True)
+    else:
+        grid = manifest["coverage_grid"]
+        target = tuple(summary["native_bounds"])
+        expected_grid = []
+        for row in range(4):
+            for column in range(4):
+                expected_grid.append((
+                    target[0] + (target[2] - target[0]) * column / 4,
+                    target[1] + (target[3] - target[1]) * row / 4,
+                    target[2] if column == 3 else target[0] + (target[2] - target[0]) * (column + 1) / 4,
+                    target[3] if row == 3 else target[1] + (target[3] - target[1]) * (row + 1) / 4,
+                ))
+        if [bounds(tile["envelope"]) for tile in grid] != expected_grid:
+            raise ValueError("Coverage grid must exactly cover the retained model-domain envelope")
     record_path = root / "resume-operation.json"
     operation = {
         "schema": "upstate.nhd-original-resume/v1", "operation_id": OPERATION,
@@ -281,7 +421,7 @@ def resume(args):
         relative(root, retained / "inventory-progress.json"), relative(root, record_path),
     ], set()
     for entry in manifest["completed_inventory"]:
-        ids, query, receipts, envelope = original_inventory(root, retained, entry)
+        ids, query, receipts, envelope = original_inventory(root, retained, entry, exact=huc_mode)
         if not (target[0] <= envelope[0] < envelope[2] <= target[2]
                 and target[1] <= envelope[1] < envelope[3] <= target[3]):
             raise ValueError("Retained candidate scope is outside the declared domain envelope")
@@ -295,10 +435,23 @@ def resume(args):
         "companions": companions,
         "scope": {
             "selection": "Complete union of retained and resumed native envelope candidates",
-            "domain_bounds_3857": list(target), "tile_rows": 4, "tile_columns": 4,
+            "domain_bounds_3857": summary["native_bounds"], "tile_rows": 4, "tile_columns": 4,
             "exact_domain_membership": "water_context_geometry.select_domain_objects",
         },
     }
+    if huc_mode:
+        descriptor["scope"].pop("tile_rows")
+        descriptor["scope"].pop("tile_columns")
+        descriptor["scope"].update({
+            "coverage_mode": "original-huc12-envelopes",
+            "huc_envelopes": huc_inventory,
+            "selection": "Complete union of retained broad candidates and original HUC12 envelope candidates",
+        })
+        descriptor["companions"].append(huc_inventory["path"])
+    # Retain completed old tile/HUC inventories before replacing the live capture.
+    # This preserves IDs whose geometry was already received from broader queries.
+    retained_partial_inventories(root, previous_capture, descriptor, selected, covered,
+                                 exact=huc_mode)
     packet = {
         "schema": "upstate.water-context-capture/v1", "operation_id": OPERATION,
         "captured_at": operation["started_at"], "complete_geometry": False,
@@ -350,34 +503,68 @@ def resume(args):
         dump(root / "capture.json", packet)
     descriptor["companions"].append(relative(root, page_progress))
     checkpoint()
-    for index, tile in enumerate(grid):
-        envelope = bounds(tile["envelope"])
-        if envelope_covered(envelope, covered):
-            continue
-        tile_root = root / "query-tiles" / tile["id"]
-        reader = OriginalSource(tile_root, args.timeout)
-        local_summary = dict(summary, native_bounds=list(envelope))
-        result = capture_layer(reader, "stream_order", local_summary, hucs, args.chunk,
-                               counts_only=True, stream_grid=1,
-                               stream_max_depth=args.stream_max_depth,
-                               stream_spatial_relation="index")
-        current_metadata = json_file(member(tile_root, result["metadata"]))
-        for key in ("fields", "hasZ", "hasM", "geometryType", "sourceSpatialReference"):
-            if current_metadata.get(key) != metadata.get(key):
-                raise ValueError("Publisher native schema changed during acquisition")
-        for query in result["queries"]:
-            new_query = {key: relative(root, member(tile_root, value)) for key, value in query.items()}
-            count, ids = json_file(member(root, new_query["count"])), json_file(member(root, new_query["ids"]))
-            native = valid_ids(ids.get("objectIds") or [])
-            if count.get("count") != len(native) or ids.get("exceededTransferLimit"):
-                raise ValueError("Resumed tile count/ID response differs")
-            selected.update(native)
-            descriptor["queries"].append(new_query)
-        descriptor["companions"].extend(relative(root, member(tile_root, p)) for p in result["companions"])
-        descriptor["companions"].append(relative(root, member(tile_root, result["metadata"])))
-        covered.add(envelope)
-        checkpoint()
-        print(json.dumps({"tile": index + 1, "tiles": 16, "candidate_ids": len(selected)}), flush=True)
+    if huc_mode:
+        scopes = [{"id": tile["id"], "geometry": tile["envelope"]} for tile in grid
+                  if not envelope_covered(bounds(tile["envelope"], exact=True), covered)]
+        if scopes:
+            tile_root = root / "query-hucs"
+            reader = OriginalSource(tile_root, args.timeout)
+            result = capture_layer(
+                reader, "stream_order", summary, hucs, args.chunk, counts_only=True,
+                stream_grid=1, stream_max_depth=args.stream_max_depth,
+                stream_spatial_relation="index", native_scopes=scopes)
+            current_metadata = json_file(member(tile_root, result["metadata"]))
+            for key in ("fields", "hasZ", "hasM", "geometryType", "sourceSpatialReference"):
+                if current_metadata.get(key) != metadata.get(key):
+                    raise ValueError("Publisher native schema changed during HUC acquisition")
+            for query in result["queries"]:
+                new_query = {key: relative(root, member(tile_root, value))
+                             for key, value in query.items()}
+                count, ids = json_file(member(root, new_query["count"])), json_file(member(root, new_query["ids"]))
+                native = valid_ids(ids.get("objectIds") or [])
+                if count.get("count") != len(native) or ids.get("exceededTransferLimit"):
+                    raise ValueError("Resumed HUC count/ID response differs")
+                selected.update(native)
+                descriptor["queries"].append(new_query)
+            descriptor["companions"].extend(
+                relative(root, member(tile_root, name)) for name in result["companions"])
+            descriptor["companions"].append(relative(root, member(tile_root, result["metadata"])))
+            for scope in scopes:
+                covered.add(bounds(scope["geometry"], exact=True))
+            checkpoint()
+        if not all(envelope_covered(bounds(tile["envelope"], exact=True), covered) for tile in grid):
+            raise ValueError("Original HUC12 envelopes are not completely covered by native queries")
+        print(json.dumps({"huc_envelopes": len(grid), "queried_huc_envelopes": len(scopes),
+                          "candidate_ids": len(selected)}), flush=True)
+    else:
+        for index, tile in enumerate(grid):
+            envelope = bounds(tile["envelope"])
+            if envelope_covered(envelope, covered):
+                continue
+            tile_root = root / "query-tiles" / tile["id"]
+            reader = OriginalSource(tile_root, args.timeout)
+            local_summary = dict(summary, native_bounds=list(envelope))
+            result = capture_layer(reader, "stream_order", local_summary, hucs, args.chunk,
+                                   counts_only=True, stream_grid=1,
+                                   stream_max_depth=args.stream_max_depth,
+                                   stream_spatial_relation="index")
+            current_metadata = json_file(member(tile_root, result["metadata"]))
+            for key in ("fields", "hasZ", "hasM", "geometryType", "sourceSpatialReference"):
+                if current_metadata.get(key) != metadata.get(key):
+                    raise ValueError("Publisher native schema changed during acquisition")
+            for query in result["queries"]:
+                new_query = {key: relative(root, member(tile_root, value)) for key, value in query.items()}
+                count, ids = json_file(member(root, new_query["count"])), json_file(member(root, new_query["ids"]))
+                native = valid_ids(ids.get("objectIds") or [])
+                if count.get("count") != len(native) or ids.get("exceededTransferLimit"):
+                    raise ValueError("Resumed tile count/ID response differs")
+                selected.update(native)
+                descriptor["queries"].append(new_query)
+            descriptor["companions"].extend(relative(root, member(tile_root, p)) for p in result["companions"])
+            descriptor["companions"].append(relative(root, member(tile_root, result["metadata"])))
+            covered.add(envelope)
+            checkpoint()
+            print(json.dumps({"tile": index + 1, "tiles": 16, "candidate_ids": len(selected)}), flush=True)
     if not received.issubset(selected):
         raise ValueError("Retained native geometry contains IDs outside the complete candidate inventory")
     packet["complete_inventory"] = True
@@ -444,6 +631,8 @@ def main(argv=None):
     parser.add_argument("--bank", required=True, help="Decoded exact source-bank JSON from F0C8UD4L25S revision2 or later")
     parser.add_argument("--bank-sha256", required=True)
     parser.add_argument("--domain-archive", required=True)
+    parser.add_argument("--huc-bounds", help="Exact original-217-huc12-native-bounds.json; uses retained per-HUC envelopes")
+    parser.add_argument("--huc-bounds-sha256", help="SHA256 of the selected original HUC envelope inventory")
     parser.add_argument("--download-directory", default=".", help="Directory containing large original geometry filenames")
     parser.add_argument("--downloads", help="Optional JSON mapping original filename to path or fresh HTTPS download URL")
     parser.add_argument("--output", required=True, help="Resumable original capture directory")
@@ -458,6 +647,8 @@ def main(argv=None):
     args = parser.parse_args(argv)
     if not 1 <= args.chunk <= 2000 or not 0 <= args.stream_max_depth <= 8 or args.timeout < 1:
         parser.error("Choose chunk 1..2000, subdivision depth 0..8 and a positive timeout")
+    if bool(args.huc_bounds) != bool(args.huc_bounds_sha256):
+        parser.error("--huc-bounds and --huc-bounds-sha256 are required together")
     if args.boundary and not args.workspace:
         parser.error("--boundary requires --workspace")
     print(json.dumps(resume(args), ensure_ascii=False, indent=2, sort_keys=True))
