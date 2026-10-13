@@ -2,7 +2,7 @@
   "schema": "upstate.operator-extension/v1",
   "id": "implementation",
   "title": "Implementation & fieldwork",
-  "version": "9",
+  "version": "10",
   "order": 70,
   "assets": [
     "implementation.mjs",
@@ -15,7 +15,8 @@
     "implementation_dispatch.mjs",
     "implementation_briefing.mjs",
     "implementation_evidence.mjs",
-    "implementation_evidence_ui.mjs"
+    "implementation_evidence_ui.mjs",
+    "implementation_source_reports.mjs"
   ],
   "backend": {
     "module": "implementation_operator",
@@ -518,7 +519,8 @@
       "api",
       "endpoint",
       "refresh",
-      "navigate"
+      "navigate",
+      "openScientificReport"
     ],
     "styles": [
       "/web/implementation.css"
