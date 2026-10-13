@@ -31,6 +31,8 @@ from model.workspace import Workspace
 from model import portable
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from conservation import Conservation, ACTIONS as CONSERVATION_ACTIONS, READS as CONSERVATION_READS
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from rehearsal import Rehearsals, ACTIONS as REHEARSAL_ACTIONS, READS as REHEARSAL_READS
 from model.spatial import SpatialReview
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from customer_reviews import CustomerReviews, ACTIONS as CUSTOMER_REVIEW_ACTIONS, READS as CUSTOMER_REVIEW_READS
@@ -50,6 +52,7 @@ ACTIONS = {"source.import", "profile.save", "scenario.save", "grid.prepare",
            "spatial.review.save", "spatial.review.export", "community.table.import", "community.plan.save",
            "community.report.build"}
 ACTIONS.update(CONSERVATION_ACTIONS)
+ACTIONS.update(REHEARSAL_ACTIONS)
 ACTIONS.update(CUSTOMER_REVIEW_ACTIONS)
 ACTIONS.update(EXPERIMENT_ACTIONS)
 ACTIONS.update(PROGRAMME_ACTIONS)
@@ -116,6 +119,7 @@ class Operator:
         self.gates = {}
         self.downloads = {}
         self.conservation = Conservation(self, Fault)
+        self.rehearsals = Rehearsals(self, Fault)
         self.customer_reviews = CustomerReviews(self, Fault)
         self.experiments = ExperimentOperator(self, Fault)
         self.programmes = Programmes(self, Fault)
@@ -291,6 +295,8 @@ class Operator:
         action = task["action"]
         if action in CONSERVATION_ACTIONS:
             return self.conservation.invoke(task)
+        if action in REHEARSAL_ACTIONS:
+            return self.rehearsals.invoke(task)
         if self.extensions.handles_action(action):
             return self.extensions.invoke(task)
         if action in EXPERIMENT_ACTIONS:
@@ -669,12 +675,13 @@ class Operator:
         state = ws.overview()
         state = self.extensions.extend_state(workspace, state)
         state["experiments"] = self.experiments.catalog(workspace)
-        state["compute_programmes"] = self.programmes.catalogue(workspace)["programmes"]
+        from programme_activity import ProgrammeActivity
+        state["compute_programmes"] = ProgrammeActivity(self, Fault).summaries(workspace, state["runs"])
         for row in state["observations"]:
             row["row_count"] = len(row["rows"])
             row.pop("rows")
         for row in state["runs"]:
-            row["stage_summary"] = {k: {x: v for x, v in stage.items() if x in {"started_at", "completed_at"}}
+            row["stage_summary"] = {k: {x: v for x, v in stage.items() if x in {"started_at", "completed_at", "reused_from", "reused_at"}}
                                     | {"file_count": len(stage.get("files", {}))}
                                     for k, stage in row.get("stages", {}).items()}
             row.pop("stages", None)
@@ -698,7 +705,7 @@ class Operator:
                              "community.report.build": "community_reports"}
         if task["action"] in community_actions and task["state"] == "complete":
             task["_downloads"] = self.item(task["workspace"], community_actions[task["action"]], result["id"])["_downloads"]
-        return self.conservation.decorate_task(self.extensions.decorate_task(self.experiments.decorate_task(self.programmes.decorate_task(self.customer_reviews.decorate_task(task)))))
+        return self.conservation.decorate_task(self.rehearsals.decorate_task(self.extensions.decorate_task(self.experiments.decorate_task(self.programmes.decorate_task(self.customer_reviews.decorate_task(task))))))
 
     def open_download(self, key):
         with self.lock:
@@ -829,6 +836,10 @@ class Handler(BaseHTTPRequestHandler):
                 if url.path in conservation_reads:
                     return self.send_json(200, self.app.conservation.read(workspace,
                         conservation_reads[url.path], {name: one(name) for name in ("study_id", "plan_id")}))
+                rehearsal_reads = {"/api/rehearsals/" + name: name for name in REHEARSAL_READS}
+                if url.path in rehearsal_reads:
+                    return self.send_json(200, self.app.rehearsals.read(workspace,
+                        rehearsal_reads[url.path], {name: one(name) for name in ("id", "revision")}))
                 if url.path == "/api/extensions":
                     return self.send_json(200, self.app.extensions.manifest())
                 experiment_reads = {"/api/experiments/" + name: name for name in EXPERIMENT_READS}
@@ -881,7 +892,7 @@ class Handler(BaseHTTPRequestHandler):
                         {name: values[0] for name, values in query.items()}))
                 raise Fault("ROUTE_MISSING", "This operator route does not exist.", 404)
             selected = "index.html" if url.path == "/" else url.path.removeprefix("/web/")
-            if selected not in ({'app.mjs', 'community.css', 'community.mjs', 'experiments.css', 'experiments.mjs', 'index.html', 'programmes.css', 'programmes.mjs', 'receiving_water_spatial.mjs', 'receiving_waters.css', 'receiving_waters.mjs', 'reviews.css', 'reviews.mjs', 'spatial.mjs', 'style.css', 'conservation.mjs', 'conservation.css'} | self.app.extensions.web_assets):
+            if selected not in (({'app.mjs', 'community.css', 'community.mjs', 'experiments.css', 'experiments.mjs', 'index.html', 'programmes.css', 'programmes.mjs', 'receiving_water_spatial.mjs', 'receiving_waters.css', 'receiving_waters.mjs', 'reviews.css', 'reviews.mjs', 'spatial.mjs', 'style.css', 'conservation.mjs', 'conservation.css'} | self.app.extensions.web_assets | {"rehearsal.mjs", "rehearsal.css"})):
                 raise Fault("PAGE_MISSING", "This operator page does not exist.", 404)
             data = (Path(__file__).parent / "web" / selected).read_bytes()
             self.close_connection = True
@@ -1042,10 +1053,6 @@ def main():
         server.server_close()
         server.operator.close()
 
-
-# ASTRA-ECO12-2651 namespaced original-operator integration
-import paired_ensemble as _paired_ensemble_extension
-_paired_ensemble_extension.install(sys.modules[__name__])
 
 if __name__ == "__main__":
     main()

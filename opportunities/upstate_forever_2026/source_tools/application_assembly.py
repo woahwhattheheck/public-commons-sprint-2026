@@ -279,9 +279,22 @@ def join_source_banks(documents):
         layer = layer_from_document(item)
         for name, content in layer.files.items():
             entry = {**layer.metadata[name], "path": name, "content": content}
-            if name in joined and any(joined[name].get(key) != entry.get(key)
-                                      for key in ("bytes", "sha256", "mode")):
-                raise ValueError("Source-bank blocks contain different bodies: " + name)
+            if name in joined:
+                previous = joined[name]
+                if any(previous.get(key) != entry.get(key)
+                       for key in ("bytes", "sha256", "mode")):
+                    raise ValueError("Source-bank blocks contain different bodies: " + name)
+                before, incoming = previous.get("base_sha256"), entry.get("base_sha256")
+                if before is not None and incoming is not None and before != incoming:
+                    raise ValueError("Source-bank blocks select different predecessors: " + name)
+                if before is not None:
+                    entry["base_sha256"] = before
+                declarations = list(previous.get("predecessor_declarations", []))
+                for declared in entry.get("predecessor_declarations", []):
+                    if declared not in declarations:
+                        declarations.append(declared)
+                if declarations:
+                    entry["predecessor_declarations"] = declarations
             joined[name] = entry
         for original in item.get("external_sources", []):
             name = original["path"]
@@ -648,6 +661,31 @@ def read_layer(path, *, payload_sha256=None):
     })
 
 
+def predecessor_sha256(entry, name):
+    """Normalize published predecessor spellings without treating refs as hashes."""
+    declarations = entry.get("predecessor_declarations", [])
+    if not isinstance(declarations, list) or any(not isinstance(item, dict)
+                                                  for item in declarations):
+        raise ValueError("Invalid predecessor declarations: " + name)
+    identities = []
+    for declared in (entry, *declarations):
+        for key in ("base_sha256", "replaces_sha256", "before_sha256"):
+            value = declared.get(key)
+            if value is not None:
+                identities.append((key, value))
+        for key in ("before", "base"):
+            value = declared.get(key)
+            # Existing banks use base="commit-ref"; only objects declare identities.
+            if isinstance(value, dict) and value.get("sha256") is not None:
+                identities.append((key + ".sha256", value["sha256"]))
+    for key, value in identities:
+        if not isinstance(value, str) or not re.fullmatch(r"[0-9a-f]{64}", value):
+            raise ValueError("Invalid predecessor identity " + key + ": " + name)
+    if len({value for _, value in identities}) > 1:
+        raise ValueError("Conflicting predecessor identities: " + name)
+    return identities[0][1] if identities else None
+
+
 def layer_from_document(document, receipt=None):
     """Validate a source-map, current customer component or base64 source bank."""
     if not is_source_document(document):
@@ -718,11 +756,17 @@ def layer_from_document(document, receipt=None):
             raise ValueError("Unsupported source file mode: " + name)
         record = {"bytes": len(body), "sha256": sha256(body), "git_blob": git_blob, "mode": mode,
                   "encoding": member_encoding}
-        expected_base = entry.get("base_sha256", entry.get("replaces_sha256"))
+        expected_base = predecessor_sha256(entry, name)
         if expected_base is not None:
-            if not isinstance(expected_base, str) or not re.fullmatch(r"[0-9a-f]{64}", expected_base):
-                raise ValueError("Invalid predecessor identity: " + name)
             record["base_sha256"] = expected_base
+        declarations = list(entry.get("predecessor_declarations", []))
+        declared = {key: entry[key] for key in (
+            "base_sha256", "replaces_sha256", "before_sha256", "before_bytes",
+            "before", "base_ref", "base_git_blob", "base") if key in entry}
+        if declared and declared not in declarations:
+            declarations.append(declared)
+        if declarations:
+            record["predecessor_declarations"] = declarations
         files[name], checked[name] = content, record
     if sum(record["bytes"] for record in checked.values()) > MAX_BYTES:
         raise ValueError("Source members exceed the receiving limit")
@@ -752,35 +796,61 @@ def compose(layers, *, edition, operation_id=None, include_receiver=True):
         raise ValueError("First layer must be a complete application map or recovered application source")
     if not isinstance(edition, str) or not edition.strip():
         raise ValueError("Choose an application edition")
-    files, metadata, changes, externals = {}, {}, [], {}
+    files, metadata, changes, externals, references = {}, {}, [], {}, {}
     for index, layer in enumerate(layers):
         origin = layer.receipt["payload_sha256"]
         for name, content in sorted(layer.files.items()):
             item = dict(layer.metadata[name])
             previous = metadata.get(name)
             expected = item.pop("base_sha256", None)
-            if expected is not None and (previous is None or previous["sha256"] not in
-                                         (expected, item["sha256"])):
-                raise ValueError("Selected predecessor differs for layer " + str(index) + ": " + name)
+            declarations = item.pop("predecessor_declarations", [])
             item["mode"] = item["mode"] or (previous or {}).get("mode") or "100644"
-            if previous and previous["sha256"] == item["sha256"] and item["git_blob"] is None:
-                item["git_blob"] = previous.get("git_blob")
-            prior_origins = list((previous or {}).get("origins", []))
-            item["origins"] = prior_origins + ([origin] if origin not in prior_origins else [])
             if previous is None:
                 action = "added"
             elif previous["sha256"] == item["sha256"] and previous["mode"] == item["mode"]:
                 action = "identical"
             else:
                 action = "replaced"
+            # Complete snapshots belong at layer zero. A changed overlay must
+            # identify the actual member it joins; later arrival is not recency.
+            if ((action == "added" and expected is not None)
+                    or (action == "replaced"
+                        and (expected is None or expected != previous["sha256"]))):
+                current = previous["sha256"] if previous else "<absent>"
+                raise ValueError(
+                    "Source join differs for layer " + str(index) + ": " + name
+                    + "; current_sha256=" + current
+                    + "; incoming_sha256=" + item["sha256"]
+                    + "; expected_predecessor_sha256=" + (expected or "<undeclared>")
+                    + ". Join this member against the current source and publish its "
+                    + "before_sha256; unchanged bodies and new members compose directly.")
+            if previous and previous["sha256"] == item["sha256"] and item["git_blob"] is None:
+                item["git_blob"] = previous.get("git_blob")
+            prior_origins = list((previous or {}).get("origins", []))
+            item["origins"] = prior_origins + ([origin] if origin not in prior_origins else [])
             if index or action != "identical":
-                changes.append({"layer": index, "path": name, "action": action,
-                                "previous_sha256": previous["sha256"] if previous else None,
-                                "sha256": item["sha256"]})
+                change = {"layer": index, "path": name, "action": action,
+                          "previous_sha256": previous["sha256"] if previous else None,
+                          "sha256": item["sha256"]}
+                if expected is not None:
+                    change["base_sha256"] = expected
+                if declarations:
+                    change["predecessor_declarations"] = declarations
+                changes.append(change)
             files[name], metadata[name] = content, item
+        def keep_reference(original):
+            if (not isinstance(original, dict) or not isinstance(original.get("reference"), str)
+                    or not original["reference"]):
+                raise ValueError("Invalid original external-reference declaration")
+            references[canonical(original)] = dict(original)
+        for original in layer.document.get("external_references", []):
+            keep_reference(original)
         for original in layer.document.get("external_sources", []):
             if not isinstance(original, dict):
                 raise ValueError("Invalid original external-source declaration")
+            if "path" not in original and isinstance(original.get("reference"), str):
+                keep_reference(original)
+                continue
             name = source_member_name(original.get("path"), layer.document.get("prefix"))
             original = {**original, "path": name}
             checked_bytes(original.get("bytes"), name, limit=(1 << 63) - 1)
@@ -812,6 +882,7 @@ def compose(layers, *, edition, operation_id=None, include_receiver=True):
         "members": {name: {key: item[key] for key in ("bytes", "sha256", "mode")}
                     for name, item in sorted(metadata.items())},
         "external_sources": [externals[name] for name in sorted(externals)],
+        "external_references": [references[key] for key in sorted(references)],
     }
     assembly_id = sha256(canonical(composition))
     return {
@@ -822,6 +893,7 @@ def compose(layers, *, edition, operation_id=None, include_receiver=True):
         "state": "source_stage_complete_application",
         "files": dict(sorted(files.items())), "file_metadata": dict(sorted(metadata.items())),
         "assembly": composition, "external_sources": composition["external_sources"],
+        "external_references": composition["external_references"],
     }
 
 

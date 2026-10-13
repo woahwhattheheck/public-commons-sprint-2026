@@ -1,4 +1,5 @@
 import {attachConservation} from './conservation.mjs';
+import {attachRehearsal} from './rehearsal.mjs';
 import {createSpatialWorkspace} from './spatial.mjs';
 import {attachCommunity} from './community.mjs';
 import {attachCustomerReviews} from './reviews.mjs';
@@ -24,8 +25,8 @@ const table = (heads, rows) => '<div class="table-scroll"><table><thead><tr>'+he
 const defs = obj => '<dl class="definition">'+Object.entries(obj).map(([k,v])=>'<dt>'+esc(human(k))+'</dt><dd>'+(typeof v==='object'?'<span class="mono">'+esc(pretty(v))+'</span>':esc(v??'—'))+'</dd>').join('')+'</dl>';
 const button = (action,label,extra='',style='') => '<button type="button" class="'+esc(style)+'" data-action="'+esc(action)+'" '+extra+'>'+esc(label)+'</button>';
 const named = (kind,id) => {const row=state?.data?.[kind]?.find(x=>x.id===id);return row?.title||row?.metadata?.title||row?.spec?.title||row?.selection?.title||short(id);};
-const viewLabels={conservation:'Conservation plans','receiving-waters':'Receiving waters',experiments:'Scenario experiments',programmes:'Run programmes',overview:'Workspace overview',sources:'Original sources',profiles:'Parameter profiles',grids:'Model grids',scenarios:'Land-cover scenarios',runs:'Native model runs',comparisons:'Run comparisons',spatial:'Spatial review',communities:'Communities','customer-reviews':'Customer reviews',observations:'Observed water quality',deliveries:'Maps and delivery'};
-const actionLabels={'conservation.experiment.prepare':'Prepare paired conservation experiment','conservation.criteria.prepare':'Prepare original parcel criteria','conservation.prepare':'Prepare conservation study','conservation.build':'Build conservation inventory','conservation.plan.save':'Save conservation plan','conservation.export':'Export conservation packet','conservation.scenario.create':'Create selected-land scenario','paired_ensemble.build':'Build paired ensemble','paired_ensemble.resume':'Continue paired ensemble','paired_ensemble.export':'Export paired ensemble','paired_ensemble.receive':'Receive paired ensemble','receiving.water.catalog':'Compile published waters','receiving.water.plan':'Prepare receiving areas','receiving.water.profile':'Prepare utility areas','receiving.water.analyze':'Analyze receiving waters','experiment.save':'Save experiment design','experiment.run':'Run scenario experiment','experiment.summarize':'Build experiment report','compute.programme.experiment':'Use saved experiment','compute.programme.save':'Save run programme','compute.programme.run':'Continue run programme','compute.programme.report':'Build result catalogue','compute.programme.delivery':'Build programme delivery','customer.review.create':'Create customer review','customer.review.export':'Export customer review','customer.review.response.import':'Receive customer response','community.table.import':'Import community table','community.plan.save':'Save intervention plan','community.report.build':'Build community report','spatial.review.save':'Save spatial review','spatial.review.export':'Export saved spatial review','source.import':'Import original sources','profile.save':'Save parameter profile','scenario.save':'Save land-cover scenario','grid.prepare':'Prepare model grid','run.prepare':'Prepare native run','run.start':'Run selected native models','run.compare':'Compare native runs','observation.import':'Import original observations','observation.compare':'Compare observed annual loads','delivery.build':'Build complete map delivery','workspace.backup':'Back up scientific workspace','workspace.restore':'Restore scientific workspace'};
+const viewLabels={conservation:'Conservation plans',rehearsal:'Operator rehearsal','receiving-waters':'Receiving waters',experiments:'Scenario experiments',programmes:'Run programmes',overview:'Workspace overview',sources:'Original sources',profiles:'Parameter profiles',grids:'Model grids',scenarios:'Land-cover scenarios',runs:'Native model runs',comparisons:'Run comparisons',spatial:'Spatial review',communities:'Communities','customer-reviews':'Customer reviews',observations:'Observed water quality',deliveries:'Maps and delivery'};
+const actionLabels={'conservation.experiment.prepare':'Prepare paired conservation experiment','conservation.criteria.prepare':'Prepare original parcel criteria','conservation.prepare':'Prepare conservation study','conservation.build':'Build conservation inventory','conservation.plan.save':'Save conservation plan','conservation.export':'Export conservation packet','conservation.scenario.create':'Create selected-land scenario','compute.programme.pair-completion':'Prepare matching scenario baselines','rehearsal.save':'Save operator rehearsal','rehearsal.begin':'Begin walkthrough step','rehearsal.record':'Record actual step outcome','rehearsal.export':'Export walkthrough and media','paired_ensemble.build':'Build paired ensemble','paired_ensemble.resume':'Continue paired ensemble','paired_ensemble.export':'Export paired ensemble','paired_ensemble.receive':'Receive paired ensemble','receiving.water.catalog':'Compile published waters','receiving.water.plan':'Prepare receiving areas','receiving.water.profile':'Prepare utility areas','receiving.water.analyze':'Analyze receiving waters','experiment.save':'Save experiment design','experiment.run':'Run scenario experiment','experiment.summarize':'Build experiment report','compute.programme.experiment':'Use saved experiment','compute.programme.save':'Save run programme','compute.programme.run':'Continue run programme','compute.programme.report':'Build result catalogue','compute.programme.delivery':'Build programme delivery','customer.review.create':'Create customer review','customer.review.export':'Export customer review','customer.review.response.import':'Receive customer response','community.table.import':'Import community table','community.plan.save':'Save intervention plan','community.report.build':'Build community report','spatial.review.save':'Save spatial review','spatial.review.export':'Export saved spatial review','source.import':'Import original sources','profile.save':'Save parameter profile','scenario.save':'Save land-cover scenario','grid.prepare':'Prepare model grid','run.prepare':'Prepare native run','run.start':'Run selected native models','run.compare':'Compare native runs','observation.import':'Import original observations','observation.compare':'Compare observed annual loads','delivery.build':'Build complete map delivery','workspace.backup':'Back up scientific workspace','workspace.restore':'Restore scientific workspace'};
 const mapFamilies=['future_sediment_loss','future_nutrient_runoff','critical_drinking_water','high_quality_waters','current_nutrient_export','current_sediment_export','combined_pollutant_export'];
 const mapTitles={future_sediment_loss:'Future sediment loss',future_nutrient_runoff:'Future nutrient runoff',critical_drinking_water:'Critical drinking-water sources',high_quality_waters:'Designated high-quality waters',current_nutrient_export:'Current nutrient export',current_sediment_export:'Current sediment export',combined_pollutant_export:'Combined pollutant export'};
 const keyName='upstate-operator-capability';
@@ -52,16 +53,39 @@ async function api(path,{method='GET',body,raw,filename,signal}={}){
 }
 const endpoint = (path, values={}) => path+'?'+new URLSearchParams({...(workspace?{workspace}:{}),...values});
 const conservation=attachConservation({getState:()=>state,api,endpoint,openForm,submitAction,detail,fileList,showTask,toast,closeForm:()=>{formDialog.close();formContext=null;}});
+async function rehearsalOpenControl(control){
+ if(control.type==='view')return navigate(control.view);
+ if(control.type==='item')return openItem(control.kind,control.id);
+ const actions=new Set(['source-open','profile-new','grid-new','scenario-new','run-prepare','run-compare','delivery-new','backup','restore']);
+ if(control.type!=='action'||!actions.has(control.action))throw Error('Choose an original operator control.');
+ const button=document.createElement('button');button.dataset.action=control.action;
+ for(const key of ['id','kind','collection'])if(control[key])button.dataset[key]=control[key];
+ return dispatch(button);
+}
+const rehearsal=attachRehearsal({getState:()=>state,api,endpoint,openItem,showTask,fileList,toast,refreshState:()=>refresh({force:true}),navigate,openControl:rehearsalOpenControl});
 const community=attachCommunity({getState:()=>state,api,endpoint,openForm,submitAction,detail,fileList,sourceForm,toast,openItem});
 const customerReviews=attachCustomerReviews({getState:()=>state,api,endpoint,openForm,submitAction,detail,fileList,uploadFile,showTask,toast,closeForm:()=>{formDialog.close();formContext=null;}});
 const receivingWaters=attachReceivingWaters({getState:()=>state,api,endpoint,openForm,submitAction,detail,fileList,showTask,toast});
 const experiments=attachExperiments({navigate,closeDetail:()=>{detailDialog.close();detailContext=null;},getState:()=>state,api,endpoint,openForm,submitAction,detail,fileList,toast,openItem,showTask});
 const programmes=attachProgrammes({getState:()=>state,api,endpoint,openForm,submitAction,detail,fileList,showTask,toast,openItem,refreshState:refresh,navigate,closeDetail:()=>{detailDialog.close();detailContext=null;}});
+let operatingJourney=null;
+const journeyForm=async open=>{await open();return {operation_id:formContext?.operation_id};};
 const extensions=createExtensionHost({getState:()=>state,getWorkspace:()=>workspace,api,endpoint,toast,
  navigationRoot:'.sidebar',refreshState:refresh,openItem,showTask,showRunLog,navigate,
  openForm,submitAction,detail,fileList,uploadFile,
  closeDetail:()=>{detailDialog.close();detailContext=null;},
  openDelivery:selection=>deliveryForm(undefined,selection),
+ getView:()=>view,reportError:globalError,selectWorkspace,
+ setJourneyController:controller=>{operatingJourney=controller;},
+ openMap:async(kind,id)=>{const target={workspace,kind,id};detailDialog.close();detailContext=null;await spatialWorkspace.openTarget(target);return navigate('spatial');},
+ openScenario:id=>journeyForm(()=>scenarioForm(id)),
+ openProfile:id=>journeyForm(()=>profileForm(id)),
+ openGrid:id=>journeyForm(()=>gridForm(id)),
+ openRun:selection=>journeyForm(()=>runForm(selection)),
+ openComparison:selection=>journeyForm(()=>compareForm(selection)),
+ openJourneyDelivery:(id,selection)=>journeyForm(()=>deliveryForm(id,selection)),
+ openBackup:()=>journeyForm(()=>backupForm()),
+ openRestore:()=>journeyForm(()=>restoreForm()),
  getProgramme:()=>typeof programmes==='undefined'?null:programmes});
 function toast(message){clearTimeout(toastTimer);$('#toast').textContent=message;$('#toast').hidden=false;toastTimer=setTimeout(()=>$('#toast').hidden=true,5500);}
 function globalError(error){$('#global-error').textContent=error.message||String(error);$('#global-error').hidden=false;}
@@ -91,7 +115,7 @@ async function refresh({force=false}={}){
     }
     renderTasks();
     extensions.update(state);
-    const fingerprint=JSON.stringify({conservation_tasks:view==='conservation'?(data.tasks||[]).filter(t=>String(t.action||'').startsWith('conservation.')||['experiment.save','experiment.run','experiment.summarize'].includes(t.action)).map(t=>[t.id,t.state,t.updated_at||null,t.progress||null]):undefined,view,workspace,data:data.data});
+    const fingerprint=JSON.stringify({conservation_tasks:view==='conservation'?(data.tasks||[]).filter(t=>String(t.action||'').startsWith('conservation.')||['experiment.save','experiment.run','experiment.summarize'].includes(t.action)).map(t=>[t.id,t.state,t.updated_at||null,t.progress||null]):undefined,rehearsal_tasks:view==='rehearsal'?(data.tasks||[]).filter(t=>String(t.action||'').startsWith('rehearsal.')).map(t=>[t.id,t.state]):undefined,view,workspace,data:data.data});
     if(force||fingerprint!==lastRendered){render();lastRendered=fingerprint;}
     if(detailContext?.kind==='task')await showTask(detailContext.id,false);
     if(['runs','spatial_exports'].includes(detailContext?.kind)&&detailDialog.open){const kind=detailContext.kind,row=(data.data[kind]||[]).find(x=>x.id===detailContext.id);if(row&&row.state!==detailContext.state)await openItem(kind,row.id,false);}
@@ -113,19 +137,36 @@ function render(){
   if(!state)return;
   if(view==='conservation'){
     if(typeof extensions!=='undefined')extensions.detach();
+    if(typeof experiments!=='undefined')experiments.detach();
+    if(typeof experimentDiagnostics!=='undefined')experimentDiagnostics.detach();
     if(typeof programmes!=='undefined')programmes.detach();
+    if(typeof receivingWaters!=='undefined')receivingWaters.detach();
+    if(typeof rehearsal!=='undefined')rehearsal.detach();
+    if(typeof journey!=='undefined'){journey.detach();journey.updateRail(view);}
+    if(typeof scenarioAnalysis!=='undefined')scenarioAnalysis.detach();
     for(const node of $$('[data-view]'))node.setAttribute('aria-current',node.dataset.view===view?'page':'false');
     if(typeof spatialWorkspace!=='undefined')spatialWorkspace.suspend();
     if(typeof community!=='undefined')community.detach();
     if(typeof customerReviews!=='undefined')customerReviews.detach();
-    if(typeof experiments!=='undefined')experiments.detach();
-    if(typeof experimentDiagnostics!=='undefined')experimentDiagnostics.detach();
-    if(typeof scenarioAnalysis!=='undefined')scenarioAnalysis.detach();
-    if(typeof receivingWaters!=='undefined')receivingWaters.detach();
     $('#content').innerHTML=conservation.render(state);
     conservation.mount($('#content'),state);return;
   }
   conservation.detach();
+  if(view==='rehearsal'){
+    for(const node of $$('[data-view]'))node.setAttribute('aria-current',node.dataset.view===view?'page':'false');
+    if(typeof spatialWorkspace!=='undefined')spatialWorkspace.suspend();
+    if(typeof community!=='undefined')community.detach();
+    if(typeof customerReviews!=='undefined')customerReviews.detach();
+    if(typeof conservation!=='undefined')conservation.detach();
+    if(typeof programmes!=='undefined')programmes.detach();
+    if(typeof scenarioAnalysis!=='undefined')scenarioAnalysis.detach();
+    if(typeof experiments!=='undefined')experiments.detach();
+    if(typeof experimentDiagnostics!=='undefined')experimentDiagnostics.detach();
+    if(typeof receivingWaters!=='undefined')receivingWaters.detach();
+    if(typeof extensions!=='undefined')extensions.detach();
+    rehearsal.mount($('#content'));return;
+  }
+  rehearsal.detach();
   if(!extensions.hasView(view))extensions.detach();
   if(typeof experiments!=='undefined'&&view!=='experiments')experiments.detach();
   if(typeof experimentDiagnostics!=='undefined'&&view!=='experiment-diagnostics')experimentDiagnostics.detach();
@@ -142,6 +183,7 @@ function render(){
   if(view==='overview'){
     const complete=d.runs.filter(x=>x.state==='complete').length;
     html=pageHeader(d.project.title,'Original data, explicit model choices, retained native outputs and a complete receiving package.',button('source-open','Import sources','','primary'));
+    html+='<div class="page-actions">'+button('journey-home','Open guided journey','','primary')+'</div>';
     html+='<div class="cards">'+[
       ['Source editions',d.sources.length,'Retained original files and provenance.'],
       ['Model grids',d.grids.filter(x=>x.state==='complete').length,'Aligned to each study’s original reference grid.'],
@@ -321,10 +363,11 @@ function downloadObservationComparison(){
 
 async function showTask(id,focus=true){
   const requestedWorkspace=workspace,row=await api(endpoint('/api/task',{id}));if(workspace!==requestedWorkspace)return;
+  const registeredActions=await extensions.taskActions(row);if(workspace!==requestedWorkspace)return;
   const body='<div class="meta">'+badge(row.state)+'<span>'+esc(when(row.created_at))+'</span><span>'+row.attempts.length+' retained attempts</span></div>'+(row.error?'<div class="notice error">'+esc(row.error.message)+'</div>':'')+
   (row.result?.workspace_key?'<div class="notice"><strong>Original workspace restored</strong>'+button('workspace-select','Open restored copy','data-id="'+row.result.workspace_key+'"','small')+'</div>':'')+
   (row.action==='spatial.review.export'&&row.result?.id?'<div class="page-actions">'+itemButton('spatial_exports',row.result.id,'Open map pack')+'</div>':'')+
-  programmes.taskActions(row)+receivingWaters.taskActions(row)+customerReviews.taskActions(row)+experiments.taskActions(row)+conservation.taskActions(row)+fileList(row._downloads||[])+'<div class="page-actions">'+(['failed','interrupted','cancelled'].includes(row.state)?button('task-resume','Resume original selection','data-id="'+row.id+'"','primary'):'')+(row.state==='queued'?button('task-cancel','Cancel before start','data-id="'+row.id+'"'):'')+'</div><details class="technical" open><summary>Original selected inputs and attempts</summary><pre class="json-view">'+esc(pretty(row))+'</pre></details>';
+  programmes.taskActions(row)+receivingWaters.taskActions(row)+customerReviews.taskActions(row)+experiments.taskActions(row)+registeredActions+conservation.taskActions(row)+fileList(row._downloads||[])+'<div class="page-actions">'+(['failed','interrupted','cancelled'].includes(row.state)?button('task-resume','Resume original selection','data-id="'+row.id+'"','primary'):'')+(row.state==='queued'?button('task-cancel','Cancel before start','data-id="'+row.id+'"'):'')+'</div><details class="technical" open><summary>Original selected inputs and attempts</summary><pre class="json-view">'+esc(pretty(row))+'</pre></details>';
   detail(actionLabels[row.action]||row.action,body,{kind:'task',id,state:row.state});detailContext.files=row._downloads||[];
   if(focus)$('#detail-body').scrollTop=0;
 }
@@ -353,7 +396,11 @@ function openForm(title,description,html,submit,onSubmit,setup){
 }
 async function submitAction(action,payload){
   if(formContext&&formContext.workspace!==workspace)throw Error('The selected workspace changed. Reopen this form in the intended workspace.');
-  const result=await api('/api/actions',{method:'POST',body:{workspace,action,payload,operation_id:formContext?.operation_id||crypto.randomUUID()}});
+  const submittedOperation=formContext?.operation_id||crypto.randomUUID();
+  const originalRequest={workspace,action,payload,operation_id:submittedOperation};
+  const request=operatingJourney?operatingJourney.beforeSubmission(originalRequest):originalRequest;
+  const result=await api('/api/actions',{method:'POST',body:request});
+  operatingJourney?.acceptTask(result,submittedOperation);
   formDialog.close();formContext=null;
   taskPanel=true;$('#task-panel').hidden=false;
   toast((actionLabels[action] || action)+' retained.');
@@ -568,12 +615,12 @@ async function scenarioForm(id){
   update();
  });
 }
-function runForm(){
+function runForm(selection={}){
  const grids=state.data.grids.filter(x=>x.state==='complete').map(x=>({id:x.id,title:(x.spec.title||'Model grid')+' · '+nativeModelLabel(x.spec)})),profiles=state.data.profiles.map(x=>({id:x.id,title:x.title+' · '+nativeModelLabel(x)})),scenarios=state.data.scenarios;
  if(!grids.length||!profiles.length||!scenarios.length)throw Error('Prepare a model grid, an original parameter profile and a scenario before selecting a native run.');
  openForm('Prepare native model run','Bind the actual grid, parameter table, scenario and selected InVEST models. Start the retained run after reviewing that selection.',
- '<div class="form-grid">'+field('Prepared model grid',select('grid',grids))+
- field('Parameter profile',select('profile',profiles))+field('Land-cover scenario',select('scenario',scenarios))+
+ '<div class="form-grid">'+field('Prepared model grid',select('grid',grids,selection.grid_id))+
+ field('Parameter profile',select('profile',profiles,selection.profile_id))+field('Land-cover scenario',select('scenario',scenarios,selection.scenario_id))+
  field('Native models',select('models',[]),'The choices use models present in both the prepared grid and selected profile.')+
  '<p id="run-model-readiness" class="note full">Choose the grid and profile to see their available models.</p>'+
  '<p class="note full">Each native stage retains its actual arguments, engine source, logs and original outputs. Resuming uses completed stages. An exact stage from another retained run can also be reused with its original provenance.</p></div>','Prepare retained run',
@@ -582,8 +629,8 @@ function runForm(){
   const update=()=>{
    const grid=state.data.grids.find(x=>x.id===val('grid')),profile=state.data.profiles.find(x=>x.id===val('profile'));
    const available=grid&&profile?nativeModels(grid.spec).filter(x=>nativeModels(profile).includes(x)):[];
-   const node=form.elements.namedItem('models'),previous=node.value.split(',');
-   const selected=previous.length&&previous.every(x=>available.includes(x))?node.value:available.join(',');
+   const node=form.elements.namedItem('models'),previous=node.value?node.value.split(','):(Array.isArray(selection.models)&&selection.models.length?selection.models:available);
+   const selected=previous.length&&previous.every(x=>available.includes(x))?previous.join(','):available.join(',');
    setOptions(node,nativeModelOptions(available),selected);
    $('#run-model-readiness').textContent=!grid||!profile?'Choose the grid and profile to see their available models.':available.length?'Ready to calculate '+available.map(x=>x.toUpperCase()).join(' and ')+'.':'These selections have no native model in common. Select a matching profile or extend the prepared grid.';
   };
@@ -668,11 +715,11 @@ async function completedModelsForm(id){
   form.elements.namedItem('source_sdr').addEventListener('change',update);update();
  });
 }
-function compareForm(){
+function compareForm(selection={}){
  const complete=state.data.runs.filter(x=>x.state==='complete');
  if(complete.length<2)throw Error('Complete a baseline and at least one alternative on the same model grid.');
  openForm('Compare completed native runs','Choose runs on the same grid with at least one common native model. Signed differences retain the actual shared pollutants and exact run identities.',
- '<div class="form-grid">'+field('Baseline run',select('baseline',complete.map(x=>[x.id,runTitle(x.id)])),'',true)+'<fieldset class="full"><legend>Alternatives on the same grid</legend><div id="compare-alternatives"></div></fieldset></div>','Compare original runs',
+ '<div class="form-grid">'+field('Baseline run',select('baseline',complete.map(x=>[x.id,runTitle(x.id)]),selection.baseline_run_id),'',true)+'<fieldset class="full"><legend>Alternatives on the same grid</legend><div id="compare-alternatives"></div></fieldset></div>','Compare original runs',
  ()=>{
   const other=chosen('alternatives');if(!other.length)throw Error('Select at least one completed alternative.');
   const ids=[val('baseline'),...other],runs=ids.map(id=>complete.find(x=>x.id===id));
@@ -682,7 +729,7 @@ function compareForm(){
  ()=>{
   const update=()=>{
    const baseline=complete.find(x=>x.id===val('baseline'));
-   $('#compare-alternatives').innerHTML=baseline?checks('alternatives',complete.filter(x=>x.id!==baseline.id&&x.selection.grid_id===baseline.selection.grid_id&&nativeModels(x.selection).some(model=>nativeModels(baseline.selection).includes(model))).map(x=>({id:x.id,title:runTitle(x.id)}))):'<p class="note">Choose the baseline first.</p>';
+   $('#compare-alternatives').innerHTML=baseline?checks('alternatives',complete.filter(x=>x.id!==baseline.id&&x.selection.grid_id===baseline.selection.grid_id&&nativeModels(x.selection).some(model=>nativeModels(baseline.selection).includes(model))).map(x=>({id:x.id,title:runTitle(x.id)})),selection.run_ids||[]):'<p class="note">Choose the baseline first.</p>';
   };
   form.elements.namedItem('baseline').addEventListener('change',update);update();
  });
@@ -805,11 +852,16 @@ function bindDeliverySource(name,requiredField,withFilters){
   form.elements.namedItem(name+'_enabled').addEventListener('change',update);update();
  }
 }
-function readDeliverySource(name,requiredField=true,withFilters=false){
+function readDeliverySource(name,requiredField=true,withFilters=false,retained=null){
  if(!requiredField&&!form.elements.namedItem(name+'_enabled').checked)return null;
  const row={source_collection_id:val(name+'_collection'),source_id:val(name+'_source')};
  if(withFilters){const layer=val(name+'_layer').trim(),where=readFilter(name);if(layer)row.layer=layer;if(where)row.where=where;}
- return row;
+ if(!retained||row.source_collection_id!==retained.source_collection_id||row.source_id!==retained.source_id)return row;
+ if(withFilters){
+  const exact=value=>JSON.stringify(Object.entries(value||{}).sort(([a],[b])=>a.localeCompare(b)));
+  if((row.layer||'')!==(retained.layer||'')||exact(row.where)!==exact(retained.where))return row;
+ }
+ return {...retained,...row};
 }
 async function deliveryForm(id,initialSelection){
  requireSources();const saved=id?await api(endpoint('/api/item',{kind:'deliveries',id})):null,row=saved?.selection||initialSelection;
@@ -840,9 +892,15 @@ async function deliveryForm(id,initialSelection){
  field('Delivery notes',area('notes',(row?.notes||[]).join('\n')),'One original interpretation or delivery note per line.',true)+'</div>',
  'Build complete original delivery',()=>{
   const alternatives=chosen('alternatives');if(!alternatives.length)throw Error('Select at least one completed alternative on the baseline grid.');
-  const source_roles={},selectedOverlays={},weights={},caps={};
-  for(const [key]of roles)source_roles[key]=readDeliverySource('role_'+key);
-  for(const [key,,requiredField]of overlays){const x=readDeliverySource('overlay_'+key,requiredField,true);if(x)selectedOverlays[key]=x;}
+  const source_roles={...(row?.source_roles||{})},selectedOverlays={},weights={},caps={};
+  for(const [key]of roles)source_roles[key]=readDeliverySource('role_'+key,true,false,row?.source_roles?.[key]);
+  for(const [key,,requiredField]of overlays){
+   const x=readDeliverySource('overlay_'+key,requiredField,true,row?.overlays?.[key]);
+   if(x)selectedOverlays[key]=x;
+  }
+  for(const [key,role]of [['high_quality_waters','HIGH_QUALITY_WATERS'],['drinking_water','SOURCE_WATER_PROTECTION_AREAS']]){
+   if(selectedOverlays[key])source_roles[role]=selectedOverlays[key];else delete source_roles[role];
+  }
   for(const key of ['nitrogen_export','phosphorus_export','sediment_export']){
    weights[key]=num('weight_'+key);const cap=num('cap_'+key,form,true);if(cap!==undefined){if(cap<=0)throw Error('A priority cap must be positive.');caps[key]=cap;}
   }
@@ -916,11 +974,13 @@ async function executeAction(action,payload){
 }
 async function navigate(next){
  if(!viewLabels[next]&&!extensions.hasView(next))return;
- view=next;history.replaceState(null,'','#'+next);lastRendered='';render();$('#main').focus();
+ view=next;operatingJourney?.updateRail(next);history.replaceState(null,'','#'+next);lastRendered='';render();$('#main').focus();
 }
 async function selectWorkspace(id){
+ if(operatingJourney?.isBusy())throw Error('Wait for the current journey request before changing workspaces.');
  if(formDialog.open)throw Error('Finish or close the current draft before changing workspaces.');
  conservation.detach();
+ rehearsal.detach();
  extensions.detach();
  spatialWorkspace.suspend();programmes.detach();community.detach();customerReviews.detach();experiments.detach();receivingWaters.detach();workspace=id;state=null;sessionStorage.setItem('upstate-selected-workspace',id);
  detailDialog.close();detailContext=null;lastRendered='';$('#content').innerHTML='<div class="empty"><h2>Opening selected workspace…</h2></div>';await refresh({force:true});
@@ -928,7 +988,7 @@ async function selectWorkspace(id){
 async function dispatch(button){
  if(button.dataset.action?.startsWith('conservation-')){
   if(['conservation-open-study','conservation-open-plan','conservation-use-criteria','conservation-new-parcel-study'].includes(button.dataset.action)){
-   detailDialog.close(); await navigate('conservation');
+   detailDialog.close(); detailContext=null; await navigate('conservation');
   }
   return conservation.dispatch(button);
  }

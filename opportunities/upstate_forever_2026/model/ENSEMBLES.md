@@ -4,7 +4,7 @@ The ensemble capability operates the existing Upper Savannah Workspace and origi
 
 ## Prepare the actual selections
 
-Receive the maintained selected-model source before this ensemble revision. Its model/model_selection.py supplies the shared selection, output and run-scope helpers. The complete source is retained in Canvas F0C8JJQ2JBX (selected-model-source JSON SHA256 247975f02842ccec1fec9b666aafd72db0b236aaa9ce7f96b10efa4bd1c09321); follow model/SELECTED_MODEL_OPERATIONS.md and its guarded receiver when composing the current application.
+Use the maintained complete application. Its model/model_selection.py supplies the shared native selection, output and run-scope helpers. Follow [SELECTED_MODEL_OPERATIONS.md](SELECTED_MODEL_OPERATIONS.md) when preparing or extending the selected-model workspace. The public application carries this dependency with the ensemble source.
 
 
 Select an existing complete grid, its saved observed-land-cover baseline, one or more explicit land-cover alternatives, and the retained scientific profiles to explore. Profiles may point to different actual biophysical tables. The unchanged table source collection, source ID, SHA256 and loading semantics travel with every member.
@@ -91,6 +91,8 @@ actual_selection contains grid_id, baseline_scenario_id, base_profile_ids and al
 
 ## Operate from the command line
 
+The complete headless path is documented in [ENSEMBLE_OPERATIONS.md](ENSEMBLE_OPERATIONS.md). context lists actual saved selections; study-design binds a sourced catalogue study to those selections; run-study prepares, executes and exports the study. continue reopens the same saved ensemble and completes its reports. export builds the printable HTML, CSV/JSON and ZIP release from completed native results. Add --with-raster-products to include the original paired raster products and their portable archives for each saved land-cover alternative.
+
 Run from the original opportunities/upstate_forever_2026 application directory with its equipped Python interpreter. Use the same existing workspace throughout.
 
 ~~~sh
@@ -158,30 +160,51 @@ The immutable plan is ensembles/ID.json. Native runs remain runs/RUN_ID/ with th
 The report schema is upstate.ensemble-report/v1. Its main arrays are rows (land-cover pairs), sensitivity (cross-profile baselines), robustness (same-support ranges) and members. Sources, run_signature, progress, generated_at, model_scope and report_state travel with those arrays. model_scope includes selected_models, omitted_models, expected_artifacts, available_artifacts, selected_models_complete, full_model_selection and full_model_outputs. Completion of an NDR study describes its two nutrient outputs. The complete seven-family delivery uses the combined NDR and SDR model outputs. Member parameter dictionaries include their executed model groups and source-table identity; partial members also carry models. Each row identifies its actual baseline_run_id, alternative_run_id, comparison_id, profile_id, member_id, scenario_id, pollutant and artifact hashes. Root's ensemble report and operator modules consume this interface for the running browser, complete HTML/CSV/JSON export and project handover.
 
 
-## Join the complementary raster analysis
+## Join the shared paired raster desk
 
-The paired scientific design keeps model/ensembles.py, model/ensemble_cli.py, the operator's ensembles view, and actions ensemble.create, ensemble.run and ensemble.report. It saves selected parameter cases, runs the original models and exports scalar physical comparisons.
+The scientific design keeps model/ensembles.py, model/ensemble_cli.py, the
+operator's ensembles view, and actions ensemble.create, ensemble.run and
+ensemble.report. It saves selected parameter cases, runs the original models
+and exports scalar physical comparisons.
 
-The complementary streaming raster implementation uses model.ensemble_workspace.run_workspace, model/ensemble_raster_cli.py, the raster_ensembles view, and actions ensemble.raster.analyze and ensemble.raster.export. Its received source uses ensemble_raster_reports records and ensemble-raster-analyses/ for native analysis files. This callable accepts explicit original baseline_run_id / alternative_run_id pairs for one selected artifact.
+The complete multi-pollutant raster implementation is model/paired_ensemble/.
+Its shared operator view is paired-ensemble, with the original
+paired_ensemble.build, paired_ensemble.resume, paired_ensemble.export and
+paired_ensemble.receive actions. Its product records remain
+paired_ensemble_products, and native files remain in
+ensemble-products/ANALYSIS_ID/.
 
-A separate multi-pollutant EnsembleWorkspace implementation is moving into model/paired_ensemble/. Receive its owner's complete namespaced successor with its own declared actions and view. Two active source owners used the ASTRA-ECO12 operation label; distinguish these implementations by the callable, package path and retained source identity during composition.
-
-Build raster pairs from this plan's actual inspected member runs: use each member's role baseline and the same selected alternative scenario_id. This retains parameter pairing. Complete native runs supply nitrogen_export, phosphorus_export or sediment_export according to their actual model selection. The streaming callable's documented selection is:
+Use the same design-cohort selector as the shared desk and headless workflow:
 
 ~~~python
-from model.ensemble_workspace import run_workspace
+from model.paired_ensemble import EnsembleWorkspace
+from model.paired_ensemble.designs import design_cohort
 
-raster_result = run_workspace(workspace, {
-    "title": actual_title,
-    "artifact": actual_artifact,
-    "pairs": actual_completed_pairs,
-    "support": "complete",
-    "quantiles": [0, 0.05, 0.5, 0.95, 1],
-})
+cohort = design_cohort(workspace, actual_ensemble_id, actual_alternative_scenario_id)
+if cohort["ready"]:
+    product = EnsembleWorkspace(workspace).build(cohort["selection"])
 ~~~
 
-actual_completed_pairs contains objects with baseline_run_id and alternative_run_id from the retained ensemble. Preserve the ensemble ID, selected scenario ID, planned member count and completed pair count with the receiving operation. Pixel fractions use the actual valid paired-member count at that pixel; uncomputed members remain visible through the planned count.
+The selector reads the saved design and actual completed native runs, binds
+each baseline to the same profile's selected land-cover alternative, and
+preserves the planned member count and pending members. Its physically present
+pollutant outputs are restricted to the study's selected model scope.
+The original binder verifies the native raster identities, units, source
+profiles, model version and common reporting grid before analysis.
 
-This engine reports change as alternative minus baseline. The streaming reduction quantity is baseline minus alternative. Negating a reduction quantile requires reversing its probability order: q10(reduction) = -q90(change), and q90(reduction) = -q10(change). The same reversal applies to minima and maxima. Parameter-only baseline sensitivity remains a separate scalar comparison.
+The original CLI is model.paired_ensemble.ensemble_cli. preview, build, pause
+and resume accept --workspace and --selection. export and receive use the
+original portable result project. [PAIRED_ENSEMBLES.md](../PAIRED_ENSEMBLES.md)
+documents those complete commands and the support modes.
 
-For Bryce's walkthrough: "We can change the scientific assumptions and the land-management case separately, then see whether the result stays consistent across the values we chose." Open an actual retained ensemble, show its inputs and member count, run or reopen it, select the alternative, read the paired change and covered area, and export the same report from the operator.
+This engine reports scalar change as alternative minus baseline. The paired
+raster product reports reduction as baseline minus alternative. Negating a
+reduction quantile requires reversing its probability order:
+q10(reduction) = -q90(change), and q90(reduction) = -q10(change).
+The same reversal applies to minima and maxima. Parameter-only baseline
+sensitivity remains a separate scalar comparison.
+
+For the walkthrough, open an actual retained design, show its inputs and member
+count, run or reopen it, select the saved alternative, read the paired change
+and covered area, and export the report. The paired desk accepts that completed
+design cohort directly and opens its spatial result in the same operator.

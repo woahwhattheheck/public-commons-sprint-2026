@@ -237,7 +237,19 @@ def patch_app(source):
     source = source.replace(
         " openProgramme:selection=>typeof programmes!=='undefined'?programmes.create({selection}):extensions.openExtension('programmes','create',{selection})});",
         " getProgramme:()=>typeof programmes==='undefined'?null:programmes});", 1)
-    source = add(source, "function toast(message){", registration, "extension browser instance", before=True)
+    first, last = registration.splitlines(keepends=True)[0], registration.splitlines(keepends=True)[-1]
+    if first not in source:
+        source = add(source, "function toast(message){", registration, "extension browser instance", before=True)
+    else:
+        if source.count(first) != 1 or source.count(last) != 1:
+            raise ValueError("Expected one complete current extension browser instance")
+        start, end = source.index(first), source.index(last, source.index(first)) + len(last)
+        current, cursor = source[start:end], 0
+        for original_line in registration.splitlines(keepends=True):
+            found = current.find(original_line, cursor)
+            if found < 0:
+                raise ValueError("Preserve and compose the current extension host capability: " + original_line.strip())
+            cursor = found + len(original_line)
     source = add(source, "    renderTasks();\n", "    extensions.update(state);\n",
                  "all task refreshes reach active desks")
     source = patch_view_lifecycle(source)

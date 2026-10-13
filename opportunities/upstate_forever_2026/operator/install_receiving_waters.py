@@ -18,7 +18,7 @@ import stat
 import tempfile
 
 
-PREFIX = "waterlink-receiving-waters-4"
+PREFIX = "waterlink-receiving-waters-5"
 REQUIRED = (
     "model/receiving_waters.py",
     "model/receiving_water_spatial.py",
@@ -368,9 +368,19 @@ def join_spatial(text):
 def join_spatial_app(text):
     if "from './receiving_water_spatial.mjs'" not in text:
         text = (
-            "import {isReceivingWaterTarget, receivingWaterTargetMatches, receivingWaterView} "
+            "import {isReceivingWaterTarget, receivingWaterTargetMatches, receivingWaterView, receivingWaterStateSignature} "
             "from './receiving_water_spatial.mjs';\n\n" + text
         )
+    text = replace_once(
+        text, "import {isReceivingWaterTarget, receivingWaterTargetMatches, receivingWaterView} from './receiving_water_spatial.mjs';",
+        "import {isReceivingWaterTarget, receivingWaterTargetMatches, receivingWaterView, receivingWaterStateSignature} from './receiving_water_spatial.mjs';",
+        "receivingWaterView, receivingWaterStateSignature}",
+    )
+    text = replace_once(
+        text, "return JSON.stringify(['sources','grids','runs','comparisons','deliveries','spatial_reviews'].map(kind=>(state.data?.[kind]||[]).map(row=>[row.id,row.state])));",
+        "return JSON.stringify([['sources','grids','runs','comparisons','deliveries','spatial_reviews'].map(kind=>(state.data?.[kind]||[]).map(row=>[row.id,row.state])),receivingWaterStateSignature(state)]);",
+        ",receivingWaterStateSignature(state)]",
+    )
     text = replace_once(
         text, "function groupTitle(name){return ({source:",
         "function groupTitle(name){return ({'receiving-water-plan':'Receiving-water boundaries',"

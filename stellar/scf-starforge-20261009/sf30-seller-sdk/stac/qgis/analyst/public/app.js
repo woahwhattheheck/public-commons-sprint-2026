@@ -48,7 +48,13 @@ function panel(title, ...body) { return element('section', {class: 'panel'}, ele
 function detail(title, value, open = false) { return element('details', {open}, element('summary', {}, title), element('pre', {}, pretty(value))); }
 function note(text) { return element('p', {class: 'muted'}, text); }
 function actions(...items) { return element('div', {class: 'actions'}, ...items); }
-function label(text, input, hint) { return element('label', {class: 'field'}, element('span', {}, text), input, hint && element('small', {}, hint)); }
+function label(text, input, hint) {
+  const title = element('span', {id: id('field-label')}, text);
+  input.setAttribute('aria-labelledby', title.id);
+  const help = hint ? element('small', {id: id('field-hint')}, hint) : null;
+  if (help) input.setAttribute('aria-describedby', help.id);
+  return element('label', {class: 'field'}, title, input, help);
+}
 function inputValue(value, oninput, options = {}) {
   return element('input', {type: 'text', value: value ?? '', ...options, oninput: event => oninput(event.target.type === 'checkbox' ? event.target.checked : event.target.value)});
 }
@@ -227,13 +233,24 @@ function renderOperation() {
 }
 async function render() {
   const epoch = ++renderEpoch, host = $('#content');
-  $('#navigation').replaceChildren(...['sources', 'layers', 'maps', 'editions', 'field', 'parcels', 'transfers', 'history'].map(tab =>
-    button(tab[0].toUpperCase() + tab.slice(1), async () => { currentTab = tab; setDraft('tab', tab); await render(); },
-      {'aria-current': currentTab === tab ? 'page' : undefined})));
-  const result = await ({sources: sourcesPane, layers: layersPane, maps: mapsPane, editions: editionsPane,
-    field: fieldPane, parcels: parcelsPane, transfers: transfersPane, history: historyPane})[currentTab]();
-  if (epoch === renderEpoch) host.replaceChildren(...(Array.isArray(result) ? result : [result]));
-  renderOperation();
+  // A reopened form must not accept edits into the previous draft while its
+  // current source and saved decision are still being read.
+  host.inert = true;
+  host.setAttribute('aria-busy', 'true');
+  try {
+    $('#navigation').replaceChildren(...['sources', 'layers', 'maps', 'editions', 'field', 'parcels', 'transfers', 'history'].map(tab =>
+      button(tab[0].toUpperCase() + tab.slice(1), async () => { currentTab = tab; setDraft('tab', tab); await render(); },
+        {'aria-current': currentTab === tab ? 'page' : undefined})));
+    const result = await ({sources: sourcesPane, layers: layersPane, maps: mapsPane, editions: editionsPane,
+      field: fieldPane, parcels: parcelsPane, transfers: transfersPane, history: historyPane})[currentTab]();
+    if (epoch === renderEpoch) host.replaceChildren(...(Array.isArray(result) ? result : [result]));
+    renderOperation();
+  } finally {
+    if (epoch === renderEpoch) {
+      host.inert = false;
+      host.setAttribute('aria-busy', 'false');
+    }
+  }
 }
 
 
