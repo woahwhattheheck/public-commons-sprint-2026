@@ -1,0 +1,92 @@
+{
+  "schema": "municipal.maximo-install.v1",
+  "operation": "FAHM-MAXIMO-TARGET-RECEIVING-SCOUT-20261013",
+  "files": [
+    {
+      "path": "workspace/maximo_target.py",
+      "bytes": 37563,
+      "sha256": "b2a364b4540964837a401490bb9f2e8c99df3ac3f4cd7d9df242da993c138384",
+      "preimage_sha256": null
+    },
+    {
+      "path": "workspace/adapters.py",
+      "bytes": 13600,
+      "sha256": "2a30ade96084589449262c752dc1c6f59deb4b3adf67800be4dc5b4b52290a60",
+      "preimage_sha256": "1030571cdac393cc0d6d3249aa2316230c50d084fd0da6b1e8372455e3c17821"
+    },
+    {
+      "path": "workspace/engine.py",
+      "bytes": 52069,
+      "sha256": "a1a262e6d4fc9baed8b986e91c4d2170527d480d47f4766fcb772fcc8485f81f",
+      "preimage_sha256": "47cfeaa6b097916d570ade8da3b85031d512a93f9110ed6bfdfc6a75b596a270"
+    },
+    {
+      "path": "workspace/maximo_load.py",
+      "bytes": 18403,
+      "sha256": "c2d6a7beb055702a9b08f98be7c743acb49b418efaa610a33154503dcbbff672",
+      "preimage_sha256": null
+    },
+    {
+      "path": "workspace/server.py",
+      "bytes": 17863,
+      "sha256": "95aa149ec4b6dad9b334e7371e606bb8f4f20d99eff3806a829817d1d2d30023",
+      "preimage_sha256": "8829fe409f302d8b7c2585697f78f3de9ab9130aef3de23d62108f4374f4c848"
+    },
+    {
+      "path": "workspace/package.py",
+      "bytes": 3666,
+      "sha256": "a33ad7c986f5b9dd1ca73e5958e696f153d24f6d546ec609bd35701af3ef87fd",
+      "preimage_sha256": "99e8fb532968cd2c50399dbc5c3523f801da80da201ad0f45dbc05ac074c5a5f"
+    },
+    {
+      "path": "workspace/ui/app.js",
+      "bytes": 52885,
+      "sha256": "b07ce1ce12625efb4600b7e9bf49c11e5109880ef5f0509dcc37589bb0335b62",
+      "preimage_sha256": "285469648dfd323ba194684161c1bedbe8bcadc810b9c7b202286408ce96895d"
+    },
+    {
+      "path": "workspace/maximo_cli.py",
+      "bytes": 5117,
+      "sha256": "5f8bcd063d29d63452c3c7042715eb56b52a8bc8d967a72aa46252668dbf880e",
+      "preimage_sha256": null
+    },
+    {
+      "path": "workspace/MAXIMO_CONTRACT.md",
+      "bytes": 12862,
+      "sha256": "6eaecab157dbea4d9ff9388b7811a61fd0c2b62e88bf4f1607d1e357d1d7abd3",
+      "preimage_sha256": null
+    },
+    {
+      "path": "workspace/MAXIMO.md",
+      "bytes": 13183,
+      "sha256": "a07a66896c6cfcd7803ce784de87dc1360a1705b02d093d6b12a7f199912b210",
+      "preimage_sha256": null
+    }
+  ],
+  "dependencies": [
+    {
+      "path": "workspace/__main__.py",
+      "git_blob_sha": "4c776ca3651e9949a2b8802a151720b49c01f383"
+    },
+    {
+      "path": "workspace/capture_intake.py",
+      "git_blob_sha": "be9d16d793d532147cbba2a457792bd9d25aab1c"
+    },
+    {
+      "path": "workspace/captures.py",
+      "git_blob_sha": "9845236f2fc09c08a981f953ac7810c41e10cebf"
+    },
+    {
+      "path": "workspace/geometry_capture.py",
+      "git_blob_sha": "481ce11d2d12658491ed75e41fec9a4bde3f8f5c"
+    },
+    {
+      "path": "workspace/public_refresh.py",
+      "git_blob_sha": "1e6cf73a8b735585df2ba53cb0f08178dab050eb"
+    },
+    {
+      "path": "workspace/report.py",
+      "git_blob_sha": "53c10ec78bff59fd3f164524103df934ff45672c"
+    }
+  ]
+}
