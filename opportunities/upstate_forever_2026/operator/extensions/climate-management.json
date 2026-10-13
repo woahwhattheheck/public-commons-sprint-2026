@@ -2,17 +2,20 @@
   "schema": "upstate.operator-extension/v1",
   "id": "climate-management",
   "title": "Management across forcing",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "order": 52,
   "assets": [
     "climate_management.mjs",
     "climate_management.css",
-    "climate_management_explorer.mjs"
+    "climate_management_explorer.mjs",
+    "climate_management_working.mjs"
   ],
   "backend": {
     "module": "climate_management",
     "actions": [
-      "climate-management.build"
+      "climate-management.build",
+      "climate-management.working.save",
+      "climate-management.working.export"
     ],
     "invoke": {
       "handler": "invoke",
@@ -63,12 +66,51 @@
           "operation",
           "payload"
         ]
+      },
+      {
+        "methods": [
+          "GET"
+        ],
+        "path": "/api/climate-management/working-list",
+        "operation": "working-list",
+        "handler": "read",
+        "args": [
+          "operator",
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "GET"
+        ],
+        "path": "/api/climate-management/working-view",
+        "operation": "working-view",
+        "handler": "read",
+        "args": [
+          "operator",
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
       }
     ],
     "items": [
       {
         "kind": "climate-management-reports",
         "operation": "report",
+        "handler": "read",
+        "args": [
+          "operator",
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "kind": "climate-management-working",
+        "operation": "working-view",
         "handler": "read",
         "args": [
           "operator",

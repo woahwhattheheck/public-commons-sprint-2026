@@ -19,7 +19,12 @@
         "source_tools/CLIMATE_MANAGEMENT_RECEIVING.md",
         "source_tools/compose.py",
         "source_tools/receive_climate_management_browser.mjs",
-        "source_tools/climate_management_browser_support.py"
+        "source_tools/climate_management_browser_support.py",
+        "model/climate_management_working.py",
+        "model/climate_management_working_transfer.py",
+        "operator/web/climate_management_working.mjs",
+        "operator/CLIMATE_MANAGEMENT_WORKING.md",
+        "source_tools/climate_management_working.py"
       ],
       "requires": [
         "core",
@@ -39,6 +44,7 @@
   ],
   "source_reference": {
     "edition": "climate-management-exploration-20261013",
-    "basis": "Original completed forcing cases, shared finite support and original scientific study delivery"
+    "basis": "Original completed forcing cases, shared finite support and original scientific study delivery",
+    "working_designs": "Original attributed immutable revisions with exact source-bound scenario-role mappings, explicit forks and editable Study delivery before report completion"
   }
 }
