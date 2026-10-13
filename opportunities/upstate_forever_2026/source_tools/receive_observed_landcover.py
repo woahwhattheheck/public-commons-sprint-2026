@@ -20,7 +20,7 @@ from server import Operator, Fault
 from source_report_editions import ScientificReportEditions
 
 SCHEMA = "upstate.selected-huc-native-receiving/v1"
-DEFAULT_HUCS = ["030601010101", "030601010102", "030601010103", "030601010704"]
+DEFAULT_HUCS = ["030601010703", "030601010704", "030601020502", "030601020507"]
 
 
 def required(condition, message):
@@ -267,6 +267,9 @@ def run(args):
     args.output.mkdir(parents=True, exist_ok=True)
     if args.cold_reopen:
         return cold_reopen(args)
+    if args.recipient_handover:
+        from source_tools.receive_observed_landcover_study import run_recipient_handover
+        return run_recipient_handover(args)
     if args.selected_study:
         from source_tools.receive_observed_landcover_study import run_selected_study
         return run_selected_study(args)
@@ -444,6 +447,8 @@ def main(argv=None):
     parser.add_argument("--resume-failed", action="store_true", help="Resume the saved course after repairing its failed phase")
     parser.add_argument("--reviewed-source-revision",
                         help="Reviewed repaired implementation revision; keeps original selection, task and product history")
+    parser.add_argument("--recipient-handover", action="store_true",
+                        help="Receive the complete recipient package for the completed original comparison/report")
     parser.add_argument("--selected-study", action="store_true",
                         help="Continue the completed original selection/report through editable selected-Study receiving")
     parser.add_argument("--cold-reopen", action="store_true", help=argparse.SUPPRESS)
@@ -451,6 +456,8 @@ def main(argv=None):
     parser.add_argument("--report-id", help=argparse.SUPPRESS)
     parser.add_argument("--expected-project-id", help=argparse.SUPPRESS)
     args = parser.parse_args(argv)
+    required(not (args.recipient_handover and (args.selected_study or args.cold_reopen)),
+             "Choose one original receiving continuation at a time")
     required(args.timeout_seconds > 0, "Use a positive original task timeout")
     return run(args)
 
