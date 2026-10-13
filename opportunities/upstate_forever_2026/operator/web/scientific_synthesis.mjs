@@ -1,4 +1,6 @@
 import {DOCUMENT_SCHEMA,WORK_SCHEMA,WORK_BYTES,KINDS,stableJSON,blankDocument,validateDocument,validateReferences,validateWorking,importWorking} from './scientific_synthesis_core.mjs';
+import {attachSynthesisEvidence,referenceEvidenceHTML} from './scientific_synthesis_evidence.mjs';
+import {attachSynthesisComparison} from './scientific_synthesis_compare.mjs';
 const clone=v=>JSON.parse(JSON.stringify(v));
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const key=s=>JSON.stringify([s.source_collection_id,s.source_id]);
@@ -25,6 +27,7 @@ export function attachScientificSynthesis(host){
  let panel=null,workspace=null,project=null,turn=0,edit=0,busy=false,error='',storageError='',work=null,editions=[],opened=null,active=false,ready=null;
  let tabId;try{tabId=sessionStorage.getItem('scientific-synthesis-tab');if(!tabId){tabId=crypto.randomUUID();sessionStorage.setItem('scientific-synthesis-tab',tabId);}}catch{tabId=crypto.randomUUID();}
  let writes=Promise.resolve();const draftRevisions=new Map();
+ const evidence=attachSynthesisEvidence({getCatalog:()=>active?work?.catalog:null,openSource:(source,options)=>host.openSource(source,options),download,notify:message=>{error=message;status();}});
  const current=(ws,t)=>active&&workspace===ws&&host.getWorkspace()===ws&&turn===t;
  const locked=()=>busy||!!work?.pending;
  const storeKey=()=>workspace+':'+tabId;
@@ -38,6 +41,7 @@ export function attachScientificSynthesis(host){
  }
  function changed(){edit++;error='';persist().catch(()=>{});status();}
  const request=(path,values={})=>host.api(host.endpoint(path,values));
+ const comparison=attachSynthesisComparison({getWorkspace:host.getWorkspace,readEdition:id=>request('/api/source-reports/synthesis-edition',{collection_id:id}),archiveEdition:id=>host.api(host.endpoint('/api/source-reports/archive'),{method:'POST',body:{collection_id:id}})});
  async function catalog(){
   const ws=workspace,t=turn,result=await request('/api/source-reports/synthesis-catalog');
   if(!current(ws,t))return null;
@@ -56,7 +60,8 @@ export function attachScientificSynthesis(host){
  function ensure(container){
   if(!panel){
    panel=document.createElement('section');panel.className='scientific-synthesis';panel.setAttribute('aria-label','Scientist-authored synthesis');
-   panel.innerHTML='<h3>Scientist-authored synthesis</h3><p>Write a decision question and attributed findings against exact original studies. Saved chapters use the normal report composer and retain complete source editions.</p><p data-synthesis-status role="status"></p><div data-synthesis-toolbar></div><div data-synthesis-editor></div><div data-synthesis-history></div>';
+   panel.innerHTML='<h3>Scientist-authored synthesis</h3><p>Write a decision question and attributed findings against exact original studies. Saved chapters use the normal report composer and retain complete source editions.</p><p data-synthesis-status role="status"></p><div data-synthesis-toolbar></div><div data-synthesis-editor></div><div data-synthesis-history></div><div data-synthesis-comparison></div>';
+   evidence.mount(panel);
    panel.addEventListener('click',event=>{const b=event.target.closest('[data-synthesis-action]');if(!b||!panel.contains(b))return;event.preventDefault();event.stopPropagation();act(b).catch(showError);});
    panel.addEventListener('input',event=>{const el=event.target;if(!el.dataset.synthesisField)return;if(locked())return;
     const before=clone(work),field=el.dataset.synthesisField;
@@ -105,7 +110,7 @@ export function attachScientificSynthesis(host){
      '<details><summary>Original references ('+s.reference_ids.length+' selected)</summary>'+
      (s.reference_ids.filter(id=>!present.has(id)).map(id=>'<p class="error">Unresolved retained reference '+esc(id)+'. Select the original study or explicitly replace this reference.</p>').join(''))+
      sources.map(source=>'<details><summary>'+esc(source.title)+'</summary>'+
-      refs.filter(r=>r.source_collection_id===source.source_collection_id&&r.source_id===source.source_id).map(r=>'<div class="scientific-synthesis-reference"><label><input type="checkbox" data-section="'+esc(s.id)+'" data-synthesis-ref="'+esc(r.id)+'"'+(s.reference_ids.includes(r.id)?' checked':'')+(lock?' disabled':'')+'> '+esc(r.kind)+' · '+esc(r.title)+'</label><details><summary>Read exact retained source value</summary><p>'+esc(r.member_path)+' '+esc(r.pointer)+'</p><pre>'+esc(JSON.stringify(r.content,null,2))+'</pre></details></div>').join('')+'</details>').join('')+
+      refs.filter(r=>r.source_collection_id===source.source_collection_id&&r.source_id===source.source_id).map(r=>'<div class="scientific-synthesis-reference"><label><input type="checkbox" data-section="'+esc(s.id)+'" data-synthesis-ref="'+esc(r.id)+'"'+(s.reference_ids.includes(r.id)?' checked':'')+(lock?' disabled':'')+'> '+esc(r.kind)+' · '+esc(r.title)+'</label>'+referenceEvidenceHTML(r)+'</div>').join('')+'</details>').join('')+
      '</details></section>').join('')+'</div>'+
     '<div class="inline-actions">'+KINDS.map(k=>button('add', 'Add '+label[k].toLowerCase(),lock,' data-kind="'+k+'"')).join('')+
     button('save','Save attributed chapter through original queue',lock||opened?.foreign_project||!work.catalog)+
@@ -115,6 +120,7 @@ export function attachScientificSynthesis(host){
   panel.querySelector('[data-synthesis-history]').innerHTML='<h4>Saved authored editions</h4>'+
    (editions.length?'<div class="table-scroll"><table><thead><tr><th>Chapter / edition</th><th>Revision</th><th></th></tr></thead><tbody>'+
     editions.map(r=>'<tr><td>'+esc(r.title)+'<small>'+esc(r.series_id)+'</small></td><td>'+esc(r.revision)+'</td><td>'+button('open','Open full edition',lock,' data-id="'+esc(r.collection_id)+'"')+'</td></tr>').join('')+'</tbody></table></div>':'<p>No scientist-authored editions in this Workspace yet.</p>');
+  comparison.mount(panel.querySelector('[data-synthesis-comparison]'),{workspace,projectId:project,editions});
   status();
  }
  async function openFile(file){
@@ -227,7 +233,7 @@ export function attachScientificSynthesis(host){
    if(current(ws,t))render();
   })().catch(reason=>{if(current(ws,t))showError(reason);});return ready;
  }
- function detach(){active=false;turn++;if(panel)panel.hidden=true;}
- function reset(){detach();panel?.remove();panel=null;workspace=null;work=null;opened=null;project=null;ready=null;}
+ function detach(){active=false;turn++;evidence.invalidate();comparison.detach();if(panel)panel.hidden=true;}
+ function reset(){detach();evidence.reset();comparison.reset();panel?.remove();panel=null;workspace=null;work=null;opened=null;project=null;ready=null;}
  return {mount,detach,reset,working:()=>work?clone(work):null};
 }
