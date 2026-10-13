@@ -289,6 +289,12 @@ def join_source_banks(documents):
                     raise ValueError("Source-bank blocks select different predecessors: " + name)
                 if before is not None:
                     entry["base_sha256"] = before
+                declarations = list(previous.get("predecessor_declarations", []))
+                for declared in entry.get("predecessor_declarations", []):
+                    if declared not in declarations:
+                        declarations.append(declared)
+                if declarations:
+                    entry["predecessor_declarations"] = declarations
             joined[name] = entry
         for original in item.get("external_sources", []):
             name = original["path"]
@@ -657,16 +663,21 @@ def read_layer(path, *, payload_sha256=None):
 
 def predecessor_sha256(entry, name):
     """Normalize published predecessor spellings without treating refs as hashes."""
+    declarations = entry.get("predecessor_declarations", [])
+    if not isinstance(declarations, list) or any(not isinstance(item, dict)
+                                                  for item in declarations):
+        raise ValueError("Invalid predecessor declarations: " + name)
     identities = []
-    for key in ("base_sha256", "replaces_sha256", "before_sha256"):
-        value = entry.get(key)
-        if value is not None:
-            identities.append((key, value))
-    for key in ("before", "base"):
-        value = entry.get(key)
-        # Existing banks use base="commit-ref"; only objects declare identities.
-        if isinstance(value, dict) and value.get("sha256") is not None:
-            identities.append((key + ".sha256", value["sha256"]))
+    for declared in (entry, *declarations):
+        for key in ("base_sha256", "replaces_sha256", "before_sha256"):
+            value = declared.get(key)
+            if value is not None:
+                identities.append((key, value))
+        for key in ("before", "base"):
+            value = declared.get(key)
+            # Existing banks use base="commit-ref"; only objects declare identities.
+            if isinstance(value, dict) and value.get("sha256") is not None:
+                identities.append((key + ".sha256", value["sha256"]))
     for key, value in identities:
         if not isinstance(value, str) or not re.fullmatch(r"[0-9a-f]{64}", value):
             raise ValueError("Invalid predecessor identity " + key + ": " + name)
@@ -748,6 +759,14 @@ def layer_from_document(document, receipt=None):
         expected_base = predecessor_sha256(entry, name)
         if expected_base is not None:
             record["base_sha256"] = expected_base
+        declarations = list(entry.get("predecessor_declarations", []))
+        declared = {key: entry[key] for key in (
+            "base_sha256", "replaces_sha256", "before_sha256", "before_bytes",
+            "before", "base_ref", "base_git_blob", "base") if key in entry}
+        if declared and declared not in declarations:
+            declarations.append(declared)
+        if declarations:
+            record["predecessor_declarations"] = declarations
         files[name], checked[name] = content, record
     if sum(record["bytes"] for record in checked.values()) > MAX_BYTES:
         raise ValueError("Source members exceed the receiving limit")
@@ -784,6 +803,7 @@ def compose(layers, *, edition, operation_id=None, include_receiver=True):
             item = dict(layer.metadata[name])
             previous = metadata.get(name)
             expected = item.pop("base_sha256", None)
+            declarations = item.pop("predecessor_declarations", [])
             item["mode"] = item["mode"] or (previous or {}).get("mode") or "100644"
             if previous is None:
                 action = "added"
@@ -814,6 +834,8 @@ def compose(layers, *, edition, operation_id=None, include_receiver=True):
                           "sha256": item["sha256"]}
                 if expected is not None:
                     change["base_sha256"] = expected
+                if declarations:
+                    change["predecessor_declarations"] = declarations
                 changes.append(change)
             files[name], metadata[name] = content, item
         for original in layer.document.get("external_sources", []):
