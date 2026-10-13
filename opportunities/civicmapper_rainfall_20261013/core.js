@@ -3,7 +3,7 @@ function sha256(bytes){const K=[],H=[];for(let n=2;K.length<64;n++){let prime=tr
 /* Rainfall Release Review — original implementation, 2026 TokenJunkie Labs. */
 (function (root) {
 "use strict";
-const VERSION = "1.0.0";
+const VERSION = "1.1.0";
 const own = (x,k) => Object.prototype.hasOwnProperty.call(x,k);
 const fail = message => { throw new Error(message); };
 const natural = (a,b) => String(a).localeCompare(String(b), "en", {numeric:true});
@@ -30,13 +30,29 @@ function metadata(m) {
   if (![5,15,60].includes(m.interval_minutes)) fail("Choose a supported 5, 15, or 60 minute interval.");
   const start=instant(m.start,"Window start"), end=instant(m.end,"Window end"), step=m.interval_minutes*60000;
   instant(m.retrieved_at,"Retrieval time");
+  if(m.source_time_zone!==undefined&&(typeof m.source_time_zone!=="string"||!m.source_time_zone.trim()))fail("Source time zone must be an IANA time zone name.");
+  timeWindow(m);
   if (m.sensors?.length * ((end-start)/step) > 1000000) fail("Use separate review windows for more than one million sensor intervals.");
   if (!(end>start) || (end-start)%step!==0) fail("The window must contain a whole positive number of intervals.");
   if ((end-start)/step>105408) fail("Choose a window of at most 105,408 intervals for this reviewer.");
   if (!Array.isArray(m.sensors) || !m.sensors.length || m.sensors.length>250 || m.sensors.some(x=>typeof x!=="string" || !x.trim())) fail("List 1–250 sensor IDs as strings.");
   if (new Set(m.sensors).size!==m.sensors.length) fail("Sensor IDs must be unique.");
   if (!/^https:\/\//i.test(m.source_url)) fail("Use an HTTPS source URL.");
+  if(m.catalogue_selection!==undefined){
+    if(m.sensor_type!=="gauge")fail("A gauge catalogue selection cannot describe pixel data.");
+    if(!root.GaugeCatalogue?.validateSelection)fail("Load the maintained gauge catalogue module to validate this capture's retained station selection.");
+    const selection=root.GaugeCatalogue.validateSelection(m.catalogue_selection);
+    if(JSON.stringify([...selection.web_ids].sort(natural))!==JSON.stringify([...m.sensors].sort(natural)))fail("The retained catalogue selection differs from the rainfall query IDs.");
+  }
+
   return {...m,sensors:[...m.sensors].sort(natural),start_ms:start,end_ms:end,step_ms:step,expected:(end-start)/step};
+}
+function timeWindow(m) {
+  const utc=new Date(instant(m.start,"Window start")).toISOString()+" to "+new Date(instant(m.end,"Window end")).toISOString();
+  const zone=m.source_time_zone||(/^https:\/\/atlas\.3riverswetweather\.org\/rainfall\//.test(m.source_url)?"America/New_York":null);
+  if(!zone)return {utc,local:null,time_zone:null};
+  let fmt;try{fmt=new Intl.DateTimeFormat("en-US",{timeZone:zone,year:"numeric",month:"short",day:"2-digit",hour:"2-digit",minute:"2-digit",timeZoneName:"short"});}catch(e){fail("The source time zone is not a recognized IANA time zone.");}
+  return {utc,local:fmt.format(new Date(m.start))+" to "+fmt.format(new Date(m.end)),time_zone:zone};
 }
 function pointTime(raw,m) {
   if (m.timestamp_label==="range") {
@@ -57,7 +73,7 @@ function points(response) {
       for (const p of group.data) result.push({...p,id:p.id??group.id});
     } else if (group.data && typeof group.data==="object") {
       const keys=Object.keys(group.data), n=keys.length && Array.isArray(group.data[keys[0]])?group.data[keys[0]].length:0;
-      if (!keys.length || keys.some(k=>!Array.isArray(group.data[k]) || group.data[k].length!==n)) fail("Columnar data arrays must have equal lengths.");
+      if (keys.some(k=>!Array.isArray(group.data[k]) || group.data[k].length!==n)) fail("Columnar data arrays must have equal lengths.");
       for(let i=0;i<n;i++){const p={id:group.id};for(const k of keys)p[k]=group.data[k][i];result.push(p);}
     } else if (own(group,"ts")) result.push(group);
     else fail("Unknown rainfall sensor shape.");
@@ -72,6 +88,7 @@ function release(capture) {
   let response;try{response=JSON.parse(capture.raw_text);}catch(e){fail("The raw rainfall response is not valid JSON.");}
   const grouped=new Map(m.sensors.map(id=>[id,new Map()]));
   const warnings=new Set(), outside=[], duplicateRows=[];
+  if(m.interval_minutes===60)warnings.add("Coverage counts returned hourly records. It does not establish the completeness of the provider’s underlying native readings.");
   for (const p of points(response)) {
     if (p.id===null || p.id===undefined || String(p.id)==="") fail("An observation has no sensor ID.");
     const id=String(p.id);if(!grouped.has(id)) fail("Unexpected sensor "+id+"; update the capture selection.");
@@ -113,6 +130,17 @@ function release(capture) {
   if(duplicateRows.length)warnings.add(duplicateRows.length+" identical duplicate rows counted once.");
   return {schema:"rainfall-normalized/v1",metadata:m,fingerprint,grouped,summaries,warnings:[...warnings],outside,duplicateRows,capture:{schema:capture.schema,metadata:capture.metadata,raw_text:capture.raw_text,raw_sha256:fingerprint,...(own(capture,"request")?{request:JSON.parse(JSON.stringify(capture.request))}:{}),...(own(capture,"acquisition")?{acquisition:JSON.parse(JSON.stringify(capture.acquisition))}:{})}};
 }
+function catalogueContext(before,after){
+  const left=before.metadata.catalogue_selection,right=after.metadata.catalogue_selection;
+  if(!left&&!right)return {status:"not_recorded",records:[]};
+  const byId=s=>new Map((s?.records||[]).map(r=>[r.web_id,r]));
+  const a=byId(left),b=byId(right),fields=["feature_id","ext_id","name","coordinates"];
+  const records=before.metadata.sensors.map(id=>{
+    const p=a.get(id)||null,q=b.get(id)||null,changed_fields=p&&q?fields.filter(k=>JSON.stringify(p[k])!==JSON.stringify(q[k])):[];
+    return {id,before:p,after:q,changed_fields};
+  });
+  return {status:left&&right?"both_recorded":"partial",records,before_source:left?.source||null,after_source:right?.source||null,historical_identity:"not_resolved_by_catalogue"};
+}
 function compare(before,after) {
   const a=before.metadata,b=after.metadata;
   for(const key of ["sensor_type","interval_minutes","start_ms","end_ms"]) if(a[key]!==b[key])fail("Comparison needs the same "+key.replaceAll("_"," ")+".");
@@ -138,7 +166,7 @@ function compare(before,after) {
     totals.matched_delta_percent=totals.before_matched_in?round(totals.matched_delta_in/totals.before_matched_in*100):null;
     summary.push(totals);
   }
-  return {before,after,rows,summary,sourceTransitions};
+  return {before,after,rows,summary,sourceTransitions,catalogue_context:catalogueContext(before,after)};
 }
 function intervalRows(release, sensorId=null) {
   const m=release.metadata, ids=sensorId===null?m.sensors:[sensorId], result=[];
@@ -167,10 +195,12 @@ function reopen(value) {
 function report(releases,notes="") {
   const comparison=releases.length===2?compare(...releases):null;
   const table=(headers,rows)=>'<div class="table"><table><thead><tr>'+headers.map(x=>"<th>"+escaped(x)+"</th>").join("")+'</tr></thead><tbody>'+rows.map(row=>"<tr>"+row.map(x=>"<td>"+escaped(x===null?"—":x)+"</td>").join("")+"</tr>").join("")+"</tbody></table></div>";
-  const cards=releases.map(r=>"<section><h2>"+escaped(r.metadata.label)+"</h2><p>"+escaped(r.metadata.product+" · "+r.metadata.sensor_type+" · "+r.metadata.interval_minutes+" minutes")+"<br>"+escaped(r.metadata.start+" to "+r.metadata.end)+"</p>"+table(["Sensor","Valid / expected","Coverage %","Absent","Missing","Invalid","Unavailable source","Observed inches"],r.summaries.map(s=>[s.id,s.valid+" / "+s.expected,s.coverage_percent,s.absent,s.missing,s.invalid,s.source_unavailable,s.observed_total_in]))+r.warnings.map(x=>"<p>"+escaped(x)+"</p>").join("")+'<p class="source">Source: '+escaped(r.metadata.source_url)+"<br>Retrieved: "+escaped(r.metadata.retrieved_at)+"<br>SHA-256: "+escaped(r.fingerprint)+"</p></section>").join("");
+  const cards=releases.map(r=>"<section><h2>"+escaped(r.metadata.label)+"</h2><p>"+escaped(r.metadata.product+" · "+r.metadata.sensor_type+" · "+r.metadata.interval_minutes+" minutes")+"<br>"+escaped("Window (UTC): "+timeWindow(r.metadata).utc)+(timeWindow(r.metadata).local?"<br>"+escaped("Source local window ("+timeWindow(r.metadata).time_zone+"): "+timeWindow(r.metadata).local):"")+"</p>"+table(["Sensor","Valid / expected","Coverage %","Absent","Missing","Invalid","Unavailable source","Observed inches"],r.summaries.map(s=>[s.id,s.valid+" / "+s.expected,s.coverage_percent,s.absent,s.missing,s.invalid,s.source_unavailable,s.observed_total_in]))+r.warnings.map(x=>"<p>"+escaped(x)+"</p>").join("")+'<p class="source">Source: '+escaped(r.metadata.source_url)+"<br>Retrieved: "+escaped(r.metadata.retrieved_at)+"<br>SHA-256: "+escaped(r.fingerprint)+"</p></section>").join("");
+  const context=comparison?.catalogue_context;
+  const catalogue=context&&context.status!=="not_recorded"?"<section><h2>Catalogue context</h2><p>The compared series use the same rainfall query IDs and window. These catalogue records describe identity at the retained catalogue observation; they do not resolve historical instrument assignment.</p>"+[["Earlier capture",context.before_source],["Later capture",context.after_source]].map(([label,s])=>'<p class="source">'+escaped(label+": "+(s?.retrieved_at||"Catalogue observation time not recorded"))+(s?"<br>"+escaped(s.url||"")+"<br>SHA-256 "+escaped(s.sha256):"")+"</p>").join("")+table(["Query ID","Earlier feature / external ID","Later feature / external ID","Changed catalogue fields"],context.records.map(r=>[r.id,r.before?(r.before.feature_id+" / "+r.before.ext_id):"Not recorded",r.after?(r.after.feature_id+" / "+r.after.ext_id):"Not recorded",r.changed_fields.length?r.changed_fields.join(", "):(r.before&&r.after?"No change in compared identity fields":"Incomplete catalogue context")]))+"</section>":"";
   const change=comparison?"<section><h2>Release comparison</h2><p>Deltas use only intervals with a valid observation in both releases. Recovered and lost intervals are counted separately.</p>"+table(["Sensor","Matched intervals","Changed","Recovered","Lost","Source changed","Matched delta (in)"],comparison.summary.map(s=>[s.id,s.matched_valid,s.value_changed,s.recovered,s.lost,s.source_changed,s.matched_delta_in]))+"</section>":"";
-  return '<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Rainfall release review</title><style>body{font:15px/1.55 system-ui,sans-serif;color:#202327;max-width:1120px;margin:40px auto;padding:0 24px}h1{font-size:28px}h2{font-size:20px;margin-top:32px}table{border-collapse:collapse;width:100%;font-size:13px}th,td{padding:10px 9px;text-align:left;border-bottom:1px solid #d5d7d9;vertical-align:top}th{background:#f0f1f2}.table{overflow:auto}.source{font-size:12px;overflow-wrap:anywhere;color:#52575d}section{break-inside:avoid}pre{white-space:pre-wrap;font:inherit}@media print{body{margin:0;max-width:none;padding:0}table{font-size:10px}th,td{padding:6px 4px}}</style><h1>Rainfall release review</h1><p>Rainfall accumulation and release changes for the selected sensors and time window.</p><p>Observed totals sum available valid intervals. Coverage below 100% means the total is incomplete. Missing observations remain missing; no rainfall is estimated.</p>'+cards+change+(notes?"<section><h2>Reviewer notes</h2><pre>"+escaped(notes)+"</pre></section>":"")+'<footer><p class="source">Prepared with Rainfall Release Review '+VERSION+'. Source data stays in its original capture. This report uses interval end times normalized to UTC and rainfall expressed in inches.</p></footer></html>';
+  return '<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Rainfall release review</title><style>body{font:15px/1.55 system-ui,sans-serif;color:#202327;max-width:1120px;margin:40px auto;padding:0 24px}h1{font-size:28px}h2{font-size:20px;margin-top:32px}table{border-collapse:collapse;width:100%;font-size:13px}th,td{padding:10px 9px;text-align:left;border-bottom:1px solid #d5d7d9;vertical-align:top}th{background:#f0f1f2}.table{overflow:auto}.source{font-size:12px;overflow-wrap:anywhere;color:#52575d}section{break-inside:avoid}pre{white-space:pre-wrap;font:inherit}@media print{body{margin:0;max-width:none;padding:0}table{font-size:10px}th,td{padding:6px 4px}}</style><h1>Rainfall release review</h1><p>Rainfall accumulation and release changes for the selected sensors and time window.</p><p>Observed totals sum available valid intervals. Coverage below 100% means the total is incomplete. Missing observations remain missing; no rainfall is estimated.</p>'+cards+change+catalogue+(notes?"<section><h2>Reviewer notes</h2><pre>"+escaped(notes)+"</pre></section>":"")+'<footer><p class="source">Prepared with Rainfall Release Review '+VERSION+'. Source data stays in its original capture. This report uses interval end times normalized to UTC and rainfall expressed in inches.</p></footer></html>';
 }
-const api={VERSION,SOURCES,instant,metadata,release,compare,intervalRows,csv,project,reopen,report,escaped,sha256Text:s=>sha256(utf8Encode(s))};
+const api={VERSION,SOURCES,instant,metadata,timeWindow,release,compare,intervalRows,csv,project,reopen,report,escaped,sha256Text:s=>sha256(utf8Encode(s))};
 root.RainfallReview=api;
 })(typeof globalThis!=="undefined"?globalThis:this);

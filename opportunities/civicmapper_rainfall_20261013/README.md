@@ -4,6 +4,28 @@ An offline reviewer and public API capture command for rainfall releases. It sup
 
 Open **index.html** directly in a browser. It has no installation, external fonts, map key, service worker, analytics, or network dependency. Use Node 20+ only when retrieving data or generating reports from the command line.
 
+## Inspect and retain station selection
+
+Open **catalogue.html** to compare the pinned application catalogue with the complete publisher response retained on October 13. The page preserves every source record, including inactive records, repeated identifiers and records without a query ID. Search or filter the record table, inspect exact original features, choose current active query IDs, and save/reopen the source review with your notes. Export the readable report, complete source records CSV, or request selection.
+
+The provider request uses `web_id`. The reference source stores that role as top-level `feature.id`; the current provider stores it as `properties.web_id` and uses `feature.id` for a different record identifier. External IDs are also reused across several current records. The comparison pairs unique (query ID, external ID) records and retains other candidates separately.
+
+A request selection retains the complete catalogue text, exact source identity, chosen active features and inactive alternatives. Add it to a new capture with `--selection gauge-request-selection.json` and use the same IDs in `--sensors`. The command validates both selections before requesting data. Resume preserves the original job's selection.
+
+These catalogues give current identity at retrieval. They contain no validity dates establishing which physical instrument represented an earlier rainfall interval. Historical results keep their original query IDs; the reviewer does not silently remap them to a different site. When both rainfall acquisitions have catalogue context, their comparison shows changed identity fields alongside the query-series comparison.
+
+## Package the actual source example
+
+    node catalogue_report.mjs --project source/20261013/gauge-catalogue-project.json --out /new/source-handover
+
+Open `OPEN_FIRST.html` in the generated directory. The complete source handover includes the editable catalogue review, source report, original GeoJSON, all-record CSV, saved project, current selection, exact file manifest, complete editable application source and `gauge-catalogue-handover.zip`. It works independently of any rainfall request. `--notes FILE` and `--select 1,2` can set the working notes and current query selection.
+
+Run the same maintained browser course against either the application or that generated directory:
+
+    node receive_handover.mjs --catalogue /new/source-handover --out /new/source-receiving
+
+The producer opens and personally views the exact pages, screenshots and downloaded attachments; the course operates the controls, exports and fresh-context reopening.
+
 ## Acquire a real public window
 
 Check the provider's current availability and sensor identifiers first:
@@ -25,7 +47,7 @@ The continuation file ends in .job.json. Resume first reopens an existing matchi
 
 The job and completed capture retain the original acquisition history: requests, complete response and error bodies, HTTP status, selected headers, retrieval timestamps, byte counts and SHA-256 values. Response bytes are the decoded body returned by fetch, not compressed HTTP wire bytes. The history can include temporary provider job, artifact and inline URLs. It travels with the completed capture and saved review project; retain that complete original packet when transferring the work. Transport failure before a usable provider response may leave the provider's acceptance unknown; the history records that actual failure and does not establish a completed job.
 
-The real source snapshot in source/20261013/publisher-selection.json contains the full availability and gauge responses retrieved on October 13, with exact byte identities. At that observation the native historical 15-minute gauge service covered April 1, 2000 through August 31, 2026, so the July command above was inside the returned bounds. Gauge query values are active properties.web_id: 1 is PWSA (Observatory Hill), and 2 is Alcosan. They are not the GeoJSON feature.id values. Check current bounds for a new selection. The snapshot qualifies the original request; it is not a completed rainfall result.
+The real source snapshot in source/20261013/publisher-selection.json contains the full availability and gauge responses retrieved on October 13, with exact byte identities. At that observation the native historical 15-minute gauge service covered April 1, 2000 through August 31, 2026, so the July command above was inside the returned global product bounds. Those bounds do not establish per-gauge operating history. At that catalogue retrieval, query ID 1 has an active record named PWSA (Observatory Hill), and query ID 2 has one named Alcosan. They are not the GeoJSON feature.id values. Check current bounds for a new selection. The snapshot qualifies the original request; it is not a completed rainfall result.
 
 For pixels, specify --sensor pixel and verified pixel IDs. Use --product realtime for a provisional source, historic15 for native historical 15-minute readings, or historic5 with --interval 5 when that service offers the requested window. The command supports 5, 15, and 60 minute review intervals. Daily/total products need calendar-specific comparison and are outside this first implementation.
 
@@ -42,11 +64,17 @@ The UI accepts files up to 40 MB. Review windows are limited to one million sele
 
 ## Time and scientific meaning
 
+The configured capture defaults to interval-end labels for native 5/15-minute results and explicit start/end ranges for Hourly results, following the pinned application's current contract. It rejects a conflicting configured label. The generic file importer also supports explicitly declared start-labelled inputs.
+
 The capture metadata explicitly specifies the accumulation window's start and end, the interval length, units, and whether provider timestamps label the interval start, interval end, or an explicit start/end range. With end labels, expected observations are (start, end], one per interval. Start labels are shifted to their interval end. Explicit ranges must have the selected interval length.
+
+The example midnight-to-midnight UTC request corresponds to July 12 at 8 p.m. through July 13 at 8 p.m. in America/New_York. It is a 24-hour UTC window, not a July 13 local calendar day. A new local-day request would use July 13 04:00Z through July 14 04:00Z; never change the saved original request. The cards and report show exact UTC and source-local bounds.
 
 All timestamps must contain a UTC offset or Z. The software will not silently interpret an ambiguous local time using the operator's browser timezone. Original timestamp strings remain in the capture; comparison normalizes instants to UTC. The configured 3RWW capture command records its provider values as inches and rejects a request to relabel them. Generic imported releases may explicitly use millimetres, which are converted to inches using 25.4 mm/in.
 
 Zero is a valid observation. Null, blank, negative, nonnumeric, and absent observations remain separate categories. The source codes G-0 and N/D indicate unavailable observations and are excluded even when a numeric placeholder is present. Unknown source codes are retained and flagged for interpretation. Identical duplicate observations count once; conflicting duplicates stop review so the source conflict can be resolved.
+
+Empty row and empty columnar sensor results both produce absent intervals and a null observed total. Hourly coverage counts returned hourly records; it does not establish completeness of underlying native readings.
 
 Observed totals sum valid observations. They are incomplete when valid coverage is below 100%. A release's total is never padded with invented zeros. Comparisons calculate deltas only across intervals valid in both releases, and count recovered/lost observations separately. Percentage change is absent when the matched earlier total is zero.
 
