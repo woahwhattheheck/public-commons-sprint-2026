@@ -2,13 +2,15 @@
 
 The registered guided journey connects the complete application's existing scientific
 controls into one operating sequence. It is designed for a live, hands-on
-explanation of a saved study: choose the starting point, explain its inputs,
-change a case, run the original models, compare the results, open the maps, and
-transfer a working project that can be reopened.
+operation from original files or a saved study: retain the source edition,
+choose its scientific inputs, prepare the first baseline, run the original models,
+change a case, compare the results, open the maps, and transfer a working project
+that can be reopened.
 
 Open the current authenticated operator and choose **Guided journey** beside
-Overview. Start by explicitly choosing a retained baseline. The guide then keeps
-that selection visible when opening the original forms, maps and downloads.
+Overview. Start with **Open original files**, select a retained source edition,
+or choose an existing baseline. The guide keeps that selection with the original
+forms, maps, downloads and saved project.
 
 ## Install into the assembled application
 
@@ -81,19 +83,50 @@ Each step presents **Do**, **See**, **Meaning**, and a sentence suitable for
 saying aloud. The step bar allows direct navigation. When you open a full
 workspace view, the guide remains available in a compact rail above the view.
 
-### 1. Choose a prepared study
+### 1. Open data or a saved study
 
-Select the baseline or prepared study deliberately. Open its original result.
-Read the selected scenario, grid, parameter profile, native model selection
-and model version.
-A completed run displays its saved physical outputs and the time recorded for
-its native stages.
+For a new study, choose **Open original files**. The existing source form previews
+the selected original ZIP or file and its metadata before importing that edition.
+Review the detected entries, original names, dates and units. The import retains
+its original task and request; a lost response uses the same **Recover original
+request** operation. The source edition becomes the journey's selected original
+collection after that task completes.
 
-Use a study whose source geography and assumptions you can explain. The
-starting selection stays available throughout the journey.
+Select a saved source edition directly when it is already in this workspace.
+**Prepare or combine source data** opens the original Source preparation desk.
+Its own intake, interpretation and scientific preparation remain authoritative.
+The resulting retained collection can be opened in this journey through
+`selectSourceCollection({workspace_key, source_collection_id})`; the original
+controller resolves that ID against the current workspace.
 
-Say: “This is our saved starting point, and every result stays linked to the
-inputs that produced it.”
+Choose a completed model grid, scientific parameter profile and unchanged
+baseline scenario, or create each through its original form. New forms open on
+the selected source edition and leave all scientific values for the scientist
+to select. Revising an existing record preserves that record's own source
+edition. Grids, profiles and scenarios may legitimately use different retained
+collections; their original references remain visible.
+
+Choose **Prepare first baseline run**. The original form displays the actual
+grid, profile, baseline and available native models. After it completes, the
+journey selects that retained run as the first baseline and opens **Calculate
+and recover**. Start the original models there. When the baseline finishes,
+**Create a separate case change** continues to the existing scenario workflow.
+
+For an existing study, choose its saved baseline or prepared run. Open the
+original result and read the selected scenario, grid, profile, model choice,
+actual state, physical outputs and retained stage times. **Start another study
+from original data** keeps the current view available in **Save, reopen and
+transfer → Switch to retained browser view** and opens a fresh first-study
+selection. Every original scientific record and completed output remains in
+the same workspace.
+
+Selecting another source resets the active preparation and result selections.
+A pending operation from an earlier selection remains under its original task;
+its late result cannot replace a newer selection. Source selection and notes
+can be saved, exported, reopened or transferred before the first run exists.
+
+Say: “I can start with my own files, retain the original data and follow the
+same project through calculation and handover.”
 
 ### 2. Explain the inputs and geography
 
@@ -213,8 +246,8 @@ behind it.”
 ### 8. Save, reopen and transfer
 
 Choose **Save view and notes** in the header or in this step. The original
-workspace retains the selected baseline, grid, profile, scenario, run,
-comparison, saved map view, map pack, delivery and operating notes in
+workspace retains the selected original source edition, baseline, grid,
+profile, scenario, run, comparison, saved map view, map pack, delivery and operating notes in
 `operator-session.json`. The saved time appears beside the project identity.
 
 Choose **Save view and transfer project**. This saves the current selection and
@@ -290,7 +323,8 @@ the selected current application; the module delegates scientific operations
 to the original application's forms and API.
 
 The registered journey exposes `observe`, `mount`, `update`, `detach`, `dispatch`,
-`beforeSubmission`, `acceptTask`, `updateRail` and `capture` for the shared
+`beforeSubmission`, `acceptTask`, `updateRail`, `selectSourceCollection` and
+`capture` for the shared
 operator host. `nativeTiming` and `validateJourneyImport` are exported for
 direct use with original retained records. The UI is self-contained and uses a
 neutral industrial layout, responsive controls, keyboard focus styling and

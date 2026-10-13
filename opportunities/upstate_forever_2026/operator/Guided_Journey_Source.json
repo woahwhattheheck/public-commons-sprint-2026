@@ -4,28 +4,28 @@
   "operation_id": "UPSTATE-FULL-PRODUCT-BUILD-BRYCE-20261012-1FB3-GUIDED-JOURNEY",
   "files": {
     "operator/install_guided_journey.py": {
-      "bytes": 21317,
-      "sha256": "e10117bfd3a5c58a988546c57e2af5272c6ef475021459bfa71b0f3312d3a0fe"
+      "bytes": 22254,
+      "sha256": "5fb0c06d9435f47d39c6d0380b934bf5467d47fd7b37eafc1d5e93516d47c6f2"
     },
     "operator/Guided_Journey_Integration.json": {
-      "bytes": 13904,
-      "sha256": "f1af6a86817ecc2ac6773807eecfd93cd578f18075e36a4f3b5653621fb2ce8e"
+      "bytes": 21577,
+      "sha256": "125025839b7903982a73f67977288b6e8051c2cc3612d9c08fc74991371f8371"
     },
     "operator/extensions/guided-journey.json": {
-      "bytes": 1405,
-      "sha256": "2755b6dcd057097d980d85fa186fdc7d560a8bcf45678d56052bb9fe7f448734"
+      "bytes": 1453,
+      "sha256": "f3957f17d155acf21add2cb9a11a010dd872a0738ea295fd0ee277b1750136c6"
     },
     "operator/web/journey.mjs": {
-      "bytes": 73365,
-      "sha256": "b035e3b3e60c4c254a0ed019fd8bf19f93ead03616721d83dbd74f0ca83d30bf"
+      "bytes": 81111,
+      "sha256": "ba4cd9709984cbd13be6824dad7d7e5ce67c4c790c59816a3f521e0fe47ccd02"
     },
     "operator/web/journey.css": {
       "bytes": 6235,
       "sha256": "61952e1dbaf7340f0a43e2fa45df33f12a8d82f5a684fabe178bffab78903e5a"
     },
     "operator/GUIDED_JOURNEY.md": {
-      "bytes": 27719,
-      "sha256": "60f116de907383b8a4d2d85647b3e7998b0bfb00a669e207cba4b7242786fd19"
+      "bytes": 30006,
+      "sha256": "1f3810783f074e15ed386b1549b7a8464082684d69d8451bcef747a4494ee822"
     }
   },
   "source_context": {
@@ -57,6 +57,18 @@
       "route": "Retained community table and selections → native saved project view → complete workspace restore",
       "controller": "operator/web/community.mjs"
     },
-    "current_host_forms": "Preserve current parameter-study/native-programme host callbacks, rehearsal navigation and runtime stage metadata."
+    "current_host_forms": "Preserve current parameter-study/native-programme host callbacks, rehearsal navigation and runtime stage metadata.",
+    "first_source_journey": {
+      "operation_id": "ECO-FIRST-STUDY-JOURNEY-9F05-20261013",
+      "source_base": "2f4339c866e643f1086561bf87c279695b87b26a",
+      "selection": "source_collection_id",
+      "route": "Original source files or retained collection → original grid/profile/baseline forms → first retained run → existing calculation/recovery/results → saved view and complete project receiving",
+      "external_intake": "host.openExtension('guided-journey','selectSourceCollection',{workspace_key,source_collection_id})",
+      "native_contract": "source.import result.id; source.compose imported:true result.source_collection_id",
+      "saved_view": "Original sources retained-item validation; independent grid/profile/scenario collections are preserved",
+      "owner_direction": "CURRENT_OWNER_DIRECTION.md v2026-10-13.4 and original 52-order post-call bank F0C8R2SQ0NP",
+      "receiving": "Actual desktop/narrow operation and all outgoing attachments remain required in the original receiving course.",
+      "current_host": "Retains current scientificInspection and Calibration → Parameter-study callbacks; full original admission/revision submitAction remains unchanged."
+    }
   }
 }
