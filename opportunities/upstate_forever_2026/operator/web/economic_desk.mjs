@@ -1,5 +1,6 @@
 /** Native report and sourced cost intake for the retained economic desk. */
 import {exportCostWorksheet,previewCostWorksheet,applyCostWorksheet} from './economic_cost_worksheet.mjs';
+import {economicImplementationOptions,economicImplementationSelection} from './economic_implementation.mjs';
 const escape = value => String(value ?? '').replace(/[&<>"']/g, c =>
   ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const short = value => String(value || '').slice(0, 12);
@@ -30,6 +31,7 @@ export function attachEconomicDesk(host) {
   let root=null,frame=null,workspace=null,source=null,catalog=null,draft=null;
   let epoch=0,busy=false,pending=null,preview=null,openEditionId=null,requestedSource=null;
   let rowFingerprint='',completedTask=null,worksheetPreview=null;
+  let editionEpoch=0,implementationOptions=null,implementationRun='';
   const operations=new Map();
   const node=selector=>frame?.querySelector(selector);
   const key=()=> 'upstate-economic-desk:'+workspace;
@@ -170,7 +172,7 @@ export function attachEconomicDesk(host) {
       '<div data-source-detail></div><details data-source-issues hidden><summary>Other retained source records</summary><ul></ul></details></section>'+
       '<section data-inputs hidden></section><section data-preview hidden class="econ-card"></section>'+
       '<section class="econ-card"><div class="econ-section-heading"><h3>Saved inputs and completed editions</h3>'+button('refresh-saved','Refresh saved work')+'</div><div data-saved></div></section>'+
-      '<section data-edition hidden class="econ-card"><div class="econ-section-heading"><h3 data-edition-title>Economic edition</h3>'+button('close-edition','Close embedded desk')+'</div><div data-edition-links></div><iframe data-edition-frame title="Complete retained economic decision desk" loading="lazy"></iframe></section>';
+      '<section data-edition hidden class="econ-card"><div class="econ-section-heading"><h3 data-edition-title>Economic edition</h3>'+button('close-edition','Close embedded desk')+'</div><div data-edition-links></div><section data-implementation hidden></section><iframe data-edition-frame title="Complete retained economic decision desk" loading="lazy"></iframe></section>';
     root.replaceChildren(frame);
     frame.addEventListener('click',onClick);
     frame.addEventListener('change',onChange);
@@ -294,7 +296,7 @@ export function attachEconomicDesk(host) {
     const editions=value.editions||[],drafts=value.drafts||[];
     let body='<div class="econ-saved-grid"><div><h4>Completed editions</h4>';
     body+=editions.length?'<ul class="econ-saved-list">'+editions.map(row=>'<li><strong>'+escape(row.title)+'</strong><span>'+escape(row.zone_title)+' · '+row.candidate_count+' scenarios · '+row.costed_count+' costs · '+row.eligible_count+' eligible</span><div>'+button('open-edition','Open desk','data-id="'+escape(row.id)+'"')+button('edit-edition','Reuse inputs','data-id="'+escape(row.id)+'"')+
-      (typeof host.openExtension==='function'?button('client-report','Prepare client report','data-id="'+escape(row.id)+'"'):'')+'</div></li>').join('')+'</ul>':'<p class="econ-empty">Completed economic editions appear here.</p>';
+      (typeof host.openExtension==='function'?button('client-report','Prepare client report','data-id="'+escape(row.id)+'"')+button('implementation-choose','Plan implementation','data-id="'+escape(row.id)+'"'):'')+'</div></li>').join('')+'</ul>':'<p class="econ-empty">Completed economic editions appear here.</p>';
     body+='</div><div><h4>Saved inputs</h4>';
     body+=drafts.length?'<ul class="econ-saved-list">'+drafts.map(row=>'<li><strong>'+escape(row.title)+'</strong><span>'+escape(row.zone_title)+' · '+row.costed_count+' sourced costs</span>'+button('open-draft','Reopen inputs','data-id="'+escape(row.id)+'"')+'</li>').join('')+'</ul>':'<p class="econ-empty">Save the actual source, zone and completed cost inputs for another operator.</p>';
     body+='</div></div>';
@@ -355,22 +357,66 @@ export function attachEconomicDesk(host) {
       }
     }catch(error){if(valid(token)){message(error.message||String(error),true);setBusy(false);}}
   }
-  async function openEdition(id) {
-    const token=epoch;
+  async function openEdition(id,{implementation=false}={}) {
+    const token=epoch,reading=++editionEpoch;
+    implementationOptions=null;implementationRun='';renderImplementation();
     message('Opening the retained economic edition…');
     const value=await api(url('/api/economic-desk/edition',{edition_id:id}));
-    if(!valid(token))return;
+    if(!valid(token)||reading!==editionEpoch)return;
+    implementationOptions=null;implementationRun='';
     openEditionId=id;
     const section=node('[data-edition]');section.hidden=false;
     node('[data-edition-title]').textContent=value.title;
     const links=node('[data-edition-links]');
     links.innerHTML='<a target="_blank" rel="noopener" href="'+escape(value.open_url)+'">Open full desk in a new tab</a> '+
       (value._downloads||[]).map(file=>'<a href="'+escape(file.url)+'?download=1">'+escape(file.label)+'</a>').join(' ')+
-      (typeof host.openExtension==='function'?' '+button('client-report','Prepare client report','data-id="'+escape(id)+'"'):'');
+      (typeof host.openExtension==='function'?' '+button('client-report','Prepare client report','data-id="'+escape(id)+'"')+' '+button('implementation-choose','Plan implementation','data-id="'+escape(id)+'"'):'');
     node('[data-edition-frame]').src=value.open_url;
+    renderImplementation();
+    if(implementation){implementationOptions=economicImplementationOptions(value,workspace);renderImplementation();}
     section.scrollIntoView({block:'start',behavior:'smooth'});
     message('Complete economic edition opened with its original modeled outcomes and cost inputs.');remember();
   }
+
+  function renderImplementation() {
+    const box=node('[data-implementation]');if(!box)return;
+    box.hidden=!implementationOptions;if(!implementationOptions)return;
+    const options=implementationOptions,row=options.alternatives.find(item=>item.run_id===implementationRun);
+    let detail='<p>Choose the complete scenario you intend to carry into fieldwork.</p>';
+    if(row){
+      const original=row.original_cost,cost=row.cost;
+      const scope=original?.scope?.kind==='whole_scenario'?'Whole modeled scenario':
+        original?.scope?.kind==='reporting_zone'?'Reporting zone: '+(original.scope.zone_title||options.zone_title):
+        original?.scope?.kind==='retained'?'Original retained footprint':'';
+      const reasons=Array.isArray(row.decision.reasons)?row.decision.reasons.map(value=>
+        '<li>'+escape(typeof value==='string'?value:JSON.stringify(value))+'</li>').join(''):'';
+      detail='<h4>'+escape(row.label)+'</h4><p>Reporting zone: <strong>'+escape(options.zone_title)+'</strong>. '+
+        (row.eligible?'This scenario meets the edition’s prepared criteria.':'This scenario is outside the edition’s prepared criteria.')+'</p>'+
+        (reasons?'<ul>'+reasons+'</ul>':'')+
+        '<div class="econ-table-wrap"><table><thead><tr><th>Modeled output</th><th>Annual avoided export</th><th>Common cells</th></tr></thead><tbody>'+
+        row.outputs.map(output=>'<tr><th>'+escape(output.label)+'</th><td>'+format(output.reduction)+' '+escape(output.units)+'</td><td>'+format(output.support?.valid_cells)+'</td></tr>').join('')+'</tbody></table></div>'+
+        (cost?'<dl class="econ-facts"><div><dt>Upfront planning estimate</dt><dd>'+format(cost.capital)+' '+escape(cost.currency)+'</dd></div>'+
+        '<div><dt>Annual operating estimate</dt><dd>'+format(cost.annual_operating)+' '+escape(cost.currency)+'/year</dd></div>'+
+        '<div><dt>Annualized comparison cost</dt><dd>'+format(cost.annualized)+' '+escape(cost.currency)+'/year</dd></div></dl>'+
+        '<p>'+escape(scope)+(scope?'. ':'')+'Source: '+escape(original.source?.title)+' · '+escape(original.source?.as_of)+'.</p>':
+        '<p>This edition has no sourced implementation estimate for this scenario.</p>');
+    }
+    box.innerHTML='<div class="econ-section-heading"><h3>Plan implementation</h3>'+button('implementation-cancel','Close scenario selection')+'</div>'+
+      '<label><span>Whole scenario from '+escape(options.edition_title)+'</span><select data-implementation-run aria-label="Whole scenario for implementation"><option value="">Choose one whole scenario</option>'+
+      options.alternatives.map(row=>'<option value="'+escape(row.run_id)+'">'+escape(row.label)+' · '+escape(short(row.run_id))+'</option>').join('')+'</select></label>'+detail+
+      '<p class="econ-note">The original scenario, reporting zone, modeled support and cost sources travel together. In Implementation &amp; fieldwork, choose the destination plan and review its proposed work. Assign tasks, dates and field budgets there. Annualized costs remain part of the scenario comparison.</p>'+
+      '<div class="econ-actions">'+button('implementation-open','Continue to implementation planning',!row?'disabled':'')+'</div>';
+    box.querySelector('[data-implementation-run]').value=implementationRun;
+  }
+  async function prepareImplementation() {
+    if(typeof host.openExtension!=='function')throw Error('Open the current operator to plan implementation.');
+    const selection=economicImplementationSelection(implementationOptions,implementationRun);
+    if(selection.workspace_key!==workspace||workspace!==getState()?.workspace_key)
+      throw Error('Reopen this economic edition in its original workspace.');
+    current();remember();
+    await host.openExtension('implementation','openEconomicScenario',selection);
+  }
+
   async function prepareClientReport(id) {
     if(typeof host.openExtension!=='function')throw Error('Open this completed edition with the current map-release operator.');
     const token=epoch,key=workspace;
@@ -418,9 +464,20 @@ export function attachEconomicDesk(host) {
       const action=target.dataset.econ;
       if(action==='refresh')return await loadCatalog();
       if(action==='refresh-saved'){if(typeof host.refreshState==='function')await host.refreshState();catalog={...catalog,...getState()?.data?.economic_editions};return renderSaved(catalog);}
-      if(action==='close-edition'){node('[data-edition]').hidden=true;node('[data-edition-frame]').removeAttribute('src');openEditionId=null;return remember();}
+      if(action==='close-edition'){editionEpoch++;implementationOptions=null;implementationRun='';node('[data-edition]').hidden=true;node('[data-edition-frame]').removeAttribute('src');openEditionId=null;return remember();}
       if(action==='open-edition')return await openEdition(target.dataset.id);
       if(action==='edit-edition')return await loadSaved('edition',target.dataset.id);
+      if(action==='implementation-choose'){
+        target.disabled=true;
+        try{return await openEdition(target.dataset.id,{implementation:true});}
+        finally{if(target.isConnected)target.disabled=false;}
+      }
+      if(action==='implementation-cancel'){editionEpoch++;implementationOptions=null;implementationRun='';renderImplementation();return;}
+      if(action==='implementation-open'){
+        target.disabled=true;
+        try{return await prepareImplementation();}
+        finally{if(target.isConnected)target.disabled=false;}
+      }
       if(action==='client-report'){
         target.disabled=true;
         try{return await prepareClientReport(target.dataset.id);}
@@ -443,6 +500,7 @@ export function attachEconomicDesk(host) {
   }
   async function onChange(event) {
     try{
+      if(event.target.matches('[data-implementation-run]')){implementationRun=event.target.value;renderImplementation();return;}
       if(event.target.matches('[data-cost-worksheet]')){try{await readWorksheet(event.target.files?.[0]);}finally{event.target.value='';}return;}
       if(event.target.matches('[data-report]')){
         current();remember();
@@ -519,7 +577,7 @@ export function attachEconomicDesk(host) {
   }
   function detach() {
     if(frame){current();remember();frame.removeEventListener('click',onClick);frame.removeEventListener('change',onChange);frame.removeEventListener('input',onInput);}
-    epoch++;root=null;frame=null;source=null;catalog=null;busy=false;preview=null;worksheetPreview=null;
+    epoch++;editionEpoch++;root=null;frame=null;source=null;catalog=null;busy=false;preview=null;worksheetPreview=null;implementationOptions=null;implementationRun='';
   }
   async function openReport(selection) {
     if(!selection?.report_id)throw Error('Choose an actual completed native report.');
@@ -528,5 +586,5 @@ export function attachEconomicDesk(host) {
     if(typeof host.navigate==='function')host.navigate('economic-desk');
     if(wasMounted&&frame)await loadCatalog({preserve:false});
   }
-  return {mount,update,detach,openReport,openEdition,loadSaved,prepareClientReport};
+  return {mount,update,detach,openReport,openEdition,loadSaved,prepareClientReport,prepareImplementation};
 }
