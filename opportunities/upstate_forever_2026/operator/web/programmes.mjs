@@ -97,6 +97,63 @@ export function attachProgrammes(context) {
     if (Array.isArray(stages)) return stages.map(item => item.name || item.stage || item).join(' · ');
     return Object.entries(stages).map(([name, stage]) => name + (stage?.completed_at ? ' completed' : stage?.state ? ': ' + labelState(stage.state) : stage?.started_at ? ' started' : '')).join(' · ');
   }
+  function storageText(storage) {
+    if (!storage || typeof storage !== 'object') return '';
+    const parts = [];
+    if (Number.isFinite(storage.available_bytes) && storage.available_bytes >= 0) {
+      const units = ['B', 'KiB', 'MiB', 'GiB', 'TiB'];
+      let amount = storage.available_bytes, unit = 0;
+      while (amount >= 1024 && unit < units.length - 1) { amount /= 1024; unit++; }
+      parts.push(amount.toLocaleString(undefined, {maximumFractionDigits: unit ? 2 : 0}) + ' ' + units[unit] + ' available');
+    }
+    if (Number.isFinite(storage.available_inodes) && storage.available_inodes >= 0) {
+      parts.push(storage.available_inodes.toLocaleString() + ' available inodes');
+    }
+    return parts.join(' · ') || (storage.error?.message ? String(storage.error.message) : '');
+  }
+  function executionSummary(execution) {
+    if (!execution || typeof execution !== 'object') return '';
+    const phases = {
+      starting: 'Starting native run', log: 'Opening native log',
+      verify_stage: 'Checking retained model stage', verify_export: 'Checking retained export',
+      grid: 'Opening model grid', runtime: 'Opening model runtime', sources: 'Opening original sources',
+      landcover: 'Preparing land cover', stage_identity: 'Resolving model stage',
+      waiting_stage: 'Waiting for shared model stage', stage_reuse: 'Reusing model stage',
+      validate: 'Validating model inputs', native: 'Calculating native model',
+      retain_stage: 'Retaining model outputs', export: 'Writing export raster', complete: 'Native run complete',
+    };
+    return [
+      Number.isInteger(execution.attempt) ? 'Attempt ' + execution.attempt : '',
+      execution.model ? String(execution.model).toUpperCase() : '',
+      phases[execution.phase] || (execution.phase ? labelState(execution.phase) : ''),
+      execution.artifact ? labelState(execution.artifact) : '',
+      execution.state && execution.state !== execution.phase ? labelState(execution.state) : '',
+    ].filter(Boolean).join(' · ');
+  }
+  function executionHTML(row) {
+    const execution = row.execution, summary = executionSummary(execution);
+    const storage = storageText(execution?.storage);
+    const checkpoint = execution?.phase_started_at || execution?.started_at || execution?.updated_at;
+    let html = summary ? '<small>' + escapeHTML(summary) + '</small>' : '';
+    if (storage) {
+      html += '<small>Storage at phase checkpoint' +
+        (checkpoint ? ' · ' + escapeHTML(new Date(checkpoint).toLocaleString()) : '') +
+        ': ' + escapeHTML(storage) + '</small>';
+    }
+    const failureStorage = storageText(row.error?.storage_at_failure);
+    if (failureStorage) html += '<small>Storage at failure: ' + escapeHTML(failureStorage) + '</small>';
+    if (typeof row.error?.recovery === 'string' && row.error.recovery) {
+      html += '<p class="programme-run-error">' + escapeHTML(row.error.recovery) + '</p>';
+    }
+    const history = asArray(row.execution_history);
+    if (history.length) {
+      html += '<details><summary>Previous execution attempts</summary><ul>' + history.map(item =>
+        '<li>' + escapeHTML(executionSummary(item)) +
+        (item.updated_at ? ' · ' + escapeHTML(new Date(item.updated_at).toLocaleString()) : '') + '</li>'
+      ).join('') + '</ul></details>';
+    }
+    return html;
+  }
   function programmeHTML() {
     if (!selected) return '<section class="section"><h2>Original calculations, continued together</h2><p>A programme may contain a single baseline or an expanded list of prepared cases. The existing native engine validates every input and executes each saved selection. Completed model stages remain available when another case needs attention.</p></section>';
     if (!record) return '<section class="section" role="status"><h2>Opening saved programme…</h2></section>';
@@ -115,7 +172,7 @@ export function attachProgrammes(context) {
         '<small class="mono">' + escapeHTML(row.key) + '</small></td><td>' + escapeHTML(named('profiles', row.profile_id)) +
         '<small>' + escapeHTML(named('scenarios', row.scenario_id)) + '</small><small>' + escapeHTML(nativeModelLabel(models)) + '</small>' +
         '<small>' + escapeHTML([Object.keys(row.parameter_changes || {}).length ? 'Parameters changed' : '', row.table_changed ? 'Biophysical table changed' : '', row.scenario_changed ? 'Land cover changed' : ''].filter(Boolean).join(' · ') || 'Reference selections') + '</small></td><td>' + stateBadge(row.state) +
-        '<small>' + escapeHTML(stageText(row)) + '</small>' + (error ? '<p class="programme-run-error">' + escapeHTML(error) + '</p>' : '') +
+        '<small>' + escapeHTML(stageText(row)) + '</small>' + (error ? '<p class="programme-run-error">' + escapeHTML(error) + '</p>' : '') + executionHTML(row) +
         '</td><td>' + escapeHTML(row.run_id ? short(row.run_id) : '—') + '</td><td><div class="programme-row-actions">' + native + '</div></td></tr>';
     });
     const report = record.latest_report || record.report;
