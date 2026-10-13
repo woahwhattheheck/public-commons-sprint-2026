@@ -23,7 +23,8 @@ def main(argv=None):
     parser.add_argument("--workspace", type=Path, required=True)
     commands = parser.add_subparsers(dest="command", required=True)
     commands.add_parser("list")
-    commands.add_parser("axes")
+    axes = commands.add_parser("axes")
+    axes.add_argument("--models", nargs="+", choices=("ndr", "sdr"))
     for name in ("preview", "prepare", "execute"):
         child = commands.add_parser(name)
         child.add_argument("selection", type=Path)
@@ -38,7 +39,7 @@ def main(argv=None):
     try:
         workspace = Workspace(args.workspace)
         if args.command == "axes":
-            result = experiments.supported_axes()
+            result = experiments.supported_axes(args.models)
         elif args.command == "list":
             result = experiments.list_experiments(workspace)
         elif args.command in ("preview", "prepare", "execute"):

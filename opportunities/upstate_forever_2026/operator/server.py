@@ -807,6 +807,11 @@ class Handler(BaseHTTPRequestHandler):
                     raise Fault("REVIEW_MEMBER", "Choose an original review package member.", 404)
                 ticket, policy = self.app.customer_reviews.desk_member(selected[0], urllib.parse.unquote(selected[1]))
                 return self.send_file(ticket["id"], download=one("download") == "1", content_security_policy=policy)
+            if self.app.extensions.has_file_route(url.path):
+                self.authorized(file=True)
+                reply = self.app.extensions.file_reply(url.path)
+                return self.send_file(reply["ticket_id"], download=one("download") == "1",
+                                      content_security_policy=reply["content_security_policy"])
             if url.path.startswith("/api/file/"):
                 self.authorized(file=True)
                 return self.send_file(url.path.rsplit("/", 1)[1], download=one("download") == "1")
@@ -818,7 +823,7 @@ class Handler(BaseHTTPRequestHandler):
                 experiment_reads = {"/api/experiments/" + name: name for name in EXPERIMENT_READS}
                 if url.path in experiment_reads:
                     return self.send_json(200, self.app.experiments.read(workspace, experiment_reads[url.path],
-                        {name: one(name) for name in ("experiment_id", "offset", "limit")}))
+                        {name: one(name) for name in ("experiment_id", "offset", "limit", "case_ids")}))
                 if url.path == "/api/state":
                     return self.send_json(200, self.app.state(workspace))
                 programme_reads = {"/api/programmes/" + name: name for name in PROGRAMME_READS}
@@ -1025,6 +1030,11 @@ def main():
     finally:
         server.server_close()
         server.operator.close()
+
+
+# ASTRA-ECO12-2651 namespaced original-operator integration
+import paired_ensemble as _paired_ensemble_extension
+_paired_ensemble_extension.install(sys.modules[__name__])
 
 if __name__ == "__main__":
     main()

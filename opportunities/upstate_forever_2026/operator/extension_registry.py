@@ -13,6 +13,7 @@ import math
 from pathlib import Path, PurePosixPath
 import re
 from typing import Any
+from urllib.parse import unquote
 
 SCHEMA = "upstate.operator-extension/v1"
 _IDENTIFIER = re.compile(r"^[a-z][a-z0-9-]*$")
@@ -20,7 +21,7 @@ _MODULE = re.compile(r"^[A-Za-z_]\w*(?:\.[A-Za-z_]\w*)*$")
 _MEMBER = re.compile(r"^[A-Za-z_]\w*$")
 _CONTEXT_KEYS = frozenset({
     "operator", "fault", "source_roots", "workspace", "workspace_key",
-    "operation", "action", "payload", "task",
+    "operation", "action", "payload", "task", "route_params",
 })
 
 
@@ -44,6 +45,7 @@ class ExtensionRegistry:
         self._extensions = {}
         self._actions = {}
         self._routes = {}
+        self._file_routes = []
         self._items = {}
         self._views = {}
         self._state_keys = {}
@@ -85,7 +87,7 @@ class ExtensionRegistry:
         self._issues.pop((extension_id, stage), None)
 
     def _context(self, *, workspace_key=None, payload=None, task=None,
-                 operation=None, workspace=None):
+                 operation=None, workspace=None, route_params=None):
         if task is not None:
             workspace_key = task.get("workspace", workspace_key)
             payload = task.get("payload", payload)
@@ -98,8 +100,75 @@ class ExtensionRegistry:
             "operation": operation,
             "action": task.get("action") if task is not None else None,
             "payload": {} if payload is None else payload,
-            "task": task,
+            "task": task, "route_params": route_params or {},
         }
+
+    @staticmethod
+    def _context_name(name):
+        return isinstance(name, str) and (
+            name in _CONTEXT_KEYS or re.fullmatch(r"route\.[A-Za-z_]\w*", name) is not None)
+
+    @staticmethod
+    def _context_value(name, context):
+        if name.startswith("route."):
+            return context["route_params"][name.removeprefix("route.")]
+        return context[name]
+
+    @staticmethod
+    def _file_template(value):
+        """Literal file families, opaque IDs and an optional final member path."""
+        if (not isinstance(value, str) or not value.startswith("/api/file/")
+                or "?" in value or "#" in value or "\\" in value):
+            raise ValueError("A file route must use an explicit /api/file/ path.")
+        parts = value.split("/")
+        if len(parts) < 5 or not re.fullmatch(r"[a-z][a-z0-9-]*", parts[3]):
+            raise ValueError("A preview route requires its own literal file family before ID parameters.")
+        if parts[3] == "review-desk":
+            raise ValueError("The original review-desk file family already has an owner.")
+        names, members, pattern, shape = [], [], [], []
+        for index, part in enumerate(parts):
+            selected = re.fullmatch(r"\{([A-Za-z_]\w*)(\.\.\.)?\}", part)
+            if selected:
+                name, tail = selected.groups()
+                if name in names:
+                    raise ValueError("A file route repeats one parameter name.")
+                names.append(name)
+                if tail:
+                    if index != len(parts) - 1 or name == "workspace_key":
+                        raise ValueError("A relative member path must be the final file-route parameter.")
+                    members.append(name)
+                    pattern.append("(?P<" + name + ">[^?#]+)")
+                    shape.append("**")
+                else:
+                    pattern.append("(?P<" + name + ">[A-Za-z0-9_-]+)")
+                    shape.append(None)
+            else:
+                if part in {".", ".."} or (part and not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_.-]*", part)):
+                    raise ValueError("File routes use literal segments and named source identifiers.")
+                pattern.append(re.escape(part))
+                shape.append(part)
+        if parts[-1] == "" or not names:
+            raise ValueError("A retained file route must declare its individual ID parameters.")
+        return re.compile("^" + "/".join(pattern) + "$"), tuple(shape), tuple(names), tuple(members)
+
+    @staticmethod
+    def _overlap(left, right):
+        for a, b in zip(left, right):
+            if a == "**" or b == "**":
+                return True
+            if a is not None and b is not None and a != b:
+                return False
+        return len(left) == len(right)
+
+    @staticmethod
+    def _member_path(value):
+        """Decode the URL once; the native provider still owns its exact inventory."""
+        decoded = unquote(value, encoding="utf-8", errors="strict")
+        if (not decoded or decoded.startswith("/") or "\\" in decoded
+                or re.search(r"[\x00-\x1f\x7f]", decoded)
+                or any(part in {"", ".", ".."} or ":" in part for part in decoded.split("/"))):
+            raise ValueError("Choose a relative member from the original retained file inventory.")
+        return decoded
 
     def _binding(self, specification, provider):
         if not isinstance(specification, dict):
@@ -112,11 +181,11 @@ class ExtensionRegistry:
         if not callable(function):
             raise ValueError("The registered handler is not callable.")
         arguments = specification.get("args", [])
-        if not isinstance(arguments, list) or any(name not in _CONTEXT_KEYS for name in arguments):
+        if not isinstance(arguments, list) or any(not self._context_name(name) for name in arguments):
             raise ValueError("A binding contains an unsupported context argument.")
         keywords = specification.get("kwargs", {})
         if (not isinstance(keywords, dict)
-                or any(not _MEMBER.fullmatch(key) or name not in _CONTEXT_KEYS
+                or any(not _MEMBER.fullmatch(key) or not self._context_name(name)
                        for key, name in keywords.items())):
             raise ValueError("A binding contains an unsupported keyword argument.")
         return (function, tuple(arguments), dict(keywords))
@@ -124,8 +193,8 @@ class ExtensionRegistry:
     @staticmethod
     def _call(binding, context):
         function, arguments, keywords = binding
-        return function(*(context[name] for name in arguments),
-                        **{key: context[name] for key, name in keywords.items()})
+        return function(*(ExtensionRegistry._context_value(name, context) for name in arguments),
+                        **{key: ExtensionRegistry._context_value(name, context) for key, name in keywords.items()})
 
     def load(self):
         """Read each explicit installed registration once; isolate failed desks."""
@@ -196,6 +265,25 @@ class ExtensionRegistry:
                     raise ValueError("HTTP route registration collides: " + " ".join(key))
                 routes[key] = (binding, operation)
 
+        file_routes = []
+        for route in backend.get("file_routes", []):
+            path = route.get("path")
+            pattern, shape, parameters, members = self._file_template(path)
+            if route.get("response") != "ticket_policy_pair":
+                raise ValueError("File routes must explicitly return the original ticket and policy pair.")
+            for previous in [*self._file_routes, *file_routes]:
+                if self._overlap(shape, previous["shape"]):
+                    raise ValueError("File route registration overlaps an existing extension family: " + path)
+            if ("GET", path) in self._builtin_routes or ("GET", path) in self._routes:
+                raise ValueError("File route registration collides with an existing route: " + path)
+            binding = self._binding(route, provider)
+            names = [*binding[1], *binding[2].values()]
+            if any(name.startswith("route.") and name.removeprefix("route.") not in parameters for name in names):
+                raise ValueError("A file binding names a parameter absent from its route.")
+            file_routes.append({"path": path, "pattern": pattern, "shape": shape,
+                                "parameters": parameters, "member_parameters": members,
+                                "binding": binding})
+
         items = {}
         for item in backend.get("items", []):
             kind = item.get("kind", "")
@@ -235,12 +323,13 @@ class ExtensionRegistry:
 
         entry = {
             "id": extension_id, "manifest": deepcopy(manifest), "provider": provider,
-            "invoke": invoke, "actions": actions, "routes": routes, "items": items,
+            "invoke": invoke, "actions": actions, "routes": routes, "file_routes": file_routes, "items": items,
             "state": state, "decorate": decorate, "verify": verify, "client": client,
         }
         self._extensions[extension_id] = entry
         self._actions.update({name: entry for name in actions})
         self._routes.update({key: (entry, *value) for key, value in routes.items()})
+        self._file_routes.extend({**route, "entry": entry} for route in file_routes)
         self._items.update({key: (entry, *value) for key, value in items.items()})
         if state:
             self._state_keys[state[0]] = entry
@@ -266,6 +355,37 @@ class ExtensionRegistry:
 
     def has_route(self, method, path):
         return (method.upper(), path) in self._routes
+
+    def has_file_route(self, path):
+        return any(route["pattern"].fullmatch(path) for route in self._file_routes)
+
+    def file_reply(self, path):
+        """Resolve an authenticated preview to the original verified file transport.
+
+        The HTTP handler must authorize(file=True) before calling this method.
+        """
+        for route in self._file_routes:
+            matched = route["pattern"].fullmatch(path)
+            if not matched:
+                continue
+            parameters = matched.groupdict()
+            for name in route["member_parameters"]:
+                parameters[name] = self._member_path(parameters[name])
+            context = self._context(workspace_key=parameters.get("workspace_key"),
+                                    route_params=parameters)
+            result = self._call(route["binding"], context)
+            if not isinstance(result, (tuple, list)) or len(result) != 2:
+                self._fail("EXTENSION_FILE", "The retained preview must return its file ticket and content policy.", 500)
+            ticket, policy = result
+            if not isinstance(ticket, dict) or not isinstance(ticket.get("id"), str) or not re.fullmatch(r"[0-9a-f]{64}", ticket["id"]):
+                self._fail("EXTENSION_FILE", "The retained preview did not return an original operator file ticket.", 500)
+            if policy is not None and (not isinstance(policy, str) or "\r" in policy or "\n" in policy):
+                self._fail("EXTENSION_POLICY", "The retained preview returned an invalid content policy.", 500)
+            workspace_key = parameters.get("workspace_key")
+            if workspace_key is not None and ticket.get("workspace") != workspace_key:
+                self._fail("EXTENSION_FILE_SCOPE", "The preview ticket belongs to another workspace.", 409)
+            return {"ticket_id": ticket["id"], "content_security_policy": policy}
+        self._fail("EXTENSION_FILE_ROUTE", "This retained preview route is not registered.", 404)
 
     def has_item(self, kind):
         return kind in self._items
@@ -359,6 +479,8 @@ class ExtensionRegistry:
                 "reads": [{"method": method, "path": path}
                           for method, path in sorted(entry["routes"])],
                 "state_key": entry["state"][0] if entry["state"] else None,
+                "file_routes": [{"method": "GET", "path": route["path"], "response": "file"}
+                                for route in entry["file_routes"]],
             })
         entries.sort(key=lambda entry: (entry["order"], entry["id"]))
         return {

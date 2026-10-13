@@ -5,7 +5,7 @@ import { resolve, dirname, join } from 'node:path';
 import { randomUUID, randomBytes } from 'node:crypto';
 import { digest, canonical, plain, need, regular, readJSON, saveJSON, privateDirectory,
   operationLease } from '../../stellar/scf-starforge-20261009/distribution/runtime-workspace/storage.mjs';
-import { openWorkspace } from '../../stellar/scf-starforge-20261009/mpp-charge/storage.mjs';
+import { openWorkspace, nativeRecordGroups } from '../../stellar/scf-starforge-20261009/mpp-charge/storage.mjs';
 import { versions } from '../../stellar/scf-starforge-20261009/mpp-charge/runtime.mjs';
 
 export const MPP_PRODUCT_SCHEMA = 'stellar-forge.mpp-product.v1';
@@ -221,7 +221,7 @@ export async function initializeMppProduct({ directory, name, workspaceDirectory
       // Only this retained setup may finish creation of its owned empty native root.
       if (await exists(selected.workspaceDirectory))
         need((await readdir(selected.workspaceDirectory)).every(value =>
-          ['.mpp-workspace.lock', 'sdk', 'purchases', 'deliveries', 'profiles', 'reports'].includes(value)),
+          ['.mpp-workspace.lock', ...nativeRecordGroups].includes(value)),
         'MPP_PRODUCT_SETUP_CONFLICT', 'The selected native workspace contains unrelated files.');
       const original = await openWorkspace(selected.workspaceDirectory, { create: !await exists(selected.workspaceDirectory) });
       await original.close();

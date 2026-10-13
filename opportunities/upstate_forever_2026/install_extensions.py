@@ -26,6 +26,7 @@ FILES = (
     "operator/EXTENSIONS.md",
 )
 OPTIONAL_FILES = ("operator/extensions/decisions.json",)
+PREVIOUS_EDITIONS = {"operator/extension_registry.py":["9363ac944ff29b0fa86747a2c10e83f45dc7ed8a745343652b197010028d6147","ae573df9f2ad99307f34b8638ffe430b215670caecf6ad8bd669859918acfe5e"],"operator/EXTENSIONS.md":["a321eb9d8066e057a87b307c1c800914e71620915a20843dc1e5a07da37ddc67","966adc778953dbf3a91f9bb80fe3d989b935c2c0da3eade48fbf7a555280dea0"],"operator/extensions/native-run-desk.json":["cde106b0e8178721c81e3e8db6746b620bf32ad69c66f9811fde602c8e72e9f6"],"operator/extensions/source-preparation.json":["7706d871baa05a4eb819e4b82de9fb0b564206b11fa4638d54c90796622fb3ae"],"operator/web/extension_host.mjs":["43aa37111364d21bff403cd62338a67340ee343d57b02e8047c851f9007a547b"]}
 BASE_ROUTES = (
     ("GET", "/api/extensions"), ("GET", "/api/state"), ("GET", "/api/item"),
     ("GET", "/api/source-info"), ("GET", "/api/task"), ("GET", "/api/run-log"),
@@ -133,6 +134,13 @@ def patch_server(source):
         "receiving verification before workspace registration"))
 
     def get_routes(section):
+        section = add(section, '            if url.path.startswith("/api/file/"):\n',
+                      '            if self.app.extensions.has_file_route(url.path):\n'
+                      '                self.authorized(file=True)\n'
+                      '                reply = self.app.extensions.file_reply(url.path)\n'
+                      '                return self.send_file(reply["ticket_id"], download=one("download") == "1",\n'
+                      '                                      content_security_policy=reply["content_security_policy"])\n',
+                      "original authenticated retained-file transport", before=True)
         section = add(section, '                workspace = one("workspace", self.app.primary)\n',
                       '                if url.path == "/api/extensions":\n'
                       '                    return self.send_json(200, self.app.extensions.manifest())\n',
@@ -175,8 +183,13 @@ def patch_app(source):
         " openForm,submitAction,detail,fileList,uploadFile,\n"
         " closeDetail:()=>{detailDialog.close();detailContext=null;},\n"
         " openDelivery:selection=>deliveryForm(undefined,selection),\n"
-        " openProgramme:selection=>typeof programmes!=='undefined'?programmes.create({selection}):extensions.openExtension('programmes','create',{selection})});\n"
+        " getProgramme:()=>typeof programmes==='undefined'?null:programmes});\n"
     )
+    # Upgrade the first installed programme callback before checking whether the
+    # complete registration is already present; never add a second host instance.
+    source = source.replace(
+        " openProgramme:selection=>typeof programmes!=='undefined'?programmes.create({selection}):extensions.openExtension('programmes','create',{selection})});",
+        " getProgramme:()=>typeof programmes==='undefined'?null:programmes});", 1)
     source = add(source, "function toast(message){", registration, "extension browser instance", before=True)
     source = add(source, "    renderTasks();\n", "    extensions.update(state);\n",
                  "all task refreshes reach active desks")
@@ -193,8 +206,12 @@ def patch_app(source):
     source = replace(source, "if(viewLabels[requested])navigate(requested);",
                      "if(viewLabels[requested]||extensions.hasView(requested))navigate(requested);",
                      "registered fragment navigation")
-    source = add(source, "async function selectWorkspace(id){\n", " extensions.detach();\n",
-                 "workspace lifecycle")
+    # Migrate the initial host join without changing the existing draft guard.
+    source = source.replace("async function selectWorkspace(id){\n extensions.detach();\n",
+                            "async function selectWorkspace(id){\n", 1)
+    source = add(source,
+                 " if(formDialog.open)throw Error('Finish or close the current draft before changing workspaces.');\n",
+                 " extensions.detach();\n", "workspace lifecycle after original draft guard")
     source = add(source, " const action=button.dataset.action,id=button.dataset.id;\n",
                  " if(await extensions.dispatch(button))return;\n", "registered action dispatch")
     startup = (
@@ -214,6 +231,14 @@ def patch_app(source):
         "requireSources();const saved=id?await api(endpoint('/api/item',{kind:'deliveries',id})):null,row=saved?.selection;",
         "requireSources();const saved=id?await api(endpoint('/api/item',{kind:'deliveries',id})):null,row=saved?.selection||initialSelection;",
         "native delivery selection defaults")
+    source = replace(source,
+        "openForm(row?'Revise complete map delivery':'Build complete seven-map delivery'",
+        "openForm(saved?'Revise complete map delivery':'Build complete seven-map delivery'",
+        "new preselected delivery title")
+    source = replace(source,
+        "toast(actionLabels[action]+' retained.');",
+        "toast((actionLabels[action] || action)+' retained.');",
+        "registered action confirmation")
     return source
 
 
@@ -242,10 +267,12 @@ def run(application, source_root, *, dry_run=False):
             if before is not None and before != data:
                 # Preserve an identical JSON registration despite whitespace.
                 equal_json = name.endswith(".json") and json.loads(before) == json.loads(data)
-                if not equal_json:
+                known_previous = sha(before) in PREVIOUS_EDITIONS.get(name, set())
+                if not equal_json and not known_previous:
                     raise ValueError("Current authored extension source differs: " + name +
                                      ". Reconcile that source edition before replacing it.")
-                data = before
+                if equal_json:
+                    data = before
             original[name], pending[name] = before, data
         for name, patch in (("operator/server.py", patch_server), ("operator/web/app.mjs", patch_app)):
             before = (application / name).read_bytes()

@@ -2,7 +2,7 @@
 from __future__ import annotations
 from .common import digest
 from .model_selection import required_roles
-from .reuse import copy_verified
+from .reuse import copy_verified, native_companions
 
 
 def source_identity(workspace, collection_id, source_id):
@@ -70,6 +70,10 @@ def reuse_grid_inputs(workspace, state, directory, selected_models):
         if digest(old_identity) != digest(new_identity):
             continue
         state["files"][role] = copy_verified(old_directory, original["files"][role], directory)
+        companions = native_companions(old_directory, {role: original["files"][role]})
+        if companions:
+            state.setdefault("input_companions", {})[role] = [
+                copy_verified(old_directory, item, directory) for item in companions]
         _, entry = workspace.source_file(spec["source_collection_id"], new_source)
         state["inputs"][role] = {
             **original["inputs"][role], "source_id": entry["id"],

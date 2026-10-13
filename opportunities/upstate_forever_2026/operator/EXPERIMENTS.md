@@ -270,3 +270,21 @@ execute and run continue unfinished cases and preserve available summaries if a 
 7. Upstate Forever. Emerging Contaminants / Small or Disadvantaged Communities Mapping RFP, October 2, 2026. https://www.upstateforever.org/files/files/20261002_FINAL_EC-SDC%20Mapping%20RFP%20APPENDIX%20COMBINED.pdf
 
 The current user guides explain the science; the fixed 3.20.0 source governs this delivery's native parameter and output contract.
+
+
+## Native execution and large experiment navigation
+
+The native case table reads the selected run's actual stage records. Each completed NDR or SDR stage shows its recorded execution, reuse or recovery mode and elapsed stage time. A reused stage links to its source run; its original execution time appears separately from the current transfer. Existing stages without a reuse record remain labelled complete. Opening a result page reads retained state through the existing operator API.
+
+Use **Go to case** to open any position in the saved design. Case counts and offsets remain exact decimal integers throughout the browser and server request, including designs larger than JavaScript's safe integer range. Completed-study filters operate over the retained result table; navigation follows the filtered order. The browser keeps the completed table until its saved summary changes and obtains native execution details only for the requested page. Searches share a short debounce so typing remains responsive.
+
+The live native case table accompanies the scientific report. The report's nitrogen, phosphorus and sediment quantities continue to come from the saved paired comparisons. Whole-workspace transfer carries the selected native outputs and their stage records, so the receiving operator can inspect the same execution history.
+
+
+## Select native models and share an experiment with compute programmes
+
+The baseline run selects the native model families for the entire experiment. Its name shows NDR, SDR, or both. Parameter rows and pollutant controls follow that choice; every alternative and its paired baseline keep the same model selection. A full native profile can support a single-model experiment. Choose additional profiles and grids containing the selected models.
+
+The maintained selected-model source integration supplies `common.selected_models`, `required_roles`, and `output_models`. Install the current shared native-model integration with this operator revision. Existing full-model experiment and run identities remain unchanged.
+
+Programmes use `expanded_cases(workspace, experiment_id, offset=0, limit=100)` to read an indexed page or consume `materialize_cases(workspace, experiment_id, offset=0, limit=None)` to prepare profiles and native run records in order. The iterator releases the experiment lock before yielding. After the programme completes native work, use **Run experiment** to reuse those runs and calculate paired case results. The complete API and selected-output contract are in `model/EXPERIMENT_MODEL_SELECTION.md`.

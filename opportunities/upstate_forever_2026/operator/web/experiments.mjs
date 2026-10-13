@@ -8,8 +8,22 @@ const esc = value => String(value ?? '').replace(/[&<>"']/g, c =>
   ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const number = value => typeof value === 'number' && Number.isFinite(value) ?
   value.toLocaleString(undefined, {maximumFractionDigits:6}) : '—';
-const count = value => typeof value==='string' && /^\d+$/.test(value) ?
-  BigInt(value).toLocaleString() : number(value);
+const count = value => typeof value==='bigint' ? value.toLocaleString() :
+  typeof value==='string' && /^\d+$/.test(value) ? BigInt(value).toLocaleString() : number(value);
+const exactInteger = value => {
+  if(typeof value==='bigint'&&value>=0n)return value;
+  if(typeof value==='string'&&/^\d+$/.test(value))return BigInt(value);
+  if(Number.isSafeInteger(value)&&value>=0)return BigInt(value);
+  throw Error('The saved experiment must provide an exact nonnegative case count.');
+};
+function caseWindow(total,offset,limit) {
+  total=exactInteger(total);offset=exactInteger(offset);const size=exactInteger(limit);
+  if(size<1n)throw Error('Choose a positive result page size.');
+  if(offset>=total)offset=total?((total-1n)/size)*size:0n;
+  const end=offset+size<total?offset+size:total;
+  return {total,offset,first:total?offset+1n:0n,last:end,
+    previous:offset>size?offset-size:0n,next:end<total?end:null};
+}
 const short = value => value ? String(value).slice(0,12) : '—';
 const human = value => String(value ?? '').replaceAll('_',' ');
 const when = value => value ? new Date(value).toLocaleString() : '—';
@@ -80,18 +94,22 @@ export function responseEnvelopes(rows) {
 
 export function attachExperiments(context) {
   const {getState,api,endpoint,openForm,submitAction,fileList,toast,openItem,showTask,navigate,closeDetail}=context;
-  let root=null,workspace=null,selected=null,offset=0,limit=100;
-  let details=null,summary=null,search='',metric='all',kind='all',axes={},methods=[];
+  let root=null,workspace=null,selected=null,offset=0n,limit=100,jumpText=null;
+  let summaryRevision=null,nativeByCase={},nativeRefresh=null;
+  let details=null,summary=null,search='',metric='all',kind='all',axes={},methods=[],formModels=['ndr','sdr'];
   let generation=0,controller=null,previewGeneration=0,previewController=null;
 
   const data=()=>getState()?.data || {};
   const experiments=()=>data().experiments || [];
+  const availableMetrics=()=>METRICS.filter(([name])=>!Array.isArray(details?.pollutants)||details.pollutants.includes(name));
   const name=(collection,id)=> {
     const row=(data()[collection]||[]).find(x=>x.id===id);
     return row?.title || row?.spec?.title || row?.metadata?.title || short(id);
   };
+  const runModels=row=>Array.isArray(row?.selection?.models)?row.selection.models:['ndr','sdr'];
+  const modelNames=models=>(models||['ndr','sdr']).map(value=>String(value).toUpperCase()).join(' + ');
   const runName=row=>name('scenarios',row.selection?.scenario_id)+' · '+
-    name('profiles',row.selection?.profile_id)+' · '+human(row.state);
+    name('profiles',row.selection?.profile_id)+' · '+modelNames(runModels(row))+' · '+human(row.state);
   const selectionKey=()=> 'upstate-experiment-selected:'+workspace;
   const setSelected=id=> {
     selected=id;
@@ -118,8 +136,22 @@ export function attachExperiments(context) {
     return id?'<div class="page-actions">'+btn('show','Open experiment',id)+'</div>':'';
   }
   function axisEntries() {
-    return Array.isArray(axes) ? axes.map(x=>typeof x==='string'?{path:x}:x) :
+    const entries=Array.isArray(axes)?axes.map(x=>typeof x==='string'?{path:x}:x):
       Object.entries(axes||{}).map(([path,spec])=>({path,...(typeof spec==='object'?spec:{})}));
+    return entries.filter(entry=>formModels.includes(entry.path.split('.')[0]));
+  }
+  function syncBaselineModels() {
+    const chosen=document.querySelector('[name="experiment_baseline"]')?.value;
+    formModels=runModels((data().runs||[]).find(run=>run.id===chosen));
+    const label=document.querySelector('#experiment-model-scope');
+    if(label)label.textContent=chosen?'Native models: '+modelNames(formModels):'Choose the retained baseline to select native models.';
+    for(const node of document.querySelectorAll('[name="experiment_axis_path"]')){
+      const original=node.value,entries=axisEntries(),retained=entries.some(axis=>axis.path===original);
+      node.innerHTML=(retained?'':option('','Choose a parameter for '+modelNames(formModels),true))+
+        entries.map(entry=>option(entry.path,(entry.label||entry.title||human(entry.path))+' · '+
+          entry.path+(entry.units?' ['+entry.units+']':''),entry.path===original)).join('');
+    }
+    invalidatePreview();
   }
   function heading() {
     return '<header class="page-header"><div><p class="eyebrow">UPPER SAVANNAH SCIENTIFIC WORKBENCH</p>'+
@@ -135,10 +167,10 @@ export function attachExperiments(context) {
     return '<section class="section"><header class="section-header"><div><h2>Saved experiments</h2>'+
       '<p>Completed cases are reused when the experiment resumes.</p></div></header>'+
       table(['Experiment','State','Completed / total','Updated',''],rows.map(row=> {
-        const p=row.progress||{},counts=row.counts_exact||row.counts||{};
+        const p=row.progress||{},exact=row.progress_exact||{},counts=row.counts_exact||row.counts||{};
         return '<tr><td class="name-cell"><strong>'+esc(row.title)+'</strong><small class="mono">'+short(row.id)+'</small></td>'+
-          '<td>'+status(row.state)+'</td><td class="number-cell">'+number(p.complete||0)+' / '+count(counts.cases||0)+
-          ((p.failed||0)?'<small>'+number(p.failed)+' failed</small>':'')+'</td><td>'+esc(when(row.updated_at))+'</td>'+
+          '<td>'+status(row.state)+'</td><td class="number-cell">'+count(exact.complete??p.complete??0)+' / '+count(counts.cases||0)+
+          ((p.failed||0)?'<small>'+count(exact.failed??p.failed)+' failed</small>':'')+'</td><td>'+esc(when(row.updated_at))+'</td>'+
           '<td class="actions-cell">'+btn('open',selected===row.id?'Selected':'Open',row.id)+
           btn('clone','Revise design',row.id)+'</td></tr>';
       }))+'</section>';
@@ -155,20 +187,23 @@ export function attachExperiments(context) {
       (!query||[row.scenario_title,row.profile_title,row.scenario_id,row.profile_id,row.run_id].some(x=>String(x||'').toLocaleLowerCase().includes(query))));
   }
   function resultPage() {
-    const complete=details?.state==='complete' && summary?.state==='complete' &&
-      summary.id===details.id && summary.rows?.length===details.total_cases;
+    const planned=exactInteger(details?.total_cases_exact??details?.total_cases??0);
+    const complete=details?.state==='complete'&&summary?.state==='complete'&&
+      summary.id===details.id&&BigInt(summary.rows?.length??-1)===planned;
     const rows=complete?matching(summary.rows):(details?.cases||[]);
-    const total=complete?rows.length:(details?.total_cases||0);
-    if(complete)offset=Math.min(offset,Math.max(0,Math.floor((total-1)/limit)*limit));
-    return {complete,total,total_display:complete?rows.length:(details?.total_cases_exact||total),rows:complete?rows.slice(offset,offset+limit):rows,
-      next:complete?(offset+limit<total?offset+limit:null):details?.next_offset};
+    const page=caseWindow(complete?rows.length:planned,offset,limit);
+    offset=page.offset;
+    return {...page,complete,rows:complete?rows.slice(Number(offset),Number(offset)+limit):rows};
   }
   function renderPagination(page) {
-    const first=page.total?offset+1:0,last=Math.min(offset+page.rows.length,page.total);
+    const last=page.rows.length?offset+BigInt(page.rows.length):0n;
     return '<span>'+((search||kind!=='all')&&page.complete?'Matching cases ':'Cases ')+
-      count(first)+'–'+count(last)+' of '+count(page.total_display)+'</span>'+
-      btn('previous','Previous',selected,offset===0?'disabled':'')+
-      btn('next','Next',selected,page.next===null||page.next===undefined?'disabled':'');
+      count(page.rows.length?page.first:0n)+'–'+count(last)+' of '+count(page.total)+'</span>'+
+      btn('previous','Previous',selected,offset===0n?'disabled':'')+
+      btn('next','Next',selected,page.next===null?'disabled':'')+
+      '<label class="experiment-jump">Go to case<input type="text" inputmode="numeric" pattern="[0-9]*" '+
+      'data-experiment-case aria-label="Case number" value="'+esc(jumpText??(page.total?page.first.toString():''))+'" '+
+      (page.total?'':'disabled')+'></label>'+btn('jump','Go',selected,page.total?'':'disabled');
   }
   function invalidatePreview() {
     previewGeneration++;previewController?.abort();
@@ -204,12 +239,14 @@ export function attachExperiments(context) {
         '<td class="number-cell">'+number(row.percent_min)+' to '+number(row.percent_max)+'</td><td>'+
         (row.lower&&!row.higher&&!row.unchanged?'Lower export in every compared profile':
           row.higher&&!row.lower&&!row.unchanged?'Higher export in every compared profile':
-          !row.lower&&!row.higher?'Unchanged export':'Mixed response')+'</td></tr>'));
+          row.lower&&!row.higher?'Lower or unchanged export':
+          row.higher&&!row.lower?'Higher or unchanged export':
+          !row.lower&&!row.higher?'Unchanged export':'Direction changes across profiles')+'</td></tr>'));
   }
   function renderDetails() {
     const target=root?.querySelector('#experiment-detail');
     if(!target||!details)return;
-    const d=details,p=d.progress||{},s=d.selection||{},page=resultPage(),cases=page.rows;
+    const d=details,p=d.progress||{},exact=d.progress_exact||{},s=d.selection||{},page=resultPage(),cases=page.rows;
     const active=(getState()?.tasks||[]).find(t=>['queued','running'].includes(t.state)&&
       t.action.startsWith('experiment.')&&(t.payload?.experiment_id===d.id||
         sameDesign(t.payload?.selection,s)));
@@ -219,14 +256,14 @@ export function attachExperiments(context) {
         d.state==='complete'?btn('report','Refresh report',d.id):btn('run',d.state==='prepared'?'Run experiment':'Resume experiment',d.id,'class="primary"'))+
       btn('clone','Revise design',d.id)+'</div></header>'+
       '<div class="section-body"><div class="experiment-counts">'+
-      [['Completed',p.complete||0],['Pending',p.pending||0],['Failed',p.failed||0],['Planned cases',d.counts_exact?.cases||d.counts?.cases||0]].map(([label,value])=>
+      [['Completed',exact.complete??p.complete??0],['Pending',exact.pending??p.pending??0],['Failed',exact.failed??p.failed??0],['Planned cases',d.counts_exact?.cases??d.counts?.cases??0]].map(([label,value])=>
         '<div><span>'+label+'</span><strong>'+count(value)+'</strong></div>').join('')+'</div>'+
       '<p class="note">Each land-cover case uses a baseline with the same parameter profile. Signed change is alternative minus baseline; '
       +'positive reduction means less exported mass. Reference and parameter cases remain separate.</p>'+
       (p.active_case_id?'<p role="status">Current native case: <code>'+esc(short(p.active_case_id))+'</code></p>':'')+
       '<details><summary>Saved inputs and design</summary><dl class="definition"><dt>Baseline run</dt><dd>'+esc(short(s.baseline_run_id))+
       ' <button type="button" data-action="item" data-kind="runs" data-id="'+esc(s.baseline_run_id)+'">Open run</button></dd>'+
-      '<dt>Design</dt><dd>'+esc(human(s.design))+'</dd><dt>Alternatives</dt><dd>'+
+      '<dt>Native models</dt><dd>'+esc(modelNames(d.models))+'</dd><dt>Design</dt><dd>'+esc(human(s.design))+'</dd><dt>Alternatives</dt><dd>'+
       (s.scenario_ids||[]).map(id=>esc(name('scenarios',id))).join(', ')+
       '</dd><dt>Additional profiles</dt><dd>'+(s.profile_ids||[]).map(id=>esc(name('profiles',id))).join(', ')+
       '</dd></dl>'+table(['Parameter','Selected values','Reference'],(s.axes||[]).map(a=>'<tr><td>'+esc(a.path)+'</td><td>'+
@@ -235,18 +272,42 @@ export function attachExperiments(context) {
       '" placeholder="Name or retained run ID"></label><label>Case kind<select data-experiment-filter="kind">'+
       [['all','All cases'],['landcover','Land-cover alternatives'],['parameter','Parameter response'],['reference','Reference baseline']].map(([v,l])=>option(v,l,kind===v)).join('')+
       '</select></label><label>Pollutant<select data-experiment-filter="metric">'+option('all','All pollutants',metric==='all')+
-      METRICS.map(([v,l])=>option(v,l,metric===v)).join('')+'</select></label></div>'+
+      availableMetrics().map(([v,l])=>option(v,l,metric===v)).join('')+'</select></label></div>'+
       '<div id="experiment-result-tables">'+renderResultTables(cases)+'</div>'+
       '<div id="experiment-pagination" class="experiment-pagination">'+renderPagination(page)+'</div>'+
       '<h3>Reports and retained files</h3>'+fileList([...(d._downloads||[]),...(summary?._downloads||[])].filter((x,i,a)=>a.findIndex(y=>y.id===x.id)===i))+
       ((!summary&&d.state!=='running')?'<p>'+btn('report','Build report from available cases',d.id)+'</p>':'')+
       '<p class="note">Use Back up workspace to transfer the experiment, original inputs and native models together.</p></div>';
   }
+  function stageDuration(start,end) {
+    const seconds=(Date.parse(end)-Date.parse(start))/1000;
+    if(!Number.isFinite(seconds)||seconds<0)return '';
+    if(seconds<60)return number(Math.round(seconds*10)/10)+' s';
+    if(seconds<3600)return Math.floor(seconds/60)+' min '+Math.floor(seconds%60)+' s';
+    return Math.floor(seconds/3600)+' h '+Math.floor(seconds%3600/60)+' min';
+  }
+  function nativeExecution(row) {
+    const execution=nativeByCase[row.id];
+    if(!execution)return '<small>Opening native stages…</small>';
+    if(!execution.stages?.length)return esc(execution.state==='unprepared'?'Awaiting preparation':
+      execution.state==='running'?'Native run running':human(execution.state));
+    return execution.stages.map(stage=>{
+      const label={executed:'Executed',reused:'Reused',recovered:'Recovered',complete:'Complete'}[stage.mode]||'Complete';
+      const duration=stageDuration(stage.started_at,stage.completed_at);
+      const original=stage.origin,originDuration=original&&stageDuration(original.started_at,original.completed_at);
+      const source=stage.source_run_id;
+      return '<div class="experiment-native-stage"><strong>'+esc(String(stage.model).toUpperCase())+' · '+label+
+        (duration?' · '+esc(duration):'')+'</strong>'+
+        ((stage.mode==='reused'||stage.mode==='recovered')&&originDuration?'<small>Original execution '+esc(originDuration)+'</small>':'')+
+        (source&&source!==row.run_id?'<button type="button" data-action="item" data-kind="runs" data-id="'+
+          esc(source)+'">Open source run</button>':'')+'</div>';
+    }).join('');
+  }
   function renderResultTables(cases) {
     return renderMetrics(cases)+renderEnvelopes()+'<h3>Native cases and continuation</h3>'+
-      table(['Scenario','Profile','State','Run','Detail'],matching(cases).map(row=>
+      table(['Scenario','Profile','State','Native execution','Run','Detail'],matching(cases).map(row=>
         '<tr><td>'+esc(row.scenario_title||short(row.scenario_id))+'</td><td>'+esc(row.profile_title||short(row.profile_id))+
-        '</td><td>'+status(row.state)+'</td><td class="actions-cell">'+(row.run_id?
+        '</td><td>'+status(row.state)+'</td><td>'+nativeExecution(row)+'</td><td class="actions-cell">'+(row.run_id?
           '<button type="button" data-action="item" data-kind="runs" data-id="'+esc(row.run_id)+'">Open run</button>'+
           '<button type="button" data-action="spatial-item" data-kind="runs" data-id="'+esc(row.run_id)+'">Map</button>':
           'Awaiting preparation')+'</td><td>'+esc(errorText(row.error))+'</td></tr>'));
@@ -256,15 +317,29 @@ export function attachExperiments(context) {
     const current=++generation,forWorkspace=workspace,id=selected;
     controller?.abort();controller=new AbortController();
     try {
-      const record=await api(endpoint('/api/experiments/inspect',{experiment_id:id,offset,limit}),{signal:controller.signal});
+      const pageIds=summary?.id===id&&summary.state==='complete'?resultPage().rows.map(row=>row.id):[];
+      const params={experiment_id:id,offset:offset.toString(),limit};
+      if(pageIds.length)params.case_ids=pageIds.join(',');
+      const record=await api(endpoint('/api/experiments/inspect',params),{signal:controller.signal});
       if(current!==generation||forWorkspace!==workspace||id!==selected||!root)return;
-      details=record;renderDetails();
-      if(record.progress?.complete || ['complete','partial','failed'].includes(record.state)) {
+      details=record;if(metric!=='all'&&!availableMetrics().some(([name])=>name===metric))metric='all';
+      Object.assign(nativeByCase,record.native_execution_by_case||{});renderDetails();
+      const revision=record.files?.json?.sha256||record.summary_at||null;
+      if((revision||['complete','partial','failed'].includes(record.state))&&
+          (!summary||summary.id!==id||summaryRevision!==revision)) {
         try {
           const report=await api(endpoint('/api/experiments/summary',{experiment_id:id}),{signal:controller.signal});
           if(current!==generation||forWorkspace!==workspace||id!==selected||!root)return;
-          summary=report;renderDetails();
+          summary=report;summaryRevision=revision;renderDetails();
         }catch(error){if(error.name!=='AbortError'&&error.status!==404)throw error;}
+      }
+      const missing=resultPage().rows.filter(row=>!nativeByCase[row.id]).map(row=>row.id);
+      if(missing.length){
+        const stages=await api(endpoint('/api/experiments/inspect',{
+          experiment_id:id,offset:offset.toString(),limit,case_ids:missing.join(',')
+        }),{signal:controller.signal});
+        if(current!==generation||forWorkspace!==workspace||id!==selected||!root)return;
+        Object.assign(nativeByCase,stages.native_execution_by_case||{});renderDetails();
       }
     }catch(error) {
       if(error.name==='AbortError'||current!==generation||forWorkspace!==workspace||!root)return;
@@ -274,32 +349,42 @@ export function attachExperiments(context) {
     }
   }
   function onFilter(event) {
+    if(event.target.dataset.experimentCase!==undefined){jumpText=event.target.value;return;}
     const field=event.target.dataset.experimentFilter;if(!field)return;
     if(field==='search')search=event.target.value;
     if(field==='kind')kind=event.target.value;
     if(field==='metric')metric=event.target.value;
     if(!details)return;
-    if(resultPage().complete)offset=0;
+    if(resultPage().complete)offset=0n;jumpText=null;
     const page=resultPage(),results=root?.querySelector('#experiment-result-tables');
     if(results)results.innerHTML=renderResultTables(page.rows);
     const pagination=root?.querySelector('#experiment-pagination');
     if(pagination)pagination.innerHTML=renderPagination(page);
+    if(page.complete&&page.rows.some(row=>!nativeByCase[row.id])){
+      clearTimeout(nativeRefresh);nativeRefresh=setTimeout(()=>loadSelected(),180);
+    }
+  }
+  function onCaseKey(event) {
+    if(event.key==='Enter'&&event.target.dataset.experimentCase!==undefined){
+      event.preventDefault();root?.querySelector('[data-action="experiment-jump"]')?.click();
+    }
   }
   function detach() {
+    clearTimeout(nativeRefresh);nativeRefresh=null;
     generation++;controller?.abort();controller=null;
-    if(root){root.removeEventListener('input',onFilter);root.removeEventListener('change',onFilter);}
+    if(root){root.removeEventListener('input',onFilter);root.removeEventListener('change',onFilter);root.removeEventListener('keydown',onCaseKey);}
     root=null;
   }
   function mount(container,currentState) {
     if(workspace!==currentState.workspace_key) {
-      workspace=currentState.workspace_key;details=null;summary=null;offset=0;search='';metric='all';kind='all';
+      workspace=currentState.workspace_key;details=null;summary=null;summaryRevision=null;nativeByCase={};offset=0n;jumpText=null;search='';metric='all';kind='all';
       try{selected=sessionStorage.getItem(selectionKey());}catch{selected=null;}
     }
     if(root!==container) {
-      if(root){root.removeEventListener('input',onFilter);root.removeEventListener('change',onFilter);}
-      root=container;root.addEventListener('input',onFilter);root.addEventListener('change',onFilter);
+      if(root){root.removeEventListener('input',onFilter);root.removeEventListener('change',onFilter);root.removeEventListener('keydown',onCaseKey);}
+      root=container;root.addEventListener('input',onFilter);root.addEventListener('change',onFilter);root.addEventListener('keydown',onCaseKey);
     }
-    if(selected&&!experiments().some(row=>row.id===selected)){setSelected(null);details=null;summary=null;}
+    if(selected&&!experiments().some(row=>row.id===selected)){setSelected(null);details=null;summary=null;summaryRevision=null;nativeByCase={};}
     render();loadSelected();
   }
 
@@ -325,6 +410,7 @@ export function attachExperiments(context) {
         axisEntries().find(x=>x.path===row.querySelector('[name="experiment_axis_path"]').value)||{}),
       reference:row.querySelector('[name="experiment_axis_reference"]').value.trim(),
     }));
+    if(selectedAxes.some(x=>!x.path||!formModels.includes(x.path.split('.')[0])))throw Error('Choose parameter rows for '+modelNames(formModels)+' or remove unused rows.');
     if(selectedAxes.some(x=>!x.reference))throw Error('Each parameter choice needs its published reference or study rationale.');
     if(new Set(selectedAxes.map(x=>x.path)).size!==selectedAxes.length)throw Error('Combine values for the same parameter in one row.');
     return {schema:'upstate.experiment-selection/v1',title,reason,baseline_run_id:baseline,
@@ -347,6 +433,7 @@ export function attachExperiments(context) {
     const baselineScenarios=new Set((data().scenarios||[]).filter(s=>s.kind==='baseline').map(s=>s.id));
     const baselineRuns=(data().runs||[]).filter(r=>baselineScenarios.has(r.selection?.scenario_id));
     if(!baselineRuns.length)throw Error('Prepare a native run using the retained baseline scenario, grid and parameter profile first.');
+    formModels=runModels(baselineRuns.find(run=>run.id===selection.baseline_run_id));
     const alternatives=(data().scenarios||[]).filter(s=>s.kind!=='baseline');
     const profiles=data().profiles||[];
     const checkbox=(name,row,checked)=>'<label class="experiment-choice"><input type="checkbox" name="'+name+
@@ -355,7 +442,8 @@ export function attachExperiments(context) {
     const html='<div class="experiment-form"><div class="experiment-form-grid">'+
       '<label>Experiment title<input name="experiment_title" required value="'+esc(selection.title||'')+'" autocomplete="off"></label>'+
       '<label>Baseline native run<select name="experiment_baseline" required>'+option('','Choose retained baseline')+
-      baselineRuns.map(row=>option(row.id,runName(row),row.id===selection.baseline_run_id)).join('')+'</select></label>'+
+      baselineRuns.map(row=>option(row.id,runName(row),row.id===selection.baseline_run_id)).join('')+'</select><small id="experiment-model-scope">'+
+      esc(selection.baseline_run_id?'Native models: '+modelNames(formModels):'Choose the retained baseline to select native models.')+'</small></label>'+
       '<label class="full">Purpose and interpretation<textarea name="experiment_reason" required rows="3">'+esc(selection.reason||'')+'</textarea></label></div>'+
       '<fieldset><legend>Land-cover alternatives</legend><p>Every selected alternative is paired with a baseline using the same parameter profile.</p>'+
       (alternatives.length?'<div class="experiment-choices">'+alternatives.map(row=>checkbox('experiment_scenario',row,
@@ -387,6 +475,7 @@ export function attachExperiments(context) {
       },()=> {
         const mode=document.querySelector('[name="experiment_execution"]');
         mode.addEventListener('change',()=>{document.querySelector('#form-submit').textContent=mode.value==='save'?'Save design':'Save and run';});
+        document.querySelector('[name="experiment_baseline"]').addEventListener('change',syncBaselineModels);
         document.querySelector('.experiment-form').addEventListener('input',invalidatePreview);
       });
   }
@@ -431,30 +520,40 @@ export function attachExperiments(context) {
       const selectedMethod=methods.find(method=>method.id===id);
       if(!selectedMethod)throw Error('Select an available published profile.');
       const supported=new Set(axisEntries().map(axis=>axis.path));
-      if(selectedMethod.axes.some(axis=>!supported.has(axis.path)))throw Error('This profile refers to a parameter outside the selected native model.');
-      document.querySelector('#experiment-axis-rows').innerHTML=selectedMethod.axes.map(axisRow).join('');
+      const selectedAxes=selectedMethod.axes.filter(axis=>formModels.includes(axis.path.split('.')[0]));
+      if(!selectedAxes.length||selectedAxes.some(axis=>!supported.has(axis.path)))throw Error('This method has no supported parameter choices for the selected native models.');
+      document.querySelector('#experiment-axis-rows').innerHTML=selectedAxes.map(axisRow).join('');
       document.querySelector('[name="experiment_design"]').value=selectedMethod.design||'factorial';
       previewGeneration++;previewController?.abort();
-      document.querySelector('#experiment-preview').textContent=selectedMethod.reference+' '+(selectedMethod.notes||[]).join(' ');
+      document.querySelector('#experiment-preview').textContent=modelNames(formModels)+' reference values. '+selectedMethod.reference+' '+(selectedMethod.notes||[]).join(' ');
       return;
     }
     if(action==='preview')return previewDesign();
     if(action==='show'){
       workspace=getState()?.workspace_key;
-      setSelected(id);offset=0;details=null;summary=null;
+      setSelected(id);offset=0n;jumpText=null;details=null;summary=null;summaryRevision=null;nativeByCase={};
       closeDetail?.();
       if(navigate)return navigate('experiments');
       render();return loadSelected();
     }
     if(action==='open'){
-      setSelected(id);offset=0;details=null;summary=null;render();return loadSelected();
+      setSelected(id);offset=0n;jumpText=null;details=null;summary=null;summaryRevision=null;nativeByCase={};render();return loadSelected();
     }
     if(action==='previous'||action==='next'){
       const page=resultPage();
-      const next=action==='previous'?Math.max(0,offset-limit):page.next;
+      const next=action==='previous'?page.previous:page.next;
       if(next===null||next===undefined)return;
-      offset=next;
-      if(page.complete){renderDetails();return;}
+      offset=next;jumpText=null;
+      if(page.complete)renderDetails();
+      return loadSelected();
+    }
+    if(action==='jump'){
+      const page=resultPage(),raw=String(root?.querySelector('[data-experiment-case]')?.value??'').trim();
+      if(!/^\d+$/.test(raw))throw Error('Enter the case number using digits.');
+      const target=BigInt(raw);
+      if(target<1n||target>page.total)throw Error('Choose a case from 1 to '+count(page.total)+'.');
+      offset=target-1n;jumpText=null;
+      if(page.complete)renderDetails();
       return loadSelected();
     }
     if(action==='task')return showTask(id);

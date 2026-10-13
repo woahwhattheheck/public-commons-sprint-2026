@@ -175,6 +175,25 @@ starforge mpp-workspace open --dir /absolute/private/mpp-product
 
 The product publishes its actual private browser and merchant MCP endpoints. Retain its product directory, source/runtime identities and original private workspace together. For an already initialized product, continue with `open`; `inspect` and `inspect-launch` reopen its current setup and launch records.
 
+### Open and initially fund the selected channel
+
+The complete Channel application now carries first-use channel setup. Open **Channel work → Open a channel** and choose the actual network, token, funder, merchant recipient, commitment public key, initial deposit, refund waiting period and compiled contract edition. Select code already present on that network, or receive the actual compiled WASM file for native upload.
+
+Preparation retains the complete code bytes and derives one channel address from the original funder and saved salt. The product terminal reviews the exact source, parties, deposit and total fee limit. Optional code upload and channel creation retain their own signed envelopes and original transaction hashes under the same opening ID. The original native SDK creates the contract directly with the selected code hash and constructor.
+
+```sh
+starforge mpp-workspace channel opening-template --dir "$MPP_PRODUCT"
+starforge mpp-workspace channel opening-prepare --dir "$MPP_PRODUCT" \
+  --input "$COMPLETE_OPENING_INPUT"
+starforge mpp-workspace channel opening-execute --dir "$MPP_PRODUCT" \
+  --input "$ORIGINAL_OPENING_ID_INPUT"
+starforge mpp-workspace channel openings --dir "$MPP_PRODUCT" --id "$ORIGINAL_OPENING_ID"
+```
+
+Continue the same ID with `opening-resume`; reconcile its original signed transaction with `opening-reconcile`. Download the opened channel's actual identity for merchant setup and recurring work. Prepared and interrupted openings can be selected in the existing full operating handover, including the exact WASM, salt, profile, original authority and both transaction stages. The receiving product uses its actual native runtime while preserving that original setup.
+
+The maintained browser, installed commands, JavaScript/TypeScript, Python client and merchant MCP expose all 41 Channel operations. The complete channel guide in the retained source table below contains the opening profile and every recovery state.
+
 ### Recurring useful work
 
 Open **Channel work** and receive the actual merchant contract or retained contract file. Select the useful priced route, authorized source edition, original channel, token and parties. Create the accountable task with its total and per-purchase cap, purchase count and expiry. The controlling terminal presents the original task edition for operator authorization.
@@ -197,13 +216,13 @@ The merchant's **Collect earned amount and keep open** operation calls the origi
 
 The product observes balance and withdrawn cumulative at the same ledger. New unpaid commitments must cover their authenticated purchase amount and fit the remaining balance while the native SDK checks the increase from its current cumulative record. Financial records retain their original action, operation ID, fee authority, signed transaction, hash and finality. Resume and archival reconciliation use that same signed transaction.
 
-The [complete Channel guide](https://github.com/woahwhattheheck/public-commons-sprint-2026/blob/5cc64e9df69025971c883bc770df4440375b484a/stellar/scf-starforge-20261009/mpp-channel/README.md) includes all 35 supported operations, exact input shapes, fee review, original transaction recovery and contract sources.
+The [complete Channel guide](https://github.com/woahwhattheheck/public-commons-sprint-2026/blob/dae458763d417d6f1adae65b3bd35f68656c9b34/stellar/scf-starforge-20261009/mpp-channel/README.md) includes all 41 supported operations, exact input shapes, fee review, original transaction recovery and contract sources.
 
 ### Receive the whole operated product
 
 Use the original complete-channel export and receiving flow to carry the actual task/customer history, merchant records, paid output files, funding, collection/refund records, signed transactions, coherent observations and native SDK state. Its source closure includes the complete Python customer application and original product.
 
-The [product receiving guide](https://github.com/woahwhattheheck/public-commons-sprint-2026/blob/5cc64e9df69025971c883bc770df4440375b484a/products/mpp-workspace/RECEIVING.md) covers the original workspace identity and operating transfer. The [Python customer guide](https://github.com/woahwhattheheck/public-commons-sprint-2026/blob/5cc64e9df69025971c883bc770df4440375b484a/stellar/scf-starforge-20261009/mpp-channel/python/README.md) provides the complete work-list runner and `receive_channel.py`. Their existing operation IDs and immutable response/handover files continue across process interruption and receiving.
+The [product receiving guide](https://github.com/woahwhattheheck/public-commons-sprint-2026/blob/dae458763d417d6f1adae65b3bd35f68656c9b34/products/mpp-workspace/RECEIVING.md) covers the original workspace identity and operating transfer. The [Python customer guide](https://github.com/woahwhattheheck/public-commons-sprint-2026/blob/dae458763d417d6f1adae65b3bd35f68656c9b34/stellar/scf-starforge-20261009/mpp-channel/python/README.md) provides the complete work-list runner and `receive_channel.py`. Their existing operation IDs and immutable response/handover files continue across process interruption and receiving.
 
 In Runtime **Applications**, this selection also exposes **Native MPP merchant and customer** from provider `mpp-product`. Select the initialized product and its original native SDK/runtime, review the application and start it through the existing managed terminal. The original **MPP merchant and customer** provider continues to operate its existing native console registrations.
 

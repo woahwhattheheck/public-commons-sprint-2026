@@ -100,3 +100,9 @@ Application installers are provided for composition into an existing workbench. 
 - `operator/OBSERVATIONS.md`: measured loads, matching periods and catchment coverage.
 - `model/NATIVE_RECEIVING.md` and `operator/RECEIVING.md`: source-to-model and browser receiving.
 - `RFP_RESPONSE_MAP.md`: engineering coverage of the published project requirements.
+
+## Paired scenario ensembles
+
+Open **Paired multi-pollutant ensembles** after the selected baseline and alternative runs finish. Choose the original grid, matching scenario pair and completed parameter profiles; select the physical outputs, retained-cell support rule and requested quantiles. Preview the complete selection, build it through the existing operation queue, and use **Pause** or **Resume** to continue the same retained raster calculation. Results include numerical rasters, HTML/PDF reports, source bindings and a portable archive that can be received into another workspace.
+
+The paired ensemble modules live under `model/paired_ensemble/`. Other ensemble modules supplied by separate scientific workflows keep their original module names.

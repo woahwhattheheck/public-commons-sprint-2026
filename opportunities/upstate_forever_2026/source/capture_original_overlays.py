@@ -286,6 +286,23 @@ def publish_features(path, metadata, page_rows, linear_rows, field, flags):
         exact_write(path, staged.read_bytes())
 
 def equivalent_sr(a, b):
+    # Identical native declarations require no geometry engine on a receiver.
+    va = a.get("latestVcsWkid") or a.get("vcsWkid") or a.get("latestVCSWkid")
+    vb = b.get("latestVcsWkid") or b.get("vcsWkid") or b.get("latestVCSWkid")
+    if va and vb and va != vb:
+        return False
+    wa, wb = a.get("wkt"), b.get("wkt")
+    if wa and wb and wa == wb:
+        return True
+    if not wa and not wb:
+        ca, cb = a.get("latestWkid") or a.get("wkid"), b.get("latestWkid") or b.get("wkid")
+        if ca is not None and cb is not None:
+            ca, cb = int(ca), int(cb)
+            ca = 3857 if ca in (102100, 102113) else ca
+            cb = 3857 if cb in (102100, 102113) else cb
+            if ca == cb:
+                return True
+    # Preserve the existing full CRS comparison for nontrivial declarations.
     import pyproj
     def crs(value):
         if value.get("wkt"):
@@ -462,7 +479,7 @@ def capture_layer(root, identity, spec, masks, retry_failed=False, metadata_root
               "path": path.relative_to(root).as_posix(), "sha256": digest(packed),
               "storage_encoding": "gzip", "decoded_sha256": digest(gzip.decompress(packed)),
               "files": files, "curve_representations": curves,
-              "coverage": ("Complete original county features intersecting the four utility-focus HUC12s"
+              "coverage": spec.get("coverage") or ("Complete original county features intersecting the four utility-focus HUC12s"
                            if spec["scope"] == "focus" else
                            "Complete original features intersecting the whole PlanningBasins2023 Upper Savannah reporting polygon"),
               "derivation": "Feature order/grouping normalized from unchanged native field values; all original HTTP bodies, attributes, geometries and numeric source tokens are retained in response files"}

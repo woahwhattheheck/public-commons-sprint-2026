@@ -1,12 +1,15 @@
 import type { MppProductClient } from '../../../products/mpp-workspace/client.mjs';
 export type ChannelOperation =
+ 'opening-template'|'opening-prepare'|'opening-execute'|'opening-resume'|'opening-reconcile'|'opening-cancel'|
  'task-template'|'task-save'|'task-authorize'|'task-authority-resume'|'task-stop'|
  'purchase-prepare'|'purchase-execute'|'purchase-resume'|'purchase-refresh'|'purchase-cancel'|
  'merchant-save'|'merchant-start'|'merchant-stop'|'delivery-recover'|
  'close-prepare'|'close-execute'|'close-resume'|'close-reconcile'|'close-cancel'|
  'funder-template'|'funder-save'|'channel-observe'|'funding-prepare'|'funding-execute'|'funding-resume'|'funding-reconcile'|'funding-cancel'|'collection-prepare'|'collection-execute'|'collection-resume'|'collection-reconcile'|'collection-cancel'|
  'contract-fetch'|'export'|'receive';
-export type ChannelRecordKind = 'tasks'|'purchases'|'contracts'|'funders'|'funding'|'settlements'|'observations';
+export type ChannelRecordKind = 'tasks'|'purchases'|'contracts'|'funders'|'funding'|'settlements'|'observations'|'openings';
+export type OpeningPrepareInput = {openingId:string;profile:Record<string,unknown>};
+export type OpeningResumeInput = {openingId:string;rpcUrl?:string};
 export type FundingAction = 'top_up'|'close_start'|'refund';
 export type FundingInput = {stream:string;fundingId:string;action:FundingAction;amountAtomic?:string};
 export type CollectionInput = {stream:string;settlementId:string};

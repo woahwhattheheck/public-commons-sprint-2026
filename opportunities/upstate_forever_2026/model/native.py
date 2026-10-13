@@ -13,6 +13,7 @@ from .model_selection import (models, run_models, required_roles, required_outpu
                               validate_completed_run, common_comparison_outputs)
 from .reuse import native_companions, verify_stage
 from .stage_cache import runtime_environment, signature, recover, register
+from .native_arguments import build_native_arguments
 
 
 def runtime(selection=None):
@@ -95,18 +96,7 @@ def execute_run(workspace, key):
                     atomic_json(directory / "run.json", state)
             if scenario["kind"] == "landcover":
                 verified_inputs[str(lulc.resolve())] = state["stages"]["landcover"]["artifact"]
-            common = {"dem_path": str(paths["DEM"]), "lulc_path": str(lulc),
-                      "watersheds_path": str(paths["model_domain"]),
-                      "biophysical_table_path": str(table), "results_suffix": "",
-                      "n_workers": -1}
-            arguments = {}
-            if "ndr" in active:
-                arguments["ndr"] = {**common, **profile["ndr"], "calc_n": True, "calc_p": True,
-                                    "runoff_proxy_path": str(paths["PRECIPITATION"])}
-            if "sdr" in active:
-                arguments["sdr"] = {**common, **profile["sdr"],
-                                    "erosivity_path": str(paths["R_FACTOR"]),
-                                    "erodibility_path": str(paths["K_FACTOR"]), "drainage_path": ""}
+            arguments = build_native_arguments(active, profile, paths, table, lulc)
             for name, module in modules.items():
                 args = {**arguments[name], "workspace_dir": str(directory / name)}
                 if name in state["stages"]:

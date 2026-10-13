@@ -17,7 +17,7 @@ import json
 
 from .common import (INVEST_VERSION, atomic_bytes, atomic_json, canonical,
                      describe_file, digest, held, identifier, now, read_json,
-                     verify_file, selected_models, output_models)
+                     verify_file, selected_models, required_roles, output_models)
 from .profiles import NDR_KEYS, SDR_KEYS, checked_parameters
 from . import rasters
 
@@ -43,8 +43,29 @@ SUPPORTED_AXES = {
 }
 
 
-def supported_axes():
-    return copy.deepcopy(SUPPORTED_AXES)
+def _retain_model_choice(value, models):
+    """Match the maintained native selector's historical full-model identity."""
+    if list(models) == selected_models():
+        value.pop("models", None)
+    else:
+        value["models"] = list(models)
+
+
+def _profile_models(profile, models):
+    missing = set(models) - set(selected_models(profile))
+    if missing:
+        raise ValueError("Select a profile containing the reference models: " + ", ".join(sorted(missing)))
+    for model in models:
+        if not isinstance(profile.get(model), dict):
+            raise ValueError("The selected profile lacks its " + model.upper() + " parameters")
+    return profile
+
+
+def supported_axes(models=None):
+    """Parameter controls for the selected native model families."""
+    families = set(selected_models(models))
+    return {path: copy.deepcopy(metadata) for path, metadata in SUPPORTED_AXES.items()
+            if path.split(".", 1)[0] in families}
 
 
 def _nonempty(value, label):
@@ -92,11 +113,17 @@ def _normalise(workspace, selected):
         raise ValueError("Select an upstate.experiment-selection/v1 document")
     baseline = workspace.inspect_run(identifier(selected.get("baseline_run_id")))
     base_selection = baseline["selection"]
-    active_models = selected_models(base_selection)
+    models = selected_models(base_selection)
     if base_selection.get("invest_version") != INVEST_VERSION:
         raise ValueError("Select a baseline from the current native model version")
-    workspace.get_grid(base_selection["grid_id"])
+    grid = workspace.get_grid(base_selection["grid_id"])
+    if not set(models).issubset(selected_models(grid["spec"])):
+        raise ValueError("The reference run selects native models outside its retained grid")
+    missing_roles = set(required_roles(models)) - set(grid["files"])
+    if missing_roles:
+        raise ValueError("The reference grid lacks selected model inputs: " + ", ".join(sorted(missing_roles)))
     base_profile = workspace._get("profiles", base_selection["profile_id"])
+    _profile_models(base_profile, models)
     base_scenario = workspace._get("scenarios", base_selection["scenario_id"])
     if base_scenario["kind"] != "baseline":
         raise ValueError("The experiment reference must use the original land-cover baseline")
@@ -108,9 +135,7 @@ def _normalise(workspace, selected):
     profile_ids = _ids(selected.get("profile_ids", []), "Profile IDs")
     profile_ids = [key for key in profile_ids if key != base_profile["id"]]
     for key in profile_ids:
-        profile = workspace._get("profiles", key)
-        if not set(active_models).issubset(selected_models(profile)):
-            raise ValueError("Select profiles containing the experiment reference native models")
+        _profile_models(workspace._get("profiles", key), models)
     design = selected.get("design", "one_at_a_time")
     if design not in ("one_at_a_time", "factorial"):
         raise ValueError("Experiment design must be one_at_a_time or factorial")
@@ -124,8 +149,8 @@ def _normalise(workspace, selected):
         path = axis["path"]
         if not isinstance(path, str) or path not in SUPPORTED_AXES:
             raise ValueError("Select an existing NDR or SDR native parameter")
-        if path.split(".", 1)[0] not in active_models:
-            raise ValueError("Select a parameter axis for the native models in the experiment reference")
+        if path.split(".", 1)[0] not in models:
+            raise ValueError(path + " does not belong to the reference run's selected models")
         if path in seen:
             raise ValueError("Parameter axes must have distinct paths")
         seen.add(path)
@@ -154,9 +179,12 @@ def _normalise(workspace, selected):
     return selection, baseline, base_profile, base_scenario
 
 
-def _changes(base, alternative):
+def _changes(base, alternative, models=None):
     result = []
+    families = set(selected_models(models))
     for model, names in (("ndr", NDR_KEYS), ("sdr", SDR_KEYS)):
+        if model not in families:
+            continue
         for name in sorted(names):
             before, after = base.get(model, {}).get(name), alternative.get(model, {}).get(name)
             if before != after:
@@ -211,7 +239,7 @@ def _derived_profile(base, overrides, axes):
     return {"id": key, "profile": value, "derived": True, "changes": derivation}
 
 
-def _profiles(workspace, selection, base):
+def _profiles(workspace, selection, base, models=None):
     # Normalized axis values are unique. OAT choices and factorial combinations
     # therefore yield unique derived selections without retaining the matrix.
     retained_ids = {base["id"], *selection["profile_ids"]}
@@ -219,7 +247,7 @@ def _profiles(workspace, selection, base):
     for key in selection["profile_ids"]:
         profile = workspace._get("profiles", key)
         yield {"id": key, "profile": profile, "derived": False,
-               "changes": _changes(base, profile)}
+               "changes": _changes(base, profile, models)}
     for overrides in _parameter_sets(selection, base):
         option = _derived_profile(base, overrides, selection["axes"])
         if option["id"] not in retained_ids:
@@ -270,13 +298,13 @@ def _matching_raw_positions(selection, base, overrides):
         yield position
 
 
-def _indexed_design(workspace, selection, base):
+def _indexed_design(workspace, selection, base, models=None):
     """Count a design and locate profile ordinals without expanding its matrix."""
     retained = [{"id": base["id"], "profile": base, "derived": False, "changes": []}]
     for key in selection["profile_ids"]:
         profile = workspace._get("profiles", key)
         retained.append({"id": key, "profile": profile, "derived": False,
-                         "changes": _changes(base, profile)})
+                         "changes": _changes(base, profile, models)})
     axes = selection["axes"]
     if selection["design"] == "one_at_a_time":
         raw_count = sum(len(axis["values"]) for axis in axes)
@@ -347,7 +375,8 @@ def _indexed_profile(layout, index):
 
 def preview(workspace, selection):
     selection, baseline, base, _ = _normalise(workspace, selection)
-    profile_count = _indexed_design(workspace, selection, base)["count"]
+    models = selected_models(baseline["selection"])
+    profile_count = _indexed_design(workspace, selection, base, models)["count"]
     case_count = profile_count * (1 + len(selection["scenario_ids"]))
     warnings = []
     if selection["design"] == "one_at_a_time" and len(selection["axes"]) > 1:
@@ -357,13 +386,14 @@ def preview(workspace, selection):
     for axis in selection["axes"]:
         if all(value == _parameter(base, axis["path"]) for value in axis["values"]):
             warnings.append(axis["path"] + " contains only the current value and creates no additional profile.")
+    reference = {"run_id": baseline["id"], "profile_id": base["id"],
+                 "scenario_id": baseline["selection"]["scenario_id"],
+                 "grid_id": baseline["selection"]["grid_id"]}
+    _retain_model_choice(reference, models)
     return {
         "schema": "upstate.experiment-preview/v1", "selection": selection,
-        "baseline": {"run_id": baseline["id"], "profile_id": base["id"],
-                     "scenario_id": baseline["selection"]["scenario_id"],
-                     "grid_id": baseline["selection"]["grid_id"],
-                     **({"models": selected_models(baseline["selection"])}
-                        if selected_models(baseline["selection"]) != ["ndr", "sdr"] else {})},
+        "baseline": reference, "models": list(models),
+        "pollutants": list(output_models(models)),
         "counts": {"profiles": profile_count, "runs": case_count, "cases": case_count},
         "axis_values": [{**axis, "baseline_value": _parameter(base, axis["path"]),
                          "metadata": copy.deepcopy(SUPPORTED_AXES[axis["path"]])}
@@ -425,6 +455,7 @@ def prepare(workspace, selection):
         value = {
             "schema": STATE_SCHEMA, "id": key, "workspace_id": workspace.project["id"],
             "title": plan["selection"]["title"], "selection": plan["selection"],
+            "models": proposed["models"], "pollutants": proposed["pollutants"],
             "counts": plan["counts"], "state": "prepared",
             "progress": {"complete": 0, "failed": 0, "pending": plan["counts"]["cases"],
                          "active_case_id": None},
@@ -438,15 +469,13 @@ def _run_selection(grid_id, profile_id, scenario_id, models=None):
     value = {"schema": "upstate.run-selection/v1", "grid_id": grid_id,
              "profile_id": profile_id, "scenario_id": scenario_id,
              "invest_version": INVEST_VERSION}
-    active = selected_models(models)
-    if active != ["ndr", "sdr"]:
-        value["models"] = active
+    _retain_model_choice(value, selected_models(models))
     return value
 
 
 def _case_definition(plan, option, scenario, ordinal):
     baseline = plan["baseline"]
-    models = baseline.get("models")
+    models = selected_models(baseline)
     own_baseline = digest(_run_selection(
         baseline["grid_id"], option["id"], baseline["scenario_id"], models))
     is_baseline = scenario["id"] == baseline["scenario_id"]
@@ -470,7 +499,8 @@ def _case_definition(plan, option, scenario, ordinal):
         "schema": CASE_SCHEMA, "id": digest(case_identity), "ordinal": ordinal,
         **identity, **original, "profile_id": option["id"], "profile_title": option["profile"]["title"],
         "scenario_id": scenario["id"], "scenario_title": scenario["title"],
-        "selection": run_selection, "state": "pending", "changes": option["changes"],
+        "selection": run_selection, "models": list(models),
+        "pollutants": list(output_models(models)), "state": "pending", "changes": option["changes"],
         "metrics": {}, "comparison_id": None,
     }
 
@@ -481,7 +511,7 @@ def _case_definitions(workspace, plan):
     scenarios = [workspace._get("scenarios", baseline["scenario_id"])]
     scenarios += [workspace._get("scenarios", key) for key in selection["scenario_ids"]]
     ordinal = 0
-    for option in _profiles(workspace, selection, base):
+    for option in _profiles(workspace, selection, base, selected_models(baseline)):
         for scenario in scenarios:
             yield _case_definition(plan, option, scenario, ordinal), option
             ordinal += 1
@@ -495,7 +525,7 @@ def _retained_case(directory, expected):
     fields = ("schema", "id", "run_id", "baseline_run_id", "kind", "profile_id",
               "scenario_id", "selection", "ordinal")
     if all(value.get(field) == expected[field] for field in fields):
-        return value
+        return {**expected, **value}
     if "source_selection" in expected:
         original = {**expected, "run_id": expected["source_run_id"],
                     "baseline_run_id": expected["source_baseline_run_id"],
@@ -529,14 +559,41 @@ def _recover_case_bindings(workspace, plan, directory, state):
     active = selected_models(plan["baseline"])
     if not plan.get("_legacy_case_ids") or state.get("native_binding_models") == active:
         return state
-    for expected, _ in _case_definitions(workspace, plan):
-        if not (directory / "cases" / (expected["id"] + ".json")).is_file():
-            continue
-        case = _retained_case(directory, expected)
-        if case.pop("_binding_recovery", False):
-            case["binding_recovered_at"] = now()
-            _persist_case(directory, case)
-    state["native_binding_models"] = active
+    # Seek only retained case ordinals. An old sparse factorial programme must
+    # not expand its unmaterialized matrix merely to recover native bindings.
+    records = []
+    seen = set()
+    for path in (directory / "cases").glob("*.json"):
+        ordinal = read_json(path).get("ordinal")
+        if (type(ordinal) is not int or ordinal < 0
+                or ordinal >= plan["counts"]["cases"] or ordinal in seen):
+            raise ValueError("The retained experiment case index differs from its plan")
+        seen.add(ordinal)
+        records.append((ordinal, path))
+    if records:
+        base = workspace._get("profiles", plan["baseline"]["profile_id"])
+        layout = _indexed_design(workspace, plan["selection"], base, active)
+        scenario_ids = [plan["baseline"]["scenario_id"]] + plan["selection"]["scenario_ids"]
+        if layout["count"] * len(scenario_ids) != plan["counts"]["cases"]:
+            raise ValueError("The indexed design differs from the retained experiment case count")
+        previous_profile, option, scenarios = None, None, {}
+        for ordinal, path in sorted(records, key=lambda item: item[0]):
+            profile_index, scenario_index = divmod(ordinal, len(scenario_ids))
+            if profile_index != previous_profile:
+                option = _indexed_profile(layout, profile_index)
+                previous_profile = profile_index
+            scenario_id = scenario_ids[scenario_index]
+            if scenario_id not in scenarios:
+                scenarios[scenario_id] = workspace._get("scenarios", scenario_id)
+            expected = _case_definition(plan, option, scenarios[scenario_id], ordinal)
+            if expected["id"] != path.stem:
+                raise ValueError("The retained case file differs from its experiment ordinal")
+            case = _retained_case(directory, expected)
+            if case.pop("_binding_recovery", False):
+                case["binding_recovered_at"] = now()
+                _persist_case(directory, case)
+    state.update(native_binding_models=active, models=list(active),
+                 pollutants=list(output_models(active)))
     return _progress(directory, state)
 
 
@@ -548,36 +605,94 @@ def list_experiments(workspace):
     return sorted(result, key=lambda item: (item["updated_at"], item["id"]), reverse=True)
 
 
+def _indexed_case_definitions(workspace, plan, offset, limit):
+    """Select case ordinals without deriving any preceding profile."""
+    total = plan["counts"]["cases"]
+    if offset >= total:
+        return
+    base = workspace._get("profiles", plan["baseline"]["profile_id"])
+    layout = _indexed_design(workspace, plan["selection"], base, selected_models(plan["baseline"]))
+    scenario_ids = [plan["baseline"]["scenario_id"]] + plan["selection"]["scenario_ids"]
+    scenario_count = len(scenario_ids)
+    if layout["count"] * scenario_count != total:
+        raise ValueError("The selected experiment index differs from its retained case count")
+    stop = total if limit is None else min(total, offset + limit)
+    scenario_cache, previous_profile, option = {}, None, None
+    for ordinal in range(offset, stop):
+        profile_index, scenario_index = divmod(ordinal, scenario_count)
+        if profile_index != previous_profile:
+            option = _indexed_profile(layout, profile_index)
+            previous_profile = profile_index
+        scenario_id = scenario_ids[scenario_index]
+        if scenario_id not in scenario_cache:
+            scenario_cache[scenario_id] = workspace._get("scenarios", scenario_id)
+        yield _case_definition(plan, option, scenario_cache[scenario_id], ordinal), option
+
+
+def _case_window(offset, limit, *, unlimited=False):
+    if type(offset) is not int or offset < 0:
+        raise ValueError("Use a nonnegative integer case offset")
+    if limit is None and unlimited:
+        return
+    if type(limit) is not int or limit <= 0:
+        raise ValueError("Use a positive integer page size")
+
+
 def inspect(workspace, experiment_id, offset=0, limit=100):
-    if type(offset) is not int or offset < 0 or type(limit) is not int or limit <= 0:
-        raise ValueError("Use a nonnegative offset and a positive page size")
+    _case_window(offset, limit)
     plan = _plan(workspace, experiment_id)
     state = _state(workspace, experiment_id)
     directory = _directory(workspace, experiment_id)
     total = plan["counts"]["cases"]
-    cases = []
-    if offset < total:
-        base = workspace._get("profiles", plan["baseline"]["profile_id"])
-        layout = _indexed_design(workspace, plan["selection"], base)
-        scenario_ids = [plan["baseline"]["scenario_id"]] + plan["selection"]["scenario_ids"]
-        scenario_count = len(scenario_ids)
-        if layout["count"] * scenario_count != total:
-            raise ValueError("The selected experiment index differs from its retained case count")
-        scenario_cache, previous_profile, option = {}, None, None
-        for ordinal in range(offset, min(total, offset + limit)):
-            profile_index, scenario_index = divmod(ordinal, scenario_count)
-            if profile_index != previous_profile:
-                option = _indexed_profile(layout, profile_index)
-                previous_profile = profile_index
-            scenario_id = scenario_ids[scenario_index]
-            if scenario_id not in scenario_cache:
-                scenario_cache[scenario_id] = workspace._get("scenarios", scenario_id)
-            case = _case_definition(plan, option, scenario_cache[scenario_id], ordinal)
-            cases.append(_retained_case(directory, case))
+    cases = [_retained_case(directory, case)
+             for case, _ in _indexed_case_definitions(workspace, plan, offset, limit)]
     next_offset = offset + len(cases)
-    return {**state, "cases": cases, "offset": offset, "limit": limit,
+    models = selected_models(plan["baseline"])
+    return {**state, "models": list(models), "pollutants": list(output_models(models)),
+            "cases": cases, "offset": offset, "limit": limit,
             "total_cases": total, "next_offset": next_offset if next_offset < total else None}
 
+
+def expanded_cases(workspace, experiment_id, offset=0, limit=100):
+    """Read the exact indexed case page for native programme composition."""
+    return inspect(workspace, experiment_id, offset=offset, limit=limit)
+
+
+def _prepare_case_run(workspace, case, option):
+    if option["derived"]:
+        path = workspace.root / "profiles" / (option["id"] + ".json")
+        profile = (workspace._get("profiles", option["id"]) if path.exists()
+                   else workspace.save_profile(option["profile"]))
+        if profile["id"] != option["id"]:
+            raise ValueError("Derived native profile differs from the planned selection")
+    run = workspace.prepare_run(case["selection"])
+    if run["id"] != case["run_id"]:
+        raise ValueError("Prepared native run differs from the experiment case")
+    return run
+
+
+def materialize_cases(workspace, experiment_id, offset=0, limit=None):
+    """Yield prepared cases in their exact order, without executing native work.
+
+    This is a streaming iterator. Consume it to retain the selected derived
+    profiles and original native run selections. An optional window jumps
+    directly to its first ordinal. Completed experiment results stay intact;
+    resuming this iterator reuses the already retained profiles and runs.
+    """
+    _case_window(offset, limit, unlimited=True)
+    plan = _plan(workspace, experiment_id)
+    directory = _directory(workspace, experiment_id)
+    if plan.get("_legacy_case_ids"):
+        with held(directory / ".experiment.lock", blocking=False):
+            _recover_case_bindings(workspace, plan, directory, _state(workspace, experiment_id))
+    for expected, option in _indexed_case_definitions(workspace, plan, offset, limit):
+        with held(directory / ".experiment.lock", blocking=False):
+            case = _retained_case(directory, expected)
+            run = _prepare_case_run(workspace, case, option)
+            if case["state"] != "complete":
+                case.update(native_state=run["state"], materialized_at=case.get("materialized_at") or now())
+                _persist_case(directory, case)
+        yield {**case, "native_state": run["state"]}
 
 def _reporting_cells(workspace, grid_id):
     import numpy as np
@@ -596,11 +711,15 @@ def _reporting_cells(workspace, grid_id):
 def _pair_metrics(workspace, baseline, alternative, reporting_cells, pixel_area_ha, comparison):
     import numpy as np
     import rasterio
+    models = selected_models(baseline["selection"])
+    if selected_models(alternative["selection"]) != models:
+        raise ValueError("Experiment pairs must select the same native models")
+    pollutants = output_models(models)
+    for run in (baseline, alternative):
+        missing = set(pollutants) - set(run["artifacts"])
+        if missing:
+            raise ValueError("The selected model run lacks completed outputs: " + ", ".join(sorted(missing)))
     metrics = {}
-    pollutants = [name for name in output_models(baseline["selection"])
-                  if name in output_models(alternative["selection"])]
-    if not pollutants:
-        raise ValueError("Experiment pairs require a shared selected native output")
     for pollutant in pollutants:
         units = rasters.MASS_UNITS[pollutant]
         base_artifact = baseline["artifacts"][pollutant]
@@ -695,7 +814,7 @@ def _envelope(rows, pollutant):
     }
 
 
-def _sensitivity(rows, selection, expected_profiles, models=None):
+def _sensitivity(rows, selection, expected_profiles, pollutants=None):
     result = []
     for scenario_id in selection["scenario_ids"]:
         completed = [row for row in rows if row["kind"] == "landcover"
@@ -704,7 +823,7 @@ def _sensitivity(rows, selection, expected_profiles, models=None):
                  "scenario_title": completed[0]["scenario_title"] if completed else None,
                  "completed_profiles": len(completed), "expected_profiles": expected_profiles,
                  "complete": len(completed) == expected_profiles, "pollutants": {}}
-        for pollutant in output_models(models):
+        for pollutant in pollutants if pollutants is not None else rasters.MASS_UNITS:
             groups = {}
             for row in completed:
                 metric = row["metrics"].get(pollutant)
@@ -741,7 +860,7 @@ def _csv_text(value):
 def _csv_bytes(rows):
     output = io.StringIO(newline="")
     columns = ("case_id", "kind", "state", "profile_id", "profile_title", "scenario_id",
-               "scenario_title", "run_id", "baseline_run_id", "comparison_id",
+               "scenario_title", "models", "run_id", "baseline_run_id", "comparison_id",
                "parameters", "pollutant", "units", "baseline_total", "alternative_total",
                "delta", "reduction", "relative_change_pct", "paired_cells",
                "baseline_valid_cells", "alternative_valid_cells", "reporting_cells",
@@ -751,7 +870,8 @@ def _csv_bytes(rows):
     for row in rows:
         common = {key: row.get(key) for key in ("kind", "state", "profile_id", "scenario_id",
                   "run_id", "baseline_run_id", "comparison_id")}
-        common.update(case_id=row["id"], profile_title=_csv_text(row["profile_title"]),
+        common.update(case_id=row["id"], models=",".join(selected_models(row["selection"])),
+                      profile_title=_csv_text(row["profile_title"]),
                       scenario_title=_csv_text(row["scenario_title"]),
                       parameters=_csv_text(json.dumps(row["changes"], ensure_ascii=False, sort_keys=True)),
                       error=_csv_text(row.get("error", {}).get("message", "")))
@@ -767,6 +887,8 @@ def _csv_bytes(rows):
 def _summarize_locked(workspace, experiment_id, plan, state):
     directory = _directory(workspace, experiment_id)
     rows = _records(directory)
+    models = selected_models(plan["baseline"])
+    pollutants = output_models(models)
     generated = now()
     summary = {
         "schema": SUMMARY_SCHEMA, "id": experiment_id, "workspace_id": workspace.project["id"],
@@ -774,13 +896,12 @@ def _summarize_locked(workspace, experiment_id, plan, state):
         "state": state["state"], "selection": plan["selection"], "baseline": plan["baseline"],
         "counts": plan["counts"], "progress": copy.deepcopy(state["progress"]),
         "generated_at": generated, "rows": rows,
+        "models": list(models), "pollutants": list(pollutants),
         "grid_id": plan["baseline"]["grid_id"],
         "pairs": [{"profile_id": row["profile_id"], "baseline_run_id": row["baseline_run_id"],
                    "alternative_run_id": row["run_id"], "scenario_id": row["scenario_id"]}
                   for row in rows if row["kind"] == "landcover" and row["state"] == "complete"],
-        "models": selected_models(plan["baseline"]),
-        "sensitivity": _sensitivity(rows, plan["selection"], plan["counts"]["profiles"],
-                                    models=plan["baseline"]),
+        "sensitivity": _sensitivity(rows, plan["selection"], plan["counts"]["profiles"], pollutants),
         "interpretation": {
             "landcover": "Alternative land cover minus the baseline under the same parameter profile.",
             "parameter": "Baseline land cover under a selected profile minus the original reference profile.",
@@ -881,14 +1002,7 @@ def execute(workspace, experiment_id, *, completed_only=False):
                 state["updated_at"] = now()
                 atomic_json(directory / "state.json", state)
                 try:
-                    if option["derived"]:
-                        path = workspace.root / "profiles" / (option["id"] + ".json")
-                        profile = workspace._get("profiles", option["id"]) if path.exists() else workspace.save_profile(option["profile"])
-                        if profile["id"] != option["id"]:
-                            raise ValueError("Derived native profile differs from the planned selection")
-                    run = workspace.prepare_run(case["selection"])
-                    if run["id"] != case["run_id"]:
-                        raise ValueError("Prepared native run differs from the experiment case")
+                    run = _prepare_case_run(workspace, case, option)
                     if run["state"] != "complete":
                         if completed_only:
                             raise RuntimeError("Complete the selected native run before synchronizing experiment results")

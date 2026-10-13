@@ -35,3 +35,10 @@
 .experiment-workspace :focus-visible,.experiment-form :focus-visible{outline:2px solid #313b45;outline-offset:2px}
 @media(max-width:900px){.experiment-axis{grid-template-columns:repeat(2,minmax(0,1fr))}.experiment-axis label:nth-child(3){grid-column:1/-1}}
 @media(max-width:640px){.experiment-counts{grid-template-columns:repeat(2,minmax(0,1fr))}.experiment-counts>div{border-bottom:1px solid #d4d8dc}.experiment-filters,.experiment-form-grid,.experiment-choices,.experiment-axis{grid-template-columns:minmax(0,1fr)}.experiment-axis label:nth-child(3){grid-column:auto}}
+
+.experiment-jump{display:flex;align-items:center;gap:7px;font-size:.86rem}
+.experiment-jump input{width:12ch;max-width:32vw;font-variant-numeric:tabular-nums}
+.experiment-native-stage{margin:0 0 9px;min-width:150px}
+.experiment-native-stage:last-child{margin-bottom:0}
+.experiment-native-stage strong{font-size:.85rem;font-weight:500;white-space:nowrap}
+.experiment-native-stage button{font-size:.78rem;margin-top:4px}

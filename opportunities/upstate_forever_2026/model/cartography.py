@@ -5,6 +5,8 @@ from pathlib import Path
 import textwrap
 from .common import finite
 
+MAP_RENDERER_VERSION = "shared-native-scales/v1"
+
 LABELS = {
     "nitrogen_export": "Nitrogen export", "phosphorus_export": "Phosphorus export",
     "sediment_export": "Sediment export", "combined_priority": "Combined export priority",
@@ -59,6 +61,34 @@ def _north_and_scale(ax, bounds, crs):
             (format(length / 1000, "g") + " km") if length >= 1000 else (format(length, "g") + " m"),
             ha="center", va="bottom", fontsize=7, bbox={"facecolor": "white", "edgecolor": "none", "alpha": .8})
 
+
+def shared_display_scale(paths, *, signed=False, percentile=98, units=""):
+    """Choose one exact native-cell range for a comparable set of map panels."""
+    from .raster_stats import raster_percentile
+    percentile = finite(percentile, "Map display percentile", minimum=0)
+    if percentile > 100:
+        raise ValueError("Map display percentile must be at most 100")
+    paths = list(dict.fromkeys(str(Path(path).resolve()) for path in paths))
+    if not paths:
+        raise ValueError("Select at least one original raster for a display scale")
+    quantiles = [raster_percentile(path, percentile, positive_only=True,
+                                  absolute=signed) for path in paths]
+    available = [value for value in quantiles if value is not None and value > 0]
+    maximum = max(available, default=1.0)
+    label = ("Shared alternative scale; " if signed else "Native-cell display scale; ")
+    label += (format(percentile, "g") + "th percentile of nonzero " +
+              ("absolute changes." if signed else "values."))
+    if len(paths) > 1:
+        label += " The largest per-raster cap applies to every alternative."
+    if not available:
+        label = "Zero-valued modeled cells use a neutral display range."
+    return {"minimum": -maximum if signed else 0.0, "maximum": maximum,
+            "signed": bool(signed), "units": units, "percentile": percentile,
+            "population": "finite nonzero absolute cells" if signed else "finite positive cells",
+            "combination": "maximum of per-raster exact percentiles",
+            "raster_percentiles": quantiles, "raster_count": len(paths),
+            "neutral_zero_range": not available, "label": label}
+
 def map_pdf(path, title, panels, *, overlays, boundary, crs, subtitle, footer, dpi=220):
     import matplotlib
     matplotlib.use("Agg")
@@ -90,13 +120,32 @@ def map_pdf(path, title, panels, *, overlays, boundary, crs, subtitle, footer, d
                 if not finite_values.size:
                     raise ValueError("Map raster contains no valid pixels: " + str(panel["path"]))
                 signed = bool(panel.get("signed"))
+                scale = panel.get("scale")
+                if scale is not None:
+                    low = finite(scale["minimum"], "Map scale minimum")
+                    high = finite(scale["maximum"], "Map scale maximum", positive=True)
+                    if bool(scale["signed"]) != signed or low >= high:
+                        raise ValueError("The selected map range differs from its panel semantics")
+                    if scale.get("units") and scale["units"] != panel["units"]:
+                        raise ValueError("Comparable map panels must use the same physical units")
+                    if signed and not low < 0 < high or not signed and low != 0:
+                        raise ValueError("Signed maps center on zero; export maps start at zero")
+                    scale_note = scale["label"]
+                elif signed:
+                    changed = np.abs(finite_values[finite_values != 0])
+                    high = float(np.quantile(changed, .98)) if changed.size else 1.0
+                    low = -high
+                    scale_note = "Display uses the 98th percentile of nonzero preview magnitudes."
+                else:
+                    positive = finite_values[finite_values > 0]
+                    high = float(np.quantile(positive, .98)) if positive.size else 1.0
+                    low = 0.0
+                    scale_note = "Display uses the 98th percentile of positive preview values."
                 if signed:
-                    limit = max(float(np.quantile(np.abs(finite_values), .98)), 1e-12)
-                    norm = TwoSlopeNorm(vmin=-limit, vcenter=0, vmax=limit)
+                    norm = TwoSlopeNorm(vmin=low, vcenter=0, vmax=high)
                     palette = "RdBu_r"
                 else:
-                    high = max(float(np.quantile(finite_values, .98)), 1e-12)
-                    norm = Normalize(vmin=0, vmax=high)
+                    norm = Normalize(vmin=low, vmax=high)
                     palette = "Greys"
                 artist = ax.imshow(values, extent=(bounds[0], bounds[2], bounds[1], bounds[3]),
                                    origin="upper", cmap=palette, norm=norm, interpolation="nearest")
@@ -118,8 +167,9 @@ def map_pdf(path, title, panels, *, overlays, boundary, crs, subtitle, footer, d
                                        extend="both" if signed else "max")
                 colorbar.set_label(panel["units"], fontsize=7)
                 colorbar.ax.tick_params(labelsize=6)
-                ax.text(.01, -.13, "Display scale clips at the 98th percentile; GeoTIFF retains every original value.",
-                        transform=ax.transAxes, fontsize=6, va="top")
+                ax.text(.01, -.13, "\n".join(textwrap.wrap(
+                    scale_note + " Numerical GeoTIFF values are preserved.", 105)),
+                    transform=ax.transAxes, fontsize=6, va="top")
         fig.suptitle(title, fontsize=15, x=.07, y=.97, ha="left")
         fig.text(.07, .925, "\n".join(textwrap.wrap(subtitle, 140)), fontsize=8, va="top")
         if legend:

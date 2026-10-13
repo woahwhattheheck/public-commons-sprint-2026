@@ -18,7 +18,7 @@ Open **Combine prepared inputs and existing source editions**. Choose completed 
 
 Open the resulting source edition to inspect its original files, units and metadata. Choose **Open model grids** to select the prepared DEM, land cover, precipitation, R-factor and K-factor through the existing grid workflow. Source preparation retains the original resolution. Grid preparation applies the selected working alignment and resampling method.
 
-## What Bryce does, sees and says
+## What the operator does, sees and says
 
 | Step | What to do | What should appear | Meaning | Suggested explanation |
 | --- | --- | --- | --- | --- |
@@ -39,4 +39,4 @@ The desk reports preparation and import. Model calculations and resulting physic
 
 This desk is the additive module `operator/web/source_workbench.mjs` and its grayscale stylesheet. Its native partner is `operator/source_preparation.py`. It calls the existing task actions `source.prepare` and `source.compose`, the existing upload/task APIs, and the source-preparation catalogue, file and progress reads. It owns no model engine or second execution queue.
 
-The interface retains form selections and original request IDs in the browser session. Server tasks and imported source editions survive browser closure. Completed imported originals travel with the ordinary whole-workspace backup. For a preparation deliberately left unimported, import or compose its completed native manifest before handing over the full workspace.
+The interface retains form selections and original request IDs in the browser session. Server tasks and imported source editions survive browser closure. Completed originals, including a preparation deliberately left unimported, travel in the ordinary whole-workspace backup. After restoration, completed prepared inputs remain selectable under **Combine prepared inputs and existing source editions**, even when the receiving operator has a new task queue. Active host jobs are resumed on their original operator; prepared banks provide the transferable source results.
