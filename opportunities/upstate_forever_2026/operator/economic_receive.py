@@ -158,58 +158,35 @@ def extract_edition(archive_path, destination):
     return manifest
 
 
-def fill_selection(page, selection, source, zone, notes):
-    if selection:
-        require(selection.get("schema") == "upstate.decision-selection/v1",
-                "Use an existing decision-selection/v1 input")
-        require(selection.get("comparison_id") == zone["comparison_id"],
-                "The supplied economic selection belongs to another original report or zone")
-    def fill(name, value):
-        field = page.locator('[data-field="' + name + '"]')
-        require(field.count() == 1, "The current native report does not expose " + name)
-        field.fill("" if value is None else str(value))
-    if selection.get("title"):
-        fill("title", selection["title"])
-    budget = selection.get("budget") or {}
-    costs = selection.get("costs") or []
-    currency = budget.get("currency") or (costs[0].get("currency") if costs else "USD")
-    fill("currency", currency)
+def fill_default_inputs(page, notes):
+    """Use the native form's actual no-cost state when no saved input is supplied."""
+    page.locator('[data-field="currency"]').fill("USD")
     for name in ("capital_limit", "annualized_limit"):
-        fill(name, budget.get(name))
-    for metric, value in (selection.get("targets") or {}).items():
-        fill("target:" + metric, value)
-    available = {item["run_id"] for item in source["alternatives"]}
-    for cost in costs:
-        key = cost["run_id"]
-        require(key in available and re.fullmatch(r"[0-9a-f]{64}", key),
-                "A supplied cost has no current available scenario row: " + str(key))
+        page.locator('[data-field="' + name + '"]').fill("")
+    targets = page.locator('[data-field^="target:"]')
+    for index in range(targets.count()):
+        targets.nth(index).fill("")
+    included = page.locator('[data-cost="enabled"]')
+    for index in range(included.count()):
+        included.nth(index).uncheck()
+    page.locator('[data-field="notes"]').fill(notes or "")
+
+
+def validate_selection_scope(selection, source, zone):
+    require(isinstance(selection, dict)
+            and selection.get("schema") == "upstate.decision-selection/v1",
+            "Use the original decision-selection/v1 input")
+    require(selection.get("comparison_id") == zone["comparison_id"],
+            "The supplied selection belongs to another original report or zone")
+    for cost in selection.get("costs", []):
         scope = cost.get("scope") or {}
         kind = scope.get("kind")
-        require(kind in {"whole_scenario", "reporting_zone"},
-                "Each supplied cost needs its explicit whole_scenario or reporting_zone scope")
-        if kind == "reporting_zone":
+        require(kind in {"whole_scenario", "reporting_zone", "retained"},
+                "Each supplied cost needs its original explicit footprint scope")
+        if kind != "whole_scenario":
             require(scope.get("zone_id") == zone["zone_id"]
                     and scope.get("producer_report_id") == source["producer_report_id"],
-                    "A supplied local implementation estimate belongs to another native report or zone")
-        row = page.locator('[data-cost-run="' + key + '"]')
-        if row.get_attribute("open") is None:
-            row.locator("summary").click()
-        row.locator('[data-cost="enabled"]').check()
-        values = {name: cost[name] for name in ("capital", "annual_operating", "horizon_years", "currency")}
-        values["discount_percent"] = float(cost["discount_rate"]) * 100
-        for name in ("title", "uri", "as_of"):
-            values["source_" + name] = cost["source"][name]
-        values["note"] = cost.get("scope_note", cost.get("note", ""))
-        for name, value in values.items():
-            row.locator('[data-cost="' + name + '"]').fill(str(value))
-        row.locator('[data-cost="cost_scope"]').select_option(
-            "whole-scenario" if kind == "whole_scenario" else "reporting-zone")
-    saved_notes = [str(item) for item in selection.get("notes", [])]
-    if notes:
-        saved_notes.append(notes)
-    final_notes = "\n".join(saved_notes)
-    fill("notes", final_notes)
-    return final_notes
+                    "A supplied local estimate belongs to another native report or zone")
 
 
 def receive_operator(args, original_url, origin, token, journal):
@@ -243,14 +220,7 @@ def receive_operator(args, original_url, origin, token, journal):
         def capture(name):
             page.screenshot(path=str(output / name), full_page=True)
 
-        def queued_action(action, button):
-            with page.expect_response(lambda response: urlsplit(response.url).path == "/api/actions"
-                                      and response.request.method == "POST"
-                                      and json.loads(response.request.post_data or "{}").get("action") == action) as pending:
-                page.locator('[data-econ="' + button + '"]').click()
-            response = pending.value
-            check_response(response, "Original queue action " + action)
-            task = response.json()
+        def wait_task(task, action):
             key = task["id"]
             record["tasks"].append({"action": action, "id": key, "state": task["state"]})
             journal.save()
@@ -272,6 +242,16 @@ def receive_operator(args, original_url, origin, token, journal):
             journal.save()
             page.locator('[data-econ="refresh-saved"]').click()
             return task
+
+
+        def queued_action(action, button):
+            with page.expect_response(lambda response: urlsplit(response.url).path == "/api/actions"
+                                      and response.request.method == "POST"
+                                      and json.loads(response.request.post_data or "{}").get("action") == action) as pending:
+                page.locator('[data-econ="' + button + '"]').click()
+            response = pending.value
+            check_response(response, "Original queue action " + action)
+            return wait_task(response.json(), action)
 
         try:
             with journal.stage("open_original_operator") as step:
@@ -309,8 +289,37 @@ def receive_operator(args, original_url, origin, token, journal):
                                        arg=zone["zone_id"])
                 page.locator("[data-zone]").select_option(zone["zone_id"])
                 page.locator('[data-econ="preview"]').wait_for(state="visible")
-                selection = json.loads(Path(args.selection).read_text(encoding="utf-8")) if args.selection else {}
-                fill_selection(page, selection, source, zone, args.notes)
+                selection = json.loads(Path(args.selection).read_text(encoding="utf-8-sig")) if args.selection else {}
+                if args.selection:
+                    validate_selection_scope(selection, source, zone)
+                    retained_path = output / "original-selection.json"
+                    shutil.copyfile(Path(args.selection), retained_path)
+                    record["supplied_selection"] = descriptor(retained_path, output)
+                    response = context.request.post(
+                        origin + "/api/actions", headers={"Authorization": "Bearer " + token},
+                        data={"workspace": workspace, "action": "economic.draft.save",
+                              "payload": {"report_id": report_id,
+                                          "report_sha256": source["source"]["sha256"],
+                                          "zone_id": zone["zone_id"], "selection": selection},
+                              "operation_id": uuid.uuid4().hex}, max_redirects=0)
+                    check_response(response, "Import original input through the existing queue")
+                    imported = wait_task(response.json(), "economic.draft.save")
+                    imported_id = imported["result"]["id"]
+                    expected_notes = "\n".join(imported["result"]["input"]["selection"].get("notes", []))
+                    with page.expect_response(lambda response: urlsplit(response.url).path == "/api/economic-desk/draft"
+                                              and parse_qs(urlsplit(response.url).query).get("draft_id") == [imported_id]) as opened:
+                        page.locator('[data-econ="open-draft"][data-id="' + imported_id + '"]').click()
+                    check_response(opened.value, "Open the original imported workspace inputs")
+                    page.wait_for_function("(value) => document.querySelector('[data-field=notes]')?.value===value",
+                                           arg=expected_notes)
+                    require(page.locator("[data-zone]").input_value() == zone["zone_id"],
+                            "Imported original inputs selected another native zone")
+                    if args.notes:
+                        page.locator('[data-field="notes"]').fill(
+                            expected_notes + ("\n" if expected_notes else "") + args.notes)
+                    step["imported_draft_id"] = imported_id
+                else:
+                    fill_default_inputs(page, args.notes)
                 record.update(producer_report_id=report_id, zone_id=zone["zone_id"],
                               source_report_sha256=source["source"]["sha256"])
                 step.update(title=source["title"], zone_title=zone["title"],
