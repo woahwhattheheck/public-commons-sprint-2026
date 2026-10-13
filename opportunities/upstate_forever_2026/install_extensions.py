@@ -193,8 +193,12 @@ def patch_app(source):
     source = replace(source, "if(viewLabels[requested])navigate(requested);",
                      "if(viewLabels[requested]||extensions.hasView(requested))navigate(requested);",
                      "registered fragment navigation")
-    source = add(source, "async function selectWorkspace(id){\n", " extensions.detach();\n",
-                 "workspace lifecycle")
+    # Migrate the initial host join without changing the existing draft guard.
+    source = source.replace("async function selectWorkspace(id){\n extensions.detach();\n",
+                            "async function selectWorkspace(id){\n", 1)
+    source = add(source,
+                 " if(formDialog.open)throw Error('Finish or close the current draft before changing workspaces.');\n",
+                 " extensions.detach();\n", "workspace lifecycle after original draft guard")
     source = add(source, " const action=button.dataset.action,id=button.dataset.id;\n",
                  " if(await extensions.dispatch(button))return;\n", "registered action dispatch")
     startup = (
