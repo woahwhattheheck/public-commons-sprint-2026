@@ -14,7 +14,7 @@
   "dependencies": [
     "Maintained sha256Utf8 returning complete bytes and SHA-256",
     "Caller complete original source-packet validator",
-    "Native Google Drive profile, metadata, document text and batch update",
+    "Native Google Drive profile, metadata, document text, complete document for empty-body admission, and batch update",
     "Maintained connected_document_delivery.cjs receiver for export and Library admission"
   ],
   "resource_links": [
