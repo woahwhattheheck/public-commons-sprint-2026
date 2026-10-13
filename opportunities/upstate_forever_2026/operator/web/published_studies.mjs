@@ -548,6 +548,20 @@ export function createPublishedStudiesDesk(host) {
       output = '<section class="ps-methods"><h2>Original activities and published summaries</h2><p>' +
         esc(observed.temporal_support || "Import the current installed study to retain its original activity sources.") +
         '</p><p>Activity values, original sample counts and printed report statistics remain visible together. Quantified-only statistics use the original recorded numbers. Censored rows retain blank values and their own detection limits.</p></section>';
+      if (observed.has_statistical_exclusions) {
+        output += '<section class="ps-methods"><h3>Statistical selection</h3><p>' +
+          esc(observed.original_record_count) + ' original results · ' +
+          esc(observed.canonical_measurement_count) + ' canonical measurements · ' +
+          esc(observed.eligible_statistical_count) + ' eligible measurements · ' +
+          esc(observed.excluded_statistical_count) + ' source-documented exclusions.</p>' +
+          '<p>Original values remain in the chronology and downloads. Statistics use eligible measurements; each exclusion is bound to its original result and source file.</p></section>';
+        output += table("Retained results excluded from statistics", arr(observed.statistical_exclusion_rows), [
+          ["site_id","Station"],["date","Date"],["parameter_original","Characteristic"],
+          ["value","Original value"],["unit","Original unit"],["original_result_identifier","Result identifier"],
+          ["original_source_path","Original file"],["source_csv_row","Source CSV row"],
+          ["statistical_exclusion_reason","Source-documented reason"]
+        ]);
+      }
       const illustrated = arr(complete?.source_artifacts).find(item => item.path === "wqp_20261013/lake-observations-report.html");
       if (illustrated) output += '<p>' + link(illustrated.preview_url || illustrated.download?.url, "Original activity figures and complete chlorophyll cohort report") + '</p>';
       const paired = arr(complete?.source_artifacts).find(item => item.path === "paired_analysis/paired-observations-report.html");
@@ -558,7 +572,7 @@ export function createPublishedStudiesDesk(host) {
         ' · Retains 73 selected records, 12 excluded campaign records, original reporting limits and the source selection inference.</p>';
       output += table("Observed series and report rows", series, [
         ["site_id","Station"],["parameter","Parameter"],["unit","Unit"],["project_id","Source project"],["activity_type","Activity type"],["sample_fraction","Fraction"],["method_authority","Method authority"],["method_id","Method"],["method_specification_name","Method specification"],["result_value_type","Result type"],["sample_support","Sample support"],["record_count","Original rows"],
-        ...((observed.statistic_basis) ? [["measurement_count","Measurements"]] : []),["activity_count","Activities"],["numeric_count","Quantified"],["censored_count","Censored"],
+        ...((observed.statistic_basis) ? [["measurement_count","Measurements"]] : []),...((observed.has_statistical_exclusions) ? [["canonical_measurement_count","Canonical measurements"],["eligible_statistical_count","Eligible measurements"],["excluded_statistical_count","Excluded"]] : []),["activity_count","Activities"],["numeric_count","Quantified"],["censored_count","Censored"],
         ["published_n","Printed n"],["observed_mean","Quantified mean"],["observed_sd","Quantified sample SD"],
         ["published_mean","Printed mean"],["published_sd","Printed SD"],["reported_depths","Original depth"]
       ], false);
@@ -577,10 +591,10 @@ export function createPublishedStudiesDesk(host) {
           ["site_id","Station"],["parameter","Parameter"],["project_id","Project"],["activity_type","Activity type"],
           ["sample_fraction","Fraction"],["method_id","Method"],["result_value_type","Result type"],
           ["record_count","Original rows"],...((observed.statistic_basis) ? [["measurement_count","Measurements"]] : []),["quantified_count","Quantified"],["below_limit_count","Below limit"],
-          ["unresolved_count","Unresolved"],["mean_interval", observed.statistic_basis ? "Activity-weighted mean interval" : "All-row mean interval"],["unit","Unit"],
+          ["unresolved_count","Unresolved"],["mean_interval", observed.statistic_basis ? "Activity-weighted mean interval" : observed.has_statistical_exclusions ? "Eligible-row mean interval" : "All-row mean interval"],["unit","Unit"],
           ["limits","Original reporting limits"]
         ],false);
-        output += '<p class="ps-help">' + (observed.statistic_basis ? 'Each interval uses each agreeing activity/characteristic measurement once; every original result identifier is retained. ' : 'Each interval uses every selected row. ') + 'The series retains its original station, parameter, project, activity type and analytical support. A below-limit value contributes [0, its original limit), conditional on nonnegative concentration. The upper endpoint is excluded when a row is censored. These are arithmetic bounds; the source values and printed report cohort stay intact. Complete endpoints and source selectors are included in the context export.</p>';
+        output += '<p class="ps-help">' + (observed.statistic_basis ? 'Each interval uses each agreeing activity/characteristic measurement once; every original result identifier is retained. ' : observed.has_statistical_exclusions ? 'Each interval uses eligible rows; documented excluded originals remain visible. ' : 'Each interval uses every selected row. ') + 'The series retains its original station, parameter, project, activity type and analytical support. A below-limit value contributes [0, its original limit), conditional on nonnegative concentration. The upper endpoint is excluded when a row is censored. These are arithmetic bounds; the source values and printed report cohort stay intact. Complete endpoints and source selectors are included in the context export.</p>';
       }
       const calendars = series.map(row => ({
         ...row, missing_dates: arr(row.missing_chlorophyll_dates).join("; "),

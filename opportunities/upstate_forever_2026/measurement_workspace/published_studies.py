@@ -639,7 +639,18 @@ def _observation_context(rows, seasonal, study, sites, parameters, strata):
         and (not start or row["date"] >= start)
         and (not end or row["date"] <= end)
     ]
+    canonical_rows = statistical_rows(chosen, study, include_excluded=True)
     weighted_rows = statistical_rows(chosen, study)
+    excluded_rows = [row for row in canonical_rows if row.get("statistical_exclusion") or row.get("statistical_exclusions")]
+    has_exclusion_declaration = study.get("observation_statistical_exclusions") is not None
+    def observation_key(row):
+        return (row["site_id"], row["parameter"], row.get("project_id", ""),
+                row.get("activity_type", ""), row.get("series_key", ""))
+    canonical_groups, original_groups = {}, {}
+    for row in canonical_rows:
+        canonical_groups.setdefault(observation_key(row), []).append(row)
+    for row in chosen:
+        original_groups.setdefault(observation_key(row), []).append(row)
     activity_weighted = study.get("observation_statistic_basis") is not None
     groups = {}
     for row in weighted_rows:
@@ -676,13 +687,20 @@ def _observation_context(rows, seasonal, study, sites, parameters, strata):
         missing = sum(row["value"] is None and not row["censored"] for row in records)
         basis = "Original quantified activities; arithmetic mean and sample SD; censored and missing values retain their source fields. Source project and activity type define separate series."
         support = "Reconciled chlorophyll cohort" if parameter == "total_chlorophyll_a" and all(row["source_file"] in (COHORT_FILE, WQP_COHORT) for row in records) else "Original campaign activities"
-        original_count = sum(row.get("measurement_original_result_count", 1) for row in records)
+        eligible_original_count = sum(row.get("measurement_original_result_count", 1) for row in records)
+        key = (site_id, parameter, project_id, activity_type, series_key)
+        canonical_count = len(canonical_groups[key])
+        original_count = len(original_groups[key])
+        excluded_count = canonical_count - len(records)
         if activity_weighted:
             basis = ("One weight per agreeing original activity and characteristic; all original cells except "
                      "ResultIdentifier and its limit URL, plus analytical and censor support, must agree. "
-                     + str(original_count) + " original result IDs form " + str(len(records))
-                     + " measurements in this series. All original IDs remain in the result table and exports. "
+                     + str(original_count) + " original result IDs form " + str(canonical_count)
+                     + " canonical measurements in this series. All original IDs remain in the result table and exports. "
                      "Quantified means and sample SD use these measurements; no censored value is substituted.")
+        if excluded_count:
+            basis += (" " + str(excluded_count) + " source-documented statistical exclusion(s) leave "
+                      + str(len(records)) + " eligible measurements. Exact source rows and reasons remain visible and exported.")
         if support == "Reconciled chlorophyll cohort":
             basis += " " + " ".join(sorted({row.get("selection_basis", "") for row in records if row.get("selection_basis")}))
         if parameter == "microcystins":
@@ -708,7 +726,9 @@ def _observation_context(rows, seasonal, study, sites, parameters, strata):
             "activity_type": activity_type, "sample_support": support,
             "parameter_original": sorted({row["parameter_original"] for row in records}),
             "unit": units[0] if comparable_units else metadata.get("support_unit", "; ".join(units)),
-            "record_count": original_count, "activity_count": len(set(identifiers)),
+            "record_count": original_count, "activity_count": len({row["activity_id"] for row in original_groups[key]}),
+            "canonical_measurement_count": canonical_count, "eligible_statistical_count": len(records),
+            "excluded_statistical_count": excluded_count, "eligible_original_result_count": eligible_original_count,
             **({"measurement_count": len(records), "statistic_basis": study["observation_statistic_basis"]} if activity_weighted else {}),
             "numeric_count": len(numeric), "censored_count": censored, "missing_count": missing,
             "date_count": len(set(dates)), "period_start": dates[0], "period_end": dates[-1],
@@ -736,7 +756,11 @@ def _observation_context(rows, seasonal, study, sites, parameters, strata):
         "schema": "upstate.published-study-observation-comparison/v1",
         "rows": sorted(chosen, key=lambda row: (row["date"], row["local_time"], row["site_id"], row["parameter"], row["activity_id"])),
         "series": series, "period_start": start, "period_end": end,
-        **({"statistics_rows": weighted_rows, "statistic_basis": study["observation_statistic_basis"]} if activity_weighted else {}),
+        **({"statistics_rows": weighted_rows} if activity_weighted or has_exclusion_declaration else {}),
+        **({"statistic_basis": study["observation_statistic_basis"]} if activity_weighted else {}),
+        "original_record_count": len(chosen), "canonical_measurement_count": len(canonical_rows),
+        "eligible_statistical_count": len(weighted_rows), "excluded_statistical_count": len(excluded_rows),
+        "statistical_exclusion_rows": excluded_rows, "has_statistical_exclusions": has_exclusion_declaration,
         "temporal_support": ("Original sampling dates within the selected year and months; all original result fields and source query intervals are retained." if study.get("observation_calendar_filters") is True else "Original activities within the published grab-sampling campaign; continuous month/year filters apply only to continuous summaries."),
         "parameter_mapping": OBSERVATION_PARAMETERS,
     }
@@ -1367,6 +1391,7 @@ class PublishedStudyStore:
                 "rows": [{"selected_csv_row": number, "original_csv_row": row["source_csv_row"],
                           "record_id": row["record_id"], "activity_id": row["activity_id"],
                           "original_result_identifier": row.get("original_result_identifier", ""),
+                          **({"statistical_exclusion": row["statistical_exclusion"]} if row.get("statistical_exclusion") else {}),
                           "metadata_source_records": {
                               role: {key: value for key, value in reference.items() if key != "raw_cells"}
                               for role, reference in row.get("metadata_source_records", {}).items()}}
@@ -1425,14 +1450,44 @@ class PublishedStudyStore:
                       "activity_id", "date", "local_time", "source_timezone", "value", "unit",
                       "censored", "detection_condition", "detection_limit", "detection_limit_unit",
                       "series_key", "measurement_original_result_count", "measurement_original_result_ids",
-                      "measurement_original_records", "statistic_basis")
+                      "measurement_original_records", "statistic_basis",
+                      "original_result_identifier", "original_source_path", "original_source_sha256",
+                      "source_csv_row", "source_selector")
             writer = csv.DictWriter(weighted, fieldnames=fields, lineterminator="\n")
             writer.writeheader()
             for row in context["observations"]["statistics_rows"]:
                 writer.writerow({name: (json.dumps(row.get(name), ensure_ascii=False, sort_keys=True)
                     if isinstance(row.get(name), (list, dict)) else row.get(name, "")) for name in fields})
-            _atomic(destination / "activity-weighted-measurements-selected.csv", weighted.getvalue().encode("utf-8"))
-            written.append("activity-weighted-measurements-selected.csv")
+            statistics_filename = ("activity-weighted-measurements-selected.csv"
+                if context["observations"].get("statistic_basis") else "statistical-measurements-selected.csv")
+            _atomic(destination / statistics_filename, weighted.getvalue().encode("utf-8"))
+            written.append(statistics_filename)
+        if context["observations"].get("has_statistical_exclusions"):
+            filename = "statistical-exclusions-selected.json"
+            _atomic(destination / filename, _json_bytes({
+                "schema": "upstate.selected-statistical-exclusions/v1",
+                "study_id": study_id, "version_id": context["record"]["version_id"],
+                "counts": {key: context["observations"][key] for key in
+                           ("original_record_count", "canonical_measurement_count",
+                            "eligible_statistical_count", "excluded_statistical_count")},
+                "records": context["observations"]["statistical_exclusion_rows"],
+                "declaration": context["study"].get("observation_statistical_exclusions"),
+            }))
+            written.append(filename)
+            exclusion_csv = io.StringIO(newline="")
+            exclusion_fields = ("site_id", "date", "parameter_original", "value", "unit",
+                "original_result_identifier", "activity_id", "original_source_path",
+                "original_source_sha256", "source_csv_row", "statistical_exclusion_reason",
+                "measurement_original_result_count", "measurement_original_result_ids",
+                "statistical_exclusion", "statistical_exclusions")
+            exclusion_writer = csv.DictWriter(exclusion_csv, fieldnames=exclusion_fields, lineterminator="\n")
+            exclusion_writer.writeheader()
+            for row in context["observations"]["statistical_exclusion_rows"]:
+                exclusion_writer.writerow({key: (json.dumps(row.get(key), ensure_ascii=False, sort_keys=True)
+                    if isinstance(row.get(key), (dict, list)) else row.get(key, "")) for key in exclusion_fields})
+            filename = "statistical-exclusions-selected.csv"
+            _atomic(destination / filename, exclusion_csv.getvalue().encode("utf-8"))
+            written.append(filename)
         support_output = io.StringIO(newline="")
         series_columns = (
             "site_id", "parameter", "project_id", "activity_type", "sample_support",
@@ -1443,6 +1498,7 @@ class PublishedStudyStore:
         )
         interval_columns = (
             "record_count", "measurement_count", "original_result_count", "statistic_basis",
+            "canonical_measurement_count", "eligible_statistical_count", "excluded_statistical_count",
             "distinct_activity_count", "quantified_count", "below_limit_count",
             "unresolved_count", "unit", "mean_lower", "mean_upper",
             "mean_upper_inclusive", "complete_interval_support", "basis",
@@ -1620,6 +1676,10 @@ class PublishedStudyStore:
             ("project_id", "Source project"), ("activity_type", "Original activity type"), ("sample_fraction", "Sample fraction"),
             ("result_value_type", "Original result type"), ("original_methods", "Analytical methods"), ("sample_support", "Sample support"),
             ("record_count", "Original rows"), ("activity_count", "Activities"),
+            *([("canonical_measurement_count", "Canonical measurements"),
+               ("eligible_statistical_count", "Eligible measurements"),
+               ("excluded_statistical_count", "Excluded from statistics")]
+              if context["observations"].get("has_statistical_exclusions") else []),
             ("numeric_count", "Quantified"), ("censored_count", "Censored"),
             *([("measurement_count", "Measurements")] if context["observations"].get("statistic_basis") else []),
             ("published_n", "Printed n"), ("mean", "Quantified mean"),
