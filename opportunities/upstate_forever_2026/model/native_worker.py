@@ -87,6 +87,24 @@ def run_request(request_path):
     if workspace.project["id"] != request["project_id"]:
         raise ValueError("The native request belongs to a different project")
 
+    payload = request.get("original_payload", {})
+    donor_ids = payload.get("reuse_source_run_ids")
+    if "reuse_source_run_ids" in payload:
+        if (not isinstance(donor_ids, list) or not donor_ids
+                or any(not isinstance(value, str) for value in donor_ids)
+                or len(set(donor_ids)) != len(donor_ids) or "source_runs" in payload):
+            raise ValueError("Preserve unique original stage donors separately from full-model assembly")
+        donor_ids = [identifier(value) for value in donor_ids]
+        if run_id in donor_ids:
+            raise ValueError("An original run cannot be its own donor")
+    forcing_context = payload.get("climate_forcing_context")
+    if forcing_context is not None:
+        from .climate_forcing import run_request
+        expected = run_request(workspace, identifier(forcing_context["study_id"]),
+                               forcing_context["case_id"])
+        if payload != expected or expected["run_id"] != run_id:
+            raise ValueError("The native worker differs from its original forcing case and donor")
+
     context = request.get("programme_context")
     if context:
         from .compute_programme import ComputeProgrammes
@@ -167,7 +185,8 @@ def run_request(request_path):
         try:
             ticker.start()
             print("Starting original native run " + run_id, flush=True)
-            result = workspace.run(run_id)
+            result = (workspace.run(run_id, reuse_source_run_ids=donor_ids)
+                      if donor_ids is not None else workspace.run(run_id))
             if result.get("id") != run_id or result.get("state") != "complete":
                 raise ValueError("The original native calculation did not complete")
             atomic_json(directory / "result.json", {
