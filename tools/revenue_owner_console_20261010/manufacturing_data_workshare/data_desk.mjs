@@ -47,6 +47,7 @@ function validateDesk(value){
 export function mountDataReadinessDesk(root,config={}){
  if(!root)throw Error('Choose the data desk container.');
  let alive=true,epoch=0,busy=false,notice='',storageWarning='',issuePage=0,tablePage=0;
+ let analyzedWorkspace=null,analyzedValue=null,previewCache=null,persistTimer=null;
  const empty=()=>({workspace:core.createWorkspace({id:config.workspaceId||uid(),label:config.title||'Manufacturing data preparation',at:now()}),pending:[],unitText:'[]',actor:'',notes:'',dispositionDrafts:{},issueQuery:'',issueStatus:'all',tableKind:'items',selectedPending:''});
  let desk={schema:'manufacturing-data-desk.v1',current:empty(),history:[],incoming:[]};
  const storageKey=config.storageKey||'manufacturing-data-desk:'+(config.workspaceId||'default');
@@ -57,7 +58,8 @@ export function mountDataReadinessDesk(root,config={}){
  const current=()=>desk.current;
  const metadata=()=>({requestId:uid(),expectedRevision:current().workspace.revision,actor:current().actor.trim()||'Operator',at:now()});
  function persist(){try{storage?.setItem(storageKey,JSON.stringify(desk));storageWarning=storage?'':'This browser has no storage. Download the complete working file to retain your edits.';}catch(error){storageWarning='Browser storage did not retain the latest edits. The complete work remains open; download the working file now. '+error.message;}}
- function changed(){persist();const target=$('desk-storage');if(target){target.hidden=!storageWarning;target.textContent=storageWarning;}}
+ function flushPersist(){if(persistTimer!==null){clearTimeout(persistTimer);persistTimer=null;}persist();const target=$('desk-storage');if(target){target.hidden=!storageWarning;target.textContent=storageWarning;}}
+ function changed(deferred=false){if(deferred){if(persistTimer!==null)clearTimeout(persistTimer);persistTimer=setTimeout(()=>{persistTimer=null;if(alive)flushPersist();},250);}else flushPersist();}
  function status(text,error=false){notice=text;const el=$('desk-status');if(el){el.textContent=text;el.className=error?'error':'';}}
  async function action(task){
   if(!alive||busy)return;busy=true;const token=epoch;renderBusy();
@@ -67,8 +69,8 @@ export function mountDataReadinessDesk(root,config={}){
  function renderBusy(){root.querySelectorAll('[data-work-action]').forEach(el=>el.disabled=busy);}
  function setWorkspace(workspace,message){current().workspace=workspace;current().selectedPending='';issuePage=0;tablePage=0;changed();status(message);}
  function retainCurrent(reason){desk.history.push({id:uid(),at:now(),reason,state:clone(current())});}
- function sourcePreview(p){return core.stageImport(current().workspace,{id:p.id,kind:p.kind,name:p.name,csv:p.csv,delimiter:p.delimiter,columns:p.columns,at:p.at});}
- function report(){return core.analyze(current().workspace);}
+ function sourcePreview(p){const workspace=current().workspace,mapping=JSON.stringify(p.columns);if(previewCache?.source===p&&previewCache.workspace===workspace&&previewCache.mapping===mapping)return previewCache.value;const value=core.stageImport(workspace,{id:p.id,kind:p.kind,name:p.name,csv:p.csv,delimiter:p.delimiter,columns:p.columns,at:p.at});previewCache={source:p,workspace,mapping,value};return value;}
+ function report(){if(analyzedWorkspace!==current().workspace){analyzedWorkspace=current().workspace;analyzedValue=core.analyze(analyzedWorkspace);}return analyzedValue;}
  function filteredIssues(value){const query=current().issueQuery.toLowerCase();return value.issues.filter(issue=>(current().issueStatus==='all'||(issue.disposition?.status||'open')===current().issueStatus)&&(!query||JSON.stringify(issue).toLowerCase().includes(query)));}
  function summary(value){
   const counts=value.counts||{};
@@ -128,7 +130,7 @@ export function mountDataReadinessDesk(root,config={}){
   else if(target.id==='desk-notes')current().notes=target.value;
   else if(target.id==='desk-units')current().unitText=target.value;
   else if(target.dataset.decisionNote){const id=target.dataset.decisionNote,issue=report().issues.find(x=>x.id===id);current().dispositionDrafts[id]??={status:issue?.disposition?.status||'open',note:''};current().dispositionDrafts[id].note=target.value;}
-  else return;changed();
+  else return;changed(true);
  });
  root.addEventListener('change',event=>{
   if(!alive)return;
@@ -193,5 +195,7 @@ export function mountDataReadinessDesk(root,config={}){
    }
   });
  });
- render();return {getState:()=>clone(desk),download:()=>saveFile('manufacturing-working.json',stringify(desk)),dispose(){alive=false;epoch++;root.replaceChildren();}};
+ const view=root.ownerDocument?.defaultView;
+ const onPageHide=()=>{if(alive)flushPersist();};view?.addEventListener('pagehide',onPageHide);
+ render();return {getState:()=>clone(desk),download:()=>saveFile('manufacturing-working.json',stringify(desk)),dispose(){if(persistTimer!==null)flushPersist();alive=false;epoch++;view?.removeEventListener('pagehide',onPageHide);root.replaceChildren();}};
 }
