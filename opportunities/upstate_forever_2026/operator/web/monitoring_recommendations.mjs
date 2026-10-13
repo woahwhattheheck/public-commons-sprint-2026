@@ -1,4 +1,5 @@
 import {configurationChangeTable, downloadSamplingText, requestLabel} from './monitoring_working_copy.mjs';
+import {samplingComparisonMarkup, downloadSamplingComparison} from './monitoring_sampling_comparison.mjs';
 /* Source-bound sampling priorities. Original Workspace, queue and Monitoring design. */
 const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const copy=value=>JSON.parse(JSON.stringify(value));
@@ -410,7 +411,7 @@ export function attachMonitoringRecommendations(host){
     if(value.workspace_key&&value.workspace_key!==state.key)throw Error('The working file preview belongs to another Workspace.');
     return value;
   }
-  function resetWorking(state){state.selectedDesignId=null;state.working=null;state.workingTitle='';state.workingOperator='';state.workingNotes='';state.workingDirty=false;state.importPreview=null;state.editVersion++;}
+  function resetWorking(state){state.comparisonPair={};state.comparison=null;state.selectedDesignId=null;state.working=null;state.workingTitle='';state.workingOperator='';state.workingNotes='';state.workingDirty=false;state.importPreview=null;state.editVersion++;}
   function sameJSON(a,b){
     if(a===b)return true;if(!a||!b||typeof a!=='object'||typeof b!=='object'||Array.isArray(a)!==Array.isArray(b))return false;
     const keys=Object.keys(a),other=Object.keys(b);return keys.length===other.length&&keys.every(key=>Object.prototype.hasOwnProperty.call(b,key)&&sameJSON(a[key],b[key]));
@@ -454,7 +455,8 @@ export function attachMonitoringRecommendations(host){
       '<div class="sampling-actions"><button type="button" data-action="preview">Preview gaps and costs</button><button type="button" data-action="prepare">'+(state.saved?'Save new revision':'Save recommendation')+'</button><button type="button" data-action="export">Export saved edition and original sources</button><button type="button" data-action="transfer">Export editable study</button></div>'+(state.saved?.parent_id?'<p>This is revision '+esc(state.saved.revision)+'. <button type="button" data-action="open-parent">Open original parent edition</button></p>':'')+''+
       '<div class="sampling-queue">'+(state.pending?'<p>Original '+esc(state.pending.kind)+' request · '+esc(state.pending.state||'awaiting acknowledgement')+'</p><button type="button" data-action="resume">Resume original request</button>':'')+(state.pending?.task_id||(!state.pending&&state.lastTask)?'<button type="button" data-action="task">Open retained operation</button>':'')+'</div>'+
       '<section class="sampling-card" data-result>'+results(state)+'</section>'+
-      '<section class="sampling-card">'+designPanel(state)+'</section>'+workingPanel(state)+
+      '<section class="sampling-card">'+designPanel(state)+'</section>'+
+      '<section class="sampling-card">'+samplingComparisonMarkup(state.saved,state.comparisonPair,state.comparison?.comparison)+'</section>'+workingPanel(state)+
       '<div class="sampling-downloads" data-downloads></div></section>';
     for(const item of state.downloads)appendDownload(state,item);
     clearEvents();
@@ -479,7 +481,7 @@ export function attachMonitoringRecommendations(host){
         (['design','export','transfer'].includes(a)&&!state.saved)||
         (['open-context','use-period','working-save','working-download'].includes(a)&&!state.context)||
         (a==='open-design'&&!node.dataset.id)||(a==='load-design'&&!state.saved?.saved_designs?.length)||
-        (a==='design'&&state.dirty)||(a==='working-open'&&!state.workingRecords.length)||
+        (a==='design'&&state.dirty)||(a==='compare-designs'&&(state.saved?.saved_designs?.length||0)<2)||(a==='working-open'&&!state.workingRecords.length)||
         (['working-bundle','working-workspace'].includes(a)&&!state.working);
     }
   }
@@ -495,6 +497,12 @@ export function attachMonitoringRecommendations(host){
   function change(state,event){
     if(!current(state))return;
     const node=event.target;
+    if(node.hasAttribute('data-comparison-file'))return reopenComparison(state,node.files?.[0]);
+    if(node.dataset.comparisonSide){
+      if(!['left','right'].includes(node.dataset.comparisonSide))throw Error('Choose an original comparison side.');
+      state.comparisonPair={...(state.comparisonPair||{}),[node.dataset.comparisonSide]:node.value};
+      state.comparison=null;render(state);root.querySelector('[data-comparison-panel]')?.setAttribute('open','');return;
+    }
     if(node.hasAttribute('data-working-file'))return importWorking(state,node.files?.[0]).catch(error=>{if(current(state))fail(state,error);});
     if(node.hasAttribute('data-evidence-source')&&state.draft){
       const row=state.draft.targets.find(item=>item.id===node.dataset.target);if(!row)return;
@@ -619,10 +627,41 @@ export function attachMonitoringRecommendations(host){
     }catch(error){if(current(state,version))fail(state,error);}
     finally{if(state.busyOwner===owner){state.busy=false;state.busyOwner=null;if(current(state,version))render(state);}}
   }
+  function comparisonSelection(state,pair=state.comparisonPair){
+    const recommendation_id=state.saved?.id||state.saved?.recommendation_id;
+    if(!ID.test(recommendation_id||'')||!ID.test(pair?.left||'')||!ID.test(pair?.right||'')||pair.left===pair.right)throw Error('Choose two distinct saved designs from this recommendation.');
+    return {recommendation_id,left_design_id:pair.left,right_design_id:pair.right};
+  }
+  async function receiveComparison(state,selection,valid,expected=null){
+    const result=await read(state,'compare-designs',selection);
+    if(!valid()||(state.saved?.id||state.saved?.recommendation_id)!==selection.recommendation_id)return;
+    const value=result.comparison;
+    if(result.workspace_key!==state.key||result.project_id!==state.catalog.project_id||value?.project_id!==result.project_id||value?.schema!=='upstate.sampling-design-comparison/v1'||!ID.test(value?.id||'')||value.recommendation_id!==selection.recommendation_id||value.left?.design_id!==selection.left_design_id||value.right?.design_id!==selection.right_design_id)throw Error('The native comparison differs from the exact original selection.');
+    if(expected&&!sameJSON(value,expected))throw Error('The complete comparison differs from the retained original JSON. Keep that file and inspect its original Workspace/source records.');
+    state.comparisonPair={left:selection.left_design_id,right:selection.right_design_id};state.comparison=result;
+    status(state,expected?'Reopened this exact comparison from the retained native sources. No records were imported or changed.':'Compared the two exact saved designs. Original observations and historical gaps remain unchanged.');
+  }
+  async function reopenComparison(state,file){
+    if(!file||state.busy)return;
+    if(state.pending&&!terminal.has(state.pending.state)){fail(state,Error('Resume the original queued request before opening comparison files.'));return;}
+    return guarded(state,async valid=>{
+      const raw=await file.text();if(!valid())return;
+      let value;try{value=JSON.parse(raw);}catch{throw Error('Open a complete comparison JSON file.');}
+      if(value?.schema!=='upstate.sampling-design-comparison/v1'||value.project_id!==state.catalog.project_id||value.recommendation_id!==(state.saved?.id||state.saved?.recommendation_id))throw Error('Open this comparison in its original Workspace and saved recommendation. Use the ordinary Study import first when its native records are absent.');
+      const selection=comparisonSelection(state,{left:value.left?.design_id,right:value.right?.design_id});
+      await receiveComparison(state,selection,valid,value);
+    });
+  }
   async function act(state,action,id){
     if(!current(state))return;
     if(state.busy&&action!=='task')return;
     if(state.pending&&!terminal.has(state.pending.state)&&!['resume','task','request-retain','working-download'].includes(action))throw Error('Resolve or explicitly retain the original request before changing this work.');
+    if(action==='compare-designs'){const selection=comparisonSelection(state);return guarded(state,valid=>receiveComparison(state,selection,valid));}
+    if(action.startsWith('comparison-')){
+      const selection=comparisonSelection(state),value=state.comparison?.comparison;
+      if(!value||value.recommendation_id!==selection.recommendation_id||value.left.design_id!==selection.left_design_id||value.right.design_id!==selection.right_design_id)throw Error('Read this exact original pair before downloading.');
+      return downloadSamplingComparison(state.comparison,action.slice('comparison-'.length));
+    }
     if(action==='working-open')return openWorking(state,root.querySelector('[data-working-saved]').value);
     if(action==='working-save')return queue(state,'working-save',{working_file:workingFile(state),parent_id:state.working?.id||null,expected_parent_digest:state.working?.id||null});
     if(action==='working-download')return guarded(state,async valid=>{const file=workingFile(state),preview=await previewWorking(state,file);if(valid()){downloadSamplingText(JSON.stringify(preview.working_file)+'\n','Sampling_Working_Copy.json');status(state,'Downloaded the current targets, full design text and exact retained requests. Saved scientific editions remain unchanged.');}});

@@ -11,7 +11,8 @@
   "assets": [
     "monitoring_recommendations.mjs",
     "monitoring_recommendations.css",
-    "monitoring_working_copy.mjs"
+    "monitoring_working_copy.mjs",
+    "monitoring_sampling_comparison.mjs"
   ],
   "backend": {
     "module": "monitoring_recommendations",
