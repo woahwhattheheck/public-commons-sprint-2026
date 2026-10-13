@@ -19,6 +19,12 @@
     {
       "path": "NATIVE_ARTIFACT_RETENTION.md",
       "reason": "Explain exact foreground completion behavior and complete public receiving."
+    },
+    {
+      "path": "connected_github_source_reuse.py",
+      "operationId": "CONNECTED-GIT-TREE-SOURCE-RECEIVING-D76C-20261013",
+      "sourceGitBlob": "7f0bd6b07f44b2923470249b0fa017df3e9f33ff",
+      "reason": "Accept complete captured original direct-tree objects before unchanged selected-source plan/copy/export; every selected ancestor/subtree still verified."
     }
   ],
   "files": [
@@ -320,9 +326,9 @@
     },
     {
       "path": "connected_github_source_reuse.py",
-      "bytes": 35620,
-      "sha256": "05cef2c0cb94f32ed883f6feaa516fc6266a68994a618a0d6372f04527405056",
-      "gitBlob": "7f0bd6b07f44b2923470249b0fa017df3e9f33ff",
+      "bytes": 39982,
+      "sha256": "12704fa34c83534218093767a1148bda54b97318e78fb70632057b6b7ee342d3",
+      "gitBlob": "4f40f00b783d354663323be8c6c1040aa6c804be",
       "sourceGitBlob": "7f0bd6b07f44b2923470249b0fa017df3e9f33ff",
       "mode": "100644"
     },
