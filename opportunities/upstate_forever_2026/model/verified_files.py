@@ -9,6 +9,13 @@ import os
 from pathlib import Path
 import stat
 import threading
+if os.name == "nt":
+    from .windows_fs import no_follow_open
+
+def _open_original_read(path):
+    if os.name == "nt":
+        return no_follow_open(path, os.O_RDONLY)
+    return os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
 
 _CURRENT = ContextVar("upstate_verified_file_operation", default=None)
 _MAX_ENTRIES = 16384
@@ -73,7 +80,7 @@ def verified_operation(function):
 def verify_path(path, item):
     """Open and bind the selected regular inode before using a verified body."""
     # Import lazily: common.verify_file retains the public path validation API.
-    from .common import _file_state, _stream_identity
+    from .common import _file_state, _stream_identity, _fd_stat, _path_stat
 
     label = "Retained output"
     expected_size, expected_hash = item["bytes"], item["sha256"]
@@ -81,9 +88,9 @@ def verify_path(path, item):
     current = _CURRENT.get()
     if current is not None and not current.owns_context():
         current = None
-    descriptor = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
+    descriptor = _open_original_read(path)
     with os.fdopen(descriptor, "rb") as source:
-        opened = os.fstat(source.fileno())
+        opened = _fd_stat(source.fileno())
         if not stat.S_ISREG(opened.st_mode) or opened.st_size != expected_size:
             raise ValueError("Retained output changed: " + item["path"])
         state = _file_state(opened)
@@ -101,9 +108,9 @@ def verify_path(path, item):
             raise ValueError("Retained output changed: " + item["path"])
         # A rename, symlink swap or write during this read cannot publish a
         # verified identity for another path or body.
-        at_path = path.lstat()
+        at_path = _path_stat(path)
         if (not stat.S_ISREG(at_path.st_mode) or _file_state(at_path) != state
-                or _file_state(os.fstat(source.fileno())) != state):
+                or _file_state(_fd_stat(source.fileno())) != state):
             if current is not None:
                 current.entries.pop(key, None)
             raise ValueError("Retained output changed during verification: " + item["path"])
@@ -120,16 +127,16 @@ def source_identity(source, path, label, *, expected_state=None, output=None):
     compares its regular-file identity with both the current path and descriptor.
     No verified state survives the outer operation, thread, process, or a write.
     """
-    from .common import _file_state, _stream_identity
+    from .common import _file_state, _stream_identity, _fd_stat, _path_stat
 
     path = Path(path)
-    opened = os.fstat(source.fileno())
+    opened = _fd_stat(source.fileno())
     if not stat.S_ISREG(opened.st_mode):
         raise ValueError(label + " is not a regular file")
     state = _file_state(opened)
     if expected_state is not None and state != expected_state:
         raise ValueError(label + " changed during intake")
-    at_path = path.lstat()
+    at_path = _path_stat(path)
     if not stat.S_ISREG(at_path.st_mode) or _file_state(at_path) != state:
         raise ValueError(label + " changed at its original path")
     current = _CURRENT.get()
@@ -151,11 +158,11 @@ def source_identity(source, path, label, *, expected_state=None, output=None):
             current.source_hashed_bytes += size
             if output is not None:
                 current.source_copied_bytes += size
-    at_path = path.lstat()
+    at_path = _path_stat(path)
     if (not stat.S_ISREG(at_path.st_mode) or _file_state(at_path) != state
             or at_path.st_nlink != links
-            or _file_state(os.fstat(source.fileno())) != state
-            or os.fstat(source.fileno()).st_nlink != links):
+            or _file_state(_fd_stat(source.fileno())) != state
+            or _fd_stat(source.fileno()).st_nlink != links):
         if current is not None:
             current.entries.pop(key, None)
         raise ValueError(label + " changed during intake")

@@ -4,7 +4,10 @@ from __future__ import annotations
 import contextlib
 import copy
 import errno
-import fcntl
+try:
+    import fcntl
+except ImportError:
+    from model import windows_fs as fcntl
 import json
 import logging
 import os
@@ -12,7 +15,8 @@ from pathlib import Path
 import socket
 import sys
 
-from .common import atomic_json, canonical, held, now, relative_file, verify_file
+from .common import (atomic_json, canonical, held, now, relative_file, verify_file,
+                     _open_original, _replace_original)
 from .model_selection import run_models, run_scope
 from .reuse import verify_stage
 
@@ -149,7 +153,8 @@ def native_batch_lease(path):
     """Keep the existing batch lease alive in an explicitly inherited child."""
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
-    fd = os.open(path, os.O_CREAT | os.O_RDWR | os.O_NOFOLLOW, 0o600)
+    fd = _open_original(path, os.O_CREAT | os.O_RDWR |
+                        getattr(os, "O_NOFOLLOW", 0), 0o600)
     try:
         fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
         yield fd
@@ -374,8 +379,9 @@ class NativeExecution:
         self._discard_reserve(self.reserve)
         self.reserve_owned = False
         size = max(256 * 1024, 2 * len(canonical(self.state)) + 65536)
-        flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW
-        fd = os.open(self.pending_reserve, flags, 0o600)
+        flags = (os.O_WRONLY | os.O_CREAT | os.O_EXCL |
+                 getattr(os, "O_NOFOLLOW", 0))
+        fd = _open_original(self.pending_reserve, flags, 0o600)
         self.pending_owned = True
         with os.fdopen(fd, "wb") as out:
             out.write(RESERVE_HEADER)
@@ -388,7 +394,7 @@ class NativeExecution:
             out.flush()
             os.fsync(out.fileno())
         self.reserve_owned = True
-        os.replace(self.pending_reserve, self.reserve)
+        _replace_original(self.pending_reserve, self.reserve)
         self.pending_owned = False
         self.state["execution"]["recovery_reserve_capacity_bytes"] = size
 
@@ -515,7 +521,8 @@ class NativeExecution:
 def _active(directory):
     """Inspect the same flock as execution without creating a file or a process."""
     try:
-        fd = os.open(directory / ".run.lock", os.O_RDONLY | os.O_NOFOLLOW)
+        fd = _open_original(directory / ".run.lock", os.O_RDONLY |
+                            getattr(os, "O_NOFOLLOW", 0))
     except FileNotFoundError:
         return False
     try:

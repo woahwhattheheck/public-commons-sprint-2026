@@ -143,6 +143,11 @@ def safe_relative(value):
     p = PurePosixPath(value)
     if p.is_absolute() or not p.parts or any(x in (".", "..") for x in p.parts) or str(p) != value:
         raise Fault("SOURCE_PATH", "Source members must use canonical relative paths.")
+    if os.name == "nt":
+        try:
+            portable.member_name(value)
+        except ValueError as error:
+            raise Fault("SOURCE_PATH", str(error)) from error
     return p
 
 def json_body(data):
@@ -709,6 +714,8 @@ class Operator:
         filename = urllib.parse.unquote(filename)
         if not filename or Path(filename).name != filename or "/" in filename or "\\" in filename or "\0" in filename or len(filename) > 240:
             raise Fault("UPLOAD_NAME", "Choose a file with an ordinary filename.")
+        if os.name == "nt":
+            safe_relative(filename)
         h = hashlib.sha256()
         pending = None
         try:
@@ -749,6 +756,12 @@ class Operator:
         entries = archive.infolist()
         if len(entries) > 20000 or sum(x.file_size for x in entries) > self.extraction_limit:
             raise Fault("SOURCE_CAPACITY", "The source archive exceeds the selected member or extraction capacity.", 413)
+        if os.name == "nt":
+            try:
+                portable.validate_receiving_names(
+                    info.filename.rstrip("/") if info.is_dir() else info.filename for info in entries)
+            except ValueError as error:
+                raise Fault("SOURCE_PATH", str(error)) from error
         files = {}
         for info in entries:
             name = info.filename.rstrip("/") if info.is_dir() else info.filename
@@ -1364,7 +1377,7 @@ class Handler(BaseHTTPRequestHandler):
                         {name: values[0] for name, values in query.items()}))
                 raise Fault("ROUTE_MISSING", "This operator route does not exist.", 404)
             selected = "index.html" if url.path == "/" else url.path.removeprefix("/web/")
-            if selected not in (({'app.mjs', 'scenario_input_review.mjs', 'community.css', 'community.mjs', 'conservation.css', 'conservation.mjs', 'conservation_optimization.css', 'conservation_optimization.mjs', 'conservation_optimization_bridge.mjs', 'experiments.css', 'experiments.mjs', 'index.html', 'jobs.css', 'jobs.mjs', 'native_presentation.mjs', 'observed_series.mjs', 'parameter_studies.css', 'parameter_studies.mjs', 'parameter_case_console.mjs', 'portfolio.css', 'portfolio.mjs', 'programmes.css', 'programmes.mjs', 'receiving_water_spatial.mjs', 'receiving_waters.css', 'receiving_waters.mjs', 'reviews.css', 'reviews.mjs', 'spatial.mjs', 'style.css', 'observation_support.mjs', 'observed_reports.mjs'} | self.app.extensions.web_assets | {"delivery_review.mjs", "delivery_review.css"} | {"rehearsal.mjs", "rehearsal.css", "team.html", "team.mjs", "team.css"})):
+            if selected not in (({'app.mjs', 'startup_guide.mjs', 'startup_guide.css', 'scenario_input_review.mjs', 'community.css', 'community.mjs', 'conservation.css', 'conservation.mjs', 'conservation_optimization.css', 'conservation_optimization.mjs', 'conservation_optimization_bridge.mjs', 'experiments.css', 'experiments.mjs', 'index.html', 'jobs.css', 'jobs.mjs', 'native_presentation.mjs', 'observed_series.mjs', 'parameter_studies.css', 'parameter_studies.mjs', 'parameter_working.mjs', 'parameter_case_console.mjs', 'portfolio.css', 'portfolio.mjs', 'programmes.css', 'programmes.mjs', 'receiving_water_spatial.mjs', 'receiving_waters.css', 'receiving_waters.mjs', 'reviews.css', 'reviews.mjs', 'spatial.mjs', 'style.css', 'observation_support.mjs', 'observed_reports.mjs'} | self.app.extensions.web_assets | {"delivery_review.mjs", "delivery_review.css"} | {"rehearsal.mjs", "rehearsal.css", "team.html", "team.mjs", "team.css"})):
                 raise Fault("PAGE_MISSING", "This operator page does not exist.", 404)
             data = (Path(__file__).parent / "web" / selected).read_bytes()
             self.close_connection = True
@@ -1537,24 +1550,44 @@ def main():
     parser.add_argument("--restore-directory")
     parser.add_argument("--upload-limit-mib", type=int, default=4096)
     parser.add_argument("--source-extraction-limit-mib", type=int, default=65536)
+    parser.add_argument("--launcher-signals", help=argparse.SUPPRESS)
     args = parser.parse_args()
     if not 1 <= args.upload_limit_mib <= 65536 or not 1 <= args.source_extraction_limit_mib <= 1048576:
         parser.error("Choose positive explicit upload and source extraction capacities.")
-    server, receipt = start_server(args.workspace, state_directory=args.operator_state, create=args.create,
-                                   title=args.title, source_manifests=args.source_manifest, source_roots=args.source_root, port=args.port,
-                                   restore_directory=args.restore_directory,
-                                   upload_limit=args.upload_limit_mib*1024**2,
-                                   extraction_limit=args.source_extraction_limit_mib*1024**2)
-    print(json.dumps(receipt), flush=True)
+    if args.launcher_signals is not None and not re.fullmatch(r"[0-9a-f]{48}", args.launcher_signals):
+        parser.error("Use the maintained launcher for its private shutdown handshake.")
+    server = None
+    stopping = threading.Event()
     def drain(*_):
-        threading.Thread(target=server.shutdown, daemon=True).start()
+        if stopping.is_set():
+            return
+        stopping.set()
+        if server is not None:
+            threading.Thread(target=server.shutdown, daemon=True).start()
     signal.signal(signal.SIGTERM, drain)
     signal.signal(signal.SIGINT, drain)
+    if hasattr(signal, "SIGBREAK"):
+        signal.signal(signal.SIGBREAK, drain)
+    if args.launcher_signals is not None:
+        if os.name != "nt" or not hasattr(signal, "SIGBREAK"):
+            parser.error("The Windows launcher handshake requires SIGBREAK.")
+        print(json.dumps({"schema": "upstate.workbench-launch-signals/v1",
+            "pid": os.getpid(), "key": args.launcher_signals, "signal": "SIGBREAK"}), flush=True)
     try:
-        server.serve_forever(poll_interval=.3)
+        server, receipt = start_server(args.workspace, state_directory=args.operator_state, create=args.create,
+                                       title=args.title, source_manifests=args.source_manifest, source_roots=args.source_root, port=args.port,
+                                       restore_directory=args.restore_directory,
+                                       upload_limit=args.upload_limit_mib*1024**2,
+                                       extraction_limit=args.source_extraction_limit_mib*1024**2)
+        if not stopping.is_set():
+            print(json.dumps(receipt), flush=True)
+            server.serve_forever(poll_interval=.3)
     finally:
-        server.server_close()
-        server.operator.close()
+        if server is not None:
+            try:
+                server.server_close()
+            finally:
+                server.operator.close()
 
 
 # Native source-refresh registration. Preserve the original server and queue.

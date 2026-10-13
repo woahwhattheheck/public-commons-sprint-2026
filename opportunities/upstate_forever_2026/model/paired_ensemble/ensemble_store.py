@@ -2,13 +2,18 @@
 from __future__ import annotations
 import contextlib
 import datetime as dt
-import fcntl
+try:
+    import fcntl
+except ImportError:
+    from model import windows_fs as fcntl
 import hashlib
 import json
 import os
 from pathlib import Path
 import re
 import tempfile
+if os.name == "nt":
+    from ..common import _open_original, _replace_original, _sync_directory
 
 
 def canonical(value):
@@ -54,12 +59,18 @@ def atomic(path, value, *, immutable=False):
                 if path.read_bytes() != body:
                     raise ValueError('Immutable experiment item changed: ' + path.name)
         else:
-            os.replace(pending, path)
-        fd = os.open(path.parent, os.O_RDONLY | os.O_DIRECTORY)
-        try:
-            os.fsync(fd)
-        finally:
-            os.close(fd)
+            if os.name == "nt":
+                _replace_original(pending, path)
+            else:
+                os.replace(pending, path)
+        if os.name == "nt":
+            _sync_directory(path.parent)
+        else:
+            fd = os.open(path.parent, os.O_RDONLY | os.O_DIRECTORY)
+            try:
+                os.fsync(fd)
+            finally:
+                os.close(fd)
     finally:
         if pending:
             pending.unlink(missing_ok=True)
@@ -69,7 +80,10 @@ def atomic(path, value, *, immutable=False):
 def held(path, *, blocking=False):
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
-    fd = os.open(path, os.O_RDWR | os.O_CREAT | os.O_NOFOLLOW, 0o600)
+    if os.name == "nt":
+        fd = _open_original(path, os.O_RDWR | os.O_CREAT, 0o600)
+    else:
+        fd = os.open(path, os.O_RDWR | os.O_CREAT | os.O_NOFOLLOW, 0o600)
     try:
         fcntl.flock(fd, fcntl.LOCK_EX | (0 if blocking else fcntl.LOCK_NB))
         yield

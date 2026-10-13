@@ -23,6 +23,7 @@ import zipfile
 from .common import (atomic_json, canonical, digest, held, identifier, now,
                      read_json)
 from . import portable, study_delivery_transfer as delivery_transfer
+from .common import _sync_directory, _path_stat
 from . import monitoring_study_transfer as monitoring_transfer, study_report_transfer as report_transfer
 from . import scientific_report_study_transfer as report_editions
 from . import paired_ensemble_study_transfer as paired_transfer
@@ -153,7 +154,7 @@ def normalise(selection):
 
 
 def _identity(path):
-    value = path.lstat()
+    value = _path_stat(path)
     if not stat.S_ISREG(value.st_mode):
         raise ValueError("A study member must be a retained regular file: " + str(path))
     return (value.st_dev, value.st_ino, value.st_size, value.st_mtime_ns, value.st_ctime_ns)
@@ -1129,11 +1130,7 @@ def export_study(workspace, destination, selection, *, progress=None, investigat
         closure.assert_unchanged()
         report("publishing", archive_bytes=result["bytes"])
         os.link(archive_path, destination)
-        directory_fd = os.open(destination.parent, os.O_RDONLY | os.O_DIRECTORY)
-        try:
-            os.fsync(directory_fd)
-        finally:
-            os.close(directory_fd)
+        _sync_directory(destination.parent)
         result.update(id=transfer_id, path=str(destination), study=receipt,
                       source_files=source_files, source_bytes=source_bytes)
         report("complete", archive_bytes=result["bytes"], id=transfer_id)

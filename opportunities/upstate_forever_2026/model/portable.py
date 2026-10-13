@@ -12,6 +12,7 @@ import zipfile
 from .common import (SCHEMA, atomic_json, canonical, file_digest, held, identifier,
                      now, read_json, relative_file)
 from .portable_databases import snapshot_databases, without_database_files, verify_database_sources
+from .common import _sync_directory, _path_stat, _fd_stat
 from .portable_acquisitions import capture_lock_paths, verify_acquisitions
 from .portable_implementation import locked_implementation, verify_implementation
 from .portable_parameter_studies import verify_parameter_studies
@@ -138,10 +139,37 @@ def member_name(value):
         raise ValueError("Archive paths must remain within the receiving directory")
     if str(path) != value:
         raise ValueError("Archive member path must be canonical")
+    if os.name == "nt":
+        reserved = {"CON", "PRN", "AUX", "NUL", "CONIN$", "CONOUT$"}
+        for part in path.parts:
+            stem = part.split(".", 1)[0].rstrip(" ").upper()
+            device = (stem in reserved
+                      or len(stem) == 4 and stem[:3] in {"COM", "LPT"}
+                      and stem[3] in "123456789\u00b9\u00b2\u00b3")
+            if (device or part.endswith((" ", "."))
+                    or any(ord(char) < 32 or char in '<>:"|?*' for char in part)):
+                raise ValueError("Archive member has no ordinary Windows destination: " + value)
     return path
 
+
+def validate_receiving_names(names):
+    """Reject Windows destination aliases before extracting any original member."""
+    if os.name != "nt":
+        return
+    seen = {}
+    for name in names:
+        parts = member_name(name).parts
+        for length in range(1, len(parts) + 1):
+            prefix = "/".join(parts[:length])
+            folded = prefix.casefold()
+            previous = seen.setdefault(folded, prefix)
+            if previous != prefix:
+                raise ValueError("Archive members alias the same Windows destination: "
+                                 + previous + " / " + prefix)
+
+
 def _identity(path):
-    value = path.lstat()
+    value = _path_stat(path)
     if not stat.S_ISREG(value.st_mode):
         raise ValueError("Only retained regular files enter the workspace archive")
     return (value.st_dev, value.st_ino, value.st_size, value.st_mtime_ns, value.st_ctime_ns)
@@ -647,7 +675,8 @@ def backup(workspace, destination, *, include_intermediates=True, include_delive
                             raise ValueError("Application changed since the delivery was selected")
                     manifest["delivery"] = delivery
                 archive.writestr("ARCHIVE.json", canonical(manifest) + b"\n")
-            with pending.open("rb") as file:
+            # Flush through a writable handle on Windows as well as POSIX.
+            with pending.open("r+b") as file:
                 os.fsync(file.fileno())
                 before = _archive_identity(file)
                 with zipfile.ZipFile(file) as archive:
@@ -666,18 +695,14 @@ def backup(workspace, destination, *, include_intermediates=True, include_delive
             # Publish without replacing an unrelated archive created meanwhile.
             os.link(pending, destination)
             pending.unlink()
-            fd = os.open(destination.parent, os.O_RDONLY | os.O_DIRECTORY)
-            try:
-                os.fsync(fd)
-            finally:
-                os.close(fd)
+            _sync_directory(destination.parent)
         return result
     finally:
         if pending is not None:
             pending.unlink(missing_ok=True)
 
 def _archive_identity(source):
-    value = os.fstat(source.fileno())
+    value = _fd_stat(source.fileno())
     if not stat.S_ISREG(value.st_mode):
         raise ValueError("Select a retained regular archive file")
     return (value.st_dev, value.st_ino, value.st_size,
@@ -705,6 +730,7 @@ def inspect_archive(path, *, verify=True):
 def _inspect_archive(archive, *, verify):
     entries = archive.infolist()
     names = [entry.filename for entry in entries]
+    validate_receiving_names(names)
     if len(names) != len(set(names)) or "ARCHIVE.json" not in names:
         raise ValueError("Archive has duplicate names or lacks its original manifest")
     for entry in entries:
@@ -1176,11 +1202,7 @@ def _restore_archive(archive, archive_source, before, manifest, destination):
             raise ValueError("Receiving destination appeared during capture")
         os.rename(pending, destination)
         pending = None
-        parent_fd = os.open(destination.parent, os.O_RDONLY | os.O_DIRECTORY)
-        try:
-            os.fsync(parent_fd)
-        finally:
-            os.close(parent_fd)
+        _sync_directory(destination.parent)
         return result
     finally:
         if pending is not None:
