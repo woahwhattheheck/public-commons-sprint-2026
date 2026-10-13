@@ -1,3 +1,4 @@
+import {attachReceivedStudies,receivedFieldworkPreview} from '../received_studies.mjs';
 /** Selected editable scientific-study transfer in the original operator.
  * TokenJunkieLabs. Uses the original task queue, downloads and receiving form.
  */
@@ -55,6 +56,7 @@ export function attachStudyTransfer(host) {
     throw new TypeError('The study desk needs the original operator API and workspace state.');
   }
   let root=null,workspace=null,epoch=0,searchTimer=null,exportTimer=null;
+  const received=attachReceivedStudies({...host,getWorkspace:()=>host.getWorkspace?.()??host.getState()?.workspace_key});
   let catalogue={items:[],total:0,offset:0,limit:200,next_offset:null};
   let exportsPage={items:[],total:0,offset:0,limit:50,next_offset:null};
   let selected=new Map(),title='Selected scientific study',kind='',query='',selectedOnly=false,offset=0;
@@ -119,7 +121,8 @@ export function attachStudyTransfer(host) {
       '<div data-study-plan></div></section>'+
       '<section class="st-panel"><div class="st-panel-heading"><h3>Study archives</h3>'+
       button('refresh-exports','Refresh exports')+'</div><div data-study-exports></div>'+
-      '<div class="st-pagination" data-study-export-pages></div></section>';
+      '<div class="st-pagination" data-study-export-pages></div></section>'+
+      '<section class="st-panel" data-study-received></section>';
     root.querySelector('[data-study-field="kind"]').value=kind;
     root.querySelector('[data-study-field="query"]').value=query;
     root.querySelector('[data-study-field="title"]').value=title;
@@ -241,6 +244,7 @@ export function attachStudyTransfer(host) {
     if(plan.related_result_issues?.length)html+='<details class="st-details"><summary>'+
       number(plan.related_result_issues.length)+' additional comparison records need repair</summary><ul>'+
       plan.related_result_issues.map(row=>'<li>'+escapeHTML(row.path)+': '+escapeHTML(row.message)+'</li>').join('')+'</ul></details>';
+    html+=receivedFieldworkPreview(plan.implementation_report_sources);
     body.innerHTML=html;
   }
 
@@ -482,11 +486,13 @@ export function attachStudyTransfer(host) {
     root=container.ownerDocument.createElement('div');
     root.className='study-transfer';container.replaceChildren(root);
     epoch++;skeleton();
+    received.mount(root.querySelector('[data-study-received]'));
     if(lastError)notice(lastError,true);
     loadCatalogue();loadExports(0);
   }
 
   function detach() {
+    received.detach();
     epoch++;requestSerial++;
     clearTimeout(searchTimer);clearTimeout(exportTimer);searchTimer=null;exportTimer=null;
     for(const controller of requests)controller.abort();
