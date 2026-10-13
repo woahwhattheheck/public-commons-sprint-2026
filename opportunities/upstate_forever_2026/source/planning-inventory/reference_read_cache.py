@@ -46,8 +46,11 @@ def main():
         windows = []
         for x, y in dict.fromkeys(anchors):
             windows.append(Window(x, y, min(512, width - x), min(512, height - y)))
-        # A one-block budget exercises eviction with original corner/middle
-        # windows when the selected data contains multiple native blocks.
+        # Include a small block-contained request; larger requests may use the
+        # direct path when their aligned rectangle exceeds a small budget.
+        windows.append(Window(0, 0, min(512, bw, width), min(512, bh, height)))
+        # A one-block budget can exercise eviction between original datasets
+        # or corner/middle blocks without forcing hundreds of striped reads.
         block_budget = max(
             min(ds.height, ds.block_shapes[0][0]) * min(ds.width, ds.block_shapes[0][1])
             * (np.dtype(ds.dtypes[0]).itemsize + 1) for ds in datasets)
@@ -95,7 +98,7 @@ def main():
                                 raise AssertionError("The original window's float64 reduction changed")
                         support_checks += 1
                 metrics = cache.snapshot()
-                if metrics["source_reads"] != metrics["cache_misses"] + metrics["direct_reads"]:
+                if metrics["source_reads"] != metrics["block_read_batches"] + metrics["direct_reads"]:
                     raise AssertionError("Native read counters do not reconcile")
                 if not budget and metrics["source_reads"] != metrics["window_requests"]:
                     raise AssertionError("Zero-budget reads did not preserve the direct path")
