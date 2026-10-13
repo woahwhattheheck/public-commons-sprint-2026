@@ -121,7 +121,7 @@ function render(){
     html=pageHeader(d.project.title,'Original data, explicit model choices, retained native outputs and a complete receiving package.',button('source-open','Import sources','','primary'));
     html+='<div class="cards">'+[
       ['Source editions',d.sources.length,'Retained original files and provenance.'],
-      ['Model grids',d.grids.filter(x=>x.state==='complete').length,'Aligned to the original 30 m reference grid.'],
+      ['Model grids',d.grids.filter(x=>x.state==='complete').length,'Aligned to each study’s original reference grid.'],
       ['Complete native runs',complete,'Completed outputs for each run’s selected native models.'],
       ['Complete deliveries',d.deliveries.filter(x=>x.state==='complete').length,'Seven map families, physical rasters and working archive.']
     ].map(x=>'<div class="card"><h3>'+x[0]+'</h3><strong class="number">'+number(x[1])+'</strong><p>'+x[2]+'</p></div>').join('')+'</div>';
@@ -142,7 +142,7 @@ function render(){
     html+=d.profiles.length?section('Retained parameter choices','The original table is preserved by source edition and content hash.',table(['Profile','Table codes','Flow routing','Model period',''],d.profiles.map(row=>'<tr><td class="name-cell"><strong>'+esc(row.title)+'</strong>'+metaId(row)+'</td><td>'+number(row.table_summary?.rows)+'</td><td>'+nativeModels(row).map(name=>esc(name.toUpperCase())+' '+esc(row[name]?.flow_dir_algorithm?.toUpperCase()||'—')).join(' / ')+'</td><td>'+esc(typeof row.model_period==='object'?JSON.stringify(row.model_period):row.model_period||'Not supplied')+'</td><td class="actions-cell">'+itemButton('profiles',row.id)+button('profile-clone','Revise','data-id="'+row.id+'"','small')+'</td></tr>'))):noRows('Select real biophysical coefficients','Create a profile from an imported parameter table and its published references.','profile-new','New profile');
   }
   if(view==='grids'){
-    html=pageHeader('Model grids','Align the selected models’ original rasters to the exact 30 m grid, preserving the reporting mask and upstream model context. Extend an existing grid when additional model sources arrive.',button('grid-new','Prepare model grid','','primary'));
+    html=pageHeader('Model grids','Align the selected models’ original rasters to the retained native grid, preserving its cell size, reporting mask and upstream model context. Extend an existing grid when additional model sources arrive.',button('grid-new','Prepare model grid','','primary'));
     html+=d.grids.length?section('Original grid preparations','Incomplete preparations retain their completed native files for continuation.',table(['Grid','State','Dimensions','Resolution','Source edition',''],d.grids.map(row=>'<tr><td class="name-cell"><strong>'+esc(row.spec.title||'Model grid')+'</strong><small>'+esc(nativeModelLabel(row.spec))+'</small>'+metaId(row)+'</td><td>'+badge(row.state)+'</td><td>'+number(row.grid?.width)+' × '+number(row.grid?.height)+'</td><td>'+number(row.grid?.resolution_m)+' m</td><td>'+esc(named('sources',row.spec.source_collection_id))+'</td><td class="actions-cell">'+itemButton('grids',row.id)+button('grid-clone',row.state==='complete'?'Extend / revise':'Revise','data-id="'+row.id+'"','small')+'</td></tr>'))):noRows('Prepare the reporting and model grid','Select original rasters, the reporting boundary, the covering hydrologic domain and an explicit positive context buffer.','grid-new','Prepare grid');
   }
   if(view==='scenarios'){
@@ -484,20 +484,26 @@ async function profileForm(id){
 }
 async function gridForm(id){
  requireSources();const original=id?await api(endpoint('/api/item',{kind:'grids',id})):null,row=original?.spec,collection=collectionDefault(row);
- const rasterRoles=[['DEM','Elevation model','ndr sdr'],['NLCD','Original 30 m land cover','ndr sdr'],['PRECIPITATION','Precipitation','ndr'],['R_FACTOR','Rainfall erosivity','sdr'],['K_FACTOR','Soil erodibility','sdr']];
- const canReuse=original?.state==='complete';
+ const rasterRoles=[['DEM','Elevation model','ndr sdr'],['NLCD','Original land cover','ndr sdr'],['PRECIPITATION','Precipitation','ndr'],['R_FACTOR','Rainfall erosivity','sdr'],['K_FACTOR','Soil erodibility','sdr']];
+ const canReuse=original?.state==='complete',originalResolution=original?.grid?.resolution_m??row?.resolution_m??30;
  openForm(row?'Extend or revise native grid':'Prepare native model grid','Choose the native models and their original sources, reporting area and upstream context. A completed grid can supply its exact common inputs when the remaining model sources arrive.',
  '<div class="form-grid">'+field('Grid title',input('title','text',row?.title?row.title+' · revision':'','required'))+field('Source edition',select('collection',sources(),collection))+
  field('Native models',select('models',nativeModelOptions(),nativeModels(row).join(',')),'NDR requires elevation, land cover and precipitation. SDR requires elevation, land cover, rainfall erosivity and soil erodibility.',true)+
- (canReuse?'<label class="full"><span>Reuse original grid preparation</span><span><input name="reuse_original_grid" type="checkbox" checked> Carry completed common files from '+esc(short(original.id))+'</span><small>Keep the original geometry, source selections and context buffer to reuse them. Clear this choice when changing the geometry. New input roles are prepared in the new grid.</small></label>':'')+
+ field('Native cell size',input('resolution','number',row?.resolution_m??originalResolution,'required min="0" step="any"'),'Metres per square cell. Match the original projected land-cover grid; 30 m is the Upper Savannah default.')+
+ (canReuse?'<label class="full"><span>Reuse original grid preparation</span><span><input name="reuse_original_grid" type="checkbox" checked> Carry completed common files from '+esc(short(original.id))+'</span><small>Keep the original cell size, geometry, source selections and context buffer to reuse them. Clear this choice when changing the physical grid. New input roles are prepared in the new grid.</small></label>':'')+
  rasterRoles.map(([key,label,models])=>field(label,select('raster_'+key,sourceRows(collection,'raster'),row?.input_sources?.[key])).replace('<label','<label data-native-models="'+models+'"')).join('')+
  field('Upstream context buffer',input('buffer','number',row?.upstream_buffer_m??'','required min="0.01" max="999999" step="any"'),'Metres. The model domain must cover the selected reporting area.')+
  vectorSelection('reporting','Reporting boundary',collection,row?.reporting_area)+vectorSelection('domain','Hydrologic model domain',collection,row?.model_domain)+'</div>',
  'Prepare original grid',()=>{
-  const modelFields=nativeModelFields(),active=nativeModels(modelFields),input_sources={};
+  const modelFields=nativeModelFields(),active=nativeModels(modelFields),input_sources={},resolution=num('resolution');
+  if(resolution<=0)throw Error('Enter a positive native cell size in metres that matches the original land-cover grid.');
   for(const [key,,models]of rasterRoles)if(models.split(' ').some(name=>active.includes(name)))input_sources[key]=val('raster_'+key);
   const selection={title:val('title'),source_collection_id:val('collection'),...modelFields,input_sources,reporting_area:readVector('reporting'),model_domain:readVector('domain'),upstream_buffer_m:num('buffer')};
-  if(canReuse&&form.elements.namedItem('reuse_original_grid')?.checked)selection.base_grid_id=original.id;
+  if(row?.resolution_m!==undefined||resolution!==30)selection.resolution_m=resolution;
+  if(canReuse&&form.elements.namedItem('reuse_original_grid')?.checked){
+   if(resolution!==Number(originalResolution))throw Error('A different native cell size needs a new grid preparation. Clear Reuse original grid preparation, then select the matching original land-cover source.');
+   selection.base_grid_id=original.id;
+  }
   return submitAction('grid.prepare',selection);
  },()=>{bindCollection('collection',[...rasterRoles.map(([key])=>['raster_'+key,'raster']),['reporting_source','vector'],['domain_source','vector']]);bindNativeModelFields();});
 }
