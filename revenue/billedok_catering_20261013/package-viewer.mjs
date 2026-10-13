@@ -21,9 +21,34 @@ const style=String.raw`
 #billedok-complete-customer-packages #document-preview[hidden]{display:none!important}
 @media(max-width:480px){#billedok-complete-customer-packages{padding:.7rem}#billedok-complete-customer-packages section{padding:.8rem}#billedok-complete-customer-packages .preview-head{flex-direction:column}}
 `;
+
+export function bindBilledOKProfileNavigation(frame){
+ frame.addEventListener("load",()=>{
+  const doc=frame.contentDocument;if(!doc)return;
+  doc.addEventListener("click",event=>{
+   const link=event.target.closest?.("a[href]"),href=link?.getAttribute("href");
+   if(!href?.startsWith("#"))return;
+   event.preventDefault();
+   let id=href.slice(1);try{id=decodeURIComponent(id);}catch{}
+   const target=id?doc.getElementById(id)||Array.from(doc.getElementsByName(id)).find(el=>el.tagName==="A"):doc.documentElement;
+   if(!target)return;
+   target.scrollIntoView({block:"start"});
+   if(!target.hasAttribute("tabindex")){
+    target.setAttribute("tabindex","-1");
+    target.addEventListener("blur",()=>target.removeAttribute("tabindex"),{once:true});
+   }
+   target.focus({preventScroll:true});
+  });
+ });
+}
+
 export function renderBilledOKPackageViewer(input,{fragment=false}={}){
  if(input?.schema!=="commons.billedok-complete-package-viewer.v1")throw Error("Select the complete BilledOK package input.");
- const original=renderCustomerPackagePanel({customer:"BilledOK",envelope:input.envelope});
+ const rendered=renderCustomerPackagePanel({customer:"BilledOK",envelope:input.envelope});
+ const endScript=rendered.lastIndexOf("</script>");
+ if(endScript<0||!rendered.slice(0,endScript).endsWith("packagePanelMain();"))throw Error("The complete original viewer runtime changed.");
+ const navigation="\n"+bindBilledOKProfileNavigation.toString()+"\nbindBilledOKProfileNavigation(document.getElementById(\"preview\"));";
+ const original=rendered.slice(0,endScript)+navigation.replace(/<\/script/gi,"<\\/script")+rendered.slice(endScript);
  const head=original.match(/<head>([\s\S]*?)<\/head>/),start=original.indexOf("<body>"),end=original.lastIndexOf("</body>");
  if(!head||start<0||end<=start)throw Error("The complete original viewer template changed.");
  const markup='<div id="'+root+'">'+original.slice(start+6,end)+"</div>";
