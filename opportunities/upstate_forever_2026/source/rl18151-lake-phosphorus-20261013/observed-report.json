@@ -4,16 +4,6 @@
   "station_id": "21SC60WQ_WQX-RL-18151",
   "inputs": [
     {
-      "path": "README.md",
-      "bytes": 9886,
-      "sha256": "02a86c0d8d8b80219f368a5c9113cc2d40c616ad1b06b2a61a56d55bf8fa93e6"
-    },
-    {
-      "path": "SOURCE_CAPTURE.md",
-      "bytes": 3129,
-      "sha256": "ab8f6cd949db6b142644a6250c5594aeef7972a510651bf28af3eb8c02a94de4"
-    },
-    {
       "path": "acquisition-plan.json",
       "bytes": 9199,
       "sha256": "472cd98e720add432fd750ec69ab93c8540395bb527cd5abf5a30826fa36e3c4"
@@ -29,14 +19,14 @@
       "sha256": "1125e1f04f7c4b9d8a91548fb31c86d56e4f41c9c902b326153e80542f396f81"
     },
     {
-      "path": "capture-manifest.json",
-      "bytes": 47483,
-      "sha256": "e8eedb832f5d6b117a2280282bd1ba7ddd153626e53a1a7d3faceeb19a7fb9b8"
-    },
-    {
       "path": "capture_rl18151.py",
       "bytes": 18835,
       "sha256": "c853934b1a975695b6005b3e9b6601125a81c1948250ee35e5e87f2a4f4814fd"
+    },
+    {
+      "path": "capture-manifest.json",
+      "bytes": 47483,
+      "sha256": "e8eedb832f5d6b117a2280282bd1ba7ddd153626e53a1a7d3faceeb19a7fb9b8"
     },
     {
       "path": "derived/annual-cohorts.csv",
@@ -85,8 +75,8 @@
     },
     {
       "path": "import_rl18151.py",
-      "bytes": 4776,
-      "sha256": "f148bc2845cfca878046260ff4e2a1f974aa33642458e7a8a2a40f2faf76f0db"
+      "bytes": 10927,
+      "sha256": "99ffdda790f8f2896319eab97b994c942ebdaeb72ac2c4dc323d3ae77de0d9bd"
     },
     {
       "path": "original-join-census.json",
@@ -174,6 +164,11 @@
       "sha256": "45829fab069ef23454a949aa2469ed947ade8cbee08387a9d23f56cf51931d50"
     },
     {
+      "path": "README.md",
+      "bytes": 9886,
+      "sha256": "02a86c0d8d8b80219f368a5c9113cc2d40c616ad1b06b2a61a56d55bf8fa93e6"
+    },
+    {
       "path": "render-report.mjs",
       "bytes": 19383,
       "sha256": "df55266c583e36989b1675a786abb9526a810dfba09a90998219627aec123555"
@@ -182,6 +177,16 @@
       "path": "report.html",
       "bytes": 1251821,
       "sha256": "7720306213c64e7b79185f61ccbc3a406c169730925b33d20bb47e8a946fb4a6"
+    },
+    {
+      "path": "RL_NATIVE_RECEIVING.md",
+      "bytes": 5488,
+      "sha256": "7d0862fcf9e16ad725dfa12f2c3e6b32531eb4e3bed82b482a0f597b3d4acb16"
+    },
+    {
+      "path": "SOURCE_CAPTURE.md",
+      "bytes": 3129,
+      "sha256": "ab8f6cd949db6b142644a6250c5594aeef7972a510651bf28af3eb8c02a94de4"
     },
     {
       "path": "supplemental-requests.json",
@@ -212,7 +217,8 @@
     "original/nutrient-narrow-results.csv",
     "original/physical-narrow-results.csv",
     "original/microbiological-narrow-results.csv",
-    "README.md"
+    "README.md",
+    "RL_NATIVE_RECEIVING.md"
   ],
   "sections": [
     [
@@ -417,6 +423,21 @@
             {
               "title": "Native receiving and reproducible compilation guide",
               "path": "README.md"
+            }
+          ]
+        }
+      ]
+    ],
+    [
+      "RL-18151 native station and delivery receiving",
+      [
+        "The original importer can now create the station geography selection from its actual imported source and observation identities, build the retained station through the maintained application, and update this report in its existing ordered scientific delivery request.",
+        {
+          "kind": "links",
+          "items": [
+            {
+              "title": "Run the original station and ordered-report receiving workflow",
+              "path": "RL_NATIVE_RECEIVING.md"
             }
           ]
         }
