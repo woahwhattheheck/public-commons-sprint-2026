@@ -235,7 +235,8 @@ def authorize(handler):
                 fail("A delivery lead retains complete Flowable commissioning sources.")
             return
         if action in ("flowable-sources/catalogue", "flowable-sources/inspect",
-                      "flowable-sources/template", "flowable-sources/prepare"):
+                      "flowable-sources/template", "flowable-sources/prepare",
+                      "flowable-sources/following-compare", "flowable-sources/following-prepare"):
             if role not in ("lead", "reviewer"):
                 fail("A delivery lead or reviewer prepares the original Flowable source.")
             handler.json_body()

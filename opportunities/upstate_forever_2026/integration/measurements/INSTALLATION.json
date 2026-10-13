@@ -234,7 +234,7 @@
     "large_collection_receiving": {
       "operation_id": "CEDAR-10212-ECO-COLLECTION-RECEIVING-20261013",
       "original_claim": "1791921813.488809",
-      "source_base": "ffa1ace3923d4b22eb593aa22e9b00c0a0ef0e47",
+      "source_base": "a3d269e53cd5fc962aa3326a015b2bd93ac28b38",
       "collection_product_merge": "513c2582b169655b674e23393a1d931d41bb3996",
       "entry": "measurement_workspace/engine/reconciliation-receiving.mjs --chapter large-collections",
       "guide": "measurement_workspace/COLLECTION_RECEIVING.md",
@@ -275,7 +275,7 @@
     {
       "path": "MEASUREMENT_LARGE_FILES_SOURCE.json",
       "bytes": 14441,
-      "sha256": "02e62c29b1955954c02621807f4499528836bae1d0ebe269b2e18e27418ec9eb"
+      "sha256": "30879071849453cb4421a867a547160d43d22224244cb5120b71c51437c64c9d"
     },
     {
       "path": "MEASUREMENT_RETURNED_REVIEWS.md",

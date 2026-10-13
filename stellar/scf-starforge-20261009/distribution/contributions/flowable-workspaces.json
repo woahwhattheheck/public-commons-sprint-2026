@@ -13,7 +13,8 @@
     "flowable-document-comparison": "stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/document-comparison-cli.mjs",
     "flowable-document-comparison-capture": "stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/capture-document-comparison.mjs",
     "flowable-installation-source": "stellar/scf_2026/sf49_data_commissioning/installation-workorders/flowable-installation/service-cli.mjs",
-    "flowable-source-review": "stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/programme-source-review-cli.mjs"
+    "flowable-source-review": "stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/programme-source-review-cli.mjs",
+    "flowable-installation-following": "stellar/scf_2026/sf49_data_commissioning/installation-workorders/flowable-installation-following.mjs"
   },
   "commandDescriptions": {
     "flowable-workspace": "Open, operate, receive and export native Flowable process, case and decision workspaces.",
@@ -26,7 +27,8 @@
     "flowable-document-comparison": "Reproduce complete selected document comparisons, review dispositions and portable receiving outputs.",
     "flowable-document-comparison-capture": "Read and retain explicitly selected Alfresco source/target versions through the original capture adapter.",
     "flowable-installation-source": "Operate complete case-bound Flowable source catalogues and customer preparations through the original Source Desk.",
-    "flowable-source-review": "Issue, return, compare and explicitly resolve complete original programme sources, then compile through the maintained Flowable authoring engine."
+    "flowable-source-review": "Issue, return, compare and explicitly resolve complete original programme sources, then compile through the maintained Flowable authoring engine.",
+    "flowable-installation-following": "Compare complete earlier and later Flowable source editions, apply explicit field choices, and prepare the following revision of the same customer Installation."
   },
   "exports": {
     "./seller/flowable/native": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/native.mjs",
@@ -69,7 +71,9 @@
     "./seller/flowable/workspace/source-review-cli": {
       "types": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/programme-source-review-cli.d.mts",
       "import": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/programme-source-review-cli.mjs"
-    }
+    },
+    "./seller/flowable/customer-installation-following": "./source/stellar/scf_2026/sf49_data_commissioning/installation-workorders/flowable-installation-following.mjs",
+    "./seller/flowable/customer-installation-following-core": "./source/stellar/scf_2026/sf49_data_commissioning/installation-workorders/flowable-installation-following-core.mjs"
   },
   "supportFiles": [
     "stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/README.md",
@@ -153,7 +157,8 @@
     "products/flowable-merchant/SOURCE_REVIEW.md",
     "products/flowable-merchant/SOURCE_REVIEW_CLI.md",
     "stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/programme-source-review.d.mts",
-    "stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/programme-source-review-cli.d.mts"
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/programme-source-review-cli.d.mts",
+    "stellar/scf_2026/sf49_data_commissioning/installation-workorders/FLOWABLE_FOLLOWING.md"
   ],
   "browserAssets": [
     {

@@ -51,6 +51,23 @@ def selected(document, files, expected, case_id):
                if x["id"] == actual["id"] and x["revision"] == actual["revision"])
     need(row["preview"]["document"] == expected["document"],
          "The complete original Installation document differs")
+    following = expected.get("following")
+    if following is not None:
+        need(isinstance(following, dict) and set(following) == {"baseline", "current"},
+             "Retain the complete original following Installation selection")
+        current = following["current"]
+        for label in ("baseline", "current"):
+            reference = following[label]
+            need(isinstance(reference, dict) and set(reference) == {"id", "revision", "sha256"}
+                 and reference["id"] == actual["id"], "Keep one original Installation history")
+            historical = next((r for r in document["installations"]
+                               if r["id"] == reference["id"] and r["revision"] == reference["revision"]), None)
+            need(historical is not None and historical["sha256"] == reference["sha256"],
+                 "The complete case lost its exact " + label + " Installation edition")
+        need(current["revision"] + 1 == actual["revision"] and
+             following["baseline"]["revision"] <= current["revision"] and
+             row["preview"]["previous"] == current,
+             "The selected following edition must append to its original current Installation")
     for source in expected["sources"]:
         body = files.get("sources/" + source["id"])
         need(body is not None and identity(body) == {"bytes": source["bytes"], "sha256": source["sha256"]},
