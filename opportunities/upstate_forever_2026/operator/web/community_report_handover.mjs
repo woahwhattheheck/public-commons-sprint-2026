@@ -118,7 +118,7 @@ export function attachCommunityReportHandover({getState,api,endpoint,openForm,su
           preview={file,upload:original,handover:result.handover};
           target.innerHTML=communityHandoverSummary(result.handover)+
             '<p class="note">Receive this original report source in '+esc(current().data?.project?.title||'the selected workspace')+
-            '. The scientific composer keeps its existing ordered sources and appends this report once.</p>';
+            '. After receiving, choose Open this report only to prepare its own scientific report, or Add to current report to keep the current draft and append this original source once.</p>';
           return preview;
         }catch(error){
           if(validFile(file,readSequence)){preview=null;target.textContent=error.message||String(error);}

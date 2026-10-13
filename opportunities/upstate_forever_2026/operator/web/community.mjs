@@ -1162,10 +1162,10 @@ export function attachCommunity({getState,api,endpoint,openForm,submitAction,det
         });
       });
   }
-  async function openPreparedReport(taskId,{sourceOnly=false,scientific=false}={}){
+  async function openPreparedReport(taskId,{sourceOnly=false,scientific=false,selectionMode='replace'}={}){
     const requestedWorkspace=workspace(),task=await api(endpoint('/api/task',{id:taskId}));
     if(workspace()!==requestedWorkspace)return;
-    if(task.workspace!==requestedWorkspace||!['community.report.source.prepare','community.report.handover.receive'].includes(task.action)||task.state!=='complete')
+    if(task.id!==taskId||task.workspace!==requestedWorkspace||!['community.report.source.prepare','community.report.handover.receive'].includes(task.action)||task.state!=='complete')
       throw Error('Open a completed Community report source operation in its original Workspace.');
     const result=task.result||{},source=result.source,selection=result.delivery_selection;
     if(!source?.source_collection_id||!source?.source_id||!list(selection?.observed_context_sources).some(
@@ -1173,8 +1173,9 @@ export function attachCommunity({getState,api,endpoint,openForm,submitAction,det
       throw Error('The completed operation has no matching retained report source selection.');
     if(scientific){
       if(typeof openScientificReport!=='function')throw Error('Open this report in the current scientific report workspace.');
-      return openScientificReport({workspace_key:requestedWorkspace,
-        sources:selection.observed_context_sources.map(row=>({source_collection_id:row.source_collection_id,source_id:row.source_id})),
+      if(!['replace','append'].includes(selectionMode))throw Error('Choose whether to open this report alone or add it to the current report.');
+      return openScientificReport({workspace_key:requestedWorkspace,selection_mode:selectionMode,
+        sources:[{source_collection_id:source.source_collection_id,source_id:source.source_id}],
         ...(typeof result.title==='string'?{title:result.title}:{})});
     }
     document.getElementById('detail-dialog')?.close();
@@ -1188,7 +1189,9 @@ export function attachCommunity({getState,api,endpoint,openForm,submitAction,det
     if(task?.action==='community.report.handover.export')return handover.taskActions(task);
     if(task?.workspace!==workspace()||!['community.report.source.prepare','community.report.handover.receive'].includes(task.action)||task.state!=='complete'||!task.result?.source)return '';
     return '<div class="page-actions">'+
-      (typeof openScientificReport==='function'?button('report-source-scientific','Open scientific report','data-id="'+e(task.id)+'"','primary'):'')+
+      (typeof openScientificReport==='function'?
+        button('report-source-scientific','Open this report only','data-id="'+e(task.id)+'"','primary')+
+        button('report-source-append','Add to current report','data-id="'+e(task.id)+'"'):'')+
       button('report-source-edition','Open retained report source','data-id="'+e(task.id)+'"')+
       button('report-source-open','Open prepared delivery form','data-id="'+e(task.id)+'"')+'</div>';
   }
@@ -1254,7 +1257,8 @@ export function attachCommunity({getState,api,endpoint,openForm,submitAction,det
     if(action==='report-new')return reportForm(node.dataset.id);
     if(action==='report-open')return reportDetail(node.dataset.id);
     if(action==='report-source')return reportSourceForm(node.dataset.id);
-    if(action==='report-source-scientific')return openPreparedReport(node.dataset.id,{scientific:true});
+    if(action==='report-source-scientific')return openPreparedReport(node.dataset.id,{scientific:true,selectionMode:'replace'});
+    if(action==='report-source-append')return openPreparedReport(node.dataset.id,{scientific:true,selectionMode:'append'});
     if(action==='report-source-open')return openPreparedReport(node.dataset.id);
     if(action==='report-source-edition')return openPreparedReport(node.dataset.id,{sourceOnly:true});
     if(action==='report-preview')return reportDetail(node.dataset.id,{preview:node.dataset.preview==='true'});
