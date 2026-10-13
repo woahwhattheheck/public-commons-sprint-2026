@@ -1,18 +1,18 @@
 # Install the Keowee, watershed and scientific setup workflows
 
-This installer applies the cumulative native profile, watershed receiving and scientific setup review work to an existing Upper Savannah application. It composes the two maintained Python entrypoints and original Conservation browser in place, installs the complete scientific setup backend and operator desk, and retains the exact Keowee 1.0.2 source profile.
+This installer applies the cumulative native profile, watershed receiving and scientific setup review work to an existing Upper Savannah application. It composes the two maintained Python entrypoints and original Conservation browser in place, installs the complete scientific setup backend and operator desk, retains the exact original Keowee methodology, upgrades its source-interval evaluator companions through recorded owner editions, and installs the original Gura setup assembler.
 
 ## Source and receiving application
 
-Use an exact checkout of this installer's publication in public-commons-sprint-2026. Its complete implementation is the cumulative PR2916, PR2939 and PR2996 edition, commit 334c35b62d2555cc61a90863a0cf238b800f22a9. The application directory is opportunities/upstate_forever_2026. Later source checkouts are also usable when their package files match the published source manifest.
+Use an exact checkout of this installer's publication in public-commons-sprint-2026. Its complete implementation includes PR2916, PR2939, PR2996 and PR3082, the native Keowee interval owner at 41b42a18522dca766ce9f4af9417d63639dfda69 and the evaluator owner at 63a6069c817b34c5da3bc4e2be0a4563a8d3dff6. The source baseline is cumulative commit f71d21b0eb204e5ef5306d069418ec0277eca670. The application directory is opportunities/upstate_forever_2026. Later source checkouts are also usable when their package files match the published source manifest.
 
-The source checkout contains the final 28-file implementation: native profile adapter/scorer and its original Greenwood receiving files, the regional receiving command and guide, the maintained completed-watershed receiver, the readable source-method view with its asset-only descriptor and original browser join, and all ten scientific setup backend, source schema, receiving and operator desk files. The installer and this guide make 30 package members. The source manifest records every exact byte count and SHA256, all three complete edit ledgers, and the nine original Keowee profile members from PR2742.
+The source checkout contains the complete 34-file implementation: native profile adapter/scorer and its original Greenwood receiving files, the regional receiving command and guide, the maintained completed-watershed receiver, the readable source-method view with its asset-only descriptor and original browser join, all ten scientific setup backend, source schema, receiving and operator desk files, the owner's original Greenwood interval journey and command, and four original Gura setup assembly files. The installer and this guide make 36 package members. The source manifest records every exact byte count and SHA256, all three complete edit ledgers, and the nine-member Keowee methodology/evaluator edition.
 
-The receiving application must already contain the original Workspace and portable engine, the maintained Conservation workflow and native Keowee method definition, the regional watershed report/export provider, and the current shared operator extension host, and the original customer review engine. The installer checks their actual APIs, including the review/export operations and original grid/profile/scenario selectors. It updates model/keowee_priority.py, operator/receive_watershed_context.py and operator/web/conservation.mjs through the recorded edits. Their respective original preimages are:
+The receiving application must already contain the original Workspace and portable engine, the maintained Conservation workflow and native Keowee method definition, the regional watershed report/export provider, and the current shared operator extension host, the original customer review engine, and source_tools/gura_comparison.py with its catalog, make_plan and _check_plan operations. The installer checks their actual APIs, including the review/export operations and original grid/profile/scenario selectors. It updates model/keowee_priority.py, operator/receive_watershed_context.py and operator/web/conservation.mjs through the recorded edits. Their respective original preimages are:
 
 - Native Keowee scorer: 34,855 bytes, SHA256 cb7c6f9aa1d193c594b9427cb80ddedc9a209924e4347f5759a54e51151341dd.
 - Maintained watershed receiver: 15,898 bytes, SHA256 9a69c84946d11d24d129e8756396f49fcdbc8137f15e97f123edd03b887ddd62.
-- Current Conservation browser: 124,883 bytes, SHA256 8ba403d5f1e7c7270066f2426ca962a8baf70b36996e74d017f1109d0e113071.
+- Current Conservation browser before the two method-view joins: 171,002 bytes, SHA256 b97d443014832e41ce53cf938d06153a1a6b5ae5b9b313731d928abd6ed079ba.
 
 An existing source file may contain additional owner work. The installer composes each unique original block while preserving all bytes outside the recorded integration edits. It also accepts the already integrated source and interrupted installations.
 
@@ -32,7 +32,7 @@ The planning invocation returns the actual changed files, exact resulting hashes
 
 All package files are checked against the source manifest. Python is compiled without executing imports, JSON is parsed, and all three full edit ledgers must reconstruct their exact published source from their original preimages. The installer stages and flushes the complete receiving plan before any application source is published.
 
-The original nine-file Keowee profile is required. Exact existing members are retained. Missing members are copied from the new checkout only after their bytes match the recorded original profile. A different existing profile member is identified by its exact path so its source edition can be reconciled.
+The nine-member Keowee source edition is required. The original 78,447-byte methodology remains SHA256 388f9f7ae3246dd156fad446c616bbf8d3440a09b2edd524c45cef1d6c299da0. Its evaluator, declarations, guide and import manifest have explicit known predecessor hashes for the source-interval implementation. Exact current members are retained; missing members are copied after verification; those four executable/documentation companions upgrade only from their recorded earlier bytes. Before installation the ordinary source-import manifest is checked against every actual companion, and the native binding is checked against both the original profile and current evaluator.
 
 Implementation dependencies and source bindings are published before the modified entrypoints. The new method-view and scientific setup modules are present before the original Conservation browser is changed. Both extension descriptors are published after every implementation member; the scientific setup descriptor is the final registration. When Node is available, the staged JavaScript modules are also parsed with node --check before publication. The source manifest is published last. Missing files use atomic no-clobber publication; updates compare the captured current bytes immediately before replacement. The shared installation lock coordinates with the existing extension installer. A changed or ambiguous owner block is reported without replacing it.
 
@@ -98,3 +98,33 @@ The second command retains the exact original selection bytes, captures original
 Existing Gura receiving operations may already retain their selected object IDs in gura-receiving/gura-receiving-state.json or in source/receiving.json and source/programme-selection.json inside the original workflow capsule. These provide the native inputs for a catalog request; use the actual Workspace associated with those records.
 
 The installer output includes both catalog and selection receiving commands. Every emitted command uses the same Python executable that invoked the installer, with shell quoting for interpreter, application and source paths. Replace the displayed example Workspace and output paths with the existing receiving operation's paths. The original review-reconciliation installer remains available for that separate feature through source_tools/install_review_reconciliation.py.
+
+
+## Receive the source intervals and original Gura setup
+
+The scorer ledger retains the original 21 native profile joins and adds eleven exact owner edits for numeric intervals. Its current owner source reverses to the original 34,855-byte preimage. The two browser joins retain all current Conservation catalog and design additions. This keeps existing source-owner work while upgrading the scientific implementation.
+
+Run the owner's complete original Greenwood interval command from the installed application:
+
+```bash
+cd "$APP"
+node source_tools/keowee_interval_receiving.mjs
+```
+
+It uses the same retained Greenwood polygon, original methodology and current evaluator; the historical scalar receiving result remains available beside source-interval-journey.json.
+
+For an actual prepared original Gura Workspace, use its original receiving.json with the new assembler:
+
+```bash
+cd "$APP"
+"$PY" -B -m source_tools.gura_setup_review \
+  --workspace "$WORKSPACE" --receiving "$RECEIVING" --catalog \
+  --output-dir "$OUT/gura-catalog"
+
+"$PY" -B -m source_tools.gura_setup_review \
+  --workspace "$WORKSPACE" --receiving "$RECEIVING" \
+  --request "$REQUEST" --plan "$EXPLICIT_PLAN" \
+  --output-dir "$OUT/gura-setup"
+```
+
+The request schema and documented example are source/gura-scientific-setup-request.json. Choose an actual retained plan or explicit repeated --convert FROM:TO choices; the installer selects no counterfactuals. The assembler reads the original class catalog, saves ordinary scenarios, retains receipt/request/plan/catalog as source companions, and continues through the installed scientific setup review/export/backup/reopen workflow. See source_tools/GURA_SETUP_REVIEW.md for the complete source-bound choice contract.
