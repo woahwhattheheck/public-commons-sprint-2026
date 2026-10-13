@@ -131,3 +131,8 @@ Campaign creation and edits require stable client operation IDs for retry safety
 The browser starts a new ID for each completed distinct action and retains the
 original pending request across a lost-response retry; API/CLI callers should reuse
 the previous ID and exact payload when retrying a lost response.
+
+
+## Current native integration 1.2.1
+
+The registered seven writes and original read surface are unchanged. `monitoring.export` additionally accepts `expected_revision_id` for a campaign export; the current interface sends the selected revision. The provider retains the original task's export selection and completed result under its existing output root. Full receiving verifies native records and source bodies without creating collections or materializing source views. The complete operating and receiving course is `integrations/monitoring/RECEIVING.md`.

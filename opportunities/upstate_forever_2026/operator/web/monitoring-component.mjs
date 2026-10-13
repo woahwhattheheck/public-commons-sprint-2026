@@ -47,12 +47,14 @@
       return payload.result ?? payload;
     }
     async run(task, label="Working…") {
+      if (this.busy) return;
       this.busy = true;
-      const buttons = [...this.shadowRoot.querySelectorAll("button")];
-      buttons.forEach(b=>b.disabled=true);this.$("status").textContent=label;this.$("status").dataset.error="false";
+      const controls = [...this.shadowRoot.querySelectorAll("button,input,select,textarea")];
+      const disabled = controls.map(control => control.disabled);
+      controls.forEach(control=>control.disabled=true);this.$("status").textContent=label;this.$("status").dataset.error="false";
       try { await task(); this.$("status").textContent="Saved work is current."; }
       catch(error) { this.$("status").textContent=error.message;this.$("status").dataset.error="true"; }
-      finally { this.busy = false;buttons.forEach(b=>b.disabled=false); }
+      finally { this.busy = false;controls.forEach((control,index)=>control.disabled=disabled[index]); }
     }
     connectedCallback() {
       if (this.initialized) return;
@@ -68,7 +70,7 @@
       this.$("adopt-plan").onclick=()=>this.run(async()=>{this.requireCampaign();this.requirePlan();const bindings=Object.fromEntries(Object.entries(this.campaign.revision.site_bindings).filter(([h])=>this.plan.selected_ids.includes(h)));await this.api("campaign.revise",{...this.revisionParams(),plan_id:this.plan.id,site_bindings:bindings,note:"Replanned from saved monitoring design."});await this.openCampaign(this.campaign.revision.campaign_id);});
       this.$("save-bindings").onclick=()=>this.run(async()=>{this.requireCampaign();const bindings={};for(const select of this.$("bindings").querySelectorAll("select")){if(select.value)bindings[select.dataset.huc]=select.value;}await this.api("campaign.revise",{...this.revisionParams(),site_bindings:bindings,note:"Updated source-station bindings."});await this.openCampaign(this.campaign.revision.campaign_id);});
       this.$("event-form").onsubmit=e=>{e.preventDefault();this.run(async()=>{this.requireCampaign();await this.api("campaign.event",{...this.revisionParams(),visit_key:this.$("visitkey").value,status:this.$("event-status").value,sample_id:this.$("sample-id").value.trim()||null,occurred_at:this.$("occurred").value,note:this.$("event-note").value});await this.openCampaign(this.campaign.revision.campaign_id);});};
-      for(const button of this.shadowRoot.querySelectorAll("[data-export]"))button.onclick=()=>this.run(async()=>{this.requirePlan();const useCampaign=this.campaign&&this.campaign.plan.id===this.plan.id;const result=await this.api("export",{...(useCampaign?{campaign_id:this.campaign.revision.campaign_id}:{plan_id:this.plan.id}),format:button.dataset.export});const base=new URL(document.baseURI);const href=new URL(result.download_url,base);if(href.origin!==base.origin)throw Error("Unexpected download origin");const a=document.createElement("a");a.href=href.href;a.textContent=`${button.textContent} · ${result.bytes.toLocaleString()} bytes`;a.download="";this.$("downloads").append(a);});
+      for(const button of this.shadowRoot.querySelectorAll("[data-export]"))button.onclick=()=>this.run(async()=>{this.requirePlan();const useCampaign=this.campaign&&this.campaign.plan.id===this.plan.id;const result=await this.api("export",{...(useCampaign?{campaign_id:this.campaign.revision.campaign_id,expected_revision_id:this.campaign.revision.id}:{plan_id:this.plan.id}),format:button.dataset.export});const base=new URL(document.baseURI);const href=new URL(result.download_url,base);if(href.origin!==base.origin)throw Error("Unexpected download origin");const a=document.createElement("a");a.href=href.href;a.textContent=`${button.textContent} · ${result.bytes.toLocaleString()} bytes`;a.download="";this.$("downloads").append(a);});
       this.$("occurred").value=new Date().toISOString();
       this.$("domain-collection").onchange=()=>this.sourceChoices();
       this.$("station-collection").onchange=()=>this.sourceChoices();

@@ -54,8 +54,8 @@ class MonitoringWorkspace:
         self.workspace = workspace
         self.root = workspace.root
         self.export_root = Path(export_root).resolve() if export_root else None
-        for kind in [*COLLECTIONS.values(), "monitoring_heads", "monitoring_frontier_jobs"]:
-            (self.root / kind).mkdir(parents=True, exist_ok=True)
+        # Original immutable writes and lock primitives create their own parents.
+        # Catalog/receiving reads leave an unopened or restored Workspace intact.
         self.lock = self.root / "monitoring.lock"
 
     def get(self, kind: str, record_id: str) -> dict:
@@ -333,10 +333,22 @@ class MonitoringWorkspace:
             record = self.get("revisions", record["parent_id"]) if record["parent_id"] else None
         return list(reversed(records))
 
-    def export(self, *, campaign_id: str | None = None, plan_id: str | None = None, format: str = "bundle") -> dict:
+    def export(self, *, campaign_id: str | None = None, plan_id: str | None = None,
+               format: str = "bundle", expected_revision_id: str | None = None) -> dict:
+        # Keep the selected campaign, calendar, event history and archive together.
+        with held(self.lock, blocking=False):
+            return self._export(campaign_id=campaign_id, plan_id=plan_id, format=format,
+                                expected_revision_id=expected_revision_id)
+
+    def _export(self, *, campaign_id=None, plan_id=None, format="bundle",
+                expected_revision_id=None):
         if bool(campaign_id) == bool(plan_id): raise ContractError("choose exactly one campaign_id or plan_id")
         if format not in {"bundle", "workspace", "html"}: raise ContractError("export format must be bundle, workspace or html")
         campaign = self.campaign(campaign_id) if campaign_id else None
+        if expected_revision_id is not None:
+            _clean_id(expected_revision_id, "expected_revision_id")
+            if campaign is None or campaign["revision"]["id"] != expected_revision_id:
+                raise ContractError("The selected campaign revision changed; reopen it before exporting")
         plan = campaign["plan"] if campaign else self.get("plans", plan_id)
         if plan["status"] not in {"optimal", "feasible"}: raise ContractError("export requires a feasible design")
         network = self.get("networks", plan["network_id"])
@@ -350,7 +362,7 @@ class MonitoringWorkspace:
         folder.mkdir(parents=True)
         if format == "workspace":
             destination = folder / "monitoring-editable-workspace.zip"
-            with held(self.lock):
+            with held(self.root / ".operator-session.lock", blocking=False):
                 if callable(getattr(self.workspace, "backup", None)):
                     manifest = self.workspace.backup(destination, include_intermediates=True)
                 else:
