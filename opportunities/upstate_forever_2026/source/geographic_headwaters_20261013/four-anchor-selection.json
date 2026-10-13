@@ -1,0 +1,79 @@
+{
+  "schema": "upstate.geographic-headwaters-selection/v1",
+  "title": "Upper Savannah RFP: four utility anchors, actual geography and simulated native inputs",
+  "question": "How do agricultural restoration in a declared hypothetical stream corridor and a disjoint control with matched agricultural class counts compare in annual native NDR/SDR stream export, across the retained routing and sediment L-factor assumptions, within the selected South Carolina reporting catchments?",
+  "reporting_huc12s": [
+    "030601010703",
+    "030601010704",
+    "030601020502",
+    "030601020507"
+  ],
+  "huc_polygons": {
+    "source_collection_id": "b6fc9a4c834765ef706cc3d3a71f9e595269a7bc52942deb4f316ee405af80bb",
+    "source_id": "original-model-domain"
+  },
+  "huc_field": "huc12",
+  "reporting_boundary": {
+    "source_collection_id": "b6fc9a4c834765ef706cc3d3a71f9e595269a7bc52942deb4f316ee405af80bb",
+    "source_id": "planning-basins2023",
+    "where": {
+      "Basin": "Upper Savannah"
+    }
+  },
+  "reporting_boundary_description": "Original PlanningBasins2023 Upper Savannah record5, supplied by HW13 from capellett/scsf45f7ea3ca968c96e2fc6188d7f55c3b0ce60da95; intersect selected original HUC polygons with this actual South Carolina reporting polygon.",
+  "utility_focus": [
+    {
+      "source_collection_id": "b6fc9a4c834765ef706cc3d3a71f9e595269a7bc52942deb4f316ee405af80bb",
+      "source_id": "scdes-arjws-prwd-swpa-20261012",
+      "where": {
+        "OBJECTID": 11,
+        "INTAKE": "S04101"
+      }
+    },
+    {
+      "source_collection_id": "b6fc9a4c834765ef706cc3d3a71f9e595269a7bc52942deb4f316ee405af80bb",
+      "source_id": "scdes-arjws-prwd-swpa-20261012",
+      "where": {
+        "OBJECTID": 12,
+        "INTAKE": "S04101"
+      }
+    },
+    {
+      "source_collection_id": "b6fc9a4c834765ef706cc3d3a71f9e595269a7bc52942deb4f316ee405af80bb",
+      "source_id": "scdes-arjws-prwd-swpa-20261012",
+      "where": {
+        "OBJECTID": 131,
+        "INTAKE": "S37109"
+      }
+    },
+    {
+      "source_collection_id": "b6fc9a4c834765ef706cc3d3a71f9e595269a7bc52942deb4f316ee405af80bb",
+      "source_id": "scdes-arjws-prwd-swpa-20261012",
+      "where": {
+        "OBJECTID": 132,
+        "INTAKE": "S37109"
+      }
+    }
+  ],
+  "utility_label": "ARJWS and Pioneer original protection footprints and separate original intake points",
+  "seed": 20261013,
+  "corridor_width_m": 90,
+  "intakes": [
+    {
+      "source_collection_id": "b6fc9a4c834765ef706cc3d3a71f9e595269a7bc52942deb4f316ee405af80bb",
+      "source_id": "scdes-public-surface-intakes-20261012",
+      "where": {
+        "OBJECTID": 6,
+        "INTAKE": "S04101"
+      }
+    },
+    {
+      "source_collection_id": "b6fc9a4c834765ef706cc3d3a71f9e595269a7bc52942deb4f316ee405af80bb",
+      "source_id": "scdes-public-surface-intakes-20261012",
+      "where": {
+        "OBJECTID": 50,
+        "INTAKE": "S37109"
+      }
+    }
+  ]
+}
