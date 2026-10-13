@@ -21,7 +21,7 @@ NDR_GUIDE = "https://storage.googleapis.com/releases.naturalcapitalproject.org/i
 SDR_GUIDE = "https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.20.0/userguide/en/sdr.html"
 OVERLAY_LABELS = (("drinking_water", "Drinking-water source areas"),
                   ("high_quality_waters", "Designated high-quality waters"))
-DELIVERY_FORMAT_VERSION = "retained-grid-analysis-economic-report-7"
+DELIVERY_FORMAT_VERSION = "retained-grid-analysis-economic-report-8"
 
 def _copy(source, target, expected=None):
     target.parent.mkdir(parents=True, exist_ok=True)
@@ -40,7 +40,10 @@ def _source_records(workspace, selection, grid, baseline):
         records[role] = {"id": role, "source_id": entry["id"], "title": entry["title"],
                          "vintage": entry["vintage"], "uri": entry["uri"],
                          "sha256": entry["body"]["sha256"], "units": entry.get("units"),
-                         "conversion": entry.get("conversion")}
+                         "conversion": entry.get("conversion"),
+                         **{key: entry[key] for key in ("data_status", "legal_edition_status",
+                                                       "catalogue_source_id", "source_labels")
+                            if key in entry}}
     source_choices = dict(selection.get("source_roles", {}))
     overlay_choices = selection.get("overlays", {})
     for name, role in (("high_quality_waters", "HIGH_QUALITY_WATERS"),
@@ -58,7 +61,10 @@ def _source_records(workspace, selection, grid, baseline):
             raise ValueError("LS_FACTOR is supplied by the original SDR terrain calculation; keep external references under a separate source ID")
         records[role] = {"id": role, "source_id": entry["id"], "title": entry["title"],
                          "vintage": entry["vintage"], "uri": entry["uri"],
-                         "sha256": entry["body"]["sha256"], "selection": choice}
+                         "sha256": entry["body"]["sha256"], "selection": choice,
+                         **{key: entry[key] for key in ("data_status", "legal_edition_status",
+                                                       "catalogue_source_id", "source_labels")
+                            if key in entry}}
     if "LS_FACTOR" not in records:
         item = baseline["stages"]["sdr"]["files"].get("ls")
         if not item:
@@ -92,6 +98,20 @@ def _overlay(workspace, choice, grid_crs, reporting, *, label):
             "source": {"uri": entry["uri"], "vintage": entry["vintage"],
                         "sha256": entry["body"]["sha256"], "title": entry["title"]},
             "width": .65, "style": "--" if label == "Designated high-quality waters" else "-"}
+
+def _delivery_audit_scope(selection, grid):
+    """Keep an explicit contract, otherwise follow the original prepared grid."""
+    chosen = selection.get("audit_scope")
+    if chosen is not None:
+        if chosen not in ("regional-30m", "source-native"):
+            raise ValueError("Select regional-30m or source-native delivery audit scope")
+        return chosen
+    a, b, _, d, e, _ = (float(value) for value in grid["grid"]["transform"])
+    regional = (math.isclose(abs(a), 30, rel_tol=0, abs_tol=1e-6)
+                and math.isclose(abs(e), 30, rel_tol=0, abs_tol=1e-6)
+                and abs(b) < 1e-8 and abs(d) < 1e-8
+                and grid["spec"]["upstream_buffer_m"] > 0)
+    return "regional-30m" if regional else "source-native"
 
 def _grid_measurements(grid):
     """Describe the actual retained pixel geometry and physical area."""
@@ -305,14 +325,6 @@ def build(workspace, selection):
             atomic_json(state_path, state)
         try:
             state.pop("error", None)
-            if "grid_record" not in state["files"]:
-                original_grid = workspace.root / "grids" / grid["id"] / "grid.json"
-                retained_grid = directory / "grid" / "grid.json"
-                _copy(original_grid, retained_grid, describe_file(workspace.root, original_grid))
-                state["files"]["grid_record"] = describe_file(directory, retained_grid)
-                atomic_json(state_path, state)
-            else:
-                verify_file(directory, state["files"]["grid_record"])
             analysis_product = analysis_delivery.retain_analysis(workspace, directory, state, analysis_link)
             if analysis_product is not None:
                 atomic_json(state_path, state)
@@ -657,23 +669,26 @@ def build(workspace, selection):
                 ))
                 state["files"]["report"] = describe_file(directory, target)
                 atomic_json(state_path, state)
+            if "native_grid_record" not in state["files"]:
+                original_grid = workspace.root / "grids" / grid["id"] / "grid.json"
+                grid_path = directory / "grid" / "grid.json"
+                _copy(original_grid, grid_path, describe_file(workspace.root, original_grid))
+                state["files"]["native_grid_record"] = describe_file(directory, grid_path)
+                atomic_json(state_path, state)
+            else:
+                verify_file(directory, state["files"]["native_grid_record"])
             manifest = {"schema": "upstate-ec-sdc-2026/delivery-v1",
+                "grid": {"schema": "upstate.retained-grid/v1", "id": grid["id"],
+                         "record": state["files"]["native_grid_record"]["path"],
+                         "audit_scope": _delivery_audit_scope(selection, grid)},
                 "model": {"name": "InVEST NDR and SDR", "version": INVEST_VERSION,
                           "upstream_buffer_m": grid["spec"]["upstream_buffer_m"],
                           "baseline_run_id": baseline["id"], "scenario_run_ids": scenario_ids,
                           "profile_id": profile["id"], "grid_id": grid["id"]},
                 "source_data": records, "rasters": {},
-                "grid": {"schema": "upstate.retained-grid/v1", "id": grid["id"],
-                    "record": state["files"]["grid_record"]["path"],
-                    "audit_scope": "regional-30m" if (
-                        math.isclose(float(cells["width"]), 30.0, rel_tol=0.0, abs_tol=1e-6)
-                        and math.isclose(float(cells["height"]), 30.0, rel_tol=0.0, abs_tol=1e-6)
-                        and abs(float(grid["grid"]["transform"][1])) < 1e-8
-                        and abs(float(grid["grid"]["transform"][3])) < 1e-8
-                        and float(grid["spec"]["upstream_buffer_m"]) > 0)
-                        else "source-native"},
                 "maps": maps, "report_pdf": state["files"]["report"]["path"],
-                "project_assets": [state["files"]["combined_priority"]["path"],
+                "project_assets": [state["files"]["native_grid_record"]["path"],
+                                   state["files"]["combined_priority"]["path"],
                                    state["files"]["working_archive"]["path"],
                                    state["files"]["display_scales"]["path"]]}
             for name in rasters.MASS_UNITS:

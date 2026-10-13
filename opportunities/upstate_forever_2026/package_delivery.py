@@ -91,8 +91,10 @@ def collect_references(data, *, limits=None):
         references.append({'role': 'map.' + key, 'path': maps.get(key)})
     references.append({'role': 'final_report', 'path': data.get('report_pdf')})
     if 'grid' in data:
-        require(isinstance(data['grid'], dict), 'Declared native grid must be an object')
-        references.append({'role': 'native_grid', 'path': data['grid'].get('record')})
+        grid = data['grid']
+        require(isinstance(grid, dict) and grid.get('schema') == 'upstate.retained-grid/v1',
+                'Expected the original retained grid declaration')
+        references.append({'role': 'model.grid', 'path': grid.get('record')})
     assets = data.get('project_assets', [])
     require(isinstance(assets, list) and (limits['max_references'] is None
             or len(assets) <= limits['max_references']) and

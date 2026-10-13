@@ -89,3 +89,26 @@ Choose distinct actual directories for STUDY_WORKSPACE and RECEIVING_WORKSPACE. 
 The JSON result includes both real project identities, edition IDs, summaries, all saved export paths and hashes, and the original ZIP's absolute path. Portable receiving compares the original station IDs, location statuses, coordinates, selected source identities, complete watershed memberships, observation counts and full summary. Source collection IDs may change naturally when originals are imported into another Workspace; their original source IDs, hashes and feature identities are preserved.
 
 Repeat the same command and paths to reuse retained imports, completed build and receiving state. A missing required original source returns the prepared-study input list with exit2. Successful complete execution returns exit0 with both editions. Open those Workspaces in the existing operator to inspect the station map, original assessment rows, watershed coverage and editable source selection.
+
+## Build the published 159-station assessment study
+
+Import the completed published inventory in addition to the same retained monitoring, WQP and domain sources. The accepted inventory is the exact file results/assessment-records-domain217.csv in the complete scientific source bank [F0C8KECMA4V](https://tokenjunkielabs.slack.com/docs/T0BRETUB5TK/F0C8KECMA4V): 111,624 bytes, SHA-256 01f1a0262bb719f39d4b6c8b6e690bbf670d9aea83cbe0f532daf81b0c6a09f7. Place that unchanged file beside the maintained source/station-assessment-context/sources.json manifest using basename assessment-records-domain217.csv. This is an additional source collection, so the original draft inventory remains available.
+
+Run from the existing application directory:
+
+    python -m model.station_study --workspace WORKSPACE \\
+      --create-workspace --build \\
+      --study-id upper-savannah-published-assessments-2024-2026-159 \\
+      --source-manifest MONITORING/sources.json \\
+      --source-manifest WQP_SUPPLEMENT/sources.json \\
+      --source-manifest ORIGINAL_DOMAIN/sources.json \\
+      --source-manifest PUBLISHED_INVENTORY/sources.json \\
+      --receive-workspace SECOND_WORKSPACE --create-receiving-workspace
+
+The existing workspace creation, native build, portable archive and receiving commands are shared by both studies. This selection requires 192 records at 159 exact station IDs, including both published editions. It resolves original inputs by their retained byte identity. The 2024 records carry their original assessment cause/use and published HUC; the July 2026 records also carry TMDL support status, report and approval date. Five of the retained eight WQP stations belong to this published inventory. The accepted draft-study inventory overlaps the published inventory at 82 station IDs; all remaining IDs are matched against the same complete retained source layer.
+
+The original station table, candidate choices, mapped watershed filter and full polygon coverage continue to operate. The assessment edition filter narrows the station map/table and filtered station CSV. Watershed coverage describes the full selected study inventory and includes zero-station polygons. Its cause counts display expanded labels.
+
+Each assessment record retains a publisher_huc12 and separately receives geographic_huc12s plus publisher_huc_relation. Multiple publisher assignments are retained, including the two original RS-06190 assignments. The native receive command compares the original station identities, mapped memberships and assessment records after reopening.
+
+The build creates assessment_links.csv, assessment_sites.geojson, and spatial-sources.json alongside the existing full station outputs. Both point layers join the maintained Spatial review source catalogue automatically. Complete original inventory rows, source editions and candidate identities remain available in the panel, report and portable archive.

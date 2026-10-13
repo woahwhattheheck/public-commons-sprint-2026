@@ -46,21 +46,21 @@ def selection_packet(study, answer):
             'source': s.source, 'additive_basis': s.additive_basis}
 
 
-def dispatch(original_workspace, action: str, payload: dict):
+def dispatch(original_workspace, action: str, payload: dict, *, operation_id=None):
     """Call from original Operator._invoke after its existing action admission."""
     if action not in ACTION_NAMES:
         raise ValueError(f'Unknown robust action: {action}')
     ws = DecisionWorkspace(original_workspace); ws.recover()
     if action == 'robust.study.list': return {'studies': ws.store.list()}
     if action == 'robust.study.read': return ws.store.read(payload['study_id'], payload.get('revision'))
-    if action == 'robust.study.create': return ws.store.create(payload['study'])
-    if action == 'robust.study.revise': return ws.store.revise(payload['study_id'], payload['study'], payload['expected_revision'])
-    if action == 'robust.experiment.prepare': return ws.import_experiment(payload['experiment_id'], payload['configuration'])
-    if action == 'robust.summary.prepare': return ws.import_summary(payload['summary'], payload['configuration'])
-    if action == 'robust.solve': return ws.solve(payload['study_id'], payload['revision'], payload.get('objective','worst_case'), time_limit=payload.get('time_limit',60), mip_rel_gap=payload.get('mip_rel_gap',0))
-    if action == 'robust.frontier': return ws.frontier(payload['study_id'], payload['revision'], payload['budgets'], payload.get('objective','worst_case'), time_limit=payload.get('time_limit',60))
+    if action == 'robust.study.create': return ws.store.create(payload['study'], operation_id=operation_id)
+    if action == 'robust.study.revise': return ws.store.revise(payload['study_id'], payload['study'], payload['expected_revision'], operation_id=operation_id)
+    if action == 'robust.experiment.prepare': return ws.import_experiment(payload['experiment_id'], payload['configuration'], operation_id=operation_id)
+    if action == 'robust.summary.prepare': return ws.import_summary(payload['summary'], payload['configuration'], operation_id=operation_id)
+    if action == 'robust.solve': return ws.solve(payload['study_id'], payload['revision'], payload.get('objective','worst_case'), time_limit=payload.get('time_limit',60), mip_rel_gap=payload.get('mip_rel_gap',0), operation_id=operation_id)
+    if action == 'robust.frontier': return ws.frontier(payload['study_id'], payload['revision'], payload['budgets'], payload.get('objective','worst_case'), time_limit=payload.get('time_limit',60), operation_id=operation_id)
     if action == 'robust.project.export': return ws.store.export(payload['study_id'])
-    if action == 'robust.project.receive': return ws.store.receive(payload['project'])
+    if action == 'robust.project.receive': return ws.store.receive(payload['project'], operation_id=operation_id)
     run = ws.store.read_run(payload['study_id'], payload['run_id'])
     study = ws.store.read(payload['study_id'], run['revision'])['study']
     if run['result'] is None:
