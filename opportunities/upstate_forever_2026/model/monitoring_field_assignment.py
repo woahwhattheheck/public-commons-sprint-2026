@@ -243,7 +243,10 @@ def _report_sources():
 def _retain_original_report(store, directory, selection):
     target = directory / "original-report"
     if (target / "manifest.json").exists():
-        report_edition(store, target)
+        original = report_edition(store, target)
+        if any(original[name] != selection[name] for name in
+               ("plan_id", "revision", "document_digest", "as_of")):
+            raise ValueError("The completed report differs from its frozen assignment revision.")
         return store.retain_report(target)
     # The final report path and revision were frozen before the first render.
     # Complete interrupted attempts are reconciled before generating any bytes.
@@ -344,10 +347,7 @@ def build(workspace, request):
         document = store.get(prepared["plan_id"], report_selection["revision"])
         if document_digest(document) != report_selection["document_digest"]:
             raise ValueError("The original assignment report revision changed.")
-        reports = [row for row in store.list_reports(prepared["plan_id"])
-                   if row["document_digest"] == report_selection["document_digest"]
-                   and row["as_of"] == report_selection["as_of"]]
-        report = reports[0] if reports else _retain_original_report(store, directory, report_selection)
+        report = _retain_original_report(store, directory, report_selection)
         files = {name: describe_file(workspace.root, directory / name)
                  for name in ("request.json", "field-support.json", "field-selection.json",
                               "initial-plan.json", "report-selection.json")}
