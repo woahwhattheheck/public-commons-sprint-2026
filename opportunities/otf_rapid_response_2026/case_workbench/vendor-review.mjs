@@ -1,4 +1,5 @@
 /* MIT. Original proposal receiving through the maintained vendor compiler. */
+import {ATTACHMENT_LIMITS} from "../vendor_submission_20261011/vendor-attachments.mjs";
 import {check,render} from "../vendor_submission_20261011/vendor-core.mjs";
 import {documentFromBytes,decodeJSON,LIMITS,readLedger,applyOperation,canonical,sourceBytes} from "./model.mjs";
 export async function reviewVendorOriginal(name,bytes){
@@ -20,7 +21,7 @@ export async function retainVendorOriginal(input,review,at){
 /** Retain the complete exact prepared edition through the original source operation. */
 export async function retainVendorPrepared(input,prepared,originalReview,at){
  const opened=await readLedger(input),selected=new Map(),members=[],names=new Set();
- if(!prepared||!Array.isArray(prepared.files)||prepared.files.length<3||prepared.files.length>12)throw new Error("Complete prepared proposal files are required");
+ if(!prepared||!Array.isArray(prepared.files)||prepared.files.length<3||prepared.files.length>ATTACHMENT_LIMITS.count+6)throw new Error("Complete prepared proposal files are required");
  async function retain(name,media_type,bytes){
   const supplied=await documentFromBytes(name,media_type,bytes),existing=opened.ledger.documents.find(d=>d.id===supplied.id)??selected.get(supplied.id);
   const document=existing??supplied;selected.set(document.id,document);
