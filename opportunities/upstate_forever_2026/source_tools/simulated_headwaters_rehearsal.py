@@ -316,20 +316,21 @@ def teaching_markdown(case):
 
 
 def bind(receipt_path, output, *, workspace=None, browser=None, operation_id=OPERATION,
-         save_spatial_review=False, customer_case=None):
+         save_spatial_review=False, customer_case=None, field_presentation=None):
     receipt_path = Path(receipt_path).resolve(strict=True)
     # This is the same native case's lock; source binding and receipt continuation
     # cannot overlap the runner's writes. The rehearsal run starts after release.
     if save_spatial_review:
         with held(receipt_path.parent / ".demo-operation.lock", blocking=False):
             return _bind(receipt_path, output, workspace=workspace, browser=browser,
-                         operation_id=operation_id, save_spatial_review=True, customer_case=customer_case)
+                         operation_id=operation_id, save_spatial_review=True, customer_case=customer_case,
+                         field_presentation=field_presentation)
     return _bind(receipt_path, output, workspace=workspace, browser=browser,
-                 operation_id=operation_id, customer_case=customer_case)
+                 operation_id=operation_id, customer_case=customer_case, field_presentation=field_presentation)
 
 
 def _bind(receipt_path, output, *, workspace=None, browser=None, operation_id=OPERATION,
-          save_spatial_review=False, customer_case=None):
+          save_spatial_review=False, customer_case=None, field_presentation=None):
     receipt_path = Path(receipt_path).resolve(strict=True)
     receipt_bytes = receipt_path.read_bytes()
     receipt = json.loads(receipt_bytes)
@@ -432,7 +433,7 @@ def _bind(receipt_path, output, *, workspace=None, browser=None, operation_id=OP
     if customer is not None:
         value["customer_review"] = customer
     from source_tools.simulated_fieldwork_recording import bind_campaign
-    fieldwork = bind_campaign(ws, receipt, output)
+    fieldwork = bind_campaign(ws, receipt, output, presentation=field_presentation)
     if fieldwork is not None:
         value["fieldwork_receiving"] = fieldwork
     from source_tools.simulated_qc_comparison_recording import bind_comparison
@@ -547,6 +548,8 @@ def main():
     parser.add_argument("--operation-id", default=OPERATION)
     parser.add_argument("--customer-case", type=Path,
                         help="Current complete original customer export path after relocating the same case")
+    parser.add_argument("--field-presentation", type=Path,
+                        help="Explicit complete original field-report presentation selection JSON")
     parser.add_argument("--save-spatial-review", action="store_true",
                         help="Save the existing paired native map and retain its ID in this same case receipt")
     parser.add_argument("--run", action="store_true",
@@ -560,7 +563,8 @@ def main():
             browser = read_json(args.browser_config) if args.browser_config else None
             result = bind(args.receipt, args.output, workspace=args.workspace,
                           browser=browser, operation_id=args.operation_id,
-                          save_spatial_review=args.save_spatial_review, customer_case=args.customer_case)
+                          save_spatial_review=args.save_spatial_review, customer_case=args.customer_case,
+                          field_presentation=args.field_presentation)
             if args.run:
                 from rehearsal_receiving import run
                 result["receiving"] = run(Path(result["input"]), skip_browser=args.native_only)
