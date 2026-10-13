@@ -1,0 +1,16 @@
+{
+  "schema": "upstate.application-component-fragment/v1",
+  "id": "regional-exact-control",
+  "extend_components": {
+    "native-run-assembly": {
+      "paths": [
+        "source_tools/matched_control_exact.cpp",
+        "source_tools/matched_control_exact.py",
+        "docs/REGIONAL_MATCHED_CONTROL.md"
+      ],
+      "requires": []
+    }
+  },
+  "required_components": [],
+  "source_reference": "Reusable exact minimum-L1 precipitation matching kernel and unchanged-grid raster support adapter for the maintained regional control preparer. Preserves original class counts, full-corridor exclusion, original cell IDs and exact paired residuals. The geographic producer owns source selection and the existing native operation. Original completed square-case selections remain intact."
+}
