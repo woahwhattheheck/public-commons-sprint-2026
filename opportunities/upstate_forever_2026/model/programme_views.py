@@ -180,6 +180,11 @@ class ProgrammeViews:
             counts = self._count(rows)
             if state["state"] == "complete" and counts["complete"] != counts["total"]:
                 visible = "failed" if counts["failed"] else "partial"
+        visible = state["state"]
+        if visible == "running" and not active:
+            visible = "interrupted"
+        if visible == "complete" and counts["complete"] != counts["total"]:
+            visible = "failed" if counts["failed"] else "partial"
         latest = state.get("latest_report") or {}
         metadata = {name: value for name, value in record["selection"].items() if name != "runs"}
         return {"schema": PROGRAMME_SCHEMA, "id": key, "programme_id": key,
