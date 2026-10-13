@@ -223,3 +223,13 @@ The comparison retains each edition’s observed row counts and acquisition scop
 The HTTP and CLI comparison JSON expose `comparisonStatus`, `coverage.before`, `coverage.after` and `note` for each table. CSV exports include coverage columns and an unavailable row where a table could not be compared. Complete native receiving retains the original source editions and all saved statement versions.
 
 Typed carbon amounts compare by their exact scaled values, and civil dates compare by their original day. Equivalent source formatting and changes in which fields are reported remain in `sourceDifferences`, with all raw before/after values retained. An API-omitted contract identifier is an unavailable field. Instrument metadata updates remain explicit; source-reported year 0001 and zero total-vintage placeholders carry a source note, while the separate retired VCU and allocation amounts retain their original values.
+
+## Complete historical ledger source operations
+
+The native desk now supports complete original RPC ledger intake alongside the retained Stellar Expert ledger responses. Native XDR supplies the whole transaction envelope, result and metadata, while the source edition preserves the original POST request, complete response, observed HTTP status, source pointers, ledger header and application order.
+
+Use `capture-history` for a finite complete ledger interval, `select-history` to reselect its retained local originals for another source address, or `capture-selected-ledgers` to close the exact ledger list already recovered by a native checkpoint scan. Each operation returns complete capture options for the existing `capture-ledger` command. All raw pages stay inside the private received source root and enter the complete native archive.
+
+The source selector keeps configured G accounts, configured GiveCredit contracts and additional source-observed addresses separate. Contract providers can remain in the original address and token-event frontier while ordinary Horizon account traversal uses G addresses. Each report retains the existing original donation-event, registry association and frozen funding rules.
+
+The [complete historical source guide](../../stellar/scf-starforge-20261009/partners/carbon-native-receiving/HISTORICAL_LEDGER_SOURCES.md) includes the native selected-ledger continuation, full interval/resume/reselection commands, exact original response contract and the two-application receiving join.
