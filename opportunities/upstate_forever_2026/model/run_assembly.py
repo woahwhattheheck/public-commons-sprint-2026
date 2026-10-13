@@ -293,7 +293,10 @@ def seed_completed_models(workspace, selection, source_runs):
             owner = originals["ndr"]
             landcover = {**owner["run"]["stages"]["landcover"],
                          "reused_from_run_id": owner["run"]["id"]}
-            target["inputs"]["lulc_path"] = owner["inputs"]["lulc_path"]
+            original_lulc = owner["inputs"]["lulc_path"]
+            target["inputs"]["lulc_path"] = {**original_lulc, "record": {
+                **original_lulc["record"],
+                "path": (directory / "scenario_lulc.tif").relative_to(workspace.root).as_posix()}}
             companions = {item["path"]: item for item in landcover.get("companions", [])}
             companions.update({item["path"]: item for item in native_companions(
                 owner["directory"], {"landcover": landcover["artifact"]})})

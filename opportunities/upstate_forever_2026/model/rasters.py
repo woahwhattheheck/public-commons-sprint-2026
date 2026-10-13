@@ -392,20 +392,26 @@ def rate_to_mass(source, destination, grid, *, reporting_mask, pollutant):
     import rasterio
     from rasterio.windows import Window
     profile = output_profile(grid)
+    target_crs = rasterio.crs.CRS.from_user_input(profile["crs"])
     total, count = 0.0, 0
     with rasterio.open(source) as src, rasterio.open(reporting_mask) as mask:
         t = src.transform
         target = profile["transform"]
-        if (not src.crs or not src.crs.is_projected or src.crs != mask.crs
-                or src.crs != rasterio.crs.CRS.from_user_input(profile["crs"])
-                or not all(math.isfinite(value) for value in (*tuple(t)[:6], *tuple(target)[:6]))
-                or t.b or t.d or target.b or target.d or target.a <= 0 or target.e >= 0
-                or abs(t.a - target.a) > 1e-9 or abs(t.e - target.e) > 1e-9):
-            raise ValueError("Native model output is not the selected projected grid")
+        if (not all(math.isfinite(value) for value in list(t)[:6] + list(target)[:6])
+                or target.a <= 0 or target.e >= 0 or target.b or target.d
+                or not math.isclose(target.a, -target.e, rel_tol=1e-9, abs_tol=1e-12)):
+            raise ValueError("Selected model grid must retain finite north-up square cells")
+        if (not target_crs.is_projected
+                or str(target_crs.linear_units).lower() not in ("metre", "meter", "metres", "meters")
+                or src.crs != target_crs or src.crs != mask.crs
+                or not math.isclose(t.a, target.a, rel_tol=0, abs_tol=1e-9)
+                or not math.isclose(t.e, target.e, rel_tol=0, abs_tol=1e-9)
+                or t.b or t.d):
+            raise ValueError("Native model output is not the selected projected metre grid")
         if (mask.transform != target or mask.width != profile["width"]
                 or mask.height != profile["height"]):
-            raise ValueError("Reporting mask is not the selected model grid")
-        dx, dy = (target.c - t.c) / target.a, (target.f - t.f) / target.e
+            raise ValueError("Reporting mask differs from the selected model grid")
+        dx, dy = (target.c - t.c) / target.a, (t.f - target.f) / (-target.e)
         if (not math.isclose(dx, round(dx), rel_tol=0, abs_tol=1e-7)
                 or not math.isclose(dy, round(dy), rel_tol=0, abs_tol=1e-7)):
             raise ValueError("Native model output has shifted pixel centres")
