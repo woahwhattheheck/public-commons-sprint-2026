@@ -21,10 +21,27 @@
         "observations/landcover_2023_2025/huc12-change-summary.csv",
         "observations/landcover_2023_2025/huc12-transitions.csv",
         "observations/landcover_2023_2025/model-sources.json",
-        "observations/landcover_2023_2025/transitions-2023-2025.json"
+        "observations/landcover_2023_2025/transitions-2023-2025.json",
+        "observations/landcover_2023_2025/scientific-report/annual-2023.json",
+        "observations/landcover_2023_2025/scientific-report/annual-2025.json",
+        "observations/landcover_2023_2025/scientific-report/transitions-2023-2025.json",
+        "observations/landcover_2023_2025/scientific-report/annual-huc12-classes.csv",
+        "observations/landcover_2023_2025/scientific-report/huc12-change-summary.csv",
+        "observations/landcover_2023_2025/scientific-report/huc12-transitions.csv",
+        "observations/landcover_2023_2025/scientific-report/domain-transitions.csv",
+        "observations/landcover_2023_2025/scientific-report/domain-class-change.csv",
+        "observations/landcover_2023_2025/scientific-report/domain-group-transitions.csv",
+        "observations/landcover_2023_2025/scientific-report/analysis-run.json",
+        "observations/landcover_2023_2025/scientific-report/model-sources.json",
+        "observations/landcover_2023_2025/scientific-report/change-summary.csv",
+        "observations/landcover_2023_2025/scientific-report/reconciliation.json",
+        "observations/landcover_2023_2025/scientific-report/landcover-change-report.html",
+        "observations/landcover_2023_2025/scientific-report/observed-report.json",
+        "observations/landcover_2023_2025/scientific-report/source-manifest.json"
       ],
       "source_manifests": [
-        "observations/landcover_2023_2025/model-sources.json"
+        "observations/landcover_2023_2025/model-sources.json",
+        "observations/landcover_2023_2025/scientific-report/source-manifest.json"
       ],
       "requires": [
         "original-landcover-analysis",
