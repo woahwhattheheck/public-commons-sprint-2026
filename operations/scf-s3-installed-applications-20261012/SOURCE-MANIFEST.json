@@ -72,10 +72,11 @@
     },
     {
       "path": "receive-s3-merchant-application.mjs",
-      "bytes": 29234,
-      "sha256": "8d1a778c7fec758b0daec23894e4a93a7c1b578c1562c381187e134b1de64648",
-      "origin": "Original receiving with atomic complete checkpoint publication",
-      "originalSha256": "4e46d41f7cc09c089bab29bf504384d2c0f20af26684f9774df18e21a4d9d02d"
+      "bytes": 50848,
+      "sha256": "d1d41bb2d7a797ae15804e05ad85e1ea328da2f4b2369fad933dcca49bc8e8e4",
+      "origin": "Original installed merchant receiving with durable selection, exact browser/native request recovery, retained same-tab/customer proof and unconditional cleanup",
+      "originalSha256": "4e46d41f7cc09c089bab29bf504384d2c0f20af26684f9774df18e21a4d9d02d",
+      "previousSha256": "8d1a778c7fec758b0daec23894e4a93a7c1b578c1562c381187e134b1de64648"
     },
     {
       "path": "retained-files.mjs",
@@ -104,10 +105,10 @@
     },
     {
       "path": "README.md",
-      "origin": "Complete original installation, managed merchant, customer and recovery guide",
-      "bytes": 12587,
-      "sha256": "1202f6214c8ae7524b6b0b0b563b5b6cde60bd47dea501c401ef184ad78380b3",
-      "previousSha256": "702b7babb6269cb0007f59aa409d6a2f6739e916646dc02262b859c867e658b4"
+      "origin": "Complete original installation, merchant/customer, exact-request interruption and native foreground recovery guide",
+      "bytes": 14610,
+      "sha256": "667e7f01ae005567e31f5e84db56f0640661f757966c2d9bcc465090cf3d65b4",
+      "previousSha256": "1202f6214c8ae7524b6b0b0b563b5b6cde60bd47dea501c401ef184ad78380b3"
     },
     {
       "path": "LICENSE.commons",
