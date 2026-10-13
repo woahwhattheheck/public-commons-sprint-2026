@@ -18,7 +18,26 @@ import re
 import sys
 import tempfile
 
-FILES = ("model/terrain_conditioning_study_transfer.py",
+FILES = ("model/calibration_native_study_transfer.py",
+         "model/calibration_study_receiving.py",
+         "model/study_receiving.py",
+         "operator/study_receiving.py",
+         "operator/web/calibration_received_studies.mjs",
+         "operator/web/received_studies.mjs",
+         "operator/extensions/study-transfer.json",
+         "model/CALIBRATION_STUDIES.md",
+         "integration/component_fragments/calibration-studies.json",
+         "model/joint_parameter_studies.py",
+         "model/joint_parameter_analysis.py",
+         "model/joint_parameter_study_transfer.py",
+         "operator/joint_parameter_operator.py",
+         "operator/extensions/joint-parameter-studies.json",
+         "operator/web/joint_parameter_studies.mjs",
+         "operator/web/joint_parameter_studies.css",
+         "model/climate_management_figures.py",
+         "operator/web/climate_management_explorer.mjs",
+         "source/usgs-southeast-sparrow-2012/CANDIDATE_COURSE.md",
+         "model/terrain_conditioning_study_transfer.py",
          "model/terrain_conditioning_report_source.py",
          "model/terrain_conditioning_scientific_report.py",
          "operator/extensions/terrain-conditioning.json",
@@ -88,7 +107,62 @@ FILES = ("model/terrain_conditioning_study_transfer.py",
          "integration/component_fragments/calibration-native-catchments.json")
 SHARED = ("operator/server.py", "operator/web/app.mjs", "operator/web/index.html",
           "model/scientific_figures.py")
-DEPENDENCIES = ("operator/extension_registry.py", "operator/web/extension_host.mjs",
+DEPENDENCIES = ("model/experiments.py",
+                "model/profiles.py",
+                "model/rasters.py",
+                "model/native_execution.py",
+                "model/parameter_pair_cache.py",
+                "operator/experiment_operator.py",
+                "model/study_report.py",
+                "model/portable.py",
+                "model/study_delivery_transfer.py",
+                "model/monitoring_study_transfer.py",
+                "model/study_report_transfer.py",
+                "model/scientific_report_study_transfer.py",
+                "model/paired_ensemble_study_transfer.py",
+                "model/report_changes_study_transfer.py",
+                "model/ensemble_study_transfer.py",
+                "model/gauge_study_transfer.py",
+                "model/community_study_transfer.py",
+                "model/conservation_study_transfer.py",
+                "model/conservation_design_study_transfer.py",
+                "model/native_process_study_transfer.py",
+                "model/receptor_study_transfer.py",
+                "model/customer_review_study_transfer.py",
+                "model/implementation_report_transfer.py",
+                "model/chemistry_study_transfer.py",
+                "model/portable_implementation.py",
+                "model/gauge_study_receiving.py",
+                "model/ensemble_study_receiving.py",
+                "model/report_review_study_receiving.py",
+                "model/observation_comparability_study_transfer.py",
+                "model/economic_comparison_study_transfer.py",
+                "model/observed_landcover_receiving.py",
+                "model/received_published_reviews.py",
+                "model/assessment_study_transfer.py",
+                "model/geographic_study_receiving.py",
+                "operator/study_transfer.py",
+                "operator/report_changes.py",
+                "operator/gauge_receiving.py",
+                "operator/ensemble_receiving.py",
+                "operator/observed_landcover_receiving.py",
+                "operator/received_published_reviews.py",
+                "operator/assessment_receiving.py",
+                "operator/geographic_receiving.py",
+                "operator/web/study_report_navigation.mjs",
+                "operator/web/gauge_received_studies.mjs",
+                "operator/web/ensemble_received_studies.mjs",
+                "operator/web/observed_landcover_received.mjs",
+                "operator/web/observed_landcover_received.css",
+                "operator/web/received_published_reviews.mjs",
+                "operator/web/received_published_reviews.css",
+                "operator/web/comparability_received_studies.mjs",
+                "operator/web/economic_received_comparisons.mjs",
+                "operator/web/assessment_received_studies.mjs",
+                "operator/web/geographic_received_studies.mjs",
+                "operator/web/extensions/study_transfer.css",
+                "source_tools/usgs_annual.py",
+                "operator/extension_registry.py", "operator/web/extension_host.mjs",
                 "install_extensions.py", "model/observed_context.py", "model/native_versions.py",
                 "model/model_selection.py", "model/observations.py",
                 "model/observation_support.py", "model/observation_diagnostics.py",
@@ -289,6 +363,29 @@ PREDECESSORS.setdefault("operator/web/extensions/study_transfer.mjs", set()).add
 
 PREDECESSORS.setdefault("model/study_transfer.py", set()).add("e5343e7f6db596f5b924a4b8f99eb36df4a934699bafb1493b51f5b3d724008a")
 PREDECESSORS.setdefault("operator/web/extensions/study_transfer.mjs", set()).add("aec3600339a51bfd53a52343a236a8be49fc15647879902f9c6678958da7ab1f")
+
+
+# Exact complete predecessors for direct Calibration receiving and current shared families.
+PREDECESSORS.setdefault("source/usgs-southeast-sparrow-2012/CANDIDATE_COURSE.md", set()).add("b313f2d9db356363847c2dce2254bfb5e28155932233ec903f22287cf5bfd6ce")
+PREDECESSORS.setdefault("model/study_transfer.py", set()).add("bd94da704c625452dd758b5b53bda06bdb5c0fd722773e27f3f204bc4fa59491")
+PREDECESSORS.setdefault("model/study_receiving.py", set()).add("de50374b8fb9cf40c81ee6b35829dffbe5675495dcaec1f7e8c0bd6ab76db4b5")
+PREDECESSORS.setdefault("operator/study_receiving.py", set()).add("5bf5f07658a1151e6d3301ad9e2497bf9932c6f9b0e224d28c44b5b71a772f18")
+PREDECESSORS.setdefault("operator/web/calibration.mjs", set()).add("f84a6b5befd8119d626f7bee31dc7fd424e33ac692ad253de7e3f444e5b41a55")
+PREDECESSORS.setdefault("operator/web/received_studies.mjs", set()).add("869ca0c842a8887fe4f4860dd933b240ecdbcd2b565bf915c776794e7dd08227")
+PREDECESSORS.setdefault("operator/web/extensions/study_transfer.mjs", set()).add("5b0fb705f7aa35decf1b496ccd254ffeef8aa098bccc18460cefea31e12e6612")
+PREDECESSORS.setdefault("operator/extensions/study-transfer.json", set()).add("0a9089f9ccbdacf24f468aa2686574f43d52e663384e8311b570c93c3db13576")
+PREDECESSORS.setdefault("operator/extensions/calibration.json", set()).add("8105b03a0284830b72ac8cdc4b9cbbfe6fedbabec45d840e7a09e0990e195b75")
+PREDECESSORS.setdefault("operator/install_calibration.py", set()).add("8d90c0993870c5c16b24ed9c00e1e962da2b3c1dc4e0cd64396f14c1389cf667")
+PREDECESSORS.setdefault("source_tools/sparrow_candidate_course.py", set()).add("69acae5093093ccd1c335ef761f96fd2e0b373c2bdf014c5e5db85d2e461b6eb")
+PREDECESSORS.setdefault("integration/component_fragments/climate-management.json", set()).add("c53968022597f59393cae5429579f11ffb3682c0e26b3e80a6494ae535b61e76")
+PREDECESSORS.setdefault("model/climate_management.py", set()).add("813b295f2e6ecc26da85232dc90b7339dc840265f961abe55b8732d9bf3832d2")
+PREDECESSORS.setdefault("operator/climate_management.py", set()).add("343b42c15ae11ca3f3c408d16691536f3eb96a7c587c335a31c8eeb15dab4ac7")
+PREDECESSORS.setdefault("operator/extensions/climate-management.json", set()).add("ebdc4908861cd061edabce4437dd1ad2690b851b623980d5f38511c6a141e964")
+PREDECESSORS.setdefault("operator/web/climate_management.mjs", set()).add("57c948eb65e2f1137a094a104bbffec90949abc3b0ba34f7c561ca2f435a9321")
+PREDECESSORS.setdefault("operator/web/climate_management.css", set()).add("9e7a04f80d54d44c75deb3d2dc31a301aee2943b8e08352bed1d7a3f86ba0d13")
+PREDECESSORS.setdefault("operator/CLIMATE_MANAGEMENT.md", set()).add("1ec7000a1de9260ac10bfdbf00cbab0cf5a4422c087673e75684497f09f0b60a")
+PREDECESSORS.setdefault("model/climate_forcing.py", set()).add("e8ccf301380f015033ada767429845768bde28cd5d17c8cf9ef5a04da49012c5")
+PREDECESSORS.setdefault("model/study_transfer.py", set()).add("91144e24fdc1441531c3a0e1e8e2adf2fac2782ee60fc320dc91d48bb4ffbe52")
 
 
 def _hash(data):

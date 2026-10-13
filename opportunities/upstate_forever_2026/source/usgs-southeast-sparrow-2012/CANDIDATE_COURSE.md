@@ -116,3 +116,55 @@ The output directory retains:
 If none of the reference catchments has complete common native support, all original comparisons and their geographic reasons are still delivered. The owner expands the actual source/domain case from those preserved basin identities and runs the same course on its new completed candidates; partial totals never enter a full-catchment fit.
 
 Open the returned observation edition and exact Calibration plan/result in the running operator. The selected-profile continuation preserves the original result, plan and chosen baseline. The recipient-facing producer must open the actual populated views, reports and downloads, inspect desktop/narrow presentation, and reopen the complete scientific Study before presenting it, following the current application AGENTS.md. Source review is distinct from that actual native delivery.
+
+
+## Share and cold-reopen a completed original course
+
+The same maintained CLI can continue an already completed course through editable Study export and native receiving. This mode reads the existing source-bound result. It does not run the annual comparison again, create a new Parameter case or launch NDR/SDR.
+
+Use the actual original Workspace and the existing course output directory containing `course-input.json`, `course.json`, `progress.json`, `original-support.json`, `selection.json`, `plan.json` and `result.json`. Keep those files unchanged. A course that retained only partial comparisons without a saved Calibration result remains scientifically useful, but cannot be presented as a completed Calibration Study.
+
+From the maintained application, with the existing GIS Python interpreter:
+
+```bash
+"$ECO_PYTHON" -m source_tools.sparrow_candidate_course \
+  --workspace "$ORIGINAL_WORKSPACE" \
+  --output "$COMPLETED_COURSE_OUTPUT" \
+  --share-completed \
+  --receive-study "$INDEPENDENT_RECEIVING_DIRECTORY"
+```
+
+The default sharing output is `COMPLETED_COURSE_OUTPUT/study-sharing`. Use `--sharing-output "$SHARING_OUTPUT"` when a separate receiving-volume directory is needed. Both the sharing output and receiving destination must be outside the original Workspace; the receiving destination must also be separate from the course and sharing output. Restore never overwrites another project. If this operation has already published that exact receiving directory, the same command uses the existing native resume operation and verifies its archive identity.
+
+To include an already completed follow-up, repeat `--followup-calibration-id ACTUAL_RESULT_ID`. Each requested result must retain the course's exact original result in its native selected-profile history. A similar title, observation filename or selected profile is insufficient. These options select existing records and do not prepare or execute follow-up cases.
+
+Existing supplements are selected explicitly:
+
+```text
+--study-supplement calibration-uncertainties:ACTUAL_ID
+--study-supplement calibration-maps:ACTUAL_ID
+--study-supplement calibration-reviews:ACTUAL_ID
+--study-supplement calibration-report-sources:ACTUAL_ID
+```
+
+Only add the desired actual saved IDs. Each supplement must belong to the original or selected follow-up history. The source reader retains already-produced complete Calibration, sensitivity and selected-profile-history exports, including their exact reading HTML, CSVs, source records, manifests and ZIPs. Missing reports or maps remain absent; this continuation does not generate them.
+
+### What the continuation verifies and retains
+
+The continuation first verifies the original course identity and exact saved plan/result/source choices. Its sharing identity preserves the old course's input and code hashes without trying to rerun that older analysis under newly installed code. It then captures direct original Calibration roots using the maintained selected-Study exporter and restores their complete native Workspace and application into the independent destination.
+
+A fresh Python process loads the archived application and verifies the received Study. It opens each original Calibration plan/result and compares the receiving view against the original source view: selected run and profile, original observation CSV hash, catchment source and selection, training/validation groups, per-constituent quantities and units, RMSE/bias/NSE, source vintages, previous evaluations, selected supplements, and every source/result download descriptor. Current receiving state stays separate from the captured edition. This is native source and receiving verification; it does not claim a browser view was visually inspected.
+
+Keep the complete sharing directory:
+
+- `sharing-input.json` pins the original course files, selected roots, receiving destination and this continuation's source hashes.
+- `original-course/` retains the original course's seven control/result files byte for byte.
+- `calibration-study.zip` is the complete editable native selected Study and archived application.
+- `study-export.json` and `study-received.json` retain the original export and native receiving receipts.
+- `expected-receiving.json` retains the original source quantities, source identities and complete download inventory.
+- `cold-reopened.json` retains the independent archived-application verification and original reopened IDs.
+- `sharing-result.json`, `sharing-progress.json` and the two `cold-reopen.*.log` files retain the same-operation outcome and any exact exception.
+
+Retry the identical sharing command after a recoverable interruption. The same export/receiving IDs are reused. A different source, selected follow-up, destination or installed continuation identity requires a fresh sharing output and never overwrites the earlier checkpoint. Original analysis progress is never relabelled by a sharing failure.
+
+The actual receiving owner then opens the received application and Workspace, uses **Study transfer → Received studies and original sources**, chooses **Open original evaluation** or **Open editable design**, and can use **Open selected native run** to reopen the original selected candidate. The owner inspects the original plan/result, source downloads and retained reports/maps at desktop and narrow widths, and reopens that exact Study. Follow the current application `AGENTS.md` for the actual visible output and download checks. Those human-facing checks belong to the same receiving operation and do not require another model run.

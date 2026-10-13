@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import copy
 
-from .common import identifier
+from .common import digest, identifier
 from . import calibration_native_study_transfer as transfer
 from . import calibration_study_transfer as dependencies
 
@@ -13,6 +13,24 @@ def summary(identity):
     return {"calibration_study_count": len(rows),
             "calibration_result_count": len({row["report_id"] for row in rows if row.get("report_id")}),
             "calibration_reading_package_count": len({item["prefix"] for row in rows for item in row["exports"]})}
+
+
+def _original_periods(observed):
+    """Group original table periods without changing eligibility or source meaning."""
+    periods = {}
+    for original in observed["rows"]:
+        row = {"parameter": original["parameter"], "source_unit": original["unit"],
+               "comparison_units": original.get("comparison_units"),
+               "period_start": original["period_start"], "period_end": original["period_end"],
+               "method": copy.deepcopy(original.get("method")),
+               "qualifier": original.get("qualifier", "")}
+        key = digest(row)
+        if key not in periods:
+            periods[key] = {**row, "record_count": 0}
+        periods[key]["record_count"] += 1
+    return sorted(periods.values(), key=lambda row: (
+        row["parameter"], row["period_start"], row["period_end"],
+        row["source_unit"], digest(row)))
 
 
 def _metrics(report):
@@ -101,7 +119,8 @@ def augment(closure, retained, result):
             "relationship": "same_project",
             "observation": {"id": observed["id"], "title": observed["metadata"].get("title", observed["id"]),
                             "original_sha256": observed["original"]["sha256"],
-                            "record_count": len(observed["rows"])},
+                            "record_count": len(observed["rows"]),
+                            "periods": _original_periods(observed)},
             "catchments": {**choice, "label": entry.get("title") or entry["id"],
                            "title": entry.get("title") or entry["id"],
                            "original_sha256": entry["body"]["sha256"],
