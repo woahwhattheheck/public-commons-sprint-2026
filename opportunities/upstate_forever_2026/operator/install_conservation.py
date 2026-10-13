@@ -182,7 +182,8 @@ KNOWN_PRIOR = {
         "1bf6aa847d00df9b1e5a5bf8d9bc347f4ae73604e1f9e36abcfac827576f2256",
         "1929be639e1ed2297e63611ce96115949b56d71e8c5a2cd58e91ed98d9b189f1",
         "2ee13bbb8b21d84a1b0267021ddb0915c6f24623f4b1d553773eb50d8f1dd195",
-        "56e0e5a3a45c44c3bdbddc8725b7e62f3d15af7242e36240b4f34c70b31b2b5c"
+        "56e0e5a3a45c44c3bdbddc8725b7e62f3d15af7242e36240b4f34c70b31b2b5c",
+        "5513429035921e3954d9ca4858941b7a07c663d66035b6acdc97d7335b3ada5d"
     ],
     "operator/conservation_regional_receiving.py": [
         "a4326a019784fdb0bd03aa071ee5f01e40694d3063d0a8b6da70caed5ce9daf7",
@@ -295,7 +296,8 @@ KNOWN_PRIOR = {
     ],
     "source_tools/soil_floodplain_sources.py": [
         "0b9a0792323aaeeaa6e8897c80bc3940d2010d1fef5304d3faf371d6ada5012f",
-        "f88ba0144a3c15c9d09d65a286af440d22c2d423b5c30422068cf3179033376b"
+        "f88ba0144a3c15c9d09d65a286af440d22c2d423b5c30422068cf3179033376b",
+        "ed8d25b2d1126c8e321b298b21c0bb6fb75eac31eb4481e3e90e14413219dc02"
     ],
     "source/soil-floodplain-source-profile-20261013.json": [
         "7c342a0de9dd1bcfae835dd89de38a26e41609cc8aa01608db0fe5e9c8c23a4b"
@@ -439,6 +441,12 @@ KNOWN_PRIOR = {
     ],
     "source/capture_original_overlays.py": [
         "c6a055ef211c2e5b03f8f2607fed153d61d5e0ce5ca2689f6de6cfb34351159a"
+    ],
+    "source_tools/source_response_reuse.py": [
+        "29311cededb9f006ee713e91036cd6c99b27ffbecec3e1f21202107d6967444f"
+    ],
+    "source_tools/SOURCE_ACQUISITION_CONTINUATION.md": [
+        "8384e6d464f8bb253df82d5abce78294785579f0855e111bd3b4b22b29257416"
     ]
 }
 
@@ -934,6 +942,7 @@ def read_packet(path):
         "source/soil-floodplain-source-profile-20261013.json",
         "source_tools/keowee_interval_receiving.mjs",
         "source_tools/parcel_criteria.py",
+        "source_tools/SOURCE_ACQUISITION_CONTINUATION.md",
         "source_tools/soil_floodplain_sources.py",
         "source_tools/source_response_reuse.py",
         "source_tools/soil_sources.py",
