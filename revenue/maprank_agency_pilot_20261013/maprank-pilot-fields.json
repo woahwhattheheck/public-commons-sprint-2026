@@ -1,0 +1,381 @@
+{
+  "schema": "maprank.pilot-field-spec/v1",
+  "edition": "2026-10-13",
+  "purpose": "Editable local pilot desk model; names are local model fields, not asserted MapRank API keys",
+  "source_register": "MAPRANK-SOURCES.json",
+  "entities": {
+    "agency": {
+      "required": [
+        "id",
+        "name",
+        "operator"
+      ],
+      "fields": {
+        "id": "local stable string",
+        "name": "string",
+        "operator": "string",
+        "reviewer": "string|null",
+        "client_ids": "local references",
+        "brand": "{company_name,logo_reference,colour,support_email,website}",
+        "default_timezone": "IANA timezone",
+        "custody_reference": "nonsecret credential owner/reference only"
+      }
+    },
+    "client": {
+      "required": [
+        "id",
+        "agency_id",
+        "name"
+      ],
+      "fields": {
+        "id": "local stable string",
+        "agency_id": "reference",
+        "name": "string",
+        "decision_maker": "string|null",
+        "decision_contact": "string|null",
+        "relationship_stage": "candidate|pilot|active|closed",
+        "location_ids": "references",
+        "data_sharing_instruction": "operator-entered text",
+        "access_review": "{reviewer,observed_at,team_members:[{label,role,project_scope,observed_source}]}"
+      }
+    },
+    "location": {
+      "required": [
+        "id",
+        "client_id",
+        "business_name"
+      ],
+      "fields": {
+        "id": "local stable string",
+        "client_id": "reference",
+        "business_name": "string",
+        "address": "string|null",
+        "google_place_id": "actual provider value|null",
+        "maprank_business_id": "actual provider value|null",
+        "latitude": "number|null",
+        "longitude": "number|null",
+        "identity_source": "reference|null",
+        "market": "string",
+        "identity_review": "unreviewed|matched|needs_correction"
+      }
+    },
+    "account_snapshot": {
+      "required": [
+        "id",
+        "observed_at",
+        "source"
+      ],
+      "fields": {
+        "id": "local stable string",
+        "label": "nonsecret account label",
+        "observed_at": "UTC timestamp",
+        "source": "actual app/account reference",
+        "plan_name": "entered current value",
+        "plan_generation": "current|legacy|unknown",
+        "active_subscription": "true|false|null",
+        "monthly_credits_remaining": "nonnegative number|null",
+        "topup_credits_remaining": "nonnegative number|null",
+        "grid_side_max": "positive odd integer|null",
+        "seats": "one|unlimited|other|unknown",
+        "custom_domain_allowed": "true|false|null",
+        "billing_period_end": "date|null",
+        "api_scanning_allowed": "true|false|null",
+        "account_owner": "string",
+        "quote": "{currency,amount,billing_interval,observed_at,source}|null"
+      }
+    },
+    "scope_version": {
+      "required": [
+        "id",
+        "series_id",
+        "revision",
+        "location_id",
+        "keyword",
+        "geometry",
+        "created_at"
+      ],
+      "fields": {
+        "id": "local stable string",
+        "series_id": "stable comparison series reference",
+        "revision": "positive integer",
+        "location_id": "reference",
+        "keyword": "exact chosen string",
+        "geometry": "{center_latitude,center_longitude,rows,columns,spacing,spacing_unit,points:[{id,latitude,longitude}]}",
+        "expected_points": "integer|null",
+        "source_geometry_available": "true|false",
+        "search_depth": "observed positive integer|null",
+        "timezone": "IANA timezone",
+        "reason": "operator-entered market rationale",
+        "cadence": "one_off|weekly|biweekly|monthly|custom",
+        "planned_dates": "dates",
+        "account_snapshot_id": "reference",
+        "budget_limit_credits": "integer|null",
+        "created_at": "UTC timestamp",
+        "supersedes_scope_id": "reference|null",
+        "scope_review": "unreviewed|accepted|needs_correction"
+      }
+    },
+    "scan_observation": {
+      "required": [
+        "id",
+        "scope_id",
+        "capture_mode",
+        "status",
+        "source_refs"
+      ],
+      "fields": {
+        "id": "local stable string",
+        "scope_id": "exact scope version",
+        "provider_scan_id": "actual identifier|null",
+        "provider": "MapRank|other entered source",
+        "capture_mode": "original_file|provider_result|manual_transcription|summary_only",
+        "status": "planned|queued|running|completed|failed|partial",
+        "started_at": "UTC|null",
+        "completed_at": "UTC|null",
+        "retrieved_at": "UTC",
+        "entered_by": "operator",
+        "source_refs": "attachment/report/source references",
+        "original_payload_reference": "immutable bytes reference|null",
+        "provider_metrics": "{average_rank,best_rank,top3_coverage,units,precision,original_labels,missing_value_rule_source}",
+        "points": "[{scope_point_id,latitude,longitude,state:ranked|not_found|error|missing,rank:null|positive integer,search_depth:null|integer,source_ref,raw_status,error_text}]",
+        "quote_credits": "observed integer|null",
+        "actual_charged_credits": "observed integer|null",
+        "balance_after": "observed integer|null",
+        "correction_of": "observation reference|null",
+        "correction_reason": "string|null"
+      }
+    },
+    "source_attachment": {
+      "required": [
+        "id",
+        "filename",
+        "media_type",
+        "bytes",
+        "sha256",
+        "source",
+        "received_at"
+      ],
+      "fields": {
+        "id": "local stable string",
+        "filename": "original filename",
+        "media_type": "string",
+        "bytes": "integer",
+        "sha256": "hex digest of exact bytes",
+        "source": "original URL/file/operator entry",
+        "received_at": "UTC",
+        "contents": "preserved exact bytes or durable private reference",
+        "visibility": "internal|client_selected",
+        "note": "string"
+      }
+    },
+    "comparison": {
+      "required": [
+        "id",
+        "baseline_id",
+        "followup_id"
+      ],
+      "fields": {
+        "id": "local stable string",
+        "baseline_id": "observation reference",
+        "followup_id": "observation reference",
+        "comparability": "eligible|unconfirmed|different_scope",
+        "differences": "actual mismatched/missing fields",
+        "joined_points": "derived actual coordinate/ID matches",
+        "local_metrics": "derived under MAPRANK-METRIC-RULES.md",
+        "provider_metric_comparison": "separate source-preserving values",
+        "review_state": "draft|reviewed|needs_correction",
+        "reviewer": "string|null",
+        "reviewed_at": "UTC|null"
+      }
+    },
+    "finding": {
+      "required": [
+        "id",
+        "scope_id",
+        "title",
+        "evidence_refs"
+      ],
+      "fields": {
+        "id": "local stable string",
+        "scope_id": "reference",
+        "comparison_id": "reference|null",
+        "title": "short readable observation",
+        "point_ids": "references",
+        "region_label": "operator label|null",
+        "evidence_refs": "actual observations/source references",
+        "observation": "observed fact",
+        "hypothesis": "separate explanation|null",
+        "priority": "operator-selected",
+        "owner": "string|null",
+        "action": "string|null",
+        "due_date": "date|null",
+        "status": "open|in_progress|done|deferred",
+        "completion_source": "reference|null"
+      }
+    },
+    "decision": {
+      "required": [
+        "id",
+        "client_id",
+        "decision",
+        "basis_revision"
+      ],
+      "fields": {
+        "id": "local stable string",
+        "client_id": "reference",
+        "decision": "continue_observation|approve_action|revise_scope|finish_pilot|pending",
+        "basis_revision": "exact working-record revision",
+        "scope_ids": "selected scope versions",
+        "observation_ids": "selected scans",
+        "comparison_ids": "selected comparisons",
+        "finding_ids": "selected findings",
+        "target": "operator/client-defined target|null",
+        "rationale": "string",
+        "decided_by": "actual person|null",
+        "decided_at": "UTC|null",
+        "next_review_date": "date|null",
+        "review_status": "proposed|accepted|superseded",
+        "superseded_by": "reference|null"
+      }
+    },
+    "publication": {
+      "required": [
+        "id",
+        "client_id",
+        "status",
+        "source_revision"
+      ],
+      "fields": {
+        "id": "local stable string",
+        "client_id": "reference",
+        "status": "unpublished|approved|shared|withdrawn",
+        "source_revision": "exact accepted revision",
+        "selected_attachment_ids": "references",
+        "report_url": "actual received URL|null",
+        "domain": "actual hostname|null",
+        "visibility": "public_by_link|private_local_packet",
+        "reviewer": "string|null",
+        "reviewed_at": "UTC|null",
+        "recipient": "string|null",
+        "shared_at": "UTC|null",
+        "withdrawn_at": "UTC|null",
+        "archive_sha256": "exact generated archive|null"
+      }
+    },
+    "history": {
+      "required": [
+        "revision",
+        "action",
+        "actor",
+        "at"
+      ],
+      "fields": {
+        "revision": "monotonic integer",
+        "action": "readable event key",
+        "actor": "operator",
+        "at": "UTC timestamp",
+        "entity_refs": "affected stable references",
+        "previous_revision": "integer",
+        "reason": "string|null",
+        "previous_values": "preserved original values",
+        "new_values": "entered values"
+      }
+    }
+  },
+  "validation": [
+    "Keep human-facing dates and labels readable; preserve exact timestamps/IDs in source exports.",
+    "Each record mutation checks expected revision; failed validation does not clear an edited row or erase input.",
+    "Each client belongs to one agency; each location belongs to one client; reject dangling references on receive.",
+    "Blank is null/empty with an explicit human label. Do not coerce blank input to numeric zero.",
+    "Coordinates must be finite in latitude[-90,90]/longitude[-180,180]; a coordinate of zero is valid.",
+    "Grid sides must be positive odd integers and actual supported account limit must be checked before a scan plan is approved. Do not impose the old13 ceiling.",
+    "Expected count must equal the unique scope point count when complete points exist; detect duplicates/extra/missing points.",
+    "Ranked point requires positive integer rank. Other states require rank null. Errors and missing outcomes never become not_found.",
+    "Source bytes/hash must match on import/export. Preserve unknown provider fields in original payload.",
+    "History corrections preserve earlier observations and acceptance. Scope/observation changes invalidate only current affected review; historical acceptance stays visible.",
+    "Report publication requires actual accepted revision and selected client-safe sources. A public link does not establish private access.",
+    "Fresh receiving preserves all entities, selected/withdrawn publications, exact original attachment bytes and monotonic revision.",
+    "Local exports contain no API token/password; only nonsecret custody references.",
+    "Budget estimate and actual quoted/charged credits remain separate; free demo does not become stored recurring balance."
+  ],
+  "blank_working_record": {
+    "schema": "maprank.pilot-workspace/v1",
+    "revision": 0,
+    "agency": null,
+    "clients": [],
+    "locations": [],
+    "account_snapshots": [],
+    "scope_versions": [],
+    "scan_observations": [],
+    "source_attachments": [],
+    "comparisons": [],
+    "findings": [],
+    "decisions": [],
+    "publications": [],
+    "history": []
+  },
+  "acceptance": [
+    {
+      "id": "identity",
+      "label": "Selected business and client identity",
+      "requires": [
+        "location identity reviewed",
+        "actual PlaceID/provider ID when available"
+      ]
+    },
+    {
+      "id": "scope",
+      "label": "Versioned measurement scope",
+      "requires": [
+        "exact keyword",
+        "grid/spacing/coordinates or explicit unavailable geometry",
+        "account limit/budget snapshot"
+      ]
+    },
+    {
+      "id": "baseline",
+      "label": "Original baseline received",
+      "requires": [
+        "actual source",
+        "capture time",
+        "received status",
+        "immutable original input",
+        "explicit missing/error states"
+      ]
+    },
+    {
+      "id": "review",
+      "label": "Labeled observations and comparison",
+      "requires": [
+        "source metrics preserved",
+        "local conventions labeled",
+        "comparability resolved or disclosed",
+        "findings reference real inputs"
+      ]
+    },
+    {
+      "id": "client_decision",
+      "label": "Client decision recorded",
+      "requires": [
+        "exact reviewed revision",
+        "actual decision-maker or pending status",
+        "rationale and next date"
+      ]
+    },
+    {
+      "id": "handover",
+      "label": "Whole workspace delivered and reopened",
+      "requires": [
+        "selected packet source revision",
+        "attachment parity",
+        "fresh receiving",
+        "operator and custody reference"
+      ]
+    }
+  ],
+  "integration_notes": [
+    "This specification is a proposed local product design based on the source register; it is not a vendor JSON schema.",
+    "The original six-agency record, two customer editions, current draft and shared account queue remain separate and unchanged.",
+    "Integrate with the existing complete desk engine and its revision/history/export behavior; do not build a second CRM or invent scan outcomes."
+  ]
+}
