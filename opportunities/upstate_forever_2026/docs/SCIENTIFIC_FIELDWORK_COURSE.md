@@ -34,7 +34,7 @@ Repeat --visit-id for an ordered subset of actual visits. Without it, the packet
 5. The selected scientific report Study includes the native report's complete editable Implementation lineage and crew packets through the existing dependency resolver.
 6. NativeProjectTransfer indexes and restores that exact Study archive. It also captures and restores the complete original Workspace, including its saved scientific briefing.
 7. Each received application starts a fresh Python process. The child reopens the original plan/revision, report source, saved scientific edition and crew packet. The Study child additionally exercises study_receiving.detail and requires the captured crew packet to be available from its original Study. The Workspace child reopens the complete saved briefing.
-8. START_HERE.html links to the actual received scientific report, briefing, crew packet, offline workbench and both complete archives.
+8. START_HERE.html links to the actual received scientific report, complete offline briefing, crew packet and ZIP, offline workbench, original editable plan and both complete archives. The complete original briefing ZIP is streamed into briefing-view/ with every retained member checked, so its relative report and figure links resolve. The page tells the field user to import the linked original plan into the offline workbench.
 
 The selected Study and whole Workspace have different scopes: the Study contains the selected scientific report and its native editable fieldwork; the whole Workspace also retains the full scientific briefing bank. The output names those scopes explicitly.
 
@@ -61,6 +61,7 @@ Both fresh receivers execute source_tools/receive_scientific_fieldwork.py inside
 | received-study/ | Study's application and editable Workspace |
 | received-workspace/ | Whole project's application and editable Workspace |
 | fresh-study/ and fresh-workspace/ | Each native child process's command, output and result |
+| briefing-view/ | Complete original briefing ZIP layout with working report and figure links |
 | receiving-selection.json | Original identities checked by both fresh processes |
 | result.json | Completed native operation with archive and receiving identities |
 | START_HERE.html | Local entrypoint over the actual received products |
