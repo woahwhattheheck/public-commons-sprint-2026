@@ -37,7 +37,9 @@ full method definition and original CSV record/line range. The existing
 `observations.csv` now gives method context/name and source selectors their own
 columns; the full `lab_source` object and any other original fields remain in
 `extra_json` and unchanged `plan.json`. Site HTML and `sites.csv` expose the
-original declared coordinate reference system alongside coordinates.
+original declared coordinate reference system alongside coordinates. Wide tables scroll inside their own focusable region at
+narrow widths; long method definitions keep readable column widths. Print output
+uses the page width through the existing print layout.
 
 This uses the existing eleven-member report, existing saved-plan revision and
 normal report manifest/export/reopen route. It adds no installation dependency.
