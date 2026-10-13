@@ -67,7 +67,10 @@ async function api(path,{method='GET',body,raw,filename,signal}={}){
   const response=await fetch(path,{method,headers,body:raw??(body===undefined?undefined:JSON.stringify(body)),credentials:'same-origin',signal});
   const text=await response.text();
   if(epoch!==connectionEpoch)throw Error('The connection changed while this request was running.');
-  let value;try{value=JSON.parse(text);}catch{value={error:{message:'The operator returned an unreadable response (HTTP '+response.status+').'}};}
+  let value;try{value=JSON.parse(text);}catch{
+    const error=new Error('The operator returned an unreadable response (HTTP '+response.status+'). Refresh the retained workspace; check Operations before repeating a submitted action.');
+    error.code='RESPONSE_INVALID';error.status=response.status;throw error;
+  }
   if(!response.ok){const error=new Error(value.error?.message||'HTTP '+response.status);error.code=value.error?.code;error.status=response.status;throw error;}
   return value;
 }
@@ -1295,7 +1298,7 @@ async function dispatch(button){
  if(action==='inspect-form-vector')return inspectFormVector(button);
 }
 document.addEventListener('click',async event=>{
- const nav=event.target.closest('[data-view]');if(nav){event.preventDefault();await navigate(nav.dataset.view);return;}
+ const nav=event.target.closest('[data-view]');if(nav){event.preventDefault();try{clearError();await navigate(nav.dataset.view);}catch(error){globalError(error);}return;}
  const button=event.target.closest('[data-action]');if(!button)return;
  event.preventDefault();
  const interaction=admissionContext(button.dataset.action,null),context=formContext;
@@ -1324,7 +1327,7 @@ form.addEventListener('submit',async event=>{
 formDialog.addEventListener('cancel',event=>{if(formContext?.busy)event.preventDefault();else formContext=null;});
 detailDialog.addEventListener('close',()=>{if(detailDialog.open||itemRequest!==detailRequest)return;itemRequest++;deliveryInspection.detach();detailContext=null;});
 $('#workspace-select').addEventListener('change',event=>selectWorkspace(event.target.value).catch(globalError));
-window.addEventListener('hashchange',()=>{const incoming=new URLSearchParams(location.hash.slice(1)).get('token');if(incoming){sessionStorage.setItem(keyName,incoming);sessionStorage.removeItem('upstate-selected-workspace');history.replaceState(null,'','/');location.reload();return;}const requested=location.hash.slice(1);if(viewLabels[requested]||extensions.hasView(requested))navigate(requested);});
+window.addEventListener('hashchange',()=>{const incoming=new URLSearchParams(location.hash.slice(1)).get('token');if(incoming){sessionStorage.setItem(keyName,incoming);sessionStorage.removeItem('upstate-selected-workspace');history.replaceState(null,'','/');location.reload();return;}const requested=location.hash.slice(1);if(viewLabels[requested]||extensions.hasView(requested))navigate(requested).catch(globalError);});
 window.addEventListener('online',()=>refresh({force:true}));
 function showConnection(message='Open your private access link or paste it below.'){
  connectionEpoch++;itemRequest++;
@@ -1358,3 +1361,4 @@ if(capability){
   await refresh({force:true});
  }catch(error){showConnection(error.message);}
 }else showConnection();
+
