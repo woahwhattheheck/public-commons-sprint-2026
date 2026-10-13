@@ -215,7 +215,10 @@ def _sections(context, bridges):
                 ["Analysis", bridge["analysis_id"] or "Source-area mode"],
                 ["Method", json.dumps(bridge["method"], ensure_ascii=False, sort_keys=True)],
                 ["Original support", json.dumps(bridge["summary"], ensure_ascii=False, sort_keys=True)]]),
-            _links([("Complete original receiving-water inputs", bridge["path"]])]]))
+            _links([
+                ("Complete original receiving-water inputs", bridge["path"]),
+            ]),
+        ]])
     from . import utility_monitoring_comparison
     sections.extend(utility_monitoring_comparison.scientific_sections(context.get("utility_context")))
     return sections
