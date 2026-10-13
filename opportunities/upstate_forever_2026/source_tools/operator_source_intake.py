@@ -362,8 +362,12 @@ def wait_tasks(client, tasks, ledger, persist, deadline, interval):
     pending = {name for name, task in tasks.items() if task["state"] in ACTIVE}
     previous = {}
     while pending:
+        fetched = {}
         for name in list(pending):
-            task = client.task(tasks[name]["id"])
+            task_id = tasks[name]["id"]
+            if task_id not in fetched:
+                fetched[task_id] = client.task(task_id)
+            task = fetched[task_id]
             tasks[name] = task
             summary = task_summary(task)
             ledger["tasks"][name] = summary
@@ -371,9 +375,10 @@ def wait_tasks(client, tasks, ledger, persist, deadline, interval):
             if previous.get(name) != marker:
                 previous[name] = marker
                 print(client.redact(f"{name}: {summary['state']} — {summary['stage']}"), file=sys.stderr, flush=True)
-                persist()
             if task["state"] not in ACTIVE:
                 pending.remove(name)
+        # Retain native counters and log progress even while the stage label is unchanged.
+        persist()
         if pending:
             if deadline is not None and time.monotonic() >= deadline:
                 ledger["state"] = "pending"
@@ -792,6 +797,7 @@ def run_source_plan(client, args, state, project, catalog):
         persist()
         deadline = time.monotonic() + args.wait_seconds if args.wait_seconds else None
         prepared, finished_tasks = {}, {}
+        known_tasks = {task["id"]: task for task in state.get("tasks", [])}
         try:
             for level in levels:
                 current, waiting = {}, {}
@@ -828,15 +834,17 @@ def run_source_plan(client, args, state, project, catalog):
                                 "action": "source.prepare", "payload": payload,
                                 "operation_id": operation(args.operation_id, "prepare-" + key)}}
                         if existing is None:
-                            existing = existing_task(client, definition, ledger, state.get("tasks", []))
+                            existing = existing_task(client, definition, ledger, known_tasks.values())
                     ledger["definitions"][key] = definition
                     persist()
                     waiting[key] = ensure_task(client, definition, existing=existing,
                         ledger=ledger, persist=persist, resume_cancelled=args.resume_cancelled)
+                    known_tasks[waiting[key]["id"]] = waiting[key]
                 # Follow the original queue with its canonical ledger names.
                 observed = wait_tasks(client, {"prepare:" + key: task for key, task in waiting.items()},
                                       ledger, persist, deadline, args.poll_seconds)
                 current.update({key: observed["prepare:" + key] for key in waiting})
+                known_tasks.update({task["id"]: task for task in observed.values()})
                 for key in level:
                     step, task = steps[key], current[key]
                     value = inspect_plan_preparation(client, step, task, project, methods[step["method"]])
@@ -848,10 +856,12 @@ def run_source_plan(client, args, state, project, catalog):
                                     "title": task["result"]["title"], "import_sources": True},
                                 "operation_id": operation(args.operation_id, "import-" + key)}}
                             imported = ensure_plan_task(client, definition, project,
-                                known_tasks=state.get("tasks", []), ledger=ledger,
+                                known_tasks=known_tasks.values(), ledger=ledger,
                                 persist=persist, resume_cancelled=args.resume_cancelled)
                             imported = wait_tasks(client, {definition["name"]: imported},
                                 ledger, persist, deadline, args.poll_seconds)[definition["name"]]
+                            if not imported.get("_restored_preparation"):
+                                known_tasks[imported["id"]] = imported
                             value["source_collection_id"] = checked_id(
                                 imported.get("result", {}).get("source_collection_id"), "Imported prerequisite collection")
                         imported_plan_source(client, project, value)
@@ -867,7 +877,7 @@ def run_source_plan(client, args, state, project, catalog):
             ledger["state"] = "composing"
             persist()
             composed = ensure_plan_task(client, definition, project,
-                known_tasks=state.get("tasks", []), ledger=ledger,
+                known_tasks=known_tasks.values(), ledger=ledger,
                 persist=persist, resume_cancelled=args.resume_cancelled)
             composed = wait_tasks(client, {"composition": composed},
                 ledger, persist, deadline, args.poll_seconds)["composition"]
