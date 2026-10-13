@@ -1,0 +1,44 @@
+{
+  "schema": "stellar-forge.kestra-deployment.v1",
+  "namespace": "conapi.commissioning",
+  "flowIdPrefix": "conapi_workflow",
+  "runtime": {
+    "schema": "stellar-forge.kestra-runtime.v1",
+    "analysisRoot": "/opt/tjlabs/merchant/stellar/scf-starforge-20261009/sf30-seller-sdk/datasette-analysis",
+    "workspace": "/var/lib/conapi/workflow",
+    "configuration": "/etc/conapi/customer-workflow.json",
+    "receiverWorkspace": "/var/lib/conapi/received-results",
+    "correlationMode": "business-properties",
+    "resultDestination": {
+      "destinationName": "conapi.results",
+      "destinationType": "QUEUE"
+    },
+    "nativeHeaderJar": "/opt/conapi/conapi-native-header-producer.jar",
+    "pythonExecutable": "/usr/bin/python3",
+    "javaExecutable": "/usr/bin/java"
+  },
+  "connectionFactoryConfig": {
+    "type": "DIRECT",
+    "connectionFactoryClass": "org.apache.activemq.ActiveMQConnectionFactory",
+    "providerJarPaths": [
+      "file:///opt/conapi/jms-libs/activemq-all.jar"
+    ],
+    "username": "{{ secret('CONAPI_JMS_USERNAME') }}",
+    "password": "{{ secret('CONAPI_JMS_PASSWORD') }}",
+    "connectionProperties": {
+      "brokerURL": "{{ secret('CONAPI_JMS_BROKER_URL') }}"
+    },
+    "useFilteredClassLoader": false
+  },
+  "intake": {
+    "mode": "manual",
+    "destination": {
+      "destinationName": "conapi.requests",
+      "destinationType": "QUEUE"
+    },
+    "maxMessages": 16,
+    "maxWaitTimeout": 5000,
+    "messageSelector": ""
+  },
+  "receiveTimeoutMilliseconds": 10000
+}

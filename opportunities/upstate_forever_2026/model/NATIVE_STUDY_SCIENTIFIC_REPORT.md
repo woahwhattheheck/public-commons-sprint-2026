@@ -108,7 +108,9 @@ This requires a prepared source and forwards the server-bound original collectio
 
 **Land-cover contrasts** pair each alternative with a baseline using the same parameter profile and exact prepared grid. Annual change is alternative minus baseline on the intersection of valid cells. Negative change means reduced modeled export.
 
-**Parameter contrasts** retain the original baseline land cover and compare each varied profile with the first selected reference profile. This is a different question and appears in its own table and figures.
+**Parameter contrasts** retain the original baseline land cover and compare each varied profile with the first selected reference profile. This is a different question and appears in its own table and figures. The scientific tables and figure coverage legends label these runs **Reference** and **Varied**. Their signed annual change is varied-profile baseline minus reference-profile baseline on the exact common-valid cells. A negative value means lower modeled export under different parameters; it is not a restoration benefit. The percentage denominator is the reference-profile baseline mass. The original numeric field names (`baseline_common`, `alternative_common`, and their own-valid totals) remain unchanged in CSV/JSON.
+
+Updating this presentation creates a new scientific source edition through the original producer-source hash. Its parameter rows, native run IDs, physical units, support masks, scalar report release and prior frozen scientific editions remain unchanged. Prepare the saved source again at the existing report boundary; do not rerun its model cases.
 
 Nitrogen and phosphorus retain kg/year. Sediment retains metric tonnes/year, normalized to the original paired report's t/year spelling. Each constituent and unit stays separate. The source adds no economic weighting or cross-pollutant physical total and does not change the original model units.
 

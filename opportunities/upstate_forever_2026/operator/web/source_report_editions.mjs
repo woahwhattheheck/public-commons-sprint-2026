@@ -246,7 +246,7 @@ export function attachScientificReportEditions(host) {
     let frame=reportFrames.get(id);
     if(!frame){
       frame=document.createElement('iframe');frame.title=opened.edition.title;
-      frame.setAttribute('sandbox','allow-scripts allow-downloads allow-modals allow-popups allow-popups-to-escape-sandbox');
+      frame.setAttribute('sandbox','allow-scripts allow-downloads allow-modals allow-popups allow-popups-to-escape-sandbox allow-same-origin');
       frame.referrerPolicy='no-referrer';frame.src=opened.viewer_url;reportFrames.set(id,frame);
     }
     if(frame.parentNode!==target)target.append(frame);
@@ -281,7 +281,7 @@ export function attachScientificReportEditions(host) {
       shell.append(heading);
       const frameShell=document.createElement('div');frameShell.className='source-report-frame-shell';
       frame.title=heading.textContent;
-      frame.setAttribute('sandbox','allow-scripts allow-downloads allow-modals allow-popups allow-popups-to-escape-sandbox');
+      frame.setAttribute('sandbox','allow-scripts allow-downloads allow-modals allow-popups allow-popups-to-escape-sandbox allow-same-origin');
       frame.setAttribute('allow','fullscreen');frame.setAttribute('allowfullscreen','');
       frame.referrerPolicy='no-referrer';frame.src=briefingOpened.viewer_url;
       frameShell.append(frame);shell.append(frameShell);holder.append(shell);

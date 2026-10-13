@@ -108,3 +108,17 @@ A retained failed or interrupted receiving operation can adopt corrected applica
 The receiver permits only the executable source reference and file identities to change. It keeps the earlier source identities and failure in `source_history` before continuing the original HTTP request. Changing the source alone does not alter the customer's source selection or any other business input. Completed operations keep their original identity checks.
 
 ResponseDocument provenance names the published Datasette endpoint. The exact URL, query and filter selection remain in the retained `source-meaning.json`, original request/page attachments and customer report. Source descriptors are content-addressed, so a corrected preparation preserves the previous failed descriptor alongside the new one. The original Analysis engine still owns source registration, workbooks, reports and archive receiving.
+
+## BDNB territory and complete customer receiving
+
+The [BDNB product entry](../../../../products/ntico/bdnb-territory/README.md) composes
+original publisher files, explicit source dictionaries, territory selections,
+edition correspondence, individual reviews and complete Analysis reports,
+workbooks, streaming annexes and workspace archives in this same application.
+The mounted **BDNB territory** operator and exact CLI requests share its native
+database and request history.
+
+Use the [complete receiving programme](../../../../products/ntico/bdnb-territory/RECEIVING.md)
+for producer → customer review → returned archive → independent reopen, and the
+[original workflow profile](../../../../products/ntico/bdnb-territory/WORKFLOW.md)
+for commissioned API/Kestra/JMS delivery and its real recipient receipt.

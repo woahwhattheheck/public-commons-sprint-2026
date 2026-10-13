@@ -1,0 +1,160 @@
+{
+  "schema": "stellar-forge.source-workflow-configuration.v1",
+  "profile": "elite-supplier-review",
+  "sourceAlias": "prices",
+  "source": {
+    "kind": "csv",
+    "path": "PRICING_CSV",
+    "bytes": 3558,
+    "sha256": "6891cc62b1341ee0cdf601a78e9e04b6232f1c26cc1cdeb8f021a5edc1fa5dcb",
+    "key": [
+      "name"
+    ],
+    "metadata": {
+      "path": "PUBLISHER_METADATA_JSON",
+      "bytes": 3780,
+      "sha256": "6c758cf191a670985e7195752565c8d16169d6be8941f707a50ebd6638adefe2"
+    },
+    "source": {
+      "publisher": "Elite Digital AI Solutions Ltd",
+      "publisherEdition": "2026-08-12",
+      "license": "Creative Commons Attribution 4.0 International (CC BY 4.0)",
+      "title": "Complete published service prices",
+      "url": "https://elitedigitalagency.io/data/published-pricing.csv"
+    }
+  },
+  "relatedSources": {
+    "catalog": {
+      "kind": "csv",
+      "path": "CATALOGUE_CSV",
+      "bytes": 4964,
+      "sha256": "c225a1e081f783ce20eaf5de222449c03a3d01130ebb9d123b29fcb3673034c9",
+      "key": [
+        "url"
+      ],
+      "analysisPrefix": "catalog",
+      "metadata": {
+        "path": "PUBLISHER_METADATA_JSON",
+        "bytes": 3780,
+        "sha256": "6c758cf191a670985e7195752565c8d16169d6be8941f707a50ebd6638adefe2"
+      },
+      "source": {
+        "publisher": "Elite Digital AI Solutions Ltd",
+        "publisherEdition": "2026-08-12",
+        "license": "Creative Commons Attribution 4.0 International (CC BY 4.0)",
+        "title": "Complete original service catalogue",
+        "url": "https://elitedigitalagency.io/data/services-catalogue.csv"
+      }
+    }
+  },
+  "sourceArchive": "SOURCE_ARCHIVE",
+  "analysis": {
+    "workspace": "ANALYSIS_WORKSPACE",
+    "operationId": "ANALYSIS_OPERATION_ID",
+    "prefix": "prices",
+    "queries": [
+      {
+        "name": "original_prices",
+        "title": "Complete original published prices",
+        "sql": "SELECT * FROM {{source:prices}} ORDER BY {{column:prices:name}}",
+        "parameterNames": [],
+        "maxRows": 100000,
+        "note": "Every published price row and original column. The price key is name; repeated paths retain the publisher's distinct price tiers. Amounts are GBP and original period/display wording is preserved."
+      },
+      {
+        "name": "original_catalogue",
+        "title": "Complete original service catalogue",
+        "sql": "SELECT * FROM {{source:catalog}} ORDER BY {{column:catalog:url}}",
+        "parameterNames": [],
+        "maxRows": 100000,
+        "note": "Every service, consultancy and charity catalogue row, with its original description, section and canonical URL."
+      },
+      {
+        "name": "price_catalogue",
+        "title": "Prices joined to the original catalogue",
+        "sql": "SELECT p.*, c.{{column:catalog:slug}} AS catalogue_slug, c.{{column:catalog:title}} AS catalogue_title, c.{{column:catalog:section}} AS catalogue_section, c.{{column:catalog:url}} AS catalogue_url, CASE WHEN c.{{column:catalog:url}} IS NULL THEN 'not-listed-in-catalogue' ELSE 'catalogued' END AS catalogue_match, CASE WHEN p.{{column:prices:charity_amount_gbp}} IS NULL OR TRIM(p.{{column:prices:charity_amount_gbp}}) = '' THEN 'unpublished' WHEN p.{{column:prices:charity_amount_gbp}} IN (0, '0') THEN 'published-zero' ELSE 'published' END AS charity_rate_state FROM {{source:prices}} AS p LEFT JOIN {{source:catalog}} AS c ON c.{{column:catalog:url}} = 'https://elitedigitalagency.io' || p.{{column:prices:path}} ORDER BY p.{{column:prices:name}}",
+        "parameterNames": [],
+        "maxRows": 100000,
+        "note": "The publisher's HTTPS origin plus each original price path is matched to the catalogue's canonical URL. Each price remains one row. An absent catalogue entry is retained explicitly. Blank charity rates remain unpublished and actual zero rates remain published-zero."
+      },
+      {
+        "name": "catalogue_coverage",
+        "title": "Catalogue coverage by published price tiers",
+        "sql": "SELECT c.{{column:catalog:slug}} AS slug, c.{{column:catalog:title}} AS title, c.{{column:catalog:section}} AS section, c.{{column:catalog:url}} AS canonical_url, COUNT(p.{{column:prices:name}}) AS published_price_tiers FROM {{source:catalog}} AS c LEFT JOIN {{source:prices}} AS p ON c.{{column:catalog:url}} = 'https://elitedigitalagency.io' || p.{{column:prices:path}} GROUP BY c.{{column:catalog:slug}}, c.{{column:catalog:title}}, c.{{column:catalog:section}}, c.{{column:catalog:url}} ORDER BY c.{{column:catalog:section}}, c.{{column:catalog:url}}",
+        "parameterNames": [],
+        "maxRows": 100000,
+        "note": "All catalogue entries remain present, including those with no published price. The price-tier count uses the price name key; related price paths are legitimate many-to-one joins."
+      },
+      {
+        "name": "catalogue_review",
+        "title": "Original price records outside the catalogue",
+        "sql": "SELECT p.* FROM {{source:prices}} AS p WHERE NOT EXISTS (SELECT 1 FROM {{source:catalog}} AS c WHERE c.{{column:catalog:url}} = 'https://elitedigitalagency.io' || p.{{column:prices:path}}) ORDER BY p.{{column:prices:name}}",
+        "parameterNames": [],
+        "maxRows": 100000,
+        "note": "These complete source records are available for review alongside the whole catalogue. The source publisher includes healthcare, care and tools outside the selected catalogue list."
+      },
+      {
+        "name": "selected_period",
+        "title": "Selected original billing period",
+        "sql": "SELECT p.*, c.{{column:catalog:slug}} AS catalogue_slug, c.{{column:catalog:section}} AS catalogue_section FROM {{source:prices}} AS p LEFT JOIN {{source:catalog}} AS c ON c.{{column:catalog:url}} = 'https://elitedigitalagency.io' || p.{{column:prices:path}} WHERE p.{{column:prices:period}} = ? ORDER BY p.{{column:prices:name}}",
+        "parameterNames": [
+          "period"
+        ],
+        "maxRows": 100000,
+        "note": "The request selects an original billing period: one-off, month or free. Published prices and from wording remain those of the source capture."
+      }
+    ],
+    "report": {
+      "title": "Published supplier prices and catalogue reconciliation",
+      "introduction": "Elite Digital AI Solutions Ltd, Elite Digital Agency Open Knowledge Datasets 1.0.0, CC BY 4.0. Original publisher capture date: 12 August 2026. Source files: https://elitedigitalagency.io/data/published-pricing.csv and https://elitedigitalagency.io/data/services-catalogue.csv; metadata: https://elitedigitalagency.io/data/datapackage.json. Original published GBP amounts, billing periods, price wording and separate charity rates remain attached to every source record.",
+      "note": "Complete original source pair, customer SQL, published report, reviewed reconciliation outputs and editable workspace travel in the same original delivery."
+    },
+    "waitSeconds": 3600
+  },
+  "delivery": {
+    "queryFormats": [
+      "csv",
+      "jsonl",
+      "sqlite"
+    ],
+    "supplier": {
+      "component": "SUPPLIER_COMPONENT",
+      "workspace": {
+        "path": "REVIEWED_SUPPLIER_WORKSPACE"
+      },
+      "tableName": "supplier_feed_accepted",
+      "coverage": {
+        "pricing": {
+          "path": "PRICING_CSV",
+          "bytes": 3558,
+          "sha256": "6891cc62b1341ee0cdf601a78e9e04b6232f1c26cc1cdeb8f021a5edc1fa5dcb"
+        },
+        "catalogue": {
+          "path": "CATALOGUE_CSV",
+          "bytes": 4964,
+          "sha256": "c225a1e081f783ce20eaf5de222449c03a3d01130ebb9d123b29fcb3673034c9"
+        },
+        "metadata": {
+          "path": "PUBLISHER_METADATA_JSON",
+          "bytes": 3780,
+          "sha256": "6c758cf191a670985e7195752565c8d16169d6be8941f707a50ebd6638adefe2"
+        },
+        "origin": "https://elitedigitalagency.io",
+        "sourceMetadata": {
+          "publisher": "Elite Digital AI Solutions Ltd",
+          "publisherEdition": "2026-08-12",
+          "license": "Creative Commons Attribution 4.0 International (CC BY 4.0)",
+          "acquiredAt": "2026-10-12",
+          "pricingURL": "https://elitedigitalagency.io/data/published-pricing.csv",
+          "catalogueURL": "https://elitedigitalagency.io/data/services-catalogue.csv",
+          "metadataURL": "https://elitedigitalagency.io/data/datapackage.json"
+        },
+        "pricingAlias": "prices",
+        "catalogueAlias": "catalog"
+      },
+      "sourceBindings": {
+        "prices": "candidate"
+      }
+    }
+  }
+}

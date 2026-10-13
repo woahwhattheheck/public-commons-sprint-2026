@@ -84,6 +84,27 @@ def document_policy(body):
     )
 
 
+# A saved report is static HTML. Its original relative source/figure links need
+# the operator origin and strict file-session cookie, while scripts remain off.
+SCIENTIFIC_REPORT_POLICY = (
+    "default-src 'none'; script-src 'none'; style-src 'self' 'unsafe-inline'; "
+    "img-src 'self' data:; connect-src 'none'; object-src 'none'; frame-src 'none'; "
+    "base-uri 'none'; form-action 'none'; frame-ancestors 'self'; "
+    "sandbox allow-same-origin allow-downloads allow-popups allow-popups-to-escape-sandbox"
+)
+
+
+def scientific_document_policy(body, view):
+    if view == "report":
+        return SCIENTIFIC_REPORT_POLICY
+    policy = document_policy(body)
+    if view == "briefing":
+        # Only the byte-exact installed client_briefing template receives this
+        # mode; its existing inline script hashes and all network limits remain.
+        return policy.replace("sandbox allow-scripts ", "sandbox allow-same-origin allow-scripts ", 1)
+    return policy
+
+
 # These are ordinary source manifests shipped with the installed application.
 # Additional editions use the existing --source-manifest or --source-root options.
 BUNDLED_REPORT_MANIFESTS = (
@@ -624,11 +645,11 @@ class SourceReports:
             workspace, collection_id, source_key, name)
 
     def scientific_member(self, workspace, key, name):
-        ticket, path = self.scientific.member(workspace, key, name)
-        policy = document_policy(path.read_bytes()) if path.suffix.lower() in (".html", ".htm") else None
+        ticket, path, view = self.scientific.member(workspace, key, name, with_view=True)
+        policy = scientific_document_policy(path.read_bytes(), view) if path.suffix.lower() in (".html", ".htm") else None
         return ticket, policy
 
     def briefing_member(self, workspace, key, name):
-        ticket, path = self.scientific.briefing_member(workspace, key, name)
-        policy = document_policy(path.read_bytes()) if path.suffix.lower() in (".html", ".htm") else None
+        ticket, path, view = self.scientific.briefing_member(workspace, key, name, with_view=True)
+        policy = scientific_document_policy(path.read_bytes(), view) if path.suffix.lower() in (".html", ".htm") else None
         return ticket, policy

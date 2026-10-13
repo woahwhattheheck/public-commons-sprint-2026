@@ -433,8 +433,9 @@ def _reference_files(workspace, result):
                 verify_file(directory, descriptor)
     operation = result["operation"]
     report = operation.get("report") or {}
-    if report.get("state") != "complete":
-        raise ValueError("The reference course has no completed original report")
+    if (report.get("state") not in ("partial", "complete")
+            or report.get("report_state") != "current"):
+        raise ValueError("The reference course has no current original report")
     for descriptor in report.get("files", {}).values():
         verify_file(workspace.root / "ensemble_reports" / report["id"], descriptor)
     for product in operation.get("raster_products", []):
@@ -465,7 +466,8 @@ def _retained_reference(workspace, record, plan, directory, previous, raster_pro
         return None
     operation = previous.get("operation", {})
     report = operation.get("report") or {}
-    if report.get("state") != "complete":
+    if (report.get("state") not in ("partial", "complete")
+            or report.get("report_state") != "current"):
         return None
     if raster_products and not operation.get("requested", {}).get("raster_products"):
         return None  # An explicitly expanded product request follows the original producer.

@@ -121,3 +121,46 @@ Pass this complete brief into every current child, provider and cloud work order
 
 Preserve active compute and existing implementation ownership. Do not force worker restarts, drop an active run or create a new controller. Keep lab attribution, source/copyright, incident and contact controls, personal-meeting approval, no private GitHub/Actions, no llama.cpp and focused internal validation. No new approval gate or broad test sweep is authorized.
 
+
+## Complete the original five-view course with its annual scientific report
+
+The existing `source_tools/operate_annual_assessment_context.py` can now carry the already-produced annual report through its original queued rendering, full project snapshot and independent receiving sequence. This is one optional continuation of the original b9d5 project. It adds no model solve and preserves the existing annual target, assessment and microbial selections.
+
+The original seventeen-file source bank supplies the assessment/annual/microbial contexts and the five saved map views containing **159, 18, 6, 4 and 1 stations**. Those views are distinct from the **five original annual-reference basins** and two scientific map figures in the completed annual basin report. Keep both sets. The original seventeen files and this annual report's source family have no overlapping paths.
+
+First materialize the original17 `receive_annual_source_20261013.py` through its existing ordinary file and run it into an owned source intake. Compose its full source bodies into the current application, preserving newer operator, formatter and Study code. Materialize and extract the unchanged completed annual report ZIP using its existing README; its root `sources.json` is the optional report input below. Its original inputs and generated HTML/maps/CSV/GeoJSON remain inside that complete source package.
+
+Run the same existing course with its original Workspace, output journal and exact original domain collection:
+
+```sh
+PYTHON -B APP/source_tools/operate_annual_assessment_context.py \
+  --application APP \
+  --workspace ORIGINAL_B9D5_WORKSPACE \
+  --output SAME_ANNUAL_OUTPUT \
+  --project-id b9d5d257-c6bb-4f07-b975-8e8c63705db3 \
+  --domain-collection ORIGINAL217_COLLECTION \
+  --domain-source-id upstate-wbd-upstream-domain-20261012 \
+  --annual-report-manifest EXTRACTED_ANNUAL_REPORT/sources.json
+```
+
+The default report source is the original completed basin edition:
+`native-assessment-observed-bef411c2954fc3e7deb6-microbial-f53df7b5a31d-annual-yields-basin-maps-v1`.
+If that exact manifest has already been imported, use `--annual-report-collection ACTUAL_RETAINED_COLLECTION` instead of the manifest option. The manifest and collection options are mutually exclusive. For a deliberately selected later national-enriched edition, pass its actual returned `--annual-report-source-id`; do not rename an older collection or substitute a station estimate. `--annual-report-title` is an optional explicit title.
+
+### Original queue, saved output and continuation
+
+The driver preserves every original five-view operation ID and map/PDF. It then imports the selected full manifest through the existing `source.import` queue, prepares and saves the exact ordered source preview, and invokes `source-reports.render` followed by `source-reports.export`. These are the same actions exposed by Sources → Prepare a scientific report. The normal formatter produces the complete PDF, HTML, Markdown, structured tables, figures and retained input files; the ordinary report ZIP includes those original members.
+
+The report request records its exact source ID, title and manifest hash or existing collection. Its preview is saved before queue dispatch, and its retained task payload is reused after an interrupted response. Once this optional request is saved in the original journal, repeating the command without report intake options continues that same request; an external manifest is no longer required after the original source-import task completes. Supplying a different source/title to that same report request fails explicitly rather than silently replacing the selected edition.
+
+A report-scoped snapshot and receiving operation follow. Their stable identity contains the completed scientific edition ID, keeping the older five-view-only snapshot and receiver intact. If an earlier completed result exists, its original JSON is retained under `completed-editions/` before the current result advances. All original selected task history travels, including source import, saved maps and report rendering/export.
+
+Cold receiving reopens the same original project, source collections and map reviews; verifies all five original selections; then opens the exact scientific edition through `scientific_report_editions.inspect`. Its source order, file descriptors and complete report ZIP must match the producing edition. The actual resulting IDs, file descriptors and received report directory are in `working-project-native-result.json → annual_report`, with `annual_report.receiving` describing the reopened edition. The existing top-level `receiving` continues to identify the full project archive.
+
+Without a saved or newly selected optional annual report, the original command keeps its previous task identities, snapshot/receiving paths and output shape. National source inventory is optional and is not a prerequisite for the completed regional report or five-view course.
+
+### Operate the exact outgoing product
+
+Use the populated source/report project, rather than an empty demonstration. Open every one of the five saved map PDFs and all scientific report pages, including both annual basin/component maps. Open the standalone association HTML at desktop and 390 px, use the original map/table/dropdown selection, fit and excluded-component controls, and download/open the actual CSV, JSON, GeoJSON and SVG. Open the report ZIP's contents and the independently received project with its archived application, then reopen the same maps and scientific edition.
+
+Return the first actual source/queue/render exception immediately in the existing annual receiving operation. Preserve its original task, source selection and project writer while the relevant source owner repairs that boundary. Return viewed original screenshots/PDF pages and actual native IDs through that same operation. Source checks or captured-but-unviewed screenshots do not replace looking at the outgoing product. The complete owner direction above continues to apply, including the original 14:00 UTC cutoff and priority of the actual-geography native case.
