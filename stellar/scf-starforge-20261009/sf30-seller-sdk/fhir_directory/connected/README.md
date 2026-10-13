@@ -205,3 +205,13 @@ Use `iterateHumanServicesDirectoryForeignKeys` with `kind: "outcomes"`, `"candid
 The existing conformance file action receives the four additional native kinds: `foreignKeys`, `foreignKeyCandidates`, `foreignKeyMatches` and `foreignKeyCoverage`. Earlier assessments retain their original files. The existing full download, manifest and reopening helpers preserve every byte; the connected 512 MiB file limit remains explicit alongside the native larger-file routes.
 
 See [Complete relationship receiving](../CONFORMANCE_FOREIGN_KEY_CLIENTS.md) for typed examples, exact action/filter names, whole-file custody and the complete `operate_foreign_key_clients.mjs` command. That programme consumes an actual completed native relationship result, reads the same workspace through its browser and Merchant, and receives the browser's full editable packet into a separate customer workspace. It preserves every immutable Directory record and any existing complete OperatingPlan histories without starting another source acquisition or assessment.
+
+## Complete returned-procedure review
+
+The existing provider now exposes `directory_operating_return_prepare/revise/complete/apply/receive/export` with the exact native input schemas, plus `directory_operating_return_review/comparison/input/rows/file`. The immutable collection is `operatingPlanReturns`. Full details, limits, operating commands and recovery are in [OPERATING_RETURNS.md](../OPERATING_RETURNS.md).
+
+`changeHumanServicesDirectoryOperatingReturn({client,workspace,action,input})` performs one exact action. Complete the review first and persist that native intent; apply is a separate call with the selected saved head. Preserve the accepted input on interruption. The applied-return receipt and native plan save are separate recoverable writes.
+
+`readHumanServicesDirectoryOperatingReturn` reopens all original JSON inputs; `iterateHumanServicesDirectoryOperatingReturn` reads every contiguous original change page. The complete-file helpers validate the runtime-declared payload against its native descriptor and use the existing resumable whole-file receiver. Original model types and every native return input/record/page are exported in this package's declarations. Large native inputs use the original CLI/HTTP path; existing connected JSON limits are unchanged.
+
+The complete native course is `operate_operating_returns.py`; its actual completed result is consumed by `operate_operating_returns_clients.mjs`, covering the real operator, SDK/MCP reopen, full original files and fresh customer workspace. Preserve the selected completed result with its exact workspacePacket.
