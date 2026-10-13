@@ -243,7 +243,60 @@ def _sections(result, selected, rows, origin_uri, original_bytes):
         live._table(["Original coefficient-source provenance", "Retained value"], [
             [key, value] for key, value in result.get("coefficient_source", {}).items()]),
     ]]]
-    sections = prefix + sections
+    methods = [section for section in sections if section[0] in {
+        "Saved Parameter result selection", "Original fixed baseline and case key",
+        "Reporting geography", "Original completed-case range selection"}]
+    findings = [section for section in sections if section not in methods]
+    overview = [[result["title"] + " — scientific findings", [
+        result["purpose"],
+        str(result["completed_cases"]) + " of " + str(result["total_cases"]) +
+        " original cases are complete; " + str(len(selected["selection"]["case_ids"])) +
+        " completed cases are selected here. Each constituent retains its original annual-mass unit.",
+        "The values below are original modeled annual export. Signed change is case minus baseline "
+        "on the cells valid in both runs. Negative change means lower modeled export. "
+        "This is a parameter/routing comparison with the original land-cover scenario held fixed.",
+    ]]]
+    for area in selected["areas"]:
+        for pollutant in selected["selection"]["pollutants"]:
+            values = [row for row in rows if row["area_id"] == area["id"] and
+                      row["pollutant"] == pollutant]
+            overview.append([area["name"] + " / " + pollutant.replace("_export", "") +
+                             " — original paired comparison", [
+                live._table(["Original case", "Units", "Paired change", "Change (%)",
+                             "Common area (ha)", "Support changed"], [
+                    [row["case"], row["units"], row["change"],
+                     row["percent_change"] if row["percent_change"] is not None else
+                     ("Undefined: no paired cells" if not row["paired_valid_cells"] else
+                      "Undefined: zero paired baseline" if row["baseline_mass"] == 0 else
+                      "Undefined in original result"),
+                     row["paired_area_ha"], row["support_changed"]] for row in values]),
+            ]])
+    reversal = next((row for row in rows if row["support_changed"] and
+                     row["change"] is not None and row["baseline_full_mass"] is not None and
+                     row["case_full_mass"] is not None and
+                     ((row["change"] < 0 and row["case_full_mass"] > row["baseline_full_mass"]) or
+                      (row["change"] > 0 and row["case_full_mass"] < row["baseline_full_mass"]))), None)
+    if reversal:
+        overview.append(["Read the comparison on its original common support", [
+            "The original " + reversal["case"] + " / " + reversal["pollutant"] +
+            " row illustrates why independent full totals and paired effects can point in different directions.",
+            live._table(["Original quantity", "Stored value"], [
+                ["Paired signed change (" + reversal["units"] + ")", reversal["change"]],
+                ["Paired percent change", reversal["percent_change"]],
+                ["Baseline own-valid total (" + reversal["units"] + ")", reversal["baseline_full_mass"]],
+                ["Case own-valid total (" + reversal["units"] + ")", reversal["case_full_mass"]],
+                ["Common valid cells", reversal["paired_valid_cells"]],
+                ["Baseline own-valid cells", reversal["baseline_valid_cells"]],
+                ["Case own-valid cells", reversal["case_valid_cells"]],
+            ]),
+            "The independent totals cover different cells. The original paired change compares the "
+            "same cells in both runs and is the appropriate value for this particular spatial comparison. "
+            "No subtraction of those independent totals replaces the retained common-cell result.",
+        ]])
+    sections = overview + findings + [["Methods, original selection and source provenance", [
+        "The following appendix retains the original identities, selections, source editions, "
+        "geographic methods and historical-range policy used for the figures and numeric tables."
+    ]]] + methods + prefix
     sections.append(["Original archive, selected rows and figure provenance", [
         "The original complete JSON is attached byte for byte. Selected row values are copied unchanged; "
         "each selected row maps to its original JSON row index in archive-provenance.json. "

@@ -1,6 +1,6 @@
 # Archived Parameter result → scientific report
 
-This entry receives an original, completed Parameter result JSON into the current application's ordinary scientific-source collection. It reuses the maintained Parameter tables and figures and the shared PDF/HTML/Markdown formatter. The receiving Workspace can select cases, areas and pollutants and compose this source alongside its other reports.
+This entry receives an original, completed Parameter result JSON into the current application's ordinary scientific-source collection. It reuses the maintained Parameter tables and figures and the shared PDF/HTML/Markdown formatter. The report opens with the scientific purpose and original per-case paired findings, followed by the actual mass/support tables. Detailed identities and coefficient provenance appear in its methods/source appendix. The receiving Workspace can select cases, areas and pollutants and compose this source alongside its other reports.
 
 The archived original JSON remains byte-for-byte unchanged. Its donor Workspace, experiment, run, profile, scenario and grid IDs remain donor identities. The receiving operation creates a source collection and report, without creating a donor experiment or native run. Metadata uses `source_basis=saved_parameter_result_archive`, distinct from the live editable Parameter study source.
 
