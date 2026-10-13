@@ -43,7 +43,7 @@ The original WQP GeoJSON provides the displayed station points. The original Sta
 
 Open `index.html`. Select utility area, station, sampling year, analytical method and result condition; search original station/activity/project/comment text. Map points and station-table links select an actual station. Filled time-plot circles show measured values, while open triangles show the original reported limit. Selecting a plotted point or table row opens all 63 original result fields.
 
-The initial view selects routine samples; the retained field replicate is explicitly selectable. The result table renders 50 rows per page, and the selected CSV contains every matching row and all original fields. Printing expands the entire currently selected result table, then restores normal pagination.
+The initial view selects routine samples; the retained field replicate is explicitly selectable. The result table renders 50 rows per page, and the selected CSV contains every matching row and all original fields. Selecting any station also selects its own utility geography. Changing a filter closes an inspected record when it leaves the selected cohort. Printing records every selected filter, expands the entire currently selected result table, then restores normal pagination.
 
 All six unchanged original result CSVs and the original 70-station discovery CSV are embedded in the HTML, so those downloads work with the HTML alone. For linked geometry, source inventory, compiler and complete native receiving, keep this full directory together. The current-source manifest carries the complete relative hierarchy as companions for each main table/report entry.
 
