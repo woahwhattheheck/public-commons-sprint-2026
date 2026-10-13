@@ -1,0 +1,33 @@
+{
+  "schema": "upstate.application-component-fragment/v1",
+  "id": "report-changes-study-transfer",
+  "extend_components": {
+    "scientific-report-changes": {
+      "paths": [
+        "model/report_changes_study_transfer.py",
+        "model/REPORT_CHANGES_STUDY_TRANSFER.md"
+      ],
+      "requires": [
+        "study-transfer"
+      ]
+    },
+    "study-transfer": {
+      "paths": [
+        "model/report_changes_study_transfer.py",
+        "model/REPORT_CHANGES_STUDY_TRANSFER.md",
+        "model/report_changes.py",
+        "operator/report_changes.py",
+        "operator/extensions/report-changes.json",
+        "operator/web/report_changes.mjs",
+        "operator/web/report_changes.css",
+        "docs/SCIENTIFIC_REPORT_CHANGES.md",
+        "install_report_changes.py",
+        "integration/component_fragments/scientific-report-changes.json"
+      ],
+      "requires": [
+        "observed-original-report-edition"
+      ]
+    }
+  },
+  "required_components": []
+}

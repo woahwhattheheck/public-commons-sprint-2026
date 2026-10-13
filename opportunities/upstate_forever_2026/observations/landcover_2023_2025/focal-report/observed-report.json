@@ -1,7 +1,7 @@
 {
   "schema": "upstate.observed-report/v1",
   "title": "Priority watershed land-cover interpretation, 2023–2025",
-  "edition": "original-focal-landcover-v1",
+  "edition": "original-focal-landcover-v2",
   "vintage": "Original Annual NLCD product years 2023 and 2025; captured 2026-10-13",
   "interpretation_kind": "original_focal_landcover_context",
   "original_source": {
@@ -117,7 +117,7 @@
     {
       "path": "reconciliation.json",
       "bytes": 6093,
-      "sha256": "2e5d1a65f18dd6e65d9d370adde2baad7904febd921ac58df50761c0897bd5d5"
+      "sha256": "9c1cfcad14d20983b01313311cf84f0a60ced86301e8eb8b7af77e6d0aa5e787"
     },
     {
       "path": "focal-figures.json",
@@ -131,8 +131,8 @@
     },
     {
       "path": "focal-report.html",
-      "bytes": 37323,
-      "sha256": "00791906d2043f5993bfb017ec7587a4dec13c2c6ff5af79846d96e636cf02e8"
+      "bytes": 131805,
+      "sha256": "a9921b38603edad701afe9e11307c8da56af37ebbbaaacf20ce0a5b31441a8ec"
     }
   ],
   "sections": [

@@ -369,13 +369,17 @@ class CaptureWorkspace:
                     break
         return {"requestsMade": used, **self.status()}
 
-    def retry(self, job_id, reason):
+    def retry(self, job_id, reason, *, expected_previous=None):
         check(isinstance(reason, str) and reason.strip(), "CAPTURE_REASON", "Record why this blocked publisher request should resume.")
+        check(expected_previous is None or isinstance(expected_previous, dict), "CAPTURE_RETRY_REVIEW",
+              "Keep the reviewed original publisher attempt when continuing a named retry.")
         with capture_lock(self.root):
             graph = self.graph()
             check(job_id in {item["id"] for item in graph["pending"]}, "CAPTURE_JOB", "Select an existing unresolved request.")
             item = next(x for x in graph["pending"] if x["id"] == job_id)
             previous = self.blocked(item, reconcile=True) or {}
+            check(expected_previous is None or previous == expected_previous, "CAPTURE_RETRY_CHANGED",
+                  "The publisher attempt changed; review its current status before a new retry.", previous=previous)
             check(not previous.get("retryAfter") or moment(previous["retryAfter"]) <= moment(now()),
                   "CAPTURE_COOLDOWN", "Preserve the publisher's actual retry deadline.", retryAfter=previous.get("retryAfter"))
             record = {"jobId": job_id, "reason": reason, "createdAt": now(), "previous": previous}

@@ -1233,7 +1233,8 @@ class Handler(BaseHTTPRequestHandler):
                         {name: one(name) for name in ("baseline_run_id", "id", "area_id", "pollutant", "offset", "limit",
                                                      "run_id", "attempt_id", "stream", "log_offset",
                                                      "expected_attempt_id", "history_offset", "range_offset",
-                                                     "range_limit", "expected_artifact_sha256")}))
+                                                     "range_limit", "expected_artifact_sha256",
+                                                     "case_filter", "query")}))
                 experiment_reads = {"/api/experiments/" + name: name for name in EXPERIMENT_READS}
                 if url.path in experiment_reads:
                     return self.send_json(200, self.app.experiments.read(workspace, experiment_reads[url.path],

@@ -188,8 +188,8 @@
     },
     {
       "path": "integrations/monitoring/source_adoption.json",
-      "bytes": 47827,
-      "sha256": "283aa8d4caaa6985ebbf8c807c705822cffa56bbbc4b27a897016e05ab6a2f26",
+      "bytes": 48478,
+      "sha256": "1ea7804b8dc8a8b8438499e41450fdc9875c0548e51d4a864cb610ab4c9bec12",
       "predecessor_sha256": [
         "830e35b5d5b8929ef6ea238935b96bd7148c1224fab04802a89c9b52234f98a7",
         "785ffefbacf24579a9d6d138797ea50874e42a9ce75b7db5282c24f36d42be19",
@@ -210,7 +210,8 @@
         "58c75066edd2c2ac89db95bb19dde29a73af50a38445b2564302fdf5da03e4a4",
         "1baf0d24f4e3d2535ae176050b1d8c8f56775ec6e3039a82c5fa16c9d0dc018e",
         "3414a3bd83fa7dc19a2562620e47f94dc44888cf0886b4ec17dbf533fa6f03d0",
-        "abed78f2dfc5f2ec468804c19c50f59b0edbbe5c1759a885e80bcdc5495d01fd"
+        "abed78f2dfc5f2ec468804c19c50f59b0edbbe5c1759a885e80bcdc5495d01fd",
+        "283aa8d4caaa6985ebbf8c807c705822cffa56bbbc4b27a897016e05ab6a2f26"
       ]
     },
     {
@@ -661,8 +662,8 @@
     },
     {
       "path": "integrations/monitoring/PREDECESSORS.json",
-      "bytes": 58210,
-      "sha256": "31e68ed827cd3ba454a4dcd2af6067f78b5bdaa7013aea1f138152524a72bf11",
+      "bytes": 60040,
+      "sha256": "000e0d76be0dd82603a5462e67711c48548290d095a7800a11893fbd74b41e29",
       "predecessor_sha256": [
         "9fef2b526d6fd30ffcb226cfef642c53f9cbabd01dc47a2923dadbbe62a6e9d2",
         "bed954a59d000b22ae24bb71f2a23359975d1099031aeb3b8d54106e9542c91f",
@@ -670,18 +671,20 @@
         "d7d8033709de17a8a48738479d613dfdb600d7ac63d24ffc03c20559fd6482d4",
         "98a60aaf35fb7bc52858eafad3951b0ffee6b72e6ca31e1a7f9cc2c08bf95382",
         "a661e90baf70cfa20f039a3e5fa24948019413a5331115554e52e6e339b90151",
-        "892f93ffe9b5a6337b5fa0fe8501c376ef50b9287912132d0c19e9f0c929bcf1"
+        "892f93ffe9b5a6337b5fa0fe8501c376ef50b9287912132d0c19e9f0c929bcf1",
+        "31e68ed827cd3ba454a4dcd2af6067f78b5bdaa7013aea1f138152524a72bf11"
       ]
     },
     {
       "path": "integrations/monitoring/current_application_files.json",
-      "bytes": 6889,
-      "sha256": "ef6a3db77688fb9980b2922e6efa6da9e2f355b380bf7fdcc3298af728440022",
+      "bytes": 7416,
+      "sha256": "2fe34c5e17280b9ba31a4414bf4a3c9adcdf6354ac0dd852054428669a41d159",
       "predecessor_sha256": [
         "57adcfadab949fdf637f6eb231cdbf05ac2a346d6be265441217c05e224b3439",
         "c5d45e0f5ad3ac532b7ed086ca749b59669749eecab25253926fe8bb8b1513a7",
         "0bc6877b7cc5b490b30aed9b32b9a7792b34bfbaa88f58733db515d8134894eb",
-        "5a8e911526d10e80942c32756a22a7555d316925a062177940c45df4ce5d1900"
+        "5a8e911526d10e80942c32756a22a7555d316925a062177940c45df4ce5d1900",
+        "ef6a3db77688fb9980b2922e6efa6da9e2f355b380bf7fdcc3298af728440022"
       ]
     },
     {
@@ -808,6 +811,17 @@
       "predecessor_sha256": [],
       "bytes": 1980,
       "sha256": "27a54cb4773c6e7f6a10691616dcf63200837b3bd114704c48ab3a576968e85b"
+    },
+    {
+      "path": "model/observed_report_render.py",
+      "bytes": 17355,
+      "sha256": "8001ba6842dc3d5ed68e37ebdf2814323090e50d80fb7a068ec9ddadec57d695",
+      "predecessor_sha256": [
+        "2d4b900c605f57638989946719df0b4e49439dcda8088a909f73d1286005779c",
+        "ba9ba98b9bfbd2b3ed0df689e176b346382390c433aeec24c478fc754c809f8e",
+        "79550b9bb7d1d3a021fcde480f459eee6a855021910448e3386c5a1e9359807e",
+        "1ae28262f41e37cc2d173a95c501c8d50c7bbbe786565e694b40cbbd48d85e20"
+      ]
     }
   ],
   "requires": [
@@ -950,7 +964,8 @@
     ],
     "shared_renderers": [
       "model/scientific_figures.py",
-      "model/scientific_map_figures.py"
+      "model/scientific_map_figures.py",
+      "model/observed_report_render.py"
     ],
     "utility_report_dependencies": [
       "model/utility_monitoring.py",
@@ -966,6 +981,8 @@
       "model/portable_parameter_studies.py",
       "model/receiving_water_monitoring.py",
       "model/receiving_waters.py",
+      "model/scientific_report.py",
+      "model/scientific_tables.py",
       "model/study_delivery_transfer.py",
       "model/study_transfer.py",
       "model/study_transfer_cli.py",
@@ -988,7 +1005,12 @@
       "scientific_browser_merge": "3f132ec823503d8b105278fcc6e22b674dbc0250",
       "progression_merge": "9e3ecec8b74302ae82978bd9127b6f3f860e3355",
       "shared_renderer_adoption": "Exact complete original bodies through the unchanged Monitoring file inventory and predecessor guard.",
-      "current_utility_report": "e844c828a98530efae611182081ad59b10b4844e"
+      "current_utility_report": "e844c828a98530efae611182081ad59b10b4844e",
+      "observed_report_capture": {
+        "source_commit": "fa7a77aecef81f13765a0c1024aef68dd323cb15",
+        "producer_commit": "08cd869286c8cafd1ef217f20507a365a558ae15",
+        "sha256": "8001ba6842dc3d5ed68e37ebdf2814323090e50d80fb7a068ec9ddadec57d695"
+      }
     },
     "preserves": "Original optimizer, source editions, fieldwork return, microbial context, saved-record opening, editable comparison transfer, original utility context, current shared Study transfer and scientific report composer."
   }

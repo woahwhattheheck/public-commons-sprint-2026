@@ -103,7 +103,8 @@
     "/api/profile-workbench/biophysical/evidence-preview",
     "/api/profile-workbench/biophysical/evidence-inspect",
     "/api/profile-workbench/biophysical/ranges-preview",
-    "/api/profile-workbench/biophysical/ranges-inspect"
+    "/api/profile-workbench/biophysical/ranges-inspect",
+    "/api/map-atlas/coefficient-evidence-catalog"
   ],
   "writePosts": [
     "/api/decisions/assessment/upload",

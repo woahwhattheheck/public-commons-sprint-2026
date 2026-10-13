@@ -108,17 +108,19 @@ No implementation-plan revision is issued by this operation. The open FIELD12 br
 
 ## Recover the original request
 
-The browser retains the complete queued action, payload and operation ID before sending it. A network error after submission leaves the original request available as **Recover original request**. Recovery resends that same identity; it does not silently create a new review.
+The browser commits the complete queued action, payload, operation ID and review draft to IndexedDB before sending it. The records are keyed by the original Workspace, plan and operation; local storage retains only a compact pointer. Full ledger audits and large row-decision selections are therefore retained without depending on the smaller local-storage quota. Recovery checks the exact stored payload hash before sending or joining the original request. A network error after submission leaves the original request available as **Recover original request**. Recovery resends that same identity; it does not silently create a new review.
 
 After a task ID is known, **Check original task** and **Open original task** follow it. An interrupted native task exposes **Resume original interrupted task**. A definitively failed or cancelled task can be downloaded and retired back to review. Unknown or active requests remain fixed.
 
 Closing the dialog retains its review and original request. Reopening the same plan recovers the pending operation even if the latest saved plan has since advanced. Completed receipts refresh their original source and edition tickets; they never overwrite newer plan edits.
 
-Browser storage failure is displayed explicitly. The operator can download the draft or original request, and no new request is sent until its identity has been retained.
+If persistent browser storage fails, no new request is sent. The open dialog keeps the original request and exposes **Download exact recovery file** and **Open original recovery file**. Download the JSON, retain it, and open that same file. The picker validates its complete draft and request hash, original Workspace and plan, and rejects a different active request. Once the original file has been opened, **Recover original request** can use precisely its original payload and operation ID even if persistent storage remains unavailable. Changed or new requests still require their own retained identity.
+
+In this file-backed mode, keep the recovery file and download the latest completion or exact recovery file before closing. Reopening the earlier request rejoins its original task and verifies the retained result. The picker accepts complete recovery JSON up to 128 MiB; the ordinary review-selection JSON picker remains separate. A compact-pointer write failure does not stop a request whose full IndexedDB transaction already committed, and reopening the same plan still locates that original record.
 
 ## Integration
 
-The native helper is operator/web/implementation_cost_review.mjs. The existing FIELD12 Costs tab loads it only in the native workspace. The original economic_desk.mjs exposes openSavedEdition({workspace_key,edition_id}), waits for its actual mount/catalog and preserves an existing input draft or unresolved task.
+The native helper is operator/web/implementation_cost_review.mjs. It shares operator/web/economic_request_store.mjs with the ordinary Economic desk for complete request persistence and exact recovery-file verification. The existing FIELD12 Costs tab loads it only in the native workspace. The original economic_desk.mjs exposes openSavedEdition({workspace_key,edition_id}), waits for its actual mount/catalog and preserves an existing input draft or unresolved task.
 
 The source consumer is model/implementation_cost_review.py. The provider owns /api/implementation-costs/catalog, /context, /preview, /detail and action implementation.cost-review.apply. The preview's native operation_id is authoritative; the browser does not recompute its source digest. The provider and existing EconomicWorkbench verify the saved original source and own durable save/build/replay.
 

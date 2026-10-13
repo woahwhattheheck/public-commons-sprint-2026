@@ -153,3 +153,62 @@ and archive receiver remain authoritative. The Study transfer Receiving action
 uses the shared host's existing `openExtension` capability and existing
 Receiving `openPlan`/`openAnalysis` APIs; it introduces no reverse family
 dependency.
+
+
+## Choose original features before preparing or revising a study
+
+The source-plan form's **Choose original features and relationship** opens an inline reader of the original retained source. Choose its source collection and original vector layer, then read actual native IDs, typed attributes and geographic features. The published-water catalogue uses the same reader through **Choose original published features**. Existing direct JSON, source sample inspection and advanced retained selections remain available.
+
+The chooser calls the maintained Spatial catalogue, description and overlay APIs. Its Esri polygon reader is the same original reader used by Receiving preparation. Each response binds the original body SHA256 and selected layer. The map displays one paginated record page in the original coordinate reference system; its clipped display geometry never becomes scientific input. Saved plans continue to resolve the complete original source geometry through their native IDs. Exact attribute values appear alongside their original text so large integer identifiers are not rounded into new IDs.
+
+Choose either specific native IDs or all matching original IDs. Specific selections remain retained when navigating pages; Apply verifies every selected ID against the current original source/filter. **All matching original IDs** reads every page using the server's actual continuation and saves the complete matching native-ID list. It never treats the visible page as the whole source. The explicit IDs also preserve the exact native feature cohort when strict Spatial scalar matching differs from general Python equality. An absent ID or changed source/filter stops Apply without silently removing retained choices.
+
+Exact filters use actual original field names and JSON scalars: quoted strings, finite representable numbers, booleans or null. Pending filter edits must be read before Apply. Unsupported advanced filters remain in the original retained-selection editor. Selecting another source does not silently discard original filter or feature choices; the form explicitly retains other source metadata, intake references and evidence for review. The chooser can explicitly clear an attribute filter, remove selected IDs or select a different original layer. Values not supported by the original engine still require correction through its ordinary preparation diagnostics.
+
+For an upstream relationship, **Choose original network and routing fields** reads the real catchment layer and supplies its actual catchment-ID and downstream fields. It preserves the complete retained network scope; it does not clip the graph to the visible viewport or discard routing context nodes. Existing advanced network filters and native-ID restrictions remain unchanged in this chooser and can be revised explicitly in the complete retained-selection editor.
+
+### Contribution meaning
+
+A published source-area relationship uses original polygon geometry and zero context buffer. A point or line requires an explicitly justified geometric context or an evidenced relationship to the original HUC / ToHUC graph. The chooser asks for that method and rationale; it does not infer drainage from proximity. Original intake references, explicit HUC seeds, scientific classification, evidence and advanced relation metadata remain part of the form's retained selection. Several chosen features form one receiving-area selection; use separate areas for waters that need separate scientific identities.
+
+Applying a selection only edits the existing form. Saving uses the original plan/catalogue queue and immutable identities. The chooser guards the original form, workspace, source response and read generation; closing or replacing the form prevents late responses from applying a different selection. Existing saved-plan and completed-analysis revision, model calculations, C8FF accounting, Study transfer, Monitoring and report controls remain available.
+
+### Actual rendered-product acceptance
+
+Following Bryce's rendered-product instruction, publication and source-level checks alone do not establish that the operator is ready for a client demonstration. Open the exact outgoing installed application with a populated original Workspace, look at its actual rendered screens and operate the source/layer, filter, feature-page, map, Apply, save and reopen controls. Inspect desktop/screenshare and narrow/mobile widths, empty/loading/error states, original downloads and restored selections. Capturing screenshots without viewing them, DOM counts, HTTP200 or code review is insufficient. Repair clipped tables, unreadable identifiers, overflow, missing styles or broken controls in the same authorized workflow. Use the existing native/browser course; no replacement model calculation or new receiver is needed.
+
+The browser course can identify the inline root with data-water-source-picker, loading/error with data-water-source-loading/data-water-source-error, geographic display with data-water-source-map, rows with data-water-source-rows/data-water-source-row, and continuation/commit with data-water-source-next/data-water-source-apply. These attributes refer to the actual operator controls and do not create a separate verification interface.
+
+
+## Compare original source plans before revising an analysis
+
+Receiving waters → Compare source plans opens two exact complete saved plans in the existing Receiving detail panel. The same control appears beside a saved plan. The inline Reference plan and Candidate plan selectors followed by Compare selected plans choose the pair; their original IDs, record digests, sources and scientific history remain unchanged. Choosing the same record deliberately produces a no-change view, so a single received plan can be inspected without manufacturing another edition.
+
+The comparison aligns receiving waters only by their explicit saved receptor ID. Changing a name leaves that ID's history visible; changing the ID is an addition and removal. Search and change filters paginate the result. Inspect changes opens the original requested source selection, relationship, designation and context alongside prepared source identities and selected native-feature records. Open original plan and Review original geography return to the maintained Receiving and Spatial views.
+
+The comparison separates these meanings:
+
+- Original source body and provenance: exact retained source identities and body hashes.
+- Requested selection: layer, typed filters, native feature tokens, relationship rationale/evidence, source metadata and original intake references.
+- Selected native records: IDs and original attributes match only within the same original source body and two equal explicit layer names, or the same immutable source entry when both requested layers are equivalently omitted. Equal multi-layer file bytes alone do not resolve different entries' default layers. Recorded source object-ID field, native collection/order/layer, feature ID basis and original array index must also agree before equal ID text is aligned. Different source editions list their native-ID populations separately; apparent equal IDs are not assumed to identify the same geographic object.
+- Prepared relationship: saved method, precision, interpretation and original geometry-reader/feature-operation provenance.
+- Prepared area: each water's original contribution hectares. A scalar difference is shown only when the recorded CRS, method, implementation and area-method metadata agree. Overlapping waters are never summed.
+- Geometry files: changed container hashes are identified as file changes. Attributes and serialization can alter a GeoPackage hash; this view does not calculate intersected, gained, lost or otherwise changed land.
+
+A Review row means exact numeric precision is unresolved in the browser, not that an original value changed. Browser-unsafe integer attributes remain unresolved and the comparison download marks them explicitly. Use the original saved plan JSON and source downloads for exact native numeric tokens. No source value, file or geometry is rewritten by comparison.
+
+Download comparison JSON saves schema upstate.receiving-water-plan-comparison/v1 with both original plan IDs/record digests, all requested/source/preparation changes, complete per-water native-ID membership and field changes, the comparison scope and interpretation limits. Filename: receiving-plan-comparison-REFERENCE12-CANDIDATE12.json. It is a review export; complete editable studies continue to use the original Study transfer workflow. Comparison search affects the screen only; the JSON contains the complete pair, not the visible page. The existing workspace-scoped Receiving session selection retains the two IDs for desk reopening, and fresh passive reads revalidate both saved records.
+
+### Continue an original analysis on the candidate plan
+
+The comparison lists complete analyses whose original plan is the reference. Select one and choose Review analysis on candidate plan. The action re-reads that exact saved analysis and candidate, checks the current workspace/view/pair/request, and opens the existing analysis revision form. Only plan_id changes at that handoff. Native baseline and alternatives, original pollutant subset, quantity domain, weights, normalization/caps, accounting, title and advanced metadata remain as saved.
+
+The form identifies retained accounting parent/upstream/reservoir IDs absent from the candidate. Correct them explicitly in the existing accounting controls, or deliberately remove an obsolete group. Missing members are never rebound by name or silently dropped. Original group validation still blocks unresolved membership on save. IDs present in both plans do not establish unchanged geographic relationships or raster support; the original analysis engine validates and computes the submitted selection.
+
+Review the selected candidate and the complete advanced draft, then save through the original receiving.water.analyze queue. The prior analysis and both source plans stay immutable. The comparison itself starts no native run, raster calculation or background task.
+
+### Operate the actual outgoing comparison
+
+Under owner AGENTS2026-10-13.1, use the existing --editable-selection browser course on its original received Workspace. Open the actual original/current returned plan pair (or the same original record for a no-change view), LOOK at real rendered desktop/screenshare and narrow/mobile frames, operate pair selection, search/status/page/details, original geography and JSON download, then reopen that pair. Exercise populated, no-match, loading and read-error states. If an original completed analysis exists, open its candidate-plan revision, inspect the complete preserved cohort/accounting and cancel that unsaved draft; do not create another model case for the course. Native saving remains the existing deliberate operator action.
+
+Stable selectors refer to real controls: [data-water-plan-comparison][data-reference][data-candidate], [data-water-plan-chooser], inline select names plan_compare_reference / plan_compare_candidate, [data-water-compare-search], [data-water-compare-status], [data-water-compare-analysis], and water-compare-new / water-compare-apply / water-compare-detail / water-compare-page / water-compare-download / water-compare-analysis actions. The enclosing original #water-selected exposes aria-busy while passive plan reads are outstanding. Source review and DOM/HTTP checks do not replace viewing and operating the exact outgoing interface.

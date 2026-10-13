@@ -141,6 +141,84 @@ async function saveDownload(locator,name){
 async function closeDetail(){
  if(await page.locator('#detail-dialog').isVisible())await page.locator('#detail-dialog [data-action="detail-close"]').click();
 }
+async function standaloneWorkspaceSwitch(restoredWorkspace){
+ const previousPage=page,previousWorkspace=currentWorkspace;
+ const receiving=await browser.newContext({viewport:{width:1440,height:1000},acceptDownloads:true});
+ let release,timeout,routeFailure=null;
+ const released=new Promise(resolve=>{release=resolve;});
+ try{
+  page=await receiving.newPage();page.setDefaultTimeout(60000);
+  page.on('pageerror',error=>journal.browser_errors.push(redact(error.message)));
+  const direct=new URL('/web/source-refresh.html',origin);
+  direct.search=new URLSearchParams({workspace:args.workspace,plan_id:selectedPlan.id}).toString();
+  direct.hash=new URLSearchParams({token:capability}).toString();
+  await page.goto(direct.href,{waitUntil:'domcontentloaded'});
+  await page.waitForFunction(id=>document.querySelector('#plans')?.value===id&&
+   !document.querySelector('#download-plan')?.disabled&&!document.querySelector('#workspace')?.disabled,selectedPlan.id);
+  required(await page.locator('#workspace option[value="'+restoredWorkspace+'"]').count()===1,
+   'The original standalone page cannot select the actual restored workspace.');
+  let admitted,admissionFailed,intercepted=false;
+  const admission=new Promise((resolve,reject)=>{admitted=resolve;admissionFailed=reject;});
+  const routeHandler=async route=>{
+   const request=route.request(),url=new URL(request.url());
+   if(intercepted||request.method()!=='GET'||url.origin!==origin||
+      url.pathname!=='/api/state'||url.searchParams.get('workspace')!==args.workspace){
+    await route.continue();return;
+   }
+   intercepted=true;
+   try{
+    const response=await route.fetch();
+    const state=await json(response,'Actual earlier workspace response');
+    required(state.workspace_key===args.workspace,'The earlier response belongs to another workspace.');
+    admitted();await released;await route.fulfill({response});
+   }catch(error){routeFailure=error;admissionFailed(error);await route.abort().catch(()=>{});}
+  };
+  await page.route('**/api/state?*',routeHandler);
+  await page.evaluate(()=>document.dispatchEvent(new Event('visibilitychange')));
+  await Promise.race([admission,new Promise((_,reject)=>{timeout=setTimeout(()=>reject(Error(
+   'The standalone page did not request its actual earlier workspace refresh.')),60000);})]);
+  clearTimeout(timeout);
+  const switched=page.waitForResponse(response=>{
+   const url=new URL(response.url());return url.pathname==='/api/state'&&
+    url.searchParams.get('workspace')===restoredWorkspace&&response.ok();
+  });
+  await page.locator('#workspace').selectOption(restoredWorkspace);
+  release();
+  const actual=await json(await switched,'Actual selected receiving workspace');
+  required(actual.workspace_key===restoredWorkspace,'The receiving response identifies another workspace.');
+  await page.waitForFunction(key=>document.querySelector('#workspace')?.value===key&&
+   !document.querySelector('#workspace')?.disabled&&sessionStorage.getItem('upstate-selected-workspace')===key,
+   restoredWorkspace);
+  await page.locator('#plans').selectOption(selectedPlan.id);
+  await page.waitForFunction(id=>document.querySelector('#plans')?.value===id&&
+   !document.querySelector('#download-plan')?.disabled,selectedPlan.id);
+  required(!routeFailure,'Delayed original response failed: '+redact(routeFailure?.message||''));
+  const received=await readPlan(restoredWorkspace,selectedPlan.id);
+  required(canonical(received.state)===canonical(selectedPlan.state),
+   'Standalone workspace switching changed the retained receiving plan.');
+  for(const [width,name] of [[1440,'10-standalone-workspace-switch-desktop'],[390,'11-standalone-workspace-switch-phone']]){
+   await page.setViewportSize({width,height:width<600?844:1000});
+   const displayed=await page.evaluate(()=>({
+    workspace_key:document.querySelector('#workspace')?.value,
+    saved_workspace_key:sessionStorage.getItem('upstate-selected-workspace'),
+    plan_id:document.querySelector('#plans')?.value,
+    viewport_width:document.documentElement.clientWidth,
+    page_scroll_width:document.documentElement.scrollWidth,
+    error:document.querySelector('#error')?.hidden?'':document.querySelector('#error')?.textContent
+   }));
+   required(displayed.workspace_key===restoredWorkspace&&displayed.saved_workspace_key===restoredWorkspace&&
+    displayed.plan_id===selectedPlan.id&&!displayed.error,'An older refresh replaced the selected receiving workspace.');
+   await shot(name);
+   await record('Kept the selected receiving workspace after the actual earlier response at '+width+' pixels',{
+    earlier_workspace_key:args.workspace,receiving_workspace_key:restoredWorkspace,
+    plan_id:selectedPlan.id,displayed
+   });
+  }
+ }finally{
+  clearTimeout(timeout);release();
+  await receiving.close();page=previousPage;currentWorkspace=previousWorkspace;
+ }
+}
 async function receivingArchive(){
  const task=await queue('.source-refresh-desk #export-study','workspace.backup');
  const ticket=(task._downloads||[]).find(row=>row.filename?.endsWith('.zip'));required(ticket,'The original backup has no ZIP ticket.');
@@ -165,6 +243,7 @@ async function receivingArchive(){
  await record('Reopened the exact update in the restored original workspace',{workspace_key:key,plan_id:received.id,archive_sha256:ticket.sha256});
  await inspectView('08-restored-source-update-desktop',1440);
  await inspectView('09-restored-source-update-phone',390);
+ await standaloneWorkspaceSwitch(key);
 }
 async function main(){
  journal.browser_runtime=browserRuntime();

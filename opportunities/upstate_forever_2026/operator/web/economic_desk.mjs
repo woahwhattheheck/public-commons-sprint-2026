@@ -1,3 +1,4 @@
+import {createEconomicRecoveryStore} from './economic_request_store.mjs';
 /** Native report and sourced cost intake for the retained economic desk. */
 import {exportCostWorksheet,previewCostWorksheet,applyCostWorksheet} from './economic_cost_worksheet.mjs';
 import {economicImplementationOptions,economicImplementationSelection} from './economic_implementation.mjs';
@@ -33,7 +34,11 @@ export function attachEconomicDesk(host) {
   let rowFingerprint='',completedTask=null,worksheetPreview=null;
   let editionEpoch=0,implementationOptions=null,implementationRun='';
   let requestedEdition=null,mountReady=null;
-  const operations=new Map();
+  let recoveryStore=null;
+  let recoveryBlocked='',storageIssue='',lastReceipt=null,retiredRequest=null,taskTimer=null,taskReading=false,requestSending=false,mountTurn=0;
+  const canonical=value=>value===null||typeof value!=='object'?JSON.stringify(value):Array.isArray(value)?'['+value.map(canonical).join(',')+']':'{'+Object.keys(value).sort().map(k=>JSON.stringify(k)+':'+canonical(value[k])).join(',')+'}';
+  const copy=value=>JSON.parse(JSON.stringify(value));
+  const economicActions=new Set(['economic.draft.save','economic.edition.build']);
   const node=selector=>frame?.querySelector(selector);
   const key=()=> 'upstate-economic-desk:'+workspace;
   const valid=token=>token===epoch&&frame&&workspace===getState()?.workspace_key;
@@ -45,16 +50,167 @@ export function attachEconomicDesk(host) {
   }
   function setBusy(value) {
     busy=value;
-    const selectedZone=source?.zones.find(row=>row.zone_id===draft?.zoneId);
-    for(const control of frame?.querySelectorAll('[data-submit]')||[])control.disabled=value||!source?.alternatives?.length||!selectedZone?.common_support_available;
-    for(const control of frame?.querySelectorAll('[data-inputs] input,[data-inputs] textarea,[data-inputs] select,[data-inputs] [data-worksheet-action],[data-report],[data-zone]')||[])control.disabled=value||(control.dataset.econ==='worksheet-apply'&&!!worksheetPreview?.errors?.length);
+    const frozen=value||!!pending||!!recoveryBlocked,selectedZone=source?.zones.find(row=>row.zone_id===draft?.zoneId);
+    for(const control of frame?.querySelectorAll('[data-submit]')||[])control.disabled=frozen||!source?.alternatives?.length||!selectedZone?.common_support_available;
+    for(const control of frame?.querySelectorAll('[data-inputs] input,[data-inputs] textarea,[data-inputs] select,[data-inputs] button,[data-report],[data-zone],[data-cost-worksheet]')||[])control.disabled=frozen||(control.dataset.econ==='worksheet-apply'&&!!worksheetPreview?.errors?.length);
+    for(const control of frame?.querySelectorAll('[data-econ="refresh"],[data-econ="edit-edition"],[data-econ="open-draft"],[data-econ="implementation-choose"],[data-econ="implementation-open"],[data-econ="client-report"]')||[])control.disabled=frozen;
   }
-  function remember() {
-    if(!workspace||!draft)return;
-    try{localStorage.setItem(key(),JSON.stringify({draft,pendingId:pending?.id||null,openEditionId}));}catch(_){}
+  function recoverySnapshot() {
+    return {schema:'upstate.economic-browser-state/v2',workspace_key:workspace,draft:copy(draft),pendingRequest:pending?copy(pending):null,pendingId:pending?.id||null,lastReceipt:lastReceipt?copy(lastReceipt):null,retiredRequest:retiredRequest?copy(retiredRequest):null,openEditionId};
   }
-  function readMemory() {
-    try{const value=JSON.parse(localStorage.getItem(key())||'null');return value&&typeof value==='object'?value:null;}catch(_){return null;}
+  function remember({required=false}={}) {
+    const selectedWorkspace=workspace,store=recoveryStore;
+    if(!workspace||!draft||recoveryBlocked||!store){const error=Error(recoveryBlocked||'Retain the original Economic workspace first.');return required?Promise.reject(error):Promise.resolve(false);}
+    const state=recoverySnapshot();
+    return store.save(state).then(result=>{if(workspace===selectedWorkspace){storageIssue=result.warning||'';renderRecovery();}return true;}).catch(error=>{if(workspace===selectedWorkspace){storageIssue=error.message||String(error);renderRecovery();}if(required)throw error;return false;});
+  }
+  function validOriginalRequest(value,selectedWorkspace) {
+    return value&&value.workspace===selectedWorkspace&&economicActions.has(value.action)&&typeof value.operation_id==='string'&&/^[A-Za-z0-9_-]{16,100}$/.test(value.operation_id)&&value.payload&&typeof value.payload==='object'&&!Array.isArray(value.payload)&&typeof value.payload.report_id==='string'&&/^[a-f0-9]{64}$/.test(value.payload.report_sha256||'')&&typeof value.payload.zone_id==='string'&&value.payload.selection&&typeof value.payload.selection==='object';
+  }
+  async function readMemory() {
+    const selectedWorkspace=workspace,store=recoveryStore,turn=mountTurn;
+    try{
+      const loaded=await store.load(),value=loaded.state;
+      if(workspace!==selectedWorkspace||recoveryStore!==store||mountTurn!==turn)return null;
+      storageIssue=loaded.warning||'';
+      if(value!==null&&(!value||typeof value!=='object'||Array.isArray(value)))throw Error('The retained Economic browser state is invalid.');
+      if(value?.workspace_key&&value.workspace_key!==workspace)throw Error('The retained Economic state belongs to another Workspace.');
+      if(value?.pendingRequest&&!validOriginalRequest(value.pendingRequest,workspace)&&!(value.pendingRequest.legacy&&value.pendingRequest.id&&value.pendingRequest.workspace===workspace))throw Error('The original retained Economic request is incomplete. Open its original recovery file or inspect its native task.');
+      return value;
+    }catch(error){if(workspace===selectedWorkspace&&recoveryStore===store&&mountTurn===turn)recoveryBlocked=error.message||String(error);return null;}
+  }
+  function adoptRecoveredState(restored) {
+    draft=restored?.draft||blank();
+    pending=restored?.pendingRequest?copy(restored.pendingRequest):(restored?.pendingId?{id:restored.pendingId,workspace,legacy:true,state:'original_task_lookup'}:null);
+    lastReceipt=restored?.lastReceipt||null;retiredRequest=restored?.retiredRequest||null;openEditionId=restored?.openEditionId||null;
+    source=null;preview=null;worksheetPreview=null;implementationOptions=null;implementationRun='';epoch++;editionEpoch++;
+    const inputs=node('[data-inputs]');if(inputs){inputs.innerHTML='';inputs.hidden=true;}
+    const previewBox=node('[data-preview]');if(previewBox)previewBox.hidden=true;
+    const editionBox=node('[data-edition]');if(editionBox)editionBox.hidden=true;
+    node('[data-edition-frame]')?.removeAttribute('src');
+  }
+  function downloadRecovery(name,value) {
+    downloadWorksheet({filename:name,content:typeof value==='string'?value:JSON.stringify(value,null,2)+'\n',mimeType:'application/json'});
+  }
+  function renderRecovery() {
+    const box=node('[data-recovery]');if(!box)return;
+    const request=pending,receipt=lastReceipt;box.hidden=!request&&!receipt&&!recoveryBlocked&&!storageIssue;
+    let body='<h3>Original Economic operation</h3><div class="econ-actions">'+button('recovery-export','Download exact recovery file')+button('recovery-import','Open original recovery file',requestSending||taskReading?'disabled':'')+'</div><input type="file" data-economic-recovery-file accept=".json,application/json" hidden>'; 
+    if(recoveryBlocked)body+='<p role="alert">'+escape(recoveryBlocked)+'</p>'+button('recovery-state','Download retained browser state');
+    if(storageIssue)body+='<p role="alert">'+escape(storageIssue)+'</p>'+button('recovery-state','Download retained browser state');
+    if(request){
+      body+='<p>'+escape(request.action||'Retained native task')+' · '+escape(request.state||'awaiting original task lookup')+'</p><p class="econ-note">Original operation '+escape(request.operation_id||'legacy task '+request.id)+'. Its selected source, zone, inputs and identity remain fixed until the native task outcome is known.</p><div class="econ-actions">'+
+        button('recovery-check',request.id?'Check original task':'Recover original request',requestSending||taskReading?'disabled':'')+
+        (request.id?button('recovery-task','Open original task'):'')+
+        (request.state==='interrupted'?button('recovery-resume','Resume original interrupted task',requestSending||taskReading?'disabled':''):'')+
+        (['failed','cancelled'].includes(request.state)?button('recovery-retire','Retain failed request and return to inputs'):'')+
+        button('recovery-request','Download original request')+'</div>';
+      if(request.error)body+='<p role="alert">'+escape(request.error)+'</p>';
+    }
+    if(receipt){
+      body+='<h4>Completed original '+(receipt.action==='economic.edition.build'?'edition':'saved input')+'</h4><p>'+escape(receipt.title||receipt.result_id)+' · '+escape(receipt.task_id)+'</p><div class="econ-actions">'+
+        (receipt.action==='economic.edition.build'?button('recovery-open-edition','Open completed edition'):button('recovery-open-input','Reopen saved inputs',pending?'disabled':''))+
+        button('recovery-receipt','Download original completion')+button('recovery-complete-task','Open completed original task')+button('recovery-refresh-receipt','Refresh original completion',requestSending||taskReading?'disabled':'')+'</div>';
+      body+='<p class="econ-note">This completion retains its original input. Opening an edition leaves the current input draft intact; Reopen saved inputs is an explicit replacement of the current form.</p>';
+    }
+    box.innerHTML=body;
+  }
+  function activeTaskContext(selectedWorkspace,selectedFrame,turn) {
+    return frame===selectedFrame&&!!frame&&workspace===selectedWorkspace&&getState()?.workspace_key===selectedWorkspace&&mountTurn===turn;
+  }
+  function exactTask(task,request) {
+    if(!task||task.id!==request.id||task.workspace!==request.workspace||task.action!==request.action||task.operation_id!==request.operation_id||canonical(task.payload)!==canonical(request.payload))throw Error('The native task differs from the original retained Economic request.');
+  }
+  function fromOriginalTask(task,selectedWorkspace,id) {
+    if(task?.id!==id||task.workspace!==selectedWorkspace||!economicActions.has(task.action))throw Error('This task is not the original Economic operation in this Workspace.');
+    const request={workspace:selectedWorkspace,action:task.action,operation_id:task.operation_id,payload:copy(task.payload),id:task.id,state:task.state||'queued'};
+    if(!validOriginalRequest(request,selectedWorkspace))throw Error('The original native task does not contain a complete recoverable Economic request.');
+    return request;
+  }
+  async function acceptOriginalTask(task,request) {
+    const selectedWorkspace=workspace,selectedFrame=frame,turn=mountTurn;
+    exactTask(task,request);request.state=task.state;request.error=task.error?.message||'';remember();
+    if(task.state==='complete'){
+      if(!task.result?.id||canonical(task.result.input)!==canonical(request.payload))throw Error('The completed Economic record differs from its original retained input.');
+      lastReceipt={schema:'upstate.economic-browser-completion/v1',workspace_key:workspace,task_id:task.id,action:task.action,operation_id:task.operation_id,payload:copy(request.payload),result_id:task.result.id,title:task.result.title||'',completed_at:task.completed_at||null};
+      pending=null;completedTask=task.id;clearTimeout(taskTimer);setBusy(false);remember();renderRecovery();
+      message(task.action==='economic.edition.build'?'The complete original Economic edition is saved. Its source-bound input and current form remain retained.':'The original economic input and cost sources are saved.');
+      if(!source)await loadCatalog();
+      if(!activeTaskContext(selectedWorkspace,selectedFrame,turn))return;
+      if(task.action==='economic.edition.build')await openEdition(task.result.id);
+      if(activeTaskContext(selectedWorkspace,selectedFrame,turn)&&typeof host.refreshState==='function')await host.refreshState({force:true});
+      return;
+    }
+    setBusy(false);renderRecovery();
+    if(['failed','cancelled','interrupted'].includes(task.state)){message(request.error||'The original Economic task '+task.state+'. Recover or inspect that task before changing inputs.',true);return;}
+    message(task.state==='queued'?'The original Economic operation is queued.':'The original Economic operation is running.');
+  }
+  async function pollOriginal() {
+    clearTimeout(taskTimer);const request=pending;if(!request?.id||taskReading||!frame)return;
+    const selectedWorkspace=workspace,selectedFrame=frame,turn=mountTurn;taskReading=true;renderRecovery();
+    try{
+      if(!request.legacy){await remember({required:true});await recoveryStore.verifyRequest(request);}
+      const result=await api(endpoint('/api/task',{workspace:selectedWorkspace,id:request.id})),task=result.task||result;
+      if(!activeTaskContext(selectedWorkspace,selectedFrame,turn)||pending!==request)return;
+      if(request.legacy){pending=fromOriginalTask(task,selectedWorkspace,request.id);await remember({required:true});}
+      const retained=pending;await acceptOriginalTask(task,retained);
+      if(activeTaskContext(selectedWorkspace,selectedFrame,turn)&&pending===retained&&!['failed','cancelled','interrupted'].includes(retained.state))taskTimer=setTimeout(()=>pollOriginal().catch(error=>message(error.message||String(error),true)),2000);
+    }catch(error){if(activeTaskContext(selectedWorkspace,selectedFrame,turn)){message(error.message||String(error),true);renderRecovery();}throw error;}
+    finally{if(activeTaskContext(selectedWorkspace,selectedFrame,turn)){taskReading=false;setBusy(busy);renderRecovery();}}
+  }
+  async function recoverOriginal() {
+    const request=pending;if(!request||requestSending)return;
+    if(request.id)return pollOriginal();
+    if(!validOriginalRequest(request,workspace))throw Error('Retain the complete original request before recovery.');
+    const selectedWorkspace=workspace,selectedFrame=frame,turn=mountTurn,store=recoveryStore;requestSending=true;setBusy(true);renderRecovery();
+    try{
+      await remember({required:true});await store.verifyRequest(request);
+      if(!activeTaskContext(selectedWorkspace,selectedFrame,turn)||pending!==request)return;
+      const result=await api('/api/actions',{method:'POST',body:{workspace:request.workspace,action:request.action,payload:request.payload,operation_id:request.operation_id}});
+      if(!activeTaskContext(selectedWorkspace,selectedFrame,turn)||pending!==request)return;
+      const task=result.task||result;
+      if(!task.id||(task.workspace&&task.workspace!==request.workspace))throw Error('No matching original Economic task was returned. Keep and recover this same request.');
+      request.id=task.id;request.state=task.state||'queued';request.error='';remember();await pollOriginal();
+    }catch(error){
+      if(activeTaskContext(selectedWorkspace,selectedFrame,turn)&&pending===request){if(!request.id)request.state='response_unconfirmed';request.error=error.message||String(error);remember();message(request.error,true);}
+      throw error;
+    }finally{if(activeTaskContext(selectedWorkspace,selectedFrame,turn)){requestSending=false;setBusy(false);renderRecovery();}}
+  }
+  async function refreshOriginalReceipt() {
+    const receipt=lastReceipt;if(!receipt||taskReading)return;
+    const selectedWorkspace=workspace,selectedFrame=frame,turn=mountTurn;taskReading=true;renderRecovery();
+    try{
+      const result=await api(endpoint('/api/task',{workspace:selectedWorkspace,id:receipt.task_id})),task=result.task||result;
+      if(!activeTaskContext(selectedWorkspace,selectedFrame,turn)||lastReceipt!==receipt)return;
+      exactTask(task,{workspace:selectedWorkspace,id:receipt.task_id,action:receipt.action,operation_id:receipt.operation_id,payload:receipt.payload});
+      if(task.state!=='complete'||task.result?.id!==receipt.result_id||canonical(task.result.input)!==canonical(receipt.payload))throw Error('The completed task no longer matches its original Economic receipt.');
+      message('Original completed Economic record verified.');renderRecovery();
+    }finally{if(activeTaskContext(selectedWorkspace,selectedFrame,turn)){taskReading=false;renderRecovery();}}
+  }
+  async function recoveryAction(action) {
+    if(action==='recovery-export'){downloadRecovery('economic-original-recovery.json',await recoveryStore.exportFile(recoverySnapshot()));return;}
+    if(action==='recovery-import'){node('[data-economic-recovery-file]')?.click();return;}
+    if(action==='recovery-check'){await recoverOriginal();return;}
+    if(action==='recovery-task'){if(pending?.id)await host.showTask?.(pending.id);return;}
+    if(action==='recovery-request'){if(pending)downloadRecovery('original-economic-request.json',pending);return;}
+    if(action==='recovery-state'){downloadRecovery('economic-original-recovery.json',await recoveryStore.exportFile(recoverySnapshot()));return;}
+    if(action==='recovery-complete-task'){if(lastReceipt?.task_id)await host.showTask?.(lastReceipt.task_id);return;}
+    if(action==='recovery-receipt'){if(lastReceipt)downloadRecovery('original-economic-completion.json',lastReceipt);return;}
+    if(action==='recovery-refresh-receipt'){await refreshOriginalReceipt();return;}
+    if(action==='recovery-open-edition'){if(lastReceipt?.action==='economic.edition.build')await openEdition(lastReceipt.result_id);return;}
+    if(action==='recovery-open-input'){if(pending||busy||recoveryBlocked)throw Error('Recover the original request first.');if(lastReceipt?.action==='economic.draft.save')await loadSaved('draft',lastReceipt.result_id);return;}
+    if(action==='recovery-retire'){
+      if(!pending||!['failed','cancelled'].includes(pending.state))throw Error('Retain the original request until its definitive native outcome is known.');
+      retiredRequest=copy(pending);downloadRecovery('original-'+pending.state+'-economic-request.json',retiredRequest);pending=null;remember();renderRecovery();await loadCatalog();return;
+    }
+    if(action==='recovery-resume'){
+      const request=pending;if(!request?.id||request.state!=='interrupted')throw Error('Choose the original interrupted Economic task.');
+      if(requestSending||taskReading)return;
+      const selectedWorkspace=workspace,selectedFrame=frame,turn=mountTurn;requestSending=true;renderRecovery();
+      try{const result=await api(endpoint('/api/task/resume',{workspace:selectedWorkspace}),{method:'POST',body:{id:request.id}});if(!activeTaskContext(selectedWorkspace,selectedFrame,turn)||pending!==request)return;const task=result.task||result;if(task.id&&task.id!==request.id)throw Error('The resumed task has a different original identity.');request.state='queued';request.error='';remember();}
+      finally{if(activeTaskContext(selectedWorkspace,selectedFrame,turn)){requestSending=false;renderRecovery();}}
+      await pollOriginal();return;
+    }
   }
   function blank(reportId='',zoneId='') {
     return {reportId,reportSha:'',zoneId,title:'',currency:'USD',capital_limit:'',
@@ -165,7 +321,7 @@ export function attachEconomicDesk(host) {
   function shell() {
     frame=document.createElement('div');frame.className='economic-workbench';
     frame.innerHTML='<header class="econ-heading"><div><p class="econ-kicker" data-study-label>DECISION COMPANION</p><h2>Economic desk</h2><p>Choose a completed native report and reporting zone. Compare whole scenarios using their modeled exports, sourced costs and budget.</p></div>'+button('refresh','Refresh completed results')+'</header>'+
-      '<p data-status class="econ-status" role="status">Opening completed native reports…</p>'+
+      '<p data-status class="econ-status" role="status">Opening completed native reports…</p><section data-recovery hidden class="econ-card"></section>'+
       '<section class="econ-card"><div class="econ-section-heading"><h3>1. Native results and reporting zone</h3></div>'+
       '<div class="econ-fields"><label><span>Completed native report</span><select data-report aria-label="Completed native report"></select></label>'+
       '<label><span>Find a reporting zone</span><input data-zone-filter type="search" placeholder="Zone title or retained ID"></label>'+
@@ -340,12 +496,13 @@ export function attachEconomicDesk(host) {
   }
   async function loadCatalog({preserve=true}={}) {
     const token=++epoch;
-    if(preserve)current();
+    if(preserve&&!pending&&!recoveryBlocked)current();
     setBusy(true);message('Discovering completed native reports and saved economic editions…');
     try{
       const value=await api(url('/api/economic-desk/catalog'));
       if(!valid(token))return;
       catalog=value;renderReports();renderSaved();
+      if(pending||recoveryBlocked){source=null;renderZones();renderSource();renderInputs();setBusy(false);renderRecovery();return;}
       const wanted=requestedSource;
       if(wanted){requestedSource=null;draft=blank(wanted.report_id,wanted.zone_id||'');}
       const reportId=wanted?.report_id||draft?.reportId||value.reports.find(row=>row.ready_zones&&row.alternative_count)?.id;
@@ -437,6 +594,7 @@ export function attachEconomicDesk(host) {
     await host.openExtension('map-atlas','create',{workspace_key:key,selection});
   }
   async function loadSaved(kind,id) {
+    if(pending||busy||recoveryBlocked)throw Error('Recover the original Economic request before replacing the current input form.');
     const token=epoch;
     const value=await api(url('/api/economic-desk/'+kind,{[kind==='draft'?'draft_id':'edition_id']:id}));
     if(!valid(token))return;
@@ -445,17 +603,18 @@ export function attachEconomicDesk(host) {
     await loadSource(draft.reportId,{preserve:true,zoneId:draft.zoneId});
   }
   async function submit(action) {
-    const body=payload(),bodyKey=action+':'+JSON.stringify(body),token=epoch;
-    let operation=operations.get(bodyKey);
-    if(!operation){operation=crypto.randomUUID();operations.set(bodyKey,operation);}
-    setBusy(true);message(action==='economic.edition.build'?'Building the complete decision edition through the existing operator queue…':'Saving the source-bound economic inputs…');
-    try{
-      const task=await api('/api/actions',{method:'POST',body:{workspace,action,payload:body,operation_id:operation}});
-      if(!valid(token))return;
-      pending=task;completedTask=null;remember();
-      if(typeof host.refreshState==='function')await host.refreshState();
-      update(getState());
-    }catch(error){if(valid(token)){setBusy(false);message(error.message||String(error),true);}}
+    if(pending||recoveryBlocked)throw Error('Finish or recover the original Economic request before saving another input.');
+    if(!economicActions.has(action))throw Error('Choose the maintained Economic save or build action.');
+    const body=payload();
+    if(lastReceipt?.action===action&&canonical(lastReceipt.payload)===canonical(body)){
+      message('These exact inputs already have a completed original operation. Reopening its retained result.');await refreshOriginalReceipt();
+      if(action==='economic.edition.build')await openEdition(lastReceipt.result_id);return;
+    }
+    pending={workspace,action,payload:copy(body),operation_id:crypto.randomUUID(),state:'submitting'};
+    const request=pending,selectedWorkspace=workspace,selectedFrame=frame,turn=mountTurn;
+    try{await remember({required:true});}catch(error){if(activeTaskContext(selectedWorkspace,selectedFrame,turn)&&pending===request){request.state='storage_unavailable';renderRecovery();}throw error;}
+    if(!activeTaskContext(selectedWorkspace,selectedFrame,turn)||pending!==request)return;
+    completedTask=null;renderRecovery();await recoverOriginal();
   }
   async function onClick(event) {
     const target=event.target.closest('[data-econ]');
@@ -463,6 +622,8 @@ export function attachEconomicDesk(host) {
     event.preventDefault();event.stopPropagation();
     try{
       const action=target.dataset.econ;
+      if(action.startsWith('recovery-'))return await recoveryAction(action);
+      if((pending||recoveryBlocked)&&!['refresh-saved','close-edition','open-edition','worksheet-csv','worksheet-json','worksheet-source'].includes(action))throw Error('Finish or recover the original Economic request before changing its inputs.');
       if(action==='refresh')return await loadCatalog();
       if(action==='refresh-saved'){if(typeof host.refreshState==='function')await host.refreshState();catalog={...catalog,...getState()?.data?.economic_editions};return renderSaved(catalog);}
       if(action==='close-edition'){editionEpoch++;implementationOptions=null;implementationRun='';node('[data-edition]').hidden=true;node('[data-edition-frame]').removeAttribute('src');openEditionId=null;return remember();}
@@ -501,6 +662,12 @@ export function attachEconomicDesk(host) {
   }
   async function onChange(event) {
     try{
+      if(event.target.matches('[data-economic-recovery-file]')){
+        const file=event.target.files?.[0];event.target.value='';if(!file)return;if(requestSending||taskReading)throw Error('Wait for the original request lookup before opening a recovery file.');
+        const selectedWorkspace=workspace,selectedFrame=frame,turn=mountTurn;if(file.size>128*1024*1024)throw Error('Choose a recovery file within 128 MiB.');const value=JSON.parse(await file.text());if(!activeTaskContext(selectedWorkspace,selectedFrame,turn))return;
+        const recovered=await recoveryStore.importFile(value,pending);if(!activeTaskContext(selectedWorkspace,selectedFrame,turn))return;requestedSource=null;adoptRecoveredState(recovered);recoveryBlocked='';storageIssue=recoveryStore.warning;renderRecovery();await loadCatalog({preserve:false});if(!activeTaskContext(selectedWorkspace,selectedFrame,turn))return;if(pending?.id)await pollOriginal();else if(!pending&&openEditionId)await openEdition(openEditionId);return;
+      }
+      if(pending||recoveryBlocked){setBusy(busy);throw Error('Recover the original Economic request before changing its retained inputs.');}
       if(event.target.matches('[data-implementation-run]')){implementationRun=event.target.value;renderImplementation();return;}
       if(event.target.matches('[data-cost-worksheet]')){try{await readWorksheet(event.target.files?.[0]);}finally{event.target.value='';}return;}
       if(event.target.matches('[data-report]')){
@@ -543,47 +710,41 @@ export function attachEconomicDesk(host) {
     }catch(error){message(error.message||String(error),true);}
   }
   function onInput(event) {
+    if(pending||recoveryBlocked){setBusy(busy);return;}
     if(event.target.matches('[data-zone-filter]'))return renderZones();
     preview=null;node('[data-preview]').hidden=true;current();remember();
   }
   function update(state=getState()) {
     if(!frame||workspace!==state?.workspace_key)return;
     const saved=state.data?.economic_editions;
-    if(saved&&JSON.stringify(saved)!==rowFingerprint){catalog={...catalog,...saved};renderSaved(saved);}
-    if(!pending)return;
+    if(saved&&JSON.stringify(saved)!==rowFingerprint){catalog={...catalog,...saved};renderSaved(saved);setBusy(busy);}
+    if(!pending?.id)return;
     const task=(state.tasks||[]).find(row=>row.id===pending.id);
-    if(!task)return;
-    pending=task;
-    if(['queued','running'].includes(task.state)){
-      setBusy(true);message(task.state==='queued'?'Economic operation queued in the existing workspace worker…':'Economic operation running…');return;
-    }
-    setBusy(false);
-    if(task.id===completedTask)return;
-    completedTask=task.id;
-    if(task.state==='complete'){
-      if(task.action==='economic.edition.build')openEdition(task.result.id).catch(error=>message(error.message||String(error),true));
-      else message('Economic inputs and cost sources saved in the workspace.');
-      pending=null;
-    }else message((task.error?.message||'The economic operation '+task.state)+'. Open its task in the existing task panel to resume.',true);
-    remember();
+    if(task&&!taskReading&&!requestSending)pollOriginal().catch(error=>message(error.message||String(error),true));
   }
   function mount(element,state=getState()) {
-    root=element;workspace=state?.workspace_key;
-    const restored=readMemory();
-    draft=restored?.draft||blank();
-    pending=(state?.tasks||[]).find(row=>row.id===restored?.pendingId)||null;
-    openEditionId=restored?.openEditionId||null;
-    shell();
-    mountReady=loadCatalog().then(()=>{update(getState());if(!requestedEdition&&openEditionId&&!pending)return openEdition(openEditionId).catch(error=>message(error.message,true));});
+    root=element;workspace=state?.workspace_key;mountTurn++;clearTimeout(taskTimer);taskReading=false;requestSending=false;recoveryBlocked='';storageIssue='';
+    recoveryStore=createEconomicRecoveryStore(workspace,'economic-desk',key());draft=blank();pending=null;lastReceipt=null;retiredRequest=null;openEditionId=null;
+    shell();setBusy(true);const turn=mountTurn,selectedFrame=frame,selectedWorkspace=workspace;
+    mountReady=(async()=>{
+      const restored=await readMemory();if(!activeTaskContext(selectedWorkspace,selectedFrame,turn))return;adoptRecoveredState(restored);renderRecovery();await loadCatalog();
+      if(!activeTaskContext(selectedWorkspace,selectedFrame,turn))return;
+      if(pending?.id)await pollOriginal();
+      else if(!pending&&!recoveryBlocked&&!requestedEdition&&openEditionId)await openEdition(openEditionId);
+      renderRecovery();
+    })();
     mountReady.then(()=>consumeSavedEdition()).catch(error=>{message(error.message||String(error),true);rejectSavedEdition(error);});
   }
   function detach() {
+    clearTimeout(taskTimer);mountTurn++;taskReading=false;requestSending=false;
     if(frame)rejectSavedEdition(Error('The Economic desk closed before the retained edition opened.'));
     mountReady=null;
     if(frame){current();remember();frame.removeEventListener('click',onClick);frame.removeEventListener('change',onChange);frame.removeEventListener('input',onInput);}
     epoch++;editionEpoch++;root=null;frame=null;source=null;catalog=null;busy=false;preview=null;worksheetPreview=null;implementationOptions=null;implementationRun='';
   }
   async function openReport(selection) {
+    if(!frame){const selectedWorkspace=getState()?.workspace_key,loaded=await createEconomicRecoveryStore(selectedWorkspace,'economic-desk','upstate-economic-desk:'+selectedWorkspace).load();if(getState()?.workspace_key!==selectedWorkspace)throw Error('The selected Workspace changed.');if(loaded.state?.pendingId||loaded.state?.pendingRequest)throw Error('Open the Economic desk and recover its original request before changing sources.');}
+    if(pending||busy||recoveryBlocked)throw Error('Recover the original Economic request before opening a new source selection.');
     if(!selection?.report_id)throw Error('Choose an actual completed native report.');
     requestedSource={report_id:selection.report_id,zone_id:selection.zone_id||null};
     const wasMounted=!!frame;
@@ -600,7 +761,7 @@ export function attachEconomicDesk(host) {
       if(mountReady)await mountReady;
       if(requestedEdition!==request)return;
       if(!frame||workspace!==request.workspace_key||getState()?.workspace_key!==request.workspace_key)throw Error('Open the retained edition in its original Workspace.');
-      if(busy||pending||requestedSource)throw Error('Finish or recover the original Economic operation before opening this retained edition.');
+      if(busy||pending||recoveryBlocked||requestedSource)throw Error('Finish or recover the original Economic operation before opening this retained edition.');
       current();remember();
       const value=await openEdition(request.edition_id);
       if(requestedEdition!==request)return;
@@ -608,12 +769,15 @@ export function attachEconomicDesk(host) {
       requestedEdition=null;request.resolve({workspace_key:workspace,edition_id:request.edition_id,open_url:value.open_url});
     }catch(error){if(requestedEdition===request){requestedEdition=null;request.reject(error);}}
   }
-  function openSavedEdition(selection) {
+  async function openSavedEdition(selection) {
     if(!selection||selection.workspace_key!==getState()?.workspace_key||typeof selection.edition_id!=='string'||!selection.edition_id.trim())return Promise.reject(Error('Choose the complete Economic edition in its original Workspace.'));
     if(requestedEdition)return Promise.reject(Error('The original retained edition is already opening.'));
-    if(frame&&(busy||pending||requestedSource))return Promise.reject(Error('Finish or recover the original Economic operation first.'));
-    const stored=!frame?(()=>{try{return JSON.parse(localStorage.getItem('upstate-economic-desk:'+selection.workspace_key)||'null');}catch{return null;}})():null;
-    if(stored?.pendingId)return Promise.reject(Error('Open the Economic desk and reconcile its retained original task before opening another edition.'));
+    if(frame&&(busy||pending||recoveryBlocked||requestedSource))return Promise.reject(Error('Finish or recover the original Economic operation first.'));
+    const stored=!frame?(await createEconomicRecoveryStore(selection.workspace_key,'economic-desk','upstate-economic-desk:'+selection.workspace_key).load()).state:null;
+    if(getState()?.workspace_key!==selection.workspace_key)throw Error('The selected Workspace changed.');
+    if(requestedEdition)throw Error('The original retained edition is already opening.');
+    if(frame&&(busy||pending||recoveryBlocked||requestedSource))throw Error('Finish or recover the original Economic operation first.');
+    if(stored?.pendingId||stored?.pendingRequest)throw Error('Open the Economic desk and reconcile its retained original task before opening another edition.');
     return new Promise((resolve,reject)=>{
       requestedEdition={workspace_key:selection.workspace_key,edition_id:selection.edition_id,resolve,reject,consuming:false};
       try{

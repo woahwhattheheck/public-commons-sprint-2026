@@ -9,8 +9,10 @@ Use the accepted native interpreter and already-admitted case. The client does n
 The single sprint demonstration uses explicit **SIMULATED DEMONSTRATION INPUTS** and the original input recipe. Its deadline is **2026-10-13 14:00:00 UTC / 10:00 EDT**. The current native owner controls execution. Keep the application, scientific Workspace, ordinary demo output and operator-receiving output as separate sibling directories.
 
 1. Run the current original generator with its normal arguments and --prepare-only. Its demo-receiving.json records the original baseline and alternative run IDs after actual source import, profile/scenario/grid preparation and footprint checks.
-2. Run this continuation once with those retained IDs. It uses the accepted interpreter to launch the existing operator/server.py.
-3. Continue the same generator without --prepare-only. Its original Workspace.run calls verify and reuse the completed results before comparison, mapped delivery, reports, archive and independent reopen. Current matched-control, parameter-course and field/laboratory additions stay with that same maintained driver.
+2. If the same maintained course uses --field-only, run that phase on the original Workspace and output before the native calculation. Preserve every prepared case, field record and existing receipt ID.
+3. Run this continuation once with those retained IDs, before the first unstarted native calculation. It uses the accepted interpreter to launch the existing operator/server.py. An already-started matching native task or child keeps its original owner; attach to its current result instead of starting a second process.
+4. Continue the same generator without --prepare-only or --field-only. Its original Workspace.run calls verify and reuse the completed results before comparison, mapped delivery, reports, archive and independent reopen. Current matched-control, parameter-course and field/laboratory additions stay with that same maintained driver.
+5. Complete the rendered-product receiving chapter below on those actual completed results and the original independently restored project.
 
 Substitute the actual accepted paths:
 
@@ -66,3 +68,19 @@ This contribution uses Python standard-library process and HTTP operations. Its 
 Current original APIs are POST/api/actions, GET/api/task, GET/api/native-job, POST/api/task/resume and the existing Stop route. Source inspection checked the complete current server, named-team authentication, worker snapshot and generator preparation boundary. Final AST and actual task/close/reconnect receiving belong to the accepted native host, followed by the same existing report/export/reopen course.
 
 The owned component fragment retains this complete client and guide and depends on the maintained original operator/native run desk.
+
+## Completed product, original downloads and reopened project
+
+This receiving course carries the owner's October 13, 2026 rendered-product instruction, version `2026-10-13.1`, retained in the application's AGENTS.md, CLAUDE.md and GEMINI.md. Include these original instruction files and this guide in source handoffs, and pass the same instruction to delegated native and browser workers. The sprint ends at 14:00 UTC on October 13; these steps do not extend the cutoff or automatically resume an interrupted case.
+
+After the same native runs and downstream driver have completed, the producing worker must open the exact outgoing application, scientific report, demo and export, LOOK at their real rendered screens or screenshots, and operate the important controls before presenting them as ready. Use the actual populated scientific Workspace and its completed selected runs. Inspect the actual screenshare width and 390px width where relevant, including meaningful populated, empty, loading and error states. Keep the plain industrial layout: readable tables, useful labels, clear hierarchy, consistent spacing and restrained controls.
+
+Continue the existing browser and recording course with the original receipt IDs:
+
+1. Open the retained run or Programme and its native progress/output view. Confirm the actual baseline, alternatives, native result status and same-task close/reconnect history are understandable. Use the completed lifecycle receipt to identify the original task; preserve its local private startup capability.
+2. Open the completed comparison, maps, original scientific report and retained source documents selected by the same driver. View the real rendered values, legends, units, captions, source qualifications and simulated-input labels. Inspect the downloaded HTML/PDF and scientific files themselves, including the important links and controls.
+3. Operate the same course's field, customer-review and saved-response chapters where present. Download the original files, save and reopen the actual selected work, and confirm the receiving-only changes stay with their own saved project.
+4. Open the independent original archive/Study receive, then follow the saved selection back to its source, maps, report and downloads. Preserve the original sender's bytes and identities while using the receiver's normal saved state.
+5. Repair concrete unreadable, clipped, overflowing, unstyled or broken output in its maintained source, reopen the resulting outgoing edition and inspect its actual pixels. Retain those real screenshots or recording and original output links with the final handoff.
+
+Capturing screenshots without viewing them does not complete this chapter. Code review, DOM counts, HTTP status, focused checks or another worker's approval do not replace the producing worker seeing and using the outgoing product. Keep validation focused on actual failures; no broad test suite or separate verification product is required. Existing native execution, report and browser owners continue their original operation and report the first concrete exception for repair.

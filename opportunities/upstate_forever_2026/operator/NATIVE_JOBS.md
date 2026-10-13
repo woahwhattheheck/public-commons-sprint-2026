@@ -169,6 +169,37 @@ After reconciling the original host or stop request, resume the same saved study
 
 ### Saved-study dependency during installation
 
-The ten-member increment includes `operator/parameter_study_jobs.py` and `operator/parameter_study_api.py`. The installed `model/parameter_studies.py` remains the scientific authority: the installer checks its maintained `native_case_context(workspace, key, run_id)` and `record_interruption(workspace, key, error)` interfaces before creating backups or writing application files. A receiving copy with an older study engine first needs the complete current application source.
+The complete supervision increment includes `operator/parameter_study_jobs.py` and `operator/parameter_study_api.py`. The installed `model/parameter_studies.py` remains the scientific authority: the installer checks its maintained `native_case_context(workspace, key, run_id)` and `record_interruption(workspace, key, error)` interfaces before creating backups or writing application files. A receiving copy with an older study engine first needs the complete current application source.
 
 The installer records that unchanged engine's exact byte length and hash under `retained_dependencies`, keeps its preimage, and checks that it has not changed before publishing the increment. Current source guards cover the exact maintained pre-supervision and supervised editions. Parameter selections, case IDs, numerical kernels and retained exports stay with that installed engine.
+
+
+## Receive the complete Parameter result and case console
+
+The native-supervision installer now receives the saved-study browser, original-attempt console, streamed result-query index and their shared catalogue readers together with the current native task adapter. This keeps a copied `ParameterStudyAPI` from importing a missing reader on its first execution or Results request.
+
+Use the same current cumulative source directory as the increment:
+
+```sh
+python -B install_native_supervision.py --application /absolute/current/application --increment /absolute/current/source
+```
+
+The incoming source includes `model/parameter_case_status.py`, `model/parameter_result_query.py`, `model/record_catalog.py`, `model/delivery_catalogue.py`, the original Parameter studies browser and shared case-console module, and their operating guides. Existing scientific Parameter studies, native-model selections, source bindings and calibration remain the installed originals. Before any application write, the installer checks the exact scientific entry points used by the incoming adapter and both readers, records the retained dependency identities and parses every incoming Python member.
+
+The maintained server read expression is extended by an AST source join. Original query expressions and unknown peer fields remain intact; missing case-history, result-range and expected-artifact fields are added. The current static asset expression is preserved while the required Parameter browser/console assets are registered. A current host is unchanged when it already supplies those fields and assets. The existing source-predecessor checks, preimage backup and concurrent-source rechecks continue to apply.
+
+After receiving, open an existing saved Parameter study. Inspect the original case attempt and its retained log, then open Results, move between original result pages and range pages, and reopen the same saved study. The result reader uses the retained results artifact and returns its identity; it does not execute a native model. Use the same study's existing Run/Resume action when native continuation is required. See [the case console](../docs/PARAMETER_CASE_CONSOLE.md), [result queries](../docs/PARAMETER_RESULT_QUERIES.md) and [process recovery](../docs/PARAMETER_STUDY_PROCESS_RECOVERY.md) for the actual controls and retained-state behavior.
+
+### Inspect the populated receiving application
+
+Use the exact received source edition and a populated saved study with retained native results. At the intended desktop or screenshare width and a narrow width, open and visually inspect the actual screens or captured screenshots. Check readable labels and columns, spacing, overflow, clipped controls, log presentation, loading, empty and error states. Keep the plain industrial design and the original scientific work.
+
+Operate the original case and attempt selectors, log controls, result and range paging, available exports and downloads, and reopening of the same saved study. Open the downloaded result or report and the retained package through their original receiving route. Record the exact source revision, application route, study ID, viewed screens and control/export/reopen outcomes with the existing saved-study receiving operation. Repair concrete display defects before presenting the outgoing product as ready. Source review and controller assertions support this work; actual product acceptance requires looking at the populated interface and operating it. For the 13 October 2026 sprint, preserve the existing scientific jobs and the 14:00 UTC cutoff.
+
+## Receive compact saved-study case browsing
+
+The same native-supervision increment includes `model/parameter_views.py` and the [saved-case browsing guide](../docs/PARAMETER_CASE_BROWSING.md). Opening a retained study uses the existing Parameter API's `view` read, returning the original requested case page and compact study state. State filtering, exact case/run selection and text search use `case_filter`, `run_id` and `query`; the installer adds missing fields to the original query expression without removing another component's fields.
+
+The installed scientific engine retains its full inspection, calibration, execution and report contracts. Before writing, the installer checks its original `_baseline_versions(run)` helper and the retained model-selection/native-version functions used by the view. Their exact source identities join the existing dependency preimages and concurrent-change checks. The shared Programme console continues to use its independent original run reader; Parameter-only navigation is imported only in the Parameter read path.
+
+On the same populated receiving study, open a later saved-case page, change the state filter, search for an original case/run, open that case's retained attempt and return to Results. Reopen the study and operate its existing native Run/Resume control only when continuation is intended. Check these actual controls at desktop/screenshare and narrow widths under the preceding receiving rule; preserve the accepted original native operation and outputs.

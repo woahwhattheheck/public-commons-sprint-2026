@@ -1,4 +1,5 @@
 import {receivedGaugePreview} from '../gauge_received_studies.mjs';
+import {receivedNativeEnsemblePreview} from '../ensemble_received_studies.mjs';
 import {attachReceivedStudies,receivedFieldworkPreview} from '../received_studies.mjs';
 /** Selected editable scientific-study transfer in the original operator.
  * TokenJunkieLabs. Uses the original task queue, downloads and receiving form.
@@ -10,6 +11,7 @@ const ROOTS = [
   ['ensemble-products', 'Paired raster analyses'],
   ['robust-decisions', 'Decision studies'],
   ['scientific-report-editions', 'Saved scientific reports'],
+  ['scientific-report-comparisons', 'Scientific report comparisons'],
   ['reviews', 'Customer reviews'],
   ['receiving-water-plans', 'Receiving-water source plans'],
   ['receiving-water-analyses', 'Receiving-water analyses'],
@@ -175,7 +177,7 @@ export function attachStudyTransfer(host) {
     root.querySelector('[data-study-action="preview"]').textContent=busy==='preview'?'Reading contents…':'Preview contents';
     for(const field of root.querySelectorAll('[data-study-field]'))field.disabled=Boolean(busy);
     for(const field of root.querySelectorAll('[data-study-root]'))field.disabled=Boolean(busy)||field.dataset.studyUnavailable==='true';
-    for(const field of root.querySelectorAll('[data-study-action="open-monitoring"],[data-study-action="open-paired"]'))field.disabled=Boolean(busy);
+    for(const field of root.querySelectorAll('[data-study-action="open-monitoring"],[data-study-action="open-paired"],[data-study-action="open-report-comparison"]'))field.disabled=Boolean(busy);
   }
 
   function sourceWaterControl(row){
@@ -242,6 +244,8 @@ export function attachStudyTransfer(host) {
               ?button('open-monitoring','Open in Monitoring','data-study-open="'+escapeHTML(key)+'"'):'')+
             (row.state!=='unreadable'&&row.kind==='ensemble-products'&&typeof host.openDesk==='function'
               ?button('open-paired','Open paired analysis','data-study-open="'+escapeHTML(key)+'"'):'')+
+            (row.state!=='unreadable'&&row.kind==='scientific-report-comparisons'&&typeof host.openDesk==='function'
+              ?button('open-report-comparison','Open report comparison','data-study-open="'+escapeHTML(key)+'"'):'')+
             '</td><td>'+escapeHTML(rootLabels[row.kind]||row.kind)+'</td>'+
             '<td><span class="st-state">'+escapeHTML(row.state||'Saved')+'</span></td>'+
             '<td>'+escapeHTML(when(row.updated_at))+'</td></tr>';
@@ -303,6 +307,7 @@ export function attachStudyTransfer(host) {
       plan.related_result_issues.map(row=>'<li>'+escapeHTML(row.path)+': '+escapeHTML(row.message)+'</li>').join('')+'</ul></details>';
     html+=receivedFieldworkPreview(plan.implementation_report_sources);
     html+=receivedGaugePreview(plan.scientific_report_sources);
+    html+=receivedNativeEnsemblePreview(plan.scientific_report_sources);
     body.innerHTML=html;
   }
 
@@ -480,6 +485,13 @@ export function attachStudyTransfer(host) {
     try{
       if(action==='open-source-water'){await openSourceWater(target.dataset.studyKind,target.dataset.studyId);}
       else if(action==='open-receiving'){await openReceiving(target.dataset.studyKind,target.dataset.studyId);}
+      else if(action==='open-report-comparison'){
+        const row=visiblePage().items.find(item=>keyOf(item)===target.dataset.studyOpen);
+        if(!row||row.state==='unreadable'||row.kind!=='scientific-report-comparisons')
+          throw new Error('Choose an original saved report comparison.');
+        if(typeof host.openDesk!=='function')throw new Error('Open the maintained Report changes desk.');
+        await host.openDesk('report-changes','openForStudy',{workspace_key:workspace,id:row.id});
+      }
       else if(action==='open-paired'){
         const row=visiblePage().items.find(item=>keyOf(item)===target.dataset.studyOpen);
         if(!row||row.state==='unreadable'||row.kind!=='ensemble-products')

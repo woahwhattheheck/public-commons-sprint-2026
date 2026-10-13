@@ -11,7 +11,7 @@ import zipfile
 from model.common import atomic_json, held, now
 
 from model.paired_ensemble.ensemble_workspace import EnsembleWorkspace
-from model.paired_ensemble.designs import available_outputs, design_cohort
+from model.paired_ensemble.designs import catalog_run, design_cohort
 from model.paired_ensemble.ensemble_rasters import UNITS, SUPPORT, checked_quantiles
 from model.paired_ensemble.ensemble_store import digest, fingerprint, identifier, member, read, verify
 from model.paired_ensemble.ensemble_portable import _manifest, receive_project
@@ -123,11 +123,7 @@ class PairedEnsembleService:
         runs = []
         for row in snapshot.get("runs", []):
             value = ws.inspect_run(identifier(row["id"]))
-            runs.append({
-                "id": value["id"], "state": value["state"], "selection": value["selection"],
-                "available_pollutants": available_outputs(value),
-                "error": value.get("error"), "completed_at": value.get("completed_at"),
-            })
+            runs.append(catalog_run(value))
         from model.ensembles import Ensembles
         designs = []
         for plan in Ensembles(ws).list():

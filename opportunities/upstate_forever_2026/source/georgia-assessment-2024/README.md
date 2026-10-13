@@ -9,25 +9,25 @@ Use the original 2024 workbook and GIS edition from Georgia EPD. EPA's approval 
 Primary sources:
 
 - [Georgia's integrated lists and original 2024 workbook](https://epd.georgia.gov/water-quality-georgia)
-- [Original2024 workbook](https://epd.georgia.gov/document/document/2024305b303dexcelversionxlsx/download)
+- [Original 2024 workbook](https://epd.georgia.gov/document/document/2024305b303dexcelversionxlsx/download)
 - [August 2024 listing methodology](https://epd.georgia.gov/document/document/finallistingassessmentmethodology2024305b303dpdf/download)
 - [Description of list fields](https://epd.georgia.gov/document/document/descriptionof305b303dlistofwaters2024updatedocxpdf/download)
 - [Code key](https://epd.georgia.gov/document/document/data-sourcecode-key-abbreviations-2024-list/download)
 - [Final 2024 highlights and changes](https://epd.georgia.gov/document/document/highlights-2024-listpdf/download)
 - [EPA approval letter](https://epd.georgia.gov/document/document/epa2024303dapprovalletterpdf/download)
-- [Original2024 GIS package](https://epd.georgia.gov/document/document/ga2024305b303dshapefilezip/download)
+- [Original 2024 GIS package](https://epd.georgia.gov/document/document/ga2024305b303dshapefilezip/download)
 - [Published stream rows](https://epd.georgia.gov/document/document/2024305bstreamspdf/download)
 - [Published lake rows](https://epd.georgia.gov/document/document/2024305blakespdf/download)
 
-The methodology PDF has stale2022 metadata in some search tools; its actual document heading and footer identify the 2024 methodology. The code uses the actual document edition.
+The methodology PDF has stale 2022 metadata in some search tools; its actual document heading and footer identify the 2024 methodology. The code uses the actual document edition.
 
 ## Preserve the scientific meaning
 
-Categories 1,2,3,3N,4a,4b,4c,5 and5R remain explicit. The full methodology places both 5 and 5R on the303(d) list. A row can contain different categories for different pollutants. The normalizer retains that row; it never creates every possible cause/category/use combination.
+Categories 1,2,3,3N,4a,4b,4c,5 and5R remain explicit. The full methodology places both 5 and 5R on the 303(d) list. A row can contain different categories for different pollutants. The normalizer retains that row; it never creates every possible cause/category/use combination.
 
 Overall “Not Supporting” can summarize one failing use while other uses meet their criteria. Raw designated uses, causes, categories, priority and notes therefore remain together. Historical TMDL notes are also preserved on currently Supporting rows. Priority is a planned TMDL drafting year or a literal label such as Low, rather than a conservation-ranking score.
 
-The2024 methodology generally considers 2021–2023, with older decisions and parameter-specific periods retained where applicable. The general method window is metadata, not an invented sample period for every reach.
+The 2024 methodology generally considers 2021–2023, with older decisions and parameter-specific periods retained where applicable. The general method window is metadata, not an invented sample period for every reach.
 
 The final highlights explain that a Bacteria listing can carry an older fecal-coliform impairment until indicator-specific information is available. Bacteria, E. coli, enterococci and fecal coliform remain separate descriptions. Biological fish/macroinvertebrate impairment is not converted to a modeled sediment load. Source code NP means nonpoint source.
 
@@ -119,7 +119,7 @@ The geometry adapter is also used by the North Carolina source arm. Its configur
 
 The same normalizer also consumes `upstate.georgia-feature-selection/v1` selections. This is a separate retained publisher GIS capture edition, with exact original response bytes, field definitions, native OID field, original feature indices and `/features/{index}/attributes` locators. It does not claim workbook row numbers for GIS records.
 
-Each selection declares the approved2024 source metadata and `captures` with `id`, `path`, `uri`, `layer_uri`, `object_id_field`, `bytes` and `sha256`. Capture bodies preserve original Esri JSON fields and all attributes. Optional `feature_inventories` supply the original `objectIds` responses with their source identities; complete captured OID sets must match exactly. Retain these inventories and service metadata under `companions`. Features repeated across captured pages are rejected. All original raw fields remain available alongside normalized interpretation.
+Each selection declares the approved 2024 source metadata and `captures` with `id`, `path`, `uri`, `layer_uri`, `object_id_field`, `bytes` and `sha256`. Capture bodies preserve original Esri JSON fields and all attributes. Optional `feature_inventories` supply the original `objectIds` responses with their source identities; complete captured OID sets must match exactly. Retain these inventories and service metadata under `companions`. Features repeated across captured pages are rejected. All original raw fields remain available alongside normalized interpretation.
 
 ```sh
 node source_tools/georgia_assessment.mjs \
@@ -127,6 +127,14 @@ node source_tools/georgia_assessment.mjs \
   --output RECEIVED_GEORGIA_GIS_CONTEXT
 ```
 
-The captured GIS source manifest and every original response accompany the normalized table and existing report tuple. Attribute-only capture supplies publisher basin selection; actual study membership still comes from the shared geometry operation. A publisher Savannah-basin selection includes lower and coastal waters outside the217-HUC study, so only the original polygon intersection establishes the study subset.
+The captured GIS source manifest and every original response accompany the normalized table and existing report tuple. Attribute-only capture supplies publisher basin selection; actual study membership still comes from the shared geometry operation. A publisher Savannah-basin selection includes lower and coastal waters outside the 217-HUC study, so only the original polygon intersection establishes the study subset.
 
-The shared geometry reader accepts original text reach IDs and finite, integral, exact-range numeric IDs. This preserves North Carolina's declared `esriFieldTypeDouble` AU_ID when a native driver presents10512.0 and the normalized unit is10512. The raw numeric source value remains in the relation. Array-valued source names and assessments flatten into readable map labels, with full originals retained.
+The shared geometry reader accepts original text reach IDs and finite, integral, exact-range numeric IDs. This preserves North Carolina's declared `esriFieldTypeDouble` AU_ID when a native driver presents 10512.0 and the normalized unit is 10512. The raw numeric source value remains in the relation. Array-valued source names and assessments flatten into readable map labels, with full originals retained.
+
+## Open the prepared report
+
+Both input routes emit `observed-report.json` with role `OBSERVED_CONTEXT`, linked to the normalized assessment table through `metadata.related_source_ids`. Import `sources.json` and select the recipe in the existing Scientific Reports composer. All recipe inputs are companions of that same document entry, so a received project retains the complete report inputs.
+
+For a GIS source with separately reviewed document context, pass `--document-context published-document-context.json`. The source-specific summaries bind each original ReachID and capture hash to an exact page in the original published PDF. They supplement field-limited GIS notes without replacing those raw values or applying a new category. The current complete publisher Savannah selection has 295 reaches; eight Notes fields reach their declared 254-character limit and have separate published-document context.
+
+The exact original GIS selection is retained at `originals/selection.json`, beside its unchanged response and metadata bodies. Reuse that file as `--input` to reproduce the original capture transformation. The producer retains each native feature pointer and verifies original ID inventories before generating the normalized table.

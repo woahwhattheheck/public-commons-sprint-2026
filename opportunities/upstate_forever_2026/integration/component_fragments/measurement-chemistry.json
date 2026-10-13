@@ -16,7 +16,10 @@
         "measurement_workspace/web/extension.mjs",
         "observations/eighteenmile_stoichiometry_20261013/stoichiometry.py",
         "integration/component_fragments/measurement-chemistry.json",
-        "operator/MEASURED_CHEMISTRY.md"
+        "operator/MEASURED_CHEMISTRY.md",
+        "measurement_workspace/engine/workspace.mjs",
+        "measurement_workspace/engine/http.mjs",
+        "measurement_workspace/ATOMIC_SNAPSHOT.md"
       ],
       "requires": [
         "measurement-collections",

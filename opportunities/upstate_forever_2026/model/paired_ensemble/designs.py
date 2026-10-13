@@ -6,6 +6,7 @@ Copyright 2026 TokenJunkieLabs.
 from __future__ import annotations
 from .ensemble_rasters import UNITS
 from .ensemble_store import identifier
+from ..native_versions import comparison_versions, model_versions, models_for_outputs
 
 POLLUTANTS = tuple(UNITS)
 
@@ -15,6 +16,31 @@ def available_outputs(run):
     return [name for name in POLLUTANTS
             if isinstance(artifacts.get(name), dict)
             and artifacts[name].get("units") == UNITS[name]]
+
+
+def catalog_run(run):
+    """Expose compact producing-runtime metadata from the retained native run."""
+    outputs = available_outputs(run)
+    return {
+        "id": run["id"], "state": run["state"], "selection": run["selection"],
+        "available_pollutants": outputs,
+        "native_model_versions": model_versions(run, models_for_outputs(outputs)),
+        "error": run.get("error"), "completed_at": run.get("completed_at"),
+    }
+
+
+def compatible_outputs(runs, outputs):
+    """Keep each physical output independent of unrelated native model stages."""
+    accepted, reasons = [], {}
+    for model in models_for_outputs(outputs):
+        names = [name for name in outputs if model in models_for_outputs([name])]
+        try:
+            comparison_versions(runs, [model])
+        except ValueError as error:
+            reasons.update({name: str(error) for name in names})
+        else:
+            accepted.extend(names)
+    return [name for name in outputs if name in accepted], reasons
 
 
 def design_cohort(workspace, design_id, scenario_id):
@@ -28,7 +54,7 @@ def design_cohort(workspace, design_id, scenario_id):
     scenario_id = identifier(scenario_id)
     if scenario_id not in plan.get("alternative_scenario_ids", []):
         raise ValueError("Select one retained land-cover alternative from this design.")
-    pairs, pending = [], []
+    pairs, pending, original_runs = [], [], []
     common = set(plan["model_scope"]["expected_artifacts"]) & set(POLLUTANTS)
     for case in plan["members"]:
         baseline = next((row for row in case["runs"]
@@ -50,16 +76,22 @@ def design_cohort(workspace, design_id, scenario_id):
         after = workspace.inspect_run(alternative["run_id"])
         shared = set(available_outputs(before)) & set(available_outputs(after))
         common &= shared
+        original_runs.extend((before, after))
         pairs.append({
             "profile_id": case["profile_id"], "baseline_run_id": before["id"],
             "alternative_run_id": after["id"], "scenario_id": scenario_id,
         })
     pollutants = [name for name in POLLUTANTS if name in common] if pairs else []
+    pollutants, incompatible = compatible_outputs(original_runs, pollutants)
     alternative = workspace._get("scenarios", scenario_id)
+    description = "Completed original InVEST land-cover pairs from scenario design " + plan["id"]
+    if incompatible:
+        description += ". Quantities excluded for producing-runtime incompatibility: " + "; ".join(
+            name + ": " + reason for name, reason in incompatible.items())
     selection = {
         "title": plan["title"] + " / " + alternative.get("title", scenario_id[:12]),
         "purpose": plan["reason"],
-        "input_description": "Completed original InVEST land-cover pairs from scenario design " + plan["id"],
+        "input_description": description,
         "pairs": pairs, "pollutants": pollutants,
         "quantiles": [0.1, 0.5, 0.9], "support": "all_pairs",
         "planned_member_count": len(plan["members"]),
@@ -72,6 +104,7 @@ def design_cohort(workspace, design_id, scenario_id):
         "scenario_id": scenario_id, "selection": selection,
         "selected_member_count": len(pairs), "planned_member_count": len(plan["members"]),
         "available_pollutants": pollutants, "pending_members": pending,
+        "incompatible_pollutants": incompatible,
         "ready": bool(pairs and pollutants),
         "effect_direction": "baseline minus alternative; positive = reduction",
     }

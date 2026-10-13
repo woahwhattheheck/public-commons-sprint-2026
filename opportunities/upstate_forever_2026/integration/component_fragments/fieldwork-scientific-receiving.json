@@ -158,10 +158,18 @@
     },
     "parameter-studies": {
       "paths": [
+        "docs/PARAMETER_CASE_BROWSING.md",
         "docs/PARAMETER_CASE_CONSOLE.md",
+        "docs/PARAMETER_RESULT_QUERIES.md",
         "docs/PARAMETER_STUDY_NATIVE_RECEIVING.md",
         "docs/PARAMETER_STUDY_PROCESS_RECOVERY.md",
+        "install_native_supervision.py",
+        "model/delivery_catalogue.py",
         "model/parameter_case_status.py",
+        "model/parameter_result_query.py",
+        "model/parameter_views.py",
+        "model/record_catalog.py",
+        "operator/NATIVE_JOBS.md",
         "operator/parameter_study_jobs.py",
         "operator/web/parameter_case_console.mjs",
         "source_tools/receive_parameter_studies.py"
@@ -184,12 +192,16 @@
         "docs/UTILITY_MONITORING_RECEIVING.md",
         "docs/UTILITY_MONITORING_REPORTS.md",
         "docs/UTILITY_SOURCE_BRIEFING.md",
+        "docs/WATERSHED_SOURCE_REVIEW.md",
         "model/client_briefing.py",
         "model/utility_monitoring.py",
         "model/utility_monitoring_comparison.py",
         "model/utility_monitoring_report.py",
         "model/watershed_briefing.py",
-        "source_tools/receive_utility_monitoring.py"
+        "model/watershed_source_review.py",
+        "source/utility-source-context/20261013/source-explorer.html",
+        "source_tools/receive_utility_monitoring.py",
+        "source_tools/watershed_source_review.mjs"
       ],
       "requires": [
         "monitoring",
@@ -203,11 +215,15 @@
         "docs/UTILITY_MONITORING_RECEIVING.md",
         "docs/UTILITY_MONITORING_REPORTS.md",
         "docs/UTILITY_SOURCE_BRIEFING.md",
+        "docs/WATERSHED_SOURCE_REVIEW.md",
         "model/utility_monitoring.py",
         "model/utility_monitoring_comparison.py",
         "model/utility_monitoring_report.py",
         "model/watershed_briefing.py",
-        "source_tools/receive_utility_monitoring.py"
+        "model/watershed_source_review.py",
+        "source/utility-source-context/20261013/source-explorer.html",
+        "source_tools/receive_utility_monitoring.py",
+        "source_tools/watershed_source_review.mjs"
       ],
       "requires": [
         "monitoring",
@@ -253,17 +269,27 @@
     },
     "retained-application-source": {
       "paths": [
+        "docs/PARAMETER_CASE_BROWSING.md",
         "docs/PARAMETER_CASE_CONSOLE.md",
+        "docs/PARAMETER_RESULT_QUERIES.md",
         "docs/PROGRAMME_CASE_CONSOLE.md",
         "docs/PROGRAMME_LARGE_DESIGNS.md",
         "docs/UTILITY_MONITORING_COMPARISONS.md",
+        "docs/WATERSHED_SOURCE_REVIEW.md",
+        "install_native_supervision.py",
         "model/delivery_catalogue.py",
         "model/parameter_case_status.py",
+        "model/parameter_result_query.py",
+        "model/parameter_views.py",
         "model/programme_case_status.py",
         "model/programme_views.py",
         "model/record_catalog.py",
         "model/utility_monitoring_comparison.py",
-        "operator/web/parameter_case_console.mjs"
+        "model/watershed_source_review.py",
+        "operator/NATIVE_JOBS.md",
+        "operator/web/parameter_case_console.mjs",
+        "source/utility-source-context/20261013/source-explorer.html",
+        "source_tools/watershed_source_review.mjs"
       ]
     },
     "monitoring-report": {
@@ -314,6 +340,11 @@
     "implementation_selected_lineage": "6499a12661e26c8fe31eef40d59ea8f48cb6cf91",
     "implementation_native_study_join": "1718cababa3c6b99834e57e6881387681f2c5e04",
     "programme_large_designs": "8fd5ce83cda967610504c1ca38cec513e150bbe6",
-    "utility_monitoring_comparisons": "9714fad1b0a762481821cf7db77b3b712ab8af7d"
+    "utility_monitoring_comparisons": "9714fad1b0a762481821cf7db77b3b712ab8af7d",
+    "parameter_result_queries": "363a729198a747656b189c6c39c727aa626a38a6",
+    "utility_source_snapshot": "027d9fe7295609f10c33a125f21681a96579dfa0",
+    "parameter_case_browsing": "6d064f826c624363c4268576be945ee434ae8724",
+    "parameter_installed_result_console": "c0c76a776ab80b5a52f515fdccebc0f98c7611db",
+    "utility_source_review": "85441320d77b99465d7b4f82947d01bbc0180206"
   }
 }

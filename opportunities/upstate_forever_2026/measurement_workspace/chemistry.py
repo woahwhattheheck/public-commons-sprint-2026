@@ -67,34 +67,18 @@ def _query(filters, **extra):
 
 
 def _snapshot(service, filters, expected_revision=None):
-    """Read full original records; reject a source edit during the complete read."""
-    before = service.json("GET")
-    revision = before["revision"]
+    """Use the original engine's one-transaction full-record/source snapshot."""
+    extra = {} if expected_revision is None else {"expected_revision": expected_revision}
+    result = service.json("GET", "snapshot?" + _query(filters, **extra))
+    revision = result["revision"]
     if expected_revision is not None and expected_revision != revision:
         raise ValueError("Measurements changed after inspection; review the current source revision")
-    rows, offset, expected_total = [], 0, None
-    while True:
-        page = service.json("GET", "records?" + _query(filters, limit=500, offset=offset))
-        if page["revision"] != revision:
-            raise ValueError("Measurements changed while reading the source population")
-        if expected_total is None:
-            expected_total = page["total"]
-        if page["total"] != expected_total:
-            raise ValueError("The selected source population changed")
-        for projected in page["rows"]:
-            rows.append(service.json("GET", "records/" + identifier(projected["id"])))
-        offset += len(page["rows"])
-        if offset == expected_total:
-            break
-        if not page["rows"] or offset > expected_total:
-            raise ValueError("Original measurement paging did not cover the complete population")
-    portable = service.json("GET", "portable")
-    after = service.json("GET")
-    if portable["revision"] != revision or after["revision"] != revision:
-        raise ValueError("Measurements changed while retaining originals; repeat the same inspection")
-    if len({r["id"] for r in rows}) != len(rows):
-        raise ValueError("Original source population repeats a record ID")
-    return {"revision": revision, "records": rows, "portable": portable, "summary": before}
+    if result["portable"]["revision"] != revision or result["summary"]["revision"] != revision:
+        raise ValueError("The original source snapshot has inconsistent revision identities")
+    rows = result["records"]
+    if result["total"] != len(rows) or len({r["id"] for r in rows}) != len(rows):
+        raise ValueError("The original source snapshot does not cover its complete unique population")
+    return result
 
 
 def catalog(workspace, service):

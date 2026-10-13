@@ -57,7 +57,9 @@ export function createPublishedReviewReports(host, bridge) {
       (product ? '<p>Original saved review: <code>' + esc(c.review.id) + '</code><br>Prepared source: <code>' +
         esc(product.id) + '</code></p><div class="ps-actions"><button type="button" data-psr-action="open"' +
         (disabled || typeof host.openScientificReport !== "function" ? " disabled" : "") +
-        '>Open scientific composer</button></div>' : "") +
+        '>Open this report only</button><button type="button" data-psr-action="append"' +
+        (disabled || typeof host.openScientificReport !== "function" ? " disabled" : "") +
+        '>Add to current report</button></div><p class="ps-help">Open this report only replaces the composer\'s selected sources and title with this saved review. Add to current report keeps its existing sources and title, then adds this review in order.</p>' : "") +
       (typeof host.openScientificReport !== "function" ? '<p class="ps-help">The retained source remains available in Sources. Install the current scientific-report composer to open it directly here.</p>' : "") +
       '<p class="ps-status" data-psr-status role="status" aria-live="polite" data-error="' + String(s.error) + '">' + esc(s.message) + '</p>';
   }
@@ -96,11 +98,13 @@ export function createPublishedReviewReports(host, bridge) {
     } catch (error) { if (valid(m) && error?.name !== "AbortError") {s.message=error.message||String(error);s.error=true;} }
     finally { s.working = false; if (valid(m)) draw(); }
   }
-  async function open() {
+  async function open(selectionMode = "replace") {
     const c = context(), s = state(c), product = selected(c);
+    if (!["replace", "append"].includes(selectionMode)) throw Error("Unknown report selection mode.");
     if (!product || c.changed || c.busy || s.working || typeof host.openScientificReport !== "function") return;
     const m = mark(c), productId = product.id;
-    s.working = true; s.error = false; s.message = "Opening the exact retained scientific source…"; draw();
+    s.working = true; s.error = false;
+    s.message = selectionMode === "replace" ? "Opening this saved review as the report selection…" : "Adding this saved review to the current report…"; draw();
     try {
       const actual = await api("/api/published-studies/review-source", {id:productId}, m);
       if (!valid(m,true) || state(context()).selected !== productId) return;
@@ -109,7 +113,7 @@ export function createPublishedReviewReports(host, bridge) {
         throw Error("The retained scientific source no longer matches the selected saved review.");
       await host.refresh({force:true});
       if (!valid(m,true) || state(context()).selected !== productId) return;
-      await host.openScientificReport({workspace_key:m.workspace,sources:[copy(actual.source_choice)],title:actual.title});
+      await host.openScientificReport({workspace_key:m.workspace,sources:[copy(actual.source_choice)],title:actual.title,selection_mode:selectionMode});
     } catch (error) {
       if (valid(m) && error?.name !== "AbortError") {s.message=error.message||String(error);s.error=true;draw();}
     } finally { s.working=false; if (valid(m)) draw(); }
@@ -136,7 +140,8 @@ export function createPublishedReviewReports(host, bridge) {
         event.preventDefault();
         const action=button.dataset.psrAction;
         if(action==="prepare")void prepare();
-        if(action==="open")void open();
+        if(action==="open")void open("replace");
+        if(action==="append")void open("append");
         if(action==="refresh")void load(true);
       },{signal:events.signal});
       root.addEventListener("change", event => {

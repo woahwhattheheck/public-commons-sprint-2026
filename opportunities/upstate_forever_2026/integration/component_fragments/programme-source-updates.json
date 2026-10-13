@@ -1,0 +1,32 @@
+{
+  "schema": "upstate.application-component-fragment/v1",
+  "id": "programme-source-updates",
+  "components": {
+    "programme-source-updates": {
+      "title": "Source-update successors for saved native Programmes",
+      "paths": [
+        "model/programme_source_updates.py",
+        "model/PROGRAMME_SOURCE_UPDATES.md",
+        "operator/programme_source_updates.py",
+        "operator/extensions/programme-source-updates.json",
+        "operator/web/programme_source_updates.mjs",
+        "operator/programme_source_updates_patch.json",
+        "operator/install_programme_source_updates.py",
+        "operator/PROGRAMME_SOURCE_UPDATES.md",
+        "integration/component_fragments/programme-source-updates.json"
+      ],
+      "requires": [
+        "core",
+        "programme-activity",
+        "source-updates"
+      ],
+      "source_reference": {
+        "version": "1.0.0",
+        "purpose": "Retain explicit old-to-new native case mappings and the source plan used to create each successor Programme"
+      }
+    }
+  },
+  "required_components": [
+    "programme-source-updates"
+  ]
+}

@@ -24,6 +24,17 @@ indicators and dates; capture the complete original pages; compare an earlier
 capture; review observations; and export the accepted edition. The
 [operating guide](OPERATING.md) follows the complete customer workflow.
 
+Use the [customer commissioning and acceptance guide](CUSTOMER_DELIVERY.md) to
+agree the source population, interpretation, reporting and workbook definitions,
+recurrence, receiving and support before preparing a customer delivery. It connects
+the same original source application, Analysis workspace and Merchant programme.
+The selected package also retains the complete [grant customer chapter](../../stellar-forge/developer-site/grant-chapters/worldbank-customer-programmes.md)
+and its [sixteen-source declaration](../../stellar-forge/developer-site/grant-products/worldbank-customer-programmes.json).
+Those measured source references retain their original Merchant repository and
+immutable editions; the public installation manifest identifies this package's
+actual source. The existing cumulative application publisher selects the chapter
+through its normal source-edition workflow.
+
 Continue an original reviewed handover into Analysis:
 
 ~~~sh

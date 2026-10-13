@@ -502,6 +502,33 @@ def _intervention_changes(before, after):
     }
 
 
+def intervention_column_mapping(headers, mapping=None):
+    """Bind plan fields to original CSV columns without rewriting the received file."""
+    explicit = mapping is not None
+    if explicit and (not isinstance(mapping, dict) or set(mapping) - set(INTERVENTION_FIELDS)):
+        raise ValueError("Map only the original intervention plan fields")
+    if not explicit:
+        missing = set(INTERVENTION_REQUIRED_COLUMNS) - set(headers)
+        if missing:
+            raise ValueError("The intervention CSV lacks columns: " + ", ".join(sorted(missing)))
+    selected, provenance = {}, []
+    for field in INTERVENTION_FIELDS:
+        column = (mapping.get(field, field if field in headers else None)
+                  if explicit else field if field in headers else None)
+        if column == "":
+            column = None
+        if column is not None and (not isinstance(column, str) or column not in headers):
+            raise ValueError("Intervention field " + field + " needs an original CSV column")
+        if column is None and field in INTERVENTION_REQUIRED_COLUMNS and field != "id":
+            raise ValueError("Choose an original CSV column for " + field)
+        selected[field] = column
+        provenance.append({"field": field, "source_column": column,
+                           "source_column_number": headers.index(column) + 1 if column is not None else None,
+                           "basis": ("original-column" if column is not None else
+                                     "generated-source-row-id" if field == "id" else "native-default")})
+    return selected, provenance
+
+
 def _intervention_import(value, table, previous):
     """Read the received CSV and retain its complete original bytes in the plan."""
     if not isinstance(value, dict) or value.get("schema") != "upstate.intervention-csv-import/v1":
@@ -551,10 +578,8 @@ def _intervention_import(value, table, previous):
         raise ValueError("Intervention CSV row 1: " + str(error)) from error
     if not headers or any(not column for column in headers) or len(headers) != len(set(headers)):
         raise ValueError("The intervention CSV needs distinct, nonempty column headings")
-    missing = set(INTERVENTION_REQUIRED_COLUMNS) - set(headers)
-    if missing:
-        raise ValueError("The intervention CSV lacks columns: " + ", ".join(sorted(missing)))
-    ignored = [column for column in headers if column not in INTERVENTION_FIELDS]
+    columns, field_provenance = intervention_column_mapping(headers, value.get("column_mapping"))
+    ignored = [column for column in headers if column not in set(columns.values())]
     record_number = 0
     while True:
         line = reader.line_num + 1
@@ -572,7 +597,9 @@ def _intervention_import(value, table, previous):
             errors.append("CSV row " + str(line) + ": expected " + str(len(headers))
                           + " columns; received " + str(len(cells)))
             continue
-        original = dict(zip(headers, cells))
+        source_values = dict(zip(headers, cells))
+        original = {field: source_values[column] if column is not None else ""
+                    for field, column in columns.items()}
         key = original["id"].strip() or ("I-CSV-" + checksum[:16] + "-" + str(record_number))
         if key in seen:
             errors.append("CSV row " + str(line) + ": intervention identifier repeats: " + key)
@@ -607,6 +634,8 @@ def _intervention_import(value, table, previous):
         "source": {"filename": filename, "media_type": "text/csv; charset=utf-8",
                    "bytes": len(encoded), "sha256": checksum, "text": raw},
         "table_id": table["id"], "previous_plan_id": previous["id"] if previous else None,
+        **({"column_mapping": columns, "source_headers": headers, "field_provenance": field_provenance}
+           if value.get("column_mapping") is not None else {}),
         "selection": import_selection,
         "rows": source_rows,
         "summary": {"row_count": len(records),

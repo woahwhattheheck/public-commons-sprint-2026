@@ -45,6 +45,13 @@
       ]
     ],
     [
+      "/operator/workflow-series.mjs",
+      [
+        "workflow-series.mjs",
+        "text/javascript; charset=utf-8"
+      ]
+    ],
+    [
       "/operator/customer-reviewer.mjs",
       [
         "customer-reviewer.mjs",
