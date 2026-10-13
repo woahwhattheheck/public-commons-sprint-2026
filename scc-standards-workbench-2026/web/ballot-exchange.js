@@ -2,7 +2,7 @@ const esc=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&
 const canonical=v=>v===null?"null":Array.isArray(v)?"["+v.map(canonical).join(",")+"]":typeof v==="object"?"{"+Object.keys(v).sort().map(k=>JSON.stringify(k)+":"+canonical(v[k])).join(",")+"}":JSON.stringify(v);
 const clone=v=>structuredClone(v),$=s=>document.querySelector(s);
 let context=null,session=null,status=null,epoch=0,dbPromise=null,saveQueue=Promise.resolve();
-const sessions=new Map(),working=new WeakSet();
+const sessions=new Map(),working=new WeakSet(),loadingUploads=new WeakSet(),uploadGenerations=new WeakMap();
 const active=(ctx,s,token)=>context===ctx&&session===s&&epoch===token&&ctx.isCurrent();
 function database(){if(!dbPromise)dbPromise=new Promise((resolve,reject)=>{const r=indexedDB.open("standards-member-ballot-operator",1);r.onupgradeneeded=()=>r.result.createObjectStore("projects");r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error);});return dbPromise;}
 async function saved(id){const db=await database();return new Promise((resolve,reject)=>{const tx=db.transaction("projects","readonly"),r=tx.objectStore("projects").get(id);r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error);});}
@@ -38,10 +38,10 @@ export async function mountBallotExchange(ctx){
 function render(){
  if(!context.isCurrent())return;
  const row=currentBallot(),m=currentMember(),r=selectedReturn(),p=session.pending,closed=!!row?.closed;
- const disabled=working.has(session)||!!p?"disabled":"";
+ const disabled=working.has(session)||loadingUploads.has(session)||!!p?"disabled":"";
  let html='<section id="ballot-exchange" class="ballot-exchange"><div class="heading"><div><p class="eyebrow">'+esc(context.project.title)+" · Project r"+status.revision+'</p><h1>Member ballot receiving</h1><p>Prepare each member’s bilingual packet, retain original and corrected returns, then explicitly adopt the verified response into the existing vote.</p></div><button type="button" data-ballot="decisions">Ballots & decisions</button></div>';
  if(p)html+='<section class="ballot-pending"><h2>Retained operation</h2><p>'+esc(p.failure?.message||"The complete original request remains available. Recover its result before changing another operation.")+'</p><p>'+esc(p.body.operation)+" · "+esc(p.body.request_id)+'</p><button type="button" id="ballot-retry" data-ballot="retry">Recover original request</button>'+(p.failure?'<button type="button" data-ballot="reconcile">Review current revision after rejected request</button>':"")+detail("Original request",p.body)+"</section>";
- html+='<p id="ballot-message" role="status" aria-live="polite"></p><div class="ballot-selectors"><label>Frozen ballot<select id="ballot-select" '+disabled+">"+options(status.ballots.map(r=>r.ballot),session.ballotId,r=>r.title)+"</select></label><label>Eligible member<select id=\"member-select\" "+disabled+">"+options((row?.members||[]).map(x=>({id:x.member.person_id,...x.member})),session.memberId,r=>r.person_name+" · "+r.organization)+"</select></label></div>";
+ html+='<p id="ballot-message" role="status" aria-live="polite"></p><div class="ballot-selectors"><label>Frozen ballot<select id="ballot-select" '+disabled+">"+options(status.ballots.map(r=>r.ballot),session.ballotId,r=>r.title)+"</select></label><label>Eligible member<select id=\"member-select\" "+disabled+">"+options((row?.members||[]).map(x=>({...x.member,id:x.member.person_id})),session.memberId,r=>r.person_name+" · "+r.organization)+"</select></label></div>";
  if(!row){html+='<section class="ballot-card"><h2>Open an edition-bound ballot</h2><p>First freeze the bilingual edition and select its original procedure and eligible roster in Ballots & decisions.</p><button type="button" data-ballot="new-ballot">Open ballot</button></section></section>';$("#main").innerHTML=html;wire();return;}
  html+='<div class="ballot-summary"><div><strong>'+row.members.length+'</strong><span>Eligible members</span></div><div><strong>'+row.members.filter(x=>x.current_vote).length+'</strong><span>Recorded votes</span></div><div><strong>'+row.members.reduce((n,x)=>n+x.returns.length,0)+'</strong><span>Retained returns</span></div><div><strong>'+(closed?"Closed":"Open")+'</strong><span>'+esc(row.ballot.opens)+" — "+esc(row.ballot.closes)+"</span></div></div>";
  if(m){const d=session.packetDraft||{},ret=allReturns();
@@ -67,18 +67,30 @@ function keepForm(form,target){for(const el of form.elements){if(el.name)target[
 function wire(){
  const owner=context,state=session,token=epoch;
  const renderCurrent=()=>{if(active(owner,state,token))render();};
- const root=$("#ballot-exchange");root.onclick=async e=>{if(!active(owner,state,token))return;const b=e.target.closest("[data-ballot]");if(!b)return;e.preventDefault();try{await act(b.dataset.ballot);}catch(error){if(active(owner,state,token))notice(error.message,true);}};
- $("#ballot-select")?.addEventListener("change",async e=>{session.ballotId=e.target.value;session.memberId="";session.packetId="";session.returnId="";session.preview=null;session.upload=null;selectionDefaults();await persist(state,owner);renderCurrent();});
- $("#member-select")?.addEventListener("change",async e=>{session.memberId=e.target.value;session.packetId="";session.returnId="";session.preview=null;session.upload=null;session.packetDraft={};session.verificationNote="";selectionDefaults();await persist(state,owner);renderCurrent();});
- $("#packet-select")?.addEventListener("change",async e=>{session.packetId=e.target.value;session.preview=null;await persist(state,owner);renderCurrent();});
- $("#return-select")?.addEventListener("change",async e=>{session.returnId=e.target.value;session.verificationNote="";await persist(state,owner);renderCurrent();});
- $("#ballot-packet-form")?.addEventListener("input",()=>{keepForm($("#ballot-packet-form"),session.packetDraft);persist().catch(e=>notice(e.message,true));});
- $("#ballot-packet-form")?.addEventListener("submit",async e=>{e.preventDefault();try{const d={};keepForm(e.target,d);await perform("ballot.packet",{ballot_id:session.ballotId,person_id:session.memberId,...d},status.revision);}catch(error){notice(error.message,true);}});
- $("#ballot-return-file")?.addEventListener("change",async e=>{try{const file=e.target.files[0];if(!file)return;if(!file.size||file.size>2*1024*1024)throw Error("Choose the complete original JSON, up to 2 MiB.");const packet=state.packetId,person=state.memberId;const a=new Uint8Array(await file.arrayBuffer());if(!active(owner,state,token)||state.packetId!==packet||state.memberId!==person)return;let binary="";for(let i=0;i<a.length;i+=32768)binary+=String.fromCharCode(...a.subarray(i,i+32768));state.upload={filename:file.name,content_base64:btoa(binary),bytes:file.size};state.preview=null;await persist(state,owner);renderCurrent();}catch(error){if(active(owner,state,token))notice(error.message,true);}});
- $("#ballot-intake-form")?.addEventListener("input",e=>{if(e.target.name==="receipt_note"){session.receiptNote=e.target.value;persist().catch(error=>notice(error.message,true));}});
- $("#ballot-intake-form")?.addEventListener("submit",async e=>{e.preventDefault();try{if(!session.preview)throw Error("Inspect this exact original file first.");await perform("ballot.receive",{packet_id:session.packetId,filename:session.upload.filename,content_base64:session.upload.content_base64,receipt_note:session.receiptNote},session.preview.revision);}catch(error){notice(error.message,true);}});
- $("#ballot-adopt-form")?.addEventListener("input",e=>{if(e.target.name==="verification_note"){session.verificationNote=e.target.value;persist().catch(error=>notice(error.message,true));}});
- $("#ballot-adopt-form")?.addEventListener("submit",async e=>{e.preventDefault();try{if(!session.verificationNote.trim())throw Error("Record the original sender and correction verification.");await perform("ballot.adopt",{return_id:session.returnId,expected_vote_sha256:currentMember().current_vote_sha256,verification_note:session.verificationNote},status.revision);}catch(error){notice(error.message,true);}});
+ const root=$("#ballot-exchange");root.onclick=async e=>{if(!active(owner,state,token))return;if(!active(owner,state,token))return;const b=e.target.closest("[data-ballot]");if(!b)return;e.preventDefault();try{await act(b.dataset.ballot);}catch(error){if(active(owner,state,token))notice(error.message,true);}};
+ $("#ballot-select")?.addEventListener("change",async e=>{if(!active(owner,state,token))return;session.ballotId=e.target.value;session.memberId="";session.packetId="";session.returnId="";session.preview=null;session.upload=null;selectionDefaults();await persist(state,owner);renderCurrent();});
+ $("#member-select")?.addEventListener("change",async e=>{if(!active(owner,state,token))return;session.memberId=e.target.value;session.packetId="";session.returnId="";session.preview=null;session.upload=null;session.packetDraft={};session.verificationNote="";selectionDefaults();await persist(state,owner);renderCurrent();});
+ $("#packet-select")?.addEventListener("change",async e=>{if(!active(owner,state,token))return;session.packetId=e.target.value;session.preview=null;await persist(state,owner);renderCurrent();});
+ $("#return-select")?.addEventListener("change",async e=>{if(!active(owner,state,token))return;session.returnId=e.target.value;session.verificationNote="";await persist(state,owner);renderCurrent();});
+ $("#ballot-packet-form")?.addEventListener("input",()=>{keepForm($("#ballot-packet-form"),session.packetDraft);persist(state,owner).catch(e=>{if(active(owner,state,token))notice(e.message,true);});});
+ $("#ballot-packet-form")?.addEventListener("submit",async e=>{if(!active(owner,state,token))return;e.preventDefault();try{const d={};keepForm(e.target,d);await perform("ballot.packet",{ballot_id:session.ballotId,person_id:session.memberId,...d},status.revision);}catch(error){if(active(owner,state,token))notice(error.message,true);}});
+ $("#ballot-return-file")?.addEventListener("change",async e=>{
+ if(!active(owner,state,token))return;let generation,errorMessage="";
+ try{
+ const file=e.target.files[0];if(!file)return;if(!file.size||file.size>2*1024*1024)throw Error("Choose the complete original JSON, up to 2 MiB.");
+ const packet=state.packetId,person=state.memberId;generation=(uploadGenerations.get(state)||0)+1;uploadGenerations.set(state,generation);
+ state.upload=null;state.preview=null;loadingUploads.add(state);renderCurrent();
+ const a=new Uint8Array(await file.arrayBuffer());
+ if(!active(owner,state,token)||state.packetId!==packet||state.memberId!==person||uploadGenerations.get(state)!==generation)return;
+ let binary="";for(let i=0;i<a.length;i+=32768)binary+=String.fromCharCode(...a.subarray(i,i+32768));
+ state.upload={filename:file.name,content_base64:btoa(binary),bytes:file.size};await persist(state,owner);
+ }catch(error){errorMessage=error.message||String(error);}
+ finally{if(generation===uploadGenerations.get(state)){loadingUploads.delete(state);renderCurrent();}if(errorMessage&&active(owner,state,token))notice(errorMessage,true);}
+ });
+ $("#ballot-intake-form")?.addEventListener("input",e=>{if(e.target.name==="receipt_note"){session.receiptNote=e.target.value;persist(state,owner).catch(error=>{if(active(owner,state,token))notice(error.message,true);});}});
+ $("#ballot-intake-form")?.addEventListener("submit",async e=>{if(!active(owner,state,token))return;e.preventDefault();try{if(!session.preview)throw Error("Inspect this exact original file first.");await perform("ballot.receive",{packet_id:session.packetId,filename:session.upload.filename,content_base64:session.upload.content_base64,receipt_note:session.receiptNote},session.preview.revision);}catch(error){if(active(owner,state,token))notice(error.message,true);}});
+ $("#ballot-adopt-form")?.addEventListener("input",e=>{if(e.target.name==="verification_note"){session.verificationNote=e.target.value;persist(state,owner).catch(error=>{if(active(owner,state,token))notice(error.message,true);});}});
+ $("#ballot-adopt-form")?.addEventListener("submit",async e=>{if(!active(owner,state,token))return;e.preventDefault();try{if(!session.verificationNote.trim())throw Error("Record the original sender and correction verification.");await perform("ballot.adopt",{return_id:session.returnId,expected_vote_sha256:currentMember().current_vote_sha256,verification_note:session.verificationNote},status.revision);}catch(error){if(active(owner,state,token))notice(error.message,true);}});
 }
 async function reload(){
  const ctx=context,s=session,token=epoch;
@@ -87,20 +99,21 @@ async function reload(){
 }
 async function perform(operation,payload,revision){
  const ctx=context,s=session,token=epoch;
- if(working.has(s))throw Error("The current original operation is still in progress.");
+ if(working.has(s)||loadingUploads.has(s))throw Error("The current original operation or file read is still in progress.");
  if(s.pending)throw Error("Recover the retained original request before starting another operation.");
  const body={operation,payload:clone(payload),expected_revision:revision,request_id:crypto.randomUUID(),actor:"Local ballot operator"};
  s.pending={body,endpoint:"/api/projects/"+encodeURIComponent(ctx.project.id)+"/operations",started_at:new Date().toISOString(),failure:null};
- await persist(s,ctx);return dispatch(ctx,s,token);
+ try{await persist(s,ctx);}catch(error){if(active(ctx,s,token)){render();notice("The complete request has not been sent because browser storage could not retain it.",true);}throw error;}return dispatch(ctx,s,token);
 }
 async function dispatch(ctx=context,s=session,token=epoch){
  if(working.has(s))return;const pending=clone(s.pending);if(!pending)return;
  working.add(s);if(active(ctx,s,token))render();
  try{
+ await persist(s,ctx);
  const result=await ctx.api(pending.endpoint,{method:"POST",body:JSON.stringify(pending.body)});
  if(result.packet_id)s.packetId=result.packet_id;if(result.return_id)s.returnId=result.return_id;
  s.pending=null;s.preview=null;if(pending.body.operation==="ballot.receive")s.upload=null;
- await persist(s,ctx);working.delete(s);
+ try{await persist(s,ctx);}catch(error){s.pending=pending;throw error;}working.delete(s);
  if(active(ctx,s,token)){await ctx.refresh();if(context.project.id===ctx.project.id&&context.isCurrent())notice(result.replayed?"Recovered the original saved operation.":"Complete operation saved.");}
  return result;
  }catch(error){
@@ -117,7 +130,7 @@ async function act(action){
  if(action==="retry")return dispatch();
  if(action==="reconcile"){if(!session.pending?.failure)throw Error("Recover the original result first.");session.pending=null;session.preview=null;await persist();await reload();notice("Current revision is displayed. Your fields and complete original file remain available; inspect them before a new operation.");return;}
  if(action==="preview"){
- if(working.has(session)||session.pending)throw Error("Recover the current request first.");if(!session.upload||!session.packetId)throw Error("Select a frozen member packet and its actual returned JSON.");
+ if(working.has(session)||loadingUploads.has(session)||session.pending)throw Error("Recover the current request or file read first.");if(!session.upload||!session.packetId)throw Error("Select a frozen member packet and its actual returned JSON.");
  const ctx=context,s=session,token=epoch,packet=s.packetId,upload=s.upload;
  working.add(s);render();try{
  const response=await ctx.api("/api/projects/"+encodeURIComponent(ctx.project.id)+"/ballot-exchange/preview",{method:"POST",body:JSON.stringify({packet_id:packet,filename:upload.filename,content_base64:upload.content_base64})});
