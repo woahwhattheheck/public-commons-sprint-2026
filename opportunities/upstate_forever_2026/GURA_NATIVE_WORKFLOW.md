@@ -121,6 +121,27 @@ and saves the full Workspace archive. Use `--physical-only` for the native
 report without the economic companion. Archive paths must be outside the
 Workspace. Existing verified complete archives are reused.
 
+## Original baseline report during the comparison run
+
+As soon as the original baseline programme completes, the workflow builds a
+saved reference-only watershed report from that exact completed run and the
+original zones in the comparison plan. Its annual totals use the original
+native NDR/SDR outputs and actual raster support. It writes the report ID,
+relative output descriptors and report directory into `gura-workflow.json`
+before the broad class comparisons begin. Repeated execution reopens the
+verified existing reference report.
+
+The `reference_report_progress` and `reference_report_complete` JSON events
+identify the actual report phase and saved files. Start the existing `serve`
+command in a second terminal against the same Workspace to open those totals
+while the comparison programme continues. The comparison and later economic
+editions remain in that same Workspace; its portable archive retains the
+reference report, comparison reports and original native source selections.
+
+Programme progress polling reads the current programme and run status without
+repeatedly enumerating ensemble candidates or completed donor-source catalogues.
+The native executor and original scenario selection remain the same.
+
 Progress and outputs:
 
 | Path | Contents |
