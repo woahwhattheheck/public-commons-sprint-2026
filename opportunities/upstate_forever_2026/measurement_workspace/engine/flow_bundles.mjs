@@ -1,15 +1,15 @@
 /** Complete independent file products for the original saved studies. */
-import {zipMembers} from './collection_zip.mjs';
+import {deflatedZipMembers} from './collection_zip.mjs';
 import {hash} from './normalise.mjs';
 import {readFlowStudy,flowCSV} from './flow_workspace.mjs';
 import {readFlowLoadResult,flowLoadCSV} from './flow_results.mjs';
 import {renderFlowStudy,renderFlowLoads} from './flow_reports.mjs';
 const json=x=>JSON.stringify(x,null,2)+'\n';
 function packageFiles(name,files){
- const members=Object.entries(files).map(([name,data])=>({name,data:Buffer.from(data)}));
- const manifest={schema:'upstate.complete-flow-product/v1',files:members.map(m=>({path:m.name,bytes:m.data.length,sha256:hash(m.data)}))};
+ const members=Object.entries(files).map(([name,data])=>({name,data}));
+ const manifest={schema:'upstate.complete-flow-product/v1',files:members.map(m=>({path:m.name,bytes:Buffer.byteLength(m.data),sha256:hash(m.data)}))};
  members.push({name:'manifest.json',data:Buffer.from(json(manifest))});
- const bytes=zipMembers(members);
+ const bytes=deflatedZipMembers(members);
  return {name,type:'application/zip',bytes:bytes.length,sha256:hash(bytes),base64:bytes.toString('base64')};
 }
 export function flowStudyFiles(study){

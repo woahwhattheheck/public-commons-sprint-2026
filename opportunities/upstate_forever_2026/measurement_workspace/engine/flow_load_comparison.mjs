@@ -3,7 +3,7 @@ import {readFlowLoadResult} from './flow_results.mjs';
 import {readFlowStudy,previewFlowStudy} from './flow_workspace.mjs';
 import {runFlowStudyLoads} from './flow_loads.mjs';
 import {flowLoadFiles} from './flow_bundles.mjs';
-import {zipMembers} from './collection_zip.mjs';
+import {deflatedZipMembers} from './collection_zip.mjs';
 import {hash,stable} from './normalise.mjs';
 import {InputError,csv} from './parse.mjs';
 
@@ -165,9 +165,9 @@ export function flowLoadComparisonFiles(product){
  return files;
 }
 export function flowLoadComparisonBundle(product){
- const members=Object.entries(flowLoadComparisonFiles(product)).map(([name,data])=>({name,data:Buffer.from(data)}));
- const manifest={schema:'upstate.complete-flow-load-comparison-files/v1',id:product.id,selection:product.selection,files:members.map(m=>({path:m.name,bytes:m.data.length,sha256:hash(m.data)}))};
- members.push({name:'manifest.json',data:Buffer.from(json(manifest))});const body=zipMembers(members);
+ const members=Object.entries(flowLoadComparisonFiles(product)).map(([name,data])=>({name,data}));
+ const manifest={schema:'upstate.complete-flow-load-comparison-files/v1',id:product.id,selection:product.selection,files:members.map(m=>({path:m.name,bytes:Buffer.byteLength(m.data),sha256:hash(m.data)}))};
+ members.push({name:'manifest.json',data:Buffer.from(json(manifest))});const body=deflatedZipMembers(members);
  return {name:'load-comparison-'+product.id.slice(0,16)+'.zip',type:'application/zip',bytes:body.length,sha256:hash(body),base64:body.toString('base64'),comparison_id:product.id,before_id:product.before.id,after_id:product.after.id};
 }
 export function flowLoadComparisonOperation(workspace,method,parts,input={}){
