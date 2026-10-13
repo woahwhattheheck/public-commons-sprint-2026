@@ -1,0 +1,2287 @@
+package sling
+
+import (
+	"context"
+	"database/sql/driver"
+	"fmt"
+	"io"
+	"os"
+	"regexp"
+	"runtime"
+	"runtime/debug"
+	"strings"
+	"sync"
+	"time"
+
+	"github.com/flarco/g"
+	"github.com/gobwas/glob"
+	"github.com/samber/lo"
+	"github.com/slingdata-io/sling-cli/core"
+	"github.com/slingdata-io/sling-cli/core/dbio/api"
+	"github.com/slingdata-io/sling-cli/core/dbio/connection"
+	"github.com/slingdata-io/sling-cli/core/dbio/database"
+	"github.com/slingdata-io/sling-cli/core/dbio/filesys"
+	"github.com/slingdata-io/sling-cli/core/dbio/iop"
+	"github.com/slingdata-io/sling-cli/core/env"
+	"github.com/spf13/cast"
+	"gopkg.in/yaml.v2"
+)
+
+type ReplicationConfig struct {
+	Source   string                              `json:"source,omitempty" yaml:"source,omitempty"`
+	Target   string                              `json:"target,omitempty" yaml:"target,omitempty"`
+	Hooks    HookMap                             `json:"hooks,omitempty" yaml:"hooks,omitempty"`
+	Defaults ReplicationStreamConfig             `json:"defaults,omitempty" yaml:"defaults,omitempty"`
+	Streams  map[string]*ReplicationStreamConfig `json:"streams,omitempty" yaml:"streams,omitempty"`
+	Env      map[string]any                      `json:"env,omitempty" yaml:"env,omitempty"`
+
+	// Tasks are compiled tasks
+	Tasks    []*Config `json:"tasks"`
+	Compiled bool      `json:"compiled"`
+	FailErr  string    // error string to fail all (e.g. when the first tasks fails to connect)
+
+	Context *g.Context `json:"-"`
+
+	startHooks, endHooks Hooks
+
+	streamsOrdered []string
+	unmatched      []unmatchedPattern // wildcard streams that matched no object
+	originalCfg    string
+	maps           replicationConfigMaps // raw maps for validation
+	state          *ReplicationState
+
+	CDCRunner CDCRunner `json:"-"`
+}
+
+type unmatchedPattern struct {
+	pattern string
+	stream  *ReplicationStreamConfig
+}
+
+type CDCRunner interface {
+	NewReadCDCHook() Hook
+}
+
+type replicationConfigMaps struct {
+	Defaults map[string]any
+	Streams  map[string]map[string]any
+}
+
+// OriginalCfg returns original config
+func (rd *ReplicationConfig) OriginalCfg() string {
+	return rd.originalCfg
+}
+
+// JSON returns json payload
+func (rd *ReplicationConfig) JSON() string {
+	payload := g.Marshal([]any{
+		g.M("source", rd.Source),
+		g.M("target", rd.Target),
+		g.M("hooks", rd.Hooks),
+		g.M("defaults", rd.Defaults),
+		g.M("streams", rd.Streams),
+		g.M("env", rd.Env),
+	})
+
+	// clean up
+	if strings.Contains(rd.Source, "://") {
+		cleanSource := strings.Split(rd.Source, "://")[0] + "://"
+		payload = strings.ReplaceAll(payload, g.Marshal(rd.Source), g.Marshal(cleanSource))
+	}
+
+	if strings.Contains(rd.Target, "://") {
+		cleanTarget := strings.Split(rd.Target, "://")[0] + "://"
+		payload = strings.ReplaceAll(payload, g.Marshal(rd.Target), g.Marshal(cleanTarget))
+	}
+
+	return payload
+}
+
+// initRuntimeState initializes the runtime state
+// loads from state file if found
+func (rd *ReplicationConfig) initRuntimeState(selectStreams []string) {
+	if rd.state == nil {
+		rd.state = &ReplicationState{
+			State:     map[string]map[string]any{},
+			Store:     map[string]any{},
+			Env:       rd.Env,
+			Runs:      map[string]*RunState{},
+			Execution: ExecutionState{},
+			Source:    ConnState{Name: rd.Source},
+			Target:    ConnState{Name: rd.Target},
+			mu:        &sync.RWMutex{},
+		}
+
+		if env.IsThreadChild {
+			for _, streamName := range selectStreams {
+				stateFile := env.RuntimeFilePath(streamName)
+				bytes, err := os.ReadFile(stateFile)
+				if err != nil {
+					g.Warn("could not read runtime state file (%s): %s", streamName, err.Error())
+					continue
+				}
+
+				err = g.Unmarshal(string(bytes), &rd.state)
+				if err != nil {
+					g.Warn("could not unmarshal runtime state file (%s): %s", streamName, err.Error())
+					continue
+				}
+			}
+		}
+	}
+
+	rd.state.Execution.ID = env.ExecID
+	rd.state.Source = ConnState{Name: rd.Source}
+	rd.state.Target = ConnState{Name: rd.Target}
+	if rd.state.State == nil {
+		rd.state.State = map[string]map[string]any{}
+	}
+	if rd.state.Store == nil {
+		rd.state.Store = map[string]any{}
+	}
+	if rd.state.Runs == nil {
+		rd.state.Runs = map[string]*RunState{}
+	}
+	rd.state.Env = env.MergeDeclaredEnv(rd.Env)
+	if rd.state.Execution.StartTime == nil {
+		rd.state.Execution.StartTime = g.Ptr(time.Now())
+	}
+}
+
+func (rd *ReplicationConfig) SetRuntimeState(state *ReplicationState) {
+	rd.state = state
+}
+
+func (rd *ReplicationConfig) RuntimeState() (_ *ReplicationState, err error) {
+	rd.initRuntimeState(nil)
+
+	// The state mutex makes concurrent callers safe.
+	rd.state.lock()
+	defer rd.state.unlock()
+
+	rd.state.Timestamp.Update()
+
+	if rd.Compiled {
+		for _, task := range rd.Tasks {
+			fMap, err := task.GetFormatMap()
+			if err != nil {
+				return rd.state, err
+			}
+
+			// populate env (process env first, declared/task env wins)
+			rd.state.Env = env.MergeDeclaredEnv(g.CastToMapAny(task.Env))
+
+			// populate source
+			rd.state.Source.Type = task.SrcConn.Type
+			rd.state.Source.Kind = task.SrcConn.Type.Kind()
+			rd.state.Source.Bucket = cast.ToString(fMap["source_bucket"])
+			rd.state.Source.Container = cast.ToString(fMap["source_container"])
+			rd.state.Source.Database = cast.ToString(task.SrcConn.Data["database"])
+			rd.state.Source.Instance = cast.ToString(task.SrcConn.Data["instance"])
+			rd.state.Source.Schema = cast.ToString(task.SrcConn.Data["schema"])
+
+			// populate target
+			rd.state.Target.Type = task.TgtConn.Type
+			rd.state.Target.Kind = task.TgtConn.Type.Kind()
+			rd.state.Target.Bucket = cast.ToString(fMap["target_bucket"])
+			rd.state.Target.Container = cast.ToString(fMap["target_container"])
+			rd.state.Target.Database = cast.ToString(task.TgtConn.Data["database"])
+			rd.state.Target.Instance = cast.ToString(task.TgtConn.Data["instance"])
+			rd.state.Target.Schema = cast.ToString(task.TgtConn.Data["schema"])
+
+			runID := iop.CleanName(rd.Normalize(task.StreamName))
+			if id := cast.ToString(fMap["stream_run_id"]); id != "" {
+				runID = id
+			}
+
+			if _, ok := rd.state.Runs[runID]; !ok {
+				rd.state.Runs[runID] = &RunState{
+					ID:     runID,
+					Status: ExecStatusCreated,
+					Stream: &StreamState{
+						FileFolder: cast.ToString(fMap["stream_file_folder"]),
+						FileName:   cast.ToString(fMap["stream_file_name"]),
+						FileExt:    cast.ToString(fMap["stream_file_ext"]),
+						FilePath:   cast.ToString(fMap["stream_file_path"]),
+						Name:       cast.ToString(fMap["stream_name"]),
+						Schema:     cast.ToString(fMap["stream_schema"]),
+						Table:      cast.ToString(fMap["stream_table"]),
+						FullName:   cast.ToString(fMap["stream_full_name"]),
+					},
+					Object: &ObjectState{
+						Name:     cast.ToString(fMap["object_name"]),
+						Schema:   cast.ToString(fMap["object_schema"]),
+						Table:    cast.ToString(fMap["object_table"]),
+						FullName: cast.ToString(fMap["object_full_name"]),
+					},
+				}
+			}
+
+		}
+	}
+
+	return rd.state, nil
+}
+
+// MD5 returns a md5 hash of the json payload
+func (rd *ReplicationConfig) MD5() string {
+	return g.MD5(rd.OriginalCfg())
+}
+
+// Scan scan value into Jsonb, implements sql.Scanner interface
+func (rd *ReplicationConfig) Scan(value interface{}) error {
+	return g.JSONScanner(rd, value)
+}
+
+// Value return json value, implement driver.Valuer interface
+func (rd ReplicationConfig) Value() (driver.Value, error) {
+	return []byte(rd.JSON()), nil
+}
+
+// StreamsOrdered returns the stream names as ordered in the YAML file
+func (rd ReplicationConfig) StreamsOrdered() []string {
+	return rd.streamsOrdered
+}
+
+// GetStream returns the stream if the it exists
+func (rd ReplicationConfig) GetStream(name string) (streamName string, cfg *ReplicationStreamConfig, found bool) {
+
+	for streamName, streamCfg := range rd.Streams {
+		if rd.Normalize(streamName) == rd.Normalize(name) {
+			return streamName, streamCfg, true
+		}
+	}
+	return
+}
+
+var chunkPartSuffixRe = regexp.MustCompile(`\s*\(part-\d+\)$`)
+
+// ChunkBaseName returns the stream name without its chunk label "(part-NNN)".
+// isPart is true when the name has the label.
+func ChunkBaseName(name string) (base string, isPart bool) {
+	base = chunkPartSuffixRe.ReplaceAllString(name, "")
+	return base, base != name
+}
+
+func (rd ReplicationConfig) MatchStreams(pattern string) (streams map[string]*ReplicationStreamConfig) {
+	streams = map[string]*ReplicationStreamConfig{}
+	gc, err := glob.Compile(strings.ToLower(pattern))
+	// tolerate a pinned chunk label: "name (part-001)" should still match
+	// the stream "name" after chunking is removed from the config
+	basePattern := chunkPartSuffixRe.ReplaceAllString(pattern, "")
+	for streamName, streamCfg := range rd.Streams {
+		if rd.Normalize(streamName) == rd.Normalize(pattern) {
+			streams[streamName] = streamCfg
+		} else if streamCfg != nil && streamCfg.ID == pattern {
+			streams[streamName] = streamCfg
+		} else if err == nil && gc.Match(strings.ToLower(rd.Normalize(streamName))) {
+			streams[streamName] = streamCfg
+		} else if basePattern != pattern && rd.Normalize(basePattern) == rd.Normalize(streamName) {
+			streams[streamName] = streamCfg
+		} else if baseStream, isPart := ChunkBaseName(streamName); isPart && rd.Normalize(baseStream) == rd.Normalize(pattern) {
+			// a base-name selection matches all chunk parts of that stream
+			streams[streamName] = streamCfg
+		}
+	}
+	return
+}
+
+// Normalize normalized the name
+func (rd ReplicationConfig) Normalize(n string) string {
+	n = strings.ReplaceAll(n, "`", "")
+	n = strings.ReplaceAll(n, `"`, "")
+	n = strings.ToLower(n)
+	return n
+}
+
+type Wildcards []*Wildcard
+
+func (ws Wildcards) Patterns() []string {
+	patterns := []string{}
+	for _, w := range ws {
+		patterns = append(patterns, w.Pattern)
+	}
+	return patterns
+}
+
+type Wildcard struct {
+	Pattern     string
+	StreamNames []string
+	NodeMap     map[string]filesys.FileNode
+	TableMap    map[string]database.Table
+	EndpointMap map[string]api.Endpoint
+}
+
+// ProcessWildcards process the streams using wildcards
+// such as `my_schema.*` or `my_schema.my_prefix_*` or `my_schema.*_my_suffix`
+func (rd *ReplicationConfig) ProcessWildcards() (err error) {
+	rd.unmatched = nil
+
+	conn, err := rd.GetSourceConnection()
+	if err != nil {
+		return g.Error(err, "could not get connection for wildcards: %s", rd.Source)
+	}
+
+	hasWildcard := func(name string) bool {
+		return strings.Contains(name, "*") || strings.Contains(name, "?")
+	}
+
+	patterns := []string{}
+	for _, name := range rd.streamsOrdered {
+		// if specified, treat wildcard as single stream (don't expand wildcard into individual streams), will be expand while reading
+		stream := rd.Streams[name]
+		if stream != nil && stream.Single != nil {
+			if *stream.Single {
+				continue
+			}
+		} else if rd.Defaults.Single != nil && *rd.Defaults.Single {
+			continue
+		}
+
+		if name == "*" && !conn.Connection.Type.IsAPI() {
+			return g.Error("Must specify schema or path when using wildcard: 'my_schema.*', 'file://./my_folder/*', not '*'")
+		} else if hasWildcard(name) || conn.Connection.Type.IsAPI() {
+			// Always treat API endpoints as patterns to forms the upstream endpoints
+			// use a clone stream to apply defaults
+			s := ReplicationStreamConfig{}
+			if stream != nil {
+				s = *stream
+			}
+
+			// apply default
+			SetStreamDefaults(name, &s, *rd)
+
+			// if the target object doesn't have runtime variables, consider as single
+			if !s.ObjectHasStreamVars() {
+				// if file max vars are zero as well for file targets, auto-set as single
+				value := g.PtrVal(g.PtrVal(s.TargetOptions).FileMaxBytes) == 0 && g.PtrVal(g.PtrVal(s.TargetOptions).FileMaxRows) == 0
+				if stream != nil {
+					stream.Single = g.Ptr(value)
+				}
+				continue
+			}
+			patterns = append(patterns, name)
+		}
+	}
+	if len(patterns) == 0 {
+		return
+	}
+
+	originalStreamNames := rd.streamsOrdered
+	originalNormalizedStreamNames := map[string]string{}
+	for _, name := range originalStreamNames {
+		originalNormalizedStreamNames[rd.Normalize(name)] = name
+	}
+
+	var wildcards Wildcards
+	if conn.Connection.Type.IsDb() {
+		if wildcards, err = rd.ProcessWildcardsDatabase(conn.Connection, patterns); err != nil {
+			return err
+		}
+	} else if conn.Connection.Type.IsFile() {
+		if wildcards, err = rd.ProcessWildcardsFile(conn.Connection, patterns); err != nil {
+			return err
+		}
+	} else if conn.Connection.Type.IsAPI() {
+		if wildcards, err = rd.ProcessWildcardsAPI(conn.Connection, patterns); err != nil {
+			return err
+		}
+	} else {
+		return g.Error("invalid connection for wildcards: %s", rd.Source)
+	}
+
+	// an empty match drops the stream, so the run can pass without its data
+	for _, wildcard := range wildcards {
+		if len(wildcard.StreamNames) == 0 && hasWildcard(wildcard.Pattern) {
+			g.Warn("stream pattern '%s' did not match any object in %s, so it has no task", wildcard.Pattern, rd.Source)
+			rd.unmatched = append(rd.unmatched, unmatchedPattern{wildcard.Pattern, rd.Streams[wildcard.Pattern]})
+		}
+	}
+
+	// add wildcard streams
+	// arrange order to reflect original
+	newStreamNames := []string{}
+	for _, origName := range originalStreamNames {
+		matched := false
+		for _, wildcard := range wildcards {
+			if wildcard.Pattern == origName {
+				matched = true
+				for _, wsn := range wildcard.StreamNames {
+					if conn.Connection.Type.IsDb() {
+						table := wildcard.TableMap[wsn]
+
+						// match on Key() (schema.table) so an explicit 2-part stream
+						// still matches when FullName() renders a database qualifier
+						_, streamCfg, found := rd.GetStream(table.Key())
+						if !found {
+							_, streamCfg, found = rd.GetStream(table.FullName())
+						}
+						if found {
+							// if the explicit stream is disabled, skip it entirely
+							if streamCfg != nil && streamCfg.Disabled {
+								continue
+							}
+							// leave as is for order to be respected
+							continue
+						}
+
+						cfg := rd.Streams[wildcard.Pattern]
+						rd.AddStream(table.FullName(), cfg)
+						newStreamNames = append(newStreamNames, table.FullName())
+					}
+
+					if conn.Connection.Type.IsFile() {
+						node := wildcard.NodeMap[wsn]
+
+						// check if node path exists
+						_, streamCfg, found := rd.GetStream(node.Path())
+						if found {
+							// if the explicit stream is disabled, skip it entirely
+							if streamCfg != nil && streamCfg.Disabled {
+								continue
+							}
+							// leave as is for order to be respected
+							continue
+						}
+
+						// check if node URI exists
+						_, streamCfg, found = rd.GetStream(node.URI)
+						if found {
+							// if the explicit stream is disabled, skip it entirely
+							if streamCfg != nil && streamCfg.Disabled {
+								continue
+							}
+							// leave as is for order to be respected
+							continue
+						}
+
+						cfg := rd.Streams[wildcard.Pattern]
+						rd.AddStream(node.Path(), cfg)
+						newStreamNames = append(newStreamNames, node.Path())
+					}
+
+					if conn.Connection.Type.IsAPI() {
+						endpoint := wildcard.EndpointMap[wsn]
+
+						// convert overrides
+						var overrides ReplicationStreamConfig
+						if endpoint.Overrides != nil {
+							if err = g.JSONConvert(endpoint.Overrides, &overrides); err != nil {
+								return g.Error(err, "could not parse endpoint overrides for %s", wsn)
+							}
+						}
+
+						setEndpointProps := func(s *ReplicationStreamConfig) {
+							s.dependsOn = endpoint.DependsOn
+							s.queueStreaming = endpoint.ConsumesQueueImmediately()
+
+							if s.PrimaryKeyI == nil {
+								s.PrimaryKeyI = endpoint.Response.Records.PrimaryKey
+							}
+
+							if s.Description == "" {
+								s.Description = endpoint.Description
+							}
+
+							// set overrides
+							if endpoint.Overrides != nil {
+								s.overrides = &overrides
+							}
+						}
+
+						// check if endpoint exists
+						key, stream, found := rd.GetStream(endpoint.Name)
+						if found {
+							// if the explicit stream is disabled, skip it entirely
+							if stream != nil && stream.Disabled {
+								continue
+							}
+							// always set endpoint props (overrides, primary_key, description, dependsOn)
+							if stream == nil {
+								stream = &ReplicationStreamConfig{}
+								setEndpointProps(stream)
+								rd.AddStream(key, stream)
+							} else {
+								setEndpointProps(stream)
+							}
+							matched = false
+							continue
+						}
+
+						// Create a copy of the wildcard config for each endpoint
+						// to avoid shared state between endpoints
+						templateCfg := rd.Streams[wildcard.Pattern]
+						var cfg *ReplicationStreamConfig
+						if templateCfg == nil {
+							cfg = &ReplicationStreamConfig{}
+						} else {
+							cfgCopy := *templateCfg
+							cfg = &cfgCopy
+							// Reset endpoint-specific fields that should come from the endpoint spec
+							cfg.PrimaryKeyI = nil
+							cfg.Description = ""
+							cfg.dependsOn = nil
+							cfg.overrides = nil
+							cfg.queueStreaming = false
+						}
+						setEndpointProps(cfg) // set endpoint props
+						rd.AddStream(endpoint.Name, cfg)
+						newStreamNames = append(newStreamNames, endpoint.Name)
+					}
+				}
+
+				// remove original pattern stream
+				// api endpoint name won't have a pattern symbol
+				if hasWildcard(wildcard.Pattern) {
+					matched = true // so it doesn't get added back
+					rd.DeleteStream(wildcard.Pattern)
+				}
+			}
+		}
+
+		if !matched {
+			newStreamNames = append(newStreamNames, origName)
+		}
+	}
+
+	rd.streamsOrdered = newStreamNames
+
+	return nil
+}
+
+func (rd *ReplicationConfig) ParseReplicationHook(stage HookStage) (err error) {
+	var hooksRaw []any
+	switch stage {
+	case HookStageStart:
+		hooksRaw = rd.Hooks.Start
+	case HookStageEnd:
+		hooksRaw = rd.Hooks.End
+	default:
+		return g.Error("invalid replication level hook stage: %s", stage)
+	}
+
+	if hooksRaw == nil {
+		return
+	}
+
+	state, err := rd.RuntimeState()
+	if err != nil {
+		return g.Error(err, "could not render runtime state")
+	}
+
+	var hooks Hooks
+	for i, hook := range hooksRaw {
+		opts := ParseOptions{stage: stage, index: i, state: state, kind: HookKindHook}
+		hook, err := ParseHook(hook, opts)
+		if err != nil {
+			return g.Error(err, "error parsing %s-hook", stage)
+		} else if hook != nil {
+			if hook.Type() == "replication" {
+				return g.Error("can't call a replication hook inside a replication. Use a pipeline.")
+			}
+
+			hooks = append(hooks, hook)
+		}
+	}
+
+	switch stage {
+	case HookStageStart:
+		rd.startHooks = hooks
+	case HookStageEnd:
+		rd.endHooks = hooks
+	}
+
+	return nil
+}
+
+func (rd *ReplicationConfig) ExecuteReplicationHook(stage HookStage) (err error) {
+
+	switch stage {
+	case HookStageStart:
+		if len(rd.startHooks) == 0 {
+			return nil
+		}
+	case HookStageEnd:
+		if len(rd.endHooks) == 0 {
+			return nil
+		}
+	default:
+		return g.Error("invalid replication hook stage: %s", stage)
+	}
+
+	// create a pseudo-stream for the start and end hook, also with LogSink
+	stream := &ReplicationStreamConfig{Object: "_", replication: rd}
+	cfg, err := rd.StreamToTaskConfig(stream, g.F("__sling_replication_hook_%s__", stage), nil)
+	if err != nil {
+		return g.Error(err, "could not make replication hook: %s", stage)
+	}
+
+	te := &TaskExecution{
+		Context:      rd.Context,
+		ExecID:       env.ExecID,
+		Config:       &cfg,
+		Status:       ExecStatusRunning,
+		StartTime:    g.Ptr(time.Now()),
+		ProgressHist: []string{},
+		cleanupFuncs: []func(){},
+		OutputLines:  make(chan *g.LogLine, 5000),
+		df:           iop.NewDataflow(),
+		Replication:  rd,
+	}
+	te.StateSet()
+
+	// loop until end of hook
+	done := make(chan struct{})
+	defer close(done)
+	go func() {
+		ticker := time.NewTicker(5 * time.Second)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-done:
+				return
+			case <-ticker.C:
+				te.StateSet()
+			}
+		}
+	}()
+
+	// recover from panic and set state
+	defer func() {
+		if r := recover(); r != nil {
+			err = g.Error("panic occurred! %#v\n%s", r, string(debug.Stack()))
+		}
+		te.EndTime = g.Ptr(time.Now())
+		te.StateSet()
+	}()
+
+	if IsReplicationRunMode() {
+		env.LogSink = func(ll *g.LogLine) {
+			ll.Group = g.F("%s,%s", te.ExecID, cfg.StreamID())
+			te.AppendOutput(ll)
+		}
+	}
+
+	g.Debug("Sling version: %s (%s %s)", core.Version, runtime.GOOS, runtime.GOARCH)
+
+	switch stage {
+	case HookStageStart:
+		if err = rd.startHooks.Execute(); err != nil {
+			te.Status = ExecStatusError
+			return g.Error(err, "error executing start hooks")
+		}
+	case HookStageEnd:
+		if err = rd.endHooks.Execute(); err != nil {
+			te.Status = ExecStatusError
+			return g.Error(err, "error executing end hooks")
+		}
+	}
+
+	// set success
+	te.Status = ExecStatusSuccess
+
+	return nil
+}
+
+func (rd *ReplicationConfig) ParseStreamHook(stage HookStage, rs *ReplicationStreamConfig) (hooks Hooks, err error) {
+	var hooksRaw []any
+	switch stage {
+	case HookStagePre:
+		hooksRaw = rs.Hooks.Pre
+	case HookStagePost:
+		hooksRaw = rs.Hooks.Post
+	case HookStagePreMerge:
+		hooksRaw = rs.Hooks.PreMerge
+	case HookStagePostMerge:
+		hooksRaw = rs.Hooks.PostMerge
+	default:
+		return nil, g.Error("invalid stream hook stage: %s", stage)
+	}
+
+	if hooksRaw == nil {
+		return
+	}
+
+	for i, hook := range hooksRaw {
+		opts := ParseOptions{stage: stage, index: i, state: rd.state, kind: HookKindHook}
+		hook, err := ParseHook(hook, opts)
+		if err != nil {
+			return nil, g.Error(err, "error parsing %s-hook", stage)
+		} else if hook != nil {
+			if hook.Type() == "replication" {
+				return nil, g.Error("can't call a replication hook inside a replication. Use a pipeline.")
+			}
+
+			hooks = append(hooks, hook)
+		}
+	}
+	return hooks, nil
+}
+
+func (rd *ReplicationConfig) ProcessChunks() (err error) {
+	// determine which stream is backfill mode, has range and chunk_size
+	type Stream struct {
+		name   string
+		config ReplicationStreamConfig
+		chunks []Stream
+	}
+	streamsToChunk := []Stream{}
+	for _, name := range rd.streamsOrdered {
+		stream := rd.Streams[name]
+
+		// use a clone stream to apply defaults
+		s := ReplicationStreamConfig{}
+		if stream != nil {
+			s = *stream
+		}
+
+		// apply default
+		SetStreamDefaults(name, &s, *rd)
+
+		chunkSpecified := false
+		if g.PtrVal(s.SourceOptions).ChunkSize != nil {
+			chunkSpecified = true
+		}
+		if cc := g.PtrVal(s.SourceOptions).ChunkCount; cc != nil && *cc > 0 {
+			chunkSpecified = true
+		}
+		if ce := g.PtrVal(s.SourceOptions).ChunkExpr; ce != nil && *ce != "" {
+			chunkSpecified = true
+		}
+
+		if !g.In(s.Mode, FullRefreshMode, TruncateMode, BackfillMode, IncrementalMode) || !chunkSpecified {
+			continue
+		}
+
+		// process stream
+		streamsToChunk = append(streamsToChunk, Stream{name, s, []Stream{}})
+	}
+
+	if len(streamsToChunk) == 0 {
+		return nil
+	}
+
+	sourceConn := connection.GetLocalConns().Get(rd.Source)
+	if sourceConn.Name == "" {
+		return g.Error("did not find connection: %s", rd.Source)
+	} else if sourceConn.Connection.Type.IsAPI() {
+		return nil // let core/dbio/api/api.go handle chunking
+	} else if !sourceConn.Connection.Type.IsDb() {
+		return g.Error("must be a database connection for chunking: %s", rd.Source)
+	}
+
+	targetConn := connection.GetLocalConns().Get(rd.Target)
+	if targetConn.Name == "" {
+		return g.Error("did not find connection: %s", rd.Target)
+	} else if !targetConn.Connection.Type.IsDb() {
+		return g.Error("must be a database connection for chunking: %s", rd.Target)
+	}
+
+	sourceConnDB, err := sourceConn.Connection.AsDatabase()
+	if err != nil {
+		return g.Error(err)
+	}
+	defer sourceConnDB.Close()
+
+	for i, stream := range streamsToChunk {
+		chunkSize := cast.ToString(stream.config.SourceOptions.ChunkSize)
+		chunkCount := g.PtrVal(stream.config.SourceOptions.ChunkCount)
+		chunkExpr := g.PtrVal(stream.config.SourceOptions.ChunkExpr)
+		min, max := stream.config.SourceOptions.RangeStartEnd()
+		table, err := database.ParseTableName(stream.name, sourceConn.Connection.Type)
+		if stream.config.SQL != "" {
+			table, err = database.ParseTableName(stream.config.SQL, sourceConn.Connection.Type)
+			table.SQL = g.R(table.SQL, "incremental_where_cond", "1=1")
+			table.SQL = g.R(table.SQL, "incremental_value", "null")
+			table.SQL = g.R(table.SQL, "fields", "*")
+		}
+
+		if err != nil {
+			return g.Error(err, "could not parse stream name as table name: %s", stream.name)
+		}
+
+		// Apply where clause so chunk min/max queries use the filtered range
+		if stream.config.Where != "" {
+			table.Where = stream.config.Where
+		}
+
+		// Get stream table name for variable expansion (always from stream.name, not SQL)
+		streamTable, _ := database.ParseTableName(stream.name, sourceConn.Connection.Type)
+
+		// Expand {stream_table} variables before parsing object
+		expandedObject := stream.config.Object
+		if streamTable.Name != "" && strings.Contains(expandedObject, "{stream_table") {
+			expandedObject = strings.ReplaceAll(expandedObject, "{stream_table}", streamTable.Name)
+			expandedObject = strings.ReplaceAll(expandedObject, "{stream_table_lower}", strings.ToLower(streamTable.Name))
+			expandedObject = strings.ReplaceAll(expandedObject, "{stream_table_upper}", strings.ToUpper(streamTable.Name))
+		}
+
+		object, err := database.ParseTableName(expandedObject, targetConn.Connection.Type)
+		if err != nil {
+			return g.Error(err, "could not parse target object name: %s", stream.name)
+		}
+
+		if chunkExpr != "" {
+			// no update_key needed for chunking by expression
+		} else if stream.config.UpdateKey == "" {
+			return g.Error("did not provide update_key for stream chunking: %s", stream.name)
+		} else if stream.config.Mode == IncrementalMode {
+			// need to get the max value target side if the table exists
+			var tempCfg Config
+			tempCfg, err = rd.StreamToTaskConfig(&stream.config, stream.name, nil)
+			if err != nil {
+				return g.Error(err, "could not prepare stream config for chunking: %s", stream.name)
+			}
+
+			tgtConn, err := targetConn.Connection.AsDatabase()
+			if err != nil {
+				return g.Error(err, "could not connect to target database for stream chunking: %s", stream.name)
+			}
+			defer tgtConn.Close()
+			err = getIncrementalValueViaDB(&tempCfg, tgtConn, sourceConnDB.GetType())
+			if err != nil {
+				return g.Error(err, "could not get max range value in target database for stream chunking: %s", stream.name)
+			}
+
+			// don't use tempCfg.IncrementalValStr due to quotes
+			incrementalMin := cast.ToString(tempCfg.IncrementalVal)
+			if min == "" {
+				min = incrementalMin
+			} else if incrementalMin != "" {
+				// use the higher of user-specified range min or target's max value
+				// so we don't re-process already-synced data, but also don't
+				// start from an earlier date than the user requested
+				Sp := iop.NewStreamProcessor()
+				if minT, err := Sp.ParseTime(min); err == nil {
+					if incT, err := Sp.ParseTime(incrementalMin); err == nil && incT.After(minT) {
+						min = incrementalMin
+					}
+				} else if cast.ToFloat64(incrementalMin) > cast.ToFloat64(min) {
+					min = incrementalMin
+				}
+			}
+		}
+
+		var chunks []database.Chunk
+		if chunkSize != "" {
+			chunks, err = database.ChunkByColumnRange(sourceConnDB, table, stream.config.UpdateKey, chunkSize, min, max)
+		} else if chunkCount > 0 {
+			if chunkExpr != "" {
+				if stream.config.Mode == BackfillMode && max == "" {
+					return g.Error("backfill mode requires a range (does not work with chunk_expr). Try incremental mode with only a primary key (no update_key needed)")
+				}
+				chunks, err = database.ChunkByExpression(sourceConnDB, table, chunkExpr, chunkCount)
+			} else {
+				chunks, chunkSize, err = database.ChunkByCount(sourceConnDB, table, stream.config.UpdateKey, chunkCount, min, max)
+			}
+		} else {
+			err = g.Error("must specify chunk_count or chunk_size")
+		}
+		if err != nil {
+			return g.Error(err, "could not generate chunk ranges: %s", stream.name)
+		}
+
+		g.Debug("determined %d chunks (size=%s, stream=%s): %s", len(chunks), chunkSize, stream.name, g.Marshal(chunks))
+
+		if len(chunks) == 0 {
+			continue
+		}
+
+		streamsToChunk[i].chunks = make([]Stream, len(chunks))
+		for j, chunk := range chunks {
+			prefix := lo.Ternary(table.IsQuery(), stream.name, table.FullName())
+			chunkedStream := Stream{
+				name:   prefix + g.F(" (part-%03d)", j+1),
+				config: stream.config,
+			}
+
+			// Use expanded object with {stream_table} variables resolved
+			chunkedStream.config.Object = expandedObject
+
+			// set range in a copy of source options
+			if rangeStr := chunk.Range(); rangeStr != "" {
+				so := SourceOptions{}
+				g.Unmarshal(g.Marshal(stream.config.SourceOptions), &so)
+				so.Range = g.Ptr(rangeStr)
+				chunkedStream.config.SourceOptions = &so
+			} else if where := chunk.Where; where != "" {
+				if stream.config.Mode == IncrementalMode {
+					where = g.F("%s and {incremental_where_cond}", where)
+				}
+				opts := database.SelectOptions{Where: where}
+				if sql := chunkedStream.config.SQL; sql != "" {
+					if !strings.Contains(sql, "{incremental_where_cond}") {
+						return g.Error("custom SQL must contain {incremental_where_cond} for chunking by expression")
+					}
+					chunkedStream.config.SQL = strings.ReplaceAll(sql, "{incremental_where_cond}", where)
+				} else {
+					chunkedStream.config.SQL = table.Select(opts)
+				}
+			}
+
+			// set temp table
+			to := TargetOptions{}
+			g.Unmarshal(g.Marshal(stream.config.TargetOptions), &to)
+			suffix := g.F("_%03d", j+1)
+			tempTable := makeTempTableName(targetConn.Connection.Type, object, suffix)
+			tempTable.Name = strings.ToLower(tempTable.Name)
+			to.TableTmp = tempTable.FullName()
+
+			chunkedStream.config.TargetOptions = &to
+
+			// pass as table name to enumerate stream name if not custom SQL
+			if chunkedStream.config.SQL == "" {
+				chunkedStream.config.SQL = table.FullName()
+			}
+
+			streamsToChunk[i].chunks[j] = chunkedStream
+		}
+	}
+
+	// arrange order to reflect original
+	newStreamNames := []string{}
+	for _, origName := range rd.streamsOrdered {
+		matched := false
+		for _, stream := range streamsToChunk {
+			if stream.name == origName {
+				matched = true
+				for _, chunkedStream := range stream.chunks {
+					rd.AddStream(chunkedStream.name, &chunkedStream.config)
+					newStreamNames = append(newStreamNames, chunkedStream.name)
+				}
+
+				// remove original stream
+				rd.DeleteStream(origName)
+			}
+		}
+		if !matched {
+			newStreamNames = append(newStreamNames, origName)
+		}
+	}
+
+	rd.streamsOrdered = newStreamNames
+
+	return nil
+}
+
+func (rd *ReplicationConfig) AddStream(key string, cfg *ReplicationStreamConfig) {
+	newCfg := ReplicationStreamConfig{}
+	g.Unmarshal(g.Marshal(cfg), &newCfg)                 // copy config over
+	newCfg.dependsOn = g.PtrVal(cfg).dependsOn           // set dependsOn since not marshalled
+	newCfg.overrides = g.PtrVal(cfg).overrides           // set overrides since not marshalled
+	newCfg.queueStreaming = g.PtrVal(cfg).queueStreaming // set since not marshalled
+	rd.Streams[key] = &newCfg
+	rd.streamsOrdered = append(rd.streamsOrdered, key)
+
+	// add to streams map if not found
+	if _, found := rd.maps.Streams[key]; !found {
+		mapEntry, _ := g.UnmarshalMap(g.Marshal(cfg))
+		rd.maps.Streams[key] = mapEntry
+	}
+}
+
+func (rd *ReplicationConfig) DeleteStream(key string) {
+	delete(rd.Streams, key)
+	rd.streamsOrdered = lo.Filter(rd.streamsOrdered, func(v string, i int) bool {
+		return v != key
+	})
+}
+
+// GetSourceConnection returns a database connection to the source
+func (rd *ReplicationConfig) GetSourceConnection() (conn connection.ConnEntry, err error) {
+	if rd.Source == "" {
+		return conn, g.Error("no source specified")
+	}
+
+	// Get local connections (same approach as ProcessWildcards)
+	connsMap := lo.KeyBy(connection.GetLocalConns(), func(c connection.ConnEntry) string {
+		return strings.ToLower(c.Connection.Name)
+	})
+
+	var ok bool
+	conn, ok = connsMap[strings.ToLower(rd.Source)]
+	if ok {
+		if err = conn.Connection.ResolveType(context.Background()); err != nil {
+			return conn, g.Error(err, "could not init source connection")
+		}
+	} else {
+		if strings.EqualFold(rd.Source, "local://") || strings.EqualFold(rd.Source, "file://") {
+			conn = connection.LocalFileConnEntry()
+		} else if strings.Contains(rd.Source, "://") {
+			conn.Connection, err = connection.NewConnectionFromURL("source", rd.Source)
+			if err != nil {
+				return conn, g.Error(err, "could not create source connection from URL")
+			}
+		} else {
+			return conn, g.Error("could not find source connection: %s", rd.Source)
+		}
+	}
+
+	return conn, nil
+}
+
+func (rd *ReplicationConfig) ProcessWildcardsDatabase(c connection.Connection, patterns []string) (wildcards Wildcards, err error) {
+
+	g.Debug("processing database wildcards for %s: %s", rd.Source, g.Marshal(patterns))
+
+	conn, err := c.AsDatabase(connection.AsConnOptions{UseCache: true})
+	if err != nil {
+		return wildcards, g.Error(err, "could not init connection for wildcard processing: %s", rd.Source)
+	} else if err = conn.Connect(); err != nil {
+		return wildcards, g.Error(err, "could not connect to database for wildcard processing: %s", rd.Source)
+	}
+	defer conn.Close() // causes issues for duckdb, let's close
+
+	for _, pattern := range patterns {
+		wildcard := Wildcard{Pattern: pattern, TableMap: map[string]database.Table{}}
+
+		schemaT, err := database.ParseTableName(pattern, c.Type)
+		if err != nil {
+			return wildcards, g.Error(err, "could not parse stream name: %s", pattern)
+		} else if schemaT.Schema == "" {
+			continue
+		}
+
+		// get all tables in schema
+		g.Debug("getting tables for %s", pattern)
+		ok, _, schemata, _, err := c.Discover(&connection.DiscoverOptions{Pattern: pattern})
+		if err != nil {
+			return wildcards, g.Error(err, "could not get tables for schema: %s", schemaT.Schema)
+		} else if !ok {
+			return wildcards, g.Error("could not get tables for schema: %s", schemaT.Schema)
+		}
+
+		for _, table := range schemata.Tables() {
+			wildcard.StreamNames = append(wildcard.StreamNames, table.FullName())
+			wildcard.TableMap[table.FullName()] = table
+		}
+
+		g.Debug("wildcard '%s' matched %d streams => %+v", pattern, len(wildcard.StreamNames), wildcard.StreamNames)
+
+		// delete * from stream map
+		wildcards = append(wildcards, &wildcard)
+
+	}
+	return
+}
+
+func (rd *ReplicationConfig) ProcessWildcardsAPI(c connection.Connection, patterns []string) (wildcards Wildcards, err error) {
+	g.Debug("processing api endpoints for %s: %s", rd.Source, g.Marshal(patterns))
+
+	ac, err := c.AsAPI(connection.AsConnOptions{UseCache: true})
+	if err != nil {
+		return wildcards, g.Error(err, "could not init connection for wildcard processing: %s", rd.Source)
+	} else if err = ac.Authenticate(); err != nil {
+		return wildcards, g.Error(err, "could not authenticate to api system for wildcard processing: %s", rd.Source)
+	}
+	defer c.Close() // close so we can re-initiate the queues on replication
+
+	endpoints, err := ac.ListEndpoints()
+	if err != nil {
+		return wildcards, g.Error(err, "could not get endpoints")
+	}
+
+	for _, pattern := range patterns {
+		wildcard := Wildcard{Pattern: pattern, EndpointMap: map[string]api.Endpoint{}}
+
+		patternEndpoints, err := ac.ListEndpoints(pattern)
+
+		if err != nil {
+			return wildcards, g.Error(err, "could not get endpoints for pattern: %s", pattern)
+		} else if len(patternEndpoints) == 0 {
+			return wildcards, g.Error("did not find endpoint(s) for: %s. Available endpoints: %s", pattern, g.Marshal(endpoints.Names()))
+		}
+
+		for _, endpoint := range patternEndpoints {
+			wildcard.StreamNames = append(wildcard.StreamNames, endpoint.Name)
+			wildcard.EndpointMap[endpoint.Name] = endpoint
+		}
+		wildcards = append(wildcards, &wildcard)
+	}
+
+	if len(wildcards) == 0 {
+		g.Warn("no endpoints detected for stream names: %s. Available endpoints: %s", g.Marshal(patterns), g.Marshal(endpoints.Names()))
+	}
+
+	return
+}
+
+func (rd *ReplicationConfig) ProcessWildcardsFile(c connection.Connection, patterns []string) (wildcards Wildcards, err error) {
+	g.Debug("processing file wildcards for %s: %s", rd.Source, g.Marshal(patterns))
+
+	fs, err := c.AsFile(connection.AsConnOptions{UseCache: true})
+	if err != nil {
+		return wildcards, g.Error(err, "could not init connection for wildcard processing: %s", rd.Source)
+	} else if err = fs.Init(context.Background()); err != nil {
+		return wildcards, g.Error(err, "could not connect to file system for wildcard processing: %s", rd.Source)
+	}
+
+	for _, pattern := range patterns {
+		path := pattern
+
+		wildcard := Wildcard{Pattern: pattern, NodeMap: map[string]filesys.FileNode{}}
+		if strings.Contains(pattern, "://") {
+			_, _, path, err = filesys.ParseURLType(pattern)
+			if err != nil {
+				return wildcards, g.Error(err, "could not parse wildcard: %s", pattern)
+			}
+		}
+
+		ok, nodes, _, _, err := c.Discover(&connection.DiscoverOptions{Pattern: path})
+		if err != nil {
+			return wildcards, g.Error(err, "could not get files for schema: %s", pattern)
+		} else if !ok {
+			return wildcards, g.Error("could not get files for schema: %s", pattern)
+		}
+
+		for _, node := range nodes {
+			// add path
+			wildcard.StreamNames = append(wildcard.StreamNames, node.Path())
+			wildcard.NodeMap[node.Path()] = node
+		}
+
+		g.Debug("wildcard '%s' matched %d streams => %+v", pattern, len(wildcard.StreamNames), wildcard.StreamNames)
+
+		// delete from stream map
+		wildcards = append(wildcards, &wildcard)
+
+	}
+
+	return
+}
+
+// ReportUnmatchedPatterns sends a task status 'warning' for each wildcard
+// stream that matched no object. Without it, the run shows as a success.
+func (rd *ReplicationConfig) ReportUnmatchedPatterns(execID string) {
+	for _, u := range rd.unmatched {
+		stream := ReplicationStreamConfig{}
+		if u.stream != nil {
+			stream = *u.stream
+		}
+		SetStreamDefaults(u.pattern, &stream, *rd)
+		stream.replication = rd
+
+		cfg, err := rd.StreamToTaskConfig(&stream, u.pattern, g.CastToMapString(rd.Env))
+		if err != nil {
+			cfg = Config{StreamName: u.pattern, Env: g.CastToMapString(rd.Env)}
+			cfg.Source.Conn, cfg.Source.Stream = rd.Source, u.pattern
+			cfg.Target.Conn = rd.Target
+		}
+
+		t := NewTask(execID, &cfg)
+		now := time.Now()
+		t.StartTime, t.EndTime = &now, &now
+		t.Status = ExecStatusWarning
+		t.Err = fmt.Errorf("stream pattern '%s' did not match any object in %s", u.pattern, rd.Source) // plain error, without a stack
+		t.StateSet()
+	}
+}
+
+// Compile compiles the replication into tasks
+func (rd *ReplicationConfig) Compile(cfgOverwrite *Config, selectStreams ...string) (err error) {
+	rd.Context = g.NewContext(context.Background())
+
+	if rd.Compiled {
+		// apply the selection if specified
+		if len(selectStreams) > 0 {
+			selectedTasks := []*Config{}
+			nameMap := g.ArrMapString(selectStreams)
+			for _, task := range rd.Tasks {
+				if _, ok := nameMap[task.StreamName]; ok {
+					selectedTasks = append(selectedTasks, task)
+				}
+			}
+			rd.Tasks = selectedTasks
+		}
+
+		// re-prepare tasks
+		for _, task := range rd.Tasks {
+			task.Prepared = false
+			if err = task.Prepare(); err != nil {
+				return g.Error(err, "could not prepare: %s", task.StreamName)
+			}
+		}
+
+		// init runtime state
+		rd.initRuntimeState(selectStreams)
+
+		if err = rd.ParseReplicationHook(HookStageStart); err != nil {
+			return g.Error(err, "could not parse start hooks")
+		}
+		if err = rd.ParseReplicationHook(HookStageEnd); err != nil {
+			return g.Error(err, "could not parse end hooks")
+		}
+
+		return nil
+	}
+
+	err = rd.ProcessWildcards()
+	if err != nil {
+		return g.Error(err, "could not compile streams")
+	}
+
+	err = rd.ProcessChunks()
+	if err != nil {
+		return g.Error(err, "could not process chunks when compiling")
+	}
+
+	// Reorder streams by foreign key dependencies when schema migration is enabled
+	if err = rd.resolveStreamOrderByFK(); err != nil {
+		return g.Error(err, "could not resolve stream order by foreign key dependencies")
+	}
+
+	// clean up selectStreams
+	matchedStreams := map[string]*ReplicationStreamConfig{}
+	includeTags := []string{}
+	excludeTags := []string{}
+	for _, selectStream := range selectStreams {
+		for key, val := range rd.MatchStreams(selectStream) {
+			key = rd.Normalize(key)
+			matchedStreams[key] = val
+		}
+		if strings.HasPrefix(selectStream, "tag:") {
+			includeTags = append(includeTags, strings.TrimPrefix(selectStream, "tag:"))
+		}
+		if strings.HasPrefix(selectStream, "-tag:") {
+			excludeTags = append(excludeTags, strings.TrimPrefix(selectStream, "-tag:"))
+		}
+	}
+
+	if len(includeTags) > 0 && len(excludeTags) > 0 {
+		return g.Error("cannot include and exclude tags. Either include or exclude.")
+	}
+
+	// init state for prepare use
+	rd.initRuntimeState(nil)
+
+	for _, name := range rd.StreamsOrdered() {
+
+		stream := ReplicationStreamConfig{}
+		if rd.Streams[name] != nil {
+			stream = *rd.Streams[name]
+		}
+		SetStreamDefaults(name, &stream, *rd)
+		stream.replication = rd
+
+		if stream.Object == "" {
+			return g.Error("need to specify `object` for stream `%s`. Please see https://docs.slingdata.io/sling-cli for help.", name)
+		}
+
+		// match on tag, need stream defined to do so
+		matchedTag := false
+		for _, tag := range includeTags {
+			if g.In(tag, stream.Tags...) {
+				matchedTag = true
+			}
+		}
+		if matchedTag {
+			matchedStreams[rd.Normalize(name)] = &stream
+		}
+
+		// exclude tags
+		for _, tag := range excludeTags {
+			if g.In(tag, stream.Tags...) {
+				delete(matchedStreams, rd.Normalize(name))
+			}
+		}
+
+		_, matched := matchedStreams[rd.Normalize(name)]
+		if len(selectStreams) > 0 && !matched {
+			g.Trace("skipping stream %s since it is not selected", name)
+			continue
+		}
+
+		// config overwrite
+		taskEnv := g.CastToMapString(rd.Env)
+		var incrementalValStr string
+		var incrementalVal any
+
+		if cfgOverwrite != nil {
+			if string(cfgOverwrite.Mode) != "" && stream.Mode != cfgOverwrite.Mode {
+				g.Debug("stream mode overwritten for `%s`: %s => %s", name, stream.Mode, cfgOverwrite.Mode)
+				stream.Mode = cfgOverwrite.Mode
+			}
+
+			if cfgOverwrite.Source.Options.Limit != nil && stream.SourceOptions.Limit != cfgOverwrite.Source.Options.Limit {
+				if stream.SourceOptions.Limit != nil {
+					g.Debug("stream limit overwritten for `%s`: %s => %s", name, *stream.SourceOptions.Limit, *cfgOverwrite.Source.Options.Limit)
+				}
+				stream.SourceOptions.Limit = cfgOverwrite.Source.Options.Limit
+			}
+
+			if cfgOverwrite.Source.Options.Offset != nil && stream.SourceOptions.Offset != cfgOverwrite.Source.Options.Offset {
+				if stream.SourceOptions.Offset != nil {
+					g.Debug("stream offset overwritten for `%s`: %s => %s", name, *stream.SourceOptions.Offset, *cfgOverwrite.Source.Options.Offset)
+				}
+				stream.SourceOptions.Offset = cfgOverwrite.Source.Options.Offset
+			}
+
+			if cfgOverwrite.Source.UpdateKey != "" && stream.UpdateKey != cfgOverwrite.Source.UpdateKey {
+				if stream.UpdateKey != "" {
+					g.Debug("stream update_key overwritten for `%s`: %s => %s", name, stream.UpdateKey, cfgOverwrite.Source.UpdateKey)
+				}
+				stream.UpdateKey = cfgOverwrite.Source.UpdateKey
+			}
+
+			if cfgOverwrite.Source.PrimaryKeyI != nil && stream.PrimaryKeyI != cfgOverwrite.Source.PrimaryKeyI {
+				if stream.PrimaryKeyI != nil {
+					g.Debug("stream primary_key overwritten for `%s`: %#v => %#v", name, stream.PrimaryKeyI, cfgOverwrite.Source.PrimaryKeyI)
+				}
+				stream.PrimaryKeyI = cfgOverwrite.Source.PrimaryKeyI
+			}
+
+			if newRange := cfgOverwrite.Source.Options.Range; newRange != nil {
+				if stream.SourceOptions.Range == nil || *stream.SourceOptions.Range != *newRange {
+					if stream.SourceOptions.Range != nil && *stream.SourceOptions.Range != "" {
+						g.Debug("stream range overwritten for `%s`: %s => %s", name, *stream.SourceOptions.Range, *newRange)
+					}
+					stream.SourceOptions.Range = newRange
+				}
+			}
+
+			// other incremental / backfill overrides
+			if newFiles := cfgOverwrite.Source.Files; newFiles != nil {
+				stream.Files = newFiles
+			}
+			incrementalVal = cfgOverwrite.IncrementalVal
+			incrementalValStr = cfgOverwrite.IncrementalValStr
+
+			// merge to existing replication env, overwrite if key already exists
+			if cfgOverwrite.Env != nil {
+				for k, v := range cfgOverwrite.Env {
+					taskEnv[k] = v
+				}
+			}
+		}
+
+		var cfg Config
+		cfg, err = rd.StreamToTaskConfig(&stream, name, taskEnv)
+		if err != nil {
+			err = g.Error(err, "could not prepare stream config: %s", name)
+			return
+		}
+
+		// set IncrementalValStr
+		cfg.IncrementalVal = incrementalVal
+		cfg.IncrementalValStr = incrementalValStr
+
+		rd.Tasks = append(rd.Tasks, &cfg)
+	}
+
+	// keep only the unmatched patterns that the selection names
+	if len(selectStreams) > 0 {
+		rd.unmatched = lo.Filter(rd.unmatched, func(u unmatchedPattern, _ int) bool {
+			return g.In(u.pattern, selectStreams...)
+		})
+	}
+
+	// fail loudly when an include-style selection matched nothing,
+	// instead of compiling zero tasks downstream
+	if len(selectStreams) > 0 && len(matchedStreams) == 0 && len(includeTags) == 0 && len(excludeTags) == 0 {
+		return g.Error("no streams matched the selection %s (available streams: %s)", g.Marshal(selectStreams), g.Marshal(lo.Keys(rd.Streams)))
+	}
+
+	// parse and validate replication level hooks
+	{
+		if err = rd.ParseReplicationHook(HookStageStart); err != nil {
+			return g.Error(err, "could not parse start hooks")
+		}
+		if err = rd.ParseReplicationHook(HookStageEnd); err != nil {
+			return g.Error(err, "could not parse end hooks")
+		}
+
+		// validate for pre/post/pre_merge/post_merge at replication level
+		stageHooks := map[string][]any{
+			"pre":         rd.Hooks.Pre,
+			"+pre":        rd.Hooks.PrePrepend,
+			"pre+":        rd.Hooks.PreAppend,
+			"post":        rd.Hooks.Post,
+			"+post":       rd.Hooks.PostPrepend,
+			"post+":       rd.Hooks.PostAppend,
+			"pre_merge":   rd.Hooks.PreMerge,
+			"+pre_merge":  rd.Hooks.PreMergePrepend,
+			"pre_merge+":  rd.Hooks.PreMergeAppend,
+			"post_merge":  rd.Hooks.PostMerge,
+			"+post_merge": rd.Hooks.PostMergePrepend,
+			"post_merge+": rd.Hooks.PostMergeAppend,
+		}
+		for stage, hooks := range stageHooks {
+			if len(hooks) > 0 {
+				return g.Error(`cannot declare a "%s" hook at replication level, only accepts start/end. Try putting it as a defaults.hooks.%s`, stage, stage)
+			}
+		}
+	}
+
+	rd.Compiled = true
+
+	// generate state
+	if _, err = rd.RuntimeState(); err != nil {
+		return g.Error(err, "could not make runtime state")
+	}
+
+	// build the CDC runner (if shared-reader CDC applies) and inject the
+	// auto-injected read_cdc start hook
+	rd.buildCDCRunner()
+
+	g.Trace("len(selectStreams) = %d, len(matchedStreams) = %d, len(replication.Streams) = %d", len(selectStreams), len(matchedStreams), len(rd.Streams))
+	streamCnt := lo.Ternary(len(selectStreams) > 0, len(matchedStreams), len(rd.Streams))
+
+	if err = testStreamCnt(streamCnt, lo.Keys(matchedStreams), lo.Keys(rd.Streams)); err != nil {
+		return err
+	}
+	return
+}
+
+// buildCDCRunner scans rd.Tasks for shared-reader-eligible CDC streams and, if
+// any are found, creates a single CDC runner and auto-injects a `read_cdc`
+// start-stage hook attached to it. A replication has exactly one source, so
+// at most one runner is ever needed. Streams in the runner's group also
+// remain in rd.Tasks; the dispatcher uses IsTaskInCDCGroup to skip them from
+// per-stream execution.
+func (rd *ReplicationConfig) buildCDCRunner() {
+	rd.CDCRunner = nil
+
+	var groupKey string
+	var groupTasks []*Config
+
+	isSharedReaderCDC := func(cfg *Config) bool {
+		if cfg == nil || cfg.Mode != ChangeCaptureMode ||
+			(cfg.ReplicationStream != nil && cfg.ReplicationStream.Disabled) {
+			return false
+		}
+
+		switch {
+		case cfg.SrcConn.Type.IsMySQLLike(), cfg.SrcConn.Type.IsPostgresLike():
+			return cfg.CDCSlotLevel() == database.CDCSlotLevelShared
+		}
+		return false
+	}
+
+	for _, cfg := range rd.Tasks {
+		if !isSharedReaderCDC(cfg) {
+			continue
+		}
+		if groupKey == "" {
+			groupKey = string(cfg.SrcConn.Type) + ":" + cfg.SrcConnMD5()
+			switch {
+			case cfg.SrcConn.Type.IsMySQLLike():
+				groupKey = "mysql:" + cfg.SrcConnMD5()
+			case cfg.SrcConn.Type.IsPostgresLike():
+				groupKey = "postgres:" + cfg.SrcConnMD5()
+			}
+		}
+		groupTasks = append(groupTasks, cfg)
+	}
+
+	if len(groupTasks) == 0 {
+		return
+	}
+
+	rd.CDCRunner = newCDCRunner(groupKey, groupTasks, rd)
+
+	// inject hook so shared read phase runs before loads
+	rd.startHooks = append(rd.startHooks, Hooks{rd.CDCRunner.NewReadCDCHook()}...)
+}
+
+type ReplicationStreamConfig struct {
+	ID            string         `json:"id,omitempty" yaml:"id,omitempty"`
+	Description   string         `json:"description,omitempty" yaml:"description,omitempty"`
+	Mode          Mode           `json:"mode,omitempty" yaml:"mode,omitempty"`
+	Object        string         `json:"object,omitempty" yaml:"object,omitempty"`
+	Select        []string       `json:"select,omitempty" yaml:"select,flow,omitempty"`
+	Files         []string       `json:"files,omitempty" yaml:"files,omitempty"` // include/exclude files
+	Where         string         `json:"where,omitempty" yaml:"where,omitempty"`
+	PrimaryKeyI   any            `json:"primary_key,omitempty" yaml:"primary_key,flow,omitempty"`
+	UpdateKey     string         `json:"update_key,omitempty" yaml:"update_key,omitempty"`
+	SQL           string         `json:"sql,omitempty" yaml:"sql,omitempty"`
+	Tags          []string       `json:"tags,omitempty" yaml:"tags,omitempty"`
+	SourceOptions *SourceOptions `json:"source_options,omitempty" yaml:"source_options,omitempty"`
+	TargetOptions *TargetOptions `json:"target_options,omitempty" yaml:"target_options,omitempty"`
+	CDCOptions    *CDCOptions    `json:"change_capture_options,omitempty" yaml:"change_capture_options,omitempty"`
+	Schedule      string         `json:"schedule,omitempty" yaml:"schedule,omitempty"`
+	Disabled      bool           `json:"disabled,omitempty" yaml:"disabled,omitempty"`
+	Single        *bool          `json:"single,omitempty" yaml:"single,omitempty"`
+	Transforms    any            `json:"transforms,omitempty" yaml:"transforms,omitempty"`
+	Columns       any            `json:"columns,omitempty" yaml:"columns,omitempty"`
+	Hooks         HookMap        `json:"hooks,omitempty" yaml:"hooks,omitempty"`
+
+	overrides      *ReplicationStreamConfig `json:"-" yaml:"-"`
+	replication    *ReplicationConfig       `json:"-" yaml:"-"`
+	dependsOn      []string                 `json:"-" yaml:"-"`
+	queueStreaming bool                     `json:"-" yaml:"-"`
+}
+
+// SelectColumnsToken, placed first in a stream's `select`, pins the column
+// names declared under `columns` (in declared order). e.g. `['@columns', '*']`.
+const SelectColumnsToken = "@columns"
+
+// expandSelectColumns replaces a leading @columns sentinel with the given column
+// names (in declared order), deduping and preserving any tokens that follow.
+// Errors if @columns is not first or `columns` is undefined.
+func expandSelectColumns(selectList, columnNames []string) ([]string, error) {
+	tokenAt := -1
+	for i, f := range selectList {
+		if strings.TrimSpace(f) == SelectColumnsToken {
+			tokenAt = i
+			break
+		}
+	}
+
+	if tokenAt == -1 {
+		return selectList, nil // no sentinel, nothing to do
+	}
+	if tokenAt != 0 {
+		return selectList, g.Error("the '%s' select token must be the first item in `select`", SelectColumnsToken)
+	}
+	if len(columnNames) == 0 {
+		return selectList, g.Error("the '%s' select token requires `columns` to be defined on the stream", SelectColumnsToken)
+	}
+
+	expanded := make([]string, 0, len(selectList)-1+len(columnNames))
+	seen := map[string]bool{}
+	add := func(f string) {
+		key := strings.ToLower(strings.TrimSpace(f))
+		if seen[key] {
+			return
+		}
+		seen[key] = true
+		expanded = append(expanded, f)
+	}
+
+	// @columns is first: emit the declared column names, then the remaining tokens
+	for _, name := range columnNames {
+		add(name)
+	}
+	for _, f := range selectList[1:] {
+		add(f)
+	}
+	return expanded, nil
+}
+
+func (s *ReplicationStreamConfig) PrimaryKey() []string {
+	return castKeyArray(s.PrimaryKeyI)
+}
+
+func (s *ReplicationStreamConfig) ObjectHasStreamVars() bool {
+	vars := []string{
+		"stream_table",
+		"stream_table_lower",
+		"stream_table_upper",
+		"stream_name",
+		"stream_file_path",
+		"stream_file_name",
+		"stream.table",
+		"stream.table_lower",
+		"stream.table_upper",
+		"stream.name",
+		"stream.file_path",
+		"stream.file_name",
+	}
+	for _, v := range vars {
+		if strings.Contains(s.Object, g.F("{%s}", v)) {
+			return true
+		}
+	}
+	return false
+}
+
+func (rd *ReplicationConfig) StreamToTaskConfig(stream *ReplicationStreamConfig, name string, env map[string]string) (cfg Config, err error) {
+
+	// use overrides if specified
+	if overrides := stream.overrides; overrides != nil {
+		if overrides.ID != "" {
+			stream.ID = overrides.ID
+		}
+		if overrides.Mode != "" {
+			stream.Mode = overrides.Mode
+		}
+		if overrides.PrimaryKeyI != nil {
+			stream.PrimaryKeyI = overrides.PrimaryKeyI
+		}
+		if overrides.UpdateKey != "" {
+			stream.UpdateKey = overrides.UpdateKey
+		}
+		if overrides.SQL != "" {
+			stream.SQL = overrides.SQL
+		}
+		if overrides.Disabled {
+			stream.Disabled = overrides.Disabled
+		}
+		if len(overrides.Select) > 0 {
+			stream.Select = overrides.Select
+		}
+		if overrides.Where != "" {
+			stream.Where = overrides.Where
+		}
+		if overrides.Columns != nil {
+			stream.Columns = overrides.Columns
+		}
+
+		// append override hooks at end
+		stream.Hooks.Pre = append(stream.Hooks.Pre, overrides.Hooks.Pre...)
+		stream.Hooks.Post = append(stream.Hooks.Post, overrides.Hooks.Post...)
+		stream.Hooks.PreMerge = append(stream.Hooks.PreMerge, overrides.Hooks.PreMerge...)
+		stream.Hooks.PostMerge = append(stream.Hooks.PostMerge, overrides.Hooks.PostMerge...)
+	}
+
+	// Expand a leading @columns sentinel here, where both `select` and `columns`
+	// are fully resolved, before the select list reaches any source reader.
+	selectFields, err := expandSelectColumns(stream.Select, columnNamesInOrder(stream.Columns))
+	if err != nil {
+		return cfg, g.Error(err, "could not resolve `select` for stream: %s", name)
+	}
+
+	cfg = Config{
+		Source: Source{
+			Conn:        rd.Source,
+			Stream:      name,
+			Query:       stream.SQL,
+			Select:      selectFields,
+			Where:       stream.Where,
+			Files:       stream.Files,
+			PrimaryKeyI: stream.PrimaryKey(),
+			UpdateKey:   stream.UpdateKey,
+		},
+		Target: Target{
+			Conn:    rd.Target,
+			Object:  stream.Object,
+			Columns: stream.Columns,
+		},
+		Mode:              stream.Mode,
+		Transforms:        stream.Transforms,
+		StreamName:        name,
+		ReplicationStream: stream,
+		DependsOn:         stream.dependsOn,
+		QueueStreaming:    stream.queueStreaming,
+		Env:               env,
+	}
+	// so that the next stream does not retain previous pointer values
+	g.Unmarshal(g.Marshal(stream.SourceOptions), &cfg.Source.Options)
+	g.Unmarshal(g.Marshal(stream.TargetOptions), &cfg.Target.Options)
+
+	// if single file target, set file_row_limit and file_bytes_limit
+	if stream.Single != nil && *stream.Single {
+		if cfg.Target.Options == nil {
+			cfg.Target.Options = &TargetOptions{}
+		}
+		cfg.Target.Options.FileMaxBytes = g.Int64(0)
+		cfg.Target.Options.FileMaxRows = g.Int64(0)
+	}
+
+	// prepare config
+	err = cfg.Prepare()
+	if err != nil {
+		err = g.Error(err, "could not prepare stream task: %s", name)
+		return
+	}
+
+	return
+}
+
+func SetStreamDefaults(name string, stream *ReplicationStreamConfig, replicationCfg ReplicationConfig) {
+
+	streamMap, ok := replicationCfg.maps.Streams[name]
+	if !ok {
+		streamMap = g.M()
+	}
+
+	// the keys to check if provided in map
+	defaultSet := map[string]func(){
+		"mode":        func() { stream.Mode = replicationCfg.Defaults.Mode },
+		"object":      func() { stream.Object = replicationCfg.Defaults.Object },
+		"select":      func() { stream.Select = replicationCfg.Defaults.Select },
+		"files":       func() { stream.Files = replicationCfg.Defaults.Files },
+		"where":       func() { stream.Where = replicationCfg.Defaults.Where },
+		"primary_key": func() { stream.PrimaryKeyI = replicationCfg.Defaults.PrimaryKeyI },
+		"update_key":  func() { stream.UpdateKey = replicationCfg.Defaults.UpdateKey },
+		"sql":         func() { stream.SQL = replicationCfg.Defaults.SQL },
+		"schedule":    func() { stream.Schedule = replicationCfg.Defaults.Schedule },
+		"tags":        func() { stream.Tags = replicationCfg.Defaults.Tags },
+		"disabled":    func() { stream.Disabled = replicationCfg.Defaults.Disabled },
+		"single":      func() { stream.Single = g.Ptr(g.PtrVal(replicationCfg.Defaults.Single)) },
+		"transforms":  func() { stream.Transforms = replicationCfg.Defaults.Transforms },
+	}
+
+	for key, setFunc := range defaultSet {
+		if _, found := streamMap[key]; !found {
+			setFunc() // if not found, set default
+		}
+	}
+
+	// handle columns: if stream columns use "+" prefix, merge with defaults
+	// otherwise, use legacy replace behavior (stream replaces defaults entirely)
+	stream.Columns = mergeColumns(replicationCfg.Defaults.Columns, stream.Columns)
+
+	// set default hooks, per stage, applying "+stage" / "stage+" modifiers
+	stream.Hooks = stream.Hooks.WithDefaults(replicationCfg.Defaults.Hooks.WithDefaults(HookMap{}))
+
+	// set default options
+	if stream.SourceOptions == nil {
+		stream.SourceOptions = g.Ptr(g.PtrVal(replicationCfg.Defaults.SourceOptions))
+	} else if replicationCfg.Defaults.SourceOptions != nil {
+		stream.SourceOptions.SetDefaults(*replicationCfg.Defaults.SourceOptions)
+	}
+
+	if stream.TargetOptions == nil {
+		stream.TargetOptions = g.Ptr(g.PtrVal(replicationCfg.Defaults.TargetOptions))
+	} else if replicationCfg.Defaults.TargetOptions != nil {
+		stream.TargetOptions.SetDefaults(*replicationCfg.Defaults.TargetOptions)
+	}
+
+	if stream.CDCOptions == nil {
+		stream.CDCOptions = g.Ptr(g.PtrVal(replicationCfg.Defaults.CDCOptions))
+	} else if replicationCfg.Defaults.CDCOptions != nil {
+		stream.CDCOptions.SetDefaults(*replicationCfg.Defaults.CDCOptions)
+	}
+}
+
+// UnmarshalReplication converts a yaml file to a replication
+func UnmarshalReplication(replicYAML string) (config ReplicationConfig, err error) {
+
+	// set base values when erroring
+	config.originalCfg = replicYAML
+	config.Env = map[string]any{}
+
+	m := g.M()
+	err = yaml.Unmarshal([]byte(replicYAML), &m)
+	if err != nil {
+		err = g.Error(err, "Error parsing yaml content")
+		return
+	}
+
+	// parse env & expand variables
+	var Env map[string]any
+	g.Unmarshal(g.Marshal(m["env"]), &Env)
+	for k, v := range Env {
+		if s, ok := v.(string); ok {
+			Env[k] = os.ExpandEnv(s)
+		}
+	}
+
+	// replace variables across the yaml file
+	Env = lo.Ternary(Env == nil, map[string]any{}, Env)
+	if Env, err = env.ResolveSecretEnv(context.Background(), Env); err != nil {
+		return
+	}
+	replicYAML = g.Rm(replicYAML, Env)
+
+	// parse again
+	m = g.M()
+	err = yaml.Unmarshal([]byte(replicYAML), &m)
+	if err != nil {
+		err = g.Error(err, "Error parsing yaml content")
+		return
+	}
+
+	// source and target
+	source, ok := m["source"]
+	if !ok {
+		err = g.Error("did not find 'source' key")
+		return
+	}
+
+	target, ok := m["target"]
+	if !ok {
+		err = g.Error("did not find 'target' key")
+		return
+	}
+
+	defaults, ok := m["defaults"]
+	if !ok {
+		defaults = g.M() // defaults not mandatory
+	}
+
+	hooks, ok := m["hooks"]
+	if !ok {
+		hooks = HookMap{} // hooks not mandatory
+	}
+
+	streams, ok := m["streams"]
+	if !ok {
+		err = g.Error("did not find 'streams' key")
+		return
+	}
+
+	maps := replicationConfigMaps{}
+	g.Unmarshal(g.Marshal(defaults), &maps.Defaults)
+	g.Unmarshal(g.Marshal(streams), &maps.Streams)
+
+	config = ReplicationConfig{
+		Source:      cast.ToString(source),
+		Target:      cast.ToString(target),
+		Env:         Env,
+		maps:        maps,
+		originalCfg: replicYAML, // set originalCfg
+	}
+
+	// parse defaults
+	err = g.Unmarshal(g.Marshal(defaults), &config.Defaults)
+	if err != nil {
+		err = g.Error(err, "could not parse 'defaults'")
+		return
+	}
+
+	// parse streams
+	err = g.Unmarshal(g.Marshal(streams), &config.Streams)
+	if err != nil {
+		err = g.Error(err, "could not parse 'streams'")
+		return
+	}
+
+	// parse hooks
+	err = g.Unmarshal(g.Marshal(hooks), &config.Hooks)
+	if err != nil {
+		err = g.Error(err, "could not parse 'hooks'")
+		return
+	}
+
+	// get streams & columns order
+	rootMap := yaml.MapSlice{}
+	err = yaml.Unmarshal([]byte(replicYAML), &rootMap)
+	if err != nil {
+		err = g.Error(err, "Error parsing yaml content")
+		return
+	}
+
+	for _, rootNode := range rootMap {
+		if cast.ToString(rootNode.Key) == "defaults" {
+
+			if value, ok := rootNode.Value.(yaml.MapSlice); ok {
+				if cols := makeColumns(value); cols != nil {
+					config.Defaults.Columns = cols
+				}
+			}
+
+			for _, defaultsNode := range rootNode.Value.(yaml.MapSlice) {
+				if cast.ToString(defaultsNode.Key) == "source_options" {
+					if value, ok := defaultsNode.Value.(yaml.MapSlice); ok {
+						if cols := makeColumns(value); cols != nil {
+							config.Defaults.SourceOptions.Columns = cols // legacy
+						}
+					}
+				}
+			}
+		}
+	}
+
+	for _, rootNode := range rootMap {
+		if cast.ToString(rootNode.Key) == "streams" {
+			streamsNodes, ok := rootNode.Value.(yaml.MapSlice)
+			if !ok {
+				continue
+			}
+
+			for _, streamsNode := range streamsNodes {
+				key := cast.ToString(streamsNode.Key)
+				stream, found := config.Streams[key]
+
+				config.streamsOrdered = append(config.streamsOrdered, key)
+				if streamsNode.Value == nil {
+					continue
+				}
+
+				if value, ok := streamsNode.Value.(yaml.MapSlice); ok {
+					if cols := makeColumns(value); cols != nil {
+						stream.Columns = cols
+					}
+				}
+
+				for _, streamConfigNode := range streamsNode.Value.(yaml.MapSlice) {
+					if cast.ToString(streamConfigNode.Key) == "source_options" {
+						if found {
+							if stream.SourceOptions == nil {
+								g.Unmarshal(g.Marshal(config.Defaults.SourceOptions), stream.SourceOptions)
+							}
+							if value, ok := streamConfigNode.Value.(yaml.MapSlice); ok {
+								if cols := makeColumns(value); cols != nil {
+									stream.SourceOptions.Columns = cols // legacy
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+
+	return
+}
+
+// columnNamesInOrder returns the column names from a stream's resolved `columns`
+// value, preserving declared order. The YAML parser stores it as an ordered
+// []any of {name, type} maps (see makeColumns); map shapes are a non-YAML
+// fallback. Returns nil if there are no columns.
+func columnNamesInOrder(cols any) []string {
+	if cols == nil {
+		return nil
+	}
+
+	extractName := func(item any) string {
+		switch v := item.(type) {
+		case map[string]any:
+			return cast.ToString(v["name"])
+		case map[any]any:
+			return cast.ToString(v["name"])
+		case iop.Column:
+			return v.Name
+		default:
+			return ""
+		}
+	}
+
+	var names []string
+	switch v := cols.(type) {
+	case []any:
+		for _, item := range v {
+			if name := extractName(item); name != "" {
+				names = append(names, name)
+			}
+		}
+	case []map[string]any:
+		for _, item := range v {
+			if name := cast.ToString(item["name"]); name != "" {
+				names = append(names, name)
+			}
+		}
+	case iop.Columns:
+		for _, c := range v {
+			names = append(names, c.Name)
+		}
+	case map[string]any:
+		for name := range v {
+			names = append(names, name)
+		}
+	case map[any]any:
+		for name := range v {
+			names = append(names, cast.ToString(name))
+		}
+	}
+
+	return names
+}
+
+// sets the columns correctly and keep the order
+func makeColumns(nodes yaml.MapSlice) (columns []any) {
+	found := false
+	for _, node := range nodes {
+		if cast.ToString(node.Key) == "columns" {
+			found = true
+			if slice, ok := node.Value.(yaml.MapSlice); ok {
+				for _, columnNode := range slice {
+					col := g.M("name", cast.ToString(columnNode.Key), "type", cast.ToString(columnNode.Value))
+					columns = append(columns, col)
+				}
+			}
+		}
+	}
+
+	if !found {
+		return nil
+	}
+
+	return columns
+}
+
+// mergeColumns handles the interaction between default columns and stream-level columns.
+// If stream columns use the "+" prefix (e.g. "+voyage_id: bigint"), they are merged
+// with defaults. A "+column: ~" (null) unsets that default.
+// Without the "+" prefix, stream columns replace defaults entirely (legacy behavior).
+// Each column entry is map[string]any{"name": "col_name", "type": "col_type"}.
+func mergeColumns(defaultCols, streamCols any) any {
+	defaultSlice, _ := defaultCols.([]any)
+	streamSlice, _ := streamCols.([]any)
+
+	if len(defaultSlice) == 0 {
+		// strip "+" prefix from names if present
+		return cleanMergePrefixes(streamCols)
+	}
+	if len(streamSlice) == 0 {
+		return defaultCols
+	}
+
+	// check if stream columns use merge mode ("+" prefix)
+	mergeMode := false
+	for _, col := range streamSlice {
+		if m, ok := col.(map[string]any); ok {
+			name := cast.ToString(m["name"])
+			if strings.HasPrefix(name, "+") {
+				mergeMode = true
+				break
+			}
+		}
+	}
+
+	// legacy behavior: stream replaces defaults entirely
+	if !mergeMode {
+		return streamCols
+	}
+
+	// helper to get name from column entry (lowercase, without "+" prefix)
+	colName := func(col any) string {
+		if m, ok := col.(map[string]any); ok {
+			name := cast.ToString(m["name"])
+			return strings.ToLower(strings.TrimPrefix(name, "+"))
+		}
+		return ""
+	}
+
+	// helper to get type from column entry
+	colType := func(col any) string {
+		if m, ok := col.(map[string]any); ok {
+			return cast.ToString(m["type"])
+		}
+		return ""
+	}
+
+	// collect stream column names for quick lookup
+	streamNames := map[string]bool{}
+	for _, col := range streamSlice {
+		streamNames[colName(col)] = true
+	}
+
+	// start with defaults that aren't overridden by stream
+	var merged []any
+	for _, col := range defaultSlice {
+		if !streamNames[colName(col)] {
+			merged = append(merged, col)
+		}
+	}
+
+	// append stream columns (with "+" stripped), skipping those with empty type (unset)
+	for _, col := range streamSlice {
+		cleanName := colName(col)
+		if typ := colType(col); typ != "" {
+			merged = append(merged, g.M("name", cleanName, "type", typ))
+		}
+	}
+
+	if len(merged) == 0 {
+		return nil
+	}
+
+	return merged
+}
+
+// cleanMergePrefixes strips "+" prefixes from column names when there are no defaults to merge with
+func cleanMergePrefixes(cols any) any {
+	slice, ok := cols.([]any)
+	if !ok || len(slice) == 0 {
+		return cols
+	}
+
+	hasPrefixes := false
+	for _, col := range slice {
+		if m, ok := col.(map[string]any); ok {
+			if strings.HasPrefix(cast.ToString(m["name"]), "+") {
+				hasPrefixes = true
+				break
+			}
+		}
+	}
+
+	if !hasPrefixes {
+		return cols
+	}
+
+	var cleaned []any
+	for _, col := range slice {
+		if m, ok := col.(map[string]any); ok {
+			name := strings.TrimPrefix(cast.ToString(m["name"]), "+")
+			typ := cast.ToString(m["type"])
+			if typ != "" {
+				cleaned = append(cleaned, g.M("name", name, "type", typ))
+			}
+		}
+	}
+
+	if len(cleaned) == 0 {
+		return nil
+	}
+	return cleaned
+}
+
+func LoadReplicationConfigFromFile(cfgPath string) (config ReplicationConfig, err error) {
+	cfgFile, err := os.Open(cfgPath)
+	if err != nil {
+		err = g.Error(err, "Unable to open replication path: "+cfgPath)
+		return
+	}
+
+	cfgBytes, err := io.ReadAll(cfgFile)
+	if err != nil {
+		err = g.Error(err, "could not read from replication path: "+cfgPath)
+		return
+	}
+
+	config, err = LoadReplicationConfig(string(cfgBytes))
+	if err != nil {
+		return
+	}
+
+	// set config path
+	config.Env["SLING_CONFIG_PATH"] = cfgPath
+
+	return
+}
+
+func LoadReplicationConfig(content string) (config ReplicationConfig, err error) {
+	config, err = UnmarshalReplication(content)
+	if err != nil {
+		err = g.Error(err, "Error parsing replication config")
+		return
+	}
+
+	// load compiled tasks if in env
+	if payload := os.Getenv("SLING_REPLICATION_TASKS"); payload != "" {
+		if strings.HasPrefix(payload, "file://") {
+			payloadPath := strings.TrimPrefix(payload, "file://")
+			bytes, err := os.ReadFile(payloadPath)
+			if err != nil {
+				err = g.Error(err, "Could not read replication tasks: "+payloadPath)
+				return config, err
+			}
+			payload = string(bytes)
+		}
+		if err = g.Unmarshal(payload, &config.Tasks); err != nil {
+			err = g.Error(err, "could not unmarshal replication compiled tasks")
+			return
+		}
+		config.Compiled = true
+	}
+
+	return
+}
+
+// IsJSONorYAML detects a JSON or YAML payload
+func IsJSONorYAML(payload string) bool {
+	if strings.HasPrefix(payload, "{") && strings.HasSuffix(payload, "}") {
+		return true
+	}
+	if strings.Contains(payload, ":") && strings.Contains(payload, "\n") &&
+		(strings.Contains(payload, "'") || strings.Contains(payload, `"`)) {
+		return true
+	}
+	return false
+}
+
+func testStreamCnt(streamCnt int, matchedStreams, inputStreams []string) error {
+	if expected := os.Getenv("SLING_STREAM_CNT"); expected != "" {
+
+		if strings.HasPrefix(expected, ">") {
+			atLeast := cast.ToInt(strings.TrimPrefix(expected, ">"))
+			if streamCnt <= atLeast {
+				return g.Error("Expected at least %d streams, got %d => %s", atLeast, streamCnt, g.Marshal(append(matchedStreams, inputStreams...)))
+			}
+			return nil
+		}
+
+		if streamCnt != cast.ToInt(expected) {
+			return g.Error("Expected %d streams, got %d => %s", cast.ToInt(expected), streamCnt, g.Marshal(append(matchedStreams, inputStreams...)))
+		}
+	}
+	return nil
+}
+
+// resolveStreamOrderByFK reorders streams by foreign key dependencies when schema migration is enabled
+// Ensures parent tables are processed before child tables that reference them
+// Also populates DependsOn for each stream to support parallel execution with SLING_THREADS
+func (rd *ReplicationConfig) resolveStreamOrderByFK() error {
+	if val := rd.Env["SLING_SCHEMA_MIGRATION"]; val != nil {
+		os.Setenv("SLING_SCHEMA_MIGRATION", cast.ToString(val))
+	}
+
+	// check if we're migrating forieng keys
+	if sm := database.NewSchemaMigrator(nil); !sm.HasForeignKeyEnabled() {
+		return nil
+	}
+
+	// Get source connection
+	conn, err := rd.GetSourceConnection()
+	if err != nil {
+		return g.Error(err, "could not get source connection for FK ordering: %v")
+	}
+
+	// Check if it's a database connection
+	if !conn.Connection.Type.IsDb() {
+		return g.Error("source is not a database connection type for FK ordering: %s", conn.Connection.Type)
+	}
+
+	dbConn, err := conn.Connection.AsDatabase(connection.AsConnOptions{UseCache: true})
+	if err != nil {
+		return g.Error(err, "could not create connection for FK ordering")
+	}
+
+	// Connect
+	if err := dbConn.Connect(); err != nil {
+		return g.Error(err, "could not connect to source for FK ordering")
+	}
+	defer dbConn.Close()
+
+	// recreate with connection
+	schemaMigrator := database.NewSchemaMigrator(&database.SchemaMigratorConfig{SourceConn: dbConn})
+	sortedStreams, sorted, dependsOnMap, err := schemaMigrator.SortStreams(rd.streamsOrdered)
+	if err != nil {
+		return err
+	} else if !sorted {
+		return nil // continue with original order
+	}
+
+	// Map sorted keys back to original stream names (preserving case)
+	streamNameMap := make(map[string]string)
+	for _, name := range rd.streamsOrdered {
+		streamNameMap[strings.ToLower(name)] = name
+	}
+
+	newOrder := make([]string, 0, len(sortedStreams))
+	for _, key := range sortedStreams {
+		if origName, ok := streamNameMap[key]; ok {
+			newOrder = append(newOrder, origName)
+		}
+	}
+
+	// Add any streams not in the graph (unlikely, but for safety)
+	for _, name := range rd.streamsOrdered {
+		found := false
+		for _, sorted := range newOrder {
+			if strings.EqualFold(name, sorted) {
+				found = true
+				break
+			}
+		}
+		if !found {
+			newOrder = append(newOrder, name)
+		}
+	}
+
+	if len(newOrder) != len(rd.streamsOrdered) {
+		g.Warn("FK ordering: stream count mismatch, keeping original order")
+		return nil
+	}
+
+	// Populate dependsOn for each stream to support parallel execution with SLING_THREADS
+	for _, name := range rd.streamsOrdered {
+		normalizedName := strings.ToLower(name)
+		if deps, ok := dependsOnMap[normalizedName]; ok && len(deps) > 0 {
+			// Convert dependency keys back to original stream names
+			var depNames []string
+			for _, depKey := range deps {
+				if origName, ok := streamNameMap[depKey]; ok {
+					depNames = append(depNames, origName)
+				}
+			}
+			if len(depNames) > 0 {
+				stream := rd.Streams[name]
+				if stream == nil {
+					stream = &ReplicationStreamConfig{}
+					rd.Streams[name] = stream
+				}
+				stream.dependsOn = depNames
+			}
+		}
+	}
+
+	g.Debug("FK ordering: original order: %v", rd.streamsOrdered)
+	g.Debug("FK ordering: reordered %d streams by dependencies: %v", len(newOrder), newOrder)
+	rd.streamsOrdered = newOrder
+	return nil
+}
