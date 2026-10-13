@@ -43,3 +43,7 @@ A certified, adequately insured partner holds all platform, City procurement, cr
 Run only with contractually authorized exports on the prime/customer's controlled equipment. Real reports retain record keys, and SHA-256 hashes of low-entropy values are not encryption or formal anonymization. Do not post customer CSVs, findings or audit JSON to GitHub, Slack or public CI. Output files are created with restrictive first-write mode; check shared-file ACLs independently. There is no direct ServiceNow authentication, data transfer, writeback, live role/SSO authorization check, license proof, procurement representation, or City result.
 
 For the issuer's contract, historical incumbent partner evidence and business qualification gates, see [internal verified Berkeley buyer→prime research](https://tokenjunkielabs.slack.com/docs/T0BRETUB5TK/F0C82MME2F7). It treats prior City Alcor contracts as past history, not proof of current bidding or budget.
+
+## Complete operating workspace
+
+The [acceptance workspace](acceptance-workspace/README.md) extends this unchanged comparator with complete original CSV editions, explicit field/key mapping, assigned exception review, corrected-target comparisons, named receiving decisions and portable editable handover. It includes browser and headless interfaces, a self-contained application builder, the complete operator guide and a defined customer workshare. The native receiving course operates the full authored case and independently matches both original comparator audits.

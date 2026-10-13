@@ -16,7 +16,7 @@ from .common import (INVEST_VERSION, ROLES, SOURCE_IDS, atomic_bytes, atomic_jso
                      now, read_json, verify_file)
 from .profiles import checked_parameters, scenario_spec
 from . import common as scientific_common
-from .native_execution import storage_exhausted
+from .native_execution import process_interrupted, storage_exhausted
 
 SELECTION_SCHEMA = "upstate.compute-programme-selection/v1"
 PROGRAMME_SCHEMA = "upstate.compute-programme/v1"
@@ -1094,7 +1094,7 @@ class ComputeProgrammes:
                         attempt.update(state="complete", completed_at=now(), reused=reused)
                     except Exception as exc:
                         attempt.update(state="failed", completed_at=now(), error=_error(exc))
-                        if storage_exhausted(exc):
+                        if storage_exhausted(exc) or process_interrupted(exc):
                             raise
                     self._write_state(key, state)
                 if state["state"] != "paused":
@@ -1128,7 +1128,7 @@ class ComputeProgrammes:
                             except Exception as exc:
                                 state["comparisons"].pop(name, None)
                                 state["comparison_errors"][name] = _error(exc)
-                                if storage_exhausted(exc):
+                                if storage_exhausted(exc) or process_interrupted(exc):
                                     raise
                             self._write_state(key, state)
                 if state["state"] != "paused":
@@ -1146,7 +1146,8 @@ class ComputeProgrammes:
                                       completed_at=(state.get("completed_at") or now()) if terminal == "complete" else None)
                 self.report(key, _locked=True)
             except BaseException as exc:
-                terminal = "interrupted" if isinstance(exc, (KeyboardInterrupt, SystemExit)) else "failed"
+                interrupted = isinstance(exc, (KeyboardInterrupt, SystemExit)) or process_interrupted(exc)
+                terminal = "interrupted" if interrupted else "failed"
                 current = state.get("current_run")
                 if current and state["attempts"].get(current) and state["attempts"][current][-1]["state"] == "running":
                     state["attempts"][current][-1].update(state=terminal, completed_at=now(), error=_error(exc))
@@ -1156,7 +1157,7 @@ class ComputeProgrammes:
                 except OSError:
                     if not capacity_failure:
                         raise
-                if not capacity_failure and not isinstance(exc, (KeyboardInterrupt, SystemExit)):
+                if not capacity_failure and not interrupted:
                     try:
                         self.report(key, _locked=True)
                     except Exception as report_error:
@@ -1347,6 +1348,8 @@ class ComputeProgrammes:
         if not isinstance(selection, dict):
             raise ValueError("Supply the complete named-run delivery selection")
         choice = _copy(selection)
+        from . import native_study
+        study_mode = native_study.prepare(choice)
         if "baseline_run_id" in choice or "scenario_run_ids" in choice:
             raise ValueError("Use the programme's named baseline_run and scenario_runs")
         by_name = {row["key"]: row for row in record["runs"]}
@@ -1359,7 +1362,7 @@ class ComputeProgrammes:
         native_ids = [by_name[name]["run_id"] for name in [base_name] + names]
         if any(_models(by_name[name]["native_selection"].get("models")) != ["ndr", "sdr"]
                for name in [base_name] + names):
-            raise ValueError("Select baseline and future runs containing both NDR and SDR for the complete seven-map delivery")
+            raise ValueError("Select baseline and future runs containing both NDR and SDR for the selected map delivery")
         if len(set(native_ids)) != len(native_ids):
             raise ValueError("Select distinct actual native runs for the delivery comparison")
         base = by_name[base_name]
@@ -1374,17 +1377,18 @@ class ComputeProgrammes:
         roles = choice.get("source_roles")
         overlays = choice.get("overlays")
         needed = set(SOURCE_IDS) - set(ROLES) - {"LS_FACTOR"}
-        if not isinstance(roles, dict) or needed - set(roles):
+        if not isinstance(roles, dict) or (not study_mode and needed - set(roles)):
             raise ValueError("Select the retained protected-land, parcel, NHD and NWI sources")
         if "LS_FACTOR" in roles:
             raise ValueError("The original SDR terrain output supplies LS_FACTOR")
-        if not isinstance(overlays, dict) or {"drinking_water", "high_quality_waters"} - set(overlays):
+        if not isinstance(overlays, dict) or (not study_mode and {"drinking_water", "high_quality_waters"} - set(overlays)):
             raise ValueError("Select retained drinking-water and high-quality-water overlays")
         contact = choice.get("contact")
         if not isinstance(contact, dict):
             raise ValueError("Supply the actual GIS metadata contact")
-        for field in ("name", "organization", "email"):
-            _text(contact.get(field), "the metadata contact " + field)
+        if not study_mode:
+            for field in ("name", "organization", "email"):
+                _text(contact.get(field), "the metadata contact " + field)
         for group, values in (("source_roles", roles), ("overlays", overlays)):
             for name, value in values.items():
                 if not isinstance(value, dict):
@@ -1407,7 +1411,9 @@ class ComputeProgrammes:
                       for name in [base_name] + names}
         return {"schema": "upstate.compute-programme-delivery-preview/v1", "programme_id": key,
                 "selection": choice, "baseline_run": base_name, "scenario_runs": names,
-                "run_states": run_states, "ready": all(state == "complete" for state in run_states.values())}
+                "run_states": run_states, "ready": all(state == "complete" for state in run_states.values()),
+                "delivery_mode": native_study.mode(choice),
+                "required_map_families": list(native_study.MAP_FAMILIES if study_mode else scientific_common.MAP_IDS)}
 
     def prepare_delivery(self, key, selection, handoff_path=None):
         preview = self.delivery_preview(key, selection)
@@ -1435,7 +1441,7 @@ class ComputeProgrammes:
             try:
                 result = self.workspace.build_delivery(preview["selection"])
                 if result["state"] != "complete":
-                    raise RuntimeError("The original seven-map delivery has not completed")
+                    raise RuntimeError("The selected original map delivery has not completed")
                 comparison = self.workspace.compare_runs([by_name[name]["run_id"] for name in selected_names])
                 grid = self.workspace.get_grid(record["selection"]["grid_id"])
                 collection = self.workspace._get("sources", grid["spec"]["source_collection_id"])

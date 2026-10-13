@@ -1,0 +1,124 @@
+{
+  "schema": "upstate.operator-extension/v1",
+  "id": "point-source-context",
+  "title": "Point-source context",
+  "version": "1.1.0",
+  "order": 64,
+  "assets": [
+    "point_source_context.mjs",
+    "point_source_context.css"
+  ],
+  "backend": {
+    "module": "point_source_context",
+    "actions": [
+      "observations.point_sources.bind"
+    ],
+    "invoke": {
+      "handler": "invoke",
+      "args": [
+        "operator",
+        "task"
+      ]
+    },
+    "routes": [
+      {
+        "methods": [
+          "GET"
+        ],
+        "path": "/api/point-source-context/catalog",
+        "operation": "catalog",
+        "handler": "read",
+        "args": [
+          "operator",
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "POST"
+        ],
+        "path": "/api/point-source-context/preview",
+        "operation": "preview",
+        "handler": "read",
+        "args": [
+          "operator",
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "GET"
+        ],
+        "path": "/api/point-source-context/binding",
+        "operation": "binding",
+        "handler": "read",
+        "args": [
+          "operator",
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      }
+    ],
+    "state": {
+      "key": "point_source_context",
+      "handler": "state",
+      "args": [
+        "operator",
+        "workspace_key"
+      ]
+    },
+    "items": [
+      {
+        "kind": "point-source-bindings",
+        "operation": "binding",
+        "handler": "read",
+        "args": [
+          "operator",
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      }
+    ],
+    "verify_workspace": {
+      "handler": "verify_workspace",
+      "args": [
+        "workspace"
+      ]
+    }
+  },
+  "client": {
+    "module": "/web/point_source_context.mjs",
+    "factory": "createPointSourceContext",
+    "requires": [
+      "getState",
+      "api",
+      "endpoint",
+      "submitAction",
+      "openItem"
+    ],
+    "styles": [
+      "/web/point_source_context.css"
+    ],
+    "view": {
+      "id": "point-source-context",
+      "title": "Point-source context",
+      "after": "observations"
+    },
+    "lifecycle": {
+      "mount": "mount",
+      "update": "update",
+      "detach": "detach"
+    },
+    "dispatch": "dispatch",
+    "action_prefixes": [
+      "point-source-context-"
+    ],
+    "task_actions": "taskActions"
+  }
+}

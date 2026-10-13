@@ -1,4 +1,5 @@
 /** Original-station geography, mounted by the existing authenticated extension host. */
+import {attachNativeAssessmentReview} from "./native_assessment_review.mjs";
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const list = value => Array.isArray(value) ? value : [];
 const clone = value => JSON.parse(JSON.stringify(value));
@@ -13,7 +14,7 @@ const point = feature => feature?.geometry?.type === 'Point' && list(feature.geo
 const validPoint = coordinates => Array.isArray(coordinates) && coordinates.length >= 2 && coordinates.slice(0,2).every(Number.isFinite);
 const statuses = ['all','located','coincident','selected','ambiguous','missing','invalid','outside','boundary','overlap'];
 const terminal = state => ['complete','failed','interrupted','cancelled'].includes(state);
-const geographyActions = new Set(['station.geography.build','station.geography.receive','station.geography.utility-microbial']);
+const geographyActions = new Set(['station.geography.build','station.geography.receive','station.geography.utility-microbial','station.geography.review-selection']);
 const nativeId = value => /^[a-f0-9]{64}$/.test(String(value||''));
 const defaultDraft = () => ({title:'Study station geography',sources:[],watersheds:[],observation_ids:[],observation_tables:[],site_tables:[],sites:[],aliases:{},choices:{}});
 const uriHTML = uri => /^https?:\/\//i.test(String(uri || '')) ? '<a href="' + esc(uri) + '" target="_blank" rel="noopener noreferrer">' + esc(uri) + '</a>' : esc(uri || '—');
@@ -167,7 +168,7 @@ export function attachStationGeography(host) {
   let generation=0, controller=null, loading=false, busy=false, error='', message='', taskFingerprint='';
   let sourceFingerprint='', viewBox=null, baseViewBox=null, projectPoint=null, drag=null, advancedOpen=false, formOpen=true;
   let aliasesText='{}', observationTablesText='[]', sourceOptionsText='{}';
-  let microbialDomainMode='required', pendingEdition=null;
+  let microbialDomainMode='required', pendingEdition=null, nativeReview=null;
   const cacheKey = key => 'upstate-station-geography-v1:' + key;
   const read = (operation,payload={},key=workspace) => host.api('/api/station-geography/'+operation,{method:'POST',body:{workspace:key,...payload},signal:controller?.signal});
   const rows = () => list(edition?.result?.stations);
@@ -436,7 +437,7 @@ export function attachStationGeography(host) {
     const selected=filteredRows(),limit=75;page=Math.max(0,Math.min(page,Math.max(0,Math.ceil(selected.length/limit)-1)));
     const visible=selected.slice(page*limit,(page+1)*limit);
     target.innerHTML='<div class="sg-table-caption"><span>'+esc(selected.length)+' of '+esc(rows().length)+' stations · '+selected.reduce((total,row)=>total+selectedReferences(row).length,0)+' matching assessment records · page '+esc(page+1)+' of '+Math.max(1,Math.ceil(selected.length/limit))+'</span>'+
-      '<div>'+button('export-filtered','Download station CSV',!edition?'disabled':'')+button('export-assessments','Download assessment records CSV',!edition?'disabled':'')+button('previous','Previous',page===0?'disabled':'')+button('next','Next',(page+1)*limit>=selected.length?'disabled':'')+'</div></div>'+
+      '<div>'+(typeof host.openDesk==='function'?button('published-cohort','Open matching observations',!edition||!selected.length?'disabled':''):'')+button('export-filtered','Download station CSV',!edition?'disabled':'')+button('export-assessments','Download assessment records CSV',!edition?'disabled':'')+button('previous','Previous',page===0?'disabled':'')+button('next','Next',(page+1)*limit>=selected.length?'disabled':'')+'</div></div>'+
       '<div class="sg-table-scroll"><table><thead><tr><th>Exact station ID</th><th>Assessment causes / county</th><th>Use / support / publication</th><th>Location</th><th>Longitude / latitude</th><th>Watershed membership</th><th>Observed rows</th></tr></thead><tbody>'+
       visible.map(row=>{const coordinates=stationPoint(row),descriptions=selectedValues(row,'station_description');return '<tr'+(String(row.station_id)===String(selectedStation)?' aria-selected="true" class="sg-selected"':'')+'>'+
         '<td>'+button('station',row.station_id,'data-sg-station="'+esc(row.station_id)+'"')+(row.label?'<small>'+esc(row.label)+'</small>':'')+(descriptions.length?'<small class="sg-station-description">'+esc(descriptions.join(' · '))+'</small>':'')+'</td>'+
@@ -468,7 +469,7 @@ export function attachStationGeography(host) {
     const row=rows().find(r=>String(r.station_id)===String(selectedStation));
     if(!row){target.innerHTML='<h3>Station detail</h3><p class="sg-help">Choose a station on the map or in the table to inspect every original location and observation link.</p>';return;}
     const candidates=list(row.candidates), observations=list(edition.result?.observation_links).filter(r=>String(r.station_id)===String(row.station_id));
-    target.innerHTML='<header class="sg-detail-header"><h3>'+esc(row.station_id)+'</h3>'+button('focus-station','Focus map')+'</header>'+
+    target.innerHTML='<header class="sg-detail-header"><h3>'+esc(row.station_id)+'</h3>'+button('focus-station','Focus map')+(typeof host.openDesk==='function'?button('published-station','Open station observations'):'')+'</header>'+
       '<p><strong>'+esc(row.status)+'</strong> · '+esc(row.watershed_status||row.membership_status||'No resolved membership')+'</p>'+
       (list(row.issues).length?'<ul>'+row.issues.map(i=>'<li>'+esc(typeof i==='object'?i.message||JSON.stringify(i):i)+'</li>').join('')+'</ul>':'')+
       inventoryDetail(row)+'<h4>Original location candidates ('+candidates.length+')</h4>'+candidates.map((c,index)=>{
@@ -533,6 +534,7 @@ export function attachStationGeography(host) {
       const result=await read('catalog');
       if(key!==workspace||version!==generation||!node)return;
       catalog=result;
+      nativeReview?.update(catalog);
       if(!draft.sources.length){
         const original=list(catalog.sources).find(s=>s.role==='MONITORING_STATIONS');
         if(original)draft.sources=[{...sourceRef(original),station_id_field:original.station_id_field||'STAT',native_id_field:original.native_id_field||'OBJECTID'}];
@@ -590,7 +592,7 @@ export function attachStationGeography(host) {
       key===(host.getWorkspace()||host.getState()?.workspace_key);
     let request=requests.find(r=>r.key===requestKey);
     if(!request){request={id:'station-geography-'+crypto.randomUUID(),key:requestKey};requests.push(request);}
-    busy=true;error='';message='Saving the selected original inputs in the operator queue…';save();renderForm();renderPresets();notice();
+    busy=true;nativeReview?.setBusy(true);error='';message='Saving the selected original inputs in the operator queue…';save();renderForm();renderPresets();notice();
     try {
       const task=await host.api('/api/actions',{method:'POST',body:{workspace:key,action,payload,operation_id:request.id}});
       if(!active())return;
@@ -600,7 +602,7 @@ export function attachStationGeography(host) {
       state=host.getState();renderTasks();notice();
       if(task.state==='complete'&&task.result?.id)await openEdition(task.result.id);
     }catch(problem){if(active())fail(new Error(problem.message+' Submit the same selection again to reuse its saved operation.'));}
-    finally{if(active()){busy=false;renderForm();renderPresets();renderDetail();notice();}}
+    finally{if(active()){busy=false;nativeReview?.setBusy(false);renderForm();renderPresets();renderDetail();notice();}}
   }
   function editInput(event) {
     const target=event.target;
@@ -648,6 +650,25 @@ export function attachStationGeography(host) {
     else if(target.matches('[data-sg-coverage-search]')){coverageSearch=target.value;coveragePage=0;renderCoverage();}
     save();
   }
+
+  async function openObservationStudies(single = false) {
+    if (!edition || typeof host.openDesk !== 'function')
+      throw Error('Open a saved station geography edition in the current application.');
+    const chosen = single ? rows().filter(row => String(row.station_id) === String(selectedStation)) : filteredRows();
+    const ids = [...new Set(chosen.map(row => String(row.station_id)))].sort();
+    if (!ids.length) throw Error('Choose at least one original station.');
+    const key = workspace, id = edition.id;
+    if (key !== host.getWorkspace()) throw Error('Open the original Workspace before selecting its stations.');
+    const view = {scope:single?'Selected station':'All stations matching the current view',
+      search:single?'':search, location_status:single?'':filter, watershed:single?'':watershedFilter,
+      assessment_source:single?'':assessmentSource, assessment_edition:single?'':assessmentEdition,
+      cause:single?'':causeFilter, use:single?'':useFilter, support:single?'':supportFilter,
+      publication:single?'':publicationFilter};
+    save();
+    await host.openDesk('published-studies', 'openForStations', {
+      workspace_key:key, geography_id:id, site_ids:ids, view
+    });
+  }
   function chooseStation(id) {selectedStation=id;renderTable();renderDetail();renderMap();save();}
   function moveView(dx=0,dy=0,scale=1) {
     if(!viewBox)return;
@@ -669,6 +690,8 @@ export function attachStationGeography(host) {
         await host.refresh({force:true});
       }
       else if(act==='go-sources')host.navigate('sources');
+      else if(act==='published-cohort')await openObservationStudies();
+      else if(act==='published-station')await openObservationStudies(true);
       else if(act==='build-microbial'){
         if(!catalog?.utility_microbial?.available)throw Error('Import the complete original utility E. coli source and refresh this desk.');
         await submit('station.geography.utility-microbial',{domain_mode:microbialDomainMode});
@@ -738,7 +761,7 @@ export function attachStationGeography(host) {
     generation++;controller=new AbortController();restore();catalog=null;edition=null;viewBox=null;loading=false;busy=false;error='';message='';
     node.innerHTML='<section class="sg-desk"><header class="sg-heading"><div><h1>Station geography</h1><p>Original station locations, observation links and retained watershed membership.</p></div>'+button('refresh','Refresh originals')+'</header>'+
       '<p class="sg-error" data-sg-error role="alert" hidden></p><p class="sg-message" data-sg-message role="status" hidden></p>'+
-      '<div data-sg-microbial></div><div data-sg-presets></div><div data-sg-form-area></div><section class="sg-reopen"><label>Saved station geography<select data-sg-editions></select></label>'+
+      '<div data-sg-microbial></div><div data-sg-native-review></div><div data-sg-presets></div><div data-sg-form-area></div><section class="sg-reopen"><label>Saved station geography<select data-sg-editions></select></label>'+
       '<label class="sg-upload">Reopen original geography package<input type="file" data-sg-receive accept=".zip,application/zip"></label></section>'+
       '<section data-sg-summary></section><section class="sg-results"><div class="sg-filters"><label>Find station<input type="search" data-sg-search value="'+esc(search)+'" placeholder="Station, watershed, description, county or cause"></label>'+
       '<label>Location status<select data-sg-filter>'+statuses.map(s=>'<option value="'+s+'"'+(s===filter?' selected':'')+'>'+esc(s==='all'?'All stations':s)+'</option>').join('')+'</select></label>'+
@@ -754,6 +777,8 @@ export function attachStationGeography(host) {
       '<div class="sg-map-layout"><div data-sg-map></div><aside data-sg-detail></aside></div><div data-sg-table></div></section>'+
       '<details class="sg-coverage" data-sg-coverage '+(coverageOpen?'open':'')+'><summary>Watershed station coverage</summary><label>Find watershed, station or cause<input type="search" data-sg-coverage-search value="'+esc(coverageSearch)+'" placeholder="Watershed ID, native name, station or cause"></label><div data-sg-coverage-content></div></details>'+
       '<section data-sg-downloads></section><section class="sg-operations"><h2>Retained operations</h2><div class="sg-table-scroll" data-sg-tasks></div></section></section>';
+    nativeReview=attachNativeAssessmentReview({container:node.querySelector('[data-sg-native-review]'),host,
+      getWorkspace:()=>workspace,submit,onError:fail});
     const signal=controller.signal;
     node.addEventListener('input',editInput,{signal});
     node.addEventListener('change',async event=>{
@@ -806,6 +831,7 @@ export function attachStationGeography(host) {
     if(sources!==sourceFingerprint){sourceFingerprint=sources;loadCatalog(false);}
   }
   function detach() {
+    nativeReview?.detach();nativeReview=null;
     save();controller?.abort();controller=null;generation++;node=null;drag=null;loading=false;busy=false;
   }
   return {mount,update,detach,taskActions,dispatch,open:requestEdition};
