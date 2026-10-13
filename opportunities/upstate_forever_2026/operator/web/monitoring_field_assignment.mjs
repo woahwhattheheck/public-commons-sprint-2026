@@ -21,24 +21,24 @@ export function attachMonitoringFieldAssignment(host){
   function draft(w=workspace){
     if(!drafts.has(w)){
       let saved={};try{saved=JSON.parse(localStorage.getItem('upstate.field-assignment.'+w)||'{}');}catch{}
-      drafts.set(w,{source:typeof saved.source==='string'?saved.source:'',title:typeof saved.title==='string'?saved.title:'Monitoring field assignments',selectionText:typeof saved.selectionText==='string'?saved.selectionText:'',filename:typeof saved.filename==='string'?saved.filename:'',lastTask:typeof saved.lastTask==='string'?saved.lastTask:'',lastOpened:typeof saved.lastOpened==='string'?saved.lastOpened:'',selectionReady:saved.selectionReady===false?false:!!saved.selectionText,edit:0,observedTasks:new Set()});
+      drafts.set(w,{source:typeof saved.source==='string'?saved.source:'',title:typeof saved.title==='string'?saved.title:'Monitoring field assignments',selectionText:typeof saved.selectionText==='string'?saved.selectionText:'',filename:typeof saved.filename==='string'?saved.filename:'',lastTask:typeof saved.lastTask==='string'?saved.lastTask:'',lastOpened:typeof saved.lastOpened==='string'?saved.lastOpened:'',selectionReady:saved.selectionReady===false?false:!!saved.selectionText,selectionRecordId:validId(saved.selectionRecordId)?saved.selectionRecordId:'',edit:0,observedTasks:new Set()});
     }
     return drafts.get(w);
   }
   function persist(w=workspace){
-    const d=draft(w);try{localStorage.setItem('upstate.field-assignment.'+w,JSON.stringify({source:d.source,title:d.title,selectionText:d.selectionText,filename:d.filename,selectionReady:d.selectionReady,lastTask:d.lastTask,lastOpened:d.lastOpened}));}catch{}
+    const d=draft(w);try{localStorage.setItem('upstate.field-assignment.'+w,JSON.stringify({source:d.source,title:d.title,selectionText:d.selectionText,filename:d.filename,selectionReady:d.selectionReady,selectionRecordId:d.selectionRecordId,lastTask:d.lastTask,lastOpened:d.lastOpened}));}catch{}
   }
   function note(text,error=false){
     const node=root?.querySelector('[data-mfa-status]');if(node){node.textContent=text;node.classList.toggle('mfa-error',error);}
   }
   function changed(){
-    const d=draft();d.source=field('source')?.value||'';d.title=field('title')?.value||'';
+    const d=draft(),source=field('source')?.value||'';if(source!==d.source)d.selectionRecordId='';d.source=source;d.title=field('title')?.value||'';
     d.edit++;previewed=null;++previewRead;persist();renderPreview();
   }
   function controls(){
     const d=draft();
     return '<section class="mfa"><header><h2>Field assignments</h2><p>Bring saved station choices, selected rounds and field notes into an editable implementation plan. Original coordinates, calendar slots and programme costs stay attached.</p></header>'+
-      '<div class="mfa-controls"><label>Original field-support source<select name="source"></select></label><label>Editable plan title<input name="title" maxlength="240" value="'+escape(d.title)+'"></label>'+
+      '<div class="mfa-controls"><label>Saved native field selection<select name="native_selection"></select><button type="button" data-mfa-action="native">Use retained selection</button></label><label>Original field-support source<select name="source"></select></label><label>Editable plan title<input name="title" maxlength="240" value="'+escape(d.title)+'"></label>'+
       '<label>Saved field-selection JSON<input name="selection" type="file" accept=".json,application/json"><small data-mfa-file>'+escape((d.filename+(d.selectionReady?'':' · selection not yet admitted'))||'Choose the file saved by the monitoring field desk.')+'</small></label>'+
       '<div class="mfa-actions"><button type="button" data-mfa-action="preview">Review assignments</button><button type="button" data-mfa-action="save" disabled>Create editable plan</button><button type="button" data-mfa-action="refresh">Refresh saved assignments</button></div></div>'+
       '<p role="status" aria-live="polite" data-mfa-status></p><div data-mfa-preview></div>'+
@@ -51,6 +51,7 @@ export function attachMonitoringFieldAssignment(host){
     catalogue=result;const d=draft(w),choices=list(result.sources).map(row=>({value:identity({source_collection_id:row.source_collection_id,source_id:row.source_id,body_sha256:row.body_sha256}),label:row.title+' · '+row.collection_title}));
     if(d.source&&!choices.some(row=>row.value===d.source))choices.push({value:d.source,label:'Previously selected original source — native preview verifies its availability'});
     field('source').innerHTML=option('','Choose the original field-support document',d.source)+choices.map(row=>option(row.value,row.label,d.source)).join('');
+    field('native_selection').innerHTML=option('','Choose an original retained selection',d.selectionRecordId)+list(result.native_selections).map(row=>option(row.id,row.title,d.selectionRecordId)).join('');
     field('saved').innerHTML=option('','Choose a saved assignment',d.lastOpened)+list(result.assignments).map(row=>option(row.id,row.title+' · '+row.assigned_areas+' assigned areas',d.lastOpened)).join('');
     if(!choices.length)note('Import the original field-support source manifest through Sources, then load the selection saved by its field desk.');
   }
@@ -59,7 +60,7 @@ export function attachMonitoringFieldAssignment(host){
     const w=workspace,e=epoch,d=draft(w),ticket=++fileRead;
     // Choosing a replacement immediately revokes the earlier preview and confirmation.
     // Retain prior bytes as a draft, but never admit them as the newly selected file.
-    d.edit++;d.selectionReady=false;d.filename=file.name;previewed=null;++previewRead;
+    d.edit++;d.selectionReady=false;d.selectionRecordId='';d.filename=file.name;previewed=null;++previewRead;
     const edit=d.edit;persist(w);renderPreview();
     root.querySelector('[data-mfa-file]').textContent=file.name+' · reading new selection';
     note('Reading the newly selected file. Review and Create are unavailable until its bytes are loaded.');
@@ -77,10 +78,35 @@ export function attachMonitoringFieldAssignment(host){
     root.querySelector('[data-mfa-file]').textContent=file.name+' · '+file.size+' bytes retained';
     renderPreview();note('Original selection loaded. Review its source, station assignments and rounds.');
   }
+  async function loadNative(){
+    const id=field('native_selection')?.value;
+    if(!validId(id))throw Error('Choose an original saved native field selection.');
+    const w=workspace,e=epoch,d=draft(w),ticket=++fileRead;
+    d.edit++;d.selectionReady=false;d.selectionRecordId='';previewed=null;++previewRead;
+    const edit=d.edit;persist(w);renderPreview();
+    note('Reading the exact retained field-selection JSON and its verified original source…');
+    let value;
+    try{value=await api(endpoint('/api/monitoring-field-assignment/selection',{workspace:w,id}));}
+    catch(error){if(alive(w,e)&&ticket===fileRead&&d.edit===edit)note(error.message||String(error),true);return;}
+    if(!alive(w,e)||ticket!==fileRead||d.edit!==edit)return;
+    if(value.selection_record_id!==id||typeof value.selection_text!=='string'||
+       !validId(value.source?.source_collection_id)||!validId(value.source?.body_sha256)||
+       typeof value.source?.source_id!=='string')throw Error('The native selection reader returned an incomplete original binding.');
+    d.selectionText=value.selection_text;d.selectionRecordId=id;d.selectionReady=true;
+    d.source=identity(value.source);d.filename='Original native selection '+id.slice(0,12)+'.json';
+    if(!d.title.trim()||d.title==='Monitoring field assignments')d.title=(value.title+' — field assignments').slice(0,240);
+    d.edit++;persist(w);
+    const select=field('source');
+    if(!Array.from(select.options||[]).some(row=>row.value===d.source))
+      select.innerHTML+=option(d.source,'Retained selection’s original field-support document',d.source);
+    select.value=d.source;field('title').value=d.title;field('native_selection').value=id;
+    root.querySelector('[data-mfa-file]').textContent=d.filename+' · exact original bytes retained';
+    note('Original native field selection loaded. Review its station assignments, calendar and programme budget.');
+  }
   function payload(){
     const d=draft();if(!d.source)throw Error('Choose the matching original field-support document.');
     if(!d.selectionReady||!d.selectionText)throw Error('Load the newly selected field-selection JSON before reviewing or saving.');
-    return {source:JSON.parse(d.source),title:d.title,selection_text:d.selectionText};
+    return {source:JSON.parse(d.source),title:d.title,selection_text:d.selectionText,...(d.selectionRecordId?{selection_record_id:d.selectionRecordId}:{})};
   }
   async function preview(){
     const w=workspace,e=epoch,d=draft(w),edit=d.edit,ticket=++previewRead,request=payload();
@@ -157,7 +183,7 @@ export function attachMonitoringFieldAssignment(host){
     root.addEventListener('click',event=>{
       const node=event.target.closest('[data-mfa-action]');if(!node)return;event.preventDefault();
       const action=node.dataset.mfaAction;
-      Promise.resolve().then(()=>({preview,save,refresh,open:()=>openSaved(field('saved').value),implementation:openImplementation}[action]?.()))
+      Promise.resolve().then(()=>({preview,save,refresh,native:loadNative,open:()=>openSaved(field('saved').value),implementation:openImplementation}[action]?.()))
         .catch(error=>{if(alive(w,e))note(error.message,true);});
     },{signal:events.signal});
     try{await refresh();if(alive(w,e)&&draft(w).lastOpened)await openSaved(draft(w).lastOpened);}
