@@ -1,52 +1,60 @@
-# Restore the fourteen original map1755 base dependencies
+# Continue the original map1755 receiving operation
 
-This continues 9BCB's actual source installation failure reported at 1791890889.668599. The original 42 map members, rebuilt 217-feature geometry, b9d5 Workspace and existing native operation remain the same. All fourteen supplement files are absent from both the 42-file map bank and the 319-file nine-study delivery. The actual received installer matches the current original installer byte for byte and requires these exact paths. No installer, model or observation source is modified.
+## Current native state and required source edition
 
-## Source identity
+9BCB completed the fourteen-file installation and original source analysis / 217-map setup in native PID4320. Its actual report export then found an older client briefing helper. The exact current two-file briefing source in this directory resolves that existing schema compatibility; no new report engine, modeled cohort or native course is introduced.
 
-Public repository: woahwhattheheck/public-commons-sprint-2026. All fourteen original source bodies are pinned at commit 435e0304dde7cf71cacccecbec2945d9f2977ed0 under opportunities/upstate_forever_2026/.
+**The fourteen-member original-bank.json is historical, pre-repair source.** Its monitoring_comparison_report.py has a known Python delimiter defect. Keep the original bank unchanged for provenance; do not install or restore that defective member over the corrected native application.
 
-- Whole bank: 299146 bytes; SHA256 f16456d7fb28ddfe7d193aeaf90066a16516c7801c2b7f4da1360a6f539b124c; Git bc39da421031a6d8aa4b5d066c71181343c3fd19.
-- Source members: 14 files, 276395 bytes. Every exact member SHA256/Git identity is in the original bank.
-- Standalone receiver: 163885 canonical UTF-8 bytes; SHA256 842a1b7dc65aa9ab45abfe5a82e99608757b77285d9dfe8cff0b1312e0e385d9; Git 2f3ff6c7a7407b97970fad99f09bb43de04da946.
-- Maintained decoder: e171ee1443652e06c1e44d863044f400d2a8c766.
+The actual native correction is already in public main, commit6bc7f660d83af551f037268486aad769e6a86658. This directory's current-source/model/monitoring_comparison_report.py is byte-for-byte identical to the native repair. The original repair is also retained as file_000000006d50820e8f02ab9de72ecd20 / libfile_e25bbf842cec8191b7d179fe87835648.
 
-## Continue the existing native operation
+| Current maintained file | UTF-8 bytes | SHA256 | Git blob |
+|---|---:|---|---|
+| model/client_briefing.py | 48850 | 866ef9d9d3bd751572b3e9e86a88a46af1404d7d62b72a56f41e42c08d5d99f8 | f28c4161f34564e11464728e6def73ce203d331f |
+| model/scientific_briefing.py | 19823 | 3984125f33b7ed79ee1a1e6b64f9dba9df480b28fcfa038bf84a8dddb11cc6e2 | 023a71a698c8ff7e0e958c785f9985d694f37566 |
+| model/monitoring_comparison_report.py | 26098 | 364f64dc19a8a7c6a5cd82cf30d7889e1b11a1678e4d22457defb2ef57eae09e | b6fda07cf6f38c0a14dabd5dc834c672f58b688b |
 
-Use the host's existing Python, original application and the same already-prepared map source directory. The physical receiver is /Ecosystem Sciences/Handoffs/receive_map1755_base_dependencies_20261013.py, Library libfile_d870dd43ece88191b2f2bbc00118d41b, file_00000000062881fda2f9e4dda1a25015. The text export is163889 bytes including BOM/CRLF; reading utf-8-sig with universal newlines recovers the exact canonical receiver hash above. Full readback matched, and the ordinary native file is available.
+All three complete files are present beneath current-source/, with their normal application-relative paths. The briefing files are pinned at public main515ad6070ac8981a17c9535b5554c134c58330bd.
 
-Set these variables to the existing actual paths; do not infer a new workspace or start another model. SUPPLEMENT is a new ordinary owned source directory and MAP_SOURCE is the received42 directory already used in the successful original geometry preparation.
+## Resume the installed application
+
+The actual native APP is /mnt/data/eco-9bcb/restored/application and WORKSPACE is /mnt/data/eco-9bcb/restored/workspace. Preserve completed nine-study delivery1652 and all existing map selections, analysis and downloads.
+
+1. Receive Map1755_Current_Briefing_Source_20261013.json.txt: file_00000000bcc881f89d79b98b1feb4b1e / libfile_4ba2e0694e908191ba6f95cba0137711. It is also retained here unchanged as briefing-current-bank.json.
+2. Read the physical text using utf-8-sig and universal newlines. Canonical JSON is78,401 bytes, SHA2566ca8b88305110bda12f56095c627075e46108ce14e38fccacadb6f53e254a428, Git3e5bf80f09bde3337aee39b198f04bc3b3738494. Its two files[].content strings are complete originals; verify every member against the table above.
+3. At the existing map task/server boundary, use the same maintained backup/source-update procedure to install these two paths. Compile the complete Python sources before replacing either file and retain old bodies. Keep the already-correct native monitoring_comparison_report.py; it matches the current-source copy exactly.
+4. Reload or restart only the existing operator server through its maintained lifecycle if needed to load changed Python modules, preserving the current Workspace and operation. Retry the SAME report export.
+5. Continue original1755 receiving and editable export / cold reopening. Return actual artifact IDs, file hashes and the actual operated/viewed result or first complete exception.
+
+Client source_context binding uses only Python's standard library. The scientific briefing companion imports existing model.common and lazily model.observed_context. These dependencies are already in the receiving application. Original report content and source selection remain bound; this upgrade does not supply a modeled baseline.
+
+The physical two-file source was independently read back in full, both original file hashes matched, and native materialization returned1available /0unavailable. Those checks do not claim the export has completed.
+
+## Historical fourteen-file supplement and a fresh receiver
+
+The original failure0889 reported fourteen missing base dependencies. Original-bank.json retains all fourteen unchanged bodies from commit435e0304dde7cf71cacccecbec2945d9f2977ed0, under opportunities/upstate_forever_2026/.
+
+- Original bank:299146 bytes; SHA256f16456d7fb28ddfe7d193aeaf90066a16516c7801c2b7f4da1360a6f539b124c; Gitbc39da421031a6d8aa4b5d066c71181343c3fd19.
+- Original source members:14 files,276395 bytes, with every member's exact SHA256/Git identity.
+- Original standalone receiver:163885 canonical UTF-8 bytes; SHA256842a1b7dc65aa9ab45abfe5a82e99608757b77285d9dfe8cff0b1312e0e385d9; Git2f3ff6c7a7407b97970fad99f09bb43de04da946.
+- Physical original receiver: file_00000000062881fda2f9e4dda1a25015 / libfile_d870dd43ece88191b2f2bbc00118d41b.
+- Maintained decoder:e171ee1443652e06c1e44d863044f400d2a8c766.
+
+A fresh source receiver may run the original standalone receiver into a new owned SUPPLEMENT directory to verify and retain that historical source. It writes received/source plus the original bank and receipt. The fourteen files supplement the already-prepared42 map source root; neither a fourteen-only root nor an unchanged42 root is a complete installation input.
+
+**Before installing a fresh combined source edition, apply the three current-source files above using the existing guarded source-upgrade/backup procedure.** In particular, replace only the known defective historical monitoring member with the exact published repair and retain both originals. Do not blindly copy the historical fourteen over an already-repaired application. The two briefing helpers must also be installed in APP because the original map installer may leave existing core helpers in place.
+
+Then use the same original map preparation/installation command with the combined, corrected MAP_SOURCE:
 
 ```sh
-"$PYTHON" -B "$RECEIVER" "$SUPPLEMENT"
-"$PYTHON" - "$SUPPLEMENT" "$MAP_SOURCE" <<'PY'
-import hashlib,json,runpy,sys
-from pathlib import Path
-supplement=Path(sys.argv[1]).resolve(strict=True)
-target=Path(sys.argv[2]).resolve(strict=True)
-helper=supplement/"input/materialize_source_banks.py"
-assert hashlib.sha256(helper.read_bytes()).hexdigest()=="85afc359f2e8ecccc8c3b61da6678749ba3f0635da3ec9e358b0ec6e3c7e2d7d"
-api=runpy.run_path(str(helper))
-raw=(supplement/"received/banks/map1755-base-dependencies.json").read_bytes()
-assert len(raw)==299146 and hashlib.sha256(raw).hexdigest()=="f16456d7fb28ddfe7d193aeaf90066a16516c7801c2b7f4da1360a6f539b124c"
-bank=json.loads(raw); assert len(bank["files"])==14
-items=[]
-for row in bank["files"]:
-    body=row["content"].encode("utf-8")
-    assert len(body)==row["bytes"] and hashlib.sha256(body).hexdigest()==row["sha256"]
-    path=api["target"](target,row["path"])
-    if any(p.is_symlink() for p in (path,*path.parents)): raise ValueError("Preserve symlink: "+str(path))
-    if path.exists() and (not path.is_file() or path.read_bytes()!=body): raise ValueError("Preserve differing source: "+str(path))
-    items.append((path,body))
-for path,body in items: api["retain"](path,body)
-print(json.dumps({"state":"retained","files":len(items),"source_root":str(target)}))
-PY
 "$PYTHON" -B "$APP/source_tools/prepare_watershed_map_context.py" --application "$APP" --source-root "$MAP_SOURCE" --search-root "$WORKSPACE" --install
 ```
 
-The first command verifies and retains the complete unchanged bank and all fourteen files. The second checks every source and destination before retaining only missing or byte-identical supplement files beside the original42. A differing existing file causes an explicit failure; do not overwrite or downgrade it. The third is the same maintained map preparation/installation command; it uses source-root then existing-application fallback and retains its normal backups and rollback. If the preparer was invoked from the retained source directory before, retain that same actual script path. Continue the existing1755 native course after installation, keeping the nine-study6944 selection separate. Return the original traceback if anything else fails.
+If the already-successful preparer was invoked from the retained source directory, use that same actual script path. The maintained installer checks all required sources before replacement, keeps its backups/rollback, and uses source-root then application fallback. Existing bank and delivery directories remain retained. No model or observation data is changed.
 
-These source, hash and API checks do not claim that the native installation or final rendering has run. The producing native owner must operate and inspect the exact outgoing populated app, desktop and390px layouts, every map/report/figure/table/source/archive attachment, downloads, editable export and cold reopen.
+## Native product acceptance
+
+The producing native owner must open and use the exact outgoing populated app, desktop and390px layouts, every map/report/figure/table/source/archive attachment, downloads, editable export and cold reopen. Do not substitute source/hash/API peer checks for actual product operation. Preserve the same native course, complete nine-study products and original source identities.
 
 ## Complete current owner direction
 
@@ -95,4 +103,3 @@ If producing video, record the actual working application and use available natu
 Pass this complete brief into every current child, provider and cloud work order and handoff. Include its durable path and version `2026-10-13.3` with the next result. Relay it at the actual coordination surface and onward to participating workers; fast feeds can bury an update. Acknowledgment alone is not delivery.
 
 Preserve active compute and existing implementation ownership. Do not force worker restarts, drop an active run or create a new controller. Keep lab attribution, source/copyright, incident and contact controls, personal-meeting approval, no private GitHub/Actions, no llama.cpp and focused internal validation. No new approval gate or broad test sweep is authorized.
-
