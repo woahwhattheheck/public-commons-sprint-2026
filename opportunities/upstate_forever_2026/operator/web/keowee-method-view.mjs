@@ -68,18 +68,36 @@ function classificationDetail(value) {
   const explanation = {
     scored: labels ? "Published class: " + labels : "Published interval matched",
     ambiguous: "Overlapping printed intervals" + (labels ? ": " + labels : ""),
-    unclassified: "Value lies outside the printed intervals",
+    unclassified: "Value falls in a printed gap or outside the published intervals",
     missing: "The original input is unobserved",
+    bounded_interval: "Original published bins evaluated across the retained acreage interval",
   }[value.state] || "Retained source classification";
-  return note(explanation) +
+  const attainableStates = Array.isArray(value.attainable_states) ?
+    [...new Set(value.attainable_states)].map(state => ({
+      scored:"published interval matched", ambiguous:"printed intervals overlap",
+      unclassified:"printed gap or value outside the published intervals", missing:"input unobserved",
+    }[state] || human(state))) : [];
+  return note(explanation) + (attainableStates.length ?
+    note("Attainable classification states: " + attainableStates.join("; ")) : "") +
     (alternatives && value.state !== "scored" ? note("Attainable points: " + alternatives) : "");
+}
+function intervalMarkup(bound) {
+  if (!bound || !finite(bound.lower) || !finite(bound.upper)) return "";
+  const text = bound.lower === bound.upper ? String(bound.lower) :
+    "[" + String(bound.lower) + ", " + String(bound.upper) + "]";
+  const basis = bound.area_basis ? " · " + human(bound.area_basis) : "";
+  return escape(text) + " " + escape(unitLabel(bound.unit || "acres")) +
+    note((bound.exact ? "Exact observed acreage" : bound.structural_only ?
+      "Original parcel area bounds this unresolved criterion" :
+      "Closed acreage bounds from observed positive area and unresolved area") + basis);
 }
 /** Render exact observed numbers rather than rounding away interval boundaries. */
 export function renderMethodValue(value, unit = null) {
   if (isClassification(value)) {
+    const interval = intervalMarkup(value.value_interval);
     const raw = escape(scalar(value.value));
     const suffix = value.value === null || value.value === undefined ? "" : " " + escape(unitLabel(value.unit));
-    return raw + suffix + classificationDetail(value);
+    return (interval || raw + suffix) + classificationDetail(value);
   }
   const text = escape(scalar(value));
   const suffix = value === null || value === undefined || value === "" || !unit ? "" : " " + escape(unitLabel(unit));
@@ -113,10 +131,10 @@ function referencesMarkup(item, originalReference) {
 }
 function pointMarkup(item, formatNumber) {
   if (finite(item.points)) return escape(formatNumber(item.points));
-  const options = formatPointAlternatives(item.score_options);
-  if (options) return escape(options) + note("Attainable points");
+  const options = formatPointAlternatives(item.score_options || item.classification?.score_options);
+  if (options) return escape(options) + note("Attainable contributions; unlisted intermediate values are not implied");
   return escape(formatNumber(item.known_points)) + "–" + escape(formatNumber(item.possible_points)) +
-    note("Known–possible points");
+    note("Known–possible bounds");
 }
 function sourceRecord(binding) {
   if (!binding || typeof binding !== "object") return "";
@@ -173,11 +191,17 @@ function evidenceDetails(observation) {
   if (Object.hasOwn(evidence, "coverage_contains_analysis_geometry")) {
     lines.push(["Source covers analysis geometry", escape(scalar(evidence.coverage_contains_analysis_geometry))]);
   }
-  const transfer = observation.unit_interpretation || binding.profile_transfer;
+  const transfer = observation.unit_interpretation || observation.profile_transfer || binding.profile_transfer;
   if (transfer && typeof transfer === "object") {
     if (finite(transfer.pixel_area_m2)) lines.push(["Current native pixel area", escape(String(transfer.pixel_area_m2)) + " m²"]);
     if (transfer.reference) lines.push(["Current-grid interpretation", escape(transfer.reference)]);
     if (transfer.sediment_ton_definition) lines.push(["Native sediment unit", escape(human(transfer.sediment_ton_definition))]);
+    if (Object.hasOwn(transfer, "original_raster_pixel_area_m2")) {
+      lines.push(["Original profile pixel area", finite(transfer.original_raster_pixel_area_m2) ?
+        escape(String(transfer.original_raster_pixel_area_m2)) + " m²" : "Not recorded in the original source profile"]);
+    }
+    if (transfer.native_unit || transfer.profile_unit) lines.push(["Native → profile units",
+      escape(unitLabel(transfer.native_unit)) + " → " + escape(unitLabel(transfer.profile_unit))]);
   }
   if (!lines.length) return "";
   return '<details><summary>Source inputs</summary><dl class="cons-definitions">' +
@@ -219,20 +243,26 @@ export function renderKeoweePointCriteria(candidate, {
   originalReference = null,
 } = {}) {
   if (!candidate?.point_score) return "";
-  const score = candidate.point_score;
+  const score = candidate.point_score, bounds = score.metric_bounds || {};
   const rows = (items, nested = false) => items.map(item => {
     const group = Array.isArray(item.terms) && item.terms.length > 0;
     const classification = item.classification || (isClassification(item.value) ? item.value : null);
-    let value = group ? "See contributing terms" : renderMethodValue(item.value, classification?.unit);
-    if (classification && !isClassification(item.value)) value += classificationDetail(classification);
+    let value = group ? "See contributing terms" :
+      intervalMarkup(item.value_interval || classification?.value_interval) || renderMethodValue(item.value, classification?.unit);
+    if (classification && (!isClassification(item.value) || item.value_interval || classification.value_interval)) {
+      value += classificationDetail(classification);
+    }
+    if (item.points_determined_by_interval) {
+      value += note("The retained acreage bounds determine this exact published contribution");
+    }
     return '<tr' + (nested ? ' class="cons-criterion-term"' : "") + '><th scope="row">' +
-      escape(label(item.id || item.metric)) + (group ? note("Combined criterion") : "") +
+      escape(item.title || item.label || label(item.id || item.metric)) + (group ? note("Combined criterion") : "") +
       "</th><td>" + value + "</td><td>" + pointMarkup(item, formatNumber) +
       "</td><td>" + referencesMarkup(item, originalReference) + "</td></tr>" +
       (group ? rows(item.terms, true) : "");
   }).join("");
   const components = Object.values(candidate.score_components || {}).filter(item =>
-    item && typeof item === "object" && item.id);
+    item && typeof item === "object" && (item.id || item.metric));
   const scoreText = finite(score.points) ? escape(formatNumber(score.points)) + " points" :
     score.prerequisite === false ? "Practice prerequisite is absent" :
       "Awaiting complete criteria and a satisfied practice prerequisite";
@@ -241,12 +271,15 @@ export function renderKeoweePointCriteria(candidate, {
   const alternatives = formatPointAlternatives(score.score_options);
   const priorities = Array.isArray(score.priority_options) ? score.priority_options.map(label) : [];
   const totalText = alternatives || String(formatNumber(score.known_points)) + "–" + String(formatNumber(score.possible_points));
-  const inputs = Object.entries(score.metric_values || {});
+  const inputs = [...new Set([...Object.keys(score.metric_values || {}), ...Object.keys(bounds)])]
+    .map(name => [name, score.metric_values?.[name]]);
   return '<details class="cons-disclosure"><summary>Published point criteria</summary>' +
     '<dl class="cons-definitions"><dt>Published practice score</dt><dd>' + scoreText +
     "</dd><dt>Practice prerequisite</dt><dd>" + escape(prerequisiteText) +
-    "</dd><dt>" + (alternatives ? "Attainable contribution" : "Known–possible contribution") + "</dt><dd>" +
-    escape(totalText) + " points</dd><dt>Category maximum</dt><dd>" +
+    "</dd><dt>" + (alternatives ? "Possible point totals" : "Known–possible contribution bounds") + "</dt><dd>" +
+    escape(totalText) + " points" + (alternatives ?
+      note("Unlisted intermediate totals are not implied. Combinations across unresolved criteria remain conservative; correlations between missing observations are not inferred.") : "") +
+    "</dd><dt>Category maximum</dt><dd>" +
     escape(formatNumber(score.maximum)) + " points</dd>" +
     (priorities.length && score.prerequisite !== false ?
       "<dt>" + (finite(score.points) ? "Published priority" : "Potential priorities") + "</dt><dd>" +
@@ -255,17 +288,22 @@ export function renderKeoweePointCriteria(candidate, {
         note("Practice eligibility remains unresolved") : "") + "</dd>" : "") +
     "</dl>" + (components.length ?
       '<div class="cons-table-wrap"><table class="cons-table"><thead><tr>' +
-      '<th scope="col">Criterion</th><th scope="col">Retained value</th><th scope="col">Points</th>' +
+      '<th scope="col">Criterion</th><th scope="col">Original value or acreage range</th><th scope="col">Points</th>' +
       '<th scope="col">Published reference</th></tr></thead><tbody>' +
       rows(components) + "</tbody></table></div>" : "") +
     (inputs.length ? '<details><summary>Complete retained input values</summary><div class="cons-table-wrap">' +
       '<table class="cons-table"><thead><tr><th scope="col">Input</th><th scope="col">Value</th>' +
-      '<th scope="col">Original source field</th></tr></thead><tbody>' +
+      '<th scope="col">Observed acreage bounds</th><th scope="col">Original source field</th></tr></thead><tbody>' +
       inputs.map(([name, value]) => '<tr><th scope="row">' + escape(label(name)) +
         "</th><td>" + renderMethodValue(value) + "</td><td>" +
-        sourceRecord(score.metric_sources?.[name]) + "</td></tr>").join("") +
-      "</tbody></table></div></details>" : "") +
+        (intervalMarkup(bounds[name]) || "—") + "</td><td>" +
+        sourceRecord(score.metric_sources?.[name]) +
+        evidenceDetails(score.metric_sources?.[name] || {}) + "</td></tr>").join("") +
+      "</tbody></table></div><p class=\"cons-help\">An original acreage interval may determine an exact published " +
+      "contribution while its underlying acreage remains bounded. Printed gaps and overlaps remain visible in the attainable values.</p></details>" : "") +
     observationsMarkup(score) + editionMarkup(score) +
-    '<details><summary>Complete criterion source references</summary><pre>' +
-    escape(JSON.stringify(score.metric_sources || {}, null, 2)) + "</pre></details></details>";
+    '<details><summary>Complete criterion source references and acreage coverage</summary><pre>' +
+    escape(JSON.stringify({ sources:score.metric_sources || {}, acreage_bounds:bounds,
+      original_criterion_evidence:score.original_criterion_evidence || null }, null, 2)) +
+    "</pre></details></details>";
 }

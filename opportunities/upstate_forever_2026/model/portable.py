@@ -9,7 +9,8 @@ import shutil
 import stat
 import tempfile
 import zipfile
-from .common import SCHEMA, atomic_json, canonical, file_digest, held, now, read_json
+from .common import (SCHEMA, atomic_json, canonical, file_digest, held, identifier,
+                     now, read_json, relative_file)
 from .portable_databases import snapshot_databases, without_database_files, verify_database_sources
 
 FORMAT = "upstate.scientific-workspace-archive/v1"
@@ -151,9 +152,17 @@ def _inventory(root, *, include_intermediates, include_deliveries, excluded):
 
 def _application(source_root):
     files = []
-    for name in APPLICATION_FILES:
-        path = source_root / name
+    # Root source files added by another maintained component travel with the
+    # same application; named nested entrypoints remain explicitly included.
+    candidates = list(source_root.iterdir()) + [source_root / name for name in APPLICATION_FILES]
+    for path in sorted(set(candidates)):
+        if (path.name.startswith(".") or path.name.endswith((".pyc", ".pyo", ".lock"))
+                or path.name == "APPLICATION_SOURCE_RECEIPT.json"):
+            continue
+        if path.is_symlink():
+            raise ValueError("Application source contains a file alias: " + path.name)
         if path.is_file():
+            _identity(path)
             files.append(path)
     # Preserve the complete maintained source families without walking installed
     # environments or version-control caches that can live beside their source.
@@ -458,9 +467,10 @@ def _received_member_aliases(manifest, destination):
                 or (not os.path.samefile(linked, source) and file_digest(linked) != wanted["sha256"])):
             raise ValueError("Received delivery alias differs from its registered source: " + relative)
         alias = "workspace/deliveries/" + key + "/" + relative
-        if alias in members and members[alias] != wanted:
+        if alias in members and any(members[alias].get(name) != value
+                                    for name, value in wanted.items()):
             raise ValueError("Received delivery alias conflicts with a retained Workspace member")
-        members[alias] = wanted
+        members[alias] = {**declared, **wanted}
     return members
 
 
@@ -524,7 +534,12 @@ def backup(workspace, destination, *, include_intermediates=True, include_delive
                     member_name(name)
                     digest = hashlib.sha256()
                     size = 0
-                    with path.open("rb") as source, archive.open(name, "w", force_zip64=True) as output:
+                    mode = "100755" if path.stat().st_mode & 0o111 else "100644"
+                    member = zipfile.ZipInfo(name)
+                    member.create_system = 3
+                    member.compress_type = zipfile.ZIP_DEFLATED
+                    member.external_attr = int(mode, 8) << 16
+                    with path.open("rb") as source, archive.open(member, "w", force_zip64=True) as output:
                         if _identity(path) != before:
                             raise ValueError("Source changed before archive capture: " + name)
                         for block in iter(lambda: source.read(1024 * 1024), b""):
@@ -533,8 +548,10 @@ def backup(workspace, destination, *, include_intermediates=True, include_delive
                             size += len(block)
                     if _identity(path) != before:
                         raise ValueError("Source changed during archive capture: " + name)
-                    records[name] = {"bytes": size, "sha256": digest.hexdigest()}
-                    if name in expected_delivery and records[name] != expected_delivery[name]:
+                    records[name] = {"bytes": size, "sha256": digest.hexdigest(), "mode": mode}
+                    if name in expected_delivery and {
+                            key: records[name][key] for key in ("bytes", "sha256")
+                    } != expected_delivery[name]:
                         raise ValueError("Selected delivery differs from its retained bytes: " + name)
                 verify_database_sources(database_sources)
                 current = _inventory(root, excluded=excluded, **inventory_selection)
@@ -555,7 +572,8 @@ def backup(workspace, destination, *, include_intermediates=True, include_delive
                     expected_application = (delivery.get("record", {}).get("selection") or {}).get(
                         "application_sha256")
                     if expected_application:
-                        captured_application = {name[len("application/"):]: item
+                        captured_application = {
+                            name[len("application/"):]: {key: item[key] for key in ("bytes", "sha256")}
                             for name, item in records.items() if name.startswith("application/")}
                         if hashlib.sha256(canonical(captured_application)).hexdigest() != expected_application:
                             raise ValueError("Application changed since the delivery was selected")
@@ -638,6 +656,10 @@ def _inspect_archive(archive, *, verify):
         info = archive.getinfo(name)
         if info.file_size != record["bytes"]:
             raise ValueError("Archived file length differs: " + name)
+        mode = record.get("mode")
+        if mode is not None:
+            if mode not in {"100644", "100755"} or info.external_attr >> 16 != int(mode, 8):
+                raise ValueError("Archived file mode differs: " + name)
         if verify:
             h = hashlib.sha256()
             with archive.open(name) as source:
@@ -719,8 +741,9 @@ def _restore_archive(archive, archive_source, before, manifest, destination):
                 os.fsync(output.fileno())
             if h.hexdigest() != expected["sha256"] or target.stat().st_size != expected["bytes"]:
                 raise ValueError("Receiving file differs: " + name)
-        # Restore the selected delivery's verified layer bindings before any
-        # saved review reconstructs the scientific Workspace catalogue.
+            if expected.get("mode") is not None:
+                target.chmod(int(expected["mode"], 8) & 0o777)
+        # Restore selected original delivery bindings before saved Spatial checks.
         _register_received_delivery(manifest, pending)
         verified_members = _received_member_aliases(manifest, pending)
         restored = Workspace(pending / "workspace")

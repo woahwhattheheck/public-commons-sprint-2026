@@ -115,6 +115,56 @@ Standalone maps and atlas sheets are saved from the same Matplotlib figure. On r
 
 A resumed GIS package is reused only when its captured manifest matches the current manifest and its retained technical audit passed with no missing references. A changed or failed earlier capture stays available in its original directory; the current release is packaged in a deterministic sibling directory with its own package-hash ZIP. Repeated resume can find and reuse that exact current package.
 
+## Saved atlas review collections
+
+A review saved from **Inspect pixels and geography** or **Open paired inspection**
+now retains its atlas origin as a typed record, separate from editable notes.
+Use **Reviewer**, **Disposition** and **Finding or resolution** in the native
+editor, then **Save review**. Dispositions are **Open**, **Addressed** and
+**Closed**. They describe the review finding and stay with that immutable
+revision. Geographic extent, annotations, overlays and physical display settings
+remain editable.
+
+Return through **Back to atlas and files** to **Saved atlas reviews**. The
+collection lists every revision branch for this exact release, its current
+heads, original panel or pair, reviewer, finding and completed map packs.
+**Refresh reviews** receives newly completed save and export tasks. **Open saved
+review** restores the exact saved viewport and annotations; **Revision history**
+opens any earlier revision. Saving from a retained review creates a successor
+using the existing native previous-review relationship. Parallel successors stay
+visible as separate current branches.
+
+**Download review log CSV** provides a spreadsheet-ready finding log. **Download
+review collection JSON** preserves the collection's exact IDs, index hash,
+source panel selections and export descriptors. These downloads describe the
+collection; the original editable records and native files remain in the
+scientific workspace.
+
+Select the current reviews and completed map packs to include, then choose
+**Prepare release with selected reviews**. The original model cohort, source
+choices and map settings open at **Review and build**. A selected map pack also
+includes its exact saved review. The existing delivery builder retains the
+original review JSON and export assets, and the offline catalogue lists them
+with the other captured files. Exported PDF appendices and local map-pack pages
+show the typed finding and original atlas identity.
+
+The saved context uses `upstate.atlas-review-context/v1` and an
+`upstate.atlas-review-origin/v1` origin: original project, delivery,
+atlas-index SHA256, panel keys/numbers and native raster selections. Native
+save, reopen, export and restore validate that origin against the retained
+atlas index and original source bindings. A revision keeps the same origin.
+Changing the selected raster bands begins an independent review instead of
+relabeling an atlas finding. Legacy notes-only reviews remain available through
+the original global review list and delivery selectors.
+
+Read-only inspection also accepts an original `received_snapshot`
+registered by the existing portable receiver. This does not mark a snapshot
+as a newly built complete delivery. The working archive must retain every
+review-referenced original delivery's index, selected source files and state,
+under the same original delivery ID; the accompanying portable closure keeps
+these snapshots nonrecursive. Restored reviews use the original source
+identities and the existing native validation/export machinery.
+
 ## Browser integration
 
 The installed `operator/extensions/map-atlas.json` manifest registers the desk through the current extension host. The atlas backend registers these reads through the existing extension registry:
@@ -124,6 +174,8 @@ The installed `operator/extensions/map-atlas.json` manifest registers the desk t
 | `GET /api/map-atlas/source-context` | Read the installed original receptor profile |
 | `POST /api/map-atlas/inspect` | Open one retained panel's exact native raster and geography |
 | `POST /api/map-atlas/compare` | Open two compatible retained alternatives through the same native renderer |
+| `POST /api/map-atlas/reviews` | Read this release's typed review collection, complete history and native map packs |
+| `POST /api/map-atlas/review` | Validate and reopen one original saved review and its panel or pair |
 
 Inspection bodies carry `workspace`, `delivery_id`, `map_key` and `panel_index`. Comparison bodies carry `workspace`, `delivery_id`, `left` and `right` objects with `map_key` / `panel_index`, plus `mode` as `compare` or `swipe`. Both return the authenticated workspace key and an original Spatial review target. The existing registry loads it without a shared server or app-dispatcher edit.
 

@@ -36,6 +36,8 @@ export function executeJob(source, row, attempt, { env = process.env, signal, in
         workerData: { application: source.applicationPath ?? source.identity.application, applicationSha256: source.identity.applicationSha256,
           functionId: row.functionId, input: row.input, jobId: row.id, attemptId: attempt.id,
           output: definition.output, maxOutputBytes: definition.maxOutputBytes, inputSha256: row.inputSha256,
+          configSha256: source.identity.configSha256, publicOrigin: source.identity.publicOrigin,
+          nativeSettlement: row.settlement ? { id: row.settlement.id, at: row.settlement.at } : null,
           inputFiles: definition.inputFiles ? { directory: inputDirectory, origin: source.compiled.publicOrigin,
             policy: definition.inputFiles } : null },
         env: environment, execArgv: [], stdout: true, stderr: true,

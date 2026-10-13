@@ -1,5 +1,6 @@
 /** Seven-family delivery planner and retained PDF atlas viewer. */
 import {createSpatialWorkspace} from './spatial.mjs';
+import {createAtlasReviewCollection} from './atlas_review_collection.mjs';
 const FAMILIES = [
  ['future_sediment_loss','Potential future sediment export'],
  ['future_nutrient_runoff','Potential future nitrogen and phosphorus export'],
@@ -124,6 +125,12 @@ export function attachMapAtlas(host) {
   toast:message=>host.toast?.(message)
  });
 
+ const reviews=createAtlasReviewCollection({
+  getWorkspace:()=>host.getWorkspace?.()||host.getState()?.workspace_key||'',
+  getDelivery:()=>opened,getData:()=>data(),request:(...args)=>host.api(...args),
+  openReview:openSavedReview,prepareRelease:prepareReviewedRelease,
+  openItem:(...args)=>host.openItem?.(...args)
+ });
  const data=()=>state?.data||{};
  const key=()=>host.getWorkspace?.()||state?.workspace_key||'';
  const endpoint=(path,values={})=>path+'?'+new URLSearchParams({workspace,...values});
@@ -158,7 +165,7 @@ export function attachMapAtlas(host) {
   return rowBy(data(),'sources',choice?.source_collection_id)?.entries?.find(e=>e.id===choice?.source_id);
  }
  function sourceCard(group,key,label,required) {
-  const name=group+'__'+key,choice=draft[group]?.[key]||{},enabled=required||Boolean(choice.source_id);
+  const name=group+'__'+key,choice=draft[group]?.[key]||{},enabled=required||Boolean(draft[group]?.[key]);
   const sources=data().sources||[],rows=(rowBy(data(),'sources',choice.source_collection_id)?.entries||[]).filter(e=>group==='overlays'?e.kind==='vector':true);
   const bound=Boolean(choice.selection_id||choice.native_source_sha256||choice.rule_reference),disabled=!enabled?'disabled':'';
   const previews=sourcePreview.get(name),saved=(data().water_designations||[]).filter(row=>row.purpose===key);
@@ -553,14 +560,15 @@ export function attachMapAtlas(host) {
    '<p class="atlas-note">For offline map review, extract the complete GIS package and open <code>index.html</code>.</p>'+
    (opened.error?'<p class="atlas-error">'+esc(opened.error.message||opened.error)+'</p>':'')+
    sourceSummary(opened.selection||{},atlas?.source_context?.water_designations||{})+
-   (opened.state==='complete'&&atlas?'<section class="atlas-pair atlas-source" data-atlas-pair-controls>'+pairControls()+'</section>':'')+
+   (['complete','received_snapshot'].includes(opened.state)&&atlas?'<section class="atlas-pair atlas-source" data-atlas-pair-controls>'+pairControls()+'</section>':'')+
+   (opened.atlas&&['complete','received_snapshot'].includes(opened.state)?'<section class="atlas-source" data-atlas-review-collection></section>':'')+
    '<div class="atlas-actions">'+Object.entries(opened.files||{}).filter(([name])=>name.startsWith('receptor_')).map(([name,record])=>downloadLink(retainedFile(record),'Download '+human(name.replace(/^receptor_/,'')))).join('')+'</div>'+
    table(['Page / family','Map','Legend and units',''],rows.map(row=>{
     const file=retainedFile(row.file);
     return '<tr><td>'+esc(row.page??'—')+'<small>'+esc(human(row.family||''))+'</small></td><td>'+esc(row.title)+'<small>'+esc(row.subtitle||'')+'</small></td><td>'+
      (row.panels||[]).map((p,index)=>'<div>'+esc(p.title)+' · '+esc(p.units)+
       (p.display_scale?'<small>'+esc(p.display_scale.minimum)+' to '+esc(p.display_scale.maximum)+'</small>':'')+
-      (opened.state==='complete'?button('inspect-panel','Inspect pixels and geography','data-map-key="'+esc(row.map_key)+'" data-panel-index="'+index+'"'):'')+'</div>').join('')+'</td><td>'+
+      (['complete','received_snapshot'].includes(opened.state)?button('inspect-panel','Inspect pixels and geography','data-map-key="'+esc(row.map_key)+'" data-panel-index="'+index+'"'):'')+'</div>').join('')+'</td><td>'+
       (atlasFile&&row.page?button('preview','Atlas page','data-url="'+esc(atlasFile.url)+'" data-page="'+row.page+'"'):'')+
       (file?button('preview','Map PDF','data-url="'+esc(file.url)+'"')+downloadLink(file,'Download'):'')+'</td></tr>';
    }))+'<div class="atlas-pdf" data-atlas-pdf hidden></div><details><summary>All retained delivery files</summary>'+
@@ -574,11 +582,13 @@ export function attachMapAtlas(host) {
    (target.comparison?table(['Side','Alternative','Atlas page'],target.sides.map(side=>'<tr><td>'+esc(human(side.slot))+'</td><td>'+esc(side.label)+'<small>'+esc(side.scenario_run_id)+'</small></td><td>'+esc(side.atlas_page)+'</td></tr>')):'')+
    '<p class="atlas-note">Original raster: '+esc(target.units)+' · retained range '+esc(target.scale.minimum)+' to '+esc(target.scale.maximum)+
    ' · '+(target.comparison?'atlas pages '+target.sides.map(side=>esc(side.atlas_page)).join(' / '):'atlas page '+esc(lineage.atlas_page))+'. Pan, inspect original pixels, annotate, save a spatial review or export a map pack below.</p>'+
+   (target.review_id?'<p class="atlas-note">Saved revision '+esc(short(target.review_id))+' · '+esc(target.review_context?.status)+' · '+esc(target.review_context?.reviewer||'Reviewer not entered')+'. Saving changes retains a successor in this atlas collection.</p>':'')+
    (target.context_notes||[]).map(note=>'<p class="atlas-note">'+esc(note)+'</p>').join('')+
    '<div data-atlas-spatial></div></section>';
  }
  function render(){
   if(!root)return;
+  reviews.detach();
   inspector.suspend();
   root.innerHTML='<section class="map-atlas"><header class="atlas-header"><div><p class="atlas-eyebrow">SCIENTIFIC WORKBENCH</p>'+
    '<h1>Map atlas and delivery</h1><p>Prepare the seven-family release, compare scenario maps on shared legends, and open the complete GIS package.</p></div>'+
@@ -595,11 +605,12 @@ export function attachMapAtlas(host) {
     button('refresh','Refresh choices')+'</div></footer></form>')+'</section>';
   renderProblems();
   if(mode==='inspect'&&inspection)inspector.mount(root.querySelector('[data-atlas-spatial]'),state);
+  const reviewRoot=root.querySelector('[data-atlas-review-collection]');if(reviewRoot)reviews.mount(reviewRoot);
  }
  function showError(e){error=e?.message||String(e);const node=root?.querySelector('[data-atlas-error]');if(node){node.hidden=false;node.textContent=error;node.scrollIntoView({block:'nearest'});}}
  function clearError(){error='';const node=root?.querySelector('[data-atlas-error]');if(node){node.hidden=true;node.textContent='';}}
  function edit(event){
-  if(event?.target?.closest?.('[data-atlas-spatial], [data-atlas-pair-controls]'))return;
+  if(event?.target?.closest?.('[data-atlas-spatial], [data-atlas-pair-controls], [data-atlas-review-collection]'))return;
   draftEdits++;operationId=null;
   try{collect();persist();renderProblems();}catch{/* Keep incomplete field text until the next explicit action. */}
  }
@@ -704,7 +715,7 @@ export function attachMapAtlas(host) {
   draft={...defaultSelection(data()),...clone(selection)};operationId=null;step=0;mode='prepare';opened=null;persist();render();
  }
  async function inspectPanel(mapKey,panelIndex){
-  ensure();if(!opened||opened.state!=='complete')throw Error('Open a completed atlas release first.');
+  ensure();if(!opened||!['complete','received_snapshot'].includes(opened.state))throw Error('Open an original retained atlas release first.');
   const atWorkspace=workspace,epoch=generation,deliveryId=opened.id,request=++inspectionRequest;
   const existing=inspection?.target?.lineage;
   if(!inspection?.target?.comparison&&existing?.delivery_id===deliveryId&&existing.map_key===mapKey&&existing.panel_index===panelIndex){
@@ -719,7 +730,7 @@ export function attachMapAtlas(host) {
   mode='inspect';render();
  }
  async function inspectPair(){
-  ensure();if(!opened||opened.state!=='complete')throw Error('Open a completed atlas release first.');
+  ensure();if(!opened||!['complete','received_snapshot'].includes(opened.state))throw Error('Open an original retained atlas release first.');
   const {left,right,value}=pairDraft();
   if(!left||!right)throw Error('Choose the same panel from two retained alternatives.');
   const atWorkspace=workspace,epoch=generation,deliveryId=opened.id,request=++inspectionRequest;
@@ -733,6 +744,26 @@ export function attachMapAtlas(host) {
   await inspector.openTarget({...result.target,workspace:atWorkspace});
   ensure();if(workspace!==atWorkspace||generation!==epoch||opened?.id!==deliveryId||request!==inspectionRequest)return;
   mode='inspect';render();
+ }
+ async function openSavedReview(id){
+  ensure();if(!opened||!['complete','received_snapshot'].includes(opened.state))throw Error('Open the original retained atlas first.');
+  const atWorkspace=workspace,epoch=generation,deliveryId=opened.id,request=++inspectionRequest;
+  const result=await host.api('/api/map-atlas/review',{method:'POST',body:{workspace:atWorkspace,delivery_id:deliveryId,review_id:id}});
+  ensure();if(workspace!==atWorkspace||generation!==epoch||opened?.id!==deliveryId||request!==inspectionRequest)return;
+  if(result.workspace_key!==atWorkspace||result.target?.review_id!==id)throw Error('The saved review belongs to another project or selection.');
+  inspection={target:result.target,reviewId:id};inspector.suspend();
+  await inspector.openTarget({kind:'spatial_reviews',id,workspace:atWorkspace});
+  ensure();if(workspace!==atWorkspace||generation!==epoch||opened?.id!==deliveryId||request!==inspectionRequest)return;
+  mode='inspect';render();
+ }
+ async function prepareReviewedRelease(value){
+  ensure();requireWorkspace(value.workspace);
+  if(opened?.id!==value.delivery_id)throw Error('Reopen the original atlas before preparing its reviewed release.');
+  const selection=clone(opened.selection),reviewSet=new Set(value.all_review_ids),exportSet=new Set(value.all_export_ids);
+  selection.spatial_review_ids=[...new Set([...(selection.spatial_review_ids||[]).filter(id=>!reviewSet.has(id)),...value.review_ids])];
+  selection.spatial_export_ids=[...new Set([...(selection.spatial_export_ids||[]).filter(id=>!exportSet.has(id)),...value.export_ids])];
+  await create({workspace_key:value.workspace,selection});
+  ensure();requireWorkspace(value.workspace);step=3;persist();render();
  }
  async function click(event){
   const b=event.target.closest('[data-atlas-action]');if(!b||!root?.contains(b))return;
@@ -757,7 +788,7 @@ export function attachMapAtlas(host) {
    else if(action==='inspect-source')await inspectSource(b.dataset.sourceCardId);
    else if(action==='inspect-panel')await inspectPanel(b.dataset.mapKey,Number(b.dataset.panelIndex));
    else if(action==='compare-panels')await inspectPair();
-   else if(action==='return-release'){mode='outputs';render();}
+   else if(action==='return-release'){mode='outputs';render();await reviews.refresh();}
    else if(action==='show-print'){
     const mapKey=b.dataset.side?inspection?.target?.sides?.find(side=>side.slot===b.dataset.side)?.map_key:inspection?.target?.lineage?.map_key;
     const row=opened?.atlas?.pages?.find(item=>item.map_key===mapKey);
@@ -827,12 +858,14 @@ export function attachMapAtlas(host) {
  }
  function update(next){
   const previous=workspace;ensure(next);
+  reviews.update();
   if(previous!==workspace){render();return;}
   const catalog=root?.querySelector('[data-atlas-catalogue]');if(catalog)catalog.innerHTML=catalogue();
   renderProblems();
   if(mode==='inspect'&&inspection&&root?.querySelector('[data-atlas-spatial]'))inspector.mount(root.querySelector('[data-atlas-spatial]'),state);
  }
  function detach(){
+  reviews.detach();
   inspector.suspend();
   if(root){try{if(mode==='prepare'){collect();persist();}}catch{}
    root.removeEventListener('click',click);root.removeEventListener('change',change);

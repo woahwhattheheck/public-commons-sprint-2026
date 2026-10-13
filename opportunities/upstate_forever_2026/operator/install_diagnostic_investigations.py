@@ -97,8 +97,9 @@ def install(application, source_root):
     if "intelligence.diagnostic.open" not in actions:
         actions.append("intelligence.diagnostic.open")
     required = registry["client"].setdefault("requires", [])
-    if "navigate" not in required:
-        required.append("navigate")
+    for capability in ("navigate", "openExtension"):
+        if capability not in required:
+            required.append(capability)
     plan(registry_name, (json.dumps(registry, indent=2) + "\n").encode("utf-8"))
 
     for name, expected in payload["replacements"].items():

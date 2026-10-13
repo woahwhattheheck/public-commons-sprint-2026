@@ -1,3 +1,4 @@
+import type { JobPackagePolicy } from '../../../sf30-seller-sdk/jobs/outputs/index.mjs';
 import type { IncomingMessage } from 'node:http';
 import type { Library } from '../../resource-library/library.mjs';
 import type { InputFilePolicy, InputStorageLimits, InputFileProgress, InputFileSource,
@@ -14,7 +15,7 @@ export interface IntakePayment {
 export interface IntakeFunction {
   id: string; description: string; inputSchema: Record<string, unknown>;
   example: Record<string, unknown>; maxInputBytes: number; maxOutputBytes: number; timeoutMs: number;
-  output: {format: 'json' | 'bytes'; contentType: string; filename: string};
+  output: {format: 'json' | 'bytes'; contentType: string; filename: string} | JobPackagePolicy;
   payment: IntakePayment; purchaseUrl: string; functionSha256: string; inputFiles?: InputFilePolicy;
 }
 export interface IntakeCatalog {

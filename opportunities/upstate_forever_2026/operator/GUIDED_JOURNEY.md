@@ -337,3 +337,7 @@ python "${application_root:?}/source_tools/receive_gura_native.py" \
 ```
 
 The official source archives are [NDR.zip](https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.20.0/data/NDR.zip) and [SDR.zip](https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.20.0/data/SDR.zip). The receiving driver checks the pinned archive identities and original cells before preparing the workspace run. The saved grid retains the chosen resolution and buffer when the project is reopened.
+
+### Current host continuation
+
+The journey installer preserves the current completed-stage predicate when the host already uses `completedModelStage`. A delivery candidate must retain completion times and original files for both NDR and SDR, together with all three export rasters. It also repairs the Rehearsal navigation collection in the shared host so opening the walkthrough marks each navigation button correctly. These joins preserve the current portfolio, delivery inspection, saved journey, source preview and registered desk integrations.

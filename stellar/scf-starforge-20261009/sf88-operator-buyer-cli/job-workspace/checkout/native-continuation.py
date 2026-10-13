@@ -173,12 +173,27 @@ def main() -> int:
     parser.add_argument("--out", type=Path)
     parser.add_argument("--approval", choices=("terminal", "browser"), default="terminal")
     parser.add_argument("--input-files", action="store_true", help="Run the distinct two-file reconciliation through browser checkout.")
+    parser.add_argument("--output-files", action="store_true",
+                        help="Run the distinct three-output package through the original two-file checkout.")
+    parser.add_argument("--browser-module", type=Path,
+                        help="Actual installed Playwright module for the output workspace review.")
+    parser.add_argument("--browser-executable", type=Path,
+                        help="Actual installed Chromium executable for desktop and 390px receiving.")
     args = parser.parse_args()
+    require(not (args.input_files and args.output_files), "SELECT_ONE_ORIGINAL_FILE_JOURNEY")
+    input_files = args.input_files or args.output_files
+    require(bool(args.browser_module) == bool(args.browser_executable), "SELECT_COMPLETE_BROWSER_RUNTIME")
+    require(not args.browser_module or args.output_files, "BROWSER_REVIEW_REQUIRES_OUTPUT_FILES_MODE")
+    if args.browser_module:
+        for runtime in (args.browser_module, args.browser_executable):
+            require(runtime.is_absolute() and runtime.is_file(), "ACTUAL_BROWSER_RUNTIME_REQUIRED")
+
     browser_approval = args.approval == "browser"
-    require(not args.input_files or browser_approval, "INPUT_FILES_REQUIRE_BROWSER_APPROVAL_MODE")
-    operation = ("SCF-JOB-INPUT-FILES-0B8D-20261012" if args.input_files else
+    require(not input_files or browser_approval, "INPUT_FILES_REQUIRE_BROWSER_APPROVAL_MODE")
+    operation = ("SCF-JOB-RESULT-PACKAGES-0B8D-20261012" if args.output_files else
+                 "SCF-JOB-INPUT-FILES-0B8D-20261012" if input_files else
                  "SCF-JOB-BROWSER-APPROVAL-0B8D-20261012" if browser_approval else OPERATION)
-    job = "input-files:2026.10" if args.input_files else "browser-checkout:2026.10" if browser_approval else JOB
+    job = "output-files:2026.10" if args.output_files else "input-files:2026.10" if input_files else "browser-checkout:2026.10" if browser_approval else JOB
     require(args.retained.is_absolute(), "ABSOLUTE_RETAINED_DIRECTORY_REQUIRED")
     retained = args.retained.resolve(strict=True)
     original_config = private_read(retained / "merchant.json")
@@ -210,7 +225,8 @@ def main() -> int:
     }
     require(all(original_source["source"].get(key) == value for key, value in original.items()),
             "ORIGINAL_MERCHANT_SOURCE_CHANGED")
-    fixture = retained / ("checkout-input-files-continuation" if args.input_files else
+    fixture = retained / ("checkout-output-files-continuation" if args.output_files else
+                          "checkout-input-files-continuation" if input_files else
                           "checkout-browser-continuation" if browser_approval else "checkout-continuation")
     fixture.mkdir(mode=0o700, exist_ok=True)
     require(fixture.is_dir() and not fixture.is_symlink() and not fixture.stat().st_mode & 0o077,
@@ -228,7 +244,12 @@ def main() -> int:
     }
     if browser_approval:
         marker["approvalMode"] = "BROWSER"
-        marker["inputMode"] = "ORIGINAL_MERCHANT_INPUT_FILES" if args.input_files else "ORIGINAL_MERCHANT_INTAKE"
+        marker["inputMode"] = "ORIGINAL_MERCHANT_INPUT_FILES" if input_files else "ORIGINAL_MERCHANT_INTAKE"
+    if args.output_files:
+        marker["outputMode"] = "ORIGINAL_MERCHANT_OUTPUT_FILES"
+        if args.browser_module:
+            marker["browserModule"] = str(args.browser_module.resolve(strict=True))
+            marker["browserExecutable"] = str(args.browser_executable.resolve(strict=True))
     immutable(fixture / "fixture.json", encoded(marker))
     keys_path = fixture / "fixture-keys.json"
     if not keys_path.exists():
@@ -306,7 +327,7 @@ def main() -> int:
         os.execve(str(node), [str(node), str(HERE / "native-continuation.mjs")], env)
     prompt = re.compile(rb"To authorize ONE fresh reservation, type exactly: (APPROVE [0-9a-f]{16})")
     try:
-        deadline = time.monotonic() + (420 if args.input_files else 210)
+        deadline = time.monotonic() + (600 if args.output_files else 420 if input_files else 210)
         while time.monotonic() < deadline:
             require(not cancelled, "CHECKOUT_NATIVE_JOURNEY_INTERRUPTED")
             ready, _, _ = select.select([descriptor], [], [], 0.1)
@@ -349,7 +370,7 @@ def main() -> int:
         require(intake.get("reference") == job and intake.get("phase") == "IMPORTED" and
                 intake.get("reopened") is True and intake.get("checkoutId") == summary["checkout"]["id"],
                 "ORIGINAL_INTAKE_CHECKOUT_RESULT_REQUIRED")
-    if args.input_files:
+    if input_files:
         resolution = summary.get("resolution", {})
         require(resolution.get("schema") == "stellar-forge.job-resolution-native-result.v1" and
                 resolution.get("result") == "PASS" and resolution.get("jobId") == job and
@@ -369,6 +390,19 @@ def main() -> int:
             require(receiving["originalInputFiles"][slot] == {
                 "bytes": len(body), "sha256": hashlib.sha256(body).hexdigest()},
                 "ORIGINAL_INPUT_FILE_DIGEST_CHANGED:" + slot)
+    if args.output_files:
+        received_outputs = summary.get("outputFiles", {})
+        require(received_outputs.get("result") == "PASS" and
+                received_outputs.get("operation") == operation and
+                received_outputs.get("jobId") == job and
+                len(received_outputs.get("files", [])) == 3 and
+                received_outputs.get("package", {}).get("sha256") == summary["artifact"]["sha256"],
+                "ORIGINAL_OUTPUT_FILE_RECEIVING_REQUIRED")
+        if args.browser_module:
+            browser = received_outputs.get("browser", {})
+            require(browser.get("result") == "PASS" and len(browser.get("screenshots", [])) == 18
+                    and len(browser.get("downloads", [])) == 4,
+                    "ORIGINAL_OUTPUT_BROWSER_RECEIVING_REQUIRED")
     with sqlite3.connect(fixture / "ledger.sqlite") as ledger:
         reservations = ledger.execute("SELECT request_id, amount, state FROM reservations ORDER BY request_id").fetchall()
         require(reservations == [(expected_intent, "10000", "reserved")], "ORIGINAL_RESERVATION_BINDING_CHANGED")
@@ -403,7 +437,7 @@ if __name__ == "__main__":
     try:
         raise SystemExit(main())
     except Exception as error:
-        failed_operation = "SCF-JOB-INPUT-FILES-0B8D-20261012" if "--input-files" in sys.argv else "SCF-JOB-BROWSER-APPROVAL-0B8D-20261012" if (
+        failed_operation = "SCF-JOB-RESULT-PACKAGES-0B8D-20261012" if "--output-files" in sys.argv else "SCF-JOB-INPUT-FILES-0B8D-20261012" if "--input-files" in sys.argv else "SCF-JOB-BROWSER-APPROVAL-0B8D-20261012" if (
             "--approval" in sys.argv and sys.argv.index("--approval") + 1 < len(sys.argv)
             and sys.argv[sys.argv.index("--approval") + 1] == "browser") or "--approval=browser" in sys.argv else OPERATION
         print(json.dumps({"result": "FAILED", "operation": failed_operation,
