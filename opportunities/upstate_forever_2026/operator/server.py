@@ -588,6 +588,20 @@ class Operator:
                 error_file.write_text(traceback.format_exc(), encoding="utf-8")
         with self.lock:
             atomic_json(self.root / "tasks" / (key + ".json"), task)
+            # Complete revision references travel with the scientific Workspace.
+            binding = (self.ws(task["workspace"]).root / "run-revisions"
+                       / "task-bindings" / (task["id"] + ".json"))
+            if binding.is_file():
+                try:
+                    from run_revision import capture_task
+                    capture_task(self, task)
+                    task.pop("run_revision_capture_error", None)
+                except Exception as error:
+                    task["run_revision_capture_error"] = {
+                        "code": getattr(error, "code", type(error).__name__),
+                        "message": str(error),
+                    }
+                atomic_json(self.root / "tasks" / (key + ".json"), task)
 
     def _invoke(self, task):
         ws = self.ws(task["workspace"])

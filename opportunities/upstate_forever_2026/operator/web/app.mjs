@@ -111,6 +111,38 @@ async function openRetainedBuiltIn(selection,target,open){
  try{return await open({...selection,isCurrent},container);}
  catch(error){if(!isCurrent())return null;toast(error.message||String(error));throw error;}
 }
+async function openRunRevisionForm(request){
+ if(!request||request.workspace_key!==workspace||!extensions.hasView('run-revisions'))
+  throw Error('Open the revision in its original Workspace.');
+ if(formDialog.open)throw Error('Save or close the current draft before opening a revision step.');
+ if(typeof request.isCurrent==='function'&&!request.isCurrent())return null;
+ const workspaceAtOpen=workspace,epoch=connectionEpoch,previous=formRevision;
+ const allowed={profile:'profile.save',scenario:'scenario.save',prepare:'run.prepare',compare:'run.compare'};
+ if(!allowed[request.step]||typeof request.revision_id!=='string'||!/^[0-9a-f]{64}$/.test(request.expected_selection_sha256||''))
+  throw Error('Open the current saved revision selection.');
+ detailDialog.close();detailContext=null;
+ if(request.step==='profile')await profileForm(request.record_id);
+ else if(request.step==='scenario')await scenarioForm(request.record_id);
+ else if(request.step==='prepare')runForm(request.selection);
+ else compareForm(request.selection);
+ if(workspace!==workspaceAtOpen||connectionEpoch!==epoch||formRevision===previous||!formDialog.open||!formContext||
+    (typeof request.isCurrent==='function'&&!request.isCurrent()))return null;
+ formContext.runRevision={id:request.revision_id,step:request.step,action:allowed[request.step],
+  expected_selection_sha256:request.expected_selection_sha256};
+ const note=document.createElement('p');note.className='note';
+ note.textContent='This form saves a new record for the retained revision. The original reference run and its inputs remain unchanged.';
+ $('#form-body').prepend(note);
+ if(request.step==='prepare'){
+  for(const name of ['grid','profile','scenario','models'])form.elements.namedItem(name).disabled=true;
+  note.textContent='Prepare the current saved revision on its original grid and native model cohort. Revise the profile or scenario from the revision desk before changing these selections.';
+ }
+ if(request.step==='compare'){
+  form.elements.namedItem('baseline').disabled=true;
+  for(const node of $$('[name="alternatives"]',form))node.disabled=true;
+  note.textContent='Compare the original reference first and this exact revised run second. The original comparison retains signed differences and shared valid-cell support.';
+ }
+ return {operation_id:formContext.operation_id};
+}
 async function openSavedScientificReport(selection){
  return openRetainedBuiltIn(selection,'sources',(value,container)=>sourceReports.openForStudy(value,container));
 }
@@ -151,6 +183,7 @@ const programmes=attachProgrammes({getState:()=>state,api,endpoint,openForm,subm
 let operatingJourney=null;
 const journeyForm=async open=>{await open();return {operation_id:formContext?.operation_id};};
 const extensions=createExtensionHost({
+ openRunRevisionForm,
  openParameterStudy:selection=>parameterStudies.openSavedStudy(selection),
  openNativeProgramme:options=>experiments.openForInvestigation(options),
  openScientificReport,openSavedScientificReport,openSavedCustomerReview,prepareReportComparisonReview,openSavedReportComparison,
@@ -445,7 +478,7 @@ async function openItem(kind,id,focus=true){
     content=deliveryReview.continuation(row,inspected.files)+inspected.html;
   }
   if(kind==='comparisons')content+='<div class="page-actions">'+button('comparison-delivery','Build delivery from this comparison','data-id="'+id+'"')+'</div>';
-  if(kind==='runs'&&row.state==='complete')content+='<div class="page-actions">'+button('run-compare-selection','Compare this run','data-id="'+id+'"')+'</div>';
+  if(kind==='runs'&&row.state==='complete')content+='<div class="page-actions">'+button('run-compare-selection','Compare this run','data-id="'+id+'"')+(extensions.hasView('run-revisions')?button('run-revision-open','Revise and compare','data-id="'+id+'"'):'')+'</div>';
   if(['sources','grids','runs','comparisons','deliveries','spatial_reviews'].includes(kind))content='<div class="page-actions">'+button('spatial-item','Open in spatial review','data-kind="'+kind+'" data-id="'+id+'"')+'</div>'+content;
   if(kind!=='deliveries')content+='<h3 class="subheading">Retained files</h3>'+fileList(row._downloads)+'<details class="technical"><summary>Original record, selection and provenance</summary><pre class="json-view">'+esc(pretty(Object.fromEntries(Object.entries(row).filter(([key])=>key!=='_downloads'))))+'</pre></details>';
   detail(row.title||row.metadata?.title||row.spec?.title||row.selection?.title||viewLabels[kind]||human(kind),content,{kind,id,state:row.state});detailContext.files=row._downloads;
@@ -584,14 +617,43 @@ async function presentAcceptedTask(ticket,result){
   }
   return result;
 }
+function revisionProfilePayload(original,payload){
+ if(!original||typeof original!=='object')throw Error('Reopen the saved profile before preparing this revision.');
+ const clone=value=>value===undefined?undefined:JSON.parse(JSON.stringify(value));
+ const retained=Object.fromEntries(Object.entries(original).filter(([key])=>!['id','schema','table_summary'].includes(key)));
+ const result={...clone(retained),...payload};
+ for(const model of ['ndr','sdr'])if(payload[model])result[model]={...clone(original[model]||{}),...payload[model]};
+ if(payload.ndr&&!Object.prototype.hasOwnProperty.call(payload.ndr,'runoff_proxy_av'))delete result.ndr.runoff_proxy_av;
+ const periodText=typeof original.model_period==='object'?JSON.stringify(original.model_period):original.model_period||'';
+ if(payload.model_period===periodText)result.model_period=clone(original.model_period);
+ else if(original.model_period!==null&&typeof original.model_period==='object'){
+  try{result.model_period=JSON.parse(payload.model_period);}
+  catch{throw Error('Keep the structured model period as valid JSON, or reopen its original saved value.');}
+  if(!result.model_period||typeof result.model_period!=='object'||Array.isArray(result.model_period))
+   throw Error('Retain the model period as its original structured object.');
+ }
+ const references=original.references||[],shown=references.map(value=>typeof value==='string'?value:JSON.stringify(value));
+ result.references=(payload.references||[]).map((value,index)=>{
+  if(value===shown[index])return clone(references[index]);
+  if(references.some(row=>row!==null&&typeof row==='object')&&/^[\[{]/.test(value.trim())){
+   try{return JSON.parse(value);}catch{throw Error('Keep edited structured source citations as valid JSON, one complete citation per line.');}
+  }
+  return value;
+ });
+ return result;
+}
 async function submitAction(action,payload){
   const context=formContext;
   if(context&&context.workspace!==workspace)throw Error('The selected workspace changed. Reopen this form in the intended workspace.');
+  if(context?.runRevision?.step==='profile')payload=revisionProfilePayload(context.originalProfile,payload);
   const submittedOperation=context?.operation_id||crypto.randomUUID();
   const ticket=admissionContext(action,submittedOperation),journey=operatingJourney;
   const originalRequest={workspace:ticket.workspace,action,payload,operation_id:submittedOperation};
   const request=journey?journey.beforeSubmission(originalRequest):originalRequest;
-  const result=await api('/api/actions',{method:'POST',body:request});
+  const revision=context?.runRevision;
+  if(revision&&revision.action!==action)throw Error('This form belongs to another revision step. Reopen it from the retained revision.');
+  const result=await api(revision?endpoint('/api/run-revisions/submit'):'/api/actions',
+    {method:'POST',body:revision?{...request,...revision}:request});
   if(context)context.acceptedTask={id:result.id,workspace:ticket.workspace};
   if(connectionEpoch!==ticket.connectionEpoch)return result;
   if(workspace===ticket.workspace&&workspaceRevision===ticket.workspaceRevision){
@@ -799,7 +861,7 @@ async function profileForm(id){
    sdr.flow_dir_algorithm=val('sdr_flow_dir_algorithm');parameters.sdr=sdr;
   }
   return submitAction('profile.save',{title:val('title'),source_collection_id:val('collection'),biophysical_source_id:val('biophysical_source'),references:lines(val('references')),...modelFields,...parameters,model_period:val('model_period'),notes:lines(val('notes'))});
- },()=>{bindCollection('collection',[['biophysical_source','table']],{biophysical_source:row?.biophysical_source_id});bindNativeModelFields();});
+ },()=>{formContext.originalProfile=row;bindCollection('collection',[['biophysical_source','table']],{biophysical_source:row?.biophysical_source_id});bindNativeModelFields();});
 }
 function bindGridResolution(original){
  const context=formContext,selectedWorkspace=workspace;
@@ -877,11 +939,19 @@ function updatePatchMask(node,collection,enabled=true){
   source?'Polygon mask: cells are selected by the original pixel-centre rule. Optional layer and exact field selections apply to this vector source.':
   'Choose an original polygon source or an aligned binary raster mask.';
 }
+function numberScenarioPatches(){
+ const rows=$$('[data-patch]',$('#patch-list')||form),visible=val('kind')==='landcover';
+ rows.forEach((row,index)=>{
+  row.querySelector('legend').textContent='Land-cover change '+(index+1)+' of '+rows.length;
+  row.querySelector('[data-action="patch-earlier"]').disabled=!visible||index===0;
+  row.querySelector('[data-action="patch-later"]').disabled=!visible||index===rows.length-1;
+ });
+}
 function patchRow(collection,row={}){
  const present=value=>value!==null&&typeof value==='object'?Object.keys(value).length>0:Boolean(value);
  if(scenarioMaskSource(collection,row.mask_source_id)?.kind==='raster'&&(present(row.layer)||present(row.where)))
   throw Error('This saved raster-mask patch contains a layer or attribute selection. Raster masks use band 1; correct the original scenario selection before revising it.');
- return '<fieldset class="patch" data-patch><div class="patch-header"><legend>Land-cover change</legend>'+button('row-remove','Remove change','','small')+'</div><div class="form-grid">'+
+ return '<fieldset class="patch" data-patch><div class="patch-header"><legend>Land-cover change</legend>'+button('patch-earlier','Earlier','','small')+button('patch-later','Later','','small')+button('row-remove','Remove change','','small')+'</div><div class="form-grid">'+
  field('Original polygon or binary raster mask',select('mask_source',scenarioMaskSources(collection),row.mask_source_id))+
  '<p class="note full" data-patch-mask-note role="status"></p>'+
  field('Layer name',input('mask_layer','text',row.layer||''),'Optional for a vector source with one layer.').replace('<label','<label data-patch-vector')+
@@ -920,6 +990,7 @@ async function scenarioForm(id){
    const visible=val('kind')==='landcover';$('#scenario-patches').hidden=!visible;
    for(const el of $$('input,select,textarea,button', $('#scenario-patches')))el.disabled=!visible;
    for(const node of $$('[data-patch]',form))updatePatchMask(node,val('collection'),visible);
+   numberScenarioPatches();
   };
   form.elements.namedItem('kind').addEventListener('change',update);
   form.elements.namedItem('collection').addEventListener('change',()=>{
@@ -1401,6 +1472,10 @@ async function dispatch(button){
  if(action==='grid-new'||action==='grid-clone')return gridForm(id);
  if(action==='scenario-new'||action==='scenario-clone')return scenarioForm(id);
  if(action==='scenario-prepare-run'){detailDialog.close();detailContext=null;return runForm({scenario_id:id});}
+ if(action==='run-revision-open'){
+  const selectedWorkspace=workspace;detailDialog.close();detailContext=null;
+  return extensions.openDesk('run-revisions','openForRun',{workspace_key:selectedWorkspace,run_id:id});
+ }
  if(action==='run-prepare')return runForm();
  if(action==='run-input-preview')return executeAction('scenario.footprint.preview',{run_id:id});
  if(action==='run-input-footprint'){
@@ -1446,8 +1521,19 @@ async function dispatch(button){
  if(action==='runtime')return runtimeDialog();
  if(action==='filter-add'){button.closest('[data-filter]').querySelector('[data-filter-rows]').insertAdjacentHTML('beforeend',filterRow());return;}
  if(action==='parameter-add'){$('#parameter-rows').insertAdjacentHTML('beforeend',parameterRow());return;}
- if(action==='patch-add'){const list=$('#patch-list');list.insertAdjacentHTML('beforeend',patchRow(val('collection')));updatePatchMask(list.lastElementChild,val('collection'),val('kind')==='landcover');return;}
- if(action==='row-remove'){button.closest('[data-filter-row],[data-parameter-row],[data-patch]').remove();return;}
+ if(action==='patch-add'){const list=$('#patch-list');list.insertAdjacentHTML('beforeend',patchRow(val('collection')));updatePatchMask(list.lastElementChild,val('collection'),val('kind')==='landcover');numberScenarioPatches();return;}
+ if(action==='patch-earlier'||action==='patch-later'){
+  const row=button.closest('[data-patch]'),sibling=action==='patch-earlier'?row.previousElementSibling:row.nextElementSibling;
+  if(sibling?.matches('[data-patch]')){
+   if(action==='patch-earlier')row.parentElement.insertBefore(row,sibling);
+   else row.parentElement.insertBefore(sibling,row);
+   numberScenarioPatches();
+   const next=row.querySelector('[data-action="'+action+'"]');
+   (next.disabled?row.querySelector('[data-action="row-remove"]'):next).focus();
+  }
+  return;
+ }
+ if(action==='row-remove'){const row=button.closest('[data-filter-row],[data-parameter-row],[data-patch]'),patch=row.matches('[data-patch]');row.remove();if(patch)numberScenarioPatches();return;}
  if(action==='inspect-form-vector')return inspectFormVector(button);
 }
 document.addEventListener('click',async event=>{
