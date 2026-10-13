@@ -902,6 +902,12 @@ def report_html(value, source_index=None):
             return "Unavailable"
         if low == high and low is not None:
             return str(low)
+        if "lower_open" not in row and "upper_open" not in row:
+            if low is None:
+                return "Upper bound "+str(high)
+            if high is None:
+                return "Lower bound "+str(low)
+            return str(low)+" to "+str(high)
         if low is None:
             return ("Less than " if row.get("upper_open") else "At most ")+str(high)
         if high is None:

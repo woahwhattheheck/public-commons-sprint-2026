@@ -1,6 +1,6 @@
 {
   "schema": "upstate.published-study-family/v1",
-  "version": "2.11.1",
+  "version": "2.11.2",
   "repository": "woahwhattheheck/public-commons-sprint-2026",
   "application_path": "opportunities/upstate_forever_2026",
   "source_reference_base": "8e5cb23856eb6f141184c367954177e5722ec8ed",
@@ -138,8 +138,8 @@
     },
     {
       "path": "measurement_workspace/monitoring_interpretation.py",
-      "bytes": 72749,
-      "sha256": "73ae717c6c7839e1ab49bef075ae6f8927539b5b50c122265b63876d79c5f676"
+      "bytes": 73010,
+      "sha256": "bf896305814e9d074af46388c38e2534842689656fcecb59fe2120f0b9d95977"
     },
     {
       "path": "measurement_workspace/OBSERVATION_SUPPORT.md",
@@ -3457,7 +3457,8 @@
       "presentation": {
         "edition": "readable-scientific-report/2",
         "scope": "Readable support, date and cohort summary; full metric/result/criterion unit separation; analyst choices and original source links; complete original-row table and unchanged scientific downloads.",
-        "source_reference_base": "a2652dcaa99a830c76bf15752883bd805b4e3fcb"
+        "source_reference_base": "a2652dcaa99a830c76bf15752883bd805b4e3fcb",
+        "aggregate_bounds": "Display retained aggregate bounds without inventing endpoint openness; original observation comparator notation remains exact."
       }
     }
   }
