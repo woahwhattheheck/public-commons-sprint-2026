@@ -144,5 +144,25 @@
       "media_type": "text/csv",
       "capture_method": "Original public HTTPS response retrieved by attachment creation, complete UTF-8 attachment readback"
     }
+  ],
+  "cross_profile_captures": [
+    {
+      "id": "h600-modern-narrow-2021-2025",
+      "path": "source/nc_ambient_measurements/20261013/profile_checks/h600-modern-narrow-2021-2025.csv",
+      "bytes": 189711,
+      "sha256": "5a1f524409768e5180070299e7c7075a0a6048568cf037a9d4b75ccee08fba35",
+      "source_url": "https://waterqualitydata.us/wqx3/Result/search?siteid=21NC03WQ-H6000000&startDateLo=01-01-2021&startDateHi=12-31-2025&mimeType=csv&zip=no&dataProfile=narrow",
+      "captured_at": "2026-10-13",
+      "profile": "WQX3"
+    },
+    {
+      "id": "h600-modern-activity-2021-2025",
+      "path": "source/nc_ambient_measurements/20261013/profile_checks/h600-modern-activity-2021-2025.csv",
+      "bytes": 180869,
+      "sha256": "8bc50c3d908db886db124b71b01a11fecdbab6bb9e8b9adf4828ff1af2a72132",
+      "source_url": "https://waterqualitydata.us/wqx3/Activity/search?siteid=21NC03WQ-H6000000&startDateLo=01-01-2021&startDateHi=12-31-2025&mimeType=csv&zip=no",
+      "captured_at": "2026-10-13",
+      "profile": "WQX3"
+    }
   ]
 }

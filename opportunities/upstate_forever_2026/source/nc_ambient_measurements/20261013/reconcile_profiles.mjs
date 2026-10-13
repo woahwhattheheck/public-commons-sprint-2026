@@ -1,0 +1,171 @@
+import {csv,BASE} from "./derive.mjs";
+const RESULT_FIELDS=[
+  [
+    "Org_Identifier",
+    "OrganizationIdentifier"
+  ],
+  [
+    "Activity_ActivityIdentifier",
+    "ActivityIdentifier"
+  ],
+  [
+    "Location_Identifier",
+    "MonitoringLocationIdentifier"
+  ],
+  [
+    "Activity_StartDate",
+    "ActivityStartDate"
+  ],
+  [
+    "Activity_StartTime",
+    "ActivityStartTime/Time"
+  ],
+  [
+    "Activity_StartTimeZone",
+    "ActivityStartTime/TimeZoneCode"
+  ],
+  [
+    "Result_MeasureIdentifier",
+    "ResultIdentifier"
+  ],
+  [
+    "Result_ResultDetectionCondition",
+    "ResultDetectionConditionText"
+  ],
+  [
+    "Result_Characteristic",
+    "CharacteristicName"
+  ],
+  [
+    "Result_MethodSpeciation",
+    "MethodSpecificationName"
+  ],
+  [
+    "Result_SampleFraction",
+    "ResultSampleFractionText"
+  ],
+  [
+    "Result_Measure",
+    "ResultMeasureValue"
+  ],
+  [
+    "Result_MeasureUnit",
+    "ResultMeasure/MeasureUnitCode"
+  ],
+  [
+    "Result_MeasureQualifierCode",
+    "MeasureQualifierCode"
+  ],
+  [
+    "Result_MeasureStatusIdentifier",
+    "ResultStatusIdentifier"
+  ],
+  [
+    "Result_StatisticalBase",
+    "StatisticalBaseCode"
+  ],
+  [
+    "Result_MeasureValueType",
+    "ResultValueTypeName"
+  ],
+  [
+    "DataQuality_ResultComment",
+    "ResultCommentText"
+  ],
+  [
+    "ResultAnalyticalMethod_Identifier",
+    "ResultAnalyticalMethod/MethodIdentifier"
+  ],
+  [
+    "ResultAnalyticalMethod_IdentifierContext",
+    "ResultAnalyticalMethod/MethodIdentifierContext"
+  ],
+  [
+    "ResultAnalyticalMethod_Name",
+    "ResultAnalyticalMethod/MethodName"
+  ]
+];
+const ACTIVITY_FIELDS=[
+  [
+    "Org_Identifier",
+    "OrganizationIdentifier"
+  ],
+  [
+    "Activity_ActivityIdentifier",
+    "ActivityIdentifier"
+  ],
+  [
+    "Location_Identifier",
+    "MonitoringLocationIdentifier"
+  ],
+  [
+    "Activity_StartDate",
+    "ActivityStartDate"
+  ],
+  [
+    "Activity_StartTime",
+    "ActivityStartTime/Time"
+  ],
+  [
+    "Activity_StartTimeZone",
+    "ActivityStartTime/TimeZoneCode"
+  ],
+  [
+    "Activity_TypeCode",
+    "ActivityTypeCode"
+  ],
+  [
+    "Activity_Media",
+    "ActivityMediaName"
+  ],
+  [
+    "Activity_MediaSubdivision",
+    "ActivityMediaSubdivisionName"
+  ],
+  [
+    "Activity_Comment",
+    "ActivityCommentText"
+  ],
+  [
+    "Activity_DepthHeightMeasure",
+    "ActivityDepthHeightMeasure/MeasureValue"
+  ],
+  [
+    "Activity_DepthHeightMeasureUnit",
+    "ActivityDepthHeightMeasure/MeasureUnitCode"
+  ],
+  [
+    "Activity_HydrologicCondition",
+    "HydrologicCondition"
+  ],
+  [
+    "Activity_HydrologicEvent",
+    "HydrologicEvent"
+  ],
+  [
+    "SampleCollectionMethod_Identifier",
+    "SampleCollectionMethod/MethodIdentifier"
+  ],
+  [
+    "SampleCollectionMethod_IdentifierContext",
+    "SampleCollectionMethod/MethodIdentifierContext"
+  ],
+  [
+    "SampleCollectionMethod_Name",
+    "SampleCollectionMethod/MethodName"
+  ]
+];
+const rows=text=>{const data=csv(text);return data.slice(1).filter(r=>r.length>1).map(r=>Object.fromEntries(data[0].map((k,i)=>[k,r[i]])));};
+export function reconcile(files,provenance) {
+ const modernResult=rows(files[BASE+"profile_checks/h600-modern-narrow-2021-2025.csv"]);
+ const modernActivity=rows(files[BASE+"profile_checks/h600-modern-activity-2021-2025.csv"]);
+ const legacyResults=[],legacyActivities=[];
+ for(const capture of provenance.captures){const body=files[capture.path],head=csv(body)[0],dest=head.includes("ResultDetectionConditionText")?legacyResults:head.includes("ActivityTypeCode")?legacyActivities:null;if(dest)dest.push(...rows(body).filter(r=>r.MonitoringLocationIdentifier==="21NC03WQ-H6000000"&&r.ActivityStartDate>="2021-01-01"&&r.ActivityStartDate<="2025-12-31"));}
+ function compare(modern,old,mapping,key){const modernKey=mapping.find(([m,l])=>l===key)[0],lookup=new Map(old.map(r=>[JSON.stringify([r.OrganizationIdentifier,r.ActivityIdentifier,r[key]]),r]));
+ if(lookup.size!==old.length)throw Error("Repeated qualified legacy profile identity");
+ const differences=[],unmatched=[],modernIdentities=new Set();
+ for(const row of modern){const k=JSON.stringify([row.Org_Identifier,row.Activity_ActivityIdentifier,row[modernKey]]);if(modernIdentities.has(k))throw Error("Repeated qualified modern profile identity");modernIdentities.add(k);const prior=lookup.get(k);if(!prior){unmatched.push(row[modernKey]);continue;}for(const [m,l] of mapping)if(row[m]!==prior[l])differences.push({id:row[modernKey],modern_field:m,legacy_field:l,modern_value:row[m],legacy_value:prior[l]});}
+ const legacy_only=[...lookup].filter(([k])=>!modernIdentities.has(k)).map(([k,row])=>row[key]);
+ return{modern_rows:modern.length,legacy_rows:old.length,mapped_fields:mapping.length,unmatched,legacy_only,differences};}
+ return{schema:"upstate.wqp-profile-reconciliation/v1",scope:"Original Horsepasture2021–2025 results/activity profiles; organization-qualified original result and activity identities",result_fields:RESULT_FIELDS,activity_fields:ACTIVITY_FIELDS,result:compare(modernResult,legacyResults,RESULT_FIELDS,"ResultIdentifier"),activity:compare(modernActivity,legacyActivities,ACTIVITY_FIELDS,"ActivityIdentifier")};
+}
