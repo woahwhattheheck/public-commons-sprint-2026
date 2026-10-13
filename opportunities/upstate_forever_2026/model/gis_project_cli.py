@@ -25,6 +25,10 @@ def main(argv=None):
     e=sub.add_parser("workspace-export",help="Use the original scientific Workspace API")
     e.add_argument("workspace");e.add_argument("selection")
     c=sub.add_parser("workspace-catalogue");c.add_argument("workspace")
+    wr=sub.add_parser("workspace-receive",help="Receive a complete GIS edition into the original scientific Workspace")
+    wr.add_argument("workspace");wr.add_argument("archive")
+    wa=sub.add_parser("workspace-adopt-sources",help="Append selected received working layers as an original source edition")
+    wa.add_argument("workspace");wa.add_argument("selection")
     args=parser.parse_args(argv)
     def progress(value):
         print(json.dumps(value,ensure_ascii=False,allow_nan=False),file=sys.stderr,flush=True)
@@ -43,9 +47,12 @@ def main(argv=None):
         else:
             sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
             from model.workspace import Workspace
-            from model.gis_workspace import export,catalogue
+            from model.gis_workspace import export,catalogue,receive,adopt_sources
             ws=Workspace(args.workspace)
-            result=export(ws,gis.load(Path(args.selection)),progress=progress) if args.command=="workspace-export" else catalogue(ws)
+            if args.command=="workspace-export":result=export(ws,gis.load(Path(args.selection)),progress=progress)
+            elif args.command=="workspace-receive":result=receive(ws,args.archive)
+            elif args.command=="workspace-adopt-sources":result=adopt_sources(ws,gis.load(Path(args.selection)))
+            else:result=catalogue(ws)
         print(json.dumps(result,ensure_ascii=False,indent=2,allow_nan=False))
         return 0
     except (ValueError,OSError,KeyError,TypeError) as exc:

@@ -26,7 +26,7 @@ import zipfile
 
 SCHEMA = "upstate.editable-gis/v1"
 REQUEST_SCHEMA = "upstate.gis-request/v1"
-VERSION = "1.1.0"
+VERSION = "1.2.0"
 CHUNK = 1024 * 1024
 
 
@@ -730,8 +730,16 @@ def build(spec: dict, source_root: Path | str, destination: Path | str,
             attachments=[]
             for item in spec.get("attachments",[]):
                 files=[]
-                for rec in [item["file"]]+item.get("companions",[]):
-                    target=stage/"documents"/rec["sha256"]/Path(rec["path"]).name
+                original_documents=[item["file"]]+item.get("companions",[])
+                common=os.path.commonpath([str(PurePosixPath(r["path"]).parent) for r in original_documents])
+                group=fingerprint(original_documents) if len(original_documents)>1 else original_documents[0]["sha256"]
+                names=set()
+                for rec in original_documents:
+                    rel=PurePosixPath(rec["path"]).relative_to(common or ".").as_posix()
+                    folded=unicodedata.normalize("NFC",rel).casefold()
+                    if folded in names:raise ValueError("Document companions have colliding portable names")
+                    names.add(folded)
+                    target=stage/"documents"/group/rel
                     copy_checked(source_root,rec,target)
                     files.append({**record(stage,target),"source_path":rec["path"]})
                 attachments.append({"id":item["id"],"title":item["title"],"files":files,"source":item.get("source",{})})
