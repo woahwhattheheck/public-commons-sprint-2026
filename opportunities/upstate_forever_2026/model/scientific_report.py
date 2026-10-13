@@ -668,6 +668,10 @@ def delivery_sections(state):
                        ("working_archive", "Complete scientific workspace"),
                        ("display_scales", "Map scale definitions"),
                        ("receptor_inventory", "Source-water contributing areas"),
+                       ("parcel_source_lineage_report", "County parcel source editions"),
+                       ("parcel_source_lineage", "Complete typed parcel source lineage"),
+                       ("parcel_source_editions", "County parcel supplier spreadsheet"),
+                       ("parcel_source_coverage", "Captured county parcel coverage"),
                        ("receiving_water_index", "Receiving-water source inventory")):
         item = state.get("files", {}).get(key)
         if item and item.get("path"):
