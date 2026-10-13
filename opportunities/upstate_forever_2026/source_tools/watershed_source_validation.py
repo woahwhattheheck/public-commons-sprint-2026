@@ -657,10 +657,12 @@ def import_source_edition(
         workspace: Any, directory: str | Path = DEFAULT_SOURCE_DIR, *,
         classified_reaches_csv: str | Path | None = None,
         source_manifest: str | Path | None = None,
+        native_network_name: str | None = None,
 ) -> dict:
     """Register the complete manifest in an existing workspace after source binding."""
     edition = load_source_edition(directory, classified_reaches_csv=classified_reaches_csv,
-                                  source_manifest=source_manifest)
+                                  source_manifest=source_manifest,
+                                  native_network_name=native_network_name)
     if edition["manifest_path"] is None:
         raise FileNotFoundError(f"Import requires {Path(directory) / MANIFEST_NAME}")
     if not callable(getattr(workspace, "import_sources", None)):
@@ -677,12 +679,14 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--source-dir", type=Path, default=DEFAULT_SOURCE_DIR)
     parser.add_argument("--classified-reaches-csv", type=Path)
     parser.add_argument("--source-manifest", type=Path)
+    parser.add_argument("--native-network-name", choices=(NETWORK_NAME, NETWORK_NAME + ".gz"))
     parser.add_argument("--workspace", type=Path)
     args = parser.parse_args(argv)
     if args.workspace is None:
         result = load_source_edition(args.source_dir,
                                      classified_reaches_csv=args.classified_reaches_csv,
-                                     source_manifest=args.source_manifest)
+                                     source_manifest=args.source_manifest,
+                                     native_network_name=args.native_network_name)
         output = result["validation"]
     else:
         workspace_path = args.workspace.expanduser().resolve()
@@ -698,7 +702,8 @@ def main(argv: list[str] | None = None) -> int:
         result = import_source_edition(
             Workspace(workspace_path), args.source_dir,
             classified_reaches_csv=args.classified_reaches_csv,
-            source_manifest=args.source_manifest)
+            source_manifest=args.source_manifest,
+            native_network_name=args.native_network_name)
         collection = result["collection"]
         output = {"collection_id": collection.get("id") if isinstance(collection, Mapping) else collection,
                   "validation": result["validation"]}
