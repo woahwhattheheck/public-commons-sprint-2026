@@ -26,12 +26,25 @@ def parser():
         ("grid-prepare", "Prepare the original 30 m alignment and source/reporting masks"),
         ("run-prepare", "Bind an immutable grid/profile/scenario selection"),
         ("delivery-build", "Build seven map families, report, GIS and native working handoff"),
+        ("community-table-import", "Import an original registered community table"),
+        ("community-plan-save", "Save an immutable community intervention plan"),
+        ("community-report-build", "Build the complete saved community report"),
     ):
         command = commands.add_parser(name, help=help_text)
         command.add_argument("selection", type=Path)
     for name in ("run", "run-inspect"):
         command = commands.add_parser(name)
         command.add_argument("run_id")
+    status = commands.add_parser("run-status",
+        help="Read active phase, storage, log and retained outputs without starting a model")
+    status.add_argument("run_id")
+    status.add_argument("--verify", action="store_true", help="Verify retained stage and export hashes")
+    status.add_argument("--log-bytes", type=int, default=16384, help="Tail 0 to 65536 native log bytes")
+    regional = commands.add_parser("regional-delivery",
+        help="Complete retained native models as maps, decision tables and an editable project")
+    regional.add_argument("model_receiving", type=Path)
+    regional.add_argument("--output", type=Path, required=True)
+    regional.add_argument("--receive-directory", type=Path)
     compare = commands.add_parser("compare-runs")
     compare.add_argument("run_ids", nargs="+", help="Baseline first, then completed alternatives")
     observation = commands.add_parser("observations-import")
@@ -62,6 +75,10 @@ def perform(args):
         manifest = inspect_archive(args.archive, verify=True)
         return {"schema": manifest["schema"], "project": manifest["project"],
                 "members": len(manifest["members"]), "selection": manifest["selection"], "bytes": "MATCH"}
+    if args.command == "regional-delivery":
+        from .regional_delivery import complete_delivery
+        return complete_delivery(args.model_receiving, workspace_path=args.workspace,
+                                 output=args.output, receive_directory=args.receive_directory)
     if not args.workspace:
         raise ValueError("--workspace is required for this operation")
     workspace = Workspace(args.workspace, create=args.command == "init",
@@ -70,7 +87,10 @@ def perform(args):
         return workspace.overview()
     operations = {"profile-save": workspace.save_profile, "scenario-save": workspace.save_scenario,
                   "grid-prepare": workspace.prepare_grid, "run-prepare": workspace.prepare_run,
-                  "delivery-build": workspace.build_delivery}
+                  "delivery-build": workspace.build_delivery,
+                  "community-table-import": workspace.import_community_table,
+                  "community-plan-save": workspace.save_community_plan,
+                  "community-report-build": workspace.build_community_report}
     if args.command in operations:
         return operations[args.command](read_json(args.selection))
     if args.command == "source-import":
@@ -79,6 +99,9 @@ def perform(args):
         return workspace.run(args.run_id)
     if args.command == "run-inspect":
         return workspace.inspect_run(args.run_id)
+    if args.command == "run-status":
+        from .native_execution import inspect_execution
+        return inspect_execution(workspace, args.run_id, verify=args.verify, log_bytes=args.log_bytes)
     if args.command == "compare-runs":
         return workspace.compare_runs(args.run_ids)
     if args.command == "observations-import":
@@ -95,7 +118,8 @@ def main(argv=None):
         print(json.dumps(result, indent=2, ensure_ascii=False, sort_keys=True, allow_nan=False))
         return 0
     except (ValueError, OSError, KeyError, ImportError, RuntimeError) as error:
-        print(json.dumps({"state": "error", "type": type(error).__name__, "message": str(error)}, ensure_ascii=False),
+        print(json.dumps({"state": "error", **getattr(error, "native_failure",
+                          {"type": type(error).__name__, "message": str(error)})}, ensure_ascii=False),
               file=sys.stderr)
         return 1
 
