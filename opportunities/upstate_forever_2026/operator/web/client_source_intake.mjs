@@ -90,7 +90,7 @@ function preserveWorking(candidate,previous,reason){
 }
 export function createClientSourceIntake(host){
   let root=null,workspace=null,state=null,generation=0,busy=false,notice='',problem='',storageProblem='';
-  let draft=fresh(),catalog=null,inspection=null,result=null,controller=null,invalidRaw=null,reading=0;
+  let draft=fresh(),catalog=null,inspection=null,result=null,controller=null,invalidRaw=null,reading=0,acceptedTask=null;
   const detachedUploads=new Map();
   const receiptKey=(key,id)=>localKey(key)+':upload:'+id;
   const localKey = key => 'upstate-client-source-intake-v1:'+key;
@@ -158,6 +158,7 @@ export function createClientSourceIntake(host){
   function messages(){
     if(!root)return;
     q('[data-ci-notice]').textContent=notice;
+    renderOperationStatus();
     q('[data-ci-error]').textContent=problem;
     q('[data-ci-storage]').textContent=storageProblem;
     q('[data-ci-invalid]').hidden=invalidRaw===null;
@@ -181,16 +182,98 @@ export function createClientSourceIntake(host){
   function selectField(label,field,values,selected){
     return '<label><span>'+esc(label)+'</span><select data-ci-field="'+field+'" data-ci-mutating>'+(!values.some(([v])=>v===selected)?'<option selected disabled value="'+esc(selected)+'">'+esc('Saved choice: '+selected+' — choose a supported option')+'</option>':'')+values.map(([v,l])=>option(v,l,selected)).join('')+'</select></label>';
   }
+  function readingChoices(file){
+    const suffix=file.filename.toLowerCase().match(/\.[^.]+$/)?.[0]||'';
+    const workbook=['.xlsx','.xlsm'].includes(suffix),delimited=['.csv','.tsv','.txt'].includes(suffix);
+    if(!workbook&&!delimited)return '<p>Read the original file’s layers, bands or document metadata during inspection.</p>';
+    return '<div class="ci-reading">'+(delimited?
+      selectField('Text encoding','encoding',[['utf-8-sig','UTF-8'],['utf-16','UTF-16'],['cp1252','Windows-1252']],file.options.encoding)+
+      selectField('Column separator','delimiter',[['','Detect for review'],[',','Comma'],[';','Semicolon'],['\t','Tab'],['|','Pipe']],file.options.delimiter||''):'')+
+      inputField('Header row','header_row',file.options.header_row,'number','min="1" max="10000"')+
+      (workbook?selectField('Workbook formulas','formula_mode',[['formulas','Show original formulas'],['cached','Use original cached values']],file.options.formula_mode):'')+'</div>'+
+      (workbook?'<p>Inspect every original worksheet. A sheet with a different header row can be inspected again with its own reading choice.</p>':'');
+  }
+  function facts(values){
+    return '<dl>'+values.map(([label,value])=>'<div><dt>'+esc(label)+'</dt><dd>'+esc(value??'Not supplied')+'</dd></div>').join('')+'</dl>';
+  }
+  function columnLabel(part,id){
+    if(!id)return 'Not selected';
+    const field=arr(part.fields).find(value=>value.id===id);
+    return field?(field.display||field.label||id):'Unavailable in this original source';
+  }
+  function partFacts(part){
+    if(part.error)return facts([['Reading status','Review the reading error below'],['Selected header row',part.header_row]]);
+    const fields=arr(part.fields),rows=arr(part.rows),values=[];
+    if(part.kind==='table'){
+      values.push(['Original columns',fields.length],['Preview rows',rows.length+
+        (part.more_rows?' shown; additional rows remain in the original file':' shown')],
+        ['Header row',part.header_row]);
+      if(part.sheet!==null&&part.sheet!==undefined)values.push(['Formula reading',part.formula_mode==='cached'?'Original cached values':
+          part.formula_mode==='formulas'?'Original formulas':'Not supplied']);
+    }else if(part.kind==='vector'){
+      values.push(['Features in this layer',part.feature_count],['Original fields',fields.length],
+        ['Preview features',rows.length+' shown'],['Geometry',part.geometry],['Coordinate reference system',part.crs]);
+    }else if(part.kind==='raster'){
+      values.push(['Band',part.band],['Dimensions',part.width+' × '+part.height+' pixels'],
+        ['Declared units',part.declared_unit||'Not supplied'],['Coordinate reference system',part.crs],
+        ['NoData value',part.nodata],['Stored scale',part.scale],['Stored offset',part.offset]);
+    }
+    return facts(values);
+  }
+  function reviewSummary(choice,part,saved=false){
+    const value=text=>String(text??'').trim()||'Not supplied';
+    const values=[['Scientific role',roleLabels[choice.role]||choice.role],
+      ['Identifier column',columnLabel(part,choice.identifier_field)],['Label column',columnLabel(part,choice.label_field)],
+      ['Physical units',value(choice.units)],['Period represented',value(choice.period)],
+      ['Time zone',value(choice.timezone)],['Reviewing scientist',value(choice.reviewer)]];
+    if(choice.role==='BIOPHYSICAL')values.push(['Selected models',arr(choice.models).map(x=>x.toUpperCase()).join(' + ')]);
+    if(choice.conversion)values.push(['Explicit conversion',value(choice.conversion.factor)+' × original value → '+value(choice.conversion.target_units)]);
+    return '<p><strong>'+esc(saved?'Saved source interpretation':choice.confirmed?'Confirmed for the source edition':'Interpretation awaiting confirmation')+'</strong></p>'+facts(values)+
+      (choice.reference?'<p><strong>Method reference:</strong> '+esc(choice.reference)+'</p>':'')+
+      (choice.notes?'<p><strong>Interpretation:</strong> '+esc(choice.notes)+'</p>':'');
+  }
+  function downloadsHTML(items){
+    return arr(items).map(item=>{
+      const label=esc(item.label||item.filename||'Retained file'),url=esc(item.url);
+      const readable=item.kind==='html'||/\.html?$/i.test(item.filename||'');
+      return readable?'<span><a href="'+url+'" target="_blank" rel="noopener">Read '+label+'</a> · <a href="'+url+'?download=1" download>Download HTML</a></span>':
+        '<a href="'+url+'?download=1" download>'+label+'</a>';
+    }).join('');
+  }
+  function renderOperationStatus(){
+    const area=q('[data-ci-operation-status]');if(!area)return;
+    const id=draft.selected_task;
+    if(!id){area.innerHTML='';return;}
+    const saved=arr(catalog?.operations).find(item=>item.id===id);
+    const running=arr(state?.tasks).find(item=>item.id===id);
+    const opened=[inspection,result].find(item=>item?.id===id&&item.state==='complete');
+    const operation=opened||(saved?.state==='complete'?saved:null)||running||saved||(acceptedTask?.id===id?acceptedTask:null);
+    if(!operation){area.innerHTML='<p>Refresh saved results to read the selected operation’s current progress.</p>';return;}
+    const inspectionOperation=operation.action==='client-source.inspect';
+    const title=inspectionOperation?'File inspection':'Reviewed source edition';
+    const wording={queued:'Waiting in the existing work queue.',pending:'Waiting in the existing work queue.',
+      running:inspectionOperation?'Reading the original files.':'Saving the reviewed source choices.',
+      working:inspectionOperation?'Reading the original files.':'Saving the reviewed source choices.',
+      complete:inspectionOperation?'Complete. Review the original worksheets, layers or bands below.':'Saved. Open the source edition and its reviewed meaning.',
+      failed:'Stopped with an error. Open the operation to inspect the cause and resume the same request.',
+      interrupted:'Interrupted. Open the operation to continue the same saved request.',
+      cancelled:'Cancelled. The retained originals and saved choices remain available.'}[operation.state]||'Current state: '+operation.state+'.';
+    const error=operation.error?.message||'';
+    const html='<p><strong>'+esc(title)+':</strong> '+esc(wording)+(error?' '+esc(error):'')+'</p>'+
+      (operation.state==='complete'&&draft.selected_result!==id?actionButton('open-result',inspectionOperation?'Open completed inspection':'Open saved source edition','data-ci-id="'+esc(id)+'" data-ci-mutating'):'')+
+      actionButton('task','Operation details','data-ci-id="'+esc(id)+'"');
+    if(area.innerHTML!==html)area.innerHTML=html;
+  }
   function fileRows(){
-    return draft.uploads.length?'<table><thead><tr><th scope="col">Original file</th><th scope="col">Size</th><th scope="col">Reading choices</th><th scope="col">Selection</th></tr></thead><tbody>'+draft.uploads.map((f,i)=>'<tr data-ci-upload="'+i+'"><td>'+esc(f.filename)+'<details><summary>Original identity</summary><code>'+esc(f.sha256)+'</code></details></td><td>'+bytes(f.bytes)+'</td><td><div class="ci-reading">'+
-      selectField('Text encoding','encoding',[['utf-8-sig','UTF-8'],['utf-16','UTF-16'],['cp1252','Windows-1252']],f.options.encoding)+
-      selectField('CSV separator','delimiter',[['','Detect for review'],[',','Comma'],[';','Semicolon'],['\t','Tab'],['|','Pipe']],f.options.delimiter||'')+
-      inputField('Header row','header_row',f.options.header_row,'number','min="1" max="10000"')+
-      selectField('Workbook formulas','formula_mode',[['formulas','Show original formulas'],['cached','Use original cached values']],f.options.formula_mode)+'</div></td><td>'+actionButton('remove-upload','Remove selection','data-ci-index="'+i+'" data-ci-mutating')+'</td></tr>').join('')+'</tbody></table>':'<p>No files selected. Choose the actual originals, including shapefile sidecars.</p>';
+    return draft.uploads.length?'<div class="ci-scroll" role="region" tabindex="0" aria-label="Selected original files and reading choices"><table><thead><tr><th scope="col">Original file</th><th scope="col">Size</th><th scope="col">Reading choices</th><th scope="col">Selection</th></tr></thead><tbody>'+draft.uploads.map((f,i)=>'<tr data-ci-upload="'+i+'"><td>'+esc(f.filename)+'<details><summary>Original identity</summary><code>'+esc(f.sha256)+'</code></details></td><td>'+bytes(f.bytes)+'</td><td>'+
+      readingChoices(f)+'</td><td>'+actionButton('remove-upload','Remove selection','data-ci-index="'+i+'" data-ci-mutating')+'</td></tr>').join('')+'</tbody></table></div>':'<p>No files selected. Choose the actual originals, including shapefile sidecars.</p>';
   }
   function table(part){
-    if(!part.fields?.length)return '';
-    return '<div class="ci-scroll" role="region" tabindex="0" aria-label="'+esc(part.name+' original preview')+'"><table><caption>Original sample'+(part.more_rows?' — additional records remain in the retained file':'')+'</caption><thead><tr><th scope="col">Source row</th>'+part.fields.map(x=>'<th scope="col">'+esc(x.display||x.label)+'</th>').join('')+'</tr></thead><tbody>'+arr(part.rows).map(row=>'<tr><th scope="row">'+esc(row.feature_id??row.row)+'</th>'+part.fields.map((x,i)=>'<td>'+esc(row.cells[i]??'')+'</td>').join('')+'</tr>').join('')+'</tbody></table></div>';
+    const fields=arr(part.fields),rows=arr(part.rows);
+    const count=Math.max(fields.length,0,...rows.map(row=>arr(row.cells).length));
+    if(!count)return '';
+    const columns=Array.from({length:count},(_,index)=>fields[index]||{display:'Unlabeled original column '+(index+1)});
+    return '<div class="ci-scroll" role="region" tabindex="0" aria-label="'+esc(part.name+' original preview')+'"><table><caption>Original sample'+(part.more_rows?' — additional records remain in the retained file':'')+'</caption><thead><tr><th scope="col">Source row</th>'+columns.map(field=>'<th scope="col">'+esc(field.display||field.label)+'</th>').join('')+'</tr></thead><tbody>'+rows.map(row=>'<tr><th scope="row">'+esc(row.feature_id??row.row)+'</th>'+columns.map((field,index)=>'<td>'+esc(index<arr(row.cells).length?row.cells[index]??'':'No cell in this row')+'</td>').join('')+'</tr>').join('')+'</tbody></table></div>';
   }
   function requiredFields(choice){
     const definitions=catalog?.required_table_fields;
@@ -215,7 +298,7 @@ export function createClientSourceIntake(host){
   function interpretation(choice,index){
     const file=inspection.files[choice.file_index],part=file.inspection.parts[choice.part_index];
     const fieldValues=[['','Not selected'],...arr(part.fields).map(x=>[x.id,x.display||x.label])];
-    return '<article class="ci-choice" data-ci-choice="'+index+'"><h3>'+esc(file.filename)+' · '+esc(part.name)+'</h3>'+(choice.role==='CONTEXT'?'<p>Retained context: not selected for scientific calculation. Choose and review a scientific role before preparing this source.</p>':'')+'<div class="ci-fields">'+
+    return '<article class="ci-choice" data-ci-choice="'+index+'"><h3>'+esc(file.filename)+' · '+esc(part.name)+'</h3><div data-ci-meaning>'+reviewSummary(choice,part)+'</div>'+(choice.role==='CONTEXT'?'<p>Retained context: not selected for scientific calculation. Choose and review a scientific role before preparing this source.</p>':'')+'<div class="ci-fields">'+
       inputField('Source title','title',choice.title)+selectField('Scientific role','role',roles[part.kind].map(x=>[x,roleLabels[x]]),choice.role)+
       inputField('Publisher / original reference URL or citation','uri',choice.uri)+inputField('Source edition / vintage','vintage',choice.vintage)+
       inputField('Original physical units','units',choice.units)+inputField('Period represented','period',choice.period)+
@@ -240,13 +323,13 @@ export function createClientSourceIntake(host){
     if(!inspection){area.innerHTML='<p>A retained inspection will show the actual original sheets, layers, fields and raster metadata here.</p>';return;}
     area.innerHTML='<h2>Review original files</h2><p>'+esc(inspection.title)+' · '+esc(inspection.created_at)+'</p>'+inspection.files.map((f,fi)=>{
       if(f.error)return '<article class="ci-file"><h3>'+esc(f.filename)+'</h3><p role="alert">'+esc(f.error.message)+'</p><p>The exact original is retained. Correct the reading choices or supply the missing native reader, then inspect again.</p></article>';
-      return '<article class="ci-file"><h3>'+esc(f.filename)+'</h3>'+arr(f.inspection.questions).map(x=>'<p>'+esc(x)+'</p>').join('')+
-        f.inspection.parts.map((part,pi)=>'<details class="ci-part" open><summary>'+esc(part.name)+' · '+esc(part.kind)+'</summary>'+
-          '<dl>'+Object.entries(part).filter(([k])=>['crs','bounds','geometry','feature_count','width','height','dtype','nodata','band','declared_unit','scale','offset','header_row','formula_mode'].includes(k)).map(([k,v])=>'<div><dt>'+esc(k.replaceAll('_',' '))+'</dt><dd>'+esc(Array.isArray(v)?v.join(', '):v??'Not supplied')+'</dd></div>').join('')+'</dl>'+
+      return '<article class="ci-file"><h3>'+esc(f.filename)+'</h3><p>'+esc(f.inspection.format?.toUpperCase()||'Original file')+' · '+f.inspection.parts.length+' original '+(f.inspection.parts.length===1?'part':'parts')+' available for review.</p>'+arr(f.inspection.questions).map(x=>'<p>'+esc(x)+'</p>').join('')+
+        f.inspection.parts.map((part,pi)=>'<details class="ci-part" open><summary>'+esc(part.sheet!==undefined&&part.sheet!==null?'Worksheet: '+part.name:part.kind==='vector'?'Layer: '+part.name:part.name)+' · '+esc(part.kind)+'</summary>'+partFacts(part)+
+          '<details><summary>Original spatial and reading metadata</summary><dl>'+Object.entries(part).filter(([k])=>['crs','bounds','geometry','feature_count','width','height','dtype','nodata','band','declared_unit','scale','offset','header_row','formula_mode'].includes(k)).map(([k,v])=>'<div><dt>'+esc(k.replaceAll('_',' '))+'</dt><dd>'+esc(Array.isArray(v)?v.join(', '):v??'Not supplied')+'</dd></div>').join('')+'</dl></details>'+
           (part.error?'<p role="alert">'+esc(part.error.message)+'</p><p>This worksheet remains in the original workbook. Other readable worksheets remain available. Choose a different header row and inspect again to review this sheet.</p>':
             arr(part.questions).map(x=>'<p>'+esc(x)+'</p>').join('')+table(part)+
             actionButton('add-choice','Review this source','data-ci-file="'+fi+'" data-ci-part="'+pi+'" data-ci-mutating'))+'</details>').join('')+'</article>';
-    }).join('')+'<div class="ci-downloads">'+arr(inspection._downloads).map(x=>'<a href="'+esc(x.url)+'?download=1" download>'+esc(x.label||x.filename)+'</a>').join('')+'</div>';
+    }).join('')+'<div class="ci-downloads">'+downloadsHTML(inspection._downloads)+'</div>';
   }
   function renderChoices(){
     const area=q('[data-ci-choices]');if(!area)return;
@@ -279,18 +362,28 @@ export function createClientSourceIntake(host){
       '<div class="ci-operation"><strong>'+esc(row.title)+'</strong><span>'+esc(row.client_source.selection.models.map(name=>name.toUpperCase()).join(' + '))+' coefficient table</span>'+
       actionButton('profile','Prepare parameter profile','data-ci-source="'+esc(row.id)+'" data-ci-mutating')+'</div>').join('');
   }
+  function savedSourceMeaning(){
+    if(result?.state!=='complete')return '';
+    const collection=arr(state?.data?.sources).find(row=>row.id===result.source_collection_id);
+    return arr(collection?.entries).filter(row=>arr(result.source_ids).includes(row.id)&&row.client_source?.selection).map(row=>{
+      const choice=row.client_source.selection;
+      const part=result.files?.[choice.file_index]?.inspection?.parts?.[choice.part_index];
+      if(!part)return '';
+      return '<details><summary>'+esc(row.title||choice.title)+' · '+esc(roleLabels[choice.role]||choice.role)+'</summary>'+reviewSummary(choice,part,true)+'</details>';
+    }).join('');
+  }
   function renderResult(){
     const area=q('[data-ci-result]');if(!area)return;
     if(!result||result.action!=='client-source.commit'){area.innerHTML='';return;}
     area.innerHTML='<h2>Saved scientific source edition</h2><p>'+esc(result.title)+' · '+esc(result.state)+'</p>'+
       (result.source_collection_id?'<p>These originals and reviewed interpretations are available in the existing source, grid, profile and run controls.</p>'+actionButton('source','Open exact saved source edition','data-ci-id="'+result.source_collection_id+'"'):'')+
-      profileLinks()+'<ol>'+arr(result.next_steps).map(x=>'<li>'+esc(x)+'</li>').join('')+'</ol><div class="ci-actions">'+
+      savedSourceMeaning()+profileLinks()+'<ol>'+arr(result.next_steps).map(x=>'<li>'+esc(x)+'</li>').join('')+'</ol><div class="ci-actions">'+
       actionButton('navigate','Prepare workbook measurements','data-ci-view="client-measurement-sources"')+
       actionButton('navigate','Prepare study inputs','data-ci-view="source-preparation"')+
       actionButton('navigate','Choose native model grid','data-ci-view="grids"')+
       actionButton('navigate','Profiles and scientific settings','data-ci-view="profiles"')+
       actionButton('navigate','Runs and results','data-ci-view="runs"')+'</div><div class="ci-downloads">'+
-      arr(result._downloads).map(x=>'<a href="'+esc(x.url)+'?download=1" download>'+esc(x.label||x.filename)+'</a>').join('')+'</div>';
+      downloadsHTML(result._downloads)+'</div>';
   }
   async function refreshCatalog(){
     const expected=workspace,epoch=generation;
@@ -314,10 +407,12 @@ export function createClientSourceIntake(host){
       boundInspection(candidate,value);
       candidate.selected_result=id;validateDraft(candidate,workspace);
       draft=candidate;inspection=value;retain();renderInspection();renderChoices();
+      notice='Showing the retained inspection: '+value.title+'. Review each selected source’s meaning before saving.';messages();
     }else{
       need(value.action==='client-source.commit','This is not a client-source result.');
       const candidate=clone(draft);candidate.selected_result=id;validateDraft(candidate,workspace);
       draft=candidate;result=value;retain();renderResult();
+      notice='Showing the saved source edition: '+value.title+'.';messages();
     }
   }
   async function request(action,payload){
@@ -336,7 +431,7 @@ export function createClientSourceIntake(host){
     const task=await host.api('/api/actions',{method:'POST',body:{workspace:expected,action,payload:exact,operation_id:id}});
     if(!current(expected,epoch))return;
     draft.selected_task=task.id;retain();
-    notice='Original operation '+task.state+'. Repeating these exact choices reopens the same request.';
+    acceptedTask=task;notice='';renderOperationStatus();
     await host.refresh({force:true});if(!current(expected,epoch))return;
     state=host.getState();await refreshCatalog();renderHistory();messages();
   }
@@ -406,7 +501,9 @@ export function createClientSourceIntake(host){
         else{const checked=choice.querySelector('[data-ci-field="confirmed"]');if(checked)checked.checked=draft.selections[index].confirmed;
           const status=choice.querySelector('[data-ci-mapping-status]');if(status)status.textContent=mappingStatus(draft.selections[index]);
           const extra=choice.querySelector('[data-ci-additional-summary]'),required=requiredFields(draft.selections[index]);
-          if(extra&&required)extra.textContent='Additional native columns · '+bioFields.filter(name=>!required.includes(name)&&draft.selections[index].mapping[name]).length+' selected';}
+          if(extra&&required)extra.textContent='Additional native columns · '+bioFields.filter(name=>!required.includes(name)&&draft.selections[index].mapping[name]).length+' selected';
+          const meaning=choice.querySelector('[data-ci-meaning]'),item=draft.selections[index];
+          if(meaning)meaning.innerHTML=reviewSummary(item,inspection.files[item.file_index].inspection.parts[item.part_index]);}
       }else if(upload){
         const index=Number(upload.dataset.ciUpload);
         saveChange(v=>{v.uploads[index].options[field]=field==='header_row'?Number(target.value):target.value;});
@@ -499,15 +596,15 @@ export function createClientSourceIntake(host){
   function mount(target,currentState=host.getState()){
     const key=host.getWorkspace();if(root===target&&workspace===key){update(currentState);return;}
     suspend();root=target;workspace=key;state=currentState;generation++;load();
-    catalog=null;inspection=null;result=null;busy=false;notice='';problem='';
+    catalog=null;inspection=null;result=null;acceptedTask=null;busy=false;notice='';problem='';
     root.innerHTML='<main class="ci-desk"><header><p class="eyebrow">SCIENTIFIC WORKBENCH</p><h1>Open my data</h1><p>Keep your original files and labels. Review their meaning here, then use the existing scientific preparation and run controls.</p></header>'+
-      '<p data-ci-error role="alert" class="ci-error"></p><p data-ci-notice role="status" aria-live="polite"></p><p data-ci-storage role="status" class="ci-warning"></p>'+
+      '<p data-ci-error role="alert" class="ci-error"></p><p data-ci-notice role="status" aria-live="polite"></p><div data-ci-operation-status role="status" aria-live="polite"></div><p data-ci-storage role="status" class="ci-warning"></p>'+
       '<section><h2>1. Choose original files</h2>'+inputField('Name this source intake','title',draft.title)+
       '<label class="ci-file-picker"><span>CSV, TSV, Excel, GeoTIFF, GeoPackage, GeoJSON or shapefile and its sidecars</span><input type="file" multiple data-ci-upload-files data-ci-mutating></label><div data-ci-files></div><div data-ci-recovered></div>'+
       '<div class="ci-actions">'+actionButton('inspect','Inspect original files','data-ci-mutating')+actionButton('download','Download complete working copy')+
       '<label>Open working copy<input type="file" accept=".json,application/json" data-ci-open-working data-ci-mutating></label>'+
       '<p data-ci-recovery-count></p><span data-ci-invalid hidden>'+actionButton('invalid','Download exact previous browser copy')+'</span></div></section>'+
-      '<section data-ci-inspection></section><section><h2>2. Review source meaning</h2><p>Use the source’s actual units and metadata. Nothing here invents measurements, chooses a scientific conclusion or runs a model automatically.</p><div data-ci-choices></div>'+
+      '<section data-ci-inspection></section><section><h2>2. Review source meaning</h2><p>Review the original columns, units and period. Save the interpretation you intend to use in the existing scientific preparation and run controls.</p><div data-ci-choices></div>'+
       '<div class="ci-actions">'+actionButton('commit','Save reviewed scientific source edition','data-ci-mutating')+'</div></section>'+
       '<section data-ci-result></section><section><h2>3. Original operations and saved editions</h2>'+actionButton('refresh','Refresh saved results','data-ci-mutating')+
       '<div data-ci-tasks></div><div data-ci-history></div></section></main>';

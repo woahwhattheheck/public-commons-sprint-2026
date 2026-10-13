@@ -27,7 +27,7 @@ const labels={
  threshold_flow_accumulation:'Stream-initiation threshold (cells)',flow_dir_algorithm:'Flow-routing algorithm',
  k_param:'Connectivity shape parameter k',subsurface_critical_length_n:'Subsurface nitrogen retention length (m)',
  subsurface_eff_n:'Maximum subsurface nitrogen retention fraction',runoff_proxy_av:'Runoff-proxy average',
- sdr_max:'Maximum sediment delivery ratio',ic_0_param:'Connectivity-index midpoint',l_max:'Maximum slope length (m)',
+ sdr_max:'Maximum sediment delivery ratio',ic_0_param:'Connectivity-index midpoint',l_max:'Maximum L factor (dimensionless)',
  lucode:'Land-cover code',lucodes:'Land-cover codes',from_codes:'Original land-cover codes',to_code:'Destination land-cover code',
  load_n:'Nitrogen loading',load_p:'Phosphorus loading',load_type_n:'Nitrogen loading basis',load_type_p:'Phosphorus loading basis',
  eff_n:'Nitrogen retention fraction',eff_p:'Phosphorus retention fraction',crit_len_n:'Nitrogen retention length (m)',
@@ -180,6 +180,23 @@ export function scientificDocument({kind,record,title:heading,data={}}){
  '<details class="scientific-group"><summary>Original structured record</summary><pre>'+esc(JSON.stringify(original,null,2))+'</pre></details>'+
  '<p class="scientific-note">TokenJunkieLabs · '+SCIENTIFIC_INSPECTION_VERSION+'</p></main></body></html>\n';
 }
+/** Use the original operator's typed source report for completed source intake.
+ * The ticket stays bound to its frozen record and Workspace; the full original
+ * JSON remains independently downloadable below.
+ */
+export function scientificSourceReport(record,workspace){
+ const action=record?.action||record?._client_source?.action;
+ if(!['client-source.inspect','client-source.commit'].includes(action))return null;
+ const tickets=Array.isArray(record?._downloads)?record._downloads:[];
+ const report=tickets.find(value=>value?.role==='source-inspection-report'&&value.kind==='html');
+ if(!report)return null;
+ if(report.workspace!==workspace||typeof report.url!=='string'||
+    !/^\/api\/file\/[a-f0-9]{64}$/.test(report.url)||
+    typeof report.filename!=='string'||!/^[^\\/\u0000-\u001f]+\.html$/.test(report.filename)||
+    !/^[a-f0-9]{64}$/.test(report.sha256||'')||
+    !Number.isSafeInteger(report.bytes)||report.bytes<1)return null;
+ return {...report};
+}
 export function createScientificInspection({getState,getWorkspace,reportError}){
  let release=null;
  const data=()=>getState()?.data||{};
@@ -188,11 +205,13 @@ export function createScientificInspection({getState,getWorkspace,reportError}){
  function bind(container,selection){
   clear();if(!container||!selection?.record)return;
   const workspace=getWorkspace(),record=scientificRecord(selection.record);
+  const sourceReport=scientificSourceReport(selection.record,workspace);
+  const sourceTask=['client-source.inspect','client-source.commit'].includes(selection.record.action||selection.record._client_source?.action);
   // Snapshot the rendered edition once. A later state refresh cannot relabel this export.
-  const html=scientificDocument({...selection,record,data:data()});
+  const html=sourceReport?null:scientificDocument({...selection,record,data:data()});
   const json=JSON.stringify(record,null,2)+'\n';
   const controls=document.createElement('div');controls.className='scientific-downloads';
-  controls.innerHTML='<button type="button" data-scientific-download="html">Download readable inspection</button><button type="button" data-scientific-download="json">Download original record JSON</button>';
+  controls.innerHTML='<button type="button" data-scientific-download="html">'+(sourceTask&&!sourceReport?'Download technical inspection':'Download readable inspection')+'</button><button type="button" data-scientific-download="json">Download original record JSON</button>';
   let active=true;
   const onClick=event=>{
    const button=event.target.closest('[data-scientific-download]');
@@ -200,7 +219,12 @@ export function createScientificInspection({getState,getWorkspace,reportError}){
    event.preventDefault();event.stopPropagation();
    try{
     if(!active||!controls.isConnected||getWorkspace()!==workspace)throw Error('Reopen this record in its original Workspace before downloading.');
-    const type=button.dataset.scientificDownload,content=type==='html'?html:json;
+    const type=button.dataset.scientificDownload;
+    if(type==='html'&&sourceReport){
+     const anchor=document.createElement('a');anchor.href=sourceReport.url+'?download=1';
+     anchor.download=sourceReport.filename;document.body.append(anchor);anchor.click();anchor.remove();return;
+    }
+    const content=type==='html'?html:json;
     const name=String(selection.title||selection.kind||'scientific-record').normalize('NFKC').replace(/[^a-zA-Z0-9._-]+/g,'-').replace(/^-+|-+$/g,'').slice(0,100)||'scientific-record';
     const url=URL.createObjectURL(new Blob([content],{type:type==='html'?'text/html;charset=utf-8':'application/json;charset=utf-8'}));
     const anchor=document.createElement('a');anchor.href=url;anchor.download=name+'-inspection.'+type;document.body.append(anchor);anchor.click();anchor.remove();

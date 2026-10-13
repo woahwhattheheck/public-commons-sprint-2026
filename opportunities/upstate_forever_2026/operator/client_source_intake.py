@@ -130,8 +130,21 @@ class ClientSourceIntake:
     def _downloads(self, workspace_key, ws, record):
         directory = self.directory(ws, record["id"])
         path = directory / "operation.json"
-        result = [self.operator._ticket(workspace_key, path, describe_file(ws.root, path),
-                                        "Complete source intake")]
+        from hashlib import sha256
+        from model.common import atomic_bytes
+        from model.client_source_inspection_report import render_inspection
+        reviewed = None
+        if record.get("selection_file"):
+            reviewed = read_json(verify_file(ws.root, record["selection_file"]))
+        readable = render_inspection(record, reviewed)
+        presentation = directory / ("inspection-readable-" + sha256(readable).hexdigest() + ".html")
+        atomic_bytes(presentation, readable, immutable=True)
+        descriptor = {**describe_file(ws.root, presentation), "filename": "source-inspection.html"}
+        report = self.operator._ticket(workspace_key, presentation, descriptor,
+                                       "Source inspection and reviewed meaning")
+        report.update(kind="html", role="source-inspection-report")
+        result = [report, self.operator._ticket(workspace_key, path, describe_file(ws.root, path),
+                                                "Complete source intake — technical JSON")]
         for row in record.get("files", []):
             body = row["original"]
             result.append(self.operator._ticket(workspace_key, self._raw(ws, body),
