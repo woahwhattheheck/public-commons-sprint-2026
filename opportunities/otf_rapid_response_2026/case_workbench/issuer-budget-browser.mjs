@@ -2,7 +2,7 @@
 import {createAsyncIssuerBudget} from "../vendor_submission_20261011/issuer-budget-core.mjs";
 import {ORIGINAL_TEMPLATE_BASE64} from "./issuer-template.mjs";
 function originalBytes(){const text=atob(ORIGINAL_TEMPLATE_BASE64);return Uint8Array.from(text,c=>c.charCodeAt(0));}
-async function sha256(bytes){if(!globalThis.crypto?.subtle)throw new Error("This browser does not expose SHA-256 here. Open the standalone desk in a trusted browser context.");const digest=await globalThis.crypto.subtle.digest("SHA-256",bytes);return Array.from(new Uint8Array(digest),x=>x.toString(16).padStart(2,"0")).join("");}
+export async function sha256(bytes){if(!globalThis.crypto?.subtle)throw new Error("This browser does not expose SHA-256 here. Open the standalone desk in a trusted browser context.");const digest=await globalThis.crypto.subtle.digest("SHA-256",bytes);return Array.from(new Uint8Array(digest),x=>x.toString(16).padStart(2,"0")).join("");}
 async function inflateRaw(bytes,expectedBytes){
  let stream;try{stream=new DecompressionStream("deflate-raw");}catch{throw new Error("This browser does not support raw DEFLATE for the original XLSX. Use a current Chromium browser or the same vendor compiler's Node command.");}
  const reader=new Blob([bytes]).stream().pipeThrough(stream).getReader(),chunks=[];let size=0;
