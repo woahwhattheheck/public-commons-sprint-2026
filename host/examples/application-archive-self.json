@@ -1,0 +1,51 @@
+{
+  "schema": "commons.application-source-selection/v1",
+  "label": "Complete ordinary ZIP and mixed-application source receiving toolkit",
+  "python": {
+    "schema": "commons.python-source-selection/v1",
+    "module_roots": [
+      "host",
+      "."
+    ],
+    "entrypoints": [
+      {
+        "script": "host/application_source_closure.py"
+      },
+      {
+        "script": "host/application_archive_parser.py"
+      }
+    ],
+    "resources": [],
+    "external_modules": [],
+    "dynamic_imports": []
+  },
+  "javascript": {
+    "schema": "commons.javascript-source-selection/v1",
+    "paths": [
+      "host/application_source_bridge.cjs",
+      "host/application_archive_source.cjs"
+    ],
+    "resources": [],
+    "routes": []
+  },
+  "resources": [
+    "host/APPLICATION_SOURCE_CLOSURE.md",
+    "host/examples/application-source-self.json",
+    "host/PYTHON_SOURCE_CLOSURE.md",
+    "host/examples/python-source-closure-self.json",
+    "host/JAVASCRIPT_SOURCE_CLOSURE.md",
+    "host/examples/source-closure-self.json",
+    "host/vendor/acorn-source-closure/SOURCE.json",
+    "host/vendor/acorn-source-closure/LICENSE",
+    "host/vendor/acorn-source-closure/acorn.cjs",
+    "host/connected_application_archive.cjs",
+    "host/connected_zip.cjs",
+    "host/connected_zip_archive.cjs",
+    "host/connected_zip_receive.cjs",
+    "host/connected_gzip.cjs",
+    "host/APPLICATION_ARCHIVE_SOURCE.md",
+    "host/CONNECTED_ZIP_ARCHIVE.md",
+    "host/examples/application-archive-self.json"
+  ],
+  "directories": []
+}
