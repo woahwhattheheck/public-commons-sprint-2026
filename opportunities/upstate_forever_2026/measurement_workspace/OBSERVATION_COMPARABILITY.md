@@ -275,3 +275,37 @@ principal download, send the saved source to Scientific Reports, and reopen the
 comparison in the restored Workspace. View the actual resulting screens and
 native report. The original scalar/interval arithmetic and completed baseline
 source remain the reference for the same cohort.
+
+
+## Transfer a selected report with its saved comparison
+
+Newly saved native comparisons bind their original project and selection ID in
+the source manifest before the source ZIP and complete edition are published.
+This changes neither the original observed recipe nor its numerical inputs.
+A selected Scientific Report now follows that exact native origin and retains
+the complete comparison receipt, build inventory, original source files, offline
+desk, CSV/JSON outputs and source ZIP. If the comparison began from another
+retained source, its exact input collection travels with it as well.
+
+In Scientific Reports, transfer the completed report through the existing
+selected-Study operation. Receive the archive into its original Workspace and
+open **Received studies and original sources**. Its **Comparable observation
+periods** card opens the exact saved comparison. From there, inspect the source
+rows and support, download its original files, and choose years/title for a new
+edition through the ordinary queue. The original saved edition is preserved.
+The card also offers explicit replacement or append into Scientific Reports.
+
+An original source imported from another project keeps its captured report
+and source companions. Its origin remains that original project; the receiver
+does not fabricate a local editor record. Older standalone or already-completed
+comparison sources without a native-origin marker retain their original
+source-only transfer behavior. Ordinary full Workspace backup still preserves
+all their existing saved comparisons. New native source collections are distinct
+per original saved comparison, so two different editor editions cannot silently
+share an ambiguous report-to-editor link.
+
+Continue the same original native/browser receiving course: export the selected
+saved scientific report, receive and reopen the Study in a fresh operator, open
+the comparison card, inspect its exact original year/title/source, download the
+complete source ZIP and CSV, then exercise both report-composer choices. View
+the actual populated desktop and narrow rendered result before presentation.
