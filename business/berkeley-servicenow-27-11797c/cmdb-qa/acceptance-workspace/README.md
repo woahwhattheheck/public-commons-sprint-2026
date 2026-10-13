@@ -85,3 +85,20 @@ The same full browser course also denies IndexedDB in one separate owned phone c
 The same application now preserves each unfinished intake, mapping, comparison, review and acceptance group while navigating. Download a complete recovery JSON or include it automatically in the complete handover. Each group is bound to its original full workspace edition; a later recorded operation leaves earlier unfinished work available in a separate original-edition copy. Read the complete operating guide for the save, reopen and current-edition workflow.
 
 `drafts.cjs` validates complete recovery contents and original CSV identities. The existing browser-receiving.cjs course retains its full original desktop/phone operation and additionally exercises unfinished navigation, complete recovery, delayed CSV intent, earlier-edition separation and cold reopening. The original comparator, working-state transition and CLI remain unchanged.
+
+## Receiving in a supplied HTML browser
+
+An existing authorized host that permits supplied HTML in an `about:blank` document can run this same complete course with `ALCOR_PAGE_SOURCE=supplied-html`. Select its actual installed Node, Python, Playwright and Chromium; the course installs nothing. For an existing private cloud browser, for example:
+
+```sh
+ALCOR_PAGE_SOURCE=supplied-html \
+ALCOR_PLAYWRIGHT_MODULE=/actual/existing/playwright/entry.js \
+CHROMIUM_PATH=/actual/existing/chromium \
+node browser-receiving.cjs /absolute/new-alcor-output
+```
+
+The entry reads each exact complete built or received HTML file and supplies it to its own blank document. It records that file's byte length, SHA-256 and actual URL, creates no local HTTP server, and makes no replacement origin or external navigation. A supplied document remains `about:blank`. The original mapping, correction, acceptance, archive extraction, phone continuation, temporary-storage and full unfinished-work recovery operations remain in this same course.
+
+An opaque supplied document may refuse IndexedDB. The application then presents its real temporary-session banner. The course saves the complete received revision through the real download control, starts a fresh supplied document, and reopens that file through the real file control; it records this as independent downloaded-workspace receiving. The normal `origin` mode continues to check actual IndexedDB persistence on reload. Both modes separately operate the explicit storage-refusal and unfinished-recovery paths, preserving all original and later editions. A supplied-mode result does not claim persistent browser storage.
+
+Use the same optional `ALCOR_CDP_ENDPOINT` only when an existing browser owner has authorized that endpoint. Attached operation owns and closes only its private contexts. With no endpoint, the selected cloud Chromium is the course's own process. An existing owner's browser reservation and accepted work retain priority.

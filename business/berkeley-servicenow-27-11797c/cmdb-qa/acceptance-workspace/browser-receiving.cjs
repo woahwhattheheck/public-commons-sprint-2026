@@ -23,6 +23,9 @@ function installedPlaywright(cdp){
 }
 async function receive(out){
  const cdp=process.env.ALCOR_CDP_ENDPOINT||"";
+ const pageSource=process.env.ALCOR_PAGE_SOURCE||"origin";
+ if(!["origin","supplied-html"].includes(pageSource))throw Error("ALCOR_PAGE_SOURCE must be origin or supplied-html.");
+ const supplied=pageSource==="supplied-html";
  if(cdp){const u=new URL(cdp);if(!["http:","https:","ws:","wss:"].includes(u.protocol)||u.username||u.password)throw Error("Use the existing authorized CDP endpoint without embedded credentials.");}
  const {chromium}=installedPlaywright(cdp);
  fs.mkdirSync(out,{mode:0o700}); // Preserve previous output; select a new directory for the complete course.
@@ -30,7 +33,7 @@ async function receive(out){
  const root=path.resolve(out);
  const views=[],events=[],errors=[],ownedContexts=new Set();let browser,server;
  const record=(stage,details={})=>{const e={stage,...details};events.push(e);console.log(JSON.stringify(e));};
- const result={operation:"ALCOR-ORIGINAL-CMDB-BROWSER-379A",status:"RUNNING",views,events};
+ const result={operation:"ALCOR-ORIGINAL-CMDB-BROWSER-379A",status:"RUNNING",pageSource,views,events};
  const save=()=>fs.writeFileSync(path.join(root,"BROWSER_RECEIVING.json"),JSON.stringify(result,null,2)+"\n");
  try{
   let origin;
@@ -39,19 +42,21 @@ async function receive(out){
    browser=await chromium.connectOverCDP(cdp,{timeout:20000,noDefaults:true});
    result.connection="existing_authorized_cdp_private_context";
   }else{
+   if(!supplied){
    server=http.createServer((req,res)=>{let name;try{name=decodeURIComponent(new URL(req.url,"http://localhost").pathname);}catch{return res.writeHead(400).end();}
     const p=path.resolve(root,"."+name);if(!p.startsWith(root+path.sep))return res.writeHead(403).end();
     try{const data=fs.readFileSync(p);res.setHeader("Content-Type",p.endsWith(".html")?"text/html; charset=utf-8":"application/octet-stream");res.end(data);}catch{res.writeHead(404).end();}});
    await new Promise((resolve,reject)=>{server.once("error",reject);server.listen(0,"127.0.0.1",resolve);});origin="http://127.0.0.1:"+server.address().port;
+   }
    browser=await chromium.launch({executablePath:process.env.CHROMIUM_PATH||"/workspace/scratch/5403360e55a4/counterpress-capture-runtime/bin/chromium",headless:true,args:["--no-sandbox","--disable-dev-shm-usage"]});
    result.connection="owned_chromium";
   }
   const createContext=async(viewport)=>{
    const context=await browser.newContext({viewport,acceptDownloads:true,serviceWorkers:"block"});ownedContexts.add(context);context.on("page",p=>p.on("dialog",dialog=>dialog.accept()));
-   if(cdp){
+   if(cdp||supplied){
     const allowed=new Map([["/release/Open_CMDB_Workspace.html",path.join(root,"release","Open_CMDB_Workspace.html")],["/received-handover/Open_CMDB_Workspace.html",path.join(root,"received-handover","Open_CMDB_Workspace.html")]]);
     await context.route("**/*",async route=>{
-     const request=route.request(),url=new URL(request.url()),filename=url.origin===origin&&allowed.get(url.pathname);
+     const request=route.request(),url=new URL(request.url()),filename=!supplied&&url.origin===origin&&allowed.get(url.pathname);
      if(filename&&request.isNavigationRequest()&&request.method()==="GET"&&!url.search){
       await route.fulfill({status:200,contentType:"text/html; charset=utf-8",body:fs.readFileSync(filename),headers:{"cache-control":"no-store"}});
      }else{if(!url.pathname.endsWith("/favicon.ico"))errors.push("Unexpected document resource: "+url.origin+url.pathname);await route.abort();}
@@ -60,7 +65,30 @@ async function receive(out){
    return context;
   };
   record("original_browser_started",{connection:result.connection});const context=await createContext({width:1440,height:1080});
-  let page=await context.newPage();page.on("pageerror",error=>errors.push(error.message));
+  const freshPage=async context=>{const next=await context.newPage();next.on("pageerror",error=>errors.push(error.message));return next;};
+  let page=await freshPage(context);
+  const openDocument=async relative=>{
+   if(!["release/Open_CMDB_Workspace.html","received-handover/Open_CMDB_Workspace.html"].includes(relative))throw Error("Unexpected original application path.");
+   if(supplied){
+    const body=fs.readFileSync(path.join(root,relative),"utf8");
+    await page.setContent(body,{waitUntil:"load"});
+    assert.equal(page.url(),"about:blank","Supplied original must stay in its permitted about:blank document.");
+    record("original_document_supplied",{path:relative,bytes:Buffer.byteLength(body),sha256:C.hash(body),url:page.url()});
+   }else await page.goto(origin+"/"+relative);
+  };
+  const reloadDocument=async(relative,workingFile)=>{
+   if(!supplied){await page.reload();return;}
+   const previous=page;page=await freshPage(previous.context());await previous.close();
+   await openDocument(relative);
+   await page.locator('[data-action="new"]').first().waitFor();
+   await page.waitForFunction(()=>/No workspace open|(?:Saved|Session) edition \d+/.test(document.getElementById("save-state")?.textContent||""));
+   await page.waitForFunction(()=>!document.getElementById("cmdb-root").dataset.busy);
+   if(workingFile){
+    await page.locator("#open-file").setInputFiles(workingFile);
+    await page.waitForFunction(()=>!document.getElementById("cmdb-root").dataset.busy);
+    record("supplied_original_download_reopened",{file:path.basename(workingFile)});
+   }
+  };
   const idle=()=>page.waitForFunction(()=>!document.getElementById("cmdb-root").dataset.busy);
   const click=async(selector)=>{await page.locator(selector).click();await idle();};
   const tab=async(name)=>click('[data-tab="'+name+'"]');
@@ -68,7 +96,7 @@ async function receive(out){
    assert(dims.page<=dims.viewport+1,"Page overflow: "+name+" "+JSON.stringify(dims));const filename=name+".jpg";
    await page.screenshot({path:path.join(root,filename),type:"jpeg",quality:85,fullPage:true});views.push({name,width,...dims,file:filename});save();};
   const download=async(selector,name)=>{const waiting=page.waitForEvent("download");await click(selector);const d=await waiting;await d.saveAs(path.join(root,name));return path.join(root,name);};
-  await page.goto(origin+"/release/Open_CMDB_Workspace.html");await page.locator('[data-action="new"]').first().waitFor();
+  await openDocument("release/Open_CMDB_Workspace.html");await page.locator('[data-action="new"]').first().waitFor();
   await page.locator("#save-state").filter({hasText:"No workspace open"}).waitFor();
   await click('footer [data-action="guide"]');await page.locator("#content .guide").waitFor();
   const initialGuide=await download('[data-action="save-guide"]',"operating-guide-before-workspace.md");
@@ -136,8 +164,8 @@ with zipfile.ZipFile(archive) as z:
   await tab("history");await screenshot("desktop-07-history",1440);await tab("overview");await screenshot("desktop-08-overview",1440);
   await click('[data-action="guide"]');await screenshot("desktop-09-operating-guide",1440);
   await context.close();ownedContexts.delete(context);
-  const phone=await createContext({width:390,height:844});page=await phone.newPage();page.on("pageerror",error=>errors.push(error.message));
-  await page.goto(origin+"/received-handover/Open_CMDB_Workspace.html");await page.getByText("Original hardware receiving",{exact:true}).waitFor();
+  const phone=await createContext({width:390,height:844});page=await freshPage(phone);
+  await openDocument("received-handover/Open_CMDB_Workspace.html");await page.getByText("Original hardware receiving",{exact:true}).waitFor();
   for(const [name,key]of [["overview","overview"],["intake","intake"],["mapping","mapping"],["comparison","comparison"],["acceptance","receiving"],["history","history"]]){
    await tab(key);await screenshot("phone-"+name,390);
   }
@@ -149,12 +177,12 @@ with zipfile.ZipFile(archive) as z:
   const phoneSaved=await download('[data-action="workspace"]',"phone-received-workspace.json"),phoneWorkspace=C.receive(fs.readFileSync(phoneSaved,"utf8"));
   assert.equal(phoneWorkspace.revision,14);assert.equal(phoneWorkspace.id,workspace.id);assert.equal(phoneWorkspace.acceptances.length,3);
   assert(C.acceptance(phoneWorkspace,phoneWorkspace.runs.at(-1).id).current);await screenshot("phone-complete-receiving",390);
-  await page.reload();await page.getByText("Original hardware receiving",{exact:true}).waitFor();await tab("history");
+  await reloadDocument("received-handover/Open_CMDB_Workspace.html",phoneSaved);await page.getByText("Original hardware receiving",{exact:true}).waitFor();await tab("history");
   assert.equal(await page.locator("#content table").first().locator("tbody tr").count(),14);await screenshot("phone-reopened-history",390);
   const temporaryContext=await createContext({width:390,height:844});
   await temporaryContext.addInitScript(()=>Object.defineProperty(globalThis,"indexedDB",{configurable:true,get(){throw new DOMException("Storage denied by browser policy","SecurityError");}}));
-  page=await temporaryContext.newPage();page.on("pageerror",error=>errors.push(error.message));
-  await page.goto(origin+"/release/Open_CMDB_Workspace.html");
+  page=await freshPage(temporaryContext);
+  await openDocument("release/Open_CMDB_Workspace.html");
   await page.locator("#storage-mode").waitFor({state:"visible"});
   await page.locator("#save-state").filter({hasText:"No workspace open"}).waitFor();
   await click('[data-action="example"]');
@@ -163,7 +191,7 @@ with zipfile.ZipFile(archive) as z:
   const temporaryWorkspace=C.receive(fs.readFileSync(temporarySaved,"utf8"));
   assert.deepEqual(temporaryWorkspace,Example.operate().workspace);
   await screenshot("phone-temporary-complete-example",390);
-  await page.reload();await page.locator("#save-state").filter({hasText:"No workspace open"}).waitFor();
+  await reloadDocument("release/Open_CMDB_Workspace.html");await page.locator("#save-state").filter({hasText:"No workspace open"}).waitFor();
   await page.locator("#open-file").setInputFiles(phoneSaved);await idle();
   await page.locator("#save-state").filter({hasText:"Session edition 14"}).waitFor();await tab("history");
   assert.equal(await page.locator("#content table").first().locator("tbody tr").count(),14);
@@ -171,6 +199,7 @@ with zipfile.ZipFile(archive) as z:
   assert.deepEqual(C.receive(fs.readFileSync(temporaryReceived,"utf8")),phoneWorkspace);
   await screenshot("phone-temporary-complete-reopen",390);
   result.temporaryReceiving={originalExampleRevision:11,receivedRevision:14,completeOriginalEqual:true,completeReceivedEqual:true,reloadStartsNewSession:true};
+  result.recordedWorkReopening=supplied?"independent original downloaded workspace in a fresh supplied document":"original IndexedDB reload plus independent temporary-session file reopening";
 
   // Continue the same complete received workspace; retain unfinished work separately.
   await tab("intake");
@@ -196,7 +225,7 @@ with zipfile.ZipFile(archive) as z:
   assert.equal(mappingEntry.mapping.key.name,"");assert.equal(mappingEntry.mapping.fields.at(-1).name,"Unfinished added field");
   assert.equal(reviewEntry.findings.length,1);assert.equal(reviewEntry.values["review-owner"],"");
   await screenshot("phone-unfinished-complete-recovery",390);
-  await page.reload();await page.locator("#save-state").filter({hasText:"No workspace open"}).waitFor();
+  await reloadDocument("release/Open_CMDB_Workspace.html");await page.locator("#save-state").filter({hasText:"No workspace open"}).waitFor();
   await page.locator("#open-recovery").setInputFiles(recoveryFile);await idle();
   await page.locator("#save-state").filter({hasText:"Session edition 14"}).waitFor();
   const groupRow=group=>page.locator("#unfinished-work li").filter({has:page.locator("strong",{hasText:group})});
