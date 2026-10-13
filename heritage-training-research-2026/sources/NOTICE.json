@@ -1,0 +1,197 @@
+{
+  "schema": "commons.uid370.official-notice-extraction.v1",
+  "operation": "UID370-HERITAGE-TRAINING-SOURCE-E496-20261013",
+  "noticeId": "095824-2026",
+  "ocid": "ocds-h6vhtk-07851f",
+  "procurementReferenceRaw": "PREF 00000631",
+  "buyer": {
+    "name": "Historic England",
+    "ppon": "PXLY-5862-RMML"
+  },
+  "source": "S02",
+  "sourceCopyId": "OCT666699",
+  "checkedOn": "2026-10-13",
+  "copyPublished": "2026-10-10",
+  "copyModified": "2026-10-10",
+  "title": "ITT - Mapping Training and Qualifications for Heritage Construction Trades in England - UID 370",
+  "values": [
+    {
+      "location": "Scope / Total value",
+      "raw": "50000 GBP to 50000GBP",
+      "currency": "GBP",
+      "amount": "50000",
+      "vatBasis": "excluding"
+    },
+    {
+      "location": "Lot1 / Lot value",
+      "raw": "50000 AED Excluding VAT",
+      "currency": "AED",
+      "amount": "50000",
+      "vatBasis": "excluding"
+    },
+    {
+      "location": "Lot1 / Lot value",
+      "raw": "60000 AED Including VAT",
+      "currency": "AED",
+      "amount": "60000",
+      "vatBasis": "including"
+    }
+  ],
+  "valueInterpretation": "Original Cabinet Office release independently confirms whole GBP50000/60000 and lot AED50000/60000. Preserve the issuer's contradictory currencies; no conversion or budget commitment inferred.",
+  "dates": {
+    "start": {
+      "date": "2026-12-14",
+      "time": "00:00:00",
+      "offset": "+00:00",
+      "qualifier": "estimated",
+      "originalRFC3339": "2026-12-14T00:00:00+00:00",
+      "source": "S02"
+    },
+    "end": {
+      "date": "2027-05-31",
+      "time": "23:59:59",
+      "offset": "+01:00",
+      "qualifier": "estimated",
+      "originalRFC3339": "2027-05-31T23:59:59+01:00",
+      "source": "S02"
+    },
+    "maximumExtensionEnd": {
+      "date": "2027-08-31",
+      "time": "23:59:59",
+      "offset": "+01:00",
+      "qualifier": "estimated, if exercised",
+      "originalRFC3339": "2027-08-31T23:59:59+01:00",
+      "source": "S02"
+    },
+    "tender": {
+      "raw": "06 November 2026, 09:30AM",
+      "date": "2026-11-06",
+      "time": "09:30:00",
+      "offset": "+00:00",
+      "originalRFC3339": "2026-11-06T09:30:00+00:00",
+      "source": "S02"
+    },
+    "enquiry": {
+      "raw": "30 October 2026, 17:00PM",
+      "date": "2026-10-30",
+      "time": "17:00:00",
+      "offset": "+00:00",
+      "originalRFC3339": "2026-10-30T17:00:00+00:00",
+      "source": "S02"
+    }
+  },
+  "timezoneInterpretation": "Actual original Cabinet Office OCDS release establishes all explicit offsets. Original unzoned Sell2Wales copy remains in predecessorCopyObservation.",
+  "awardCriteria": {
+    "qualityPercent": 70,
+    "pricePercent": 30
+  },
+  "submissionUrl": "https://supplier.in-tend.co.uk/historicengland/home",
+  "procedure": "Below threshold - open competition",
+  "cpv": [
+    "73110000",
+    "73210000",
+    "79315000"
+  ],
+  "scopeSummary": "Repeatable England baseline of heritage-related construction training, provision, funding and uptake; assess content, geographic/role coverage, trends and qualification risk.",
+  "fullIttState": "not present in the retrieved official notice copy",
+  "predecessorCopyObservation": {
+    "schema": "commons.uid370.official-notice-extraction.v1",
+    "operation": "UID370-HERITAGE-TRAINING-SOURCE-E496-20261013",
+    "noticeId": "095824-2026",
+    "ocid": "ocds-h6vhtk-07851f",
+    "procurementReferenceRaw": "PREF 00000631",
+    "buyer": {
+      "name": "Historic England",
+      "ppon": "PXLY-5862-RMML"
+    },
+    "source": "S01",
+    "sourceCopyId": "OCT666699",
+    "checkedOn": "2026-10-13",
+    "copyPublished": "2026-10-10",
+    "copyModified": "2026-10-10",
+    "title": "ITT - Mapping Training and Qualifications for Heritage Construction Trades in England - UID 370",
+    "values": [
+      {
+        "location": "Scope / Total value",
+        "raw": "50000 GBP to 50000GBP",
+        "currency": "GBP",
+        "amount": "50000",
+        "vatBasis": "excluding"
+      },
+      {
+        "location": "Lot1 / Lot value",
+        "raw": "50000 AED Excluding VAT",
+        "currency": "AED",
+        "amount": "50000",
+        "vatBasis": "excluding"
+      },
+      {
+        "location": "Lot1 / Lot value",
+        "raw": "60000 AED Including VAT",
+        "currency": "AED",
+        "amount": "60000",
+        "vatBasis": "including"
+      }
+    ],
+    "valueInterpretation": "Retain contradictory original currencies. No conversion, VAT derivation or committed budget inferred.",
+    "dates": {
+      "start": {
+        "date": "2026-12-14",
+        "time": "00:00",
+        "offset": null,
+        "qualifier": "estimated"
+      },
+      "end": {
+        "date": "2027-05-31",
+        "time": "23:59",
+        "offset": null,
+        "qualifier": "estimated"
+      },
+      "maximumExtensionEnd": {
+        "date": "2027-08-31",
+        "time": "23:59",
+        "offset": null,
+        "qualifier": "estimated, if exercised"
+      },
+      "tender": {
+        "raw": "06 November 2026, 09:30AM",
+        "date": "2026-11-06",
+        "time": "09:30",
+        "offset": null
+      },
+      "enquiry": {
+        "raw": "30 October 2026, 17:00PM",
+        "date": "2026-10-30",
+        "time": "17:00",
+        "offset": null
+      }
+    },
+    "timezoneInterpretation": "Official copy gives no offset; original FTS or buyer portal must establish it before a timed submission.",
+    "awardCriteria": {
+      "qualityPercent": 70,
+      "pricePercent": 30
+    },
+    "submissionUrl": "https://supplier.in-tend.co.uk/historicengland/home",
+    "procedure": "Below threshold - open competition",
+    "cpv": [
+      "73110000",
+      "73210000",
+      "79315000"
+    ],
+    "scopeSummary": "Repeatable England baseline of heritage-related construction training, provision, funding and uptake; assess content, geographic/role coverage, trends and qualification risk.",
+    "fullIttState": "not present in the retrieved official notice copy"
+  },
+  "originalPublished": "2026-10-09T16:42:28+01:00",
+  "originalBytesSha256": "5e9549dbf55d0440b747cbda9036c767810731811935a90a217e1a795400bfac",
+  "originalFile": "originals/UID370_095824-2026_original_ocds.json",
+  "originalTenderValue": {
+    "amountGross": 60000,
+    "amount": 50000,
+    "currency": "GBP"
+  },
+  "originalLotValue": {
+    "amountGross": 60000,
+    "amount": 50000,
+    "currency": "AED"
+  }
+}

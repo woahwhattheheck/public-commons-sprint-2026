@@ -1,0 +1,208 @@
+{
+  "schema": "commons.uid370.documented-identity-seeds.v1",
+  "checkedOn": "2026-10-13",
+  "meaning": "Actual published identities and dated source observations. These are reference/content candidates, with no fabricated provider offering, learner count, funding award or research approval.",
+  "qualifications": [
+    {
+      "id": "ofqual:60031116",
+      "authority": "Ofqual",
+      "qualificationNumber": "600/3111/6",
+      "comparisonKey": "60031116",
+      "label": "Pre-1919 repair and maintenance award",
+      "level": "3",
+      "tqt": "20",
+      "credits": "2",
+      "awardingBodyName": "NOCN",
+      "source": "S30",
+      "locator": "Qualification Overview; Structure & Units",
+      "sourceKind": "awarding-body qualification page",
+      "regulatoryStatus": "Available to learners",
+      "larsLearnAimRef": null,
+      "heritageReviewDecision": null,
+      "offeringIds": [],
+      "measureIds": [],
+      "regulatorySource": "S36",
+      "regulatoryLocator": "/",
+      "organisationRecognitionNumber": "RN5194",
+      "regulatoryOriginalFile": "originals/Ofqual_qualification_60031116_original.json",
+      "regulatoryOriginalSha256": "a794e2c8db397b8217a247e4d49584daa84d29cc182401c78604384c99f495d1",
+      "regulatoryLastUpdatedDate": "2026-06-18T22:31:10.24Z",
+      "regulatoryObservedOn": "2026-10-13",
+      "regulatoryDates": {
+        "regulationStartDate": "2011-08-18T00:00:00Z",
+        "operationalStartDate": "2011-10-01T00:00:00Z",
+        "operationalEndDate": null,
+        "certificationEndDate": null,
+        "reviewDate": "2028-08-31T22:59:59Z"
+      },
+      "offeredInEngland": true
+    },
+    {
+      "id": "ofqual:6101607X",
+      "authority": "Ofqual",
+      "qualificationNumber": "610/1607/X",
+      "comparisonKey": "6101607X",
+      "label": "Older and traditional buildings energy-efficiency award",
+      "level": "3",
+      "tqt": "30",
+      "credits": "3",
+      "awardingBodyName": "NOCN",
+      "source": "S31",
+      "locator": "Qualification Overview; Mandatory Group",
+      "sourceKind": "awarding-body qualification page",
+      "regulatoryStatus": "Available to learners",
+      "larsLearnAimRef": null,
+      "heritageReviewDecision": null,
+      "mandatoryUnitReferences": [
+        "M/650/4478",
+        "R/650/4479",
+        "D/650/4481"
+      ],
+      "offeringIds": [],
+      "measureIds": [],
+      "regulatorySource": "S35",
+      "regulatoryLocator": "/",
+      "organisationRecognitionNumber": "RN5194",
+      "regulatoryOriginalFile": "originals/Ofqual_qualification_6101607X_original.json",
+      "regulatoryOriginalSha256": "bc556ae12c6449ddf2a2b76db073c5a5cd9e21cb62db6f4e31d27a0092a097f6",
+      "regulatoryLastUpdatedDate": "2026-06-18T22:31:10.24Z",
+      "regulatoryObservedOn": "2026-10-13",
+      "regulatoryDates": {
+        "regulationStartDate": "2022-10-25T13:51:04Z",
+        "operationalStartDate": "2022-11-01T23:59:59Z",
+        "operationalEndDate": null,
+        "certificationEndDate": null,
+        "reviewDate": "2028-07-31T22:59:59Z"
+      },
+      "offeredInEngland": true
+    }
+  ],
+  "standards": [
+    {
+      "id": "skills-england:ST0442:1.1",
+      "authority": "Skills England",
+      "reference": "ST0442",
+      "version": "1.1",
+      "label": "Stonemason",
+      "level": "2",
+      "larsStandardCode": "637",
+      "earliestStartDate": "2023-02-20",
+      "latestStartDate": "2023-08-09",
+      "sourceStatus": "retired version",
+      "source": "S27",
+      "locator": "Version log; LARS Code",
+      "optionIds": [
+        "skills-england:OCC0442C"
+      ],
+      "qualificationMeasureAllocation": null
+    },
+    {
+      "id": "skills-england:ST0442:1.2",
+      "authority": "Skills England",
+      "reference": "ST0442",
+      "version": "1.2",
+      "label": "Stonemason",
+      "level": "2",
+      "larsStandardCode": "637",
+      "earliestStartDate": "2023-08-10",
+      "latestStartDate": null,
+      "latestStartDateRaw": "Not set",
+      "sourceStatus": "Approved for delivery (available for starts)",
+      "sourceUpdated": "2025-10-01",
+      "source": "S28",
+      "locator": "Version log; Options; LARS Code",
+      "optionIds": [
+        "skills-england:OCC0442C"
+      ],
+      "qualificationMeasureAllocation": null
+    }
+  ],
+  "occupations": [
+    {
+      "id": "skills-england:OCC0442C",
+      "authority": "Skills England",
+      "stdCode": "OCC0442C",
+      "label": "Heritage Stonemason",
+      "source": "S29",
+      "sourceAccess": "official indexed record",
+      "standardReference": "ST0442",
+      "mappingSources": [
+        "S28",
+        "S29"
+      ],
+      "scope": "one option within the whole Stonemason standard",
+      "providerIds": [],
+      "measureIds": []
+    }
+  ],
+  "contentComponents": [
+    {
+      "id": "nocn:6101607X:M6504478",
+      "qualificationId": "ofqual:6101607X",
+      "reference": "M/650/4478",
+      "label": "Evaluate possible measures",
+      "requirement": "mandatory",
+      "credits": "1",
+      "source": "S31",
+      "locator": "Mandatory Group"
+    },
+    {
+      "id": "nocn:6101607X:R6504479",
+      "qualificationId": "ofqual:6101607X",
+      "reference": "R/650/4479",
+      "label": "Recommend measures and advice",
+      "requirement": "mandatory",
+      "credits": "1",
+      "source": "S31",
+      "locator": "Mandatory Group"
+    },
+    {
+      "id": "nocn:6101607X:D6504481",
+      "qualificationId": "ofqual:6101607X",
+      "reference": "D/650/4481",
+      "label": "Recognise building age and characteristics",
+      "requirement": "mandatory",
+      "credits": "1",
+      "source": "S31",
+      "locator": "Mandatory Group"
+    }
+  ],
+  "mappings": [
+    {
+      "id": "map-ST0442-637",
+      "fromNamespace": "Skills England standard",
+      "from": "ST0442",
+      "toNamespace": "LARS StandardCode",
+      "to": "637",
+      "sources": [
+        "S27",
+        "S28"
+      ],
+      "basis": "explicit published LARS Code",
+      "effectiveVersionIds": [
+        "skills-england:ST0442:1.1",
+        "skills-england:ST0442:1.2"
+      ]
+    },
+    {
+      "id": "map-ST0442-OCC0442C",
+      "fromNamespace": "Skills England standard",
+      "from": "ST0442",
+      "toNamespace": "Skills England occupation",
+      "to": "OCC0442C",
+      "sources": [
+        "S28",
+        "S29"
+      ],
+      "basis": "explicit named option plus exact official occupational-map identity",
+      "cardinality": "option of whole standard",
+      "countAllocation": null
+    }
+  ],
+  "providers": [],
+  "sites": [],
+  "offerings": [],
+  "fundingAwards": [],
+  "heritageMeasures": [],
+  "researchApprovals": []
+}

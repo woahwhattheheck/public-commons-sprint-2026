@@ -1,0 +1,2359 @@
+{
+  "openapi": "3.0.1",
+  "info": {
+    "title": "Skills England Occupation Maps - Public API",
+    "description": "Get Skills England's latest occupation standards and occupational map data from the occupational maps API.",
+    "contact": {
+      "name": "Skills England",
+      "url": "https://skillsengland.education.gov.uk/"
+    },
+    "license": {
+      "name": "Open Government Licence",
+      "url": "https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/"
+    },
+    "version": "1.0"
+  },
+  "paths": {
+    "/api/v1/CustomMap": {
+      "get": {
+        "tags": [
+          "CustomMap"
+        ],
+        "summary": "Returns a custom Occupational Map representing a specific set of occupations",
+        "description": "All the specified occupations will be returned in their appropriate location within the occupational map hierarchy.\r\n            \r\nOccupations in multiple routes may be returned.  A route contains pathways, pathways contain cluster groups, cluster groups contain clusters (each of which is at a specific technical level), clusters contain occupations.\r\n            \r\nAdditional information about the occupations can be included by using the expand parameter.\r\n            \r\nIf includeCompleteMapHierarchy is false (default), only the routes, pathways, cluster groups and clusters which contain the occupations specified will be returned, if it is false, then the full hierarchy will be returned, even if it is empty.\r\n            \r\nPlease note that the max URL length is 2048 chars, this will restrict how many occCodes and expansions it will be possible to request.",
+        "parameters": [
+          {
+            "name": "occCodes",
+            "in": "query",
+            "description": "Comma separated list of Occupation codes to be included in the custom map.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "expand",
+            "in": "query",
+            "description": "Optional parameter to allow expanding the response. Possible expansions include (as a comma separated list):\r\n    occupation.overview,\r\n    occupation.summary,\r\n    occupation.soc,\r\n    occupation.maphierarchy,\r\n    occupation.typicaljobtitles,\r\n    occupation.dutiesKSB,\r\n    occupation.green,\r\n    occupation.products,\r\n    occupation.links,\r\n    occupation.keywords,\r\n    occupation.involvedemployers,\r\n    occupation.salary,\r\n    occupation.ssa,\r\n    product.links (requires occupation.products),\r\n    product.ssa (requires occupation.products),\r\n    green.links (requires occupation.green)",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "includeCompleteMapHierarchy",
+            "in": "query",
+            "description": "Include all the routes, pathways, cluster groups and clusters even if they are empty",
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "406": {
+            "description": "Not Acceptable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationProblemDetails"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/v1_0.Models.Route"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/GreenTheme/{themeId}": {
+      "get": {
+        "tags": [
+          "GreenTheme"
+        ],
+        "summary": "Returns an Occupational Map representing a specific green theme",
+        "description": "All the occupations with the green theme will be returned in their appropriate location within the occupational map hierarchy.\r\n            \r\nOccupations in multiple routes may be returned.  A route contains pathways, pathways contain cluster groups, cluster groups contain clusters (each of which is at a specific technical level), clusters contain occupations.\r\n            \r\nAdditional information about the occupations can be included by using the expand parameter.\r\n            \r\nTo retrieve the IDs for a green theme please call the /GreenThemes endpoint.",
+        "parameters": [
+          {
+            "name": "themeId",
+            "in": "path",
+            "description": "Required. The ID of a Green Theme to return a map for.",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "expand",
+            "in": "query",
+            "description": "Optional parameter to allow expanding the response. Possible expansions include (as a comma separated list):\r\n    occupation.overview,\r\n    occupation.summary,\r\n    occupation.soc,\r\n    occupation.maphierarchy,\r\n    occupation.typicaljobtitles,\r\n    occupation.dutiesKSB,\r\n    occupation.green,\r\n    occupation.products,\r\n    occupation.links,\r\n    occupation.keywords,\r\n    occupation.involvedemployers,\r\n    occupation.salary,\r\n    occupation.ssa,\r\n    product.ssa (requires occupation.products),\r\n    product.links (requires occupation.products),\r\n    green.links (requires occupation.green)",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "406": {
+            "description": "Not Acceptable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationProblemDetails"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/v1_0.Models.Route"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/GreenTheme/{themeId}/{subThemeId}": {
+      "get": {
+        "tags": [
+          "GreenTheme"
+        ],
+        "summary": "Returns an Occupational Map representing a specific green sub theme",
+        "description": "All the occupations with the green sub theme will be returned in their appropriate location within the occupational map hierarchy.\r\n            \r\nOccupations in multiple routes may be returned.  A route contains pathways, pathways contain cluster groups, cluster groups contain clusters (each of which is at a specific technical level), clusters contain occupations.\r\n            \r\nAdditional information about the occupations can be included by using the expand parameter.\r\n            \r\nTo retrieve the IDs for a green sub theme please call the /GreenThemes endpoint.",
+        "parameters": [
+          {
+            "name": "themeId",
+            "in": "path",
+            "description": "Required. The ID of the parent Green Theme for the Green Sub Theme.",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "expand",
+            "in": "query",
+            "description": "Optional parameter to allow expanding the response. Possible expansions include (as a comma separated list):\r\n    occupation.overview,\r\n    occupation.summary,\r\n    occupation.soc,\r\n    occupation.maphierarchy,\r\n    occupation.typicaljobtitles,\r\n    occupation.dutiesKSB,\r\n    occupation.green,\r\n    occupation.products,\r\n    occupation.links,\r\n    occupation.keywords,\r\n    occupation.involvedemployers,\r\n    occupation.salary,\r\n    occupation.ssa,\r\n    product.links (requires occupation.products),\r\n    green.links (requires occupation.green)",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "subThemeId",
+            "in": "path",
+            "description": "Required. The ID of a Green Sub Theme to return a map for.",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "406": {
+            "description": "Not Acceptable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationProblemDetails"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/v1_0.Models.Route"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/Info": {
+      "get": {
+        "tags": [
+          "Info"
+        ],
+        "summary": "Returns application information such as Assembly version and Creation Date",
+        "responses": {
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/OccupationStates": {
+      "get": {
+        "tags": [
+          "Lookups"
+        ],
+        "summary": "Returns the a list of the possible states for an occupation.",
+        "responses": {
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/v1_0.Models.OccupationStates"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/TechnicalEducationProductTypes": {
+      "get": {
+        "tags": [
+          "Lookups"
+        ],
+        "summary": "Returns the current list of technical education product types.",
+        "responses": {
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/v1_0.Models.TechnicalEducationProductTypes"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/TechnicalLevels": {
+      "get": {
+        "tags": [
+          "Lookups"
+        ],
+        "summary": "Returns the current list of technical levels.",
+        "description": "Clusters have a technical level.",
+        "responses": {
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/v1_0.Models.TechnicalLevels"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/GreenThemes": {
+      "get": {
+        "tags": [
+          "Lookups"
+        ],
+        "summary": "Returns the current list of Green Themes and their sub-themes",
+        "parameters": [
+          {
+            "name": "expand",
+            "in": "query",
+            "description": "Optional parameter to allow expanding the response. Possible expansions include (as a comma separated list):\r\n    green.links",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "406": {
+            "description": "Not Acceptable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationProblemDetails"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/v1_0.Models.GreenTheme"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/OccupationalProgression/{stdCode}": {
+      "get": {
+        "tags": [
+          "OccupationalProgression"
+        ],
+        "summary": "Returns the occupational progression data for a specified occupation.",
+        "description": "Occupation codes can be retrieved from one of the route endpoints or via the search endpoint.  \r\n            \r\nThis endpoint will return a list of occupations for which progression exists to or from the specified occupation.  The progression mappings will indicate whether the progression is to or from the specified occupation. \r\n            \r\nAdditional information about the occupations can be included by using the expand parameter.",
+        "parameters": [
+          {
+            "name": "stdCode",
+            "in": "path",
+            "description": "Required. In the format \"OCC\" followed by 4 digits and an optional letter (e.g. \"OCC0001\" or \"OCC0001a\").",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "expand",
+            "in": "query",
+            "description": "Optional parameter to allow expanding the response. Possible expansions include (as a comma separated list):\r\n    occupation.overview,\r\n    occupation.summary,\r\n    occupation.soc,\r\n    occupation.maphierarchy,\r\n    occupation.typicaljobtitles,\r\n    occupation.dutiesKSB,\r\n    occupation.green,\r\n    occupation.products,\r\n    occupation.links,\r\n    occupation.keywords,\r\n    occupation.involvedemployers,\r\n    occupation.salary,\r\n    occupation.ssa,\r\n    product.ssa (requires occupation.products),\r\n    product.links (requires occupation.products),\r\n    green.links (requires occupation.green)",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "406": {
+            "description": "Not Acceptable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationProblemDetails"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1_0.Models.OccupationalProgressionMap"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/Occupations/{stdCode}": {
+      "get": {
+        "tags": [
+          "Occupations"
+        ],
+        "summary": "Returns occupation data for a specific occupation.",
+        "description": "Occupation codes can be retrived from one of the route endpoints or via the search endpoint.\r\n            \r\nAdditional information about the occupations can be included by using the expand parameter.",
+        "parameters": [
+          {
+            "name": "stdCode",
+            "in": "path",
+            "description": "Required. In the format \"OCC\" followed by 4 digits and an optional letter (e.g. \"OCC0001\" or \"OCC0001a\").",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "expand",
+            "in": "query",
+            "description": "Optional parameter to allow expanding the response. Possible expansions include (as a comma separated list):\r\n    occupation.overview,\r\n    occupation.summary,\r\n    occupation.soc,\r\n    occupation.maphierarchy,\r\n    occupation.typicaljobtitles,\r\n    occupation.dutiesKSB,\r\n    occupation.green,\r\n    occupation.products,\r\n    occupation.links,\r\n    occupation.keywords,\r\n    occupation.involvedemployers,\r\n    occupation.salary,\r\n    occupation.ssa,\r\n    product.links (requires occupation.products),\r\n    product.ssa (requires occupation.products),\r\n    green.links (requires occupation.green)",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "406": {
+            "description": "Not Acceptable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationProblemDetails"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1_0.Models.Occupation"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/Occupations": {
+      "get": {
+        "tags": [
+          "Occupations"
+        ],
+        "summary": "Returns a summary list of occupations present in the Occupational Maps api.",
+        "description": "A summary list of Occupations with basic information can be retrieved from this endpoint.\r\n            \r\nAdditional information about the occupations can be retrieved by using the '/Occupations/{stdCode}' endpoint.",
+        "responses": {
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/v1_0.Models.Occupation"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/OccupationsBySOC": {
+      "get": {
+        "tags": [
+          "OccupationsBySOC"
+        ],
+        "summary": "Returns a summary of the occupation data for a specific SOCCode.",
+        "description": "Additional information about the occupations can be included by using the expand parameter.",
+        "parameters": [
+          {
+            "name": "SOCCode",
+            "in": "query",
+            "description": "Required. The SOC code. 4 digits (e.g. 1234) or 4 digits followed by a forward slash and two digits (e.g. 1234/01)",
+            "required": true,
+            "schema": {
+              "pattern": "(\\d{4})(\\/\\d{2})?",
+              "type": "string"
+            }
+          },
+          {
+            "name": "SOCVersion",
+            "in": "query",
+            "description": "2010 or 2020 - defaults to 2020 if not supplied.",
+            "schema": {
+              "type": "string",
+              "default": "2020"
+            }
+          },
+          {
+            "name": "expand",
+            "in": "query",
+            "description": "Optional parameter to allow expanding the response. Possible expansions include (as a comma separated list):\r\n    occupation.overview,\r\n    occupation.summary,\r\n    occupation.soc,\r\n    occupation.maphierarchy,\r\n    occupation.typicaljobtitles,\r\n    occupation.dutiesKSB,\r\n    occupation.green,\r\n    occupation.products,\r\n    occupation.links,\r\n    occupation.keywords,\r\n    occupation.involvedemployers,\r\n    occupation.salary,\r\n    occupation.ssa,\r\n    product.ssa (requires occupation.products),\r\n    product.links (requires occupation.products),\r\n    green.links (requires occupation.green)",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "406": {
+            "description": "Not Acceptable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationProblemDetails"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/v1_0.Models.Occupation"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/Routes": {
+      "get": {
+        "tags": [
+          "Routes"
+        ],
+        "summary": "Returns the current list of occupational routes.  Each route corresponds to an occupational map.",
+        "parameters": [
+          {
+            "name": "expand",
+            "in": "query",
+            "description": "Optional parameter to allow expanding the response. Possible expansions include (as a comma separated list):\r\n    route.links",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/v1_0.Models.Route"
+                  }
+                }
+              }
+            }
+          },
+          "406": {
+            "description": "Not Acceptable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/Routes/{id}": {
+      "get": {
+        "tags": [
+          "Routes"
+        ],
+        "summary": "Returns the route specified with all the occupations in the hierarchical map structure",
+        "description": "A route is broken down into pathways, pathways contain cluster groups, cluster groups contain clusters (each of which is at a specific technical level), clusters contain occupations.  This endpoint returns a response in this hierarchical structure.\r\nAdditional information about the occupations can be included by using the expand parameter.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Required. Use the routes endpoint if you need to find the route id's.",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "expand",
+            "in": "query",
+            "description": "Optional parameter to allow expanding the response. Possible expansions include (as a comma separated list):\r\n    occupation.overview,\r\n    occupation.summary,\r\n    occupation.soc,\r\n    occupation.maphierarchy,\r\n    occupation.typicaljobtitles,\r\n    occupation.dutiesKSB,\r\n    occupation.green,\r\n    occupation.products,\r\n    occupation.links,\r\n    occupation.keywords,\r\n    occupation.involvedemployers,\r\n    occupation.salary,\r\n    occupation.ssa,\r\n    product.links (requires occupation.products),\r\n    product.ssa (requires occupation.products),\r\n    green.links (requires occupation.green)",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "406": {
+            "description": "Not Acceptable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationProblemDetails"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1_0.Models.Route"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/SearchOccupations": {
+      "get": {
+        "tags": [
+          "SearchOccupations"
+        ],
+        "summary": "Returns a list of occupations matching the search term entered",
+        "description": "This search will return a list of occupations where any word in the search term entered appears in the following fields: occupation code, occupation name, typical job titles, keywords, product code and name of associated technical education product.  There is some synonym and stem matching.  \r\n            \r\nSorting is determined by how often the searched words appear in the occupation and how close the search terms are to each other.  Occupations where the search term appears in the occupation name are ranked highest.\r\n            \r\nIf an occupation code is searched for, just that occupation will be returned - in this scenario it would be more efficient to use the /Occupations endpoint.\r\n            \r\nAdditional information about the occupations can be included by using the expand parameter.\r\n            \r\nResults are returned paginated.",
+        "parameters": [
+          {
+            "name": "searchTerm",
+            "in": "query",
+            "description": "Required, max length 500.",
+            "schema": {
+              "maxLength": 500,
+              "type": "string"
+            }
+          },
+          {
+            "name": "expand",
+            "in": "query",
+            "description": "Optional parameter to allow expanding the response. Possible expansions include (as a comma separated list):\r\n    occupation.overview,\r\n    occupation.summary,\r\n    occupation.soc,\r\n    occupation.maphierarchy,\r\n    occupation.typicaljobtitles,\r\n    occupation.dutiesKSB,\r\n    occupation.green,\r\n    occupation.products,\r\n    occupation.links,\r\n    occupation.keywords,\r\n    occupation.involvedemployers,\r\n    occupation.salary,\r\n    occupation.ssa,\r\n    product.links (requires occupation.products),\r\n    product.ssa (requires occupation.products),\r\n    green.links (requires occupation.green)",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "description": "The number of results to return, between 1 and 250. Defaults to 10.",
+            "schema": {
+              "maximum": 250,
+              "minimum": 1,
+              "type": "integer",
+              "format": "int32",
+              "default": 10
+            }
+          },
+          {
+            "name": "pageNumber",
+            "in": "query",
+            "description": "The page number to return. Defaults to 1.",
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "default": 1
+            }
+          }
+        ],
+        "responses": {
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "406": {
+            "description": "Not Acceptable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationProblemDetails"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1_0.Models.Pagination.PaginatedResults`1[[v1_0.Models.Occupation, Com.PDMS.OMaps.PublicAPI.Web, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/SearchOccupations/Advanced": {
+      "post": {
+        "tags": [
+          "SearchOccupations"
+        ],
+        "summary": "Returns a list of occupations matching the search term entered",
+        "description": "This search will return a list of occupations where any word in the search term entered appears in any of the fields that you select in the searchFields. There is some synonym and stem matching.  \r\n            \r\nSorting is determined by how often the searched words appear in the occupation and how close the search terms are to each other.  Occupations where the search term appears in the occupation name are ranked highest.\r\n            \r\nIf an occupation code is searched for, just that occupation will be returned - in this scenario it would be more efficient to use the /Occupations endpoint.\r\n            \r\nAdditional information about the occupations can be included by using the expand parameter.\r\n            \r\nResults are returned paginated.",
+        "parameters": [
+          {
+            "name": "expand",
+            "in": "query",
+            "description": "Optional parameter to allow expanding the response. Possible expansions include (as a comma separated list):\r\n    occupation.overview,\r\n    occupation.summary,\r\n    occupation.soc,\r\n    occupation.maphierarchy,\r\n    occupation.typicaljobtitles,\r\n    occupation.dutiesKSB,\r\n    occupation.green,\r\n    occupation.products,\r\n    occupation.links,\r\n    occupation.keywords,\r\n    occupation.involvedemployers,\r\n    occupation.salary,\r\n    occupation.ssa,\r\n    product.links (requires occupation.products),\r\n    product.ssa (requires occupation.products),\r\n    green.links (requires occupation.green)",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "description": "The number of results to return, between 1 and 250. Defaults to 10.",
+            "schema": {
+              "maximum": 250,
+              "minimum": 1,
+              "type": "integer",
+              "format": "int32",
+              "default": 10
+            }
+          },
+          {
+            "name": "pageNumber",
+            "in": "query",
+            "description": "The page number to return. Defaults to 1.",
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "default": 1
+            }
+          }
+        ],
+        "requestBody": {
+          "description": "",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/v1_0.Models.SearchOccupationsAdvancedFilterRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/v1_0.Models.SearchOccupationsAdvancedFilterRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/v1_0.Models.SearchOccupationsAdvancedFilterRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "406": {
+            "description": "Not Acceptable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationProblemDetails"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SearchOccupationsAdvancedFilter"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/TechnicalEducationProgression/{productCode}": {
+      "get": {
+        "tags": [
+          "TechnicalEducationProgression"
+        ],
+        "summary": "Returns the technical education progression data for a specific product code.",
+        "description": "Product codes can be retrieved via their associated occupation by expanding occupation.products.\r\n            \r\nThis endpoint will return a list of technical education products for which progression exists to or from the specified product. A list of job tiles and / or a list of non-technical education qualifications may be included.",
+        "parameters": [
+          {
+            "name": "productCode",
+            "in": "path",
+            "description": "Required.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "expand",
+            "in": "query",
+            "description": "Optional parameter to allow expanding the response. Possible expansions include (as a comma separated list):\r\n    product.links,\r\n    product.ssa",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1_0.Models.TechnicalEducationProgressionMap"
+                }
+              }
+            }
+          },
+          "406": {
+            "description": "Not Acceptable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "ProblemDetails": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "nullable": true
+          },
+          "title": {
+            "type": "string",
+            "nullable": true
+          },
+          "status": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "detail": {
+            "type": "string",
+            "nullable": true
+          },
+          "instance": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": { }
+      },
+      "SearchOccupationsAdvancedFields": {
+        "type": "object",
+        "properties": {
+          "reference": {
+            "type": "boolean"
+          },
+          "name": {
+            "type": "boolean"
+          },
+          "keywords": {
+            "type": "boolean"
+          },
+          "jobTitles": {
+            "type": "boolean"
+          },
+          "productNames": {
+            "type": "boolean"
+          },
+          "knowledges": {
+            "type": "boolean"
+          },
+          "skills": {
+            "type": "boolean"
+          },
+          "behaviours": {
+            "type": "boolean"
+          },
+          "summary": {
+            "type": "boolean"
+          },
+          "duties": {
+            "type": "boolean"
+          },
+          "soC2020Codes": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false
+      },
+      "SearchOccupationsAdvancedFilter": {
+        "type": "object",
+        "properties": {
+          "pageNumber": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "pageSize": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "filterTerm": {
+            "type": "string",
+            "nullable": true
+          },
+          "searchFields": {
+            "$ref": "#/components/schemas/SearchOccupationsAdvancedFields"
+          },
+          "filters": {
+            "$ref": "#/components/schemas/SearchOccupationsAdvancedFilters"
+          }
+        },
+        "additionalProperties": false
+      },
+      "SearchOccupationsAdvancedFilters": {
+        "type": "object",
+        "properties": {
+          "route": {
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "format": "int32"
+            },
+            "nullable": true
+          },
+          "productTypes": {
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "format": "int32"
+            },
+            "nullable": true
+          },
+          "occupationalLevels": {
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "format": "int32"
+            },
+            "nullable": true
+          },
+          "occupationalStatuses": {
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "format": "int32"
+            },
+            "nullable": true
+          },
+          "careerStarter": {
+            "type": "boolean",
+            "nullable": true
+          },
+          "teProgression": {
+            "type": "boolean",
+            "nullable": true
+          },
+          "royal": {
+            "type": "boolean",
+            "nullable": true
+          },
+          "green": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "ValidationProblemDetails": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "nullable": true
+          },
+          "title": {
+            "type": "string",
+            "nullable": true
+          },
+          "status": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "detail": {
+            "type": "string",
+            "nullable": true
+          },
+          "instance": {
+            "type": "string",
+            "nullable": true
+          },
+          "errors": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "nullable": true
+          }
+        },
+        "additionalProperties": { }
+      },
+      "v1_0.Models.Behaviour": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "nullable": true
+          },
+          "behaviourId": {
+            "type": "string",
+            "nullable": true
+          },
+          "detail": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false,
+        "description": "Behaviour information for this occupation.  This is included if the expansion 'occupation.dutiesKSB' is requested."
+      },
+      "v1_0.Models.Cluster": {
+        "type": "object",
+        "properties": {
+          "object": {
+            "type": "string",
+            "nullable": true
+          },
+          "id": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "name": {
+            "type": "string",
+            "nullable": true
+          },
+          "description": {
+            "type": "string",
+            "nullable": true
+          },
+          "technicalLevel": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "technicalLevelName": {
+            "type": "string",
+            "nullable": true
+          },
+          "occupations": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/v1_0.Models.Occupation"
+            },
+            "nullable": true
+          },
+          "sequence": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false,
+        "description": "A cluster is a container for occupations within the same cluster group and technical level."
+      },
+      "v1_0.Models.ClusterGroup": {
+        "type": "object",
+        "properties": {
+          "object": {
+            "type": "string",
+            "nullable": true
+          },
+          "id": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "name": {
+            "type": "string",
+            "nullable": true
+          },
+          "clusters": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/v1_0.Models.Cluster"
+            },
+            "nullable": true
+          },
+          "sequence": {
+            "type": "integer",
+            "format": "int32"
+          }
+        },
+        "additionalProperties": false,
+        "description": "A cluster group is a group of clusters, it sits within a pathway."
+      },
+      "v1_0.Models.Duty": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "nullable": true
+          },
+          "dutyId": {
+            "type": "string",
+            "nullable": true
+          },
+          "dutyDetail": {
+            "type": "string",
+            "nullable": true
+          },
+          "isThisACoreDuty": {
+            "type": "boolean"
+          },
+          "criteriaForMeasuringPerformance": {
+            "type": "string",
+            "nullable": true
+          },
+          "mappedBehaviour": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "nullable": true
+          },
+          "mappedBehaviourIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "nullable": true
+          },
+          "mappedKnowledge": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "nullable": true
+          },
+          "mappedKnowledgeIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "nullable": true
+          },
+          "mappedSkills": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "nullable": true
+          },
+          "mappedSkillsIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "nullable": true
+          }
+        },
+        "additionalProperties": false,
+        "description": "Duties information for this occupation.  This is included if the expansion 'occupation.dutiesKSB' is requested.  Duties are also mapped to the knowledge, skills and behaviours."
+      },
+      "v1_0.Models.GreenOccupation": {
+        "type": "object",
+        "properties": {
+          "isGreen": {
+            "type": "boolean"
+          },
+          "classification": {
+            "type": "string",
+            "nullable": true
+          },
+          "themes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/v1_0.Models.GreenTheme"
+            },
+            "nullable": true
+          }
+        },
+        "additionalProperties": false,
+        "description": "Green information for this occupation.  This is included if the expansion 'occupation.green' is requested."
+      },
+      "v1_0.Models.GreenTheme": {
+        "type": "object",
+        "properties": {
+          "themeId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "themeName": {
+            "type": "string",
+            "nullable": true
+          },
+          "links": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/v1_0.Models.Link"
+            },
+            "nullable": true
+          },
+          "subThemes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/v1_0.Models.GreenTheme"
+            },
+            "nullable": true
+          }
+        },
+        "additionalProperties": false,
+        "description": "A list of all the green themes and their sub-themes. If the expansion 'occupation.links' is requested, related URLs and API endpoints will be included."
+      },
+      "v1_0.Models.Knowledge": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "nullable": true
+          },
+          "knowledgeId": {
+            "type": "string",
+            "nullable": true
+          },
+          "detail": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false,
+        "description": "Knowledge information for this occupation.  This is included if the expansion 'occupation.dutiesKSB' is requested."
+      },
+      "v1_0.Models.Link": {
+        "type": "object",
+        "properties": {
+          "rel": {
+            "type": "string",
+            "nullable": true
+          },
+          "href": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false,
+        "description": "Links to URLs and API endpoints."
+      },
+      "v1_0.Models.MapHierarchy": {
+        "type": "object",
+        "properties": {
+          "routeId": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "routeName": {
+            "type": "string",
+            "nullable": true
+          },
+          "routeSequence": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "pathwayId": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "pathwayName": {
+            "type": "string",
+            "nullable": true
+          },
+          "clusterGroupId": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "clusterId": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "clusterName": {
+            "type": "string",
+            "nullable": true
+          },
+          "technicalLevel": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "technicalLevelName": {
+            "type": "string",
+            "nullable": true
+          },
+          "pathwaySequence": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "clusterGroupSequence": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "clusterSeqeunce": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false,
+        "description": "How this occupation is positioned in the map.  This is included if the expansion 'occupation.maphierarchy' is requested."
+      },
+      "v1_0.Models.Occupation": {
+        "type": "object",
+        "properties": {
+          "object": {
+            "type": "string",
+            "description": "Type name of this object: \"Occupation\"",
+            "nullable": true
+          },
+          "stdCode": {
+            "type": "string",
+            "description": "The occupation standard code - starts with 'OCC', followed by any 4 digits, and ends with a single optional letter.",
+            "nullable": true
+          },
+          "name": {
+            "type": "string",
+            "description": "The occupation standard name",
+            "nullable": true
+          },
+          "status": {
+            "type": "integer",
+            "description": "The ID for the status of the occupation standard. This corresponds to the ID returned in the /OccupationalStates endpoint",
+            "format": "int32",
+            "nullable": true
+          },
+          "statusName": {
+            "type": "string",
+            "description": "The name of the status of the occupation standard.",
+            "nullable": true
+          },
+          "level": {
+            "type": "integer",
+            "description": "The level of the occupation standard.",
+            "format": "int32"
+          },
+          "versionNo": {
+            "type": "string",
+            "description": "Version of this occupation standard.",
+            "nullable": true
+          },
+          "summary": {
+            "type": "string",
+            "description": "The Summary for this Occupation.  This is included if the expansion 'occupation.summary' is requested.",
+            "nullable": true
+          },
+          "overview": {
+            "type": "string",
+            "description": "The Overview for this Occupation.  This is included if the expansion 'occupation.overview' is requested.",
+            "nullable": true
+          },
+          "involvedEmployers": {
+            "type": "string",
+            "description": "The employers who were involved in creating this occupational standard.  This is included if the expansion 'occupation.involvedEmployers' is requested.",
+            "nullable": true
+          },
+          "medianAnnualSalaryinGBP": {
+            "type": "integer",
+            "description": "",
+            "format": "int32",
+            "nullable": true
+          },
+          "keywords": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "The keywords for this occupation.  This is included if the expansion 'occupation.keywords' is requested.",
+            "nullable": true
+          },
+          "typicalJobTitles": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/v1_0.Models.TypicalJobTitle"
+            },
+            "nullable": true
+          },
+          "soc": {
+            "$ref": "#/components/schemas/v1_0.Models.SOCCode"
+          },
+          "mapHierarchy": {
+            "$ref": "#/components/schemas/v1_0.Models.MapHierarchy"
+          },
+          "knowledges": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/v1_0.Models.Knowledge"
+            },
+            "nullable": true
+          },
+          "skills": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/v1_0.Models.Skill"
+            },
+            "nullable": true
+          },
+          "behaviours": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/v1_0.Models.Behaviour"
+            },
+            "nullable": true
+          },
+          "duties": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/v1_0.Models.Duty"
+            },
+            "nullable": true
+          },
+          "greenOccupation": {
+            "$ref": "#/components/schemas/v1_0.Models.GreenOccupation"
+          },
+          "products": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/v1_0.Models.Product"
+            },
+            "nullable": true
+          },
+          "links": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/v1_0.Models.Link"
+            },
+            "description": "Links related to this occupation.  This is included if the expansion 'occupation.links' is requested.",
+            "nullable": true
+          },
+          "statusLastUpdated": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "ssa": {
+            "$ref": "#/components/schemas/v1_0.Models.SectorSubjectArea"
+          }
+        },
+        "additionalProperties": false,
+        "description": "The occupation object"
+      },
+      "v1_0.Models.OccupationStates": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "name": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "v1_0.Models.OccupationalProgressionMap": {
+        "type": "object",
+        "properties": {
+          "keyStdCode": {
+            "type": "string",
+            "nullable": true
+          },
+          "occupations": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/v1_0.Models.Occupation"
+            },
+            "nullable": true
+          },
+          "progressions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/v1_0.Models.OccupationalProgressionMapProgression"
+            },
+            "nullable": true
+          }
+        },
+        "additionalProperties": false,
+        "description": "This response includes an expandable collection of occupations relating to this occupational progression map and a list of progression mappings indicating whether the progression is to or from the key occupation."
+      },
+      "v1_0.Models.OccupationalProgressionMapProgression": {
+        "type": "object",
+        "properties": {
+          "stdCodeFrom": {
+            "type": "string",
+            "nullable": true
+          },
+          "stdCodeTo": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "v1_0.Models.Pagination.PaginatedResults`1[[v1_0.Models.Occupation, Com.PDMS.OMaps.PublicAPI.Web, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]": {
+        "type": "object",
+        "properties": {
+          "pagination": {
+            "$ref": "#/components/schemas/v1_0.Models.Pagination.Pagination"
+          },
+          "results": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/v1_0.Models.Occupation"
+            },
+            "description": "The current page of results",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false,
+        "description": "A model to represent a set of paginated results of a particular type"
+      },
+      "v1_0.Models.Pagination.Pagination": {
+        "type": "object",
+        "properties": {
+          "totalMatched": {
+            "type": "integer",
+            "description": "The total number of matched records",
+            "format": "int32"
+          },
+          "totalReturned": {
+            "type": "integer",
+            "description": "The total number of returned records e.g. The current page size",
+            "format": "int32"
+          },
+          "currentPage": {
+            "type": "integer",
+            "description": "The current page number",
+            "format": "int32"
+          },
+          "totalPages": {
+            "type": "integer",
+            "description": "The total page count",
+            "format": "int32"
+          },
+          "hasMoreItems": {
+            "type": "boolean",
+            "description": "Indicates whether there are any more items to be paged through"
+          },
+          "links": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/v1_0.Models.Link"
+            },
+            "description": "A collection of links to aid in pagination",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false,
+        "description": "Pagination inforamtion"
+      },
+      "v1_0.Models.Pathway": {
+        "type": "object",
+        "properties": {
+          "object": {
+            "type": "string",
+            "nullable": true
+          },
+          "id": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "name": {
+            "type": "string",
+            "nullable": true
+          },
+          "clusterGroups": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/v1_0.Models.ClusterGroup"
+            },
+            "nullable": true
+          },
+          "sequence": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false,
+        "description": "A pathway is a collection of cluster groups.  A pathway is within a route."
+      },
+      "v1_0.Models.Product": {
+        "type": "object",
+        "properties": {
+          "object": {
+            "type": "string",
+            "nullable": true
+          },
+          "name": {
+            "type": "string",
+            "nullable": true
+          },
+          "versionNo": {
+            "type": "string",
+            "nullable": true
+          },
+          "level": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "status": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "statusName": {
+            "type": "string",
+            "nullable": true
+          },
+          "type": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "typeName": {
+            "type": "string",
+            "nullable": true
+          },
+          "careerStarter": {
+            "type": "boolean"
+          },
+          "productCode": {
+            "type": "string",
+            "nullable": true
+          },
+          "royal": {
+            "type": "boolean",
+            "nullable": true
+          },
+          "links": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/v1_0.Models.Link"
+            },
+            "nullable": true
+          },
+          "qualificationCategory": {
+            "type": "string",
+            "nullable": true
+          },
+          "ssa1": {
+            "type": "string",
+            "nullable": true
+          },
+          "ssa2": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false,
+        "description": "Associated products for the occupation.  This is included if the expansion 'occupation.products' is requested and the related links are included if the expansion 'products.links' is also included."
+      },
+      "v1_0.Models.Route": {
+        "type": "object",
+        "properties": {
+          "object": {
+            "type": "string",
+            "nullable": true
+          },
+          "routeId": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "name": {
+            "type": "string",
+            "nullable": true
+          },
+          "pathways": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/v1_0.Models.Pathway"
+            },
+            "nullable": true
+          },
+          "links": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/v1_0.Models.Link"
+            },
+            "nullable": true
+          },
+          "sequence": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false,
+        "description": "A route is a collections of pathways.  The Institute has 15 routes."
+      },
+      "v1_0.Models.SOC2020SubUnitGroup": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "nullable": true
+          },
+          "description": {
+            "type": "string",
+            "nullable": true
+          },
+          "isPrimary": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false
+      },
+      "v1_0.Models.SOCCode": {
+        "type": "object",
+        "properties": {
+          "soc2010Code": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "soc2010Description": {
+            "type": "string",
+            "nullable": true
+          },
+          "soc2020Code": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "soc2020Description": {
+            "type": "string",
+            "nullable": true
+          },
+          "soc2020SubUnitGroups": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/v1_0.Models.SOC2020SubUnitGroup"
+            },
+            "nullable": true
+          }
+        },
+        "additionalProperties": false,
+        "description": "Information about the Standard Occupational Classification (SOC) which has been mapped to this occupational standard.  This is included if the expansion 'occupation.soc' is requested."
+      },
+      "v1_0.Models.SearchOccupationsAdvancedFilterRequest": {
+        "required": [
+          "searchTerm"
+        ],
+        "type": "object",
+        "properties": {
+          "searchTerm": {
+            "maxLength": 500,
+            "minLength": 1,
+            "type": "string"
+          },
+          "searchFields": {
+            "$ref": "#/components/schemas/SearchOccupationsAdvancedFields"
+          },
+          "filters": {
+            "$ref": "#/components/schemas/SearchOccupationsAdvancedFilters"
+          }
+        },
+        "additionalProperties": false
+      },
+      "v1_0.Models.SectorSubjectArea": {
+        "type": "object",
+        "properties": {
+          "ssaId": {
+            "type": "string",
+            "nullable": true
+          },
+          "ssaName": {
+            "type": "string",
+            "nullable": true
+          },
+          "subSSA": {
+            "$ref": "#/components/schemas/v1_0.Models.SectorSubjectArea"
+          }
+        },
+        "additionalProperties": false,
+        "description": "The Sector Subject Area and Sub-Sector Subject Area for the Occupation"
+      },
+      "v1_0.Models.Skill": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "nullable": true
+          },
+          "skillId": {
+            "type": "string",
+            "nullable": true
+          },
+          "detail": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false,
+        "description": "Skill information for the occupation.  This is included if the expansion 'occupation.dutiesKSB' is requested."
+      },
+      "v1_0.Models.TEPEducationOptions": {
+        "type": "object",
+        "properties": {
+          "technicalOptions": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "nullable": true
+          },
+          "higherTechnicalOptions": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "nullable": true
+          },
+          "professionalOptions": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "nullable": true
+          }
+        },
+        "additionalProperties": false,
+        "description": "Non-technical education qualifications are grouped according to their technical level.\r\n'Technical' relates to qualification levels 2 and 3.\r\n'Higher Technical' relates to qualification levels 4 and 5.\r\n'Professional' relates to qualification levels 6 and 7."
+      },
+      "v1_0.Models.TEPWorkOptions": {
+        "type": "object",
+        "properties": {
+          "technicalOptions": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "nullable": true
+          },
+          "higherTechnicalOptions": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "nullable": true
+          },
+          "professionalOptions": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "nullable": true
+          }
+        },
+        "additionalProperties": false,
+        "description": "Job titles are grouped according to their technical level.\r\n'Technical' relates to work requiring qualification levels 2 and 3.\r\n'Higher Technical' relates to work requiring qualification levels 4 and 5.\r\n'Professional' relates to work requiring qualification levels 6 and 7."
+      },
+      "v1_0.Models.TechnicalEducation": {
+        "type": "object",
+        "properties": {
+          "object": {
+            "type": "string",
+            "nullable": true
+          },
+          "name": {
+            "type": "string",
+            "nullable": true
+          },
+          "level": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "type": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "typeName": {
+            "type": "string",
+            "nullable": true
+          },
+          "careerStarter": {
+            "type": "boolean"
+          },
+          "productCode": {
+            "type": "string",
+            "nullable": true
+          },
+          "progression": {
+            "type": "string",
+            "nullable": true
+          },
+          "routeRef": {
+            "type": "string",
+            "nullable": true
+          },
+          "routeId": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "routeName": {
+            "type": "string",
+            "nullable": true
+          },
+          "royal": {
+            "type": "boolean",
+            "nullable": true
+          },
+          "links": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/v1_0.Models.Link"
+            },
+            "nullable": true
+          },
+          "progressionURL": {
+            "type": "string",
+            "nullable": true
+          },
+          "ssa1": {
+            "type": "string",
+            "nullable": true
+          },
+          "ssa2": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false,
+        "description": "The technical education products for which progression has been identified."
+      },
+      "v1_0.Models.TechnicalEducationProductTypes": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "name": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "v1_0.Models.TechnicalEducationProgressionMap": {
+        "type": "object",
+        "properties": {
+          "keyProductCode": {
+            "type": "string",
+            "nullable": true
+          },
+          "furtherDevelopment": {
+            "type": "string",
+            "nullable": true
+          },
+          "technicalEducation": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/v1_0.Models.TechnicalEducation"
+            },
+            "nullable": true
+          },
+          "education": {
+            "$ref": "#/components/schemas/v1_0.Models.TEPEducationOptions"
+          },
+          "work": {
+            "$ref": "#/components/schemas/v1_0.Models.TEPWorkOptions"
+          },
+          "links": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/v1_0.Models.Link"
+            },
+            "nullable": true
+          }
+        },
+        "additionalProperties": false,
+        "description": "This response shows potential progression which has been identified from the key technical education product.\r\n            \r\nIt may include: technical education products, non-technical education qualifications and a list of potential job titles.\r\n            \r\nFor technical education products a progression type will be given, this can be used to indicate if the progression is accelerated, not applicable or to be confirmed."
+      },
+      "v1_0.Models.TechnicalLevels": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "name": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "v1_0.Models.TypicalJobTitle": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "nullable": true
+          },
+          "isGreen": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false,
+        "description": "The typical job titles for this occupation.  This is included if the expansion 'occupation.typicaljobtitles' is requested."
+      }
+    },
+    "securitySchemes": {
+      "X-API-KEY": {
+        "type": "apiKey",
+        "description": "A valid API key must appear in header",
+        "name": "X-API-KEY",
+        "in": "header"
+      }
+    }
+  },
+  "security": [
+    {
+      "X-API-KEY": [ ]
+    }
+  ],
+  "tags": [
+    {
+      "name": "Info",
+      "description": "Generic \"info\" or \"healthcheck\" endpoint."
+    },
+    {
+      "name": "CustomMap",
+      "description": "Endpoints for accessing Custom maps for a given set of Occupation Codes."
+    },
+    {
+      "name": "GreenTheme",
+      "description": "Endpoints for accessing occuaptions by green theme."
+    },
+    {
+      "name": "Lookups",
+      "description": "Endpoints for accessing lookup data for the occupational maps.  These will change infrequently and may be suitable for caching."
+    },
+    {
+      "name": "OccupationalProgression",
+      "description": "Endpoints for accessing Occupational Progression data."
+    },
+    {
+      "name": "OccupationsBySOC",
+      "description": "Endpoints for accessing Occupation data via SOC Codes."
+    },
+    {
+      "name": "Occupations",
+      "description": "Endpoints for accessing Occupation data."
+    },
+    {
+      "name": "Routes",
+      "description": "Endpoints for accessing ApiRouteDTO data."
+    },
+    {
+      "name": "SearchOccupations",
+      "description": "Endpoints for Searching Occupations"
+    },
+    {
+      "name": "TechnicalEducationProgression",
+      "description": "Endpoints for accessing Technical Education Progression data."
+    }
+  ]
+}
