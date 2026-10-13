@@ -1,0 +1,47 @@
+{
+  "schema": "commons.source-bank-transfer/v1",
+  "operation_id": "ECO-S1-SEASONAL-COMPLETE-20261013",
+  "repository": "woahwhattheheck/public-commons-sprint-2026",
+  "file_count": 14,
+  "source_bytes": 2883426,
+  "banks": [
+    {
+      "name": "seasonal-comparison",
+      "original_git_blob": "ab08fa5b981826c33a91e7b36c3d3188150da041",
+      "original_bytes": 2387238,
+      "original_sha256": "ca6ca978d1e15dd87e020056a4edd6ca2357d778c9d504540bffd3bf3be46ce8",
+      "gzip_bytes": 129721,
+      "gzip_sha256": "93149544fce316804cbe4a794dff742de83a66f2d728d19102c1d01baab8934b",
+      "parts": [
+        {
+          "git_blob": "b9cf96b78533d0f2b0d97a98be3b6aaa87c0419d",
+          "json_bytes": 173181,
+          "json_sha256": "31d3fc8c103ccdeb095a1c040f9fb957def80e2ed890a444bb827cde4c26ad0c",
+          "index": 0,
+          "offset": 0,
+          "bytes": 129721,
+          "sha256": "93149544fce316804cbe4a794dff742de83a66f2d728d19102c1d01baab8934b"
+        }
+      ]
+    },
+    {
+      "name": "seasonal-original-inputs",
+      "original_git_blob": "bf12c1b0b57a9a97762c5e79fe66c4fdbbbba0e6",
+      "original_bytes": 726903,
+      "original_sha256": "778b511a131b6617def93c491e4d44f654de63130600c8033c300b9d3fe73239",
+      "gzip_bytes": 51374,
+      "gzip_sha256": "db3822771f22b50bdb0f5755f9672664dc95cc0e4886cf78460cdb9d0dd1d071",
+      "parts": [
+        {
+          "git_blob": "46bf3d36d0b26f429e35905b01f145c48b701357",
+          "json_bytes": 68721,
+          "json_sha256": "99ace58d2d073c248a965ed5b6a21c9f4b0a3c3a4574373826e5110ffb261933",
+          "index": 0,
+          "offset": 0,
+          "bytes": 51374,
+          "sha256": "db3822771f22b50bdb0f5755f9672664dc95cc0e4886cf78460cdb9d0dd1d071"
+        }
+      ]
+    }
+  ]
+}
