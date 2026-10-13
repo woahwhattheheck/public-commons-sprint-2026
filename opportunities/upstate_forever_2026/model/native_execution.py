@@ -21,6 +21,15 @@ RESERVE_PENDING_NAME = RESERVE_NAME + ".allocating"
 
 
 def resource_status():
+    """Keep optional observations from replacing a model or storage failure."""
+    try:
+        return _resource_status()
+    except Exception as error:
+        return {"read_errors": [{"source": "native-resources",
+                                 "type": type(error).__name__}]}
+
+
+def _resource_status():
     """Observe this process and its visible cgroup without changing execution.
 
     Memory and cache observations belong to execution records, never scientific
