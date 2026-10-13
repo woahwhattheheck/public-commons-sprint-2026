@@ -2,13 +2,15 @@
   "schema": "upstate.operator-extension/v1",
   "id": "source-reports",
   "title": "Retained source reports",
-  "version": "2.5.0",
+  "version": "2.6.0",
   "order": 56,
   "assets": [
     "source_reports.mjs",
     "source_reports.css",
     "source_report_editions.mjs",
-    "scientific_source_reader.mjs"
+    "scientific_source_reader.mjs",
+    "published_original_reports.mjs",
+    "published_studies.css"
   ],
   "backend": {
     "module": "source_reports",
@@ -176,6 +178,19 @@
           "operation",
           "payload"
         ]
+      },
+      {
+        "methods": [
+          "POST"
+        ],
+        "path": "/api/source-reports/scientific-source-preview",
+        "operation": "scientific-source-preview",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
       }
     ],
     "file_routes": [
@@ -219,6 +234,15 @@
           "route.collection_id",
           "route.source_key",
           "route.member"
+        ]
+      },
+      {
+        "path": "/api/file/scientific-source-preview/{workspace_key}/{ticket_id}",
+        "response": "ticket_policy_pair",
+        "handler": "scientific_source_preview_file",
+        "args": [
+          "route.workspace_key",
+          "route.ticket_id"
         ]
       }
     ],

@@ -432,3 +432,22 @@ If producing video, record the actual working application and use available natu
 Pass this complete brief into every current child, provider and cloud work order and handoff. Include its durable path and version `2026-10-13.3` with the next result. Relay it at the actual coordination surface and onward to participating workers; fast feeds can bury an update. Acknowledgment alone is not delivery.
 
 Preserve active compute and existing implementation ownership. Do not force worker restarts, drop an active run or create a new controller. Keep lab attribution, source/copyright, incident and contact controls, personal-meeting approval, no private GitHub/Actions, no llama.cpp and focused internal validation. No new approval gate or broad test sweep is authorized.
+
+
+## Original Scientific source documents and companion links
+
+In the existing Sources report composer, choose **Read original scientific study**, then choose a retained HTML document. The document opens in the existing reader beside its unchanged recipe tables and source identity. Its scripts remain isolated in an opaque sandbox; they do not receive the application's origin or session access.
+
+The reader checks the exact original source collection, source ID, recipe body SHA and every retained member byte count and hash. Original local images are embedded from those verified members. A bound parent relay opens only the original inventoried companion selected inside that document. CSV/JSON/data links download the unchanged original file; nested HTML opens with its original relative query and fragment and offers Previous report. Fragment-only links remain inside the original document. External method links retain their original destinations. No report source, observation, model result or native study registration is created or changed.
+
+Switching documents retains each already-opened HTML frame and its own filters. Hidden frames cannot request actions. An interrupted pending open is cancelled and explicitly reloaded when selected again. The reader preserves its original text query, table pages and ordered report selection; **Add this study** and **Prepare report from this study only** keep their original explicit append/replace behavior. SVG figures retain the original isolated display and exact raw download.
+
+The viewer waits for a ready message from the actual verified opaque document. A frame load event alone is not success; a failed/no-ready open offers Retry. Return to report selection, a newer source, a Workspace change and detachment invalidate pending actions. Original HTML, all original member downloads and complete scientific source/archive controls remain available in the existing reader.
+
+### Existing receiving and actual viewing
+
+Compose the complete current source at the same existing Scientific Reports application boundary; preserve current4355 saved-report/briefing handlers and unrelated advancing source. The additive `integration/component_fragments/scientific-source-preview.json` declares the shared relay, verified-image helper, required browser module/styles, current reader/provider and source extension. It adds no dependency edge to Published studies.
+
+Use the already-populated original Workspace and exact source edition. At desktop and390px, open Read original scientific study, operate its original table search/pages, choose HTML and inspect the actual pixels, follow original CSV/JSON/nested HTML/image links, print, and switch away/back to confirm the document's own filters remain. Exercise append/replace without disturbing ordered source selection. Open the existing Three/Twenty station-network report and its observation_context comparison where retained: normalize each relative link against its actual inventoried member path, including the retained ../../ and ../../../ companions. Download/extract the existing complete source package and reopen its contained original report as the recipient would. Inspect failed-open Retry and a Workspace switch while loading.
+
+Keep the same3363 receiving/browser course and actual native/model operation identities. Return actual screenshots/images for the producing worker's own viewing. Source/controller review does not replace this actual outgoing-product use. The full current owner direction above, all-attachments inspection requirement and14:00UTC cutoff remain in force.

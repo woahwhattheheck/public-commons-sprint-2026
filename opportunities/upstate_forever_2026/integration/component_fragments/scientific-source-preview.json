@@ -1,0 +1,22 @@
+{
+  "schema": "upstate.application-component-fragment/v1",
+  "id": "scientific-source-preview",
+  "source_reference": "Existing Scientific source reader verified companion continuation, original source binding and opaque scripts",
+  "extend_components": {
+    "scientific-report-review": {
+      "paths": [
+        "operator/scientific_source_reader.py",
+        "operator/web/scientific_source_reader.mjs",
+        "operator/published_report_preview.py",
+        "operator/delivery_preview.py",
+        "operator/web/published_original_reports.mjs",
+        "operator/web/published_studies.css",
+        "operator/source_reports.py",
+        "operator/extensions/source-reports.json",
+        "operator/team_route_policy.json",
+        "operator/SOURCE_REPORTS.md"
+      ]
+    }
+  },
+  "required_components": []
+}
