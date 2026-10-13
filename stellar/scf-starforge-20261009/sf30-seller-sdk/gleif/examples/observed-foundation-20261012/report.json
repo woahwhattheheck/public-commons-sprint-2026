@@ -1,0 +1,808 @@
+{
+  "schema": "stellar-forge.gleif-research.v1.report",
+  "id": "observed-foundation-source-20261012",
+  "title": "GLEIF foundation and Singapore branch — source research",
+  "createdAt": "2026-10-12T21:10:44.314Z",
+  "workspaceId": null,
+  "source": {
+    "publisher": "Global Legal Entity Identifier Foundation",
+    "name": "GLEIF LEI reference data",
+    "api": "https://www.gleif.org/en/lei-data/gleif-api/",
+    "documentation": "https://documenter.getpostman.com/view/7679680/SVYrrxuU",
+    "dictionary": "https://www.gleif.org/en/lei-data/access-and-use-lei-data/gleif-data-dictionary",
+    "terms": "https://www.gleif.org/en/meta/lei-data-terms-of-use"
+  },
+  "captures": [
+    {
+      "schema": "stellar-forge.gleif-research.v1.capture",
+      "id": "foundation-name-20261012",
+      "plan": {
+        "kind": "name",
+        "query": "Global Legal Entity Identifier Foundation",
+        "pageSize": 100
+      },
+      "createdAt": "2026-10-12T20:45:52Z",
+      "completedAt": "2026-10-12T20:45:58Z",
+      "state": "COMPLETE",
+      "next": null,
+      "notBefore": null,
+      "pages": [
+        {
+          "url": "https://api.gleif.org/api/v1/lei-records?filter%5Bentity.legalName%5D=Global%20Legal%20Entity%20Identifier%20Foundation&page%5Bsize%5D=100&page%5Bnumber%5D=1",
+          "startedAt": "2026-10-12T20:45:52Z",
+          "observedAt": "2026-10-12T20:45:58Z",
+          "status": null,
+          "headers": null,
+          "acquisition": {
+            "kind": "SOURCE_URL_ATTACHMENT",
+            "sourceUrl": "https://api.gleif.org/api/v1/lei-records?filter%5Bentity.legalName%5D=Global%20Legal%20Entity%20Identifier%20Foundation&page%5Bsize%5D=100&page%5Bnumber%5D=1",
+            "method": "Notion external HTTPS source_url attachment import; complete native attachment download",
+            "sha256": "6c92c2bf372969992d1bea2188f476ace62d778d3c07b63a3940840a02348e36",
+            "receipt": {
+              "file_upload_id": "3f7dd772-3100-8191-adeb-00b2cf9604f7",
+              "filename": "GLEIF_Global_Legal_Entity_Identifier_Foundation_name_query_page1_20261012.json",
+              "content_type": "application/json; charset=utf-8",
+              "content_length": 6150,
+              "status": "uploaded",
+              "markdown_source": "file-upload://3f7dd772-3100-8191-adeb-00b2cf9604f7",
+              "suggested_markdown": "<file src=\"file-upload://3f7dd772-3100-8191-adeb-00b2cf9604f7\"></file>"
+            },
+            "download": {
+              "file_upload_id": "3f7dd772-3100-8191-adeb-00b2cf9604f7",
+              "filename": "GLEIF_Global_Legal_Entity_Identifier_Foundation_name_query_page1_20261012.json",
+              "content_type": "application/json; charset=utf-8",
+              "content_length": 6150
+            }
+          },
+          "sha256": "6c92c2bf372969992d1bea2188f476ace62d778d3c07b63a3940840a02348e36",
+          "bytes": 6150,
+          "records": 2
+        }
+      ],
+      "attempts": [
+        {
+          "url": "https://api.gleif.org/api/v1/lei-records?filter%5Bentity.legalName%5D=Global%20Legal%20Entity%20Identifier%20Foundation&page%5Bsize%5D=100&page%5Bnumber%5D=1",
+          "startedAt": "2026-10-12T20:45:52Z",
+          "observedAt": "2026-10-12T20:45:58Z",
+          "status": null,
+          "headers": null,
+          "acquisition": {
+            "kind": "SOURCE_URL_ATTACHMENT",
+            "sourceUrl": "https://api.gleif.org/api/v1/lei-records?filter%5Bentity.legalName%5D=Global%20Legal%20Entity%20Identifier%20Foundation&page%5Bsize%5D=100&page%5Bnumber%5D=1",
+            "method": "Notion external HTTPS source_url attachment import; complete native attachment download",
+            "sha256": "6c92c2bf372969992d1bea2188f476ace62d778d3c07b63a3940840a02348e36",
+            "receipt": {
+              "file_upload_id": "3f7dd772-3100-8191-adeb-00b2cf9604f7",
+              "filename": "GLEIF_Global_Legal_Entity_Identifier_Foundation_name_query_page1_20261012.json",
+              "content_type": "application/json; charset=utf-8",
+              "content_length": 6150,
+              "status": "uploaded",
+              "markdown_source": "file-upload://3f7dd772-3100-8191-adeb-00b2cf9604f7",
+              "suggested_markdown": "<file src=\"file-upload://3f7dd772-3100-8191-adeb-00b2cf9604f7\"></file>"
+            },
+            "download": {
+              "file_upload_id": "3f7dd772-3100-8191-adeb-00b2cf9604f7",
+              "filename": "GLEIF_Global_Legal_Entity_Identifier_Foundation_name_query_page1_20261012.json",
+              "content_type": "application/json; charset=utf-8",
+              "content_length": 6150
+            }
+          },
+          "sha256": "6c92c2bf372969992d1bea2188f476ace62d778d3c07b63a3940840a02348e36",
+          "bytes": 6150,
+          "records": 2
+        }
+      ]
+    }
+  ],
+  "records": [
+    {
+      "row": {
+        "lei": "506700GE1G29325QX363",
+        "legalName": "Global Legal Entity Identifier Foundation",
+        "legalNameLanguage": "de-CH",
+        "otherNames": "[{\"name\":\"Global Legal Entity Identifier Stiftung\",\"language\":\"de-CH\",\"type\":\"ALTERNATIVE_LANGUAGE_LEGAL_NAME\"}]",
+        "transliteratedOtherNames": "[]",
+        "entityStatus": "ACTIVE",
+        "category": "GENERAL",
+        "subCategory": "",
+        "legalJurisdiction": "CH",
+        "legalFormId": "2JZ4",
+        "legalFormOther": "",
+        "registrationAuthorityId": "RA000548",
+        "registrationAuthorityEntityId": "CHE200595965",
+        "legalAddress": "{\"language\":\"de-CH\",\"addressLines\":[\"St. Alban-Vorstadt 12\"],\"addressNumber\":null,\"addressNumberWithinBuilding\":null,\"mailRouting\":null,\"city\":\"Basel\",\"region\":\"CH-BS\",\"country\":\"CH\",\"postalCode\":\"4052\"}",
+        "headquartersAddress": "{\"language\":\"de-CH\",\"addressLines\":[\"St. Alban-Vorstadt 12\"],\"addressNumber\":null,\"addressNumberWithinBuilding\":null,\"mailRouting\":null,\"city\":\"Basel\",\"region\":\"CH-BS\",\"country\":\"CH\",\"postalCode\":\"4052\"}",
+        "creationDate": "2014-07-31T00:00:00Z",
+        "registrationStatus": "ISSUED",
+        "initialRegistrationDate": "2018-03-16T00:00:00Z",
+        "lastUpdateDate": "2026-04-23T05:00:06Z",
+        "nextRenewalDate": "2027-03-15T00:00:00Z",
+        "managingLou": "506700LOLO7M6V0E4247",
+        "validationSources": "FULLY_CORROBORATED",
+        "bic": "[]",
+        "successorEntities": "[]",
+        "entityEvents": "[{\"groupType\":\"STANDALONE\",\"events\":[{\"validationDocuments\":\"OTHER_OFFICIAL_DOCUMENTS\",\"effectiveDate\":\"2024-01-30T00:00:00Z\",\"recordedDate\":\"2024-01-30T00:00:00Z\",\"type\":\"CHANGE_HQ_ADDRESS\",\"status\":\"COMPLETED\"}]},{\"groupType\":\"STANDALONE\",\"events\":[{\"validationDocuments\":\"SUPPORTING_DOCUMENTS\",\"effectiveDate\":\"2023-12-18T00:00:00Z\",\"recordedDate\":\"2023-12-18T00:00:00Z\",\"type\":\"CHANGE_LEGAL_ADDRESS\",\"status\":\"COMPLETED\"}]}]",
+        "relationshipReferences": "{\"managing-lou\":{\"links\":{\"related\":\"https://api.gleif.org/api/v1/lei-records/506700GE1G29325QX363/managing-lou\"}},\"lei-issuer\":{\"links\":{\"related\":\"https://api.gleif.org/api/v1/lei-records/506700GE1G29325QX363/lei-issuer\"}},\"field-modifications\":{\"links\":{\"related\":\"https://api.gleif.org/api/v1/lei-records/506700GE1G29325QX363/field-modifications\"}},\"direct-parent\":{\"links\":{\"reporting-exception\":\"https://api.gleif.org/api/v1/lei-records/506700GE1G29325QX363/direct-parent-reporting-exception\"}},\"ultimate-parent\":{\"links\":{\"reporting-exception\":\"https://api.gleif.org/api/v1/lei-records/506700GE1G29325QX363/ultimate-parent-reporting-exception\"}},\"branches\":{\"links\":{\"relationship-records\":\"https://api.gleif.org/api/v1/lei-records/506700GE1G29325QX363/branch-relationships\",\"related\":\"https://api.gleif.org/api/v1/lei-records/506700GE1G29325QX363/branches\"}}}",
+        "captureId": "foundation-name-20261012",
+        "sourcePage": "1",
+        "sourceObservedAt": "2026-10-12T20:45:58Z"
+      },
+      "resource": {
+        "type": "lei-records",
+        "id": "506700GE1G29325QX363",
+        "attributes": {
+          "lei": "506700GE1G29325QX363",
+          "entity": {
+            "legalName": {
+              "name": "Global Legal Entity Identifier Foundation",
+              "language": "de-CH"
+            },
+            "otherNames": [
+              {
+                "name": "Global Legal Entity Identifier Stiftung",
+                "language": "de-CH",
+                "type": "ALTERNATIVE_LANGUAGE_LEGAL_NAME"
+              }
+            ],
+            "transliteratedOtherNames": [],
+            "legalAddress": {
+              "language": "de-CH",
+              "addressLines": [
+                "St. Alban-Vorstadt 12"
+              ],
+              "addressNumber": null,
+              "addressNumberWithinBuilding": null,
+              "mailRouting": null,
+              "city": "Basel",
+              "region": "CH-BS",
+              "country": "CH",
+              "postalCode": "4052"
+            },
+            "headquartersAddress": {
+              "language": "de-CH",
+              "addressLines": [
+                "St. Alban-Vorstadt 12"
+              ],
+              "addressNumber": null,
+              "addressNumberWithinBuilding": null,
+              "mailRouting": null,
+              "city": "Basel",
+              "region": "CH-BS",
+              "country": "CH",
+              "postalCode": "4052"
+            },
+            "registeredAt": {
+              "id": "RA000548",
+              "other": null
+            },
+            "registeredAs": "CHE200595965",
+            "jurisdiction": "CH",
+            "category": "GENERAL",
+            "legalForm": {
+              "id": "2JZ4",
+              "other": null
+            },
+            "associatedEntity": {
+              "lei": null,
+              "name": null
+            },
+            "status": "ACTIVE",
+            "expiration": {
+              "date": null,
+              "reason": null
+            },
+            "successorEntity": {
+              "lei": null,
+              "name": null
+            },
+            "successorEntities": [],
+            "creationDate": "2014-07-31T00:00:00Z",
+            "subCategory": null,
+            "otherAddresses": [],
+            "eventGroups": [
+              {
+                "groupType": "STANDALONE",
+                "events": [
+                  {
+                    "validationDocuments": "OTHER_OFFICIAL_DOCUMENTS",
+                    "effectiveDate": "2024-01-30T00:00:00Z",
+                    "recordedDate": "2024-01-30T00:00:00Z",
+                    "type": "CHANGE_HQ_ADDRESS",
+                    "status": "COMPLETED"
+                  }
+                ]
+              },
+              {
+                "groupType": "STANDALONE",
+                "events": [
+                  {
+                    "validationDocuments": "SUPPORTING_DOCUMENTS",
+                    "effectiveDate": "2023-12-18T00:00:00Z",
+                    "recordedDate": "2023-12-18T00:00:00Z",
+                    "type": "CHANGE_LEGAL_ADDRESS",
+                    "status": "COMPLETED"
+                  }
+                ]
+              }
+            ]
+          },
+          "registration": {
+            "initialRegistrationDate": "2018-03-16T00:00:00Z",
+            "lastUpdateDate": "2026-04-23T05:00:06Z",
+            "status": "ISSUED",
+            "nextRenewalDate": "2027-03-15T00:00:00Z",
+            "managingLou": "506700LOLO7M6V0E4247",
+            "corroborationLevel": "FULLY_CORROBORATED",
+            "validatedAt": {
+              "id": "RA000548",
+              "other": null
+            },
+            "validatedAs": "CHE200595965",
+            "otherValidationAuthorities": []
+          },
+          "bic": null,
+          "mic": null,
+          "ocid": null,
+          "qcc": "QCHKFAN6X0",
+          "gem": null,
+          "spglobal": [
+            "537250307"
+          ],
+          "conformityFlag": "CONFORMING"
+        },
+        "relationships": {
+          "managing-lou": {
+            "links": {
+              "related": "https://api.gleif.org/api/v1/lei-records/506700GE1G29325QX363/managing-lou"
+            }
+          },
+          "lei-issuer": {
+            "links": {
+              "related": "https://api.gleif.org/api/v1/lei-records/506700GE1G29325QX363/lei-issuer"
+            }
+          },
+          "field-modifications": {
+            "links": {
+              "related": "https://api.gleif.org/api/v1/lei-records/506700GE1G29325QX363/field-modifications"
+            }
+          },
+          "direct-parent": {
+            "links": {
+              "reporting-exception": "https://api.gleif.org/api/v1/lei-records/506700GE1G29325QX363/direct-parent-reporting-exception"
+            }
+          },
+          "ultimate-parent": {
+            "links": {
+              "reporting-exception": "https://api.gleif.org/api/v1/lei-records/506700GE1G29325QX363/ultimate-parent-reporting-exception"
+            }
+          },
+          "branches": {
+            "links": {
+              "relationship-records": "https://api.gleif.org/api/v1/lei-records/506700GE1G29325QX363/branch-relationships",
+              "related": "https://api.gleif.org/api/v1/lei-records/506700GE1G29325QX363/branches"
+            }
+          }
+        },
+        "links": {
+          "self": "https://api.gleif.org/api/v1/lei-records/506700GE1G29325QX363"
+        }
+      },
+      "page": 1
+    },
+    {
+      "row": {
+        "lei": "875500ELOZEL05BVXV37",
+        "legalName": "Global Legal Entity Identifier Foundation Singapore Branch",
+        "legalNameLanguage": "de",
+        "otherNames": "[]",
+        "transliteratedOtherNames": "[]",
+        "entityStatus": "ACTIVE",
+        "category": "BRANCH",
+        "subCategory": "",
+        "legalJurisdiction": "CH",
+        "legalFormId": "2JZ4",
+        "legalFormOther": "",
+        "registrationAuthorityId": "RA000523",
+        "registrationAuthorityEntityId": "T22FC0077A",
+        "legalAddress": "{\"language\":\"de\",\"addressLines\":[\"9 RAFFLES PLACE #26-01\",\"REPUBLIC PLAZA\"],\"addressNumber\":null,\"addressNumberWithinBuilding\":null,\"mailRouting\":null,\"city\":\"Singapore\",\"region\":\"SG-01\",\"country\":\"SG\",\"postalCode\":\"048619\"}",
+        "headquartersAddress": "{\"language\":\"de\",\"addressLines\":[\"St. Alban-Vorstadt 12\"],\"addressNumber\":null,\"addressNumberWithinBuilding\":null,\"mailRouting\":null,\"city\":\"Basel\",\"region\":\"CH-BS\",\"country\":\"CH\",\"postalCode\":\"4052\"}",
+        "creationDate": "2022-11-24T00:00:00Z",
+        "registrationStatus": "ISSUED",
+        "initialRegistrationDate": "2022-12-12T12:30:42Z",
+        "lastUpdateDate": "2026-04-19T07:56:06Z",
+        "nextRenewalDate": "2026-12-15T13:20:10Z",
+        "managingLou": "52990034RLKT0WSOAM90",
+        "validationSources": "FULLY_CORROBORATED",
+        "bic": "[]",
+        "successorEntities": "[]",
+        "entityEvents": "[{\"groupType\":\"STANDALONE\",\"events\":[{\"validationDocuments\":\"OTHER_OFFICIAL_DOCUMENTS\",\"effectiveDate\":\"2023-11-13T16:00:00Z\",\"recordedDate\":\"2023-11-21T07:37:11Z\",\"type\":\"CHANGE_LEGAL_ADDRESS\",\"status\":\"COMPLETED\"}]}]",
+        "relationshipReferences": "{\"managing-lou\":{\"links\":{\"related\":\"https://api.gleif.org/api/v1/lei-records/875500ELOZEL05BVXV37/managing-lou\"}},\"lei-issuer\":{\"links\":{\"related\":\"https://api.gleif.org/api/v1/lei-records/875500ELOZEL05BVXV37/lei-issuer\"}},\"field-modifications\":{\"links\":{\"related\":\"https://api.gleif.org/api/v1/lei-records/875500ELOZEL05BVXV37/field-modifications\"}},\"head-office\":{\"links\":{\"lei-record\":\"https://api.gleif.org/api/v1/lei-records/875500ELOZEL05BVXV37/head-office\",\"relationship-record\":\"https://api.gleif.org/api/v1/lei-records/875500ELOZEL05BVXV37/head-office-relationship\"}}}",
+        "captureId": "foundation-name-20261012",
+        "sourcePage": "1",
+        "sourceObservedAt": "2026-10-12T20:45:58Z"
+      },
+      "resource": {
+        "type": "lei-records",
+        "id": "875500ELOZEL05BVXV37",
+        "attributes": {
+          "lei": "875500ELOZEL05BVXV37",
+          "entity": {
+            "legalName": {
+              "name": "Global Legal Entity Identifier Foundation Singapore Branch",
+              "language": "de"
+            },
+            "otherNames": [],
+            "transliteratedOtherNames": [],
+            "legalAddress": {
+              "language": "de",
+              "addressLines": [
+                "9 RAFFLES PLACE #26-01",
+                "REPUBLIC PLAZA"
+              ],
+              "addressNumber": null,
+              "addressNumberWithinBuilding": null,
+              "mailRouting": null,
+              "city": "Singapore",
+              "region": "SG-01",
+              "country": "SG",
+              "postalCode": "048619"
+            },
+            "headquartersAddress": {
+              "language": "de",
+              "addressLines": [
+                "St. Alban-Vorstadt 12"
+              ],
+              "addressNumber": null,
+              "addressNumberWithinBuilding": null,
+              "mailRouting": null,
+              "city": "Basel",
+              "region": "CH-BS",
+              "country": "CH",
+              "postalCode": "4052"
+            },
+            "registeredAt": {
+              "id": "RA000523",
+              "other": null
+            },
+            "registeredAs": "T22FC0077A",
+            "jurisdiction": "CH",
+            "category": "BRANCH",
+            "legalForm": {
+              "id": "2JZ4",
+              "other": null
+            },
+            "associatedEntity": {
+              "lei": null,
+              "name": null
+            },
+            "status": "ACTIVE",
+            "expiration": {
+              "date": null,
+              "reason": null
+            },
+            "successorEntity": {
+              "lei": null,
+              "name": null
+            },
+            "successorEntities": [],
+            "creationDate": "2022-11-24T00:00:00Z",
+            "subCategory": null,
+            "otherAddresses": [],
+            "eventGroups": [
+              {
+                "groupType": "STANDALONE",
+                "events": [
+                  {
+                    "validationDocuments": "OTHER_OFFICIAL_DOCUMENTS",
+                    "effectiveDate": "2023-11-13T16:00:00Z",
+                    "recordedDate": "2023-11-21T07:37:11Z",
+                    "type": "CHANGE_LEGAL_ADDRESS",
+                    "status": "COMPLETED"
+                  }
+                ]
+              }
+            ]
+          },
+          "registration": {
+            "initialRegistrationDate": "2022-12-12T12:30:42Z",
+            "lastUpdateDate": "2026-04-19T07:56:06Z",
+            "status": "ISSUED",
+            "nextRenewalDate": "2026-12-15T13:20:10Z",
+            "managingLou": "52990034RLKT0WSOAM90",
+            "corroborationLevel": "FULLY_CORROBORATED",
+            "validatedAt": {
+              "id": "RA000523",
+              "other": null
+            },
+            "validatedAs": "T22FC0077A",
+            "otherValidationAuthorities": []
+          },
+          "bic": null,
+          "mic": null,
+          "ocid": null,
+          "qcc": "QSG9AGXEDT",
+          "gem": null,
+          "spglobal": [
+            "1819031232"
+          ],
+          "conformityFlag": "CONFORMING"
+        },
+        "relationships": {
+          "managing-lou": {
+            "links": {
+              "related": "https://api.gleif.org/api/v1/lei-records/875500ELOZEL05BVXV37/managing-lou"
+            }
+          },
+          "lei-issuer": {
+            "links": {
+              "related": "https://api.gleif.org/api/v1/lei-records/875500ELOZEL05BVXV37/lei-issuer"
+            }
+          },
+          "field-modifications": {
+            "links": {
+              "related": "https://api.gleif.org/api/v1/lei-records/875500ELOZEL05BVXV37/field-modifications"
+            }
+          },
+          "head-office": {
+            "links": {
+              "lei-record": "https://api.gleif.org/api/v1/lei-records/875500ELOZEL05BVXV37/head-office",
+              "relationship-record": "https://api.gleif.org/api/v1/lei-records/875500ELOZEL05BVXV37/head-office-relationship"
+            }
+          }
+        },
+        "links": {
+          "self": "https://api.gleif.org/api/v1/lei-records/875500ELOZEL05BVXV37"
+        }
+      },
+      "page": 1
+    }
+  ],
+  "reviews": [
+    {
+      "id": "lei-506700GE1G29325QX363",
+      "title": "Global Legal Entity Identifier Foundation",
+      "captureId": "foundation-name-20261012",
+      "lei": "506700GE1G29325QX363",
+      "decision": "include",
+      "reviewer": "Stellar Forge company source research",
+      "rationale": "Retain the exact foundation entity as the reference source for company identity and source comparison.",
+      "useCase": "Company reference-data integration and receiving",
+      "nextWork": "Receive this original source in the installed project and review the preserved legal and address fields with the operator.",
+      "version": 1,
+      "resourceSha256": "19bd914aaf4f5a7127321e77b3c7e881ba0fa96a2713b2c09ca364ea7f1c3920",
+      "originalResource": {
+        "type": "lei-records",
+        "id": "506700GE1G29325QX363",
+        "attributes": {
+          "lei": "506700GE1G29325QX363",
+          "entity": {
+            "legalName": {
+              "name": "Global Legal Entity Identifier Foundation",
+              "language": "de-CH"
+            },
+            "otherNames": [
+              {
+                "name": "Global Legal Entity Identifier Stiftung",
+                "language": "de-CH",
+                "type": "ALTERNATIVE_LANGUAGE_LEGAL_NAME"
+              }
+            ],
+            "transliteratedOtherNames": [],
+            "legalAddress": {
+              "language": "de-CH",
+              "addressLines": [
+                "St. Alban-Vorstadt 12"
+              ],
+              "addressNumber": null,
+              "addressNumberWithinBuilding": null,
+              "mailRouting": null,
+              "city": "Basel",
+              "region": "CH-BS",
+              "country": "CH",
+              "postalCode": "4052"
+            },
+            "headquartersAddress": {
+              "language": "de-CH",
+              "addressLines": [
+                "St. Alban-Vorstadt 12"
+              ],
+              "addressNumber": null,
+              "addressNumberWithinBuilding": null,
+              "mailRouting": null,
+              "city": "Basel",
+              "region": "CH-BS",
+              "country": "CH",
+              "postalCode": "4052"
+            },
+            "registeredAt": {
+              "id": "RA000548",
+              "other": null
+            },
+            "registeredAs": "CHE200595965",
+            "jurisdiction": "CH",
+            "category": "GENERAL",
+            "legalForm": {
+              "id": "2JZ4",
+              "other": null
+            },
+            "associatedEntity": {
+              "lei": null,
+              "name": null
+            },
+            "status": "ACTIVE",
+            "expiration": {
+              "date": null,
+              "reason": null
+            },
+            "successorEntity": {
+              "lei": null,
+              "name": null
+            },
+            "successorEntities": [],
+            "creationDate": "2014-07-31T00:00:00Z",
+            "subCategory": null,
+            "otherAddresses": [],
+            "eventGroups": [
+              {
+                "groupType": "STANDALONE",
+                "events": [
+                  {
+                    "validationDocuments": "OTHER_OFFICIAL_DOCUMENTS",
+                    "effectiveDate": "2024-01-30T00:00:00Z",
+                    "recordedDate": "2024-01-30T00:00:00Z",
+                    "type": "CHANGE_HQ_ADDRESS",
+                    "status": "COMPLETED"
+                  }
+                ]
+              },
+              {
+                "groupType": "STANDALONE",
+                "events": [
+                  {
+                    "validationDocuments": "SUPPORTING_DOCUMENTS",
+                    "effectiveDate": "2023-12-18T00:00:00Z",
+                    "recordedDate": "2023-12-18T00:00:00Z",
+                    "type": "CHANGE_LEGAL_ADDRESS",
+                    "status": "COMPLETED"
+                  }
+                ]
+              }
+            ]
+          },
+          "registration": {
+            "initialRegistrationDate": "2018-03-16T00:00:00Z",
+            "lastUpdateDate": "2026-04-23T05:00:06Z",
+            "status": "ISSUED",
+            "nextRenewalDate": "2027-03-15T00:00:00Z",
+            "managingLou": "506700LOLO7M6V0E4247",
+            "corroborationLevel": "FULLY_CORROBORATED",
+            "validatedAt": {
+              "id": "RA000548",
+              "other": null
+            },
+            "validatedAs": "CHE200595965",
+            "otherValidationAuthorities": []
+          },
+          "bic": null,
+          "mic": null,
+          "ocid": null,
+          "qcc": "QCHKFAN6X0",
+          "gem": null,
+          "spglobal": [
+            "537250307"
+          ],
+          "conformityFlag": "CONFORMING"
+        },
+        "relationships": {
+          "managing-lou": {
+            "links": {
+              "related": "https://api.gleif.org/api/v1/lei-records/506700GE1G29325QX363/managing-lou"
+            }
+          },
+          "lei-issuer": {
+            "links": {
+              "related": "https://api.gleif.org/api/v1/lei-records/506700GE1G29325QX363/lei-issuer"
+            }
+          },
+          "field-modifications": {
+            "links": {
+              "related": "https://api.gleif.org/api/v1/lei-records/506700GE1G29325QX363/field-modifications"
+            }
+          },
+          "direct-parent": {
+            "links": {
+              "reporting-exception": "https://api.gleif.org/api/v1/lei-records/506700GE1G29325QX363/direct-parent-reporting-exception"
+            }
+          },
+          "ultimate-parent": {
+            "links": {
+              "reporting-exception": "https://api.gleif.org/api/v1/lei-records/506700GE1G29325QX363/ultimate-parent-reporting-exception"
+            }
+          },
+          "branches": {
+            "links": {
+              "relationship-records": "https://api.gleif.org/api/v1/lei-records/506700GE1G29325QX363/branch-relationships",
+              "related": "https://api.gleif.org/api/v1/lei-records/506700GE1G29325QX363/branches"
+            }
+          }
+        },
+        "links": {
+          "self": "https://api.gleif.org/api/v1/lei-records/506700GE1G29325QX363"
+        }
+      },
+      "createdAt": "2026-10-12T21:10:44.314Z"
+    },
+    {
+      "id": "lei-875500ELOZEL05BVXV37",
+      "title": "Global Legal Entity Identifier Foundation Singapore Branch",
+      "captureId": "foundation-name-20261012",
+      "lei": "875500ELOZEL05BVXV37",
+      "decision": "include",
+      "reviewer": "Stellar Forge company source research",
+      "rationale": "Retain the branch separately. Its entity jurisdiction is CH, legal address country SG and headquarters country CH.",
+      "useCase": "Company reference-data integration and receiving",
+      "nextWork": "Receive this original source in the installed project and review the preserved legal and address fields with the operator.",
+      "version": 1,
+      "resourceSha256": "c8b8f20db08dd03594fe0b7634ea25f878b0e4e6be3a3d68883f4019cdc1cdd5",
+      "originalResource": {
+        "type": "lei-records",
+        "id": "875500ELOZEL05BVXV37",
+        "attributes": {
+          "lei": "875500ELOZEL05BVXV37",
+          "entity": {
+            "legalName": {
+              "name": "Global Legal Entity Identifier Foundation Singapore Branch",
+              "language": "de"
+            },
+            "otherNames": [],
+            "transliteratedOtherNames": [],
+            "legalAddress": {
+              "language": "de",
+              "addressLines": [
+                "9 RAFFLES PLACE #26-01",
+                "REPUBLIC PLAZA"
+              ],
+              "addressNumber": null,
+              "addressNumberWithinBuilding": null,
+              "mailRouting": null,
+              "city": "Singapore",
+              "region": "SG-01",
+              "country": "SG",
+              "postalCode": "048619"
+            },
+            "headquartersAddress": {
+              "language": "de",
+              "addressLines": [
+                "St. Alban-Vorstadt 12"
+              ],
+              "addressNumber": null,
+              "addressNumberWithinBuilding": null,
+              "mailRouting": null,
+              "city": "Basel",
+              "region": "CH-BS",
+              "country": "CH",
+              "postalCode": "4052"
+            },
+            "registeredAt": {
+              "id": "RA000523",
+              "other": null
+            },
+            "registeredAs": "T22FC0077A",
+            "jurisdiction": "CH",
+            "category": "BRANCH",
+            "legalForm": {
+              "id": "2JZ4",
+              "other": null
+            },
+            "associatedEntity": {
+              "lei": null,
+              "name": null
+            },
+            "status": "ACTIVE",
+            "expiration": {
+              "date": null,
+              "reason": null
+            },
+            "successorEntity": {
+              "lei": null,
+              "name": null
+            },
+            "successorEntities": [],
+            "creationDate": "2022-11-24T00:00:00Z",
+            "subCategory": null,
+            "otherAddresses": [],
+            "eventGroups": [
+              {
+                "groupType": "STANDALONE",
+                "events": [
+                  {
+                    "validationDocuments": "OTHER_OFFICIAL_DOCUMENTS",
+                    "effectiveDate": "2023-11-13T16:00:00Z",
+                    "recordedDate": "2023-11-21T07:37:11Z",
+                    "type": "CHANGE_LEGAL_ADDRESS",
+                    "status": "COMPLETED"
+                  }
+                ]
+              }
+            ]
+          },
+          "registration": {
+            "initialRegistrationDate": "2022-12-12T12:30:42Z",
+            "lastUpdateDate": "2026-04-19T07:56:06Z",
+            "status": "ISSUED",
+            "nextRenewalDate": "2026-12-15T13:20:10Z",
+            "managingLou": "52990034RLKT0WSOAM90",
+            "corroborationLevel": "FULLY_CORROBORATED",
+            "validatedAt": {
+              "id": "RA000523",
+              "other": null
+            },
+            "validatedAs": "T22FC0077A",
+            "otherValidationAuthorities": []
+          },
+          "bic": null,
+          "mic": null,
+          "ocid": null,
+          "qcc": "QSG9AGXEDT",
+          "gem": null,
+          "spglobal": [
+            "1819031232"
+          ],
+          "conformityFlag": "CONFORMING"
+        },
+        "relationships": {
+          "managing-lou": {
+            "links": {
+              "related": "https://api.gleif.org/api/v1/lei-records/875500ELOZEL05BVXV37/managing-lou"
+            }
+          },
+          "lei-issuer": {
+            "links": {
+              "related": "https://api.gleif.org/api/v1/lei-records/875500ELOZEL05BVXV37/lei-issuer"
+            }
+          },
+          "field-modifications": {
+            "links": {
+              "related": "https://api.gleif.org/api/v1/lei-records/875500ELOZEL05BVXV37/field-modifications"
+            }
+          },
+          "head-office": {
+            "links": {
+              "lei-record": "https://api.gleif.org/api/v1/lei-records/875500ELOZEL05BVXV37/head-office",
+              "relationship-record": "https://api.gleif.org/api/v1/lei-records/875500ELOZEL05BVXV37/head-office-relationship"
+            }
+          }
+        },
+        "links": {
+          "self": "https://api.gleif.org/api/v1/lei-records/875500ELOZEL05BVXV37"
+        }
+      },
+      "createdAt": "2026-10-12T21:10:44.314Z"
+    }
+  ],
+  "selection": "all",
+  "comparison": null,
+  "creation": {
+    "method": "Original source rendered through the installed shared company-report model",
+    "sourceEdition": "2026-10-12T08:00:00Z",
+    "sourceReceipt": "Notion source URL attachment",
+    "sourceFiles": [
+      {
+        "file": "GLEIF_506700GE1G29325QX363_20261012.json",
+        "bytes": 3194,
+        "sha256": "e899f2cc0c931eeccf2b5eddbcfb73f0bba5e89b7a0907b2e14c017b2c1ecfef",
+        "url": "https://api.gleif.org/api/v1/lei-records/506700GE1G29325QX363",
+        "observedFrom": "2026-10-12 20:45:40 UTC",
+        "observedThrough": "2026-10-12 20:45:48 UTC"
+      },
+      {
+        "file": "GLEIF_Global_Legal_Entity_Identifier_Foundation_name_query_page1_20261012.json",
+        "bytes": 6150,
+        "sha256": "6c92c2bf372969992d1bea2188f476ace62d778d3c07b63a3940840a02348e36",
+        "url": "https://api.gleif.org/api/v1/lei-records?filter%5Bentity.legalName%5D=Global%20Legal%20Entity%20Identifier%20Foundation&page%5Bsize%5D=100&page%5Bnumber%5D=1",
+        "observedFrom": "2026-10-12 20:45:52 UTC",
+        "observedThrough": "2026-10-12 20:45:58 UTC"
+      }
+    ]
+  }
+}
