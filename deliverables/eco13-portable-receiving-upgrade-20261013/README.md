@@ -45,9 +45,12 @@ SHA256 `be799c9f0db7cd8d15c1aa912ea21207b537e212a63f796307611da8ac0a2ece`,
 project `b9d5d257-c6bb-4f07-b975-8e8c63705db3`.
 It was delivered as `file_00000000fa2c81f5822e48cc073258cc`.
 Use the exact original archive from which the selected application was received.
-If the actual application came from the earlier 69,852,743-byte archive, supply
-that archive and its own independently retained SHA256 instead; do not give it
-the 45 MB archive's identity.
+The separately retained 69,852,743-byte regional calendar archive is a distinct
+source selection, not an earlier version of this 87-station project. Its project
+identity has not been confirmed by this package. Do not substitute its archive
+or invent its hash/project from the 45 MB selection. If that is the actual base,
+the existing source owner must identify its retained archive SHA256 and original
+project ID; then supply both, including `--project-id ACTUAL_PROJECT_ID`.
 
 ```bash
 PYTHON -B PACKAGE/install.py \
