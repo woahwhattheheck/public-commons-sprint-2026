@@ -54,6 +54,12 @@ grid, with an external modeling buffer chosen for the catchment (RFP p. 2).
 The Gura grid supports the original working demonstration. An omitted `resolution_m` retains the historic
 30 m selection identity.
 
+The official InVEST 3.20.0 Gura release data use 15 m cells and the original
+watershed's explicit zero upstream buffer through
+`source_tools/receive_gura_native.py`. The earlier working edition retains its
+separate 300 m grid and recorded buffer through `source_tools/receive_gura.py`.
+The guide below identifies both receivers, original archives and cell areas.
+
 See `GUIDED_JOURNEY.md` for the complete operating sequence.
 
 ## Original operation lifecycle
