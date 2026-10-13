@@ -210,3 +210,81 @@ and sidecars, original four-focus response, full native network selection and
 its referenced pages remain part of the retained source snapshot. The
 [crosswalk guide](../source_tools/HIGH_QUALITY_WATER_CROSSWALK.md) documents the
 same API and standalone CLI.
+
+
+## Version 1.5.0: portable classified-water source briefing
+
+The existing **Download printable source briefing** control produces one complete
+HTML file from the review's current source editions and full matching cohorts.
+Set its title, choose the legal filters, and optionally load/filter the native
+feature browser before downloading. Changing the visible page does not change
+either selected cohort. A source change or incomplete native load must finish
+before a briefing can be prepared.
+
+Open the downloaded HTML in a browser to read the full selected reach
+descriptions, source-qualified original record IDs, current and previous
+classes, site-specific/NDZ flags, legal edition dates, original PDF pages and
+line references. Each existing native association retains its candidate,
+partial or coextensive status, selected-register agreement, publisher status,
+positive measured HUC12s and boundary touches. Original names, aliases and
+split reaches remain separate rows.
+
+The native cohort has independent selected/source counts, class and publisher
+linework-type distributions, blank-name/county counts and measured geographic
+relationship. The complete original feature list is included in an expandable
+appendix and in both data downloads. Publisher HUC12 values remain separate
+from positive WBD intersections. Crosswalk-associated legal records are retained
+with their own editions, even when the independently selected register differs.
+
+The original full-crosswalk coverage table is labeled as its complete retained
+scope. Its independent region, edition, class scope, feature-measure sums,
+dissolved unique measures and units are preserved. The briefing does not
+recalculate this table for a filtered cohort or sum overlapping geographic rows.
+Full inventory profiles and any retained domain-completeness comparisons remain
+in the file. The native feature selection is checked against the same workspace
+and crosswalk source identity before publication.
+
+The HTML includes **Complete briefing JSON**, **Selected legal rows CSV** and,
+when the native browser was loaded, **Selected native features CSV**. The two
+CSV bodies come from the desk's existing complete-row exporters, including their
+spreadsheet formula protection. The JSON schema is
+`upstate.water-source-brief/v1`; it preserves selected identities,
+filters, full legal/native rows, original associations, source descriptors,
+hashes and scope. Operator download tickets are omitted from this portable
+snapshot; the original source downloads remain in the live source desk.
+Original public source URLs remain linked. The file uses no remote script,
+font, service or source fetch.
+
+**Print / save PDF** uses the browser's normal print flow. All selected legal
+descriptions are part of the reading view. The potentially large native
+inventory prints when its appendix is opened; its complete data remain in the
+HTML/CSV/JSON regardless. Layout uses neutral type, plain tables and source
+references.
+
+This source-cohort briefing is available before a receiving-water plan is
+created. The existing designation handoff, saved receiving-water plan/analysis,
+and its separate scientific-report source producer remain the downstream
+workflow for selected geometry and model results.
+
+### Installation and native receiving
+
+Add `operator/web/extensions/water_source_brief.mjs` alongside the
+current review controller. The maintained descriptor now declares this asset
+and version 1.5.0, so the original extension installer and complete-source
+resolver retain it with the existing controller, stylesheet, backend and guide.
+No backend route, second store, queue or model calculation is added.
+
+In the existing receiving operator, open the imported legal register and its
+current crosswalk, then exercise a real legal filter and captured-feature filter.
+Download the briefing, reopen it outside the operator, inspect a complete source
+reach, and download its selected JSON and CSV. Their original qualified IDs and
+row counts must equal the original filter selections, including when the source
+desk displays only the first page. Preserve the current saved designation and
+original scientific-source handoff.
+
+The additive module exposes
+`prepareWaterSourceBrief({snapshot,records,filter,nativeCatalogue,nativeRecords,nativeFilter,legalCsv,nativeCsv,title,preparedAt})`
+and `renderWaterSourceBrief(prepared)` for the maintained browser.
+The preparation function rejects repeated/absent/changed source rows and
+crosswalk/workspace mismatches. It freezes a portable copy without mutating the
+live source records. Pure rendering returns the whole standalone document.

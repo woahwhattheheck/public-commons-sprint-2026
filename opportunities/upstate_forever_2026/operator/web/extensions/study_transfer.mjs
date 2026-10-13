@@ -9,6 +9,14 @@ const ROOTS = [
   ['scientific-report-editions', 'Saved scientific reports'],
   ['receiving-water-plans', 'Receiving-water source plans'],
   ['receiving-water-analyses', 'Receiving-water analyses'],
+  ['community-tables', 'Community source tables'],
+  ['community-plans', 'Editable Community plans'],
+  ['community-reports', 'Saved Community reports'],
+  ['community-plan-comparisons', 'Community revision handovers'],
+  ['conservation', 'Conservation study'],
+  ['conservation-plans', 'Conservation portfolio'],
+  ['conservation-exports', 'Conservation decision packet'],
+  ['conservation-report-sources', 'Conservation report source'],
   ['monitoring_networks', 'Monitoring networks'],
   ['monitoring_plans', 'Monitoring designs'],
   ['monitoring_frontiers', 'Monitoring budget comparisons'],
@@ -90,7 +98,7 @@ export function attachStudyTransfer(host) {
     root.innerHTML=
       '<header class="st-heading"><div><p class="st-eyebrow">Scientific workspace</p>'+
       '<h2>Transfer a scientific study</h2>'+
-      '<p>Choose saved scientific reports, analyses or Monitoring studies. The receiving workspace keeps ordered report sources, original results and available editable study history.</p>'+
+      '<p>Choose saved reports and scientific, Monitoring, Community or Conservation studies. The receiving workspace keeps original source editions, results and editable study history.</p>'+
       '</div><button type="button" data-action="restore">Receive study archive</button></header>'+
       '<div class="st-notice" data-study-notice role="status" aria-live="polite" hidden></div>'+
       '<section class="st-panel"><div class="st-panel-heading"><h3>Choose studies</h3>'+
@@ -105,7 +113,7 @@ export function attachStudyTransfer(host) {
       '<section class="st-panel"><div class="st-panel-heading"><h3>Study contents</h3></div>'+
       '<div class="st-export-fields"><label><span>Archive title</span><input type="text" data-study-field="title" maxlength="240"></label>'+
       '<label class="st-check"><input type="checkbox" data-study-field="related"><span>Include saved comparisons for the selected cohort</span></label></div>'+
-      '<p class="st-description">Shared source editions and prepared grids are included once. Saved scientific reports keep their original source order and files, with recorded local diagnostic, Monitoring and calibration history for further analysis.</p>'+
+      '<p class="st-description">Shared source editions and prepared grids are included once. Saved reports keep their original source order and files, with recorded local scientific and planning history for further work.</p>'+
       '<div class="st-actions">'+button('preview','Preview contents')+button('export','Export editable study','class="st-primary"')+'</div>'+
       '<div data-study-plan></div></section>'+
       '<section class="st-panel"><div class="st-panel-heading"><h3>Study archives</h3>'+

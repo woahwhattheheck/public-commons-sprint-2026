@@ -5454,7 +5454,9 @@
         "operator/web/observed_reports.mjs",
         "source_tools/prepare_scientific_briefing.py",
         "docs/SCIENTIFIC_REPORT_BRIEFING.md",
-        "docs/OBSERVED_REPORT_RENDERING.md"
+        "docs/OBSERVED_REPORT_RENDERING.md",
+        "source_tools/receive_scientific_report_review.py",
+        "source_tools/RECEIVE_SCIENTIFIC_REPORT_REVIEW.md"
       ],
       "requires": [
         "eco13",
