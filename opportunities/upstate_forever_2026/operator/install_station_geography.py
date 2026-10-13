@@ -13,6 +13,8 @@ import sys
 import tempfile
 
 FILES = (
+    "integration/component_fragments/assessment-scientific-report-consumer.json",
+    "integration/observed-station-wbd-components.json",
     "model/station_geography.py",
     "model/station_inventory.py",
     "model/assessment_context.py",
@@ -103,6 +105,42 @@ def source_members(pending, manifest_name):
     return checked
 
 
+
+def installation_files(source_root):
+    """Compose the owned files with the original WBD producer's selected inventory."""
+    names = list(FILES)
+    catalogue_name = "integration/observed-station-wbd-components.json"
+    catalogue = json.loads((source_root / catalogue_name).read_bytes())
+    if (not isinstance(catalogue, dict)
+            or catalogue.get("schema") != "upstate.application-components/v1"
+            or not isinstance(catalogue.get("components"), dict)):
+        raise ValueError("Retain the original WBD application component catalogue")
+    selected = catalogue.get("required_components")
+    if (not isinstance(selected, list) or not selected
+            or any(not isinstance(value, str) or not value for value in selected)
+            or len(selected) != len(set(selected))):
+        raise ValueError("The WBD catalogue needs its explicit original component selection")
+    for component_id in selected:
+        component = catalogue["components"].get(component_id)
+        if not isinstance(component, dict):
+            raise ValueError("The WBD catalogue omits selected component: " + component_id)
+        paths = component.get("paths")
+        if not isinstance(paths, list) or not paths:
+            raise ValueError("The selected WBD component needs its original source paths")
+        for name in paths:
+            if (not isinstance(name, str) or not name or "\\" in name
+                    or any(ord(character) < 32 for character in name)):
+                raise ValueError("WBD source paths must be portable relative names")
+            path = PurePosixPath(name)
+            if (path.is_absolute() or path.as_posix() != name
+                    or any(part in {".", ".."} or ":" in part for part in path.parts)):
+                raise ValueError("WBD source path leaves its original application: " + name)
+            if name not in names:
+                names.append(name)
+    if "model/station_wbd_context.py" not in names:
+        raise ValueError("The station geography source requires its original WBD context module")
+    return tuple(names)
+
 def scientific_report_host(application):
     """Require the maintained standalone composer before installing its consumer."""
     contracts = {
@@ -141,8 +179,9 @@ def install(application, source_root, *, dry_run=False):
         if not (application / name).is_file():
             raise ValueError("Receive the complete existing application before adding station geography: " + name)
     report_host = scientific_report_host(application)
+    files = installation_files(source_root)
     pending, previous = {}, {}
-    for name in FILES:
+    for name in files:
         body = (source_root / name).read_bytes()
         if name.endswith(".py"):
             ast.parse(body.decode("utf-8"), filename=name)
@@ -155,18 +194,19 @@ def install(application, source_root, *, dry_run=False):
     original_sources = {name: source_members(pending, name) for name in (
         "source/station-assessment-context/sources.json",
         "source/ecoli_utility_context/20261013/source-manifest.json",
+        "observations/wbd_station_join_20261013/station-context.sources.json",
     )}
-    changed = [name for name in FILES if previous[name] != pending[name]]
+    changed = [name for name in files if previous[name] != pending[name]]
     server = (application / "operator/server.py").read_text(encoding="utf-8")
     browser = (application / "operator/web/app.mjs").read_text(encoding="utf-8")
     host_needed = "ExtensionRegistry" not in server or "createExtensionHost" not in browser
     if host_needed and not (application / "install_extensions.py").is_file():
         raise ValueError("Retain the existing authored install_extensions.py to join its original operator host")
     receipt = {"schema": "upstate.station-geography-install/v1", "application": str(application),
-        "dry_run": dry_run, "changed": changed, "existing_host_install_needed": host_needed,
+        "dry_run": dry_run, "changed": changed, "installed_files": len(files), "existing_host_install_needed": host_needed,
         "original_sources": original_sources, "scientific_report_host": report_host,
         "files": [{"path": name, "bytes": len(pending[name]), "sha256": sha(pending[name]),
-                  "previous_sha256": sha(previous[name]) if previous[name] is not None else None} for name in FILES]}
+                  "previous_sha256": sha(previous[name]) if previous[name] is not None else None} for name in files]}
     if dry_run:
         return receipt
     stamp = dt.datetime.now(dt.timezone.utc).strftime("%Y%m%dT%H%M%S%fZ")
