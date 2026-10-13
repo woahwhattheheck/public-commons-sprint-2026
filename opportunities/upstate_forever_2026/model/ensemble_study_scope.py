@@ -14,10 +14,14 @@ from pathlib import Path
 from .common import atomic_json, describe_file, digest, identifier
 from . import ensemble_scientific_source as shared
 
-VERSION = 1
+VERSION = 2
 SCOPE_FILE = "study-source-scope.json"
 KNOWN_ASSUMPTIONS = ("upstate.simulated-assumptions/v1", "upstate.simulated-input-recipe/v1")
 CONTROL_SCHEMA = "upstate.simulated-matched-control/v1"
+GEOGRAPHIC_SCHEMA = "upstate.geographic-headwaters-assumptions/v1"
+GEOGRAPHIC_FIELDS = ("classification", "question", "geography", "physical_fields",
+                     "terrain", "terrain_parameters", "land_cover_pattern", "loads",
+                     "parameters", "outputs", "scope", "control", "references")
 ASSUMPTION_FIELDS = ("classification", "assumptions", "nutrient_loading", "runoff_scaling",
                      "retention", "sediment", "stream_threshold", "parameter_profile")
 
@@ -57,10 +61,43 @@ def _references(profiles, bindings):
     return uris, hashes, controls
 
 
+
+def _geographic_references(profiles):
+    """Bind a geographic edition to the profile's own retained source collection."""
+    result = {}
+    for profile in profiles.values():
+        collection = profile.get("source_collection_id")
+        if not isinstance(collection, str):
+            continue
+        for reference in profile.get("references", []):
+            if not isinstance(reference, str) or not reference.startswith("geographic-edition:"):
+                continue
+            edition = reference.split(":", 1)[1]
+            if len(edition) == 64 and all(c in "0123456789abcdef" for c in edition):
+                result.setdefault(collection, set()).add(edition)
+    return result
+
+
+def _geographic_member(entry, editions):
+    """Recognize only the exact declared edition and one original member name."""
+    uri = entry.get("uri")
+    if not isinstance(uri, str):
+        return None
+    for edition in sorted(editions):
+        prefix = "upstate.geographic-headwaters:" + edition + "/"
+        if uri.startswith(prefix):
+            name = uri[len(prefix):]
+            if (name and name not in (".", "..") and "/" not in name
+                    and "\\" not in name and "\0" not in name):
+                return {"edition_id": edition, "member": name}
+    return None
+
+
 def capture(workspace, directory, grid, profiles, bindings, collections):
     """Retain explicitly referenced document bodies and the original scope."""
     directory = Path(directory)
     uris, hashes, controls = _references(profiles, bindings)
+    geographic_editions = _geographic_references(profiles)
     references, extra_bindings, source_records = [], [], []
     already = {(row["source_collection_id"], row["source_id"]) for row in bindings}
     for collection_id, collection in sorted(collections.items()):
@@ -68,6 +105,9 @@ def capture(workspace, directory, grid, profiles, bindings, collections):
             if entry.get("kind") != "document":
                 continue
             reasons = []
+            geographic = _geographic_member(entry, geographic_editions.get(collection_id, set()))
+            if geographic is not None:
+                reasons.append("Exact geographic-edition profile reference in its original source collection")
             if entry.get("uri") in uris:
                 reasons.append("Exact original profile reference URI")
             if entry.get("body", {}).get("sha256") in hashes:
@@ -94,7 +134,7 @@ def capture(workspace, directory, grid, profiles, bindings, collections):
                 copied.append(item)
                 if body is entry["body"]:
                     original_member = target
-            assertions, original_control = {}, None
+            assertions, original_control, original_geographic = {}, None, None
             if entry["body"]["bytes"] <= 2 * 1024 * 1024:
                 try:
                     value = json.loads(original_member.read_bytes())
@@ -102,6 +142,21 @@ def capture(workspace, directory, grid, profiles, bindings, collections):
                     value = None
                 if isinstance(value, dict) and value.get("schema") in KNOWN_ASSUMPTIONS:
                     assertions = {key: deepcopy(value[key]) for key in ASSUMPTION_FIELDS if key in value}
+                if geographic is not None and isinstance(value, dict):
+                    if value.get("schema") == GEOGRAPHIC_SCHEMA:
+                        assertions = {key: deepcopy(value[key]) for key in GEOGRAPHIC_FIELDS if key in value}
+                        original_geographic = {
+                            "kind": "assumptions", "edition_id": geographic["edition_id"],
+                            "schema": value["schema"], "input_summary": deepcopy(value.get("input_summary", {})),
+                        }
+                    elif geographic["member"] == "geographic-binding.json":
+                        original_geographic = {
+                            "kind": "binding", "edition_id": geographic["edition_id"],
+                            "binding": {key: deepcopy(value[key]) for key in (
+                                "reporting_huc12s", "model_domain_huc12s", "upstream_huc12s",
+                                "method", "hydrology_scope", "areas_ha", "topology", "grid",
+                                "intake_footprint_relations") if key in value},
+                        }
                 if isinstance(value, dict) and value.get("schema") == CONTROL_SCHEMA:
                     original_control = {key: deepcopy(value[key]) for key in (
                         "schema", "classification", "source_recipe_sha256", "source_mask_role",
@@ -120,6 +175,7 @@ def capture(workspace, directory, grid, profiles, bindings, collections):
                 "body": describe_file(directory, original_member),
                 "members": copied, "original_assumptions": assertions,
                 "original_control": original_control,
+                "geographic_reference": geographic, "original_geographic": original_geographic,
             })
             if (collection_id, source_id) not in already:
                 extra_bindings.append({
@@ -218,6 +274,116 @@ def _control_blocks(document, control):
     return blocks
 
 
+
+def _geographic_blocks(document, geographic, references):
+    """Display retained preparation quantities; never infer local model benefits."""
+    blocks = [
+        "This geographic edition combines original public-source geography with explicitly "
+        "simulated physical fields and planting assumptions. Quantities in this section "
+        "describe the retained input preparation. Native finite-cell support and annual "
+        "stream exports remain in the completed-result sections.",
+        _table(["Original geographic source", "Retained identity"], [
+            ["Source document", document["title"]],
+            ["Profile-declared geographic edition", geographic["edition_id"]],
+        ], "Exact geographic edition selected by the original parameter profile"),
+    ]
+    if geographic["kind"] == "binding":
+        binding = geographic["binding"]
+        areas = binding.get("areas_ha", {})
+        blocks.extend([
+            _table(["Original spatial selection", "Retained value"], [
+                ["Reporting HUC12 IDs", binding.get("reporting_huc12s")],
+                ["Complete upstream model-domain HUC12 IDs", binding.get("model_domain_huc12s")],
+                ["Additional upstream HUC12 IDs", binding.get("upstream_huc12s")],
+                ["Original topology", binding.get("topology")],
+                ["Original selection method", binding.get("method")],
+                ["Hydrologic interpretation", binding.get("hydrology_scope")],
+            ], "Original topology and distinct geographic selections"),
+            _table(["Original vector area", "Hectares"], [
+                ["Complete upstream model domain", areas.get("model_domain")],
+                ["Selected reporting HUC polygons before boundary intersection", areas.get("reporting_whole_hucs")],
+                ["Selected reporting HUCs within the declared reporting boundary", areas.get("reporting_area")],
+                ["Full selected utility footprint union", areas.get("utility_full_union")],
+                ["Utility union within the reporting area", areas.get("utility_reporting_intersection")],
+            ], "Vector-union areas; these are not pixel counts or native finite-output areas"),
+        ])
+        relations = binding.get("intake_footprint_relations", [])
+        if isinstance(relations, list) and relations:
+            blocks.append(_table(
+                ["Original intake ID", "Original footprint ID", "Inside or on boundary", "Original distance (m)"],
+                [[row.get("intake_id"), row.get("footprint_id"), row.get("inside_or_on_boundary"),
+                  row.get("distance_m")] for row in relations],
+                "Original point-to-footprint relations; no intake was moved or snapped"))
+    else:
+        summary = geographic.get("input_summary", {})
+        summary = summary if isinstance(summary, dict) else {}
+        control = summary.get("control", {})
+        control = control if isinstance(control, dict) else {}
+        blocks.extend([
+            _table(["Prepared input support", "Cells", "Hectares"], [
+                ["Whole computational domain", summary.get("domain_cells"), summary.get("domain_raster_ha")],
+                ["Reporting intersection", summary.get("reporting_cells"), summary.get("reporting_raster_ha")],
+                ["Corridor restoration", summary.get("changed_cells"), summary.get("changed_hectares")],
+                ["Off-corridor control", summary.get("control_changed_cells"), control.get("changed_area_ha")],
+            ], "Original pixel-centre preparation counts; no native output-validity claim"),
+            _table(["Original matching property", "Retained value"], [
+                ["Method actually used", control.get("method")],
+                ["Target definition", control.get("target_definition")],
+                ["Candidate definition", control.get("candidate_definition")],
+                ["Input-domain precipitation mean (mm/year)", control.get("selected_domain_precipitation_mean_mm_year")],
+                ["Original normalization scope", control.get("normalization_scope")],
+                ["Changed-area and siting interpretation", summary.get("control_meaning")],
+            ], "Original matching method and support; no method is inferred from a title"),
+        ])
+        classes = control.get("by_original_class", [])
+        if isinstance(classes, list) and classes:
+            blocks.extend([
+                _table(["Original code", "Replacement", "Restoration cells", "Control cells", "Changed area (ha)"],
+                       [[row.get("from_code"), row.get("to_code"), row.get("target_cells"),
+                         row.get("control_cells"), row.get("changed_area_ha")] for row in classes],
+                       "Original class and area balance across the reporting union"),
+                _table(["Original code", "Restoration precipitation sum", "Control precipitation sum",
+                        "Control minus restoration", "Mean absolute paired residual", "Maximum absolute paired residual"],
+                       [[row.get("from_code"), row.get("target_precipitation_sum_mm_year"),
+                         row.get("control_precipitation_sum_mm_year"), row.get("precipitation_sum_residual_mm_year"),
+                         row.get("mean_absolute_paired_precipitation_residual_mm_year"),
+                         row.get("max_absolute_paired_precipitation_residual_mm_year")] for row in classes],
+                       "Original cell precipitation values and matching residuals (mm/year); not pollutant export"),
+            ])
+        per_huc = summary.get("per_huc", {})
+        if isinstance(per_huc, dict) and per_huc:
+            blocks.append(_table(
+                ["Original HUC12", "Reporting cells", "Corridor cells", "Restored cells",
+                 "Restored area (ha)", "Original 81 cells", "Original 82 cells"],
+                [[key, row.get("reporting_cells"), row.get("corridor_cells"), row.get("changed_cells"),
+                  row.get("changed_hectares"), row.get("original_class_counts", {}).get("81"),
+                  row.get("original_class_counts", {}).get("82")] for key, row in sorted(per_huc.items())],
+                "Original prepared restoration by HUC; this table contains no local control allocation"))
+        blocks.append(
+            "Equal overall class counts and treatment area do not establish equal planting within each "
+            "HUC or utility footprint. Local restoration/control allocation requires its separately "
+            "saved spatial accounting. Utility footprints may overlap, so their separate areas cannot "
+            "be added as an unduplicated union. The declared corridor is a simulated planting choice; "
+            "its per-side buffer and terrain assumptions remain in the original source statements.")
+        for statement in control.get("interpretation", []):
+            blocks.append(_plain(statement))
+    links = [{"title": "Complete original geographic source document", "path": document["body"]["path"]}]
+    for reference in references:
+        relation = reference.get("geographic_reference") or {}
+        if relation.get("edition_id") != geographic["edition_id"]:
+            continue
+        for member in reference.get("members", []):
+            path = member["path"]
+            if path.endswith("/matched-control/matching-summary.json"):
+                links.append({"title": "Complete original matching summary", "path": path})
+            elif path.endswith("/matched-control/matched-pairs.csv"):
+                links.append({"title": "Every original restoration/control matching pair", "path": path})
+            elif path.endswith("/matched-control/control-prepared.json"):
+                links.append({"title": "Original matching implementation and source receipt", "path": path})
+    blocks.append({"kind": "links", "items": links})
+    return blocks
+
+
 def sections(scope):
     """Readable source facts in the existing ordered Scientific Reports format."""
     native = scope["native_grid"]
@@ -279,7 +445,7 @@ def sections(scope):
             _table(["Original document", "Reference relationship", "Original SHA256"],
                    [[row["title"], row["reasons"], row["body"]["sha256"]]
                     for row in scope["referenced_documents"]],
-                   "Source documents selected by original profile URI or declared recipe/control hash"),
+                   "Source documents selected by exact profile URI, geographic-edition reference or declared recipe/control hash"),
         ]
         if statements:
             detail.append(_table(["Original document", "Source field", "Original statement"],
@@ -287,6 +453,10 @@ def sections(scope):
         detail.append({"kind": "links", "items": links})
         result.append(["Original referenced input assumptions and recipes", detail])
     for document in scope["referenced_documents"]:
+        geographic = document.get("original_geographic")
+        if geographic is not None:
+            result.append(["Original geographic preparation and control support",
+                           _geographic_blocks(document, geographic, scope["referenced_documents"])])
         control = document.get("original_control")
         if control is not None:
             result.append(["Original matched-control input selection", _control_blocks(document, control)])
