@@ -62,13 +62,13 @@ zero and actual Boolean values retain their original distinctions.
 
 ## English and French reader labels
 
-The application\'s current **Language / Langue** preference selects the reader
+The application's current **Language / Langue** preference selects the reader
 labels for its authenticated Word and PDF downloads. Each respondent keeps its
 own existing preference; operator downloads use the operator preference. An
 explicit `?language=en` or `?language=fr` selects a copy on an existing document
 route, including a released public report. It does not change the saved report,
 release decision or language preference. Anonymous public downloads default to
-the retained edition\'s declared language, then English.
+the retained edition's declared language, then English.
 
 The normal document call accepts an optional language without changing its
 original two positional arguments:
@@ -89,9 +89,11 @@ python3 application/document_exports.py public.json public.pdf
 python3 application/document_exports.py protected.json protected-fr.docx --language fr
 ~~~
 
-This selection translates reader controls, generated missing/withheld markers,
-document state, statistics labels and reference headings. It does not translate
-or rewrite source questions, answers, notes, grouping labels or numerical values.
+This selection uses original French question labels and source context where
+they are retained in the selected edition. It also translates reader controls,
+generated missing/withheld markers, document state, statistics labels and
+reference headings. Answers, notes, grouping labels and numerical values retain
+their saved values.
 Complete original stems and their French wording already supplied in the
 selected edition are retained with their source context. An answer whose literal text happens to be
 “Not answered” remains that exact answer; generated markers have a separate
@@ -131,9 +133,9 @@ selects only the requested frozen reports, and writes into a new directory
 outside the retained workspace. Each selected public/protected payload is saved
 with its original report, publication, release and exact retained-JSON identity.
 
-Use the actual installed document runtime with PyMuPDF for page inspection.
-The delivered renderer still uses its original python-docx and ReportLab
-dependencies. For Word page receiving, supply the original installed
+For this optional developer page-review command, use a Python environment
+with PyMuPDF installed. The application downloads use the six delivered offline
+wheels and their original python-docx and ReportLab dependencies. For Word page receiving, supply the original installed
 LibreOffice executable explicitly:
 
 ```sh
