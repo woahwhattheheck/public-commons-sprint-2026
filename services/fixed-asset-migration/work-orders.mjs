@@ -216,7 +216,10 @@ function reconcileState(s){
    const item={key:allocationKey(row.rowId,a.id),sourceId:row.sourceId,sourceRowId:row.rowId,allocationId:a.id,values:{...values,cost_amount:E.decimal(values.cost_amount),quantity:values.quantity===undefined||values.quantity===''?'':E.decimal(values.quantity)},explicit:!!selected};expected.push(item);total(allocationTotals,item.values,item.values.cost_amount);
   }
  }
- for(const row of domains.target.costs)if(row.valid)total(targetTotals,row.values,row.values.cost_amount);
+ for(const row of domains.target.costs)if(row.valid){
+  if(!index['target:orders'].get(key(row.values.company_id,row.values.work_order_id)))issues.push({code:'MISSING_TARGET_ORDER',rowId:row.rowId,message:'The returned cost has no unique valid header in the selected target order export.'});
+  total(targetTotals,row.values,row.values.cost_amount);
+ }
  for(const item of expected){
   const selected=s.matches[item.key],ids=selected?.rowIds||[],matched=ids.map(id=>returned.get(id)).filter(Boolean),differences=[];
   if(!ids.length)differences.push({field:'returned_rows',expected:'explicit reviewed match',actual:'unmatched'});
