@@ -86,7 +86,9 @@ const experiments=attachExperiments({navigate,closeDetail:()=>{detailDialog.clos
 const programmes=attachProgrammes({getState:()=>state,api,endpoint,openForm,submitAction,detail,fileList,showTask,toast,openItem,refreshState:refresh,navigate,closeDetail:()=>{detailDialog.close();detailContext=null;}});
 let operatingJourney=null;
 const journeyForm=async open=>{await open();return {operation_id:formContext?.operation_id};};
-const extensions=createExtensionHost({getState:()=>state,getWorkspace:()=>workspace,api,endpoint,toast,
+const extensions=createExtensionHost({
+ openNativeProgramme:options=>experiments.openForInvestigation(options),
+getState:()=>state,getWorkspace:()=>workspace,api,endpoint,toast,
  navigationRoot:'.sidebar',refreshState:refresh,openItem,showTask,showRunLog,navigate,
  openForm,submitAction,detail,fileList,uploadFile,
  closeDetail:()=>{detailDialog.close();detailContext=null;},
