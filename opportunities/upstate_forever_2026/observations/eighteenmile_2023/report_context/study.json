@@ -1,0 +1,81 @@
+{
+  "schema": "upstate.published-water-quality-study/v1",
+  "study_id": "scdes-eighteenmile-lake-2023",
+  "title": "Lake Hartwell - Eighteenmile Creek Lake Arm 2023 Nutrient Study",
+  "technical_report": "010-2023",
+  "publication": "2023-12",
+  "author": "Matthew S. Baumann",
+  "issuing_body": "South Carolina Department of Health and Environmental Control, Bureau of Water",
+  "current_source_host": "South Carolina Department of Environmental Services",
+  "original_url": "https://www.des.sc.gov/sites/des/files/Documents/BOW/WaterQuality/2023LakeProgramFinalReport.pdf",
+  "discovery_page": "https://www.des.sc.gov/programs/bureau-water/aquatic-science",
+  "retrieved_at": "2026-10-13 00:29:40 UTC",
+  "pdf_pages": 45,
+  "grab_sampling": {
+    "start": "2023-04-05",
+    "end": "2023-10-17",
+    "frequency": "biweekly",
+    "visits_per_site": 15,
+    "total_visits": 75,
+    "total_grabs": 120,
+    "surface_depth_m": 0.3
+  },
+  "continuous": {
+    "stations": [
+      "SV-838",
+      "SV-839"
+    ],
+    "interval_minutes": 30,
+    "approximate_depth_m": 0.5,
+    "table_record_start": "2023-04-06",
+    "table_record_ends": {
+      "SV-838": "2023-10-23",
+      "SV-839": "2023-10-31"
+    }
+  },
+  "hydrography": {
+    "huc10": "0306010106",
+    "report_area_acres": 38112,
+    "huc12": [
+      {
+        "id": "030601010601",
+        "name": "Upper Eighteenmile Creek",
+        "report_area_acres": 22158
+      },
+      {
+        "id": "030601010602",
+        "name": "Lower Eighteenmile Creek",
+        "report_area_acres": 15943
+      }
+    ]
+  },
+  "reported_threshold_exceedances": {
+    "total_phosphorus": {
+      "site_id": "SV-268",
+      "threshold_mg_l": 0.06,
+      "exceedances": 10,
+      "samples": 15
+    },
+    "total_nitrogen": {
+      "site_id": "SV-268",
+      "threshold_mg_l": 1.5,
+      "exceedances": 1,
+      "samples": 15
+    },
+    "source_pdf_page": 24
+  },
+  "content_counts": {
+    "stations": 5,
+    "seasonal_summary_rows": 26,
+    "surface_range_rows": 5,
+    "monthly_do_rows": 14,
+    "monthly_ph_rows": 14,
+    "reported_npdes_permits": 4
+  },
+  "source_interpretation": {
+    "native_model_context": "Use as observed lake-response and seasonal concentration context alongside watershed nutrient and sediment exports.",
+    "summary_units": "Preserve source concentration, FNU, SU and sampling-depth fields.",
+    "coordinates": "Station CSV carries each WQP datum explicitly. NAD83 records use EPSG4269; WGS84 records use EPSG4326. Preserve the separate rounded coordinates from the report.",
+    "temporal_support": "Summaries describe the published 2023 sampling campaign. Individual activity rows are acquired by the existing OBS12 WQX path."
+  }
+}
