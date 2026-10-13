@@ -435,7 +435,8 @@ def capture_scenario_stability(workspace, study, plan, geometry_data, candidate_
     from shapely.ops import unary_union
     from shapely.geometry import mapping
     cases = comparison["cases"]
-    signatures = [tuple(sorted(case["scenario_run_ids"].items())) for case in cases]
+    signatures = [(tuple(sorted(case["scenario_run_ids"].items())),
+                   tuple(sorted(case.get("family_ids", {}).items()))) for case in cases]
     if len(set(signatures)) != len(signatures):
         raise ValueError("Stability map requires distinct retained native cases")
     sets = []
@@ -453,6 +454,7 @@ def capture_scenario_stability(workspace, study, plan, geometry_data, candidate_
         "analysis_id": analysis["id"], "analysis_file": deepcopy(retained["state"]["files"]["analysis"]),
         "case_count": len(cases), "cases": [{"name": case["name"],
              "scenario_run_ids": deepcopy(case["scenario_run_ids"]),
+             **({"family_ids": deepcopy(case["family_ids"])} if "family_ids" in case else {}),
              "selected_ids": list(case["selected_ids"])} for case in cases],
         "any_selected_ids": sorted(any_ids), "every_selected_ids": sorted(every_ids),
         "any_selected": union(any_ids), "every_selected": union(every_ids),

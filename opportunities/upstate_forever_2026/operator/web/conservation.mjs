@@ -1,5 +1,6 @@
 /** Conservation studies and portfolios within the existing GIS operator. */
 import { renderKeoweePointCriteria } from "./keowee-method-view.mjs";
+import { renderJointChoices } from "./conservation_joint_choices.mjs";
 const POLLUTANTS = [
   ["nitrogen_export", "Nitrogen"],
   ["phosphorus_export", "Phosphorus"],
@@ -1809,7 +1810,7 @@ export function attachConservation({
       (a.stability?.profiles || []).map(profile => '<tr><th scope="row">' + h(profile.name) + '</th><td>' +
         number(profile.eligible_count) + '</td><td>' + number(profile.selected_ids?.length) + '</td><td>' +
         h(human(profile.optimization?.status)) + '</td><td>' + h(percent(profile.optimization?.relative_gap)) + '</td></tr>').join("") +
-      '</tbody></table></div></details>' + matchedFamilySupportView(ui.study) + scenarioStabilityView(a) + '<div class="cons-filters">' +
+      '</tbody></table></div></details>' + matchedFamilySupportView(ui.study) + scenarioStabilityView(a) + renderJointChoices(a) + '<div class="cons-filters">' +
       '<label class="cons-field"><span>Find an original unit</span><input data-optimization-filter="search" value="' +
       h(ui.optimizationSearch || "") + '"></label><label class="cons-field"><span>Candidate view</span>' +
       '<select data-optimization-filter="mode">' + [["all","All retained units"],["selected","Selected"],["eligible","Eligible"],["excluded","Excluded"]]

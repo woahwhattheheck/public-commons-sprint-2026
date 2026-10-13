@@ -19,7 +19,7 @@ from pathlib import Path
 import shutil
 import zipfile
 
-from . import conservation
+from . import conservation, conservation_joint_choices
 from .common import (
     atomic_bytes, atomic_json, canonical, describe_file, digest, file_digest,
     held, identifier, now, read_json, verify_file,
@@ -1041,6 +1041,9 @@ def preview(workspace, selection):
         }
     scenario_comparison = _scenario_comparison(
         rows, request, case_variants, scored, chosen, optimization, engine, solver_request)
+    joint_comparison = conservation_joint_choices.compare(
+        rows, request, case_variants, profile_results, scenario_comparison,
+        _score, engine._optimize, solver_request)
     geometry = _spatial_summary(workspace, study, sorted(ids), request)
     selected_rows = [row for row in rows if row["selected"]]
     currency_values = {row["currency"] for row in selected_rows if row["currency"] is not None}
@@ -1116,6 +1119,15 @@ def preview(workspace, selection):
         analysis["methods"]["scenario_comparison"] = scenario_comparison["interpretation"]
         analysis["methods"]["criterion_direction"] = "Maximize retains each signed source value; minimize negates its normalized contribution. Missing values never become credited zeros."
         analysis["methods"]["attribute_units"] = "Attribute units and references are explicit analyst declarations attached to the unchanged source field; no implicit conversion or connectivity model is applied."
+    if joint_comparison is not None:
+        joint_module = Path(conservation_joint_choices.__file__).resolve()
+        joint_comparison["implementation"] = {
+            "module": "model.conservation_joint_choices",
+            "bytes": joint_module.stat().st_size, "sha256": file_digest(joint_module),
+        }
+        analysis["joint_comparison"] = joint_comparison
+        analysis["methods"]["joint_comparison"] = joint_comparison["interpretation"]
+        analysis["methods"]["portfolio_regret"] = joint_comparison["regret"]
     analysis["id"] = digest(analysis)
     return analysis
 
@@ -1403,6 +1415,9 @@ nav{display:flex;flex-wrap:wrap;gap:.6rem 1.1rem;margin:1rem 0}section{margin-bo
         "Selected cases", "Eligible cases", "Case rank range"
     ], stability_rows, wide=True))
     parts.append('<p class="muted">Counts describe only the explicitly included preferences and cases. Eligibility can change when a positive-weight criterion lacks support. These fractions are neither selection probabilities nor calibrated confidence levels.</p>')
+    if analysis.get("joint_comparison") is not None:
+        parts.append(conservation_joint_choices.html_section(
+            analysis["joint_comparison"], {row["feature_id"]: row["label"] for row in candidates}))
     parts.append('<h2>Original candidate values and support</h2>')
     candidate_rows = []
     for row in candidates:
@@ -1489,12 +1504,18 @@ def _retain(workspace, analysis):
         atomic_json(directory / "analysis.json", analysis, immutable=True)
         atomic_bytes(directory / "candidates.csv", _csv(analysis))
         atomic_bytes(directory / "index.html", _html(analysis))
+        joint_files = {}
+        if analysis.get("joint_comparison") is not None:
+            for filename, body in conservation_joint_choices.csv_files(analysis["joint_comparison"]).items():
+                atomic_bytes(directory / filename, body)
+                joint_files[filename] = describe_file(workspace.root, directory / filename)
         state = {
             "schema": REFERENCE_SCHEMA, "id": analysis["id"], "study_id": analysis["input"]["study_id"],
             "state": "complete", "created_at": now(),
             "files": {name: describe_file(workspace.root, directory / filename) for name, filename in (
                 ("analysis", "analysis.json"), ("candidates", "candidates.csv"), ("report", "index.html"))},
         }
+        state["files"].update(joint_files)
         atomic_json(state_path, state, immutable=True)
         return state
 
@@ -1631,7 +1652,9 @@ def export(workspace, plan_id):
                         with source.open(member, "r") as incoming, output.open(member, "w", force_zip64=True) as outgoing:
                             shutil.copyfileobj(incoming, outgoing, length=1024 * 1024)
                 for name, item in reference["files"].items():
-                    member = {"analysis": "analysis.json", "candidates": "candidates.csv", "report": "index.html"}[name]
+                    member = {"analysis": "analysis.json", "candidates": "candidates.csv", "report": "index.html",
+                              "joint-cells.csv": "joint-cells.csv", "joint-portfolios.csv": "joint-portfolios.csv",
+                              "joint-candidates.csv": "joint-candidates.csv"}[name]
                     output.write(verify_file(workspace.root, item), "optimization/" + member)
                 for item in geography["files"]:
                     member_path = verify_file(geography_directory, item)

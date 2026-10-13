@@ -132,3 +132,8 @@ rasters carry the complete numerical/source records.
 The maintained typed Conservation transfer reader accepts this report edition and
 copies the complete study, all bound runs, support files, decision and report through
 the original portable restore interface. Older report editions remain readable.
+
+
+## Joint preference and native-case reports
+
+Edition `conservation-saved-plan-report/5` adds the full retained Cartesian comparison when both existing multi-criteria comparison controls are enabled. The report keeps every cell, each encountered portfolio across every cell, unsupported combinations and the original solver-qualified loss bounds. It carries `joint-cells.csv`, `joint-portfolios.csv` and `joint-candidates.csv` beside the original analysis and physical/source records. Historical source editions 1–4 remain valid and unchanged; new joint companions require their exact edition-5 inventory in typed Study receiving. See `../CONSERVATION_JOINT_CHOICES.md` for the complete operator, scientific interpretation and original-course receiving.
