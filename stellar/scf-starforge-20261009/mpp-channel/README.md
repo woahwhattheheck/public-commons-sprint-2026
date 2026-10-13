@@ -38,7 +38,7 @@ Choose the actual network, token, funder account, recipient, commitment public k
 | Network and RPC | The RPC must report the selected Stellar network before observation, preparation, submission or recovery. |
 | Token and decimals | The selected SEP-41 token contract and its display precision. Every amount is a canonical string in that token's base units. |
 | Funder and signer | The original `G…` account pays transaction fees and deposits its selected tokens. The funding account must equal that funder. The host reads its secret only from the selected environment-variable name. |
-| Recipient | The actual merchant's `G…` or `C…` address that will collect earned commitments. |
+| Recipient | The actual merchant's `G…` or `C…` address that will collect earned commitments. The application's recipient fee signer supports `G…` accounts; a `C…` recipient uses that contract's own authorization. |
 | Commitment public key | The actual `G…` public key for the customer's off-chain commitments. The funder and commitment signer may use different keys. |
 | Initial amount | The selected nonnegative base-unit amount deposited by the original constructor. A zero deposit opens an empty channel for later top-up. |
 | Refund waiting period | An exact unsigned 32-bit number of ledgers. Select it with the merchant so the recipient has time to collect after a funder starts closing. |
