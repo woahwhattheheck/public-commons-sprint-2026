@@ -44,6 +44,7 @@ PLAN_SCHEMA = "upstate.study-transfer-plan/v1"
 RECEIPT_SCHEMA = "upstate.study-transfer/v1"
 ROOT_KINDS = ("experiment-diagnostics", "experiments", "runs", "robust-decisions",
               "receiving-water-plans", "receiving-water-analyses",
+              "spatial-reviews", "spatial-exports",
               *monitoring_transfer.ROOT_KINDS, *report_editions.ROOT_KINDS,
               *community_transfer.ROOT_KINDS, *receptor_transfer.ROOT_KINDS, *conservation_transfer.ROOT_KINDS,
               *customer_review_transfer.ROOT_KINDS, *paired_transfer.ROOT_KINDS,
@@ -1117,13 +1118,33 @@ def catalog(workspace, *, kind=None, query="", offset=0, limit=200):
                 if not query or query in canonical(row).decode("utf-8").casefold():
                     rows.append(row)
             continue
-        document = DOCUMENTS[selected_kind]
-        for path in (workspace.root / selected_kind).glob("*/" + document):
-            key = path.parent.name
+        spatial_review = selected_kind == "spatial-reviews"
+        pattern = "*.json" if spatial_review else "*/" + DOCUMENTS[selected_kind]
+        for path in (workspace.root / selected_kind).glob(pattern):
+            key = path.stem if spatial_review else path.parent.name
             try:
                 identifier(key)
                 value = read_json(_member(workspace.root, path.relative_to(workspace.root).as_posix()))
-                if selected_kind == "experiment-diagnostics":
+                if spatial_review:
+                    if (value.get("schema") != "upstate.spatial-reviews/v1"
+                            or value.get("project_id") != workspace.project["id"]
+                            or digest(value) != key):
+                        raise ValueError("The saved map review differs from its original identity or project.")
+                    selection, state = value, {**value, "state": "complete"}
+                elif selected_kind == "spatial-exports":
+                    if (value.get("schema") != "upstate.spatial-export/v1"
+                            or value.get("project_id") != workspace.project["id"]
+                            or value.get("id") != key):
+                        raise ValueError("The saved map export differs from its original identity or project.")
+                    # The existing typed visitor transfers only complete map packs.
+                    # In-flight and failed exports stay in the original Spatial desk.
+                    if value.get("state") != "complete":
+                        continue
+                    selection, state = value["selection"], value
+                    if selection.get("review_id") != value.get("review_id"):
+                        raise ValueError("The saved map pack changed its original review selection.")
+                    identifier(value["review_id"])
+                elif selected_kind == "experiment-diagnostics":
                     selection = value["identity"]["selection"]
                     state = read_json(_member(workspace.root, selected_kind + "/" + key + "/state.json"))
                 elif selected_kind == "experiments":
@@ -1141,6 +1162,13 @@ def catalog(workspace, *, kind=None, query="", offset=0, limit=200):
                                      ("grid_id", "profile_id", "scenario_id", "models", "design", "baseline_run_id")
                                      if name in selection},
                        "counts": state.get("counts"), "error": state.get("error")}
+                if selected_kind in ("spatial-reviews", "spatial-exports"):
+                    row["selection"] = {name: selection[name] for name in
+                                        ("reference", "mode", "view", "review_id", "paper", "dpi",
+                                         "previous_review_id") if name in selection}
+                    if spatial_review:
+                        row["counts"] = {"overlays": len(value.get("overlays", [])),
+                                         "markers": len(value.get("markers", []))}
                 if selected_kind == "runs":
                     labels = []
                     for field, source_kind in (("profile_id", "profiles"), ("scenario_id", "scenarios")):
