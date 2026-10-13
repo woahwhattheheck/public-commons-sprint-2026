@@ -1130,14 +1130,41 @@ class PublishedStudyStore:
             written.append(filename)
         report_context = dict(context)
         report_context["related_reports"] = []
+        record = context["record"]
+        version_root = self._version_root(study_id, record["version_id"])
+        manifest_bytes = (version_root / "sources.json").read_bytes()
+        expected_manifest = record["source_manifest"]
+        if len(manifest_bytes) != expected_manifest["bytes"] or _hash(manifest_bytes) != expected_manifest["sha256"]:
+            raise ValueError("The retained study source manifest changed.")
+        bindings = {entry["id"]: entry for entry in _json(manifest_bytes)["entries"]}
+        inventory = {entry["path"]: entry for entry in record["source_files"]}
+        copied = set()
         for artifact in context["source_artifacts"]:
             name = artifact["path"]
-            if name == "wqp_20261013/lake-observations-report.html":
-                path, _ = self.source_file(study_id, name, context["record"]["version_id"])
-                report_name = "original-lake-observation-report.html"
-                _atomic(destination / report_name, path.read_bytes())
-                written.append(report_name)
-                report_context["related_reports"].append({"filename": report_name, "title": "Original activity figures and complete chlorophyll cohort report"})
+            if PurePosixPath(name).suffix.lower() not in (".html", ".htm"):
+                continue
+            binding = bindings[record["source_entries"][name]]
+            members = [name]
+            for companion in binding.get("companions", []):
+                relative = companion["path"]
+                if not relative.startswith("source/"):
+                    raise ValueError("A report companion must belong to the retained study source directory.")
+                members.append(_name(relative[len("source/"):]))
+            for member in members:
+                if member in copied:
+                    continue
+                expected = inventory[member]
+                raw = (version_root / "source" / member).read_bytes()
+                if len(raw) != expected["bytes"] or _hash(raw) != expected["sha256"]:
+                    raise ValueError("Retained report companion changed: " + member)
+                report_member = "original-sources/" + member
+                _atomic(destination / report_member, raw)
+                written.append(report_member)
+                copied.add(member)
+            report_context["related_reports"].append({
+                "filename": "original-sources/" + name,
+                "title": binding.get("title") or PurePosixPath(name).name,
+            })
         report_context["embedded_images"] = []
         for artifact in context["source_artifacts"]:
             name = artifact["path"]
@@ -1149,6 +1176,19 @@ class PublishedStudyStore:
                         "title": name, "data_uri": "data:image/png;base64," + base64.b64encode(raw).decode("ascii")
                     })
         _atomic(destination / "study-report.html", self.report_html(report_context).encode("utf-8"))
+        # One download preserves relative links in the selected report and each
+        # original HTML/companion tree without rewriting original source bytes.
+        with tempfile.NamedTemporaryFile(dir=destination, suffix=".zip", delete=False) as temp:
+            temporary = Path(temp.name)
+        try:
+            with zipfile.ZipFile(temporary, "w", zipfile.ZIP_DEFLATED) as archive:
+                for name in sorted(set(written)):
+                    archive.write(destination / name, name)
+            os.replace(temporary, destination / "selected-study-report.zip")
+        finally:
+            if temporary.exists():
+                temporary.unlink()
+        written.append("selected-study-report.zip")
         return {
             "directory": str(destination.resolve()),
             "files": [
