@@ -1,0 +1,8 @@
+Authored document review example
+Document: Reference supplier information
+Version: 1.0
+Owner: Example operations team
+Review amount: 1248.75
+Reference sequence: 9223372036854775806
+
+This editable example contains no customer records or business policy.

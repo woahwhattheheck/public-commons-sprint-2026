@@ -1,0 +1,99 @@
+{
+  "schema": "stellar-forge.alfresco-document-capture.v1",
+  "state": "CAPTURED",
+  "repository": {
+    "id": "authored-reference",
+    "baseUrl": "https://alfresco.example.invalid/alfresco/api/-default-/public/alfresco/versions/1"
+  },
+  "selection": {
+    "nodeId": "11111111-2222-4333-8444-555555555555",
+    "versionId": "1.0"
+  },
+  "reads": [
+    {
+      "role": "node",
+      "url": "https://alfresco.example.invalid/alfresco/api/-default-/public/alfresco/versions/1/nodes/11111111-2222-4333-8444-555555555555?include=properties%2CaspectNames",
+      "status": 200,
+      "headers": {
+        "content-type": "application/json"
+      },
+      "startedAt": "2026-10-13T12:00:00.000Z",
+      "completedAt": "2026-10-13T12:00:00.000Z",
+      "body": {
+        "name": "node",
+        "bytes": 508,
+        "sha256": "78f52c0caf53a55b2a69c857b914767acc47ed5a409a0eb844b62cf2e6b7b2a1",
+        "mediaType": "application/json",
+        "contentBase64": "ewogICJlbnRyeSI6IHsKICAgICJpZCI6ICIxMTExMTExMS0yMjIyLTQzMzMtODQ0NC01NTU1NTU1NTU1NTUiLAogICAgIm5hbWUiOiAicmVmZXJlbmNlLXN1cHBsaWVyLWluZm9ybWF0aW9uLnR4dCIsCiAgICAibm9kZVR5cGUiOiAiY206Y29udGVudCIsCiAgICAiaXNGaWxlIjogdHJ1ZSwKICAgICJpc0ZvbGRlciI6IGZhbHNlLAogICAgIm1vZGlmaWVkQXQiOiAiMjAyNi0xMC0xM1QxMDowMDowMC4wMDArMDAwMCIsCiAgICAibW9kaWZpZWRCeVVzZXIiOiB7CiAgICAgICJpZCI6ICJleGFtcGxlLmF1dGhvciIsCiAgICAgICJkaXNwbGF5TmFtZSI6ICJFeGFtcGxlIGF1dGhvciIKICAgIH0sCiAgICAiY29udGVudCI6IHsKICAgICAgIm1pbWVUeXBlIjogInRleHQvcGxhaW4iLAogICAgICAic2l6ZUluQnl0ZXMiOiAyNTMsCiAgICAgICJlbmNvZGluZyI6ICJVVEYtOCIKICAgIH0sCiAgICAicHJvcGVydGllcyI6IHsKICAgICAgImNtOnZlcnNpb25MYWJlbCI6ICIyLjAiCiAgICB9CiAgfQp9Cg=="
+      }
+    },
+    {
+      "role": "versions:0",
+      "url": "https://alfresco.example.invalid/alfresco/api/-default-/public/alfresco/versions/1/nodes/11111111-2222-4333-8444-555555555555/versions?include=properties%2CaspectNames&skipCount=0&maxItems=100",
+      "status": 200,
+      "headers": {
+        "content-type": "application/json"
+      },
+      "startedAt": "2026-10-13T12:00:00.000Z",
+      "completedAt": "2026-10-13T12:00:00.000Z",
+      "body": {
+        "name": "versions:0",
+        "bytes": 1735,
+        "sha256": "534437056d755ae0edaa96a4100a8c5e0d59357b60de289ae0633b6beee4a70d",
+        "mediaType": "application/json",
+        "contentBase64": "ewogICJsaXN0IjogewogICAgInBhZ2luYXRpb24iOiB7CiAgICAgICJjb3VudCI6IDIsCiAgICAgICJoYXNNb3JlSXRlbXMiOiBmYWxzZSwKICAgICAgInRvdGFsSXRlbXMiOiAyLAogICAgICAic2tpcENvdW50IjogMCwKICAgICAgIm1heEl0ZW1zIjogMTAwCiAgICB9LAogICAgImVudHJpZXMiOiBbCiAgICAgIHsKICAgICAgICAiZW50cnkiOiB7CiAgICAgICAgICAiaWQiOiAiMi4wIiwKICAgICAgICAgICJuYW1lIjogInJlZmVyZW5jZS1zdXBwbGllci1pbmZvcm1hdGlvbi50eHQiLAogICAgICAgICAgIm5vZGVUeXBlIjogImNtOmNvbnRlbnQiLAogICAgICAgICAgImlzRmlsZSI6IHRydWUsCiAgICAgICAgICAiaXNGb2xkZXIiOiBmYWxzZSwKICAgICAgICAgICJtb2RpZmllZEF0IjogIjIwMjYtMTAtMTNUMTA6MDA6MDAuMDAwKzAwMDAiLAogICAgICAgICAgIm1vZGlmaWVkQnlVc2VyIjogewogICAgICAgICAgICAiaWQiOiAiZXhhbXBsZS5hdXRob3IiLAogICAgICAgICAgICAiZGlzcGxheU5hbWUiOiAiRXhhbXBsZSBhdXRob3IiCiAgICAgICAgICB9LAogICAgICAgICAgImNvbnRlbnQiOiB7CiAgICAgICAgICAgICJtaW1lVHlwZSI6ICJ0ZXh0L3BsYWluIiwKICAgICAgICAgICAgInNpemVJbkJ5dGVzIjogMjUzLAogICAgICAgICAgICAiZW5jb2RpbmciOiAiVVRGLTgiCiAgICAgICAgICB9LAogICAgICAgICAgInByb3BlcnRpZXMiOiB7CiAgICAgICAgICAgICJjbTp0aXRsZSI6ICJSZWZlcmVuY2Ugc3VwcGxpZXIgaW5mb3JtYXRpb24iLAogICAgICAgICAgICAiZXhhbXBsZTpyZXZpZXdlciI6ICJleGFtcGxlLnJldmlld2VyIiwKICAgICAgICAgICAgImV4YW1wbGU6YW1vdW50IjogIjEyNDguNzUiLAogICAgICAgICAgICAiZXhhbXBsZTpzZXF1ZW5jZSI6ICI5MjIzMzcyMDM2ODU0Nzc1ODA2IgogICAgICAgICAgfQogICAgICAgIH0KICAgICAgfSwKICAgICAgewogICAgICAgICJlbnRyeSI6IHsKICAgICAgICAgICJpZCI6ICIxLjAiLAogICAgICAgICAgIm5hbWUiOiAicmVmZXJlbmNlLXN1cHBsaWVyLWluZm9ybWF0aW9uLnR4dCIsCiAgICAgICAgICAibm9kZVR5cGUiOiAiY206Y29udGVudCIsCiAgICAgICAgICAiaXNGaWxlIjogdHJ1ZSwKICAgICAgICAgICJpc0ZvbGRlciI6IGZhbHNlLAogICAgICAgICAgIm1vZGlmaWVkQXQiOiAiMjAyNi0xMC0xMlQxMDowMDowMC4wMDArMDAwMCIsCiAgICAgICAgICAibW9kaWZpZWRCeVVzZXIiOiB7CiAgICAgICAgICAgICJpZCI6ICJleGFtcGxlLmF1dGhvciIsCiAgICAgICAgICAgICJkaXNwbGF5TmFtZSI6ICJFeGFtcGxlIGF1dGhvciIKICAgICAgICAgIH0sCiAgICAgICAgICAiY29udGVudCI6IHsKICAgICAgICAgICAgIm1pbWVUeXBlIjogInRleHQvcGxhaW4iLAogICAgICAgICAgICAic2l6ZUluQnl0ZXMiOiAyNTMsCiAgICAgICAgICAgICJlbmNvZGluZyI6ICJVVEYtOCIKICAgICAgICAgIH0sCiAgICAgICAgICAicHJvcGVydGllcyI6IHsKICAgICAgICAgICAgImNtOnRpdGxlIjogIlJlZmVyZW5jZSBzdXBwbGllciBpbmZvcm1hdGlvbiIsCiAgICAgICAgICAgICJleGFtcGxlOnJldmlld2VyIjogImV4YW1wbGUucmV2aWV3ZXIiLAogICAgICAgICAgICAiZXhhbXBsZTphbW91bnQiOiAiMTI0OC43NSIsCiAgICAgICAgICAgICJleGFtcGxlOnNlcXVlbmNlIjogIjkyMjMzNzIwMzY4NTQ3NzU4MDYiCiAgICAgICAgICB9CiAgICAgICAgfQogICAgICB9CiAgICBdCiAgfQp9Cg=="
+      }
+    },
+    {
+      "role": "selected-before",
+      "url": "https://alfresco.example.invalid/alfresco/api/-default-/public/alfresco/versions/1/nodes/11111111-2222-4333-8444-555555555555/versions/1.0",
+      "status": 200,
+      "headers": {
+        "content-type": "application/json"
+      },
+      "startedAt": "2026-10-13T12:00:00.000Z",
+      "completedAt": "2026-10-13T12:00:00.000Z",
+      "body": {
+        "name": "selected-before",
+        "bytes": 625,
+        "sha256": "6022108e4cfe9c4ae38e9c3749365261be000cfcb8f96ad0dd87683b95bd606c",
+        "mediaType": "application/json",
+        "contentBase64": "ewogICJlbnRyeSI6IHsKICAgICJpZCI6ICIxLjAiLAogICAgIm5hbWUiOiAicmVmZXJlbmNlLXN1cHBsaWVyLWluZm9ybWF0aW9uLnR4dCIsCiAgICAibm9kZVR5cGUiOiAiY206Y29udGVudCIsCiAgICAiaXNGaWxlIjogdHJ1ZSwKICAgICJpc0ZvbGRlciI6IGZhbHNlLAogICAgIm1vZGlmaWVkQXQiOiAiMjAyNi0xMC0xMlQxMDowMDowMC4wMDArMDAwMCIsCiAgICAibW9kaWZpZWRCeVVzZXIiOiB7CiAgICAgICJpZCI6ICJleGFtcGxlLmF1dGhvciIsCiAgICAgICJkaXNwbGF5TmFtZSI6ICJFeGFtcGxlIGF1dGhvciIKICAgIH0sCiAgICAiY29udGVudCI6IHsKICAgICAgIm1pbWVUeXBlIjogInRleHQvcGxhaW4iLAogICAgICAic2l6ZUluQnl0ZXMiOiAyNTMsCiAgICAgICJlbmNvZGluZyI6ICJVVEYtOCIKICAgIH0sCiAgICAicHJvcGVydGllcyI6IHsKICAgICAgImNtOnRpdGxlIjogIlJlZmVyZW5jZSBzdXBwbGllciBpbmZvcm1hdGlvbiIsCiAgICAgICJleGFtcGxlOnJldmlld2VyIjogImV4YW1wbGUucmV2aWV3ZXIiLAogICAgICAiZXhhbXBsZTphbW91bnQiOiAiMTI0OC43NSIsCiAgICAgICJleGFtcGxlOnNlcXVlbmNlIjogIjkyMjMzNzIwMzY4NTQ3NzU4MDYiCiAgICB9CiAgfQp9Cg=="
+      }
+    },
+    {
+      "role": "content",
+      "url": "https://alfresco.example.invalid/alfresco/api/-default-/public/alfresco/versions/1/nodes/11111111-2222-4333-8444-555555555555/versions/1.0/content?attachment=true",
+      "status": 200,
+      "headers": {
+        "content-type": "text/plain"
+      },
+      "startedAt": "2026-10-13T12:00:00.000Z",
+      "completedAt": "2026-10-13T12:00:00.000Z",
+      "body": {
+        "name": "content",
+        "bytes": 253,
+        "sha256": "da1e102da54b4d3aa7a8046b0aba306638f5845ae6728f4900cc4b1c32d9400e",
+        "mediaType": "text/plain",
+        "contentBase64": "QXV0aG9yZWQgZG9jdW1lbnQgcmV2aWV3IGV4YW1wbGUKRG9jdW1lbnQ6IFJlZmVyZW5jZSBzdXBwbGllciBpbmZvcm1hdGlvbgpWZXJzaW9uOiAxLjAKT3duZXI6IEV4YW1wbGUgb3BlcmF0aW9ucyB0ZWFtClJldmlldyBhbW91bnQ6IDEyNDguNzUKUmVmZXJlbmNlIHNlcXVlbmNlOiA5MjIzMzcyMDM2ODU0Nzc1ODA2CgpUaGlzIGVkaXRhYmxlIGV4YW1wbGUgY29udGFpbnMgbm8gY3VzdG9tZXIgcmVjb3JkcyBvciBidXNpbmVzcyBwb2xpY3kuCg=="
+      }
+    },
+    {
+      "role": "selected-after",
+      "url": "https://alfresco.example.invalid/alfresco/api/-default-/public/alfresco/versions/1/nodes/11111111-2222-4333-8444-555555555555/versions/1.0",
+      "status": 200,
+      "headers": {
+        "content-type": "application/json"
+      },
+      "startedAt": "2026-10-13T12:00:00.000Z",
+      "completedAt": "2026-10-13T12:00:00.000Z",
+      "body": {
+        "name": "selected-after",
+        "bytes": 625,
+        "sha256": "6022108e4cfe9c4ae38e9c3749365261be000cfcb8f96ad0dd87683b95bd606c",
+        "mediaType": "application/json",
+        "contentBase64": "ewogICJlbnRyeSI6IHsKICAgICJpZCI6ICIxLjAiLAogICAgIm5hbWUiOiAicmVmZXJlbmNlLXN1cHBsaWVyLWluZm9ybWF0aW9uLnR4dCIsCiAgICAibm9kZVR5cGUiOiAiY206Y29udGVudCIsCiAgICAiaXNGaWxlIjogdHJ1ZSwKICAgICJpc0ZvbGRlciI6IGZhbHNlLAogICAgIm1vZGlmaWVkQXQiOiAiMjAyNi0xMC0xMlQxMDowMDowMC4wMDArMDAwMCIsCiAgICAibW9kaWZpZWRCeVVzZXIiOiB7CiAgICAgICJpZCI6ICJleGFtcGxlLmF1dGhvciIsCiAgICAgICJkaXNwbGF5TmFtZSI6ICJFeGFtcGxlIGF1dGhvciIKICAgIH0sCiAgICAiY29udGVudCI6IHsKICAgICAgIm1pbWVUeXBlIjogInRleHQvcGxhaW4iLAogICAgICAic2l6ZUluQnl0ZXMiOiAyNTMsCiAgICAgICJlbmNvZGluZyI6ICJVVEYtOCIKICAgIH0sCiAgICAicHJvcGVydGllcyI6IHsKICAgICAgImNtOnRpdGxlIjogIlJlZmVyZW5jZSBzdXBwbGllciBpbmZvcm1hdGlvbiIsCiAgICAgICJleGFtcGxlOnJldmlld2VyIjogImV4YW1wbGUucmV2aWV3ZXIiLAogICAgICAiZXhhbXBsZTphbW91bnQiOiAiMTI0OC43NSIsCiAgICAgICJleGFtcGxlOnNlcXVlbmNlIjogIjkyMjMzNzIwMzY4NTQ3NzU4MDYiCiAgICB9CiAgfQp9Cg=="
+      }
+    }
+  ]
+}

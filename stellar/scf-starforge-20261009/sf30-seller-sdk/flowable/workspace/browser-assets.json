@@ -120,6 +120,13 @@
         "history-browser.mjs",
         "text/javascript; charset=utf-8"
       ]
+    ],
+    [
+      "/document-intake-browser.mjs",
+      [
+        "document-intake-browser.mjs",
+        "text/javascript; charset=utf-8"
+      ]
     ]
   ]
 }
