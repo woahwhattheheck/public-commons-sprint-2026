@@ -4,7 +4,7 @@ The maintained `model.observed_context` collector now adds the same original
 concentration coverage and mean-interval tables used by Published Studies.
 The selected OBSERVED_CONTEXT source still supplies the complete original report
 recipe, all source members, and the four numeric figures. Its binding edition is
-`observed-context-20261013-v3`, so a new delivery retains this complete collector
+`observed-context-20261013-v4`, so a new delivery retains this complete collector
 edition while earlier reports keep their original identity.
 
 ## Original source and calculation
@@ -74,7 +74,7 @@ The collector binds each original normalized row, station row and printed season
 
 For normalized observation rows, the original agency response also receives its actual retained selector and member identity. Its SHA256 must match the original response hash carried by the normalized row. A missing or different original response raises a source-integrity error at this boundary. The displayed values, activity IDs, source record indices, dates, qualifiers, units and reporting limits remain unchanged.
 
-This binding supplies the `source_selector` required by the existing comparison producer and keeps the same original identity in the exported concentration context and series support. The `observed-context-20261013-v3` delivery binding causes the native report operation to retain this completed collector edition.
+This binding supplies the `source_selector` required by the existing comparison producer and keeps the same original identity in the exported concentration context and series support. The `observed-context-20261013-v4` delivery binding causes the native report operation to retain this completed collector edition.
 
 ## Original study namespaces in regional reports (collector v4)
 
