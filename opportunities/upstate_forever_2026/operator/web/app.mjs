@@ -52,7 +52,7 @@ let teamPerson=null,connectionEpoch=0;
 let state=null,view=viewLabels[location.hash.slice(1)]?location.hash.slice(1):'overview',poll=null,refreshing=false,refreshQueued=false;
 let formContext=null,detailContext=null,taskPanel=false,toastTimer=null,sourcePreview=null;
 let lastTaskStates=new Map(),lastRendered='',logOffset=0,itemRequest=0,detailRequest=0;
-let formRevision=0,navigationRevision=0,workspaceRevision=0;
+let formRevision=0,navigationRevision=0,workspaceRevision=0,interactionRevision=0;
 let formOpeningRequest=0;
 const acceptedTasks=new Map();
 const form=$('#operation-form'),formDialog=$('#form-dialog'),detailDialog=$('#detail-dialog');
@@ -117,7 +117,7 @@ async function openSavedScientificReport(selection){
 async function openSavedCustomerReview(selection){
  return openRetainedBuiltIn(selection,'customer-reviews',value=>customerReviews.openForStudy(value));
 }
-const community=attachCommunity({getState:()=>state,api,endpoint,openForm,submitAction,detail,fileList,sourceForm,toast,openItem,refreshState:refresh,openDelivery:selection=>deliveryForm(undefined,selection),openScientificReport,openStudyTransfer:selection=>extensions.openExtension('study-transfer','openForStudies',selection)});
+const community=attachCommunity({getState:()=>state,getOpeningContext:()=>({workspaceRevision,connectionEpoch,formRevision,navigationRevision,interactionRevision,detail_kind:detailContext?.kind,detail_id:detailContext?.id}),api,endpoint,openForm,submitAction,detail,fileList,sourceForm,toast,openItem,refreshState:refresh,openDelivery:selection=>deliveryForm(undefined,selection),openScientificReport,openStudyTransfer:selection=>extensions.openExtension('study-transfer','openForStudies',selection)});
 const customerReviews=attachCustomerReviews({getState:()=>state,api,endpoint,openForm,submitAction,detail,fileList,uploadFile,showTask,toast,openSavedScientificReport,closeForm:()=>{formDialog.close();formContext=null;},openStudyTransfer:async selection=>{await extensions.openExtension('study-transfer','openForStudies',selection);if(workspace===selection.workspace_key){detailDialog.close();detailContext=null;}}});
 const receivingWaters=attachReceivingWaters({getState:()=>state,api,endpoint,openForm,submitAction,detail,fileList,showTask,toast,navigate,openDelivery:selection=>deliveryForm(undefined,selection),openScientificReport});
 const deliveryInspection=attachDeliveryInspection({getState:()=>state,api,endpoint,openItem,toast,
@@ -1286,6 +1286,7 @@ async function selectWorkspace(id){
  detailDialog.close();detailContext=null;lastRendered='';$('#content').innerHTML='<div class="empty"><h2>Opening selected workspace…</h2></div>';await refresh({force:true});
 }
 async function dispatch(button){
+ interactionRevision++;
  const action=button.dataset.action,id=button.dataset.id;
  if(action?.startsWith('native-job-'))return nativeJobs.dispatch(button);
  if(await extensions.dispatch(button))return;
