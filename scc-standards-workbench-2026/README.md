@@ -6,10 +6,10 @@ The application runs on your computer. Its SQLite workspace contains the current
 
 ## Install and open
 
-Python 3.10 or newer is required. The package uses `python-docx 1.2.0` and `reportlab 4.4.9` to generate editable Word documents and PDFs. Download the [complete source package](https://github.com/woahwhattheheck/public-commons-sprint-2026/raw/main/scc-standards-workbench-2026/releases/scc_standards_workbench-0.2.3-source.zip) and install it into your usual Python environment. The archive contains the application, browser assets, original public sources and declared build metadata:
+Python 3.10 or newer is required. The package uses `python-docx 1.2.0` and `reportlab 4.4.9` to generate editable Word documents and PDFs. Download the [complete source package](https://github.com/woahwhattheheck/public-commons-sprint-2026/raw/main/scc-standards-workbench-2026/releases/scc_standards_workbench-0.3.0-source.zip) and install it into your usual Python environment. The archive contains the application, browser assets, original public sources and declared build metadata:
 
 ```sh
-python -m pip install ./scc_standards_workbench-0.2.3-source.zip
+python -m pip install ./scc_standards_workbench-0.3.0-source.zip
 standards-workbench --workspace ./standards-workspace --demo
 ```
 
@@ -150,3 +150,8 @@ The complete application includes the public municipal example and a separate au
 The publisher generated the actual English/French DOCX, PDF and HTML standards, edition comparison and delivery workpapers. All four Word documents and four PDFs were rendered to pages. Their page review identified the presentation corrections included here; the formatting revision uses those same frozen editions and source records. The original complete authored browser and installed-archive continuation remains separately tracked. See the [installation guide](https://github.com/woahwhattheheck/public-commons-sprint-2026/blob/main/scc-standards-workbench-2026/releases/INSTALL.md) for the current wheel and completed execution results.
 
 The source archive is independently installable through its `pyproject.toml`. Its per-file digest manifest preserves the exact release bytes. The code is licensed under MIT, with Statistics Canada and document-library source notices retained separately. The package supplies engineering and public-source demonstrations; applicant qualifications, consortium commitments and grant eligibility remain the applicant's actual application inputs.
+
+
+## Individual member ballots and returned votes
+
+The **Member ballot receiving** desk composes offline bilingual member packets, original and corrected return intake, explicit sender verification and adoption into existing vote identities. Continue authority decisions, independent procedural review and publication through the original workbench. [BALLOT-EXCHANGE.md](BALLOT-EXCHANGE.md) gives the complete operator and transport contract; [BALLOT-RECEIVING.md](BALLOT-RECEIVING.md) carries the whole native/browser operation. Full private workspace exports retain every original return and editable decision record.

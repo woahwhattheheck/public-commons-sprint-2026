@@ -743,6 +743,32 @@ def _field_qc_comparison(ws, files, check, receipt, delivery):
             "inspection": result}
 
 
+def _field_report_adoption(ws, files, check, receipt):
+    """Reopen the same original five-report adoption using received modules."""
+    from model import field_report_adoption
+    from model.common import identifier
+    key = identifier(check["operation_id"])
+    captured = receipt.get("field_report_adoption")
+    binding = receipt.get("field_report_adoption_archive")
+    if (not isinstance(captured, dict) or captured.get("operation_id") != key
+            or captured.get("status") != "complete"
+            or captured.get("project_id") != ws.project["id"]
+            or captured.get("field_operation_id") != receipt["fieldwork_operation_id"]
+            or captured.get("plan_id") != receipt["fieldwork_plan_id"]
+            or not isinstance(binding, dict) or binding != check.get("expected")):
+        raise ValueError("Retain the explicit same-case field report adoption")
+    # These comparisons bind the original and selected reports, journal and
+    # historical plan revisions to the actual complete archive manifest.
+    files.descriptors(ws.root, binding["retained_files"])
+    actual = field_report_adoption.inspect_adoption(ws, key)
+    actual_binding = field_report_adoption.archive_binding(ws, key)
+    if actual != captured or actual_binding != binding:
+        raise ValueError("Cold receiving changed the adopted original field presentation")
+    files.descriptors(ws.root, actual_binding["retained_files"])
+    return {"kind": "field_report_adoption", "operation_id": key,
+            "inspection": actual, "archive_binding": actual_binding}
+
+
 def _customer_review(ws, files, check, receipt):
     """Use the restored application for the exact saved customer case and packages."""
     from model.simulated_customer_review import inspect_export, inspect_review, receive_review_case, STEPS
@@ -995,6 +1021,11 @@ def _inspect(request):
     checks = request["extra_checks"]
     if not isinstance(checks, list):
         raise ValueError("Extra receiving checks must be an explicit list")
+    if receipt.get("field_report_adoption") is not None:
+        adoption_checks = [item for item in checks
+                           if isinstance(item, dict) and item.get("kind") == "field_report_adoption"]
+        if len(adoption_checks) != 1:
+            raise ValueError("Cold receiving requires the selected field adoption exactly once")
     extra = []
     for check in checks:
         if not isinstance(check, dict):
@@ -1014,6 +1045,8 @@ def _inspect(request):
             extra.append(_customer_review(ws, files, check, receipt))
         elif check.get("kind") == "field_qc_comparison":
             extra.append(_field_qc_comparison(ws, files, check, receipt, delivery))
+        elif check.get("kind") == "field_report_adoption":
+            extra.append(_field_report_adoption(ws, files, check, receipt))
         elif check.get("kind") == "field_campaign":
             from model.simulated_fieldwork import inspect_campaign
             result = inspect_campaign(ws, check["operation_id"])

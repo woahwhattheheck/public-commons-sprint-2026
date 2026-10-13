@@ -1,41 +1,41 @@
 {
   "schema": "upstate.measurements-source-upgrade/v1",
-  "source_commit": "05fe5871aea9c5cb07e3c29a8298bacd30bf0dd0",
+  "source_commit": "0827b03567e3d901c316696471e463bc57da2fd5",
   "source_root": "opportunities/upstate_forever_2026",
   "operation_id": "ECO13-MEASUREMENTS-COMPLETE-DD6B-20261013",
   "installer": "operator/install_measurements.py",
   "inventory": "integration/measurements/INSTALLATION.json",
-  "source_files": 57,
-  "installed_files": 55,
-  "source_bytes": 698274,
+  "source_files": 59,
+  "installed_files": 57,
+  "source_bytes": 720713,
   "parts": [
     {
       "path": "source-01.json",
-      "bytes": 280975,
-      "sha256": "957c69ed7071dfd559f703730b7af6f4403700484bbb52b259a25e6582d98d4b",
+      "bytes": 287315,
+      "sha256": "610dda1e69a129e11c55e2b89631ca7940b9719b2302ef2b62cc33efbb4f8df2",
       "members": 22,
-      "source_bytes": 207185
+      "source_bytes": 211937
     },
     {
       "path": "source-02.json",
       "bytes": 278105,
-      "sha256": "c2e1b14ddb65f1886288864a9443e53613c65740f7397b02fabcffdbe2f6378c",
+      "sha256": "65d4ecacaa5199f1a139cfabe28e6e74e351580bc2de48db8f638fc950cd799a",
       "members": 16,
       "source_bytes": 205891
     },
     {
       "path": "source-03.json",
-      "bytes": 282127,
-      "sha256": "636e08430de5846d73568c3bd58579745a4884317a906210aabc3338119fcb05",
+      "bytes": 282231,
+      "sha256": "73b5d624a560f4b410e08ea99e45c6120950a36d774da0556e478b800e5f85a6",
       "members": 15,
-      "source_bytes": 209076
+      "source_bytes": 209154
     },
     {
       "path": "source-04.json",
-      "bytes": 102596,
-      "sha256": "91dbcac792266e98f8d5f790355df53da78af4f5837ea78e0dd9867851f55d7d",
-      "members": 4,
-      "source_bytes": 76122
+      "bytes": 126463,
+      "sha256": "7bcb3829bf697d7d2f80ce3d563e2709e4021acef9e1a56a58960c1dea735384",
+      "members": 6,
+      "source_bytes": 93731
     }
   ],
   "files": [
@@ -54,7 +54,7 @@
     {
       "path": "install_measurement_large_files.py",
       "bytes": 12865,
-      "sha256": "12dc4f8f34746959738b22867aa3af443fa65a388ff1ba7b3436294671eb967c",
+      "sha256": "21fb84d41642a04f1c2c3d8794bc8b30f78a3d351f859b4938111264335b92b8",
       "role": "installed_component"
     },
     {
@@ -71,14 +71,14 @@
     },
     {
       "path": "integration/component_fragments/measurement-large-files.json",
-      "bytes": 1474,
-      "sha256": "f37a796c4e442e9e179c8402522b2ee75785fe2cf1f3517cf0cb3986db24643c",
+      "bytes": 1555,
+      "sha256": "a2f5db4eba22ad8b0a230b2f04a9fc626f17ccaa9137b6516e5dad7bb16e2282",
       "role": "installed_component"
     },
     {
       "path": "integration/measurements/INSTALLATION.json",
-      "bytes": 20351,
-      "sha256": "5d310c984e18b3bdbaf3689dc3e3b9455450326ffded123db473ef12e32fb7ac",
+      "bytes": 22216,
+      "sha256": "d5d4388a88c3eba472a8c807a1280f2a8c7933e968fde148e3067f838e7b4bf1",
       "role": "installed_component"
     },
     {
@@ -101,14 +101,14 @@
     },
     {
       "path": "MEASUREMENT_LARGE_FILES_SOURCE.json",
-      "bytes": 7710,
-      "sha256": "9f34e3a87fb8b77a76d66a0c5e8a944e4bb65c68fe46013b4c72928d4658a61d",
+      "bytes": 8253,
+      "sha256": "654dbcdddc80bbb0ecbb5cb627d58a1b1a1025b8ad9e28022bcfb1c438bb6671",
       "role": "installed_component"
     },
     {
       "path": "MEASUREMENT_LARGE_FILES.md",
-      "bytes": 20085,
-      "sha256": "dcb3b3130f8285406d0d175b981b59bd893a35e5b6138a60f4393c122d2d014a",
+      "bytes": 22348,
+      "sha256": "984be9c2f4613ebe05bf30522c09bd86c21fe612d90ef234cd1647fd9feae78a",
       "role": "installed_component"
     },
     {
@@ -287,8 +287,8 @@
     },
     {
       "path": "measurement_workspace/web/large_files.mjs",
-      "bytes": 17940,
-      "sha256": "e26b5472953158c8a5c06fe078772a64cf789e37c534053988e7bc5c43a2cd54",
+      "bytes": 17979,
+      "sha256": "9635f72bc095efd3cd27617a70c2d1e22c08ea721f6358f9a34394a9dddeeb12",
       "role": "installed_component"
     },
     {
@@ -347,8 +347,8 @@
     },
     {
       "path": "operator/web/measured_large_files.mjs",
-      "bytes": 17940,
-      "sha256": "e26b5472953158c8a5c06fe078772a64cf789e37c534053988e7bc5c43a2cd54",
+      "bytes": 17979,
+      "sha256": "9635f72bc095efd3cd27617a70c2d1e22c08ea721f6358f9a34394a9dddeeb12",
       "role": "installed_component"
     },
     {
@@ -380,6 +380,18 @@
       "bytes": 34879,
       "sha256": "cfcdb9ec23abfc783aea59b255f1a376cc7700958c1ab5783cb6c7f944d3f558",
       "role": "installed_component"
+    },
+    {
+      "path": "model/portable_databases.py",
+      "role": "installed_component",
+      "bytes": 7984,
+      "sha256": "b15b5c7a26cbb39d686ec746d96f7ca51e33a96a60f35218983edd7cd5f61871"
+    },
+    {
+      "path": "model/MEASUREMENTS_PORTABLE.md",
+      "role": "installed_component",
+      "bytes": 9625,
+      "sha256": "7d526a90464720e9b7c36ac8ffea57bad8b33a3c7aa875588a452aa810e2de47"
     }
   ],
   "bootstrap": {
@@ -443,5 +455,7 @@
     "version": "2026-10-13.3",
     "source_path": "opportunities/upstate_forever_2026/CURRENT_OWNER_DIRECTION.md",
     "source_commit": "e7325cdf"
-  }
+  },
+  "original_download_lifecycle_commit": "6af867c99ba8ac84141adbf5b31a2d3efe9130f8",
+  "original_outer_snapshot_commit": "109eb3a2af0f67924a4d104552cac9918f69fbcc"
 }

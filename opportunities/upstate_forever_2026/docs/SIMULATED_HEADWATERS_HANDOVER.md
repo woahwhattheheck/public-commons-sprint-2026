@@ -10,6 +10,20 @@ Extract the returned rehearsal-delivery-*.zip into a fresh directory and open ST
 
 The human opening page and copied report files enter the ordinary DELIVERY.json inventory and existing ZIP-member verification. This addition does not change the saved scientific report, Workspace, original record timestamps, native result quantities or rehearsal checkpoint.
 
+## Interpret the original contrasts
+
+The opening page distinguishes the original comparison directions and their scientific meaning:
+
+| Saved product | Signed quantity | Interpretation |
+|---|---|---|
+| Land-cover comparison | Alternative minus baseline within the same parameter profile | A negative value means lower modeled annual export under that alternative. |
+| Parameter sensitivity | Varied-profile baseline minus reference-profile baseline | A negative value means the varied parameter profile produces a lower modeled baseline. This is parameter sensitivity, not a restoration benefit. |
+| Paired raster or joint siting product | Baseline minus alternative on that product's recorded common support | A positive value means lower modeled annual export under the alternative. |
+
+To examine whether a land-cover effect changes with model choices, compare each alternative with its own baseline within each profile, then compare those paired effects across the saved profiles. Preserve every product's original valid-cell support and annual units. These native modeled stream exports do not establish measured water-quality changes or intake concentrations.
+
+This correction changes only the generated opening-page explanation. The original native scenario comparison, parameter rows, report and map files, selected IDs, scientific archive and receiving checkpoint retain their bytes. The existing complete-bundle publisher includes the newly generated page in its content identity, producing a new handover ZIP when the page changes while preserving an earlier ZIP. Reopen the same completed rehearsal through its existing receiving command to publish the corrected handover; no native calculation or report regeneration is needed.
+
 ## Inspect the actual outgoing product
 
 Open the extracted page at desktop width and 390 pixels. Read the full numeric values and units, inspect the actual plots, use each primary report/project/media link, download and reopen the original project, and operate the video controls. Watch and listen to the actual outgoing media. View the complete report and map attachments, including their narrow layout and PDF page breaks. Preserve clear foreground/background pairs in both light and dark embedding contexts.
