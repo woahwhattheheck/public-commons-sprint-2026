@@ -97,6 +97,31 @@ and default `/api/state` continue to provide the previous complete model view.
 Repeated compact requests should reuse unchanged record projections while actual
 native progress and source imports remain visible.
 
+## Task submission and saved views
+
+Task submission keeps a separate bounded catalogue of original task identities,
+workspace IDs, request digests, states and creation times. Completed result bodies
+are not repeatedly parsed while the global submission lock is held. Candidate
+matches retain the original most-recent-first ordering. Before returning any match,
+the operator reopens that full original task and checks its workspace, active state
+and exact request digest again. The existing operation-ID check, atomic queue
+creation, task response, execution, cancellation and recovery remain unchanged.
+This request cache retains at most 32,768 metadata records / 16 MiB; larger histories
+still work through the original files.
+
+Saving a guided view resolves its selected records directly in the same Workspace.
+The original project, source-selection, paired baseline/alternative, comparison and
+map-pack checks still run, followed by unchanged optimistic-revision validation,
+note-history retention and atomic save. Invalid or absent selections keep the
+original JOURNEY_SELECTION response; malformed retained scientific identities still
+raise their original validation error. Complete original catalogues remain available
+to full model/detail callers.
+
+The existing native continuation should submit an ordinary already-supported action,
+retry its same operation identity, and save/reopen the current guided view. Reused
+requests must return the same full original task; a deliberately stale saved-view
+revision still returns JOURNEY_CHANGED.
+
 ## Cache lifetime and bounds
 
 The cache contains canonical JSON bytes of a projection, never a shared mutable
