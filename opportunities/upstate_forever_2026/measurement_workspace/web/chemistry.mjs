@@ -159,6 +159,7 @@ export function mountMeasuredChemistry(root,host,{memory=new Map()}={}){
     const override=draft.day_overrides?.[r.id]||{},role=draft.roles.by_record?.[r.id]||'';
     return '<details data-record-id="'+esc(r.id)+'"><summary>'+esc(r.stationId)+' · '+esc(r.sampledDate)+' · '+esc(r.characteristic)+' · '+esc(r.reportedValue??r.value)+' '+esc(r.reportedUnit||r.unit)+'</summary>'+
      '<p>Current eligibility: '+esc(r.eligible?.ok?'eligible':(r.eligible?.reasons||[]).join('; '))+'. Source review: '+esc(r.review?.state||'pending')+'.</p>'+
+     '<dl><dt>Original sampling time</dt><dd>'+esc(r.sampledAt||r.sourceTime||r.sampledDate)+' · '+esc(r.timePrecision||'source precision unspecified')+' · '+esc(r.timeZone||'timezone unspecified')+'</dd><dt>Method / laboratory</dt><dd>'+esc(r.method||'unspecified')+' / '+esc(r.laboratory||'unspecified')+'</dd><dt>Reported fraction / basis</dt><dd>'+esc(r.fraction||'unspecified')+' / '+esc(r.basis||'unspecified')+'</dd><dt>Normalized source value and bounds</dt><dd>'+esc(r.value??'')+' '+esc(r.unit||'')+' · '+esc(r.censor||'')+' · lower '+esc(r.lower??'absent')+' / upper '+esc(r.upper??'absent')+'</dd></dl>'+
      '<div class="mb-grid">'+select('record_role','Individual role',[['','Use date/default rule'],['fit','Fit'],['holdout','Holdout']],role)+text('day','Explicit model day (optional)',override.day??'','type="number" min="0" step="any"')+'</div>'+
      note('day_reason','Reason for explicit day',override.reason||'')+
      '<button type="button" data-mb-action="record-apply">Keep record timing and role</button><details><summary>Complete original record and source history</summary><pre>'+esc(pretty(r))+'</pre></details></details>';
@@ -193,7 +194,7 @@ export function mountMeasuredChemistry(root,host,{memory=new Map()}={}){
   if(!prepared?.native_payload)throw Error('Reopen a saved measured binding first.');
   const payload=copy(prepared.native_payload),key=requestKey();let entry;
   try{entry=JSON.parse(localStorage.getItem(key)||'null');}catch(error){throw Error('The original request journal cannot be read: '+error.message);}
-  if(entry&&canonical(entry.request.payload)!==canonical(payload))throw Error('The saved request journal differs from this retained binding.');
+  if(entry&&(entry.request.workspace!==workspace||entry.request.action!=='chemistry.run'||!entry.request.operation_id||canonical(entry.request.payload)!==canonical(payload)))throw Error('The saved request journal differs from this retained binding.');
   if(!entry){
    entry={request:{workspace,action:'chemistry.run',payload,operation_id:'measured-chemistry-'+crypto.randomUUID()},prepared_at:new Date().toISOString()};
    try{localStorage.setItem(key,JSON.stringify(entry));}catch{throw Error('The browser cannot retain this operation before sending; enable storage or export the native request.');}
