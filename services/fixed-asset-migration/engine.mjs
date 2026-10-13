@@ -367,6 +367,7 @@ export function reconcile(workspace){
    }
   }
  }
+ if(!roleNames.some(role=>(domains[role].books?.rows.length||0)+[...financialDomains].reduce((n,d)=>n+(domains[role][d]?.rows.length||0),0)>0)){financial.confirmed=false;issue('warning','FINANCIAL_SCOPE_ABSENT',{},'Select the actual book and monetary populations before confirming a financial basis.');}
  const comparisons={};
  for(const [domain,spec]of Object.entries(DOMAINS)){
   const left=domains.source[domain],right=domains.target[domain];if(!left&&!right)continue;
