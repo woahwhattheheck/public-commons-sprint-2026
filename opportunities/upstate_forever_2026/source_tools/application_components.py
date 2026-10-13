@@ -12,6 +12,18 @@ import re
 import sys
 from urllib.parse import unquote, urlsplit
 
+try:
+    from .component_fragments import (compose_catalog, fragment_paths,
+                                     read_directory_fragments)
+except ImportError:
+    # The cumulative installer loads this original module through runpy; resolve
+    # the exact sibling helper without requiring a package or changing sys.path.
+    import runpy
+    _fragment_helper = runpy.run_path(str(Path(__file__).with_name("component_fragments.py")))
+    compose_catalog = _fragment_helper["compose_catalog"]
+    fragment_paths = _fragment_helper["fragment_paths"]
+    read_directory_fragments = _fragment_helper["read_directory_fragments"]
+
 CATALOG_PATH = "integration/application_components.json"
 MODULE_PATH = "source_tools/application_components.py"
 CATALOG_SCHEMA = "upstate.application-components/v1"
@@ -231,10 +243,14 @@ def inspect(document, *, catalog=None, extra_components=(), allow_embedded=True)
     metadata = document.get("file_metadata", {})
     if not isinstance(files, dict) or not isinstance(metadata, dict):
         raise ValueError("Choose the original application source map")
+    fragment_records = []
     if catalog is None:
         if CATALOG_PATH not in files:
             raise ValueError("The application has no selected-edition catalogue: " + CATALOG_PATH)
         catalog = json.loads(_text(files, metadata, CATALOG_PATH))
+        catalog, fragment_records = compose_catalog(catalog, [
+            (path, _text(files, metadata, path)) for path in fragment_paths(files)])
+    # An explicitly supplied catalogue is already the caller's complete selection.
     catalog = validate_catalog(catalog)
     selected = _selected(catalog, extra_components)
     files, metadata = dict(files), dict(metadata)
@@ -463,6 +479,8 @@ def inspect(document, *, catalog=None, extra_components=(), allow_embedded=True)
                 issue("python-import", owner, _module_label(_child_module(name, alias.name)),
                       "Imported name is absent from the retained module", line=line)
 
+    for fragment in fragment_records:
+        require(fragment["path"], CATALOG_PATH, "component-fragment")
     for name in selected:
         for path in catalog["components"][name]["paths"]:
             require(path, "component:" + name, "component")
@@ -618,7 +636,7 @@ def inspect(document, *, catalog=None, extra_components=(), allow_embedded=True)
                       source_id=member["source_id"], expected=expected, actual=actual[key])
     distinct = {canonical(item): item for item in issues}
     missing = [distinct[key] for key in sorted(distinct)]
-    return {
+    report = {
         "schema": REPORT_SCHEMA, "edition": catalog["edition"],
         "catalog_sha256": digest(canonical(catalog)),
         "selected_components": selected, "ready": not missing,
@@ -633,6 +651,9 @@ def inspect(document, *, catalog=None, extra_components=(), allow_embedded=True)
         "dependencies": sorted(edges, key=lambda row: (row["path"], row["kind"], row["target"])),
         "issues": missing,
     }
+    if fragment_records:
+        report["component_fragments"] = fragment_records
+    return report
 
 
 def require_complete(document, **kwargs):
@@ -653,8 +674,11 @@ def inspect_directory(root, *, required=False, allow_embedded=False):
     catalog_file = root / CATALOG_PATH
     if not catalog_file.is_file():
         raise ValueError("Receive the original selected-edition catalogue: " + CATALOG_PATH)
-    catalog = validate_catalog(json.loads(catalog_file.read_text("utf-8")))
+    catalog, fragment_records = compose_catalog(
+        json.loads(catalog_file.read_text("utf-8")), read_directory_fragments(root))
+    catalog = validate_catalog(catalog)
     declared = {path for component in catalog["components"].values() for path in component["paths"]}
+    declared.update(fragment["path"] for fragment in fragment_records)
     selected = _selected(catalog, ())
     declared.update(path for name in selected
                     for path in catalog["components"][name].get("source_manifests", []))
