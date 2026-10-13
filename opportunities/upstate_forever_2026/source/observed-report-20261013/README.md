@@ -6,7 +6,7 @@ Maintained by TokenJunkieLabs. Code follows the repository MIT license. Scientif
 
 ## Install in the current application
 
-Use the maintained application checkout containing `model/workspace.py`, the complete original observation sources merged in [PR3046](https://github.com/woahwhattheheck/public-commons-sprint-2026/pull/3046), and the scientific/client receiving integration merged in [PR2920](https://github.com/woahwhattheheck/public-commons-sprint-2026/pull/2920). Current `model/scientific_report.py` and `model/delivery.py` include the report integration; retain later source changes when updating an existing checkout. Then run:
+Use the maintained application with the original observation sources merged in [PR3046](https://github.com/woahwhattheheck/public-commons-sprint-2026/pull/3046) and receiving workflow merged in [PR2920](https://github.com/woahwhattheheck/public-commons-sprint-2026/pull/2920), containing `model/workspace.py`, the merged scientific/client delivery, its current `model/scientific_report.py`, `model/scientific_figures.py`, `model/observed_context.py`, and the complete current `measurement_workspace` family. The original source Canvas below records an earlier author edition. Current repository modules include the subsequent native-source binding, self-contained HTML figures and restored-project navigation. The merged PR3111 collector v4 supports both the regional source namespace and the separately retained original study. Then run:
 
 ```sh
 python -B source/observed-report-20261013/install.py --workspace /mnt/data/gis12/original-workspace
@@ -24,7 +24,7 @@ The six-year gauge component was executed from six original agency daily-mean re
 
 The monthly discharge companion was executed from 230 original reporting periods, four source routes and all 365 approved gauge days. It preserves actual reporting-period overlap and selected source identifiers. The three upstream volume and phosphorus cohorts are complete in every month. Species-specific nitrogen coverage remains explicit.
 
-PDF output uses ReportLab vector Drawings from the exact figure specification (one 252-point-high drawing per panel). HTML and Markdown use the original D3 SVGs. These are four scientific figures with 5, 1, 1 and 5 panels. The figure spec, original SVGs, offline D3 renderer and pinned licensed dependencies are included.
+PDF output uses ReportLab vector Drawings from the exact figure specification (one 252-point-high drawing per panel). HTML carries the verified original D3 SVG bytes for standalone viewing; Markdown links to the same retained package SVGs. These are four scientific figures with 5, 1, 1 and 5 panels. The figure spec, original SVGs, offline D3 renderer and pinned licensed dependencies are included.
 
 ## Reproduce source calculations
 

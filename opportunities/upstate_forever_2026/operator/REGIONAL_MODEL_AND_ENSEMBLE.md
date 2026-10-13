@@ -565,3 +565,78 @@ The decision operation reuses each completed profile's original baseline and alt
 The complete acquisition is retained in [source/hydrology-huc05-07-20261013/](../source/hydrology-huc05-07-20261013/). It contains eight unchanged USGS response bodies, all six annual daily series for 2020–2025, the original station inventory and series catalogue, request URLs and dates, all 26,242 source rows in a usable CSV, and 78 station/year coverage records with exact gaps. Original approved, provisional, estimated and nonnumeric values remain attached to their source rows. Thirteen daily-mean discharge series overlap the requested period; seven contain all 2,192 numeric days.
 
 The source HUC8 selection covers 03060105–03060107. Join the publisher's NAD83 station coordinates to the original retained 217-polygon domain to obtain the exact model and reporting membership. For modeled annual-load comparison, retain each monitoring location's original contributing catchment, measurement period, concentration observations and chosen annual-load method. A73C / OBS12 / AE11 maintain that observation pipeline. The package's [README](../source/hydrology-huc05-07-20261013/README.md) gives the original quantities, qualifiers, source provenance and an offline Node command that reproduces the derived tables from the eight retained responses.
+
+## 13. Use an imported annual reference directly with a saved study
+
+The Annual load observations desk retains the selected original observation
+edition together with its source catchments. After an import completes, choose
+**Evaluate saved study** on that operation, then choose the existing saved
+parameter study. The Scenario sensitivity desk opens the same calibration form
+with the original observation and catchment identities already bound.
+
+The form shows the publisher's source, methods, annual mass units, original
+periods, admitted records and available published standard errors. The study
+supplies its completed baseline candidates. Select the relevant parameters and
+analysis groups; the original calibration engine applies the requested objective
+and temporal weighting. The existing **Open calibration** route remains available
+for a manually selected candidate cohort.
+
+The same original import is available from the command line:
+
+```sh
+"$UPSTATE_PYTHON" -B -m model.ensemble_consumers_cli \
+  --workspace "$UPSTATE_WORKSPACE" annual-references
+
+"$UPSTATE_PYTHON" -B -m model.ensemble_consumers_cli \
+  --workspace "$UPSTATE_WORKSPACE" calibration \
+  --ensemble-id "$UPSTATE_ENSEMBLE_ID" \
+  --annual-import-id "$UPSTATE_ANNUAL_IMPORT_ID"
+```
+
+Set `UPSTATE_ANNUAL_IMPORT_ID` to the completed import's actual task ID from
+the returned catalog. Optional `--reference-options` accepts a retained JSON file
+containing observation-record selection, spatial groups, objective, source notes
+and temporal weighting. Its original observation and catchment binding stays
+fixed. Optional `--standard-errors` invokes the maintained published-source
+sensitivity after calibration. The resulting plan retains the original import,
+source summary and exact source binding alongside its selected baseline runs.
+The normal Workspace backup carries the import records, consumer plans and
+results into an independent receiving directory.
+
+## 14. Original daily-flow gauge and catchment source
+
+The complete source edition in
+`source/hydrology-huc05-07-20261013/nldi/` accompanies the original discharge
+records in section 12. It contains all 13 original NLDI gauge features and 13
+original contributing-basin responses, source station/network bindings, full
+GeoJSON views and an offline standard-library Node derivation.
+
+From the current application root, import its three source views into the same
+scientific Workspace:
+
+```sh
+"$UPSTATE_PYTHON" -B -m model.cli --workspace "$UPSTATE_WORKSPACE" \
+  source-import source/hydrology-huc05-07-20261013/nldi/model-sources.json
+```
+
+The retained source IDs are:
+
+| Source view | Source ID | Identity field |
+|---|---|---|
+| Original gauge locations | `nldi-daily-flow-gauge-locations-20261013` | `station_id` |
+| Whole upstream catchments | `nldi-daily-flow-whole-catchments-20261013` | `basin_id` |
+| Station and basin bindings | `nldi-daily-flow-station-basin-bindings-20261013` | `station_id` |
+
+Each native source includes the original companions needed for portable
+receiving. The original `simplified=false&splitCatchment=false` basin response
+retains the complete local NHDPlus catchment at each gauge's source reach.
+The registered gauge point, its source reach measure, this whole-catchment
+context and any later exact gauge-split geometry retain their own identities.
+For annual calibration, use the geometry declared by the imported annual
+estimator's original binding in section 13.
+
+The regional station-geography workflow joins the original points and catchments
+to the existing 217-HUC domain and its reporting, upstream and utility selections.
+HUC8 catalog membership remains source context; the original polygon geometry
+determines the spatial relationship. See the source edition's complete README
+and capture manifest for all request URLs, original dates and geometry details.

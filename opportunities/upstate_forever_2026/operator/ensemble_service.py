@@ -2,11 +2,11 @@
 from __future__ import annotations
 from model.common import identifier, read_json, relative_file, describe_file
 from model.ensembles import Ensembles, parameter_catalog
-from model import ensemble_report, ensemble_consumers
+from model import ensemble_report, ensemble_consumers, ensemble_references
 
 ACTIONS = frozenset({"ensemble.create", "ensemble.run", "ensemble.report",
                      "ensemble.decision", "ensemble.calibration", "ensemble.consumer.resume"})
-READS = frozenset({"catalog", "inspect", "report", "consumers", "consumer"})
+READS = frozenset({"catalog", "inspect", "report", "consumers", "consumer", "annual-references"})
 WRITES = frozenset({"preview"})
 
 class EnsembleService:
@@ -109,6 +109,9 @@ class EnsembleService:
                     "ensembles": self.overview(workspace),
                     "profiles": state["profiles"], "scenarios": state["scenarios"],
                     "grids": state["grids"]}
+        if operation == "annual-references":
+            return {"workspace_key": workspace, **ensemble_references.catalog(ws),
+                    "ensembles": self.overview(workspace)}
         if operation == "consumer":
             return self._consumer(workspace, payload.get("consumer_id"))
         if operation == "consumers":
@@ -128,6 +131,7 @@ class EnsembleService:
                           for row in ws._list("calibration-plans")]
             return {"workspace_key": workspace, "catalog": selected, "observations": observed,
                     "catchment_sources": sources, "reference_selections": references,
+                    "annual_references": ensemble_references.catalog(ws),
                     "scenarios": ws._list("scenarios"), "consumers": self._consumer_rows(ws, key)}
         if operation == "preview":
             spec = payload.get("spec")
@@ -206,7 +210,9 @@ class EnsembleService:
             else:
                 plan = ensemble_consumers.prepare_calibration(
                     ws, self._ensemble_id(payload), payload.get("reference_selection"),
-                    profile_ids=payload.get("profile_ids"), pollutants=payload.get("pollutants"))
+                    profile_ids=payload.get("profile_ids"), pollutants=payload.get("pollutants"),
+                    reference_import_id=payload.get("reference_import_id"),
+                    reference_options=payload.get("reference_options"))
             if plan["mode"] == "decision":
                 result = ensemble_consumers.build_decision(ws, plan["id"])
             else:

@@ -19,19 +19,27 @@ import tempfile
 
 SCHEMA = "upstate.conservation-design-install/v1"
 DIRECTORY = "scenario-design"
+DATABASE_MODULE = "model/portable_databases.py"
+DATABASE_MEMBER = "workspace/conservation-design/editor/projects.sqlite"
 FILES = (
     "integration/conservation_design_composition.json",
     "model/CONSERVATION_CONSUMERS.md",
     "model/conservation_bindings.py",
     "model/conservation_scenarios.py",
     "model/conservation_design.py",
+    "model/conservation_design_editor.py",
     "operator/CONSERVATION_DESIGN.md",
+    "operator/CONSERVATION_DESIGN_EDITOR.md",
+    "operator/CONSERVATION_DESIGN_BROWSER.md",
+    "operator/conservation_design_browser_receiving.py",
     "operator/conservation_design.py",
     "operator/extensions/conservation-design.json",
     "operator/install_conservation_design.py",
     "operator/CONSERVATION_DESIGN_RECEIVING.md",
     "operator/web/conservation_design.css",
     "operator/web/conservation_design.mjs",
+    "operator/web/conservation_design_editor.mjs",
+    "operator/web/conservation_design_frame.js",
     "scenario-design/CONSERVATION.md",
     "scenario-design/INTEGRATION.md",
     "scenario-design/PERFORMANCE.json",
@@ -60,9 +68,9 @@ DEPENDENCIES = (
     "model/workspace.py", "model/common.py", "model/rasters.py",
     "model/conservation.py", "model/profiles.py", "model/reuse.py",
     "operator/extension_registry.py", "operator/web/extension_host.mjs",
-    "install_extensions.py",
+    "install_extensions.py", "operator/conservation_browser_receiving.py",
 )
-SHARED = ("model/portable.py", "operator/server.py", "operator/web/app.mjs")
+SHARED = ("model/portable.py", DATABASE_MODULE, "operator/server.py", "operator/web/app.mjs")
 ASSEMBLER = "source_tools/application_assembly.py"
 PREDECESSORS = {
     "scenario-design/CONSERVATION.md": [
@@ -79,13 +87,15 @@ PREDECESSORS = {
     ],
     "scenario-design/SOURCE_MANIFEST.json": [
         "86c8f36734f03d252e1549d024d653be9ea1cdabcd85493ccfad06aac50839bc",
-        "eeaae93824f804dd3d5d694792135b4368d2aaadd9e453105d81733673b4aa71"
+        "eeaae93824f804dd3d5d694792135b4368d2aaadd9e453105d81733673b4aa71",
+        "103ea7faa1c2af283dd675c909a6b9de656b99f9f8620402e3a2f91033f7683d"
     ],
     "scenario-design/conservation.py": [
         "d635b010c420c4c55e8ad601407b6293c5b6d329ae2a9b87d009c5a88f02a9fb"
     ],
     "scenario-design/eco_bridge.py": [
-        "8197fbe50bce6b7c9f0d7be4c4bf1a134dfa8350b4f183feee3834b5b02dcc6b"
+        "8197fbe50bce6b7c9f0d7be4c4bf1a134dfa8350b4f183feee3834b5b02dcc6b",
+        "6d719d80b1ffda0be74d5b22dcf0f47cd515f8a3835c5c6ab5b6709075858b6f"
     ],
     "scenario-design/engine.py": [
         "99a1ba9f99ba102a1be058c693b4b2d339c812f01c01a6a47da66ef0694aa327",
@@ -95,7 +105,8 @@ PREDECESSORS = {
         "ea37d77c317d16578ef4d395336b9788cc92cd58125e2783936f9a456eb60959"
     ],
     "scenario-design/server.py": [
-        "7399475fcbb8aceeb4b234e96f669871bd53d11f067a29ea9e78e0827d72a024"
+        "7399475fcbb8aceeb4b234e96f669871bd53d11f067a29ea9e78e0827d72a024",
+        "1056f4969ffc948a8551dc7f412f606d9d3d2cebd0f09bb87c0bcbd55b7f1841"
     ],
     "scenario-design/start.cmd": [
         "d8ae6297a4a7592be58178a855632a49bf10977b4938a165da5d3b1223484170"
@@ -141,25 +152,33 @@ PREDECESSORS = {
     ],
     "operator/conservation_design.py": [
         "58b76335b6b8f8f8c6a2d11d2271c8210f34b822990eb635d83db3d93b17684e",
-        "be9637b9494fb35e39a1cd1740d93201e016e444b4d1b60fbe27ce3b5d7fe8a4"
+        "be9637b9494fb35e39a1cd1740d93201e016e444b4d1b60fbe27ce3b5d7fe8a4",
+        "6f67f91e217ef79ec818cb67912bb43d76dbda90d381dff9adf6ff60e13d84ad"
     ],
     "operator/extensions/conservation-design.json": [
-        "05a0d15df2b22f0ae3cfb3bcbf50b4474a2ad534fc475194de35e3b06a7cf591"
+        "05a0d15df2b22f0ae3cfb3bcbf50b4474a2ad534fc475194de35e3b06a7cf591",
+        "98929c6559caac73bb07d20fa5ff48eaa0476051bc4f59a44253f937047d54d8"
     ],
     "operator/web/conservation_design.mjs": [
         "828c579f7108609af4b94062d453defe9bcdf6420e66d070eb6edf3940c7ce8a",
-        "d591e5d2b08b4eebf59c03578d6f4fdac07e92d215c7ea23e9dcf1753a7688c1"
+        "d591e5d2b08b4eebf59c03578d6f4fdac07e92d215c7ea23e9dcf1753a7688c1",
+        "f18f8522322b1ffb7d48ae220a511e3b7c7dd7e31ec3b273d3675cbff4ffea6b"
     ],
     "operator/web/conservation_design.css": [
-        "0642c88ad7a19d5eb1180a775fbf7e59b45346530ae215ab4a068b0bc1a90efc"
+        "0642c88ad7a19d5eb1180a775fbf7e59b45346530ae215ab4a068b0bc1a90efc",
+        "8754c8297f6b441d181b5746fa04a3e1857ff381f9e0f97c8ee81c0066df1864"
     ],
     "operator/CONSERVATION_DESIGN.md": [
         "51659614cab8da4e9e4624e77f0fdd4b7074e7d013f5cba85b55a2ac3b5a4a89",
-        "bb87c3a4a63ccf9e9d7fbca7e8ee9193f0387b80eba1305a8e40ec249c9dd262"
+        "bb87c3a4a63ccf9e9d7fbca7e8ee9193f0387b80eba1305a8e40ec249c9dd262",
+        "11d6864d992d58f26da4b988f9d718ec943b91af74854747bff28079cd2075a8"
     ],
     "integration/conservation_design_composition.json": [
         "68c6ffe3157cf5c8c54b074f48fec32262d40b9a574b497a03de57fd51b70f58",
-        "f39eeb44abb5e9cee585114c0e790c5a43e73a9d9c192682b78f4d76ccfa36ca"
+        "f39eeb44abb5e9cee585114c0e790c5a43e73a9d9c192682b78f4d76ccfa36ca",
+        "1eb473f5b18165d8214a1fd17fc78379c4c15462db1c8ef702c419865de03788",
+        "0c79e65fa6788c2c0a13a3f973950cb48050b0dd4d544c4818c472d2946b50dd",
+        "a19c70b696c4a89b455ca3f0c98fc9f4c2545844aa077c43955f503587a2bc66"
     ],
     "model/conservation_bindings.py": [
         "f23070f1298b90614ce51898c02f41bb9be8cdaf90bcb3b43627b768000dcb62",
@@ -172,6 +191,34 @@ PREDECESSORS = {
     "model/conservation_scenarios.py": [
         "7d219c37ccd94094bf1e3355433ed12499a5aec389220cc7608d76140643ae6d",
         "2bc3fa18d2ed4e8b59310e4a442411b7f7b91aec585ac2d1916060ce8345e25b"
+    ],
+    "model/conservation_design_editor.py": [
+        "5a61fd73c7f7de5c68215d91f5160bbf0797d790d9db15ffc8869a7f8b8dc587",
+        "06ec5046ecaaa8bb69b3fd865afb859f06ebe20e126a67f1f6bf6714a9295112"
+    ],
+    "operator/web/conservation_design_editor.mjs": [
+        "049ccb1a6b1971378acc77090b8ea6cf36996f48c3e5971d9a115b11e2af7b3c",
+        "6e85ab160629609296a2e77cf62a3b04f5b87b86d9809f3bb937e3430f58d013"
+    ],
+    "operator/web/conservation_design_frame.js": [
+        "1fcf2486bb010a55fd9308e76554106980779f2d3c0e084dc2ecb3b63c3b66b2"
+    ],
+    "operator/CONSERVATION_DESIGN_EDITOR.md": [
+        "4f25a1ded3c1c9e1ac80e40d1693b6c3bba0b5e4a9c45411e6d50174bcbdb283"
+    ],
+    "operator/install_conservation_design.py": [
+        "0f532e73bf900afa43bb59c148bf5b56b2140d04435b00001b28933e8dd65de1"
+    ],
+    "operator/CONSERVATION_DESIGN_RECEIVING.md": [
+        "1cf145d7a459f7c33aa9507c6d71b36567365a50e46f24f87b850295c920f986"
+    ],
+    "operator/conservation_design_browser_receiving.py": [
+        "2e2c711cff2052a61e8d49598ac7e80eb16365441f18b4a513fad3962d09ad73",
+        "c9acbb06ce9a2ecc748845fac0ff84c17e137c2fdffe5365b898d1b364d485a3"
+    ],
+    "operator/CONSERVATION_DESIGN_BROWSER.md": [
+        "1d868453463464468233673dd7584810a6341aa1413f6850eb8e13e9bb219ccd",
+        "c24784f0512beddd3a2485d93de3e6072b4475d50ba37c0e90653ababb393c3b"
     ]
 }
 
@@ -202,7 +249,7 @@ def _read(root, name, *, required=True):
 
 
 def _directory_literal(source, variable, *, directories, function=None):
-    """Extend one current literal using AST byte offsets; preserve other source."""
+    """Extend one current string inventory; preserve its type and other source."""
     tree = ast.parse(source)
     scope = tree
     if function:
@@ -225,15 +272,21 @@ def _directory_literal(source, variable, *, directories, function=None):
     if len(assignments) != 1:
         raise ValueError("Compose the unique current directory inventory: " + variable)
     value = assignments[0]
-    if not isinstance(value, (ast.Tuple, ast.List)):
-        raise ValueError("The current directory inventory must remain a literal: " + variable)
+    if not isinstance(value, (ast.Tuple, ast.List, ast.Set)):
+        raise ValueError("The current source inventory must remain a literal: " + variable)
     selected = ast.literal_eval(value)
+    if isinstance(value, ast.Set):
+        selected = sorted(selected)
     if not all(isinstance(item, str) and item for item in selected):
         raise ValueError("The source directory inventory needs original directory names")
     additions = [*selected, *(name for name in directories if name not in selected)]
     if list(selected) == additions:
         return source
-    replacement = repr(tuple(additions) if isinstance(value, ast.Tuple) else additions).encode("utf-8")
+    if isinstance(value, ast.Set):
+        literal = "{" + ", ".join(repr(name) for name in additions) + "}"
+    else:
+        literal = repr(tuple(additions) if isinstance(value, ast.Tuple) else additions)
+    replacement = literal.encode("utf-8")
     lines = source.encode("utf-8").splitlines(keepends=True)
     start = sum(map(len, lines[:value.lineno - 1])) + value.col_offset
     end = sum(map(len, lines[:value.end_lineno - 1])) + value.end_col_offset
@@ -283,6 +336,10 @@ def inventory_sources(sources, *, directories=(DIRECTORY,)):
         sources["model/portable.py"], "APPLICATION_DIRECTORIES", directories=directories)}
     if ASSEMBLER in sources:
         result[ASSEMBLER] = _assembler_directories(sources[ASSEMBLER], directories)
+    if DIRECTORY in directories and DATABASE_MODULE in sources:
+        result[DATABASE_MODULE] = _directory_literal(
+            sources[DATABASE_MODULE], "MUTABLE_DATABASE_MEMBERS",
+            directories=(DATABASE_MEMBER,))
     return result
 
 
@@ -342,6 +399,18 @@ def _validate_sources(incoming):
             or descriptor.get("id") != "conservation-design"
             or descriptor.get("backend", {}).get("module") != "conservation_design"):
         raise ValueError("Receive the original Scenario design extension descriptor")
+    backend = descriptor.get("backend", {})
+    if not {"conservation.design.editor.open", "conservation.design.editor.write"}.issubset(backend.get("actions", ())):
+        raise ValueError("Receive the complete embedded-editor action registration")
+    if "conservation_design_editor.mjs" not in descriptor.get("assets", ()):
+        raise ValueError("Receive the embedded-editor parent browser asset registration")
+    if not any(route.get("path") == "/api/conservation-design/editor"
+               and "POST" in route.get("methods", ()) for route in backend.get("routes", ())):
+        raise ValueError("Receive the original embedded-editor read route")
+    if not any(route.get("path") == "/api/file/conservation-design/{workspace_key}/editor/{member_path...}"
+               and route.get("response") == "ticket_policy_pair"
+               for route in backend.get("file_routes", ())):
+        raise ValueError("Receive the original embedded-editor authenticated file transport")
     manifest = json.loads(incoming["scenario-design/SOURCE_MANIFEST.json"])
     if not isinstance(manifest, dict) or not manifest:
         raise ValueError("Receive the complete original editor source manifest")
@@ -393,6 +462,15 @@ def install(application, source, *, preview=False):
     if not {"_effective_run", "_validate_run"}.issubset(scenario_methods):
         raise ValueError("Receive the current original conservation_scenarios.py with native model-scope resolution")
     _validate_sources(incoming)
+    database_tree = ast.parse(current[DATABASE_MODULE].decode("utf-8"))
+    database_methods = {node.name for node in database_tree.body
+                        if isinstance(node, ast.FunctionDef)}
+    if not {"snapshot_databases", "without_database_files", "verify_database_sources"}.issubset(database_methods):
+        raise ValueError("Receive the maintained SQLite online-backup source before installing the embedded editor")
+    portable_tree = ast.parse(current["model/portable.py"].decode("utf-8"))
+    if not any(isinstance(node, ast.Call) and isinstance(node.func, ast.Name)
+               and node.func.id == "snapshot_databases" for node in ast.walk(portable_tree)):
+        raise ValueError("Receive the maintained Workspace archive with its original SQLite snapshot integration")
     host = runpy.run_path(str(application / "install_extensions.py"))
     if not all(callable(host.get(name)) for name in ("patch_server", "patch_app")):
         raise ValueError("Receive the maintained extension installer's source composition API")
@@ -440,6 +518,8 @@ def install(application, source, *, preview=False):
                   "assembler_present": assembler is not None,
                   "assembler_updated": assembler is not None and changes[ASSEMBLER] != assembler,
                   "catalogue": "/api/conservation-design/overview",
+                  "editor_database_member": DATABASE_MEMBER,
+                  "editor_database_snapshot": "sqlite-online-backup",
                   "changed_files": sum(row["changed"] for row in rows)}
         if preview:
             return {**result, "state": "prepared"}

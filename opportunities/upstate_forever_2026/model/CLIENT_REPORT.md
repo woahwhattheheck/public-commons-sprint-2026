@@ -86,7 +86,7 @@ This integration carries forward ED6E's seven-map decision guide and economic re
 
 ## Current-source integration
 
-The prepared-atlas revision is composed with the current scientific v11 renderer and its safe-link checks. Source records retain declared data status, legal edition status, catalogue source identity and original source labels for both modeled inputs and selected context. Delivery format `retained-grid-study-observed-client-report-10` binds this report metadata to a new release identity.
+The prepared-atlas revision is composed with the current scientific v11 renderer and its safe-link checks. Source records retain declared data status, legal edition status, catalogue source identity and original source labels for both modeled inputs and selected context. Delivery format `retained-grid-study-observed-client-report-11` binds this report metadata to a new release identity.
 
 The existing native grid record, source-native versus regional audit scope, saved-analysis attachment, package recovery and final atlas-browser snapshot remain in the delivery. The final browser snapshot runs after report and analysis members have been retained. Existing completed releases reopen unchanged through their original identities.
 

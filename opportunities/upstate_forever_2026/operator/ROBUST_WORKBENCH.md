@@ -41,7 +41,7 @@ original twelve robust.* action names. Install both companion browser
 assets from the product-experience source packet before reopening the
 operator, because the registry checks each declared asset. Do not
 simultaneously register the old manual ACTIONS.update/dispatch snippet:
-the extension is the single owner of those twelve actions.
+the extension is the single owner of those original actions and diagnostic preparation.
 
 The current cumulative bank also carries operator/extensions/robust-decisions.json,
 an earlier action-only owner. Use source/install_robust_workbench.py with the
@@ -100,6 +100,64 @@ The existing separate additive-actions mode requires its explicit additive
 basis; whole InVEST scenario outcomes are not summed to manufacture a new
 modeled package.
 
+## Prepare a decision from saved scientific diagnostics
+
+The **Saved shared-footprint analysis** selector reads committed Scientific
+interpretation reports. Select the desired analysis and choose **Configure saved
+diagnostics**. The form retains that report's SHA-256 and initially presents all
+declared profiles and all scenarios other than its baseline. The original
+diagnostic's common-valid-cell annual mass totals supply the physical outcomes;
+costs, capacity, metric scales, weights and optional probabilities remain explicit
+operator choices.
+
+Each selected profile and scenario must have a complete original native run and
+every requested annual metric must have a complete, nonempty shared footprint.
+The bridge receives the baseline and alternative on that exact same support,
+with positive gain equal to baseline mass minus alternative mass. The stored
+support coverage is the common cell count divided by the diagnostic model-grid
+cell count. It describes computational grid coverage. Native support hashes,
+source artifact hashes, original run selections and the full declared diagnostic
+matrix remain in the source binding. Observation-fit failures do not prevent
+using otherwise complete physical outcomes.
+
+Profiles retain their original structural groups: routing methods, model period
+and declared model scopes. The default comparison uses one group. To combine
+different structural models, select the explicit structural comparison option and
+describe the intended hypotheses; the saved source identifies every group and
+its factors. Table and numeric parameter perturbations retain their recorded
+parameter provenance. Advanced input editing can name an explicit subset of the
+declared profiles, scenarios or metrics; any missing requested outcome produces
+the original preparation error.
+
+Saving queues `robust.diagnostic.prepare` with `diagnostic_id`,
+`report_sha256` and `configuration`. It receives the original paired matrix
+through OPT12, retains the exact report bytes and revision manifest, then creates
+an original Decision study. If the report changes before saving, reopen the
+configuration. An already retained report revision stays available for replay.
+Calculations, revisions, reports, exports and **Transfer editable study** use the
+same original workbench and stores.
+
+The native command line exposes the same operation:
+
+    python -m model.robust_decisions.eco_robust diagnostic-preview \
+      --workspace WORKSPACE --diagnostic-id DIAGNOSTIC_ID --output preview.json
+    python -m model.robust_decisions.eco_robust prepare-diagnostic \
+      --workspace WORKSPACE --diagnostic-id DIAGNOSTIC_ID \
+      --report-sha256 REPORT_SHA256 --configuration explicit-configuration.json \
+      --operation-id RETAINED_OPERATION_ID --output prepared-study.json
+
+The configuration is the preview's configuration object with actual decision
+inputs completed. A native study result supplies its original `study_...` ID,
+revision, study and calculation history. Both commands read the original
+Workspace; preparation does not run a model or rebuild diagnostics.
+
+Exact local report revisions live at
+`robust_decisions/diagnostic-revisions/<diagnostic_id>/<report_sha256>/`.
+The typed `upstate.decision-diagnostic-binding/v1` records the project identity
+and original report and manifest descriptors. Complete workspace receiving
+verifies local revisions; an independently received decision-project JSON retains
+its donor's explicitly external provenance and physical gains.
+
 ## HTTP and queue contracts
 
 Authenticated GET or POST /api/robust-workbench/catalog returns workspace_key,
@@ -113,6 +171,10 @@ experiment_id and returns its unaltered summary plus the editable
 configuration. The methods read returns the native JSON schema and named
 modes/objectives.
 
+The diagnostic read accepts diagnostic_id and returns its verified report_sha256,
+configuration, coverage, results_state, source_stamp and common_support. Catalogues
+include the persisted diagnostic snapshots. This read performs no scientific computation.
+
 All mutations use POST /api/actions with the existing
 {workspace,action,payload,operation_id} envelope. Action names and payloads:
 
@@ -123,6 +185,7 @@ All mutations use POST /api/actions with the existing
 | robust.study.create | {study} or {upload_id} |
 | robust.study.revise | {study_id,study,expected_revision} |
 | robust.experiment.prepare | {experiment_id,configuration} |
+| robust.diagnostic.prepare | {diagnostic_id,report_sha256,configuration} or configuration_upload_id |
 | robust.summary.prepare | {summary,configuration} |
 | robust.solve | {study_id,revision,objective?,time_limit?,mip_rel_gap?} |
 | robust.frontier | {study_id,revision,budgets,objective?,time_limit?} |
@@ -193,3 +256,11 @@ queue response. The output directory retains the working project, original
 operator state, received complete application and workflow result. The default
 input is OPT12's original arithmetic fixture; `--study PATH` selects an
 existing complete native study. It does not schedule ecological raster runs.
+
+A preparation interrupted after copying its pinned report but before writing the adjacent revision manifest resumes from those exact SHA-verified report bytes. This preserves the selected scientific revision even when the live diagnostic has advanced; preview remains read-only and the queued original preparation completes the missing revision metadata.
+
+## Open Decision preparation from a saved scientific report
+
+In **Scientific interpretation**, open a saved report and choose **Prepare Decision study**. The registered Decision studies desk receives the original workspace, diagnostic ID and exact report SHA. It opens the existing editable draft for that revision when available; otherwise it reads the saved common-support configuration. Enter explicit costs, capacity, metric scales and weights, then choose **Save native decision study** to prepare the study through the original operation queue.
+
+Opening this view creates no study and runs no ecological model. If the saved report advanced since it was displayed, reopen the analysis before preparing its new revision. Temporary catalogue failures leave retained draft economics, current studies and completed operation results recoverable. **Refresh** retries the affected reads. The existing experiment preparation entry and regional saved-view workflow remain available in the same desk.

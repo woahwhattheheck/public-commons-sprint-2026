@@ -89,7 +89,7 @@ The current source edition has 11 executable-marked members. As with other input
 
 ## Receive the published station assessment source
 
-The station assessment carrier uses a single `commons.gzip-source-bank/v1` envelope. It contains ordered base64 `chunks` and mandatory `compressed_bytes`, `compressed_sha256`, `decoded_bytes` and `decoded_sha256`. The decoder checks the compressed identity, bounded gzip output, decoded identity and every leaf descriptor before extraction.
+The station assessment carrier uses a single `commons.gzip-source-bank/v1` envelope. It contains ordered base64 `chunks`, mandatory decoded byte/hash identity, and one complete compressed identity pair: `compressed_bytes`/`compressed_sha256` or `gzip_bytes`/`gzip_sha256`. The carrier may label this representation `base64+gzip` or `gzip+base64`. If both compressed identity pairs are supplied, they must agree. A declared `file_count` must match every decoded member. The decoder checks the compressed identity, bounded gzip output, decoded identity and every leaf descriptor before extraction.
 
 For [the complete maintained revision 2 station assessment edition](https://tokenjunkielabs.slack.com/docs/T0BRETUB5TK/F0C8JP4654K):
 
@@ -103,6 +103,8 @@ This original carrier recovers 302,938 source bytes in ten files. Its gzip is 77
 The current maintained station application and original receiving operation remain the installation route. This example demonstrates receipt of that retained source edition. Select the newest source cohort from its original owner when composing with an existing application.
 
 Slack's exported JSON indentation can contain non-breaking spaces. Parsing normalizes these only outside quoted strings; source bodies, quoted paths, encoded data and literal source characters remain unchanged. Original carrier bytes and their hash are retained. The optional `--sha256` argument checks those outer Markdown bytes; the envelope's declared inner hashes are checked automatically.
+
+The original [17-file priority and assessment source bank](https://tokenjunkielabs.slack.com/docs/T0BRETUB5TK/F0C8KECMA4V) uses the same envelope schema with the `gzip_bytes`/`gzip_sha256` pair and `encoding: "gzip+base64"`. The ordinary inspector/extractor accepts its complete original Canvas response. It recovers all 5,787,182 source bytes, including the full original normalized 2024 and July 2026 banks, the 217-HUC comparison and its actual 192-record CSV. Its compressed identity is 532,533 bytes / SHA-256 `c12c4d5af49f0a61636266a32d31e53d33661e39f5f500efe0c1000729f9ed4b`; its decoded source bank is 6,398,128 bytes / SHA-256 `38d107f670cd69b6b259600af54cfd06cc51da9b4541e5675922326292d7847d`.
 
 ## Pure JavaScript use
 
@@ -194,6 +196,7 @@ The pure decoder was exercised on the actual retained originals:
 | Actual six-file Canvas, its native MCP response, unescaped Markdown and original source JSON | All four input forms recovered the same six paths and hashes, totaling 114,891 bytes |
 | Published station revision 2, original MCP/Canvas response with NBSP indentation | All 10 files and 302,938 source bytes matched; exact 111,624-byte assessment inventory recovered |
 | Original 87-station supplement | All eight files and 122,947 source bytes matched their declared hashes |
+| Complete priority/assessment carrier, original MCP/Canvas response | All 17 files and 5,787,182 source bytes matched; both gzip identity aliases and declared file count checked |
 | Quoted NBSP characters and source-map modes | Quoted source bytes preserved; an explicitly supplied symlink mode rejected |
 | Changed source-envelope gzip identity or excessive provider wrapper nesting | Rejected before source recovery |
 | Changed source-map byte count/hash, missing or orphan metadata, unsupported file mode | Rejected at the source-map descriptor check |

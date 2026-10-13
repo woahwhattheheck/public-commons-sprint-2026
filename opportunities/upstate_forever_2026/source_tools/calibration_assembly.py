@@ -25,9 +25,11 @@ INSTALLER_NAME = "operator/install_calibration.py"
 REQUIRED = ("model/workspace.py", "model/observations.py", "model/common.py",
             "model/calibration.py", "model/CALIBRATION.md",
             "model/calibration_uncertainty.py", "model/CALIBRATION_UNCERTAINTY.md",
-            "model/calibration_maps.py", "model/CALIBRATION_MAPS.md", "model/spatial.py", "operator/server.py",
+            "model/calibration_maps.py", "model/CALIBRATION_MAPS.md",
+            "model/calibration_review.py", "model/CALIBRATION_REVIEW.md", "model/spatial.py", "operator/server.py",
             "operator/calibration.py", "operator/web/app.mjs", "operator/web/index.html",
-            "operator/web/calibration.mjs", "operator/web/calibration_maps.mjs", "operator/web/calibration.css",
+            "operator/web/calibration.mjs", "operator/web/calibration_maps.mjs",
+            "operator/web/calibration_review.mjs", "operator/web/calibration.css",
             "operator/extensions/calibration.json", "operator/extension_registry.py",
             "operator/web/extension_host.mjs", "install_extensions.py")
 

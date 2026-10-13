@@ -608,9 +608,22 @@ def import_response(workspace, value):
             "imported_at": now(), "response": checked})
 
 
-def response_template(workspace, review_id):
+def response_prefix(records, through_response_id=_UNSPECIFIED):
+    """Select an existing immutable response generation, including its prefix."""
+    if through_response_id is _UNSPECIFIED:
+        return records
+    if through_response_id is None:
+        return []
+    identifier(through_response_id)
+    for index, record in enumerate(records):
+        if record["id"] == through_response_id:
+            return records[:index + 1]
+    raise ValueError("Selected historical customer response is not in this review")
+
+
+def response_template(workspace, review_id, *, through_response_id=_UNSPECIFIED):
     review = workspace._get("reviews", identifier(review_id))
-    previous = history(workspace, review_id)
+    previous = response_prefix(history(workspace, review_id), through_response_id)
     if previous:
         value = copy.deepcopy(previous[-1]["response"])
         value.update(previous_response_id=previous[-1]["id"], created_at=now(),
@@ -764,12 +777,17 @@ def _package_manifest(root, packet):
     return {**value, "package_sha256": digest(value)}
 
 
-def export_review(workspace, review_id, destination, *, archive=None, expected_response_id=_UNSPECIFIED):
+def export_review(workspace, review_id, destination, *, archive=None, expected_response_id=_UNSPECIFIED,
+                  through_response_id=_UNSPECIFIED):
     """Export the selected review, optionally binding its response generation.
 
     An explicit None selects the original request with no recorded response.
     Omitting the argument keeps the direct caller\'s current-history behavior.
+    through_response_id selects a retained historical prefix for an engineering
+    handback; it does not change the current response history or its import rules.
     """
+    if expected_response_id is not _UNSPECIFIED and through_response_id is not _UNSPECIFIED:
+        raise ValueError("Select either a current-response guard or a retained historical prefix")
     if expected_response_id is not _UNSPECIFIED and expected_response_id is not None:
         identifier(expected_response_id)
     destination = Path(destination).absolute()
@@ -785,6 +803,9 @@ def export_review(workspace, review_id, destination, *, archive=None, expected_r
             packet = show_review(workspace, review_id)
             if expected_response_id is not _UNSPECIFIED and packet["latest_response_id"] != expected_response_id:
                 raise ValueError("Review response changed before export; reopen the review and select its current response")
+            if through_response_id is not _UNSPECIFIED:
+                packet["responses"] = response_prefix(packet["responses"], through_response_id)
+                packet["latest_response_id"] = packet["responses"][-1]["id"] if packet["responses"] else None
             cache, captured = {}, {}
             for item in packet["review"]["artifacts"]:
                 path = _resolve(workspace, item, cache)
@@ -801,7 +822,8 @@ def export_review(workspace, review_id, destination, *, archive=None, expected_r
                     _copy_file(path, target, item)
                     captured[(item["sha256"], item["bytes"])] = target
             atomic_json(pending / "review.json", packet, immutable=True)
-            atomic_json(pending / "response-template.json", response_template(workspace, review_id), immutable=True)
+            atomic_json(pending / "response-template.json",
+                        response_template(workspace, review_id, through_response_id=through_response_id), immutable=True)
             (pending / "index.html").write_text(_html(packet), encoding="utf-8")
             (pending / "README.md").write_text(_readme(packet), encoding="utf-8")
             manifest = _package_manifest(pending, packet)
@@ -1042,8 +1064,9 @@ def validate_workspace(workspace, *, verify_files=False):
         count += len(history(workspace, review["id"]))
         if verify_files:
             show_review(workspace, review["id"], previews=False)
+    from .review_handback import validate_workspace as validate_handbacks
     return {"project_id": workspace.project["id"], "reviews": len(workspace._list("reviews")),
-            "responses": count, "selected_files_checked": bool(verify_files)}
+            "responses": count, "selected_files_checked": bool(verify_files), **validate_handbacks(workspace)}
 
 
 def list_reviews(workspace):
