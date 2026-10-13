@@ -1,12 +1,17 @@
 """Reuse completed files as independently owned, verified operation outputs."""
 from __future__ import annotations
 import errno
-import fcntl
 import hashlib
 import os
 from pathlib import Path
 import tempfile
 from .common import canonical, describe_file, file_digest, relative_file, verify_file
+from .host_files import sync_directory
+
+if os.name == "posix":
+    import fcntl
+else:
+    fcntl = None
 
 FICLONE = 0x40049409
 
@@ -68,6 +73,8 @@ def copy_verified(source_root, descriptor, destination_root, *, path=None, trans
                 raise ValueError("Original retained file length changed during reuse")
             method = "reflink"
             try:
+                if fcntl is None:
+                    raise OSError(errno.EOPNOTSUPP, "Host has no reflink ioctl")
                 fcntl.ioctl(out.fileno(), FICLONE, src.fileno())
             except OSError as exc:
                 if exc.errno not in (errno.EOPNOTSUPP, errno.ENOTTY, errno.EXDEV,
@@ -88,11 +95,7 @@ def copy_verified(source_root, descriptor, destination_root, *, path=None, trans
             raise ValueError("Original retained file changed during reuse")
         os.replace(pending, target)
         pending = None
-        fd = os.open(target.parent, os.O_RDONLY | os.O_DIRECTORY)
-        try:
-            os.fsync(fd)
-        finally:
-            os.close(fd)
+        sync_directory(target.parent)
         _transfer_count(transfer, method, descriptor["bytes"])
         return expected
     finally:
