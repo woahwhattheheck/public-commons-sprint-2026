@@ -103,10 +103,30 @@ export function createSourceBankToolkit(options = {}) {
   function sourceBank(bank) {
     if (!bank || typeof bank !== "object" || Array.isArray(bank)) fail("expected a source-bank object");
     const schema = bank.schema ?? bank.format;
-    if (![1, "commons.source-bank/v1", "upstate.source-files/v1", "eco-source-text-v1"].includes(schema))
+    if (![1, "commons.source-bank/v1", "commons.source-map/1",
+          "upstate.source-files/v1", "eco-source-text-v1"].includes(schema))
       fail("unsupported source-bank schema");
     let entries;
-    if (Array.isArray(bank.files)) entries = bank.files;
+    if (schema === "commons.source-map/1") {
+      if (!bank.files || typeof bank.files !== "object" || Array.isArray(bank.files) ||
+          !bank.file_metadata || typeof bank.file_metadata !== "object" || Array.isArray(bank.file_metadata))
+        fail("source map needs files and file_metadata mappings");
+      const paths = Object.keys(bank.files), metadataPaths = Object.keys(bank.file_metadata);
+      if (paths.length > limits.maxMembers) fail("source bank member limit exceeded");
+      if (paths.length !== metadataPaths.length ||
+          metadataPaths.some(path => !Object.prototype.hasOwnProperty.call(bank.files, path)))
+        fail("source-map metadata paths must match every source file exactly");
+      entries = paths.map(path => {
+        const metadata = bank.file_metadata[path];
+        if (!metadata || typeof metadata !== "object" || Array.isArray(metadata) ||
+            !Number.isSafeInteger(metadata.bytes) || metadata.bytes < 0 ||
+            typeof metadata.sha256 !== "string" || !shaPattern.test(metadata.sha256) ||
+            !["100644", "100755"].includes(metadata.mode))
+          fail("source-map metadata needs original bytes, SHA-256 and regular-file mode: " + path);
+        return { path, content: bank.files[path], bytes: metadata.bytes,
+                 sha256: metadata.sha256, mode: metadata.mode, declaredMetadata: metadata };
+      });
+    } else if (Array.isArray(bank.files)) entries = bank.files;
     else if (bank.files && typeof bank.files === "object")
       entries = Object.entries(bank.files).map(([path, content]) => ({ path, content }));
     else fail("source bank needs files");
@@ -134,9 +154,15 @@ export function createSourceBankToolkit(options = {}) {
       const row = fileRow(path, data, entry);
       row.executable = [0o755, "755", "0755", "100755"].includes(entry.mode);
       row.declaredSha256 = entry.sha256 !== undefined;
+      if (entry.declaredMetadata !== undefined) row.declaredMetadata = { ...entry.declaredMetadata };
       total += data.length; files.push(row);
     }
-    return summarize("source-bank", files, { schema, sourceRoot: bank.source_root ?? bank.base_path ?? null });
+    return summarize("source-bank", files, {
+      schema, sourceRoot: bank.source_root ?? bank.base_path ?? (schema === "commons.source-map/1" ? bank.prefix ?? null : null),
+      ...(schema === "commons.source-map/1" ? {
+        edition: bank.edition ?? null, repository: bank.repository ?? null, sourceRef: bank.source_ref ?? null
+      } : {})
+    });
   }
   const u16 = (a, p) => a[p] | (a[p + 1] << 8);
   const u32 = (a, p) => (a[p] | (a[p + 1] << 8) | (a[p + 2] << 16) | (a[p + 3] << 24)) >>> 0;
