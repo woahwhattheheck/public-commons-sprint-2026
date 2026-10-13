@@ -71,6 +71,19 @@ def _query(query, allowed):
 
 def read_route(workspace, path, query):
     parcel = ParcelWorkspace(workspace)
+    if path == "/api/parcels/capture":
+        from .capture_operator import status
+        values = _query(query, {"directory"})
+        require(set(values) == {"directory"}, "PARCEL_CAPTURE_DIRECTORY", "Choose the original named capture directory.")
+        return status(workspace, values["directory"])
+    if path == "/api/parcels/captures":
+        from .capture_operator import records
+        values = _query(query, {"offset", "limit"})
+        for name, default in (("offset", "0"), ("limit", "50")):
+            text = values.get(name, default)
+            require(re.fullmatch(r"[0-9]{1,9}", text) is not None, "PARCEL_CAPTURE_PAGE", "Choose a retained capture page.")
+            values[name] = int(text)
+        return records(workspace, **values)
     if path == "/api/parcels":
         require(not query, "PARCEL_QUERY", "Use the original parcel workspace route.")
         return parcel.view()

@@ -22,7 +22,7 @@ ACTIONS = frozenset((
     "source.inspect", "source.import", "source.select", "layers.save",
     "edition.review", "map.inspect", "map.save", "map.reopen",
     "map.render", "map.features", "project.export", "project.receive",
-    "field.command", "postgis.select", "postgis.check", "postgis.layers", "parcel.command",
+    "field.command", "postgis.select", "postgis.check", "postgis.layers", "parcel.command", "parcel.capture",
 ))
 MUTATIONS = frozenset(("source.import", "source.select", "layers.save",
                        "edition.review", "map.save", "field.command", "postgis.check", "postgis.layers", "parcel.command"))

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 // Original QGIS analyst workspace. Every mutation retains its original request.
-import {renderParcels, acceptParcelResult} from './parcels.js';
+import {renderParcels, acceptParcelResult, acceptParcelCaptureResult} from './parcels.js';
 const $ = (selector, root = document) => root.querySelector(selector);
 const clone = value => structuredClone(value);
 const clean = value => value === null || value === undefined ? '—' : typeof value === 'object' ? JSON.stringify(value) : String(value);
@@ -188,6 +188,11 @@ async function acceptResult(operation) {
     if (payload.action === 'field.review') fieldReview = {result, ...payload.payload};
     if (payload.action === 'field.inspect') draft.fieldInspection = result;
   }
+  if (action === 'parcel.capture') {
+    draft.parcels ||= {};
+    acceptParcelCaptureResult(draft.parcels, payload, result);
+    saveDraft();
+  }
   if (action === 'parcel.command') {
     draft.parcels ||= {};
     acceptParcelResult(draft.parcels, payload, result);
@@ -259,7 +264,8 @@ async function parcelsPane() {
   return renderParcels({state, draft: draft.parcels, sourceDirectory: draft.sourceDirectory,
     element, button, link, panel, detail, note, actions, label, inputValue, selectValue, textArea,
     table, pager, compact, clean, request, render, save: saveDraft, jsonDownload, requireValue,
-    uploadControl, notice, run: (action, payload) => run('parcel.command', {action, payload})});
+    uploadControl, notice, run: (action, payload) => run('parcel.command', {action, payload}),
+    runCapture: (action, payload) => run('parcel.capture', {action, payload})});
 }
 
 function connectionFields(profile, changed, roles = []) {
