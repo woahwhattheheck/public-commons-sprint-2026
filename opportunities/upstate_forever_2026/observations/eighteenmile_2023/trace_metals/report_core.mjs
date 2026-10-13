@@ -51,7 +51,7 @@ function prepareTraceReport(study,supplied,sourceFiles,digest,columns,{html=null
   files["selection.json"]=JSON.stringify({...identity,id},null,2)+"\n";
   const summaries=study.metals.map(metal=>{const rs=rows.filter(r=>r.characteristic===metal),numeric=rs.filter(r=>r.interpretation.kind==="reported").map(r=>r.interpretation.value);return {metal,results:rs.length,reported:numeric.length,below:rs.length-numeric.length,reported_min:numeric.length?Math.min(...numeric):null,reported_max:numeric.length?Math.max(...numeric):null,unit:"mg/L",fraction:"Unfiltered",methods:[...new Set(rs.map(r=>r.analytical_method_context+" "+r.analytical_method_id))].join("; "),original_limits:[...new Set(rs.filter(r=>r.detection_limit!==""&&r.detection_limit!==null&&r.detection_limit!==undefined).map(r=>r.detection_limit+" "+r.detection_limit_unit))].join("; ")};}).filter(x=>x.results);
   files["selected-summary.csv"]=traceCsv(summaries,["metal","results","reported","below","reported_min","reported_max","unit","fraction","methods","original_limits"]);
-  if(html!==null)files["explorer.html"]=html;
+  if(html!==null)files["report.html"]=html;
   const figureSpec={schema:"upstate.scientific-figure-spec/v1",edition:study.edition,selection_id:id,figures:summaries.map(s=>traceFigure(study,s.metal,rows))};
   files["figure-spec.json"]=JSON.stringify(figureSpec,null,2)+"\n";
   for(const f of figureSpec.figures)files["figures/"+f.id+".svg"]=renderTraceSvg(f);
