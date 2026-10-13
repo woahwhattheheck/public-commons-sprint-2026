@@ -1,4 +1,5 @@
 /** Original Measurements guided intake; no scientific interpretation in the browser. */
+import {mountIntakeComparison} from './intake_comparison.mjs';
 const esc=x=>String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const opt=(v,t,s)=>'<option value="'+esc(v)+'"'+(v===s?' selected':'')+'>'+esc(t)+'</option>';
 const labels={station:'Station identifier',organization:'Source organisation',activity:'Sampling activity identifier',result:'Result identifier',date:'Sample date (YYYY-MM-DD)',datetime:'Sample date and time',time:'Sample time',zone:'Source time zone',characteristic:'Measured characteristic',value:'Measured value',unit:'Source unit',detection:'Detection condition',qualifier:'Result qualifier',fraction:'Sample fraction',status:'Result status',valueType:'Value type',medium:'Sample medium',activityType:'Activity type',method:'Analytical method',laboratory:'Laboratory',pcode:'USGS parameter code',name:'Station name',latitude:'Latitude',longitude:'Longitude',datum:'Coordinate datum',comment:'Source comment'};
@@ -26,6 +27,7 @@ export function mountGuidedIntake({api,onImported=()=>{}}){
   const element=document.createElement('section');element.className='mi mw-panel';
   let db=null,workspaceId=null,selected=null,savedList=[],localList=[],inspection=null,busy=false,dead=false,generation=0,timer=null,interpretations={};
   const viewId=crypto.randomUUID();
+  const comparisonState={};let comparisonPanel=null;
   let lockRevision=0,rescueSignature=null,storageQueue=Promise.resolve();
   const active=()=>{if(dead){const e=new Error('This measurement workspace was closed. Its complete preparation is retained for the original workspace.');e.name='AbortError';throw e;}};
   function remember(){if(workspaceId&&selected)liveRecovery.set(workspaceId,{working:clone(selected),localRevision:lockRevision});}
@@ -61,6 +63,14 @@ export function mountGuidedIntake({api,onImported=()=>{}}){
     for(const k of ['label','reviewer','note','context'])selected.value[k]=form.elements[k].value;
     const scientific=form.elements.interpretation;if(scientific){const key=selected.value.kind==='usgs-daily'?'_usgs_daily':'_wqp_detection';if(scientific.value)selected.value.mapping[key]=scientific.value;else delete selected.value.mapping[key];}
     for(const s of form.querySelectorAll('[data-map]'))selected.value.mapping[s.dataset.map]=s.value;
+    const characteristic=form.elements.characteristicInterpretation;
+    if(characteristic){
+      const keys=interpretations.characteristicFields||[];
+      selected.characteristicMappings??={};
+      for(const key of keys)if(Object.hasOwn(selected.value.mapping,key))selected.characteristicMappings[key]=selected.value.mapping[key];
+      if(characteristic.value){selected.value.mapping._wqp_characteristics=characteristic.value;selected.value.mapping._wqp_detection=interpretations.wqp;for(const [key,value]of Object.entries(selected.characteristicMappings))if(!Object.hasOwn(selected.value.mapping,key))selected.value.mapping[key]=value;}
+      else{delete selected.value.mapping._wqp_characteristics;for(const key of keys)delete selected.value.mapping[key];}
+    }
     remember();
   }
   function dirty(){return selected&&(!selected.savedValue||valueSignature(selected.value)!==valueSignature(JSON.parse(selected.savedValue)));}
@@ -82,7 +92,8 @@ export function mountGuidedIntake({api,onImported=()=>{}}){
     return lineageBody()+'<div class="mi-facts"><span>File <strong>'+esc(v.sourceName)+'</strong></span><span>Saved edition <strong>'+selected.revision+'</strong></span><span>Preparation <code>'+esc(selected.id)+'</code></span></div><form data-edit><label>Source name<input name="label" value="'+esc(v.label)+'"></label><div class="mi-grid"><label>Mapping reviewer<input name="reviewer" value="'+esc(v.reviewer)+'"></label><label>Review note<input name="note" value="'+esc(v.note)+'"></label></div><label>Original context: workbook/sheet, agency, date window or supplied instructions<textarea name="context" rows="2">'+esc(v.context)+'</textarea></label>'+
       (i?'<p><strong>'+i.rawRows+'</strong> source rows; '+i.rawRejectedCount+' malformed rows. Showing up to twelve original rows. Complete original is retained.</p><details open><summary>Original columns and sample rows</summary><div class="mw-table-wrap"><table><thead><tr><th>Source line</th>'+i.headers.map(h=>'<th>'+esc(h)+'</th>').join('')+'</tr></thead><tbody>'+i.sample.map(r=>'<tr><td>'+esc(sourceLine(r.line))+'</td>'+i.headers.map(h=>'<td>'+esc(r.raw[h])+'</td>').join('')+'</tr>').join('')+'</tbody></table></div></details>':'')+
       (v.kind!=='usgs-daily'&&i?.headers.length?'<h3>Map the columns you recognise</h3><p>Suggestions use the original importer’s exact header aliases. Review dates, units, time zones and fractions; no missing unit or location is invented.</p><div class="mi-grid">'+i.mappingFields.map(k=>'<label>'+esc(labels[k]||k)+'<select data-map="'+k+'">'+opt('','Not supplied',v.mapping[k]||'')+i.headers.map(h=>opt(h,h,v.mapping[k]||'')).join('')+(!i.headers.includes(v.mapping[k])&&v.mapping[k]?opt(v.mapping[k],'Missing column: '+v.mapping[k],v.mapping[k]):'')+'</select></label>').join('')+'</div>':'')+
-      (v.kind==='stations'?'':'<label>Scientific interpretation<select name="interpretation">'+opt('','Original unpinned interpretation',v.mapping[v.kind==='usgs-daily'?'_usgs_daily':'_wqp_detection']||'')+opt(interpretations[v.kind],interpretations[v.kind],v.mapping[v.kind==='usgs-daily'?'_usgs_daily':'_wqp_detection']||'')+'</select><small>Changing this choice creates a separate native source interpretation. Earlier imports stay intact.</small></label>')+'<div class="mi-actions"><button type="button" data-action="save">Save preparation</button><button type="button" data-action="preview">Review mapped measurements</button><button type="button" data-action="copy">Save separate copy</button><button type="button" data-action="original">Download original</button><button type="button" data-action="project">Download complete preparation</button><button type="button" data-action="rescue">Download unsaved inputs</button></div></form>'+
+      (v.kind==='stations'?'':'<label>Scientific interpretation<select name="interpretation">'+opt('','Original unpinned interpretation',v.mapping[v.kind==='usgs-daily'?'_usgs_daily':'_wqp_detection']||'')+opt(interpretations[v.kind],interpretations[v.kind],v.mapping[v.kind==='usgs-daily'?'_usgs_daily':'_wqp_detection']||'')+'</select><small>Changing this choice creates a separate native source interpretation. Earlier imports stay intact.</small></label>')+
+      (v.kind==='wqp'?'<label>Characteristic interpretation<select name="characteristicInterpretation">'+opt('','Original characteristic mapping',v.mapping._wqp_characteristics||'')+(interpretations.characteristics||[]).map(x=>opt(x,x,v.mapping._wqp_characteristics||'')).join('')+'</select><small>Explicit characteristic editions use the existing detection interpretation. They expose original method, depth, basis and solids fields without changing scientific eligibility. Switching back retains those unfinished column choices in browser recovery.</small></label>':'')+'<div class="mi-actions"><button type="button" data-action="save">Save preparation</button><button type="button" data-action="preview">Review mapped measurements</button><button type="button" data-action="copy">Save separate copy</button><button type="button" data-action="original">Download original</button><button type="button" data-action="project">Download complete preparation</button><button type="button" data-action="rescue">Download unsaved inputs</button></div></form>'+
       (i?.issues.length?'<div class="mw-notice">'+i.issues.map(x=>'<p>'+esc(x)+'</p>').join('')+'</div>':'')+
       (i?.native?'<section class="mi-preview"><h3>Review the native interpretation</h3><p>'+i.native.rows+' accepted; '+i.native.rejectedCount+' rejected; '+i.native.stationCount+' stations; '+i.native.censored+' censored results.</p><p>These values come from the existing scientific normaliser. Censored values remain bounds; units, fractions and source times remain distinct.</p><div class="mw-table-wrap"><table><thead><tr><th>Source line</th><th>Station</th><th>Date / precision</th><th>Characteristic</th><th>Value / bounds</th><th>Unit / basis / fraction</th><th>Issues</th></tr></thead><tbody>'+i.native.sample.map(r=>'<tr><td>'+esc(sourceLine(r.sourceLine))+'</td><td>'+esc(r.stationId||r.id)+'</td><td>'+esc([r.sampledDate,r.timePrecision,r.sourceTime,r.timeZone].filter(Boolean).join(' / '))+'</td><td>'+esc(r.characteristic||r.name)+'</td><td>'+esc(r.censor&&r.censor!=='none'?r.censor+' ['+r.lower+', '+r.upper+']':r.value??'')+'</td><td>'+esc([r.unit,r.basis,r.fraction].filter(Boolean).join(' / '))+'</td><td>'+esc((r.issues||[]).join('; '))+'</td></tr>').join('')+'</tbody></table></div><details><summary>Complete preview accounting and rejection sample</summary><pre>'+esc(JSON.stringify(i.native,null,2))+'</pre></details>'+
       (i.previewSha?'<label class="mi-confirm"><input type="checkbox" data-confirm> I reviewed this source edition, its mapping, accepted/rejected counts and scientific interpretation.</label><button data-action="import" '+(!i.native.rows?'disabled':'')+'>Import reviewed source</button>':'<p>Save and review the mapped preparation to enable import.</p>')+'</section>':'')+
@@ -90,9 +101,22 @@ export function mountGuidedIntake({api,onImported=()=>{}}){
   }
   function render(){
     if(dead)return;
+    comparisonPanel?.destroy();comparisonPanel=null;
     const options=new Map(savedList.map(x=>[x.id,{id:x.id,label:x.value.label||x.value.sourceName,revision:x.revision}]));
     for(const x of localList)if(!options.has(x.working.id))options.set(x.working.id,{id:x.working.id,label:x.working.value.label||x.working.value.sourceName,revision:x.working.revision});
     element.innerHTML='<h2>Prepare a measurement file</h2><p>Open the original, review its columns, then import the saved mapping into this workspace.</p><div class="mi-grid"><label>Saved preparations<select data-select>'+opt('','Choose a preparation',selected?.id)+[...options.values()].map(x=>opt(x.id,x.label+' · edition '+x.revision,selected?.id)).join('')+'</select></label><label>Open a complete preparation<input type="file" data-project accept=".json"></label></div><details '+(!selected?'open':'')+'><summary>Choose another original file</summary><form data-file-form><label>File type<select name="kind">'+opt('wqp','Chemistry / WQP','wqp')+opt('stations','Monitoring stations','wqp')+opt('usgs-daily','USGS daily discharge GeoJSON','wqp')+'</select></label><label>Complete original UTF-8 file<input type="file" name="file" required accept=".csv,.json,.geojson,.txt"></label><button>Open and inspect original</button></form></details><p data-status role="status" aria-live="polite"></p><div data-body>'+body()+'</div>';
+    comparisonPanel=mountIntakeComparison({api,protect,run,state:comparisonState,
+      context:()=>({workspaceId,id:selected?.id||null,revision:selected?.revision||0,value:selected?.value||null,pending:selected?.pending||null}),
+      reviewCurrent:async report=>{
+        capture();const owner=selected;
+        if(!owner||report.workspaceId!==workspaceId||report.after.id!==owner.id||report.after.revision!==owner.revision||dirty()||owner.pending)throw Error('Keep the unfinished preparation and original pending request. This review opens only the identical saved current after revision; save or explicitly reopen that preparation first.');
+        const original=report.project.editions.find(x=>x.revision===report.after.revision);
+        if(!original||valueSignature(owner.value)!==valueSignature(original.value))throw Error('The working mapping differs from the complete compared after revision.');
+        const result=await api('/intake/'+encodeURIComponent(owner.id)+'/preview','POST',{revision:owner.revision});
+        active();if(selected!==owner||result.digest!==report.after.digest||result.sourceSha!==report.after.sourceSha)throw Error('The selected original preparation changed before preview.');
+        inspection=result;render();message('Exact compared after revision opened in the original native preview. Inspect and confirm it there before using Import reviewed source.');
+      }});
+    element.append(comparisonPanel.element);
     freeze(busy);if(selected)message(dirty()?'Inputs changed. Browser recovery retains edits; Save preparation records a native edition.':'Preparation loaded. Original source and saved mapping are retained.');
   }
   function freeze(value){for(const x of element.querySelectorAll('button,input,select,textarea'))x.disabled=value;}
@@ -160,6 +184,9 @@ export function mountGuidedIntake({api,onImported=()=>{}}){
     clearTimeout(timer);timer=setTimeout(()=>{if(!busy&&!dead)run(async()=>{await protect();message('Working inputs retained in this browser. Save preparation records a native edition.');});},450);
   });
   element.addEventListener('change',e=>{
+    if(e.target.matches('[name="characteristicInterpretation"],[name="interpretation"]')&&!busy){
+      clearTimeout(timer);capture();run(async()=>{await protect();await inspect();if(selected?.value.mapping._wqp_characteristics&&inspection?.mapping){for(const key of interpretations.characteristicFields||[])if(!Object.hasOwn(selected.value.mapping,key)&&Object.hasOwn(inspection.mapping,key))selected.value.mapping[key]=inspection.mapping[key];await retain(selected);}render();message('The explicit interpretation and original column choices are retained. Save a preparation revision to compare or import.');});return;
+    }
     if(e.target.matches('[data-select]')){const id=e.target.value;run(async()=>{if(id)await open(id);else render();});}
     if(e.target.matches('[data-project]')){const f=e.target.files[0];if(f)run(async()=>{
       await protect();const p=JSON.parse(await read(f));
@@ -204,5 +231,5 @@ export function mountGuidedIntake({api,onImported=()=>{}}){
   window.addEventListener('beforeunload',unload);
   render();
   run(async()=>{db=await database();await lists();render();message('Saved preparations loaded. Choose an original file or reopen a saved preparation.');});
-  return {element,destroy(){capture();remember();dead=true;generation++;clearTimeout(timer);window.removeEventListener('beforeunload',unload);const final=selected&&db?retain(selected):storageQueue;final.catch(()=>{remember();}).finally(()=>db?.close());}};
+  return {element,destroy(){capture();remember();comparisonPanel?.destroy();dead=true;generation++;clearTimeout(timer);window.removeEventListener('beforeunload',unload);const final=selected&&db?retain(selected):storageQueue;final.catch(()=>{remember();}).finally(()=>db?.close());}};
 }

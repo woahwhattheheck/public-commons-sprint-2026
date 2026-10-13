@@ -1,5 +1,7 @@
 /** Guided preparation around the original Measurements parser and importer. */
 import {randomUUID} from 'node:crypto';
+import {CHARACTERISTIC_FIELDS,CHARACTERISTIC_MAPPING,WQP_CHARACTERISTIC_EDITIONS} from './characteristics.mjs';
+import {buildIntakeComparison,compareIntakeIdentity} from './intake_comparison.mjs';
 import {initialiseLineage,originalMap,retainOriginals,readOriginal,validateStoredLineage,exportOriginals,validateLineagePacket,sourceLineages} from './source_lineage.mjs';
 import {parseCSV, safeJSON, InputError} from './parse.mjs';
 import {FIELDS, fieldReader, hash, stable, parseSource, WQP_DETECTION_EDITION, USGS_DAILY_EDITION} from './normalise.mjs';
@@ -25,8 +27,8 @@ function draft(value){
   if(!object(value.mapping))fail('Preparation mapping must be an object.');
   v.mapping={};
   for(const [k,x]of Object.entries(value.mapping)){
-    if(k==='_wqp_detection'&&x===WQP_DETECTION_EDITION||k==='_usgs_daily'&&x===USGS_DAILY_EDITION){v.mapping[k]=x;continue;}
-    if(!Object.hasOwn(FIELDS,k)||typeof x!=='string')fail('Invalid preparation mapping: '+k);
+    if(k===CHARACTERISTIC_MAPPING&&WQP_CHARACTERISTIC_EDITIONS.includes(x)||k==='_wqp_detection'&&x===WQP_DETECTION_EDITION||k==='_usgs_daily'&&x===USGS_DAILY_EDITION){v.mapping[k]=x;continue;}
+    if(!(Object.hasOwn(FIELDS,k)||Object.hasOwn(CHARACTERISTIC_FIELDS,k))||typeof x!=='string')fail('Invalid preparation mapping: '+k);
     v.mapping[k]=x;
   }
   if(value.lineage!==undefined){if(!object(value.lineage))fail('Keep complete original worksheet lineage.');v.lineage=JSON.parse(JSON.stringify(value.lineage));}
@@ -44,7 +46,7 @@ export function readIntake(s,id,revision){
 }
 function receipt(s,id,revision){const row=s.db.prepare('SELECT data FROM intake_receipts WHERE id=? AND revision=?').get(id,revision);return row?JSON.parse(row.data):null;}
 export function listIntakes(s){
-  return {workspaceId:intakeIdentity(s),interpretations:{wqp:WQP_DETECTION_EDITION,'usgs-daily':USGS_DAILY_EDITION},preparations:s.db.prepare('SELECT e.* FROM intake_editions e JOIN (SELECT id,MAX(revision) r FROM intake_editions GROUP BY id) x ON e.id=x.id AND e.revision=x.r ORDER BY e.created_at DESC,e.id').all().map(r=>{const v=rowValue(r);return {...v,receipt:receipt(s,v.id,v.revision)};})};
+  return {workspaceId:intakeIdentity(s),interpretations:{wqp:WQP_DETECTION_EDITION,'usgs-daily':USGS_DAILY_EDITION,characteristics:[...WQP_CHARACTERISTIC_EDITIONS],characteristicFields:Object.keys(CHARACTERISTIC_FIELDS)},preparations:s.db.prepare('SELECT e.* FROM intake_editions e JOIN (SELECT id,MAX(revision) r FROM intake_editions GROUP BY id) x ON e.id=x.id AND e.revision=x.r ORDER BY e.created_at DESC,e.id').all().map(r=>{const v=rowValue(r);return {...v,receipt:receipt(s,v.id,v.revision)};})};
 }
 function writeIntake(s,operation){s.db.exec('BEGIN IMMEDIATE');try{let changed=false;const result=operation(()=>{changed=true;});if(changed)s.db.prepare("UPDATE meta SET value=value+1 WHERE key='revision'").run();s.db.exec('COMMIT');return result;}catch(e){s.db.exec('ROLLBACK');throw e;}}
 export function saveIntake(s,input){
@@ -83,7 +85,7 @@ export function validateWorkingIntake(input){
 }
 export function inspectIntake(s,input){
   if(typeof input?.text!=='string'||!kinds.includes(input.kind))fail('Choose a complete UTF-8 CSV or USGS GeoJSON source.');
-  const result={kind:input.kind,sourceSha:hash(input.text),bytes:Buffer.byteLength(input.text),headers:[],sample:[],interpretations:{wqp:WQP_DETECTION_EDITION,'usgs-daily':USGS_DAILY_EDITION},rawRows:0,rawRejectedCount:0,mapping:{},mappingFields:Object.keys(FIELDS),missing:[],issues:[],native:null};
+  const result={kind:input.kind,sourceSha:hash(input.text),bytes:Buffer.byteLength(input.text),headers:[],sample:[],interpretations:{wqp:WQP_DETECTION_EDITION,'usgs-daily':USGS_DAILY_EDITION,characteristics:[...WQP_CHARACTERISTIC_EDITIONS],characteristicFields:Object.keys(CHARACTERISTIC_FIELDS)},rawRows:0,rawRejectedCount:0,mapping:{},mappingFields:Object.keys(input.mapping?.[CHARACTERISTIC_MAPPING]?{...FIELDS,...CHARACTERISTIC_FIELDS}:FIELDS),missing:[],issues:[],native:null};
   if(input.kind==='usgs-daily'){
     result.mapping=input.mapping||{};
     try{
@@ -202,10 +204,30 @@ export function copyIntake(s,input){
     return readIntake(s,input.id);
   });
 }
+
+export function compareIntakePreparations(s,id,input){
+ return s.readConsistent(()=>{
+ const project=exportIntakes(s,id);
+ validateIntakes(project);
+ if(input.expectedHistorySha!==hash(stable(project)))fail('The complete preparation history changed. Refresh the comparison selection.',409);
+ return buildIntakeComparison(project,input.beforeRevision,input.afterRevision);
+ });
+}
+export function reopenIntakeComparison(report){
+ compareIntakeIdentity(report);
+ validateIntakes(report.project);
+ const fresh=buildIntakeComparison(report.project,report.before.revision,report.after.revision);
+ if(stable(fresh)!==stable(report))fail('This saved comparison differs from the complete original preparation or the current normaliser. Keep the unchanged selected file; it was not installed or imported.',409);
+ return fresh;
+}
+
 export function intakeOperation(s,method,parts,input={}){
   if(method==='GET'&&!parts.length)return listIntakes(s);
   if(method==='GET'&&parts[0]==='source-lineages'&&parts.length===2)return sourceLineages(s,parts[1]);
   if(method==='GET'&&parts[1]==='original'&&parts.length===2){const saved=readIntake(s,parts[0]);if(!saved.value.lineage)fail('This preparation uses an original text source.',404);return {...readOriginal(s,saved.value.lineage.original.sha256),filename:saved.value.lineage.original.filename};}
+  if(method==='POST'&&parts[0]==='comparison-reopen'&&parts.length===1)return reopenIntakeComparison(input);
+  if(method==='POST'&&parts[1]==='compare'&&parts.length===2)return compareIntakePreparations(s,parts[0],input);
+  if(method==='GET'&&parts[1]==='comparison-history'&&parts.length===2)return s.readConsistent(()=>{const project=exportIntakes(s,parts[0]);validateIntakes(project);return {project,historySha:hash(stable(project))};});
   if(method==='POST'&&parts[0]==='validate-working')return validateWorkingIntake(input);
   if(method==='POST'&&parts[0]==='inspect')return inspectIntake(s,input);
   if(method==='POST'&&parts[0]==='copy')return copyIntake(s,input);
