@@ -10,6 +10,7 @@ const stable = value => JSON.stringify(value, function (key, item) {
   return item;
 });
 let collectionPanel = null;
+let transferPanel = null;
 const S = {
   data: null, csrf: "", connected: false, tab: "overview", stateBusy: false,
   requestBusy: false, savePending: false, reviewEpoch: 0, rawEpoch: 0, rawDirty: false,
@@ -236,6 +237,7 @@ function renderState() {
   renderArtifacts();
   renderActivity();
   collectionPanel?.update(data);
+  transferPanel?.update(data);
   renderControls();
 }
 function renderHistory() {
@@ -273,8 +275,9 @@ function renderControls() {
   const available = Boolean(S.data?.providers?.[S.provider]?.available);
   $("prepare-destination").disabled = !initialized || !S.connected || busy || dirty || !available;
   $("build-package").disabled = !initialized || !S.connected || busy || dirty;
-  $("export-workspace").disabled = (!initialized && !S.data?.accessions?.length) || !S.connected || busy || dirty || Boolean(collectionPanel?.dirty());
+  $("export-workspace").disabled = (!initialized && !S.data?.accessions?.length && !S.data?.artifacts?.some(a=>["transfer-inspect-json","transfer-compare-json"].includes(a.kind))) || !S.connected || busy || dirty || Boolean(collectionPanel?.dirty());
   collectionPanel?.controls({busy, connected:S.connected});
+  transferPanel?.controls({busy, connected:S.connected});
   for (const id of ["run-migration", "refresh-migration", "resume-preparation", "reconcile-migration"]) {
     $(id).disabled = !S.selectedMigration || !S.connected || busy;
   }
@@ -1196,6 +1199,7 @@ async function poll() {
   }
 }
 collectionPanel = window.createCollectionAccessionPanel({root:$("collection-panel"),api,mutation,refreshState,notifyChange:renderControls});
+transferPanel = window.createTransferInspectionPanel({root:$("transfer-panel"),api,mutation,refreshState});
 renderControls();
 refreshState().catch(report).finally(() => { S.timer = setTimeout(poll, 2500); });
 })();

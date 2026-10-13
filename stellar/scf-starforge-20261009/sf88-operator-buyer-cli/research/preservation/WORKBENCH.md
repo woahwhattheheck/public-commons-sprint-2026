@@ -590,3 +590,9 @@ The [complete collection guide](COLLECTION_ACCESSION.md) covers original inspect
 The source closure additionally includes `research/preservation/collection_accession.py`, `collection_accession.js` `COLLECTION_ACCESSION.md`, and both complete `receiving/collection_accession_receive.py` / `receiving/collection_accession_browser.mjs` manual programmes. Native source binding and complete archive receiving verify that whole group. Interrupted private accession staging data remains in complete backups; it is not shown as a completed accession.
 
 Collection API routes are `GET /api/accessions`, `GET /api/accession?id=ID`, and POST `/api/accession-inspect`, `/api/accession-init`, `/api/accession-review`, `/api/accession-build`. All use the existing Host/Origin and workspace token checks. Review save checks the original expected revision; queued actions use the original operation record and shared server lifecycle.
+
+## Complete transfer inspection and edition comparison
+
+The Delivery tab now opens exact supported research or original-file collection BagIt packages, displays every full recorded row, and compares ordered package editions through their original verification/comparison engines. Saved packages are reused by original artifact identity; incoming regular ZIPs are retained once by full byte hash. Full JSON, HTML and CSV findings and their original packages travel in the complete editable workspace.
+
+[TRANSFER_INSPECTION.md](TRANSFER_INSPECTION.md) documents package selection, all-row reading, complete downloads, CLI observation, original-case native continuation and the separately retained desktop/narrow browser receiving programme. Inspection is a local source observation; provider acceptance and repository operations retain their existing controls and actual receipts.
