@@ -1,0 +1,680 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="referrer" content="no-referrer"><title>VentCRM operator commissioning — commissioning</title><style id="programme-styles">*{box-sizing:border-box}body{margin:0;color:#202020;background:#f1f1f1;font:16px/1.55 system-ui,-apple-system,Segoe UI,sans-serif}header,main,footer,.status,.import{max-width:1160px;margin:auto;padding:24px}header{background:#fff;border-bottom:1px solid #bbb}.brand{font-size:22px;font-weight:700}.muted{color:#4b4b4b}.small{font-size:14px}h1{font-size:29px;line-height:1.25;margin:0 0 20px}h2{font-size:22px;line-height:1.3}h3{font-size:17px;margin:24px 0 8px}h4{font-size:16px}p{margin:0 0 16px;overflow-wrap:anywhere}a{color:#252525;text-decoration:underline;overflow-wrap:anywhere}nav,.actions,.toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:end}nav{margin-top:22px}.toolbar>label{flex:1 1 245px}button,.file-button{border:1px solid #666;border-radius:3px;padding:10px 14px;background:#fff;color:#202020;font:inherit;cursor:pointer;min-height:44px}button:hover,.file-button:hover{background:#e9e9e9}button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-visible,.file-button:focus-within{outline:3px solid #333;outline-offset:3px}button[aria-current=page]{background:#333;color:#fff}button:disabled{cursor:default;background:#e8e8e8;color:#555;border-color:#aaa}label{display:block;font-weight:600;margin-bottom:14px}input,select,textarea{display:block;width:100%;min-width:0;max-width:100%;border:1px solid #777;border-radius:3px;background:#fff;color:#202020;padding:10px;font:inherit;margin-top:6px}textarea{resize:vertical;font-weight:400}.file-button{position:relative;overflow:hidden;flex:0 1 auto!important;margin-bottom:0}.file-button input{position:absolute;inset:0;opacity:0;cursor:pointer}article,section{background:#fff;border:1px solid #bcbcbc;padding:24px;margin-bottom:20px;min-width:0}.cards{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px}.cards article{margin:0}.fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px 24px}.status{padding-top:12px;padding-bottom:12px;border-bottom:1px solid #ccc;overflow-wrap:anywhere}.sources{padding-left:20px}.sources li{margin:8px 0;overflow-wrap:anywhere}dt{font-weight:700;margin-top:16px}dd{margin-left:0}footer{font-size:14px;color:#4b4b4b;border-top:1px solid #bbb}@media(max-width:680px){header,main,footer,.status,.import{padding:18px 14px}h1{font-size:25px}h2{font-size:21px}.cards,.fields{grid-template-columns:1fr}article,section{padding:19px 16px}.toolbar{align-items:stretch}.toolbar>label{flex-basis:100%}nav button{flex:1 1 42%}button,.file-button{max-width:100%;white-space:normal}nav,.actions{align-items:stretch}.actions button{flex:1 1 100%}}@media print{header,nav,.toolbar,.status,footer,button,.file-button{display:none}body{background:#fff}main{max-width:none;padding:0}article{break-before:auto}section{break-inside:avoid}.cards,.fields{display:block}}</style></head><body><div id="app"></div><script id="programme-data" type="application/json">{"seed":{"version":"ventcrm.commissioning-seed.v1","title":"VentCRM operator commissioning","operators":[],"criteria":[{"id":"scope","phase":"intake","title":"Select one actual operating business","source_ids":["product","acceptable_use"],"criterion_origin":"proposed_operator_commissioning_workflow","action":"Record business identity, service types, crew size, operator contact, operating timezone and its current system. List required integrations and any payroll or inventory dependency.","acceptance":"The selected service matches the operator's actual daily route; each unusual dependency has a named treatment in the agreed scope.","retain":"Business profile, dependency list and selected scope.","depends_on":[],"default_status":"unreviewed","instruction":"Record business identity, service types, crew size, operator contact, operating timezone and its current system. List required integrations and any payroll or inventory dependency.\n\nCompleted outcome: The selected service matches the operator's actual daily route; each unusual dependency has a named treatment in the agreed scope.\n\nRetain: Business profile, dependency list and selected scope.","source_url":"https://ventcrm.com/"},{"id":"terms","phase":"intake","title":"Keep published terms and the selected agreement distinct","source_ids":["terms","exit"],"criterion_origin":"proposed_operator_commissioning_workflow","action":"Record links, retrieval dates and draft labels beside the agreement actually selected for this pilot. Record who selected it and when setup work begins.","acceptance":"The desk can display the source version separately from the operator's agreed scope, dates and commercial treatment. An unresolved source detail stays visible as a question assigned to its actual owner.","retain":"Source register, agreement reference, setup-start event and open questions.","depends_on":[],"default_status":"unreviewed","instruction":"Record links, retrieval dates and draft labels beside the agreement actually selected for this pilot. Record who selected it and when setup work begins.\n\nCompleted outcome: The desk can display the source version separately from the operator's agreed scope, dates and commercial treatment. An unresolved source detail stays visible as a question assigned to its actual owner.\n\nRetain: Source register, agreement reference, setup-start event and open questions.","source_url":"https://ventcrm.com/terms"},{"id":"fees","phase":"intake","title":"Record the actual service and usage basis","source_ids":["pricing"],"criterion_origin":"proposed_operator_commissioning_workflow","action":"Enter the selected setup/monthly amounts, billing start, usage responsibility and payment-account owner. Preserve a later negotiated amount beside the published reference.","acceptance":"The operating budget separates software, SMS and card costs and identifies whose account receives customer payments.","retain":"Selected commercial record and usage-cost owner.","depends_on":[],"default_status":"unreviewed","instruction":"Enter the selected setup/monthly amounts, billing start, usage responsibility and payment-account owner. Preserve a later negotiated amount beside the published reference.\n\nCompleted outcome: The operating budget separates software, SMS and card costs and identifies whose account receives customer payments.\n\nRetain: Selected commercial record and usage-cost owner.","source_url":"https://ventcrm.com/pricing"},{"id":"identity","phase":"setup","title":"Configure the operator's identity and service catalogue","source_ids":["pricing"],"criterion_origin":"proposed_operator_commissioning_workflow","action":"Load the agreed name, logo, domain, services, prices, taxes, service area and booking rules from the intake.","acceptance":"One authored booking displays the selected operator identity and service details consistently through the invoice and customer document.","retain":"Configuration export and the authored booking reference.","depends_on":["scope"],"default_status":"unreviewed","instruction":"Load the agreed name, logo, domain, services, prices, taxes, service area and booking rules from the intake.\n\nCompleted outcome: One authored booking displays the selected operator identity and service details consistently through the invoice and customer document.\n\nRetain: Configuration export and the authored booking reference.","source_url":"https://ventcrm.com/pricing"},{"id":"source","phase":"migration","title":"Retain the original export before mapping","source_ids":["migration"],"criterion_origin":"proposed_operator_commissioning_workflow","action":"Receive the operator-authorized original files, inventory every file and count records by entity. Preserve original bytes and timestamps before any transformations.","acceptance":"Every received file remains available and is attributable to one intake; corrections are separate editions with a stated reason.","retain":"Original-file manifest, row counts and intake owner.","depends_on":["scope"],"default_status":"unreviewed","instruction":"Receive the operator-authorized original files, inventory every file and count records by entity. Preserve original bytes and timestamps before any transformations.\n\nCompleted outcome: Every received file remains available and is attributable to one intake; corrections are separate editions with a stated reason.\n\nRetain: Original-file manifest, row counts and intake owner.","source_url":"https://ventcrm.com/jobber-alternative"},{"id":"mapping","phase":"migration","title":"Make each field and relationship explicit","source_ids":["migration"],"criterion_origin":"proposed_operator_commissioning_workflow","action":"Map source identifiers, customer/property relationships, visits, invoice amounts/statuses and dates. Record timezone, currency and duplicate rules. Keep exceptions assigned to an operator.","acceptance":"Every in-scope source field is mapped, intentionally retained as extra information or explicitly excluded; customer/job/invoice references remain connected.","retain":"Complete mapping, duplicate decisions and unresolved-source list.","depends_on":["source"],"default_status":"unreviewed","instruction":"Map source identifiers, customer/property relationships, visits, invoice amounts/statuses and dates. Record timezone, currency and duplicate rules. Keep exceptions assigned to an operator.\n\nCompleted outcome: Every in-scope source field is mapped, intentionally retained as extra information or explicitly excluded; customer/job/invoice references remain connected.\n\nRetain: Complete mapping, duplicate decisions and unresolved-source list.","source_url":"https://ventcrm.com/jobber-alternative"},{"id":"balances","phase":"migration","title":"Reconcile operational and financial continuity","source_ids":["migration"],"criterion_origin":"proposed_operator_commissioning_workflow","action":"Compare imported counts, future appointments, outstanding balances and paid/void states to the original export. Resolve missing links and unexpected differences within the same case.","acceptance":"Booked work and invoice balances can be traced to the received source; every remaining difference has a documented operator decision.","retain":"Before/after reconciliation and the complete exception decisions.","depends_on":["mapping"],"default_status":"unreviewed","instruction":"Compare imported counts, future appointments, outstanding balances and paid/void states to the original export. Resolve missing links and unexpected differences within the same case.\n\nCompleted outcome: Booked work and invoice balances can be traced to the received source; every remaining difference has a documented operator decision.\n\nRetain: Before/after reconciliation and the complete exception decisions.","source_url":"https://ventcrm.com/jobber-alternative"},{"id":"delta","phase":"migration","title":"Plan the changeover from the still-running system","source_ids":["migration"],"criterion_origin":"proposed_operator_commissioning_workflow","action":"Choose a cutover window, identify records created or changed during preparation, and name the responsible operator for the final delta and fallback.","acceptance":"The plan accounts for new bookings and payments through the selected switch time, with a way to resume the original process if the cutover is deferred.","retain":"Cutover worksheet, delta inventory and fallback contact.","depends_on":["balances"],"default_status":"unreviewed","instruction":"Choose a cutover window, identify records created or changed during preparation, and name the responsible operator for the final delta and fallback.\n\nCompleted outcome: The plan accounts for new bookings and payments through the selected switch time, with a way to resume the original process if the cutover is deferred.\n\nRetain: Cutover worksheet, delta inventory and fallback contact.","source_url":"https://ventcrm.com/jobber-alternative"},{"id":"owner_access","phase":"access","title":"Give the operator an individual account","source_ids":["product"],"criterion_origin":"proposed_operator_commissioning_workflow","action":"Use the intended owner identity in the selected private instance. Exercise ordinary sign-in, sign-out and the supported recovery path during the walkthrough.","acceptance":"The owner can return to the intended business workspace through its normal entry point; credentials are kept out of the desk and shared documents.","retain":"Instance URL, named account custodian and walkthrough result.","depends_on":["identity"],"default_status":"unreviewed","instruction":"Use the intended owner identity in the selected private instance. Exercise ordinary sign-in, sign-out and the supported recovery path during the walkthrough.\n\nCompleted outcome: The owner can return to the intended business workspace through its normal entry point; credentials are kept out of the desk and shared documents.\n\nRetain: Instance URL, named account custodian and walkthrough result.","source_url":"https://ventcrm.com/"},{"id":"technician_access","phase":"access","title":"Review the actual technician role","source_ids":["product"],"criterion_origin":"proposed_operator_commissioning_workflow","action":"With an operator-authorized technician account, open its normal day view and one same-day invoice. In the same workflow inspect the owner-only routes the operator depends on.","acceptance":"The observed role fits the published daily-work boundary; any broader access is recorded against the exact route for the product owner to correct.","retain":"Role matrix and actual route/result notes.","depends_on":["owner_access"],"default_status":"unreviewed","instruction":"With an operator-authorized technician account, open its normal day view and one same-day invoice. In the same workflow inspect the owner-only routes the operator depends on.\n\nCompleted outcome: The observed role fits the published daily-work boundary; any broader access is recorded against the exact route for the product owner to correct.\n\nRetain: Role matrix and actual route/result notes.","source_url":"https://ventcrm.com/"},{"id":"custody","phase":"access","title":"Record system and provider custody","source_ids":["privacy"],"criterion_origin":"proposed_operator_commissioning_workflow","action":"Name the business owner and technical custodian of the instance, domain, data store, email, messaging and payment connections. Record references and recovery contacts without secrets.","acceptance":"The operator can identify who controls each connection and where customer data belongs; a handover does not require a password embedded in a document.","retain":"Account-custody register and recovery contacts.","depends_on":["owner_access"],"default_status":"unreviewed","instruction":"Name the business owner and technical custodian of the instance, domain, data store, email, messaging and payment connections. Record references and recovery contacts without secrets.\n\nCompleted outcome: The operator can identify who controls each connection and where customer data belongs; a handover does not require a password embedded in a document.\n\nRetain: Account-custody register and recovery contacts.","source_url":"https://ventcrm.com/privacy"},{"id":"booking","phase":"daily_operation","title":"Operate a booking through the selected rules","source_ids":["product"],"criterion_origin":"proposed_operator_commissioning_workflow","action":"Use an authored pilot customer and the configured public booking route; carry the booking into the schedule, visit and final invoice on the operator's phone.","acceptance":"The intended service, time, address and selected charges remain consistent through the operator's normal day.","retain":"One linked booking-to-invoice course and reviewed phone/desktop views.","depends_on":["identity","balances"],"default_status":"unreviewed","instruction":"Use an authored pilot customer and the configured public booking route; carry the booking into the schedule, visit and final invoice on the operator's phone.\n\nCompleted outcome: The intended service, time, address and selected charges remain consistent through the operator's normal day.\n\nRetain: One linked booking-to-invoice course and reviewed phone/desktop views.","source_url":"https://ventcrm.com/"},{"id":"consent","phase":"communications","title":"Carry consent with the contact","source_ids":["sms"],"criterion_origin":"proposed_operator_commissioning_workflow","action":"For controlled pilot contacts, record consent source, scope, wording/version and time. Make absent or limited consent visible before enabling communications.","acceptance":"Only the communication appropriate to the recorded scope is selected; a service contact is not silently reclassified as a marketing subscriber.","retain":"Contact permission record and selected communication purpose.","depends_on":["mapping"],"default_status":"unreviewed","instruction":"For controlled pilot contacts, record consent source, scope, wording/version and time. Make absent or limited consent visible before enabling communications.\n\nCompleted outcome: Only the communication appropriate to the recorded scope is selected; a service contact is not silently reclassified as a marketing subscriber.\n\nRetain: Contact permission record and selected communication purpose.","source_url":"https://ventcrm.com/sms-policy"},{"id":"registration","phase":"communications","title":"Join the actual business messaging connection","source_ids":["sms"],"criterion_origin":"proposed_operator_commissioning_workflow","action":"Retain the provider's actual number/registration result and responsible custodian. Use a consenting operator-controlled contact for a send and reply in the private pilot instance.","acceptance":"The chosen business sender and reply appear in the intended conversation; registration status is an observed provider result.","retain":"Nonsecret registration reference, sender identity and message result.","depends_on":["custody","consent"],"default_status":"unreviewed","instruction":"Retain the provider's actual number/registration result and responsible custodian. Use a consenting operator-controlled contact for a send and reply in the private pilot instance.\n\nCompleted outcome: The chosen business sender and reply appear in the intended conversation; registration status is an observed provider result.\n\nRetain: Nonsecret registration reference, sender identity and message result.","source_url":"https://ventcrm.com/sms-policy"},{"id":"optout","phase":"communications","title":"Continue the same conversation through an opt-out","source_ids":["sms"],"criterion_origin":"proposed_operator_commissioning_workflow","action":"Use the controlled contact's opt-out in the selected pilot course, then inspect its recorded communication preference before the next queued or manual action.","acceptance":"The contact's new preference is retained and reflected in subsequent messaging decisions; the course records the actual observed result.","retain":"Opt-out event and subsequent communication disposition.","depends_on":["registration"],"default_status":"unreviewed","instruction":"Use the controlled contact's opt-out in the selected pilot course, then inspect its recorded communication preference before the next queued or manual action.\n\nCompleted outcome: The contact's new preference is retained and reflected in subsequent messaging decisions; the course records the actual observed result.\n\nRetain: Opt-out event and subsequent communication disposition.","source_url":"https://ventcrm.com/sms-policy"},{"id":"automation","phase":"communications","title":"Select automation with the operator","source_ids":["product"],"criterion_origin":"proposed_operator_commissioning_workflow","action":"Identify the actual triggers enabled for the authored course, their recipient, timing and owner. Review the resulting customer copy before a selected trigger is exercised.","acceptance":"Each enabled action has an intentional recipient and observable result; repeated operating actions do not leave unexplained repeated customer messages.","retain":"Selected automation list and linked delivery results.","depends_on":["booking","consent"],"default_status":"unreviewed","instruction":"Identify the actual triggers enabled for the authored course, their recipient, timing and owner. Review the resulting customer copy before a selected trigger is exercised.\n\nCompleted outcome: Each enabled action has an intentional recipient and observable result; repeated operating actions do not leave unexplained repeated customer messages.\n\nRetain: Selected automation list and linked delivery results.","source_url":"https://ventcrm.com/"},{"id":"stripe","phase":"payments","title":"Connect the operator-owned payment account","source_ids":["pricing"],"criterion_origin":"proposed_operator_commissioning_workflow","action":"Record the operator's chosen Stripe connection and use its supported test or operator-approved pilot flow; follow the hosted payment link through to the invoice result.","acceptance":"Payment belongs to the selected business account and reconciles to one invoice; the desk retains reference/status/amount rather than card details.","retain":"Payment-account custody, invoice reference and reconciliation.","depends_on":["custody","booking"],"default_status":"unreviewed","instruction":"Record the operator's chosen Stripe connection and use its supported test or operator-approved pilot flow; follow the hosted payment link through to the invoice result.\n\nCompleted outcome: Payment belongs to the selected business account and reconciles to one invoice; the desk retains reference/status/amount rather than card details.\n\nRetain: Payment-account custody, invoice reference and reconciliation.","source_url":"https://ventcrm.com/pricing"},{"id":"payment_states","phase":"payments","title":"Reconcile a corrected or incomplete payment state","source_ids":["product"],"criterion_origin":"proposed_operator_commissioning_workflow","action":"Select a relevant failed, reversed or manually recorded payment path with the operator. Preserve the original event and the correcting event together.","acceptance":"The resulting amount due and customer document match the selected payment history without discarding the original invoice.","retain":"Original payment history, correction and resulting customer document.","depends_on":["stripe"],"default_status":"unreviewed","instruction":"Select a relevant failed, reversed or manually recorded payment path with the operator. Preserve the original event and the correcting event together.\n\nCompleted outcome: The resulting amount due and customer document match the selected payment history without discarding the original invoice.\n\nRetain: Original payment history, correction and resulting customer document.","source_url":"https://ventcrm.com/"},{"id":"self_export","phase":"portability","title":"Receive each promised self-serve export","source_ids":["exit"],"criterion_origin":"proposed_operator_commissioning_workflow","action":"From the selected instance, download the available self-serve entity exports and inventory their columns, counts, timestamps and source view.","acceptance":"The recipient opens the actual files and reconciles the selected pilot records to the operating workspace.","retain":"Export manifest, original files and receiving notes.","depends_on":["booking","payment_states"],"default_status":"unreviewed","instruction":"From the selected instance, download the available self-serve entity exports and inventory their columns, counts, timestamps and source view.\n\nCompleted outcome: The recipient opens the actual files and reconciles the selected pilot records to the operating workspace.\n\nRetain: Export manifest, original files and receiving notes.","source_url":"https://ventcrm.com/cancellation"},{"id":"complete_export","phase":"portability","title":"Account for the full handover scope","source_ids":["exit"],"criterion_origin":"proposed_operator_commissioning_workflow","action":"Build a coverage matrix for every agreed entity, relationship, document and attachment. Mark whether each comes from self-service, a supplied export or another agreed path.","acceptance":"Every item in the selected handover has a real received output or a specifically assigned missing-output action; a smaller CSV set is not labeled complete.","retain":"Coverage matrix, missing-output ownership and received handover.","depends_on":["self_export"],"default_status":"unreviewed","instruction":"Build a coverage matrix for every agreed entity, relationship, document and attachment. Mark whether each comes from self-service, a supplied export or another agreed path.\n\nCompleted outcome: Every item in the selected handover has a real received output or a specifically assigned missing-output action; a smaller CSV set is not labeled complete.\n\nRetain: Coverage matrix, missing-output ownership and received handover.","source_url":"https://ventcrm.com/cancellation"},{"id":"reopen","phase":"portability","title":"Reopen the same records from the delivered files","source_ids":["exit"],"criterion_origin":"proposed_operator_commissioning_workflow","action":"Open the handover in a clean receiving workspace using the agreed destination, retaining original identifiers. Follow one customer's linked job, invoice, payment and communication through the received records.","acceptance":"The recipient can use the delivered information without the originating browser session, and exceptions remain connected to their source.","retain":"Receiving result, relationships and unresolved items.","depends_on":["complete_export"],"default_status":"unreviewed","instruction":"Open the handover in a clean receiving workspace using the agreed destination, retaining original identifiers. Follow one customer's linked job, invoice, payment and communication through the received records.\n\nCompleted outcome: The recipient can use the delivered information without the originating browser session, and exceptions remain connected to their source.\n\nRetain: Receiving result, relationships and unresolved items.","source_url":"https://ventcrm.com/cancellation"},{"id":"exit_plan","phase":"handover","title":"Document the operator's selected exit treatment","source_ids":["exit","terms"],"criterion_origin":"proposed_operator_commissioning_workflow","action":"Record the effective cancellation date, final billing, export destination and any agreed retention. Keep active-system removal and backup expiry as separate fields; preserve unset values when not established.","acceptance":"The plan states what will happen and who owns it using the selected agreement and actual provider information.","retain":"Exit plan, agreement reference and backup-retention source.","depends_on":["complete_export"],"default_status":"unreviewed","instruction":"Record the effective cancellation date, final billing, export destination and any agreed retention. Keep active-system removal and backup expiry as separate fields; preserve unset values when not established.\n\nCompleted outcome: The plan states what will happen and who owns it using the selected agreement and actual provider information.\n\nRetain: Exit plan, agreement reference and backup-retention source.","source_url":"https://ventcrm.com/cancellation"},{"id":"walkthrough","phase":"handover","title":"Let the operator complete the working course","source_ids":["pricing","product"],"criterion_origin":"proposed_operator_commissioning_workflow","action":"Have the operator use the saved pilot on the phone: find today's job, review access notes, continue the visit, invoice, receive a reply and locate its export. Open the same record on desktop.","acceptance":"The operator can resume the saved work through the normal entry points and identify how to obtain support.","retain":"Completed course, usable guide and assigned follow-up work.","depends_on":["technician_access","automation","reopen"],"default_status":"unreviewed","instruction":"Have the operator use the saved pilot on the phone: find today's job, review access notes, continue the visit, invoice, receive a reply and locate its export. Open the same record on desktop.\n\nCompleted outcome: The operator can resume the saved work through the normal entry points and identify how to obtain support.\n\nRetain: Completed course, usable guide and assigned follow-up work.","source_url":"https://ventcrm.com/pricing"},{"id":"publication","phase":"handover","title":"Review the actual operator package","source_ids":["cookies","privacy"],"criterion_origin":"proposed_operator_commissioning_workflow","action":"Review the outgoing guide, selected terms, screenshots and downloadable files as the operator will receive them. Keep private customer data out of the public sandbox and internal delivery destinations out of customer instructions.","acceptance":"The delivered package is readable, current and opens from its actual recipient-facing surface; the public/demo policy scope is not silently applied to the private instance.","retain":"Final package edition, image review and recipient-ready handover.","depends_on":["walkthrough","exit_plan"],"default_status":"unreviewed","instruction":"Review the outgoing guide, selected terms, screenshots and downloadable files as the operator will receive them. Keep private customer data out of the public sandbox and internal delivery destinations out of customer instructions.\n\nCompleted outcome: The delivered package is readable, current and opens from its actual recipient-facing surface; the public/demo policy scope is not silently applied to the private instance.\n\nRetain: Final package edition, image review and recipient-ready handover.","source_url":"https://ventcrm.com/cookies"}]},"guide_markdown":"# VentCRM operator profiles and commissioning desk\n\n## Open the complete package\n\nOpen the original sample.html or paid.html for the researched company profiles. The corresponding CSV and JSON preserve the original published contacts, observations, sources and tailored conversation openings.\n\nOpen sample-commissioning.html or paid-commissioning.html to work with the selected operators. Each is a complete local application. It contains its own source and needs no installation, login or network connection for editing. Source links open the original public websites separately.\n\nThe sample includes one operator. The paid edition includes its five original operators. The two researched replacement candidates remain in the internal source programme. An operator’s actual fleet, current system, data access, budget and interest are established during the conversation; the research profiles describe publicly observed workflows.\n\n## Enter actual programme details\n\nUse Operators to read the original profile and proposed comparison. Enter your name at the top before recording changes.\n\nIn Setup, enter the agreed service scope, original system, operating timezone, cutover plan and business choices. Unknown values remain blank. Record the selected commercial agreement separately from the current published reference. As retrieved on October 13, 2026, VentCRM advertises USD750 setup and USD129 monthly, with messaging and card processing separate. The selected operator agreement determines the programme.\n\nIn Records, retain the actual original-file register, field and relationship mappings, received export list, account custody and assigned follow-up work. Store nonsecret references and received-file locations. Keep passwords, API keys, payment card data and unrelated customer information in their established systems. Rows can be edited or removed; the complete working history preserves their earlier values.\n\nSource files should record their actual name, entity, count and SHA-256 when available. Mappings identify how each source field is mapped, retained or excluded. Export rows distinguish self-serve output from the wider agreed handover. Give unresolved work an owner and concrete output. Mark it done only after that output exists.\n\n## Complete one continuous operating course\n\nThe Acceptance section contains 24 source-linked operating steps. They cover the selected scope and terms; source receiving, mapping, reconciliation and cutover; owner and technician access; booking, messages and payments; and the complete export and handover. Use one authorized pilot from intake through its final received records. Each step includes its intended outcome and the output to retain.\n\nRecord the actual observed result and the person doing the work. Choose Not applicable only with the agreed scope reason. A passed source, mapping or custody step needs its corresponding working register. Self-serve and full-handover export steps require their respective received output routes.\n\nThe current public policy pages show published draft notices dated August 13, 2026. Keep those source versions distinct from the agreement selected for the private operator instance. Self-serve CSV is described for clients, invoices, leads and Stripe payouts; the wider cancellation handover names additional records and relationships. Record actual received coverage rather than assuming all entities are in an ordinary CSV.\n\n## Save, reopen and hand over\n\nWorking changes are saved in this browser when local storage is available. Use Save working JSON before closing or moving machines. The downloaded file contains the full source selection, all entered setup and registers, every check and decision, and the complete operation history.\n\nOpen working JSON receives that complete document, verifies its checksum and replays its history before replacing the local copy. A selected sample or paid desk accepts only the same selected research source. The empty general desk can open either complete programme.\n\nThe Handover section shows unfinished setup, mismatched migration counts and open work. Once the programme is complete, record the actual acceptance decision. Changing setup or registers resets its checks for review; editing a check reopens acceptance. Earlier values remain in the saved history. A second browser tab cannot silently overwrite a newer local copy.\n\nDownload the complete check register CSV and handover HTML for the receiving operator. The HTML includes source research, entered setup, every working register, results and the acceptance decision. The working JSON is the editable source.\n\n## Initial state and receiving\n\nThe supplied working JSON starts with blank operator-entered values and unreviewed checks. Open it in its accompanying desk to begin. Keep a downloaded original before working. Exercise your first edits in a separate copy if you are learning the interface.\n\nBefore handing over, open the exact selected HTML and all its accompanying CSV, JSON and guide files. Use both a desktop and a narrow phone view; save, reopen, edit and download the real outputs. Review the received records and source links together with the operator.\n\n## Source register\n\n- Product tour and operator FAQ: https://ventcrm.com/ — current product page; retrieved 2026-10-13.\n- Pricing and setup: https://ventcrm.com/pricing — current product page; retrieved 2026-10-13.\n- Jobber migration and cutover: https://ventcrm.com/jobber-alternative — current product page; retrieved 2026-10-13.\n- Privacy policy: https://ventcrm.com/privacy — published draft; retrieved 2026-10-13.\n- SMS policy: https://ventcrm.com/sms-policy — published draft; retrieved 2026-10-13.\n- Terms of service: https://ventcrm.com/terms — published draft; retrieved 2026-10-13.\n- Cancellation and data export: https://ventcrm.com/cancellation — published draft; retrieved 2026-10-13.\n- Acceptable use: https://ventcrm.com/acceptable-use — published draft; retrieved 2026-10-13.\n- Cookie policy: https://ventcrm.com/cookies — published draft; retrieved 2026-10-13.\n","guide_html":"\u003ch2>VentCRM operator profiles and commissioning desk\u003c/h2>\n\u003ch3>Open the complete package\u003c/h3>\n\u003cp>Open the original sample.html or paid.html for the researched company profiles. The corresponding CSV and JSON preserve the original published contacts, observations, sources and tailored conversation openings.\u003c/p>\n\u003cp>Open sample-commissioning.html or paid-commissioning.html to work with the selected operators. Each is a complete local application. It contains its own source and needs no installation, login or network connection for editing. Source links open the original public websites separately.\u003c/p>\n\u003cp>The sample includes one operator. The paid edition includes its five original operators. The two researched replacement candidates remain in the internal source programme. An operator’s actual fleet, current system, data access, budget and interest are established during the conversation; the research profiles describe publicly observed workflows.\u003c/p>\n\u003ch3>Enter actual programme details\u003c/h3>\n\u003cp>Use Operators to read the original profile and proposed comparison. Enter your name at the top before recording changes.\u003c/p>\n\u003cp>In Setup, enter the agreed service scope, original system, operating timezone, cutover plan and business choices. Unknown values remain blank. Record the selected commercial agreement separately from the current published reference. As retrieved on October 13, 2026, VentCRM advertises USD750 setup and USD129 monthly, with messaging and card processing separate. The selected operator agreement determines the programme.\u003c/p>\n\u003cp>In Records, retain the actual original-file register, field and relationship mappings, received export list, account custody and assigned follow-up work. Store nonsecret references and received-file locations. Keep passwords, API keys, payment card data and unrelated customer information in their established systems. Rows can be edited or removed; the complete working history preserves their earlier values.\u003c/p>\n\u003cp>Source files should record their actual name, entity, count and SHA-256 when available. Mappings identify how each source field is mapped, retained or excluded. Export rows distinguish self-serve output from the wider agreed handover. Give unresolved work an owner and concrete output. Mark it done only after that output exists.\u003c/p>\n\u003ch3>Complete one continuous operating course\u003c/h3>\n\u003cp>The Acceptance section contains 24 source-linked operating steps. They cover the selected scope and terms; source receiving, mapping, reconciliation and cutover; owner and technician access; booking, messages and payments; and the complete export and handover. Use one authorized pilot from intake through its final received records. Each step includes its intended outcome and the output to retain.\u003c/p>\n\u003cp>Record the actual observed result and the person doing the work. Choose Not applicable only with the agreed scope reason. A passed source, mapping or custody step needs its corresponding working register. Self-serve and full-handover export steps require their respective received output routes.\u003c/p>\n\u003cp>The current public policy pages show published draft notices dated August 13, 2026. Keep those source versions distinct from the agreement selected for the private operator instance. Self-serve CSV is described for clients, invoices, leads and Stripe payouts; the wider cancellation handover names additional records and relationships. Record actual received coverage rather than assuming all entities are in an ordinary CSV.\u003c/p>\n\u003ch3>Save, reopen and hand over\u003c/h3>\n\u003cp>Working changes are saved in this browser when local storage is available. Use Save working JSON before closing or moving machines. The downloaded file contains the full source selection, all entered setup and registers, every check and decision, and the complete operation history.\u003c/p>\n\u003cp>Open working JSON receives that complete document, verifies its checksum and replays its history before replacing the local copy. A selected sample or paid desk accepts only the same selected research source. The empty general desk can open either complete programme.\u003c/p>\n\u003cp>The Handover section shows unfinished setup, mismatched migration counts and open work. Once the programme is complete, record the actual acceptance decision. Changing setup or registers resets its checks for review; editing a check reopens acceptance. Earlier values remain in the saved history. A second browser tab cannot silently overwrite a newer local copy.\u003c/p>\n\u003cp>Download the complete check register CSV and handover HTML for the receiving operator. The HTML includes source research, entered setup, every working register, results and the acceptance decision. The working JSON is the editable source.\u003c/p>\n\u003ch3>Initial state and receiving\u003c/h3>\n\u003cp>The supplied working JSON starts with blank operator-entered values and unreviewed checks. Open it in its accompanying desk to begin. Keep a downloaded original before working. Exercise your first edits in a separate copy if you are learning the interface.\u003c/p>\n\u003cp>Before handing over, open the exact selected HTML and all its accompanying CSV, JSON and guide files. Use both a desktop and a narrow phone view; save, reopen, edit and download the real outputs. Review the received records and source links together with the operator.\u003c/p>\n\u003ch3>Source register\u003c/h3>\n\u003cul>\u003cli>Product tour and operator FAQ: \u003ca href=\"https://ventcrm.com/\">https://ventcrm.com/\u003c/a> — current product page; retrieved 2026-10-13.\u003c/li>\u003cli>Pricing and setup: \u003ca href=\"https://ventcrm.com/pricing\">https://ventcrm.com/pricing\u003c/a> — current product page; retrieved 2026-10-13.\u003c/li>\u003cli>Jobber migration and cutover: \u003ca href=\"https://ventcrm.com/jobber-alternative\">https://ventcrm.com/jobber-alternative\u003c/a> — current product page; retrieved 2026-10-13.\u003c/li>\u003cli>Privacy policy: \u003ca href=\"https://ventcrm.com/privacy\">https://ventcrm.com/privacy\u003c/a> — published draft; retrieved 2026-10-13.\u003c/li>\u003cli>SMS policy: \u003ca href=\"https://ventcrm.com/sms-policy\">https://ventcrm.com/sms-policy\u003c/a> — published draft; retrieved 2026-10-13.\u003c/li>\u003cli>Terms of service: \u003ca href=\"https://ventcrm.com/terms\">https://ventcrm.com/terms\u003c/a> — published draft; retrieved 2026-10-13.\u003c/li>\u003cli>Cancellation and data export: \u003ca href=\"https://ventcrm.com/cancellation\">https://ventcrm.com/cancellation\u003c/a> — published draft; retrieved 2026-10-13.\u003c/li>\u003cli>Acceptable use: \u003ca href=\"https://ventcrm.com/acceptable-use\">https://ventcrm.com/acceptable-use\u003c/a> — published draft; retrieved 2026-10-13.\u003c/li>\u003cli>Cookie policy: \u003ca href=\"https://ventcrm.com/cookies\">https://ventcrm.com/cookies\u003c/a> — published draft; retrieved 2026-10-13.\u003c/li>\u003cli>\u003c/li>\u003c/ul>"}</script><script>window.CommissioningEngine=(()=>{const sh={exports:{}};((module)=>{
+/**
+ * Strict UTF-8 SHA-256 for retained complete text, with no runtime imports.
+ *
+ * Bundled upstream: emn178/js-sha256 1.0.0, build/sha256.cjs
+ * Commit: 9a54fb31d4594762987e1b5d175265f6bac921de
+ * Upstream blob: e3a08633357cb7ca248e14751f9270d95fbbbdf2
+ * The upstream source between the markers is unchanged.
+ *
+ * Upstream license:
+ * Copyright (c) 2014-2026 Chen, Yi-Cyuan
+ * 
+ * MIT License
+ * 
+ * Permission is hereby granted, free of charge, to any person obtaining
+ * a copy of this software and associated documentation files (the
+ * "Software"), to deal in the Software without restriction, including
+ * without limitation the rights to use, copy, modify, merge, publish,
+ * distribute, sublicense, and/or sell copies of the Software, and to
+ * permit persons to whom the Software is furnished to do so, subject to
+ * the following conditions:
+ * 
+ * The above copyright notice and this permission notice shall be
+ * included in all copies or substantial portions of the Software.
+ * 
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+ * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+ * NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE
+ * LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+ * OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+ * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ */
+
+// BEGIN UNCHANGED UPSTREAM SOURCE
+/**
+ * [js-sha256]{@link https://github.com/emn178/js-sha256}
+ *
+ * @version 1.0.0
+ * @author Chen, Yi-Cyuan [emn178@gmail.com]
+ * @copyright Chen, Yi-Cyuan 2014-2026
+ * @license MIT
+ */
+'use strict';
+
+var INPUT_ERROR = 'input is invalid type';
+var FINALIZE_ERROR = 'finalize already called';
+
+var ARRAY_BUFFER = typeof ArrayBuffer !== 'undefined';
+
+var formatMessage = function (message) {
+  var type = typeof message;
+  if (type === 'string') {
+    return [message, true];
+  }
+  if (Array.isArray(message)) {
+    return [message, false];
+  }
+  if (ARRAY_BUFFER && message) {
+    if (message.constructor === ArrayBuffer) {
+      return [new Uint8Array(message), false];
+    } else if (ArrayBuffer.isView(message)) {
+      return [message, false];
+    }
+  }
+  throw new Error(INPUT_ERROR);
+};
+
+var HEX_CHARS = '0123456789abcdef'.split('');
+var EXTRA = [-2147483648, 8388608, 32768, 128];
+var SHIFT = [24, 16, 8, 0];
+var K = [
+  0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3956c25b, 0x59f111f1, 0x923f82a4, 0xab1c5ed5,
+  0xd807aa98, 0x12835b01, 0x243185be, 0x550c7dc3, 0x72be5d74, 0x80deb1fe, 0x9bdc06a7, 0xc19bf174,
+  0xe49b69c1, 0xefbe4786, 0x0fc19dc6, 0x240ca1cc, 0x2de92c6f, 0x4a7484aa, 0x5cb0a9dc, 0x76f988da,
+  0x983e5152, 0xa831c66d, 0xb00327c8, 0xbf597fc7, 0xc6e00bf3, 0xd5a79147, 0x06ca6351, 0x14292967,
+  0x27b70a85, 0x2e1b2138, 0x4d2c6dfc, 0x53380d13, 0x650a7354, 0x766a0abb, 0x81c2c92e, 0x92722c85,
+  0xa2bfe8a1, 0xa81a664b, 0xc24b8b70, 0xc76c51a3, 0xd192e819, 0xd6990624, 0xf40e3585, 0x106aa070,
+  0x19a4c116, 0x1e376c08, 0x2748774c, 0x34b0bcb5, 0x391c0cb3, 0x4ed8aa4a, 0x5b9cca4f, 0x682e6ff3,
+  0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208, 0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2
+];
+var OUTPUT_TYPES = ['hex', 'array', 'digest', 'arrayBuffer'];
+
+var blocks = [];
+
+var createOutputMethod = function (outputType, is224) {
+  return function (message) {
+    return new Sha256(is224, true).update(message)[outputType]();
+  };
+};
+
+var createMethod = function (is224) {
+  var method = createOutputMethod('hex', is224);
+  method.create = function () {
+    return new Sha256(is224);
+  };
+  method.update = function (message) {
+    return method.create().update(message);
+  };
+  for (var i = 0; i < OUTPUT_TYPES.length; ++i) {
+    var type = OUTPUT_TYPES[i];
+    method[type] = createOutputMethod(type, is224);
+  }
+  return method;
+};
+
+var createHmacOutputMethod = function (outputType, is224) {
+  return function (key, message) {
+    return new HmacSha256(key, is224, true).update(message)[outputType]();
+  };
+};
+
+var createHmacMethod = function (is224) {
+  var method = createHmacOutputMethod('hex', is224);
+  method.create = function (key) {
+    return new HmacSha256(key, is224);
+  };
+  method.update = function (key, message) {
+    return method.create(key).update(message);
+  };
+  for (var i = 0; i < OUTPUT_TYPES.length; ++i) {
+    var type = OUTPUT_TYPES[i];
+    method[type] = createHmacOutputMethod(type, is224);
+  }
+  return method;
+};
+
+function Sha256(is224, sharedMemory) {
+  if (sharedMemory) {
+    blocks[0] = blocks[16] = blocks[1] = blocks[2] = blocks[3] =
+      blocks[4] = blocks[5] = blocks[6] = blocks[7] =
+      blocks[8] = blocks[9] = blocks[10] = blocks[11] =
+      blocks[12] = blocks[13] = blocks[14] = blocks[15] = 0;
+    this.blocks = blocks;
+  } else {
+    this.blocks = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+  }
+
+  if (is224) {
+    this.h0 = 0xc1059ed8;
+    this.h1 = 0x367cd507;
+    this.h2 = 0x3070dd17;
+    this.h3 = 0xf70e5939;
+    this.h4 = 0xffc00b31;
+    this.h5 = 0x68581511;
+    this.h6 = 0x64f98fa7;
+    this.h7 = 0xbefa4fa4;
+  } else { // 256
+    this.h0 = 0x6a09e667;
+    this.h1 = 0xbb67ae85;
+    this.h2 = 0x3c6ef372;
+    this.h3 = 0xa54ff53a;
+    this.h4 = 0x510e527f;
+    this.h5 = 0x9b05688c;
+    this.h6 = 0x1f83d9ab;
+    this.h7 = 0x5be0cd19;
+  }
+
+  this.block = this.start = this.bytes = this.hBytes = 0;
+  this.finalized = this.hashed = false;
+  this.first = true;
+  this.is224 = is224;
+}
+
+Sha256.prototype.update = function (message) {
+  if (this.finalized) {
+    throw new Error(FINALIZE_ERROR);
+  }
+  var result = formatMessage(message);
+  message = result[0];
+  var isString = result[1];
+  var code, index = 0, i, length = message.length, blocks = this.blocks;
+  while (index < length) {
+    if (this.hashed) {
+      this.hashed = false;
+      blocks[0] = this.block;
+      this.block = blocks[16] = blocks[1] = blocks[2] = blocks[3] =
+        blocks[4] = blocks[5] = blocks[6] = blocks[7] =
+        blocks[8] = blocks[9] = blocks[10] = blocks[11] =
+        blocks[12] = blocks[13] = blocks[14] = blocks[15] = 0;
+    }
+
+    if (isString) {
+      for (i = this.start; index < length && i < 64; ++index) {
+        code = message.charCodeAt(index);
+        if (code < 0x80) {
+          blocks[i >>> 2] |= code << SHIFT[i++ & 3];
+        } else if (code < 0x800) {
+          blocks[i >>> 2] |= (0xc0 | (code >>> 6)) << SHIFT[i++ & 3];
+          blocks[i >>> 2] |= (0x80 | (code & 0x3f)) << SHIFT[i++ & 3];
+        } else if (code < 0xd800 || code >= 0xe000) {
+          blocks[i >>> 2] |= (0xe0 | (code >>> 12)) << SHIFT[i++ & 3];
+          blocks[i >>> 2] |= (0x80 | ((code >>> 6) & 0x3f)) << SHIFT[i++ & 3];
+          blocks[i >>> 2] |= (0x80 | (code & 0x3f)) << SHIFT[i++ & 3];
+        } else {
+          code = 0x10000 + (((code & 0x3ff) << 10) | (message.charCodeAt(++index) & 0x3ff));
+          blocks[i >>> 2] |= (0xf0 | (code >>> 18)) << SHIFT[i++ & 3];
+          blocks[i >>> 2] |= (0x80 | ((code >>> 12) & 0x3f)) << SHIFT[i++ & 3];
+          blocks[i >>> 2] |= (0x80 | ((code >>> 6) & 0x3f)) << SHIFT[i++ & 3];
+          blocks[i >>> 2] |= (0x80 | (code & 0x3f)) << SHIFT[i++ & 3];
+        }
+      }
+    } else {
+      for (i = this.start; index < length && i < 64; ++index) {
+        blocks[i >>> 2] |= message[index] << SHIFT[i++ & 3];
+      }
+    }
+
+    this.lastByteIndex = i;
+    this.bytes += i - this.start;
+    if (i >= 64) {
+      this.block = blocks[16];
+      this.start = i - 64;
+      this.hash();
+      this.hashed = true;
+    } else {
+      this.start = i;
+    }
+  }
+  if (this.bytes > 4294967295) {
+    this.hBytes += this.bytes / 4294967296 << 0;
+    this.bytes = this.bytes % 4294967296;
+  }
+  return this;
+};
+
+Sha256.prototype.finalize = function () {
+  if (this.finalized) {
+    return;
+  }
+  this.finalized = true;
+  var blocks = this.blocks, i = this.lastByteIndex;
+  blocks[16] = this.block;
+  blocks[i >>> 2] |= EXTRA[i & 3];
+  this.block = blocks[16];
+  if (i >= 56) {
+    if (!this.hashed) {
+      this.hash();
+    }
+    blocks[0] = this.block;
+    blocks[16] = blocks[1] = blocks[2] = blocks[3] =
+      blocks[4] = blocks[5] = blocks[6] = blocks[7] =
+      blocks[8] = blocks[9] = blocks[10] = blocks[11] =
+      blocks[12] = blocks[13] = blocks[14] = blocks[15] = 0;
+  }
+  blocks[14] = this.hBytes << 3 | this.bytes >>> 29;
+  blocks[15] = this.bytes << 3;
+  this.hash();
+};
+
+Sha256.prototype.hash = function () {
+  var a = this.h0, b = this.h1, c = this.h2, d = this.h3, e = this.h4, f = this.h5, g = this.h6,
+    h = this.h7, blocks = this.blocks, j, s0, s1, maj, t1, t2, ch, ab, da, cd, bc;
+
+  for (j = 16; j < 64; ++j) {
+    // rightrotate
+    t1 = blocks[j - 15];
+    s0 = ((t1 >>> 7) | (t1 << 25)) ^ ((t1 >>> 18) | (t1 << 14)) ^ (t1 >>> 3);
+    t1 = blocks[j - 2];
+    s1 = ((t1 >>> 17) | (t1 << 15)) ^ ((t1 >>> 19) | (t1 << 13)) ^ (t1 >>> 10);
+    blocks[j] = blocks[j - 16] + s0 + blocks[j - 7] + s1 << 0;
+  }
+
+  bc = b & c;
+  for (j = 0; j < 64; j += 4) {
+    if (this.first) {
+      if (this.is224) {
+        ab = 300032;
+        t1 = blocks[0] - 1413257819;
+        h = t1 - 150054599 << 0;
+        d = t1 + 24177077 << 0;
+      } else {
+        ab = 704751109;
+        t1 = blocks[0] - 210244248;
+        h = t1 - 1521486534 << 0;
+        d = t1 + 143694565 << 0;
+      }
+      this.first = false;
+    } else {
+      s0 = ((a >>> 2) | (a << 30)) ^ ((a >>> 13) | (a << 19)) ^ ((a >>> 22) | (a << 10));
+      s1 = ((e >>> 6) | (e << 26)) ^ ((e >>> 11) | (e << 21)) ^ ((e >>> 25) | (e << 7));
+      ab = a & b;
+      maj = ab ^ (a & c) ^ bc;
+      ch = (e & f) ^ (~e & g);
+      t1 = h + s1 + ch + K[j] + blocks[j];
+      t2 = s0 + maj;
+      h = d + t1 << 0;
+      d = t1 + t2 << 0;
+    }
+    s0 = ((d >>> 2) | (d << 30)) ^ ((d >>> 13) | (d << 19)) ^ ((d >>> 22) | (d << 10));
+    s1 = ((h >>> 6) | (h << 26)) ^ ((h >>> 11) | (h << 21)) ^ ((h >>> 25) | (h << 7));
+    da = d & a;
+    maj = da ^ (d & b) ^ ab;
+    ch = (h & e) ^ (~h & f);
+    t1 = g + s1 + ch + K[j + 1] + blocks[j + 1];
+    t2 = s0 + maj;
+    g = c + t1 << 0;
+    c = t1 + t2 << 0;
+    s0 = ((c >>> 2) | (c << 30)) ^ ((c >>> 13) | (c << 19)) ^ ((c >>> 22) | (c << 10));
+    s1 = ((g >>> 6) | (g << 26)) ^ ((g >>> 11) | (g << 21)) ^ ((g >>> 25) | (g << 7));
+    cd = c & d;
+    maj = cd ^ (c & a) ^ da;
+    ch = (g & h) ^ (~g & e);
+    t1 = f + s1 + ch + K[j + 2] + blocks[j + 2];
+    t2 = s0 + maj;
+    f = b + t1 << 0;
+    b = t1 + t2 << 0;
+    s0 = ((b >>> 2) | (b << 30)) ^ ((b >>> 13) | (b << 19)) ^ ((b >>> 22) | (b << 10));
+    s1 = ((f >>> 6) | (f << 26)) ^ ((f >>> 11) | (f << 21)) ^ ((f >>> 25) | (f << 7));
+    bc = b & c;
+    maj = bc ^ (b & d) ^ cd;
+    ch = (f & g) ^ (~f & h);
+    t1 = e + s1 + ch + K[j + 3] + blocks[j + 3];
+    t2 = s0 + maj;
+    e = a + t1 << 0;
+    a = t1 + t2 << 0;
+    this.chromeBugWorkAround = true;
+  }
+
+  this.h0 = this.h0 + a << 0;
+  this.h1 = this.h1 + b << 0;
+  this.h2 = this.h2 + c << 0;
+  this.h3 = this.h3 + d << 0;
+  this.h4 = this.h4 + e << 0;
+  this.h5 = this.h5 + f << 0;
+  this.h6 = this.h6 + g << 0;
+  this.h7 = this.h7 + h << 0;
+};
+
+Sha256.prototype.hex = function () {
+  this.finalize();
+
+  var h0 = this.h0, h1 = this.h1, h2 = this.h2, h3 = this.h3, h4 = this.h4, h5 = this.h5,
+    h6 = this.h6, h7 = this.h7;
+
+  var hex = HEX_CHARS[(h0 >>> 28) & 0x0F] + HEX_CHARS[(h0 >>> 24) & 0x0F] +
+    HEX_CHARS[(h0 >>> 20) & 0x0F] + HEX_CHARS[(h0 >>> 16) & 0x0F] +
+    HEX_CHARS[(h0 >>> 12) & 0x0F] + HEX_CHARS[(h0 >>> 8) & 0x0F] +
+    HEX_CHARS[(h0 >>> 4) & 0x0F] + HEX_CHARS[h0 & 0x0F] +
+    HEX_CHARS[(h1 >>> 28) & 0x0F] + HEX_CHARS[(h1 >>> 24) & 0x0F] +
+    HEX_CHARS[(h1 >>> 20) & 0x0F] + HEX_CHARS[(h1 >>> 16) & 0x0F] +
+    HEX_CHARS[(h1 >>> 12) & 0x0F] + HEX_CHARS[(h1 >>> 8) & 0x0F] +
+    HEX_CHARS[(h1 >>> 4) & 0x0F] + HEX_CHARS[h1 & 0x0F] +
+    HEX_CHARS[(h2 >>> 28) & 0x0F] + HEX_CHARS[(h2 >>> 24) & 0x0F] +
+    HEX_CHARS[(h2 >>> 20) & 0x0F] + HEX_CHARS[(h2 >>> 16) & 0x0F] +
+    HEX_CHARS[(h2 >>> 12) & 0x0F] + HEX_CHARS[(h2 >>> 8) & 0x0F] +
+    HEX_CHARS[(h2 >>> 4) & 0x0F] + HEX_CHARS[h2 & 0x0F] +
+    HEX_CHARS[(h3 >>> 28) & 0x0F] + HEX_CHARS[(h3 >>> 24) & 0x0F] +
+    HEX_CHARS[(h3 >>> 20) & 0x0F] + HEX_CHARS[(h3 >>> 16) & 0x0F] +
+    HEX_CHARS[(h3 >>> 12) & 0x0F] + HEX_CHARS[(h3 >>> 8) & 0x0F] +
+    HEX_CHARS[(h3 >>> 4) & 0x0F] + HEX_CHARS[h3 & 0x0F] +
+    HEX_CHARS[(h4 >>> 28) & 0x0F] + HEX_CHARS[(h4 >>> 24) & 0x0F] +
+    HEX_CHARS[(h4 >>> 20) & 0x0F] + HEX_CHARS[(h4 >>> 16) & 0x0F] +
+    HEX_CHARS[(h4 >>> 12) & 0x0F] + HEX_CHARS[(h4 >>> 8) & 0x0F] +
+    HEX_CHARS[(h4 >>> 4) & 0x0F] + HEX_CHARS[h4 & 0x0F] +
+    HEX_CHARS[(h5 >>> 28) & 0x0F] + HEX_CHARS[(h5 >>> 24) & 0x0F] +
+    HEX_CHARS[(h5 >>> 20) & 0x0F] + HEX_CHARS[(h5 >>> 16) & 0x0F] +
+    HEX_CHARS[(h5 >>> 12) & 0x0F] + HEX_CHARS[(h5 >>> 8) & 0x0F] +
+    HEX_CHARS[(h5 >>> 4) & 0x0F] + HEX_CHARS[h5 & 0x0F] +
+    HEX_CHARS[(h6 >>> 28) & 0x0F] + HEX_CHARS[(h6 >>> 24) & 0x0F] +
+    HEX_CHARS[(h6 >>> 20) & 0x0F] + HEX_CHARS[(h6 >>> 16) & 0x0F] +
+    HEX_CHARS[(h6 >>> 12) & 0x0F] + HEX_CHARS[(h6 >>> 8) & 0x0F] +
+    HEX_CHARS[(h6 >>> 4) & 0x0F] + HEX_CHARS[h6 & 0x0F];
+  if (!this.is224) {
+    hex += HEX_CHARS[(h7 >>> 28) & 0x0F] + HEX_CHARS[(h7 >>> 24) & 0x0F] +
+      HEX_CHARS[(h7 >>> 20) & 0x0F] + HEX_CHARS[(h7 >>> 16) & 0x0F] +
+      HEX_CHARS[(h7 >>> 12) & 0x0F] + HEX_CHARS[(h7 >>> 8) & 0x0F] +
+      HEX_CHARS[(h7 >>> 4) & 0x0F] + HEX_CHARS[h7 & 0x0F];
+  }
+  return hex;
+};
+
+Sha256.prototype.toString = Sha256.prototype.hex;
+
+Sha256.prototype.digest = function () {
+  this.finalize();
+
+  var h0 = this.h0, h1 = this.h1, h2 = this.h2, h3 = this.h3, h4 = this.h4, h5 = this.h5,
+    h6 = this.h6, h7 = this.h7;
+
+  var arr = [
+    (h0 >>> 24) & 0xFF, (h0 >>> 16) & 0xFF, (h0 >>> 8) & 0xFF, h0 & 0xFF,
+    (h1 >>> 24) & 0xFF, (h1 >>> 16) & 0xFF, (h1 >>> 8) & 0xFF, h1 & 0xFF,
+    (h2 >>> 24) & 0xFF, (h2 >>> 16) & 0xFF, (h2 >>> 8) & 0xFF, h2 & 0xFF,
+    (h3 >>> 24) & 0xFF, (h3 >>> 16) & 0xFF, (h3 >>> 8) & 0xFF, h3 & 0xFF,
+    (h4 >>> 24) & 0xFF, (h4 >>> 16) & 0xFF, (h4 >>> 8) & 0xFF, h4 & 0xFF,
+    (h5 >>> 24) & 0xFF, (h5 >>> 16) & 0xFF, (h5 >>> 8) & 0xFF, h5 & 0xFF,
+    (h6 >>> 24) & 0xFF, (h6 >>> 16) & 0xFF, (h6 >>> 8) & 0xFF, h6 & 0xFF
+  ];
+  if (!this.is224) {
+    arr.push((h7 >>> 24) & 0xFF, (h7 >>> 16) & 0xFF, (h7 >>> 8) & 0xFF, h7 & 0xFF);
+  }
+  return arr;
+};
+
+Sha256.prototype.array = Sha256.prototype.digest;
+
+Sha256.prototype.arrayBuffer = function () {
+  this.finalize();
+
+  var buffer = new ArrayBuffer(this.is224 ? 28 : 32);
+  var dataView = new DataView(buffer);
+  dataView.setUint32(0, this.h0);
+  dataView.setUint32(4, this.h1);
+  dataView.setUint32(8, this.h2);
+  dataView.setUint32(12, this.h3);
+  dataView.setUint32(16, this.h4);
+  dataView.setUint32(20, this.h5);
+  dataView.setUint32(24, this.h6);
+  if (!this.is224) {
+    dataView.setUint32(28, this.h7);
+  }
+  return buffer;
+};
+
+function HmacSha256(key, is224, sharedMemory) {
+  var i, result = formatMessage(key);
+  key = result[0];
+  if (result[1]) {
+    var bytes = [], length = key.length, index = 0, code;
+    for (i = 0; i < length; ++i) {
+      code = key.charCodeAt(i);
+      if (code < 0x80) {
+        bytes[index++] = code;
+      } else if (code < 0x800) {
+        bytes[index++] = (0xc0 | (code >>> 6));
+        bytes[index++] = (0x80 | (code & 0x3f));
+      } else if (code < 0xd800 || code >= 0xe000) {
+        bytes[index++] = (0xe0 | (code >>> 12));
+        bytes[index++] = (0x80 | ((code >>> 6) & 0x3f));
+        bytes[index++] = (0x80 | (code & 0x3f));
+      } else {
+        code = 0x10000 + (((code & 0x3ff) << 10) | (key.charCodeAt(++i) & 0x3ff));
+        bytes[index++] = (0xf0 | (code >>> 18));
+        bytes[index++] = (0x80 | ((code >>> 12) & 0x3f));
+        bytes[index++] = (0x80 | ((code >>> 6) & 0x3f));
+        bytes[index++] = (0x80 | (code & 0x3f));
+      }
+    }
+    key = bytes;
+  }
+
+  if (key.length > 64) {
+    key = (new Sha256(is224, true)).update(key).array();
+  }
+
+  var oKeyPad = [], iKeyPad = [];
+  for (i = 0; i < 64; ++i) {
+    var b = key[i] || 0;
+    oKeyPad[i] = 0x5c ^ b;
+    iKeyPad[i] = 0x36 ^ b;
+  }
+
+  Sha256.call(this, is224, sharedMemory);
+
+  this.update(iKeyPad);
+  this.oKeyPad = oKeyPad;
+  this.inner = true;
+  this.sharedMemory = sharedMemory;
+}
+HmacSha256.prototype = new Sha256();
+
+HmacSha256.prototype.finalize = function () {
+  Sha256.prototype.finalize.call(this);
+  if (this.inner) {
+    this.inner = false;
+    var innerHash = this.array();
+    Sha256.call(this, this.is224, this.sharedMemory);
+    this.update(this.oKeyPad);
+    this.update(innerHash);
+    Sha256.prototype.finalize.call(this);
+  }
+};
+
+var sha256 = createMethod();
+var sha224 = createMethod(true);
+sha256.sha256 = sha256;
+sha256.sha224 = sha224;
+sha256.hmac = createHmacMethod();
+sha224.hmac = createHmacMethod(true);
+
+module.exports = sha256;
+// END UNCHANGED UPSTREAM SOURCE
+
+const connectedSha256Upstream = module.exports;
+
+/**
+ * Count exact UTF-8 bytes and reject unpaired UTF-16 surrogates.
+ * Use this for text validation when no digest is needed.
+ */
+function utf8ByteLength(value) {
+  if (typeof value !== 'string') throw new TypeError('utf8ByteLength requires a string');
+  let bytes = 0;
+  for (const char of value) {
+    const code = char.codePointAt(0);
+    if (code >= 0xd800 && code <= 0xdfff) throw new TypeError('Unpaired UTF-16 surrogate');
+    bytes += code < 0x80 ? 1 : code < 0x800 ? 2 : code < 0x10000 ? 3 : 4;
+  }
+  return bytes;
+}
+
+/**
+ * Hash a complete well-formed UTF-16 string as its exact UTF-8 content bytes.
+ * No normalization, byte-order mark insertion, newline conversion or I/O.
+ * @returns {{bytes: number, sha256: string}}
+ */
+function sha256Utf8(value) {
+  if (typeof value !== 'string') throw new TypeError('sha256Utf8 requires a string');
+  const bytes = utf8ByteLength(value);
+  // A separate hasher owns its working state for each invocation.
+  const sha256 = connectedSha256Upstream.create().update(value).hex();
+  return {bytes, sha256};
+}
+
+/** Hash exact binary source bytes with the same maintained upstream implementation. */
+function sha256Bytes(value) {
+  if (!(value instanceof Uint8Array)) throw new TypeError('sha256Bytes requires a Uint8Array');
+  return {bytes: value.byteLength,
+    sha256: connectedSha256Upstream.create().update(value).hex()};
+}
+
+module.exports = {sha256Utf8, sha256Bytes, utf8ByteLength};
+
+})(sh);const co={exports:{}};((module)=>{
+'use strict';
+function createEngine(digest) {
+ const SCHEMA='ventcrm.commissioning-workspace.v1';
+ const fields=['owner','fleet','current_system','service_area','timezone','target_date','services_prices','booking_rules','payment_setup','texting_setup','migration_scope','customers_expected','customers_received','jobs_expected','jobs_received','invoices_expected','invoices_received','migration_exceptions','rollback_plan','training_plan','support_contact','export_location','retention_plan','agreement_reference','selected_setup_fee','selected_monthly_fee','billing_start','usage_cost_owner','active_removal_date','backup_expiry','notes'];
+ const registers={files:['name','entity','rows','sha256','location','source_date','note'],mappings:['entity','source_field','target_field','transform','decision','note'],exports:['entity','route','file_ref','rows','keys','note'],open_work:['title','owner','due','status','output'],custody:['service','owner','reference','recovery']};
+ const blankRegisters=()=>Object.fromEntries(Object.keys(registers).map(k=>[k,[]]));
+ const clone=x=>JSON.parse(JSON.stringify(x));
+ const need=(ok,msg)=>{if(!ok)throw Error(msg);};
+ const text=(v,name,max=10000)=>{need(typeof v==='string'&&v.length<=max&&!/[\u0000-\u0008\u000b\u000c\u000e-\u001f]/.test(v),name+' must be plain text within '+max+' characters.');return v;};
+ const canonical=x=>Array.isArray(x)?'['+x.map(canonical).join(',')+']':x&&typeof x==='object'?'{'+Object.keys(x).sort().map(k=>JSON.stringify(k)+':'+canonical(x[k])).join(',')+'}':JSON.stringify(x);
+ const hash=x=>digest(canonical(x));
+ function validateSeed(seed){
+  need(seed&&seed.version==='ventcrm.commissioning-seed.v1','The programme source version differs.');
+  text(seed.title,'Title',160);need(Array.isArray(seed.operators)&&seed.operators.length<=100,'Up to 100 source operators are supported.');
+  const ids=new Set();for(const o of seed.operators){need(o&&typeof o==='object','Operator source missing.');text(o.id,'Operator ID',180);need(o.id&&!ids.has(o.id),'Operator IDs must be distinct.');ids.add(o.id);for(const k of ['company','geography','contact','observed','proposal','qualification'])text(o[k],k,15000);need(Array.isArray(o.sources)&&o.sources.length<=20,'Original source list differs.');for(const u of o.sources)need(typeof u==='string'&&/^https:\/\//.test(u)&&u.length<2048,'Use an original HTTPS source.');}
+  need(Array.isArray(seed.criteria)&&seed.criteria.length>0&&seed.criteria.length<=60,'The acceptance criteria are missing.');
+  const checks=new Set();for(const c of seed.criteria){text(c.id,'Criterion ID',100);need(c.id&&!checks.has(c.id),'Criterion IDs must be distinct.');checks.add(c.id);for(const k of ['title','instruction','source_url'])text(c[k],k,4000);need(/^https:\/\//.test(c.source_url),'Criterion source must be HTTPS.');}
+  return clone(seed);
+ }
+ function seal(state){state.checksum=hash(Object.fromEntries(Object.entries(state).filter(([k])=>k!=='checksum')));return state;}
+ function create(seed,id){
+  seed=validateSeed(seed);text(id,'Workspace ID',180);need(id.length>0,'Workspace ID required.');
+  return seal({schema:SCHEMA,id,seed,seed_sha256:hash(seed),revision:0,operators:seed.operators.map(o=>({id:o.id,facts:Object.fromEntries(fields.map(k=>[k,''])),registers:blankRegisters(),checks:Object.fromEntries(seed.criteria.map(c=>[c.id,{status:'unreviewed',evidence:'',reviewer:'',checked_at:''}])),acceptance:null})),history:[]});
+ }
+ function validateFacts(facts){
+  need(facts&&typeof facts==='object'&&!Array.isArray(facts),'Setup values must be an object.');
+  need(Object.keys(facts).length===fields.length&&fields.every(k=>Object.hasOwn(facts,k)),'Complete setup fields are required.');
+  for(const k of fields)text(facts[k],k);
+  for(const k of ['fleet','customers_expected','customers_received','jobs_expected','jobs_received','invoices_expected','invoices_received'])if(facts[k]!=='')need(/^(0|[1-9]\d{0,7})$/.test(facts[k]),k+' must be a nonnegative whole number, or blank when unknown.');
+  for(const k of ['selected_setup_fee','selected_monthly_fee'])if(facts[k]!=='')need(/^(0|[1-9]\d{0,6})(\.\d{1,2})?$/.test(facts[k]),k+' must be a nonnegative USD amount, or blank.');
+  if(facts.target_date)need(/^\d{4}-\d{2}-\d{2}$/.test(facts.target_date)&&!Number.isNaN(Date.parse(facts.target_date+'T00:00:00Z'))&&new Date(facts.target_date+'T00:00:00Z').toISOString().slice(0,10)===facts.target_date,'Use a calendar date for the target.');
+ }
+ function readiness(state,operatorId){
+  const o=state.operators.find(o=>o.id===operatorId);need(o,'Choose an operator in this programme.');
+  const outstanding=state.seed.criteria.filter(c=>!['pass','not_applicable'].includes(o.checks[c.id].status)).map(c=>c.title);
+  const missing=['owner','current_system','service_area','timezone','migration_scope','rollback_plan','training_plan','support_contact','export_location'].filter(k=>!o.facts[k].trim());
+  const countDifferences=[];
+  for(const prefix of ['customers','jobs','invoices']){const a=o.facts[prefix+'_expected'],b=o.facts[prefix+'_received'];if((a===''||b==='')&&(a!==''||b!==''))countDifferences.push(prefix+': enter both counts or leave both unknown');else if(a!==''&&a!==b)countDifferences.push(prefix+': '+a+' expected / '+b+' received');}
+  const openWork=o.registers.open_work.filter(x=>x.status!=='done').map(x=>x.title+' — '+(x.owner||'owner needed'));return {outstanding,missing,countDifferences,openWork,ready:outstanding.length===0&&missing.length===0&&countDifferences.length===0&&openWork.length===0};
+ }
+ function execute(state,event){
+  need(event&&event.expected_revision===state.revision,'The workspace changed. Reopen the current working copy before applying this change.');
+  need(state.history.length<2000,'Export this completed programme before starting a new programme.');
+  need(typeof event.at==='string'&&/^\d{4}-\d\d-\d\dT/.test(event.at)&&!Number.isNaN(Date.parse(event.at)),'Use an actual ISO operation time.');
+  const o=state.operators.find(x=>x.id===event.operator_id);need(o,'Operator is outside this selected programme.');
+  text(event.by,'Reviewer',160);need(event.by.trim(),'Enter the person recording this change.');
+  if(event.kind==='facts-save'){validateFacts(event.facts);const changed=canonical(o.facts)!==canonical(event.facts);o.facts=clone(event.facts);if(changed){for(const c of state.seed.criteria)o.checks[c.id]={status:'unreviewed',evidence:'',reviewer:'',checked_at:''};o.acceptance=null;}}
+  else if(event.kind==='register-save'){
+   need(Object.hasOwn(registers,event.register),'Unknown programme register.');
+   need(Array.isArray(event.rows)&&event.rows.length<=500,'Use up to 500 rows per register.');
+   const ids=new Set();for(const row of event.rows){need(row&&typeof row==='object'&&Object.keys(row).length===registers[event.register].length+1,'Complete register row fields are required.');text(row.id,'Row ID',180);need(row.id&&!ids.has(row.id),'Register row IDs must be distinct.');ids.add(row.id);for(const k of registers[event.register])text(row[k],k,4000);if(Object.hasOwn(row,'rows')&&row.rows!=='')need(/^(0|[1-9]\d{0,8})$/.test(row.rows),'Record count must be a nonnegative whole number.');if(row.sha256)need(/^[0-9a-f]{64}$/.test(row.sha256),'Source SHA-256 must be 64 lower-case hexadecimal characters.');if(event.register==='mappings')need(['mapped','retained','excluded'].includes(row.decision),'Choose mapped, retained or excluded.');if(event.register==='exports')need(['self_serve','full_handover'].includes(row.route),'Choose self-serve or full handover.');if(event.register==='open_work')need(['open','done'].includes(row.status),'Choose open or done.');}
+   if(canonical(o.registers[event.register])!==canonical(event.rows)){o.registers[event.register]=clone(event.rows);o.acceptance=null;for(const c of state.seed.criteria)o.checks[c.id]={status:'unreviewed',evidence:'',reviewer:'',checked_at:''};}
+  }else if(event.kind==='check-save'){
+   need(Object.hasOwn(o.checks,event.check_id),'Unknown acceptance criterion.');
+   need(['unreviewed','pass','follow_up','fail','not_applicable'].includes(event.status),'Unknown check result.');
+   text(event.evidence,'Check evidence',10000);if(event.status!=='unreviewed')need(event.evidence.trim(),'Record the observed result or reason for this check.');
+   if(event.status==='pass'){
+    const required={source:'files',mapping:'mappings',custody:'custody'};
+    if(required[event.check_id])need(o.registers[required[event.check_id]].length>0,'Complete the '+required[event.check_id]+' register before marking this step passed.');
+    if(['self_export','complete_export'].includes(event.check_id))need(o.registers.exports.some(x=>x.route===(event.check_id==='self_export'?'self_serve':'full_handover')),'Record the received export in its correct handover route first.');
+   }
+   o.checks[event.check_id]={status:event.status,evidence:event.evidence,reviewer:event.by,checked_at:event.at};o.acceptance=null;
+  }else if(event.kind==='accept'){
+   const r=readiness(state,o.id);need(r.ready,'Finish setup, count reconciliation and acceptance checks before accepting the programme.');
+   text(event.summary,'Acceptance summary',10000);need(event.summary.trim(),'Record the acceptance decision.');
+   o.acceptance={by:event.by,at:event.at,revision:state.revision+1,summary:event.summary};
+  }else if(event.kind==='reopen'){text(event.reason,'Reopen reason',10000);need(event.reason.trim(),'Record why the accepted programme is reopened.');o.acceptance=null;}
+  else throw Error('Unknown programme operation.');
+  state.revision++;state.history.push(clone(event));return seal(state);
+ }
+ function receive(bundle){
+  need(bundle&&bundle.schema===SCHEMA,'Choose a full commissioning workspace JSON file.');
+  need(typeof bundle.checksum==='string','Workspace checksum missing.');
+  need(bundle.checksum===hash(Object.fromEntries(Object.entries(bundle).filter(([k])=>k!=='checksum'))),'The saved workspace differs from its checksum.');
+  need(Array.isArray(bundle.history)&&bundle.history.length<=2000,'Saved operation history differs.');
+  let replay=create(bundle.seed,bundle.id);
+  for(const event of bundle.history)replay=execute(replay,event);
+  need(canonical(replay)===canonical(bundle),'The saved programme differs from its complete operation history.');
+  return replay;
+ }
+ function apply(bundle,event){return execute(receive(bundle),clone(event));}
+ function csv(state){
+  state=receive(state);const cell=s=>'"'+String(s??'').replace(/"/g,'""')+'"';
+  const rows=[['company','criterion','result','evidence','reviewer','checked_at','acceptance']];
+  for(const source of state.seed.operators){const o=state.operators.find(x=>x.id===source.id);for(const c of state.seed.criteria){const r=o.checks[c.id];rows.push([source.company,c.title,r.status,r.evidence,r.reviewer,r.checked_at,o.acceptance?o.acceptance.by+' / '+o.acceptance.at:'']);}}
+  return rows.map(row=>row.map(cell).join(',')).join('\r\n')+'\r\n';
+ }
+ return {SCHEMA,fields,registers,hash,canonical,create,receive,apply,readiness,csv,validateSeed};
+}
+module.exports={createEngine};
+
+})(co);return co.exports.createEngine(s=>sh.exports.sha256Utf8(s).sha256);})();</script><script>'use strict';
+(() => {
+ const boot=JSON.parse(document.getElementById('programme-data').textContent),engine=window.CommissioningEngine;
+ const $=s=>document.querySelector(s), esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+ const labels={owner:'Programme owner',fleet:'Trucks / crews',current_system:'Current scheduling and billing system',service_area:'Agreed service area',timezone:'Operating time zone',target_date:'Proposed cutover date',services_prices:'Services, durations, prices and tax rules',booking_rules:'Booking, deposit, cancellation and approval rules',payment_setup:'Owner Stripe connection and payment trial',texting_setup:'Registered business number and consent handling',migration_scope:'Authorized migration scope and exclusions',customers_expected:'Customers in agreed source',customers_received:'Customers received',jobs_expected:'Jobs in agreed source',jobs_received:'Jobs received',invoices_expected:'Invoices in agreed source',invoices_received:'Invoices received',migration_exceptions:'Resolved exceptions and retained legacy records',rollback_plan:'Rollback and retained source plan',training_plan:'Phone walkthrough and operator training',support_contact:'Support owner and escalation route',export_location:'Verified export location and reopen result',retention_plan:'Agreed retention and deletion terms',agreement_reference:'Selected agreement reference and version',selected_setup_fee:'Agreed setup fee (USD)',selected_monthly_fee:'Agreed monthly fee (USD)',billing_start:'Agreed billing start',usage_cost_owner:'SMS / card cost basis and account owner',active_removal_date:'Agreed active-system removal date',backup_expiry:'Agreed backup expiry or unresolved owner',notes:'Additional working notes'};
+ let state=engine.create(boot.seed,'programme-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,8)),selected=boot.seed.operators[0]?.id||'',tab='operators',reviewer='',register='files',editingRow=null,pending=null,notice='',saveWarning='',diskToken=null;
+ const storageKey='ventcrm-commissioning:'+engine.hash(boot.seed);
+ try { const raw=localStorage.getItem(storageKey);diskToken=raw;if(raw){const restored=engine.receive(JSON.parse(raw));if(boot.seed.operators.length&&restored.seed_sha256!==engine.hash(boot.seed))throw Error('The local programme belongs to different research.');state=restored;selected=state.seed.operators[0]?.id||'';notice='Saved working programme reopened.';}}catch(e){saveWarning='Local storage could not be reopened: '+e.message+' Use a downloaded working JSON to continue.';}
+ function save(next){
+  const raw=JSON.stringify(next);
+  try {const actual=localStorage.getItem(storageKey);if(actual!==diskToken)throw Error('Another tab changed this programme. Download this tab’s working JSON, then reload to receive the current local copy.');localStorage.setItem(storageKey,raw);diskToken=raw;saveWarning='';}
+  catch(e){if(e.message.startsWith('Another tab'))throw e;saveWarning='This browser could not save locally. Download the full working JSON before closing.';}
+  state=next;
+ }
+ function download(name,body,type='application/json'){const url=URL.createObjectURL(new Blob([body],{type})),a=document.createElement('a');a.href=url;a.download=name;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1500);}
+ const operator=()=>state.operators.find(x=>x.id===selected);
+ const source=()=>state.seed.operators.find(x=>x.id===selected);
+ const paragraphs=s=>'<p>'+esc(s).replace(/\n\n/g,'</p><p>').replace(/\n/g,'<br>')+'</p>';
+ const links=urls=>'<ul class="sources">'+urls.map(u=>'<li><a href="'+esc(u)+'" target="_blank" rel="noopener noreferrer">'+esc(u)+'</a></li>').join('')+'</ul>';
+ function act(change){const next=engine.apply(state,{...change,operator_id:selected,expected_revision:state.revision,at:new Date().toISOString(),by:reviewer});save(next);notice='Working programme saved. Revision '+state.revision+'.';render();}
+ function summary(o){const r=engine.readiness(state,o.id);return o.acceptance?'Accepted by '+o.acceptance.by:r.ready?'Ready for an explicit acceptance decision':r.outstanding.length+' checks to complete';}
+ function sourceCard(o){return '<article><h2>'+esc(o.company)+'</h2><p class="muted">'+esc(o.geography)+'</p><h3>Published contact</h3>'+paragraphs(o.contact)+'<h3>Observed workflow</h3>'+paragraphs(o.observed)+'<h3>Proposed comparison</h3>'+paragraphs(o.proposal)+'<h3>Research qualification</h3>'+paragraphs(o.qualification)+links(o.sources)+'<button data-operator="'+esc(o.id)+'">Open commissioning plan</button></article>';}
+ function operators(){return '<h1>Operator programmes</h1><p>These profiles describe public business workflows. Setup values and check results begin blank and are entered during an agreed operator programme.</p><div class="cards">'+state.seed.operators.map(sourceCard).join('')+'</div>';}
+ function setup(){const o=operator();if(!o)return empty();return '<h1>'+esc(source().company)+' — setup</h1><p>Record confirmed scope, source counts and operating choices. Unknown values stay blank. Changing setup resets its checks for review and reopens a previous acceptance. Earlier observations remain in the full working history.</p><form id="facts-form"><div class="fields">'+engine.fields.map(k=>{const small=['fleet','target_date','customers_expected','customers_received','jobs_expected','jobs_received','invoices_expected','invoices_received'].includes(k);return '<label>'+esc(labels[k])+(small?'<input name="'+k+'" '+(k==='target_date'?'type="date"':'inputmode="numeric"')+' value="'+esc(o.facts[k])+'">':'<textarea name="'+k+'" rows="'+(['notes','migration_scope','rollback_plan'].includes(k)?4:2)+'">'+esc(o.facts[k])+'</textarea>')+'</label>';}).join('')+'</div><button type="submit">Save complete setup</button></form>';}
+ 
+ const registerTitles={files:'Original source files',mappings:'Field and relationship mapping',exports:'Received exports and handover',open_work:'Assigned open work',custody:'Account custody'};
+ const fieldTitle=k=>({source_field:'Source field',target_field:'Destination field',source_date:'Source date',file_ref:'Received file reference',sha256:'SHA-256',rows:'Record count',keys:'Relationship keys',reference:'Nonsecret account / instance reference'}[k]||k.replace(/_/g,' ').replace(/^./,x=>x.toUpperCase()));
+ function records(){
+  const o=operator();if(!o)return empty();const keys=engine.registers[register],row=editingRow?o.registers[register].find(x=>x.id===editingRow):null;
+  return '<h1>'+esc(source().company)+' — working records</h1><p>Retain source file identities, actual mapping decisions, received exports and assigned follow-up work. Each edit is preserved in the complete programme history and resets affected programme review.</p><label>Register<select id="register-select">'+Object.entries(registerTitles).map(([k,v])=>'<option value="'+k+'" '+(k===register?'selected':'')+'>'+v+'</option>').join('')+'</select></label><section><h2>'+(row?'Edit record':'Add record')+'</h2><form id="register-form"><div class="fields">'+keys.map(k=>{const v=row?.[k]||'',options=k==='decision'?['mapped','retained','excluded']:k==='route'?['self_serve','full_handover']:k==='status'?['open','done']:null;return '<label>'+esc(fieldTitle(k))+(options?'<select name="'+k+'">'+options.map(s=>'<option value="'+s+'" '+(v===s?'selected':'')+'>'+esc(s.replace(/_/g,' '))+'</option>').join('')+'</select>':'<textarea name="'+k+'" rows="'+(['note','output','transform','recovery'].includes(k)?3:2)+'">'+esc(v)+'</textarea>')+'</label>';}).join('')+'</div><button type="submit">'+(row?'Save record':'Add record')+'</button>'+(row?'<button type="button" data-action="cancel-row">Cancel edit</button>':'')+'</form></section><section><h2>'+esc(registerTitles[register])+' ('+o.registers[register].length+')</h2>'+(o.registers[register].length?o.registers[register].map(r=>'<article><dl>'+keys.map(k=>'<dt>'+esc(fieldTitle(k))+'</dt><dd>'+paragraphs(r[k]||'Not entered')+'</dd>').join('')+'</dl><button data-edit-row="'+esc(r.id)+'">Edit record</button> <button data-remove-row="'+esc(r.id)+'">Remove record</button></article>').join(''):'<p>No records entered.</p>')+'</section>';
+ }
+
+ function checks(){const o=operator();if(!o)return empty();return '<h1>'+esc(source().company)+' — acceptance checks</h1><p>Use the actual selected product and authorized operator data. Record the observed result or a specific reason when a check does not apply.</p>'+state.seed.criteria.map(c=>{const r=o.checks[c.id];return '<article><h2>'+esc(c.title)+'</h2>'+paragraphs(c.instruction)+'<p class="small"><a href="'+esc(c.source_url)+'" target="_blank" rel="noopener noreferrer">Published product source</a></p><form data-check="'+esc(c.id)+'"><label>Result<select name="status">'+[['unreviewed','Unreviewed'],['pass','Pass'],['follow_up','Follow up'],['fail','Fail'],['not_applicable','Not applicable — reason recorded']].map(([v,l])=>'<option value="'+v+'" '+(v===r.status?'selected':'')+'>'+l+'</option>').join('')+'</select></label><label>Observed result / retained output / reason<textarea name="evidence" rows="3">'+esc(r.evidence)+'</textarea></label><p class="muted">'+(r.checked_at?'Last recorded by '+esc(r.reviewer)+' at '+esc(r.checked_at):'No review has been recorded.')+'</p><button type="submit">Save this check</button></form></article>';}).join('');}
+ function empty(){return '<h1>Open a programme</h1><p>Use Open working JSON to receive a complete saved programme. The operating guide is available before a programme is opened.</p>';}
+ function handover(){const o=operator();if(!o)return empty();const r=engine.readiness(state,o.id);return '<h1>'+esc(source().company)+' — handover</h1><section><h2>Readiness</h2><p>'+esc(summary(o))+'</p>'+(['outstanding','missing','countDifferences','openWork'].map(k=>r[k].length?'<h3>'+({outstanding:'Checks to complete',missing:'Setup values to complete',countDifferences:'Migration count differences',openWork:'Assigned work to complete'}[k])+'</h3><ul>'+r[k].map(v=>'<li>'+esc(labels[v]||v)+'</li>').join('')+'</ul>':'').join(''))+(o.acceptance?'<h3>Recorded acceptance</h3>'+paragraphs(o.acceptance.summary)+'<p>'+esc(o.acceptance.by)+' · '+esc(o.acceptance.at)+' · revision '+o.acceptance.revision+'</p><form id="reopen-form"><label>Reason to reopen<textarea name="reason" required></textarea></label><button>Reopen this programme</button></form>':'<form id="accept-form"><label>Acceptance decision<textarea name="summary" required placeholder="Record the accepted scope, remaining agreed exclusions and handover decision."></textarea></label><button '+(!r.ready?'disabled':'')+'>Record acceptance</button></form>')+'</section><section><h2>Complete working outputs</h2><p>The JSON retains every selected operator, setup field, check, decision and operation. The CSV and HTML report are readable handover views.</p><div class="actions"><button data-action="json">Download working JSON</button><button data-action="csv">Download check register CSV</button><button data-action="report">Download complete handover HTML</button></div></section><section><h2>Recent operations</h2><ol>'+state.history.filter(e=>e.operator_id===selected).slice(-15).reverse().map(e=>'<li>'+esc(e.at)+' — '+esc(e.kind)+' — '+esc(e.by)+'</li>').join('')+'</ol></section>';}
+ function guide(){return '<h1>Operating guide</h1>'+boot.guide_html+'<button data-action="guide">Download the complete guide</button>';}
+ function report(){
+  const body=state.seed.operators.map(s=>{const o=state.operators.find(x=>x.id===s.id);return '<article><h2>'+esc(s.company)+'</h2><p>'+esc(summary(o))+'</p><h3>Published workflow</h3>'+paragraphs(s.observed)+links(s.sources)+'<h3>Entered setup</h3><dl>'+engine.fields.map(k=>'<dt>'+esc(labels[k])+'</dt><dd>'+paragraphs(o.facts[k]||'Not entered')+'</dd>').join('')+'</dl><h3>Working registers</h3>'+Object.entries(engine.registers).map(([key,fields])=>'<h4>'+esc(registerTitles[key])+'</h4>'+o.registers[key].map(row=>'<dl>'+fields.map(f=>'<dt>'+esc(fieldTitle(f))+'</dt><dd>'+paragraphs(row[f]||'Not entered')+'</dd>').join('')+'</dl>').join('')).join('')+'<h3>Acceptance checks</h3>'+state.seed.criteria.map(c=>{const r=o.checks[c.id];return '<section><h4>'+esc(c.title)+' — '+esc(r.status)+'</h4>'+paragraphs(r.evidence||'No result recorded')+'<p>'+esc(r.reviewer)+' '+esc(r.checked_at)+'</p></section>';}).join('')+(o.acceptance?'<h3>Acceptance</h3>'+paragraphs(o.acceptance.summary)+'<p>'+esc(o.acceptance.by)+' '+esc(o.acceptance.at)+'</p>':'')+'</article>';}).join('');
+  return '<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Commissioning handover</title><style>'+document.getElementById('programme-styles').textContent+'</style><main><h1>'+esc(state.seed.title)+' — handover</h1><p>Working revision '+state.revision+' · Generated '+esc(new Date().toISOString())+'</p>'+body+'</main></html>';
+ }
+ function render(){
+  const nav=[['operators','Operators'],['setup','Setup'],['records','Records'],['checks','Acceptance'],['handover','Handover'],['guide','Guide']];
+  $('#app').innerHTML='<header><div class="brand">VentCRM commissioning desk</div><p class="muted">'+esc(state.seed.title)+'</p><div class="toolbar"><label>Operator<select id="operator-select">'+state.seed.operators.map(s=>'<option value="'+esc(s.id)+'" '+(s.id===selected?'selected':'')+'>'+esc(s.company)+'</option>').join('')+'</select></label><label>Person recording changes<input id="reviewer" value="'+esc(reviewer)+'" autocomplete="name" placeholder="Your name"></label><button data-action="json">Save working JSON</button><label class="file-button">Open working JSON<input id="open-file" type="file" accept=".json,application/json"></label></div><nav aria-label="Programme sections">'+nav.map(([v,l])=>'<button data-tab="'+v+'" aria-current="'+(v===tab?'page':'false')+'">'+l+'</button>').join('')+'</nav></header><div id="status" role="status" class="status">'+esc(saveWarning||notice||'Original research loaded. Enter actual programme details to begin.')+'</div>'+ (pending?'<section class="import"><h2>Open saved programme</h2><p>'+esc(pending.seed.title)+' · '+pending.operators.length+' operators · revision '+pending.revision+'. This replaces the local working copy in this browser.</p><button data-action="confirm-import">Open this complete working copy</button><button data-action="cancel-import">Cancel</button></section>':'')+'<main>'+({operators,setup,records,checks,handover,guide}[tab]())+'</main><footer>Revision '+state.revision+' · Work is saved in this browser when available. Download working JSON for a durable copy.</footer>';
+  document.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>{reviewer=$('#reviewer').value;tab=b.dataset.tab;notice='';render();window.scrollTo(0,0);});
+  $('#reviewer').oninput=e=>reviewer=e.target.value;
+  $('#operator-select').onchange=e=>{selected=e.target.value;render();};
+  document.querySelectorAll('[data-operator]').forEach(b=>b.onclick=()=>{selected=b.dataset.operator;tab='setup';render();window.scrollTo(0,0);});
+  const form=$('#facts-form');if(form)form.onsubmit=e=>{e.preventDefault();safe(()=>act({kind:'facts-save',facts:Object.fromEntries(engine.fields.map(k=>[k,form.elements[k].value]))}));};
+  document.querySelectorAll('[data-check]').forEach(f=>f.onsubmit=e=>{e.preventDefault();safe(()=>act({kind:'check-save',check_id:f.dataset.check,status:f.elements.status.value,evidence:f.elements.evidence.value}));});
+  const reg=$('#register-select');if(reg)reg.onchange=e=>{register=e.target.value;editingRow=null;render();};
+  const rf=$('#register-form');if(rf)rf.onsubmit=e=>{e.preventDefault();safe(()=>{const row={id:editingRow||('row-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,7)),...Object.fromEntries(engine.registers[register].map(k=>[k,rf.elements[k].value]))};const rows=operator().registers[register].filter(x=>x.id!==row.id);rows.push(row);editingRow=null;act({kind:'register-save',register,rows});});};
+  document.querySelectorAll('[data-edit-row]').forEach(b=>b.onclick=()=>{editingRow=b.dataset.editRow;render();window.scrollTo(0,0);});
+  document.querySelectorAll('[data-remove-row]').forEach(b=>b.onclick=()=>safe(()=>{const row=operator().registers[register].find(x=>x.id===b.dataset.removeRow);if(confirm('Remove this record? Its earlier values remain in the complete operation history.')){editingRow=null;act({kind:'register-save',register,rows:operator().registers[register].filter(x=>x.id!==row.id)});}}));
+  const accept=$('#accept-form');if(accept)accept.onsubmit=e=>{e.preventDefault();safe(()=>act({kind:'accept',summary:accept.elements.summary.value}));};
+  const reopen=$('#reopen-form');if(reopen)reopen.onsubmit=e=>{e.preventDefault();safe(()=>act({kind:'reopen',reason:reopen.elements.reason.value}));};
+  document.querySelectorAll('[data-action]').forEach(b=>b.onclick=()=>safe(()=>{const a=b.dataset.action;if(a==='cancel-row'){editingRow=null;render();}else if(a==='json')download('commissioning-working.json',JSON.stringify(engine.receive(state),null,2)+'\n');else if(a==='csv')download('commissioning-checks.csv',engine.csv(state),'text/csv;charset=utf-8');else if(a==='report')download('commissioning-handover.html',report(),'text/html;charset=utf-8');else if(a==='guide')download('START-HERE.md',boot.guide_markdown,'text/markdown;charset=utf-8');else if(a==='cancel-import'){pending=null;render();}else if(a==='confirm-import'){save(pending);pending=null;selected=state.seed.operators[0]?.id||'';notice='Complete working programme reopened.';render();}}));
+  $('#open-file').onchange=e=>safeAsync(async()=>{const f=e.target.files[0];if(!f)return;if(f.size>5000000)throw Error('Choose a working JSON smaller than 5 MB.');const received=engine.receive(JSON.parse(await f.text()));if(boot.seed.operators.length&&received.seed_sha256!==engine.hash(boot.seed))throw Error('This working file belongs to another selected customer programme. Open it in its original commissioning desk.');pending=received;render();});
+ }
+ function safe(fn){try{fn();}catch(e){notice=e.message;$('#status').textContent=e.message;$('#status').focus();}}
+ async function safeAsync(fn){try{await fn();}catch(e){notice=e.message;$('#status').textContent=e.message;}}
+ window.ventcrmProgramme={read:()=>engine.receive(state)};
+ render();
+})();
+</script></body></html>

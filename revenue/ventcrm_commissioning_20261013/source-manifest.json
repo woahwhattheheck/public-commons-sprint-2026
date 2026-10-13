@@ -1,0 +1,125 @@
+{
+  "schema": "ventcrm.complete-source-manifest.v1",
+  "files": [
+    {
+      "path": "commissioning-core.cjs",
+      "bytes": 11081,
+      "sha256": "0b9474a1306efdeeb34692f2edb1adae31ac4051f67d74d54b672feeb7ce69ad"
+    },
+    {
+      "path": "app.js",
+      "bytes": 18442,
+      "sha256": "ec891c4b6ae5e302b94f247492dcb2ac9f90d5b445e85fbfc98fa8b990200640"
+    },
+    {
+      "path": "styles.css",
+      "bytes": 2807,
+      "sha256": "4f04525d0deaebb9fd8f2435241631ab73bc41c2dde63c8c527d2dcc0a3858c1"
+    },
+    {
+      "path": "render.cjs",
+      "bytes": 1251,
+      "sha256": "9bee1d7f19ab4b5ea33f959ff2bbba84c6ee8165253cd567a96e1d5a9b7b850e"
+    },
+    {
+      "path": "compose.cjs",
+      "bytes": 6452,
+      "sha256": "306793474748b0c1f884947850fdb6ac7cf4550756c65e9c48e0488acd7cb9a4"
+    },
+    {
+      "path": "build.cjs",
+      "bytes": 5628,
+      "sha256": "68b070c85762fd01737b15eff9ae6aa56b1bc33f0e6d16d137bc93423457accb"
+    },
+    {
+      "path": "browser-receiving.mjs",
+      "bytes": 9829,
+      "sha256": "2b8bd9e33309d91de541dbd2fd7019c269ebca4dcb6fee6d7e3d07cc9516416b"
+    },
+    {
+      "path": "criteria.json",
+      "bytes": 29180,
+      "sha256": "d71d931132396096c99ff4a68805b168b2ed399711b05e98b24957eeeb097364"
+    },
+    {
+      "path": "START-HERE.md",
+      "bytes": 6073,
+      "sha256": "ebde2575e481e5bb5487673c222f65edd7e92fc8c07f3f1d537757f8acfc1a22"
+    },
+    {
+      "path": "guide.html",
+      "bytes": 6672,
+      "sha256": "920184cfa40c322bddcea3c468a2ab6fd7333e057b79fe6160c551e85436ece4"
+    },
+    {
+      "path": "README.md",
+      "bytes": 7885,
+      "sha256": "fd79647610debb2afc46f618746aeeee9c6e68db9639d3948c69d79b381f7d8c"
+    },
+    {
+      "path": "commissioning.html",
+      "bytes": 91373,
+      "sha256": "37d2b0db530f84a19d090506a731ce9e739dda274a3cfd54d2e12e7e0f9816fc"
+    },
+    {
+      "path": "authored-receiving.json",
+      "bytes": 151115,
+      "sha256": "a966d05d2645afd3ccc8f6155d09e12102e8eb52c90efc470df71c4f58fa7a53"
+    },
+    {
+      "path": "tools/revenue_owner_console_20261010/lead_fulfillment_core.cjs",
+      "bytes": 81753,
+      "sha256": "c683ae05e7a83e43ea8d5a3e7a0735f635d20954c1b7002c3c976e2e475b024d"
+    },
+    {
+      "path": "host/connected_sha256.cjs",
+      "bytes": 18336,
+      "sha256": "023b01f089168605a6153b9e5f3ccd7a66a0d0487fab3e79522897a1df226cc2"
+    },
+    {
+      "path": "tools/revenue_owner_console_20261010/lead_capture_core.cjs",
+      "bytes": 12268,
+      "sha256": "75b949c45a4b848671fd78c7b631794d27691b092549e4259edb017c0474fae2"
+    },
+    {
+      "path": "tools/revenue_owner_console_20261010/lead_customer_files.cjs",
+      "bytes": 19719,
+      "sha256": "6fd989943d558d806cbb5cdb5e3bad9ee630950aebae13ba6a58dd373d897081"
+    },
+    {
+      "path": "tools/revenue_owner_console_20261010/lead_reconciliation_core.cjs",
+      "bytes": 20121,
+      "sha256": "9225050eb8ea3a86fcc02e1845fbe0970473e7ae6bd08a858fb7c806f67562ad"
+    },
+    {
+      "path": "tools/revenue_owner_console_20261010/lead_customer_requests.cjs",
+      "bytes": 35457,
+      "sha256": "e93569600867bc3da48d8063b5d62c318472f04cb0d2cc08762ed20d649e6a7f"
+    },
+    {
+      "path": "tools/revenue_owner_console_20261010/capture/capture_core.cjs",
+      "bytes": 9998,
+      "sha256": "ab7c7ba6411f58f6fb6d15e20685fa3c75c090f3e6fc8bd6c88f7eaf2ce198f6"
+    },
+    {
+      "path": "criteria-source/COMMISSIONING.md",
+      "bytes": 18138,
+      "sha256": "1fd4c0b1df2b3283baf1ddcc663d59fc2d5996669108490024b1d32332032978"
+    },
+    {
+      "path": "criteria-source/commissioning-criteria.json",
+      "bytes": 18659,
+      "sha256": "2d5052794589fbb08dec914fa9296972c54dfe1d6cdc5666c99da9a2a8455a64"
+    },
+    {
+      "path": "criteria-source/operator-case-template.json",
+      "bytes": 6712,
+      "sha256": "eba6f6a1b1d34a9805f0bc38459bf9c12b1ddd13b2795a65d679c07dca09f44b"
+    },
+    {
+      "path": "criteria-source/source-register.json",
+      "bytes": 5431,
+      "sha256": "ec6798e1927ebae086be78eac84744cd9707a3653a00c3049d52dc5e377f75e2"
+    }
+  ]
+}
