@@ -47,12 +47,17 @@ const TRANSFER_SOURCE=Object.freeze([
   'research/preservation/receiving/transfer_inspection_receive.py',
     'research/preservation/receiving/transfer_inspection_browser.mjs',
 ]);
+const PORTABLE_REVIEW_SOURCE=Object.freeze([
+  'research/preservation/collection_review.py','research/preservation/collection_review.js',
+  'research/preservation/COLLECTION_REVIEW.md',
+  'research/preservation/receiving/collection_review_receive.mjs',
+]);
 const field=(name,label,type,required,description)=>({name,label,type,required,description});
 const equal=(a,b)=>JSON.stringify(canonical(a))===JSON.stringify(canonical(b));
 
 function nativeSources(value){
   need(plain(value),'APPLICATION_PRESERVATION_SOURCE_INCOMPLETE');
-  const names=Object.keys(value),groups=[PRESERVICA_SOURCE,LIBNOVA_SOURCE,ARCHIVEMATICA_SOURCE,COLLECTION_SOURCE,TRANSFER_SOURCE];
+  const names=Object.keys(value),groups=[PRESERVICA_SOURCE,LIBNOVA_SOURCE,ARCHIVEMATICA_SOURCE,COLLECTION_SOURCE,TRANSFER_SOURCE,PORTABLE_REVIEW_SOURCE];
   const optional=groups.flatMap(group=>group.filter(name=>Object.hasOwn(value,name)));
   need(BASE_SOURCE.every(name=>Object.hasOwn(value,name))&&
     groups.every(group=>group.every(name=>Object.hasOwn(value,name))||
