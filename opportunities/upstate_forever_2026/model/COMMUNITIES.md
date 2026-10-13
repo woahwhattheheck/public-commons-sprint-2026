@@ -180,3 +180,52 @@ Rebuilding the same saved plan with report format version 3 creates a new report
 edition while preserving earlier reports. The original intervention CSV import,
 plan revision lineage, received CSV and import record remain in their existing
 report and portable Workspace paths.
+
+## Use a completed regional watershed report in a Community plan
+
+Receive or build the regional result in the existing **Watershed context**
+workbench. Its original result and source identity remain in the project's
+regional registry. In the Community plan editor, select that completed report
+under **Original scientific context**, then save the plan or its next revision.
+
+The saved Community context contains only the HUC12 rows represented by the
+selected block-group memberships. The plan preserves the original report ID,
+exact regional JSON hash and source-input fingerprint. The full regional report
+remains a single retained file in the project. Each Community report includes:
+
+- A human-readable watershed planning table with original whole-HUC acres,
+  state-portion acres, NRCS FY26 priority states and classified-water query scope.
+- The separate original NRCS state records, including Ground, Surface or Both
+  programme labels and the source resource concern.
+- `watershed-planning-context.csv`, `watershed-state-portions.csv` and
+  `selected-watershed-context.json` for editable use.
+- `original-watershed-context.json`, copied byte for byte from the completed
+  regional result and included in the normal report ZIP and file inventory.
+
+The native command saves the same immutable revision:
+
+```sh
+python model/community_cli.py --workspace /actual/workspace \
+  plan-attach-watershed ORIGINAL_PLAN_ID watershed-4592eb077b7164d59ba4
+```
+
+Use the actual completed report ID from that project's regional workbench.
+The returned plan ID can be supplied to the existing report-build action.
+Subsequent `plan-revise-csv` operations keep the selected regional report.
+
+The retained 217-HUC result `watershed-4592eb077b7164d59ba4` includes all four
+RFP focus watersheds. Its Lower Tugaloo row preserves 59,689.69 whole-HUC acres
+and two FY26 High Priority Area records: 38,264.28633246 acres in Georgia and
+21,425.42741381 acres in South Carolina. Each state record carries the original
+Ground programme label and Water Quality resource concern. The report retains
+the published difference between whole-HUC and summed state acres.
+
+For all four focus HUCs that result records a complete membership query with
+zero matches for ORW, ONRW, TN, TPGT and TPT under the publisher's HUC12 assignment.
+Read those counts with their named class set and South Carolina jurisdiction;
+use the corresponding assessment sources for condition and impairment decisions.
+Community populations remain the RFP's whole block-group counts.
+
+Original completed result: [ECO-WATERSHED13](https://tokenjunkielabs.slack.com/docs/T0BRETUB5TK/F0C9JNBA7EU).
+Its regional JSON is 470,519 bytes, SHA-256
+`54374a5b1feae5afda7217b27b7c796616d8654de8cc1fd8fc92831780e86e34`.
