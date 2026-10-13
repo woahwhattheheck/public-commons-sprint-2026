@@ -1,0 +1,177 @@
+scope,group,station,analyte,n,censored,mean_lower,mean_upper,upper_open,median_lower,median_upper,median_upper_open,date_first,date_last,median_flow_cfs,flow_estimated,flow_provisional
+station,SV-233,SV-233,Reconstructed total N,68,10,0.948823529412,0.963529411765,true,0.86,0.87,false,2020-01-06,2025-11-04,52.55,0,0
+station,SV-233,SV-233,Phosphorus,68,0,0.096632352941,0.096632352941,false,0.048,0.048,false,2020-01-06,2025-11-04,52.55,0,0
+station,SV-233,SV-233,Nitrate + Nitrite,68,0,0.6275,0.6275,false,0.605,0.605,false,2020-01-06,2025-11-04,52.55,0,0
+station,SV-233,SV-233,Kjeldahl nitrogen,68,10,0.321323529412,0.336029411765,true,0.275,0.275,false,2020-01-06,2025-11-04,52.55,0,0
+station,SV-375,SV-375,Reconstructed total N,48,19,0.942770833333,0.982354166667,true,0.915,0.99,true,2022-01-11,2025-12-04,47.1,0,1
+station,SV-375,SV-375,Phosphorus,48,31,0.015708333333,0.028625,true,0,0.02,true,2022-01-11,2025-12-04,47.1,0,1
+station,SV-375,SV-375,Nitrate + Nitrite,48,0,0.8219375,0.8219375,false,0.85,0.85,false,2022-01-11,2025-12-04,47.1,0,1
+station,SV-375,SV-375,Kjeldahl nitrogen,48,19,0.120833333333,0.160416666667,true,0.12,0.12,false,2022-01-11,2025-12-04,47.1,0,1
+station,SV-376,SV-376,Reconstructed total N,36,12,0.68,0.713333333333,true,0.63,0.675,true,2023-01-23,2025-12-04,40.5,0,1
+station,SV-376,SV-376,Phosphorus,36,4,0.061555555556,0.063777777778,true,0.031,0.031,false,2023-01-23,2025-12-04,40.5,0,1
+station,SV-376,SV-376,Nitrate + Nitrite,36,0,0.530555555556,0.530555555556,false,0.53,0.53,false,2023-01-23,2025-12-04,40.5,0,1
+station,SV-376,SV-376,Kjeldahl nitrogen,36,12,0.149444444444,0.182777777778,true,0.13,0.13,false,2023-01-23,2025-12-04,40.5,0,1
+station,SV-245,SV-245,Reconstructed total N,1,0,0.84,0.84,false,0.84,0.84,false,2023-12-14,2023-12-14,32.7,0,0
+station,SV-245,SV-245,Phosphorus,1,0,0.029,0.029,false,0.029,0.029,false,2023-12-14,2023-12-14,32.7,0,0
+station,SV-245,SV-245,Nitrate + Nitrite,1,0,0.53,0.53,false,0.53,0.53,false,2023-12-14,2023-12-14,32.7,0,0
+station,SV-245,SV-245,Kjeldahl nitrogen,1,0,0.31,0.31,false,0.31,0.31,false,2023-12-14,2023-12-14,32.7,0,0
+station_year,SV-233|2020,SV-233,Reconstructed total N,12,0,1.053333333333,1.053333333333,false,1.14,1.14,false,2020-01-06,2020-12-03,77.9,0,0
+station_year,SV-233|2020,SV-233,Phosphorus,12,0,0.038083333333,0.038083333333,false,0.036,0.036,false,2020-01-06,2020-12-03,77.9,0,0
+station_year,SV-233|2020,SV-233,Nitrate + Nitrite,12,0,0.611666666667,0.611666666667,false,0.635,0.635,false,2020-01-06,2020-12-03,77.9,0,0
+station_year,SV-233|2020,SV-233,Kjeldahl nitrogen,12,0,0.441666666667,0.441666666667,false,0.415,0.415,false,2020-01-06,2020-12-03,77.9,0,0
+station_year,SV-233|2021,SV-233,Reconstructed total N,12,3,0.995,1.02,true,1.01,1.025,false,2021-01-06,2021-12-02,44.4,0,0
+station_year,SV-233|2021,SV-233,Phosphorus,12,0,0.04,0.04,false,0.0285,0.0285,false,2021-01-06,2021-12-02,44.4,0,0
+station_year,SV-233|2021,SV-233,Nitrate + Nitrite,12,0,0.699166666667,0.699166666667,false,0.69,0.69,false,2021-01-06,2021-12-02,44.4,0,0
+station_year,SV-233|2021,SV-233,Kjeldahl nitrogen,12,3,0.295833333333,0.320833333333,true,0.29,0.29,false,2021-01-06,2021-12-02,44.4,0,0
+station_year,SV-375|2022,SV-375,Reconstructed total N,12,2,0.93025,0.946916666667,true,0.94,0.985,true,2022-01-11,2022-12-01,58.7,0,0
+station_year,SV-375|2022,SV-375,Phosphorus,12,8,0.028833333333,0.042166666667,true,0,0.02,true,2022-01-11,2022-12-01,58.7,0,0
+station_year,SV-375|2022,SV-375,Nitrate + Nitrite,12,0,0.746916666667,0.746916666667,false,0.865,0.865,false,2022-01-11,2022-12-01,58.7,0,0
+station_year,SV-375|2022,SV-375,Kjeldahl nitrogen,12,2,0.183333333333,0.2,true,0.175,0.175,false,2022-01-11,2022-12-01,58.7,0,0
+station_year,SV-233|2022,SV-233,Reconstructed total N,10,3,0.724,0.754,true,0.73,0.74,false,2022-01-19,2022-12-06,57.95,0,0
+station_year,SV-233|2022,SV-233,Phosphorus,10,0,0.2226,0.2226,false,0.044,0.044,false,2022-01-19,2022-12-06,57.95,0,0
+station_year,SV-233|2022,SV-233,Nitrate + Nitrite,10,0,0.53,0.53,false,0.585,0.585,false,2022-01-19,2022-12-06,57.95,0,0
+station_year,SV-233|2022,SV-233,Kjeldahl nitrogen,10,3,0.194,0.224,true,0.18,0.18,false,2022-01-19,2022-12-06,57.95,0,0
+station_year,SV-375|2023,SV-375,Reconstructed total N,12,6,0.999166666667,1.049166666667,true,1.015,1.055,false,2023-01-03,2023-12-07,59.95,0,0
+station_year,SV-375|2023,SV-375,Phosphorus,12,6,0.014333333333,0.024333333333,true,0.0105,0.0205,true,2023-01-03,2023-12-07,59.95,0,0
+station_year,SV-375|2023,SV-375,Nitrate + Nitrite,12,0,0.860833333333,0.860833333333,false,0.855,0.855,false,2023-01-03,2023-12-07,59.95,0,0
+station_year,SV-375|2023,SV-375,Kjeldahl nitrogen,12,6,0.138333333333,0.188333333333,true,0.055,0.105,true,2023-01-03,2023-12-07,59.95,0,0
+station_year,SV-233|2023,SV-233,Reconstructed total N,12,2,1.0025,1.019166666667,true,0.87,0.87,false,2023-01-23,2023-12-05,59.6,0,0
+station_year,SV-233|2023,SV-233,Phosphorus,12,0,0.156416666667,0.156416666667,false,0.069,0.069,false,2023-01-23,2023-12-05,59.6,0,0
+station_year,SV-233|2023,SV-233,Nitrate + Nitrite,12,0,0.551666666667,0.551666666667,false,0.555,0.555,false,2023-01-23,2023-12-05,59.6,0,0
+station_year,SV-233|2023,SV-233,Kjeldahl nitrogen,12,2,0.450833333333,0.4675,true,0.255,0.255,false,2023-01-23,2023-12-05,59.6,0,0
+station_year,SV-376|2023,SV-376,Reconstructed total N,12,4,0.63,0.663333333333,true,0.61,0.635,true,2023-01-23,2023-12-05,59.6,0,0
+station_year,SV-376|2023,SV-376,Phosphorus,12,3,0.10625,0.11125,true,0.029,0.029,false,2023-01-23,2023-12-05,59.6,0,0
+station_year,SV-376|2023,SV-376,Nitrate + Nitrite,12,0,0.461666666667,0.461666666667,false,0.445,0.445,false,2023-01-23,2023-12-05,59.6,0,0
+station_year,SV-376|2023,SV-376,Kjeldahl nitrogen,12,4,0.168333333333,0.201666666667,true,0.175,0.175,false,2023-01-23,2023-12-05,59.6,0,0
+station_year,SV-245|2023,SV-245,Reconstructed total N,1,0,0.84,0.84,false,0.84,0.84,false,2023-12-14,2023-12-14,32.7,0,0
+station_year,SV-245|2023,SV-245,Phosphorus,1,0,0.029,0.029,false,0.029,0.029,false,2023-12-14,2023-12-14,32.7,0,0
+station_year,SV-245|2023,SV-245,Nitrate + Nitrite,1,0,0.53,0.53,false,0.53,0.53,false,2023-12-14,2023-12-14,32.7,0,0
+station_year,SV-245|2023,SV-245,Kjeldahl nitrogen,1,0,0.31,0.31,false,0.31,0.31,false,2023-12-14,2023-12-14,32.7,0,0
+station_year,SV-233|2024,SV-233,Reconstructed total N,12,2,0.905,0.921666666667,true,0.785,0.785,false,2024-01-03,2024-12-12,39.25,0,0
+station_year,SV-233|2024,SV-233,Phosphorus,12,0,0.058666666667,0.058666666667,false,0.053,0.053,false,2024-01-03,2024-12-12,39.25,0,0
+station_year,SV-233|2024,SV-233,Nitrate + Nitrite,12,0,0.689166666667,0.689166666667,false,0.615,0.615,false,2024-01-03,2024-12-12,39.25,0,0
+station_year,SV-233|2024,SV-233,Kjeldahl nitrogen,12,2,0.215833333333,0.2325,true,0.195,0.195,false,2024-01-03,2024-12-12,39.25,0,0
+station_year,SV-375|2024,SV-375,Reconstructed total N,12,4,0.985833333333,1.019166666667,true,1.005,1.055,true,2024-01-03,2024-12-12,42,0,0
+station_year,SV-375|2024,SV-375,Phosphorus,12,7,0.0125,0.024166666667,true,0,0.02,true,2024-01-03,2024-12-12,42,0,0
+station_year,SV-375|2024,SV-375,Nitrate + Nitrite,12,0,0.875833333333,0.875833333333,false,0.875,0.875,false,2024-01-03,2024-12-12,42,0,0
+station_year,SV-375|2024,SV-375,Kjeldahl nitrogen,12,4,0.11,0.143333333333,true,0.12,0.12,false,2024-01-03,2024-12-12,42,0,0
+station_year,SV-376|2024,SV-376,Reconstructed total N,12,4,0.719166666667,0.7525,true,0.635,0.675,true,2024-01-03,2024-12-12,39.25,0,0
+station_year,SV-376|2024,SV-376,Phosphorus,12,0,0.039083333333,0.039083333333,false,0.0335,0.0335,false,2024-01-03,2024-12-12,39.25,0,0
+station_year,SV-376|2024,SV-376,Nitrate + Nitrite,12,0,0.5825,0.5825,false,0.56,0.56,false,2024-01-03,2024-12-12,39.25,0,0
+station_year,SV-376|2024,SV-376,Kjeldahl nitrogen,12,4,0.136666666667,0.17,true,0.145,0.145,false,2024-01-03,2024-12-12,39.25,0,0
+station_year,SV-375|2025,SV-375,Reconstructed total N,12,7,0.855833333333,0.914166666667,true,0.84,0.92,true,2025-01-14,2025-12-04,36.55,0,1
+station_year,SV-375|2025,SV-375,Phosphorus,12,10,0.007166666667,0.023833333333,true,0,0.02,true,2025-01-14,2025-12-04,36.55,0,1
+station_year,SV-375|2025,SV-375,Nitrate + Nitrite,12,0,0.804166666667,0.804166666667,false,0.82,0.82,false,2025-01-14,2025-12-04,36.55,0,1
+station_year,SV-375|2025,SV-375,Kjeldahl nitrogen,12,7,0.051666666667,0.11,true,0,0.1,true,2025-01-14,2025-12-04,36.55,0,1
+station_year,SV-376|2025,SV-376,Reconstructed total N,12,4,0.690833333333,0.724166666667,true,0.66,0.685,false,2025-01-14,2025-12-04,36.55,0,1
+station_year,SV-376|2025,SV-376,Phosphorus,12,1,0.039333333333,0.041,true,0.0295,0.0295,false,2025-01-14,2025-12-04,36.55,0,1
+station_year,SV-376|2025,SV-376,Nitrate + Nitrite,12,0,0.5475,0.5475,false,0.55,0.55,false,2025-01-14,2025-12-04,36.55,0,1
+station_year,SV-376|2025,SV-376,Kjeldahl nitrogen,12,4,0.143333333333,0.176666666667,true,0.115,0.115,false,2025-01-14,2025-12-04,36.55,0,1
+station_year,SV-233|2025,SV-233,Reconstructed total N,10,0,0.981,0.981,false,0.95,0.95,false,2025-02-24,2025-11-04,43.05,0,0
+station_year,SV-233|2025,SV-233,Phosphorus,10,0,0.0827,0.0827,false,0.074,0.074,false,2025-02-24,2025-11-04,43.05,0,0
+station_year,SV-233|2025,SV-233,Nitrate + Nitrite,10,0,0.675,0.675,false,0.61,0.61,false,2025-02-24,2025-11-04,43.05,0,0
+station_year,SV-233|2025,SV-233,Kjeldahl nitrogen,10,0,0.306,0.306,false,0.315,0.315,false,2025-02-24,2025-11-04,43.05,0,0
+station_season,SV-233|DJF,SV-233,Reconstructed total N,16,2,0.849375,0.861875,true,0.855,0.87,false,2020-01-06,2025-02-24,86.1,0,0
+station_season,SV-233|DJF,SV-233,Phosphorus,16,0,0.0528125,0.0528125,false,0.044,0.044,false,2020-01-06,2025-02-24,86.1,0,0
+station_season,SV-233|DJF,SV-233,Nitrate + Nitrite,16,0,0.5725,0.5725,false,0.58,0.58,false,2020-01-06,2025-02-24,86.1,0,0
+station_season,SV-233|DJF,SV-233,Kjeldahl nitrogen,16,2,0.276875,0.289375,true,0.31,0.31,false,2020-01-06,2025-02-24,86.1,0,0
+station_season,SV-233|MAM,SV-233,Reconstructed total N,17,2,0.851176470588,0.862941176471,true,0.82,0.82,false,2020-03-19,2025-05-14,71.3,0,0
+station_season,SV-233|MAM,SV-233,Phosphorus,17,0,0.057,0.057,false,0.043,0.043,false,2020-03-19,2025-05-14,71.3,0,0
+station_season,SV-233|MAM,SV-233,Nitrate + Nitrite,17,0,0.584705882353,0.584705882353,false,0.59,0.59,false,2020-03-19,2025-05-14,71.3,0,0
+station_season,SV-233|MAM,SV-233,Kjeldahl nitrogen,17,2,0.266470588235,0.278235294118,true,0.22,0.22,false,2020-03-19,2025-05-14,71.3,0,0
+station_season,SV-233|JJA,SV-233,Reconstructed total N,17,4,1.106470588235,1.13,true,1.11,1.11,false,2020-06-08,2025-08-18,38.1,0,0
+station_season,SV-233|JJA,SV-233,Phosphorus,17,0,0.203411764706,0.203411764706,false,0.063,0.063,false,2020-06-08,2025-08-18,38.1,0,0
+station_season,SV-233|JJA,SV-233,Nitrate + Nitrite,17,0,0.774117647059,0.774117647059,false,0.74,0.74,false,2020-06-08,2025-08-18,38.1,0,0
+station_season,SV-233|JJA,SV-233,Kjeldahl nitrogen,17,4,0.332352941176,0.355882352941,true,0.33,0.33,false,2020-06-08,2025-08-18,38.1,0,0
+station_season,SV-233|SON,SV-233,Reconstructed total N,18,2,0.980555555556,0.991666666667,true,0.805,0.805,false,2020-09-09,2025-11-04,32.25,0,0
+station_season,SV-233|SON,SV-233,Phosphorus,18,0,0.072166666667,0.072166666667,false,0.044,0.044,false,2020-09-09,2025-11-04,32.25,0,0
+station_season,SV-233|SON,SV-233,Nitrate + Nitrite,18,0,0.578333333333,0.578333333333,false,0.56,0.56,false,2020-09-09,2025-11-04,32.25,0,0
+station_season,SV-233|SON,SV-233,Kjeldahl nitrogen,18,2,0.402222222222,0.413333333333,true,0.22,0.22,false,2020-09-09,2025-11-04,32.25,0,0
+station_season,SV-375|DJF,SV-375,Reconstructed total N,12,5,1.016666666667,1.058333333333,true,1.02,1.07,true,2022-01-11,2025-12-04,62.3,0,1
+station_season,SV-375|DJF,SV-375,Phosphorus,12,7,0.014333333333,0.026,true,0,0.02,true,2022-01-11,2025-12-04,62.3,0,1
+station_season,SV-375|DJF,SV-375,Nitrate + Nitrite,12,0,0.9175,0.9175,false,0.945,0.945,false,2022-01-11,2025-12-04,62.3,0,1
+station_season,SV-375|DJF,SV-375,Kjeldahl nitrogen,12,5,0.099166666667,0.140833333333,true,0.115,0.115,false,2022-01-11,2025-12-04,62.3,0,1
+station_season,SV-375|MAM,SV-375,Reconstructed total N,12,6,0.91275,0.96275,true,0.91,1.01,true,2022-03-02,2025-05-07,63,0,0
+station_season,SV-375|MAM,SV-375,Phosphorus,12,7,0.02825,0.039916666667,true,0,0.02,true,2022-03-02,2025-05-07,63,0,0
+station_season,SV-375|MAM,SV-375,Nitrate + Nitrite,12,0,0.814416666667,0.814416666667,false,0.87,0.87,false,2022-03-02,2025-05-07,63,0,0
+station_season,SV-375|MAM,SV-375,Kjeldahl nitrogen,12,6,0.098333333333,0.148333333333,true,0.055,0.105,true,2022-03-02,2025-05-07,63,0,0
+station_season,SV-375|JJA,SV-375,Reconstructed total N,12,3,0.960833333333,0.985833333333,true,0.96,1.01,true,2022-06-02,2025-08-05,37.1,0,0
+station_season,SV-375|JJA,SV-375,Phosphorus,12,7,0.014,0.025666666667,true,0,0.02,true,2022-06-02,2025-08-05,37.1,0,0
+station_season,SV-375|JJA,SV-375,Nitrate + Nitrite,12,0,0.791666666667,0.791666666667,false,0.825,0.825,false,2022-06-02,2025-08-05,37.1,0,0
+station_season,SV-375|JJA,SV-375,Kjeldahl nitrogen,12,3,0.169166666667,0.194166666667,true,0.16,0.16,false,2022-06-02,2025-08-05,37.1,0,0
+station_season,SV-375|SON,SV-375,Reconstructed total N,12,5,0.880833333333,0.9225,true,0.865,0.9,false,2022-09-06,2025-11-12,26.4,0,0
+station_season,SV-375|SON,SV-375,Phosphorus,12,10,0.00625,0.022916666667,true,0,0.02,true,2022-09-06,2025-11-12,26.4,0,0
+station_season,SV-375|SON,SV-375,Nitrate + Nitrite,12,0,0.764166666667,0.764166666667,false,0.76,0.76,false,2022-09-06,2025-11-12,26.4,0,0
+station_season,SV-375|SON,SV-375,Kjeldahl nitrogen,12,5,0.116666666667,0.158333333333,true,0.11,0.11,false,2022-09-06,2025-11-12,26.4,0,0
+station_season,SV-376|DJF,SV-376,Reconstructed total N,9,3,0.736666666667,0.77,true,0.68,0.69,false,2023-01-23,2025-12-04,51.4,0,1
+station_season,SV-376|DJF,SV-376,Phosphorus,9,1,0.048555555556,0.050777777778,true,0.041,0.041,false,2023-01-23,2025-12-04,51.4,0,1
+station_season,SV-376|DJF,SV-376,Nitrate + Nitrite,9,0,0.597777777778,0.597777777778,false,0.57,0.57,false,2023-01-23,2025-12-04,51.4,0,1
+station_season,SV-376|DJF,SV-376,Kjeldahl nitrogen,9,3,0.138888888889,0.172222222222,true,0.16,0.16,false,2023-01-23,2025-12-04,51.4,0,1
+station_season,SV-376|MAM,SV-376,Reconstructed total N,9,4,0.653333333333,0.697777777778,true,0.65,0.69,false,2023-03-21,2025-05-07,62.2,0,0
+station_season,SV-376|MAM,SV-376,Phosphorus,9,1,0.050666666667,0.052888888889,true,0.032,0.032,false,2023-03-21,2025-05-07,62.2,0,0
+station_season,SV-376|MAM,SV-376,Nitrate + Nitrite,9,0,0.534444444444,0.534444444444,false,0.53,0.53,false,2023-03-21,2025-05-07,62.2,0,0
+station_season,SV-376|MAM,SV-376,Kjeldahl nitrogen,9,4,0.118888888889,0.163333333333,true,0.1,0.1,false,2023-03-21,2025-05-07,62.2,0,0
+station_season,SV-376|JJA,SV-376,Reconstructed total N,9,3,0.727777777778,0.761111111111,true,0.68,0.74,true,2023-06-12,2025-08-05,35,0,0
+station_season,SV-376|JJA,SV-376,Phosphorus,9,1,0.115,0.117222222222,true,0.033,0.033,false,2023-06-12,2025-08-05,35,0,0
+station_season,SV-376|JJA,SV-376,Nitrate + Nitrite,9,0,0.527777777778,0.527777777778,false,0.55,0.55,false,2023-06-12,2025-08-05,35,0,0
+station_season,SV-376|JJA,SV-376,Kjeldahl nitrogen,9,3,0.2,0.233333333333,true,0.13,0.13,false,2023-06-12,2025-08-05,35,0,0
+station_season,SV-376|SON,SV-376,Reconstructed total N,9,2,0.602222222222,0.624444444444,true,0.58,0.59,false,2023-09-14,2025-11-12,24.4,0,0
+station_season,SV-376|SON,SV-376,Phosphorus,9,1,0.032,0.034222222222,true,0.023,0.023,false,2023-09-14,2025-11-12,24.4,0,0
+station_season,SV-376|SON,SV-376,Nitrate + Nitrite,9,0,0.462222222222,0.462222222222,false,0.43,0.43,false,2023-09-14,2025-11-12,24.4,0,0
+station_season,SV-376|SON,SV-376,Kjeldahl nitrogen,9,2,0.14,0.162222222222,true,0.17,0.17,false,2023-09-14,2025-11-12,24.4,0,0
+station_season,SV-245|DJF,SV-245,Reconstructed total N,1,0,0.84,0.84,false,0.84,0.84,false,2023-12-14,2023-12-14,32.7,0,0
+station_season,SV-245|DJF,SV-245,Phosphorus,1,0,0.029,0.029,false,0.029,0.029,false,2023-12-14,2023-12-14,32.7,0,0
+station_season,SV-245|DJF,SV-245,Nitrate + Nitrite,1,0,0.53,0.53,false,0.53,0.53,false,2023-12-14,2023-12-14,32.7,0,0
+station_season,SV-245|DJF,SV-245,Kjeldahl nitrogen,1,0,0.31,0.31,false,0.31,0.31,false,2023-12-14,2023-12-14,32.7,0,0
+station_flow_quartile,SV-233|Q4,SV-233,Reconstructed total N,19,2,0.82,0.830526315789,true,0.82,0.82,false,2020-01-06,2025-05-14,119,0,0
+station_flow_quartile,SV-233|Q4,SV-233,Phosphorus,19,0,0.101368421053,0.101368421053,false,0.05,0.05,false,2020-01-06,2025-05-14,119,0,0
+station_flow_quartile,SV-233|Q4,SV-233,Nitrate + Nitrite,19,0,0.506842105263,0.506842105263,false,0.54,0.54,false,2020-01-06,2025-05-14,119,0,0
+station_flow_quartile,SV-233|Q4,SV-233,Kjeldahl nitrogen,19,2,0.313157894737,0.323684210526,true,0.33,0.33,false,2020-01-06,2025-05-14,119,0,0
+station_flow_quartile,SV-233|Q3,SV-233,Reconstructed total N,14,3,0.832857142857,0.854285714286,true,0.825,0.85,true,2020-03-19,2025-08-18,64.45,0,0
+station_flow_quartile,SV-233|Q3,SV-233,Phosphorus,14,0,0.056571428571,0.056571428571,false,0.053,0.053,false,2020-03-19,2025-08-18,64.45,0,0
+station_flow_quartile,SV-233|Q3,SV-233,Nitrate + Nitrite,14,0,0.627142857143,0.627142857143,false,0.605,0.605,false,2020-03-19,2025-08-18,64.45,0,0
+station_flow_quartile,SV-233|Q3,SV-233,Kjeldahl nitrogen,14,3,0.205714285714,0.227142857143,true,0.175,0.175,false,2020-03-19,2025-08-18,64.45,0,0
+station_flow_quartile,SV-233|Q2,SV-233,Reconstructed total N,16,2,0.94125,0.95375,true,0.95,0.965,false,2020-06-08,2025-11-04,38.3,0,0
+station_flow_quartile,SV-233|Q2,SV-233,Phosphorus,16,0,0.04925,0.04925,false,0.0445,0.0445,false,2020-06-08,2025-11-04,38.3,0,0
+station_flow_quartile,SV-233|Q2,SV-233,Nitrate + Nitrite,16,0,0.6875,0.6875,false,0.69,0.69,false,2020-06-08,2025-11-04,38.3,0,0
+station_flow_quartile,SV-233|Q2,SV-233,Kjeldahl nitrogen,16,2,0.25375,0.26625,true,0.225,0.225,false,2020-06-08,2025-11-04,38.3,0,0
+station_flow_quartile,SV-233|Q1,SV-233,Reconstructed total N,19,3,1.169473684211,1.185263157895,true,1.08,1.08,false,2020-07-23,2025-10-15,25.1,0,0
+station_flow_quartile,SV-233|Q1,SV-233,Phosphorus,19,0,0.161315789474,0.161315789474,false,0.054,0.054,false,2020-07-23,2025-10-15,25.1,0,0
+station_flow_quartile,SV-233|Q1,SV-233,Nitrate + Nitrite,19,0,0.697894736842,0.697894736842,false,0.68,0.68,false,2020-07-23,2025-10-15,25.1,0,0
+station_flow_quartile,SV-233|Q1,SV-233,Kjeldahl nitrogen,19,3,0.471578947368,0.487368421053,true,0.33,0.33,false,2020-07-23,2025-10-15,25.1,0,0
+station_flow_quartile,SV-375|Q4,SV-375,Reconstructed total N,13,4,0.902538461538,0.933307692308,true,0.95,1.04,true,2022-01-11,2025-08-05,88.6,0,0
+station_flow_quartile,SV-375|Q4,SV-375,Phosphorus,13,5,0.025230769231,0.032923076923,true,0.028,0.028,false,2022-01-11,2025-08-05,88.6,0,0
+station_flow_quartile,SV-375|Q4,SV-375,Nitrate + Nitrite,13,0,0.774076923077,0.774076923077,false,0.86,0.86,false,2022-01-11,2025-08-05,88.6,0,0
+station_flow_quartile,SV-375|Q4,SV-375,Kjeldahl nitrogen,13,4,0.128461538462,0.159230769231,true,0.14,0.14,false,2022-01-11,2025-08-05,88.6,0,0
+station_flow_quartile,SV-375|Q2,SV-375,Reconstructed total N,12,9,0.8975,0.9725,true,0.85,0.94,true,2022-02-02,2025-12-04,38.35,0,1
+station_flow_quartile,SV-375|Q2,SV-375,Phosphorus,12,9,0.00575,0.02075,true,0,0.02,true,2022-02-02,2025-12-04,38.35,0,1
+station_flow_quartile,SV-375|Q2,SV-375,Nitrate + Nitrite,12,0,0.859166666667,0.859166666667,false,0.84,0.84,false,2022-02-02,2025-12-04,38.35,0,1
+station_flow_quartile,SV-375|Q2,SV-375,Kjeldahl nitrogen,12,9,0.038333333333,0.113333333333,true,0,0.1,true,2022-02-02,2025-12-04,38.35,0,1
+station_flow_quartile,SV-375|Q3,SV-375,Reconstructed total N,10,2,1.045,1.065,true,1.055,1.055,false,2022-03-02,2025-04-02,59.95,0,0
+station_flow_quartile,SV-375|Q3,SV-375,Phosphorus,10,5,0.0336,0.0436,true,0.01,0.02,true,2022-03-02,2025-04-02,59.95,0,0
+station_flow_quartile,SV-375|Q3,SV-375,Nitrate + Nitrite,10,0,0.865,0.865,false,0.89,0.89,false,2022-03-02,2025-04-02,59.95,0,0
+station_flow_quartile,SV-375|Q3,SV-375,Kjeldahl nitrogen,10,2,0.18,0.2,true,0.15,0.15,false,2022-03-02,2025-04-02,59.95,0,0
+station_flow_quartile,SV-375|Q1,SV-375,Reconstructed total N,13,4,0.946153846154,0.976923076923,true,0.9,0.96,true,2022-08-09,2025-11-12,21.4,0,0
+station_flow_quartile,SV-375|Q1,SV-375,Phosphorus,13,12,0.001615384615,0.020076923077,true,0,0.02,true,2022-08-09,2025-11-12,21.4,0,0
+station_flow_quartile,SV-375|Q1,SV-375,Nitrate + Nitrite,13,0,0.802307692308,0.802307692308,false,0.83,0.83,false,2022-08-09,2025-11-12,21.4,0,0
+station_flow_quartile,SV-375|Q1,SV-375,Kjeldahl nitrogen,13,4,0.143846153846,0.174615384615,true,0.12,0.12,false,2022-08-09,2025-11-12,21.4,0,0
+station_flow_quartile,SV-376|Q4,SV-376,Reconstructed total N,8,3,0.6625,0.7,true,0.68,0.68,false,2023-01-23,2025-08-05,98.3,0,0
+station_flow_quartile,SV-376|Q4,SV-376,Phosphorus,8,0,0.14825,0.14825,false,0.078,0.078,false,2023-01-23,2025-08-05,98.3,0,0
+station_flow_quartile,SV-376|Q4,SV-376,Nitrate + Nitrite,8,0,0.46625,0.46625,false,0.49,0.49,false,2023-01-23,2025-08-05,98.3,0,0
+station_flow_quartile,SV-376|Q4,SV-376,Kjeldahl nitrogen,8,3,0.19625,0.23375,true,0.18,0.18,false,2023-01-23,2025-08-05,98.3,0,0
+station_flow_quartile,SV-376|Q3,SV-376,Reconstructed total N,8,2,0.70625,0.73125,true,0.69,0.72,true,2023-02-06,2025-04-02,59.6,0,0
+station_flow_quartile,SV-376|Q3,SV-376,Phosphorus,8,2,0.062125,0.067125,true,0.0465,0.0465,false,2023-02-06,2025-04-02,59.6,0,0
+station_flow_quartile,SV-376|Q3,SV-376,Nitrate + Nitrite,8,0,0.53375,0.53375,false,0.56,0.56,false,2023-02-06,2025-04-02,59.6,0,0
+station_flow_quartile,SV-376|Q3,SV-376,Kjeldahl nitrogen,8,2,0.1725,0.1975,true,0.165,0.165,false,2023-02-06,2025-04-02,59.6,0,0
+station_flow_quartile,SV-376|Q2,SV-376,Reconstructed total N,11,5,0.634545454545,0.68,true,0.58,0.61,false,2023-07-11,2025-12-04,35.3,0,1
+station_flow_quartile,SV-376|Q2,SV-376,Phosphorus,11,1,0.026090909091,0.027909090909,true,0.027,0.027,false,2023-07-11,2025-12-04,35.3,0,1
+station_flow_quartile,SV-376|Q2,SV-376,Nitrate + Nitrite,11,0,0.555454545455,0.555454545455,false,0.51,0.51,false,2023-07-11,2025-12-04,35.3,0,1
+station_flow_quartile,SV-376|Q2,SV-376,Kjeldahl nitrogen,11,5,0.079090909091,0.124545454545,true,0.1,0.1,false,2023-07-11,2025-12-04,35.3,0,1
+station_flow_quartile,SV-376|Q1,SV-376,Reconstructed total N,9,2,0.727777777778,0.75,true,0.62,0.66,true,2023-10-02,2025-11-12,20.8,0,0
+station_flow_quartile,SV-376|Q1,SV-376,Phosphorus,9,1,0.027333333333,0.029555555556,true,0.03,0.03,false,2023-10-02,2025-11-12,20.8,0,0
+station_flow_quartile,SV-376|Q1,SV-376,Nitrate + Nitrite,9,0,0.554444444444,0.554444444444,false,0.56,0.56,false,2023-10-02,2025-11-12,20.8,0,0
+station_flow_quartile,SV-376|Q1,SV-376,Kjeldahl nitrogen,9,2,0.173333333333,0.195555555556,true,0.17,0.17,false,2023-10-02,2025-11-12,20.8,0,0
+station_flow_quartile,SV-245|Q2,SV-245,Reconstructed total N,1,0,0.84,0.84,false,0.84,0.84,false,2023-12-14,2023-12-14,32.7,0,0
+station_flow_quartile,SV-245|Q2,SV-245,Phosphorus,1,0,0.029,0.029,false,0.029,0.029,false,2023-12-14,2023-12-14,32.7,0,0
+station_flow_quartile,SV-245|Q2,SV-245,Nitrate + Nitrite,1,0,0.53,0.53,false,0.53,0.53,false,2023-12-14,2023-12-14,32.7,0,0
+station_flow_quartile,SV-245|Q2,SV-245,Kjeldahl nitrogen,1,0,0.31,0.31,false,0.31,0.31,false,2023-12-14,2023-12-14,32.7,0,0
