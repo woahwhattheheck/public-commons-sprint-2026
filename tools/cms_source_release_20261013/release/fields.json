@@ -1,0 +1,230 @@
+{
+  "facility_id": {
+    "type": "text",
+    "mysql_type": "text",
+    "description": "Facility ID",
+    "preserved_type": "string"
+  },
+  "facility_name": {
+    "type": "text",
+    "mysql_type": "text",
+    "description": "Facility Name",
+    "preserved_type": "string"
+  },
+  "address": {
+    "type": "text",
+    "mysql_type": "text",
+    "description": "Address",
+    "preserved_type": "string"
+  },
+  "citytown": {
+    "type": "text",
+    "mysql_type": "text",
+    "description": "City/Town",
+    "preserved_type": "string"
+  },
+  "state": {
+    "type": "text",
+    "mysql_type": "text",
+    "description": "State",
+    "preserved_type": "string"
+  },
+  "zip_code": {
+    "type": "text",
+    "mysql_type": "text",
+    "description": "ZIP Code",
+    "preserved_type": "string"
+  },
+  "countyparish": {
+    "type": "text",
+    "mysql_type": "text",
+    "description": "County/Parish",
+    "preserved_type": "string"
+  },
+  "telephone_number": {
+    "type": "text",
+    "mysql_type": "text",
+    "description": "Telephone Number",
+    "preserved_type": "string"
+  },
+  "hospital_type": {
+    "type": "text",
+    "mysql_type": "text",
+    "description": "Hospital Type",
+    "preserved_type": "string"
+  },
+  "hospital_ownership": {
+    "type": "text",
+    "mysql_type": "text",
+    "description": "Hospital Ownership",
+    "preserved_type": "string"
+  },
+  "emergency_services": {
+    "type": "text",
+    "mysql_type": "text",
+    "description": "Emergency Services",
+    "preserved_type": "string"
+  },
+  "meets_criteria_for_birthing_friendly_designation": {
+    "type": "text",
+    "mysql_type": "text",
+    "description": "Meets criteria for birthing friendly designation",
+    "preserved_type": "string"
+  },
+  "hospital_overall_rating": {
+    "type": "text",
+    "mysql_type": "text",
+    "description": "Hospital overall rating",
+    "preserved_type": "string"
+  },
+  "hospital_overall_rating_footnote": {
+    "type": "text",
+    "mysql_type": "text",
+    "description": "Hospital overall rating footnote",
+    "preserved_type": "string"
+  },
+  "mort_group_measure_count": {
+    "type": "text",
+    "mysql_type": "text",
+    "description": "MORT Group Measure Count",
+    "preserved_type": "string"
+  },
+  "count_of_facility_mort_measures": {
+    "type": "text",
+    "mysql_type": "text",
+    "description": "Count of Facility MORT Measures",
+    "preserved_type": "string"
+  },
+  "count_of_mort_measures_better": {
+    "type": "text",
+    "mysql_type": "text",
+    "description": "Count of MORT Measures Better",
+    "preserved_type": "string"
+  },
+  "count_of_mort_measures_no_different": {
+    "type": "text",
+    "mysql_type": "text",
+    "description": "Count of MORT Measures No Different",
+    "preserved_type": "string"
+  },
+  "count_of_mort_measures_worse": {
+    "type": "text",
+    "mysql_type": "text",
+    "description": "Count of MORT Measures Worse",
+    "preserved_type": "string"
+  },
+  "mort_group_footnote": {
+    "type": "text",
+    "mysql_type": "text",
+    "description": "MORT Group Footnote",
+    "preserved_type": "string"
+  },
+  "safety_group_measure_count": {
+    "type": "text",
+    "mysql_type": "text",
+    "description": "Safety Group Measure Count",
+    "preserved_type": "string"
+  },
+  "count_of_facility_safety_measures": {
+    "type": "text",
+    "mysql_type": "text",
+    "description": "Count of Facility Safety Measures",
+    "preserved_type": "string"
+  },
+  "count_of_safety_measures_better": {
+    "type": "text",
+    "mysql_type": "text",
+    "description": "Count of Safety Measures Better",
+    "preserved_type": "string"
+  },
+  "count_of_safety_measures_no_different": {
+    "type": "text",
+    "mysql_type": "text",
+    "description": "Count of Safety Measures No Different",
+    "preserved_type": "string"
+  },
+  "count_of_safety_measures_worse": {
+    "type": "text",
+    "mysql_type": "text",
+    "description": "Count of Safety Measures Worse",
+    "preserved_type": "string"
+  },
+  "safety_group_footnote": {
+    "type": "text",
+    "mysql_type": "text",
+    "description": "Safety Group Footnote",
+    "preserved_type": "string"
+  },
+  "readm_group_measure_count": {
+    "type": "text",
+    "mysql_type": "text",
+    "description": "READM Group Measure Count",
+    "preserved_type": "string"
+  },
+  "count_of_facility_readm_measures": {
+    "type": "text",
+    "mysql_type": "text",
+    "description": "Count of Facility READM Measures",
+    "preserved_type": "string"
+  },
+  "count_of_readm_measures_better": {
+    "type": "text",
+    "mysql_type": "text",
+    "description": "Count of READM Measures Better",
+    "preserved_type": "string"
+  },
+  "count_of_readm_measures_no_different": {
+    "type": "text",
+    "mysql_type": "text",
+    "description": "Count of READM Measures No Different",
+    "preserved_type": "string"
+  },
+  "count_of_readm_measures_worse": {
+    "type": "text",
+    "mysql_type": "text",
+    "description": "Count of READM Measures Worse",
+    "preserved_type": "string"
+  },
+  "readm_group_footnote": {
+    "type": "text",
+    "mysql_type": "text",
+    "description": "READM Group Footnote",
+    "preserved_type": "string"
+  },
+  "pt_exp_group_measure_count": {
+    "type": "text",
+    "mysql_type": "text",
+    "description": "Pt Exp Group Measure Count",
+    "preserved_type": "string"
+  },
+  "count_of_facility_pt_exp_measures": {
+    "type": "text",
+    "mysql_type": "text",
+    "description": "Count of Facility Pt Exp Measures",
+    "preserved_type": "string"
+  },
+  "pt_exp_group_footnote": {
+    "type": "text",
+    "mysql_type": "text",
+    "description": "Pt Exp Group Footnote",
+    "preserved_type": "string"
+  },
+  "te_group_measure_count": {
+    "type": "text",
+    "mysql_type": "text",
+    "description": "TE Group Measure Count",
+    "preserved_type": "string"
+  },
+  "count_of_facility_te_measures": {
+    "type": "text",
+    "mysql_type": "text",
+    "description": "Count of Facility TE Measures",
+    "preserved_type": "string"
+  },
+  "te_group_footnote": {
+    "type": "text",
+    "mysql_type": "text",
+    "description": "TE Group Footnote",
+    "preserved_type": "string"
+  }
+}

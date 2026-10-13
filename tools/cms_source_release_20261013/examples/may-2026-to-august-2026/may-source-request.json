@@ -1,0 +1,190 @@
+{
+  "schema": "source-csv-request/1",
+  "dataset_id": "xubh-q36u",
+  "resource_id": "hospitals_2026-05-13.zip:Hospital_General_Information.csv",
+  "scope": {
+    "state": "CA"
+  },
+  "origin": "official-original",
+  "original_member": "original/Hospital_General_Information.csv",
+  "metadata": {
+    "source_modified": null,
+    "source_released": null,
+    "dataset_url": "https://data.cms.gov/provider-data/dataset/xubh-q36u",
+    "dictionary_url": null,
+    "captured_on": "2026-10-13",
+    "source_url": "https://data.cms.gov/provider-data/sites/default/files/dataset-archives/theme/hospitals/hospitals_2026-05-13.zip",
+    "archive_url": "https://data.cms.gov/provider-data/sites/default/files/dataset-archives/theme/hospitals/hospitals_2026-05-13.zip",
+    "archive_member": "Hospital_General_Information.csv",
+    "archive_date": "2026-05-13",
+    "archive_date_meaning": "Unpublished and replaced with updated data",
+    "date_provenance": {
+      "publication": {
+        "note": "The bundled publisher readme supplies the unpublication/replacement meaning of the archive date and does not provide a publication date.",
+        "source_url": "https://data.cms.gov/provider-data/sites/default/files/dataset-archives/theme/hospitals/hospitals_2026-05-13.zip",
+        "source_member": "readme.txt",
+        "source_sha256": "729913b5bccde42b3c7fe62a1a6acce41b9b3c25d6697d73b9fdc250f25686ab"
+      },
+      "archive": {
+        "note": "The data in this archive was unpublished on the date listed for the archive, because it was replaced with updated data.",
+        "source_url": "https://data.cms.gov/provider-data/sites/default/files/dataset-archives/theme/hospitals/hospitals_2026-05-13.zip",
+        "source_member": "readme.txt",
+        "source_sha256": "729913b5bccde42b3c7fe62a1a6acce41b9b3c25d6697d73b9fdc250f25686ab"
+      }
+    }
+  },
+  "column_mapping": [
+    {
+      "source_header": "Facility ID",
+      "field": "facility_id"
+    },
+    {
+      "source_header": "Facility Name",
+      "field": "facility_name"
+    },
+    {
+      "source_header": "Address",
+      "field": "address"
+    },
+    {
+      "source_header": "City/Town",
+      "field": "citytown"
+    },
+    {
+      "source_header": "State",
+      "field": "state"
+    },
+    {
+      "source_header": "ZIP Code",
+      "field": "zip_code"
+    },
+    {
+      "source_header": "County/Parish",
+      "field": "countyparish"
+    },
+    {
+      "source_header": "Telephone Number",
+      "field": "telephone_number"
+    },
+    {
+      "source_header": "Hospital Type",
+      "field": "hospital_type"
+    },
+    {
+      "source_header": "Hospital Ownership",
+      "field": "hospital_ownership"
+    },
+    {
+      "source_header": "Emergency Services",
+      "field": "emergency_services"
+    },
+    {
+      "source_header": "Meets criteria for birthing friendly designation",
+      "field": "meets_criteria_for_birthing_friendly_designation"
+    },
+    {
+      "source_header": "Hospital overall rating",
+      "field": "hospital_overall_rating"
+    },
+    {
+      "source_header": "Hospital overall rating footnote",
+      "field": "hospital_overall_rating_footnote"
+    },
+    {
+      "source_header": "MORT Group Measure Count",
+      "field": "mort_group_measure_count"
+    },
+    {
+      "source_header": "Count of Facility MORT Measures",
+      "field": "count_of_facility_mort_measures"
+    },
+    {
+      "source_header": "Count of MORT Measures Better",
+      "field": "count_of_mort_measures_better"
+    },
+    {
+      "source_header": "Count of MORT Measures No Different",
+      "field": "count_of_mort_measures_no_different"
+    },
+    {
+      "source_header": "Count of MORT Measures Worse",
+      "field": "count_of_mort_measures_worse"
+    },
+    {
+      "source_header": "MORT Group Footnote",
+      "field": "mort_group_footnote"
+    },
+    {
+      "source_header": "Safety Group Measure Count",
+      "field": "safety_group_measure_count"
+    },
+    {
+      "source_header": "Count of Facility Safety Measures",
+      "field": "count_of_facility_safety_measures"
+    },
+    {
+      "source_header": "Count of Safety Measures Better",
+      "field": "count_of_safety_measures_better"
+    },
+    {
+      "source_header": "Count of Safety Measures No Different",
+      "field": "count_of_safety_measures_no_different"
+    },
+    {
+      "source_header": "Count of Safety Measures Worse",
+      "field": "count_of_safety_measures_worse"
+    },
+    {
+      "source_header": "Safety Group Footnote",
+      "field": "safety_group_footnote"
+    },
+    {
+      "source_header": "READM Group Measure Count",
+      "field": "readm_group_measure_count"
+    },
+    {
+      "source_header": "Count of Facility READM Measures",
+      "field": "count_of_facility_readm_measures"
+    },
+    {
+      "source_header": "Count of READM Measures Better",
+      "field": "count_of_readm_measures_better"
+    },
+    {
+      "source_header": "Count of READM Measures No Different",
+      "field": "count_of_readm_measures_no_different"
+    },
+    {
+      "source_header": "Count of READM Measures Worse",
+      "field": "count_of_readm_measures_worse"
+    },
+    {
+      "source_header": "READM Group Footnote",
+      "field": "readm_group_footnote"
+    },
+    {
+      "source_header": "Pt Exp Group Measure Count",
+      "field": "pt_exp_group_measure_count"
+    },
+    {
+      "source_header": "Count of Facility Pt Exp Measures",
+      "field": "count_of_facility_pt_exp_measures"
+    },
+    {
+      "source_header": "Pt Exp Group Footnote",
+      "field": "pt_exp_group_footnote"
+    },
+    {
+      "source_header": "TE Group Measure Count",
+      "field": "te_group_measure_count"
+    },
+    {
+      "source_header": "Count of Facility TE Measures",
+      "field": "count_of_facility_te_measures"
+    },
+    {
+      "source_header": "TE Group Footnote",
+      "field": "te_group_footnote"
+    }
+  ]
+}
