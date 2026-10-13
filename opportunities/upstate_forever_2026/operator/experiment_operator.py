@@ -1,0 +1,276 @@
+"""Scenario experiments on the existing operator queue and retained workspace."""
+from __future__ import annotations
+
+import contextlib
+import html
+import json
+import math
+import os
+from pathlib import Path
+import re
+import tempfile
+
+from model import experiments
+from model.common import atomic_json, file_digest, held, now, read_json
+
+ACTIONS = {"experiment.save", "experiment.run", "experiment.summarize"}
+READS = {"catalog", "inspect", "summary", "axes", "methods"}
+POLLUTANTS = (
+    ("nitrogen_export", "Nitrogen"),
+    ("phosphorus_export", "Phosphorus"),
+    ("sediment_export", "Sediment"),
+)
+
+
+def _id(value):
+    if not isinstance(value, str) or not re.fullmatch(r"[0-9a-f]{64}", value):
+        raise ValueError("Choose a saved experiment.")
+    return value
+
+
+def _integer(value, default, minimum=0, maximum=None):
+    if value is None:
+        return default
+    if isinstance(value, bool) or not re.fullmatch(r"[0-9]+", str(value)):
+        raise ValueError("Use a nonnegative whole number for the result page.")
+    result = int(value)
+    if result < minimum or (maximum is not None and result > maximum):
+        raise ValueError("The requested result page is outside the supported range.")
+    return result
+
+
+def _exact_counts(value):
+    result = dict(value)
+    for name in ("counts", "progress"):
+        if isinstance(result.get(name), dict):
+            result[name + "_exact"] = {key: str(item) for key, item in result[name].items()
+                                      if type(item) is int}
+    for name in ("total_cases", "offset", "limit", "next_offset"):
+        if type(result.get(name)) is int:
+            result[name + "_exact"] = str(result[name])
+    return result
+
+
+def _text(value):
+    return html.escape(str(value if value is not None else ""), quote=True)
+
+
+def _number(value):
+    if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value):
+        return "—"
+    return format(value, ",.6g")
+
+
+def _error(value):
+    if isinstance(value, dict):
+        return value.get("message") or value.get("type") or json.dumps(value, ensure_ascii=False)
+    return str(value or "")
+
+
+def render_report(summary):
+    """Readable offline report; figures use the same retained paired-mass rows."""
+    rows = summary.get("rows", [])
+    progress = summary.get("progress", {})
+    pieces = [
+        '<!doctype html><html lang="en"><head><meta charset="utf-8">',
+        '<meta name="viewport" content="width=device-width,initial-scale=1">',
+        '<meta name="color-scheme" content="light">',
+        '<title>' + _text(summary.get("title", "Scenario experiment")) + '</title>',
+        '<style>body{font:15px/1.55 system-ui,sans-serif;color:#202326;background:#fff;'
+        'max-width:1280px;margin:36px auto;padding:0 24px}h1{font-size:30px;line-height:1.2}'
+        'h2{font-size:21px;margin-top:32px}p{max-width:90ch}.muted{color:#525a61}'
+        'table{width:100%;border-collapse:collapse;font-size:13px;margin:16px 0}'
+        'th,td{text-align:left;vertical-align:top;padding:9px;border-bottom:1px solid #d5d8db}'
+        'th{background:#f0f1f2}td.num{font-variant-numeric:tabular-nums;white-space:nowrap}'
+        'code{overflow-wrap:anywhere;font-size:11px}.scroll{overflow:auto}.meta{display:flex;gap:24px;flex-wrap:wrap}'
+        '.notice{border:1px solid #bfc5cb;background:#f5f6f7;padding:12px}'
+        '@media print{body{margin:0;max-width:none;padding:0;font-size:10pt}'
+        'thead{display:table-header-group}tr{break-inside:avoid}.scroll{overflow:visible}'
+        'h2{break-after:avoid}table{font-size:8pt}th,td{padding:5px}}</style></head><body>',
+        '<p class="muted">UPPER SAVANNAH · SCENARIO EXPERIMENT</p>',
+        '<h1>' + _text(summary.get("title", "Scenario experiment")) + '</h1>',
+        '<div class="meta"><span>State: <strong>' + _text(summary.get("state")) + '</strong></span>',
+        '<span>Complete: ' + _number(progress.get("complete", 0)) + '</span>',
+        '<span>Failed: ' + _number(progress.get("failed", 0)) + '</span>',
+        '<span>Pending: ' + _number(progress.get("pending", 0)) + '</span></div>',
+        '<p class="muted">Report generated ' + _text(now()) + '. Experiment <code>' + _text(summary.get("id")) + '</code>.</p>',
+        '<p>Each land-cover alternative is compared with the baseline using the same parameter profile. '
+        'Parameter cases show how changing the profile affects the baseline landscape. '
+        'Signed change is alternative minus its paired baseline; positive reduction means less exported mass.</p>',
+        '<p>Totals are annual exported mass over the retained reporting mask. Comparisons use the cells '
+        'valid in both runs. Read paired cells and coverage with every result. Parameter ranges describe '
+        'the selected experiment and are not probability intervals or observed measurements.</p>',
+    ]
+    if summary.get("state") != "complete":
+        pieces.append('<p class="notice">This report contains the completed cases available in this saved experiment. '
+                      'Pending and failed totals remain visible above; unfinished selections can be resumed in the workbench.</p>')
+    pieces.append('<h2>Paired native model results</h2><div class="scroll"><table><thead><tr>'
+                  '<th>Scenario / profile</th><th>Case</th><th>Export</th><th>Units</th>'
+                  '<th>Paired baseline</th><th>Alternative</th><th>Signed change</th>'
+                  '<th>Reduction</th><th>Change %</th><th>Paired cells / coverage</th>'
+                  '</tr></thead><tbody>')
+    rendered = 0
+    for row in rows:
+        for key, label in POLLUTANTS:
+            value = row.get("metrics", {}).get(key)
+            if not isinstance(value, dict):
+                continue
+            coverage = value.get("coverage_fraction")
+            coverage_text = _number(coverage * 100) + "%" if isinstance(coverage, (int, float)) else "—"
+            pieces.append(
+                '<tr><td>' + _text(row.get("scenario_title") or row.get("scenario_id")) +
+                '<br><span class="muted">' + _text(row.get("profile_title") or row.get("profile_id")) +
+                '</span></td><td>' + _text(row.get("kind")) + '</td><td>' + label +
+                '</td><td>' + _text(value.get("units")) + '</td>' +
+                ''.join('<td class="num">' + _number(value.get(field)) + '</td>'
+                        for field in ("baseline_total", "alternative_total", "delta", "reduction", "relative_change_pct")) +
+                '<td class="num">' + _number(value.get("paired_cells")) + ' / ' + coverage_text + '</td></tr>')
+            rendered += 1
+    if not rendered:
+        pieces.append('<tr><td colspan="10">Completed paired results will appear after the selected native runs finish.</td></tr>')
+    pieces.append('</tbody></table></div>')
+    pieces.append('<h2>Case register</h2><div class="scroll"><table><thead><tr>'
+                  '<th>Scenario</th><th>Profile</th><th>State</th><th>Changes</th>'
+                  '<th>Native run / paired baseline</th><th>Recovery detail</th></tr></thead><tbody>')
+    for row in rows:
+        pieces.append('<tr><td>' + _text(row.get("scenario_title") or row.get("scenario_id")) +
+                      '</td><td>' + _text(row.get("profile_title") or row.get("profile_id")) +
+                      '</td><td>' + _text(row.get("state")) +
+                      '</td><td><code>' + _text(json.dumps(row.get("changes", {}), ensure_ascii=False, sort_keys=True)) +
+                      '</code></td><td><code>' + _text(row.get("run_id")) +
+                      '<br>' + _text(row.get("baseline_run_id")) +
+                      '</code></td><td>' + _text(_error(row.get("error"))) + '</td></tr>')
+    pieces.append('</tbody></table></div>')
+    pieces.append('<h2>Interpretation and continued work</h2><p>Use the same-profile land-cover comparisons '
+                  'to assess the response of an alternative. Keep the individual nutrient and sediment '
+                  'quantities available when combining priorities. Run identifiers reopen the native '
+                  'outputs, maps and logs in this workspace. The complete workspace archive carries the '
+                  'original sources, scenarios, profiles, experiment design and completed models.</p>')
+    pieces.append('<p class="muted">Source methods: InVEST 3.20.0 nutrient and sediment delivery models; '
+                  'Upstate Forever EC-SDC Mapping RFP dated October 2, 2026. '
+                  'Read each selected profile and scenario for its own references and assumptions.</p>')
+    pieces.append('</body></html>')
+    return "".join(pieces)
+
+
+class ExperimentOperator:
+    def __init__(self, operator, fault):
+        self.app = operator
+        self.Fault = fault
+
+    def catalog(self, workspace):
+        return [_exact_counts(item) for item in experiments.list_experiments(self.app.ws(workspace))]
+
+    def axes(self):
+        provider = getattr(experiments, "supported_axes", None)
+        return provider() if callable(provider) else getattr(experiments, "SUPPORTED_AXES", {})
+
+    def preview(self, value):
+        key = value.get("workspace", self.app.primary)
+        ws = self.app.ws(key)
+        selection = value.get("selection")
+        if not isinstance(selection, dict):
+            raise ValueError("Supply an experiment selection.")
+        return _exact_counts(experiments.preview(ws, selection))
+
+    def _decorate(self, workspace, value):
+        result = _exact_counts(json.loads(json.dumps(value)))
+        key = _id(result["id"])
+        ws = self.app.ws(workspace)
+        scope = ws.root / "experiments" / key
+        result["_downloads"] = self.app._files(workspace, result, scope)
+        marker = scope / "operator-report.json"
+        summary_path = scope / "summary.json"
+        if marker.is_file() and summary_path.is_file():
+            retained = read_json(marker)
+            if retained.get("summary_sha256") == file_digest(summary_path):
+                extra = self.app._files(workspace, {"files": {"report": retained["report"]}}, scope)
+                seen = {row["id"] for row in result["_downloads"]}
+                result["_downloads"].extend(row for row in extra if row["id"] not in seen)
+        return result
+
+    def read(self, workspace, operation, value):
+        ws = self.app.ws(workspace)
+        if operation == "catalog":
+            return {"experiments": self.catalog(workspace), "axes": self.axes()}
+        if operation == "axes":
+            return {"axes": self.axes()}
+        if operation == "methods":
+            path = Path(__file__).resolve().parent.parent / "source" / "experiment-methods-20261012.json"
+            return read_json(path) if path.is_file() else {"methods": []}
+        key = _id(value.get("experiment_id"))
+        if operation == "inspect":
+            record = experiments.inspect(
+                ws, key,
+                offset=_integer(value.get("offset"), 0),
+                limit=_integer(value.get("limit"), 100, minimum=1, maximum=1000))
+        elif operation == "summary":
+            record = experiments.read_summary(ws, key)
+            if record is None:
+                raise self.Fault("EXPERIMENT_SUMMARY", "Run the experiment or build a report from available cases.", 404)
+        else:
+            raise self.Fault("EXPERIMENT_READ", "Choose a supported experiment view.", 404)
+        return self._decorate(workspace, record)
+
+    def _report(self, workspace, key, summary=None):
+        ws = self.app.ws(workspace)
+        scope = ws.root / "experiments" / _id(key)
+        with held(scope / ".experiment.lock", blocking=False):
+            # Read the retained summary while its original writer is excluded.
+            summary = experiments.read_summary(ws, key)
+            summary_path = scope / "summary.json"
+            summary_sha256 = file_digest(summary_path)
+            text = render_report(summary)
+            output = scope / "report.html"
+            fd, temporary = tempfile.mkstemp(prefix=".write-report-", dir=scope)
+            try:
+                with os.fdopen(fd, "w", encoding="utf-8", newline="") as handle:
+                    handle.write(text)
+                    handle.flush()
+                    os.fsync(handle.fileno())
+                os.replace(temporary, output)
+            finally:
+                with contextlib.suppress(FileNotFoundError):
+                    os.unlink(temporary)
+            record = {"path": output.name, "bytes": output.stat().st_size,
+                      "sha256": file_digest(output)}
+            atomic_json(scope / "operator-report.json",
+                        {"summary_sha256": summary_sha256, "report": record})
+            result = dict(summary)
+            result["files"] = dict(result.get("files", {}), report=record)
+            return result
+
+    def invoke(self, task):
+        ws = self.app.ws(task["workspace"])
+        value = task["payload"]
+        action = task["action"]
+        if action == "experiment.save":
+            return experiments.prepare(ws, value.get("selection", value))
+        key = value.get("experiment_id")
+        if key is None and action == "experiment.run":
+            selection = value.get("selection")
+            if not isinstance(selection, dict):
+                raise ValueError("Choose a saved experiment or provide its selection.")
+            key = experiments.prepare(ws, selection)["id"]
+        key = _id(key)
+        if action == "experiment.run":
+            try:
+                experiments.execute(ws, key)
+            except Exception:
+                with contextlib.suppress(Exception):
+                    self._report(task["workspace"], key)
+                raise
+            summary = experiments.read_summary(ws, key)
+        elif action == "experiment.summarize":
+            summary = experiments.summarize(ws, key)
+        else:
+            raise ValueError("Unknown experiment operation.")
+        return self._report(task["workspace"], key, summary)
+
+    def decorate_task(self, task):
+        if task.get("action") in ACTIONS and task.get("state") == "complete":
+            result = task.get("result", {})
+            if result.get("id"):
+                decorated = self._decorate(task["workspace"], result)
+                task["_downloads"] = decorated["_downloads"]
+        return task

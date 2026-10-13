@@ -78,7 +78,8 @@ export function attachProgrammes(context) {
         escapeHTML(row.title || row.key) + '"' + (subset.has(row.key) ? ' checked' : '') + '></td><td><strong>' +
         escapeHTML(row.title || row.key) + '</strong>' + (row.key === record.selection?.baseline_run ? '<small>Reference case</small>' : '') +
         '<small class="mono">' + escapeHTML(row.key) + '</small></td><td>' + escapeHTML(named('profiles', row.profile_id)) +
-        '<small>' + escapeHTML(named('scenarios', row.scenario_id)) + '</small></td><td>' + stateBadge(row.state) +
+        '<small>' + escapeHTML(named('scenarios', row.scenario_id)) + '</small>' +
+        '<small>' + escapeHTML([Object.keys(row.parameter_changes || {}).length ? 'Parameters changed' : '', row.table_changed ? 'Biophysical table changed' : '', row.scenario_changed ? 'Land cover changed' : ''].filter(Boolean).join(' · ') || 'Reference selections') + '</small></td><td>' + stateBadge(row.state) +
         '<small>' + escapeHTML(stageText(row)) + '</small>' + (error ? '<p class="programme-run-error">' + escapeHTML(error) + '</p>' : '') +
         '</td><td>' + escapeHTML(row.run_id ? short(row.run_id) : '—') + '</td><td><div class="programme-row-actions">' + native + '</div></td></tr>';
     });
@@ -112,6 +113,7 @@ export function attachProgrammes(context) {
     const preserveScroll = host.scrollTop;
     host.innerHTML = '<div class="programme-workbench"><header class="page-header"><div><p class="eyebrow">UPPER SAVANNAH SCIENTIFIC WORKBENCH</p><h1>Run programmes</h1><p>Run saved native cases, inspect progress, pause between calculations and continue the same work after reopening.</p></div>' +
       '<div class="page-actions">' + actionButton('create', 'Create programme') + actionButton('import', 'Import selections') +
+      (catalogue?.experiments_available ? actionButton('experiment', 'Use saved experiment') : '') +
       '<button type="button" data-view="runs">Native model runs</button></div></header><div class="notice error" data-programme-error role="alert"' +
       (latestError ? '' : ' hidden') + '>' + escapeHTML(latestError) + '</div>' + catalogueHTML() + programmeHTML() +
       '<p class="programme-method">Parameter designs and interpretation use the selected experiment and scientific profile. ' + methodLink + '.</p></div>';
@@ -207,7 +209,9 @@ export function attachProgrammes(context) {
       ['Units', row => row.units],
       ['Valid cells', row => printable(row.valid_cells)],
       ['Area (ha)', row => printable(row.valid_area_ha ?? row.area_ha)],
-      ['Common-area change', row => printable(row.common_sum_change ?? row.sum_change)],
+      ['Common-area change', row => printable(row.total_change ?? row.common_sum_change ?? row.sum_change)],
+      ['Change (%)', row => printable(row.percent_change)],
+      ['Comparison cells', row => printable(row.comparison_cells)],
       ['State', row => labelState(row.state)],
     ];
     return '<p>' + escapeHTML(report.title || 'Saved native result catalogue') + '</p>' +
@@ -260,7 +264,9 @@ export function attachProgrammes(context) {
         const original = originals.get(element.dataset.programmeFormRow) || {};
         const row = {};
         for (const name of ['key', 'title', 'profile_id', 'scenario_id']) row[name] = element.querySelector('[data-field="' + name + '"]').value.trim();
-        for (const name of ['reason', 'experiment_key', 'changes']) if (original[name] !== undefined) row[name] = original[name];
+        if (row.profile_id === original.profile_id && row.scenario_id === original.scenario_id) {
+          for (const name of ['reason', 'experiment_key', 'changes']) if (original[name] !== undefined) row[name] = original[name];
+        }
         selection.runs.push(row);
         if (element.querySelector('input[type="radio"]').checked) selection.baseline_run = row.key;
       }
@@ -270,9 +276,10 @@ export function attachProgrammes(context) {
       if (!selection.baseline_run) throw new Error('Choose the reference case.');
       return selection;
     };
-    openForm(copy ? 'Copy saved programme selections' : 'Create a run programme',
+    const isCopy = Boolean(copy?.id);
+    openForm(isCopy ? 'Copy saved programme selections' : 'Create a run programme',
       'Select the original prepared inputs and cases. Parameter designs from the experiment planner can also be imported as expanded selections.',
-      '<div class="programme-form"><div class="form-grid"><label>Programme title<input name="programme_title" value="' + escapeHTML(copy ? initial.title + ' — copy' : initial.title) +
+      '<div class="programme-form"><div class="form-grid"><label>Programme title<input name="programme_title" value="' + escapeHTML(isCopy ? initial.title + ' — copy' : initial.title) +
       '" required></label><label>Completed model grid<select name="programme_grid" required>' + grids.map(row => option(row, initial.grid_id)).join('') + '</select></label></div>' +
       '<label>Source or experiment reference<input name="programme_source" value="' + escapeHTML(initial.source_reference || '') +
       '" placeholder="Saved experiment identifier, source citation or work-order reference"></label><p class="note">Each case uses a retained profile and land-cover scenario compatible with the selected grid.</p>' +
@@ -310,6 +317,42 @@ export function attachProgrammes(context) {
         });
       });
   }
+  async function fromExperiment(experimentId) {
+    const available = await api(query('catalog'));
+    const experiments = asArray(available.experiments).filter(row => row.state !== 'unavailable');
+    if (!experiments.length) {
+      detail('Prepare an experiment', '<p>Save an experiment in this workspace to create its complete native run programme. The saved design retains the profiles, cases and comparison pairs that the programme will execute.</p>', {kind: 'programme-experiment'});
+      return;
+    }
+    if (experimentId && !experiments.some(row => row.id === experimentId)) throw new Error('The saved experiment is absent from this workspace.');
+    let form, requestGeneration = 0;
+    const preview = async () => {
+      const request = ++requestGeneration, key = form.elements.namedItem('programme_experiment').value;
+      const target = form.querySelector('[data-experiment-programme-preview]');
+      target.textContent = 'Opening the prepared cases…';
+      try {
+        const result = await api('/api/programmes/experiment-preview', {method: 'POST',
+          body: {workspace: workspaceKey(), experiment_id: key, offset: 0, limit: 100}});
+        if (request !== requestGeneration || !form.isConnected) return;
+        target.innerHTML = '<p><strong>' + escapeHTML(result.counts.cases) + ' prepared cases</strong> across ' +
+          escapeHTML(result.counts.profiles) + ' profiles. Saving materializes the exact profiles and native run selections.</p>' +
+          table(['Prepared case', 'Kind', 'Profile', 'Land-cover case'], asArray(result.cases).map(row =>
+            '<tr><td>' + escapeHTML(row.title) + '</td><td>' + escapeHTML(row.kind) + '</td><td class="mono">' +
+            escapeHTML(short(row.profile_id)) + '</td><td class="mono">' + escapeHTML(short(row.scenario_id)) + '</td></tr>')) +
+          (result.next_offset !== null ? '<p>The first ' + result.cases.length + ' cases are shown. All ' + result.counts.cases + ' saved cases are included in the programme.</p>' : '') +
+          '<p class="note">The programme compares against the original reference. Each case also retains the experiment’s paired baseline for the scientific comparison workflow.</p>';
+      } catch (error) { if (request === requestGeneration) target.textContent = error.message || String(error); }
+    };
+    openForm('Create programme from a saved experiment',
+      'Continue the existing experiment design through the shared native operator.',
+      '<div class="programme-form"><label>Saved experiment<select name="programme_experiment" required>' +
+      experiments.map(row => option(row, experimentId || experiments[0].id)).join('') +
+      '</select></label><div data-experiment-programme-preview role="status"></div></div>',
+      'Save complete programme',
+      async () => submitAction('compute.programme.experiment', {experiment_id: form.elements.namedItem('programme_experiment').value}),
+      () => { form = document.querySelector('#operation-form'); form.elements.namedItem('programme_experiment').addEventListener('change', preview); preview(); });
+  }
+
   function importForm() {
     let form, selection = null;
     openForm('Import expanded programme selections',
@@ -343,6 +386,7 @@ export function attachProgrammes(context) {
     if (action === 'open') return select(value);
     if (action === 'create') return createForm();
     if (action === 'import') return importForm();
+    if (action === 'experiment') return fromExperiment();
     if (action === 'clone') return createForm(record);
     if (action === 'select-pending') { subset = new Set(asArray(record?.runs).filter(row => row.state !== 'complete').map(row => row.key)); draw(); return; }
     if (action === 'clear-selection') { subset.clear(); draw(); return; }
@@ -387,5 +431,5 @@ export function attachProgrammes(context) {
     const result = task.result || {}, counts = result.counts || {};
     return 'Programme ' + labelState(result.state) + ': ' + (counts.complete || 0) + ' / ' + (counts.total || 0) + ' runs completed.';
   }
-  return {mount, detach, open, dispatch, taskActions, completionMessage, refresh: refreshRecord, create: createForm, importSelections: importForm};
+  return {mount, detach, open, dispatch, taskActions, completionMessage, refresh: refreshRecord, create: createForm, fromExperiment, importSelections: importForm};
 }
