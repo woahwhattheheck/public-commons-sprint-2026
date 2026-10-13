@@ -4,17 +4,17 @@ This bank carries the full maintained Chemistry 0.3.0 component, explicit prepar
 
 ## Included source
 
-The 5 source parts contain **57 complete UTF-8 files / 1,096,607 source bytes**:
+The 6 source parts contain **81 complete UTF-8 files / 1,591,774 source bytes**:
 
-- All **52** paths used by `operator/install_chemistry.py`, including the complete numerical engine, saved-case/run provider, scientific HTML/source producers, current operator interface, registered descriptor, guides and original installation machinery.
-- The complete native receiving script and guide, the original Chemistry report browser course and guide, and the complete 27-member source bank linked by that browser guide. These five receiving files are staged beside the complete component.
-- The original 0.1 source manifest remains byte-identical. `integration/reach_chemistry/COMPOUND_SOURCE.json` identifies all 51 other installed paths in the maintained 0.3 source edition.
+- All **75** paths used by `operator/install_chemistry.py`, including the complete numerical engine, saved-case/run provider, scientific HTML/source producers, current operator interface, registered descriptor, guides and original installation machinery.
+- The complete native receiving script and guide, the original Chemistry report browser course and guide, and the complete 27-member source bank linked by that browser guide. These five receiving files and 1 complete shared-source reference body are staged beside the complete component. The guarded installer composes only its explicit field-selection hook in the receiver's current Monitoring module; it preserves all other current Monitoring source.
+- The original 0.1 source manifest remains byte-identical. `integration/reach_chemistry/COMPOUND_SOURCE.json` identifies all 74 other installed paths in the maintained 0.3 source edition.
 
 The separate bootstrap directory contains the complete unchanged original application source assembler, matching component reader and its required component-fragment helper from the same source edition. The stager verifies all three complete bodies, loads the fragment helper before the component reader and assembler as a private Python package, and delegates source decoding and publication to those original modules. Its imports do not depend on an assembler or component reader installed in the base application. Every source part and every complete member is verified before the first staged source file is published.
 
 The bank also carries the current owner instruction in `AGENTS.md`, verifies its declared identity and retains the complete file at the stage root. The installation command below preserves any existing application instructions while adding this exact current instruction when needed.
 
-Complete study source pin: `5ee552982cfa2ffdd254032358d64c81064151ce`. The prior native component source pin `326f0593b158251b03c371ed1a993de6e885b3a8` remains the provenance for unchanged source, including the maintained compound observations, explicit report selection, v1/v2 Study-source resolver and editor-lifetime repair. The complete native receiving script and guide are preserved from `2714cfca13fc4d0939ca9aa32834d0f3dfed9846`; their exact Git blob identities appear in `manifest.json`. This preserves the completed-archive and isolated delivered-application opening behavior.
+Complete field-study source pin: `6568e594e91ffba3f3b3202f06831660524ba635`. Previous completed Monitoring/Chemistry study source remains `5ee552982cfa2ffdd254032358d64c81064151ce` / merged4183. The prior native component source pin `326f0593b158251b03c371ed1a993de6e885b3a8` remains the provenance for unchanged source, including the maintained compound observations, explicit report selection, v1/v2 Study-source resolver and editor-lifetime repair. The complete native receiving script and guide are preserved from `2714cfca13fc4d0939ca9aa32834d0f3dfed9846`; their exact Git blob identities appear in `manifest.json`. This preserves the completed-archive and isolated delivered-application opening behavior.
 
 ## Complete saved Monitoring and Chemistry study
 
@@ -23,6 +23,12 @@ The installed `source/monitoring-chemistry-study/README.md` carries the original
 The new component includes the entire original12-member source delivery plus its maintained operating guide. Its historical local `COMPOUND_SOURCE.json` and `reporting.py` remain original producer provenance; the canonical executable renderer is `model/reach_chemistry/reporting.py`, and only `integration/reach_chemistry/COMPOUND_SOURCE.json` is the active installation inventory. Original calculations do not repeat to refresh their saved report presentation.
 
 Use the received complete regional application's existing Monitoring source and original Workspace. Continue an accepted process with its existing producer edition; adopt this complete source at its normal completed/interrupted boundary. The source includes maintained capture/open helpers for original archive identity and independent application reopening, not another controller.
+
+## Completed field study and explicit source-bound selections
+
+The installed `source/monitoring-field-study/INSTALLATION.md` connects the original eight-member field producer/template and native source receiver to its completed scientific package. The original desk preserves all 730 observation rows, 36 observation-station locations, 87 native assessment sites and 217 catchments. The saved area-maximizing budgets reach the same 234 historical results (233 routine plus one replicate), while selected draft-assessment site support changes 10/14/15. This is source support, with historical periods, censoring and original coordinate bases retained.
+
+Use the original 239-member field package for the unchanged two-entry native source import; the installed source-only directory intentionally does not substitute for its 223 companions per entry. The original manifest remains immutable provenance. The existing Sources document controls open the fully embedded desk and its downloads. Open Monitoring design → Saved field selections, choose the retained original source, review the exported selection JSON, and retain its exact edition through the existing queue. Reopen the exact JSON and selected working desk, then use the original whole Workspace backup/restore. These source-bound review choices remain separate from campaign station assignments. Follow operator/MONITORING_FIELD_SELECTION.md and the complete installed guide at the accepting host's same operation boundary.
 
 ## Existing application and project
 
