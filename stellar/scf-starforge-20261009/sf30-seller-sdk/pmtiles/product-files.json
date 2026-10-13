@@ -45,6 +45,8 @@
     "uploads.mjs",
     "web/app.css",
     "web/app.js",
+    "web/commerce.css",
+    "web/commerce.mjs",
     "web/index.html",
     "workspace.mjs"
   ]

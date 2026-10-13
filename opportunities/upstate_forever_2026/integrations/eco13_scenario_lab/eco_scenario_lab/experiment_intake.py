@@ -8,15 +8,15 @@ from __future__ import annotations
 import argparse
 import copy
 import json
-import os
 from pathlib import Path
 import shutil
 import tempfile
 from typing import Any
 from .engine import cost, safe_id, stamp
+from .retention import RetentionSession
 from .results import binding_for, build_comparison, read_results, render_report, rank
 from .store import (ScenarioError, atomic_json, dataset_hash, digest, file_hash,
-                    inside, read_json, snapshot)
+                    inside, read_json)
 
 SUPPORTED = {"3.15.0", "3.20.0"}
 DEFAULT_FIELDS = {"args": "/invest_args", "version": "/version",
@@ -45,32 +45,6 @@ def pointer(value: Any, path: str) -> Any:
     return value
 
 
-def _copy_workspace(source: Path, target: Path) -> list[dict]:
-    """Copy a finished native directory; retain every regular file and its hash."""
-    if not source.is_dir() or source.is_symlink():
-        raise ScenarioError(f"Native workspace is not a regular directory: {source}")
-    if target.resolve().is_relative_to(source.resolve()):
-        raise ScenarioError("Receiving must be outside every original native workspace")
-    before = sorted(source.rglob("*"))
-    if any(p.is_symlink() for p in before):
-        raise ScenarioError("Native workspace contains a symlink; retain explicit regular files")
-    files = [p for p in before if p.is_file()]
-    inventory = []
-    for src in files:
-        relative = src.relative_to(source)
-        dst = target / relative
-        dst.parent.mkdir(parents=True, exist_ok=True)
-        wanted = file_hash(src)
-        shutil.copyfile(src, dst)
-        if file_hash(dst) != wanted or file_hash(src) != wanted:
-            raise ScenarioError(f"Original native file changed during receiving: {relative}")
-        inventory.append({"path": relative.as_posix(), "bytes": dst.stat().st_size,
-                          "sha256": wanted})
-    if [p.relative_to(source) for p in files] != [p.relative_to(source) for p in sorted(source.rglob("*")) if p.is_file()]:
-        raise ScenarioError("Original native directory membership changed during receiving")
-    return inventory
-
-
 def adopt(selection_path: Path, destination: Path) -> dict:
     """Create a portable comparison workspace from original completed run records.
 
@@ -79,6 +53,9 @@ def adopt(selection_path: Path, destination: Path) -> dict:
     Caller may snapshot a whole `workspace.experiments.inspect(key)` to JSON.
     """
     selection = read_json(selection_path)
+    if selection.get("source_format") == "upstate.experiment/v1":
+        from .upstate_intake import adopt as adopt_upstate
+        return adopt_upstate(selection_path, destination)
     if selection.get("schema") != 1:
         raise ScenarioError("Unsupported intake selection schema")
     for name in ("project_id", "setup_id"):
@@ -129,6 +106,7 @@ def adopt(selection_path: Path, destination: Path) -> dict:
     destination.parent.mkdir(parents=True, exist_ok=True)
     stage = Path(tempfile.mkdtemp(prefix=".experiment-intake-", dir=destination.parent))
     input_inventory = {}
+    retention = RetentionSession(stage)
     state = {"schema": 1, "jobs": {}, "active_jobs": {}, "prepared": {}}
     positions = set()
     native_receipts = set()
@@ -182,13 +160,11 @@ def adopt(selection_path: Path, destination: Path) -> dict:
                     if not isinstance(value, str):
                         raise ScenarioError(f"Expected original native file argument: {key}")
                     source = (original_root / value).resolve()
-                    relative, files = snapshot(source, stage)
+                    relative, files = retention.snapshot(source)
                     input_inventory.update({f["path"]: f for f in files})
                     absolute_args[key] = str(source)
                     retained_args[key] = relative
-                    arg_digests[key] = dataset_hash(source)
-                    if arg_digests[key] != dataset_hash(inside(stage, relative)):
-                        raise ScenarioError(f"Original native input changed: {key}")
+                    arg_digests[key] = retention.dataset_hash(source)
                 else:
                     absolute_args[key] = value
                     retained_args[key] = value
@@ -197,7 +173,7 @@ def adopt(selection_path: Path, destination: Path) -> dict:
             for key, value in declared_digests.items():
                 if key in absolute_args and isinstance(value, str):
                     source = Path(str(absolute_args[key]))
-                    if source.is_file() and value not in {file_hash(source), dataset_hash(source)}:
+                    if source.is_file() and value not in {retention.source_hash(source), retention.dataset_hash(source)}:
                         raise ScenarioError(f"Native inspection input digest differs: {key}")
             native_dir = (original_root / pointer(native, fields["workspace"])).resolve()
             roots = [Path(r).resolve() for r in selection.get("native_roots", [str(original_root)])]
@@ -213,7 +189,7 @@ def adopt(selection_path: Path, destination: Path) -> dict:
                 table_name = table_name.with_name(table_name.stem + suffix + table_name.suffix)
             src_table = inside(native_dir, table_name.as_posix())
             # Reading the original table before copy fails immediately on wrong bindings.
-            watershed_digest = dataset_hash(Path(absolute_args["watersheds_path"]))
+            watershed_digest = retention.dataset_hash(Path(absolute_args["watersheds_path"]))
             original_values = read_results(src_table, binding, watershed_source_sha256=watershed_digest)
             provenance = {"experiment_key": experiment_key, "job_key": original_key,
                           "case_label": record["case_label"], "native_pointer": native_pointer,
@@ -222,10 +198,13 @@ def adopt(selection_path: Path, destination: Path) -> dict:
                           "input_digests": arg_digests, "native": native}
             jid = digest({"provenance": provenance, "selection": position})[:32]
             run_root = stage / "runs" / jid
-            files = _copy_workspace(native_dir, run_root / "native")
+            retained_native = retention.native_directory(native_dir)
+            native_reference = {key: retained_native[key] for key in
+                                ("path", "directory_sha256", "logical_bytes")}
             atomic_json(run_root / "original-run.json", provenance)
-            atomic_json(run_root / "native-files.json", files)
-            table = inside(run_root / "native", table_name.as_posix())
+            atomic_json(run_root / "native-files.json", retained_native["files"])
+            atomic_json(run_root / "native-reference.json", native_reference)
+            table = inside(stage, retained_native["path"] + "/" + table_name.as_posix())
             copied_values = read_results(table, binding, watershed_source_sha256=watershed_digest)
             if copied_values != original_values:
                 raise ScenarioError("Native table changed between inspection and copy")
@@ -245,6 +224,7 @@ def adopt(selection_path: Path, destination: Path) -> dict:
                  "original_job_key": original_key, "original_case_label": record["case_label"],
                  "original_experiment_key": experiment_key,
                  "native_table_path": table.relative_to(stage).as_posix(),
+                 "native_storage": native_reference,
                  "native_dataset_sha256": dataset_hash(table),
                  "result_path": result.relative_to(stage).as_posix(), "result_sha256": file_hash(result),
                  "attempts": [{"workspace": run_root.relative_to(stage).as_posix(),
@@ -269,15 +249,15 @@ def adopt(selection_path: Path, destination: Path) -> dict:
             ranking = rank(comparison, selection["objectives"], selection.get("budget_cents"))
             atomic_json(stage / "reports" / "ranking.json", ranking)
         report = render_report(stage, comparison, ranking)
-        for meta in input_inventory.values():
-            if file_hash(inside(stage, meta["path"])) != meta["sha256"]:
-                raise ScenarioError("Retained input changed during receiving")
+        storage = retention.verify()
+        atomic_json(stage / "receiving-storage.json", storage)
         if read_json(inspection_path) != inspection:
             raise ScenarioError("Original experiment inspection changed during receiving")
         stage.rename(destination)
         return {"workspace": str(destination), "original_experiment_key": experiment_key,
                 "adopted_jobs": len(state["jobs"]), "paired_records": len(comparison["rows"]),
                 "incomplete": comparison["incomplete"], "native_versions": sorted(native_versions),
+                "storage": storage,
                 "report": str(destination / report.relative_to(stage))}
     finally:
         if stage.exists():

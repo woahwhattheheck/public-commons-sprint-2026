@@ -339,6 +339,7 @@ export function attachMapAtlas(host) {
   const sourceReportId=opened.selection?.source_report_id;
   const indexFile=retainedFile(opened.files?.map_atlas_index),csvFile=retainedFile(opened.files?.map_atlas_csv);
   const sourceContextFile=retainedFile(opened.files?.map_atlas_sources);
+  const offlineBrowserFile=retainedFile(opened.files?.map_atlas_browser);
   const archive=retainedFile(opened.files?.delivery_archive),rows=atlas?.pages||Object.entries(opened.maps||{}).map(([k,file])=>{
    const family=FAMILIES.find(([id])=>k===id||k.startsWith(id+'-'));
    return {map_key:k,family:family?.[0],title:family?.[1]||k,file,page:null,panels:[]};
@@ -346,7 +347,7 @@ export function attachMapAtlas(host) {
   return '<div class="atlas-release"><h2>'+esc(titleOf(opened))+'</h2><p>'+esc(opened.state)+' · '+rows.length+' map sheets'+
    (atlas?' · '+atlas.page_count+' atlas pages':'')+'</p><div class="atlas-actions">'+
    (atlasFile?button('preview','Open complete atlas','data-url="'+esc(atlasFile.url)+'"')+downloadLink(atlasFile,'Download atlas PDF'):'')+
-   downloadLink(archive,'Download complete GIS package')+downloadLink(indexFile,'Download JSON index')+
+   downloadLink(archive,'Download complete GIS package')+downloadLink(offlineBrowserFile,'Download offline atlas browser')+downloadLink(indexFile,'Download JSON index')+
    downloadLink(csvFile,'Download CSV index')+downloadLink(sourceContextFile,'Download source choices')+(sourceReportId?button('source-report','Open source watershed report','data-id="'+esc(sourceReportId)+'"'):'')+
    button('clone','Revise this selection')+button('item','Open complete record','data-kind="deliveries" data-id="'+esc(opened.id)+'"')+'</div>'+
    (opened.error?'<p class="atlas-error">'+esc(opened.error.message||opened.error)+'</p>':'')+

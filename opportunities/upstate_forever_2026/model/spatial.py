@@ -915,7 +915,7 @@ class SpatialReview:
 
     def point(self, payload):
         from pyproj import CRS, Transformer
-        from shapely.geometry import shape, Point
+        from shapely.geometry import shape, Point, mapping
         from shapely.ops import transform
         layers = self._layers()
         raw = payload.get("point")
@@ -979,6 +979,8 @@ class SpatialReview:
                         truncated = True
                         break
                     found.append(self._feature(feature, geometry, geometry_crs=native.to_string(), include_original=True,
+                                               display_geometry=_json(mapping(projected)),
+                                               display_geometry_crs=point_crs.to_string(),
                                                match="covers" if covers else "within selected tolerance",
                                                distance=distance, distance_crs=point_crs.to_string()))
             groups.append({"selection": {**selection, "layer": layer}, "layer": record["public"],

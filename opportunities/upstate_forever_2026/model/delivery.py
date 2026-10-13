@@ -9,7 +9,7 @@ import sys
 import xml.etree.ElementTree as ET
 from .common import (INVEST_SOURCE, INVEST_VERSION, MAP_IDS, SOURCE_IDS, atomic_bytes, atomic_json,
                      describe_file, digest, held, identifier, now, read_json, verify_file)
-from . import cartography, map_atlas, portable, rasters
+from . import atlas_browser, cartography, map_atlas, portable, rasters
 from .report_release import bind_report, retain_report
 from .delivery_archive import package_archive
 from . import receiving_water_delivery
@@ -608,6 +608,8 @@ def build(workspace, selection):
                 manifest["source_report"] = report_link
             audit_manifest = directory / "delivery.json"
             receiving_water_delivery.extend_assets(manifest, state)
+            atlas_browser.write(directory, state, manifest)
+            atomic_json(state_path, state)
             atomic_json(audit_manifest, manifest)
             source_root = Path(__file__).resolve().parent.parent
             if str(source_root) not in sys.path:
