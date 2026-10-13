@@ -21,8 +21,10 @@ export function receivedComparabilityHTML(detail,disabled=false){
       }else{
         html+='<p>This source originated in project '+esc(row.source_project_id)+
           '. Its original report and complete source companions remain in this Study.</p>'+
-          '<div class="st-actions">'+button('report','Open this report only',index,disabled)+
-          button('append','Add to current report',index,disabled)+'</div>';
+          '<div class="st-actions">'+button('source','Use original cohort for a local comparison',index,disabled)+
+          button('report','Open this report only',index,disabled)+
+          button('append','Add to current report',index,disabled)+'</div>'+
+          '<p>Choose the earlier and later years in this Workspace, then save its complete comparison. The received source and report remain available.</p>';
       }
       return html+'<details class="st-details"><summary>Original source identity</summary><dl>'+
         '<dt>Source collection</dt><dd><code>'+esc(row.source_collection_id)+'</code></dd>'+
@@ -47,6 +49,15 @@ export async function openReceivedComparability(host,detail,target,{workspace_ke
       throw Error('This source retains another original project; open its captured scientific report.');
     if(typeof host.openExtension!=='function')throw Error('Use the maintained comparable-period desk.');
     await host.openExtension('observation-comparability','openSaved',row.native_comparison.id);
+    return true;
+  }
+  if(action==='cohort-source'){
+    if(!validID(row.source_body_sha256))throw Error('Retain the original cohort recipe identity.');
+    if(typeof host.openExtension!=='function')throw Error('Use the maintained comparable-period desk.');
+    await host.openExtension('observation-comparability','openSource',{
+      workspace_key,source:{kind:'retained',source_collection_id:row.source_collection_id,
+        source_id:row.source_id,source_sha256:row.source_body_sha256},
+    });
     return true;
   }
   if(action==='cohort-report'||action==='cohort-append'){
