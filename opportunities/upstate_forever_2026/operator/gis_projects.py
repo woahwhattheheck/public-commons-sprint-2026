@@ -110,6 +110,7 @@ class GISProjects:
 
     def catalogue(self, workspace):
         ws = self.operator.ws(workspace)
+        from model import gis_edition_review
         result = gis_workspace.catalogue(ws)
         result['exports'] = [self.describe(workspace, 'export', r['id']) for r in result['exports']]
         result['received'] = [self.describe(workspace, 'received', gis.load(p)['id'])
@@ -132,7 +133,7 @@ class GISProjects:
         for row in result['runs']:
             scenario = ws._get('scenarios', row['selection']['scenario_id'])
             row['title'] = scenario['title']
-        return {**result, 'workspace_key': workspace}
+        return {**result, 'workspace_key': workspace, 'review_version': gis_edition_review.VERSION}
 
     def invoke(self, task):
         ws = self.operator.ws(task['workspace'])
