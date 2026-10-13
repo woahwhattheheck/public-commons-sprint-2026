@@ -1,0 +1,148 @@
+{
+  "schema": "upstate.operator-extension/v1",
+  "id": "run-revisions",
+  "title": "Run revisions",
+  "version": "1.0.0",
+  "order": 43,
+  "assets": [
+    "run_revision.mjs",
+    "run_revision.css"
+  ],
+  "backend": {
+    "module": "run_revision",
+    "routes": [
+      {
+        "methods": [
+          "GET"
+        ],
+        "path": "/api/run-revisions/catalog",
+        "operation": "catalog",
+        "handler": "read",
+        "args": [
+          "operator",
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "GET"
+        ],
+        "path": "/api/run-revisions/review",
+        "operation": "review",
+        "handler": "read",
+        "args": [
+          "operator",
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "GET"
+        ],
+        "path": "/api/run-revisions/export",
+        "operation": "export",
+        "handler": "read",
+        "args": [
+          "operator",
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "POST"
+        ],
+        "path": "/api/run-revisions/create",
+        "operation": "create",
+        "handler": "read",
+        "args": [
+          "operator",
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "POST"
+        ],
+        "path": "/api/run-revisions/submit",
+        "operation": "submit",
+        "handler": "read",
+        "args": [
+          "operator",
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "POST"
+        ],
+        "path": "/api/run-revisions/capture",
+        "operation": "capture",
+        "handler": "read",
+        "args": [
+          "operator",
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "POST"
+        ],
+        "path": "/api/run-revisions/import",
+        "operation": "import",
+        "handler": "read",
+        "args": [
+          "operator",
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      }
+    ],
+    "verify_workspace": {
+      "handler": "verify_workspace",
+      "args": [
+        "workspace"
+      ]
+    }
+  },
+  "client": {
+    "module": "/web/run_revision.mjs",
+    "factory": "attachRunRevisions",
+    "requires": [
+      "api",
+      "endpoint",
+      "getState",
+      "getWorkspace",
+      "openItem",
+      "showTask",
+      "openDesk",
+      "openRunRevisionForm",
+      "openBackup"
+    ],
+    "styles": [
+      "/web/run_revision.css"
+    ],
+    "view": {
+      "id": "run-revisions",
+      "title": "Run revisions",
+      "after": "runs"
+    },
+    "lifecycle": {
+      "mount": "mount",
+      "update": "update",
+      "detach": "detach"
+    }
+  }
+}

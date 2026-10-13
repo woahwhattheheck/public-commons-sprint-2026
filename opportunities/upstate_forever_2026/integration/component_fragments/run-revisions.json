@@ -1,0 +1,27 @@
+{
+  "schema": "upstate.application-component-fragment/v1",
+  "id": "run-revisions",
+  "source_reference": "https://tokenjunkielabs.slack.com/archives/C0BTTA66TK3/p1791890521306799",
+  "components": {
+    "run-revisions": {
+      "title": "Saved native-run revision and comparison",
+      "paths": [
+        "operator/run_revision.py",
+        "operator/extensions/run-revisions.json",
+        "operator/web/run_revision.mjs",
+        "operator/web/run_revision.css",
+        "operator/RUN_REVISIONS.md",
+        "operator/server.py",
+        "operator/web/app.mjs"
+      ],
+      "requires": [
+        "core",
+        "scenario-inputs",
+        "native-process-reports"
+      ]
+    }
+  },
+  "required_components": [
+    "run-revisions"
+  ]
+}
