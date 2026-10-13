@@ -42,7 +42,8 @@ The pure `analyzeStreamNutrients(inputs, parseCsv)` API in `analysis_core.mjs` a
 | activity-nutrients-flow.csv | All 153 reconstructed/component/P values, original metadata, daily/antecedent flow and original source selectors |
 | station-cohort-summaries.csv | 176 station, annual, seasonal and flow-quartile summaries |
 | paired-station-contrasts.csv | 116 interval contrasts with clocks, original activity IDs and flow context |
-| paired-nitrogen-components.csv | 58 exact paired nitrogen decompositions; component difference bounds sum to each reconstructed total |\n| agency-calculated-nitrogen.csv | All six original calculated-N discrepancies, component values and source rows |
+| paired-nitrogen-components.csv | 58 exact paired nitrogen decompositions; component difference bounds sum to each reconstructed total |
+| agency-calculated-nitrogen.csv | All six original calculated-N discrepancies, component values and source rows |
 | daily-gauge-flow.csv | All 2,192 original discharge observations, qualifiers and exact JSON selectors |
 | annual-flow-coverage.csv | Six complete calendar-year flow/sampling summaries |
 | study-summary.json | Machine-readable coverage, original station coordinates and computed summaries |
