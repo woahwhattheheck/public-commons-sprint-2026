@@ -88,3 +88,20 @@ Run this with the existing application root available on Python’s import path 
 The parameter-study adapter is `ParameterStudyAPI` from `operator.parameter_study_api`. Its collection and navigation key is `parameter-studies`; browser actions use `parameter-study-`, queued actions use `parameter-study.`, and reads use `/api/parameter-studies/`. The browser factory is `attachParameterStudies`. Existing scenario experiments keep `ExperimentOperator`, `experiment.*`, `/api/experiments/*`, the `experiments` view, and the current public `experiments.mjs/css`. The immutable study identifier remains the existing `experiment_id` field and the stored parameter schema remains unchanged.
 
 The server resolves parameter-study downloads under `workspace.root / 'experiments' / study_id` using the original artifact descriptors. This shared parent directory has two explicit file layouts: the scenario engine discovers `state.json`, while parameter studies discover `experiment.json`.
+
+## Use completed cases in annual-load calibration
+
+From the saved study, choose **Use completed cases in calibration**, review the
+eligible original runs and their producing-model details, then choose
+**Open calibration selection**. The next desk keeps the current observation and
+catchment draft and reviews the positive-weight objective and spatial split.
+Each original run appears once with all of its study case labels.
+
+A case with an unsupported native output convention, missing retained output or
+unfinished execution remains visible with its own exclusion reason. Compatible
+completed cases remain available. The version display distinguishes completed
+stage execution, observed run fallback and a requested legacy declaration.
+
+The complete [native-version and handoff guide](../model/PARAMETER_NATIVE_VERSIONS.md#continue-completed-cases-into-annual-load-calibration)
+describes original identity preservation, physical units, objective-specific
+version compatibility and the `model.parameter_calibration.candidates` API.
