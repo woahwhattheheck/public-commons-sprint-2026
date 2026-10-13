@@ -3,9 +3,9 @@ import base64
 import hashlib
 import re
 
-from model import landcover_workspace
+from model import landcover_workspace, landcover_report_source
 
-ACTIONS = {'landcover.ledger.build'}
+ACTIONS = {'landcover.ledger.build', 'landcover_report_source'}
 
 
 def _downloads(operator, workspace_key, edition):
@@ -19,7 +19,10 @@ def _downloads(operator, workspace_key, edition):
 def invoke(operator, workspace_key, action, payload):
     if action not in ACTIONS:
         raise ValueError('Choose the original land-cover ledger action')
-    return landcover_workspace.build(operator.ws(workspace_key), payload)
+    workspace = operator.ws(workspace_key)
+    if action == 'landcover_report_source':
+        return landcover_report_source.prepare(workspace, payload)
+    return landcover_workspace.build(workspace, payload)
 
 
 def read(operator, workspace_key, operation, payload):
@@ -30,8 +33,13 @@ def read(operator, workspace_key, operation, payload):
         return landcover_workspace.preview_inputs(workspace, payload['selection'])
     if operation == 'edition':
         result = landcover_workspace.inspect(workspace, payload['id'])
+        result['report_sources'] = landcover_report_source.list_sources(workspace, result['edition']['id'])
         result['_downloads'] = _downloads(operator, workspace_key, result['edition'])
         result['preview_url'] = _preview_url(workspace_key, result['edition']['id'])
+        return result
+    if operation == 'report-source':
+        result = landcover_report_source.get(workspace, payload['id'])
+        result['_downloads'] = _report_downloads(operator, workspace_key, result)
         return result
     raise ValueError('Choose an existing land-cover ledger reader')
 
@@ -42,8 +50,18 @@ def overview(operator, workspace_key):
 
 def decorate_task(operator, task):
     if task['action'] in ACTIONS and task['state'] == 'complete':
-        task['_downloads'] = _downloads(operator, task['workspace'], task['result'])
+        if task['action'] == 'landcover_report_source':
+            task['_downloads'] = _report_downloads(operator, task['workspace'], task['result'])
+        else:
+            task['_downloads'] = _downloads(operator, task['workspace'], task['result'])
     return task
+
+
+def _report_downloads(operator, workspace_key, receipt):
+    workspace = operator.ws(workspace_key)
+    return [operator._ticket(workspace_key, workspace.root / row['path'], row,
+                             'Land-cover report source: ' + name)
+            for name, row in receipt['files'].items()]
 
 
 def _preview_url(workspace_key, edition_id):
