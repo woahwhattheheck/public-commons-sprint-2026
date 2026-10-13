@@ -1,3 +1,4 @@
+import {createObservedLandcoverHandover} from "./observed_landcover_handover.mjs";
 import {createObservedLandcoverSelectionContract} from "./observed_landcover_selection.mjs";
 import {renderOriginalLandcoverGroups} from "./observed_landcover_groups.mjs";
 /** Original completed NLCD matrices, selected HUC support, and retained scientific reports. */
@@ -58,6 +59,7 @@ export function attachObservedLandcover(host){
   const {getState,api,endpoint,toast,openForm,submitAction,openScientificReport,openDesk}=host;
   let root=null,workspace=null,epoch=0,catalogRead=0,inputRead=0,comparisonRead=0,portableRead=0,composeRead=0,sourceOpenRead=0,events=null,catalog=null,inputs=null,preview=null,opened=null;
   const contexts=new Map(),portableSelection=createObservedLandcoverSelectionContract();
+  const recipientHandover=createObservedLandcoverHandover(host);
   const state=()=>getState()?.workspace_key||'';
   const find=s=>root?.querySelector(s);
   const field=name=>find('[name="'+name+'"]');
@@ -82,6 +84,7 @@ export function attachObservedLandcover(host){
     return {...clone(source),title:c.draft.title.trim(),huc12s:[...c.draft.huc12s].sort()};
   }
   function clearPreview(){
+    recipientHandover.detach();
     ++comparisonRead;preview=null;opened=null;const node=find('[data-lc-result]');if(node)node.replaceChildren();
     const tools=find('[data-lc-result-tools]');if(tools)tools.replaceChildren();
   }
@@ -158,6 +161,7 @@ export function attachObservedLandcover(host){
     return preview;
   }
   function renderReport(report,downloads=[]){
+    recipientHandover.detach();
     const c=context(workspace);
     find('[data-lc-result-tools]').innerHTML='<section class="olc-panel"><div class="olc-toolbar"><label>Reporting area<select name="view_huc">'+
       '<option value="">All selected watersheds · unique union</option>'+rows(report.watersheds).map(row=>'<option value="'+esc(row.huc12)+'">'+esc(row.huc12+' · '+row.properties?.name)+'</option>').join('')+
@@ -167,6 +171,11 @@ export function attachObservedLandcover(host){
         return '<a href="'+esc(row.url+(row.url.includes('?')?'&':'?')+'download=1')+'">'+esc(row.label||row.filename)+'</a>';
       }).join('')+'</div>'+(opened?'<p class="olc-note">To send an editable study, prepare and save the scientific report, then choose <strong>Transfer this report and its studies</strong>. The original watershed selection, complete source files and analysis collections travel with that saved report.</p>':'')+'</section>';
     renderValues(report);
+    if(opened){
+      const container=document.createElement('div');container.dataset.lcHandover='';
+      find('[data-lc-result-tools]').appendChild(container);
+      void recipientHandover.mount(container,{workspace,comparisonId:opened.edition.id});
+    }
   }
   function renderValues(report=opened?.report||preview?.report){
     if(report)find('[data-lc-result]').innerHTML=renderObservedLandcover(report,{huc:field('view_huc')?.value||'',unit:context(workspace).draft.unit});
@@ -327,7 +336,7 @@ export function attachObservedLandcover(host){
     else return;
     c.edit++;clearPreview();persist(workspace);
   }
-  function detach(){++epoch;++catalogRead;++inputRead;++comparisonRead;++portableRead;++composeRead;++sourceOpenRead;events?.abort();events=null;root=null;workspace=null;catalog=null;inputs=null;preview=null;opened=null;}
+  function detach(){recipientHandover.detach();++epoch;++catalogRead;++inputRead;++comparisonRead;++portableRead;++composeRead;++sourceOpenRead;events?.abort();events=null;root=null;workspace=null;catalog=null;inputs=null;preview=null;opened=null;}
   async function mount(container){
     if(root===container&&workspace===state())return update();
     detach();root=container;workspace=state();const w=workspace,g=epoch,c=context(w);
@@ -352,6 +361,7 @@ export function attachObservedLandcover(host){
   function update(){
     if(!root)return;
     if(workspace!==state()){const target=root;return mount(target);}
+    recipientHandover.update();
     const c=context(workspace),task=rows(getState()?.tasks).find(row=>row.id===c.lastTask&&row.workspace===workspace);
     if(task&&task.state==='complete'&&!c.observedTasks.has(task.id)){
       c.observedTasks.add(task.id);persist(workspace);
