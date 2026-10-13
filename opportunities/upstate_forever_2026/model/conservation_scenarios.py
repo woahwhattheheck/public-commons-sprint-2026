@@ -360,13 +360,25 @@ def _study_reference(workspace, record):
 
 def _same_scope(workspace, candidate, selection, *, required=False):
     native = candidate["selection"]
+    # The experiment engine retains its requested-version case identity. Also
+    # check the completed stages so a resumed run cannot admit incompatible
+    # physical quantities merely because its original request names this version.
+    execution = conservation._native_execution(candidate, require_supported=False)
+    completed = [name for name in selected_models(native)
+                 if ((candidate.get("stages") or {}).get(name) or {}).get("completed_at")]
+    compatible = execution["supported"] if candidate.get("state") == "complete" else all(
+        execution["model_versions"][name]["comparison_version"] == INVEST_VERSION
+        for name in completed)
     same = (native["grid_id"] == selection["grid_id"]
             and native["profile_id"] == selection["profile_id"]
             and selected_models(native) == selected_models(selection)
             and native.get("invest_version") == INVEST_VERSION
+            and compatible
             and workspace._get("scenarios", native["scenario_id"])["kind"] == "baseline")
     if required and not same:
-        raise ValueError("Choose an original-landcover baseline with the same grid, profile and selected models")
+        raise ValueError(
+            "Choose an original-landcover baseline with the same grid, profile and selected models, "
+            "the experiment engine's retained requested version, and compatible per-model execution versions")
     return same
 
 
