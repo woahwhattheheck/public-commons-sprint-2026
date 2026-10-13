@@ -485,10 +485,19 @@ def main():
                               "builds": len(result["builds"]), "receiverReopened": len(reopened)}), flush=True)
         except BaseException as error:
             retain_primary(error)
+            if error is not primary_error:
+                generation.setdefault("cleanupErrors", []).append({
+                    "operation": "temporary_lifetime", "kind": type(error).__name__,
+                    "message": str(error)})
+                report_failure("EDR_ORIGINAL_LIFETIME_FAILED", error,
+                               primaryType=type(primary_error).__name__,
+                               primaryMessage=str(primary_error)[:2000])
             generation.update(state="failed", endedAt=utc(),
                               error={"type": type(primary_error).__name__, "message": str(primary_error)[:2000]})
             public["status"] = "RETAINED_FOR_CONTINUATION"
             retain_failure_result(result_path, public)
+            if error is not primary_error:
+                raise primary_error.with_traceback(primary_error.__traceback__) from None
             raise
         finally:
             drain_lifetime(*sys.exc_info())
