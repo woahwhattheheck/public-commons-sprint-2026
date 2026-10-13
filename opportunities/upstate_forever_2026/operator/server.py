@@ -1190,7 +1190,9 @@ class Handler(BaseHTTPRequestHandler):
                 if url.path in review_reads:
                     return self.send_json(200, self.app.customer_reviews.read(workspace, review_reads[url.path],
                         {name: one(name) for name in ("review_id", "before_id", "after_id", "export_id",
-                                                   "response_id", "handback_id", "revised_review_id", "receipt_id")}))
+                                                   "response_id", "handback_id", "revised_review_id", "receipt_id",
+                                                   "q", "owner", "owner_state", "requested_assignee", "disposition",
+                                                   "priority", "offset", "limit", "snapshot_id", "request_id")}))
                 if url.path == "/api/spatial/catalog":
                     return self.send_json(200, self.app.spatial_read(workspace, "catalog"))
                 if url.path == "/api/deliveries/report":
