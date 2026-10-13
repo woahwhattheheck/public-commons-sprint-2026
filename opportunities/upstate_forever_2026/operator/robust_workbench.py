@@ -185,7 +185,10 @@ class RobustWorkbench:
                 if not result.get("ready") or not isinstance(result.get("selection"), dict):
                     issues = result.get("issues") or ["The selected native profile is not ready for delivery"]
                     raise self.Fault("DECISION_DELIVERY_UNAVAILABLE",
-                                     "; ".join(str(item) for item in issues), 409)
+                                     "; ".join(str(item.get("message") or item.get("code") or
+                                                   "Unavailable native profile")
+                                               if isinstance(item, dict) else str(item)
+                                               for item in issues), 409)
                 return {"kind": "native_delivery", **result}
             return result
         native = DecisionWorkspace(ws)

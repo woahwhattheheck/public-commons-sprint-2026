@@ -16,11 +16,13 @@ const { values: args } = parseArgs({ options: {
   configuration: { type: 'string' }, output: { type: 'string' },
   objective: { type: 'string', default: 'worst_case' }, 'time-limit': { type: 'string', default: '60' },
   'run-label': { type: 'string' }, 'browser-channel': { type: 'string' },
+  'delivery-profile': { type: 'string' }, 'delivery-point': { type: 'string' },
+  'delivery-budgets': { type: 'string' },
   headed: { type: 'boolean', default: false }, video: { type: 'boolean', default: false },
   help: { type: 'boolean', default: false },
 } });
 if (args.help) {
-  process.stdout.write('Usage: node source/run_robust_workbench_browser.mjs --url-file PRIVATE_URL_FILE (--experiment RETAINED_EXPERIMENT_ID | --diagnostic RETAINED_DIAGNOSTIC_ID --report-sha256 EXACT_REPORT_SHA256) --configuration DECISION_CONFIG_JSON [--workspace OPERATOR_WORKSPACE_KEY] [--output DIRECTORY] [--objective worst_case|minimax_regret|expected] [--time-limit SECONDS] [--video] [--headed]\nDecision configuration supplies actual candidate/profile/metric IDs, costs, capacity use, cost units, metric scales and weights. Optional ceilings, targets, probabilities and group limits are honored. Outcome cells come from the selected original retained experiment or diagnostic. Diagnostic mode pins the exact report SHA and honors source.diagnostic_design structural choices.\n');
+  process.stdout.write('Usage: node source/run_robust_workbench_browser.mjs --url-file PRIVATE_URL_FILE (--experiment RETAINED_EXPERIMENT_ID | --diagnostic RETAINED_DIAGNOSTIC_ID --report-sha256 EXACT_REPORT_SHA256) --configuration DECISION_CONFIG_JSON [--workspace OPERATOR_WORKSPACE_KEY] [--output DIRECTORY] [--objective worst_case|minimax_regret|expected] [--time-limit SECONDS] [--delivery-profile NATIVE_PROFILE_ID [--delivery-point ZERO_BASED_INDEX --delivery-budgets EXPLICIT_COMMA_SEPARATED_BUDGETS]] [--video] [--headed]\nDecision configuration supplies actual candidate/profile/metric IDs, costs, capacity use, cost units, metric scales and weights. Optional ceilings, targets, probabilities and group limits are honored. Outcome cells come from the selected original retained experiment or diagnostic. Diagnostic mode pins the exact report SHA and honors source.diagnostic_design structural choices. Optional delivery mode opens the original atlas using an explicit native profile, checks its original run pair, backlink and retained mobile draft. An explicit frontier point also requires explicit delivery budgets; it is calculated through the original frontier action.\n');
   process.exit(0);
 }
 const runLabel = args['run-label'] || new Date().toISOString().replace(/[:.]/g, '-');
@@ -235,6 +237,136 @@ async function exportFile(selector, name, extension) {
   journal.exports.push(record);
   return { path, bytes, task };
 }
+
+async function exerciseNativeDelivery(saved, solved, allowance) {
+  if (!args['delivery-profile']) return;
+  const profileId = args['delivery-profile'];
+  let calculation = solved.task.result, pointIndex = null;
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await ready(); await openStudy(saved.id);
+  if (args['delivery-budgets']) {
+    const budgets = args['delivery-budgets'].split(',').map(value => Number(value.trim()));
+    await page.locator('#rw-budgets').fill(budgets.join(', '));
+    const frontier = await action('#rw-frontier', 'robust.frontier', (allowance + 180) * 1000);
+    calculation = frontier.task.result;
+    pointIndex = Number(args['delivery-point']);
+    requireValue(calculation?.answer?.schema_version === 'ecosci.robust-frontier/1',
+      'The original frontier action did not return its retained answer.');
+    requireValue(calculation.revision === saved.revision,
+      'The delivery frontier did not use the selected saved revision.');
+    const point = calculation.answer.points[pointIndex];
+    requireValue(point && Array.isArray(point.result?.selected_ids),
+      'The explicitly selected frontier point has no feasible retained selection.');
+    journal.delivery_frontier = clone(calculation);
+  }
+  const expected = { study_id: saved.id, run_id: calculation.run_id };
+  requireValue(expected.run_id, 'The original calculation has no retained run ID.');
+  const getOptions = async (rememberedPoint = null) => {
+    const pending = page.waitForResponse(matches('/api/robust-workbench/delivery-options',
+      { ...expected, ...(rememberedPoint === null ? {} : { point_index: rememberedPoint }) }));
+    await page.locator('#rw-nativeDelivery').click();
+    return nativeJSON(await pending, 'Saved decision delivery options');
+  };
+  let options = await getOptions();
+  requireValue(options.study_id === saved.id && options.run_id === calculation.run_id &&
+    options.revision === saved.revision, 'Delivery options changed the saved calculation identity.');
+  await page.locator('#rw-nativeDeliveryCard').waitFor({ state: 'visible' });
+  if (pointIndex !== null) {
+    const pending = page.waitForResponse(matches('/api/robust-workbench/delivery-options',
+      { ...expected, point_index: pointIndex }));
+    await page.locator('#rw-nativePoint').selectOption(String(pointIndex));
+    options = await nativeJSON(await pending, 'Explicit frontier point delivery options');
+    requireValue(options.point_index === pointIndex, 'The chosen frontier point changed.');
+  }
+  const profile = options.profiles?.find(row => row.id === profileId);
+  requireValue(profile?.ready === true,
+    'The explicitly selected native profile is unavailable: ' +
+    (profile?.issues || options.issues || ['Profile is outside the saved calculation']).map(
+      item => typeof item === 'object' ? item.message || item.code || JSON.stringify(item) : item).join('; '));
+  await page.locator('#rw-nativeProfile').selectOption(profileId);
+  const openMap = async () => {
+    const pending = page.waitForResponse(matches('/api/robust-workbench/delivery-release',
+      { ...expected, profile_id: profileId, ...(pointIndex === null ? {} : { point_index: pointIndex }) }));
+    await page.locator('#rw-nativeOpenMap').click();
+    const released = await nativeJSON(await pending, 'Original native map release');
+    const binding = released.selection?.source_decision;
+    requireValue(released.ready && binding?.study_id === saved.id &&
+      binding.run_id === calculation.run_id && binding.revision === saved.revision &&
+      binding.profile_id === profileId && (binding.point_index ?? null) === pointIndex,
+      'The map handoff lost its explicit saved calculation, profile or point.');
+    requireValue(released.selection.baseline_run_id === profile.baseline_run_id &&
+      canonical(released.selection.scenario_run_ids) === canonical([profile.alternative_run_id]),
+      'The map handoff changed the original same-profile native pair.');
+    await page.locator('.map-atlas [data-atlas-form]').waitFor({ state: 'visible' });
+    return released;
+  };
+  const release = await openMap();
+  const readDraft = () => page.evaluate(key =>
+    JSON.parse(sessionStorage.getItem('upstate-atlas-draft:' + key) || 'null'),
+    journal.operator_workspace_key);
+  const checkDraft = async () => {
+    const retained = await readDraft(), selection = retained?.selection;
+    requireValue(selection?.baseline_run_id === release.selection.baseline_run_id &&
+      canonical(selection?.scenario_run_ids) === canonical(release.selection.scenario_run_ids) &&
+      canonical(selection?.source_decision) === canonical(release.selection.source_decision),
+      'The original atlas draft changed its native pair or saved decision binding.');
+    return retained;
+  };
+  await checkDraft();
+  requireValue(await page.locator('.map-atlas select[name="baseline"]').isDisabled(),
+    'The saved decision baseline can be changed independently in the atlas.');
+  const alternatives = page.locator('.map-atlas input[name="alternatives"]:checked');
+  requireValue(await alternatives.count() === 1 && await alternatives.first().isDisabled(),
+    'The saved whole scenario package is not retained as one locked alternative.');
+  await shot('08-decision-native-map-draft', '.map-atlas');
+  await page.locator('.map-atlas [data-atlas-action="step"][data-step="3"]').click();
+  const backlink = page.locator('.map-atlas [data-atlas-action="source-decision"]');
+  await backlink.waitFor({ state: 'visible' });
+  requireValue(await backlink.getAttribute('data-study-id') === saved.id &&
+    await backlink.getAttribute('data-run-id') === calculation.run_id &&
+    Number(await backlink.getAttribute('data-revision')) === saved.revision &&
+    await backlink.getAttribute('data-profile-id') === profileId,
+    'The atlas backlink does not identify its original saved calculation.');
+  requireValue((await backlink.getAttribute('data-point-index')) ===
+    (pointIndex === null ? null : String(pointIndex)), 'The atlas backlink changed its explicit frontier point.');
+  const reopened = page.waitForResponse(matches('/api/robust-workbench/run', expected));
+  await backlink.click(); await nativeJSON(await reopened, 'Reopen exact saved calculation from atlas');
+  await page.locator('#rw-results').waitFor({ state: 'visible' });
+  await page.waitForFunction(({ profile, point }) =>
+    document.querySelector('#rw-nativeProfile')?.value === profile &&
+    (point === null || document.querySelector('#rw-nativePoint')?.value === String(point)) &&
+    document.querySelector('#rw-nativeOpenMap')?.disabled === false,
+    { profile: profileId, point: pointIndex });
+  options = await getOptions(pointIndex);
+  await page.waitForFunction(({ profile, point }) =>
+    document.querySelector('#rw-nativeProfile')?.value === profile &&
+    (point === null || document.querySelector('#rw-nativePoint')?.value === String(point)) &&
+    document.querySelector('#rw-nativeOpenMap')?.disabled === false,
+    { profile: profileId, point: pointIndex });
+  requireValue(await page.locator('#rw-nativeProfile').inputValue() === profileId,
+    'The saved calculation backlink did not retain the explicit native profile.');
+  const second = await openMap();
+  requireValue(canonical(second.selection.source_decision) === canonical(release.selection.source_decision),
+    'Reopening the same saved selection changed its source binding.');
+  await page.reload({ waitUntil: 'domcontentloaded' });
+  const atlasNav = page.locator('[data-view="map-atlas"]');
+  await atlasNav.waitFor({ state: 'visible' });
+  if (!(await page.locator('.map-atlas [data-atlas-form]').isVisible())) await atlasNav.click();
+  await page.locator('.map-atlas [data-atlas-form]').waitFor({ state: 'visible' });
+  const restored = await checkDraft();
+  await page.setViewportSize({ width: 390, height: 844 });
+  await shot('09-reopened-native-map-draft-mobile', '.map-atlas');
+  journal.native_delivery = {
+    study_id: saved.id, run_id: calculation.run_id, revision: saved.revision,
+    profile_id: profileId, point_index: pointIndex,
+    source_decision: clone(release.selection.source_decision),
+    baseline_run_id: release.selection.baseline_run_id,
+    scenario_run_ids: clone(release.selection.scenario_run_ids),
+    restored_draft_step: restored.step, original_backlink: 'reopened',
+    mobile_viewport: { width: 390, height: 844 },
+  };
+}
+
 async function main() {
   await mkdir(join(output, 'exports'), { recursive: true });
   requireValue(Boolean(args.experiment) !== Boolean(args.diagnostic),
@@ -247,6 +379,19 @@ async function main() {
   requireValue(['worst_case', 'minimax_regret', 'expected'].includes(args.objective), 'Choose a native robust objective.');
   const allowance = number(Number(args['time-limit']), 'calculation time allowance', { positive: true });
   requireValue(allowance >= 1 && allowance <= 3600, 'Calculation time allowance must be from 1 to 3600 seconds.');
+  if (args['delivery-profile']) requireValue(/^[0-9a-f]{64}$/.test(args['delivery-profile']),
+    '--delivery-profile must be the exact native profile content ID.');
+  if (args['delivery-point'] !== undefined || args['delivery-budgets'] !== undefined) {
+    requireValue(args['delivery-profile'] && /^(0|[1-9][0-9]*)$/.test(args['delivery-point'] || '') &&
+      Number.isSafeInteger(Number(args['delivery-point'])) && args['delivery-budgets'],
+      'An explicit --delivery-point requires --delivery-profile and --delivery-budgets.');
+    const parts = args['delivery-budgets'].split(',').map(value => value.trim());
+    requireValue(parts.length > 0 && parts.every(value => value && Number.isFinite(Number(value)) && Number(value) >= 0),
+      '--delivery-budgets must contain explicit nonnegative finite budget values.');
+    const ordered = [...new Set(parts.map(Number))].sort((a,b) => a-b);
+    requireValue(Number(args['delivery-point']) < ordered.length,
+      '--delivery-point is outside the original sorted unique budget list.');
+  }
   const supplied = JSON.parse(await readFile(resolve(args.configuration), 'utf8'));
   privateURL = (args['url-file'] ? await readFile(args['url-file'], 'utf8') : args.url || process.env.ECO_OPERATOR_URL || '').trim();
   requireValue(privateURL, 'Supply the original private operator URL via --url-file, --url or ECO_OPERATOR_URL.');
@@ -370,6 +515,7 @@ async function main() {
   await page.setViewportSize({ width: 390, height: 844 });
   await shot('07-reopened-decision-mobile', '#rw-results');
   journal.mobile_viewport = { width: 390, height: 844 };
+  await exerciseNativeDelivery(saved, solved, allowance);
   journal.status = 'complete';
 }
 try { await main(); }

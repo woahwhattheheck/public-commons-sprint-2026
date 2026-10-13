@@ -205,3 +205,19 @@ For receiving, transfer the complete study/project using the original workspace 
 Use the current native receiving operation for this journey. An unavailable profile reports its concrete missing original run/output or incompatible source condition before opening a deliverable draft. Continue native preparation through the existing scientific workflow, then reopen the same saved decision; the read endpoints do not schedule hidden model work.
 
 The guarded installer also requires the existing `model/native_versions.py` dependency in the assembled application. Include its current full host postimage when receiving over a baseline that predates the shared producing-stage version resolver.
+
+### Existing browser journey: saved calculation to original atlas
+
+The existing `source/run_robust_workbench_browser.mjs` now accepts `--delivery-profile ORIGINAL_NATIVE_PROFILE_ID`. After its original source preparation, solve, report/project export and receiving steps, it reopens the original saved calculation, chooses that explicit profile in **Prepare map release**, and opens the existing atlas. It verifies the actual same-profile run pair and saved decision hashes, locked cohort controls, the exact calculation backlink, retained profile choice, draft reload and a 390-pixel mobile view.
+
+For a frontier, additionally supply `--delivery-point ZERO_BASED_INDEX --delivery-budgets COMMA_SEPARATED_VALUES`. These are explicit decision budget thresholds. The driver uses the original frontier control and indexes its sorted, unique budget list. A point without a feasible retained result fails with its concrete condition; no point is substituted.
+
+```sh
+node source/run_robust_workbench_browser.mjs \
+  --url-file PRIVATE_URL_FILE --workspace WORKSPACE_KEY \
+  --diagnostic ORIGINAL_DIAGNOSTIC_ID --report-sha256 EXACT_REPORT_SHA256 \
+  --configuration EXPLICIT_DECISION_INPUTS.json \
+  --delivery-profile ORIGINAL_NATIVE_PROFILE_ID --output RECEIVING_OUTPUT
+```
+
+The optional extension leaves a restored original atlas draft for review and its existing queued delivery build. The journey journal records the saved study/run/revision, explicit profile and point, source pin and actual baseline/alternative run IDs.
