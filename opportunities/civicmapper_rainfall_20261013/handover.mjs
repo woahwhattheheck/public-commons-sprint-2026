@@ -10,7 +10,7 @@ for(let i=0;i<words.length;i+=2){if(!words[i]?.startsWith("--")||!words[i+1])thr
 const sha=data=>createHash("sha256").update(data).digest("hex");
 const readText=async file=>new TextDecoder("utf-8",{fatal:true,ignoreBOM:true}).decode(await fs.readFile(file));
 const ownDir=path.dirname(fileURLToPath(import.meta.url));
-const names=["core.js","index.html","capture.mjs","portable.js","handover.mjs","receive_handover.mjs","README.md","SOURCES.md","HANDOVER.md","AGENTS.md"];
+const names=["core.js","index.html","capture.mjs","portable.js","handover.mjs","receive_handover.mjs","README.md","SOURCES.md","HANDOVER.md","AGENTS.md","source/20261013/publisher-selection.json"];
 async function verify(root) {
  const manifest=JSON.parse(await fs.readFile(path.join(root,"manifest.json"),"utf8"));
  if(manifest.schema!=="rainfall-handover/v1"||!Array.isArray(manifest.files))throw Error("Unknown handover manifest.");
@@ -32,7 +32,7 @@ try{
   const sourceFiles=Object.fromEntries(await Promise.all(names.map(async name=>[name,await readText(path.join(ownDir,name))])));
   const captureTexts=[await readText(args.before)];if(args.after)captureTexts.push(await readText(args.after));
   const notes=args.notes?await readText(args.notes):"";
-  const publicSourceTexts=args["public-sources"]?[await readText(args["public-sources"])]:[];
+  const publicSourceTexts=args["public-sources"]?[await readText(args["public-sources"])]:[sourceFiles["source/20261013/publisher-selection.json"]];
   const result=RainfallHandover.build({R:RainfallReview,sourceFiles,captureTexts,notes,publicSourceTexts});
   const destination=path.resolve(args.out),parent=path.dirname(destination),staging=destination+".building-"+randomUUID();
   await fs.mkdir(parent,{recursive:true});
