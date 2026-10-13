@@ -1,0 +1,44 @@
+{
+  "schema": "stellar-forge.flowable-history-source-contract.v1",
+  "upstream": {
+    "repository": "flowable/flowable-engine",
+    "commit": "0779d68e5a3385b74d8acb8bc37901ff54513249",
+    "files": [
+      {
+        "path": "modules/flowable-rest/src/main/java/org/flowable/rest/service/api/history/HistoricProcessInstanceResponse.java",
+        "gitBlob": "c758f67023c824c26314bafec2fc61f5e7e14e2b"
+      },
+      {
+        "path": "modules/flowable-rest/src/main/java/org/flowable/rest/service/api/history/HistoricTaskInstanceResponse.java",
+        "gitBlob": "35d932d9ff15ed8a843569c8a6e666a3909d100f"
+      },
+      {
+        "path": "modules/flowable-rest/src/main/java/org/flowable/rest/service/api/history/HistoricActivityInstanceResponse.java",
+        "gitBlob": "a7d691af6e9e3c0907d0373db39b755814e4626b"
+      }
+    ]
+  },
+  "maintained": {
+    "repository": "woahwhattheheck/tjlabs-stellar-merchant-workspace",
+    "commit": "3d41bc34ecca412d216194966a5ca3cdb4700df7",
+    "nativePath": "stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/native.mjs",
+    "nativeBlob": "65a5d5346b9a2f14c55d920b59a7c23da6043c82"
+  },
+  "contract": {
+    "collections": [
+      "definitions",
+      "historicProcesses",
+      "historicTasks",
+      "historicActivities"
+    ],
+    "nativeRows": "Original native response values, unmodified. Collection paging verifies total, offset and distinct original IDs. Full history is not an atomic snapshot.",
+    "timestamps": [
+      "startTime",
+      "endTime",
+      "claimTime"
+    ],
+    "duration": "durationInMillis is retained as an audit comparison; elapsed metrics use exact parsed UTC start/end milliseconds.",
+    "taskCompletion": "Native task endTime with absent/null/completed deleteReason is normal completion; all other nonempty deletion reasons are separate.",
+    "source": "The original workspace inventory and native page/resource blobs are retained in the complete workspace export."
+  }
+}
