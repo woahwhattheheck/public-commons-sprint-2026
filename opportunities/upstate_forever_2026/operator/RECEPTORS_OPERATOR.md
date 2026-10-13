@@ -435,3 +435,33 @@ The saved source-water programme links directly to **Run programmes**, including
 ## Saved geography in scientific reports
 
 Saved original networks and prepared source areas now offer **Prepare scientific report source**. The queued action retains the complete original network, polygon subsets, membership tables and source records as one typed scientific report choice. Open its saved result, then continue to the existing scientific report composer with that exact source. The standalone report includes the original geographic SVG; the typed recipe contributes source tables and links to the shared publisher. Original publisher AreaSqKm sums show their completeness and use distinct HUC12 units for union totals. Complete native/receiving instructions are in `model/RECEPTOR_REPORT_SOURCE.md`.
+
+
+## Original projected maps in scientific source reports
+
+**Prepare scientific report source** now opens a form for the retained network
+or prepared-area result. The source-only default preserves the complete original
+geography, memberships and source files. On an equipped host, selecting
+**Include projected original watershed maps** adds native SVG/PDF figures from
+the same original Esri body. The form shows the installed ReportLab, Shapely and
+PROJ versions; a stale form cannot submit a result after a Workspace, desk
+generation or saved-result change.
+
+Mapped editions keep separate original HUC12 polygons, light upstream support
+and dark anchor outlines. Labels refer to receiving areas, not inferred intake
+locations. North and scale use the original projected grid; EPSG:3857 distances
+are not corrected ground distances. Published area quantities continue to use
+the original AreaSqKm attributes. The original Esri parser's ring assembly and
+any validity operations are retained with every feature's original source
+position and the full decoded body identity.
+
+The retained result card identifies the native figure count, CRS and recorded
+reader operations. Its printable geography, individual downloads and complete
+source package carry the figure specification, SVGs, exact original products,
+geometry interpretation inventory, and producing source files. The existing
+scientific report composer opens the actual retained source choice and renders
+the shared typed map figures with the original source tables.
+
+See `model/RECEPTOR_REPORT_SOURCE.md` for the native command, complete
+dependencies, immutable mapped-edition identity and the ordinary queued
+render/export/restore course.
