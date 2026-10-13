@@ -524,7 +524,8 @@ def receive(workspace_path, edition_id, review_selection, output, *, created_at=
                        "review_selection": preview["review_selection"]}
         atomic_json(retained_request, request, immutable=True)
         atomic_json(request_path, request, immutable=True)
-        _event("prepare-original-review", operation_id=operation_id, **target)
+        _event("prepare-original-review", operation_id=operation_id,
+               **({"edition_id": edition_id} if comparison_id is None else target))
         created = engine.create_review(
             workspace, comparison_id if comparison_id is not None else edition_id,
             preview["review_selection"],
@@ -712,7 +713,8 @@ def continue_selected_review(workspace_path, receipt_path, *, response_path=None
                 **target, "selection": selection}
     with held(operation / "operation.lock"):
         atomic_json(operation / "identity.json", identity, immutable=True)
-        _event("preview-selected-review", review_id=review["id"], **target)
+        _event("preview-selected-review", review_id=review["id"],
+               **({"edition_id": edition_id} if comparison_id is None else target))
         archive_path = operation / "editable-review.zip"
         archive_receipt = operation / "study-export.json"
         if archive_receipt.is_file():
