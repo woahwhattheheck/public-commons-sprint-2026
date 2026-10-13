@@ -37,6 +37,11 @@ function singleLine(value, label) {
 export async function readNativeOperatorConfiguration(path) {
   path = resolve(path);
   const raw = JSON.parse(new TextDecoder('utf-8', {fatal:true}).decode(await readNativePrivateFile(path)));
+  return normalizeNativeOperatorConfiguration(raw, path);
+}
+/** Normalize the same original connection from an already retained file snapshot. */
+export function normalizeNativeOperatorConfiguration(raw, path) {
+  path = resolve(path);
   requireNative(plain(raw) && raw.schema === NATIVE_OPERATOR_CONNECTION_SCHEMA &&
     Object.keys(raw).every(key => ['schema','operators'].includes(key)) && plain(raw.operators) &&
     Object.keys(raw.operators).length >= 1 && Object.keys(raw.operators).length <= 128,

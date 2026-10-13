@@ -1100,6 +1100,329 @@
       },
       "required": [],
       "additionalProperties": false
+    },
+    "conformance_plan": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "label": {
+          "type": "string",
+          "description": "Name this complete reviewed record.",
+          "maxLength": 240,
+          "minLength": 1
+        },
+        "actor": {
+          "type": "string",
+          "description": "Actual operator or reviewer.",
+          "maxLength": 200,
+          "minLength": 1
+        },
+        "subjectKind": {
+          "type": "string",
+          "enum": [
+            "sources",
+            "editions"
+          ]
+        },
+        "subjectId": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "family": {
+          "type": "string",
+          "enum": [
+            "hsds-3.3.1",
+            "fhir-hsd-1.0.0"
+          ]
+        },
+        "tables": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "description": "Exact original table or resource type.",
+            "maxLength": 128
+          },
+          "uniqueItems": true,
+          "maxItems": 100
+        },
+        "profileDisposition": {
+          "type": "string",
+          "enum": [
+            "selected-standard",
+            "migration-assessment"
+          ],
+          "description": "A migration assessment does not assert that the publisher selected this target standard."
+        },
+        "publisherProfile": {
+          "type": "string",
+          "description": "Publisher's actual declared profile URI or version; leave empty only if none was observed.",
+          "maxLength": 2048
+        },
+        "scope": {
+          "type": "string",
+          "description": "Exact publication/selection coverage and intended receiving use.",
+          "maxLength": 4000
+        },
+        "formatPolicy": {
+          "type": "string",
+          "enum": [
+            "annotation",
+            "assert"
+          ],
+          "description": "Whether canonical JSON Schema format declarations are checked or retained as annotations. Tabular field formats remain their declared logical type and format assertions."
+        },
+        "definitionRefs": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "sourceId": {
+                "type": "string",
+                "pattern": "^[0-9a-f]{64}$",
+                "description": "Exact retained Directory source."
+              },
+              "recordId": {
+                "type": "string",
+                "pattern": "^[0-9a-f]{64}$",
+                "description": "Exact retained original resource record."
+              }
+            },
+            "required": [
+              "sourceId",
+              "recordId"
+            ]
+          },
+          "uniqueItems": true,
+          "maxItems": 3,
+          "description": "For HSD, select the original published 1.0.0 StructureDefinition records with full snapshots. HSDS leaves this empty."
+        },
+        "note": {
+          "type": "string",
+          "description": "Full interpretation and standards-selection note.",
+          "maxLength": 8192
+        }
+      },
+      "required": [
+        "label",
+        "actor",
+        "subjectKind",
+        "subjectId",
+        "family",
+        "profileDisposition",
+        "scope"
+      ]
+    },
+    "conformance_assess": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "label": {
+          "type": "string",
+          "description": "Name this complete reviewed record.",
+          "maxLength": 240,
+          "minLength": 1
+        },
+        "actor": {
+          "type": "string",
+          "description": "Actual operator or reviewer.",
+          "maxLength": 200,
+          "minLength": 1
+        },
+        "planId": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "note": {
+          "type": "string",
+          "description": "Purpose of the complete original assessment.",
+          "maxLength": 8192
+        }
+      },
+      "required": [
+        "label",
+        "actor",
+        "planId"
+      ]
+    },
+    "conformance_review": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "label": {
+          "type": "string",
+          "description": "Name this complete reviewed record.",
+          "maxLength": 240,
+          "minLength": 1
+        },
+        "actor": {
+          "type": "string",
+          "description": "Actual operator or reviewer.",
+          "maxLength": 200,
+          "minLength": 1
+        },
+        "assessmentId": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "disposition": {
+          "type": "string",
+          "enum": [
+            "accept-for-receiving",
+            "needs-correction",
+            "defer"
+          ]
+        },
+        "declaration": {
+          "type": "string",
+          "description": "Reviewer's interpretation of coverage, limitations and selected receiving use.",
+          "maxLength": 12000
+        },
+        "decisions": {
+          "type": "array",
+          "maxItems": 10000,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "findingId": {
+                "type": "string",
+                "pattern": "^[0-9a-f]{64}$"
+              },
+              "disposition": {
+                "type": "string",
+                "enum": [
+                  "accepted-deviation",
+                  "requires-correction",
+                  "not-applicable"
+                ]
+              },
+              "reason": {
+                "type": "string",
+                "description": "Source-bound reason; findings and originals remain unchanged.",
+                "maxLength": 4000
+              }
+            },
+            "required": [
+              "findingId",
+              "disposition",
+              "reason"
+            ]
+          }
+        },
+        "predecessorId": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "string",
+              "pattern": "^[0-9a-f]{64}$"
+            }
+          ]
+        },
+        "note": {
+          "type": "string",
+          "description": "Additional review note.",
+          "maxLength": 8192
+        },
+        "groups": {
+          "type": "array",
+          "maxItems": 1000,
+          "description": "Explicit groups over this immutable assessment. Each group's full matched finding IDs are retained. Per-finding decisions take precedence; overlapping groups are rejected.",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "code": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 200
+              },
+              "severity": {
+                "type": "string",
+                "enum": [
+                  "error",
+                  "warning",
+                  "not-evaluated"
+                ]
+              },
+              "table": {
+                "type": "string",
+                "maxLength": 128
+              },
+              "disposition": {
+                "type": "string",
+                "enum": [
+                  "accepted-deviation",
+                  "requires-correction",
+                  "not-applicable"
+                ]
+              },
+              "reason": {
+                "type": "string",
+                "description": "Source-bound reason; findings and originals remain unchanged.",
+                "maxLength": 4000
+              }
+            },
+            "required": [
+              "code",
+              "disposition",
+              "reason"
+            ]
+          }
+        }
+      },
+      "required": [
+        "label",
+        "actor",
+        "assessmentId",
+        "disposition",
+        "declaration"
+      ]
+    },
+    "conformance_compare": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "label": {
+          "type": "string",
+          "description": "Name this complete reviewed record.",
+          "maxLength": 240,
+          "minLength": 1
+        },
+        "actor": {
+          "type": "string",
+          "description": "Actual operator or reviewer.",
+          "maxLength": 200,
+          "minLength": 1
+        },
+        "beforeAssessmentId": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "afterAssessmentId": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "scopeNote": {
+          "type": "string",
+          "description": "Explain the two selected assessment populations; this compares rule outcomes without inferring entity equivalence.",
+          "maxLength": 8192
+        },
+        "note": {
+          "type": "string",
+          "description": "Additional note.",
+          "maxLength": 8192
+        }
+      },
+      "required": [
+        "label",
+        "actor",
+        "beforeAssessmentId",
+        "afterAssessmentId",
+        "scopeNote"
+      ]
     }
   },
   "actions": [
@@ -1158,6 +1481,34 @@
       "method": "POST",
       "path": "/api/directory/exports",
       "python": "prepare_directory_export"
+    },
+    {
+      "id": "conformance-plan",
+      "input": "conformance_plan",
+      "method": "POST",
+      "path": "/api/directory/conformance/plans",
+      "python": "save_directory_conformance_plan"
+    },
+    {
+      "id": "conformance-assess",
+      "input": "conformance_assess",
+      "method": "POST",
+      "path": "/api/directory/conformance/assessments",
+      "python": "assess_directory_conformance"
+    },
+    {
+      "id": "conformance-review",
+      "input": "conformance_review",
+      "method": "POST",
+      "path": "/api/directory/conformance/reviews",
+      "python": "review_directory_conformance"
+    },
+    {
+      "id": "conformance-compare",
+      "input": "conformance_compare",
+      "method": "POST",
+      "path": "/api/directory/conformance/comparisons",
+      "python": "compare_directory_conformance"
     }
   ],
   "limits": {
@@ -1185,7 +1536,11 @@
     "exports",
     "receivingReviews",
     "receives",
-    "importProfiles"
+    "importProfiles",
+    "conformancePlans",
+    "conformanceAssessments",
+    "conformanceReviews",
+    "conformanceComparisons"
   ],
   "mutableKinds": [
     "acquisitions",
@@ -1199,6 +1554,17 @@
     "Reviewed mapping produces a derived FHIR collection and retains every original directory input and mapping disposition.",
     "Selection records stated status, schedules, capacity units/timestamps and operator decisions. No directory capacity is reserved.",
     "Clinical Task/ServiceRequest owner/performer changes occur only through explicit original-resource bindings; status, consent, response and outcome remain their original values.",
-    "Complete workspace receiving retains the same original UUID, registry, indices, captures, inherited Gravity source and every recorded original file."
-  ]
+    "Complete workspace receiving retains the same original UUID, registry, indices, captures, inherited Gravity source and every recorded original file.",
+    "Original source and edition IDs, logical JSON number tokens and member bytes are unchanged.",
+    "HSDS JSON assertions follow the exact retained canonical schemas; unknown properties are allowed unless a selected source schema says otherwise.",
+    "Tabular cells are interpreted only for checking their original compiled data-package declarations; interpreted values never replace original cells.",
+    "FHIR assessment records cardinality, selected primitive/fixed/pattern and reference observations from the exact retained snapshots. Unsupported slices, invariants, external bases and terminology are reported as unevaluated requirements.",
+    "Must Support and narrative semantic obligations remain review requirements, not invented missing-field cardinalities.",
+    "Format annotation and additional format assertions are separate operator selections.",
+    "No result is a blanket certification. A reviewed receiving disposition retains all findings and coverage limitations.",
+    "Comparison reports complete rule-outcome counts and row populations, without silently matching entities from different sources.",
+    "Whole editable export includes every assessment index, finding, rule, report and original subject.",
+    "Accept-for-receiving requires an explicit accepted-deviation or not-applicable disposition for every error; grouped decisions freeze every matched original finding ID. Findings are never removed."
+  ],
+  "conformanceCatalogueFile": "directory-conformance-schema.json"
 }

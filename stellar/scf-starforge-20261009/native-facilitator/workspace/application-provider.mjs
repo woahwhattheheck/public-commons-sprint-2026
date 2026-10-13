@@ -66,18 +66,17 @@ function selectedArguments(request) {
   return {directory, ownershipDirectory, port};
 }
 
-/** Check the original immutable start review immediately before the managed child. */
-export async function verifyNativeOperatorLaunch(request, operationDirectory) {
-  if (request.command !== COMMAND || !request.applicationId) return;
-  const selected = selectedArguments(request);
+/** Check the original immutable review and its selected source/configuration files. */
+export async function verifyNativeReviewedInputs(request, operationDirectory, command) {
+  if (request.command !== command || !request.applicationId) return null;
   const directory = absolute(operationDirectory), root = dirname(dirname(directory));
   const applicationId = recordId(request.applicationId), id = operationId(basename(directory));
   const run = await readJSON(join(root, 'applications', applicationId, 'runs', id + '.json'));
-  need(run.applicationId === applicationId && run.id === id && run.request.command === COMMAND &&
+  need(run.applicationId === applicationId && run.id === id && run.request.command === command &&
     isDeepStrictEqual(run.request.args, request.args), 'APPLICATION_NATIVE_OPERATOR_RUN_CHANGED');
   const review = await readJSON(join(root, 'application-reviews', recordId(run.reviewId) + '.json'));
   need(review.schema === 'stellar-forge.application-start-review.v1' &&
-    review.applicationId === applicationId && review.command.command === COMMAND &&
+    review.applicationId === applicationId && review.command.command === command &&
     isDeepStrictEqual(review.command.args, request.args) && Array.isArray(review.command.inputs),
   'APPLICATION_NATIVE_OPERATOR_REVIEW_CHANGED');
   for (const input of review.command.inputs) {
@@ -87,7 +86,10 @@ export async function verifyNativeOperatorLaunch(request, operationDirectory) {
       'APPLICATION_NATIVE_OPERATOR_SOURCE_CHANGED');
     }
   }
-  for (const path of new Set([selected.directory, selected.ownershipDirectory])) {
+  return review;
+}
+export async function verifyNativeReviewedDirectories(review, paths) {
+  for (const path of new Set(paths)) {
     const input = review.command.inputs.find(value => value.path === path && value.kind === 'directory');
     need(input?.exists === true, 'APPLICATION_NATIVE_OPERATOR_DIRECTORY_CHANGED');
     await privateDirectory(path);
@@ -95,6 +97,13 @@ export async function verifyNativeOperatorLaunch(request, operationDirectory) {
     need(await realpath(path) === path && current.dev === input.dev && current.ino === input.ino,
       'APPLICATION_NATIVE_OPERATOR_DIRECTORY_CHANGED');
   }
+}
+/** Keep the same native profile and signing-account directory check before its child. */
+export async function verifyNativeOperatorLaunch(request, operationDirectory) {
+  if (request.command !== COMMAND || !request.applicationId) return;
+  const selected = selectedArguments(request);
+  const review = await verifyNativeReviewedInputs(request, operationDirectory, COMMAND);
+  await verifyNativeReviewedDirectories(review, [selected.directory, selected.ownershipDirectory]);
 }
 
 /** Match one authenticated original listener to its retained process and directories. */

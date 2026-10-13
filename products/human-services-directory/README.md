@@ -23,6 +23,7 @@ The product connects original Open Referral HSDS source with HL7 FHIR Human Serv
 | Complete native, browser, connected and installed receiving | [RECEIVING.md](RECEIVING.md) |
 | Exact original source versions and retained identities | [SOURCE.json](SOURCE.json) |
 | Native source acquisition and index API | [SOURCE_API.md](../../stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_directory/SOURCE_API.md) |
+| Standards assessment, finding review and complete packages | [Conformance](../../stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_directory/CONFORMANCE.md) |
 | Connected SDK, MCP and CLI | [Connected operator](../../stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_directory/connected/README.md) |
 | Managed application setup and reopening | [Applications](../../stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_directory/APPLICATIONS.md) |
 | Published source attribution | [Source notice](../../stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_directory/SOURCE_NOTICE.md) |
