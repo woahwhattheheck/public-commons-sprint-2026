@@ -5,6 +5,7 @@ import { pathToFileURL } from 'node:url';
 import { createRuntimeWorkspace, openRuntimeWorkspace } from './model.mjs';
 import { startRuntimeWorkspace } from './server.mjs';
 import { workspaceBackupCommands, workspaceBackupHelp, runWorkspaceBackupCommand } from './workspace-backup-cli.mjs';
+import { runtimeProcedureCommands, runtimeProcedureHelp, runRuntimeProcedureCommand } from './operating-procedures-cli.mjs';
 import { readJSON } from './storage.mjs';
 import { fail, json, saveJSON, runtimeWorkspaceError } from './storage.mjs';
 
@@ -68,6 +69,7 @@ const HELP = `Starforge customer runtime workspace
   runtime-workspace application-output --workspace DIRECTORY --application-id ID --operation-id UUID
 
 ${workspaceBackupHelp}
+${runtimeProcedureHelp}
 
 The private browser receives an original archive or reuses an existing runtime,
 reviews exact dependency profiles, prepares and resumes original installations,
@@ -78,6 +80,7 @@ Linux, Node22.16+, Python3.11+, npm and flock are the original installer require
 `;
 const allowed = {
   ...workspaceBackupCommands,
+  ...runtimeProcedureCommands,
   'source-plans': ['--workspace', '--query', '--limit', '--cursor', '--receiving-query', '--receiving-status', '--receiving-limit', '--receiving-cursor'],
   'source-plan-inspect': ['--document'],
   'source-plan-save': ['--workspace', '--request'],
@@ -156,6 +159,7 @@ export async function main(argv = process.argv.slice(2)) {
   const model = await openRuntimeWorkspace({ directory });
   let result;
   if (Object.hasOwn(workspaceBackupCommands, command)) result = await runWorkspaceBackupCommand(model, command, options);
+  else if (Object.hasOwn(runtimeProcedureCommands, command)) result = await runRuntimeProcedureCommand(model, command, options);
   else if (command === 'source-plans') result = await model.sourcePlansState({
     ...(options['--query'] !== undefined ? { query: options['--query'] } : {}),
     ...(options['--limit'] !== undefined ? { limit: Number(options['--limit']) } : {}),
