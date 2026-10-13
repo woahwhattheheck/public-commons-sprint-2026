@@ -6,7 +6,7 @@ Maintained by TokenJunkieLabs. Code follows the repository MIT license. Scientif
 
 ## Install in the current application
 
-Use the current maintained application containing `model/workspace.py`, the merged scientific/client delivery, its current `model/scientific_report.py`, `model/scientific_figures.py`, `model/observed_context.py`, and the complete current `measurement_workspace` family. The original source Canvas below records an earlier author edition. Current repository modules include the subsequent native-source binding, self-contained HTML figures and restored-project navigation. Compose the regional concentration collector v4 on that current source, then run:
+Use the current maintained application containing `model/workspace.py`, the merged scientific/client delivery, its current `model/scientific_report.py`, `model/scientific_figures.py`, `model/observed_context.py`, and the complete current `measurement_workspace` family. The original source Canvas below records an earlier author edition. Current repository modules include the subsequent native-source binding, self-contained HTML figures and restored-project navigation. The merged PR3111 collector v4 supports both the regional source namespace and the separately retained original study. Then run:
 
 ```sh
 python -B source/observed-report-20261013/install.py --workspace /mnt/data/gis12/original-workspace

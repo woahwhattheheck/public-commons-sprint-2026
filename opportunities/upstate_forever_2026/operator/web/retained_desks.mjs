@@ -134,7 +134,9 @@ export async function attachDiagnosticsDesk(host) {
     openInvestigation:typeof host.openExtension==='function'&&desks.has('investigations')?
       selection=>host.openExtension('investigations','openForDiagnostic',selection):host.openInvestigation,
     openStudy:typeof host.openExtension==='function'&&desks.has('study-transfer')?
-      roots=>host.openExtension('study-transfer','openForStudies',roots):host.openStudy
+      roots=>host.openExtension('study-transfer','openForStudies',roots):host.openStudy,
+    openDecision:typeof host.openExtension==='function'&&desks.has('robust-workbench')?
+      selection=>host.openExtension('robust-workbench','openForDiagnostic',selection):host.openDecision
   };
   return adapt(joined, attachExperimentDiagnostics, {
     view:'experiment-diagnostics', render:true,

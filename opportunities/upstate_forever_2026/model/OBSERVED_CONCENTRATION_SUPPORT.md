@@ -89,7 +89,7 @@ The maintained Published Studies reader still receives its original logical CSV
 names and source-authored row paths. Each returned row's source selector and
 original-response selector bind the actual retained collection, source, full
 member path and SHA256. The full concentration-context artifact records those
-full input-member paths and the selected source member prefix. The regional
+full input-member paths in the selected source namespace. The regional
 report therefore includes the same 85-record campaign microcystin support and
 75-record reconciled chlorophyll cohort as the directly imported original study.
 Source values, qualifiers, activity groups, dates and reporting limits remain in

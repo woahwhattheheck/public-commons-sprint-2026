@@ -25,6 +25,38 @@ export function rfpFocusWatersheds(rows) {
   return rfpFocusHuc12s.every(huc => available.has(huc)) ? [...rfpFocusHuc12s] : [];
 }
 
+
+export function utilityWatershedChoicesHtml(choices, busy = false) {
+  if (!list(choices).length) return '';
+  return '<section class="wc-coverage"><h2>Utility contributing watersheds</h2>' +
+    '<p class="wc-note">Choose a utility to save its original focus anchors and distinct upstream model-domain HUC12s. ' +
+    'Whole-HUC planning footprints, published intake-protection polygons and native reporting masks keep separate boundaries.</p>' +
+    list(choices).map(choice => {
+      const summary = choice.summary || {};
+      const status = choice.available ? '<dl class="wc-facts"><div><dt>Whole HUC12s</dt><dd>' +
+        esc(number(summary.huc_count)) + '</dd></div><div><dt>NRCS whole-HUC area</dt><dd>' +
+        esc(number(summary.area_acres, 2)) + ' acres</dd></div><div><dt>Original state–HUC rows</dt><dd>' +
+        esc(number(summary.state_row_count)) + '</dd></div><div><dt>Outside SC jurisdiction</dt><dd>' +
+        esc(number(summary.outside_south_carolina_huc_count)) + ' HUC12s</dd></div><div><dt>Selected SC source features</dt><dd>' +
+        esc(number(summary.selected_classification_count)) + '</dd></div></dl>' +
+        '<div class="wc-table-scroll"><table><caption>Original NRCS high-priority programme designations</caption>' +
+        '<thead><tr><th scope="col">System type</th><th scope="col">State–HUC rows</th><th scope="col">Designated state-portion acres</th></tr></thead><tbody>' +
+        list(choice.programme_designations).map(row => '<tr><th scope="row">' + esc(row.system_type) +
+          '</th><td>' + esc(number(row.state_row_count)) + '</td><td>' + esc(number(row.state_portion_acres, 2)) +
+          (row.missing_area_count ? ' · ' + esc(number(row.missing_area_count)) + ' missing source areas' : '') + '</td></tr>').join('') +
+        '</tbody></table></div>' : '<p class="wc-note">' + esc(choice.reason) + '</p>';
+      return '<section><h3>' + esc(choice.title || choice.utility_id) + '</h3>' + status +
+        '<p class="wc-note">Ground, Surface and Both retain the original programme labels. Feature counts use publisher HUC attributes; the SCDES jurisdiction is South Carolina.</p>' +
+        '<button type="button" data-wc-utility="' + esc(choice.key) + '"' +
+        (busy || !choice.available ? ' disabled' : '') + '>Save and export ' + esc(choice.utility_id) + ' contributing watersheds</button>' +
+        '<details><summary>Original profile and membership</summary><pre>' +
+        esc(pretty({anchor_huc12s:choice.anchor_huc12s, huc12s:choice.huc12s,
+          known_external_upstream_huc12s:choice.known_external_upstream_huc12s,
+          profile_source:choice.profile_source,reference:choice.reference,area_basis:choice.area_basis})) +
+        '</pre></details></section>';
+    }).join('') + '</section>';
+}
+
 export function filterWatersheds(rows, filters = {}) {
   const needle = String(filters.search || '').trim().toLocaleLowerCase();
   return list(rows).filter(row =>
@@ -345,9 +377,10 @@ export function createWatershedContextDesk(host) {
         metric(number(all.filter(row => row.priority).length), 'NRCS priority watersheds') +
         metric(number(sum(all, 'selected_classification_count')), 'Selected-class source features') +
         '</section>' + coverageHtml(report) + completedConnectivityHtml() + networkHtml(report) +
+        utilityWatershedChoicesHtml(saved._utility_selections, busy) +
         '<section class="wc-watersheds"><header class="wc-section-heading"><h2>Watersheds</h2>' +
         '<div class="wc-actions"><button type="button" data-wc-clear>' + (selectedExportId ? 'Show all watersheds' : 'Clear filters') + '</button><button type="button" data-wc-export>Export matching watersheds</button>' +
-        (rfpFocusWatersheds(all).length ? '<button type="button" data-wc-export-rfp>Export RFP focus brief</button>' : '') +
+        (rfpFocusWatersheds(all).length ? '<button type="button" data-wc-export-rfp>Export four RFP anchor watersheds</button>' : '') +
         '</div></header>' +
         filtersHtml() + '<p data-wc-count class="wc-note" aria-live="polite"></p>' +
         '<div class="wc-table-scroll"><table><thead><tr>' +
@@ -548,16 +581,17 @@ export function createWatershedContextDesk(host) {
       if (root) await refresh();
     } finally { busy = false; if (root) { const node = root.querySelector('[data-wc-build]'); if (node) node.disabled = false; renderRows(); } }
   }
-  async function exportRows(huc12s) {
+  async function exportRows(huc12s, utilityKey = null) {
     if (busy) return;
     if (!saved || !huc12s.length) throw new Error('Choose watershed records to export.');
     busy = true;
-    renderRows();
+    render();
     try {
-      await host.submitAction('watershed.context.export', {report_id:saved.id, huc12s});
+      await host.submitAction('watershed.context.export', {report_id:saved.id, huc12s,
+        ...(utilityKey ? {utility_key:utilityKey} : {})});
       await host.refresh?.({force:true});
       if (root) await refresh();
-    } finally { busy = false; if (root) renderRows(); }
+    } finally { busy = false; if (root) render(); }
   }
   async function click(event) {
     const button = event.target.closest('button');
@@ -578,6 +612,11 @@ export function createWatershedContextDesk(host) {
         remember();
         render();
         return;
+      }
+      if (button.dataset.wcUtility) {
+        const choice = list(saved?._utility_selections).find(row => row.key === button.dataset.wcUtility);
+        if (!choice?.available) throw new Error('Choose an available utility footprint from the original profile.');
+        return await exportRows(choice.huc12s, choice.key);
       }
       if (button.hasAttribute('data-wc-export')) return await exportRows(filtered().map(row => row.huc12));
       if (button.hasAttribute('data-wc-export-rfp')) return await exportRows(rfpFocusWatersheds(rows()));

@@ -49,6 +49,25 @@ def _records(value, prefix=""):
         for key, child in value.items():
             title = (prefix + " / " if prefix else "") + str(key).replace("_", " ")
             yield from _records(child, title)
+    elif isinstance(value, (list, tuple)) and value:
+        if any(isinstance(item, (Mapping, list, tuple)) for item in value):
+            for index, item in enumerate(value, 1):
+                yield from _records(item, prefix + " [" + str(index) + "]")
+        elif len(value) > 12 or sum(len(str(item)) + 2 for item in value) > 400:
+            chunk, start, characters = [], 1, 0
+            for index, item in enumerate(value, 1):
+                size = len(str(item)) + 2
+                if chunk and (len(chunk) >= 12 or characters + size > 400):
+                    label = prefix + " [" + str(start) + "–" + str(index - 1) + " of " + str(len(value)) + "]"
+                    yield label, chunk
+                    chunk, start, characters = [], index, 0
+                chunk.append(item)
+                characters += size
+            if chunk:
+                label = prefix + " [" + str(start) + "–" + str(len(value)) + " of " + str(len(value)) + "]"
+                yield label, chunk
+        else:
+            yield prefix, value
     else:
         yield prefix, value
 
@@ -241,14 +260,15 @@ def build_sections(directory, state, *, baseline_run_id, alternative_run_ids,
             ["Complete contributing area (ha)", number(receptor.get("contribution_area_ha"))],
             ["Area within quantity scope (ha)", number(receptor.get("area_in_quantity_scope_ha"))],
             ["Selected grid cells", number(metrics.get("selected_cells"))],
-            ["Selected pixel area (ha)", number(metrics.get("selected_pixel_area_ha"))],
+            ["Total selected pixel area (ha)", number(metrics.get("selected_pixel_area_ha"))],
         ]
         context_rows.extend(
-            [label, text(source[key])]
+            [name, text(value)]
             for key, label in (("title", "Source title"), ("source_id", "Source identifier"),
                                ("uri", "Original source URI"), ("vintage", "Source vintage"),
                                ("feature_ids", "Original selected features"))
             if key in source
+            for name, value in _records(source[key], label)
         )
         context_rows.extend(
             ["Classification / " + name, text(value)]
