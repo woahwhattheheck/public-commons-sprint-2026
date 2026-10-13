@@ -114,3 +114,19 @@ No monitoring coordinates, station identities or HUCs are derived from the digit
 ## Shared jurisdiction geography adapter
 
 The geometry adapter is also used by the North Carolina source arm. Its configuration declares assessment_schema, jurisdiction, optional record_collection (defaults to records) and optional record_fields mapping (id, name, assessment, categories, cause, listed). Geometry outputs retain a generic assessment_unit_id plus the selected native ID field. Edition metadata comes from the original normalized bank; Georgia approval/category meanings are not applied to North Carolina. source_id_prefix names a distinct source entry per jurisdiction and edition.
+
+## Original publisher GIS response input
+
+The same normalizer also consumes `upstate.georgia-feature-selection/v1` selections. This is a separate retained publisher GIS capture edition, with exact original response bytes, field definitions, native OID field, original feature indices and `/features/{index}/attributes` locators. It does not claim workbook row numbers for GIS records.
+
+Each selection declares the approved2024 source metadata and `captures` with `id`, `path`, `uri`, `layer_uri`, `object_id_field`, `bytes` and `sha256`. Capture bodies preserve original Esri JSON fields and all attributes. Optional `feature_inventories` supply the original `objectIds` responses with their source identities; complete captured OID sets must match exactly. Retain these inventories and service metadata under `companions`. Features repeated across captured pages are rejected. All original raw fields remain available alongside normalized interpretation.
+
+```sh
+node source_tools/georgia_assessment.mjs \
+  --input ORIGINAL_GIS_SELECTION.json \
+  --output RECEIVED_GEORGIA_GIS_CONTEXT
+```
+
+The captured GIS source manifest and every original response accompany the normalized table and existing report tuple. Attribute-only capture supplies publisher basin selection; actual study membership still comes from the shared geometry operation. A publisher Savannah-basin selection includes lower and coastal waters outside the217-HUC study, so only the original polygon intersection establishes the study subset.
+
+The shared geometry reader accepts original text reach IDs and finite, integral, exact-range numeric IDs. This preserves North Carolina's declared `esriFieldTypeDouble` AU_ID when a native driver presents10512.0 and the normalized unit is10512. The raw numeric source value remains in the relation. Array-valued source names and assessments flatten into readable map labels, with full originals retained.
