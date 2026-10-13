@@ -432,7 +432,7 @@ export function attachStudyTransfer(host) {
       if(retained){
         const value=JSON.parse(retained),payload=value?.body?.payload;
         const validRoots=Array.isArray(payload?.roots)&&payload.roots.length&&payload.roots.every(row=>
-          Object.hasOwn(rootLabels,row.kind)&&/^[0-9a-f]{64}$/.test(row.id||''));
+          Object.hasOwn(rootLabels,row.kind)&&(row.kind==='robust-decisions'?/^study_[0-9a-f]{32}$/:/^[0-9a-f]{64}$/).test(row.id||''));
         if(value?.workspace===workspace&&value.body?.workspace===workspace&&value.body?.action==='study.export'&&
           validRoots&&typeof payload.title==='string'&&typeof payload.include_related_results==='boolean'){
           pendingSubmission=value;
