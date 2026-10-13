@@ -1,5 +1,6 @@
 // MIT. Original tool metadata; provider runtimes load only when selected.
 import { MAX_RETAINED_CHUNK_BYTES } from '../retained-file-contracts.mjs';
+import { dcatCorrectionExchangeDefinitions } from './ckan-dcat-correction-exchanges.mjs';
 import { dcatCorrectionDefinitions } from './ckan-dcat-corrections.mjs';
 import { dcatWorkspaceDefinitions } from './ckan-dcat.mjs';
 import { dcatSemanticDefinitions } from './ckan-dcat-semantic.mjs';
@@ -50,6 +51,7 @@ const projection = { type: 'object', minProperties: 1, maxProperties: 64,
 const definitions = [
   ...dcatWorkspaceDefinitions({ selected, changing, changed, alias, uuid, digest, offset, read, mutation }),
   ...dcatCorrectionDefinitions({ selected, changing, changed, alias, uuid, digest, offset, read, mutation }),
+  ...dcatCorrectionExchangeDefinitions({ selected, changing, changed, alias, uuid, digest, offset, read, mutation }),
   ...dcatSemanticDefinitions({ selected, changing, changed, alias, uuid, digest, offset, read, mutation }),
   ...dcatSemanticComparisonDefinitions({ selected, changing, changed, uuid, digest, offset, read, mutation }),
   ['merchant_ckan_workspaces', 'List host-declared original and receiving CKAN project aliases, browser ownership, current receiving operation, configured inputs and merchant/buyer availability. Does not open a project or read a catalogue.', {}, [], read],
