@@ -2,7 +2,7 @@
   "schema": "upstate.operator-extension/v1",
   "id": "implementation",
   "title": "Implementation & fieldwork",
-  "version": "10",
+  "version": "11",
   "order": 70,
   "assets": [
     "implementation.mjs",
@@ -16,7 +16,8 @@
     "implementation_briefing.mjs",
     "implementation_evidence.mjs",
     "implementation_evidence_ui.mjs",
-    "implementation_source_reports.mjs"
+    "implementation_source_reports.mjs",
+    "implementation_reconciliation.mjs"
   ],
   "backend": {
     "module": "implementation_operator",
@@ -42,7 +43,8 @@
       "implementation.briefing.import",
       "implementation.lab.dispatch-report",
       "implementation.evidence.import",
-      "implementation.evidence.export"
+      "implementation.evidence.export",
+      "implementation.reconciliation.apply"
     ],
     "invoke": {
       "handler": "invoke",
@@ -473,6 +475,45 @@
         ],
         "path": "/api/implementation/evidence-export",
         "operation": "evidence-export",
+        "handler": "queue",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "GET"
+        ],
+        "path": "/api/implementation/reconciliation-conflicts",
+        "operation": "reconciliation-conflicts",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "POST"
+        ],
+        "path": "/api/implementation/reconciliation-preview",
+        "operation": "reconciliation-preview",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "POST"
+        ],
+        "path": "/api/implementation/reconciliation-apply",
+        "operation": "reconciliation-apply",
         "handler": "queue",
         "args": [
           "workspace_key",
