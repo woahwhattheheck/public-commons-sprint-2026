@@ -120,8 +120,8 @@
     },
     {
       "path": "source/ecoli_temporal_analysis/20261013/build-publication-figures.mjs",
-      "bytes": 1680,
-      "sha256": "4c80b5a902d1ab0216d3a4758ad0ba5f27da21d3e15410320981a61c48916af0"
+      "bytes": 2262,
+      "sha256": "5cff009450b0ed86d9948be632eded9f7e181439c5e021f74fd0aa39f751405f"
     },
     {
       "path": "source/ecoli_temporal_analysis/20261013/publication-figures.json",

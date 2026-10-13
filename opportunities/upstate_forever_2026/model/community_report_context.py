@@ -35,7 +35,7 @@ def _copy(source, target, expected):
         if target.stat().st_size != expected["bytes"] or file_digest(target) != expected["sha256"]:
             raise ValueError("A retained Community report member changed: " + str(target))
         return
-    handle, temporary = tempfile.mkstemp(prefix=".community-source-", dir=target.parent)
+    handle, temporary = tempfile.mkstemp(prefix=".write-community-source-", dir=target.parent)
     try:
         size, sha = 0, hashlib.sha256()
         with os.fdopen(handle, "wb") as output, open(source, "rb") as original:

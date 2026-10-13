@@ -1,0 +1,18 @@
+{
+  "schema": "upstate.application-component-fragment/v1",
+  "id": "eco13-customer-workflow",
+  "source_reference": "https://github.com/woahwhattheheck/public-commons-sprint-2026/commit/14c3b40d8b2bcd9d6a2f2d4c8af9789a4b86edc4",
+  "extend_components": {
+    "eco13": {
+      "paths": [
+        "model/review_receiving.py",
+        "model/review_worklist.py",
+        "operator/CUSTOMER_REVIEW_RECEIVING.md",
+        "operator/CUSTOMER_REQUEST_WORKLIST.md"
+      ]
+    }
+  },
+  "required_components": [
+    "eco13"
+  ]
+}
