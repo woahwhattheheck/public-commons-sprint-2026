@@ -2,7 +2,7 @@
   "schema": "upstate.operator-extension/v1",
   "id": "project-transfer",
   "title": "Transfer and restore",
-  "version": "2",
+  "version": "2.1",
   "order": 90,
   "assets": [
     "project_transfer_desk.mjs",
@@ -110,7 +110,8 @@
       "refreshState",
       "navigate",
       "showTask",
-      "selectWorkspace"
+      "selectWorkspace",
+      "openParameterStudy"
     ],
     "styles": [
       "/web/project_transfer.css"

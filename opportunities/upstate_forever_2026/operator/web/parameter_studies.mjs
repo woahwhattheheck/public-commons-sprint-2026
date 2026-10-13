@@ -522,11 +522,31 @@ export function attachParameterStudies(host) {
     }
   }
 
+
+  async function openSavedStudy(selection) {
+    const selectedWorkspace=workspace(), id=selection?.experiment_id;
+    if(!selection||selection.workspace_key!==selectedWorkspace||!/^[0-9a-f]{64}$/.test(id||'')) {
+      throw new Error('Open a retained parameter study in its original workspace.');
+    }
+    const retained=await host.api(requested('/api/item',{kind:'parameter-studies',id}));
+    if(workspace()!==selectedWorkspace||retained.id!==id) {
+      throw new Error('The workspace or saved parameter study changed while opening it.');
+    }
+    currentWorkspace=selectedWorkspace;selected=id;study=null;results=null;
+    pendingOpen={workspace:selectedWorkspace,id};
+    resultFilters={area_id:'',pollutant:'',offset:0};caseFilter='';caseOffset=0;
+    await host.navigate('parameter-studies');
+    if(workspace()!==selectedWorkspace)throw new Error('Reopen the retained study in its selected workspace.');
+    if(pendingOpen)await host.refreshState();
+    if(workspace()!==selectedWorkspace)throw new Error('The selected workspace changed while refreshing the study.');
+    return {workspace_key:selectedWorkspace,experiment_id:id};
+  }
+
   function taskActions(task) {
     return task.action?.startsWith('parameter-study.') && task.result?.id && task.workspace ?
       (task.result.state === 'partial' ? '<div class="notice">Completed-case results are available. Resume the study to recover the remaining cases.</div>' : '') +
       '<div class="page-actions">' + button('open', 'Open parameter study', 'data-id="' + escapeHTML(task.result.id) + '" data-workspace="' + escapeHTML(task.workspace) + '"') + '</div>' : '';
   }
 
-  return {render, mount, detach, dispatch, taskActions};
+  return {render, mount, detach, dispatch, taskActions, openSavedStudy};
 }
