@@ -49,12 +49,46 @@ def _cause_label(code, supplied=""):
     return "; ".join(CAUSE_LABELS.get(part.strip(), part.strip()) for part in parts)
 
 
+def _station_publisher_hucs(station):
+    """Read declared original attributes on the exact selected point candidate."""
+    selected = next((item for item in station.get("candidates", [])
+                     if item.get("candidate_id") == station.get("selected_candidate_id")), None)
+    if selected is None:
+        return {"huc12": "", "huc8": "", "fields": {}}
+    properties = selected.get("properties") or {}
+    source = selected.get("source_ref") or {}
+    fields = {}
+    # Exact original Atlas layer9 field, confirmed by its retained source edition.
+    if source.get("source_sha256") == "14b1a945ee8d5f172f63435b4fd955e9dada6894fcbca2964160c6e2e52d79f0":
+        if "HUC_12" in properties:
+            fields["HUC_12"] = properties["HUC_12"]
+    # Exact WQP station-page/CSV field; keep its eight-digit resolution.
+    if str(properties.get("MonitoringLocationIdentifier", "")).startswith("21SC60WQ_WQX-"):
+        if "HUCEightDigitCode" in properties:
+            fields["HUCEightDigitCode"] = properties["HUCEightDigitCode"]
+    huc12, huc8 = fields.get("HUC_12"), fields.get("HUCEightDigitCode")
+    return {"huc12": huc12 if isinstance(huc12, str) and len(huc12) == 12 and huc12.isdigit() else "",
+            "huc8": huc8 if isinstance(huc8, str) and len(huc8) == 8 and huc8.isdigit() else "",
+            "fields": fields}
+
+
+def _station_huc_relation(assessment_huc12, station_hucs):
+    if not assessment_huc12:
+        return "assessment_publisher_huc_missing"
+    if station_hucs["huc12"]:
+        return "same_huc12" if assessment_huc12 == station_hucs["huc12"] else "different_huc12"
+    if station_hucs["huc8"]:
+        return "same_huc8" if assessment_huc12[:8] == station_hucs["huc8"] else "different_huc8"
+    return "station_publisher_huc_missing"
+
+
 def enrich(stations, source_bindings):
     """Return edition-specific links and enrich existing station rows in place."""
     bindings = {(source["collection_id"], source["source_id"]): source
                 for source in source_bindings}
     links, edition_counts, sites_by_edition, changed_membership = [], Counter(), {}, []
     for station in stations:
+        station_hucs = _station_publisher_hucs(station)
         records, seen = [], set()
         for reference in station.get("source_references", []):
             original = reference.get("original")
@@ -98,6 +132,14 @@ def enrich(stations, source_bindings):
                 "source_uri": _value(original, "source_uri", source.get("uri") or ""),
                 "source_sha256": _value(original, "source_sha256", reference.get("source_sha256") or ""),
                 "publisher_huc12": published_huc,
+                "station_publisher_huc12": station_hucs["huc12"],
+                "station_publisher_huc8": station_hucs["huc8"],
+                "station_publisher_huc_fields": station_hucs["fields"],
+                "station_publisher_huc_relation": _station_huc_relation(published_huc, station_hucs),
+                "inventory_body_sha256": reference.get("source_sha256"),
+                "original_record_pointer": reference.get("record_pointer"),
+                "original_record_index": reference.get("record_index"),
+                "inventory_row_number": reference.get("row_number"),
                 "cause_code": cause,
                 "cause_label": _cause_label(cause, _value(original, "cause_label")),
                 "cause_source_cell": _value(original, "cause_source_cell", cause),
@@ -143,6 +185,13 @@ def enrich(stations, source_bindings):
             for key, count in sorted(edition_counts.items())],
         "stations_with_multiple_publisher_hucs": changed_membership,
         "assessment_huc_relation_counts": dict(sorted(Counter(record["publisher_huc_relation"] for record in links).items())),
+        "station_publisher_huc_relation_counts": dict(sorted(Counter(record["station_publisher_huc_relation"] for record in links).items())),
+        "station_assessment_publisher_huc_differences": [
+            {key: record[key] for key in ("station_id", "assessment_record_id", "source_vintage",
+                "publisher_huc12", "station_publisher_huc12", "station_publisher_huc8",
+                "station_publisher_huc_relation", "geographic_huc12s", "publisher_huc_relation",
+                "original_record_pointer", "inventory_body_sha256")}
+            for record in links if record["station_publisher_huc_relation"] in ("different_huc12", "different_huc8")],
     }
     return links, summary
 
@@ -171,9 +220,12 @@ def report_section(result):
             record["station_id"], record["source_vintage"],
             record["cause_label"] + " (" + record["cause_code"] + ")",
             record["use"], record["use_support"].replace("_", " "),
-            record["publisher_huc12"], "; ".join(record["geographic_huc12s"]),
+            record["publisher_huc12"], record.get("station_publisher_huc12") or record.get("station_publisher_huc8"),
+            record.get("station_publisher_huc_relation", "").replace("_", " "),
+            "; ".join(record["geographic_huc12s"]),
             record["publisher_huc_relation"].replace("_", " "), record["source_page"],
-            record["tmdl_report"], record["approval_date"])) + "</tr>")
+            record["tmdl_report"], record["approval_date"], record.get("original_record_pointer") or
+            ("CSV row " + str(record["inventory_row_number"]) if record.get("inventory_row_number") else ""))) + "</tr>")
     sources = sorted({(record["source_id"], record["source_vintage"],
                        record["source_uri"], record["source_sha256"]) for record in records})
     source_rows = []
@@ -185,12 +237,16 @@ def report_section(result):
     source_table = ('<h3>Assessment publisher sources</h3><div class="scroll"><table><thead><tr>'
                     '<th>Source edition</th><th>Vintage</th><th>Publisher</th><th>Retained source SHA-256</th>'
                     '</tr></thead><tbody>' + "".join(source_rows) + '</tbody></table></div>')
-    headers = ("Station", "Assessment edition", "Cause", "Use", "Support", "Publisher HUC12",
-               "Mapped HUC12", "Membership relation", "Source page", "TMDL report", "Approval date")
+    headers = ("Station", "Assessment edition", "Cause", "Use", "Support", "Assessment HUC12",
+               "Station publisher HUC", "Publisher comparison", "Mapped HUC12", "Spatial comparison",
+               "Source page", "TMDL report", "Approval date", "Original record location")
     return ("<h2>Assessment editions on the original station geography</h2><p>" +
             str(len(records)) + " source assessment records are attached to their exact station identifiers. "
-            "Each edition retains its original cause, use and publisher HUC. Geographic membership follows "
+             "Each edition retains its original cause, use and publisher HUC. Station publisher HUCs remain "
+            "separate from assessment publisher HUCs. Geographic membership follows "
             "the retained point and polygon sources. Assessment TN is Total Nitrogen; classification TN is "
-            "Trout Natural and remains a separate classified-reach field.</p><div class=\"scroll\"><table><thead><tr>" +
+            "Trout Natural and remains a separate classified-reach field. Original normalized-bank JSON "
+            "pointers identify distinct records even when extracted publisher row numbers repeat.</p>" +
+            "<div class=\"scroll\"><table><thead><tr>" +
             "".join("<th>" + escape(value) + "</th>" for value in headers) +
             "</tr></thead><tbody>" + "".join(rows) + "</tbody></table></div>" + source_table)
