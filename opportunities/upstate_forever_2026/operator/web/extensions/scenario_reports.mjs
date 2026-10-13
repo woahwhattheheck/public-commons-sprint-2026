@@ -112,7 +112,7 @@ export function attachScenarioReports(context) {
   function fillControls(values,names) {
     for(const name of names) {
       if(!(name in values))continue;
-      const nodes=$('[name="'+name+'"]');
+      const nodes=$$('[name="'+name+'"]');
       for(const node of nodes) {
         if(node.type==='checkbox')node.checked=Array.isArray(values[name])?values[name].includes(node.value):Boolean(values[name]);
         else if(node.tagName!=='SELECT'||Array.from(node.options).some(item=>item.value===text(values[name])))node.value=text(values[name]);

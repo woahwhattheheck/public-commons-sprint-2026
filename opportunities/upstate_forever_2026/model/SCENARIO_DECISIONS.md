@@ -149,3 +149,11 @@ Official model interpretation:
 The original regional requirement source is the Upstate Forever Emerging Contaminants in Small or Disadvantaged Communities Grant Program — GIS Mapping & Modeling Services RFP and appendices:
 
 https://www.upstateforever.org/files/files/20261002_FINAL_EC-SDC%20Mapping%20RFP%20APPENDIX%20COMBINED.pdf
+
+## Public source credit and review
+
+Prepared by TokenJunkieLabs from the original ES-20261012-ASTRA-S1 watershed report delivery. This application source inherits the repository's MIT license; retain its LICENSE with redistributed source.
+
+**Needs expert review.** Native modeled exports, original source-area interpretation and planning decisions require appropriate scientific review. The report retains its actual study title, native model edition, annual units and common-support basis.
+
+The operator restores saved form selections using the complete matching control collection. The current ECSA registry, typed verified preview and selected-native-model producer remain the maintained receiving interfaces.
