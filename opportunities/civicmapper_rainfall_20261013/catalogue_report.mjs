@@ -48,8 +48,9 @@ try{
   "catalogue-records.csv":C.csv(C.recordRows(comparison)),
   "originals/before.geojson":project.before.content,
   "originals/after.geojson":project.after.content,
-  "README.txt":"Open catalogue-report.html in a browser. It contains all original records and downloads for the saved project, comparison, CSV and both raw sources. Open and visually inspect the exact report at desktop and narrow widths, use its downloads and reopen catalogue-project.json before client presentation. Project/source hashes retain the actual inputs. Query selection describes the current observed catalogue, not historical instrument assignment.\n"
+  "README.txt":"Open OPEN_FIRST.html in a browser, then the editable catalogue.html review or catalogue-report.html. The handover contains all original records and downloads for the saved project, comparison, CSV and both raw sources. Open and visually inspect the exact report at desktop and narrow widths, use its downloads and reopen catalogue-project.json before client presentation. Project/source hashes retain the actual inputs. Query selection describes the current observed catalogue, not historical instrument assignment.\n"
  };
+ if(Buffer.byteLength(files["catalogue-project.json"],"utf8")>40*1024*1024)throw Error("The complete source project exceeds the reviewer’s 40 MB import limit. Choose a smaller source review.");
  if(project.selected_web_ids.length)files["catalogue-selection.json"]=JSON.stringify(C.selection(comparison,project.selected_web_ids),null,2)+"\n";
  const ownDir=path.dirname(fileURLToPath(import.meta.url));
  // Rebuilding includes these exact maintained files and the owner instructions.
@@ -58,6 +59,7 @@ try{
  const editor=files["source/catalogue.html"],module=files["source/catalogue.js"];
  if(!editor.includes("<script>"+module+"</script>"))throw Error("The catalogue editor and editable module differ.");
  const payload=JSON.stringify(project).replace(/</g,"\\u003c").replace(/\u2028/g,"\\u2028").replace(/\u2029/g,"\\u2029");
+ if(Buffer.byteLength(payload,"utf8")>40*1024*1024)throw Error("The embedded source project exceeds the reviewer’s 40 MB import limit.");
  const projectPattern=/(<script type="application\/json" id="prepared-catalogue">)[\s\S]*?(<\/script>)/;
  if(!projectPattern.test(editor))throw Error("The maintained catalogue editor's original-project seam is missing.");
  files["catalogue.html"]=editor.replace(projectPattern,(_,start,end)=>start+payload+end).replace('<a id="rainfall-link" href="index.html">','<a id="rainfall-link" href="source/index.html">');
