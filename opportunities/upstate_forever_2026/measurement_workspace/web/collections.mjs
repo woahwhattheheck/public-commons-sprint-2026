@@ -1,7 +1,9 @@
 /** Complete collection operating surface over the original authenticated API. */
-import {freshCollectionWorking,validateCollectionWorking,addCollectionSources,editCollectionWorking,mappingFor,definitionKey,validateCollectionDefinition,retainCollectionRequest,acceptCollectionResponse,saveCollectionInspection,reviewedCollectionRequest,preserveUnresolvedCollectionRequest,exportCollectionWorking,captureCollectionSession,restoreCollectionSession} from './collection_working.mjs';
+import {freshCollectionWorking,validateCollectionWorking,addCollectionSources,editCollectionWorking,mappingFor,definitionKey,validateCollectionDefinition,retainCollectionRequest,acceptCollectionResponse,saveCollectionInspection,reviewedCollectionRequest,preserveUnresolvedCollectionRequest,exportCollectionWorking,captureCollectionSession,restoreCollectionSession,saveCollectionReading} from './collection_working.mjs';
 import {collectionRandomId,collectionSHA256,uploadCollectionOriginal,downloadCollectionMember} from './collection_transfer.mjs';
 import {receiveCollectionEditionFolder,reopenCollectionEditionFolder} from './collection_folder.mjs';
+import {openRemoteCollectionEditionReader,openFolderCollectionEditionReader} from './edition_reader.mjs';
+import {mountCollectionEditionReader} from './edition_review.mjs';
 const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const clone=value=>JSON.parse(JSON.stringify(value)),stable=value=>JSON.stringify(value,(_k,v)=>v&&typeof v==='object'&&!Array.isArray(v)?Object.fromEntries(Object.keys(v).sort().map(k=>[k,v[k]])):v),hex=value=>typeof value==='string'&&/^[a-f0-9]{64}$/.test(value);
 const base64=bytes=>{let s='';for(let i=0;i<bytes.length;i+=32768)s+=String.fromCharCode(...bytes.subarray(i,i+32768));return btoa(s);};
@@ -11,6 +13,7 @@ export function mountCollectionPanel(host,{request,refresh,workspaceKey,initialS
  const lifecycle=new AbortController(),fileHandles=new Map(),editionBindings=new Map(),downloads=new Set(),storageKey='measurement-collection-working/v1:'+workspaceKey;
  let state=freshCollectionWorking(workspaceKey),knownRevision=null,storageBlocked=false,storageMessage='',downloadedPendingId=null;
  let dead=false,busy=false,generation=0,openSequence=0,dirty=false;
+ let editionReader=null,readingGeneration=0;
  const signal=lifecycle.signal;
  host.classList.add('measured-collections');
  host.innerHTML='<style>'+CSS+'</style><h2>Observation collections and complete study editions</h2><p>Keep chemistry, monitoring stations, discharge and accompanying originals together. Chemistry and station CSVs travel in checked 256 KiB chunks; their actual mappings and source summaries come from the installed measurement engine.</p>'+
@@ -21,7 +24,7 @@ export function mountCollectionPanel(host,{request,refresh,workspaceKey,initialS
  '<div data-pending class="mc-note" hidden></div><div class="mc-actions"><button type="button" data-action="resume">Resume exact saved request</button><button type="button" data-action="revise">Retain unresolved request and open fresh review</button><button type="button" data-action="pause">Pause this browser operation</button></div>'+
  '<div data-status role="status" aria-live="polite"></div><div data-persistence role="alert" hidden></div>'+
  '<h3>Complete source inspection</h3><div class="mc-scroll" data-inspection></div><details><summary>Original mappings, source summaries and operation history</summary><pre data-details></pre></details></details>'+
- '<details open><summary>Saved collections and complete study editions</summary><div class="mc-actions"><button type="button" data-action="refresh">Refresh saved collections</button><button type="button" data-action="verify-folder">Verify received edition folder</button></div><div data-list></div><div data-native-status></div><div data-edition></div></details>';
+ '<details open><summary>Saved collections and complete study editions</summary><div class="mc-actions"><button type="button" data-action="refresh">Refresh saved collections</button><button type="button" data-action="read-folder">Open received edition folder</button><button type="button" data-action="verify-folder">Verify received edition folder</button></div><div data-list></div><div data-native-status></div><div data-edition></div><div data-edition-reader></div></details>';
  const el=selector=>host.querySelector(selector);
  function notice(message,error=false){if(dead)return;const node=el('[data-status]');node.textContent=message;node.setAttribute('role',error?'alert':'status');}
  function persistence(){if(dead)return;const node=el('[data-persistence]');node.hidden=!storageMessage;node.textContent=storageMessage;}
@@ -41,7 +44,7 @@ export function mountCollectionPanel(host,{request,refresh,workspaceKey,initialS
   // browser download; disposal happens on panel destruction.
  }
  function saveWorking(suffix='working'){
-  const body=exportCollectionWorking(state);download('collection-'+suffix+'.json',new Blob([body],{type:'application/json'}));
+  retainReading(false);const body=exportCollectionWorking(state);download('collection-'+suffix+'.json',new Blob([body],{type:'application/json'}));
   if(state.pending)downloadedPendingId=state.pending.id;
   notice('The complete collection working file is ready to save. It includes the current original request and every retained field.');
  }
@@ -51,12 +54,57 @@ export function mountCollectionPanel(host,{request,refresh,workspaceKey,initialS
   if(!response.ok){const error=new Error(body||'Collection request failed.');error.status=response.status;throw error;}
   try{return JSON.parse(body);}catch{throw new Error('The collection operation returned an unreadable complete response.');}
  }
+ 
+ function retainReading(persist=true){
+  if(!editionReader||!state.reading?.active)return;
+  const value=editionReader.snapshot(),id=state.reading.active.id;
+  if(stable(value)!==stable(state.reading.states[id])){saveCollectionReading(state,state.reading.active,value);dirty=true;if(persist)saveLocal();}
+ }
+ function closeReading({persist=true}={}){
+  retainReading(persist);readingGeneration++;editionReader?.destroy();editionReader=null;
+  if(!dead)el('[data-edition-reader]').replaceChildren();
+ }
+ function readingGuard(token,selected){
+  return ()=>{if(dead||readingGeneration!==token||state!==selected)throw new Error('The original edition reading view changed. Reopen its retained position to continue.');};
+ }
+ function attachReading(reader,kind,check){
+  check();const selected=state,selection={kind,id:reader.edition.id,collectionId:reader.edition.collectionBinding.collectionId};
+  const initialPosition=state.reading?.states?.[selection.id]||null;
+  let view;try{view=mountCollectionEditionReader(el('[data-edition-reader]'),{reader,workspaceKey,initialPosition,check,
+   ...(kind==='api'?{downloadOriginal:(name,downloadCheck)=>downloadCollectionMember({api,id:selection.id,name,check:()=>{check();downloadCheck();},progress,download})}:{}),
+   onChange(value){check();if(state!==selected)return false;saveCollectionReading(state,selection,value);return saveLocal();}
+  });}catch(error){reader.close();throw error;}
+  editionReader=view;check();
+  // The current selection is retained even while its first page is pending.
+  saveCollectionReading(state,selection,view.snapshot());saveLocal();
+ }
+ async function openRemoteReading(id,collectionId,parentCheck){
+  closeReading();const selected=state,token=readingGeneration,check=readingGuard(token,selected);
+  const reader=await openRemoteCollectionEditionReader({api,id,collectionId,check});parentCheck();check();
+  attachReading(reader,'api',check);
+ }
+ async function showFolderEdition(directory,parentCheck){
+  closeReading();const selected=state,token=readingGeneration,check=readingGuard(token,selected);
+  const reader=await openFolderCollectionEditionReader({directory,check,progress});parentCheck();check();
+  const edition=reader.edition;
+  el('[data-edition]').innerHTML='<h3>Received study edition</h3><p>Reading original folder <strong>'+esc(reader.folderName||directory.name)+'</strong> · edition <code>'+esc(edition.id)+'</code> · workspace revision '+esc(edition.workspaceRevision)+'.</p><p>Pages and complete downloads read the selected saved originals. Each returned range is checked against the immutable edition; current workspace data is not used.</p>';
+  attachReading(reader,'folder',check);
+ }
+ async function restoreReading(){
+  const selected=state,active=state.reading?.active,token=generation;if(!active)return;
+  const check=()=>{if(dead||state!==selected||generation!==token)throw new Error('The selected collection working copy changed.');};
+  if(active.kind==='folder'){
+   el('[data-edition]').innerHTML='<p>Saved offline reading position for edition <code>'+esc(active.id)+'</code>. Use Open received edition folder and select that original folder to resume its pages.</p>';return;
+  }
+  await showLargeEdition(active.id,check);
+ }
+
  function controls(){
   if(dead)return;
   host.setAttribute('aria-busy',String(busy));
-  for(const node of host.querySelectorAll('input,select,textarea'))node.disabled=busy||!!state.pending;
+  for(const node of host.querySelectorAll('input,select,textarea'))if(!node.closest('[data-edition-reader]'))node.disabled=busy||!!state.pending;
   el('[data-open]').disabled=busy;
-  for(const node of host.querySelectorAll('button'))node.disabled=busy||node.dataset.nativeEligible==='0';
+  for(const node of host.querySelectorAll('button'))if(!node.closest('[data-edition-reader]'))node.disabled=busy||node.dataset.nativeEligible==='0';
   el('[data-action="save"]').disabled=false;
   el('[data-action="pause"]').disabled=!busy;
   el('[data-action="resume"]').disabled=busy||!state.pending;
@@ -152,15 +200,15 @@ export function mountCollectionPanel(host,{request,refresh,workspaceKey,initialS
  }
  async function showLargeEdition(id,check){
   if(!hex(id))throw new Error('Invalid study edition identity.');const edition=await api('/large/editions/'+id);check();
-  el('[data-edition]').innerHTML='<h3>Complete editable study edition</h3><p>Edition <code>'+esc(id)+'</code> · workspace revision '+esc(edition.workspaceRevision)+'</p><p>Every original, editable project, report and complete archive is downloaded from this saved edition with its declared chunk hashes and full byte count.</p><div class="mc-actions"><button type="button" data-folder-edition="'+id+'" data-folder-collection="'+esc(edition.collectionBinding?.collectionId||'')+'">Receive complete edition to folder</button></div><p>Choose a parent folder to receive all original members. Repeating this action with the same parent resumes its checked original chunks after a browser restart. Existing complete-file downloads remain available.</p><div class="mc-scroll"><table><thead><tr><th>Complete member</th><th>Bytes</th><th>Download</th></tr></thead><tbody>'+edition.files.map(f=>'<tr><td>'+esc(f.path)+'</td><td>'+esc(f.bytes)+'</td><td><button type="button" data-member="'+esc(f.path)+'" data-download-edition="'+id+'">Download complete file</button></td></tr>').join('')+'</tbody></table></div>';
+  el('[data-edition]').innerHTML='<h3>Complete editable study edition</h3><p>Edition <code>'+esc(id)+'</code> · workspace revision '+esc(edition.workspaceRevision)+'</p><p>Every original, editable project, report and complete archive is downloaded from this saved edition with its declared chunk hashes and full byte count.</p><div class="mc-actions"><button type="button" data-folder-edition="'+id+'" data-folder-collection="'+esc(edition.collectionBinding?.collectionId||'')+'">Receive complete edition to folder</button></div><p>Choose a parent folder to receive all original members. Repeating this action with the same parent resumes its checked original chunks after a browser restart. Existing complete-file downloads remain available.</p><div class="mc-scroll"><table><thead><tr><th>Complete member</th><th>Bytes</th><th>Download</th></tr></thead><tbody>'+edition.files.map(f=>'<tr><td>'+esc(f.path)+'</td><td>'+esc(f.bytes)+'</td><td><button type="button" data-member="'+esc(f.path)+'" data-download-edition="'+id+'">Download complete file</button></td></tr>').join('')+'</tbody></table></div>';  await openRemoteReading(id,edition.collectionBinding?.collectionId,check);
  }
  async function showOldEdition(collection,id,check){
   if(!hex(collection)||!hex(id))throw new Error('Invalid saved collection edition.');
-  const edition=await api('/collections/'+collection+'/editions/'+id);check();
+  const edition=await api('/collections/'+collection+'/editions/'+id);check();closeReading();
   el('[data-edition]').innerHTML='<h3>Earlier complete study edition</h3><p>Revision '+esc(edition.workspaceRevision)+': '+esc(edition.recordCount)+' complete records.</p><button type="button" data-old-bundle="'+id+'" data-old-collection="'+collection+'">Download complete editable study ZIP</button>';
  }
  host.addEventListener('input',event=>{
-  const target=event.target;if(busy||state.pending)return;
+  const target=event.target;if(target.closest('[data-edition-reader]')||busy||state.pending)return;
   try{
    if(target.matches('[data-title]'))editCollectionWorking(state,s=>{s.title=target.value;});
    else if(target.dataset.field){const row=state.rows.find(r=>r.key===target.closest('[data-key]')?.dataset.key);if(!row)return;editCollectionWorking(state,()=>{row[target.dataset.field]=target.value;});}
@@ -169,7 +217,7 @@ export function mountCollectionPanel(host,{request,refresh,workspaceKey,initialS
   }catch(error){notice(error.message,true);}
  },{signal});
  host.addEventListener('change',event=>{
-  const target=event.target;
+  const target=event.target;if(target.closest('[data-edition-reader]'))return;
   if(target.matches('[data-open]')){openWorking(target);return;}
   if(busy||state.pending)return;
   try{
@@ -186,19 +234,19 @@ export function mountCollectionPanel(host,{request,refresh,workspaceKey,initialS
    const body=await file.text();if(dead||serial!==openSequence)return;
    if(state!==selected||state.revision!==version||busy)throw new Error('Current work changed while the saved file was read. Your newer work remains; choose the file again.');
    const next=validateCollectionWorking(JSON.parse(body),workspaceKey);
-   if(state.rows.length||state.pending||state.history.length)saveWorking('before-open');
-   state=next;generation++;fileHandles.clear();downloadedPendingId=null;saveLocal();renderRows();notice('Opened the complete working file. Its original native requests and source identities are retained.');
+   closeReading();if(state.rows.length||state.pending||state.history.length||state.reading)saveWorking('before-open');
+   state=next;generation++;fileHandles.clear();downloadedPendingId=null;saveLocal();renderRows();notice('Opened the complete working file. Its original native requests and source identities are retained.');restoreReading().catch(error=>{if(!dead&&state===next)notice(error.message,true);});
   }catch(error){if(!dead&&serial===openSequence)notice(error.message,true);}
   finally{if(serial===openSequence)input.value='';}
  }
  host.addEventListener('click',event=>{
-  const target=event.target.closest('button');if(!target||!host.contains(target))return;
+  const target=event.target.closest('button');if(!target||!host.contains(target)||target.closest('[data-edition-reader]'))return;
   const action=target.dataset.action;
   if(action==='save'){try{saveWorking();}catch(error){notice(error.message,true);}return;}
   if(action==='pause'){generation++;notice('Browser operation paused. Its current original request remains retained; resume it to reconcile native completion.');return;}
   if(busy)return;
   if(action==='new'){
-   try{if(state.rows.length||state.pending||state.history.length)saveWorking('before-new');state=freshCollectionWorking(workspaceKey);generation++;fileHandles.clear();downloadedPendingId=null;saveLocal();renderRows();notice('New collection working copy opened. The preceding complete working file is ready to save.');}catch(error){notice(error.message,true);}return;
+   try{closeReading();if(state.rows.length||state.pending||state.history.length||state.reading)saveWorking('before-new');state=freshCollectionWorking(workspaceKey);generation++;fileHandles.clear();downloadedPendingId=null;saveLocal();renderRows();notice('New collection working copy opened. The preceding complete working file is ready to save.');}catch(error){notice(error.message,true);}return;
   }
   if(target.dataset.fork){
    try{editCollectionWorking(state,()=>{const row=state.rows.find(r=>r.key===target.dataset.fork);if(!row)throw new Error('Choose an original source row.');row.intakeId=collectionRandomId();row.retained=null;row.prepared=null;row.error=null;});saveLocal();renderRows();notice('A new source interpretation is selected. The preceding native original remains retained; reselect the same complete original if this tab no longer has it.');}catch(error){notice(error.message,true);}return;
@@ -206,13 +254,14 @@ export function mountCollectionPanel(host,{request,refresh,workspaceKey,initialS
   if(target.dataset.remove){
    try{editCollectionWorking(state,s=>{s.rows=s.rows.filter(r=>r.key!==target.dataset.remove);});fileHandles.delete(target.dataset.remove);saveLocal();renderRows();}catch(error){notice(error.message,true);}return;
   }
-  if(action==='verify-folder'||target.dataset.folderEdition){
-   if(typeof globalThis.showDirectoryPicker!=='function'||!globalThis.navigator?.locks?.request){notice('This browser does not expose selected-folder receiving. Use Download complete file or the installed collection export.',true);return;}
+  if(action==='read-folder'||action==='verify-folder'||target.dataset.folderEdition){
+   if(typeof globalThis.showDirectoryPicker!=='function'||(target.dataset.folderEdition&&!globalThis.navigator?.locks?.request)){notice('This browser does not expose selected-folder receiving. Use Download complete file or the installed collection export.',true);return;}
    // Acquire the actual user-granted handle before any network work can consume
    // transient activation. The ordinary run lifetime guards all later effects.
-   let selected;try{selected=globalThis.showDirectoryPicker({mode:action==='verify-folder'?'read':'readwrite',id:'measurement-collection-edition'});}catch(error){notice(error.message,true);return;}
+   let selected;try{selected=globalThis.showDirectoryPicker({mode:action==='verify-folder'||action==='read-folder'?'read':'readwrite',id:'measurement-collection-edition'});}catch(error){notice(error.message,true);return;}
    run(async check=>{
     const directory=await selected;check();
+    if(action==='read-folder'){await showFolderEdition(directory,check);notice('Opened the complete received edition. Original populations and files are available offline.');return;}
     const result=action==='verify-folder'?await reopenCollectionEditionFolder({directory,check,progress}):await receiveCollectionEditionFolder({api,id:target.dataset.folderEdition,collectionId:target.dataset.folderCollection,directory,check,progress});check();
     notice((action==='verify-folder'?'Verified all complete original members in ':'Received all complete original members in ')+result.folderName+'. Open START_HERE.md and the files/ directory. '+(result.cleanupErrors?.length?'Some checked chunk files remain for later cleanup; the complete originals and receiving result are saved.':''));
    });return;
@@ -233,7 +282,7 @@ export function mountCollectionPanel(host,{request,refresh,workspaceKey,initialS
   });
  },{signal});
  window.addEventListener('storage',event=>{if(event.key===storageKey&&!dead){storageBlocked=true;storageMessage='Another tab changed this workspace’s saved collection. Your current work remains here. Download both copies, reload the current saved copy, then open the chosen complete file.';persistence();}},{signal});
- window.addEventListener('beforeunload',event=>{if(dirty||busy||state.pending){event.preventDefault();event.returnValue='';}},{signal});
+ window.addEventListener('beforeunload',event=>{if(dirty||busy||state.pending||editionReader?.hasUnsaved()){event.preventDefault();event.returnValue='';}},{signal});
  if(initialSession!==null){
   const retained=restoreCollectionSession(initialSession,workspaceKey);
   ({state,knownRevision,storageBlocked,storageMessage,dirty}=retained);
@@ -243,6 +292,6 @@ export function mountCollectionPanel(host,{request,refresh,workspaceKey,initialS
   catch(error){storageBlocked=true;dirty=true;storageMessage=error.message+' Your complete retained work remains here. Download it before closing this browser.';}
   notice('Restored this workspace and account’s complete collection working copy, including unfinished fields and the exact pending request. Reselect a large original if more file bytes are needed.');persistence();
  }else try{const envelope=readEnvelope();if(envelope){state=validateCollectionWorking(envelope.state,workspaceKey);knownRevision=envelope.revision;notice('Reopened the saved collection working copy with its original request history.');}}catch(error){storageBlocked=true;storageMessage=error.message+' Download current work and retain the existing browser copy before replacing it.';persistence();}
- renderRows();persistence();const start=generation;list(()=>{if(dead||generation!==start)throw new Error('Collection list refresh superseded.');}).catch(error=>{if(!dead&&generation===start)notice(error.message,true);});
- return {snapshot(){return captureCollectionSession({state,knownRevision,storageBlocked,storageMessage,dirty});},hasUnsaved(){return dirty||busy||!!state.pending;},destroy(){dead=true;generation++;lifecycle.abort();for(const value of downloads){URL.revokeObjectURL(value.url);Promise.resolve(value.cleanup()).catch(()=>{});}downloads.clear();host.replaceChildren();}};
+ renderRows();persistence();restoreReading().catch(error=>{if(!dead)notice(error.message,true);});const start=generation;list(()=>{if(dead||generation!==start)throw new Error('Collection list refresh superseded.');}).catch(error=>{if(!dead&&generation===start)notice(error.message,true);});
+ return {snapshot(){retainReading(false);return captureCollectionSession({state,knownRevision,storageBlocked,storageMessage,dirty});},hasUnsaved(){return dirty||busy||!!state.pending||Boolean(editionReader?.hasUnsaved());},destroy(){closeReading({persist:false});dead=true;generation++;lifecycle.abort();for(const value of downloads){URL.revokeObjectURL(value.url);Promise.resolve(value.cleanup()).catch(()=>{});}downloads.clear();host.replaceChildren();}};
 }

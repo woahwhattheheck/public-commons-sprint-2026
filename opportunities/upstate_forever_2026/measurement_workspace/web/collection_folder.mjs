@@ -139,15 +139,24 @@ export async function receiveCollectionEditionFolder({api,id,collectionId,direct
   return receiveLocked({api,id,collectionId,directory,check,progress,digest});
  });
 }
-/** Offline, read-only reopening of the complete original folder. */
-export async function reopenCollectionEditionFolder({directory,check=()=>{},progress=()=>{},digest=collectionSHA256}){
- check();const saved=await readJSON(directory,'EDITION.json');check();
+/** Read the original folder's complete selection and receiving metadata.
+ * Population readers verify each actual chunk they display; full reopening below
+ * independently reads every complete member.
+ */
+export async function readCollectionFolderBinding({directory,check=()=>{},digest=collectionSHA256}){
+check();const saved=await readJSON(directory,'EDITION.json');check();
  if(saved.format!==FORMAT)throw Error('Select the original complete Measurements edition folder.');
  const selection=inspectCollectionFolderEdition(saved.edition);
  if(canonical(saved)!==canonical(selection))throw Error('The saved edition binding or full source metadata changed.');
  const selectionSha256=await digest(utf8(text(selection))),expected=receiptFor(selection,selectionSha256),receipt=await readJSON(directory,'RECEIVED.json');check();
  if(canonical(receipt)!==canonical(expected))throw Error('The original edition has no matching complete receiving result. Resume its original receiving folder.');
- const files=await descend(directory,['files'],false,check);let total=0;
+
+ return {selection,selectionSha256,receipt};
+}
+/** Offline, read-only reopening of the complete original folder. */
+export async function reopenCollectionEditionFolder({directory,check=()=>{},progress=()=>{},digest=collectionSHA256}){
+ const {selection,selectionSha256,receipt}=await readCollectionFolderBinding({directory,check,digest});check();
+const files=await descend(directory,['files'],false,check);let total=0;
  for(const member of selection.edition.files){const handle=await originalHandle(files,member.path,false,check);if(!await checkedFile(handle,member,check,digest))throw Error('The original complete file is missing: '+member.path);total+=member.bytes;progress({stage:'verified',name:member.path,bytes:member.bytes,total:member.bytes,editionBytes:total,editionTotal:selection.totalBytes});}
  return {status:'COMPLETE',folderName:directory.name,selectionSha256,receipt};
 }
