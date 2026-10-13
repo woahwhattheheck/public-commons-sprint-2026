@@ -229,8 +229,12 @@ th{background:#f1f1f1}small{overflow-wrap:anywhere}code{overflow-wrap:anywhere}s
     document += "<h2>Dated observation views</h2><p>The existing Observed water quality desk now contains " + e(observation_import.get("views", 0)) + " retained views of original measurements, discharge, stage and available effluent source context. Choose a view, station and parameter to inspect original dated values, censor bounds and coverage. <a href=\"observations.json\">Open the observation import record</a>.</p>"
     if state.get("nutrient_flow_import"):
         document += '<p><a href="nutrient-flow-observations.json">Routine nutrient interval views</a> retain the paired lower and upper endpoints of the same original records, alongside their sampling calendar and flow contrasts.</p>'
-    document += "<h2>Maps and geographic joins</h2><ul>" + "".join(packs) + "</ul>"
-    document += '<p><a href="assessment/operation.json">Saved native views and source selections</a> · <a href="assessment/station-domain-joins.csv">Original station–watershed joins</a> · <a href="scenario-source-areas.json">Four public-water source areas</a></p>'
+    document += "<h2>Maps and geographic joins</h2>"
+    if assessment:
+        document += "<ul>" + "".join(packs) + "</ul>"
+        document += '<p><a href="assessment/operation.json">Saved native views and source selections</a> · <a href="assessment/station-domain-joins.csv">Original station–watershed joins</a> · <a href="scenario-source-areas.json">Four public-water source areas</a></p>'
+    else:
+        document += '<p>Original source intake and observation views are complete. Continue this receiving operation to add source-water selections, station–watershed joins and geographic exports.</p>'
     document += "<h2>Source tables and geographic layers</h2><p>Table counts describe actual retained rows. Source scope and complete collection identities are in <a href=\"source-inventory.json\">the source inventory</a>. The existing operator Sources desk provides table previews and every original companion download; Spatial review and Exports display these same saved views.</p>"
     document += "<table><thead><tr><th>Source</th><th>Kind</th><th>Rows</th><th>Units / datum</th><th>Open</th></tr></thead><tbody>" + "".join(source_rows) + "</tbody></table>"
     document += "<h2>Reading the observations</h2><p>Gauge discharge and stage keep their original units and quality flags. Laboratory concentrations keep their sample dates, fractions, analytical methods and detection conditions. The published 2023 seasonal statistics and independently reconciled individual activities retain separate source identities. Same-date upstream discharge supplies hydrologic context for the lake samples. The four published public-water protection polygons retain their original regulatory footprint and source-area relation.</p>"
@@ -245,8 +249,6 @@ def receive(args):
     sys.path.insert(0, str(application))
     from model.common import atomic_json, describe_file, digest, held, now, read_json, file_digest
     from model.workspace import Workspace
-    from source_tools.operate_assessment_context import operate
-
     workspace = Workspace(Path(args.workspace).resolve(strict=True), create=False)
     selection, manifests, spec_path = _selection(args, application)
     identity = {"project_id": workspace.project["id"], "selection": selection}
@@ -254,10 +256,17 @@ def receive(args):
     output = workspace.root / "observed-context" / key
     output.mkdir(parents=True, exist_ok=True)
     state_path = output / "receiving.json"
+    sources_only = bool(getattr(args, "sources_only", False))
     with held(output / ".receiving.lock", blocking=False):
         previous = read_json(state_path) if state_path.is_file() else {}
         if previous and (previous.get("id") != key or previous.get("identity") != identity):
             raise ValueError("The retained observed-context operation identity changed")
+        if sources_only and previous.get("state") == "complete":
+            from model.common import verify_file
+            for item in previous.get("files", []):
+                verify_file(workspace.root, item)
+            return {**previous, "application": str(application), "workspace": str(workspace.root),
+                    "directory": str(output), "index": str(output / "index.html")}
         state = {
             "schema": SCHEMA, "id": key, "identity": identity,
             "state": "receiving", "created_at": previous.get("created_at", now()), "updated_at": now(),
@@ -337,6 +346,30 @@ def receive(args):
                     item["context_count"] for item in nutrient["observations"])
             state["updated_at"] = now()
             atomic_json(state_path, state)
+            inventory = _source_inventory(workspace, collections, output)
+            atomic_json(output / "source-inventory.json", {
+                "schema": "upstate.observed-context-source-inventory/v1",
+                "operation_id": key, "project_id": workspace.project["id"], "sources": inventory})
+            source_files = ["source-inventory.json", "observations.json"]
+            if state.get("nutrient_flow_import"):
+                source_files.append("nutrient-flow-observations.json")
+            state["source_phase"] = {
+                "state": "complete", "completed_at": now(),
+                "observation_views": state["observation_import"]["views"],
+                "sources": len(inventory),
+                "tables": sum(item["kind"] == "table" for item in inventory),
+                "vectors": sum(item["kind"] == "vector" for item in inventory),
+                "files": [describe_file(workspace.root, output / name) for name in source_files],
+            }
+            state.update(state="sources_complete", updated_at=now())
+            _index(output, state, inventory, {}, workspace)
+            state["files"] = state["source_phase"]["files"] + [
+                describe_file(workspace.root, output / "index.html")]
+            atomic_json(state_path, state)
+            if sources_only:
+                state["attempts"][-1].update(state="sources_complete", completed_at=now())
+                atomic_json(state_path, state)
+                return {**state, "directory": str(output), "index": str(output / "index.html")}
             water = next(item for item in collections if item["role"] == "public_water")
             state["public_water"] = _public_water(
                 workspace, workspace._get("sources", water["source_collection_id"]), spec_path, output)
@@ -353,11 +386,8 @@ def receive(args):
                 primary_layer_id=args.primary_layer_id, comparison_layer_id=args.comparison_layer_id,
                 mode=args.mode, paper=args.paper, dpi=args.dpi, skip_export=args.skip_export,
                 output=str(output / "assessment"))
+            from source_tools.operate_assessment_context import operate
             assessment = operate(assessment_args)
-            inventory = _source_inventory(workspace, collections, output)
-            atomic_json(output / "source-inventory.json", {
-                "schema": "upstate.observed-context-source-inventory/v1",
-                "operation_id": key, "project_id": workspace.project["id"], "sources": inventory})
             _index(output, state, inventory, assessment, workspace)
             state.update(state="complete", updated_at=now(),
                          observed_context={
@@ -407,6 +437,8 @@ def main(argv=None):
     parser.add_argument("--paper", choices=("letter", "a4"), default="letter")
     parser.add_argument("--dpi", type=int, choices=(150, 220, 300), default=150)
     parser.add_argument("--skip-export", action="store_true", help="Save the same native views without print rendering")
+    parser.add_argument("--sources-only", action="store_true",
+                        help="Complete original source, published-study and observation intake; retain geographic continuation")
     args = parser.parse_args(argv)
     result = receive(args)
     print(json.dumps(result, sort_keys=True, ensure_ascii=False, allow_nan=False))
