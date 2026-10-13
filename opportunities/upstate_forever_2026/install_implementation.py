@@ -26,9 +26,11 @@ FILES = (
     "model/implementation_sources.py",
     "model/implementation_economics.py",
     "model/implementation_observations.py",
+    "model/implementation_lab_results.py",
     "operator/implementation_operator.py",
     "operator/extensions/implementation.json",
     "operator/web/implementation.mjs",
+    "operator/web/implementation_lab.mjs",
     "operator/web/implementation_core.mjs",
     "operator/web/implementation_forms.mjs",
     "operator/web/implementation.css",
@@ -42,6 +44,8 @@ OPTIONAL_FILES = (
     "docs/implementation-operator-guide.md",
     "IMPLEMENTATION_SOURCE_IMPORT.md",
     "docs/IMPLEMENTATION_OBSERVATIONS.md",
+    "docs/IMPLEMENTATION_LAB_RESULTS.md",
+    "docs/IMPLEMENTATION_FIELD_CAPTURE.md",
 )
 RECEIPT = ".implementation-install.json"
 ERROR_IMPORT = "from implementation_operator import implementation_error\n"

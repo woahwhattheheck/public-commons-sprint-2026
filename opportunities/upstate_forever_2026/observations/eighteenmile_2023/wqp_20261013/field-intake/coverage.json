@@ -1,0 +1,19 @@
+{
+  "schema": "upstate.wqp-field-intake-coverage/v1",
+  "source_hashes": {
+    "stations": "85a33ed59d36327d6ec127e9d2f83cf688095103ef887b7ab1d408b45d4ec8e3",
+    "activities": "8118f52771b1bc87822e821f52c4980bdd8ab3471c8a5b790a9c8129ccf72f85",
+    "results": "5b22e3de1a4311963b2ed616886273788bd485897f276663157a7137ce0aaa61"
+  },
+  "plan_id": "eighteenmile-2023-original-lake-samples",
+  "sites": 3,
+  "collection_events": 48,
+  "sample_activities": 88,
+  "expected_csv_rows": 88,
+  "expected_result_types": {
+    "numeric": 82,
+    "censored": 6
+  },
+  "source_mapping": "Every raw result maps by exact ActivityIdentifier and MonitoringLocationIdentifier.",
+  "limit_interpretation": "Original Lower Reporting Limit type, value and unit stay in the retained CSV. This preparation does not relabel that field as a detection limit or quantitation limit."
+}
