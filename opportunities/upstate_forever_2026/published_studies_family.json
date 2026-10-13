@@ -1,10 +1,10 @@
 {
   "schema": "upstate.published-study-family/v1",
-  "version": "2.3.0",
+  "version": "2.3.1",
   "repository": "woahwhattheheck/public-commons-sprint-2026",
   "application_path": "opportunities/upstate_forever_2026",
   "source_reference_base": "37691b6e75aedf0943603cf71b8ba6ae5e4ed85f",
-  "instruction": "Resolve the complete inventory at this delivery commit and include this inventory. The installer retains the existing host. The lake, four-stream nutrient, and utility microbial builtins retain their separate original source cohorts. Stream analytical reports preserve their complete original application layout; selected exports preserve every original result column and analytical series dimension. The microbial temporal and calendar companion preserves its complete original application layout, self-contained HTML explorer and a separately bound native scientific-report recipe. Named saved reviews retain exact original study editions and complete cohort selections; complete review exports include the original study and selected report tree. Review import preserves an existing current study edition. The owned published-study-reviews component fragment retains complete review, hydrologic-source and microbial-gallery dependencies in cumulative application assembly. RL-18151 preserves its complete original 40-file scientific family and exact 498-result cohort. The shared native receiving course preserves the existing SV-833 saved-review continuation and provides the complete RL-18151 import/report/study/project lifecycle. Geographic station selections open the maintained original-observation review workflow with explicit matched/missing coverage and original donor provenance.",
+  "instruction": "Resolve the complete inventory at this delivery commit and include this inventory. The installer retains the existing host. The lake, four-stream nutrient, and utility microbial builtins retain their separate original source cohorts. Stream analytical reports preserve their complete original application layout; selected exports preserve every original result column and analytical series dimension. The microbial temporal and calendar companion preserves its complete original application layout, self-contained HTML explorer and a separately bound native scientific-report recipe. Named saved reviews retain exact original study editions and complete cohort selections; complete review exports include the original study and selected report tree. Review import preserves an existing current study edition. The owned published-study-reviews component fragment retains complete review, hydrologic-source and microbial-gallery dependencies in cumulative application assembly. RL-18151 preserves its complete original 40-file scientific family and exact 498-result cohort. The shared native receiving course preserves the existing SV-833 saved-review continuation and provides the complete RL-18151 import/report/study/project lifecycle. Geographic station selections open the maintained original-observation review workflow with explicit matched/missing coverage and original donor provenance. Explicit saved-review relocation verifies the original operation and archives, preserves original request/source identities and records separate receiving-host locations.",
   "external_source_edition": {
     "files": 62,
     "bank_sha256": "46334fae01f7ab6d356b70dbcfe2c5bfb555cccae99877e78c8f80cf17970272",
@@ -103,8 +103,8 @@
     },
     {
       "path": "measurement_workspace/STUDY_REVIEWS.md",
-      "bytes": 11496,
-      "sha256": "d76ea2ffc1d167eb48b6c5b2d69f109a88cd97bbdada0ae1d6e078fae491bd7f"
+      "bytes": 15316,
+      "sha256": "fe5ce92cbf5fa9549daf40e63a6a9cb76cc556d21098addc77e86d1feed16d89"
     },
     {
       "path": "measurement_workspace/study_reviews.py",
@@ -1153,8 +1153,8 @@
     },
     {
       "path": "source_tools/receive_original_study.py",
-      "bytes": 26785,
-      "sha256": "4040094bed4fe826910113ad13ff279a3667aa2c8a477b1dcc02546dce7a0d63"
+      "bytes": 38465,
+      "sha256": "58910054c623724ebdef3c690386324b59a77b2f0d13470f30453b9b70c0f2b0"
     },
     {
       "path": "source_tools/receive_rl18151_study.py",
