@@ -56,7 +56,7 @@ const phosphorus=result.records.filter(row=>/phosphor/i.test(row.characteristic)
 const phosphorusGroups=Object.fromEntries([...new Set(phosphorus.map(row=>row.characteristic))].sort().map(name=>[name,phosphorus.filter(row=>row.characteristic===name).length]));
 const annualRows=result.cohorts.filter(row=>/phosphor/i.test(row.characteristic)).map(row=>[
  row.year,row.characteristic,row.fraction||"(blank)",row.unit,row.depth_value?row.depth_value+" "+row.depth_unit:"(not supplied)",
- row.method_context+":"+row.method_id,String(row.records),String(row.numeric_records),String(row.left_censored_records),
+ [row.method_context,row.method_id,row.method_name].filter(Boolean).join(":"),String(row.records),String(row.numeric_records),String(row.left_censored_records),
  row.numeric_median===null?"—":String(row.numeric_median)]);
 const recipe={
  schema:"upstate.observed-report/v1",title:"RL-18151 original Lake Keowee observations, 2018–2026",
@@ -65,7 +65,7 @@ const recipe={
                "capture-manifest.json","acquisition-plan.json",...originalPaths,"README.md"],
  sections:[
   ["RL-18151 original station and assessment context",[
-   "Original Lake Keowee sampling at "+result.summary.station.latitude+", "+result.summary.station.longitude+" ("+datum+"). The retained 2024 source lists total phosphorus at station RL-18151, HUC12 030601010204, source page61/record5d50e961f2d6ea86619791dc. This assessment edition remains separate from the dates of individual measurements.",
+   "Original Lake Keowee sampling at "+result.summary.station.latitude+", "+result.summary.station.longitude+" ("+datum+"). The retained 2024 source lists total phosphorus at station RL-18151, HUC12 030601010204, source page 61 / record 5d50e961f2d6ea86619791dc. This assessment edition remains separate from the dates of individual measurements.",
    "Requested period: "+manifest.selected_start+" through "+manifest.selected_end+". Returned results span "+result.summary.first_date+" through "+result.summary.last_date+".",
    {kind:"table",columns:["Original scope","Count"],rows:[
     ["Agency responses",String(result.summary.source_response_count)],["Result records",String(result.summary.records)],
@@ -92,7 +92,7 @@ const recipe={
 save("observed-report.json",json(recipe));
 const closure=[...members,descriptor("observed-report.json")];
 const entry=(id,title,kind,path,role,uri)=>({
- id,title,kind,path,role,uri,vintage:"Original agency responses retained"+manifest.originals.map(item=>item.retrieved_at).sort().at(-1),
+ id,title,kind,path,role,uri,vintage:"Original agency responses retained "+manifest.originals.map(item=>item.retrieved_at).sort().at(-1),
  ...descriptor(path),companions:closure.filter(item=>item.path!==path),
  station_id:result.summary.station_id,source_operation:manifest.operation
 });

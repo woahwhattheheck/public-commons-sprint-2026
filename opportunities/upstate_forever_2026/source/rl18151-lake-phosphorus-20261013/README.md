@@ -47,9 +47,9 @@ An empty group remains an explicit original empty response. It does not become a
 
 The concentration and physical records are discrete observations at a lake sampling station. They are not annual catchment exports. No daily flow, watershed load, water-volume weighting or unsampled time-series value is reconstructed.
 
-Recognized left-censored records use the interval from zero to the published detection/quantitation limit, with an open upper bound, only when the two original units match. Their reported value text remains unchanged. Unknown detection conditions, missing limits and incompatible units have unresolved numeric intervals. No half-limit substitution is applied.
+Recognized left-censored records use the interval from zero to the published detection/quantitation limit, with an open upper bound, only when the published limit is strictly positive and the two original units match. A zero limit remains unresolved because the implied nonnegative interval would be empty. Their reported value text remains unchanged. Unknown detection conditions, missing limits and incompatible units have unresolved numeric intervals. No half-limit substitution is applied.
 
-Numeric min/max/median/mean describe only the reported numeric subset. An all-record mean interval is available only when every record in the exact source cohort has a comparable numeric interval. Records retain their original qualifiers and result status; the initial report excludes no quality code silently.
+Numeric min/max/median/mean describe only the reported numeric subset. An all-record mean interval is available only when every record in the exact source cohort has a comparable numeric interval. The cohort output retains whether each mean endpoint is open or closed. Records retain their original qualifiers and result status; the initial report excludes no quality code silently.
 
 The full requested nine-year span is not a claim of complete sampling. Returned sampling dates/months and exact annual record/activity counts describe actual coverage. The current 2026 observations cover only the query endpoint. The source analysis keeps depths and laboratory methods separate before temporal interpretation.
 
