@@ -67,6 +67,14 @@ OPERATOR_REFERENCE_PREDECESSORS = {
     "operator/GUIDED_JOURNEY.md": "1f3810783f074e15ed386b1549b7a8464082684d69d8451bcef747a4494ee822",
     "operator/Guided_Journey_Source.json": "827d3db43b68ff5eff7176d879be9b7eb1a5d232ac326c9b4fca59e720a101ea"
 }
+# Exact complete reference edition before the original Calibration workflow chapter.
+CALIBRATION_REFERENCE_PREDECESSORS = {
+    "operator/web/operator_reference.mjs": "174f5cee6a1b631daa7a499d31595f85ae0a3223a69bb840c5cc6f96c8e4ee37",
+    "operator/OPERATOR_REFERENCE.html": "33974a529b57309c0cad846213dd5d373ce624bc7f9cd1dde3fd329c4a8d1169",
+    "operator/OPERATOR_REFERENCE.md": "b951867f5df62fb389dd993d0f2dfd4a8a5803c8c68fffd7f394e066cf1aa4c0",
+    "operator/install_guided_journey.py": "88b8a0b07739d719858b34f62cf46744b94979824912b28a548c7084b737fe43",
+    "operator/Guided_Journey_Source.json": "907173b2212a11b2fa0537cc55e6fb4e064d41830a78a1652a620a9a00a6564b"
+}
 SHARED = ("operator/server.py", "operator/web/app.mjs")
 OPTIONAL_SHARED = ("install_extensions.py", "operator/web/index.html")
 
@@ -204,7 +212,8 @@ def prepare(application, files, integration):
                 and hashlib.sha256(before).hexdigest() not in {
                     PREDECESSORS.get(name), CURRENT_PREDECESSORS.get(name),
                     FIRST_SOURCE_PREDECESSORS.get(name),
-                    OPERATOR_REFERENCE_PREDECESSORS.get(name)}):
+                    OPERATOR_REFERENCE_PREDECESSORS.get(name),
+                    CALIBRATION_REFERENCE_PREDECESSORS.get(name)}):
             raise ValueError("Preserve and compose the other installed journey edition at " + name)
         original[name], proposed[name] = before, incoming
         modes[name] = path.stat().st_mode & 0o777 if before is not None else 0o644
