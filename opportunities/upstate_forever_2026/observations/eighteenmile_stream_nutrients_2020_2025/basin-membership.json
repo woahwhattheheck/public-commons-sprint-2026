@@ -1,0 +1,94 @@
+{
+  "schema": "upstate.station-basin-membership/v1",
+  "coordinate_order": "longitude,latitude",
+  "basin_query": {
+    "simplified": false,
+    "splitCatchment": false
+  },
+  "records": [
+    {
+      "site_id": "SV-233",
+      "monitoring_location_id": "21SC60WQ_WQX-SV-233",
+      "coordinate_tokens": {
+        "longitude": "-82.8044725100",
+        "latitude": "34.6347837300"
+      },
+      "coordinates": [
+        -82.80447251,
+        34.63478373
+      ],
+      "datum": "WGS84",
+      "source_crs": "EPSG:4326",
+      "station_catalog_source_id": "scdes-seneca-nutrient-stations-2020-2025",
+      "station_catalog_sha256": "c27a0e7fcd486c17634c71f1f2ac8e29b7d6eaec29bf08c22c0c47d186b5708c",
+      "basin_source_id": "usgs-eighteenmile-whole-basin",
+      "basin_sha256": "097050d2b09e371feb2dbcf3fe1d2fba90730086db45d4a90be514706145dc88",
+      "whole_basin_membership": "inside",
+      "gauge_upstream_applicability": "not_determined_by_unsplit_basin",
+      "predicate": "Planar lon/lat ray crossing on original polygon, respecting exterior and hole rings; cross-product boundary tolerance 1e-12 square degrees and coordinate bounding tolerance 1e-12 degrees."
+    },
+    {
+      "site_id": "SV-245",
+      "monitoring_location_id": "21SC60WQ_WQX-SV-245",
+      "coordinate_tokens": {
+        "longitude": "-82.6916993600",
+        "latitude": "34.7419027100"
+      },
+      "coordinates": [
+        -82.69169936,
+        34.74190271
+      ],
+      "datum": "WGS84",
+      "source_crs": "EPSG:4326",
+      "station_catalog_source_id": "scdes-seneca-nutrient-stations-2020-2025",
+      "station_catalog_sha256": "c27a0e7fcd486c17634c71f1f2ac8e29b7d6eaec29bf08c22c0c47d186b5708c",
+      "basin_source_id": "usgs-eighteenmile-whole-basin",
+      "basin_sha256": "097050d2b09e371feb2dbcf3fe1d2fba90730086db45d4a90be514706145dc88",
+      "whole_basin_membership": "inside",
+      "gauge_upstream_applicability": "not_determined_by_unsplit_basin",
+      "predicate": "Planar lon/lat ray crossing on original polygon, respecting exterior and hole rings; cross-product boundary tolerance 1e-12 square degrees and coordinate bounding tolerance 1e-12 degrees."
+    },
+    {
+      "site_id": "SV-375",
+      "monitoring_location_id": "21SC60WQ_WQX-SV-375",
+      "coordinate_tokens": {
+        "longitude": "-82.6492180000",
+        "latitude": "34.7910840000"
+      },
+      "coordinates": [
+        -82.649218,
+        34.791084
+      ],
+      "datum": "WGS84",
+      "source_crs": "EPSG:4326",
+      "station_catalog_source_id": "scdes-seneca-nutrient-stations-2020-2025",
+      "station_catalog_sha256": "c27a0e7fcd486c17634c71f1f2ac8e29b7d6eaec29bf08c22c0c47d186b5708c",
+      "basin_source_id": "usgs-eighteenmile-whole-basin",
+      "basin_sha256": "097050d2b09e371feb2dbcf3fe1d2fba90730086db45d4a90be514706145dc88",
+      "whole_basin_membership": "inside",
+      "gauge_upstream_applicability": "not_determined_by_unsplit_basin",
+      "predicate": "Planar lon/lat ray crossing on original polygon, respecting exterior and hole rings; cross-product boundary tolerance 1e-12 square degrees and coordinate bounding tolerance 1e-12 degrees."
+    },
+    {
+      "site_id": "SV-376",
+      "monitoring_location_id": "21SC60WQ_WQX-SV-376",
+      "coordinate_tokens": {
+        "longitude": "-82.7358600000",
+        "latitude": "34.7190900000"
+      },
+      "coordinates": [
+        -82.73586,
+        34.71909
+      ],
+      "datum": "WGS84",
+      "source_crs": "EPSG:4326",
+      "station_catalog_source_id": "scdes-seneca-nutrient-stations-2020-2025",
+      "station_catalog_sha256": "c27a0e7fcd486c17634c71f1f2ac8e29b7d6eaec29bf08c22c0c47d186b5708c",
+      "basin_source_id": "usgs-eighteenmile-whole-basin",
+      "basin_sha256": "097050d2b09e371feb2dbcf3fe1d2fba90730086db45d4a90be514706145dc88",
+      "whole_basin_membership": "inside",
+      "gauge_upstream_applicability": "not_determined_by_unsplit_basin",
+      "predicate": "Planar lon/lat ray crossing on original polygon, respecting exterior and hole rings; cross-product boundary tolerance 1e-12 square degrees and coordinate bounding tolerance 1e-12 degrees."
+    }
+  ]
+}

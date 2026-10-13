@@ -58,7 +58,15 @@
     "utility-microbial-study",
     "native-interactions",
     "station-assessment",
-    "extension-startup"
+    "extension-startup",
+    "chemistry",
+    "implementation",
+    "monitoring",
+    "portfolio-pairing",
+    "profile-workbench",
+    "scenario-inputs",
+    "source-updates",
+    "keowee-regional-review-setup"
   ],
   "components": {
     "core": {
@@ -161,13 +169,62 @@
       ]
     },
     "conservation-design": {
-      "title": "conservation design",
-      "paths": [
-        "operator/extensions/conservation-design.json"
-      ],
       "requires": [
-        "core"
-      ]
+        "core",
+        "conservation"
+      ],
+      "paths": [
+        "integration/conservation_design_composition.json",
+        "model/CONSERVATION_CONSUMERS.md",
+        "model/conservation_bindings.py",
+        "model/conservation_scenarios.py",
+        "model/conservation_design.py",
+        "model/conservation_design_editor.py",
+        "operator/CONSERVATION_DESIGN.md",
+        "operator/CONSERVATION_DESIGN_EDITOR.md",
+        "operator/CONSERVATION_DESIGN_BROWSER.md",
+        "operator/conservation_design_browser_receiving.py",
+        "operator/conservation_design.py",
+        "operator/extensions/conservation-design.json",
+        "operator/install_conservation_design.py",
+        "operator/CONSERVATION_DESIGN_RECEIVING.md",
+        "operator/web/conservation_design.css",
+        "operator/web/conservation_design.mjs",
+        "operator/web/conservation_design_editor.mjs",
+        "operator/web/conservation_design_frame.js",
+        "scenario-design/CONSERVATION.md",
+        "scenario-design/INTEGRATION.md",
+        "scenario-design/PERFORMANCE.json",
+        "scenario-design/README.md",
+        "scenario-design/SOURCE_MANIFEST.json",
+        "scenario-design/__init__.py",
+        "scenario-design/conservation.py",
+        "scenario-design/eco_bridge.py",
+        "scenario-design/engine.py",
+        "scenario-design/requirements.txt",
+        "scenario-design/server.py",
+        "scenario-design/start.cmd",
+        "scenario-design/start.sh",
+        "scenario-design/tests/browser_journey.py",
+        "scenario-design/tests/test_conservation_journey.py",
+        "scenario-design/tests/test_journey.py",
+        "scenario-design/tests/test_native_bridge.py",
+        "scenario-design/tests/ui_transport.py",
+        "scenario-design/tools/capacity_journey.py",
+        "scenario-design/tools/pack_source.py",
+        "scenario-design/web/app.js",
+        "scenario-design/web/index.html",
+        "scenario-design/web/style.css"
+      ],
+      "source_reference": {
+        "repository": "woahwhattheheck/public-commons-sprint-2026",
+        "revision": "ff839fd1183986d77616a3f254c32469008bfad3",
+        "installer": "operator/install_conservation_design.py",
+        "installer_sha256": "e5fa566f9753e4e2b86131a5cbfcdbe5f6fc06f65050b0be32bc562f36137c8c",
+        "executable_paths": [
+          "scenario-design/start.sh"
+        ]
+      }
     },
     "conservation-optimization": {
       "title": "conservation optimization",
@@ -765,12 +822,44 @@
       }
     },
     "receiving-waters": {
-      "title": "receiving waters",
+      "title": "Receiving waters, original public source, native maps and browser operation",
       "paths": [
-        "operator/extensions/receiving-waters.json"
+        "docs/receiving_water_catalog.md",
+        "model/RECEIVING_WATERS.md",
+        "model/receiving_water_cli.py",
+        "model/receiving_water_delivery.py",
+        "model/receiving_water_journey.py",
+        "model/receiving_water_monitoring.py",
+        "model/receiving_water_spatial.py",
+        "model/receiving_waters.py",
+        "operator/RECEIVING_WATERS_OPERATOR.md",
+        "operator/RECEIVING_WATER_MONITORING.md",
+        "operator/extensions/receiving-waters.json",
+        "operator/install_receiving_waters.py",
+        "operator/receiving_water_actions.py",
+        "operator/receiving_water_browser.mjs",
+        "operator/receiving_water_operate.py",
+        "operator/receiving_waters.extension.json",
+        "operator/web/receiving_water_monitoring.mjs",
+        "operator/web/receiving_water_spatial.mjs",
+        "operator/web/receiving_waters.css",
+        "operator/web/receiving_waters.mjs",
+        "operator/web/receiving_waters_extension.mjs",
+        "source/water_context/20261012/public-water/README.md",
+        "source/water_context/20261012/public-water/metadata/public-water-0.json",
+        "source/water_context/20261012/public-water/metadata/public-water-2.json",
+        "source/water_context/20261012/public-water/raw/public-intakes.esri.json",
+        "source/water_context/20261012/public-water/raw/scdes-arjws-prwd-source-water-protection-original.json",
+        "source/water_context/20261012/public-water/receiving-waters.public-spec.json",
+        "source/water_context/20261012/public-water/sources.public-native.json",
+        "source_tools/PUBLIC_SOURCE_WATER_NATIVE.md",
+        "source_tools/prepare_public_source_water.py",
+        "source_tools/receiving_water_catalog.py",
+        "source_tools/receiving_water_selection.schema.json"
       ],
       "requires": [
-        "core"
+        "core",
+        "monitoring"
       ]
     },
     "receptors": {
@@ -1470,6 +1559,299 @@
         "core"
       ],
       "source_reference": "PR3039 73d703b3d04f69a96a8f3556385b9c1c2069676c."
+    },
+    "chemistry": {
+      "title": "Reach chemistry",
+      "paths": [
+        "operator/extensions/chemistry.json"
+      ],
+      "requires": [
+        "core"
+      ],
+      "source_reference": {
+        "git_ref": "7e210d18ec0944868559b30a302826d525d27a0d",
+        "git_blob": "91ed64e78461e0422ebd02d7a0036af769566458"
+      }
+    },
+    "implementation": {
+      "title": "Implementation & fieldwork",
+      "paths": [
+        "operator/extensions/implementation.json"
+      ],
+      "requires": [
+        "core"
+      ],
+      "source_reference": {
+        "git_ref": "7e210d18ec0944868559b30a302826d525d27a0d",
+        "git_blob": "4309452cb20771a86169b201a109e851ac6c889a"
+      }
+    },
+    "monitoring": {
+      "title": "Monitoring design and complete original native receiving package",
+      "paths": [
+        "integration/completed_component_adoption.json",
+        "integrations/monitoring/API.md",
+        "integrations/monitoring/HANDOFF.md",
+        "integrations/monitoring/MANIFEST.json",
+        "integrations/monitoring/PREDECESSORS.json",
+        "integrations/monitoring/README.md",
+        "integrations/monitoring/RECEIVING.md",
+        "integrations/monitoring/install_monitoring.py",
+        "integrations/monitoring/install_native_monitoring.py",
+        "integrations/monitoring/requirements-monitoring.txt",
+        "integrations/monitoring/source_adoption.json",
+        "integrations/monitoring/src/opportunities/upstate_forever_2026/model/MONITORING.md",
+        "integrations/monitoring/src/opportunities/upstate_forever_2026/model/monitoring_actions.py",
+        "integrations/monitoring/src/opportunities/upstate_forever_2026/model/monitoring_campaign.py",
+        "integrations/monitoring/src/opportunities/upstate_forever_2026/model/monitoring_cli.py",
+        "integrations/monitoring/src/opportunities/upstate_forever_2026/model/monitoring_common.py",
+        "integrations/monitoring/src/opportunities/upstate_forever_2026/model/monitoring_design.py",
+        "integrations/monitoring/src/opportunities/upstate_forever_2026/model/monitoring_network.py",
+        "integrations/monitoring/src/opportunities/upstate_forever_2026/model/monitoring_sources.py",
+        "integrations/monitoring/src/opportunities/upstate_forever_2026/model/monitoring_workspace.py",
+        "integrations/monitoring/src/opportunities/upstate_forever_2026/operator/MONITORING_API.md",
+        "integrations/monitoring/src/opportunities/upstate_forever_2026/operator/extensions/monitoring.json",
+        "integrations/monitoring/src/opportunities/upstate_forever_2026/operator/monitoring.py",
+        "integrations/monitoring/src/opportunities/upstate_forever_2026/operator/monitoring_native.py",
+        "integrations/monitoring/src/opportunities/upstate_forever_2026/operator/monitoring_receiving.py",
+        "integrations/monitoring/src/opportunities/upstate_forever_2026/operator/static/monitoring.js",
+        "integrations/monitoring/src/opportunities/upstate_forever_2026/operator/web/monitoring-component.mjs",
+        "integrations/monitoring/src/opportunities/upstate_forever_2026/operator/web/monitoring.css",
+        "integrations/monitoring/src/opportunities/upstate_forever_2026/operator/web/monitoring.mjs",
+        "integrations/monitoring/tests/browser_journey.py",
+        "integrations/monitoring/tests/contract_support.py",
+        "integrations/monitoring/tests/native_browser_journey.py",
+        "integrations/monitoring/tests/native_contract_support.py",
+        "integrations/monitoring/tests/shared_registry_journey.py",
+        "integrations/monitoring/tests/test_monitoring.py",
+        "integrations/monitoring/tests/test_native_contract.py",
+        "model/MONITORING.md",
+        "model/monitoring_actions.py",
+        "model/monitoring_campaign.py",
+        "model/monitoring_cli.py",
+        "model/monitoring_common.py",
+        "model/monitoring_design.py",
+        "model/monitoring_network.py",
+        "model/monitoring_sources.py",
+        "model/monitoring_workspace.py",
+        "model/requirements-monitoring.txt",
+        "operator/MONITORING_API.md",
+        "operator/extensions/monitoring.json",
+        "operator/monitoring.py",
+        "operator/monitoring_native.py",
+        "operator/monitoring_receiving.py",
+        "operator/static/monitoring.js",
+        "operator/web/monitoring-component.mjs",
+        "operator/web/monitoring.css",
+        "operator/web/monitoring.mjs"
+      ],
+      "requires": [
+        "core"
+      ]
+    },
+    "portfolio-pairing": {
+      "title": "Portfolio native continuation",
+      "paths": [
+        "operator/extensions/portfolio-pairing.json"
+      ],
+      "requires": [
+        "core"
+      ],
+      "source_reference": {
+        "git_ref": "7e210d18ec0944868559b30a302826d525d27a0d",
+        "git_blob": "4188f3706ce6120da038c2d7439b787a18fa32c4"
+      }
+    },
+    "profile-workbench": {
+      "title": "Profile workbench",
+      "paths": [
+        "operator/extensions/profile-workbench.json"
+      ],
+      "requires": [
+        "core"
+      ],
+      "source_reference": {
+        "git_ref": "7e210d18ec0944868559b30a302826d525d27a0d",
+        "git_blob": "e9f8b032688369afee2cace27c48e34d6bac6d2d"
+      }
+    },
+    "scenario-inputs": {
+      "title": "Model input changes and native scenario response",
+      "paths": [
+        "model/scenario_inputs.py",
+        "model/scenario_response.py",
+        "operator/SCENARIO_INPUTS.md",
+        "operator/extensions/scenario-inputs.json",
+        "operator/install_scenario_inputs.py",
+        "operator/scenario_inputs.py",
+        "operator/web/scenario-inputs.css",
+        "operator/web/scenario-inputs.mjs"
+      ],
+      "requires": [
+        "core"
+      ]
+    },
+    "source-updates": {
+      "title": "Source Updates and original roots-format compatibility",
+      "paths": [
+        "SOURCE_REFRESH.md",
+        "docs/source-refresh-compatibility.md",
+        "docs/source-refresh.md",
+        "install_source_refresh.py",
+        "model/source_refresh.py",
+        "model/source_refresh_cli.py",
+        "model/source_refresh_compat.py",
+        "model/source_refresh_legacy.py",
+        "model/source_refresh_legacy_cli.py",
+        "operator/SOURCE_UPDATES.md",
+        "operator/extensions/source-updates.json",
+        "operator/install_source_refresh.py",
+        "operator/source_refresh.py",
+        "operator/source_refresh_legacy.py",
+        "operator/source_refresh_native.py",
+        "operator/source_refresh_server.py",
+        "operator/web/source-refresh-legacy/source-refresh-nav.css",
+        "operator/web/source-refresh-legacy/source-refresh.css",
+        "operator/web/source-refresh-legacy/source-refresh.html",
+        "operator/web/source-refresh-legacy/source-refresh.mjs",
+        "operator/web/source-refresh-nav.mjs",
+        "operator/web/source-refresh.css",
+        "operator/web/source-refresh.html",
+        "operator/web/source-refresh.mjs",
+        "source/landcover-change/METHOD.md",
+        "source_tools/landcover_change.py"
+      ],
+      "requires": [
+        "core"
+      ]
+    },
+    "keowee-regional-review-setup": {
+      "title": "Keowee methods, regional original results and scientific review",
+      "paths": [
+        "model/KEOWEE_PROFILE_INTEGRATION.md",
+        "model/SCIENTIFIC_SETUP.md",
+        "model/keowee_priority.py",
+        "model/keowee_profile_adapter.py",
+        "model/review_reconciliation.py",
+        "model/setup_review.py",
+        "operator/KEOWEE_METHOD_VIEW.md",
+        "operator/REVIEW_RECONCILIATION.md",
+        "operator/SCIENTIFIC_SETUP_DESK.md",
+        "operator/extensions/keowee-method-view.json",
+        "operator/extensions/review-reconciliation.json",
+        "operator/extensions/scientific-setup.json",
+        "operator/receive_watershed_context.py",
+        "operator/review_reconciliation.py",
+        "operator/scientific_setup.py",
+        "operator/web/conservation.mjs",
+        "operator/web/keowee-method-view.mjs",
+        "operator/web/review_reconciliation.mjs",
+        "operator/web/scientific-setup.css",
+        "operator/web/scientific-setup.mjs",
+        "source/gura-original-tables-3.20/NDR/biophysical_table_gura.csv",
+        "source/gura-original-tables-3.20/SDR/biophysical_table_Gura.csv",
+        "source/gura-scientific-setup-request.json",
+        "source/gura-setup-integration-20261013.json",
+        "source/keowee-method-view-integration-20261013.json",
+        "source/keowee-native-binding-20261013.json",
+        "source/keowee-native-integration-20261013.json",
+        "source/keowee-native-receiving-20261013/capture.json",
+        "source/keowee-native-receiving-20261013/greenwood-native-feature.json",
+        "source/keowee-native-receiving-20261013/source-interval-journey.json",
+        "source/keowee-native-receiving-20261013/source-selection-journey.json",
+        "source/keowee-native-receiving-20261013/sources.json",
+        "source/keowee/20261013/KEOWEE-INTEGRATION.md",
+        "source/keowee/20261013/keowee-criteria.csv",
+        "source/keowee/20261013/keowee-evaluator.d.mts",
+        "source/keowee/20261013/keowee-evaluator.mjs",
+        "source/keowee/20261013/keowee-fields.csv",
+        "source/keowee/20261013/keowee-journey-check.json",
+        "source/keowee/20261013/keowee-source-catalog.json",
+        "source/keowee/20261013/keowee-sources-manifest.json",
+        "source/keowee/20261013/lake-keowee-methodology.json",
+        "source/scientific-setup-integration-20261013.json",
+        "source/scientific-setup-selection.schema.json",
+        "source/water_context/20261012/README.md",
+        "source/water_context/20261012/classified-reaches.csv",
+        "source/water_context/20261012/raw/nrcs-fy26.json",
+        "source/water_context/20261012/source-dictionary.json",
+        "source/water_context/20261013/README.md",
+        "source/water_context/20261013/classified-full-domain-query.json",
+        "source/water_context/20261013/classified-reaches.csv",
+        "source/water_context/20261013/complete-native-sources.json",
+        "source/water_context/20261013/complete-sources.json",
+        "source/water_context/20261013/completed-run.package.json",
+        "source/water_context/20261013/connectivity/WATERSHED_CONNECTIVITY.md",
+        "source/water_context/20261013/connectivity/editions/1/watershed-connectivity-summary.json",
+        "source/water_context/20261013/connectivity/watershed-connectivity-217.csv",
+        "source/water_context/20261013/connectivity/watershed-connectivity-summary.json",
+        "source/water_context/20261013/domain-huc12s.json",
+        "source/water_context/20261013/full-domain-water-context.json",
+        "source/water_context/20261013/native-network-source.json",
+        "source/water_context/20261013/native-network.json",
+        "source/water_context/20261013/nrcs-domain-fy26.csv",
+        "source/water_context/20261013/original-source-README.md",
+        "source/water_context/20261013/original-sources.json",
+        "source/water_context/20261013/received/watershed-context-20261013/eco-watershed13-received.zip",
+        "source/water_context/20261013/received/watershed-context-20261013/original-source/model/WATERSHED_CONTEXT.md",
+        "source/water_context/20261013/received/watershed-context-20261013/original-source/model/watershed_context.py",
+        "source/water_context/20261013/received/watershed-context-20261013/original-source/model/watershed_context_cli.py",
+        "source/water_context/20261013/received/watershed-context-20261013/run-receipt.json",
+        "source/water_context/20261013/received/watershed-context-20261013/selected-watersheds.csv",
+        "source/water_context/20261013/received/watershed-context-20261013/selected-watersheds.json",
+        "source/water_context/20261013/received/watershed-context-20261013/source-receipt.json",
+        "source/water_context/20261013/received/watershed-context-20261013/stderr.txt",
+        "source/water_context/20261013/received/watershed-context-20261013/stdout.json",
+        "source/water_context/20261013/received/watershed-context-20261013/watershed-context.json",
+        "source/water_context/20261013/received/watershed-context-20261013/watershed-huc8s.csv",
+        "source/water_context/20261013/received/watershed-context-20261013/watershed-hucs.csv",
+        "source/water_context/20261013/received/watershed-context-20261013/watershed-report.md",
+        "source/water_context/20261013/received/watershed-context-20261013/watershed-states.csv",
+        "source/water_context/20261013/scdes-classified-streams.esri.json",
+        "source/water_context/20261013/scdes-domain217-source-coverage.json",
+        "source/water_context/20261013/scdes-huc8-03060104-to-07-target-class-count.json",
+        "source/water_context/20261013/scdes-original-domain217-classified-objectids.json",
+        "source/water_context/20261013/source-context-run.json",
+        "source/water_context/sources-20261013.json",
+        "source_tools/FIRST_GURA_RECEIVING.md",
+        "source_tools/GURA_SETUP_REVIEW.md",
+        "source_tools/INSTALL_KEOWEE_WATERSHED_JOIN.md",
+        "source_tools/RECEIVE_WATERSHED_EDITION.md",
+        "source_tools/archive_reader/ARTIFACT-READER.md",
+        "source_tools/archive_reader/archive-reader-journey.json",
+        "source_tools/archive_reader/artifact-reader.mjs",
+        "source_tools/archive_reader/artifact-writer.mjs",
+        "source_tools/archive_reader/watershed-companion-plan.json",
+        "source_tools/archive_reader/watershed-received-context.json",
+        "source_tools/gura_comparison.py",
+        "source_tools/gura_setup_review.py",
+        "source_tools/gura_workflow.py",
+        "source_tools/install_keowee_watershed_join.py",
+        "source_tools/install_review_reconciliation.py",
+        "source_tools/keowee_interval_receiving.mjs",
+        "source_tools/keowee_profile_receiving.py",
+        "source_tools/keowee_watershed_join.source.json",
+        "source_tools/receive_first_gura_case.py",
+        "source_tools/receive_gura.py",
+        "source_tools/receive_keowee_reviews.py",
+        "source_tools/receive_scientific_setup.py",
+        "source_tools/receive_watershed_edition.py",
+        "source_tools/review_reconciliation.source.json"
+      ],
+      "requires": [
+        "core",
+        "conservation",
+        "watershed-context"
+      ],
+      "source_reference": {
+        "schema": "commons.source-bank/v1",
+        "version": "1.2.1",
+        "index": "https://tokenjunkielabs.slack.com/docs/T0BRETUB5TK/F0C9KMLM34G",
+        "metadata": "https://tokenjunkielabs.slack.com/docs/T0BRETUB5TK/F0C8PC3FQG6",
+        "files": 104,
+        "source_bytes": 8071724,
+        "revision": "2c1cffc67376ae1ddb09fdec9546e8316c52ebf8"
+      }
     }
   }
 }

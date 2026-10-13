@@ -212,3 +212,66 @@ The report binding joins use `model.report_release.bind_report` and `retain_repo
 Original requirement: [Upstate Forever issuer RFP and appendix](https://www.upstateforever.org/files/files/20261002_FINAL_EC-SDC%20Mapping%20RFP%20APPENDIX%20COMBINED.pdf).
 
 PDF implementation uses the existing [Matplotlib PdfPages interface](https://matplotlib.org/stable/api/backend_pdf_api.html#matplotlib.backends.backend_pdf.PdfPages). The atlas adds no runtime dependency.
+
+## Continue a saved Decision calculation into the delivery
+
+Open a completed calculation in **Decision studies** and choose **Prepare map release**.
+The preparation panel reads that original saved calculation and its study revision.
+For a frontier, select the **Retained frontier point** explicitly. Select the
+**Scientific profile** whose original baseline and chosen alternative will supply
+the maps, then choose **Open map release**.
+
+The atlas opens its existing preparation form with that exact native run pair.
+The full Decision comparison across profiles remains attached to the release;
+the selected profile specifies which original raster outputs the maps display.
+The original package-selection model chooses a complete modeled scenario.
+Its physical results are never added to another modeled package.
+A saved calculation without an eligible local native pair keeps its original
+explanation in the preparation panel.
+
+Continue through the original source context, delivery mode, map settings,
+contact and interpretation choices, then choose **Build atlas and complete GIS
+delivery**. The source-decision link keeps its baseline and alternative fixed.
+The existing **Choose a different run cohort** control removes the attached
+decision link when starting an independent map selection.
+
+### Retained calculation and reports
+
+The completed delivery carries the saved Decision study revision, calculation
+and optional frontier point, explicit display profile, original selected package,
+and exact native baseline and alternative identities. Its decision report retains
+the full original economic inputs, capacities, metric scales, weights, profile
+probabilities when supplied, objective and outcomes across the studied profiles.
+
+The queued native delivery retains the original full decision project export
+alongside the selected study/result, implementation selection and HTML/CSV
+reports. A resumed build reuses the first captured complete project export;
+unrelated later study revisions do not replace that delivery's history.
+The scientific and client reports contain the retained decision interpretation,
+and the complete GIS package includes the associated decision files.
+The original full working archive retains the editable scientific workspace.
+
+In **Saved releases → Open atlas and files**, use **Open saved Decision
+calculation** to return to its exact revision and calculation, including the
+selected frontier point and display profile. The adjacent downloads open the
+retained original decision files. **Revise this selection** preserves the same
+decision attachment for a later map edition.
+
+### Native composition
+
+The original `model.robust_decisions.eco_robust.decision_delivery` helper validates
+the selected calculation and native cohort before the delivery identity is
+computed. The original `delivery.build` queue retains its reports and export
+inside the existing build lock. The selection's `source_decision` pins the study,
+revision, calculation, optional point, selected package, display profile and
+content hashes. The `decision_*` file entries participate in the normal
+delivery manifest, offline navigator and complete working archive.
+
+The browser uses the existing read routes
+`/api/robust-workbench/delivery-options` and
+`/api/robust-workbench/delivery-release`, followed by the existing
+`openExtension('map-atlas', 'create', {workspace_key, selection})` capability.
+Its return action uses
+`openDesk('robust-workbench', 'openForCalculation', selection)`.
+The Decision operation queue, atlas renderer and physical model engines retain
+their original ownership.

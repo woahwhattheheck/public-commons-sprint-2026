@@ -399,7 +399,7 @@ def _areas(workspace, selections, target_crs, grid_id):
     return result
 
 
-def _paired(baseline_path, case_path, areas, *, pollutant):
+def _paired(baseline_path, case_path, areas, *, pollutant, checkpoint=None):
     import numpy as np
     import rasterio
     from rasterio.features import geometry_mask
@@ -418,7 +418,15 @@ def _paired(baseline_path, case_path, areas, *, pollutant):
             raise ValueError("The retained comparison grid has invalid pixel area")
         # Native capture already converted the original per-hectare rates to
         # annual mass per pixel. Aggregate those stored masses exactly once.
-        for _, window in baseline.block_windows(1):
+        block_height, block_width = baseline.block_shapes[0]
+        total_windows = (math.ceil(baseline.height / block_height)
+                         * math.ceil(baseline.width / block_width))
+        next_window = 0
+        if checkpoint is not None:
+            totals, next_window = checkpoint.begin(totals, total_windows)
+        for window_index, (_, window) in enumerate(baseline.block_windows(1)):
+            if window_index < next_window:
+                continue
             a = baseline.read(1, window=window, masked=True)
             b = alternative.read(1, window=window, masked=True)
             av, bv = np.ma.getdata(a), np.ma.getdata(b)
@@ -439,6 +447,10 @@ def _paired(baseline_path, case_path, areas, *, pollutant):
                 total["baseline_valid_cells"] += int(ga.sum())
                 total["case_valid_cells"] += int(gb.sum())
                 total["paired_valid_cells"] += int(paired.sum())
+            if checkpoint is not None:
+                # Publish only after every area has consumed this complete window.
+                checkpoint.advance(totals, window_index + 1,
+                                   force=window_index + 1 == total_windows)
     for area in areas:
         total = totals[area["id"]]
         for name in ("baseline", "case"):
@@ -477,8 +489,9 @@ def _response(case, profile, change, baseline_mass):
     return result
 
 
-def _summarize(workspace, key):
+def _summarize(workspace, key, *, progress=None):
     import rasterio
+    from .parameter_pair_cache import PairResults
     state = inspect(workspace, key)
     directory = workspace.root / "experiments" / key
     completed = [case for case in state["cases"] if case["state"] == "complete"]
@@ -494,13 +507,23 @@ def _summarize(workspace, key):
     with rasterio.open(baseline_files[pollutants[0]]) as raster:
         areas = _areas(workspace, state["selection"]["reporting_areas"], raster.crs,
                        baseline["selection"]["grid_id"])
+    cache = PairResults(
+        directory, workspace_id=workspace.project["id"], experiment_id=key,
+        engine_path=Path(__file__), areas=areas,
+        total_pairs=len(completed) * len(pollutants), progress=progress)
     rows = []
     for case in completed:
         run = workspace.inspect_run(case["run_id"])
         for pollutant in pollutants:
             path = (baseline_files[pollutant] if case["id"] == "baseline" else
                     verify_file(workspace.root / "runs" / run["id"], run["artifacts"][pollutant]))
-            values = _paired(baseline_files[pollutant], path, areas, pollutant=pollutant)
+            values = cache.evaluate(
+                case_id=case["id"], run_id=run["id"], pollutant=pollutant,
+                baseline=baseline["artifacts"][pollutant],
+                alternative=run["artifacts"][pollutant],
+                calculate=lambda checkpoint: _paired(
+                    baseline_files[pollutant], path, areas,
+                    pollutant=pollutant, checkpoint=checkpoint))
             for area in areas:
                 value = values[area["id"]]
                 rows.append({"case_id": case["id"], "case": case["label"], "run_id": run["id"],
@@ -523,7 +546,9 @@ def _summarize(workspace, key):
                                "minimum_mass": low["case_mass"], "maximum_mass": high["case_mass"],
                                "minimum_case_id": low["case_id"], "maximum_case_id": high["case_id"],
                                "support_changed_cases": len(selected) - len(matched)})
+    aggregation = cache.finish()
     result = {"schema": "upstate.parameter-experiment-results/v1", "experiment_id": key,
+              "aggregation": aggregation,
               "workspace_id": workspace.project["id"], "title": state["selection"]["title"],
               "purpose": state["selection"]["purpose"], "design": state["selection"]["design"],
               "selection": state["selection"], "baseline_selection": baseline["selection"],
@@ -602,6 +627,16 @@ def _exports(workspace, state):
                 for case in state["cases"]}
     atomic_json(directory / "profiles.json", profiles)
     files = ["selection.json", "results.json", "results.csv", "report.html", "profiles.json"]
+    if (directory / "aggregation.json").is_file():
+        files.append("aggregation.json")
+        aggregation = read_json(directory / "aggregation.json")
+        context = directory / aggregation["context"]
+        # A context path is written only by the retained pair-result manager.
+        if not context.resolve().is_relative_to((directory / "paired-results").resolve()):
+            raise ValueError("The retained aggregation context leaves its study")
+        files.append(context.relative_to(directory).as_posix())
+        for pair_id in dict.fromkeys(row["pair_id"] for row in aggregation["pairs"]):
+            files.append((context.parent / (identifier(pair_id) + ".json")).relative_to(directory).as_posix())
     pending = directory / ".results.zip"
     with zipfile.ZipFile(pending, "w", compression=zipfile.ZIP_DEFLATED) as archive:
         for name in files:
@@ -614,9 +649,12 @@ def _exports(workspace, state):
                     original = verify_file(workspace.root / "runs" / case["run_id"], stage["arguments"])
                     archive.write(original, "native-arguments/" + case["id"] + "/" + model + ".json")
     pending.replace(directory / "experiment-results.zip")
-    return {name: describe_file(directory, directory / filename) for name, filename in (
+    result = {name: describe_file(directory, directory / filename) for name, filename in (
         ("selection", "selection.json"), ("results", "results.json"), ("csv", "results.csv"),
         ("report", "report.html"), ("profiles", "profiles.json"), ("archive", "experiment-results.zip"))}
+    if (directory / "aggregation.json").is_file():
+        result["aggregation"] = describe_file(directory, directory / "aggregation.json")
+    return result
 
 
 def execute(workspace, key, *, progress=None):
@@ -656,7 +694,9 @@ def execute(workspace, key, *, progress=None):
                         raise
                 save()
             # Preserve usable quantitative results while other parameter cases recover.
-            summary = _summarize(workspace, key)
+            summary = _summarize(workspace, key,
+                                 progress=lambda value: save(active_case_id=None, active_run_id=None,
+                                                             aggregation_progress=value))
             if state["selection"]["difference_maps"]:
                 completed_ids = [case["run_id"] for case in state["cases"] if case["state"] == "complete"]
                 if len(completed_ids) > 1:
@@ -682,7 +722,10 @@ def summarize(workspace, key):
     directory = workspace.root / "experiments" / key
     with held(directory / ".experiment.lock", blocking=False):
         state = inspect(workspace, key)
-        result = _summarize(workspace, key)
+        def aggregation_progress(value):
+            state.update(aggregation_progress=value, updated_at=now())
+            atomic_json(directory / "experiment.json", state)
+        result = _summarize(workspace, key, progress=aggregation_progress)
         if state["selection"]["difference_maps"]:
             run_ids = [case["run_id"] for case in state["cases"] if case["state"] == "complete"]
             if len(run_ids) > 1:

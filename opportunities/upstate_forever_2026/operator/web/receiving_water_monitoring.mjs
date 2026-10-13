@@ -88,7 +88,7 @@ export function attachReceivingWaterMonitoring(context){
       field('Planning source title',input('water_monitor_title',(plan.title||'Receiving waters')+' — monitoring','required'),'',true)+
       areaChoices+
       '<fieldset class="full"><legend>Original catchment network</legend><div class="form-grid">'+
-      field('Retained HUC source',select('water_monitor_catchments',sources,sourceKey(originalCatchments)), 'Choose complete original catchment polygons with their original downstream field.',true)+
+      field('Retained HUC source',select('water_monitor_catchments',sources,sourceKey(originalCatchments)), 'Keep the complete original HUC network. Catchments outside the selected water scope retain their routing with zero target weight.',true)+
       field('Native layer',input('water_monitor_layer',originalCatchments.layer||''),'Leave empty for a single-layer source.')+
       field('HUC ID field',input('water_monitor_id_field',originalCatchments.id_field||'huc12','required'))+
       field('Downstream ID field',input('water_monitor_downstream',originalCatchments.downstream_field||'tohuc','required'))+
@@ -101,7 +101,7 @@ export function attachReceivingWaterMonitoring(context){
       field('Verified outlet field',input('water_monitor_station_outlet'),'Optional original Boolean assertion; outlet placement is never inferred.')+
       field('Explicit boundary assignments','<textarea name="water_monitor_assignments" rows="3" spellcheck="false">{}</textarea>','Optional JSON mapping original station IDs to covering HUC IDs.',true)+
       '</div></fieldset>'+
-      '<p class="full water-note">'+(analysis?'Model-weighted coverage is a planning objective; physical exports and measurement units stay with the original analysis.':'Area coverage uses the selected contribution geometry and its projected area method.')+' Sampling locations remain the retained source station points. Campaign costs and calendar are entered in the existing design desk.</p></div>';
+      '<p class="full water-note">'+(analysis?'Model-weighted coverage is a planning objective; physical exports and measurement units stay with the original analysis.':'Area coverage uses the selected contribution geometry and its projected area method.')+' Sampling locations remain the retained source station points. Opening the network starts candidate exclusions outside this water scope; review or change them under Advanced constraints. Campaign costs and calendar are entered in the existing design desk.</p></div>';
     let form;
     openForm('Prepare monitoring from this water study','Save the complete HUC planning source and its original monitoring network, then compare budgets and create a campaign.',
       html,'Prepare monitoring network',()=>{
