@@ -1,0 +1,234 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "2157af2a4b924acf8e1660dafe753228",
+        "unit_of_measure": "in",
+        "parameter_name": "Precipitation",
+        "parameter_code": "00045",
+        "statistic_id": null,
+        "hydrologic_unit_code": "03060102",
+        "state_name": "South Carolina",
+        "last_modified": "2025-06-16T17:23:37.332598",
+        "begin": "2024-09-27T12:15:00.000001",
+        "end": "2024-12-17T18:30:00.000001",
+        "begin_utc": "2024-09-27T12:15:00+00:00",
+        "end_utc": "2024-12-17T18:30:00+00:00",
+        "computation_period_identifier": "Points",
+        "computation_identifier": "Decumulated",
+        "thresholds": [],
+        "sublocation_identifier": null,
+        "primary": "Primary",
+        "monitoring_location_id": "USGS-344108083090600",
+        "web_description": null,
+        "parameter_description": "Precipitation, total, inches",
+        "parent_time_series_id": null,
+        "data_gap_interval": null
+      },
+      "id": "2157af2a4b924acf8e1660dafe753228",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -83.1516666666667,
+          34.6855555555556
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "263cacb43199484e98d94893608e2ddd",
+        "unit_of_measure": "ft",
+        "parameter_name": "Gage height",
+        "parameter_code": "00065",
+        "statistic_id": "00011",
+        "hydrologic_unit_code": "03060102",
+        "state_name": "South Carolina",
+        "last_modified": "2026-10-12T05:33:05.217604",
+        "begin": "2023-09-11T00:00:00.000001",
+        "end": "2026-10-12T05:15:00.000001",
+        "begin_utc": "2023-09-11T00:00:00+00:00",
+        "end_utc": "2026-10-12T05:15:00+00:00",
+        "computation_period_identifier": "Points",
+        "computation_identifier": "Instantaneous",
+        "thresholds": [
+          {
+            "Name": "Approximate Radar Elevation",
+            "Type": "ThresholdAbove",
+            "Periods": [
+              {
+                "EndTime": "9999-12-31T23:59:59.9999999+00:00",
+                "StartTime": "0001-01-01T00:00:00.0000000+00:00",
+                "AppliedTime": "2026-08-12T19:59:54.5341104Z",
+                "SuppressData": true,
+                "ReferenceValue": 59.5
+              }
+            ],
+            "Severity": 0,
+            "Description": "Values above a specified threshold limit",
+            "DisplayColor": "#990600",
+            "ReferenceCode": "Operational limit - high-Public",
+            "ProcessingOrder": "Suppression"
+          },
+          {
+            "Name": "VERY HIGH",
+            "Type": "ThresholdAbove",
+            "Periods": [
+              {
+                "EndTime": "9999-12-31T23:59:59.9999999+00:00",
+                "StartTime": "0001-01-01T00:00:00.0000000+00:00",
+                "AppliedTime": "2020-06-24T12:49:37.3142119Z",
+                "SuppressData": true,
+                "ReferenceValue": 25
+              }
+            ],
+            "Severity": 0,
+            "Description": "Unspecified threshold value",
+            "DisplayColor": "#990600",
+            "ReferenceCode": "AQUARIUS only",
+            "ProcessingOrder": "Suppression"
+          },
+          {
+            "Name": "VERY LOW",
+            "Type": "ThresholdBelow",
+            "Periods": [
+              {
+                "EndTime": "9999-12-31T23:59:59.9999999+00:00",
+                "StartTime": "0001-01-01T00:00:00.0000000+00:00",
+                "AppliedTime": "2020-06-24T12:49:55.0830285Z",
+                "SuppressData": true,
+                "ReferenceValue": 0.01
+              }
+            ],
+            "Severity": 0,
+            "Description": "Unspecified threshold value",
+            "DisplayColor": "#990600",
+            "ReferenceCode": "AQUARIUS only",
+            "ProcessingOrder": "Suppression"
+          }
+        ],
+        "sublocation_identifier": null,
+        "primary": "Primary",
+        "monitoring_location_id": "USGS-344108083090600",
+        "web_description": null,
+        "parameter_description": "Gage height, feet",
+        "parent_time_series_id": null,
+        "data_gap_interval": null
+      },
+      "id": "263cacb43199484e98d94893608e2ddd",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -83.1516666666667,
+          34.6855555555556
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "c6c9669df6534070a40038dff2a4398e",
+        "unit_of_measure": "in",
+        "parameter_name": "Precipitation",
+        "parameter_code": "00045",
+        "statistic_id": "00006",
+        "hydrologic_unit_code": "03060102",
+        "state_name": "South Carolina",
+        "last_modified": "2024-12-17T16:56:26.224086",
+        "begin": null,
+        "end": null,
+        "begin_utc": null,
+        "end_utc": null,
+        "computation_period_identifier": "Daily",
+        "computation_identifier": "Sum",
+        "thresholds": [],
+        "sublocation_identifier": null,
+        "primary": "Primary",
+        "monitoring_location_id": "USGS-344108083090600",
+        "web_description": null,
+        "parameter_description": "Precipitation, total, inches",
+        "parent_time_series_id": "2157af2a4b924acf8e1660dafe753228",
+        "data_gap_interval": null
+      },
+      "id": "c6c9669df6534070a40038dff2a4398e",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -83.1516666666667,
+          34.6855555555556
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "dc8f57fd0ad54e9c8b78f96719261f97",
+        "unit_of_measure": "ft",
+        "parameter_name": "Gage height",
+        "parameter_code": "00065",
+        "statistic_id": "00003",
+        "hydrologic_unit_code": "03060102",
+        "state_name": "South Carolina",
+        "last_modified": "2026-10-12T05:33:32.072130",
+        "begin": "2023-10-13T00:00:00.000001",
+        "end": "2026-10-10T00:00:00.000001",
+        "begin_utc": "2023-10-13T04:00:00+00:00",
+        "end_utc": "2026-10-10T04:00:00+00:00",
+        "computation_period_identifier": "Daily",
+        "computation_identifier": "Mean",
+        "thresholds": [],
+        "sublocation_identifier": null,
+        "primary": "Primary",
+        "monitoring_location_id": "USGS-344108083090600",
+        "web_description": null,
+        "parameter_description": "Gage height, feet",
+        "parent_time_series_id": "263cacb43199484e98d94893608e2ddd",
+        "data_gap_interval": null
+      },
+      "id": "dc8f57fd0ad54e9c8b78f96719261f97",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -83.1516666666667,
+          34.6855555555556
+        ]
+      }
+    }
+  ],
+  "numberReturned": 4,
+  "links": [
+    {
+      "type": "application/geo+json",
+      "rel": "self",
+      "title": "This document as GeoJSON",
+      "href": "https://api.waterdata.usgs.gov/ogcapi/v0/collections/time-series-metadata/items?f=json&amp;monitoring_location_id=USGS-344108083090600&amp;limit=100"
+    },
+    {
+      "rel": "alternate",
+      "type": "application/ld+json",
+      "title": "This document as RDF (JSON-LD)",
+      "href": "https://api.waterdata.usgs.gov/ogcapi/v0/collections/time-series-metadata/items?f=jsonld&amp;monitoring_location_id=USGS-344108083090600&amp;limit=100"
+    },
+    {
+      "type": "text/html",
+      "rel": "alternate",
+      "title": "This document as HTML",
+      "href": "https://api.waterdata.usgs.gov/ogcapi/v0/collections/time-series-metadata/items?f=html&amp;monitoring_location_id=USGS-344108083090600&amp;limit=100"
+    },
+    {
+      "type": "text/csv; charset=utf-8",
+      "rel": "alternate",
+      "title": "This document as CSV",
+      "href": "https://api.waterdata.usgs.gov/ogcapi/v0/collections/time-series-metadata/items?f=csv&amp;monitoring_location_id=USGS-344108083090600&amp;limit=100"
+    },
+    {
+      "type": "application/json",
+      "title": "Time series metadata",
+      "rel": "collection",
+      "href": "https://api.waterdata.usgs.gov/ogcapi/v0/collections/time-series-metadata"
+    }
+  ],
+  "timeStamp": "2026-10-13T01:30:41.748554Z"
+}

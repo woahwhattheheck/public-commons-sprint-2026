@@ -21,6 +21,8 @@ CAUSE_LABELS = {
     "NH3": "Ammonia nitrogen", "FC": "Fecal coliform",
     "ENTERO": "Enterococci", "CR": "Chromium", "CD": "Cadmium",
 }
+KNOWN_DRAFT_ASSESSMENT_SHA = "545a4e1413012b8f17c81c8afe815dd1e225ade5f5b9792ca22e83ef8723307f"
+
 FIELD_ALIASES = {
     "source_vintage": ("source_vintage", "assessment_edition", "vintage"),
     "publisher_huc12": ("publisher_huc12", "huc12", "source_huc12"),
@@ -101,6 +103,13 @@ def enrich(stations, source_bindings):
             seen.add(key)
             source = bindings.get((reference.get("collection_id"), reference.get("source_id")), {})
             metadata = source.get("source_metadata", {})
+            # This retained CSV identifies its draft source but carries publication
+            # status in its original source edition rather than in each row.
+            known_draft = reference.get("source_sha256") == KNOWN_DRAFT_ASSESSMENT_SHA
+            publication = str(metadata.get("publication_status") or ("draft" if known_draft else ""))
+            evidence = str(metadata.get("evidence_kind") or "")
+            if known_draft:
+                evidence = _value(original, "section", evidence)
             cause = _value(original, "cause_code")
             if not cause:
                 continue
@@ -127,8 +136,8 @@ def enrich(stations, source_bindings):
                 "assessment_record_id": _value(original, "id"),
                 "source_id": source_id,
                 "source_vintage": edition,
-                "publication_status": _value(original, "publication_status", str(metadata.get("publication_status") or "")),
-                "evidence_kind": _value(original, "evidence_kind", str(metadata.get("evidence_kind") or "")),
+                "publication_status": _value(original, "publication_status", publication),
+                "evidence_kind": _value(original, "evidence_kind", evidence),
                 "source_uri": _value(original, "source_uri", source.get("uri") or ""),
                 "source_sha256": _value(original, "source_sha256", reference.get("source_sha256") or ""),
                 "publisher_huc12": published_huc,

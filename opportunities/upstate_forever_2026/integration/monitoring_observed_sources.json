@@ -1,6 +1,6 @@
 {
   "schema": "upstate.monitoring-observed-source-install/v1",
-  "version": "1.3.1",
+  "version": "1.4.0",
   "source_root": "opportunities/upstate_forever_2026",
   "predecessor": "Original Monitoring1.2.1 / PR3140 composed with current receiving-water Monitoring1.3.0 at4d7415ebdb4ed3ed522b419349aac0178aa37476",
   "files": [
@@ -90,35 +90,42 @@
     },
     {
       "path": "model/monitoring_actions.py",
-      "bytes": 3355,
-      "sha256": "9bdecb178fc77025f26669d8428baa69066074d3c700e4a1535bc24e67b13686",
+      "bytes": 3649,
+      "sha256": "1e1d64781a8b70b8c884bd2ddd5373d9bbdccae68584f17bcd8a49340061f84a",
       "predecessor_sha256": [
-        "e9bc8115891abb1a855c96c0007a93926049d0a1d4f208ef30fe462026b7b87f"
+        "e9bc8115891abb1a855c96c0007a93926049d0a1d4f208ef30fe462026b7b87f",
+        "9bdecb178fc77025f26669d8428baa69066074d3c700e4a1535bc24e67b13686"
       ]
     },
     {
       "path": "model/monitoring_workspace.py",
-      "bytes": 34010,
-      "sha256": "fe465c33f8a4faf95d01c8ac3e189306639614fb5ce9079031a3c6e6f7096340",
+      "bytes": 33882,
+      "sha256": "deed9680682b32f71131800c7d04dd06569ce380124643c88029f7a7fc784076",
       "predecessor_sha256": [
-        "3cbe9008882a748880c394a480a32c0b68beaf66be85599fb2061484cfff7d1c"
+        "3cbe9008882a748880c394a480a32c0b68beaf66be85599fb2061484cfff7d1c",
+        "fe465c33f8a4faf95d01c8ac3e189306639614fb5ce9079031a3c6e6f7096340",
+        "bd5946b4f758bbe6ad1ecafb45bd0c04273092178451c16c9dbd3f529f790cbc"
       ]
     },
     {
       "path": "operator/monitoring_native.py",
-      "bytes": 6844,
-      "sha256": "6e988dbba4730c08af0afe3fb242fa01ed407e6a801163965a12672d279a7d60",
+      "bytes": 7930,
+      "sha256": "3386288f6b86715e6bd941e94d85bea2637721e063599d90f4779dfc73c17ffd",
       "predecessor_sha256": [
-        "f1db205c2240b65d15fbe6d44c357459b31caa82d348dc9b8a058135e6a91c75"
+        "f1db205c2240b65d15fbe6d44c357459b31caa82d348dc9b8a058135e6a91c75",
+        "6e988dbba4730c08af0afe3fb242fa01ed407e6a801163965a12672d279a7d60",
+        "6f5ce1a12ee537c5963c198b99f3142055c7778f96df8d5b6aceae726e7a96c9"
       ]
     },
     {
       "path": "operator/extensions/monitoring.json",
-      "bytes": 1669,
-      "sha256": "224aa0281aa1047e804bcf7dcf6d34451ca9bb59cd5a18e06ff4dfdcc7b405b4",
+      "bytes": 1758,
+      "sha256": "f78a7bf1b38e057b04b65f03badbc89576930a152b4d3af7271803ec0500dd5c",
       "predecessor_sha256": [
         "dd42f8a79612669422d6d1d3ddf91bff8f8d017d90eb60c2f601252e8627ced8",
-        "8f562aeab5eb007c0bfbb1e9eb54274817d7d0cd093935f7a27647fe42fc007c"
+        "8f562aeab5eb007c0bfbb1e9eb54274817d7d0cd093935f7a27647fe42fc007c",
+        "224aa0281aa1047e804bcf7dcf6d34451ca9bb59cd5a18e06ff4dfdcc7b405b4",
+        "6f126ec8362be17ee17f70780f6d2b8ebc98b5f22fa03118f8100ff4cae0d3bf"
       ]
     },
     {
@@ -128,7 +135,9 @@
       "predecessor_sha256": [
         "4997a2652034fae1708455f742b72b68dcc7d3a405c0ff303c7c69828b6ab9ea",
         "1728c22d5b2c9ffaf572b9cea8d9f9dcc4a3e28edd81c5125d7af9d227b124be",
-        "be145e48c968912ad9d759977b1f26b8271ef5bd1702411be21a9bf1ba77658a"
+        "be145e48c968912ad9d759977b1f26b8271ef5bd1702411be21a9bf1ba77658a",
+        "c65c0081e94a1500850fc8e8f5f798bc8b63ed7e3bc57deab91784e8a5054f44",
+        "0a76feed9d9bd4ac929fa8e9ad0f28f95205fa705c9f6314ef79e3f095e4b895"
       ]
     },
     {
@@ -137,7 +146,8 @@
       "sha256": "064d50959afc32411df87e9cd1479dc1d0802ad9e83ada549de0d9e1ac654949",
       "predecessor_sha256": [
         "46747a23fb5d77dac210eb16fa0894774956e5a1776c5a48c278b1a26a47a288",
-        "52cc07c29bde345efbe305ad0b47a7835c75af16649a8d7c548a80f849d575be"
+        "52cc07c29bde345efbe305ad0b47a7835c75af16649a8d7c548a80f849d575be",
+        "74733636160383214ead70221766e622cb9b2940bb12ef238adbcdb9cc5edd6d"
       ]
     },
     {
@@ -148,13 +158,14 @@
     },
     {
       "path": "integrations/monitoring/source_adoption.json",
-      "bytes": 14760,
-      "sha256": "f089667e84cfd0c188ba9b88b70b4eba254dbd0ad7515a1732e7669a159cc518",
+      "bytes": 19002,
+      "sha256": "f369e85122676c48e5a44ba171ce37b4e883e49927dfe24314c6f38c19d0750c",
       "predecessor_sha256": [
         "830e35b5d5b8929ef6ea238935b96bd7148c1224fab04802a89c9b52234f98a7",
         "785ffefbacf24579a9d6d138797ea50874e42a9ce75b7db5282c24f36d42be19",
         "7620dbe4b3e5a4f6fd9a9d24215c393248198591dffa00ef8876791310e93a3c",
-        "fb09fda9c1ab9c0daabd7da2f7433c9e53e3e5ddf7ad8d98c37f23028c93d7fd"
+        "fb09fda9c1ab9c0daabd7da2f7433c9e53e3e5ddf7ad8d98c37f23028c93d7fd",
+        "f089667e84cfd0c188ba9b88b70b4eba254dbd0ad7515a1732e7669a159cc518"
       ]
     },
     {
@@ -167,16 +178,119 @@
     },
     {
       "path": "integrations/monitoring/RECEIVING.md",
-      "bytes": 12853,
-      "sha256": "c8a3d22111a0195b73937cc086ffb77fad8180a812a9bcbc9bb830944996bd8e",
+      "bytes": 15473,
+      "sha256": "1612f65c774b8ac1ddbd712500428441958f6e584d1317244660539329a691cd",
       "predecessor_sha256": [
-        "64c51b2a43621fd9f57b8457754a77a0bb7f0bc356aab1c253a6b0edf8ed451b"
+        "64c51b2a43621fd9f57b8457754a77a0bb7f0bc356aab1c253a6b0edf8ed451b",
+        "c8a3d22111a0195b73937cc086ffb77fad8180a812a9bcbc9bb830944996bd8e"
       ]
     },
     {
       "path": "model/MONITORING.md",
       "bytes": 19210,
       "sha256": "666f2407ff9e3c668e6dc1bff9e1871db3abbf4e3438d402db1f0d612096e4d5",
+      "predecessor_sha256": [
+        "2a31b106a2f13852d1644f2c3c42b0262195245ba39990586d7058afc00387e8",
+        "473986c5a439276ee406b1cf426693e486ca2447e84fbbebc28f47cb2a107e14"
+      ]
+    },
+    {
+      "path": "model/MONITORING_FIELDWORK.md",
+      "bytes": 5022,
+      "sha256": "c8b9819e114304822e60e0aeecd461a31f75293b4b5544000cf704dceb6c0c03",
+      "predecessor_sha256": []
+    },
+    {
+      "path": "model/monitoring_campaign.py",
+      "bytes": 8179,
+      "sha256": "9e6ad6d5590c6200236211e59b6098c3fafb5db93ec1fbeb12061fe7ea89ac36",
+      "predecessor_sha256": []
+    },
+    {
+      "path": "model/monitoring_cli.py",
+      "bytes": 1694,
+      "sha256": "a6849dfdc19121a0b49fcd127dbe4bb1c9b2500c27db63c04aa67dfa6f89633f",
+      "predecessor_sha256": []
+    },
+    {
+      "path": "model/monitoring_common.py",
+      "bytes": 626,
+      "sha256": "a25fce18c6f7da1c0db7f1e3ec926610b86206348b83e4be3813e14ef027ba2f",
+      "predecessor_sha256": []
+    },
+    {
+      "path": "model/monitoring_design.py",
+      "bytes": 15170,
+      "sha256": "ff755941cf4529874fa954278d0143c774069e23a362c4cc9d35f14e69694a18",
+      "predecessor_sha256": []
+    },
+    {
+      "path": "model/monitoring_network.py",
+      "bytes": 11729,
+      "sha256": "9e4e57f104a805a939c96f93984c5245c2a5b3e4ddddb234f927a92d5f7da122",
+      "predecessor_sha256": []
+    },
+    {
+      "path": "model/monitoring_sources.py",
+      "bytes": 9136,
+      "sha256": "832279605375c3dc2b2ac9d322d17b3c2556afceceb07e9dc62526317406c53b",
+      "predecessor_sha256": [
+        "b10e2927d0fd8265d6d36ce12f458ddcd5f2fe554951b0bb531d3e30e244145e",
+        "16f988793211baee79f69de0e46c3e8b3a30cdac752ff7e4c8cbc957225c3ddb"
+      ]
+    },
+    {
+      "path": "model/monitoring_implementation.py",
+      "bytes": 26097,
+      "sha256": "121c5bad60658a4c8c3407f4dc0e795657ed0361652a89b3b4abcdd195e4a840",
+      "predecessor_sha256": [
+        "88e136003c82f7e9ea2a38aed00981eae6984dcc5ce755f102d53f49126493f6"
+      ]
+    },
+    {
+      "path": "model/requirements-monitoring.txt",
+      "bytes": 181,
+      "sha256": "01b1d14a98a0e180a062ccaa19ea6d45bb9f70fa84c991eafbdf534427e8764d",
+      "predecessor_sha256": []
+    },
+    {
+      "path": "operator/MONITORING_API.md",
+      "bytes": 7631,
+      "sha256": "605d66bbac8c60d1767579529d94e8f3b75873cc0c1089b684aed58611a2a0fe",
+      "predecessor_sha256": [
+        "2bbe83b1a7e3349e0cfbe19f32b881a6eac9fac67df9d7ac1981d2bfe087ffb5"
+      ]
+    },
+    {
+      "path": "operator/monitoring.py",
+      "bytes": 217,
+      "sha256": "5a03358a60f0ca0899499ffeb082fea556aca89d83a4b6b2230f5d3f5139d920",
+      "predecessor_sha256": [
+        "176ae016ff3f6c9ae91c010889d3920627563709b1b98f2d1d366cf41dec8bea"
+      ]
+    },
+    {
+      "path": "operator/static/monitoring.js",
+      "bytes": 27040,
+      "sha256": "eb3c4684e9de66b6dd448ca08ccf0277f28aa27def9e6f1983569838ddeb0b41",
+      "predecessor_sha256": []
+    },
+    {
+      "path": "operator/web/monitoring.css",
+      "bytes": 3592,
+      "sha256": "a2bc999bad6bee6f9f6c6c849c3e39f617b8e5344529f5f17a509b3d5bc2cd93",
+      "predecessor_sha256": []
+    },
+    {
+      "path": "operator/web/monitoring_fieldwork.mjs",
+      "bytes": 4708,
+      "sha256": "3fd06327c4ba24ab45dac440d2c21a96c2ea7d4d2b792a6eb82c0614d4e7685b",
+      "predecessor_sha256": []
+    },
+    {
+      "path": "model/monitoring_packet.py",
+      "bytes": 6141,
+      "sha256": "855b0cccacabd605ff15511132394cdeedd80ac68eb187c91a77598e8a53cf95",
       "predecessor_sha256": []
     }
   ],
@@ -242,5 +356,5 @@
     }
   },
   "receiving": "integrations/monitoring/RECEIVING.md",
-  "receiving_base": "Current complete application atce1175a61650ffcd961ef784766df7d5c07e6b59, preserving Monitoring report and Implementation fieldwork composition"
+  "receiving_base": "Complete current application at bef8f145e9430a8181926c735a45c2ba7f3672c0, retaining campaign fieldwork, native backup and streaming packet source"
 }

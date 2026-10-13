@@ -1,3 +1,61 @@
+# Migration Workbench — original evidence, cases and cutover
+
+A complete local operating application for source inventories, file migration evidence, case/document relationships, explicit destination plans, independent rehearsal results, reviewed findings and portable customer continuation. The Python browser and command line share one original SQLite workspace, immutable source objects and request history.
+
+## Start the complete application
+
+Use Linux and Python 3.10 or later. The application uses the Python standard library; no package installation is required. From this complete directory:
+
+    python3 migration_server.py --workspace /absolute/path/to/workspace --create --title "Migration review"
+
+Open the local address printed by the server (default http://127.0.0.1:8083). Enter the operator name to record with changes. To reopen the same project, use the same command without --create. One process owns a workspace at a time; stop its server before opening that same workspace through the CLI.
+
+For a received handover:
+
+    python3 /absolute/received/application/migration_server.py --workspace /absolute/received/workspace
+
+Keep the whole received application, workspace and retained object tree. The original standalone Node audit remains available for its compact JSONL contract; it is not the entry point for the full operating application.
+
+## Choose the workflow
+
+| Need | Start here |
+| --- | --- |
+| Import inventories/provider reports, review mappings, reconcile file evidence and work corrections | [Operating Workbench](OPERATING_WORKBENCH.md) |
+| Project supplied cases/documents/links, set a lifecycle cutoff and destination policy, reconcile independent rehearsals, review findings and record cutover readiness | [Cases & cutover](CASE_MIGRATION.md) |
+| Exact original operation envelope, parsers, pagination, source profiles and snapshot contracts | [Core API](MIGRATION_CORE.md) |
+| Run the complete supplied-case programme, preserve interrupted requests and verify customer/return continuation | [Case receiving](CASE_RECEIVING.md) |
+
+In the browser, retain complete original files in Sources. Then use the existing Rounds, Mappings & evidence, Reconciliation and Corrections views for file evidence, or open Cases & cutover for its six source-to-decision views. Handover & history prepares the entire editable project. Download the Cases working JSON separately when preserving unsubmitted browser drafts.
+
+## Native entry points
+
+    python3 migration_cli.py --workspace /absolute/path/to/workspace state
+    python3 migration_cli.py --workspace /absolute/path/to/workspace case schema
+    python3 migration_cli.py --workspace /absolute/path/to/workspace case list rehearsal --offset 0 --limit 100
+
+The complete CLI also retains source import, original request inspection/resume, complete CSV/NDJSON exports, report publication, delivery preparation/download and independent receiving. Mutation requests use actual operation IDs, recorded actors and the current reviewed revision; examples in the guides identify where supplied values are required.
+
+## Complete handover and source selection
+
+New deliveries contain all 21 application files, the original SQLite snapshot, every retained object and earlier archive referenced by that snapshot, complete readable reports and full case/file result exports. Current case deliveries declare the exact commons.case-migration-application/v1 roster. Complete historical 16-file deliveries remain inspectable and receivable under their original profile and frozen bytes.
+
+Read reports/review.html and reports/case-review.html in a prepared handover. Continue the same logical project in its separate received workspace, prepare a customer return, and independently reopen it. Re-receiving the original identical archive preserves later customer edits.
+
+## Evidence and execution scope
+
+The application interprets supplied originals and records explicit decisions. Independent target inventories remain separate from loader receipts. Missing evidence stays unresolved; a recorded cutover approval does not execute a tenant migration, establish effective access or replace the customer's acceptance process. Keep actual customer data and credentials in their authorized environment. The repository contains generic software and requires operator-supplied inputs.
+
+The complete source and API reviews are distinct from execution of a selected customer programme. A native result must identify its actual source/input, complete outputs and closed operation.
+
+---
+
+## Historical origin — 10 October 2026
+
+The original Massachusetts metadata-audit discovery note follows unchanged for provenance. Its dates, proposed commercial scope, founder decisions and agent-era holds describe that historical operation. They are not current application instructions, current procurement verification or standing approval policy for this workbench.
+
+<details>
+<summary>Original Massachusetts DOR / EOVS discovery and compact audit note</summary>
+
 # Massachusetts DOR + EOVS M365 migration: independent evidence pilot
 
 Commercial discovery and executable metadata-only migration acceptance tool — 2026-10-10.
@@ -35,3 +93,5 @@ The repeatable route is: (a) public buyer+live identifier+closing gate, (b) firs
 ## Source and provenance caution
 
 The DOR COMMBUYS public original page is available; the EOVS official attachment and bid-rights could not be independently accessed here. All claimed detailed security and timing clauses from mirrors require re-checking against the original vendor-accessible DOCX. Source pages are date-sensitive and the status may change.
+
+</details>

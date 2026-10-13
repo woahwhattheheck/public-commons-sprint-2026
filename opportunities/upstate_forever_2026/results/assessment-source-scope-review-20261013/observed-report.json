@@ -1,0 +1,405 @@
+{
+  "schema": "upstate.observed-report/v1",
+  "title": "Coverage of original station and statewide assessment sources",
+  "edition": "assessment-source-interpretation-20261013-v1",
+  "vintage": "2026-10-13",
+  "interpretation_kind": "published_assessment_and_source_association",
+  "original_report": {
+    "source_id": "assessment-source-scope-14da35a62ab5628477a8",
+    "path": "assessment-station-source-audit.json",
+    "bytes": 6193236,
+    "sha256": "14da35a62ab5628477a8d31a767ec3956988fed568f72a3444df36357a203621"
+  },
+  "inputs": [
+    {
+      "path": "OPEN_SOURCE_SCOPE.html",
+      "bytes": 6228297,
+      "sha256": "51d1779036aa20282ccc972c085c98f013d3ade10c5a8d0f1091120632e3c4db"
+    },
+    {
+      "path": "assessment-station-source-audit.json",
+      "bytes": 6193236,
+      "sha256": "14da35a62ab5628477a8d31a767ec3956988fed568f72a3444df36357a203621"
+    },
+    {
+      "path": "source-audit-summary.json",
+      "bytes": 1010,
+      "sha256": "ad19fce1d70585e77a9ab121820c4a83e462445532f4f48d826a7a03400a6226"
+    },
+    {
+      "path": "all-statewide-assessment-source-associations.csv",
+      "bytes": 915607,
+      "sha256": "e31f6931e4e3f0a51a1f2e4bf57f4040465d2c13110a8b96f732fda0f5e4e458"
+    },
+    {
+      "path": "publisher-huc-differences.csv",
+      "bytes": 4575,
+      "sha256": "a4bd99e849200dc08a564ca77485770e3a8715c23e77fec8486491a6bd09e7a8"
+    },
+    {
+      "path": "all-native-station-source-coverage.csv",
+      "bytes": 153074,
+      "sha256": "6330c0463d88231c3b07b0478f72ab29159cf85c34b5ca7a8526b845717e1299"
+    },
+    {
+      "path": "artifacts.json",
+      "bytes": 1848,
+      "sha256": "954d2109427884e43edacf14dcb7ed7e1303fefc27e980bfb559867edc8a78e2"
+    },
+    {
+      "path": "source_data/scdes_savannah705_20261013/scdes-savannah705-native.esri.json",
+      "bytes": 1043696,
+      "sha256": "14b1a945ee8d5f172f63435b4fd955e9dada6894fcbca2964160c6e2e52d79f0"
+    },
+    {
+      "path": "source/water-quality-assessments/20261013/inputs/303d-2024-pdf-table-normalized.json",
+      "bytes": 2674649,
+      "sha256": "69e6894001fdcfa0130d8be532a31655eda22486a4044079665e8ee614eb5b0c"
+    },
+    {
+      "path": "source/water-quality-assessments/20261013/inputs/tmdl-attainment-native-20260728.json",
+      "bytes": 1260570,
+      "sha256": "cceaf00eb0fc4cc85eabb67fbd2a9b5d843bb0cc0c7ab8da54d2108f025c2522"
+    },
+    {
+      "path": "source/water-quality-assessments/20261013/inputs/domain-huc12s.json",
+      "bytes": 3257,
+      "sha256": "a8e83c835b97440f21077fd09d41dcd48d3b07711f371bb839f9c483ecca314f"
+    },
+    {
+      "path": "source_data/scdes_savannah705_20261013/sources.json",
+      "bytes": 1525,
+      "sha256": "4f586bfe326c485ce917622e5d091082c17e407b0d5005ae9fe2f79a39dd273a"
+    },
+    {
+      "path": "source_data/scdes_savannah705_20261013/source-provenance.json",
+      "bytes": 931,
+      "sha256": "f7c7c2e6eb9ef1992380f605afcda599e7cccbbd925956132d91ac585b31b2fc"
+    },
+    {
+      "path": "source_data/scdes_savannah705_20261013/original-count-response.html",
+      "bytes": 41,
+      "sha256": "d110bed49ce5c04505eba11c314a48b8d6615417ab68e11882526aaabe0a9487"
+    },
+    {
+      "path": "source/water-quality-assessments/20261013/sources.json",
+      "bytes": 2155,
+      "sha256": "353b4fac9e1f2cecd694aef14a0e41ab468c75bbe6cd13fb7b7d2ed4ef0dc60f"
+    },
+    {
+      "path": "source/water-quality-assessments/20261013/inputs/303d-2024-publisher-pdf-table-text.json",
+      "bytes": 688155,
+      "sha256": "9be7679b79ca2a8a4d4d21227ad57371b88fd6082e8b29c7efc6d9a18ab0edce"
+    },
+    {
+      "path": "report-artifacts.json",
+      "bytes": 3139,
+      "sha256": "b69146d9010c4f03d13494ba1015948a61b8250edebace01b0a4dc4fe234c664"
+    },
+    {
+      "path": "source-scope-report.zip",
+      "bytes": 1648158,
+      "sha256": "f27437cc7a9a929b93cc119c5d029a557037dbb110e9b14836ac5e6ca9838c36"
+    },
+    {
+      "path": "sources.json",
+      "bytes": 4347,
+      "sha256": "f6fbbd3acc10ccfe97a35a19b7f7073742f20a87618d082c5fc1ed620de7ad7b"
+    }
+  ],
+  "sections": [
+    [
+      "Coverage of original station and statewide assessment sources",
+      [
+        "This companion reviews the complete 705-station Savannah publisher selection against all 2,329 records in two retained statewide published assessment editions. Matching uses the original exact station identifier.",
+        {
+          "kind": "table",
+          "columns": [
+            "Source inventory or association",
+            "Count"
+          ],
+          "rows": [
+            [
+              "Original native stations",
+              "705"
+            ],
+            [
+              "Complete statewide assessment records",
+              "2329"
+            ],
+            [
+              "Assessment records with a matching native station",
+              "246"
+            ],
+            [
+              "Distinct native stations with matching assessment records",
+              "209"
+            ],
+            [
+              "Native stations without records in these two editions",
+              "496"
+            ],
+            [
+              "Statewide assessment records outside this native station selection",
+              "2083"
+            ]
+          ],
+          "widths": [
+            4.4,
+            1.3
+          ]
+        },
+        "496 native stations have no matching record in these two selected editions. This describes source coverage; it is not a conclusion about water quality or monitoring activity.",
+        {
+          "kind": "table",
+          "columns": [
+            "Published edition",
+            "Statewide records",
+            "Matched records",
+            "Matched stations",
+            "HUC12 differences"
+          ],
+          "rows": [
+            [
+              "2024 published 303(d)",
+              "1516",
+              "155",
+              "137",
+              "1"
+            ],
+            [
+              "July 2026 TMDL status",
+              "813",
+              "91",
+              "91",
+              "7"
+            ]
+          ],
+          "widths": [
+            1.7,
+            1,
+            1,
+            1,
+            1
+          ]
+        },
+        "A site may occur in both assessment editions. Distinct matched sites are counted once in the combined total."
+      ]
+    ],
+    [
+      "Source selection and the selected watershed programme",
+      [
+        {
+          "kind": "table",
+          "columns": [
+            "Assessment-publisher selection",
+            "All original records",
+            "Records matching native 705",
+            "Distinct matching sites"
+          ],
+          "rows": [
+            [
+              "Inside the selected 217 HUCs",
+              "192",
+              "182",
+              "152"
+            ],
+            [
+              "Outside the selected 217 HUCs",
+              "2137",
+              "64",
+              "58"
+            ]
+          ],
+          "widths": [
+            2.1,
+            1.2,
+            1.3,
+            1.1
+          ]
+        },
+        "The 246 native-source associations comprise 182 records inside the assessment-publisher-selected domain and 64 records outside it. The fixed 192-record domain report also includes 10 original records whose sites are outside this 705-station source selection. These are different source selections, so their totals answer different questions.",
+        {
+          "kind": "table",
+          "columns": [
+            "Assessment publisher HUC12 in selected domain",
+            "Station publisher HUC12 in selected domain",
+            "Matched records"
+          ],
+          "rows": [
+            [
+              "Yes",
+              "Yes",
+              "182"
+            ],
+            [
+              "No",
+              "Yes",
+              "1"
+            ],
+            [
+              "No",
+              "No",
+              "63"
+            ]
+          ],
+          "widths": [
+            2.3,
+            2.3,
+            1.1
+          ]
+        },
+        "The separate published 217-HUC comparison retains 192 assessment-publisher-selected records using its native 159 identity cohort, including the retained WQP point sources. This whole-source audit uses only the original 705-station publisher selection; 182 of those domain-selected assessment records match that source.",
+        "The July 2026 SV-192 record illustrates the selection boundary: its assessment-publisher HUC12 is 030601030613, outside the selected 217; its native station publisher reports 030601030513, inside. The original record remains in the complete statewide source, while the fixed 192-record assessment-domain report keeps its original denominator."
+      ]
+    ],
+    [
+      "Original publisher watershed differences",
+      [
+        {
+          "kind": "table",
+          "columns": [
+            "Site",
+            "Edition",
+            "Assessment HUC12",
+            "Station HUC12",
+            "Source page"
+          ],
+          "rows": [
+            [
+              "SV-686",
+              "2024",
+              "030502050108",
+              "030601060202",
+              "50"
+            ],
+            [
+              "SV-809",
+              "2026-07-28",
+              "030601010305",
+              "030601020507",
+              "35"
+            ],
+            [
+              "RS-06190",
+              "2026-07-28",
+              "030601030502",
+              "030601030602",
+              "37"
+            ],
+            [
+              "SV-318",
+              "2026-07-28",
+              "030601030510",
+              "030601030609",
+              "38"
+            ],
+            [
+              "SV-164",
+              "2026-07-28",
+              "030601030602",
+              "030601030502",
+              "38"
+            ],
+            [
+              "SV-052",
+              "2026-07-28",
+              "030601030609",
+              "030601030509",
+              "38"
+            ],
+            [
+              "SV-192",
+              "2026-07-28",
+              "030601030613",
+              "030601030513",
+              "38"
+            ],
+            [
+              "SV-353",
+              "2026-07-28",
+              "030601070208",
+              "030601070207",
+              "39"
+            ]
+          ],
+          "widths": [
+            0.85,
+            0.95,
+            1.45,
+            1.45,
+            0.75
+          ]
+        },
+        "These eight original identifier differences include the six in the fixed 192-record report plus SV-192 and the 2024 SV-686 record. Both SV-686 publisher HUC12 values are outside the selected 217 domain. The full source preserves each publisher's county, description and evidence identity.",
+        "These comparisons use published labels. The maintained Station geography workflow uses the retained original coordinates and watershed polygons for point membership."
+      ]
+    ],
+    [
+      "Native reported attributes and original source detail",
+      [
+        {
+          "kind": "table",
+          "columns": [
+            "Station",
+            "Original publisher HUC attribute",
+            "Reported-level status"
+          ],
+          "rows": [
+            [
+              "SV-835",
+              "30601030507",
+              "not_twelve_digit_huc12"
+            ],
+            [
+              "SV-834",
+              "30601010703",
+              "not_twelve_digit_huc12"
+            ]
+          ],
+          "widths": [
+            1,
+            2.4,
+            2.1
+          ]
+        },
+        "The two eleven-digit HUC attributes above remain verbatim. They are not padded, repaired or used as invented HUC12 assignments; original station geometry and CRS remain available.",
+        "An assessment absent from the selected native705 source remains an original assessment; absence describes this source selection.",
+        "A native station with zero matching records has no record in these two selected assessment editions.",
+        "Both original publisher HUC labels, counties, descriptions and source identities are retained.",
+        "Eleven-digit native HUC attributes remain their exact source strings; the audit does not pad or assign them.",
+        "The existing217-HUC report retains its192 assessment-publisher-selected records; station-based selection is separately identified.",
+        {
+          "kind": "links",
+          "items": [
+            {
+              "title": "Open the complete interactive source-scope report",
+              "path": "OPEN_SOURCE_SCOPE.html"
+            },
+            {
+              "title": "All statewide assessment source associations",
+              "path": "all-statewide-assessment-source-associations.csv"
+            },
+            {
+              "title": "All native station source coverage",
+              "path": "all-native-station-source-coverage.csv"
+            },
+            {
+              "title": "Original publisher HUC differences",
+              "path": "publisher-huc-differences.csv"
+            },
+            {
+              "title": "Complete source-bound audit JSON",
+              "path": "assessment-station-source-audit.json"
+            }
+          ]
+        }
+      ]
+    ]
+  ],
+  "source_links": [
+    "sources.json",
+    "OPEN_SOURCE_SCOPE.html",
+    "assessment-station-source-audit.json"
+  ]
+}

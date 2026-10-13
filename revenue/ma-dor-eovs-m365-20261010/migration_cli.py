@@ -144,7 +144,7 @@ def parser():
     resume.add_argument("--reason", required=True)
     _envelope_parser(resume)
     export = commands.add_parser("export", help="Stream complete retained rows/findings or a reviewed principal map")
-    export.add_argument("kind", choices=("source","reconciliation","mapping"))
+    export.add_argument("kind", choices=("source","reconciliation","mapping","case.dataset","case.plan","case.rehearsal","case.review","case.cutover"))
     export.add_argument("id")
     export.add_argument("--format", choices=("ndjson","csv"), default="ndjson")
     export.add_argument("--out", required=True, help="Create-only output file, or - for binary stdout")
@@ -160,6 +160,34 @@ def parser():
     receive.add_argument("--into", required=True)
     receive.add_argument("--sha256", help="Optional independently retained full archive digest")
     receive.add_argument("--bytes", type=int, help="Optional independently retained full archive byte length")
+    case = commands.add_parser("case", help="Original case/document projection, policy, rehearsal, review and cutover")
+    case_commands = case.add_subparsers(dest="case_command", required=True)
+    case_commands.add_parser("schema", help="Exact installed case field/action contract")
+    case_list = case_commands.add_parser("list", help="One explicit page of original case editions")
+    case_list.add_argument("kind", choices=("dataset","plan","rehearsal","review","cutover"))
+    case_list.add_argument("--offset", type=int, default=0)
+    case_list.add_argument("--limit", type=int, default=100)
+    case_list.add_argument("--query")
+    case_get = case_commands.add_parser("get", help="Complete immutable selected case edition")
+    case_get.add_argument("kind", choices=("dataset","plan","rehearsal","review","cutover"))
+    case_get.add_argument("id")
+    case_preview = case_commands.add_parser("preview", help="Read-only explicit original field/value projection")
+    case_preview.add_argument("--payload", required=True)
+    case_create = case_commands.add_parser("create", help="Invoke an exact reviewed case mutation through the original operation")
+    case_create.add_argument("kind", choices=("dataset","plan","rehearsal","review","cutover"))
+    case_create.add_argument("--payload", required=True, help="Whole JSON object including the original operation envelope")
+    report = commands.add_parser("report", help="Publish a complete read-only review and all original record exports")
+    report.add_argument("--out", required=True, help="Original selected ordinary report directory")
+    report.add_argument("--expected-revision", type=int, required=True)
+    report.add_argument("--title", default="Migration workbench review")
+    report.add_argument("--note", default="")
+    deliver = commands.add_parser("prepare-delivery", help="Freeze the complete original workspace, objects, reports and application")
+    _envelope_parser(deliver)
+    deliver.add_argument("--title", default="Migration workbench handover")
+    deliver.add_argument("--note", default="")
+    delivery_file = commands.add_parser("delivery-file", help="Download the entire selected original prepared archive")
+    delivery_file.add_argument("id")
+    delivery_file.add_argument("--out", required=True)
     return root
 
 def main(argv=None):
@@ -208,6 +236,46 @@ def main(argv=None):
                         result = _publish(_binary_chunks(original),args.out)
                 elif args.command == "snapshot":
                     result = workspace.backup_to(args.out)
+                elif args.command == "case":
+                    if args.case_command == "schema":
+                        result = workspace.dispatch("case.schema", {})
+                    elif args.case_command == "list":
+                        payload = {"kind":args.kind, "offset":args.offset, "limit":args.limit}
+                        if args.query is not None:
+                            payload["query"] = args.query
+                        result = workspace.dispatch("case.list", payload)
+                    elif args.case_command == "get":
+                        result = workspace.dispatch("case." + args.kind + ".get", {"id":args.id})
+                    elif args.case_command == "preview":
+                        result = workspace.dispatch("case.dataset.preview", _read_request(args.payload))
+                    else:
+                        result = workspace.dispatch("case." + args.kind + ".create", _read_request(args.payload))
+                elif args.command == "report":
+                    from migration_reports import build_reports
+                    from migration_portable import ordinary_directory, file_description, publish_bytes, canonical as portable_json
+                    directory = ordinary_directory(args.out, create=True)
+                    with workspace._mutex:
+                        if workspace.project["revision"] != args.expected_revision:
+                            raise MigrationError("REVISION_CONFLICT", "Retain the exact reviewed report revision",
+                                                 {"actual_revision":workspace.project["revision"]})
+                        names = build_reports(workspace, directory, source_revision=args.expected_revision,
+                                              title=args.title, note=args.note)
+                        result = {"schema":"commons.case-migration-report/v1",
+                                  "workspace_id":workspace.project["id"], "revision":args.expected_revision,
+                                  "title":args.title, "note":args.note,
+                                  "files":[file_description(directory / name, name) for name in names]}
+                        publish_bytes(directory / "REPORT.json", portable_json(result))
+                elif args.command == "prepare-delivery":
+                    result = workspace.dispatch("delivery.prepare", {**_mutation(args),
+                        "title":args.title, "note":args.note})
+                elif args.command == "delivery-file":
+                    from migration_portable import PortableService
+                    service = PortableService(workspace, workspace.root, Path(__file__).parent)
+                    record, handle = service.open_delivery(args.id)
+                    with handle:
+                        output = _publish(_binary_chunks(handle), args.out)
+                    result = {**output, "delivery":record}
+
                 else:
                     raise MigrationError("UNKNOWN_COMMAND", "Unknown native command")
         stream = sys.stderr if isinstance(result,dict) and result.get("stdout") else sys.stdout

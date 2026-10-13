@@ -702,11 +702,11 @@ run <- function() {
         plot <- capture_call(function() plot_model(object, prediction, file.path(directory, "model-report.pdf"), model),
                              file.path(directory, "plot"))
         result$plot <- plot$outcome
-        if (!stats$outcome$ok || (!is.null(result$prediction) && !result$prediction$ok) ||
-            (!is.null(result$savings) && !result$savings$ok) ||
-            (!is.null(result$performanceFit) && !result$performanceFit$ok) ||
-            (!is.null(result$performanceStatistics) && !result$performanceStatistics$ok) ||
-            (!is.null(result$normalizedSavings) && !result$normalizedSavings$ok) ||
+        if (!stats$outcome$ok || (!is.null(result[["prediction"]]) && !result[["prediction"]][["ok"]]) ||
+            (!is.null(result[["savings"]]) && !result[["savings"]][["ok"]]) ||
+            (!is.null(result[["performanceFit"]]) && !result[["performanceFit"]][["ok"]]) ||
+            (!is.null(result[["performanceStatistics"]]) && !result[["performanceStatistics"]][["ok"]]) ||
+            (!is.null(result[["normalizedSavings"]]) && !result[["normalizedSavings"]][["ok"]]) ||
             !plot$outcome$ok)
           result$status <- "partial"
       }

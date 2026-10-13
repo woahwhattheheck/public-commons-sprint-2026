@@ -112,3 +112,52 @@ def run_label(run):
     """Keep each selected model's version and source basis visible in one label."""
     return "; ".join(model.upper() + ": " + version_label(info)
                      for model, info in model_versions(run).items())
+
+
+def run_comparison_identity(runs):
+    """Use the producing runtimes and common output scope of completed runs."""
+    from .model_selection import common_comparison_outputs
+    if len(runs) < 2 or len({run["id"] for run in runs}) != len(runs):
+        raise ValueError("Select a baseline and distinct original alternative runs")
+    if any(run.get("state") != "complete" for run in runs):
+        raise ValueError("Finish the selected original native comparison runs")
+    if any(run["selection"]["grid_id"] != runs[0]["selection"]["grid_id"] for run in runs[1:]):
+        raise ValueError("Run comparison requires the same retained reporting/model grid")
+    outputs = common_comparison_outputs(runs)
+    versions = comparison_versions(runs, models_for_outputs(outputs))
+    return {"runs": [run["id"] for run in runs], "direction": "alternative minus baseline",
+            "native_version_provenance": versions}
+
+
+def validate_run_comparison(workspace, comparison, *, expected_id=None):
+    """Validate current and original legacy comparison identities without rerunning models."""
+    from .common import digest, identifier
+    from .model_selection import common_comparison_outputs
+    if (comparison.get("schema") != "upstate.run-comparison/v1"
+            or comparison.get("direction") != "alternative minus baseline"):
+        raise ValueError("Select the retained alternative-minus-baseline comparison")
+    key = identifier(comparison.get("id"))
+    if expected_id is not None and key != identifier(expected_id):
+        raise ValueError("The original comparison identity differs")
+    ids = [identifier(comparison.get("baseline_run_id"))] + [
+        identifier(item.get("run_id")) for item in comparison.get("alternatives", [])]
+    runs = [workspace.inspect_run(run_id) for run_id in ids]
+    identity = run_comparison_identity(runs)
+    outputs = list(common_comparison_outputs(runs))
+    if "native_version_provenance" in comparison:
+        if (comparison["native_version_provenance"] != identity["native_version_provenance"]
+                or comparison.get("common_artifacts") != outputs):
+            raise ValueError("The retained comparison's native version or output scope changed")
+    else:
+        # Legacy records retain their exact original IDs; their producing models
+        # must still be compatible through the same current runtime resolver.
+        identity.pop("native_version_provenance")
+        if "common_artifacts" in comparison and comparison["common_artifacts"] != outputs:
+            raise ValueError("The original comparison output scope changed")
+    if digest(identity) != key:
+        raise ValueError("The original native comparison changed its run cohort")
+    for alternative, run in zip(comparison["alternatives"], runs[1:]):
+        if (alternative.get("selection") != run["selection"]
+                or set(alternative.get("artifacts", {})) != set(outputs)):
+            raise ValueError("The native comparison differs from its original run or output selection")
+    return comparison

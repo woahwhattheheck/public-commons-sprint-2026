@@ -135,6 +135,8 @@ def main():
                 "model/communities.py", "model/community_reports.py", "model/community_cli.py",
                 "model/COMMUNITIES.md", "operator/web/community.mjs", "operator/web/community.css",
                 "operator/community_receiving.py", "operator/community_receiving.mjs", "operator/server.py",
+                "operator/web/app.mjs", "operator/web/journey.mjs",
+                "operator/web/regional_journey.mjs", "operator/web/extension_host.mjs",
                 "source/communities-rfp-20261012/rfp-table1.csv",
                 "source/communities-rfp-20261012/source-manifest.json",
             }

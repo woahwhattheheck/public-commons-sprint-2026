@@ -24,7 +24,7 @@ from .common import (atomic_bytes, atomic_json, canonical, describe_file, digest
 
 from .station_assessment_context import enrich as enrich_assessments, geojson as assessment_geojson, report_section as assessment_report
 
-VERSION = "1.2.1"
+VERSION = "1.2.2"
 KIND = "station-geographies"
 RESULT_SCHEMA = "upstate.station-geography-result/v1"
 PACKAGE_SCHEMA = "upstate.station-geography-package/v1"

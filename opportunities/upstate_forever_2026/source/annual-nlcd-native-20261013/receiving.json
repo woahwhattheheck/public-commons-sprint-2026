@@ -79,27 +79,26 @@
     "95": 23599
   },
   "raster": {
-    "bytes": 9237060,
-    "sha256": "a9f6bfedc4bd3936b20c05b68709f2f450b822df9fbd8cd53fa2f46bb27e5157",
+    "bytes": 9443751,
+    "sha256": "3fa517b4cc3251b9e1bd31e51b54b036a875c09e5f1075511da7c8e951656670",
     "strip_offsets": [
       672,
       1743282,
       3254088,
       4739521,
-      5986657,
-      7455268,
-      8968222
+      6193348,
+      7661959,
+      9174913
     ]
   },
   "header": {
     "bytes": 672,
-    "sha256": "1ce1844662545d12e22d65b611aaeb757c58e526be736fbef575942781e254ad",
-    "base64": "SUkqAAgAAAARAAABBAABAAAAKxkAAAEBBAABAAAArxgAAAIBAwABAAAACAAAAAMBAwABAAAACAAAAAYBAwABAAAAAQAAAA4BAgDPAAAA4AAAABEBBAAHAAAAsAEAABUBAwABAAAAAQAAABYBBAABAAAAAAQAABcBBAAHAAAA0AEAABwBAwABAAAAAQAAADEBAgA3AAAA8AEAAFMBAwABAAAAAQAAAA6DDAADAAAAKAIAAIKEDAAGAAAAQAIAAK+HAwAYAAAAcAIAAIGkAgAEAAAAMjUwAAAAAAAAAAAAAABVU0dTIEFubnVhbCBOTENEMjAyNSBuYXRpdmUgY2xhc3Mgc291cmNlOyBleGFjdCB5ZWFyMjAyNS0wMS0wMVQwMDowMDowMC4wMDBaOyBFUFNHNTA3MDsgbmF0aXZlMzBtIGdyaWQ7IGZ1bGwyMTdIVUMgVXBwZXIgU2F2YW5uYWggYnVmZmVyMTAwMG07IGV4cGxpY2l0IGRpc2NyZXRlIFdNUyBjbGFzcyBtYXBwaW5nIHdpdGhvdXQgc3BhdGlhbCByZXNhbXBsaW5nLgAAoAIAALKZGgBIpzEAwVFIAGFZWwAkwnEAHtiIAAAAAAASlxoAlg0XAHmqFgCgBxMAw2gWAPoVFwAmGgQAAAAAAFVwcGVyIFNhdmFubmFoIG5hdGl2ZSBjbGFzcyBzb3VyY2UgcmVjZWl2ZXIgMjAyNi0xMC0xMwAAskHs////PUABOHAAAAA+QAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAGozc/+sCMUFrUZT/8co1QQAAAAAAAAAAAQABAAAABQAABAAAAQABAAEEAAABAAEAAAgAAAEArRAADAAAAQDOEwQMAAABACkj"
+    "sha256": "fab4049d8a585cd87ce6620a71795bc1bfb1fd9c772cb30a51af3332894e85d1",
+    "base64": "SUkqAAgAAAARAAABBAABAAAAKxkAAAEBBAABAAAArxgAAAIBAwABAAAACAAAAAMBAwABAAAACAAAAAYBAwABAAAAAQAAAA4BAgDPAAAA4AAAABEBBAAHAAAAsAEAABUBAwABAAAAAQAAABYBBAABAAAAAAQAABcBBAAHAAAA0AEAABwBAwABAAAAAQAAADEBAgA3AAAA8AEAAFMBAwABAAAAAQAAAA6DDAADAAAAKAIAAIKEDAAGAAAAQAIAAK+HAwAYAAAAcAIAAIGkAgAEAAAAMjUwAAAAAAAAAAAAAABVU0dTIEFubnVhbCBOTENEMjAyNSBuYXRpdmUgY2xhc3Mgc291cmNlOyBleGFjdCB5ZWFyMjAyNS0wMS0wMVQwMDowMDowMC4wMDBaOyBFUFNHNTA3MDsgbmF0aXZlMzBtIGdyaWQ7IGZ1bGwyMTdIVUMgVXBwZXIgU2F2YW5uYWggYnVmZmVyMTAwMG07IGV4cGxpY2l0IGRpc2NyZXRlIFdNUyBjbGFzcyBtYXBwaW5nIHdpdGhvdXQgc3BhdGlhbCByZXNhbXBsaW5nLgAAoAIAALKZGgBIpzEAwVFIAMSAXgCH6XQAgf+LAAAAAAASlxoAlg0XAHmqFgADLxYAw2gWAPoVFwAmGgQAAAAAAFVwcGVyIFNhdmFubmFoIG5hdGl2ZSBjbGFzcyBzb3VyY2UgcmVjZWl2ZXIgMjAyNi0xMC0xMwAAskHs////PUABOHAAAAA+QAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAGozc/+sCMUFrUZT/8co1QQAAAAAAAAAAAQABAAAABQAABAAAAQABAAEEAAABAAEAAAgAAAEArRAADAAAAQDOEwQMAAABACkj"
   },
   "strips": [
     {
       "row": 0,
-      "parts": 130,
       "bytes": 1742610,
       "sha256": "0ecaa88f05f9fa50d8d2c2f6da671778e4e0e91b147ea866fe8d1408f1cc0f24",
       "pixel_bytes": 6597632,
@@ -108,7 +107,6 @@
     },
     {
       "row": 1,
-      "parts": 112,
       "bytes": 1510806,
       "sha256": "ebd2d4ab38238629f1d6a4d84b925422b382f6a6f5c8f69c0dea518d294b9f4f",
       "pixel_bytes": 6597632,
@@ -117,7 +115,6 @@
     },
     {
       "row": 2,
-      "parts": 111,
       "bytes": 1485433,
       "sha256": "39d26ff00d75e0778006436bbec8e6b20d59c716a637d07d66b619c540cbfe88",
       "pixel_bytes": 6597632,
@@ -126,16 +123,14 @@
     },
     {
       "row": 3,
-      "parts": 93,
-      "bytes": 1247136,
-      "sha256": "e34edd84785f591aa29537afa05ceabe32a0b56edc49cdcd472e8c7451c9126e",
+      "bytes": 1453827,
+      "sha256": "48de22ebae2882d6c6eb4efab241fee50a85aeeca0d18625ea9a8a098360d1f8",
       "pixel_bytes": 6597632,
-      "pixel_sha256": "b4756070f461f92928f7d24a9a7b8aa856bfd62c86826ef1f4089e604f56626d",
+      "pixel_sha256": "5af74e68597677c4429f6b5bc51f4537d03e2ada0d40f8566bb15d2a78aa71cd",
       "height": 1024
     },
     {
       "row": 4,
-      "parts": 109,
       "bytes": 1468611,
       "sha256": "d8c489846bac3c689a930fe71c8e00901dab626ae32940896b4c363f24ec9635",
       "pixel_bytes": 6597632,
@@ -144,7 +139,6 @@
     },
     {
       "row": 5,
-      "parts": 113,
       "bytes": 1512954,
       "sha256": "50d214c56c5cded38253a2b831168f50169511e1684ba0114c427c22769cdc12",
       "pixel_bytes": 6597632,
@@ -153,7 +147,6 @@
     },
     {
       "row": 6,
-      "parts": 20,
       "bytes": 268838,
       "sha256": "b00cf6c8e636af6c2470f41b7acb6773d3cc7aaec1ba0d14db129192dd261eb6",
       "pixel_bytes": 1127525,
@@ -161,134 +154,7 @@
       "height": 175
     }
   ],
-  "source_volumes": [
-    {
-      "row": 0,
-      "start": 1,
-      "end": 48,
-      "page_id": "page_840ea1126b6081918e7c0397f840b0a2",
-      "url": "https://chatgpt.com/space/page_840ea1126b6081918e7c0397f840b0a2"
-    },
-    {
-      "row": 1,
-      "start": 1,
-      "end": 25,
-      "page_id": "page_8cb33f9b8bd88191a60d11cfa53a7447",
-      "url": "https://chatgpt.com/space/page_8cb33f9b8bd88191a60d11cfa53a7447"
-    },
-    {
-      "row": 0,
-      "start": 49,
-      "end": 96,
-      "page_id": "page_7f45491156c881919e818b54d7c74e63",
-      "url": "https://chatgpt.com/space/page_7f45491156c881919e818b54d7c74e63"
-    },
-    {
-      "row": 0,
-      "start": 97,
-      "end": 130,
-      "page_id": "page_f2a2168fa47081918c6f2bc3560ee755",
-      "url": "https://chatgpt.com/space/page_f2a2168fa47081918c6f2bc3560ee755"
-    },
-    {
-      "row": 1,
-      "start": 26,
-      "end": 73,
-      "page_id": "page_5727aef6a74881918dd3296aa5c23695",
-      "url": "https://chatgpt.com/space/page_5727aef6a74881918dd3296aa5c23695"
-    },
-    {
-      "row": 1,
-      "start": 74,
-      "end": 112,
-      "page_id": "page_6574575390208191aefc1d50d0b4c9bb",
-      "url": "https://chatgpt.com/space/page_6574575390208191aefc1d50d0b4c9bb"
-    },
-    {
-      "row": 2,
-      "start": 1,
-      "end": 48,
-      "page_id": "page_88b1cbf54df48191b1f3d466f585b575",
-      "url": "https://chatgpt.com/space/page_88b1cbf54df48191b1f3d466f585b575"
-    },
-    {
-      "row": 2,
-      "start": 49,
-      "end": 96,
-      "page_id": "page_c8dc07f9ba348191bdf9a60c39500b23",
-      "url": "https://chatgpt.com/space/page_c8dc07f9ba348191bdf9a60c39500b23"
-    },
-    {
-      "row": 2,
-      "start": 97,
-      "end": 111,
-      "page_id": "page_9a79513a87d4819191c4772752343616",
-      "url": "https://chatgpt.com/space/page_9a79513a87d4819191c4772752343616"
-    },
-    {
-      "row": 3,
-      "start": 1,
-      "end": 48,
-      "page_id": "page_c4ec88da6a5081919849cfc818595129",
-      "url": "https://chatgpt.com/space/page_c4ec88da6a5081919849cfc818595129"
-    },
-    {
-      "row": 3,
-      "start": 49,
-      "end": 93,
-      "page_id": "page_f0cf223de6cc819183b1a3326451961f",
-      "url": "https://chatgpt.com/space/page_f0cf223de6cc819183b1a3326451961f"
-    },
-    {
-      "row": 4,
-      "start": 1,
-      "end": 48,
-      "page_id": "page_cff35dce5a5c819185b4ff4c92ec1283",
-      "url": "https://chatgpt.com/space/page_cff35dce5a5c819185b4ff4c92ec1283"
-    },
-    {
-      "row": 4,
-      "start": 49,
-      "end": 96,
-      "page_id": "page_968cdbb2e67881918e43c65b793f79c5",
-      "url": "https://chatgpt.com/space/page_968cdbb2e67881918e43c65b793f79c5"
-    },
-    {
-      "row": 4,
-      "start": 97,
-      "end": 109,
-      "page_id": "page_10f012afc86c8191a21ccfeb59cfd4c5",
-      "url": "https://chatgpt.com/space/page_10f012afc86c8191a21ccfeb59cfd4c5"
-    },
-    {
-      "row": 5,
-      "start": 1,
-      "end": 48,
-      "page_id": "page_8519f2ba6efc819182ffaa23c93bf50d",
-      "url": "https://chatgpt.com/space/page_8519f2ba6efc819182ffaa23c93bf50d"
-    },
-    {
-      "row": 5,
-      "start": 49,
-      "end": 96,
-      "page_id": "page_6442c0bd41308191a60a939ebac02462",
-      "url": "https://chatgpt.com/space/page_6442c0bd41308191a60a939ebac02462"
-    },
-    {
-      "row": 5,
-      "start": 97,
-      "end": 113,
-      "page_id": "page_ce8e916cc8648191b655a0aa17f28c81",
-      "url": "https://chatgpt.com/space/page_ce8e916cc8648191b655a0aa17f28c81"
-    },
-    {
-      "row": 6,
-      "start": 1,
-      "end": 20,
-      "page_id": "page_aa1958aade148191afecf84199f2febd",
-      "url": "https://chatgpt.com/space/page_aa1958aade148191afecf84199f2febd"
-    }
-  ],
+  "source_volumes": [],
   "companion_names": [
     "plan.json",
     "validation.json",
@@ -296,7 +162,7 @@
     "style.sld"
   ],
   "source_entry": {
-    "id": "usgs-annual-nlcd-2025-native-region-a9f6bfedc4bd3936",
+    "id": "usgs-annual-nlcd-2025-native-region-3fa517b4cc3251b9",
     "title": "USGS Annual NLCD2025 native classes - complete Upper Savannah model source",
     "kind": "raster",
     "role": "NLCD",
@@ -306,10 +172,10 @@
     "vintage": "USGS published Annual NLCD native time2025-01-01T00:00:00.000Z; captured2026-10-13",
     "source_crs": "EPSG:5070",
     "path": "land-cover.tif",
-    "bytes": 9237060,
-    "sha256": "a9f6bfedc4bd3936b20c05b68709f2f450b822df9fbd8cd53fa2f46bb27e5157",
+    "bytes": 9443751,
+    "sha256": "3fa517b4cc3251b9e1bd31e51b54b036a875c09e5f1075511da7c8e951656670",
     "source_time": "2025-01-01T00:00:00.000Z",
-    "preparation_sha256": "c62a2098a0aebe7000d6dbbb7f94fd999a9f6067f299064d418bf17969d6aba3",
+    "preparation_sha256": "2379619824566b5c4e47d6b6e953ccabaad861508455f7736e9bb2f5cb9b6917",
     "source_description_sha256": "1a3cba52dca82969d46c0f08aa02f5f2047b5c94edb87bc476c8d172bbad0ff9",
     "domain_feature_count": 217,
     "buffer_m": 1000,
@@ -364,18 +230,21 @@
       "nodata_cells": 0,
       "class_counts_scope": "Entire rectangular native source grid; polygon-domain and per-HUC totals are calculated by the receiving model using the original217feature domain.",
       "provider_png_bytes": 11252658,
-      "provider_tiles": 49
+      "provider_tiles": 49,
+      "assembly_revision": "original-png-cell-verified-20261013",
+      "serialized_original_matched_cells": 40713317,
+      "unexpected_zero_cells": 0
     },
     "companions": [
       {
         "path": "plan.json",
-        "bytes": 146944,
-        "sha256": "1ebaae20730dd8cb7ce996211732e536b3ab6ed5ef56f724feaaae53c5af823c"
+        "bytes": 147290,
+        "sha256": "bb1b47bb1836ef856af60085834e6c4b7e7be2fe5ab0c94f3fc4fe8e39f66494"
       },
       {
         "path": "validation.json",
-        "bytes": 12504,
-        "sha256": "d3f93796a006fb80092f97584faca0c0cd13ab65232521ccf56be7fd52d97344"
+        "bytes": 26965,
+        "sha256": "f41bad26fb452d8db29b340bacad02b75fc7e4d94bb1173c0f3a6c01b14cbeaf"
       },
       {
         "path": "class-area.csv",
@@ -389,5 +258,6 @@
       }
     ],
     "model_domain_decoded_sha256": "2300d9b32a513d70503222a5d2e782e032107297214036a58e8b444a312169af"
-  }
+  },
+  "transport": "The adjacent checked-in complete GeoTIFF, or an exact downloaded copy. Earlier Page-strip source was superseded by original-cell verification."
 }
