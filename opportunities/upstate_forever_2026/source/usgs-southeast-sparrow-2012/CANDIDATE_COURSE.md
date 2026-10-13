@@ -21,7 +21,7 @@ For an original cohort outside an ensemble, use repeated --candidate-run-id inst
 
 The first source admission uses source/usgs-southeast-sparrow-2012/prepared-tributaries. The original preparation ID is 4deee902904529bf1f1ecac709451de7a67158174edd1e4cde0811e431be6ddb. All 25 described members are checked by the maintained binder; its returned native observation and source-collection IDs are used directly. The command preserves all seven original source rows.
 
-Rerun the **same command and output** to continue an interrupted course. A retained lock prevents two writers. The immutable course-input.json fixes the original reference edition, candidate runs, native execution fingerprints, model source bodies, prepared geometry/masks, optional input contract and executing implementation. Existing exact source comparisons are reused. A changed source or implementation receives a fresh output directory, preserving the prior course.
+Rerun the **same command and output** to continue an interrupted course. A retained lock prevents two writers. The immutable course-input.json fixes the original reference edition, candidate runs, native execution fingerprints, model source bodies, prepared geometry/masks, optional input contract and executing implementation. Existing exact source comparisons are reused. A changed source or implementation receives a fresh output directory, preserving the prior course. A rejected attempt with a different binding leaves that original progress checkpoint unchanged; errors before binding admission are returned through the command error output.
 
 ## Original source quantities and holdout
 
