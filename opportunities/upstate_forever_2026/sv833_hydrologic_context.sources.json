@@ -76,8 +76,8 @@
         },
         {
           "path": "source/sv833-hydrologic-context-20261013/report.mjs",
-          "bytes": 12229,
-          "sha256": "27402ec6daf2d6040e1b437b8d26e37fb9ac4615634f16d050111e53d7105a37"
+          "bytes": 12342,
+          "sha256": "096a503cf88bb178f0a784bdbc1ec35b89a818bb4d4cadfac00e144d7b73c64e"
         },
         {
           "path": "source/sv833-hydrologic-context-20261013/outputs.mjs",
@@ -141,8 +141,8 @@
         },
         {
           "path": "source/sv833-hydrologic-context-20261013/sv833-hydrologic-context.html",
-          "bytes": 50427,
-          "sha256": "926d6be41d8e486e3f27871435105c52b3a121cc345d6bac8be6a60950162ca2"
+          "bytes": 50540,
+          "sha256": "b7a8e05031ad6fa1e7226856d9e757e85f9bdbbd4c870d6287b557116f0393ce"
         },
         {
           "path": "observations/sv833_2021_2026/csv.mjs",
@@ -223,8 +223,8 @@
         },
         {
           "path": "source/sv833-hydrologic-context-20261013/report.mjs",
-          "bytes": 12229,
-          "sha256": "27402ec6daf2d6040e1b437b8d26e37fb9ac4615634f16d050111e53d7105a37"
+          "bytes": 12342,
+          "sha256": "096a503cf88bb178f0a784bdbc1ec35b89a818bb4d4cadfac00e144d7b73c64e"
         },
         {
           "path": "source/sv833-hydrologic-context-20261013/outputs.mjs",
@@ -288,8 +288,8 @@
         },
         {
           "path": "source/sv833-hydrologic-context-20261013/sv833-hydrologic-context.html",
-          "bytes": 50427,
-          "sha256": "926d6be41d8e486e3f27871435105c52b3a121cc345d6bac8be6a60950162ca2"
+          "bytes": 50540,
+          "sha256": "b7a8e05031ad6fa1e7226856d9e757e85f9bdbbd4c870d6287b557116f0393ce"
         },
         {
           "path": "observations/sv833_2021_2026/csv.mjs",
@@ -370,8 +370,8 @@
         },
         {
           "path": "source/sv833-hydrologic-context-20261013/report.mjs",
-          "bytes": 12229,
-          "sha256": "27402ec6daf2d6040e1b437b8d26e37fb9ac4615634f16d050111e53d7105a37"
+          "bytes": 12342,
+          "sha256": "096a503cf88bb178f0a784bdbc1ec35b89a818bb4d4cadfac00e144d7b73c64e"
         },
         {
           "path": "source/sv833-hydrologic-context-20261013/outputs.mjs",
@@ -435,8 +435,8 @@
         },
         {
           "path": "source/sv833-hydrologic-context-20261013/sv833-hydrologic-context.html",
-          "bytes": 50427,
-          "sha256": "926d6be41d8e486e3f27871435105c52b3a121cc345d6bac8be6a60950162ca2"
+          "bytes": 50540,
+          "sha256": "b7a8e05031ad6fa1e7226856d9e757e85f9bdbbd4c870d6287b557116f0393ce"
         },
         {
           "path": "observations/sv833_2021_2026/csv.mjs",
@@ -517,8 +517,8 @@
         },
         {
           "path": "source/sv833-hydrologic-context-20261013/report.mjs",
-          "bytes": 12229,
-          "sha256": "27402ec6daf2d6040e1b437b8d26e37fb9ac4615634f16d050111e53d7105a37"
+          "bytes": 12342,
+          "sha256": "096a503cf88bb178f0a784bdbc1ec35b89a818bb4d4cadfac00e144d7b73c64e"
         },
         {
           "path": "source/sv833-hydrologic-context-20261013/outputs.mjs",
@@ -582,8 +582,8 @@
         },
         {
           "path": "source/sv833-hydrologic-context-20261013/sv833-hydrologic-context.html",
-          "bytes": 50427,
-          "sha256": "926d6be41d8e486e3f27871435105c52b3a121cc345d6bac8be6a60950162ca2"
+          "bytes": 50540,
+          "sha256": "b7a8e05031ad6fa1e7226856d9e757e85f9bdbbd4c870d6287b557116f0393ce"
         },
         {
           "path": "observations/sv833_2021_2026/csv.mjs",
@@ -593,13 +593,13 @@
       ]
     },
     {
-      "id": "sv833-hydrology-sv833-hydrologic-context",
+      "id": "sv833-hydrology-report",
       "title": "SV-833 original hydrologic context report",
       "kind": "document",
       "role": "observed_water_quality_hydrologic_context",
       "path": "source/sv833-hydrologic-context-20261013/sv833-hydrologic-context.html",
-      "bytes": 50427,
-      "sha256": "926d6be41d8e486e3f27871435105c52b3a121cc345d6bac8be6a60950162ca2",
+      "bytes": 50540,
+      "sha256": "b7a8e05031ad6fa1e7226856d9e757e85f9bdbbd4c870d6287b557116f0393ce",
       "uri": "https://app.notion.com/p/3f8dd77231008194832bda8cdd7b6c84",
       "vintage": "Original NLDI responses captured 2026-10-13",
       "metadata": {
@@ -661,8 +661,8 @@
         },
         {
           "path": "source/sv833-hydrologic-context-20261013/report.mjs",
-          "bytes": 12229,
-          "sha256": "27402ec6daf2d6040e1b437b8d26e37fb9ac4615634f16d050111e53d7105a37"
+          "bytes": 12342,
+          "sha256": "096a503cf88bb178f0a784bdbc1ec35b89a818bb4d4cadfac00e144d7b73c64e"
         },
         {
           "path": "source/sv833-hydrologic-context-20261013/outputs.mjs",
@@ -737,7 +737,7 @@
       ]
     },
     {
-      "id": "sv833-hydrology-sv833-hydrologic-context",
+      "id": "sv833-hydrology-map",
       "title": "SV-833 original network and indexed-site map",
       "kind": "document",
       "role": "observed_water_quality_figure",
@@ -806,8 +806,8 @@
         },
         {
           "path": "source/sv833-hydrologic-context-20261013/report.mjs",
-          "bytes": 12229,
-          "sha256": "27402ec6daf2d6040e1b437b8d26e37fb9ac4615634f16d050111e53d7105a37"
+          "bytes": 12342,
+          "sha256": "096a503cf88bb178f0a784bdbc1ec35b89a818bb4d4cadfac00e144d7b73c64e"
         },
         {
           "path": "source/sv833-hydrologic-context-20261013/outputs.mjs",
@@ -871,8 +871,8 @@
         },
         {
           "path": "source/sv833-hydrologic-context-20261013/sv833-hydrologic-context.html",
-          "bytes": 50427,
-          "sha256": "926d6be41d8e486e3f27871435105c52b3a121cc345d6bac8be6a60950162ca2"
+          "bytes": 50540,
+          "sha256": "b7a8e05031ad6fa1e7226856d9e757e85f9bdbbd4c870d6287b557116f0393ce"
         },
         {
           "path": "observations/sv833_2021_2026/csv.mjs",
@@ -951,8 +951,8 @@
         },
         {
           "path": "source/sv833-hydrologic-context-20261013/report.mjs",
-          "bytes": 12229,
-          "sha256": "27402ec6daf2d6040e1b437b8d26e37fb9ac4615634f16d050111e53d7105a37"
+          "bytes": 12342,
+          "sha256": "096a503cf88bb178f0a784bdbc1ec35b89a818bb4d4cadfac00e144d7b73c64e"
         },
         {
           "path": "source/sv833-hydrologic-context-20261013/outputs.mjs",
@@ -1016,8 +1016,8 @@
         },
         {
           "path": "source/sv833-hydrologic-context-20261013/sv833-hydrologic-context.html",
-          "bytes": 50427,
-          "sha256": "926d6be41d8e486e3f27871435105c52b3a121cc345d6bac8be6a60950162ca2"
+          "bytes": 50540,
+          "sha256": "b7a8e05031ad6fa1e7226856d9e757e85f9bdbbd4c870d6287b557116f0393ce"
         },
         {
           "path": "observations/sv833_2021_2026/csv.mjs",
