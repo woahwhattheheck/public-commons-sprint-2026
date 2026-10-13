@@ -262,11 +262,10 @@ def _fgdc(path, title, raster, *, unit, grid, sources, selection, profile, conta
                 ET.SubElement(albers, tag).text = str(value)
     else:
         # The published DTD and XSD differ on otherprj nesting. The common
-        # local-planar production retains the complete original definition.
-        add("spref/horizsys/planar/localp/localpd", crs.to_wkt())
-        add("spref/horizsys/planar/localp/localpgi",
-            "Original projected coordinates use the complete retained CRS definition above. "
-            "The raster affine transform is " + json.dumps(grid["grid"]["transform"]) +
+        # other-grid production retains this original plane-rectangular grid.
+        add("spref/horizsys/planar/gridsys/gridsysn", "other grid system")
+        add("spref/horizsys/planar/gridsys/othergrd", crs.to_wkt() +
+            " Original raster affine transform: " + json.dumps(grid["grid"]["transform"]) +
             "; coordinate values and original pixel alignment are unchanged.")
     add("spref/horizsys/planar/planci/plance", "row and column")
     add("spref/horizsys/planar/planci/coordrep/absres", cells["width"])
