@@ -4,6 +4,8 @@ The existing Sources desk now connects the received Study, original source reade
 
 ## Read before choosing
 
+The first source read immediately shows its chosen title and **Return to report selection**. That control cancels only the pending view handoff; a late response cannot reopen it. A failed or mismatched source response stays readable as a failure message, with the same return control and the existing report draft preserved. Retry by choosing the original study again.
+
 Use **Read original study before adding** beside the available source selector, or **Read original study** beside an already selected source. The reader verifies the source document and every original companion through the same maintained source contract used by the scientific renderer. A source that has changed fails before it is displayed.
 
 Original section headings, paragraphs and table cells stay literal. Search searches displayed table cells without changing the source. Tables page in groups of 50, retain complete row counts and use keyboard-focusable horizontal scrolling. Complete original tables and any additional producer metadata remain in the original recipe download; no table rows or files are removed from the source.
