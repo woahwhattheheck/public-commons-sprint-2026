@@ -6,6 +6,24 @@ const labelState = value => String(value || 'pending').replaceAll('_', ' ');
 const asArray = value => Array.isArray(value) ? value : [];
 const canonical = value => JSON.stringify(value, (_key, item) => item && typeof item === 'object' && !Array.isArray(item) ? Object.fromEntries(Object.keys(item).sort().map(key => [key, item[key]])) : item);
 const option = (row, selected) => '<option value="' + escapeHTML(row.id) + '"' + (row.id === selected ? ' selected' : '') + '>' + escapeHTML(row.title || short(row.id)) + '</option>';
+const nativeModelValue = models => {
+  if (models === undefined) return '';
+  if (!Array.isArray(models) || !models.length ||
+      models.some(name => !['ndr', 'sdr'].includes(name)) || new Set(models).size !== models.length) {
+    throw new Error('Choose NDR, SDR, or both native models for each case.');
+  }
+  return ['ndr', 'sdr'].filter(name => models.includes(name)).join(',');
+};
+const nativeModelOptions = models => [
+  {id: '', title: 'Use selected grid'},
+  {id: 'ndr,sdr', title: 'NDR + SDR — nutrients and sediment'},
+  {id: 'ndr', title: 'NDR — nitrogen and phosphorus'},
+  {id: 'sdr', title: 'SDR — sediment'},
+].map(row => option(row, nativeModelValue(models))).join('');
+const nativeModelLabel = models => {
+  const value = nativeModelValue(models);
+  return value ? value.split(',').map(name => name.toUpperCase()).join(' + ') : 'Uses selected grid';
+};
 const actionButton = (action, title, value = '', extra = '') => '<button type="button" data-programme-action="' + escapeHTML(action) + '" data-value="' + escapeHTML(value) + '" ' + extra + '>' + escapeHTML(title) + '</button>';
 const stateBadge = value => '<span class="programme-state">' + escapeHTML(labelState(value)) + '</span>';
 const methodLink = '<a href="https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.20.0/userguide/en/calibration_freshwater.html" target="_blank" rel="noopener noreferrer">InVEST 3.20.0 freshwater model guidance</a>';
@@ -18,6 +36,21 @@ export function attachProgrammes(context) {
   const selectionByWorkspace = new Map();
 
   function workspaceKey() { return getState()?.workspace_key; }
+  function rememberedSelection(key) {
+    if (selectionByWorkspace.has(key)) return selectionByWorkspace.get(key);
+    let value = null;
+    try { value = sessionStorage.getItem('upstate-programme-selection:' + key); } catch {}
+    if (!/^[0-9a-f]{64}$/.test(value || '')) value = null;
+    selectionByWorkspace.set(key, value);
+    return value;
+  }
+  function rememberSelection(key, value) {
+    selectionByWorkspace.set(key, value || null);
+    try {
+      const name = 'upstate-programme-selection:' + key;
+      if (value) sessionStorage.setItem(name, value); else sessionStorage.removeItem(name);
+    } catch {}
+  }
   function query(path, values = {}) { return endpoint('/api/programmes/' + path, values); }
   function showError(error) {
     latestError = error?.message || String(error);
@@ -71,14 +104,16 @@ export function attachProgrammes(context) {
     const nativeActive = Boolean(task) || Boolean(record.active) || rows.some(row => row.state === 'running');
     const complete = Number(counts.complete || 0), total = Number(counts.total ?? rows.length);
     const canPause = nativeActive && !record.pause_requested;
+    const savedSelections = new Map(asArray(record.selection?.runs).map(row => [row.key, row]));
     const runRows = rows.map(row => {
       const error = row.error?.message || (typeof row.error === 'string' ? row.error : '');
       const native = row.run_id ? actionButton('native', 'Inspect run', row.run_id) + actionButton('log', 'Log', row.run_id) : '<small>Prepared when executed</small>';
+      const models = row.models ?? savedSelections.get(row.key)?.models;
       return '<tr><td><input type="checkbox" data-programme-run="' + escapeHTML(row.key) + '" aria-label="Select ' +
         escapeHTML(row.title || row.key) + '"' + (subset.has(row.key) ? ' checked' : '') + '></td><td><strong>' +
         escapeHTML(row.title || row.key) + '</strong>' + (row.key === record.selection?.baseline_run ? '<small>Reference case</small>' : '') +
         '<small class="mono">' + escapeHTML(row.key) + '</small></td><td>' + escapeHTML(named('profiles', row.profile_id)) +
-        '<small>' + escapeHTML(named('scenarios', row.scenario_id)) + '</small>' +
+        '<small>' + escapeHTML(named('scenarios', row.scenario_id)) + '</small><small>' + escapeHTML(nativeModelLabel(models)) + '</small>' +
         '<small>' + escapeHTML([Object.keys(row.parameter_changes || {}).length ? 'Parameters changed' : '', row.table_changed ? 'Biophysical table changed' : '', row.scenario_changed ? 'Land cover changed' : ''].filter(Boolean).join(' · ') || 'Reference selections') + '</small></td><td>' + stateBadge(row.state) +
         '<small>' + escapeHTML(stageText(row)) + '</small>' + (error ? '<p class="programme-run-error">' + escapeHTML(error) + '</p>' : '') +
         '</td><td>' + escapeHTML(row.run_id ? short(row.run_id) : '—') + '</td><td><div class="programme-row-actions">' + native + '</div></td></tr>';
@@ -128,7 +163,7 @@ export function attachProgrammes(context) {
       if (!host || currentGeneration !== generation || requestedWorkspace !== workspaceKey()) return;
       catalogue = nextCatalogue;
       if (selected && !asArray(catalogue.programmes).some(row => row.id === selected)) {
-        selected = null; record = null; subset.clear();
+        selected = null; rememberSelection(requestedWorkspace, null); record = null; subset.clear();
       }
       if (selected) {
         const nextRecord = await api(query('detail', {programme_id: selected}));
@@ -145,7 +180,7 @@ export function attachProgrammes(context) {
     if (!key) return;
     if (host !== element || currentWorkspace !== key) {
       detach();
-      host = element; currentWorkspace = key; selected = selectionByWorkspace.get(key) || null;
+      host = element; currentWorkspace = key; selected = rememberedSelection(key);
       catalogue = null; record = null; latestError = ''; subset.clear();
       controller = new AbortController();
       host.addEventListener('click', event => {
@@ -170,7 +205,7 @@ export function attachProgrammes(context) {
   }
   async function select(id) {
     if (selected !== id) { generation++; loading = false; subset.clear(); record = null; }
-    selected = id; selectionByWorkspace.set(workspaceKey(), id);
+    selected = id; rememberSelection(workspaceKey(), id);
     await refreshRecord();
   }
   async function sendAction(action, payload) {
@@ -223,11 +258,15 @@ export function attachProgrammes(context) {
       escapeHTML(JSON.stringify(report, null, 2)) + '</pre></details>';
   }
   async function showReport(id) {
+    const requestedWorkspace = workspaceKey();
     const report = await api(query('report', {programme_id: id}));
+    if (workspaceKey() !== requestedWorkspace) return;
     detail(report.title || 'Saved result catalogue', reportHTML(report), {kind: 'programme-report', id});
   }
   async function showLog(id) {
+    const requestedWorkspace = workspaceKey();
     const data = await api(endpoint('/api/run-log', {id, offset: 0}));
+    if (workspaceKey() !== requestedWorkspace) return;
     detail('Native model log', '<p>Original retained output for run <span class="mono">' + escapeHTML(short(id)) +
       '</span>.</p><pre class="logs">' + escapeHTML(data.text || 'The selected run has no native log output yet.') + '</pre>' +
       '<p class="note">Open the native run for continued log inspection and its complete artifact list.</p>', {kind: 'programme-log', id});
@@ -240,10 +279,14 @@ export function attachProgrammes(context) {
       '<label><span class="sr-only">Case title</span><input data-field="title" value="' + escapeHTML(row.title || 'Case ' + (index + 1)) + '" required></label></td>' +
       '<td><label><span class="sr-only">Parameter profile</span><select data-field="profile_id" required>' +
       available.profiles.map(item => option(item, row.profile_id)).join('') + '</select></label></td><td><label><span class="sr-only">Land-cover case</span><select data-field="scenario_id" required>' +
-      available.scenarios.map(item => option(item, row.scenario_id)).join('') + '</select></label></td><td><button type="button" data-programme-form-action="remove">Remove</button></td></tr>';
+      available.scenarios.map(item => option(item, row.scenario_id)).join('') + '</select></label></td>' +
+      '<td><label><span class="sr-only">Native models</span><select data-field="models">' + nativeModelOptions(row.models) +
+      '</select></label></td><td><button type="button" data-programme-form-action="remove">Remove</button></td></tr>';
   }
   async function createForm(copy) {
+    const requestedWorkspace = workspaceKey();
     const available = await api(query('catalog'));
+    if (workspaceKey() !== requestedWorkspace) return;
     const grids = asArray(available.grids).filter(row => row.state === 'complete');
     if (!grids.length || !asArray(available.profiles).length || !asArray(available.scenarios).length) {
       detail('Prepare the calculation inputs', '<p>A run programme selects an existing completed model grid, a saved parameter profile and a saved land-cover case.</p>' +
@@ -264,6 +307,8 @@ export function attachProgrammes(context) {
         const original = originals.get(element.dataset.programmeFormRow) || {};
         const row = {};
         for (const name of ['key', 'title', 'profile_id', 'scenario_id']) row[name] = element.querySelector('[data-field="' + name + '"]').value.trim();
+        const models = element.querySelector('[data-field="models"]').value;
+        if (models) row.models = models.split(',');
         if (row.profile_id === original.profile_id && row.scenario_id === original.scenario_id) {
           for (const name of ['reason', 'experiment_key', 'changes']) if (original[name] !== undefined) row[name] = original[name];
         }
@@ -283,7 +328,8 @@ export function attachProgrammes(context) {
       '" required></label><label>Completed model grid<select name="programme_grid" required>' + grids.map(row => option(row, initial.grid_id)).join('') + '</select></label></div>' +
       '<label>Source or experiment reference<input name="programme_source" value="' + escapeHTML(initial.source_reference || '') +
       '" placeholder="Saved experiment identifier, source citation or work-order reference"></label><p class="note">Each case uses a retained profile and land-cover scenario compatible with the selected grid.</p>' +
-      '<div class="table-scroll"><table><thead><tr><th>Reference</th><th>Case key / title</th><th>Parameter profile</th><th>Land-cover case</th><th></th></tr></thead><tbody data-programme-form-rows>' +
+      '<p class="note">Choose nutrients, sediment, or both for each case. <strong>Use selected grid</strong> keeps the grid’s model selection. Copied cases retain their saved choices.</p>' +
+      '<div class="table-scroll"><table><thead><tr><th>Reference</th><th>Case key / title</th><th>Parameter profile</th><th>Land-cover case</th><th>Native models</th><th></th></tr></thead><tbody data-programme-form-rows>' +
       asArray(initial.runs).map((row, index) => rowHTML(row, index, row.key === initial.baseline_run, available)).join('') + '</tbody></table></div>' +
       '<div class="programme-controls"><button type="button" data-programme-form-action="add">Add prepared case</button><button type="button" data-programme-form-action="preview">Review planned runs</button></div>' +
       '<div data-programme-preview role="status"></div></div>',
@@ -318,7 +364,9 @@ export function attachProgrammes(context) {
       });
   }
   async function fromExperiment(experimentId) {
+    const requestedWorkspace = workspaceKey();
     const available = await api(query('catalog'));
+    if (workspaceKey() !== requestedWorkspace) return;
     const experiments = asArray(available.experiments).filter(row => row.state !== 'unavailable');
     if (!experiments.length) {
       detail('Prepare an experiment', '<p>Save an experiment in this workspace to create its complete native run programme. The saved design retains the profiles, cases and comparison pairs that the programme will execute.</p>', {kind: 'programme-experiment'});
@@ -407,7 +455,7 @@ export function attachProgrammes(context) {
     }
   }
   async function open(id) {
-    if (id) { selected = id; selectionByWorkspace.set(workspaceKey(), id); record = null; subset.clear(); }
+    if (id) { selected = id; rememberSelection(workspaceKey(), id); record = null; subset.clear(); }
     context.closeDetail?.();
     await context.navigate?.('programmes');
     if (host) await refreshRecord();
