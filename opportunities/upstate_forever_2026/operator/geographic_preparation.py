@@ -16,7 +16,7 @@ from model.common import atomic_json, describe_file, digest, file_digest, held, 
 from model import geographic_headwaters as native
 from source_preparation import SourcePreparation
 
-ACTIONS = frozenset({"geography.prepare", "geography.compose"})
+ACTIONS = frozenset({"geography.prepare", "geography.compose", "geography.adopt-programme"})
 METHOD = {
     "id": "geographic-headwaters",
     "title": "Upper Savannah geographic model case",
@@ -288,6 +288,11 @@ class GeographyPreparation(SourcePreparation):
             return self.catalog(workspace)
         if operation == "preview":
             return self._preview(ws, value.get("payload", value))
+        if operation == "programme-preview":
+            from model import geographic_programme
+            key = identifier(value.get("case_id"))
+            delivery_id = identifier(value["delivery_id"]) if value.get("delivery_id") else None
+            return geographic_programme.preview(ws, key, delivery_id=delivery_id)
         if operation in {"case", "allocation"}:
             key = identifier(value.get("case_id"))
             found = next((item for item in self._cases(ws) if item["id"] == key), None)
@@ -326,7 +331,7 @@ class GeographyPreparation(SourcePreparation):
 
     def invoke(self, task):
         if task["action"] not in ACTIONS:
-            self._fail("GEOGRAPHY_ACTION", "Choose a geographic preparation or source composition.")
+            self._fail("GEOGRAPHY_ACTION", "Choose a geographic preparation, source composition or completed Programme.")
         ws = self.operator.ws(task["workspace"])
         path, root = self._record_path(ws, task["id"]), self._native_root(ws, task["id"])
         root.mkdir(parents=True, exist_ok=True)
@@ -347,6 +352,26 @@ class GeographyPreparation(SourcePreparation):
             try:
                 if task["action"] == "geography.compose":
                     result = self._compose(ws, task, root, record)
+                elif task["action"] == "geography.adopt-programme":
+                    from model import geographic_programme
+                    value = task["payload"]
+                    if (not isinstance(value, dict)
+                            or set(value) - {"case_id", "delivery_id", "expected_preview_id"}):
+                        raise ValueError("Retain the selected geographic case and its reviewed Programme")
+                    key = identifier(value.get("case_id"))
+                    expected = identifier(value.get("expected_preview_id"))
+                    delivery_id = identifier(value["delivery_id"]) if value.get("delivery_id") else None
+                    result = self._stage(ws, record, "Retaining completed geographic runs in the original Programme",
+                        lambda: geographic_programme.adopt(ws, key, delivery_id=delivery_id,
+                                                         expected_preview_id=expected))
+                    result["documents"] = result["report"].get("files", [])
+                    result["summary"] = {"title": "Geographic Programme saved", "rows": [
+                        ["Programme", result["programme_id"]],
+                        ["State", result["programme_state"]],
+                        ["Original reference runs", len(result["native_runs"])],
+                        ["Original report rows", len(result["report"]["rows"])]],
+                        "details": {"Original geographic binding": result["binding"],
+                                    "Annual quantity meaning": result["meaning"]}}
                 else:
                     value = task["payload"]
                     preview = self._stage(ws, record, "Reading original geographic coverage", lambda: self._preview(ws, value))
