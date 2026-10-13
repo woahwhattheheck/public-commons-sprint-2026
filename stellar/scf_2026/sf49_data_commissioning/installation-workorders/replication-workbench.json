@@ -1,0 +1,135 @@
+{
+  "schema": "stellar-forge.installation-workorder-profile.v1",
+  "id": "replication-workbench",
+  "title": "Replication Workbench customer commissioning",
+  "task": {
+    "name": "Commission a complete recurring replication, exact comparison and independently received consumer edition",
+    "purpose": "Give a customer data owner and receiving operator a repeatable service that retains original configuration and inputs, runs the agreed native replication, compares the complete typed population and delivers an explicitly selected consumer edition with rollback and editable receiving.",
+    "request": "Receive the current Workshare, complete original Airbyte configuration and agreed source/parallel-target selection. List every selected stream/table, namespace, field, type/null meaning, mode, cursor, primary key and source period. Establish source-use authority and accountable data/consumer/receiving owners. Retain full source files, provenance and byte/SHA identities. Prepare or reopen the pinned original Sling1.6.5 Linux amd64 runtime and verify its complete archive and actual executable. Open the maintained 70-file Workbench through managed Applications and a private host actor. Compile the original configuration through its supported intake family, retain unresolved adaptations and review the complete selected plan. Use the original SQLite snapshot adapter for the supplied reference; separately commission a complete native export/snapshot adapter before claiming execution for another connector pair. Load the complete baseline, run original replication into a separate target and retain every native attempt, command result, database snapshot and typed row export. Compare all selected rows/cells, nulls, exact values, keys and duplicate multiplicities. Retain a real incremental input/source change, repeat the complete original run/comparison and review any drift. Explicitly switch the consumer to the accepted comparison, read all selected consumer rows and demonstrate original prior-selection rollback. If commissioned, apply and restore reviewed literal downstream file edits against original bytes. Expose the same source, actions and full outputs through the private Merchant agent. Close original jobs before named handoff, independently receive the full editable/native project, reopen fresh/same/older/forward history and continue a useful later customer edition. Record Installation outcomes only from those actual completed operations.",
+    "completeOutput": "One complete commissioned replication service and accepted recurring data edition with all agreed source/configuration, reviewed plan, original native attempts and whole snapshots/typed outputs, exact comparison, consumer/rollback decisions, optional reviewed downstream edits, managed browser/agent access and a complete independently received editable application/runtime/project handover.",
+    "repeatTrigger": "A distinct real source period, authorized configuration/schema change or useful requested consumer edition creates a linked task. Retries, repeated pages, re-subscription, source upload chunks, browser reloads, alternative file formats and repeated downloads continue the same original customer task rather than create additional purchases.",
+    "pricedUnit": "One agreed complete baseline/change commissioning or recurring accepted edition for the selected population and receiving workflow. Preserve the existing Installation merchant unit, approved integer atomic amount/count/budget and spending selection. Customer connector adaptation, hosting and ongoing support remain separately explicit Workshare terms."
+  },
+  "source": {
+    "reference": "Select the current complete customer Workshare and Installation packet, original Airbyte/configuration source, full source/target snapshots or approved extraction authority and actual source period. Retain URLs/acquisition references, timestamps, filenames, media types, complete byte/SHA identities and original project/source/plan/job IDs.",
+    "mode": "Original supported Airbyte configured catalogue, state/config/export or selected connection input through the maintained semantic compiler and explicit bindings. Native execution uses the pinned original Sling1.6.5 binary. The installed reference imports original CSV into SQLite and replicates separate SQLite snapshots; other connector pairs need complete commissioned native execution/export adapters.",
+    "population": "Every agreed stream/table, business column and row in the selected source period, including duplicates and explicit null/type meaning. Retain every adaptation issue and rejected/skipped source decision. Structured plan input is at most32MiB; complete upload is at most2GiB. A larger legitimate population requires explicit whole-part delivery/processing that preserves every member, never a sample presented as complete.",
+    "meaning": "Preserve source namespaces, selected fields, sync mode, cursor/update key, primary keys, type/null semantics, exact decimal/integer values and duplicate multiplicities. The comparison binds the actual source plan and full observations. A count alone does not establish parity. Consumer selection identifies the exact immutable SQLite snapshot, original comparison and table bindings; historical packages do not claim live source queries.",
+    "changePolicy": "Retain source and approved plan editions, stable request/revision selections and original native attempt IDs. Native writes use the original job lifetime and explicit cancellation/reconciliation controls. Review configuration/schema changes before a new plan; unsupported semantics remain visible adaptations. Receiving fences source-host observations and never silently resumes a received native writer."
+  },
+  "receiving": {
+    "application": "TJLabs Replication Workbench, complete 70-file maintained Commons source 6d969651d2f48f1ca620f94ed88c33c65f07577e derived from d074376ca95c0a5cc6c7abb1f28409201c1082ee, under products/replication-workbench/workbench. Five retained source/manifest/operating-guide corrections repair original observer closure and same-request consumer phase recovery without replacing the native engine. Commands replication-workbench, replication-workbench-prepare, replication-workbench-managed and replication-workbench-receive. Select the actual installed applicationDirectory, runtimeReadyFile, absolute Python and private actor/configuration.",
+    "acceptanceRule": "The complete agreed source and configuration are retained; the approved plan resolves required adaptations. Actual original native operations finish with complete files and full typed comparison. All selected row/cell/key/schema/multiplicity checks pass before accepted consumer cutover. The complete consumer is read and original rollback restores its prior binding. Optional downstream edits preserve original files and reviewed restoration. Browser and Merchant agent operate the same original project with stable request replay. Whole source/runtime/project packages independently receive and reopen without duplicate native execution. Only actual observed outcomes enter Installation acceptance.",
+    "changeAndWithdraw": "Use original reviewed action/revision and explicit reasons for plan, consumer and downstream changes. job.cancel requests native cancellation; observe original closure before handoff. Applications Stop closes the observer/listener and its own handles, while accepted detached native jobs retain their original kernel lifetime. Do not present Stop as cancellation. Reopen to reconcile the same jobs and use job.resume/job.resolve only for the actual ended attempt. Use the original Installation change/return process for commercial or population changes.",
+    "recovery": "Retain exact actor, request ID, expected revision and payload before dispatch. Read the Merchant request record and replay the same original action after an uncertain HTTP result; the original action may have committed before launch/materialization/response failure. There is no native HTTP request-receipt endpoint. Resume an original upload at its exact committed offset. Preserve original target-write uncertainty and explicit retry/adopt/abandon decisions. Receive closed named packages, retain current auth on the receiving host and choose its own verified runtime before explicit native continuation.",
+    "maintenance": "Assign data/source owner, original native operator, adaptation engineer, consumer owner and independent receiver in the existing case. Deliver full editable source, original engine/archive/version, licenses, complete actual runtime and native/result history. Keep auth files, bearer tokens, connection and private host inputs outside public/customer project exports. The authored workbench does not imply vendor endorsement or completion of another connector adapter."
+  },
+  "steps": [
+    {
+      "title": "Receive the whole Workshare and source-period contract",
+      "result": "Use the current original Workshare-derived seed. Retain commercial phases, assignments, accountable owners and actual payment selections. List all selected source periods/streams/fields, source authority, consumer owner and independent receiving owner."
+    },
+    {
+      "title": "Prepare and verify the original source/runtime",
+      "result": "Verify all 70 selected maintained source files and original license closure. Prepare/reopen Sling1.6.5 using the fixed complete archive SHA/length, actual extracted executable/version and selected Python. Bind private managed configuration to exact installed source/runtime."
+    },
+    {
+      "title": "Retain complete configuration and actual source inputs",
+      "result": "Upload whole original sources with SHA/length and committed-range replay. Retain original Airbyte input family, connection selection, source authority, complete rows and source/target bindings."
+    },
+    {
+      "title": "Compile and approve the complete migration plan",
+      "result": "Retain original semantic plan and replication document. Review every selected stream, mode, key, cursor, business column and unsupported transformation. Approve only the exact ready plan."
+    },
+    {
+      "title": "Run original baseline and retain every native output",
+      "result": "Prepare and start the original source-load and replication jobs, using separate native snapshots. Observe original attempts and full output files. Explicitly handle cancellation or uncertain writes through retained controls."
+    },
+    {
+      "title": "Compare every selected typed row and cell",
+      "result": "Use the original complete observations and comparison. Resolve schema/key/null/type/value/multiplicity differences; retain full reports and decision history rather than counts or sampled previews."
+    },
+    {
+      "title": "Deliver a real incremental source edition",
+      "result": "Retain the complete agreed update input and explicit source/plan changes. Continue the original prior target when selected and retain the whole current native result/comparison. Count one useful customer task, not internal requests."
+    },
+    {
+      "title": "Switch and roll back the actual consumer",
+      "result": "Apply the current reviewed ready comparison with a reason, read every selected stream/page from the actual consumer snapshot, restore the exact prior selection and explicitly choose the final accepted edition."
+    },
+    {
+      "title": "Apply and restore commissioned downstream file changes",
+      "result": "Retain complete original files and explicit literal edits. Review the original downstream plan, apply within the declared consumer root or workspace copy, retain all observations and restore original file content. Omit this step only when the Workshare excludes downstream edits."
+    },
+    {
+      "title": "Operate full outputs through the customer agent",
+      "result": "Connect host-declared operator/viewer aliases. Retain exact original requests, stream declared inputs and full native/comparison/handoff files, inspect complete JSON via pointers and read all bytes. Current original actor permission governs every cached disclosure."
+    },
+    {
+      "title": "Independently receive and reopen the complete edition",
+      "result": "Close original native jobs before complete named NDJSONv2 handoff. Independently receive fresh/forward/same/older editions and original gzipv1 where selected; retain full source/native/history and cold CLI/browser reopen. Explicitly select receiving runtime for any later job."
+    },
+    {
+      "title": "Record actual Installation outcomes and recurring work",
+      "result": "Use original current case/version preview/save and complete Operations export/receiving. Record actual task/purchase/native/output/acceptance IDs and name the next real source period or useful requested edition."
+    }
+  ],
+  "inputs": [
+    "Complete customer Workshare/Installation packet, original phases, assignments, terms, funded package and accountable data/consumer/receiver owners.",
+    "Full original Airbyte input/configuration with actual selected connection, namespace/fields, cursor/key/mode and explicit native source/parallel-target bindings.",
+    "Complete authorized source-period population, original CSV or snapshots, provenance, source-use authority and full byte/SHA identities.",
+    "Actual original70-file source manifest/license and pinned Sling archive/executable/version/runtime-ready on the selected host; Node24, absolute Python and flock.",
+    "Original private auth roles and installation connection configuration; no token or private path in public project source.",
+    "Reviewed plan/adaptation decisions, complete native job/attempt/control/result files and actual source/target SQLite snapshots or commissioned connector exports.",
+    "Whole typed observations and comparison, all errors/multiplicities and explicit accepted consumer selection/rollback reason.",
+    "Complete downstream original files and reviewed edits/restore request only when this scope is commissioned.",
+    "Complete named packages, actual independent receiving/cold reopen and rendered desktop/mobile product inspection.",
+    "Actual merchant/buyer, asset/network/recipient, integer atomic amount/count/budget and authorized spending selection."
+  ],
+  "sourceFiles": [
+    {
+      "path": "products/replication-workbench/workbench/server.mjs",
+      "blob": "480728e2f3abdaa7219a85c036c64bd71d79e3f7"
+    },
+    {
+      "path": "products/replication-workbench/workbench/core/workspace.mjs",
+      "blob": "226de29dd500a3f7cc0cfcb2adb46a0941a8def7"
+    },
+    {
+      "path": "products/replication-workbench/workbench/native/runtime.mjs",
+      "blob": "6af334ac698e18ec1248842ceba7cb67e54bf07e"
+    },
+    {
+      "path": "products/replication-workbench/workbench/native/install.py",
+      "blob": "7f3de3a95fffa4e694f4267b77c28f242ed51417"
+    },
+    {
+      "path": "products/replication-workbench/workbench/native/worker.py",
+      "blob": "4fb21e6481ab69c01d529466b168e9a4c7150ac9"
+    },
+    {
+      "path": "products/replication-workbench/workbench/migration/plan.mjs",
+      "blob": "3200c3624647a006e2a77e5099b45b023f2b8efa"
+    },
+    {
+      "path": "products/replication-workbench/workbench/migration/compare.mjs",
+      "blob": "f67a566bd02797beb9fa48f36b68a10851da64d8"
+    },
+    {
+      "path": "products/replication-workbench/workbench/migration/downstream.mjs",
+      "blob": "b93087bce522ed76c6b001d5cfaceda93faac600"
+    },
+    {
+      "path": "products/replication-workbench/workbench/core/archive.mjs",
+      "blob": "02327b9d6afff063d069d084846949c70011d539"
+    },
+    {
+      "path": "products/replication-workbench/workbench/receiving/receive.mjs",
+      "blob": "7970c98461d11967e328d8e20e8cce94be7a28ab"
+    },
+    {
+      "path": "products/replication-workbench/workbench/OPERATOR.md",
+      "blob": "1468fdfe224ee1578a246145838c2054642322e6"
+    }
+  ]
+}
