@@ -20,3 +20,6 @@ export type OriginalLedgerSource=OriginalExpertLedgerSource|OriginalRpcLedgerSou
 export interface LedgerCaptureOptions {originalLedgerSources?:OriginalLedgerSource[];network?:Network;networkPassphrase?:string;rpcUrl?:string;horizonUrl?:string;archiveRpcUrl?:string|null;contractId?:string;contractIds?:string[];account?:string;accounts?:string[];simulationSource?:string;transactionHashes?:string[];hash?:string;registrySource?:RegistryEdition;registrySources?:RegistryEdition[];from?:string;before?:string;fromDate?:string;beforeDate?:string;startLedger?:string|number;endLedger?:string|number;assets?:Asset[];fetchImpl?:typeof fetch;sdk?:unknown;signal?:AbortSignal;timeoutMs?:number;rpcHeaders?:Record<string,string>;horizonHeaders?:Record<string,string>;archiveHeaders?:Record<string,string>;checkpoint?:LedgerEdition;checkpointMode?:'copy'|'borrowed';onProgress?:(value:NativeRow&{phase:string;checkpoint:LedgerEdition})=>void|Promise<void>}
 export function captureLedger(options?:LedgerCaptureOptions):Promise<LedgerEdition>;
 export function captureTransaction(options:LedgerCaptureOptions&{hash:string}):Promise<LedgerEdition>;
+
+/** Checks the original selection without mutating the checkpoint or making a source request. */
+export function validateLedgerCheckpointSelection(source:LedgerEdition,options?:LedgerCaptureOptions):Promise<NativeRow>;
