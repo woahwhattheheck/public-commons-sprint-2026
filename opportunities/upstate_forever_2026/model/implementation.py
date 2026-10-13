@@ -159,7 +159,9 @@ class ImplementationStore:
     there is no mutable HEAD file that can lag behind its history.
     """
     def __init__(self, workspace_or_path):
-        root = getattr(workspace_or_path, "root", workspace_or_path)
+        # pathlib paths also expose .root ("/" or a drive), not a Workspace directory.
+        root = (workspace_or_path if isinstance(workspace_or_path, (str, os.PathLike))
+                else getattr(workspace_or_path, "root", workspace_or_path))
         self.root = Path(root).expanduser().resolve()
         self.base = self.root / "implementation" / "plans"
         self.base.mkdir(parents=True, exist_ok=True)
