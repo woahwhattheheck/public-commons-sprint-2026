@@ -7,7 +7,7 @@ import {createHash,randomUUID} from 'node:crypto';
 import {inspectClickHouseAcceptancePreparation} from './prepare.mjs';
 import {spawn} from 'node:child_process';
 import {resolveSourceEdition} from './source-editions.mjs';
-import {admitSourceObserver,completeSourceObserver,runSourceObserver} from './source-observer.mjs';
+import {admitSourceObserver,completeSourceObserver,runSourceObserver,fixtureCompletionAccepted} from './source-observer.mjs';
 import {collectSourceFiles} from './workbench/vendor/sling/core/common.mjs';
 import {acquireWorkspaceLease,privateDirectory} from './workbench/vendor/sling/vendor/stellar-expert/store.mjs';
 import {inspectOriginalSource,WORKBENCH_ROOT,ORIGINAL_MANIFEST_SHA256} from './managed.mjs';
@@ -111,7 +111,7 @@ async function originalReference(options){
   if(options.option['source-observer']){observer=admitSourceObserver(options.option['source-observer']);need(observer.request.directory===root&&(!request||same(observer.request,request)),'MERCHANT_REFERENCE_SOURCE','The observer must select this same original reference.');}
   if(observer&&await exists(resultPath)){
     const fixturePath=join(observer.request.fixtureDirectory,'fixture-result.json'),fixture=await exists(fixturePath)?await json(fixturePath):null;
-    if(!fixture?.completed||fixture.programmeExit!==0||!fixture.closedAt)await runSourceObserver(observer.path);
+    if(!fixtureCompletionAccepted(fixture))await runSourceObserver(observer.path);
   }
   if(!await exists(resultPath)){
     need(request,'MERCHANT_NATIVE_REQUIRED','The selected completed original reference result is absent.');
@@ -199,7 +199,7 @@ async function originalReference(options){
   }
   if(request){
     const fixture=await json(join(request.fixtureDirectory,'fixture-result.json'));
-    need(fixture.schema==='altinity.reference-result.v1'&&fixture.completed===true&&fixture.programmeExit===0&&fixture.closedAt&&fixture.native?.version==='26.8.24.9'&&fixture.native.sourceRows===3,
+    need(fixture.schema==='altinity.reference-result.v1'&&fixture.completed===true&&fixture.programmeExit===0&&fixture.closedAt&&[0,-15].includes(fixture.databaseExit)&&(!fixture.cleanup||fixtureCompletionAccepted(fixture))&&fixture.native?.version==='26.8.24.9'&&fixture.native.sourceRows===3,
       'MERCHANT_NATIVE_REQUIRED','The original fixture must close its own database and completed receiving child.');
   }
   const observers=[],observerRoot=join(root,'merchant-reference','source-observers');

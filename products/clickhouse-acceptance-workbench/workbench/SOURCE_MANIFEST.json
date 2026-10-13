@@ -94,8 +94,8 @@
     },
     {
       "path": "reference/fixture.py",
-      "bytes": 38603,
-      "sha256": "21b6b9c8c8fcc88d27d32e1147a54350cc9007427278d64efc23663511ed874a"
+      "bytes": 45223,
+      "sha256": "5f03b1a38b22600bed0a0975d1362bb51e3582f02d9b319bf3b69e62e19434b4"
     },
     {
       "path": "reference/merchant-source.json",

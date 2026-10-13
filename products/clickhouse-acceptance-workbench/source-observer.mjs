@@ -11,10 +11,10 @@ import {collectSourceFiles,atomicBytes,atomicJson,canonical} from './workbench/v
 import {hashFile} from './workbench/vendor/sling/core/objects.mjs';
 import {privateDirectory,acquireWorkspaceLease} from './workbench/vendor/sling/vendor/stellar-expert/store.mjs';
 const HERE=dirname(fileURLToPath(import.meta.url)),SCHEMA='altinity.source-observer.v1';
-const OBSERVER_MANIFEST_SHA256='42bfdf12a1c0ece3e0feacb57e609c520b51d13fae61f21d14d43532f9d1369f';
+const OBSERVER_MANIFEST_SHA256='01d3622dcc9a923c7b5123475896e3f0be496c62d8c4791ba63d2926913a2006';
 const REVIEWED_BASELINES=new Set(['7465743b33c7418e229f86452bc8c71cb83e4197f21068d87c5585b8b422d3eb','319d467960f5cd86534ca90f20d4fbff29a36bf5e8af0ec94284ee3e32d7a1a0']);
 const REVIEWED_SOURCE_PATHS=new Set(['receiving/receive.mjs','reference/fixture.py','SOURCE_MANIFEST.json','web/app.mjs']);
-const AUTHORITY_SHA256='761f84ddc801b5594b506799836c579eac72c878cb242aba60099806f12578d2';
+const AUTHORITY_SHA256='616931dfe75e9cfbcaa82423c4cddde8bdc7505a10cb2d8f33c11bc21f87f081';
 const read=p=>JSON.parse(readFileSync(p,'utf8')),same=(a,b)=>canonical(a)===canonical(b);
 const need=(ok,message)=>{if(!ok)throw Object.assign(new Error(message),{code:'SOURCE_OBSERVER_BINDING'});};
 const identity=p=>hashFile(p);
@@ -131,13 +131,21 @@ export async function prepareSourceObserver({referenceRequest,id,reason,at}){
   atomicJson(path,value,{immutable:true});const retained=admitSourceObserver(path);return{path,...retained.identity,operationId:state.id};
  }finally{try{await operationGuard?.close();}finally{await guard.close();}}
 }
+export function fixtureCompletionAccepted(fixture){
+ const database=fixture?.cleanup?.database,programme=fixture?.cleanup?.programme;
+ const errorsEmpty=value=>Array.isArray(value)&&value.length===0;
+ const closed=database?.owned===true&&database.runningBefore===true&&database.terminateRequested===true&&database.forceKill===false&&database.reaped===true&&[0,-15].includes(database.exit)&&database.exit===fixture.databaseExit&&errorsEmpty(database.errors)&&database.acceptedNormal===true;
+ const receiver=programme&&errorsEmpty(programme.errors)&&(programme.owned===true&&programme.reaped===true&&programme.exit===0||programme.owned===false&&programme.reaped===false&&programme.exit===null&&typeof fixture.reusedProgramme?.operationId==='string'&&fixture.reusedProgramme.resultIdentity);
+ return fixture?.schema==='altinity.reference-result.v1'&&fixture.completed===true&&fixture.programmeExit===0&&fixture.sourceUnchanged===true&&typeof fixture.closedAt==='string'&&fixture.closedAt.length>0&&!fixture.error&&!fixture.interrupted&&closed&&Boolean(receiver)&&(!fixture.resultPersistenceErrors||errorsEmpty(fixture.resultPersistenceErrors));
+}
 export function completeSourceObserver(path){
  const admitted=admitSourceObserver(path),{request,value,directory,state}=admitted;
  const resultPath=join(request.directory,'CUSTOMER_RESULT.json'),result=read(resultPath),fixture=read(join(request.fixtureDirectory,'fixture-result.json'));
  need(state.status==='complete'&&result.status==='complete'&&result.operationId===value.operationId&&same(result.sourceManifest,value.baseline.manifest),'Receive the complete same original operation.');
  matches(resultPath,state.resultIdentity);
  const entry=(state.sourceObservers??[]).find(row=>row.id===value.id);need(entry&&same(entry.request,{path,...admitted.identity})&&same(entry.baselineManifest,value.baseline.manifest)&&same(entry.observerManifest,value.observer.manifest),'Only an actually admitted observer can complete its original course.');
- need(fixture.completed===true&&fixture.programmeExit===0&&fixture.closedAt&&fixture.native?.version==='26.8.24.9'&&fixture.native.sourceRows===3,'The original fixture must finish and close its database and receiver.');
+ need(fixtureCompletionAccepted(fixture)&&fixture.fixture===request.fixtureDirectory&&fixture.native?.version==='26.8.24.9'&&fixture.native.sourceRows===3,'The original fixture must retain accepted normal database shutdown and completed receiver closure.');
+ if(fixture.reusedProgramme)need(fixture.reusedProgramme.operationId===state.id&&same(fixture.reusedProgramme.resultIdentity,state.resultIdentity),'The reused receiver must remain the exact completed original operation.');
  const completionPath=join(directory,'complete.json');
  if(existsSync(completionPath)){
   const retained=read(completionPath);need(retained.operationId===value.operationId&&retained.observerId===value.id&&same(retained.request,admitted.identity)&&same(retained.result,{path:resultPath,...identity(resultPath)}),'Retain the original complete observer result.');
@@ -167,7 +175,7 @@ export async function runSourceObserver(path){
  try{
   const fixtureResult=join(admitted.request.fixtureDirectory,'fixture-result.json');
   if(existsSync(join(admitted.request.directory,'CUSTOMER_RESULT.json'))&&existsSync(fixtureResult)){
-    const fixture=read(fixtureResult);if(fixture.completed===true&&fixture.programmeExit===0&&fixture.closedAt)return completeSourceObserver(path).completion;
+    const fixture=read(fixtureResult);if(fixtureCompletionAccepted(fixture))return completeSourceObserver(path).completion;
   }
   const argv=[join(admitted.value.observer.root,'reference','fixture.py'),'--directory',admitted.request.fixtureDirectory,'--clickhouse',admitted.request.clickhouse,'--resume','--source-observer',path,'--',...admitted.value.originalCommand];
   const env={...process.env};for(const key of ['PYTHONPATH','PYTHONHOME','PYTHONUSERBASE','PYTHONSTARTUP'])delete env[key];
