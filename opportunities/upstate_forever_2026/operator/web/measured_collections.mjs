@@ -1,6 +1,7 @@
 /** Complete collection operating surface over the original authenticated API. */
 import {freshCollectionWorking,validateCollectionWorking,addCollectionSources,editCollectionWorking,mappingFor,definitionKey,validateCollectionDefinition,retainCollectionRequest,acceptCollectionResponse,saveCollectionInspection,reviewedCollectionRequest,preserveUnresolvedCollectionRequest,exportCollectionWorking,captureCollectionSession,restoreCollectionSession} from './collection_working.mjs';
 import {collectionRandomId,collectionSHA256,uploadCollectionOriginal,downloadCollectionMember} from './collection_transfer.mjs';
+import {receiveCollectionEditionFolder,reopenCollectionEditionFolder} from './collection_folder.mjs';
 const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const clone=value=>JSON.parse(JSON.stringify(value)),stable=value=>JSON.stringify(value,(_k,v)=>v&&typeof v==='object'&&!Array.isArray(v)?Object.fromEntries(Object.keys(v).sort().map(k=>[k,v[k]])):v),hex=value=>typeof value==='string'&&/^[a-f0-9]{64}$/.test(value);
 const base64=bytes=>{let s='';for(let i=0;i<bytes.length;i+=32768)s+=String.fromCharCode(...bytes.subarray(i,i+32768));return btoa(s);};
@@ -20,7 +21,7 @@ export function mountCollectionPanel(host,{request,refresh,workspaceKey,initialS
  '<div data-pending class="mc-note" hidden></div><div class="mc-actions"><button type="button" data-action="resume">Resume exact saved request</button><button type="button" data-action="revise">Retain unresolved request and open fresh review</button><button type="button" data-action="pause">Pause this browser operation</button></div>'+
  '<div data-status role="status" aria-live="polite"></div><div data-persistence role="alert" hidden></div>'+
  '<h3>Complete source inspection</h3><div class="mc-scroll" data-inspection></div><details><summary>Original mappings, source summaries and operation history</summary><pre data-details></pre></details></details>'+
- '<details open><summary>Saved collections and complete study editions</summary><div class="mc-actions"><button type="button" data-action="refresh">Refresh saved collections</button></div><div data-list></div><div data-native-status></div><div data-edition></div></details>';
+ '<details open><summary>Saved collections and complete study editions</summary><div class="mc-actions"><button type="button" data-action="refresh">Refresh saved collections</button><button type="button" data-action="verify-folder">Verify received edition folder</button></div><div data-list></div><div data-native-status></div><div data-edition></div></details>';
  const el=selector=>host.querySelector(selector);
  function notice(message,error=false){if(dead)return;const node=el('[data-status]');node.textContent=message;node.setAttribute('role',error?'alert':'status');}
  function persistence(){if(dead)return;const node=el('[data-persistence]');node.hidden=!storageMessage;node.textContent=storageMessage;}
@@ -151,7 +152,7 @@ export function mountCollectionPanel(host,{request,refresh,workspaceKey,initialS
  }
  async function showLargeEdition(id,check){
   if(!hex(id))throw new Error('Invalid study edition identity.');const edition=await api('/large/editions/'+id);check();
-  el('[data-edition]').innerHTML='<h3>Complete editable study edition</h3><p>Edition <code>'+esc(id)+'</code> · workspace revision '+esc(edition.workspaceRevision)+'</p><p>Every original, editable project, report and complete archive is downloaded from this saved edition with its declared chunk hashes and full byte count.</p><div class="mc-scroll"><table><thead><tr><th>Complete member</th><th>Bytes</th><th>Download</th></tr></thead><tbody>'+edition.files.map(f=>'<tr><td>'+esc(f.path)+'</td><td>'+esc(f.bytes)+'</td><td><button type="button" data-member="'+esc(f.path)+'" data-download-edition="'+id+'">Download complete file</button></td></tr>').join('')+'</tbody></table></div>';
+  el('[data-edition]').innerHTML='<h3>Complete editable study edition</h3><p>Edition <code>'+esc(id)+'</code> · workspace revision '+esc(edition.workspaceRevision)+'</p><p>Every original, editable project, report and complete archive is downloaded from this saved edition with its declared chunk hashes and full byte count.</p><div class="mc-actions"><button type="button" data-folder-edition="'+id+'" data-folder-collection="'+esc(edition.collectionBinding?.collectionId||'')+'">Receive complete edition to folder</button></div><p>Choose a parent folder to receive all original members. Repeating this action with the same parent resumes its checked original chunks after a browser restart. Existing complete-file downloads remain available.</p><div class="mc-scroll"><table><thead><tr><th>Complete member</th><th>Bytes</th><th>Download</th></tr></thead><tbody>'+edition.files.map(f=>'<tr><td>'+esc(f.path)+'</td><td>'+esc(f.bytes)+'</td><td><button type="button" data-member="'+esc(f.path)+'" data-download-edition="'+id+'">Download complete file</button></td></tr>').join('')+'</tbody></table></div>';
  }
  async function showOldEdition(collection,id,check){
   if(!hex(collection)||!hex(id))throw new Error('Invalid saved collection edition.');
@@ -204,6 +205,17 @@ export function mountCollectionPanel(host,{request,refresh,workspaceKey,initialS
   }
   if(target.dataset.remove){
    try{editCollectionWorking(state,s=>{s.rows=s.rows.filter(r=>r.key!==target.dataset.remove);});fileHandles.delete(target.dataset.remove);saveLocal();renderRows();}catch(error){notice(error.message,true);}return;
+  }
+  if(action==='verify-folder'||target.dataset.folderEdition){
+   if(typeof globalThis.showDirectoryPicker!=='function'||!globalThis.navigator?.locks?.request){notice('This browser does not expose selected-folder receiving. Use Download complete file or the installed collection export.',true);return;}
+   // Acquire the actual user-granted handle before any network work can consume
+   // transient activation. The ordinary run lifetime guards all later effects.
+   let selected;try{selected=globalThis.showDirectoryPicker({mode:action==='verify-folder'?'read':'readwrite',id:'measurement-collection-edition'});}catch(error){notice(error.message,true);return;}
+   run(async check=>{
+    const directory=await selected;check();
+    const result=action==='verify-folder'?await reopenCollectionEditionFolder({directory,check,progress}):await receiveCollectionEditionFolder({api,id:target.dataset.folderEdition,collectionId:target.dataset.folderCollection,directory,check,progress});check();
+    notice((action==='verify-folder'?'Verified all complete original members in ':'Received all complete original members in ')+result.folderName+'. Open START_HERE.md and the files/ directory. '+(result.cleanupErrors?.length?'Some checked chunk files remain for later cleanup; the complete originals and receiving result are saved.':''));
+   });return;
   }
   run(async check=>{
    if(action==='inspect')await inspect(check);

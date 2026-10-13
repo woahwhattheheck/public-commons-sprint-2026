@@ -1,7 +1,7 @@
 {
   "schema": "upstate.application-component-fragment/v1",
   "id": "measurement-collections",
-  "source_reference": "Recovered complete OBS12 native measured-data engine with source collections and independent editable study editions, 1.1.0. Complete retained large-source collection receiving and original streaming edition continuation. Shared large-file source paths are declared directly; original large-file→chemistry→collection dependencies remain acyclic. The original owned receiving command includes a complete large-collections chapter over the unchanged public eight-station originals, with exact request recovery, full native edition downloads and independent complete-project receiving.",
+  "source_reference": "Recovered complete OBS12 native measured-data engine with source collections and independent editable study editions, 1.1.0. Complete retained large-source collection receiving and original streaming edition continuation. Shared large-file source paths are declared directly; original large-file→chemistry→collection dependencies remain acyclic. The original owned receiving command includes a complete large-collections chapter over the unchanged public eight-station originals, with exact request recovery, full native edition downloads and independent complete-project receiving. Whole-edition selected-folder receiving retains verified original chunks across browser lifetimes and provides read-only complete local reopening.",
   "components": {
     "measurement-collections": {
       "title": "Complete measured-observation source collections and editable study editions",
@@ -77,7 +77,9 @@
         "source_data/wqp_eight_20261013/wqp_eight_source_metadata.json",
         "source_data/wqp_eight_20261013/wqp_eight_monitoring_sites.geojson",
         "source_data/wqp_eight_20261013/wqp_eight_station_page_extractions.json",
-        "source_data/wqp_eight_20261013/sources.json"
+        "source_data/wqp_eight_20261013/sources.json",
+        "measurement_workspace/web/collection_folder.mjs",
+        "operator/web/collection_folder.mjs"
       ],
       "requires": [
         "core"

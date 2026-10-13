@@ -31,7 +31,8 @@
     "chiques_nutrients.mjs",
     "collection_working.mjs",
     "collection_transfer.mjs",
-    "eco_handovers.mjs"
+    "eco_handovers.mjs",
+    "collection_folder.mjs"
   ],
   "backend": {
     "module": "measurement_workspace.extension",
