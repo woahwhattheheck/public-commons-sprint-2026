@@ -1095,7 +1095,7 @@ export function attachCommunity({getState,api,endpoint,openForm,submitAction,det
     return openDelivery(JSON.parse(JSON.stringify(selection)));
   }
   function taskActions(task){
-    if(task?.action==='community.plan.compare')return revisions.taskActions(task);
+    if(['community.plan.compare','community.revision.receive'].includes(task?.action))return revisions.taskActions(task);
     if(task?.workspace!==workspace()||task.action!=='community.report.source.prepare'||task.state!=='complete'||!task.result?.source)return '';
     return '<div class="page-actions">'+
       (typeof openScientificReport==='function'?button('report-source-scientific','Open scientific report','data-id="'+e(task.id)+'"','primary'):'')+
