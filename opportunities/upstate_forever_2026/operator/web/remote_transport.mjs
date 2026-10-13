@@ -111,6 +111,35 @@ async function outcome(id,signal){
   return response;
  }
 }
+async function completeApiResponse(response,id,signal){
+ // app.api already consumes the complete JSON body. Finish that read here so
+ // interrupted action/upload acknowledgements recover through the SAME result.
+ // Original file links and download streams use their unchanged native routes.
+ let identity=null;
+ for(let attempt=0;;attempt++){
+  abort(signal);
+  const returned=response.headers.get('X-Eco-Request-ID');
+  if(returned&&returned!==id){try{await response.body?.cancel();}catch{}throw problem('The connection returned a different request identity.','REMOTE_IDENTITY',id);}
+  const current={status:response.status,sha256:response.headers.get('X-Eco-Body-SHA256'),type:response.headers.get('Content-Type')};
+  if(identity&&(current.status!==identity.status||current.sha256!==identity.sha256||current.type!==identity.type)){
+   try{await response.body?.cancel();}catch{}
+   throw problem('The retained response identity changed while reconnecting.','REMOTE_RESULT_IDENTITY',id);
+  }
+  identity??=current;
+  try{
+   const bytes=await response.arrayBuffer();abort(signal);
+   const length=response.headers.get('Content-Length');
+   if(length!==null&&!response.headers.has('Content-Encoding')&&/^\d+$/.test(length)&&Number(length)!==bytes.byteLength)throw new Error('Incomplete original response bytes');
+   if(current.sha256&&(!/^[a-f0-9]{64}$/.test(current.sha256)||hex(await hash(bytes,signal))!==current.sha256))throw new Error('Original response digest did not match');
+   return new Response(response.body===null?null:bytes,{status:response.status,statusText:response.statusText,headers:response.headers});
+  }catch(cause){
+   abort(signal);try{await response.body?.cancel(cause);}catch{}
+   if(attempt>=7)throw problem('The original request is retained but its complete reply could not be read. Keep its reference when reconnecting.','REMOTE_RESPONSE_INTERRUPTED',id,response.status);
+   await pause(retryDelay(response,attempt),signal);
+   response=await outcome(id,signal);
+  }
+ }
+}
 function finishWhenRead(response,done,signal){
  if(!response.body){done();return response;}
  const reader=response.body.getReader();
@@ -150,7 +179,7 @@ async function upload(path,options){
  }
  const sealed=await control('/_eco/v1/requests/'+id+'/seal',{method:'POST',headers:json,body:JSON.stringify({body_bytes:blob.size})},id,signal);
  if(sealed.id!==id||sealed.sealed!==true)throw problem('The transfer has not confirmed the complete file.','REMOTE_SEAL',id);
- const response=await outcome(id,signal);
+ const response=await completeApiResponse(await outcome(id,signal),id,signal);
  return finishWhenRead(response,()=>{journalRemove(key,id);heldFiles.get(blob)?.delete(signature);},signal);
 }
 /** Keep the ordinary local fetch unchanged; the login marker enables remote transport. */
@@ -165,7 +194,7 @@ export async function operatorFetch(path,options={},capability=null){
  headers.delete('Authorization');headers.set('X-Eco-Request-ID',id);
  let response;
  try{response=await fetch(originalPath,{...options,headers,credentials:'same-origin',redirect:'error'});}
- catch(cause){abort(options.signal);return outcome(id,options.signal);}
+ catch(cause){abort(options.signal);return completeApiResponse(await outcome(id,options.signal),id,options.signal);}
  if(response.headers.get('X-Eco-Uncertain')==='1'){
   await response.body?.cancel();throw problem('The native request needs reconciliation. Check its original operation before submitting it again.','UPSTREAM_UNCERTAIN',id,response.status);
  }
@@ -173,7 +202,7 @@ export async function operatorFetch(path,options={},capability=null){
   const returned=response.headers.get('X-Eco-Request-ID');
   await response.body?.cancel();
   if(returned&&returned!==id)throw problem('The connection returned a different request identity.','REMOTE_IDENTITY',id);
-  return outcome(id,options.signal);
+  return completeApiResponse(await outcome(id,options.signal),id,options.signal);
  }
- return response;
+ return completeApiResponse(response,id,options.signal);
 }

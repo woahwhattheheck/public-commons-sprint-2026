@@ -59,6 +59,15 @@ def digest(value):
     return hashlib.sha256(value).hexdigest()
 
 
+def fsync_directory(path):
+    if os.name == "posix":
+        descriptor = os.open(path, os.O_RDONLY | getattr(os, "O_DIRECTORY", 0))
+        try:
+            os.fsync(descriptor)
+        finally:
+            os.close(descriptor)
+
+
 def event(name, request_id=None, **fields):
     # Do not log credentials, URLs, request bodies, upstream errors, or filenames.
     print(json.dumps({"event": name, **({"request_id": request_id} if request_id else {}),
@@ -217,6 +226,7 @@ class Config:
                            "edge_origin": self.origin, "native_binding": self.native_binding}, handle)
                 handle.flush()
                 os.fsync(handle.fileno())
+            fsync_directory(self.directory)
         saved = private_json(self.instance_path)
         if (saved.get("operator_id") != self.operator_id or saved.get("edge_origin") != self.origin
                 or not ID.fullmatch(self.instance) or saved.get("native_binding") != self.native_binding):
@@ -345,6 +355,11 @@ class Journal:
         with self.connect() as db:
             row = db.execute("SELECT * FROM chunks WHERE id=? AND offset=?", (request_id, offset)).fetchone()
             return dict(row) if row else None
+
+    def chunks(self, request_id):
+        with self.connect() as db:
+            return [dict(row) for row in db.execute(
+                "SELECT offset,bytes,sha256 FROM chunks WHERE id=? ORDER BY offset", (request_id,))]
 
     def recover(self):
         with self.connect() as db:
@@ -498,13 +513,59 @@ class Connector:
             if extra + 32 * CHUNK > free:
                 raise ConnectorError("PRIVATE_DISK_CAPACITY")
 
+    def verify_input(self, source, request, committed, allow_suffix=False):
+        """Verify all durable bytes, including prefixes the edge already ACKed."""
+        size = request["body_bytes"]
+        if type(committed) is not int or not 0 <= committed <= size:
+            raise ConnectorError("DURABLE_INPUT_OFFSET")
+        mode = os.fstat(source.fileno())
+        if not stat.S_ISREG(mode.st_mode):
+            raise ConnectorError("DURABLE_INPUT_REGULAR_FILE_REQUIRED")
+        if mode.st_size < committed or (not allow_suffix and mode.st_size != committed):
+            raise ConnectorError("DURABLE_INPUT_LENGTH")
+        source.seek(0)
+        full, offset = hashlib.sha256(), 0
+        for chunk in self.journal.chunks(request["id"]):
+            count = chunk["bytes"]
+            if (chunk["offset"] != offset or type(count) is not int
+                    or not 0 < count <= CHUNK or offset + count > committed):
+                raise ConnectorError("DURABLE_INPUT_CHUNK_INVENTORY")
+            raw = source.read(count)
+            if len(raw) != count or digest(raw) != chunk["sha256"]:
+                raise ConnectorError("DURABLE_INPUT_CHANGED")
+            full.update(raw)
+            offset += count
+        if offset != committed:
+            raise ConnectorError("DURABLE_INPUT_CHUNK_INVENTORY")
+        result = full.hexdigest()
+        if committed == size and request["body_sha256"] and request["body_sha256"] != result:
+            raise ConnectorError("ORIGINAL_REQUEST_HASH_MISMATCH")
+        source.seek(0)
+        return result
+
     def receive(self, request):
         request_id, size = request["id"], request["body_bytes"]
         state = self.journal.get(request_id)
         path = self.journal.body_path(request_id, "input")
-        mode = "r+b" if path.exists() else "w+b"
-        with path.open(mode) as output:
-            os.chmod(path, 0o600)
+        if path.is_symlink():
+            raise ConnectorError("DURABLE_INPUT_REGULAR_FILE_REQUIRED")
+        try:
+            output = path.open("r+b")
+        except FileNotFoundError:
+            if state["input_offset"]:
+                raise ConnectorError("DURABLE_INPUT_MISSING")
+            output = path.open("x+b")
+            try:
+                os.chmod(path, 0o600)
+                output.flush()
+                os.fsync(output.fileno())
+                fsync_directory(path.parent)
+            except BaseException:
+                output.close()
+                raise
+        with output:
+            self.verify_input(output, request, state["input_offset"], allow_suffix=True)
+            # Only an uncommitted suffix may be discarded, never create missing bytes.
             output.truncate(state["input_offset"])
             status = self.edge.status(request_id)
             edge_offset = integer(status.get("input_offset", 0), "input_offset")
@@ -540,9 +601,10 @@ class Connector:
                 edge_offset += len(chunk)
             output.flush()
             os.fsync(output.fileno())
-        sha = self.file_hash(path)
-        if request["body_sha256"] and request["body_sha256"] != sha:
-            raise ConnectorError("ORIGINAL_REQUEST_HASH_MISMATCH")
+            current = self.journal.get(request_id)
+            if current["input_offset"] != size:
+                raise ConnectorError("DURABLE_INPUT_INCOMPLETE")
+            self.verify_input(output, request, size)
         self.journal.state(request_id, "ready")
         return True
 
@@ -557,20 +619,27 @@ class Connector:
     def execute(self, request):
         request_id = request["id"]
         source = self.journal.body_path(request_id, "input")
-        # Persist before either the execution marker or any upstream network operation.
-        self.journal.state(request_id, "executing")
-        try:
-            self.edge.json("POST", "/requests/" + request_id + "/executing",
-                           {"body_bytes": request["body_bytes"], "body_sha256": self.file_hash(source)})
-        except BaseException:
-            # No upstream call has happened; the same marker is safe to reconcile/repeat.
-            self.journal.state(request_id, "ready")
-            raise
-        response_path = self.journal.body_path(request_id, "response")
-        headers = dict(request["headers"])
-        headers["content-length"] = str(request["body_bytes"])
-        try:
-            with source.open("rb") as body:
+        if source.is_symlink():
+            raise ConnectorError("DURABLE_INPUT_REGULAR_FILE_REQUIRED")
+        # Verify the SAME open file that will be dispatched, before changing state.
+        with source.open("rb") as body:
+            current = self.journal.get(request_id)
+            if current["input_offset"] != request["body_bytes"]:
+                raise ConnectorError("DURABLE_INPUT_INCOMPLETE")
+            input_sha = self.verify_input(body, request, request["body_bytes"])
+            # Persist before either the execution marker or any upstream operation.
+            self.journal.state(request_id, "executing")
+            try:
+                self.edge.json("POST", "/requests/" + request_id + "/executing",
+                               {"body_bytes": request["body_bytes"], "body_sha256": input_sha})
+            except BaseException:
+                # No upstream call has happened; this same marker is safe to repeat.
+                self.journal.state(request_id, "ready")
+                raise
+            response_path = self.journal.body_path(request_id, "response")
+            headers = dict(request["headers"])
+            headers["content-length"] = str(request["body_bytes"])
+            try:
                 conn, reply = self.local_call(request["method"], request["path"], headers,
                                               body if request["body_bytes"] else None)
                 try:
@@ -593,6 +662,7 @@ class Connector:
                             size += len(chunk)
                         output.flush()
                         os.fsync(output.fileno())
+                    fsync_directory(response_path.parent)
                     if reply.status not in (204, 304) and expected is not None and size != int(expected):
                         raise ConnectorError("NATIVE_RESPONSE_TRUNCATED")
                     if reply.status not in (204, 304):
@@ -602,10 +672,10 @@ class Connector:
                     self.journal.state(request_id, "response", response=response)
                 finally:
                     conn.close()
-        except BaseException as error:
-            self.journal.state(request_id, "ready" if request["method"] == "GET" else "uncertain",
-                               error=None if request["method"] == "GET" else "NATIVE_OUTCOME_UNCERTAIN")
-            raise
+            except BaseException:
+                self.journal.state(request_id, "ready" if request["method"] == "GET" else "uncertain",
+                                   error=None if request["method"] == "GET" else "NATIVE_OUTCOME_UNCERTAIN")
+                raise
         event("native_response_retained", request_id, status=response["status"], bytes=size)
 
     def uncertain(self, request):
@@ -655,6 +725,7 @@ class Connector:
                 output.write(raw)
                 output.flush()
                 os.fsync(output.fileno())
+            fsync_directory(path.parent)
             self.journal.state(request["id"], "response", response={
                 "status": 202, "headers": {"content-type": "application/json",
                 "content-length": str(len(raw)), "x-eco-reconciled-operation": operation},
