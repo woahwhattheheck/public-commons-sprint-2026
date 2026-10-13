@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import argparse
+import contextlib
+import fcntl
 import csv
 import html
 import io
@@ -11,6 +13,9 @@ import logging
 import os
 from pathlib import Path
 import shutil
+import subprocess
+import time
+import uuid
 import sys
 import traceback
 
@@ -81,6 +86,8 @@ def parser():
                    help="Also use the actual evaluation in gura-planning-state.json")
     p.add_argument("--difference-maps", action="store_true",
                    help="Retain per-case difference rasters through the native comparison API")
+    p.add_argument("--isolate-native-cases", action="store_true",
+                   help="Execute each unfinished native run in a fresh interpreter; retain the exact cases and stage cache")
     p.add_argument("--archive", type=Path,
                    help="Copy the completed/partial portable suite ZIP to this external path")
     return p
@@ -196,6 +203,88 @@ small{color:#515b63}a{color:#273844;margin-right:12px}code{overflow-wrap:anywher
     return artifacts
 
 
+
+@contextlib.contextmanager
+def _native_batch_lock(path):
+    """Keep the existing batch lease in both parent and its active native child."""
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    fd = os.open(path, os.O_CREAT | os.O_RDWR | os.O_NOFOLLOW, 0o600)
+    try:
+        fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        yield fd
+    finally:
+        os.close(fd)
+
+
+_NATIVE_CASE_CHILD = r'''
+import json, pathlib, sys
+request = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+sys.path.insert(0, request["application"])
+from model.workspace import Workspace
+workspace = Workspace(request["workspace"])
+result = workspace.run(request["run_id"], reuse_source_run_ids=request["reuse_source_run_ids"])
+if result["id"] != request["run_id"] or result["state"] != "complete":
+    raise RuntimeError("Original prepared native case did not complete")
+print(json.dumps({"run_id": result["id"], "state": result["state"]}), flush=True)
+'''
+
+
+def _isolated_process(application, workspace, receiving, run_id, donors, custody_fds, observe):
+    """Execute one unchanged Workspace run; release its process memory on return."""
+    from model.common import atomic_json, now
+    from model.model_selection import validate_completed_run
+    directory = receiving / "native-case-processes" / run_id / uuid.uuid4().hex
+    directory.mkdir(parents=True, exist_ok=False)
+    request = {
+        "schema": "upstate.gura-isolated-native-case/v1", "application": str(application),
+        "workspace": str(workspace.root), "workspace_id": workspace.project["id"],
+        "run_id": run_id, "reuse_source_run_ids": sorted(value for value in donors if value != run_id),
+        "python": sys.executable, "created_at": now(),
+    }
+    request_path = directory / "request.json"
+    atomic_json(request_path, request, immutable=True)
+    process = None
+    started = now()
+    try:
+        with (directory / "stdout.log").open("xb") as stdout, (directory / "stderr.log").open("xb") as stderr:
+            process = subprocess.Popen(
+                [sys.executable, "-B", "-c", _NATIVE_CASE_CHILD, str(request_path)],
+                cwd=application, env=dict(os.environ), stdin=subprocess.DEVNULL,
+                stdout=stdout, stderr=stderr, pass_fds=tuple(custody_fds))
+            observation = {"run_id": run_id, "pid": process.pid,
+                           "process_directory": str(directory), "started_at": started}
+            atomic_json(directory / "process.json", observation, immutable=True)
+            observe({**observation, "state": "running"})
+            while True:
+                try:
+                    code = process.wait(timeout=15)
+                    break
+                except subprocess.TimeoutExpired:
+                    # The child's ordinary run.json/native.log remain the native
+                    # journals. This small operation observation keeps the caller live.
+                    observe({**observation, "state": "running", "observed_at": now()})
+        atomic_json(directory / "return.json", {
+            **observation, "state": "returned", "return_code": code, "returned_at": now()})
+    except BaseException:
+        if process is not None and process.poll() is None:
+            process.terminate()
+            process.wait()
+        raise
+    result = workspace.inspect_run(run_id)
+    if result.get("state") == "complete":
+        validate_completed_run(result)
+        observe({**observation, "state": "complete", "return_code": code, "completed_at": now()})
+        return result
+    failure = RuntimeError("Original native case " + run_id + " returned "
+                           + str(code) + "; continue its retained run and " + str(directory))
+    if result.get("error"):
+        failure.native_failure = result["error"]
+    observe({**observation, "state": result.get("state", "interrupted"),
+             "return_code": code, "returned_at": now()})
+    raise failure
+
+
 def main(argv=None):
     args = parser().parse_args(argv)
     application = args.application.resolve(strict=True)
@@ -220,6 +309,7 @@ def main(argv=None):
     inputs = args.inputs.resolve(strict=True)
     scopes = [name for name in SCOPES if name in set(args.scopes)]
     state, directory = None, None
+    custody_fds = ()
 
     class ReusingWorkspace(Workspace):
         """Expose original completed donors to native identity-checked stage reuse."""
@@ -236,6 +326,12 @@ def main(argv=None):
 
         def run(self, key, *, reuse_source_run_ids=None):
             donors = sorted(self.donors | set(reuse_source_run_ids or ()))
+            retained = self.inspect_run(key)
+            if args.isolate_native_cases and retained["state"] != "complete":
+                _isolated_process(application, self, receiving, key, donors, custody_fds,
+                    lambda value: checkpoint("native-case-process", native_case_process=value))
+                # The ordinary completed-run path verifies every retained output;
+                # it does not load or execute another native model.
             result = super().run(key, reuse_source_run_ids=[value for value in donors if value != key])
             if result["state"] == "complete":
                 self.donors.add(result["id"])
@@ -248,7 +344,8 @@ def main(argv=None):
                 "stage": stage, "updated_at": now(),
                 "request": {"baseline_run_id": args.baseline_run_id,
                             "scopes": scopes, "design": args.design,
-                            "evaluation_run_ids": args.evaluation_run_id}, **values})
+                            "evaluation_run_ids": args.evaluation_run_id,
+                            "isolate_native_cases": args.isolate_native_cases}, **values})
             receiver.emit("gura-studies-" + stage, **values)
             return
         state.update(stage=stage, updated_at=now(), **values)
@@ -256,8 +353,9 @@ def main(argv=None):
         receiver.emit("gura-studies-" + stage, suite_id=state["id"],
                       state_path=str(directory / "state.json"), **values)
 
-    with held(receiving / ".parameter-suite.lock", blocking=False), held(
-            root / ".native-model-batch.lock", blocking=False):
+    with _native_batch_lock(receiving / ".parameter-suite.lock") as suite_fd, _native_batch_lock(
+            root / ".native-model-batch.lock") as batch_fd:
+        custody_fds = (suite_fd, batch_fd)
         try:
             baseline_id = args.baseline_run_id
             recorded = receiving / "gura-receiving-state.json"
@@ -269,9 +367,17 @@ def main(argv=None):
                     baseline_id = None
             if baseline_id is None:
                 checkpoint("original-reference")
-                code = receiver.main([
+                original_args = [
                     "--application", str(application), "--workspace", str(root),
-                    "--inputs", str(inputs), "--models", "ndr", "sdr", "--mode", "both"])
+                    "--inputs", str(inputs), "--models", "ndr", "sdr", "--mode", "both"]
+                if args.isolate_native_cases:
+                    # The original reference receiver owns its separate .driver
+                    # lease. It does not reacquire this suite's native batch lease.
+                    code = subprocess.call(
+                        [sys.executable, "-B", str(Path(receiver.__file__)), *original_args],
+                        cwd=application, env=dict(os.environ), pass_fds=custody_fds)
+                else:
+                    code = receiver.main(original_args)
                 if code:
                     raise RuntimeError("Original Gura receiving requires recovery; inspect its retained state")
                 baseline_id = read_json(recorded)["workspace_baseline"]["run_id"]
@@ -336,6 +442,11 @@ def main(argv=None):
             }
             if state["selection"] != selection:
                 raise ValueError("Retained suite selection differs from its immutable source identity")
+            state["execution_policy"] = {
+                "native_cases": "isolated-process" if args.isolate_native_cases else "same-process",
+                "python": sys.executable, "driver_sha256": receiver.sha(Path(__file__)),
+                "case_order": "NDR-only, SDR-only, then combined; original run IDs and scientific selections",
+            }
             exports = SuiteExports(workspace, directory, suite_id)
             for item in state["studies"]:
                 if item.get("study_id"):
@@ -344,8 +455,8 @@ def main(argv=None):
                         workspace.remember(case["run_id"])
             checkpoint("prepared", state="running")
             failures = []
-            for target in targets:
-                for scope in scopes:
+            for scope in scopes:
+                for target in targets:
                     item_key = target["id"] + ":" + scope
                     item = next((row for row in state["studies"] if row["key"] == item_key), None)
                     if item is None:
