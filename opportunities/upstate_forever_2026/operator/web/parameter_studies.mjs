@@ -306,8 +306,8 @@ export function attachParameterStudies(host) {
       (!isBusy && Number(progress.completed) > 0 ? button('summarize', 'Refresh completed results', 'data-id="' + escapeHTML(id) + '"') : '') +
       button('revise', 'Use as new draft', 'data-id="' + escapeHTML(id) + '"') +
       button('calibration', 'Use completed cases in calibration', 'data-id="' + escapeHTML(id) + '"') +
-      (item.artifacts?.results ? button('source-prepare', 'Prepare scientific source', 'data-id="' + escapeHTML(id) + '"') +
-        button('source-open', 'Open prepared source in composer', 'data-id="' + escapeHTML(id) + '"') : '') +
+      (item.artifacts?.results ? button('source-prepare', 'Prepare scientific source', 'data-id="' + escapeHTML(id) + '"') : '') +
+      (item.scientific_source ? button('source-open', 'Open prepared source in composer', 'data-id="' + escapeHTML(id) + '" data-source-id="' + escapeHTML(item.scientific_source.id) + '"') : '') +
       (item.comparison_id ? '<button type="button" data-action="item" data-kind="comparisons" data-id="' + escapeHTML(item.comparison_id) + '">Open difference maps</button><button type="button" data-action="spatial-item" data-kind="comparisons" data-id="' + escapeHTML(item.comparison_id) + '">View difference maps</button>' : '');
   }
 

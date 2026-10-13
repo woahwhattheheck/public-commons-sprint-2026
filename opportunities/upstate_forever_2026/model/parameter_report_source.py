@@ -348,6 +348,20 @@ def get(workspace, source_id):
         "current" if current == operation["selection"]["expected_artifact_sha256"] else "earlier-result")}
 
 
+def summary(workspace, experiment_id, artifact_sha256=None):
+    """Read the compact pointer without parsing the selected case/source inventory."""
+    key = identifier(experiment_id)
+    pointer = workspace.root / "experiments" / key / "latest-scientific-source.json"
+    if not pointer.is_file():
+        return None
+    value = read_json(pointer)
+    if value.get("experiment_id") != key:
+        raise ValueError("The scientific source pointer belongs to another study")
+    return {"id": identifier(value["source_operation_id"]), "experiment_id": key,
+            "title": value.get("title"), "state": value.get("state"),
+            "source_state": "current" if value.get("artifact_sha256") == artifact_sha256 else "earlier-result"}
+
+
 def latest(workspace, experiment_id):
     key = identifier(experiment_id)
     pointer = workspace.root / "experiments" / key / "latest-scientific-source.json"
@@ -417,7 +431,9 @@ def prepare(workspace, value, *, render=True):
             operation["updated_at"] = now()
             atomic_json(record, operation)
             atomic_json(workspace.root / "experiments" / key / "latest-scientific-source.json",
-                        {"experiment_id": key, "source_operation_id": operation_id})
+                        {"experiment_id": key, "source_operation_id": operation_id,
+                         "title": operation["title"], "state": operation["state"],
+                         "artifact_sha256": operation["selection"]["expected_artifact_sha256"]})
             return get(workspace, operation_id)
         except BaseException as error:
             operation.update(error={"type": type(error).__name__, "message": str(error)}, updated_at=now())

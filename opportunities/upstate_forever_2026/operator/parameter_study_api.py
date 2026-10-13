@@ -71,6 +71,9 @@ class ParameterStudyAPI:
             value = DEFAULT_VIEWS.read(workspace, identifier(payload.get("id")), **{
                 name: payload[name] for name in ("offset", "limit", "case_filter", "query", "run_id")
                 if payload.get(name) not in (None, "")})
+            from model.parameter_report_source import summary
+            value["scientific_source"] = summary(workspace, value["id"],
+                value.get("artifacts", {}).get("results", {}).get("sha256"))
             value["_downloads"] = self.operator._files(
                 workspace_id, value, workspace.root / "experiments" / value["id"])
             return value
