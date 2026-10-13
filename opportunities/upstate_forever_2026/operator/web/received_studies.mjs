@@ -8,7 +8,7 @@ const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&
 const list=v=>Array.isArray(v)?v:[];
 const button=(action,label,extra='')=>'<button type="button" data-received-action="'+action+'" '+extra+'>'+esc(label)+'</button>';
 const validID=v=>typeof v==='string'&&/^[0-9a-f]{64}$/.test(v);
-const families={report:'Implementation plan report',outcome:'Outcomes comparison',field:'Field observation context'};
+const families={report:'Implementation plan report',outcome:'Outcomes comparison',field:'Field observation context',laboratory:'Laboratory requests and returned results'};
 function files(rows,primary=null) {
   const links=list(rows).filter(row=>!primary||primary.has(row.filename||row.label))
     .filter(row=>/^\/api\/file\/[0-9a-f]{64}$/.test(row.url||''));
@@ -77,6 +77,16 @@ export function attachReceivedStudies(host) {
         '<div class="st-actions">'+button('plan','Open source revision','data-index="'+index+'" '+disabled)+
         (native.revision!==native.selected_revision?button('current','Open latest editable plan','data-index="'+index+'" '+disabled):'')+'</div>'+
         '<p>'+Object.entries(native.record_counts||{}).filter(([,n])=>n).map(([name,n])=>esc(n)+' '+esc(name.replaceAll('_',' '))).join(' · ')+'</p>';
+      if(source.laboratory){
+        const lab=source.laboratory;
+        html+='<section class="st-details"><h4>'+esc(lab.label||'Original laboratory request')+'</h4>'+
+          '<p>'+esc(lab.laboratory)+' · requested revision '+esc(lab.request_revision)+
+          ' · report/results revision '+esc(lab.result_revision)+'</p>'+
+          button('laboratory','Open laboratory request and results','data-index="'+index+'" '+disabled)+
+          files(lab._request_downloads,new Set(['laboratory-package.zip','lab-submission.csv','return-template.csv']))+
+          allFiles(lab._request_downloads,'Complete original laboratory package')+
+          allFiles(lab._report_downloads,'Retained laboratory report source and selection')+'</section>';
+      }
       for(const report of list(source.reports)){
         html+='<details class="st-details"'+(report.selected_source_report?' open':'')+'><summary>'+
           (report.selected_source_report?'Original source report':'Retained plan report')+' · revision '+esc(report.revision)+' · '+esc(report.as_of||'')+
@@ -186,7 +196,7 @@ export function attachReceivedStudies(host) {
         workspace_key:ws,current:()=>current(ws,e)&&opened===value&&selected===value.id,
       });
     }
-    if(!['plan','current','packet-plan'].includes(action))return;
+    if(!['plan','current','packet-plan','laboratory'].includes(action))return;
     const ws=workspace,e=epoch,value=opened;
     if(!value||value.id!==selected||value.workspace_key!==ws)throw Error('Reopen the original received Study.');
     const index=Number(target.dataset.index),source=Number.isSafeInteger(index)?value.field_sources[index]:null;
@@ -201,7 +211,11 @@ export function attachReceivedStudies(host) {
     if(!Number.isSafeInteger(revision)||revision<1)throw Error('Choose an original saved revision.');
     if(!current(ws,e))return;
     if(typeof host.openExtension!=='function')throw Error('Reopen this Workspace in the maintained operator.');
-    await host.openExtension('implementation','openSavedPlan',{workspace_key:ws,plan_id:native.plan_id,revision});
+    const laboratory=action==='laboratory'?source.laboratory:null;
+    if(action==='laboratory'&&(!laboratory||!validID(laboratory.dispatch_id)||!validID(laboratory.operation_id)))
+      throw Error('Reopen the original retained laboratory source.');
+    await host.openExtension('implementation','openSavedPlan',{workspace_key:ws,plan_id:native.plan_id,revision,
+      ...(laboratory?{laboratory_dispatch_id:laboratory.dispatch_id,laboratory_report_operation:laboratory.operation_id}:{})});
   }
   function click(event){
     const target=event.target.closest('[data-received-action]');

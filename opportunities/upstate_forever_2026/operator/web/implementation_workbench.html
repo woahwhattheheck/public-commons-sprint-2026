@@ -2613,8 +2613,23 @@ class ImplementationWorkbench {
     const revision=payload.revision??null;
     if(revision!==null&&(!Number.isSafeInteger(revision)||revision<1))throw Error('Choose the original saved revision.');
     if(this.root.querySelector('dialog[open]'))throw Error('Close the current plan editor before opening the received plan.');
-    await this.openPlan(payload.plan_id,true,revision);
-    if(this.gone||this.plan?.id!==payload.plan_id||revision!==null&&this.plan.revision!==revision)throw Error('The saved plan changed while opening its original revision.');
+    const workspace=this.workspace;
+    if(payload.laboratory_report_operation){
+      if(this.pending)throw Error('Finish the current retained plan operation before opening a laboratory report.');
+      if(!/^[0-9a-f]{64}$/.test(payload.laboratory_dispatch_id||'')||!/^[0-9a-f]{64}$/.test(payload.laboratory_report_operation))
+        throw Error('Choose the original laboratory request and report identities.');
+    }
+    const opening=this.openPlan(payload.plan_id,true,revision),turn=this.generation;
+    const current=()=>!this.gone&&this.generation===turn&&this.workspace===workspace&&this.host.getState?.()?.workspace_key===workspace;
+    try{await opening;}catch(error){if(current())throw error;return {accepted:false};}
+    if(!current())return {accepted:false};
+    if(this.plan?.id!==payload.plan_id||revision!==null&&this.plan.revision!==revision)throw Error('The saved plan changed while opening its original revision.');
+    if(payload.laboratory_report_operation){
+      let dispatch;try{dispatch=await this.dispatchCapability();}catch(error){if(current())throw error;return {accepted:false};}
+      if(!current())return {accepted:false};
+      const accepted=await dispatch.openRetainedReport(this,payload);
+      return {accepted,workspace_key:workspace,plan_id:this.plan?.id,revision:this.plan?.revision};
+    }
     this.tab='handover';this.message='Opened the original saved plan at native revision '+this.plan.revision+'. Its retained reports and source files are available below.';this.render();
     return {accepted:true,workspace_key:this.workspace,plan_id:this.plan.id,revision:this.plan.revision};
   }
