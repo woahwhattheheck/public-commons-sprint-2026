@@ -1,0 +1,22 @@
+{
+  "schema": "upstate.application-component-fragment/v1",
+  "id": "measurement-native-observations",
+  "components": {
+    "measurement-native-observations": {
+      "title": "Original Measurements imports as native observation context",
+      "requires": [
+        "observed-context",
+        "measurement-collections"
+      ],
+      "paths": [
+        "measurement_workspace/engine/native_observations.mjs",
+        "measurement_workspace/native_observations.py",
+        "measurement_workspace/NATIVE_OBSERVATION_HANDOFF.md",
+        "operator/web/measured_native_observations.mjs"
+      ]
+    }
+  },
+  "required_components": [
+    "measurement-native-observations"
+  ]
+}

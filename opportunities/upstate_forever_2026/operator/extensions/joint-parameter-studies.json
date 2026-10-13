@@ -1,0 +1,132 @@
+{
+  "schema": "upstate.operator-extension/v1",
+  "id": "joint-parameter-studies",
+  "title": "Joint parameter studies",
+  "version": "1.0.0",
+  "order": 65,
+  "assets": [
+    "joint_parameter_studies.mjs",
+    "joint_parameter_studies.css"
+  ],
+  "backend": {
+    "module": "joint_parameter_operator",
+    "factory": {
+      "name": "JointParameterOperator",
+      "args": [
+        "operator",
+        "fault"
+      ]
+    },
+    "actions": [
+      "joint-study.prepare",
+      "joint-study.run",
+      "joint-study.analyze"
+    ],
+    "invoke": {
+      "handler": "invoke",
+      "args": [
+        "task"
+      ]
+    },
+    "routes": [
+      {
+        "methods": [
+          "GET"
+        ],
+        "path": "/api/joint-parameters/catalog",
+        "operation": "catalog",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "GET"
+        ],
+        "path": "/api/joint-parameters/inspect",
+        "operation": "inspect",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "GET"
+        ],
+        "path": "/api/joint-parameters/analysis",
+        "operation": "analysis",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "POST"
+        ],
+        "path": "/api/joint-parameters/preview",
+        "operation": "preview",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      }
+    ],
+    "state": {
+      "key": "joint_parameter_studies",
+      "handler": "summaries",
+      "args": [
+        "workspace_key"
+      ]
+    },
+    "decorate_task": {
+      "handler": "decorate_task",
+      "args": [
+        "task"
+      ]
+    },
+    "verify_workspace": {
+      "module": "model.joint_parameter_study_transfer",
+      "handler": "verify_workspace",
+      "args": [
+        "workspace"
+      ]
+    }
+  },
+  "client": {
+    "module": "/web/joint_parameter_studies.mjs",
+    "factory": "attachJointParameterStudies",
+    "requires": [
+      "getState",
+      "api",
+      "endpoint",
+      "fileList",
+      "showTask",
+      "refreshState",
+      "openExtension"
+    ],
+    "lifecycle": {
+      "mount": "mount",
+      "update": "update",
+      "detach": "detach"
+    },
+    "styles": [
+      "/web/joint_parameter_studies.css"
+    ],
+    "view": {
+      "id": "joint-parameter-studies",
+      "title": "Joint parameter studies",
+      "after": "experiments"
+    }
+  }
+}

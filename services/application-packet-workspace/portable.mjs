@@ -38,9 +38,13 @@ export function workingHTML(source,record=null){
   const payload={source,record,copyId:record?.copyId||'packet-'+(record?head(record.workspace):sha256Utf8(JSON.stringify(Object.keys(source))).sha256)};
   const template=source['template.html'];
   for(const token of ['__APPLICATION_STYLE__','__APPLICATION_BOOT__','__APPLICATION_CODE__'])if(template.split(token).length!==2)throw Error('The complete template must contain one '+token+'.');
-  return template.replace('__APPLICATION_STYLE__',()=>source['style.css'])
-    .replace('__APPLICATION_BOOT__',()=>safeJSON(payload))
-    .replace('__APPLICATION_CODE__',()=>script.replace(/<\/script/gi,'<\\/script'));
+  const substitutions={
+    __APPLICATION_STYLE__:source['style.css'],
+    __APPLICATION_BOOT__:safeJSON(payload),
+    __APPLICATION_CODE__:script.replace(/<\/script/gi,'<\\/script')
+  };
+  // Replace only tokens in the original template, never tokens inside inserted source.
+  return template.replace(/__APPLICATION_(?:STYLE|BOOT|CODE)__/g,token=>substitutions[token]);
 }
 const crcTable=Array.from({length:256},(_,n)=>{let c=n;for(let k=0;k<8;k++)c=c&1?0xedb88320^(c>>>1):c>>>1;return c>>>0;});
 function crc(bytes){let c=0xffffffff;for(const n of bytes)c=crcTable[(c^n)&255]^(c>>>8);return(c^0xffffffff)>>>0;}

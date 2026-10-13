@@ -182,6 +182,20 @@
         "sha256": "d5ce9059090593e7c98275c356710ad3576fef8ba2364582bc2864a129ab8cf7"
       },
       "reason": "Independently clean up owned child/log/file resources, preserving actual failure diagnostics."
+    },
+    {
+      "path": "products/staff-portal-workbench/receiving.mjs",
+      "before": {
+        "gitBlob": "76fa29ec8668672ea564796dd3eea1fd3568ff7a",
+        "bytes": 45394,
+        "sha256": "c3a5c5f894a302d2ee68e9a397ca699474ea0c5a39f011eca305b24317405337"
+      },
+      "after": {
+        "gitBlob": "d76c5a785f8b340a7e7ff0c04bc8e0f6e2032951",
+        "bytes": 47612,
+        "sha256": "9b3553beb0e9663fb59aabc0a1b7f678385c140e8f840eb52bd59b99071cd664"
+      },
+      "reason": "Retain exact positive child/observer closure, selected-before-dispatch cancellation and same-request recovery while preserving public readiness and independent cleanup."
     }
   ],
   "packaging": {
@@ -387,5 +401,25 @@
     "custody": "Preserve the selected existing native operation and original equipped owner. Adopt the completed original donor without redispatch.",
     "installedContinuation": "Resume any existing installed operation using its exact original source manifest, helper/browser selection, preparation and origin; a new public source edition does not rewrite it.",
     "readiness": "Source delivery does not establish actual native/browser receiving or producer visual inspection."
+  },
+  "receivingClosureSource": {
+    "repository": "woahwhattheheck/tjlabs-stellar-merchant-workspace",
+    "commit": "b08d3bb3f2a4fba3829968a2b5d2023df4271118",
+    "fullSourceBlob": "a577ec6b49ddd8f1727527a1cf9cf1417fbf7542",
+    "publicSharedFiles": [
+      {
+        "path": "stellar/scf-starforge-20261009/distribution/runtime-workspace/managed-command.mjs",
+        "gitBlob": "2d38b113cc68d4361454d71fd77c0384d253a9f0",
+        "bytes": 7664,
+        "sha256": "51cff7b0bce06156f6690b02e53f2da275478d7cff1ecdbe090ecb3a823bfba9"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/distribution/runtime-workspace/application-provider.mjs",
+        "gitBlob": "cb4bb8faed61f87567b5fca22da4d46aec98db6d",
+        "bytes": 7522,
+        "sha256": "6de5e8de411425927aef22267504808841bc7d2c9dffa0e66c51f032eb440853"
+      }
+    ],
+    "preservation": "Existing selected native source, original application bodies, business records and completed receipts remain unchanged. Select this coherent public package through the existing receiving/source-adoption contract; do not rewrite an active installed selection."
   }
 }

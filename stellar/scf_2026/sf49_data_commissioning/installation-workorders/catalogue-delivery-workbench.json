@@ -86,11 +86,11 @@
     },
     {
       "path": "products/catalogue-delivery-workbench/mcp.mjs",
-      "blob": "f68a53e7aa5fa682ea4ccf668e5190ce9a6dfc2e"
+      "blob": "8acb26340b14e8f6cf310e642d00a363f4f44619"
     },
     {
       "path": "products/catalogue-delivery-workbench/requests.mjs",
-      "blob": "bef8291b0080bf158bbd87e463d774eb9d340b61"
+      "blob": "14479ef2c6e2384ddc88c843acf9a1dd13a4bc11"
     },
     {
       "path": "products/catalogue-delivery-workbench/files.mjs",
@@ -103,6 +103,22 @@
     {
       "path": "products/catalogue-delivery-workbench/source-manifest.schema.json",
       "blob": "69e2da0a1f7f875b79b3f1d2749a38d6c251285c"
+    },
+    {
+      "path": "products/catalogue-delivery-workbench/receiving.mjs",
+      "blob": "1af0c3e2331018552b40fec54cf0f6d8b47eb5d6"
+    },
+    {
+      "path": "products/catalogue-delivery-workbench/RECEIVING.md",
+      "blob": "0b07b9cb0375eb4ae10d5058536af79e9b191b61"
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/distribution/runtime-workspace/managed-command.mjs",
+      "blob": "2d38b113cc68d4361454d71fd77c0384d253a9f0"
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/distribution/runtime-workspace/application-provider.mjs",
+      "blob": "cb4bb8faed61f87567b5fca22da4d46aec98db6d"
     }
   ]
 }

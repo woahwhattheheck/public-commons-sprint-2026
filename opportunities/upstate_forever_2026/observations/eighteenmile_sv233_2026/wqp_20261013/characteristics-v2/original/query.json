@@ -1,0 +1,13 @@
+{
+  "schema": "upstate.wqp-source-capture/v1",
+  "station_id": "21SC60WQ_WQX-SV-233",
+  "from": "2026-01-01",
+  "to": "2026-10-13",
+  "profile": "WQX2.2",
+  "data_profiles": {
+    "Result": "resultPhysChem",
+    "Activity": "activityAll"
+  },
+  "publisher": "https://www.waterqualitydata.us/",
+  "interpretation": "Original observations only; no annualization or native model output."
+}
