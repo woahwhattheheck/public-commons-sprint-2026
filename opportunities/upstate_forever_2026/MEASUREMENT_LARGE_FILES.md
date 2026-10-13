@@ -211,8 +211,10 @@ comparison in 147.343 seconds, peak reported RSS 233,428 KiB. Of the authored ro
 software workloads, not field observations or a watershed-model acceptance.
 
 This source recovery is a draft. The composed visual interface has not been
-accepted: local Chromium failed with socket Operation not permitted, and the cloud
-browser returned a URL-policy denial. No screenshot inspection or browser-control
+accepted: local Chromium failed with socket Operation not permitted. The cloud
+browser could not reach the local HTTP server (ERR_CONNECTION_REFUSED); rebinding
+its internal chrome-error page also returned a protocol-policy denial. The error
+page was not read or bypassed. No screenshot inspection or browser-control
 completion is claimed. Do not present this as a ready client application. Complete
 the original loaded/empty/error/download/reopen desktop and narrow-width journey
 in an authorized browser before product delivery. No denied route is retried.
@@ -271,6 +273,23 @@ Pass this complete brief into every current child, provider and cloud work order
 Preserve active compute and existing implementation ownership. Do not force worker restarts, drop an active run or create a new controller. Keep lab attribution, source/copyright, incident and contact controls, personal-meeting approval, no private GitHub/Actions, no llama.cpp and focused internal validation. No new approval gate or broad test sweep is authorized.
 
 
+## Streamed original continuity, recovery edition 1.2.2
+
+DD6B's complete 804f9822 read-adapter correction is composed into this edition.
+The original atomic fullSnapshot calls portableDocument inside its read
+transaction. The old large-file adapter hydrated only portable, leaving original
+content and rejected rows absent in the reviewed snapshot. The actual preimage
+returned zero source characters and zero rejections while portable retained
+90,427 source characters and three rejected rows.
+
+The corrected adapter hydrates portableDocument inside that same transaction;
+older standalone engines retain the portable fallback. No scientific parser,
+normalizer or solver is replaced. Actual streamed import, native HTTP snapshot,
+original collection publication and independent complete native receiving now
+retain identical original content, rejected rows and every native table. Current
+40,609-byte Chemistry binding and 35,156-byte browser helper are retained from
+the maintained application; their hashes are pinned in the source inventory.
+The package remains a draft pending actual visual product use.
 
 ## Complete current native source composition
 
@@ -281,3 +300,9 @@ Streamed source content and rejected rows are hydrated inside `portableDocument(
 The original standalone single-species compiler remains byte-preserved as `measurement_workspace/legacy_chemistry.py`. Its separate `LEGACY_CHEMISTRY.md` documents its existing plan/build/receive format. The active native desk uses the current compound/interval-aware `measurement_workspace/chemistry.py`; the original standalone compiler never replaces it.
 
 The existing `source/run_measured_chemistry_receiving.py` course keeps the exact 36 authored reference observations, original model days, fit/holdout roles and error scales, full original source collection ZIPs, native fitted case/report and independent editable receiving. Continue the already-admitted receiving operation on its own source edition; install this complete successor at an ordinary boundary and use a new output directory when the implementation changes. Actual field-source choices require their explicit physical reach, conserved basis and uncertainty interpretation.
+
+## Complete native archive and download continuity
+
+ES26's original6af867c9 download lifecycle correction is retained in both complete browser aliases. After each pending OPFS write, close and file read, the original panel generation is checked before creating a download. Leaving or pausing the panel preserves the native saved edition and suppresses an obsolete outgoing download.
+
+The existing full scientific Workspace exporter uses `model/portable_databases.py` from original4165. Its exact managed Measurements SQLite path is captured with the original read-only online backup, retaining committed source chunks/rejections, reviews and history while the Node service remains open. Unrelated source databases retain exact-byte copying. `model/MEASUREMENTS_PORTABLE.md` contains the original full receiving semantics and current owner direction. The complete guarded installation admits only actual captured predecessor hashes of this shared module, preserving unknown newer source for its owner.
