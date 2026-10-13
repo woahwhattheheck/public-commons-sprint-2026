@@ -248,7 +248,7 @@ class SpatialReview:
                             **{k: alternative["selection"][k] for k in ("grid_id", "profile_id", "scenario_id")})
             for path in sorted((ws.root / "deliveries").glob("*/delivery-state.json")):
                 delivery = read_json(path)
-                if delivery.get("state") != "complete":
+                if delivery.get("state") not in {"complete", "received_snapshot"}:
                     continue
                 for role, item in delivery.get("files", {}).items():
                     add("delivery", delivery["id"], role, item, scope=path.parent,
@@ -1225,6 +1225,8 @@ class SpatialReview:
             description = self._describe(choice, record)
             bindings.append(self._binding(choice, record, description["native"]))
         value["bindings"] = bindings
+        from .atlas_reviews import save_context
+        save_context(self.workspace, self, payload, value, layers=layers)
         # Preserve original content identities and native backup lock order.
         # The operator's existing task identity makes a received save retry safe.
         with held(self.workspace.root / ".workspace.lock"):
@@ -1280,4 +1282,6 @@ class SpatialReview:
             previous = self.workspace._get("spatial-reviews", identifier(review["previous_review_id"]))
             if previous.get("project_id") != self.workspace.project["id"]:
                 raise ValueError("Saved spatial review history belongs to another project")
+        from .atlas_reviews import validate_saved_context
+        validate_saved_context(self.workspace, self, review, layers=layers)
         return {"id": review["id"], "project_id": review["project_id"], "bindings": len(bindings), "identity": "MATCH"}
