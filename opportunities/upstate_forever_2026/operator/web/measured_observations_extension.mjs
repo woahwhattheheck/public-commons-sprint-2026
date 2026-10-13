@@ -1,13 +1,14 @@
+import {mountReturnedReviews} from './measured_returned_reviews.mjs';
 import {mountMeasuredChemistry} from './measured_chemistry.mjs';
 import {mountLargeFilePanel} from './measured_large_files.mjs';
 import {mountCollectionPanel} from './measured_collections.mjs';
 import {mountMeasurements} from './measured_observations.mjs';
 /** Existing extension-host lifecycle, authenticated API and Workspace selection. */
 export function createMeasuredObservations(capabilities){
-  const {api,getWorkspace,getState}=capabilities,chemistryMemory=new Map(),lateResults=new Map();
+  const {api,getWorkspace,getState}=capabilities,chemistryMemory=new Map(),returnedReviewMemory=new Map(),lateResults=new Map();
   const personIdentity=()=>JSON.stringify(getState?.()?.person??null);
   let person=personIdentity(),displayedPerson=null;
-  let instance=null,collections=null,largeFiles=null,chemistry=null,root=null,key=null,generation=0;
+  let instance=null,collections=null,largeFiles=null,chemistry=null,returnedReviews=null,root=null,key=null,generation=0;
   let paintCurrentNotice=()=>{};
   const stale=()=>{const error=new Error('This Measurements view was closed or its workspace changed. Reopen the original workspace to inspect any submitted operation.');error.name='AbortError';return error;};
   const writes=(path,method)=>method!=='GET'&&!['/preview','/collections/preview','/provider-query'].includes(path);
@@ -76,6 +77,10 @@ export function createMeasuredObservations(capabilities){
     chemistry=mountMeasuredChemistry(chemistryHost,capabilities,{memory:chemistryMemory});
     const collectionHost=document.createElement('section');outer.append(collectionHost);
     collections=mountCollectionPanel(collectionHost,{request,refresh});
+    const returnedHost=document.createElement('section');outer.append(returnedHost);
+    returnedReviews=mountReturnedReviews(returnedHost,capabilities,{memory:returnedReviewMemory,openLargeFiles(){
+      if(!active())return;largeHost.scrollIntoView({behavior:'smooth',block:'start'});largeHost.querySelector('[data-file]')?.focus({preventScroll:true});
+    }});
     const component=document.createElement('div');outer.append(component);
     binding.querySelector('form').addEventListener('submit',async event=>{
       event.preventDefault();const status=binding.querySelector('[role=status]');
@@ -89,7 +94,7 @@ export function createMeasuredObservations(capabilities){
   }
   function suspend(){
     generation++;paintCurrentNotice=()=>{};displayedPerson=null;
-    largeFiles?.destroy();largeFiles=null;chemistry?.destroy();chemistry=null;collections?.destroy();collections=null;instance?.destroy();instance=null;root=null;key=null;
+    returnedReviews?.destroy();returnedReviews=null;largeFiles?.destroy();largeFiles=null;chemistry?.destroy();chemistry=null;collections?.destroy();collections=null;instance?.destroy();instance=null;root=null;key=null;
   }
   return {mount,update(){const personChanged=syncPerson();if(root&&(personChanged||key!==getWorkspace()))mount(root);},suspend};
 }

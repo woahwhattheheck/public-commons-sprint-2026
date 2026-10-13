@@ -166,8 +166,8 @@
     },
     {
       "path": "measurement_workspace/web/extension.mjs",
-      "bytes": 7437,
-      "sha256": "7194eec1453cf39034e38f2a359e7ba474bf438773de0418c4b0d4b5865b349f",
+      "bytes": 7961,
+      "sha256": "7f94db4b1de020b61a5fe6b4536e271110a8cc6cae26129afbac7d96bc4e6131",
       "role": "patch"
     },
     {
@@ -223,6 +223,18 @@
       "role": "native",
       "bytes": 9735,
       "sha256": "c3382d75b8fe90719ada3eaf82014a4b3589a08a4d645534b0d6d6b6ab22abd2"
+    },
+    {
+      "path": "operator/web/measured_returned_reviews.mjs",
+      "bytes": 21786,
+      "sha256": "4510c8da9720c3fa3e9b71b202c8b383674cb22cd79ed23b58c918902242afbd",
+      "role": "native"
+    },
+    {
+      "path": "measurement_workspace/web/returned_reviews.mjs",
+      "bytes": 21786,
+      "sha256": "4510c8da9720c3fa3e9b71b202c8b383674cb22cd79ed23b58c918902242afbd",
+      "role": "native"
     }
   ],
   "origin_manifest_sha256": "812896a296ce245165102b480a66aa1532cf4ec84bead5bafd227f64b0d89ca7",
@@ -236,6 +248,12 @@
     "original_download_lifecycle_commit": "6af867c99ba8ac84141adbf5b31a2d3efe9130f8",
     "original_outer_database_commit": "109eb3a2af0f67924a4d104552cac9918f69fbcc",
     "workspace_transport_commit": "cc01c5710da426fd5c4f571fd2d040afd3cea1a3",
-    "workspace_transport": "Mount-scoped original workspace and generation bind delayed inputs and responses; original admitted native operations preserve their identity."
+    "workspace_transport": "Mount-scoped original workspace and generation bind delayed inputs and responses; original admitted native operations preserve their identity.",
+    "returned_reviews": {
+      "engine_commit": "c2579cad55bd617085e769400c26eb60a705c017",
+      "provider_commit": "8caee9462899baa0003f92e42330c0791800cbf0",
+      "panel_commit": "0b93b60b53318c2a996b24e5cf965921bea4ced7",
+      "note": "Original returned-review engine is unchanged; the original registered operator mounts a native queue panel."
+    }
   }
 }
