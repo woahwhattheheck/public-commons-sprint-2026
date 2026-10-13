@@ -21,6 +21,14 @@ const selection = { type: 'object', properties: {
   contentType: { enum: ['application/json','application/x-yaml'] }, query: { type: 'object' },
   scope: { enum: ['node','group'] }, block: { type: 'boolean' },
 }, required: ['operation'], additionalProperties: false };
+const gatewayTargetExpectation = { type:'object', properties:{
+  record:{type:'object',properties:{kind:{enum:['connection']},id,revision,sha256:sha},
+    required:['kind','id','revision','sha256'],additionalProperties:false},
+  configurationSha256:sha,
+},required:['record','configurationSha256'],additionalProperties:false};
+const gatewayTargetExpectations = {type:'object',properties:{
+  staging:gatewayTargetExpectation,production:gatewayTargetExpectation,
+},required:['staging','production'],additionalProperties:false};
 function action(title, description, write, properties, required = []) {
   return Object.freeze({ title, description, write,
     inputSchema: { type: 'object', properties: { ...(write ? { requestId: uuid } : {}), ...properties },
@@ -71,7 +79,7 @@ export const TYK_WORKSPACE_ACTIONS = Object.freeze({
     ['id','expectedRevision','stepId','contextSha256','reviewer','note']),
 
   createGatewayCommissioning: action('Save two-Gateway cohort', 'Retain complete original API sources, distinct staging/production Gateways and explicit native operations in one durable course.', true,
-    {stagingConnectionId:id,productionConnectionId:id,label:text(300),customer:text(300),operator:text(300),
+    {stagingConnectionId:id,productionConnectionId:id,expectedTargets:gatewayTargetExpectations,label:text(300),customer:text(300),operator:text(300),
       entries:{type:'array',minItems:1,items:{type:'object',properties:{key:text(80),label:text(300),selection,productionOperation:{enum:['create','update']}},required:['key','selection','productionOperation'],additionalProperties:false}},
       checkNames:{type:'array',items:text(200),minItems:1,uniqueItems:true},
       reload:{type:'object',properties:{scope:{enum:['node','group']},block:{type:'boolean'}},required:['scope'],additionalProperties:false},

@@ -160,7 +160,7 @@ export async function openTykWorkspace({
     return { schema: SCHEMA, workspaceId, directory: store.directory, createdAt: store.identity.createdAt,
       connections: records, counts: Object.fromEntries(KINDS.map(kind => [kind, heads.filter(item => item.kind === kind).length])),
       closing, capabilities: { migrations: 'native-dashboard', gatewayImport: true, hotReload: 'explicit',
-        delivery: 'complete-source-and-history', automaticMutationRetry: false } };
+        delivery: 'complete-source-and-history', gatewayTargetExpectations: 'record-and-configuration-v1', automaticMutationRetry: false } };
   }
   async function listRecords(input = {}) {
     const result = await store.list(input);
