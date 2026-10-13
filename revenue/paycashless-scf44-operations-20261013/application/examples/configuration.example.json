@@ -1,0 +1,46 @@
+{
+  "name": "Paycashless operations",
+  "connections": {
+    "merchant-sandbox": {
+      "provider": "paycashless",
+      "environment": "sandbox",
+      "baseUrl": "https://api.paycashless.com",
+      "organizationId": "REPLACE_WITH_ORIGINAL_MERCHANT_SCOPE",
+      "apiKey": "REPLACE_WITH_ACCOUNT_API_KEY",
+      "apiSecret": "REPLACE_WITH_ACCOUNT_API_SECRET",
+      "initialReads": [
+        {
+          "action": "paycashless.invoices.list",
+          "input": {}
+        },
+        {
+          "action": "paycashless.payments.list",
+          "input": {}
+        },
+        {
+          "action": "paycashless.payouts.list",
+          "input": {}
+        }
+      ],
+      "webhookEndpoints": {
+        "merchant": {
+          "callbackUrl": "https://YOUR_CONTROLLED_HOST/webhooks/provider/merchant-sandbox/merchant",
+          "urlConvention": "exact"
+        }
+      }
+    },
+    "stellar-selected": {
+      "provider": "horizon",
+      "environment": "sandbox",
+      "baseUrl": "https://horizon-testnet.stellar.org",
+      "networkPassphrase": "Test SDF Network ; September 2015",
+      "accountIds": []
+    }
+  },
+  "webhookWorker": {
+    "enabled": true,
+    "pollSeconds": 15
+  },
+  "maximumUploadBytes": 67108864,
+  "runtimeDirectory": "/absolute/private/paycashless-runtime"
+}
