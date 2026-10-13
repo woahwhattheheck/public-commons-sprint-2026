@@ -506,20 +506,24 @@ export function attachStationGeography(host) {
   }
   async function submit(action,payload) {
     if(busy)return;
-    const key=workspace,requestKey=canonical({workspace:key,action,payload,
+    const key=workspace,version=generation,requestKey=canonical({workspace:key,action,payload,
       ...(action==='station.geography.utility-microbial'?{source_context:list(catalog?.sources).map(source=>
         [source.collection_id,source.source_id,source.source_sha256||source.sha256||null]).sort((a,b)=>canonical(a).localeCompare(canonical(b)))}:{})});
+    const active=()=>key===workspace&&version===generation&&!!node&&
+      key===(host.getWorkspace()||host.getState()?.workspace_key);
     let request=requests.find(r=>r.key===requestKey);
     if(!request){request={id:'station-geography-'+crypto.randomUUID(),key:requestKey};requests.push(request);}
     busy=true;error='';message='Saving the selected original inputs in the operator queue…';save();renderForm();renderPresets();notice();
     try {
       const task=await host.api('/api/actions',{method:'POST',body:{workspace:key,action,payload,operation_id:request.id}});
-      if(key!==workspace)return;
+      if(!active())return;
       currentTask=task.id;save();message='Geography operation '+task.state+'. The saved operation can resume after this desk closes.';
-      await host.refresh({force:true});state=host.getState();renderTasks();notice();
+      await host.refresh({force:true});
+      if(!active())return;
+      state=host.getState();renderTasks();notice();
       if(task.state==='complete'&&task.result?.id)await openEdition(task.result.id);
-    }catch(problem){if(key===workspace)fail(new Error(problem.message+' Submit the same selection again to reuse its saved operation.'));}
-    finally{busy=false;if(key===workspace){renderForm();renderPresets();renderDetail();notice();}}
+    }catch(problem){if(active())fail(new Error(problem.message+' Submit the same selection again to reuse its saved operation.'));}
+    finally{if(active()){busy=false;renderForm();renderPresets();renderDetail();notice();}}
   }
   function editInput(event) {
     const target=event.target;

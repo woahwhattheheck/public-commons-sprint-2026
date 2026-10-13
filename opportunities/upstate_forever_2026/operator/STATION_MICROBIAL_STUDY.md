@@ -12,7 +12,7 @@ The default **Use the complete original 217-watershed domain** requires the orig
 
 ## Build and reopen
 
-Select **Build original E. coli study**. The task imports or reuses the complete maintained source, prepares its exact native selection, and invokes the existing Station geography engine. The engine retains its original map, report, source collection and portable ZIP. The completed task includes the microbial receiving JSON and opens directly into the saved geography edition.
+Select **Build original E. coli study**. The task imports or reuses the complete maintained source, prepares its exact native selection, and invokes the existing Station geography engine. The engine retains its original map, report, source collection and portable ZIP. The completed task includes the microbial receiving JSON and opens directly into the saved geography edition. Its files also include **Original E. coli interactive explorer.html**: download and open it for the original station/date map and plot, filters, all 63 source fields, original and selected CSV downloads, and printed selection. The full native ZIP retains the complete original companion directory.
 
 The desk retains its queued operation when closed. Reopen its saved task or choose the edition in **Saved station geography**. The task's **Open station geography** button checks the original Workspace and also works when this desk has not previously been opened. Failed or interrupted tasks retain the existing resume control.
 
