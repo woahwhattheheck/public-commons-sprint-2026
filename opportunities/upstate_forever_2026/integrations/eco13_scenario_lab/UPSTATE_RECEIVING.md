@@ -177,3 +177,17 @@ received = adopt(selection_path, destination)
 ```
 
 The receiver reads the existing experiment and its retained native outputs. The original operator remains the place to execute or resume scientific cases.
+
+<!-- ecosystem-current-work-order:2026-10-13.3:begin -->
+## Current demonstration receiving assignment
+
+Carry the complete [current owner brief](../../CURRENT_OWNER_DIRECTION.md), version `2026-10-13.3`, into each current cloud/provider/child assignment and onward handoff. Its full self-contained copy is in this package's [AGENTS.md](AGENTS.md), including all four direct owner instructions. Source brief Git blob: `8cd1c1f3d371a2fb75471813844e31f489aa8272`.
+
+The hard priority is the actual Upper Savannah simulated native model and connected usable product. Use actual geographic/source shapes and the 30 m grid; preserve the upstream contributing model domain, South Carolina reporting mask and utility focus separately. The current execution owner retains the original baseline, realistic restoration and matched-control calculation. Clearly label realistic simulated inputs, keep parameters/source editions editable, and report actual annual N/P in kg/year and sediment in tonnes/year delivered to streams. Keep load distinct from concentration and stream output distinct from intake exposure.
+
+Continue this existing receiver on that owner's actual completed experiment. Runtime/source availability or a receiving plan is not the run. Preserve the live calculation, one writer per Workspace and the original run/task/source identities. Use the existing equipped runtime or an isolated actual execution environment through the current execution owner when needed; do not start a second controller. Other builds continue. Tim's team already practices GIS, watershed/environmental modeling, analysis, map/report publishing and natural-capital decision support. Show a concrete production workshare rather than assuming a capability gap; the prime retains scientific direction, method choices, review and the client relationship.
+
+Demonstrate choose inputs/assumptions → run → inspect differences → revise → export and cold-reopen an editable package his team can continue. Show actual produced artifacts and real elapsed history without invented timing or guaranteed reactions. Open, LOOK at and operate the exact outgoing product and ALL attachments as the recipient, including relevant desktop/narrow widths, meaningful states, downloads and extracted archive/project reopening. Fix concrete defects in the same plain industrial product. If media is used, record the actual working app, use natural generative TTS where available, and watch/listen to the final export; generated screens cannot stand in for execution.
+
+Carry the complete direction onward at the next safe message boundary, with the durable path/version and next substantive result. No bid/prime-yes gate, arbitrary feature cap, broad suite or review/test theatre. Keep active calculations and substantive integration moving. Preserve owner-stopped/deleted work, all existing attribution/contact/meeting/spend/source controls, no private GitHub/Actions and the October 13, 2026 10:00 a.m. Eastern / 14:00 UTC cutoff. This propagation does not request a restart or pause.
+<!-- ecosystem-current-work-order:end -->
