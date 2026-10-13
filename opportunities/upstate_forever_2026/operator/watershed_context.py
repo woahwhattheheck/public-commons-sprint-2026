@@ -7,9 +7,12 @@ import json
 import re
 from pathlib import Path
 
-from model.common import atomic_bytes, atomic_json, describe_file, held, identifier, now, read_json
+from model.common import atomic_bytes, atomic_json, describe_file, digest, held, identifier, now, read_json
+from source_tools.watershed_source_entry import capture_source_entry, retain_source_entry
 from model import watershed_context as context_model
-from model.watershed_brief import BRIEF_FORMAT, write_selection_brief
+from model.watershed_brief import (
+    BRIEF_FORMAT, selection_with_contributing_context, write_selection_brief,
+)
 
 ACTIONS = frozenset({"watershed.context.analyze", "watershed.context.export",
                      "watershed.context.receive"})
@@ -19,6 +22,7 @@ SCHEMA = "upstate.operator-watershed-context/v1"
 NETWORK_NAMES = ("usgs-wbd-savannah-original-topology-20261013.json",
                  "native-network.json", "native-network.json.gz", "model-domain.esri.json.gz")
 NETWORK_ROLES = {"NATIVE_HUC_NETWORK", "WBD_HUC12_NETWORK", "HUC12_NETWORK"}
+
 
 
 def _hash(body):
@@ -150,7 +154,7 @@ class WatershedContextActions:
     def _summary(record):
         return {key: record.get(key) for key in (
             "id", "title", "state", "created_at", "completed_at", "summary",
-            "source_fingerprint", "source_inputs",
+            "source_fingerprint", "source_inputs", "source_edition_fingerprint",
         )}
 
     def export_snapshot(self, workspace):
@@ -287,6 +291,49 @@ class WatershedContextActions:
             ],
         }
 
+    @staticmethod
+    def _retain_source_entries(directory, files, closures, fingerprint, supporting, previous=None):
+        """Retain whole imported entries and bind this exact source edition."""
+        entries = []
+        for purpose, closure in closures:
+            prefix = "source/entries/" + closure["source_edition_fingerprint"]
+            files.update(retain_source_entry(closure, directory, source_prefix=prefix))
+            entries.append({
+                "purpose": purpose,
+                "source_collection_id": closure["source_collection_id"],
+                "source_id": closure["source_id"],
+                "source_edition_fingerprint": closure["source_edition_fingerprint"],
+                "body_member_path": prefix + "/" + closure["body_view_path"],
+                "manifest_path": prefix + "/_source-entry-manifest.json",
+                "record_path": prefix + "/_source-entry.json",
+                "member_count": len(closure["members"]),
+            })
+        identity = {
+            "schema": "upstate.watershed-source-edition/v1",
+            "report_id": directory.name, "path_basis": "report_directory",
+            "model_input_fingerprint": fingerprint,
+            "source_entries": sorted(entries, key=lambda row: (row["purpose"], row["source_id"])),
+            "supporting_inputs": [
+                {key: row[key] for key in ("id", "member_path", "bytes", "sha256")}
+                for row in sorted(supporting, key=lambda row: row["id"])
+            ],
+        }
+        edition_fingerprint = digest(identity)
+        manifest = {**identity, "source_edition_fingerprint": edition_fingerprint}
+        path = directory / "source" / "editions" / (edition_fingerprint + ".json")
+        atomic_json(path, manifest, immutable=True)
+        descriptor = describe_file(directory, path)
+        files[descriptor["path"]] = descriptor
+        editions = dict((previous or {}).get("source_editions", {}))
+        if edition_fingerprint in editions and editions[edition_fingerprint] != manifest:
+            raise ValueError("The retained complete source edition changed.")
+        editions[edition_fingerprint] = manifest
+        return {
+            "source_edition_fingerprint": edition_fingerprint,
+            "source_edition": manifest,
+            "source_editions": editions,
+        }
+
     def _analyze(self, task):
         ws = self.operator.ws(task["workspace"])
         value = task.get("payload") or {}
@@ -310,8 +357,21 @@ class WatershedContextActions:
                 raise ValueError("Choose the retained full-domain watershed source.")
         from source_tools.prepare_watershed_context import load_source_edition
         edition = load_source_edition(context_path.parent)
+        closures = []
+        if collection_id:
+            closure = capture_source_entry(
+                ws, collection_id, source_id, model_inputs=edition["source_files"])
+            if closure["model_input_fingerprint"] != edition["validation"]["source_fingerprint"]:
+                raise ValueError("The complete source entry changed the original calculation inputs.")
+            closures.append(("context", closure))
         if selection.get("network"):
-            network, network_source = self._selected_network(ws, selection["network"])
+            network_choice = selection["network"]
+            network, network_source = self._selected_network(ws, network_choice)
+            if network_choice.get("source_collection_id"):
+                closure = capture_source_entry(
+                    ws, network_choice["source_collection_id"], network_choice["source_id"],
+                    model_inputs=[network_source])
+                closures.append(("selected_network", closure))
             edition = {**edition, "native_network": network,
                        "source_files": [row for row in edition["source_files"]
                                         if row["name"] not in {"native-network.json", "native-network.json.gz"}]
@@ -346,6 +406,12 @@ class WatershedContextActions:
             [{"id": row["id"], "sha256": row["sha256"]} for row in source_inputs],
             sort_keys=True, separators=(",", ":"),
         ).encode("utf-8"))
+        edition = {**edition, "validation": {
+            **edition["validation"], "report_id": report["id"],
+            "analysis_version": report["analysis_version"], "summary": report["summary"],
+            "classification_coverage": report["classification_coverage"],
+            "source_fingerprint": fingerprint, "native_network_supplied": "native_network" in edition,
+        }}
         directory = ws.root / "watershed-context" / key
         record_path = directory / "operator-report.json"
         with held(ws.root / ".workspace.lock"):
@@ -358,8 +424,11 @@ class WatershedContextActions:
                     old.get("source_supporting_inputs", []), supporting_inputs)
                 retained_files = dict(old["files"])
                 self._retain_sources(directory, bodies, retained_files)
+                source_edition = self._retain_source_entries(
+                    directory, retained_files, closures, fingerprint, supporting, old)
                 updated = {
-                    **old, "files": retained_files, "source_supporting_inputs": supporting,
+                    **old, **source_edition,
+                    "files": retained_files, "source_supporting_inputs": supporting,
                     "source_validation": self._validation_with_supporting(
                         old.get("source_validation", {}), edition["validation"], supporting),
                 }
@@ -370,7 +439,10 @@ class WatershedContextActions:
             directory.mkdir(parents=True, exist_ok=True)
             files = context_model.write_watershed_context(report, directory)
             self._retain_sources(directory, bodies, files)
+            source_edition = self._retain_source_entries(
+                directory, files, closures, fingerprint, supporting_inputs)
             record = {
+                **source_edition,
                 "schema": SCHEMA, "id": key,
                 "title": str(value.get("title") or "Regional watershed context"),
                 "state": "complete", "created_at": now(), "completed_at": now(),
@@ -409,11 +481,22 @@ class WatershedContextActions:
         if set(selected) - indexed.keys():
             raise ValueError("The export contains a watershed outside this saved regional report.")
         report_sha = record["files"]["watershed-context.json"]["sha256"]
+        selection = selection_with_contributing_context(
+            report, selected, report_sha,
+            Path(__file__).resolve().parents[1] / "outputs" / "watershed-connectivity-20261013",
+        )
         identity = {
             "report_id": record["id"], "report_sha256": report_sha, "huc12s": selected,
             "csv_format": CSV_FORMAT, "csv_columns": list(context_model.HUC_COLUMNS),
             "brief_format": BRIEF_FORMAT,
         }
+        if record.get("source_edition_fingerprint"):
+            identity["source_edition_fingerprint"] = record["source_edition_fingerprint"]
+        if selection.get("contributing_context") is not None:
+            identity["contributing_context_sha256"] = _hash(json.dumps(
+                selection["contributing_context"], sort_keys=True, separators=(",", ":"),
+                ensure_ascii=False, allow_nan=False,
+            ).encode("utf-8"))
         key = _hash(json.dumps(identity, sort_keys=True, separators=(",", ":")).encode("utf-8"))
         target = ws.root / "watershed-context-exports" / key
         with held(ws.root / ".workspace.lock"):
@@ -423,10 +506,13 @@ class WatershedContextActions:
             target.mkdir(parents=True, exist_ok=True)
             rows = [indexed[huc] for huc in selected]
             selection = {
-                **context_model.selected_watershed_export(report, selected),
+                **selection,
                 "export_id": key, **identity,
                 "source_fingerprint": record["source_fingerprint"],
                 "source_inputs": record["source_inputs"],
+                "source_edition": record.get("source_edition"),
+                "source_edition_path_basis": "parent_report_directory",
+                "source_edition_report_id": record["id"],
             }
             atomic_json(target / "selected-watersheds.json", selection)
             (target / "selected-watersheds.csv").write_bytes(_csv(rows))
@@ -440,6 +526,8 @@ class WatershedContextActions:
                     for name in ("selected-watersheds.json", "selected-watersheds.csv")
                 },
             }
+            if selection.get("contributing_context") is not None:
+                result["contributing_summary"] = selection["contributing_context"]["summary"]
             result["files"].update(brief_files)
             atomic_json(path, result)
         return result

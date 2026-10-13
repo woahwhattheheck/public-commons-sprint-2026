@@ -15,7 +15,7 @@ from pathlib import Path
 import sys
 from .common import (INVEST_VERSION, atomic_bytes, atomic_json, canonical,
                      describe_file, digest, file_digest, finite, held, identifier,
-                     now, read_json, relative_file)
+                     now, read_json, relative_file, selected_models)
 from .profiles import checked_parameters, inspect_table
 
 PROFILE_SET_SCHEMA = "upstate.sourced-experiment-profiles/v1"
@@ -149,10 +149,17 @@ def _base(workspace, profile_id):
     path = relative_file(workspace.root, body["object"])
     if path.stat().st_size != body["bytes"] or file_digest(path) != body["sha256"]:
         raise ValueError("The original biophysical source changed")
-    table = inspect_table(path)
+    table = inspect_table(path, selected_models=selected_models(profile))
     if profile["table_summary"]["sha256"] != body["sha256"]:
         raise ValueError("The baseline profile refers to a different biophysical edition")
     return profile, entry, table
+
+
+def _target_model(target):
+    domain, name = target.split(".", 1)
+    if domain == "table":
+        return "sdr" if name in ("usle_c", "usle_p") else "ndr"
+    return domain
 
 
 def catalog(workspace=None, baseline_profile_id=None):
@@ -165,13 +172,17 @@ def catalog(workspace=None, baseline_profile_id=None):
     }
     if workspace is not None and baseline_profile_id is not None:
         profile, entry, table = _base(workspace, baseline_profile_id)
+        active = selected_models(profile)
+        result["parameters"] = [item for item in result["parameters"]
+                                if _target_model(item["target"]) in active]
         result.update(
             baseline_profile_id=profile["id"],
             biophysical_source_id=entry["id"],
             biophysical_sha256=entry["body"]["sha256"],
             lucodes=table["lucodes"],
             table_rows=table["rows"],
-            baseline_parameters={"ndr": profile["ndr"], "sdr": profile["sdr"]},
+            baseline_parameters={model: profile[model] for model in active},
+            models=active,
         )
     return result
 
@@ -191,6 +202,7 @@ def _normalise(workspace, spec):
     if clean["design"] not in ("one_at_a_time", "factorial"):
         raise ValueError("Select one_at_a_time or factorial")
     base, entry, table = _base(workspace, clean["baseline_profile_id"])
+    active = selected_models(base)
     by_code = {int(row["lucode"]): row for row in table["rows"]}
     factors = spec.get("factors", [])
     if not isinstance(factors, list):
@@ -202,6 +214,8 @@ def _normalise(workspace, spec):
         target = factor.get("target")
         if not isinstance(target, str) or target not in PARAMETERS:
             raise ValueError("Select a supported native parameter or biophysical column")
+        if _target_model(target) not in active:
+            raise ValueError("A source factor selects a model outside the retained baseline scope: " + target)
         value = {"name": _text(factor.get("name") or PARAMETERS[target]["label"], "Factor name"),
                  "target": target, "levels": []}
         if target.startswith("table."):
@@ -390,7 +404,7 @@ def _derive_table(workspace, directory, base, entry, table, profile_set, config)
     sha = hashlib.sha256(body).hexdigest()
     csv_path = folder / "biophysical.csv"
     atomic_bytes(csv_path, body, immutable=True)
-    inspect_table(csv_path)
+    inspect_table(csv_path, selected_models=selected_models(base))
     provenance = {
         "schema": "upstate.biophysical-derivation/v1",
         "profile_set_id": profile_set["id"],

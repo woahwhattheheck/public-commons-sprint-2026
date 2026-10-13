@@ -55,9 +55,6 @@ ACTIONS = {"source.import", "profile.save", "scenario.save", "grid.prepare",
            "portfolio.run.prepare", "portfolio.run.start"}
 ACTIONS.update(REHEARSAL_ACTIONS)
 ACTIONS.update(CUSTOMER_REVIEW_ACTIONS)
-# PROJECT-TRANSFER12 integration
-from project_transfer import ProjectTransfers, ACTIONS as PROJECT_TRANSFER_ACTIONS
-ACTIONS.update(PROJECT_TRANSFER_ACTIONS)
 ACTIONS.update(EXPERIMENT_ACTIONS)
 ACTIONS.update(PROGRAMME_ACTIONS)
 
@@ -111,7 +108,6 @@ class Operator:
     def __init__(self, directory, state_directory, *, create=False, title=None,
                  source_manifests=(), source_roots=(), restore_directory=None, upload_limit=4*1024**3,
                  extraction_limit=64*1024**3):
-        self.project_transfers = ProjectTransfers(self, Fault)
         self.root = Path(state_directory).resolve()
         self.root.mkdir(parents=True, exist_ok=True, mode=0o700)
         self.owner = held(self.root / ".operator.lock", blocking=False)
@@ -369,8 +365,6 @@ class Operator:
             atomic_json(self.root / "tasks" / (key + ".json"), task)
 
     def _invoke(self, task):
-        if task["action"] in PROJECT_TRANSFER_ACTIONS:
-            return self.project_transfers.invoke(task)
         ws = self.ws(task["workspace"])
         value = task["payload"]
         action = task["action"]
@@ -817,7 +811,7 @@ class Operator:
                              "community.report.build": "community_reports"}
         if task["action"] in community_actions and task["state"] == "complete":
             task["_downloads"] = self.item(task["workspace"], community_actions[task["action"]], result["id"])["_downloads"]
-        return self.rehearsals.decorate_task(self.extensions.decorate_task(self.experiments.decorate_task(self.programmes.decorate_task(self.project_transfers.decorate_task(self.customer_reviews.decorate_task(task))))))
+        return self.rehearsals.decorate_task(self.extensions.decorate_task(self.experiments.decorate_task(self.programmes.decorate_task(self.customer_reviews.decorate_task(task)))))
 
     def open_download(self, key):
         with self.lock:
