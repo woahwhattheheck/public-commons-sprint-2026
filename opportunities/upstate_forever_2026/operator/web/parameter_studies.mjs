@@ -319,7 +319,7 @@ export function attachParameterStudies(host) {
       '<div data-parameter-study-error></div></div></section>' +
       '<section class="section"><header class="section-header"><div><h2>Native cases</h2><p>Each case uses the baseline grid and land-cover scenario with its selected parameter profile.</p></div><label class="parameter-study-filter">Find a case<input data-parameter-study-case-filter type="search" value="' + escapeHTML(caseFilter) + '" placeholder="Case, parameter, or run ID"></label></header><div data-parameter-study-cases></div></section>' +
       '<section class="section"><header class="section-header"><div><h2>Results and downloads</h2><p>Signed changes are study case minus baseline, using the paired valid cells for each selected area.</p></div></header><div class="section-body"><div data-parameter-study-results></div>' +
-      host.fileList(item._downloads || []) + '</div></section>';
+      '<div data-parameter-study-downloads>' + host.fileList(item._downloads || []) + '</div></div></section>';
     renderCases();
     if (item.artifacts?.results) await refreshResults();
     else detail.querySelector('[data-parameter-study-results]').innerHTML = '<p class="note">Run the study to produce the comparison matrix, selected-case ranges, and downloadable report. Completed native cases can be summarized at any time.</p>';
@@ -376,6 +376,25 @@ export function attachParameterStudies(host) {
       return;
     }
     if (!current()) return;
+    if (study?.artifacts?.results?.sha256 !== result.artifact_sha256) {
+      const downloads = root.querySelector('[data-parameter-study-downloads]');
+      if (downloads) downloads.innerHTML = '<p class="note">Refreshing downloads for this saved result edition…</p>';
+      let retained;
+      try {
+        retained = await host.api(requested('/api/item', {kind: 'parameter-studies', id}), {signal: reading.signal});
+      } catch (error) {
+        if (current()) throw error;
+        return;
+      }
+      if (!current()) return;
+      if (retained?.artifacts?.results?.sha256 !== result.artifact_sha256) {
+        // The source advanced again during this item read. Resolve its current
+        // original edition before exposing either rows or download tickets.
+        return refreshResults();
+      }
+      study = retained;
+      if (downloads) downloads.innerHTML = host.fileList(retained._downloads || []);
+    }
     results = result; resultFilters.offset = result.offset;
     resultFilters.range_offset = result.range_offset || 0;
     resultFilters.area_id = result.area_id ?? resultFilters.area_id;
