@@ -978,7 +978,7 @@ class Handler(BaseHTTPRequestHandler):
                         {name: values[0] for name, values in query.items()}))
                 raise Fault("ROUTE_MISSING", "This operator route does not exist.", 404)
             selected = "index.html" if url.path == "/" else url.path.removeprefix("/web/")
-            if selected not in (({'app.mjs', 'community.css', 'community.mjs', 'experiments.css', 'experiments.mjs', 'index.html', 'programmes.css', 'programmes.mjs', 'receiving_water_spatial.mjs', 'receiving_waters.css', 'receiving_waters.mjs', 'reviews.css', 'reviews.mjs', 'spatial.mjs', 'style.css', 'conservation.mjs', 'conservation.css'} | self.app.extensions.web_assets | {"rehearsal.mjs", "rehearsal.css"})):
+            if selected not in (({'app.mjs', 'community.css', 'community.mjs', 'experiments.css', 'experiments.mjs', 'index.html', 'programmes.css', 'programmes.mjs', 'receiving_water_spatial.mjs', 'receiving_waters.css', 'receiving_waters.mjs', 'reviews.css', 'reviews.mjs', 'spatial.mjs', 'style.css', 'conservation.mjs', 'conservation.css', 'conservation_optimization_bridge.mjs', 'conservation_optimization.mjs', 'conservation_optimization.css'} | self.app.extensions.web_assets | {"rehearsal.mjs", "rehearsal.css"})):
                 raise Fault("PAGE_MISSING", "This operator page does not exist.", 404)
             data = (Path(__file__).parent / "web" / selected).read_bytes()
             self.close_connection = True

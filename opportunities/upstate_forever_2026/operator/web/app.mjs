@@ -1,4 +1,4 @@
-import {attachConservation} from './conservation.mjs';
+import {attachConservationWithOptimization} from './conservation_optimization_bridge.mjs';
 import {attachRehearsal} from './rehearsal.mjs';
 import {createSpatialWorkspace} from './spatial.mjs';
 import {attachCommunity} from './community.mjs';
@@ -52,7 +52,9 @@ async function api(path,{method='GET',body,raw,filename,signal}={}){
   return value;
 }
 const endpoint = (path, values={}) => path+'?'+new URLSearchParams({...(workspace?{workspace}:{}),...values});
-const conservation=attachConservation({getState:()=>state,api,endpoint,openForm,submitAction,detail,fileList,showTask,toast,closeForm:()=>{formDialog.close();formContext=null;}});
+const conservation=attachConservationWithOptimization({getState:()=>state,api,endpoint,openForm,submitAction,detail,fileList,showTask,toast,navigate,
+ closeDetail:()=>{detailDialog.close();detailContext=null;},
+ closeForm:()=>{formDialog.close();formContext=null;}});
 async function rehearsalOpenControl(control){
  if(control.type==='view')return navigate(control.view);
  if(control.type==='item')return openItem(control.kind,control.id);
@@ -1008,7 +1010,7 @@ async function selectWorkspace(id){
  detailDialog.close();detailContext=null;lastRendered='';$('#content').innerHTML='<div class="empty"><h2>Opening selected workspace…</h2></div>';await refresh({force:true});
 }
 async function dispatch(button){
- if(button.dataset.action?.startsWith('conservation-')){
+ if(button.dataset.action?.startsWith('conservation-')||button.dataset.action?.startsWith('portfolio-optimization-')){
   if(['conservation-open-study','conservation-open-plan','conservation-use-criteria','conservation-new-parcel-study'].includes(button.dataset.action)){
    detailDialog.close(); detailContext=null; await navigate('conservation');
   }
