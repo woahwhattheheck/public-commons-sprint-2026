@@ -68,6 +68,9 @@ def visit(closure, kind, key, value):
         if original != snapshot["studies"][study_id]:
             raise ValueError("The saved benefit changed its original forcing-family selection")
         closure.need(climate_forcing.ROOT, study_id, "Original management comparison forcing family")
+    origin = snapshot["selection"].get("working_origin")
+    if origin is not None:
+        closure.need("climate-management-working", identifier(origin["revision_id"]), "Original saved management working revision")
     periods = snapshot["selection"]["periods"]
     roles = snapshot["roles"]
     explicit = {(period["id"], role): period[role] for period in periods for role in roles}
