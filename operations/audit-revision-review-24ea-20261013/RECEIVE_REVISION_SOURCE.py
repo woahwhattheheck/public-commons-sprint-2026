@@ -89,7 +89,10 @@ def main():
             "operation": OPERATION, "application": str(application), "sourceCommit": SOURCE_COMMIT,
             "packet": {"bytes": BYTES, "sha256": SHA256}, "files": [row for _, _, row in rows]}
         selected = (json.dumps(selection, sort_keys=True, indent=2) + "\n").encode()
-        original(journal / "SELECTION.json", selected)
+        selection_path = journal / "SELECTION.json"
+        if any(application.iterdir()) and (selection_path.is_symlink() or not selection_path.is_file() or selection_path.read_bytes() != selected):
+            raise ValueError("Use an empty separate application directory, or resume this exact owned source selection.")
+        original(selection_path, selected)
         for name, content, _ in rows:
             path = application
             for part in PurePosixPath(name).parts[:-1]:

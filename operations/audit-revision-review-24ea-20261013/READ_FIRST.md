@@ -20,7 +20,7 @@ python3 RECEIVE_REVISION_SOURCE.py \
   --application /absolute/audit-revision-review-82
 ~~~
 
-The receiver verifies the complete packet, all 82 original Git identities and SOURCE_FILES inventory before writing. Each source publication is create-only and atomic; an interrupted exact receive resumes with the same input. It does not overwrite earlier source cohorts.
+The receiver verifies the complete packet, all 82 original Git identities and SOURCE_FILES inventory before writing. Each source publication is create-only and atomic; an interrupted exact receive resumes with the same input. A nonempty application is accepted only when its sibling source journal already binds this exact complete selection; unrelated earlier applications and native workspaces are rejected before any source publication. Exact owned resumes may retain later runtime caches. It does not overwrite earlier source cohorts.
 
 ## Continue the actual completed queue
 
