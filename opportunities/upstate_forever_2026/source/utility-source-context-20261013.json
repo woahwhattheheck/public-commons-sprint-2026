@@ -41,8 +41,8 @@
         },
         {
           "path": "utility-source-context/20261013/README.md",
-          "bytes": 7577,
-          "sha256": "05f8b0f3317faabb98e11d22583b1e7b49778b370199290d5bf0d9fe0548cc24"
+          "bytes": 8679,
+          "sha256": "7e5954864310a0119fff11851fffc3d8380e65426635196f43750335837511ba"
         },
         {
           "path": "utility-source-context/20261013/explorer.html",
@@ -80,7 +80,14 @@
         },
         "geography": "Whole-HUC planning context; published protection polygons and native reporting masks retain separate geometry",
         "models": "Source-only programme and designation context; native model quantities retain their own run/support",
-        "csv_row_granularity": "Utility/HUC12/state; whole-HUC areas and classification counts repeat across state rows"
+        "csv_row_granularity": "Utility/HUC12/state; whole-HUC areas and classification counts repeat across state rows",
+        "native_receiving_command": {
+          "path": "source_tools/receive_utility_source_context.py",
+          "bytes": 7379,
+          "sha256": "6d7505e86e846c4dda7f0a593caac178529598fcb8a710158ff29d5904bfe054",
+          "minimum_python": "3.10",
+          "purpose": "Rebuild the retained regional network context and both original utility exports through the maintained Python modules"
+        }
       }
     }
   ]

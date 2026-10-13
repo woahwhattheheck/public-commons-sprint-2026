@@ -81,3 +81,26 @@ The exact paths, byte lengths and SHA256 values are in `inputs.json`. They refer
 - `source/water_context/20261013/scdes-domain217-source-coverage.json`
 
 The utility profile retains the [issuer RFP and appendix](https://www.upstateforever.org/files/files/20261002_FINAL_EC-SDC%20Mapping%20RFP%20APPENDIX%20COMBINED.pdf). The source context retains the original [NRCS FY26 service](https://services.arcgis.com/SXbDpmb7xQkk44JV/ArcGIS/rest/services/Source_Water_Protection_Resource_Concern_FY26/FeatureServer/7), [SCDES classification service](https://gis.des.sc.gov/gisserver/rest/services/water/SCHydroClass/MapServer/2), and [USGS WBD layer](https://hydro.nationalmap.gov/arcgis/rest/services/wbd/MapServer/6).
+
+
+## Receive both native Python utility exports
+
+The same original data can be run with Python 3.10 or newer and its standard
+library. From one pinned complete application checkout:
+
+```bash
+python -B source_tools/receive_utility_source_context.py \
+  --out /absolute/path/to/existing-operation/utility-receiving
+```
+
+The receiver verifies the four original input bodies and the profile hash already
+declared by the original topology result. It calls the maintained regional model,
+utility-selection logic and watershed brief writer. Each execution writes a new
+directory containing the full 217-HUC report, both utility selections, readable
+briefs, original state/programme tables and the GIS membership CSVs.
+
+The actual stdout and `receiving.json` record the computed report and selection
+identities, source hashes, loaded implementation hashes, Python version, elapsed
+time and every output file identity. All original input bodies travel with the
+result. Keep the checkout fixed for the duration of the run. The receiver uses
+local retained sources and requires no GIS package or network request.
