@@ -266,14 +266,16 @@ def prepare(workspace, output, selection, *, receive=True):
             state["artifacts"]["study_archive"] = checked_artifact(archive, output)
             atomic_json(state_path, state)
             destination = output / "received"
+            archive_sha256 = state["artifacts"]["study_archive"]["sha256"]
             if destination.exists():
-                manifest = portable.inspect_archive(archive, verify=True)
-                for name, body in manifest["members"].items():
-                    path = destination / name
-                    if not path.is_file() or path.stat().st_size != body["bytes"] or file_digest(path) != body["sha256"]:
-                        raise ValueError("Retained receiving directory differs from its original archive: " + name)
+                receiving = portable.resume_restore(
+                    archive, destination, expected_archive_sha256=archive_sha256)
             else:
-                portable.restore(archive, destination)
+                receiving = portable.restore(archive, destination)
+            if receiving.get("archive_sha256") != archive_sha256:
+                raise ValueError("Received Monitoring study differs from the retained original archive")
+            state["receiving"] = receiving
+            atomic_json(state_path, state)
             recipient = Workspace(destination / "workspace")
             received = observed.inspect(recipient, context["id"])
             if received != context or MonitoringWorkspace(recipient).get("networks", network["id"]) != network:
