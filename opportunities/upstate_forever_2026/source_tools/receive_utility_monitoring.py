@@ -220,11 +220,20 @@ def run(workspace_path, operation, *, utilities=UTILITIES, programme_path=None,
     programme, programme_body = _programme(programme_path, utilities)
     root.mkdir(parents=True, exist_ok=True)
     with held(root / ".utility-monitoring-receiving.lock", blocking=False):
+        # A resume selects the exact original domain edition from its retained intent.
+        previous_selection = read_json(root / "selection.json") if (root / "selection.json").exists() else {}
+        if domain_manifest:
+            domain_manifest = Path(domain_manifest).expanduser().resolve(strict=True)
+            workspace.import_sources(domain_manifest)
+        domain, domain_reference, rows, _, _, _ = utility_monitoring._domain(
+            workspace, previous_selection.get("domain"))
+        domain_hucs = sorted(str(row["properties"][domain["id_field"]]) for row in rows)
         # Validate all available original model and supporting members before import.
         edition = load_source_edition(context_root)
         source_files = [*edition["source_files"], *edition.get("supporting_files", [])]
         selection = {"schema": SCHEMA, "workspace_id": workspace.project["id"],
                      "utilities": utilities, "include_microbial": include_microbial,
+                     "domain": domain_reference,
                      "source_manifest": describe_file(manifest.parent, manifest),
                      "source_inputs": [{key: row[key] for key in ("name", "bytes", "sha256")} for row in source_files],
                      "programme_file": {"bytes": len(programme_body), "sha256": hashlib.sha256(programme_body).hexdigest()} if programme_body is not None else None,
@@ -246,11 +255,6 @@ def run(workspace_path, operation, *, utilities=UTILITIES, programme_path=None,
             atomic_json(state_path, state)
             print(json.dumps({"phase": phase, **values}, ensure_ascii=False, default=str), flush=True)
         try:
-            if domain_manifest:
-                checkpoint("import_original_domain")
-                workspace.import_sources(domain_manifest)
-            domain, _, rows, _, _, _ = utility_monitoring._domain(workspace, None)
-            domain_hucs = sorted(str(row["properties"][domain["id_field"]]) for row in rows)
             checkpoint("receive_original_regional_sources")
             imported = import_source_edition(workspace, context_root, source_manifest=manifest)
             provider = _provider(workspace)
@@ -277,7 +281,8 @@ def run(workspace_path, operation, *, utilities=UTILITIES, programme_path=None,
                     "payload": {"report_id": report["id"], "utility_key": choice["key"]}})
                 checkpoint("utility_network", current_utility=utility_id)
                 prepared = utility_monitoring.prepare(
-                    workspace, {"export_id": exported["id"], "include_microbial": include_microbial},
+                    workspace, {"export_id": exported["id"], "include_microbial": include_microbial,
+                                "domain": domain_reference},
                     progress=lambda value: print(json.dumps(value, ensure_ascii=False), flush=True))
                 item = {"utility_id": utility_id, "title": choice["title"], "huc12s": choice["huc12s"],
                         "export_id": exported["id"], "operation_id": prepared["id"],

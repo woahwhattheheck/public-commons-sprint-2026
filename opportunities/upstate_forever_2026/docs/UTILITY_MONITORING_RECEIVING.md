@@ -84,7 +84,7 @@ The historical five/31 station assignments come from original utility-source mem
 
 ## Resume and source preservation
 
-selection.json binds the original Workspace, selected utilities, exact original source manifest/input hashes, exact programme bytes and all composing source files. Resume the same path with the same pinned implementation and inputs. Use a new operation directory for a deliberately changed source or programme edition.
+selection.json binds the original Workspace, exact original domain source edition, selected utilities, exact original source manifest/input hashes, exact programme bytes and all composing source files. Resume the same path with the same pinned implementation and inputs. The retained domain choice is reopened explicitly, so an unrelated imported edition cannot change automatic source selection during resume. Use a new operation directory for a deliberately changed source or programme edition.
 
 Native report/export/preparation records remain owned by their existing maintained engines. The receiver's external state records coordinate those products; they do not replace them. A fresh read verifies original source files before completion. Errors are retained with their actual type/message, then raised to the native caller.
 
