@@ -7,7 +7,7 @@ Open **Native model runs → Run programmes** in the current operator, or use it
 ## Complete operator workflow
 
 1. Prepare or select a completed model grid, saved parameter profiles and land-cover scenarios in the existing workbench.
-2. Open **Run programmes**. Choose **Create programme** to group prepared cases, or **Import selections** to receive the complete expanded case list from the experiment planner.
+2. Open **Run programmes**. Choose **Create programme** to group prepared cases, **Use saved experiment** to materialize a prepared design, or **Import selections** to receive an existing expanded case list.
 3. Review the named cases and distinct native selections. Save the programme. Its identity binds the complete selected grid, profiles, scenarios, case labels and source reference.
 4. Open the saved programme and choose **Continue unfinished runs**. Each case appears with its original native run ID, state, completed stages and error, when present. **Run selected cases** operates on a selected subset while retaining the entire programme.
 5. Use **Pause after current run** to request a checkpoint between native calculations. The request is delivered immediately to the programme controller, independently of the single native worker queue. The current native run finishes before the next one starts.
@@ -19,11 +19,11 @@ The **Copy selections** action creates another selected programme while retainin
 
 ## Install into the maintained application
 
-The source edition contains the two model modules, operator adapter, browser component, stylesheet, this guide and the installer. Receive it beside the existing full application.
+The source edition includes the programme engine and CLI, saved-experiment adapter, operator integration, browser controls, original Gura input receiver and operating guide. The public application source includes the original scientific core and its current interface dependencies. Use the installer when joining programme controls into an existing application.
 
     python -B install_programmes.py --application /absolute/path/to/current/application
 
-The installer reads the current shared operator and browser files, inserts the programme registrations, and preserves the other registered modules and static assets. It validates the Python source before replacement and checks each current file again at its replacement boundary. An already-installed identical edition is reusable. If a programme-owned file already has different authored contents, reconcile that exact edition before updating it.
+The installer reads the current shared operator and browser files, inserts the programme registrations, and preserves the other registered modules and static assets. It validates the Python source before replacement and checks each current file again at its replacement boundary. An already-installed identical edition is reusable, and the installer can upgrade the exact previously published programme edition. Concurrent or other authored edits are retained for composition.
 
 The existing operator must be restarted after source installation so it imports the new backend. Use the same original workspace and operator state directory. The normal startup command and capability URL remain the opening route.
 
@@ -59,7 +59,7 @@ Import **ComputeProgrammes** from **model.compute_programme** and construct it w
 | preview(selection) | Validated expanded named selections and native identities |
 | create(selection, source_reference=None) | Persisted programme |
 | status(programme_id) | Saved selections, live native states, stages, errors and counts |
-| execute(programme_id, only_runs=None) | Native execution and continuation |
+| execute(programme_id, only_runs=None) | Execute the saved selection while respecting an existing pause signal |
 | pause(programme_id) | Immediate request to pause between native runs |
 | resume(programme_id, only_runs=None) | Continued original execution |
 | report(programme_id) | Saved metadata-based result catalogue |
@@ -79,6 +79,7 @@ The current operator's authentication, request identities and task queue apply t
 | GET /api/programmes/detail?workspace=…&programme_id=… | Saved programme and authenticated output links |
 | GET /api/programmes/report?workspace=…&programme_id=… | Saved result catalogue |
 | POST /api/programmes/preview | {workspace, selection} |
+| POST /api/programmes/experiment-preview | {workspace, experiment_id, offset?, limit?}; inspect the prepared design |
 | POST /api/programmes/pause | {workspace, programme_id}; immediate checkpoint signal |
 | POST /api/programmes/delivery-preview | {workspace, programme_id, selection} |
 | POST /api/actions | Existing retained task protocol with one of the actions below |
@@ -86,19 +87,20 @@ The current operator's authentication, request identities and task queue apply t
 Task actions:
 
 - **compute.programme.save** with **{selection, source_reference?}**
+- **compute.programme.experiment** with **{experiment_id}**
 - **compute.programme.run** with **{programme_id, only_runs?}**
 - **compute.programme.report** with **{programme_id}**
 - **compute.programme.delivery** with **{programme_id, selection}**
 
 Supply the existing task protocol's workspace, action, payload and stable operation_id fields. A failed or interrupted original task can be continued through **/api/task/resume**. The browser retains a request identity across an uncertain response and reuses a matching failed task on retry.
 
-External operator modules can import **attachProgrammes** from **operator/web/programmes.mjs**, using the existing workbench API/context helpers. Its **mount**, **open**, **refresh**, **detach**, **create** and **importSelections** methods provide the same execution controls inside an experiment or native-run desk.
+External operator modules can import **attachProgrammes** from **operator/web/programmes.mjs**, using the existing workbench API/context helpers. Its **mount**, **open**, **refresh**, **detach**, **create**, **fromExperiment** and **importSelections** methods provide the same execution controls inside an experiment or native-run desk.
 
 ## Calculation and release dependencies
 
 A completed native model grid, scientific profile and selected land-cover case are the calculation inputs. A programme can run a baseline alone and retain useful output before the final release selections are complete.
 
-The later full release still supplies its required source roles, overlays, named baseline and alternatives, observation links, cartography choices and contact metadata through the existing native delivery service. The current original grid and native run contracts require the complete selected NDR/SDR input stack. Stage-specific source/native preparation can extend that contract separately.
+The later full release still supplies its required source roles, overlays, named baseline and alternatives, observation links, cartography choices and contact metadata through the existing native delivery service. Profiles, grids and runs explicitly select NDR, SDR, or both. Missing model selections retain the original combined behaviour. NDR requires DEM, NLCD and precipitation/runoff-proxy rasters; SDR requires DEM, NLCD, rainfall erosivity and soil erodibility. Programme rows inherit the grid's selected models unless their supported subset is explicitly supplied. Comparisons use the actual shared model outputs on the same grid, while the full seven-map release requires both selected models.
 
 ## Interpreting retained quantities
 
@@ -111,6 +113,33 @@ Primary method sources:
 - [InVEST 3.20.0 freshwater calibration and sensitivity](https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.20.0/userguide/en/calibration_freshwater.html)
 - [InVEST 3.20.0 Nutrient Delivery Ratio](https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.20.0/userguide/en/ndr.html)
 - [InVEST 3.20.0 Sediment Delivery Ratio](https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.20.0/userguide/en/sdr.html)
+
+
+## Saved experiment handoff
+
+**Use saved experiment** reads the retained plan and displays the first page of its prepared cases with the complete case count. Saving includes every case. It saves the exact derived profiles produced by the experiment planner and binds every case to its canonical native selection, including the selected models. Original planner IDs are retained as context when an older saved planner omitted a partial model selection.
+
+The programme keeps one overall reference case. Each experiment case also retains its own native paired baseline in **selection.runs[].changes.pairing**. A land-cover comparison under a changed parameter profile can therefore use the experiment's matching profile baseline; the programme result catalogue continues to show its declared overall reference. The operator displays actual parameter, biophysical-table and land-cover change flags beside each run.
+
+Other screens can open this workflow with **programmes.fromExperiment(experiment_id)**. The existing native run desk passes prepared selections with **programmes.create({selection})**, and reopens a saved programme with **programmes.open(programme_id)**. These calls use the same workspace, authentication, original tasks and result downloads.
+
+## Continuation and source updates
+
+The browser's **Continue unfinished runs** and **Run selected cases** clear an earlier pause before resuming. A paused programme keeps its original cases. If the process ended during coordination, resumption records the interrupted attempt and the native stages already present, then verifies and reuses those outputs.
+
+Programme control and report repairs can be installed while retaining saved programmes. Execution keeps the original source inventory and records the current coordinator source for each attempt. Scientific engine files and the selected grid/profile/scenario identities continue to be checked against the original programme. A changed scientific engine is selected through a new programme using **Copy selections**.
+
+The complete delivery builder shares the workspace's native execution lock with command-line and operator calculations, so its captured working archive is assembled from a stable run set.
+
+## Receive the original Gura example
+
+The optional **source_tools/receive_gura.py** intake uses the original per-model Gura NDR and SDR sample archives referenced by the tagged InVEST 3.20.0 datastacks. It preserves each archive and selected original source member, joins the nutrient and sediment tables by their original land-cover code, checks the common terrain and land-cover cells, and prepares the existing Workspace plus a baseline programme.
+
+Run its command-line help from the full application:
+
+    python -B -m source_tools.receive_gura --help
+
+Supply the actual retained archive paths with **--ndr-archive** and **--sdr-archive**, the separate current original CSV paths with **--ndr-table** and **--sdr-table**, separate workspace and source directories, the installed source reference, and an explicit model-context buffer. The current receiver preserves the original 300-metre reference resolution; every square cell covers 9 hectares. **--upstream-buffer-m** selects a separate model-context distance. Each table's original source URI, complete bytes and row lineage are retained independently of the archive's older sample tables. The receiver reads the scientific coefficients and load semantics from the original tables. Use the original regional workspace for the Upper Savannah study; the Gura workspace is named for its source study and exercises the same native application path.
 
 ## Source operation
 

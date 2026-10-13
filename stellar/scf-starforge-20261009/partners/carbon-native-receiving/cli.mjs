@@ -27,6 +27,7 @@ Run options:
   --registry-source FILE             Complete authorized original registry edition
   --capture-options FILE             Original capture selection, including archive inputs
   --capture-checkpoint FILE          Retained checkpoint for that same capture query
+  --resume-from DIR                  Preserved original receiving output to continue
   --from YYYY-MM-DD --before YYYY-MM-DD  Included start and excluded end of statement
   --accounting-directory DIR         Original maintained accounting case
   --expected-accounting-workspace-id ID
@@ -35,10 +36,15 @@ Run options:
   --archive-path FILE                New archive outside the source and output
   --keep-open                        Reopen received desks after the closed archive
 
-Use new private source/output paths and preserve earlier attempts. Recovery keeps
-the original operation and capture query, selects its checkpoint, and uses a new
-output directory. The run retains complete source/workspaces, original report
-files, receiving edits and browser downloads; it streams the closed archive.
+Use new private source/output paths and preserve earlier attempts. --resume-from
+selects the original OUTPUT containing receiving.json and its complete workspaces.
+Receive the current source packet with preserved-output-v1 recovery first. The
+continuation copies and reopens saved stages, reuses the original accounting draft,
+and finishes the remaining journey in --output NEW_DIR. A matching saved capture
+checkpoint is reused; --capture-checkpoint can select an explicit matching file.
+The original output stays intact. An observed live original process is rejected.
+The run retains complete source/workspaces, original report files, receiving edits
+and browser downloads; it streams the closed archive.
 
 Status joins receiving.json with its sibling archive descriptor, archive file and
 immutable archived snapshot. Verify additionally streams SHA256 over the entire

@@ -35,7 +35,10 @@ def main(argv=None):
     common.add_argument("--workspace");common.add_argument("--credentials-file")
     def command(name):
         c=sub.add_parser(name,parents=[common]);return c
-    command("init");command("state");command("catalogue");command("guidance")
+    command("init");command("state");command("catalogue");command("guidance");command("operating-plan-catalog")
+    for name in ["operating-plan-document","operating-plan-draft","operating-plan-input","operating-plan-basis"]:
+        c=command(name);c.add_argument("--id",required=True)
+        if name=="operating-plan-draft":c.add_argument("--revision",type=int)
     operations={a["id"]:(a["python"],a["input"])for a in source.json_value((HERE/"directory-schema.json").read_bytes())["actions"]}
     operations.update({"connection-save":("directory_connection","connection"),"request-save":("directory_request","request"),
         "edition-save":("directory_edition","edition"),"edition-compare":("directory_compare","comparison"),"import-profile-save":("save_directory_import","import")})
@@ -45,9 +48,10 @@ def main(argv=None):
         command(name).add_argument("--operation",required=True)
     c=command("source-import");c.add_argument("--file",required=True);c.add_argument("--input");c.add_argument("--import-profile")
     c=command("records");c.add_argument("--kind",required=True);c.add_argument("--id");c.add_argument("--offset",type=int,default=0);c.add_argument("--limit",type=int,default=50);c.add_argument("--query",default="")
-    c=command("rows");c.add_argument("--kind",choices=["source","edition","mapping-preview","selection","comparison","conformance-findings","conformance-rows"],required=True);c.add_argument("--id",required=True)
+    c=command("rows");c.add_argument("--kind",choices=["source","edition","mapping-preview","selection","comparison","conformance-findings","conformance-rows","conformance-foreign-keys","conformance-foreign-key-candidates","conformance-foreign-key-matches"],required=True);c.add_argument("--id",required=True)
     c.add_argument("--table");c.add_argument("--group",default="findings");c.add_argument("--state");c.add_argument("--offset",type=int,default=0);c.add_argument("--limit",type=int,default=50);c.add_argument("--query",default="")
     c.add_argument("--severity");c.add_argument("--code");c.add_argument("--finding-source");c.add_argument("--finding-record")
+    c.add_argument("--rule");c.add_argument("--target-group");c.add_argument("--source-id");c.add_argument("--record-id");c.add_argument("--outcome");c.add_argument("--candidate")
     c=command("conformance-finding");c.add_argument("--assessment",required=True);c.add_argument("--finding",required=True)
     c=command("row");c.add_argument("--source",required=True);c.add_argument("--record",required=True);c.add_argument("--edition")
     c=command("links");c.add_argument("--edition",required=True);c.add_argument("--record");c.add_argument("--source");c.add_argument("--link");c.add_argument("--offset",type=int,default=0);c.add_argument("--limit",type=int,default=50)
@@ -62,6 +66,10 @@ def main(argv=None):
     with Workspace(root,create=args.command in {"init","receive-workspace","receive-handoff"}and not root.exists(),credentials_file=args.credentials_file)as ws:
         name=args.command
         if name in {"init","state"}:result=ws.state()
+        elif name=="operating-plan-catalog":result=ws.directory_operating_catalogue()
+        elif name=="operating-plan-draft":result=ws.directory_operating_plan_draft(args.id,args.revision)
+        elif name in {"operating-plan-document","operating-plan-input","operating-plan-basis"}:
+            result=getattr(ws,{"operating-plan-document":"directory_operating_plan_document","operating-plan-input":"directory_operating_plan_input","operating-plan-basis":"directory_operating_plan_basis"}[name])(args.id)
         elif name in operations:result=getattr(ws,operations[name][0])(input_file(args.input))
         elif name in {"discover","acquire"}:
             raw=input_file(args.input)
@@ -84,6 +92,9 @@ def main(argv=None):
             elif args.kind=="selection":result=ws.directory_selection_page(args.id,args.offset,args.limit,args.query)
             elif args.kind=="conformance-findings":result=ws.directory_conformance_findings(args.id,args.offset,args.limit,args.severity,args.table,args.code,args.finding_source,args.finding_record)
             elif args.kind=="conformance-rows":result=ws.directory_conformance_rows(args.id,args.offset,args.limit,args.table)
+            elif args.kind=="conformance-foreign-keys":result=ws.directory_conformance_foreign_keys(args.id,args.offset,args.limit,args.table,args.state,args.rule,args.source_id,args.record_id)
+            elif args.kind=="conformance-foreign-key-candidates":result=ws.directory_conformance_foreign_key_candidates(args.id,args.offset,args.limit,args.table,args.state,args.target_group,args.source_id,args.record_id)
+            elif args.kind=="conformance-foreign-key-matches":result=ws.directory_conformance_foreign_key_matches(args.id,args.offset,args.limit,args.outcome,args.candidate)
             else:result=ws.directory_changes(args.id,args.offset,args.limit,args.state)
         elif name=="conformance-finding":result=ws.directory_conformance_finding(args.assessment,args.finding)
         elif name=="row":result=ws.directory_edition_row(args.edition,args.source,args.record)if args.edition else ws.directory_source_row(args.source,args.record)

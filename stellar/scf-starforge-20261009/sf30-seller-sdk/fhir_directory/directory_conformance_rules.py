@@ -159,12 +159,15 @@ class HsdsRules:
             for i,field in enumerate(resource["fields"]):
                 rules.append({"family":"hsds-tabular-3.3.1","table":table,"keyword":"field",
                     "requirement":field,"mode":"evaluated","source":source_location(table,"/fields/"+str(i),True)})
-            for key in ("primaryKey","foreignKeys","missingValues"):
+            for key in ("primaryKey","missingValues"):
                 if key in resource:rules.append({"family":"hsds-tabular-3.3.1","table":table,
-                    "keyword":key,"requirement":resource[key],"mode":"unevaluated"if key=="foreignKeys"else"evaluated",
-                    "checkScope":"Exact native reference states are reported separately as selected-population observations; full declared foreign-key conformance is not asserted"if key=="foreignKeys"else"Selected original tabular assertion",
+                    "keyword":key,"requirement":resource[key],"mode":"evaluated",
+                    "checkScope":"Selected original tabular assertion",
                     "source":source_location(table,"/"+key,True)})
-        for r in rules:r["id"]=sha(jbytes(r))
+        from directory_conformance_foreign_keys import catalogue_rules
+        rules.extend(catalogue_rules(self.native))
+        for r in rules:
+            if "id" not in r:r["id"]=sha(jbytes(r))
         return rules
 
     def check_json(self,value,table,emit,count,path="",spec=None,schema_table=None,schema_pointer="",depth=0):

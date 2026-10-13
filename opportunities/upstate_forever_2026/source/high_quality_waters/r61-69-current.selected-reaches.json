@@ -1,0 +1,1971 @@
+{
+  "schema": "upstate.classified-water-registry/v1",
+  "edition": {
+    "id": "sc-r61-69-2023",
+    "jurisdiction": "South Carolina",
+    "regulation": "R.61-69",
+    "state_publication_date": "2023-05-26",
+    "cwa_effective_date": "2023-12-12",
+    "status": "current",
+    "checked_at": "2026-10-12",
+    "source_url": "https://des.sc.gov/sites/des/files/Library/Regulations/R.61-69.pdf",
+    "effective_source_url": "https://www.epa.gov/wqs-tech/water-quality-standards-regulations-south-carolina"
+  },
+  "coverage": {
+    "selected_records": 105,
+    "selection": "Outstanding-resource/trout rows in Oconee, Pickens and Anderson, plus neighboring split reaches and utility/reporting waters. Geography inclusion must be determined by the retained PlanningBasins2023 geometry and original HUC polygons.",
+    "full_source_lines": 1786,
+    "full_source_pdf_pages": 34
+  },
+  "class_labels": {
+    "ONRW": "Outstanding National Resource Waters",
+    "ORW": "Outstanding Resource Waters",
+    "SFH": "Shellfish Harvesting Waters",
+    "TN": "Trout - Natural",
+    "TPGT": "Trout - Put, Grow, and Take",
+    "TPT": "Trout - Put and Take",
+    "FW": "Freshwaters",
+    "SA": "Class SA (saltwaters)",
+    "SB": "Class SB (saltwaters)"
+  },
+  "semantics": {
+    "parentheses": "Previous class on ONRW/ORW waterbodies; preserve independently from current class.",
+    "site_specific": "The sp suffix identifies site-specific criteria; these do not transfer automatically to tributaries or downstream waters.",
+    "no_discharge_zone": "NDZ in the waterbody name concerns marine sanitation device discharges and does not replace the use class.",
+    "unlisted_tributary": "R.61-69 B applies the receiving stream use class and class numeric standards, excluding site-specific numeric standards. This registry does not infer unlisted tributaries by name or HUC membership."
+  },
+  "proposed_edition": {
+    "id": "sc-r61-69-proposed-2026-5474",
+    "status": "proposed",
+    "comment_closes": "2026-10-26",
+    "source_url": "https://des.sc.gov/sites/des/files/Library/Regulations/5474_R.61-68%20%26%2069%20NPR_Full%20Text.pdf",
+    "local_changes": [
+      {
+        "current_record_id": "sc-r61-69-2023-L0307",
+        "field": "reach_description",
+        "current": "The entire creek tributary to Rocky Creek",
+        "proposed": "The entire creek tributary to Rocky River",
+        "class_unchanged": "FW",
+        "source_pdf_page": 74
+      }
+    ]
+  },
+  "records": [
+    {
+      "id": "sc-r61-69-2023-L0131",
+      "waterbody_name": "Abner Creek",
+      "county_codes": [
+        "Pkns"
+      ],
+      "class_raw": "ORW(FW)",
+      "class_code": "ORW",
+      "previous_class": "FW",
+      "site_specific": false,
+      "no_discharge_zone": false,
+      "rfp_high_quality_candidate": true,
+      "reach_description": "The entire creek tributary to Eastatoe Creek",
+      "source_pdf_page": 6,
+      "source_printed_page": 3,
+      "source_line_start": 131,
+      "source_line_end": 131
+    },
+    {
+      "id": "sc-r61-69-2023-L0277",
+      "waterbody_name": "Bad Creek",
+      "county_codes": [
+        "Ocne"
+      ],
+      "class_raw": "ORW(FW)",
+      "class_code": "ORW",
+      "previous_class": "FW",
+      "site_specific": false,
+      "no_discharge_zone": false,
+      "rfp_high_quality_candidate": true,
+      "reach_description": "That portion of the creek from the North Carolina line to Chattooga River",
+      "source_pdf_page": 8,
+      "source_printed_page": 5,
+      "source_line_start": 277,
+      "source_line_end": 278
+    },
+    {
+      "id": "sc-r61-69-2023-L0279",
+      "waterbody_name": "Bad Creek Reservoir",
+      "county_codes": [
+        "Ocne"
+      ],
+      "class_raw": "FW",
+      "class_code": "FW",
+      "previous_class": null,
+      "site_specific": false,
+      "no_discharge_zone": false,
+      "rfp_high_quality_candidate": false,
+      "reach_description": "The entire reservoir",
+      "source_pdf_page": 8,
+      "source_printed_page": 5,
+      "source_line_start": 279,
+      "source_line_end": 279
+    },
+    {
+      "id": "sc-r61-69-2023-L0306",
+      "waterbody_name": "Battle Creek",
+      "county_codes": [
+        "Ocne"
+      ],
+      "class_raw": "TPGT",
+      "class_code": "TPGT",
+      "previous_class": null,
+      "site_specific": false,
+      "no_discharge_zone": false,
+      "rfp_high_quality_candidate": true,
+      "reach_description": "The entire creek tributary to Tugaloo River",
+      "source_pdf_page": 8,
+      "source_printed_page": 5,
+      "source_line_start": 306,
+      "source_line_end": 306
+    },
+    {
+      "id": "sc-r61-69-2023-L0307",
+      "waterbody_name": "Bear Creek",
+      "county_codes": [
+        "Andn"
+      ],
+      "class_raw": "FW",
+      "class_code": "FW",
+      "previous_class": null,
+      "site_specific": false,
+      "no_discharge_zone": false,
+      "rfp_high_quality_candidate": false,
+      "reach_description": "The entire creek tributary to Rocky Creek",
+      "source_pdf_page": 8,
+      "source_printed_page": 5,
+      "source_line_start": 307,
+      "source_line_end": 307
+    },
+    {
+      "id": "sc-r61-69-2023-L0400",
+      "waterbody_name": "Brasstown Creek",
+      "county_codes": [
+        "Ocne"
+      ],
+      "class_raw": "TPGT",
+      "class_code": "TPGT",
+      "previous_class": null,
+      "site_specific": false,
+      "no_discharge_zone": false,
+      "rfp_high_quality_candidate": true,
+      "reach_description": "That portion of the creek from its headwaters to Tugaloo River",
+      "source_pdf_page": 10,
+      "source_printed_page": 7,
+      "source_line_start": 400,
+      "source_line_end": 401
+    },
+    {
+      "id": "sc-r61-69-2023-L0459",
+      "waterbody_name": "Burgess Creek",
+      "county_codes": [
+        "Ocne"
+      ],
+      "class_raw": "TN",
+      "class_code": "TN",
+      "previous_class": null,
+      "site_specific": false,
+      "no_discharge_zone": false,
+      "rfp_high_quality_candidate": true,
+      "reach_description": "That portion of the creek from its headwaters to Mill Creek",
+      "source_pdf_page": 11,
+      "source_printed_page": 8,
+      "source_line_start": 459,
+      "source_line_end": 460
+    },
+    {
+      "id": "sc-r61-69-2023-L0475",
+      "waterbody_name": "Camp Branch",
+      "county_codes": [
+        "Ocne"
+      ],
+      "class_raw": "FW",
+      "class_code": "FW",
+      "previous_class": null,
+      "site_specific": false,
+      "no_discharge_zone": false,
+      "rfp_high_quality_candidate": false,
+      "reach_description": "The entire branch tributary to Opossum Creek",
+      "source_pdf_page": 11,
+      "source_printed_page": 8,
+      "source_line_start": 475,
+      "source_line_end": 475
+    },
+    {
+      "id": "sc-r61-69-2023-L0477",
+      "waterbody_name": "Cane Creek",
+      "county_codes": [
+        "Pkns"
+      ],
+      "class_raw": "TN",
+      "class_code": "TN",
+      "previous_class": null,
+      "site_specific": false,
+      "no_discharge_zone": false,
+      "rfp_high_quality_candidate": true,
+      "reach_description": "The entire creek tributary to Lake Keowee",
+      "source_pdf_page": 11,
+      "source_printed_page": 8,
+      "source_line_start": 477,
+      "source_line_end": 477
+    },
+    {
+      "id": "sc-r61-69-2023-L0481",
+      "waterbody_name": "Cantrell Creek",
+      "county_codes": [
+        "Ocne"
+      ],
+      "class_raw": "TN",
+      "class_code": "TN",
+      "previous_class": null,
+      "site_specific": false,
+      "no_discharge_zone": false,
+      "rfp_high_quality_candidate": true,
+      "reach_description": "That portion of the creek from its headwaters to Lake Cheohee",
+      "source_pdf_page": 11,
+      "source_printed_page": 8,
+      "source_line_start": 481,
+      "source_line_end": 482
+    },
+    {
+      "id": "sc-r61-69-2023-L0488",
+      "waterbody_name": "Carrick Creek",
+      "county_codes": [
+        "Pkns"
+      ],
+      "class_raw": "ORW(FW)",
+      "class_code": "ORW",
+      "previous_class": "FW",
+      "site_specific": false,
+      "no_discharge_zone": false,
+      "rfp_high_quality_candidate": true,
+      "reach_description": "That portion of the creek from its headwaters to Pinnacle Lake",
+      "source_pdf_page": 11,
+      "source_printed_page": 8,
+      "source_line_start": 488,
+      "source_line_end": 489
+    },
+    {
+      "id": "sc-r61-69-2023-L0492",
+      "waterbody_name": "Carrick Creek",
+      "county_codes": [
+        "Pkns"
+      ],
+      "class_raw": "FW",
+      "class_code": "FW",
+      "previous_class": null,
+      "site_specific": false,
+      "no_discharge_zone": false,
+      "rfp_high_quality_candidate": false,
+      "reach_description": "That portion of the creek from the dam at Pinnacle Lake to the end of Table Rock State Park land",
+      "source_pdf_page": 12,
+      "source_printed_page": 9,
+      "source_line_start": 492,
+      "source_line_end": 494
+    },
+    {
+      "id": "sc-r61-69-2023-L0530",
+      "waterbody_name": "Chattooga River",
+      "county_codes": [
+        "Ocne"
+      ],
+      "class_raw": "FW",
+      "class_code": "FW",
+      "previous_class": null,
+      "site_specific": false,
+      "no_discharge_zone": false,
+      "rfp_high_quality_candidate": false,
+      "reach_description": "That portion of the river from its confluence with Opossum Creek to Tugaloo River",
+      "source_pdf_page": 12,
+      "source_printed_page": 9,
+      "source_line_start": 530,
+      "source_line_end": 531
+    },
+    {
+      "id": "sc-r61-69-2023-L0532",
+      "waterbody_name": "Chattooga River",
+      "county_codes": [
+        "Ocne"
+      ],
+      "class_raw": "ORW(FW)",
+      "class_code": "ORW",
+      "previous_class": "FW",
+      "site_specific": false,
+      "no_discharge_zone": false,
+      "rfp_high_quality_candidate": true,
+      "reach_description": "That portion of the river from the North Carolina line to its confluence with Opossum Creek",
+      "source_pdf_page": 12,
+      "source_printed_page": 9,
+      "source_line_start": 532,
+      "source_line_end": 533
+    },
+    {
+      "id": "sc-r61-69-2023-L0534",
+      "waterbody_name": "Chauga Creek (also called Jerry Creek)",
+      "county_codes": [
+        "Ocne"
+      ],
+      "class_raw": "FW",
+      "class_code": "FW",
+      "previous_class": null,
+      "site_specific": false,
+      "no_discharge_zone": false,
+      "rfp_high_quality_candidate": false,
+      "reach_description": "The entire creek tributary to Chauga River",
+      "source_pdf_page": 12,
+      "source_printed_page": 9,
+      "source_line_start": 534,
+      "source_line_end": 536
+    },
+    {
+      "id": "sc-r61-69-2023-L0537",
+      "waterbody_name": "Chauga River",
+      "county_codes": [
+        "Ocne"
+      ],
+      "class_raw": "ORW(FW)",
+      "class_code": "ORW",
+      "previous_class": "FW",
+      "site_specific": false,
+      "no_discharge_zone": false,
+      "rfp_high_quality_candidate": true,
+      "reach_description": "That portion of the river from its headwaters to 1 mile above U.S. Rte 76",
+      "source_pdf_page": 12,
+      "source_printed_page": 9,
+      "source_line_start": 537,
+      "source_line_end": 538
+    },
+    {
+      "id": "sc-r61-69-2023-L0539",
+      "waterbody_name": "Chauga River",
+      "county_codes": [
+        "Ocne"
+      ],
+      "class_raw": "FW",
+      "class_code": "FW",
+      "previous_class": null,
+      "site_specific": false,
+      "no_discharge_zone": false,
+      "rfp_high_quality_candidate": false,
+      "reach_description": "That portion of the river from 1 mile above U.S. Rte 76 to Tugaloo River",
+      "source_pdf_page": 12,
+      "source_printed_page": 9,
+      "source_line_start": 539,
+      "source_line_end": 540
+    },
+    {
+      "id": "sc-r61-69-2023-L0545",
+      "waterbody_name": "Cheohee Creek",
+      "county_codes": [
+        "Ocne"
+      ],
+      "class_raw": "ORW(FW)",
+      "class_code": "ORW",
+      "previous_class": "FW",
+      "site_specific": false,
+      "no_discharge_zone": false,
+      "rfp_high_quality_candidate": true,
+      "reach_description": "That portion of the creek from its headwaters to end of U.S. Forest Service Land",
+      "source_pdf_page": 12,
+      "source_printed_page": 9,
+      "source_line_start": 545,
+      "source_line_end": 546
+    },
+    {
+      "id": "sc-r61-69-2023-L0549",
+      "waterbody_name": "Cheohee Creek",
+      "county_codes": [
+        "Ocne"
+      ],
+      "class_raw": "FW",
+      "class_code": "FW",
+      "previous_class": null,
+      "site_specific": false,
+      "no_discharge_zone": false,
+      "rfp_high_quality_candidate": false,
+      "reach_description": "That portion of the creek from U.S. Forest Service Land to its confluence with Tamassee Creek",
+      "source_pdf_page": 13,
+      "source_printed_page": 10,
+      "source_line_start": 549,
+      "source_line_end": 551
+    },
+    {
+      "id": "sc-r61-69-2023-L0557",
+      "waterbody_name": "Choestoea Creek",
+      "county_codes": [
+        "Ocne"
+      ],
+      "class_raw": "FW",
+      "class_code": "FW",
+      "previous_class": null,
+      "site_specific": false,
+      "no_discharge_zone": false,
+      "rfp_high_quality_candidate": false,
+      "reach_description": "The entire creek tributary to Hartwell Lake",
+      "source_pdf_page": 13,
+      "source_printed_page": 10,
+      "source_line_start": 557,
+      "source_line_end": 557
+    },
+    {
+      "id": "sc-r61-69-2023-L0569",
+      "waterbody_name": "Clark(s) Hill Reservoir (NDZ) (also called J. Strom Thurmond Lake)",
+      "county_codes": [
+        "Abvl",
+        "Mcmk"
+      ],
+      "class_raw": "FW",
+      "class_code": "FW",
+      "previous_class": null,
+      "site_specific": false,
+      "no_discharge_zone": true,
+      "rfp_high_quality_candidate": false,
+      "reach_description": "The entire reservoir on Savannah River",
+      "source_pdf_page": 13,
+      "source_printed_page": 10,
+      "source_line_start": 569,
+      "source_line_end": 573
+    },
+    {
+      "id": "sc-r61-69-2023-L0637",
+      "waterbody_name": "Corbin Creek",
+      "county_codes": [
+        "Ocne"
+      ],
+      "class_raw": "ORW(TPGT)",
+      "class_code": "ORW",
+      "previous_class": "TPGT",
+      "site_specific": false,
+      "no_discharge_zone": false,
+      "rfp_high_quality_candidate": true,
+      "reach_description": "The entire creek tributary to Devils Fork",
+      "source_pdf_page": 14,
+      "source_printed_page": 11,
+      "source_line_start": 637,
+      "source_line_end": 637
+    },
+    {
+      "id": "sc-r61-69-2023-L0657",
+      "waterbody_name": "Dark Creek",
+      "county_codes": [
+        "Ocne"
+      ],
+      "class_raw": "ORW(FW)",
+      "class_code": "ORW",
+      "previous_class": "FW",
+      "site_specific": false,
+      "no_discharge_zone": false,
+      "rfp_high_quality_candidate": true,
+      "reach_description": "The entire creek tributary to East Fork Chattooga River",
+      "source_pdf_page": 14,
+      "source_printed_page": 11,
+      "source_line_start": 657,
+      "source_line_end": 658
+    },
+    {
+      "id": "sc-r61-69-2023-L0674",
+      "waterbody_name": "Devils Fork",
+      "county_codes": [
+        "Ocne"
+      ],
+      "class_raw": "TN",
+      "class_code": "TN",
+      "previous_class": null,
+      "site_specific": false,
+      "no_discharge_zone": false,
+      "rfp_high_quality_candidate": true,
+      "reach_description": "That portion of the creek from its confluence of Corbin Creek and Howard Creek to Lake Jocassee",
+      "source_pdf_page": 15,
+      "source_printed_page": 12,
+      "source_line_start": 674,
+      "source_line_end": 676
+    },
+    {
+      "id": "sc-r61-69-2023-L0707",
+      "waterbody_name": "Eastatoe Creek",
+      "county_codes": [
+        "Pkns"
+      ],
+      "class_raw": "ORW(FW)",
+      "class_code": "ORW",
+      "previous_class": "FW",
+      "site_specific": false,
+      "no_discharge_zone": false,
+      "rfp_high_quality_candidate": true,
+      "reach_description": "That portion of the creek from its headwaters to its confluence with Laurel Creek",
+      "source_pdf_page": 15,
+      "source_printed_page": 12,
+      "source_line_start": 707,
+      "source_line_end": 708
+    },
+    {
+      "id": "sc-r61-69-2023-L0709",
+      "waterbody_name": "Eastatoe Creek",
+      "county_codes": [
+        "Pkns"
+      ],
+      "class_raw": "TPGT",
+      "class_code": "TPGT",
+      "previous_class": null,
+      "site_specific": false,
+      "no_discharge_zone": false,
+      "rfp_high_quality_candidate": true,
+      "reach_description": "That portion of the creek from its confluence with Laurel Creek to Lake Keowee",
+      "source_pdf_page": 15,
+      "source_printed_page": 12,
+      "source_line_start": 709,
+      "source_line_end": 710
+    },
+    {
+      "id": "sc-r61-69-2023-L0717",
+      "waterbody_name": "East Fork Chattooga River",
+      "county_codes": [
+        "Ocne"
+      ],
+      "class_raw": "ORW(FW)",
+      "class_code": "ORW",
+      "previous_class": "FW",
+      "site_specific": false,
+      "no_discharge_zone": false,
+      "rfp_high_quality_candidate": true,
+      "reach_description": "That portion of the river from the North Carolina line to its confluence with Indian Camp Branch",
+      "source_pdf_page": 16,
+      "source_printed_page": 13,
+      "source_line_start": 717,
+      "source_line_end": 720
+    },
+    {
+      "id": "sc-r61-69-2023-L0721",
+      "waterbody_name": "East Fork Chattooga River",
+      "county_codes": [
+        "Ocne"
+      ],
+      "class_raw": "TN",
+      "class_code": "TN",
+      "previous_class": null,
+      "site_specific": false,
+      "no_discharge_zone": false,
+      "rfp_high_quality_candidate": true,
+      "reach_description": "That portion of the river from its confluence with Indian Camp Branch to Chattooga River",
+      "source_pdf_page": 16,
+      "source_printed_page": 13,
+      "source_line_start": 721,
+      "source_line_end": 724
+    },
+    {
+      "id": "sc-r61-69-2023-L0736",
+      "waterbody_name": "Eighteen Mile Creek",
+      "county_codes": [
+        "Pkns",
+        "Andn"
+      ],
+      "class_raw": "FW",
+      "class_code": "FW",
+      "previous_class": null,
+      "site_specific": false,
+      "no_discharge_zone": false,
+      "rfp_high_quality_candidate": false,
+      "reach_description": "The entire creek tributary to Hartwell Lake",
+      "source_pdf_page": 16,
+      "source_printed_page": 13,
+      "source_line_start": 736,
+      "source_line_end": 736
+    },
+    {
+      "id": "sc-r61-69-2023-L0737",
+      "waterbody_name": "Emory Creek",
+      "county_codes": [
+        "Pkns"
+      ],
+      "class_raw": "ORW(FW)",
+      "class_code": "ORW",
+      "previous_class": "FW",
+      "site_specific": false,
+      "no_discharge_zone": false,
+      "rfp_high_quality_candidate": true,
+      "reach_description": "That portion of the creek from its headwaters to the northern boundary of Table Rock Resort property",
+      "source_pdf_page": 16,
+      "source_printed_page": 13,
+      "source_line_start": 737,
+      "source_line_end": 739
+    },
+    {
+      "id": "sc-r61-69-2023-L0740",
+      "waterbody_name": "Emory Creek",
+      "county_codes": [
+        "Pkns"
+      ],
+      "class_raw": "TN",
+      "class_code": "TN",
+      "previous_class": null,
+      "site_specific": false,
+      "no_discharge_zone": false,
+      "rfp_high_quality_candidate": true,
+      "reach_description": "That portion of the creek from northern boundary of Table Rock Resort property to its confluence with Oolenoy River",
+      "source_pdf_page": 16,
+      "source_printed_page": 13,
+      "source_line_start": 740,
+      "source_line_end": 742
+    },
+    {
+      "id": "sc-r61-69-2023-L0748",
+      "waterbody_name": "Fall Creek",
+      "county_codes": [
+        "Ocne"
+      ],
+      "class_raw": "FW",
+      "class_code": "FW",
+      "previous_class": null,
+      "site_specific": false,
+      "no_discharge_zone": false,
+      "rfp_high_quality_candidate": false,
+      "reach_description": "The entire creek tributary to Chattooga River",
+      "source_pdf_page": 16,
+      "source_printed_page": 13,
+      "source_line_start": 748,
+      "source_line_end": 748
+    },
+    {
+      "id": "sc-r61-69-2023-L0825",
+      "waterbody_name": "Green Creek",
+      "county_codes": [
+        "Pkns"
+      ],
+      "class_raw": "ORW(FW)",
+      "class_code": "ORW",
+      "previous_class": "FW",
+      "site_specific": false,
+      "no_discharge_zone": false,
+      "rfp_high_quality_candidate": true,
+      "reach_description": "The entire creek tributary to Carrick Creek",
+      "source_pdf_page": 17,
+      "source_printed_page": 14,
+      "source_line_start": 825,
+      "source_line_end": 825
+    },
+    {
+      "id": "sc-r61-69-2023-L0847",
+      "waterbody_name": "Hartwell Lake (NDZ)",
+      "county_codes": [
+        "Andn",
+        "Ocne",
+        "Pkns"
+      ],
+      "class_raw": "FW",
+      "class_code": "FW",
+      "previous_class": null,
+      "site_specific": false,
+      "no_discharge_zone": true,
+      "rfp_high_quality_candidate": false,
+      "reach_description": "All that portion within South Carolina",
+      "source_pdf_page": 18,
+      "source_printed_page": 15,
+      "source_line_start": 847,
+      "source_line_end": 851
+    },
+    {
+      "id": "sc-r61-69-2023-L0877",
+      "waterbody_name": "Howard Creek",
+      "county_codes": [
+        "Ocne"
+      ],
+      "class_raw": "ORW(TPGT)",
+      "class_code": "ORW",
+      "previous_class": "TPGT",
+      "site_specific": false,
+      "no_discharge_zone": false,
+      "rfp_high_quality_candidate": true,
+      "reach_description": "That portion of the creek from its headwaters to 0.3 mile below S.C. Hwy 130 above the flow augmentation system at the Bad Creek pumped storage station dam",
+      "source_pdf_page": 18,
+      "source_printed_page": 15,
+      "source_line_start": 877,
+      "source_line_end": 880
+    },
+    {
+      "id": "sc-r61-69-2023-L0881",
+      "waterbody_name": "Howard Creek",
+      "county_codes": [
+        "Ocne"
+      ],
+      "class_raw": "TN",
+      "class_code": "TN",
+      "previous_class": null,
+      "site_specific": false,
+      "no_discharge_zone": false,
+      "rfp_high_quality_candidate": true,
+      "reach_description": "That portion of the creek from just above the flow augmentation system at the Bad Creek pumped storage station dam to Devils Fork",
+      "source_pdf_page": 18,
+      "source_printed_page": 15,
+      "source_line_start": 881,
+      "source_line_end": 883
+    },
+    {
+      "id": "sc-r61-69-2023-L0889",
+      "waterbody_name": "Indian Camp Branch",
+      "county_codes": [
+        "Ocne"
+      ],
+      "class_raw": "ORW(FW)",
+      "class_code": "ORW",
+      "previous_class": "FW",
+      "site_specific": false,
+      "no_discharge_zone": false,
+      "rfp_high_quality_candidate": true,
+      "reach_description": "The entire branch tributary to East Fork Chattooga River",
+      "source_pdf_page": 19,
+      "source_printed_page": 16,
+      "source_line_start": 889,
+      "source_line_end": 892
+    },
+    {
+      "id": "sc-r61-69-2023-L0896",
+      "waterbody_name": "Ira Branch",
+      "county_codes": [
+        "Ocne"
+      ],
+      "class_raw": "ORW(FW)",
+      "class_code": "ORW",
+      "previous_class": "FW",
+      "site_specific": false,
+      "no_discharge_zone": false,
+      "rfp_high_quality_candidate": true,
+      "reach_description": "The entire branch tributary to the Chattooga River",
+      "source_pdf_page": 19,
+      "source_printed_page": 16,
+      "source_line_start": 896,
+      "source_line_end": 897
+    },
+    {
+      "id": "sc-r61-69-2023-L0899",
+      "waterbody_name": "J. Strom Thurmond Lake (also called Clarks Hill Reservoir) (NDZ)",
+      "county_codes": [
+        "Abvl",
+        "Mcmk"
+      ],
+      "class_raw": "FW",
+      "class_code": "FW",
+      "previous_class": null,
+      "site_specific": false,
+      "no_discharge_zone": true,
+      "rfp_high_quality_candidate": false,
+      "reach_description": "The entire lake on Savannah River",
+      "source_pdf_page": 19,
+      "source_printed_page": 16,
+      "source_line_start": 899,
+      "source_line_end": 903
+    },
+    {
+      "id": "sc-r61-69-2023-L0904",
+      "waterbody_name": "Jackies Branch",
+      "county_codes": [
+        "Pkns"
+      ],
+      "class_raw": "TN",
+      "class_code": "TN",
+      "previous_class": null,
+      "site_specific": false,
+      "no_discharge_zone": false,
+      "rfp_high_quality_candidate": true,
+      "reach_description": "The entire branch tributary to the confluence with Laurel Fork Creek",
+      "source_pdf_page": 19,
+      "source_printed_page": 16,
+      "source_line_start": 904,
+      "source_line_end": 905
+    },
+    {
+      "id": "sc-r61-69-2023-L0906",
+      "waterbody_name": "Jacks Creek",
+      "county_codes": [
+        "Ocne"
+      ],
+      "class_raw": "ORW(FW)",
+      "class_code": "ORW",
+      "previous_class": "FW",
+      "site_specific": false,
+      "no_discharge_zone": false,
+      "rfp_high_quality_candidate": true,
+      "reach_description": "The entire creek tributary to the East Fork Chattooga River",
+      "source_pdf_page": 19,
+      "source_printed_page": 16,
+      "source_line_start": 906,
+      "source_line_end": 907
+    },
+    {
+      "id": "sc-r61-69-2023-L0937",
+      "waterbody_name": "Jumping Branch",
+      "county_codes": [
+        "Ocne"
+      ],
+      "class_raw": "TN",
+      "class_code": "TN",
+      "previous_class": null,
+      "site_specific": false,
+      "no_discharge_zone": false,
+      "rfp_high_quality_candidate": true,
+      "reach_description": "That portion of the branch from its headwaters to Lake Cherokee",
+      "source_pdf_page": 19,
+      "source_printed_page": 16,
+      "source_line_start": 937,
+      "source_line_end": 938
+    },
+    {
+      "id": "sc-r61-69-2023-L0945",
+      "waterbody_name": "King Creek",
+      "county_codes": [
+        "Ocne"
+      ],
+      "class_raw": "ORW(FW)",
+      "class_code": "ORW",
+      "previous_class": "FW",
+      "site_specific": false,
+      "no_discharge_zone": false,
+      "rfp_high_quality_candidate": true,
+      "reach_description": "The entire creek tributary to Chattooga River",
+      "source_pdf_page": 20,
+      "source_printed_page": 17,
+      "source_line_start": 945,
+      "source_line_end": 945
+    },
+    {
+      "id": "sc-r61-69-2023-L0947",
+      "waterbody_name": "Knox Creek",
+      "county_codes": [
+        "Ocne"
+      ],
+      "class_raw": "FW",
+      "class_code": "FW",
+      "previous_class": null,
+      "site_specific": false,
+      "no_discharge_zone": false,
+      "rfp_high_quality_candidate": false,
+      "reach_description": "That portion of the creek from Lake Cheohee Dam to the confluence with Cheohee Creek",
+      "source_pdf_page": 20,
+      "source_printed_page": 17,
+      "source_line_start": 947,
+      "source_line_end": 948
+    },
+    {
+      "id": "sc-r61-69-2023-L0963",
+      "waterbody_name": "Lake Jocassee",
+      "county_codes": [
+        "Ocne"
+      ],
+      "class_raw": "TPGT",
+      "class_code": "TPGT",
+      "previous_class": null,
+      "site_specific": false,
+      "no_discharge_zone": false,
+      "rfp_high_quality_candidate": true,
+      "reach_description": "The entire lake",
+      "source_pdf_page": 20,
+      "source_printed_page": 17,
+      "source_line_start": 963,
+      "source_line_end": 963
+    },
+    {
+      "id": "sc-r61-69-2023-L0964",
+      "waterbody_name": "Lake Keowee (NDZ)",
+      "county_codes": [
+        "Andn",
+        "Pkns"
+      ],
+      "class_raw": "FW",
+      "class_code": "FW",
+      "previous_class": null,
+      "site_specific": false,
+      "no_discharge_zone": true,
+      "rfp_high_quality_candidate": false,
+      "reach_description": "The entire lake",
+      "source_pdf_page": 20,
+      "source_printed_page": 17,
+      "source_line_start": 964,
+      "source_line_end": 964
+    },
+    {
+      "id": "sc-r61-69-2023-L0990",
+      "waterbody_name": "Lake Tugaloo",
+      "county_codes": [
+        "Ocne"
+      ],
+      "class_raw": "TPGT",
+      "class_code": "TPGT",
+      "previous_class": null,
+      "site_specific": false,
+      "no_discharge_zone": false,
+      "rfp_high_quality_candidate": true,
+      "reach_description": "The entire lake",
+      "source_pdf_page": 20,
+      "source_printed_page": 17,
+      "source_line_start": 990,
+      "source_line_end": 990
+    },
+    {
+      "id": "sc-r61-69-2023-L0998",
+      "waterbody_name": "Laurel Branch",
+      "county_codes": [
+        "Pkns"
+      ],
+      "class_raw": "ORW(FW)",
+      "class_code": "ORW",
+      "previous_class": "FW",
+      "site_specific": false,
+      "no_discharge_zone": false,
+      "rfp_high_quality_candidate": true,
+      "reach_description": "The entire branch tributary to Eastatoe Creek",
+      "source_pdf_page": 20,
+      "source_printed_page": 17,
+      "source_line_start": 998,
+      "source_line_end": 998
+    },
+    {
+      "id": "sc-r61-69-2023-L1000",
+      "waterbody_name": "Laurel Creek",
+      "county_codes": [
+        "Pkns"
+      ],
+      "class_raw": "ORW(FW)",
+      "class_code": "ORW",
+      "previous_class": "FW",
+      "site_specific": false,
+      "no_discharge_zone": false,
+      "rfp_high_quality_candidate": true,
+      "reach_description": "The entire creek tributary to Eastatoe Creek",
+      "source_pdf_page": 20,
+      "source_printed_page": 17,
+      "source_line_start": 1000,
+      "source_line_end": 1000
+    },
+    {
+      "id": "sc-r61-69-2023-L1001",
+      "waterbody_name": "Laurel Fork Creek",
+      "county_codes": [
+        "Pkns"
+      ],
+      "class_raw": "TN",
+      "class_code": "TN",
+      "previous_class": null,
+      "site_specific": false,
+      "no_discharge_zone": false,
+      "rfp_high_quality_candidate": true,
+      "reach_description": "The entire creek tributary to Lake Jocassee",
+      "source_pdf_page": 20,
+      "source_printed_page": 17,
+      "source_line_start": 1001,
+      "source_line_end": 1001
+    },
+    {
+      "id": "sc-r61-69-2023-L1013",
+      "waterbody_name": "Lick Log Creek",
+      "county_codes": [
+        "Ocne"
+      ],
+      "class_raw": "FW",
+      "class_code": "FW",
+      "previous_class": null,
+      "site_specific": false,
+      "no_discharge_zone": false,
+      "rfp_high_quality_candidate": false,
+      "reach_description": "That portion of the creek from its headwaters through Thrift Lake",
+      "source_pdf_page": 21,
+      "source_printed_page": 18,
+      "source_line_start": 1013,
+      "source_line_end": 1014
+    },
+    {
+      "id": "sc-r61-69-2023-L1015",
+      "waterbody_name": "Lick Log Creek",
+      "county_codes": [
+        "Ocne"
+      ],
+      "class_raw": "ORW(FW)",
+      "class_code": "ORW",
+      "previous_class": "FW",
+      "site_specific": false,
+      "no_discharge_zone": false,
+      "rfp_high_quality_candidate": true,
+      "reach_description": "That portion of the creek from Thrift Lake to Chattooga River",
+      "source_pdf_page": 21,
+      "source_printed_page": 18,
+      "source_line_start": 1015,
+      "source_line_end": 1016
+    },
+    {
+      "id": "sc-r61-69-2023-L1021",
+      "waterbody_name": "Limber Pole Creek",
+      "county_codes": [
+        "Ocne"
+      ],
+      "class_raw": "TN",
+      "class_code": "TN",
+      "previous_class": null,
+      "site_specific": false,
+      "no_discharge_zone": false,
+      "rfp_high_quality_candidate": true,
+      "reach_description": "The entire creek tributary to Devils Fork",
+      "source_pdf_page": 21,
+      "source_printed_page": 18,
+      "source_line_start": 1021,
+      "source_line_end": 1021
+    },
+    {
+      "id": "sc-r61-69-2023-L1027",
+      "waterbody_name": "Little Eastatoe Creek",
+      "county_codes": [
+        "Pkns"
+      ],
+      "class_raw": "TPGT",
+      "class_code": "TPGT",
+      "previous_class": null,
+      "site_specific": false,
+      "no_discharge_zone": false,
+      "rfp_high_quality_candidate": true,
+      "reach_description": "That portion of the creek from its headwaters to its confluence with Eastatoe Creek",
+      "source_pdf_page": 21,
+      "source_printed_page": 18,
+      "source_line_start": 1027,
+      "source_line_end": 1030
+    },
+    {
+      "id": "sc-r61-69-2023-L1053",
+      "waterbody_name": "Little River",
+      "county_codes": [
+        "Ocne"
+      ],
+      "class_raw": "FW",
+      "class_code": "FW",
+      "previous_class": null,
+      "site_specific": false,
+      "no_discharge_zone": false,
+      "rfp_high_quality_candidate": false,
+      "reach_description": "The entire river tributary to Lake Hartwell",
+      "source_pdf_page": 21,
+      "source_printed_page": 18,
+      "source_line_start": 1053,
+      "source_line_end": 1053
+    },
+    {
+      "id": "sc-r61-69-2023-L1071",
+      "waterbody_name": "Long Creek",
+      "county_codes": [
+        "Ocne"
+      ],
+      "class_raw": "FW",
+      "class_code": "FW",
+      "previous_class": null,
+      "site_specific": false,
+      "no_discharge_zone": false,
+      "rfp_high_quality_candidate": false,
+      "reach_description": "The entire creek tributary to Chattooga River",
+      "source_pdf_page": 22,
+      "source_printed_page": 19,
+      "source_line_start": 1071,
+      "source_line_end": 1071
+    },
+    {
+      "id": "sc-r61-69-2023-L1104",
+      "waterbody_name": "Martin Creek",
+      "county_codes": [
+        "Ocne"
+      ],
+      "class_raw": "FW",
+      "class_code": "FW",
+      "previous_class": null,
+      "site_specific": false,
+      "no_discharge_zone": false,
+      "rfp_high_quality_candidate": false,
+      "reach_description": "The entire creek tributary to Lake Hartwell",
+      "source_pdf_page": 22,
+      "source_printed_page": 19,
+      "source_line_start": 1104,
+      "source_line_end": 1104
+    },
+    {
+      "id": "sc-r61-69-2023-L1124",
+      "waterbody_name": "McKinneys Creek",
+      "county_codes": [
+        "Ocne"
+      ],
+      "class_raw": "TN",
+      "class_code": "TN",
+      "previous_class": null,
+      "site_specific": false,
+      "no_discharge_zone": false,
+      "rfp_high_quality_candidate": true,
+      "reach_description": "That portion of the creek from its headwaters to S.C. Hwy 25",
+      "source_pdf_page": 23,
+      "source_printed_page": 20,
+      "source_line_start": 1124,
+      "source_line_end": 1125
+    },
+    {
+      "id": "sc-r61-69-2023-L1126",
+      "waterbody_name": "McKinneys Creek",
+      "county_codes": [
+        "Ocne"
+      ],
+      "class_raw": "FW",
+      "class_code": "FW",
+      "previous_class": null,
+      "site_specific": false,
+      "no_discharge_zone": false,
+      "rfp_high_quality_candidate": false,
+      "reach_description": "That portion of the creek from S.C. Hwy 25 to Lake Keowee",
+      "source_pdf_page": 23,
+      "source_printed_page": 20,
+      "source_line_start": 1126,
+      "source_line_end": 1127
+    },
+    {
+      "id": "sc-r61-69-2023-L1153",
+      "waterbody_name": "Mill Creek",
+      "county_codes": [
+        "Ocne"
+      ],
+      "class_raw": "TN",
+      "class_code": "TN",
+      "previous_class": null,
+      "site_specific": false,
+      "no_discharge_zone": false,
+      "rfp_high_quality_candidate": true,
+      "reach_description": "That portion of the creek from its headwaters to Burgess Creek",
+      "source_pdf_page": 23,
+      "source_printed_page": 20,
+      "source_line_start": 1153,
+      "source_line_end": 1154
+    },
+    {
+      "id": "sc-r61-69-2023-L1155",
+      "waterbody_name": "Mill Creek",
+      "county_codes": [
+        "Pkns"
+      ],
+      "class_raw": "TPGT",
+      "class_code": "TPGT",
+      "previous_class": null,
+      "site_specific": false,
+      "no_discharge_zone": false,
+      "rfp_high_quality_candidate": true,
+      "reach_description": "The entire creek tributary to Eastatoe Creek",
+      "source_pdf_page": 23,
+      "source_printed_page": 20,
+      "source_line_start": 1155,
+      "source_line_end": 1155
+    },
+    {
+      "id": "sc-r61-69-2023-L1164",
+      "waterbody_name": "Moody Creek",
+      "county_codes": [
+        "Ocne"
+      ],
+      "class_raw": "TN",
+      "class_code": "TN",
+      "previous_class": null,
+      "site_specific": false,
+      "no_discharge_zone": false,
+      "rfp_high_quality_candidate": true,
+      "reach_description": "That portion of the creek from its headwaters to its confluence with Cantrell Creek",
+      "source_pdf_page": 23,
+      "source_printed_page": 20,
+      "source_line_start": 1164,
+      "source_line_end": 1165
+    },
+    {
+      "id": "sc-r61-69-2023-L1169",
+      "waterbody_name": "Moss Mill Creek",
+      "county_codes": [
+        "Ocne"
+      ],
+      "class_raw": "ORW(FW)",
+      "class_code": "ORW",
+      "previous_class": "FW",
+      "site_specific": false,
+      "no_discharge_zone": false,
+      "rfp_high_quality_candidate": true,
+      "reach_description": "The entire creek tributary to Chattooga River",
+      "source_pdf_page": 23,
+      "source_printed_page": 20,
+      "source_line_start": 1169,
+      "source_line_end": 1169
+    },
+    {
+      "id": "sc-r61-69-2023-L1216",
+      "waterbody_name": "North Fork Little River",
+      "county_codes": [
+        "Ocne"
+      ],
+      "class_raw": "TPGT",
+      "class_code": "TPGT",
+      "previous_class": null,
+      "site_specific": false,
+      "no_discharge_zone": false,
+      "rfp_high_quality_candidate": true,
+      "reach_description": "That portion of the river from the confluence of Mill Creek and Burgess Creek to S.C. Hwy 11",
+      "source_pdf_page": 24,
+      "source_printed_page": 21,
+      "source_line_start": 1216,
+      "source_line_end": 1219
+    },
+    {
+      "id": "sc-r61-69-2023-L1220",
+      "waterbody_name": "North Fork Little River",
+      "county_codes": [
+        "Ocne"
+      ],
+      "class_raw": "FW",
+      "class_code": "FW",
+      "previous_class": null,
+      "site_specific": false,
+      "no_discharge_zone": false,
+      "rfp_high_quality_candidate": false,
+      "reach_description": "That portion of the river from S.C. Hwy 11 to its confluence with Little River",
+      "source_pdf_page": 24,
+      "source_printed_page": 21,
+      "source_line_start": 1220,
+      "source_line_end": 1223
+    },
+    {
+      "id": "sc-r61-69-2023-L1252",
+      "waterbody_name": "Oolenoy River",
+      "county_codes": [
+        "Pkns"
+      ],
+      "class_raw": "TPGT",
+      "class_code": "TPGT",
+      "previous_class": null,
+      "site_specific": false,
+      "no_discharge_zone": false,
+      "rfp_high_quality_candidate": true,
+      "reach_description": "That portion of the river from its headwaters to Emory Creek",
+      "source_pdf_page": 25,
+      "source_printed_page": 22,
+      "source_line_start": 1252,
+      "source_line_end": 1253
+    },
+    {
+      "id": "sc-r61-69-2023-L1254",
+      "waterbody_name": "Oolenoy River",
+      "county_codes": [
+        "Pkns"
+      ],
+      "class_raw": "FW",
+      "class_code": "FW",
+      "previous_class": null,
+      "site_specific": false,
+      "no_discharge_zone": false,
+      "rfp_high_quality_candidate": false,
+      "reach_description": "That portion of the river from Emory Creek to its confluence with South Saluda River",
+      "source_pdf_page": 25,
+      "source_printed_page": 22,
+      "source_line_start": 1254,
+      "source_line_end": 1255
+    },
+    {
+      "id": "sc-r61-69-2023-L1274",
+      "waterbody_name": "Pig Pen Branch",
+      "county_codes": [
+        "Ocne"
+      ],
+      "class_raw": "ORW(FW)",
+      "class_code": "ORW",
+      "previous_class": "FW",
+      "site_specific": false,
+      "no_discharge_zone": false,
+      "rfp_high_quality_candidate": true,
+      "reach_description": "The entire branch tributary to Lick Log Creek",
+      "source_pdf_page": 25,
+      "source_printed_page": 22,
+      "source_line_start": 1274,
+      "source_line_end": 1274
+    },
+    {
+      "id": "sc-r61-69-2023-L1275",
+      "waterbody_name": "Pinckney Branch",
+      "county_codes": [
+        "Ocne"
+      ],
+      "class_raw": "FW",
+      "class_code": "FW",
+      "previous_class": null,
+      "site_specific": false,
+      "no_discharge_zone": false,
+      "rfp_high_quality_candidate": false,
+      "reach_description": "The entire branch tributary to Chattooga River",
+      "source_pdf_page": 25,
+      "source_printed_page": 22,
+      "source_line_start": 1275,
+      "source_line_end": 1275
+    },
+    {
+      "id": "sc-r61-69-2023-L1276",
+      "waterbody_name": "Pinnacle Lake",
+      "county_codes": [
+        "Pkns"
+      ],
+      "class_raw": "ORW(FW)",
+      "class_code": "ORW",
+      "previous_class": "FW",
+      "site_specific": false,
+      "no_discharge_zone": false,
+      "rfp_high_quality_candidate": true,
+      "reach_description": "The entire lake",
+      "source_pdf_page": 25,
+      "source_printed_page": 22,
+      "source_line_start": 1276,
+      "source_line_end": 1276
+    },
+    {
+      "id": "sc-r61-69-2023-L1305",
+      "waterbody_name": "Ramsey Creek",
+      "county_codes": [
+        "Ocne"
+      ],
+      "class_raw": "FW",
+      "class_code": "FW",
+      "previous_class": null,
+      "site_specific": false,
+      "no_discharge_zone": false,
+      "rfp_high_quality_candidate": false,
+      "reach_description": "The entire creek tributary to Chauga River",
+      "source_pdf_page": 26,
+      "source_printed_page": 23,
+      "source_line_start": 1305,
+      "source_line_end": 1305
+    },
+    {
+      "id": "sc-r61-69-2023-L1312",
+      "waterbody_name": "Reedy Branch",
+      "county_codes": [
+        "Ocne"
+      ],
+      "class_raw": "FW",
+      "class_code": "FW",
+      "previous_class": null,
+      "site_specific": false,
+      "no_discharge_zone": false,
+      "rfp_high_quality_candidate": false,
+      "reach_description": "The entire branch tributary to Chattooga River",
+      "source_pdf_page": 26,
+      "source_printed_page": 23,
+      "source_line_start": 1312,
+      "source_line_end": 1312
+    },
+    {
+      "id": "sc-r61-69-2023-L1313",
+      "waterbody_name": "Reedy Cove Creek",
+      "county_codes": [
+        "Pkns"
+      ],
+      "class_raw": "FW",
+      "class_code": "FW",
+      "previous_class": null,
+      "site_specific": false,
+      "no_discharge_zone": false,
+      "rfp_high_quality_candidate": false,
+      "reach_description": "The entire creek tributary to Eastatoe Creek",
+      "source_pdf_page": 26,
+      "source_printed_page": 23,
+      "source_line_start": 1313,
+      "source_line_end": 1313
+    },
+    {
+      "id": "sc-r61-69-2023-L1320",
+      "waterbody_name": "Rock Creek",
+      "county_codes": [
+        "Pkns"
+      ],
+      "class_raw": "TN",
+      "class_code": "TN",
+      "previous_class": null,
+      "site_specific": false,
+      "no_discharge_zone": false,
+      "rfp_high_quality_candidate": true,
+      "reach_description": "That portion of the creek within South Carolina",
+      "source_pdf_page": 26,
+      "source_printed_page": 23,
+      "source_line_start": 1320,
+      "source_line_end": 1320
+    },
+    {
+      "id": "sc-r61-69-2023-L1323",
+      "waterbody_name": "Rocky Bottom Creek",
+      "county_codes": [
+        "Pkns"
+      ],
+      "class_raw": "ORW(FW)",
+      "class_code": "ORW",
+      "previous_class": "FW",
+      "site_specific": false,
+      "no_discharge_zone": false,
+      "rfp_high_quality_candidate": true,
+      "reach_description": "The entire creek tributary to Eastatoe Creek",
+      "source_pdf_page": 26,
+      "source_printed_page": 23,
+      "source_line_start": 1323,
+      "source_line_end": 1323
+    },
+    {
+      "id": "sc-r61-69-2023-L1332",
+      "waterbody_name": "Rocky River",
+      "county_codes": [
+        "Abvl",
+        "Andn"
+      ],
+      "class_raw": "FW",
+      "class_code": "FW",
+      "previous_class": null,
+      "site_specific": false,
+      "no_discharge_zone": false,
+      "rfp_high_quality_candidate": false,
+      "reach_description": "The entire river tributary to Savannah River",
+      "source_pdf_page": 26,
+      "source_printed_page": 23,
+      "source_line_start": 1332,
+      "source_line_end": 1332
+    },
+    {
+      "id": "sc-r61-69-2023-L1398",
+      "waterbody_name": "Savannah River",
+      "county_codes": [
+        "Abvl",
+        "Andn"
+      ],
+      "class_raw": "TPGT",
+      "class_code": "TPGT",
+      "previous_class": null,
+      "site_specific": false,
+      "no_discharge_zone": false,
+      "rfp_high_quality_candidate": true,
+      "reach_description": "That portion of the river from Lake Hartwell Dam to the headwaters of Lake Richard B. Russell",
+      "source_pdf_page": 27,
+      "source_printed_page": 24,
+      "source_line_start": 1398,
+      "source_line_end": 1399
+    },
+    {
+      "id": "sc-r61-69-2023-L1400",
+      "waterbody_name": "Savannah River",
+      "county_codes": [
+        "Abvl",
+        "Aikn",
+        "Aldl",
+        "Andn",
+        "Brwl",
+        "Efld",
+        "Hmpt",
+        "Mcmk"
+      ],
+      "class_raw": "FW",
+      "class_code": "FW",
+      "previous_class": null,
+      "site_specific": false,
+      "no_discharge_zone": false,
+      "rfp_high_quality_candidate": false,
+      "reach_description": "That portion of the river from the headwaters of Lake Richard B. Russell to Seaboard Coastline Railroad",
+      "source_pdf_page": 27,
+      "source_printed_page": 24,
+      "source_line_start": 1400,
+      "source_line_end": 1406
+    },
+    {
+      "id": "sc-r61-69-2023-L1415",
+      "waterbody_name": "Sawhead Branch",
+      "county_codes": [
+        "Ocne"
+      ],
+      "class_raw": "FW",
+      "class_code": "FW",
+      "previous_class": null,
+      "site_specific": false,
+      "no_discharge_zone": false,
+      "rfp_high_quality_candidate": false,
+      "reach_description": "The entire branch tributary to Opossum Creek",
+      "source_pdf_page": 28,
+      "source_printed_page": 25,
+      "source_line_start": 1415,
+      "source_line_end": 1415
+    },
+    {
+      "id": "sc-r61-69-2023-L1446",
+      "waterbody_name": "Side of Mountain Creek",
+      "county_codes": [
+        "Pkns"
+      ],
+      "class_raw": "ORW(FW)",
+      "class_code": "ORW",
+      "previous_class": "FW",
+      "site_specific": false,
+      "no_discharge_zone": false,
+      "rfp_high_quality_candidate": true,
+      "reach_description": "The entire creek tributary to Eastatoe Creek",
+      "source_pdf_page": 28,
+      "source_printed_page": 25,
+      "source_line_start": 1446,
+      "source_line_end": 1448
+    },
+    {
+      "id": "sc-r61-69-2023-L1451",
+      "waterbody_name": "Six and Twenty Creek",
+      "county_codes": [
+        "Andn"
+      ],
+      "class_raw": "FW",
+      "class_code": "FW",
+      "previous_class": null,
+      "site_specific": false,
+      "no_discharge_zone": false,
+      "rfp_high_quality_candidate": false,
+      "reach_description": "The entire creek tributary to Lake Hartwell",
+      "source_pdf_page": 28,
+      "source_printed_page": 25,
+      "source_line_start": 1451,
+      "source_line_end": 1453
+    },
+    {
+      "id": "sc-r61-69-2023-L1465",
+      "waterbody_name": "Slatten Branch",
+      "county_codes": [
+        "Ocne"
+      ],
+      "class_raw": "ORW(FW)",
+      "class_code": "ORW",
+      "previous_class": "FW",
+      "site_specific": false,
+      "no_discharge_zone": false,
+      "rfp_high_quality_candidate": true,
+      "reach_description": "The entire branch tributary to East Fork Chattooga River",
+      "source_pdf_page": 29,
+      "source_printed_page": 26,
+      "source_line_start": 1465,
+      "source_line_end": 1466
+    },
+    {
+      "id": "sc-r61-69-2023-L1467",
+      "waterbody_name": "Smeltzer Creek",
+      "county_codes": [
+        "Ocne"
+      ],
+      "class_raw": "TN",
+      "class_code": "TN",
+      "previous_class": null,
+      "site_specific": false,
+      "no_discharge_zone": false,
+      "rfp_high_quality_candidate": true,
+      "reach_description": "That portion of the creek from its headwaters to S.C. Hwy 130",
+      "source_pdf_page": 29,
+      "source_printed_page": 26,
+      "source_line_start": 1467,
+      "source_line_end": 1468
+    },
+    {
+      "id": "sc-r61-69-2023-L1469",
+      "waterbody_name": "Smeltzer Creek",
+      "county_codes": [
+        "Ocne"
+      ],
+      "class_raw": "TPGT",
+      "class_code": "TPGT",
+      "previous_class": null,
+      "site_specific": false,
+      "no_discharge_zone": false,
+      "rfp_high_quality_candidate": true,
+      "reach_description": "That portion of the creek from S.C. Hwy 130 to North Fork Little River",
+      "source_pdf_page": 29,
+      "source_printed_page": 26,
+      "source_line_start": 1469,
+      "source_line_end": 1470
+    },
+    {
+      "id": "sc-r61-69-2023-L1494",
+      "waterbody_name": "South Saluda River",
+      "county_codes": [
+        "Gnvl",
+        "Pkns"
+      ],
+      "class_raw": "ORW(FW)",
+      "class_code": "ORW",
+      "previous_class": "FW",
+      "site_specific": false,
+      "no_discharge_zone": false,
+      "rfp_high_quality_candidate": true,
+      "reach_description": "That portion of the river from its headwaters to Table Rock Reservoir Dam",
+      "source_pdf_page": 29,
+      "source_printed_page": 26,
+      "source_line_start": 1494,
+      "source_line_end": 1495
+    },
+    {
+      "id": "sc-r61-69-2023-L1496",
+      "waterbody_name": "South Saluda River",
+      "county_codes": [
+        "Gnvl",
+        "Pkns"
+      ],
+      "class_raw": "TPGT",
+      "class_code": "TPGT",
+      "previous_class": null,
+      "site_specific": false,
+      "no_discharge_zone": false,
+      "rfp_high_quality_candidate": true,
+      "reach_description": "That portion of the river from Table Rock Reservoir Dam to Hwy 8",
+      "source_pdf_page": 29,
+      "source_printed_page": 26,
+      "source_line_start": 1496,
+      "source_line_end": 1497
+    },
+    {
+      "id": "sc-r61-69-2023-L1498",
+      "waterbody_name": "South Saluda River",
+      "county_codes": [
+        "Gnvl",
+        "Pkns"
+      ],
+      "class_raw": "FW",
+      "class_code": "FW",
+      "previous_class": null,
+      "site_specific": false,
+      "no_discharge_zone": false,
+      "rfp_high_quality_candidate": false,
+      "reach_description": "That portion of the river from S.C. Hwy 8 to junction with North Saluda River",
+      "source_pdf_page": 29,
+      "source_printed_page": 26,
+      "source_line_start": 1498,
+      "source_line_end": 1499
+    },
+    {
+      "id": "sc-r61-69-2023-L1524",
+      "waterbody_name": "Stevens Creek",
+      "county_codes": [
+        "Efld",
+        "Mcmk"
+      ],
+      "class_raw": "FW",
+      "class_code": "FW",
+      "previous_class": null,
+      "site_specific": false,
+      "no_discharge_zone": false,
+      "rfp_high_quality_candidate": false,
+      "reach_description": "The entire creek tributary to Savannah River",
+      "source_pdf_page": 29,
+      "source_printed_page": 26,
+      "source_line_start": 1524,
+      "source_line_end": 1524
+    },
+    {
+      "id": "sc-r61-69-2023-L1547",
+      "waterbody_name": "Swaford Creek",
+      "county_codes": [
+        "Ocne"
+      ],
+      "class_raw": "TN",
+      "class_code": "TN",
+      "previous_class": null,
+      "site_specific": false,
+      "no_discharge_zone": false,
+      "rfp_high_quality_candidate": true,
+      "reach_description": "The entire creek tributary to Whetstone Creek",
+      "source_pdf_page": 30,
+      "source_printed_page": 27,
+      "source_line_start": 1547,
+      "source_line_end": 1547
+    },
+    {
+      "id": "sc-r61-69-2023-L1554",
+      "waterbody_name": "Tamassee Creek",
+      "county_codes": [
+        "Ocne"
+      ],
+      "class_raw": "ORW(FW)",
+      "class_code": "ORW",
+      "previous_class": "FW",
+      "site_specific": false,
+      "no_discharge_zone": false,
+      "rfp_high_quality_candidate": true,
+      "reach_description": "That portion of the creek from its headwaters to end of U.S. Forest Service Land",
+      "source_pdf_page": 30,
+      "source_printed_page": 27,
+      "source_line_start": 1554,
+      "source_line_end": 1555
+    },
+    {
+      "id": "sc-r61-69-2023-L1556",
+      "waterbody_name": "Tamassee Creek",
+      "county_codes": [
+        "Ocne"
+      ],
+      "class_raw": "FW",
+      "class_code": "FW",
+      "previous_class": null,
+      "site_specific": false,
+      "no_discharge_zone": false,
+      "rfp_high_quality_candidate": false,
+      "reach_description": "That portion of the creek from U.S. Forest Service Land to its confluence with Cheohee Creek",
+      "source_pdf_page": 30,
+      "source_printed_page": 27,
+      "source_line_start": 1556,
+      "source_line_end": 1558
+    },
+    {
+      "id": "sc-r61-69-2023-L1562",
+      "waterbody_name": "Thompson River",
+      "county_codes": [
+        "Ocne"
+      ],
+      "class_raw": "TN",
+      "class_code": "TN",
+      "previous_class": null,
+      "site_specific": false,
+      "no_discharge_zone": false,
+      "rfp_high_quality_candidate": true,
+      "reach_description": "That portion of the river from the State line to Lake Jocassee",
+      "source_pdf_page": 30,
+      "source_printed_page": 27,
+      "source_line_start": 1562,
+      "source_line_end": 1563
+    },
+    {
+      "id": "sc-r61-69-2023-L1565",
+      "waterbody_name": "Tilly Branch",
+      "county_codes": [
+        "Ocne"
+      ],
+      "class_raw": "FW",
+      "class_code": "FW",
+      "previous_class": null,
+      "site_specific": false,
+      "no_discharge_zone": false,
+      "rfp_high_quality_candidate": false,
+      "reach_description": "The entire branch tributary to Chattooga River",
+      "source_pdf_page": 30,
+      "source_printed_page": 27,
+      "source_line_start": 1565,
+      "source_line_end": 1565
+    },
+    {
+      "id": "sc-r61-69-2023-L1597",
+      "waterbody_name": "Townes Creek",
+      "county_codes": [
+        "Ocne"
+      ],
+      "class_raw": "TN",
+      "class_code": "TN",
+      "previous_class": null,
+      "site_specific": false,
+      "no_discharge_zone": false,
+      "rfp_high_quality_candidate": true,
+      "reach_description": "That portion of the creek from the confluence of West Fork and Crane Creek to Lake Cherokee",
+      "source_pdf_page": 31,
+      "source_printed_page": 28,
+      "source_line_start": 1597,
+      "source_line_end": 1598
+    },
+    {
+      "id": "sc-r61-69-2023-L1601",
+      "waterbody_name": "Tugaloo River",
+      "county_codes": [
+        "Ocne"
+      ],
+      "class_raw": "FW",
+      "class_code": "FW",
+      "previous_class": null,
+      "site_specific": false,
+      "no_discharge_zone": false,
+      "rfp_high_quality_candidate": false,
+      "reach_description": "That portion of the river from Tugaloo Dam to Lake Hartwell",
+      "source_pdf_page": 31,
+      "source_printed_page": 28,
+      "source_line_start": 1601,
+      "source_line_end": 1602
+    },
+    {
+      "id": "sc-r61-69-2023-L1613",
+      "waterbody_name": "Turpin Branch",
+      "county_codes": [
+        "Ocne"
+      ],
+      "class_raw": "FW",
+      "class_code": "FW",
+      "previous_class": null,
+      "site_specific": false,
+      "no_discharge_zone": false,
+      "rfp_high_quality_candidate": false,
+      "reach_description": "The entire branch tributary to Chattooga River",
+      "source_pdf_page": 31,
+      "source_printed_page": 28,
+      "source_line_start": 1613,
+      "source_line_end": 1613
+    },
+    {
+      "id": "sc-r61-69-2023-L1615",
+      "waterbody_name": "Twelvemile Creek",
+      "county_codes": [
+        "Pkns"
+      ],
+      "class_raw": "FW",
+      "class_code": "FW",
+      "previous_class": null,
+      "site_specific": false,
+      "no_discharge_zone": false,
+      "rfp_high_quality_candidate": false,
+      "reach_description": "The entire creek tributary to Lake Hartwell",
+      "source_pdf_page": 31,
+      "source_printed_page": 28,
+      "source_line_start": 1615,
+      "source_line_end": 1615
+    },
+    {
+      "id": "sc-r61-69-2023-L1619",
+      "waterbody_name": "Three and Twenty Creek",
+      "county_codes": [
+        "Andn"
+      ],
+      "class_raw": "FW",
+      "class_code": "FW",
+      "previous_class": null,
+      "site_specific": false,
+      "no_discharge_zone": false,
+      "rfp_high_quality_candidate": false,
+      "reach_description": "The entire creek tributary to Lake Hartwell",
+      "source_pdf_page": 31,
+      "source_printed_page": 28,
+      "source_line_start": 1619,
+      "source_line_end": 1621
+    },
+    {
+      "id": "sc-r61-69-2023-L1738",
+      "waterbody_name": "West Fork",
+      "county_codes": [
+        "Ocne"
+      ],
+      "class_raw": "TN",
+      "class_code": "TN",
+      "previous_class": null,
+      "site_specific": false,
+      "no_discharge_zone": false,
+      "rfp_high_quality_candidate": true,
+      "reach_description": "That portion from its headwaters to its confluence with Crane Creek",
+      "source_pdf_page": 33,
+      "source_printed_page": 30,
+      "source_line_start": 1738,
+      "source_line_end": 1739
+    },
+    {
+      "id": "sc-r61-69-2023-L1745",
+      "waterbody_name": "Whetstone Creek",
+      "county_codes": [
+        "Ocne"
+      ],
+      "class_raw": "TN",
+      "class_code": "TN",
+      "previous_class": null,
+      "site_specific": false,
+      "no_discharge_zone": false,
+      "rfp_high_quality_candidate": true,
+      "reach_description": "The entire creek tributary to Chattooga River",
+      "source_pdf_page": 33,
+      "source_printed_page": 30,
+      "source_line_start": 1745,
+      "source_line_end": 1745
+    },
+    {
+      "id": "sc-r61-69-2023-L1750",
+      "waterbody_name": "White Oak Creek",
+      "county_codes": [
+        "Ocne"
+      ],
+      "class_raw": "TN",
+      "class_code": "TN",
+      "previous_class": null,
+      "site_specific": false,
+      "no_discharge_zone": false,
+      "rfp_high_quality_candidate": true,
+      "reach_description": "That portion of the creek from its headwaters to Knox Creek",
+      "source_pdf_page": 33,
+      "source_printed_page": 30,
+      "source_line_start": 1750,
+      "source_line_end": 1751
+    },
+    {
+      "id": "sc-r61-69-2023-L1752",
+      "waterbody_name": "Whitewater River",
+      "county_codes": [
+        "Ocne"
+      ],
+      "class_raw": "ORW(TPGT)",
+      "class_code": "ORW",
+      "previous_class": "TPGT",
+      "site_specific": false,
+      "no_discharge_zone": false,
+      "rfp_high_quality_candidate": true,
+      "reach_description": "That portion of the river from State line to Lake Jocassee",
+      "source_pdf_page": 33,
+      "source_printed_page": 30,
+      "source_line_start": 1752,
+      "source_line_end": 1753
+    },
+    {
+      "id": "sc-r61-69-2023-L1764",
+      "waterbody_name": "Willis Creek",
+      "county_codes": [
+        "Pkns"
+      ],
+      "class_raw": "ORW(FW)",
+      "class_code": "ORW",
+      "previous_class": "FW",
+      "site_specific": false,
+      "no_discharge_zone": false,
+      "rfp_high_quality_candidate": true,
+      "reach_description": "That portion of the creek from its headwaters to the northern boundary of Table Rock Resort property",
+      "source_pdf_page": 34,
+      "source_printed_page": 31,
+      "source_line_start": 1764,
+      "source_line_end": 1766
+    },
+    {
+      "id": "sc-r61-69-2023-L1767",
+      "waterbody_name": "Willis Creek",
+      "county_codes": [
+        "Pkns"
+      ],
+      "class_raw": "TN",
+      "class_code": "TN",
+      "previous_class": null,
+      "site_specific": false,
+      "no_discharge_zone": false,
+      "rfp_high_quality_candidate": true,
+      "reach_description": "That portion of the creek from the northern boundary of Table Rock Resort property to its confluence with Oolenoy River",
+      "source_pdf_page": 34,
+      "source_printed_page": 31,
+      "source_line_start": 1767,
+      "source_line_end": 1769
+    },
+    {
+      "id": "sc-r61-69-2023-L1783",
+      "waterbody_name": "Wright Creek",
+      "county_codes": [
+        "Ocne"
+      ],
+      "class_raw": "ORW(TPGT)",
+      "class_code": "ORW",
+      "previous_class": "TPGT",
+      "site_specific": false,
+      "no_discharge_zone": false,
+      "rfp_high_quality_candidate": true,
+      "reach_description": "The entire creek tributary to Lake Jocassee",
+      "source_pdf_page": 34,
+      "source_printed_page": 31,
+      "source_line_start": 1783,
+      "source_line_end": 1783
+    }
+  ],
+  "source_extraction": {
+    "method": "Complete source-indexed text retrieved from the SCDES regulation PDF; selected records reconstructed from exact contiguous source rows.",
+    "source_line_count": 1786,
+    "pdf_page_count": 34,
+    "text_file": "r61-69-current.fulltext.txt",
+    "normalized_record_scope": "105 selected rows; use native polygon/line intersection to determine reporting membership."
+  }
+}

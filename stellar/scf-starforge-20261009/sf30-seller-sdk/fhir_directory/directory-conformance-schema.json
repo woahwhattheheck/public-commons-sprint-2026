@@ -368,7 +368,11 @@
     "index",
     "rules",
     "summary",
-    "package"
+    "package",
+    "foreignKeys",
+    "foreignKeyCandidates",
+    "foreignKeyMatches",
+    "foreignKeyCoverage"
   ],
   "families": [
     {
@@ -386,7 +390,11 @@
     "findings": 1000000,
     "rows": 250000,
     "fileBytes": 1073741824,
-    "interactiveBytes": 4194304
+    "interactiveBytes": 4194304,
+    "foreignKeyCandidates": 1000000,
+    "foreignKeyOutcomes": 2000000,
+    "foreignKeyMatches": 2000000,
+    "foreignKeyTupleBytes": 1048576
   },
   "semantics": [
     "Original source and edition IDs, logical JSON number tokens and member bytes are unchanged.",
@@ -398,6 +406,188 @@
     "No result is a blanket certification. A reviewed receiving disposition retains all findings and coverage limitations.",
     "Comparison reports complete rule-outcome counts and row populations, without silently matching entities from different sources.",
     "Whole editable export includes every assessment index, finding, rule, report and original subject.",
-    "Accept-for-receiving requires an explicit accepted-deviation or not-applicable disposition for every error; grouped decisions freeze every matched original finding ID. Findings are never removed."
-  ]
+    "Accept-for-receiving requires an explicit accepted-deviation or not-applicable disposition for every error; grouped decisions freeze every matched original finding ID. Findings are never removed.",
+    "Each exact original HSDS tabular foreignKeys declaration is evaluated separately, including repeated declarations. String and equal-cardinality array field tuples are supported; the retained 3.3.1 edition declares 38 single-field foreign keys and no composites.",
+    "Original CSV and top-level rows in an explicitly selected HSDS tables JSON document are checked. Nested/entity/page JSON has explicit tabular noncoverage; native parent links never supply invented foreign-key cells.",
+    "Original missingValues and existing field casting determine logical keys. Physical absence, JSON null and exact missing markers remain distinct. This implementation explicitly selects SQL MATCH SIMPLE for otherwise interpretable nullable tuples; field required/primary-key checks stay separate.",
+    "All original target candidates and every matching edge are retained. Existence can pass with ambiguous identity; no candidate is silently selected. A target table outside established selected coverage is unevaluated, distinct from a missing key within a received table.",
+    "The foreign-key implementation has a new exact engine edition and four complete additional files. Earlier seven-file assessment records and their original plans remain readable and immutable."
+  ],
+  "implementationEdition": "stellar-forge.directory-conformance.hsds-foreign-keys.20261013",
+  "reads": [
+    {
+      "method": "GET",
+      "path": "/api/directory/conformance/assessments/:id/foreign-keys",
+      "python": "directory_conformance_foreign_keys",
+      "filters": [
+        "offset",
+        "limit",
+        "table",
+        "state",
+        "ruleId",
+        "sourceId",
+        "recordId"
+      ],
+      "querySchema": "conformance_foreign_keys",
+      "response": "conformance_relationship_page"
+    },
+    {
+      "method": "GET",
+      "path": "/api/directory/conformance/assessments/:id/foreign-key-candidates",
+      "python": "directory_conformance_foreign_key_candidates",
+      "filters": [
+        "offset",
+        "limit",
+        "table",
+        "state",
+        "groupId",
+        "sourceId",
+        "recordId"
+      ],
+      "querySchema": "conformance_foreign_key_candidates",
+      "response": "conformance_relationship_page"
+    },
+    {
+      "method": "GET",
+      "path": "/api/directory/conformance/assessments/:id/foreign-key-matches",
+      "python": "directory_conformance_foreign_key_matches",
+      "filters": [
+        "offset",
+        "limit",
+        "outcomeId",
+        "candidateId"
+      ],
+      "querySchema": "conformance_foreign_key_matches",
+      "response": "conformance_relationship_page"
+    }
+  ],
+  "querySchemas": {
+    "conformance_foreign_keys": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "offset": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 10000000,
+          "default": 0
+        },
+        "limit": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 250,
+          "default": 50
+        },
+        "table": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "state": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "ruleId": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "sourceId": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "recordId": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        }
+      }
+    },
+    "conformance_foreign_key_candidates": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "offset": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 10000000,
+          "default": 0
+        },
+        "limit": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 250,
+          "default": 50
+        },
+        "table": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "state": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "groupId": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "sourceId": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "recordId": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        }
+      }
+    },
+    "conformance_foreign_key_matches": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "offset": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 10000000,
+          "default": 0
+        },
+        "limit": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 250,
+          "default": 50
+        },
+        "outcomeId": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "candidateId": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        }
+      }
+    }
+  },
+  "pageResponses": {
+    "conformance_relationship_page": {
+      "description": "The complete filtered rows in original SQLite ordinal order, bounded by the requested count and 4 MiB total body bytes. Follow each exact nextOffset; no target list is truncated into a count-only result.",
+      "fields": {
+        "assessmentId": "original immutable assessment ID",
+        "rows": "complete original relationship record bodies",
+        "total": "full filtered count",
+        "offset": "requested offset",
+        "limit": "requested count",
+        "nextOffset": "next contiguous offset, or null at completion",
+        "bytes": "sum of original stored JSON body bytes returned",
+        "byteBudget": 4194304
+      }
+    }
+  },
+  "fileDescriptions": {
+    "foreignKeys": "Complete JSON Lines: one outcome for every selected original row and exact original foreign-key declaration, with full declaration/source pointer, original row reference, interpretation components, constraint/resolution status and matching-target count.",
+    "foreignKeyCandidates": "Complete JSON Lines: every original target row for each selected declaration target group, including null, invalid and non-tabular rows. Interpreted values do not replace original cells or JSON.",
+    "foreignKeyMatches": "Complete JSON Lines: every exact matching source-outcome/target-candidate edge. Multiple matches remain separate original references; no winning target is inferred.",
+    "foreignKeyCoverage": "Complete JSON: all 38 original declarations, source pointers, selected and unselected coverage, target groups, original table presence, null/type policy, operation counts and explicit implementation limits."
+  }
 }

@@ -1,0 +1,44 @@
+/* Quiet, readable experiment controls and native quantitative results. */
+.experiment-workspace .section-header h2{margin:0;font-size:1.15rem}
+.experiment-workspace .section-body>h3{margin-top:28px}
+.experiment-workspace small{display:block;color:#59636b;line-height:1.5}
+.experiment-workspace .number-cell{font-variant-numeric:tabular-nums;white-space:nowrap}
+.experiment-state{display:inline-flex;border:1px solid #bfc5ca;border-radius:3px;padding:3px 7px;color:#293037;background:#f3f4f5;font-size:.82rem;white-space:nowrap}
+.experiment-counts{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));border:1px solid #d4d8dc;margin:8px 0 20px}
+.experiment-counts>div{padding:12px 16px;border-right:1px solid #d4d8dc}
+.experiment-counts>div:last-child{border:0}
+.experiment-counts span{display:block;font-size:.85rem;color:#535e66}
+.experiment-counts strong{display:block;font-size:1.6rem;font-weight:600;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.experiment-filters{display:grid;grid-template-columns:minmax(160px,2fr) repeat(2,minmax(130px,1fr));gap:12px;margin:24px 0 14px}
+.experiment-filters label,.experiment-form label{display:flex;flex-direction:column;gap:6px;font-size:.88rem;font-weight:500}
+.experiment-filters input,.experiment-filters select,.experiment-form input:not([type=checkbox]),.experiment-form select,.experiment-form textarea{width:100%;box-sizing:border-box}
+.experiment-pagination{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:16px 0}
+.experiment-pagination span{margin-right:auto;font-variant-numeric:tabular-nums}
+.experiment-form{width:100%;min-width:0}
+.experiment-form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin:12px 0}
+.experiment-form-grid>.full{grid-column:1/-1}
+.experiment-form fieldset{margin:20px 0;padding:16px;border:1px solid #cbd0d5}
+.experiment-form legend{font-weight:600;padding:0 7px}
+.experiment-form p{font-size:.9rem;font-weight:400;color:#515d66}
+.experiment-choices{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;max-height:260px;overflow:auto;padding:2px}
+.experiment-form .experiment-choice{display:flex;flex-direction:row;align-items:flex-start;gap:8px;border:1px solid #d8dce0;padding:10px;font-weight:400}
+.experiment-choice input{flex:0 0 auto;margin:4px 0 0}
+.experiment-choice span{min-width:0;overflow-wrap:anywhere}
+.experiment-choice small{display:block;color:#5d666e;font-size:.78rem;margin-top:3px}
+.experiment-axis{display:grid;grid-template-columns:minmax(160px,1fr) minmax(120px,1fr) minmax(180px,1.3fr) auto;align-items:start;gap:10px;border-top:1px solid #d8dce0;padding:16px 0}
+.experiment-axis>button{align-self:center}
+.experiment-preview{border:1px solid #c6ccd2;background:#f4f5f6;padding:14px;margin-top:20px}
+.experiment-preview [role=status]{margin-top:12px;font-size:.9rem}
+.experiment-workspace details{border:1px solid #d2d7dc;padding:12px;margin:14px 0}
+.experiment-workspace summary,.experiment-preview summary{cursor:pointer;font-weight:600}
+.experiment-workspace button.primary,.experiment-form button.primary{background:#2f3841;border-color:#2f3841;color:#fff}
+.experiment-workspace :focus-visible,.experiment-form :focus-visible{outline:2px solid #313b45;outline-offset:2px}
+@media(max-width:900px){.experiment-axis{grid-template-columns:repeat(2,minmax(0,1fr))}.experiment-axis label:nth-child(3){grid-column:1/-1}}
+@media(max-width:640px){.experiment-counts{grid-template-columns:repeat(2,minmax(0,1fr))}.experiment-counts>div{border-bottom:1px solid #d4d8dc}.experiment-filters,.experiment-form-grid,.experiment-choices,.experiment-axis{grid-template-columns:minmax(0,1fr)}.experiment-axis label:nth-child(3){grid-column:auto}}
+
+.experiment-jump{display:flex;align-items:center;gap:7px;font-size:.86rem}
+.experiment-jump input{width:12ch;max-width:32vw;font-variant-numeric:tabular-nums}
+.experiment-native-stage{margin:0 0 9px;min-width:150px}
+.experiment-native-stage:last-child{margin-bottom:0}
+.experiment-native-stage strong{font-size:.85rem;font-weight:500;white-space:nowrap}
+.experiment-native-stage button{font-size:.78rem;margin-top:4px}

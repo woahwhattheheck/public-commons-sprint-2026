@@ -320,13 +320,38 @@ class Workspace(_original.Workspace):
     def _get(self,ident,step,connection,request_url):
         if not re.fullmatch(r"[a-z][a-z0-9-]{0,63}",step):raise InputError("Invalid acquisition step")
         path=self._op_path(ident);saved=path/"steps"/(step+".json")
+        def verified(document_id):
+            doc=self._document(document_id)
+            if doc["receipt"]["requestUrl"]!=request_url or doc["receipt"]["status"]!=200:
+                raise InputError("Retained HTTP document belongs to another request or failed response")
+            return doc
         if saved.exists():
-            record=load_json(saved.read_bytes())
-            if record.get("requestUrl")!=request_url:raise InputError("Retained HTTP step belongs to another original request")
-            return self._document(record["documentId"])
-        numbers=[int(p.stem.rsplit("-",1)[1]) for p in (path/"attempts").glob(step+"-*.json") if p.stem.rsplit("-",1)[1].isdigit()]
-        attempt=path/"attempts"/(step+"-"+str(max(numbers,default=0)+1).zfill(6)+".json")
+            _original.regular(saved,65536);record=load_json(saved.read_bytes())
+            source.exact(record,{"requestUrl","documentId"},"retained HTTP step",{"requestUrl","documentId"})
+            if record["requestUrl"]!=request_url:raise InputError("Retained HTTP step belongs to another original request")
+            return verified(record["documentId"])
+        candidates=[]
+        for candidate in (path/"attempts").glob(step+"-*.json"):
+            suffix=candidate.stem.rsplit("-",1)[1]
+            if suffix.isdigit():candidates.append((int(suffix),candidate))
+        # A received response can outlive interruption before its step record.
+        # Bind the original complete receipt before issuing another provider GET.
+        for _,candidate in sorted(candidates,reverse=True):
+            _original.regular(candidate,131072);previous=load_json(candidate.read_bytes())
+            if previous.get("schema")!="stellar-forge.edr-http-attempt.v1" or previous.get("requestUrl")!=request_url:
+                raise InputError("Retained HTTP attempt belongs to another original request")
+            if previous.get("status")!="received":continue
+            receipt=previous.get("receipt")
+            if not isinstance(receipt,dict):raise InputError("Received HTTP attempt omitted its original receipt")
+            if receipt.get("status")!=200:continue
+            doc=verified(previous.get("documentId"))
+            if receipt!=doc["receipt"]:raise InputError("Received HTTP attempt differs from its verified original document")
+            retained(saved,json_bytes({"requestUrl":request_url,"documentId":doc["id"]}))
+            return doc
+        attempt=path/"attempts"/(step+"-"+str(max((n for n,_ in candidates),default=0)+1).zfill(6)+".json")
         doc=self._http(connection,request_url,attempt)
+        if doc["receipt"]["requestUrl"]!=request_url or doc["receipt"]["status"]!=200:
+            raise InputError("Original HTTP response differs from this acquisition step")
         retained(saved,json_bytes({"requestUrl":request_url,"documentId":doc["id"]}))
         return doc
 

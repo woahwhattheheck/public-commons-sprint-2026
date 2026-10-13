@@ -142,7 +142,7 @@ A reviewed mapping can choose a plain native integer or number column. That is a
 
 ## Operations and continuity
 
-Each browse or acquisition uses an explicit stable operation ID. The retained request binds the connection and resource, or the acquisition query and source label. The same ID cannot be reused for changed inputs. Every successful GET step can be resumed without making that request again. A provider 429 or 503 with a Retry-After value records a deadline; a continuation respects that original deadline.
+Each browse or acquisition uses an explicit stable operation ID. The retained request binds the connection and resource, or the acquisition query and source label. The same ID cannot be reused for changed inputs. Every successful GET step can be resumed without making that request again. A complete retained response whose step record was interrupted is verified against its original request and receipt, then adopted before another GET. A provider 429 or 503 with a Retry-After value records a deadline; a continuation respects that original deadline.
 
 Operation state, successful raw documents and actual failures remain in the original workspace. A completed acquisition returns its original source. Changing a selection creates a new saved query and operation; the original failed or partial request stays available for review.
 
@@ -156,10 +156,14 @@ The dataset directory contains data.csv, dataset.json and EDR lineage. The linea
 
 A recipient uses an independent workspace. Acceptance checks exact project bytes, source and plan identities, native build and snapshot, complete query traversal, exported data and cold reopen. Merchant configuration and buyer offer drafting are separate explicit product inputs. A public reference dataset does not supply payment terms, a seller account or a customer agreement.
 
+## Operator, merchant and customer integration
+
+The [provider client guide](PROVIDER_CLIENT.md) gives the complete configured-operator/MCP workflow, retained file receiving, seller and buyer commands, original native reference command and customer acceptance programme. It preserves explicit source rights and seller/payment selections.
+
 ## Source ownership and execution state
 
 This application is additive under `sf30-seller-sdk/edr` and reuses the maintained XML source format / NativeEngine integration. It does not replace the existing ERDDAP, NetCDF, Connected Systems or SensorThings applications.
 
 Original operation: `SCF-EDR-COVERAGEJSON-F1CB-20261013`.
 
-The five native publisher HTTP responses above are complete. The original parser/mapping and Workspace check is in progress; the product's final native, operator, installed receiving and publication receipts are recorded in the original delivery result when those phases actually finish.
+The five original publisher HTTP responses are retained in full. The original native operation has completed both selected datasets: 12 point cells and 54 cube cells, complete cursor traversal, exact project and dataset exports, independent receiving and cold reopen. The publisher recipe preserves the initial extraction-array comparison receipt and separately verifies the native API's named-column row representation. The additional quarter-window acquisition, operator browser and installed receiving remain separate recorded phases; their results are reported only after those original operations finish.

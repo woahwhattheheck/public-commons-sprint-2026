@@ -10,6 +10,7 @@ import uuid
 from directory_runtime import (InputError,ConflictError,original_server,source,atomic_json,safe_read)
 from directory_workspace import Workspace
 from directory_receiving import MAX_PACKET
+from directory_operating_plans import MAX_REQUEST as OPERATING_PLAN_REQUEST
 from referral_server import Handler as BaseHandler
 import directory_schema as schema
 
@@ -56,6 +57,15 @@ class Handler(BaseHandler):
         target=self._gate(api=False)
         if not target.path.startswith("/api/directory"):return super()._get()
         self._gate();p=self._parts(target.path);ws=self.server.workspace;t=p[2:]
+        if t==["operating-plans","catalog"]:
+            self._query(target,());return self._json(ws.directory_operating_catalogue())
+        if len(t)==3 and t[0]=="operatingPlans"and t[2]in {"document","draft","input","basis"}:
+            if t[2]=="draft":
+                q=self._query(target,("revision",));revision=self._integer(q["revision"],"revision",1)if "revision"in q else None
+                return self._json(ws.directory_operating_plan_draft(t[1],revision))
+            self._query(target,())
+            method={"document":ws.directory_operating_plan_document,"input":ws.directory_operating_plan_input,"basis":ws.directory_operating_plan_basis}[t[2]]
+            return self._json(method(t[1]))
         if t==["catalogue"]:
             self._query(target,());return self._json(ws.directory_catalogue())
         if t==["state"]:
@@ -116,6 +126,18 @@ class Handler(BaseHandler):
         if len(t)==3 and t[0]=="selections"and t[2]=="candidates":
             q,offset,limit=self._page_args(target,("query",));return self._json(ws.directory_selection_page(t[1],offset,limit,q.get("query","")))
         if len(t)>=4 and t[:2]==["conformance","assessments"]:
+            if len(t)==4 and t[3]=="foreign-keys":
+                q,offset,limit=self._page_args(target,("table","state","ruleId","sourceId","recordId"))
+                return self._json(ws.directory_conformance_foreign_keys(t[2],offset,limit,
+                    q.get("table"),q.get("state"),q.get("ruleId"),q.get("sourceId"),q.get("recordId")))
+            if len(t)==4 and t[3]=="foreign-key-candidates":
+                q,offset,limit=self._page_args(target,("table","state","groupId","sourceId","recordId"))
+                return self._json(ws.directory_conformance_foreign_key_candidates(t[2],offset,limit,
+                    q.get("table"),q.get("state"),q.get("groupId"),q.get("sourceId"),q.get("recordId")))
+            if len(t)==4 and t[3]=="foreign-key-matches":
+                q,offset,limit=self._page_args(target,("outcomeId","candidateId"))
+                return self._json(ws.directory_conformance_foreign_key_matches(t[2],offset,limit,
+                    q.get("outcomeId"),q.get("candidateId")))
             if len(t)==4 and t[3]in {"findings","rows"}:
                 if t[3]=="findings":
                     q,offset,limit=self._page_args(target,("severity","table","code","sourceId","recordId"))
@@ -157,7 +179,12 @@ class Handler(BaseHandler):
         routes={tuple(a["path"].split("/")[3:]):getattr(ws,a["python"])for a in schema.catalogue()["actions"]}
         routes.update({("connections",):ws.directory_connection,("requests",):ws.directory_request,
             ("editions",):ws.directory_edition,("comparisons",):ws.directory_compare,("imports",):ws.save_directory_import})
-        if tuple(t)in routes:return self._json(routes[tuple(t)](self._json_body()),201)
+        if tuple(t)in routes:
+            if t and t[0]=="operating-plans":
+                value=source.json_value(self._body(OPERATING_PLAN_REQUEST).read())
+                if not isinstance(value,dict):raise InputError("Expected one complete Operating Plans JSON object")
+            else:value=self._json_body()
+            return self._json(routes[tuple(t)](value),201)
         if t==["discover"]:
             v=self._json_body(("connectionId","operationId"),("connectionId","operationId"))
             return self._json(ws.directory_discover(v["connectionId"],v["operationId"]),201)

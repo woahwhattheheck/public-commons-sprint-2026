@@ -3,7 +3,7 @@
  * Compares retained physical outputs; it does not run or calibrate a model.
  * See SCENARIO_DECISIONS.md for the adapter contract.
  */
-export const VERSION = "1.0.0";
+export const VERSION = "1.1.1";
 export const DEFAULT_METRICS = Object.freeze([
   Object.freeze({id:"nitrogen_export",label:"Nitrogen export",unit:"kg/year",nonnegative:true}),
   Object.freeze({id:"phosphorus_export",label:"Phosphorus export",unit:"kg/year",nonnegative:true}),
@@ -17,6 +17,8 @@ const directionValid = v => v === "minimize" || v === "maximize";
 const own = (object,key) => Object.prototype.hasOwnProperty.call(object || {},key);
 const clone = v => JSON.parse(JSON.stringify(v));
 const numeric = v => finite(v) ? v : null;
+const PAGE_SIZES = Object.freeze([25,50,100,250]);
+const numberFormatter = new Intl.NumberFormat(undefined,{maximumSignificantDigits:7});
 const selected = (supplied,available) => Array.isArray(supplied) ? unique(supplied.map(identifier)).filter(id => available.includes(id)) : available.slice();
 
 function normalizeDataset(input) {
@@ -376,7 +378,7 @@ function csvCell(value) {
 export function toJSON(comparison) {
   return JSON.stringify(comparison,null,2) + "\n";
 }
-export function toCSV(comparison) {
+export function* toCSVChunks(comparison) {
   const headers = [
     "workspace_id","baseline_id","alternative_id","alternative_label","catchment_id","metric_id","metric_label",
     "baseline_run_id","alternative_run_id","baseline_grid_id","alternative_grid_id",
@@ -390,9 +392,13 @@ export function toCSV(comparison) {
     "exclusion_reasons","flags","pareto_status","dominated_by","priority_score","priority_rank","priority_status",
     "priority_direction","priority_raw_weight","common_alternative_ids"
   ];
-  const lines = [headers.join(",")];
-  comparison.rows.forEach(row => {
-    const group = comparison.groups.find(g => g.catchment_id === row.catchment_id);
+  const commonSets = new Map();
+  comparison.groups.forEach(group => {
+    if (!commonSets.has(group.catchment_id)) commonSets.set(group.catchment_id,csvCell(group.common_alternative_ids.join(" | ")));
+  });
+  yield headers.join(",") + "\r\n";
+  const lines = [];
+  for (const row of comparison.rows) {
     const b = row.baseline, a = row.alternative;
     const bm = row.baseline_measurement, am = row.alternative_measurement, native = row.native_change;
     const values = [
@@ -405,14 +411,17 @@ export function toCSV(comparison) {
       native ? native.reasons.join(" | ") : "",native && native.artifact_sha256,
       row.exclusion_reasons.join(" | "),row.flags.join(" | "),row.pareto_status,row.dominated_by.join(" | "),
       row.priority_score,row.priority_rank,row.priority_status,comparison.selection.directions[row.metric_id],
-      comparison.selection.priority.weights[row.metric_id],
-      group ? group.common_alternative_ids.join(" | ") : ""
+      comparison.selection.priority.weights[row.metric_id]
     ];
-    lines.push(values.map(csvCell).join(","));
-  });
-  return lines.join("\r\n") + "\r\n";
+    lines.push(values.map(csvCell).join(",") + "," + (commonSets.get(row.catchment_id) || "") + "\r\n");
+    if (lines.length === 256) {yield lines.join(""); lines.length = 0;}
+  }
+  if (lines.length) yield lines.join("");
 }
-export function toText(comparison) {
+export function toCSV(comparison) {
+  return Array.from(toCSVChunks(comparison)).join("");
+}
+export function* toTextChunks(comparison) {
   const number = value => value === null || value === undefined ? "unavailable" : String(value);
   const lines = [
     "SCENARIO DECISION COMPARISON",
@@ -425,7 +434,14 @@ export function toText(comparison) {
     ""
   ];
   if (comparison.issues.length) lines.push("INPUT NOTES",...comparison.issues.map(issue => "- " + issue),"");
-  comparison.groups.forEach(group => {
+  yield lines.join("\n") + "\n";
+  const scopeRows = new Map();
+  comparison.rows.forEach(row => {
+    if (!scopeRows.has(row.catchment_id)) scopeRows.set(row.catchment_id,[]);
+    scopeRows.get(row.catchment_id).push(row);
+  });
+  for (const group of comparison.groups) {
+    lines.length = 0;
     lines.push(
       "REPORTING SCOPE: " + group.catchment_id,
       "Common eligible alternative set: " + (group.common_alternative_ids.join(", ") || "none"),
@@ -442,7 +458,7 @@ export function toText(comparison) {
           "; constant " + criterion.constant + ".");
       });
     }
-    comparison.rows.filter(row => row.catchment_id === group.catchment_id).forEach(row => {
+    (scopeRows.get(group.catchment_id) || []).forEach(row => {
       const b = row.baseline, a = row.alternative, bm = row.baseline_measurement, am = row.alternative_measurement;
       lines.push("",
         row.alternative_label + " [" + row.alternative_id + "] / " + row.metric_label,
@@ -468,8 +484,11 @@ export function toText(comparison) {
         "User priority: " + row.priority_status + "; score " + number(row.priority_score) + "; rank " + number(row.priority_rank) + ".");
     });
     lines.push("");
-  });
-  return lines.join("\n") + "\n";
+    yield lines.join("\n") + "\n";
+  }
+}
+export function toText(comparison) {
+  return Array.from(toTextChunks(comparison)).join("");
 }
 
 let mountCount = 0;
@@ -487,7 +506,7 @@ function element(document,tag,attributes,...children) {
 }
 function displayNumber(value,sign = false) {
   if (!finite(value)) return "Unavailable";
-  const formatted = new Intl.NumberFormat(undefined,{maximumSignificantDigits:7}).format(value === 0 ? 0 : value);
+  const formatted = numberFormatter.format(value === 0 ? 0 : value);
   return sign && value > 0 ? "+" + formatted : formatted;
 }
 function safeFilename(value) {
@@ -507,7 +526,8 @@ export function mount(container,input,options = {}) {
     catchment_ids:data.catchment_ids.slice(),
     directions:{},priority:{enabled:false,weights:{}},
     query:"",status_filter:"all",pinned_ids:[],only_pinned:false,
-    sort_key:"alternative",sort_direction:"asc"
+    sort_key:"alternative",sort_direction:"asc",
+    table_page:1,table_page_size:50,method_catchment_id:""
   };
   let result = null;
   let calculationKey = null;
@@ -515,19 +535,28 @@ export function mount(container,input,options = {}) {
   let destroyed = false;
   let baselineSelect = null;
   let criteriaBox = null;
+  let viewCache = {result:null,key:null,rows:[]};
+  let countCache = {result:null,comparable:0,native:0};
+  let contextResult = null;
+  let searchCache = new WeakMap();
+  let methodResult = null;
+  let methodController = null;
+  let tableView = null;
+  const rowCollator = new Intl.Collator(undefined,{numeric:true});
   const panel = make("section",{"class":"sdc-panel","aria-labelledby":prefix + "title"});
   ["click","change","input"].forEach(type => panel.addEventListener(type,event => event.stopPropagation()));
-  const status = make("p",{"class":"sdc-status",role:"status","aria-live":"polite"});
+  const status = make("p",{id:prefix + "status","class":"sdc-status",role:"status","aria-live":"polite"});
   const error = make("p",{"class":"sdc-notice",role:"alert",hidden:true});
   const controls = make("div",{"class":"sdc-controls"});
   const contextBox = make("div",{"class":"sdc-context"});
   const resultBox = make("div",{"class":"sdc-results"});
+  const methodBox = make("div",{"class":"sdc-method-box"});
   panel.append(
     make("header",{"class":"sdc-heading"},
       make("div",{},make("h2",{id:prefix + "title"},"Scenario decisions"),
         make("p",{},"Compare retained annual outputs, physical changes and alternative choices.")),
       make("span",{"class":"sdc-version"},"Workspace " + (data.workspace_id || "unspecified"))
-    ),status,error,controls,contextBox,resultBox
+    ),status,error,controls,contextBox,resultBox,methodBox
   );
   container.replaceChildren(panel);
 
@@ -550,6 +579,9 @@ export function mount(container,input,options = {}) {
     if (!["asc","desc"].includes(state.sort_direction)) state.sort_direction = "asc";
     state.only_pinned = state.only_pinned === true;
     state.priority.enabled = state.priority.enabled === true;
+    state.table_page = Number.isSafeInteger(Number(state.table_page)) && Number(state.table_page) > 0 ? Number(state.table_page) : 1;
+    state.table_page_size = PAGE_SIZES.includes(Number(state.table_page_size)) ? Number(state.table_page_size) : 50;
+    state.method_catchment_id = identifier(state.method_catchment_id);
   }
   function currentState() {
     return clone({
@@ -557,13 +589,14 @@ export function mount(container,input,options = {}) {
       metric_ids:state.metric_ids,catchment_ids:state.catchment_ids,
       directions:state.directions,priority:state.priority,query:state.query,
       status_filter:state.status_filter,pinned_ids:state.pinned_ids,
-      only_pinned:state.only_pinned,sort_key:state.sort_key,sort_direction:state.sort_direction
+      only_pinned:state.only_pinned,sort_key:state.sort_key,sort_direction:state.sort_direction,
+      table_page:state.table_page,table_page_size:state.table_page_size,method_catchment_id:state.method_catchment_id
     });
   }
   function notify() {
     if (typeof options.onChange !== "function") return;
     try {
-      options.onChange(currentState(),clone(result));
+      options.onChange(currentState(),options.notifyAssessment === false ? undefined : clone(result));
       error.hidden = true;
     } catch (problem) {
       error.textContent = "The host could not retain this view: " + (problem && problem.message ? problem.message : String(problem));
@@ -616,6 +649,7 @@ export function mount(container,input,options = {}) {
       "aria-describedby":prefix + id + "-help",
       onchange:() => {
         state[field] = Array.from(select.selectedOptions,option => option.value);
+        state.table_page = 1;
         if (onSelection) onSelection();
         refresh();
       }
@@ -625,6 +659,7 @@ export function mount(container,input,options = {}) {
     },item.label)));
     const selectAll = value => {
       state[field] = value ? items.map(item => item.id) : [];
+      state.table_page = 1;
       Array.from(select.options).forEach(option => {option.selected = value;});
       if (onSelection) onSelection();
       refresh();
@@ -644,6 +679,7 @@ export function mount(container,input,options = {}) {
       id:prefix + "baseline",
       onchange:event => {
         state.baseline_id = event.target.value;
+        state.table_page = 1;
         rebuildControls();
         refresh();
         baselineSelect.focus();
@@ -658,12 +694,16 @@ export function mount(container,input,options = {}) {
     );
     criteriaBox = make("div");
     controls.appendChild(baselineField);
+    const scopeLabels = new Map();
+    data.alternatives.forEach(alternative => alternative.summaries.forEach(summary => {
+      if (!scopeLabels.has(summary.catchment_id)) scopeLabels.set(summary.catchment_id,summary.label);
+    }));
     controls.appendChild(make("div",{"class":"sdc-selections"},
       selectionControl("Alternatives","alternatives",data.alternatives.filter(a => a.id !== state.baseline_id).map(a => ({id:a.id,label:a.label + " [" + a.id + "]"})),"alternative_ids"),
       selectionControl("Metrics","metrics",data.metrics.map(m => ({id:m.id,label:m.label + " (" + m.unit + ")"})),"metric_ids",rebuildCriteria),
       selectionControl("Reporting scopes","catchments",data.catchment_ids.map(id => {
-        const summary = data.alternatives.flatMap(a => a.summaries).find(s => s.catchment_id === id);
-        return {id,label:summary && summary.label !== id ? summary.label + " [" + id + "]" : id};
+        const label = scopeLabels.get(id);
+        return {id,label:label && label !== id ? label + " [" + id + "]" : id};
       }),"catchment_ids")
     ));
     const details = make("details",{"class":"sdc-preferences"});
@@ -680,19 +720,19 @@ export function mount(container,input,options = {}) {
     rebuildCriteria();
     const query = make("input",{
       id:prefix + "search",type:"search",value:state.query,placeholder:"Scenario, run, metric or exclusion",
-      oninput:event => {state.query = event.target.value; refresh();}
+      oninput:event => {state.query = event.target.value; state.table_page = 1; refresh();}
     });
     const statusFilter = make("select",{
-      id:prefix + "filter",onchange:event => {state.status_filter = event.target.value; refresh();}
+      id:prefix + "filter",onchange:event => {state.status_filter = event.target.value; state.table_page = 1; refresh();}
     });
     [["all","All rows"],["comparable","Comparable totals"],["excluded","Excluded totals"],["native","Retained native changes"],["undominated","Pareto undominated"],["dominated","Pareto dominated"]].forEach(([value,label]) => statusFilter.appendChild(make("option",{value},label)));
     statusFilter.value = state.status_filter;
     const pinnedOnly = make("input",{
       id:prefix + "pins-only",type:"checkbox",checked:state.only_pinned,
-      onchange:event => {state.only_pinned = event.target.checked; refresh();}
+      onchange:event => {state.only_pinned = event.target.checked; state.table_page = 1; refresh();}
     });
     controls.appendChild(make("div",{"class":"sdc-toolbar"},
-      make("div",{"class":"sdc-search"},make("label",{for:prefix + "search"},"Search visible rows"),query),
+      make("div",{"class":"sdc-search"},make("label",{for:prefix + "search"},"Search all selected rows"),query),
       make("div",{},make("label",{for:prefix + "filter"},"Show"),statusFilter),
       make("label",{"class":"sdc-checkbox",for:prefix + "pins-only"},pinnedOnly,"Pinned alternatives only"),
       make("div",{"class":"sdc-exports","aria-label":"Export computed comparison"},
@@ -701,18 +741,19 @@ export function mount(container,input,options = {}) {
         make("button",{type:"button",onclick:() => download("txt")},"Export text")
       )
     ));
-    controls.appendChild(make("p",{"class":"sdc-help"},"Exports contain the complete selected comparison, including exclusions and exact unrounded numbers. Search, sorting and pins affect the table view only."));
+    controls.appendChild(make("p",{"class":"sdc-help"},"Exports contain the complete selected comparison, including exclusions and exact unrounded numbers. Search, sorting, pins and pages affect the table view only. Printing includes the current page; use Export text or CSV for the full comparison."));
   }
   function download(format) {
-    const content = format === "csv" ? toCSV(result) : format === "txt" ? toText(result) : toJSON(Object.assign({},result,{view_state:currentState()}));
+    const content = () => format === "csv" ? toCSV(result) : format === "txt" ? toText(result) : toJSON(Object.assign({},result,{view_state:currentState()}));
     const filename = "scenario-comparison-" + safeFilename(state.baseline_id) + "." + format;
     const type = format === "csv" ? "text/csv;charset=utf-8" : format === "txt" ? "text/plain;charset=utf-8" : "application/json;charset=utf-8";
     if (typeof options.onExport === "function") {
-      options.onExport({format,filename,content,type});
+      options.onExport({format,filename,content:content(),type});
       return;
     }
     const window = document.defaultView;
-    const objectUrl = window.URL.createObjectURL(new window.Blob([content],{type}));
+    const parts = format === "csv" ? toCSVChunks(result) : format === "txt" ? toTextChunks(result) : [content()];
+    const objectUrl = window.URL.createObjectURL(new window.Blob(parts,{type}));
     const link = make("a",{href:objectUrl,download:filename,hidden:true});
     panel.appendChild(link);
     link.click();
@@ -728,6 +769,8 @@ export function mount(container,input,options = {}) {
     );
   }
   function refreshContext() {
+    if (contextResult === result) return;
+    contextResult = result;
     contextBox.replaceChildren();
     if (result.baseline) {
       contextBox.append(make("h3",{},"Baseline: " + result.baseline.label + " [" + result.selection.baseline_id + "]"),
@@ -737,6 +780,9 @@ export function mount(container,input,options = {}) {
   }
   function viewRows() {
     const query = state.query.trim().toLocaleLowerCase();
+    const key = JSON.stringify([query,state.status_filter,state.only_pinned,state.pinned_ids,state.sort_key,state.sort_direction]);
+    if (viewCache.result === result && viewCache.key === key) return viewCache.rows;
+    if (viewCache.result !== result) searchCache = new WeakMap();
     const pinned = new Set(state.pinned_ids);
     const rows = result.rows.filter(row => {
       if (state.only_pinned && !pinned.has(row.alternative_id)) return false;
@@ -746,28 +792,89 @@ export function mount(container,input,options = {}) {
       if (state.status_filter === "undominated" && row.pareto_status !== "undominated") return false;
       if (state.status_filter === "dominated" && row.pareto_status !== "dominated") return false;
       if (!query) return true;
-      const haystack = [
-        row.alternative_id,row.alternative_label,row.catchment_id,row.catchment_label,row.metric_id,row.metric_label,
-        row.alternative.run_id,row.alternative.grid_id,row.alternative.profile_id,row.alternative.scenario_id,
-        row.alternative.domain_id,row.alternative.period_id,...row.exclusion_reasons,...row.flags
-      ].join(" ").toLocaleLowerCase();
+      let haystack = searchCache.get(row);
+      if (haystack === undefined) {
+        haystack = [
+          row.alternative_id,row.alternative_label,row.catchment_id,row.catchment_label,row.metric_id,row.metric_label,
+          row.alternative.run_id,row.alternative.grid_id,row.alternative.profile_id,row.alternative.scenario_id,
+          row.alternative.domain_id,row.alternative.period_id,...row.exclusion_reasons,...row.flags
+        ].join(" ").toLocaleLowerCase();
+        searchCache.set(row,haystack);
+      }
       return haystack.includes(query);
     });
-    const sortValue = row => ({
-      alternative:row.alternative_label,catchment:row.catchment_id,metric:row.metric_label,
-      baseline:row.baseline_measurement.value,value:row.alternative_measurement.value,
-      delta:row.delta,percent:row.percent_reduction,priority:row.priority_score
-    })[state.sort_key];
+    const getters = {
+      alternative:row => row.alternative_label,catchment:row => row.catchment_id,metric:row => row.metric_label,
+      baseline:row => row.baseline_measurement.value,value:row => row.alternative_measurement.value,
+      delta:row => row.delta,percent:row => row.percent_reduction,priority:row => row.priority_score
+    };
+    const sortValue = getters[state.sort_key];
+    const direction = state.sort_direction === "asc" ? 1 : -1;
     rows.sort((left,right) => {
       const pinnedOrder = Number(pinned.has(right.alternative_id)) - Number(pinned.has(left.alternative_id));
       if (pinnedOrder) return pinnedOrder;
       const a = sortValue(left), b = sortValue(right);
       if (a === null || a === undefined) return b === null || b === undefined ? left.key.localeCompare(right.key) : 1;
       if (b === null || b === undefined) return -1;
-      const order = typeof a === "number" && typeof b === "number" ? (a < b ? -1 : a > b ? 1 : 0) : String(a).localeCompare(String(b),undefined,{numeric:true});
-      return order * (state.sort_direction === "asc" ? 1 : -1) || left.key.localeCompare(right.key);
+      const order = typeof a === "number" && typeof b === "number" ? (a < b ? -1 : a > b ? 1 : 0) : rowCollator.compare(String(a),String(b));
+      return order * direction || left.key.localeCompare(right.key);
     });
+    viewCache = {result,key,rows};
     return rows;
+  }
+  function pageRows(rows) {
+    const pageCount = Math.max(1,Math.ceil(rows.length / state.table_page_size));
+    state.table_page = Math.min(pageCount,Math.max(1,state.table_page));
+    const offset = (state.table_page - 1) * state.table_page_size;
+    const shown = rows.slice(offset,offset + state.table_page_size);
+    tableView = {
+      page:state.table_page,page_size:state.table_page_size,page_count:pageCount,
+      total_rows:result.rows.length,filtered_rows:rows.length,shown_rows:shown.length,
+      first_row:shown.length ? offset + 1 : 0,last_row:shown.length ? offset + shown.length : 0,
+      selected_alternatives:result.selection.alternative_ids.length,
+      selected_catchments:result.selection.catchment_ids.length,
+      row_keys:shown.map(row => row.key)
+    };
+    return shown;
+  }
+  function pagination(position) {
+    const view = tableView;
+    const base = prefix + "page-" + position + "-";
+    const go = value => {
+      const next = Number(value);
+      state.table_page = Number.isSafeInteger(next) ? Math.min(view.page_count,Math.max(1,next)) : view.page;
+      refresh();
+    };
+    const page = make("input",{
+      id:base + "number",type:"number",min:"1",max:String(view.page_count),step:"1",value:String(view.page),inputmode:"numeric",
+      "aria-label":"Page of scenario comparison rows","aria-controls":prefix + "comparison-table",
+      onchange:event => go(event.target.value),
+      onkeydown:event => {if (event.key === "Enter") {event.preventDefault(); go(event.target.value);}}
+    });
+    const button = (label,name,target,disabled) => make("button",{
+      id:base + name,type:"button",disabled,
+      "aria-label":label + " page of scenario comparison rows","aria-controls":prefix + "comparison-table",
+      onclick:() => go(target)
+    },label);
+    const navigation = make("nav",{"class":"sdc-pagination","aria-label":"Scenario comparison pages (" + position + ")"},
+      make("div",{"class":"sdc-page-buttons"},
+        button("First","first",1,view.page === 1),
+        button("Previous","previous",view.page - 1,view.page === 1),
+        make("label",{"class":"sdc-page-number",for:base + "number"},"Page ",page," of " + view.page_count),
+        button("Next","next",view.page + 1,view.page === view.page_count),
+        button("Last","last",view.page_count,view.page === view.page_count)
+      ),
+      make("span",{"class":"sdc-page-count"},
+        "Rows " + view.first_row + "–" + view.last_row + " of " + view.filtered_rows + " matching comparison rows")
+    );
+    if (position === "top") {
+      const size = make("select",{
+        id:base + "size","aria-controls":prefix + "comparison-table",
+        onchange:event => {state.table_page_size = Number(event.target.value); state.table_page = 1; refresh();}
+      },PAGE_SIZES.map(value => make("option",{value:String(value),selected:value === state.table_page_size},String(value))));
+      navigation.appendChild(make("label",{"class":"sdc-page-size",for:base + "size"},"Rows per page ",size));
+    }
+    return navigation;
   }
   function sortHeader(label,key) {
     const active = state.sort_key === key;
@@ -777,6 +884,7 @@ export function mount(container,input,options = {}) {
       onclick:() => {
         state.sort_direction = active && state.sort_direction === "asc" ? "desc" : "asc";
         state.sort_key = key;
+        state.table_page = 1;
         refresh();
       }
     },label,active ? state.sort_direction === "asc" ? " ↑" : " ↓" : "");
@@ -820,54 +928,141 @@ export function mount(container,input,options = {}) {
     notes.appendChild(metadataDetails);
     return notes;
   }
-  function methodDetails() {
+  function methodDetails(wasOpen) {
     const details = make("details",{"class":"sdc-method"});
-    details.append(make("summary",{},"Comparison membership and calculation method"),
-      make("p",{},"Delta is alternative minus baseline. Percent reduction is 100 × (baseline − alternative) / baseline. Native intersection changes remain visible when total support differs."),
-      make("p",{},"Each reporting scope has a separate common set containing alternatives with comparable totals for every selected metric. The baseline is the reference, outside the choice set. Selected catchments are never summed. A changed selected alternative set may change priority scores.")
-    );
-    result.groups.forEach(group => {
-      const section = make("section",{},
-        make("h4",{},group.catchment_id),
-        make("p",{},"Common set (" + group.common_alternative_ids.length + "): " + (group.common_alternative_ids.join(", ") || "none")),
+    const content = make("div",{"class":"sdc-method-content"});
+    let scopeSelect = null;
+    let scopeBox = null;
+    let renderedId = null;
+    details.append(make("summary",{},"Comparison membership and calculation method"),content);
+    const groupMap = new Map(result.groups.map(group => [group.catchment_id,group]));
+    const labels = new Map();
+    result.rows.forEach(row => {if (!labels.has(row.catchment_id)) labels.set(row.catchment_id,row.catchment_label);});
+    function renderScope() {
+      const group = groupMap.get(state.method_catchment_id);
+      if (!scopeBox || !group) return;
+      if (scopeSelect) scopeSelect.value = state.method_catchment_id;
+      if (renderedId === state.method_catchment_id) return;
+      renderedId = state.method_catchment_id;
+      scopeBox.replaceChildren();
+      const label = labels.get(group.catchment_id) || group.catchment_id;
+      const section = make("section",{"class":"sdc-scope-method","aria-labelledby":prefix + "method-scope-title"},
+        make("h4",{id:prefix + "method-scope-title"},label + (label === group.catchment_id ? "" : " [" + group.catchment_id + "]")),
+        make("p",{},"Eligible choice cohort: " + group.common_alternative_ids.length + " distinct alternatives in this reporting scope. " +
+          result.selection.alternative_ids.length + " alternatives are selected across " + group.selected_metric_ids.length + " metrics."),
+        make("p",{},"Selected metric IDs: " + (group.selected_metric_ids.join(", ") || "none") + "."),
+        make("p",{},"Physical basis for the choices below: alternative annual totals on matching baseline support."),
         make("p",{},"Pareto: " + group.pareto.status + ". " + group.pareto.issues.join(" ")),
-        make("p",{},"Weighted priority: " + group.priority.status + ". " + group.priority.issues.join(" "))
+        make("p",{},"Directions: " + group.selected_metric_ids.map(id => id + " = " + (group.pareto.directions[id] || "unset")).join("; ") + "."),
+        make("p",{},"Weighted priority: " + group.priority.status + ". " + group.priority.issues.join(" ")),
+        make("div",{"class":"sdc-cohort-members",tabindex:"0","aria-label":"Complete eligible alternative identifiers"},
+          make("strong",{},"Complete eligible alternative IDs"),
+          make("p",{"class":"sdc-id"},group.common_alternative_ids.join(", ") || "none"))
       );
-      if (group.excluded_alternatives.length) section.appendChild(make("details",{},
-        make("summary",{},"Excluded alternatives (" + group.excluded_alternatives.length + ")"),
-        make("ul",{},group.excluded_alternatives.map(item => make("li",{},item.alternative_id + ": " + item.reasons.join(" "))))
-      ));
+      if (group.excluded_alternatives.length) {
+        const excluded = make("details",{},
+          make("summary",{},"Excluded alternatives (" + group.excluded_alternatives.length + ")"));
+        let expanded = false;
+        excluded.addEventListener("toggle",() => {
+          if (excluded.open && !expanded) {
+            expanded = true;
+            excluded.appendChild(make("ul",{},group.excluded_alternatives.map(item =>
+              make("li",{},item.alternative_id + ": " + item.reasons.join(" ")))));
+          }
+        });
+        section.appendChild(excluded);
+      }
       if (group.priority.enabled && group.priority.criteria.length) {
-        const table = make("table",{"class":"sdc-normalization"});
+        const table = make("table",{"class":"sdc-normalization",tabindex:"0"});
+        table.appendChild(make("caption",{},"Full eligible cohort ranges for this scope; independent of table pages, search and pins."));
         table.appendChild(make("thead",{},make("tr",{},
           ["Metric","Direction","Raw weight","Normalized weight","Common minimum","Common maximum","Constant"].map(label => make("th",{scope:"col"},label))
         )));
-        table.appendChild(make("tbody",{},group.priority.criteria.map(criterion => make("tr",{},
-          make("th",{scope:"row"},criterion.metric_id),
-          [criterion.direction || "Unset",criterion.weight,criterion.normalized_weight,
-            criterion.minimum === null ? "Unavailable" : criterion.minimum,
-            criterion.maximum === null ? "Unavailable" : criterion.maximum,
-            criterion.constant ? "Yes" : "No"].map(value => make("td",{},value))
-        ))));
-        section.append(make("p",{},"Min-max preference scores use the common set above. Positive weights sum to one after normalization. Constant criteria contribute zero; scores express only the selected user preferences."),table);
+        table.appendChild(make("tbody",{},group.priority.criteria.map(criterion => {
+          const metric = result.metrics.find(item => item.id === criterion.metric_id);
+          return make("tr",{},
+            make("th",{scope:"row"},criterion.metric_id,make("span",{"class":"sdc-unit"},metric ? metric.unit : "")),
+            [criterion.direction || "Unset",criterion.weight,criterion.normalized_weight,
+              criterion.minimum === null ? "Unavailable" : criterion.minimum,
+              criterion.maximum === null ? "Unavailable" : criterion.maximum,
+              criterion.constant ? "Yes" : "No"].map(value => make("td",{},value))
+          );
+        })));
+        section.append(make("p",{},"Min-max preference scores use the complete eligible cohort above. Positive weights sum to one after normalization. Constant criteria contribute zero. Zero-weight selected metrics still determine cohort eligibility."),table);
       }
-      details.appendChild(section);
-    });
-    return details;
+      scopeBox.appendChild(section);
+    }
+    function populate() {
+      if (!scopeBox) {
+        content.append(
+          make("p",{},"Delta is alternative minus baseline. Percent reduction is 100 × (baseline − alternative) / baseline. Native intersection changes remain visible when total support differs."),
+          make("p",{},"Each reporting scope has a separate common set containing alternatives with comparable totals for every selected metric. The baseline is the reference, outside the choice set. Selected catchments are never summed. Changing the selected alternative set may change priority scores."),
+          make("p",{"class":"sdc-help"},"Inspect one scope at a time below. Every scope and its full eligible cohort, exclusions and calculated ranges remain in the saved assessment and complete exports.")
+        );
+        scopeSelect = make("select",{
+          id:prefix + "method-catchment",
+          onchange:event => {
+            state.method_catchment_id = event.target.value;
+            renderScope();
+            notify();
+          }
+        },result.groups.map(group => {
+          const label = labels.get(group.catchment_id) || group.catchment_id;
+          return make("option",{value:group.catchment_id},label + (label === group.catchment_id ? "" : " [" + group.catchment_id + "]"));
+        }));
+        scopeBox = make("div",{"class":"sdc-method-scope"});
+        if (result.groups.length) content.append(
+          make("label",{for:prefix + "method-catchment"},"Reporting scope for method details"),scopeSelect,scopeBox);
+        else content.appendChild(make("p",{},"Select reporting scopes to inspect calculation membership."));
+      }
+      renderScope();
+    }
+    details.addEventListener("toggle",() => {if (details.open) populate();});
+    details.open = !!wasOpen;
+    if (details.open) populate();
+    return {node:details,update:() => {if (details.open) populate();}};
+  }
+  function refreshMethod() {
+    if (!result.groups.some(group => group.catchment_id === state.method_catchment_id)) {
+      state.method_catchment_id = result.groups.length ? result.groups[0].catchment_id : "";
+    }
+    if (methodResult !== result) {
+      const open = methodController && methodController.node.open;
+      methodResult = result;
+      methodController = methodDetails(open);
+      methodBox.replaceChildren(methodController.node);
+    } else if (methodController) methodController.update();
+  }
+  function contextLabel(row,key,label) {
+    const baseline = row.baseline[key] || "Unspecified";
+    const alternative = row.alternative[key] || "Unspecified";
+    return label + ": " + (baseline === alternative ? alternative : "baseline " + baseline + "; alternative " + alternative);
   }
   function refreshResults() {
     const focusedId = document.activeElement && document.activeElement.id;
-    const methodWasOpen = resultBox.querySelector(".sdc-method")?.open;
+    const previousScrollLeft = resultBox.querySelector(".sdc-table-scroll")?.scrollLeft || 0;
     resultBox.replaceChildren();
-    const rows = viewRows();
-    const comparableCount = result.rows.filter(row => row.totals_comparable).length;
-    const nativeCount = result.rows.filter(row => row.native_change && row.native_change.eligible).length;
-    status.textContent = rows.length + " of " + result.rows.length + " selected rows shown. " + comparableCount +
-      " comparable total pairs; " + nativeCount + " retained native changes; " + state.pinned_ids.length + " pinned alternatives.";
-    resultBox.appendChild(make("p",{"class":"sdc-help"},"Physical change = alternative − baseline. A negative export change is a reduction. Displayed numbers are rounded to seven significant digits; exports retain full numeric precision."));
+    const matchingRows = viewRows();
+    const rows = pageRows(matchingRows);
+    if (countCache.result !== result) {
+      countCache = {result,comparable:0,native:0};
+      result.rows.forEach(row => {
+        if (row.totals_comparable) countCache.comparable += 1;
+        if (row.native_change && row.native_change.eligible) countCache.native += 1;
+      });
+    }
+    status.textContent = "Showing comparison rows " + tableView.first_row + "–" + tableView.last_row + " of " + tableView.filtered_rows +
+      " matching rows. Full selection: " + result.rows.length + " comparison rows, " + tableView.selected_alternatives +
+      " distinct alternatives and " + tableView.selected_catchments + " reporting scopes. " + countCache.comparable +
+      " comparable total pairs; " + countCache.native + " retained native changes; " + state.pinned_ids.length + " pinned alternatives.";
+    resultBox.appendChild(make("p",{id:prefix + "physical-help","class":"sdc-help"},"Physical change = alternative − baseline. A negative export change is a reduction. Displayed numbers are rounded to seven significant digits; exports retain full numeric precision. Table pages and filters do not change the eligible choice cohorts."));
     if (rows.length) {
-      const table = make("table",{"class":"sdc-comparison"});
-      table.appendChild(make("caption",{"class":"sdc-visually-hidden"},"Selected retained scenario outputs and changes. Baseline outputs repeat beside each alternative for direct comparison."));
+      resultBox.appendChild(pagination("top"));
+      const table = make("table",{
+        id:prefix + "comparison-table","class":"sdc-comparison","aria-rowcount":matchingRows.length + 1,
+        "aria-describedby":prefix + "status " + prefix + "physical-help"
+      });
+      table.appendChild(make("caption",{"class":"sdc-visually-hidden"},"Selected retained scenario outputs and changes, page " + tableView.page + " of " + tableView.page_count + ". Baseline outputs repeat beside each alternative for direct comparison."));
       table.appendChild(make("thead",{},make("tr",{},
         make("th",{scope:"col"},"Pin"),sortHeader("Alternative","alternative"),sortHeader("Reporting scope","catchment"),
         sortHeader("Metric","metric"),sortHeader("Baseline total","baseline"),sortHeader("Alternative total","value"),
@@ -875,13 +1070,15 @@ export function mount(container,input,options = {}) {
         make("th",{scope:"col"},"Context and exclusions")
       )));
       const body = make("tbody");
-      rows.forEach(row => {
-        const pinned = state.pinned_ids.includes(row.alternative_id);
+      const pinnedIds = new Set(state.pinned_ids);
+      rows.forEach((row,index) => {
+        const pinned = pinnedIds.has(row.alternative_id);
         const pin = make("button",{
           id:prefix + "pin-" + encodeURIComponent(row.key),type:"button","aria-pressed":pinned,
           "aria-label":(pinned ? "Unpin " : "Pin ") + row.alternative_label,
           onclick:() => {
             state.pinned_ids = pinned ? state.pinned_ids.filter(id => id !== row.alternative_id) : [...state.pinned_ids,row.alternative_id];
+            state.table_page = 1;
             refresh();
           }
         },pinned ? "Pinned" : "Pin");
@@ -898,10 +1095,13 @@ export function mount(container,input,options = {}) {
         ));
         if (row.dominated_by.length) choice.appendChild(make("small",{},"Dominated by: " + row.dominated_by.join(", ")));
         if (row.priority_score !== null) choice.appendChild(make("p",{},"Priority " + displayNumber(row.priority_score) + " / 100; rank " + row.priority_rank + " in scope"));
-        body.appendChild(make("tr",{"class":pinned ? "sdc-pinned" : ""},
+        body.appendChild(make("tr",{"class":pinned ? "sdc-pinned" : "","aria-rowindex":tableView.first_row + index + 1,"data-sdc-row":row.key},
           make("td",{},pin),
           make("th",{scope:"row"},make("strong",{},row.alternative_label),make("span",{"class":"sdc-id"},row.alternative_id),identityView(row.alternative)),
-          make("td",{},row.catchment_label,make("small",{"class":"sdc-id"},row.catchment_id)),
+          make("td",{},row.catchment_label,make("small",{"class":"sdc-id"},row.catchment_id),
+            make("small",{"class":"sdc-id"},contextLabel(row,"domain_id","Domain")),
+            make("small",{"class":"sdc-period"},contextLabel(row,"period_id","Period")),
+            row.baseline.year || row.alternative.year ? make("small",{"class":"sdc-period"},contextLabel(row,"year","Year")) : null),
           make("td",{},row.metric_label,make("small",{"class":"sdc-id"},row.metric_id)),
           totalCell(row.baseline_measurement),totalCell(row.alternative_measurement),delta,
           make("td",{"class":"sdc-numeric"},row.percent_reduction === null ? "Undefined" : displayNumber(row.percent_reduction) + "%"),
@@ -909,15 +1109,18 @@ export function mount(container,input,options = {}) {
         ));
       });
       table.appendChild(body);
-      resultBox.appendChild(make("div",{"class":"sdc-table-scroll",tabindex:"0","aria-label":"Scenario comparison table; scroll horizontally for all columns"},table));
+      const scroll = make("div",{id:prefix + "table-scroll","class":"sdc-table-scroll",tabindex:"0","aria-label":"Scenario comparison table; scroll horizontally for all columns"},table);
+      resultBox.append(scroll,pagination("bottom"));
+      scroll.scrollLeft = previousScrollLeft;
     } else {
       resultBox.appendChild(make("p",{"class":"sdc-empty"},result.rows.length ? "No rows match the current search, status and pin filters." : "Choose a baseline, alternatives, metrics and reporting scopes to populate this comparison."));
     }
-    const details = methodDetails();
-    details.open = !!methodWasOpen;
-    resultBox.appendChild(details);
     if (focusedId) {
-      const restore = document.getElementById(focusedId);
+      let restore = document.getElementById(focusedId);
+      if ((!restore || restore.disabled) && focusedId.startsWith(prefix + "page-")) {
+        restore = document.getElementById(prefix + "page-" + (focusedId.includes("-bottom-") ? "bottom" : "top") + "-number");
+      }
+      if (!restore && focusedId.startsWith(prefix + "pin-")) restore = document.getElementById(prefix + "page-top-number");
       if (restore && panel.contains(restore) && document.activeElement !== restore) restore.focus({preventScroll:true});
     }
   }
@@ -932,6 +1135,7 @@ export function mount(container,input,options = {}) {
       calculationKey = nextCalculationKey;
     }
     refreshContext();
+    refreshMethod();
     refreshResults();
     notify();
   }
@@ -955,12 +1159,13 @@ export function mount(container,input,options = {}) {
     setState(patch) {mergeState(patch); rebuildControls(); refresh();},
     getState:currentState,
     getComparison:() => clone(result),
+    getTableView:() => tableView ? Object.assign({},tableView,{row_keys:tableView.row_keys.slice()}) : null,
     exportJSON:() => toJSON(Object.assign({},result,{view_state:currentState()})),
     exportCSV:() => toCSV(result),
     exportText:() => toText(result),
     destroy() {destroyed = true; panel.remove();}
   };
 }
-export function attachScenarioDecisions({container,data,initialState,onChange,onExport,onError}) {
-  return mount(container,data,{initialState,onChange,onExport,onError});
+export function attachScenarioDecisions({container,data,initialState,onChange,onExport,onError,notifyAssessment}) {
+  return mount(container,data,{initialState,onChange,onExport,onError,notifyAssessment});
 }
