@@ -324,7 +324,10 @@
         "source/capture_upstream_network.py",
         "source/observation_source_calendar.py",
         "source/retained_point_sources.py",
-        "operator/study_transfer.py"
+        "operator/study_transfer.py",
+        "source_tools/receive_observed_station_studies.py",
+        "integration/component_fragments/economic-comparison.json",
+        "integration/component_fragments/economic-comparison-source.json"
       ]
     },
     "station-assessment": {
@@ -648,7 +651,10 @@
         "source/capture_upstream_network.py",
         "source/observation_source_calendar.py",
         "source/retained_point_sources.py",
-        "operator/study_transfer.py"
+        "operator/study_transfer.py",
+        "source_tools/receive_observed_station_studies.py",
+        "integration/component_fragments/economic-comparison.json",
+        "integration/component_fragments/economic-comparison-source.json"
       ]
     },
     "study-transfer": {
@@ -972,7 +978,10 @@
         "source/capture_upstream_network.py",
         "source/observation_source_calendar.py",
         "source/retained_point_sources.py",
-        "operator/study_transfer.py"
+        "operator/study_transfer.py",
+        "source_tools/receive_observed_station_studies.py",
+        "integration/component_fragments/economic-comparison.json",
+        "integration/component_fragments/economic-comparison-source.json"
       ],
       "requires": [
         "station-assessment"
