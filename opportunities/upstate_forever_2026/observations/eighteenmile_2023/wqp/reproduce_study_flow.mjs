@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { readFile, writeFile, mkdir, rename, unlink } from "node:fs/promises";
+import { readFile, open, mkdir, rename, unlink } from "node:fs/promises";
 import { resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createHash } from "node:crypto";
@@ -66,10 +66,13 @@ if (body.length !== expected.bytes || hash(body) !== expected.sha256) {
 const output = resolve(outputPath);
 await mkdir(output, { recursive: true });
 const path = resolve(output, "study_flow_dates.csv"), pending = path + ".partial-" + process.pid;
+const handle = await open(pending, "wx");
 try {
-  await writeFile(pending, body, { flag: "wx" });
+  await handle.writeFile(body);
+  await handle.close();
   await rename(pending, path);
 } catch (error) {
+  await handle.close().catch(() => {});
   await unlink(pending).catch(() => {});
   throw error;
 }
