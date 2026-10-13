@@ -1,0 +1,30 @@
+{
+  "schema": "upstate.observed-station-wbd-hooks/v1",
+  "path": "model/station_geography.py",
+  "edits": [
+    {
+      "before": "from .station_assessment_context import enrich as enrich_assessments, geojson as assessment_geojson, report_section as assessment_report\n",
+      "after": "from .station_assessment_context import enrich as enrich_assessments, geojson as assessment_geojson, report_section as assessment_report\nfrom .station_wbd_context import VERSION as WBD_CONTEXT_VERSION, enrich as enrich_wbd_context, report_section as wbd_context_report\n"
+    },
+    {
+      "before": "build_id = digest({\"version\": VERSION, \"selection\": selection,",
+      "after": "build_id = digest({\"version\": VERSION, \"wbd_context_version\": WBD_CONTEXT_VERSION, \"selection\": selection,"
+    },
+    {
+      "before": "    summary.update(assessment_summary)\n",
+      "after": "    summary.update(assessment_summary)\n    summary.update(enrich_wbd_context(rows))\n"
+    },
+    {
+      "before": "\"assessment_cause_labels\", \"publisher_huc12s\") if key in row}})",
+      "after": "\"assessment_cause_labels\", \"publisher_huc12s\", \"wbd_context_status\",\n                \"selected_current_huc12s\", \"selected_wbd_point_ids\", \"wbd_source_context\") if key in row}})"
+    },
+    {
+      "before": "\"candidate_ids\", \"aliases\", \"source_references\", \"issues\"], flat_stations)",
+      "after": "\"candidate_ids\", \"aliases\", \"source_references\", \"wbd_context_status\",\n         \"selected_current_huc12s\", \"selected_wbd_point_ids\", \"wbd_source_context\", \"issues\"], flat_stations)"
+    },
+    {
+      "before": "+ assessment_report(result) + '<h2>Every selected study station",
+      "after": "+ assessment_report(result) + wbd_context_report(result) + '<h2>Every selected study station"
+    }
+  ]
+}
