@@ -1,6 +1,7 @@
 /* TokenJunkieLabs: retained native comparisons joined to saved decision views. */
 import {mount as mountPanel} from './scenario_decisions.mjs';
 import {prepareAssessment,uploadAssessment,operationId} from './decision_transfer.mjs';
+import {buildScenarioAnalysisSeed} from './scenario_handoff.mjs';
 
 const escape = value => String(value ?? '').replace(/[&<>"']/g, character =>
   ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[character]));
@@ -187,9 +188,10 @@ export function workspaceSourceSignature(state){
   });
 }
 
-export function attachDecisionWorkbench({getState, api, endpoint, toast}) {
+export function attachDecisionWorkbench({getState, api, endpoint, toast, openExtension}) {
   let root=null, frame=null, controller=null, snapshot=null, liveCatalog=null, workspaceKey=null;
   let selection=null, loadedView=null, previousViewId=null,generation=0,lastBaseline=null;
+  let panelData=null, handoffMarkup='', deferredViewId=null;
   let sourceStamp='',savedStamp='',backgroundRefresh=null,nextSourceRefresh=0;
   let pending=null, currentError='', currentMessage='', loading=false;
   let savedViews=[], requestKeys=new Map(), objectiveId='',transferring=null;
@@ -207,12 +209,16 @@ export function attachDecisionWorkbench({getState, api, endpoint, toast}) {
     }
   };
   const remember = () => {
-    if (!selection || !workspaceKey || !frame) return;
-    try {localStorage.setItem(localKey(), JSON.stringify({
-      selection, title:node('[name="decision-title"]')?.value || '',
-      purpose:node('[name="decision-purpose"]')?.value || '',
-      previous_view_id:previousViewId,
-    }));} catch (_) {}
+    if (!selection || !workspaceKey) return;
+    try {
+      let retained={};
+      try{retained=JSON.parse(localStorage.getItem(localKey())||'null')||{};}catch(_){}
+      localStorage.setItem(localKey(), JSON.stringify({
+        selection, title:node('[name="decision-title"]')?.value ?? retained.title ?? '',
+        purpose:node('[name="decision-purpose"]')?.value ?? retained.purpose ?? '',
+        previous_view_id:previousViewId,
+      }));
+    } catch (_) {}
   };
   function initialState(catalog) {
     const comparison=(catalog.comparisons || [])[0];
@@ -254,6 +260,11 @@ export function attachDecisionWorkbench({getState, api, endpoint, toast}) {
       '<p data-decision-objective-description class="note"></p>' +
       '<p data-decision-origin class="note"></p></section>' +
       '<div data-decision-panel></div>' +
+      '<section class="section decision-continuation" aria-labelledby="decision-analysis-title">' +
+      '<h2 id="decision-analysis-title">Continue with fixed-scale analysis</h2>' +
+      '<p>Carry the selected native runs into Scenario analysis. Choose its fixed baseline scales, planning weights and retained geographic areas in the analysis form.</p>' +
+      '<div data-decision-handoff></div>' +
+      '<button type="button" data-decision-action="analysis" data-decision-primary-analysis disabled>Continue in Scenario analysis</button></section>' +
       '<details class="section decision-interpretation"><summary>Method and original source choices</summary><div data-decision-methods></div></details>';
   }
   function choiceCatalog(){
@@ -304,7 +315,41 @@ export function attachDecisionWorkbench({getState, api, endpoint, toast}) {
         showObjective();
       }
     }
-    selection={...next,objective_id:objectiveId};remember();
+    selection={...next,objective_id:objectiveId};remember();showHandoff();
+  }
+  function currentHandoff() {
+    const current=getState();
+    return buildScenarioAnalysisSeed({
+      data:panelData,selection,
+      nativeRuns:Array.isArray(current?.data?.runs)?current.data.runs:(liveCatalog?.runs||[]),
+      workspaceKey:current?.workspace_key,
+      title:node('[name="decision-title"]')?.value?.trim() || 'Selected watershed scenarios',
+    });
+  }
+  function showHandoff() {
+    const target=node('[data-decision-handoff]'),button=node('[data-decision-primary-analysis]');
+    if(!target||!button)return;
+    const handoff=currentHandoff();
+    const available=typeof openExtension==='function';
+    button.disabled=!available||!handoff.ready;
+    const issues=[...handoff.baseline_issues,...(handoff.cohort_issues||[])];
+    if(!available)issues.unshift('Open this assessment in the current integrated operator to continue.');
+    let content='<p>'+escape(handoff.accepted_run_count+' native alternative'+(handoff.accepted_run_count===1?'':'s')+
+      ' available from '+handoff.selected_case_count+' selected case'+(handoff.selected_case_count===1?'':'s')+'.')+'</p>';
+    if(handoff.target_metric_ids?.length)content+='<p class="note">Available analysis outputs: '+
+      escape(handoff.target_metric_ids.map(id=>METRICS.find(metric=>metric.id===id)?.label||id).join(', '))+'.</p>';
+    if(issues.length)content+='<ul>'+issues.map(issue=>'<li>'+escape(issue)+'</li>').join('')+'</ul>';
+    if(handoff.rejected_cases.length)content+='<details><summary>'+
+      escape(handoff.rejected_cases.length+' selected case'+(handoff.rejected_cases.length===1?' is':'s are')+' unavailable for this analysis')+
+      '</summary><ul>'+handoff.rejected_cases.map(item=>'<li>'+escape(item.label)+': '+
+        escape(item.reasons.join(' '))+'</li>').join('')+'</ul></details>';
+    if(handoff.ready&&!handoff.selected_case_count)content+='<p>The analysis will use the selected native baseline.</p>';
+    if(handoff.compatible_cohorts?.length)content+='<div class="actions">'+handoff.compatible_cohorts.map(cohort=>
+      '<button type="button" data-decision-action="analysis" data-decision-cohort="'+escape(cohort.id)+'">'+
+      escape('Open '+cohort.title+' · '+cohort.alternative_count+' alternative'+(cohort.alternative_count===1?'':'s'))+
+      '</button>').join('')+'</div>';
+    if(content!==handoffMarkup){target.innerHTML=content;handoffMarkup=content;}
+    return handoff;
   }
   function showMethods() {
     const target=node('[data-decision-methods]');if(!target||!snapshot)return;
@@ -329,7 +374,7 @@ export function attachDecisionWorkbench({getState, api, endpoint, toast}) {
   }
   function mountValues() {
     if (!snapshot || !node('[data-decision-panel]'))return;
-    const data=buildDecisionInput(snapshot,selection?.baseline_id);
+    const data=buildDecisionInput(snapshot,selection?.baseline_id);panelData=data;
     controller?.destroy?.();
     lastBaseline=selection?.baseline_id;objectiveId=selection?.objective_id||'';
     controller=mountPanel(node('[data-decision-panel]'),data,{
@@ -339,12 +384,13 @@ export function attachDecisionWorkbench({getState, api, endpoint, toast}) {
         retainSelection(next);
         if (next.baseline_id!==lastBaseline) {
           lastBaseline=next.baseline_id;
-          controller?.setData?.(buildDecisionInput(snapshot,next.baseline_id));
+          panelData=buildDecisionInput(snapshot,next.baseline_id);
+          controller?.setData?.(panelData);
         }
       },
     });
     selection=currentSelection();
-    optionLists();showMethods();
+    optionLists();showMethods();showHandoff();
     node('[data-decision-origin]').textContent=loadedView ?
       'Saved assessment '+short(loadedView.id)+' · original source snapshot '+short(loadedView.source_snapshot_sha256)+
       '. Editing creates a new saved revision; the original remains available.' :
@@ -392,7 +438,7 @@ export function attachDecisionWorkbench({getState, api, endpoint, toast}) {
     status(action==='decision.view.save'?'Saving the assessment in the scientific workspace…':
       'The native comparison is queued. Existing completed differences are reused.');
   }
-  async function act(action) {
+  async function act(action,cohortId='') {
     if(transferring?.workspace===workspaceKey&&['save','compare','refresh'].includes(action)){
       status('The original assessment transfer is in progress. Its retained parts will be reused after an interruption.');return;
     }
@@ -404,6 +450,14 @@ export function attachDecisionWorkbench({getState, api, endpoint, toast}) {
     }
     if(!controller||loading)throw Error('Wait for the original operands to open.');
     selection=currentSelection();remember();
+    if(action==='analysis') {
+      const handoff=showHandoff()||currentHandoff();
+      if(typeof openExtension!=='function')throw Error('Open this assessment in the current integrated operator to continue.');
+      const cohort=cohortId?(handoff.compatible_cohorts||[]).find(item=>item.id===cohortId):null;
+      if(cohortId&&!cohort)throw Error('The native selection changed. Choose an available analysis group.');
+      if(!cohort&&!handoff.ready)throw Error(handoff.baseline_issues[0]||handoff.cohort_issues?.[0]||'Choose a compatible native cohort in the comparison.');
+      return await openExtension('scenario-analysis','create',cohort?.request||handoff.request);
+    }
     if(action==='save') {
       const title=node('[name="decision-title"]').value.trim();
       if(!title)throw Error('Give this assessment a title before saving.');
@@ -449,14 +503,15 @@ export function attachDecisionWorkbench({getState, api, endpoint, toast}) {
       if(backgroundRefresh!==request||request.workspace!==workspaceKey||request.generation!==generation||!root)return;
       liveCatalog=result;sourceStamp=stamp;nextSourceRefresh=0;savedViews=result.saved_views||savedViews;
       if(loadedView){
-        optionLists();
+        optionLists();showHandoff();
         status('New workspace results are available in the report and comparison selectors.');
       }else{
         const retained=controller?currentSelection():selection;
         snapshot=result;
-        controller?.setData(buildDecisionInput(snapshot,retained?.baseline_id));
+        panelData=buildDecisionInput(snapshot,retained?.baseline_id);
+        controller?.setData(panelData);
         if(controller&&retained)controller.setState(retained);
-        optionLists();showMethods();
+        optionLists();showMethods();showHandoff();
         status('The completed native results and watershed reports have refreshed. The current decision settings are retained.');
       }
     }).catch(error=>{
@@ -470,7 +525,7 @@ export function attachDecisionWorkbench({getState, api, endpoint, toast}) {
     savedViews=getState()?.data?.decision_views||savedViews;
     const changedSaved=JSON.stringify(savedViews.map(row=>row.id));
     if(changedSaved!==savedStamp){savedStamp=changedSaved;if(frame)optionLists();}
-    if(!pending){refreshExternalSources();return;}
+    if(!pending){showHandoff();refreshExternalSources();return;}
     const task=(getState()?.tasks||[]).find(item=>item.id===pending.id);
     if(!task)return;
     pending={...pending,...task};
@@ -483,8 +538,10 @@ export function attachDecisionWorkbench({getState, api, endpoint, toast}) {
       if(node('[data-decision-action="retry"]'))node('[data-decision-action="retry"]').hidden=true;
       if(finished.action==='decision.view.save'&&task.result?.id) {
         toast('Scenario assessment saved.');
-        openView(task.result.id);
-      }else loadCurrent({keepSelection:true});
+        previousViewId=task.result.id;
+        if(root)openView(task.result.id);
+        else {deferredViewId=task.result.id;remember();}
+      }else if(root)loadCurrent({keepSelection:true});
     }else status('Workspace operation: '+task.state+'. Its original task and progress are retained.');
   }
   function mount(container) {
@@ -494,9 +551,9 @@ export function attachDecisionWorkbench({getState, api, endpoint, toast}) {
     }
     const changingWorkspace=workspaceKey!==nextWorkspace;
     detach();
-    if(changingWorkspace){pending=null;snapshot=null;liveCatalog=null;loadedView=null;previousViewId=null;savedViews=[];requestKeys=new Map();transferring=null;sourceStamp='';savedStamp='';backgroundRefresh=null;nextSourceRefresh=0;}
+    if(changingWorkspace){deferredViewId=null;panelData=null;pending=null;snapshot=null;liveCatalog=null;loadedView=null;previousViewId=null;savedViews=[];requestKeys=new Map();transferring=null;sourceStamp='';savedStamp='';backgroundRefresh=null;nextSourceRefresh=0;}
     root=container;workspaceKey=nextWorkspace;
-    frame=document.createElement('div');frame.className='decision-workbench';frame.innerHTML=controls();
+    frame=document.createElement('div');frame.className='decision-workbench';frame.innerHTML=controls();handoffMarkup='';
     container.replaceChildren(frame);
     let draft;
     try{draft=JSON.parse(localStorage.getItem(localKey())||'null');}catch(_){}
@@ -508,10 +565,10 @@ export function attachDecisionWorkbench({getState, api, endpoint, toast}) {
       if(!button)return;event.preventDefault();event.stopPropagation();
       button.disabled=true;
       const actionWorkspace=workspaceKey;
-      Promise.resolve(act(button.dataset.decisionAction)).catch(error=>{
+      Promise.resolve(act(button.dataset.decisionAction,button.dataset.decisionCohort||'')).catch(error=>{
         if(workspaceKey===actionWorkspace)status(error.message||String(error),true);
       })
-        .finally(()=>{button.disabled=false;});
+        .finally(()=>{button.disabled=false;if(button.dataset.decisionAction==='analysis')showHandoff();});
     });
     frame.addEventListener('change',event=>{
       if(event.target.name==='saved-decision')openView(event.target.value);
@@ -548,7 +605,8 @@ export function attachDecisionWorkbench({getState, api, endpoint, toast}) {
     frame.addEventListener('input',event=>{
       if(event.target.name==='decision-title'||event.target.name==='decision-purpose')remember();
     });
-    loadCurrent({keepSelection:true});
+    if(deferredViewId){const id=deferredViewId;deferredViewId=null;openView(id);}
+    else loadCurrent({keepSelection:true});
   }
   function detach() {
     remember();generation++;controller?.destroy?.();controller=null;

@@ -2,12 +2,13 @@
   "schema": "upstate.operator-extension/v1",
   "id": "receiving-waters",
   "title": "Receiving waters",
-  "version": "2",
+  "version": "4",
   "order": 52,
   "assets": [
     "receiving_waters.mjs",
     "receiving_waters_extension.mjs",
-    "receiving_waters.css"
+    "receiving_waters.css",
+    "receiving_water_spatial.mjs"
   ],
   "backend": {
     "module": "receiving_water_actions",

@@ -8,6 +8,8 @@ const families = {critical_drinking_water:'Drinking-water sources',high_quality_
 const pollutants = {nitrogen_export:'Nitrogen',phosphorus_export:'Phosphorus',sediment_export:'Sediment'};
 const totalUnits = {nitrogen_export:'kg/year',phosphorus_export:'kg/year',sediment_export:'metric tonnes/year'};
 const control = (action,label,attrs='',primary=false) => '<button type="button" data-action="'+esc(action)+'" '+attrs+(primary?' class="primary"':'')+'>'+esc(label)+'</button>';
+const spatialControl = (label,kind,id,subject='',statistic='areas',run='',quantity='',subjectKind='') => control('spatial-item',label,
+  'data-kind="receiving-water-'+esc(kind)+'" data-id="'+esc(id)+'" data-subject="'+esc(subject)+'" data-statistic="'+esc(statistic)+'" data-run="'+esc(run)+'" data-quantity="'+esc(quantity)+'" data-subject-kind="'+esc(subjectKind)+'"');
 const input = (name,value='',attrs='') => '<input name="'+esc(name)+'" value="'+esc(value)+'" '+attrs+'>';
 const area = (name,value='',attrs='') => '<textarea name="'+esc(name)+'" '+attrs+'>'+esc(value)+'</textarea>';
 const field = (label,html,note='',wide=false) => '<label'+(wide?' class="full"':'')+'><span>'+esc(label)+'</span>'+html+(note?'<small>'+esc(note)+'</small>':'')+'</label>';
@@ -111,7 +113,7 @@ export function attachReceivingWaters(context){
   }
   function planView(row){
     return '<header class="water-section-heading"><div><p class="eyebrow">SAVED SOURCE PLAN</p><h2>'+esc(row.title)+'</h2><p>'+fmt(row.receptors?.length||0)+' receiving waters</p></div>'+control('water-analyze-new','Analyze this plan','data-plan-id="'+esc(row.id)+'"',true)+'</header>'+
-      table(['Receiving water','Family','Relationship','Contribution area (ha)','Original source',''],(row.receptors||[]).map(r=>'<tr><td><strong>'+esc(r.title)+'</strong><small>'+esc(r.id)+'</small></td><td>'+esc(families[r.family]||human(r.family))+'</td><td>'+esc(r.relationship_precision||human(r.relation?.method))+'</td><td>'+fmt(r.contribution_area_ha)+'</td><td>'+esc(sourceTitle(r.source))+'</td><td>'+control('water-subject','Details','data-id="'+esc(r.id)+'"')+'</td></tr>'))+
+      table(['Receiving water','Family','Relationship','Contribution area (ha)','Original source',''],(row.receptors||[]).map(r=>'<tr><td><strong>'+esc(r.title)+'</strong><small>'+esc(r.id)+'</small></td><td>'+esc(families[r.family]||human(r.family))+'</td><td>'+esc(r.relationship_precision||human(r.relation?.method))+'</td><td>'+fmt(r.contribution_area_ha)+'</td><td>'+esc(sourceTitle(r.source))+'</td><td>'+control('water-subject','Details','data-id="'+esc(r.id)+'"')+spatialControl('Boundaries','plan',row.id,r.id)+'</td></tr>'))+
       '<details><summary>Source geometries and plan downloads</summary>'+fileList(row._downloads||[])+'</details>'+
       '<details><summary>Original source selection</summary><pre class="json-view">'+esc(pretty(row.identity?.selection||row.selection))+'</pre></details>';
   }
@@ -124,6 +126,7 @@ export function attachReceivingWaters(context){
     const runOptions=(row.alternative_run_ids||[]).map(id=>[id,runTitle(id)]);
     if(display.run&&!runOptions.some(x=>x[0]===display.run))display.run='';
     return '<header class="water-section-heading"><div><p class="eyebrow">SAVED MODEL ANALYSIS</p><h2>'+esc(row.title)+'</h2><p>'+esc(runTitle(row.baseline_run_id))+' · '+esc(row.quantity_scope==='model_domain'?'Full modeled domain':'Reporting area')+' · '+esc(keys.map(k=>pollutants[k]||human(k)).join(', '))+'</p></div>'+badge(progress(row))+'</header>'+
+      (row.state==='complete'?'<div class="water-actions">'+spatialControl('Review receiving areas','analysis',row.id)+'</div>':'')+
       (row.state==='complete'&&typeof context.openDelivery==='function'&&Object.keys(pollutants).every(key=>keys.includes(key))?'<div class="water-actions">'+control('water-delivery','Add to maps and delivery','data-id="'+esc(row.id)+'"')+'</div>':'')+
       (active?'<p class="water-progress" role="status">Calculating receiving areas. Completed geometry results are saved as the analysis proceeds.</p>':'')+
       (row.error?'<div class="water-error" role="alert">'+esc(typeof row.error==='string'?row.error:row.error.message||pretty(row.error))+' '+control('water-analysis-resume','Resume saved selection','data-id="'+esc(row.id)+'"')+'</div>':'')+
@@ -136,6 +139,12 @@ export function attachReceivingWaters(context){
       '<details><summary>Priority calculation and source interpretation</summary><div class="water-definition">'+
       '<h3>Normalization</h3><pre class="json-view">'+esc(pretty(row.normalization||{}))+'</pre><h3>Physical measurement</h3><pre class="json-view">'+esc(pretty(row.measurement||{}))+'</pre></div></details>'+
       '<details><summary>Saved maps, quantities, and receiving areas</summary>'+fileList(row._downloads||[])+'</details>';
+  }
+  function analysisMapControl(subject){
+    const statistic=display.run&&display.quantity==='increased'?'increased_export_priority':display.run&&display.quantity==='avoided'?'avoided_export_priority':'current_priority';
+    const key=(display.run?display.run+'_':'')+statistic;
+    if(!subject.metrics?.files?.[key])return '';
+    return spatialControl(statistic==='current_priority'?'Priority map':statistic==='increased_export_priority'?'Increased-export map':'Avoided-export map','analysis',record.id,subject.id,statistic,display.run,'',subject.kind);
   }
   function selectedStats(subject,key){
     const metrics=subject.metrics||{};
@@ -157,7 +166,7 @@ export function attachReceivingWaters(context){
       const coverage=keys.map(k=>selectedStats(s,k)?.coverage_fraction).filter(x=>x!==null&&x!==undefined);
       return '<tr><td><strong>'+esc(s.title)+'</strong><small>'+esc(s.kind==='family_union'?'Combined family area':families[s.family]||human(s.family))+'</small></td>'+
         keys.map(k=>'<td class="water-number">'+fmt(selectedQuantity(selectedStats(s,k)))+'</td>').join('')+
-        '<td class="water-number">'+percent(coverage.length?Math.min(...coverage):null)+'</td><td class="water-number">'+fmt(s.area_in_quantity_scope_ha)+'</td><td>'+control('water-subject','Details','data-id="'+esc(s.id)+'"')+'</td></tr>';
+        '<td class="water-number">'+percent(coverage.length?Math.min(...coverage):null)+'</td><td class="water-number">'+fmt(s.area_in_quantity_scope_ha)+'</td><td>'+control('water-subject','Details','data-id="'+esc(s.id)+'"')+analysisMapControl(s)+'</td></tr>';
     });
     target.innerHTML=(display.quantity!=='physical'&&!display.run?'<p class="water-note">Choose an alternative run to show export changes. The table currently shows the baseline.</p>':'')+
       '<p class="water-result-count">'+fmt(rows.length)+' of '+fmt(record.subjects?.length||0)+' areas</p>'+(body.length?table(heads,body):'<p class="water-empty">No completed areas match this selection.</p>');
@@ -171,6 +180,8 @@ export function attachReceivingWaters(context){
         ['Area in quantity domain (ha)',fmt(subject.area_in_quantity_scope_ha)]
       ].map(([k,v])=>'<tr><th scope="row">'+esc(k)+'</th><td>'+esc(v||'—')+'</td></tr>'));
     const metrics=subject.metrics;
+    if(!metrics)html+='<div class="water-actions">'+spatialControl('Review boundaries','plan',record.id,subject.id)+'</div>';
+    else if(metrics.files?.current_priority)html+='<div class="water-actions">'+spatialControl('Review baseline priority','analysis',record.id,subject.id,'current_priority','','',subject.kind)+'</div>';
     if(metrics){
       const keys=Object.keys(metrics.baseline_physical||{});
       html+='<h3>Baseline physical export</h3>'+table(['Quantity','Total','Units','Valid cells','Coverage'],keys.map(key=>{
@@ -178,10 +189,10 @@ export function attachReceivingWaters(context){
       }));
       for(const [runId,alt]of Object.entries(metrics.alternatives||{})){
         html+='<h3>'+esc(runTitle(runId))+'</h3><p class="water-note">Paired baseline and alternative totals use their common valid cells. Signed change is alternative minus baseline.</p>'+
-          table(['Quantity','Baseline on common cells','Alternative on common cells','Signed change','Increased export','Avoided export','Units','Paired coverage'],keys.map(key=>{
+          table(['Quantity','Baseline on common cells','Alternative on common cells','Signed change','Increased export','Avoided export','Units','Paired coverage','Map'],keys.map(key=>{
             const v=alt.changes?.[key]||{};return '<tr><th scope="row">'+esc(pollutants[key]||human(key))+'</th>'+
               ['baseline_sum_on_common_cells','alternative_sum_on_common_cells','sum','sum_increased_export','sum_avoided_export'].map(k=>'<td class="water-number">'+fmt(v[k])+'</td>').join('')+
-              '<td>'+esc(totalUnits[key]||v.sum_units||'')+'</td><td>'+percent(v.coverage_fraction)+'</td></tr>';
+              '<td>'+esc(totalUnits[key]||v.sum_units||'')+'</td><td>'+percent(v.coverage_fraction)+'</td><td>'+(metrics.files?.[runId+'_'+key+'_change']?spatialControl('Signed change','analysis',record.id,subject.id,'change',runId,key,subject.kind):'—')+'</td></tr>';
           }));
       }
       html+='<h3>Priority statistics</h3><p class="water-note">Priority values are dimensionless. Physical export quantities remain in the tables above.</p><pre class="json-view">'+esc(pretty({baseline:metrics.current_priority,alternatives:Object.fromEntries(Object.entries(metrics.alternatives||{}).map(([id,a])=>[id,{current:a.current_priority,increased:a.increased_export_priority,avoided:a.avoided_export_priority}]))}))+'</pre>';

@@ -1,13 +1,17 @@
 /* MIT. Directory standards assessment and review inside the original operator. */
+import {createDirectoryForeignKeyWorkbench} from './directory-conformance-foreign-keys.mjs';
 export function installDirectoryConformance(ctx){
   const {S,root,views,el,button,heading,panel,table,badge,api,download,showDialog,showRecord,
     jsonView,saveJSON,rowsOf,pager,formEditor,collectionPanel,browseRecords,browseRows,showRow,
     commonDraft,readDraft,loadDraft,persistDraft,filtered,describe,short,actor,showError,
     okToLeave,captureDraft,setDirty}=ctx;
+  const foreignKeyWorkbench=createDirectoryForeignKeyWorkbench(ctx);
   const kinds={plans:"conformancePlans",assessments:"conformanceAssessments",
     reviews:"conformanceReviews",comparisons:"conformanceComparisons"};
   const labels={report:"Readable report",findings:"Complete findings",rows:"Complete rows",
-    index:"Complete index",rules:"Selected rules",summary:"Summary",package:"Complete package"};
+    index:"Complete index",rules:"Selected rules",summary:"Summary",package:"Complete package",
+    foreignKeys:"Complete relationship outcomes",foreignKeyCandidates:"All original target candidates",
+    foreignKeyMatches:"Every original match",foreignKeyCoverage:"Full declarations and coverage"};
   const count=value=>Number(value||0).toLocaleString();
   const endpoint=(collection,id,tail)=>"/api/directory/conformance/"+collection+"/"+encodeURIComponent(id)+(tail?"/"+tail:"");
   const original=(collection,id)=>api("/api/directory/"+kinds[collection]+"/"+encodeURIComponent(id));
@@ -15,9 +19,11 @@ export function installDirectoryConformance(ctx){
   const draft=id=>loadDraft(draftKey(id),{...commonDraft("Directory assessment review"),assessmentId:id,
     disposition:"needs-correction",declaration:"",decisions:[],groups:[]});
   const saveDraft=(id,value)=>persistDraft(draftKey(id),value);
-  const itemTitle=(record,open)=>el("div",{},[
-    button(record.label||short(record.id),open,{kind:"link"}),
-    el("code",{class:"cell-sub",text:record.id})]);
+  const itemTitle=(record,open)=>{
+    const target=button(record.label||short(record.id),open,{kind:"link"});
+    target.dataset.conformanceRecordId=record.id;
+    return el("div",{},[target,el("code",{class:"cell-sub",text:record.id})]);
+  };
   function files(collection,record){
     return el("div",{class:"conformance-files"},Object.entries(record.files||{}).map(([kind,value])=>
       el("div",{class:"conformance-file"},[
@@ -246,7 +252,12 @@ export function installDirectoryConformance(ctx){
             {label:"Errors",get:r=>count(r.summary?.severityCounts?.error)},
             {label:"Review",get:r=>button("Open review draft",()=>openReview(r.id),{kind:"small"})}
           ]}));
-        if(assessmentId)appendBody(await findingsWorkbench(await original("assessments",assessmentId),()=>openReview(assessmentId)));
+        if(assessmentId){
+          const assessment=await original("assessments",assessmentId);
+          appendBody(await findingsWorkbench(assessment,()=>openReview(assessmentId)));
+          const relationships=await foreignKeyWorkbench(assessment);
+          if(relationships)appendBody(relationships);
+        }
       }else if(tab==="reviews"){
         const id=S.selected.conformanceAssessment;
         if(id){

@@ -84,7 +84,7 @@ Use the exact archive hash returned by the sending host with --archive-sha256 wh
   --archive /mnt/data/upstate-reporting-parcel-plan-20261013.zip
 ~~~
 
-This writes the actual required-county list and hectares, the reporting/county intersections in EPSG:5070, and 25km clockwise rectangular acquisition masks covering the reporting polygon. Every selected county provider is queried against all reporting tiles. This preserves parcels that straddle a recent county boundary or sit outside a county polygon's current geometry. Tile-edge overcoverage remains in native sources; preparation performs the reporting intersection.
+This writes the actual required-county list and hectares, the reporting/county intersections in EPSG:5070, and 25km clockwise rectangular acquisition masks covering the reporting polygon. Every selected county provider is queried against all reporting tiles. This preserves parcels that straddle a recent county boundary or sit outside a county polygon's current geometry. Tile-edge overcoverage remains in native sources. Preparation selects parcels by a positive reporting intersection, publishes each complete analytical polygon, and measures the reporting intersection separately.
 
 The plan includes original reporting members and county responses. It reports county-union area, reporting area outside that union, and summed county-intersection area so version differences and county polygon overlaps stay visible.
 
@@ -160,8 +160,8 @@ Pass this JSON object as the existing parcel selection. In a full delivery selec
 
 | Output | Contents |
 | --- | --- |
-| reporting-parcels.gpkg / parcels_reporting | Eligible parcels intersected with the reporting area; whole-source areas and original identifiers remain attributes |
-| reporting-parcels.gpkg / cadastral_context | Native road, water, rail, outside-county and unclassified cadastral categories |
+| reporting-parcels.gpkg / parcels_reporting | Complete eligible source polygons with positive reporting overlap; whole and reporting areas remain separate attributes |
+| reporting-parcels.gpkg / cadastral_context | Complete source polygons for road, water, rail, outside-county and unclassified cadastral categories |
 | reporting-parcels.gpkg / county_reporting | Reporting/county geometry and source coverage measures |
 | reporting-parcels.gpkg / parcel_coverage_gaps | Spatial gaps in available source coverage, classified by provider status |
 | parcels.csv | Parcel candidate inventory with county, provider, native ID, parcel reference and areas |
@@ -170,12 +170,14 @@ Pass this JSON object as the existing parcel selection. In a full delivery selec
 | county-sources.csv | Provider URI, native OID field, exact hash, capture/data-edit dates and counts |
 | excluded-records.csv | Native records with absent geometry, nonpolygon repair outcomes, or no positive reporting intersection |
 | geometry-corrections.json | Original-ID-linked repairs from the maintained geometry reader |
-| methods.json | Units, identity, clipping, classification and coverage definitions |
+| methods.json | Preparation version, whole geometry, reporting intersection, identity, units, classification and coverage definitions |
 | parcel-inventory.json | Latest prepared inventory and existing reducer binding |
 
 The prepared key is county FIPS:provider ID:native OID. Native parcel references such as TMS/PIN remain strings, including leading zeros and fully qualified Saluda keys. Duplicate parcel references remain independent source records. Overlapping parcels keep independent model reductions.
 
-Whole-source and clipped areas use actual geometry in EPSG:5070, measured in hectares. Vector preparation preserves reporting intersections without rasterization. The model continues to use its received 30m grid and original raster units.
+Whole-source and clipped areas use actual geometry in EPSG:5070, measured in hectares. `parcels_reporting` and `cadastral_context` retain complete polygons after the maintained reader's recorded repairs and coordinate transformation. `whole_feature_area_ha` measures that complete geometry; `reporting_area_ha` measures its intersection with the original reporting mask. The ED6E reducer receives the complete polygon, calculates its original `area_ha`, and clips it against the selected analysis reporting mask itself. Coverage still intersects each full polygon with the exact county/reporting tile before forming a union. The model continues to use its received 30m grid and original raster units.
+
+The preparation method is `upstate.reporting-parcels/whole-original-polygons/v2`. It is part of the source fingerprint, preparation context, source metadata and inventory result. Re-run the existing `prepare` command on the retained capture to create this edition, then import the returned `parcel-sources.json` and select its actual source-collection/source IDs in the existing delivery. Earlier inventories that contained reporting-clipped geometry remain under their original fingerprints and cannot be reused as this method. Original county responses and native feature bodies are reused unchanged.
 
 ### Abbeville source categories
 

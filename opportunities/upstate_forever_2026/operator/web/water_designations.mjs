@@ -1456,6 +1456,7 @@ export function createWaterDesignationsExtension(context) {
     mount: function (containerNode, hostState) {
       if (controller) controller.destroy();
       mountedWorkspace = currentWorkspace();
+      const originWorkspace = mountedWorkspace;
       catalogStamp = stamp(hostState);
       controller = mountWaterDesignations({
         container: containerNode,
@@ -1465,8 +1466,28 @@ export function createWaterDesignationsExtension(context) {
           if (typeof context.refreshState === "function") await context.refreshState();
           else if (typeof context.refresh === "function") await context.refresh();
         },
-        onUseInDelivery: typeof context.openDelivery === "function"
-          ? function (_overlay, _record, delivery) {
+        onUseInDelivery: (typeof context.openExtension === "function" || typeof context.openDelivery === "function")
+          ? async function (_overlay, _record, delivery) {
+              function requireOrigin() {
+                if (currentWorkspace() !== originWorkspace) {
+                  throw new Error("The originating workspace changed before the saved water selection opened.");
+                }
+              }
+              requireOrigin();
+              if (typeof context.openExtension === "function") {
+                const catalogue = await context.api("/api/extensions");
+                requireOrigin();
+                if ((catalogue.extensions || []).some(function (entry) {
+                  return entry.id === "map-atlas" && entry.client && entry.client.view;
+                })) {
+                  return context.openExtension("map-atlas", "create", {
+                    workspace_key: originWorkspace, selection: delivery
+                  });
+                }
+              }
+              if (typeof context.openDelivery !== "function") {
+                throw new Error("Open an installed delivery editor for this saved selection.");
+              }
               return context.openDelivery(delivery);
             } : undefined
       });

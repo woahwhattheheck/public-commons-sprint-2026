@@ -35,6 +35,11 @@ def parser():
     for name in ("run", "run-inspect"):
         command = commands.add_parser(name)
         command.add_argument("run_id")
+    status = commands.add_parser("run-status",
+        help="Read active phase, storage, log and retained outputs without starting a model")
+    status.add_argument("run_id")
+    status.add_argument("--verify", action="store_true", help="Verify retained stage and export hashes")
+    status.add_argument("--log-bytes", type=int, default=16384, help="Tail 0 to 65536 native log bytes")
     regional = commands.add_parser("regional-delivery",
         help="Complete retained native models as maps, decision tables and an editable project")
     regional.add_argument("model_receiving", type=Path)
@@ -94,6 +99,9 @@ def perform(args):
         return workspace.run(args.run_id)
     if args.command == "run-inspect":
         return workspace.inspect_run(args.run_id)
+    if args.command == "run-status":
+        from .native_execution import inspect_execution
+        return inspect_execution(workspace, args.run_id, verify=args.verify, log_bytes=args.log_bytes)
     if args.command == "compare-runs":
         return workspace.compare_runs(args.run_ids)
     if args.command == "observations-import":
@@ -110,7 +118,8 @@ def main(argv=None):
         print(json.dumps(result, indent=2, ensure_ascii=False, sort_keys=True, allow_nan=False))
         return 0
     except (ValueError, OSError, KeyError, ImportError, RuntimeError) as error:
-        print(json.dumps({"state": "error", "type": type(error).__name__, "message": str(error)}, ensure_ascii=False),
+        print(json.dumps({"state": "error", **getattr(error, "native_failure",
+                          {"type": type(error).__name__, "message": str(error)})}, ensure_ascii=False),
               file=sys.stderr)
         return 1
 

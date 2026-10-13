@@ -22,6 +22,9 @@ FILES = (
     "model/compute_programme_cli.py",
     "model/programme_experiments.py",
     "source_tools/receive_gura.py",
+    "source/gura-original-tables-3.20/NDR/biophysical_table_gura.csv",
+    "source/gura-original-tables-3.20/SDR/biophysical_table_Gura.csv",
+    "source/gura-original-tables-3.20/source.json",
     "operator/programmes.py",
     "operator/web/programmes.mjs",
     "operator/web/programmes.css",
@@ -30,27 +33,49 @@ FILES = (
 
 
 PREVIOUS_EDITIONS = {
-    "model/compute_programme.py": [
-        "0d676a655f42427749a835706d139ce287bc8ea8f138970413652b6938a93e03"
-    ],
-    "model/compute_programme_cli.py": [
-        "2021af6d59f3a9f94849da50cbcd58eac987f9cbae52964582d1d090c461ff96"
-    ],
-    "operator/programmes.py": [
-        "67c0c1697b44f81763e21dbf3dd62e258886247707f72a408d2b6ecbf6a10a61"
-    ],
-    "operator/web/programmes.mjs": [
-        "0a334cf55eaa95a7c0347ad605adea170261495b3042fc33b6b051fbaad9d2d4"
-    ],
-    "operator/web/programmes.css": [
-        "939dea3c338775175b137239acfbc7d4cd1e2daef58060af2ed73ea98c484bdf"
-    ],
-    "install_programmes.py": [
-        "168d26a1792c2f1ade350d92130279e2710c2c4d4790b2f1cdf911b1007b21f0"
-    ],
-    "PROGRAMMES.md": [
-        "b0a9c33c09f4dddba47db5a677ddc135b5c4242630c255ab4c232d4f365a206f"
-    ]
+  "model/compute_programme.py": [
+    "0d676a655f42427749a835706d139ce287bc8ea8f138970413652b6938a93e03",
+    "f3ffdf5ed39aa827e83ed67b73fabad894f6219e46509e18da8f5a7c88512bce",
+    "b118d793dc2b2cc2de8ea0016ccb8b0e0e18af422a1f154e8dd822801c6387c1",
+    "c4327d021354b53a12f39ce9bca2d84442b997cb6b45a69e912593a186d497e5"
+  ],
+  "model/compute_programme_cli.py": [
+    "2021af6d59f3a9f94849da50cbcd58eac987f9cbae52964582d1d090c461ff96",
+    "268ea8468e60e13b81b6f2236df7cdcf8dae35a3767751e5168bd94e5dee3518",
+    "a49c784ccfb96497780444f8259db5743b446c4568c5c143e010b200d1f5b7ea"
+  ],
+  "operator/programmes.py": [
+    "67c0c1697b44f81763e21dbf3dd62e258886247707f72a408d2b6ecbf6a10a61",
+    "2cf9f3748debb8c78b272141ea2da4f02193ebe279a41b5a02ad1af0c6a56bd7"
+  ],
+  "operator/web/programmes.mjs": [
+    "0a334cf55eaa95a7c0347ad605adea170261495b3042fc33b6b051fbaad9d2d4",
+    "6bfb24faecccc34da3668c77234d871c75fa68195d44d804ce78cd04b7b7d81a",
+    "2e0438a63ee057ecef5bf36d14a9053701b98f83f09cea3a14a57dffa9432571",
+    "5a3f6d32cc1de2a8a4dc86550684c240cb51be5dad675eb6d3c7fe6e96bb3f0d",
+    "95f29be61a90fbcca671264b0c3fe849e3de0aec894c6e8438235e0aded1fe30"
+  ],
+  "operator/web/programmes.css": [
+    "939dea3c338775175b137239acfbc7d4cd1e2daef58060af2ed73ea98c484bdf"
+  ],
+  "install_programmes.py": [
+    "168d26a1792c2f1ade350d92130279e2710c2c4d4790b2f1cdf911b1007b21f0",
+    "d0def021491c12552834c3d2e3f85599d025dea5fc00bf14cde1df8fc3794508"
+  ],
+  "PROGRAMMES.md": [
+    "b0a9c33c09f4dddba47db5a677ddc135b5c4242630c255ab4c232d4f365a206f",
+    "59c5602aac0a6d476610cea86f7481087b808f9dec67522e5b8e0da11d2090be"
+  ],
+  "model/programme_experiments.py": [
+    "f5ba6fc94f46102065aa084f5314a5ac660d31a3eff927549e99f71b831a17cc",
+    "ecba938e891af641a245e1c453c22a9a6d257e7b85d70c3b5d495999fead972d"
+  ],
+  "source_tools/receive_gura.py": [
+    "4282b6f65b59c97a94b7f6528615c17a48741a378f42e41db2397d7395e3ed5b"
+  ],
+  "source/gura-original-tables-3.20/NDR/biophysical_table_gura.csv": [],
+  "source/gura-original-tables-3.20/SDR/biophysical_table_Gura.csv": [],
+  "source/gura-original-tables-3.20/source.json": []
 }
 
 def sha(data):
@@ -106,6 +131,10 @@ def patch_server(source):
                  '            if url.path == "/api/programmes/experiment-preview":\n'
                  '                return self.send_json(200, self.app.programmes.experiment_preview(value.get("workspace", self.app.primary), value))\n',
                  "saved experiment preview")
+    source = replace(source,
+        'return self.send_json(200, self.app.programmes.read(workspace, programme_reads[url.path],\n                        {"programme_id": one("programme_id")}))',
+        'return self.send_json(200, self.app.programmes.read(workspace, programme_reads[url.path],\n                        {"programme_id": one("programme_id"), "include_sources": one("include_sources")}))',
+        "completed native source catalogue selection")
     matches = list(re.finditer(r"if selected not in (\(?)(\{[^}\n]+\})([^:\n]*):", source))
     if len(matches) != 1:
         raise ValueError("Static programme assets: current operator asset registry is ambiguous.")

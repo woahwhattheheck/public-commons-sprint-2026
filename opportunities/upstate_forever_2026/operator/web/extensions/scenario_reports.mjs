@@ -1,5 +1,5 @@
 /* Native watershed-report generation and receiving controls for the maintained operator. */
-export const VERSION = '2026-10-13';
+export const VERSION = '2026-10-13.2';
 export const FOCUS_HUCS = ['030601010703','030601010704','030601020507','030601020502'];
 const esc = value => String(value ?? '').replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
 const text = value => String(value ?? '');
@@ -8,6 +8,8 @@ const labels = {nitrogen:'Nitrogen',phosphorus:'Phosphorus',sediment:'Sediment'}
 const button = (action,label,attrs='') => '<button type="button" data-report-action="'+action+'" '+attrs+'>'+esc(label)+'</button>';
 const option = (value,label,selected=false) => '<option value="'+esc(value)+'"'+(selected?' selected':'')+'>'+esc(label)+'</option>';
 const number = value => typeof value === 'number' ? value.toLocaleString() : '—';
+const sourceIdentity = source => JSON.stringify([source.source_collection_id,source.source_id]);
+const sourceFromChoice = (catalog,value) => (catalog?.zone_sources||[]).find(source=>sourceIdentity(source)===value);
 const safeLocalURL = value => typeof value === 'string' && /^\/api\/file\/[a-zA-Z0-9/_-]+(?:\?[a-zA-Z0-9_=&%-]*)?$/.test(value) ? value : null;
 
 export function commonPollutants(runs) {
@@ -71,11 +73,11 @@ export function selectionFromDraft(catalog,draft) {
 }
 
 export function attachScenarioReports(context) {
-  const {getState,api,endpoint,toast=()=>{},showTask}=context;
+  const {getState,api,endpoint,toast=()=>{},showTask,openExtension,navigate}=context;
   if (typeof getState!=='function'||typeof api!=='function'||typeof endpoint!=='function') throw Error('Scenario reports need the maintained operator context.');
-  let root=null,events=null,workspaceKey=null,catalog=null,requestGeneration=0,sourceGeneration=0;
-  let sourceInfo=null,sourceChoice=null,submitting=false,lastSubmission=null,selectedReport=null;
-  let completed=new Set(),lastTaskSignature='',disposed=true,pendingDraft=null;
+  let root=null,events=null,workspaceKey=null,catalog=null,requestGeneration=0,sourceGeneration=0,builderGeneration=0;
+  let sourceInfo=null,sourceChoice=null,submitting=null,lastSubmission=null,selectedReport=null;
+  let completed=new Set(),lastTaskSignature='',disposed=true,pendingDraft=null,pendingOpen=null;
   const currentWorkspace=()=>getState()?.workspace_key || null;
   const $=selector=>root?.querySelector(selector);
   const $$=selector=>root ? Array.from(root.querySelectorAll(selector)) : [];
@@ -104,7 +106,7 @@ export function attachScenarioReports(context) {
         } else values[element.name]=element.checked;
       } else values[element.name]=element.value;
     }
-    const selected=val('zone_source')===''?null:catalog?.zone_sources?.[Number(val('zone_source'))];
+    const selected=sourceFromChoice(catalog,val('zone_source'));
     const source=selected?{source_collection_id:selected.source_collection_id,source_id:selected.source_id}:null;
     const value={schema:'upstate.scenario-report-draft/v1',open:!$('[data-report-builder]').hidden,values,source,lastSubmission};
     try {localStorage.setItem(draftKey(),JSON.stringify(value));}catch(_){}
@@ -114,7 +116,7 @@ export function attachScenarioReports(context) {
       if(!(name in values))continue;
       const nodes=$$('[name="'+name+'"]');
       for(const node of nodes) {
-        if(node.type==='checkbox')node.checked=Array.isArray(values[name])?values[name].includes(node.value):Boolean(values[name]);
+        if(node.type==='checkbox')node.checked=!node.disabled&&(Array.isArray(values[name])?values[name].includes(node.value):Boolean(values[name]));
         else if(node.tagName!=='SELECT'||Array.from(node.options).some(item=>item.value===text(values[name])))node.value=text(values[name]);
       }
     }
@@ -140,9 +142,17 @@ export function attachScenarioReports(context) {
       [...rows].sort((a,b)=>text(b.created_at).localeCompare(text(a.created_at))).map(row=>'<tr><td><strong>'+esc(row.title)+'</strong><small>'+esc(short(row.id))+'</small></td><td>'+number(row.zones)+' zones · '+number(row.runs)+' runs</td><td>'+esc((row.pollutants||[]).map(x=>labels[x]||x).join(', '))+'</td><td>'+esc(row.created_at?new Date(row.created_at).toLocaleString():'—')+'</td><td>'+button('open','Open','data-report-id="'+esc(row.id)+'"')+'</td></tr>').join('')+'</tbody></table></div>';
   };
   async function refresh() {
+    if(pendingOpen&&pendingOpen.workspace!==currentWorkspace())pendingOpen=null;
     if(disposed||!root)return;
-    const key=currentWorkspace();if(!key){message('Open a scientific project to view watershed reports.');return;}
-    if(workspaceKey!==key){remember();workspaceKey=key;catalog=null;sourceInfo=null;sourceChoice=null;selectedReport=null;completed=new Set();lastTaskSignature='';sourceGeneration++;pendingDraft=readRemembered();lastSubmission=pendingDraft?.lastSubmission||null;scaffold();}
+    const key=currentWorkspace();
+    if(!key){
+      remember();workspaceKey=null;catalog=null;sourceInfo=null;sourceChoice=null;selectedReport=null;
+      pendingDraft=null;lastSubmission=null;completed=new Set();lastTaskSignature='';
+      requestGeneration++;sourceGeneration++;builderGeneration++;scaffold();
+      $('[data-report-action="new"]').disabled=true;
+      message('Open a scientific project to view watershed reports.');return;
+    }
+    if(workspaceKey!==key){remember();workspaceKey=key;catalog=null;sourceInfo=null;sourceChoice=null;selectedReport=null;completed=new Set();lastTaskSignature='';sourceGeneration++;builderGeneration++;pendingDraft=readRemembered();lastSubmission=pendingDraft?.lastSubmission||null;scaffold();}
     const generation=++requestGeneration;
     message('Reading completed runs and saved reports…');
     try {
@@ -153,42 +163,55 @@ export function attachScenarioReports(context) {
       if(!catalog.runs.some(run=>run.reportable))message('Complete a native NDR or SDR run to build the first watershed report.');
       if(pendingDraft?.open&&catalog.runs.some(run=>run.reportable)){const saved=pendingDraft;pendingDraft=null;await renderBuilder(saved);}else pendingDraft=null;
       observe(getState());
+      if(pendingOpen&&pendingOpen.workspace===workspaceKey) {
+        const requested=pendingOpen;pendingOpen=null;
+        await openReport(requested.report_id);
+      }
     } catch(error){if(!disposed&&generation===requestGeneration)message(error.message,true);}
   }
   async function renderBuilder(saved=null) {
     assertWorkspace();
+    const key=workspaceKey,generation=++builderGeneration;
     if(!catalog)throw Error('Refresh the completed model runs first.');
     const runs=catalog.runs.filter(run=>run.reportable);
     if(!runs.length)throw Error('Complete a native model run to build a report.');
     const chosen=runs.find(run=>run.scenario_kind==='baseline')||runs[0];
+    const savedReference=saved?.values?.baseline_run_id;
+    const missingReference=Boolean(savedReference&&!runs.some(run=>run.id===savedReference));
     sourceInfo=null;sourceChoice=null;sourceGeneration++;
     const target=$('[data-report-builder]');
     target.hidden=false;
-    target.innerHTML='<form data-report-form><fieldset><legend>Build a watershed comparison</legend>'+
+    target.innerHTML='<form data-report-form><fieldset><legend>Build a watershed report</legend>'+
       '<div class="sr-grid"><label>Report title<input name="report_title" required maxlength="240" value="'+esc((catalog.project?.title||'Watershed')+' native export report')+'"></label>'+
-      '<label>Reference run<select name="baseline_run_id">'+runs.map(run=>option(run.id,run.scenario_title+' · '+run.profile_title+' · '+(run.pollutants||[]).map(p=>labels[p]||p).join('/'),run.id===chosen.id)).join('')+'</select></label></div>'+
+      '<label>Reference run<select name="baseline_run_id">'+option('','Choose a completed reference run')+runs.map(run=>option(run.id,run.scenario_title+' · '+run.profile_title+' · '+(run.pollutants||[]).map(p=>labels[p]||p).join('/'),run.id===chosen.id)).join('')+'</select></label></div>'+
       '<label class="sr-check"><input type="checkbox" name="include_parameter_changes"> Include alternatives with different parameter profiles</label>'+
       '<div data-report-alternatives></div><div data-report-pollutants></div>'+
       '<h4>Watershed scope</h4><p class="sr-note">The retained reporting area and hydrologic model domain are always included. Add the original utility, HUC or other polygon source for individual watershed rows.</p>'+
       '<label>Additional polygon source<select name="zone_source">'+option('','Reporting area and model domain only')+
-      (catalog.zone_sources||[]).map((source,index)=>option(String(index),source.title+' · '+(source.vintage||short(source.source_collection_id)))).join('')+'</select></label>'+
+      (catalog.zone_sources||[]).map(source=>option(sourceIdentity(source),source.title+' · '+(source.vintage||short(source.source_collection_id)))).join('')+'</select></label>'+
       '<div data-report-zone-fields hidden></div><p class="sr-note" data-report-selection-note></p>'+
       '<div class="sr-actions"><button type="submit">Build and save report</button>'+button('cancel','Close controls')+'</div>'+
       '</fieldset></form>';
+    const form=$('[data-report-form]');
     if(saved)fillControls(saved.values||{},['report_title','baseline_run_id','include_parameter_changes']);
+    if(missingReference)$('[name="baseline_run_id"]').value='';
     renderAlternatives();
     if(saved) {
       fillControls(saved.values||{},['alternative_run_id']);renderPollutants();
       fillControls(saved.values||{},['pollutant']);
-      const index=(catalog.zone_sources||[]).findIndex(row=>row.source_collection_id===saved.source?.source_collection_id&&row.source_id===saved.source?.source_id);
-      if(index>=0) {
-        $('[name="zone_source"]').value=String(index);
-        await loadSource(saved.values?.zone_layer||null);
-        if(disposed||!$('[data-report-form]'))return;
+      const savedSource=(catalog.zone_sources||[]).find(row=>row.source_collection_id===saved.source?.source_collection_id&&row.source_id===saved.source?.source_id);
+      if(savedSource) {
+        $('[name="zone_source"]').value=sourceIdentity(savedSource);
+        const loading=loadSource(saved.values?.zone_layer||null),sourceRequest=sourceGeneration;
+        const applied=await loading;
+        if(!applied||disposed||key!==workspaceKey||key!==currentWorkspace()||generation!==builderGeneration||sourceRequest!==sourceGeneration||form!==$('[data-report-form]'))return;
         fillControls(saved.values||{},['zone_id_field','zone_label_field','zone_scope','zone_mode','zone_title','zone_feature_ids']);updateZoneNote();
       }
     }
+    if(disposed||key!==workspaceKey||key!==currentWorkspace()||generation!==builderGeneration||form!==$('[data-report-form]'))return;
     remember();target.scrollIntoView({block:'nearest'});
+    if(missingReference)message('The saved reference is no longer available. Choose a completed reference run and its native outputs.',true);
+    else if(Array.isArray(saved?.values?.pollutant)&&saved.values.pollutant.some(p=>!commonPollutants(selectedRuns()).includes(p)))message('Some saved native outputs are unavailable for this cohort. Review the output selection.',true);
   }
   function selectedRuns() {
     const {baseline,alternatives}=cohortRuns(catalog,val('baseline_run_id'),checked('include_parameter_changes'));
@@ -198,7 +221,7 @@ export function attachScenarioReports(context) {
   function renderAlternatives() {
     const {baseline,alternatives}=cohortRuns(catalog,val('baseline_run_id'),checked('include_parameter_changes'));
     const target=$('[data-report-alternatives]');if(!target)return;
-    if(!baseline){target.textContent='Choose a completed reference run.';return;}
+    if(!baseline){target.textContent='Choose a completed reference run.';renderPollutants();return;}
     target.innerHTML='<h4>Alternatives</h4>'+(alternatives.length?
       '<div class="sr-table-scroll"><table><thead><tr><th>Include</th><th>Scenario</th><th>Parameter profile</th><th>Comparison</th></tr></thead><tbody>'+
       alternatives.map(run=>{const same=run.selection.profile_id===baseline.selection.profile_id;
@@ -217,15 +240,23 @@ export function attachScenarioReports(context) {
   }
   async function loadSource(layer=null) {
     assertWorkspace();
+    const key=workspaceKey,form=$('[data-report-form]');
     const choice=val('zone_source'),target=$('[data-report-zone-fields]');
     const generation=++sourceGeneration;
     sourceInfo=null;sourceChoice=null;
-    if(choice===''){target.hidden=true;target.innerHTML='';return;}
-    const source=catalog.zone_sources[Number(choice)];
+    if(choice===''){target.hidden=true;target.innerHTML='';return true;}
+    const source=sourceFromChoice(catalog,choice);
     if(!source)throw Error('Choose an original retained polygon source.');
     target.hidden=false;target.innerHTML='<p>Reading the original polygon schema…</p>';
-    const info=await call('/api/source-info',{collection:source.source_collection_id,source:source.source_id,...((layer||source.layer)?{layer:layer||source.layer}:{})});
-    if(disposed||generation!==sourceGeneration||workspaceKey!==currentWorkspace())return;
+    const ownsRequest=()=>!disposed&&generation===sourceGeneration&&key===workspaceKey&&key===currentWorkspace()&&form===$('[data-report-form]')&&target===$('[data-report-zone-fields]');
+    let info;
+    try {
+      info=await call('/api/source-info',{collection:source.source_collection_id,source:source.source_id,...((layer||source.layer)?{layer:layer||source.layer}:{})});
+    } catch(error) {
+      if(ownsRequest())target.innerHTML='<p class="sr-message is-error" role="alert">'+esc(error.message)+'</p>';
+      return false;
+    }
+    if(!ownsRequest())return false;
     sourceInfo=info;sourceChoice=source;
     const fields=Object.keys(info.fields||{});
     const huc=fields.find(name=>/^huc_?12$/i.test(name));
@@ -235,7 +266,7 @@ export function attachScenarioReports(context) {
     if(!/polygon/i.test(info.geometry_type||'')){
       target.innerHTML=(layers.length>1?'<label>Original layer<select name="zone_layer">'+layers.map(x=>option(x,x,x===info.selected_layer)).join('')+'</select></label>':'')+
         '<p class="sr-message is-error">The selected native layer contains '+esc(info.geometry_type||'unknown geometry')+'. Select a polygon layer for watershed summaries.</p>';
-      return;
+      return true;
     }
     target.innerHTML='<p class="sr-note">'+number(info.feature_count)+' original polygon features · '+esc(source.vintage||'')+'</p>'+
       '<div class="sr-grid">'+(layers.length?'<label>Original layer<select name="zone_layer">'+layers.map(x=>option(x,x,x===info.selected_layer)).join('')+'</select></label>':'')+
@@ -246,7 +277,7 @@ export function attachScenarioReports(context) {
       '<label>Watershed group title<input name="zone_title" value="'+esc(source.title)+'"></label></div>'+
       '<label data-report-original-ids hidden>Original feature IDs<textarea name="zone_feature_ids" rows="3" placeholder="One original ID per line"></textarea></label>'+
       '<p class="sr-note" data-report-zone-note></p>';
-    updateZoneNote();
+    updateZoneNote();return true;
   }
   function updateZoneNote() {
     const mode=val('zone_mode'),id=val('zone_id_field');
@@ -265,7 +296,7 @@ export function attachScenarioReports(context) {
       alternative_run_ids:$$('input[name="alternative_run_id"]:checked').map(x=>x.value),
       pollutants:$$('input[name="pollutant"]:checked').map(x=>x.value)};
     if(val('zone_source')!=='') {
-      if(!sourceInfo||!sourceChoice||!/polygon/i.test(sourceInfo.geometry_type||''))throw Error('Finish choosing the original watershed polygon layer.');
+      if(!sourceInfo||!sourceChoice||sourceIdentity(sourceChoice)!==val('zone_source')||!/polygon/i.test(sourceInfo.geometry_type||''))throw Error('Finish choosing the original watershed polygon layer.');
       value.zone={...sourceChoice,layer:val('zone_layer')||sourceInfo.selected_layer,
         id_field:val('zone_id_field'),label_field:val('zone_label_field'),scope:val('zone_scope'),
         title:val('zone_title'),mode:val('zone_mode'),feature_ids:val('zone_feature_ids')};
@@ -273,12 +304,13 @@ export function attachScenarioReports(context) {
     return value;
   }
   async function submit() {
-    assertWorkspace();if(submitting)return;
+    assertWorkspace();if(submitting?.workspace===workspaceKey)return;
     const selected=selectionFromDraft(catalog,draft());
     const fingerprint=JSON.stringify({workspace:workspaceKey,selection:selected});
     if(!lastSubmission||lastSubmission.fingerprint!==fingerprint)lastSubmission={fingerprint,id:crypto.randomUUID()};
     const key=workspaceKey,form=$('[data-report-form]'),fieldset=form?.querySelector('fieldset');
-    remember();submitting=true;if(fieldset)fieldset.disabled=true;message('Queuing the native watershed report…');
+    const attempt={workspace:key,operation_id:lastSubmission.id};
+    remember();submitting=attempt;if(fieldset)fieldset.disabled=true;message('Queuing the native watershed report…');
     try {
       const result=await api('/api/actions',{method:'POST',body:{workspace:key,action:'scenario.decision.build',payload:{selection:selected},operation_id:lastSubmission.id}});
       if(disposed||key!==currentWorkspace())return;
@@ -286,7 +318,66 @@ export function attachScenarioReports(context) {
       toast('Watershed report queued.');if(showTask)await showTask(result.id);
       observe(getState());
     } catch(error){if(!disposed&&key===currentWorkspace())message(error.message,true);}
-    finally{submitting=false;if(fieldset&&fieldset.isConnected)fieldset.disabled=false;}
+    finally{if(submitting===attempt)submitting=null;if(fieldset&&fieldset.isConnected)fieldset.disabled=false;}
+  }
+  const releaseHTML=value=>{
+    const release=value||{ready:false,issues:[],releases:[]};
+    const issues=release.issues||[];
+    const choices=release.remaining_choices||[];
+    const rows=release.releases||[];
+    return '<section class="sr-release" aria-label="Map releases from this report"><h4>Map release</h4>'+
+      '<p>Use this saved reference and every alternative for the map atlas. The original report, annual totals, comparison tables and watershed geometry travel with the release.</p>'+
+      (issues.length?'<ul>'+issues.map(item=>'<li>'+esc(item.message)+'</li>').join(''):'')+
+      (release.ready?'<div class="sr-actions">'+button('map-release','Build map release','data-report-id="'+esc(selectedReport)+'"')+'</div>':'')+
+      (release.ready&&choices.length?'<p class="sr-note">Complete the remaining choices in the atlas builder: '+esc(choices.join('; '))+'.</p>':'')+
+      (rows.length?'<h5>Saved map releases</h5><div class="sr-table-scroll"><table><thead><tr><th>Release</th><th>State</th><th>Saved</th><th></th></tr></thead><tbody>'+
+        rows.map(row=>'<tr><td>'+esc(row.title)+'<small>'+esc(short(row.id))+'</small></td><td>'+esc(row.state)+'</td><td>'+esc(row.created_at?new Date(row.created_at).toLocaleString():'—')+'</td><td>'+
+          button('open-release','Open release','data-release-id="'+esc(row.id)+'"')+'</td></tr>').join('')+'</tbody></table></div>':'')+
+      ((release.release_issues||[]).length?'<p class="sr-note">'+esc(release.release_issues.map(item=>item.message).join(' '))+'</p>':'')+'</section>';
+  };
+  async function createMapRelease(id) {
+    assertWorkspace();
+    if(typeof openExtension!=='function')throw Error('Install the current map-atlas desk to open this report selection.');
+    const key=workspaceKey;
+    message('Opening the map release for this saved report…');
+    const release=await call('/api/scenario-reports/release',{report_id:id});
+    if(disposed||key!==currentWorkspace()||selectedReport!==id)return;
+    if(!release.ready) {
+      const target=$('[data-report-release]');
+      if(target)target.innerHTML=releaseHTML(release);
+      message((release.issues||[]).map(item=>item.message).join(' ')||'Reopen the report selection before building the map release.',true);
+      return;
+    }
+    await openExtension('map-atlas','create',{workspace_key:key,selection:release.selection});
+  }
+  async function openLinkedRelease(id) {
+    assertWorkspace();
+    if(typeof openExtension!=='function')throw Error('Install the current map-atlas desk to open this release.');
+    return openExtension('map-atlas','open',id,{workspace_key:workspaceKey});
+  }
+  async function open(id,options={}) {
+    if(!/^[0-9a-f]{64}$/.test(id||''))throw Error('Choose an existing saved watershed report.');
+    const key=options?.workspace_key||currentWorkspace();
+    if(key!==currentWorkspace())throw Error('Open this saved report in its original project.');
+    if(!key)throw Error('Open the project containing this watershed report.');
+    const requested={workspace:key,report_id:id};
+    if((disposed||!root)&&typeof navigate!=='function')throw Error('Open Watershed reports, then select this saved report.');
+    pendingOpen=requested;
+    try {
+      if(typeof navigate==='function')await navigate('scenario-reports');
+    } catch(error) {
+      if(pendingOpen===requested)pendingOpen=null;
+      throw error;
+    }
+    if(currentWorkspace()!==key){
+      if(pendingOpen===requested)pendingOpen=null;
+      throw Error('The selected project changed. Open the report in its original project.');
+    }
+    if(root&&!disposed&&workspaceKey===key&&pendingOpen===requested) {
+      pendingOpen=null;
+      return openReport(id);
+    }
+    return {workspace_key:key,report_id:id};
   }
   async function openReport(id) {
     assertWorkspace();
@@ -302,14 +393,16 @@ export function attachScenarioReports(context) {
         '<div class="sr-actions">'+(preview?'<a href="'+esc(preview)+'" target="_blank" rel="noopener">Open report in a new tab</a>':'')+
         downloads.map(item=>'<a href="'+esc(item.url)+(item.url.includes('?')?'&amp;':'?')+'download=1" download>'+esc(item.filename||item.label)+'</a>').join('')+'</div>'+
         '<p class="sr-note">The decision workbench can now open this report through its watershed selector. All alternatives retain the same common-support comparison used here.</p>'+
+        '<div data-report-release>'+releaseHTML(packet.release)+'</div>'+
         (preview?'<iframe title="Saved watershed scenario report" src="'+esc(preview)+'" sandbox="allow-scripts allow-downloads allow-modals" referrerpolicy="no-referrer"></iframe>':'<p>Use the saved HTML download to open the complete report.</p>');
       message('');target.scrollIntoView({block:'nearest'});
       root.dispatchEvent(new CustomEvent('upstate:scenario-report-opened',{bubbles:true,detail:{workspace:key,report_id:id,summary,report}}));
     } catch(error){if(!disposed&&key===currentWorkspace()&&selectedReport===id)message(error.message,true);}
   }
   function observe(state=getState()) {
+    if(pendingOpen&&pendingOpen.workspace!==currentWorkspace())pendingOpen=null;
     if(disposed||!root)return;
-    if(state?.workspace_key!==workspaceKey){refresh();return;}
+    if((state?.workspace_key||null)!==workspaceKey){refresh();return;}
     const tasks=(state.tasks||[]).filter(task=>task.action==='scenario.decision.build'&&task.workspace===workspaceKey);
     const signature=JSON.stringify(tasks.map(task=>[task.id,task.state,task.updated_at,task.result?.id]));
     if(signature===lastTaskSignature)return;
@@ -324,12 +417,14 @@ export function attachScenarioReports(context) {
     if(changed&&catalog)refresh();
   }
   function detach() {
-    remember();disposed=true;requestGeneration++;sourceGeneration++;events?.abort();events=null;
+    if(pendingOpen&&pendingOpen.workspace!==currentWorkspace())pendingOpen=null;
+    remember();disposed=true;requestGeneration++;sourceGeneration++;builderGeneration++;events?.abort();events=null;
     if(root){root.classList.remove('scenario-report-workbench');root.replaceChildren();}
-    root=null;workspaceKey=null;catalog=null;sourceInfo=null;sourceChoice=null;selectedReport=null;lastTaskSignature='';
+    root=null;workspaceKey=null;catalog=null;sourceInfo=null;sourceChoice=null;selectedReport=null;submitting=null;lastTaskSignature='';
   }
   function mount(element) {
-    if(root===element&&!disposed&&workspaceKey===currentWorkspace()){observe();return {detach,update:observe,refresh,open:openReport};}
+    if(pendingOpen&&pendingOpen.workspace!==currentWorkspace())pendingOpen=null;
+    if(root===element&&!disposed&&workspaceKey===currentWorkspace()){observe();return {detach,update:observe,refresh,open};}
     detach();root=element;disposed=false;events=new AbortController();scaffold();
     root.addEventListener('click',event=>{
       const node=event.target.closest('[data-report-action]');if(!node||!root.contains(node))return;
@@ -337,22 +432,27 @@ export function attachScenarioReports(context) {
       Promise.resolve().then(()=>{
         if(action==='new')return renderBuilder();
         if(action==='refresh')return refresh();
-        if(action==='cancel'){$('[data-report-builder]').hidden=true;remember();return;}
+        if(action==='cancel'){builderGeneration++;sourceGeneration++;$('[data-report-builder]').hidden=true;remember();return;}
         if(action==='open')return openReport(node.dataset.reportId);
+        if(action==='map-release')return createMapRelease(node.dataset.reportId);
+        if(action==='open-release')return openLinkedRelease(node.dataset.releaseId);
         if(action==='close-preview'){$('[data-report-view]').hidden=true;$('[data-report-view]').replaceChildren();selectedReport=null;return;}
         if(action==='task'&&showTask)return showTask(node.dataset.taskId);
       }).catch(error=>message(error.message,true));
     },{signal:events.signal});
     root.addEventListener('change',event=>{
-      const name=event.target.name;
+      const name=event.target.name,key=workspaceKey,form=$('[data-report-form]');
+      const ownsForm=()=>!disposed&&key===workspaceKey&&key===currentWorkspace()&&form===$('[data-report-form]');
+      const readSource=layer=>{const loading=loadSource(layer),generation=sourceGeneration;return loading.then(applied=>{if(applied&&ownsForm()&&generation===sourceGeneration)remember();});};
       Promise.resolve().then(()=>{
+        if(!ownsForm())return;
         if(name==='baseline_run_id'||name==='include_parameter_changes')renderAlternatives();
         else if(name==='alternative_run_id')renderPollutants();
-        else if(name==='zone_source')return loadSource().then(remember);
-        else if(name==='zone_layer')return loadSource(event.target.value).then(remember);
+        else if(name==='zone_source')return readSource();
+        else if(name==='zone_layer')return readSource(event.target.value);
         else if(name==='zone_mode'||name==='zone_id_field')updateZoneNote();
         remember();
-      }).catch(error=>message(error.message,true));
+      }).catch(error=>{if(ownsForm())message(error.message,true);});
     },{signal:events.signal});
     root.addEventListener('input',remember,{signal:events.signal});
     root.addEventListener('submit',event=>{
@@ -360,7 +460,7 @@ export function attachScenarioReports(context) {
       event.preventDefault();submit().catch(error=>message(error.message,true));
     },{signal:events.signal});
     refresh();
-    return {detach,update:observe,refresh,open:openReport};
+    return {detach,update:observe,refresh,open};
   }
-  return {mount,detach,update:observe,refresh,open:openReport};
+  return {mount,detach,update:observe,refresh,open};
 }

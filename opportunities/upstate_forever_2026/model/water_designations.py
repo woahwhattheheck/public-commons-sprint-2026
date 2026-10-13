@@ -626,7 +626,7 @@ def apply_to_delivery(workspace, selection_id, delivery_selection):
         raise ValueError("Delivery overlays and source_roles must be JSON objects")
     role = {"high_quality_waters": "HIGH_QUALITY_WATERS",
             "drinking_water": "SOURCE_WATER_PROTECTION_AREAS",
-            "protected_lands": "PROTECTED_LANDS"}[result["purpose"]]
+            "protected_lands": "PROTECTED_LANDS_OVERLAY"}[result["purpose"]]
     choice = result["delivery_overlay"]
     overlays[result["purpose"]] = json.loads(json.dumps(choice))
     source_roles[role] = json.loads(json.dumps(choice))

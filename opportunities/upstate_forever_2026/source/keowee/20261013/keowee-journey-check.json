@@ -1,0 +1,65 @@
+{
+  "schema": "upstate.keowee-journey-check/v1",
+  "passed": true,
+  "fixture_role": "Checks implementation against published source boundaries and aggregation; values are an engineering fixture.",
+  "checks": 23,
+  "categories": [
+    {
+      "category_id": "land_protection",
+      "score": 31
+    },
+    {
+      "category_id": "agricultural_bmp",
+      "score": 17
+    },
+    {
+      "category_id": "wetland_restoration",
+      "score": 18
+    },
+    {
+      "category_id": "riparian_restoration",
+      "score": 26
+    },
+    {
+      "category_id": "voluntary_dam_removal",
+      "score": 5
+    },
+    {
+      "category_id": "shoreline_management",
+      "score": 20
+    },
+    {
+      "category_id": "stormwater_bmp",
+      "score": 15
+    },
+    {
+      "category_id": "pet_waste",
+      "score": 2
+    }
+  ],
+  "stormwater_developed_logging_score": 16,
+  "nitrogen_overlap_possible_points": [
+    0,
+    2
+  ],
+  "septic_1970_class": "outside_published_age_classes",
+  "cost_usd": 5309.42,
+  "pasture_to_forest_one_hectare_reduction_kg_year": {
+    "tss": 257,
+    "tp": 0.020000000000000004,
+    "tn": 2.2
+  },
+  "bundle_identity": {
+    "different_parcel_rejected": true,
+    "different_huc10_rejected": true,
+    "explicit_raw_array_score": 1
+  },
+  "provider_adaptation": {
+    "id": "scdes-h2oclass-to-keowee-2020",
+    "raw_H2OCLASS": "TPGT",
+    "mapped_class": "TGPT",
+    "criterion_score": 3,
+    "source_values_preserved": true,
+    "unassigned_TPT_retained": true
+  }
+}
