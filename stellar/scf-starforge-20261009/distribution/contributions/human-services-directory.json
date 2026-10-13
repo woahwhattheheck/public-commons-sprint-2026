@@ -1,18 +1,45 @@
 {
   "schema": "stellar-forge.merchant-distribution-contribution.v1",
   "id": "human-services-directory",
-  "description": "Original HSDS and FHIR Human Services Directory sources, complete editions and comparisons, reviewed mapping and service selection, Gravity referral joins, and editable handoffs.",
+  "description": "Original HSDS/FHIR Directory sources, standards assessments, reviewed service/referral decisions, complete OperatingPlan procedures and editable handoffs.",
   "commands": {
     "human-services-directory": "stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_directory/cli.mjs"
   },
   "commandDescriptions": {
-    "human-services-directory": "Acquire and import original directory sources, review all mappings, select a service, join the selected original clinical resources and receive the complete workspace."
+    "human-services-directory": "Acquire and assess original directories, review service/referral decisions, prepare and edit complete procedures, and receive the original workspace and histories."
   },
   "exports": {
     "./seller/human-services-directory": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_eltss/merchant.mjs",
-    "./buyer/human-services-directory": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_eltss/customer.mjs"
+    "./buyer/human-services-directory": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_eltss/customer.mjs",
+    "./human-services-directory/operating-plans": {
+      "types": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_directory/directory_operating_plan.d.mts",
+      "import": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_directory/directory_operating_plan.mjs"
+    },
+    "./human-services-directory/operating-plan-model": {
+      "types": "./source/stellar/scf-starforge-20261009/distribution/discovery/operating-plan.d.mts",
+      "import": "./source/stellar/scf-starforge-20261009/distribution/discovery/operating-plan.mjs"
+    }
   },
   "components": [
     "stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_directory"
+  ],
+  "supportFiles": [
+    "stellar/scf-starforge-20261009/distribution/discovery/catalog.d.mts",
+    "stellar/scf-starforge-20261009/distribution/discovery/catalog.mjs",
+    "stellar/scf-starforge-20261009/distribution/discovery/load.mjs",
+    "stellar/scf-starforge-20261009/distribution/discovery/operating-plan.d.mts",
+    "stellar/scf-starforge-20261009/distribution/discovery/operating-plan.mjs",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_directory/CONFORMANCE_NATIVE.md",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_directory/OPERATING_PLANS.md",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_directory/directory-operating-plans-schema.json",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_directory/directory_operating_plan.d.mts",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_directory/directory_operating_plan.mjs",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_directory/directory_operating_plan_bridge.mjs",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_directory/directory_operating_plans.py",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_directory/operate_conformance_clients.mjs",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_directory/operate_operating_plans.py",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_directory/operate_operating_plans_browser.mjs",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_directory/public/directory-operating-plans.css",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_directory/public/directory-operating-plans.mjs"
   ]
 }

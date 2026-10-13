@@ -5,7 +5,8 @@ import {pathToFileURL} from 'node:url';
 import {parseArgs} from 'node:util';
 import {ENVELOPE, MAX_BYTES, validateDraft, makeSource, createDraft, importFormMap, exportFormMap, measureText, applicationOutput} from './dist/grant-submission-core.mjs';
 import {emptyHandover} from './dist/grant-handover-core.mjs';
-import {openDraftEnvelope, createDraftEnvelope, verifyHandover, createSourceBundle, retainSourceBundle, prepareSubmission} from './dist/grant-handover-source.mjs';
+import {openDraftEnvelope, createDraftEnvelope, verifyHandover, createSourceBundle, retainSourceBundle, prepareSubmission,
+  MAX_SOURCE_PACKAGE_BYTES,openReviewerSourcePackage,receiveReviewerSource,reviewerSourceFromDraft,createReviewerSourcePackage} from './dist/grant-handover-source.mjs';
 
 // MIT. Command-line receiving for the original SCF submission model.
 const EXPORT_SCHEMA = 'stellar-forge.grant-cli-export.v1';
@@ -78,6 +79,8 @@ export async function prepareGrantExport(input, {selection='auto', format='plain
   const files = new Map();
   files.set('draft.json',await createDraftEnvelope(draft,{exportedAt:generatedAt}));
   files.set('form-map.json',JSON.stringify(exportFormMap(draft),null,2)+'\n');
+  if(draft.handover.selection.bundleId)files.set('source-package.json',await createReviewerSourcePackage(
+    await reviewerSourceFromDraft(draft,draft.handover.selection.bundleId),{exportedAt:generatedAt}));
   files.set('application.md',applicationOutput(draft,{format:'markdown',useFields:false}));
   files.set('prepared.txt',edition.body.output.text);
   files.set('prepared.json',JSON.stringify(prepared,null,2)+'\n');
@@ -105,12 +108,17 @@ export async function writeGrantExport(options) {
   const fromDraft = Boolean(options.draft);
   requireValue(fromDraft !== Boolean(options.source), 'Choose a saved draft or an application source.');
   requireValue(options.out, 'Choose a new output directory with --out.');
+  requireValue(!options['receive-source-package'] || fromDraft, 'Receive a source package into the original saved draft with --draft.');
   if (fromDraft) requireValue(!options['source-index'] && !options['source-url'] && !options.budget && !options.companion && !options.id && !options.title, 'A saved draft retains its own source, identity and title.');
   let draft;
   if (fromDraft) {
     const saved = await readBounded(resolve(options.draft),'Saved submission',MAX_BYTES*2+65536);
     const document = JSON.parse(saved.text.replace(/^\uFEFF/,''));
     draft = document.schema === ENVELOPE ? await openDraftEnvelope(saved.text) : await verifyHandover(document);
+    if(options['receive-source-package']) {
+      const incoming=await readBounded(resolve(options['receive-source-package']),'Reviewer source package',MAX_SOURCE_PACKAGE_BYTES);
+      draft=await receiveReviewerSource(draft,await openReviewerSourcePackage(incoming.text));
+    }
   } else {
     requireValue(options['source-index'] && options['source-url'], 'A new draft needs --source-index and --source-url from the same application edition.');
     const {bytes,text} = await readBounded(resolve(options.source),'Application');
@@ -151,14 +159,16 @@ export async function writeGrantExport(options) {
 export async function runCLI(args=process.argv.slice(2)) {
   const {values} = parseArgs({args,options:{
     help:{type:'boolean'},draft:{type:'string'},source:{type:'string'},'source-index':{type:'string'},'source-url':{type:'string'},budget:{type:'string'},companion:{type:'string'},
-    'form-map':{type:'string'},out:{type:'string'},select:{type:'string'},format:{type:'string'},id:{type:'string'},title:{type:'string'}
+    'receive-source-package':{type:'string'},'form-map':{type:'string'},out:{type:'string'},select:{type:'string'},format:{type:'string'},id:{type:'string'},title:{type:'string'}
   },allowPositionals:false});
   if (values.help) {
     process.stdout.write('Export the existing SCF submission model.\n\n' +
       '  node grant-export.mjs --draft saved-submission.json --out /private/new-export\n' +
+      '  node grant-export.mjs --draft saved-submission.json --receive-source-package source-package.json --out /private/received-export\n' +
       '  node grant-export.mjs --source application.md --source-index source-index.json --source-url https://original/source --out /private/new-export\n\n' +
       'Options: --budget budget.csv --companion product-and-finance.md; --form-map native-map.json; --select auto|answers|fields; --format plain|markdown.\n' +
-      'New source drafts may use --id and --title. Saved draft identities and all history are retained.\n');
+      'New source drafts may use --id and --title. Saved draft identities and all history are retained.\n' +
+      'A selected complete reviewer bundle is also exported as source-package.json for source receiving.\n');
     return 0;
   }
   const result = await writeGrantExport(values);

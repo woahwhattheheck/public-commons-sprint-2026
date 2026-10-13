@@ -15,6 +15,7 @@ from .research_extraction_cli import add_extraction_commands, run_extraction_com
 from .research_eligibility_cli import add_eligibility_commands, run_eligibility_command
 from .research_customer_cli import add_customer_commands, run_customer_command
 from .research_commerce_cli import add_commerce_commands, run_commerce_command
+from .research_quotes_cli import add_quotes_commands, run_quotes_command
 
 _READ = {"status", "dossiers", "metadata", "section", "compare", "documents-list",
          "documents-review", "documents-elements", "pipelines-list", "pipelines-operation",
@@ -42,6 +43,7 @@ def parser():
     add_eligibility_commands(commands)
     add_customer_commands(commands)
     add_commerce_commands(commands)
+    add_quotes_commands(commands)
     commands.add_parser("status")
     saved = commands.add_parser("calls")
     saved.add_argument("--offset", type=int, default=0)
@@ -73,7 +75,9 @@ def parser():
 def main(argv=None):
     arguments = parser().parse_args(argv)
     try:
-        if arguments.command.startswith("commerce-"):
+        if arguments.command.startswith("quotes-"):
+            result = run_quotes_command(arguments)
+        elif arguments.command.startswith("commerce-"):
             result = run_commerce_command(arguments)
         elif arguments.command.startswith("customer-"):
             result = run_customer_command(arguments)

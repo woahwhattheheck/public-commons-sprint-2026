@@ -2,7 +2,7 @@
   "schema": "stellar-forge.distribution-source-selection.v1",
   "id": "human-services-directory",
   "title": "Human Services Directory",
-  "description": "Complete original directory programme: HSDS and FHIR inputs, native acquisition and retained editions, reviewed mapping, service selection and clinical resource joining, full Gravity operations, connected tools, managed Applications and editable customer receiving.",
+  "description": "Complete Directory programme: original HSDS/FHIR acquisition, editions, conformance review, mappings, service/referral decisions, full OperatingPlan procedures, SDK/MCP, Applications and editable customer receiving.",
   "base": {
     "commands": [
       "installation",
@@ -117,10 +117,18 @@
     "products/gravity-referrals/OPERATING.md",
     "products/gravity-referrals/RECEIVING.md",
     "products/gravity-referrals/SOURCE.json",
+    "products/human-services-directory/OPERATING.md",
+    "products/human-services-directory/RECEIVING.md",
+    "products/human-services-directory/SOURCE.json",
     "stellar-forge/payment-auto-catalog/package-lock.json",
     "stellar-forge/payment-auto-catalog/package.json",
     "stellar-forge/payment-auto-catalog/schema-pattern.mjs",
     "stellar-forge/payment-auto-catalog/schema-validation.mjs",
+    "stellar/scf-starforge-20261009/distribution/discovery/catalog.d.mts",
+    "stellar/scf-starforge-20261009/distribution/discovery/catalog.mjs",
+    "stellar/scf-starforge-20261009/distribution/discovery/load.mjs",
+    "stellar/scf-starforge-20261009/distribution/discovery/operating-plan.d.mts",
+    "stellar/scf-starforge-20261009/distribution/discovery/operating-plan.mjs",
     "stellar/scf-starforge-20261009/sf101-merchant-outbox-continuity/continuity.mjs",
     "stellar/scf-starforge-20261009/sf103-native-buyer-signer/diagnostics.mjs",
     "stellar/scf-starforge-20261009/sf30-seller-sdk/dataset-cli.mjs",
@@ -129,21 +137,30 @@
     "stellar/scf-starforge-20261009/sf30-seller-sdk/examples/service.json",
     "stellar/scf-starforge-20261009/sf30-seller-sdk/examples/upstream-service.json",
     "stellar/scf-starforge-20261009/sf30-seller-sdk/examples/upstreams.json",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_directory/CONFORMANCE_NATIVE.md",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_directory/OPERATING_PLANS.md",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_directory/directory-operating-plans-schema.json",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_directory/directory_operating_plan.d.mts",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_directory/directory_operating_plan.mjs",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_directory/directory_operating_plan_bridge.mjs",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_directory/directory_operating_plans.py",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_directory/operate_conformance_clients.mjs",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_directory/operate_operating_plans.py",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_directory/operate_operating_plans_browser.mjs",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_directory/public/directory-operating-plans.css",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_directory/public/directory-operating-plans.mjs",
     "stellar/scf-starforge-20261009/sf30-seller-sdk/native-factory.mjs",
     "stellar/scf-starforge-20261009/sf30-seller-sdk/seller.mjs",
     "stellar/scf-starforge-20261009/sf74-merchant-support-console/case-store.mjs",
     "stellar/scf-starforge-20261009/sf74-merchant-support-console/runtime-support.mjs",
-    "stellar/scf-starforge-20261009/sf74-merchant-support-console/workspace-file.mjs",
-    "products/human-services-directory/OPERATING.md",
-    "products/human-services-directory/RECEIVING.md",
-    "products/human-services-directory/SOURCE.json"
+    "stellar/scf-starforge-20261009/sf74-merchant-support-console/workspace-file.mjs"
   ],
   "excludeFiles": [
     "stellar/scf-starforge-20261009/distribution/index.mjs"
   ],
   "product": {
     "schema": "stellar-forge.merchant-product-package.v1",
-    "description": "Human Services Directory source, service selection, Gravity referral handoff and complete editable customer receiving",
+    "description": "Human Services Directory source and standards review, complete operating procedures, service/referral handoff and full editable customer receiving",
     "repository": {
       "url": "https://github.com/woahwhattheheck/tjlabs-stellar-merchant-workspace",
       "directory": ""

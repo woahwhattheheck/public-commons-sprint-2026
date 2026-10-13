@@ -523,6 +523,7 @@ def run_locked(args, root):
        manifest.get("sourceSelection", {}).get("id") != "flowable-merchant":
         fail("The installed runtime must contain the same selected Flowable source")
     for relative in (PREFIX + "/native-journey.mjs", PREFIX + "/native.mjs",
+                     PREFIX + "/cmmn-native.mjs", PREFIX + "/cmmn-native-journey.mjs",
                      "products/flowable-merchant/native-installed-journey.mjs"):
         if not (source_root / relative).is_file() or not (installed_source / relative).is_file():
             fail("Receive the complete original source including " + relative)
@@ -544,6 +545,8 @@ def run_locked(args, root):
         completed = read_private(completed_path)
         if completed.get("state") != "PASSED" or completed.get("sourceRevision") != args.source_revision:
             fail("The retained complete native delivery differs")
+        if completed.get("nativeResult", {}).get("result", {}).get("cases", {}).get("state") != "PASSED":
+            fail("The original complete delivery must retain its actual CMMN programme")
         for item in (completed["completeReceiving"], completed["nativeResult"]["stateFile"]):
             if digest(Path(item["path"])) != {key: item[key] for key in ("bytes", "sha256")}:
                 fail("The original completed native receiving bytes changed")
@@ -603,7 +606,8 @@ def run_locked(args, root):
         "spring.datasource.username=flowable", "spring.datasource.password=" + runtime["databasePassword"],
         "spring.datasource.driver-class-name=org.h2.Driver", "flowable.database-schema-update=true",
         "flowable.history-level=full", "flowable.dmn.enabled=true", "flowable.dmn.history-enabled=true",
-        "flowable.dmn.servlet.path=/dmn-api", "flowable.async-executor-activate=false",
+        "flowable.dmn.servlet.path=/dmn-api", "flowable.cmmn.enabled=true",
+        "flowable.cmmn.servlet.path=/cmmn-api", "flowable.async-executor-activate=false",
         "flowable.async-history-executor-activate=false", "flowable.rest.app.create-demo-definitions=false",
         "flowable.rest.app.authentication-mode=verify-privilege",
         "flowable.rest.app.admin.user-id=" + runtime["username"], "flowable.rest.app.admin.password=" + runtime["password"],
@@ -617,6 +621,7 @@ def run_locked(args, root):
         atomic(properties_path, properties.encode("utf-8"))
     base = "http://127.0.0.1:" + str(runtime["port"]) + "/flowable-rest/service"
     dmn_base = "http://127.0.0.1:" + str(runtime["port"]) + "/flowable-rest/dmn-api"
+    cmmn_base = "http://127.0.0.1:" + str(runtime["port"]) + "/flowable-rest/cmmn-api"
     credentials = {"username": runtime["username"], "password": runtime["password"]}
     engine_saved = next((item for item in reversed(state["processes"]) if item["role"] == "flowable" and same_process(item)), None)
     engine_process = None
@@ -646,6 +651,13 @@ def run_locked(args, root):
             status, value, raw = native_json(dmn_base, credentials, "/dmn-repository/decisions?size=1")
             return status == 200 and isinstance(value.get("data"), list)
         wait_ready(dmn_ready, engine_process, "Original Flowable8 DMN REST engine", seconds=240)
+        def cmmn_ready():
+            status, value, raw = native_json(cmmn_base, credentials, "/cmmn-repository/case-definitions?size=1")
+            return status == 200 and isinstance(value.get("data"), list)
+        wait_ready(cmmn_ready, engine_process, "Original Flowable8 CMMN REST engine", seconds=240)
+        state["nativeServices"] = {"process": base, "decision": dmn_base, "case": cmmn_base,
+                                  "historyLevel": "full", "readyAt": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())}
+        save(state_path, state)
         reviewer = ensure_reviewer(root, base, credentials, runtime["reviewerUserId"])
         environment["FLOWABLE_NATIVE_USERNAME"] = runtime["username"]
         environment["FLOWABLE_NATIVE_PASSWORD"] = runtime["password"]
@@ -661,8 +673,11 @@ def run_locked(args, root):
                       "usernameEnv": "FLOWABLE_NATIVE_USERNAME", "passwordEnv": "FLOWABLE_NATIVE_PASSWORD"}
         dmn_connection = {"id": "native-flowable-dmn", "label": "Original Flowable8 decision engine", "baseUrl": dmn_base,
                           "usernameEnv": "FLOWABLE_NATIVE_USERNAME", "passwordEnv": "FLOWABLE_NATIVE_PASSWORD"}
+        cmmn_connection = {"id": "native-flowable-cmmn", "label": "Original Flowable8 case engine", "baseUrl": cmmn_base,
+                           "usernameEnv": "FLOWABLE_NATIVE_USERNAME", "passwordEnv": "FLOWABLE_NATIVE_PASSWORD"}
         configuration = {"schema": "stellar-forge.flowable-native-journey.v1", "operation": OPERATION,
             "sourceRevision": args.source_revision, "installedVersion": VERSION, "connection": connection, "dmnConnection": dmn_connection,
+            "cmmnConnection": cmmn_connection,
             "runtimeDirectory": str(runtime_root), "installedSourceRoot": str(installed_source),
             "environmentFile": str(private_environment_path),
             "adminUserId": runtime["username"], "reviewerUserId": runtime["reviewerUserId"],
@@ -704,6 +719,9 @@ def run_locked(args, root):
                 break
         if not native_result or native_result["operation"] != OPERATION or native_result["scope"] != SCOPE:
             fail("The original complete Flowable journey result is absent")
+        if native_result.get("result", {}).get("cases", {}).get("state") != "PASSED" or \
+           native_result.get("result", {}).get("installed", {}).get("state") != "PASSED":
+            fail("Complete original CMMN commissioning and installed customer receiving before publication")
         journey = read_json(root / "journey/journey.json")
         if journey["state"] != "PASSED" or journey["operation"] != OPERATION or \
            journey["configuration"]["sourceRevision"] != args.source_revision:

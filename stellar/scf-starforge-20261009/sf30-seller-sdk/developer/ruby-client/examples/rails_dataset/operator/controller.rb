@@ -18,7 +18,8 @@ module Starforge
         end
         helper_method :operator_token, :operator_values, :operator_text,
           :operator_data_unpack, :operator_data_value, :operator_data_label,
-          :operator_data_time, :operator_data_column, :operator_data_type
+          :operator_data_time, :operator_data_column, :operator_data_type,
+          :operator_mapping_row, :operator_mapping_label, :operator_mapping_configured?, :operator_source_types
         rescue_from Starforge::Error, Starforge::RailsDataset::ImportError, with: :operator_error
         rescue_from ActiveRecord::RecordNotFound do
           head :not_found
@@ -38,6 +39,66 @@ module Starforge
           selection_sha256: selected.fetch("selection_sha256"), actor: @operator_actor)
         operator_enqueue(PrepareJob,id)
         redirect_to({action: :show,id: id},status: :see_other)
+      end
+
+      def create_source
+        selected = operator_verify("create_source")
+        id = selected.fetch("review_id")
+        @workspace.select(id: id,candidate_id: selected.fetch("candidate_id"),
+          selection_sha256: selected.fetch("selection_sha256"),actor: @operator_actor)
+        operator_enqueue(SourcePrepareJob,id)
+        redirect_to({action: :mapping,id: id},status: :see_other)
+      end
+
+      def prepare_source
+        selected = operator_verify("source_prepare")
+        id = params[:id].to_s
+        Files.need(selected["review_id"] == id,"DATASET_OPERATOR_SELECTION_CHANGED")
+        @workspace.selection(id)
+        operator_enqueue(SourcePrepareJob,id)
+        redirect_to({action: :mapping,id: id},status: :see_other)
+      end
+
+      def mapping
+        operator_mapping_context
+        render template: "starforge_dataset_operator/mapping",layout: "starforge_dataset_operator"
+      end
+
+      def save_mapping
+        selected = operator_verify("mapping_save")
+        id = params[:id].to_s
+        Files.need(selected["original_review_id"] == id,"DATASET_OPERATOR_SELECTION_CHANGED")
+        @mapping_form = operator_mapping_input
+        review_id = selected.fetch("review_id")
+        @workspace.remap_form(id,new_id: review_id,actor: @operator_actor,form: @mapping_form,
+          expected_context_sha256: selected.fetch("context_sha256"))
+        operator_enqueue(PrepareJob,review_id)
+        redirect_to({action: :show,id: review_id},status: :see_other)
+      rescue Starforge::Error, Starforge::RailsDataset::ImportError => error
+        @mapping_problem = operator_mapping_problem(error)
+        operator_mapping_context
+        render template: "starforge_dataset_operator/mapping",
+          layout: "starforge_dataset_operator",status: :unprocessable_entity
+      end
+
+      def source_rows
+        id = params[:id].to_s
+        @detail = @workspace.detail(id)
+        unless @workspace.source_available?(id)
+          redirect_to({action: :mapping,id: id},status: :see_other)
+          return
+        end
+        @source_summary = @workspace.source_summary(id)
+        @source_rows = @workspace.source_rows(id,page: operator_data_page)
+        render template: "starforge_dataset_operator/source_rows",layout: "starforge_dataset_operator"
+      end
+
+      def source_export
+        operator_download(@workspace.source_export(params[:id].to_s,format: params[:format].to_s))
+      end
+
+      def mapping_export
+        operator_download(@workspace.mapping_export(params[:id].to_s))
       end
 
       def show
@@ -253,6 +314,106 @@ module Starforge
         render template: "starforge_dataset_operator/error",layout: "starforge_dataset_operator",status: :conflict
       end
 
+      def operator_mapping_context
+        id = params[:id].to_s
+        @detail = @workspace.detail(id)
+        @mapping_review_id = SecureRandom.uuid
+        return unless @workspace.source_available?(id)
+        @mapping_context = @workspace.mapping_context(id)
+        return if @mapping_form
+        definition = @mapping_context.fetch("mapping")
+        keys = definition.fetch("key_columns",[])
+        chosen = @mapping_context.dig("target","unique_keys").find { |index|
+          index.fetch("columns").sort == keys.sort
+        }
+        @mapping_form = {"key_index"=>chosen && chosen["name"],
+          "removal"=>definition.dig("removal","strategy") || "retain",
+          "archive_column"=>definition.dig("removal","column"),
+          "archive_active"=>definition.dig("removal","active") == false ? "false" : "true",
+          "rows"=>@mapping_context.dig("target","columns").map do |column|
+            spec = definition.fetch("columns",{}).fetch(column.fetch("name"),{})
+            field = spec["field"]
+            field = "" unless field.is_a?(String) && @mapping_context.dig("source","fields").include?(field)
+            {"column"=>column.fetch("name"),"field"=>field,
+              "null"=>%w[assign preserve].include?(spec["null"]) ? spec["null"] : "assign",
+              "missing"=>%w[error preserve].include?(spec["missing"]) ? spec["missing"] : "error",
+              "stringify"=>spec["stringify"] == true ? "1" : "0"}
+          end}
+      end
+
+      def operator_mapping_input
+        value = params.require(:mapping)
+        raise ActionController::BadRequest,"Use the field mapping form." unless
+          value.is_a?(ActionController::Parameters)
+        value.permit(:key_index,:removal,:archive_column,:archive_active,
+          rows: [:column,:field,:null,:missing,:stringify]).to_h
+      end
+
+      def operator_mapping_row(form, name)
+        value = form.fetch("rows",[])
+        value = value.values if value.is_a?(Hash)
+        return {} unless value.is_a?(Array)
+        value.find { |row| row.is_a?(Hash) && row["column"] == name } || {}
+      end
+
+      def operator_mapping_configured?(definition)
+        definition.is_a?(Hash) && definition["columns"].is_a?(Hash) &&
+          !definition["columns"].empty? && definition["key_columns"].is_a?(Array) &&
+          !definition["key_columns"].empty?
+      end
+
+      def operator_mapping_label(value)
+        text = value.to_s.tr("_"," ").strip
+        text.empty? ? "Field" : text.sub(/\A./) { |first| first.upcase }
+      end
+
+      def operator_source_types(column)
+        types = column.fetch("types",{})
+        names = {"null"=>"Empty","string"=>"Text","integer"=>"Whole number",
+          "decimal"=>"Decimal","boolean"=>"Yes / no"}
+        selected = types.reject { |key,count| key == "null" || count.to_i.zero? }.map do |key,count|
+          "#{names.fetch(key) { operator_mapping_label(key) }}: #{count}"
+        end
+        selected.empty? ? "No nonempty values" : selected.join(" · ")
+      end
+
+      def operator_mapping_problem(error)
+        code = error.respond_to?(:code) ? error.code : nil
+        problems = {
+          "DATASET_OPERATOR_MAPPING_CONTEXT_CHANGED"=>"The source or application fields changed while this form was open. Review the current fields below, then create the mapping review.",
+          "DATASET_OPERATOR_MAPPING_SELECTION_CHANGED"=>"This saved form belongs to another mapping selection. Review the current fields below and create a new review.",
+          "DATASET_OPERATOR_KEY_INDEX"=>"Choose one of the application's unique record keys.",
+          "DATASET_OPERATOR_KEY_SOURCE_REQUIRED"=>"Choose a source column for every field in the selected record key.",
+          "DATASET_OPERATOR_KEY_SOURCE_CHANGED"=>"The current source no longer supplies this stream's original record key. Review the original source selection.",
+          "DATASET_OPERATOR_MAPPING_COLUMN"=>"Choose each application field once from the fields shown below.",
+          "DATASET_OPERATOR_MAPPING_FIELD"=>"Choose a source column from the complete retained dataset.",
+          "DATASET_OPERATOR_MAPPING_FORM"=>"Complete the supported field mapping options below.",
+          "DATASET_OPERATOR_MAPPING_TEXT"=>"Convert numbers or yes/no values to text only for a text field.",
+          "DATASET_OPERATOR_REMOVAL_POLICY"=>"Choose whether absent source records are retained or archived.",
+          "DATASET_OPERATOR_ARCHIVE_COLUMN"=>"Choose a Boolean archive field that is left unmapped in the field list.",
+          "DATASET_MAPPING_KEYS"=>"Map at least one application field and choose its complete record key.",
+          "DATASET_TARGET_COLUMN"=>"This field is controlled by the application. Choose an available application field.",
+          "DATASET_COLUMN_TYPE"=>"Use the application's current field type.",
+          "DATASET_FIELD_MAPPING"=>"Choose a source column and supported empty-value behavior for each mapped field.",
+          "DATASET_KEY_REQUIRED"=>"Every record-key field needs an actual source value.",
+          "DATASET_UNIQUE_TARGET_KEY"=>"The selected record key needs an existing unique index within this application's scope.",
+          "DATASET_STREAM_BINDING"=>"This stream's established source, record key or application scope differs from the selection. Continue with its original source and key.",
+          "DATASET_ARCHIVE_COLUMN"=>"Choose an available Boolean archive field that is left unmapped.",
+          "DATASET_SOURCE_FIELD_MISSING"=>"The selected source column is missing from this complete dataset.",
+          "DATASET_TEXT_REQUIRED"=>"A source value needs text. Select text conversion only when numbers or yes/no values should become text.",
+          "DATASET_INTEGER_REQUIRED"=>"A source value does not fit a whole-number field.",
+          "DATASET_DECIMAL_REQUIRED"=>"A source value does not fit a decimal field.",
+          "DATASET_BOOLEAN_REQUIRED"=>"A yes/no field requires actual true or false source values.",
+          "DATASET_COLUMN_NULL"=>"The application requires a value in this field.",
+          "DATASET_COLUMN_PRECISION"=>"A source value exceeds the precision of its application field.",
+          "DATASET_COLUMN_VALUE"=>"A source value does not fit its selected application field."
+        }
+        message = problems.fetch(code,"The mapping could not be selected. Review the source columns, record key and application fields below.")
+        details = error.respond_to?(:details) ? error.details : nil
+        column = details && (details[:column] || details["column"])
+        column ? "#{operator_mapping_label(column)}: #{message}" : message
+      end
+
       def operator_data_page
         page = operator_integer(:page,1)
         raise ActionController::BadRequest, "Choose a page starting at 1." unless page >= 1
@@ -353,7 +514,11 @@ module Starforge
           "unchanged"=>"Matches imported values","changed"=>"Edited after import",
           "missing"=>"No current record","selected"=>"Waiting to start",
           "running"=>"Saving records","error"=>"Needs attention",
-          "complete"=>"Ready"}.fetch(value.to_s) { value.to_s.tr("_"," ").capitalize }
+          "complete"=>"Ready","source_preparing"=>"Reading complete source",
+          "source_ready"=>"Source ready for mapping","source_error"=>"Source needs attention",
+          "preparing"=>"Preparing complete review","ready"=>"Ready for review",
+          "approved"=>"Import approved","importing"=>"Importing edition",
+          "import_error"=>"Import needs attention","prepare_error"=>"Review needs attention"}.fetch(value.to_s) { value.to_s.tr("_"," ").capitalize }
       end
 
       def operator_data_time(value)

@@ -29,7 +29,8 @@ Add `commerce` beneath an existing named workspace:
         "stateDirectory": "/private/original-buyer-state",
         "runtimeDirectory": "/private/original-sf88-runtime",
         "configuration": "/private/original-buyer-configuration.json",
-        "operatorProfile": "/private/original-operator-profile.json"
+        "operatorProfile": "/private/original-operator-profile.json",
+        "operatorWorkspace": "/private/original-funded-operator"
       }
     }
   }
@@ -158,6 +159,22 @@ after interruption, recover its original uncertain payment/receipt operation,
 then continue that exact object. The complete file must match the selected
 snapshot, byte count and SHA-256.
 
+### Original accounting continuation
+
+`purchase_accounting` and `purchase_finalize` take the same `workspace`,
+`buyer` and `purchaseRequestId`, with optional `offset` and `limit`. The
+configured buyer's `operatorWorkspace` supplies the original financial
+workspace. Both return the unchanged native response under `accounting`;
+follow `accounting.native.range.nextOffset` for the complete original
+session. The default range is 0/100 and the maximum limit is 250.
+
+`purchase_accounting_recover` takes those same three selectors and optional
+`commandId`. It reads the original retained command after a lost response,
+including the last complete response if a later command was interrupted.
+The native finalizer preserves its existing idempotent outcomes and original
+reservation/payment identities. See the full
+[accounting and native environment guide](../../stellar/scf-starforge-20261009/sf30-seller-sdk/pmtiles/commerce/NATIVE_ENVIRONMENT.md).
+
 `purchase_adopt` adds `requestId` and imports the completed original
 ObjectDelivery into this map workspace, preserving rights and source identity.
 
@@ -169,6 +186,15 @@ same request reopens the retained customer result and preserves later edits
 in that receiving workspace.
 
 ## Complete original native phase
+
+The optional `outputCommerce.nativeEnvironment` selector retains the complete
+private environment descriptor and its SHA256 before the original input is
+frozen. It starts the maintained facilitator and original HTTPS transport,
+passes the original operator custody to native buyer children, then drains
+them after seller/MCP completion. Its descriptor also selects the original
+accounting workspace. Existing services can instead supply
+`outputCommerce.buyer.operatorWorkspace` directly.
+
 
 The callable `exercisePMTilesOutputCommerce` receives the same actual
 producer and native runtime after the original browser/MCP/Applications

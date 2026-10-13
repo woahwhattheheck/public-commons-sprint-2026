@@ -71,3 +71,19 @@ The output contains `APPLICATIONS_JOURNEY.json`, retained original runtime/appli
 | `directory/operator-connection.json` | Original private native descriptor |
 
 Native operation and the connected SDK share the same original workspace. A connected client borrows an already running Applications operator. For complete install, transfer and customer receiving commands, follow [the product receiving guide](../../../../products/human-services-directory/RECEIVING.md).
+
+
+## Conformance in the installed application
+
+The **Conformance** section is part of the same Human Services Directory application. Open its saved workspace, select standards and source scope, run complete assessments, review findings and compare results. All records and retained files travel with the normal editable workspace export and receiving flow.
+
+The [complete conformance guide](CONFORMANCE.md) covers source and profile selection, finding groups, review successors, report packages and connected SDK/MCP operation.
+
+
+## Operating Plans in the same managed application
+
+Open **Operating Plans** after starting the saved Human Services Directory workspace. Prepare a procedure from the exact selected edition and native records, inspect its complete preview, and accept that same preview. Edit and reorder steps, open an earlier revision, append a reviewed draft, copy the whole history and receive complete original JSON histories through the existing application.
+
+The source basis and all saved procedures remain in the same Directory workspace. Opening a historical revision is read-only until an explicit save; closing and reopening Applications preserves the native saved-head chain and complete original inputs. The connected client can read the same document, draft, basis and accepted input while borrowing this running application.
+
+The [complete Operating Plans guide](OPERATING_PLANS.md) contains the exact native/connected inputs, complete operating drivers, JSON/Markdown/HTML downloads and fresh editable-workspace receiving. Working browser drafts remain distinct from native saved revisions. Full workspace receiving preserves the original OperatingPlan model, every saved revision and all selected native source files.

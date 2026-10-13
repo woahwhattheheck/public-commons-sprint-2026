@@ -45,8 +45,18 @@ module Starforge
     examples/rails_dataset/operator/views/starforge_dataset_operator/records.html.erb
     examples/rails_dataset/operator/views/starforge_dataset_operator/record.html.erb
   ].freeze
-  DATASET_OPERATOR_RUBY_FILES = (LEGACY_DATASET_OPERATOR_RUBY_FILES + DATASET_RECORD_RUBY_FILES).freeze
+  LEGACY_RECORD_DATASET_OPERATOR_RUBY_FILES = (LEGACY_DATASET_OPERATOR_RUBY_FILES + DATASET_RECORD_RUBY_FILES).freeze
+  DATASET_MAPPING_RUBY_FILES = %w[
+    examples/rails_dataset/operator/source.rb
+    examples/rails_dataset/operator/mapping.rb
+    examples/rails_dataset/operator/source_cli.rb
+    examples/rails_dataset/operator/mapping_example.rb
+    examples/rails_dataset/operator/views/starforge_dataset_operator/mapping.html.erb
+    examples/rails_dataset/operator/views/starforge_dataset_operator/source_rows.html.erb
+  ].freeze
+  DATASET_OPERATOR_RUBY_FILES = (LEGACY_RECORD_DATASET_OPERATOR_RUBY_FILES + DATASET_MAPPING_RUBY_FILES).freeze
   LEGACY_OPERATOR_RUBY_FILES = (LEGACY_COMPLETE_RUBY_FILES + LEGACY_DATASET_OPERATOR_RUBY_FILES).freeze
+  LEGACY_RECORD_RUBY_FILES = (LEGACY_COMPLETE_RUBY_FILES + LEGACY_RECORD_DATASET_OPERATOR_RUBY_FILES).freeze
   RUBY_FILES = (LEGACY_COMPLETE_RUBY_FILES + DATASET_OPERATOR_RUBY_FILES).freeze
 
   class Error < StandardError
@@ -361,7 +371,7 @@ module Starforge
       base = Files.parse(base_bytes)
       Files.need(Files.hash(base_bytes) == @manifest["originalManifestSha256"] &&
         base["sourceSha256"] == @manifest["sourceSha256"], "RUBY_ORIGINAL_EXPORT_CHANGED")
-      selected = [LEGACY_RUBY_FILES,LEGACY_DATASET_RUBY_FILES,LEGACY_COMPLETE_RUBY_FILES,LEGACY_OPERATOR_RUBY_FILES,RUBY_FILES].find { |files|
+      selected = [LEGACY_RUBY_FILES,LEGACY_DATASET_RUBY_FILES,LEGACY_COMPLETE_RUBY_FILES,LEGACY_OPERATOR_RUBY_FILES,LEGACY_RECORD_RUBY_FILES,RUBY_FILES].find { |files|
         @manifest["files"].is_a?(Array) && @manifest["files"].length == files.length
       }
       Files.need(selected, "RUBY_PACKAGE_INCOMPLETE")

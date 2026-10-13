@@ -13,6 +13,7 @@ import {workspaceOverview,donationsPage,donationDetail,transfersPage,transferDet
 import {statementFiles,comparisonCSV} from './exports.mjs';
 import {captureRegistry} from './capture.mjs';
 import {captureLedger,captureTransaction} from './ledger.mjs';
+import {captureLedgerInterval,selectLedgerInterval,captureLedgerSelection} from './history.mjs';
 import {createGiveCreditServer} from './server.mjs';
 export const HELP=String.raw`GiveCredit donor and initiative statements
 
@@ -27,6 +28,10 @@ export const HELP=String.raw`GiveCredit donor and initiative statements
   givecredit-statements capture-registry --directory DIR --file OPTIONS.json --label LABEL [--resume]
   givecredit-statements capture-ledger --directory DIR --file OPTIONS.json --label LABEL [--registry-edition ID] [--resume]
   givecredit-statements capture-transaction --directory DIR --hash ORIGINAL_HASH --label LABEL [--file OPTIONS.json]
+
+  givecredit-statements capture-history --file NATIVE_HISTORY_OPTIONS.json [--resume] [--sdk-module EXISTING_SDK.mjs]
+  givecredit-statements select-history --file NATIVE_HISTORY_OPTIONS.json [--fetch-closures] [--sdk-module EXISTING_SDK.mjs]
+  givecredit-statements capture-selected-ledgers --file NATIVE_HISTORY_OPTIONS.json [--resume] [--sdk-module EXISTING_SDK.mjs]
 
   givecredit-statements payment-link|allocation|bridge|statement|settings|carry-payment-links --directory DIR --file VALUE.json [--actor NAME] [--request-id ID]
   givecredit-statements preview --directory DIR --kind allocation|bridge|statement --file VALUE.json
@@ -53,8 +58,23 @@ Registry capture retains all original organization pages and later impact relati
 Ledger capture uses the original ^16.3.0 Stellar SDK peer, whole transaction XDR and
 the public RPC/Horizon/archive sources. OPTIONS.json accepts network, contractId,
 transactionHashes, accounts, source dates, original endpoints and ledger bounds.
+originalLedgerSources retains complete original public ledger JSON responses as
+{format:"stellar-expert-ledger-json",sourceUrl,ledger,content,retrievedAt?,acquisition?}.
+The RPC source form is {format:"stellar-rpc-ledgers-json",sourceUrl,request,
+requestContent?,content,status?,retrievedAt?,acquisition?}; retain the original
+named-parameter getLedgers request and its whole base64-XDR response.
+The native reader preserves original envelope/result/meta and provider provenance
+when the live indexes have pruned an older transaction. Whole retained sources can
+be prepared with the companion carbon-native-receiving/prepare-ledger-inputs.mjs.
 --registry-edition adds every original Stellar receipt payment hash in that edition.
 A failed acquisition saves its exact native checkpoint for --resume.
+
+Native history options select sourceRoot/output, SDK module, public archive URL,
+accounts, contractIds and additional source addresses. capture-history includes
+startLedger and excludes beforeLedger; select-history reuses complete local pages;
+capture-selected-ledgers closes an existing native scan's exact ledgers array.
+All original files stay under sourceRoot for the complete native receiving archive.
+The resulting captureOptions path feeds ordinary capture-ledger or receive-native.
 
 Mutation JSON uses exact amountAtoms strings, source edition IDs and original record
 keys. Existing mappings include id and expectedVersion. The browser accepts ordinary
@@ -71,7 +91,7 @@ function parse(args){
   const command=args[0]||'help',options={};
   for(let i=1;i<args.length;i++){
     const key=args[i];need(key.startsWith('--'),'CLI_OPTION','Use named command options.');
-    if(['--retained','--resume','--help'].includes(key)){options[key.slice(2)]=true;continue;}
+    if(['--retained','--resume','--fetch-closures','--help'].includes(key)){options[key.slice(2)]=true;continue;}
     need(i+1<args.length&&!args[i+1].startsWith('--'),'CLI_OPTION','Provide a value for '+key+'.');
     options[key.slice(2)]=args[++i];
   }
@@ -92,6 +112,13 @@ async function writeNew(path,value){path=resolve(required(path,'a new output pat
 export async function main(args=process.argv.slice(2)){
   const {command,options}=parse(args);
   if(['help','--help','-h'].includes(command)||options.help){process.stdout.write(HELP);return;}
+  if(['capture-history','select-history','capture-selected-ledgers'].includes(command)){
+    const input=await readJSONFile(required(options.file,'the complete native history options'));
+    if(options.resume)input.resume=true;if(options['fetch-closures'])input.fetchClosures=true;
+    if(options['sdk-module'])input.sdkModule=options['sdk-module'];
+    input.onProgress=value=>process.stderr.write(JSON.stringify(value)+'\n');
+    print(await (command==='capture-history'?captureLedgerInterval:command==='select-history'?selectLedgerInterval:captureLedgerSelection)(input));return;
+  }
   const directory=resolve(required(options.directory,'the private workspace directory'));
   if(command==='init'||command==='receive'){
     const workspace=await GiveCreditWorkspace.create(directory,{name:options.name,handover:command==='receive'?await readJSONFile(required(options.file,'the complete handover file')):undefined});

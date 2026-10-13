@@ -71,7 +71,8 @@ export async function startWorkspace({directory, ownershipDirectory, create = fa
           return send(200, controller.catalog({runtimeId,query:params.toString(),
             expectedVersion:version === null ? null : Number(version)}));
         }
-        if (path === '/api/profiles') return send(200, await store.list({after:url.searchParams.get('after') ?? ''}));
+        if (path === '/api/profiles') return send(200, await store.list({after:url.searchParams.get('after') ?? '',
+          limit:url.searchParams.has('limit') ? Number(url.searchParams.get('limit')) : 30}));
         if (path === '/api/profile' || path === '/api/download') {
           const profile = await store.read(url.searchParams.get('name'));
           if (path === '/api/profile') return send(200, profile);

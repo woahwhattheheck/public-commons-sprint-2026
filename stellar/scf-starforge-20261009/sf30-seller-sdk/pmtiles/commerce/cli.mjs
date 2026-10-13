@@ -10,12 +10,13 @@ import {need,clone,identifier} from '../model.mjs';
 import {PMTilesOutputController} from './controller.mjs';
 import {fields,OUTPUT_METADATA_BYTES} from './model.mjs';
 import {prepareOutputPurchase,inspectOutputPurchase,runOutputPurchase,recoverOutputPurchase,
-  adoptPurchasedMapResource,receivePurchasedMapOperations} from './buyer.mjs';
+  adoptPurchasedMapResource,receivePurchasedMapOperations,
+  inspectOutputPurchaseAccounting,finalizeOutputPurchaseAccounting,recoverOutputPurchaseAccounting} from './buyer.mjs';
 
 const HELP='Paid map outputs\n\n'+
 'starforge pmtiles-output prepare|package|catalog|stage|release|compare|activate|request|status --connection /PRIVATE/output.json [--request /PRIVATE/request.json]\n'+
 'starforge pmtiles-output serve --connection /PRIVATE/output.json --request /PRIVATE/start.json\n'+
-'starforge pmtiles-output purchase-prepare|purchase-status|purchase-run|purchase-recover|purchase-adopt|purchase-receive --connection /PRIVATE/customer.json --request /PRIVATE/request.json\n\n'+
+'starforge pmtiles-output purchase-prepare|purchase-status|purchase-run|purchase-recover|purchase-accounting|purchase-finalize|purchase-accounting-recover|purchase-adopt|purchase-receive --connection /PRIVATE/customer.json --request /PRIVATE/request.json\n\n'+
 'Serve keeps the original owned SF82 seller in this foreground process; Ctrl-C drains it.\n'+
 'Keep the same request ID, source/catalog hashes and original purchase directory after interruption.\n';
 function absolute(value){need(typeof value==='string'&&isAbsolute(value)&&!value.includes('\0'),
@@ -48,9 +49,10 @@ async function connection(path){
     if(value[key]!==undefined)value[key]=absolute(value[key]);
   if(value.expectedWorkspaceId!==undefined)identifier(value.expectedWorkspaceId);
   if(value.buyer!==undefined){
-    fields(value.buyer,['runtimeDirectory','stateDirectory','operatorProfile'],['runtimeDirectory','stateDirectory']);
+    fields(value.buyer,['runtimeDirectory','stateDirectory','operatorProfile','operatorWorkspace'],['runtimeDirectory','stateDirectory']);
     for(const key of ['runtimeDirectory','stateDirectory'])value.buyer[key]=absolute(value.buyer[key]);
     if(value.buyer.operatorProfile!==undefined)value.buyer.operatorProfile=absolute(value.buyer.operatorProfile);
+    if(value.buyer.operatorWorkspace!==undefined)value.buyer.operatorWorkspace=absolute(value.buyer.operatorWorkspace);
   }
   return value;
 }
@@ -73,7 +75,8 @@ export async function runPMTilesOutputCommand(argv,{signal,onReady}={}){
     signal?.throwIfAborted();
     if(command.startsWith('purchase-')){
       need(config.buyer&&config.purchasesDirectory,'PMTILES_OUTPUT_BUYER_CONNECTION_REQUIRED');
-      const buyer=new Buyer(config.buyer),action=command.slice('purchase-'.length);
+      const {operatorWorkspace,...buyerOptions}=config.buyer;
+      const buyer=new Buyer(buyerOptions),action=command.slice('purchase-'.length);
       const purchaseRequestId=identifier(action==='prepare'?request.requestId:request.purchaseRequestId);
       const directory=join(config.purchasesDirectory,purchaseRequestId);
       if(config.workspaceDirectory)need(directory!==config.workspaceDirectory&&!directory.startsWith(config.workspaceDirectory+sep)&&
@@ -88,6 +91,18 @@ export async function runPMTilesOutputCommand(argv,{signal,onReady}={}){
       if(['status','run','recover'].includes(action)){
         fields(request,['purchaseRequestId'],['purchaseRequestId']);
         return await (action==='status'?inspectOutputPurchase(common):action==='run'?runOutputPurchase(common):recoverOutputPurchase(common));
+      }
+      if(action==='accounting'||action==='finalize'){
+        fields(request,['purchaseRequestId','offset','limit'],['purchaseRequestId']);
+        need(operatorWorkspace,'PMTILES_OUTPUT_ORIGINAL_OPERATOR_WORKSPACE_REQUIRED');
+        const {purchaseRequestId:_selected,...range}=request;
+        return await (action==='finalize'?finalizeOutputPurchaseAccounting:inspectOutputPurchaseAccounting)(
+          {...common,input:{...range,workspaceDirectory:operatorWorkspace}});
+      }
+      if(action==='accounting-recover'){
+        fields(request,['purchaseRequestId','commandId'],['purchaseRequestId']);
+        const {purchaseRequestId:_selected,...input}=request;
+        return await recoverOutputPurchaseAccounting({...common,input});
       }
       if(action==='adopt'){
         fields(request,['requestId','purchaseRequestId'],['requestId','purchaseRequestId']);

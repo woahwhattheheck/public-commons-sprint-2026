@@ -25,6 +25,8 @@ const SOURCE_FILES = [
   'concentration-units.mjs', 'review-sheet/concentrations.mjs', 'ui/concentrations.mjs',
   'standardized-analysis/model.mjs', 'standardized-analysis/formats.mjs', 'standardized-analysis/workflow.mjs',
   'ui/standardized-analysis.mjs',
+  'kiwis/source.mjs', 'kiwis/wqm.mjs', 'kiwis/model.mjs', 'kiwis/workflow.mjs', 'kiwis/formats.mjs', 'ui/kiwis.mjs',
+  '../lab-edd/model.mjs', '../lab-edd/reconciliation-profile.mjs', '../lab-edd/reconciliation.mjs', '../lab-edd/result.mjs', '../lab-edd/table.mjs', '../lab-edd/zip.mjs',
 ];
 const hash = value => createHash('sha256').update(typeof value === 'string' || Buffer.isBuffer(value)
   ? value : JSON.stringify(value)).digest('hex');

@@ -9,7 +9,7 @@ export const RESULT_SCHEMA='stellar-forge.human-services-directory-merchant-resu
 export const TOOL_PREFIX='merchant_human_services_directory_';
 export const MANIFEST_NAME='human-services-directory-manifest.json';
 export const EXPORT_KINDS=Object.freeze([...inheritedKinds,
-  'directory-source-file','directory-guidance-file','directory-export-file','directory-handoff-packet'
+  'directory-source-file','directory-guidance-file','directory-export-file','directory-handoff-packet','directory-conformance-file'
 ]);
 export function parseHumanServicesDirectoryExport(bytes,expectedId){
   return parseEltssExport(bytes,expectedId,{

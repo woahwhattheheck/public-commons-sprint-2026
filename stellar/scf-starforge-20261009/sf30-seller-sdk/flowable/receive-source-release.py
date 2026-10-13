@@ -386,16 +386,43 @@ def receive_locked(args, root):
         need(journey_identity == {key: state_file[key] for key in ("bytes", "sha256")},
              "Keep the original completed native journey")
         journey = json.loads(journey_path.read_bytes())
-        step_name = "complete-native-process-history-export-and-cold-receiving"
-        step = journey["steps"][step_name]
         need(journey["operation"] == OPERATION and journey["state"] == "PASSED" and
-             journey["scope"] == scope and step["completedAt"], "Original workspace receiving is incomplete")
-        later = step["value"]["laterDownload"]
+             journey["scope"] == scope, "Original workspace receiving is incomplete")
+        step_name = "installed-product-cli-client-applications-and-mcp-receiving"
+        installed_step = journey["steps"].get(step_name, {})
+        installed = installed_step.get("value", {})
+        complete_workspace = installed.get("completeWorkspace")
+        if complete_workspace is not None:
+            need(installed_step.get("completedAt") and installed.get("state") == "PASSED" and
+                 isinstance(complete_workspace, dict), "The completed installed workspace is required")
+            later = complete_workspace["file"]
+            export_reference = complete_workspace["delivery"]
+            receiving_reference = complete_workspace["receiving"]
+            workspace_id = complete_workspace["workspaceId"]
+            need(journey.get("result", {}).get("workspace") == later and
+                 journey.get("result", {}).get("installed", {}).get("completeWorkspace") == complete_workspace,
+                 "The final journey must identify its completed installed workspace")
+            need(isinstance(export_reference, dict) and isinstance(receiving_reference, dict) and
+                 isinstance(workspace_id, str) and workspace_id,
+                 "The original installed export, receiving and workspace identities are required")
+            workspace_directory = native_root / "journey/installed-product"
+        else:
+            # Earlier process/decision source editions retained their original export here.
+            need("cases" not in journey.get("result", {}),
+                 "Case operations require the completed installed export and cold receiving")
+            step_name = "complete-native-process-history-export-and-cold-receiving"
+            step = journey["steps"][step_name]
+            need(step.get("completedAt"), "Original workspace receiving is incomplete")
+            later = step["value"]["laterDownload"]
+            export_reference = step["value"]["second"]
+            receiving_reference = step["value"]["laterReceiving"]
+            workspace_id = step["value"].get("receiverWorkspaceId")
+            workspace_directory = native_root / "journey/downloads"
         workspace_path = Path(later["path"])
         need(workspace_path.is_file() and not workspace_path.is_symlink() and
-             workspace_path.resolve().is_relative_to(native_root / "journey/downloads") and
+             workspace_path.resolve().is_relative_to(workspace_directory) and
              identity(workspace_path) == {key: later[key] for key in ("bytes", "sha256")},
-             "The original later native workspace export differs")
+             "The original completed native workspace export differs")
         complete = native_receiving["completeReceiving"]
         need(identity(Path(complete["path"])) == {key: complete[key] for key in ("bytes", "sha256")},
              "The original complete native receiving archive differs")
@@ -403,7 +430,8 @@ def receive_locked(args, root):
         result["nativeReceiving"] = native_receiving
         result["nativeWorkspace"] = {
             "path": str(workspace_path), **identity(workspace_path), "scope": scope,
-            "exportReference": step["value"]["second"], "receivingReference": step["value"]["laterReceiving"],
+            "exportReference": export_reference, "receivingReference": receiving_reference,
+            "receivingWorkspaceId": workspace_id,
             "journey": {"path": str(journey_path), **journey_identity, "step": step_name}}
         result["status"] = "SOURCE_RELEASE_AND_NATIVE_RECEIVED"
         immutable(root / ("native-receiving-" + scope + ".json"), data(result))
