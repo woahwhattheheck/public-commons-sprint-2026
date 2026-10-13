@@ -205,8 +205,8 @@
       "source": "model/MONITORING_OBSERVED_CONTEXT.md",
       "source_role": "current_application_source",
       "path": "model/MONITORING_OBSERVED_CONTEXT.md",
-      "bytes": 19011,
-      "sha256": "b345444db93018843e8d3dd736429ddbd32f649ba6733c969314f3c2248d3363",
+      "bytes": 19887,
+      "sha256": "62ec7d4c2bc092d00f862b40115ad345135e728db268a6508c9746de2a1db7fb",
       "retained_installed_editions": [
         {
           "bytes": 11799,
@@ -219,10 +219,14 @@
         {
           "bytes": 17232,
           "sha256": "f1b55f73e8bb0d15f6f8ee48e628d87d80683e0f0e8932478e6c0db8a4d07858"
+        },
+        {
+          "bytes": 19011,
+          "sha256": "b345444db93018843e8d3dd736429ddbd32f649ba6733c969314f3c2248d3363"
         }
       ],
-      "previous_bytes": 17232,
-      "previous_sha256": "f1b55f73e8bb0d15f6f8ee48e628d87d80683e0f0e8932478e6c0db8a4d07858"
+      "previous_bytes": 19011,
+      "previous_sha256": "b345444db93018843e8d3dd736429ddbd32f649ba6733c969314f3c2248d3363"
     },
     {
       "source": "model/monitoring_observed_context.py",
@@ -323,10 +327,20 @@
       "source": "model/MONITORING_STUDY_TRANSFER.md",
       "source_role": "current_application_source",
       "path": "model/MONITORING_STUDY_TRANSFER.md",
-      "bytes": 8459,
-      "sha256": "5732615fb82ebb0b29f2264f692f679006758c3cd6e8d40bc4be5d9696c14224",
-      "previous_bytes": 7841,
-      "previous_sha256": "0095d0ca255e9989c35146f801561c82a327e02445850dd2bf3a4ae316570692"
+      "bytes": 9796,
+      "sha256": "7065cd1f35b2536f4b7157a9da37504a7c9a7e3cdb4c1490ae64f1da845e38ce",
+      "previous_bytes": 8459,
+      "previous_sha256": "5732615fb82ebb0b29f2264f692f679006758c3cd6e8d40bc4be5d9696c14224",
+      "retained_installed_editions": [
+        {
+          "bytes": 7841,
+          "sha256": "0095d0ca255e9989c35146f801561c82a327e02445850dd2bf3a4ae316570692"
+        },
+        {
+          "bytes": 8459,
+          "sha256": "5732615fb82ebb0b29f2264f692f679006758c3cd6e8d40bc4be5d9696c14224"
+        }
+      ]
     },
     {
       "source": "model/monitoring_study_transfer.py",
@@ -570,12 +584,22 @@
     {
       "source": "src/opportunities/upstate_forever_2026/operator/web/monitoring-component.mjs",
       "path": "operator/web/monitoring-component.mjs",
-      "bytes": 23901,
-      "sha256": "064d50959afc32411df87e9cd1479dc1d0802ad9e83ada549de0d9e1ac654949",
+      "bytes": 24175,
+      "sha256": "7cddac64d34641eb339e52029d7125cf03b908f1b8fc54852280799f45598bb0",
       "original_bytes": 23470,
       "original_sha256": "74733636160383214ead70221766e622cb9b2940bb12ef238adbcdb9cc5edd6d",
-      "previous_bytes": 23690,
-      "previous_sha256": "52cc07c29bde345efbe305ad0b47a7835c75af16649a8d7c548a80f849d575be"
+      "previous_bytes": 23901,
+      "previous_sha256": "064d50959afc32411df87e9cd1479dc1d0802ad9e83ada549de0d9e1ac654949",
+      "retained_installed_editions": [
+        {
+          "bytes": 23690,
+          "sha256": "52cc07c29bde345efbe305ad0b47a7835c75af16649a8d7c548a80f849d575be"
+        },
+        {
+          "bytes": 23901,
+          "sha256": "064d50959afc32411df87e9cd1479dc1d0802ad9e83ada549de0d9e1ac654949"
+        }
+      ]
     },
     {
       "source": "operator/web/monitoring-frontiers.css",
@@ -595,8 +619,8 @@
       "source": "operator/web/monitoring-observed.mjs",
       "source_role": "current_application_source",
       "path": "operator/web/monitoring-observed.mjs",
-      "bytes": 24516,
-      "sha256": "ead60a60b44adc80e0495ba988a337ac11afa92a9af26b12734528d94ee1114e",
+      "bytes": 25250,
+      "sha256": "0226a65719bea63020a69e41bf0b9efc68ff27ff0c5dc11fe6b55066ec367f0b",
       "retained_installed_editions": [
         {
           "bytes": 11144,
@@ -609,10 +633,14 @@
         {
           "bytes": 17134,
           "sha256": "b892173baf305692e3b4fcb1b108cc47bcd5a747de32e99beed51f3667d6c9b8"
+        },
+        {
+          "bytes": 24516,
+          "sha256": "ead60a60b44adc80e0495ba988a337ac11afa92a9af26b12734528d94ee1114e"
         }
       ],
-      "previous_bytes": 17134,
-      "previous_sha256": "b892173baf305692e3b4fcb1b108cc47bcd5a747de32e99beed51f3667d6c9b8"
+      "previous_bytes": 24516,
+      "previous_sha256": "ead60a60b44adc80e0495ba988a337ac11afa92a9af26b12734528d94ee1114e"
     },
     {
       "source": "operator/web/monitoring-report.mjs",
@@ -647,12 +675,12 @@
     {
       "source": "src/opportunities/upstate_forever_2026/operator/web/monitoring.mjs",
       "path": "operator/web/monitoring.mjs",
-      "bytes": 8855,
-      "sha256": "3e25982a207cb20a4493dee22cab03ec399b8c59941beb89b9c78408dfb17deb",
+      "bytes": 13110,
+      "sha256": "fc32b32ac15149e72e564a110f1e04fb8a1fa4c1241662171df69701111479cc",
       "original_bytes": 4274,
       "original_sha256": "0a76feed9d9bd4ac929fa8e9ad0f28f95205fa705c9f6314ef79e3f095e4b895",
-      "previous_bytes": 8438,
-      "previous_sha256": "61806854947e01183f0e160a6ae808346c9b794b5b6ac7210372ae97ab7ffe49",
+      "previous_bytes": 8855,
+      "previous_sha256": "3e25982a207cb20a4493dee22cab03ec399b8c59941beb89b9c78408dfb17deb",
       "retained_installed_editions": [
         {
           "bytes": 7810,
@@ -665,6 +693,10 @@
         {
           "bytes": 8438,
           "sha256": "61806854947e01183f0e160a6ae808346c9b794b5b6ac7210372ae97ab7ffe49"
+        },
+        {
+          "bytes": 8855,
+          "sha256": "3e25982a207cb20a4493dee22cab03ec399b8c59941beb89b9c78408dfb17deb"
         }
       ]
     },
@@ -878,5 +910,22 @@
     "report_descriptor": "operator/extensions/monitoring-report.json",
     "component": "integration/component_fragments/monitoring-comparison-report.json",
     "behavior": "Exact saved budget choices enter the existing ordered scientific report with every original plan, source-bound observed context and retained comparison packet. Single-study report enrichment stays unchanged outside this explicit compound report kind."
+  },
+  "saved_record_opening": {
+    "route": "Study transfer → Open in Monitoring",
+    "host_method": "openDesk('monitoring', 'openStudy', selection)",
+    "selection_fields": [
+      "workspace_key",
+      "kind",
+      "id"
+    ],
+    "kinds": [
+      "monitoring_networks",
+      "monitoring_plans",
+      "monitoring_heads",
+      "monitoring_observed_contexts"
+    ],
+    "context_calendar": "Original immutable context; current campaign revision is not substituted",
+    "network_only_context": true
   }
 }
