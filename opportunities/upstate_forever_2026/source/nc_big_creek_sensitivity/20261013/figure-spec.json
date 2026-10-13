@@ -1,0 +1,1041 @@
+{
+  "schema": "upstate.scientific-figure-spec/v1",
+  "figures": [
+    {
+      "id": "big-creek-cyanide",
+      "title": "Cyanide: reporting limits and the 2022 methodology",
+      "caption": "Twelve routine samples were reported as not detected at a practical quantitation limit of 0.02 mg/L, displayed here as 20 µg/L. Each open triangle is that limit, not a measured concentration. The dashed line is the 5 µg/L reference in the published 2022 methodology. The captured assessment label instead says 5 mg/L and remains unchanged in the source table. Original blank method and fraction fields remain unspecified.",
+      "panels": [
+        {
+          "title": "Cyanide · routine unspecified fraction",
+          "x": {
+            "label": "Original sampling date",
+            "unit": "days since 1970-01-01 UTC",
+            "domain": [
+              14975,
+              15706
+            ],
+            "ticks": [
+              {
+                "value": 14975,
+                "label": "Jan 2011"
+              },
+              {
+                "value": 15156,
+                "label": "Jul 2011"
+              },
+              {
+                "value": 15340,
+                "label": "Jan 2012"
+              },
+              {
+                "value": 15522,
+                "label": "Jul 2012"
+              },
+              {
+                "value": 15706,
+                "label": "Jan 2013"
+              }
+            ]
+          },
+          "y": {
+            "label": "Cyanide",
+            "unit": "ug/L",
+            "domain": [
+              0,
+              25
+            ],
+            "ticks": [
+              {
+                "value": 0
+              },
+              {
+                "value": 5
+              },
+              {
+                "value": 10
+              },
+              {
+                "value": 15
+              },
+              {
+                "value": 20
+              },
+              {
+                "value": 25
+              }
+            ]
+          },
+          "reference_lines": [
+            {
+              "axis": "y",
+              "value": 5,
+              "label": "5 ug/L historical reference"
+            }
+          ],
+          "series": [
+            {
+              "label": "Original nondetection limit",
+              "geometry": "scatter",
+              "marker": "triangle-open",
+              "points": [
+                {
+                  "x": 15020,
+                  "y": 20,
+                  "censored": true,
+                  "result_id": "STORET-256106598",
+                  "original_source": {
+                    "path": "source/nc_big_creek_sensitivity/20261013/original/cyanide-wqx3-fullphyschem.csv",
+                    "row": 7,
+                    "original_column_suffix": "A"
+                  },
+                  "original_value": "0.02",
+                  "original_unit": "mg/L"
+                },
+                {
+                  "x": 15098,
+                  "y": 20,
+                  "censored": true,
+                  "result_id": "STORET-256201583",
+                  "original_source": {
+                    "path": "source/nc_big_creek_sensitivity/20261013/original/cyanide-wqx3-fullphyschem.csv",
+                    "row": 8,
+                    "original_column_suffix": "A"
+                  },
+                  "original_value": "0.02",
+                  "original_unit": "mg/L"
+                },
+                {
+                  "x": 15152,
+                  "y": 20,
+                  "censored": true,
+                  "result_id": "STORET-256246239",
+                  "original_source": {
+                    "path": "source/nc_big_creek_sensitivity/20261013/original/cyanide-wqx3-fullphyschem.csv",
+                    "row": 4,
+                    "original_column_suffix": "A"
+                  },
+                  "original_value": "0.02",
+                  "original_unit": "mg/L"
+                },
+                {
+                  "x": 15216,
+                  "y": 20,
+                  "censored": true,
+                  "result_id": "STORET-256338478",
+                  "original_source": {
+                    "path": "source/nc_big_creek_sensitivity/20261013/original/cyanide-wqx3-fullphyschem.csv",
+                    "row": 6,
+                    "original_column_suffix": "A"
+                  },
+                  "original_value": "0.02",
+                  "original_unit": "mg/L"
+                },
+                {
+                  "x": 15266,
+                  "y": 20,
+                  "censored": true,
+                  "result_id": "STORET-256407613",
+                  "original_source": {
+                    "path": "source/nc_big_creek_sensitivity/20261013/original/cyanide-wqx3-fullphyschem.csv",
+                    "row": 2,
+                    "original_column_suffix": "A"
+                  },
+                  "original_value": "0.02",
+                  "original_unit": "mg/L"
+                },
+                {
+                  "x": 15320,
+                  "y": 20,
+                  "censored": true,
+                  "result_id": "STORET-256497122",
+                  "original_source": {
+                    "path": "source/nc_big_creek_sensitivity/20261013/original/cyanide-wqx3-fullphyschem.csv",
+                    "row": 5,
+                    "original_column_suffix": "A"
+                  },
+                  "original_value": "0.02",
+                  "original_unit": "mg/L"
+                },
+                {
+                  "x": 15398,
+                  "y": 20,
+                  "censored": true,
+                  "result_id": "STORET-256648906",
+                  "original_source": {
+                    "path": "source/nc_big_creek_sensitivity/20261013/original/cyanide-wqx3-fullphyschem.csv",
+                    "row": 10,
+                    "original_column_suffix": "A"
+                  },
+                  "original_value": "0.02",
+                  "original_unit": "mg/L"
+                },
+                {
+                  "x": 15454,
+                  "y": 20,
+                  "censored": true,
+                  "result_id": "STORET-256692613",
+                  "original_source": {
+                    "path": "source/nc_big_creek_sensitivity/20261013/original/cyanide-wqx3-fullphyschem.csv",
+                    "row": 13,
+                    "original_column_suffix": "A"
+                  },
+                  "original_value": "0.02",
+                  "original_unit": "mg/L"
+                },
+                {
+                  "x": 15511,
+                  "y": 20,
+                  "censored": true,
+                  "result_id": "STORET-256820449",
+                  "original_source": {
+                    "path": "source/nc_big_creek_sensitivity/20261013/original/cyanide-wqx3-fullphyschem.csv",
+                    "row": 12,
+                    "original_column_suffix": "A"
+                  },
+                  "original_value": "0.02",
+                  "original_unit": "mg/L"
+                },
+                {
+                  "x": 15587,
+                  "y": 20,
+                  "censored": true,
+                  "result_id": "STORET-257063749",
+                  "original_source": {
+                    "path": "source/nc_big_creek_sensitivity/20261013/original/cyanide-wqx3-fullphyschem.csv",
+                    "row": 11,
+                    "original_column_suffix": "A"
+                  },
+                  "original_value": "0.02",
+                  "original_unit": "mg/L"
+                },
+                {
+                  "x": 15644,
+                  "y": 20,
+                  "censored": true,
+                  "result_id": "STORET-257231959",
+                  "original_source": {
+                    "path": "source/nc_big_creek_sensitivity/20261013/original/cyanide-wqx3-fullphyschem.csv",
+                    "row": 14,
+                    "original_column_suffix": "A"
+                  },
+                  "original_value": "0.02",
+                  "original_unit": "mg/L"
+                },
+                {
+                  "x": 15685,
+                  "y": 20,
+                  "censored": true,
+                  "result_id": "STORET-257302357",
+                  "original_source": {
+                    "path": "source/nc_big_creek_sensitivity/20261013/original/cyanide-wqx3-fullphyschem.csv",
+                    "row": 9,
+                    "original_column_suffix": "A"
+                  },
+                  "original_value": "0.02",
+                  "original_unit": "mg/L"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "big-creek-cadmium",
+      "title": "Total cadmium: laboratory sensitivity in the historical source",
+      "caption": "Twenty-four routine total-cadmium samples, on 24 dates, were not detected at 1 µg/L. The 0.4 µg/L line is the literal legacy trout-assessment label. Forty-eight separate dissolved routine records and all blanks/replicates remain in the complete source. Current dissolved-metal and hardness requirements must be selected from the applicable rule when designing new sampling.",
+      "panels": [
+        {
+          "title": "Cadmium · routine Total",
+          "x": {
+            "label": "Original sampling date",
+            "unit": "days since 1970-01-01 UTC",
+            "domain": [
+              14975,
+              15706
+            ],
+            "ticks": [
+              {
+                "value": 14975,
+                "label": "Jan 2011"
+              },
+              {
+                "value": 15156,
+                "label": "Jul 2011"
+              },
+              {
+                "value": 15340,
+                "label": "Jan 2012"
+              },
+              {
+                "value": 15522,
+                "label": "Jul 2012"
+              },
+              {
+                "value": 15706,
+                "label": "Jan 2013"
+              }
+            ]
+          },
+          "y": {
+            "label": "Cadmium",
+            "unit": "ug/L",
+            "domain": [
+              0,
+              1.25
+            ],
+            "ticks": [
+              {
+                "value": 0
+              },
+              {
+                "value": 0.25
+              },
+              {
+                "value": 0.5
+              },
+              {
+                "value": 0.75
+              },
+              {
+                "value": 1
+              },
+              {
+                "value": 1.25
+              }
+            ]
+          },
+          "reference_lines": [
+            {
+              "axis": "y",
+              "value": 0.4,
+              "label": "0.4 ug/L historical reference"
+            }
+          ],
+          "series": [
+            {
+              "label": "Original nondetection limit",
+              "geometry": "scatter",
+              "marker": "triangle-open",
+              "points": [
+                {
+                  "x": 15008,
+                  "y": 1,
+                  "censored": true,
+                  "result_id": "STORET-256097921",
+                  "original_source": {
+                    "path": "source/nc_big_creek_sensitivity/20261013/original/cadmium-wqx3-fullphyschem.csv",
+                    "row": 15,
+                    "original_column_suffix": "A"
+                  },
+                  "original_value": "1.0",
+                  "original_unit": "ug/L"
+                },
+                {
+                  "x": 15020,
+                  "y": 1,
+                  "censored": true,
+                  "result_id": "STORET-256106016",
+                  "original_source": {
+                    "path": "source/nc_big_creek_sensitivity/20261013/original/cadmium-wqx3-fullphyschem.csv",
+                    "row": 16,
+                    "original_column_suffix": "A"
+                  },
+                  "original_value": "1.0",
+                  "original_unit": "ug/L"
+                },
+                {
+                  "x": 15056,
+                  "y": 1,
+                  "censored": true,
+                  "result_id": "STORET-256145630",
+                  "original_source": {
+                    "path": "source/nc_big_creek_sensitivity/20261013/original/cadmium-wqx3-fullphyschem.csv",
+                    "row": 60,
+                    "original_column_suffix": "A"
+                  },
+                  "original_value": "1.0",
+                  "original_unit": "ug/L"
+                },
+                {
+                  "x": 15098,
+                  "y": 1,
+                  "censored": true,
+                  "result_id": "STORET-256201590",
+                  "original_source": {
+                    "path": "source/nc_big_creek_sensitivity/20261013/original/cadmium-wqx3-fullphyschem.csv",
+                    "row": 6,
+                    "original_column_suffix": "A"
+                  },
+                  "original_value": "1.0",
+                  "original_unit": "ug/L"
+                },
+                {
+                  "x": 15128,
+                  "y": 1,
+                  "censored": true,
+                  "result_id": "STORET-256230638",
+                  "original_source": {
+                    "path": "source/nc_big_creek_sensitivity/20261013/original/cadmium-wqx3-fullphyschem.csv",
+                    "row": 59,
+                    "original_column_suffix": "A"
+                  },
+                  "original_value": "1.0",
+                  "original_unit": "ug/L"
+                },
+                {
+                  "x": 15152,
+                  "y": 1,
+                  "censored": true,
+                  "result_id": "STORET-256246254",
+                  "original_source": {
+                    "path": "source/nc_big_creek_sensitivity/20261013/original/cadmium-wqx3-fullphyschem.csv",
+                    "row": 58,
+                    "original_column_suffix": "A"
+                  },
+                  "original_value": "1.0",
+                  "original_unit": "ug/L"
+                },
+                {
+                  "x": 15190,
+                  "y": 1,
+                  "censored": true,
+                  "result_id": "STORET-256284705",
+                  "original_source": {
+                    "path": "source/nc_big_creek_sensitivity/20261013/original/cadmium-wqx3-fullphyschem.csv",
+                    "row": 9,
+                    "original_column_suffix": "A"
+                  },
+                  "original_value": "1.0",
+                  "original_unit": "ug/L"
+                },
+                {
+                  "x": 15216,
+                  "y": 1,
+                  "censored": true,
+                  "result_id": "STORET-256338489",
+                  "original_source": {
+                    "path": "source/nc_big_creek_sensitivity/20261013/original/cadmium-wqx3-fullphyschem.csv",
+                    "row": 28,
+                    "original_column_suffix": "A"
+                  },
+                  "original_value": "1.0",
+                  "original_unit": "ug/L"
+                },
+                {
+                  "x": 15246,
+                  "y": 1,
+                  "censored": true,
+                  "result_id": "STORET-256372190",
+                  "original_source": {
+                    "path": "source/nc_big_creek_sensitivity/20261013/original/cadmium-wqx3-fullphyschem.csv",
+                    "row": 4,
+                    "original_column_suffix": "A"
+                  },
+                  "original_value": "1.0",
+                  "original_unit": "ug/L"
+                },
+                {
+                  "x": 15266,
+                  "y": 1,
+                  "censored": true,
+                  "result_id": "STORET-256407681",
+                  "original_source": {
+                    "path": "source/nc_big_creek_sensitivity/20261013/original/cadmium-wqx3-fullphyschem.csv",
+                    "row": 21,
+                    "original_column_suffix": "A"
+                  },
+                  "original_value": "1.0",
+                  "original_unit": "ug/L"
+                },
+                {
+                  "x": 15309,
+                  "y": 1,
+                  "censored": true,
+                  "result_id": "STORET-256473609",
+                  "original_source": {
+                    "path": "source/nc_big_creek_sensitivity/20261013/original/cadmium-wqx3-fullphyschem.csv",
+                    "row": 30,
+                    "original_column_suffix": "A"
+                  },
+                  "original_value": "1.0",
+                  "original_unit": "ug/L"
+                },
+                {
+                  "x": 15320,
+                  "y": 1,
+                  "censored": true,
+                  "result_id": "STORET-256497143",
+                  "original_source": {
+                    "path": "source/nc_big_creek_sensitivity/20261013/original/cadmium-wqx3-fullphyschem.csv",
+                    "row": 41,
+                    "original_column_suffix": "A"
+                  },
+                  "original_value": "1.0",
+                  "original_unit": "ug/L"
+                },
+                {
+                  "x": 15366,
+                  "y": 1,
+                  "censored": true,
+                  "result_id": "STORET-256640715",
+                  "original_source": {
+                    "path": "source/nc_big_creek_sensitivity/20261013/original/cadmium-wqx3-fullphyschem.csv",
+                    "row": 99,
+                    "original_column_suffix": "A"
+                  },
+                  "original_value": "1.0",
+                  "original_unit": "ug/L"
+                },
+                {
+                  "x": 15398,
+                  "y": 1,
+                  "censored": true,
+                  "result_id": "STORET-256648910",
+                  "original_source": {
+                    "path": "source/nc_big_creek_sensitivity/20261013/original/cadmium-wqx3-fullphyschem.csv",
+                    "row": 75,
+                    "original_column_suffix": "A"
+                  },
+                  "original_value": "1.0",
+                  "original_unit": "ug/L"
+                },
+                {
+                  "x": 15419,
+                  "y": 1,
+                  "censored": true,
+                  "result_id": "STORET-256653447",
+                  "original_source": {
+                    "path": "source/nc_big_creek_sensitivity/20261013/original/cadmium-wqx3-fullphyschem.csv",
+                    "row": 109,
+                    "original_column_suffix": "A"
+                  },
+                  "original_value": "1.0",
+                  "original_unit": "ug/L"
+                },
+                {
+                  "x": 15454,
+                  "y": 1,
+                  "censored": true,
+                  "result_id": "STORET-256692633",
+                  "original_source": {
+                    "path": "source/nc_big_creek_sensitivity/20261013/original/cadmium-wqx3-fullphyschem.csv",
+                    "row": 84,
+                    "original_column_suffix": "A"
+                  },
+                  "original_value": "1.0",
+                  "original_unit": "ug/L"
+                },
+                {
+                  "x": 15481,
+                  "y": 1,
+                  "censored": true,
+                  "result_id": "STORET-256749204",
+                  "original_source": {
+                    "path": "source/nc_big_creek_sensitivity/20261013/original/cadmium-wqx3-fullphyschem.csv",
+                    "row": 76,
+                    "original_column_suffix": "A"
+                  },
+                  "original_value": "1.0",
+                  "original_unit": "ug/L"
+                },
+                {
+                  "x": 15511,
+                  "y": 1,
+                  "censored": true,
+                  "result_id": "STORET-256822873",
+                  "original_source": {
+                    "path": "source/nc_big_creek_sensitivity/20261013/original/cadmium-wqx3-fullphyschem.csv",
+                    "row": 95,
+                    "original_column_suffix": "A"
+                  },
+                  "original_value": "1.0",
+                  "original_unit": "ug/L"
+                },
+                {
+                  "x": 15552,
+                  "y": 1,
+                  "censored": true,
+                  "result_id": "STORET-256975130",
+                  "original_source": {
+                    "path": "source/nc_big_creek_sensitivity/20261013/original/cadmium-wqx3-fullphyschem.csv",
+                    "row": 110,
+                    "original_column_suffix": "A"
+                  },
+                  "original_value": "1.0",
+                  "original_unit": "ug/L"
+                },
+                {
+                  "x": 15587,
+                  "y": 1,
+                  "censored": true,
+                  "result_id": "STORET-257063771",
+                  "original_source": {
+                    "path": "source/nc_big_creek_sensitivity/20261013/original/cadmium-wqx3-fullphyschem.csv",
+                    "row": 106,
+                    "original_column_suffix": "A"
+                  },
+                  "original_value": "1.0",
+                  "original_unit": "ug/L"
+                },
+                {
+                  "x": 15615,
+                  "y": 1,
+                  "censored": true,
+                  "result_id": "STORET-257152358",
+                  "original_source": {
+                    "path": "source/nc_big_creek_sensitivity/20261013/original/cadmium-wqx3-fullphyschem.csv",
+                    "row": 93,
+                    "original_column_suffix": "A"
+                  },
+                  "original_value": "1.0",
+                  "original_unit": "ug/L"
+                },
+                {
+                  "x": 15644,
+                  "y": 1,
+                  "censored": true,
+                  "result_id": "STORET-257231975",
+                  "original_source": {
+                    "path": "source/nc_big_creek_sensitivity/20261013/original/cadmium-wqx3-fullphyschem.csv",
+                    "row": 73,
+                    "original_column_suffix": "A"
+                  },
+                  "original_value": "1.0",
+                  "original_unit": "ug/L"
+                },
+                {
+                  "x": 15671,
+                  "y": 1,
+                  "censored": true,
+                  "result_id": "STORET-257263139",
+                  "original_source": {
+                    "path": "source/nc_big_creek_sensitivity/20261013/original/cadmium-wqx3-fullphyschem.csv",
+                    "row": 83,
+                    "original_column_suffix": "A"
+                  },
+                  "original_value": "1.0",
+                  "original_unit": "ug/L"
+                },
+                {
+                  "x": 15685,
+                  "y": 1,
+                  "censored": true,
+                  "result_id": "STORET-257311008",
+                  "original_source": {
+                    "path": "source/nc_big_creek_sensitivity/20261013/original/cadmium-wqx3-fullphyschem.csv",
+                    "row": 102,
+                    "original_column_suffix": "A"
+                  },
+                  "original_value": "1.0",
+                  "original_unit": "ug/L"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "big-creek-mercury",
+      "title": "Total mercury: original routine observations and limits",
+      "caption": "Twenty-four routine total-mercury samples retain nine numerical results from 1.05 to 3.69 ng/L and fifteen nondetects at 1 ng/L. The 12 ng/L line equals the original 0.012 µg/L assessment label. The open circle at 1.28 ng/L on 27 January 2012 retains Q2, the publisher's holding-time comment. The two field replicates and 24 field blanks are separate source cohorts.",
+      "panels": [
+        {
+          "title": "Mercury · routine Total",
+          "x": {
+            "label": "Original sampling date",
+            "unit": "days since 1970-01-01 UTC",
+            "domain": [
+              14975,
+              15706
+            ],
+            "ticks": [
+              {
+                "value": 14975,
+                "label": "Jan 2011"
+              },
+              {
+                "value": 15156,
+                "label": "Jul 2011"
+              },
+              {
+                "value": 15340,
+                "label": "Jan 2012"
+              },
+              {
+                "value": 15522,
+                "label": "Jul 2012"
+              },
+              {
+                "value": 15706,
+                "label": "Jan 2013"
+              }
+            ]
+          },
+          "y": {
+            "label": "Mercury",
+            "unit": "ng/L",
+            "domain": [
+              0,
+              14
+            ],
+            "ticks": [
+              {
+                "value": 0
+              },
+              {
+                "value": 2
+              },
+              {
+                "value": 4
+              },
+              {
+                "value": 6
+              },
+              {
+                "value": 8
+              },
+              {
+                "value": 10
+              },
+              {
+                "value": 12
+              },
+              {
+                "value": 14
+              }
+            ]
+          },
+          "reference_lines": [
+            {
+              "axis": "y",
+              "value": 12,
+              "label": "12 ng/L historical reference"
+            }
+          ],
+          "series": [
+            {
+              "label": "Original reported result",
+              "geometry": "scatter",
+              "marker": "circle",
+              "points": [
+                {
+                  "x": 15128,
+                  "y": 1.06,
+                  "filled": true,
+                  "result_id": "STORET-256231216",
+                  "original_source": {
+                    "path": "source/nc_big_creek_sensitivity/20261013/original/mercury-wqx3-fullphyschem.csv",
+                    "row": 6
+                  },
+                  "original_value": "1.06",
+                  "original_unit": "ng/L"
+                },
+                {
+                  "x": 15190,
+                  "y": 1.05,
+                  "filled": true,
+                  "result_id": "STORET-256285166",
+                  "original_source": {
+                    "path": "source/nc_big_creek_sensitivity/20261013/original/mercury-wqx3-fullphyschem.csv",
+                    "row": 24
+                  },
+                  "original_value": "1.05",
+                  "original_unit": "ng/L"
+                },
+                {
+                  "x": 15266,
+                  "y": 1.74,
+                  "filled": true,
+                  "result_id": "STORET-256415536",
+                  "original_source": {
+                    "path": "source/nc_big_creek_sensitivity/20261013/original/mercury-wqx3-fullphyschem.csv",
+                    "row": 23
+                  },
+                  "original_value": "1.74",
+                  "original_unit": "ng/L"
+                },
+                {
+                  "x": 15309,
+                  "y": 1.2,
+                  "filled": true,
+                  "result_id": "STORET-256474119",
+                  "original_source": {
+                    "path": "source/nc_big_creek_sensitivity/20261013/original/mercury-wqx3-fullphyschem.csv",
+                    "row": 11
+                  },
+                  "original_value": "1.20",
+                  "original_unit": "ng/L"
+                },
+                {
+                  "x": 15366,
+                  "y": 1.28,
+                  "filled": false,
+                  "result_id": "STORET-256640804",
+                  "original_source": {
+                    "path": "source/nc_big_creek_sensitivity/20261013/original/mercury-wqx3-fullphyschem.csv",
+                    "row": 28
+                  },
+                  "original_value": "1.28",
+                  "original_unit": "ng/L"
+                },
+                {
+                  "x": 15552,
+                  "y": 1.51,
+                  "filled": true,
+                  "result_id": "STORET-256977075",
+                  "original_source": {
+                    "path": "source/nc_big_creek_sensitivity/20261013/original/mercury-wqx3-fullphyschem.csv",
+                    "row": 51
+                  },
+                  "original_value": "1.51",
+                  "original_unit": "ng/L"
+                },
+                {
+                  "x": 15587,
+                  "y": 2.48,
+                  "filled": true,
+                  "result_id": "STORET-257069783",
+                  "original_source": {
+                    "path": "source/nc_big_creek_sensitivity/20261013/original/mercury-wqx3-fullphyschem.csv",
+                    "row": 29
+                  },
+                  "original_value": "2.48",
+                  "original_unit": "ng/L"
+                },
+                {
+                  "x": 15615,
+                  "y": 3.69,
+                  "filled": true,
+                  "result_id": "STORET-257156355",
+                  "original_source": {
+                    "path": "source/nc_big_creek_sensitivity/20261013/original/mercury-wqx3-fullphyschem.csv",
+                    "row": 35
+                  },
+                  "original_value": "3.69",
+                  "original_unit": "ng/L"
+                },
+                {
+                  "x": 15685,
+                  "y": 1.27,
+                  "filled": true,
+                  "result_id": "STORET-257312080",
+                  "original_source": {
+                    "path": "source/nc_big_creek_sensitivity/20261013/original/mercury-wqx3-fullphyschem.csv",
+                    "row": 45
+                  },
+                  "original_value": "1.27",
+                  "original_unit": "ng/L"
+                }
+              ]
+            },
+            {
+              "label": "Original nondetection limit",
+              "geometry": "scatter",
+              "marker": "triangle-open",
+              "points": [
+                {
+                  "x": 15008,
+                  "y": 1,
+                  "censored": true,
+                  "result_id": "STORET-256095473",
+                  "original_source": {
+                    "path": "source/nc_big_creek_sensitivity/20261013/original/mercury-wqx3-fullphyschem.csv",
+                    "row": 3,
+                    "original_column_suffix": "A"
+                  },
+                  "original_value": "1.00",
+                  "original_unit": "ng/L"
+                },
+                {
+                  "x": 15020,
+                  "y": 1,
+                  "censored": true,
+                  "result_id": "STORET-256106746",
+                  "original_source": {
+                    "path": "source/nc_big_creek_sensitivity/20261013/original/mercury-wqx3-fullphyschem.csv",
+                    "row": 12,
+                    "original_column_suffix": "A"
+                  },
+                  "original_value": "1.00",
+                  "original_unit": "ng/L"
+                },
+                {
+                  "x": 15056,
+                  "y": 1,
+                  "censored": true,
+                  "result_id": "STORET-256142846",
+                  "original_source": {
+                    "path": "source/nc_big_creek_sensitivity/20261013/original/mercury-wqx3-fullphyschem.csv",
+                    "row": 19,
+                    "original_column_suffix": "A"
+                  },
+                  "original_value": "1.00",
+                  "original_unit": "ng/L"
+                },
+                {
+                  "x": 15098,
+                  "y": 1,
+                  "censored": true,
+                  "result_id": "STORET-256203442",
+                  "original_source": {
+                    "path": "source/nc_big_creek_sensitivity/20261013/original/mercury-wqx3-fullphyschem.csv",
+                    "row": 9,
+                    "original_column_suffix": "A"
+                  },
+                  "original_value": "1.00",
+                  "original_unit": "ng/L"
+                },
+                {
+                  "x": 15152,
+                  "y": 1,
+                  "censored": true,
+                  "result_id": "STORET-256247149",
+                  "original_source": {
+                    "path": "source/nc_big_creek_sensitivity/20261013/original/mercury-wqx3-fullphyschem.csv",
+                    "row": 2,
+                    "original_column_suffix": "A"
+                  },
+                  "original_value": "1.00",
+                  "original_unit": "ng/L"
+                },
+                {
+                  "x": 15216,
+                  "y": 1,
+                  "censored": true,
+                  "result_id": "STORET-256340418",
+                  "original_source": {
+                    "path": "source/nc_big_creek_sensitivity/20261013/original/mercury-wqx3-fullphyschem.csv",
+                    "row": 15,
+                    "original_column_suffix": "A"
+                  },
+                  "original_value": "1.00",
+                  "original_unit": "ng/L"
+                },
+                {
+                  "x": 15246,
+                  "y": 1,
+                  "censored": true,
+                  "result_id": "STORET-256372884",
+                  "original_source": {
+                    "path": "source/nc_big_creek_sensitivity/20261013/original/mercury-wqx3-fullphyschem.csv",
+                    "row": 18,
+                    "original_column_suffix": "A"
+                  },
+                  "original_value": "1.00",
+                  "original_unit": "ng/L"
+                },
+                {
+                  "x": 15320,
+                  "y": 1,
+                  "censored": true,
+                  "result_id": "STORET-256499098",
+                  "original_source": {
+                    "path": "source/nc_big_creek_sensitivity/20261013/original/mercury-wqx3-fullphyschem.csv",
+                    "row": 14,
+                    "original_column_suffix": "A"
+                  },
+                  "original_value": "1.00",
+                  "original_unit": "ng/L"
+                },
+                {
+                  "x": 15398,
+                  "y": 1,
+                  "censored": true,
+                  "result_id": "STORET-256649163",
+                  "original_source": {
+                    "path": "source/nc_big_creek_sensitivity/20261013/original/mercury-wqx3-fullphyschem.csv",
+                    "row": 48,
+                    "original_column_suffix": "A"
+                  },
+                  "original_value": "1.00",
+                  "original_unit": "ng/L"
+                },
+                {
+                  "x": 15419,
+                  "y": 1,
+                  "censored": true,
+                  "result_id": "STORET-256653745",
+                  "original_source": {
+                    "path": "source/nc_big_creek_sensitivity/20261013/original/mercury-wqx3-fullphyschem.csv",
+                    "row": 33,
+                    "original_column_suffix": "A"
+                  },
+                  "original_value": "1.00",
+                  "original_unit": "ng/L"
+                },
+                {
+                  "x": 15454,
+                  "y": 1,
+                  "censored": true,
+                  "result_id": "STORET-256694754",
+                  "original_source": {
+                    "path": "source/nc_big_creek_sensitivity/20261013/original/mercury-wqx3-fullphyschem.csv",
+                    "row": 40,
+                    "original_column_suffix": "A"
+                  },
+                  "original_value": "1.00",
+                  "original_unit": "ng/L"
+                },
+                {
+                  "x": 15481,
+                  "y": 1,
+                  "censored": true,
+                  "result_id": "STORET-256748235",
+                  "original_source": {
+                    "path": "source/nc_big_creek_sensitivity/20261013/original/mercury-wqx3-fullphyschem.csv",
+                    "row": 50,
+                    "original_column_suffix": "A"
+                  },
+                  "original_value": "1.00",
+                  "original_unit": "ng/L"
+                },
+                {
+                  "x": 15511,
+                  "y": 1,
+                  "censored": true,
+                  "result_id": "STORET-256836095",
+                  "original_source": {
+                    "path": "source/nc_big_creek_sensitivity/20261013/original/mercury-wqx3-fullphyschem.csv",
+                    "row": 34,
+                    "original_column_suffix": "A"
+                  },
+                  "original_value": "1.00",
+                  "original_unit": "ng/L"
+                },
+                {
+                  "x": 15644,
+                  "y": 1,
+                  "censored": true,
+                  "result_id": "STORET-257233884",
+                  "original_source": {
+                    "path": "source/nc_big_creek_sensitivity/20261013/original/mercury-wqx3-fullphyschem.csv",
+                    "row": 32,
+                    "original_column_suffix": "A"
+                  },
+                  "original_value": "1.00",
+                  "original_unit": "ng/L"
+                },
+                {
+                  "x": 15671,
+                  "y": 1,
+                  "censored": true,
+                  "result_id": "STORET-257267658",
+                  "original_source": {
+                    "path": "source/nc_big_creek_sensitivity/20261013/original/mercury-wqx3-fullphyschem.csv",
+                    "row": 30,
+                    "original_column_suffix": "A"
+                  },
+                  "original_value": "1.00",
+                  "original_unit": "ng/L"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
