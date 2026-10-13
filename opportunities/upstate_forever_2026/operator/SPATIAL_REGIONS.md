@@ -68,3 +68,16 @@ The shared spatial and portable files retain all current owners' source. Their j
 Compile the two new Python files in the application's actual interpreter, import them beside the original SpatialReview, and let the existing operator discover the descriptor. Use an original retained Workspace with real native rasters and select an actual published/model result polygon or viewport. Open its complete result and the original CSV tickets. For a pair, use compatible original rasters and inspect the shared validity count; for land cover, inspect the original class frequencies.
 
 The region JSON retains every calculation input needed to repeat the same operation. Original model/source owners remain responsible for the scientific meaning of the source quantities and native model parameters.
+
+## Native command line
+
+The same retained model is available without an operator HTTP session. Run from the installed application directory in its actual scientific Python environment:
+
+    python -m model.region_cli catalog ACTUAL_WORKSPACE --describe
+    python -m model.region_cli describe ACTUAL_WORKSPACE ORIGINAL_LAYER_ID
+    python -m model.region_cli analyze-source ACTUAL_WORKSPACE ORIGINAL_LAYER_ID --title "Original regional result" --export OUTPUT_DIRECTORY
+    python -m model.region_cli analyze-source ACTUAL_WORKSPACE ORIGINAL_LAYER_ID --comparison ORIGINAL_ALTERNATIVE_LAYER_ID --export OUTPUT_DIRECTORY
+    python -m model.region_cli analyze ACTUAL_WORKSPACE REGION_PLAN.json --export OUTPUT_DIRECTORY
+    python -m model.region_cli inspect ACTUAL_WORKSPACE SAVED_ANALYSIS_ID --export OUTPUT_DIRECTORY
+
+The catalogue returns actual layer IDs, native units, grid descriptions and retained result identities. Full-source analysis obtains its extent and CRS from the selected original raster. JSON plans use the same primary, comparison, region, title, notes, histogram_bins and all_touched fields as the operator action; source_feature selections resolve the original retained polygon. Standard output is the complete result JSON; progress and useful errors go to standard error. The export directory receives the unchanged original analysis manifest and the three numeric CSV tables. Repeating an identical export reuses its existing exact bytes.
