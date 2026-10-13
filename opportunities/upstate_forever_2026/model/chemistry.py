@@ -23,7 +23,8 @@ from .reach_chemistry.io import write_outputs
 ENGINE_VERSION = '0.1.0'
 ACTIONS = {'chemistry.case.save', 'chemistry.case.get', 'chemistry.catalog',
            'chemistry.run', 'chemistry.run.get', 'chemistry.result.page',
-           'chemistry.case.from-source', 'chemistry.export', 'chemistry.receive'}
+           'chemistry.case.from-source', 'chemistry.export', 'chemistry.receive',
+           'chemistry.report.prepare', 'chemistry.report.get', 'chemistry.report.list'}
 
 class Chemistry:
     def __init__(self, workspace):
@@ -354,6 +355,11 @@ def invoke(workspace,action,value, *, progress_hook=None):
     if action=='chemistry.case.from-source': return service.from_source(value)
     if action=='chemistry.case.get': return service.get_case(value['case_id'])
     if action=='chemistry.catalog': return service.catalog()
+    if action in {'chemistry.report.prepare', 'chemistry.report.get', 'chemistry.report.list'}:
+        from . import chemistry_reports
+        if action == 'chemistry.report.prepare': return chemistry_reports.prepare(workspace, value['run_id'])
+        if action == 'chemistry.report.get': return chemistry_reports.inspect(workspace, value['report_id'])
+        return {'reports': chemistry_reports.catalog(workspace, value.get('run_id'))}
     if action=='chemistry.run': return service.run(value,progress_hook=progress_hook)
     if action=='chemistry.run.get': return service.get_run(value['run_id'])
     if action=='chemistry.result.page': return service.result_page(value)
