@@ -86,13 +86,18 @@
     },
     {
       "path": "reconciliation.json",
-      "bytes": 4371,
-      "sha256": "17958a34d072d766f79e1967d16cc054f3aa61afcde061648cd2f6ca54290b36"
+      "bytes": 5098,
+      "sha256": "67349b30982ddecb279043fe4d2beeed8daaa0c47f4e7fe0e43877b04c58841c"
+    },
+    {
+      "path": "watershed-group-flows.csv",
+      "bytes": 1207485,
+      "sha256": "3266777f92f5ee843aa89d6a2842882b42a471fe1995c497594d6a0e4f954405"
     },
     {
       "path": "landcover-change-report.html",
-      "bytes": 261820,
-      "sha256": "08246409893ef3727caab9d0ab6df65e74f701b2ad8961f4349c2a5a3508dc8a"
+      "bytes": 310588,
+      "sha256": "6523851a610570964ba6b1c84027a3c7ff852efcd5f764d4f4569dc4afce2287"
     }
   ],
   "sections": [
@@ -2540,6 +2545,10 @@
               "path": "reconciliation.json"
             },
             {
+              "title": "watershed-group-flows.csv",
+              "path": "watershed-group-flows.csv"
+            },
+            {
               "title": "landcover-change-report.html",
               "path": "landcover-change-report.html"
             }
@@ -2562,6 +2571,7 @@
     "model-sources.json",
     "change-summary.csv",
     "reconciliation.json",
+    "watershed-group-flows.csv",
     "landcover-change-report.html"
   ]
 }
