@@ -420,20 +420,27 @@ def _report_html(report):
         details = row["comparison"]
         counts = details.get("counts") or {}
         summary = "; ".join(key.replace("_", " ") + ": " + str(value) for key, value in counts.items())
+        if details.get("comparison"):
+            summary = details["comparison"] + "; " + summary
+        difference = details.get("difference")
+        if difference is not None:
+            summary += "; received minus exported: minimum " + str(difference["minimum"]) + ", maximum " + str(difference["maximum"])
+            summary += ", mean " + str(difference["mean"]) + ", RMSE " + str(difference["rmse"])
+            summary += " " + str(difference["units"]) + "; representable difference cells: " + str(difference["valid_cells"])
         if details.get("reason") or details.get("physical_comparison"):
             summary += "; " + (details.get("reason") or details["physical_comparison"])
         if row.get("metadata_changed"):
             summary += "; metadata changed: " + ", ".join(row["metadata_changed"])
         links = " ".join('<a href="'+esc(rec["path"])+'">'+esc(Path(rec["path"]).name)+'</a>'
                          for rec in row["files"])
-        rows.append("<tr><th>"+esc(row["title"])+"</th><td>"+esc(row["kind"])+"</td><td>"+
+        rows.append("<tr><th>"+esc(row["title"])+"</th><td>"+esc(row["kind"])+"</td><td>"+esc(row["units"])+"</td><td>"+
                     esc(summary or details.get("comparison") or details.get("method"))+"</td><td>"+links+"</td></tr>")
     return """<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width">
 <title>Received GIS edition review</title><style>body{font:16px system-ui,sans-serif;color:#222;background:#fff;max-width:1200px;margin:2rem auto;padding:0 1rem}table{border-collapse:collapse;width:100%}th,td{border:1px solid #ccc;padding:.6rem;text-align:left;vertical-align:top}code{overflow-wrap:anywhere}a{color:#222;text-decoration:underline}td a{display:block}h1{font-size:1.6rem}</style>
 <h1>"""+esc(report["title"])+"""</h1><p>Received working edition compared with its explicitly selected retained original export. Vector changes retain full row records. Raster differences use the selected logical band on the exact same native grid; support changes are separate. Open review.json for complete headers, units, source identities, methods and ambiguity counts.</p>
 <p>Export <code>"""+esc(report["selection"]["export_id"])+"""</code><br>Receipt <code>"""+esc(report["selection"]["receipt_id"])+"""</code><br>Direction: received minus exported.</p>
 <p><a href="review.json">Complete review JSON</a> · <a href="layers.csv">Layer summary CSV</a> · <a href="exported-project.json">Original exported manifest</a> · <a href="received-project.json">Received manifest</a></p>
-<table><thead><tr><th>Layer</th><th>Kind</th><th>Actual changes</th><th>Complete change artifacts</th></tr></thead><tbody>"""+ "".join(rows)+"""</tbody></table>
+<table><thead><tr><th>Layer</th><th>Kind</th><th>Received units</th><th>Actual changes</th><th>Complete change artifacts</th></tr></thead><tbody>"""+ "".join(rows)+"""</tbody></table>
 <p>Original table/document attachments remain in the complete received GIS project. This review adds context to optional source adoption; original source adoption remains available.</p></html>"""
 
 

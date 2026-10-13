@@ -112,4 +112,13 @@ python -B operator/install_chemistry.py --application ACTUAL_APP --source-root A
 
 The installer includes the producer, guide and append-only `chemistry_report_sources.json` component fragment, accepts the exact merged scientific-report predecessors and preserves independently changed source. It checks the currently installed shared publisher, figure renderer, observed-context reader and extension host without replacing them.
 
-Whole-workspace transfer retains the original source records, source objects and report-source export directory through the existing recursive workspace inventory. Chemistry's receiving validator invokes the producer's original `verify_workspace`, so a reopened workspace checks each saved source against its original scientific report and retained members. The editable Chemistry project export remains its original project/run format; use the whole-workspace transfer to move saved report/source editions together with other scientific studies.
+Whole-workspace transfer retains the original source records, source objects and report-source export directory through the existing recursive workspace inventory. Chemistry's receiving validator invokes the producer's original `verify_workspace`, so a reopened workspace checks each saved source against its original scientific report and retained members. The editable Chemistry project export remains its original project/run format; use whole-workspace transfer or the original saved Scientific Report's selected Study transfer to move report/source editions with their editable scientific history.
+
+
+### Transfer the selected scientific study
+
+Once the ordered Scientific Report is saved, its existing **Transfer editable study** action includes the exact Chemistry cases and parent history, original source objects, selected completed run, saved Chemistry report and scientific-source export. The preview lists those original record groups. Receive through the existing project-transfer controls, then reopen the original report, source and run with their unchanged IDs.
+
+Foreign-workspace report sources retain their complete captured original documents and labeled external lineage. Original local case IDs are resolved only when the captured source belongs to the original workspace being transferred. The source resolver uses the maintained archive, capture locks and restore validation.
+
+The complete installation, native commands and shared-owner contract are in [Chemistry Study transfer](../model/CHEMISTRY_STUDY_TRANSFER.md).

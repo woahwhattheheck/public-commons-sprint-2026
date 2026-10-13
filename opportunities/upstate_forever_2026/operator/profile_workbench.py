@@ -5,12 +5,19 @@ import json
 
 from model import profile_editions as model
 from model import profile_customer_review as customer_review
+from model import biophysical_evidence as evidence
 from model.common import describe_file, verify_file
 
 CUSTOMER_ACTIONS = frozenset({"profile.customer_review.create", "profile.customer_review.apply"})
-ACTIONS = frozenset({"profile.edition.save", "profile.edition.review"}) | CUSTOMER_ACTIONS
+BIOPHYSICAL_ACTIONS = frozenset({
+    "profile.biophysical.evidence.save", "profile.biophysical.ranges.prepare",
+    "profile.biophysical.experiment.prepare",
+})
+ACTIONS = frozenset({"profile.edition.save", "profile.edition.review"}) | CUSTOMER_ACTIONS | BIOPHYSICAL_ACTIONS
 READS = frozenset({"catalog", "inspect", "table", "preview", "compare", "methods",
-                   "customer-review-catalog", "customer-review-inspect", "customer-review-preview"})
+                   "customer-review-catalog", "customer-review-inspect", "customer-review-preview",
+                   "biophysical-catalog", "biophysical-template", "biophysical-evidence-preview",
+                   "biophysical-evidence-inspect", "biophysical-ranges-preview", "biophysical-ranges-inspect"})
 
 
 class ProfileWorkbench:
@@ -54,14 +61,46 @@ class ProfileWorkbench:
                 seen.add(ticket["id"])
         return downloads
 
+    def _evidence_downloads(self, workspace_key, record, kind):
+        ws = self.operator.ws(workspace_key)
+        path = ws.root / kind / (record["id"] + ".json")
+        downloads = [self.operator._ticket(workspace_key, path,
+                     describe_file(ws.root, path, media_type="application/json"),
+                     "Coefficient evidence" if kind == evidence.EVIDENCE_KIND else "Selected endpoint profiles")]
+        original = record if kind == evidence.EVIDENCE_KIND else evidence.inspect_evidence(ws, record["evidence_id"])
+        if kind != evidence.EVIDENCE_KIND:
+            evidence_path = ws.root / evidence.EVIDENCE_KIND / (original["id"] + ".json")
+            downloads.append(self.operator._ticket(workspace_key, evidence_path,
+                             describe_file(ws.root, evidence_path, media_type="application/json"),
+                             "Bound coefficient evidence"))
+        source = original["source"]
+        source_path, entry = ws.source_file(source["source_collection_id"], source["source_id"])
+        downloads.append(self.operator._ticket(workspace_key, source_path, entry["body"],
+                         "Original coefficient evidence CSV"))
+        return downloads
+
     def read(self, workspace_key, operation, payload=None):
         ws = self.operator.ws(workspace_key)
         value = payload or {}
         if not isinstance(value, dict):
             raise self.Fault("PROFILE_REQUEST", "Use a profile selection object.")
-        if operation.startswith("customer-review-"):
+        if operation.startswith(("customer-review-", "biophysical-")):
             value = {key: item for key, item in value.items() if key != "workspace"}
-        if operation == "customer-review-catalog":
+        if operation == "biophysical-catalog":
+            result = evidence.catalog(ws, value.get("profile_id"))
+        elif operation == "biophysical-template":
+            result = evidence.template(ws, value.get("profile_id"))
+        elif operation == "biophysical-evidence-preview":
+            result = evidence.preview_evidence(ws, value)
+        elif operation == "biophysical-evidence-inspect":
+            result = evidence.inspect_evidence(ws, value.get("evidence_id"))
+            result["_downloads"] = self._evidence_downloads(workspace_key, result, evidence.EVIDENCE_KIND)
+        elif operation == "biophysical-ranges-preview":
+            result = evidence.preview_ranges(ws, value)
+        elif operation == "biophysical-ranges-inspect":
+            result = evidence.inspect_ranges(ws, value.get("range_id"))
+            result["_downloads"] = self._evidence_downloads(workspace_key, result, evidence.RANGES_KIND)
+        elif operation == "customer-review-catalog":
             result = customer_review.catalog(ws, value.get("profile_id"))
         elif operation == "customer-review-inspect":
             result = customer_review.inspect(ws, value.get("capture_id"))
@@ -99,6 +138,12 @@ class ProfileWorkbench:
     def invoke(self, task):
         ws = self.operator.ws(task["workspace"])
         action = task["action"]
+        if action == "profile.biophysical.evidence.save":
+            return evidence.save_evidence(ws, task["payload"])
+        if action == "profile.biophysical.ranges.prepare":
+            return evidence.prepare_ranges(ws, task["payload"])
+        if action == "profile.biophysical.experiment.prepare":
+            return evidence.prepare_experiment(ws, task["payload"])
         if action == "profile.customer_review.create":
             return customer_review.create(ws, task["payload"], operation_id=task["id"],
                                           created_at=task.get("created_at"))
@@ -116,6 +161,14 @@ class ProfileWorkbench:
         value = deepcopy(task)
         result = value["result"]
         ws = self.operator.ws(value["workspace"])
+        if task["action"] in BIOPHYSICAL_ACTIONS:
+            if task["action"] == "profile.biophysical.evidence.save":
+                detail = evidence.inspect_evidence(ws, result["id"])
+                value["_downloads"] = self._evidence_downloads(value["workspace"], detail, evidence.EVIDENCE_KIND)
+            elif task["action"] == "profile.biophysical.ranges.prepare":
+                detail = evidence.inspect_ranges(ws, result["id"])
+                value["_downloads"] = self._evidence_downloads(value["workspace"], detail, evidence.RANGES_KIND)
+            return value
         if task["action"] in CUSTOMER_ACTIONS:
             # Customer capture files are source-relative list entries. Resolve them
             # through their original collection; never treat view paths as outputs.
@@ -140,4 +193,5 @@ class ProfileWorkbench:
 
     def verify_all(self, workspace):
         return {**model.verify_all(workspace),
-                "customer_reviews": customer_review.verify_all(workspace)}
+                "customer_reviews": customer_review.verify_all(workspace),
+                "biophysical_evidence": evidence.verify_all(workspace)}

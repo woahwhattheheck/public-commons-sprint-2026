@@ -6,7 +6,8 @@
   "order": 88,
   "assets": [
     "extensions/study_transfer.mjs",
-    "extensions/study_transfer.css"
+    "extensions/study_transfer.css",
+    "received_studies.mjs"
   ],
   "requires_actions": [
     "workspace.restore"
@@ -75,6 +76,32 @@
         ],
         "path": "/api/study-transfer/progress",
         "operation": "progress",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "GET"
+        ],
+        "path": "/api/study-transfer/received",
+        "operation": "received",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "GET"
+        ],
+        "path": "/api/study-transfer/received-detail",
+        "operation": "received-detail",
         "handler": "read",
         "args": [
           "workspace_key",

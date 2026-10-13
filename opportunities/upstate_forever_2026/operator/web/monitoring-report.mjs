@@ -7,7 +7,7 @@ const saveSaved=(key,value)=>{memory.set(key,clone(value));try{sessionStorage.se
 const validId=value=>typeof value==='string'&&/^[a-f0-9]{64}$/.test(value);
 
 export function attachMonitoringReport(node, context, workspaceKey) {
-  const {getState,api,openDelivery,showTask,toast}=context;
+  const {getState,api,openScientificReport,openDelivery,showTask,toast}=context;
   const host=node.shadowRoot.querySelector('[data-export="bundle"]')?.closest('details');
   if(!host)throw Error('The current Monitoring report controls are missing.');
   const section=document.createElement('section');
@@ -24,7 +24,8 @@ export function attachMonitoringReport(node, context, workspaceKey) {
     <div class="row"><button type="button" data-report-prepare>Prepare scientific report source</button>
     <button type="button" data-report-task hidden>Open saved operation</button>
     <button type="button" data-report-retry hidden>Resume original request</button>
-    <button type="button" data-report-open hidden>Open prepared report form</button></div>
+    <button type="button" data-report-open hidden>Open scientific report</button>
+    <button type="button" data-report-open-delivery hidden>Open model delivery</button></div>
     <p data-report-status class="small" role="status" aria-live="polite"></p>\n    <p data-report-prepared class="small"></p>
     <div class="row"><label>Saved monitoring report sources<select data-report-saved><option value="">Choose a retained report source</option></select></label>
     <button type="button" data-report-refresh>Refresh saved sources</button>
@@ -86,6 +87,7 @@ export function attachMonitoringReport(node, context, workspaceKey) {
     find('task').hidden=!operation?.task_id;
     find('retry').hidden=!operation||!!operation.task_id||submitting;
     find('open').hidden=!prepared?.source||!prepared?.delivery_selection;
+    find('open-delivery').hidden=!prepared?.source||!prepared?.delivery_selection||typeof openDelivery!=='function';
     const retained=prepared?.selection||{};
     find('prepared').textContent=prepared?.source
       ? 'Prepared source: '+(prepared.title||prepared.id)+(retained.campaign_id?' · campaign '+retained.campaign_id+' · exact revision '+retained.expected_revision_id:retained.plan_id?' · saved design '+retained.plan_id:retained.comparison_id?' · saved budget comparison':'')
@@ -123,7 +125,7 @@ export function attachMonitoringReport(node, context, workspaceKey) {
       if(identity!==lastTaskState){
         prepared=clone(task.result);
         operation.handled_complete_id=task.id;
-        status('Scientific report source retained. Open the prepared report form to review its native runs and delivery settings.');
+        status('Scientific report source retained. Open the scientific report to review its ordered sources and prepare PDF, HTML and data.');
         showFiles(task._downloads);
         void refreshSources(false);
       }
@@ -236,13 +238,20 @@ export function attachMonitoringReport(node, context, workspaceKey) {
       if(!current()||version!==generation||sequence!==requestSequence||id!==selectedSaved||delivery!==chosenDelivery)return;
       if(value.id!==id)throw Error('The saved report source identity changed.');
       prepared=value;persist();showFiles(value._downloads);
-      status('Original report source reopened. Open the prepared report form to review its delivery selection.');
+      status('Original report source reopened. Open the scientific report to review its ordered sources.');
     }catch(error){if(current()&&version===generation)fail(error);}
     finally{reading=false;if(current())renderSelection();}
   }
   async function open(){
     if(!current()||!prepared?.source||!prepared?.delivery_selection)return;
-    if(typeof openDelivery!=='function')throw Error('Use the current shared scientific report form.');
+    if(typeof openScientificReport!=='function')throw Error('Open the current application to prepare its saved scientific reports.');
+    const sources=prepared.delivery_selection.observed_context_sources;
+    if(!Array.isArray(sources)||!sources.length)throw Error('Reopen the retained source to recover its ordered report selection.');
+    await openScientificReport({workspace_key:workspaceKey,sources:clone(sources),title:prepared.title});
+  }
+  async function openModelDelivery(){
+    if(!current()||!prepared?.source||!prepared?.delivery_selection)return;
+    if(typeof openDelivery!=='function')throw Error('Open the current application to review its model delivery.');
     await openDelivery(clone(prepared.delivery_selection));
   }
   find('scope').onchange=()=>{
@@ -257,6 +266,7 @@ export function attachMonitoringReport(node, context, workspaceKey) {
   find('retry').onclick=()=>submitOriginal().catch(fail);
   find('task').onclick=()=>operation?.task_id&&showTask?.(operation.task_id);
   find('open').onclick=()=>open().catch(fail);
+  find('open-delivery').onclick=()=>openModelDelivery().catch(fail);
   find('refresh').onclick=()=>refreshSources();
   find('reopen').onclick=()=>reopen();
   find('delivery').onchange=()=>{chosenDelivery=find('delivery').value;prepared=null;persist();renderSelection();};

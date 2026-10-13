@@ -8,13 +8,13 @@ import { parseArgs } from 'node:util';
 
 const {values:args}=parseArgs({options:{
  'url-file':{type:'string'},opening:{type:'string'},receiving:{type:'string'},'restored-selection':{type:'string'},workspace:{type:'string'},
- 'context-id':{type:'string'},'comparison-selection':{type:'string'},output:{type:'string'},
+ 'context-id':{type:'string'},'comparison-selection':{type:'string'},'comparison-report-title':{type:'string'},'comparison-report-delivery':{type:'string'},output:{type:'string'},
  resume:{type:'boolean',default:false},video:{type:'boolean',default:false},
  headed:{type:'boolean',default:false},'browser-channel':{type:'string'},'browser-executable':{type:'string'},'browser-renderer-limit':{type:'string'},
  'task-timeout-seconds':{type:'string',default:'3600'},help:{type:'boolean',default:false}
 }});
 if(args.help){
- console.log('node source/run_monitoring_browser.mjs --url-file PRIVATE_URL_FILE (--opening MONITORING_OPENING.json --receiving RECEIVING.json | --restored-selection SELECTION.json --workspace KEY) --output DIRECTORY [--context-id SAVED_CONTEXT] [--comparison-selection BUDGET_SELECTION.json] [--video] [--headed] [--browser-channel NAME | --browser-executable PATH] [--browser-renderer-limit COUNT] [--resume]');
+ console.log('node source/run_monitoring_browser.mjs --url-file PRIVATE_URL_FILE (--opening MONITORING_OPENING.json --receiving RECEIVING.json | --restored-selection SELECTION.json --workspace KEY) --output DIRECTORY [--context-id SAVED_CONTEXT] [--comparison-selection BUDGET_SELECTION.json] [--comparison-report-title TITLE [--comparison-report-delivery DELIVERY_ID]] [--video] [--headed] [--browser-channel NAME | --browser-executable PATH] [--browser-renderer-limit COUNT] [--resume]');
  process.exit(0);
 }
 const output=resolve(args.output||join('artifacts','monitoring-browser',new Date().toISOString().replace(/[:.]/g,'-')));
@@ -23,7 +23,7 @@ const canonical=value=>JSON.stringify(value,(_key,item)=>item&&!Array.isArray(it
 const required=(value,message)=>{if(!value)throw Error(message);};
 const stopped=new Set(['failed','interrupted','cancelled']);
 let browser,context,page,privateURL='',origin='',capability='',currentWorkspace='';
-let opening,receiving,requestState,selection,baseline,comparisonSelection=null,journalWritable=false;
+let opening,receiving,requestState,selection,baseline,comparisonSelection=null,comparisonReport=null,journalWritable=false;
 let journal={schema:'upstate.monitoring-browser/v1',prepared_by:'TokenJunkieLabs engineering',
  started_at:new Date().toISOString(),status:'running',steps:[],screenshots:[],downloads:[],browser_errors:[]};
 async function readOptional(path){
@@ -105,6 +105,14 @@ async function initializeContinuation(){
   comparisonSelection={frontier_id:chosen.frontier_id,baseline_plan_id:chosen.baseline_plan_id||null,context_ids:chosen.context_ids||[],title:chosen.title.trim()};
   input={...input,comparison:{selection_sha256:hash(bytes),selection:comparisonSelection}};
  }
+ if(args['comparison-report-title']!==undefined){
+  required(comparisonSelection,'A comparison report source requires --comparison-selection.');
+  const title=args['comparison-report-title'].trim();
+  required(title&&title.length<=300,'Give the report source a title of 1–300 characters.');
+  const delivery=args['comparison-report-delivery']||null;
+  required(delivery===null||/^[a-f0-9]{64}$/.test(delivery),'Choose an original saved scientific delivery ID.');
+  comparisonReport={title,delivery_id:delivery};input={...input,comparison_report:comparisonReport};
+ }else required(args['comparison-report-delivery']===undefined,'Select a report source title before choosing its scientific delivery.');
  const retained=await readOptional(join(output,'request-state.json')),previous=await readOptional(join(output,'journey.json'));
  if(args.resume){
   required(retained,'This output has no original durable Monitoring request state.');
@@ -342,6 +350,7 @@ async function freshBrowser(){
   const value=await readSelection();required(canonical(identity(value))===canonical(requestState.selection),'A fresh browser opened another native campaign revision.');
   await verifyRendered(value);await openObservedContext();await shot('06-fresh-browser-campaign');
   if(comparisonSelection){await reopenBudgetComparison('fresh-browser');await chooseCampaign();}
+  if(comparisonReport){await reopenComparisonReport('fresh-browser');await reopenScientificEdition('fresh-browser');await openDesk();await chooseCampaign();}
   await record('Reopened the complete original campaign in a fresh browser',{...identity(value)});
  }finally{await fresh.close();page=originalPage;currentWorkspace=originalWorkspace;}
 }
@@ -359,6 +368,7 @@ async function transferWorkspace(archive){
  const value=await readSelection();required(canonical(identity(value))===canonical(requestState.selection),'Independent workspace receiving changed the original network, design, campaign, calendar or retained source bindings.');
  await verifyRendered(value);await openObservedContext();await shot('07-received-campaign');
  if(comparisonSelection){await reopenBudgetComparison('received-workspace');await chooseCampaign();}
+ if(comparisonReport){await reopenComparisonReport('received-workspace');await reopenScientificEdition('received-workspace');await openDesk();await chooseCampaign();}
  await record('Reopened the original campaign after independent workspace receiving',{workspace_key:currentWorkspace,archive_sha256:archive.sha256,...identity(value)});
  journal.received_workspace_key=currentWorkspace;
 }
@@ -449,6 +459,236 @@ async function operateBudgetComparison(){
  await record('Downloaded complete original budget comparison',{comparison_id:comparisonId,...packet});
 }
 
+function retainedReport(value){
+ const {_downloads,workspace_key,delivery_selection,...record}=value;
+ return record;
+}
+async function reportRead(action,params={}){
+ return apiGet('/api/monitoring-report',{workspace:currentWorkspace,action,...params});
+}
+function reportTicketInventory(value){
+ required(Array.isArray(value.files)&&value.files.length&&Array.isArray(value._downloads),'The report omitted its original file inventory.');
+ const tickets=value._downloads;
+ required(tickets.length===value.files.length&&new Set(tickets.map(item=>item.id)).size===tickets.length,'The report file tickets do not cover each original member exactly once.');
+ const signature=rows=>rows.map(row=>canonical(row)).sort();
+ required(canonical(signature(value.files.map(item=>[basename(item.path),item.bytes,item.sha256])))===
+  canonical(signature(tickets.map(item=>[item.filename,item.bytes,item.sha256]))),'The report download inventory differs from its retained original files.');
+ for(const ticket of tickets){
+  required(ticket.id&&ticket.workspace===currentWorkspace&&Number.isSafeInteger(ticket.bytes)&&ticket.bytes>=0&&/^[a-f0-9]{64}$/.test(ticket.sha256),'The report returned an invalid native file ticket.');
+  required(new URL(ticket.url,origin).origin===origin&&new URL(ticket.url,origin).pathname==='/api/file/'+ticket.id,'The report file ticket points outside the original operator.');
+ }
+ return tickets;
+}
+async function reportSource(value){
+ required(value.source?.source_collection_id&&value.source?.source_id,'The report omitted its native source selection.');
+ const source=await apiGet('/api/source-info',{workspace:currentWorkspace,collection:value.source.source_collection_id,source:value.source.source_id});
+ required(source.source?.id===value.source.source_id&&source.source.kind==='document'&&source.source.metadata?.report_schema==='upstate.observed-report/v1','The prepared original report document is absent from this Workspace.');
+ required(source.download?.sha256===source.source.body?.sha256&&source.download?.bytes===source.source.body?.bytes,'The original report source body differs from its native download.');
+ const selected=value.delivery_selection?.observed_context_sources;
+ required(Array.isArray(selected)&&selected.some(choice=>canonical(choice)===canonical(value.source)),'The ordered scientific report selection omitted this original source.');
+ return source.source;
+}
+async function waitReportRead(action,trigger,params={}){
+ const pending=page.waitForResponse(response=>{
+  const url=new URL(response.url());
+  return url.origin===origin&&url.pathname==='/api/monitoring-report'&&url.searchParams.get('workspace')===currentWorkspace&&url.searchParams.get('action')===action&&Object.entries(params).every(([key,value])=>url.searchParams.get(key)===value);
+ });pending.catch(()=>{});
+ await trigger();return json(await pending,'Read saved Monitoring report '+action);
+}
+async function reopenComparisonReport(label){
+ const retained=requestState.comparison_report;
+ required(retained?.report_id,'This original request has no saved comparison report.');
+ await idle();await expandFor('[data-report-scope]');
+ await waitReportRead('catalog',()=>page.locator(desk('[data-report-refresh]')).click());
+ await page.locator(desk('[data-report-delivery]')).selectOption(comparisonReport.delivery_id||'');
+ await page.locator(desk('[data-report-saved]')).selectOption(retained.report_id);
+ const value=await waitReportRead('get',()=>page.locator(desk('[data-report-reopen]')).click(),{id:retained.report_id});
+ required(value.id===retained.report_id&&value.selection?.comparison_id===requestState.comparison.comparison_id&&hash(canonical(retainedReport(value)))===retained.sha256,'The reopened comparison report differs from its full native original.');
+ const source=await reportSource(value);
+ required(hash(canonical(source))===retained.source_sha256,'The reopened scientific report source edition changed.');
+ required(hash(canonical(value.delivery_selection))===retained.delivery_selection_sha256,'The ordered original scientific delivery selection changed.');
+ const tickets=reportTicketInventory(value);
+ await page.waitForFunction(expected=>{
+  const root=document.querySelector('eco-monitoring')?.shadowRoot;
+  if(!root)return false;
+  const ids=[...root.querySelectorAll('[data-report-downloads] a')].map(link=>new URL(link.href).pathname.split('/').pop()).sort();
+  return JSON.stringify(ids)===JSON.stringify(expected.ids)&&root.querySelector('[data-report-open]')?.hidden===false;
+ },{ids:tickets.map(ticket=>ticket.id).sort()});
+ required((await page.locator(desk('[data-report-prepared]')).textContent()).includes(value.title),'The report panel did not reopen the selected original title.');
+ await shot('report-'+label);
+ await record('Reopened original comparison report in '+label,{report_id:value.id,comparison_id:value.selection.comparison_id,source:value.source,file_count:tickets.length,sha256:retained.sha256,workspace_key:currentWorkspace});
+ return value;
+}
+
+const scientific=selector=>'.scientific-report-editions '+selector;
+const sourceChoice=row=>({source_collection_id:row.source_collection_id,source_id:row.source_id});
+async function openScientificComposer(value){
+ const before=await page.evaluate(key=>JSON.parse(sessionStorage.getItem('scientific-report-draft:'+key)||'null'),currentWorkspace);
+ const incoming=value.delivery_selection.observed_context_sources.map(sourceChoice),expected=(before?.selected||[]).map(sourceChoice);
+ for(const row of incoming)if(!expected.some(item=>canonical(item)===canonical(row)))expected.push(row);
+ await page.locator(desk('[data-report-open]')).click();
+ await page.locator(scientific('[data-scientific-report-action="preview"]')).waitFor({state:'visible'});
+ await page.waitForFunction(expected=>{
+  const panel=document.querySelector('.scientific-report-editions');
+  const draft=JSON.parse(sessionStorage.getItem('scientific-report-draft:'+expected.workspace)||'null');
+  return panel&&!panel.hidden&&draft&&JSON.stringify(draft.selected)===JSON.stringify(expected.sources);
+ },{workspace:currentWorkspace,sources:expected});
+ const body=await page.evaluate(key=>{
+  const draft=JSON.parse(sessionStorage.getItem('scientific-report-draft:'+key)||'null');
+  if(!draft||draft.pending)throw Error('Finish the existing original scientific report request.');
+  return{sources:draft.selected,...(draft.title.trim()?{title:draft.title.trim()}:{}),contact:draft.contact};
+ },currentWorkspace);
+ required(canonical(body.sources)===canonical(expected),'The scientific composer changed its retained draft order.');
+ if(before?.title?.trim())required(body.title===before.title.trim(),'Opening prepared sources replaced the existing report draft title.');
+ if(before?.contact)required(canonical(body.contact)===canonical(before.contact),'Opening prepared sources replaced existing report contact fields.');
+ return body;
+}
+async function restoreScientificSelection(body){
+ // Reenter the frozen browser operation through the original composer controls.
+ // This browser owns this working draft; its immutable saved reports stay intact.
+ while(await page.locator(scientific('[data-scientific-report-action="remove"]')).count())
+  await page.locator(scientific('[data-scientific-report-action="remove"]')).first().click();
+ for(const source of body.sources){
+  await page.locator(scientific('[data-scientific-report-source]')).selectOption(JSON.stringify([source.source_collection_id,source.source_id]));
+  await page.locator(scientific('[data-scientific-report-action="add"]')).click();
+ }
+ await page.locator(scientific('[data-scientific-report-field="title"]')).fill(body.title||'');
+ for(const name of ['name','organization','email'])
+  await page.locator(scientific('[data-scientific-report-field="'+name+'"]')).fill(body.contact[name]||'');
+}
+async function scientificEdition(id){
+ return apiGet('/api/source-reports/scientific-edition',{workspace:currentWorkspace,id});
+}
+function scientificFileIdentity(value){
+ return value.files.map(({url,...file})=>file);
+}
+async function reopenScientificEdition(label,downloadFiles=false){
+ const retained=requestState.scientific_report;
+ required(retained?.edition_id,'This browser operation has no completed original scientific edition.');
+ // The Sources screen is the native scientific report library.
+ await page.locator('[data-view="sources"]').click();
+ const refresh=scientific('[data-scientific-report-action="refresh"]');
+ await page.locator(refresh).waitFor({state:'visible'});
+ const ready=page.waitForResponse(response=>{
+  const url=new URL(response.url());
+  return url.origin===origin&&url.pathname==='/api/source-reports/scientific-catalog'&&url.searchParams.get('workspace')===currentWorkspace;
+ });ready.catch(()=>{});
+ await page.locator(refresh).click();await json(await ready,'Refresh original scientific editions');
+ const pending=page.waitForResponse(response=>{
+  const url=new URL(response.url());
+  return url.origin===origin&&url.pathname==='/api/source-reports/scientific-edition'&&url.searchParams.get('workspace')===currentWorkspace&&url.searchParams.get('id')===retained.edition_id;
+ });pending.catch(()=>{});
+ await page.locator(scientific('[data-scientific-report-action="open"][data-id="'+retained.edition_id+'"]')).click();
+ const value=await json(await pending,'Reopen original scientific report');
+ required(value.workspace_key===currentWorkspace&&value.edition?.id===retained.edition_id&&value.edition.state==='complete'&&value.edition.project_id===selection.project_id,'The report library opened another completed scientific edition.');
+ required(hash(canonical(value.edition))===retained.sha256&&hash(canonical(scientificFileIdentity(value)))===retained.files_sha256,'The original scientific edition or its complete files changed after reopening.');
+ const original=value.edition.render_identity?.selection;
+ const choices=original?.observed_context_sources||[original?.source_roles?.OBSERVED_CONTEXT];
+ required(canonical(choices)===canonical(requestState.scientific_selection.sources),'The retained scientific report changed its original ordered sources.');
+ await page.waitForFunction(expected=>{
+  const root=document.querySelector('.scientific-report-editions [data-scientific-report-detail]');
+  if(!root||root.hidden)return false;
+  const frame=root.querySelector('iframe');
+  return root.querySelector('h3')?.textContent===expected.title&&frame&&new URL(frame.src).pathname===new URL(expected.viewer,document.baseURI).pathname;
+ },{title:value.edition.title,viewer:value.viewer_url});
+ const links=page.locator(scientific('[data-scientific-report-detail] > .table-scroll tbody a[download]'));
+ required(await links.count()===value.files.length,'The scientific report library omitted an original file.');
+ if(downloadFiles){
+  for(let index=0;index<value.files.length;index++){
+   const file=value.files[index],url=new URL(file.url,origin);
+   required(url.origin===origin,'The saved scientific report file leaves its native operator.');
+   const position=await links.evaluateAll((nodes,path)=>nodes.findIndex(node=>new URL(node.href).pathname===path),url.pathname);
+   required(position>=0,'The rendered report omitted an original native member.');
+   const filename=basename(file.path).replace(/[^A-Za-z0-9._-]/g,'_')||'report';
+   await saveDownload(links.nth(position),'scientific-report-'+String(index+1).padStart(4,'0')+'-'+filename,file);
+   await writeJournal();
+  }
+ }
+ await shot('scientific-'+label);
+ await record('Reopened complete original scientific report in '+label,{edition_id:retained.edition_id,title:value.edition.title,source_count:value.edition.source_count,section_count:value.edition.section_count,figure_count:value.edition.figure_count,file_count:value.files.length,sha256:retained.sha256,workspace_key:currentWorkspace});
+ return value;
+}
+async function operateScientificReport(value){
+ await stage('open-original-scientific-composer');
+ let editionId;
+ if(hasRequest('comparison-scientific-render')||requestState.scientific_report){
+  required(requestState.scientific_selection&&requestState.scientific_preview?.preview_id,'The retained report request lost its original ordered preview.');
+  editionId=requestState.scientific_preview.preview_id;
+  if(hasRequest('comparison-scientific-render')){
+   const task=await queue('comparison-scientific-render',scientific('[data-scientific-report-action="render"]'),'source-reports.render',{...requestState.scientific_selection,preview_id:editionId});
+   required(task.result?.scientific_report_edition_id===editionId&&task.result.state==='complete','The retained renderer task belongs to another original report.');
+  }
+ }else{
+ let body=await openScientificComposer(value);
+ if(requestState.scientific_selection){
+  body=requestState.scientific_selection;await restoreScientificSelection(body);
+ }else{requestState.scientific_selection=body;await persistRequests();}
+ const pending=page.waitForResponse(response=>{
+  const url=new URL(response.url());
+  return url.origin===origin&&url.pathname==='/api/source-reports/scientific-preview'&&url.searchParams.get('workspace')===currentWorkspace;
+ });pending.catch(()=>{});
+ await page.locator(scientific('[data-scientific-report-action="preview"]')).click();
+ const response=await pending,preview=await json(response,'Preview ordered scientific report');
+ required(canonical(bodyOf(response))===canonical(body),'The visible scientific preview submitted another original draft.');
+ required(preview.workspace_key===currentWorkspace&&canonical(preview.sources.map(sourceChoice))===canonical(body.sources),'The scientific preview changed its ordered source identities.');
+ const binding={preview_id:preview.id,render_identity_sha256:hash(canonical(preview.render_identity)),sources:preview.sources};
+ if(requestState.scientific_preview)required(canonical(requestState.scientific_preview)===canonical(binding),'The original report preview source editions or rendering identity changed.');
+ else{requestState.scientific_preview=binding;await persistRequests();}
+ await page.locator(scientific('[data-scientific-report-preview] .scientific-report-preview')).waitFor({state:'visible'});
+ const renderedSources=await page.locator(scientific('.scientific-report-order li strong')).allTextContents();
+ required(canonical(renderedSources)===canonical(preview.sources.map(row=>row.title)),'The scientific composer did not preserve the original source reading order.');
+ await shot('scientific-ordered-preview');
+ await record('Previewed original ordered scientific report',{preview_id:preview.id,sources:preview.sources,title:preview.title});
+ await stage('prepare-original-scientific-edition');
+ if(hasRequest('comparison-scientific-render')||!preview.existing){
+  const task=await queue('comparison-scientific-render',scientific('[data-scientific-report-action="render"]'),'source-reports.render',{...body,preview_id:preview.id});
+  required(task.result?.scientific_report_edition_id===preview.id&&task.result.state==='complete','The native renderer retained another original report edition.');
+ }
+ editionId=preview.id;
+ }
+ const detail=await scientificEdition(editionId);
+ required(detail.edition?.id===editionId&&detail.edition.state==='complete'&&detail.edition.project_id===selection.project_id,'The selected original scientific report did not complete.');
+ const retained={edition_id:editionId,sha256:hash(canonical(detail.edition)),files_sha256:hash(canonical(scientificFileIdentity(detail)))};
+ if(requestState.scientific_report)required(canonical(requestState.scientific_report)===canonical(retained),'The original completed scientific edition changed.');
+ else{requestState.scientific_report=retained;await persistRequests();}
+ await reopenScientificEdition('saved-library',true);
+ await stage('export-original-scientific-edition');
+ const exported=await queue('comparison-scientific-export',scientific('[data-scientific-report-action="export"]'),'source-reports.export',{id:retained.edition_id});
+ const archive=await taskDownload(exported,'.zip','monitoring-scientific-report.zip');
+ await record('Downloaded complete native scientific report ZIP',{edition_id:retained.edition_id,...archive});
+ await openDesk();await chooseCampaign();await verifyRendered(baseline);await openObservedContext();
+}
+async function operateComparisonReport(){
+ await stage('prepare-comparison-report-source');await idle();await expandFor('[data-report-scope]');
+ await page.locator(desk('[data-report-scope]')).selectOption('comparison');
+ await page.locator(desk('[data-report-comparisons-refresh]')).click();
+ await page.waitForFunction(id=>[...document.querySelector('eco-monitoring').shadowRoot.querySelector('[data-report-comparison]').options].some(option=>option.value===id),requestState.comparison.comparison_id);
+ await page.locator(desk('[data-report-comparison]')).selectOption(requestState.comparison.comparison_id);
+ await page.waitForFunction(resuming=>{const root=document.querySelector('eco-monitoring')?.shadowRoot;return root&&!root.querySelector('[data-report-comparison]').disabled&&(resuming||!root.querySelector('[data-report-prepare]').disabled);},hasRequest('comparison-report-prepare'));
+ await page.locator(desk('[data-report-title]')).fill(comparisonReport.title);
+ await page.locator(desk('[data-report-delivery]')).selectOption(comparisonReport.delivery_id||'');
+ const expected={comparison_id:requestState.comparison.comparison_id,title:comparisonReport.title,...(comparisonReport.delivery_id?{delivery_id:comparisonReport.delivery_id}:{})};
+ const task=await queue('comparison-report-prepare',desk('[data-report-prepare]'),'monitoring.report.prepare',expected);
+ required(task.result?.id&&task.result.selection?.comparison_id===expected.comparison_id&&task.result.state==='complete','The queued report source belongs to another saved comparison.');
+ const native=await reportRead('get',{id:task.result.id,...(comparisonReport.delivery_id?{delivery_id:comparisonReport.delivery_id}:{})});
+ required(canonical(retainedReport(native))===canonical(retainedReport(task.result)),'The saved report differs from the completed original operation.');
+ const source=await reportSource(native),retained={report_id:native.id,sha256:hash(canonical(retainedReport(native))),source_sha256:hash(canonical(source)),delivery_selection_sha256:hash(canonical(native.delivery_selection))};
+ if(requestState.comparison_report)required(canonical(requestState.comparison_report)===canonical(retained),'The original report-source identity changed after resume.');
+ else{requestState.comparison_report=retained;await persistRequests();}
+ const reopened=await reopenComparisonReport('saved-library'),tickets=reportTicketInventory(reopened);
+ await stage('download-complete-comparison-report');
+ for(let index=0;index<tickets.length;index++){
+  const ticket=tickets[index],links=page.locator(desk('[data-report-downloads] a'));
+  const position=await links.evaluateAll((nodes,id)=>nodes.findIndex(node=>new URL(node.href).pathname==='/api/file/'+id),ticket.id);
+  required(position>=0,'The report panel omitted an original download member.');
+  const filename=basename(ticket.filename).replace(/[^A-Za-z0-9._-]/g,'_')||'source';
+  await saveDownload(links.nth(position),'comparison-report-'+String(index+1).padStart(4,'0')+'-'+filename,ticket);
+  await writeJournal();
+ }
+ await record('Downloaded every original comparison report member',{report_id:native.id,file_count:tickets.length,source:native.source});
+ await operateScientificReport(reopened);
+}
+
 async function main(){
  await mkdir(join(output,'exports'),{recursive:true});
  required(args['url-file'],'Supply the private original operator URL file.');await initializeContinuation();
@@ -506,6 +746,7 @@ async function main(){
  const observed=await openObservedContext();
  if(observed){await shot('04-original-observed-support');await record('Opened exact retained observational support',{context_id:observed.id,summary:observed.summary,sha256:requestState.context_sha256});}
  if(comparisonSelection){await operateBudgetComparison();await chooseCampaign();await verifyRendered(baseline);await openObservedContext();}
+ if(comparisonReport)await operateComparisonReport();
  await exportCampaign('html');await exportCampaign('bundle');
  const archive=await exportCampaign('workspace');await shot('05-campaign-exports');
  await stage('fresh-browser-reopen');await freshBrowser();
@@ -513,6 +754,7 @@ async function main(){
  required(!journal.browser_errors.length,'Browser exception: '+journal.browser_errors.join('; '));
  journal.current_step='complete';journal.status='complete';journal.network_id=selection.network_id;journal.plan_id=selection.plan_id;journal.campaign_id=selection.campaign_id;
  if(comparisonSelection)journal.comparison_id=requestState.comparison.comparison_id;
+ if(comparisonReport){journal.comparison_report_id=requestState.comparison_report.report_id;journal.scientific_report_edition_id=requestState.scientific_report.edition_id;}
 }
 try{await main();}catch(error){
  journal.status='failed';journal.error=redact(error.stack||error.message);process.exitCode=1;

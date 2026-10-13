@@ -1,0 +1,118 @@
+{
+  "schema": "upstate.utility-microbial-context/v1",
+  "captured_on": "2026-10-13",
+  "query_period": {
+    "start": "2021-01-01",
+    "end": "2025-12-31"
+  },
+  "original_records": 730,
+  "original_activities": 730,
+  "stations": 36,
+  "utilities": {
+    "ARJWS": {
+      "stations": 5,
+      "records": 142
+    },
+    "PRWD": {
+      "stations": 31,
+      "records": 588
+    }
+  },
+  "statuses": {
+    "measured": 554,
+    "above_limit": 6,
+    "below_limit": 67,
+    "not_detected": 102,
+    "not_reported": 1,
+    "missing": 0
+  },
+  "activity_types": {
+    "Sample-Routine": 729,
+    "Quality Control Sample-Field Replicate": 1
+  },
+  "methods": [
+    {
+      "id": "9223-B",
+      "context": "APHA",
+      "name": "9223 B ~ Enzyme substrate assay for measuring total coliforms and E. coli (ONPG-MUG test or CPRG-MUG test)",
+      "description": "https://www.nemi.gov/methods/method_summary/5583/"
+    },
+    {
+      "id": "9221-F",
+      "context": "APHA",
+      "name": "9221 F ~ Escherichia coli, Multi-tube Fermentation Technique",
+      "description": ""
+    },
+    {
+      "id": "BAC94",
+      "context": "USGS",
+      "name": "E. Coli, multi tube fermentation",
+      "description": "Standard Methods"
+    }
+  ],
+  "result_fields": [
+    "OrganizationIdentifier",
+    "OrganizationFormalName",
+    "ActivityIdentifier",
+    "ActivityTypeCode",
+    "ActivityMediaName",
+    "ActivityMediaSubdivisionName",
+    "ActivityStartDate",
+    "ActivityStartTime/Time",
+    "ActivityStartTime/TimeZoneCode",
+    "ActivityEndDate",
+    "ActivityEndTime/Time",
+    "ActivityEndTime/TimeZoneCode",
+    "ActivityDepthHeightMeasure/MeasureValue",
+    "ActivityDepthHeightMeasure/MeasureUnitCode",
+    "ActivityDepthAltitudeReferencePointText",
+    "ActivityTopDepthHeightMeasure/MeasureValue",
+    "ActivityTopDepthHeightMeasure/MeasureUnitCode",
+    "ActivityBottomDepthHeightMeasure/MeasureValue",
+    "ActivityBottomDepthHeightMeasure/MeasureUnitCode",
+    "ProjectIdentifier",
+    "ActivityConductingOrganizationText",
+    "MonitoringLocationIdentifier",
+    "ActivityCommentText",
+    "SampleAquifer",
+    "HydrologicCondition",
+    "HydrologicEvent",
+    "SampleCollectionMethod/MethodIdentifier",
+    "SampleCollectionMethod/MethodIdentifierContext",
+    "SampleCollectionMethod/MethodName",
+    "SampleCollectionEquipmentName",
+    "ResultDetectionConditionText",
+    "CharacteristicName",
+    "ResultSampleFractionText",
+    "ResultMeasureValue",
+    "ResultMeasure/MeasureUnitCode",
+    "MeasureQualifierCode",
+    "ResultStatusIdentifier",
+    "StatisticalBaseCode",
+    "ResultValueTypeName",
+    "ResultWeightBasisText",
+    "ResultTimeBasisText",
+    "ResultTemperatureBasisText",
+    "ResultParticleSizeBasisText",
+    "PrecisionValue",
+    "ResultCommentText",
+    "USGSPCode",
+    "ResultDepthHeightMeasure/MeasureValue",
+    "ResultDepthHeightMeasure/MeasureUnitCode",
+    "ResultDepthAltitudeReferencePointText",
+    "SubjectTaxonomicName",
+    "SampleTissueAnatomyName",
+    "ResultAnalyticalMethod/MethodIdentifier",
+    "ResultAnalyticalMethod/MethodIdentifierContext",
+    "ResultAnalyticalMethod/MethodName",
+    "MethodDescriptionText",
+    "LaboratoryName",
+    "AnalysisStartDate",
+    "ResultLaboratoryCommentText",
+    "DetectionQuantitationLimitTypeName",
+    "DetectionQuantitationLimitMeasure/MeasureValue",
+    "DetectionQuantitationLimitMeasure/MeasureUnitCode",
+    "PreparationStartDate",
+    "ProviderName"
+  ]
+}

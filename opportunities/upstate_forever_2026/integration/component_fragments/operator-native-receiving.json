@@ -1,0 +1,20 @@
+{
+  "schema": "upstate.application-component-fragment/v1",
+  "id": "operator-native-receiving",
+  "components": {
+    "operator-native-receiving": {
+      "title": "Original operator native task continuation and same-worker reconnect",
+      "paths": [
+        "source_tools/receive_operator_native.py",
+        "docs/OPERATOR_NATIVE_RECEIVING.md"
+      ],
+      "requires": [
+        "core",
+        "native-run-desk"
+      ]
+    }
+  },
+  "required_components": [
+    "operator-native-receiving"
+  ]
+}

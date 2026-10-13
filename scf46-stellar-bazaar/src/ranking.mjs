@@ -10,13 +10,133 @@ const words = s => tokenize(typeof s === 'string' ? s.slice(0,2048) : '');
 const object = o => o !== null && typeof o === 'object' && !Array.isArray(o);
 const field = (text, weight) => ({ tokens: words(text).slice(0,128), weight });
 
+// Input annotations share the original parameter field's 2048-character /
+// 128-token budget. Walk only request schemas that the seller actually emits.
+// Request examples, defaults and response payloads do not contribute terms.
+const SCHEMA_NODES = 128;
+const SCHEMA_DEPTH = 16;
+const SCHEMA_CHILDREN = 32;
+const PARAMETER_CHARS = 2048;
+const HTTP_PARAMETER_GROUPS = ['queryParams', 'body', 'pathParams', 'headers'];
+
+function localSchemaReference(root, reference) {
+  if (typeof reference !== 'string' || reference.length > 2048 ||
+      !reference.startsWith('#')) return null;
+  let pointer;
+  try { pointer = decodeURIComponent(reference.slice(1)); }
+  catch { return null; }
+  if (pointer === '') return root;
+  if (!pointer.startsWith('/')) return null;
+  const parts = pointer.slice(1).split('/');
+  if (parts.length > SCHEMA_DEPTH * 2) return null;
+  let node = root;
+  for (const part of parts) {
+    if (/~(?:[^01]|$)/.test(part)) return null;
+    const key = part.replace(/~1/g, '/').replace(/~0/g, '~');
+    if (node === null || typeof node !== 'object' || !Object.hasOwn(node, key)) return null;
+    node = node[key];
+  }
+  return object(node) ? node : null;
+}
+
+function schemaAlternatives(schema, root) {
+  const alternatives = [];
+  const reference = localSchemaReference(root, schema.$ref);
+  if (reference) alternatives.push(reference);
+  for (const keyword of ['allOf', 'anyOf', 'oneOf']) {
+    if (Array.isArray(schema[keyword]))
+      alternatives.push(...schema[keyword].slice(0, SCHEMA_CHILDREN).filter(object));
+  }
+  return alternatives;
+}
+
+/** Locate the actual HTTP input groups, including composed/local-ref containers. */
+function httpParameterSchemas(root) {
+  if (!object(root)) return [];
+  const queue = [{ schema: root, step: 0, depth: 0 }], result = [];
+  const seen = new WeakMap();
+  const enqueue = (schema, step, depth) => {
+    if (object(schema) && depth <= SCHEMA_DEPTH && queue.length < SCHEMA_NODES)
+      queue.push({ schema, step, depth });
+  };
+  for (let at = 0; at < queue.length; at++) {
+    const { schema, step, depth } = queue[at];
+    const visits = seen.get(schema) ?? new Set();
+    if (visits.has(step)) continue;
+    visits.add(step); seen.set(schema, visits);
+    if (step === 2) { result.push(schema); continue; }
+    const properties = object(schema.properties) ? schema.properties : {};
+    for (const name of step === 0 ? ['input'] : HTTP_PARAMETER_GROUPS)
+      if (Object.hasOwn(properties, name)) enqueue(properties[name], step + 1, depth + 1);
+    for (const alternative of schemaAlternatives(schema, root))
+      enqueue(alternative, step, depth + 1);
+  }
+  return result;
+}
+
+/**
+ * Breadth-first traversal keeps top-level parameters ahead of deep schemas.
+ * Local JSON pointers resolve only inside their original schema document;
+ * unreachable definitions and remote references do not contribute terms.
+ */
+function inputParameterText(row, input) {
+  const bazaarSchema = row.extensions?.bazaar?.schema;
+  const roots = input.type === 'http'
+    ? httpParameterSchemas(bazaarSchema).map(schema => ({ schema, root: bazaarSchema }))
+    : object(input.inputSchema) ? [{ schema: input.inputSchema, root: input.inputSchema }] : [];
+  const queue = [], seen = new WeakSet();
+  let text = '';
+  const append = value => {
+    if (typeof value !== 'string' || !value.length) return;
+    const separator = text.length ? ' ' : '';
+    const available = PARAMETER_CHARS - text.length - separator.length;
+    if (available > 0) text += separator + value.slice(0, available);
+  };
+  const enqueue = (schema, root, depth, name = '') => {
+    if (depth <= SCHEMA_DEPTH && queue.length < SCHEMA_NODES && (object(schema) || name))
+      queue.push({ schema, root, depth, name });
+  };
+  for (const { schema, root } of roots) enqueue(schema, root, 0);
+  for (let at = 0; at < queue.length && text.length < PARAMETER_CHARS; at++) {
+    const { schema, root, depth, name } = queue[at];
+    append(name);
+    if (!object(schema) || seen.has(schema)) continue;
+    seen.add(schema);
+    append(schema.description);
+    append(schema.title);
+    if (object(schema.properties)) {
+      let count = 0;
+      for (const property in schema.properties) {
+        if (!Object.hasOwn(schema.properties, property)) continue;
+        if (count++ === SCHEMA_CHILDREN) break;
+        enqueue(schema.properties[property], root, depth + 1, property);
+      }
+    }
+    for (const alternative of schemaAlternatives(schema, root))
+      enqueue(alternative, root, depth + 1);
+    const items = Array.isArray(schema.items) ? schema.items.slice(0, SCHEMA_CHILDREN) : [schema.items];
+    for (const item of items) enqueue(item, root, depth + 1);
+    if (Array.isArray(schema.prefixItems))
+      for (const item of schema.prefixItems.slice(0, SCHEMA_CHILDREN)) enqueue(item, root, depth + 1);
+    for (const keyword of ['additionalProperties', 'unevaluatedProperties'])
+      enqueue(schema[keyword], root, depth + 1);
+    if (object(schema.patternProperties)) {
+      let count = 0;
+      for (const pattern in schema.patternProperties) {
+        if (!Object.hasOwn(schema.patternProperties, pattern)) continue;
+        if (count++ === SCHEMA_CHILDREN) break;
+        enqueue(schema.patternProperties[pattern], root, depth + 1);
+      }
+    }
+  }
+  return text;
+}
+
 function toFields(row) {
   const resource = object(row.resource) ? row.resource : {};
   const info = object(row.extensions?.bazaar?.info) ? row.extensions.bazaar.info : {};
   const input = object(info.input) ? info.input : {};
-  const props = object(input.inputSchema?.properties) ? input.inputSchema.properties : {};
-  const parameters = Object.entries(props).slice(0,32).map(([name, spec]) =>
-    name+' '+(object(spec) && typeof spec.description === 'string' ? spec.description : '')).join(' ');
+  const parameters = inputParameterText(row, input);
   return [
     field(resource.serviceName, 9),
     field(Array.isArray(resource.tags) ? resource.tags.filter(x => typeof x === 'string').slice(0,16).join(' ') : '', 7),

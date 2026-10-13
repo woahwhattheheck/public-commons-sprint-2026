@@ -1,0 +1,36 @@
+{
+  "schema": "upstate.application-component-fragment/v1",
+  "id": "landcover-observation-profiles",
+  "components": {
+    "landcover-observation-profiles": {
+      "title": "217 watershed land-cover and original observation profiles",
+      "paths": [
+        "observations/landcover_observation_profiles_20261013/profiles_core.mjs",
+        "observations/landcover_observation_profiles_20261013/watershed-profiles.csv",
+        "observations/landcover_observation_profiles_20261013/landcover-groups.csv",
+        "observations/landcover_observation_profiles_20261013/original-location-context.csv",
+        "observations/landcover_observation_profiles_20261013/summary.json",
+        "observations/landcover_observation_profiles_20261013/input-manifest.json",
+        "observations/landcover_observation_profiles_20261013/rebuild.mjs",
+        "observations/landcover_observation_profiles_20261013/README.md",
+        "landcover_observation_profiles.sources.json",
+        "integration/component_fragments/landcover-observation-profiles.json"
+      ],
+      "requires": [
+        "annual-landcover-observed-2023-2025",
+        "observed-station-wbd"
+      ],
+      "source_manifests": [
+        "landcover_observation_profiles.sources.json"
+      ]
+    }
+  },
+  "required_components": [
+    "landcover-observation-profiles"
+  ],
+  "source_reference": {
+    "operation": "ECO-SCI-ROOT-LANDCOVER-OBSERVATION-PROFILES-20261013",
+    "landcover": "https://github.com/woahwhattheheck/public-commons-sprint-2026/pull/3547",
+    "station_context": "https://github.com/woahwhattheheck/public-commons-sprint-2026/pull/3571"
+  }
+}

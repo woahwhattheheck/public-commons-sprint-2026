@@ -67,9 +67,9 @@ The same request/result identities, complete GIS inventory, QGS/QGZ references, 
 
 ## Review the actual changes in a received GIS edition
 
-In **Editable GIS projects**, open the received edition's **Review received data changes** section. Select the retained **Original exported GIS project** and choose **Build complete change review**. Only exports with the same original GIS selection are offered. The queued operation verifies the actual original request, both inventory fingerprints, logical layer IDs, retained source identities and complete working files.
+In **Editable GIS projects**, open the received edition's **Compare exported and received working editions** section. Select the retained **Original exported GIS project** and choose **Build complete edition comparison**. Only exports with the same original GIS selection are offered. The queued operation verifies the actual original request, both inventory fingerprints, logical layer IDs, retained source identities and complete working files.
 
-This comparison uses the original exported working data and the actual received working data. The received edition's seal history remains available as additional provenance; a file-hash history alone does not supply the old geometry or raster values.
+This comparison uses the original exported working data and the actual received working data. The existing **Working vector changes** control separately compares received vectors with their original retained source features; its original-source/Fiona identity reference remains available. Choose the comparison whose original reference matches the question. The received edition's seal history remains available as additional provenance; a file-hash history alone does not supply the old geometry or raster values.
 
 The normal task result opens the completed report and its full ZIP, JSON and layer-summary CSV. The received card retains the exact original export choice through refresh and displays completed reviews with their actual edition identities and report creation time. Changing the selected original export clears an incompatible optional adoption review, while preserving the separate adoption title, reason, working-layer and original table/document choices.
 
@@ -384,11 +384,10 @@ sources, prepared grids, coefficients, scenarios and numerical results stay inta
 A new source edition is available for the operator's normal selection and preparation
 workflow; adopting it does not silently rerun or replace an existing model.
 
-In **Editable GIS projects**, open the received edition's **Use edited working
-layers as new study sources** section. Select its layers, enter the title and reason,
+In **Editable GIS projects**, open the received edition's **Use received layers, tables or documents as study sources** section. Select its layers, enter the title and reason,
 and click **Adopt selected study sources**. The original task records the received
 edition, selected working layers and resulting source collection. In **Adopted study
-source editions**, **Select this source edition for export** opens that same native
+source editions**, **Select this source edition for GIS export** opens that same native
 collection for another complete handover. The retained source catalogue also exposes
 it to the rest of the scientific application.
 
@@ -401,8 +400,11 @@ python model/gis_project_cli.py workspace-catalogue "$WORKSPACE"
 python model/gis_project_cli.py workspace-export "$WORKSPACE" continued-selection.json
 ```
 
-`adoption.json` contains `receipt_id`, `title`, `reason` and a nonempty `layer_ids`
-array, using the actual IDs from the received project's `project.json`. The returned
+`adoption.json` contains `receipt_id`, `title`, `reason` and actual `layer_ids`
+and/or `attachment_ids` from the received project's `project.json`. Select at least
+one working layer, original table or document. A working-layer selection retains all
+original attachments; an attachment-only selection can choose tables/documents
+independently. An optional `review_id` retains the matching edition-comparison context. The returned
 `source_collection_id` belongs to the original Workspace. Its `sources` array maps
 each received layer ID to the native source ID. The next export selection can use
 that collection and the same retained native source IDs.

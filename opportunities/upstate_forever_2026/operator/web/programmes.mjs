@@ -1,3 +1,4 @@
+import {attachNativeCaseConsole} from './parameter_case_console.mjs';
 /* Retained native execution control, shared by programme and experiment callers. */
 const escapeHTML = value => String(value ?? '').replace(/[&<>"']/g, character => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[character]));
 const short = value => value ? String(value).slice(0, 12) : '—';
@@ -12,6 +13,7 @@ const methodLink = '<a href="https://storage.googleapis.com/releases.naturalcapi
 
 export function attachProgrammes(context) {
   const {api, endpoint, getState, openForm, submitAction, detail, fileList, showTask, toast, openItem} = context;
+  const caseConsole = attachNativeCaseConsole({...context, executeAction: sendAction}, 'programme');
   let host = null, controller = null, selected = null, currentWorkspace = null;
   let catalogue = null, record = null, loading = false, generation = 0;
   let subset = new Set(), latestError = '', activeRequest = false;
@@ -291,7 +293,10 @@ export function attachProgrammes(context) {
     const canPause = nativeActive && !record.pause_requested;
     const runRows = rows.map(row => {
       const error = row.error?.message || (typeof row.error === 'string' ? row.error : '');
-      const native = row.run_id ? actionButton('native', 'Inspect run', row.run_id) + actionButton('log', 'Log', row.run_id) : '<small>Prepared when executed</small>';
+      const native = row.run_id ? (row.native_state !== 'missing'
+        ? actionButton('case-console', 'Native case console', row.run_id) : '') +
+        actionButton('native', 'Inspect run', row.run_id) + actionButton('log', 'Log', row.run_id)
+        : '<small>Prepared when executed</small>';
       const sources = ['ndr', 'sdr'].map(model => {
         const id = row.stages?.[model]?.reused_from?.run_id || row.source_runs?.[model];
         return id ? actionButton('native', model.toUpperCase() + ' source', id, 'title="' + escapeHTML(id) + '"') : '';
@@ -1089,6 +1094,10 @@ export function attachProgrammes(context) {
     if (action === 'pair-completion') return preparePairCompletion(value);
     if (action === 'select-pending') { subset = new Set(asArray(record?.runs).filter(row => row.state !== 'complete').map(row => row.key)); draw(); return; }
     if (action === 'clear-selection') { subset.clear(); draw(); return; }
+    if (action === 'case-console') {
+      if (!record?.id) throw new Error('Open the original saved programme before its native case.');
+      return caseConsole.open(record.id, value);
+    }
     if (action === 'native') return openItem('runs', value);
     if (action === 'log') return showLog(value);
     if (action === 'task') return showTask(value);
