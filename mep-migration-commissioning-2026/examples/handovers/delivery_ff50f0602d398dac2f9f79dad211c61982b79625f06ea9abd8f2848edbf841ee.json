@@ -1,0 +1,48 @@
+{
+  "schema": "commons.mep-migration.target-rows.v1",
+  "targetSystem": "DEMONSTRATION receiver for action",
+  "targetVersion": "1",
+  "targetContractLabel": "Explicit DEMONSTRATION receiving schema v1; supplied fields are not a MEPflow API contract.",
+  "batchId": "batch_fa18a95ae424b13d1d81e1a9cd542c89b9095e661e7d80104d17feb5315246ff",
+  "columns": [
+    "externalKey",
+    "customerKey",
+    "siteKey",
+    "kind",
+    "status",
+    "quotedAmount",
+    "startDate",
+    "notes"
+  ],
+  "rows": [
+    {
+      "rowId": "original_action_job_correction:2",
+      "recordId": "job_16eeb4bb53848d509db437f17495ccfc",
+      "recordRevision": 2,
+      "fields": {
+        "externalKey": "action-J002",
+        "customerKey": "DEMO-action-customer-2",
+        "siteKey": "DEMO-action-site-2",
+        "kind": "Planned installation — corrected scope",
+        "status": "scheduled",
+        "quotedAmount": "1750.50",
+        "startDate": "2026-10-15",
+        "notes": "Exact original\nmultiline scope, with comma."
+      },
+      "sourceFields": {
+        "externalKey": "action-J002",
+        "customerKey": "action-C002",
+        "siteKey": "action-S002",
+        "kind": "Planned installation — corrected scope",
+        "status": "scheduled",
+        "quotedAmount": "1750.50",
+        "startDate": "2026-10-15",
+        "notes": "Exact original\nmultiline scope, with comma."
+      },
+      "links": {
+        "customerKey": "customer_d12437d0a5800317a166fa31eb023003",
+        "siteKey": "site_ff32445dcbc848c9ace751ba29e0fb28"
+      }
+    }
+  ]
+}

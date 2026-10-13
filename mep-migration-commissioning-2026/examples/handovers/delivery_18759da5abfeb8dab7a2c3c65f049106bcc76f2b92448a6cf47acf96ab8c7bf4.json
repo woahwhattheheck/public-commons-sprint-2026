@@ -1,0 +1,50 @@
+{
+  "schema": "commons.mep-migration.target-rows.v1",
+  "targetSystem": "DEMONSTRATION receiver for dixie",
+  "targetVersion": "1",
+  "targetContractLabel": "Explicit DEMONSTRATION receiving schema v1; supplied fields are not a MEPflow API contract.",
+  "batchId": "batch_582409f1cbd8b5e8748b8ec3b6276d79c5e857d600e9bf4165e8eeb342f42a8d",
+  "columns": [
+    "externalKey",
+    "customerKey",
+    "description"
+  ],
+  "rows": [
+    {
+      "rowId": "original_dixie_site_first:1",
+      "recordId": "site_6526cc17cfab733800e914a59a1683ef",
+      "recordRevision": 1,
+      "fields": {
+        "externalKey": "dixie-S001",
+        "customerKey": "DEMO-dixie-customer-1",
+        "description": "Demonstration workshop address supplied by operator"
+      },
+      "sourceFields": {
+        "externalKey": "dixie-S001",
+        "customerKey": "dixie-C001",
+        "description": "Demonstration workshop address supplied by operator"
+      },
+      "links": {
+        "customerKey": "customer_b956902e9e7f21181004e83f86a79d75"
+      }
+    },
+    {
+      "rowId": "original_dixie_site_first:2",
+      "recordId": "site_cd5202c391bf1a3683a88e73571984c5",
+      "recordRevision": 1,
+      "fields": {
+        "externalKey": "dixie-S002",
+        "customerKey": "DEMO-dixie-customer-2",
+        "description": "Demonstration service address supplied by operator"
+      },
+      "sourceFields": {
+        "externalKey": "dixie-S002",
+        "customerKey": "dixie-C002",
+        "description": "Demonstration service address supplied by operator"
+      },
+      "links": {
+        "customerKey": "customer_1f365d2d3e2eaebf76caf71536279d7f"
+      }
+    }
+  ]
+}
