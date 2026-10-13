@@ -1,0 +1,21 @@
+{
+  "schema": "upstate.application-component-fragment/v1",
+  "components": {
+    "nc-ambient-original-hydration": {
+      "title": "Complete retained NC ambient downloads and raw intake",
+      "paths": [
+        "source_tools/hydrate_nc_ambient_sources.py",
+        "docs/NC_AMBIENT_ORIGINAL_HYDRATION.md"
+      ],
+      "requires": [
+        "core",
+        "nc-ambient-original-intake"
+      ]
+    }
+  },
+  "required_components": [
+    "nc-ambient-original-hydration"
+  ],
+  "id": "nc-ambient-original-hydration",
+  "source_reference": "Original retained NC ambient download continuation; capture supplied by original source owner"
+}
