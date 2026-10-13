@@ -239,6 +239,13 @@ class Handler(BaseHTTPRequestHandler):
                 return self.reply(200, {"load_id": result["load_id"], "receive_id": result["receive_id"],
                                        "rows": len(result["rows"]), "findings": result["findings"]})
             raise InvalidData("Choose a supported original Maximo operation")
+        if endpoint == "maximo-result" and not write:
+            try:
+                offset = int(query.get("offset", "0")); limit = int(query.get("limit", "100"))
+            except (TypeError, ValueError):
+                raise InvalidData("Select a numeric original result page")
+            result = maximo_load.result_view(workspace, project_id, query.get("operation"), offset, limit)
+            return self.reply(200, maximo_target.wire(result, maximum=4*1024*1024), "application/json")
         if endpoint == "maximo-file" and not write:
             kind = query.get("kind")
             if kind == "capture":
@@ -250,7 +257,10 @@ class Handler(BaseHTTPRequestHandler):
                 saved = maximo_load.load(workspace, query.get("operation"))
                 if saved["request"]["project_id"] != project_id: raise InvalidData("Select the original project's load")
                 return self.reply(200, maximo_target.wire(saved, maximum=16*1024*1024), "application/json", "Maximo-Prepared-Load.json")
-            raise InvalidData("Select the complete capture or prepared load")
+            if kind == "result":
+                return self.reply(200, maximo_load.result_document(workspace, project_id, query.get("operation")),
+                                  "application/json", "Maximo-Original-Result.json")
+            raise InvalidData("Select the complete capture, prepared load or original result")
         if endpoint == "refresh":
             workspace.project(project_id)
             if not write:
