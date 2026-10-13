@@ -1197,9 +1197,11 @@ function retainedDeliveryCohort(selection,baseline,alternatives){
  return [...original];
 }
 function formOpening(action){
- const request=++formOpeningRequest,ticket=admissionContext(action,null);
+ const request=++formOpeningRequest,ticket=admissionContext(action,null),interaction=interactionRevision;
  const context=formContext,formOpen=formDialog.open,detailOpen=detailDialog.open;
- return ()=>request===formOpeningRequest&&currentAdmission(ticket)&&
+ const detailKind=detailContext?.kind,detailId=detailContext?.id;
+ return ()=>request===formOpeningRequest&&currentAdmission(ticket,{details:false})&&interactionRevision===interaction&&
+  detailContext?.kind===detailKind&&detailContext?.id===detailId&&
   formContext===context&&formDialog.open===formOpen&&detailDialog.open===detailOpen;
 }
 async function deliveryForm(id,initialSelection){
