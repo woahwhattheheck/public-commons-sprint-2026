@@ -1,0 +1,112 @@
+{
+  "schema": "stellar-forge.installation-workorder-profile.v1",
+  "id": "amp-iati",
+  "title": "AMP country-programme commissioning",
+  "task": {
+    "name": "Commission a complete IATI programme into the selected AMP installation",
+    "purpose": "Give a country-programme operator a complete, editable mapping and financial review from original publisher records to actual AMP projects, with following-edition continuity and an independently received handover.",
+    "request": "Receive the complete original publisher XML and identify the selected country programme, parent/child activity relationships and full native project coverage. Capture the actual installed AMP version, workspace/session, configured fields, possible-value responses and complete original projects. Map publishers and activities to actual projects, currencies, organisations, classifications and financial families. Preserve original currency, value and transaction dates, source identifiers, amount text, planning periods and distinct commitment, disbursement and expenditure meanings. Review every selected row as included, excluded or requiring programme attention. Prepare each complete native request and review its exact configured-field findings. Operate the original authorized journal, receive full native returns and retain actual returned project/funding/transaction identities with original request-position correspondence. Receive a following original publisher edition and fresh installed capture; compare all added/changed/removed rows and carry confirmed native identities. Deliver complete original source, editable mappings, decisions, reports and native request/response history. Independently receive, reopen and continue the same programme. The original Workshare supplies its country/workspace, source volumes, editions, review rounds and delivery window.",
+    "completeOutput": "One complete commissioned programme edition: original publisher files and selected records; full installed capture and project preimages; editable mapping and row decisions; configured-field findings; complete prepared requests and actual native receiving state; original native identity correspondence; financial/programme reports; and a portable archive that independently receives and reopens the same source, history and continuation.",
+    "repeatTrigger": "An actual subsequent publisher edition, selected programme correction or supported AMP configuration/version change creates an explicitly reviewed programme edition linked to its original history. An interrupted response continues the retained original request and native run.",
+    "pricedUnit": "One agreed complete programme edition and its selected full project/financial population, with original source, complete receiving and operator handover. Retain the actual merchant task price and unit count from the selected Installation payment terms; professional commissioning retains its separate Workshare fee and phases."
+  },
+  "source": {
+    "reference": "Select the complete original IATI publisher editions and the actual existing AMP workspace/country programme in the original case. Retain acquisition URLs and times, exact bytes/SHA-256, original XML, explicit activity selection, installed version and complete original project coverage.",
+    "mode": "Versioned original-file intake plus the existing AMP API. Read complete publisher XML through the original IATI engine; capture configured fields, possible values, session/layout and each explicitly selected full project through the retained native client. Publisher and native captures remain immutable editions.",
+    "population": "One selected country programme and existing workspace, with all original publisher files, explicit activity selection, complete project coverage and financial population agreed in the Workshare. Retain every selected transaction and budget period, including rows needing review; make original selection totals and excluded programme coverage readable.",
+    "meaning": "Publisher reference and IATI activity ID identify the source programme and parent/child relationships. Source row keys/hashes bind decisions. Actual native project/funding/transaction IDs bind receiving and later editions. Preserve exact decimal amount text, currency, transaction/value dates, financial type/adjustment meaning and planning-period coverage. Commitments, disbursements, expenditures and budgets remain distinct groups. Repeated equal amounts remain separate original records. The installed activity_group version and full configured dictionaries govern native field meaning.",
+    "changePolicy": "Retain the original source and all prior programme editions. A new publisher or configuration capture requires named source/mapping review. Compare all added, changed and removed rows and retain earlier native history. Carry actual received identities into the following edition. Record source withdrawal through the original programme/Installation decision while retaining the attributable acquisition and history."
+  },
+  "receiving": {
+    "application": "The maintained IATI application, AMP commissioning browser, typed client and CLI, source-owned receiving/amp.py programme and original destination contract. Retain the exact selected application source and managed bindings with the customer's original runtime selection.",
+    "acceptanceRule": "Every agreed publisher and native project is present in full with declared coverage. Every selected financial row retains source identity and an inclusion/exclusion/review decision. Agreed native changes have complete actual receiving against their original request and configured destination fields, with actual native IDs and versions. The following edition retains prior history, full source changes and reviewed corrections. A designated operator independently receives the full archive, reopens the same programme and uses the retained reports and continuation. Save actual completed observations in the original Installation.",
+    "changeAndWithdraw": "The programme owner reviews scope and financial mapping in the original AMP workspace. Preserve portfolio/capture/plan revisions and native results when source or scope changes. Use existing Installation edit/change/return actions for the selected edition and actual operator decision. Additional publishers, programmes, deployments, records or integrations follow the original Workshare change process.",
+    "recovery": "Read the original request and native run before continuing an interrupted response. Repeated preparation of unchanged complete requests reuses that native operation. Once a POST returns a project ID, reconciliation remains bound to that exact returned ID. Recover uncertain native steps through the original reconcile action, then continue the same case/manifest. Preserve full raw responses and native events through portable export and independent receiving.",
+    "maintenance": "Retain the accountable programme owner, implementation owner and receiving operator in the original case. Supply editable implementation, upstream licences, source/configuration records, operator guidance and the agreed correction period. Select the actual existing environment and authority through its owner. Enter credentials locally through the native protocol; the source archive and retained operational journal carry the complete work without authentication secrets."
+  },
+  "steps": [
+    {
+      "title": "Receive original programme and installed environment",
+      "result": "Retain complete publisher XML/acquisition and select original country, publishers, activities and full project coverage. Capture the existing AMP workspace, installed version/session, fields and possible values. Reopen the original Workshare with its phases, effort and terms."
+    },
+    {
+      "title": "Build complete source-to-native mappings",
+      "result": "Receive the actual portfolio and full project preimages. Map publisher/activity and parent/child relationships to actual project representations, organisations, currencies and classifications. Preserve configured required fields and existing funding attributes in complete JSON bodies."
+    },
+    {
+      "title": "Review the entire financial population",
+      "result": "Review all original transactions and budget periods with exact amounts, currency, dates and financial families. Save explicit include/exclude/review decisions against the full analysis identity. Retain source differences and real period gaps as programme findings."
+    },
+    {
+      "title": "Operate original native requests and receive results",
+      "result": "Prepare full project bodies against the selected destination contract. Run the authorized original journal, receive complete returns and reconcile project/funding/transaction collections. Preserve original request positions, actual returned IDs and persisted versions through unchanged or repeated collections."
+    },
+    {
+      "title": "Commission the following publisher edition",
+      "result": "Retain an actual subsequent source and fresh native capture. Compare all added/changed/removed rows, preserve prior plan/history and carry confirmed received identities. Review ambiguous correspondence and operate the selected corrections through the linked edition."
+    },
+    {
+      "title": "Receive and reopen the complete operator handover",
+      "result": "Export full source, portfolio/capture/plan histories, reports, native requests/responses and current runtime source. Independently import to the designated second workspace, compare and re-export the programme, close it and reopen the same state. Complete operator sessions and agreed consolidated corrections."
+    },
+    {
+      "title": "Save Installation and customer continuation",
+      "result": "Use the original Workshare-derived seed, actual current plan and selected source attachments. Preview and save the complete programme with actual payment/authority selections and observed checks. Export the entire Operations case, independently receive it and reopen the same Installation ID/revision; continue the original customer application and manifest."
+    }
+  ],
+  "inputs": [
+    "The complete original Workshare and matching receiving packet: all delivery phases/dependencies, quoted effort, payment milestones, start conditions, review/operator sessions and correction terms.",
+    "Complete original publisher XML/acquisition records with actual URLs, timestamps, bytes/SHA-256, explicit country/programme/activity selection and full source coverage.",
+    "The selected existing AMP environment and actual installed version/workspace/user selection; full fields/possible values, session/layout and complete original project records.",
+    "The programme owner's complete reviewed mappings, row decisions, source/native identity correspondence and original preimage/request/response bodies.",
+    "An actual subsequent publisher edition and fresh installed capture with reviewed source changes and confirmed prior native identities.",
+    "The original native programme result and full portable archive, exact runtime/upstream licences, readable reports, operating guide and independent receive/reopen output.",
+    "Actual Operations case/plan/source IDs, accountable merchant/customer deployments, payment network/asset/recipient/task price/authority and named receiving host/operator."
+  ],
+  "sourceFiles": [
+    {
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/iati/AMP.md",
+      "blob": "d28be6e943852d7de58f589762b4f437382c5b75"
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/iati/amp_cli.py",
+      "blob": "cf20cb0fa7407a7f2ab92f8c6d12aa36a6ef5fef"
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/iati/amp/native.py",
+      "blob": "5e5283384d47d0ab443dcc337acd39a826e097e0"
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/iati/amp/workspace.py",
+      "blob": "4fbca62a4461f235389b9caf5009709cd5464732"
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/iati/amp/portable.py",
+      "blob": "8ceee408c28e7bf9bfa439b22faa2781582d76e2"
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/iati/amp/destination.py",
+      "blob": "ef02804258dd5a1c2210bbe1e0d71f4ff56428cd"
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/iati/amp/DESTINATION.md",
+      "blob": "cb8fa934fc594910e9ad819012da2a869bee2c34"
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/iati/amp/DESTINATION_UPSTREAM.json",
+      "blob": "edcf44981c9eea52d0dbc6d583f04bba35b409e8"
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/iati/receiving/amp.py",
+      "blob": "3ac97f1594d5cdb001641fc0bb194eb24f495f99"
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/iati/receiving/AMP.md",
+      "blob": "45dceeb461285642d7a2a7895514dbbf8b0992d5"
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/iati/examples/amp-haiti/PROGRAMME.md",
+      "blob": "154b624c3881921b70731328ecd17bb447405c10"
+    }
+  ]
+}

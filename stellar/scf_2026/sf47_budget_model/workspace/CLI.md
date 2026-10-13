@@ -4,6 +4,14 @@ The command-line operator opens the same private planning workspace as the brows
 
 Use this interface to prepare a grant delivery plan on a Linux worker, revise the staffing and payment assumptions in a saved plan, retain the complete history for another operator, and reopen the result in the browser. The maintained Starforge distribution includes the original scenario, calculator, browser workspace and this operator under their repository paths.
 
+## Installation delivery queue
+
+Use `operations delivery-queue --case ID --as-of YYYY-MM-DD [--output FILE]` for the complete dated JSON view, and `operations delivery-queue-export --case ID --as-of YYYY-MM-DD --output FILE` for the full handover ZIP. Add `--workspace PATH` to the operations group. [Installation delivery queue](DELIVERY_QUEUE.md) provides complete commands, assignment editing and import/reopen instructions.
+
+## Installation effort and support
+
+Use `operations installation-effort-seed --case ID --installation ID --expected-revision N --expected-version N --as-of YYYY-MM-DD [--document FILE] [--output FILE]` to prepare the complete saved Installation review. Save the edited full document through the existing installation-preview/save commands. `installation-effort-selection --case ID --expected-version N --forecast ID --installation-selections FILE [--name TEXT] [--note TEXT] [--output FILE]` opens its reviewed remaining hours as a complete original Forecast input. [Installation effort and support](INSTALLATION_EFFORT.md) documents the full file-based operation and complete handover.
+
 ## Start from the installed release or original source
 
 Python 3.10 or newer on Linux is required. The model uses the Python standard library, including SQLite and `fcntl`; the installed command uses the existing Node launcher to start Python. Select another Python executable with `SF47_PYTHON=/absolute/path/to/python3`. No shell command is evaluated by the launcher.
@@ -133,7 +141,15 @@ starforge grant-workspace import-bundle --workspace /absolute/private/scf-receiv
 starforge grant-workspace serve --workspace /absolute/private/scf-receiving
 ```
 
-The receiving plan has a new ID. It retains the complete original revision sequence, saved timestamps, notes, historical reports, content digests and exact source bytes. The response contains its ID and saved contents, plus the exact received ZIP's SHA-256. The browser can open the same ZIP directly through its existing import control. The native import verifies bundle membership, file lengths and hashes, revision continuity, original source identity and the original model inputs. It validates each historical scenario through the current calculator while retaining that revision's original report and saved timestamp. Subsequent changes use the current original calculator.
+To finish a delivery for an earlier saved edition after later work has been saved, select that original revision explicitly:
+
+```sh
+starforge grant-workspace export --workspace /absolute/private/scf-planning --plan plan-EXACT_ID --revision 5 --output /absolute/delivery/scf-original-plan-r5.zip
+```
+
+Choose either `--expected-revision` or `--revision`. The first requires the current plan to match the reviewed revision. The second exports the named saved revision and every original revision through it, even when the source workspace has later saved work. Both use the same eleven-file bundle and original exporter. The active plan, later revisions and saved requests remain available in the source workspace. The export response reports the selected revision and the source workspace's current revision.
+
+The receiving plan has a new ID. It retains the complete exported revision sequence, saved timestamps, notes, historical reports, content digests and exact source bytes. The response contains its ID and saved contents, plus the exact received ZIP's SHA-256. The browser can open the same ZIP directly through its existing import control. The native import verifies bundle membership, file lengths and hashes, revision continuity, original source identity and the original model inputs. It validates each historical scenario through the current calculator while retaining that revision's original report and saved timestamp. Subsequent changes use the current original calculator.
 
 ## Transfer every saved plan and resume an interrupted receiving operation
 
@@ -174,9 +190,107 @@ The current source is the original [SF47 budget model](https://github.com/woahwh
 
 The earlier source integration [PR1167](https://github.com/woahwhattheheck/public-commons-sprint-2026/pull/1167) bound the deployment acceptance plan to the current scenario. Follow the current saved source digest and the workspace owner's current source release when comparing a received plan. The CLI calls the original model for every calculation and keeps the original imported scenario alongside subsequent edits.
 
+## Original-currency forecast inputs
+
+The existing forecast preview/save commands accept complete original-currency inputs through `--inputs`. See [Original currencies in operating forecasts](CURRENCY.md) and the [complete input example](examples/native-currency-forecast.json) for native prices and costs, retained rates, original payment credits, event timing and the conditional currency exports. Keep the whole normalized input from preview when saving or passing a selected Portfolio alternative back to Forecast.
+
 ## Operating forecasts
 
 The original `operations` command includes `forecast-preview`, `forecast-save`, `forecasts`, `forecast-show` and `forecast-export`. Use the same case ID, explicit expected version and stable request ID. Saving additionally requires the exact reviewed preview SHA-256 and complete input JSON. Full examples and source/receiving semantics are in [FORECAST.md](FORECAST.md). The ordinary case `export` and `import` commands carry all immutable saved forecasts with the original source and work/payment records.
+
+## Portfolio with installation phases
+
+Use the original Portfolio commands to allocate saved Installation phases alongside all other grant and customer work. The installed release and original source both call the same case owner. Close the managed browser service before opening that same workspace with the headless CLI.
+
+In the commands below, `$CASE_ID`, `$CASE_VERSION` and `$FORECAST_ID` are the actual values from the current case and its selected saved Forecast. Create the private output directory first. The [Portfolio guide](PORTFOLIO.md) describes phase effort, original terms, the commercial delivery boundary and support capacity.
+
+Read the current case and seed its saved Forecast:
+
+```sh
+starforge grant-workspace operations --workspace /absolute/private/scf-planning \
+  show --case "$CASE_ID" --output /absolute/private/output/case-current.json
+starforge grant-workspace operations --workspace /absolute/private/scf-planning \
+  portfolio-seed --case "$CASE_ID" --forecast "$FORECAST_ID" \
+  --expected-version "$CASE_VERSION" --output /absolute/private/output/portfolio-seed.json
+```
+
+Review the complete `installationCandidates` and `sourceTasks` arrays in that seed. Write the selected exact editions as one JSON array. Every item contains `taskId`, `installationId`, `installationRevision` and `installationSha256`. Use the returned original IDs, edition numbers and digests.
+
+Extract the complete seed's `inputs` object for editing. This retains all original arrays and decimal strings:
+
+```sh
+python3 - /absolute/private/output/portfolio-seed.json /absolute/private/output/portfolio-base-inputs.json <<'PY'
+import json
+import sys
+with open(sys.argv[1], encoding="utf-8") as source:
+    retained = json.load(source)
+with open(sys.argv[2], "x", encoding="utf-8") as target:
+    json.dump(retained["inputs"], target, ensure_ascii=False, indent=2)
+    target.write("\n")
+PY
+```
+
+Seed the selected phase source while preserving that complete draft:
+
+```sh
+starforge grant-workspace operations --workspace /absolute/private/scf-planning \
+  portfolio-seed --case "$CASE_ID" --forecast "$FORECAST_ID" \
+  --expected-version "$CASE_VERSION" \
+  --installation-selections /absolute/private/output/installation-selections.json \
+  --inputs /absolute/private/output/portfolio-base-inputs.json \
+  --output /absolute/private/output/portfolio-phase-seed.json
+```
+
+Both new flags are optional. `--installation-selections` reads a complete JSON array; `--inputs` reads a complete existing Portfolio draft object. Reuse the same extraction command with the phase-seed filename and a new draft filename, then edit that full `inputs` object. Passing an entire seed/preview wrapper as `--inputs` does not select its inner input.
+
+Enter resource availability and phase remaining hours, retain each original phase and dependency, and enter the delivery boundary and its note. Every phase effort map must total its remaining hours; phase remainders must total the original commercial task's remainder. Set the bound parent minimum working duration to zero. Phase `priority: null` inherits the aggregate task priority; an entered integer, including `100`, is explicit. Newly seeded phase priorities are null.
+
+The seed attaches or refreshes base phase plans and preserves every explicit alternative override, including `installationPlans: []`. Omission inherits the base array; an explicit empty array uses the original aggregate tasks and requires their complete resource effort. To refresh one alternative, compose its complete inherited fields as temporary base `inputs` with `alternatives: []`, run `portfolio-seed` with its reviewed selections, and retain only the returned `installationPlans` as that alternative's complete override in the original draft. Keep the other settings and alternatives. The [SDK example](AGENT.md#prepare-one-explicit-phase-alternative) shows the same full-input transformation.
+
+Preview and retain the reviewed input:
+
+```sh
+starforge grant-workspace operations --workspace /absolute/private/scf-planning \
+  portfolio-preview --case "$CASE_ID" --expected-version "$CASE_VERSION" \
+  --inputs /absolute/private/output/portfolio-reviewed-inputs.json \
+  --output /absolute/private/output/portfolio-preview.json
+starforge grant-workspace operations --workspace /absolute/private/scf-planning \
+  portfolio-save --case "$CASE_ID" --expected-version "$CASE_VERSION" \
+  --inputs /absolute/private/output/portfolio-reviewed-inputs.json \
+  --expected-preview-sha256 "$PORTFOLIO_PREVIEW_SHA256" \
+  --actor "$ACTOR" --request-id "$PORTFOLIO_REQUEST_ID" \
+  --note "$PORTFOLIO_REVIEW_NOTE" --output /absolute/private/output/portfolio-save.json
+```
+
+Set the preview digest from the exact retained preview. Keep that complete input file, every save argument and the stable request ID before dispatch. A save receipt's `recordId` is the new saved Portfolio ID, and `version` is the new case version. After an interrupted response, repeat the identical save command and input with the same request ID. A definite original source/version conflict requires a refreshed review and a new request.
+
+Reopen the result with `portfolio-show --case "$CASE_ID" --portfolio "$PORTFOLIO_ID"`. Select a saved `READY` alternative using the freshly read case version:
+
+```sh
+starforge grant-workspace operations --workspace /absolute/private/scf-planning \
+  portfolio-selection --case "$CASE_ID" --portfolio "$PORTFOLIO_ID" \
+  --alternative "$ALTERNATIVE_ID" --expected-version "$CURRENT_CASE_VERSION" \
+  --output /absolute/private/output/portfolio-selected-forecast.json
+```
+
+Extract that result's complete `inputs` with the same JSON extraction procedure. Pass the extracted file to `forecast-preview` and then `forecast-save` with the current version, exact preview SHA, actor and a separate retained Forecast request ID. Review original collections, currencies, rates and event conditions before saving. Selection itself leaves the original saved Forecast available.
+
+Export the complete calculation and receiving case:
+
+```sh
+starforge grant-workspace operations --workspace /absolute/private/scf-planning \
+  portfolio-export --case "$CASE_ID" --portfolio "$PORTFOLIO_ID" \
+  --output /absolute/private/output/installation-portfolio.zip
+starforge grant-workspace operations --workspace /absolute/private/scf-planning \
+  export --case "$CASE_ID" --expected-version "$LATEST_CASE_VERSION" \
+  --output /absolute/private/output/installation-portfolio-case.zip
+starforge grant-workspace operations --workspace /absolute/private/receiving-workspace \
+  import --file /absolute/private/output/installation-portfolio-case.zip \
+  --name "Received installation allocation" --actor "$ACTOR" \
+  --request-id "$RECEIVING_REQUEST_ID"
+```
+
+Use the received case ID to list and reopen its saved Portfolios. Keep the complete original case ZIP and receiving request for exact import replay. The calculation ZIP contains the full reviewed source and results; the whole case ZIP restores the saved Installation editions, attachments, original events and Forecasts through the existing receiver.
 
 ## Cohort acceptance and its original tranche join
 

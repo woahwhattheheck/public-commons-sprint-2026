@@ -1,0 +1,89 @@
+{
+  "schema": "stellar-forge.installation-workorder-profile.v1",
+  "id": "facilitator-commissioning",
+  "title": "Same-service commissioning across two independent facilitators",
+  "task": {
+    "name": "Commission and independently receive one complete service across two facilitators",
+    "purpose": "Keep one authorized source edition, request contract and complete useful output coherent while commissioning two independently operated facilitator profiles for the actual customer.",
+    "request": "Receive the complete original commissioning job and every declared source member. Hold the selected service, source population, schema and entire request/page set constant. Review each actual provider's native capabilities and exact payment alternatives, stage the compatible original release, operate the explicitly selected seller and prepare the customer's original approved buyer requests. Reconcile each original attempt, full returned body and recipient decision through the existing SF82, SF88 and commissioning writers. Keep unresolved attempts, source differences and provider failures in the same job.",
+    "completeOutput": "The original complete service scope/schema/acceptance material; both provider authority and capability sources; all reviewed/staged releases; original commands, requests, seller observations and buyer outputs; per-provider whole-task result and every unresolved decision; complete operator and customer source/configuration references; the full native and operator transfer with original manifests; the independently reopened editable job and original Installation history.",
+    "repeatTrigger": "A genuinely needed source edition, reporting period, approved query or separately authorized useful customer task can start a new selected purchase set. An interrupted request, missing response, reopen or byte-identical retry continues its original intent and is retained under its original operation.",
+    "pricedUnit": "Use the customer's actual advertised paid resource unit and approved whole-task spending. A page may be one paid unit within a larger complete task. Keep the two providers' original advertised alternatives and each distinct approved purchase. Professional commissioning and support fees remain in the Workshare; grant allocations, example values and repeated receiving are not service prices."
+  },
+  "source": {
+    "reference": "Select the original commissioning job, native TRANSFER.json identity, exact retained source edition, full scope/schema/acceptance files and actual complete request/output set.",
+    "mode": "MIXED",
+    "population": "Every request, page and output in the actual retained job, with its original source population and review scope. Preserve both provider authority/capability sources, release derivation, exact request bodies and all returned outcomes. A subset keeps its explicit selection and parent source.",
+    "meaning": "Retain original keys, types, nulls, units, time basis, media types, request-contract hashes and source editions. The two providers must keep distinct original operator IDs and configured origins. Provider review and staging do not establish a paid purchase. Preserve independent native settlement, merchant-reported outcome, complete returned output and the named recipient's acceptance as their respective source facts.",
+    "changePolicy": "Retain a new complete source cut before changing the selected service, schema, request/page population, provider, payment choice or receiving conditions. Current decisions use the original job revision and full command. The native writer reconciles a lost acknowledgement under the same UUID; changed work gets an explicitly new reviewed selection."
+  },
+  "receiving": {
+    "application": "The maintained facilitator-commissioning operator, CLI and complete report, its 18-tool Merchant customer interface and typed client, plus the original SF47 Customer Installation and whole-case receiver. Select the actual complete installed source and existing private host references.",
+    "acceptanceRule": "Operate the actual selected service and all agreed requests through each retained facilitator. Inspect original approval, independently observed native transfer, full output and customer receiving decision for every original attempt. Open the complete report and all delivered artifacts, use the populated desktop and phone application, and independently receive/reopen the original full operator job and operating case. Record each real result through the unchanged Installation checks and named reviewer; keep unresolved and rejected work visible.",
+    "changeAndWithdraw": "The source owner retains source permission, the merchant controls the service and price, the buyer controls its approved request and spending, and the recipient controls acceptance. Provider selection does not authorize a new purchase. Reconnection to current host credentials, seller start, payment execution, source refresh or changed terms follows the original named operator's explicit selection.",
+    "recovery": "Retain full original commands, revision/source binding, native requests and results, seller observation, buyer intent, actual output and complete export receipt. Reconcile the original request before deliberate continuation. Receive every byte under the selected file manifest and release readers. Portable receiving verifies job/transfer/selection/manifest and complete archive bytes before publication, preserving exact source bindings and original operation IDs at the new host.",
+    "maintenance": "Name the source owner, merchant host, buyer operator, facilitator contacts, receiving engineer and support owner. Agree source cadence, full output scope, spending authority, monitoring, backup/restore and the supported source/runtime edition. Keep private credentials in existing authorized custody; deliver usable configuration references, full source and the original editable state."
+  },
+  "steps": [
+    {
+      "title": "Receive the original Workshare and selected service",
+      "result": "Open the actual commercial case and complete native Installation seed. Preserve its source-backed payer, scope, phase owners, effort, fees, funding assignments and original acceptance checks. Inspect the complete original commissioning transfer."
+    },
+    {
+      "title": "Retain the complete source population",
+      "result": "Receive TRANSFER.json and every declared original member, including full scope/schema/acceptance, both provider sources and all request/output files. Attach the exact required source to the same case, then read its current full source catalog and regenerate its current planned seed."
+    },
+    {
+      "title": "Prepare the original Installation",
+      "result": "Bind actual case source IDs by complete byte count/SHA256, preserve both native provider identities, choose actual deployments and receiving host, and retain the approved payment selections. Preview and save through the unchanged native Installation writer and original request journal."
+    },
+    {
+      "title": "Commission each original facilitator",
+      "result": "Review actual native capabilities and advertised payment choices for the same original service. Stage each retained reviewed release. Explicitly select/start/stop the original seller through its existing owner; retain failures and original run intent."
+    },
+    {
+      "title": "Complete the useful customer requests",
+      "result": "Use the existing approved buyer configuration and exact service request set. Prepare each original buyer plan, perform only its authorized native action, and receive its actual original observations and every output byte. Keep attempt time separate from later recovery observation."
+    },
+    {
+      "title": "Review complete paired-service results",
+      "result": "Inspect each source request and provider in the original report. Retain partial, failed, returned, unaccepted and unresolved results. Record the named recipient's actual decision and original complete source references; do not infer acceptance or independently operated use from source preparation."
+    },
+    {
+      "title": "Receive the complete application and files",
+      "result": "Export the full original operator job and original case, retain original native/operator manifests and exact archive identity, download every member, and independently receive/reopen the same service, provider records, pending work and history. Open all final attachments and extracted project contents."
+    },
+    {
+      "title": "Continue actual customer operation",
+      "result": "Record actual native Installation observations and responsible operators; close only the original completed phase. Keep the same Workshare history, original funding assignments and actual recurring-use period. Deliver full operating/source/recovery material to the independent maintainer."
+    }
+  ],
+  "inputs": [
+    "Complete original Workshare, native planned Installation seed, selected case/plan versions and original funded assignments/checks",
+    "Complete original commissioning transfer and TRANSFER.json identity, including every declared source file and the original job/selection",
+    "Actual current case source catalog with original source IDs, full SHA256 and byte counts; native attach results for all selected source members",
+    "Both distinct retained facilitator identities/origins, original authority and supported-response sources, complete review/stage results",
+    "Actual merchant and independent buyer deployments, approved payment network/asset/recipient/options and useful task spending authority",
+    "Every original scope/schema/acceptance file, exact request/page/body/output and source edition",
+    "Existing authorized host and private listener/configuration references; named source, merchant, buyer and independent receiving operators",
+    "Full original native observations, output acceptance, report/export/receive results and source-backed maintenance agreement"
+  ],
+  "sourceFiles": [
+    {
+      "path": "products/facilitator-commissioning/OPERATING.md",
+      "blob": "b43df78a538999581b1f6652bae65576b51072a9"
+    },
+    {
+      "path": "products/facilitator-commissioning/CUSTOMER_AGENT.md",
+      "blob": "5f7ce30843b56976245ac9e286dd446513a85c7b"
+    },
+    {
+      "path": "products/facilitator-commissioning/commissioning.mjs",
+      "blob": "6823335f1e7b90098054db1d56e01b8f2b386d0c"
+    },
+    {
+      "path": "products/facilitator-commissioning/receive-operator.mjs",
+      "blob": "a067ce70fca1005facea9966a8f2828775811cd6"
+    }
+  ]
+}

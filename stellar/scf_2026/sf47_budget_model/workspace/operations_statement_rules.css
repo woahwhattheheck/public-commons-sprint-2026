@@ -1,0 +1,17 @@
+.statement-desk .statement-rules{color:#202326;background:#fff;border:1px solid #c6c9cc}
+.statement-rules p,.statement-rules label,.statement-rules legend,.statement-rules summary{color:#202326}
+.statement-rules small{display:block;color:#50565b;overflow-wrap:anywhere;margin-top:.3rem}
+.statement-rules details{margin:.75rem 0;padding:.7rem;border:1px solid #d2d5d7;background:#fafafa;color:#202326}
+.statement-rules summary{font-weight:600;cursor:pointer;overflow-wrap:anywhere}
+.statement-rules fieldset{margin:1rem 0;padding:1rem;border:1px solid #c6c9cc;min-width:0}
+.statement-rules legend{padding:0 .4rem;font-weight:600}
+.statement-rules input,.statement-rules select,.statement-rules textarea{background:#fff;color:#202326;border:1px solid #aeb4b8;max-width:100%;min-width:0}
+.statement-rules input:disabled,.statement-rules select:disabled,.statement-rules textarea:disabled{background:#eceeef;color:#5b6166}
+.statement-rules button{background:#f3f4f5;color:#202326;border:1px solid #aeb4b8;white-space:normal}
+.statement-rules button:disabled{background:#f3f4f5;color:#737a80}
+.statement-rules th{background:#eff1f2;color:#202326}
+.statement-rules td{background:#fff;color:#202326;vertical-align:top;overflow-wrap:anywhere}
+.statement-rules pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#f4f5f6;color:#202326;padding:.75rem;max-height:24rem;overflow:auto}
+.statement-rules .statement-rule-help{max-width:85ch;color:#50565b}
+.statement-rules .statement-actions{gap:.5rem;flex-wrap:wrap}
+@media(max-width:600px){.statement-rules .statement-fields{grid-template-columns:minmax(0,1fr)}.statement-rules fieldset{padding:.65rem}.statement-rules .statement-actions button{flex:1 1 12rem}.statement-rules td{min-width:10rem}.statement-rules details{padding:.5rem}}

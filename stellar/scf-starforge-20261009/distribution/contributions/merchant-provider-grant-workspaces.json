@@ -4,5 +4,34 @@
   "description": "Original grant workspaces MCP provider",
   "merchantProviders": {
     "grant-workspaces": "stellar-forge/mcp-merchant-operator/providers/grant-workspaces.mjs"
-  }
+  },
+  "supportFiles": [
+    "stellar-forge/mcp-merchant-operator/grant-procedures.mjs",
+    "stellar-forge/mcp-merchant-operator/catalog/grant-procedures.mjs",
+    "stellar-forge/mcp-merchant-operator/grant-reporting-capture.mjs",
+    "stellar-forge/mcp-merchant-operator/catalog/grant-reporting-capture.mjs",
+    "stellar/scf-starforge-20261009/distribution/discovery/grant-reporting-native.mjs",
+    "stellar/scf-starforge-20261009/distribution/discovery/grant-reporting-native.d.mts",
+    "stellar/scf_2026/sf47_budget_model/workspace/grant_procedures_native.mjs",
+    "stellar/scf_2026/sf47_budget_model/workspace/grant_procedures.mjs",
+    "stellar-forge/mcp-merchant-operator/grant-planning-sources.mjs",
+    "stellar-forge/mcp-merchant-operator/catalog/grant-planning-sources.mjs",
+    "stellar-forge/mcp-merchant-operator/grant-installation-sources.mjs",
+    "stellar-forge/mcp-merchant-operator/catalog/grant-installation-sources.mjs",
+    "stellar/scf_2026/sf47_budget_model/workspace/installation-source-desk-agent.mjs",
+    "stellar/scf_2026/sf47_budget_model/workspace/installation-source-desk-agent.d.mts",
+    "stellar/scf_2026/sf47_budget_model/workspace/INSTALLATION_SOURCE_DESK_AGENT.md",
+    "stellar/scf_2026/sf47_budget_model/workspace/installation-source-collection-agent.mjs",
+    "stellar/scf_2026/sf47_budget_model/workspace/installation-source-collection-agent.d.mts",
+    "stellar/scf_2026/sf47_budget_model/workspace/installation-source-collection-store.mjs",
+    "stellar/scf_2026/sf47_budget_model/workspace/installation-source-collection-store.d.mts",
+    "stellar/scf_2026/sf47_budget_model/workspace/installation-source-collection-session.mjs",
+    "stellar/scf_2026/sf47_budget_model/workspace/installation-source-collection-session.d.mts",
+    "stellar/scf_2026/sf47_budget_model/workspace/installation-source-collection-cli.mjs",
+    "stellar/scf_2026/sf47_budget_model/workspace/installation-source-collection-cli.d.mts",
+    "stellar/scf_2026/sf47_budget_model/workspace/INSTALLATION_SOURCE_COLLECTION_AGENT.md",
+    "stellar/scf_2026/sf47_budget_model/workspace/operations_installation_source_collection.mjs",
+    "stellar-forge/mcp-merchant-operator/grant-source-collection.mjs",
+    "stellar-forge/mcp-merchant-operator/catalog/grant-source-collection.mjs"
+  ]
 }

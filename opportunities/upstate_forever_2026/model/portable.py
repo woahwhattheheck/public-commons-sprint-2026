@@ -967,6 +967,10 @@ def _verify_restored_workspace(manifest, destination):
     if (restored._list("biophysical-evidence") or restored._list("biophysical-ranges")):
         from .biophysical_evidence import verify_all as verify_biophysical_evidence
         verify_biophysical_evidence(restored)
+    if any(restored._list(kind) for kind in ("biophysical-authoring", "biophysical-authoring-imports",
+                                            "biophysical-authoring-registrations")):
+        from .biophysical_evidence_authoring import verify_all as verify_biophysical_authoring
+        verify_biophysical_authoring(restored)
     if restored._list("planning-inventories"):
         from .planning_inventory import inspect as inspect_planning_inventory
         for inventory in restored._list("planning-inventories"):

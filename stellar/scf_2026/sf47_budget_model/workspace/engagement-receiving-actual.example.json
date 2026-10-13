@@ -1,0 +1,51 @@
+{
+  "schema": "stellar-forge.sf47-engagement-native-receiving.v1",
+  "operationId": "SCF-CONTRIBUTOR-RECEIVING-SELECT-ONE",
+  "mode": "ACTUAL",
+  "actor": "SELECT_ORIGINAL_RECORDING_OPERATOR",
+  "reviewNote": "SELECT_THE_COMPLETE_NATIVE_REVIEW_NOTE",
+  "importedCaseName": "SELECT_DISTINCT_RECEIVING_CASE_NAME",
+  "sourceDirectory": "/absolute/original/current-source/stellar/scf_2026/sf47_budget_model",
+  "outputDirectory": "/absolute/private/engagement-course/output",
+  "deadlineSeconds": 3600,
+  "host": {
+    "url": "http://127.0.0.1:8765",
+    "workspaceDirectory": "/absolute/original/native-workspace",
+    "keyFile": "/absolute/original/native-workspace/access.key"
+  },
+  "actual": {
+    "caseId": "SELECT_ORIGINAL_OPERATION_ID",
+    "expectedVersion": 1,
+    "baseForecastId": "SELECT_ORIGINAL_BASE_FORECAST_ID",
+    "document": {
+      "path": "/absolute/private/engagement-course/original-engagement.json"
+    },
+    "agreementIds": [
+      "SELECT_CONFIRMED_ENGAGEMENT_ID"
+    ],
+    "forecastSelection": {
+      "name": "Selected contributor remaining work",
+      "note": "SELECT_REVIEWED_FORECAST_HANDOVER_NOTE"
+    },
+    "portfolioSelection": {
+      "resourceMap": [
+        {
+          "engagementId": "SELECT_CONFIRMED_ENGAGEMENT_ID",
+          "resourceId": "SELECT_REVIEWED_ORIGINAL_RESOURCE_ID"
+        }
+      ],
+      "name": "Selected contributor delivery allocation",
+      "note": "SELECT_REVIEWED_PORTFOLIO_HANDOVER_NOTE"
+    }
+  },
+  "repositoryRoot": "/absolute/original/current-source",
+  "agent": {
+    "nodeExecutable": "/absolute/original/runtime/node",
+    "repository": "woahwhattheheck/tjlabs-stellar-merchant-workspace",
+    "revision": "SELECT_THE_ACTUAL_FULL_40_CHARACTER_SOURCE_COMMIT",
+    "providerConfiguration": {
+      "path": "/absolute/private/engagement-course/grant-workspaces.json"
+    },
+    "workspace": "selected-grant"
+  }
+}

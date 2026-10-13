@@ -14,6 +14,7 @@ import {operateGeographicReview} from './geographic_review_browser.mjs';
 import {admitGeographicCourse,operateGeographicCourse,selectGeographicReceivingEdition} from './geographic_browser_course.mjs';
 import {operateGeographicAllocation} from './geographic_allocation_browser.mjs';
 import {operateGeographicProgramme} from './geographic_programme_browser.mjs';
+import {admitMatchedControlChapter,operateMatchedControl} from './multivariate_control_browser.mjs';
 
 // Current direction .4 renews the full delivery. A caller may request its own deadline.
 let CUTOFF=Infinity;
@@ -44,9 +45,10 @@ async function main(argv){
  try{
   check();requireValue(argv.length===1&&isAbsolute(argv[0]),'Pass one absolute path to the complete receiving input JSON');
   const settings=await readJSON(argv[0]);
-  const allowed=['schema','operation_id','restored_root','connection_file','output_directory','playwright_module','executable','state_file','archive_sha256','handover_id','completion_scope','programme_action','cutoff'];
+  const allowed=['schema','operation_id','restored_root','connection_file','output_directory','playwright_module','executable','state_file','archive_sha256','handover_id','completion_scope','programme_action','cutoff','multivariate_control'];
   requireValue(settings.schema===INPUT&&Object.keys(settings).every(k=>allowed.includes(k)),'Select the complete geographic browser input');
   safeId(settings.operation_id);
+  const matchedControl=await admitMatchedControlChapter(settings.multivariate_control,{requireValue});
   if(settings.cutoff!==undefined){requireValue(typeof settings.cutoff==='string'&&/T.*(?:Z|[+-]\d{2}:\d{2})$/.test(settings.cutoff)&&Number.isFinite(Date.parse(settings.cutoff)),'Use a complete caller-requested cutoff timestamp with timezone');CUTOFF=Date.parse(settings.cutoff);}
   check();
   if(settings.programme_action!==undefined)requireValue(['inspect','adopt_completed'].includes(settings.programme_action),'Choose inspect or adopt_completed for the original Programme');
@@ -116,6 +118,7 @@ async function main(argv){
    delivery_id:record.delivery_id,review_id:record.review.review_id,handover_id:completion.id,
    archive_sha256:receiving.archive_sha256,operator_workspace:connection.workspace_key};
   if(settings.programme_action!==undefined)binding.programme_action=settings.programme_action;
+  if(matchedControl)binding.multivariate_control=matchedControl;
   const progressPath=join(output,'browser-progress.json');
   progress=await exists(progressPath)?await readJSON(progressPath):{schema:RESULT,binding,attempts:[],created_at:now()};
   requireValue(progress.schema===RESULT&&equal(progress.binding,binding),'This browser output belongs to a different original case');
@@ -148,6 +151,12 @@ async function main(argv){
   async function api(path,query={}){
    check();const u=new URL(path,operatorURL);u.search=new URLSearchParams({workspace:connection.workspace_key,...query}).toString();
    const response=await context.request.get(u.href,{headers:{Authorization:'Bearer '+token,'X-Workspace':connection.workspace_key}});
+   requireValue(response.ok(),'The original operator read failed: '+path+' HTTP '+response.status());return response.json();
+  }
+  async function apiPost(path,payload={}){
+   check();const response=await context.request.post(new URL(path,operatorURL).href,{
+    headers:{Authorization:'Bearer '+token,'X-Workspace':connection.workspace_key},
+    data:{workspace:connection.workspace_key,...payload}});
    requireValue(response.ok(),'The original operator read failed: '+path+' HTTP '+response.status());return response.json();
   }
   const downloadedFiles=new Map();
@@ -432,6 +441,9 @@ async function main(argv){
    const ids=value=>value.data[kind].map(x=>x.id).sort();
    requireValue(equal(ids(before),ids(after)),'The receiving course must preserve original '+kind+' identities');
   }
+  if(matchedControl)await operateMatchedControl({page,chapter:matchedControl,prepared,course,api,apiPost,
+   workspaceKey:connection.workspace_key,equal,requireValue,check,waitFor,saveRecord,screenshot,
+   action,download,ticketDownloads,click,closeDialog,navigate,readJSON});
   await page.reload({waitUntil:'domcontentloaded'});await navigate('geographic-headwaters');
   await waitFor(async()=>await page.locator('[data-geo-case="'+prepared.id+'"]').count()>0,'same case after actual reload');
   await click('[data-geo-case="'+prepared.id+'"]');await screenshot(page,'geographic-reopened',1440);await screenshot(page,'geographic-reopened',390);

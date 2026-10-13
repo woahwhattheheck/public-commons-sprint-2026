@@ -33,6 +33,8 @@ from .dataset_changes import DatasetChanges
 from .dataset_profiles import DatasetProfiles
 from . import _analysis_profiles_ui
 from .analysis_reports import AnalysisReports
+from .analysis_report_reviews import ReportReviews
+from . import report_reviews_http
 from .analysis_exports import AnalysisExports
 from .analysis_workbooks import AnalysisWorkbooks
 from .workspace_archive import WorkspaceArchives
@@ -173,6 +175,7 @@ class AnalysisWorkspace:
             self.changes = DatasetChanges(self.database)
             self.profiles = DatasetProfiles(self.database)
             self.reports = AnalysisReports(self.database, encode_cell=_cell, parse_parameters=_parameters, changes=self.changes)
+            self.report_reviews = ReportReviews(self)
             self.responses = AnalysisResponses(self.database, checkout=self.checkout, node=self.node, encode_cell=_cell)
             self.research = ResearchIntake(self, connections=research_connections)
             self.synthesis = AnalysisSynthesis(self)
@@ -733,6 +736,7 @@ def serve(workspace, *, port=0):
             if url.scheme or url.netloc or url.fragment:
                 return self._reply(400, {"error": "ANALYSIS_ROUTE_INVALID"})
             assets = {"/": (_analysis_ui.HTML, "text/html;charset=utf-8"), "/app.js": (_analysis_ui.JS, "text/javascript;charset=utf-8"), "/style.css": (_analysis_ui.CSS, "text/css;charset=utf-8")}
+            assets.update(report_reviews_http.assets())
             assets.update(worldbank_intake_http.assets())
             assets.update(synthesis_http.assets())
             assets.update(lineage_http.assets())
@@ -751,6 +755,8 @@ def serve(workspace, *, port=0):
                 raise StateError("ANALYSIS_QUERY_PARAMETERS_INVALID")
             get = lambda key, default=None: query.get(key, [default])[0]
             parts = url.path.strip("/").split("/")
+            if report_reviews_http.get(self, workspace, url, query, parts):
+                return
             if synthesis_http.get(self, workspace, url, query, parts):
                 return
             if lineage_http.get(self, workspace, url, query, parts):
@@ -914,7 +920,7 @@ def serve(workspace, *, port=0):
                     return self._reply(415, {"error": "ANALYSIS_JSON_REQUIRED"})
                 length = int(self.headers.get("Content-Length", "0"))
                 body_limit = (128 * 1024 * 1024 if url.path == "/api/synthesis-publications" else
-                              16 * 1024 * 1024 if url.path == "/api/synthesis-protocols" else _MAX_BODY)
+                              16 * 1024 * 1024 if url.path in {"/api/synthesis-protocols", "/api/report-review-returns"} else _MAX_BODY)
                 if not 0 < length <= body_limit:
                     return self._reply(413, {"error": "ANALYSIS_REQUEST_SIZE_INVALID"})
                 raw = self.rfile.read(length)
@@ -923,6 +929,8 @@ def serve(workspace, *, port=0):
                 body = parse(raw)
                 if not isinstance(body, dict):
                     raise StateError("ANALYSIS_REQUEST_OBJECT_REQUIRED")
+                if report_reviews_http.post(self, workspace, url, parts, body):
+                    return
                 if synthesis_http.post(self, workspace, url, parts, body):
                     return
                 if lineage_http.post(self, workspace, url, parts, body):

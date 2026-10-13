@@ -1,0 +1,65 @@
+/* Contributor engagements, within the original Operations workspace. */
+.engagement-desk{--eng-border:#b7b9bc;--eng-soft:#f3f3f2;--eng-ink:#242628;--eng-muted:#56595d;color:var(--eng-ink);max-width:100%;line-height:1.5}
+.engagement-desk *{box-sizing:border-box}
+.engagement-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:1.25rem;margin:0 0 1rem}
+.engagement-heading h3{font-size:1.25rem;margin:0 0 .35rem}
+.engagement-heading p{color:var(--eng-muted);margin:0;max-width:80ch}
+.engagement-tabs,.engagement-actions{display:flex;flex-wrap:wrap;gap:.45rem;align-items:center}
+.engagement-tabs{border-bottom:1px solid var(--eng-border);padding:0 0 .8rem;margin:1rem 0}
+.engagement-tabs button[aria-current=page]{background:#242628;color:#fff;border-color:#242628}
+.engagement-desk button{white-space:normal}
+.engagement-desk button:disabled{cursor:default}
+.engagement-toolbar{display:grid;grid-template-columns:minmax(13rem,2fr) repeat(2,minmax(10rem,1fr));gap:.8rem;margin:1rem 0}
+.engagement-desk label{display:flex;flex-direction:column;gap:.35rem;font-weight:600}
+.engagement-desk label small{color:var(--eng-muted);font-weight:400}
+.engagement-desk input,.engagement-desk select,.engagement-desk textarea{width:100%;font:inherit}
+.engagement-desk input[type=checkbox]{width:auto;min-width:1.1rem;min-height:1.1rem}
+.engagement-desk textarea{resize:vertical;min-height:6rem}
+.engagement-desk select[multiple]{min-height:8rem}
+.engagement-desk fieldset{min-width:0;border:1px solid var(--eng-border);padding:1rem;margin:0}
+.engagement-desk legend{font-weight:650;padding:0 .35rem}
+.engagement-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1rem}
+.engagement-wide{grid-column:1/-1}
+.engagement-editor{display:grid;gap:1rem}
+.engagement-editor>footer{position:sticky;bottom:0;background:#fff;border:1px solid var(--eng-border);padding:.8rem;z-index:1}
+.engagement-table{overflow:auto;max-width:100%;border:1px solid var(--eng-border);margin:.85rem 0 1.2rem}
+.engagement-table table{width:100%;border-collapse:collapse;min-width:640px;margin:0}
+.engagement-table th,.engagement-table td{padding:.7rem .8rem;text-align:left;vertical-align:top;border-bottom:1px solid #ddd;max-width:34rem}
+.engagement-table th{background:var(--eng-soft);font-size:.82rem}
+.engagement-table tr:last-child td{border-bottom:0}
+.engagement-table td small{display:block;color:var(--eng-muted);margin-top:.3rem}
+.engagement-table td .engagement-actions{min-width:10rem}
+.engagement-check{flex-direction:row!important;align-items:flex-start;gap:.6rem!important;font-weight:400!important}
+.engagement-check input{flex:none;margin-top:.2rem}
+.engagement-status{display:inline-block;border:1px solid #b0b2b5;padding:.12rem .4rem;background:#fff;font-size:.79rem;white-space:nowrap}
+.engagement-state-list{display:flex;flex-wrap:wrap;gap:.4rem}
+.engagement-note,.engagement-pending{border:1px solid #9fa2a6;background:var(--eng-soft);padding:1rem;margin:.85rem 0}
+.engagement-note p,.engagement-pending p{margin:.25rem 0 .65rem}
+.engagement-empty{border:1px dashed var(--eng-border);padding:1.1rem;color:var(--eng-muted)}
+.engagement-desk [role=alert]{border-left:3px solid #333;padding:.65rem .8rem;font-weight:600;overflow-wrap:anywhere}
+.engagement-desk [role=status]{overflow-wrap:anywhere}
+.engagement-split{display:grid;grid-template-columns:minmax(16rem,1fr) minmax(23rem,2fr);gap:1rem;align-items:start}
+.engagement-panel{border:1px solid var(--eng-border);padding:1rem;min-width:0}
+.engagement-panel h4{font-size:1rem;margin:0 0 .7rem}
+.engagement-week{display:grid;grid-template-columns:repeat(7,minmax(4.5rem,1fr));gap:.55rem;overflow:auto}
+.engagement-week label{font-size:.82rem}
+.engagement-week input{min-width:4.5rem;font-variant-numeric:tabular-nums}
+.engagement-date-row{display:grid;grid-template-columns:minmax(10rem,1fr) minmax(6rem,1fr) auto;gap:.6rem;align-items:end;margin:.6rem 0}
+.engagement-source-row{display:flex;gap:.55rem;align-items:flex-start;border-bottom:1px solid #ddd;padding:.6rem 0}
+.engagement-source-row:last-child{border-bottom:0}
+.engagement-source-row a{overflow-wrap:anywhere}
+.engagement-source-row small{display:block;color:var(--eng-muted)}
+.engagement-desk code,.engagement-break{font-size:.8rem;overflow-wrap:anywhere;word-break:break-word}
+.engagement-desk pre{max-height:28rem;overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere;background:var(--eng-soft);padding:.85rem;font-size:.8rem}
+.engagement-desk details{border:1px solid var(--eng-border);padding:.65rem .85rem;margin:.75rem 0}
+.engagement-desk summary{cursor:pointer;font-weight:600}
+.engagement-desk details>div{margin-top:.85rem}
+.engagement-desk button:focus-visible,.engagement-desk input:focus-visible,.engagement-desk select:focus-visible,.engagement-desk textarea:focus-visible,.engagement-desk a:focus-visible{outline:2px solid #303236;outline-offset:2px}
+.engagement-desk [hidden]{display:none!important}
+.engagement-metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));border:1px solid var(--eng-border);margin:1rem 0}
+.engagement-metrics>div{padding:.85rem;border-right:1px solid var(--eng-border)}
+.engagement-metrics>div:last-child{border-right:0}
+.engagement-metrics strong{display:block;font-size:1.2rem;font-variant-numeric:tabular-nums}
+.engagement-metrics small{color:var(--eng-muted)}
+@media(max-width:1000px){.engagement-toolbar{grid-template-columns:1fr 1fr}.engagement-toolbar>label:first-child{grid-column:1/-1}.engagement-split{grid-template-columns:1fr}.engagement-heading{flex-direction:column}.engagement-metrics{grid-template-columns:1fr 1fr}.engagement-metrics>div:nth-child(2){border-right:0}.engagement-metrics>div:nth-child(-n+2){border-bottom:1px solid var(--eng-border)}}
+@media(max-width:640px){.engagement-fields,.engagement-toolbar{grid-template-columns:1fr}.engagement-wide,.engagement-toolbar>label:first-child{grid-column:auto}.engagement-panel,.engagement-desk fieldset{padding:.75rem}.engagement-week{grid-template-columns:repeat(4,minmax(4.5rem,1fr))}.engagement-date-row{grid-template-columns:minmax(8rem,1fr) minmax(5rem,1fr)}.engagement-date-row button{grid-column:1/-1;justify-self:start}.engagement-tabs button{font-size:.85rem}.engagement-table th,.engagement-table td{padding:.6rem}.engagement-editor>footer{position:static}}

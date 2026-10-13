@@ -544,7 +544,33 @@ def main(argv=None):
     modes.add_argument("--run-reference",action="store_true",help="Run/reuse only the original first native trio, retain its complete reference handover, and leave the existing sensitivity course for explicit continuation")
     modes.add_argument("--report-only",action="store_true")
     parser.add_argument("--reference-handover",action="store_true",help="Include a separate reference-scoped full project archive and cold receiving for an actual partial course report")
+    matched = parser.add_mutually_exclusive_group()
+    matched.add_argument("--matched-control-selection", type=Path,
+                         help="Continue one authored multivariate-control selection in the existing Workspace")
+    matched.add_argument("--matched-control-id",
+                         help="Receive an exact saved multivariate-control design, retaining its original choices")
+    parser.add_argument("--execute-matched-control", action="store_true",
+                        help="Execute only the newly adopted control through the original experiment")
+    parser.add_argument("--matched-geographic-id",
+                        help="Require exact baseline/restoration membership in this retained Geographic preparation")
     args = parser.parse_args(argv)
+    if args.matched_control_selection or args.matched_control_id:
+        if (args.selection or args.import_sources or args.workspace_preparation
+                or args.adopt_prepared or args.adopt_handover or args.adopt_reference_report
+                or args.reference_handover or any((args.catalog, args.preview, args.prepare_only,
+                                                args.run, args.run_reference, args.report_only))):
+            parser.error("Use the optional matched-control chapter with its own explicit selection or ID; preserve the original Geographic course separately")
+        if args.output is None:
+            parser.error("--output is required for the matched-control chapter")
+        from source_tools.multivariate_control_receiving import receive as receive_matched_control
+        result = receive_matched_control(
+            Workspace(args.workspace), args.output,
+            selection_path=args.matched_control_selection, design_id=args.matched_control_id,
+            execute=args.execute_matched_control, prepared_id=args.matched_geographic_id)
+        print(json.dumps(result, indent=2, sort_keys=True, allow_nan=False))
+        return 0
+    if args.execute_matched_control or args.matched_geographic_id:
+        parser.error("Choose --matched-control-selection or --matched-control-id first")
     if args.workspace_preparation and not (args.report_only or args.run_reference or args.run):
         parser.error("--workspace-preparation requires --report-only, --run-reference or --run")
     if args.workspace_preparation and args.import_sources:

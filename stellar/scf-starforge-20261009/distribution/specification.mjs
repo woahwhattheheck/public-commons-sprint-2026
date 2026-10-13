@@ -1,6 +1,7 @@
 // MIT. Compose source-owned merchant registrations for checkout and pinned builds.
 import { createHash } from 'node:crypto';
 import { browserAssetDeclarations } from './browser-assets.mjs';
+import { validateManagedSourceManifest } from './managed-source.mjs';
 import { readFile, readdir, realpath, stat } from 'node:fs/promises';
 import { isAbsolute, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -12,8 +13,8 @@ export const contributionDirectory = 'stellar/scf-starforge-20261009/distributio
 export const contributionSchema = 'stellar-forge.merchant-distribution-contribution.v1';
 const ownRoot = fileURLToPath(new URL('../../../', import.meta.url));
 const baseSchema = 'stellar-forge.merchant-distribution.v1';
-const fields = ["components","supportFiles","excludeFiles","commands","commandDescriptions","exports","nativePeers","featurePeers","runtimePackageManifests","browserAssets","applicationProviders","merchantProviders"];
-const lists = ['components', 'supportFiles', 'excludeFiles'];
+const fields = ["components","supportFiles","managedSourceManifests","excludeFiles","commands","commandDescriptions","exports","nativePeers","featurePeers","runtimePackageManifests","browserAssets","applicationProviders","merchantProviders"];
+const lists = ['components', 'supportFiles', 'managedSourceManifests', 'excludeFiles'];
 const maps = ["commands","commandDescriptions","exports","nativePeers","runtimePackageManifests","applicationProviders","merchantProviders"];
 const idPattern = /^[a-z][a-z0-9-]{0,63}$/;
 const packagePattern = /^(?:@[a-z0-9][a-z0-9._-]*\/)?[a-z0-9][a-z0-9._-]*$/;
@@ -78,7 +79,11 @@ function validateRegistrations(data, owner) {
   for (const field of lists) {
     if (data[field] === undefined) continue;
     if (!Array.isArray(data[field])) throw new TypeError(owner + ': ' + field + ' must be a source path array');
-    for (const value of data[field]) filePath(value, field);
+    for (const value of data[field]) {
+      filePath(value, field);
+      if (field === 'managedSourceManifests' && !value.endsWith('.json'))
+        throw new TypeError(owner + ': a managed source manifest must name original JSON');
+    }
   }
   for (const field of maps) {
     if (data[field] === undefined) continue;
@@ -372,6 +377,12 @@ export async function readDistributionSpecification({ sourceRoot = ownRoot, sele
   }
   if (recipeFile) inputFiles.push(recipeFile.descriptor);
   const distribution = composeDistribution({ base: original.data, contributions, selection: recipe });
+  const managedSources = [];
+  for (const path of distribution.spec.managedSourceManifests ?? []) {
+    const file = await originalJson(root, path);
+    managedSources.push({descriptor:file.descriptor,
+      inventory:validateManagedSourceManifest(file.data, path)});
+  }
   if (manifest) {
     const entries = new Map(manifest.files.map(entry => [entry.path, entry]));
     if (entries.size !== manifest.files.length) throw new TypeError('Installed distribution has duplicate files');
@@ -380,6 +391,19 @@ export async function readDistributionSpecification({ sourceRoot = ownRoot, sele
     if (!same(discoveredPaths, admittedContributions) ||
         !same(contributionPaths([...entries.keys()]), admittedContributions))
       throw new TypeError('Installed source selection contains unselected or unauthenticated contribution files');
+    for (const {descriptor, inventory} of managedSources) {
+      const retained = entries.get(descriptor.path);
+      if (!retained || retained.packagePath !== 'source/' + descriptor.path ||
+          retained.bytes !== descriptor.bytes || retained.sha256 !== descriptor.sha256)
+        throw new TypeError('Installed managed source manifest changed: ' + descriptor.path);
+      for (const source of inventory.entries) {
+        const entry = entries.get(source.path);
+        if (!entry || entry.packagePath !== 'source/' + source.path ||
+            !Number.isSafeInteger(entry.bytes) || entry.bytes < 0 || entry.bytes > 1024 * 1024 ||
+            !/^[a-f0-9]{64}$/.test(entry.sha256 ?? ''))
+          throw new TypeError('Installed managed source is missing or invalid: ' + source.path);
+      }
+    }
     const expected = [distributionPath, ...paths, ...(recipePath ? [recipePath] : [])];
     if (!same(inputFiles.map(entry => entry.path), expected))
       throw new TypeError('Installed distribution contribution inventory changed');

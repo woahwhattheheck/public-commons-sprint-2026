@@ -403,3 +403,7 @@ The issuer guidance ties three delivery tranches to measurable development outco
 ## Editable saved-plan workbooks
 
 Source tables also exports an exact saved plan as a complete editable workbook handover. The browser and grant-source-tables CLI retain the original native ZIP, four worksheet mappings, exact decimals, all source cells, and explicit receiving choices. Receive all four edited sheets, review their current mappings, calculate the original native result, then save and reopen the complete case. See [WORKBOOK_HANDOVER.md](WORKBOOK_HANDOVER.md) for the complete browser/CLI workflow and the production export-to-return operating programme.
+
+## Complete agent operation
+
+The same source-table project, original workbook reader, complete column choices, reviewed native preview and named save are available through the existing typed Grant client and Merchant MCP. [SOURCE_TABLES_AGENT.md](SOURCE_TABLES_AGENT.md) gives the full retained-file sequence, exact saved-revision handover, interrupted-request recovery and continuation of the original complete workbook case.

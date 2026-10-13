@@ -1,0 +1,25 @@
+{
+  "schema": "upstate.application-component-fragment/v1",
+  "id": "disturbance-studies",
+  "source_reference": "ECO-DISTURBANCE-CLOUD-A555/1.0.0/2026-10-13",
+  "components": {
+    "disturbance-studies": {
+      "paths": [
+        "model/disturbance_studies.py",
+        "model/disturbance_report.py",
+        "model/disturbance_report.html",
+        "model/DISTURBANCE_STUDIES.md",
+        "operator/disturbance_studies.py",
+        "operator/extensions/disturbance-studies.json",
+        "operator/web/disturbance_studies.mjs",
+        "operator/web/disturbance_studies.css",
+        "integration/component_fragments/disturbance-studies.json"
+      ],
+      "requires": [],
+      "retained_only": []
+    }
+  },
+  "required_components": [
+    "disturbance-studies"
+  ]
+}
