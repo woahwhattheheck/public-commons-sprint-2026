@@ -1,6 +1,6 @@
 {
   "schema": "upstate.published-study-family/v1",
-  "version": "2.10.0",
+  "version": "2.10.1",
   "repository": "woahwhattheheck/public-commons-sprint-2026",
   "application_path": "opportunities/upstate_forever_2026",
   "source_reference_base": "181307420b29cd309114f45be4502f6df30807fe",
@@ -2784,7 +2784,7 @@
     {
       "path": "source/three-twenty-hydrologic-context-20261013/authored-inputs.json",
       "bytes": 3768,
-      "sha256": "ab6a346cc98631a1120d788c99fd1ff6f90540eb40b1566d2a67d03eab1a7666"
+      "sha256": "3520504adc48ea2dd17eb4201f2106532614f50840bc9696b3ad917ebfd56579"
     },
     {
       "path": "source/three-twenty-hydrologic-context-20261013/build_study.mjs",
@@ -2809,7 +2809,7 @@
     {
       "path": "source/three-twenty-hydrologic-context-20261013/family.json",
       "bytes": 20390,
-      "sha256": "7fd773c52015ecd9cda861991988c04c365fa719fb42e4dc6e3e29aeec36255f"
+      "sha256": "c7fc78061cf52f423af50519d4afd5f21aec0152dd14b2ad4014373476f3347e"
     },
     {
       "path": "source/three-twenty-hydrologic-context-20261013/input-manifest.json",
@@ -2863,8 +2863,8 @@
     },
     {
       "path": "source/three-twenty-hydrologic-context-20261013/observation_context/network-observation-comparison.html",
-      "bytes": 1181211,
-      "sha256": "b88a784c6351aeec80c12da0c22f5738a1760a083d90b7cd9b40641615c7d27d"
+      "bytes": 1320090,
+      "sha256": "b66bf81ae8ac503db7f8d53d619ea6a00d5f0dd2af6910553048aed3b3be33a0"
     },
     {
       "path": "source/three-twenty-hydrologic-context-20261013/observation_context/network-observation-comparison.json",
@@ -2913,8 +2913,8 @@
     },
     {
       "path": "source/three-twenty-hydrologic-context-20261013/observation_context/report_section.mjs",
-      "bytes": 15427,
-      "sha256": "b2971ba5739ab95aa041ab5aa437dec9aa633686f400e059dd2c3cf7f2a2f68a"
+      "bytes": 15865,
+      "sha256": "06bc008bbbfa2700d09e45180a65c07e66c72992d77ef76a0b44ea26bbe69917"
     },
     {
       "path": "source/three-twenty-hydrologic-context-20261013/original-downstream-reaches.geojson",
@@ -2998,8 +2998,8 @@
     },
     {
       "path": "source/three-twenty-hydrologic-context-20261013/report.mjs",
-      "bytes": 40060,
-      "sha256": "c3179776adb88e102116cf035bf0fea07e9facfc85f084019d8ea984c7656cea"
+      "bytes": 40082,
+      "sha256": "cdd8c980f0a16ac60beaba97d6bfd7b64f035974286aecf33ae92a72de625c06"
     },
     {
       "path": "source/three-twenty-hydrologic-context-20261013/station-location-views.geojson",
@@ -3023,8 +3023,8 @@
     },
     {
       "path": "source/three-twenty-hydrologic-context-20261013/station-network-report.html",
-      "bytes": 1409355,
-      "sha256": "d64c3b1950d12ae023f423e101512f3d9871ff009918402eb9a159ba0575fa3f"
+      "bytes": 1545351,
+      "sha256": "6df54401f3c7a5af7ce2b3cd99ac554a35640680c66c58e7ee8f60f8235bf781"
     },
     {
       "path": "source/three-twenty-hydrologic-context-20261013/station-network-summary.json",
@@ -3114,7 +3114,7 @@
     {
       "path": "three_twenty_hydrologic_context.sources.json",
       "bytes": 435853,
-      "sha256": "04ff787a9b7c0177713e1a9963b7d0a0065b0846133d4c07df5f6a1666156f42"
+      "sha256": "7b859f120866d128051ed69bd0a06468ad7718151c77be6d7be9a39099475355"
     },
     {
       "path": "tools/attach_published_report.py",
@@ -3328,7 +3328,7 @@
     "three_twenty_hydrologic_context": {
       "original_source_merge": "8fcac6d85abcbb41fa9183da62c2865d801eaea8",
       "manifest": "three_twenty_hydrologic_context.sources.json",
-      "manifest_sha256": "04ff787a9b7c0177713e1a9963b7d0a0065b0846133d4c07df5f6a1666156f42",
+      "manifest_sha256": "7b859f120866d128051ed69bd0a06468ad7718151c77be6d7be9a39099475355",
       "complete_members": 91,
       "native_retained_members": 90,
       "stations": 4,
@@ -3350,7 +3350,8 @@
       "compatible_observation_cohorts": 54,
       "observation_dependency_files": 46,
       "original_observation_sources": 28,
-      "observation_analysis": "source/three-twenty-hydrologic-context-20261013/observation_context/network-observation-comparison.json"
+      "observation_analysis": "source/three-twenty-hydrologic-context-20261013/observation_context/network-observation-comparison.json",
+      "original_source_navigation": "Original observation CSVs and comparison JSON snapshots are directly linked with retained CSV rows and JSON pointers in both report editions."
     },
     "original_report_preview": {
       "helper": "operator/published_report_preview.py",
