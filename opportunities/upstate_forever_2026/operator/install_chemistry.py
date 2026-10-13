@@ -281,6 +281,14 @@ FIELD_DERIVED_FILES = [
     "integration/reach_chemistry/COMPOUND_SOURCE.json"
 ]
 
+FIELD_RECEIVING_PREVIOUS_SHA256 = {
+    "source/monitoring-chemistry-study/capture_editable_workspace.py": "213fd73b7a12749c7d60e9c45d5ee36ebb23049048948d26600639758e637b3e",
+    "source/monitoring-chemistry-study/open_completed_study.py": "a58c4e2007b1ea8840292954cff7de9b6cf34b6a8adc3a382c3e835624753732",
+    "source/monitoring-chemistry-study/README.md": "e5a81b7d8bb7e135c2a626bd5b3c1be6b2cd00ce904427e3f77c7caceb284441",
+    "operator/install_chemistry.py": "28f0179dbd2d81040c75af6b94880471c125b704a97eaee61ae041194ae7d921",
+    "integration/reach_chemistry/COMPOUND_SOURCE.json": "5ded95c23ac431860ef2ae72d70bbe03f6f8e270362893e5cb5ce01c87070094"
+}
+
 BANK_SCHEMA = "commons.source-bank/v1"
 BANK_LIMIT = 16 * 1024 * 1024
 
@@ -419,7 +427,7 @@ def install(application, source_root=None, dry_run=False, *, source_bank=None):
                      BANK_INTERVAL_PREVIOUS_SHA256.get(name), REPORT_SELECTION_PREVIOUS_SHA256.get(name),
                      STUDY_EDITION_PREVIOUS_SHA256.get(name), LIFETIME_PREVIOUS_SHA256.get(name),
                      RIVER_STUDY_PREVIOUS_SHA256.get(name), RIVER_ORIGINAL_STUDY_SHA256.get(name),
-                     FIELD_STUDY_PREVIOUS_SHA256.get(name), FIELD_SELECTION_PREVIOUS_SHA256.get(name), FIELD_CUSTODY_PREVIOUS_SHA256.get(name)}):
+                     FIELD_STUDY_PREVIOUS_SHA256.get(name), FIELD_SELECTION_PREVIOUS_SHA256.get(name), FIELD_CUSTODY_PREVIOUS_SHA256.get(name), FIELD_RECEIVING_PREVIOUS_SHA256.get(name)}):
                 if name in FIELD_DERIVED_FILES:
                     derived_rechecks.append(name)
                 else:
