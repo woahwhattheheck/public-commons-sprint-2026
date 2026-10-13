@@ -28,14 +28,28 @@ def add_parser(commands):
             item.add_argument("--pair-id")
         if kind == "reports":
             item.add_argument("--run-id")
-    for kind in ("pair", "run-read", "report-read", "request"):
+    for kind in ("carry-reviews", "carry-applications"):
+        item = actions.add_parser(kind, help="Page frozen prior-decision reviews or explicit applications")
+        item.add_argument("--target-run-id")
+        item.add_argument("--offset", type=int, default=0)
+        item.add_argument("--limit", type=int, default=25)
+    for kind in ("pair", "run-read", "report-read", "request", "carry-review-read", "carry-application"):
         item = actions.add_parser(kind)
         item.add_argument("id")
         if kind == "pair":
             item.add_argument("--revision", type=int)
-    for kind in ("save-pair", "run", "decision", "report"):
+    for kind in ("save-pair", "run", "decision", "report", "carry-review", "carry-apply"):
         item = actions.add_parser(kind, help="Retain exact request_id/workspace_id and native revision before dispatch")
         item.add_argument("--request-file", required=True, help="Original JSON body with stable request and workspace IDs")
+    carry = actions.add_parser("carry-candidates", help="Page every eligible, changed, missing, ambiguous or already-reviewed finding")
+    carry.add_argument("id", help="Frozen carry review ID")
+    carry.add_argument("--state")
+    carry.add_argument("--kind", choices=("group", "row"))
+    carry.add_argument("--offset", type=int, default=0)
+    carry.add_argument("--limit", type=int, default=25)
+    selected = actions.add_parser("carry-candidate")
+    selected.add_argument("id", help="Frozen carry review ID")
+    selected.add_argument("--candidate-id", type=int, required=True)
     resume = actions.add_parser("resume", help="Explicitly continue the original retained reconciliation request")
     resume.add_argument("id")
     resume.add_argument("--workspace-id", required=True)
@@ -90,11 +104,20 @@ def dispatch(workspace, args):
         if action == "reports":
             options["run_id"] = args.run_id
         return native.catalog(action, **options)
+    if action in {"carry-reviews", "carry-applications"}:
+        return native.carry_catalog("reviews" if action == "carry-reviews" else "applications",
+                                    target_run_id=args.target_run_id, offset=args.offset, limit=args.limit)
+    if action in {"carry-review-read", "carry-application"}:
+        return native.carry_record("reviews" if action == "carry-review-read" else "applications", args.id)
+    if action == "carry-candidates":
+        return native.carry_candidates(args.id, state=args.state, kind=args.kind, offset=args.offset, limit=args.limit)
+    if action == "carry-candidate":
+        return native.carry_candidate(args.id, args.candidate_id)
     if action == "pair":
         return native.pair(args.id, args.revision)
     if action in {"run-read", "report-read", "request"}:
         return getattr(native, {"run-read": "run", "report-read": "report", "request": "request"}[action])(args.id)
-    if action in {"save-pair", "run", "decision", "report"}:
+    if action in {"save-pair", "run", "decision", "report", "carry-review", "carry-apply"}:
         return native.perform("pairs" if action == "save-pair" else action, _body(args.request_file))
     if action == "resume":
         return native.resume(args.id, args.workspace_id)

@@ -55,6 +55,9 @@ const subject={oneOf:[
  {type:'object',additionalProperties:false,required:['kind','group_id'],properties:{kind:{const:'group'},group_id:{type:'integer',minimum:1}}},
  {type:'object',additionalProperties:false,required:['kind','side','row'],properties:{kind:{const:'row'},side:{enum:['source','target']},row:{type:'integer',minimum:1}}}
 ]};
+export const reconciliationCarryStates=Object.freeze(['ELIGIBLE','PRIOR_OPEN','POLICY_CHANGED','GROUP_MISSING',
+ 'VALUES_CHANGED','ROW_MISSING','ROW_AMBIGUOUS','TARGET_REVIEWED']);
+const candidateId={type:'integer',minimum:1,maximum:1000000000};
 const spec=(required,properties,description)=>({required,properties,description});
 export const nativeDuckDBReconciliationOperations=Object.freeze({
  'reconcile-status':spec([],{},'Read paired-workflow counts in the SAME original warehouse; no new service or capture.'),
@@ -96,10 +99,27 @@ export const nativeDuckDBReconciliationOperations=Object.freeze({
   {request_id:requestId,run_id:id,expected_revision:revision,before_run_id:id},
   'Snapshot this exact decision revision with the original saved SQL recipes; optional prior-run comparison checks complete native typed multiplicities. Absence is not a correction.'),
  'reconcile-changes':spec(['report_id'],{report_id:id,...page},'Page the complete retained earlier/later group comparison, including canonical-content changes.'),
+ 'reconcile-carry-reviews':spec([],{...page,target_run_id:id},'Page immutable prior-decision reviews for the original target run; reads do not resume.'),
+ 'reconcile-carry-review':spec(['review_id'],{review_id:id},'Read the full frozen source report, meaning/policy comparison, target revision and candidate checksum.'),
+ 'reconcile-prepare-carry':spec(['request_id','source_report_id','target_run_id','expected_revision','scope_basis'],
+  {request_id:requestId,source_report_id:id,target_run_id:id,expected_revision:revision,
+   scope_basis:{type:'string',minLength:1,maxLength:16000}},
+  'Retain a complete reviewed carry-forward preview from one frozen prior report to a different run of the same pair. Native typed canonical AND original row multiplicities must match; meaning/policy changes, missing rows, duplicate ambiguity and existing target decisions stay visible. Free-text scope basis never overrides failed checks.'),
+ 'reconcile-carry-candidates':spec(['review_id'],{review_id:id,...page,state:{enum:reconciliationCarryStates},kind:{enum:['group','row']}},
+  'Page every frozen candidate, with exact source/target subjects, full original decision and applicability reasons.'),
+ 'reconcile-carry-candidate':spec(['review_id','candidate_id'],{review_id:id,candidate_id:candidateId},
+  'Read one exact candidate; candidate_id is its original prior decision sequence, not a display row number.'),
+ 'reconcile-apply-carry':spec(['request_id','review_id','review_sha256','expected_revision','candidate_ids','actor','reason'],
+  {request_id:requestId,review_id:id,review_sha256:id,expected_revision:revision,
+   candidate_ids:{type:'array',minItems:1,maxItems:10000,uniqueItems:true,items:candidateId},
+   actor:{type:'string',minLength:1,maxLength:240},reason:{type:'string',minLength:1,maxLength:16000}},
+  'Explicitly apply selected ELIGIBLE candidates once under the frozen review hash and target decision revision. Preserve original outcomes/reasons and full source lineage; record the new engineer and carry rationale. Never overwrite an existing target decision, including OPEN. Same request ID/body recovers its original result.'),
+ 'reconcile-carry-applications':spec([],{...page,target_run_id:id},'Page immutable selected-apply receipts and native decision sequence ranges.'),
+ 'reconcile-carry-application':spec(['application_id'],{application_id:id},'Read complete selected candidates, retained outcomes and exact new target decision sequences.'),
  'reconcile-operations':spec([],{...page},'Page original paired-workflow request bodies and actual outcomes. Reads never replay operations.'),
  'reconcile-request':spec(['request_id'],{request_id:requestId},'Read one original stable request. A genuinely absent ID returns REQUEST_NOT_FOUND.'),
  'reconcile-resume':spec(['request_id'],{request_id:requestId},'Explicitly resume exactly the retained original body under its native writer; never choose a replacement ID.'),
  'reconcile-export-manifest':spec(['export_id'],{export_id:id},'Read the small exact manifest descriptor for a complete reconciliation handoff, including packages whose full file list exceeds the tool response size. Read its original bytes with file.'),
  'reconcile-export':spec(['request_id','report_id'],{request_id:requestId,report_id:id},
-  'Export complete CSV/Parquet for all frozen recipes (including fields and complete normalizations when reviewed), exact original sources, guide/report and original sparse warehouse handoff. Use original operation/resume for this export journal, and export-read/file for all declared bytes.')
+  'Export complete CSV/Parquet for all frozen recipes (including fields and complete normalizations when reviewed), exact original sources (including decision lineage editions), guides/report, frozen prior reports/reviews/applications and original sparse warehouse handoff. Use original operation/resume for this export journal, and export-read/file for all declared bytes.')
 });

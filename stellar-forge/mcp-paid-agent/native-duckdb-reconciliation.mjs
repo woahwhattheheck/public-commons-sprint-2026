@@ -4,7 +4,7 @@ export async function dispatchDuckDBReconciliation({operation,body,get,post,work
  const route='/api/reconciliation',encode=value=>encodeURIComponent(String(value));
  const query=values=>{const entries=Object.entries(values).filter(([,v])=>v!==undefined);return entries.length?'?'+new URLSearchParams(entries.map(([k,v])=>[k,String(v)])):'';};
  const scoped=value=>({...value,workspace_id:workspaceId});
- const pageKind={'reconcile-pairs':'pairs','reconcile-runs':'runs','reconcile-reports':'reports','reconcile-operations':'operations'}[operation];
+ const pageKind={'reconcile-pairs':'pairs','reconcile-runs':'runs','reconcile-reports':'reports','reconcile-operations':'operations','reconcile-carry-reviews':'carry-reviews','reconcile-carry-applications':'carry-applications'}[operation];
  if(pageKind)return get(route+'/'+pageKind+query(body));
  if(operation==='reconcile-status')return get(route+'/status');
  if(operation==='reconcile-review')return post(route+'/review',body);
@@ -12,12 +12,16 @@ export async function dispatchDuckDBReconciliation({operation,body,get,post,work
  if(operation==='reconcile-pair')return get(route+'/pairs/'+encode(body.pair_id)+query({revision:body.revision}));
  if(operation==='reconcile-run')return get(route+'/runs/'+encode(body.run_id));
  if(operation==='reconcile-report')return get(route+'/reports/'+encode(body.report_id));
+ if(operation==='reconcile-carry-review')return get(route+'/carry-reviews/'+encode(body.review_id));
+ if(operation==='reconcile-carry-application')return get(route+'/carry-applications/'+encode(body.application_id));
+ if(operation==='reconcile-carry-candidates'){const {review_id,...paging}=body;return get(route+'/carry-reviews/'+encode(review_id)+'/candidates'+query(paging));}
+ if(operation==='reconcile-carry-candidate')return get(route+'/carry-reviews/'+encode(body.review_id)+'/candidates/'+encode(body.candidate_id));
  if(operation==='reconcile-request')return get(route+'/requests/'+encode(body.request_id));
  if(operation==='reconcile-resume')return post(route+'/requests/'+encode(body.request_id)+'/resume',{workspace_id:workspaceId});
  if(operation==='reconcile-changes'){const {report_id,...paging}=body;return get(route+'/reports/'+encode(report_id)+'/changes'+query(paging));}
  const grid={'reconcile-groups':'groups','reconcile-rows':'rows','reconcile-fields':'fields','reconcile-normalizations':'normalizations','reconcile-row':'row','reconcile-decisions':'decisions'}[operation];
  if(grid){const {run_id,...parameters}=body;return get(route+'/runs/'+encode(run_id)+'/'+grid+query(parameters));}
- const action={'reconcile-save-pair':'pairs','reconcile-execute':'run','reconcile-decide':'decision','reconcile-save-report':'report'}[operation];
+ const action={'reconcile-save-pair':'pairs','reconcile-execute':'run','reconcile-decide':'decision','reconcile-save-report':'report','reconcile-prepare-carry':'carry-review','reconcile-apply-carry':'carry-apply'}[operation];
  if(action)return post(route+'/'+action,scoped(body));
  if(operation==='reconcile-export-manifest'){
   const value=await get('/api/exports/'+encode(body.export_id));

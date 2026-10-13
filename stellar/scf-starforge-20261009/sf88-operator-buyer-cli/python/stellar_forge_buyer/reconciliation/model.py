@@ -11,7 +11,7 @@ from ..duckdb_dataset import _hex, _json, _now, _qid, _wire
 from ..duckdb_agent import read_identity
 from .. import duckdb_semantics
 from ..storage import parse
-from . import normalization
+from . import normalization, decision_carry
 from .comparison_rules import FEATURE_SCHEMA, FIELD_STATES, materialize as materialize_rules
 from .contracts import (SCHEMA, OUTCOMES, CATEGORIES, STATUSES, bound_review, fail,
                         fields, integer, literal, page, pair_key, request_id, sha,
@@ -43,7 +43,7 @@ class Reconciliation:
     @staticmethod
     def _exists(db):
         row = db.execute("SELECT value FROM sf_workspace WHERE key='reconciliation_schema'").fetchone()
-        if row and row[0] not in {SCHEMA, FEATURE_SCHEMA, normalization.FEATURE_SCHEMA}:
+        if row and row[0] not in {SCHEMA, FEATURE_SCHEMA, normalization.FEATURE_SCHEMA, decision_carry.FEATURE_SCHEMA}:
             fail("SCHEMA_CHANGED")
         return row is not None
 
@@ -263,11 +263,12 @@ class Reconciliation:
             if prior["definition_sha256"] == review["review_sha256"]:
                 return prior
         if review.get("normalizations"):
-            db.execute("UPDATE sf_workspace SET value=? WHERE key='reconciliation_schema'", [normalization.FEATURE_SCHEMA])
+            db.execute("UPDATE sf_workspace SET value=? WHERE key='reconciliation_schema' AND value<>?",
+                       [normalization.FEATURE_SCHEMA, decision_carry.FEATURE_SCHEMA])
         elif review.get("comparison_rules"):
             # Preserve a newer normalization marker when saving a rule-only pair.
-            db.execute("UPDATE sf_workspace SET value=? WHERE key='reconciliation_schema' AND value<>?",
-                       [FEATURE_SCHEMA, normalization.FEATURE_SCHEMA])
+            db.execute("UPDATE sf_workspace SET value=? WHERE key='reconciliation_schema' AND value NOT IN (?,?)",
+                       [FEATURE_SCHEMA, normalization.FEATURE_SCHEMA, decision_carry.FEATURE_SCHEMA])
         record = {"schema": SCHEMA, "pair_id": identity, "name": review["definition"]["name"],
                   "label": review["definition"]["label"], "revision": revision + 1,
                   "definition_sha256": review["review_sha256"], "definition": review["definition"],
@@ -467,15 +468,27 @@ class Reconciliation:
             fail("DECISION_SUBJECT_NOT_FOUND")
         if body["outcome"] not in OUTCOMES:
             fail("OUTCOME_INVALID")
-        decision = {"run_id": run["run_id"], "sequence": run["review_revision"] + 1, "subject": selected,
-                    "outcome": body["outcome"], "actor": text(body["actor"], maximum=240),
-                    "reason": text(body["reason"], maximum=16000), "created_at": _now(),
-                    "request_id": body["request_id"]}
-        db.execute("INSERT INTO sf_reconciliation_decisions VALUES(?,?,?,?)",
-                   [run["run_id"], decision["sequence"], key, _json(decision)])
-        db.execute("UPDATE sf_reconciliation_runs SET review_revision=? WHERE id=?",
-                   [decision["sequence"], run["run_id"]])
+        decision = self._append_decision(db, run["run_id"], run["review_revision"], selected,
+                                         body["outcome"], body["actor"], body["reason"], body["request_id"])
         return {"decision": decision, "run": self._run_on(db, run["run_id"])}
+
+    @staticmethod
+    def _append_decision(db, run_id, revision, selected, outcome, actor, reason, request, *, carried_from=None):
+        # Internal writer shared by a manual decision and one explicitly reviewed
+        # carry selection. Both callers validate existence and CAS under this SAME
+        # exclusive transaction. Recompute full progress once, not per batch row.
+        selected, key = subject(selected)
+        if outcome not in OUTCOMES:
+            fail("OUTCOME_INVALID")
+        decision = {"run_id": _hex(run_id), "sequence": integer(revision) + 1, "subject": selected,
+                    "outcome": outcome, "actor": text(actor, maximum=240),
+                    "reason": text(reason, maximum=16000), "created_at": _now(), "request_id": request_id(request)}
+        if carried_from is not None:
+            decision["carried_from"] = deepcopy(carried_from)
+        db.execute("INSERT INTO sf_reconciliation_decisions VALUES(?,?,?,?)",
+                   [run_id, decision["sequence"], key, _json(decision)])
+        db.execute("UPDATE sf_reconciliation_runs SET review_revision=? WHERE id=?", [decision["sequence"], run_id])
+        return decision
 
     def _grid(self, db, sql, parameters, offset, limit):
         total = db.execute("SELECT count(*) FROM (" + sql + ")", parameters).fetchone()[0]
@@ -778,6 +791,9 @@ class Reconciliation:
             statements["fields"] = self._fields_sql(run) + " ORDER BY group_id,column_index"
         if run.get("normalizations"):
             statements["normalizations"] = self._normalizations_sql(run) + ' ORDER BY side,"row",column_index'
+        carry = decision_carry.snapshot(self, db, run, revision)
+        if carry:
+            statements["decision_carry"] = decision_carry.statement(run["run_id"], revision)
         comparison = None
         if before_id:
             before = self._run_on(db, before_id)
@@ -796,6 +812,8 @@ class Reconciliation:
                   "source_edition": run["source_edition"], "target_edition": run["target_edition"],
                   "before_run_id": before_id, "scope_comparison": comparison, "queries": queries,
                   "views_at_creation": self.workspace._views(db), "created_at": _now()}
+        if carry:
+            record["decision_carry_forward"] = carry
         db.execute("INSERT INTO sf_reconciliation_reports VALUES(?,?,?,?)",
                    [identity, run["run_id"], revision, _json(record)])
         return record
@@ -817,8 +835,44 @@ class Reconciliation:
                 fail("COMPARISON_NOT_FOUND")
             return self._grid(db, query["sql"], query["parameters"], offset, limit)
 
+    def carry_catalog(self, kind, *, target_run_id=None, offset=0, limit=25):
+        with self.workspace._guard(), self.workspace._connection() as db:
+            self._exists(db)
+            db.execute("BEGIN")
+            try:
+                result = decision_carry.catalog(db, kind, target_run_id=target_run_id, offset=offset, limit=limit)
+                db.commit()
+                return result
+            except BaseException:
+                db.rollback()
+                raise
+
+    def carry_record(self, kind, identity):
+        with self.workspace._guard(), self.workspace._connection() as db:
+            self._exists(db)
+            return decision_carry.record(db, kind, identity)
+
+    def carry_candidates(self, identity, *, state=None, kind=None, offset=0, limit=25):
+        with self.workspace._guard(), self.workspace._connection() as db:
+            self._exists(db)
+            db.execute("BEGIN")
+            try:
+                result = decision_carry.candidates(db, identity, state=state, kind=kind, offset=offset, limit=limit)
+                db.commit()
+                return result
+            except BaseException:
+                db.rollback()
+                raise
+
+    def carry_candidate(self, identity, candidate_id):
+        with self.workspace._guard(), self.workspace._connection() as db:
+            self._exists(db)
+            return decision_carry.candidate(db, identity, candidate_id)
+
     def perform(self, kind, body):
-        actions = {"pairs": self._save_pair, "run": self._run, "decision": self._decision, "report": self._report}
+        actions = {"pairs": self._save_pair, "run": self._run, "decision": self._decision, "report": self._report,
+                   "carry-review": lambda db, value: decision_carry.prepare(self, db, value),
+                   "carry-apply": lambda db, value: decision_carry.apply(self, db, value)}
         if kind not in actions:
             fail("OPERATION_INVALID")
         return self._mutate(kind, body, actions[kind])
