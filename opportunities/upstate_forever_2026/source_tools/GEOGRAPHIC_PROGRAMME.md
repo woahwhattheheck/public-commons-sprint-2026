@@ -2,6 +2,8 @@
 
 The geographic preparation already retains the original upstream domain, South Carolina reporting mask, utility protection geometry, declared simulated inputs and baseline/restoration/matched-control selections. This adapter puts those **same completed native runs** into the existing Programmes desk. Source-update successors, native stage candidates, report controls and native-study delivery then work on the actual geographic case through their maintained APIs.
 
+The original mapped delivery may select either alternative or both. Adoption preserves its nonempty, unique scenario order and every other delivery selection field; the saved Programme and its native report still retain all three reference cases.
+
 ## Continue the existing receiving operation
 
 Use the current geographic owner's actual application, qualified Python and Workspace. Preserve any active native writer. The current receiving call remains authoritative; this is one append after its original three reference runs complete. The twelve-member parameter course can keep its own original state and source identity.

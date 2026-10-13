@@ -157,14 +157,20 @@ def _delivery_selection(ws, prepared, delivery_id=None):
                       "Annual export reaches modeled streams; it is not intake delivery or concentration."]}
     original = ws.retained_item("deliveries", identifier(delivery_id))
     selected = original.get("selection", {})
+    selected_ids = selected.get("scenario_run_ids")
+    alternatives = dict(zip(prepared["alternative_run_ids"], KEYS[1:]))
     if (original.get("state") != "complete"
             or selected.get("baseline_run_id") != prepared["baseline_run_id"]
-            or selected.get("scenario_run_ids") != prepared["alternative_run_ids"]):
-        raise ValueError("Select the completed mapped delivery for this exact original geographic cohort")
+            or not isinstance(selected_ids, list) or not selected_ids
+            or any(not isinstance(run_id, str) for run_id in selected_ids)
+            or len(selected_ids) != len(set(selected_ids))
+            or any(run_id not in alternatives for run_id in selected_ids)):
+        raise ValueError("Select a completed mapped delivery with this baseline and original geographic alternatives")
     result = deepcopy(selected)
     result.pop("baseline_run_id")
     result.pop("scenario_run_ids")
-    result.update(baseline_run="baseline", scenario_runs=list(KEYS[1:]))
+    result.update(baseline_run="baseline",
+                  scenario_runs=[alternatives[run_id] for run_id in selected_ids])
     return result
 
 
