@@ -1,6 +1,6 @@
 {
   "schema": "upstate.measurements-installation/v1",
-  "edition": "2026-10-13-returned-reviews-native-operator",
+  "edition": "complete-measurements-returned-review-registry-load-20261013",
   "source_reference": {
     "repository": "woahwhattheheck/public-commons-sprint-2026",
     "original_core_commit": "a81e07284183a2008a413198714759488c2d2c9d",
@@ -21,8 +21,8 @@
   "files": [
     {
       "path": "CURRENT_OWNER_DIRECTION.md",
-      "bytes": 4999,
-      "sha256": "57945ea0e6eca762011e9f7e6febd39255359143d454fd3aa58a3a849ec14fc9"
+      "bytes": 6094,
+      "sha256": "4ea34a3c562729773214977f6098d5aa304cc34b9265bc91d44aef3f05c05c64"
     },
     {
       "path": "MEASURED_CHEMISTRY.md",
@@ -52,17 +52,17 @@
     {
       "path": "MEASUREMENT_RETURNED_REVIEWS.md",
       "bytes": 10267,
-      "sha256": "6d6b7f77494178b8994a0acadada29d1e65b1f78aa16751feaa95c6f91aba850"
+      "sha256": "6965cdbaa3f2f04395b3abea18c217be0dbde1a4d5d5892b7a46e8f7f7fcb10d"
     },
     {
       "path": "MEASUREMENT_RETURNED_REVIEWS_SOURCE.json",
       "bytes": 1723,
-      "sha256": "341fefc51c2f423310a49e3a3fed45f990766700375fe66f15e8252301a97c0e"
+      "sha256": "ff2cd42b579127ac1ce31e9762414fa34dbf84a1a3bd24bd6db96c4229c82076"
     },
     {
       "path": "checks/measurement_returned_reviews_operator.py",
-      "bytes": 17623,
-      "sha256": "ce7bca4caaf64b387a50afdb931abb254fa0edf542b2dc362770cc193a23d83f"
+      "bytes": 17796,
+      "sha256": "34b63f77d8c2f617d8c98c9d4063abdeb2a26a4597bc136a00b06637f4cb9593"
     },
     {
       "path": "checks/returned_review_capacity.mjs",
@@ -91,8 +91,8 @@
     },
     {
       "path": "integration/component_fragments/measurement-collections.json",
-      "bytes": 1761,
-      "sha256": "42543acc7bb429243284ee832f7213e2ffc92c322a282da5a876cc0ee5a7c30d"
+      "bytes": 2251,
+      "sha256": "606d146a2c4583c8fadf59d64e2c03a4b45d0e166efe4a034ffd8db309e7acbf"
     },
     {
       "path": "integration/component_fragments/measurement-large-files.json",
@@ -107,7 +107,7 @@
     {
       "path": "integration/component_fragments/measurement-returned-reviews.json",
       "bytes": 1002,
-      "sha256": "9a8a059d7c57c0974df2cc5581e7481dd5fa3ed26153b9ee6683da2d711027ae"
+      "sha256": "65c0f064c6e9dfefbca981ff729f151d843ade2db77875943c6ede53c7bdc8cd"
     },
     {
       "path": "measurement_workspace/ATOMIC_SNAPSHOT.md",
@@ -206,8 +206,8 @@
     },
     {
       "path": "measurement_workspace/engine/returned_review_reports.mjs",
-      "bytes": 19382,
-      "sha256": "9748999764b696c18c8408543491173d08b3c5047707b43f69f8b60592c00c40"
+      "bytes": 19394,
+      "sha256": "b66e08538849638a340fd4a2b334e8316e2473909332469b476b278b0cc1b5d3"
     },
     {
       "path": "measurement_workspace/engine/returned_reviews.mjs",
@@ -311,8 +311,8 @@
     },
     {
       "path": "operator/MEASUREMENT_RETURNED_REVIEWS.md",
-      "bytes": 7800,
-      "sha256": "e9b175c5ba661119fc8b33a7222dac4f713247b625879a2f826bb01572164a85"
+      "bytes": 9106,
+      "sha256": "9f73f969706819bfe1d31e230247b477af26d976ed9a6f14006651601ee76fa3"
     },
     {
       "path": "operator/extensions/measured-observations.json",
@@ -326,8 +326,8 @@
     },
     {
       "path": "operator/install_measurements.py",
-      "bytes": 11769,
-      "sha256": "f0614c40895818084ce4964c9d9d5355a067853817be25d5416e15ccc4b3cbf5"
+      "bytes": 12141,
+      "sha256": "29457ff21ab651bae36d4e82c23ebaba71eb6bec2376b626fd3ddbeb01d62ee7"
     },
     {
       "path": "operator/measurement_returned_reviews_native.py",
@@ -455,7 +455,12 @@
       "4badf415651a1848b74fc05e4e3361eb2e10cd927c9ffca992e0a61b28440041",
       "5d310c984e18b3bdbaf3689dc3e3b9455450326ffded123db473ef12e32fb7ac",
       "d5d4388a88c3eba472a8c807a1280f2a8c7933e968fde148e3067f838e7b4bf1",
-      "ea88ad205b8977b629178c22d5ea328dcd7af367a297328830aa596170a29d2e"
+      "ea88ad205b8977b629178c22d5ea328dcd7af367a297328830aa596170a29d2e",
+      "e72aa23ba4c02ead95b75657a693054df24be7b53dabaed5065e5386dd839e15",
+      "58b15a5326a40e5f7f836d85a114c7ad75bf6a23dc34aeda02f0682eda73f577",
+      "23f8338db897fe1fa8132dbf3ff17cbcb214ac62fbdc6eba957787384ddea3ca",
+      "a603c97d6e02bd70964682d91455c93019b6fc41cc939809a8fdd546452faa3c",
+      "746bd5e68bacc9c2e47bab4589a69a3585679eea239562a7aacbfcb168ca5fb2"
     ],
     "CURRENT_OWNER_DIRECTION.md": [
       "57945ea0e6eca762011e9f7e6febd39255359143d454fd3aa58a3a849ec14fc9"
@@ -470,7 +475,9 @@
       "2fee4765c26299edd3be0c43c7f560bf9b70dbb724eee38857bbeea52cce655e"
     ],
     "integration/component_fragments/measurement-collections.json": [
-      "0d871954f93fa6d4457cfd41eb42cf189c6c4d7847ce3da992d26a0bbf4c4d1c"
+      "0d871954f93fa6d4457cfd41eb42cf189c6c4d7847ce3da992d26a0bbf4c4d1c",
+      "e01d082945f7f9df22d573e5441d0b0ba6235715f1b17fa12cc807170a8b5335",
+      "42543acc7bb429243284ee832f7213e2ffc92c322a282da5a876cc0ee5a7c30d"
     ],
     "measurement_workspace/engine/calibration.mjs": [
       "9d9ff7ab3d6ccb5a00f06b11d0f6cb209640c27749c750dc8f4b8cb15e0e1199"
@@ -602,6 +609,24 @@
     ],
     "model/MEASUREMENTS_PORTABLE.md": [
       "c3382d75b8fe90719ada3eaf82014a4b3589a08a4d645534b0d6d6b6ab22abd2"
+    ],
+    "MEASUREMENT_RETURNED_REVIEWS.md": [
+      "6d6b7f77494178b8994a0acadada29d1e65b1f78aa16751feaa95c6f91aba850"
+    ],
+    "integration/component_fragments/measurement-returned-reviews.json": [
+      "9a8a059d7c57c0974df2cc5581e7481dd5fa3ed26153b9ee6683da2d711027ae"
+    ],
+    "measurement_workspace/engine/returned_review_reports.mjs": [
+      "9748999764b696c18c8408543491173d08b3c5047707b43f69f8b60592c00c40"
+    ],
+    "MEASUREMENT_RETURNED_REVIEWS_SOURCE.json": [
+      "341fefc51c2f423310a49e3a3fed45f990766700375fe66f15e8252301a97c0e"
+    ],
+    "checks/measurement_returned_reviews_operator.py": [
+      "ce7bca4caaf64b387a50afdb931abb254fa0edf542b2dc362770cc193a23d83f"
+    ],
+    "operator/MEASUREMENT_RETURNED_REVIEWS.md": [
+      "e9b175c5ba661119fc8b33a7222dac4f713247b625879a2f826bb01572164a85"
     ]
   },
   "requires": [
@@ -620,8 +645,8 @@
   ],
   "instruction": {
     "path": "AGENTS.md",
-    "bytes": 7593,
-    "sha256": "27e178ba2e5769624667016941c40c8eca9b202752c64c6283ca0be92184da9c",
+    "bytes": 8469,
+    "sha256": "e4800ffe55b6bed027f8ec012501657f5dabadbbc435ac5ce2503e22828a6c78",
     "version": "2026-10-13.1"
   },
   "preserves": [

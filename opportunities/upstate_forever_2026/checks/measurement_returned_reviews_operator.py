@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """Operate the maintained returned-review queue using an already-completed native case.
 
-Reuse its original input-archives, comparison/plan.json and decisions.json. This
+Reuse its original input-archives (or the delivered comparison/inputs),
+comparison/plan.json and decisions.json. This
 does not author measurements, rerun capacity work or substitute a comparison engine.
 """
 from __future__ import annotations
@@ -218,8 +219,11 @@ def main():
     if decisions["planId"] != native_plan["id"]:
         raise ValueError("Choose original decisions for the exact completed native comparison")
     inputs = {}
+    input_directory = original / "input-archives"
+    if not input_directory.is_dir():
+        input_directory = original / "comparison" / "inputs"
     for role in ("baseline", "returned", "current"):
-        path = original / "input-archives" / (role + ".zip")
+        path = input_directory / (role + ".zip")
         actual = sha(path)
         if actual != native_plan["inputs"][role]:
             raise ValueError("An original comparison archive changed: " + role)

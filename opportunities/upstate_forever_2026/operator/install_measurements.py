@@ -21,6 +21,18 @@ def sha(body):
     return hashlib.sha256(body).hexdigest()
 
 
+def registry_constructor(value):
+    """Recognize the original registry's direct and installed load forms."""
+    if (isinstance(value, ast.Call)
+            and isinstance(value.func, ast.Attribute)
+            and value.func.attr == "load"
+            and not value.args and not value.keywords):
+        value = value.func.value
+    return (isinstance(value, ast.Call)
+            and isinstance(value.func, ast.Name)
+            and value.func.id == "ExtensionRegistry")
+
+
 def name(value):
     if not isinstance(value, str):
         raise ValueError("Choose an original application-relative source member.")
@@ -106,9 +118,7 @@ def install(application, source_root, *, check=False):
     server = ast.parse(body(target, "operator/server.py"))
     registered = any(
         isinstance(item, ast.Assign)
-        and isinstance(item.value, ast.Call)
-        and isinstance(item.value.func, ast.Name)
-        and item.value.func.id == "ExtensionRegistry"
+        and registry_constructor(item.value)
         and any(isinstance(selected, ast.Attribute) and selected.attr == "extensions"
                 and isinstance(selected.value, ast.Name) and selected.value.id == "self"
                 for selected in item.targets)
