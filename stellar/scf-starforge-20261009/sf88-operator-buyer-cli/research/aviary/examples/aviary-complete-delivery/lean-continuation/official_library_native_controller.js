@@ -15,6 +15,13 @@ const publicValue=value=>{if(Array.isArray(value))return value.map(publicValue);
 const stable=value=>value&&typeof value==="object"?Array.isArray(value)?value.map(stable):Object.fromEntries(Object.keys(value).sort().map(k=>[k,stable(value[k])])):value;
 const equal=(a,b)=>JSON.stringify(stable(a))===JSON.stringify(stable(b));
 function resultArray(result,key){const structured=result?.structuredContent;if(structured!=null){need(Array.isArray(structured[key]),"Canonical Library structured result lacks "+key);return structured[key];}for(const item of result?.content||[]){try{const value=JSON.parse(item.text);if(Array.isArray(value?.[key]))return value[key];}catch{}}throw Error("The canonical Library result lacks "+key);}
+const libraryNameMatches=(actual,requested)=>{
+ if(typeof actual!=="string"||actual.includes("/")||actual.includes("\\"))return false;
+ if(actual===requested)return true;
+ const dot=requested.lastIndexOf("."),stem=dot>0?requested.slice(0,dot):requested,suffix=dot>0?requested.slice(dot):"";
+ const escape=value=>Array.from(value,ch=>".^$*+?()[]{}\\|".includes(ch)?"\\"+ch:ch).join("");
+ return new RegExp("^"+escape(stem)+"\\([1-9][0-9]*\\)"+escape(suffix)+"$").test(actual);
+};
 async function servicePrepared(request){
  need(request.connector==="connector_openai_library"&&["prepare_uploads","finalize_uploads"].includes(request.tool),"Unexpected prepared Library action");
  need(typeof request.name==="string"&&request.source?.path?.startsWith("/dev/aviary-complete-final-6ba15/")&&request.source.path.split("/").pop()===request.name&&Number.isInteger(request.source.bytes)&&request.source.bytes>0&&/^[a-f0-9]{64}$/.test(request.source.sha256)&&/^[a-f0-9]{64}$/.test(request.requestSha256),"Invalid original prepared source identity");
@@ -47,7 +54,7 @@ async function servicePrepared(request){
   const returned=resultArray(result,request.tool==="prepare_uploads"?"uploads":"results");
   need(returned.length===1,"Canonical prepared result count differs");
   if(request.tool==="prepare_uploads"){
-   need(returned[0].file_name===request.name&&returned[0].purpose==="create_library_file"&&returned[0].upload_url&&!returned[0].workspace_path,"The original private preparation has another transfer identity");
+   need(libraryNameMatches(returned[0].file_name,request.name)&&returned[0].purpose==="create_library_file"&&returned[0].upload_url&&!returned[0].workspace_path,"The original private preparation has another transfer identity");
    store(sourceKey+"-prepared",returned);
   }
  }
