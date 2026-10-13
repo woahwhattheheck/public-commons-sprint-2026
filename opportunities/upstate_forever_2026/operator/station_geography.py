@@ -1,7 +1,7 @@
 """Station geography desk for the existing authenticated operator and task queue."""
 from pathlib import Path
 from model import station_geography as geography
-from model.common import identifier, read_json, relative_file, verify_file
+from model.common import describe_file, identifier, read_json, relative_file, verify_file
 
 ACTIONS = frozenset(("station.geography.build", "station.geography.receive",
                      "station.geography.utility-microbial"))
@@ -93,7 +93,9 @@ class StationGeography:
                     "build_id": received["station_geography_build_id"],
                     "summary": received["summary"], "selection": received["selection"],
                     "utility_microbial": {key: received[key] for key in (
-                        "id", "source_collection_id", "source_counts", "domain", "receiving_file")}}
+                        "id", "source_collection_id", "source_counts", "domain", "receiving_file")},
+                    "original_report": {key: received["original_report"][key] for key in (
+                        "source_id", "source_sha256")}}
         else:
             selection = payload.get("selection", payload)
             if not isinstance(selection, dict):
@@ -116,6 +118,16 @@ class StationGeography:
             path = verify_file(ws.root, item)
             task["_downloads"].append(self.operator._ticket(
                 task["workspace"], path, item, "Original microbial study receiving.json"))
+        original_report = (task.get("result") or {}).get("original_report")
+        if microbial and original_report:
+            ws = self.operator.ws(task["workspace"])
+            path, entry = ws.source_file(microbial["source_collection_id"],
+                                         original_report["source_id"])
+            if entry["body"]["sha256"] != original_report["source_sha256"]:
+                self._fail("STATION_REPORT", "The retained original microbial report differs.", 409)
+            item = describe_file(ws.root, path)
+            task["_downloads"].append(self.operator._ticket(
+                task["workspace"], path, item, "Original E. coli interactive explorer.html"))
         task["_station_geography"] = {
             "id": edition_id, "title": edition.get("title"),
             "summary": edition.get("summary", {}), "view": "station-geography",
