@@ -18,6 +18,10 @@ const stable = value => JSON.stringify(value, function(key,item){
     ? Object.fromEntries(Object.keys(item).sort().map(name=>[name,item[name]])) : item;
 });
 function gridPoints(count) { return count===3 ? 15 : count===2 ? 5 : count===1 ? 1 : 0; }
+const referenceOnly = value => value?.report_kind
+  ? value.report_kind==='reference_totals' : value?.run_ids?.length===1;
+const kindTitle = value => referenceOnly(value)?'Reference totals':'Scenario comparisons';
+const coveragePercent = value => value===null||value===undefined?'\u2014':percent(100*value);
 
 export function attachUtilityCohorts(context) {
   let root=null, workspace=null, state=null, controller=null, epoch=0, rowsEpoch=0;
@@ -75,7 +79,6 @@ export function attachUtilityCohorts(context) {
     const baseline=run(currentDraft.baseline);
     if(!source)throw new Error('Select the imported original protection-area source edition.');
     if(!baseline?.eligible)throw new Error('Select a completed native baseline.');
-    if(!currentDraft.alternatives.length)throw new Error('Select at least one completed alternative.');
     const pollutants=commonOutputs();
     if(!pollutants.length)throw new Error('The selected runs must share at least one completed native pollutant.');
     const weights=Object.fromEntries(POLLUTANTS.map(name=>[name,pollutants.includes(name)?Number(currentDraft.weights[name]):0]));
@@ -100,16 +103,16 @@ export function attachUtilityCohorts(context) {
   }
   function shell(){
     return '<div class="uc-desk">'+
-      '<header class="uc-heading"><div><h2>Utility scenario cohorts</h2><p>Compare original ARJWS and Pioneer source-water protection areas using the same completed native runs and fixed planning scale.</p></div>'+
+      '<header class="uc-heading"><div><h2>Utility scenario cohorts</h2><p>Calculate reference exports and compare scenarios for the original ARJWS and Pioneer source-water protection areas in South Carolina on one fixed planning scale.</p></div>'+
       '<div class="uc-actions">'+button('refresh','Refresh choices')+button('sources','Study sources')+button('runs','Native runs')+'</div></header>'+
       '<div class="uc-error" data-error hidden role="alert"></div>'+
-      '<section class="uc-section" aria-labelledby="uc-build-title"><h3 id="uc-build-title">Build a comparison</h3>'+
+      '<section class="uc-section" aria-labelledby="uc-build-title"><h3 id="uc-build-title">Prepare utility outcomes</h3>'+
       '<form data-builder><div class="uc-grid"><label class="uc-wide">Title<input name="title" maxlength="240" value="ARJWS and Pioneer native scenario priorities"></label>'+
       '<label class="uc-wide">Original protection-area source<select name="source" required><option value="">Loading imported sources...</option></select><small data-source-note></small></label>'+
-      '<label class="uc-wide">Baseline native run<select name="baseline" required><option value="">Loading completed runs...</option></select></label></div>'+
-      '<fieldset><legend>Alternative native runs</legend><label class="uc-check"><input type="checkbox" name="parameters">Include runs with a different parameter profile</label>'+
-      '<p class="uc-note">Every selected run uses the baseline grid. Parameter changes remain identified in the resulting comparison.</p><div data-alternatives class="uc-alternatives"></div></fieldset>'+
-      '<fieldset><legend>Planning weights</legend><p data-pollutants class="uc-note">Choose the baseline and alternatives to resolve their shared native outputs.</p><div class="uc-grid uc-three">'+
+      '<label class="uc-wide">Reference native run<select name="baseline" required><option value="">Loading completed runs...</option></select><small>Select the regional study whose original reporting area overlaps these protection polygons.</small></label></div>'+
+      '<fieldset><legend>Alternative native runs, optional</legend><label class="uc-check"><input type="checkbox" name="parameters">Include runs with a different parameter profile</label>'+
+      '<p class="uc-note">The reference run produces source-area totals and priorities immediately. Select alternatives to compare their changes on that same grid. Parameter changes remain identified.</p><div data-alternatives class="uc-alternatives"></div></fieldset>'+
+      '<fieldset><legend>Planning weights</legend><p data-pollutants class="uc-note">Choose the reference run and any alternatives to resolve the available native outputs.</p><div class="uc-grid uc-three">'+
       POLLUTANTS.map(name=>'<label>'+NAMES[name]+'<input type="number" name="weight-'+name+'" min="0" step="any" value="1"></label>').join('')+
       '</div><label class="uc-check"><input type="checkbox" name="weight-grid"><span data-grid-label>Compare all 15 planning ratios</span></label>'+
       '<p class="uc-note" data-grid-note>The optional grid spans the available pollutants in quarter-step ratios. The selected weights remain the primary result.</p></fieldset>'+
@@ -167,7 +170,7 @@ export function attachUtilityCohorts(context) {
         '<small>'+esc(item.profile_title)+' / '+esc(item.comparison_pollutants.map(name=>NAMES[name]).join(', '))+' / '+esc(short(item.id))+
         (item.selection.profile_id!==baseline.selection.profile_id?' / parameter profile differs':'')+
         (!common.length?' / no shared native output':'')+'</small></span></label>';
-    }).join(''):'<p class="uc-note">Complete an alternative on the selected baseline grid'+(includeParameters?'.':' and parameter profile.')+'</p>';
+    }).join(''):'<p class="uc-note">'+(baseline?'The selected reference can be calculated now. Completed alternatives on this grid will appear here.':'Select a completed reference run.')+'</p>';
   }
   function sourceNote(){
     const source=catalog?.sources.find(item=>sourceKey(item)===$('[name="source"]').value);
@@ -192,6 +195,8 @@ export function attachUtilityCohorts(context) {
       'The optional grid includes every quarter-step ratio across the available pollutants. Duplicate normalized selections are reused.';
     const caps=$('[name="normalization"]').value==='caps';
     $('[data-caps]').hidden=!caps;$('[data-percentile]').hidden=caps;
+    const alternativeCount=$$('[name="alternative"]:checked').length;
+    $('[data-build]').textContent=alternativeCount?'Build scenario comparison':'Build reference totals';
     $('[data-build]').disabled=submitting||!catalog.sources.length||!n;
   }
   function progress(value) {
@@ -223,7 +228,7 @@ export function attachUtilityCohorts(context) {
     if(!root)return;
     const rows=summaries();
     $('[data-saved]').innerHTML=rows.length?'<div class="uc-table-wrap"><table><thead><tr><th>Cohort</th><th>Native outputs</th><th>State / phase</th><th>Runs</th><th>Created</th><th></th></tr></thead><tbody>'+
-      rows.map(item=>'<tr><td><strong>'+esc(item.title||'Utility cohort')+'</strong><small>'+esc(short(item.id))+'</small></td><td>'+
+      rows.map(item=>'<tr><td><strong>'+esc(item.title||'Utility cohort')+'</strong><small>'+esc(kindTitle(item))+' / '+esc(short(item.id))+'</small></td><td>'+
       esc((item.comparison_pollutants||POLLUTANTS).map(name=>NAMES[name]).join(', '))+'</td><td>'+esc(item.state)+
       (item.state==='building'?progress(item.progress):item.error?'<small>'+esc(item.error.message||item.error)+'</small>':'')+'</td><td>'+
       number(item.run_ids?.length,0)+'</td><td>'+esc(date(item.created_at))+'</td><td>'+button('open','Open','data-id="'+esc(item.id)+'"')+'</td></tr>').join('')+'</tbody></table></div>':
@@ -265,7 +270,7 @@ export function attachUtilityCohorts(context) {
       const value=await context.api('/api/utility-cohorts/preview',{method:'POST',body:{workspace,selection}});
       if(!current(token))return;
       $('[data-preview]').innerHTML='<h4>Selected original source areas</h4>'+sourceAreas(value.zone_bindings)+
-        '<p class="uc-note">'+value.run_ids.length+' actual runs / '+value.weight_grid.weight_set_count+' declared weight sets / grid '+esc(short(value.grid_id))+'</p>';
+        '<p class="uc-note">'+esc(kindTitle(value))+' / '+value.run_ids.length+' actual runs / '+value.weight_grid.weight_set_count+' declared weight sets / grid '+esc(short(value.grid_id))+'</p>';
     }catch(reason){if(current(token)){$('[data-preview]').hidden=true;error(reason.message||String(reason));}}
     finally{if(current(token))previewing=false;}
   }
@@ -293,7 +298,9 @@ export function attachUtilityCohorts(context) {
     }finally{if(current(token)){submitting=false;updatePlanning();}}
   }
   function sourceAreas(areas){
-    return '<div class="uc-table-wrap"><table><thead><tr><th>Source area</th><th>Intake</th><th>Native buffer</th><th>Original area, ha</th><th>Reporting intersection, ha</th></tr></thead><tbody>'+
+    const intersecting=areas.filter(area=>area.reporting_intersection_area_ha>0).length;
+    return '<p class="uc-note">'+intersecting+' of '+areas.length+' original protection areas overlap the selected study. Areas outside its reporting geometry remain listed.</p>'+
+      '<div class="uc-table-wrap"><table><thead><tr><th>Source area</th><th>Intake</th><th>Native buffer</th><th>Original area, ha</th><th>Reporting intersection, ha</th></tr></thead><tbody>'+
       areas.map(area=>'<tr><td>'+esc(area.title)+'<small>OBJECTID '+esc(area.object_id)+' / '+esc(area.rank_group)+'</small></td><td>'+
       esc(area.intake_id)+'</td><td>'+number(area.buffer_ft,0)+' ft</td><td>'+number(area.original_area_ha)+'</td><td>'+
       number(area.reporting_intersection_area_ha)+'</td></tr>').join('')+'</tbody></table></div>';
@@ -322,7 +329,7 @@ export function attachUtilityCohorts(context) {
       '<label>Native run<select name="filter-run">'+option('','All selected runs')+runOptions+'</select></label>'+
       '<label>Pollutant<select name="filter-pollutant">'+option('','All available pollutants')+
       packet.filters.pollutants.map(name=>option(name,NAMES[name])).join('')+'</select></label>'+
-      '<label>Table<select name="filter-view"><option value="physical">Physical outcomes</option><option value="priority">Planning priorities</option></select></label></div>'+
+      '<label>Table<select name="filter-view"><option value="physical">Physical outcomes</option><option value="priority">Planning priorities</option><option value="coverage">Native coverage</option></select></label></div>'+
       '<p class="uc-note" data-table-note></p><div data-result-rows></div><div class="uc-pagination" data-pagination></div>'+
       '<h4>Retained products</h4>'+downloadGroups(packet._downloads);
   }
@@ -344,9 +351,16 @@ export function attachUtilityCohorts(context) {
       if(input.selectedIndex<0){input.value=key==='view'?'physical':'';filters[key]=input.value;}
     }
     $('[name="filter-pollutant"]').disabled=filters.view==='priority';
-    $('[data-table-note]').textContent=filters.view==='priority'?
-      'Priority uses the selected planning weights and frozen physical caps. Ranks compare the same published buffer group; a negative rank change moves upward. Each source-area/run pair appears once.':
-      'Annual physical change is alternative minus baseline. Avoided export is baseline minus alternative. Each pollutant uses the same valid cells across the entire selected cohort.';
+    const reference=referenceOnly(packet.cohort);
+    const notes={
+      priority:'Priority uses the selected planning weights and frozen physical caps. Ranks compare the same published buffer group. Each source-area/run pair appears once.'+
+        (reference?'':' A negative rank change moves upward.'),
+      physical:reference?
+        'Reference annual export is aggregated from this original native run. Yield divides that mass by its valid source-area hectares. Each pollutant retains its own native units.':
+        'Annual physical change is alternative minus baseline. Avoided export is baseline minus alternative. Each pollutant uses the same valid cells across the entire selected cohort.',
+      coverage:'Native valid area and annual mass include every valid cell in this run. Common area uses the intersection across all selected runs. Structural stream cells are identified by the original stream raster; unexpected missing cells remain separate.'
+    };
+    $('[data-table-note]').textContent=notes[filters.view];
   }
   async function open(id){
     identifier(id);const token=epoch;selectedId=id;packet=null;rowPage=null;detailLoading=true;persist();error('');
@@ -357,7 +371,7 @@ export function attachUtilityCohorts(context) {
       if(!current(token)||selectedId!==id)return;
       packet=value;
       $('[data-result-heading]').innerHTML='<div class="uc-heading"><div><h3>'+esc(value.cohort.title)+'</h3><p>'+
-        esc(value.summary.state)+' / '+value.cohort.run_ids.length+' runs / '+esc(packet.filters.pollutants.map(name=>NAMES[name]).join(', '))+
+        esc(value.summary.state)+' / '+esc(kindTitle(value.cohort))+' / '+value.cohort.run_ids.length+' runs / '+esc(packet.filters.pollutants.map(name=>NAMES[name]).join(', '))+
         ' / '+esc(date(value.cohort.completed_at||value.cohort.created_at))+'</p></div></div>';
       $('[data-result-progress]').innerHTML=value.summary.state==='complete'?'':progress(value.summary.progress)+
         (value.summary.error?'<p class="uc-error">'+esc(value.summary.error.message||value.summary.error)+'</p>':'');
@@ -380,21 +394,55 @@ export function attachUtilityCohorts(context) {
     }catch(reason){if(current(token)&&requestId===rowsEpoch)error(reason.message||String(reason));}
   }
   function renderRows(){
-    const priority=filters.view==='priority';
+    const priority=filters.view==='priority',coverage=filters.view==='coverage';
+    const reference=referenceOnly(packet.cohort);
     const titles=new Map(packet.runs.map(item=>[item.id,item.title]));
-    const headers=priority?['Source area','Native run','Priority mean','Score change','Rank','Rank change','Rank range','Score range','Common coverage']:
-      ['Source area','Native run','Pollutant / annual units','Baseline mass','Current mass','Change','Avoided export','Change %','Common area, ha','Common coverage'];
+    let headers=['Source area','Native run'];
+    if(priority)headers=headers.concat(reference?
+      ['Priority mean','Rank','Rank range across weights','Score range across weights','Common coverage']:
+      ['Priority mean','Score change','Rank','Rank change','Rank range across weights','Score range across weights','Common coverage']);
+    else if(coverage)headers=headers.concat([
+      'Pollutant / annual units','Selected cells','Native valid cells','Structural stream cells',
+      'Unexpected missing cells','Unknown stream cells','Native valid area, ha','Native annual mass',
+      'Common area, ha','Common native support','Coverage status']);
+    else headers=headers.concat(reference?
+      ['Pollutant / annual units','Annual export','Yield / ha / year','Valid area, ha','Valid coverage']:
+      ['Pollutant / annual units','Baseline mass','Current mass','Change','Avoided export','Change %','Common area, ha','Common coverage']);
     const rows=rowPage.rows.map(row=>{
-      const first='<td><strong>'+esc(row.title)+'</strong><small>'+esc(row.rank_group||'Reporting area')+'</small></td><td>'+
-        esc(titles.get(row.run_id)||short(row.run_id))+'<small>'+esc(row.comparison_kind)+'</small></td>';
-      return '<tr>'+first+(priority?
-        '<td>'+number(row.selected_priority_mean,6)+'</td><td>'+signed(row.selected_priority_score_change,6)+'</td><td>'+number(row.selected_priority_rank,0)+'</td><td>'+
-        signed(row.priority_rank_change,0)+'</td><td>'+number(row.sensitivity_best_rank,0)+' to '+number(row.sensitivity_worst_rank,0)+'</td><td>'+
-        number(row.sensitivity_score_min,6)+' to '+number(row.sensitivity_score_max,6)+'</td><td>'+percent(row.priority_coverage_fraction===null?null:100*row.priority_coverage_fraction)+'</td>':
-        '<td>'+esc(NAMES[row.pollutant])+'<small>'+esc(row.units)+'</small></td><td>'+number(row.baseline_common_mass)+'</td><td>'+number(row.current_common_mass)+'</td><td>'+
-        signed(row.change_mass)+'</td><td>'+signed(row.avoided_export_mass)+'</td><td>'+percent(row.change_percent)+
-        (row.percent_status!=='defined'?'<small>'+esc(String(row.percent_status).replaceAll('_',' '))+'</small>':'')+'</td><td>'+number(row.common_area_ha)+'</td><td>'+
-        percent(row.common_coverage_fraction===null?null:100*row.common_coverage_fraction)+'</td>')+'</tr>';
+      const cells=[
+        '<strong>'+esc(row.title)+'</strong><small>'+esc(row.rank_group||'Reporting area')+'</small>',
+        esc(titles.get(row.run_id)||short(row.run_id))+'<small>'+esc(reference?'Reference':row.comparison_kind)+'</small>'
+      ];
+      if(priority){
+        cells.push(number(row.selected_priority_mean,6));
+        if(!reference)cells.push(signed(row.selected_priority_score_change,6));
+        cells.push(number(row.selected_priority_rank,0));
+        if(!reference)cells.push(signed(row.priority_rank_change,0));
+        cells.push(number(row.sensitivity_best_rank,0)+' to '+number(row.sensitivity_worst_rank,0),
+          number(row.sensitivity_score_min,6)+' to '+number(row.sensitivity_score_max,6),
+          coveragePercent(row.priority_coverage_fraction));
+      }else{
+        cells.push(esc(NAMES[row.pollutant])+'<small>'+esc(row.units)+'</small>');
+        if(coverage){
+          cells.push(number(row.selected_cells,0),number(row.native_valid_cells,0),
+            number(row.native_structural_stream_cells,0),number(row.native_unexpected_missing_cells,0),
+            number(row.native_unknown_stream_cells,0),number(row.native_valid_area_ha),
+            number(row.native_all_valid_mass),number(row.common_area_ha),
+            coveragePercent(row.common_native_support_fraction),
+            row.native_complete_support===true?'Complete native support':
+              row.native_complete_support===false?'Review source coverage':'See native report');
+        }else if(reference){
+          cells.push(number(row.current_common_mass),number(row.common_yield_per_ha_year),
+            number(row.common_area_ha),coveragePercent(row.common_coverage_fraction));
+        }else{
+          cells.push(number(row.baseline_common_mass),number(row.current_common_mass),
+            signed(row.change_mass),signed(row.avoided_export_mass),
+            percent(row.change_percent)+(row.percent_status!=='defined'?
+              '<small>'+esc(String(row.percent_status).replaceAll('_',' '))+'</small>':''),
+            number(row.common_area_ha),coveragePercent(row.common_coverage_fraction));
+        }
+      }
+      return '<tr>'+cells.map(value=>'<td>'+value+'</td>').join('')+'</tr>';
     }).join('');
     $('[data-result-rows]').innerHTML=rows?'<div class="uc-table-wrap"><table><thead><tr>'+headers.map(title=>'<th>'+esc(title)+'</th>').join('')+
       '</tr></thead><tbody>'+rows+'</tbody></table></div>':'<p class="uc-note">No retained rows match these filters.</p>';

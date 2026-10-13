@@ -221,7 +221,15 @@ The completed run's **Original completed models** table shows the original run, 
 
 The saved native result includes actual prepared grid companions and the original source editions identified by reused inputs. Its original request retains both selected source run IDs. Existing task retry, cancellation before start, native-result reopening, and complete Workspace backup continue through their maintained routes.
 
-### Continue a failed input match
+mpact workspace state and completed native stages
+
+The live workspace state carries each run's native completion times and retained file counts in `stage_summary`. Opening a run returns its complete `stages` records. The completed-model form accepts both shapes and ranks candidate sources by the target scenario, grid and profile, then their original completion time.
+
+Only a stage with its original completion timestamp and retained files enters the choices. A failed run can supply a model that completed before its other work failed. Running and queued runs remain outside those choices. The final native operation checks the selected actual files, model parameters, runtime and source lineage before adopting the stages.
+
+The full-delivery picker reads the same completed stages and requires retained nitrogen, phosphorus and sediment exports from a complete combined selection. NDR-only and SDR-only runs keep their independent selections and reporting outputs.
+
+### Co### Continue a failed input match
 
 Read the error on the original task. The comparison identifies the exact input or parameter that differs. Reopen the prepared run and select source stages matching its actual grid, scenario changes, original biophysical table, and selected native parameters. Retain the original failed task and source runs alongside the new explicit selection.
 

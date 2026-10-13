@@ -8,7 +8,8 @@ from pathlib import Path
 import tempfile
 
 from model.common import atomic_json, describe_file, digest, held, read_json
-from model.native_execution import NativeExecution, RESERVE_NAME, inspect_execution
+from model.native_execution import (NativeExecution, RESERVE_HEADER, RESERVE_NAME,
+                                    RESERVE_PENDING_NAME, inspect_execution)
 from model import native
 
 
@@ -35,6 +36,8 @@ with tempfile.TemporaryDirectory(prefix="native-recovery-check-") as temporary:
     state = {"id": ws.key, "selection": ws.selection, "state": "prepared",
              "created_at": "retained", "stages": {}, "artifacts": {}}
     atomic_json(ws.directory / "run.json", state)
+    # A killed allocator can leave its staging file before any header is written.
+    (ws.directory / RESERVE_PENDING_NAME).write_bytes(b"")
     primary = OSError(errno.ENOSPC, "original native disk exhaustion")
     stderr = io.StringIO()
     try:
@@ -44,6 +47,8 @@ with tempfile.TemporaryDirectory(prefix="native-recovery-check-") as temporary:
                 active = inspect_execution(ws, ws.key, log_bytes=0)
                 assert active["active"] is True
                 assert active["execution"]["phase"] == "native"
+                assert active["execution"]["storage_recorded_at"]
+                assert not (ws.directory / RESERVE_PENDING_NAME).exists()
                 assert (ws.directory / RESERVE_NAME).stat().st_size >= 262144
                 raise primary
     except OSError as caught:
@@ -54,6 +59,7 @@ with tempfile.TemporaryDirectory(prefix="native-recovery-check-") as temporary:
     assert failed["error"]["phase"] == "native"
     assert failed["error"]["model"] == "ndr"
     assert failed["error"]["kind"] == "storage_exhausted"
+    assert failed["error"]["storage_recorded_at"]
     assert not (ws.directory / RESERVE_NAME).exists()
     assert json.loads(stderr.getvalue())["error"]["message"] == str(primary)
 
@@ -71,6 +77,8 @@ with tempfile.TemporaryDirectory(prefix="native-recovery-check-") as temporary:
         failed["artifacts"][name] = describe_file(ws.directory, ws.directory / (name + ".tif"),
                                                 units="kg/pixel/year")
     atomic_json(ws.directory / "run.json", failed)
+    # The same recovery also accepts an interrupted partial staging header.
+    (ws.directory / RESERVE_PENDING_NAME).write_bytes(RESERVE_HEADER[:5])
     original_runtime = native.runtime
     def unexpected_runtime(*args, **kwargs):
         raise AssertionError("Recovery attempted to load the native engine")
@@ -81,6 +89,8 @@ with tempfile.TemporaryDirectory(prefix="native-recovery-check-") as temporary:
         native.runtime = original_runtime
     assert completed["state"] == "complete"
     assert completed["execution"]["phase"] == "complete"
+    assert completed["execution"]["storage_recorded_at"]
+    assert not (ws.directory / RESERVE_PENDING_NAME).exists()
     assert completed["execution_history"][-1]["error"]["message"] == str(primary)
     assert completed["stages"]["ndr"]["completed_at"] == "original-completion"
     assert not (ws.directory / RESERVE_NAME).exists()
@@ -113,7 +123,8 @@ with tempfile.TemporaryDirectory(prefix="native-recovery-check-") as temporary:
     assert stale["state"] == "interrupted"
 print(json.dumps({"native_recovery_check": "passed",
                   "checks": ["active lock and phase", "disk failure retained",
-                             "reserve released", "completed exports recovered",
+                             "reserve released", "interrupted reserve allocation recovered",
+                             "completed exports recovered",
                              "attempt history preserved", "original exception preserved",
                              "interrupted state detected"],
                   "model_executions": 0}, sort_keys=True))

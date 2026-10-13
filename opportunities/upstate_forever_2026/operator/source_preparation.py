@@ -343,7 +343,8 @@ class SourcePreparation:
             return progress
         if operation == "result":
             return {"workspace_key": workspace, "task_id": task_id,
-                    "progress": progress, "result": record.get("result"), "stages": record.get("stages", [])}
+                    "progress": progress, "result": record.get("result"), "stages": record.get("stages", []),
+                    "_downloads": self._record_downloads(workspace, ws, path, record.get("result") or {})}
         self._fail("SOURCE_READ", "Choose a supported source preparation read.")
 
     def _observed_progress(self, workspace, record):
@@ -391,6 +392,14 @@ class SourcePreparation:
                 "native_progress": record.get("native_progress"),
                 "log_tail": [item["message"] for item in events[-12:]]}
 
+    def _record_downloads(self, workspace, ws, path, result):
+        files = [self.operator._ticket(workspace, path,
+                 describe_file(ws.root, path), "Source preparation operation")]
+        for item in result.get("documents", []):
+            retained = relative_file(ws.root, item["path"])
+            files.append(self.operator._ticket(workspace, retained, item, item.get("label")))
+        return files
+
     def decorate_task(self, task):
         if task.get("action") not in ACTIONS:
             return task
@@ -400,13 +409,8 @@ class SourcePreparation:
             return task
         record = read_json(path)
         task["_source_preparation"] = self._progress(record, task)
-        files = [self.operator._ticket(task["workspace"], path,
-                 describe_file(ws.root, path), "Source preparation operation")]
-        result = record.get("result") or {}
-        for item in result.get("documents", []):
-            retained = relative_file(ws.root, item["path"])
-            files.append(self.operator._ticket(task["workspace"], retained, item, item.get("label")))
-        task.setdefault("_downloads", []).extend(files)
+        task.setdefault("_downloads", []).extend(
+            self._record_downloads(task["workspace"], ws, path, record.get("result") or {}))
         return task
 
     def _resolve(self, workspace, selector):
