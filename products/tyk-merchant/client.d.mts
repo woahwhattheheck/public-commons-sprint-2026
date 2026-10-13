@@ -188,8 +188,14 @@ export interface CommissioningView {
 export interface GatewaySourceEntry {
   key: string; label?: string; selection: DefinitionSelection; productionOperation: 'create' | 'update';
 }
+export interface GatewayTargetExpectation {
+  record: RecordReference & { kind: 'connection' };
+  configurationSha256: string;
+}
 export interface CreateGatewayCommissioningInput extends RequestIdentity {
   stagingConnectionId: string; productionConnectionId: string; label: string; customer?: string; operator?: string;
+  /** Both target editions are compared atomically before first creation; original request replay precedes this check. */
+  expectedTargets?: Record<GatewayPhase, GatewayTargetExpectation>;
   entries: GatewaySourceEntry[]; checkNames: string[];
   reload?: { scope: 'node'; block?: boolean } | { scope: 'group' };
   workshare?: CommissioningSupportingFile;
@@ -225,6 +231,8 @@ export interface GatewayObservation {
 export interface GatewayCommissioningValue {
   schema: 'stellar-forge.tyk-gateway-commissioning.v1'; label: string; customer: string; operator: string;
   connectionId: string; targets: Record<GatewayPhase, GatewayTarget>;
+  /** Original optional precondition retained in the complete course history. */
+  expectedTargets?: Record<GatewayPhase, GatewayTargetExpectation>;
   entries: (GatewaySourceEntry & { sourceSha256: string; sourceBytes: number })[]; checkNames: string[];
   source: SourceReference; manuscript: SourceReference;
   reload: { scope: 'node' | 'group'; block?: boolean };
