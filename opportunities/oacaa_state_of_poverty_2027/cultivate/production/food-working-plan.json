@@ -1,0 +1,883 @@
+{
+  "schema": "tjl.oacaa.acs-working-plan.v1",
+  "measurementPeriod": "2024 current food estimates; explicitly labeled historical observations and 2023 release comparisons",
+  "cohorts": [
+    {
+      "key": "state",
+      "path": "datasets/ohio-food-state-2024.json",
+      "datasetId": "ohio-food-state-2024",
+      "sha256": "343ab02e81f195f205a83e071f4bc73a37e9c827215fe313aef1cbc1270cdae8",
+      "originals": [
+        "sources/FOOD_ORIGINALS.json"
+      ]
+    },
+    {
+      "key": "counties",
+      "path": "datasets/ohio-food-child-counties-2024.json",
+      "datasetId": "ohio-food-child-counties-2024",
+      "sha256": "6b7a01afd90e0140f048e9a95e1686254766a9eabe9798abedefcfd1138a7ebc",
+      "originals": [
+        "sources/FOOD_ORIGINALS.json"
+      ]
+    },
+    {
+      "key": "history",
+      "path": "datasets/ohio-food-child-history-ne-2013-2024.json",
+      "datasetId": "ohio-food-child-history-ne-2013-2024",
+      "sha256": "41a6ce16f5ad3656fbce399fbef577a20753a6df357cb32289f8dcef66b0bc0f",
+      "originals": [
+        "sources/FOOD_ORIGINALS.json"
+      ]
+    },
+    {
+      "key": "revision",
+      "path": "datasets/ohio-food-county-revision-2023.json",
+      "datasetId": "ohio-food-county-revision-2023",
+      "sha256": "f2b1b2fb91eda2704348d92888229e989c017d091ff75e33914985465f8b38e1",
+      "originals": [
+        "sources/FOOD_ORIGINALS.json"
+      ]
+    }
+  ],
+  "sources": [
+    {
+      "id": "food-mmg-2026",
+      "title": "Feeding America: 2024 Ohio food insecurity, released 2026",
+      "url": "https://map.feedingamerica.org/county/2024/child/ohio",
+      "locator": "Statewide child/overall pages and all 88 county child pages; source representations and SHA-256 identities are retained.",
+      "note": "Each observation carries its exact measurement year, geography and selected population."
+    },
+    {
+      "id": "food-mmg-method-2026",
+      "title": "Map the Meal Gap 2026 technical brief",
+      "url": "https://www.feedingamerica.org/sites/default/files/2026-09/Map%20the%20Meal%20Gap%20Technical%20Brief.pdf",
+      "locator": "Physical pages 4–5: correction to 2023 county estimates; methodology sections: food insecurity, income thresholds and costs.",
+      "note": "State and congressional estimates were unaffected by the documented county correction. Preserve independently rounded values and distinct population universes."
+    },
+    {
+      "id": "food-hcn-history",
+      "title": "Healthy Northeast Ohio: Feeding America historical county redistribution",
+      "url": "https://embed-cuyahoga.thehcn.net/indicators/index/indicatorcsv?indicatorId=2108&localeFilterId=0&localeTypeId=2",
+      "locator": "Complete 108-row source CSV: nine counties, 2013–2024.",
+      "note": "The source names Feeding America and is maintained by Conduent Healthy Communities Institute. Earlier unavailable counts remain blank."
+    }
+  ],
+  "sections": [
+    {
+      "id": "food-ohio",
+      "title": "Food insecurity in Ohio",
+      "summary": "2024 measurement year · 2026 release",
+      "breakBefore": true,
+      "blocks": [
+        {
+          "id": "food-populations",
+          "type": "paragraph",
+          "text": "The tables show the source estimates of people and children living in food-insecure households in Ohio in 2024. Child observations concern people under age 18. The overall population includes children, so the two rows overlap.",
+          "sourceIds": [
+            "food-mmg-2026",
+            "food-mmg-method-2026"
+          ]
+        },
+        {
+          "id": "food-income-context",
+          "type": "paragraph",
+          "text": "The income-threshold percentages concern people already estimated to be food insecure. Ohio child estimates use 185% of the federal poverty level, while the overall page displays the 130% SNAP threshold. These percentages describe income, rather than actual enrollment or every eligibility rule.",
+          "sourceIds": [
+            "food-mmg-2026",
+            "food-mmg-method-2026"
+          ]
+        },
+        {
+          "id": "food-rounding",
+          "type": "paragraph",
+          "text": "Source counts and percentages are independently rounded. The overall page publishes 60% above and 41% below its threshold; both remain as published. No exact population denominator is reconstructed from those rounded values.",
+          "sourceIds": [
+            "food-mmg-2026",
+            "food-mmg-method-2026"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "food-county-counts",
+      "title": "Child food insecurity across Ohio counties",
+      "summary": "Complete 88-county cohort · 2024",
+      "breakBefore": true,
+      "blocks": [
+        {
+          "id": "food-county-universe",
+          "type": "paragraph",
+          "text": "Each row represents children under age 18 in the named county. County counts and percentages come from that county’s selected 2024 child page. The statewide estimate is retained separately; county and statewide values are not added together.",
+          "sourceIds": [
+            "food-mmg-2026",
+            "food-mmg-method-2026"
+          ]
+        },
+        {
+          "id": "food-county-chart-note",
+          "type": "paragraph",
+          "text": "The chart selects the ten highest published county rates in this received source. It is a descriptive ordering of modeled point estimates, without a claim of statistically significant differences.",
+          "sourceIds": [
+            "food-mmg-2026",
+            "food-mmg-method-2026"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "food-county-income",
+      "title": "Children and income thresholds",
+      "summary": "Percent of food-insecure children · 185% of federal poverty level",
+      "breakBefore": true,
+      "blocks": [
+        {
+          "id": "food-eligibility-denominator",
+          "type": "paragraph",
+          "text": "Above-threshold and at/below-threshold percentages use food-insecure children as their denominator. The original report’s Table 10 also contains a measure with all children as its denominator. Those fields remain distinct; the percentages shown here must not be copied into the all-children field.",
+          "sourceIds": [
+            "food-mmg-2026",
+            "food-mmg-method-2026"
+          ]
+        },
+        {
+          "id": "food-program-rules",
+          "type": "paragraph",
+          "text": "An income threshold is one part of program rules. The source’s modeled income categories do not show actual receipt, application or denial of benefits.",
+          "sourceIds": [
+            "food-mmg-2026",
+            "food-mmg-method-2026"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "food-county-cost",
+      "title": "Local food costs and budget shortfalls",
+      "summary": "Geography-wide measures · 2024",
+      "breakBefore": true,
+      "blocks": [
+        {
+          "id": "food-cost-population",
+          "type": "paragraph",
+          "text": "The map also displays each county’s average meal cost and annual food-budget shortfall. These are geography-wide measures for the overall population. Their appearance on a child page does not make them child-only amounts.",
+          "sourceIds": [
+            "food-mmg-2026",
+            "food-mmg-method-2026"
+          ]
+        },
+        {
+          "id": "food-cost-definition",
+          "type": "paragraph",
+          "text": "The annual shortfall is a modeled estimate derived from food insecurity, reported additional spending needs, and local food prices. It is not a SNAP benefit amount or an appropriation. The retained technical brief explains the calculation.",
+          "sourceIds": [
+            "food-mmg-2026",
+            "food-mmg-method-2026"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "food-source-revision",
+      "title": "Correcting the original food-source year and release",
+      "summary": "Original report Tables 10 and 13",
+      "breakBefore": true,
+      "blocks": [
+        {
+          "id": "food-table13-year",
+          "type": "paragraph",
+          "text": "The original Table 13 labels its heading 2024 and its footer 2022, while its Ohio count of 517,450 and rate of 20.1% match the 2023 source. That original observation is retained as 2023. The current tables in this working edition use the received 2024 source.",
+          "sourceIds": [
+            "food-mmg-2026",
+            "food-mmg-method-2026"
+          ]
+        },
+        {
+          "id": "food-county-revision",
+          "type": "paragraph",
+          "text": "Feeding America documents that its previous 2023 county estimates used 2022 unemployment data. The current release revises those county estimates; state and congressional results were unaffected. The following table compares original and revised values for the same 2023 measurement year.",
+          "sourceIds": [
+            "food-mmg-method-2026",
+            "food-hcn-history"
+          ]
+        },
+        {
+          "id": "food-original-snap-period",
+          "type": "paragraph",
+          "text": "The original Table 10’s SNAP participation percentage is labeled 2025 and cites Ohio JFS monthly statistics, without identifying a month. It stays in the original-report concordance rather than being recast as a 2024 food-insecurity measure.",
+          "sourceIds": [
+            "food-mmg-2026",
+            "food-mmg-method-2026"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "food-history",
+      "title": "Historical county estimates retained with the source",
+      "summary": "Nine Northeast Ohio counties · 2013–2024",
+      "breakBefore": true,
+      "blocks": [
+        {
+          "id": "food-history-coverage",
+          "type": "paragraph",
+          "text": "The received historical CSV contains all 108 observations for Ashland, Ashtabula, Cuyahoga, Geauga, Lake, Lorain, Medina, Portage and Summit counties. The complete dataset is editable in the source desk. The printed comparison selects 2023 and 2024 rows.",
+          "sourceIds": [
+            "food-hcn-history"
+          ]
+        },
+        {
+          "id": "food-history-comparison",
+          "type": "paragraph",
+          "text": "Changes in measurement year, source release and model inputs are separate concepts. The displayed historical values preserve their actual year; descriptive differences do not establish statistical significance or a causal trend.",
+          "sourceIds": [
+            "food-mmg-method-2026",
+            "food-hcn-history"
+          ]
+        }
+      ]
+    }
+  ],
+  "mappings": [
+    {
+      "cohort": "state",
+      "mapping": {
+        "id": "food-ohio-counts",
+        "kind": "table",
+        "sectionId": "food-ohio",
+        "sectionTitle": "Food insecurity in Ohio",
+        "blockId": "food-ohio-counts",
+        "title": "Ohio food insecurity: counts and rates",
+        "caption": "The two populations overlap; all measures describe 2024.",
+        "rowIds": [
+          "food-39000-overall",
+          "food-39000-child"
+        ],
+        "columns": [
+          "population",
+          "count",
+          "rate"
+        ]
+      }
+    },
+    {
+      "cohort": "state",
+      "mapping": {
+        "id": "food-ohio-income",
+        "kind": "table",
+        "sectionId": "food-ohio",
+        "sectionTitle": "Food insecurity in Ohio",
+        "blockId": "food-ohio-income",
+        "title": "Income thresholds among food-insecure people",
+        "caption": "Each population uses its displayed threshold. Published rounding is preserved.",
+        "rowIds": [
+          "food-39000-overall",
+          "food-39000-child"
+        ],
+        "columns": [
+          "population",
+          "threshold_fpl",
+          "above_threshold",
+          "below_threshold"
+        ]
+      }
+    },
+    {
+      "cohort": "counties",
+      "mapping": {
+        "id": "food-counties-counts-1",
+        "kind": "table",
+        "sectionId": "food-county-counts",
+        "sectionTitle": "Child food insecurity across Ohio counties",
+        "blockId": "food-counties-counts-1",
+        "title": "Adams County – Erie County",
+        "caption": "Food-insecure children under 18, 2024; exact published count and rate.",
+        "rowIds": [
+          "food-39001-child",
+          "food-39003-child",
+          "food-39005-child",
+          "food-39007-child",
+          "food-39009-child",
+          "food-39011-child",
+          "food-39013-child",
+          "food-39015-child",
+          "food-39017-child",
+          "food-39019-child",
+          "food-39021-child",
+          "food-39023-child",
+          "food-39025-child",
+          "food-39027-child",
+          "food-39029-child",
+          "food-39031-child",
+          "food-39033-child",
+          "food-39035-child",
+          "food-39037-child",
+          "food-39039-child",
+          "food-39041-child",
+          "food-39043-child"
+        ],
+        "columns": [
+          "geography",
+          "count",
+          "rate"
+        ]
+      }
+    },
+    {
+      "cohort": "counties",
+      "mapping": {
+        "id": "food-counties-income-1",
+        "kind": "table",
+        "sectionId": "food-county-income",
+        "sectionTitle": "Children and income thresholds",
+        "blockId": "food-counties-income-1",
+        "title": "Adams County – Erie County",
+        "caption": "Percent of FOOD-INSECURE children, above or at/below 185% of the federal poverty level.",
+        "rowIds": [
+          "food-39001-child",
+          "food-39003-child",
+          "food-39005-child",
+          "food-39007-child",
+          "food-39009-child",
+          "food-39011-child",
+          "food-39013-child",
+          "food-39015-child",
+          "food-39017-child",
+          "food-39019-child",
+          "food-39021-child",
+          "food-39023-child",
+          "food-39025-child",
+          "food-39027-child",
+          "food-39029-child",
+          "food-39031-child",
+          "food-39033-child",
+          "food-39035-child",
+          "food-39037-child",
+          "food-39039-child",
+          "food-39041-child",
+          "food-39043-child"
+        ],
+        "columns": [
+          "geography",
+          "above_threshold",
+          "below_threshold"
+        ]
+      }
+    },
+    {
+      "cohort": "counties",
+      "mapping": {
+        "id": "food-counties-cost-1",
+        "kind": "table",
+        "sectionId": "food-county-cost",
+        "sectionTitle": "Local food costs and budget shortfalls",
+        "blockId": "food-counties-cost-1",
+        "title": "Adams County – Erie County",
+        "caption": "Overall geography-wide food costs in USD, 2024. These are not child-only amounts.",
+        "rowIds": [
+          "food-39001-child",
+          "food-39003-child",
+          "food-39005-child",
+          "food-39007-child",
+          "food-39009-child",
+          "food-39011-child",
+          "food-39013-child",
+          "food-39015-child",
+          "food-39017-child",
+          "food-39019-child",
+          "food-39021-child",
+          "food-39023-child",
+          "food-39025-child",
+          "food-39027-child",
+          "food-39029-child",
+          "food-39031-child",
+          "food-39033-child",
+          "food-39035-child",
+          "food-39037-child",
+          "food-39039-child",
+          "food-39041-child",
+          "food-39043-child"
+        ],
+        "columns": [
+          "geography",
+          "meal_cost",
+          "annual_shortfall"
+        ]
+      }
+    },
+    {
+      "cohort": "counties",
+      "mapping": {
+        "id": "food-counties-counts-2",
+        "kind": "table",
+        "sectionId": "food-county-counts",
+        "sectionTitle": "Child food insecurity across Ohio counties",
+        "blockId": "food-counties-counts-2",
+        "title": "Fairfield County – Lawrence County",
+        "caption": "Food-insecure children under 18, 2024; exact published count and rate.",
+        "rowIds": [
+          "food-39045-child",
+          "food-39047-child",
+          "food-39049-child",
+          "food-39051-child",
+          "food-39053-child",
+          "food-39055-child",
+          "food-39057-child",
+          "food-39059-child",
+          "food-39061-child",
+          "food-39063-child",
+          "food-39065-child",
+          "food-39067-child",
+          "food-39069-child",
+          "food-39071-child",
+          "food-39073-child",
+          "food-39075-child",
+          "food-39077-child",
+          "food-39079-child",
+          "food-39081-child",
+          "food-39083-child",
+          "food-39085-child",
+          "food-39087-child"
+        ],
+        "columns": [
+          "geography",
+          "count",
+          "rate"
+        ]
+      }
+    },
+    {
+      "cohort": "counties",
+      "mapping": {
+        "id": "food-counties-income-2",
+        "kind": "table",
+        "sectionId": "food-county-income",
+        "sectionTitle": "Children and income thresholds",
+        "blockId": "food-counties-income-2",
+        "title": "Fairfield County – Lawrence County",
+        "caption": "Percent of FOOD-INSECURE children, above or at/below 185% of the federal poverty level.",
+        "rowIds": [
+          "food-39045-child",
+          "food-39047-child",
+          "food-39049-child",
+          "food-39051-child",
+          "food-39053-child",
+          "food-39055-child",
+          "food-39057-child",
+          "food-39059-child",
+          "food-39061-child",
+          "food-39063-child",
+          "food-39065-child",
+          "food-39067-child",
+          "food-39069-child",
+          "food-39071-child",
+          "food-39073-child",
+          "food-39075-child",
+          "food-39077-child",
+          "food-39079-child",
+          "food-39081-child",
+          "food-39083-child",
+          "food-39085-child",
+          "food-39087-child"
+        ],
+        "columns": [
+          "geography",
+          "above_threshold",
+          "below_threshold"
+        ]
+      }
+    },
+    {
+      "cohort": "counties",
+      "mapping": {
+        "id": "food-counties-cost-2",
+        "kind": "table",
+        "sectionId": "food-county-cost",
+        "sectionTitle": "Local food costs and budget shortfalls",
+        "blockId": "food-counties-cost-2",
+        "title": "Fairfield County – Lawrence County",
+        "caption": "Overall geography-wide food costs in USD, 2024. These are not child-only amounts.",
+        "rowIds": [
+          "food-39045-child",
+          "food-39047-child",
+          "food-39049-child",
+          "food-39051-child",
+          "food-39053-child",
+          "food-39055-child",
+          "food-39057-child",
+          "food-39059-child",
+          "food-39061-child",
+          "food-39063-child",
+          "food-39065-child",
+          "food-39067-child",
+          "food-39069-child",
+          "food-39071-child",
+          "food-39073-child",
+          "food-39075-child",
+          "food-39077-child",
+          "food-39079-child",
+          "food-39081-child",
+          "food-39083-child",
+          "food-39085-child",
+          "food-39087-child"
+        ],
+        "columns": [
+          "geography",
+          "meal_cost",
+          "annual_shortfall"
+        ]
+      }
+    },
+    {
+      "cohort": "counties",
+      "mapping": {
+        "id": "food-counties-counts-3",
+        "kind": "table",
+        "sectionId": "food-county-counts",
+        "sectionTitle": "Child food insecurity across Ohio counties",
+        "blockId": "food-counties-counts-3",
+        "title": "Licking County – Pike County",
+        "caption": "Food-insecure children under 18, 2024; exact published count and rate.",
+        "rowIds": [
+          "food-39089-child",
+          "food-39091-child",
+          "food-39093-child",
+          "food-39095-child",
+          "food-39097-child",
+          "food-39099-child",
+          "food-39101-child",
+          "food-39103-child",
+          "food-39105-child",
+          "food-39107-child",
+          "food-39109-child",
+          "food-39111-child",
+          "food-39113-child",
+          "food-39115-child",
+          "food-39117-child",
+          "food-39119-child",
+          "food-39121-child",
+          "food-39123-child",
+          "food-39125-child",
+          "food-39127-child",
+          "food-39129-child",
+          "food-39131-child"
+        ],
+        "columns": [
+          "geography",
+          "count",
+          "rate"
+        ]
+      }
+    },
+    {
+      "cohort": "counties",
+      "mapping": {
+        "id": "food-counties-income-3",
+        "kind": "table",
+        "sectionId": "food-county-income",
+        "sectionTitle": "Children and income thresholds",
+        "blockId": "food-counties-income-3",
+        "title": "Licking County – Pike County",
+        "caption": "Percent of FOOD-INSECURE children, above or at/below 185% of the federal poverty level.",
+        "rowIds": [
+          "food-39089-child",
+          "food-39091-child",
+          "food-39093-child",
+          "food-39095-child",
+          "food-39097-child",
+          "food-39099-child",
+          "food-39101-child",
+          "food-39103-child",
+          "food-39105-child",
+          "food-39107-child",
+          "food-39109-child",
+          "food-39111-child",
+          "food-39113-child",
+          "food-39115-child",
+          "food-39117-child",
+          "food-39119-child",
+          "food-39121-child",
+          "food-39123-child",
+          "food-39125-child",
+          "food-39127-child",
+          "food-39129-child",
+          "food-39131-child"
+        ],
+        "columns": [
+          "geography",
+          "above_threshold",
+          "below_threshold"
+        ]
+      }
+    },
+    {
+      "cohort": "counties",
+      "mapping": {
+        "id": "food-counties-cost-3",
+        "kind": "table",
+        "sectionId": "food-county-cost",
+        "sectionTitle": "Local food costs and budget shortfalls",
+        "blockId": "food-counties-cost-3",
+        "title": "Licking County – Pike County",
+        "caption": "Overall geography-wide food costs in USD, 2024. These are not child-only amounts.",
+        "rowIds": [
+          "food-39089-child",
+          "food-39091-child",
+          "food-39093-child",
+          "food-39095-child",
+          "food-39097-child",
+          "food-39099-child",
+          "food-39101-child",
+          "food-39103-child",
+          "food-39105-child",
+          "food-39107-child",
+          "food-39109-child",
+          "food-39111-child",
+          "food-39113-child",
+          "food-39115-child",
+          "food-39117-child",
+          "food-39119-child",
+          "food-39121-child",
+          "food-39123-child",
+          "food-39125-child",
+          "food-39127-child",
+          "food-39129-child",
+          "food-39131-child"
+        ],
+        "columns": [
+          "geography",
+          "meal_cost",
+          "annual_shortfall"
+        ]
+      }
+    },
+    {
+      "cohort": "counties",
+      "mapping": {
+        "id": "food-counties-counts-4",
+        "kind": "table",
+        "sectionId": "food-county-counts",
+        "sectionTitle": "Child food insecurity across Ohio counties",
+        "blockId": "food-counties-counts-4",
+        "title": "Portage County – Wyandot County",
+        "caption": "Food-insecure children under 18, 2024; exact published count and rate.",
+        "rowIds": [
+          "food-39133-child",
+          "food-39135-child",
+          "food-39137-child",
+          "food-39139-child",
+          "food-39141-child",
+          "food-39143-child",
+          "food-39145-child",
+          "food-39147-child",
+          "food-39149-child",
+          "food-39151-child",
+          "food-39153-child",
+          "food-39155-child",
+          "food-39157-child",
+          "food-39159-child",
+          "food-39161-child",
+          "food-39163-child",
+          "food-39165-child",
+          "food-39167-child",
+          "food-39169-child",
+          "food-39171-child",
+          "food-39173-child",
+          "food-39175-child"
+        ],
+        "columns": [
+          "geography",
+          "count",
+          "rate"
+        ]
+      }
+    },
+    {
+      "cohort": "counties",
+      "mapping": {
+        "id": "food-counties-income-4",
+        "kind": "table",
+        "sectionId": "food-county-income",
+        "sectionTitle": "Children and income thresholds",
+        "blockId": "food-counties-income-4",
+        "title": "Portage County – Wyandot County",
+        "caption": "Percent of FOOD-INSECURE children, above or at/below 185% of the federal poverty level.",
+        "rowIds": [
+          "food-39133-child",
+          "food-39135-child",
+          "food-39137-child",
+          "food-39139-child",
+          "food-39141-child",
+          "food-39143-child",
+          "food-39145-child",
+          "food-39147-child",
+          "food-39149-child",
+          "food-39151-child",
+          "food-39153-child",
+          "food-39155-child",
+          "food-39157-child",
+          "food-39159-child",
+          "food-39161-child",
+          "food-39163-child",
+          "food-39165-child",
+          "food-39167-child",
+          "food-39169-child",
+          "food-39171-child",
+          "food-39173-child",
+          "food-39175-child"
+        ],
+        "columns": [
+          "geography",
+          "above_threshold",
+          "below_threshold"
+        ]
+      }
+    },
+    {
+      "cohort": "counties",
+      "mapping": {
+        "id": "food-counties-cost-4",
+        "kind": "table",
+        "sectionId": "food-county-cost",
+        "sectionTitle": "Local food costs and budget shortfalls",
+        "blockId": "food-counties-cost-4",
+        "title": "Portage County – Wyandot County",
+        "caption": "Overall geography-wide food costs in USD, 2024. These are not child-only amounts.",
+        "rowIds": [
+          "food-39133-child",
+          "food-39135-child",
+          "food-39137-child",
+          "food-39139-child",
+          "food-39141-child",
+          "food-39143-child",
+          "food-39145-child",
+          "food-39147-child",
+          "food-39149-child",
+          "food-39151-child",
+          "food-39153-child",
+          "food-39155-child",
+          "food-39157-child",
+          "food-39159-child",
+          "food-39161-child",
+          "food-39163-child",
+          "food-39165-child",
+          "food-39167-child",
+          "food-39169-child",
+          "food-39171-child",
+          "food-39173-child",
+          "food-39175-child"
+        ],
+        "columns": [
+          "geography",
+          "meal_cost",
+          "annual_shortfall"
+        ]
+      }
+    },
+    {
+      "cohort": "counties",
+      "mapping": {
+        "id": "food-counties-rate-chart",
+        "kind": "chart",
+        "sectionId": "food-county-counts",
+        "sectionTitle": "Child food insecurity across Ohio counties",
+        "blockId": "food-counties-rate-chart",
+        "title": "Ten highest published county child rates",
+        "caption": "Percent of all children under 18, 2024. Ordering is descriptive.",
+        "rowIds": [
+          "food-39105-child",
+          "food-39001-child",
+          "food-39131-child",
+          "food-39145-child",
+          "food-39087-child",
+          "food-39053-child",
+          "food-39095-child",
+          "food-39079-child",
+          "food-39081-child",
+          "food-39141-child"
+        ],
+        "columns": [],
+        "labelColumn": "geography",
+        "valueColumn": "rate",
+        "chartType": "bar"
+      }
+    },
+    {
+      "cohort": "revision",
+      "mapping": {
+        "id": "food-revision-table",
+        "kind": "table",
+        "sectionId": "food-source-revision",
+        "sectionTitle": "Correcting the original food-source year and release",
+        "blockId": "food-revision-table",
+        "title": "2023 county release corrections",
+        "caption": "Same measurement year: original OACAA Table 10 versus the current received source. Difference is percentage points.",
+        "rowIds": [
+          "food-revision-ashland",
+          "food-revision-ashtabula",
+          "food-revision-cuyahoga",
+          "food-revision-geauga",
+          "food-revision-lake",
+          "food-revision-lorain",
+          "food-revision-medina",
+          "food-revision-portage",
+          "food-revision-summit"
+        ],
+        "columns": [
+          "geography",
+          "original_rate",
+          "revised_rate",
+          "difference_pp"
+        ]
+      }
+    },
+    {
+      "cohort": "history",
+      "mapping": {
+        "id": "food-history-recent-table",
+        "kind": "table",
+        "sectionId": "food-history",
+        "sectionTitle": "Historical county estimates retained with the source",
+        "blockId": "food-history-recent-table",
+        "title": "Received historical estimates, 2023 and 2024",
+        "caption": "Current source release; comparison years remain explicit.",
+        "rowIds": [
+          "food-history-ashland-2024",
+          "food-history-ashland-2023",
+          "food-history-ashtabula-2024",
+          "food-history-ashtabula-2023",
+          "food-history-cuyahoga-2024",
+          "food-history-cuyahoga-2023",
+          "food-history-geauga-2024",
+          "food-history-geauga-2023",
+          "food-history-lake-2024",
+          "food-history-lake-2023",
+          "food-history-lorain-2024",
+          "food-history-lorain-2023",
+          "food-history-medina-2024",
+          "food-history-medina-2023",
+          "food-history-portage-2024",
+          "food-history-portage-2023",
+          "food-history-summit-2024",
+          "food-history-summit-2023"
+        ],
+        "columns": [
+          "geography",
+          "period",
+          "count",
+          "rate"
+        ]
+      }
+    }
+  ],
+  "sharedOriginals": [
+    "FOOD_SOURCE_MANIFEST.json",
+    "FOOD_SOURCE_CONCORDANCE.json",
+    "FOOD_SOURCE_GUIDE.md",
+    "food_reporting.cjs",
+    "food_plan.cjs",
+    "food-working-plan.json",
+    "food_member_graphics.py",
+    "food-source-lock.json"
+  ],
+  "concordance": "FOOD_SOURCE_CONCORDANCE.json"
+}

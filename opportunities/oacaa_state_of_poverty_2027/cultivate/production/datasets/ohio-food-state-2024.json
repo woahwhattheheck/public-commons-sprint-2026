@@ -1,0 +1,169 @@
+{
+  "schema": "tjl.publication.report-dataset.v1",
+  "id": "ohio-food-state-2024",
+  "title": "Ohio food insecurity and income thresholds — 2024",
+  "description": "Statewide overall and child populations, with exact published counts, rates and program-income thresholds.",
+  "publicationPeriod": "Map the Meal Gap 2026 source working edition",
+  "dataPeriod": "2024",
+  "geography": "Ohio",
+  "methodology": "Counts are modeled persons living in food-insecure households. A child is under age 18. Counts and percentages are independently rounded as published; no denominator is reverse-engineered. Income eligibility among food-insecure children uses 185% of the federal poverty level. It is a share of food-insecure children, not all children, and does not establish actual participation or every program eligibility rule. Meal cost and annual budget shortfall are geography-wide food-cost measures. They are not child-only costs and are not benefit amounts.",
+  "source": {
+    "title": "Feeding America Map the Meal Gap 2026: Ohio",
+    "url": "https://map.feedingamerica.org/county/2024/child/ohio",
+    "locator": "Selected 2024 statewide child and overall pages; exact representations in FOOD_ORIGINALS.json.",
+    "publisher": "Feeding America",
+    "retrievedAt": "2026-10-13",
+    "note": "Public pages were received through Jina Reader and Notion; dates and selected populations are checked before extraction.",
+    "rights": "Published statistical facts with attribution. Source representation and original URLs are retained; publisher branding and narrative are not licensed for reuse."
+  },
+  "columns": [
+    {
+      "key": "geography",
+      "label": "Geographic area",
+      "kind": "text",
+      "role": "label",
+      "unit": "",
+      "period": "2024",
+      "definition": "Original selected Ohio geography."
+    },
+    {
+      "key": "fips",
+      "label": "FIPS",
+      "kind": "text",
+      "role": "geography",
+      "unit": "",
+      "period": "2024",
+      "definition": "Five-digit Census geographic identity, retained separately from the source map URL."
+    },
+    {
+      "key": "period",
+      "label": "Data year",
+      "kind": "text",
+      "role": "period",
+      "unit": "",
+      "period": "2024",
+      "definition": "Measurement year 2024; release 2026."
+    },
+    {
+      "key": "population",
+      "label": "Population",
+      "kind": "text",
+      "role": "note",
+      "unit": "",
+      "period": "2024",
+      "definition": "Child means under 18; overall includes children and adults."
+    },
+    {
+      "key": "count",
+      "label": "Food-insecure people",
+      "kind": "integer",
+      "role": "value",
+      "unit": "persons",
+      "period": "2024",
+      "definition": "Modeled food-insecure persons in this selected population."
+    },
+    {
+      "key": "rate",
+      "label": "Food-insecurity rate",
+      "kind": "decimal",
+      "role": "value",
+      "unit": "percent",
+      "period": "2024",
+      "definition": "Percent of the selected child or overall population."
+    },
+    {
+      "key": "above_threshold",
+      "label": "Above income threshold",
+      "kind": "decimal",
+      "role": "value",
+      "unit": "percent",
+      "period": "2024",
+      "definition": "Share of food-insecure people in the selected population with income above the displayed threshold."
+    },
+    {
+      "key": "below_threshold",
+      "label": "At/below displayed threshold",
+      "kind": "decimal",
+      "role": "value",
+      "unit": "percent",
+      "period": "2024",
+      "definition": "Share of food-insecure children at/below 185% FPL; overall source labels below 130% SNAP threshold."
+    },
+    {
+      "key": "threshold_fpl",
+      "label": "Displayed income threshold",
+      "kind": "decimal",
+      "role": "note",
+      "unit": "percent",
+      "period": "2024",
+      "definition": "Threshold as a percent of the federal poverty level; this is not a participation rate."
+    },
+    {
+      "key": "meal_cost",
+      "label": "Average meal cost",
+      "kind": "decimal",
+      "role": "value",
+      "unit": "USD",
+      "period": "2024",
+      "definition": "Geography-wide modeled average meal cost, not a child-only measure."
+    },
+    {
+      "key": "annual_shortfall",
+      "label": "Annual food-budget shortfall",
+      "kind": "integer",
+      "role": "value",
+      "unit": "USD",
+      "period": "2024",
+      "definition": "Geography-wide annual modeled shortfall across the overall population, not a child-only measure."
+    },
+    {
+      "key": "source_url",
+      "label": "Source URL",
+      "kind": "text",
+      "role": "source",
+      "unit": "",
+      "period": "2024",
+      "definition": "Original selected source page."
+    }
+  ],
+  "rows": [
+    {
+      "id": "food-39000-overall",
+      "values": {
+        "geography": "Ohio",
+        "fips": "39000",
+        "period": "2024",
+        "population": "All people",
+        "count": "1822930",
+        "rate": "15.3",
+        "above_threshold": "60",
+        "below_threshold": "41",
+        "threshold_fpl": "130",
+        "meal_cost": "3.53",
+        "annual_shortfall": "1220450000",
+        "source_url": "https://map.feedingamerica.org/county/2024/overall/ohio"
+      },
+      "locator": "2024 Food Insecurity in Ohio",
+      "note": "Counts are modeled persons living in food-insecure households. A child is under age 18. Counts and percentages are independently rounded as published; no denominator is reverse-engineered. Income eligibility among food-insecure children uses 185% of the federal poverty level. It is a share of food-insecure children, not all children, and does not establish actual participation or every program eligibility rule. Meal cost and annual budget shortfall are geography-wide food-cost measures. They are not child-only costs and are not benefit amounts. Published rounded eligibility percentages 60 and 41 sum to 101 and remain unchanged."
+    },
+    {
+      "id": "food-39000-child",
+      "values": {
+        "geography": "Ohio",
+        "fips": "39000",
+        "period": "2024",
+        "population": "Children under 18",
+        "count": "534640",
+        "rate": "20.8",
+        "above_threshold": "33",
+        "below_threshold": "67",
+        "threshold_fpl": "185",
+        "meal_cost": "3.53",
+        "annual_shortfall": "1220450000",
+        "source_url": "https://map.feedingamerica.org/county/2024/child/ohio"
+      },
+      "locator": "2024 Food Insecurity in Ohio",
+      "note": "Counts are modeled persons living in food-insecure households. A child is under age 18. Counts and percentages are independently rounded as published; no denominator is reverse-engineered. Income eligibility among food-insecure children uses 185% of the federal poverty level. It is a share of food-insecure children, not all children, and does not establish actual participation or every program eligibility rule. Meal cost and annual budget shortfall are geography-wide food-cost measures. They are not child-only costs and are not benefit amounts."
+    }
+  ]
+}
