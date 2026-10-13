@@ -47,15 +47,16 @@ for(const name of codeFiles){
     if(!existsSync(target))copyFileSync(source,target);
   }
 }
+const captureCompanions=["SOURCE_CAPTURE.md","original-join-census.json","supplemental-requests.json"].filter(path=>existsSync(join(root,path)));
 const originalPaths=manifest.originals.map(item=>item.path);
 const dataPaths=[...Object.keys(result.outputs),"derived/station.geojson"];
-const sourcePaths=[...originalPaths,"capture-manifest.json","acquisition-plan.json","capture_rl18151.py",...codeFiles,...dataPaths].sort();
+const sourcePaths=[...originalPaths,"capture-manifest.json","acquisition-plan.json","capture_rl18151.py",...codeFiles,...dataPaths,...captureCompanions].sort();
 save("report.html",renderReport(result,sourcePaths));
 const members=[...sourcePaths,"report.html"].sort().map(descriptor);
 const phosphorus=result.records.filter(row=>/phosphor/i.test(row.characteristic));
 const phosphorusGroups=Object.fromEntries([...new Set(phosphorus.map(row=>row.characteristic))].sort().map(name=>[name,phosphorus.filter(row=>row.characteristic===name).length]));
 const annualRows=result.cohorts.filter(row=>/phosphor/i.test(row.characteristic)).map(row=>[
- row.year,row.characteristic,row.fraction||"(blank)",row.unit,row.depth_value?row.depth_value+" "+row.depth_unit:"(not supplied)",
+ row.year,row.characteristic,row.fraction||"(blank)",row.unit||"(blank)",[row.interval_unit,row.method_specification].filter(Boolean).join(" ")+" / "+row.interval_unit_basis,row.depth_value?row.depth_value+" "+row.depth_unit:"(not supplied)",
  [row.method_context,row.method_id,row.method_name].filter(Boolean).join(":"),String(row.records),String(row.numeric_records),String(row.left_censored_records),
  row.numeric_median===null?"—":String(row.numeric_median)]);
 const recipe={
@@ -69,20 +70,20 @@ const recipe={
    "Requested period: "+manifest.selected_start+" through "+manifest.selected_end+". Returned results span "+result.summary.first_date+" through "+result.summary.last_date+".",
    {kind:"table",columns:["Original scope","Count"],rows:[
     ["Agency responses",String(result.summary.source_response_count)],["Result records",String(result.summary.records)],
-    ["Original activities",String(result.summary.activities)],["Sampling dates",String(result.summary.sampling_dates)],
+    ["Native ResultIdentifiers",String(result.summary.result_identifiers)],["Original activities",String(result.summary.activities)],["Sampling dates",String(result.summary.sampling_dates)],
     ...Object.entries(phosphorusGroups).map(([name,n])=>[name+" result records",String(n)])]},
    {kind:"links",items:[{title:"Offline original-record explorer and exact source inspectors",path:"report.html"},
                         {title:"Original station coordinates and source metadata",path:"original/station.csv"}]}
   ]],
   ["RL-18151 phosphorus source cohorts",[
-   "Rows retain exact fraction, unit, medium, sampling depth, analytical method and result basis. Reported numeric summaries describe only the numeric subset; censored records retain their separate published bounds. No unsampled day, annual load or water flux is reconstructed.",
-   {kind:"table",columns:["Year","Characteristic","Fraction","Unit","Depth","Method","Records","Numeric","Left-censored","Numeric median"],rows:annualRows},
+   "Rows retain exact fraction, original and interval units, chemical basis from the original narrow MethodSpecificationName, medium, sampling depth, analytical method and result basis. Phosphorus is as P, ammonia is as NH3, and nitrogen-as-N source records remain separate. A blank original result value and unit can retain a separately typed, explicitly published quantitation-limit bound. Reported numeric summaries describe only the numeric subset; censored records retain their separate published bounds. No unsampled day, annual load or water flux is reconstructed.",
+   {kind:"table",columns:["Year","Characteristic","Fraction","Original unit","Interval unit / basis","Depth","Method","Records","Numeric","Left-censored","Numeric median"],rows:annualRows},
    {kind:"links",items:[{title:"Complete annual cohorts and exact original-row membership",path:"derived/annual-cohorts.json"},
                         {title:"All original result fields, qualifiers and detection limits",path:"derived/observed-records.json"}]}
   ]],
   ["RL-18151 receiving and interpretation",[
    result.summary.censor_method,result.summary.temporal_comparability,result.summary.interpretation,
-   "Original Result, Activity and DetectionQuantitationLimit tables remain separate source files. The native context tables preserve their source-row identities; any source join that requires an additional identifier is inspected before using a related limit or activity.",
+   result.summary.identity_method,
    {kind:"links",items:[{title:"Complete acquisition requests and assessment-source identity",path:"acquisition-plan.json"},
                         {title:"Per-response retrieval metadata and exact content identities",path:"capture-manifest.json"},
                         {title:"Native receiving and reproducible compilation guide",path:"README.md"}]}
