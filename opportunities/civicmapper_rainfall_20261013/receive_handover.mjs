@@ -52,7 +52,7 @@ async function receiveCatalogueArchive(directory){
  const received=path.join(output,"received-catalogue");
  await extractExactArchive(path.join(directory,archive.file),received,[...names,"manifest.json"]);
  assert(await fs.readFile(path.join(received,"manifest.json"),"utf8")===manifestText,"Received catalogue manifest differs.");
- for(const [name,item] of Object.entries(manifest.files)){const member=await fs.readFile(path.join(received,name));assert(member.length===item.bytes&&sha(member)===item.sha256,"Received catalogue member differs: "+name);}
+ for(const root of [directory,received])for(const [name,item] of Object.entries(manifest.files)){const member=await fs.readFile(path.join(root,name));assert(member.length===item.bytes&&sha(member)===item.sha256,"Catalogue member differs in "+root+": "+name);}
  record("independent_catalogue_zip_receive",{members:names.length+1,archive_sha256:archive.sha256});
  return received;
 }
