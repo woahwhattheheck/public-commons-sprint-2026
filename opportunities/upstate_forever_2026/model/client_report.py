@@ -18,7 +18,7 @@ from .common import INVEST_VERSION
 from .model_selection import MODEL_LABELS, run_scope
 
 SCHEMA = "upstate.client-report/v1"
-REPORT_EDITION = "2026-10-13-client-report-3-companion-1"
+REPORT_EDITION = "2026-10-13-client-report-5"
 RFP_URL = "https://www.upstateforever.org/files/files/20261002_FINAL_EC-SDC%20Mapping%20RFP%20APPENDIX%20COMBINED.pdf"
 RFP_SHA256 = "a519d33190eefaef7ec082c19642fc6b8ef89329ad3c648a561699c7dd277e74"
 POLLUTANTS = (
@@ -132,6 +132,13 @@ def _fmt(value: Any, digits: int = 6) -> str:
         return format(number, f".{digits}g")
     return f"{number:,.{digits}g}"
 
+def _supported_quantity(value: Any, valid_cells: Any) -> str:
+    support, quantity = _num(valid_cells), _num(value)
+    if support is None or support <= 0 or quantity is None:
+        return "Unavailable"
+    return _fmt(quantity)
+
+
 def _pct(value: Any) -> str:
     number = _num(value)
     return _fmt(number * 100, 4) + "%" if number is not None else "Not recorded"
@@ -211,7 +218,7 @@ def _quantity_rows(baseline):
         total = _num(artifact.get("sum"))
         average = total / area if total is not None and area is not None and area > 0 else None
         units = _units(artifact.get("sum_units"), default_units)
-        rows.append([label, _fmt(total), str(units), _fmt(count), _fmt(area),
+        rows.append([label, _supported_quantity(total, count), str(units), _fmt(count), _fmt(area),
                      (_fmt(average) + " " + units.replace("/year", "/ha/year"))
                      if average is not None else "Not applicable"])
     return rows
@@ -261,16 +268,18 @@ def _scenario_rows(workspace, baseline, alternatives, comparison, summary):
                            default_units)
             cn, an, bn = _num(joint), _num(original_n), _num(baseline_n)
             bt, cv = _num(baseline_total), _num(change)
-            equal_support = cn is not None and cn == an == bn
+            equal_support = cn is not None and cn > 0 and cn == an == bn
             benefit = None
             if equal_support and bt is not None and bt > 0 and cv is not None:
                 supplied_benefit = _num(supplied_row.get("benefit_percent"))
                 benefit = supplied_benefit if supplied_benefit is not None else -100 * cv / bt
-            benefit_text = (_fmt(benefit, 4) + "%" if benefit is not None
+            benefit_text = ("Unavailable without paired valid cells" if cn is None or cn <= 0
+                            else _fmt(benefit, 4) + "%" if benefit is not None
                             else "Not comparable across full supports" if not equal_support
                             else "Not applicable to zero baseline" if bt == 0
                             else "Not recorded")
-            rows.append([name, label, _fmt(total), _fmt(change), units,
+            rows.append([name, label, _supported_quantity(total, an),
+                         _supported_quantity(change, cn), units,
                          _fmt(cn), benefit_text])
             support.append({"run_id": run_id, "pollutant": key,
                             "baseline_valid_cells": baseline_n,
@@ -776,17 +785,34 @@ def build_report(*, workspace, directory, selection, state, baseline, alternativ
                  scenario_summary=None, additional_sections=(),
                  output_stem=None, file_key_prefix=""):
     """Drop-in report hook for the existing delivery.py report branch."""
+    from .client_receiving_waters import build_sections, LEGACY_SECTION_TITLE
+
     report = compose_report(workspace=workspace, selection=selection, state=state,
                             baseline=baseline, alternatives=alternatives, grid=grid,
                             profile=profile, source_records=records,
                             observation_results=observation_results, comparison=comparison,
                             scenario_summary=scenario_summary)
-    section_ids = {section["id"] for section in report["sections"]}
+    run_names = {run["id"]: _run_name(workspace, run)[0]
+                 for run in [baseline] + list(alternatives)}
+    water_report = build_sections(
+        directory, state, baseline_run_id=baseline["id"],
+        alternative_run_ids=[run["id"] for run in alternatives],
+        run_names=run_names, number=_fmt, text=_text,
+    )
+    appended = []
     for index, (title, paragraphs) in enumerate(additional_sections, 1):
-        key = "receiving-water-" + str(index)
+        if water_report is not None and title == LEGACY_SECTION_TITLE:
+            continue
+        appended.append(_section("receiving-water-" + str(index), title, paragraphs))
+    if water_report is not None:
+        appended.extend(water_report["sections"])
+        report["quantity_provenance"]["receiving_waters"] = water_report["provenance"]
+    section_ids = {section["id"] for section in report["sections"]}
+    for section in appended:
+        key = section["id"]
         while key in section_ids:
             key += "-additional"
-        report["sections"].append(_section(key, title, paragraphs))
+        report["sections"].append(dict(section, id=key))
         section_ids.add(key)
     return write_report(directory, report, output_stem=output_stem,
                         file_key_prefix=file_key_prefix)

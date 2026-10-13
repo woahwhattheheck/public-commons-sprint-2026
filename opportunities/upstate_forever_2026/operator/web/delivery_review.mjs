@@ -103,7 +103,7 @@ export function createDeliveryReview(ctx) {
         const selection = row.selection || {};
         const count = (selection.scenario_run_ids || selection.alternative_run_ids || []).length;
         const reports = row.files?.report_html && (row.files?.report_data || row.files?.report_model)
-          ? 'Client report included' : 'Report preparation available';
+          ? 'Scientific report included' : 'Report preparation available';
         return '<tr><td class="name-cell"><strong>' +
           esc(selection.title || 'Scientific delivery') + '</strong><small>' +
           esc(when(row.completed_at || row.created_at || row.updated_at)) +
@@ -152,7 +152,7 @@ export function createDeliveryReview(ctx) {
       (byRole.client_report_html && byRole.client_report_model ? button('delivery-client-report', 'Read client companion', attrs(row.id)) : '') +
       openPDF(byRole.report) + download(byRole.delivery_archive, 'Download complete delivery') + '</div>';
     if (row.state === 'received_snapshot') {
-      html += '<p class="report-note">This received copy includes the saved report, maps, study choices and working data. Prepare the complete copy to assemble its local delivery and working-project archives.</p>' +
+      html += '<p class="report-note">This received copy includes the saved report, maps, study choices and original working archive. Prepare the complete delivery ZIP from those retained choices.</p>' +
         button('delivery-report-refresh', 'Prepare complete copy', attrs(row.id), 'primary');
     } else if ((!hasReport || olderEdition) && row.state === 'complete') {
       html += '<p class="report-note">This saved delivery predates the current client-report format. Create the current report edition from the retained study choices.</p>' +
@@ -208,6 +208,32 @@ export function createDeliveryReview(ctx) {
     return html;
   }
 
+  function continuation(row) {
+    const entries = fileEntries(row), byRole = Object.fromEntries(entries.map(file => [file.role, file]));
+    const selection = row.selection || {};
+    const hasReport = Boolean(byRole.report_html && (byRole.report_data || byRole.report_model));
+    const savedEdition = (selection.client_report_edition || row.report_edition || '') + '|' +
+      (selection.report_renderer_version || row.report_renderer_version || '') + '|' +
+      (selection.client_companion_edition || row.client_companion_edition || '');
+    const olderEdition = row._current_report_edition && savedEdition !== row._current_report_edition;
+    let html = '<section class="delivery-review"><h3 class="subheading">Client companion and delivery choices</h3><div class="delivery-actions">';
+    if (byRole.client_report_html && byRole.client_report_model)
+      html += button('delivery-client-report', 'Read client companion', attrs(row.id), 'primary');
+    html += openPDF(byRole.client_report, 'Open companion PDF') +
+      download(byRole.client_report_markdown, 'Download editable companion') +
+      button('delivery-revise', 'Revise delivery choices', attrs(row.id)) + '</div>';
+    if (row.state === 'received_snapshot') {
+      html += '<p class="report-note">The received reports, selected study and original working archive are available here. Build the complete delivery ZIP from these retained choices.</p>' +
+        button('delivery-report-refresh', 'Prepare complete copy', attrs(row.id), 'primary');
+    } else if ((!hasReport || olderEdition) && row.state === 'complete') {
+      html += '<p class="report-note">Create the current report edition from this saved study while retaining its original release.</p>' +
+        button('delivery-report-refresh', 'Create current report edition', attrs(row.id), 'primary');
+    }
+    if (row.state === 'interrupted')
+      html += button('delivery-resume', 'Continue delivery', attrs(row.id), 'primary');
+    return html + '</section>';
+  }
+
   async function preview(id, report = 'scientific') {
     const workspace = ctx.getWorkspace();
     const info = await ctx.api(ctx.endpoint('/api/deliveries/report', {id, report}));
@@ -260,5 +286,5 @@ export function createDeliveryReview(ctx) {
     throw Error('Unknown delivery report action.');
   }
 
-  return {overview, detail, handle};
+  return {overview, detail, continuation, handle};
 }

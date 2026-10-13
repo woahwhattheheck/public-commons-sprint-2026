@@ -56,9 +56,6 @@ ACTIONS = {"source.import", "profile.save", "scenario.save", "grid.prepare",
            "portfolio.run.prepare", "portfolio.run.start"}
 ACTIONS.update(REHEARSAL_ACTIONS)
 ACTIONS.update(CUSTOMER_REVIEW_ACTIONS)
-# PROJECT-TRANSFER12 integration
-from project_transfer import ProjectTransfers, ACTIONS as PROJECT_TRANSFER_ACTIONS
-ACTIONS.update(PROJECT_TRANSFER_ACTIONS)
 ACTIONS.update(EXPERIMENT_ACTIONS)
 ACTIONS.update(PROGRAMME_ACTIONS)
 
@@ -112,7 +109,6 @@ class Operator:
     def __init__(self, directory, state_directory, *, create=False, title=None,
                  source_manifests=(), source_roots=(), restore_directory=None, upload_limit=4*1024**3,
                  extraction_limit=64*1024**3):
-        self.project_transfers = ProjectTransfers(self, Fault)
         self.root = Path(state_directory).resolve()
         self.root.mkdir(parents=True, exist_ok=True, mode=0o700)
         self.owner = held(self.root / ".operator.lock", blocking=False)
@@ -370,8 +366,6 @@ class Operator:
             atomic_json(self.root / "tasks" / (key + ".json"), task)
 
     def _invoke(self, task):
-        if task["action"] in PROJECT_TRANSFER_ACTIONS:
-            return self.project_transfers.invoke(task)
         ws = self.ws(task["workspace"])
         value = task["payload"]
         action = task["action"]
@@ -758,11 +752,23 @@ class Operator:
                             break
                     result.update(sample=rows, sample_limit=20)
         elif entry["kind"] == "raster":
+            import math
             import rasterio
+            from pyproj import CRS
             with rasterio.open(path) as original:
+                reference = CRS.from_user_input(original.crs) if original.crs else None
+                axes = reference.axis_info[:2] if reference else []
+                metre_grid = bool(reference and reference.is_projected and len(axes) == 2
+                                  and all(abs(axis.unit_conversion_factor - 1) <= 1e-12 for axis in axes))
+                affine = original.transform
+                native_cell = (float(affine.a) if metre_grid and affine.a > 0 and affine.e < 0
+                               and abs(affine.b) <= 1e-12 and abs(affine.d) <= 1e-12
+                               and math.isclose(affine.a, -affine.e, rel_tol=1e-9, abs_tol=1e-12)
+                               and math.isfinite(affine.a) else None)
                 result.update(width=original.width, height=original.height, count=original.count,
                               crs=str(original.crs), transform=list(original.transform)[:6],
-                              resolution=list(original.res), bounds=list(original.bounds),
+                              resolution=list(original.res), native_resolution_m=native_cell,
+                              projected_metre_grid=metre_grid, bounds=list(original.bounds),
                               dtypes=list(original.dtypes),
                               nodata=None if original.nodata is None or not __import__("math").isfinite(original.nodata) else original.nodata,
                               native_tags=original.tags())
@@ -820,7 +826,7 @@ class Operator:
                              "community.report.build": "community_reports"}
         if task["action"] in community_actions and task["state"] == "complete":
             task["_downloads"] = self.item(task["workspace"], community_actions[task["action"]], result["id"])["_downloads"]
-        return self.rehearsals.decorate_task(self.extensions.decorate_task(self.experiments.decorate_task(self.programmes.decorate_task(self.project_transfers.decorate_task(self.customer_reviews.decorate_task(task))))))
+        return self.rehearsals.decorate_task(self.extensions.decorate_task(self.experiments.decorate_task(self.programmes.decorate_task(self.customer_reviews.decorate_task(task)))))
 
     def open_download(self, key):
         with self.lock:
