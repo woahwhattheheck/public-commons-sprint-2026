@@ -31,6 +31,7 @@ const asString = value => typeof value === 'string' ? value.trim() : '';
 const asArray = value => Array.isArray(value) ? value : [];
 const obj = value => value && typeof value === 'object' && !Array.isArray(value) ? value : {};
 const safe = value => asString(value).replace(/\\/g,'\\\\').replace(/([`*_[\]<>])/g,'\\$1').replace(/[\u0000-\u001f]/g,' ').replace(/\|/g,'\\|');
+const sentence = value => { const str=safe(value); return /[.!?]$/.test(str)?str:str+'.'; };
 const section = (label, value) => `**${label}:** ${value ? safe(value) : 'NOT PROVIDED'}\n`;
 const privateCustody = value => /\binternal\s*:|(?:notion-file-block|file-upload):\/\/|https?:\/\/(?:[a-z0-9-]+\.)*(?:slack\.com|chatgpt\.com|notion\.com|notion\.so|mail\.google\.com)(?:[/:?#]|$)/i.test(value);
 const money = cents => Number.isSafeInteger(cents) && cents > 0 && cents <= 100000000 ? `$${(cents/100).toFixed(2)}` : 'NOT PROVIDED';
@@ -106,14 +107,14 @@ export function render(doc,quality,{audience='internal'}={}){
     '## 1. Applicant, technical expertise and personnel',
     section('Applicant',a.name),section('Organization or individual background',a.description),section('Reply owner',c.replyOwner),section('Contact',c.email),
     section('Policy / contracting point of contact',a.policyContact),
-    ...asArray(doc.team).map((m,i)=>`- ${i+1}. **${safe(obj(m).name)}**, ${safe(obj(m).role)}: ${safe(obj(m).bio)} (CV evidence: ${evidenceFor(m,'cvEvidence','cvPublicEvidence',`team[${i}].cvPublicEvidence`)})`),
+    ...asArray(doc.team).map((m,i)=>`${i+1}. **${safe(obj(m).name)}**, ${safe(obj(m).role)}: ${safe(obj(m).bio)} (CV evidence: ${evidenceFor(m,'cvEvidence','cvPublicEvidence',`team[${i}].cvPublicEvidence`)})`),
     '',
     '## 2. Primary requested services and loaded hourly rates',
-    ...asArray(doc.services).map((x,i)=>`- ${i+1}. **${safe(SERVICE_LABELS[asString(obj(x).category)]||'INVALID CATEGORY')}**: ${safe(obj(x).offering)}. Method: ${safe(obj(x).method)}`),
+    ...asArray(doc.services).map((x,i)=>`${i+1}. **${safe(SERVICE_LABELS[asString(obj(x).category)]||'INVALID CATEGORY')}**: ${sentence(obj(x).offering)} Method: ${safe(obj(x).method)}`),
     '',
     '| Labor category | Loaded USD / hour | Standard commercial USD / hour (optional) |',
     '|---|---:|---:|',
-    ...asArray(doc.laborRates).map(x=>`| ${safe(obj(x).title)} | ${money(obj(x).loadedHourlyCents)} | ${'commercialHourlyCents' in obj(x)?money(obj(x).commercialHourlyCents):'Not specified'} |`),
+    ...(asArray(doc.laborRates).length?asArray(doc.laborRates).map(x=>`| ${safe(obj(x).title)} | ${money(obj(x).loadedHourlyCents)} | ${'commercialHourlyCents' in obj(x)?money(obj(x).commercialHourlyCents):'Not specified'} |`):['| Actual categories to be supplied | Not provided | Not provided |']),
     '',
     'Rates are inclusive of labor, fringe and indirect costs; reimbursable direct costs require separate preapproval, allowable actual cost and receipts.',
     'The completed original issuer budget workbook accompanies this proposal. Its requested ceiling is an evaluation amount; approved actual casework is billed separately.',
@@ -125,7 +126,7 @@ export function render(doc,quality,{audience='internal'}={}){
     ...Object.entries(REQUIRED_QUALIFICATIONS).map(([k,label])=>section(label,q[k])),
     '',
     '## 5. Examples of prior technical work',
-    ...asArray(doc.workExamples).map((x,i)=>`- ${i+1}. **${safe(obj(x).title)}**: ${safe(obj(x).work)}. ${audience==='submission'?'Evidence':'Evidence/custody'}: ${evidenceFor(x,'evidence','publicEvidence',`workExamples[${i}].publicEvidence`)}.${audience==='internal'?` Disclosure permission: ${x.disclosureApproved===true?'confirmed':'NOT CONFIRMED'}.`:''}`),
+    ...asArray(doc.workExamples).map((x,i)=>`${i+1}. **${safe(obj(x).title)}**: ${sentence(obj(x).work)} ${audience==='submission'?'Evidence':'Evidence/custody'}: ${evidenceFor(x,'evidence','publicEvidence',`workExamples[${i}].publicEvidence`)}.${audience==='internal'?` Disclosure permission: ${x.disclosureApproved===true?'confirmed':'NOT CONFIRMED'}.`:''}`),
     '',
     '## 6. Language proficiencies other than English',section('Languages (use "none" when accurate)',doc.languagesOtherThanEnglish),
     '',
