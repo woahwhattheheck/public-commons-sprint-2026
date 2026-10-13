@@ -20,7 +20,8 @@
     "actions": [
       "assessment.context.build",
       "assessment.context.receive",
-      "assessment.context.criteria"
+      "assessment.context.parcels",
+      "assessment.context.receive_parcels"
     ],
     "invoke": {
       "handler": "invoke",
@@ -70,12 +71,34 @@
           "operation",
           "payload"
         ]
+      },
+      {
+        "methods": [
+          "GET",
+          "POST"
+        ],
+        "path": "/api/assessment-context/parcels",
+        "operation": "parcels",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
       }
     ],
     "items": [
       {
         "kind": "assessment-contexts",
         "handler": "item",
+        "args": [
+          "workspace_key",
+          "payload"
+        ]
+      },
+      {
+        "kind": "assessment-parcel-contexts",
+        "handler": "parcel_item",
         "args": [
           "workspace_key",
           "payload"
@@ -93,6 +116,12 @@
       "handler": "decorate_task",
       "args": [
         "task"
+      ]
+    },
+    "verify_workspace": {
+      "handler": "verify_workspace",
+      "args": [
+        "workspace"
       ]
     }
   },

@@ -25,6 +25,11 @@ KIND = "assessment-contexts"
 SCHEMA = "upstate.assessment-geographic-context/v1"
 PACKAGE = "upstate.assessment-context-package/v1"
 SOURCE_ID = "assessment-geographic-context"
+PARCEL_KIND = "assessment-parcel-contexts"
+KNOWN_ASSESSMENT_SHA = "545a4e1413012b8f17c81c8afe815dd1e225ade5f5b9792ca22e83ef8723307f"
+KNOWN_ASSESSMENT = {"title":"South Carolina 2026 draft integrated assessment",
+                    "status":"draft","vintage":"2026",
+                    "reference":"https://apps.des.sc.gov/PublicNotices/SearchAndDisplay/PDF/302110"}
 RELATION = ("Geographic context of selected original assessment records. Polygon association "
             "does not designate every location in the polygon as impaired or establish "
             "hydrologic contribution from an intersecting parcel.")
@@ -86,13 +91,15 @@ def options(workspace, geography_id, table=None):
         fields = sorted({key for row in records for key in row["original"]})
         values = {key: sorted({_field(row["original"].get(key)) for row in records}) for key in fields}
         defaults = {key: name for key,name in (("watershed","huc12"),("cause","cause"),
-                    ("use","impaired_use"),("county","county")) if name in fields}
+                    ("use","impaired_use"),("county","county"),("assessment_edition","assessment_edition"),
+                    ("assessment_title","assessment_title"),("assessment_status","assessment_status"),
+                    ("assessment_vintage","assessment_vintage"),("assessment_reference","assessment_reference")) if name in fields}
         tables.append({"reference": _source_ref(reference), "title": binding.get("title"),
                        "uri": binding.get("uri"), "vintage": binding["source_metadata"].get("vintage"),
                        "source_sha256": binding["source_sha256"], "row_count": len(records),
-                       "assessment_defaults": ({"title":"South Carolina 2026 draft integrated assessment",
-                           "status":"draft","vintage":"2026","reference":binding.get("uri")}
-                           if binding["source_sha256"]=="545a4e1413012b8f17c81c8afe815dd1e225ade5f5b9792ca22e83ef8723307f"
+                       "assessment_locked":binding["source_sha256"]==KNOWN_ASSESSMENT_SHA,
+                       "assessment_defaults": (_copy(KNOWN_ASSESSMENT)
+                           if binding["source_sha256"]==KNOWN_ASSESSMENT_SHA
                            else {"title":binding.get("title") or "",
                                  "status":(binding["source_metadata"].get("metadata") or {}).get("assessment_status",""),
                                  "vintage":binding["source_metadata"].get("vintage") or "",
@@ -114,6 +121,8 @@ def catalog(workspace):
         for row in workspace._list(geography.KIND)],
         "editions": [{key:row.get(key) for key in ("id","title","summary","created_at","selection")}
                      for row in workspace._list(KIND)],
+        "parcel_editions": [{key:row.get(key) for key in ("id","title","summary","context_id","study_id","created_at")}
+                            for row in workspace._list(PARCEL_KIND)],
         "parcel_studies": [row for row in conservation.overview(workspace)["studies"]
                           if row.get("unit_type") == "parcel"]}
 
@@ -134,12 +143,13 @@ def _selection(study, value):
     fields = result.get("fields")
     if not isinstance(fields, dict) or not {"watershed","cause","use"} <= set(fields):
         raise ValueError("Select original watershed, cause and impaired-use fields")
-    if set(fields) - {"watershed","cause","use","county"}:
+    if set(fields) - {"watershed","cause","use","county","assessment_edition","assessment_title",
+                      "assessment_status","assessment_vintage","assessment_reference"}:
         raise ValueError("Unknown assessment field binding")
     fields = {key:_text(value, "Original " + key + " field") for key,value in fields.items()}
     result["fields"] = fields
     filters = result.get("filters") or {}
-    if not isinstance(filters, dict) or set(filters) - {"causes","uses","counties"}:
+    if not isinstance(filters, dict) or set(filters) - {"causes","uses","counties","editions"}:
         raise ValueError("Choose exact original cause, use and county filters")
     for key, values in filters.items():
         if not isinstance(values, list) or any(not isinstance(item,str) for item in values):
@@ -149,8 +159,9 @@ def _selection(study, value):
     assessment = result.get("assessment")
     if not isinstance(assessment, dict):
         raise ValueError("Retain the selected assessment title, status, vintage and reference")
-    result["assessment"] = {key:_text(assessment.get(key), "Assessment " + key)
-                            for key in ("title","status","vintage","reference")}
+    result["assessment"] = (_copy(KNOWN_ASSESSMENT) if binding["source_sha256"]==KNOWN_ASSESSMENT_SHA else
+                                {key:_text(assessment.get(key), "Assessment " + key)
+                                 for key in ("title","status","vintage","reference")})
     result["table_source_sha256"] = binding["source_sha256"]
     return result, binding
 
@@ -170,11 +181,28 @@ def _csv(rows, columns):
         writer.writerow(rendered)
     return output.getvalue().encode("utf-8")
 
+
+def _assessment_groups(rows):
+    groups={}
+    for row in rows:
+        identity={"assessment":row["assessment"],"edition":row["assessment_edition"],
+                  "cause":row["cause"],"impaired_use":row["impaired_use"]}
+        key=digest(identity)
+        group=groups.setdefault(key,{"id":key,**_copy(identity),"station_ids":set(),"row_numbers":[]})
+        group["station_ids"].add(row["station_id"]);group["row_numbers"].append(row["row_number"])
+    return [{**value,"station_ids":sorted(value["station_ids"]),"row_numbers":sorted(value["row_numbers"]),
+             "station_count":len(value["station_ids"]),"assessment_row_count":len(value["row_numbers"])}
+            for key,value in sorted(groups.items())]
+
 def _report(result):
     esc = lambda value: html.escape(str(value), quote=True)
     rows = "".join("<tr>" + "".join("<td>" + esc(row.get(key,"")) + "</td>" for key in
                   ("watershed_id","station_count","assessment_row_count","causes","uses")) + "</tr>"
                   for row in result["watersheds"])
+    groups = "".join("<tr>"+"".join("<td>"+esc(value)+"</td>" for value in
+              (row["edition"],row["assessment"]["title"],row["assessment"]["status"],
+               row["assessment"]["vintage"],row["cause"],row["impaired_use"],row["assessment_row_count"]))+
+              "</tr>" for row in result["assessment_groups"])
     issues = "".join("<li>" + esc(row["station_id"]) + " / original row " +
                      str(row["row_number"]) + ": " + esc(row["geographic_status"]) + "</li>"
                      for row in result["rows"] if row["geographic_status"] != "matched")
@@ -191,10 +219,12 @@ def _report(result):
             "</p><h2>Selected watershed context</h2><table><thead><tr><th>Original watershed ID</th>"
             "<th>Distinct stations</th><th>Assessment rows</th><th>Original causes</th><th>Original uses</th>"
             "</tr></thead><tbody>" + rows + "</tbody></table><h2>Unresolved or multiple associations</h2><ul>" +
-            issues + "</ul><p>Complete original rows, both association methods and source identities accompany "
+            issues + "</ul><h2>Original assessment editions and cause/use groups</h2><table><tr>"
+            "<th>Edition</th><th>Title</th><th>Status</th><th>Vintage</th><th>Cause</th><th>Use</th><th>Rows</th>"
+            "</tr>"+groups+"</table><p>Complete original rows, both association methods and source identities accompany "
             "this report in JSON and CSV.</p></html>").encode("utf-8")
 
-def _criteria_binding(collection_id, selection):
+def _context_binding(collection_id, selection):
     assessment = selection["assessment"]
     filters = selection["filters"]
     reference = (assessment["title"] + "; status " + assessment["status"] + "; vintage " +
@@ -213,10 +243,10 @@ def build(workspace, value):
     field_names = set(fields.values())
     if any(field_names - set(row["original"]) for row in rows):
         raise ValueError("A selected original field is absent from an assessment row")
-    for category, field in (("causes","cause"),("uses","use"),("counties","county")):
+    for category, field in (("causes","cause"),("uses","use"),("counties","county"),("editions","assessment_edition")):
         wanted = filters.get(category, [])
         if wanted and field not in fields:
-            raise ValueError("Select the original county field before filtering counties")
+            raise ValueError("Select the original "+field+" field before filtering "+category)
         if wanted:
             available = {_field(row["original"].get(fields[field])) for row in rows}
             if set(wanted) - available:
@@ -246,8 +276,17 @@ def build(workspace, value):
                 "computed_polygon_ids":[feature["id"] for feature in computed],
                 "selected_polygon_ids":[feature["id"] for feature in chosen],
                 "cause":row["original"][fields["cause"]], "impaired_use":row["original"][fields["use"]],
+                "assessment":(_copy(KNOWN_ASSESSMENT) if binding["source_sha256"]==KNOWN_ASSESSMENT_SHA
+                    else {name:(row["original"][fields["assessment_"+name]]
+                                if "assessment_"+name in fields else selection["assessment"][name])
+                          for name in ("title","status","vintage","reference")}),
+                "assessment_edition":row["original"].get(fields.get("assessment_edition"))
+                                     if fields.get("assessment_edition") else None,
                 "geographic_status":"unmatched" if not chosen else "multiple" if len(chosen)>1 else "matched",
-                "association_agreement":set(f["id"] for f in published) == set(computed_ids),
+                "association_agreement":(set(f["id"] for f in published) == set(computed_ids)) if published and computed else None,
+                "association_status":("both_resolved_agree" if set(f["id"] for f in published)==set(computed_ids)
+                                      else "both_resolved_differ") if published and computed else
+                                     "published_only" if published else "computed_only" if computed else "neither_resolved",
                 "computed_boundary_or_overlap":row["watershed_status"] in ("boundary","overlap")}
         selected_rows.append(item)
         for feature in chosen:
@@ -265,13 +304,15 @@ def build(workspace, value):
                    "uses":sorted({_field(row["impaired_use"]) for row in members}),
                    "station_ids":sorted({row["station_id"] for row in members}),
                    "source_ref":native["source_ref"],
-                   "assessment_row_numbers":sorted({row["row_number"] for row in members})}
+                   "assessment_row_numbers":sorted({row["row_number"] for row in members}),
+                   "assessment_groups":_assessment_groups(members)}
         summaries.append(summary)
         properties = {key:summary[key] for key in
                       ("context_id","watershed_id","station_count","assessment_row_count")}
-        properties.update(assessment_title=selection["assessment"]["title"],
-            assessment_status=selection["assessment"]["status"],
-            assessment_vintage=selection["assessment"]["vintage"],
+        properties.update(inventory_title=selection["assessment"]["title"],
+            assessment_groups_json=json.dumps(summary["assessment_groups"],ensure_ascii=False,sort_keys=True),
+            inventory_status=selection["assessment"]["status"],
+            inventory_vintage=selection["assessment"]["vintage"],
             relationship_basis=selection["relationship_basis"], relation=RELATION,
             causes_json=json.dumps(summary["causes"],ensure_ascii=False),
             uses_json=json.dumps(summary["uses"],ensure_ascii=False),
@@ -297,13 +338,15 @@ def build(workspace, value):
                    "watershed_count":len(features),
                    "unmatched_row_count":sum(row["geographic_status"]=="unmatched" for row in selected_rows),
                    "multiple_association_row_count":sum(row["geographic_status"]=="multiple" for row in selected_rows),
-                   "differing_association_row_count":sum(not row["association_agreement"] for row in selected_rows)}
+                   "differing_association_row_count":sum(row["association_agreement"] is False for row in selected_rows),
+                   "unresolved_comparison_row_count":sum(row["association_agreement"] is None for row in selected_rows)}
         result = {"schema":SCHEMA,"version":VERSION,"title":selection["title"],"created_at":created,
                   "build_id":build_id,"selection":selection,"assessment":selection["assessment"],
                   "relationship_basis":selection["relationship_basis"],"relation":RELATION,
                   "coverage":{"negative_association":"unknown","basis":"Selected station assessment inventory",
                               "selected_source_polygon_count":len(polygons)},
                   "summary":summary,"rows":selected_rows,"watersheds":summaries,
+                  "assessment_groups":_assessment_groups(selected_rows),
                   "original_geography_id":study["id"],"original_geography_build_id":study["build_id"],
                   "assessment_source":binding}
         atomic_json(destination/"selection.json",selection,immutable=True)
@@ -311,12 +354,12 @@ def build(workspace, value):
         atomic_json(destination/"context.geojson",{"type":"FeatureCollection","features":features},immutable=True)
         atomic_bytes(destination/"assessment-rows.csv",_csv(selected_rows,[
             "station_id","row_number","cause","impaired_use","original_watershed_value",
-            "location_status","watershed_status","geographic_status","association_agreement",
+            "location_status","watershed_status","geographic_status","association_agreement","association_status",
             "computed_boundary_or_overlap","published_polygon_ids","computed_polygon_ids",
-            "selected_polygon_ids","computed_memberships","source_ref","original"]),immutable=True)
+            "selected_polygon_ids","computed_memberships","assessment","assessment_edition","source_ref","original"]),immutable=True)
         atomic_bytes(destination/"watershed-context.csv",_csv(summaries,[
             "context_id","watershed_id","station_count","assessment_row_count","causes","uses",
-            "station_ids","assessment_row_numbers","source_ref"]),immutable=True)
+            "station_ids","assessment_row_numbers","assessment_groups","source_ref"]),immutable=True)
         atomic_bytes(destination/"OPEN_ASSESSMENT_CONTEXT.html",_report(result),immutable=True)
         original_archive = next(item for item in study["files"]
                                 if Path(item["path"]).name=="station-geography.zip")
@@ -339,18 +382,18 @@ def build(workspace, value):
                  "id_field":"context_id","source_crs":"EPSG:4326",
                  "metadata":{"assessment":selection["assessment"],"relation":RELATION,
                              "negative_coverage":"unknown","original_station_geography":study["id"],
-                             "parcel_criteria":{key:value for key,value in _criteria_binding("",selection).items()
+                             "geographic_context":{key:value for key,value in _context_binding("",selection).items()
                                                if key in ("reference","relation","meaning")}},
                  "companions":[{"path":name,"sha256":file_digest(destination/name)} for name in companion_names]}
         manifest = {"schema":"upstate.sources/v1","title":selection["title"],"captured_at":created,
                     "entries":[entry],"notes":[RELATION]}
         atomic_json(destination/"sources.json",manifest,immutable=True)
         imported = workspace.import_sources(destination/"sources.json")
-        parcel_binding = _criteria_binding(imported["id"],selection)
-        atomic_json(destination/"parcel-criteria-binding.json",{"sources":{"impairments":parcel_binding}},immutable=True)
+        context_binding = _context_binding(imported["id"],selection)
+        atomic_json(destination/"geographic-context-binding.json",context_binding,immutable=True)
         exported_names = ["started.json","selection.json","context.json","context.geojson",
                           "assessment-rows.csv","watershed-context.csv","OPEN_ASSESSMENT_CONTEXT.html",
-                          "original-station-geography.zip","sources.json","parcel-criteria-binding.json"]
+                          "original-station-geography.zip","sources.json","geographic-context-binding.json"]
         inventory = [describe_file(destination,destination/name) for name in exported_names]
         package = {"schema":PACKAGE,"version":VERSION,"selection":selection,
                    "table_source_sha256":binding["source_sha256"],
@@ -362,14 +405,14 @@ def build(workspace, value):
         pending = destination/"assessment-context.zip.pending"
         with zipfile.ZipFile(pending,"w",compression=zipfile.ZIP_DEFLATED,compresslevel=6) as archive:
             for name in exported_names+["package.json"]:
-                archive.write(destination/name,name)
+                archive.write(destination/name,name,compress_type=zipfile.ZIP_STORED if name.endswith(".zip") else zipfile.ZIP_DEFLATED)
         os.replace(pending,archive_path)
         files = [describe_file(workspace.root,destination/name,label=name)
                  for name in exported_names+["package.json","assessment-context.zip"]]
         saved = workspace._save(KIND,{"version":VERSION,"title":selection["title"],"created_at":created,
             "selection":selection,"build_id":build_id,"summary":summary,"files":files,
             "source_collection_id":imported["id"],"source_id":SOURCE_ID,
-            "parcel_criteria_binding":parcel_binding})
+            "context_source_binding":context_binding})
         atomic_json(saved_path,{"id":saved["id"],"build_id":build_id},immutable=True)
         return saved
 
@@ -385,17 +428,209 @@ def inspect(workspace, key, *, verify=False, include_result=False):
             row[key] = read_json(verify_file(workspace.root,item))
     return row
 
-def prepare_parcel_criteria(workspace, context_id, study_id, *, settings=None, sources=None):
-    from source_tools import parcel_criteria
-    context = inspect(workspace,context_id,verify=True)
-    selected = _copy(sources or {})
-    if "impairments" in selected and selected["impairments"]!=context["parcel_criteria_binding"]:
-        raise ValueError("Parcel selection already contains another assessment association")
-    selected["impairments"] = context["parcel_criteria_binding"]
-    value = {"study_id":identifier(study_id),"sources":selected}
-    if settings is not None:
-        value["settings"] = _copy(settings)
-    return parcel_criteria.prepare(workspace,value)
+def parcel_associations(workspace, context_id, study_id):
+    """Retain parcel/context geometry associations independently of impairment scoring."""
+    from . import conservation
+    from pyproj import Transformer
+    from shapely.geometry import shape, mapping
+    from shapely.ops import transform, unary_union
+    try:
+        from shapely import STRtree
+    except ImportError:
+        from shapely.strtree import STRtree
+    context = inspect(workspace,context_id,verify=True,include_result=True)
+    study = conservation.inspect(workspace,identifier(study_id),include_candidates=False)
+    if study["selection"]["spec"]["unit_type"]!="parcel":
+        raise ValueError("Choose an original parcel study")
+    crs, reporting, units, _, _ = conservation._geometry_inputs(workspace,study)
+    to_metric = Transformer.from_crs("EPSG:4326",crs,always_xy=True)
+    to_wgs = Transformer.from_crs(crs,"EPSG:4326",always_xy=True)
+    originals = context["geojson"]["features"]
+    shapes = [transform(to_metric.transform,shape(feature["geometry"])) for feature in originals]
+    if any(p.is_empty or not p.is_valid for p in shapes):
+        raise ValueError("Use valid retained assessment-context polygon geometry")
+    tree=STRtree(shapes)
+    summary_by_id={row["context_id"]:row for row in context["result"]["watersheds"]}
+    key=digest({"version":VERSION,"context_id":context["id"],"study_id":study["id"],
+                "study_selection":study["selection"],"method":"reporting-parcel polygon intersection"})
+    directory=workspace.root/"assessment-parcel-context"/key
+    directory.mkdir(parents=True,exist_ok=True)
+    with held(directory/".association.lock"):
+        if (directory/"edition.json").exists():
+            return inspect_parcels(workspace,read_json(directory/"edition.json")["id"],verify=True)
+        started=directory/"started.json"
+        if not started.exists():
+            atomic_json(started,{"created_at":now()},immutable=True)
+        rows,relationships,features=[],[],[]
+        for unit in units:
+            zone=unit["clipped"];pieces=[];linked=[];hits=[];station_ids=set();row_numbers=set()
+            for found in tree.query(zone):
+                if hasattr(found,"geom_type"):
+                    indices=[i for i,p in enumerate(shapes) if p is found]
+                else:
+                    indices=[int(found)]
+                for index in indices:
+                    overlap=zone.intersection(shapes[index])
+                    if overlap.is_empty:
+                        continue
+                    area=float(overlap.area);feature=originals[index]
+                    native=summary_by_id[feature["id"]]
+                    relation="area_overlap" if area>0 else "boundary_contact"
+                    hit={"parcel_id":unit["id"],"context_id":feature["id"],
+                         "watershed_id":native["watershed_id"],"relation":relation,
+                         "overlap_area_ha":area/10000.0,"reporting_parcel_fraction":area/zone.area,
+                         "station_ids":native["station_ids"],"assessment_row_numbers":native["assessment_row_numbers"],
+                         "original_watershed_source":native["source_ref"]}
+                    relationships.append(hit);hits.append(hit);linked.append(feature["id"])
+                    station_ids.update(native["station_ids"]);row_numbers.update(native["assessment_row_numbers"])
+                    if area>0:
+                        pieces.append(overlap)
+            union_area=float(unary_union(pieces).area) if pieces else 0.0
+            row={"parcel_id":unit["id"],"label":unit["label"],
+                 "full_parcel_area_ha":float(unit["geometry"].area)/10000.0,
+                 "reporting_parcel_area_ha":float(zone.area)/10000.0,
+                 "context_overlap_area_ha":union_area/10000.0,
+                 "reporting_context_fraction":union_area/zone.area,
+                 "association_status":"area_overlap" if union_area>0 else "boundary_contact" if linked else "no_selected_context_intersection",
+                 "context_ids":sorted(set(linked)),"station_ids":sorted(station_ids),
+                 "assessment_row_numbers":sorted(row_numbers),"context_count":len(set(linked)),
+                 "station_count":len(station_ids),"assessment_row_count":len(row_numbers),
+                 "original_parcel_attributes":_copy(unit["properties"]),
+                 "geometry_corrections":_copy(unit.get("geometry_corrections",[])),
+                 "source_axes":_copy(unit.get("source_axes")),
+                 "source_array_index":unit.get("source_array_index")}
+            rows.append(row)
+            properties={name:row[name] for name in ("parcel_id","label","full_parcel_area_ha",
+                "reporting_parcel_area_ha","context_overlap_area_ha","reporting_context_fraction",
+                "association_status","context_count","station_count","assessment_row_count")}
+            properties["original_attributes_json"]=json.dumps(row["original_parcel_attributes"],ensure_ascii=False,sort_keys=True)
+            features.append({"type":"Feature","id":unit["id"],"geometry":mapping(transform(to_wgs.transform,zone)),
+                             "properties":properties})
+        created=read_json(started)["created_at"]
+        summary={"parcel_count":len(rows),"area_association_parcel_count":sum(r["association_status"]=="area_overlap" for r in rows),
+                 "boundary_contact_parcel_count":sum(r["association_status"]=="boundary_contact" for r in rows),
+                 "without_selected_context_count":sum(r["association_status"]=="no_selected_context_intersection" for r in rows),
+                 "relationship_count":len(relationships)}
+        result={"schema":"upstate.assessment-parcel-context/v1","version":VERSION,
+                "title":context["title"]+" — "+study["title"],"created_at":created,
+                "context_id":context["id"],"study_id":study["id"],"summary":summary,
+                "assessment":context["result"]["assessment"],"assessment_groups":context["result"]["assessment_groups"],"relation":RELATION,
+                "method":"Positive polygon area overlap and boundary-only contact recorded separately; area is the union within each reporting-clipped parcel",
+                "analysis_crs_wkt":crs.to_wkt(),"study_selection":study["selection"],
+                "rows":rows,"relationships":relationships,
+                "assessment_rows":context["result"]["rows"],
+                "score_effect":"Independent geographic association; no published impairment criterion or score is changed."}
+        atomic_json(directory/"parcel-context.json",result)
+        atomic_json(directory/"parcel-context.geojson",{"type":"FeatureCollection","features":features})
+        columns=["parcel_id","label","association_status","full_parcel_area_ha","reporting_parcel_area_ha",
+                 "context_overlap_area_ha","reporting_context_fraction","context_count","station_count",
+                 "assessment_row_count","context_ids","station_ids","assessment_row_numbers",
+                 "original_parcel_attributes","geometry_corrections","source_axes","source_array_index"]
+        atomic_bytes(directory/"parcel-context.csv",_csv(rows,columns))
+        atomic_bytes(directory/"parcel-context-relationships.csv",_csv(relationships,[
+            "parcel_id","context_id","watershed_id","relation","overlap_area_ha","reporting_parcel_fraction",
+            "station_ids","assessment_row_numbers","original_watershed_source"]))
+        atomic_json(directory/"original-parcel-study.json",study)
+        context_archive=next(item for item in context["files"] if Path(item["path"]).name=="assessment-context.zip")
+        shutil.copyfile(verify_file(workspace.root,context_archive),directory/"assessment-context.zip")
+        spec=study["selection"]["spec"]
+        bindings=[]
+        for choice in [spec["parcels"]]+([spec["reporting_area"]] if spec.get("reporting_area") else []):
+            _,_,binding=geography._source(workspace,{"collection_id":choice["source_collection_id"],
+                                                   "source_id":choice["source_id"]})
+            bindings.append(binding)
+        manifests,_=geography._package_inputs(workspace,directory,bindings,[])
+        if study["selection"]["bindings"].get("grid"):
+            grid=study["selection"]["bindings"]["grid"]
+            source=verify_file(workspace.root/"grids"/grid["id"],grid["reporting_area"])
+            shutil.copyfile(source,directory/("original-reporting-boundary"+source.suffix))
+            atomic_json(directory/"original-grid-binding.json",grid)
+        atomic_json(directory/"retained-source-manifests.json",manifests)
+        esc=lambda value:html.escape(str(value),quote=True)
+        document=("<!doctype html><html lang=en><meta charset=utf-8><title>"+esc(result["title"])+
+            "</title><style>body{font:15px system-ui;margin:2rem;color:#222}table{border-collapse:collapse}"
+            "td,th{padding:.5rem;border:1px solid #bbb;text-align:left}</style><h1>"+esc(result["title"])+
+            "</h1><p>"+esc(RELATION)+"</p><p>"+esc(result["score_effect"])+
+            "</p><p>Area is measured in the original study metric CRS. Per-parcel overlap unions avoid double counting "
+            "overlapping context polygons; overlapping source parcels remain independent.</p><table><tr><th>Original parcel</th>"
+            "<th>Association</th><th>Context overlap ha</th><th>Reporting fraction</th><th>Stations</th></tr>"+
+            "".join("<tr>"+"".join("<td>"+esc(row[key])+"</td>" for key in
+                    ("parcel_id","association_status","context_overlap_area_ha","reporting_context_fraction","station_count"))+
+                    "</tr>" for row in rows)+"</table></html>")
+        atomic_bytes(directory/"OPEN_PARCEL_CONTEXT.html",document.encode("utf-8"))
+        names=[path.relative_to(directory).as_posix() for path in sorted(directory.rglob("*"))
+               if path.is_file() and path.relative_to(directory).as_posix() not in
+               (".association.lock","parcel-context.zip","parcel-context.zip.pending","edition.json","package.json")]
+        package={"schema":"upstate.assessment-parcel-context-package/v1",
+                 "context_id":context["id"],"study_id":study["id"],
+                 "files":[describe_file(directory,directory/name) for name in names]}
+        atomic_json(directory/"package.json",package)
+        pending=directory/"parcel-context.zip.pending"
+        with zipfile.ZipFile(pending,"w",compression=zipfile.ZIP_DEFLATED) as archive:
+            for name in names+["package.json"]:
+                archive.write(directory/name,name,compress_type=zipfile.ZIP_STORED if name.endswith(".zip") else zipfile.ZIP_DEFLATED)
+        os.replace(pending,directory/"parcel-context.zip")
+        exported=["parcel-context.json","parcel-context.geojson","parcel-context.csv",
+                  "parcel-context-relationships.csv","OPEN_PARCEL_CONTEXT.html","package.json","parcel-context.zip"]
+        saved=workspace._save(PARCEL_KIND,{"version":VERSION,"title":result["title"],
+             "context_id":context["id"],"study_id":study["id"],"created_at":created,"summary":summary,
+             "files":[describe_file(workspace.root,directory/name,label=name) for name in exported]})
+        atomic_json(directory/"edition.json",{"id":saved["id"]},immutable=True)
+        return saved
+
+def inspect_parcels(workspace,key,*,verify=False,include_result=False):
+    row=workspace._get(PARCEL_KIND,identifier(key))
+    if verify:
+        for item in row["files"]:
+            verify_file(workspace.root,item)
+    if include_result:
+        item=next(item for item in row["files"] if Path(item["path"]).name=="parcel-context.json")
+        row["result"]=read_json(verify_file(workspace.root,item))
+    return row
+
+def _restore_package(path, target, schema, max_extracted_bytes):
+    with zipfile.ZipFile(path) as archive:
+        members = {}
+        for item in archive.infolist():
+            name = geography._safe_member(item.filename).as_posix()
+            mode = item.external_attr>>16
+            if item.is_dir() or item.flag_bits&1 or (stat.S_IFMT(mode) not in (0,stat.S_IFREG)):
+                raise ValueError("Context archive needs ordinary unencrypted file members")
+            if name.casefold() in {key.casefold() for key in members}:
+                raise ValueError("Context archive repeats a member")
+            members[name]=item
+        if sum(item.file_size for item in members.values())>max_extracted_bytes or len(members)>20000:
+            raise ValueError("Context archive exceeds the receiving extraction limit")
+        if "package.json" not in members or members["package.json"].file_size>16*1024**2:
+            raise ValueError("Context archive has no usable complete inventory")
+        package = json.loads(archive.read("package.json"))
+        if package.get("schema")!=schema:
+            raise ValueError("Choose an assessment geographic-context archive")
+        declared = {item["path"]:item for item in package["files"]}
+        if len(declared)!=len(package["files"]) or set(declared)!=set(members)-{"package.json"}:
+            raise ValueError("Context archive and its complete inventory differ")
+        for name,item in declared.items():
+            if item["bytes"]!=members[name].file_size:
+                raise ValueError("Context archive member length differs")
+        restored = target/"original"
+        if not restored.exists():
+            with tempfile.TemporaryDirectory(prefix=".context-",dir=target) as temporary:
+                stage = Path(temporary)/"original"
+                stage.mkdir()
+                for name,item in members.items():
+                    out=stage.joinpath(*geography._safe_member(name).parts)
+                    out.parent.mkdir(parents=True,exist_ok=True)
+                    with archive.open(item) as stream,out.open("wb") as dest:
+                        shutil.copyfileobj(stream,dest,1024*1024)
+                    if name in declared and file_digest(out)!=declared[name]["sha256"]:
+                        raise ValueError("Context archive member hash differs")
+                os.rename(stage,restored)
+        if read_json(restored/"package.json")!=package:
+            raise ValueError("Retained package inventory changed")
+        for name,item in declared.items():
+            if (restored/name).stat().st_size!=item["bytes"] or file_digest(restored/name)!=item["sha256"]:
+                raise ValueError("Retained received context member changed")
+    return restored,package
 
 def receive(workspace, path, *, max_extracted_bytes=2*1024**3):
     path = Path(path).resolve(strict=True)
@@ -405,45 +640,7 @@ def receive(workspace, path, *, max_extracted_bytes=2*1024**3):
         receipt = target/"received.json"
         if receipt.exists():
             return inspect(workspace,read_json(receipt)["id"],verify=True)
-        with zipfile.ZipFile(path) as archive:
-            members = {}
-            for item in archive.infolist():
-                name = geography._safe_member(item.filename).as_posix()
-                mode = item.external_attr>>16
-                if item.is_dir() or item.flag_bits&1 or (stat.S_IFMT(mode) not in (0,stat.S_IFREG)):
-                    raise ValueError("Context archive needs ordinary unencrypted file members")
-                if name.casefold() in {key.casefold() for key in members}:
-                    raise ValueError("Context archive repeats a member")
-                members[name]=item
-            if sum(item.file_size for item in members.values())>max_extracted_bytes or len(members)>20000:
-                raise ValueError("Context archive exceeds the receiving extraction limit")
-            if "package.json" not in members or members["package.json"].file_size>16*1024**2:
-                raise ValueError("Context archive has no usable complete inventory")
-            package = json.loads(archive.read("package.json"))
-            if package.get("schema")!=PACKAGE:
-                raise ValueError("Choose an assessment geographic-context archive")
-            declared = {item["path"]:item for item in package["files"]}
-            if len(declared)!=len(package["files"]) or set(declared)!=set(members)-{"package.json"}:
-                raise ValueError("Context archive and its complete inventory differ")
-            for name,item in declared.items():
-                if item["bytes"]!=members[name].file_size:
-                    raise ValueError("Context archive member length differs")
-            restored = target/"original"
-            if not restored.exists():
-                with tempfile.TemporaryDirectory(prefix=".context-",dir=target) as temporary:
-                    stage = Path(temporary)/"original"
-                    stage.mkdir()
-                    for name,item in members.items():
-                        out=stage.joinpath(*geography._safe_member(name).parts)
-                        out.parent.mkdir(parents=True,exist_ok=True)
-                        with archive.open(item) as stream,out.open("wb") as dest:
-                            shutil.copyfileobj(stream,dest,1024*1024)
-                        if name in declared and file_digest(out)!=declared[name]["sha256"]:
-                            raise ValueError("Context archive member hash differs")
-                    os.rename(stage,restored)
-            for name,item in declared.items():
-                if (restored/name).stat().st_size!=item["bytes"] or file_digest(restored/name)!=item["sha256"]:
-                    raise ValueError("Retained received context member changed")
+        restored,package=_restore_package(path,target,PACKAGE,max_extracted_bytes)
         study = geography.receive(workspace,restored/"original-station-geography.zip",
                                    max_extracted_bytes=max_extracted_bytes)
         selection = _copy(package["selection"])
@@ -458,10 +655,62 @@ def receive(workspace, path, *, max_extracted_bytes=2*1024**3):
         atomic_json(receipt,{"id":result["id"],"original_selection":package["selection"]},immutable=True)
         return result
 
+
+def receive_parcels(workspace,path,*,max_extracted_bytes=2*1024**3):
+    """Reopen a complete saved parcel association and retain its original inputs."""
+    path=Path(path).resolve(strict=True)
+    archive_sha=file_digest(path)
+    target=workspace.root/"assessment-parcel-context-received"/archive_sha
+    target.mkdir(parents=True,exist_ok=True)
+    with held(target/".receive.lock"):
+        receipt_path=target/"received.json"
+        receipt=read_json(receipt_path) if receipt_path.exists() else {"source_map":{}}
+        if receipt.get("id"):
+            return inspect_parcels(workspace,receipt["id"],verify=True)
+        restored,package=_restore_package(path,target,"upstate.assessment-parcel-context-package/v1",
+                                           max_extracted_bytes)
+        result=read_json(restored/"parcel-context.json")
+        if result.get("schema")!="upstate.assessment-parcel-context/v1":
+            raise ValueError("Choose a complete original parcel geographic-association package")
+        if result["context_id"]!=package["context_id"] or result["study_id"]!=package["study_id"]:
+            raise ValueError("Parcel context package references changed")
+        context=receive(workspace,restored/"assessment-context.zip",
+                        max_extracted_bytes=max_extracted_bytes)
+        for item in read_json(restored/"retained-source-manifests.json"):
+            old=identifier(item["original_collection_id"])
+            if old not in receipt["source_map"]:
+                manifest=relative_file(restored,geography._safe_member(item["path"]).as_posix())
+                receipt["source_map"][old]=workspace.import_sources(manifest)["id"]
+                atomic_json(receipt_path,receipt)
+            else:
+                workspace._get("sources",receipt["source_map"][old])
+        original=target/"parcel-context.zip"
+        if not original.exists():
+            shutil.copyfile(path,original)
+        if file_digest(original)!=archive_sha:
+            raise ValueError("Retained original parcel context archive changed")
+        names=["parcel-context.json","parcel-context.geojson","parcel-context.csv",
+               "parcel-context-relationships.csv","OPEN_PARCEL_CONTEXT.html","package.json"]
+        saved=workspace._save(PARCEL_KIND,{"version":VERSION,"title":result["title"],
+            "context_id":context["id"],"study_id":result["study_id"],"created_at":result["created_at"],
+            "summary":result["summary"],
+            "received_from":{"archive_sha256":archive_sha,"original_context_id":result["context_id"],
+                             "original_study_id":result["study_id"],
+                             "source_collection_map":receipt["source_map"],
+                             "study_state":"Original saved study retained; select a destination study to calculate a new association"},
+            "files":[describe_file(workspace.root,restored/name,label=name) for name in names]+
+                    [describe_file(workspace.root,original,label="parcel-context.zip")]})
+        receipt["id"]=saved["id"];receipt["received_at"]=now()
+        atomic_json(receipt_path,receipt)
+        return saved
+
 def verify_workspace(workspace):
     for row in workspace._list(KIND):
         inspect(workspace,row["id"],verify=True)
-    return {"assessment_contexts":len(workspace._list(KIND))}
+    for row in workspace._list(PARCEL_KIND):
+        inspect_parcels(workspace,row["id"],verify=True)
+    return {"assessment_contexts":len(workspace._list(KIND)),
+            "assessment_parcel_contexts":len(workspace._list(PARCEL_KIND))}
 
 def main(argv=None):
     from .workspace import Workspace
@@ -473,14 +722,18 @@ def main(argv=None):
     command=commands.add_parser("build");command.add_argument("selection")
     command=commands.add_parser("inspect");command.add_argument("id")
     command=commands.add_parser("receive");command.add_argument("archive")
-    command=commands.add_parser("criteria");command.add_argument("context_id");command.add_argument("study_id")
+    command=commands.add_parser("receive-parcels");command.add_argument("archive")
+    command=commands.add_parser("inspect-parcels");command.add_argument("id")
+    command=commands.add_parser("parcels");command.add_argument("context_id");command.add_argument("study_id")
     args=parser.parse_args(argv);ws=Workspace(args.workspace)
     if args.command=="catalog": result=catalog(ws)
     elif args.command=="options": result=options(ws,args.geography_id)
     elif args.command=="build": result=build(ws,read_json(Path(args.selection)))
     elif args.command=="inspect": result=inspect(ws,args.id,verify=True,include_result=True)
     elif args.command=="receive": result=receive(ws,args.archive)
-    else: result=prepare_parcel_criteria(ws,args.context_id,args.study_id)
+    elif args.command=="receive-parcels": result=receive_parcels(ws,args.archive)
+    elif args.command=="inspect-parcels": result=inspect_parcels(ws,args.id,verify=True,include_result=True)
+    else: result=parcel_associations(ws,args.context_id,args.study_id)
     print(json.dumps(result,ensure_ascii=False,indent=2,allow_nan=False))
 
 if __name__=="__main__":
