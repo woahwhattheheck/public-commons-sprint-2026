@@ -12,7 +12,7 @@ const metricName = key => ({nitrogen_export:'Nitrogen', phosphorus_export:'Phosp
 
 export function attachReceptorWorkbench({getState, getWorkspace, api, endpoint, toast, openExtension, openForm, submitAction, refreshState, openItem, navigate, closeDetail, getProgramme, openScientificReport}) {
   let root=null, frame=null, workspace=null, generation=0, catalog=null, taskTarget=null;
-  let transferVersion=0, transferring=false;
+  let transferVersion=0, transferring=false, sourceComposerIntent=0;
   let draft=null, customProfile=null, planned=null, profileOptions=[], scenarioOptions=[];
   let result=null, pending=null, packageFiles=[], observing=false, fetching=false, pathSelection=null, selectedMapHuc='';
   let filters={profile:'',scenario:'',area:'',pollutant:'',search:''}, page=0;
@@ -1100,11 +1100,14 @@ export function attachReceptorWorkbench({getState, getWorkspace, api, endpoint, 
     const saved=result, summary=saved.summary, report=ticketURL(saved._report);
     node('[data-rc-result-header]').innerHTML='<h2>'+esc(saved.title)+'</h2>'+
       '<p>'+number(summary.network_huc12_count)+' original HUC12 units · '+number(summary.selected_huc12_count)+' selected distinct units · '+number(summary.membership_rows)+' original membership rows</p>'+
-      '<div class="rc-toolbar"><button type="button" data-receptor-action="scientific-compose">'+
-      (typeof openScientificReport==='function'?'Open scientific report composer':'Open retained scientific source')+'</button>'+
+      '<div class="rc-toolbar"><button type="button" data-receptor-action="scientific-compose" data-selection-mode="replace">'+
+      (typeof openScientificReport==='function'?'Open this report only':'Open retained scientific source')+'</button>'+
+      (typeof openScientificReport==='function'?'<button type="button" data-receptor-action="scientific-compose" data-selection-mode="append">Add to current report</button>':'')+
       '<button type="button" data-receptor-action="export">Export complete source package</button>'+
       '<button type="button" data-receptor-action="open" data-kind="'+(saved.preparation_id?'source-areas':'network')+'" data-id="'+esc(saved.preparation_id||saved.network_result_id)+'">Open original source study</button>'+
-      (report?'<a class="rc-button" href="'+esc(report)+'" target="_blank" rel="noopener">Printable source geography</a>':'')+'</div><div data-rc-package>'+downloadLinks(packageFiles)+'</div>';
+      (report?'<a class="rc-button" href="'+esc(report)+'" target="_blank" rel="noopener">Printable source geography</a>':'')+'</div>'+
+      (typeof openScientificReport==='function'?'<p class="rc-note">Open this report only replaces the composer’s selected sources and title. Add to current report preserves its source order and title, then adds this source; an empty title uses this report’s title.</p>':'')+
+      '<div data-rc-package>'+downloadLinks(packageFiles)+'</div>';
     for(const selector of ['[data-rc-result-filters]','[data-rc-path]','[data-rc-ranges]'])node(selector)?.replaceChildren();
     node('[data-rc-quantities]').innerHTML='<div class="rc-scroll"><table><caption>Original receiving-area source support</caption><thead><tr><th>Receiving area</th><th>HUC12 units</th><th>Original anchors</th><th>Published area (km²)</th><th>Longest path (links)</th></tr></thead><tbody>'+
       summary.areas.map(area=>'<tr><td>'+esc(area.title)+'</td><td>'+number(area.huc12_count)+'</td><td>'+esc(area.anchor_huc12s.join(', '))+'</td><td>'+
@@ -1114,15 +1117,16 @@ export function attachReceptorWorkbench({getState, getWorkspace, api, endpoint, 
       (summary.projected_maps?'<p><strong>'+number(summary.projected_maps.figures)+' native projected map figures</strong> · '+esc(summary.projected_maps.crs)+'. Separate upstream-unit boundaries and original anchors remain visible. Grid scale uses projected metres. '+number(summary.projected_maps.native_geometry_operations)+' recorded reader operations are retained with the original geometry and native renderer source.</p>':'<p>This retained edition includes the original source geography and membership tables. To add projected vector figures, reopen the original study and select maps when preparing a new report source.</p>');
     node('[data-rc-downloads]').innerHTML='<details class="rc-detail"><summary>Complete original report files</summary><p class="rc-download-links">'+downloadLinks(saved._downloads||[])+'</p><p>Original decoded source: <code>'+esc(saved.source_binding.decoded_sha256)+'</code></p></details>';
   }
-  async function openSourceReportComposer() {
+  async function openSourceReportComposer(selectionMode='replace') {
+    if(!['replace','append'].includes(selectionMode))throw Error('Choose a supported scientific report source selection mode.');
     if(result?._kind!=='report-source')throw Error('Open the retained source geography report first.');
-    const selected=result, context=viewContext(), epoch=generation, choice=copy(selected.source_choice);
+    const selected=result, context=viewContext(), epoch=generation, intent=++sourceComposerIntent, choice=copy(selected.source_choice);
     await waitForRetainedState(choice.source_collection_id);
-    if(!currentView(context)||generation!==epoch||result!==selected)return;
+    if(!currentView(context)||generation!==epoch||result!==selected||intent!==sourceComposerIntent)return;
     const collection=getState()?.data?.sources?.find(row=>row.id===choice.source_collection_id);
     if(!collection?.entries?.some(entry=>entry.id===choice.source_id))throw Error('Refresh the retained report source before opening its composer.');
     if(typeof openScientificReport==='function'){
-      await openScientificReport({workspace_key:context.workspace,sources:[choice],title:selected.title});
+      await openScientificReport({workspace_key:context.workspace,sources:[choice],title:selected.title,selection_mode:selectionMode});
     }else{
       await openItem('sources',choice.source_collection_id);
     }
@@ -1195,7 +1199,7 @@ export function attachReceptorWorkbench({getState, getWorkspace, api, endpoint, 
 
   async function act(action,target) {
     if(action==='transfer-study')return transferStudy(target);
-    if(action==='scientific-compose')return openSourceReportComposer();
+    if(action==='scientific-compose')return openSourceReportComposer(target.dataset.selectionMode||'replace');
     if(action==='scientific-source')return sourceReportForm();
     if(action==='prepare-areas')return prepareAreaForm();
     if(action==='prepared-analysis')return usePreparedAnalysis();
