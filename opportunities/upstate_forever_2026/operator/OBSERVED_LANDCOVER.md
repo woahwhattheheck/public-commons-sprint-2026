@@ -184,3 +184,12 @@ Pass this rule to child/delegated workers and persist it in owner-controlled pro
 
 Canonical local policy: `C:/Users/lucys/.commons/rendered-product-inspection-policy.md` and `.json`. Portable repository copy: `docs/policies/rendered-product-inspection-policy.md` and `.json` when present. Only Bryce can change this standing rule.
 <!-- bryce-rendered-product-inspection:end -->
+
+
+## Preserve the latest source and report choice
+
+The two report buttons retain the latest explicit choice while the saved edition is being reread. If **Open this report only** is followed by **Add to current report**, only the later choice can open the composer, regardless of response order. A superseded request cannot surface a stale error or navigate after the desk has detached. The native saved source, existing draft ordering and the Scientific Reports composer's own guards remain unchanged.
+
+Opening an imported source also belongs to the exact mounted desk and current analyst selection. Switching away and back to the same Workspace, opening another saved comparison, editing the source/title/HUC selection, or choosing a newer imported source cancels an older source-opening response. Background catalogue refresh uses the current selected source, and cannot restart its earlier source-load plan after the analyst edits or opens a comparison.
+
+At the existing native four-RFP-HUC receiving boundary, operate both report buttons against a populated Scientific Reports draft, including a delayed response followed by a different choice. Return to the same Workspace during an imported-source read and confirm the new draft stays intact. Refresh the catalogue while editing the source or opening a saved comparison. Open and LOOK at the exact outgoing desktop and narrow views, then operate source/report downloads and reopen the saved edition and editable Study. Preserve the original completed model/land-cover operations and the current owner brief at CURRENT_OWNER_DIRECTION.md, version2026-10-13.3, including its 14:00 UTC cutoff and complete recipient-use requirement for every outgoing attachment.
