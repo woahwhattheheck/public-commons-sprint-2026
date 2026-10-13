@@ -10,6 +10,7 @@ import math
 import re
 import textwrap
 import zipfile
+from functools import lru_cache
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
 from xml.etree import ElementTree as ET
@@ -205,24 +206,57 @@ def text_box(tree,identity,text,left,top,width,height,size=22,bold=False):
     for line in str(text).split('\n'):
         para=x(body,A,'p');run=x(para,A,'r');properties=x(run,A,'rPr',lang='en-CA',sz=int(size*75),b='1' if bold else '0');fill=x(properties,A,'solidFill');x(fill,A,'srgbClr',val='202020');x(properties,A,'latin',typeface='DejaVu Sans');x(run,A,'t',line)
 
+@lru_cache(maxsize=2)
+def _office_font(bold=False):
+    # Use the same licensed font as the editable table. The delivered document
+    # runtime supplies these font metrics; no host font or network is involved.
+    from reportlab.pdfbase import pdfmetrics
+    from reportlab.pdfbase.ttfonts import TTFont
+    name='QuestionnaireOfficeSans'+('Bold' if bold else '')
+    filename='DejaVuSans-Bold.ttf' if bold else 'DejaVuSans.ttf'
+    pdfmetrics.registerFont(TTFont(name,str(ROOT/'export-assets'/'fonts'/filename)))
+    return name
+
+def _office_lines(value,width,bold=False):
+    from reportlab.pdfbase import pdfmetrics
+    name=_office_font(bold)
+    fits=lambda text:pdfmetrics.stringWidth(text,name,17)*4/3<=width-26
+    result=[]
+    for paragraph in str('' if value is None else value).split('\n'):
+        current=''
+        for word in paragraph.split():
+            candidate=current+' '+word if current else word
+            if fits(candidate):current=candidate;continue
+            if current:result.append(current);current=''
+            if fits(word):current=word;continue
+            # A long identifier remains complete across explicit native lines.
+            for character in word:
+                if current and not fits(current+character):result.append(current);current=''
+                current+=character
+        result.append(current)
+    return result or ['']
+
 def _pptx(model):
     sections,responses=report_tables(model)
     pages=[{'title':model['title'],'text':model['edition'].capitalize()+' report\n'+model['created']+'\n'+str(len(model['responses']))+' accepted responses\n'+model.get('description','')+'\nBlank numeric cells represent unavailable values.'}]
-    def row_height(row,widths):
-        return max(38,max(22*(sum(max(1,math.ceil(len(line)/max(9,(widths[i]-24)/11))) for line in str('' if value is None else value).split('\n'))+1) for i,value in enumerate(row)))
+    def prepared_row(row,widths,bold=False):
+        lines=[_office_lines(value,widths[i],bold) for i,value in enumerate(row)]
+        return ['\n'.join(cell) for cell in lines],max(38,max(len(cell) for cell in lines)*28+12)
     def add_table(title,note,header,rows,widths):
-        header_height=row_height(header,widths)
+        header,header_height=prepared_row(header,widths,True)
         limit=440-header_height
         chunk=[];used=0
         prepared=[]
         for row in rows:
-            if row_height(row,widths)<=limit:
-                prepared.append(row);continue
-            lines=[[wrapped for line in str('' if value is None else value).split('\n') for wrapped in textwrap.wrap(line,max(9,int((widths[i]-24)/11)),break_long_words=True) or ['']] for i,value in enumerate(row)]
-            count=max(1,int(limit/22)-1)
-            for start in range(0,max(len(cell) for cell in lines),count):prepared.append(['\n'.join(cell[start:start+count]) for cell in lines])
-        for row in prepared:
-            height=row_height(row,widths)
+            wrapped,height=prepared_row(row,widths)
+            if height<=limit:
+                prepared.append((wrapped,height));continue
+            lines=[cell.split('\n') for cell in wrapped]
+            count=max(1,int((limit-12)/28))
+            for start in range(0,max(len(cell) for cell in lines),count):
+                fragment=[cell[start:start+count] or [''] for cell in lines]
+                prepared.append((['\n'.join(cell) for cell in fragment],max(38,max(len(cell) for cell in fragment)*28+12)))
+        for row,height in prepared:
             if chunk and used+height>limit:pages.append({'title':title,'note':note,'headers':header,'header_height':header_height,'rows':chunk,'widths':widths});chunk=[];used=0
             chunk.append((row,height));used+=height
         if chunk or not rows:pages.append({'title':title,'note':note,'headers':header,'header_height':header_height,'rows':chunk,'widths':widths})
@@ -276,7 +310,8 @@ def _pptx(model):
                 for value in row:
                     cell=x(tr,A,'tc');body=x(cell,A,'txBody');x(body,A,'bodyPr',wrap='square');x(body,A,'lstStyle')
                     for line in str('' if value is None else value).split('\n'):
-                        para=x(body,A,'p');run=x(para,A,'r');rp=x(run,A,'rPr',lang='en-CA',sz=1700,b='1' if row_index==0 else '0');fill=x(rp,A,'solidFill');x(fill,A,'srgbClr',val='FFFFFF' if row_index==0 else '202020');x(rp,A,'latin',typeface='DejaVu Sans');x(run,A,'t',line)
+                        para=x(body,A,'p');spacing=x(para,A,'pPr');x(x(spacing,A,'lnSpc'),A,'spcPts',val=2100);x(x(spacing,A,'spcBef'),A,'spcPts',val=0);x(x(spacing,A,'spcAft'),A,'spcPts',val=0)
+                        run=x(para,A,'r');rp=x(run,A,'rPr',lang='en-CA',sz=1700,b='1' if row_index==0 else '0');fill=x(rp,A,'solidFill');x(fill,A,'srgbClr',val='FFFFFF' if row_index==0 else '202020');x(rp,A,'latin',typeface='DejaVu Sans');x(run,A,'t',line)
                     props=x(cell,A,'tcPr',marL=12*EMU,marR=12*EMU,marT=5*EMU,marB=5*EMU);fill=x(props,A,'solidFill');x(fill,A,'srgbClr',val='303030' if row_index==0 else 'FFFFFF')
             if page.get('note'):text_box(tree,5,page['note'],60,140,1160,36,size=16)
         if page.get('chart'):
