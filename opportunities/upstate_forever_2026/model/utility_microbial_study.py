@@ -7,10 +7,10 @@ import gzip
 import hashlib
 import io
 import json
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 
-from .common import (atomic_json, describe_file, digest, file_digest, held,
-                     identifier, read_json, verify_file)
+from .common import (atomic_bytes, atomic_json, describe_file, digest, file_digest, finite, held,
+                     identifier, read_json, relative_file, verify_file)
 
 SCHEMA = "upstate.utility-microbial-study/v1"
 FOLDER = "utility-microbial-studies"
@@ -120,6 +120,124 @@ def _choose_domain(workspace, requested, mode):
     return None, notes
 
 
+def _coordinate_sources(workspace, collection, entry, points):
+    """Retain native coordinate groups from original station CSV strings and datums."""
+    records = [entry["body"], *entry.get("companions", [])]
+    selected = [row for row in records
+                if row.get("source_path") == "raw/stations-original.csv"]
+    if len(selected) != 1:
+        raise ValueError("Retain the original station CSV alongside the display points")
+    original_csv = relative_file(workspace.root, selected[0]["object"])
+    raw = original_csv.read_bytes()
+    if (len(raw) != selected[0]["bytes"]
+            or hashlib.sha256(raw).hexdigest() != selected[0]["sha256"]):
+        raise ValueError("The original station coordinate CSV changed")
+    table = csv.DictReader(io.StringIO(raw.decode("utf-8-sig"), newline=""))
+    originals = {}
+    for number, row in enumerate(table, 2):
+        station = row.get("MonitoringLocationIdentifier")
+        if None in row or not station or station in originals:
+            raise ValueError("Original station coordinate rows need distinct native identifiers")
+        originals[station] = (number, row)
+    definitions = {"WGS84": ("wgs84", "EPSG:4326", 34),
+                   "NAD83": ("nad83", "EPSG:4269", 2)}
+    groups = {datum: [] for datum in definitions}
+    source_rows = []
+    for feature in points["features"]:
+        properties = feature["properties"]
+        station = properties["MonitoringLocationIdentifier"]
+        if station not in originals:
+            raise ValueError("Original station CSV does not contain " + station)
+        number, row = originals[station]
+        if any(properties.get(name) != value for name, value in row.items()):
+            raise ValueError("The selected station attributes differ from the original CSV: " + station)
+        datum = row.get("HorizontalCoordinateReferenceSystemDatumName")
+        if datum not in definitions:
+            raise ValueError("Retain an explicit supported original coordinate datum")
+        x = finite(row["LongitudeMeasure"], "Original station longitude")
+        y = finite(row["LatitudeMeasure"], "Original station latitude")
+        if not -180 <= x <= 180 or not -90 <= y <= 90:
+            raise ValueError("Original geographic coordinates are outside their native bounds")
+        groups[datum].append({"type": "Feature", "id": station,
+            "geometry": {"type": "Point", "coordinates": [x, y]},
+            "properties": {**properties, "original_station_source_row": number,
+                "native_coordinate_basis": "Original WQP CSV coordinate strings and declared datum"}})
+        source_rows.append({"station_id": station, "source_row": number,
+            "datum": datum, "source_crs": definitions[datum][1],
+            "longitude_text": row["LongitudeMeasure"], "latitude_text": row["LatitudeMeasure"]})
+    if any(len(groups[datum]) != expected
+           for datum, (_, _, expected) in definitions.items()):
+        raise ValueError("Retain all 34 WGS84 and two NAD83 original station positions")
+    identity = {"schema": "upstate.utility-microbial-coordinates/v1",
+        "source_collection_id": collection["id"],
+        "display_source_sha256": entry["body"]["sha256"],
+        "coordinate_source_sha256": selected[0]["sha256"],
+        "coordinate_fields": ["LongitudeMeasure", "LatitudeMeasure",
+                              "HorizontalCoordinateReferenceSystemDatumName"],
+        "selected_stations": source_rows}
+    key = digest(identity)
+    directory = workspace.root / "utility-microbial-coordinate-sources" / key
+    directory.mkdir(parents=True, exist_ok=True)
+    with held(directory / ".coordinates.lock", blocking=False):
+        companions, seen = [], set()
+        for body in records:
+            name = body.get("view_path", body["filename"])
+            member = PurePosixPath(name)
+            if (member.is_absolute() or not member.parts or ".." in member.parts
+                    or member.as_posix() != name or "\\" in name or "\0" in name or name in seen):
+                raise ValueError("Retain distinct portable original coordinate-source members")
+            seen.add(name)
+            source = relative_file(workspace.root, body["object"])
+            content = source.read_bytes()
+            if len(content) != body["bytes"] or hashlib.sha256(content).hexdigest() != body["sha256"]:
+                raise ValueError("An original microbial source companion changed")
+            target = directory / "original" / name
+            atomic_bytes(target, content, immutable=True)
+            companions.append({"path": "original/" + name, "sha256": body["sha256"]})
+        atomic_json(directory / "coordinate-derivation.json", identity, immutable=True)
+        companions.append({"path": "coordinate-derivation.json",
+                           "sha256": file_digest(directory / "coordinate-derivation.json")})
+        native_entries = []
+        for datum, (code, crs, expected) in definitions.items():
+            filename = "stations-" + code + ".geojson"
+            native = {"type": "FeatureCollection",
+                "name": "Original utility-focus station coordinates — " + datum,
+                "crs": {"type": "name", "properties": {"name": crs}},
+                "features": groups[datum]}
+            atomic_json(directory / filename, native, immutable=True)
+            native_entries.append({"id": "utility-ecoli-native-" + code,
+                "title": "Original utility-focus station coordinates — " + datum,
+                "kind": "vector", "format": "geojson", "path": filename,
+                "sha256": file_digest(directory / filename),
+                "uri": entry["uri"], "vintage": entry["vintage"],
+                "source_crs": crs, "station_id_field": "MonitoringLocationIdentifier",
+                "native_id_field": "MonitoringLocationIdentifier",
+                "station_count": expected, "coordinate_datum": datum,
+                "original_source_collection_id": collection["id"],
+                "original_station_csv_sha256": selected[0]["sha256"],
+                "coordinate_basis": "Unchanged original coordinate values, partitioned by declared datum",
+                "companions": companions})
+        manifest = {"schema": "upstate.sources/v1",
+            "title": "Utility-focus microbial stations — original coordinate systems",
+            "captured_at": collection.get("captured_at"),
+            "scope": {"coordinate_derivation": identity},
+            "notes": ["The original coordinate strings are retained in feature properties.",
+                      "Native Station geography performs its ordinary CRS transformation.",
+                      "The independent offline display and original source bodies remain preserved."],
+            "entries": native_entries}
+        manifest_path = directory / "sources.json"
+        atomic_json(manifest_path, manifest, immutable=True)
+        retained = workspace.import_sources(manifest_path)
+        references = []
+        for native_entry in retained["entries"]:
+            workspace.source_file(retained["id"], native_entry["id"])
+            references.append(_reference(retained, native_entry, format="geojson",
+                station_id_field="MonitoringLocationIdentifier",
+                native_id_field="MonitoringLocationIdentifier",
+                source_crs=native_entry["source_crs"]))
+        return retained, references
+
+
 def _selection(workspace, collection, entries, domain, title):
     path, unused = workspace.source_file(collection["id"], "utility-ecoli-stations")
     points = read_json(path)
@@ -164,13 +282,12 @@ def _selection(workspace, collection, entries, domain, title):
               for utility in EXPECTED_COUNTS}
     if counts != EXPECTED_COUNTS or len(seen) != 730 or len(stations) != 36:
         raise ValueError("Retain the complete 730-result, 36-station utility source edition")
-    station_entry = entries["utility-ecoli-stations"]
+    coordinate_collection, coordinate_sources = _coordinate_sources(
+        workspace, collection, entries["utility-ecoli-stations"], points)
     table_entry = entries["utility-ecoli-observations"]
     selection = {
         "title": title,
-        "sources": [_reference(collection, station_entry, format="geojson",
-                    station_id_field="MonitoringLocationIdentifier",
-                    native_id_field="MonitoringLocationIdentifier", source_crs="EPSG:4326")],
+        "sources": coordinate_sources,
         "observation_tables": [_reference(collection, table_entry,
                     station_id_field="MonitoringLocationIdentifier",
                     record_id_field="ActivityIdentifier")],
@@ -182,7 +299,9 @@ def _selection(workspace, collection, entries, domain, title):
             "period": {"start": "2021-01-01", "end": "2025-12-31"},
             "quantity": "Original sampled E. coli concentration and detection/quantitation condition",
             "utility_source_counts": counts,
-            "geographic_basis": "Original WQP GeoJSON points and source-native station identifiers",
+            "geographic_basis": "Original WQP CSV coordinates and declared WGS84/NAD83 datums",
+            "coordinate_source_collection_id": coordinate_collection["id"],
+            "coordinate_source_counts": {"EPSG:4326": 34, "EPSG:4269": 2},
             "watershed_basis": "Original 217-HUC polygon membership" if domain else
                                "Point and utility-source context; watershed overlay not selected",
             "original_report_source_id": "utility-ecoli-offline-explorer",
