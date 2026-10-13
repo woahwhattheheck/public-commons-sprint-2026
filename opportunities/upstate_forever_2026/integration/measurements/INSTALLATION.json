@@ -245,6 +245,14 @@
       "base_commit": "fc47a578a02a50abfd9543f66c006983d8dd6376",
       "guide": "measurement_workspace/ECO_LDA_HANDOVER.md",
       "preserves": "Original complete project ZIP, historical populations, collection identities, scientific records and saved results; exact original native validation and explicit readable-source selection."
+    },
+    "collection_folder_receiving": {
+      "original_claim": "1791923626.838759",
+      "source_base": "c1a7e73390bdd762b52d116cd10592dd474a2b70",
+      "guide": "MEASUREMENT_COLLECTION_WORKING.md",
+      "behavior": "Explicitly selected whole-edition folder, immutable original source metadata, durable checked native chunk receiving, complete original file publication and read-only local reopening.",
+      "preserves": "Complete existing337-member source, original native writer/archive/controller, per-member OPFS downloads, workspace/account working custody and callable receiving chapter.",
+      "composed_main": "59e3f7376978e5ea90bbb9589d72f92cc780687f"
     }
   },
   "files": [
@@ -295,8 +303,8 @@
     },
     {
       "path": "integration/component_fragments/measurement-collections.json",
-      "bytes": 5436,
-      "sha256": "47b9180d89b6f2f6b9cf3c1dbf2da173da39edfdd7d284949667cf29849d38a4"
+      "bytes": 5688,
+      "sha256": "8607a6bcf0d2f71408154f5f06b2693142b7850cc7d25df56ca14bd6ad69ef29"
     },
     {
       "path": "integration/component_fragments/measurement-eco-handover.json",
@@ -365,8 +373,8 @@
     },
     {
       "path": "MEASUREMENT_COLLECTION_WORKING.md",
-      "bytes": 17713,
-      "sha256": "a441978ac78da6fe9b2831030ac523a4bb3e0060b12967c2b19df91bf404448d"
+      "bytes": 25053,
+      "sha256": "d08d5e283bd7925e080bd08a047b8b83335d989f831743197c92544f0d301dd0"
     },
     {
       "path": "MEASUREMENT_COLLECTIONS.md",
@@ -375,8 +383,8 @@
     },
     {
       "path": "MEASUREMENT_LARGE_FILES_SOURCE.json",
-      "bytes": 14441,
-      "sha256": "30879071849453cb4421a867a547160d43d22224244cb5120b71c51437c64c9d"
+      "bytes": 15323,
+      "sha256": "464073aabe8c702c10d682e25b543cc6d4d213643874eac9b2b4840b7824e7f3"
     },
     {
       "path": "MEASUREMENT_LARGE_FILES.md",
@@ -1019,6 +1027,11 @@
       "sha256": "3e13880b80db8eada003b8bb53f678b9c2d77aad7f454a99eefd050b7df5c767"
     },
     {
+      "path": "measurement_workspace/web/collection_folder.mjs",
+      "bytes": 15721,
+      "sha256": "25a46d13cc847512f00e7050dfcdaddb00e1fb7f4dee6786761c73267df13c55"
+    },
+    {
       "path": "measurement_workspace/web/collection_transfer.mjs",
       "bytes": 6217,
       "sha256": "08e3519c39f9389c975dbdb851da38ea31258261ce28d31da8c6460f2dd4dbde"
@@ -1030,8 +1043,8 @@
     },
     {
       "path": "measurement_workspace/web/collections.mjs",
-      "bytes": 33724,
-      "sha256": "671845fa46e0f26e79b5c8589df236a6cf16e005dc5e537d40adc87e3f194274"
+      "bytes": 35680,
+      "sha256": "aff2954339fea1197bb3e29a1b5df12b153e3c82b4bc2e99d5fc5b6d0c97f2a3"
     },
     {
       "path": "measurement_workspace/web/eco_handovers.mjs",
@@ -1470,8 +1483,8 @@
     },
     {
       "path": "operator/extensions/measured-observations.json",
-      "bytes": 2798,
-      "sha256": "3f66b3fd045c7fb6bb37f05a789b0412144789537ff7ea23d7b69a502ac98299"
+      "bytes": 2827,
+      "sha256": "6099b1a3d51cc77e7beb81a8b08f522f416e8c965420a274e1213fcf9396c0e7"
     },
     {
       "path": "operator/extensions/measurement-returned-reviews-native.json",
@@ -1529,6 +1542,11 @@
       "sha256": "3ae2d6d5bfa07b62618e77214711250f6375f30f090bf440afa8997449852a7d"
     },
     {
+      "path": "operator/web/collection_folder.mjs",
+      "bytes": 15721,
+      "sha256": "25a46d13cc847512f00e7050dfcdaddb00e1fb7f4dee6786761c73267df13c55"
+    },
+    {
       "path": "operator/web/collection_transfer.mjs",
       "bytes": 6217,
       "sha256": "08e3519c39f9389c975dbdb851da38ea31258261ce28d31da8c6460f2dd4dbde"
@@ -1575,8 +1593,8 @@
     },
     {
       "path": "operator/web/measured_collections.mjs",
-      "bytes": 33724,
-      "sha256": "671845fa46e0f26e79b5c8589df236a6cf16e005dc5e537d40adc87e3f194274"
+      "bytes": 35680,
+      "sha256": "aff2954339fea1197bb3e29a1b5df12b153e3c82b4bc2e99d5fc5b6d0c97f2a3"
     },
     {
       "path": "operator/web/measured_intake.mjs",
@@ -2029,7 +2047,8 @@
       "818265e53c42803676de7f6e28276fb7ecbca631a8467265d82afe65ea4f5e30",
       "55f0dba6455d7c15f83741b91b31464265bdbff737cde573e34bd5256b78ce66",
       "3cc96e2315f293ba6e5ad3f8c094f1985cc9fe830db89e04eb2b7532b18cdc66",
-      "d9d5d444876604f9b516e76dbd141a43b18a5f913f7c5d01a61e983e541004bc"
+      "d9d5d444876604f9b516e76dbd141a43b18a5f913f7c5d01a61e983e541004bc",
+      "3f66b3fd045c7fb6bb37f05a789b0412144789537ff7ea23d7b69a502ac98299"
     ],
     "operator/web/measured_observations_extension.mjs": [
       "53956ef94c20be2083e3ecfb6389dc9352ccea1e52b42e60e487c65d083a2d48",
@@ -2134,7 +2153,8 @@
       "42543acc7bb429243284ee832f7213e2ffc92c322a282da5a876cc0ee5a7c30d",
       "606d146a2c4583c8fadf59d64e2c03a4b45d0e166efe4a034ffd8db309e7acbf",
       "0c90cebe42be6ffa5c28c54999fbb6471dcf3c22e46a06af407c9f9954ea450c",
-      "48fc6a72f1ab393f7bba948437800a782d28da21dfb610bbfd66fdba318d4b58"
+      "48fc6a72f1ab393f7bba948437800a782d28da21dfb610bbfd66fdba318d4b58",
+      "47b9180d89b6f2f6b9cf3c1dbf2da173da39edfdd7d284949667cf29849d38a4"
     ],
     "measurement_workspace/engine/calibration.mjs": [
       "9d9ff7ab3d6ccb5a00f06b11d0f6cb209640c27749c750dc8f4b8cb15e0e1199"
@@ -2190,7 +2210,8 @@
     "measurement_workspace/web/collections.mjs": [
       "1e4910387bea5986e503d0609075546645554311e58c4c974023dca02184d1b2",
       "6ee780786d0ddff3759f2221ff9cbfda56bd5f04e547a54e0fee8379031c32f5",
-      "003a69b436f058677b9a031be8c327295143d01f592dd05f42439feb3ecc02c4"
+      "003a69b436f058677b9a031be8c327295143d01f592dd05f42439feb3ecc02c4",
+      "671845fa46e0f26e79b5c8589df236a6cf16e005dc5e537d40adc87e3f194274"
     ],
     "measurement_workspace/engine/providers.mjs": [
       "b6cc24dbadce5f8b1bc4ac1eb2a8b86b146f6fc04d5b060b1096b05fd7204b8e"
@@ -2241,7 +2262,8 @@
     "operator/web/measured_collections.mjs": [
       "1e4910387bea5986e503d0609075546645554311e58c4c974023dca02184d1b2",
       "6ee780786d0ddff3759f2221ff9cbfda56bd5f04e547a54e0fee8379031c32f5",
-      "003a69b436f058677b9a031be8c327295143d01f592dd05f42439feb3ecc02c4"
+      "003a69b436f058677b9a031be8c327295143d01f592dd05f42439feb3ecc02c4",
+      "671845fa46e0f26e79b5c8589df236a6cf16e005dc5e537d40adc87e3f194274"
     ],
     "source/MEASURED_CHEMISTRY_RECEIVING.md": [
       "6ce4c211a91336c094a123b295731ccd1a177ed293235af7a071592f05c26ad3"
@@ -2269,7 +2291,8 @@
       "4c0587db9127ece1e122cb45837e112989435b36eb4301f044da11fe642bc3cd",
       "7fa7df0f7d26c0df40cacba16fba18894ae4c879a2b1e5158c2dc952f96bf6ba",
       "55db5f54ca44b4621cc1fc1651ebaacd700f44ef47c3d02368d8caa1df6343ed",
-      "ef5d5af29998f156c50efa94aa4cc7965e765ed54835e4decf15fb60162ff20a"
+      "ef5d5af29998f156c50efa94aa4cc7965e765ed54835e4decf15fb60162ff20a",
+      "30879071849453cb4421a867a547160d43d22224244cb5120b71c51437c64c9d"
     ],
     "install_measurement_large_files.py": [
       "7f98a811d03ffba1fa1f5b7f574c0cbe7b092c74be3de19b61f3d71d53f1bd7a",
@@ -2524,7 +2547,8 @@
       "7064b72e812a8e09b0f7043665e918c9403d47ac91feb6d3ac7dd5be1d91ffb6"
     ],
     "MEASUREMENT_COLLECTION_WORKING.md": [
-      "d12447ff7f893a6c572174d1899f27fee478b527a923099d22514acdf2d5051d"
+      "d12447ff7f893a6c572174d1899f27fee478b527a923099d22514acdf2d5051d",
+      "a441978ac78da6fe9b2831030ac523a4bb3e0060b12967c2b19df91bf404448d"
     ],
     "measurement_workspace/web/collection_working.mjs": [
       "4c67e041626a14e9b028a613a18cbb47446669a3816c622600f52632f4412d8c"
