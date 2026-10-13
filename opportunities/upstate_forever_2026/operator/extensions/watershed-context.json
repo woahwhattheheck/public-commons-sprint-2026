@@ -2,7 +2,7 @@
   "schema": "upstate.operator-extension/v1",
   "id": "watershed-context",
   "title": "Regional watershed context",
-  "version": "1.9.0",
+  "version": "1.9.1",
   "order": 55,
   "assets": [
     "watershed_context.mjs",
