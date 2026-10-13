@@ -102,3 +102,8 @@ The [official Amazon developer hackathon rules](https://amazonappdev2026.devpost
 Use the complete household journey for the actual product recording: enter inputs, inspect a plan, compare a tariff, select it for a fresh plan, approve and simulate, then reopen its saved history. The original `DEVPOST_SUBMISSION_FEEDBACK_20261010.md` retains the entrant's competition-field guidance. The included MIT license applies to this source.
 
 The rendered workflow covers original inputs, retained comparisons, explicit approval and idempotent simulation, five custom loads, a stopped-and-restarted SQLite server, exact record recovery, a separate-browser backup restore, a changed backup rejected before mutation, concurrent-tab handling, and desktop/390px layout.
+
+
+## Use this household through MCP
+
+The original local application now exposes a household-bound MCP2025-11-25 Streamable HTTP connection. Open **Assistant connection** in the daily page to name a connection and download its private client configuration. The assistant can read retained history, propose daily/weekly work, continue the original weekly review and export complete artifacts. Human approval remains in the original browser; simulated execution requires that exact approved plan. Full original request/result receipts survive response loss and restart, and remain historical when a household is received. See [MCP.md](MCP.md) for the complete connection, file client, recovery, revoke and receive/reopen workflow. No real device or external service is changed.

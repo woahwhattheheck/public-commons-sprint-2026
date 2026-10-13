@@ -1,12 +1,13 @@
 import {createRobustnessPanel} from './robustness-ui.js';
 import {mountScenarioHandoff} from './scenario-handoff.js';
 import {mountHouseholds} from './households.js';
+import {mountAssistant} from './assistant.js';
 import {createExactInputs} from './exact-inputs.js';
 const $=id=>document.getElementById(id);
 const loads=[{id:'laundry',label:'Laundry'},{id:'dishwasher',label:'Dishwasher'},{id:'ev-topup',label:'EV top-up'}];
 const taskKeys=new Set(['id','label','kw','hours','earliest','deadline','quiet']);
 let state=null,busy=true,analysisBusy=false,draftRevision=0,needsPlan=false,draftHouseholdId=null;
-let handoff=null,households=null,robustness=null,exact=null;
+let handoff=null,households=null,robustness=null,exact=null,assistant=null;
 const money=n=>'$'+Number(n||0).toFixed(2);
 const rateForHour=h=>h>=17&&h<21?'peak':h>=21||h<7?'offpeak':'standard';
 const occupied=()=>busy||analysisBusy;
@@ -73,7 +74,7 @@ function updateControls(){
     'Another tab opened a different household. Your draft is retained here: create a new household from it, or reopen the saved inputs.':
     needsPlan?'Unsaved input changes. Save this revision or plan it before approving a schedule.':
     state?.proposal?'The current proposal uses these saved household inputs.':'Inputs are saved. Plan this scenario to review its schedule.';
-  robustness?.refresh();handoff?.refresh();households?.refresh();
+  robustness?.refresh();handoff?.refresh();households?.refresh();assistant?.refresh();
 }
 function changed(){draftRevision++;needsPlan=true;$('error').textContent='';handoff?.invalidate();updateControls();}
 function acceptState(data,fill=false){
@@ -184,6 +185,10 @@ robustness=createRobustnessPanel({
 });
 households=mountHouseholds({getState:()=>state,isBusy:occupied,mutate:workspaceAction,
   onProblem:error=>{$('error').textContent=error?.message||'Household operation failed';}});
+assistant=mountAssistant({getState:()=>state,isBusy:occupied,run,
+  onState:data=>{const fill=!needsPlan&&data?.workspace?.selectedId===state?.workspace?.selectedId;acceptState(data,fill);},
+  onProblem:error=>{$('error').textContent=error?.message||'Assistant connection failed';},
+});
 handoff=mountScenarioHandoff({getDraft:readScenario,getProposal:()=>needsPlan?null:state?.proposal,isBusy:occupied,
   applyDraft:async scenario=>{const cleared=await call('cancel');if(!cleared)throw Error('Could not clear the current plan.');fillScenario(scenario);changed();},
   onProblem:error=>{$('error').textContent=error?.message||'Scenario transfer failed';},
