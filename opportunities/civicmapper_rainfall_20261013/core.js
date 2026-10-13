@@ -111,7 +111,7 @@ function release(capture) {
   }
   if(outside.length)warnings.add(outside.length+" out-of-window rows retained in the capture and excluded from review.");
   if(duplicateRows.length)warnings.add(duplicateRows.length+" identical duplicate rows counted once.");
-  return {schema:"rainfall-normalized/v1",metadata:m,fingerprint,grouped,summaries,warnings:[...warnings],outside,duplicateRows,capture:{schema:capture.schema,metadata:capture.metadata,raw_text:capture.raw_text,raw_sha256:fingerprint}};
+  return {schema:"rainfall-normalized/v1",metadata:m,fingerprint,grouped,summaries,warnings:[...warnings],outside,duplicateRows,capture:{schema:capture.schema,metadata:capture.metadata,raw_text:capture.raw_text,raw_sha256:fingerprint,...(own(capture,"request")?{request:JSON.parse(JSON.stringify(capture.request))}:{}),...(own(capture,"acquisition")?{acquisition:JSON.parse(JSON.stringify(capture.acquisition))}:{})}};
 }
 function compare(before,after) {
   const a=before.metadata,b=after.metadata;

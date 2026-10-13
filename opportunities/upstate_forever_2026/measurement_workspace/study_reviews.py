@@ -47,6 +47,87 @@ def _binding(record):
     }
 
 
+
+REVIEW_PRESENTATION = "published-study-review/2"
+
+_TABLE_TITLES = {
+    "seasonal": "Seasonal observations", "continuous": "Continuous observations",
+    "observed": "Original observations", "wqp": "Original water-quality records",
+    "flow": "Flow context", "figures": "Scientific figures", "ranges": "Observed ranges",
+    "stations": "Original stations", "sources": "Original sources",
+}
+_MONTH_NAMES = ("January", "February", "March", "April", "May", "June",
+                "July", "August", "September", "October", "November", "December")
+
+
+def _review_document(value, interpretation_matches_snapshot):
+    """Readable portable opening page; original source/science stays in its report."""
+    body = value["content"]
+    binding, filters = body["binding"], body["selection"]
+    esc = html.escape
+
+    def selected(values, empty):
+        if not values:
+            return "<p>" + esc(empty) + "</p>"
+        return '<ul class="values">' + "".join("<li>" + esc(str(item)) + "</li>" for item in values) + "</ul>"
+
+    rows = (
+        ("Stations", selected(filters["site_ids"], "All retained stations")),
+        ("Parameters", selected(filters["parameters"], "All retained parameters")),
+        ("Strata", selected(filters["strata"], "All retained strata")),
+        ("Year", "<p>" + esc(str(filters["year"]) if filters["year"] is not None else "All retained years") + "</p>"),
+        ("Months", selected([_MONTH_NAMES[month - 1] for month in filters["months"]], "All retained months")),
+        ("Saved table", "<p>" + esc(_TABLE_TITLES.get(body["table"], body["table"])) + "</p>"),
+    )
+    details = "".join("<dt>" + esc(label) + "</dt><dd>" + content + "</dd>" for label, content in rows)
+    style = """
+:root{color-scheme:light;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#222;background:#fff}
+*{box-sizing:border-box}body{margin:0;font-size:16px;line-height:1.55}main{max-width:72rem;margin:0 auto;padding:2rem clamp(1rem,4vw,3rem) 3rem}
+a{color:inherit;text-underline-offset:.18em;overflow-wrap:anywhere}a:focus-visible,summary:focus-visible{outline:3px solid #111;outline-offset:4px}
+h1{font-size:clamp(1.6rem,4vw,2.35rem);line-height:1.18;margin:.4rem 0 1rem;overflow-wrap:anywhere}h2{font-size:1.25rem;margin:2rem 0 .7rem}p{margin:.6rem 0}
+.kicker{font-size:.82rem;letter-spacing:.04em;text-transform:uppercase}.study{font-size:1.1rem}.intro{max-width:66ch}
+nav{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,18rem),1fr));gap:.75rem;margin:1.4rem 0}nav a{border:1px solid #888;padding:.9rem 1rem;text-decoration:none;min-height:3rem}nav a:hover{background:#f3f3f3}nav strong,nav span{display:block}nav span{font-size:.9rem;margin-top:.25rem}
+dl{margin:0}.selection,.identities{display:grid;grid-template-columns:minmax(7rem,10rem) minmax(0,1fr);column-gap:1.2rem}.selection dt,.selection dd,.identities dt,.identities dd{padding:.6rem 0;border-bottom:1px solid #ddd;margin:0;overflow-wrap:anywhere}.selection dt,.identities dt{font-weight:600}.selection p{margin:0}
+.values{margin:0;padding:0;list-style:none;display:flex;flex-wrap:wrap;gap:.2rem 1.2rem}.values li{max-width:100%;overflow-wrap:anywhere}
+.notice{border-left:3px solid #555;padding:.25rem 1rem;margin:1rem 0}.notes,.source-details{border:1px solid #bbb;padding:.8rem 1rem;margin:1rem 0}summary{cursor:pointer;font-weight:600;overflow-wrap:anywhere}.notes pre{font:inherit;line-height:1.55;white-space:pre-wrap;overflow-wrap:anywhere;margin:1rem 0 0}
+code{font-size:.9em;overflow-wrap:anywhere;white-space:normal}.source-details dl{margin-top:.8rem}footer{border-top:1px solid #999;margin-top:2rem;padding-top:1rem;font-size:.9rem}.muted{color:#555}
+@media(max-width:480px){main{padding:1.25rem 1rem 2rem}.selection,.identities{grid-template-columns:1fr}.selection dt,.identities dt{border-bottom:0;padding:.7rem 0 0}.selection dd,.identities dd{padding:.15rem 0 .7rem}.notes,.source-details{padding:.75rem}nav{grid-template-columns:1fr}}
+@media print{@page{margin:16mm}body{font-size:10pt}main{max-width:none;padding:0}nav{display:block}nav a{display:block;margin:.4rem 0;padding:.5rem}h1{font-size:20pt}h2,summary{break-after:avoid}dt,dd,li{break-inside:avoid}.selection,.identities{grid-template-columns:9rem minmax(0,1fr)}a{color:#000}.notes:not([open])>pre,.source-details:not([open])>dl{display:none}.notes[open] pre{white-space:pre-wrap}footer{font-size:9pt}}
+"""
+    document = '<!doctype html><html lang="en"><head><meta charset="utf-8">'
+    document += '<meta name="viewport" content="width=device-width, initial-scale=1">'
+    document += "<title>" + esc(body["title"]) + "</title><style>" + style + "</style></head><body><main>"
+    document += '<header><p class="kicker">Saved observation review</p><h1>' + esc(body["title"]) + "</h1>"
+    document += '<p class="study">' + esc(body["study_title"]) + "</p>"
+    document += '<p class="intro">Open the selected original study report to explore its observations, scientific context and sources. This review retains the exact study edition and filters shown below.</p></header>'
+    document += '<nav aria-label="Review reports and original files">'
+    document += '<a href="selected/study-report.html"><strong>Open selected study report</strong><span>Original observations, scientific figures and source links</span></a>'
+    document += '<a href="original-study.zip"><strong>Complete original study</strong><span>Original source files and editable study edition</span></a>'
+    document += '<a href="review.json"><strong>Saved review record</strong><span>Exact filters, full notes and retained scientific snapshot</span></a></nav>'
+    if not interpretation_matches_snapshot:
+        document += '<aside class="notice"><strong>Interpretation update</strong><p>The selected report uses the current maintained interpretation. The saved review record retains its original coverage and temporal-support snapshot. Its source edition and exact filters are unchanged.</p></aside>'
+    document += '<section aria-labelledby="cohort"><h2 id="cohort">Selected observations</h2><dl class="selection">' + details + "</dl>"
+    document += '<p class="muted">Calendar applicability, original units, censor treatment and sampling support are explained in the selected study report. A filter does not turn sampled records into a continuous or annual estimate.</p></section>'
+    if body["notes"]:
+        document += '<details class="notes"><summary>Saved review notes</summary><pre>' + esc(body["notes"]) + "</pre></details>"
+    else:
+        document += '<p class="muted">No review notes were saved.</p>'
+    identities = (
+        ("Review", value["id"]), ("Study", binding["study_id"]), ("Study edition", binding["version_id"]),
+        ("Saved", value["saved_at"]), ("Source collection", binding["source_collection_id"]),
+        ("Source manifest SHA256", binding["source_manifest_sha256"]),
+        ("Original source inventory SHA256", binding["source_files_sha256"]),
+    )
+    document += '<details class="source-details"><summary>Original review and source identities</summary><dl class="identities">'
+    document += "".join("<dt>" + esc(label) + "</dt><dd><code>" + esc(str(text)) + "</code></dd>" for label, text in identities)
+    document += "</dl></details>"
+    document += '<footer><p>To edit or revise this selection, import the complete <strong>saved-review.zip</strong> in the maintained Published studies desk. Its original study and immutable review are retained together; receiving preserves an existing current study edition.</p>'
+    document += '<p>The authored notes remain available above and in the original review record. The selected report and complete source study carry their own original scientific interpretation.</p>'
+    document += '<p><a href="selected/study-report.html">Open selected study report</a> · <a href="review.json">Original review JSON</a></p>'
+    document += "</footer></main></body></html>"
+    return document
+
+
 class PublishedStudyReviews:
     def __init__(self, store):
         self.store = store
@@ -204,25 +285,14 @@ class PublishedStudyReviews:
             body["binding"]["study_id"], destination / "original-study.zip",
             body["binding"]["version_id"])
         _atomic(destination / "review.json", _json_bytes(value))
-        esc = html.escape
-        filters = body["selection"]
-        details = "".join("<dt>" + esc(k.replace("_", " ")) + "</dt><dd>" +
-                          esc(json.dumps(v, ensure_ascii=False)) + "</dd>" for k, v in filters.items())
-        document = '<!doctype html><meta charset="utf-8"><title>' + esc(body["title"]) + '</title>'
-        document += '<style>body{font:16px system-ui;max-width:68rem;margin:3rem auto;padding:0 1rem;color:#222}dt{font-weight:600;margin-top:.8rem}pre{white-space:pre-wrap}a{color:inherit}</style>'
-        document += "<h1>" + esc(body["title"]) + "</h1><p>" + esc(body["study_title"]) + "</p>"
-        document += "<p>Original study edition: <code>" + esc(body["binding"]["version_id"]) + "</code></p>"
-        if not result["interpretation_matches_snapshot"]:
-            document += "<p><strong>Interpretation update:</strong> review.json retains the coverage and sampling-support snapshot saved with this review. The selected report uses the current maintained interpretation. Its original study edition and exact cohort selection are unchanged.</p>"
-        document += "<h2>Selected cohort</h2><dl>" + details + "</dl><h2>Review notes</h2><pre>" + esc(body["notes"]) + "</pre>"
-        document += '<p><a href="selected/study-report.html">Open selected original study report</a> · <a href="original-study.zip">Complete original study and sources</a> · <a href="review.json">Exact saved review</a></p>'
-        document += "<p>The selected report retains its original units, censor treatment and calendar applicability. Review notes are authored context.</p>"
+        document = _review_document(value, result["interpretation_matches_snapshot"])
         _atomic(destination / "review.html", document.encode("utf-8"))
         names = ["review.json", "review.html", "original-study.zip"]
         names.extend("selected/" + row["relative_path"] for row in selected["files"])
         entries = [{"path": name, "bytes": (destination / name).stat().st_size,
                     "sha256": _hash((destination / name).read_bytes())} for name in sorted(set(names))]
         index = {"schema": BUNDLE_SCHEMA, "review_id": value["id"], "files": entries,
+                 "presentation_edition": REVIEW_PRESENTATION,
                  "interpretation_matches_snapshot": result["interpretation_matches_snapshot"],
                  "reopen": "Import this review ZIP through Published studies; its original study and exact selection are retained."}
         _atomic(destination / "review-export.json", _json_bytes(index))

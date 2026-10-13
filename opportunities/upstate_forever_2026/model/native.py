@@ -129,14 +129,20 @@ def execute_run(workspace, key, *, reuse_source_run_ids=None):
                         if "landcover" in state["stages"]:
                             lulc = verify_file(directory, state["stages"]["landcover"]["artifact"])
                         else:
-                            lulc = directory / "scenario_lulc.tif"
-                            edits = rasters.make_scenario(
-                                paths["NLCD"], lulc, grid["grid"], scenario["patches"],
-                                source_loader=lambda sid: workspace.source_file(scenario["source_collection_id"], sid),
-                                allowed_codes=set(profile["table_summary"]["lucodes"]))
-                            state["stages"]["landcover"] = {
-                                "completed_at": now(), "edits": edits,
-                                "artifact": describe_file(directory, lulc, units="class")}
+                            from .scenario_footprint import reuse_prepared_landcover
+                            landcover = reuse_prepared_landcover(workspace, key, directory)
+                            if landcover is None:
+                                lulc = directory / "scenario_lulc.tif"
+                                edits = rasters.make_scenario(
+                                    paths["NLCD"], lulc, grid["grid"], scenario["patches"],
+                                    source_loader=lambda sid: workspace.source_file(scenario["source_collection_id"], sid),
+                                    allowed_codes=set(profile["table_summary"]["lucodes"]))
+                                landcover = {
+                                    "completed_at": now(), "edits": edits,
+                                    "artifact": describe_file(directory, lulc, units="class")}
+                            else:
+                                lulc = verify_file(directory, landcover["artifact"])
+                            state["stages"]["landcover"] = landcover
                             execution.save()
                         verified_inputs[str(lulc.resolve())] = state["stages"]["landcover"]["artifact"]
                     arguments = build_native_arguments(unfinished, profile, paths, table, lulc)

@@ -1,0 +1,18 @@
+[
+  {
+    "code": "EXACT_ORIGINAL_RESULT_SELECTION",
+    "context": "All 1,588 original result identities are validated before exact 1,502-result selection. Source CSVs, Activity and ResultIdentifier joins, and physical source-row identities remain unchanged."
+  },
+  {
+    "code": "PAIRED_CONTEXT",
+    "context": "The 24 same-day activity pairs and 275 compatible contrasts retain differing original clocks. Pair A/B names do not infer upstream/downstream direction or treatment effects."
+  },
+  {
+    "code": "ORIGINAL_CALCULATED_NITROGEN",
+    "context": "All three original agency Calculated Nitrogen values differ from original same-activity TKN plus nitrate/nitrite; source values are preserved separately."
+  },
+  {
+    "code": "SOURCE_PH_REVIEW",
+    "context": "Literal SV-833 pH 724 on 2023-11-29 remains preserved and flagged. Historical aggregate and contrast summaries exclude only that flagged pH result."
+  }
+]

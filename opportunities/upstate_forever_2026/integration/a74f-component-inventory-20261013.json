@@ -346,9 +346,10 @@
     "complete_operating_guide": {
       "paths": [
         "operator/REGIONAL_MODEL_AND_ENSEMBLE.md",
-        "integration/component_fragments/a74f-regional-source-composition.json"
+        "integration/component_fragments/a74f-regional-source-composition.json",
+        "CURRENT_OWNER_DIRECTION.md"
       ],
-      "files": 2
+      "files": 3
     },
     "regional_gauge_support": {
       "paths": [
@@ -536,6 +537,7 @@
         "source/georgia-assessment-2024/README.md",
         "source/georgia-assessment-2024/publisher-savannah-20261013/README.md",
         "source/georgia-assessment-2024/publisher-savannah-20261013/assessments.json",
+        "source/georgia-assessment-2024/publisher-savannah-20261013/geometry-capture-manifest.original.json",
         "source/georgia-assessment-2024/publisher-savannah-20261013/observed-report.json",
         "source/georgia-assessment-2024/publisher-savannah-20261013/originals/acquisition.public.json",
         "source/georgia-assessment-2024/publisher-savannah-20261013/originals/georgia-2024-official-stream-layers-original.json",
@@ -621,7 +623,7 @@
         "source_tools/receive_georgia_assessment.py",
         "source_tools/receive_north_carolina_assessment.py"
       ],
-      "files": 90
+      "files": 91
     }
   },
   "files": [
@@ -633,6 +635,18 @@
       "blob_available": true,
       "components": [
         "paired_raster_studies"
+      ]
+    },
+    {
+      "path": "CURRENT_OWNER_DIRECTION.md",
+      "git_blob_sha": "8cd1c1f3d371a2fb75471813844e31f489aa8272",
+      "bytes": 4999,
+      "sha256": "57945ea0e6eca762011e9f7e6febd39255359143d454fd3aa58a3a849ec14fc9",
+      "encoding": "utf-8",
+      "source_ref": "16828ebc8c7101c88ebc4c90d43e40c4ebe242b4",
+      "blob_available": true,
+      "components": [
+        "complete_operating_guide"
       ]
     },
     {
@@ -681,14 +695,15 @@
     },
     {
       "path": "integration/component_fragments/a74f-regional-source-composition.json",
-      "git_blob_sha": "484df149b7926502c94724226d77acc57e292884",
-      "bytes": 17519,
-      "source_ref": "414155a7f92abcf744902db11f7c8dcb4c68a5a2",
+      "git_blob_sha": "e4b26e3bdf4f9ad14e94d90236dbc2a4bac4d2b1",
+      "bytes": 17557,
+      "source_ref": null,
       "blob_available": true,
       "components": [
         "complete_operating_guide"
       ],
-      "sha256": "c19d9c84c0c1ebcaa6584f1b835e8f4d0f8d2bd131509f14d4c36b2f457698c5"
+      "sha256": "5b97bad90e97ba6857c0854188141a9e20a4569d2298aad99f01d996834f7f67",
+      "encoding": "utf-8"
     },
     {
       "path": "integration/component_fragments/assessment-report-receiving.json",
@@ -696,7 +711,7 @@
       "bytes": 807,
       "sha256": "a690601e97a6360ce62e4d1f584cec832fb3b15a61ae5599f6328d80c9adfc4f",
       "encoding": "utf-8",
-      "source_ref": null,
+      "source_ref": "b019b185f0ed4d4496e9f26776761b457a7c2543",
       "blob_available": true,
       "components": [
         "jurisdiction_assessment_receiving"
@@ -759,9 +774,9 @@
     },
     {
       "path": "integration/component_fragments/nc-ga-assessment-native-intake.json",
-      "bytes": 9658,
-      "sha256": "3756e94aaa6b58dc0a26839b47cfeea8c0c0867c3108413e69b7de331c6a0bbb",
-      "git_blob_sha": "2b327e0a89cfe062c66e6f3b74aecf207ce8c00e",
+      "bytes": 9768,
+      "sha256": "61eb5c8436d902708d093ff28ae659e041f883df82b15caf0ece549f915fde75",
+      "git_blob_sha": "b4a0385ad3a6f0d1edef3256bc84191e0ebf18a7",
       "encoding": "utf-8",
       "source_ref": null,
       "blob_available": true,
@@ -807,7 +822,7 @@
       "sha256": "acce006ab143858d8285909644fdaf56ec1dda89c3a0ba350e75cfd7790e796a",
       "git_blob_sha": "07ae3a0a9d9d6714e8618a320d5d6c579c13f0f2",
       "encoding": "utf-8",
-      "source_ref": null,
+      "source_ref": "b019b185f0ed4d4496e9f26776761b457a7c2543",
       "blob_available": true,
       "components": [
         "jurisdiction_assessment_receiving"
@@ -960,14 +975,16 @@
     },
     {
       "path": "model/ensemble_report.py",
-      "git_blob_sha": "6d2d598ae963809ae19ea92e9e2e187597096860",
-      "bytes": 26288,
-      "source_ref": "414155a7f92abcf744902db11f7c8dcb4c68a5a2",
+      "git_blob_sha": "e5e562d0c511252fafe5d330b1f56950d3053ec5",
+      "bytes": 26751,
+      "source_ref": null,
       "blob_available": true,
       "components": [
         "saved_parameter_studies",
         "saved_study_consumers"
-      ]
+      ],
+      "sha256": "512e216ce21a46a1126ec3c628424fe4cd6ba309845236f58c76937e847e1f62",
+      "encoding": "utf-8"
     },
     {
       "path": "model/ensemble_scientific_figures.py",
@@ -1907,15 +1924,16 @@
     },
     {
       "path": "operator/REGIONAL_MODEL_AND_ENSEMBLE.md",
-      "git_blob_sha": "a6ca9f354d915b558d6d191697a9a71287c3fa88",
-      "bytes": 112143,
+      "git_blob_sha": "cb61779497b1a589c4fcb5d2d5dc34bd8b408842",
+      "bytes": 117260,
       "source_ref": null,
       "blob_available": true,
       "components": [
         "complete_operating_guide"
       ],
-      "sha256": "884ae2c8ed23e88c58456824b96dd3f4dc2900bf622b5a87cd047b6fb0fe1902",
-      "source_state": "authored postimage included in this publication"
+      "sha256": "30966d1fc35f4d922555f425f7a02f8d3891f783bab09dfa761d11a1edb0396b",
+      "source_state": "authored postimage included in this publication",
+      "encoding": "utf-8"
     },
     {
       "path": "operator/REGIONAL_SOIL_DESK.md",
@@ -2281,9 +2299,9 @@
     },
     {
       "path": "source_tools/ASSESSMENT_REPORT_RECEIVING.md",
-      "git_blob_sha": "ccd12ce10db61af47cf25c91607fb9d5f8eac876",
-      "bytes": 10002,
-      "sha256": "3bbd57b6ebb61200a464dfbcf9bcd6e450da51ea76b5ef77892681194aab6e06",
+      "git_blob_sha": "2cad290cbefd484d98d68f8ca2c2c107c6735a2d",
+      "bytes": 11774,
+      "sha256": "c18ef758d0d33e1e2fb36a5a5bf5b01c6c1d579cb9126733b3d54095e2d46446",
       "encoding": "utf-8",
       "source_ref": null,
       "blob_available": true,
@@ -2293,9 +2311,9 @@
     },
     {
       "path": "source_tools/assessment_report_receiving.py",
-      "git_blob_sha": "fd7b26065a121201094417f6f259f18a28fd0c80",
-      "bytes": 19463,
-      "sha256": "4301e163e4954fab3790acf8c2e725949795de58f2654603d082716ea271ab72",
+      "git_blob_sha": "4b1bbdaaeb45ab412a4a8d99c979893dc42726db",
+      "bytes": 19929,
+      "sha256": "dc0ac9970add9e88b908589784fcacb6177fa389510865579d24eaf1ee93b7ba",
       "encoding": "utf-8",
       "source_ref": null,
       "blob_available": true,
@@ -2436,9 +2454,9 @@
     },
     {
       "path": "source_tools/RECEIVE_GEORGIA_ASSESSMENT.md",
-      "git_blob_sha": "cd9ab65996206f4353869362e81fe1d271d2cf1d",
-      "bytes": 8955,
-      "sha256": "cdab6d4748674f89418368450a33aa55bd8142c99bc82ccc82779f409e438e0b",
+      "git_blob_sha": "f8b342ca88b1d2c801a5e5ed3255ceb434877658",
+      "bytes": 14321,
+      "sha256": "eee402fd91ff1f4a0cd9b191701dbba02c8d80cd825fc9963ae204277faf2882",
       "encoding": "utf-8",
       "source_ref": null,
       "blob_available": true,
@@ -2448,9 +2466,9 @@
     },
     {
       "path": "source_tools/receive_georgia_assessment.py",
-      "git_blob_sha": "228e2528dc3ca0b4d6b3525585631a14b5d5d75d",
-      "bytes": 19015,
-      "sha256": "a8eb32eb654b339468c9dcb66c6d42e0a88da02de201a065f1df5c91a346aa2f",
+      "git_blob_sha": "4e5d127488f29aa119e9b94464bdf4c0d1f4ad74",
+      "bytes": 27824,
+      "sha256": "bfea83cea612149a6ee3b32557a1a2f02d5b73ab04d696de0100ddd4916717ae",
       "encoding": "utf-8",
       "source_ref": null,
       "blob_available": true,
@@ -2464,7 +2482,7 @@
       "bytes": 8632,
       "sha256": "5d9912ca03ed08b9a8d4a3936e8e6ccb062e19aadb030868758234f1c762dc02",
       "encoding": "utf-8",
-      "source_ref": null,
+      "source_ref": "b019b185f0ed4d4496e9f26776761b457a7c2543",
       "blob_available": true,
       "components": [
         "jurisdiction_assessment_receiving"
@@ -2476,7 +2494,7 @@
       "bytes": 23495,
       "sha256": "09ed1e14a40aa5f22f8d532de26a2cb2603993fa3fd6df2106a39a517f8de25f",
       "encoding": "utf-8",
-      "source_ref": null,
+      "source_ref": "b019b185f0ed4d4496e9f26776761b457a7c2543",
       "blob_available": true,
       "components": [
         "jurisdiction_assessment_receiving"
@@ -3398,6 +3416,18 @@
       "git_blob_sha": "d26b4a1cbccb05b2fd71dd8bf9ffefb6857291cd",
       "encoding": "utf-8",
       "source_ref": "704c1d14946f13e75e7e5b9db0340ca677050d51",
+      "blob_available": true,
+      "components": [
+        "jurisdiction_assessment_receiving"
+      ]
+    },
+    {
+      "path": "source/georgia-assessment-2024/publisher-savannah-20261013/geometry-capture-manifest.original.json",
+      "git_blob_sha": "1c4351f51e44808c7d6b01ba20fbc2966391ea78",
+      "bytes": 18874,
+      "sha256": "d52ea020236b6577947698537e07332d99810d99b8d000c69334360cca781c1f",
+      "encoding": "utf-8",
+      "source_ref": null,
       "blob_available": true,
       "components": [
         "jurisdiction_assessment_receiving"
@@ -5668,7 +5698,7 @@
       "sha256": "6147f2d2db8a990090dcf0dc83bc40705c99bd9707192192f5d429919adf8fdc"
     }
   ],
-  "composition": "Seventeen complete source families retain 461 exact paths from the merged Gauge and native-study receiving application. The native demonstration and Gauge receivers save scientific report editions, export editable selected Studies and reopen the archived application. Received Gauge studies open their saved Gauge, Station Geography, regional report and scientific source. Received native model studies open their captured physical results, original editable local designs, retained native runs, source figures and report composer. The regional family retains all157 complete members and its five native manifests; the annual/assessment family retains all17 source members. Executable receiving uses the current complete application and preserves newer shared peers while immutable source banks recover original data. The complete 90-member jurisdiction source family continues the original North Carolina and Georgia assessment operations into saved ordered scientific reports, selected Studies and independent archived-application reopening.",
+  "composition": "Seventeen complete source families retain 463 exact paths from the merged Gauge and native-study receiving application. The native demonstration and Gauge receivers save scientific report editions, export editable selected Studies and reopen the archived application. Received Gauge studies open their saved Gauge, Station Geography, regional report and scientific source. Received native model studies open their captured physical results, original editable local designs, retained native runs, source figures and report composer. The regional family retains all157 complete members and its five native manifests; the annual/assessment family retains all17 source members. Executable receiving uses the current complete application and preserves newer shared peers while immutable source banks recover original data. The complete 91-member jurisdiction source family continues the original North Carolina and Georgia assessment operations into saved ordered scientific reports, selected Studies and independent archived-application reopening. The maintained Georgia receiver downloads missing original attachment pages into the original geometry course before source import. Completed assessment Study receiving resumes through the maintained native receiving API. Current report wording preserves simulated input meaning and each run's valid reporting support. The complete current owner brief travels with the application and operating guide.",
   "publication": {
     "merged_prs": [
       2806,
@@ -5700,19 +5730,20 @@
       3790,
       3842,
       3872,
-      3914
+      3914,
+      4000,
+      4004
     ],
     "authored_continuation_paths": [
-      "operator/REGIONAL_MODEL_AND_ENSEMBLE.md",
       "source_tools/assessment_report_receiving.py",
-      "source_tools/receive_north_carolina_assessment.py",
-      "source_tools/receive_georgia_assessment.py",
       "source_tools/ASSESSMENT_REPORT_RECEIVING.md",
-      "source_tools/RECEIVE_NORTH_CAROLINA_ASSESSMENT.md",
+      "model/ensemble_report.py",
+      "operator/REGIONAL_MODEL_AND_ENSEMBLE.md",
+      "integration/component_fragments/a74f-regional-source-composition.json",
+      "source_tools/receive_georgia_assessment.py",
       "source_tools/RECEIVE_GEORGIA_ASSESSMENT.md",
-      "integration/component_fragments/assessment-report-receiving.json",
       "integration/component_fragments/nc-ga-assessment-native-intake.json",
-      "integration/STATE_ASSESSMENT_SOURCE_RECEIVING.md"
+      "source/georgia-assessment-2024/publisher-savannah-20261013/geometry-capture-manifest.original.json"
     ],
     "pending_blob_paths": []
   }

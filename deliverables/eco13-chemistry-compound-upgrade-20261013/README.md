@@ -4,7 +4,7 @@ This bank carries the full maintained Chemistry 0.3.0 component, explicit prepar
 
 ## Included source
 
-The 4 source parts contain **43 complete UTF-8 files / 895,314 source bytes**:
+The 4 source parts contain **43 complete UTF-8 files / 915,538 source bytes**:
 
 - All **38** paths used by `operator/install_chemistry.py`, including the complete numerical engine, saved-case/run provider, scientific HTML/source producers, current operator interface, registered descriptor, guides and original installation machinery.
 - The complete native receiving script and guide, the original Chemistry report browser course and guide, and the complete 27-member source bank linked by that browser guide. These five receiving files are staged beside the complete component.
@@ -25,6 +25,21 @@ The existing Scientific Reports composer must export `SCIENTIFIC_REPORT_SOURCE_S
 The scientific Python environment needs NumPy, SciPy, ReportLab and the full application's existing transfer dependencies. Complete transfer requires its maintained `model.portable.resume_restore` API, checked before native course effects. Preserve the current shared portable implementation; this frozen Chemistry component does not replace it. Use the same environment that opens the current regional Workspace.
 
 The retained project for this course is `b9d5d257-c6bb-4f07-b975-8e8c63705db3`. The current independently received regional archive includes the original authored four-reach case and its completed calibration, 512-draw uncertainty and monitoring analyses. The receiving guide lists their complete native IDs. Scientific source collections, observed records, model requests and completed run artifacts remain in that existing Workspace.
+
+## Continue the exact saved scientific edition
+
+At the existing completed native boundary, the staged browser can build its configuration directly from the native output. This uses the actual original `receiving.json` and `scientific-preview.json`; it preserves completed run/report/source identities, original ordering, project and case, title and the exact historical contact object.
+
+```sh
+node "$STAGE/source/chemistry-report-receiving/browser.mjs" \
+  --from-native "$OUTPUT" \
+  --workspace-key ACTUAL_REGISTERED_WORKSPACE_KEY \
+  --write-config /actual/chemistry-browser-selection.json
+```
+
+Use that configuration in the existing browser command with the accepting host's private operator URL and Playwright. The current composer replace/append/preview controls are operated, then the exact native combined edition is opened for its original downloads, selected Study export and independent reopening. The journal retains the current composer preview separately from the selected scientific edition; historical contact identity remains unchanged. The existing durable request admission/recovery is preserved.
+
+Only the browser receiving driver and its guide change in this complete source edition. All 38 installed component leaves, the native receiving command, original numerical results, other three source parts and bootstrap remain unchanged. The two full source postimages are identified by public source bank `82fcbaafaab280c38de102b76e1744668a1af2cc` and their exact member hashes in `manifest.json`. Stage into a fresh source directory at the existing source boundary, preserving any active accepted browser process and its original configuration/journal.
 
 ## Stage, install and operate
 
@@ -107,7 +122,7 @@ node "$STAGE/source/chemistry-report-receiving/browser.mjs" \
   --playwright /actual/installed/playwright/index.mjs
 ```
 
-Use `CHROMIUM_EXECUTABLE` only for the receiver's existing browser runtime when needed. The browser course uses its original request journal and task recovery; repeat the same configuration and output after interruption. The native numerical course can run in the already accepted Python operation while the existing browser owner continues the interactive course. Read the complete staged `source/chemistry-report-receiving/README.md` for exact controls, source provenance and retained output paths.
+Use `CHROMIUM_EXECUTABLE` only for the receiver's existing browser runtime when needed. The browser course saves each complete original request before admitting it to the operator. After interruption, it first reconciles complete task history, including a task reused under another operation ID, and reopens the original report/export/restore task. An ambiguous history remains in Operations; it does not submit another task. Repeat the same configuration and output after interruption. This source-only receiving correction leaves all 38 installed component bodies and completed native results unchanged. Use the newly staged browser script only at the existing course's next finished or interrupted source boundary; keep any active accepted script and its process intact. The native numerical course can run in the already accepted Python operation while the existing browser owner continues the interactive course. Read the complete staged `source/chemistry-report-receiving/README.md` for exact controls, source provenance and retained output paths.
 
 ## Rendered-product inspection before presentation
 
@@ -150,3 +165,54 @@ Pass this rule to child/delegated workers and persist it in owner-controlled pro
 
 Canonical local policy: `C:/Users/lucys/.commons/rendered-product-inspection-policy.md` and `.json`. Portable repository copy: `docs/policies/rendered-product-inspection-policy.md` and `.json` when present. Only Bryce can change this standing rule.
 <!-- bryce-rendered-product-inspection:end -->
+
+
+## Complete current owner direction
+
+Carried unchanged from `opportunities/upstate_forever_2026/CURRENT_OWNER_DIRECTION.md`, version `2026-10-13.3`, Git `8cd1c1f3d371a2fb75471813844e31f489aa8272`:
+
+# Current owner direction: Ecosystem Sciences demonstration
+
+Version: `2026-10-13.3`. Owner: Bryce / TokenJunkieLabs. Direction for the Upper Savannah application, demonstration, presentation and work orders. Continue the broad build without arbitrary feature/scenario caps. Preserve today's cutoff: **October 13, 2026, 10:00 a.m. Eastern / 14:00 UTC**. Do not pause work or extend the sprint.
+
+## Direct owner instructions
+
+> do the simulated model
+
+> just make sure that what we put infront of him is something he would need and want and he will be blown away how relevant it is to him and how he wants it,a nd also the speed we produced it
+
+> just checking dont pause anythi g
+
+> and make sure wherever the fleet is coordinating in slack or github or wherever on this demo / presentation / ecosystem gets that update toand passes it along to other agents because the feed may be moving fast
+
+## Build for an experienced scientific practice
+
+Ecosystem Sciences lists GIS, hydrology/monitoring, ecological modeling, watershed assessment, statistics, visualization, optimization and publishing. Tim Maguire's practice includes GIS, modeling and water resources. Its South Platte work assembled data, mapped natural capital and produced watershed investment decision support. Do not assume it lacks these capabilities. Its unmet tooling, InVEST or production-capacity gap is unknown until the call. Sources: [Services](https://www.ecosystemsciences.com/read-me), [Firm](https://www.ecosystemsciences.com/firm), [South Platte](https://www.ecosystemsciences.com/).
+
+Show concrete delivery and engineering offload on the actual Upper Savannah RFP workflow: source assembly, reproducible native calculations, editable scenarios, useful decisions and a complete working handoff. The prime retains scientific direction, method choices, interpretation/review and the client relationship. Relevance comes from useful work they can inspect, adapt and receive; do not promise Tim's reaction or claim an unconfirmed need.
+
+## Execute the prepared simulated case now
+
+Native execution is the immediate hard priority. Issue the prepared simulated case on the verified scientific runtime, retain its actual run identity and progress, and obtain the real native outputs. Continue the source/runtime/application integration needed to make that happen. Further plans, stock demonstrations, policy reviews and cosmetic inspection do not replace execution. Do not introduce a bid decision or a prime's yes as a gate.
+
+Demonstrate the scientific operation in the actual application:
+
+1. Use the RFP's 30 m GIS selection. Keep the upstream contributing model domain distinct from the South Carolina reporting mask and the four existing utility focus anchors; retain their actual source geometries and identities.
+2. Run the baseline, a realistic riparian alternative and its matched control with explicit, editable source editions, assumptions, parameters and scenario changes.
+3. Show active run/progress/logs and completed native annual NDR/SDR results: nitrogen and phosphorus in **kg/year**, sediment in **tonnes/year**, representing delivery to streams. Do not present these modeled stream loads as intake concentrations.
+4. Compare the actual maps, tables and report, preserving matched scientific support and original units. Keep source/assumption edits and their consequences inspectable.
+5. Export the editable GIS/project and complete scientific working package. Cold-reopen the delivered application/project and show the retained sources, selections, results and useful controls.
+
+Identify the simulated case as modeled. Never invent measurements, completion or customer acceptance.
+
+## Present the real work and real speed
+
+Actually open, see and use the outgoing app and every attachment as its recipient would. Repair defects and ship a plain, readable product. Apply the standing inspection rule without review/test theatre or parallel bureaucracy.
+
+If producing video, record the actual working application and use available natural generative voice/TTS. Watch and listen to the final export. Generated frames must never pretend to be a working app. Explain speed using actual elapsed start, commit, run and package history; do not invent delivery times or guaranteed reactions.
+
+## Carry this direction with the work
+
+Pass this complete brief into every current child, provider and cloud work order and handoff. Include its durable path and version `2026-10-13.3` with the next result. Relay it at the actual coordination surface and onward to participating workers; fast feeds can bury an update. Acknowledgment alone is not delivery.
+
+Preserve active compute and existing implementation ownership. Do not force worker restarts, drop an active run or create a new controller. Keep lab attribution, source/copyright, incident and contact controls, personal-meeting approval, no private GitHub/Actions, no llama.cpp and focused internal validation. No new approval gate or broad test sweep is authorized.

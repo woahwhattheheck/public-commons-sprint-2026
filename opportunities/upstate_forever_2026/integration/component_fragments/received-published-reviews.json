@@ -1,7 +1,7 @@
 {
   "schema": "upstate.application-component-fragment/v1",
   "id": "received-published-reviews",
-  "source_reference": "https://github.com/woahwhattheheck/public-commons-sprint-2026/tree/main/opportunities/upstate_forever_2026",
+  "source_reference": "https://github.com/woahwhattheheck/public-commons-sprint-2026/issues/4056",
   "extend_components": {
     "published-studies": {
       "paths": [
@@ -9,7 +9,13 @@
         "operator/received_published_reviews.py",
         "operator/web/received_published_reviews.mjs",
         "operator/web/received_published_reviews.css",
-        "operator/RECEIVED_PUBLISHED_REVIEWS.md"
+        "operator/RECEIVED_PUBLISHED_REVIEWS.md",
+        "model/published_review_admission.py",
+        "operator/published_review_admission.py",
+        "operator/extensions/received-published-review-admission.json",
+        "model/published_review_study_transfer.py",
+        "CURRENT_OWNER_DIRECTION.md",
+        "AGENTS.md"
       ]
     },
     "study-transfer": {
@@ -18,7 +24,13 @@
         "operator/received_published_reviews.py",
         "operator/web/received_published_reviews.mjs",
         "operator/web/received_published_reviews.css",
-        "operator/RECEIVED_PUBLISHED_REVIEWS.md"
+        "operator/RECEIVED_PUBLISHED_REVIEWS.md",
+        "model/published_review_admission.py",
+        "operator/published_review_admission.py",
+        "operator/extensions/received-published-review-admission.json",
+        "model/published_review_study_transfer.py",
+        "CURRENT_OWNER_DIRECTION.md",
+        "AGENTS.md"
       ]
     }
   },

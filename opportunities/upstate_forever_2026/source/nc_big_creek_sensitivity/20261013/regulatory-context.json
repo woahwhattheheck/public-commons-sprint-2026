@@ -1,0 +1,52 @@
+{
+  "schema": "upstate.nc-regulatory-source-context/v1",
+  "retrieved_at": "2026-10-13",
+  "purpose": "Retain reference vintages and literal source discrepancies separately from the original measurements.",
+  "sources": [
+    {
+      "id": "ncdeq-2022-methodology",
+      "url": "https://www.deq.nc.gov/water-quality/planning/tmdl/303d/2022/2022-303d-listing-methodology-final/download",
+      "title": "2022 303(d) Listing and Delisting Methodology",
+      "printed_pages": [
+        2,
+        4,
+        6
+      ],
+      "observations": [
+        "The published freshwater cyanide reference is 5 µg/L.",
+        "The principal 2022 assessment data window is 2016–2020, with stated treatment of older records.",
+        "Assessment includes agency quality review and statistical procedures; these source comparisons retain original ratings."
+      ]
+    },
+    {
+      "id": "ncdeq-current-standards",
+      "url": "https://www.deq.nc.gov/about/divisions/water-resources/water-planning/classification-standards/surface-water-standards",
+      "title": "Surface Water Standards",
+      "page_observations": [
+        "The landing page identifies the rule compilation as effective June 1, 2026.",
+        "Class B primary-recreation amendments use E. coli and were approved by EPA May 9, 2026.",
+        "The landing page's older rulemaking archive describes metal, cyanide and other changes; use the applicable complete rule for a new laboratory scope."
+      ],
+      "linked_current_compilation": "https://edocs.deq.nc.gov/WaterResources/DocView.aspx?dbid=0&id=4518298",
+      "complete_rule_pdf_status": "Linked original compilation was identified; its full body is not part of this selected-measurement family."
+    }
+  ],
+  "source_discrepancy": {
+    "assessment_id": 10673,
+    "assessment_label": "Cyanide (5 mg/L, AL, FW)",
+    "methodology_reference": {
+      "value": 5,
+      "unit": "µg/L"
+    },
+    "original_measurement_pql": {
+      "value": "0.02",
+      "unit": "mg/L"
+    },
+    "derived_pql": {
+      "value": 20,
+      "unit": "µg/L",
+      "factor": 1000
+    }
+  },
+  "reference_comparison_scope": "Literal retained assessment labels and one explicitly named 2022-methodology reference. Contemporary dissolved-metal/hardness criteria are selected separately for future sampling."
+}

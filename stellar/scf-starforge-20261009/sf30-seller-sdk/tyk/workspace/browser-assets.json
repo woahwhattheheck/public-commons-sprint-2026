@@ -29,6 +29,20 @@
         "actions.mjs",
         "text/javascript; charset=utf-8"
       ]
+    ],
+    [
+      "/commissioning-browser.mjs",
+      [
+        "commissioning-browser.mjs",
+        "text/javascript; charset=utf-8"
+      ]
+    ],
+    [
+      "/browser-request-store.mjs",
+      [
+        "browser-request-store.mjs",
+        "text/javascript; charset=utf-8"
+      ]
     ]
   ]
 }

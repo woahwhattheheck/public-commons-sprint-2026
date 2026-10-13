@@ -294,6 +294,9 @@ def request(workspace, selection: dict) -> dict:
     A source-only selection is fully usable before model execution. A selected run
     must be complete. No invented native-stage unit mappings are supplied here.
     """
+    if selection.get("native_study"):
+        from . import gis_native_study
+        return gis_native_study.request(workspace, selection)
     layers, attachments, grid_ids, run_ids = [], [], [], []
     delivery = delivery_layers(workspace, selection["delivery_id"]) if selection.get("delivery_id") else None
     if delivery is not None:

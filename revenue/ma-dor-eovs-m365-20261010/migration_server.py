@@ -18,6 +18,7 @@ import uuid
 from migration_workspace import MigrationWorkspace, MigrationError
 import financial_workspace
 import property_workspace
+import crf_workspace
 from migration_portable import PortableService
 
 READS = {
@@ -30,10 +31,18 @@ READS = {
     "case.schema", "case.dataset.preview", "case.dataset.get", "case.dataset.rows",
     "case.plan.get", "case.plan.items", "case.rehearsal.get", "case.rehearsal.items",
     "case.rehearsal.compare", "case.review.get", "case.cutover.get", "case.list",
+    "register.schema", "register.list", "register.dataset.preview", "register.dataset.get",
+    "register.dataset.rows", "register.plan.get", "register.plan.items", "register.rehearsal.get",
+    "register.rehearsal.items", "register.rehearsal.compare", "register.review.get", "register.cutover.get",
 }
 READS.update(financial_workspace.READS)
 READS.update(property_workspace.READS)
+READS.update(crf_workspace.READS)
 STATIC = {
+    "/crf": ("public/crf.html", "text/html; charset=utf-8"),
+    "/crf.html": ("public/crf.html", "text/html; charset=utf-8"),
+    "/crf.js": ("public/crf.js", "text/javascript; charset=utf-8"),
+    "/crf.css": ("public/crf.css", "text/css; charset=utf-8"),
     "/property": ("public/property.html", "text/html; charset=utf-8"),
     "/property.js": ("public/property.js", "text/javascript; charset=utf-8"),
     "/property.css": ("public/property.css", "text/css; charset=utf-8"),
@@ -44,6 +53,7 @@ STATIC = {
     "/migration-style.css": ("public/migration-style.css", "text/css; charset=utf-8"),
     "/migration-app.js": ("public/migration-app.js", "text/javascript; charset=utf-8"),
     "/migration-cases.js": ("public/migration-cases.js", "text/javascript; charset=utf-8"),
+    "/migration-registers.js": ("public/migration-registers.js", "text/javascript; charset=utf-8"),
 }
 HASH = re.compile(r"^[0-9a-f]{64}$")
 MAX_COMMAND = 2 * 1024 * 1024
@@ -209,8 +219,9 @@ class WorkbenchHandler(BaseHTTPRequestHandler):
                 kind = query.get("kind", [""])[0]
                 identifier = query.get("id", [""])[0]
                 format_name = query.get("format", ["ndjson"])[0]
-                if kind not in {"case.dataset", "case.plan", "case.rehearsal", "case.review", "case.cutover"} | set(financial_workspace.KINDS) | set(property_workspace.KINDS):
-                    raise ValueError("Choose a complete case migration export")
+                if kind not in {"case.dataset", "case.plan", "case.rehearsal", "case.review", "case.cutover",
+                                "register.dataset", "register.plan", "register.rehearsal", "register.review", "register.cutover"} | set(financial_workspace.KINDS) | set(property_workspace.KINDS) | set(crf_workspace.KINDS):
+                    raise ValueError("Choose a complete retained workbench record export")
                 if format_name not in {"ndjson", "csv"}:
                     raise ValueError("Choose NDJSON or CSV")
                 # Finish the retained generator before sending headers. Its mutex

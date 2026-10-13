@@ -74,6 +74,19 @@ export function attachObservationComparability(host){
       '<p class="oc-method">Later year minus earlier year. Every agreeing analytical activity has one weight within its month; each shared complete month has one weight. Complete support means complete among retained source measurements, not continuous calendar coverage. Original reporting-limit bounds remain bounds.</p>'+
       '<div data-oc-downloads class="oc-downloads"></div><div data-oc-result></div></div></section>';
   }
+  function savedFigures(data,c){
+    if(!opened)return '';
+    const allowed=new Set(list(data.series).filter(row=>(!c.station||row.station===c.station)&&(!c.series||row.id===c.series)).map(row=>row.id));
+    const figures=list(opened._figures).filter(row=>allowed.has(row.series_id));
+    if(!figures.length)return '';
+    return '<details class="oc-native-figures"><summary>Saved paired-period interval figures ('+figures.length+')</summary>'+
+      '<p>Each panel uses one original analytical series and its own scale. Filled and open endpoints preserve included and excluded bounds. An arrow has no finite endpoint. The original tables retain all exact values and support.</p>'+
+      figures.map(row=>{
+        if(typeof row.url!=='string'||!/^\/api\/file\//.test(row.url))throw Error('An original figure ticket is missing.');
+        return '<figure><h3>'+esc(row.title)+'</h3><div class="oc-scroll" tabindex="0" role="region" aria-label="'+esc(row.title)+'"><img loading="lazy" src="'+esc(row.url)+'" alt="'+esc(row.caption)+'"></div>'+
+          '<figcaption>'+esc(row.caption)+'</figcaption><p><a href="'+esc(row.url+(row.url.includes('?')?'&':'?')+'download=1')+'">Download original SVG</a></p></figure>';
+      }).join('')+'</details>';
+  }
   function sourceContext(){
     const value=opened?.source_origin||loaded?.source_origin;
     if(!value)return '';
@@ -102,7 +115,7 @@ export function attachObservationComparability(host){
       (opened?'<p>Saved original edition '+esc(opened.edition.id.slice(0,16))+'. Full originals and the report source are retained in this Workspace.</p>':'<p>Original source opened. Save this selection to retain its report source, full offline desk and portable source package.</p>')+sourceContext();
     find('[data-oc-view]').hidden=false;
     const result=renderComparablePeriods(data,{yearA:c.yearA,yearB:c.yearB,station:c.station,series:c.series,tab:c.tab,query:c.query,page:c.page});
-    renderedRows=result.rows;find('[data-oc-result]').innerHTML=result.html;
+    renderedRows=result.rows;find('[data-oc-result]').innerHTML=result.html+savedFigures(data,c);
     find('[data-oc-action="compose"]').disabled=!opened;
     find('[data-oc-action="append"]').disabled=!opened;
     find('[data-oc-downloads]').innerHTML=list(opened?._downloads).map(row=>{
