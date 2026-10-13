@@ -1,3 +1,4 @@
+import {validateApplicationReturns} from './grant-application-return.mjs';
 import {validateRequirementReviews,captureRequirementReview} from './grant-requirement-review-core.mjs';
 import {validateGrantOperatingSelection} from './grant-operating-plan-core.mjs';
 import {validateProductSourceAuthoring,productSourceSelectionOf,restoreProductSourceSelection} from './grant-product-authoring-core.mjs';
@@ -161,6 +162,7 @@ export function validateDraftShape(input){
   }
   validateHandover(input);
   validateProductSourceAuthoring(input);
+  validateApplicationReturns(input);
   return input;
 }
 export function validateDraft(input){

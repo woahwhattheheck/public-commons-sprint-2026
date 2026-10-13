@@ -269,6 +269,27 @@
       ]
     ],
     [
+      "/grant-application-return-working.mjs",
+      [
+        "grant-application-return-working.mjs",
+        "text/javascript; charset=utf-8"
+      ]
+    ],
+    [
+      "/grant-application-return-workspace.mjs",
+      [
+        "grant-application-return-workspace.mjs",
+        "text/javascript; charset=utf-8"
+      ]
+    ],
+    [
+      "/grant-application-return.mjs",
+      [
+        "grant-application-return.mjs",
+        "text/javascript; charset=utf-8"
+      ]
+    ],
+    [
       "/grant-catalog-browser.mjs",
       [
         "grant-catalog-browser.mjs",
@@ -836,6 +857,13 @@
       ]
     ],
     [
+      "/source-table-corrections.mjs",
+      [
+        "source-table-corrections.mjs",
+        "text/javascript; charset=utf-8"
+      ]
+    ],
+    [
       "/source-table-guide.md",
       [
         "../SOURCE_TABLES.md",
@@ -959,13 +987,6 @@
       [
         "woo.html",
         "text/html; charset=utf-8"
-      ]
-    ],
-    [
-      "/source-table-corrections.mjs",
-      [
-        "source-table-corrections.mjs",
-        "text/javascript; charset=utf-8"
       ]
     ]
   ]
