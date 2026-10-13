@@ -183,13 +183,11 @@ def profile_read(value):
 
 def initialize(workspace):
     with workspace.connection(write=True) as db:
-        db.executescript("""
-        CREATE TABLE IF NOT EXISTS maximo_profiles(id TEXT PRIMARY KEY,body TEXT NOT NULL,updated_at REAL NOT NULL);
-        CREATE TABLE IF NOT EXISTS maximo_jobs(id TEXT PRIMARY KEY,project_id TEXT NOT NULL,binding TEXT NOT NULL,
-          body TEXT NOT NULL,updated_at REAL NOT NULL);
-        CREATE TABLE IF NOT EXISTS maximo_http(job_id TEXT NOT NULL,step TEXT NOT NULL,attempt INTEGER NOT NULL,
-          request TEXT NOT NULL,response TEXT,body BLOB,PRIMARY KEY(job_id,step,attempt));
-        """)
+        db.execute("""CREATE TABLE IF NOT EXISTS maximo_profiles(id TEXT PRIMARY KEY,body TEXT NOT NULL,updated_at REAL NOT NULL)""")
+        db.execute("""CREATE TABLE IF NOT EXISTS maximo_jobs(id TEXT PRIMARY KEY,project_id TEXT NOT NULL,binding TEXT NOT NULL,
+          body TEXT NOT NULL,updated_at REAL NOT NULL)""")
+        db.execute("""CREATE TABLE IF NOT EXISTS maximo_http(job_id TEXT NOT NULL,step TEXT NOT NULL,attempt INTEGER NOT NULL,
+          request TEXT NOT NULL,response TEXT,body BLOB,PRIMARY KEY(job_id,step,attempt))""")
 def save_profile(workspace, value):
     value = profile_read(value); initialize(workspace)
     with workspace.connection(write=True) as db:

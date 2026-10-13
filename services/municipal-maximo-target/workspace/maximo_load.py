@@ -15,12 +15,23 @@ from .maximo_target import (need, original, wire, key, pointer, parse_capture, l
 
 def initialize(workspace):
     with workspace.connection(write=True) as db:
-        db.executescript("""
-        CREATE TABLE IF NOT EXISTS maximo_loads(id TEXT PRIMARY KEY,project_id TEXT NOT NULL,
-          request_sha256 TEXT NOT NULL,body BLOB NOT NULL,created_at REAL NOT NULL);
-        CREATE TABLE IF NOT EXISTS maximo_load_returns(id TEXT PRIMARY KEY,load_id TEXT NOT NULL,
-          body BLOB NOT NULL,report TEXT NOT NULL,actor TEXT NOT NULL,at REAL NOT NULL);
-        """)
+        db.execute("""CREATE TABLE IF NOT EXISTS maximo_loads(id TEXT PRIMARY KEY,project_id TEXT NOT NULL,
+          request_sha256 TEXT NOT NULL,body BLOB NOT NULL,created_at REAL NOT NULL,summary TEXT)""")
+        db.execute("""CREATE TABLE IF NOT EXISTS maximo_load_returns(id TEXT PRIMARY KEY,load_id TEXT NOT NULL,
+          body BLOB NOT NULL,report TEXT NOT NULL,actor TEXT NOT NULL,at REAL NOT NULL,summary TEXT)""")
+        for table in ("maximo_loads", "maximo_load_returns"):
+            if "summary" not in {row["name"] for row in db.execute("PRAGMA table_info("+table+")")}:
+                db.execute("ALTER TABLE "+table+" ADD COLUMN summary TEXT")
+
+def prepared_summary(document):
+    return {"id": document["id"], "rows": len(document["rows"]), "body_sha256": document["body_sha256"],
+            "request_sha256": document["request_sha256"], "created_at": document["prepared_at"]}
+
+def received_summary(report):
+    counts = {}
+    for row in report["rows"]: counts[row["outcome"]] = counts.get(row["outcome"], 0)+1
+    return {k:report[k] for k in ("schema", "load_id", "receive_id", "body_sha256", "http_status", "allornothing", "findings", "verification")} | {
+        "row_count": len(report["rows"]), "outcomes": counts}
 
 def scalar(value, definition, field):
     kind = definition.get("type")
@@ -170,7 +181,8 @@ def prepare(workspace, project_id, revision, actor, operation, capture_operation
         if prior:
             need(prior["request_sha256"] == request_hash, "Load operation was used concurrently")
             return original(prior["body"])
-        db.execute("INSERT INTO maximo_loads VALUES(?,?,?,?,?)", (operation, project_id, request_hash, encoded, time.time()))
+        db.execute("INSERT INTO maximo_loads(id,project_id,request_sha256,body,created_at,summary) VALUES(?,?,?,?,?,?)",
+                   (operation, project_id, request_hash, encoded, time.time(), canonical(prepared_summary(document))))
     return document
 
 def receive(workspace, project_id, load_id, operation, actor, returned):
@@ -203,7 +215,7 @@ def receive(workspace, project_id, load_id, operation, actor, returned):
         status = int(supplied) if isinstance(supplied, (int, str)) and str(supplied).isdigit() else None
         data = response.get("_responsedata") if isinstance(response, dict) else None
         error = data.get("Error") if isinstance(data, dict) else None
-        outcome = "reported_success" if status is not None and 200 <= status < 300 and not error else "reported_rejection" if status is not None and status >= 400 else "unknown"
+        outcome = "accepted_pending" if status == 202 and not error else "reported_success" if status is not None and 200 <= status < 300 and not error else "reported_rejection" if status is not None and status >= 400 else "unknown"
         results.append({**expected, "reported_status": status, "outcome": outcome,
                         "resource_location": meta.get("Location", meta.get("location")), "original_response": response})
     all_or_nothing = saved["headers"]["allornothing"] == "1"
@@ -213,6 +225,8 @@ def receive(workspace, project_id, load_id, operation, actor, returned):
         for row in results: row["outcome"] = "transaction_not_committed"
     elif all_or_nothing and any(row["outcome"] == "unknown" for row in results):
         for row in results: row["outcome"] = "unknown"
+    elif all_or_nothing and any(row["outcome"] == "accepted_pending" for row in results):
+        for row in results: row["outcome"] = "accepted_pending"
     report = {"schema": "municipal.maximo-load-result.v1", "load_id": load_id, "receive_id": operation,
               "body_sha256": SHA(raw), "http_status": returned["http_status"],
               "allornothing": all_or_nothing, "rows": results, "findings": findings,
@@ -224,22 +238,53 @@ def receive(workspace, project_id, load_id, operation, actor, returned):
             need(old["load_id"] == load_id and old["body"] == encoded and old["actor"] == actor,
                  "Original receiving operation belongs to a different result")
             return json.loads(old["report"])
-        db.execute("INSERT INTO maximo_load_returns VALUES(?,?,?,?,?,?)",
-                   (operation, load_id, encoded, wire(report, maximum=16*1024*1024).decode(), actor, time.time()))
+        db.execute("INSERT INTO maximo_load_returns(id,load_id,body,report,actor,at,summary) VALUES(?,?,?,?,?,?,?)",
+                   (operation, load_id, encoded, wire(report, maximum=16*1024*1024).decode(), actor, time.time(),
+                    canonical(received_summary(report))))
     return report
 
 def list_loads(workspace, project_id):
     initialize(workspace)
-    with workspace.connection() as db:
-        values = list(db.execute("SELECT id,body,created_at FROM maximo_loads WHERE project_id=? ORDER BY created_at DESC", (project_id,)))
+    # Older retained editions are summarized once. Routine state reads select no BLOBs.
+    with workspace.connection(write=True) as db:
+        missing = list(db.execute("SELECT id,body FROM maximo_loads WHERE project_id=? AND summary IS NULL", (project_id,)))
+        for row in missing:
+            doc = original(row["body"])
+            if "request_sha256" not in doc:
+                doc["request_sha256"] = SHA(wire({k:doc[k] for k in ("method","url","headers","body_sha256")}))
+            db.execute("UPDATE maximo_loads SET summary=? WHERE id=?", (canonical(prepared_summary(doc)),row["id"]))
+        missing_returns = list(db.execute("""SELECT r.id,r.report FROM maximo_load_returns r JOIN maximo_loads l ON l.id=r.load_id
+             WHERE l.project_id=? AND r.summary IS NULL""", (project_id,)))
+        for row in missing_returns:
+            db.execute("UPDATE maximo_load_returns SET summary=? WHERE id=?",
+                       (canonical(received_summary(json.loads(row["report"]))),row["id"]))
+        values = list(db.execute("SELECT id,summary FROM maximo_loads WHERE project_id=? ORDER BY created_at DESC", (project_id,)))
         result = []
         for row in values:
-            item = original(row["body"])
-            returns = [{"id": x["id"], "actor": x["actor"], "at": x["at"], "report": json.loads(x["report"])}
-                       for x in db.execute("SELECT * FROM maximo_load_returns WHERE load_id=? ORDER BY at", (row["id"],))]
-            result.append({"id": row["id"], "rows": len(item["rows"]), "body_sha256": item["body_sha256"],
-                           "created_at": row["created_at"], "request_sha256": item["request_sha256"], "returns": returns})
+            item = json.loads(row["summary"])
+            item["returns"] = [{"id": x["id"], "actor": x["actor"], "at": x["at"], "report": json.loads(x["summary"])}
+               for x in db.execute("SELECT id,actor,at,summary FROM maximo_load_returns WHERE load_id=? ORDER BY at", (row["id"],))]
+            result.append(item)
     return result
+
+def result_view(workspace, project_id, receive_id, offset=0, limit=100):
+    initialize(workspace)
+    need(type(offset) is int and offset >= 0 and type(limit) is int and 1 <= limit <= 250, "Select a bounded original result page")
+    with workspace.connection() as db:
+        row = db.execute("""SELECT r.report FROM maximo_load_returns r JOIN maximo_loads l ON l.id=r.load_id
+             WHERE r.id=? AND l.project_id=?""", (receive_id,project_id)).fetchone()
+    if not row: raise KeyError(receive_id)
+    report = original(row["report"].encode())
+    items = [{k:v for k,v in item.items() if k != "original_response"} for item in report["rows"][offset:offset+limit]]
+    return {**received_summary(report), "offset":offset, "limit":limit, "total":len(report["rows"]), "rows":items}
+
+def result_document(workspace, project_id, receive_id):
+    initialize(workspace)
+    with workspace.connection() as db:
+        row = db.execute("""SELECT r.body FROM maximo_load_returns r JOIN maximo_loads l ON l.id=r.load_id
+             WHERE r.id=? AND l.project_id=?""", (receive_id,project_id)).fetchone()
+    if not row: raise KeyError(receive_id)
+    return row["body"]
 
 def export(workspace, project_id):
     initialize(workspace)

@@ -211,7 +211,7 @@ async function maximoRequests(id){
 }
 async function maximoRetain(name,value){
   const text=JSON.stringify(value);
-  if(new TextEncoder().encode(text).length>16*1024*1024)throw new Error('Complete saved request exceeds16MiB. Use the original native CLI with the full file.');
+  if(new TextEncoder().encode(text).length>16*1024*1024)throw new Error('Complete saved request exceeds 16MiB. Use the original native CLI with the full file.');
   return maximoStored('readwrite',(store,done,fail)=>{
     const existing=store.get(name);
     existing.onsuccess=()=>{
@@ -253,6 +253,33 @@ async function maximoStart(payload){
     await maximoRetain(name,saved);
     return await maximoSend(saved,name,true);
   }finally{setBusy(false);}
+}
+function maximoResultDetails(projectId,received){
+  const detail=el('details',{},el('summary',{},'Original result '+received.id+' · '+when(received.at)));
+  const rows=el('div'),controls=el('div',{class:'toolbar'});
+  let offset=0,generation=0,loaded=false,loading=false;
+  const previous=button('Previous result rows',()=>show(Math.max(0,offset-100)));
+  const next=button('Next result rows',()=>show(offset+100));
+  controls.append(previous,next);
+  detail.append(jsonDetails('Complete result summary',received.report),
+    el('a',{href:'/api/projects/'+projectId+'/maximo-file?kind=result&operation='+encodeURIComponent(received.id)},'Download full original provider result'),
+    rows,controls);
+  async function show(selected){
+    if(loading)return;loading=true;const token=++generation;
+    previous.disabled=next.disabled=true;
+    try{
+      const data=await request('/api/projects/'+projectId+'/maximo-result?operation='+encodeURIComponent(received.id)+'&offset='+selected+'&limit=100');
+      if(project?.id!==projectId||!detail.isConnected||token!==generation)return;
+      if(data.receive_id!==received.id)throw new Error('Returned result belongs to another original operation.');
+      offset=data.offset;loaded=true;
+      rows.replaceChildren(el('p',{class:'small'},data.total?'Rows '+(offset+1)+'–'+(offset+data.rows.length)+' of '+data.total:'No prepared source rows'),
+        table(['Position','Original source ID','Native key','Outcome','Provider status'],data.rows.map(row=>[row.position,row.source_id,row.native_key,human(row.outcome),row.reported_status??'unknown'])));
+      previous.disabled=offset===0;next.disabled=offset+data.rows.length>=data.total;
+    }catch(error){rows.replaceChildren(el('p',{class:'error'},error.message));previous.disabled=false;next.disabled=false;}
+    finally{loading=false;}
+  }
+  detail.addEventListener('toggle',()=>{if(detail.open&&!loaded)show(0);});
+  return detail;
 }
 function maximo(){
   const host=$('#content'),id=project.id,serial=++maximoSerial;host.replaceChildren();
@@ -311,7 +338,7 @@ function maximo(){
       ...data.loads.map(row=>el('details',{},el('summary',{},row.id+' · '+row.rows+' source rows'),
         el('a',{href:'/api/projects/'+id+'/maximo-file?kind=load&operation='+encodeURIComponent(row.id)},'Download complete prepared load'),
         el('p',{class:'mono small'},row.body_sha256),
-        ...row.returns.map(received=>jsonDetails('Original result '+received.id+' · '+when(received.at),received.report))))));
+        ...row.returns.map(received=>maximoResultDetails(id,received))))));
   });
 }
 

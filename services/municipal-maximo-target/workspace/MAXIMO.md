@@ -108,7 +108,7 @@ Retain the actual HTTP status and all available original response headers. The p
 python -m workspace.maximo_cli --workspace "$WORKSPACE" receive-load --project "$PROJECT" --actor "$ACTOR" --operation "$RESULT_RECEIVE_ID" --load "$LOAD_ID" --result /private/original-result.json --output /private/received-result-report.json
 ```
 
-The app's **Receive complete provider result** reads that same full file. HTTP200 is evaluated through every positional `_responsemeta.status` and `_responsedata.Error`. The complete original response is retained even when malformed or incomplete at the semantic level, and ambiguous rows remain unknown. Explicit all-or-nothing failures are displayed as an uncommitted transaction.
+The app's **Receive complete provider result** reads that same full file. HTTP200 is evaluated through every positional `_responsemeta.status` and `_responsedata.Error`. The complete original response is retained even when malformed or incomplete at the semantic level, and ambiguous rows remain unknown. A per-resource202 is retained as accepted/pending, including any atomic transaction awaiting completion. Explicit all-or-nothing failures are displayed as an uncommitted transaction. Ordinary status refreshes load compact stored summaries; opening an original result shows all positional source rows in pages of100, with the complete original provider response available as a separate download.
 
 Capture a new complete target edition after the prime's actual mutation. Receive it in the same project and use the existing comparison/report to assess the actual result. Reported provider success and independently observed target values remain separate fields.
 
