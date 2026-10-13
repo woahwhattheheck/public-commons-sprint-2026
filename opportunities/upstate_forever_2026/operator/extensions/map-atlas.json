@@ -2,7 +2,7 @@
   "schema": "upstate.operator-extension/v1",
   "id": "map-atlas",
   "title": "Map atlas and delivery",
-  "version": "2",
+  "version": "3",
   "order": 90,
   "assets": [
     "map_atlas.mjs",
@@ -40,6 +40,21 @@
   "backend": {
     "module": "map_atlas",
     "routes": [
+      {
+        "methods": [
+          "POST"
+        ],
+        "path": "/api/map-atlas/inspect",
+        "operation": "inspect",
+        "handler": "read",
+        "args": [
+          "operator",
+          "workspace_key",
+          "operation",
+          "payload",
+          "fault"
+        ]
+      },
       {
         "methods": [
           "GET"
