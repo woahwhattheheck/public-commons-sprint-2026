@@ -1,0 +1,97 @@
+{
+  "schema": "source-release/1",
+  "release_id": "cms-ca-8d621b64ae245acb9f970dbc24e9447f18fb5d1c2710640d538dd6afebe29872",
+  "dataset_id": "xubh-q36u",
+  "resource_id": "90fa4cdf-f49d-556d-8790-d32fbbec40c6",
+  "scope": {
+    "state": "CA"
+  },
+  "captured_on": "2026-10-13",
+  "source_modified": "2026-07-22",
+  "source_released": "2026-08-13",
+  "dataset_url": "https://data.cms.gov/provider-data/dataset/xubh-q36u",
+  "dictionary_url": "https://data.cms.gov/provider-data/sites/default/files/data_dictionaries/hospital/HOSPITAL_Data_Dictionary.pdf",
+  "row_count": 377,
+  "field_count": 38,
+  "key": {
+    "field": "facility_id",
+    "type": "text",
+    "meaning": "CMS facility identifier; preserved exactly including leading zeroes"
+  },
+  "fields": [
+    "facility_id",
+    "facility_name",
+    "address",
+    "citytown",
+    "state",
+    "zip_code",
+    "countyparish",
+    "telephone_number",
+    "hospital_type",
+    "hospital_ownership",
+    "emergency_services",
+    "meets_criteria_for_birthing_friendly_designation",
+    "hospital_overall_rating",
+    "hospital_overall_rating_footnote",
+    "mort_group_measure_count",
+    "count_of_facility_mort_measures",
+    "count_of_mort_measures_better",
+    "count_of_mort_measures_no_different",
+    "count_of_mort_measures_worse",
+    "mort_group_footnote",
+    "safety_group_measure_count",
+    "count_of_facility_safety_measures",
+    "count_of_safety_measures_better",
+    "count_of_safety_measures_no_different",
+    "count_of_safety_measures_worse",
+    "safety_group_footnote",
+    "readm_group_measure_count",
+    "count_of_facility_readm_measures",
+    "count_of_readm_measures_better",
+    "count_of_readm_measures_no_different",
+    "count_of_readm_measures_worse",
+    "readm_group_footnote",
+    "pt_exp_group_measure_count",
+    "count_of_facility_pt_exp_measures",
+    "pt_exp_group_footnote",
+    "te_group_measure_count",
+    "count_of_facility_te_measures",
+    "te_group_footnote"
+  ],
+  "original_pages": [
+    {
+      "path": "original/cms-ca-offset-0.json",
+      "source_url": "https://data.cms.gov/provider-data/api/1/datastore/query/xubh-q36u/0?limit=100&conditions%5B0%5D%5Bproperty%5D=state&conditions%5B0%5D%5Bvalue%5D=CA&conditions%5B0%5D%5Boperator%5D=%3D",
+      "offset": 0,
+      "rows": 100,
+      "bytes": 135537,
+      "sha256": "ade7b42ea5eff607702ef095392890551c4da9751e891202e575f7feb994892c"
+    },
+    {
+      "path": "original/cms-ca-offset-100.json",
+      "source_url": "https://data.cms.gov/provider-data/api/1/datastore/query/xubh-q36u/0?limit=100&conditions%5B0%5D%5Bproperty%5D=state&conditions%5B0%5D%5Bvalue%5D=CA&conditions%5B0%5D%5Boperator%5D=%3D&offset=100",
+      "offset": 100,
+      "rows": 100,
+      "bytes": 135714,
+      "sha256": "87ebb297ee5431cb4c424b65c4a1de6138020b6843a88a92f58b04b9d368484b"
+    },
+    {
+      "path": "original/cms-ca-offset-200.json",
+      "source_url": "https://data.cms.gov/provider-data/api/1/datastore/query/xubh-q36u/0?limit=100&conditions%5B0%5D%5Bproperty%5D=state&conditions%5B0%5D%5Bvalue%5D=CA&conditions%5B0%5D%5Boperator%5D=%3D&offset=200",
+      "offset": 200,
+      "rows": 100,
+      "bytes": 136816,
+      "sha256": "feb926709a4e3e44624da3ab9eed53db20b70909f17cdeef8fd99288ea5d8c66"
+    },
+    {
+      "path": "original/cms-ca-offset-300.json",
+      "source_url": "https://data.cms.gov/provider-data/api/1/datastore/query/xubh-q36u/0?limit=100&conditions%5B0%5D%5Bproperty%5D=state&conditions%5B0%5D%5Bvalue%5D=CA&conditions%5B0%5D%5Boperator%5D=%3D&offset=300",
+      "offset": 300,
+      "rows": 77,
+      "bytes": 118732,
+      "sha256": "a4d95bee99c25db4c84af4bf2893f91d62f3241595f3795f8fe27a4f48166675"
+    }
+  ],
+  "records_sha256": "ea80b8e9c8b9b27743b8ef212f5e886024478c064c28677a3cd79ad3e57e6323",
+  "data_csv_sha256": "3247fa39b9afde13de92b182a80732d721780106108fde3b1013c531f71757b2"
+}
