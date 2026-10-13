@@ -15,9 +15,12 @@ export function buildReviewPage(files,working,{gzipSource,zipSource}={}){
  const script=original.indexOf("<script>");if(script<0)throw Error("Original application script is missing.");
  const prepared=original.slice(0,script+8)+prefix.replace(/<\/script/gi,"<\\/script")+original.slice(script+8);
  const compact=compactInlinePayload(prepared,{dataId:"source-bundle",zipGlobal:"CmdbPageZip",bootstrapBefore:anchor,codecGlobal:"CmdbPageInflate",gzipSource,maxBytes:33554432});
- const style=compact.match(/<style>([\s\S]*?)<\/style>/),body=compact.match(/<body>([\s\S]*?)<\/body>/);
- if(!style||!body)throw Error("Original application body or styles are missing.");
- return "<style>"+style[1]+"</style>\n"+body[1];
+ const styleStart=compact.indexOf("<style>"),styleEnd=compact.indexOf("</style>",styleStart+7);
+ const bodyStart=compact.indexOf("<body>"),bodyEnd=compact.lastIndexOf("</body>");
+ if(styleStart<0||styleEnd<=styleStart||bodyStart<styleEnd+8||bodyEnd<=bodyStart||!/^\s*<\/html>\s*$/.test(compact.slice(bodyEnd+7)))throw Error("Original application body or styles are missing.");
+ const body=compact.slice(bodyStart+6,bodyEnd);
+ if(!body.trimEnd().endsWith("</script>"))throw Error("The complete original application startup is missing.");
+ return "<style>"+compact.slice(styleStart+7,styleEnd)+"</style>\n"+body;
 }
 export function buildReviewPages(output){
  const here=path.dirname(fileURLToPath(import.meta.url)),source=path.join(here,"acceptance-workspace");
