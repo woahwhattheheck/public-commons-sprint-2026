@@ -36,6 +36,7 @@ CASES = [*("study-" + name for name in STUDIES), *("context-" + name for name in
 CODE = [
     "model/station_study.py", "model/station_geography.py",
     "model/assessment_context.py", "model/assessment_report_context.py",
+    "model/assessment_map_context.py", "model/scientific_figures.py", "model/scientific_map_figures.py",
     "model/station_assessment_context.py", "model/station_inventory.py", "model/station_wbd_context.py",
     "model/common.py", "source/observed-report-20261013/prepare_assessment.py",
 ]
