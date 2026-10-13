@@ -515,3 +515,34 @@ def import_dispatch_report(workspace, saved_plan, dispatch_id, *,
         raise
     except (ValueError, KeyError, TypeError, OSError) as error:
         raise ImplementationError("Laboratory dispatch scientific report: " + str(error)) from error
+
+
+def get_dispatch_report(workspace, operation_id):
+    """Reopen one committed original laboratory report without recomputing it."""
+    try:
+        root = _root(workspace, operation_id)
+        identity = read_json(root / "identity.json")
+        if (identity.get("schema") != IDENTITY_SCHEMA or digest(identity) != operation_id
+                or identity.get("project_id") != workspace.project["id"]):
+            raise ImplementationError("The laboratory report changed its original operation.")
+        binding = identity["plan"]
+        plan = ImplementationStore(workspace).get(binding["id"], binding["revision"])
+        if document_digest(plan) != binding["document_digest"]:
+            raise ImplementationError("The laboratory report lost its original saved revision.")
+        package, unused = dispatch_files(workspace, binding["id"], identity["dispatch_id"])
+        if (package["plan"] != identity["dispatch_plan"]
+                or package["files"] != identity["package_files"]):
+            raise ImplementationError("The laboratory report lost its original request package.")
+        result = _reopen(workspace, root / "import.json",
+                         {"operation_id": operation_id, "identity": identity})
+        if result.get("state") != "imported" or result.get("edition") != identity["edition"]:
+            raise ImplementationError("The laboratory report is not a committed original edition.")
+        report = result["report_source"]
+        if (read_json(root / "report/observed-report.json").get("implementation_dispatch_report_identity") != identity
+                or read_json(root / "report/delivery-selection.json") != result["delivery_selection"]):
+            raise ImplementationError("The laboratory report changed its retained source selection.")
+        return result
+    except ImplementationError:
+        raise
+    except (ValueError, KeyError, TypeError, OSError) as error:
+        raise ImplementationError("Retained laboratory dispatch report: " + str(error)) from error
