@@ -91,6 +91,33 @@ async function run(){
      const member=members.find(m=>m.name===f.name);if(!member||member.bytes!==f.bytes||hash(member.data)!==f.sha256)throw Error("Downloaded original member differs.");
      const expectedPreview=documentPreview(f.name,Zip.utf8Text(member.data));
      if(await page.locator("#preview").getAttribute("srcdoc")!==expectedPreview)throw Error("The actual selected document preview differs.");
+     if(/^(sample|paid)\.html$/.test(f.name)){
+      const iframe=await page.locator("#preview").elementHandle(),frame=await iframe.contentFrame();
+      const source=Zip.utf8Text(member.data),title=source.match(/<title>([\s\S]*?)<\/title>/)[1];
+      await frame.waitForFunction(({title})=>document.title===title,{title});
+      const expectedHrefs=Array.from(source.matchAll(/<a\b[^>]*href=["'](#[^"']+)["']/g),match=>match[1]);
+      const links=await frame.locator('.contents a[href^="#"]').evaluateAll(items=>items.map(link=>({href:link.getAttribute("href"),label:link.textContent.trim()})));
+      if(JSON.stringify(links.map(link=>link.href))!==JSON.stringify(expectedHrefs))throw Error("The original profile contents selection differs.");
+      const selectedBody=await frame.locator("body").innerText(),navigations=[];
+      const track=navigated=>{if(navigated===frame)navigations.push(navigated.url());};
+      page.on("framenavigated",track);
+      try{
+       for(const [index,link]of links.entries()){
+        const target=decodeURIComponent(link.href.slice(1));
+        await frame.locator('.contents a[href^="#"]').nth(index).click();
+        await frame.waitForFunction(({id})=>{
+         const target=document.getElementById(id);if(!target)return false;
+         const box=target.getBoundingClientRect();
+         return location.href==="about:srcdoc"&&document.activeElement===target&&box.bottom>0&&box.top<innerHeight;
+        },{id:target});
+        if(navigations.length||await frame.locator("body").innerText()!==selectedBody)throw Error("The contents link left the original selected profile: "+link.href);
+        const file=width+"-"+i+"-"+target+"-embedded.jpg";
+        await page.locator("#preview").screenshot({path:path.join(out,"screens",file),type:"jpeg",quality:86});
+        result.views.push({width,name:i+"-"+target+"-embedded",file,profile:link.label});
+        event("original_profile_contents_opened",{width,document:f.name,href:link.href,profile:link.label});
+       }
+      }finally{page.off("framenavigated",track);}
+     }
      if(f.name.endsWith("-commissioning.html")){
       const frame=page.frameLocator("#preview"),body=frame.locator('body[data-ventcrm-opening="complete"]');
       await body.waitFor({state:"visible"});
