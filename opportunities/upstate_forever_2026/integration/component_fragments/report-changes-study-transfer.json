@@ -22,12 +22,24 @@
         "operator/web/report_changes.css",
         "docs/SCIENTIFIC_REPORT_CHANGES.md",
         "install_report_changes.py",
-        "integration/component_fragments/scientific-report-changes.json"
+        "integration/component_fragments/scientific-report-changes.json",
+        "operator/source_reports.py",
+        "operator/extensions/source-reports.json",
+        "operator/web/source_reports.mjs",
+        "operator/web/source_reports.css",
+        "operator/web/observed_reports.mjs",
+        "model/scientific_report.py",
+        "model/scientific_briefing.py",
+        "model/spatial.py",
+        "model/cartography.py",
+        "measurement_workspace/__init__.py",
+        "integration/component_fragments/report-changes-study-transfer.json"
       ],
       "requires": [
-        "observed-original-report-edition"
+        "scientific-report-rendering"
       ]
     }
   },
-  "required_components": []
+  "required_components": [],
+  "source_reference": "ES26 original Report Changes editable transfer, preserving all ten original model/provider/UI members and exact saved report edition identity. Composed above PR3872 with the existing acyclic scientific-report-rendering foundation (core, published-studies, scientific-map-figures) and all remaining original publisher/UI dependencies. The higher-level observed-original-report-edition data component is retained by scientific-report-changes; Study does not depend on its return path through Implementation and scientific-report-editions."
 }
