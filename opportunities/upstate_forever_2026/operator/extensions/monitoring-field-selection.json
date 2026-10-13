@@ -1,0 +1,95 @@
+{
+  "schema": "upstate.operator-extension/v1",
+  "id": "monitoring-field-selection",
+  "title": "Saved field selections",
+  "version": "1.0.0",
+  "order": 86,
+  "assets": [
+    "monitoring-field-selection.mjs",
+    "monitoring-field-selection.css"
+  ],
+  "backend": {
+    "module": "monitoring_field_selection_native",
+    "actions": [
+      "monitoring.field-selection.receive"
+    ],
+    "invoke": {
+      "handler": "perform",
+      "args": [
+        "operator",
+        "task"
+      ]
+    },
+    "routes": [
+      {
+        "methods": [
+          "POST"
+        ],
+        "path": "/api/monitoring-field-selection/catalog",
+        "operation": "catalog",
+        "handler": "read",
+        "args": [
+          "operator",
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "POST"
+        ],
+        "path": "/api/monitoring-field-selection/source",
+        "operation": "source",
+        "handler": "read",
+        "args": [
+          "operator",
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "POST"
+        ],
+        "path": "/api/monitoring-field-selection/preview",
+        "operation": "preview",
+        "handler": "read",
+        "args": [
+          "operator",
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "POST"
+        ],
+        "path": "/api/monitoring-field-selection/inspect",
+        "operation": "inspect",
+        "handler": "read",
+        "args": [
+          "operator",
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      }
+    ],
+    "decorate_task": {
+      "handler": "decorate_task",
+      "args": [
+        "operator",
+        "task"
+      ]
+    },
+    "verify_workspace": {
+      "handler": "verify_workspace",
+      "args": [
+        "workspace"
+      ]
+    }
+  }
+}
