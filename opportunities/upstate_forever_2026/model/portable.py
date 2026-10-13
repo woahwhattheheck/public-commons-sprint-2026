@@ -506,11 +506,9 @@ def backup(workspace, destination, *, include_intermediates=True, include_delive
     destination.parent.mkdir(parents=True, exist_ok=True)
     if destination.exists():
         raise ValueError("Choose a new archive path")
-    pending = destination.parent / (".archive-" + destination.name + ".pending")
-    if pending.exists():
-        raise ValueError("The original archive staging path is already present")
+    pending = None
     source_root = Path(__file__).resolve().parent.parent
-    excluded = {destination, pending}
+    excluded = {destination}
     selection = {"include_intermediates": bool(include_intermediates),
                  "include_deliveries": bool(include_deliveries)}
     inventory_selection = dict(selection)
@@ -523,6 +521,13 @@ def backup(workspace, destination, *, include_intermediates=True, include_delive
         selection["include_delivery_assets"] = True
     records = {}
     try:
+        # Each invocation owns its exclusive staging file. A competing backup
+        # that fails lock admission must never remove another writer's archive.
+        pending_fd, pending_name = tempfile.mkstemp(
+            prefix=".archive-", suffix=".pending", dir=destination.parent)
+        pending = Path(pending_name)
+        os.close(pending_fd)
+        excluded.add(pending)
         with contextlib.ExitStack() as stack:
             stack.enter_context(held(root / ".workspace.lock", blocking=False))
             stack.enter_context(held(root / ".receiving-water-report-source.lock", blocking=False))
@@ -566,7 +571,7 @@ def backup(workspace, destination, *, include_intermediates=True, include_delive
             inputs += extra_inputs
             inputs, databases, database_sources = stack.enter_context(
                 snapshot_databases(inputs, destination.parent, frozen=frozen_databases))
-            with zipfile.ZipFile(pending, "x", compression=zipfile.ZIP_DEFLATED,
+            with zipfile.ZipFile(pending, "w", compression=zipfile.ZIP_DEFLATED,
                                  compresslevel=3, allowZip64=True) as archive:
                 for name, path, before in inputs:
                     member_name(name)
@@ -648,7 +653,8 @@ def backup(workspace, destination, *, include_intermediates=True, include_delive
                 os.close(fd)
         return result
     finally:
-        pending.unlink(missing_ok=True)
+        if pending is not None:
+            pending.unlink(missing_ok=True)
 
 def _archive_identity(source):
     value = os.fstat(source.fileno())
