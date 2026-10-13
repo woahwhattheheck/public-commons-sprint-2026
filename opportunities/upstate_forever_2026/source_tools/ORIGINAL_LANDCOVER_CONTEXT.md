@@ -49,7 +49,13 @@ The additive `integration/component_fragments/original-landcover-context.json` c
 
 ## Continue in the existing Workspace
 
-Import `source-manifest.json` using the existing source importer. Select its document in the ordered scientific-report picker beside the retained observations, model results and watershed context. The current observed-report collector binds every companion and carries these tables and links through the saved scientific delivery and portable Workspace.
+The current complete application includes both original annual reports and their complete eight-member source families. In **Original sources → Review retained reports**, choose **Refresh available editions**. The 2023 and 2025 annual editions appear alongside the original paired-change and focal-watershed reports when those components are installed. Use **Preview and import** for each wanted edition; the normal importer checks its original source hashes and retains the same source IDs. An incomplete installation reports its missing members instead of presenting the edition as ready.
+
+For a separately downloaded annual ZIP, keep all eight members together and import its `source-manifest.json` using the existing source importer. The manifest is named `source-manifest.json`, not `sources.json`. The two application-relative manifest paths are `observations/landcover_2023_2025/report-2023/source-manifest.json` and `observations/landcover_2023_2025/report-2025/source-manifest.json`.
+
+After import, open **Maps and delivery → Scientific study reports**, choose the original annual edition from **Available retained study** and select **Add study**. Add the second year, paired-change and focal interpretation only when wanted; **Move up**, **Move down** and **Remove** retain the chosen report order. These original document sources declare `role: OBSERVED_CONTEXT`; they are selectable without rewriting their metadata or scientific recipes. The standalone Scientific Reports catalogue uses the same source eligibility rule.
+
+Save the scientific report through the existing report controls. The observed-report collector binds every selected companion, carries the original tables and links into the saved report, and preserves them through the normal complete or selected-study archive/reopen. On the receiving application, the restored source collection and source IDs remain the selection; the file transport rebuilds download URLs for that receiving Workspace. No land-cover calculation or model execution is needed to discover, import or include these completed reports.
 
 The original raster source remains separately selectable as `NLCD` for native models. This document provides its completed source-area interpretation. Existing model runs, management masks, source profiles and their producing identities continue through their existing operations.
 
