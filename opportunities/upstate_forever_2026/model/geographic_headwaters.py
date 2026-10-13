@@ -99,7 +99,8 @@ def normalize(value):
         raise ValueError("Use " + SCHEMA)
     allowed = {"schema", "title", "question", "reporting_huc12s", "huc_polygons",
                "huc_field", "reporting_boundary", "reporting_boundary_description",
-               "utility_focus", "utility_label", "intakes", "seed", "corridor_width_m"}
+               "utility_focus", "utility_label", "intakes", "seed", "corridor_width_m",
+               "matching_method", "max_working_bytes"}
     if set(value) - allowed:
         raise ValueError("Unknown geographic selection fields: " + ", ".join(sorted(set(value) - allowed)))
     ids = value.get("reporting_huc12s")
@@ -119,6 +120,17 @@ def normalize(value):
     width = value.get("corridor_width_m", 90)
     if type(width) not in (int, float) or not math.isfinite(width) or width <= 0:
         raise ValueError("corridor_width_m must be a positive finite distance")
+    matching_options = {}
+    if "matching_method" in value or "max_working_bytes" in value:
+        method = value.get("matching_method")
+        if method not in ("greedy", "exact_monge"):
+            raise ValueError("Explicit matching_method must be greedy or exact_monge")
+        budget = value.get("max_working_bytes", 1024 * 1024 * 1024)
+        if type(budget) is not int or budget <= 0:
+            raise ValueError("max_working_bytes must be a positive integer byte budget")
+        matching_options = {"matching_method": method, "max_working_bytes": budget}
+    # An older selection with neither option retains its original normalized
+    # fields. An explicit method/budget becomes part of the edition identity.
     return {"schema": SCHEMA, "title": _text(value.get("title"), "title", 300),
             "question": _text(value.get("question"), "question"),
             "reporting_huc12s": sorted(ids),
@@ -130,7 +142,7 @@ def normalize(value):
             "utility_focus": [_selector(v, "utility_focus") for v in utilities],
             "intakes": [_selector(v, "intakes") for v in intakes],
             "utility_label": _text(value.get("utility_label"), "utility_label", 300),
-            "seed": seed, "corridor_width_m": float(width)}
+            "seed": seed, "corridor_width_m": float(width), **matching_options}
 
 
 def catalog(workspace):
@@ -355,7 +367,7 @@ def _retain_originals(workspace, destination, selectors):
     return entries
 
 
-def _physical_inputs(geo, destination):
+def _physical_inputs(geo, destination, identity):
     import numpy as np
     import rasterio
     from contextlib import ExitStack
@@ -422,81 +434,104 @@ def _physical_inputs(geo, destination):
     def inside(geometry, shape, trans):
         return geometry_mask([original_shapes[id(geometry)]], shape, trans, invert=True,
                              all_touched=False)
-    with ExitStack() as stack:
-        outputs = {}
-        for role in roles:
-            categorical = role in ("NLCD","RESTORED_NLCD") or role.endswith("_MASK")
-            outputs[role] = stack.enter_context(rasterio.open(
-                destination/(role.lower()+".tif"),"w",dtype="int16" if categorical else "float64",**profile))
-            outputs[role].update_tags(classification="SIMULATED" if not role.endswith("_MASK") else
-                ("DERIVED_ORIGINAL_GEOGRAPHY" if role=="REPORTING_MASK" else "SIMULATED"),
-                role=role,units=UNITS.get(role,"mask"))
-        for _, window in outputs["DEM"].block_windows(1):
-            shape = (int(window.height),int(window.width))
-            trans = window_transform(window,transform)
-            domain = inside(geo["domain"],shape,trans)
-            reporting = inside(geo["reporting"],shape,trans) & domain
-            corr = inside(corridor,shape,trans) & reporting
-            x = (np.arange(int(window.col_off),int(window.col_off+window.width),dtype="float64")[None,:]+.5)/grid["width"]
-            y = (np.arange(int(window.row_off),int(window.row_off+window.height),dtype="float64")[:,None]+.5)/grid["height"]
-            east_m = x*(right-left)
-            north_m = (1-y)*(top-bottom)
-            score = .5+.22*np.sin(2*math.pi*east_m/3600+phase)*np.cos(2*math.pi*north_m/2700)+.20*np.sin(2*math.pi*(east_m+north_m)/6000)
-            cover = np.where(score<.28,21,np.where(score<.55,41,np.where(score<.70,81,82))).astype("int16")
-            columns = np.arange(int(window.col_off),int(window.col_off+window.width),dtype="float64")[None,:]
-            valley_columns = base_column+np.rint(12*np.sin(2*math.pi*north_m/24000+phase))
-            distance = RESOLUTION*np.abs(((columns-valley_columns+30)%60)-30)
-            relief = 80*(1+.2*np.sin(2*math.pi*north_m/12000+phase))
-            values = {
-                "DEM":np.broadcast_to(180+.002*north_m+relief*(-np.expm1(-distance/600)),shape),
-                "NLCD":cover,
-                "PRECIPITATION":np.broadcast_to(1400+120*(1-y)+60*np.sin(4*x),shape),
-                "R_FACTOR":np.broadcast_to(4300+350*(1-y)+140*np.cos(6*x),shape),
-                "K_FACTOR":np.broadcast_to(.028+.006*x+.002*np.sin(9*y),shape),
-                "RESTORATION_MASK":(corr & np.isin(cover,[81,82])).astype("int16"),
-                "RESTORED_NLCD":np.where(corr & np.isin(cover,[81,82]),41,cover).astype("int16"),
-                "CORRIDOR_MASK":corr.astype("int16"),
-                "REPORTING_MASK":reporting.astype("int16")}
-            summary["domain_cells"] += int(domain.sum())
-            summary["reporting_cells"] += int(reporting.sum())
-            restoration = values["RESTORATION_MASK"] == 1
-            summary["changed_cells"] += int(restoration.sum())
-            for part in geo["reporting_parts"]:
-                if part["geometry"].is_empty:
-                    continue
-                selected_huc = inside(part["geometry"],shape,trans) & reporting
-                distribution = summary["per_huc"][part["huc12"]]
-                distribution["reporting_cells"] += int(selected_huc.sum())
-                distribution["corridor_cells"] += int((selected_huc & corr).sum())
-                distribution["changed_cells"] += int((selected_huc & restoration).sum())
+    # The edition lock owns this stable stage. Once original physical rasters
+    # close successfully, retain their exact bytes and summary before matching.
+    # A later interrupted match reuses the same paths, bodies and disk checkpoints.
+    physical_receipt = destination / "physical-input-receipt.json"
+    if physical_receipt.exists():
+        physical = read_json(physical_receipt)
+        if physical.get("identity") != identity:
+            raise ValueError("Physical input checkpoint belongs to another geographic edition")
+        expected = {role.lower() + ".tif" for role in roles}
+        members = physical.get("files", [])
+        if (len(members) != len(expected)
+                or {item.get("path") for item in members} != expected):
+            raise ValueError("Retain all original physical raster checkpoint members")
+        for item in members:
+            verify_file(destination, item)
+        summary = physical["summary"]
+    else:
+        with ExitStack() as stack:
+            outputs = {}
+            for role in roles:
+                categorical = role in ("NLCD","RESTORED_NLCD") or role.endswith("_MASK")
+                outputs[role] = stack.enter_context(rasterio.open(
+                    destination/(role.lower()+".tif"),"w",dtype="int16" if categorical else "float64",**profile))
+                outputs[role].update_tags(classification="SIMULATED" if not role.endswith("_MASK") else
+                    ("DERIVED_ORIGINAL_GEOGRAPHY" if role=="REPORTING_MASK" else "SIMULATED"),
+                    role=role,units=UNITS.get(role,"mask"))
+            for _, window in outputs["DEM"].block_windows(1):
+                shape = (int(window.height),int(window.width))
+                trans = window_transform(window,transform)
+                domain = inside(geo["domain"],shape,trans)
+                reporting = inside(geo["reporting"],shape,trans) & domain
+                corr = inside(corridor,shape,trans) & reporting
+                x = (np.arange(int(window.col_off),int(window.col_off+window.width),dtype="float64")[None,:]+.5)/grid["width"]
+                y = (np.arange(int(window.row_off),int(window.row_off+window.height),dtype="float64")[:,None]+.5)/grid["height"]
+                east_m = x*(right-left)
+                north_m = (1-y)*(top-bottom)
+                score = .5+.22*np.sin(2*math.pi*east_m/3600+phase)*np.cos(2*math.pi*north_m/2700)+.20*np.sin(2*math.pi*(east_m+north_m)/6000)
+                cover = np.where(score<.28,21,np.where(score<.55,41,np.where(score<.70,81,82))).astype("int16")
+                columns = np.arange(int(window.col_off),int(window.col_off+window.width),dtype="float64")[None,:]
+                valley_columns = base_column+np.rint(12*np.sin(2*math.pi*north_m/24000+phase))
+                distance = RESOLUTION*np.abs(((columns-valley_columns+30)%60)-30)
+                relief = 80*(1+.2*np.sin(2*math.pi*north_m/12000+phase))
+                values = {
+                    "DEM":np.broadcast_to(180+.002*north_m+relief*(-np.expm1(-distance/600)),shape),
+                    "NLCD":cover,
+                    "PRECIPITATION":np.broadcast_to(1400+120*(1-y)+60*np.sin(4*x),shape),
+                    "R_FACTOR":np.broadcast_to(4300+350*(1-y)+140*np.cos(6*x),shape),
+                    "K_FACTOR":np.broadcast_to(.028+.006*x+.002*np.sin(9*y),shape),
+                    "RESTORATION_MASK":(corr & np.isin(cover,[81,82])).astype("int16"),
+                    "RESTORED_NLCD":np.where(corr & np.isin(cover,[81,82]),41,cover).astype("int16"),
+                    "CORRIDOR_MASK":corr.astype("int16"),
+                    "REPORTING_MASK":reporting.astype("int16")}
+                summary["domain_cells"] += int(domain.sum())
+                summary["reporting_cells"] += int(reporting.sum())
+                restoration = values["RESTORATION_MASK"] == 1
+                summary["changed_cells"] += int(restoration.sum())
+                for part in geo["reporting_parts"]:
+                    if part["geometry"].is_empty:
+                        continue
+                    selected_huc = inside(part["geometry"],shape,trans) & reporting
+                    distribution = summary["per_huc"][part["huc12"]]
+                    distribution["reporting_cells"] += int(selected_huc.sum())
+                    distribution["corridor_cells"] += int((selected_huc & corr).sum())
+                    distribution["changed_cells"] += int((selected_huc & restoration).sum())
+                    for code in (81,82):
+                        distribution["original_class_counts"][str(code)] += int((selected_huc & restoration & (cover==code)).sum())
+                for code in (21,41,81,82):
+                    summary["baseline_class_counts"][str(code)] += int((domain & (cover==code)).sum())
                 for code in (81,82):
-                    distribution["original_class_counts"][str(code)] += int((selected_huc & restoration & (cover==code)).sum())
-            for code in (21,41,81,82):
-                summary["baseline_class_counts"][str(code)] += int((domain & (cover==code)).sum())
-            for code in (81,82):
-                summary["restoration_original_class_counts"][str(code)] += int((restoration & (cover==code)).sum())
-            for role, array in values.items():
-                if role in ("DEM","PRECIPITATION","R_FACTOR","K_FACTOR") and domain.any():
-                    low,high = float(array[domain].min()),float(array[domain].max())
-                    previous = summary["ranges"].get(role,{"minimum":low,"maximum":high,"units":UNITS[role]})
-                    previous.update(minimum=min(previous["minimum"],low),maximum=max(previous["maximum"],high))
-                    summary["ranges"][role] = previous
-                outputs[role].write(np.where(domain,array,-9999).astype(outputs[role].dtypes[0]),1,window=window)
-    if not summary["domain_cells"] or not summary["reporting_cells"] or not summary["changed_cells"]:
-        raise ValueError("Selected 30m reporting/corridor assumptions yield no treatment cells; revise the explicit selection/seed")
-    for distribution in summary["per_huc"].values():
-        distribution.update(reporting_hectares=distribution["reporting_cells"]*.09,
-                            changed_hectares=distribution["changed_cells"]*.09)
-    summary.update(domain_raster_ha=summary["domain_cells"]*.09,
-                   reporting_raster_ha=summary["reporting_cells"]*.09,
-                   changed_hectares=summary["changed_cells"]*.09)
+                    summary["restoration_original_class_counts"][str(code)] += int((restoration & (cover==code)).sum())
+                for role, array in values.items():
+                    if role in ("DEM","PRECIPITATION","R_FACTOR","K_FACTOR") and domain.any():
+                        low,high = float(array[domain].min()),float(array[domain].max())
+                        previous = summary["ranges"].get(role,{"minimum":low,"maximum":high,"units":UNITS[role]})
+                        previous.update(minimum=min(previous["minimum"],low),maximum=max(previous["maximum"],high))
+                        summary["ranges"][role] = previous
+                    outputs[role].write(np.where(domain,array,-9999).astype(outputs[role].dtypes[0]),1,window=window)
+        if not summary["domain_cells"] or not summary["reporting_cells"] or not summary["changed_cells"]:
+            raise ValueError("Selected 30m reporting/corridor assumptions yield no treatment cells; revise the explicit selection/seed")
+        for distribution in summary["per_huc"].values():
+            distribution.update(reporting_hectares=distribution["reporting_cells"]*.09,
+                                changed_hectares=distribution["changed_cells"]*.09)
+        summary.update(domain_raster_ha=summary["domain_cells"]*.09,
+                       reporting_raster_ha=summary["reporting_cells"]*.09,
+                       changed_hectares=summary["changed_cells"]*.09)
+        physical = {"schema": "upstate.geographic-physical-input-checkpoint/v1",
+                    "identity": identity, "summary": deepcopy(summary),
+                    "files": [describe_file(destination, destination / (role.lower() + ".tif"))
+                              for role in roles]}
+        atomic_json(physical_receipt, physical, immutable=True)
     # Compose the complete original WAT adapter and matcher, preserving whole
     # baseline input support while matching actual restoration inside reporting.
     from source_tools.geographic_matched_control import prepare_control
     wrapped = prepare_control(
         destination/"nlcd.tif",destination/"restored_nlcd.tif",
         destination/"corridor_mask.tif",destination/"reporting_mask.tif",
-        destination/"precipitation.tif",destination.parent/"control-work",seed=spec["seed"])
+        destination/"precipitation.tif",destination.parent/"control-work",seed=spec["seed"],
+        **{key: spec[key] for key in ("matching_method", "max_working_bytes") if key in spec})
     original = wrapped["preparation"]
     control = original["summary"]
     counts = {str(key):int(value) for key,value in wrapped["class_counts"].items()}
@@ -516,7 +551,7 @@ def _physical_inputs(geo, destination):
     summary.update(control=control,control_original_class_counts=counts,
                    control_changed_cells=wrapped["changed_cells"],
                    control_receipt="matched-control/control-prepared.json",
-                   control_meaning="Equal agricultural class counts/area and disjoint off-corridor siting within reporting support; whole-domain precipitation normalization and actual local matching residuals remain explicit.")
+                   control_meaning="Equal agricultural class counts/area and disjoint off-corridor siting within reporting support; whole-domain precipitation normalization, the declared matching method and actual per-pair rainfall residuals remain explicit.")
     return summary, corridor_features, corridor
 
 
@@ -558,7 +593,7 @@ def _write_inputs(workspace, geo, destination, identity):
                               "properties_json":json.dumps(row["properties"],sort_keys=True,allow_nan=False)}})
         source(role,path,"vector","derived-original-geography",source_crs=CRS,layer=role,
                derivation="Individual original features transformed to the declared metre CRS; properties and source reader operations retained in geographic-binding.json")
-    summary, corridor_features, corridor = _physical_inputs(geo, destination)
+    summary, corridor_features, corridor = _physical_inputs(geo, destination, identity)
     control_receipt = read_json(destination/"matched-control"/"control-prepared.json")
     if control_receipt["binding"]["retained_implementation"] != identity["control_source_closure"]:
         raise ValueError("Matched-control implementation changed during geographic preparation")
@@ -623,6 +658,9 @@ def _write_inputs(workspace, geo, destination, identity):
                                      for p in sorted((destination/"originals").glob("*/source-*.json"))]
     represented = {entry["path"] for entry in entries}
     represented.update(item["path"] for entry in entries for item in entry.get("companions",[]))
+    # Publication records can survive an interrupted stable-stage write. They
+    # must not become self-referencing source companions when rewritten below.
+    represented.update({"sources.json", "input-receipt.json"})
     # Retain additional actual control receipts in the same portable source edition.
     selection_entry["companions"].extend(
         {"path":p.relative_to(destination).as_posix(),"sha256":file_digest(p)}
@@ -635,6 +673,44 @@ def _write_inputs(workspace, geo, destination, identity):
                "files":[describe_file(destination,p) for p in sorted(destination.rglob("*")) if p.is_file()]}
     atomic_json(destination / "input-receipt.json",receipt)
     return receipt
+
+
+def _retire_completed_control_work(directory, inputs):
+    """Remove only rebuilt sort/scan spools after their complete input handover."""
+    receipt = read_json(inputs / "matched-control" / "control-prepared.json")
+    if receipt.get("state") != "prepared":
+        raise ValueError("Only a completed matched-control edition can retire its work files")
+    for item in receipt["files"]:
+        if Path(item["path"]).parts[:1] == ("work",):
+            raise ValueError("A declared matched-control result still requires its work directory")
+    owner = directory.resolve()
+    owned = owner / "control-work"
+    original = Path(receipt["directory"])
+    # Portable receipts preserve the original producer path. A reopened project
+    # must never clean an old machine's path or another Workspace's directory.
+    if not original.is_absolute() or not original.exists():
+        return
+    original = original.resolve(strict=True)
+    if (not original.is_relative_to(owned) or original == owned
+            or not original.is_relative_to(owner)):
+        return
+    work = original / "work"
+    if not work.exists():
+        return
+    if work.is_symlink() or not work.is_dir():
+        raise ValueError("Matched-control work is not its original owned directory")
+    outcome = {"schema": "upstate.geographic-control-work-retirement/v1",
+               "control_binding": receipt["binding"],
+               "work_path": work.relative_to(owner).as_posix(),
+               "basis": "Complete hashed physical/input handover; declared control results remain retained"}
+    try:
+        shutil.rmtree(work)
+        outcome["state"] = "retired"
+    except OSError as error:
+        # Usable complete input data remains valid if optional spool cleanup
+        # cannot finish. The same owned cleanup is retried on ordinary resume.
+        outcome.update(state="retained", error={"type": type(error).__name__, "message": str(error)})
+    atomic_json(directory / "control-work-retirement.json", outcome)
 
 
 def prepare(workspace, value):
@@ -666,10 +742,29 @@ def prepare(workspace, value):
                 for item in original["files"]:
                     verify_file(inputs, item)
             else:
-                with tempfile.TemporaryDirectory(prefix=".geographic-inputs-", dir=directory) as temporary:
-                    pending = Path(temporary)
+                # Keep original input paths stable across interrupted attempts:
+                # the matcher binds those paths as well as their exact bytes.
+                pending = directory / ".input-staging"
+                pending.mkdir(exist_ok=True)
+                request_path = pending / "staging-identity.json"
+                if request_path.exists():
+                    if read_json(request_path) != identity:
+                        raise ValueError("Staged input request belongs to another geographic edition")
+                else:
+                    if any(pending.iterdir()):
+                        raise ValueError("Retain the original identity for this nonempty input stage")
+                    atomic_json(request_path, identity, immutable=True)
+                staged_receipt = pending / "input-receipt.json"
+                if staged_receipt.exists():
+                    original = read_json(staged_receipt)
+                    if original["identity"] != identity:
+                        raise ValueError("Completed input stage belongs to another geographic edition")
+                    for item in original["files"]:
+                        verify_file(pending, item)
+                else:
                     original = _write_inputs(workspace, geo, pending, identity)
-                    os.rename(pending, inputs)
+                os.rename(pending, inputs)
+            _retire_completed_control_work(directory, inputs)
             imported = workspace.import_sources(inputs / "sources.json")
             collection = imported["id"]
             profile = workspace.save_profile({"title":geo["selection"]["title"]+": simulated NDR/SDR assumptions",
