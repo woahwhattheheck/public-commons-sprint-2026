@@ -345,7 +345,9 @@ class Programme{
         return{first:applied.consumer,rollback:rolled.consumer,final:selected.consumer,cutoverIds:[applied.action.result.cutoverId,rolled.action.result.cutoverId,selected.action.result.cutoverId]};
       });
       const merchant=await this.phase('06b-original-read-source',async()=>{
-        const file=join(SOURCE,'reference','merchant-source.json'),original=read(file),upload=await this.upload(primary,'merchant-source',file,'application/json');
+        const file=join(this.root,'intake','reference','merchant-source.json');
+        atomicBytes(file,readFileSync(join(SOURCE,'reference','merchant-source.json')),{immutable:true});
+        const original=read(file),upload=await this.upload(primary,'merchant-source',file,'application/json');
         const retainedMerchant=await this.action(primary,projectId,'merchant-retain','source.retain',{uploadId:upload.uploadId,title:'Original native named-query source',role:'merchant_original',url:'https://github.com/woahwhattheheck/public-commons-sprint-2026/blob/'+EXPECTED_SOURCE+'/stellar/scf-starforge-20261009/sf30-seller-sdk/clickhouse/examples/source.json',notes:'Unchanged complete original source, queries, parameters and typed limits.'});
         const target=this.config.tables[0].target[1],edits=[{queryId:'transfers',find:'FROM transfers WHERE',replace:'FROM '+target+' WHERE',expectedOccurrences:1,reason:'Review the same original named query against the exact fully compared candidate.'}];
         const derived=await this.action(primary,projectId,'merchant-derive','merchant.derive',{sourceId:retainedMerchant.result.sourceId,title:'Accepted candidate original read source',edits});

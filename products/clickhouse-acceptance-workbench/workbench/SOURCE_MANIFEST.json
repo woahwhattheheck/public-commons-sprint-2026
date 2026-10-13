@@ -74,8 +74,8 @@
     },
     {
       "path": "receiving/receive.mjs",
-      "bytes": 48971,
-      "sha256": "a2bd7a20fcdfdd180f660611c7b534fa42f2fac66e5a4d7aeff716a2f35d3694"
+      "bytes": 49104,
+      "sha256": "3393b6e6fd1c6b072e8e30629e7763a52b6a83a5160a42e84a18acf21bd20f6d"
     },
     {
       "path": "reference/FIXTURE.md",
@@ -249,8 +249,8 @@
     },
     {
       "path": "web/app.mjs",
-      "bytes": 41586,
-      "sha256": "20a779a78a5d9f096e702289a53dd770fa758d02f51d19bf0c6c22ea823361ef"
+      "bytes": 41773,
+      "sha256": "925a9f46296f3690ede127996880a7e719f21f5ce9837bfda2204d8bf55a3032"
     },
     {
       "path": "web/index.html",

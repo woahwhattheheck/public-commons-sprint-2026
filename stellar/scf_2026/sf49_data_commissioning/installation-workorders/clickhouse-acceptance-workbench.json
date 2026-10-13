@@ -116,7 +116,7 @@
     },
     {
       "path": "products/clickhouse-acceptance-workbench/workbench/receiving/receive.mjs",
-      "blob": "547683ee0f4bc0e06f8a118a382b271a526a95b5"
+      "blob": "8721bedbad883d930ee9ae6377dd198bccbc9086"
     },
     {
       "path": "products/clickhouse-acceptance-workbench/workbench/reference/fixture.py",
