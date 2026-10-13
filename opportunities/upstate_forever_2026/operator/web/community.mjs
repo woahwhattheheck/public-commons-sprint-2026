@@ -190,11 +190,72 @@ export function readInterventionCsv(source,table,previous=[],sourceSha256='',sel
 }
 
 
+
+/** Match original whole-watershed rows to the retained block-group memberships. */
+export function selectCommunityWatersheds(report,groups,selection={}){
+  const chosen=selectCommunityGroups(groups,selection);
+  const huc12s=unique(chosen.flatMap(group=>list(group.memberships).map(member=>String(member.watershed_id??'')))).sort();
+  if(huc12s.some(id=>!/^\d{12}$/.test(id)))throw Error('A selected community membership has no original twelve-digit HUC12.');
+  const indexed=new Map();
+  for(const row of list(report?.hucs)){
+    if(typeof row?.huc12!=='string'||indexed.has(row.huc12))throw Error('The retained regional report contains an invalid or repeated HUC12.');
+    indexed.set(row.huc12,row);
+  }
+  return {selected_huc12s:huc12s,hucs:huc12s.filter(id=>indexed.has(id)).map(id=>indexed.get(id)),
+    missing_huc12s:huc12s.filter(id=>!indexed.has(id))};
+}
+
+function watershedCoverage(row,coverage={}){
+  if(row.classification_scope==='outside_south_carolina'||row.classification_coverage==='outside_south_carolina')
+    return 'Outside South Carolina source jurisdiction';
+  const complete=row.classification_query_coverage==='complete_domain_query'||coverage.complete_domain_query===true;
+  if(numeric(row.selected_classification_count)===0&&complete)return 'Complete selected-class query; zero features';
+  if(complete)return 'Complete selected-class query';
+  return human(row.classification_coverage||row.classification_query_coverage||'Query coverage unrecorded');
+}
+
+/** Render the saved original regional selection without recalculating its analysis. */
+export function communityWatershedContextHtml(context){
+  if(!context)return '';
+  const rows=list(context.hucs),coverage=context.classification_coverage??{};
+  const area=rows.length&&rows.every(row=>numeric(row.area_km2)!==null)?rows.reduce((sum,row)=>sum+Number(row.area_km2),0):null;
+  const classificationCount=rows.length&&rows.every(row=>numeric(row.selected_classification_count)!==null)?
+    rows.reduce((sum,row)=>sum+Number(row.selected_classification_count),0):null;
+  const originalRows=rows.flatMap(row=>list(row.nrcs_state_rows).map(state=>({...state,huc:row})));
+  const title=context.title||'Regional watershed context';
+  return '<div class="section-body"><h3>'+e(title)+'</h3>'+
+    '<p class="note">The regional selection follows the plan’s original watershed memberships. Whole-watershed areas count each HUC12 once; the state rows retain their original NRCS programme designations and state-portion areas.</p>'+
+    '<div class="community-metrics">'+metric('Whole watersheds',n(rows.length),'Selected original HUC12 records')+
+    metric('Whole-watershed area',n(area,2)+' km²','Original regional source areas')+
+    metric('Selected SCDES features',n(classificationCount),'Publisher HUC12 assignments within the source jurisdiction')+'</div></div>'+
+    table(['Watershed','Whole area (km² / acres)','NRCS priority','Selected SCDES features','Query coverage'],rows.map(row=>
+      '<tr><th scope="row">'+e(row.name||row.huc12)+'<small>'+e(row.huc12)+' · '+e(list(row.states).join(' / '))+'</small></th>'+
+      '<td class="number-cell">'+n(row.area_km2,2)+' / '+n(row.area_acres,2)+'</td>'+
+      '<td>'+e(row.priority?'Priority in '+list(row.priority_states).join(', '):'No priority designation in these source rows')+
+      '<small>'+e(list(row.system_types).join(' / '))+'</small></td>'+
+      '<td class="number-cell">'+n(row.selected_classification_count)+'</td><td>'+e(watershedCoverage(row,coverage))+'</td></tr>'),
+      'Original whole-watershed regional context')+
+    (originalRows.length?table(['Watershed / source record','State','State-portion acres','NRCS status','System type','Resource concern'],originalRows.map(state=>
+      '<tr><th scope="row">'+e(state.huc.huc12)+'<small>Original NRCS record '+e(state.OBJECTID??'—')+'</small></th>'+
+      '<td>'+e(state.st_usps)+'</td><td class="number-cell">'+n(state.st_ac,2)+'</td><td>'+e(state.fy26_status)+'</td>'+
+      '<td>'+e(state.system_type)+'</td><td>'+e(state.resource_concern)+'</td></tr>'),'Retained NRCS state programme records'):'')+
+    '<div class="section-body"><p class="note">SCDES counts describe the selected classification query and its South Carolina jurisdiction. Zero selected features records that query result; water-quality conclusions require measured observations. Selected query classes: '+
+    e(list(coverage.selected_classes).join(', ')||'See the retained source query')+'.</p>'+
+    '<details><summary>Original regional source and methods</summary><pre>'+e(JSON.stringify({
+      report_id:context.report_id||context.id,analysis_version:context.analysis_version,selected_huc12s:context.selected_huc12s||rows.map(row=>row.huc12),
+      report_file:context.report_file,source_fingerprint:context.source_fingerprint,source_edition_fingerprint:context.source_edition_fingerprint,
+      source_inputs:context.source_inputs,sources:context.sources,methods:context.methods,
+      classification_coverage:coverage,network_status:context.network_status
+    },null,2))+'</pre></details></div>';
+}
+
 /** Host-owned callbacks retain original workspace, task and dialog semantics. */
 export function attachCommunity({getState,api,endpoint,openForm,submitAction,detail,fileList,sourceForm,toast,openItem}){
   const cache=new Map(),pending=new Map();
   let activeWorkspace=null,container=null,mountController=null,loadError='',formTable=null,formWorkspace=null;
   let formPlanPrevious=null,formCsvPreview=null,formInterventionImport=null,formCsvEpoch=0;
+  let formWatershedCatalog=[],formWatershedReport=null,formWatershedError='',formWatershedCatalogError='';
+  let formWatershedGeneration=0,formWatershedRequest=0;
   let local={table:'',tab:'explore',utility:'',watershed:'',query:'',sort:'geoid',compare:[]};
   const current=()=>getState();
   const data=()=>current()?.data??{};
@@ -466,6 +527,96 @@ export function attachCommunity({getState,api,endpoint,openForm,submitAction,det
   function completeRuns(grid=''){
     return list(data().runs).filter(r=>r.state==='complete'&&(!grid||r.selection?.grid_id===grid)).map(r=>({id:r.id,title:entityTitle('runs',r.id),grid_id:r.selection?.grid_id}));
   }
+
+  function watershedReportOptions(selected=''){
+    const choices=formWatershedCatalog.filter(row=>row.state==='complete').map(row=>({
+      id:row.id,title:(row.title||row.id)+' · '+n(row.summary?.huc_count)+' watersheds'
+    }));
+    if(selected&&!choices.some(row=>row.id===selected))choices.unshift({
+      id:selected,title:formWatershedReport?.title||formPlanPrevious?.context?.snapshots?.watershed_context?.title||'Previously selected regional report '+selected
+    });
+    return choices;
+  }
+  function watershedContextForm(context={}){
+    const selected=context.watershed_context_id||'';
+    return '<fieldset class="full"><legend>Regional watershed context</legend>'+
+      field('Retained regional report',select('community_watershed_context',watershedReportOptions(selected),selected,'No regional report selected'),
+        'Attach the existing NRCS areas, priority designations and SCDES query coverage for the plan’s selected watersheds.',true)+
+      '<div class="actions-cell">'+button('watershed-refresh','Refresh regional reports','','small')+'</div>'+
+      '<p id="community-watershed-catalog-note" class="note">'+e(formWatershedCatalogError||
+        (formWatershedCatalog.length?'Choose a retained report to inspect the selected original watershed rows.':'Receive or build a regional report in Regional watersheds, then refresh this list.'))+'</p>'+
+      '<div id="community-watershed-preview" aria-live="polite"></div></fieldset>';
+  }
+  async function readWatershedCatalog(){
+    const owner=workspace(),generation=formWatershedGeneration;
+    try{
+      const result=await api(endpoint('/api/watershed-context/catalog'));
+      if(owner!==workspace()||generation!==formWatershedGeneration)return;
+      formWatershedCatalog=list(result.reports);
+      formWatershedCatalogError='';
+    }catch(error){
+      if(owner!==workspace()||generation!==formWatershedGeneration)return;
+      formWatershedCatalogError='Regional reports could not be refreshed: '+error.message;
+    }
+  }
+  async function refreshWatershedCatalog(){
+    ensureFormWorkspace();
+    const host=form(),generation=formWatershedGeneration,selected=value('community_watershed_context');
+    await readWatershedCatalog();
+    if(host!==form()||generation!==formWatershedGeneration||formWorkspace!==workspace())return;
+    setSelect(host.querySelector('[name="community_watershed_context"]'),watershedReportOptions(selected),selected,'No regional report selected');
+    host.querySelector('#community-watershed-catalog-note').textContent=formWatershedCatalogError||
+      (formWatershedCatalog.length?'Choose a retained report to inspect the selected original watershed rows.':'Receive or build a regional report in Regional watersheds, then refresh this list.');
+    await loadWatershedContext();
+  }
+  function updateWatershedPreview(){
+    const target=form()?.querySelector('#community-watershed-preview');if(!target)return;
+    const selected=value('community_watershed_context');
+    if(!selected){target.innerHTML='<p class="note">This plan will retain its selected community table and scientific context.</p>';return;}
+    if(formWatershedError){target.innerHTML='<p role="alert">'+e(formWatershedError)+'</p>';return;}
+    if(formWatershedReport?.id!==selected){target.innerHTML='<p class="note" role="status">Loading the original regional report…</p>';return;}
+    try{
+      const report=formWatershedReport.report;
+      const chosen=selectCommunityWatersheds(report,formTable.groups,readSelection());
+      if(!chosen.selected_huc12s.length){target.innerHTML='<p class="note">Choose the community memberships to inspect their regional context.</p>';return;}
+      if(chosen.missing_huc12s.length){target.innerHTML='<p role="alert">The selected regional report is missing these plan watersheds: '+e(chosen.missing_huc12s.join(', '))+'. Choose a report containing the complete selection.</p>';return;}
+      target.innerHTML=communityWatershedContextHtml({...report,...chosen,
+        report_id:formWatershedReport.id,title:formWatershedReport.title||report.title,
+        report_file:formWatershedReport.files?.['watershed-context.json'],
+        source_fingerprint:formWatershedReport.source_fingerprint||report.source_fingerprint,
+        source_edition_fingerprint:formWatershedReport.source_edition_fingerprint,
+        source_inputs:formWatershedReport.source_inputs});
+    }catch(error){target.innerHTML='<p role="alert">'+e(error.message)+'</p>';}
+  }
+  async function loadWatershedContext(){
+    const host=form(),owner=workspace(),generation=formWatershedGeneration,request=++formWatershedRequest;
+    const selected=value('community_watershed_context');
+    formWatershedError='';
+    if(!selected){formWatershedReport=null;updateWatershedPreview();return;}
+    if(formWatershedReport?.id===selected){updateWatershedPreview();return;}
+    formWatershedReport=null;updateWatershedPreview();
+    try{
+      const result=await get('watershed-context',selected);
+      if(host!==form()||owner!==workspace()||generation!==formWatershedGeneration||request!==formWatershedRequest)return;
+      if(result.id!==selected||!result.report||result.report.id!==selected)throw Error('The retained regional report identity differs from this selection.');
+      formWatershedReport=result;
+      updateWatershedPreview();
+    }catch(error){
+      if(host!==form()||owner!==workspace()||generation!==formWatershedGeneration||request!==formWatershedRequest)return;
+      formWatershedError='The regional selection could not be loaded: '+error.message;
+      updateWatershedPreview();
+    }
+  }
+  async function ensureWatershedSelection(){
+    const selected=value('community_watershed_context');if(!selected)return;
+    await loadWatershedContext();
+    ensureFormWorkspace();
+    if(selected!==value('community_watershed_context'))throw Error('The regional report selection changed while loading. Save the plan again.');
+    if(formWatershedReport?.id!==selected)throw Error(formWatershedError||'Load the selected original regional report before saving this plan.');
+    const chosen=selectCommunityWatersheds(formWatershedReport.report,formTable.groups,readSelection());
+    if(chosen.missing_huc12s.length)throw Error('The regional report is missing selected plan watersheds: '+chosen.missing_huc12s.join(', ')+'.');
+  }
+
   function contextForm(context={}){
     const selectedGrid=context.grid_id||list(data().runs).find(r=>r.id===context.baseline_run_id)?.selection?.grid_id||'';
     return '<p class="note">'+e(SCIENTIFIC_SCOPE_TEXT)+'</p><div class="form-grid">'+
@@ -473,7 +624,7 @@ export function attachCommunity({getState,api,endpoint,openForm,submitAction,det
       field('Completed baseline run',select('community_baseline',completeRuns(selectedGrid),context.baseline_run_id||'','No baseline selected'))+
       '<fieldset class="full"><legend>Completed alternative runs</legend><p class="note">Choose the actual alternative runs on the selected baseline grid.</p><div id="community-context-alternatives">'+checks('community_alternatives',completeRuns(selectedGrid).filter(r=>r.id!==context.baseline_run_id),list(context.scenario_run_ids))+'</div></fieldset>'+
       field('Original GIS delivery',select('community_delivery',list(data().deliveries).filter(d=>d.state==='complete').map(d=>({id:d.id,title:entityTitle('deliveries',d.id)})),context.delivery_id||'','No delivery selected'),'Attach a completed original map delivery to the community plan.',true)+
-      '<fieldset class="full"><legend>Supporting source editions</legend>'+checks('community_sources',list(data().sources),list(context.source_collection_ids))+'</fieldset></div>';
+      '<fieldset class="full"><legend>Supporting source editions</legend>'+checks('community_sources',list(data().sources),list(context.source_collection_ids))+'</fieldset>'+watershedContextForm(context)+'</div>';
   }
   function interventionMembershipChoices(t,utilityId,watershedId,selected=[]){
     const rows=selectCommunityGroups(t.groups,{utility_ids:utilityId?[utilityId]:[],watershed_ids:watershedId?[watershedId]:[]});
@@ -572,7 +723,7 @@ export function attachCommunity({getState,api,endpoint,openForm,submitAction,det
   }
   function readContext(){
     const context={source_collection_ids:checked('community_sources'),scenario_run_ids:checked('community_alternatives')};
-    for(const [name,key]of [['community_grid','grid_id'],['community_baseline','baseline_run_id'],['community_delivery','delivery_id']]){
+    for(const [name,key]of [['community_grid','grid_id'],['community_baseline','baseline_run_id'],['community_delivery','delivery_id'],['community_watershed_context','watershed_context_id']]){
       const chosen=value(name);if(chosen)context[key]=chosen;
     }
     return context;
@@ -619,7 +770,8 @@ export function attachCommunity({getState,api,endpoint,openForm,submitAction,det
     host.addEventListener('change',event=>{
       if(!host.dataset.communityPlan)return;
       const target=event.target;
-      if(['community_plan_utilities','community_plan_watersheds','community_plan_geoids'].includes(target.name))updatePlanSummary();
+      if(['community_plan_utilities','community_plan_watersheds','community_plan_geoids'].includes(target.name)){updatePlanSummary();updateWatershedPreview();}
+      if(target.name==='community_watershed_context')void loadWatershedContext();
       if(['community_grid','community_baseline'].includes(target.name))updateContext({changed:target.name});
       const row=target.closest('[data-community-intervention]');
       if(row&&['intervention_utility','intervention_watershed'].includes(target.name)){
@@ -632,16 +784,23 @@ export function attachCommunity({getState,api,endpoint,openForm,submitAction,det
       }
     },{signal:planFormController.signal});
     updatePlanSummary();
+    void loadWatershedContext();
   }
   let planFormController=null;
   async function planForm(id,{fromSelection=false}={}){
     sync();
+    const generation=++formWatershedGeneration,selectedWorkspace=workspace();
     if(!tables().length)return importForm();
     const old=id?await get('community_plans',id):null;
     const tableId=old?.table_id||local.table||tables()[0].id;
     const t=await get('community_tables',tableId);
+    if(generation!==formWatershedGeneration||selectedWorkspace!==workspace())return;
     formTable=t;formWorkspace=workspace();
     formPlanPrevious=old;formCsvPreview=null;formInterventionImport=null;formCsvEpoch++;
+    formWatershedCatalog=list(data().watershed_context_reports);
+    formWatershedReport=null;formWatershedError='';formWatershedCatalogError='';formWatershedRequest++;
+    await readWatershedCatalog();
+    if(generation!==formWatershedGeneration||selectedWorkspace!==workspace())return;
     const selection=old?.selection||(fromSelection?{
       utility_ids:local.utility?[local.utility]:[],watershed_ids:local.watershed?[local.watershed]:[],
       geoids:local.compare.length?list(local.compare):local.query.trim()?filtered(t).map(g=>g.geoid):[]
@@ -662,6 +821,7 @@ export function attachCommunity({getState,api,endpoint,openForm,submitAction,det
       (old?'<p class="note">This revision retains the previous plan and its original intervention identities.</p>':'')+'</div>',
       old?'Save revised plan':'Save complete plan',async()=>{
         ensureFormWorkspace();
+        await ensureWatershedSelection();
         const selected=readSelection();
         if(!selectCommunityGroups(formTable.groups,selected).length)throw Error('Choose at least one original community through the utility, watershed and geography selections.');
         const payload={title:value('community_plan_title').trim(),purpose:value('community_plan_purpose').trim(),table_id:formTable.id,selection:selected,
@@ -696,8 +856,9 @@ export function attachCommunity({getState,api,endpoint,openForm,submitAction,det
     for(const id of list(c.scenario_run_ids))items.push(['Alternative model run',entityTitle('runs',id),button('native-item','Open run','data-kind="runs" data-id="'+e(id)+'"','small')]);
     if(c.delivery_id)items.push(['GIS delivery',entityTitle('deliveries',c.delivery_id),button('native-item','Open delivery','data-kind="deliveries" data-id="'+e(c.delivery_id)+'"','small')]);
     for(const id of list(c.source_collection_ids))items.push(['Supporting source edition',entityTitle('sources',id),button('native-item','Open source','data-kind="sources" data-id="'+e(id)+'"','small')]);
-    return items.length?scientificCoverage(c)+table(['Context','Original selection',''],items.map(([kind,title,action])=>'<tr><th scope="row">'+e(kind)+'</th><td>'+e(title)+'</td><td class="actions-cell">'+action+'</td></tr>')):
-      '<div class="section-body"><p class="note">This plan retains the original community table. Add completed scientific selections in a revised plan when they are ready.</p></div>';
+    const regional=communityWatershedContextHtml(c.snapshots?.watershed_context);
+    return regional+(items.length?scientificCoverage(c)+table(['Context','Original selection',''],items.map(([kind,title,action])=>'<tr><th scope="row">'+e(kind)+'</th><td>'+e(title)+'</td><td class="actions-cell">'+action+'</td></tr>')):
+      regional?'':'<div class="section-body"><p class="note">This plan retains the original community table. Add completed scientific selections in a revised plan when they are ready.</p></div>');
   }
   async function planDetail(id){
     const p=await get('community_plans',id,{fresh:true}),t=await get('community_tables',p.table_id),groups=list(p.selected_groups).length?p.selected_groups:selectCommunityGroups(t.groups,p.selection);
@@ -755,6 +916,7 @@ export function attachCommunity({getState,api,endpoint,openForm,submitAction,det
     if(action==='reset-filters'){local.utility='';local.watershed='';local.query='';local.sort='geoid';redraw();return;}
     if(action==='select-visible'){local.compare=unique([...local.compare,...filtered().map(g=>g.geoid)]);updateExplore();return;}
     if(action==='clear-comparison'){local.compare=[];updateExplore();return;}
+    if(action==='watershed-refresh')return refreshWatershedCatalog();
     if(action==='plan-new')return planForm();
     if(action==='plan-selection')return planForm(null,{fromSelection:true});
     if(action==='plan-revise')return planForm(node.dataset.id);
