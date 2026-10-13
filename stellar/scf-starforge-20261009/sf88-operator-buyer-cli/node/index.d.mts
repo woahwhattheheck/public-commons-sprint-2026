@@ -621,6 +621,38 @@ export interface InboxLostOutputRecoveryOptions extends InboxLostOutputSelection
   expectedRequestSha256: string;
 }
 
+export interface InboxRpcDocument { bytes: number; sha256: string; text: string }
+export interface InboxRpcReadEdition {
+  readId: string; complete: boolean; readSha256: string; completedSha256: string | null;
+  recoveryReadStartedAt: string; responseObservedAt: string; publishedAt: string | null;
+  response: {path: string; bytes: number; sha256: string; contentType: 'application/json'};
+}
+export interface InboxRpcSavedResponse {
+  status: 'SAVED'; path: string; bytes: number; sha256: string; contentType: 'application/json';
+  source: 'SETTLED_RPC_RECOVERY_READ'; readId: string; readSha256: string; completedSha256: string;
+  originalAttemptStartedAt: string; recoveryReadStartedAt: string; responseObservedAt: string;
+  publishedAt: string; transaction: string;
+  /** The original recovery writer accepts HTTP 200 before publishing its record. */
+  httpStatus: 200; httpStatusSource: 'ORIGINAL_RPC_RECOVERY_HTTP_200_CONTRACT';
+  [key: string]: unknown;
+}
+export interface InboxRpcRecovery {
+  schema: 'stellar-forge.commerce-rpc-saved-results.v1';
+  state: 'PAYMENT_RECONCILIATION_REQUIRED' | 'SETTLED_RESPONSE_RECOVERY_PENDING' | 'SETTLED_RESULT_RECOVERED';
+  original: JsonObject; settlement: JsonObject | null; reads: InboxRpcReadEdition[];
+  responseFile: InboxRpcSavedResponse | null; providerReads: 0;
+  commerceDirectory: string; inboxDirectory: string;
+  sessionSha256: string; sellerConfigSha256: string; planSha256: string;
+}
+export interface InboxRpcSelectedRecovery extends InboxRpcRecovery {
+  state: 'SETTLED_RESULT_RECOVERED'; responseFile: InboxRpcSavedResponse;
+  readId: string; readSha256: string; completedSha256: string;
+  readDocument: InboxRpcDocument; completedDocument: InboxRpcDocument;
+}
+export interface InboxRpcResponseSelection {
+  commerceDirectory: string; readId: string; expectedResponseSha256: string; signal?: AbortSignal;
+}
+
 export class Inbox {
   readonly directory: string;
   constructor(buyer: Buyer, directory: string);
@@ -658,6 +690,11 @@ export class Inbox {
   }): Promise<InboxResult<InboxOperationsExport>>;
   /** Reopen the exact saved edition without recapturing current Inbox state. */
   inspectOperations(file: string, options?: {signal?: AbortSignal}): Promise<InboxResult<InboxOperationsInspection>>;
+  /** List create-only original RPC read editions through the original finality reader. */
+  rpcResponses(intentId: string, options: {commerceDirectory: string; signal?: AbortSignal}):
+    Promise<InboxResult<InboxJob & {rpcRecovery: InboxRpcRecovery | null}>>;
+  /** Receive one selected original recovery edition while retaining the terminal outcome. */
+  rpcResponse(intentId: string, options: InboxRpcResponseSelection): Promise<InboxRpcResponse | null>;
   /** Original terminal summary + configured saved response; null if no response record exists. */
   response(intentId: string, options?: {signal?: AbortSignal}): Promise<InboxResponse | null>;
 }
@@ -672,6 +709,12 @@ export class InboxResponse extends VerifiedFile {
     runtimeDirectory: string);
   events(options?: StreamReadOptions): AsyncIterable<BuyerStreamEvent>;
   ndjson<T = unknown>(options?: StreamReadOptions): AsyncIterable<T>;
+}
+
+export class InboxRpcResponse extends InboxResponse {
+  readonly job: InboxJob & {rpcRecovery: InboxRpcSelectedRecovery};
+  readonly recovery: InboxRpcSelectedRecovery;
+  readonly delivery: InboxRpcSavedResponse;
 }
 
 export type DatasetScalar = string | number | boolean | null;
