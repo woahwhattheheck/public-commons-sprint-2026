@@ -2,6 +2,8 @@
  * Native run execution desk over the original operator task queue.
  * Scientific selections and calculations remain in model.workspace/native.
  */
+import {attachRunAssembly} from './run_assembly_workbench.mjs';
+
 const escapeHTML = value => String(value ?? '').replace(/[&<>"']/g, character =>
   ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[character]));
 const activeStates = new Set(['queued', 'running']);
@@ -261,12 +263,14 @@ export function runDeskProgrammes(snapshot, draft, rows = null, index = runDeskI
   return programmes;
 }
 
-export function attachRunWorkbench({getState, api, refreshState, openItem, showTask, showRunLog, openDelivery, openProgramme, getProgramme, openExtension, toast}) {
+export function attachRunWorkbench({getState, api, refreshState, openItem, showTask, showRunLog, openDelivery, openProgramme, getProgramme, openForm, submitAction, toast}) {
   let host = null, current = null, workspaceKey = null, draft = null;
   let busy = false, notice = '', page = 0, filter = 'all', search = '';
   let storageMessage = '', submission = null;
   let programmeStatuses = [], programmeRead = null, programmeCache = null, programmeEpoch = 0, programmeMessage = '';
   let assemblyCapability = null, assemblyRead = null, assemblyEpoch = 0;
+  const assemblyForm = typeof openForm === 'function' && typeof submitAction === 'function' ?
+    attachRunAssembly({api, getState, openForm, submitAction, openItem}) : null;
   let programmeActivityMode = 'unknown', programmeActivityRecords = new Map();
   let sourceIndex = null, rowCache = null, selectionRevision = 0;
   function currentIndex() {
@@ -382,7 +386,7 @@ export function attachRunWorkbench({getState, api, refreshState, openItem, showT
   }
   async function refreshAssemblyAvailability() {
     const target = getState()?.workspace_key;
-    if (!host || !target || typeof openExtension !== 'function' ||
+    if (!host || !target || !assemblyForm ||
         (assemblyCapability?.workspace === target && (!assemblyCapability.error || Date.now() - assemblyCapability.observedAt < 30000))) return;
     if (assemblyRead?.workspace === target) return assemblyRead.promise;
     const request = {workspace: target, epoch: assemblyEpoch, promise: null};
@@ -404,7 +408,7 @@ export function attachRunWorkbench({getState, api, refreshState, openItem, showT
   }
   function canAssemble(row) {
     const sources = currentIndex().reusableModels;
-    return assemblyCapability?.supported && typeof openExtension === 'function' && row.modelKey === 'ndr+sdr' &&
+    return assemblyCapability?.supported && !!assemblyForm && row.modelKey === 'ndr+sdr' &&
       row.startable && ['prepared', 'failed'].includes(row.run?.state) && sources.ndr && sources.sdr;
   }
   async function openAssembly(key) {
@@ -415,7 +419,7 @@ export function attachRunWorkbench({getState, api, refreshState, openItem, showT
     assertWorkspace(target); synchronize(getState());
     const row = runDeskRows(current, draft, activity?.records || programmeStatuses, currentIndex()).find(value => value.key === key);
     if (!row || !canAssemble(row)) throw Error('Prepare an available full target run and complete the original NDR and SDR source runs.');
-    return openExtension('native-run-assembly', 'open', {selection: row.selection, run_id: row.run.id});
+    return assemblyForm.open({selection: row.selection, run_id: row.run.id});
   }
 
   function storageKey(key) { return 'upstate-run-desk-v1:' + key; }
