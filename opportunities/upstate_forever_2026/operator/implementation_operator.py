@@ -27,9 +27,9 @@ ACTIONS = frozenset({
     "implementation.records.append", "implementation.source.attach",
     "implementation.source.import", "implementation.selection.import",
     "implementation.observations.import", "implementation.lab.import", "implementation.briefing.import",
-    "implementation.lab.dispatch",
+    "implementation.lab.dispatch", "implementation.lab.dispatch-report",
 })
-READS = frozenset({"list", "detail", "history", "schedule", "summary", "catalog", "selections", "observations-preview", "lab-inspect", "lab-preview", "dispatch-preview", "dispatches", "dispatch-detail", "dispatch-reconcile", "briefing-catalog", "briefing-preview"})
+READS = frozenset({"list", "detail", "history", "schedule", "summary", "catalog", "selections", "observations-preview", "lab-inspect", "lab-preview", "dispatch-preview", "dispatches", "dispatch-detail", "dispatch-reconcile", "dispatch-report-preview", "briefing-catalog", "briefing-preview"})
 WRITE_ROUTES = {
     "create": "implementation.plan.create",
     "import": "implementation.plan.import",
@@ -43,6 +43,7 @@ WRITE_ROUTES = {
     "lab-import": "implementation.lab.import",
     "briefing-import": "implementation.briefing.import",
     "dispatch": "implementation.lab.dispatch",
+    "dispatch-report": "implementation.lab.dispatch-report",
 }
 
 
@@ -238,6 +239,8 @@ class ImplementationOperator:
             return self.list(workspace)
         if operation == "selections":
             return self.selections(workspace)
+        if operation == "dispatch-report-preview":
+            return self._dispatch_report(workspace, payload, preview=True)
         if operation in ("dispatch-preview", "dispatches", "dispatch-detail", "dispatch-reconcile"):
             return self._dispatch(workspace, payload, operation=operation)
         if operation in ("lab-inspect", "lab-preview"):
@@ -451,6 +454,88 @@ class ImplementationOperator:
             source_link=result["source_link"], file_ref=result["file_ref"],
         )
 
+
+    def _dispatch_report_downloads(self, workspace, result):
+        """Refresh verified files of one immutable report-source operation."""
+        from model import observed_context
+        if (not isinstance(result, dict)
+                or result.get("schema") != "upstate.implementation-lab-dispatch-report/v1"
+                or result.get("state") != "imported"
+                or result.get("workspace_key") not in (None, workspace)):
+            raise self.Fault("IMPLEMENTATION_DISPATCH_REPORT",
+                             "The retained scientific report source is unavailable.")
+        operation_id = result.get("operation_id")
+        if not isinstance(operation_id, str) or not re.fullmatch(r"[0-9a-f]{64}", operation_id):
+            raise self.Fault("IMPLEMENTATION_DISPATCH_REPORT", "The report operation identity changed.")
+        ws = self.operator.ws(workspace)
+        root = ws.root.resolve()
+        directory = root / "implementation" / "laboratory-reports" / operation_id
+        if directory.is_symlink() or not directory.resolve().is_relative_to(root):
+            raise self.Fault("IMPLEMENTATION_DISPATCH_REPORT", "The original report directory changed.")
+        report = result.get("report_source")
+        if (not isinstance(report, dict)
+                or result.get("source_collection_id") != report.get("source_collection_id")
+                or result.get("delivery_selection") != report.get("delivery_selection")
+                or observed_context.bind(ws, report["delivery_selection"]) != report.get("binding")):
+            raise self.Fault("IMPLEMENTATION_DISPATCH_REPORT", "The original report source binding changed.", 409)
+        ws._get("sources", result["source_collection_id"])
+        files = result.get("files")
+        if not isinstance(files, list):
+            raise self.Fault("IMPLEMENTATION_DISPATCH_REPORT", "The report source file inventory is unavailable.")
+        downloads = []
+        for descriptor in files:
+            if not isinstance(descriptor, dict):
+                raise self.Fault("IMPLEMENTATION_DISPATCH_REPORT", "The report source descriptor is invalid.")
+            path = root / observed_context._relative(descriptor.get("path"))
+            if not path.resolve().is_relative_to(directory.resolve()):
+                raise self.Fault("IMPLEMENTATION_DISPATCH_REPORT", "A report member leaves its original operation.")
+            downloads.append(self._ticket(workspace, path, descriptor["path"], descriptor))
+        return dict(result, workspace_key=workspace, _downloads=downloads)
+
+    def _dispatch_report(self, workspace, value, *, preview=False):
+        """Compose the exact dispatch/current revision into the existing report source."""
+        from model.implementation_dispatch_report import (
+            preview_dispatch_report, import_dispatch_report,
+        )
+        if not isinstance(value, dict) or any(key in value for key in
+                ("path", "directory", "document", "source_document", "upload_id")):
+            raise self.Fault("IMPLEMENTATION_DISPATCH_REPORT", "Choose the retained laboratory request and saved plan revision.")
+        if value.get("workspace_key") not in (None, workspace):
+            raise self.Fault("IMPLEMENTATION_DISPATCH_REPORT", "Reopen the source in its original workspace.")
+        plan_id = self._id(value.get("plan_id", value.get("id")))
+        revision = self._integer(value.get("revision"), "revision")
+        dispatch_id = value.get("dispatch_id")
+        if not isinstance(dispatch_id, str) or not re.fullmatch(r"[0-9a-f]{64}", dispatch_id):
+            raise self.Fault("IMPLEMENTATION_DISPATCH_REPORT", "Choose an original laboratory package.")
+        document = self.store(workspace).get(plan_id, revision)
+        checksum = document_digest(document)
+        supplied = value.get("document_digest")
+        if ((supplied is not None and supplied != checksum) or (not preview and supplied != checksum)):
+            raise self.Fault("IMPLEMENTATION_DISPATCH_REPORT_BINDING", "Review this exact saved plan revision first.", 409)
+        selection = value.get("existing_report_selection")
+        if selection is not None and not isinstance(selection, dict):
+            raise self.Fault("IMPLEMENTATION_DISPATCH_REPORT", "The preceding report selection must be its original JSON object.")
+        ws = self.operator.ws(workspace)
+        if preview:
+            result = preview_dispatch_report(ws, document, dispatch_id, existing_report_selection=selection)
+        else:
+            operation_id = value.get("report_operation_id")
+            if not isinstance(operation_id, str) or not re.fullmatch(r"[0-9a-f]{64}", operation_id):
+                raise self.Fault("IMPLEMENTATION_DISPATCH_REPORT_BINDING", "Review the original scientific source operation first.")
+            result = import_dispatch_report(ws, document, dispatch_id, expected_operation_id=operation_id,
+                                            existing_report_selection=selection)
+        if (not isinstance(result, dict)
+                or result.get("schema") != "upstate.implementation-lab-dispatch-report/v1"
+                or result.get("dispatch_id") != dispatch_id
+                or result.get("plan", {}).get("id") != plan_id
+                or result["plan"].get("revision") != revision
+                or result["plan"].get("document_digest") != checksum
+                or result.get("state") != ("preview" if preview else "imported")
+                or (not preview and result.get("operation_id") != operation_id)):
+            raise self.Fault("IMPLEMENTATION_DISPATCH_REPORT_RESULT", "The scientific source differs from the reviewed original operation.", 409)
+        result = dict(result, workspace_key=workspace, plan_id=plan_id,
+                      revision=revision, document_digest=checksum)
+        return result if preview else self._dispatch_report_downloads(workspace, result)
 
     def _dispatch_result(self, workspace, plan_id, dispatch_id):
         from model.implementation_lab_dispatch import dispatch_files
@@ -803,7 +888,8 @@ class ImplementationOperator:
             document = None
             plan_id = self._id(value.get("plan_id", value.get("id")))
         if (action not in ("implementation.plan.report", "implementation.observations.import",
-                           "implementation.lab.import", "implementation.lab.dispatch", "implementation.briefing.import")
+                           "implementation.lab.import", "implementation.lab.dispatch",
+                           "implementation.lab.dispatch-report", "implementation.briefing.import")
                 and (not task.get("attempts") or len(task["attempts"]) > 1)):
             replay = self._replay(store, plan_id, actor)
             if replay is not None:
@@ -842,6 +928,8 @@ class ImplementationOperator:
                 return self._source_import(store, task, plan_id, expected, actor)
             if action == "implementation.plan.report":
                 return self._report(store, task, plan_id)
+            if action == "implementation.lab.dispatch-report":
+                return self._dispatch_report(workspace, value)
             if action == "implementation.briefing.import":
                 return self._briefing(workspace, value, actor=actor)
             if action == "implementation.lab.dispatch":
@@ -864,7 +952,11 @@ class ImplementationOperator:
         workspace = task["workspace"]
         if task.get("state") == "complete":
             result = task.get("result", {})
-            if task["action"] == "implementation.lab.dispatch":
+            if task["action"] == "implementation.lab.dispatch-report":
+                refreshed = self._dispatch_report_downloads(workspace, result)
+                task["result"] = refreshed
+                task["_downloads"] = refreshed["_downloads"]
+            elif task["action"] == "implementation.lab.dispatch":
                 refreshed = self._dispatch_result(workspace, result["plan_id"], result["dispatch_id"])
                 task["result"] = dict(refreshed, status=result.get("status", refreshed["status"]))
                 task["_downloads"] = refreshed["_downloads"]
