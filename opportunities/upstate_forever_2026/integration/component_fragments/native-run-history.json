@@ -12,6 +12,7 @@
         "operator/web/native_run_history.mjs",
         "operator/web/run_workbench.mjs",
         "operator/NATIVE_RUN_HISTORY.md",
+        "source_tools/receive_native_run_history.py",
         "integration/component_fragments/native-run-history.json",
         "CURRENT_OWNER_DIRECTION.md"
       ],
