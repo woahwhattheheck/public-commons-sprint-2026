@@ -1,0 +1,63 @@
+{
+  "schema": "stellar-forge.merchant-distribution-contribution.v1",
+  "id": "catalogue-delivery-workbench",
+  "description": "Generic complete installed catalogue FileStore delivery, customer implementation and native approval workflow around privately supplied original source.",
+  "commands": {
+    "catalogue-delivery-workbench": "products/catalogue-delivery-workbench/cli.mjs",
+    "catalogue-delivery-workbench-prepare": "products/catalogue-delivery-workbench/prepare.mjs",
+    "catalogue-delivery-workbench-managed": "products/catalogue-delivery-workbench/managed.mjs",
+    "catalogue-delivery-workbench-receive": "products/catalogue-delivery-workbench/receive.mjs"
+  },
+  "commandDescriptions": {
+    "catalogue-delivery-workbench": "Operate the original catalogue, approval or implementation CLI with the reviewed private source and workspace",
+    "catalogue-delivery-workbench-prepare": "Prepare and independently receive complete private source and actual local Python/package observations",
+    "catalogue-delivery-workbench-managed": "Run the same original delivery, implementation and approval application through managed Applications",
+    "catalogue-delivery-workbench-receive": "Adopt actual original native results and receive complete implementation/approval history through browser and customer-agent flows"
+  },
+  "exports": {
+    "./catalogue-delivery-workbench/connection": "./source/products/catalogue-delivery-workbench/connection.mjs",
+    "./catalogue-delivery-workbench/managed": "./source/products/catalogue-delivery-workbench/managed.mjs",
+    "./catalogue-delivery-workbench/mcp": "./source/products/catalogue-delivery-workbench/mcp.mjs",
+    "./catalogue-delivery-workbench/setup": "./source/products/catalogue-delivery-workbench/setup.mjs",
+    "./catalogue-delivery-workbench/prepare": "./source/products/catalogue-delivery-workbench/prepare.mjs"
+  },
+  "applicationProviders": {
+    "catalogue-delivery-workbench": "products/catalogue-delivery-workbench/application-provider.mjs"
+  },
+  "merchantProviders": {
+    "catalogue-delivery-workbench": "products/catalogue-delivery-workbench/merchant-provider.mjs"
+  },
+  "runtimePackageManifests": {
+    "catalogue-delivery-workbench": "products/catalogue-delivery-workbench/runtime-package.json"
+  },
+  "components": [
+    "products/catalogue-delivery-workbench"
+  ],
+  "supportFiles": [
+    "products/catalogue-delivery-workbench/OPERATING.md",
+    "products/catalogue-delivery-workbench/PREPARING.md",
+    "products/catalogue-delivery-workbench/RECEIVING.md",
+    "products/catalogue-delivery-workbench/application-provider.mjs",
+    "products/catalogue-delivery-workbench/cli.mjs",
+    "products/catalogue-delivery-workbench/connection.mjs",
+    "products/catalogue-delivery-workbench/files.mjs",
+    "products/catalogue-delivery-workbench/managed.mjs",
+    "products/catalogue-delivery-workbench/managed_host.py",
+    "products/catalogue-delivery-workbench/mcp.mjs",
+    "products/catalogue-delivery-workbench/merchant-provider.mjs",
+    "products/catalogue-delivery-workbench/preparation.py",
+    "products/catalogue-delivery-workbench/prepare.mjs",
+    "products/catalogue-delivery-workbench/receive.mjs",
+    "products/catalogue-delivery-workbench/receiving-browser.mjs",
+    "products/catalogue-delivery-workbench/receiving-original.py",
+    "products/catalogue-delivery-workbench/receiving.mjs",
+    "products/catalogue-delivery-workbench/requests.mjs",
+    "products/catalogue-delivery-workbench/runtime-package.json",
+    "products/catalogue-delivery-workbench/setup.mjs",
+    "products/catalogue-delivery-workbench/source-manifest.schema.json",
+    "products/catalogue-delivery-workbench/tools.mjs",
+    "stellar-forge/developer-site/GRANT_CATALOGUE_DELIVERY_WORKBENCH.md",
+    "stellar-forge/developer-site/grant-products/catalogue-delivery-workbench.json",
+    "stellar/scf_2026/sf49_data_commissioning/installation-workorders/catalogue-delivery-workbench.json"
+  ]
+}
