@@ -89,7 +89,8 @@ def shared_display_scale(paths, *, signed=False, percentile=98, units=""):
             "raster_percentiles": quantiles, "raster_count": len(paths),
             "neutral_zero_range": not available, "label": label}
 
-def map_pdf(path, title, panels, *, overlays, boundary, crs, subtitle, footer, dpi=220):
+def map_pdf(path, title, panels, *, overlays, boundary, crs, subtitle, footer, dpi=220,
+            paper=None, project_title="", pdf_pages=None, page_number=None, page_count=None):
     import matplotlib
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
@@ -101,8 +102,16 @@ def map_pdf(path, title, panels, *, overlays, boundary, crs, subtitle, footer, d
     dpi = int(finite(dpi, "Map DPI", minimum=120))
     if dpi > 600 or not panels or len(panels) > 3:
         raise ValueError("Select one to three map panels and 120–600 DPI")
+    if path is None and pdf_pages is None:
+        raise ValueError("Select a standalone map path or an open atlas document")
     count = len(panels)
-    fig, axes = plt.subplots(1, count, figsize=(11.7 * max(1, count / 2), 8.3), squeeze=False)
+    dimensions = (11.7 * max(1, count / 2), 8.3)
+    if paper is not None:
+        from .map_atlas import PAPER
+        if paper not in PAPER:
+            raise ValueError("Choose Letter, A4 or A3 landscape paper")
+        dimensions = PAPER[paper]
+    fig, axes = plt.subplots(1, count, figsize=dimensions, squeeze=False)
     try:
         legend = []
         for overlay in overlays:
@@ -170,19 +179,32 @@ def map_pdf(path, title, panels, *, overlays, boundary, crs, subtitle, footer, d
                 ax.text(.01, -.13, "\n".join(textwrap.wrap(
                     scale_note + " Numerical GeoTIFF values are preserved.", 105)),
                     transform=ax.transAxes, fontsize=6, va="top")
-        fig.suptitle(title, fontsize=15, x=.07, y=.97, ha="left")
-        fig.text(.07, .925, "\n".join(textwrap.wrap(subtitle, 140)), fontsize=8, va="top")
+        if project_title:
+            fig.text(.07, .976, textwrap.shorten(str(project_title), 145, placeholder="…"),
+                     fontsize=8, va="top", color="#444444")
+        fig.suptitle(title, fontsize=14 if project_title else 15, x=.07,
+                     y=.945 if project_title else .97, ha="left")
+        fig.text(.07, .898 if project_title else .925,
+                 "\n".join(textwrap.wrap(subtitle, 140)), fontsize=8, va="top")
         if legend:
             fig.legend(handles=legend, loc="lower center", bbox_to_anchor=(.5, .085),
                        fontsize=7, frameon=False, ncol=min(3, len(legend)))
         fig.text(.07, .04, "\n".join(textwrap.wrap(footer, 155)), fontsize=6, va="bottom")
-        fig.subplots_adjust(left=.07, right=.93, bottom=.19, top=.86, wspace=.30)
-        Path(path).parent.mkdir(parents=True, exist_ok=True)
-        fig.savefig(path, dpi=dpi, metadata={"Title": title, "Subject": subtitle,
-                                           "Creator": "Upper Savannah scientific workbench"})
+        if page_number is not None:
+            fig.text(.97, .018, str(page_number) + ((" / " + str(page_count)) if page_count else ""),
+                     fontsize=7, ha="right", va="bottom")
+        fig.subplots_adjust(left=.07, right=.93, bottom=.19,
+                            top=.815 if project_title else .86, wspace=.30)
+        if path is not None:
+            Path(path).parent.mkdir(parents=True, exist_ok=True)
+            fig.savefig(path, format="pdf", dpi=dpi, metadata={"Title": title, "Subject": subtitle,
+                                               "Creator": "Upper Savannah scientific workbench"})
+        if pdf_pages is not None:
+            pdf_pages.savefig(fig, dpi=dpi)
     finally:
         plt.close(fig)
-    return {"path": str(path), "title": title, "panels": len(panels), "dpi": dpi,
+    return {"path": str(path) if path is not None else None, "title": title,
+            "panels": len(panels), "dpi": dpi, "paper": paper,
             "display_resampling": "nearest; full numerical GeoTIFFs remain unchanged"}
 
 def report_pdf(path, title, sections, *, contact, source_records):

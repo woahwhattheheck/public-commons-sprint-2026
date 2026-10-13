@@ -71,11 +71,11 @@ export function selectionFromDraft(catalog,draft) {
 }
 
 export function attachScenarioReports(context) {
-  const {getState,api,endpoint,toast=()=>{},showTask}=context;
+  const {getState,api,endpoint,toast=()=>{},showTask,openExtension,navigate}=context;
   if (typeof getState!=='function'||typeof api!=='function'||typeof endpoint!=='function') throw Error('Scenario reports need the maintained operator context.');
   let root=null,events=null,workspaceKey=null,catalog=null,requestGeneration=0,sourceGeneration=0;
   let sourceInfo=null,sourceChoice=null,submitting=false,lastSubmission=null,selectedReport=null;
-  let completed=new Set(),lastTaskSignature='',disposed=true,pendingDraft=null;
+  let completed=new Set(),lastTaskSignature='',disposed=true,pendingDraft=null,pendingOpen=null;
   const currentWorkspace=()=>getState()?.workspace_key || null;
   const $=selector=>root?.querySelector(selector);
   const $$=selector=>root ? Array.from(root.querySelectorAll(selector)) : [];
@@ -140,6 +140,7 @@ export function attachScenarioReports(context) {
       [...rows].sort((a,b)=>text(b.created_at).localeCompare(text(a.created_at))).map(row=>'<tr><td><strong>'+esc(row.title)+'</strong><small>'+esc(short(row.id))+'</small></td><td>'+number(row.zones)+' zones · '+number(row.runs)+' runs</td><td>'+esc((row.pollutants||[]).map(x=>labels[x]||x).join(', '))+'</td><td>'+esc(row.created_at?new Date(row.created_at).toLocaleString():'—')+'</td><td>'+button('open','Open','data-report-id="'+esc(row.id)+'"')+'</td></tr>').join('')+'</tbody></table></div>';
   };
   async function refresh() {
+    if(pendingOpen&&pendingOpen.workspace!==currentWorkspace())pendingOpen=null;
     if(disposed||!root)return;
     const key=currentWorkspace();if(!key){message('Open a scientific project to view watershed reports.');return;}
     if(workspaceKey!==key){remember();workspaceKey=key;catalog=null;sourceInfo=null;sourceChoice=null;selectedReport=null;completed=new Set();lastTaskSignature='';sourceGeneration++;pendingDraft=readRemembered();lastSubmission=pendingDraft?.lastSubmission||null;scaffold();}
@@ -153,6 +154,10 @@ export function attachScenarioReports(context) {
       if(!catalog.runs.some(run=>run.reportable))message('Complete a native NDR or SDR run to build the first watershed report.');
       if(pendingDraft?.open&&catalog.runs.some(run=>run.reportable)){const saved=pendingDraft;pendingDraft=null;await renderBuilder(saved);}else pendingDraft=null;
       observe(getState());
+      if(pendingOpen&&pendingOpen.workspace===workspaceKey) {
+        const requested=pendingOpen;pendingOpen=null;
+        await openReport(requested.report_id);
+      }
     } catch(error){if(!disposed&&generation===requestGeneration)message(error.message,true);}
   }
   async function renderBuilder(saved=null) {
@@ -288,6 +293,65 @@ export function attachScenarioReports(context) {
     } catch(error){if(!disposed&&key===currentWorkspace())message(error.message,true);}
     finally{submitting=false;if(fieldset&&fieldset.isConnected)fieldset.disabled=false;}
   }
+  const releaseHTML=value=>{
+    const release=value||{ready:false,issues:[],releases:[]};
+    const issues=release.issues||[];
+    const choices=release.remaining_choices||[];
+    const rows=release.releases||[];
+    return '<section class="sr-release" aria-label="Map releases from this report"><h4>Map release</h4>'+
+      '<p>Use this saved reference and every alternative for the map atlas. The original report, annual totals, comparison tables and watershed geometry travel with the release.</p>'+
+      (issues.length?'<ul>'+issues.map(item=>'<li>'+esc(item.message)+'</li>').join(''):'')+
+      (release.ready?'<div class="sr-actions">'+button('map-release','Build map release','data-report-id="'+esc(selectedReport)+'"')+'</div>':'')+
+      (release.ready&&choices.length?'<p class="sr-note">Complete the remaining choices in the atlas builder: '+esc(choices.join('; '))+'.</p>':'')+
+      (rows.length?'<h5>Saved map releases</h5><div class="sr-table-scroll"><table><thead><tr><th>Release</th><th>State</th><th>Saved</th><th></th></tr></thead><tbody>'+
+        rows.map(row=>'<tr><td>'+esc(row.title)+'<small>'+esc(short(row.id))+'</small></td><td>'+esc(row.state)+'</td><td>'+esc(row.created_at?new Date(row.created_at).toLocaleString():'—')+'</td><td>'+
+          button('open-release','Open release','data-release-id="'+esc(row.id)+'"')+'</td></tr>').join('')+'</tbody></table></div>':'')+
+      ((release.release_issues||[]).length?'<p class="sr-note">'+esc(release.release_issues.map(item=>item.message).join(' '))+'</p>':'')+'</section>';
+  };
+  async function createMapRelease(id) {
+    assertWorkspace();
+    if(typeof openExtension!=='function')throw Error('Install the current map-atlas desk to open this report selection.');
+    const key=workspaceKey;
+    message('Opening the map release for this saved report…');
+    const release=await call('/api/scenario-reports/release',{report_id:id});
+    if(disposed||key!==currentWorkspace()||selectedReport!==id)return;
+    if(!release.ready) {
+      const target=$('[data-report-release]');
+      if(target)target.innerHTML=releaseHTML(release);
+      message((release.issues||[]).map(item=>item.message).join(' ')||'Reopen the report selection before building the map release.',true);
+      return;
+    }
+    await openExtension('map-atlas','create',{workspace_key:key,selection:release.selection});
+  }
+  async function openLinkedRelease(id) {
+    assertWorkspace();
+    if(typeof openExtension!=='function')throw Error('Install the current map-atlas desk to open this release.');
+    return openExtension('map-atlas','open',id,{workspace_key:workspaceKey});
+  }
+  async function open(id,options={}) {
+    if(!/^[0-9a-f]{64}$/.test(id||''))throw Error('Choose an existing saved watershed report.');
+    const key=options?.workspace_key||currentWorkspace();
+    if(key!==currentWorkspace())throw Error('Open this saved report in its original project.');
+    if(!key)throw Error('Open the project containing this watershed report.');
+    const requested={workspace:key,report_id:id};
+    if((disposed||!root)&&typeof navigate!=='function')throw Error('Open Watershed reports, then select this saved report.');
+    pendingOpen=requested;
+    try {
+      if(typeof navigate==='function')await navigate('scenario-reports');
+    } catch(error) {
+      if(pendingOpen===requested)pendingOpen=null;
+      throw error;
+    }
+    if(currentWorkspace()!==key){
+      if(pendingOpen===requested)pendingOpen=null;
+      throw Error('The selected project changed. Open the report in its original project.');
+    }
+    if(root&&!disposed&&workspaceKey===key&&pendingOpen===requested) {
+      pendingOpen=null;
+      return openReport(id);
+    }
+    return {workspace_key:key,report_id:id};
+  }
   async function openReport(id) {
     assertWorkspace();
     const key=workspaceKey;selectedReport=id;message('Opening the saved watershed report…');
@@ -302,12 +366,14 @@ export function attachScenarioReports(context) {
         '<div class="sr-actions">'+(preview?'<a href="'+esc(preview)+'" target="_blank" rel="noopener">Open report in a new tab</a>':'')+
         downloads.map(item=>'<a href="'+esc(item.url)+(item.url.includes('?')?'&amp;':'?')+'download=1" download>'+esc(item.filename||item.label)+'</a>').join('')+'</div>'+
         '<p class="sr-note">The decision workbench can now open this report through its watershed selector. All alternatives retain the same common-support comparison used here.</p>'+
+        '<div data-report-release>'+releaseHTML(packet.release)+'</div>'+
         (preview?'<iframe title="Saved watershed scenario report" src="'+esc(preview)+'" sandbox="allow-scripts allow-downloads allow-modals" referrerpolicy="no-referrer"></iframe>':'<p>Use the saved HTML download to open the complete report.</p>');
       message('');target.scrollIntoView({block:'nearest'});
       root.dispatchEvent(new CustomEvent('upstate:scenario-report-opened',{bubbles:true,detail:{workspace:key,report_id:id,summary,report}}));
     } catch(error){if(!disposed&&key===currentWorkspace()&&selectedReport===id)message(error.message,true);}
   }
   function observe(state=getState()) {
+    if(pendingOpen&&pendingOpen.workspace!==currentWorkspace())pendingOpen=null;
     if(disposed||!root)return;
     if(state?.workspace_key!==workspaceKey){refresh();return;}
     const tasks=(state.tasks||[]).filter(task=>task.action==='scenario.decision.build'&&task.workspace===workspaceKey);
@@ -324,12 +390,14 @@ export function attachScenarioReports(context) {
     if(changed&&catalog)refresh();
   }
   function detach() {
+    if(pendingOpen&&pendingOpen.workspace!==currentWorkspace())pendingOpen=null;
     remember();disposed=true;requestGeneration++;sourceGeneration++;events?.abort();events=null;
     if(root){root.classList.remove('scenario-report-workbench');root.replaceChildren();}
     root=null;workspaceKey=null;catalog=null;sourceInfo=null;sourceChoice=null;selectedReport=null;lastTaskSignature='';
   }
   function mount(element) {
-    if(root===element&&!disposed&&workspaceKey===currentWorkspace()){observe();return {detach,update:observe,refresh,open:openReport};}
+    if(pendingOpen&&pendingOpen.workspace!==currentWorkspace())pendingOpen=null;
+    if(root===element&&!disposed&&workspaceKey===currentWorkspace()){observe();return {detach,update:observe,refresh,open};}
     detach();root=element;disposed=false;events=new AbortController();scaffold();
     root.addEventListener('click',event=>{
       const node=event.target.closest('[data-report-action]');if(!node||!root.contains(node))return;
@@ -339,6 +407,8 @@ export function attachScenarioReports(context) {
         if(action==='refresh')return refresh();
         if(action==='cancel'){$('[data-report-builder]').hidden=true;remember();return;}
         if(action==='open')return openReport(node.dataset.reportId);
+        if(action==='map-release')return createMapRelease(node.dataset.reportId);
+        if(action==='open-release')return openLinkedRelease(node.dataset.releaseId);
         if(action==='close-preview'){$('[data-report-view]').hidden=true;$('[data-report-view]').replaceChildren();selectedReport=null;return;}
         if(action==='task'&&showTask)return showTask(node.dataset.taskId);
       }).catch(error=>message(error.message,true));
@@ -360,7 +430,7 @@ export function attachScenarioReports(context) {
       event.preventDefault();submit().catch(error=>message(error.message,true));
     },{signal:events.signal});
     refresh();
-    return {detach,update:observe,refresh,open:openReport};
+    return {detach,update:observe,refresh,open};
   }
-  return {mount,detach,update:observe,refresh,open:openReport};
+  return {mount,detach,update:observe,refresh,open};
 }
