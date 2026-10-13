@@ -265,16 +265,20 @@
       "source": "model/monitoring_observed_context.py",
       "source_role": "current_application_source",
       "path": "model/monitoring_observed_context.py",
-      "bytes": 36331,
-      "sha256": "8b44b4186713101d1225610ceff685795de1587df6417f7000638c3f9c0289ca",
+      "bytes": 36783,
+      "sha256": "168507dcd2742f2955796904e9104a5b46da84ba23130018affaaff7522d1591",
       "retained_installed_editions": [
         {
           "bytes": 27224,
           "sha256": "6071c0aa5f0715ec31caa0778e7b52fed70098845ed4361d48fed72c530cf556"
+        },
+        {
+          "bytes": 36331,
+          "sha256": "8b44b4186713101d1225610ceff685795de1587df6417f7000638c3f9c0289ca"
         }
       ],
-      "previous_bytes": 27224,
-      "previous_sha256": "6071c0aa5f0715ec31caa0778e7b52fed70098845ed4361d48fed72c530cf556"
+      "previous_bytes": 36331,
+      "previous_sha256": "8b44b4186713101d1225610ceff685795de1587df6417f7000638c3f9c0289ca"
     },
     {
       "source": "operator/web/monitoring-observed.mjs",
@@ -299,16 +303,20 @@
       "source": "model/MONITORING_OBSERVED_CONTEXT.md",
       "source_role": "current_application_source",
       "path": "model/MONITORING_OBSERVED_CONTEXT.md",
-      "bytes": 17030,
-      "sha256": "7c8189909d6fae3e917e7e4549ad0fc788aeb2e1684ce2268a2fc1d4f04e301c",
+      "bytes": 17232,
+      "sha256": "f1b55f73e8bb0d15f6f8ee48e628d87d80683e0f0e8932478e6c0db8a4d07858",
       "retained_installed_editions": [
         {
           "bytes": 11799,
           "sha256": "18a222a0269cd333713041854d4be2a9811912664c7b082589f5c9ae6e319992"
+        },
+        {
+          "bytes": 17030,
+          "sha256": "7c8189909d6fae3e917e7e4549ad0fc788aeb2e1684ce2268a2fc1d4f04e301c"
         }
       ],
-      "previous_bytes": 11799,
-      "previous_sha256": "18a222a0269cd333713041854d4be2a9811912664c7b082589f5c9ae6e319992"
+      "previous_bytes": 17030,
+      "previous_sha256": "7c8189909d6fae3e917e7e4549ad0fc788aeb2e1684ce2268a2fc1d4f04e301c"
     },
     {
       "source": "integrations/monitoring/RECEIVING.md",
@@ -503,7 +511,8 @@
         "Explicit v2 same-station and date-scoped daily flow and routine-sample episode coverage",
         "Retained original WGS84/NAD83 station datums and unavailable cross-datum distance",
         "Complete matched original microbial observations with paginated inspection and streamed CSV exports",
-        "Snapshot-verified installer, current editable-study transfer, fieldwork and original-source streaming identities"
+        "Snapshot-verified installer, current editable-study transfer, fieldwork and original-source streaming identities",
+        "Preserve original report columns, sections and export members for historical saved v1 contexts without an observations table"
       ],
       "preserved": "Original v1 nutrient context, network/plan/campaign identities, source bindings, native queue, study transfer, fieldwork, reporting and original scientific values"
     }
