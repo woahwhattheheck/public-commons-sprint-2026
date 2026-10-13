@@ -264,7 +264,7 @@ def continue_studies(workspace, value):
                         choices = reports.catalog(workspace, retained["id"])
                         prepared = reports.prepare(workspace, {
                             "experiment_id": retained["id"], "title": row["title"],
-                            "expected_artifact_sha256": choices["artifact_sha256"]})
+                            "expected_artifact_sha256": choices["artifact_sha256"]}, render=True)
                         row["source_operation_id"] = prepared["id"]
                 row["updated_at"] = now()
                 atomic_json(path, state)
