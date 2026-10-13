@@ -953,6 +953,7 @@ def _validate_packet(packet, selection):
     metrics = _item_metrics(root)
     if not metrics:
         raise DecisionError("The packet needs at least one actual modeled pollutant output")
+    support_baselines = {}
     for group in groups:
         _identifier(group["id"])
         base = group["baseline"]
@@ -1003,6 +1004,18 @@ def _validate_packet(packet, selection):
                     count = data.get("comparison_valid_cells", support.get("valid_cells"))
                     if _number(count, "Shared finite-cell count", minimum=0) <= 0:
                         raise DecisionError("Paired physical results need positive shared cell coverage")
+                    if float(count) != int(count):
+                        raise DecisionError("Shared finite-cell count must be an integer")
+                    # One original baseline on one exact mask has one mass.
+                    # Pairwise signs alone cannot establish that candidates
+                    # claiming identical support are physically comparable.
+                    key = (base["run_id"], metric, support["id"])
+                    previous = support_baselines.get(key)
+                    if previous is not None and (
+                            previous[1] != count or not math.isclose(
+                                previous[0], data["baseline"], rel_tol=1e-10, abs_tol=1e-10)):
+                        raise DecisionError("Identical support for the same baseline must retain identical annual mass and finite-cell count")
+                    support_baselines[key] = (data["baseline"], count)
                     expected_percent = (100.0 * data["reduction"] / data["baseline"]
                                         if data["baseline"] != 0 else None)
                     if expected_percent is None:
