@@ -28,6 +28,18 @@ async function retain(filename,bytes){
   }finally{if(handle)await handle.close();await fs.unlink(temporary).catch(error=>{if(error.code!=='ENOENT')throw error;});}
   return {path:filename,bytes:bytes.length,sha256:hash(bytes)};
 }
+async function verifyDescriptor(item){
+ check(item&&typeof item.path==='string'&&Number.isSafeInteger(item.bytes)&&item.bytes>=0&&/^[a-f0-9]{64}$/.test(item.sha256||''),'Use a complete original output descriptor.');
+ const handle=await fs.open(item.path,'r');
+ try{
+  const before=await handle.stat();check(before.isFile()&&before.size===item.bytes,'The original output size changed: '+item.path);
+  const digest=crypto.createHash('sha256'),buffer=Buffer.alloc(1024*1024);let offset=0;
+  while(offset<before.size){const {bytesRead}=await handle.read(buffer,0,Math.min(buffer.length,before.size-offset),offset);check(bytesRead>0,'The original output was truncated: '+item.path);digest.update(buffer.subarray(0,bytesRead));offset+=bytesRead;}
+  const after=await handle.stat(),named=await fs.lstat(item.path);
+  const same=value=>value.dev===before.dev&&value.ino===before.ino&&value.size===before.size&&value.mtimeMs===before.mtimeMs&&value.ctimeMs===before.ctimeMs;
+  check(!named.isSymbolicLink()&&same(after)&&same(named)&&digest.digest('hex')===item.sha256,'The completed original output changed: '+item.path);
+ }finally{await handle.close();}
+}
 async function json(filename,value){return retain(filename,Buffer.from(JSON.stringify(value,null,2)+'\n'));}
 
 const stable=value=>JSON.stringify(order(value));
@@ -477,8 +489,7 @@ export async function reviewEvidenceBrowser({page,url,inputs,directory,reviewer,
   if(completed){
     check(completed.operationId===OPERATION&&completed.workspaceId===inputs.workspaceId&&completed.caseId===inputs.caseId&&completed.caseVersionId===inputs.caseVersionId,'The completed original browser course belongs to another selection.');
     for(const file of [...completed.images,...completed.downloads,completed.printedReport]){
-      const bytes=await fs.readFile(file.path);
-      check(bytes.length===file.bytes&&hash(bytes)===file.sha256,'A retained completed browser artifact changed: '+file.path);
+      await verifyDescriptor(file);
     }
     return completed;
   }
