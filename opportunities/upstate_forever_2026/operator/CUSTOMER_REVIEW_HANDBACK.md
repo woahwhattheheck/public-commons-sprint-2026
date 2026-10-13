@@ -53,7 +53,7 @@ A rebuild preserves the source export selection and records the source task in i
 
 An unfinished export recovered by the original project-transfer operation also retains its original selected response generation when resumed. A new ordinary **Export current review** continues to check that the response shown in the form is still current.
 
-The receiver checks the exact task request, transfer lineage, scientific project and selected edition before recognizing a missing sender export. A local package with a changed inventory, changed archive size, invalid path or symlink reports the underlying error. A rebuild also checks the full hash of an available source archive. Original download handling verifies the selected file bytes before serving them.
+The receiver checks the exact task request, transfer lineage, scientific project and selected edition before recognizing a missing sender export. A local package with a changed inventory, changed archive size, invalid path or symlink displays its own export issue. Other retained reviews and exports remain usable. Opening that task or serving its files retains the underlying error; the damaged row does not offer automatic rebuild. A present desk whose ZIP is absent is inspected completely before recovery is offered. A rebuild also checks the full hash of an available source archive. Original download handling verifies the selected file bytes before serving them.
 
 ## Day-to-day navigation
 

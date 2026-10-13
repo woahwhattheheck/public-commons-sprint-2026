@@ -223,6 +223,8 @@ export function attachCustomerReviews({getState,api,endpoint,openForm,submitActi
     return '<p class="note">'+esc(row.export_message)+'</p>'+button('rebuild-export','Rebuild selected export',taskId);
   }
   function exportControls(row,label='Open desk'){
+    if(row.export_status==='error')return '<p class="note">'+esc(row.export_message)+'</p>'+
+      '<button data-action="task-open" data-id="'+esc(row.task_id)+'" type="button">Inspect export issue</button>';
     return rebuildExportControl(row.task_id,row)||
       ((row.desk_url?'<a class="button" href="'+esc(row.desk_url)+'" target="_blank" rel="noopener">'+esc(label)+'</a>':'')+
        '<button data-action="task-open" data-id="'+esc(row.task_id)+'" type="button">Download package</button>');
