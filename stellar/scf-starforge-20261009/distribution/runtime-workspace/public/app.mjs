@@ -7,6 +7,7 @@ import { createManagedWorkspaceView } from './managed.mjs';
 import { createApplicationsWorkspaceView } from './applications.mjs';
 import { createPythonWorkspaceView } from './python.mjs';
 import { createSourceBuildWorkspaceView } from './source-build.mjs';
+import { createRuntimeOutputView } from './runtime-output.mjs';
 // MIT. Industrial operator presentation; original runtime records remain authoritative.
 const $ = id => document.getElementById(id);
 const make = (tag, text, className) => { const node = document.createElement(tag); if (text !== undefined) node.textContent = text; if (className) node.className = className; return node; };
@@ -15,7 +16,7 @@ let token = location.hash.slice(1) || sessionStorage.getItem(tokenKey) || '';
 if (location.hash) { sessionStorage.setItem(tokenKey, token); history.replaceState(null, '', location.pathname); }
 let state, selectedId = null, profileReview = null, selectedArchive = null, handoff = null;
 let loading = false, refreshAgain = false, view = 'runtime', logSelection = null, initial = true;
-let archiveSelectionGeneration = 0, logRequestGeneration = 0, loadedOperationDetail = null;
+let archiveSelectionGeneration = 0, loadedOperationDetail = null;
 const operationDetail = name => ['managed', 'images', 'transfers', 'source-builds'].includes(name) ? 'full' : 'summary';
 const pendingKey = () => 'starforge-runtime-pending-request-' + state?.workspaceId;
 function message(text = '') { $('message').textContent = text; $('message').hidden = !text; }
@@ -89,7 +90,7 @@ function updateControls() {
   $('inspect').disabled = !value?.profile;
   $('install').disabled = !exists || active || !value.state;
   $('recover').disabled = !exists || active;
-  $('install-log').disabled = !value?.state?.logFile;
+  $('install-log').disabled = !value?.id;
   $('compare').disabled = !exists || !$('compare-after').value;
   $('create-handoff').disabled = !exists || value.phase !== 'READY';
   $('review-profile').disabled = !selectedArchive;
@@ -308,7 +309,10 @@ async function refresh({ quiet = false } = {}) {
     try { pending = JSON.parse(sessionStorage.getItem(pendingKey()) ?? 'null'); } catch { sessionStorage.removeItem(pendingKey()); }
     if (pending && value.operations.some(job => job.id === pending.requestId)) sessionStorage.removeItem(pendingKey());
     $('retry-request').hidden = !sessionStorage.getItem(pendingKey());
-    if (logSelection && view === 'operations' && $('log-panel').hidden) await openLog(logSelection);
+    if (logSelection && view === 'operations') {
+      if ($('log-panel').hidden) await openLog(logSelection);
+      else await runtimeOutput.update();
+    }
     prefs();
   } catch (value) {
     if (token !== requestedToken) { refreshAgain = true; return; }
@@ -416,17 +420,8 @@ async function operation(value) {
   return result;
 }
 async function openLog(value) {
-  const generation = ++logRequestGeneration, requestedToken = token, workspaceId = state?.workspaceId;
-  const result = await api(query('/api/log', value));
-  if (generation !== logRequestGeneration || requestedToken !== token || state?.workspaceId !== workspaceId) return;
-  logSelection = value; $('log-panel').hidden = false;
-  $('log-title').textContent = result.name;
-  $('log-detail').textContent = result.available === false
-    ? result.state === 'NOT_CREATED' ? 'This operation has not created its worker log yet.' : 'The retained worker log is currently unavailable.'
-    : result.offset ? 'Showing the final ' + (result.totalBytes - result.offset) + ' of ' + result.totalBytes + ' bytes.' : result.totalBytes + ' retained bytes.';
-  $('log-text').textContent = result.available === false
-    ? result.error.code + ': ' + result.error.message : result.text || '(The selected log is empty.)';
-  switchView('operations'); prefs();
+  $('log-panel').hidden = false; switchView('operations');
+  await runtimeOutput.open(value);
 }
 const images = initImageWorkspace({ root: $('image-workspace'), api, operation, refresh, openLog, message, error,
   switchView, getState: () => state, getToken: () => token, getView: () => view });
@@ -460,7 +455,7 @@ $('compare').addEventListener('click', async () => {
   } catch (value) { error(value); }
 });
 $('install-log').addEventListener('click', () => openLog({ runtimeId: selectedId }).catch(error));
-$('refresh-log').addEventListener('click', () => logSelection && openLog(logSelection).catch(error));
+
 $('retry-request').addEventListener('click', async () => {
   let scope;
   try {
@@ -508,6 +503,8 @@ $('download-handoff').addEventListener('click', () => {
   const link = make('a'); link.href = url; link.download = 'starforge-runtime-handoff.json'; link.click(); setTimeout(() => URL.revokeObjectURL(url), 1000);
 });
 $('copy-handoff').addEventListener('click', () => handoff && navigator.clipboard.writeText(JSON.stringify(handoff, null, 2)).then(() => message('Deployment handoff copied.')).catch(error));
+const runtimeOutput = createRuntimeOutputView({ root: $('log-panel'), api, getWorkspaceId: () => state?.workspaceId, error,
+  onSelection: value => { logSelection = value; prefs(); } });
 const sourceBuilds = createSourceBuildWorkspaceView({ root: $('source-build-workspace'), api, getState: () => state,
   operation, refreshWorkspace: refresh, openLog, switchView, chooseRuntime, message, error,
   chooseArchive: async id => {
@@ -554,6 +551,7 @@ window.addEventListener('hashchange', () => {
   token = location.hash.slice(1); sessionStorage.setItem(tokenKey, token);
   history.replaceState(null, '', location.pathname);
   operationHistoryView.reset(); loadedOperationDetail = null;
+  runtimeOutput.reset();
   images.reset();
   managed.reset();
   applications.reset();
@@ -562,7 +560,7 @@ window.addEventListener('hashchange', () => {
   operatingProcedures.reset();
   python.reset();
   sourceBuilds.reset();
-  archiveSelectionGeneration++; logRequestGeneration++;
+  archiveSelectionGeneration++;
   initial = true; state = undefined; selectedId = null; selectedArchive = null;
   profileReview = null; handoff = null; logSelection = null; view = 'runtime';
   $('handoff').hidden = true; $('comparison').hidden = true; $('profile-review').hidden = true;
