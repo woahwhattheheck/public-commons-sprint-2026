@@ -95,3 +95,11 @@ Start the maintained operator with `--workspace "$GURA_REFERENCE_WORKSPACE"` and
 A useful explanation alongside the actual comparison is: “This reference uses the publisher's original example inputs. We run the original engine directly and through our saved-project pipeline, then show their results on the same cells. The same pipeline carries our separately selected Upper Savannah inputs.”
 
 For the original native calculation's definitions, consult the pinned [NDR source](https://github.com/natcap/invest/blob/3.20.0/src/natcap/invest/ndr/ndr.py) and [SDR source](https://github.com/natcap/invest/blob/3.20.0/src/natcap/invest/sdr/sdr.py). The original source archives retain their publisher notices and README lineage.
+
+## Continue after receiving a saved project
+
+The original source and executed argument paths remain part of the scientific record. When a complete project is restored to another directory or host, comparison resolves each direct-native export through its retained relative file descriptor and verifies its byte count and SHA256 inside the received `gura-receiving` directory. Earlier saved records are supported by mapping the export's original path relative to its recorded native-selection directory and matching that exact member in the retained output inventory.
+
+Continue with the restored application and Workspace returned by the normal `model.cli restore` command. Supply the same original release archives through `--inputs`; `--mode workspace` reopens the application baseline and computes comparisons from the received original outputs. `--mode both` also follows the existing native-stage reuse check. Native export totals and executed argument provenance retain their original values and identities.
+
+Each comparison now includes `native_reference_artifact`, relative to the named `gura-receiving` root, so the original raster used in the comparison can be inspected or transferred independently with its exact file identity.
