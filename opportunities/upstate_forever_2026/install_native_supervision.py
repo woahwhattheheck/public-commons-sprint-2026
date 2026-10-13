@@ -103,6 +103,10 @@ PREVIOUS.setdefault("operator/web/parameter_studies.mjs", []).append("ca146243fe
 PREVIOUS.setdefault("install_native_supervision.py", []).append("f3a0528a818641095969898b635e7c6324f6ab6842995cbe55f90f2079aee733")
 PREVIOUS.setdefault("operator/NATIVE_JOBS.md", []).append("fb4339debca8ab51cb97cdf076b16a0f61c86afcc5bef2a5a4383da6001a2b56")
 
+# Complete the received Parameter operating guide while accepting this original edition.
+PREVIOUS.setdefault("operator/NATIVE_JOBS.md", []).append("125bfb1e39c0a0c56f84c7d171e15b7c9e55ffd0d635381af1df8137002a68b8")
+PREVIOUS.setdefault("install_native_supervision.py", []).append("2badb6f90e9ff87475be475cf7f4551352e507c39ac24684623a4c9a2f1c6bef")
+
 DETACH_DISPOSITION = ('            final_state = ("interrupted" if isinstance(error, NativeJobDetached) else\n'
                       '                           "cancelled" if isinstance(error, NativeJobCancelled) else "failed")\n')
 
