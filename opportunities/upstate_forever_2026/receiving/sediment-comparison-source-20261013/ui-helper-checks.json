@@ -1,0 +1,54 @@
+{
+  "mode": "CONNECTED_V8_ACTUAL_HELPERS_WITH_HTTP_AND_IDB_STUBS",
+  "checks": [
+    "same-ID physical branch mismatch rejects",
+    "actual persist retains both complete candidates after another tab advances revision",
+    "foreign original request cannot invoke native lookup or retry",
+    "uncertain retirement first looks up original UUID and retries exact retained retirement envelope",
+    "imported retirement cannot detach from its original save"
+  ],
+  "requests": [
+    {
+      "path": "/sediment-comparisons/requests/00000000-0000-4000-8000-000000000008",
+      "method": "GET"
+    },
+    {
+      "path": "/sediment-comparisons/requests/00000000-0000-4000-8000-000000000008",
+      "method": "GET"
+    },
+    {
+      "path": "/sediment-comparisons/abandon",
+      "method": "POST",
+      "body": {
+        "request_id": "00000000-0000-4000-8000-000000000008",
+        "original": {
+          "request_id": "00000000-0000-4000-8000-000000000008",
+          "expected_preview_id": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+          "selection": {
+            "schema": "upstate.sediment-model-comparison-selection/v1",
+            "id": "00000000-0000-4000-8000-000000000006",
+            "title": "Exact pending",
+            "actor": "",
+            "at": "",
+            "note": "",
+            "models": [],
+            "observations": [],
+            "rangePolicy": "",
+            "rationale": ""
+          },
+          "parent_id": null
+        },
+        "actor": "Scientist",
+        "at": "2026-10-13T20:00:00Z",
+        "reason": "Retain invalid original without committing comparison"
+      }
+    },
+    {
+      "path": "/sediment-comparisons/catalogue",
+      "method": "GET"
+    }
+  ],
+  "notRendering": true,
+  "source_packet": "16faa22c766c99b9acb0260d11253b0786201975",
+  "scope": "Actual source helpers with stub HTTP/IDB and DOM shell; native and rendered receiving remains the original equipped course."
+}
