@@ -9,21 +9,21 @@
   "inventory": "integration/reach_chemistry/COMPOUND_SOURCE.json",
   "source_files": 40,
   "installed_files": 38,
-  "source_bytes": 418177,
+  "source_bytes": 418891,
   "parts": [
     {
       "path": "source-01.json",
       "bytes": 379003,
-      "sha256": "97db63698998e882fa92e7aa90b294a9cc8457b498d65b31cabd8765b4bfe486",
+      "sha256": "55efa2b30ef10f5a656e89a312dafe4740752948dd53bc5bc55929811c9b46ec",
       "members": 27,
       "source_bytes": 279937
     },
     {
       "path": "source-02.json",
-      "bytes": 187223,
-      "sha256": "cd259408e583a6771dc5969069d51a74ad6853145e44f4b5e7639eb035eb7f43",
+      "bytes": 188175,
+      "sha256": "7fc4759c39c84803aba6e7a000337b1a2af8ac4e1950eeec2a821df3aacc769e",
       "members": 13,
-      "source_bytes": 138240
+      "source_bytes": 138954
     }
   ],
   "files": [
@@ -295,17 +295,17 @@
     },
     {
       "path": "source/CHEMISTRY_COMPOUND_RECEIVING.md",
-      "bytes": 6239,
-      "sha256": "e67836c7c7c5533e84341a204dbee248d4455fb1fc8fc838a202cc36d8b61643",
+      "bytes": 6849,
+      "sha256": "8f595d5a4c443561f769c0869882e98279cceb1a085bf33d5fb5a548669cb676",
       "role": "receiving_driver",
-      "source_commit": "1c067ec39324290f20eb85ae3a365be74a71e7a4"
+      "source_commit": "5a8c02a05f2c45c758d361c44c624479bfa157b4"
     },
     {
       "path": "source/run_chemistry_compound_receiving.py",
-      "bytes": 31013,
-      "sha256": "1cea1a2585d6994b1fdfc17b66038a102d35a229c5a83eb85cde91a5b86cedfc",
+      "bytes": 31117,
+      "sha256": "5fd1fea30210ea37d9b6c661c4f60a3d58809464857bf04b49c697c2077e7d92",
       "role": "receiving_driver",
-      "source_commit": "1c067ec39324290f20eb85ae3a365be74a71e7a4"
+      "source_commit": "5a8c02a05f2c45c758d361c44c624479bfa157b4"
     }
   ],
   "bootstrap": {
