@@ -1,6 +1,6 @@
 {
   "schema": "three-twenty.hydrologic-original-inputs/v1",
-  "title": "Original four-station NLDI geographic inputs",
+  "title": "Original four-station river and contributing-catchment inputs",
   "captured_at": "2026-10-13",
   "path_base": "application root",
   "source_page": "https://app.notion.com/p/3f8dd77231008194832bda8cdd7b6c84",
@@ -14,7 +14,9 @@
     "stations": 4,
     "downstream_reaches": 65,
     "downstream_vertices": 650,
-    "upstream_reaches": 45
+    "upstream_reaches": 45,
+    "original_inputs": 18,
+    "original_catchments": 4
   },
   "files": [
     {
@@ -137,6 +139,41 @@
       "role": "station_catalogue",
       "uri": "https://www.waterqualitydata.us/data/Station/search?huc=03060101&startDateLo=01-01-2020&startDateHi=12-31-2025&characteristicType=Nutrient&mimeType=csv&zip=no",
       "station": "SV-833"
+    },
+    {
+      "path": "source/sv833-hydrologic-context-20261013/original/sv833-nldi-upstream-whole-catchment-basin-original.json",
+      "bytes": 7993,
+      "sha256": "3387b59bb154a2cb94d2f96cc100ee821122a677899ee29e3ea071a0fbe68c8d",
+      "role": "whole_basin",
+      "uri": "https://api.water.usgs.gov/nldi/linked-data/wqp/21SC60WQ_WQX-SV-833/basin?f=json&simplified=false&splitCatchment=false",
+      "station": "SV-833"
+    },
+    {
+      "station": "RS-26250",
+      "role": "whole_basin",
+      "path": "source/three-twenty-hydrologic-context-20261013/original/three-twenty-rs-26250-nldi-upstream-whole-catchment-basin-original.json",
+      "uri": "https://api.water.usgs.gov/nldi/linked-data/wqp/21SC60WQ_WQX-RS-26250/basin?f=json&simplified=false&splitCatchment=false",
+      "bytes": 11423,
+      "sha256": "51099dea7e302f6c3fc60b5a45d8ff87a54ffe4d310ea11b2cbd0cdfb7bbfed3",
+      "file_upload_id": "3f8dd772-3100-81a3-9010-00b2116c5bcd"
+    },
+    {
+      "station": "SV-735",
+      "role": "whole_basin",
+      "path": "source/three-twenty-hydrologic-context-20261013/original/three-twenty-sv-735-nldi-upstream-whole-catchment-basin-original.json",
+      "uri": "https://api.water.usgs.gov/nldi/linked-data/wqp/21SC60WQ_WQX-SV-735/basin?f=json&simplified=false&splitCatchment=false",
+      "bytes": 14475,
+      "sha256": "9d94a264163d102a05d28228eeba5018c24e01678bf29dd4ab53807634f8acfd",
+      "file_upload_id": "3f8dd772-3100-81b0-a436-00b27b751779"
+    },
+    {
+      "station": "SV-111",
+      "role": "whole_basin",
+      "path": "source/three-twenty-hydrologic-context-20261013/original/three-twenty-sv-111-nldi-upstream-whole-catchment-basin-original.json",
+      "uri": "https://api.water.usgs.gov/nldi/linked-data/wqp/21SC60WQ_WQX-SV-111/basin?f=json&simplified=false&splitCatchment=false",
+      "bytes": 15680,
+      "sha256": "32fd64e08f3b614e306a94b9acc1395a6533d17f3d3acad375f846d0496211f9",
+      "file_upload_id": "3f8dd772-3100-814a-8e69-00b2b916256c"
     }
   ]
 }
