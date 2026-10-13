@@ -1,0 +1,389 @@
+{
+  "schema": "tjl.publication.report-dataset.v1",
+  "id": "us-hhs-poverty-guidelines-2024",
+  "title": "HHS poverty guidelines, 2024",
+  "description": "Complete published eight-person schedules for the contiguous states/DC, Alaska and Hawaii, with the additional-person increments.",
+  "publicationPeriod": "2026 working production",
+  "dataPeriod": "2024 guideline edition",
+  "geography": "Three separately published geographic schedules; Ohio uses the contiguous-states/DC schedule",
+  "methodology": "Values are retained as published in the original HHS notice. The guidelines simplify Census thresholds for administrative use and use programme-specific definitions of income, family and applicability. They are not SPM thresholds or the Census statistical grid.",
+  "source": {
+    "title": "Annual Update of the HHS Poverty Guidelines, 2024",
+    "url": "https://www.govinfo.gov/content/pkg/FR-2024-01-17/html/2024-00796.htm",
+    "locator": "89 FR 2961–2963, document 2024-00796",
+    "publisher": "U.S. Department of Health and Human Services / Government Publishing Office",
+    "retrievedAt": "2026-10-13",
+    "note": "",
+    "rights": "U.S. government public-domain statistical publication"
+  },
+  "columns": [
+    {
+      "key": "geography",
+      "label": "Geographic schedule",
+      "kind": "text",
+      "role": "geography",
+      "unit": "",
+      "period": "See row measurement period",
+      "definition": ""
+    },
+    {
+      "key": "persons",
+      "label": "Persons in family/household",
+      "kind": "integer",
+      "role": "denominator",
+      "unit": "",
+      "period": "See row measurement period",
+      "definition": ""
+    },
+    {
+      "key": "annual_guideline",
+      "label": "Annual guideline",
+      "kind": "integer",
+      "role": "value",
+      "unit": "USD per year",
+      "period": "See row measurement period",
+      "definition": ""
+    },
+    {
+      "key": "additional_person_above_eight",
+      "label": "Add for each person above eight",
+      "kind": "integer",
+      "role": "value",
+      "unit": "USD per year",
+      "period": "See row measurement period",
+      "definition": ""
+    },
+    {
+      "key": "period",
+      "label": "Guideline edition",
+      "kind": "text",
+      "role": "period",
+      "unit": "",
+      "period": "See row measurement period",
+      "definition": ""
+    },
+    {
+      "key": "applicable_date",
+      "label": "Published applicable date",
+      "kind": "text",
+      "role": "note",
+      "unit": "",
+      "period": "See row measurement period",
+      "definition": ""
+    }
+  ],
+  "rows": [
+    {
+      "id": "contiguous-1",
+      "values": {
+        "geography": "48 contiguous states and District of Columbia",
+        "persons": "1",
+        "annual_guideline": "15060",
+        "additional_person_above_eight": "5380",
+        "period": "2024",
+        "applicable_date": "2024-01-11"
+      },
+      "locator": "89 FR 2962; 48 contiguous states and District of Columbia table, 1 persons; reader line 102",
+      "note": "Applicable date may differ when the administering programme specifies its own date. This is a historical reference, not an individual eligibility determination."
+    },
+    {
+      "id": "contiguous-2",
+      "values": {
+        "geography": "48 contiguous states and District of Columbia",
+        "persons": "2",
+        "annual_guideline": "20440",
+        "additional_person_above_eight": "5380",
+        "period": "2024",
+        "applicable_date": "2024-01-11"
+      },
+      "locator": "89 FR 2962; 48 contiguous states and District of Columbia table, 2 persons; reader line 103",
+      "note": "Applicable date may differ when the administering programme specifies its own date. This is a historical reference, not an individual eligibility determination."
+    },
+    {
+      "id": "contiguous-3",
+      "values": {
+        "geography": "48 contiguous states and District of Columbia",
+        "persons": "3",
+        "annual_guideline": "25820",
+        "additional_person_above_eight": "5380",
+        "period": "2024",
+        "applicable_date": "2024-01-11"
+      },
+      "locator": "89 FR 2962; 48 contiguous states and District of Columbia table, 3 persons; reader line 104",
+      "note": "Applicable date may differ when the administering programme specifies its own date. This is a historical reference, not an individual eligibility determination."
+    },
+    {
+      "id": "contiguous-4",
+      "values": {
+        "geography": "48 contiguous states and District of Columbia",
+        "persons": "4",
+        "annual_guideline": "31200",
+        "additional_person_above_eight": "5380",
+        "period": "2024",
+        "applicable_date": "2024-01-11"
+      },
+      "locator": "89 FR 2962; 48 contiguous states and District of Columbia table, 4 persons; reader line 105",
+      "note": "Applicable date may differ when the administering programme specifies its own date. This is a historical reference, not an individual eligibility determination."
+    },
+    {
+      "id": "contiguous-5",
+      "values": {
+        "geography": "48 contiguous states and District of Columbia",
+        "persons": "5",
+        "annual_guideline": "36580",
+        "additional_person_above_eight": "5380",
+        "period": "2024",
+        "applicable_date": "2024-01-11"
+      },
+      "locator": "89 FR 2962; 48 contiguous states and District of Columbia table, 5 persons; reader line 106",
+      "note": "Applicable date may differ when the administering programme specifies its own date. This is a historical reference, not an individual eligibility determination."
+    },
+    {
+      "id": "contiguous-6",
+      "values": {
+        "geography": "48 contiguous states and District of Columbia",
+        "persons": "6",
+        "annual_guideline": "41960",
+        "additional_person_above_eight": "5380",
+        "period": "2024",
+        "applicable_date": "2024-01-11"
+      },
+      "locator": "89 FR 2962; 48 contiguous states and District of Columbia table, 6 persons; reader line 107",
+      "note": "Applicable date may differ when the administering programme specifies its own date. This is a historical reference, not an individual eligibility determination."
+    },
+    {
+      "id": "contiguous-7",
+      "values": {
+        "geography": "48 contiguous states and District of Columbia",
+        "persons": "7",
+        "annual_guideline": "47340",
+        "additional_person_above_eight": "5380",
+        "period": "2024",
+        "applicable_date": "2024-01-11"
+      },
+      "locator": "89 FR 2962; 48 contiguous states and District of Columbia table, 7 persons; reader line 108",
+      "note": "Applicable date may differ when the administering programme specifies its own date. This is a historical reference, not an individual eligibility determination."
+    },
+    {
+      "id": "contiguous-8",
+      "values": {
+        "geography": "48 contiguous states and District of Columbia",
+        "persons": "8",
+        "annual_guideline": "52720",
+        "additional_person_above_eight": "5380",
+        "period": "2024",
+        "applicable_date": "2024-01-11"
+      },
+      "locator": "89 FR 2962; 48 contiguous states and District of Columbia table, 8 persons; reader line 109",
+      "note": "Applicable date may differ when the administering programme specifies its own date. This is a historical reference, not an individual eligibility determination."
+    },
+    {
+      "id": "alaska-1",
+      "values": {
+        "geography": "Alaska",
+        "persons": "1",
+        "annual_guideline": "18810",
+        "additional_person_above_eight": "6730",
+        "period": "2024",
+        "applicable_date": "2024-01-11"
+      },
+      "locator": "89 FR 2962; Alaska table, 1 persons; reader line 118",
+      "note": "Applicable date may differ when the administering programme specifies its own date. This is a historical reference, not an individual eligibility determination."
+    },
+    {
+      "id": "alaska-2",
+      "values": {
+        "geography": "Alaska",
+        "persons": "2",
+        "annual_guideline": "25540",
+        "additional_person_above_eight": "6730",
+        "period": "2024",
+        "applicable_date": "2024-01-11"
+      },
+      "locator": "89 FR 2962; Alaska table, 2 persons; reader line 119",
+      "note": "Applicable date may differ when the administering programme specifies its own date. This is a historical reference, not an individual eligibility determination."
+    },
+    {
+      "id": "alaska-3",
+      "values": {
+        "geography": "Alaska",
+        "persons": "3",
+        "annual_guideline": "32270",
+        "additional_person_above_eight": "6730",
+        "period": "2024",
+        "applicable_date": "2024-01-11"
+      },
+      "locator": "89 FR 2962; Alaska table, 3 persons; reader line 120",
+      "note": "Applicable date may differ when the administering programme specifies its own date. This is a historical reference, not an individual eligibility determination."
+    },
+    {
+      "id": "alaska-4",
+      "values": {
+        "geography": "Alaska",
+        "persons": "4",
+        "annual_guideline": "39000",
+        "additional_person_above_eight": "6730",
+        "period": "2024",
+        "applicable_date": "2024-01-11"
+      },
+      "locator": "89 FR 2962; Alaska table, 4 persons; reader line 121",
+      "note": "Applicable date may differ when the administering programme specifies its own date. This is a historical reference, not an individual eligibility determination."
+    },
+    {
+      "id": "alaska-5",
+      "values": {
+        "geography": "Alaska",
+        "persons": "5",
+        "annual_guideline": "45730",
+        "additional_person_above_eight": "6730",
+        "period": "2024",
+        "applicable_date": "2024-01-11"
+      },
+      "locator": "89 FR 2962; Alaska table, 5 persons; reader line 122",
+      "note": "Applicable date may differ when the administering programme specifies its own date. This is a historical reference, not an individual eligibility determination."
+    },
+    {
+      "id": "alaska-6",
+      "values": {
+        "geography": "Alaska",
+        "persons": "6",
+        "annual_guideline": "52460",
+        "additional_person_above_eight": "6730",
+        "period": "2024",
+        "applicable_date": "2024-01-11"
+      },
+      "locator": "89 FR 2962; Alaska table, 6 persons; reader line 123",
+      "note": "Applicable date may differ when the administering programme specifies its own date. This is a historical reference, not an individual eligibility determination."
+    },
+    {
+      "id": "alaska-7",
+      "values": {
+        "geography": "Alaska",
+        "persons": "7",
+        "annual_guideline": "59190",
+        "additional_person_above_eight": "6730",
+        "period": "2024",
+        "applicable_date": "2024-01-11"
+      },
+      "locator": "89 FR 2962; Alaska table, 7 persons; reader line 124",
+      "note": "Applicable date may differ when the administering programme specifies its own date. This is a historical reference, not an individual eligibility determination."
+    },
+    {
+      "id": "alaska-8",
+      "values": {
+        "geography": "Alaska",
+        "persons": "8",
+        "annual_guideline": "65920",
+        "additional_person_above_eight": "6730",
+        "period": "2024",
+        "applicable_date": "2024-01-11"
+      },
+      "locator": "89 FR 2962; Alaska table, 8 persons; reader line 125",
+      "note": "Applicable date may differ when the administering programme specifies its own date. This is a historical reference, not an individual eligibility determination."
+    },
+    {
+      "id": "hawaii-1",
+      "values": {
+        "geography": "Hawaii",
+        "persons": "1",
+        "annual_guideline": "17310",
+        "additional_person_above_eight": "6190",
+        "period": "2024",
+        "applicable_date": "2024-01-11"
+      },
+      "locator": "89 FR 2962; Hawaii table, 1 persons; reader line 135",
+      "note": "Applicable date may differ when the administering programme specifies its own date. This is a historical reference, not an individual eligibility determination."
+    },
+    {
+      "id": "hawaii-2",
+      "values": {
+        "geography": "Hawaii",
+        "persons": "2",
+        "annual_guideline": "23500",
+        "additional_person_above_eight": "6190",
+        "period": "2024",
+        "applicable_date": "2024-01-11"
+      },
+      "locator": "89 FR 2962; Hawaii table, 2 persons; reader line 136",
+      "note": "Applicable date may differ when the administering programme specifies its own date. This is a historical reference, not an individual eligibility determination."
+    },
+    {
+      "id": "hawaii-3",
+      "values": {
+        "geography": "Hawaii",
+        "persons": "3",
+        "annual_guideline": "29690",
+        "additional_person_above_eight": "6190",
+        "period": "2024",
+        "applicable_date": "2024-01-11"
+      },
+      "locator": "89 FR 2962; Hawaii table, 3 persons; reader line 137",
+      "note": "Applicable date may differ when the administering programme specifies its own date. This is a historical reference, not an individual eligibility determination."
+    },
+    {
+      "id": "hawaii-4",
+      "values": {
+        "geography": "Hawaii",
+        "persons": "4",
+        "annual_guideline": "35880",
+        "additional_person_above_eight": "6190",
+        "period": "2024",
+        "applicable_date": "2024-01-11"
+      },
+      "locator": "89 FR 2962; Hawaii table, 4 persons; reader line 138",
+      "note": "Applicable date may differ when the administering programme specifies its own date. This is a historical reference, not an individual eligibility determination."
+    },
+    {
+      "id": "hawaii-5",
+      "values": {
+        "geography": "Hawaii",
+        "persons": "5",
+        "annual_guideline": "42070",
+        "additional_person_above_eight": "6190",
+        "period": "2024",
+        "applicable_date": "2024-01-11"
+      },
+      "locator": "89 FR 2962; Hawaii table, 5 persons; reader line 139",
+      "note": "Applicable date may differ when the administering programme specifies its own date. This is a historical reference, not an individual eligibility determination."
+    },
+    {
+      "id": "hawaii-6",
+      "values": {
+        "geography": "Hawaii",
+        "persons": "6",
+        "annual_guideline": "48260",
+        "additional_person_above_eight": "6190",
+        "period": "2024",
+        "applicable_date": "2024-01-11"
+      },
+      "locator": "89 FR 2962; Hawaii table, 6 persons; reader line 140",
+      "note": "Applicable date may differ when the administering programme specifies its own date. This is a historical reference, not an individual eligibility determination."
+    },
+    {
+      "id": "hawaii-7",
+      "values": {
+        "geography": "Hawaii",
+        "persons": "7",
+        "annual_guideline": "54450",
+        "additional_person_above_eight": "6190",
+        "period": "2024",
+        "applicable_date": "2024-01-11"
+      },
+      "locator": "89 FR 2962; Hawaii table, 7 persons; reader line 141",
+      "note": "Applicable date may differ when the administering programme specifies its own date. This is a historical reference, not an individual eligibility determination."
+    },
+    {
+      "id": "hawaii-8",
+      "values": {
+        "geography": "Hawaii",
+        "persons": "8",
+        "annual_guideline": "60640",
+        "additional_person_above_eight": "6190",
+        "period": "2024",
+        "applicable_date": "2024-01-11"
+      },
+      "locator": "89 FR 2962; Hawaii table, 8 persons; reader line 142",
+      "note": "Applicable date may differ when the administering programme specifies its own date. This is a historical reference, not an individual eligibility determination."
+    }
+  ]
+}

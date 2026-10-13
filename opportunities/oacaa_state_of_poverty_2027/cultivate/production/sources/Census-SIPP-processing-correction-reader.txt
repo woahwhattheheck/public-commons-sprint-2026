@@ -1,0 +1,217 @@
+2022 SIPP: Social Security Processing Error and its Impact on Poverty Estimates (https://www.census.gov/programs-surveys/sipp/tech-documentation/user-notes/2022-usernotes/2022-soc-sec-proces-err-impct-pov-est.html)
+【turn271view0】 [wordlim: 200] Crawled: today; Content type: text/html; Source: click({"ref_id":"turn269view0","id":83}); Total lines: 214
+L0: 【0†Skip Header】
+L1: 
+L2: 【1†Partners】 【2†Researchers】 【3†Educators】 【4†Survey Respondents】
+L3: 
+L4: Explore Census.gov for...
+L5: 
+L6:   * 【1†Partners】
+L7:   * 【2†Researchers】
+L8:   * 【3†Educators】
+L9:   * 【4†Survey Respondents】
+L10: 
+L11: 【5†News】 【6†NAICS Codes】 【7†Jobs】 【8†About Us】 【9†Contact Us】 【10†Help】
+L12: 
+L13: 【11†Topics】
+L14: 
+L15: 【12†Data & Maps】
+L16: 
+L17: 【13†Surveys & Programs】
+L18: 
+L19: 【14†Resource Library】
+L20: 
+L21: Search census.gov
+L22: 
+L23: Search
+L24: 
+L25: [Input: Search census.gov] [Input] [Input] [Input] [Input] [Input] [Button: Search ]
+L26: 
+L27: * * *
+L28: 
+L29: * * *
+L30: 
+L31: Helpful Links
+L32: 【15†Advanced Data Search†data.census.gov】 【4†Get Survey Help】 【12†Census Bureau Data and Maps】 【16†American Community Survey (ACS)】 【17†Census Records & Genealogy】
+L33: 
+L34: * * *
+L35: 
+L36: Helpful Links
+L37: 
+L38: 【15†Advanced Data Search†data.census.gov】 【4†Get Survey Help】 【12†Census Bureau Data and Maps】 【16†American Community Survey (ACS)】 【17†Census Records & Genealogy】
+L39: 
+L40: Search
+L41: 
+L42: Menu
+L43: 
+L44: * * *
+L45: 
+L46: Topics
+L47: 
+L48: Browse our topics and subtopics to find information and data.
+L49: 
+L50: 【11†View All Topics and Subtopics】 【18†Index A to Z】
+L51: 【19†Age and Sex】 【20†Business and Economy】 【21†Education】 【22†Emergency Management / Disasters】 【23†Employment】 【24†Families and Living Arrangements】 【25†Geography】 【26†Health】 【27†Hispanic Origin】 【28†Housing】
+L52: 
+L53: 【29†Income and Poverty】 【30†International Trade】 【31†Migration/Geographic Mobility】 【32†Population】 【33†Population Estimates】 【34†Public Sector】 【35†Race】 【36†Redistricting】 【2†Research】 【37†Voting and Registration】
+L54: 
+L55: Data & Maps
+L56: Access demographic, economic and population data from the U.S. Census Bureau. Explore census data with visualizations and view tutorials.
+L57: 
+L58: 【38†Explore Data on data.census.gov】 【12†View All Data Resources】
+L59: 
+L60: 【39†Census Academy】 【40†Combining Data】 【41†Data Tools and Apps】 【42†Datasets】 【43†Developers】 【44†Experimental Data Products】 【45†Interactive Maps】
+L61: 
+L62: 【46†Mapping Files】 【47†Profiles】 【48†Related Sites】 【49†Software】 【50†Tables】 【39†Training and Workshops】 【51†Visualizations】
+L63: 
+L64: Surveys & Programs
+L65: Our surveys provide periodic and comprehensive statistics about the nation. This data is critical for government programs, policies, and decision-making.
+L66: 
+L67: 【4†Survey Help】 【13†View All Surveys & Programs】
+L68: 
+L69: 【52†2020 Census】 【53†2026 Census Test】 【54†2030 Census】 【16†American Community Survey (ACS)】 【55†American Housing Survey (AHS)】 【56†Annual Business Survey (ABS)】 【57†Annual Integrated Economic Survey (AIES)】 【58†County Business Patterns (CBP)】 【59†Current Population Survey (CPS)】
+L70: 【60†Economic Census】 【61†Household Pulse Survey】 【62†International Programs】 【63†Metro and Micro Areas】 【64†Population Estimates】 【65†Population Projections】 【66†Small Area Income and Poverty】 【67†Statistics of U.S. Businesses】 【68†Survey of Income and Program Participation (SIPP)】
+L71: 
+L72: Resource Library
+L73: 
+L74: Browse our collection of stories and more.
+L75: 
+L76: 【14†View All Library Resources】 【69†Glossary】
+L77: 【70†America Counts: Stories】 【71†Audio】 【72†Blogs】 【73†Facts for Features】 【74†Fact Sheets】 【51†Infographics and Visualizations】
+L78: 
+L79: 【75†Publications】 【76†Spotlights】 【77†Stats for Stories】 【39†Training (Census Academy)】 【78†Videos】 【79†Working Papers】
+L80: 
+L81: Topics
+L82: 
+L83: Data & Maps
+L84: 
+L85: Surveys & Programs
+L86: 
+L87: Resource Library
+L88: 
+L89: * * *
+L90: 
+L91: Topics
+L92: 
+L93: Data & Maps
+L94: 
+L95: Surveys & Programs
+L96: 
+L97: Resource Library
+L98: 
+L99: * * *
+L100: 
+L101: 【1†Partners】 【2†Researchers】 【3†Educators】 【4†Survey Respondents】
+L102: 
+L103: * * *
+L104: 【5†News】 【6†NAICS Codes】 【7†Jobs】 【8†About Us】 【9†Contact Us】 【10†Help】
+L105: 
+L106: 【11†View All Topics and Subtopics】 【18†Index A to Z】
+L107: 
+L108: * * *
+L109: 【19†Age and Sex】 【20†Business and Economy】 【21†Education】 【22†Emergency Management / Disasters】 【23†Employment】 【24†Families and Living Arrangements】 【25†Geography】 【26†Health】 【27†Hispanic Origin】 【28†Housing】 【29†Income and Poverty】 【30†International Trade】 【31†Migration/Geographic Mobility】 【32†Population】 【33†Population Estimates】 【34†Public Sector】 【35†Race】 【36†Redistricting】 【2†Research】 【37†Voting and Registration】
+L110: 
+L111: 【38†Explore Data on data.census.gov】 【12†View All Data Resources】
+L112: 
+L113: * * *
+L114: 【39†Census Academy】 【40†Combining Data】 【41†Data Tools and Apps】 【42†Datasets】 【43†Developers】 【44†Experimental Data Products】 【45†Interactive Maps】 【46†Mapping Files】 【47†Profiles】 【48†Related Sites】 【49†Software】 【50†Tables】 【39†Training and Workshops】 【51†Visualizations】
+L115: 
+L116: 【4†Survey Help】 【13†View All Surveys & Programs】
+L117: 
+L118: * * *
+L119: 【52†2020 Census】 【53†2026 Census Test】 【54†2030 Census】 【16†American Community Survey (ACS)】 【55†American Housing Survey (AHS)】 【56†Annual Business Survey (ABS)】 【57†Annual Integrated Economic Survey (AIES)】 【58†County Business Patterns (CBP)】 【59†Current Population Survey (CPS)】 【60†Economic Census】 【61†Household Pulse Survey】 【62†International Programs】 【63†Metro and Micro Areas】 【64†Population Estimates】 【65†Population Projections】 【66†Small Area Income and Poverty】 【67†Statistics of U.S.
+L120: Businesses】 【68†Survey of Income and Program Participation (SIPP)】
+L121: 【14†View All Library Resources】 【69†Glossary】
+L122: 
+L123: * * *
+L124: 
+L125: 【70†America Counts: Stories】 【71†Audio】 【72†Blogs】 【73†Facts for Features】 【74†Fact Sheets】 【51†Infographics and Visualizations】 【75†Publications】 【76†Spotlights】 【77†Stats for Stories】 【39†Training (Census Academy)】 【78†Videos】 【79†Working Papers】
+L126: # 2022 SIPP: Social Security Processing Error and its Impact on Poverty Estimates
+L127: 
+L128: 【0†Skip Navigation】
+L129: 
+L130: 【80†Within Technical Documentation】
+L131: 
+L132:   * 【81†1984-2008 Topical Modules List】
+L133:   * 【82†Crosswalks】
+L134:   * 【83†Data Dictionaries】
+L135:   * 【84†Data Release and File Documentation】
+L136:   * 【85†Information for Data Users】
+L137:   * 【86†Nonresponse Bias Reports】
+L138:   * 【87†Questionnaires and Instruments】
+L139:   * 【88†Sample Loss Reports】
+L140:   * 【89†SIPP Codebook】
+L141:   * 【90†Source and Accuracy Statements】
+L142:   * 【91†User Notes】
+L143: Within Technical Documentation
+L144: 
+L145: 【80†Within Technical Documentation】
+L146: 
+L147:   * 【81†1984-2008 Topical Modules List】
+L148:   * 【82†Crosswalks】
+L149:   * 【83†Data Dictionaries】
+L150:   * 【84†Data Release and File Documentation】
+L151:   * 【85†Information for Data Users】
+L152:   * 【86†Nonresponse Bias Reports】
+L153:   * 【87†Questionnaires and Instruments】
+L154:   * 【88†Sample Loss Reports】
+L155:   * 【89†SIPP Codebook】
+L156:   * 【90†Source and Accuracy Statements】
+L157:   * 【91†User Notes】
+L158: # 2022 SIPP: Social Security Processing Error and its Impact on Poverty Estimates
+L159: 
+L160: February 27, 2024
+L161: 
+L162: ! This User Note is only applicable to SIPP data downloaded prior to 7/24/2025. This issue is corrected in SIPP data downloaded on or after 7/24/2025.
+L163: Since its redesign starting with the 2014 Panel, the SIPP has had an overcount of Social Security income (National Academies of Sciences, Engineering, and Medicine 2018; Warren, Fox, and Edwards 2020). Census Bureau staff have reviewed the issue and identified a processing error for gross Social Security benefit amounts, TSSSAMT, where the value of Medicare deductions was double counted. The processing error has been corrected for the 2022 SIPP.
+L164: The processing error often overstated income among families and households with Social Security income, thus reducing the likelihood these families would be in poverty. This led poverty rates in the 2014-2021 SIPP to be lower than they otherwise would have been, particularly for groups likely to be Social Security recipients, such as people aged 65 years or older.
+L165: For data users using the 2014-2021 SIPP files, a possible fix is described in a separate user note titled 【92†2022 SIPP: Prior Processing Error Affecting Social Security ‘Self’ Amounts】. The updated annual and monthly poverty rates following the implementation of a post-hoc Social Security Processing Error correction can be found in the tables titled 【93†Corrected Annual and Monthly SIPP Poverty Rates: 2014-2022】.
+L166: References:
+L167: 
+L168: National Academies of Sciences, Engineering, and Medicine. 2018. The 2014 Redesign of the Survey of Income and Program Participation: An Assessment. Washington, DC: The National Academies Press .
+L169: 
+L170: Warren, Lewis, Liana Fox, and Ashley Edwards. 2020. “Calculating the Supplemental Poverty Measure in the Survey of Income and Program Participation.” SEHSD Working Paper 2020-20.
+L171: 
+L172: Page Last Revised - January 8, 2026
+L173: 
+L174: ✕
+L175: Is this page helpful?
+L176: 【94†Image: Thumbs Up Image†census.gov】 Yes 【95†Image: Thumbs Down Image†census.gov】 No
+L177: 
+L178: ✕
+L179: 
+L180: [Input]
+L181: 
+L182: NO THANKS
+L183: 
+L184: 255 characters maximum 【96†Image†census.gov】255 characters maximum reached
+L185: 
+L186: ✕
+L187: 
+L188: Thank you for your feedback.
+L189: Comments or suggestions? 【97†Image†census.gov】【98†Image†census.gov】
+L190: 
+L191: Top
+L192: 
+L193: 【99†Back to Header】
+L194: 
+L195: Receive Updates
+L196: 
+L197: To sign up for updates please enter your email address.
+L198: 
+L199: * * *
+L200: 
+L201: Stay Current
+L202: 【70†America Counts】 【100†Director’s Blog】 【101†Deputy Director’s Blog】 【102†Random Samplings】 【103†Research Matters】
+L203: 
+L204: Stay Connected
+L205: 
+L206: 【9†Contact】 【10†Support】 【7†Jobs】
+L207: 
+L208: Follow
+L209: 
+L210: 【104†Information Quality】 | 【105†Data Linkage Infrastructure】 | 【106†Data Protection and Privacy Policy】 | 【107†Accessibility】 | 【108†FOIA】 | 【109†Inspector General†www.oig.doc.gov】 | 【110†No FEAR Act†www.commerce.gov】 | 【111†U.S. Department of Commerce†www.commerce.gov】 | 【112†USA.gov†www.usa.gov】
+L211: 
+L212: * * *
+L213: Measuring America's People and Economy
+
