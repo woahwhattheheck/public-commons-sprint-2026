@@ -313,18 +313,24 @@ export function attachStudyTransfer(host) {
     body.innerHTML=html;
   }
 
-  async function loadCatalogue() {
+  async function loadCatalogue({propagate=false,isCurrent=()=>true}={}) {
     if(!root||!workspace)return;
     if(selectedOnly){catalogueBusy=false;renderCatalogue();return;}
     const captured=stamp(),serial=++requestSerial;
     catalogueBusy=true;renderCatalogue();
     try {
       const value=await request(endpoint('/api/study-transfer/catalog',{kind,query,offset,limit:200}));
-      if(!current(captured)||serial!==requestSerial)return;
+      if(!current(captured)||serial!==requestSerial||!isCurrent())return null;
       catalogue=value;
       for(const row of value.items)if(selected.has(keyOf(row)))selected.set(keyOf(row),row);
       notice('');
-    }catch(error){if(current(captured)&&serial===requestSerial)fail(error);}
+      return value;
+    }catch(error){
+      if(current(captured)&&serial===requestSerial&&isCurrent()){
+        fail(error);if(propagate)throw error;
+      }
+      return null;
+    }
     finally{if(current(captured)&&serial===requestSerial){catalogueBusy=false;renderCatalogue();}}
   }
 
@@ -457,7 +463,7 @@ export function attachStudyTransfer(host) {
     if(name==='title'){
       title=event.target.value;invalidatePlan();
     }else if(name==='query'){
-      query=event.target.value;offset=0;
+      query=event.target.value;offset=0;++requestSerial;
       clearTimeout(searchTimer);searchTimer=setTimeout(()=>loadCatalogue(),300);
     }
   }
@@ -621,5 +627,30 @@ export function attachStudyTransfer(host) {
     }
   }
 
-  return {mount,update,detach,setTransferHandler,openForStudies};
+  async function openForFinder(selection) {
+    if(!root||!workspace||selection?.workspace_key!==workspace||workspace!==workspaceNow())
+      throw new Error('Open this saved study in its original workspace.');
+    if(!Object.hasOwn(rootLabels,selection.kind)||
+       !(selection.kind==='robust-decisions'?/^study_[0-9a-f]{32}$/:/^[0-9a-f]{64}$/).test(selection.id||''))
+      throw new Error('Choose an original saved scientific study.');
+    const captured=stamp(),allowed=()=>current(captured)&&
+      (typeof selection.isCurrent!=='function'||selection.isCurrent());
+    if(!allowed())return null;
+    clearTimeout(searchTimer);searchTimer=null;
+    kind=selection.kind;query=selection.id;selectedOnly=false;offset=0;
+    root.querySelector('[data-study-field="kind"]').value=kind;
+    root.querySelector('[data-study-field="query"]').value=query;
+    root.querySelector('[data-study-field="selected-only"]').checked=false;
+    const value=await loadCatalogue({propagate:true,isCurrent:allowed});
+    if(!value||!allowed()||kind!==selection.kind||query!==selection.id||selectedOnly||offset!==0)return null;
+    const row=value.items.find(item=>item.kind===selection.kind&&item.id===selection.id);
+    if(!row){notice('This saved study is no longer listed in the original workspace. Refresh the search.',true);return null;}
+    const checkbox=[...root.querySelectorAll('[data-study-root]')].find(node=>node.dataset.studyRoot===keyOf(row));
+    const rowNode=checkbox?.closest('tr'),control=rowNode?.querySelector('button:not([disabled])')||checkbox;
+    if(control&&!control.disabled)control.focus({preventScroll:true});
+    rowNode?.scrollIntoView({block:'nearest'});
+    return {workspace_key:workspace,kind:row.kind,id:row.id};
+  }
+
+  return {mount,update,detach,setTransferHandler,openForStudies,openForFinder};
 }
