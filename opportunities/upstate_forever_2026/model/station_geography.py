@@ -24,7 +24,7 @@ from .common import (atomic_bytes, atomic_json, canonical, describe_file, digest
 
 from .station_assessment_context import enrich as enrich_assessments, geojson as assessment_geojson, report_section as assessment_report
 
-VERSION = "1.1.0"
+VERSION = "1.2.0"
 KIND = "station-geographies"
 RESULT_SCHEMA = "upstate.station-geography-result/v1"
 PACKAGE_SCHEMA = "upstate.station-geography-package/v1"
@@ -426,29 +426,22 @@ def _choose(value, candidates):
 
 
 def _site_tables(workspace, selection):
-    """Retain station inventory rows without treating assessment rows as measurements."""
-    sites, bindings = {}, []
-    for reference in selection.get("site_tables", []):
-        path, entry, binding = _source(workspace, reference)
-        field = reference.get("station_id_field") or entry.get("station_id_field")
-        if not field:
-            raise ValueError("Select the exact station field in the original study inventory")
+    """Retain original CSV or complete JSON inventory rows as station source context."""
+    from .station_inventory import read_inventory
+    sites,bindings={},[]
+    for reference in selection.get("site_tables",[]):
+        path,entry,binding=_source(workspace,reference)
+        field,records,info=read_inventory(path,reference,entry)
         bindings.append(binding)
-        with open(path, encoding="utf-8-sig", newline="") as stream:
-            table = csv.DictReader(stream)
-            if not table.fieldnames or len(table.fieldnames) != len(set(table.fieldnames)) or field not in table.fieldnames:
-                raise ValueError("Original station inventory needs distinct headers and its station field")
-            for number, original in enumerate(table, 2):
-                if None in original:
-                    raise ValueError("Original station inventory has an extra cell")
-                station = _station_key(original[field])
-                if not station:
-                    raise ValueError("Original station inventory row has no exact station ID")
-                sites.setdefault(station, {"station_id": station, "source_references": []})["source_references"].append({
-                    "collection_id": binding["collection_id"], "source_id": binding["source_id"],
-                    "source_sha256": binding["source_sha256"], "row_number": number, "original": original})
-    return sites, bindings
-
+        for number,original,position in records:
+            station=_station_key(original[field])
+            if not station:
+                raise ValueError("Original station inventory row has no exact station ID")
+            sites.setdefault(station,{"station_id":station,"source_references":[]})["source_references"].append({
+                "collection_id":binding["collection_id"],"source_id":binding["source_id"],
+                "source_sha256":binding["source_sha256"],"row_number":number,
+                **position,"original":original})
+    return sites,bindings
 
 def _csv(fields, rows):
     output = io.StringIO(newline="")
@@ -829,6 +822,7 @@ def inspect(workspace, edition_id, *, verify=False, include_result=False):
 
 
 def catalog(workspace):
+    from .station_inventory import catalogue_fields
     sources = []
     for collection in workspace._list("sources"):
         for entry in collection["entries"]:
@@ -839,6 +833,7 @@ def catalog(workspace):
             row.update(collection_id=collection["id"], source_id=entry["id"],
                        collection_title=collection.get("title"), source_sha256=entry["body"]["sha256"],
                        bytes=entry["body"]["bytes"])
+            row.update(catalogue_fields(entry))
             sources.append(row)
     observations = [{"id": row["id"], "title": row["metadata"].get("title"), "row_count": len(row["rows"]),
                      "source_uri": row["metadata"].get("source_uri")} for row in workspace._list("observations")]
