@@ -22,8 +22,23 @@ FILES = (
     "operator/receive_watershed_context.py",
     "operator/install_watershed_context.py",
     "operator/WATERSHED_CONTEXT.md",
+    "source_tools/receive_watershed_context.py",
+    "source_tools/watershed_source_entry.py",
 )
-OPTIONAL = ("model/watershed_context_cli.py", "model/WATERSHED_CONTEXT.md")
+OPTIONAL = (
+    "model/watershed_context_cli.py",
+    "model/WATERSHED_CONTEXT.md",
+    "model/WATERSHED_BRIEF.md",
+    "integration/watershed_completed_receiving.json",
+    "outputs/watershed-connectivity-20261013/WATERSHED_CONNECTIVITY.md",
+    "outputs/watershed-connectivity-20261013/connectivity-manifest.json",
+    "outputs/watershed-connectivity-20261013/watershed-connectivity-217.csv",
+    "outputs/watershed-connectivity-20261013/watershed-connectivity-summary.json",
+    "source/water_context/20261013/completed-run.package.json",
+    "source/water_context/20261013/full-domain-water-context.json",
+    "source/water_context/20261013/scdes-domain217-source-coverage.json",
+    "source_tools/WATERSHED_SOURCE_IMPORT.md",
+)
 
 
 def digest(body):
