@@ -26,6 +26,14 @@ The picker keeps the chosen option across navigation within the same cohort. Rea
 
 Saved releases reopen with their retained choices. **Revise this selection** creates an editable draft with those same bindings. Loading selection or receptor JSON preserves newer selections and edits made while the file is being read, including unfinished invalid input; reload the file if the draft changed. Current-condition maps require an original baseline, and alternative IDs must be unique and distinct from it.
 
+## Observed water-quality context and receiving waters
+
+Import the complete original observed-report source through its supplied native installer. In the atlas **Source context** step, enable **Observed water-quality context** and choose the imported scientific report document. The selector lists editions carrying the original report schema. The report retains the measured concentrations, dated flow context, reported discharge quantities and four original scientific figures alongside the annual native-model results. The same source selection and numeric figure specifications drive PDF, offline HTML, Markdown and structured report data.
+
+Receiving-water tables show baseline and alternative annual exports over the same valid cells. They preserve each original receiving-area identifier and source-feature cohort. Geometric contribution area, total selected pixel area and each quantity's valid modeled support are recorded separately. Long source-feature cohorts continue across table rows without dropping IDs. Working-material links include every retained receiving-water asset.
+
+The final scientific workspace is created once after the report files are complete, and its delivery snapshot includes those finished reports. Report links use its planned package-relative path; the retained archive descriptor is recorded after the backup succeeds. The complete GIS package and offline index retain the scientific, economic, receiving-water and observed-context materials together.
+
 ## Economic content
 
 The report includes:
@@ -78,7 +86,7 @@ This integration carries forward ED6E's seven-map decision guide and economic re
 
 ## Current-source integration
 
-The prepared-atlas revision is composed with the current scientific v7 renderer and its safe-link checks. Source records retain declared data status, legal edition status, catalogue source identity and original source labels for both modeled inputs and selected context. Delivery format `native-grid-analysis-economic-report-7` binds this report metadata to a new release identity.
+The prepared-atlas revision is composed with the current scientific v11 renderer and its safe-link checks. Source records retain declared data status, legal edition status, catalogue source identity and original source labels for both modeled inputs and selected context. Delivery format `retained-grid-study-observed-client-report-10` binds this report metadata to a new release identity.
 
 The existing native grid record, source-native versus regional audit scope, saved-analysis attachment, package recovery and final atlas-browser snapshot remain in the delivery. The final browser snapshot runs after report and analysis members have been retained. Existing completed releases reopen unchanged through their original identities.
 
@@ -94,7 +102,8 @@ generated = client_report.build_report(
     observation_results=observation_results, comparison=comparison,
     scenario_summary=summary,
     additional_sections=receiving_water_delivery.report_section(water_product),
-    output_stem="client-report", file_key_prefix="client_")
+    output_stem="client-report", file_key_prefix="client_",
+    working_archive_path="working/scientific-workspace.zip")
 for name, relative in generated.items():
     state["files"][name] = describe_file(directory, directory / relative)
 ```
@@ -110,3 +119,9 @@ Customer-specific narrative and RFP delivery coverage are maintained in the priv
 ## Reopening the working project
 
 The first rendered report links to `working/scientific-workspace.zip`. The actual ZIP is registered and verified after both reports are complete, so its selected snapshot includes their final bytes. Receiving retains the original input ZIP outside its own member manifest, beside the extracted reports and through the restored delivery record. Same-filesystem receiving uses one linked data copy; cross-filesystem receiving streams the original open archive into the destination. Identity reads and result construction finish before the receiving directory is published.
+
+## Original native-study releases
+
+Select the existing native-study delivery mode for an original study such as Gura. Its title, purpose, reference, reporting polygon, model domain, biophysical table and native grid are retained with the release. The scientific report and client companion use that study context. The client map guide counts the five native-study families and any optional source-water families actually selected; the regional mode retains its seven RFP families and original RFP references. Native-study PDF, HTML and Markdown identify the original study rather than presenting the regional RFP as its contract.
+
+Both reports preserve the same completed runs, annual-mass artifacts and paired valid support. The companion links to the scientific report and selected economic or observed materials without changing their quantities. The final archive captures both complete report sets, the original grid record, the offline atlas navigator and delivery manifest.
