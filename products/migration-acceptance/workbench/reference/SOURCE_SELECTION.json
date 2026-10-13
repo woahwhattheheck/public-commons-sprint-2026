@@ -1,0 +1,70 @@
+{
+  "schema": "commons.pinned-public-source-selection.v1",
+  "repository": "lerocha/chinook-database",
+  "commit": "7f67772503d71ba90f19283c38e93923addb43fa",
+  "version": "1.4.5",
+  "rawRoot": "https://raw.githubusercontent.com/lerocha/chinook-database/7f67772503d71ba90f19283c38e93923addb43fa/",
+  "files": [
+    {
+      "path": "ChinookDatabase/DataSources/Chinook_PostgreSql.sql",
+      "gitBlob": "d93a20d08239ac6bdd8a56601e148f5d4d048593",
+      "bytes": 600200,
+      "sha256": "e3fde5c1a5b51a2a91429a702c9ca6e69ba56e6c7f5e112724d70c3d03db695e"
+    },
+    {
+      "path": "ChinookDatabase/DataSources/Chinook_Sqlite.sql",
+      "gitBlob": "299610dc69f04a2b16b3a2e45bd2af82ed2872a2",
+      "bytes": 595545,
+      "sha256": "caf31d698a4a79c628215b552dfe6575e71be052ae02b8f18e763498f55f5d44"
+    },
+    {
+      "path": "LICENSE.md",
+      "gitBlob": "7487a9edc2d42e50d7a38ab1fbdba33ac63230f7",
+      "bytes": 1117,
+      "sha256": "5064d720db431474b0a0b0cef9d2b5e362b6c6f80602b35c6443b07cbc979f77"
+    },
+    {
+      "path": "README.md",
+      "gitBlob": "4c49e574ccce8f8ae0cf28a3462f40eb7b69ef6e",
+      "bytes": 3183,
+      "sha256": "f8c04f76f7887110731e4cb2286dcb9de4b23db99b88c0ca548652b8cafebd9c"
+    },
+    {
+      "path": "ChinookDatabase/DataSources/ChinookData.json",
+      "gitBlob": "6dfaacd0a3a5c33829c381a0c2ea4e004fb4a11d",
+      "bytes": 1897482,
+      "sha256": "2998161de437518e3447e779c7ce7418f081895e388081bff315f3c258752d8c"
+    },
+    {
+      "path": "ChinookDatabase/DataSources/ChinookDataSet.xsd",
+      "gitBlob": "73660acb845b3223814e0b959e1de19d55b08675",
+      "bytes": 38540,
+      "sha256": "e1921f1af7480f6face77cb54ab4aff5a16824c422f79a14ad9d932af46ed042"
+    },
+    {
+      "path": "ChinookDatabase/DataSources/ChinookDatabase.tt",
+      "gitBlob": "a673ca4bdeb65d558f24f9998f45886a50426b31",
+      "bytes": 15877,
+      "sha256": "4aaa7c745846c74e1284fcf466eba4c89f2e53de107bd3c3e15700c9216b9ede"
+    },
+    {
+      "path": "ChinookDatabase/DdlStrategies/AbstractDdlStrategy.cs",
+      "gitBlob": "6b3a8626ffc6d2d79276c81b76577c1f0e77e9b4",
+      "bytes": 4691,
+      "sha256": "19846fc510019f077ae715a48f42842cb1ad996bf6c1258f9f774cb73ba28aa8"
+    },
+    {
+      "path": "ChinookDatabase/DdlStrategies/SqliteStrategy.cs",
+      "gitBlob": "a092d19eaa4005f281712767f2da7b8a4946b23f",
+      "bytes": 2012,
+      "sha256": "9af24399ae22442c0ac2a8ea18389667596ee15cfa8ee55617087fcf7a237694"
+    },
+    {
+      "path": "ChinookDatabase/Utilities/DataSetHelper.cs",
+      "gitBlob": "12ab094ba87426aa05cf2da86a7a06b5953d8487",
+      "bytes": 2482,
+      "sha256": "0926104dfe90ea68f20809ed85c6e2cc22a1e78d794fc033b73c1e3a70932a50"
+    }
+  ],
+  "referenceDescription": "Complete published Chinook sample. Original upstream documentation identifies media from an iTunes library, fictitious customers/employees and generated sales. This cohort supplies actual original input to a reference migration."
+}

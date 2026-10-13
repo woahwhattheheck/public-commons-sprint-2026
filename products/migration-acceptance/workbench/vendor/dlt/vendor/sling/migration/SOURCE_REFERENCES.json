@@ -1,0 +1,123 @@
+{
+  "schema": "slingdata.migration-sources.v1",
+  "retrieved": "2026-10-12",
+  "references": [
+    {
+      "id": "sling-migration-guide",
+      "title": "Migrating from Airbyte to Sling",
+      "url": "https://slingdata.io/articles/migrating-from-airbyte-to-sling/",
+      "published": "2026-07-20",
+      "retrieved": "2026-10-12",
+      "supports": [
+        "basic mode mappings",
+        "primary-key field-path shape",
+        "namespace and prefix migration",
+        "target-derived watermark",
+        "parallel target comparison and downstream cutover"
+      ]
+    },
+    {
+      "id": "sling-native-replication",
+      "title": "Original Sling replication and modes",
+      "repository": "slingdata-io/sling-cli",
+      "commit": "7641892e24a7023c8012069596698970c7b3e041",
+      "tag": "v1.6.5",
+      "paths": [
+        "core/sling/replication.go",
+        "core/sling/config.go",
+        "cmd/sling/resource/llm_REPLICATION.md"
+      ],
+      "license": "GPL-3.0",
+      "supports": [
+        "original JSON/YAML reader",
+        "exact native replication fields",
+        "all seven native modes",
+        "incremental maximum and primary-key upsert"
+      ]
+    },
+    {
+      "id": "sling-original-inputs",
+      "title": "Original Sling repository CSV inputs",
+      "repository": "slingdata-io/sling-cli",
+      "commit": "7641892e24a7023c8012069596698970c7b3e041",
+      "paths": [
+        "tests/files/test1.csv",
+        "tests/files/test1.upsert.csv"
+      ],
+      "notes": [
+        "The original files have different final header fields: update_dt versus json_data.",
+        "The workspace reference operation must retain both original files and explicitly select any source-schema evolution."
+      ]
+    },
+    {
+      "id": "airbyte-public-connection",
+      "title": "Original Airbyte public connection SDK model",
+      "repository": "airbytehq/terraform-provider-airbyte",
+      "path": "internal/sdk/models/shared/connectionresponse.go",
+      "git_blob": "793e619da52eeed7db7094a4a73c6aa24c43892f",
+      "retained_content": {
+        "bytes": 3689,
+        "sha256": "759e4b52b05b804d2f99a041b78da9cb84e8cd2a25550c8e434e62a25fe23b66"
+      },
+      "original_blob_url": "https://api.github.com/repos/airbytehq/terraform-provider-airbyte/git/blobs/793e619da52eeed7db7094a4a73c6aa24c43892f"
+    },
+    {
+      "id": "airbyte-public-stream",
+      "title": "Original Airbyte public stream SDK model",
+      "repository": "airbytehq/terraform-provider-airbyte",
+      "path": "internal/sdk/models/shared/streamconfiguration.go",
+      "git_blob": "892fa202029b8297a34e6b24178399217c09054b",
+      "retained_content": {
+        "bytes": 2497,
+        "sha256": "9c5b634f623b5e6ab143c181e19f6520a39c7430f8fe05919ef5c698f296d4f4"
+      },
+      "original_blob_url": "https://api.github.com/repos/airbytehq/terraform-provider-airbyte/git/blobs/892fa202029b8297a34e6b24178399217c09054b"
+    },
+    {
+      "id": "airbyte-terraform-connection",
+      "title": "Original Airbyte Terraform connection resource",
+      "repository": "airbytehq/terraform-provider-airbyte",
+      "path": "docs/resources/connection.md",
+      "source_tree": "a928be030dc2f9a1d0972b71c70979321a685cb1",
+      "retained_content": {
+        "bytes": 11096,
+        "sha256": "d28fafe4cdf4aab5f4c407f8aab64c4c6ad4cbd65d294ba0fda9275918f22df7"
+      }
+    },
+    {
+      "id": "airbyte-protocol",
+      "title": "Original Airbyte protocol catalogue schema",
+      "repository": "airbytehq/airbyte-protocol",
+      "path": "protocol-models/src/main/resources/airbyte_protocol/v0/airbyte_protocol.yaml",
+      "git_blob": "a2a4c4d9a15c25d8ae3c402db91415273dd0b971",
+      "source_tree": "79375c2c6cbd8436c9d283be1ba964fc4e85e62d",
+      "retained_content": {
+        "bytes": 41771,
+        "sha256": "1617797b2ee9c977b12750632c4ad6a31348d3084b43fc4752e4d49e7e4ab213"
+      },
+      "original_blob_url": "https://api.github.com/repos/airbytehq/airbyte-protocol/git/blobs/a2a4c4d9a15c25d8ae3c402db91415273dd0b971"
+    },
+    {
+      "id": "airbyte-legacy-public-mapping",
+      "title": "Original Airbyte configuration-to-public connection mapper",
+      "repository": "airbytehq/airbyte-platform",
+      "path": "airbyte-server/src/main/kotlin/io/airbyte/server/apis/publicapi/mappers/ConnectionReadMapper.kt",
+      "git_blob": "5b3514816cdd8897051fc1c7727c998993d354b2",
+      "source_tree": "e8603a75bbc138c06a3b979bc787f86406674527",
+      "retained_content": {
+        "bytes": 9585,
+        "sha256": "f00c254eb08fd9ed56a83b1f314363264a46b8f0bc718e0a9cd8f8858fa0956d"
+      },
+      "original_blob_url": "https://api.github.com/repos/airbytehq/airbyte-platform/git/blobs/5b3514816cdd8897051fc1c7727c998993d354b2"
+    }
+  ],
+  "reused_components": [
+    {
+      "path": "vendor/stellar-expert/store.mjs",
+      "git_blob": "f1362ac98774ca0970768bc770fc11e9923dde08",
+      "bytes": 9506,
+      "sha256": "fe12c5dbd3fddfe91b82b6898358375a1d90d3984ad921dfb718d85f71addd38",
+      "purpose": "original kernel lifetime lease and private directory operations"
+    }
+  ]
+}

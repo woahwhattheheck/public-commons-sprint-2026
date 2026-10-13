@@ -1,0 +1,11 @@
+{
+  "schema": "commons.retained-source-adaptation.v1",
+  "original": "Sling full v2 source commit 7b268 (merged PR36653)",
+  "changes": [
+    {
+      "path": "core/common.mjs",
+      "change": "Add .lock to the unchanged source collector suffix set so the complete original dlt uv.lock is retained in editable application packages."
+    }
+  ],
+  "originalFunctions": "All Store/archive/lifetime/custody behavior unchanged."
+}
