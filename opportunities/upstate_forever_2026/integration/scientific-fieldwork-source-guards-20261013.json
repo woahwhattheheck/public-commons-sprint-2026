@@ -11,9 +11,10 @@
   },
   "original_application": {
     "archive_inventory_sha256": "176c272d97dbc890f77cbfe27bf5ffa044b7e5666581829b7223b35a8518098a",
-    "library_file_id": "file_000000003a88820b88095cbc8be34e4d",
+    "library_file_id": "libfile_9abc5d3d000c8191b9784064d4db0e9a",
     "member_count": 2849,
-    "project_id": "dc92b8b9-6eda-4362-b12d-3cf2ef6c9007"
+    "project_id": "dc92b8b9-6eda-4362-b12d-3cf2ef6c9007",
+    "file_id": "file_000000003a88820b88095cbc8be34e4d"
   },
   "file_count": 99,
   "source_bytes": 2222844,
