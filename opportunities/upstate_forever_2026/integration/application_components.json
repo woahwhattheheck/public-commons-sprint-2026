@@ -777,7 +777,10 @@
         "model/gis_edition_review.py",
         "operator/gis_projects.py",
         "model/gis_project_cli.py",
-        "install_gis_projects.py"
+        "install_gis_projects.py",
+        "model/gis_vector_review.py",
+        "operator/gis_vector_reviews.py",
+        "operator/extensions/gis-vector-reviews.json"
       ],
       "requires": [
         "core",
