@@ -17,27 +17,27 @@ Use the existing accepting Linux or WSL Linux host and an ordinary checkout of t
 The original runtime_source.py uses Python's standard library. From this directory, choose your own private paths and run its existing commands:
 
 ~~~sh
-python3 -B host/runtime_source.py pack \\
-  --root host \\
-  --out /absolute/private/receiving/native-runtime-source.zip \\
-  --entrypoint native_foreground.py \\
-  --entrypoint swarm_cloud_job.py \\
-  --entrypoint swarm_cloud_worker.py \\
-  --entrypoint runtime_source.py \\
-  --asset NATIVE_ARTIFACT_RETENTION.md \\
+python3 -B host/runtime_source.py pack \
+  --root host \
+  --out /absolute/private/receiving/native-runtime-source.zip \
+  --entrypoint native_foreground.py \
+  --entrypoint swarm_cloud_job.py \
+  --entrypoint swarm_cloud_worker.py \
+  --entrypoint runtime_source.py \
+  --asset NATIVE_ARTIFACT_RETENTION.md \
   --asset AGENTS.md
 ~~~
 
 The pack response contains the exact archive file, bytes and sha256. Preserve that response with the existing operation. Pass its returned hash to the same inspector and receiver:
 
 ~~~sh
-python3 -B host/runtime_source.py inspect \\
-  --archive /absolute/private/receiving/native-runtime-source.zip \\
+python3 -B host/runtime_source.py inspect \
+  --archive /absolute/private/receiving/native-runtime-source.zip \
   --sha256 RETURNED_ARCHIVE_SHA256
 
-python3 -B host/runtime_source.py receive \\
-  --archive /absolute/private/receiving/native-runtime-source.zip \\
-  --sha256 RETURNED_ARCHIVE_SHA256 \\
+python3 -B host/runtime_source.py receive \
+  --archive /absolute/private/receiving/native-runtime-source.zip \
+  --sha256 RETURNED_ARCHIVE_SHA256 \
   --out /absolute/private/received-native-runtime
 ~~~
 
