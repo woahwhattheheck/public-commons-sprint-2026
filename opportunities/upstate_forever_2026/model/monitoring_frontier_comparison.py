@@ -19,6 +19,7 @@ from .monitoring_sources import source_export_members, verify_retained_binding
 COLLECTION = "monitoring_frontier_comparisons"
 SCHEMA = "upstate." + COLLECTION + "/v1"
 RECIPE = "upstate.monitoring-frontier-comparison/1"
+EXPORT_EDITION = 2
 FEASIBLE = {"optimal", "feasible"}
 
 
@@ -333,6 +334,91 @@ def report_html(record):
     return "\n".join(pieces) + "\n"
 
 
+def packet_index_html(record, files):
+    """Navigate exactly the report and original members selected for this ZIP."""
+    from urllib.parse import quote
+
+    escape = lambda value: html.escape(str(value), quote=True)
+    def link(name, label=None):
+        return ('<a href="' + escape(quote(name, safe="/")) + '">'
+                + escape(label if label is not None else name) + "</a>")
+    def group(name):
+        if name.startswith("contexts/"):
+            return "Retained observed contexts"
+        if name.startswith("observed-sources/"):
+            return "Original observation sources"
+        if name.startswith("sources/"):
+            return "Original network sources"
+        if name.startswith("native/"):
+            return "Original frontier, network and plans"
+        return "Comparison and receiving"
+
+    groups = {}
+    for name, member in sorted(files.items()):
+        groups.setdefault(group(name), []).append((name, member))
+    pieces = [
+        '<!doctype html><html lang="en"><meta charset="utf-8">',
+        '<meta name="viewport" content="width=device-width,initial-scale=1">',
+        "<title>" + escape(record["title"]) + " — retained files</title>",
+        "<style>body{font:15px/1.5 system-ui,sans-serif;color:#171717;background:#fff;"
+        "max-width:1200px;margin:32px auto;padding:0 24px}h1{font-size:25px}"
+        "h2{font-size:19px;margin-top:30px}a{color:inherit;text-underline-offset:2px}"
+        "nav{display:flex;flex-wrap:wrap;gap:10px 20px;padding:14px 0;border-block:1px solid #bbb}"
+        "table{width:100%;border-collapse:collapse;margin:16px 0;font-size:13px}"
+        "th,td{padding:8px;border:1px solid #ccc;text-align:left;vertical-align:top;"
+        "overflow-wrap:anywhere}th{background:#f2f2f2}td:last-child{font-family:monospace;"
+        "font-size:11px}.identity{font-size:12px;color:#444;overflow-wrap:anywhere}"
+        "@media print{body{margin:0;max-width:none;padding:0}tr{break-inside:avoid}"
+        "thead{display:table-header-group}h2{break-after:avoid}}</style>",
+        "<main><h1>" + escape(record["title"]) + "</h1>",
+        "<p>" + escape(record["network_title"]) + ". Read the saved comparison, then "
+        "open its exact native plans, observed-support reports and original source files.</p>",
+        '<nav aria-label="Comparison files">' + " ".join(
+            link(name, label) for name, label in (
+                ("report.html", "Printable comparison"),
+                ("comparison.csv", "Comparison table"),
+                ("comparison.json", "Saved comparison"),
+                ("selection.json", "Original selection"),
+                ("manifest.json", "Complete member manifest"))
+            if name in files or name == "manifest.json") + "</nav>",
+        '<p class="identity">Comparison ' + escape(record["id"]) + "<br>Project "
+        + escape(record["project_id"]) + "<br>Saved frontier " + escape(record["frontier_id"])
+        + "<br>Comparison baseline " + escape(record["baseline_plan_id"]) + "</p>",
+        "<p>Extract the complete ZIP into one directory before opening these links. "
+        "Member paths, byte counts and SHA-256 values below come from the same "
+        "retained descriptors used to stream the ZIP. The manifest also includes this index.</p>",
+    ]
+    contexts = [(row["plan_id"], row["observed"]) for row in record["rows"] if row.get("observed")]
+    if contexts:
+        pieces.append("<h2>Observed support by original plan</h2>"
+                      "<table><thead><tr><th>Original plan</th><th>Saved context</th>"
+                      "<th>Open retained context</th></tr></thead><tbody>")
+        for plan_id, context in contexts:
+            prefix = "contexts/" + context["context_id"] + "/observed-context/"
+            targets = [(prefix + "report.html", "Report"), (prefix + "context.json", "Complete context"),
+                       (prefix + "station-matches.csv", "Station matches"),
+                       (prefix + "observations.csv", "Original observations"),
+                       (prefix + "calendar.csv", "Saved calendar")]
+            pieces.append("<tr><td>" + escape(plan_id) + "</td><td>"
+                          + escape(context["context_id"]) + "</td><td>"
+                          + " · ".join(link(name, label) for name, label in targets if name in files)
+                          + "</td></tr>")
+        pieces.append("</tbody></table>")
+    for title, members in groups.items():
+        pieces.append("<h2>" + escape(title) + "</h2><table><thead><tr>"
+                      "<th>Retained member</th><th>Bytes</th><th>SHA-256</th></tr></thead><tbody>")
+        for name, member in members:
+            pieces.append("<tr><td>" + link(name) + "</td><td>"
+                          + escape(format(member["bytes"], ",")) + "</td><td>"
+                          + escape(member["sha256"]) + "</td></tr>")
+        pieces.append("</tbody></table>")
+    pieces.append("<h2>Reopen the editable project</h2><p>Receive the accompanying complete "
+                  "Workspace backup and reopen this comparison's original ID in Monitoring design. "
+                  "This packet retains the comparison and source/report files; the working-project "
+                  "archive carries the editable Workspace.</p></main></html>")
+    return "\n".join(pieces) + "\n"
+
+
 def export_comparison(workspace, *, comparison_id, export_root=None):
     """Stream the full original comparison, source members and editable records."""
     record = inspect(workspace, comparison_id)
@@ -362,6 +448,7 @@ def export_comparison(workspace, *, comparison_id, export_root=None):
             add_member(files, prefix + "/" + name, member)
     add_member(files, "README.txt", bytes_member((
         "Saved Monitoring budget comparison\n\n"
+        "Open index.html for all retained reports and source files, with their exact member identities.\n"
         "Open report.html for the printable report and comparison.csv for its exact table.\n"
         "comparison.json and native/ retain the original immutable comparison, frontier, network and every plan.\n"
         "sources/ and observed-sources/ retain the exact original source editions and members.\n"
@@ -370,8 +457,10 @@ def export_comparison(workspace, *, comparison_id, export_root=None):
         "Use the application's complete Workspace backup/restore to receive that editable project; "
         "this source/report packet accompanies it.\n"
     ).encode("utf-8")))
+    add_member(files, "index.html", bytes_member(packet_index_html(record, files).encode("utf-8")))
     add_json("manifest.json", {
         "schema": "upstate.monitoring-frontier-comparison-export/v1",
+        "export_edition": EXPORT_EDITION, "entrypoint": "index.html",
         "comparison_id": comparison_id, "project_id": record["project_id"],
         "frontier_id": record["frontier_id"],
         "members": [{"path": name, "bytes": member["bytes"], "sha256": member["sha256"]}
@@ -379,9 +468,10 @@ def export_comparison(workspace, *, comparison_id, export_root=None):
     })
     base = Path(export_root).resolve() if export_root else workspace.root.parent / (workspace.root.name + "-monitoring-exports")
     service.export_root = base
-    path = base / ("monitoring-budget-comparison-" + comparison_id) / "monitoring-budget-comparison.zip"
+    path = base / ("monitoring-budget-comparison-" + comparison_id + "-v" + str(EXPORT_EDITION)) / "monitoring-budget-comparison.zip"
     retain_packet(path, files)
     return service._download(path, {"format": "budget-comparison", "comparison_id": comparison_id,
+                                    "export_edition": EXPORT_EDITION, "entrypoint": "index.html",
                                     "frontier_id": frontier["id"], "network_id": network["id"],
                                     "files": len(files)})
 
