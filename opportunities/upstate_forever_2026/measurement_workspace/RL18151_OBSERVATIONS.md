@@ -26,7 +26,7 @@ From **Published studies**, select the installed RL-18151 cohort and import it i
 
 The retained-report list includes **RL-18151 original lake observations — offline inspector**. This is the original source-owned `report.html`, with its original interactive analytical-cohort and reporting-limit context. Its native source entry keeps the source's existing report-recipe identity in metadata. The report uses its own source scope; filtering the desk does not rewrite that original report.
 
-The five original native source entries and all 40 scientific-family files are preserved. An additional HTML entry points to the unchanged original report for the existing report viewer. Original source roles, metadata, companion identities and application-relative paths survive intake and reopening.
+The five original native source entries and the complete scientific source family are preserved. An additional HTML entry points to the unchanged original report for the existing report viewer. Original source roles, metadata, companion identities and application-relative paths survive intake and reopening.
 
 ## Install or materialize
 
@@ -69,3 +69,7 @@ The original SV-833 command remains available and retains its original defaults 
 The adapter accepts the source-owned `sources.json` only through the registered nested application path. It checks every declared byte count and SHA256, then checks the original `study-files.json` against the exact same source closure. Paths resolve relative to their original manifest and remain within the declared RL-18151 source directory. The original inventory is also retained in exports.
 
 The existing source reader preserves all 78 original NarrowResult columns and exact Activity/Result metadata lineage. The existing Published studies provider, report viewer, selected-row exports, complete-study export and Workspace portability provide the downstream lifecycle; there is one maintained desk and one cohort identity.
+
+## Station geography and ordered scientific delivery
+
+The maintained scientific source now includes `RL_NATIVE_RECEIVING.md`. Its original `import_rl18151.py` can build the saved Station Geography edition and compose the RL report into an existing ordered delivery request. Those operations reuse the source owner's original observation editions and station coordinates. Open the retained receiving guide for the exact `--station-output`, `--build-station` and delivery-selection options. Published studies retains this guide, importer and complete updated report closure alongside the same 498-result cohort.
