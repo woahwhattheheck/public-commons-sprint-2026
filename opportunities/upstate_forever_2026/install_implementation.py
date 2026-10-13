@@ -99,6 +99,8 @@ FILES = (
 OFFLINE_FILE = "operator/web/implementation_workbench.html"
 OFFLINE_BUILDER = "build_implementation_offline.py"
 OPTIONAL_FILES = (
+    "source_tools/receive_scientific_report_review.py",
+    "source_tools/RECEIVE_SCIENTIFIC_REPORT_REVIEW.md",
     "model/SCIENTIFIC_REPORT_REVIEW.md",
     "model/IMPLEMENTATION_QC.md",
     "observations/eighteenmile_2023/wqp_20261013/field-intake/README.md",
