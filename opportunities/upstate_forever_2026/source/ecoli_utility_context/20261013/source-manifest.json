@@ -2,6 +2,19 @@
   "schema": "upstate.sources/v1",
   "title": "Upper Savannah utility-focus E. coli observations, 2021–2025",
   "captured_at": "2026-10-13",
+  "presentation": {
+    "edition": "20261013-comments-v2",
+    "predecessor_manifest_sha256": "ee6d5cc19e2a98b799db33df08026c6020a9a122f5cfb4ab83f1e415476dee23",
+    "predecessor_commit": "817335bc6d2a9130e203a48e63ecab91e0094003",
+    "original_source_members_unchanged": 19,
+    "information_only_records": 72,
+    "source_comment_fields": [
+      "ResultCommentText",
+      "ActivityCommentText",
+      "ResultLaboratoryCommentText"
+    ],
+    "information_only_basis": "Case-insensitive Information Only or Infomation Only in the original ResultCommentText; numerical and detection statuses are unchanged."
+  },
   "scope": {
     "parameter": "Escherichia coli",
     "period_start": "2021-01-01",
@@ -31,11 +44,11 @@
         },
         {
           "path": "build_ecoli_report.mjs",
-          "sha256": "5b429341f794ee155cadda87b6262da3da2649ba31cf0e69c92b160b362dcfb5"
+          "sha256": "e8934aeff2126ea766d50812c2915a16a3f5b7e092b41abab4e9dacacf4bf8d7"
         },
         {
           "path": "index.html",
-          "sha256": "1fb6f51d95109b2a146f344175c27364573eb9529c748645d9df9505e78cca26"
+          "sha256": "cde833111bc9848a6070a0c3be3d8bc642c54d92e909c56b2d7d97bbf8d65eff"
         },
         {
           "path": "raw/arjws-results-2021-2025-original.csv",
@@ -127,11 +140,11 @@
         },
         {
           "path": "build_ecoli_report.mjs",
-          "sha256": "5b429341f794ee155cadda87b6262da3da2649ba31cf0e69c92b160b362dcfb5"
+          "sha256": "e8934aeff2126ea766d50812c2915a16a3f5b7e092b41abab4e9dacacf4bf8d7"
         },
         {
           "path": "index.html",
-          "sha256": "1fb6f51d95109b2a146f344175c27364573eb9529c748645d9df9505e78cca26"
+          "sha256": "cde833111bc9848a6070a0c3be3d8bc642c54d92e909c56b2d7d97bbf8d65eff"
         },
         {
           "path": "raw/arjws-results-2021-2025-original.csv",
@@ -221,11 +234,11 @@
         },
         {
           "path": "build_ecoli_report.mjs",
-          "sha256": "5b429341f794ee155cadda87b6262da3da2649ba31cf0e69c92b160b362dcfb5"
+          "sha256": "e8934aeff2126ea766d50812c2915a16a3f5b7e092b41abab4e9dacacf4bf8d7"
         },
         {
           "path": "index.html",
-          "sha256": "1fb6f51d95109b2a146f344175c27364573eb9529c748645d9df9505e78cca26"
+          "sha256": "cde833111bc9848a6070a0c3be3d8bc642c54d92e909c56b2d7d97bbf8d65eff"
         },
         {
           "path": "raw/arjws-results-2021-2025-original.csv",
@@ -315,11 +328,11 @@
         },
         {
           "path": "build_ecoli_report.mjs",
-          "sha256": "5b429341f794ee155cadda87b6262da3da2649ba31cf0e69c92b160b362dcfb5"
+          "sha256": "e8934aeff2126ea766d50812c2915a16a3f5b7e092b41abab4e9dacacf4bf8d7"
         },
         {
           "path": "index.html",
-          "sha256": "1fb6f51d95109b2a146f344175c27364573eb9529c748645d9df9505e78cca26"
+          "sha256": "cde833111bc9848a6070a0c3be3d8bc642c54d92e909c56b2d7d97bbf8d65eff"
         },
         {
           "path": "raw/arjws-results-2021-2025-original.csv",
@@ -411,11 +424,11 @@
         },
         {
           "path": "build_ecoli_report.mjs",
-          "sha256": "5b429341f794ee155cadda87b6262da3da2649ba31cf0e69c92b160b362dcfb5"
+          "sha256": "e8934aeff2126ea766d50812c2915a16a3f5b7e092b41abab4e9dacacf4bf8d7"
         },
         {
           "path": "index.html",
-          "sha256": "1fb6f51d95109b2a146f344175c27364573eb9529c748645d9df9505e78cca26"
+          "sha256": "cde833111bc9848a6070a0c3be3d8bc642c54d92e909c56b2d7d97bbf8d65eff"
         },
         {
           "path": "raw/arjws-results-2021-2025-original.csv",
@@ -497,7 +510,7 @@
       "title": "Utility-focus E. coli · original observation map and record explorer",
       "kind": "document",
       "path": "index.html",
-      "sha256": "1fb6f51d95109b2a146f344175c27364573eb9529c748645d9df9505e78cca26",
+      "sha256": "cde833111bc9848a6070a0c3be3d8bc642c54d92e909c56b2d7d97bbf8d65eff",
       "uri": "https://www.waterqualitydata.us/",
       "vintage": "2021–2025 observations; source capture 2026-10-13",
       "companions": [
@@ -507,7 +520,7 @@
         },
         {
           "path": "build_ecoli_report.mjs",
-          "sha256": "5b429341f794ee155cadda87b6262da3da2649ba31cf0e69c92b160b362dcfb5"
+          "sha256": "e8934aeff2126ea766d50812c2915a16a3f5b7e092b41abab4e9dacacf4bf8d7"
         },
         {
           "path": "raw/arjws-results-2021-2025-original.csv",
@@ -591,6 +604,7 @@
     "All original publisher result fields and source-coordinate metadata are retained.",
     "Each source entry retains the complete relative source directory as companions, including the independent offline report and its linked original files.",
     "Censored and not-reported source measurements remain blank; their source condition and actual detection/quantitation limits are separate fields.",
-    "Exact numerical summaries separate station, year, analytical method, activity type and original unit spelling."
+    "Exact numerical summaries separate station, year, analytical method, activity type and original unit spelling.",
+    "The source-comments presentation retains all original records by default; its optional information-only filter records the selected cohort in print and downloadable selection metadata."
   ]
 }
