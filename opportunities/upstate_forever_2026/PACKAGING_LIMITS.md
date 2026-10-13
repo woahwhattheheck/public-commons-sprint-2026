@@ -119,3 +119,56 @@ captureLimits inside JSON cannot relax that caller-selected budget.
 This is a packaging exercise: its small byte fixtures are not ecosystem model
 outputs. Actual regional science continues through the original source, InVEST,
 scenario, receiving-water and delivery operations.
+
+
+## Final delivery ZIP and receiving
+
+The original `model.delivery_archive.package_archive` carrier uses the same
+`max_index_bytes` metadata budget as the audited package: 64 MiB by default.
+This replaces its smaller 16 MiB transfer-inventory ceiling. The complete
+explicit inventory is encoded and checked before any large raster member is
+copied, then streamed into `transfer.json`. Source members still stream in
+1 MiB chunks, and the writer retains their exact byte counts and SHA-256
+identities. A changing source, write failure, or metadata limit failure
+propagates and removes only the operation's pending ZIP.
+
+The existing three-argument call remains valid. A caller that selected a
+different metadata budget passes it to both wrapping and receiving:
+
+```python
+from model.delivery_archive import package_archive, inspect_archive
+
+policy = {"max_index_bytes": 96 * 1024 ** 2}
+carrier = package_archive(
+    delivery_directory, original_package_directory, original_package,
+    limits=policy,
+)
+inventory = inspect_archive(
+    delivery_directory / carrier["path"],
+    expected_package_sha256=original_package["packageSha256"],
+    limits=policy,
+)
+```
+
+The transfer inventory records its writer's selected metadata budget for
+provenance. That stored value never changes the receiver's selected policy.
+Receiving checks both the ZIP member's declared size and a bounded metadata
+read, rejects duplicate JSON keys, and verifies every original member's
+size and hash. Reusing an existing carrier and the writer's post-write reopen
+use the same explicitly selected policy.
+
+Capture reference/member/total limits apply to the original audited package
+through `package_delivery.pack` and `package_delivery.verify`. The carrier
+retains that complete inventory and adds the original verification tools,
+package index, handoff view, and transfer manifest; those additions do not
+redefine the scientific cohort or introduce a second scenario-count ceiling.
+The tools directory now includes this guide. After extraction, the original
+`tools/package_delivery.py verify PACKAGE_ROOT` command accepts the same
+capture-policy flags described above.
+
+Workspace backup is a separate archive with a maintained application inventory
+and an existing 64 MiB `ARCHIVE.json` limit. Its current metadata ceiling
+already matches the default delivery-transfer ceiling. Its owner maintains
+application-file inclusion independently; the final delivery ZIP always
+includes this guide with its original verifier. A custom delivery transfer
+budget does not implicitly change the separate workspace archive policy.
