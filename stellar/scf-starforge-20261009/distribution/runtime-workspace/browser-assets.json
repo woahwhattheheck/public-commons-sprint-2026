@@ -267,6 +267,27 @@
         "operation-history-model.mjs",
         "text/javascript; charset=utf-8"
       ]
+    ],
+    [
+      "/managed-configuration.mjs",
+      [
+        "managed-configuration.mjs",
+        "text/javascript; charset=utf-8"
+      ]
+    ],
+    [
+      "/managed-configuration-drafts.mjs",
+      [
+        "managed-configuration-drafts.mjs",
+        "text/javascript; charset=utf-8"
+      ]
+    ],
+    [
+      "/managed-configuration.css",
+      [
+        "managed-configuration.css",
+        "text/css; charset=utf-8"
+      ]
     ]
   ]
 }
