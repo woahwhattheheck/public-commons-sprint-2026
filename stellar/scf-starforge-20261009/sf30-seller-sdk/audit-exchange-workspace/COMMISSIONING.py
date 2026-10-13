@@ -373,13 +373,24 @@ class Host:
         return response
 
     def close(self):
-        if self.connection is None:
-            if self.process is not None and self.process.poll() is None:
-                need(self.process_start(self.process.pid) == self.process_identity["start"] and
-                     self.process_identity["start"] is not None,
-                     "Keep the exact original starting server process identity.")
+        if self.process is not None and self.owned_here:
+            # The live Popen child handle is authoritative in its own producing
+            # process, including PID namespaces without readable /proc/<pid>.
+            if self.process.poll() is None:
+                if self.connection is not None:
+                    try:
+                        identity = self.http("/api/identity")[1]
+                    except (OSError, urllib.error.URLError):
+                        identity = None
+                    need(identity is None or identity == self.connection,
+                         "Keep the owned original listener's exact HTTP identity.")
                 self.process.terminate()
                 self.process.wait(timeout=30)
+            if self.log:
+                self.log.close()
+            self.connection = None
+            return
+        if self.connection is None:
             if self.log:
                 self.log.close()
             return
@@ -388,18 +399,18 @@ class Host:
             identity = self.http("/api/identity")[1]
         except (OSError, urllib.error.URLError):
             identity = None
+        start = self.process_identity["start"]
         if identity is not None:
-            need(identity == self.connection and self.process_start(pid) == self.process_identity["start"] and
-                 self.process_identity["start"] is not None,
+            need(identity == self.connection and start is not None and self.process_start(pid) == start,
                  "Retain the original server process until its exact owner can close it.")
             os.kill(pid, signal.SIGTERM)
-            if self.process is not None:
-                self.process.wait(timeout=30)
-            else:
-                deadline = time.monotonic() + 30
-                while self.process_start(pid) == self.process_identity["start"]:
-                    need(time.monotonic() < deadline, "The original native listener is still closing.")
-                    time.sleep(.1)
+            deadline = time.monotonic() + 30
+            while self.process_start(pid) == start:
+                need(time.monotonic() < deadline, "The original native listener is still closing.")
+                time.sleep(.1)
+        elif start is not None:
+            need(self.process_start(pid) != start,
+                 "Reconcile the original retained server process before capturing its workspace.")
         if self.log:
             self.log.close()
         self.connection = None
@@ -504,12 +515,66 @@ def browser_journey(case, host, combined):
     node = os.environ.get("CODEX_PRIMARY_RUNTIME_NODE") or shutil.which("node")
     need(node, "Use the actual installed Node runtime for the complete operator journey.")
     log = case.root / "logs" / "browser-native.log"
-    with log.open("ab", buffering=0) as output:
-        result = subprocess.run([node, str(case.application / "BROWSER_COMMISSIONING.mjs"),
-                                 "--input", str(wire)], cwd=case.application,
-                                stdout=output, stderr=subprocess.STDOUT, timeout=900,
-                                env=dict(os.environ, PYTHONDONTWRITEBYTECODE="1"))
-    need(result.returncode == 0, "Continue the original browser journal; inspect " + str(log))
+    attempts = case.root / "browser" / "native-attempts"
+    attempts.mkdir(parents=True, exist_ok=True)
+    number = max((int(path.name) for path in attempts.iterdir() if path.is_dir() and path.name.isdigit()), default=0) + 1
+    attempt = attempts / ("%04d" % number)
+    attempt.mkdir()
+    command = [node, str(case.application / "BROWSER_COMMISSIONING.mjs"), "--input", str(wire)]
+    log_offset = log.stat().st_size if log.exists() else 0
+    invocation = {"format": FORMAT, "operation": OPERATION, "attempt": number, "startedAt": now(),
+                  "command": command, "directory": str(case.application), "inputPath": str(wire),
+                  "inputSha256": sha(raw_json(document)), "timeoutSeconds": 900,
+                  "sourceSha256": read_json(case.root / "active-source.json")["sha256"],
+                  "browserSourceSha256": sha((case.application / "BROWSER_COMMISSIONING.mjs").read_bytes()),
+                  "logPath": str(log), "logOffset": log_offset}
+    atomic(attempt / "input.json", raw_json(document))
+    atomic(attempt / "invocation.json", raw_json(invocation))
+    child = None
+    failure = None
+    try:
+        with log.open("ab", buffering=0) as output:
+            child = subprocess.Popen(command, cwd=case.application, stdout=output, stderr=subprocess.STDOUT,
+                                     env=dict(os.environ, PYTHONDONTWRITEBYTECODE="1"), start_new_session=True,
+                                     pass_fds=(case.guard,))
+            atomic(attempt / "process.json", raw_json({"pid": child.pid, "start": Host.process_start(child.pid),
+                                                        "command": command, "startedAt": now()}))
+            try:
+                child.wait(timeout=900)
+            except subprocess.TimeoutExpired as error:
+                failure = error
+                child.terminate()
+                try:
+                    child.wait(timeout=30)
+                except subprocess.TimeoutExpired:
+                    child.kill()
+                    child.wait(timeout=30)
+    except BaseException as error:
+        failure = error
+        if child is not None and child.poll() is None:
+            child.terminate()
+            try:
+                child.wait(timeout=30)
+            except subprocess.TimeoutExpired:
+                child.kill()
+                child.wait(timeout=30)
+    finally:
+        observed = log.read_bytes()[log_offset:] if log.exists() else b""
+        outcome = {"format": FORMAT, "operation": OPERATION, "attempt": number, "finishedAt": now(),
+                   "returncode": child.poll() if child is not None else None,
+                   "started": child is not None, "logPath": str(log), "logOffset": log_offset,
+                   "logBytes": len(observed), "logSha256": sha(observed),
+                   "errorType": type(failure).__name__ if failure else None,
+                   "error": str(failure) if failure else None}
+        atomic(attempt / "native-output.log", observed)
+        atomic(attempt / "outcome.json", raw_json(outcome))
+        emit({"stage": "ORIGINAL_BROWSER_NATIVE_RETURNED", **outcome})
+    if failure is not None:
+        raise RuntimeError("Original browser attempt " + str(number) + " returned " +
+                           str(outcome["returncode"]) + "; inspect " + str(attempt / "outcome.json") +
+                           ": " + str(failure)) from failure
+    need(outcome["returncode"] == 0, "Original browser attempt " + str(number) + " returned " +
+         str(outcome["returncode"]) + "; inspect " + str(attempt / "outcome.json") + " and " + str(log))
     outcome = read_json(case.root / "browser" / "result.json")
     need(outcome["operation"] == OPERATION and outcome["workspaceId"] == host.connection["workspaceId"] and
          outcome["status"] == "passed", "The original full operator journey has not completed.")
