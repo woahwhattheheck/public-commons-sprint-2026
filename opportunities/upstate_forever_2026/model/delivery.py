@@ -363,6 +363,7 @@ def _fgdc(path, title, raster, *, unit, grid, sources, selection, profile, conta
 def build(workspace, selection):
     selection = dict(selection)
     study_mode = native_study.prepare(selection)
+    fgdc_metadata.validate_contact(selection.get("contact"))
     map_atlas.settings(selection.get("map_settings"))
     water_links = map_atlas.bind_water_selections(workspace, selection)
     report_link = bind_report(workspace, selection)
