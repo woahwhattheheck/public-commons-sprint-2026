@@ -1,0 +1,106 @@
+{
+  "schema": "commons.mep-migration.target-rows.v1",
+  "targetSystem": "DEMONSTRATION receiver for whatley",
+  "targetVersion": "1",
+  "targetContractLabel": "Explicit DEMONSTRATION receiving schema v1; supplied fields are not a MEPflow API contract.",
+  "batchId": "batch_1c2473d2c915241271048ce09323096e99ed2fd555cbbdbff2bac1cdffa422ad",
+  "columns": [
+    "externalKey",
+    "customerKey",
+    "siteKey",
+    "kind",
+    "status",
+    "quotedAmount",
+    "startDate",
+    "notes"
+  ],
+  "rows": [
+    {
+      "rowId": "original_whatley_job_first:1",
+      "recordId": "job_5d3a03138652fc137d192bc6e42124b0",
+      "recordRevision": 1,
+      "fields": {
+        "externalKey": "whatley-J001",
+        "customerKey": "DEMO-whatley-customer-1",
+        "siteKey": "DEMO-whatley-site-1",
+        "kind": "Short service visit",
+        "status": "requested",
+        "quotedAmount": "125.00",
+        "startDate": "2026-10-14",
+        "notes": "Fictional operating input."
+      },
+      "sourceFields": {
+        "externalKey": "whatley-J001",
+        "customerKey": "whatley-C001",
+        "siteKey": "whatley-S001",
+        "kind": "Short service visit",
+        "status": "requested",
+        "quotedAmount": "125.00",
+        "startDate": "2026-10-14",
+        "notes": "Fictional operating input."
+      },
+      "links": {
+        "customerKey": "customer_352c241058bee95908997aa9f2a78ec7",
+        "siteKey": "site_0c4639497781310087682a555a4b45e0"
+      }
+    },
+    {
+      "rowId": "original_whatley_job_first:2",
+      "recordId": "job_938657895d66b466f4a9eee025e038c0",
+      "recordRevision": 1,
+      "fields": {
+        "externalKey": "whatley-J002",
+        "customerKey": "DEMO-whatley-customer-2",
+        "siteKey": "DEMO-whatley-site-2",
+        "kind": "Multi-day installation",
+        "status": "scheduled",
+        "quotedAmount": "1800.00",
+        "startDate": "2026-10-15",
+        "notes": "Exact original\nmultiline scope, with comma."
+      },
+      "sourceFields": {
+        "externalKey": "whatley-J002",
+        "customerKey": "whatley-C002",
+        "siteKey": "whatley-S002",
+        "kind": "Multi-day installation",
+        "status": "scheduled",
+        "quotedAmount": "1800.00",
+        "startDate": "2026-10-15",
+        "notes": "Exact original\nmultiline scope, with comma."
+      },
+      "links": {
+        "customerKey": "customer_d856dd81fb955859f2edf24bef625819",
+        "siteKey": "site_93823b6aa161e5ff4b3b56bf236cd0b6"
+      }
+    },
+    {
+      "rowId": "original_whatley_job_first:3",
+      "recordId": "job_d55eb2156946b9ce5cc7ce75ec196fad",
+      "recordRevision": 1,
+      "fields": {
+        "externalKey": "whatley-J003",
+        "customerKey": "DEMO-whatley-customer-1",
+        "siteKey": "DEMO-whatley-site-1",
+        "kind": "Generator service review",
+        "status": "completed",
+        "quotedAmount": "95.00",
+        "startDate": "2026-10-16",
+        "notes": "Fictional operating input."
+      },
+      "sourceFields": {
+        "externalKey": "whatley-J003",
+        "customerKey": "whatley-C001",
+        "siteKey": "whatley-S001",
+        "kind": "Generator service review",
+        "status": "completed",
+        "quotedAmount": "95.00",
+        "startDate": "2026-10-16",
+        "notes": "Fictional operating input."
+      },
+      "links": {
+        "customerKey": "customer_352c241058bee95908997aa9f2a78ec7",
+        "siteKey": "site_0c4639497781310087682a555a4b45e0"
+      }
+    }
+  ]
+}

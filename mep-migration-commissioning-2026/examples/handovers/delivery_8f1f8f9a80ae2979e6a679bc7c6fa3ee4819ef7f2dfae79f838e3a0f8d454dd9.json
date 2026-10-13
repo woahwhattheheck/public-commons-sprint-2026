@@ -1,0 +1,51 @@
+{
+  "schema": "commons.mep-migration.target-rows.v1",
+  "targetSystem": "DEMONSTRATION receiver for whatley",
+  "targetVersion": "1",
+  "targetContractLabel": "Explicit DEMONSTRATION receiving schema v1; supplied fields are not a MEPflow API contract.",
+  "batchId": "batch_56addc397244269722431c039d04e8b4a0b3b4ecdd2a4abed8cbe8bd3e63b9f2",
+  "columns": [
+    "externalKey",
+    "name",
+    "status",
+    "address"
+  ],
+  "rows": [
+    {
+      "rowId": "original_whatley_customer_first:1",
+      "recordId": "customer_352c241058bee95908997aa9f2a78ec7",
+      "recordRevision": 1,
+      "fields": {
+        "externalKey": "whatley-C001",
+        "name": "Demonstration customer A",
+        "status": "active",
+        "address": "1 Demonstration Lane"
+      },
+      "sourceFields": {
+        "externalKey": "whatley-C001",
+        "name": "Demonstration customer A",
+        "status": "active",
+        "address": "1 Demonstration Lane"
+      },
+      "links": {}
+    },
+    {
+      "rowId": "original_whatley_customer_first:2",
+      "recordId": "customer_d856dd81fb955859f2edf24bef625819",
+      "recordRevision": 1,
+      "fields": {
+        "externalKey": "whatley-C002",
+        "name": "Demonstration customer B",
+        "status": "active",
+        "address": "2 Demonstration Lane"
+      },
+      "sourceFields": {
+        "externalKey": "whatley-C002",
+        "name": "Demonstration customer B",
+        "status": "active",
+        "address": "2 Demonstration Lane"
+      },
+      "links": {}
+    }
+  ]
+}

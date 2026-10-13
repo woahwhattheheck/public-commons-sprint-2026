@@ -1,0 +1,51 @@
+{
+  "schema": "commons.mep-migration.target-rows.v1",
+  "targetSystem": "DEMONSTRATION receiver for action",
+  "targetVersion": "1",
+  "targetContractLabel": "Explicit DEMONSTRATION receiving schema v1; supplied fields are not a MEPflow API contract.",
+  "batchId": "batch_59d62dfa4760bb66da136c1baaeb9b15a68ed25142c338629134fede2e0a1113",
+  "columns": [
+    "externalKey",
+    "name",
+    "status",
+    "address"
+  ],
+  "rows": [
+    {
+      "rowId": "original_action_customer_first:1",
+      "recordId": "customer_de1ee672541c784ef03242fba5466d0f",
+      "recordRevision": 1,
+      "fields": {
+        "externalKey": "action-C001",
+        "name": "Demonstration customer A",
+        "status": "active",
+        "address": "1 Demonstration Lane"
+      },
+      "sourceFields": {
+        "externalKey": "action-C001",
+        "name": "Demonstration customer A",
+        "status": "active",
+        "address": "1 Demonstration Lane"
+      },
+      "links": {}
+    },
+    {
+      "rowId": "original_action_customer_first:2",
+      "recordId": "customer_d12437d0a5800317a166fa31eb023003",
+      "recordRevision": 1,
+      "fields": {
+        "externalKey": "action-C002",
+        "name": "Demonstration customer B",
+        "status": "active",
+        "address": "2 Demonstration Lane"
+      },
+      "sourceFields": {
+        "externalKey": "action-C002",
+        "name": "Demonstration customer B",
+        "status": "active",
+        "address": "2 Demonstration Lane"
+      },
+      "links": {}
+    }
+  ]
+}

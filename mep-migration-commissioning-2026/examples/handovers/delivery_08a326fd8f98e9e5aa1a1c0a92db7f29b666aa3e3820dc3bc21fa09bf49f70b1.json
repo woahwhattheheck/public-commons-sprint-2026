@@ -1,0 +1,51 @@
+{
+  "schema": "commons.mep-migration.target-rows.v1",
+  "targetSystem": "DEMONSTRATION receiver for united",
+  "targetVersion": "1",
+  "targetContractLabel": "Explicit DEMONSTRATION receiving schema v1; supplied fields are not a MEPflow API contract.",
+  "batchId": "batch_565889c611de4d67bfa8e05337110e423acc43706ba801cedd5ef814d846d8b2",
+  "columns": [
+    "externalKey",
+    "name",
+    "status",
+    "address"
+  ],
+  "rows": [
+    {
+      "rowId": "original_united_customer_first:1",
+      "recordId": "customer_ef8ce820e0242938068344df573fa742",
+      "recordRevision": 1,
+      "fields": {
+        "externalKey": "united-C001",
+        "name": "Demonstration customer A",
+        "status": "active",
+        "address": null
+      },
+      "sourceFields": {
+        "externalKey": "united-C001",
+        "name": "Demonstration customer A",
+        "status": "active",
+        "address": null
+      },
+      "links": {}
+    },
+    {
+      "rowId": "original_united_customer_first:2",
+      "recordId": "customer_cc95a72b4986567cb2578e640aecf419",
+      "recordRevision": 1,
+      "fields": {
+        "externalKey": "united-C002",
+        "name": "Demonstration customer B",
+        "status": "active",
+        "address": "2 Demonstration Lane"
+      },
+      "sourceFields": {
+        "externalKey": "united-C002",
+        "name": "Demonstration customer B",
+        "status": "active",
+        "address": "2 Demonstration Lane"
+      },
+      "links": {}
+    }
+  ]
+}

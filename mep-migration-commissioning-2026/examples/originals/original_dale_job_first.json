@@ -1,0 +1,35 @@
+{
+  "label": "Explicit fictional original job export",
+  "rows": [
+    {
+      "legacy_job": "dale-J001",
+      "customer_key": "dale-C001",
+      "site_key": "dale-S001",
+      "job_kind": "Short service visit",
+      "source_status": "Open",
+      "quoted_amount": "125.00",
+      "start_date": "2026-10-14",
+      "note": "Fictional operating input."
+    },
+    {
+      "legacy_job": "dale-J002",
+      "customer_key": "dale-C002",
+      "site_key": "dale-S002",
+      "job_kind": "Multi-day installation",
+      "source_status": "Booked",
+      "quoted_amount": "1800.00",
+      "start_date": "2026-10-15",
+      "note": "Exact original\nmultiline scope, with comma."
+    },
+    {
+      "legacy_job": "dale-J003",
+      "customer_key": "dale-C001",
+      "site_key": "dale-S001",
+      "job_kind": "Generator service review",
+      "source_status": "Done",
+      "quoted_amount": "95.00",
+      "start_date": "2026-10-16",
+      "note": "Fictional operating input."
+    }
+  ]
+}

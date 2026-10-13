@@ -1,0 +1,50 @@
+{
+  "schema": "commons.mep-migration.target-rows.v1",
+  "targetSystem": "DEMONSTRATION receiver for dale",
+  "targetVersion": "1",
+  "targetContractLabel": "Explicit DEMONSTRATION receiving schema v1; supplied fields are not a MEPflow API contract.",
+  "batchId": "batch_50815a0f0470b27c05c72fa4612f59e7695029801b83c0a943567e211929396c",
+  "columns": [
+    "externalKey",
+    "customerKey",
+    "description"
+  ],
+  "rows": [
+    {
+      "rowId": "original_dale_site_first:1",
+      "recordId": "site_69c911ddf74363882c9069590ba46b75",
+      "recordRevision": 1,
+      "fields": {
+        "externalKey": "dale-S001",
+        "customerKey": "DEMO-dale-customer-1",
+        "description": "Demonstration workshop address supplied by operator"
+      },
+      "sourceFields": {
+        "externalKey": "dale-S001",
+        "customerKey": "dale-C001",
+        "description": "Demonstration workshop address supplied by operator"
+      },
+      "links": {
+        "customerKey": "customer_7ac4ed30173b856d2cc60edd6bcd2aaf"
+      }
+    },
+    {
+      "rowId": "original_dale_site_first:2",
+      "recordId": "site_a782d1b830e7595deba9f63724693332",
+      "recordRevision": 1,
+      "fields": {
+        "externalKey": "dale-S002",
+        "customerKey": "DEMO-dale-customer-2",
+        "description": "Demonstration service address supplied by operator"
+      },
+      "sourceFields": {
+        "externalKey": "dale-S002",
+        "customerKey": "dale-C002",
+        "description": "Demonstration service address supplied by operator"
+      },
+      "links": {
+        "customerKey": "customer_f28e244b9d7c299c21f67f56e1774717"
+      }
+    }
+  ]
+}
