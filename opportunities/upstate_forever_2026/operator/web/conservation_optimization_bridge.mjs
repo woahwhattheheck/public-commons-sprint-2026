@@ -6,6 +6,11 @@ export function attachConservationWithOptimization(host) {
   const original = attachConservation(host);
   const decision = attachConservationOptimization(host, {view:'conservation'});
   let target = null;
+  function ensureStyle() {
+    const document=host.document || globalThis.document, href='/web/conservation_optimization.css';
+    if(!document || [...document.querySelectorAll('link[rel="stylesheet"]')].some(link=>link.getAttribute('href')===href))return;
+    const link=document.createElement('link');link.rel='stylesheet';link.href=href;document.head.append(link);
+  }
   return {
     ...original,
     render(state = host.getState()) {
@@ -15,6 +20,7 @@ export function attachConservationWithOptimization(host) {
         '</div>';
     },
     mount(root, state = host.getState()) {
+      ensureStyle();
       original.mount(root, state);
       target = root?.querySelector('[data-conservation-optimization]') || null;
       if (target) return decision.mount(target);
