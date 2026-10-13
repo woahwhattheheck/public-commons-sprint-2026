@@ -116,5 +116,9 @@
     "src/opportunities/upstate_forever_2026/operator/web/monitoring_fieldwork.mjs": "3fd06327c4ba24ab45dac440d2c21a96c2ea7d4d2b792a6eb82c0614d4e7685b",
     "src/opportunities/upstate_forever_2026/source_tools/receive_monitoring_fieldwork.py": "0013adef7cece77ff1c043bb06420a143d50b786686e79ab8de0cde565266eac",
     "src/opportunities/upstate_forever_2026/source_tools/return_monitoring_fieldwork.py": "e5d55b67011c1e9b28ce3e74f0a0ec6eb38d7c8bd512938869087081a242f0be"
+  },
+  "retained-station-identifier-review-896c94d7a65ec91146f7f59d74f46dd99264e9ff": {
+    "src/opportunities/upstate_forever_2026/model/MONITORING_OBSERVED_CONTEXT.md": "b345444db93018843e8d3dd736429ddbd32f649ba6733c969314f3c2248d3363",
+    "src/opportunities/upstate_forever_2026/operator/web/monitoring-observed.mjs": "ead60a60b44adc80e0495ba988a337ac11afa92a9af26b12734528d94ee1114e"
   }
 }

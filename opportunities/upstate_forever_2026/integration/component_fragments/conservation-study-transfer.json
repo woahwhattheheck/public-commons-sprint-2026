@@ -1,0 +1,26 @@
+{
+  "schema": "upstate.application-component-fragment/v1",
+  "id": "conservation-study-transfer",
+  "source_reference": "ES26 original Conservation editable-study continuation",
+  "extend_components": {
+    "conservation": {
+      "paths": [
+        "model/conservation_study_transfer.py",
+        "operator/CONSERVATION_STUDY_TRANSFER.md",
+        "operator/web/conservation.mjs",
+        "operator/web/retained_desks.mjs"
+      ],
+      "requires": [
+        "study-transfer"
+      ]
+    },
+    "study-transfer": {
+      "paths": [
+        "model/conservation_study_transfer.py",
+        "operator/CONSERVATION_STUDY_TRANSFER.md",
+        "model/conservation_reporting.py",
+        "model/source_lineage.py"
+      ]
+    }
+  }
+}

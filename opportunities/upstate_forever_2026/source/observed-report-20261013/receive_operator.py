@@ -56,6 +56,8 @@ def main():
                         help="Original typed-report manifest; repeat in reading order.")
     source.add_argument("--selection", type=Path,
                         help="JSON with ordered sources, optional title and contact.")
+    source.add_argument("--course", type=Path,
+                        help="Continue an explicit ordered manifest of original report operations.")
     parser.add_argument("--title")
     parser.add_argument("--contact-json", type=Path)
     parser.add_argument("--create-workspace", action="store_true")
@@ -68,6 +70,18 @@ def main():
                         help="Run the adjacent real browser continuation with this Node interpreter.")
     parser.add_argument("--video", action="store_true")
     args = parser.parse_args()
+    if args.course:
+        spec = importlib.util.spec_from_file_location(
+            "upstate_scientific_report_course", Path(__file__).with_name("receive_course.py"))
+        module = importlib.util.module_from_spec(spec)
+        sys.modules[spec.name] = module
+        spec.loader.exec_module(module)
+        return module.run(args, receive, APP, identity)
+    return receive(args)
+
+
+def receive(args):
+    """Continue one original operation, including its retained output/task IDs."""
     require(args.timeout > 0 and 1 <= args.upload_limit_gib <= 64,
             "Use positive task time and upload capacity from 1 to 64 GiB.")
     workspace, out = args.workspace.resolve(), args.output.resolve()
@@ -108,7 +122,8 @@ def operate(args, workspace, out):
         require(read_json(request_path) == requested,
                 "Resume with the original sources, order, title, contact and Workspace.")
     else:
-        require(not args.resume, "The retained output lacks its original source selection.")
+        require(not any(path.name != ".scientific-report-receiving.lock" for path in out.iterdir()),
+                "The retained output lacks its original source selection.")
         atomic_json(request_path, requested, immutable=True)
     operation = digest(requested)
     progress_path = out / "receiving-progress.json"

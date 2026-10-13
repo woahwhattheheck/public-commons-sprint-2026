@@ -26,7 +26,173 @@ def file_identity(path):
 
 
 
-def continue_saved_review(workspace, output, state, state_path, *, profile="sv833"):
+
+def reconcile_receiving_locations(workspace, output, state_path, specification):
+    """Bind explicitly relocated originals without changing the saved request."""
+    from model.common import atomic_json
+    from model.portable import inspect_archive
+    from measurement_workspace.published_studies import PublishedStudyStore
+    import tempfile
+
+    specification = Path(specification).expanduser().resolve(strict=True)
+    spec_bytes = specification.read_bytes()
+    spec = json.loads(spec_bytes.decode("utf-8-sig"))
+    if (not isinstance(spec, dict)
+            or spec.get("schema") != "upstate.published-study-receiving-relocation/v1"
+            or set(spec) != {"schema", "operation", "archives"}):
+        raise ValueError("Use an explicit original-operation and archive relocation specification.")
+    descriptor = spec["operation"]
+    if (not isinstance(descriptor, dict) or set(descriptor) != {"path", "bytes", "sha256"}
+            or not isinstance(descriptor["path"], str)
+            or isinstance(descriptor["bytes"], bool) or not isinstance(descriptor["bytes"], int)
+            or descriptor["bytes"] < 1 or not isinstance(descriptor["sha256"], str)):
+        raise ValueError("Retain the original operation file path, byte length and SHA-256.")
+    original_path = Path(descriptor["path"]).expanduser().resolve(strict=True)
+    if original_path == state_path.resolve() or specification == state_path.resolve():
+        raise ValueError("Keep the immutable original operation and relocation specification separate from operation.json.")
+    original_bytes = original_path.read_bytes()
+    if (len(original_bytes) != descriptor["bytes"]
+            or hashlib.sha256(original_bytes).hexdigest() != descriptor["sha256"]):
+        raise ValueError("The relocated original operation differs from its published bytes or SHA-256.")
+    original = json.loads(original_bytes.decode("utf-8-sig"))
+    if (not isinstance(original, dict) or original.get("schema") != "upstate.published-study-receiving/v1"
+            or not isinstance(original.get("operation_id"), str)
+            or not isinstance(original.get("request"), dict)):
+        raise ValueError("Select the complete original native receiving operation.")
+    request, phases = original["request"], original.get("phases", {})
+    required = ("import", "original_rows", "selected_report", "complete_study",
+                "study_reopen", "project_archive", "project_reopen")
+    if not isinstance(phases, dict) or any(name not in phases for name in required):
+        raise ValueError("Relocation requires the original completed study and project receiving phases.")
+    if request.get("workspace_id") != workspace.project["id"]:
+        raise ValueError("The relocated Workspace has a different original project identity.")
+    old_workspace = Path(request.get("workspace", ""))
+    old_archive = Path(phases["project_archive"].get("path", ""))
+    if not old_workspace.is_absolute() or not old_archive.is_absolute():
+        raise ValueError("The original operation must retain its original absolute Workspace and archive paths.")
+    # Historical paths describe the original host; do not resolve its symlinks
+    # through this receiving host's unrelated filesystem.
+    old_workspace = Path(os.path.normpath(str(old_workspace)))
+    old_output = Path(os.path.normpath(str(old_archive))).parent
+    current_roots = (workspace.root.resolve(), output.resolve())
+    original_roots = (old_workspace, old_output)
+    if any(a != b and (a.is_relative_to(b) or b.is_relative_to(a))
+           for a in current_roots for b in original_roots):
+        raise ValueError("Relocated Workspace/output roots must be identical to or disjoint from original roots.")
+    if (workspace.root.is_relative_to(output) or output.is_relative_to(workspace.root)
+            or current_roots[0] == old_output or current_roots[1] == old_workspace):
+        raise ValueError("Keep the relocated Workspace and receiving output in separate, corresponding directories.")
+    mappings = spec["archives"]
+    if not isinstance(mappings, dict) or set(mappings) != {"complete_study", "project_archive"}:
+        raise ValueError("Explicitly locate both original complete-study and full-Workspace archives.")
+    archives = {}
+    for phase in ("complete_study", "project_archive"):
+        if not isinstance(mappings[phase], str):
+            raise ValueError("Each relocated archive path must be an explicit string.")
+        actual = file_identity(Path(mappings[phase]).expanduser().resolve(strict=True))
+        expected = phases[phase]
+        if any(actual[key] != expected[key] for key in ("bytes", "sha256")):
+            raise ValueError("The relocated original archive changed: " + phase)
+        archives[phase] = actual
+    manifest = inspect_archive(archives["project_archive"]["path"], verify=True)
+    if manifest["project"] != workspace.project:
+        raise ValueError("The original archive and relocated Workspace describe different projects.")
+    imported = phases["import"]
+    store = PublishedStudyStore(workspace, workspace.root / "published_studies")
+    retained = store.get_study(imported["study_id"], imported["version_id"])
+    record = retained["record"]
+    version_root = store._version_root(imported["study_id"], imported["version_id"])
+    expected_manifest = phases["original_rows"]["source_manifest"]
+    actual_manifest = file_identity(version_root / "sources.json")
+    # The original store rebinds the source-manifest path to this Workspace.
+    # Its content identity, not the former host's absolute path, is immutable.
+    if (record["source_collection_id"] != imported["source_collection_id"]
+            or any(record["source_manifest"].get(key) != value
+                   for key, value in expected_manifest.items() if key != "path")
+            or any(actual_manifest[key] != expected_manifest[key] for key in ("bytes", "sha256"))
+            or len({row["original_result_identifier"] for row in retained["observation_rows"]})
+            != phases["original_rows"]["result_identifiers"]):
+        raise ValueError("The relocated Workspace does not retain the exact original study source and result cohort.")
+    preserved = [
+        workspace.root / "sources" / (imported["source_collection_id"] + ".json"),
+        version_root / "record.json", version_root / "sources.json",
+    ]
+    for path in preserved:
+        actual = file_identity(path)
+        member = "workspace/" + path.relative_to(workspace.root).as_posix()
+        expected = manifest["members"].get(member)
+        if not expected or any(actual[key] != expected[key] for key in ("bytes", "sha256")):
+            raise ValueError("The relocated source identity differs from the original full archive: " + member)
+
+    if state_path.is_file():
+        state = json.loads(state_path.read_text(encoding="utf-8-sig"))
+        if any(state.get(key) != original.get(key) for key in ("schema", "operation_id", "request", "phases", "source_sha256")):
+            raise ValueError("This receiving directory already contains a different original operation.")
+    else:
+        state = original
+    frozen = output / "relocation-original-operation.json"
+    if frozen.exists():
+        if frozen.read_bytes() != original_bytes:
+            raise ValueError("This destination already retains a different original operation snapshot.")
+    else:
+        temporary = None
+        try:
+            with tempfile.NamedTemporaryFile(dir=output, prefix=".relocation-", delete=False) as stream:
+                temporary = Path(stream.name)
+                stream.write(original_bytes)
+                stream.flush()
+                os.fsync(stream.fileno())
+            try:
+                os.link(temporary, frozen)
+            except FileExistsError:
+                if frozen.read_bytes() != original_bytes:
+                    raise ValueError("A different original operation appeared during relocation.")
+        finally:
+            if temporary is not None:
+                temporary.unlink(missing_ok=True)
+    location = {
+        "schema": spec["schema"], "operation_id": original["operation_id"],
+        "original_operation": {**file_identity(frozen), "source_path": str(original_path)},
+        "specification": {"path": str(specification), "bytes": len(spec_bytes),
+                          "sha256": hashlib.sha256(spec_bytes).hexdigest()},
+        "original_workspace": str(old_workspace), "workspace": str(workspace.root),
+        "original_output": str(old_output), "output": str(output),
+        "archives": archives,
+        "source_binding": {"study_id": record["study_id"], "version_id": record["version_id"],
+                           "source_collection_id": record["source_collection_id"],
+                           "source_manifest": record["source_manifest"]},
+    }
+    history = state.setdefault("receiving_locations", [])
+    if not isinstance(history, list):
+        raise ValueError("Original receiving location history must remain a list.")
+    if location not in history:
+        history.append(location)
+    atomic_json(state_path, state)
+    return state, location
+
+
+def located_artifact(expected, location):
+    """Resolve only the two explicit originals or paths within their saved roots."""
+    if location is None:
+        return expected["path"]
+    source = Path(os.path.normpath(str(Path(expected["path"]).expanduser())))
+    if not source.is_absolute():
+        raise ValueError("Retained receiving artifacts need their original absolute paths.")
+    for archive in location["archives"].values():
+        if (expected.get("bytes"), expected.get("sha256")) == (archive["bytes"], archive["sha256"]):
+            return archive["path"]
+    old_roots = [(Path(location["original_workspace"]), Path(location["workspace"])),
+                 (Path(location["original_output"]), Path(location["output"]))]
+    for original, received in old_roots:
+        if source.is_relative_to(received):
+            return str(source)
+    for original, received in sorted(old_roots, key=lambda pair: len(pair[0].parts), reverse=True):
+        if source.is_relative_to(original):
+            return str(received / source.relative_to(original))
+    raise ValueError("The retained continuation artifact is outside the explicit original receiving roots: " + str(source))
+
+
+def continue_saved_review(workspace, output, state, state_path, *, profile="sv833", location=None):
     """Continue a completed native intake using its retained source and selection."""
     from model.common import atomic_json
     from model.portable import backup, restore, inspect_archive
@@ -40,9 +206,15 @@ def continue_saved_review(workspace, output, state, state_path, *, profile="sv83
     if any(name not in state.get("phases", {}) for name in required):
         raise ValueError("--saved-review requires the original completed study and project receiving phases.")
     request = state["request"]
-    if (request.get("workspace_id") != workspace.project["id"]
-            or Path(request.get("workspace", "")).resolve() != workspace.root.resolve()):
-        raise ValueError("The retained original operation belongs to another Workspace.")
+    if not state["operation_id"].startswith(profile + "-native-"):
+        raise ValueError("Use the original study profile's receiving command for this retained operation.")
+    original_workspace = Path(os.path.normpath(request.get("workspace", "")))
+    same_path = original_workspace == workspace.root.resolve()
+    relocated = (location is not None and location["operation_id"] == state["operation_id"]
+                 and Path(location["original_workspace"]) == original_workspace
+                 and Path(location["workspace"]) == workspace.root.resolve())
+    if request.get("workspace_id") != workspace.project["id"] or not (same_path or relocated):
+        raise ValueError("The retained original operation belongs to another Workspace; use explicit verified relocation for a moved original.")
     imported = state["phases"]["import"]
     study_id, version_id = imported["study_id"], imported["version_id"]
     store = PublishedStudyStore(workspace, workspace.root / "published_studies")
@@ -59,7 +231,7 @@ def continue_saved_review(workspace, output, state, state_path, *, profile="sv83
     # Existing archives are immutable originals; the review has separate paths below.
     for phase in ("complete_study", "project_archive"):
         expected = state["phases"][phase]
-        actual = file_identity(expected["path"])
+        actual = file_identity(located_artifact(expected, location))
         if any(actual[key] != expected[key] for key in ("bytes", "sha256")):
             raise ValueError("The original completed archive changed: " + phase)
 
@@ -97,7 +269,7 @@ def continue_saved_review(workspace, output, state, state_path, *, profile="sv83
             raise ValueError("The saved review changed its original source edition or selected cohort.")
 
     def checked_file(expected):
-        actual = file_identity(expected["path"])
+        actual = file_identity(located_artifact(expected, location))
         if any(actual[key] != expected[key] for key in ("bytes", "sha256")):
             raise ValueError("A retained review continuation artifact changed: " + expected["path"])
         return actual
@@ -255,9 +427,13 @@ def main(argv=None, *, profile="sv833"):
     parser.add_argument("--create-workspace", action="store_true")
     parser.add_argument("--saved-review", action="store_true",
                         help="Continue an existing completed operation with its exact saved source and review transfer.")
+    parser.add_argument("--relocate-receiving", type=Path,
+                        help="With --saved-review, verify an explicit original-operation and archive location specification.")
     parser.add_argument("--year", type=int, default=2025)
     parser.add_argument("--parameter", default=expected["parameter"])
     args = parser.parse_args(argv)
+    if args.relocate_receiving and (not args.saved_review or args.create_workspace):
+        parser.error("--relocate-receiving requires --saved-review and an already restored original Workspace.")
     application = args.application.expanduser().resolve(strict=True)
     workspace_path = args.workspace.expanduser().resolve()
     output = args.output.expanduser().resolve()
@@ -292,10 +468,16 @@ def main(argv=None, *, profile="sv833"):
         json.dumps(request, sort_keys=True).encode("utf-8")).hexdigest()[:24]
     with held(output / ("." + profile + "-receiving.lock"), blocking=False):
         if args.saved_review:
-            if not state_path.is_file():
-                parser.error("--saved-review requires the original receiving/operation.json.")
-            state = json.loads(state_path.read_text(encoding="utf-8"))
-            return continue_saved_review(workspace, output, state, state_path, profile=profile)
+            location = None
+            if args.relocate_receiving:
+                state, location = reconcile_receiving_locations(workspace, output, state_path,
+                                                                 args.relocate_receiving)
+            else:
+                if not state_path.is_file():
+                    parser.error("--saved-review requires the original receiving/operation.json.")
+                state = json.loads(state_path.read_text(encoding="utf-8"))
+            return continue_saved_review(workspace, output, state, state_path,
+                                         profile=profile, location=location)
         if state_path.is_file():
             state = json.loads(state_path.read_text(encoding="utf-8"))
             if state.get("request") != request:

@@ -38,7 +38,7 @@ export function communityRevisionSummary(value){
   '<details><summary>Original source and metadata changes</summary>'+table(['Field','Earlier value','Later value'],fieldRows(value.source_changes))+'</details>';
 }
 
-export function attachCommunityRevisions({getState,api,endpoint,openForm,submitAction,detail,fileList,openPlan}){
+export function attachCommunityRevisions({getState,api,endpoint,openForm,submitAction,detail,fileList,openPlan,studyTransferButton}){
   let generation=0;
   const workspace=()=>getState()?.workspace_key||'';
   const data=()=>getState()?.data||{};
@@ -63,6 +63,7 @@ export function attachCommunityRevisions({getState,api,endpoint,openForm,submitA
     const comparison=result.comparison;
     detail(result.title,'<div class="community-detail-actions">'+
       button('plan','Open earlier plan',comparison.before_plan.id)+button('plan','Open later plan',comparison.after_plan.id)+
+      (typeof studyTransferButton==='function'?studyTransferButton('community-plan-comparisons',id):'')+
       '</div>'+communityRevisionSummary(comparison)+fileList(list(result._downloads))+
       '<details class="technical"><summary>Complete retained comparison</summary><pre class="json-view">'+
       esc(JSON.stringify(comparison,null,2))+'</pre></details>',

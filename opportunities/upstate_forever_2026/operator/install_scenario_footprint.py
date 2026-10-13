@@ -34,6 +34,7 @@ NAV = '<script type="module" src="/web/scenario-footprint-nav.mjs"></script>'
 FILES = ("model/scenario_footprint.py", "operator/scenario_footprint.py",
          "operator/web/scenario-footprint.html", "operator/web/scenario-footprint.css",
          "operator/web/scenario-footprint.mjs", "operator/web/scenario-footprint-nav.mjs",
+         "operator/web/scenario_input_review.mjs",
          "operator/SCENARIO_FOOTPRINT.md", "operator/install_scenario_footprint.py",
          "source/scenario-footprint/reference_ordered_patches.py",
          "operator/extensions/scenario-footprint.json",
@@ -90,6 +91,16 @@ for _path, _fingerprint in {
 }.items():
     KNOWN_RELEASED.setdefault(_path, []).append(_fingerprint)
 
+
+
+# Complete published operator edition before ordinary input-review integration.
+for _path, _fingerprint in {
+    "operator/extensions/scenario-footprint.json": "8da5a76e5402433ab57431a3f89c299bd7828ea2564a1b9f8c66b0648e2cf4a5",
+    "operator/web/scenario-footprint.mjs": "6fb666959e648d28056b6b28a25488243a97fde457cf77f39d6661e47996d9c5",
+    "operator/SCENARIO_FOOTPRINT.md": "198441a04201ea8d410080ab668c26dcde109e6d32332d63562fa46d8966d6b1",
+    "operator/install_scenario_footprint.py": "35577a4503a5f11c583b4b52c96fa658654ee6e2b874a93596f667b231fa5892"
+}.items():
+    KNOWN_RELEASED.setdefault(_path, []).append(_fingerprint)
 
 
 def sha(body):

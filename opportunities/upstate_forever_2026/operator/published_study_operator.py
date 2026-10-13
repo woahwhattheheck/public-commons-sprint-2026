@@ -295,6 +295,14 @@ class PublishedStudyProvider:
                     "source_roots": [{"id": key, "label": str(path)} for key, path in self.roots.items()],
                     "table_titles": TABLE_TITLES,
                 }
+            if operation in ("geographic-preview", "geographic-selection"):
+                from measurement_workspace import geographic_study_selection as geographic
+                if operation == "geographic-preview":
+                    return geographic.preview(ws, store, payload)
+                result = geographic.resolve(ws, store, payload)
+                result["study"] = self._source_links(workspace_key, ws, store, result["study"])
+                result["context"] = self._source_links(workspace_key, ws, store, result["context"])
+                return result
             if operation == "review":
                 result = PublishedStudyReviews(store).get(payload.get("review_id"))
                 result["context"] = self._source_links(workspace_key, ws, store, result["context"])

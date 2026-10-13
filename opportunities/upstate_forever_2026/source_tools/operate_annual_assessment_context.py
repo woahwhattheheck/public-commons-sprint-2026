@@ -11,6 +11,7 @@ def main():
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--project-id", required=True)
     parser.add_argument("--manifest", type=Path)
+    parser.add_argument("--microbial-manifest", type=Path)
     parser.add_argument("--domain-archive", type=Path)
     parser.add_argument("--domain-collection")
     parser.add_argument("--domain-source-id", default="upstate-wbd-upstream-domain-20261012")
@@ -21,6 +22,7 @@ def main():
     DOMAIN = args.domain_archive
     STATE = ROOT / "operator-state"
     MANIFEST = (args.manifest or APP / "source/annual-reference-assessment-20261013/sources.json").resolve()
+    MICROBIAL_MANIFEST = (args.microbial_manifest or MANIFEST.parent / "microbial-assessment-sources.json").resolve()
     if ROOT == WORKSPACE or ROOT.is_relative_to(WORKSPACE):
         raise ValueError("Keep operation outputs outside the retained workspace.")
     sys.path[:0] = [str(APP / "operator"), str(APP)]
@@ -34,7 +36,7 @@ def main():
         atomic_json(PROGRESS, progress)
     def opening():
         print(json.dumps({"stage": "opening maintained operator", "workspace": str(WORKSPACE)}), flush=True)
-        return Operator(WORKSPACE, STATE, source_manifests=(MANIFEST,))
+        return Operator(WORKSPACE, STATE, source_manifests=(MANIFEST, MICROBIAL_MANIFEST))
     operator = opening()
     key = operator.primary
     workspace = operator.ws(key)
@@ -87,6 +89,15 @@ def main():
             preview = operator.preview_source({"registered_id": registered})
             context_task = queued("source.import", {"preview_id": preview["id"]}, "assessment-source")
 
+        known = existing("microbial-source")
+        if known:
+            microbial_task = queued("source.import", known["payload"], "microbial-source")
+        else:
+            registered = next(rid for rid, record in operator.registered.items()
+                              if Path(record["path"]).resolve() == MICROBIAL_MANIFEST)
+            preview = operator.preview_source({"registered_id": registered})
+            microbial_task = queued("source.import", {"preview_id": preview["id"]}, "microbial-source")
+
         domain_collections = [collection for collection in workspace.sources()
                               if any(entry["id"] == args.domain_source_id
                                      for entry in collection["entries"])]
@@ -138,6 +149,8 @@ def main():
                 raise RuntimeError("Expected one source layer: " + source_id + " " + str(len(matches)))
             return matches[0]
         point = source_layer("assessment-physical-geography159-20261013", context_task["result"]["id"])
+        microbial_point = source_layer("assessment-microbial-geography159-20261013",
+                                       microbial_task["result"]["id"])
         domain_candidates = [item for item in layers if item.get("source_id") == args.domain_source_id
                              and (not args.domain_collection or item.get("source_collection_id") == args.domain_collection)]
         if len(domain_candidates) != 1:
@@ -146,7 +159,8 @@ def main():
         catchment_binding = annual_task["result"]["binding"]["catchments"]
         basin = source_layer(catchment_binding["source_id"],
                              catchment_binding["source_collection_id"])
-        progress["layers"] = {"assessment": point, "domain": domain, "annual_catchments": basin}
+        progress["layers"] = {"assessment": point, "domain": domain, "annual_catchments": basin,
+                              "microbial_assessment": microbial_point}
         write_progress()
 
         selections = [
@@ -166,7 +180,27 @@ def main():
              {"layer_id": point["id"], "where": {"assessment_geometry_differences": 1}}, 6,
              "These six July 2026 source-edition HUC values differ from physical point-in-polygon "
              "membership: RS-06190, SV-052, SV-164, SV-318, SV-353 and SV-809. Original published "
-             "assessment values and native station identities remain unchanged in source attributes.")
+             "assessment values and native station identities remain unchanged in source attributes."),
+            ("microbial-shared", "Assessment stations with E. coli observations | 4 stations and 132 routine samples",
+             {"layer_id": microbial_point["id"], "where": {"has_microbial_observations": True}},
+             {"layer_id": domain["id"]}, 4,
+             "SV-111, SV-735, SV-833 and RS-21014 share 132 original routine samples with eight "
+             "published assessment records. Samples retain their actual 2021-2025 dates, APHA9223-B "
+             "method and MPN per 100 mL units. Six above-limit results retain their original lower "
+             "bounds; none is substituted with its limit. The 2024 assessment covers 2018-2022; "
+             "July 2026 source records do not state an assessment period. The full utility cohort "
+             "has 36 stations and 730 records, including one separate field replicate. A station "
+             "without this cohort's measurements may have observations in other sources."),
+            ("microbial-prwd", "PRWD assessment station with E. coli observations | RS-21014 and 12 routine samples",
+             {"layer_id": microbial_point["id"],
+              "where": {"has_microbial_observations": True, "PRWD_geometry": True}},
+             {"layer_id": domain["id"]}, 1,
+             "RS-21014 is physically within Little Beaverdam Creek / PRWD upstream. Its 12 "
+             "original routine samples span 2021-01-06 to 2021-12-02, with APHA9223-B results "
+             "in MPN per 100 mL. The retained 2024 assessment has E. coli, dissolved oxygen and "
+             "pH cause records and an assessment period of 2018-2022. Measured E. coli samples "
+             "supply context for the microbial cause; they do not measure dissolved oxygen or pH. "
+             "This is one of 18 physical PRWD assessment stations in the selected source editions.")
         ]
         saved = []
         for suffix, title, selected_point, reference, expected, notes in selections:
@@ -176,6 +210,38 @@ def main():
                                        "limit": 500, "tolerance": 0})
             assert overlay["returned"] == expected and overlay.get("next_offset") is None, (
                 suffix, overlay.get("returned"), overlay.get("next_offset"))
+            markers = []
+            if suffix.startswith("microbial-"):
+                # Zoom only the new measured views. Source geometry and the three
+                # existing request payloads remain unchanged.
+                coordinates = []
+                for feature in overlay["features"]:
+                    geometry = feature["geometry"]
+                    if geometry["type"] != "Point":
+                        raise ValueError("Measured assessment source must retain Point geometry.")
+                    x, y = geometry["coordinates"][:2]
+                    coordinates.append((x, y))
+                    properties = feature["properties"]
+                    markers.append({
+                        "x": x, "y": y,
+                        "label": (str(properties["station_id"]) + " | "
+                                  + str(properties["microbial_routine_count"]) + " routine samples | "
+                                  + properties["microbial_first_date"] + " to "
+                                  + properties["microbial_last_date"])
+                    })
+                xs, ys = zip(*coordinates)
+                original_bounds = frame["view"]["bounds"]
+                width = max(max(xs) - min(xs), (original_bounds[2] - original_bounds[0]) / 50)
+                height = max(max(ys) - min(ys), (original_bounds[3] - original_bounds[1]) / 50)
+                cx, cy = (max(xs) + min(xs)) / 2, (max(ys) + min(ys)) / 2
+                measured_view = {"crs": frame["view"]["crs"],
+                                 "bounds": [cx - width * .75, cy - height * .75,
+                                            cx + width * .75, cy + height * .75]}
+                frame = spatial.frame({"reference": reference, "mode": "single",
+                                       "view": measured_view, "size": {"width": 1200, "height": 800}})
+                overlay = spatial.overlay({"selection": selected_point, "view": frame["view"],
+                                           "limit": 500, "tolerance": 0})
+                assert overlay["returned"] == expected and overlay.get("next_offset") is None
             payload = {
                 "title": title, "reference": reference, "mode": "single", "view": frame["view"],
                 "overlays": [
@@ -186,7 +252,7 @@ def main():
                     {"selection": selected_point, "label": title.split(" | ")[-1],
                      "style": "solid", "width": 3, "opacity": 1, "visible": True}
                 ],
-                "markers": [], "notes": notes
+                "markers": markers, "notes": notes
             }
             task = queued("spatial.review.save", payload, "map-" + suffix)
             row = {"key": suffix, "title": title, "review_id": task["result"]["id"],
@@ -221,13 +287,15 @@ def main():
                   "application": str(APP), "source_commit": "eaa20367bd7d2bc7e30046683eeda9102ee9b4ce",
                   "layers": progress["layers"], "views": saved, "task_ids": progress["tasks"],
                   "annual_reference": annual_task["result"],
-                  "assessment_source": context_task["result"]}
+                  "assessment_source": context_task["result"],
+                  "microbial_source": microbial_task["result"],
+                  "microbial_source_commit": "cd4604708d689740e0486ef69a6eb541c3c14e96"}
         atomic_json(ROOT / "working-project-native-result.json", result)
         selected_task_ids = list(progress["tasks"])
-        prior_capture = existing("snapshot")
+        prior_capture = existing("snapshot-with-microbial")
         capture_payload = prior_capture["payload"] if prior_capture else {
             "transport": "archive", "task_ids": selected_task_ids}
-        capture_task = queued("workspace.snapshot", capture_payload, "snapshot")
+        capture_task = queued("workspace.snapshot", capture_payload, "snapshot-with-microbial")
         result["capture"] = capture_task["result"]
         result["capture_task_id"] = capture_task["id"]
         result["task_ids"] = list(progress["tasks"])

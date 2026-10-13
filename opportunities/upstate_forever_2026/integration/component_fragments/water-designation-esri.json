@@ -1,0 +1,14 @@
+{
+  "schema": "upstate.application-component-fragment/v1",
+  "id": "water-designation-esri",
+  "source_reference": "Original regional water designation receiving of SCDES polygons 11/12/131/132; native reader shared with Receiving waters and Conservation",
+  "extend_components": {
+    "water-designations": {
+      "paths": [
+        "model/spatial_esri.py",
+        "source/capture_upstream_network.py",
+        "model/WATER_DESIGNATION_ESRI.md"
+      ]
+    }
+  }
+}

@@ -106,3 +106,53 @@ Its phases and results live under `continuations.saved_review` in the same opera
 After native completion, open the same Workspace in its existing operator session and choose Published studies. Select the exact saved study/version, then use an actually available station, parameter and calendar selection. Save review; reopen its returned ID; edit notes and save a linked revision; use Save as new review for an independent record. Export its complete ZIP and import it through the actual allowed source root containing that returned archive. The original task UI retains accepted task/result identities. Navigate away and back to check the retained working draft; use another Workspace only when that actual Workspace exists.
 
 The native receiver reports its actual review ID, source binding, selected edition before/after receive, new archive identity and restored project path. Browser receiving adds the actual operator origin and interaction result to that same operation record.
+
+
+## Relocate the same completed receiving operation
+
+A retained original project can continue on another equipped host after the first host becomes unavailable. Restore the exact original full Workspace archive through the existing `model.cli restore` command into a fresh directory. Keep its project ID and original study edition; selecting another regional project with similar files does not resume this operation. Use the current complete application for the added saved-review feature.
+
+Copy the original complete-study ZIP, original full-Workspace ZIP, and the original completed `operation.json` as immutable received artifacts. Verify the operation file against its published byte length and SHA-256. Create an explicit location specification using those actual files:
+
+```json
+{
+  "schema": "upstate.published-study-receiving-relocation/v1",
+  "operation": {
+    "path": "/received/original-operation.json",
+    "bytes": 46617,
+    "sha256": "ACTUAL_PUBLISHED_OPERATION_SHA256"
+  },
+  "archives": {
+    "complete_study": "/received/original-study.zip",
+    "project_archive": "/received/original-workspace.zip"
+  }
+}
+```
+
+The example byte length belongs to the original AE11 SV-833 receipt; use the actual published length/hash for any other original operation. Archive byte lengths and hashes come from that verified operation, rather than from newly generated source files.
+
+Continue through the same original profile command:
+
+```sh
+"$PYTHON" -B "$APPLICATION/source_tools/receive_sv833_study.py" \
+  --application "$APPLICATION" \
+  --workspace "$RESTORED_ORIGINAL_WORKSPACE" \
+  --output "$RELOCATED_RECEIVING" \
+  --saved-review \
+  --relocate-receiving "$RELOCATION_SPEC"
+```
+
+The maintained RL-18151 wrapper supports the same option for its own original operation. Keep each profile's original command and operation together. Relocation requires an existing restored Workspace and cannot be combined with `--create-workspace`.
+
+Before recording a location, the receiver verifies:
+
+- The immutable original operation's exact bytes and SHA-256.
+- Both original archives against the operation's retained identities, plus every full-Workspace archive member.
+- The restored project's original identity, exact retained study/version/source collection and original result count.
+- The restored source-collection record and study edition records against their original archived bytes.
+
+The receiver keeps the original `request`, `operation_id`, source hash, and completed `phases` unchanged. It preserves the exact original operation bytes as `relocation-original-operation.json`, then appends the explicit original-to-current paths and verified archive/source bindings to `receiving_locations`. The usual `continuations.saved_review` contains the new actual review/export/receive/archive/reopen results.
+
+Use separate Workspace and receiving-output directories. Each new root must be identical to its corresponding original root or disjoint from the original roots; ancestor/child substitutions and swapping the original Workspace/output roots are rejected. The immutable input operation and specification must remain separate from the live receiving `operation.json`.
+
+Repeat the command with the same specification to resume accepted phases. Existing continuation artifacts resolve only through the two explicitly verified archive locations or the retained original Workspace/output roots, and their original byte lengths and hashes are checked again. Transfer any previously completed review export or continuation archive before resuming a partially completed continuation. New review results use their own review-ID paths; the two original archives retain their exact bytes. A newer legitimately selected study edition in the restored Workspace remains selected when the older saved review is received.

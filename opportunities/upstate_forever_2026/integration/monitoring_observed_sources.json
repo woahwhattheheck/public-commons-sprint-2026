@@ -75,20 +75,22 @@
     },
     {
       "path": "operator/web/monitoring-observed.mjs",
-      "bytes": 17134,
-      "sha256": "b892173baf305692e3b4fcb1b108cc47bcd5a747de32e99beed51f3667d6c9b8",
+      "bytes": 24516,
+      "sha256": "ead60a60b44adc80e0495ba988a337ac11afa92a9af26b12734528d94ee1114e",
       "predecessor_sha256": [
         "7ebb4f2d5f1fe2505f085c6e7b9472339cfc8dc2e3871bbfe985d228d8cf3ebe",
-        "d9e01600e859b91ca5a881ad6d844874938c99f8ebc618e4d6ac5ca37896c21f"
+        "d9e01600e859b91ca5a881ad6d844874938c99f8ebc618e4d6ac5ca37896c21f",
+        "b892173baf305692e3b4fcb1b108cc47bcd5a747de32e99beed51f3667d6c9b8"
       ]
     },
     {
       "path": "model/MONITORING_OBSERVED_CONTEXT.md",
-      "bytes": 17232,
-      "sha256": "f1b55f73e8bb0d15f6f8ee48e628d87d80683e0f0e8932478e6c0db8a4d07858",
+      "bytes": 19011,
+      "sha256": "b345444db93018843e8d3dd736429ddbd32f649ba6733c969314f3c2248d3363",
       "predecessor_sha256": [
         "18a222a0269cd333713041854d4be2a9811912664c7b082589f5c9ae6e319992",
-        "7c8189909d6fae3e917e7e4549ad0fc788aeb2e1684ce2268a2fc1d4f04e301c"
+        "7c8189909d6fae3e917e7e4549ad0fc788aeb2e1684ce2268a2fc1d4f04e301c",
+        "f1b55f73e8bb0d15f6f8ee48e628d87d80683e0f0e8932478e6c0db8a4d07858"
       ]
     },
     {
@@ -180,8 +182,8 @@
     },
     {
       "path": "integrations/monitoring/source_adoption.json",
-      "bytes": 31485,
-      "sha256": "4b2afe0f7086c3fdee29f8962b4197dbbb32915ecd702e055be726b23ad5513a",
+      "bytes": 31753,
+      "sha256": "7f1e2886a331d75ce1def4c5d4a0a91a551573ad72931efeddd3933c42e214e8",
       "predecessor_sha256": [
         "830e35b5d5b8929ef6ea238935b96bd7148c1224fab04802a89c9b52234f98a7",
         "785ffefbacf24579a9d6d138797ea50874e42a9ce75b7db5282c24f36d42be19",
@@ -191,7 +193,9 @@
         "f369e85122676c48e5a44ba171ce37b4e883e49927dfe24314c6f38c19d0750c",
         "9a6b8beb001af96487838b62d21a064ffd14e1fb8be7160981338adf80d27b9c",
         "c8fa5a27fe68a5eb17863f52cd9b13e87b8625a0960c480ae8490469a54533b7",
-        "53b7ff0e49b95bee66cf537625ff6b941851ffe386d3165b672353f6dae94a5c"
+        "53b7ff0e49b95bee66cf537625ff6b941851ffe386d3165b672353f6dae94a5c",
+        "f410679ab2882516ecfb31e90778bd136984ab08518d35d7f903c3945c0d2550",
+        "4b2afe0f7086c3fdee29f8962b4197dbbb32915ecd702e055be726b23ad5513a"
       ]
     },
     {
@@ -631,9 +635,11 @@
     },
     {
       "path": "integrations/monitoring/PREDECESSORS.json",
-      "bytes": 15878,
-      "sha256": "9fef2b526d6fd30ffcb226cfef642c53f9cbabd01dc47a2923dadbbe62a6e9d2",
-      "predecessor_sha256": []
+      "bytes": 16267,
+      "sha256": "bed954a59d000b22ae24bb71f2a23359975d1099031aeb3b8d54106e9542c91f",
+      "predecessor_sha256": [
+        "9fef2b526d6fd30ffcb226cfef642c53f9cbabd01dc47a2923dadbbe62a6e9d2"
+      ]
     },
     {
       "path": "integrations/monitoring/current_application_files.json",

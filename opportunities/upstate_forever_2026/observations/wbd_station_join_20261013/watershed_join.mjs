@@ -27,7 +27,7 @@ export function buildObservationWatershedJoin(points, captures, domainIds) {
     const actual=matches.map(m=>m.attributes.huc12),single=matches.length===1?matches[0].attributes:null;
     const listed=hucs(p.listed_huc12,12),source8=hucs(p.published_huc8,8),source10=hucs(p.published_huc10,10),study10=hucs(p.source_study_huc10,10);
     const properties=p.source_properties||{};
-    const role=p.point_kind==="usgs_gauge"?((Number(properties.observed_flow_series) || (properties.flow_method_id && Number(properties.flow_days_2023)>0))?"observed_flow":Number(properties.observed_stage_days_2023_2025)?"observed_stage_only":"inventory_only"):"";
+    const role=p.point_kind==="usgs_gauge"?(p.gauge_observation_role || ((Number(properties.observed_flow_series) || (properties.flow_method_id && Number(properties.flow_days_2023)>0))?"observed_flow":Number(properties.observed_stage_days_2023_2025)?"observed_stage_only":"inventory_only")):"";
     const row={
       point_id:p.point_id,entity_id:p.entity_id,site:p.site,point_kind:p.point_kind,input_cohort:p.input_cohort||p.point_kind,coordinate_variant:p.coordinate_variant,
       native_x:p.x,native_y:p.y,native_epsg:p.wkid,geometry_key:key,
