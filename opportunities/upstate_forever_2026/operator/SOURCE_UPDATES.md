@@ -135,8 +135,18 @@ With `--transfer`, it downloads the ordinary complete archive, verifies its
 native ticket, restores that exact ZIP through the original form, and opens the
 same immutable update and progress in the independent receiving workspace.
 
-Screenshots, optional browser video, original downloads and the completed step
-journal are saved in the selected output directory. The private operator URL
+The maintained driver opens and refreshes the populated plan at desktop and
+390-pixel phone widths, then downloads its HTML/CSV report and original plan
+through the narrow view. With `--run-models`, it checks actual completed native
+stage/output receipts, repeats preparation on the same plan, and confirms those
+receipts remain identical. Add `--expect-reuse` only for a deliberately selected
+lineage-only edition of completed original runs; every model must then retain
+its actual reused source-run identity. Fresh-browser and archive receiving
+views are captured at both widths. Complete archive SHA256 is streamed from
+disk without retaining the ZIP in JavaScript memory.
+
+Screenshots, actual control geometry, optional browser video, original downloads
+and the completed step journal are saved in the selected output directory. The private operator URL
 and capability are redacted. A native failure leaves its actual task identity
 and exception in that same journal and the original operator queue, so
 continuation uses the saved operation.
