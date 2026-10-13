@@ -3,6 +3,7 @@ import {benchmarkHTML} from './benchmark_reports.mjs';
 import {flowStudyBundle,flowLoadBundle} from './flow_bundles.mjs';
 import {flowLoadOperation,readFlowLoadResult,flowLoadCSV} from './flow_results.mjs';
 import {renderFlowStudy,renderFlowLoads} from './flow_reports.mjs';
+import {nativeSourceOperation} from './native_observations.mjs';
 import {reconciliationOperation,reconciliationReport,reconciliationCSV} from './source_reconciliation.mjs';
 import {sourceReviewHTML} from '../web/source_reconciliation.mjs';
 import {intakeOperation} from './intake.mjs';
@@ -45,6 +46,7 @@ export function createMeasurementHandler({directory,base=DEFAULT_BASE,fetcher=gl
     }
     const parts=url.pathname.slice(base.length).split('/').filter(Boolean).map(decodeURIComponent),method=request.method,query=Object.fromEntries(url.searchParams);
       const s=get();
+      if(parts[0]==='native-observations'){send(response,200,nativeSourceOperation(s,method,parts.slice(1),query));return;}
       if(parts[0]==='benchmarks'){
         if(method==='GET'&&parts[1]==='studies'&&parts.length===4&&['report.html','rows.csv','periods.csv'].includes(parts[3])){
           const study=readBenchmark(s,parts[2]),html=parts[3]==='report.html';

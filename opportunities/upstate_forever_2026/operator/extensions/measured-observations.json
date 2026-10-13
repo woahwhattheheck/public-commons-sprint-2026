@@ -2,7 +2,7 @@
   "schema": "upstate.operator-extension/v1",
   "id": "measured-observations",
   "title": "Measured observations",
-  "version": "1.6.0",
+  "version": "1.7.0",
   "order": 45,
   "assets": [
     "measured_observations.mjs",
@@ -20,7 +20,8 @@
     "source_reconciliation.css",
     "source_handback.mjs",
     "source_handback.css",
-    "benchmarks.mjs"
+    "benchmarks.mjs",
+    "measured_native_observations.mjs"
   ],
   "backend": {
     "module": "measurement_workspace.extension",
@@ -64,6 +65,19 @@
         ],
         "path": "/api/measurements/chemistry",
         "operation": "chemistry",
+        "handler": "read",
+        "args": [
+          "workspace",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "POST"
+        ],
+        "path": "/api/measurements/native-observations",
+        "operation": "native-observations",
         "handler": "read",
         "args": [
           "workspace",
