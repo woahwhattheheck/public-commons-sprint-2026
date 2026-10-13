@@ -29,6 +29,7 @@ from . import paired_ensemble_study_transfer as paired_transfer
 from . import report_changes_study_transfer as report_changes_transfer
 from . import multivariate_control_study_transfer as control_transfer
 from . import climate_forcing_study_transfer as forcing_transfer
+from . import joint_parameter_study_transfer as joint_transfer
 from . import terrain_conditioning_study_transfer as terrain_transfer
 from . import climate_management_study_transfer as climate_management_transfer
 from . import management_case_study_transfer as management_transfer
@@ -55,7 +56,7 @@ ROOT_KINDS = ("experiment-diagnostics", "experiments", "parameter-studies", "par
               *monitoring_transfer.ROOT_KINDS, *report_editions.ROOT_KINDS,
               *community_transfer.ROOT_KINDS, *receptor_transfer.ROOT_KINDS, *conservation_transfer.ROOT_KINDS,
               *customer_review_transfer.ROOT_KINDS, *paired_transfer.ROOT_KINDS,
-              *report_changes_transfer.ROOT_KINDS, *control_transfer.ROOT_KINDS, *forcing_transfer.ROOT_KINDS, *terrain_transfer.ROOT_KINDS, *climate_management_transfer.ROOT_KINDS,
+              *report_changes_transfer.ROOT_KINDS, *control_transfer.ROOT_KINDS, *forcing_transfer.ROOT_KINDS, *joint_transfer.ROOT_KINDS, *terrain_transfer.ROOT_KINDS, *climate_management_transfer.ROOT_KINDS,
               *management_transfer.ROOT_KINDS)
 IMMUTABLE_KINDS = ("parameter-working", "sources", "profiles", "scenarios", "observations",
                    "observation-comparisons", *delivery_transfer.IMMUTABLE_KINDS,
@@ -68,7 +69,7 @@ DOCUMENTS = {
     **delivery_transfer.DOCUMENTS,
     **monitoring_transfer.DOCUMENTS,
     **report_editions.DOCUMENTS, **paired_transfer.DOCUMENTS,
-    **report_changes_transfer.DOCUMENTS, **control_transfer.DOCUMENTS, **forcing_transfer.DOCUMENTS, **climate_management_transfer.DOCUMENTS,
+    **report_changes_transfer.DOCUMENTS, **control_transfer.DOCUMENTS, **forcing_transfer.DOCUMENTS, **joint_transfer.DOCUMENTS, **climate_management_transfer.DOCUMENTS,
     **receptor_transfer.DOCUMENTS, **conservation_transfer.DOCUMENTS,
 }
 LOCKS = {
@@ -76,7 +77,7 @@ LOCKS = {
     "experiments": ".experiment.lock", "experiment-diagnostics": ".diagnostics.lock",
     "comparisons": ".comparison.lock",
     **delivery_transfer.LOCKS,
-    **report_editions.LOCKS, **control_transfer.LOCKS, **forcing_transfer.LOCKS, **climate_management_transfer.LOCKS,
+    **report_editions.LOCKS, **control_transfer.LOCKS, **forcing_transfer.LOCKS, **joint_transfer.LOCKS, **climate_management_transfer.LOCKS,
     **receptor_transfer.LOCKS, **conservation_transfer.LOCKS,
 }
 LABELS = {
@@ -91,7 +92,7 @@ LABELS = {
     **delivery_transfer.LABELS,
     **monitoring_transfer.LABELS,
     **report_editions.LABELS, **paired_transfer.LABELS,
-    **report_changes_transfer.LABELS, **control_transfer.LABELS, **forcing_transfer.LABELS, **climate_management_transfer.LABELS,
+    **report_changes_transfer.LABELS, **control_transfer.LABELS, **forcing_transfer.LABELS, **joint_transfer.LABELS, **climate_management_transfer.LABELS,
     **calibration_transfer.LABELS,
     **community_transfer.LABELS,
     **receptor_transfer.LABELS, **conservation_transfer.LABELS,
@@ -184,7 +185,8 @@ class _Closure:
                  implementation_lineage=True, customer_review_lineage=True,
                  report_source_keys=None, implementation_source_keys=None,
                  geographic_native_studies=None, climate_forcing_studies=None,
-                 management_case_studies=None, climate_management_records=None):
+                 management_case_studies=None, climate_management_records=None,
+                 joint_parameter_lineage=True):
         self.workspace = workspace
         self.root = Path(workspace.root).resolve()
         self.selection = normalise(selection)
@@ -202,6 +204,8 @@ class _Closure:
         self.monitoring_reports = {}
         self.report_source_records = {}
         self.parameter_study_records = {}
+        self.joint_parameter_records = {}
+        self.joint_parameter_lineage_enabled = joint_parameter_lineage
         self.scientific_report_records = {}
         self.paired_ensemble_records = {}
         self.report_comparison_records = {}
@@ -382,6 +386,7 @@ class _Closure:
                 derivation = value.get("experiment_derivation", {})
                 if derivation.get("base_profile_id"):
                     self.need("profiles", derivation["base_profile_id"], "Original parameter derivation")
+                joint_transfer.include_profile(self, key, value)
         elif kind == "observations":
             self._body(value["original"])
             self._source_refs(value.get("metadata", {}), reason)
@@ -394,6 +399,7 @@ class _Closure:
         if (plan.get("schema") != "upstate.experiment-plan/v1" or digest(plan) != key
                 or plan.get("workspace_id") != self.workspace.project["id"]):
             raise ValueError("The experiment plan differs from this workspace.")
+        joint_transfer.include_experiment(self, key)
         prefix = "experiments/" + key + "/"
         state = self.read(prefix + "state.json")
         if state.get("id") != key or state.get("workspace_id") != self.workspace.project["id"]:
@@ -508,7 +514,9 @@ class _Closure:
         node = {"kind": kind, "id": key, "title": title, "state": value.get("state"),
                 "reasons": [reason]}
         self.nodes[(kind, key)] = node
-        if climate_management_transfer.visit(self, kind, key, value):
+        if joint_transfer.visit(self, kind, key, value):
+            pass
+        elif climate_management_transfer.visit(self, kind, key, value):
             pass
         elif management_transfer.visit(self, kind, key, value):
             pass
@@ -701,6 +709,7 @@ class _Closure:
             "climate_management_records": climate_management_transfer.receipt(self),
             "management_case_studies": management_transfer.receipt(self),
             "parameter_studies": parameter_transfer.native_receipt(self),
+            "joint_parameter_studies": joint_transfer.receipt(self),
             "parameter_working": working_transfer.receipt(self),
             "monitoring_history": monitoring_transfer.receipt(self),
             "scientific_report_sources": report_transfer.receipt(self),
@@ -723,7 +732,8 @@ def preview(workspace, selection):
 
 def _capture_locks(stack, closure, already):
     from . import source_refresh_report_transfer, parameter_study_transfer, geographic_study_transfer
-    for relative in (*chemistry_transfer.lock_paths(closure),
+    for relative in (*joint_transfer.lock_paths(closure),
+                     *chemistry_transfer.lock_paths(closure),
                      *source_refresh_report_transfer.lock_paths(closure),
                      *parameter_study_transfer.lock_paths(closure),
                      *geographic_study_transfer.lock_paths(closure)):
@@ -988,6 +998,8 @@ def export_study(workspace, destination, selection, *, progress=None, investigat
         }
         if getattr(closure, "parameter_working_records", {}):
             identity["parameter_working"] = working_transfer.receipt(closure)
+        if closure.joint_parameter_records:
+            identity["joint_parameter_studies"] = joint_transfer.receipt(closure)
         if closure.parameter_study_records:
             identity["parameter_studies"] = parameter_transfer.native_receipt(closure)
         if closure.geographic_native_records:
@@ -1074,11 +1086,13 @@ def export_study(workspace, destination, selection, *, progress=None, investigat
         return result
 
 
-def verify_received_studies(workspace):
+def verify_received_studies(workspace, *, joint_only=False):
     """Validate selected-study records during the original receiving operation."""
     result = []
     for path in sorted((workspace.root / "study-transfers").glob("*.json")):
         receipt = read_json(path)
+        if joint_only and "joint_parameter_studies" not in receipt.get("identity", {}):
+            continue
         if (receipt.get("schema") != RECEIPT_SCHEMA or receipt.get("id") != path.stem
                 or digest(receipt.get("identity")) != path.stem
                 or receipt["identity"]["project_id"] != workspace.project["id"]):
@@ -1088,6 +1102,7 @@ def verify_received_studies(workspace):
                            climate_forcing_studies=receipt["identity"].get("climate_forcing_studies", []),
                            climate_management_records=receipt["identity"].get("climate_management_records", []),
                            management_case_studies=receipt["identity"].get("management_case_studies", []),
+                           joint_parameter_lineage="joint_parameter_studies" in receipt["identity"],
                            report_lineage="scientific_report_sources" in receipt["identity"],
                            implementation_lineage="implementation_report_sources" in receipt["identity"],
                            customer_review_lineage="customer_reviews" in receipt["identity"],
@@ -1096,6 +1111,7 @@ def verify_received_studies(workspace):
                            report_source_keys={(row["source_collection_id"], row["source_id"])
                                                for row in receipt["identity"].get("scientific_report_sources", [])}).resolve(
             receipt["identity"].get("investigation_dependencies", ()))
+        joint_transfer.verify_receipt(closure, receipt["identity"].get("joint_parameter_studies", []))
         parameter_transfer.verify_native_receipt(closure, receipt["identity"].get("parameter_studies", []))
         working_transfer.verify_receipt(closure, receipt["identity"].get("parameter_working", []))
         forcing_transfer.verify_receipt(closure, receipt["identity"].get("climate_forcing_studies", []))
@@ -1129,6 +1145,7 @@ def verify_received_studies(workspace):
             workspace, receipt["identity"].get("conservation_design_history"))
         result.append({"id": receipt["id"], "title": receipt["title"],
                        "retained_records": len(required), "identity": "MATCH",
+                       "joint_parameter_studies": copy.deepcopy(receipt["identity"].get("joint_parameter_studies", [])),
                        "climate_forcing_studies": forcing_transfer.receipt(closure),
                        "climate_management_records": climate_management_transfer.receipt(closure),
                        "management_case_studies": management_transfer.receipt(closure),
@@ -1153,6 +1170,11 @@ def catalog(workspace, *, kind=None, query="", offset=0, limit=200):
             continue
         if selected_kind == "parameter-working":
             for row in working_transfer.catalogue(workspace):
+                if not query or query in canonical(row).decode("utf-8").casefold():
+                    rows.append(row)
+            continue
+        if selected_kind == joint_transfer.KIND:
+            for row in joint_transfer.catalogue(workspace):
                 if not query or query in canonical(row).decode("utf-8").casefold():
                     rows.append(row)
             continue

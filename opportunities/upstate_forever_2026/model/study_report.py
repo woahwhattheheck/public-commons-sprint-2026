@@ -11,7 +11,7 @@ import json
 import math
 from pathlib import Path
 
-from . import study_comparison_view, profile_report_comparison
+from . import study_comparison_view, profile_report_comparison, joint_parameter_analysis
 
 POLLUTANTS = {
     "nitrogen_export": "Nitrogen export",
@@ -426,7 +426,7 @@ def _geography_section(value):
     return "".join(rendered)
 
 
-def _render(summary, rows, profiles, *, downloads=(), execution=None, decisions=None, interpretation=None, geography=None):
+def _render(summary, rows, profiles, *, downloads=(), execution=None, decisions=None, interpretation=None, geography=None, joint=None):
     total = summary["counts"]["cases"]
     completed = summary["progress"]["complete"]
     names = _aliases(profiles)
@@ -514,6 +514,7 @@ def _render(summary, rows, profiles, *, downloads=(), execution=None, decisions=
             + _table(["Alternative", "Export", "Units", "Reduction range", "Profiles",
                       "Paired cells", "Response", "Cell support"], envelopes)
             + "</section>")
+    sections.append(joint_parameter_analysis.html_section(joint))
     sections.append(_decision_section(decisions))
     sections.append(
         "<section><h2>Completed native comparisons</h2>"
@@ -712,6 +713,7 @@ def build(workspace, experiment_id, *, profiles=None):
         interpretation = study_interpretation.collect(workspace, summary, profiles=profiles)
         interpretation["original_profile_comparison"] = profile_report_comparison.collect(workspace, summary)
         published_context = _published_context(interpretation)
+        joint = joint_parameter_analysis.collect(workspace, summary)
         context = {
             "schema": "upstate.study-report-context/v1",
             "experiment_id": experiment_id, "workspace_id": workspace.project["id"],
@@ -738,6 +740,8 @@ def build(workspace, experiment_id, *, profiles=None):
                 "geography": geography,
                 "experiment_summary": summary_source,
             }
+            if joint is not None:
+                data["joint_parameter_analysis"] = joint
             atomic_json(directory / "study-summary.json", data)
             retained = {
                 "study-summary.json": (
@@ -762,6 +766,7 @@ def build(workspace, experiment_id, *, profiles=None):
                     study_interpretation.transition_csv(interpretation)),
                 **profile_report_comparison.downloads(interpretation["original_profile_comparison"]),
                 **published_context,
+                **joint_parameter_analysis.downloads(joint),
             }
             if geography is not None:
                 retained["study-watershed-context.csv"] = (
@@ -784,7 +789,7 @@ def build(workspace, experiment_id, *, profiles=None):
             atomic_bytes(directory / "index.html",
                          _render(summary, rows, profiles, downloads=downloads,
                                  execution=execution, decisions=decisions,
-                                 interpretation=interpretation, geography=geography).encode("utf-8"))
+                                 interpretation=interpretation, geography=geography, joint=joint).encode("utf-8"))
             labels = {"index.html": "Study report",
                       **{name: item[0] for name, item in retained.items()}}
             files = {name: describe_file(workspace.root, directory / name) for name in labels}
