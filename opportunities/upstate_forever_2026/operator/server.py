@@ -1224,7 +1224,7 @@ class Handler(BaseHTTPRequestHandler):
                 return self.send_json(200, {"connected": False})
             readonly = {"/api/spatial/describe", "/api/spatial/frame", "/api/spatial/overlay", "/api/spatial/point",
                         "/api/parameter-studies/preview", "/api/experiments/preview",
-                        "/api/programmes/preview", "/api/programmes/experiment-preview", "/api/programmes/delivery-preview"}
+                        "/api/programmes/preview", "/api/programmes/experiment-preview", "/api/programmes/delivery-preview", "/api/programmes/interaction-preview"}
             if url.path in {"/api/task/resume", "/api/task/cancel"}:
                 task = self.app.task(required(value, "id"))
                 self.selected_workspace(task["workspace"], write=True)
@@ -1243,6 +1243,8 @@ class Handler(BaseHTTPRequestHandler):
                 return self.send_json(200, self.app.programmes.preview(value.get("workspace", self.app.primary), value))
             if url.path == "/api/programmes/experiment-preview":
                 return self.send_json(200, self.app.programmes.experiment_preview(value.get("workspace", self.app.primary), value))
+            if url.path == "/api/programmes/interaction-preview":
+                return self.send_json(200, self.app.programmes.interaction_preview(value.get("workspace", self.app.primary), value))
             if url.path == "/api/programmes/pause":
                 return self.send_json(200, self.app.programmes.pause(value.get("workspace", self.app.primary), value))
             if url.path == "/api/programmes/delivery-preview":

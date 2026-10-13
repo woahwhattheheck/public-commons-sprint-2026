@@ -35,6 +35,14 @@ def parser():
     create.add_argument("selection", type=Path)
     create.add_argument("--source-reference",
                         help="The exact installed application revision; otherwise captured file hashes identify it")
+    for name in ("interaction-preview", "interaction-create"):
+        command = commands.add_parser(name, help="Adopt an original conservation coalition study")
+        command.add_argument("plan_id")
+    attach = commands.add_parser("attach-interaction", help="Attach an exact completed common-support result")
+    attach.add_argument("programme_id")
+    attach.add_argument("result_id")
+    sync = commands.add_parser("sync-interaction", help="Analyze already completed programme coalitions and retain attribution")
+    sync.add_argument("programme_id")
     for name in ("status", "pause", "report", "read-report", "ensemble-candidates", "pair-completion-preview"):
         command = commands.add_parser(name)
         command.add_argument("programme_id")
@@ -62,16 +70,33 @@ def parser():
 
 def _synchronize_completed(programmes, result):
     source = result.get("selection", {}).get("source_reference", "")
-    if (result.get("state") != "complete" or not isinstance(source, str)
-            or not source.startswith(("upstate.experiment:", "upstate.programme-pair-completion:"))):
+    if result.get("state") != "complete" or not isinstance(source, str):
         return result
-    from .programme_experiments import sync_completed
-    synchronized = sync_completed(programmes.workspace, result)
-    return {**result, "experiment_sync": synchronized} if synchronized is not None else result
+    if source.startswith("upstate.native-interactions:"):
+        from .programme_interactions import sync_completed
+        synchronized = sync_completed(programmes.workspace, result)
+        return {**result, "interaction_sync": synchronized, "files": synchronized["files"]} if synchronized else result
+    if source.startswith(("upstate.experiment:", "upstate.programme-pair-completion:")):
+        from .programme_experiments import sync_completed
+        synchronized = sync_completed(programmes.workspace, result)
+        return {**result, "experiment_sync": synchronized} if synchronized is not None else result
+    return result
 
 
 def perform(args):
     programmes = ComputeProgrammes(Workspace(args.workspace))
+    if args.command in ("interaction-preview", "interaction-create", "attach-interaction", "sync-interaction"):
+        from . import programme_interactions
+        if args.command == "interaction-preview":
+            return programme_interactions.preview(programmes.workspace, args.plan_id)
+        if args.command == "interaction-create":
+            return programme_interactions.create(programmes.workspace, args.plan_id)
+        if args.command == "attach-interaction":
+            return programme_interactions.attach(programmes.workspace, args.programme_id, args.result_id)
+        result = programme_interactions.sync_completed(programmes.workspace, programmes.status(args.programme_id))
+        if result is None:
+            raise ValueError("Choose an adopted conservation interaction programme")
+        return result
     if args.command == "catalog":
         return programmes.catalog(include_completed_sources=not args.without_completed_sources)
     if args.command == "preview":
