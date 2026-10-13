@@ -132,7 +132,12 @@ def _verified(root, descriptor):
 
 def _tree(root):
     root = Path(root)
-    for directory, directories, filenames in os.walk(root, followlinks=False):
+    def unreadable(error):
+        raise ValueError(
+            "A retained comparison directory could not be read: " + str(error)
+        ) from error
+    for directory, directories, filenames in os.walk(
+            root, followlinks=False, onerror=unreadable):
         current = Path(directory)
         for name in directories:
             if (current / name).is_symlink():
@@ -166,6 +171,30 @@ def _clone_comparison(source, destination):
     finally:
         if pending.exists():
             shutil.rmtree(pending)
+
+
+
+def _recover_task_staging(root, identity):
+    """Remove only this retained task's interrupted private receiving trees.
+
+    The original operator lock is held before this function is called. All three
+    writers run in that same process and create their candidates with mkdtemp in
+    the task-owned directory. The published comparison and unrelated names stay.
+    """
+    root = Path(root)
+    marker = root / "operation.json"
+    if marker.is_symlink() or not marker.is_file() or read_json(marker) != identity:
+        raise ValueError("Staging recovery needs its original retained operation.")
+    candidates = []
+    for path in root.iterdir():
+        if re.fullmatch(r"\.(?:eco13-clone|upstate-receiving|receiving)-[a-z0-9_]{8}",
+                        path.name) is None:
+            continue
+        if path.is_symlink() or not path.is_dir():
+            raise ValueError("An interrupted receiving candidate is not its original directory.")
+        candidates.append(path)
+    for path in candidates:
+        shutil.rmtree(path)
 
 
 def _record_scope(workspace, record_id):
@@ -497,8 +526,9 @@ class Eco13Operator:
         root.mkdir(parents=False, exist_ok=True, mode=0o700)
         selection = root / "operation.json"
         if selection.exists():
-            if read_json(selection) != identity:
+            if selection.is_symlink() or read_json(selection) != identity:
                 raise ValueError("The unfinished receiver belongs to another retained operation.")
+            _recover_task_staging(root, identity)
         else:
             atomic_json(selection, identity, immutable=True)
         return root

@@ -6,6 +6,7 @@ import json
 import os
 from pathlib import Path
 import shutil
+import stat
 import tempfile
 import urllib.parse
 import urllib.request
@@ -185,58 +186,182 @@ def acquire(manifest_path: Path, destination: Path) -> dict[str, Any]:
     return output
 
 
+def _file_identity(path: Path) -> tuple[int, int, int, int, int]:
+    value = path.lstat()
+    if not stat.S_ISREG(value.st_mode):
+        raise ScenarioError(f"Portable workspaces need regular files: {path}")
+    return (value.st_dev, value.st_ino, value.st_size,
+            value.st_mtime_ns, value.st_ctime_ns)
+
+
+def _portable_inventory(root: Path) -> dict[str, tuple[int, int, int, int, int]]:
+    """Capture the complete membership while the original workspace is locked."""
+    selected = {}
+    def unreadable(error):
+        raise ScenarioError(
+            f"Workspace inventory could not read {error.filename or root}: {error}"
+        ) from error
+    for directory, directories, filenames in os.walk(
+            root, followlinks=False, onerror=unreadable):
+        current = Path(directory)
+        directories.sort()
+        for name in directories:
+            if (current / name).is_symlink():
+                raise ScenarioError("Workspace export refuses directory symlinks")
+        for name in sorted(filenames):
+            path = current / name
+            if path == root / ".workspace.lock":
+                continue
+            relative = path.relative_to(root).as_posix()
+            if relative == "PORTABLE-MANIFEST.json":
+                raise ScenarioError("The workspace contains the reserved portable manifest name")
+            selected[relative] = _file_identity(path)
+    return dict(sorted(selected.items()))
+
+
+def _sync_directory(path: Path) -> None:
+    descriptor = os.open(path, os.O_RDONLY | os.O_DIRECTORY)
+    try:
+        os.fsync(descriptor)
+    finally:
+        os.close(descriptor)
+
+
 def export_workspace(root: Path, target: Path) -> dict[str, Any]:
-    if target.exists() or target.resolve().is_relative_to(root.resolve()):
+    root, target = Path(root).resolve(), Path(target).absolute()
+    if os.path.lexists(target) or target.resolve().is_relative_to(root):
         raise ScenarioError("Export needs a new filename outside the workspace")
     target.parent.mkdir(parents=True, exist_ok=True)
     with exclusive(root):
-        files = sorted(p for p in root.rglob("*") if p.is_file() and
-                       p != root / ".workspace.lock")
-        if any(p.is_symlink() for p in files):
-            raise ScenarioError("Workspace export refuses symlinks")
-        inventory = [{"path": p.relative_to(root).as_posix(), "sha256": file_hash(p),
-                      "bytes": p.stat().st_size} for p in files]
-        temp = target.with_name("." + target.name + ".writing")
+        original = _portable_inventory(root)
+        descriptor, name = tempfile.mkstemp(prefix=".eco13-export-", dir=target.parent)
+        temporary = Path(name)
         try:
-            with zipfile.ZipFile(temp, "w", compression=zipfile.ZIP_DEFLATED, compresslevel=3) as z:
-                for p, meta in zip(files, inventory):
-                    z.write(p, meta["path"])
-                    if file_hash(p) != meta["sha256"]:
-                        raise ScenarioError("Workspace changed during export")
-                z.writestr("PORTABLE-MANIFEST.json", canonical({"schema": 1, "files": inventory}))
-            os.replace(temp, target)
+            inventory = []
+            with os.fdopen(descriptor, "w+b") as output:
+                with zipfile.ZipFile(output, "w", compression=zipfile.ZIP_DEFLATED,
+                                     compresslevel=3, allowZip64=True) as archive:
+                    for relative, expected in original.items():
+                        source = root / relative
+                        opened = os.open(source, os.O_RDONLY | os.O_NOFOLLOW)
+                        with os.fdopen(opened, "rb") as retained:
+                            before = os.fstat(retained.fileno())
+                            identity = (before.st_dev, before.st_ino, before.st_size,
+                                        before.st_mtime_ns, before.st_ctime_ns)
+                            if identity != expected:
+                                raise ScenarioError(f"Original file changed before export: {relative}")
+                            digestor, size = hashlib.sha256(), 0
+                            with archive.open(relative, "w", force_zip64=True) as member:
+                                for block in iter(lambda: retained.read(1024 * 1024), b""):
+                                    member.write(block)
+                                    digestor.update(block)
+                                    size += len(block)
+                            after = os.fstat(retained.fileno())
+                            observed = (after.st_dev, after.st_ino, after.st_size,
+                                        after.st_mtime_ns, after.st_ctime_ns)
+                            if observed != expected or size != expected[2]:
+                                raise ScenarioError(f"Original file changed during export: {relative}")
+                        if _file_identity(source) != expected:
+                            raise ScenarioError(f"Original file was replaced during export: {relative}")
+                        inventory.append({"path": relative, "bytes": size,
+                                          "sha256": digestor.hexdigest()})
+                    if _portable_inventory(root) != original:
+                        raise ScenarioError("Workspace membership changed during export")
+                    archive.writestr("PORTABLE-MANIFEST.json",
+                                     canonical({"schema": 1, "files": inventory}))
+                output.flush()
+                os.fsync(output.fileno())
+            # Link is an atomic create-only publication on the staging volume.
+            # A concurrent completed archive or dangling alias is preserved.
+            try:
+                os.link(temporary, target)
+            except FileExistsError as error:
+                raise ScenarioError("The export destination was created by another operation") from error
+            temporary.unlink()
+            _sync_directory(target.parent)
         finally:
-            temp.unlink(missing_ok=True)
+            temporary.unlink(missing_ok=True)
     return {"file": str(target), "sha256": file_hash(target), "files": len(inventory)}
 
 
-def receive_workspace(archive: Path, destination: Path, max_bytes: int = 100 * 1024**3) -> dict[str, Any]:
-    if destination.exists():
+def _portable_member(value: Any) -> str:
+    if (not isinstance(value, str) or not value or "\\" in value or "\0" in value
+            or value.startswith("/") or
+            any(part in ("", ".", "..") for part in value.split("/"))):
+        raise ScenarioError("Archive members need canonical relative file paths")
+    return value
+
+
+def receive_workspace(archive: Path, destination: Path,
+                      max_bytes: int = 100 * 1024**3) -> dict[str, Any]:
+    archive, destination = Path(archive), Path(destination).absolute()
+    if type(max_bytes) is not int or max_bytes < 0:
+        raise ScenarioError("Receiving byte limit must be a nonnegative integer")
+    if os.path.lexists(destination):
         raise ScenarioError("Receiving is create-only; choose a new workspace directory")
     destination.parent.mkdir(parents=True, exist_ok=True)
     staging = Path(tempfile.mkdtemp(prefix=".receiving-", dir=destination.parent))
     try:
-        with zipfile.ZipFile(archive) as z:
-            names = z.namelist()
+        with zipfile.ZipFile(archive) as source:
+            infos = source.infolist()
+            names = [item.filename for item in infos]
             if len(names) != len(set(names)) or len(names) > 1000000:
                 raise ScenarioError("Duplicate archive members or excessive file count")
-            if sum(info.file_size for info in z.infolist()) > max_bytes:
+            if sum(info.file_size for info in infos) > max_bytes:
                 raise ScenarioError("Archive exceeds receive limit")
-            manifest = json.loads(z.read("PORTABLE-MANIFEST.json"))
-            entries = {v["path"]: v for v in manifest["files"]}
-            if len(entries) != len(manifest["files"]) or set(names) != set(entries) | {"PORTABLE-MANIFEST.json"}:
+            for info in infos:
+                _portable_member(info.filename)
+                mode = stat.S_IFMT(info.external_attr >> 16)
+                if info.is_dir() or mode not in (0, stat.S_IFREG) or info.flag_bits & 1:
+                    raise ScenarioError("Archive members must be unencrypted regular files")
+            if "PORTABLE-MANIFEST.json" not in names:
+                raise ScenarioError("Archive lacks its portable manifest")
+            manifest = json.loads(source.read("PORTABLE-MANIFEST.json"))
+            if (not isinstance(manifest, dict) or type(manifest.get("schema")) is not int
+                    or manifest["schema"] != 1
+                    or not isinstance(manifest.get("files"), list)):
+                raise ScenarioError("Choose a supported schema1 portable workspace")
+            entries = {}
+            for value in manifest["files"]:
+                if not isinstance(value, dict):
+                    raise ScenarioError("Archive file descriptor must be an object")
+                relative = _portable_member(value.get("path"))
+                if relative in entries or relative == "PORTABLE-MANIFEST.json":
+                    raise ScenarioError("Archive manifest repeats a reserved or original member")
+                sha256 = value.get("sha256")
+                if (type(value.get("bytes")) is not int or value["bytes"] < 0
+                        or not isinstance(sha256, str) or len(sha256) != 64
+                        or any(char not in "0123456789abcdef" for char in sha256)):
+                    raise ScenarioError(f"Archive member descriptor is invalid: {relative}")
+                entries[relative] = value
+            if set(names) != set(entries) | {"PORTABLE-MANIFEST.json"}:
                 raise ScenarioError("Archive membership differs from its manifest")
-            for relative, meta in entries.items():
-                info = z.getinfo(relative)
-                if (info.external_attr >> 16) & 0o170000 == 0o120000:
-                    raise ScenarioError("Archive contains a symbolic link")
-                target = inside(staging, relative)
+            for relative, expected in entries.items():
+                info = source.getinfo(relative)
+                if info.file_size != expected["bytes"]:
+                    raise ScenarioError(f"Archive member length differs: {relative}")
+                target = staging.joinpath(*relative.split("/"))
                 target.parent.mkdir(parents=True, exist_ok=True)
-                with z.open(relative) as src, target.open("xb") as dst:
-                    shutil.copyfileobj(src, dst, 1024 * 1024)
-                if target.stat().st_size != meta["bytes"] or file_hash(target) != meta["sha256"]:
+                digestor, size = hashlib.sha256(), 0
+                descriptor = os.open(target, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+                with os.fdopen(descriptor, "wb") as output, source.open(info) as retained:
+                    for block in iter(lambda: retained.read(1024 * 1024), b""):
+                        output.write(block)
+                        digestor.update(block)
+                        size += len(block)
+                    output.flush()
+                    os.fsync(output.fileno())
+                if size != expected["bytes"] or digestor.hexdigest() != expected["sha256"]:
                     raise ScenarioError(f"Archive member failed verification: {relative}")
-        staging.rename(destination)
+        # Serialize publishers targeting this exact destination. The complete
+        # extracted edition remains private until its final directory rename.
+        lock_name = ".eco13-receive-" + hashlib.sha256(
+            str(destination.resolve()).encode("utf-8")).hexdigest() + ".lock"
+        with exclusive(destination.parent, name=lock_name):
+            if os.path.lexists(destination):
+                raise ScenarioError("Receiving destination was created by another operation")
+            staging.rename(destination)
+            _sync_directory(destination.parent)
         return {"workspace": str(destination), "files": len(entries)}
     finally:
         if staging.exists():
