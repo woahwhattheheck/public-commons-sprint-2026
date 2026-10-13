@@ -1,0 +1,22 @@
+{
+  "schema": "upstate.application-component-fragment/v1",
+  "id": "watershed-observation-exports",
+  "extend_components": {
+    "watershed-context": {
+      "paths": [
+        "model/watershed_observation_context.py",
+        "integration/component_fragments/watershed-observation-exports.json"
+      ],
+      "requires": [
+        "landcover-observation-profiles"
+      ],
+      "source_manifests": [
+        "landcover_observation_profiles.sources.json"
+      ]
+    }
+  },
+  "source_reference": {
+    "operation": "ECO-SCI-ROOT-WATERSHED-EVIDENCE-EXPORT-20261013",
+    "profiles": "https://github.com/woahwhattheheck/public-commons-sprint-2026/pull/3653"
+  }
+}

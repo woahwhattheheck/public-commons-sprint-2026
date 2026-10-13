@@ -1,8 +1,52 @@
 # Original observed sources to a saved scientific report and Customer review
 
-The maintained entrypoint source_tools/receive_observed_scientific_review.py completes the source-to-review workflow from an actual saved delivery selection. It uses the same native preview and rendering lifecycle as the SourceReports desk, saves the ordinary scientific-report edition, and calls the existing review/export/Workspace receiving command.
+The maintained entrypoint source_tools/receive_observed_scientific_review.py completes the source-to-review workflow from an actual saved delivery selection or explicitly ordered original source manifests. It uses the same native preview and rendering lifecycle as the SourceReports desk, saves the ordinary scientific-report edition, and calls the existing review/export/Workspace receiving command.
 
 The selected field, laboratory and outcome source documents remain in their original reading order. Their actual source collection IDs, body hashes, methods, figures and complete member trees travel through the report and review package.
+
+## Compose the completed regional atlas and annual land-cover sources
+
+Repeat --source-manifest in the exact intended reading order. Each original upstate.sources/v1 manifest must declare exactly one scientific report document, either through metadata.report_schema=upstate.observed-report/v1 or role=OBSERVED_CONTEXT. This accepts both the published regional atlas and the maintained completed land-cover ledger producer.
+
+For the actual regional atlas holder, select its retained regional-atlas.sources.json. Add the completed annual land-cover source's sources.json only when that real source has been prepared in the original Workspace:
+
+~~~sh
+python -B source_tools/receive_observed_scientific_review.py \
+  --workspace /path/to/original-regional-workspace \
+  --source-manifest /path/to/RegionalObservationAtlas/regional-atlas.sources.json \
+  --source-manifest /path/to/completed-landcover-report-source/sources.json \
+  --review-selection source/water_context/20261013/regional-scientific-review.request.json \
+  --title "Upper Savannah — regional observations and annual land-cover context" \
+  --output /path/outside-workspace-and-application/regional-scientific-review
+~~~
+
+With only the regional atlas, omit the second --source-manifest and use a title matching that selected scope. There is no automatic search for an annual source, new land-cover calculation, change of Workspace or source-order inference.
+
+The annual source is the existing model.landcover_report_source.prepare(workspace, {"ledger_id": ACTUAL_COMPLETED_LEDGER_ID}) result. Its recipe, original ledger files, geographic and numerical figures, source bindings and native raster inputs are already retained by that producer. The caller consumes its original manifest without reconstructing those results. The regional atlas holder keeps its actual source recipe, native bindings, original observations, map sheets and unsimplified GIS geometries.
+
+Before rendering, the maintained importer:
+
+1. Reads every original manifest and requires one explicitly marked report document.
+2. Uses Workspace.import_sources to retain its original body, manifest and complete companions.
+3. Verifies the imported manifest bytes and body/member identities.
+4. Builds the canonical ordered observed_context_sources and primary source, rejecting duplicate documents.
+5. Retains the original manifests, complete source records, identity, delivery-selection.json and receipt.json beneath scientific-report-source-selections/OPERATION_ID in the existing Workspace.
+6. Passes that exact bound selection through the same saved-edition and Customer review lifecycle below.
+
+The completed result includes source_manifest_import with the actual import receipt, ordered source choices and source count. original_delivery_selection identifies the retained canonical selection. Both are bound into the workflow identity. Repeating unchanged inputs reuses native import identities and the retained source selection.
+
+After a complete Workspace transfer, the original external atlas/source folders are optional: pass the returned original_delivery_selection.path through --delivery-selection in the restored Workspace. The retained native collection already contains every selected body and companion. The manifest input path itself is not a substituted scientific identity.
+
+All imported scientific sources appear in the existing SourceReports picker. The saved edition appears under saved reports and supports Prepare customer review, briefing and study transfer. This command therefore produces the same product objects that the operator opens.
+
+### Regional review request and scientific meaning
+
+source/water_context/20261013/regional-scientific-review.request.json is an authored internal review request tied to the published atlas's actual quantities and questions. It covers original HUC/station support, polygon union versus raster-cell area, changing annual station calendars, the original SV-833 month comparison, the original USGS daily-flow context, censored measurements and exact method/unit identities. Its annual-land-cover questions apply only if that completed source is included.
+
+The report keeps source-water coverage, annual land-cover classification, observed sample results and modeled fluxes distinct. A shared watershed identifier or temporal overlap does not supply a causal or downstream-transport relationship. Every selected source retains its original scientific sections, figures and provenance rather than being recast as a common measurement.
+
+The older source/observed-report-20261013/render.py manifest path also accepts the same metadata-or-role declaration. Its existing output/API remain unchanged; use the maintained receiver above for a saved scientific edition plus the complete review/export/restore flow.
+
 
 ## Continue the existing native case
 

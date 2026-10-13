@@ -507,7 +507,11 @@ def install(capsule, prefix, application, *, python=sys.executable, resume=False
         except BaseException as exc:
             state.update(state="interrupted" if isinstance(exc, (KeyboardInterrupt, SystemExit)) else "failed",
                          error={"type": type(exc).__name__, "message": str(exc)}, updated_at=stamp())
-            atomic_json(state_path, state)
+            try:
+                atomic_json(state_path, state)
+            except OSError as recording_error:
+                if hasattr(exc, "add_note"):
+                    exc.add_note("Could not record installation failure: " + str(recording_error))
             raise
 
 

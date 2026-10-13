@@ -29,8 +29,9 @@ def _source_references(row):
     for key in ("source_link_id", "audit_source_link_id", "source_ref", "custody_ref"):
         if isinstance(row.get(key), str):
             refs.append(row[key])
-    if isinstance(row.get("evidence_refs"), list):
-        refs.extend(row["evidence_refs"])
+    for key in ("evidence_refs", "source_link_ids"):
+        if isinstance(row.get(key), list):
+            refs.extend(row[key])
     for key in ("original_source", "lab_source"):
         source = row.get(key)
         if isinstance(source, dict):
@@ -268,7 +269,8 @@ class ImplementationStore:
                            {row["id"] for row in incoming["source_links"]})
         if removed_sources:
             collections = [(name, incoming[name]) for name in COLLECTIONS]
-            collections.append(("field12_lab_imports", incoming.get("field12_lab_imports", [])))
+            for name in ("field12_lab_imports", "field12_site_visit_imports"):
+                collections.append((name, incoming.get(name, [])))
             for collection, rows in collections:
                 if not isinstance(rows, list):
                     continue

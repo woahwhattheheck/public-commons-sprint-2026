@@ -1,10 +1,12 @@
 {
   "schema": "upstate.operator-extension/v1",
   "id": "community-report-context",
-  "title": "Community scientific report source",
-  "version": "1",
+  "title": "Community scientific report sources and handovers",
+  "version": "2",
   "order": 57,
-  "assets": [],
+  "assets": [
+    "community_report_handover.mjs"
+  ],
   "backend": {
     "module": "community_report_context",
     "factory": {
@@ -15,7 +17,9 @@
       ]
     },
     "actions": [
-      "community.report.source.prepare"
+      "community.report.source.prepare",
+      "community.report.handover.export",
+      "community.report.handover.receive"
     ],
     "invoke": {
       "handler": "invoke",
@@ -28,6 +32,21 @@
       "args": [
         "task"
       ]
-    }
+    },
+    "routes": [
+      {
+        "methods": [
+          "GET"
+        ],
+        "path": "/api/community-report-context/handover-preview",
+        "operation": "handover-preview",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      }
+    ]
   }
 }
