@@ -467,24 +467,24 @@ export function attachCommunity({getState,api,endpoint,openForm,submitAction,det
   }
   async function validateView(value){
     if(value===undefined||value===null)return null;
-    sync();validatedView=null;const selectedWorkspace=workspace(),before=JSON.stringify(local),project=data().project?.id;
+    const opening=beginOpening();validatedView=null;const selectedWorkspace=workspace(),before=JSON.stringify(local),project=data().project?.id;
     const fresh=await api('/api/state?workspace='+encodeURIComponent(selectedWorkspace));
-    if(workspace()!==selectedWorkspace||fresh.workspace_key!==selectedWorkspace||fresh.data?.project?.id!==project)
+    if(!isOpeningCurrent(opening)||workspace()!==selectedWorkspace||fresh.workspace_key!==selectedWorkspace||fresh.data?.project?.id!==project)
       throw Error('The selected workspace changed. Open the Community view in its original project.');
     let selected=validateCommunityView(value,fresh);
     await get('community_tables',selected.table_id,{fresh:true});
     if(selected.plan_id)await get('community_plans',selected.plan_id,{fresh:true});
     if(selected.report_id)await get('community_reports',selected.report_id,{fresh:true});
-    if(workspace()!==selectedWorkspace||JSON.stringify(local)!==before)
+    if(!isOpeningCurrent(opening)||workspace()!==selectedWorkspace||JSON.stringify(local)!==before)
       throw Error('The Community selection changed while opening the saved view. Open it again.');
     selected=validateCommunityView(selected,viewState(fresh));
-    validatedView={value:JSON.stringify(selected),state:fresh,before,workspace:selectedWorkspace,project};
+    validatedView={value:JSON.stringify(selected),state:fresh,before,workspace:selectedWorkspace,project,opening};
     return selected;
   }
   function restoreView(value){
     if(value===undefined||value===null)return null;
     const original=validatedView;
-    if(original&&(original.workspace!==workspace()||original.project!==data().project?.id||original.before!==JSON.stringify(local)))
+    if(original&&(!isOpeningCurrent(original.opening)||original.workspace!==workspace()||original.project!==data().project?.id||original.before!==JSON.stringify(local)))
       throw Error('The Community selection changed. Open the saved view again.');
     const selected=validateCommunityView(value,viewState(original?.value===JSON.stringify(value)?original.state:current()));
     if(original?.value===JSON.stringify(value))retainedState={previous:getState(),state:original.state};
@@ -675,10 +675,10 @@ export function attachCommunity({getState,api,endpoint,openForm,submitAction,det
       }
     },{signal});
     node.addEventListener('input',event=>{if(event.target.name==='community_query'){invalidateOpenings();local.query=event.target.value;updateExplore();}},{signal});
-    const t=selectedTable(),ws=workspace(),tableId=local.table;
+    const t=selectedTable(),ws=workspace(),tableId=local.table,lifecycle=workspaceGeneration;
     if(tableId&&!Array.isArray(t?.groups)&&!loadError)get('community_tables',tableId).then(()=>{
-      if(visible()&&workspace()===ws&&local.table===tableId){loadError='';redraw();}
-    }).catch(error=>{if(visible()&&workspace()===ws){loadError=error.message;redraw();}});
+      if(visible()&&workspace()===ws&&lifecycle===workspaceGeneration&&local.table===tableId){loadError='';redraw();}
+    }).catch(error=>{if(visible()&&workspace()===ws&&lifecycle===workspaceGeneration&&local.table===tableId){loadError=error.message;redraw();}});
   }
   function form(){return document.getElementById('operation-form');}
   function value(name,root=form()){return root?.querySelector('[name="'+name+'"]')?.value??'';}

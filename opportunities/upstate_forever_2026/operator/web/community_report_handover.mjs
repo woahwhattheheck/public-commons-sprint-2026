@@ -175,8 +175,10 @@ export function attachCommunityReportHandover({getState,api,endpoint,openForm,su
   }
   async function openExport(id,expectedWorkspace){
     const ticket=chosenWorkspace(expectedWorkspace);
-    const task=await api(endpoint('/api/task',{id}));
-    if(!same(ticket))return;
+    let task;
+    try{task=await api(endpoint('/api/task',{id}));}
+    catch(error){if(same(ticket)&&isOpeningCurrent(ticket.opening))throw error;return;}
+    if(!same(ticket)||!isOpeningCurrent(ticket.opening))return;
     if(task.id!==id||task.workspace!==ticket.workspace||task.action!=='community.report.handover.export'||
        task.state!=='complete'||!rows(task._downloads).length)
       throw Error('Open a completed source handover in its original workspace.');
