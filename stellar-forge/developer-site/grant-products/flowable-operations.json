@@ -417,13 +417,19 @@
       "repository": "woahwhattheheck/public-commons-sprint-2026",
       "kind": "blob",
       "path": "stellar/scf-starforge-20261009/distribution/contributions/flowable-workspaces.json",
-      "commit": "273f0f5ab423971a772560781675c7a9f57ef54b",
+      "commit": "fa8c4876fc20bcfd0e3b123050c44b336d98e54c",
       "editions": [
         {
           "commit": "273f0f5ab423971a772560781675c7a9f57ef54b",
           "git_blob": "96aefb959c5ea1b9a5af7a87f6e5aa44f244db0f",
           "bytes": 7430,
           "sha256": "905c3ea575f61bc984e91fb22ed310357b8226e4bcf8703ce83a61922d25df5b"
+        },
+        {
+          "commit": "fa8c4876fc20bcfd0e3b123050c44b336d98e54c",
+          "git_blob": "693d5705c50d6c1848579ed7260536cc4ba3d2dc",
+          "bytes": 17827,
+          "sha256": "a0f74a74098fdd32327f43e90dd2d2f8fd8e30d846d0e3c72fe6df9780475dd6"
         }
       ]
     },
@@ -808,13 +814,19 @@
       "required": false,
       "repository": "woahwhattheheck/public-commons-sprint-2026",
       "kind": "blob",
-      "commit": "05d9276b93a1887ce1fd499572d6dfc8f45f7214",
+      "commit": "fa8c4876fc20bcfd0e3b123050c44b336d98e54c",
       "editions": [
         {
           "commit": "05d9276b93a1887ce1fd499572d6dfc8f45f7214",
           "git_blob": "6abbaeb03f235ea1558c53548c0a926084e1751d",
           "bytes": 29737,
           "sha256": "f15b879c11d456d8bce95be66c14d675c982a0c85764a28db23a5fa30db6233d"
+        },
+        {
+          "commit": "fa8c4876fc20bcfd0e3b123050c44b336d98e54c",
+          "git_blob": "23719da0fba8910d1af35c8a008ed64fecc68b5c",
+          "bytes": 35173,
+          "sha256": "9f459b6a29e9f55d99583e008eae73b9b6d6c36c29a25a44522699949444e021"
         }
       ]
     },
@@ -842,13 +854,19 @@
       "required": false,
       "repository": "woahwhattheheck/public-commons-sprint-2026",
       "kind": "blob",
-      "commit": "05d9276b93a1887ce1fd499572d6dfc8f45f7214",
+      "commit": "fa8c4876fc20bcfd0e3b123050c44b336d98e54c",
       "editions": [
         {
           "commit": "05d9276b93a1887ce1fd499572d6dfc8f45f7214",
           "git_blob": "64753a5b3d41651312a3c4711048c281d1a67670",
           "bytes": 22924,
           "sha256": "061631664b30a72d96b4577a294666e0731da3041a7c82f7b4df2defa3aada4b"
+        },
+        {
+          "commit": "fa8c4876fc20bcfd0e3b123050c44b336d98e54c",
+          "git_blob": "22bf122d5ef644ea513635804ba05b3c3564aef8",
+          "bytes": 29183,
+          "sha256": "1f400f3af237b4e68185e52d2c79498cfb22bf4d6dce99452d200a245eb973c3"
         }
       ]
     },
@@ -859,13 +877,19 @@
       "required": false,
       "repository": "woahwhattheheck/public-commons-sprint-2026",
       "kind": "blob",
-      "commit": "05d9276b93a1887ce1fd499572d6dfc8f45f7214",
+      "commit": "fa8c4876fc20bcfd0e3b123050c44b336d98e54c",
       "editions": [
         {
           "commit": "05d9276b93a1887ce1fd499572d6dfc8f45f7214",
           "git_blob": "3113b8f3ae5858849c90d1f46b08ab971fd373b8",
           "bytes": 41853,
           "sha256": "ffe4bcbc6f6cdc6970f7c314363da5a58d440c9f438c26db52047fb25bde7629"
+        },
+        {
+          "commit": "fa8c4876fc20bcfd0e3b123050c44b336d98e54c",
+          "git_blob": "e360c5d78b359194d4a501d29c07c9657230c7d3",
+          "bytes": 42481,
+          "sha256": "6b8169fab880a3788a99bb9f8697e54ba8af4e47ef17d74c23fb2f20e816afc4"
         }
       ]
     },
@@ -876,13 +900,19 @@
       "required": false,
       "repository": "woahwhattheheck/public-commons-sprint-2026",
       "kind": "blob",
-      "commit": "05d9276b93a1887ce1fd499572d6dfc8f45f7214",
+      "commit": "fa8c4876fc20bcfd0e3b123050c44b336d98e54c",
       "editions": [
         {
           "commit": "05d9276b93a1887ce1fd499572d6dfc8f45f7214",
           "git_blob": "890b6fec7add752c0ad35478bff947e16d0d50fe",
           "bytes": 38749,
           "sha256": "18fa2199cb3663fbd728f7f9011a2d80e3d9cd3c9c43d3afc202c441945358a0"
+        },
+        {
+          "commit": "fa8c4876fc20bcfd0e3b123050c44b336d98e54c",
+          "git_blob": "93cc97dffe20407623654d714a5fa19d22c5428f",
+          "bytes": 45909,
+          "sha256": "2ab7cd1829e31d584448b23456e12bf99302be6e1fceea2fa642a8f6aa3453ad"
         }
       ]
     },
@@ -910,13 +940,19 @@
       "required": false,
       "repository": "woahwhattheheck/public-commons-sprint-2026",
       "kind": "blob",
-      "commit": "05d9276b93a1887ce1fd499572d6dfc8f45f7214",
+      "commit": "fa8c4876fc20bcfd0e3b123050c44b336d98e54c",
       "editions": [
         {
           "commit": "05d9276b93a1887ce1fd499572d6dfc8f45f7214",
           "git_blob": "3ce028f704f5f33f574b8bb250d39a367bdcb204",
           "bytes": 15795,
           "sha256": "d2d6fc07e764b7f9641e5d09329beea688a21460cefa844c60971ad7e3a36efc"
+        },
+        {
+          "commit": "fa8c4876fc20bcfd0e3b123050c44b336d98e54c",
+          "git_blob": "693d5705c50d6c1848579ed7260536cc4ba3d2dc",
+          "bytes": 17827,
+          "sha256": "a0f74a74098fdd32327f43e90dd2d2f8fd8e30d846d0e3c72fe6df9780475dd6"
         }
       ]
     },
@@ -1131,13 +1167,643 @@
       "required": false,
       "repository": "woahwhattheheck/public-commons-sprint-2026",
       "kind": "blob",
-      "commit": "166841a05b4585f3d7923f6f72af1443be1321ed",
+      "commit": "fa8c4876fc20bcfd0e3b123050c44b336d98e54c",
       "editions": [
         {
           "commit": "166841a05b4585f3d7923f6f72af1443be1321ed",
           "git_blob": "28d565c7a43f81fac5d252156d2ad0b3a7c801ee",
           "bytes": 17037,
           "sha256": "e4b29b47449c8612c4543f4767173b1d336929acc4b215a21a0614b1d76c9bbf"
+        },
+        {
+          "commit": "fa8c4876fc20bcfd0e3b123050c44b336d98e54c",
+          "git_blob": "693d5705c50d6c1848579ed7260536cc4ba3d2dc",
+          "bytes": 17827,
+          "sha256": "a0f74a74098fdd32327f43e90dd2d2f8fd8e30d846d0e3c72fe6df9780475dd6"
+        }
+      ]
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/model.mjs",
+      "id": "flowable-job-recovery-model",
+      "label": "Original retained job captures, preparation, dispatch and reconciliation",
+      "required": false,
+      "repository": "woahwhattheheck/tjlabs-stellar-merchant-workspace",
+      "kind": "blob",
+      "commit": "46a6670324d28ab4ed9cfab80e89bc3bfbbed0a2",
+      "editions": [
+        {
+          "commit": "46a6670324d28ab4ed9cfab80e89bc3bfbbed0a2",
+          "git_blob": "180818fbb483c9c7a149fb7a3d6036f18aa1651c",
+          "bytes": 41923,
+          "sha256": "0a79569633d7b647b1cee268d5aec54ecce2b9373297ba9dae85b2ee74290b87"
+        }
+      ]
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/actions.mjs",
+      "id": "flowable-job-recovery-actions",
+      "label": "Five job actions in the complete existing workspace contract",
+      "required": false,
+      "repository": "woahwhattheheck/tjlabs-stellar-merchant-workspace",
+      "kind": "blob",
+      "commit": "46a6670324d28ab4ed9cfab80e89bc3bfbbed0a2",
+      "editions": [
+        {
+          "commit": "46a6670324d28ab4ed9cfab80e89bc3bfbbed0a2",
+          "git_blob": "f04929b324b6e7629504ff635ae47c91764d90a5",
+          "bytes": 15578,
+          "sha256": "413a1a7f85e6c290d3e515bed21491df9dc2aca1b6527862137f3e390005d868"
+        }
+      ]
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/review.mjs",
+      "id": "flowable-job-recovery-review",
+      "label": "Original native request, response and queue observations",
+      "required": false,
+      "repository": "woahwhattheheck/tjlabs-stellar-merchant-workspace",
+      "kind": "blob",
+      "commit": "46a6670324d28ab4ed9cfab80e89bc3bfbbed0a2",
+      "editions": [
+        {
+          "commit": "46a6670324d28ab4ed9cfab80e89bc3bfbbed0a2",
+          "git_blob": "f0e70006c3bba6ce1aa4af40bd392ce5bbd396b7",
+          "bytes": 3145,
+          "sha256": "8a5b49efd555747fbb8de936f12df7f93287dca6e1e85a0ef9eb0d7266de2675"
+        }
+      ]
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/job-browser.mjs",
+      "id": "flowable-job-recovery-browser",
+      "label": "Job inspection and independently retained unfinished working copies",
+      "required": false,
+      "repository": "woahwhattheheck/tjlabs-stellar-merchant-workspace",
+      "kind": "blob",
+      "commit": "46a6670324d28ab4ed9cfab80e89bc3bfbbed0a2",
+      "editions": [
+        {
+          "commit": "46a6670324d28ab4ed9cfab80e89bc3bfbbed0a2",
+          "git_blob": "5c5fb54891ac8c31a766a20ad99c371675923ab7",
+          "bytes": 20246,
+          "sha256": "816d37e654674f4decef518e452f725e6a72c5cadd2b6b382457a78d5258c879"
+        }
+      ]
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/browser.mjs",
+      "id": "flowable-job-recovery-workspace-browser",
+      "label": "Complete industrial workspace joined to job recovery",
+      "required": false,
+      "repository": "woahwhattheheck/tjlabs-stellar-merchant-workspace",
+      "kind": "blob",
+      "commit": "46a6670324d28ab4ed9cfab80e89bc3bfbbed0a2",
+      "editions": [
+        {
+          "commit": "46a6670324d28ab4ed9cfab80e89bc3bfbbed0a2",
+          "git_blob": "e1fa45abdc146ca342a218bc10936d4e134b83c8",
+          "bytes": 62080,
+          "sha256": "2959a6642a4789dfc53d3d37784c82913aa57bf310014bd8c409c20f4c192832"
+        }
+      ]
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/index.html",
+      "id": "flowable-job-recovery-workspace-layout",
+      "label": "Installed job desk and ordinary workspace controls",
+      "required": false,
+      "repository": "woahwhattheheck/tjlabs-stellar-merchant-workspace",
+      "kind": "blob",
+      "commit": "46a6670324d28ab4ed9cfab80e89bc3bfbbed0a2",
+      "editions": [
+        {
+          "commit": "46a6670324d28ab4ed9cfab80e89bc3bfbbed0a2",
+          "git_blob": "b1f6d7cd1922184e2655aaa6dc2c117634c31b25",
+          "bytes": 28969,
+          "sha256": "a68349ebbb842d700a27dfb335173df29ca0873b2047d9d7c988050e967badad"
+        }
+      ]
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/browser-assets.json",
+      "id": "flowable-job-recovery-browser-assets",
+      "label": "Complete installed browser source selection",
+      "required": false,
+      "repository": "woahwhattheheck/tjlabs-stellar-merchant-workspace",
+      "kind": "blob",
+      "commit": "46a6670324d28ab4ed9cfab80e89bc3bfbbed0a2",
+      "editions": [
+        {
+          "commit": "46a6670324d28ab4ed9cfab80e89bc3bfbbed0a2",
+          "git_blob": "2c0fd2842cef2e70f2aa61afe0eaf4b6b5f64d8a",
+          "bytes": 3257,
+          "sha256": "35e1ba60050841d4dadd47ffa87eded36d3a515e8b22b2f604abc11670642ddd"
+        }
+      ]
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/server.mjs",
+      "id": "flowable-job-recovery-server",
+      "label": "Existing authenticated workspace server with job desk assets",
+      "required": false,
+      "repository": "woahwhattheheck/tjlabs-stellar-merchant-workspace",
+      "kind": "blob",
+      "commit": "46a6670324d28ab4ed9cfab80e89bc3bfbbed0a2",
+      "editions": [
+        {
+          "commit": "46a6670324d28ab4ed9cfab80e89bc3bfbbed0a2",
+          "git_blob": "b66099b71cee9ce1d783ba6c5c7510d12efb5387",
+          "bytes": 15925,
+          "sha256": "360f40f5d465f5f7be8716481a07c28f8927934eb15ef4eef2f594d8605a703f"
+        }
+      ]
+    },
+    {
+      "path": "products/flowable-merchant/client.mjs",
+      "id": "flowable-job-recovery-client",
+      "label": "Installed merchant client for job capture and recovery",
+      "required": false,
+      "repository": "woahwhattheheck/tjlabs-stellar-merchant-workspace",
+      "kind": "blob",
+      "commit": "46a6670324d28ab4ed9cfab80e89bc3bfbbed0a2",
+      "editions": [
+        {
+          "commit": "46a6670324d28ab4ed9cfab80e89bc3bfbbed0a2",
+          "git_blob": "c6f050e1d7d09ebd5493e8d0b0537f0244302194",
+          "bytes": 12728,
+          "sha256": "f4768e00f86058167eff04d82bd1cd4a477d2c137d1927e646b7897b2d3f689f"
+        }
+      ]
+    },
+    {
+      "path": "products/flowable-merchant/managed.mjs",
+      "id": "flowable-job-recovery-managed",
+      "label": "Original managed application receiving with job operating guide",
+      "required": false,
+      "repository": "woahwhattheheck/tjlabs-stellar-merchant-workspace",
+      "kind": "blob",
+      "commit": "79a88659b13e9da69946c738bb7a89999ed974e7",
+      "editions": [
+        {
+          "commit": "46a6670324d28ab4ed9cfab80e89bc3bfbbed0a2",
+          "git_blob": "26b1606af29c9876314e077e33d255ad175d1e47",
+          "bytes": 6445,
+          "sha256": "0921691c842da09cab1e035ca744317b428a402367218458363977573a1ceb77"
+        },
+        {
+          "commit": "79a88659b13e9da69946c738bb7a89999ed974e7",
+          "git_blob": "aa47f59c695ba772c3a7dff5b597bb8a2249b08f",
+          "bytes": 6692,
+          "sha256": "0261e86df6b17edd845c23f6e16b19a3514ccabce680f694ea91f897dd8a4102"
+        }
+      ]
+    },
+    {
+      "path": "products/flowable-merchant/client.d.mts",
+      "id": "flowable-job-recovery-types",
+      "label": "Complete typed merchant job contract",
+      "required": false,
+      "repository": "woahwhattheheck/tjlabs-stellar-merchant-workspace",
+      "kind": "blob",
+      "commit": "46a6670324d28ab4ed9cfab80e89bc3bfbbed0a2",
+      "editions": [
+        {
+          "commit": "46a6670324d28ab4ed9cfab80e89bc3bfbbed0a2",
+          "git_blob": "a1a96980b6852a16dca7b16f52eff6f7a998ac2a",
+          "bytes": 31640,
+          "sha256": "de92173b5d9f8c9904242e515c3e36b36a5b4ddc451f3d184b79841bf5b0b41e"
+        }
+      ]
+    },
+    {
+      "path": "products/flowable-merchant/cli.mjs",
+      "id": "flowable-job-recovery-cli",
+      "label": "Installed native job command line",
+      "required": false,
+      "repository": "woahwhattheheck/tjlabs-stellar-merchant-workspace",
+      "kind": "blob",
+      "commit": "46a6670324d28ab4ed9cfab80e89bc3bfbbed0a2",
+      "editions": [
+        {
+          "commit": "46a6670324d28ab4ed9cfab80e89bc3bfbbed0a2",
+          "git_blob": "6746f76109abb8c74ae900cf9700057f086db2c7",
+          "bytes": 17341,
+          "sha256": "0f3c67de560525c1855d1438e36f3c6bb99e9db4acf19c3922de5d45d60fbe33"
+        }
+      ]
+    },
+    {
+      "path": "products/flowable-merchant/JOBS.md",
+      "id": "flowable-job-recovery-operating",
+      "label": "Complete operator and customer receiving guide",
+      "required": false,
+      "repository": "woahwhattheheck/tjlabs-stellar-merchant-workspace",
+      "kind": "blob",
+      "commit": "79a88659b13e9da69946c738bb7a89999ed974e7",
+      "editions": [
+        {
+          "commit": "46a6670324d28ab4ed9cfab80e89bc3bfbbed0a2",
+          "git_blob": "d0f1285d166137eb6a3a6cef344809d75b1d8de3",
+          "bytes": 13971,
+          "sha256": "bc88607a7d86b9794bfae8be91e942728500c2b8b17081aef2d39764b42897ca"
+        },
+        {
+          "commit": "79a88659b13e9da69946c738bb7a89999ed974e7",
+          "git_blob": "186581bc77d4a7df5bb30528d7c572e36aa51952",
+          "bytes": 15096,
+          "sha256": "9abfc1e2371a8599b601c15f565a98ca1f1d0303a39e2ee9c9e6d1ad9a4bb61b"
+        }
+      ]
+    },
+    {
+      "path": "stellar-forge/mcp-merchant-operator/catalog/flowable-workspace.mjs",
+      "id": "flowable-job-recovery-tool-catalog",
+      "label": "Merchant agent job action catalog",
+      "required": false,
+      "repository": "woahwhattheheck/tjlabs-stellar-merchant-workspace",
+      "kind": "blob",
+      "commit": "46a6670324d28ab4ed9cfab80e89bc3bfbbed0a2",
+      "editions": [
+        {
+          "commit": "46a6670324d28ab4ed9cfab80e89bc3bfbbed0a2",
+          "git_blob": "679817ad4d720762c89bb2d9c69818c291e75616",
+          "bytes": 6118,
+          "sha256": "0cc49e894daed47945247bd37aef80dfb6256d95e4e9f11f496dca7f93de8d38"
+        }
+      ]
+    },
+    {
+      "path": "stellar-forge/mcp-merchant-operator/providers/flowable-workspaces.mjs",
+      "id": "flowable-job-recovery-tool-provider",
+      "label": "Original workspace writer routing for merchant job tools",
+      "required": false,
+      "repository": "woahwhattheheck/tjlabs-stellar-merchant-workspace",
+      "kind": "blob",
+      "commit": "46a6670324d28ab4ed9cfab80e89bc3bfbbed0a2",
+      "editions": [
+        {
+          "commit": "46a6670324d28ab4ed9cfab80e89bc3bfbbed0a2",
+          "git_blob": "a47c17e2133c23c185ac40a58086be317706d110",
+          "bytes": 4381,
+          "sha256": "f23410404ee6f35708dd6e9d79d50a9b2c77c35055164c099b4d8cbb7e134a9c"
+        }
+      ]
+    },
+    {
+      "path": "products/flowable-merchant/README.md",
+      "id": "flowable-job-recovery-merchant-guide",
+      "label": "Merchant installation and native job operating entry",
+      "required": false,
+      "repository": "woahwhattheheck/tjlabs-stellar-merchant-workspace",
+      "kind": "blob",
+      "commit": "46a6670324d28ab4ed9cfab80e89bc3bfbbed0a2",
+      "editions": [
+        {
+          "commit": "46a6670324d28ab4ed9cfab80e89bc3bfbbed0a2",
+          "git_blob": "1bfcfaa7365996aa489236b3870e3fb8df3835df",
+          "bytes": 6146,
+          "sha256": "f3f42847a5c4f5534281dddb1672e2e5fd1f29ed6787cd268a368d796a5f307a"
+        }
+      ]
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/job-native.mjs",
+      "id": "flowable-job-recovery-native",
+      "label": "Source-native Flowable five-queue transport and recovery",
+      "required": false,
+      "repository": "woahwhattheheck/tjlabs-stellar-merchant-workspace",
+      "kind": "blob",
+      "commit": "46a6670324d28ab4ed9cfab80e89bc3bfbbed0a2",
+      "editions": [
+        {
+          "commit": "46a6670324d28ab4ed9cfab80e89bc3bfbbed0a2",
+          "git_blob": "357d732f76a6635471900b9721d958bb478e4d77",
+          "bytes": 22306,
+          "sha256": "9ec460e51fb2575d7a4a657c6963e22d97179112ea9036e9af1a1892dc07b610"
+        }
+      ]
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/JOB_NATIVE_CONTRACT.md",
+      "id": "flowable-job-recovery-native-contract",
+      "label": "Exact native controller contract and original outcome semantics",
+      "required": false,
+      "repository": "woahwhattheheck/tjlabs-stellar-merchant-workspace",
+      "kind": "blob",
+      "commit": "46a6670324d28ab4ed9cfab80e89bc3bfbbed0a2",
+      "editions": [
+        {
+          "commit": "46a6670324d28ab4ed9cfab80e89bc3bfbbed0a2",
+          "git_blob": "c148fcb8c5b607a1514f86ece9a90d9c07d28f5b",
+          "bytes": 10900,
+          "sha256": "55f945360ffaf818c55a2c322401de6d0b6eeae5385b3ff8d9ec7cd1d7b03da8"
+        }
+      ]
+    },
+    {
+      "id": "flowable-job-recovery-producer",
+      "label": "Isolated original engine lifecycle and complete recovery case",
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/job-native-host.py",
+      "required": false,
+      "repository": "woahwhattheheck/tjlabs-stellar-merchant-workspace",
+      "kind": "blob",
+      "commit": "79a88659b13e9da69946c738bb7a89999ed974e7",
+      "editions": [
+        {
+          "commit": "79a88659b13e9da69946c738bb7a89999ed974e7",
+          "git_blob": "099888f7a234d90c75c13a7f1f19b0e3d0b43233",
+          "bytes": 21786,
+          "sha256": "bb85b4e576b580c5fe008c8c65e45f004fab4fecdcbadf837cd1fdac2c0b255d"
+        }
+      ]
+    },
+    {
+      "id": "flowable-job-recovery-native-course",
+      "label": "Original installed workspace, native operations and cold receiving",
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/job-native-journey.mjs",
+      "required": false,
+      "repository": "woahwhattheheck/tjlabs-stellar-merchant-workspace",
+      "kind": "blob",
+      "commit": "79a88659b13e9da69946c738bb7a89999ed974e7",
+      "editions": [
+        {
+          "commit": "79a88659b13e9da69946c738bb7a89999ed974e7",
+          "git_blob": "6f110bd0b806d49a32480643714ab72dc1f3e409",
+          "bytes": 25687,
+          "sha256": "30defa2e6230ff42dc46d9f8f6adb93bc81d6448ced67f6f1b10e009b184461c"
+        }
+      ]
+    },
+    {
+      "id": "flowable-job-recovery-browser-course",
+      "label": "Actual installed browser use, downloads and original response recovery",
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/job-native-browser.mjs",
+      "required": false,
+      "repository": "woahwhattheheck/tjlabs-stellar-merchant-workspace",
+      "kind": "blob",
+      "commit": "79a88659b13e9da69946c738bb7a89999ed974e7",
+      "editions": [
+        {
+          "commit": "79a88659b13e9da69946c738bb7a89999ed974e7",
+          "git_blob": "a3a9b264eb1590593d6ee19191e9fea2b110c6c5",
+          "bytes": 13716,
+          "sha256": "740021860c3d387b7326f8976bf41611679158186bec00558463e429bf57f56b"
+        }
+      ]
+    },
+    {
+      "id": "flowable-job-recovery-demonstration-source",
+      "label": "Complete original native failure, timer and recovery definitions",
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/examples/job-recovery-demo.bpmn20.xml",
+      "required": false,
+      "repository": "woahwhattheheck/tjlabs-stellar-merchant-workspace",
+      "kind": "blob",
+      "commit": "79a88659b13e9da69946c738bb7a89999ed974e7",
+      "editions": [
+        {
+          "commit": "79a88659b13e9da69946c738bb7a89999ed974e7",
+          "git_blob": "f459a31949912ed06a42ec579088487e0375b5b3",
+          "bytes": 2213,
+          "sha256": "5ae68dc1e0faca7056fe7fa027d1fc003c563726146fdafb33b473b76c5905d1"
+        }
+      ]
+    },
+    {
+      "id": "flowable-job-recovery-receiving-guide",
+      "label": "Complete installed native and browser receiving operation",
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/JOB_NATIVE_RECEIVING.md",
+      "required": false,
+      "repository": "woahwhattheheck/tjlabs-stellar-merchant-workspace",
+      "kind": "blob",
+      "commit": "79a88659b13e9da69946c738bb7a89999ed974e7",
+      "editions": [
+        {
+          "commit": "79a88659b13e9da69946c738bb7a89999ed974e7",
+          "git_blob": "5c2e7a68f7beb7035fbf3e7a458460a201976392",
+          "bytes": 16214,
+          "sha256": "d1013b7d6188a5dce5ae0a357740521ede28b5840fd3c7df0a4ccad266a0bd2b"
+        }
+      ]
+    },
+    {
+      "id": "flowable-job-recovery-distribution",
+      "label": "Installed complete job recovery source and receiving programme",
+      "path": "stellar/scf-starforge-20261009/distribution/contributions/flowable-workspaces.json",
+      "required": false,
+      "repository": "woahwhattheheck/tjlabs-stellar-merchant-workspace",
+      "kind": "blob",
+      "commit": "79a88659b13e9da69946c738bb7a89999ed974e7",
+      "editions": [
+        {
+          "commit": "79a88659b13e9da69946c738bb7a89999ed974e7",
+          "git_blob": "e86765aa90ff30ad692dd6c0b9b3658df0010966",
+          "bytes": 18670,
+          "sha256": "86ab015c2e26df8a150ba4e7fe929450416e635584fbeac41ac258431831c2ac"
+        }
+      ]
+    },
+    {
+      "id": "flowable-job-recovery-original-host",
+      "label": "Original pinned engine acquisition, process identity and closure",
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/flowable-native-host.py",
+      "required": false,
+      "repository": "woahwhattheheck/tjlabs-stellar-merchant-workspace",
+      "kind": "blob",
+      "commit": "79a88659b13e9da69946c738bb7a89999ed974e7",
+      "editions": [
+        {
+          "commit": "79a88659b13e9da69946c738bb7a89999ed974e7",
+          "git_blob": "3c2825798c7762ce80d2242b14f0665e2619ed82",
+          "bytes": 42758,
+          "sha256": "dc5666f0be284b83cef9e692e9a76eef7f8ebeb5370d381d68812da2c10a66c9"
+        }
+      ]
+    },
+    {
+      "id": "flowable-following-reconciliation",
+      "label": "Complete historical, current and later source comparison and explicit field choices",
+      "path": "stellar/scf_2026/sf49_data_commissioning/installation-workorders/flowable-installation-following-core.mjs",
+      "required": false,
+      "repository": "woahwhattheheck/public-commons-sprint-2026",
+      "kind": "blob",
+      "commit": "fa8c4876fc20bcfd0e3b123050c44b336d98e54c",
+      "editions": [
+        {
+          "commit": "fa8c4876fc20bcfd0e3b123050c44b336d98e54c",
+          "git_blob": "f1d2d478fdc5350b291d907841e7ccd90736eb84",
+          "bytes": 11029,
+          "sha256": "87fec40f126d7ddf3e530a33f3d5701b4f10cbd3899bfdcdda74a0e697a8324d"
+        }
+      ]
+    },
+    {
+      "id": "flowable-following-preparation",
+      "label": "Portable full source chain, deliberate following preparation and independent cold reopening",
+      "path": "stellar/scf_2026/sf49_data_commissioning/installation-workorders/flowable-installation-following.mjs",
+      "required": false,
+      "repository": "woahwhattheheck/public-commons-sprint-2026",
+      "kind": "blob",
+      "commit": "fa8c4876fc20bcfd0e3b123050c44b336d98e54c",
+      "editions": [
+        {
+          "commit": "fa8c4876fc20bcfd0e3b123050c44b336d98e54c",
+          "git_blob": "130ac87118e98bb2399f39dd336740fb9230e626",
+          "bytes": 15483,
+          "sha256": "006866d998144ca95dd677c51230d633ed838084b5ddda058a04a2cd32016c41"
+        }
+      ]
+    },
+    {
+      "id": "flowable-source-desk-private-cli",
+      "label": "Original workspace-owned source-service command boundary and same-case native input",
+      "path": "stellar/scf_2026/sf49_data_commissioning/installation-workorders/flowable-installation/service-cli.mjs",
+      "required": false,
+      "repository": "woahwhattheheck/public-commons-sprint-2026",
+      "kind": "blob",
+      "commit": "fa8c4876fc20bcfd0e3b123050c44b336d98e54c",
+      "editions": [
+        {
+          "commit": "fa8c4876fc20bcfd0e3b123050c44b336d98e54c",
+          "git_blob": "c41808546b4238b019ef64596536a4083e974d9f",
+          "bytes": 5781,
+          "sha256": "869674dd4cc79db2bbd4ae717691e97c1977c5dc743c5badb3f60ba98060a486"
+        }
+      ]
+    },
+    {
+      "id": "flowable-following-source-desk",
+      "label": "Full saved-history selection, source review, choices and retained working-copy controls",
+      "path": "stellar/scf_2026/sf47_budget_model/workspace/operations_flowable_following.mjs",
+      "required": false,
+      "repository": "woahwhattheheck/public-commons-sprint-2026",
+      "kind": "blob",
+      "commit": "fa8c4876fc20bcfd0e3b123050c44b336d98e54c",
+      "editions": [
+        {
+          "commit": "fa8c4876fc20bcfd0e3b123050c44b336d98e54c",
+          "git_blob": "ee8defdbfb928bbb710b1b24dfba09d2ccfbb09a",
+          "bytes": 16445,
+          "sha256": "041fa1e3fc22454848e8948df8bad91cf74340a3241461b6980d141fb7378d1d"
+        }
+      ]
+    },
+    {
+      "id": "flowable-following-customer-operating",
+      "label": "Complete same-Installation source update, original request recovery and customer receiving course",
+      "path": "stellar/scf_2026/sf49_data_commissioning/installation-workorders/FLOWABLE_FOLLOWING.md",
+      "required": false,
+      "repository": "woahwhattheheck/public-commons-sprint-2026",
+      "kind": "blob",
+      "commit": "fa8c4876fc20bcfd0e3b123050c44b336d98e54c",
+      "editions": [
+        {
+          "commit": "fa8c4876fc20bcfd0e3b123050c44b336d98e54c",
+          "git_blob": "93d4c8fbe4070b88c8b5447923dd83193b52b341",
+          "bytes": 16733,
+          "sha256": "2154356ebb5e77c00ddcfe894366f54e0205c1e6b7a29fadedf4204f2da51b0b"
+        }
+      ]
+    },
+    {
+      "id": "flowable-following-typed-client",
+      "label": "Installed original transport and explicit following comparison/preparation requests",
+      "path": "stellar/scf_2026/sf47_budget_model/workspace/flowable-source-desk-agent.mjs",
+      "required": false,
+      "repository": "woahwhattheheck/public-commons-sprint-2026",
+      "kind": "blob",
+      "commit": "fa8c4876fc20bcfd0e3b123050c44b336d98e54c",
+      "editions": [
+        {
+          "commit": "fa8c4876fc20bcfd0e3b123050c44b336d98e54c",
+          "git_blob": "3e8be5bcbdfa8fb619abad40212b00b468d1c74a",
+          "bytes": 8104,
+          "sha256": "b47900a4e95ee1f15de507745895912bb6fa0414732d111cf26c4da297fbc044"
+        }
+      ]
+    },
+    {
+      "id": "flowable-following-installed-command",
+      "label": "Original installed Source Desk commands including complete following requests",
+      "path": "stellar/scf_2026/sf47_budget_model/workspace/installation-source-desk.py",
+      "required": false,
+      "repository": "woahwhattheheck/public-commons-sprint-2026",
+      "kind": "blob",
+      "commit": "fa8c4876fc20bcfd0e3b123050c44b336d98e54c",
+      "editions": [
+        {
+          "commit": "fa8c4876fc20bcfd0e3b123050c44b336d98e54c",
+          "git_blob": "e49dd3e836131bd25ca25078bca437e914cf5355",
+          "bytes": 18121,
+          "sha256": "b6ae715b3a4e1b142fa6053cef296ec777be4ba6813ff08f8a16adf938c8cedc"
+        }
+      ]
+    },
+    {
+      "id": "flowable-following-staff-access",
+      "label": "Existing authenticated staff roles and complete source-operation request boundary",
+      "path": "stellar/scf_2026/sf47_budget_model/workspace/staff_http.py",
+      "required": false,
+      "repository": "woahwhattheheck/public-commons-sprint-2026",
+      "kind": "blob",
+      "commit": "fa8c4876fc20bcfd0e3b123050c44b336d98e54c",
+      "editions": [
+        {
+          "commit": "fa8c4876fc20bcfd0e3b123050c44b336d98e54c",
+          "git_blob": "89f88cfaa313ac5c98908d9069308bc68b450d99",
+          "bytes": 20308,
+          "sha256": "cc042604acbacf4e2726a49e605df8c5d5827c10d3ee42c80c1e6b3f7152659e"
+        }
+      ]
+    },
+    {
+      "id": "flowable-following-client-types",
+      "label": "Full typed following-selection, choice, native-source and retained-result interfaces",
+      "path": "stellar/scf_2026/sf47_budget_model/workspace/flowable-source-desk-agent.d.mts",
+      "required": false,
+      "repository": "woahwhattheheck/public-commons-sprint-2026",
+      "kind": "blob",
+      "commit": "fa8c4876fc20bcfd0e3b123050c44b336d98e54c",
+      "editions": [
+        {
+          "commit": "fa8c4876fc20bcfd0e3b123050c44b336d98e54c",
+          "git_blob": "223cee2a34f866e40bc231025fba04f9ba13ec2b",
+          "bytes": 6869,
+          "sha256": "54791c44ae9b1889222bd912584bae64fe6c6a66fdb97976b769e7fd08ec69b4"
+        }
+      ]
+    },
+    {
+      "id": "flowable-following-native-case-receiving",
+      "label": "Complete original case archive validation with baseline, current and successor revisions",
+      "path": "stellar/scf_2026/sf49_data_commissioning/installation-workorders/flowable-installation-operations.py",
+      "required": false,
+      "repository": "woahwhattheheck/public-commons-sprint-2026",
+      "kind": "blob",
+      "commit": "fa8c4876fc20bcfd0e3b123050c44b336d98e54c",
+      "editions": [
+        {
+          "commit": "fa8c4876fc20bcfd0e3b123050c44b336d98e54c",
+          "git_blob": "a8e5f5756d364c8f87d13981ca83bc0c85fcdf24",
+          "bytes": 7627,
+          "sha256": "81cfc67119d1f9b9d065423848a50b91a908a037edc4745ec0f707631f67912c"
+        }
+      ]
+    },
+    {
+      "id": "flowable-following-native-editor",
+      "label": "Existing Installation editor preserving original same-ID preview and expected revision",
+      "path": "stellar/scf_2026/sf47_budget_model/workspace/operations_installations.mjs",
+      "required": false,
+      "repository": "woahwhattheheck/public-commons-sprint-2026",
+      "kind": "blob",
+      "commit": "fa8c4876fc20bcfd0e3b123050c44b336d98e54c",
+      "editions": [
+        {
+          "commit": "fa8c4876fc20bcfd0e3b123050c44b336d98e54c",
+          "git_blob": "76969601457967bc4b3c8d0971432074de4f23ec",
+          "bytes": 95037,
+          "sha256": "d07affe3c0943521928b971a2d399a25e3ac649abc4a716f2262cbb75fefcd05"
         }
       ]
     }
