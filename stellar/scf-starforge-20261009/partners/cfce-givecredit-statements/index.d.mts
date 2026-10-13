@@ -30,3 +30,5 @@ export class GiveCreditWorkspace {
   captureCheckpoint(kind:'registry'|'ledger'):Promise<SourceEdition|undefined>;
   close():Promise<void>;
 }
+export * from './archive.mjs';
+export * from './history.mjs';
