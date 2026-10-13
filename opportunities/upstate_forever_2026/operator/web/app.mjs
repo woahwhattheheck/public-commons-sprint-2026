@@ -535,7 +535,7 @@ function bindNativeModelFields(){
 }
 function fullNativeRun(row){
  return row?.state==='complete'&&nativeModels(row.selection).length===2&&
-  ['ndr','sdr'].every(name=>Object.hasOwn(row.stages||row.stage_summary||{},name))&&
+  ['ndr','sdr'].every(name=>completedModelStage(row,name))&&
   ['nitrogen_export','phosphorus_export','sediment_export'].every(name=>row.artifacts?.[name]);
 }
 function nativeOutputCell(row,model,artifact){
