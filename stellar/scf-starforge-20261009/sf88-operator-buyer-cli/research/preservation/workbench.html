@@ -30,6 +30,7 @@ footer{font-size:12px;color:var(--muted);border-top:1px solid var(--line);paddin
 @media(max-width:700px){header{padding:16px}.header-row{display:block}.header-row>.toolbar{margin-top:12px}nav.tabs{padding:0 6px}nav.tabs button{padding:11px 13px}main{padding:16px 12px 28px}.panel{padding:14px}.metrics{grid-template-columns:repeat(2,minmax(0,1fr))}.two,.three,.destination-list{grid-template-columns:minmax(0,1fr)}.panel-heading{display:block}.panel-heading>.toolbar{margin-top:9px}.field-editor-row{grid-template-columns:minmax(0,1fr) auto}.field-editor-row label{grid-column:1/-1;padding-top:0}.table-wrap table{min-width:580px}.table-wrap.metadata table{min-width:490px}.pagination{flex-wrap:wrap}.toolbar .grow{min-width:150px}}
 </style>
 <script src="/collection_accession.js" defer></script>
+<script src="/transfer_inspection.js" defer></script>
 <script src="/workbench.js" defer></script>
 </head>
 <body>
@@ -125,6 +126,7 @@ footer{font-size:12px;color:var(--muted);border-top:1px solid var(--line);paddin
 </div></div>
 </section>
 <section id="page-delivery" role="tabpanel" aria-labelledby="tab-delivery" hidden>
+<div id="transfer-panel"></div>
 <div class="grid two"><div class="panel"><h2>Build a preservation transfer</h2><p class="muted">Build the Archivematica BagIt package from the selected saved review. Prepared RODA and Preservica packages, and the original Archivematica and LIBNOVA BagIt transfers and source reviews, appear when preparation completes. Verified Archivematica and LIBNOVA destinations also add their receiving reports and complete results.</p><div class="field"><label for="package-revision">Saved source review</label><select id="package-revision" data-review-select></select></div><button id="build-package" class="primary" type="button">Build Archivematica package</button></div>
 <div class="panel"><h2>Export the complete workspace</h2><p class="muted">Export the application, original research and file collections, every retained review, saved destinations, original request history and generated packages in one complete delivery. A collection-only workspace can be received and reopened through this same complete delivery.</p><button id="export-workspace" class="primary" type="button">Export complete workspace</button><small>Earlier complete exports stay listed by their original identity. Each new delivery contains the current complete workspace.</small></div></div>
 <div class="panel"><div class="panel-heading"><h2>Saved delivery files</h2><span id="artifact-count" class="muted">0 files</span></div><div class="table-wrap"><table><thead><tr><th scope="col">File</th><th scope="col">Package</th><th scope="col">Original selection</th><th scope="col">Size</th><th scope="col">Download</th></tr></thead><tbody id="artifact-rows"><tr><td colspan="5" class="empty">Build a transfer or export the complete workspace.</td></tr></tbody></table></div></div>
