@@ -352,6 +352,11 @@ def start_page(root, result):
     add("Complete offline scientific briefing", briefing_view(root, Workspace(whole), result["briefing_id"]))
     packet_root = study / "implementation" / "plans" / original["plan_id"] / "deployments" / result["deployment_id"]
     packet = read_json(packet_root / "deployment.json")
+    build_record = read_json(packet_root / "offline-build.json")
+    field_start = ("Open the offline field workbench to continue the included original plan. "
+                   "Choose the selected visit in its toolbar, record fieldwork and export the complete plan-and-files ZIP."
+                   if build_record.get("field_packet") else
+                   "Open the offline field workbench and import the Original editable plan linked above.")
     for label, name in (("Field crew packet", "crew-packet.html"), ("Complete crew ZIP", "crew-packet.zip"),
                         ("Offline field workbench", "field-workbench.html"), ("Original editable plan", "original-plan.json")):
         add(label, packet_root / name)
@@ -363,7 +368,7 @@ def start_page(root, result):
             'code{overflow-wrap:anywhere}</style><main><h1>' + html.escape(original["title"]) + '</h1><p>Original project '
             '<code>' + html.escape(result["project_id"]) + '</code>. Saved plan revision ' + str(original["revision"]) +
             '; ' + str(len(original["visit_ids"])) + ' selected visits.</p><ul>' + "".join(links) +
-            '</ul><p>Open the offline field workbench and import the Original editable plan linked above. '
+            '</ul><p>' + field_start + ' '
             'The complete crew ZIP contains these same original files for the field team.</p><p>'
             'The Study opens its captured scientific report, editable plan history and crew packet. '
             'The whole Workspace also contains the complete scientific briefing. Both copies reopened in fresh '
