@@ -10,7 +10,7 @@ import textwrap
 from .common import MAP_IDS, atomic_bytes, atomic_json, describe_file, finite, verify_file
 from . import cartography
 
-ATLAS_VERSION = "seven-family-atlas/v2"
+ATLAS_VERSION = "seven-family-atlas/v3"
 PAPER = {"letter": (11.0, 8.5), "a4": (297 / 25.4, 210 / 25.4),
          "a3": (420 / 25.4, 297 / 25.4)}
 INDEX_ROWS = 14
