@@ -149,3 +149,55 @@ The resulting review_id is the existing Customer review ID. Its ordinary show, e
 - model/reviews.py — review selection, artifacts, export, responses and receiving.
 - model/review_worklist.py — current returned requests and engineering responses.
 - model/portable.py — complete original Workspace backup and receiving.
+
+
+## Transfer the editable review with its scientific report
+
+In **Customer reviews**, open the saved review and choose **Transfer editable
+review**. The existing Study transfer desk receives that exact saved review.
+Preview its original dependencies, then use the original queued Study export.
+Restore the resulting archive into a new directory through the ordinary
+Workspace restore flow and open **Customer reviews** in the received project.
+
+The selected transfer retains the original review title, purpose, requirements,
+notes and complete selected artifacts. It also retains the complete native
+customer response chain, item decisions, questions, requested changes, correction
+assignments and resolutions. Engineering handbacks carry their original response,
+previous handback and explicitly selected revised review; their selected original
+and revised scientific records travel together. These remain the maintained
+review records, not a copied parallel store.
+
+A selected saved scientific report also includes its linked Customer reviews
+when **Include related results** is enabled. This association requires the
+original `SCIENTIFIC_REPORT_REVIEW` source identity, project and saved edition.
+Imported reports from another project retain their captured source files without
+resolving the other project's producer IDs locally. Turning related results off
+leaves the report selection narrower; explicitly selecting a Customer review
+always includes the dependencies required to reopen that review.
+
+Received review-package receipts carry the unchanged original ZIP in the
+Workspace's content-addressed objects. Returned response documents retain their
+complete original JSON bytes, including staged returns awaiting reconciliation.
+Prepared and completed reconciliation records keep the actual choices, candidate,
+predecessor, operation identity and resulting response. An interrupted prepared
+reconciliation remains prepared; transfer never silently imports or resolves it.
+
+After receiving, append responses, reconcile an independently returned response,
+or prepare a further engineering handback through the same original controls.
+Receiving verification requires the transferred response prefix and every
+captured immutable member. New replies and later completed reconciliations may
+extend that history without invalidating the original transfer.
+
+The native report HTML/PDF, linked figures/data and original report source
+receipt retain their paths and hashes. The original source files behind mixed
+review selections, completed runs, map exports and deliveries are included by
+the existing typed scientific dependency closure. Historical local browser-view
+caches and sender-local operator export directories are recreated through their
+original controls on the receiving computer; they are not substituted for the
+retained original review archive, source records or feedback.
+
+Implementation: `model/customer_review_study_transfer.py` composes the original
+`model.reviews`, `review_handback`, `review_receiving` and
+`review_reconciliation` validators. Source resolution reads existing CAS members
+without creating source-view links. The original Workspace and reconciliation
+locks protect capture. No native model or report rendering is run during transfer.
