@@ -1,0 +1,36 @@
+{
+  "schema": "upstate.application-component-fragment/v1",
+  "id": "observed-station-wbd-nldi-197",
+  "extend_components": {
+    "observed-station-wbd": {
+      "paths": [
+        "integration/component_fragments/observed-station-wbd-nldi-197.json",
+        "observations/wbd_station_join_20261013/inputs/source/hydrology-huc05-07-20261013/nldi/derived/stations.geojson",
+        "observations/wbd_station_join_20261013/original/point-usgs_gauge-USGS-02193340-nldi_indexed.json",
+        "observations/wbd_station_join_20261013/original/point-usgs_gauge-USGS-02193500-nldi_indexed.json",
+        "observations/wbd_station_join_20261013/original/point-usgs_gauge-USGS-02195320-nldi_indexed.json",
+        "observations/wbd_station_join_20261013/original/point-usgs_gauge-USGS-02195470-nldi_indexed.json",
+        "observations/wbd_station_join_20261013/original/point-usgs_gauge-USGS-02196000-nldi_indexed.json",
+        "observations/wbd_station_join_20261013/original/point-usgs_gauge-USGS-02196485-nldi_indexed.json",
+        "observations/wbd_station_join_20261013/original/point-usgs_gauge-USGS-02196690-nldi_indexed.json",
+        "observations/wbd_station_join_20261013/original/point-usgs_gauge-USGS-02196835-nldi_indexed.json",
+        "observations/wbd_station_join_20261013/original/point-usgs_gauge-USGS-021968385-nldi_indexed.json",
+        "observations/wbd_station_join_20261013/original/point-usgs_gauge-USGS-02197000-nldi_indexed.json",
+        "observations/wbd_station_join_20261013/original/point-usgs_gauge-USGS-02197020-nldi_indexed.json",
+        "observations/wbd_station_join_20261013/original/point-usgs_gauge-USGS-021973269-nldi_indexed.json",
+        "observations/wbd_station_join_20261013/original/point-usgs_gauge-USGS-02197500-nldi_indexed.json"
+      ],
+      "source_manifests": [
+        "observations/wbd_station_join_20261013/station-context.sources.json"
+      ]
+    }
+  },
+  "required_components": [
+    "observed-station-wbd"
+  ],
+  "source_reference": {
+    "source_page": "https://chatgpt.com/space/page_9fed900fa5108191b4d091fe16c4d824",
+    "source_sha256": "eea01345486cd017db9fdc175e1f192ae709571674d3d02bff0aef47ef98569b",
+    "predecessor_commit": "353c421c314744de46cf1cebcda1b0dea416f7f3"
+  }
+}

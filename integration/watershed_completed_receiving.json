@@ -1,0 +1,218 @@
+{
+  "schema": "upstate.watershed-completed-receiving/v1",
+  "operation_id": "UPSTATE-INTEGRATED-DELIVERY-ECD1-20261012",
+  "edition": "regional-context-1.2.0-completed-receiving",
+  "source_carriers": {
+    "current_operator": "F0C8J7BMGUB",
+    "original_loader": "F0C8QA3KZ42",
+    "original_completed_archive": "F0C9JNBA7EU"
+  },
+  "original_result_id": "watershed-4592eb077b7164d59ba4",
+  "original_archive": {
+    "bytes": 121182,
+    "sha256": "716ddaeb211536cc90590a003bffb0bd1b18386d92cf663649743d06970868b5"
+  },
+  "guards": [
+    {
+      "path": "operator/watershed_context.py",
+      "before": "ACTIONS = frozenset({\"watershed.context.analyze\", \"watershed.context.export\"})",
+      "after": "ACTIONS = frozenset({\"watershed.context.analyze\", \"watershed.context.export\",\n                     \"watershed.context.receive\"})",
+      "label": "original task registry"
+    },
+    {
+      "path": "operator/watershed_context.py",
+      "before": "    def _export(self, task):\n",
+      "after": "    def _receive(self, task):\n        from source_tools.receive_watershed_context import receive_completed\n        value = task.get(\"payload\") or {}\n        upload_id = value.get(\"upload_id\")\n        if not isinstance(upload_id, str) or not upload_id:\n            raise ValueError(\"Choose the completed regional run archive.\")\n        upload = self.operator.upload(upload_id)\n        record = receive_completed(\n            self.operator.ws(task[\"workspace\"]), Path(upload[\"path\"]),\n            expected_sha256=upload[\"sha256\"], title=value.get(\"title\"),\n        )\n        return self._summary(record)\n\n    def _export(self, task):\n",
+      "label": "receive verified original uploaded result"
+    },
+    {
+      "path": "operator/watershed_context.py",
+      "before": "        if task.get(\"action\") == \"watershed.context.export\":\n",
+      "after": "        if task.get(\"action\") == \"watershed.context.receive\":\n            return self._receive(task)\n        if task.get(\"action\") == \"watershed.context.export\":\n",
+      "label": "queued original result receiving"
+    },
+    {
+      "path": "operator/web/watershed_context.mjs",
+      "before": "  let filters = emptyFilters();\n",
+      "after": "  let filters = emptyFilters();\n  const receivingTasks = new Map();\n",
+      "label": "workspace-specific receiving task"
+    },
+    {
+      "path": "operator/web/watershed_context.mjs",
+      "before": "esc(task.action === 'watershed.context.export' ? 'Export watershed selection' : 'Build regional context')",
+      "after": "esc(task.action === 'watershed.context.export' ? 'Export watershed selection' :\n        task.action === 'watershed.context.receive' ? 'Receive completed regional run' : 'Build regional context')",
+      "label": "receiving operation title"
+    },
+    {
+      "path": "operator/web/watershed_context.mjs",
+      "before": "      '<div class=\"wc-actions\"><button type=\"button\" data-wc-refresh>Refresh reports</button><button type=\"button\" data-wc-receiving>Open receiving waters</button></div></header>' +",
+      "after": "      '<div class=\"wc-actions\"><button type=\"button\" data-wc-refresh>Refresh reports</button>' +\n      '<button type=\"button\" data-wc-receive' + (busy ? ' disabled' : '') + '>Receive completed run</button>' +\n      '<input type=\"file\" name=\"wc-completed-run\" accept=\".zip,application/zip\" hidden>' +\n      '<button type=\"button\" data-wc-receiving>Open receiving waters</button></div></header>' +",
+      "label": "completed result upload control"
+    },
+    {
+      "path": "operator/web/watershed_context.mjs",
+      "before": "  async function refresh() {\n",
+      "after": "  async function refresh() {\n    const pending = receivingTasks.get(workspace);\n    const completed = list(host.getState()?.tasks).find(task =>\n      task.id === pending && task.action === 'watershed.context.receive' &&\n      task.state === 'complete' && task.result?.id);\n    if (completed) {\n      selectedId = completed.result.id;\n      clearSelection();\n      focusHuc = '';\n      filters = emptyFilters();\n      selectionRequest += 1;\n      receivingTasks.delete(workspace);\n      remember();\n    }\n",
+      "label": "reopen completed original result in its workspace"
+    },
+    {
+      "path": "operator/web/watershed_context.mjs",
+      "before": "  async function build() {\n",
+      "after": "  async function receive(file) {\n    if (!file || busy) return;\n    const key = workspace;\n    if (!key || currentWorkspace() !== key)\n      throw new Error('Choose the project receiving this regional run.');\n    busy = true;\n    if (root) render();\n    try {\n      const uploaded = await host.uploadFile(file);\n      if (currentWorkspace() !== key)\n        throw new Error('The selected project changed. Choose the receiving project and archive again.');\n      const task = await host.submitAction('watershed.context.receive', {upload_id:uploaded.id});\n      receivingTasks.set(key, task.id);\n      await host.refresh?.({force:true});\n      if (root && workspace === key) await refresh();\n    } finally {\n      busy = false;\n      if (root) render();\n    }\n  }\n  async function build() {\n",
+      "label": "upload and invoke original shared queue"
+    },
+    {
+      "path": "operator/web/watershed_context.mjs",
+      "before": "      if (button.hasAttribute('data-wc-build')) return await build();\n",
+      "after": "      if (button.hasAttribute('data-wc-build')) return await build();\n      if (button.hasAttribute('data-wc-receive')) {\n        if (!busy) root.querySelector('[name=\"wc-completed-run\"]')?.click();\n        return;\n      }\n",
+      "label": "receive button route"
+    },
+    {
+      "path": "operator/web/watershed_context.mjs",
+      "before": "    const key = name.slice(3);\n",
+      "after": "    const key = name.slice(3);\n    if (key === 'completed-run') {\n      const file = event.target.files?.[0];\n      event.target.value = '';\n      receive(file).catch(fail);\n      return;\n    }\n",
+      "label": "original file input"
+    },
+    {
+      "path": "operator/install_watershed_context.py",
+      "before": "    \"source_tools/prepare_watershed_context.py\",\n",
+      "after": "    \"source_tools/prepare_watershed_context.py\",\n    \"source_tools/receive_watershed_context.py\",\n",
+      "label": "complete receiving implementation installation"
+    }
+  ],
+  "receiving_command": "python -B source_tools/receive_watershed_context.py --workspace EXISTING_WORKSPACE --source-package source/water_context/20261013/completed-run.package.json",
+  "installed_backend_action": "watershed.context.receive",
+  "network_browser_source": {
+    "schema": "commons.exact-source-splices/v1",
+    "source_ref": "11080bea3b9ef0b12f122d3bf56de97d30126f6c",
+    "files": [
+      {
+        "path": "operator/web/watershed_context.mjs",
+        "before_bytes": 28699,
+        "before_sha256": "b05c6673f80eb3d21bec3301d1f878384e85dc0cf1ad87e6444348c43756d255",
+        "after_bytes": 32064,
+        "after_sha256": "5e068fed7575c2d00ffe18c84de88e891cfaf38dc7658753952eeb1bcd67e517",
+        "splices": [
+          {
+            "start": 32,
+            "delete": 0,
+            "lines": [
+              "function watershedHucLink(huc12, domain) {",
+              "  const key = String(huc12 ?? '');",
+              "  return domain.has(key)",
+              "    ? '<button type=\"button\" data-wc-huc=\"' + esc(key) + '\">' + esc(key) + '</button>'",
+              "    : '<span>' + esc(key) + ' · outside model domain</span>';",
+              "}",
+              "",
+              "export function watershedDownstreamHtml(row, domainHuc12s = []) {",
+              "  const domain = new Set(domainHuc12s);",
+              "  if (row.downstream_huc12) return watershedHucLink(row.downstream_huc12, domain);",
+              "  const state = row.network?.downstream_state;",
+              "  if (state === 'terminal') return 'Terminal outlet in the original network';",
+              "  if (state === 'unknown') return 'Unknown in the original downstream record';",
+              "  if (state === 'missing_native_record') return 'No original network row for this watershed';",
+              "  return 'Original drainage network is not attached to this report';",
+              "}",
+              "",
+              "export function watershedNetworkHtml(row, domainHuc12s = []) {",
+              "  const network = row.network;",
+              "  if (!network) return '';",
+              "  const domain = new Set(domainHuc12s);",
+              "  const hucList = values => list(values).map(key => watershedHucLink(key, domain)).join(' · ');",
+              "  const upstream = list(network.known_upstream_domain_huc12s);",
+              "  const path = list(network.downstream_huc12s);",
+              "  const external = list(network.known_external_upstream_huc12s);",
+              "  const pathStates = {",
+              "    terminal: 'Terminal outlet',",
+              "    unknown: 'Unknown downstream attribute',",
+              "    missing_native_record: 'Original network row unavailable',",
+              "    exits_supplied_network: 'Leaves the supplied original network',",
+              "    cycle_in_source: 'Cycle in the original downstream records',",
+              "  };",
+              "  return '<section class=\"wc-coverage\"><h3>Original drainage network</h3>' +",
+              "    '<p class=\"wc-note\">Known upstream totals count distinct connected model watersheds and exclude this watershed. Areas use the published watershed records.</p>' +",
+              "    '<dl class=\"wc-facts\"><div><dt>Known upstream model watersheds</dt><dd>' +",
+              "    esc(number(network.known_upstream_domain_huc_count)) +",
+              "    '</dd></div><div><dt>Upstream NRCS priority watersheds</dt><dd>' +",
+              "    esc(number(network.known_upstream_priority_huc_count)) +",
+              "    '</dd></div><div><dt>Known upstream area</dt><dd>' +",
+              "    esc(number(network.known_upstream_area_acres, 2)) + ' acres' +",
+              "    (network.known_upstream_area_huc_count === undefined ? '' :",
+              "      ' / ' + esc(number(network.known_upstream_area_huc_count)) + ' area records') +",
+              "    '</dd></div><div><dt>Upstream selected-class records</dt><dd>' +",
+              "    esc(number(network.known_upstream_selected_classification_count)) +",
+              "    '</dd></div><div><dt>Downstream path</dt><dd>' +",
+              "    esc(pathStates[network.downstream_path_status] || human(network.downstream_path_status)) +",
+              "    '</dd></div><div><dt>Original outgoing records</dt><dd>' +",
+              "    (network.outgoing_records_complete_for_model_domain === true",
+              "      ? 'All model watersheds have an original outgoing value'",
+              "      : 'Some model watersheds have missing or unknown outgoing values') +",
+              "    '</dd></div></dl>' +",
+              "    (path.length ? '<details><summary>Original downstream path</summary><p>' + hucList(path) + '</p></details>' : '') +",
+              "    (upstream.length ? '<details><summary>Known upstream model watersheds (' + esc(number(upstream.length)) +",
+              "      ')</summary><p>' + hucList(upstream) + '</p></details>' : '') +",
+              "    (external.length ? '<details><summary>Additional upstream records outside the model domain (' +",
+              "      esc(number(external.length)) + ')</summary><p>' + hucList(external) + '</p></details>' : '') +",
+              "    '</section>';",
+              "}",
+              ""
+            ]
+          },
+          {
+            "start": 292,
+            "delete": 3,
+            "lines": [
+              "      '</dd></div><div><dt>Downstream watershed</dt><dd>' + watershedDownstreamHtml(row, rows().map(item => item.huc12)) +"
+            ]
+          },
+          {
+            "start": 307,
+            "delete": 0,
+            "lines": [
+              "      watershedNetworkHtml(row, rows().map(item => item.huc12)) +"
+            ]
+          }
+        ]
+      },
+      {
+        "path": "operator/WATERSHED_CONTEXT.md",
+        "before_bytes": 6744,
+        "before_sha256": "c5f4a738883c1ae880ea8a1139c64c6122abad07d541aed5c1f4d07c2a5926db",
+        "after_bytes": 7650,
+        "after_sha256": "3c9b5d1e0ce4ee5f203997048ab575be50962d0b7135ad1889f48d4402db5730",
+        "splices": [
+          {
+            "start": 66,
+            "delete": 0,
+            "lines": [
+              "## Original drainage network in watershed details",
+              "",
+              "When the source edition contains the original HUC12/ToHUC records, the detail panel shows the downstream path and distinct known upstream model watersheds, their published area, NRCS priority count, and selected-class record count. Open an in-domain HUC12 to inspect that watershed. Destinations outside the model domain retain the original identifier as text, so they do not lead to an unavailable detail view. Terminal outlets, unknown downstream attributes, and missing source rows remain distinct.",
+              "",
+              "The upstream summary excludes the focal watershed and uses the original published HUC areas. Reopening a saved selection restores its membership. Following an upstream or downstream HUC outside that selection returns to the full parent report and opens that watershed. The JSON and CSV export paths continue to use the same source-bound model report.",
+              ""
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "joined_edition": "regional-context-1.3.1-maintained-receiving",
+  "joined_sources": {
+    "completed_receiver": "F0C8QF9P7LJ",
+    "network_operator": "F0C8KAKRVFX",
+    "connectivity": "F0C8NMPGQ78",
+    "model_and_gzip_import": "PR2801 /78fc53bd8334a7c6f7a7333a439c5ae496719908",
+    "original_context_operator": "PR2768 /c028c99b7a7841aced7cd3d5781ce73554f9eaff",
+    "current_public_preimage": "39150a4635d8468503b970f5e2c56dd5734c4e14"
+  },
+  "joined_behavior": [
+    "Retain original complete calculation and source bytes in the existing Workspace.",
+    "Compose the declared original receiving joins with maintained network catalogue and upstream/downstream selection exports.",
+    "Use complete model HUC_COLUMNS, nested native values and versioned selection export identities.",
+    "Preserve original gzip network bytes in source selection and completed archive receiving.",
+    "Retain verified complete connectivity companions with original report downloads and show disjoint domain exits.",
+    "Keep the original Lower Tugaloo detail and all217 domain rows.",
+    "Use the existing operator native adoption engine and preserve canonical executed-input fingerprints, native_source_files, supporting publisher originals, planning briefs and the original RFP-focus selection."
+  ]
+}

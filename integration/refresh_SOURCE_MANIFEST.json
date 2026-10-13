@@ -1,0 +1,79 @@
+[
+  {
+    "path": "opportunities/upstate_forever_2026/SOURCE_REFRESH.md",
+    "bytes": 10283,
+    "sha256": "6cfded328d17b8684ea3c9bbb7bc6f40c014c36b08580d244f0b0506126c6c77",
+    "git_blob": "54ad65b52626595c20db84e147396c4b491a86f0",
+    "encoding": "utf-8"
+  },
+  {
+    "path": "opportunities/upstate_forever_2026/install_source_refresh.py",
+    "bytes": 5588,
+    "sha256": "689226ec18f615ee4ada207b59dd2b1c9f05975be6a2ca0286b213adfac9126c",
+    "git_blob": "6400476c2b8d5624c23a2b1ab3197aef21f8dad5",
+    "encoding": "utf-8"
+  },
+  {
+    "path": "opportunities/upstate_forever_2026/model/source_refresh.py",
+    "bytes": 24840,
+    "sha256": "eddb911a423838aa2b91db159af773f29f7fdb4f63ca1dc42b1b4f33b7f310ef",
+    "git_blob": "2b16502c2e6aa08ade2b3891f9c5c92a83354373",
+    "encoding": "utf-8"
+  },
+  {
+    "path": "opportunities/upstate_forever_2026/model/source_refresh_cli.py",
+    "bytes": 4551,
+    "sha256": "59084a5a125313fd3b892eef58630ca298d1d8a95193c977e76e691fbc8196d5",
+    "git_blob": "dbb1176164be5c660d6b6f010dad5ed8f0244ac2",
+    "encoding": "utf-8"
+  },
+  {
+    "path": "opportunities/upstate_forever_2026/operator/source_refresh.py",
+    "bytes": 10682,
+    "sha256": "f9c08a33ce9d08f596baaa55cf909d6c58014123b5f6b7717adcedd5a3800d13",
+    "git_blob": "cdfa771dbbaa7a321a76dc6e009f172e5ed2fd6f",
+    "encoding": "utf-8"
+  },
+  {
+    "path": "opportunities/upstate_forever_2026/operator/source_refresh_native.py",
+    "bytes": 3320,
+    "sha256": "7c619c771fa584568ecf9ea68a9227bd7594ab9fa90f65bb3f753cb0f9acb6da",
+    "git_blob": "ba15453ad1c2300ae1eff7a5fae16a1a16899fda",
+    "encoding": "utf-8"
+  },
+  {
+    "path": "opportunities/upstate_forever_2026/operator/source_refresh_server.py",
+    "bytes": 517,
+    "sha256": "c0b853e75cc9e858d00d3352e1121619441493485adfea8b84f3c3a3714f0a48",
+    "git_blob": "0bb15ffa8bbfa26684f07e62942077994cf3ab5e",
+    "encoding": "utf-8"
+  },
+  {
+    "path": "opportunities/upstate_forever_2026/operator/web/source-refresh-nav.css",
+    "bytes": 352,
+    "sha256": "08d39dd1b5165733005ae946cc895e81ed7ca461e126c4c4d80673ecac39a540",
+    "git_blob": "496ca760bef0cdaa41caa18043c65ceb1018866d",
+    "encoding": "utf-8"
+  },
+  {
+    "path": "opportunities/upstate_forever_2026/operator/web/source-refresh.css",
+    "bytes": 2402,
+    "sha256": "7f60d9e886ae06382d0e518c54734c24c4e30430656517c30d62f5715919eb3e",
+    "git_blob": "b84bab7ab25f3c872a8ada511710ba4215dc7c17",
+    "encoding": "utf-8"
+  },
+  {
+    "path": "opportunities/upstate_forever_2026/operator/web/source-refresh.html",
+    "bytes": 3073,
+    "sha256": "ab79d4564f94af8ce583e426b56b17ac19a5e35462da7fa60a5180eaf01a171e",
+    "git_blob": "1a35094610b077c0e950fc17020de54bad5aa07e",
+    "encoding": "utf-8"
+  },
+  {
+    "path": "opportunities/upstate_forever_2026/operator/web/source-refresh.mjs",
+    "bytes": 10409,
+    "sha256": "74c939685ae1d6abb32918932345101bb878c01dab44be1eed98940c6532781c",
+    "git_blob": "fe0d008dc3573e027dde5faafeaaff196dfd90ab",
+    "encoding": "utf-8"
+  }
+]

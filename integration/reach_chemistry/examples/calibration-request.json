@@ -1,0 +1,490 @@
+{
+  "mode": "calibrate",
+  "parameters": [
+    {
+      "id": "nitrification_rate",
+      "kind": "reaction_rate_day",
+      "target": "nitrification",
+      "lower": 0.01,
+      "upper": 0.5
+    },
+    {
+      "id": "point_load",
+      "kind": "load_kg_day",
+      "target": "point_n",
+      "lower": 2,
+      "upper": 20
+    }
+  ],
+  "observations": [
+    {
+      "id": "tributary_a-ammonium_n-1",
+      "reach": "tributary_a",
+      "species": "ammonium_n",
+      "day": 1,
+      "sigma_mg_l": 0.03,
+      "mg_l": 7.192148600804274,
+      "role": "holdout",
+      "provenance": {
+        "kind": "constructed-reference",
+        "reference": "Noise-free calculation at nitrification 0.23/day and NH4 source 12.3 kg/day; code-generated recovery exercise, not a field observation."
+      }
+    },
+    {
+      "id": "tributary_a-ammonium_n-3",
+      "reach": "tributary_a",
+      "species": "ammonium_n",
+      "day": 3,
+      "sigma_mg_l": 0.03,
+      "mg_l": 9.908821117456535,
+      "role": "fit",
+      "provenance": {
+        "kind": "constructed-reference",
+        "reference": "Noise-free calculation at nitrification 0.23/day and NH4 source 12.3 kg/day; code-generated recovery exercise, not a field observation."
+      }
+    },
+    {
+      "id": "tributary_a-ammonium_n-6",
+      "reach": "tributary_a",
+      "species": "ammonium_n",
+      "day": 6,
+      "sigma_mg_l": 0.03,
+      "mg_l": 10.156264218638203,
+      "role": "fit",
+      "provenance": {
+        "kind": "constructed-reference",
+        "reference": "Noise-free calculation at nitrification 0.23/day and NH4 source 12.3 kg/day; code-generated recovery exercise, not a field observation."
+      }
+    },
+    {
+      "id": "tributary_a-ammonium_n-10",
+      "reach": "tributary_a",
+      "species": "ammonium_n",
+      "day": 10,
+      "sigma_mg_l": 0.03,
+      "mg_l": 10.162555368450555,
+      "role": "fit",
+      "provenance": {
+        "kind": "constructed-reference",
+        "reference": "Noise-free calculation at nitrification 0.23/day and NH4 source 12.3 kg/day; code-generated recovery exercise, not a field observation."
+      }
+    },
+    {
+      "id": "tributary_a-ammonium_n-15",
+      "reach": "tributary_a",
+      "species": "ammonium_n",
+      "day": 15,
+      "sigma_mg_l": 0.03,
+      "mg_l": 5.173268936176765,
+      "role": "fit",
+      "provenance": {
+        "kind": "constructed-reference",
+        "reference": "Noise-free calculation at nitrification 0.23/day and NH4 source 12.3 kg/day; code-generated recovery exercise, not a field observation."
+      }
+    },
+    {
+      "id": "tributary_a-ammonium_n-20",
+      "reach": "tributary_a",
+      "species": "ammonium_n",
+      "day": 20,
+      "sigma_mg_l": 0.03,
+      "mg_l": 5.162624384528013,
+      "role": "holdout",
+      "provenance": {
+        "kind": "constructed-reference",
+        "reference": "Noise-free calculation at nitrification 0.23/day and NH4 source 12.3 kg/day; code-generated recovery exercise, not a field observation."
+      }
+    },
+    {
+      "id": "tributary_a-nitrate_n-1",
+      "reach": "tributary_a",
+      "species": "nitrate_n",
+      "day": 1,
+      "sigma_mg_l": 0.03,
+      "mg_l": 0.9509501930244555,
+      "role": "fit",
+      "provenance": {
+        "kind": "constructed-reference",
+        "reference": "Noise-free calculation at nitrification 0.23/day and NH4 source 12.3 kg/day; code-generated recovery exercise, not a field observation."
+      }
+    },
+    {
+      "id": "tributary_a-nitrate_n-3",
+      "reach": "tributary_a",
+      "species": "nitrate_n",
+      "day": 3,
+      "sigma_mg_l": 0.03,
+      "mg_l": 2.28831081225792,
+      "role": "fit",
+      "provenance": {
+        "kind": "constructed-reference",
+        "reference": "Noise-free calculation at nitrification 0.23/day and NH4 source 12.3 kg/day; code-generated recovery exercise, not a field observation."
+      }
+    },
+    {
+      "id": "tributary_a-nitrate_n-6",
+      "reach": "tributary_a",
+      "species": "nitrate_n",
+      "day": 6,
+      "sigma_mg_l": 0.03,
+      "mg_l": 2.622906104406159,
+      "role": "fit",
+      "provenance": {
+        "kind": "constructed-reference",
+        "reference": "Noise-free calculation at nitrification 0.23/day and NH4 source 12.3 kg/day; code-generated recovery exercise, not a field observation."
+      }
+    },
+    {
+      "id": "tributary_a-nitrate_n-10",
+      "reach": "tributary_a",
+      "species": "nitrate_n",
+      "day": 10,
+      "sigma_mg_l": 0.03,
+      "mg_l": 2.644415804940542,
+      "role": "fit",
+      "provenance": {
+        "kind": "constructed-reference",
+        "reference": "Noise-free calculation at nitrification 0.23/day and NH4 source 12.3 kg/day; code-generated recovery exercise, not a field observation."
+      }
+    },
+    {
+      "id": "tributary_a-nitrate_n-15",
+      "reach": "tributary_a",
+      "species": "nitrate_n",
+      "day": 15,
+      "sigma_mg_l": 0.03,
+      "mg_l": 1.5607754946040482,
+      "role": "holdout",
+      "provenance": {
+        "kind": "constructed-reference",
+        "reference": "Noise-free calculation at nitrification 0.23/day and NH4 source 12.3 kg/day; code-generated recovery exercise, not a field observation."
+      }
+    },
+    {
+      "id": "tributary_a-nitrate_n-20",
+      "reach": "tributary_a",
+      "species": "nitrate_n",
+      "day": 20,
+      "sigma_mg_l": 0.03,
+      "mg_l": 1.5339156003554288,
+      "role": "fit",
+      "provenance": {
+        "kind": "constructed-reference",
+        "reference": "Noise-free calculation at nitrification 0.23/day and NH4 source 12.3 kg/day; code-generated recovery exercise, not a field observation."
+      }
+    },
+    {
+      "id": "confluence-ammonium_n-1",
+      "reach": "confluence",
+      "species": "ammonium_n",
+      "day": 1,
+      "sigma_mg_l": 0.03,
+      "mg_l": 1.531228794335249,
+      "role": "fit",
+      "provenance": {
+        "kind": "constructed-reference",
+        "reference": "Noise-free calculation at nitrification 0.23/day and NH4 source 12.3 kg/day; code-generated recovery exercise, not a field observation."
+      }
+    },
+    {
+      "id": "confluence-ammonium_n-3",
+      "reach": "confluence",
+      "species": "ammonium_n",
+      "day": 3,
+      "sigma_mg_l": 0.03,
+      "mg_l": 4.256081352462302,
+      "role": "fit",
+      "provenance": {
+        "kind": "constructed-reference",
+        "reference": "Noise-free calculation at nitrification 0.23/day and NH4 source 12.3 kg/day; code-generated recovery exercise, not a field observation."
+      }
+    },
+    {
+      "id": "confluence-ammonium_n-6",
+      "reach": "confluence",
+      "species": "ammonium_n",
+      "day": 6,
+      "sigma_mg_l": 0.03,
+      "mg_l": 5.0813891350113485,
+      "role": "fit",
+      "provenance": {
+        "kind": "constructed-reference",
+        "reference": "Noise-free calculation at nitrification 0.23/day and NH4 source 12.3 kg/day; code-generated recovery exercise, not a field observation."
+      }
+    },
+    {
+      "id": "confluence-ammonium_n-10",
+      "reach": "confluence",
+      "species": "ammonium_n",
+      "day": 10,
+      "sigma_mg_l": 0.03,
+      "mg_l": 5.189546955501035,
+      "role": "holdout",
+      "provenance": {
+        "kind": "constructed-reference",
+        "reference": "Noise-free calculation at nitrification 0.23/day and NH4 source 12.3 kg/day; code-generated recovery exercise, not a field observation."
+      }
+    },
+    {
+      "id": "confluence-ammonium_n-15",
+      "reach": "confluence",
+      "species": "ammonium_n",
+      "day": 15,
+      "sigma_mg_l": 0.03,
+      "mg_l": 2.756739684973334,
+      "role": "fit",
+      "provenance": {
+        "kind": "constructed-reference",
+        "reference": "Noise-free calculation at nitrification 0.23/day and NH4 source 12.3 kg/day; code-generated recovery exercise, not a field observation."
+      }
+    },
+    {
+      "id": "confluence-ammonium_n-20",
+      "reach": "confluence",
+      "species": "ammonium_n",
+      "day": 20,
+      "sigma_mg_l": 0.03,
+      "mg_l": 2.6511878326678717,
+      "role": "fit",
+      "provenance": {
+        "kind": "constructed-reference",
+        "reference": "Noise-free calculation at nitrification 0.23/day and NH4 source 12.3 kg/day; code-generated recovery exercise, not a field observation."
+      }
+    },
+    {
+      "id": "confluence-nitrate_n-1",
+      "reach": "confluence",
+      "species": "nitrate_n",
+      "day": 1,
+      "sigma_mg_l": 0.03,
+      "mg_l": 0.3048555182225393,
+      "role": "fit",
+      "provenance": {
+        "kind": "constructed-reference",
+        "reference": "Noise-free calculation at nitrification 0.23/day and NH4 source 12.3 kg/day; code-generated recovery exercise, not a field observation."
+      }
+    },
+    {
+      "id": "confluence-nitrate_n-3",
+      "reach": "confluence",
+      "species": "nitrate_n",
+      "day": 3,
+      "sigma_mg_l": 0.03,
+      "mg_l": 1.8419524554654712,
+      "role": "fit",
+      "provenance": {
+        "kind": "constructed-reference",
+        "reference": "Noise-free calculation at nitrification 0.23/day and NH4 source 12.3 kg/day; code-generated recovery exercise, not a field observation."
+      }
+    },
+    {
+      "id": "confluence-nitrate_n-6",
+      "reach": "confluence",
+      "species": "nitrate_n",
+      "day": 6,
+      "sigma_mg_l": 0.03,
+      "mg_l": 3.0666611176891214,
+      "role": "holdout",
+      "provenance": {
+        "kind": "constructed-reference",
+        "reference": "Noise-free calculation at nitrification 0.23/day and NH4 source 12.3 kg/day; code-generated recovery exercise, not a field observation."
+      }
+    },
+    {
+      "id": "confluence-nitrate_n-10",
+      "reach": "confluence",
+      "species": "nitrate_n",
+      "day": 10,
+      "sigma_mg_l": 0.03,
+      "mg_l": 3.487379157328846,
+      "role": "fit",
+      "provenance": {
+        "kind": "constructed-reference",
+        "reference": "Noise-free calculation at nitrification 0.23/day and NH4 source 12.3 kg/day; code-generated recovery exercise, not a field observation."
+      }
+    },
+    {
+      "id": "confluence-nitrate_n-15",
+      "reach": "confluence",
+      "species": "nitrate_n",
+      "day": 15,
+      "sigma_mg_l": 0.03,
+      "mg_l": 2.378525216825724,
+      "role": "fit",
+      "provenance": {
+        "kind": "constructed-reference",
+        "reference": "Noise-free calculation at nitrification 0.23/day and NH4 source 12.3 kg/day; code-generated recovery exercise, not a field observation."
+      }
+    },
+    {
+      "id": "confluence-nitrate_n-20",
+      "reach": "confluence",
+      "species": "nitrate_n",
+      "day": 20,
+      "sigma_mg_l": 0.03,
+      "mg_l": 2.098454844173895,
+      "role": "fit",
+      "provenance": {
+        "kind": "constructed-reference",
+        "reference": "Noise-free calculation at nitrification 0.23/day and NH4 source 12.3 kg/day; code-generated recovery exercise, not a field observation."
+      }
+    },
+    {
+      "id": "reservoir-ammonium_n-1",
+      "reach": "reservoir",
+      "species": "ammonium_n",
+      "day": 1,
+      "sigma_mg_l": 0.03,
+      "mg_l": 0.14292134461118738,
+      "role": "fit",
+      "provenance": {
+        "kind": "constructed-reference",
+        "reference": "Noise-free calculation at nitrification 0.23/day and NH4 source 12.3 kg/day; code-generated recovery exercise, not a field observation."
+      }
+    },
+    {
+      "id": "reservoir-ammonium_n-3",
+      "reach": "reservoir",
+      "species": "ammonium_n",
+      "day": 3,
+      "sigma_mg_l": 0.03,
+      "mg_l": 1.1865946186049297,
+      "role": "holdout",
+      "provenance": {
+        "kind": "constructed-reference",
+        "reference": "Noise-free calculation at nitrification 0.23/day and NH4 source 12.3 kg/day; code-generated recovery exercise, not a field observation."
+      }
+    },
+    {
+      "id": "reservoir-ammonium_n-6",
+      "reach": "reservoir",
+      "species": "ammonium_n",
+      "day": 6,
+      "sigma_mg_l": 0.03,
+      "mg_l": 2.3046353159278987,
+      "role": "fit",
+      "provenance": {
+        "kind": "constructed-reference",
+        "reference": "Noise-free calculation at nitrification 0.23/day and NH4 source 12.3 kg/day; code-generated recovery exercise, not a field observation."
+      }
+    },
+    {
+      "id": "reservoir-ammonium_n-10",
+      "reach": "reservoir",
+      "species": "ammonium_n",
+      "day": 10,
+      "sigma_mg_l": 0.03,
+      "mg_l": 2.710949637083754,
+      "role": "fit",
+      "provenance": {
+        "kind": "constructed-reference",
+        "reference": "Noise-free calculation at nitrification 0.23/day and NH4 source 12.3 kg/day; code-generated recovery exercise, not a field observation."
+      }
+    },
+    {
+      "id": "reservoir-ammonium_n-15",
+      "reach": "reservoir",
+      "species": "ammonium_n",
+      "day": 15,
+      "sigma_mg_l": 0.03,
+      "mg_l": 1.7783923622034887,
+      "role": "fit",
+      "provenance": {
+        "kind": "constructed-reference",
+        "reference": "Noise-free calculation at nitrification 0.23/day and NH4 source 12.3 kg/day; code-generated recovery exercise, not a field observation."
+      }
+    },
+    {
+      "id": "reservoir-ammonium_n-20",
+      "reach": "reservoir",
+      "species": "ammonium_n",
+      "day": 20,
+      "sigma_mg_l": 0.03,
+      "mg_l": 1.4597067743355998,
+      "role": "fit",
+      "provenance": {
+        "kind": "constructed-reference",
+        "reference": "Noise-free calculation at nitrification 0.23/day and NH4 source 12.3 kg/day; code-generated recovery exercise, not a field observation."
+      }
+    },
+    {
+      "id": "reservoir-nitrate_n-1",
+      "reach": "reservoir",
+      "species": "nitrate_n",
+      "day": 1,
+      "sigma_mg_l": 0.03,
+      "mg_l": 0.28025243072286216,
+      "role": "holdout",
+      "provenance": {
+        "kind": "constructed-reference",
+        "reference": "Noise-free calculation at nitrification 0.23/day and NH4 source 12.3 kg/day; code-generated recovery exercise, not a field observation."
+      }
+    },
+    {
+      "id": "reservoir-nitrate_n-3",
+      "reach": "reservoir",
+      "species": "nitrate_n",
+      "day": 3,
+      "sigma_mg_l": 0.03,
+      "mg_l": 0.8500961478839606,
+      "role": "fit",
+      "provenance": {
+        "kind": "constructed-reference",
+        "reference": "Noise-free calculation at nitrification 0.23/day and NH4 source 12.3 kg/day; code-generated recovery exercise, not a field observation."
+      }
+    },
+    {
+      "id": "reservoir-nitrate_n-6",
+      "reach": "reservoir",
+      "species": "nitrate_n",
+      "day": 6,
+      "sigma_mg_l": 0.03,
+      "mg_l": 2.6160468207328296,
+      "role": "fit",
+      "provenance": {
+        "kind": "constructed-reference",
+        "reference": "Noise-free calculation at nitrification 0.23/day and NH4 source 12.3 kg/day; code-generated recovery exercise, not a field observation."
+      }
+    },
+    {
+      "id": "reservoir-nitrate_n-10",
+      "reach": "reservoir",
+      "species": "nitrate_n",
+      "day": 10,
+      "sigma_mg_l": 0.03,
+      "mg_l": 4.255338631138001,
+      "role": "fit",
+      "provenance": {
+        "kind": "constructed-reference",
+        "reference": "Noise-free calculation at nitrification 0.23/day and NH4 source 12.3 kg/day; code-generated recovery exercise, not a field observation."
+      }
+    },
+    {
+      "id": "reservoir-nitrate_n-15",
+      "reach": "reservoir",
+      "species": "nitrate_n",
+      "day": 15,
+      "sigma_mg_l": 0.03,
+      "mg_l": 4.163648189108266,
+      "role": "fit",
+      "provenance": {
+        "kind": "constructed-reference",
+        "reference": "Noise-free calculation at nitrification 0.23/day and NH4 source 12.3 kg/day; code-generated recovery exercise, not a field observation."
+      }
+    },
+    {
+      "id": "reservoir-nitrate_n-20",
+      "reach": "reservoir",
+      "species": "nitrate_n",
+      "day": 20,
+      "sigma_mg_l": 0.03,
+      "mg_l": 3.3223050001039924,
+      "role": "holdout",
+      "provenance": {
+        "kind": "constructed-reference",
+        "reference": "Noise-free calculation at nitrification 0.23/day and NH4 source 12.3 kg/day; code-generated recovery exercise, not a field observation."
+      }
+    }
+  ],
+  "loss": "linear"
+}

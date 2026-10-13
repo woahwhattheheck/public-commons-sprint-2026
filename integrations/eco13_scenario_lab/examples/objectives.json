@@ -1,0 +1,14 @@
+[
+  {
+    "watershed_id": "1",
+    "metric": "nitrogen_export"
+  },
+  {
+    "watershed_id": "1",
+    "metric": "phosphorus_export"
+  },
+  {
+    "watershed_id": "1",
+    "metric": "sediment_export"
+  }
+]

@@ -1,0 +1,18 @@
+{
+  "schema": "upstate.application-component-fragment/v1",
+  "id": "chemistry_reports",
+  "source_reference": "Original completed Chemistry result presentation / reach-chemistry-scientific-report/2",
+  "extend_components": {
+    "chemistry": {
+      "paths": [
+        "model/chemistry_reports.py",
+        "model/CHEMISTRY_REPORTS.md",
+        "model/reach_chemistry/reporting.py",
+        "integration/component_fragments/chemistry_reports.json"
+      ]
+    }
+  },
+  "required_components": [
+    "chemistry"
+  ]
+}
