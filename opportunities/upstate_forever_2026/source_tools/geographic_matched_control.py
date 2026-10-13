@@ -8,7 +8,8 @@ from pathlib import Path
 from source_tools.regional_matched_control import prepare, _identity, _check, _implementation_snapshot
 
 def prepare_control(nlcd_path, restoration_path, corridor_path, reporting_mask_path,
-                    precipitation_path, destination, *, seed, progress=None):
+                    precipitation_path, destination, *, seed, progress=None,
+                    matching_method="greedy", max_working_bytes=1024 * 1024 * 1024):
     """Return a complete original-source control mask and exact class/rainfall summary.
 
     restoration_path is the actual restored NLCD, not a binary treatment mask.
@@ -36,6 +37,7 @@ def prepare_control(nlcd_path, restoration_path, corridor_path, reporting_mask_p
                                for name, body in implementation.items()}
     request = {"schema": "upstate.geographic-matched-control-request/v1",
                "sources": source_entries, "seed": seed,
+               "matching_method": matching_method, "max_working_bytes": max_working_bytes,
                "adapter_sha256": hashlib.sha256(code).hexdigest(),
                "retained_implementation": implementation_identity,
                "domain_definition": "Every valid original baseline NLCD cell; checked against all input roles by the matcher"}
@@ -75,6 +77,7 @@ def prepare_control(nlcd_path, restoration_path, corridor_path, reporting_mask_p
             "schema": "upstate.regional-matched-control-input/v1",
             "sources": {**source_entries, "MODEL_DOMAIN_MASK": {"path": str(domain_path), **_identity(domain_path)}},
             "from_codes": [81, 82], "to_code": 41, "window_size": 256,
+            "matching_method": matching_method, "max_working_bytes": max_working_bytes,
             "source_binding": {"producer": "model.geographic_headwaters", "seed": seed,
                                "request_sha256": digest(request),
                                "restoration": "Actual baseline81/82 to restored41, inside reporting value1",
@@ -123,9 +126,12 @@ def main(argv=None):
     for name in ("nlcd", "restoration", "corridor", "reporting-mask", "precipitation", "destination"):
         parser.add_argument("--" + name, type=Path, required=True)
     parser.add_argument("--seed", type=int, required=True)
+    parser.add_argument("--matching-method", choices=("greedy", "exact_monge"), default="greedy")
+    parser.add_argument("--max-working-bytes", type=int, default=1024 * 1024 * 1024)
     args = parser.parse_args(argv)
     result = prepare_control(args.nlcd, args.restoration, args.corridor, args.reporting_mask,
                              args.precipitation, args.destination, seed=args.seed,
+                             matching_method=args.matching_method, max_working_bytes=args.max_working_bytes,
                              progress=lambda value: print(json.dumps(value, allow_nan=False), flush=True))
     print(json.dumps(result, indent=2, allow_nan=False))
     return 0
