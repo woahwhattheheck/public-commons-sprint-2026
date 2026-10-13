@@ -329,6 +329,15 @@ def _render(data):
     if data.get("geographic_programme") is not None:
         original_links.append(_link("delivery", "geographic-programme.json",
                                     "Complete saved Programme, original results and editable map selection"))
+    if data.get("geographic_gis") is not None:
+        gis = data["geographic_gis"]
+        original_links.extend([
+            _link("delivery", "geographic-gis.json", "Complete editable GIS and reference execution identities"),
+            _link("workspace", gis["export"]["open"], "Open the original reference GIS"),
+            _link("workspace", gis["export"]["project"], "Open the editable QGIS project"),
+            _link("workspace", gis["export"]["archive"]["path"], "Download the complete original GIS ZIP", download=True),
+            _link("workspace", "native-run-histories/" + gis["history_id"] + "/index.html", "Original reference execution history"),
+        ])
     figures = '<div class="figures">' + "".join(
         '<figure><a href="' + _url("workspace", row["path"]) + '"><img src="'
         + _url("workspace", row["path"]) + '" alt="' + _text(Path(row["path"]).stem.replace("-", " "))
@@ -430,7 +439,7 @@ filter();
         'Original native calculations and editable source</footer><script>' + script + '</script></body></html>\n')
 
 
-def prepare(workspace, output, state, prepared, scientific, delivery, exported, *, reference_basis=None, programme=None):
+def prepare(workspace, output, state, prepared, scientific, delivery, exported, *, reference_basis=None, programme=None, geographic_gis=None):
     """Return delivery_root/files for the caller's one ordinary portable.backup."""
     output = Path(output).resolve(strict=True)
     if (output.is_relative_to(workspace.root.resolve())
@@ -523,6 +532,14 @@ def prepare(workspace, output, state, prepared, scientific, delivery, exported, 
                 or programme.get("existing_delivery_id") != delivery["id"]):
             raise ValueError("Select the programme of this original geographic delivery")
         data["geographic_programme"] = deepcopy(programme)
+    if geographic_gis is not None:
+        from model.geographic_gis_handover import verify as verify_reference_gis
+        verify_reference_gis(workspace, geographic_gis)
+        if (geographic_gis["identity"]["geographic_binding"]["geographic_id"] != prepared["id"]
+                or geographic_gis["reference_run_ids"] != [prepared["baseline_run_id"], *prepared["alternative_run_ids"]]
+                or geographic_gis["identity"]["delivery"]["path"] != "deliveries/" + delivery["id"] + "/delivery-state.json"):
+            raise ValueError("Select the GIS edition of this original geographic delivery")
+        data["geographic_gis"] = deepcopy(geographic_gis)
     identity = {"schema": SCHEMA, "version": VERSION, "project_id": workspace.project["id"],
                 "content_sha256": digest(data), "helper_sha256": file_digest(Path(__file__)),
                 "style_sha256": hashlib.sha256(STYLE.encode("utf-8")).hexdigest()}
@@ -543,6 +560,8 @@ def prepare(workspace, output, state, prepared, scientific, delivery, exported, 
                 atomic_json(pending / "geographic-operator-choices.json", data["operator_choices"], immutable=True)
                 if programme is not None:
                     atomic_json(pending / "geographic-programme.json", programme, immutable=True)
+                if geographic_gis is not None:
+                    atomic_json(pending / "geographic-gis.json", geographic_gis, immutable=True)
                 atomic_bytes(pending / "START_HERE.html", _render(data).encode("utf-8"), immutable=True)
                 review_files = dict(review_manifest["members"])
                 review_files["review-manifest.json"] = describe_file(review_root, review_root / "review-manifest.json")
@@ -567,6 +586,8 @@ def prepare(workspace, output, state, prepared, scientific, delivery, exported, 
                          "operator_choices": describe_file(pending, pending / "geographic-operator-choices.json")}
                 if programme is not None:
                     files["geographic_programme"] = describe_file(pending, pending / "geographic-programme.json")
+                if geographic_gis is not None:
+                    files["geographic_gis"] = describe_file(pending, pending / "geographic-gis.json")
                 for index, name in enumerate(sorted(review_files)):
                     files["customer_review_%05d" % index] = {
                         "path": "customer-review/" + name,

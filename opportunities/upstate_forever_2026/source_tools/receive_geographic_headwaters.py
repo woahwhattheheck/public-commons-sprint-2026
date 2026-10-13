@@ -375,6 +375,11 @@ def receive(args):
         programme = phase("geographic_programme", lambda: _geographic_programme(
             workspace, output, prepared, delivery))
         save(geographic_programme=programme)
+        from model.geographic_gis_handover import prepare as prepare_reference_gis
+        geographic_gis = phase("reference_editable_gis", lambda: prepare_reference_gis(
+            workspace, prepared, scientific, delivery, reference_basis=reference_basis))
+        atomic_json(output/"geographic-gis.json", geographic_gis)
+        save(geographic_gis=geographic_gis)
         from model import reviews
         review_selection = {"schema":reviews.SELECTION_SCHEMA,
             "title":selection["title"]+": geography, assumptions and native results",
@@ -422,13 +427,13 @@ def receive(args):
         save(selected_completion_scope="reference" if selected_reference is not None else "full_course")
         handover = phase("handover", lambda: prepare_handover(
             workspace, output, state, prepared, scientific, delivery, exported,
-            reference_basis=selected_reference, programme=programme))
+            reference_basis=selected_reference, programme=programme, geographic_gis=geographic_gis))
         save(**{"reference_handover" if selected_reference is not None else "handover": handover})
         archive_policy = {"include_intermediates": True, "include_deliveries": True}
         selected_binding = retain_binding(
             workspace, output, prepared, scientific, delivery, review, response_id,
             archive_selection=archive_policy, handover=handover, utility_context=utilities,
-            reference_basis=selected_reference, programme=programme)
+            reference_basis=selected_reference, programme=programme, geographic_gis=geographic_gis)
         save(**{"reference_archive_binding_id" if selected_reference is not None
                 else "archive_binding_id": selected_binding["id"]})
         from model import portable
@@ -470,7 +475,8 @@ def receive(args):
             output/"cold-reopen"/edition, receiving_lock_fd=receiving_lock_fd,
             receiving_lock_path=output/".geographic-receiving.lock",
             review_response_id=response_id, receiving_context=utilities,
-            scenario_context=interpreted, reference_basis=selected_reference, programme=programme))
+            scenario_context=interpreted, reference_basis=selected_reference, programme=programme,
+            geographic_gis=geographic_gis))
         if selected_reference is not None:
             history = state.setdefault("reference_handover_editions", {})
             history[edition] = {"reference_basis": selected_reference,
