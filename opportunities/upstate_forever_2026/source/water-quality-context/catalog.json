@@ -24,7 +24,25 @@
       "publication_status": "published",
       "assessment_period": "2018-2022",
       "max_bytes": 30000000,
-      "publisher_index": "https://www.des.sc.gov/programs/bureau-water/south-carolina-303d-list-impaired-waters-tmdls"
+      "publisher_index": "https://www.des.sc.gov/programs/bureau-water/south-carolina-303d-list-impaired-waters-tmdls",
+      "cause_encoding": "scdes_303d_codes",
+      "cause_code_guide_uri": "https://www.des.sc.gov/sites/des/files/Documents/BOW/WaterQuality/303dList2024.pdf",
+      "cause_code_guide_pages": [
+        8,
+        9
+      ],
+      "table_defaults": {
+        "sheet": "303D LIST FOR WEB",
+        "header_row": 1,
+        "bindings": {
+          "site": "SITE",
+          "huc12": "HUC 12",
+          "cause": "CAUSE",
+          "description": "DESCRIPTION",
+          "county": "COUNTY",
+          "use": "IMPAIRED USE"
+        }
+      }
     },
     {
       "id": "scdes-tmdl-attainment-20260728",
@@ -59,6 +77,32 @@
       "max_bytes": 30000000
     },
     {
+      "id": "scdes-classification-context-current",
+      "title": "SCDES published water-classification geometry",
+      "uri": "https://gis.des.sc.gov/gisserver/rest/services/water/Water_Classifications/MapServer/0",
+      "transport": "arcgis",
+      "vintage": "current service capture",
+      "kind": "vector",
+      "role": "WATER_CLASSIFICATION",
+      "classification_status": "provisional",
+      "publication_status": "published",
+      "page_size": 100,
+      "where": "1=1",
+      "source_fields": {
+        "object_id": "OBJECTID_1",
+        "class": "H2OCLASS",
+        "waterbody": "HYDNAME",
+        "hydro_type": "HYDTYPE",
+        "huc12": "HUC_12",
+        "county": "Cnty_Name",
+        "basin": "Basin",
+        "main_stem": "MainStem"
+      },
+      "acquire_by_default": false,
+      "selection_note": "Use the retained original classification capture when present; explicit --source-id enables this complete statewide capture.",
+      "object_id_field": "OBJECTID_1"
+    },
+    {
       "id": "scdes-hydro24k-classification-context-current",
       "title": "SCDES hydro_24k classified streams",
       "uri": "https://gis.des.sc.gov/gisserver/rest/services/water/SCHydroClass/MapServer/2",
@@ -74,20 +118,23 @@
         "object_id": "OBJECTID",
         "class": "H2OCLASS",
         "waterbody": "HYDNAME",
-        "hydro_type": "HYDTYPE",
         "huc12": "HUC_12",
         "county": "Cnty_Name",
         "basin": "Basin",
-        "main_stem": "MainStem"
+        "main_stem": "MainStem",
+        "hydro_type": "HYDTYPE"
       },
       "acquire_by_default": false,
       "selection_note": "Reuse the existing ECO-SOURCE12 original capture. Explicit --source-id enables complete statewide capture into this distinct source ID; preserve older Water_Classifications editions under their original IDs.",
+      "regulatory_reference": "https://des.sc.gov/sites/des/files/Library/Regulations/R.61-69.pdf",
       "object_id_field": "OBJECTID",
+      "classification_field": "H2OCLASS",
+      "publisher_huc_field": "HUC_12",
       "discovery_uri": "https://gis.des.sc.gov/stormwater/js/a_settings.js",
       "retained_source_id": "scdes-classified-streams-upper-savannah-20261012"
     }
   ],
-  "current_source_status_as_of": "2026-10-12",
+  "current_source_status_as_of": "2026-10-13",
   "edition_context": {
     "draft_2026_303d": {
       "status": "draft",
@@ -102,5 +149,6 @@
       "included_as_effective": false,
       "publisher_index": "https://des.sc.gov/programs/bureau-water/water-quality-standards"
     }
-  }
+  },
+  "preferred_retained_classification_source": "scdes-classified-streams-upper-savannah-20261012"
 }

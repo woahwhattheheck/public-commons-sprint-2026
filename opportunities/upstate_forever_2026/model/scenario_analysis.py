@@ -67,6 +67,19 @@ def _weight_sets(selection, pollutants=POLLUTANTS):
     return result
 
 
+
+def _native_version(run):
+    """Retain observed and requested provenance; label old requested-only records."""
+    def text(value):
+        return value.strip() if isinstance(value, str) and value.strip() else None
+    requested = text(run.get("selection", {}).get("invest_version"))
+    observed = text((run.get("runtime") or {}).get("version"))
+    return {"requested": requested, "observed": observed,
+            "comparison_version": observed or requested,
+            "basis": "observed_runtime" if observed else "requested_legacy" if requested else "unavailable",
+            "differs_from_requested": bool(observed and requested and observed != requested)}
+
+
 def _comparison_scope(runs):
     """Resolve the maintained native-stage contract; preserve complete legacy studies."""
     try:
@@ -477,8 +490,13 @@ def analyze(workspace, selection):
     baseline = runs[0]
     if any(run["selection"]["grid_id"] != baseline["selection"]["grid_id"] for run in runs):
         raise ValueError("Scenario analysis requires one retained grid and reporting mask")
-    if any(run["selection"]["invest_version"] != baseline["selection"]["invest_version"] for run in runs):
-        raise ValueError("Separate model-version experiments from the selected scenario analysis")
+    native_versions = {run["id"]: _native_version(run) for run in runs}
+    baseline_version = native_versions[baseline["id"]]["comparison_version"]
+    if not baseline_version or any(not value["comparison_version"] for value in native_versions.values()):
+        raise ValueError("Each native run needs an observed or retained requested InVEST version")
+    if any(value["comparison_version"] != baseline_version for value in native_versions.values()):
+        raise ValueError("Separate observed model-version experiments from this scenario analysis; "
+                         "requested versions are used only for legacy records without execution metadata")
     pollutants, scopes = _comparison_scope(runs)
     algorithm = ALGORITHM if pollutants == POLLUTANTS else SELECTED_MODEL_ALGORITHM
     grid = workspace.get_grid(baseline["selection"]["grid_id"])
@@ -500,8 +518,10 @@ def analyze(workspace, selection):
                             "scenario_kind": scenario["kind"], "scenario_reason": scenario.get("reason"),
                             "comparison_kind": "baseline" if index == 0 else _kind(baseline, run),
                             "selection": run["selection"], "model_scope": scopes[run["id"]],
+                            "native_version": native_versions[run["id"]],
                             "parameter_changes": [] if index == 0 else _profile_changes(workspace, baseline, run)})
-        binding.append({"run_id": run["id"], "selection": run["selection"], "artifacts": selected})
+        binding.append({"run_id": run["id"], "selection": run["selection"], "artifacts": selected,
+                        "native_version": native_versions[run["id"]]})
     basis = {"algorithm": algorithm, "selection": selection, "inputs": binding,
              "regions": [{key: value for key, value in r.items() if key != "geometry"} for r in regions],
              "reporting_mask": grid["files"]["reporting_mask"]}
@@ -523,6 +543,11 @@ def analyze(workspace, selection):
                   "run_ids": ids, "grid_id": grid["id"], "runs": run_details, "files": {},
                   "input_binding": binding, "progress": None,
                   "comparison_pollutants": list(pollutants),
+                  "native_version": {"comparison_version": baseline_version,
+                                     "policy": "observed_runtime_else_labeled_requested_legacy",
+                                     "requested_fallback_run_ids": [
+                                         run["id"] for run in runs
+                                         if native_versions[run["id"]]["basis"] == "requested_legacy"]},
                   "model_scope": {"comparison_pollutants": list(pollutants),
                                   "full_model_outputs": pollutants == POLLUTANTS,
                                   "runs": [{"run_id": run["id"], **scopes[run["id"]]} for run in runs]}}

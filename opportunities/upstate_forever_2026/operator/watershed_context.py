@@ -1,15 +1,14 @@
 """Regional watershed context in the original operator and verified file transport."""
 from __future__ import annotations
 
-import csv
 import hashlib
-import io
 import json
 import re
 from pathlib import Path
 
-from model.common import atomic_json, describe_file, held, identifier, now, read_json
+from model.common import atomic_bytes, atomic_json, describe_file, held, identifier, now, read_json
 from model import watershed_context as context_model
+from model.watershed_brief import BRIEF_FORMAT, write_selection_brief
 
 ACTIONS = frozenset({"watershed.context.analyze", "watershed.context.export"})
 CONTEXT_NAME = "full-domain-water-context.json"
@@ -27,28 +26,13 @@ def _report_identifier(value):
     return value
 
 
-def _safe_cell(value):
-    text = "" if value is None else str(value)
-    return "'" + text if text.lstrip().startswith(("=", "+", "-", "@")) else text
+# Version participates in the export identity so older retained exports remain readable.
+CSV_FORMAT = "upstate.watershed-context-csv/v2"
 
 
 def _csv(rows):
-    columns = [
-        "huc12", "name", "huc8", "states", "role", "area_acres", "area_km2",
-        "priority", "priority_states", "priority_reasons", "classification_count",
-        "selected_classification_count", "selected_classes", "classification_coverage",
-        "classification_scope", "classification_assignment", "downstream_huc12",
-    ]
-    out = io.StringIO(newline="")
-    writer = csv.DictWriter(out, fieldnames=columns, lineterminator="\n")
-    writer.writeheader()
-    for row in rows:
-        writer.writerow({
-            key: _safe_cell(" | ".join(map(str, row[key])) if isinstance(row.get(key), list)
-                            else row.get(key))
-            for key in columns
-        })
-    return out.getvalue().encode("utf-8")
+    """Use the maintained native field order, JSON cells, booleans and formula protection."""
+    return context_model._csv_bytes(rows, context_model.HUC_COLUMNS)
 
 
 class WatershedContextActions:
@@ -186,6 +170,7 @@ class WatershedContextActions:
                 "report_id": record["id"], "huc": row,
                 "classification_coverage": report.get("classification_coverage"),
                 "sources": report.get("sources", []), "source_inputs": record.get("source_inputs", []),
+                "source_supporting_inputs": record.get("source_supporting_inputs", []),
                 "methods": report.get("methods"), "source_fingerprint": record["source_fingerprint"],
             }
         if operation != "report":
@@ -195,6 +180,53 @@ class WatershedContextActions:
             "_downloads": self._downloads(
                 workspace, directory, record, "operator-report.json", "Regional watershed source manifest",
             ),
+        }
+
+    @staticmethod
+    def _retain_sources(directory, bodies, files):
+        source_directory = directory / "source"
+        for name, body in bodies.items():
+            member = "source/" + name
+            expected = files.get(member)
+            path = source_directory / name
+            if expected and (expected.get("path") != member
+                    or expected.get("sha256") != _hash(body)
+                    or expected.get("bytes") != len(body)):
+                raise ValueError("A retained original source has different named bytes: " + name)
+            if path.is_symlink() or (path.exists() and path.read_bytes() != body):
+                raise ValueError("A retained original source has different named bytes: " + name)
+        source_directory.mkdir(exist_ok=True)
+        for name, body in bodies.items():
+            path = source_directory / name
+            atomic_bytes(path, body, immutable=True)
+            files["source/" + name] = describe_file(directory, path)
+
+    @staticmethod
+    def _supporting_metadata(previous, incoming):
+        indexed = {}
+        for row in list(previous) + list(incoming):
+            name = row["id"]
+            if name in indexed and indexed[name] != row:
+                raise ValueError("A retained original source has different named bytes: " + name)
+            indexed[name] = row
+        return [indexed[name] for name in sorted(indexed)]
+
+    @staticmethod
+    def _validation_with_supporting(previous, current, supporting):
+        checks = dict(previous.get("original_source_checks", {}))
+        for name, value in current.get("original_source_checks", {}).items():
+            retained = checks.get(name, {})
+            checks[name] = {**retained, **value}
+            if "domain_object_ids_matched" in retained or "domain_object_ids_matched" in value:
+                checks[name]["domain_object_ids_matched"] = (
+                    retained.get("domain_object_ids_matched") is True
+                    or value.get("domain_object_ids_matched") is True)
+        return {
+            **previous, **current, "original_source_checks": checks,
+            "supporting_sources": [
+                {"name": row["id"], "bytes": row["bytes"], "sha256": row["sha256"]}
+                for row in supporting
+            ],
         }
 
     def _analyze(self, task):
@@ -227,19 +259,25 @@ class WatershedContextActions:
         key = _report_identifier(report["id"])
         bodies = {}
         source_inputs = []
-        for row in edition["source_files"]:
-            name = row["name"]
-            if not isinstance(name, str) or Path(name).name != name or name in {"", ".", ".."}:
-                raise ValueError("The source edition contains an unsupported companion filename.")
-            body = Path(row["path"]).read_bytes()
-            if _hash(body) != row["sha256"] or len(body) != row["bytes"]:
-                raise ValueError("The regional source changed during analysis: " + name)
-            bodies[name] = body
-            source_inputs.append({
-                "id": name, "member_path": name, "sha256": row["sha256"],
-                "bytes": row["bytes"], "hash_basis": "exact source bytes",
-            })
+        supporting_inputs = []
+        for rows, retained in (
+                (edition["source_files"], source_inputs),
+                (edition.get("supporting_files", []), supporting_inputs)):
+            for row in rows:
+                name = row["name"]
+                if (not isinstance(name, str) or Path(name).name != name
+                        or name in {"", ".", ".."} or name in bodies):
+                    raise ValueError("The source edition contains an unsupported companion filename.")
+                body = Path(row["path"]).read_bytes()
+                if _hash(body) != row["sha256"] or len(body) != row["bytes"]:
+                    raise ValueError("The regional source changed during analysis: " + name)
+                bodies[name] = body
+                retained.append({
+                    "id": name, "member_path": name, "sha256": row["sha256"],
+                    "bytes": row["bytes"], "hash_basis": "exact source bytes",
+                })
         source_inputs.sort(key=lambda row: row["id"])
+        supporting_inputs.sort(key=lambda row: row["id"])
         fingerprint = _hash(json.dumps(
             [{"id": row["id"], "sha256": row["sha256"]} for row in source_inputs],
             sort_keys=True, separators=(",", ":"),
@@ -252,22 +290,31 @@ class WatershedContextActions:
                 if old.get("source_fingerprint") != fingerprint:
                     raise ValueError("This report identity already belongs to different retained source bytes.")
                 self._report(ws, {"report_id": key})
-                return self._summary(old)
+                supporting = self._supporting_metadata(
+                    old.get("source_supporting_inputs", []), supporting_inputs)
+                retained_files = dict(old["files"])
+                self._retain_sources(directory, bodies, retained_files)
+                updated = {
+                    **old, "files": retained_files, "source_supporting_inputs": supporting,
+                    "source_validation": self._validation_with_supporting(
+                        old.get("source_validation", {}), edition["validation"], supporting),
+                }
+                if updated != old:
+                    updated["sources_updated_at"] = now()
+                    atomic_json(record_path, updated)
+                return self._summary(updated)
             directory.mkdir(parents=True, exist_ok=True)
             files = context_model.write_watershed_context(report, directory)
-            source_directory = directory / "source"
-            source_directory.mkdir(exist_ok=True)
-            for name, body in bodies.items():
-                path = source_directory / name
-                path.write_bytes(body)
-                files["source/" + name] = describe_file(directory, path)
+            self._retain_sources(directory, bodies, files)
             record = {
                 "schema": SCHEMA, "id": key,
                 "title": str(value.get("title") or "Regional watershed context"),
                 "state": "complete", "created_at": now(), "completed_at": now(),
                 "summary": report.get("summary", {}),
                 "source_root_id": root_id, "source_collection_id": collection_id, "source_id": source_id,
-                "source_validation": edition["validation"], "source_inputs": source_inputs,
+                "source_validation": self._validation_with_supporting(
+                    {}, edition["validation"], supporting_inputs),
+                "source_inputs": source_inputs, "source_supporting_inputs": supporting_inputs,
                 "source_fingerprint": fingerprint, "files": files,
             }
             atomic_json(record_path, record)
@@ -285,7 +332,11 @@ class WatershedContextActions:
         if set(selected) - indexed.keys():
             raise ValueError("The export contains a watershed outside this saved regional report.")
         report_sha = record["files"]["watershed-context.json"]["sha256"]
-        identity = {"report_id": record["id"], "report_sha256": report_sha, "huc12s": selected}
+        identity = {
+            "report_id": record["id"], "report_sha256": report_sha, "huc12s": selected,
+            "csv_format": CSV_FORMAT, "csv_columns": list(context_model.HUC_COLUMNS),
+            "brief_format": BRIEF_FORMAT,
+        }
         key = _hash(json.dumps(identity, sort_keys=True, separators=(",", ":")).encode("utf-8"))
         target = ws.root / "watershed-context-exports" / key
         with held(ws.root / ".workspace.lock"):
@@ -302,6 +353,7 @@ class WatershedContextActions:
             }
             atomic_json(target / "selected-watersheds.json", selection)
             (target / "selected-watersheds.csv").write_bytes(_csv(rows))
+            brief_files = write_selection_brief(target, selection)
             result = {
                 "schema": "upstate.watershed-context-export/v1", "id": key,
                 "title": "Regional watershed selection", "state": "complete", "created_at": now(),
@@ -311,6 +363,7 @@ class WatershedContextActions:
                     for name in ("selected-watersheds.json", "selected-watersheds.csv")
                 },
             }
+            result["files"].update(brief_files)
             atomic_json(path, result)
         return result
 

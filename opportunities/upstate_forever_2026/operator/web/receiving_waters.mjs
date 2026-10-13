@@ -113,7 +113,7 @@ export function attachReceivingWaters(context){
   }
   function planView(row){
     return '<header class="water-section-heading"><div><p class="eyebrow">SAVED SOURCE PLAN</p><h2>'+esc(row.title)+'</h2><p>'+fmt(row.receptors?.length||0)+' receiving waters</p></div>'+control('water-analyze-new','Analyze this plan','data-plan-id="'+esc(row.id)+'"',true)+'</header>'+
-      table(['Receiving water','Family','Relationship','Contribution area (ha)','Original source',''],(row.receptors||[]).map(r=>'<tr><td><strong>'+esc(r.title)+'</strong><small>'+esc(r.id)+'</small></td><td>'+esc(families[r.family]||human(r.family))+'</td><td>'+esc(r.relationship_precision||human(r.relation?.method))+'</td><td>'+fmt(r.contribution_area_ha)+'</td><td>'+esc(sourceTitle(r.source))+'</td><td>'+control('water-subject','Details','data-id="'+esc(r.id)+'"')+spatialControl('Boundaries','plan',row.id,r.id)+'</td></tr>'))+
+      table(['Receiving water','Family','Relationship','Contribution area (ha)','Original source',''],(row.receptors||[]).map(r=>'<tr><td><strong>'+esc(r.title)+'</strong><small>'+esc(r.id)+'</small></td><td>'+esc(families[r.family]||human(r.family))+'</td><td>'+esc(r.relationship_precision||human(r.relation?.method))+'</td><td>'+fmt(r.contribution_area_ha)+'</td><td>'+esc(sourceTitle(r.source))+'</td><td>'+control('water-subject','Details','data-id="'+esc(r.id)+'" data-subject-kind="receptor"')+spatialControl('Boundaries','plan',row.id,r.id)+'</td></tr>'))+
       '<details><summary>Source geometries and plan downloads</summary>'+fileList(row._downloads||[])+'</details>'+
       '<details><summary>Original source selection</summary><pre class="json-view">'+esc(pretty(row.identity?.selection||row.selection))+'</pre></details>';
   }
@@ -166,13 +166,15 @@ export function attachReceivingWaters(context){
       const coverage=keys.map(k=>selectedStats(s,k)?.coverage_fraction).filter(x=>x!==null&&x!==undefined);
       return '<tr><td><strong>'+esc(s.title)+'</strong><small>'+esc(s.kind==='family_union'?'Combined family area':families[s.family]||human(s.family))+'</small></td>'+
         keys.map(k=>'<td class="water-number">'+fmt(selectedQuantity(selectedStats(s,k)))+'</td>').join('')+
-        '<td class="water-number">'+percent(coverage.length?Math.min(...coverage):null)+'</td><td class="water-number">'+fmt(s.area_in_quantity_scope_ha)+'</td><td>'+control('water-subject','Details','data-id="'+esc(s.id)+'"')+analysisMapControl(s)+'</td></tr>';
+        '<td class="water-number">'+percent(coverage.length?Math.min(...coverage):null)+'</td><td class="water-number">'+fmt(s.area_in_quantity_scope_ha)+'</td><td>'+control('water-subject','Details','data-id="'+esc(s.id)+'" data-subject-kind="'+esc(s.kind)+'"')+analysisMapControl(s)+'</td></tr>';
     });
     target.innerHTML=(display.quantity!=='physical'&&!display.run?'<p class="water-note">Choose an alternative run to show export changes. The table currently shows the baseline.</p>':'')+
       '<p class="water-result-count">'+fmt(rows.length)+' of '+fmt(record.subjects?.length||0)+' areas</p>'+(body.length?table(heads,body):'<p class="water-empty">No completed areas match this selection.</p>');
   }
-  function subjectDetails(id){
-    const subject=(record?.subjects||record?.receptors||[]).find(x=>x.id===id);if(!subject)throw Error('Open the receiving-water record again.');
+  function subjectDetails(id,kind){
+    const matches=(record?.subjects||record?.receptors||[]).filter(x=>x.id===id&&(!kind||(x.kind||'receptor')===kind));
+    if(matches.length!==1)throw Error('Choose the individual water or combined family area from the saved receiving-water record.');
+    const subject=matches[0];
     let html='<p>'+esc(subject.interpretation||subject.relationship_precision||'')+'</p>'+
       table(['Source relationship','Value'],[
         ['Family',families[subject.family]||subject.family],['Method',subject.relationship_precision||subject.relation?.method],
@@ -459,7 +461,7 @@ export function attachReceivingWaters(context){
     if(action==='water-open')return openSelection(button.dataset.kind,id);
     if(action==='water-task-result'){selected={kind:button.dataset.kind,id};remember();document.querySelector('#detail-dialog')?.close();if(location.hash==='#receiving-waters')return loadSelection();location.hash='receiving-waters';return;}
     if(action==='water-task')return showTask(id);
-    if(action==='water-subject')return subjectDetails(id);
+    if(action==='water-subject')return subjectDetails(id,button.dataset.subjectKind);
     if(action==='water-profile-new')return profileForm();
     if(action==='water-plan-new')return planForm();
     if(action==='water-catalog-new')return catalogForm();
