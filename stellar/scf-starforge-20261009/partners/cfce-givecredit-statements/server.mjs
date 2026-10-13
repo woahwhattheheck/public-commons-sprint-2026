@@ -9,7 +9,7 @@ import {resolve} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {readBrowserAssets} from '../../distribution/browser-assets.mjs';
 import {readNativeDirectory} from '../stellarcarbon-statements/store.mjs';
-import {GiveCreditWorkspace,sealSource,MAX_INPUT_BYTES,MAX_WORKSPACE_BYTES} from './store.mjs';
+import {GiveCreditWorkspace,MAX_INPUT_BYTES,MAX_WORKSPACE_BYTES} from './store.mjs';
 import {need,copy,receiveRegistryFiles,receiveCarbon,sourceSummary} from './source.mjs';
 import {editionFor,donationsPage,donationDetail,transfersPage,transferDetail,poolRegister,providerPayoutCandidates,nativePayments,
   prepareAllocation,prepareBridge,prepareStatement,statementVersion,compareEditions,transactionFor} from './engine.mjs';
@@ -100,8 +100,8 @@ export async function createGiveCreditServer({directory,port=0,expectedWorkspace
           const current={};for(const kind of ['registry','ledger'])current[kind]={...captures[kind],checkpoint:await workspace.captureStatus(kind)};
           send(response,200,current);return;
         }
-        if(parts[1]==='handover'){await downloadJSON(response,'givecredit-workspace.json',await workspace.handover());return;}
-        const state=await workspace.snapshot();
+        if(parts[1]==='handover'){await downloadJSON(response,'givecredit-workspace.json',await workspace.readonlyHandover());return;}
+        const state=await workspace.readonlySnapshot();
         if(parts[1]==='choices'){send(response,200,choices(state,query));return;}
         if(parts[1]==='donations'){send(response,200,parts[2]?donationDetail(state,query.editionId,parts[2],query.ledgerEditionId):donationsPage(state,query));return;}
         if(parts[1]==='transfers'){send(response,200,parts[2]?transferDetail(state,query.editionId,parts[2]):transfersPage(state,query));return;}
@@ -148,7 +148,7 @@ export async function createGiveCreditServer({directory,port=0,expectedWorkspace
         send(response,201,service.startup);return;
       }
       if(parts[1]==='preview'){
-        const state=await workspace.snapshot(),kind=parts[2]||'statement';
+        const state=await workspace.readonlySnapshot(),kind=parts[2]||'statement';
         const result=kind==='allocation'?prepareAllocation(state,value.value):kind==='bridge'?prepareBridge(state,value.value):prepareStatement(state,value.value);
         send(response,200,result);return;
       }
@@ -168,7 +168,7 @@ export async function createGiveCreditServer({directory,port=0,expectedWorkspace
         need(!tasks[kind],'CAPTURE_RUNNING','This source acquisition is already running.',409);
         need(options.revision===workspace.state.revision,'STALE_WORKSPACE','Refresh the current workspace before acquisition.',409);
         const input={...(value.value||{})};
-        if(kind==='ledger'&&input.registryEditionId){input.registrySource=editionFor(await workspace.snapshot(),input.registryEditionId,'registry');delete input.registryEditionId;}
+        if(kind==='ledger'&&input.registryEditionId){input.registrySource=editionFor(await workspace.readonlySnapshot(),input.registryEditionId,'registry');delete input.registryEditionId;}
         const checkpoint=input.resume?await workspace.captureCheckpoint(kind):undefined,requestId=options.requestId||randomUUID();
         controllers[kind]=new AbortController();captures[kind]={status:'RUNNING',startedAt:new Date().toISOString(),records:0};
         const task=(async()=>{
@@ -176,7 +176,7 @@ export async function createGiveCreditServer({directory,port=0,expectedWorkspace
             const onProgress=async progress=>{const checkpoint=progress.checkpoint?await workspace.saveCapture(kind,progress.checkpoint,{phase:progress.phase}):captures[kind].checkpoint;
               captures[kind]={...captures[kind],checkpoint,phase:progress.phase||kind,table:progress.table||null,records:progress.rows||null};};
             const source=await (kind==='registry'?captureRegistry:captureLedger)({...input,checkpoint,checkpointMode:'borrowed',onProgress,signal:controllers[kind].signal});
-            const result=await workspace.serial(()=>workspace.applyUnlocked('import',{source:sealSource(source),label:value.label},
+            const result=await workspace.serial(()=>workspace.importUnlocked(source,value.label,
               {...options,requestId,revision:workspace.state.revision}));
             captures[kind]={...captures[kind],status:'COMPLETE',completedAt:new Date().toISOString(),editionId:result.edition.id};
           }catch(error){let checkpointError=null;

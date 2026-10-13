@@ -6,9 +6,9 @@ import {createHash,randomUUID} from 'node:crypto';
 import {privateDirectory,regular,withWorkspaceWrite,workspaceReceivingState} from '../../distribution/runtime-workspace/storage.mjs';
 import {jsonChunks,jsonDocumentChunks} from './json-stream.mjs';
 const fail=(code,message)=>{throw Object.assign(new Error(message),{code});};
-export function jsonIdentity(value,{pretty=false,newline=false}={}){
+export function jsonIdentity(value,{pretty=false,newline=false,canonical=false}={}){
   const hash=createHash('sha256');let bytes=0;
-  for(const chunk of newline?jsonDocumentChunks(value,{pretty}):jsonChunks(value,{pretty})){
+  for(const chunk of newline?jsonDocumentChunks(value,{pretty,canonical}):jsonChunks(value,{pretty,canonical})){
     bytes+=Buffer.byteLength(chunk);hash.update(chunk);
   }
   return {bytes,sha256:hash.digest('hex')};
