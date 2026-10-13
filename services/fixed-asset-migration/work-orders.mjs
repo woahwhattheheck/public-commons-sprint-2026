@@ -123,8 +123,9 @@ function apply(s,action,input,event){
  }
  need(false,'Unknown work-order operation: '+action);
 }
-export function read(workspace){
- const ws=E.validateWorkspace(workspace),s=blank(ws),files=new Map(ws.supportingFiles.map(f=>[f.id,f])),seen=new Set();
+export function read(workspace){return readValidated(E.validateWorkspace(workspace));}
+function readValidated(ws){
+ const s=blank(ws),files=new Map(ws.supportingFiles.map(f=>[f.id,f])),seen=new Set();
  for(const op of ws.operations){if(op.kind!=='import-supporting')continue;const file=files.get(op.supportingInputId);if(!file||file.purpose!==PURPOSE||seen.has(file.id))continue;
   seen.add(file.id);const eventText=codec.decode(file.base64),event=JSON.parse(eventText);
   need(event.schema===SCHEMA&&event.workspaceId===ws.id&&event.sequence===s.eventCount+1&&event.previous===s.head,'The complete work-order event chain differs.','WORK_ORDER_HISTORY_CHANGED');
@@ -142,7 +143,7 @@ export function run(workspace,action,input){
   return{workspace,receipt:clone(old),replayed:true};
  }
  need(input.expectedRevision===workspace.revision,'The original workspace revision changed.','REVISION_CONFLICT');
- const state=read(workspace),at=input.at||new Date().toISOString(),event={schema:SCHEMA,workspaceId:workspace.id,sequence:state.eventCount+1,previous:state.head,operationId:input.operationId,at,action,input:clone(input),requestSha256:hash(input)};
+ const state=readValidated(workspace),at=input.at||new Date().toISOString(),event={schema:SCHEMA,workspaceId:workspace.id,sequence:state.eventCount+1,previous:state.head,operationId:input.operationId,at,action,input:clone(input),requestSha256:hash(input)};
  const result=apply(state,action,input,event),text=JSON.stringify(event);
  const saved=E.importSupportingFile(workspace,{operationId:input.operationId,expectedRevision:input.expectedRevision,at,filename:'work-order-'+String(event.sequence).padStart(4,'0')+'-'+action+'.json',mimeType:'application/json',purpose:PURPOSE,base64:codec.encode(text)});
  return{...saved,workOrderResult:result};
