@@ -1,0 +1,37 @@
+{
+  "schema": "upstate.headwaters-input-replay/v1",
+  "edition": "headwaters-input-interpretation-20261013-v1",
+  "sources": {
+    "recipe": {
+      "path": "source/simulated_headwaters_20261013/input-recipe.json",
+      "bytes": 678544,
+      "sha256": "3f8842c985a4d9186d43eafea07023ad326de1a46780f3fc93b0c4e04874d0fb",
+      "git_blob": "5536ce04b03264a32d2534d492fb0e81711fefd2"
+    },
+    "control": {
+      "path": "source/simulated_headwaters_20261013/matched-control.json",
+      "bytes": 350926,
+      "sha256": "552ec6934b08b35678898b00c6a6d6fbacf93b8946d924475675001c8b433cb0",
+      "git_blob": "1a7f1992b055d83ede27bc3ff09a1e45f85198a6"
+    },
+    "biophysical": {
+      "path": "source/headwaters_input_interpretation_20261013/biophysical-source-replay.csv",
+      "bytes": 397,
+      "sha256": "bd5d7a436a302df751e57f63c188216402f13acdfff26c847b9b83733651fd94",
+      "origin": "Exact source-generation replay of the original assumed four-class table"
+    },
+    "control_generator": {
+      "path": "source/simulated_headwaters_20261013/generate-matched-control.mjs",
+      "bytes": 6965,
+      "sha256": "193af3916b4ba8bd600903e5d086bf7d2c62d874a4f24078101dd610e5185c9a",
+      "git_blob": "7d778123ef8305fdd17c1637192c69399c5efac5"
+    },
+    "coefficient_generator": {
+      "path": "source/headwaters_input_interpretation_20261013/original/simulated_headwaters.py",
+      "bytes": 47708,
+      "sha256": "27ed9a250bc08a079b4d40db1d5aaffa55747a1f6f4c21d01ee7024c00d3dd0a",
+      "git_blob": "1961d82d240be24909f265bb5a3e5c1b4d379538",
+      "original_path": "source_tools/simulated_headwaters.py"
+    }
+  }
+}
