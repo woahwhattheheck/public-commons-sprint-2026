@@ -175,5 +175,10 @@
       "sha256": "32fd64e08f3b614e306a94b9acc1395a6533d17f3d3acad375f846d0496211f9",
       "file_upload_id": "3f8dd772-3100-814a-8e69-00b2b916256c"
     }
-  ]
+  ],
+  "observation_inputs": {
+    "path": "source/three-twenty-hydrologic-context-20261013/observation_context/observation-inputs.json",
+    "bytes": 18764,
+    "sha256": "83821480dcabdaf22425eb21bb6bdd7c1bfdd02bab6ec7693a9c5d3c64d2f3d9"
+  }
 }
