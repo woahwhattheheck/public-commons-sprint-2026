@@ -2,11 +2,12 @@
   "schema": "upstate.operator-extension/v1",
   "id": "climate-management",
   "title": "Management across forcing",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "order": 52,
   "assets": [
     "climate_management.mjs",
-    "climate_management.css"
+    "climate_management.css",
+    "climate_management_explorer.mjs"
   ],
   "backend": {
     "module": "climate_management",

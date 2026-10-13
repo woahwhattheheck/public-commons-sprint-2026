@@ -98,7 +98,9 @@ climate-management-reports/<report-id>/
 
 Its original files include:
 
-- `report.html`: readable standalone explanation and tables;
+- `report.html`: readable standalone explanation, saved figures and tables;
+- `figure-data.json`: complete original numeric figure specification, support and source identities in version-two editions;
+- `figures/*.svg`: independent vector figures with original categorical labels in version-two editions;
 - `results.json`: complete numerical result and interpretation metadata;
 - `benefits.csv`: period/area/metric benefits and interactions;
 - `independent-totals.csv`: all original independent/common/excluded totals;
@@ -123,6 +125,24 @@ Select that retained source in **Scientific Reports**. The existing renderer com
 The typed source collection also exposes the benefits table, original reporting polygon and generated/result rasters for the existing GIS source workflow. A heterogeneous comparison table has no single invented unit: its metric/unit columns and quantity note are authoritative.
 
 HTML display uses approximately eight significant digits. JSON and CSV retain the computed numerical values. CSV text starting with a spreadsheet formula character is apostrophe-prefixed; the exact original text remains in JSON. No original scientific source is modified.
+
+## Explore a saved comparison
+
+The saved-result view starts with two **view controls**: Reporting area and Export metric and units. They select existing rows and figures from that saved edition. Changing either control preserves the current preparation draft, reviewed preview and pending task identities.
+
+For the selected area and metric, the view presents:
+
+- **Benefit across the selected periods:** native role totals, signed reference-minus-treatment benefit, optional control-minus-treatment benefit and their change from the explicit reference period. Figures use categorical markers in the original selected order. There is no connecting trend line or inferred temporal spacing.
+- **Exact numerical tables:** all selected periods, original annual units, signed benefits, interaction and original scenario exports on the same common support. Display rounding leaves the original JSON and CSV values intact.
+- **Shared support and exclusions:** reporting cells, common cells and hectares, retained percentage, each role's independent/common/excluded export and missing reporting cells. Areas can overlap; summing their totals can double count.
+- **Original maps and GIS:** the retained common-support mask, signed result maps and native role output maps for the selected metric, plus the original reporting geometry. These are complete original rasters. Selecting an area in this desk filters the tables and figures; it does not silently crop raster downloads.
+- **Original cases and forcing editions:** readable publisher vintages and units, with direct opening of every named original native run.
+
+Figures have a separate original-label key so every categorical marker remains identifiable. A report with more than six periods has multiple figure pages. Each saved SVG includes its original labels and can be opened independently. The full figure specification retains original values, support, role totals, selected case identities and the exact categorical order.
+
+Choose **Prepare editable GIS project** to open the existing GIS project desk with this report's actual registered source collection and original coordinate system. Review the ordinary GIS selection there, build through its existing task queue, download the complete GIS project and open it in the normal desktop application. This action preserves the full report companions and creates no native model run. The existing **Export editable comparison** action captures the original Climate Management result and its native dependencies through Study delivery.
+
+Historical saved editions remain readable with their original tables and files. Newly built version-two editions include the retained figures. Opening a historical result does not rewrite it or manufacture missing figure files.
 
 ## Original operator/API contracts
 
@@ -188,6 +208,14 @@ The guide and published source are implementation deliverables. They are not evi
 
 ## Component and ownership
 
-The additive model and Study visitor are `model/climate_management.py` and `model/climate_management_study_transfer.py`. They compose the original Climate forcing family, original Study capture, native model/output selection and ordinary scientific report source format.
+The model, figure producer and Study visitor are `model/climate_management.py`, `model/climate_management_figures.py` and `model/climate_management_study_transfer.py`. The original browser controller composes `operator/web/climate_management_explorer.mjs`; all visual styling is a registered same-origin CSS asset. The component includes its existing GIS project dependency. They compose the original Climate forcing family, original Study capture, native model/output selection and ordinary scientific report source format.
 
 No changes to native solver, cache, donor matching or forcing-source acquisition are required by this comparison. Original Climate, structural sensitivity, multivariate control, parameter interaction and scientific report owners retain their existing workflows. The component must travel with its declared Climate forcing/Study dependencies and the complete current application source.
+
+## Receiving this figure and exploration edition
+
+Continue the same INPUTS13 Climate receiving operation and existing application/Workspace. Carry `CURRENT_OWNER_DIRECTION.md` version `2026-10-13.4` and the standing rendered-product inspection instruction into this source composition. Retain all current shared source and completed native work. The new helper and complete model must be installed together; the component fragment supplies that closure with the original Climate, Study and GIS dependencies.
+
+On the actual completed original cases, preview and build the comparison normally. Open the saved result at the presentation width and at 390 pixels. Personally look at the rendered benefit/interaction figures, labels, zero line, readable support and table scrolling; select a different actual area/metric and confirm the preparation draft stays intact. Open an original native run and return to the retained result. Download and open the standalone HTML, SVGs, exact CSV/JSON, mask/maps and complete ZIP as their recipients would. Check that each SVG identifies its full original periods and that every plotted value matches its saved row. Operate the original GIS and selected Study exports, receive into their existing independent receiving copy and reopen the saved result and all files. A new screenshot or receipt alone does not replace using and looking at the actual product. Repair the affected component when a real display or receiving defect appears.
+
+The source/controller exercise uses retained-result fixtures to check navigation and state preservation. The actual original native runs, maps and rendered screenshots come from that existing scientific receiving operation.
