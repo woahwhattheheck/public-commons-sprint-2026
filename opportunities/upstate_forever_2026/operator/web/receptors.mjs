@@ -10,7 +10,7 @@ const active = value => ['queued', 'running'].includes(value);
 const ticketURL = ticket => /^\/api\/file\/[a-f0-9]{64}$/.test(ticket?.url || '') ? ticket.url : '';
 const metricName = key => ({nitrogen_export:'Nitrogen', phosphorus_export:'Phosphorus', sediment_export:'Sediment'}[key] || label(key));
 
-export function attachReceptorWorkbench({getState, api, endpoint, toast, openExtension, openForm, submitAction, refreshState, openItem, navigate, closeDetail}) {
+export function attachReceptorWorkbench({getState, api, endpoint, toast, openExtension, openForm, submitAction, refreshState, openItem, navigate, closeDetail, getProgramme}) {
   let root=null, frame=null, workspace=null, generation=0, catalog=null, taskTarget=null;
   let draft=null, customProfile=null, planned=null, profileOptions=[], scenarioOptions=[];
   let result=null, pending=null, packageFiles=[], observing=false, fetching=false, pathSelection=null, selectedMapHuc='';
@@ -294,10 +294,11 @@ export function attachReceptorWorkbench({getState, api, endpoint, toast, openExt
     const rows=[...(catalog.comparisons||[]).map(row=>({...row,kind:'comparison'})),
       ...(catalog.inventories||[]).map(row=>({...row,kind:'inventory'})),
       ...(catalog.networks||[]).map(row=>({...row,kind:'network'})),
-      ...(catalog.source_areas||[]).map(row=>({...row,kind:'source-areas'}))].sort((a,b)=>String(b.created_at||'').localeCompare(String(a.created_at||'')));
+      ...(catalog.source_areas||[]).map(row=>({...row,kind:'source-areas'})),
+      ...(catalog.programmes||[]).map(row=>({...row,kind:'programme'}))].sort((a,b)=>String(b.created_at||'').localeCompare(String(a.created_at||'')));
     node('[data-rc-saved]').innerHTML=rows.length ?
       '<div class="rc-scroll"><table><caption>Retained source-water products</caption><thead><tr><th>Title</th><th>Type</th><th>State</th><th>Rows</th><th>Open</th></tr></thead><tbody>'+
-      rows.map(row=>'<tr><td>'+esc(row.title)+'</td><td>'+esc(row.kind==='comparison'?'Experiment profiles':row.kind==='network'?'Original watershed network':row.kind==='source-areas'?'Prepared scenario areas':'One baseline')+'</td><td>'+esc(label(row.state))+'</td><td>'+esc(number(row.scenario_rows))+'</td><td><button type="button" data-receptor-action="open" data-kind="'+row.kind+'" data-id="'+esc(row.id)+'">Open result</button></td></tr>').join('')+
+      rows.map(row=>'<tr><td>'+esc(row.title)+'</td><td>'+esc(row.kind==='comparison'?'Experiment profiles':row.kind==='network'?'Original watershed network':row.kind==='source-areas'?'Prepared scenario areas':row.kind==='programme'?'Paired native programme':'One baseline')+'</td><td>'+esc(label(row.state))+'</td><td>'+esc(number(row.scenario_rows))+'</td><td><button type="button" data-receptor-action="open" data-kind="'+row.kind+'" data-id="'+esc(row.id)+'">Open result</button></td></tr>').join('')+
       '</tbody></table></div>' : '<p>Saved original watershed networks, native comparisons and inventories appear here as their workspace tasks finish.</p>';
   }
   function selection() {
@@ -431,6 +432,7 @@ export function attachReceptorWorkbench({getState, api, endpoint, toast, openExt
     node('[data-rc-result]').hidden=false;
     if(result._kind==='network')return renderNetwork();
     if(result._kind==='source-areas')return renderPreparedSources();
+    if(result._kind==='programme')return renderProgramme();
     node('[data-rc-path]').replaceChildren();
     const rows=resultRows(), report=ticketURL(result._report);
     node('[data-rc-result-header]').innerHTML='<h2>'+esc(result.title)+'</h2><p>'+rows.length+' retained receiving-area quantities · '+esc(label(result.state||'complete'))+'</p>'+
@@ -820,12 +822,149 @@ export function attachReceptorWorkbench({getState, api, endpoint, toast, openExt
         updateModels();
       });
   }
+  function programmeForm() {
+    const prepared=requirePreparation(),requested=workspace,state=getState()?.data||{};
+    const scenarios=sourceAreaScenarios(prepared),baselines=(state.scenarios||[]).filter(row=>row.kind==='baseline');
+    const grids=(state.grids||[]).filter(row=>{
+      const spec=row.spec||{},collection=(state.sources||[]).find(item=>item.id===spec.source_collection_id);
+      const original=collection?.entries?.find(item=>item.id===spec.model_domain?.source_id);
+      return row.state==='complete'&&original?.body?.sha256===prepared.source_binding.body_sha256;
+    }),profiles=state.profiles||[];
+    if(!scenarios.length)throw Error('Save the intended land-cover alternatives on these areas before preparing their programme.');
+    if(!grids.length)throw Error('Prepare a native grid from this study’s original watershed source first.');
+    if(!baselines.length||!profiles.length)throw Error('Retain the original land-cover baseline and parameter profiles first.');
+    const options=rows=>rows.map(row=>'<option value="'+esc(row.id)+'">'+esc(row.title||row.spec?.title||short(row.id))+'</option>').join('');
+    const models=row=>row?.models||['ndr','sdr'];
+    const initial=models(grids[0].spec);
+    const checks=(rows,name)=>rows.map((row,i)=>'<label class="rc-choice"><input type="checkbox" name="'+name+'" value="'+esc(row.id)+'" '+
+      ((name==='rc_programme_scenarios'||i===0)?'checked':'')+'><span>'+esc(row.title)+
+      (name==='rc_programme_profiles'?' <small>'+esc(models(row).join(' + ').toUpperCase())+'</small>':'')+'</span></label>').join('');
+    let form,formRoot,revision=0;
+    const read=()=>{
+      if(!form.reportValidity())throw Error('Complete the marked programme fields.');
+      const chosen=name=>[...form.querySelectorAll('[name="'+name+'"]:checked')].map(input=>input.value);
+      const profilesChosen=chosen('rc_programme_profiles'),scenariosChosen=chosen('rc_programme_scenarios');
+      if(!profilesChosen.length||!scenariosChosen.length)throw Error('Select at least one retained profile and one land-cover alternative.');
+      return {schema:'upstate.receptor-programme-selection/v1',title:form.elements.namedItem('rc_programme_title').value.trim(),
+        reason:form.elements.namedItem('rc_programme_reason').value.trim(),preparation_id:prepared.id,
+        grid_id:form.elements.namedItem('rc_programme_grid').value,
+        baseline_scenario_id:form.elements.namedItem('rc_programme_baseline').value,
+        models:form.elements.namedItem('rc_programme_models').value.split(','),
+        profile_ids:profilesChosen,scenario_ids:scenariosChosen};
+    };
+    const stillCurrent=(selected,version)=>workspace===requested&&currentWorkspace()===requested&&version===revision&&
+      formRoot?.isConnected&&operationForm()===form&&JSON.stringify(selected)===JSON.stringify(read());
+    const drawPreview=value=>{
+      form.querySelector('[data-rc-programme-preview]').innerHTML='<p><strong>'+number(value.counts.profiles)+' profiles · '+
+        number(value.counts.baselines)+' matching baselines · '+number(value.counts.alternatives)+' alternatives · '+
+        number(value.counts.runs)+' native runs</strong></p><p>'+number(value.counts.complete_runs)+' runs are already complete. '+
+        'Each selected profile keeps its own baseline; the first selected profile is the experiment’s overall reference.</p>'+
+        '<div class="rc-scroll"><table><thead><tr><th>Profile</th><th>Scenario</th><th>Native state</th><th>Matching baseline</th></tr></thead><tbody>'+
+        value.runs.map(row=>'<tr><td>'+esc(row.profile_title)+'</td><td>'+esc(row.scenario_title)+'</td><td>'+esc(label(row.state))+
+          '</td><td><code>'+esc(short(row.paired_baseline_run_id))+'</code></td></tr>').join('')+'</tbody></table></div>';
+    };
+    openForm('Prepare paired source-water programme',
+      'Select the complete intervention cohort. The existing experiment planner supplies each profile’s baseline, and the native programme runs and resumes those exact cases.',
+      '<div class="form-grid"><label class="full">Programme title<input name="rc_programme_title" value="'+esc(prepared.title+' — paired native scenarios')+'" required></label>'+
+      '<label class="full">Scientific purpose<textarea name="rc_programme_reason" required>Compare the selected upstream-area land-cover alternatives under retained parameter profiles.</textarea></label>'+
+      '<label>Original model grid<select name="rc_programme_grid" required>'+options(grids)+'</select></label>'+
+      '<label>Original land-cover baseline<select name="rc_programme_baseline" required>'+options(baselines)+'</select></label>'+
+      '<label>Native models<select name="rc_programme_models">'+
+      [['ndr,sdr','Nutrients and sediment'],['ndr','Nitrogen and phosphorus'],['sdr','Sediment']].map(([value,title])=>'<option value="'+value+'" '+(value===initial.join(',')?'selected':'')+'>'+title+'</option>').join('')+
+      '</select></label></div><div class="rc-programme-choices"><fieldset><legend>Retained parameter profiles</legend>'+checks(profiles,'rc_programme_profiles')+
+      '<button type="button" data-rc-select-profiles>Select all compatible profiles</button></fieldset><fieldset><legend>Prepared land-cover alternatives</legend>'+
+      checks(scenarios,'rc_programme_scenarios')+'</fieldset></div><p class="rc-note" data-rc-programme-count></p>'+
+      '<button type="button" data-rc-programme-review>Review paired calculations</button><div data-rc-programme-preview role="status" aria-live="polite"></div>',
+      'Save paired programme',async()=>{
+        const selected=read(),version=revision;
+        const previewed=await api('/api/receptors/programme-plan',{method:'POST',body:{workspace:requested,selection:selected}});
+        if(!stillCurrent(selected,version))throw Error('The selections or workspace changed. Review the current programme.');
+        return submitFormAction('receptor.programme.create',{selection:previewed.selection,expected_preview_id:previewed.id},requested);
+      },()=>{
+        form=operationForm();formRoot=form.querySelector('.rc-programme-choices');
+        const updateChoices=()=>{
+          const grid=grids.find(row=>row.id===form.elements.namedItem('rc_programme_grid').value),
+            selectedModels=form.elements.namedItem('rc_programme_models').value.split(','),
+            gridModels=models(grid?.spec),inputs=[...form.querySelectorAll('[name="rc_programme_profiles"]')],
+            alternatives=form.querySelectorAll('[name="rc_programme_scenarios"]:checked').length,
+            selectedProfiles=inputs.filter(input=>input.checked).length;
+          for(const option of form.elements.namedItem('rc_programme_models').options)
+            option.disabled=option.value.split(',').some(model=>!gridModels.includes(model));
+          const compatible=selectedModels.every(model=>gridModels.includes(model));
+          form.elements.namedItem('rc_programme_models').setCustomValidity(compatible?'':'Select native models available in the original grid.');
+          for(const input of inputs){
+            const profile=profiles.find(row=>row.id===input.value);
+            input.setCustomValidity(input.checked&&selectedModels.some(model=>!models(profile).includes(model))?
+              'This retained profile does not support the selected native models.':'');
+          }
+          form.querySelector('[data-rc-programme-count]').textContent=selectedProfiles+' selected profiles × '+(1+alternatives)+
+            ' land-cover cases = '+(selectedProfiles*(1+alternatives))+' native selections. Completed compatible runs remain reusable.';
+        };
+        const changed=()=>{revision++;form.querySelector('[data-rc-programme-preview]').textContent='Review the current paired selections before saving.';updateChoices();};
+        form.addEventListener('change',changed);
+        form.addEventListener('input',()=>{revision++;});
+        form.querySelector('[data-rc-select-profiles]').addEventListener('click',()=>{
+          const chosen=form.elements.namedItem('rc_programme_models').value.split(',');
+          for(const input of form.querySelectorAll('[name="rc_programme_profiles"]'))
+            input.checked=chosen.every(model=>models(profiles.find(row=>row.id===input.value)).includes(model));
+          changed();
+        });
+        form.querySelector('[data-rc-programme-review]').addEventListener('click',async event=>{
+          const button=event.currentTarget;let version=revision;
+          try{
+            const selected=read();version=revision;button.disabled=true;
+            form.querySelector('[data-rc-programme-preview]').textContent='Reading original sources and exact native selections…';
+            const value=await api('/api/receptors/programme-plan',{method:'POST',body:{workspace:requested,selection:selected}});
+            if(stillCurrent(selected,version))drawPreview(value);
+          }catch(error){if(workspace===requested&&revision===version&&formRoot?.isConnected)form.querySelector('[data-rc-programme-preview]').textContent=error.message||String(error);}
+          finally{button.disabled=false;}
+        });
+        updateChoices();
+      });
+  }
+  async function openNativeProgramme(id) {
+    if(!/^[0-9a-f]{64}$/.test(id||''))throw Error('Choose a retained native programme.');
+    const controller=getProgramme?.();
+    if(typeof controller?.open!=='function')throw Error('Open Run programmes in the maintained operator to continue this saved programme.');
+    return controller.open(id);
+  }
+  function renderProgramme() {
+    const saved=result,native=saved.native_programme,report=ticketURL(saved._report),counts=native.counts||{};
+    node('[data-rc-result-header]').innerHTML='<h2>'+esc(saved.title)+'</h2><p>'+esc(label(native.state))+' · '+
+      number(counts.complete)+' / '+number(counts.total)+' native runs complete · '+number(saved.counts.profiles)+' parameter profiles</p>'+
+      '<div class="rc-toolbar"><button type="button" data-receptor-action="native-programme" data-id="'+esc(saved.programme_id)+'">Open programme and continue runs</button>'+
+      '<button type="button" data-receptor-action="programme-compare" '+(native.state==='complete'?'':'disabled')+'>Build source-water comparisons</button>'+
+      '<button type="button" data-receptor-action="open" data-kind="programme" data-id="'+esc(saved.id)+'">Refresh calculation status</button>'+
+      '<button type="button" data-receptor-action="open" data-kind="source-areas" data-id="'+esc(saved.preparation_id)+'">Open prepared areas</button>'+
+      '<button type="button" data-receptor-action="export">Export programme plan</button>'+
+      (report?'<a class="rc-button" href="'+esc(report)+'" target="_blank" rel="noopener">Printable paired selections</a>':'')+'</div>'+
+      '<div data-rc-package>'+downloadLinks(packageFiles)+'</div><p class="rc-note">Each profile retains its own original land-cover baseline. '+
+      'The native programme provides pause, continuation, original logs and paired map controls. After its runs finish, collect the source-water quantities here.</p>';
+    node('[data-rc-result-filters]').replaceChildren();node('[data-rc-path]').replaceChildren();node('[data-rc-ranges]').replaceChildren();
+    node('[data-rc-quantities]').innerHTML='<div class="rc-scroll"><table><caption>Retained native selections and current state</caption><thead><tr>'+
+      '<th>Parameter profile</th><th>Land-cover scenario</th><th>State</th><th>Matching baseline</th><th>Native run</th></tr></thead><tbody>'+
+      native.runs.map(row=>{
+        const original=saved.runs.find(item=>item.run_id===row.run_id);
+        return '<tr><td>'+esc(row.profile_title)+'</td><td>'+esc(row.scenario_title)+'</td><td>'+esc(label(row.state))+'</td><td><code>'+
+          esc(short(original?.paired_baseline_run_id))+'</code></td><td><button type="button" data-receptor-action="native-run" data-id="'+esc(row.run_id)+'">Open run</button></td></tr>';
+      }).join('')+'</tbody></table></div>';
+    const comparisons=(catalog?.comparisons||[]).filter(row=>row.experiment_id===saved.experiment_id);
+    node('[data-rc-products]').innerHTML='<h3>Receiving-area comparison reports</h3>'+
+      (comparisons.length?'<div class="rc-products">'+comparisons.map(row=>'<article><h4>'+esc(row.title)+'</h4><p>'+esc(label(row.state))+'</p>'+
+        '<button type="button" data-receptor-action="open" data-kind="comparison" data-id="'+esc(row.id)+'">Open source-water results</button></article>').join('')+'</div>':
+        '<p>Build the receiving-area comparisons after the native programme completes. The report preserves each profile’s baseline, shared valid raster support and original physical units.</p>');
+    node('[data-rc-downloads]').innerHTML='<details class="rc-detail" open><summary>Saved selections and original lineage</summary><p class="rc-download-links">'+
+      downloadLinks((saved._downloads||[]).filter(row=>!row.filename.endsWith('.html')))+'</p><p>Paired experiment: <code>'+esc(saved.experiment_id)+
+      '</code></p><p>Native programme: <code>'+esc(saved.programme_id)+'</code></p></details>';
+  }
+
   function renderPreparedSources() {
     const prepared=result,report=ticketURL(result._report),scenarios=sourceAreaScenarios(prepared);
     node('[data-rc-result-header]').innerHTML='<h2>'+esc(prepared.title)+'</h2>'+
       '<p>'+number(prepared.areas.length)+' receiving areas · '+number(prepared.selected_huc12_count)+' unique original HUC12 polygons</p>'+
       '<div class="rc-toolbar"><button type="button" data-receptor-action="prepared-analysis">Compare native results for these areas</button>'+
       '<button type="button" data-receptor-action="prepared-scenario">Create land-cover scenario</button>'+
+      '<button type="button" data-receptor-action="prepared-programme">Prepare paired programme</button>'+
       '<button type="button" data-receptor-action="export">Export complete source package</button>'+
       '<button type="button" data-receptor-action="open" data-kind="network" data-id="'+esc(prepared.network_result_id)+'">Open original watershed study</button>'+
       (report?'<a class="rc-button" href="'+esc(report)+'" target="_blank" rel="noopener">Printable area report</a>':'')+'</div>'+
@@ -841,6 +980,10 @@ export function attachReceptorWorkbench({getState, api, endpoint, toast, openExt
         '<button type="button" data-receptor-action="native-scenario" data-id="'+esc(scenario.id)+'">Open saved scenario</button> '+
         '<button type="button" data-receptor-action="prepared-run" data-id="'+esc(scenario.id)+'">Prepare native run</button></p></article>').join('')+'</div>':'<p>Create an explicit land-cover scenario to prepare its native model run.</p>')+
       '<p class="rc-note">'+number(Object.keys(prepared.shared_huc12s||{}).length)+' HUC12 units are shared by selected areas. Analyses retain each area separately; land-cover patches apply in their declared order.</p>';
+    const programmes=(catalog?.programmes||[]).filter(row=>row.preparation_id===prepared.id);
+    if(programmes.length)node('[data-rc-products]').insertAdjacentHTML('beforeend','<h3>Paired native programmes</h3><div class="rc-products">'+
+      programmes.map(row=>'<article><h4>'+esc(row.title)+'</h4><p>'+number(row.counts.profiles)+' profiles · '+number(row.counts.runs)+' native selections</p>'+
+        '<button type="button" data-receptor-action="open" data-kind="programme" data-id="'+esc(row.id)+'">Open calculations and source-water reports</button></article>').join('')+'</div>');
     const scenarioIds=new Set(scenarios.map(row=>row.id)),runs=(getState()?.data?.runs||[]).filter(run=>scenarioIds.has(run.selection?.scenario_id));
     if(runs.length)node('[data-rc-products]').insertAdjacentHTML('beforeend','<h3>Native runs for these areas</h3><div class="rc-scroll"><table><thead><tr><th>Scenario</th><th>State</th><th>Models</th><th>Open</th></tr></thead><tbody>'+
       runs.map(run=>'<tr><td>'+esc(scenarios.find(row=>row.id===run.selection.scenario_id)?.title||run.selection.scenario_id)+'</td><td>'+esc(label(run.state))+'</td><td>'+esc((run.selection.models||['ndr','sdr']).join(', ').toUpperCase())+'</td><td>'+
@@ -857,11 +1000,13 @@ export function attachReceptorWorkbench({getState, api, endpoint, toast, openExt
       'receptor.network.build':['network','Open watershed study'],
       'receptor.inventory.build':['inventory','Open source-water inventory'],
       'receptor.experiment.build':['comparison','Open profile comparisons'],
-      'receptor.source-areas.prepare':['source-areas','Open prepared scenario areas']
+      'receptor.source-areas.prepare':['source-areas','Open prepared scenario areas'],
+      'receptor.programme.create':['programme','Open paired native programme'],
+      'receptor.programme.compare':['comparison','Open source-water programme comparisons']
     };
     const valid=value=>typeof value==='string'&&/^[0-9a-f]{64}$/.test(value);
     const resultButton=(kind,id,title)=>{
-      if(!['network','inventory','comparison','source-areas'].includes(kind)||!valid(id))return;
+      if(!['network','inventory','comparison','source-areas','programme'].includes(kind)||!valid(id))return;
       buttons.push('<button type="button" data-action="receptor-result-open" data-workspace="'+esc(task.workspace)+
         '" data-kind="'+kind+'" data-id="'+id+'">'+esc(title)+'</button>');
     };
@@ -889,7 +1034,7 @@ export function attachReceptorWorkbench({getState, api, endpoint, toast, openExt
       closeDetail();
       return openItem('scenarios',id);
     }
-    if(action!=='receptor-result-open'||!['network','inventory','comparison','source-areas'].includes(button.dataset.kind))
+    if(action!=='receptor-result-open'||!['network','inventory','comparison','source-areas','programme'].includes(button.dataset.kind))
       throw Error('Choose a registered source-water task result.');
     taskTarget={workspace:requested,kind:button.dataset.kind,id};
     closeDetail();
@@ -902,6 +1047,12 @@ export function attachReceptorWorkbench({getState, api, endpoint, toast, openExt
     if(action==='prepared-analysis')return usePreparedAnalysis();
     if(action==='prepared-scenario')return interventionForm();
     if(action==='prepared-run')return preparedRunForm(target.dataset.id);
+    if(action==='prepared-programme')return programmeForm();
+    if(action==='native-programme')return openNativeProgramme(target.dataset.id);
+    if(action==='programme-compare'){
+      if(result?._kind!=='programme')throw Error('Open the saved source-water programme.');
+      return submit('receptor.programme.compare',{source_water_programme_id:result.id});
+    }
     if(action==='native-scenario')return openItem('scenarios',target.dataset.id);
     if(action==='native-run')return openItem('runs',target.dataset.id);
     if(action==='refresh')return loadCatalog();
@@ -959,7 +1110,7 @@ export function attachReceptorWorkbench({getState, api, endpoint, toast, openExt
     if(!frame)return;
     if(workspace!==currentWorkspace())return mount(root);
     const sourceState=getState()?.data?.source_water;
-    if(sourceState&&catalog){catalog.comparisons=sourceState.comparisons||[];catalog.inventories=sourceState.inventories||[];catalog.networks=sourceState.networks||[];catalog.source_areas=sourceState.source_areas||[];renderSaved();if(result?._kind==='source-areas')renderPreparedSources();}
+    if(sourceState&&catalog){catalog.comparisons=sourceState.comparisons||[];catalog.inventories=sourceState.inventories||[];catalog.networks=sourceState.networks||[];catalog.source_areas=sourceState.source_areas||[];catalog.programmes=sourceState.programmes||[];renderSaved();if(result?._kind==='source-areas')renderPreparedSources();}
     if(!pending||observing)return;
     const task=(getState()?.tasks||[]).find(row=>row.id===pending.id||row.operation_id===pending.operation_id);
     if(!task)return;
@@ -987,7 +1138,8 @@ export function attachReceptorWorkbench({getState, api, endpoint, toast, openExt
         await openResult('source-areas',finished.result.preparation_id);
         toast('Land-cover scenario saved. Prepare its native run from these source areas.');
       } else if(finished.result?.id){
-        const kind=finished.action==='receptor.experiment.build'?'comparison':finished.action==='receptor.network.build'?'network':finished.action==='receptor.source-areas.prepare'?'source-areas':'inventory';
+        const kind=finished.action==='receptor.programme.create'?'programme':
+          ['receptor.experiment.build','receptor.programme.compare'].includes(finished.action)?'comparison':finished.action==='receptor.network.build'?'network':finished.action==='receptor.source-areas.prepare'?'source-areas':'inventory';
         if(kind==='source-areas'){
           await waitForRetainedState(finished.result.source_collection_id);
           if(workspace!==requested||epoch!==generation||!frame)return;
