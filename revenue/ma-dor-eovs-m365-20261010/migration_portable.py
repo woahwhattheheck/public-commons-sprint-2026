@@ -19,7 +19,7 @@ from migration_store import MigrationError, identifier, integer, identity as cor
 SCHEMA = "commons.migration-workbench-delivery/v1"
 READY_SCHEMA = "commons.migration-workbench-receiving/v1"
 HASH = re.compile(r"^[0-9a-f]{64}$")
-APPLICATION_FILES = (
+LEGACY_APPLICATION_FILES = (
     "audit.mjs", "audit.test.mjs", "README.md",
     "migration_store.py", "migration_formats.py", "migration_reconcile.py",
     "migration_workspace.py", "migration_cli.py", "migration_server.py",
@@ -27,7 +27,36 @@ APPLICATION_FILES = (
     "public/migration-index.html", "public/migration-style.css",
     "public/migration-app.js",
 )
+APPLICATION_PROFILE = "commons.case-migration-application/v1"
+APPLICATION_FILES = LEGACY_APPLICATION_FILES + (
+    "migration_cases.py", "CASE_MIGRATION.md", "CASE_RECEIVING.md", "case_receiving.py",
+    "public/migration-cases.js",
+)
 BLOCK = 1024 * 1024
+
+
+def application_selection(entries, *, profile=None):
+    """Keep old complete deliveries executable without rewriting their source edition."""
+    names = [entry.get("path") for entry in entries]
+    if len(names) != len(set(names)):
+        raise ValueError("Frozen application inventory repeats a path")
+    actual = set(names)
+    legacy = {"application/" + name for name in LEGACY_APPLICATION_FILES}
+    current = {"application/" + name for name in APPLICATION_FILES}
+    if profile == APPLICATION_PROFILE and actual == current:
+        return APPLICATION_PROFILE
+    if profile is None and actual == legacy:
+        return None
+    raise ValueError("Frozen application inventory/profile is not one complete supported edition")
+
+
+def captured_application_selection(entries):
+    # A prepare started before this extension keeps its original complete roster.
+    # New prepares always freeze APPLICATION_FILES before their reservation.
+    names = {entry.get("path") for entry in entries}
+    profile = APPLICATION_PROFILE if names == {"application/" + name for name in APPLICATION_FILES} else None
+    return application_selection(entries, profile=profile)
+
 
 
 def digest(path):
@@ -165,6 +194,10 @@ def _manifest_from_archive(archive):
     entries = value.get("files")
     if not isinstance(entries, list) or not entries:
         raise ValueError("Delivery contains no complete file inventory")
+    profile = value.get("application_profile")
+    roster = APPLICATION_FILES if profile == APPLICATION_PROFILE else LEGACY_APPLICATION_FILES
+    if profile not in (None, APPLICATION_PROFILE):
+        raise ValueError("Unsupported application source profile")
     expected = {"delivery.json"}
     for entry in entries:
         if not isinstance(entry, dict):
@@ -176,7 +209,7 @@ def _manifest_from_archive(archive):
         if not isinstance(entry.get("sha256"), str) or not HASH.fullmatch(entry["sha256"]):
             raise ValueError("Invalid complete file identity")
         if name.startswith("application/"):
-            if name[len("application/"):] not in APPLICATION_FILES:
+            if name[len("application/"):] not in roster:
                 raise ValueError("Unexpected application member")
         elif name.startswith("workspace/"):
             if name.startswith("workspace/deliveries/"):
@@ -201,7 +234,8 @@ def _manifest_from_archive(archive):
             raise ValueError("Only ordinary files are supported")
         if info.flag_bits & 1 or info.compress_type not in (zipfile.ZIP_STORED, zipfile.ZIP_DEFLATED):
             raise ValueError("Unsupported encrypted or compressed archive member")
-    required = {"application/" + name for name in APPLICATION_FILES}
+    application_selection([entry for entry in entries if entry["path"].startswith("application/")], profile=profile)
+    required = {"application/" + name for name in roster}
     required.add("workspace/workspace.sqlite3")
     required.add("reports/review.html")
     if not required.issubset(expected):
@@ -285,8 +319,7 @@ class PortableService:
                 application = [file_description(self.application_root / relative,
                                "application/" + relative) for relative in APPLICATION_FILES]
                 publish_bytes(application_intent, canonical(application))
-            if {entry["path"] for entry in application} != {"application/" + name for name in APPLICATION_FILES}:
-                raise ValueError("Original captured application inventory differs")
+            captured_application_selection(application)
             for entry in application:
                 relative = member_name(entry["path"])
                 capture_file(self.application_root / relative[len("application/"):],
@@ -353,9 +386,7 @@ class PortableService:
         files = []
         paths = {}
         application = json.loads((job / "application.json").read_text())
-        expected_application = {"application/" + name for name in APPLICATION_FILES}
-        if {entry["path"] for entry in application} != expected_application:
-            raise ValueError("Frozen complete application roster differs")
+        application_profile = captured_application_selection(application)
         reports = json.loads((job / "reports.json").read_text())
         for captured in application + reports:
             name = member_name(captured["path"])
@@ -412,6 +443,8 @@ class PortableService:
             "application_entrypoint": "application/migration_server.py",
             "files": files,
         }
+        if application_profile is not None:
+            manifest["application_profile"] = application_profile
         manifest_bytes = canonical(manifest)
         publish_bytes(job / "delivery.json", manifest_bytes)
         temporary = destination.with_name(destination.name + ".pending-" + uuid.uuid4().hex)
