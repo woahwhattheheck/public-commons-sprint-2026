@@ -1,3 +1,5 @@
+import {installDocumentCorrections} from './corrections.mjs';
+let corrections;
 import {installPdfBundles} from './pdf-bundles.mjs';
 let pdfBundles;
 // MIT. Full document preparation and receiving on the original customer host.
@@ -6,7 +8,7 @@ const state={token:location.hash.slice(1),host:null,payload:null,selected:null,s
   selectedOffset:0,listOffset:0,listEpoch:0,selectionEpoch:0,operation:null,operationTimer:null,
   followId:null,sourceBusy:false,restoreSource:null,pendingReads:0,datasetRead:0,restoreRead:0,exampleRead:0,assembly:null,assemblyEpoch:0,assemblySelected:null,assemblyComposition:null,assemblyStaging:false};
 const MiB=1048576,HASH=/^[a-f0-9]{64}$/;
-const titles={stage:'Preparing complete source documents',restore:'Receiving the original source plan',
+const titles={correct:'Preparing selected replacement document sources',stage:'Preparing complete source documents',restore:'Receiving the original source plan',
   prepare:'Preparing the original merchant price',run:'Rendering the saved document set',
   receive:'Receiving existing paid jobs',export:'Exporting the complete received Collection',
   'assembly-stage':'Preparing the complete ordered PDF bundle','assembly-prepare':'Preparing the original assembly price',
@@ -146,7 +148,7 @@ function updateProvider(){
   $('recipe').value=JSON.stringify(request,null,2);
 }
 function showNew(){
-  pdfBundles?.hide();
+  pdfBundles?.hide();corrections?.hide();
   state.selected=null;state.selectedId=null;state.followId=null;state.selectionEpoch++;
   $('new-panel').hidden=false;$('saved-panel').hidden=true;
   history.replaceState(null,'','/documents/#'+state.token);
@@ -215,7 +217,7 @@ function drawDocuments(selected){
   clear($('document-rows'));
   for(const item of selected.documents){
     const row=node('tr'),title=node('td'),task=node('td'),source=node('td'),status=node('td'),pdf=node('td');
-    title.append(node('strong',item.label),node('small','Record '+item.recordKey+' · '+item.templateId));
+    title.append(corrections.checkbox(item),node('strong',item.label),node('small','Record '+item.recordKey+' · '+item.templateId));
     task.textContent=item.taskReference;
     source.append(linkDownload(human(item.format)+' source',selection('source',{file:item.source})),node('small',bytes(item.bytes)));
     const native=item.native;
@@ -398,6 +400,7 @@ async function stageAssembly(){
 
 function drawSelection(selected){
   $('new-panel').hidden=true;$('saved-panel').hidden=false;
+  corrections.observe(selected);
   $('saved-title').textContent=selected.name;$('saved-id').textContent=selected.id+' · '+selected.provider+' · '+selected.merchantOrigin;
   clear($('source-details'));
   for(const [label,value]of [['Source SHA256',selected.sourceSha256],['Full source plan',bytes(selected.sourceBytes)],
@@ -480,6 +483,7 @@ async function pollOperation(id){
 }
 async function startOperation(kind,input){
   const result=await api(kind,{method:'POST',body:input});
+  if(input.id!==state.selectedId)state.selectedOffset=0;
   state.followId=input.id;watch(result);await refreshList();
 }
 async function selectedAction(kind){
@@ -562,7 +566,9 @@ for(const [id,path]of [['request-link','/jobs/request/'],['checkout-link','/jobs
   ['jobs-link','/jobs/'],['library-link','/'],['collections-link','/collections']])
   $(id).href=path+'#'+state.token;
 
+corrections=installDocumentCorrections({api,guard,start:startOperation,onOpen:loadComposition});
 pdfBundles=installPdfBundles({api,guard,onOpen(){
+  corrections.hide();
   state.selected=null;state.selectedId=null;state.followId=null;state.selectionEpoch++;
   $('new-panel').hidden=true;$('saved-panel').hidden=true;$('operation-panel').hidden=true;markSelected();
 }});
