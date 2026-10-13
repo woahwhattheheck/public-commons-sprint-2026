@@ -13,6 +13,8 @@ from datetime import datetime, timezone
 
 CODE_FILES = (
     "measurement_workspace/published_studies.py",
+    "measurement_workspace/observation_support.py",
+    "measurement_workspace/OBSERVATION_SUPPORT.md",
     "operator/published_study_operator.py",
     "operator/extensions/published-studies.json",
     "operator/web/published_studies.mjs",
@@ -104,7 +106,10 @@ def main():
         data_files.append(cohort_manifest)
     for manifest in (
         source / DATA_ROOT / "model-sources.json",
+        source / DATA_ROOT / "wqp" / "flow-context-sources.json",
+        source / DATA_ROOT / "wqp" / "flow-context-public-sources.json",
         source / DATA_ROOT / "wqp_20261013" / "source-manifest.json",
+        source / DATA_ROOT / "figures" / "model-sources.json",
         source / "eighteenmile_chlorophyll_reconciled.sources.json",
         source / "eighteenmile_lake_observation_report.sources.json",
         source / "eighteenmile_lake_paired_analysis.sources.json",
@@ -124,6 +129,9 @@ def main():
     flow_manifest = DATA_ROOT / "wqp" / "flow-context-sources.json"
     if (source / flow_manifest).is_file():
         data_files.append(str(flow_manifest))
+    support_result = DATA_ROOT / "microcystin_support_20261013" / "original-campaign-support.json"
+    if (source / support_result).is_file():
+        data_files.append(str(support_result))
     data_files = sorted(set(data_files))
     expected = list(CODE_FILES) + data_files
     for relative in expected:
