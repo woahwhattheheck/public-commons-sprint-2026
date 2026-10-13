@@ -1,3 +1,4 @@
+import {attachMonitoringFieldwork} from './monitoring_fieldwork.mjs';
 /* Native host adapter: original authorization, task queue and file tickets. */
 const READS = new Set(['context.catalog','context.list','context.get','context.preview','list','get','frontier.progress','campaign.get','campaign.list','campaign.history','capabilities','source.catalog']);
 let componentReady;
@@ -9,7 +10,9 @@ function component() {
 }
 const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
 
-export function attachMonitoring({getState, api, endpoint, showTask, toast}) {
+export function attachMonitoring(host) {
+  const {getState, api, endpoint, showTask, toast}=host;
+  const fieldwork=attachMonitoringFieldwork({...host,transport});
   const nodes = new Map(), pendingMemory = new Map();
   const storage = {
     get(key) {
@@ -96,6 +99,8 @@ export function attachMonitoring({getState, api, endpoint, showTask, toast}) {
     if(active===node && node.parentNode===root)return;
     active=node;root.replaceChildren(node);
     await node.ready;
+    if(ticket!==generation || workspace()!==key)return;
+    await fieldwork.mount(root,key);
   }
   async function update() {
     if (!active?.isConnected || active.busy || updating) return;
@@ -111,9 +116,11 @@ export function attachMonitoring({getState, api, endpoint, showTask, toast}) {
       await node.refresh();
       if (!current()) return;
       await node.refreshSources();
+      if (!current()) return;
+      await fieldwork.update();
       if (current()) completedByWorkspace.set(key, completed);
     } finally { updating = false; }
   }
-  function detach(){generation++;networkOpening++;if(active)active.remove();active=null;}
+  function detach(){generation++;networkOpening++;fieldwork.detach();if(active)active.remove();active=null;}
   return {mount,update,detach,openNetwork,render:()=>'',dispatch:()=>false};
 }
