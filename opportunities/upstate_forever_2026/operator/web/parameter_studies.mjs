@@ -157,7 +157,7 @@ export function attachParameterStudies(host) {
   let study = null, results = null, resultFilters = {area_id: '', pollutant: '', offset: 0, range_offset: 0};
   let caseFilter = '', caseState = 'all', caseOffset = 0, caseSequence = 0, caseController = null, caseTimer = null, draftCatalog = null, draftRoot = null;
   let catalogSequence = 0, previewSequence = 0, resultSequence = 0, confirmedSelection = null;
-  let formSequence = 0, activeForm = null, draftSession = null, resultController = null;
+  let formSequence = 0, activeForm = null, draftSession = null, resultController = null, draftCalibration = null;
   const state = () => host.getState();
   const data = () => state()?.data || {};
   const workspace = () => state()?.workspace_key;
@@ -226,7 +226,7 @@ export function attachParameterStudies(host) {
         dialog.removeEventListener('close', onClose);
         if (activeForm === session) activeForm = null;
         if (draftSession === session) {
-          draftSession = null; draftRoot = null; draftCatalog = null; confirmedSelection = null;
+          draftSession = null; draftRoot = null; draftCatalog = null; confirmedSelection = null; draftCalibration = null;
           catalogSequence++; previewSequence++;
         }
       }
@@ -380,6 +380,7 @@ export function attachParameterStudies(host) {
       '</h2><p>' + escapeHTML(item.selection.purpose) + '</p></div><div class="page-actions" data-parameter-study-actions>' + actions +
       '</div></header><div class="section-body"><div data-parameter-study-summary>' + caseSummary(item) + '</div>' +
       '<dl class="parameter-study-provenance">' + provenance(item.baseline_selection) + '</dl>' + baselineExecution(item) +
+      calibrationOriginPanel(item.selection.calibration_origin, null, false) +
       '<details class="technical"><summary>Selected axes and scientific rationale</summary>' + axesSummary(item.selection.axes) + '</details>' +
       '<div data-parameter-study-error></div></div></section>' +
       '<section class="section"><header class="section-header"><div><h2>Native cases</h2><p>Each case uses the baseline grid and land-cover scenario with its selected parameter profile.</p></div><label class="parameter-study-filter">Case state<select data-parameter-study-case-state>' +
@@ -611,6 +612,7 @@ export function attachParameterStudies(host) {
         return area;
       }),
       difference_maps: draftRoot.querySelector('[name="difference_maps"]').checked};
+    if (draftCalibration) selection.calibration_origin = JSON.parse(JSON.stringify(draftCalibration));
     return selection;
   }
 
@@ -640,8 +642,44 @@ export function attachParameterStudies(host) {
     }
   }
 
-  async function newStudy(id, baselineId) {
-    if (!(data().runs || []).length) throw new Error('Prepare a native run before creating a parameter study.');
+
+  function calibrationOriginPanel(origin, context = null, editable = true) {
+    if (!origin) return '';
+    const original = context?.title || 'Original annual-reference evaluation';
+    return '<section class="section" data-parameter-calibration-origin><header class="section-header"><div><h3>Selected profile and original evaluation</h3><p>' +
+      escapeHTML(original) + '</p></div></header><div class="section-body"><dl class="parameter-study-provenance">' +
+      [['Evaluation', origin.calibration_id], ['Selected native run', origin.selected_run_id],
+       ['Selected profile', origin.selected_profile_id],
+       ['Original reference run', origin.reference_run_id || 'Not declared in the original evaluation'],
+       ['Original observations', origin.observation_id]].map(([label, value]) =>
+        '<div><dt>' + escapeHTML(label) + '</dt><dd class="mono">' + escapeHTML(value) + '</dd></div>').join('') +
+      '</dl><p class="note">' + escapeHTML(context?.interpretation ||
+        'The new study retains the selected run as its baseline and the complete original evaluation as source history. Its new cases are not independently validated by that earlier evaluation.') +
+      '</p>' + (context ? '<details><summary>Original source notes and held-out design</summary><pre class="json-view">' + escapeHTML(pretty(context)) + '</pre></details>' : '') +
+      (editable ? button('calibration-clear', 'Use a different baseline without this calibration link') :
+        '<button type="button" data-action="item" data-kind="calibrations" data-id="' + escapeHTML(origin.calibration_id) + '">Open original evaluation</button>') + '</div></section>';
+  }
+
+  async function openFromCalibration(value) {
+    if (!value || value.workspace_key !== workspace() ||
+        !/^[0-9a-f]{64}$/.test(value.calibration_id || '')) {
+      throw new Error('Open the original annual-reference result in its own Workspace.');
+    }
+    if (typeof value.isCurrent === 'function' && !value.isCurrent()) return null;
+    const opening = formRequest();
+    const current = () => opening.current() && (typeof value.isCurrent !== 'function' || value.isCurrent());
+    const packet = await opening.read(() =>
+      host.api(requested('/api/parameter-studies/calibration-origin', {id: value.calibration_id})));
+    if (!current()) return null;
+    if (packet?.workspace_key !== opening.workspace || packet.calibration_id !== value.calibration_id ||
+        packet.calibration_origin?.selected_run_id !== packet.baseline_run_id) {
+      throw new Error('The selected-profile handoff belongs to another original evaluation.');
+    }
+    return newStudy(null, packet.baseline_run_id, packet);
+  }
+
+  async function newStudy(id, baselineId, calibration = null) {
+    if (!(data().runs || []).length && !calibration) throw new Error('Prepare a native run before creating a parameter study.');
     const opening = formRequest(), originalWorkspace = opening.workspace;
     let initial = {}, editor = null;
     if (id) {
@@ -651,17 +689,40 @@ export function attachParameterStudies(host) {
       if (retained?.id !== id) throw new Error('The saved study response belongs to another original study.');
       initial = retained.selection;
     }
+    if (calibration) initial = {title: calibration.title, purpose: calibration.purpose,
+      baseline_run_id: calibration.baseline_run_id, calibration_origin: calibration.calibration_origin};
+    if (initial.calibration_origin && !calibration) {
+      calibration = await opening.read(() => host.api(requested('/api/parameter-studies/calibration-origin',
+        {id: initial.calibration_origin.calibration_id})));
+      if (!opening.current()) return;
+      if (!calibration?.calibration_origin ||
+          Object.keys(calibration.calibration_origin).length !== Object.keys(initial.calibration_origin).length ||
+          Object.entries(initial.calibration_origin).some(([key, value]) => calibration.calibration_origin[key] !== value) ||
+          calibration.baseline_run_id !== initial.baseline_run_id) {
+        throw new Error('The retained study changed its original calibration binding.');
+      }
+    }
     if (!opening.current()) return;
     draftCatalog = null; confirmedSelection = null;
+    const baselineRuns = [...(data().runs || [])];
+    if (calibration && !baselineRuns.some(run => run.id === calibration.baseline_run_id)) {
+      if (calibration.catalog?.baseline_run_id !== calibration.baseline_run_id ||
+          calibration.catalog?.selection?.profile_id !== calibration.calibration_origin?.selected_profile_id) {
+        throw new Error('The original selected baseline catalogue changed.');
+      }
+      baselineRuns.push({id: calibration.baseline_run_id, selection: calibration.catalog.selection,
+        state: calibration.catalog.baseline_state});
+    }
     const html = '<div class="parameter-study-draft"><div class="form-grid">' +
-      field('experiment_title', 'Study title', initial.title ? initial.title + ' — revision' : '', 'required') +
+      field('experiment_title', 'Study title', initial.title ? initial.title + (id ? ' — revision' : '') : '', 'required') +
       '<label>Design<select name="experiment_design">' + option('one-at-a-time', 'One parameter axis at a time', initial.design !== 'factorial') +
       option('factorial', 'Every combination of axis values', initial.design === 'factorial') + '</select></label>' +
       textarea('experiment_purpose', 'Scientific question', initial.purpose || '', 'required rows="3"') +
-      '<label>Baseline native run<select name="baseline_run_id" required>' + option('', 'Choose retained baseline') +
-      data().runs.map(run => option(run.id, named('scenarios', run.selection.scenario_id) + ' · ' +
+      '<label>Baseline native run<select name="baseline_run_id" required' + (initial.calibration_origin ? ' disabled' : '') + '>' + option('', 'Choose retained baseline') +
+      baselineRuns.map(run => option(run.id, named('scenarios', run.selection.scenario_id) + ' · ' +
         named('profiles', run.selection.profile_id) + ' · ' + modelNames(run.selection) + ' · ' + run.state + ' · ' + short(run.id),
         run.id === (initial.baseline_run_id || baselineId))).join('') + '</select></label></div>' +
+      calibrationOriginPanel(initial.calibration_origin, calibration?.context) +
       '<div data-baseline-description class="parameter-study-baseline"></div><div class="subheading"><h3>Parameter axes</h3>' +
       button('axis-add', 'Add parameter axis') + '</div><div data-parameter-study-axes>' +
       (initial.axes?.length ? initial.axes : [{}]).map(axisEditor).join('') + '</div>' +
@@ -687,6 +748,7 @@ export function attachParameterStudies(host) {
       }, () => {
         editor = formSession('.parameter-study-draft', originalWorkspace);
         draftSession = editor; draftRoot = editor.anchor;
+        draftCalibration = initial.calibration_origin ? JSON.parse(JSON.stringify(initial.calibration_origin)) : null;
         editor.listen(draftRoot, 'input', invalidatePreview);
         editor.listen(draftRoot, 'change', event => {
           invalidatePreview();
@@ -883,6 +945,14 @@ export function attachParameterStudies(host) {
     if (['preview', 'axis-add', 'axis-remove', 'area-add', 'area-remove'].includes(action)) {
       if (!draftSession?.current() || !draftRoot.contains(node)) return;
     }
+    if (action === 'calibration-clear') {
+      if (!draftSession?.current() || !draftRoot.contains(node)) return;
+      if (!confirm('Choose a different baseline and remove the structured calibration link from this new draft? The original evaluation and every saved study remain retained.')) return;
+      draftCalibration = null;
+      draftRoot.querySelector('[name="baseline_run_id"]').disabled = false;
+      draftRoot.querySelector('[data-parameter-calibration-origin]')?.remove();
+      invalidatePreview(); return;
+    }
     if (action === 'preview') return previewDesign();
     if (action === 'axis-add') {
       draftRoot.querySelector('[data-parameter-study-axes]').insertAdjacentHTML('beforeend', axisEditor());
@@ -969,5 +1039,5 @@ export function attachParameterStudies(host) {
       '<div class="page-actions">' + button('open', 'Open parameter study', 'data-id="' + escapeHTML(task.result.id) + '" data-workspace="' + escapeHTML(task.workspace) + '"') + '</div>' : '';
   }
 
-  return {render, mount, detach, dispatch, taskActions, openSavedStudy};
+  return {render, mount, detach, dispatch, taskActions, openSavedStudy, openFromCalibration};
 }

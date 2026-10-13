@@ -112,6 +112,81 @@ def candidates(workspace, experiment_id, *, candidate_run_ids=None):
     }
 
 
+def continuation_origin(report, plan, workspace_id):
+    """Bind the original selected profile to its complete retained evaluation."""
+    if (report.get("state") != "complete" or report.get("workspace_id") != workspace_id
+            or plan.get("workspace_id") != workspace_id or report.get("plan_id") != plan.get("id")):
+        raise ValueError("Continue a completed annual-reference evaluation in its original Workspace.")
+    result_id, plan_id = identifier(report.get("id")), identifier(plan.get("id"))
+    run_id, profile_id = identifier(report.get("selected_run_id")), identifier(report.get("selected_profile_id"))
+    selection = plan["selection"]
+    original = next((row for row in plan["candidates"] if row["run_id"] == run_id), None)
+    ranked = next((row for row in report.get("ranked_candidates", []) if row.get("run_id") == run_id), None)
+    if (original is None or ranked is None or original.get("profile_id") != profile_id
+            or run_id not in selection["candidate_run_ids"]
+            or report.get("observations") != plan.get("observations")):
+        raise ValueError("The selected working profile differs from its original evaluation.")
+    reference = selection.get("reference_run_id")
+    if reference is not None:
+        identifier(reference)
+        if reference not in selection["candidate_run_ids"]:
+            raise ValueError("The original reference is outside the saved candidate roster.")
+    return {
+        "schema": "upstate.parameter-calibration-origin/v1", "workspace_id": workspace_id,
+        "calibration_id": result_id, "plan_id": plan_id,
+        "selected_run_id": run_id, "selected_profile_id": profile_id,
+        "reference_run_id": reference, "observation_id": selection["observation_id"],
+        "selection_sha256": digest(selection),
+    }
+
+
+def continuation(workspace, calibration_id):
+    """Open an ordinary new Parameter study; no native calculation is dispatched."""
+    report = workspace._get("calibrations", identifier(calibration_id))
+    plan = workspace._get("calibration-plans", identifier(report["plan_id"]))
+    origin = continuation_origin(report, plan, workspace.project["id"])
+    catalog = parameter_studies.catalog(workspace, origin["selected_run_id"])
+    if (catalog["baseline_state"] != "complete"
+            or catalog["selection"]["profile_id"] != origin["selected_profile_id"]):
+        raise ValueError("Retain the original completed selected run before continuing its profile.")
+    notes = list(plan["selection"].get("notes", []))
+    title = report.get("title") or plan["selection"]["title"]
+    context = {
+        "title": title, "notes": notes, "source_vintages": report.get("source_vintages", {}),
+        "observations": plan["observations"], "catchments": plan["selection"]["catchments"],
+        "calibration_group_ids": plan["selection"].get("calibration_group_ids", []),
+        "validation_group_ids": plan["selection"].get("validation_group_ids", []),
+        "selected_validation": report.get("selected_validation"),
+        "objective": plan["selection"]["objective"],
+        "interpretation": ("The retained evaluation selected this existing profile. New parameter "
+            "cases keep that exact run as their baseline. Original source periods, support limitations "
+            "and held-out results remain with the evaluation; continuation does not establish field "
+            "calibration or independently validate any new case."),
+    }
+    purpose = ("Continue the selected profile from " + title + ". Original evaluation "
+               + origin["calibration_id"] + "; original plan " + origin["plan_id"] + ". "
+               + context["interpretation"])
+    if notes:
+        purpose += "\nOriginal evaluation notes:\n" + "\n".join(notes)
+    return {"schema": "upstate.parameter-calibration-continuation/v1",
+            "workspace_id": workspace.project["id"], "calibration_id": origin["calibration_id"],
+            "title": title + " — selected-profile study", "purpose": purpose,
+            "baseline_run_id": origin["selected_run_id"], "calibration_origin": origin,
+            "context": context, "catalog": catalog}
+
+
+def validate_continuation(workspace, origin, baseline_run_id):
+    if not isinstance(origin, dict):
+        raise ValueError("Retain the complete original calibration binding.")
+    report = workspace._get("calibrations", identifier(origin.get("calibration_id")))
+    plan = workspace._get("calibration-plans", identifier(report["plan_id"]))
+    expected = continuation_origin(report, plan, workspace.project["id"])
+    if origin != expected or baseline_run_id != expected["selected_run_id"]:
+        raise ValueError("The Parameter baseline or calibration binding changed. "
+                         "Reopen the original selected profile or explicitly clear its calibration link.")
+    return expected
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--workspace", required=True)
