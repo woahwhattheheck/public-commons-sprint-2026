@@ -90,6 +90,11 @@ def collect_references(data, *, limits=None):
         require(isinstance(key, str) and len(key) <= 200, 'Map IDs must be bounded strings')
         references.append({'role': 'map.' + key, 'path': maps.get(key)})
     references.append({'role': 'final_report', 'path': data.get('report_pdf')})
+    if 'grid' in data:
+        grid = data['grid']
+        require(isinstance(grid, dict) and grid.get('schema') == 'upstate.retained-grid/v1',
+                'Expected the original retained grid declaration')
+        references.append({'role': 'model.grid', 'path': grid.get('record')})
     assets = data.get('project_assets', [])
     require(isinstance(assets, list) and len(assets) <= limits['max_references'] and
             all(isinstance(path, str) and path for path in assets),
