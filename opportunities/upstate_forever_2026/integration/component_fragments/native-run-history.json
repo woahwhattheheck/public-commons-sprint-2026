@@ -1,0 +1,28 @@
+{
+  "schema": "upstate.application-component-fragment/v1",
+  "id": "native-run-history",
+  "source_reference": "Original native execution records and selected-run history in the maintained run desk",
+  "components": {
+    "native-run-history": {
+      "title": "Original native execution history and portable handover",
+      "paths": [
+        "model/native_run_history.py",
+        "operator/native_run_history.py",
+        "operator/extensions/native-run-history.json",
+        "operator/web/native_run_history.mjs",
+        "operator/web/run_workbench.mjs",
+        "operator/NATIVE_RUN_HISTORY.md",
+        "integration/component_fragments/native-run-history.json",
+        "CURRENT_OWNER_DIRECTION.md"
+      ],
+      "requires": [
+        "core",
+        "native-run-desk",
+        "guided-journey"
+      ]
+    }
+  },
+  "required_components": [
+    "native-run-history"
+  ]
+}
