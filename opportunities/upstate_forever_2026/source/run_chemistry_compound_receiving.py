@@ -81,7 +81,7 @@ def compound_inputs(project, original, calibration_run_id):
     require(all(project.species[sid]["basis"] == "N" for sid in ("ammonium_n", "nitrate_n")),
             "The original two pools must retain elemental nitrogen basis")
     definitions = [
-        ("Dissolved inorganic nitrogen", [("ammonium_n", 1.0), ("nitrate_n", 1.0)]),
+        ("Ammonium and nitrate nitrogen", [("ammonium_n", 1.0), ("nitrate_n", 1.0)]),
         ("Weighted nitrogen operator check", [("ammonium_n", 0.5), ("nitrate_n", 1.5)]),
     ]
     rows, mapping = [], []
@@ -208,7 +208,7 @@ def run_course(args):
         # Day zero uses the original reservoir inventory, independent of the two
         # fitted rate/load parameters. Exact endpoint membership is observable.
         endpoint = {"id": "endpoint-included", "reach": "reservoir", "day": 0,
-                    "measurement": "Initial dissolved inorganic nitrogen", "basis": "N",
+                    "measurement": "Initial ammonium and nitrate nitrogen", "basis": "N",
                     "components": [{"species": "ammonium_n", "weight": 1.0},
                                    {"species": "nitrate_n", "weight": 1.0}],
                     "role": "holdout", "qualifier": "interval", "sigma_mg_l": 0.03,

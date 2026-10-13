@@ -38,7 +38,7 @@ The four corresponding CLI options allow an explicitly selected equivalent autho
 
 The original 36 calibration records provide 18 paired reach/day positions. Two explicit measurement operators are retained at every position:
 
-- Dissolved inorganic nitrogen: `1 × ammonium_n + 1 × nitrate_n`.
+- Ammonium and nitrate nitrogen: `1 × ammonium_n + 1 × nitrate_n`.
 - Weighted operator exercise: `0.5 × ammonium_n + 1.5 × nitrate_n`.
 
 Both use the original elemental-N basis. Reference concentrations are exact weighted sums of the retained authored records. A combined record is held out if either original contributor was held out. Each new provenance record includes both original IDs and the original calibration run.
