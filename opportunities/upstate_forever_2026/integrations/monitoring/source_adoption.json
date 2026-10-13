@@ -160,12 +160,12 @@
     {
       "source": "src/opportunities/upstate_forever_2026/operator/web/monitoring.mjs",
       "path": "operator/web/monitoring.mjs",
-      "bytes": 7509,
-      "sha256": "72741cb39fa2add660a8e2b57aea9d0d8bf41db74adb7e38d5f5e6d3eb2b7874",
+      "bytes": 7810,
+      "sha256": "f24ec9690b5aefc8e85c9792a55ef311e4933371688d83ce4f5f108d1ea32919",
       "original_bytes": 4274,
       "original_sha256": "0a76feed9d9bd4ac929fa8e9ad0f28f95205fa705c9f6314ef79e3f095e4b895",
-      "previous_bytes": 7237,
-      "previous_sha256": "be145e48c968912ad9d759977b1f26b8271ef5bd1702411be21a9bf1ba77658a"
+      "previous_bytes": 7566,
+      "previous_sha256": "c65c0081e94a1500850fc8e8f5f798bc8b63ed7e3bc57deab91784e8a5054f44"
     },
     {
       "source": "model/monitoring_observed_context.py",
@@ -241,7 +241,7 @@
         "Preserve original queued request identity and saved report-source reopening",
         "Capture report preparation under its root lock during complete Workspace transfer"
       ],
-      "preserved": "Original ASTRA-MONITOR12 solver, native campaign and field history; current water-study handoff; ES26 observed-context source and browser reads"
+      "preserved": "Original ASTRA-MONITOR12 solver, native campaign and field history; current water-study handoff; ES26 observed-context source and browser reads; ES-EXP campaign-to-Implementation fieldwork mounting, updates and detach"
     }
   ],
   "observational_context": {

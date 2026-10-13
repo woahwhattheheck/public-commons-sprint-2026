@@ -482,30 +482,49 @@ def join_portable(text):
 
 
 def join_monitoring_report(text):
-    """Add retained report controls to the current Monitoring adapter only."""
+    """Preserve current Monitoring and Fieldwork lifecycles when adding reports."""
     text = replace_once(
         text, '/* Native host adapter: original authorization, task queue and file tickets. */\n',
-        'import {attachMonitoringReport} from \'./monitoring-report.mjs\';\n/* Native host adapter: original authorization, task queue and file tickets. */\n',
+        'import {attachMonitoringReport} from \'./monitoring-report.mjs\';\n'
+        '/* Native host adapter: original authorization, task queue and file tickets. */\n',
         'import {attachMonitoringReport} from \'./monitoring-report.mjs\';',
     )
-    text = replace_once(
-        text, 'export function attachMonitoring({getState, api, endpoint, showTask, toast}) {\n',
-        'export function attachMonitoring(context) {\n  const {getState, api, endpoint, showTask, toast}=context;\n',
-        'export function attachMonitoring(context) {',
-    )
-    text = replace_once(
-        text, '    await node.ready;\n',
-        '    await node.ready;\n    node.monitoringReport ||= attachMonitoringReport(node,context,key);\n    node.monitoringReport.update();\n',
-        'node.monitoringReport ||= attachMonitoringReport(node,context,key);',
-    )
+    legacy = 'export function attachMonitoring({getState, api, endpoint, showTask, toast}) {\n'
+    if legacy in text:
+        text = replace_once(
+            text, legacy,
+            'export function attachMonitoring(context) {\n'
+            '  const {getState, api, endpoint, showTask, toast}=context;\n',
+            'export function attachMonitoring(context) {',
+        )
+    scopes = re.findall(r"export function attachMonitoring\((host|context)\) \{", text)
+    if len(scopes) != 1:
+        raise ValueError("Compose the current Monitoring host/context adapter before report integration")
+    scope = scopes[0]
+    existing = re.findall(r"attachMonitoringReport\(node,(\w+),key\)", text)
+    if existing and existing != [scope]:
+        raise ValueError("The current Monitoring report helper uses another adapter context")
+    addition = ('    node.monitoringReport ||= attachMonitoringReport(node,' + scope + ',key);\n'
+                '    node.monitoringReport.update();\n')
+    marker = 'node.monitoringReport ||= attachMonitoringReport(node,' + scope + ',key);'
+    if '    await fieldwork.mount(root,key);\n' in text:
+        text = replace_once(
+            text, '    await fieldwork.mount(root,key);\n',
+            addition + '    await fieldwork.mount(root,key);\n', marker,
+        )
+    else:
+        text = replace_once(
+            text, '    await node.ready;\n',
+            '    await node.ready;\n' + addition, marker,
+        )
     text = replace_once(
         text, '  async function update() {\n',
         '  async function update() {\n    active?.monitoringReport?.update();\n',
         'active?.monitoringReport?.update();',
     )
     text = replace_once(
-        text, '  function detach(){generation++;networkOpening++;if(active)active.remove();active=null;}\n',
-        '  function detach(){generation++;networkOpening++;active?.monitoringReport?.detach();if(active)active.remove();active=null;}\n',
+        text, '  function detach(){generation++;networkOpening++;',
+        '  function detach(){generation++;networkOpening++;active?.monitoringReport?.detach();',
         'active?.monitoringReport?.detach();',
     )
     return text

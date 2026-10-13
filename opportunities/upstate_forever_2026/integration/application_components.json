@@ -333,7 +333,12 @@
     "conservation": {
       "title": "conservation",
       "paths": [
-        "operator/extensions/conservation.json"
+        "model/CONSERVATION_NATIVE_VERSIONS.md",
+        "model/EXPERIMENT_SOURCE_ADOPTION.md",
+        "model/conservation_scenarios.py",
+        "model/experiments.py",
+        "operator/extensions/conservation.json",
+        "operator/install_conservation.py"
       ],
       "requires": [
         "core"
@@ -1126,10 +1131,40 @@
     "robust-workbench": {
       "title": "robust workbench",
       "paths": [
-        "operator/extensions/robust-workbench.json"
+        "model/client_report.py",
+        "model/decision_study_transfer.py",
+        "model/delivery.py",
+        "model/native_versions.py",
+        "model/robust_decisions/SOURCE_MANIFEST.json",
+        "model/robust_decisions/eco_robust/cli.py",
+        "model/robust_decisions/eco_robust/decision_delivery.py",
+        "model/robust_decisions/eco_robust/diagnostics.py",
+        "model/robust_decisions/eco_robust/integration.py",
+        "model/robust_decisions/eco_robust/operations.py",
+        "model/robust_decisions/eco_robust/store.py",
+        "model/study_delivery_transfer.py",
+        "model/study_transfer.py",
+        "operator/MAP_ATLAS.md",
+        "operator/ROBUST_WORKBENCH.md",
+        "operator/ROBUST_WORKBENCH_UI.md",
+        "operator/STUDY_TRANSFER.md",
+        "operator/extensions/robust-workbench.json",
+        "operator/robust_workbench.py",
+        "operator/web/experiment_diagnostics.mjs",
+        "operator/web/map_atlas.mjs",
+        "operator/web/retained_desks.mjs",
+        "operator/web/robust_workbench.css",
+        "operator/web/robust_workbench.mjs",
+        "source/ROBUST_RECEIVING.md",
+        "source/install_robust_workbench.py",
+        "source/run_robust_workbench_browser.mjs",
+        "source/run_robust_workspace_transfer.py"
       ],
       "requires": [
-        "core"
+        "core",
+        "map-atlas",
+        "study-transfer",
+        "experiment-diagnostics"
       ]
     },
     "scenario-analysis-delivery": {
@@ -1222,6 +1257,11 @@
     "study-transfer": {
       "title": "study transfer",
       "paths": [
+        "model/decision_study_transfer.py",
+        "model/robust_decisions/eco_robust/decision_delivery.py",
+        "model/study_delivery_transfer.py",
+        "model/study_transfer.py",
+        "operator/STUDY_TRANSFER.md",
         "operator/extensions/study-transfer.json"
       ],
       "requires": [
@@ -1526,7 +1566,10 @@
             "mode": "100644"
           }
         }
-      }
+      },
+      "source_manifests": [
+        "source/ecoli_utility_context/20261013/source-manifest.json"
+      ]
     },
     "native-interactions": {
       "title": "Native conservation combinations",
@@ -1836,7 +1879,11 @@
             "mode": "100644"
           }
         }
-      }
+      },
+      "source_manifests": [
+        "source/station-assessment-context/sources.json",
+        "source_data/wqp_assessment159_additional_two_20261013/sources.json"
+      ]
     },
     "extension-startup": {
       "title": "Maintained extension startup",
@@ -2770,7 +2817,7 @@
       ]
     },
     "observed-context": {
-      "title": "Original observed measurements, flow context and complete scientific sources",
+      "title": "Original observed measurements, seasonal flow and complete scientific sources",
       "paths": [
         "assessment/GEOGRAPHY_README.md",
         "assessment/GEOGRAPHY_SOURCES.json",
@@ -2988,6 +3035,24 @@
         "observations/eighteenmile_2023/wqp_20261013/three-lake-results-2023-original.csv",
         "observations/eighteenmile_2023/wqp_20261013/three-lake-series-coverage.csv",
         "observations/eighteenmile_2023/wqp_20261013/three-lake-stations-original.csv",
+        "observations/flow_seasonality_20261013/README.md",
+        "observations/flow_seasonality_20261013/annual.csv",
+        "observations/flow_seasonality_20261013/explorer-data.json",
+        "observations/flow_seasonality_20261013/flow-duration.csv",
+        "observations/flow_seasonality_20261013/flow_seasonality.mjs",
+        "observations/flow_seasonality_20261013/inputs.json",
+        "observations/flow_seasonality_20261013/monthly-comparisons.csv",
+        "observations/flow_seasonality_20261013/monthly-profiles.csv",
+        "observations/flow_seasonality_20261013/monthly.csv",
+        "observations/flow_seasonality_20261013/original-flow-data.json",
+        "observations/flow_seasonality_20261013/original-flow-positions.json",
+        "observations/flow_seasonality_20261013/products.mjs",
+        "observations/flow_seasonality_20261013/rebuild.mjs",
+        "observations/flow_seasonality_20261013/seasonal-comparisons.csv",
+        "observations/flow_seasonality_20261013/seasonal-profiles.csv",
+        "observations/flow_seasonality_20261013/seasonal.csv",
+        "observations/flow_seasonality_20261013/station-context.csv",
+        "observations/flow_seasonality_20261013/summary.json",
         "observations/observed_hydrology_20261013/CALIBRATION_CONTEXT.md",
         "observations/observed_hydrology_20261013/README.md",
         "observations/observed_hydrology_20261013/calibration-context.json",
@@ -3092,6 +3157,8 @@
         "observations/observed_hydrology_20261013/original/usgs_nldi_basin_method.html",
         "observations/observed_hydrology_20261013/original/usgs_series_queryables.json",
         "observations/observed_hydrology_20261013/rebuild_hydrology.mjs",
+        "observed_flow_seasonality.report.json",
+        "observed_flow_seasonality.sources.json",
         "observed_hydrology_context.report.json",
         "observed_hydrology_context.sources.json",
         "operator/web/observed_reports.mjs",
@@ -3184,6 +3251,7 @@
         "source_tools/observed_flow_inputs.mjs",
         "source_tools/observed_flow_map.mjs",
         "source_tools/observed_flow_report.mjs",
+        "source_tools/observed_flow_seasonality.mjs",
         "source_tools/operate_assessment_context.py",
         "source_tools/receive_observed_context.py"
       ],
