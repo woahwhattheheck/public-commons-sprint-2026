@@ -91,3 +91,8 @@ Reuse the same outputDirectory and exact original application edition. The first
 Before repeating a mutation, the receiver downloads the actual complete workspace and reconciles its original operation, source hash, full mapping/correction effect and supporting-file identity. A committed operation is adopted instead of clicked again. Named completed phases retain their complete downloads and screenshots. Every invocation writes under its own attempts/ directory; earlier files remain intact.
 
 The final native-finance-receiving.json at the original root lists the complete receiving selection and retained file identities. Reopening verifies every file, restores a missing file from its exact retained bytes, and returns the same completed result. Retain the whole root, including original source, checkpoints, attempts, receipt and retained-bytes; this is the portable original execution record. Actual screenshot/attachment viewing remains the producing peer's responsibility.
+
+
+## Work orders and costs
+
+Open the added Work orders and costs desk for the complete operational source-to-target workflow. Its source selection, mapping, exact allocations, returned rows, review and history use this same workspace. [WORK_ORDER_OPERATING.md](WORK_ORDER_OPERATING.md) covers the whole sequence and bulk schedules. Save working HTML retains both modules and all work-order drafts; Handover includes their original CSVs, event history, expected allocations and actual returned comparisons.

@@ -1,0 +1,135 @@
+/** Industrial work-order desk inside the original fixed-asset operator. */
+export function createWorkOrderPanel(W,{getWorkspace,change,download,getDraft,setDraft,notice,now}){
+ const esc=x=>String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+ const $=s=>document.querySelector(s),clone=x=>JSON.parse(JSON.stringify(x));
+ const btn=(id,label)=>'<button id="'+id+'">'+esc(label)+'</button>';
+ const option=(value,label,chosen)=>'<option value="'+esc(value)+'"'+(value===chosen?' selected':'')+'>'+esc(label)+'</option>';
+ const table=(headers,rows)=>'<div class="table-wrap"><table><thead><tr>'+headers.map(x=>'<th>'+esc(x)+'</th>').join('')+'</tr></thead><tbody>'+rows.map(r=>'<tr>'+r.map(c=>'<td>'+esc(c)+'</td>').join('')+'</tr>').join('')+'</tbody></table></div>';
+ const field=(id,label,value='',type='text')=>'<label>'+esc(label)+'<input id="'+id+'" type="'+type+'" value="'+esc(value)+'"></label>';
+ let headerSource='',headerTarget='';
+ let section='sources',selected='',role='source',domain='orders',rowPage=0,targetPage=0,filter='',costRow='',allocationKey='',correctionRow='',correctionColumn=0;
+ let state,report,redraw,wrap;
+ const current=()=>state.sources.find(x=>x.id===selected)||state.sources.find(x=>x.id===state.selections[role][domain]);
+ const draft=()=>getDraft()||{mapping:{},allocation:{},match:{},correction:{},review:{}};
+ const keep=(kind,key,value)=>{const d=clone(draft());d[kind]??={};d[kind][key]=clone(value);setDraft(d);};
+ const remove=(kind,key)=>{const d=clone(draft());if(d[kind])delete d[kind][key];return d;};
+ const effective=(src,row)=>{const cells=[...row.cells];for(const c of state.corrections)if(c.sourceId===src.id&&c.rowId===row.id)cells[c.column]=c.value;return cells;};
+ const inputValue=id=>$(id)?.value??'';
+ const labelRow=r=>[r.values.company_id,r.values.work_order_id,r.values.line_id,r.values.line_kind,r.values.cost_amount,r.values.currency,r.values.cost_basis].filter(Boolean).join(' / ');
+ async function save(action,input,clear){
+  const saved=clear?remove(clear[0],clear[1]):draft();
+  await change(meta=>W.run(getWorkspace(),action,{...meta,at:now(),...input}),saved);
+ }
+ function sourceView(){
+  const src=current();if(src){selected=src.id;const saved=draft().correction?.[src.id];if(saved){correctionRow=saved.rowId;correctionColumn=saved.column;}}
+  const choices=state.sources.filter(s=>s.role===role&&s.domain===domain);
+  let html='<section class="panel"><h2>Original work-order files</h2><p>Retain complete original CSV files, map their actual columns, and select returned exports from the chosen target system. Costs require their original currency and cost basis; blank costs remain missing.</p><div class="toolbar"><label>Side<select id="wo-role">'+['source','target'].map(x=>option(x,x==='source'?'Original source':'Actual target return',role)).join('')+'</select></label><label>Content<select id="wo-domain">'+['orders','costs'].map(x=>option(x,x==='orders'?'Work-order headers':'Cost lines',domain)).join('')+'</select></label><input type="file" id="wo-file" accept=".csv,text/csv">'+btn('wo-import','Import complete CSV')+btn('wo-template','Empty column template')+'</div><label>Retained edition<select id="wo-source"><option value="">Choose a source file</option>'+choices.map(s=>option(s.id,s.filename+' · '+s.rows.length+' rows'+(state.selections[role][domain]===s.id?' · selected':''),selected)).join('')+'</select></label>'+btn('wo-select','Use this retained edition')+'</section>';
+  if(!src)return html;
+  const mapping=draft().mapping?.[src.id]||state.mappings[src.id]||Object.fromEntries(W.FIELDS[src.domain].filter(f=>src.headers.includes(f.name)).map(f=>[f.name,src.headers.indexOf(f.name)]));
+  html+='<section class="panel"><h3>Field mapping</h3><p>Column numbers distinguish duplicate original headings. Required fields carry an asterisk. Save the reviewed mapping before reconciliation.</p><div class="fields">'+W.FIELDS[src.domain].map(f=>'<label>'+esc(f.label)+(f.required?' *':'')+'<select data-wo-field="'+esc(f.name)+'"><option value="">Not supplied</option>'+src.headers.map((h,i)=>option(String(i),(i+1)+': '+h,mapping[f.name]===undefined?'':String(mapping[f.name]))).join('')+'</select></label>').join('')+'</div>'+btn('wo-map','Save reviewed mapping')+btn('wo-original','Download original CSV')+'</section>';
+  const rows=src.rows.filter(r=>!filter||effective(src,r).some(v=>v.toLowerCase().includes(filter.toLowerCase()))),page=rows.slice(rowPage*50,rowPage*50+50);
+  html+='<section class="panel"><h3>Original rows and corrections</h3>'+field('wo-filter','Filter original or corrected cells',filter)+'<p>'+rows.length+' rows · page '+(rowPage+1)+'</p>'+table(['Row',...src.headers],page.map(r=>[r.id,...effective(src,r)]))+btn('wo-prev','Previous')+btn('wo-next','Next')+'<details id="wo-correction"><summary>Correct a selected source cell</summary><p>The original CSV remains unchanged. Each correction retains its prior value, reviewer and reason.</p><label>Row<select id="wo-c-row"><option value="">Select from this page</option>'+page.map(r=>option(r.id,'Record '+r.record+' · '+effective(src,r).slice(0,4).join(' / '),correctionRow)).join('')+'</select></label><label>Column<select id="wo-c-col">'+src.headers.map((h,i)=>option(String(i),(i+1)+': '+h,String(correctionColumn))).join('')+'</select></label>'+field('wo-c-value','Corrected value',draft().correction?.[src.id]?.value||'')+field('wo-c-actor','Reviewer',draft().correction?.[src.id]?.actor||'')+'<label>Reason<textarea id="wo-c-reason">'+esc(draft().correction?.[src.id]?.reason||'')+'</textarea></label>'+btn('wo-c-save','Save cell correction')+'</details></section>';
+  return html;
+ }
+ const allocationFields=['id','work_order_id','asset_id','fixed_asset_id','project_id','project_task_id','dimension_set_id','dimension_1','dimension_2','cost_amount','quantity','unit_code','posting_date'];
+ function allocationView(){
+  const costs=report.domains.source.costs;let row=costs.find(r=>r.rowId===costRow)||costs[0];if(row)costRow=row.rowId;
+  let html='<section class="panel"><h2>Cost allocation</h2><p>Allocate the complete original cost to explicit destination orders, assets, projects and dimensions. Each amount must sum exactly to its source line. Quantities are conserved separately in their original unit.</p><label>Original cost line<select id="wo-cost"><option value="">Choose a mapped cost</option>'+costs.map(r=>option(r.rowId,labelRow(r),costRow)).join('')+'</select></label></section>';
+  if(!row)return html+'<p>Import and map the original orders and costs first.</p>';
+  const existing=state.allocations[costRow],d=draft().allocation?.[costRow]||{rows:existing?.rows||[{id:'full',...row.values,note:''}],actor:existing?.actor||'',reason:existing?.reason||''};
+  html+='<section class="panel"><h3>'+esc(labelRow(row))+'</h3><p>Company '+esc(row.values.company_id)+' · currency '+esc(row.values.currency)+' · basis '+esc(row.values.cost_basis)+' · kind '+esc(row.values.line_kind)+'</p><div class="table-wrap"><table><thead><tr>'+allocationFields.map(f=>'<th>'+esc(f.replaceAll('_',' '))+'</th>').join('')+'<th>Note</th><th>Action</th></tr></thead><tbody>'+d.rows.map((a,i)=>'<tr>'+allocationFields.map(f=>'<td><input aria-label="'+esc('Allocation '+(i+1)+' '+f)+'" data-wo-allocation="'+i+'" data-wo-key="'+f+'" value="'+esc(a[f]??'')+'"></td>').join('')+'<td><input data-wo-allocation="'+i+'" data-wo-key="note" aria-label="Allocation note" value="'+esc(a.note||'')+'"></td><td><button data-wo-remove="'+i+'">Remove</button></td></tr>').join('')+'</tbody></table></div>'+btn('wo-add-allocation','Add destination')+field('wo-a-actor','Reviewer',d.actor)+'<label>Allocation reason<textarea id="wo-a-reason">'+esc(d.reason)+'</textarea></label>'+btn('wo-save-allocation','Save complete allocation')+'<p>Original company, currency, cost basis and kind remain explicit. No implicit exchange rate, unit conversion or expected-to-actual cost conversion is applied.</p></section>';
+  html+='<section class="panel"><h3>Import a complete allocation schedule</h3><p>Download expected allocations, edit explicit destinations and amounts in the complete CSV, and import the reviewed schedule. Retain source_row_id and allocation_id. One import can apply up to 10,000 allocation rows through the same original journal.</p>'+btn('wo-expected-csv','Download current allocation CSV')+'<input type="file" id="wo-batch-file" accept=".csv,text/csv">'+field('wo-batch-actor','Schedule reviewer')+'<label>Schedule reason<textarea id="wo-batch-reason"></textarea></label>'+btn('wo-allocation-batch','Apply reviewed allocation CSV')+'</section>';
+  return html;
+ }
+ function readbackView(){
+  const expected=report.expected;let item=expected.find(x=>x.key===allocationKey)||expected[0];if(item)allocationKey=item.key;
+  let html='<section class="panel"><h2>Returned target reconciliation</h2><p>Select the actual returned cost rows for each expected allocation. A returned row can serve one allocation. Native IDs and the reviewed match stay with the original files; descriptions and maintenance-plan numbers are never used as automatic order matches.</p><label>Expected allocation<select id="wo-expected">'+expected.map(a=>option(a.key,[a.values.work_order_id,a.values.asset_id,a.allocationId,a.values.cost_amount,a.values.currency,a.values.cost_basis].filter(Boolean).join(' / '),allocationKey)).join('')+'</select></label></section>';
+  if(!item)return html;
+  const saved=state.matches[item.key],d=draft().match?.[item.key]||{rowIds:saved?.rowIds||[],actor:saved?.actor||'',reason:saved?.reason||''};
+  const rows=report.domains.target.costs.filter(r=>!filter||labelRow(r).toLowerCase().includes(filter.toLowerCase())),page=rows.slice(targetPage*50,targetPage*50+50);
+  html+='<section class="panel"><h3>Actual returned costs</h3>'+field('wo-filter','Filter returned company / order / line / amount',filter)+'<p>'+d.rowIds.length+' selected · '+rows.length+' available rows · page '+(targetPage+1)+'</p><div class="table-wrap"><table><thead><tr><th>Select</th><th>Original returned row</th><th>Company / order / line / amount</th><th>Asset</th><th>Project / task</th><th>Dimensions</th></tr></thead><tbody>'+page.map(r=>'<tr><td><input type="checkbox" data-wo-match="'+esc(r.rowId)+'" aria-label="'+esc('Select returned '+r.rowId)+'"'+(d.rowIds.includes(r.rowId)?' checked':'')+'></td><td>'+esc(r.rowId)+'</td><td>'+esc(labelRow(r))+'</td><td>'+esc(r.values.asset_id)+'</td><td>'+esc(r.values.project_id+' / '+r.values.project_task_id)+'</td><td>'+esc([r.values.dimension_set_id,r.values.dimension_1,r.values.dimension_2].filter(Boolean).join(' / '))+'</td></tr>').join('')+'</tbody></table></div>'+btn('wo-target-prev','Previous')+btn('wo-target-next','Next')+btn('wo-target-clear','Clear this match')+field('wo-m-actor','Reviewer',d.actor)+'<label>Match evidence / source reference<textarea id="wo-m-reason">'+esc(d.reason)+'</textarea></label>'+btn('wo-match','Save reviewed match')+'</section>';
+  const c=report.comparisons.find(x=>x.allocationKey===item.key);
+  html+='<section class="panel"><h3>Current selected result: '+esc(c?.state||'UNMATCHED')+'</h3>'+table(['Field','Expected','Returned','Difference'],(c?.differences||[]).map(x=>[x.field,x.expected,x.actual,x.delta||'']))+'</section>';
+  html+='<section class="panel"><h3>Import reviewed returned-row matches</h3><p>The CSV columns are allocation_key and target_row_id. Repeat an allocation for several actual returned entries; an empty returned ID clears that allocation match. Export the current reconciliation to obtain retained row identities.</p><input type="file" id="wo-batch-file" accept=".csv,text/csv">'+field('wo-batch-actor','Match reviewer')+'<label>Match schedule evidence<textarea id="wo-batch-reason"></textarea></label>'+btn('wo-match-batch','Apply reviewed match CSV')+'</section>';
+  const stale=Object.keys(state.matches).filter(k=>!expected.some(e=>e.key===k));if(stale.length)html+='<section class="panel"><h3>Earlier selection matches</h3><p>Clear a match after reviewing its replacement in the new source edition.</p>'+stale.map(k=>'<p>'+esc(k)+' <button data-wo-clear-stale="'+esc(k)+'">Clear obsolete match</button></p>').join('')+'</section>';
+  return html;
+ }
+
+ function headerView(){
+  const rows=report.domains.source.orders,src=rows.find(r=>r.rowId===headerSource)||rows[0];if(src)headerSource=src.rowId;
+  let html='<section class="panel"><h2>Returned work-order headers</h2><p>Map each original header to its actual returned header. Review destination identifiers, status, dates, location, assets and description. Original source values remain unchanged; explicit destination corrections retain their reviewer and reason.</p><label>Original order<select id="wo-h-source"><option value="">Choose a mapped header</option>'+rows.map(r=>option(r.rowId,r.values.company_id+' / '+r.values.work_order_id+' / '+r.values.description,headerSource)).join('')+'</select></label></section>';
+  if(!src)return html;
+  const saved=state.orderMatches[src.rowId],d=draft().header?.[src.rowId]||{targetRowId:saved?.targetRowId||'',expected:saved?.expected||{},actor:saved?.actor||'',reason:saved?.reason||''};
+  headerTarget=d.targetRowId;
+  html+='<section class="panel"><label>Actual returned header<select id="wo-h-target"><option value="">Choose the returned header</option>'+report.domains.target.orders.map(r=>option(r.rowId,r.values.company_id+' / '+r.values.work_order_id+' / '+r.values.description,headerTarget)).join('')+'</select></label><div class="fields">'+W.FIELDS.orders.filter(f=>!['native_record_id','source_reference'].includes(f.name)).map(f=>'<label>'+esc(f.label)+'<input data-wo-header="'+f.name+'" value="'+esc(Object.hasOwn(d.expected,f.name)?d.expected[f.name]:src.values[f.name])+'"><span class="muted">Original: '+esc(src.values[f.name]||'(not supplied)')+'</span></label>').join('')+'</div>'+field('wo-h-actor','Header reviewer',d.actor)+'<label>Match and destination evidence<textarea id="wo-h-reason">'+esc(d.reason)+'</textarea></label>'+btn('wo-h-save','Save reviewed header match')+btn('wo-h-clear','Clear header match')+'</section>';
+  const comparison=report.orderComparisons.find(x=>x.sourceRowId===src.rowId);
+  html+='<section class="panel"><h3>Current header result: '+esc(comparison?.state||'UNMATCHED')+'</h3>'+table(['Field','Expected','Returned'],(comparison?.differences||[]).map(x=>[x.field,x.expected,x.actual]))+'</section>';
+  html+='<section class="panel"><h3>Reviewed header schedule</h3><p>Import source_row_id and target_row_id with optional expected_ fields, such as expected_work_order_id or expected_status. A supplied expected column, including a blank cell, is an explicit destination override. Use one row per original header; keep the full original file for review.</p><input type="file" id="wo-batch-file" accept=".csv,text/csv">'+field('wo-batch-actor','Schedule reviewer')+'<label>Schedule evidence<textarea id="wo-batch-reason"></textarea></label>'+btn('wo-header-batch','Apply reviewed header CSV')+'</section>';
+  const current=new Set(rows.map(r=>r.rowId)),stale=Object.keys(state.orderMatches).filter(id=>!current.has(id));
+  if(stale.length)html+='<section class="panel"><h3>Older source-header matches</h3>'+stale.map(id=>'<p>'+esc(id)+' <button data-wo-clear-header="'+esc(id)+'">Clear obsolete header match</button></p>').join('')+'</section>';
+  return html;
+ }
+
+ function reviewView(){
+  const d=draft().review||{},s=report.summary;
+  return '<section class="panel"><h2>Rehearsals and acceptance</h2><p>'+s.sourceOrders+' source orders · '+s.differentHeaders+' differing headers · '+s.sourceCosts+' source cost lines · '+s.expectedAllocations+' expected allocations · '+s.targetCosts+' returned lines</p><p><strong>'+esc(report.accepted?'Current allocation and returned-export basis accepted':report.ready?'All selected costs reconcile; ready for recorded acceptance':'Review the current source and returned-export differences')+'</strong></p><p>'+s.errors+' source issues · '+s.differentAllocations+' differing allocations · '+s.unmatchedTarget+' unmatched target rows</p>'+table(['Issue','Original row / allocation','Detail'],report.issues.slice(0,100).map(i=>[i.code,i.rowId||i.allocationKey||i.sourceId||'',i.message]))+(report.issues.length>100?'<p>The complete downloaded reconciliation includes all '+report.issues.length+' issues.</p>':'')+btn('wo-report','Download full reconciliation')+btn('wo-expected-csv','Download expected allocations')+'</section><section class="panel"><h3>Exact monetary totals</h3>'+['source','allocated','returned'].map(side=>'<h4>'+esc(side)+'</h4>'+table(['Company','Currency','Cost basis','Kind','Amount','Rows'],report.totals[side].map(r=>[r.company_id,r.currency,r.cost_basis,r.line_kind,r.amount,r.rows]))).join('')+'</section><section class="panel"><h3>Record the actual review</h3>'+field('wo-r-label','Rehearsal or cutover label',d.label||'')+field('wo-r-actor','Reviewer',d.actor||'')+field('wo-r-reference','Actual export / run / cutover reference',d.reference||'')+'<label>Observation and correction notes<textarea id="wo-r-note">'+esc(d.note||'')+'</textarea></label>'+btn('wo-rehearsal','Record rehearsal result')+'<button id="wo-accept"'+(!report.ready?' disabled':'')+'>Accept current returned-export basis</button><p>Financial book balances and GL closure remain in Financial basis and Reconciliation. A later source, mapping, correction, allocation or match change makes this acceptance historical.</p></section><section class="panel"><h3>Retained review history</h3>'+table(['Time','Type','Label','Reviewer','Reference','Basis'],[...state.rehearsals.map(x=>({...x,type:'Rehearsal'})),...state.acceptances.map(x=>({...x,type:'Acceptance'}))].sort((a,b)=>a.at.localeCompare(b.at)).map(x=>[x.at,x.type,x.label,x.actor,x.reference,x.basis]))+'</section>';
+ }
+ function render(){
+  try{state=W.read(getWorkspace());report=W.reconcile(getWorkspace());}
+  catch(e){return'<section class="panel"><h2>Work-order history</h2><p>'+esc(e.message)+'</p><p>Download the complete original workspace and reopen its retained chain before another work-order change.</p></section>';}
+  return '<div class="toolbar" aria-label="Work-order sections">'+[['sources','Source and mapping'],['allocation','Allocation'],['headers','Header readback'],['readback','Target readback'],['review','Rehearsals and acceptance']].map(([k,l])=>'<button data-wo-tab="'+k+'" aria-current="'+(section===k?'page':'false')+'">'+esc(l)+'</button>').join('')+'</div>'+({sources:sourceView,allocation:allocationView,headers:headerView,readback:readbackView,review:reviewView}[section])();
+ }
+ function on(id,fn){const e=$('#'+id);if(e)e.onclick=()=>wrap(fn);}
+ function allocationDraft(){
+  const r=report.domains.source.costs.find(x=>x.rowId===costRow);needRow(r);
+  const old=draft().allocation?.[costRow]||{rows:clone(state.allocations[costRow]?.rows||[{id:'full',...r.values,note:''}]),actor:'',reason:''};
+  const d=clone(old);document.querySelectorAll('[data-wo-allocation]').forEach(el=>{d.rows[Number(el.dataset.woAllocation)][el.dataset.woKey]=el.value;});
+  d.actor=inputValue('#wo-a-actor');d.reason=inputValue('#wo-a-reason');return d;
+ }
+ function needRow(r){if(!r)throw Error('Select a mapped source cost line.');}
+ function matchDraft(){
+  const old=draft().match?.[allocationKey]||{rowIds:state.matches[allocationKey]?.rowIds||[],actor:'',reason:''},set=new Set(old.rowIds);
+  document.querySelectorAll('[data-wo-match]').forEach(el=>el.checked?set.add(el.dataset.woMatch):set.delete(el.dataset.woMatch));
+  return{rowIds:[...set],actor:inputValue('#wo-m-actor'),reason:inputValue('#wo-m-reason')};
+ }
+ function wire(renderAgain,run){
+  redraw=renderAgain;wrap=run;
+  document.querySelectorAll('[data-wo-tab]').forEach(el=>el.onclick=()=>{section=el.dataset.woTab;filter='';redraw();});
+  for(const [id,fn]of [['wo-role',e=>{role=e.value;selected='';rowPage=0;}],['wo-domain',e=>{domain=e.value;selected='';rowPage=0;}],['wo-source',e=>{selected=e.value;rowPage=0;}],['wo-h-source',e=>{headerSource=e.value;}],['wo-cost',e=>{costRow=e.value;}],['wo-expected',e=>{allocationKey=e.value;targetPage=0;}]]){const el=$('#'+id);if(el)el.onchange=()=>{fn(el);redraw();};}
+  const filterEl=$('#wo-filter');if(filterEl)filterEl.onchange=()=>{filter=filterEl.value;rowPage=targetPage=0;redraw();};
+  on('wo-import',async()=>{const file=$('#wo-file').files[0];if(!file||file.size>32*1024*1024)throw Error('Select a complete UTF-8 CSV within 32 MiB.');
+   const bytes=new Uint8Array(await file.arrayBuffer()),text=new TextDecoder('utf-8',{fatal:true,ignoreBOM:true}).decode(bytes);await save('import',{role,domain,filename:file.name,text,observedAt:now()});selected='';});
+  on('wo-template',()=>download('work-order-'+domain+'-template.csv',W.templateCsv(domain),'text/csv'));
+  on('wo-select',()=>save('select',{sourceId:current()?.id}));
+  on('wo-original',()=>download(current().filename,current().text,'text/csv'));
+  on('wo-map',()=>{const src=current(),columns={};document.querySelectorAll('[data-wo-field]').forEach(el=>{if(el.value!=='')columns[el.dataset.woField]=Number(el.value);});return save('map',{sourceId:src.id,columns},['mapping',src.id]);});
+  document.querySelectorAll('[data-wo-field]').forEach(el=>el.onchange=()=>{const columns={};document.querySelectorAll('[data-wo-field]').forEach(e=>{if(e.value!=='')columns[e.dataset.woField]=Number(e.value);});keep('mapping',current().id,columns);});
+  on('wo-prev',()=>{rowPage=Math.max(0,rowPage-1);redraw();});on('wo-next',()=>{rowPage++;redraw();});
+  function correctionSelection(){const src=current();correctionRow=inputValue('#wo-c-row');correctionColumn=Number(inputValue('#wo-c-col'));const r=src?.rows.find(x=>x.id===correctionRow);if(r)$('#wo-c-value').value=effective(src,r)[correctionColumn]||'';}
+  for(const id of ['wo-c-row','wo-c-col']){const el=$('#'+id);if(el)el.onchange=correctionSelection;}
+  for(const id of ['wo-c-value','wo-c-actor','wo-c-reason']){const el=$('#'+id);if(el)el.oninput=()=>keep('correction',current().id,{rowId:inputValue('#wo-c-row'),column:Number(inputValue('#wo-c-col')),value:inputValue('#wo-c-value'),actor:inputValue('#wo-c-actor'),reason:inputValue('#wo-c-reason')});}
+  on('wo-c-save',()=>{const src=current(),rowId=inputValue('#wo-c-row'),column=Number(inputValue('#wo-c-col')),row=src.rows.find(x=>x.id===rowId);if(!row)throw Error('Select an original row.');return save('correct',{sourceId:src.id,rowId,column,before:effective(src,row)[column],value:inputValue('#wo-c-value'),actor:inputValue('#wo-c-actor'),reason:inputValue('#wo-c-reason')},['correction',src.id]);});
+  document.querySelectorAll('[data-wo-allocation],#wo-a-actor,#wo-a-reason').forEach(el=>el.oninput=()=>keep('allocation',costRow,allocationDraft()));
+  on('wo-add-allocation',()=>{const d=allocationDraft(),r=report.domains.source.costs.find(x=>x.rowId===costRow);let i=1;while(d.rows.some(x=>x.id==='split-'+i))i++;d.rows.push({...r.values,id:'split-'+i,cost_amount:'',quantity:'',note:''});keep('allocation',costRow,d);redraw();});
+  document.querySelectorAll('[data-wo-remove]').forEach(el=>el.onclick=()=>wrap(()=>{const d=allocationDraft();if(d.rows.length===1)throw Error('Retain at least one destination.');d.rows.splice(Number(el.dataset.woRemove),1);keep('allocation',costRow,d);redraw();}));
+  on('wo-save-allocation',()=>{const d=allocationDraft(),r=report.domains.source.costs.find(x=>x.rowId===costRow);return save('allocate',{sourceId:r.sourceId,rowId:r.rowId,allocations:d.rows,actor:d.actor,reason:d.reason},['allocation',costRow]);});
+  document.querySelectorAll('[data-wo-match],#wo-m-actor,#wo-m-reason').forEach(el=>el.oninput=()=>keep('match',allocationKey,matchDraft()));
+  on('wo-target-prev',()=>{keep('match',allocationKey,matchDraft());targetPage=Math.max(0,targetPage-1);redraw();});on('wo-target-next',()=>{keep('match',allocationKey,matchDraft());targetPage++;redraw();});
+  on('wo-target-clear',()=>{const d=matchDraft();d.rowIds=[];keep('match',allocationKey,d);redraw();});
+  on('wo-match',()=>{const d=matchDraft();return save('match',{allocationKey,targetRowIds:d.rowIds,actor:d.actor,reason:d.reason},['match',allocationKey]);});
+  document.querySelectorAll('[data-wo-clear-stale]').forEach(el=>el.onclick=()=>wrap(()=>save('match',{allocationKey:el.dataset.woClearStale,targetRowIds:[],actor:'Operator',reason:'Removed obsolete match after selecting the current source edition.'})));
+  for(const id of ['wo-r-label','wo-r-actor','wo-r-reference','wo-r-note']){const el=$('#'+id);if(el)el.oninput=()=>{const d=clone(draft());d.review={label:inputValue('#wo-r-label'),actor:inputValue('#wo-r-actor'),reference:inputValue('#wo-r-reference'),note:inputValue('#wo-r-note')};setDraft(d);};}
+  const review=action=>save(action,{basis:report.basis,label:inputValue('#wo-r-label'),actor:inputValue('#wo-r-actor'),reference:inputValue('#wo-r-reference'),note:inputValue('#wo-r-note')});
+  async function batch(action){const file=$('#wo-batch-file').files[0];if(!file||file.size>32*1024*1024)throw Error('Choose the complete reviewed CSV within 32 MiB.');const text=new TextDecoder('utf-8',{fatal:true,ignoreBOM:true}).decode(await file.arrayBuffer());return save(action,{filename:file.name,text,actor:inputValue('#wo-batch-actor'),reason:inputValue('#wo-batch-reason')});}
+  on('wo-header-batch',()=>batch('order-match-batch'));on('wo-allocation-batch',()=>batch('allocate-batch'));on('wo-match-batch',()=>batch('match-batch'));
+  on('wo-rehearsal',()=>review('rehearsal'));on('wo-accept',()=>review('accept'));
+  function headerDraft(){const src=report.domains.source.orders.find(r=>r.rowId===headerSource),expected={};document.querySelectorAll('[data-wo-header]').forEach(el=>{if(el.value!==src.values[el.dataset.woHeader])expected[el.dataset.woHeader]=el.value;});return{targetRowId:inputValue('#wo-h-target'),expected,actor:inputValue('#wo-h-actor'),reason:inputValue('#wo-h-reason')};}
+  document.querySelectorAll('[data-wo-header],#wo-h-target,#wo-h-actor,#wo-h-reason').forEach(el=>el.oninput=()=>keep('header',headerSource,headerDraft()));
+  on('wo-h-save',()=>save('order-match',{sourceRowId:headerSource,...headerDraft()},['header',headerSource]));
+  on('wo-h-clear',()=>save('order-match',{sourceRowId:headerSource,targetRowId:'',expected:{},actor:inputValue('#wo-h-actor'),reason:inputValue('#wo-h-reason')},['header',headerSource]));
+  document.querySelectorAll('[data-wo-clear-header]').forEach(el=>el.onclick=()=>wrap(()=>save('order-match',{sourceRowId:el.dataset.woClearHeader,targetRowId:'',expected:{},actor:'Operator',reason:'Removed obsolete header match after selecting the current source edition.'})));
+  on('wo-report',()=>download('work-order-reconciliation.json',JSON.stringify(report,null,2)+'\n'));
+  on('wo-expected-csv',()=>{const f=W.exportFiles(getWorkspace()).files.find(f=>f.path.endsWith('expected-allocations.csv'));download('expected-allocations.csv',f.text,'text/csv');});
+ }
+ return{render,wire};
+}
