@@ -412,7 +412,7 @@ export function attachReceivingWaters(context){
           'No changes to the retained selection. Saving can reuse the original completed result.';
       }catch(error){summary.textContent=error.message;}
     };
-    root.addEventListener('input',update);root.addEventListener('change',update);
+    root.addEventListener('input',update);root.addEventListener('change',update);root.addEventListener('click',update);
     root.querySelector('[data-water-apply-selection]').addEventListener('click',async()=>{
       try{
         if(root!==formRoot()||workspace!==currentWorkspace())throw Error('Reopen the form in its original workspace.');
@@ -498,7 +498,7 @@ export function attachReceivingWaters(context){
       '<p>Separate a receiving catchment into the union of its declared upstream catchments and the remaining land. Reservoir catchments can be reported separately within that upstream union.</p>'+
       '<p class="water-note">Choose source areas from this saved plan. Boundaries and the original source relationship determine the precision. Reservoir rows describe land export to streams above the dam; reservoir throughput requires a separate model.</p>'+
       '<p id="water-accounting-plan-status" role="status">Choose a source plan to load its original areas.</p>'+
-      '<div id="water-accounting-groups"></div>'+
+      '<p class="water-note">Removing the last group removes the accounting setting from this revised analysis; the original analysis remains saved.</p><div id="water-accounting-groups"></div>'+
       '<button type="button" data-water-accounting-add disabled>Add catchment group</button></details>';
   }
   function mountAccountingForm(root,initial){
@@ -575,7 +575,7 @@ export function attachReceivingWaters(context){
         throw Error(errorMessage||'Wait for the selected source plan and its retained accounting groups to finish loading.');
       const groups=readGroups();
       if(new Set(groups.map(group=>group.id)).size!==groups.length)throw Error('Each catchment group needs a different stable ID.');
-      if(!groups.length&&!(retained?.groups?.length))return retained;
+      if(!groups.length)return retained?.groups?.length?undefined:retained;
       const out=retained&&typeof retained==='object'?copySelection(retained):{};
       out.groups=groups;return out;
     };

@@ -68,6 +68,8 @@ export function reviseReceptor(original,fields){
   change(out,['classification','original_class'],fields.designation,before.designation,value=>value||undefined);
   if(!out.source?.source_collection_id||!out.source?.source_id)throw Error('Choose the original source for every receiving area.');
   if(!out.relation?.rationale)throw Error('Describe the contribution relationship for every receiving area.');
+  if(out.relation.method==='source_area'&&Number(out.relation.buffer_m||0)!==0)
+    throw Error('A published source-area polygon requires a zero buffer. Explicitly set the context buffer to zero when changing this relationship.');
   return out;
 }
 export function planFields(seed){

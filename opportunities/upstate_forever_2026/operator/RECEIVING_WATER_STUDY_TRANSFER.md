@@ -116,7 +116,7 @@ IDs, original alternative ordering, quantity domain, pollutant subset,
 weights, normalization caps/reference and every accounting option. Its existing
 accounting editor loads the selected original plan before accepting retained
 groups. Group identities, parent/upstream/reservoir membership, references and
-rationale are populated; unknown group properties remain retained.
+rationale are populated; unknown group properties remain retained for explicit review. Removing the last group deliberately removes the accounting setting, as required by the original engine; it does not submit an invalid empty group list.
 
 Unavailable original run or source choices remain visible. A changed baseline
 does not silently remove a selected alternative. A changed plan does not silently
