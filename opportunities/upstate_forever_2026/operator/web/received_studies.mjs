@@ -1,5 +1,6 @@
 import {receivedGaugeHTML,openReceivedGauge} from './gauge_received_studies.mjs';
 import {receivedNativeEnsembleHTML,openReceivedNativeEnsemble} from './ensemble_received_studies.mjs';
+import {receivedComparabilityHTML,openReceivedComparability} from './comparability_received_studies.mjs';
 /** Original selected-study receiving, reports and editable Implementation lineage. */
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const list=v=>Array.isArray(v)?v:[];
@@ -93,6 +94,7 @@ export function attachReceivedStudies(host) {
     }
     html+=receivedGaugeHTML(value,!!disabled);
     html+=receivedNativeEnsembleHTML(value,!!disabled);
+    html+=receivedComparabilityHTML(value,!!disabled);
     return html+'</section>';
   }
   async function loadPage(offset=0) {
@@ -119,6 +121,14 @@ export function attachReceivedStudies(host) {
     if(action==='previous')return loadPage(Math.max(0,page.offset-page.limit));
     if(action==='next'&&page.next_offset!==null)return loadPage(page.next_offset);
     if(action==='open')return open(target.dataset.id);
+    if(action?.startsWith('cohort-')){
+      const ws=workspace,e=epoch,value=opened;
+      if(!value||value.id!==selected||value.workspace_key!==ws)
+        throw Error('Reopen the original received Study.');
+      return await openReceivedComparability(host,value,target,{
+        workspace_key:ws,current:()=>current(ws,e)&&opened===value&&selected===value.id,
+      });
+    }
     if(action?.startsWith('native-ensemble-')){
       const ws=workspace,e=epoch,value=opened;
       if(!value||value.id!==selected||value.workspace_key!==ws)
