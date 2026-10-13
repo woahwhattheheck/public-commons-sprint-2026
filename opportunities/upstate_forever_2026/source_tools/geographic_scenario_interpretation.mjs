@@ -139,7 +139,10 @@ export function interpretGeographicScenario({prepared, matching, coefficients, s
     const residual = number(group.precipitation_sum_residual_mm_year, "paired precipitation residual");
     const absoluteResidual = number(group.sum_absolute_paired_precipitation_residual_mm_year, "absolute paired precipitation residual");
     if (targetRain < 0 || controlRain < 0 || absoluteResidual < 0) fail("Negative precipitation aggregate");
-    equal(residual, controlRain - targetRain, "Paired precipitation aggregate");
+    const aggregationTolerance = 16 * Number.EPSILON * Math.max(1, n) *
+      (Math.abs(targetRain) + Math.abs(controlRain) + Math.abs(residual)) + 1e-9;
+    if (Math.abs(residual - (controlRain - targetRain)) > aggregationTolerance)
+      fail("Paired precipitation aggregate exceeds floating-point summation tolerance");
     if (Math.abs(residual) > absoluteResidual + 1e-7 * Math.max(1, absoluteResidual))
       fail("Paired absolute residual cannot be smaller than its signed sum");
     for (const pollutant of ["n", "p"]) {
@@ -161,7 +164,8 @@ export function interpretGeographicScenario({prepared, matching, coefficients, s
         selected_domain_mean_precipitation_mm_year: meanRain,
         corridor_proxy_weighted_source_reduction_kg_year: target,
         control_proxy_weighted_source_reduction_kg_year: control,
-        corridor_minus_control_source_reduction_kg_year: target - control,
+        corridor_minus_control_source_reduction_kg_year: -area * change * residual / meanRain,
+        source_reduction_aggregation_roundoff_kg_year: target - control + area * change * residual / meanRain,
         absolute_paired_residual_bound_kg_year: area * Math.abs(change) * absoluteResidual / meanRain,
         quantity_kind: "assumed_source_loading_reduction_on_preparation_support"
       });
@@ -172,7 +176,8 @@ export function interpretGeographicScenario({prepared, matching, coefficients, s
     const selected = rows.filter(row => row.pollutant === pollutant);
     const names = ["unweighted_source_reduction_each_kg_year",
       "corridor_proxy_weighted_source_reduction_kg_year", "control_proxy_weighted_source_reduction_kg_year",
-      "corridor_minus_control_source_reduction_kg_year", "absolute_paired_residual_bound_kg_year"];
+      "corridor_minus_control_source_reduction_kg_year", "absolute_paired_residual_bound_kg_year",
+      "source_reduction_aggregation_roundoff_kg_year"];
     return {pollutant, units: "kg/year", ...Object.fromEntries(names.map(name => [name, sum(selected.map(row => row[name]))]))};
   });
   const width = number(prepared.selection.corridor_width_m, "corridor per-side buffer distance", true);
