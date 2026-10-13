@@ -6,6 +6,16 @@ The chapter makes the comparison useful on screen: it opens the retained result,
 
 **Needs expert review.** Programme-specific QA criteria, group relationships, method comparability and interpretation belong to the responsible scientist. The recorded course follows the authored simulation's retained criteria. Before and after are the selected source order. A change in duplicate precision does not establish an environmental or conservation effect.
 
+## Open the retained comparison's original links
+
+The saved comparison now includes **Open readable report and original sources**. The current chapter clicks that actual control and opens the retained report in its own tab in the original authenticated context. It uses the complete source task's original member inventory, follows each internal HTML link, downloads the exact comparison/source JSON and both **before-review.zip** and **after-review.zip**, and verifies every member's original byte count and SHA-256. The two unchanged original review archives remain the correct way to extract and open each original before/after HTML with its complete relative companions.
+
+The Operator route selects the exact workspace, plan, report family, report ID and declared member. Native inspection reopens the original scientific comparison and complete source records before serving it. Ordinary HTML/JSON/CSV/ZIP bytes are unchanged. The report-specific policy permits the exact original `window.print()` event handler and no other script body; the course clicks **Print complete comparison** and observes `beforeprint`. In a headed browser, dismiss the native print dialog when finished so the course can continue. All other attached HTML retains ordinary isolation.
+
+This same link-and-download phase repeats from the independent fresh browser. Its actual desktop/390px images are `qc-comparison/attempt-N/original-linked-report.png`, `original-linked-report-narrow.png`, `fresh-linked-report.png` and `fresh-linked-report-narrow.png`. Each leg retains its `*-report-navigation.json` with original report/member identities and the observed print-event result, together with every clicked source download. Temporary report tabs are closed by this chapter; the parent's recorded page, original private draft recovery, source/export tasks and contexts retain their existing ownership.
+
+The producing peer must open and LOOK at these actual returned views and all downloaded/extracted report products. Browser assertions establish the actual navigation and file identity; they do not replace that visual and scientific inspection. If an original linked member is unavailable or changed, retain the same course and actual error, fix the original source/receiving seam, and resume the same native task identity. For offline use, download and extract the complete original package before opening `report.html`; a lone saved HTML file does not contain its source companions.
+
 ## Retain the actual native choice first
 
 Use the original completed field operation with the maintained native comparison consumer. Its saved result includes schema `upstate.simulated-qc-comparison/v1`, the original field operation, comparison operation, project, field plan, saved comparison report and comparison IDs.
