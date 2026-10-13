@@ -1,9 +1,9 @@
 {
   "schema": "upstate.published-study-family/v1",
-  "version": "1.7.0",
+  "version": "1.7.1",
   "repository": "woahwhattheheck/public-commons-sprint-2026",
   "application_path": "opportunities/upstate_forever_2026",
-  "source_reference_base": "ce3f9cb0543e97e44be328dc2b403d71c07f1e77",
+  "source_reference_base": "a01ff11151a70d5162c585db5b8225c60bb71c59",
   "instruction": "Resolve the complete inventory at this delivery commit and include this inventory. The installer retains the existing host. The lake, four-stream nutrient, and utility microbial builtins retain their separate original source cohorts. Stream analytical reports preserve their complete original application layout; selected exports preserve every original result column and analytical series dimension.",
   "external_source_edition": {
     "files": 62,
@@ -73,8 +73,8 @@
     },
     {
       "path": "measurement_workspace/STREAM_OBSERVATIONS.md",
-      "bytes": 11654,
-      "sha256": "d39bffb8ae0c58cfad44ffb1f79edd309aff764efdd592ebd7cca8f35362eebe"
+      "bytes": 14514,
+      "sha256": "e3273a1fd2ab22ad35c442b068f8a1cdf78013b83b27675bce840042182703ef"
     },
     {
       "path": "measurement_workspace/study_context.py",
@@ -854,7 +854,7 @@
     {
       "path": "operator/extensions/published-studies.json",
       "bytes": 2476,
-      "sha256": "8df5224e97c47c99afc4dae42f99f7724fb3d0b4eeacf63b74b1223e0f3831b5"
+      "sha256": "d9d0a7731a2c01cc3b41aecb038d366c8eeeb2bd4b69bbdb706ce4654e05f993"
     },
     {
       "path": "operator/published_study_operator.py",
@@ -868,13 +868,13 @@
     },
     {
       "path": "operator/web/published_studies.mjs",
-      "bytes": 44056,
-      "sha256": "39c8e28d38e9bca6e7736ed0a25d370abcc52262da611a1670d4a46a4a647dfe"
+      "bytes": 44296,
+      "sha256": "0b3548f4aa89758d2a304301b51d0164611b80179e4870a862d9bb7616008c52"
     },
     {
       "path": "PUBLISHED_STUDIES.md",
-      "bytes": 33250,
-      "sha256": "f62697ffa18b655fe9f3e805240acb82d3437a7b5fcd59115f48e9624777eac9"
+      "bytes": 34110,
+      "sha256": "5b15a2ae0d724de33dde8201321f8825f7c61b9d6dc71bd60fc58a12b4f84155"
     },
     {
       "path": "receive_published_studies.py",

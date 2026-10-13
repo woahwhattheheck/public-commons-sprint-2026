@@ -1,6 +1,6 @@
 # Published field-study workspace
 
-The ECSA extension turns the existing Eighteenmile 2023 companion into a retained, filterable study. It imports the original source files through the current Workspace source registry, displays original station datums and published statistics, produces selected reports, and exports a complete ZIP that the same intake can reopen in another workspace.
+The ECSA extension retains the original lake, stream-nutrient and utility-microbial source cohorts as separate filterable studies. It imports the original source files through the current Workspace source registry, displays original station datums and published statistics, produces selected reports, and exports a complete ZIP that the same intake can reopen in another workspace.
 
 ## Included study
 
@@ -339,3 +339,9 @@ node original-sources/application-context/physical-water-quality/observations/ei
 ```
 
 The complete study ZIP preserves the same immutable source edition for native re-import. The current Workspace source registration and portable project archive retain these additional source families with the original collection/source identifiers and declared bytes.
+
+## Study task continuity (1.7.1)
+
+Queued imports and exports keep their task and operation identities when the desk closes. The visible task response belongs to the Workspace and mounted view that submitted it: late responses, refreshes and errors leave a remounted or different Workspace unchanged. Reopen the accepted task from the existing task list to inspect its retained result.
+
+The [stream observations guide](measurement_workspace/STREAM_OBSERVATIONS.md#sampling-coverage-and-original-network-context) describes the original nutrient and sampling-coverage reports, their separate percentile methods, upstream/downstream source identities and complete export/reopen path. Original report titles, the physical study, all current source registrations and the complete scientific companion tree remain part of this edition.
