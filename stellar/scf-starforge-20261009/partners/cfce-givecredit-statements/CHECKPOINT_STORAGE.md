@@ -51,7 +51,7 @@ The original `receive-native.mjs` continues the same preserved-output operation.
 
 The output retains both the original saved checkpoint and the new incremental directory. The receiving receipt records the current manifest path, committed source/progress counts and bytes written or reused. The existing whole-output archive includes every object and manifest. The completed accounting prefix, original source options, saved statements and browser-attempt recovery remain in the same operation.
 
-A complete source checkpoint is reused directly. An interrupted checkpoint continues with its original collector selection and cursors. Missing or changed immutable objects produce a receiving error; the prior source files remain available for restoration.
+A complete source checkpoint is reused after the same exact native selection check used by an interrupted capture. The check uses the selected SDK/defaults and original ledger-response identities without mutating the checkpoint or fetching source data. An interrupted checkpoint continues with its original collector selection and cursors. Missing or changed immutable objects produce a receiving error; the prior source files remain available for restoration.
 
 ## Storage and interruption behavior
 
