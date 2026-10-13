@@ -67,6 +67,7 @@ Optional flags are:
 | --headed | Show the actual browser while the course runs |
 | --browser-channel NAME | Select the existing installed browser channel |
 | --browser-executable PATH | Select the existing installed browser executable instead of a channel |
+| --playwright-module PATH | Use the equipped host's existing Playwright module file, such as its maintained absolute index.mjs, for standalone launch |
 | --task-timeout-seconds 900 | Set the ordinary queued-export wait interval for this invocation |
 
 Choose either a browser channel or an executable path. The first output directory must be new. Keep the current receiving owner and original native operation; do not launch competing browser writers against the same output directory.
@@ -88,6 +89,40 @@ The browser opens the original Implementation plan and follows the actual Field 
 **Local interaction states.** The course exercises an empty filter result, local draft/error states and the existing source-view controls, then returns to the useful saved record. These visible states should explain what the operator can do next without concealing the original source. Measurements, QA fields and native field-task records remain unchanged by this browser course.
 
 The browser uses a 1440 × 1000 desktop viewport and a 390 × 844 narrow viewport. Long source text and tables should remain readable without losing the important labels, controls or original values. Inspect the actual resulting screens before presenting them.
+
+## Join the existing recorded operator course
+
+The same module exports `runSampleQCCourse`. A maintained rehearsal can call it with its current Playwright page and context, original operator URL, actual Workspace key and completed native field document:
+
+~~~javascript
+import {runSampleQCCourse} from './source/implementation/run_sample_qc_browser.mjs';
+
+const fieldCourse = await runSampleQCCourse({
+  page,
+  context: page.context(),
+  operatorURL: originalPrivateOperatorURL,
+  workspace: actualWorkspaceKey,
+  fieldwork: actualInspectCampaignResult,
+  output: originalCourseOutput,
+  resume: continueOriginalCourse,
+  checkRunning,
+  taskTimeoutSeconds: 900
+});
+~~~
+
+Resolve the import relative to the calling source file or use an absolute file URL. The supplied `fieldwork` is the complete parsed `inspect_campaign` result, including its original operation and report references. Alternatively supply `fieldworkFile` with the original raw JSON file; choose one input form. Use the same form and identical source content for continuation. The callable retains the provided native document as a complete JSON edition before any queued export. The CLI continues to read the original input file unchanged.
+
+`checkRunning` is the recording owner's existing cooperative-stop callback. The course invokes it at meaningful navigation, download, native-request and queue-wait boundaries. If it throws, the original requests and attempted outputs remain in the same private course directory and the error returns to that recording owner. An interrupted report export continues as its original saved task; this chapter does not dispatch or cancel scientific models.
+
+Importing the callable does not resolve or import a Playwright package. It uses the caller's already-created page and context; the standalone entrypoint loads Playwright only when it launches its own browser. This preserves the maintained rehearsal's explicit external Playwright module configuration.
+
+The callable uses the supplied recorded page for the populated field/QC/task/evidence controls. It obtains fresh independent contexts from that page's existing Playwright Browser for the receiving/reopen steps. It closes only those temporary contexts and leaves the parent's page, Browser, recording and session open. Its own network handlers are removed afterward. The initial viewport is restored. Existing QC browser draft/recovery entries are retained in each attempt's `borrowed-qc-browser-drafts.json` and the durable root `recording-context.json` before local interaction. The root file marks restoration required until the original entries have been restored and read back. Native completed exports remain in `request-state.json`.
+
+The maintained recording may close its persistent context immediately on cooperative stop. In that case, the course explicitly retains pending draft restoration. The same-course resume on the original operator origin saves any intervening browser edits as `before-draft-recovery.json`, restores the original retained draft snapshot, then continues. A successful chapter restores the original entries and marks them restored; an unavailable or failed restoration stays an interrupted course. The caller's page, browser and recording ownership stay intact.
+
+Run the callable serially within the maintained rehearsal, after its field closeout and before its final archive. The chapter returns the original operation, plan, QC/action report IDs, accepted native task IDs, complete artifact inventory and actual screenshot descriptors. It does not import-and-run automatically, create another browser worker or stop the parent recording. The standalone CLI still starts and closes its own browser and uses the same operation/state logic.
+
+Keep the actual resulting PNGs and downloaded report HTML viewable to producing peers. The cooperative callback and complete screenshot inventory make the original recorded programme easier to continue; the producing worker still needs to LOOK at the outgoing pixels and repair visible defects.
 
 ## Receive the complete operated outputs
 
