@@ -56,6 +56,47 @@ programme/decision reconciliation, study/economic completion, source-workbench
 collection IDs and project-transfer recovery therefore keep their original data.
 Task detail remains complete and creates its ordinary selected-result tickets.
 
+## Core source, observation and run catalogues
+
+Compact polling also reuses the original core collection readers through
+`model/operator_catalog.py`. All source entries and their original metadata
+remain present. The other immutable source/profile/scenario/community/review and
+planning records keep their existing shapes. Before a changed immutable file
+enters the cache, its canonical content must match the original filename identity,
+using the same `digest(value) == id` check as `Workspace._get`.
+
+Observation catalogue rows retain the original metadata, ID and exact
+`row_count`; their full `rows` stay available from the ordinary observation
+item and model APIs. Native run rows retain selection, runtime, state, artifacts
+and the existing `stage_summary` fields: original stage names,
+started/completed/reuse timestamps, actual file counts, and each completed stage's
+original runtime provenance. Stage runtime remains the execution authority when a
+partially completed run resumes under a later runtime; no version is inferred from
+its requested model selection. Compact internal stage
+presence is retained until the programme catalogue has checked the original native
+scope. The browser receives the same stage summary as before.
+
+The programme catalogue still observes the original execution locks, progress and
+pause controls on every refresh. Unchanged file metadata is reusable; active
+execution state is not inferred from a cached lock. Experiment, parameter-study
+and registered extension catalogues retain their existing APIs and complete
+extension result shapes.
+
+One additional core cache per Workspace shares the same 8 MiB / 2,048-record
+budget across its collections. Source edits, native progress, newly imported
+records and deleted files are picked up through the existing paths and signatures.
+A record above the cache budget is returned in full through the selected catalogue
+contract and simply is not retained in the cache. These bounds control retained
+memory, not the number of observations, runs, scientific files or operations.
+
+After updating the maintained application, continue the existing native operator
+operation. Refresh an already populated Workspace, open an original source and
+observation, and inspect a saved native run. Compare its retained `row_count`
+and stage file counts with those exact original records. Full `Workspace.overview()`
+and default `/api/state` continue to provide the previous complete model view.
+Repeated compact requests should reuse unchanged record projections while actual
+native progress and source imports remain visible.
+
 ## Cache lifetime and bounds
 
 The cache contains canonical JSON bytes of a projection, never a shared mutable
