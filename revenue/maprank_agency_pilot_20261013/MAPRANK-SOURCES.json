@@ -1,0 +1,109 @@
+{
+  "schema": "commons.public-source-register/v1",
+  "operation": "MAPRANK-AGENCY-PILOT-379A-20261013",
+  "retrieved_utc": "2026-10-13T14:17:06Z",
+  "audience": "original internal MapRank delivery and derived operator guide",
+  "sources": [
+    {
+      "id": "MR-PRICING",
+      "url": "https://app.maprank.so/pricing",
+      "ref": "turn358view0",
+      "title": "Current application pricing",
+      "retrieved_utc": "2026-10-13T14:17:06Z",
+      "scope": "public",
+      "kind": "current_product_contract",
+      "finding": "Monthly USD: Solo19/4,900credits/9x9/one seat; Agency39/12,250/11x11/unlimited seats; Pro79/29,400/21x21; Scale149/58,800/21x21. Pro and Scale include custom domains; lower plans use branded MapRank links. All include scheduled weekly/biweekly/monthly scans, comparisons, API and unlimited businesses/keywords. Annual rates display20% reduction. Pricing expresses a standard scan as49points and quotes exact costs before execution. Older accounts retain their plan. Pricing text conflicts about when plan changes apply: next invoice versus immediately; use actual account checkout for a change."
+    },
+    {
+      "id": "MR-TERMS",
+      "url": "https://maprank.so/terms",
+      "ref": "turn356view0",
+      "title": "Terms of Service",
+      "document_date": "2026-10-11",
+      "retrieved_utc": "2026-10-13T14:17:06Z",
+      "scope": "public",
+      "kind": "current_product_terms",
+      "finding": "One free manual5x5 demo for one business; a failed demo can be retried. Further, scheduled, API or MCP scans require a paid plan. One credit per grid point; app displays cost. Rankings sample public results at scan time, without a future outcome guarantee. Cancellation preserves business/history; unused monthly credits expire when inactive. Top-ups remain a separate balance and require an active plan for scanning. Paid fees generally nonrefundable. Share links readable by anyone holding the link. Current terms corroborate Pro custom domains and21x21 Pro/Scale."
+    },
+    {
+      "id": "MR-PRIVACY",
+      "url": "https://maprank.so/privacy",
+      "ref": "turn356view1",
+      "title": "Privacy Policy",
+      "document_date": "2026-10-11",
+      "retrieved_utc": "2026-10-13T14:17:06Z",
+      "scope": "public",
+      "kind": "data_and_access_contract",
+      "finding": "Stores business name/address/coordinates/PlaceID, category, keywords, logo, grid and schedule; scan includes points, found/rank and scoring responses. Google Places finds businesses; DataForSEO provides Maps results; Mapbox draws maps. Invitations retain email/role/project scope. Shared reports/public rank maps are public by possession of URL. API full key is shown once; only hash/prefix/usage/revocation data retained. Account data remains while open; closure/deletion request removes within90days, including backup aging. Deletion is staff-assisted via support@maprank.so. US Supabase region is us-east-2. Same-login sibling products have distinct scope."
+    },
+    {
+      "id": "MR-AGENTS",
+      "url": "https://maprank.so/for-agents",
+      "ref": "turn356view3",
+      "title": "Published MCP and REST workflow",
+      "retrieved_utc": "2026-10-13T14:17:06Z",
+      "scope": "public",
+      "kind": "public_integration_contract",
+      "finding": "Five tools: get_account, list_businesses, run_scan, get_scan, list_scans. REST GET/api/v1/account, GET/api/v1/businesses, POST/api/v1/scans, GET/api/v1/scans, GET/api/v1/scans/:id; bearer key; asynchronous scan IDs. Connector reads/runs existing businesses. Add-business, branding and share-link actions remain in app. Results include average rank, best rank, top3coverage and point data. No search volume, keyword difficulty, citation-building, review-management or site audits. Exact request/response field names, pagination, rate limits and average-rank missing conventions are not specified by this public page. Its domain/tier claims conflict with current app pricing."
+    },
+    {
+      "id": "MR-GRID",
+      "url": "https://maprank.so/geo-grid-rank-tracker",
+      "ref": "turn356view2",
+      "title": "Grid method guide",
+      "retrieved_utc": "2026-10-13T14:17:06Z",
+      "scope": "public",
+      "kind": "method_guide_with_stale_commercial_fields",
+      "finding": "Recommends category phrases, market-appropriate spacing, identical coordinates for repeat comparisons and multiple observations rather than interpreting one point as a verdict. Its500freecredits/4,500Soloallowance/13x13limits are superseded by current pricing/terms."
+    },
+    {
+      "id": "MR-CHECK",
+      "url": "https://maprank.so/google-maps-rank-checker",
+      "ref": "turn359view1",
+      "title": "Rank checker definitions",
+      "retrieved_utc": "2026-10-13T14:17:06Z",
+      "scope": "public",
+      "kind": "metric_description",
+      "finding": "Defines top3coverage as proportion of gridpoints in ranks1–3; reports averageposition; describes not-found as absent from top20. Marketing sample is explicitly sample data. It does not specify average calculation for absent or errored points. Its7x7/one-mile coverage description says12-mile square, while apppricing describes roughly6miles; exact received coordinates determine comparison geometry."
+    },
+    {
+      "id": "MR-GBP",
+      "url": "https://maprank.so/gbp-rank-tracker",
+      "ref": "turn359view2",
+      "title": "Profile tracking workflow",
+      "retrieved_utc": "2026-10-13T14:17:06Z",
+      "scope": "public",
+      "kind": "location_workflow",
+      "finding": "Each location is its own business/grid/defaults. By-name public results tracking needs no GBP manager access, does not alter the profile and is distinct from organic website ranking. Describes baseline, change record and same-grid repeat."
+    },
+    {
+      "id": "MR-HOME",
+      "url": "https://maprank.so/",
+      "ref": "turn355view0",
+      "title": "Marketing homepage",
+      "retrieved_utc": "2026-10-13T14:17:06Z",
+      "scope": "public",
+      "kind": "conflicting_marketing_snapshot",
+      "finding": "Still states own-domain reports on all plans and Pro/Scale13x13. Treat those fields as stale against current app pricing and October11terms. Its illustrated coffee-shop ranks are marked as a sample, and provide no agency/client baseline."
+    },
+    {
+      "id": "MR-SIGNUP",
+      "url": "https://app.maprank.so/signup",
+      "ref": "turn358view1",
+      "title": "Actual signup",
+      "retrieved_utc": "2026-10-13T14:17:06Z",
+      "scope": "public",
+      "kind": "onboarding_surface",
+      "finding": "Actual onboarding sequence: create account, add client, first scan. Email/password or Google sign-in; current free offer is one5x5demo. No account was created during this read-only source task."
+    }
+  ],
+  "freshness": "Refresh app/account and checkout at commissioning. Current public pages inspected October13; each source retains its observed version.",
+  "precedence": "Use current app pricing and October11terms for changed commercial fields; preserve actual legacy/current account snapshot. Method pages inform comparison design, not current entitlements.",
+  "unresolved": [
+    "Actual paid account and exact API wire schema were not accessed in this source task.",
+    "Provider average rank handling for not-found/error points is unspecified.",
+    "Pricing copy conflicts about immediate versus next-invoice plan changes; actual account checkout determines the transaction.",
+    "Public native export/backup endpoint, share-link revocation behavior and role permission matrix not established."
+  ],
+  "implementation_boundary": "All desk fields, validation, computed metrics and acceptance flow in companion files are proposed engineering decisions, separately labeled from vendor claims."
+}
