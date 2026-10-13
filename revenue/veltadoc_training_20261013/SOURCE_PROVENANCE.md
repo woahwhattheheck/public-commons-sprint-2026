@@ -1,0 +1,9 @@
+# Complete source provenance
+
+Original product/source: private Commons PR37200 /2af6318cfe7a1968419ecb53f0facdca55f9929f, plus its current original receiving guide PR37686 /bcaad0c2f58dc9b9f85abd9c61092123a16af9a6. The exact complete current16-file carrier F0C8TJ70J0J decoded419122bytes/SHA256ae4196f6bf151773496146e7dad2dd7693a066fef08f1c5c39aab15ac15e327b. All sixteen leaves are preserved under their original repository-relative directory in this standalone closure.
+
+Seven original fulfillment engine/dependency bodies are preserved at the original pins in `tools/revenue_owner_console_20261010/lead_pack_sources/veltadoc-20261013/source-pins.json`. The complete original working record independently received into an empty ledger and re-exported equal, preserving six leads, two editions, seven customer files and two package selections.
+
+The unchanged maintained `host/connected_zip.cjs` and `host/connected_gzip.cjs` come from the public shared-helper source already consumed by Alcor and BilledOK. The unchanged full `vendor/customer-package-panel.mjs` is the original6A62 viewer, received at BilledOK PR4384 head3fddf17fda4515f77dde2d405cf6636e8d57ea29. Its upstream license and complete source are retained. The root color/body wrapper, original package build/receive and browser continuation reuse the fully reviewed BilledOK source with Veltadoc's exact source names and selection. New `compose-packages.cjs` supplies Veltadoc's original selected records to those maintained components.
+
+The deterministic archives use ordinary STORE entries, timestamp2026-10-13T00:00:00Z and file mode0644. This adds complete packaging; no original customer content is rewritten. The gzip envelope is ordinary RFC1952 framing over the maintained raw-DEFLATE module, with original CRC32 and length checked on full reopen.
