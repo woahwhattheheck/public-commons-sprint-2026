@@ -56,6 +56,16 @@ The production-time table uses the first completed timestamps and intervals capt
 
 Scientific rendering may advance to a new presentation edition while retaining original quantities. The handover identity binds the exact scientific file descriptors, map delivery, review generation, source helper and shared style. Operational `updated_at`/latest-pointer metadata is excluded so a same-result retry does not create a new handover merely because it was reopened.
 
+## First completed reference edition
+
+The same native handover can deliver the original completed baseline, riparian alternative and matched control while later parameter profiles remain pending. Use the current geographic receiver's explicit reference-report mode at a returned or stopped native boundary. Its saved scientific source remains a rendered report with the actual partial native-course state.
+
+Pass the unchanged dictionary returned by `reference_report_basis(workspace, ensemble_id, course)` to this helper as `reference_basis=basis`, and pass that same basis to the existing reference archive binding and cold-reopen calls. The helper reads the original saved course and verifies the supplied basis, original ordered run selection and scientific progress before writing its immutable edition. The default call continues to require the complete parameter course.
+
+The opening page labels the reference edition, shows every saved profile's actual baseline/restoration/control states, and links the original all-alternative decision reports and complete decision packages. Each native profile is visible with its original parameter assignments and run IDs. The original pairwise comparison table remains available with its own finite support. Scientific values stay in their existing producers.
+
+The handover record keeps the exact `reference_basis` plus a read-only `course_snapshot`. Pending native records and the complete source design stay in the editable Workspace; subsequent native continuation uses the original saved ensemble and completed runs. A later completed sensitivity study creates its own scientific/handover edition. Use the maintained geographic receiver for continuation and archive recovery, preserving earlier downloaded editions.
+
 ## Recipient workflow
 
 1. Restore the complete native archive with its contained maintained application:
