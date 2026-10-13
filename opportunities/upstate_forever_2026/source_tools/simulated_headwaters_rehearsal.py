@@ -113,13 +113,15 @@ def bind(receipt_path, output, *, workspace=None, browser=None, operation_id=OPE
     from rehearsal_receiving import validate
     validate(value)
     output.mkdir(parents=True, exist_ok=True)
-    atomic_bytes(output / "original-demo-receiving.json", receipt_bytes, immutable=True)
+    teaching = output / "uploads" / "simulated-headwaters"
+    teaching.mkdir(parents=True, exist_ok=True)
+    atomic_bytes(teaching / "original-demo-receiving.json", receipt_bytes, immutable=True)
     atomic_json(output / "input.json", value, immutable=True)
     guide = APP / GUIDE
-    atomic_bytes(output / "TEACHING_GUIDE.md", guide.read_bytes(), immutable=True)
+    atomic_bytes(teaching / "TEACHING_GUIDE.md", guide.read_bytes(), immutable=True)
     return {"input": str(output / "input.json"), "project_id": ws.project["id"],
             "selection": selected, "receipt_sha256": file_digest(receipt_path),
-            "guide": str(output / "TEACHING_GUIDE.md")}
+            "guide": str(teaching / "TEACHING_GUIDE.md")}
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)

@@ -21,7 +21,7 @@ export function buildInputs() {
       const u=(col+.5)/width,d=Math.min(...centres(v).map(x=>Math.abs(u-x)));
       // Two upland tributary valleys join a south-flowing trunk. Positive
       // downslope relief and convex valley sides give real routing terrain.
-      const elevation=205+150*(1-v)+250*d*d+12*(u-.5)**2;
+      const elevation=205+60*(1-v)+120*d+400*d*d+4.8*(u-.5)**2;
       let landcover=41;
       if(ellipse(u,v,.70,.36,.19,.27)||ellipse(u,v,.56,.82,.27,.16))landcover=82;
       if(ellipse(u,v,.30,.55,.22,.29))landcover=81;

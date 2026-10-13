@@ -17,7 +17,11 @@
         "operator/rehearsal_browser.mjs",
         "operator/rehearsal_receiving.py",
         "operator/REHEARSAL.md",
-        "operator/rehearsal.example.json"
+        "operator/rehearsal.example.json",
+        "operator/rehearsal_cli.py",
+        "operator/web/rehearsal.mjs",
+        "operator/web/rehearsal.css",
+        "operator/install_rehearsal.py"
       ],
       "requires": [
         "core",
