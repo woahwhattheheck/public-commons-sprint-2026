@@ -1,0 +1,42 @@
+{
+  "schema": "tjlabs.migration-reconciliation.complete-source-package.v1",
+  "repository": "woahwhattheheck/public-commons-sprint-2026",
+  "product_source_directory": "tools/migration-reconciliation-e258-20261013",
+  "artifact_directory": "operations/migration-reconciliation-receiving-e258-20261013",
+  "selected_core": "5abce5dd9b04e55089bb2dcda29dadb4d4cfc8c9",
+  "selected_examples_and_native": "6b75feefe2560cb94c0de536a3146f08d3633c32",
+  "selected_inspector_and_browser": "a25df300070918483526d94228cefd886d916f76",
+  "archive": {
+    "path": "Migration_Source.zip",
+    "bytes": 145615,
+    "sha256": "afa9478ed1ee9ea071890dc21cf6c826ec466d24e4684b4fc658822f88053ec7"
+  },
+  "manifest": {
+    "path": "SOURCE_SELECTION.json",
+    "bytes": 24307,
+    "sha256": "b1c6ec53f39ff2e91c6dec0748c766a918cc4b07c6122c679c24f8a20f16080a"
+  },
+  "guide": {
+    "path": "README.md",
+    "bytes": 12619,
+    "sha256": "bb79116f01df40b07bed9d19c82820d7ffd9527921ac2cfc81d951dbdb089f57"
+  },
+  "product_files": 96,
+  "archive_files": 96,
+  "source_bytes": 586911,
+  "verification": {
+    "status": "SOURCE_PACKAGED",
+    "all_original11_bytes_preserved": true,
+    "all_members_independently_inflated_crc_sha_mode_checked": true,
+    "native_receiving": "EXISTING_ORIGINAL_QUEUE",
+    "browser_receiving": "EXISTING_ORIGINAL_QUEUE_A_AND_C_REQUIRED",
+    "actual_visual_review": "PENDING_ORIGINAL_PRODUCED_FILES"
+  },
+  "license": {
+    "path": "LICENSE",
+    "mode": "100644",
+    "bytes": 1091,
+    "sha256": "2c961cd561150af9a4f94f3f48f0bad7bf271acd0f9cdaa1d354c511b94e84d8",
+    "git_blob": "2d2a35a69e3896b7c6b885c1faebae2f2f8bc9c1"
+  }
+}

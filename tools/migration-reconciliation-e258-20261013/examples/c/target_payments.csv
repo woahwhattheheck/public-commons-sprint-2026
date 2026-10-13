@@ -1,0 +1,4 @@
+"payment_id","account_id","canonical_account","payment_date","currency","credit_minor"
+"Y001","NA100","A001","2025-07-10","GBP","10025"
+"Y002","NA200","A002","2025-07-10","GBP","6000"
+"Y003","NA300","A003","2025-12-31","GBP","1050"

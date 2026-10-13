@@ -1,0 +1,4 @@
+"allocation_id","payment_id","bill_id","currency","applied_amount"
+"L001","Y001","B001","GBP","100.25"
+"L002","Y002","B002","GBP","40.00"
+"L003","Y003","B003","GBP","10.50"
