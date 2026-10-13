@@ -1,5 +1,6 @@
 {
   "schema": "upstate.application-component-fragment/v1",
+  "id": "headwaters-native-interpretation",
   "components": {
     "headwaters-native-interpretation": {
       "title": "Completed original headwaters source-to-native interpretation",
