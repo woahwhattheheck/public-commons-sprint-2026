@@ -1,0 +1,144 @@
+[
+  {
+    "code": "published_chlorophyll_sample_count",
+    "scope": [
+      "SV-374",
+      "SV-840"
+    ],
+    "field": "n",
+    "published": 4,
+    "source_table": 7,
+    "source_pdf_page": 21,
+    "context": "The field-program section reports 15 surface samples per site. Both printed counts are preserved as their source fields."
+  },
+  {
+    "code": "published_do_range_difference",
+    "scope": [
+      "SV-838"
+    ],
+    "source_table": 5,
+    "source_pdf_page": 18,
+    "context": "Reported average daily range differs from printed average daily maximum minus minimum in every month. Preserve all three printed statistics independently.",
+    "rows": [
+      {
+        "month": 4,
+        "published_range": 1.82,
+        "difference_of_printed_means": 3.68
+      },
+      {
+        "month": 5,
+        "published_range": 2.15,
+        "difference_of_printed_means": 3.82
+      },
+      {
+        "month": 6,
+        "published_range": 2.37,
+        "difference_of_printed_means": 4.35
+      },
+      {
+        "month": 7,
+        "published_range": 2.71,
+        "difference_of_printed_means": 4.17
+      },
+      {
+        "month": 8,
+        "published_range": 2.81,
+        "difference_of_printed_means": 4.51
+      },
+      {
+        "month": 9,
+        "published_range": 2.81,
+        "difference_of_printed_means": 4.68
+      },
+      {
+        "month": 10,
+        "published_range": 3.45,
+        "difference_of_printed_means": 5.34
+      }
+    ]
+  },
+  {
+    "code": "table_number_cross_reference",
+    "scope": [
+      "total_phosphorus",
+      "total_nitrogen"
+    ],
+    "context": "The contents and narrative refer to Tables10 and11; actual captions are Table9 on PDFpage24 and Table10 on PDFpage25. Dataset source_table follows actual captions."
+  },
+  {
+    "code": "published_standard_deviation_dash",
+    "scope": [
+      "SV-840"
+    ],
+    "parameter": "total_phosphorus",
+    "source_table": 9,
+    "source_pdf_page": 24,
+    "published_token": "-",
+    "context": "Stored as null with the original dash token."
+  },
+  {
+    "code": "laboratory_turbidity_errors",
+    "date": "2023-04-18",
+    "source_pdf_page": 13,
+    "scope": [
+      {
+        "site_id": "SV-839",
+        "depth_m": 4
+      },
+      {
+        "site_id": "SV-374",
+        "depth_m": 9
+      },
+      {
+        "site_id": "SV-374",
+        "depth_m": 16.5
+      }
+    ]
+  },
+  {
+    "code": "laboratory_ammonia_tkn_issues",
+    "source_pdf_page": 13,
+    "scope": [
+      {
+        "site_id": "SV-374",
+        "date": "2023-07-11",
+        "depth_m": 16.5
+      },
+      {
+        "site_id": "SV-374",
+        "date": "2023-07-25",
+        "depth_m": 8
+      },
+      {
+        "site_id": "SV-374",
+        "date": "2023-08-08",
+        "depth_m": 15
+      }
+    ]
+  },
+  {
+    "code": "microcystin_sample_loss",
+    "site_id": "SV-838",
+    "date": "2023-09-05",
+    "source_pdf_page": 13
+  },
+  {
+    "code": "microcystin_laboratory_qc",
+    "site_id": "SV-840",
+    "date": "2023-10-17",
+    "source_pdf_page": 13
+  },
+  {
+    "code": "published_huc_area_sum",
+    "source_pdf_page": 8,
+    "huc10": "0306010106",
+    "published_huc10_acres": 38112,
+    "published_component_acres": [
+      22158,
+      15943
+    ],
+    "sum_of_published_components_acres": 38101,
+    "difference_acres": 11,
+    "context": "Retain each published area; spatial products derive area from the original geometry."
+  }
+]
