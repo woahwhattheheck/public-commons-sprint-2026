@@ -938,6 +938,11 @@ def inspect_packet(path):
     clean["artifacts"] = [{key: value for key, value in item.items() if key != "preview"} for item in review["artifacts"]]
     if digest(clean) != review["id"]:
         raise ValueError("Review request identity differs")
+    expected_files = [{"artifact_id": item["id"], "path": item["path"],
+                       "bytes": item["bytes"], "sha256": item["sha256"]}
+                      for item in review["artifacts"]]
+    if packet.get("files") != expected_files:
+        raise ValueError("Review package files differ from its selected original artifacts")
     for item in packet["files"]:
         name = _relative(item["path"])
         expected = manifest["members"].get(name)
@@ -1009,7 +1014,7 @@ def receive_packet(path, destination, *, workspace=None):
 
 
 def import_packet(workspace, packet):
-    """Join an exported review to its original, or already restored, Workspace."""
+    """Preflight and join a complete original review to its restored Workspace."""
     if not isinstance(packet, dict) or packet.get("schema") != PACKET_SCHEMA:
         raise ValueError("Import the original complete review packet document")
     review = copy.deepcopy(packet["review"])
@@ -1025,8 +1030,12 @@ def import_packet(workspace, packet):
             path = _resolve(workspace, item, cache)
             if path.stat().st_size != item["bytes"] or file_digest(path) != item["sha256"]:
                 raise ValueError("Restore the original selected workspace files before joining this review")
-        original = workspace._save("reviews", review)
-        current = history(workspace, original["id"])
+        try:
+            workspace._get("reviews", expected_id)
+        except FileNotFoundError:
+            current = []
+        else:
+            current = history(workspace, expected_id)
         incoming = packet.get("responses")
         if not isinstance(incoming, list):
             raise ValueError("Review packet needs its complete response history")
@@ -1038,7 +1047,7 @@ def import_packet(workspace, packet):
             if (checked["previous_response_id"] != previous or record.get("previous_response_id") != previous
                     or record.get("request_sha256") != digest(checked)
                     or record.get("project_id") != workspace.project["id"]
-                    or record.get("review_id") != original["id"]
+                    or record.get("review_id") != expected_id
                     or record.get("schema") != "upstate.review-responses/v1"):
                 raise ValueError("Incoming response history differs from the original review")
             if digest({key: value for key, value in record.items() if key != "id"}) != record.get("id"):
@@ -1046,8 +1055,15 @@ def import_packet(workspace, packet):
             previous = record["id"]
             incoming_ids.append(previous)
             normalized.append(record)
-        if current_ids[:min(len(current_ids), len(incoming_ids))] != incoming_ids[:min(len(current_ids), len(incoming_ids))]:
+        if packet.get("latest_response_id") != previous:
+            raise ValueError("Incoming review names another response generation")
+        shared = min(len(current_ids), len(incoming_ids))
+        if current_ids[:shared] != incoming_ids[:shared]:
             raise ValueError("Review response histories have diverged; preserve both and reconcile their decisions")
+        # No record is published before every incoming response and original
+        # source binding has passed.  An interrupted valid join resumes its
+        # already-retained immutable prefix through the same original importer.
+        original = workspace._save("reviews", review)
         for record in normalized[len(current_ids):]:
             retained = workspace._save("review-responses", record)
             if retained["id"] != record["id"]:

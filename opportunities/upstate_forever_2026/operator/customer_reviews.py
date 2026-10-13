@@ -14,16 +14,18 @@ import stat
 import urllib.parse
 
 from model.common import atomic_json, canonical, digest, file_digest, identifier, read_json
-from model import reviews, review_handback
+from model import reviews, review_handback, review_receiving
 
 ACTIONS = frozenset({
     "customer.review.create", "customer.review.export", "customer.review.response.import",
     "customer.review.handback.save", "customer.review.handback.export", "customer.review.handback.import",
+    "customer.review.packet.receive", "customer.review.packet.open",
 })
 READS = frozenset({"catalog", "review", "template", "compare", "spatial-export",
-                   "handbacks", "handback", "handback-template"})
+                   "handbacks", "handback", "handback-template", "packets", "packet"})
 APPLICATION = Path(__file__).resolve().parents[1]
 EXPORT_ACTIONS = frozenset({"customer.review.export", "customer.review.handback.export"})
+PACKET_ACTIONS = frozenset({"customer.review.packet.receive", "customer.review.packet.open"})
 
 
 class ReceivedExportUnavailable(Exception):
@@ -247,9 +249,161 @@ class CustomerReviews:
     def _desk_url(task_id, member="index.html"):
         return "/api/file/review-desk/" + task_id + "/" + urllib.parse.quote(member, safe="/")
 
+
+    def _packet_root(self):
+        return self.operator.root / "outputs" / "customer-review-packet-views"
+
+    def _packet_identity(self, task, *, completed=False):
+        action, payload = task.get("action"), task.get("payload")
+        operation = task.get("operation_id")
+        if (action not in PACKET_ACTIONS or not isinstance(payload, dict)
+                or not isinstance(operation, str)
+                or not re.fullmatch(r"[A-Za-z0-9_-]{16,100}", operation)):
+            raise ValueError("Choose an original received-review operation")
+        workspace, key = identifier(task.get("workspace")), identifier(task.get("id"))
+        if (key != digest({"workspace": workspace, "operation_id": operation})
+                or task.get("request_sha256") != digest({
+                    "workspace": workspace, "action": action, "payload": payload})):
+            raise ValueError("The receiving operation differs from its original selection")
+        origin = task.get("transfer_origin")
+        while origin is not None:
+            if not isinstance(origin, dict):
+                raise ValueError("The receiving operation has an invalid transfer history")
+            identifier(origin.get("transfer_id"))
+            old_workspace = identifier(origin.get("workspace_key"))
+            if (identifier(origin.get("task_id")) != digest({
+                    "workspace": old_workspace, "operation_id": operation})
+                    or origin.get("request_sha256") != digest({
+                        "workspace": old_workspace, "action": action, "payload": payload})):
+                raise ValueError("The received task differs from its original transferred request")
+            origin = origin.get("previous")
+        if action == "customer.review.packet.receive":
+            if set(payload) - {"upload_id", "review_id"}:
+                raise ValueError("Choose only the original review upload and optional review")
+            self._id(payload, "upload_id")
+            if "review_id" in payload:
+                self._id(payload, "review_id")
+        else:
+            if set(payload) != {"receipt_id"}:
+                raise ValueError("Choose one original received-review receipt")
+            self._id(payload, "receipt_id")
+        if not completed:
+            return None
+        if task.get("state") != "complete" or not isinstance(task.get("result"), dict):
+            raise ValueError("Open a completed received-review operation")
+        ws, result = self.operator.ws(workspace), task["result"]
+        receipt = review_receiving.record(ws, self._id(result, "receipt_id"))
+        if action == "customer.review.packet.receive":
+            if (receipt["upload_id"] != payload["upload_id"]
+                    or receipt["operation_id"] != operation
+                    or receipt["received_at"] != task["created_at"]
+                    or receipt["expected_review_id"] != payload.get("review_id")):
+                raise ValueError("The saved receipt differs from its original receiving request")
+        elif receipt["id"] != payload["receipt_id"]:
+            raise ValueError("The local viewer opened another received package")
+        if (result.get("review_id") != receipt["review_id"]
+                or result.get("project_id") != ws.project["id"]
+                or result.get("package_sha256") != receipt["package_sha256"]
+                or result.get("incoming_response_id") != receipt["incoming_response_id"]):
+            raise ValueError("The received result differs from its exact original edition")
+        view, _ = review_receiving._view_record(ws, self._id(result, "view_id"))
+        if view["receipt_id"] != receipt["id"]:
+            raise ValueError("The local viewer belongs to another received package")
+        return receipt
+
+    def _packet_files(self, workspace, receipt_id, packet=None):
+        ws = self.operator.ws(workspace)
+        archive, row = review_receiving.archive_file(ws, receipt_id)
+        if packet is None:
+            _, inspected = review_receiving.inspect_received(ws, receipt_id)
+            packet = inspected["packet"]
+        return [
+            self.operator._ticket(workspace, archive, row["archive"], "Complete original received review ZIP"),
+            self._json_ticket(workspace, packet, "received-review.json",
+                              "Complete received review and original response history"),
+        ]
+
+    def _packet_view(self, task):
+        self._packet_identity(task, completed=True)
+        root = self._packet_root()
+        view_id = task["result"]["view_id"]
+        # Only the whole missing local materialization is an ordinary transfer
+        # omission. Missing members inside a present edition remain errors.
+        directory = root / view_id
+        try:
+            directory.lstat()
+        except FileNotFoundError:
+            return None
+        return review_receiving.view(self.operator.ws(task["workspace"]), view_id, root)
+
+    def _packet_availability(self, workspace, receipt_id):
+        candidates = [task for task in self.operator.task_list(workspace)
+                      if task.get("action") in PACKET_ACTIONS and task.get("state") == "complete"
+                      and task.get("result", {}).get("receipt_id") == receipt_id]
+        errors = []
+        for task in sorted(candidates, key=lambda item: (item.get("ended_at", ""), item["id"]), reverse=True):
+            try:
+                if self._packet_view(task) is not None:
+                    return {"status": "available", "url": self._desk_url(task["id"])}
+            except (self.Fault, OSError, ValueError, KeyError, TypeError) as error:
+                errors.append(str(error))
+        if errors:
+            return {"status": "error", "message": errors[0]}
+        return {"status": "open_on_this_computer",
+                "message": "The original ZIP and its received edition are retained. "
+                           "Open this package on this computer to recreate its local review desk."}
+
+    def _receive_packet(self, task):
+        self._packet_identity(task)
+        ws, payload = self.operator.ws(task["workspace"]), task["payload"]
+        if task["action"] == "customer.review.packet.receive":
+            # A transferred or interrupted receive can finish from its already
+            # retained original ZIP even when the sender-local upload is absent.
+            saved = [review_receiving.record(ws, row["id"]) for row in ws._list(review_receiving.KIND)
+                     if row.get("operation_id") == task["operation_id"]
+                     and row.get("upload_id") == payload["upload_id"]
+                     and row.get("received_at") == task["created_at"]]
+            if len(saved) > 1:
+                raise ValueError("This original receiving operation has multiple retained receipts")
+            if saved:
+                receipt = saved[0]
+                if receipt["expected_review_id"] != payload.get("review_id"):
+                    raise ValueError("The received task changed its original review selection")
+                _, inspected = review_receiving.inspect_received(ws, receipt["id"])
+                reviews.import_packet(ws, inspected["packet"])
+            else:
+                uploaded = self.operator.upload(payload["upload_id"])
+                receipt, _ = review_receiving.receive(
+                    ws, uploaded["path"], sha256=uploaded["sha256"], filename=uploaded["filename"],
+                    upload_id=payload["upload_id"], operation_id=task["operation_id"],
+                    received_at=task["created_at"], expected_review_id=payload.get("review_id"))
+        else:
+            receipt = review_receiving.record(ws, payload["receipt_id"])
+        opened = review_receiving.open_view(ws, receipt["id"], self._packet_root())
+        current = reviews.history(ws, receipt["review_id"])
+        return {
+            "receipt_id": receipt["id"], "view_id": opened["view"]["id"],
+            "review_id": receipt["review_id"], "project_id": ws.project["id"],
+            "package_sha256": receipt["package_sha256"],
+            "incoming_response_id": receipt["incoming_response_id"],
+            "current_latest_response_id": current[-1]["id"] if current else None,
+            "members": receipt["members"], "archive_bytes": receipt["archive"]["bytes"],
+        }
+
     def read(self, workspace, operation, value=None):
         value = value or {}
         ws = self.operator.ws(workspace)
+        if operation == "packets":
+            selected = self._id(value, "review_id") if value.get("review_id") else None
+            return {"workspace_key": workspace, "project": ws.project, "review_id": selected,
+                    "receipts": review_receiving.list_receipts(ws, selected)}
+        if operation == "packet":
+            receipt_id = self._id(value, "receipt_id")
+            result = review_receiving.show(ws, receipt_id)
+            packet = result.pop("packet")
+            result["_downloads"] = self._packet_files(workspace, receipt_id, packet)
+            result["_desk"] = self._packet_availability(workspace, receipt_id)
+            return result
         if operation == "catalog":
             overview = ws.overview()
             def choice(row, kind):
@@ -358,6 +512,8 @@ class CustomerReviews:
         workspace, payload = task["workspace"], task["payload"]
         ws = self.operator.ws(workspace)
         action = task["action"]
+        if action in PACKET_ACTIONS:
+            return self._receive_packet(task)
         if action == "customer.review.handback.save":
             record = review_handback.save(ws, payload.get("handback"), created_at=task["created_at"])
             return {"review_id": record["review_id"], "handback_id": record["id"], "handback": record}
@@ -523,6 +679,15 @@ class CustomerReviews:
             return task
         result = task["result"]
         task["_review"] = {"review_id": result["review_id"]}
+        if task["action"] in PACKET_ACTIONS:
+            receipt = self._packet_identity(task, completed=True)
+            task["_review"].update(kind="received-review", receipt_id=receipt["id"],
+                                  incoming_response_id=receipt["incoming_response_id"])
+            opened = self._packet_view(task)
+            if opened is not None:
+                task["_review"]["desk_url"] = self._desk_url(task["id"])
+            task["_downloads"] = self._packet_files(task["workspace"], receipt["id"])
+            return task
         if task["action"].startswith("customer.review.handback."):
             task["_review"].update(handback_id=result["handback_id"], kind="engineering-handback")
         if task["action"] in EXPORT_ACTIONS:
@@ -569,22 +734,37 @@ class CustomerReviews:
 
     def desk_member(self, task_id, member):
         task = self.operator.task(identifier(task_id))
-        try:
-            directory, manifest = self._export_manifest(task)
-        except ReceivedExportUnavailable as error:
-            raise self.Fault("REVIEW_EXPORT_RECEIVED",
-                             "Open the retained review and rebuild this export on this computer.", 409) from error
+        received = task["action"] in PACKET_ACTIONS
+        opened = None
+        if received:
+            opened = self._packet_view(task)
+            if opened is None:
+                raise self.Fault("REVIEW_PACKET_RECEIVED",
+                                 "Open the received package on this computer first.", 409)
+            directory, manifest = opened["directory"], opened["manifest"]
+        else:
+            try:
+                directory, manifest = self._export_manifest(task)
+            except ReceivedExportUnavailable as error:
+                raise self.Fault("REVIEW_EXPORT_RECEIVED",
+                                 "Open the retained review and rebuild this export on this computer.", 409) from error
         relative = PurePosixPath(member)
         if ("\\" in member or "\0" in member or relative.is_absolute()
                 or str(relative) != member or any(part in (".", "..") for part in relative.parts)):
             raise self.Fault("REVIEW_MEMBER", "Choose an original review package member.", 404)
         if member == (review_handback.MANIFEST if task["action"] == "customer.review.handback.export" else "review-manifest.json"):
-            descriptor = task["result"]["manifest"]
+            descriptor = opened["receipt"]["original_manifest"] if received else task["result"]["manifest"]
         else:
             descriptor = manifest["members"].get(member)
         if descriptor is None:
             raise self.Fault("REVIEW_MEMBER", "This file is outside the selected review package.", 404)
         path = directory.joinpath(*relative.parts)
+        if received and member == "index.html":
+            # Execute only the installed application generated from checked
+            # packet data. The sender's HTML remains untouched in the ZIP.
+            directory = opened["scope"]
+            path = opened["native_index"]
+            descriptor = opened["view"]["native_index"]
         if not path.resolve().is_relative_to(directory.resolve()) or path.is_symlink():
             raise self.Fault("REVIEW_MEMBER_CHANGED", "The original review package member changed.", 409)
         ticket = self.operator._ticket(task["workspace"], path, descriptor, path.name)
