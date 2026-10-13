@@ -1,4 +1,6 @@
 // MIT. Native directory input types follow its installed source-owned JSON catalogues.
+import type * as Operating from '../directory_operating_plan.mjs';
+import type {CommandCatalog} from '../../../distribution/discovery/catalog.mjs';
 import type * as Gravity from '../../fhir_referral/connected/client.mjs';
 export type Json=Gravity.Json;export type JsonObject=Gravity.JsonObject;
 export type UUID=Gravity.UUID;export type SHA256=Gravity.SHA256;
@@ -114,11 +116,49 @@ export interface DirectoryConformanceResultValues{
  directory_conformance_file:Json;
 }
 
-export type DirectoryCollection=DirectoryConformanceCollection|"connections"|"discoveries"|"requests"|"importProfiles"|"sources"|"editions"|"comparisons"|"operations"|"mappings"|"mappingPreviews"|"sourceConversions"|"selections"|"referralJoins"|"handoffs"|"exports"|"receivingReviews"|"receives";
+export type DirectoryOperatingPlanCreateInput=Operating.DirectoryOperatingPlanCreateInput;
+export type DirectoryOperatingPlanSaveInput=Operating.DirectoryOperatingPlanSaveInput;
+export type DirectoryOperatingPlanReceiveInput=Operating.DirectoryOperatingPlanReceiveInput;
+export type DirectoryOperatingPlanCopyInput=Operating.DirectoryOperatingPlanCopyInput;
+export type DirectoryOperatingPlanCompareInput=Operating.DirectoryOperatingPlanCompareInput;
+export type DirectoryOperatingPlanExportInput=Operating.DirectoryOperatingPlanExportInput;
+export type DirectoryOperatingPlanStepInput=Operating.DirectoryOperatingPlanStepInput;
+export interface DirectoryOperatingArguments {
+ directory_operating_plan_step:{workspace:WorkspaceAlias;operating_plan_step:Operating.DirectoryOperatingPlanStepInput};
+ directory_operating_plan_preview:{workspace:WorkspaceAlias;operating_plan_create:Operating.DirectoryOperatingPlanCreateInput};
+ directory_operating_plan_create:{workspace:WorkspaceAlias;operating_plan_create:Operating.DirectoryOperatingPlanCreateInput};
+ directory_operating_plan_save:{workspace:WorkspaceAlias;operating_plan_save:Operating.DirectoryOperatingPlanSaveInput};
+ directory_operating_plan_receive:{workspace:WorkspaceAlias;operating_plan_receive:Operating.DirectoryOperatingPlanReceiveInput};
+ directory_operating_plan_copy:{workspace:WorkspaceAlias;operating_plan_copy:Operating.DirectoryOperatingPlanCopyInput};
+ directory_operating_plan_compare:{workspace:WorkspaceAlias;operating_plan_compare:Operating.DirectoryOperatingPlanCompareInput};
+ directory_operating_plan_export:{workspace:WorkspaceAlias;operating_plan_export:Operating.DirectoryOperatingPlanExportInput};
+ directory_operating_catalog:{workspace:WorkspaceAlias};
+ directory_operating_document:{workspace:WorkspaceAlias;recordId:SHA256};
+ directory_operating_draft:{workspace:WorkspaceAlias;recordId:SHA256;revision?:number};
+ directory_operating_input:{workspace:WorkspaceAlias;recordId:SHA256};
+ directory_operating_basis:{workspace:WorkspaceAlias;recordId:SHA256};
+}
+export interface DirectoryOperatingResultValues {
+ directory_operating_plan_step:Operating.OperatingStep;
+ directory_operating_plan_preview:Operating.DirectoryOperatingPreview;
+ directory_operating_plan_create:Operating.DirectoryOperatingSaved;
+ directory_operating_plan_save:Operating.DirectoryOperatingSaved;
+ directory_operating_plan_receive:Operating.DirectoryOperatingSaved;
+ directory_operating_plan_copy:Operating.DirectoryOperatingSaved;
+ directory_operating_plan_compare:Operating.DirectoryOperatingComparison;
+ directory_operating_plan_export:Operating.DirectoryOperatingExport;
+ directory_operating_catalog:CommandCatalog;
+ directory_operating_document:Operating.OperatingPlan;
+ directory_operating_draft:Operating.OperatingPlanDraft;
+ directory_operating_input:Operating.DirectoryOperatingPlanCreateInput|Operating.DirectoryOperatingPlanSaveInput|Operating.DirectoryOperatingPlanReceiveInput|Operating.DirectoryOperatingPlanCopyInput;
+ directory_operating_basis:Operating.DirectoryOperatingBasis;
+}
+
+export type DirectoryCollection='operatingPlans'|DirectoryConformanceCollection|"connections"|"discoveries"|"requests"|"importProfiles"|"sources"|"editions"|"comparisons"|"operations"|"mappings"|"mappingPreviews"|"sourceConversions"|"selections"|"referralJoins"|"handoffs"|"exports"|"receivingReviews"|"receives";
 export type DirectoryState={schema:'stellar-forge.human-services-directory.v1';workspaceId:UUID}&
  Partial<Record<DirectoryCollection,Json[]>>;
 export type NativeState=Gravity.NativeState&{directory:DirectoryState};
-export interface DirectoryAddedArguments extends DirectoryConformanceArguments{
+export interface DirectoryAddedArguments extends DirectoryConformanceArguments,DirectoryOperatingArguments{
  directory_link_targets:{workspace:WorkspaceAlias;editionId:SHA256;sourceId:SHA256;linkId:SHA256}&Pick<DirectorySourcePageInput,'offset'|'limit'>;
  directory_index_file:{workspace:WorkspaceAlias;collection:'sources'|'editions'|'comparisons';recordId:SHA256};
  directory_source_record_file:{workspace:WorkspaceAlias}&DirectoryRecordRef;
@@ -165,7 +205,7 @@ export interface DirectoryAddedArguments extends DirectoryConformanceArguments{
  directory_workspace_import:{workspace:WorkspaceAlias;input:string;expectedSha256?:SHA256};
  directory_handoff_import:{workspace:WorkspaceAlias;input:string;expectedSha256?:SHA256};
 }
-export type DirectoryNativeBodyAction="directory_conformance_plan"|"directory_conformance_assess"|"directory_conformance_review"|"directory_conformance_compare"|"directory_connection_save"|"directory_discover"|"directory_import_profile_save"|"directory_request_save"|"directory_acquire"|"directory_edition_save"|"directory_compare"|"directory_mapping_save"|"directory_mapping_preview"|"directory_mapping_apply"|"directory_selection_save"|"directory_referral_join"|"directory_handoff_prepare"|"directory_receiving_save"|"directory_export_prepare";
+export type DirectoryNativeBodyAction="directory_operating_plan_step"|"directory_operating_plan_preview"|"directory_operating_plan_create"|"directory_operating_plan_save"|"directory_operating_plan_receive"|"directory_operating_plan_copy"|"directory_operating_plan_compare"|"directory_operating_plan_export"|"directory_conformance_plan"|"directory_conformance_assess"|"directory_conformance_review"|"directory_conformance_compare"|"directory_connection_save"|"directory_discover"|"directory_import_profile_save"|"directory_request_save"|"directory_acquire"|"directory_edition_save"|"directory_compare"|"directory_mapping_save"|"directory_mapping_preview"|"directory_mapping_apply"|"directory_selection_save"|"directory_referral_join"|"directory_handoff_prepare"|"directory_receiving_save"|"directory_export_prepare";
 type OriginalReceive=Gravity.GravityReferralActionArguments['receive_export'];
 export type HumanServicesDirectoryActionArguments=
  Omit<Gravity.GravityReferralActionArguments,'input_apply'|'receive_export'>&DirectoryAddedArguments&{
@@ -179,7 +219,7 @@ type InheritedResult<T>=T extends Gravity.RetainedResult<infer V>?RetainedResult
 export type HumanServicesDirectoryActionResults=Omit<{
  [A in keyof Gravity.GravityReferralActionResults]:InheritedResult<Gravity.GravityReferralActionResults[A]>
 },'state'>&{state:RetainedResult<NativeState>}&{
- [A in keyof DirectoryAddedArguments]:RetainedResult<A extends keyof DirectoryConformanceResultValues?DirectoryConformanceResultValues[A]:A extends 'directory_state'?NativeState:Json>
+ [A in keyof DirectoryAddedArguments]:RetainedResult<A extends keyof DirectoryOperatingResultValues?DirectoryOperatingResultValues[A]:A extends keyof DirectoryConformanceResultValues?DirectoryConformanceResultValues[A]:A extends 'directory_state'?NativeState:Json>
 };
 export type HumanServicesDirectoryAction=keyof HumanServicesDirectoryActionArguments;
 type Camel<S extends string>=S extends `${infer A}_${infer B}`?`${A}${Capitalize<Camel<B>>}`:S;
@@ -233,3 +273,18 @@ export function downloadHumanServicesDirectoryConformance(options:
  client:HumanServicesDirectoryClient;collection:DirectoryConformanceFileCollection;recordId:SHA256;
  fileKind?:DirectoryConformanceFileKind;requestOptions?:RequestOptions;
  }):Promise<{result:RetainedResult;receipt:DownloadReceipt}>;
+
+export function prepareHumanServicesDirectoryOperatingPlan(options:{
+ client:HumanServicesDirectoryClient;workspace:WorkspaceAlias;input:DirectoryOperatingPlanCreateInput;requestOptions?:RequestOptions;
+}):Promise<{result:RetainedResult<Operating.DirectoryOperatingPreview>;preview:Operating.DirectoryOperatingPreview}>;
+export function saveHumanServicesDirectoryOperatingPlan(options:{
+ client:HumanServicesDirectoryClient;workspace:WorkspaceAlias;input:DirectoryOperatingPlanCreateInput;previewRecordId:SHA256;requestOptions?:RequestOptions;
+}):Promise<{result:RetainedResult<Operating.DirectoryOperatingSaved>;saved:Operating.DirectoryOperatingSaved}>;
+export function readHumanServicesDirectoryOperatingPlan(options:{
+ client:HumanServicesDirectoryClient;workspace:WorkspaceAlias;recordId:SHA256;revision?:number;requestOptions?:RequestOptions;
+}):Promise<{document:Operating.OperatingPlan;draft:Operating.OperatingPlanDraft;basis:Operating.DirectoryOperatingBasis;
+ input:DirectoryOperatingResultValues['directory_operating_input'];results:Record<'document'|'draft'|'basis'|'input',RetainedResult>}>;
+export function downloadHumanServicesDirectoryOperatingPlan(options:
+ Omit<DownloadOptions,'exportId'|'expectedManifestSha256'|'client'>&{
+ client:HumanServicesDirectoryClient;input:DirectoryOperatingPlanExportInput;requestOptions?:RequestOptions;
+ }):Promise<{prepared:Operating.DirectoryOperatingExport;prepareResult:RetainedResult;result:RetainedResult;receipt:DownloadReceipt}>;
