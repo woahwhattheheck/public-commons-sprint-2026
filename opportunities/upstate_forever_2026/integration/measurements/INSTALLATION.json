@@ -1,6 +1,6 @@
 {
   "schema": "upstate.measurements-installation/v1",
-  "edition": "complete-measurements-observed-benchmarks-20261013",
+  "edition": "complete-measurements-source-returns-benchmarks-and-receiving-20261013",
   "source_reference": {
     "repository": "woahwhattheheck/public-commons-sprint-2026",
     "original_core_commit": "a81e07284183a2008a413198714759488c2d2c9d",
@@ -66,6 +66,16 @@
       "base_commit": "ebacc524221be985edcc16852855c51c02c29357",
       "guide": "measurement_workspace/OBSERVED_BENCHMARKS.md",
       "native_rendered": false
+    },
+    "source_reconciliation_receiving": {
+      "operation_id": "ECO-SOURCE-RECONCILIATION-15227-20261013",
+      "original_merge": "57a8942b6f991d226d1843ce99149122f59737cd",
+      "composed_main": "e1cd1eb92d41e3eae6067fcf0a596524d0af9119",
+      "native_receiver_blob": "88bacaf506f3bc31ab3da69c08b411d1da0cd9af",
+      "complete_receiver_source": "e94d52668ca14ec3a109f41cb773d644abf0125c",
+      "flow_report_merge": "a3a1d13d2981a8e2617f7e47e74916f648dce852",
+      "preserves": "Complete Guided Intake, source returns, Source Versions, historical reports, Flow/Load products and original receiving workspaces.",
+      "observed_benchmark_merge": "9484a3a73aa1dbe24717572a83eb0bc4bdbd849a"
     }
   },
   "files": [
@@ -133,6 +143,11 @@
       "path": "integration/component_fragments/measurement-returned-reviews.json",
       "bytes": 1002,
       "sha256": "65c0f064c6e9dfefbca981ff729f151d843ade2db77875943c6ede53c7bdc8cd"
+    },
+    {
+      "path": "integration/component_fragments/measurement-source-reconciliation.json",
+      "bytes": 1703,
+      "sha256": "df22390ab7439ee253ce87ae8b8adc3caeb210a80bbdc6cdd49f7d7d908e575c"
     },
     {
       "path": "MEASURED_CHEMISTRY.md",
@@ -251,8 +266,8 @@
     },
     {
       "path": "measurement_workspace/engine/flow_reports.mjs",
-      "bytes": 12090,
-      "sha256": "a4323d34a7377060e874b37f7bf488428eda49eda6623e09e5dfd719b7fafac0"
+      "bytes": 12434,
+      "sha256": "d8437e94929afb2d7bdefc1ce86f46b0cecf36cffa94499a0235ec6a8c7dadda"
     },
     {
       "path": "measurement_workspace/engine/flow_results.mjs",
@@ -268,6 +283,11 @@
       "path": "measurement_workspace/engine/http.mjs",
       "bytes": 13043,
       "sha256": "a5517dfa93558403e75745ab98f476660f23f2ce74df5e97df023eef9d02d81a"
+    },
+    {
+      "path": "measurement_workspace/engine/intake-receiving.mjs",
+      "bytes": 12704,
+      "sha256": "e3310a8956847ce529d18503a07baa098151bbcb7b50eef3d46541556a2180f2"
     },
     {
       "path": "measurement_workspace/engine/intake.mjs",
@@ -330,6 +350,11 @@
       "sha256": "84f28a12db782be3398d7e534c96d43675cccbf5d6949e753b496872b0e9e69b"
     },
     {
+      "path": "measurement_workspace/engine/reconciliation-receiving.mjs",
+      "bytes": 32377,
+      "sha256": "f058b76b21b52651f1fce85736c210fc0d0b1213423f2f9ae8cdeb4730d230b1"
+    },
+    {
       "path": "measurement_workspace/engine/returned_review_cli.mjs",
       "bytes": 2977,
       "sha256": "3c95ea1dd7a66d93c09359e3e5510a64f06dac93676be666a8e083b2d4277543"
@@ -390,6 +415,11 @@
       "sha256": "5c349c157d0de20fa2598820d59baf31389ad5d88d4b2e5112ca5a800473caea"
     },
     {
+      "path": "measurement_workspace/GUIDED_INTAKE.md",
+      "bytes": 7613,
+      "sha256": "4fedf035be54e89f3f795a1310cc31eed45825577670aaa58c32b6c2e56b3f35"
+    },
+    {
       "path": "measurement_workspace/large_context.py",
       "bytes": 6545,
       "sha256": "0d9cb79443768f48e04bc879a8beaf2bcf0324d29322ed31a96cedfe2e2f52c2"
@@ -438,6 +468,11 @@
       "path": "measurement_workspace/SOURCE_HANDBACK.md",
       "bytes": 11272,
       "sha256": "8722d8da1ef7406a2f345941227aefc3ebeda011ae81d3620d05c80f889be682"
+    },
+    {
+      "path": "measurement_workspace/SOURCE_RECONCILIATION.md",
+      "bytes": 18435,
+      "sha256": "71466ae7584023b896647b5cc13d6f2692f7c0c87f3de1fa7c0dc97b671c081c"
     },
     {
       "path": "measurement_workspace/web/benchmarks.mjs",
@@ -967,7 +1002,8 @@
       "d24cab14e5f37954eeef37634f6ad3b5ee60003ca1a2d1b6ae041d245c41590c",
       "7fcf6463e8d141b5087b820587dfb6fc8f2c5eac4d101975be98376b46c8748a",
       "02dd78e1d5a3efbb361344677f7e2dbc3499f4069d5a94dac8a026248e7716a0",
-      "6362435703fc01930e44426162e73866b0703cb582d6e676c5415180891f7a08"
+      "6362435703fc01930e44426162e73866b0703cb582d6e676c5415180891f7a08",
+      "5aed00039a416d079fbc561edd20f0427b6fa6a92eeb32056392d3cd4e08de87"
     ],
     "CURRENT_OWNER_DIRECTION.md": [
       "57945ea0e6eca762011e9f7e6febd39255359143d454fd3aa58a3a849ec14fc9",
@@ -1187,6 +1223,18 @@
     ],
     "operator/web/flow_loads_ui.mjs": [
       "0b180232689c38d41bd77f7944b45be0cd2d41610381fe9f9d4d8a2310de047e"
+    ],
+    "measurement_workspace/engine/flow_reports.mjs": [
+      "a4323d34a7377060e874b37f7bf488428eda49eda6623e09e5dfd719b7fafac0"
+    ],
+    "integration/component_fragments/measurement-source-reconciliation.json": [
+      "908b1806444cf315f18c631511c5af071a8784c879e0a8da3ea49de5865e4bc3"
+    ],
+    "measurement_workspace/SOURCE_RECONCILIATION.md": [
+      "9181f8c3ccc050dd216d2a93d4a1c9846c4b99ec620c70379eb8a73ec2e59a3a"
+    ],
+    "source_tools/flow_editions.mjs": [
+      "dcbbb98d9a5ac7238203d4477f4ce405c7aa484ab1e2abe690b4582b0b95987b"
     ]
   },
   "requires": [
