@@ -5436,6 +5436,8 @@ function createConnectedFirstContact(options) {
     return {...body,sha256:modules.sha256Utf8(rateCanonical(body)).sha256};
   }
   const api = {
+    // Pure original revision proof for source receiving; no account/provider action.
+    validateOriginalJournalRevision: () => frozenJson(returnedMailboxRevision()),
     ...(modules.deliveryNotices ? {receiveDeliveryNotice,deliveryStatus,exportDeliveryNotices} : {}),
     ...(nativeDraft ? {receiveDraft:receiveReviewedDraft,prepareDraft:prepareReviewedDraft,receiveCompletedDraft} : {}),
     plan: () => ({case_id: reviewed.opportunity_id, recipient, input_sha256: identity, sender:{...sender},

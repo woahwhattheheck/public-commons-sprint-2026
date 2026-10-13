@@ -11,13 +11,14 @@ function runContactProductLoaderChecks(source,sha256){
    mailboxes:[{name:'business',link_id:'original-business',id:'111',email:'business@example.test'},{name:'secondary',link_id:'original-secondary',id:'222',email:'secondary@example.test'}],
    authority:{scope_id:'original-scope',accounts:[{profile_id:'111',account_key:sha256(JSON.stringify({provider:'gmail',profile_id:'111',activity:'Mail sending'}))}]}
  });
- const dependencies=['host/connected_first_contact.cjs','host/connected_first_contact_checkpoint.cjs','host/connected_contact_local_state.py','host/connected_contact_file_state.cjs','host/connected_contact_local_adoption.cjs','host/connected_first_contact_queue_drain.cjs'];
+ const dependencies=['host/connected_first_contact.cjs','host/connected_first_contact_checkpoint.cjs','host/connected_contact_local_state.py','host/connected_contact_file_state.cjs','host/connected_contact_local_adoption.cjs','host/connected_first_contact_queue_drain.cjs','host/connected_first_contact_draft.cjs'];
  const files={},fs={lstatSync(p){if(p==='/fixture')return {isDirectory:()=>true,isSymbolicLink:()=>false};if(!files[p])throw Error('Missing source');return {isFile:()=>true,isSymbolicLink:()=>false};},realpathSync:p=>p,readFileSync:p=>files[p]};
  const bytes=s=>({text:s,length:s.length});
  const manifest={schema:'commons.connected-contact-source-manifest/v1',files:dependencies.map(name=>{files['/fixture/'+name]=bytes('// '+name);return {path:name,bytes:files['/fixture/'+name].length,sha256:sha256(files['/fixture/'+name].text)};})};
  files['/fixture/SOURCE_MANIFEST.json']=bytes(JSON.stringify(manifest));
  const outputs={
-  'host/connected_first_contact.cjs':{loadOriginalContactModules:()=>({sha256Utf8:sha256})},
+  'host/connected_first_contact.cjs':{loadOriginalContactModules:()=>({sha256Utf8:sha256}),createConnectedFirstContact:options=>({ordinary:true,options})},
+  'host/connected_first_contact_draft.cjs':{createConnectedExistingFirstContactDraft:options=>({draft:true,options})},
   'host/connected_contact_file_state.cjs':{createContactFileState:settings=>{constructions++;return {settings};},initializeContactCoordinator:settings=>{initializations++;return {settings};}},
   'host/connected_first_contact_checkpoint.cjs':{},
   'host/connected_contact_local_adoption.cjs':{},
@@ -32,6 +33,11 @@ function runContactProductLoaderChecks(source,sha256){
  try{
   const product=load(config());assert(product.storage.settings.authority.accounts.length===1,'selected subset');cases.push('single-account authority is retained without adding the second mailbox');
   const same=load(config());assert(same.factory===product.factory,'cache reuse');cases.push('unchanged verified cached module reopens');
+  const ordinaryInput={subject:'Original ordinary input'},ordinary=product.factory.createConnectedFirstContact({input:ordinaryInput});
+  assert(ordinary.ordinary&&ordinary.options.input===ordinaryInput,'ordinary constructor');cases.push('ordinary inputs retain the original carrier constructor');
+  const draftInput={native_draft:{draft_id:'original-draft'}},received=product.factory.createConnectedFirstContact({input:draftInput,modules:{original:true}});
+  assert(received.draft&&received.options.input===draftInput&&received.options.createConnectedFirstContact===outputs['host/connected_first_contact.cjs'].createConnectedFirstContact,'draft constructor');cases.push('saved drafts use the unchanged original helper and same carrier');
+  assert(product.drafts===outputs['host/connected_first_contact_draft.cjs'],'original draft module');cases.push('complete original draft helper remains available to the same operator');
   reject('mailbox order is rejected before state construction',c=>({...c,mailboxes:[...c.mailboxes].reverse()}));
   reject('wrong selected Gmail account key is rejected before state construction',c=>{c.authority.accounts[0].account_key='0'.repeat(64);return c;});
   reject('unconfigured authority profile is rejected before state construction',c=>{c.authority.accounts[0].profile_id='333';return c;});
