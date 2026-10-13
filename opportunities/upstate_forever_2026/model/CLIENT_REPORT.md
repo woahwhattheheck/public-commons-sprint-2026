@@ -105,7 +105,7 @@ Before the delivery identity is calculated, `selection.client_companion_edition`
 
 The existing delivery screen opens either report through the authenticated preview route. Both report models must bind the exact selected delivery ID. Its file tickets preserve each real map, GIS and report path, and the grouped downloads expose both complete formats. Received copies list their retained snapshot and can prepare a complete local delivery through the original task queue.
 
-The preserved original client narrative and RFP coverage remain in `delivery/ECOSYSTEM_CLIENT_NARRATIVE.md` and `delivery/RFP_DELIVERY_COVERAGE.json`.
+Customer-specific narrative and RFP delivery coverage are maintained in the private handoff alongside this reusable compiler.
 
 ## Reopening the working project
 
