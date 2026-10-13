@@ -325,13 +325,30 @@ def run(args):
 
             def build_inventory():
                 page.locator('[name="studyTitle"]').fill(args.title + " · conservation inventory")
-                page.locator('[name="mode"]').select_option("source_context")
+                page.locator('[name="mode"]').select_option("native_model" if args.baseline_run else "source_context")
+                if args.baseline_run:
+                    page.locator('[name="baseline"]').select_option(args.baseline_run)
+                    for run_id in args.alternative_run:
+                        page.locator('[name="alternative"][value="' + run_id + '"]').check()
+                    page.locator('[name="scoreBasis"]').select_option(args.score_basis)
+                    page.locator('[name="scoreScale"]').select_option(args.score_scale)
+                    if args.score_basis != "current_export":
+                        page.locator('[name="scoreAlternative"]').select_option(args.scoring_alternative)
+                    receipt["native_study_selection"] = {
+                        "baseline_run_id": args.baseline_run,
+                        "alternative_run_ids": args.alternative_run,
+                        "score_basis": args.score_basis, "score_scale": args.score_scale,
+                        "scoring_alternative": args.scoring_alternative,
+                    }
                 task = click_queue("conservation.build", page.locator('[data-parcel-form="study"] button[type="submit"]'))
                 receipt["conservation_task_id"] = task["id"]
                 close_details()
                 task = wait_task(task)
                 close_details()
                 receipt["conservation_study_id"] = task["result"]["id"]
+                receipt["conservation_result"] = {
+                    key: task["result"].get(key) for key in ("id", "state", "mode", "metric_state", "summary")
+                }
                 control = page.locator('[data-action="conservation-open-study"][data-study-id="' + task["result"]["id"] + '"]')
                 control.first.wait_for(state="visible", timeout=120000)
                 control.first.click()
@@ -349,6 +366,9 @@ def run(args):
                 if reopened["source_collection_id"] != edition["source_collection_id"] or reopened["input_selection"] != edition["input_selection"]:
                     raise AssertionError("Reopening must preserve the same original county source selection")
                 page.locator('[data-parcel-action="record"]').first.wait_for()
+                receipt["reopened_study_draft"] = page.locator('[data-parcel-form="study"]').evaluate(
+                    """form => Object.fromEntries([...new FormData(form)].filter(([key]) => key !== 'alternative')
+                       .concat([['alternatives',[...form.querySelectorAll('[name="alternative"]:checked')].map(item=>item.value)]]))""")
                 screenshot("06-reopened-parcel-edition")
                 receipt["reopened_binding"] = reopened["bindings"]
             stage("Close and reopen the retained edition", reopen)
@@ -375,7 +395,17 @@ def main(argv=None):
     parser.add_argument("--output", required=True)
     parser.add_argument("--chromium-executable")
     parser.add_argument("--timeout-seconds", type=int, default=21600)
+    parser.add_argument("--baseline-run", help="Actual completed original NDR+SDR run for the quantitative study")
+    parser.add_argument("--alternative-run", action="append", default=[], help="Actual completed same-grid alternative; repeat for each selected run")
+    parser.add_argument("--score-basis", choices=("current_export", "scenario_reduction", "disturbance_increase"), default="current_export")
+    parser.add_argument("--score-scale", choices=("total", "per_hectare"), default="total")
+    parser.add_argument("--scoring-alternative")
     args = parser.parse_args(argv)
+    if args.alternative_run and not args.baseline_run:
+        parser.error("--alternative-run requires --baseline-run")
+    if args.score_basis != "current_export" and (
+            not args.baseline_run or args.scoring_alternative not in args.alternative_run):
+        parser.error("A change priority requires --baseline-run and --scoring-alternative among the selected --alternative-run values")
     value = run(args)
     print(json.dumps({"state": value["state"], "edition_id": value.get("edition_id"),
                       "output": str(Path(args.output).resolve()), "elapsed_seconds": value["elapsed_seconds"]}), flush=True)

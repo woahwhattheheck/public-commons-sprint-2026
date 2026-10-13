@@ -22,7 +22,9 @@ from .common import (atomic_bytes, atomic_json, canonical, describe_file, digest
                      file_digest, identifier, now, read_json, relative_file,
                      verify_file)
 
-VERSION = "1.0.1"
+from .station_assessment_context import enrich as enrich_assessments, geojson as assessment_geojson, report_section as assessment_report
+
+VERSION = "1.1.0"
 KIND = "station-geographies"
 RESULT_SCHEMA = "upstate.station-geography-result/v1"
 PACKAGE_SCHEMA = "upstate.station-geography-package/v1"
@@ -576,7 +578,8 @@ def _report(result, watershed_geojson):
                 escape(", ".join(str(w["watershed_id"]) for w in row["watersheds"])) + "</td><td>" +
                 str(row["observation_count"]) + "</td><td>" + candidates + "</td></tr>")
     files = ("stations.csv", "station_watershed_crosswalk.csv", "observation_links.csv", "unassigned_observations.csv",
-             "source_inventory.csv", "stations.geojson", "candidate_locations.geojson", "watersheds.geojson", "analysis.json")
+             "source_inventory.csv", "stations.geojson", "candidate_locations.geojson", "watersheds.geojson",
+             "assessment_links.csv", "assessment_sites.geojson", "analysis.json")
     links = " ".join('<a href="' + name + '">' + name + "</a>" for name in files)
     sources = "".join("<tr><td>" + escape(s["title"]) + "</td><td>" + escape(s["source_id"]) + "</td><td><code>" +
                       escape(s["source_sha256"]) + "</code></td><td>" + escape(s["uri"]) + "</td></tr>" for s in result["sources"])
@@ -585,7 +588,7 @@ def _report(result, watershed_geojson):
         "<body><h1>" + escape(result["title"]) + "</h1><p>Original station locations, exact study identifiers and membership in retained watershed geometry. Observation values, units, dates, qualifiers and methods are retained with their original rows.</p>" +
         '<div class="metrics">' + cards + "</div><h2>Study geography</h2>" + _svg_map(stations, watershed_geojson) +
         "<p>Display coordinates use EPSG:4326. Each station keeps native source coordinates, source CRS, feature identifiers and original attributes. Polygon covers includes boundary points; all overlapping matches remain in the crosswalk.</p>" +
-        '<div class="exports">' + links + '</div><h2>Every selected study station</h2><div class="scroll"><table><thead><tr><th>Station</th><th>Location status</th><th>Longitude, latitude</th><th>Watershed membership</th><th>Observation rows</th><th>Original locations</th></tr></thead><tbody>' +
+        '<div class="exports">' + links + '</div>' + assessment_report(result) + '<h2>Every selected study station</h2><div class="scroll"><table><thead><tr><th>Station</th><th>Location status</th><th>Longitude, latitude</th><th>Watershed membership</th><th>Observation rows</th><th>Original locations</th></tr></thead><tbody>' +
         "".join(station_rows) + "</tbody></table></div><h2>Original source editions</h2><div class=\"scroll\"><table><thead><tr><th>Title</th><th>Source ID</th><th>Original hash</th><th>Provider reference</th></tr></thead><tbody>" +
         sources + "</tbody></table></div><h2>Reopen the original selection</h2><p>In the operator, open Station geography and choose Reopen original geography package. Select station-geography.zip. It contains the native sources, companions, observation originals and complete selection needed to create an editable geography edition in the receiving workspace.</p>" +
         "<p>Created " + escape(result["created_at"]) + " · build <code>" + escape(result["build_id"]) + "</code></p></body></html>")
@@ -677,6 +680,7 @@ def build(workspace, selection):
     if started.get("build_id") != build_id:
         raise ValueError("The saved geographic operation belongs to another selection")
     created = started["created_at"]
+    assessment_links, assessment_summary = enrich_assessments(rows, bindings)
     row_by_id = {row["station_id"]: row for row in rows}
     for link in links:
         station = row_by_id[link["station_id"]]
@@ -692,10 +696,12 @@ def build(workspace, selection):
         "original_candidate_count": len(inventory), "study_candidate_count": sum(len(r["candidates"]) for r in rows),
         "watershed_feature_count": len(watershed_geojson["features"]), "source_count": len(bindings),
         "status_counts": counts, "outside_watersheds_count": sum(r["watershed_status"] == "outside" for r in rows)}
+    summary.update(assessment_summary)
     result = {"schema": RESULT_SCHEMA, "version": VERSION, "build_id": build_id,
         "project_id": workspace.project["id"], "title": selection.get("title") or "Study station geography",
         "created_at": created, "selection": selection, "summary": summary, "stations": rows,
         "observation_links": links, "unassigned_observations": unassigned, "sources": bindings,
+        "assessment_links": assessment_links,
         "source_inventory": inventory, "matching_method": "Exact trimmed native identifiers and explicitly retained aliases",
         "watershed_method": "Native-CRS point/polygon covers; all boundary and overlap memberships retained"}
     atomic_json(destination / "analysis.json", result, immutable=True)
@@ -704,14 +710,17 @@ def build(workspace, selection):
         station_features.append({"type": "Feature", "id": row["station_id"],
             "geometry": {"type": "Point", "coordinates": row["coordinates"]} if row["coordinates"] else None,
             "properties": {key: row[key] for key in ("station_id", "status", "selected_candidate_id",
-                "selected_source_ref", "watersheds", "watershed_status", "observation_count", "source_references", "aliases") if key in row}})
+                "selected_source_ref", "watersheds", "watershed_status", "observation_count", "source_references", "aliases",
+                "assessment_record_count", "assessment_editions", "assessment_cause_codes",
+                "assessment_cause_labels", "publisher_huc12s") if key in row}})
         for candidate in row["candidates"]:
             candidate_features.append({"type": "Feature", "id": candidate["candidate_id"],
                 "geometry": {"type": "Point", "coordinates": candidate["coordinates_wgs84"]} if candidate["coordinates_wgs84"] else None,
                 "properties": {**candidate, "station_id": row["station_id"]}})
     for name, value in (("stations.geojson", {"type": "FeatureCollection", "features": station_features}),
                         ("candidate_locations.geojson", {"type": "FeatureCollection", "features": candidate_features}),
-                        ("watersheds.geojson", watershed_geojson)):
+                        ("watersheds.geojson", watershed_geojson),
+                        ("assessment_sites.geojson", assessment_geojson(assessment_links))):
         atomic_json(destination / name, value, immutable=True)
     flat_stations = [{**row, "longitude": row["coordinates"][0] if row["coordinates"] else None,
         "latitude": row["coordinates"][1] if row["coordinates"] else None,
@@ -737,10 +746,35 @@ def build(workspace, selection):
     atomic_bytes(destination / "unassigned_observations.csv", _csv(
         ["station_id_original", "observation_id", "record_id", "row_number", "reason", "candidate_study_ids",
          "source_ref", "measurement", "original"], unassigned), immutable=True)
+    atomic_bytes(destination / "assessment_links.csv", _csv(
+        ["id", "station_id", "assessment_record_id", "source_id", "source_vintage", "publication_status",
+         "evidence_kind", "source_uri", "source_sha256", "publisher_huc12", "cause_code", "cause_label",
+         "cause_source_cell", "use", "use_support", "priority_ranking", "description", "county",
+         "source_page", "tmdl_report", "approval_date", "location_status", "coordinates_wgs84",
+         "geographic_huc12s", "publisher_huc_relation", "station_source_ref", "inventory_source_ref", "original"],
+        assessment_links), immutable=True)
     atomic_bytes(destination / "source_inventory.csv", _csv(
         ["candidate_id", "native_station_id", "station_key", "native_crs", "native_crs_wkt", "native_coordinates",
          "coordinates_wgs84", "source_ref", "native_geometry", "properties", "issues"], inventory), immutable=True)
     atomic_bytes(destination / "OPEN_STATIONS.html", _report(result, watershed_geojson).encode("utf-8"), immutable=True)
+    spatial_manifest = {
+        "schema": "upstate.sources/v1", "title": result["title"] + " — mapped assessment editions",
+        "captured_at": created, "scope": {"station_geography_build_id": build_id},
+        "entries": [{
+            "id": "station-geography-" + build_id + "-" + role,
+            "title": title, "uri": "urn:upstate:station-geography:" + build_id,
+            "vintage": created, "kind": "vector", "path": filename, "format": "geojson",
+            "role": role, "source_crs": "EPSG:4326",
+            "sha256": file_digest(destination / filename),
+            "provenance": {"station_geography_build_id": build_id,
+                           "source_identities": [{"source_id": source["source_id"], "sha256": source["source_sha256"]}
+                                                 for source in bindings]},
+        } for role, title, filename in (
+            ("MONITORING_STATIONS", result["title"] + " — original station locations", "stations.geojson"),
+            ("STATION_ASSESSMENTS", result["title"] + " — assessment records by edition", "assessment_sites.geojson"))],
+    }
+    atomic_json(destination / "spatial-sources.json", spatial_manifest, immutable=True)
+    spatial_collection = workspace.import_sources(destination / "spatial-sources.json")
     manifests, original_observations = _package_inputs(workspace, destination, bindings, observations)
     owned_package_files = {destination / name for name in (
         "edition.json", "station-geography.zip", "package.json", "station-geography.zip.pending")}
@@ -762,11 +796,13 @@ def build(workspace, selection):
     os.replace(archive_pending, archive_path)
     files = [describe_file(workspace.root, destination / name, label=name) for name in (
         "analysis.json", "stations.geojson", "candidate_locations.geojson", "watersheds.geojson",
+        "assessment_sites.geojson", "assessment_links.csv", "spatial-sources.json",
         "stations.csv", "station_watershed_crosswalk.csv", "observation_links.csv", "unassigned_observations.csv",
         "source_inventory.csv", "OPEN_STATIONS.html", "package.json", "station-geography.zip")]
     saved = workspace._save(KIND, {"version": VERSION, "title": result["title"], "created_at": created,
         "build_id": build_id, "selection": selection, "summary": summary, "sources": bindings,
-        "observation_ids": [o["id"] for o in observations], "files": files})
+        "observation_ids": [o["id"] for o in observations], "files": files,
+        "source_collection_id": spatial_collection["id"]})
     atomic_json(existing, {"id": saved["id"], "build_id": build_id}, immutable=True)
     return saved
 

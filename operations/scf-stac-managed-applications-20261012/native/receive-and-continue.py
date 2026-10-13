@@ -3,7 +3,13 @@ from pathlib import Path
 import hashlib,json,os,shutil,stat,subprocess,sys
 
 base=Path(__file__).resolve().parent
-selected=json.loads((base/'native-input.json').read_text())
+if len(sys.argv)==1:input_file=base/'native-input.json'
+elif len(sys.argv)==3 and sys.argv[1]=='--input':
+    input_file=Path(sys.argv[2])
+    if input_file!=base/'following-native-input.json' or input_file.is_symlink():
+        raise ValueError('Use the explicitly retained following input')
+else:raise SystemExit('Usage: receive-and-continue.py [--input ABSOLUTE_FOLLOWING_INPUT]')
+selected=json.loads(input_file.read_text())
 project=Path(selected['projectDirectory'])
 delivery=project/'delivery'
 project.mkdir(mode=0o700,parents=True,exist_ok=True)
@@ -139,7 +145,7 @@ try:
         if result.returncode:
             outcome=result.returncode
             break
-        result=subprocess.run(['node',str(code/'continue-stac-applications.mjs'),str(base/'native-input.json')])
+        result=subprocess.run(['node',str(code/'continue-stac-applications.mjs'),str(input_file)])
         outcome=result.returncode
         if not outcome:break
         error=project/'continuation-error.json'
@@ -157,11 +163,13 @@ finally:
     for name in ['native-input.json','receive-and-continue.py','launch-native.py']:
         path=base/name
         if path.is_file():shutil.copy2(path,delivery/name)
+    if input_file.name!='native-input.json':shutil.copy2(input_file,delivery/input_file.name)
     if not (project/'source-release.json').is_file() and cache.is_dir():
         shutil.copytree(cache,delivery/'source-cache',dirs_exist_ok=True)
     (delivery/'native-continuation-exit.json').write_text(json.dumps({
         'operationId':selected['operationId'],'sourceCommit':selected['sourceCommit'],
         'exitCode':outcome,'additionalOriginalSourcePaths':sorted(additional),
+        'selectedInput':{'path':str(input_file),'bytes':input_file.stat().st_size,'sha256':hashlib.sha256(input_file.read_bytes()).hexdigest()},
         'declaredArchiveDonor':archive_declaration,'selectedArchiveDonor':archive_input,
         'qualifiedSecondArchiveDonor':second_archive_declaration,'selectedSecondArchiveDonor':second_archive_input,
         'optionalGitDonorAdmission':optional_git_admission

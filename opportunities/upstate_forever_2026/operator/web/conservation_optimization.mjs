@@ -219,8 +219,9 @@ export function attachConservationOptimization(host, options = {}) {
     if(task.action===ACTION+'preview'&&task.result?.request){
       active={analysis:task.result,files:task._downloads||[],task:id};query='';show='all';page=0;issue='';paint();
     }else if(task._conservation_optimization?.plan_id||task.result?.plan?.id||task.result?.plan_id){
-      await openPlan(task._conservation_optimization?.plan_id||task.result?.plan?.id||task.result?.plan_id);
-      if(active && task.workspace===key()){
+      const planId=task._conservation_optimization?.plan_id||task.result?.plan?.id||task.result?.plan_id;
+      await openPlan(planId);
+      if(active?.plan?.id===planId && task.workspace===key()){
         const files=new Map([...array(active.files),...array(task._downloads)].map(file=>[file.id||file.url,file]));
         active.files=[...files.values()];paint();
       }

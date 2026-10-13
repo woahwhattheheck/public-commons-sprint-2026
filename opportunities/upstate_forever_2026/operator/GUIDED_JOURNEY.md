@@ -212,28 +212,39 @@ behind it.”
 
 ### 8. Save, reopen and transfer
 
-Create the complete native backup through the original workspace form. Open the
-completed backup task and its original download. Separately download
-**Journey selections** and **Operating notes**.
+Choose **Save view and notes** in the header or in this step. The original
+workspace retains the selected baseline, grid, profile, scenario, run,
+comparison, saved map view, map pack, delivery and operating notes in
+`operator-session.json`. The saved time appears beside the project identity.
 
-Restore the native archive with the existing restore form and open the returned
-workspace. Import the journey JSON into that restored project. The importer
-checks the original project identity and resolves every selected record against
-the actual restored project. It checks the selected run's grid, profile,
-scenario and native model scope, the comparison's runs, the delivery's runs, and the map pack's saved
-review before adopting the selections.
+Create the complete native backup through the original workspace form. Its
+retained request captures this journey selection, and the archive includes the
+operator snapshot together with the scientific records, original source files,
+native results and application. Open the completed backup task and download
+the archive.
 
-The native archive carries the scientific records and original files. The
-journey file carries the selected operating sequence and your project notes.
-The Markdown operating notes include the selected record IDs, actual retained
-results and timing, step instructions, working definitions and notes.
+Restore the archive with the existing restore form and open the returned
+workspace. The saved analysis and notes open automatically in a new browser or
+receiving workspace. The guide resolves each saved ID against the actual
+project and checks the selected run's grid, profile and scenario and native model scope, the
+comparison's runs, the delivery's runs and the map pack's saved review.
+
+The separate **Journey selections** JSON and **Operating notes** Markdown
+downloads remain available. The JSON importer can resume another saved view in
+the same project; the notes include the selected record IDs, actual retained
+results and timing, step instructions and project notes.
+
+A second browser saving the same project receives a revision conflict before
+replacing an intervening save. Refresh, then save the intended local view.
+Distinct previous text is retained in the note versions that accompany the
+next save. Retrying an unchanged backup request uses its original snapshot.
 
 Say: “We can reopen the same project and continue the discussion from the saved
 analysis.”
 
 ## Notes and ongoing work
 
-Notes are retained as they are typed. If another tab changes the notes, distinct
+Draft notes are retained in the browser as they are typed. **Save view and notes** commits them to the original project, and a native backup captures the same selection and text. If another tab changes the notes, distinct
 text is preserved and can be opened in the guide or read in the exported
 operating notes. Each submitted operation also has its own browser storage
 record. An operation completing after the selected case changes remains in the
@@ -298,3 +309,9 @@ The separate **Download journey selections** file remains useful for moving a vi
 ### Source integration
 
 The registered host uses its existing journey controller for backup capture. The joined browser also supports the original direct host, including its delivery form, navigation and stylesheet attachment. Native saved views use the existing authenticated operator API and source-preserving workspace backup. The component manifest records the current browser and this guide; all unrelated host modules and extension owners remain part of the installed application.
+
+## Original source labels and production geography
+
+The map legend and point inspection read land-cover descriptions from the selected original biophysical tables. Discrete grey shades identify categories. The profile detail opens the exact retained table while native work continues. Step 7 opens **Scenario reports** for retained scenario analyses; a completed run also opens comparison selection directly, and a saved comparison carries its baseline and alternatives into the delivery form.
+
+The issuer requires every final Upper Savannah map dataset on a **30 × 30 m raster grid**, including an external modeling buffer whose distance the consultant selects. The original Gura working demonstration uses its native **300 m** land-cover grid and a separately recorded upstream buffer. Select the appropriate original source edition and reporting boundary in the grid form; the saved grid retains both cell size and buffer as distinct values. The regional production maps use Upper Savannah sources and the South Carolina reporting extent with upstream context. See the issuer's combined RFP, PDF page 2, and `../RFP_RESPONSE_MAP.md` for the exact seven map requirements and delivery scope.

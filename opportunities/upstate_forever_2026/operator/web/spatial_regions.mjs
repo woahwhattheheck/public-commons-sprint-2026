@@ -1,3 +1,5 @@
+import {cohortMarkup,createCohortAnalysis} from './spatial_cohorts.mjs';
+
 const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const copy=value=>value==null?value:JSON.parse(JSON.stringify(value));
 const number=value=>typeof value==='number'&&Number.isFinite(value)?value.toLocaleString(undefined,{maximumSignificantDigits:9}):'—';
@@ -12,7 +14,7 @@ export function regionMarkup(){
     '<div class="region-actions">'+button('analyze','Calculate and save','class="primary"')+button('clear','Clear selection')+'</div>'+
     '<p data-region-status class="note" role="status" aria-live="polite"></p><p data-region-error class="error-text" role="alert" hidden></p>'+
     '<div data-region-result></div><details><summary>Analysis tasks</summary><div data-region-tasks></div></details>'+
-    '<details open><summary>Saved region analyses</summary><label class="region-search">Find an analysis<input data-region-input="search" type="search" placeholder="Search saved titles"></label><div data-region-history></div></details></section>';
+    '<details open><summary>Saved region analyses</summary><label class="region-search">Find an analysis<input data-region-input="search" type="search" placeholder="Search saved titles"></label><div data-region-history></div></details></section>'+cohortMarkup();
 }
 
 export function regionFeatureButton(group,index,feature){
@@ -20,7 +22,7 @@ export function regionFeatureButton(group,index,feature){
     button('feature','Measure this original polygon','data-group="'+group+'" data-feature="'+index+'"'):'';
 }
 
-export function createRegionAnalysis({root,model,workspace,request,alive,getSelection,refreshState,showTask,reopen,selectionChanged}){
+export function createRegionAnalysis({root,model,workspace,request,alive,getSelection,getSources,refreshState,showTask,reopen,selectionChanged}){
   model.operations||={};model.items||=[];model.tasks||=[];model.title||='';model.notes||='';
   model.bins||=32;model.inclusion||='centre';model.search||='';model.page||=0;model.categoryPages||={};
   const events=new AbortController(),reads=new Set();let disposed=false,features=[],opening=null,lastSignature='';
@@ -140,6 +142,7 @@ export function createRegionAnalysis({root,model,workspace,request,alive,getSele
   }
   function setState(state){
     if(state?.workspace_key!==workspace||!current())return;
+    cohorts.setState(state);
     model.items=state.data?.spatial_regions||[];
     model.tasks=(state.tasks||[]).filter(task=>task.action==='spatial.region.analyze'&&task.workspace===workspace);
     const signature=JSON.stringify([model.items,model.tasks.map(task=>[task.id,task.state,task.region_progress,task.result?.id])]);
@@ -196,7 +199,10 @@ export function createRegionAnalysis({root,model,workspace,request,alive,getSele
     if(key==='inclusion')model.inclusion=target.value;
     if(key==='histogram'){model.histogramSeries=target.value;const row=tableSeries(model.result).find(row=>row.key===target.value);node('[data-region-histogram]').innerHTML=histogram(row);}
   },{signal:events.signal});
+  model.cohorts||={};
+  const cohorts=createCohortAnalysis({root,model:model.cohorts,workspace,request,alive:current,getSelection,getSources,refreshState,showTask,
+    openRegion:async id=>{await openResult(id);if(current()&&model.result?.id===id)node('[data-region-result]')?.scrollIntoView({block:'start',behavior:'smooth'});}});
   restoreFields();
   selection();renderResult();renderHistory();renderTasks();
-  return {selectBounds,selectRegion,setState,openResult,setFeatures:value=>{features=value||[];},dispose:()=>{disposed=true;events.abort();for(const control of reads)control.abort();reads.clear();}};
+  return {selectBounds,selectRegion,setState,openResult,updateSources:()=>cohorts.updateSources(),setFeatures:value=>{features=value||[];},dispose:()=>{disposed=true;cohorts.dispose();events.abort();for(const control of reads)control.abort();reads.clear();}};
 }

@@ -1,5 +1,8 @@
 """Receiving-water operations through the original operator task and file APIs."""
 from __future__ import annotations
+from collections import OrderedDict
+from copy import deepcopy
+from threading import RLock
 from model.common import atomic_json, describe_file, held, identifier, now, read_json
 from model import receiving_waters
 
@@ -14,6 +17,8 @@ class ReceivingWaterActions:
     def __init__(self, operator, fault):
         self.operator = operator
         self.Fault = fault
+        self._summary_cache = OrderedDict()
+        self._summary_lock = RLock()
 
     @staticmethod
     def _plan_summary(row):
@@ -43,20 +48,64 @@ class ReceivingWaterActions:
             "selected_count", "prepared_plan_ids", "error",
         )}
 
+    @staticmethod
+    def _manifest_identity(path):
+        stat = path.stat()
+        return (stat.st_dev, stat.st_ino, stat.st_mtime_ns, stat.st_ctime_ns, stat.st_size)
+
     def snapshot(self, workspace):
         ws = self.operator.ws(workspace)
-        return {
-            "receiving_water_catalogs": [
-                self._catalog_summary(read_json(path))
-                for path in sorted((ws.root / "receiving-water-catalogs").glob("*/operator-catalog.json"))
-            ],
-            "receiving_water_plans": [
-                self._plan_summary(row) for row in receiving_waters.list_plans(ws)
-            ],
-            "receiving_water_analyses": [
-                self._analysis_summary(row) for row in receiving_waters.list_analyses(ws)
-            ],
-        }
+        workspace_key = (str(ws.root), ws.project["id"])
+        groups = (
+            ("receiving_water_catalogs", "receiving-water-catalogs", "operator-catalog.json",
+             lambda path: read_json(path), self._catalog_summary),
+            ("receiving_water_plans", "receiving-water-plans", "plan.json",
+             lambda path: receiving_waters.inspect_plan(ws, path.parent.name, verify=False),
+             self._plan_summary),
+            ("receiving_water_analyses", "receiving-water-analyses", "analysis.json",
+             lambda path: receiving_waters.inspect(ws, path.parent.name, verify=False),
+             self._analysis_summary),
+        )
+        # The operator serves concurrent browser polls. Retain only compact
+        # summaries, with a fixed maximum of 16 workspaces / 1024 manifests each.
+        # Every poll still enumerates and stats real manifests; immutable paths
+        # alone never authorize reusing an earlier summary.
+        with self._summary_lock:
+            cache = self._summary_cache.setdefault(workspace_key, OrderedDict())
+            self._summary_cache.move_to_end(workspace_key)
+            while len(self._summary_cache) > 16:
+                self._summary_cache.popitem(last=False)
+            result, present = {}, set()
+            for name, directory, filename, loader, summarize in groups:
+                rows = []
+                for path in sorted((ws.root / directory).glob("*/" + filename)):
+                    manifest_key = str(path.relative_to(ws.root))
+                    present.add(manifest_key)
+                    before = self._manifest_identity(path)
+                    retained = cache.get(manifest_key)
+                    if retained is not None and retained[0] == before:
+                        row = retained[1]
+                        cache.move_to_end(manifest_key)
+                    else:
+                        row = summarize(loader(path))
+                        after = self._manifest_identity(path)
+                        if before == after:
+                            cache[manifest_key] = (after, row)
+                            cache.move_to_end(manifest_key)
+                            while len(cache) > 1024:
+                                cache.popitem(last=False)
+                        else:
+                            # An atomic replacement during this read is a valid
+                            # snapshot, but it must be read afresh on the next poll.
+                            cache.pop(manifest_key, None)
+                    rows.append(deepcopy(row))
+                result[name] = rows
+            for key in list(cache):
+                if key not in present:
+                    del cache[key]
+            while len(cache) > 1024:
+                cache.popitem(last=False)
+            return result
 
     def read(self, workspace, operation, value=None):
         ws = self.operator.ws(workspace)

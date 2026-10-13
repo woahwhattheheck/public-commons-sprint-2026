@@ -1,0 +1,10 @@
+{
+  "title": "Review a retained route occurrence",
+  "periodId": "REPLACE_WITH_SAVED_PERIOD_UUID",
+  "periodVersion": 1,
+  "status": "PROPOSED",
+  "note": "Record the observed issue, proposed change and actual native outcome.",
+  "incidentIds": [],
+  "operationIds": [],
+  "sourceIds": []
+}

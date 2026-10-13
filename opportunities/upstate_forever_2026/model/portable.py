@@ -10,6 +10,7 @@ import stat
 import tempfile
 import zipfile
 from .common import SCHEMA, atomic_json, canonical, file_digest, held, now, read_json
+from .portable_databases import snapshot_databases, without_database_files, verify_database_sources
 
 FORMAT = "upstate.scientific-workspace-archive/v1"
 APPLICATION_FILES = (
@@ -36,6 +37,9 @@ APPLICATION_FILES = (
     "install_programmes.py",
     "requirements-paired-ensemble.txt",
     "PUBLISHED_STUDIES.md",
+    "eighteenmile_chlorophyll_reconciled.sources.json",
+    "eighteenmile_lake_observation_report.sources.json",
+    "eighteenmile_lake_paired_analysis.sources.json",
     "install_published_studies.py",
     "receive_published_studies.py",
     "tools/attach_published_report.py",
@@ -61,6 +65,14 @@ APPLICATION_FILES = (
     "water_context_cli.py",
     "WATER_CONTEXT_OPERATOR.md",
     "NATIVE_REUSE_MATCHING.md",
+    "install_intelligence.py",
+    "requirements-intelligence.txt",
+    "install_native_supervision.py",
+    "install_ensemble.py",
+    "portable_sqlite_check.py",
+    "science_catalog_delivery.py",
+    "SCIENTIFIC_CATALOG.md",
+    "install_intelligence_operator.py",
 )
 APPLICATION_DIRECTORIES = (
     "model",
@@ -82,6 +94,16 @@ APPLICATION_DIRECTORIES = (
     "tools",
 )
 MAX_MANIFEST = 64 * 1024 * 1024
+RUNTIME_DIRECTORIES = {
+    "__pycache__", ".git", ".hg", ".svn", ".venv", "venv", "node_modules",
+}
+
+
+def _retained_directory(path):
+    return (path.name not in RUNTIME_DIRECTORIES
+            and not path.name.startswith((".archive-", ".receive-", ".write-", ".intake-"))
+            and not path.is_symlink()
+            and not (path / "pyvenv.cfg").is_file())
 
 def member_name(value):
     if not isinstance(value, str) or "\\" in value or "\0" in value:
@@ -104,12 +126,14 @@ def _inventory(root, *, include_intermediates, include_deliveries, excluded):
     for directory, folders, files in os.walk(root, followlinks=False):
         directory = Path(directory)
         relative = directory.relative_to(root)
-        folders[:] = sorted(name for name in folders if name not in ("source-views", "__pycache__")
+        folders[:] = sorted(name for name in folders if name != "source-views"
                             and (include_deliveries or name != "deliveries")
-                            and not (directory / name).is_symlink())
+                            and _retained_directory(directory / name))
         for name in sorted(files):
             path = directory / name
-            if path in excluded or name.endswith(".lock") or name.startswith((".write-", ".intake-", ".archive-")):
+            if (path in excluded or name.endswith((".lock", ".pyc", ".pyo"))
+                    or name.startswith(".native-recovery-reserve")
+                    or name.startswith((".write-", ".intake-", ".archive-", ".native-reserve-"))):
                 continue
             rel = (relative / name).as_posix()
             if not include_intermediates and len(relative.parts) >= 3 and relative.parts[0] == "runs":
@@ -129,9 +153,6 @@ def _application(source_root):
             files.append(path)
     # Preserve the complete maintained source families without walking installed
     # environments or version-control caches that can live beside their source.
-    excluded_directories = {
-        "__pycache__", ".git", ".hg", ".svn", ".venv", "venv", "node_modules",
-    }
     for name in APPLICATION_DIRECTORIES:
         folder = source_root / name
         if not folder.is_dir() or folder.is_symlink():
@@ -140,19 +161,20 @@ def _application(source_root):
             directory = Path(directory)
             folders[:] = sorted(
                 part for part in folders
-                if part not in excluded_directories
-                and not (directory / part).is_symlink()
+                if _retained_directory(directory / part)
             )
             for filename in sorted(names):
                 path = directory / filename
                 if (path.suffix in {".pyc", ".pyo"} or filename.endswith(".lock")
-                        or filename.startswith((".write-", ".intake-", ".archive-"))):
+                        or filename.startswith(".native-recovery-reserve")
+                        or filename.startswith((".write-", ".intake-", ".archive-", ".native-reserve-"))):
                     continue
                 if path.is_file() and not path.is_symlink():
                     files.append(path)
     return sorted(set(files))
 
-def backup(workspace, destination, *, include_intermediates=True, include_deliveries=True):
+def backup(workspace, destination, *, include_intermediates=True, include_deliveries=True,
+           frozen_databases=None):
     root = workspace.root
     destination = Path(destination).absolute()
     destination.parent.mkdir(parents=True, exist_ok=True)
@@ -178,12 +200,16 @@ def backup(workspace, destination, *, include_intermediates=True, include_delive
             for path in sorted((root / "receiving-water-analyses").glob("*/.analysis.lock")):
                 stack.enter_context(held(path, blocking=False))
             initial = _inventory(root, excluded=excluded, **selection)
+            application = {p.relative_to(source_root).as_posix(): _identity(p)
+                           for p in _application(source_root)}
+            inputs = [("workspace/" + relative, root / relative, identity)
+                      for relative, identity in initial.items()]
+            inputs += [("application/" + relative, source_root / relative, identity)
+                       for relative, identity in application.items()]
+            inputs, databases, database_sources = stack.enter_context(
+                snapshot_databases(inputs, destination.parent, frozen=frozen_databases))
             with zipfile.ZipFile(pending, "x", compression=zipfile.ZIP_DEFLATED,
                                  compresslevel=3, allowZip64=True) as archive:
-                inputs = [("workspace/" + relative, root / relative, identity)
-                          for relative, identity in initial.items()]
-                inputs += [("application/" + p.relative_to(source_root).as_posix(), p, _identity(p))
-                           for p in _application(source_root)]
                 for name, path, before in inputs:
                     member_name(name)
                     digest = hashlib.sha256()
@@ -198,10 +224,19 @@ def backup(workspace, destination, *, include_intermediates=True, include_delive
                     if _identity(path) != before:
                         raise ValueError("Source changed during archive capture: " + name)
                     records[name] = {"bytes": size, "sha256": digest.hexdigest()}
-                if _inventory(root, excluded=excluded, **selection) != initial:
+                verify_database_sources(database_sources)
+                current = _inventory(root, excluded=excluded, **selection)
+                if (without_database_files(current, databases, "workspace") !=
+                        without_database_files(initial, databases, "workspace")):
                     raise ValueError("Workspace changed while its archive was captured")
+                current_application = {p.relative_to(source_root).as_posix(): _identity(p)
+                                       for p in _application(source_root)}
+                if (without_database_files(current_application, databases, "application") !=
+                        without_database_files(application, databases, "application")):
+                    raise ValueError("Application changed while its archive was captured")
                 manifest = {"schema": FORMAT, "project": workspace.project, "created_at": now(),
                             "selection": selection, "members": records,
+                            "database_snapshots": databases,
                             "receiving": "python application/model/cli.py restore ARCHIVE NEW_DIRECTORY",
                             "source_views": "Recreated from the original content-addressed objects on demand"}
                 archive.writestr("ARCHIVE.json", canonical(manifest) + b"\n")
@@ -218,7 +253,8 @@ def backup(workspace, destination, *, include_intermediates=True, include_delive
                 os.close(fd)
         return {"schema": FORMAT, "project_id": workspace.project["id"], "path": str(destination),
                 "bytes": destination.stat().st_size, "sha256": file_digest(destination),
-                "members": len(records), "selection": selection}
+                "members": len(records), "selection": selection,
+                "database_snapshots": databases}
     finally:
         pending.unlink(missing_ok=True)
 
@@ -288,8 +324,23 @@ def restore(archive_path, destination):
         restored = Workspace(pending / "workspace")
         if restored.project != manifest["project"]:
             raise ValueError("Receiving changed the original workspace identity")
-        for kind in ("sources", "profiles", "scenarios", "observations", "observation-comparisons"):
+        for kind in ("sources", "profiles", "scenarios", "observations", "observation-comparisons",
+                     "planning-inventories", "portfolios", "portfolio-reports"):
             restored._list(kind)
+        if restored._list("planning-inventories"):
+            from .planning_inventory import inspect as inspect_planning_inventory
+            for inventory in restored._list("planning-inventories"):
+                inspect_planning_inventory(restored, inventory["id"])
+        if restored._list("portfolios"):
+            from .portfolios import verify_portfolio
+            for portfolio in restored._list("portfolios"):
+                verify_portfolio(restored, portfolio)
+        for report in restored._list("portfolio-reports"):
+            for retained in report["files"].values():
+                path = restored.root.joinpath(*member_name(retained["path"]).parts)
+                if (not path.is_file() or path.stat().st_size != retained["bytes"]
+                        or file_digest(path) != retained["sha256"]):
+                    raise ValueError("Receiving changed a conservation portfolio report")
         reviews = restored._list("spatial-reviews")
         if reviews:
             from .spatial import SpatialReview
@@ -299,6 +350,9 @@ def restore(archive_path, destination):
         if restored._list("spatial-regions"):
             from .spatial_regions import SpatialRegions
             SpatialRegions(restored).verify()
+        if restored._list("spatial-cohorts"):
+            from .spatial_cohorts import SpatialCohorts
+            SpatialCohorts(restored).verify()
         spatial_exports = restored.overview().get("spatial_exports", [])
         if spatial_exports:
             from .spatial_exports import SpatialExports
@@ -351,7 +405,8 @@ def restore(archive_path, destination):
                 "directory": str(destination), "workspace": str(destination / "workspace"),
                 "application": str(destination / "application"),
                 "archive_sha256": file_digest(archive_path), "members": len(manifest["members"]),
-                "selection": manifest["selection"], "identity": "MATCH"}
+                "selection": manifest["selection"], "identity": "MATCH",
+                "database_snapshots": manifest.get("database_snapshots", {})}
     finally:
         if pending is not None:
             shutil.rmtree(pending)
