@@ -87,6 +87,16 @@ def _cell(table, row, field):
     return {"state": "present", "value": row["cells"][index]}
 
 
+def _loading_basis(table, row, field):
+    if field["name"] not in ("load_n", "load_p"):
+        return None
+    name = "load_type_" + field["name"][-1]
+    matches = [item for item in table["fields"] if item["name"] == name]
+    # The maintained DictReader uses the last occurrence of a repeated header.
+    source_field = matches[-1] if matches else {"name": name, "occurrence": 1}
+    return _cell(table, row, source_field)
+
+
 def _compare(before, after):
     fields = list(before["fields"])
     keys = {_key(field) for field in fields}
@@ -98,17 +108,24 @@ def _compare(before, after):
     for code in codes:
         for field in fields:
             old, new = _cell(before, a.get(code), field), _cell(after, b.get(code), field)
-            if old == new or (old["state"] != "present" and new["state"] != "present"):
+            old_basis = _loading_basis(before, a.get(code), field)
+            new_basis = _loading_basis(after, b.get(code), field)
+            if ((old == new and old_basis == new_basis)
+                    or (old["state"] != "present" and new["state"] != "present")):
                 continue
             if old["state"] != "present":
                 change = "Original " + ABSENT[old["state"]].lower()
             elif new["state"] != "present":
                 change = "Alternative " + ABSENT[new["state"]].lower()
+            elif old == new and old_basis != new_basis:
+                change = "Loading basis changed"
             else:
                 change = "Source text changed"
             result.append({"lucode": code, "field": field["name"],
                            "field_occurrence": field["occurrence"],
-                           "baseline": old, "alternative": new, "change": change})
+                           "baseline": old, "alternative": new,
+                           "baseline_loading_basis": old_basis,
+                           "alternative_loading_basis": new_basis, "change": change})
     return result
 
 
@@ -203,7 +220,8 @@ def _h(value):
 
 def _field_label(name, occurrence=1):
     title, unit = FIELDS.get(name, (name if name is not None else "Unheaded source field", ""))
-    return (str(title) + (" (" + unit + ")" if unit else "")
+    return (str(title) + (" [" + name + "]" if name in FIELDS else "")
+            + (" (" + unit + ")" if unit else "")
             + (" [occurrence " + str(occurrence) + "]" if occurrence > 1 else ""))
 
 
@@ -213,6 +231,14 @@ def _cell_html(cell):
     if cell["value"] == "":
         return "<em>Empty original source cell</em>"
     return '<span class="source-cell">' + _h(cell["value"]) + "</span>"
+
+
+def _comparison_cell(row, side):
+    result = _cell_html(row[side])
+    basis = row[side + "_loading_basis"]
+    if basis is not None:
+        result += "<br><small>Original loading basis: " + _cell_html(basis) + "</small>"
+    return result
 
 
 def _html_table(headers, rows):
@@ -245,7 +271,10 @@ def html_section(value):
         "<p>Compare each retained source edition with " + _h(baseline_name) + ". "
         "Every displayed input is the original CSV text. Changed spelling or precision "
         "is distinguished from the numerical coefficient changes reported above. "
-        "Repeated source bytes appear once; all selected profile and case bindings remain in the downloads.</p>",
+        "Repeated source bytes appear once; all selected profile and case bindings remain in the downloads. "
+        "Nitrogen and phosphorus loads retain kg/ha/year under both application-rate and measured-runoff bases; "
+        "the native engine applies its on-pixel retention adjustment only to application-rate inputs. "
+        "The original values below are unadjusted source cells.</p>",
     ]
     for comparison in value["comparisons"]:
         titles = [names[key] for key in comparison["profile_ids"]]
@@ -267,7 +296,7 @@ def html_section(value):
                 output.append(_html_table(
                     ["Land-cover code", "Original field", "Baseline source", "Selected source", "Source difference"],
                     [[_h(row["lucode"]), _h(_field_label(row["field"], row["field_occurrence"])),
-                      _cell_html(row["baseline"]), _cell_html(row["alternative"]), _h(row["change"])]
+                      _comparison_cell(row, "baseline"), _comparison_cell(row, "alternative"), _h(row["change"])]
                      for row in comparison["cell_changes"]]))
             else:
                 output.append("<p>The original CSV bytes differ, while every matched source cell is unchanged. "
@@ -301,6 +330,7 @@ def comparison_csv(value):
     fields = (
         "profile_ids_json", "lucode", "field_json", "field_occurrence",
         "baseline_state", "baseline_value_json", "alternative_state", "alternative_value_json",
+        "baseline_loading_basis_json", "alternative_loading_basis_json",
         "source_difference", "baseline_sha256", "alternative_sha256",
     )
     output = io.StringIO(newline="")
@@ -316,6 +346,8 @@ def comparison_csv(value):
                 "baseline_value_json": _json(row["baseline"]["value"]),
                 "alternative_state": row["alternative"]["state"],
                 "alternative_value_json": _json(row["alternative"]["value"]),
+                "baseline_loading_basis_json": _json(row["baseline_loading_basis"]),
+                "alternative_loading_basis_json": _json(row["alternative_loading_basis"]),
                 "source_difference": row["change"],
                 "baseline_sha256": comparison["baseline_sha256"],
                 "alternative_sha256": comparison["alternative_sha256"],
