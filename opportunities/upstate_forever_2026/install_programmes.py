@@ -153,8 +153,17 @@ def patch_server(source):
                  "        self.programmes = Programmes(self, Fault)\n", "programme operator")
     source = add(source, "        if action in CUSTOMER_REVIEW_ACTIONS:\n",
                  "        if action in PROGRAMME_ACTIONS:\n            return self.programmes.invoke(task)\n", "programme worker", after=False)
-    source = add(source, "        state = ws.overview()\n",
-                 '        state["compute_programmes"] = self.programmes.catalogue(workspace)["programmes"]\n', "programme state")
+    # Maintained operator editions derive activity from current native runs and
+    # locks. Keep that complete registration instead of reinstating a full
+    # programme catalogue before every poll.
+    activity_states = (
+        '        state["compute_programmes"] = self.programme_activity.summaries(workspace, state["runs"])\n',
+        '        state["compute_programmes"] = ProgrammeActivity(self, Fault).summaries(workspace, state["runs"])\n',
+    )
+    if not any(line in source for line in activity_states):
+        source = add(source, "        state = ws.overview()\n",
+                     '        state["compute_programmes"] = self.programmes.catalogue(workspace)["programmes"]\n',
+                     "programme state")
     if "self.programmes.decorate_task(" not in source:
         source = replace(source, "        return self.customer_reviews.decorate_task(task)\n",
                          "        return self.programmes.decorate_task(self.customer_reviews.decorate_task(task))\n", "programme task view")
@@ -165,14 +174,17 @@ def patch_server(source):
                      '                    return self.send_json(200, self.app.programmes.read(workspace, programme_reads[url.path],\n'
                      '                        {"programme_id": one("programme_id")}))\n',
                      "programme read routes", after=False)
-    source = add(source, "            value = self.body()\n",
-                 '            if url.path == "/api/programmes/preview":\n'
-                 '                return self.send_json(200, self.app.programmes.preview(value.get("workspace", self.app.primary), value))\n'
-                 '            if url.path == "/api/programmes/pause":\n'
-                 '                return self.send_json(200, self.app.programmes.pause(value.get("workspace", self.app.primary), value))\n'
-                 '            if url.path == "/api/programmes/delivery-preview":\n'
-                 '                return self.send_json(200, self.app.programmes.delivery_preview(value.get("workspace", self.app.primary), value))\n',
-                 "programme immediate routes")
+    # Match each existing handler independently: experiment-preview and other
+    # current routes may legitimately sit between these original handlers.
+    for route, method in reversed((
+            ("preview", "preview"), ("pause", "pause"),
+            ("delivery-preview", "delivery_preview"))):
+        addition = (
+            f'            if url.path == "/api/programmes/{route}":\n'
+            f'                return self.send_json(200, self.app.programmes.{method}'
+            '(value.get("workspace", self.app.primary), value))\n')
+        source = add(source, "            value = self.body()\n", addition,
+                     "programme " + route + " route")
     source = add(source,
                  '                return self.send_json(200, self.app.programmes.preview(value.get("workspace", self.app.primary), value))\n',
                  '            if url.path == "/api/programmes/experiment-preview":\n'
