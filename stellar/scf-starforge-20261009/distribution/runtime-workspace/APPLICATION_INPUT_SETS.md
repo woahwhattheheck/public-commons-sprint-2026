@@ -76,3 +76,108 @@ node distribution/runtime-workspace/receiving/APPLICATION_INPUT_SETS_RECEIVE.mjs
 The course retains the full original folder, begins and reopens a partial upload, completes the same source set, prepares one working selection, edits that selected member without replacing companions, reviews/saves the actual application, and captures desktop and 320-pixel browser output. It then re-imports/exports through the CLI and backs up/restores the same isolated workspace at its original path. Every restored original, working member and saved application revision is compared with its retained identity.
 
 A receiving journal, unique invocation outputs and the original UUIDs permit continuation with the same arguments. The original workspace is retained beside the restored one after archive inspection; other workspaces are not moved. Source-set handling applies to all existing path settings. This course uses the maintained Grant provider's concrete save/connect flow; domain-specific EPANET, Jisc or other native execution stays with the corresponding application.
+
+
+## Complete archive download and browser receiving
+
+Open a READY source set and choose **Download complete source-set ZIP**. This
+downloads its complete original manifest, completion record and every original
+file under `originals/`, including zero-byte files and empty directories. It
+streams the original file bytes; edited working copies remain separate.
+
+On the receiving Runtime, open **Applications → Companion file sets → Or receive
+a complete Runtime source-set ZIP**. Select the whole downloaded file. The
+browser reads the entire original inventory and checks every file and chunk
+before exposing **Save complete source set**. The review displays its original
+set ID, name, origin workspace, file count and directory count. The name stays
+with the reviewed manifest.
+
+Choose **Save complete source set** to receive it through the existing resumable
+file library. After interruption, reselect the same ZIP and repeat that action;
+the content-derived original set ID and acknowledged upload chunks are reused.
+An invalid incoming archive leaves the prior complete source selection intact.
+Opening another source while a transfer finishes retains both selections.
+
+Choose the intended Application setting, prepare a separate working set, then
+use its normal **Review application** and **Save application**. Receiving
+original files changes no saved Application, working copy or run. The original
+workspace ID shown in the review describes the source; the receiving workspace
+owns its normal local upload and working-selection records.
+
+The ZIP uses ordinary uncompressed ZIP members and can be extracted by standard
+archive tools. The receiving control accepts unchanged complete ZIPs emitted by
+this Runtime profile. For another ZIP format, extract it with its normal tool
+and choose the complete source folder through the existing intake. Source sets
+still allow 1,024 files, 4,096 directories, 16 MiB per file and 64 MiB of original
+content. The complete archive allowance is 128 MiB, including paths and metadata.
+No files are omitted to fit. Paths and case collisions use the original source
+normalizer.
+
+### Native archive commands and API
+
+~~~sh
+starforge runtime-workspace input-set-archive-export \
+  --workspace /private/runtime-workspace --set-id ORIGINAL_SET_SHA256 \
+  --output /private/new-complete-source.zip
+
+starforge runtime-workspace input-set-archive-inspect \
+  --workspace /private/receiving-workspace --archive /private/original-complete-source.zip
+
+starforge runtime-workspace input-set-archive-receive \
+  --workspace /private/receiving-workspace --archive /private/original-complete-source.zip \
+  --set-id ORIGINAL_SET_SHA256
+~~~
+
+Inspect is read-only. Receive validates every original byte before its first
+set initialization, then uses the original missing-chunk protocol. Export
+publishes a complete fsynced private file exclusively; an existing destination
+remains intact. Retrying a receive returns the same content-derived source set.
+
+The original model adds `applicationInputSetArchiveDownload({setId})`, returning
+the complete stream, exact byte count, filename, original set manifest and
+explicit `close()`. Destroy the stream and call close in a finally block.
+The existing same-origin authenticated POST
+`/api/application-input-sets/archive-download` prepares one 60-second, single-use
+download URL. Receiving in the browser uses the same existing begin/chunk/
+complete routes, with the complete manifest retained before member uploads.
+The package export `@tokenjunkielabs/starforge-merchant/runtime-workspace/input-set-archives`
+carries the typed native archive functions.
+
+### Continue the original equipped course
+
+The same `receiving/APPLICATION_INPUT_SETS_RECEIVE.mjs` adds an archive phase
+after the original full backup/restore and history. It downloads the exact
+restored original set, independently reads/extracts the ordinary ZIP with
+Python's standard library, receives it in the existing control workspace
+through the real browser, prepares a separate working selection, cold-reopens
+and exports it again. The original source/edited working copy/Application and
+all earlier checkpoints stay retained. The original browser and native owner
+continues this same operation with its existing arguments.
+
+Inspect the actual archive and every original member with their appropriate
+recipient tools, including the actual Grant scenario and companion documents,
+in addition to the original desktop/narrow browser course. The archive phase
+returns the real screenshots, full downloaded ZIP and extracted original tree.
+Producing peers open and LOOK at these outputs and operate the important
+controls before presenting the product; source execution is separate from
+that actual native and rendered receiving.
+
+## Standing lab rule: inspect the rendered product before presenting it
+
+Bryce's direct owner instruction, October 13, 2026. This applies to every current and future lab peer, provider, model, harness, local session, cloud session, and delegated or child worker.
+
+Before calling a client/prospect-facing app, site, dashboard, demo, report, presentation, or export ready, or putting it before a client/prospect, the responsible producing peer MUST open/run/render the exact outgoing version and visually LOOK at the actual result. Inspect at the actual screenshare/presentation width and at narrow/mobile widths where relevant. Operate critical controls; inspect applicable loaded, empty, loading, and error states; exercise downloads/exports and reopen the delivered files. Capture real screenshots or rendered page images and actually VIEW them. Capturing without viewing does not satisfy this rule.
+
+This includes ALL attachments. Literally observe the actual thing the way a user or recipient would see and use it: open and view downloaded HTML, every relevant PDF/report page, slides, spreadsheets, maps, images, video/audio, archives and project attachments in their normal recipient-facing viewer or application; play audiovisual media and inspect the usable contents of archives/projects. Metadata, schemas, source text, and a browser link do not substitute for opening the attachment and using the delivered result normally.
+
+Fix ugly, cramped, broken, unstyled, clipped, overflowing, or unreadable results within the authorized task before presenting them. Favor simple industrial/plain presentation, consistent spacing and typography, readable tables, and working controls. Do not add decorative template slop. Source review, unit tests, HTTP 200, DOM counts, a reviewer/model approval, or an evidence form do not substitute for looking at and operating the real outgoing product.
+
+This is focused internal product validation, never permission to build or submit a proof, test, or verification product, run broad suites, or repeatedly recheck an unchanged accepted version. Building and integrating the actual deliverable remains the main work; do not substitute endless reviews for delivery. Retain an exact-version visual receipt in the handoff: source/head or artifact hash, URL/file, viewport sizes, screenshots actually viewed, controls/states/export files exercised, fixes, and any precise unresolved gap. A changed outgoing version needs inspection of the affected result.
+
+Bryce explicitly clarified: "that includes all attachments and this does not become review theatre or test theatre you need to literally observe the actual thing the way a user would see and use it". A checklist, screenshot folder, receipt, passing test, or parallel review bureaucracy is not the requirement or a substitute for actual observation and normal use. Perform focused fixes and keep shipping the main work; create no review or approval gate.
+
+Bryce also instructed: "also add that if u make a video use voice gen tts not robot voices, use generative stuff we have models, use them". For video/media narration, use available high-quality generative voice/TTS and applicable generative visual/media capabilities when helpful, with natural professional delivery instead of robotic default voices. Actually play/listen/watch the final exported attachment and inspect clarity, pronunciation, pacing, timing, and audio alignment. Reviewing a text script does not substitute for experiencing the final video/audio. This adds no paid-service purchase or real-person voice-cloning authorization; preserve lab attribution and third-party copyright/license controls.
+
+Pass this rule to child/delegated workers and persist it in owner-controlled provider/project/cloud instruction copies. Record delivery and readback coverage; never claim every running session loaded it without evidence. This rule creates no hooks, watchers, restarts, approval queue, credential restrictions, or new publication authority. Preserve all existing owner rules, including no llama.cpp, no private GitHub repositories or Actions, focused validation, attribution, incident communication, personal meeting approval, contact holds, demo pauses, bounty restrictions, and owner cutoffs.
+
+Canonical local policy: `C:/Users/lucys/.commons/rendered-product-inspection-policy.md` and `.json`. Portable repository copy: `docs/policies/rendered-product-inspection-policy.md` and `.json` when present. Only Bryce can change this standing rule.

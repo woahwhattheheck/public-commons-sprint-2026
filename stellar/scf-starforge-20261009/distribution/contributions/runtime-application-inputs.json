@@ -21,6 +21,10 @@
     "./runtime-workspace/result-sets": {
       "types": "./source/stellar/scf-starforge-20261009/distribution/runtime-workspace/application-result-sets.d.mts",
       "import": "./source/stellar/scf-starforge-20261009/distribution/runtime-workspace/application-result-sets.mjs"
+    },
+    "./runtime-workspace/input-set-archives": {
+      "types": "./source/stellar/scf-starforge-20261009/distribution/runtime-workspace/application-input-set-archives.d.mts",
+      "import": "./source/stellar/scf-starforge-20261009/distribution/runtime-workspace/application-input-set-archives.mjs"
     }
   },
   "supportFiles": [
@@ -54,6 +58,10 @@
     "stellar/scf-starforge-20261009/distribution/runtime-workspace/application-result-sets-cli.mjs",
     "stellar/scf-starforge-20261009/distribution/runtime-workspace/application-input-workspace.mjs",
     "stellar/scf-starforge-20261009/distribution/runtime-workspace/public/application-result-sets.mjs",
-    "stellar/scf-starforge-20261009/distribution/runtime-workspace/APPLICATION_RESULT_SETS.md"
+    "stellar/scf-starforge-20261009/distribution/runtime-workspace/APPLICATION_RESULT_SETS.md",
+    "stellar/scf-starforge-20261009/distribution/runtime-workspace/application-input-set-archives.mjs",
+    "stellar/scf-starforge-20261009/distribution/runtime-workspace/application-input-set-archives.d.mts",
+    "stellar/scf-starforge-20261009/distribution/runtime-workspace/public/application-input-set-archive-format.mjs",
+    "stellar/scf-starforge-20261009/distribution/runtime-workspace/receiving/APPLICATION_INPUT_SET_ARCHIVE_RECEIVE.mjs"
   ]
 }

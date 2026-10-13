@@ -1,4 +1,5 @@
 // MIT. Complete companion-file sets use the same original upload and Applications selection.
+import {inspectApplicationInputSetArchive,APPLICATION_INPUT_SET_ARCHIVE_LIMITS} from './application-input-set-archive-format.mjs';
 import {createApplicationInputSetEditionsView} from './application-input-set-editions.mjs';
 import {APPLICATION_INPUT_SET_SCHEMA,APPLICATION_INPUT_SET_LIMITS as LIMITS,
   normalizeApplicationInputSet,applicationInputSetPath} from './application-input-set-format.mjs';
@@ -11,7 +12,7 @@ export function createApplicationInputSetsView({root,api,getToken,getWorkspaceId
     const css=document.createElement('link');css.rel='stylesheet';css.href='/application-input-sets.css';
     css.setAttribute('data-application-input-sets','');document.head.append(css);
   }
-  let workspace=getWorkspaceId(),epoch=0,listing=0,busy=false,selected=[],directories=[],offset=0,workingOffset=0,opened=null,sourceChoice=0;
+  let workspace=getWorkspaceId(),epoch=0,listing=0,busy=false,selected=[],directories=[],offset=0,workingOffset=0,opened=null,sourceChoice=0,archiveReview=null;
   const panel=node('details',undefined,'panel');panel.id='application-input-sets';
   panel.append(node('summary','Companion file sets'));
   const intro=node('p','Keep an entry file and every companion in one original source set. Prepare one editable working folder, then select its entry file or folder in the normal application review.','note');
@@ -21,6 +22,8 @@ export function createApplicationInputSetsView({root,api,getToken,getWorkspaceId
   const folderLabel=node('label','Choose a source folder');folderLabel.append(folder);
   const files=node('input');files.type='file';files.multiple=true;
   const filesLabel=node('label','Or select companion files from one folder');filesLabel.append(files);
+  const archive=node('input');archive.type='file';archive.accept='.zip,application/zip';
+  const archiveLabel=node('label','Or receive a complete Runtime source-set ZIP');archiveLabel.append(archive);
   const sourceSummary=node('p','','note'),status=node('p','','note');status.setAttribute('role','status');status.setAttribute('aria-live','polite');
   const upload=button('Save complete source set',()=>perform(uploadSelected));
   const recover=button('Continue working-set selection',()=>perform(()=>prepare(true)));
@@ -36,7 +39,7 @@ export function createApplicationInputSetsView({root,api,getToken,getWorkspaceId
   const member=node('select');
   const pathLabel=node('label','Application entry');pathLabel.append(member);
   const prepareButton=button('Prepare working set for this setting',()=>perform(()=>prepare(false)));
-  panel.append(intro,nameLabel,folderLabel,filesLabel,sourceSummary,controls,status,search,
+  panel.append(intro,nameLabel,folderLabel,filesLabel,archiveLabel,sourceSummary,controls,status,search,
     button('Refresh source sets',()=>void refresh()),list,pageControls,details,pathLabel,prepareButton,
     node('h3','Retained working sets'),copies,workingControls);
   const editionRoot=node('section',undefined,'application-input-set-editions');panel.append(editionRoot);
@@ -49,7 +52,7 @@ export function createApplicationInputSetsView({root,api,getToken,getWorkspaceId
   function pending(){return readSaved('input-set-selection',workspace);}
   function remember(value){return saveSaved('input-set-selection',value,workspace);}
   function enabled() {
-    folder.disabled=files.disabled=name.disabled=busy;
+    folder.disabled=files.disabled=archive.disabled=busy;name.disabled=busy||Boolean(archiveReview);
     upload.disabled=busy||!selected.length;
     recover.disabled=busy;recover.hidden=!pending();
     prepareButton.disabled=busy||opened?.phase!=='READY'||!target();
@@ -60,7 +63,7 @@ export function createApplicationInputSetsView({root,api,getToken,getWorkspaceId
     finally{if(current(own)){busy=false;enabled();await refresh();}}
   }
   function acceptSelection(items,label) {
-    sourceChoice++;selected=items;directories=[];opened=null;details.replaceChildren();member.replaceChildren();name.value=label;
+    sourceChoice++;selected=items;directories=[];archiveReview=null;archive.value='';opened=null;details.replaceChildren();member.replaceChildren();name.value=label;
     sourceSummary.textContent=items.length+' complete file(s), '+human(items.reduce((sum,x)=>sum+x.file.size,0))+' bytes.';
     status.textContent='Relative names are retained exactly. Select every required companion; use CLI directory intake when empty directories are part of the source.';
     enabled();
@@ -72,8 +75,27 @@ export function createApplicationInputSetsView({root,api,getToken,getWorkspaceId
     files.value='';acceptSelection(chosen.map(file=>({path:file.webkitRelativePath.split('/').slice(1).join('/'),file})),[...roots][0]);
   });
   files.addEventListener('change',()=>{folder.value='';acceptSelection([...(files.files??[])].map(file=>({path:file.name,file})),name.value||'Companion files');});
+  archive.addEventListener('change',()=>{
+    const file=archive.files?.[0];if(!file)return;
+    void perform(async()=>{
+      const own=scope(),choice=sourceChoice;
+      if(file.size>APPLICATION_INPUT_SET_ARCHIVE_LIMITS.bytes)throw Error('Choose a complete Runtime source-set ZIP no larger than 96 MiB.');
+      // Keep the previous complete selection while every incoming member is read.
+      const review=await inspectApplicationInputSetArchive({bytes:file.size,
+        read:(offset,length)=>file.slice(offset,offset+length).arrayBuffer(),sha256:digest,
+        onProgress:({path,files,total})=>{if(current(own)&&choice===sourceChoice)status.textContent='Reviewing complete archive '+(files+1)+' of '+total+' · '+path;}});
+      if(!current(own)||choice!==sourceChoice)return;
+      sourceChoice++;archiveReview=review;directories=[...review.manifest.directories];name.value=review.manifest.name;
+      selected=review.files.map(row=>({path:row.path,file:{size:row.bytes,
+        arrayBuffer:()=>file.slice(row.offset,row.offset+row.bytes).arrayBuffer(),
+        slice:(start,end)=>file.slice(row.offset+start,row.offset+Math.min(end,row.bytes))}}));
+      folder.value=files.value='';opened=null;details.replaceChildren();member.replaceChildren();
+      sourceSummary.textContent=review.manifest.name+' · '+selected.length+' files · '+directories.length+' directories · '+human(review.manifest.files.reduce((n,f)=>n+f.bytes,0))+' original bytes · set '+review.setId;
+      notice('Complete ZIP verified from workspace '+review.originWorkspaceId+'. Save complete source set to receive these exact originals. Existing source selections and working edits remain retained.');
+    });
+  });
   async function uploadSelected() {
-    const own=scope(),selection=[...selected],label=name.value.trim();
+    const own=scope(),selection=[...selected],label=name.value.trim(),reviewedArchive=archiveReview,choice=sourceChoice;
     if(!selection.length)throw Error('Choose the complete original source files.');
     if(selection.length>LIMITS.files||selection.reduce((sum,x)=>sum+x.file.size,0)>LIMITS.bytes||
       selection.some(x=>x.file.size>LIMITS.fileBytes))throw Error('A source set supports up to 1,024 files, 16 MiB per file and 64 MiB total. Existing host paths remain available for larger sources.');
@@ -88,7 +110,8 @@ export function createApplicationInputSetsView({root,api,getToken,getWorkspaceId
       manifest.files.push({path:item.path,bytes:body.byteLength,sha256:await digest(body),chunkSha256:chunks});
     }
     const normalized=normalizeApplicationInputSet(manifest);
-    if(!current(own))return;
+    if(reviewedArchive&&JSON.stringify(normalized)!==JSON.stringify(reviewedArchive.manifest))throw Error('The complete archive selection changed. Choose the original ZIP again.');
+    if(!current(own)||choice!==sourceChoice)return;
     const retained=await api('/api/application-input-sets/begin',{manifest:normalized});
     if(!current(own))return;
     const lookup=new Map(selection.map(x=>[x.path,x.file]));
@@ -111,7 +134,8 @@ export function createApplicationInputSetsView({root,api,getToken,getWorkspaceId
     if(!current(own))return;
     const completed=await api('/api/application-input-sets/complete',{setId:retained.setId});
     if(!current(own))return;
-    selected=[];folder.value=files.value='';sourceSummary.textContent='';show(completed);enabled();
+    if(choice!==sourceChoice){notice('Complete original source set retained. Your later source selection stays open.');return;}
+    selected=[];directories=[];archiveReview=null;folder.value=files.value=archive.value='';sourceSummary.textContent='';show(completed);enabled();
     notice('Complete original source set saved. Select its entry file or folder for the intended application setting.');
   }
   function downloadJSON(value,filename) {
@@ -134,7 +158,14 @@ export function createApplicationInputSetsView({root,api,getToken,getWorkspaceId
     details.replaceChildren(node('h3',value.manifest.name),node('p',value.setId,'note'),
       node('p',value.phase==='READY'?'Every original is retained. Relative file paths stay together in the working folder.':
         'Reselect the same complete folder/files and source set name to resume the original transfer.','note'),
-      button('Download source manifest',()=>downloadJSON(value.manifest,'application-source-set-'+value.setId+'.json')),...rows);
+      button('Download source manifest',()=>downloadJSON(value.manifest,'application-source-set-'+value.setId+'.json')),
+      ...(value.phase==='READY'?[button('Download complete source-set ZIP',()=>perform(async()=>{
+        const own=scope(),choice=sourceChoice,setId=value.setId;
+        const result=await api('/api/application-input-sets/archive-download',{setId});
+        if(!current(own)||choice!==sourceChoice)return;
+        const a=node('a');a.href=result.url;a.download=result.filename;document.body.append(a);try{a.click();}finally{a.remove();}
+        notice('Complete ZIP download requested. Keep the whole archive to receive the same original set in another Runtime workspace.');
+      }))]:[]),...rows);
     enabled();
   }
   async function openSet(setId) {
@@ -169,7 +200,7 @@ export function createApplicationInputSetsView({root,api,getToken,getWorkspaceId
       const result=await api('/api/application-input-sets?'+new URLSearchParams({query:search.value,offset,limit:20,workingOffset,workingLimit:10}));
       if(!current(own)||version!==listing)return;
       list.replaceChildren(...result.sets.items.map(item=>{
-        const row=node('article',undefined,'operation');row.append(node('h4',item.name),node('p',item.files+' files · '+human(item.bytes)+' bytes','note'),
+        const row=node('article',undefined,'operation');row.dataset.inputSetId=item.setId;row.append(node('h4',item.name),node('p',item.files+' files · '+human(item.bytes)+' bytes','note'),
           button('Open original source set',()=>perform(()=>openSet(item.setId))));return row;
       }));
       back.disabled=offset===0;next.disabled=offset+20>=result.sets.total;page.textContent=result.sets.total+' source sets';
@@ -192,8 +223,8 @@ export function createApplicationInputSetsView({root,api,getToken,getWorkspaceId
     }catch(error){if(current(own)&&version===listing)onError(error);}
   }
   function reset() {
-    epoch++;listing++;sourceChoice++;workspace=getWorkspaceId();busy=false;selected=[];directories=[];offset=workingOffset=0;opened=null;
-    folder.value=files.value=name.value=search.value='';sourceSummary.textContent=status.textContent='';list.replaceChildren();
+    epoch++;listing++;sourceChoice++;workspace=getWorkspaceId();busy=false;selected=[];directories=[];archiveReview=null;offset=workingOffset=0;opened=null;
+    folder.value=files.value=archive.value=name.value=search.value='';sourceSummary.textContent=status.textContent='';list.replaceChildren();
     details.replaceChildren();copies.replaceChildren();member.replaceChildren();editions.reset();enabled();
   }
   search.addEventListener('input',()=>{offset=0;void refresh();});
