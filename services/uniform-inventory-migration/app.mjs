@@ -5,19 +5,54 @@ const id=()=>crypto.randomUUID(), now=()=>new Date().toISOString(), copy=x=>JSON
 const MAX=E.LIMITS.workspaceBytes, encoder=new TextEncoder();
 let drafts=copy(boot.drafts||{corrections:{},mappings:{}});
 let ws=boot.portable?E.importWorkspace(boot.portable):E.createWorkspace({id:id(),title:'Uniform and inventory migration',createdAt:now()});
-let copyId=boot.copyId||id(),dbRevision=0,db=null,manual=false,dirty=false,blocked=false,active=false,queue=Promise.resolve(),report=null,tab='sources',domain='locations',role='source',selected='',page=0,issuePage=0,query='',notice='',recovery=null,archive=null;
+let copyId=boot.copyId||id(),dbRevision=0,db=null,manual=false,dirty=false,blocked=false,active=false,report=null,tab='sources',domain='locations',role='source',selected='',page=0,issuePage=0,query='',notice='',recovery=copy(boot.recovery||null),archive=null;
 const copyKey=()=> 'uniform-migration:'+copyId;
 function download(name,text,type='application/json'){const b=text instanceof Blob?text:new Blob([text],{type});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),30000);}
 function safeName(x){return String(x).replace(/[^a-zA-Z0-9._-]/g,'_').slice(0,100)||'workspace';}
 function wire(name,fn){const n=$('#'+name);if(n)n.addEventListener('click',()=>run(fn));}
-function run(fn){queue=queue.then(async()=>{if(active)return;active=true;try{await fn();}catch(e){notice=e.message||String(e);render();}finally{active=false;}}).catch(e=>{notice=e.message;render();});return queue;}
+function syncBusy(){
+ const mount=$('#app');if(!mount)return;
+ mount.inert=active;
+ if(active)mount.setAttribute('aria-busy','true');else mount.removeAttribute('aria-busy');
+ mount.querySelectorAll('button,input,select,textarea').forEach(n=>{
+  if(active&&!n.disabled){n.dataset.operationDisabled='true';n.disabled=true;}
+  else if(!active&&n.dataset.operationDisabled==='true'){n.disabled=false;delete n.dataset.operationDisabled;}
+ });
+}
+async function run(fn){
+ if(active)return;
+ active=true;syncBusy();
+ try{return await fn();}
+ catch(e){notice=e.message||String(e);render();}
+ finally{active=false;syncBusy();}
+}
+function submittedDrafts(entries){
+ const value=copy(drafts);
+ for(const [kind,key]of entries)delete value[kind][key];
+ return value;
+}
 function status(message){notice=message;render();}
 function readRecord(){return new Promise((resolve,reject)=>{const t=db.transaction('copies','readonly'),r=t.objectStore('copies').get(copyKey());r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error);});}
 function openDB(){return new Promise((resolve,reject)=>{const r=indexedDB.open('tjlabs-uniform-migration-v1',1);r.onupgradeneeded=()=>r.result.createObjectStore('copies');r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error);r.onblocked=()=>reject(new Error('Browser storage is busy. Save a working HTML copy to continue independently.'));});}
-function persist(next){if(!db)throw new Error('Browser storage is unavailable. Use Save working HTML to retain this complete copy.');const text=E.exportWorkspace(next);
-return new Promise((resolve,reject)=>{const t=db.transaction('copies','readwrite'),s=t.objectStore('copies'),r=s.get(copyKey());let err=null;const rev=dbRevision+1;r.onsuccess=()=>{const old=r.result;if((old?.revision||0)!==dbRevision){err=new Error('Another tab has saved this working copy. Download both complete versions and open a new working copy.');recovery={kind:'competing-tab',current:old?.portable||null,incoming:text};t.abort();return;}s.put({revision:rev,portable:text,drafts:copy(drafts),savedAt:now()},copyKey());};t.oncomplete=()=>{dbRevision=rev;resolve();};t.onabort=()=>reject(err||t.error||new Error('The complete working copy could not be saved.'));t.onerror=()=>{};});}
-async function commit(result){const next=result.workspace;if(manual){ws=next;dirty=true;report=archive=null;notice='Revision '+ws.revision+' is in memory. Save working HTML to retain all changes.';render();return;}try{await persist(next);ws=next;blocked=false;report=null;archive=null;notice='Saved revision '+ws.revision+'. '+(result.receipt?.id||'');}catch(e){recovery=recovery||{kind:'storage-write',current:E.exportWorkspace(ws),incoming:E.exportWorkspace(next)};ws=next;blocked=true;dirty=true;report=null;archive=null;notice=e.message;}render();}
-function change(fn){if(blocked)throw new Error('Save this complete working HTML as a new copy, then reopen it before editing. Both versions are available under recovery.');return commit(fn({operationId:id(),expectedRevision:ws.revision}));}
+function persist(next,nextDrafts=copy(drafts)){if(!db)throw new Error('Browser storage is unavailable. Use Save working HTML to retain this complete copy.');const text=E.exportWorkspace(next);
+return new Promise((resolve,reject)=>{const t=db.transaction('copies','readwrite'),s=t.objectStore('copies'),r=s.get(copyKey());let err=null;const rev=dbRevision+1;r.onsuccess=()=>{const old=r.result;if((old?.revision||0)!==dbRevision){err=new Error('Another tab has saved this working copy. Download both complete versions and open a new working copy.');recovery={kind:'competing-tab',current:old?.portable||null,currentDrafts:copy(old?.drafts||{}),incoming:text,incomingDrafts:copy(nextDrafts)};t.abort();return;}s.put({revision:rev,portable:text,drafts:copy(nextDrafts),savedAt:now()},copyKey());};t.oncomplete=()=>{dbRevision=rev;resolve();};t.onabort=()=>reject(err||t.error||new Error('The complete working copy could not be saved.'));t.onerror=()=>{};});}
+async function commit(result,nextDrafts=copy(drafts)){
+ const next=result.workspace;
+ if(manual){ws=next;drafts=nextDrafts;dirty=true;report=archive=null;notice='Revision '+ws.revision+' is in memory. Save working HTML to retain all changes.';render();return;}
+ try{
+  await persist(next,nextDrafts);
+  ws=next;drafts=nextDrafts;blocked=false;report=null;archive=null;notice='Saved revision '+ws.revision+'. '+(result.receipt?.id||'');
+ }catch(e){
+  recovery=recovery||{kind:'storage-write',current:E.exportWorkspace(ws),currentDrafts:copy(drafts),incoming:E.exportWorkspace(next),incomingDrafts:copy(nextDrafts)};
+  recovery.submittedDrafts=copy(drafts);drafts=nextDrafts;
+  ws=next;blocked=true;dirty=true;report=null;archive=null;notice=e.message;
+ }
+ render();
+}
+function change(fn,nextDrafts=copy(drafts)){
+ if(blocked)throw new Error('Save this complete working HTML as a new copy, then reopen it before editing. Both versions are available under recovery.');
+ return commit(fn({operationId:id(),expectedRevision:ws.revision}),nextDrafts);
+}
 async function fileText(file,limit){if(!file)throw new Error('Choose a file.');if(file.size>limit)throw new Error('The selected file exceeds the '+Math.floor(limit/1048576)+' MiB input limit. It remains unchanged on your computer.');return new TextDecoder('utf-8',{fatal:true,ignoreBOM:true}).decode(await file.arrayBuffer());}
 function selectedSource(){return ws.sources.find(s=>s.id===selected&&s.role===role&&s.domain===domain)||ws.sources.filter(s=>s.role===role&&s.domain===domain).at(-1);}
 function selectedMapping(){return ws.mappings?.[role]?.[domain];}
@@ -63,7 +98,7 @@ html+='<section class="panel"><h3>Start another migration</h3><label>New workspa
 if(archive)html+='<section class="panel"><h3>Revision '+esc(archive.revision)+' handover</h3><p>'+archive.files.length+' complete files. '+(archive.ready?'Selected mappings reconcile.':'Open findings are retained in the report.')+'</p><div class="toolbar">'+button('zip','Download full handover ZIP')+button('handover-json','Download full handover JSON')+'</div>'+table(['File','Bytes','SHA-256','Download'],archive.files.map((f,i)=>[esc(f.path),esc(f.bytes),'<span class="id">'+esc(f.sha256)+'</span>','<button data-file="'+i+'">Download</button>']))+'</section>';return html;}
 function render(){
 const mount=$('#app');
-mount.innerHTML='<header><div><p class="eyebrow">Migration workspace</p><h1>'+esc(ws.title)+'</h1><p>Revision '+esc(ws.revision)+' · '+ws.sources.length+' retained files</p></div><div class="toolbar">'+button('top-save','Save working HTML')+button('top-json','Workspace JSON')+'</div></header><div id="notice" role="status" aria-live="polite">'+esc(notice||'Import original source files and actual returned target exports to begin.')+'</div>'+(recovery?'<section class="recovery"><h2>Complete version recovery</h2><p>'+esc(recovery.kind)+'. Both versions remain available. Save a new working HTML to continue independently.</p>'+button('recovery-current','Download other saved version')+button('recovery-incoming','Download this version')+button('manual-mode','Continue in downloaded-file mode')+'</section>':'')+'<nav aria-label="Workspace sections">'+[['sources','Source files'],['mapping','Field mapping'],['report','Reconciliation'],['history','Working history'],['handover','Handover']].map(([v,l])=>'<button data-tab="'+v+'" aria-current="'+(tab===v?'page':'false')+'">'+l+'</button>').join('')+'</nav><main>'+({sources:renderSources,mapping:renderMapping,report:renderReport,history:renderHistory,handover:renderHandover}[tab])()+'</main><footer><p>Original values remain in the complete working file. This application processes files locally in this browser.</p><p class="id">Workspace '+esc(ws.id)+' · Working copy '+esc(copyId)+'</p></footer>';
+mount.innerHTML='<header><div><p class="eyebrow">Migration workspace</p><h1>'+esc(ws.title)+'</h1><p>Revision '+esc(ws.revision)+' · '+ws.sources.length+' retained files</p></div><div class="toolbar">'+button('top-save','Save working HTML')+button('top-json','Workspace JSON')+'</div></header><div id="notice" role="status" aria-live="polite">'+esc(notice||'Import original source files and actual returned target exports to begin.')+'</div>'+(recovery?'<section class="recovery"><h2>Complete version recovery</h2><p>'+esc(recovery.kind)+'. Both versions remain available. Save a new working HTML to continue independently.</p>'+button('recovery-current','Download other saved version')+button('recovery-incoming','Download this version')+button('recovery-bundle','Download complete recovery bundle')+button('manual-mode','Continue in downloaded-file mode')+'</section>':'')+'<nav aria-label="Workspace sections">'+[['sources','Source files'],['mapping','Field mapping'],['report','Reconciliation'],['history','Working history'],['handover','Handover']].map(([v,l])=>'<button data-tab="'+v+'" aria-current="'+(tab===v?'page':'false')+'">'+l+'</button>').join('')+'</nav><main>'+({sources:renderSources,mapping:renderMapping,report:renderReport,history:renderHistory,handover:renderHandover}[tab])()+'</main><footer><p>Original values remain in the complete working file. This application processes files locally in this browser.</p><p class="id">Workspace '+esc(ws.id)+' · Working copy '+esc(copyId)+'</p></footer>';
 mount.querySelectorAll('[data-tab]').forEach(n=>n.onclick=()=>{tab=n.dataset.tab;query='';page=issuePage=0;if(tab==='report')domain='all';else if(domain==='all')domain='locations';render();});
 for(const n of ['domain','role','source']){const el=$('#'+n);if(el)el.onchange=()=>{if(n==='domain')domain=el.value;if(n==='role')role=el.value;if(n==='source')selected=el.value;else selected='';query='';page=0;render();};}
 const original=selectedSource();if(original&&tab==='sources'){const draft=drafts.corrections[original.id];if(draft){for(const [k,v]of Object.entries(draft)){const el=$('#'+k);if(el)el.value=v;}if(draft['row-id'])$('#correction-panel').open=true;}for(const key of ['row-id','column','value','reason','actor']){const el=$('#'+key);if(el)el.addEventListener('input',()=>{drafts.corrections[original.id]=Object.fromEntries(['row-id','column','value','reason','actor'].map(k=>[k,$('#'+k).value]));dirty=true;});}}
@@ -77,8 +112,8 @@ const search=$('#row-search');if(search)search.onchange=()=>{query=search.value;
 wire('prev',()=>{page=Math.max(0,page-1);render();});wire('next',()=>{page++;render();});
 mount.querySelectorAll('[data-row]').forEach(n=>n.onclick=()=>{const panel=$('#correction-panel');panel.open=true;$('#row-id').value=n.dataset.row;const s=selectedSource(),r=correctedRows(s).find(r=>r.id===n.dataset.row);$('#value').value=r?.cells[Number($('#column').value)]??'';drafts.corrections[s.id]=Object.fromEntries(['row-id','column','value','reason','actor'].map(k=>[k,$('#'+k).value]));dirty=true;panel.scrollIntoView({block:'nearest'});});
 const col=$('#column');if(col)col.onchange=()=>{const s=selectedSource(),r=correctedRows(s).find(r=>r.id===$('#row-id').value);if(r)$('#value').value=r.cells[Number(col.value)]??'';drafts.corrections[s.id]=Object.fromEntries(['row-id','column','value','reason','actor'].map(k=>[k,$('#'+k).value]));dirty=true;};
-wire('correct',async()=>{const s=selectedSource(),rowId=$('#row-id').value,column=Number($('#column').value),value=$('#value').value,reason=$('#reason').value,actor=$('#actor').value;if(!reason.trim()||!actor.trim())throw new Error('Enter the reviewer and reason.');await change(meta=>E.saveCorrection(ws,{...meta,sourceId:s.id,rowId,column,value,reason,actor,at:now()}));if(!blocked){delete drafts.corrections[s.id];render();}});
-wire('save-map',async()=>{const s=selectedSource(),columns={};mount.querySelectorAll('[data-field]').forEach(n=>{if(n.value!=='')columns[n.dataset.field]=Number(n.value);});await change(meta=>E.saveMapping(ws,{...meta,role,domain,sourceId:s.id,columns,at:now()}));if(!blocked){delete drafts.mappings[s.id];render();}});
+wire('correct',async()=>{const s=selectedSource(),rowId=$('#row-id').value,column=Number($('#column').value),value=$('#value').value,reason=$('#reason').value,actor=$('#actor').value;if(!reason.trim()||!actor.trim())throw new Error('Enter the reviewer and reason.');await change(meta=>E.saveCorrection(ws,{...meta,sourceId:s.id,rowId,column,value,reason,actor,at:now()}),submittedDrafts([['corrections',s.id]]));});
+wire('save-map',async()=>{const s=selectedSource(),columns={};mount.querySelectorAll('[data-field]').forEach(n=>{if(n.value!=='')columns[n.dataset.field]=Number(n.value);});await change(meta=>E.saveMapping(ws,{...meta,role,domain,sourceId:s.id,columns,at:now()}),submittedDrafts([['mappings',s.id]]));});
 wire('run-report',()=>{report=E.reconcile(ws);tab='report';domain='all';query='';issuePage=0;notice='Complete reconciliation calculated for revision '+ws.revision+'.';render();});
 mount.querySelectorAll('[data-finding]').forEach(n=>n.onclick=()=>{const f=report.issues.find(i=>i.id===n.dataset.finding);role=f.role;domain=f.domain;selected=f.sourceId;query=f.rowId||'';page=0;tab='sources';render();});
 wire('report-json',()=>download('reconciliation-revision-'+ws.revision+'.json',JSON.stringify(report,null,2)));
@@ -93,16 +128,18 @@ wire('receive',async()=>{const file=$('#receive-file').files[0],raw=await fileTe
 wire('manual-mode',()=>{if(recovery.current)download('other-complete-workspace.json',recovery.current);downloadWorkspace('-before-file-mode');copyId=id();dbRevision=0;manual=true;blocked=false;dirty=true;notice='Working in downloaded-file mode. Save working HTML after edits; this independent copy stays in memory until saved.';render();});
 wire('recovery-current',()=>{if(recovery.current)download('other-complete-workspace.json',recovery.current);else notice='No prior stored version exists.';});
 wire('recovery-incoming',()=>download('this-complete-workspace.json',recovery.incoming));
+wire('recovery-bundle',()=>download('complete-migration-recovery.json',JSON.stringify({schema:'tjlabs.migration-recovery.v1',workspaceId:ws.id,copyId,recovery},null,2)));
+syncBusy();
 }
 function downloadWorkspace(suffix=''){download(safeName(ws.title)+suffix+'.json',E.exportWorkspace(ws));}
-function saveHTML(suffix=''){const portable=E.exportWorkspace(ws),next={...boot,copyId:id(),portable,drafts:copy(drafts)};const doc=document.documentElement.cloneNode(true);doc.querySelector('#bootstrap').textContent=JSON.stringify(next).replace(/</g,'\\u003c');doc.querySelector('#app').innerHTML='<p>Opening complete migration workspace…</p>';download(safeName(ws.title)+suffix+'-working.html','<!doctype html>\n'+doc.outerHTML,'text/html;charset=utf-8');dirty=false;notice='Complete working HTML downloaded. Open that file to continue as an independent copy.';render();}
+function saveHTML(suffix=''){const portable=E.exportWorkspace(ws),next={...boot,copyId:id(),portable,drafts:copy(drafts),recovery:copy(recovery)};const doc=document.documentElement.cloneNode(true);doc.querySelector('#bootstrap').textContent=JSON.stringify(next).replace(/</g,'\\u003c');doc.querySelector('#app').innerHTML='<p>Opening complete migration workspace…</p>';download(safeName(ws.title)+suffix+'-working.html','<!doctype html>\n'+doc.outerHTML,'text/html;charset=utf-8');dirty=false;notice='Complete working HTML downloaded. Open that file to continue as an independent copy.';render();}
 function makeZip(files){
 const data=[],central=[];let offset=0;const crcTable=Array.from({length:256},(_,n)=>{for(let i=0;i<8;i++)n=(n&1)?0xedb88320^(n>>>1):n>>>1;return n>>>0;});
 const crc=b=>{let c=0xffffffff;for(const v of b)c=crcTable[(c^v)&255]^(c>>>8);return(c^0xffffffff)>>>0;};
 const header=(len,fields)=>{const b=new Uint8Array(len),v=new DataView(b.buffer);for(const [at,value,size]of fields)size===2?v.setUint16(at,value,true):v.setUint32(at,value,true);return b;};
 for(const f of files){if(!f.path||f.path.startsWith('/')||f.path.split('/').some(p=>p==='..'||!p))throw new Error('Unsafe handover member path.');const name=encoder.encode(f.path),body=encoder.encode(f.text),sum=crc(body);if(name.length>65535||offset+body.length>512*1048576)throw new Error('Handover exceeds the browser ZIP limit. Download individual complete files or use the CLI.');const h=header(30,[[0,0x04034b50,4],[4,20,2],[6,0x800,2],[14,sum,4],[18,body.length,4],[22,body.length,4],[26,name.length,2]]);data.push(h,name,body);central.push(header(46,[[0,0x02014b50,4],[4,20,2],[6,20,2],[8,0x800,2],[16,sum,4],[20,body.length,4],[24,body.length,4],[28,name.length,2],[42,offset,4]]),name);offset+=30+name.length+body.length;}
 const size=central.reduce((n,b)=>n+b.length,0);return new Blob([...data,...central,header(22,[[0,0x06054b50,4],[8,files.length,2],[10,files.length,2],[12,size,4],[16,offset,4]])],{type:'application/zip'});}
-try{db=await openDB();const saved=await readRecord();if(saved){try{ws=E.importWorkspace(saved.portable);drafts=copy(saved.drafts||drafts);dbRevision=saved.revision;notice='Reopened complete browser working copy from '+saved.savedAt+'.';}catch(e){blocked=true;recovery={kind:'unreadable-stored-version',current:saved.portable,incoming:E.exportWorkspace(ws)};notice='The stored version could not be validated. Download it for recovery and save a new working HTML.';}}else await persist(ws);}catch(e){blocked=false;manual=true;dirty=true;notice='Downloaded-file mode: '+e.message+' Save working HTML after edits to retain the complete project.';}
+try{db=await openDB();const saved=await readRecord();if(saved){try{ws=E.importWorkspace(saved.portable);drafts=copy(saved.drafts||drafts);dbRevision=saved.revision;notice='Reopened complete browser working copy from '+saved.savedAt+'.';}catch(e){blocked=true;recovery={kind:'unreadable-stored-version',current:saved.portable,currentDrafts:copy(saved.drafts||{}),incoming:E.exportWorkspace(ws),incomingDrafts:copy(drafts)};notice='The stored version could not be validated. Download it for recovery and save a new working HTML.';}}else await persist(ws);}catch(e){blocked=false;manual=true;dirty=true;notice='Downloaded-file mode: '+e.message+' Save working HTML after edits to retain the complete project.';}
 window.addEventListener('beforeunload',e=>{if(dirty){e.preventDefault();e.returnValue='';}});
 render();
 }
