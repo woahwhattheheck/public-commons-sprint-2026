@@ -4,6 +4,22 @@ TokenJunkieLabs · Upper Savannah scientific workbench.
 
 The Scenario sensitivity desk can compare any selected original scenario with another scenario under every retained parameter profile. The result uses the original native comparison reducer and its actual common valid cells. A restoration-versus-matched-control result therefore has its own geographic support and direct change raster.
 
+## Read alternatives side by side on the same support
+
+The ordinary ensemble report and its scientific Study now include **Alternatives on identical geographic support**. This view joins two saved alternative rows only when they share the original member/profile, reference run, annual pollutant unit, nonempty exact common-valid mask, common-cell count and reference mass. A and B are explicitly named; their order is stable by original scenario ID. Combinations that cannot be joined retain their source identities and a visible reason.
+
+For eligible rows, the report shows the original reference, A and B totals, annual B−A, 100×(B−A)/A, and both reductions from the reference. The B/A reduction ratio is (reference−B)/(reference−A). It is defined only for a positive A reduction and a nonnegative B reduction. A zero A export leaves the export percentage undefined. Annual totals already sum the original area-converted pixel outputs: do not apply a second pixel-area factor. N/P use kg/year; sediment uses metric tonnes/year. This physical mass ratio includes no cost, probability or field-validation assumptions.
+
+Full-precision `alternatives.csv` travels in the existing numeric report ZIP and the scientific source's `numeric/` directory. `report.json.alternative_comparisons` retains the same values, source run/scenario/comparison IDs, complete mask hashes and unavailable reasons. The scientific PDF/HTML section uses those retained rows directly, with stable AC case keys. The original paired rows, parameter comparisons, source classification, direct-reference selection, rasters and completed runs remain intact. This scalar table complements the direct native pair reducer; use the existing **Compare two scenarios** workflow for its own direct difference maps.
+
+### Continue the original native report and editable Study
+
+Adopt the complete current `model/ensemble_report.py` and `model/ensemble_study_source.py` together, preserving any newer shared source through the normal current-application composition. In the original saved ensemble's existing report course, prepare another ordinary scientific source/report with `model.ensemble_study_source.prepare(workspace, actual_ensemble_id, render=True)`. It reuses the completed native runs and saves a new report/source edition. Existing direct-reference preparation remains supported. The current coefficient-evidence and range choices should follow the same original UI/provider contract already described above.
+
+Open the new ordinary report and the scientific HTML/PDF. In the original completed twelve-case teaching study, all twelve alternative-comparison rows should be comparable: matched control sorts as A, riparian restoration as B, three constituents across four profiles. Confirm the displayed names before interpreting signs or ratios. MFD support differs from D8; l_max122 and333 retain identical outputs within the same routing setting in this case. l_max is an SDR parameter: unchanged NDR input signatures make N/P equality structurally expected; the actual differing SDR signatures with identical sediment outputs establish the recorded cap-insensitivity result.
+
+Operate the original coefficient/range and direct-reference controls, download the complete report ZIP and full-precision alternatives CSV, open those actual outputs, and independently reopen the selected scientific Study. Inspect populated desktop and390px views and every outgoing attachment under the complete owner rule below. Preserve original model/run/source identities and every active regional process. Source review and exact arithmetic checks do not replace this actual native render/use/reopen step.
+
 ## Use the complete operator workflow
 
 1. Open **Scenario sensitivity**, select the original saved ensemble, and choose **Compare two scenarios**.
