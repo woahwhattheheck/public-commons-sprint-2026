@@ -22,8 +22,8 @@ The regional study's steep-restoration case combines crop 82→mixed forest 43 a
 | --- | --- | --- | --- |
 | Pasture 81→grass 71, N load (kg/ha/year) | 6.28→5.67; −9.71% | 3.1→3.1; unchanged | 6.28→3; −52.23% |
 | Pasture 81→grass 71, P load (kg/ha/year) | 1.35→0.15; −88.89% | 0.1→0.4; +300% | 1.35→0.15; −88.89% |
-| Crop 82→mixed43, N load (kg/ha/year) | 12.42→2.2; −82.29% | 10→1.54; −84.60% | 12.42→2.1; −83.09% |
-| Crop 82→mixed43, P load (kg/ha/year) | 2.21→0.275; −87.56% | 0.99→0.275; −72.22% | 2.21→0.286; −87.06% |
+| Crop 82→mixed 43, N load (kg/ha/year) | 12.42→2.2; −82.29% | 10→1.54; −84.60% | 12.42→2.1; −83.09% |
+| Crop 82→mixed 43, P load (kg/ha/year) | 2.21→0.275; −87.56% | 0.99→0.275; −72.22% | 2.21→0.286; −87.06% |
 
 In the Albright pasture-to-grassland change, P retention efficiency is 0.5 in both rows and P critical length is 150 m in both rows. N loading is unchanged while N retention efficiency increases from 0.8 to 0.9. The scenario name alone therefore cannot determine the sign of every nutrient response. Read the actual retained, routed NDR output for each constituent and each spatial alternative.
 
@@ -38,7 +38,7 @@ USLE gross erosion contains the product `R × K × LS × C × P`. The ratios bel
 | Deciduous 41→low development 22 | 0.001→0.05; 50× | 0.009→0.00003; 1/300 | 0.002→0.05; 25× |
 | Evergreen 42→low development 22 | 0.001→0.05; 50× | 0.004→0.00003; 0.0075× | 0.002→0.05; 25× |
 | Mixed 43→low development 22 | 0.001→0.05; 50× | 0.007→0.00003; 0.004285714286× | 0.002→0.05; 25× |
-| Crop 82→mixed43 | 0.2→0.001; 0.005× | 0.12→0.007; 0.058333333333× | 0.17→0.002; 0.011764705882× |
+| Crop 82→mixed 43 | 0.2→0.001; 0.005× | 0.12→0.007; 0.058333333333× | 0.17→0.002; 0.011764705882× |
 | Pasture 81→grass 71 | 0.01→0.01; 1× | 0.05→0.004; 0.08× | 0.07→0.04; 0.571428571429× |
 
 Albright's developed rows use P=0.001; low development has C=0.03 and medium development has C=0.02. The regional table uses P=0.5 and C=0.1 for those rows. These exact published choices explain the opposite C×P input directions. The Albright high-intensity row also has C=0.
@@ -47,7 +47,7 @@ Keep the published coefficients as named alternatives and preserve the signed na
 
 ## Retention and model parameters must travel with the loads
 
-Albright uses 150 m critical lengths for both nutrients in all fifteen classes; the regional and mapped Upper Flint rows use30 m. The fivefold length difference accompanies changed class retention efficiencies. A ratio of loading coefficients alone cannot explain the full NDR response.
+Albright uses 150 m critical lengths for both nutrients in all fifteen classes; the regional and mapped Upper Flint rows use 30 m. The fivefold length difference accompanies changed class retention efficiencies. A ratio of loading coefficients alone cannot explain the full NDR response.
 
 The current retained regional table has nitrogen subsurface proportion 0 for every class. The Albright alternative preserves those values, and the mapped Upper Flint nutrient rows also specify 0. This particular reference-table comparison therefore exercises the surface nutrient pathway. The Vickery–Quinn profile still preserves its reported nitrogen subsurface settings as part of the coherent source definition; their effect depends on the actual selected baseline's subsurface fractions.
 
@@ -65,7 +65,7 @@ The original baseline, reporting mask, model domain and scenario allocation must
 
 ## Source attribution and exact retained inputs
 
-1. Regional reference: Georgia 2019 TableA1 nutrients and Duke Forest 2022 Table 4 sediment, `source/biophysical-regional-20261012/regional-biophysical.csv`; SHA256 `b2b5778c5d8c71b2b0c6db370f29a60e987d1be3d491cec91493a0b975b8b9e4`. Original references: [Georgia 2019](https://doi.org/10.3390/environments6050052) and [Duke Forest 2022 source](https://dukespace.lib.duke.edu/bitstreams/57c6d8cb-9ce3-4740-b1d5-39c92bda284c/download). The adjacent source manifest retains their complete provenance.
+1. Regional reference: Georgia 2019 Table A1 nutrients and Duke Forest 2022 Table 4 sediment, `source/biophysical-regional-20261012/regional-biophysical.csv`; SHA256 `b2b5778c5d8c71b2b0c6db370f29a60e987d1be3d491cec91493a0b975b8b9e4`. Original references: [Georgia 2019](https://doi.org/10.3390/environments6050052) and [Duke Forest 2022 source](https://dukespace.lib.duke.edu/bitstreams/57c6d8cb-9ce3-4740-b1d5-39c92bda284c/download). The adjacent source manifest retains their complete provenance.
 2. Albright, Vickery, Bower and Quinn 2023, Appendix 1; `source/regional-studies-20261013/albright-2023-biophysical.csv`; SHA256 `64c5c803e09d50d9f51c029ece199a06c01d19951ae3fdce52b7fca7bb13bf8c`. [Original paper](https://doi.org/10.1080/1747423X.2023.2234903).
 3. Abbasnezhad, Abrams and Wenger 2024, original supplement; `source/upper-flint-2024/nlcd-nonurban-coefficients.csv`; SHA256 `ba2e1b14ab77f7b327f1124d9b489a81b783c84b71176eb665365d899e27665d`. [Original paper](https://doi.org/10.3390/land13060893) and [complete supplement](https://www.researchgate.net/publication/381634619_land-2997438-supplementarypdf).
 4. Vickery and Quinn 2023, Appendices 1–2, retained in `study-definitions.json`. [Original parameter and transition rules](https://doi.org/10.1007/s00267-023-01861-6).
