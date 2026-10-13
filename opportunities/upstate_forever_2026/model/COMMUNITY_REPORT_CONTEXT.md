@@ -76,3 +76,57 @@ Population, households and poverty counts describe the selected whole source blo
 Interventions, progress labels and cost estimates are recorded planning decisions. Native totals keep their original reporting mask, units and valid-cell count; alternative changes retain the original common-support comparison. The report does not allocate those values to communities or proposed interventions.
 
 Regional context shows each selected original HUC area once and each original NRCS state portion with its edition and designation. A complete query with zero selected South Carolina class matches describes that query’s named classes. Assessment sources remain the basis for water-quality condition and impairment decisions.
+
+
+## Receive an original report when its Workspace is offline
+
+A complete Community report ZIP and its saved report record can be received as
+scientific source in an actual destination Workspace. This continues the original
+report edition without rebuilding its plan, importing intervention edits again,
+or assigning the sender's project ID to the recipient.
+
+Use the inner original `community-report.zip`, its exact saved
+`revised-report.json` (or original saved record), the original project UUID from
+its receiving receipt, and the record's
+`files["community-report.json"]["sha256"]`. A broader receiving package may
+contain these originals; keep that package unchanged and extract the named
+original members first.
+
+~~~sh
+python -B -m model.community_report_context \
+  --workspace ACTUAL_RECEIVING_WORKSPACE \
+  --report-archive ORIGINAL_COMMUNITY_REPORT_ZIP \
+  --report-record ORIGINAL_SAVED_REPORT_RECORD_JSON \
+  --original-project-id ORIGINAL_PROJECT_UUID \
+  --report-sha256 ORIGINAL_REPORT_JSON_SHA256
+~~~
+
+The existing live-Workspace `--report-id` route remains available. Choose exactly
+one route. The archive route accepts the same `--prepare-only` and optional
+`--delivery-id` controls. Its returned `source`, `delivery_selection` and
+`sources.json` feed the same scientific report composer and standalone renderer.
+
+The receiver checks the saved report's immutable identity and selection, the
+original ZIP size and SHA256, exact member inventory, each member's byte length,
+SHA256 and ZIP CRC, original plan/table identities, original file index, and any
+saved revision register. Member paths stay inside the receiving directory.
+Interrupted copies resume from verified original members. The exact ZIP and
+saved record remain companions of the typed scientific source.
+
+The recipe's original project/report/plan IDs describe the sender. The actual
+destination project owns the newly imported source collection and scientific
+report edition. Cross-project Community source IDs remain provenance; this
+source-only receiving route does not recreate editable sender records. Use the
+existing complete Workspace or selected **Transfer editable study** archive to
+continue those original editable records.
+
+Reports made before the parent-plan change register retain their original
+content. Receiving an archive does not calculate a replacement register or relabel
+it as a newer Community report format. A newer report must be built from the
+actual saved plan through the ordinary live-Workspace route.
+
+After preparation, pass the returned `delivery_selection` source choices to
+`observed_report_render.prepare`, render with the existing report renderer, and
+use `observed_report_render.archive_report` for complete receiving and independent
+reopening. All received source bytes, original report companions and the rendered
+scientific report follow ordinary Workspace backup/restore.

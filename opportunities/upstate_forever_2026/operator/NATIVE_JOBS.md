@@ -129,7 +129,7 @@ Once the original child is selected, compute-programmes/PARENT/supervision/TASK.
 
 ### Receiving the current complete source
 
-The increment contains seven full files. Assemble them together, then run the existing installer with the receiving native interpreter:
+The increment contains eight full files, including `model/native_execution.py`, which supplies the worker's resource observer. Assemble them together, then run the existing installer with the receiving native interpreter:
 
     ACTUAL_PYTHON -B install_native_supervision.py --application ACTUAL_APPLICATION --retention
 

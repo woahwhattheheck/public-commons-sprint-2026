@@ -12,7 +12,7 @@ import json
 import logging
 import os
 from pathlib import Path
-import shutil
+
 import stat
 import subprocess
 import time
@@ -110,6 +110,7 @@ def _copy_exports(workspace, directory, state, *, exports=None, build_archive=Tr
                     cases=[{name: case[name] for name in ("id", "run_id", "profile_id", "state")}
                            for case in current["cases"]])
         item["artifacts"] = exported
+        item["export_layout"] = exports.layout(key)
         outputs.update({key + "/" + name: value for name, value in exported.items()})
         for row in study_rows:
             results.append({
@@ -150,14 +151,16 @@ def _copy_exports(workspace, directory, state, *, exports=None, build_archive=Tr
     for item in studies:
         progress = item.get("progress", {})
         links = " ".join(
-            '<a href="' + escaped(value["path"]) + '">' + escaped(name) + "</a>"
+            '<a href="' + escaped(value["path"]) + '">' + escaped({"export_manifest": "Complete file manifest"}.get(name, name)) + "</a>"
             for name, value in item.get("artifacts", {}).items()
-            if name in {"report", "csv", "archive"})
+            if name in {"report", "csv", "archive", "export_manifest"})
         rows.append(
             "<tr><td>" + escaped(item["landscape"]) + "</td><td>" +
             escaped(item["model_scope"].upper()) + "</td><td>" + escaped(item["state"]) +
             "</td><td>" + escaped(progress.get("completed", 0)) + " / " +
-            escaped(progress.get("total", 0)) + "</td><td>" + links + "</td></tr>")
+            escaped(progress.get("total", 0)) + "</td><td>" + links + "<br><small>" +
+            escaped(item.get("export_layout", {}).get("mode", "pending")) +
+            " layout</small></td></tr>")
     report = """<!doctype html><html lang="en"><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Gura native parameter studies</title><style>
@@ -178,6 +181,14 @@ small{color:#515b63}a{color:#273844;margin-right:12px}code{overflow-wrap:anywher
         " " + escaped(result["mass_basis"]) + "</p><p>Open a study report to inspect " +
         "its quantities, native run IDs, actual coverage and explicit coefficients. " +
         "Every study includes the original parameter reference for its own landscape.</p>" +
+        "<h2>Portable study contents</h2><p>Flat studies carry their complete scientific files " +
+        "at the original relative paths. Nested studies retain their complete study ZIP " +
+        "when that layout is smaller. Open the file manifest for exact member hashes. " +
+        "Both layouts preserve native arguments and aggregation history.</p><p>" +
+        escaped(result["export_cache"]["logical_bytes_avoided"]) +
+        " logical bytes of duplicate or redundant nested contents avoided across " +
+        escaped(result["export_cache"]["flat_studies"]) +
+        " flat studies. These are file lengths, not measured filesystem space or compressed ZIP savings.</p>" +
         "<h2>Original methods</h2><p><a href=\"" + NDR_GUIDE + "\">InVEST 3.20 NDR guide</a>" +
         "<a href=\"" + SDR_GUIDE + "\">InVEST 3.20 SDR guide</a></p>" +
         "<small>Suite <code>" + escaped(state["id"]) + "</code></small></html>")
@@ -186,7 +197,9 @@ small{color:#515b63}a{color:#273844;margin-right:12px}code{overflow-wrap:anywher
         outputs[name] = describe_file(directory, directory / name)
     manifest = {"schema": "commons.gura-parameter-suite-package/v1",
                 "suite_id": state["id"], "workspace_id": workspace.project["id"],
-                "state": state["state"], "files": outputs}
+                "state": state["state"], "files": outputs,
+                "study_layouts": {item["study_id"]: item.get("export_layout", {})
+                                  for item in studies if item.get("study_id")}}
     atomic_json(directory / "manifest.json", manifest)
     artifacts = {"report": describe_file(directory, directory / "index.html"),
                  "csv": describe_file(directory, directory / "results.csv"),
@@ -201,6 +214,8 @@ small{color:#515b63}a{color:#273844;margin-right:12px}code{overflow-wrap:anywher
             progress=progress)
         artifacts["archive"] = describe_file(directory, directory / "gura-parameter-suite.zip")
         state["packaging"].update(state="complete", archive="current")
+    exports.prune()
+    state["packaging"]["cache"] = exports.progress()
     return artifacts
 
 
@@ -208,14 +223,9 @@ small{color:#515b63}a{color:#273844;margin-right:12px}code{overflow-wrap:anywher
 @contextlib.contextmanager
 def _native_batch_lock(path):
     """Keep the existing batch lease in both parent and its active native child."""
-    path = Path(path)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    fd = os.open(path, os.O_CREAT | os.O_RDWR | os.O_NOFOLLOW, 0o600)
-    try:
-        fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    from model.native_execution import native_batch_lease
+    with native_batch_lease(path) as fd:
         yield fd
-    finally:
-        os.close(fd)
 
 
 def _supervisor_custody(workspace_root):
@@ -263,8 +273,10 @@ print(json.dumps({"run_id": result["id"], "state": result["state"]}), flush=True
 
 def _isolated_process(application, workspace, receiving, run_id, donors, custody_fds, observe):
     """Execute one unchanged Workspace run; release its process memory on return."""
-    from model.common import atomic_json, now
+    from model.common import atomic_json, file_digest, now
     from model.model_selection import validate_completed_run
+    from model.native_execution import (NativeProcessInterrupted, process_failure,
+                                        record_process_interruption, resource_status)
     directory = receiving / "native-case-processes" / run_id / uuid.uuid4().hex
     directory.mkdir(parents=True, exist_ok=False)
     request = {
@@ -277,6 +289,7 @@ def _isolated_process(application, workspace, receiving, run_id, donors, custody
     atomic_json(request_path, request, immutable=True)
     process = None
     started = now()
+    resources_before = resource_status()
     try:
         with (directory / "stdout.log").open("xb") as stdout, (directory / "stderr.log").open("xb") as stderr:
             process = subprocess.Popen(
@@ -284,7 +297,9 @@ def _isolated_process(application, workspace, receiving, run_id, donors, custody
                 cwd=application, env=dict(os.environ), stdin=subprocess.DEVNULL,
                 stdout=stdout, stderr=stderr, pass_fds=tuple(custody_fds))
             observation = {"run_id": run_id, "pid": process.pid,
-                           "process_directory": str(directory), "started_at": started}
+                           "process_directory": str(directory), "started_at": started,
+                           "request_path": request_path.relative_to(workspace.root).as_posix(),
+                           "request_sha256": file_digest(request_path), "python": sys.executable}
             atomic_json(directory / "process.json", observation, immutable=True)
             observe({**observation, "state": "running"})
             while True:
@@ -295,14 +310,39 @@ def _isolated_process(application, workspace, receiving, run_id, donors, custody
                     # The child's ordinary run.json/native.log remain the native
                     # journals. This small operation observation keeps the caller live.
                     observe({**observation, "state": "running", "observed_at": now()})
-        atomic_json(directory / "return.json", {
-            **observation, "state": "returned", "return_code": code, "returned_at": now()})
+        resources_after = resource_status()
+        returned = {**observation, "state": "returned", "return_code": code, "returned_at": now(),
+                    "resources_before": resources_before, "resources_after": resources_after}
     except BaseException:
         if process is not None and process.poll() is None:
             process.terminate()
             process.wait()
         raise
     result = workspace.inspect_run(run_id)
+    signal_failure = process_failure(code, run_id=run_id, process=observation,
+                                     before=resources_before, after=resources_after,
+                                     native_state=result)
+    if signal_failure is not None:
+        # A complete original run remains complete even if its process received
+        # a signal while exiting. Stop this attempt before another case starts.
+        if result.get("state") == "complete":
+            validate_completed_run(result)
+        failure = NativeProcessInterrupted(signal_failure)
+        recording_error = None
+        try:
+            record_process_interruption(workspace, run_id, signal_failure, pid=process.pid)
+            atomic_json(directory / "return.json", returned)
+            atomic_json(directory / "interruption.json", signal_failure, immutable=True)
+            observe({**observation, "state": "interrupted", "return_code": code,
+                     "error": signal_failure, "returned_at": now()})
+        except (OSError, ValueError) as error:
+            recording_error = error
+            failure.native_failure["publication_error"] = {
+                "type": type(error).__name__, "message": str(error)}
+        if recording_error is not None:
+            raise failure from recording_error
+        raise failure
+    atomic_json(directory / "return.json", returned)
     if result.get("state") == "complete":
         validate_completed_run(result)
         observe({**observation, "state": "complete", "return_code": code, "completed_at": now()})
@@ -331,7 +371,7 @@ def main(argv=None):
     from model.common import atomic_json, digest, held, identifier, now, read_json
     from model.model_selection import run_models, validate_completed_run
     from model.workspace import Workspace
-    from model.native_execution import storage_exhausted
+    from model.native_execution import process_interrupted, storage_exhausted
     from model.parameter_suite_exports import SuiteExports
 
     root = args.workspace.resolve()
@@ -478,6 +518,21 @@ def main(argv=None):
                 "python": sys.executable, "driver_sha256": receiver.sha(Path(__file__)),
                 "case_order": "NDR-only, SDR-only, then combined; original run IDs and scientific selections",
             }
+            # Use resolved original targets, not a later mutable planning-state
+            # pointer, so an explicit continuation reopens the same suite.
+            continuation = [sys.executable, "-B", str(Path(__file__).resolve()),
+                            "--application", str(application), "--workspace", str(root),
+                            "--inputs", str(inputs), "--baseline-run-id", baseline["id"],
+                            "--scopes", *scopes, "--design", args.design]
+            for target in targets[1:]:
+                continuation.extend(["--evaluation-run-id", target["id"]])
+            if args.difference_maps:
+                continuation.append("--difference-maps")
+            if args.isolate_native_cases:
+                continuation.append("--isolate-native-cases")
+            if args.archive:
+                continuation.extend(["--archive", str(args.archive.resolve())])
+            state["continue_argv"] = continuation
             exports = SuiteExports(workspace, directory, suite_id)
             for item in state["studies"]:
                 if item.get("study_id"):
@@ -529,7 +584,7 @@ def main(argv=None):
                             "type": type(error).__name__, "message": str(error),
                             "traceback": traceback.format_exc()})
                         failures.append(item_key)
-                        if storage_exhausted(error):
+                        if storage_exhausted(error) or process_interrupted(error):
                             raise
                         logging.exception("Gura parameter study needs recovery: %s", item_key)
                     # Keep the completed reports usable while remaining native cases continue.
@@ -548,16 +603,19 @@ def main(argv=None):
                 if destination.is_relative_to(root):
                     raise ValueError("Save the external suite ZIP outside the source workspace")
                 destination.parent.mkdir(parents=True, exist_ok=True)
-                temporary = destination.with_name("." + destination.name + ".partial")
-                shutil.copyfile(directory / "gura-parameter-suite.zip", temporary)
-                os.replace(temporary, destination)
+                from model.reuse import copy_verified
+                transfer = {"files": 0, "bytes": 0, "methods": {}}
+                copy_verified(directory, state["files"]["archive"], destination.parent,
+                              path=destination.name, replace_mismatch=True, transfer=transfer)
+                state["external_archive_transfer"] = transfer
                 state["external_archive"] = receiver.artifact(destination, destination.parent)
             checkpoint("complete" if complete else "partial", active_study_key=None,
                        failed_study_keys=failures, completed_at=now() if complete else None)
             return 0 if complete else 1
         except Exception as error:
             try:
-                checkpoint("error", state="error", error={
+                checkpoint("interrupted" if process_interrupted(error) else "error",
+                           state="partial" if process_interrupted(error) else "error", error={
                     **(getattr(error, "native_failure", None) or {}),
                     "type": type(error).__name__, "message": str(error),
                     "traceback": traceback.format_exc()})

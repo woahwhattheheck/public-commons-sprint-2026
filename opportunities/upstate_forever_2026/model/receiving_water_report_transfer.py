@@ -2,7 +2,8 @@
 
 TokenJunkieLabs. This adapter reads immutable records and source CAS descriptors;
 it never materializes source views, prepares geography or reruns a native model.
-The maintained study_report_transfer dispatcher owns registration and receipts.
+The maintained scientific_report_study_transfer dispatcher owns source selection;
+study_report_transfer retains the original lineage receipts.
 """
 from __future__ import annotations
 
@@ -13,6 +14,7 @@ from .common import digest, identifier
 CONTEXT = "receiving-water-scientific-study"
 REPORT_SCHEMA = "upstate.observed-report/v1"
 CAPTURE_SCHEMA = "upstate.receiving-water-report-source/v1"
+EDITIONS = ("receiving-water-report-source/1", "receiving-water-report-source/2")
 FOLDER = "receiving-water-report-sources"
 ROLE = "receiving-water-report-source"
 SOURCE_ID = "receiving-water-scientific-report"
@@ -212,6 +214,7 @@ def _capture(closure, key, collection_id, entry, recipe, members, plan, analysis
     if (record.get("schema") != CAPTURE_SCHEMA or record.get("id") != key
             or record.get("state") != "complete" or not isinstance(identity, dict)
             or digest(identity) != key or identity.get("workspace_id") != recipe["project_id"]
+            or identity.get("edition") != recipe["edition"]
             or identity.get("study") != study or identity.get("source_entries") != sources
             or record.get("selection") != identity.get("selection")
             or digest({name: value for name, value in record.items() if name != "record_sha256"})
@@ -234,6 +237,8 @@ def _capture(closure, key, collection_id, entry, recipe, members, plan, analysis
             or any(selection.get(name) != value for name, value in selected.items())):
         raise ValueError("Receiving report capture selects another original study")
     required_modules = {"producer", "plan_reader"} | ({"exporter", "scientific_formatter"} if analysis else set())
+    if recipe["edition"] == "receiving-water-report-source/2":
+        required_modules |= {"map_capture", "map_renderer", "scientific_figures"}
     implementation = identity.get("capture_implementation", {})
     if set(implementation) != required_modules:
         raise ValueError("Receiving report lost its original capture implementation")
@@ -291,7 +296,8 @@ def _binding(closure, collection_id, entry):
     recipe = _read(closure, entry["body"])
     if (entry.get("id") != SOURCE_ID or entry.get("kind") != "document" or entry.get("role") != ROLE
             or metadata.get("report_schema") != REPORT_SCHEMA
-            or recipe.get("schema") != REPORT_SCHEMA or recipe.get("report_context_kind") != CONTEXT):
+            or recipe.get("schema") != REPORT_SCHEMA or recipe.get("report_context_kind") != CONTEXT
+            or recipe.get("edition") not in EDITIONS):
         raise ValueError("Receiving report differs from its explicitly declared source producer")
     project = recipe.get("project_id")
     if not isinstance(project, str) or not project:
@@ -305,6 +311,8 @@ def _binding(closure, collection_id, entry):
         if name in metadata and metadata[name] != expected:
             raise ValueError("Receiving report metadata differs from its original source identity")
     members = _members(closure, entry, recipe)
+    if recipe["edition"] == "receiving-water-report-source/2" and "figures/source-map-spec.json" not in members:
+        raise ValueError("Receiving report edition 2 lost its original geographic figure specification")
     plan = _native_record(closure, members, "plan", "upstate.receiving-water-plan/v1", project)
     mode = metadata.get("mode")
     if mode not in ("source_plan", "completed_analysis") or metadata.get("plan_id") != plan["id"]:

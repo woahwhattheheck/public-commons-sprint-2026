@@ -100,12 +100,13 @@ function sourceRef(raw, layer, label) {
 }
 
 export function attachConservation({
-  getState, api, endpoint, submitAction, showTask, toast, fileList, openScientificReport,
+  getState, api, endpoint, submitAction, showTask, toast, fileList, openScientificReport, openStudyTransfer,
 } = {}) {
   const memories = new Map();
   let mounted = null;
   let listener = null;
   let activeWorkspace = null;
+  let transferVersion = 0, transferRequest = null;
   const workspace = () => getState?.()?.workspace_key || null;
   function memory(key = workspace()) {
     if (!memories.has(key)) memories.set(key, {
@@ -213,6 +214,51 @@ export function attachConservation({
     if (workspace() !== key) return null;
     return result;
   }
+  function studyTransferButton(kind, id, label, selectedWorkspace = workspace()) {
+    if (typeof openStudyTransfer !== "function" || !id || !selectedWorkspace) return "";
+    return button("transfer-study", label, 'data-transfer-kind="' + h(kind) +
+      '" data-transfer-id="' + h(id) + '" data-workspace="' + h(selectedWorkspace) + '"', memory().busy);
+  }
+  async function transferStudy(control) {
+    const key = workspace(), ui = memory(key);
+    if (ui.busy) return;
+    if (control.dataset.workspace !== key) {
+      throw new Error("The workspace changed. Open the saved Conservation record in the intended workspace.");
+    }
+    const kind = control.dataset.transferKind, id = control.dataset.transferId;
+    if (!["conservation", "conservation-plans"].includes(kind) || !/^[0-9a-f]{64}$/.test(id || "")) {
+      throw new Error("Choose a saved Conservation study or portfolio.");
+    }
+    if (typeof openStudyTransfer !== "function") {
+      throw new Error("Editable Study transfer is unavailable in this application.");
+    }
+    const pending = { key, ui, version: ++transferVersion, readVersion: ui.readVersion };
+    transferRequest = pending;
+    const current = () => transferRequest === pending && transferVersion === pending.version &&
+      workspace() === key && ui.readVersion === pending.readVersion;
+    ui.busy = true; ui.notice = null; paint();
+    try {
+      const retained = kind === "conservation" ?
+        await catalogRead("study", { study_id: id }) : await read("plan", { plan_id: id });
+      if (!current()) return;
+      if (!retained || retained.id !== id) throw new Error("The original saved Conservation record could not be reopened.");
+      const root = { kind, id, title: retained.title || retained.spec?.title || id };
+      if (typeof retained.state === "string") root.state = retained.state;
+      await openStudyTransfer({ workspace_key: key, roots: [root] });
+    } catch (error) {
+      if (current()) {
+        const message = error.message || String(error);
+        ui.notice = { kind: "error", message };
+        if (toast) toast(message);
+      }
+    } finally {
+      if (transferRequest === pending) {
+        transferRequest = null; ui.busy = false;
+        if (workspace() === key && transferVersion === pending.version) paint();
+      }
+    }
+  }
+
   function taskStamp(state) {
     const source = state?.data?.tasks ?? state?.tasks;
     const tasks = Array.isArray(source) ? source : Array.isArray(source?.tasks) ? source.tasks :
@@ -1640,7 +1686,8 @@ export function attachConservation({
       h(plan.id) + "</p></div>" +
       button(optimization ? "optimization-export" : "export-plan", "Export this saved portfolio", 'data-plan-id="' + h(plan.id) +
         '" data-study-id="' + h(plan.study_id) + '"', memory().busy) +
-      button("prepare-report", "Prepare scientific report", 'data-plan-id="' + h(plan.id) + '"', memory().busy) + "</div>" +
+      button("prepare-report", "Prepare scientific report", 'data-plan-id="' + h(plan.id) + '"', memory().busy) +
+      studyTransferButton("conservation-plans", plan.id, "Transfer editable portfolio") + "</div>" +
       '<div class="cons-summary"><div><span>Selected units</span><strong>' +
       h(summary.parcels ?? (plan.selected_ids || []).length) + "</strong></div>" +
       "<div><span>Full selected footprint</span><strong>" + number(summary.whole_unit_union_area_ha) + " ha</strong></div>" +
@@ -1960,6 +2007,7 @@ export function attachConservation({
           h(human(study.mode || study.spec?.mode || "Recorded study")) + "</td><td>" +
           h(human(study.state || "")) + "</td><td>" +
           button("open-study", "Open", 'data-study-id="' + h(study.id) + '"', ui.busy) +
+          studyTransferButton("conservation", study.id, "Transfer editable study") +
           "</td></tr>").join("") + "</tbody></table></div>" :
         "<p>" + (ui.overviewLoading ? "Loading retained studies…" :
           "Create a study from the imported planning-unit and reporting-area sources.") + "</p>") +
@@ -1970,6 +2018,7 @@ export function attachConservation({
           '<span class="cons-metric-note">' + h(plan.id) + "</span></th><td>" +
           h(plan.study_id || "") + "</td><td>" +
           button("open-plan", "Open", 'data-plan-id="' + h(plan.id) + '"', ui.busy) +
+          studyTransferButton("conservation-plans", plan.id, "Transfer editable portfolio") +
           "</td></tr>").join("") + "</tbody></table></div>" :
         "<p>Saved portfolios will appear here with their original study and selection.</p>") + reportSourcesView() + scenarioBridgesView() + "</section>";
   }
@@ -1998,6 +2047,7 @@ export function attachConservation({
         button("new-portfolio", "Create portfolio", "", ui.busy || study.state !== "complete") +
         button("optimization-new", "Optimize portfolio", "", ui.busy || study.state !== "complete") +
         button("export-study", "Export candidate inventory", 'data-study-id="' + h(study.id) + '"', ui.busy) +
+        studyTransferButton("conservation", study.id, "Transfer editable study") +
         (study.state !== "complete" ? button("build-study", "Build this inventory",
           'data-study-id="' + h(study.id) + '"', ui.busy) : "") +
         button("close-study", "Back to all records", "", ui.busy) + "</div></div>" +
@@ -2397,6 +2447,8 @@ export function attachConservation({
     try {
       if (!workspace()) throw new Error("Open a workspace before using conservation planning.");
       switch (name) {
+        case "transfer-study":
+          await transferStudy(node); break;
         case "optimization-new":
           ui.optimization = optimizationDraft(ui.study); ui.form = "optimization"; ui.notice = null; paint(); break;
         case "optimization-use-checked": {
@@ -2760,6 +2812,11 @@ export function attachConservation({
   }
   function detach() {
     if (mounted && activeWorkspace === workspace()) captureView();
+    transferVersion++;
+    if (transferRequest) {
+      transferRequest.ui.busy = false;
+      transferRequest = null;
+    }
     listener?.abort(); listener = null; mounted = null; activeWorkspace = null;
   }
   return { render, mount, detach, dispatch, taskActions, integratedOptimization: true };

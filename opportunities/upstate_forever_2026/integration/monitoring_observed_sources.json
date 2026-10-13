@@ -1,6 +1,6 @@
 {
   "schema": "upstate.monitoring-observed-source-install/v1",
-  "version": "1.5.0",
+  "version": "1.7.0",
   "source_root": "opportunities/upstate_forever_2026",
   "predecessor": "Original Monitoring1.2.1 / PR3140 composed with current receiving-water Monitoring1.3.0 at4d7415ebdb4ed3ed522b419349aac0178aa37476",
   "files": [
@@ -75,20 +75,22 @@
     },
     {
       "path": "operator/web/monitoring-observed.mjs",
-      "bytes": 17134,
-      "sha256": "b892173baf305692e3b4fcb1b108cc47bcd5a747de32e99beed51f3667d6c9b8",
+      "bytes": 24516,
+      "sha256": "ead60a60b44adc80e0495ba988a337ac11afa92a9af26b12734528d94ee1114e",
       "predecessor_sha256": [
         "7ebb4f2d5f1fe2505f085c6e7b9472339cfc8dc2e3871bbfe985d228d8cf3ebe",
-        "d9e01600e859b91ca5a881ad6d844874938c99f8ebc618e4d6ac5ca37896c21f"
+        "d9e01600e859b91ca5a881ad6d844874938c99f8ebc618e4d6ac5ca37896c21f",
+        "b892173baf305692e3b4fcb1b108cc47bcd5a747de32e99beed51f3667d6c9b8"
       ]
     },
     {
       "path": "model/MONITORING_OBSERVED_CONTEXT.md",
-      "bytes": 17232,
-      "sha256": "f1b55f73e8bb0d15f6f8ee48e628d87d80683e0f0e8932478e6c0db8a4d07858",
+      "bytes": 19011,
+      "sha256": "b345444db93018843e8d3dd736429ddbd32f649ba6733c969314f3c2248d3363",
       "predecessor_sha256": [
         "18a222a0269cd333713041854d4be2a9811912664c7b082589f5c9ae6e319992",
-        "7c8189909d6fae3e917e7e4549ad0fc788aeb2e1684ce2268a2fc1d4f04e301c"
+        "7c8189909d6fae3e917e7e4549ad0fc788aeb2e1684ce2268a2fc1d4f04e301c",
+        "f1b55f73e8bb0d15f6f8ee48e628d87d80683e0f0e8932478e6c0db8a4d07858"
       ]
     },
     {
@@ -101,12 +103,13 @@
     },
     {
       "path": "model/monitoring_actions.py",
-      "bytes": 4119,
-      "sha256": "3001009ea496a7b4168d1ae3e99018669e6abbfd4cb0d9ff49b04edf8e1a898a",
+      "bytes": 5097,
+      "sha256": "6a1943001eb067e41681d491dd25e6e6ecc3a324e958f4b547367db212bd84c1",
       "predecessor_sha256": [
         "e9bc8115891abb1a855c96c0007a93926049d0a1d4f208ef30fe462026b7b87f",
         "9bdecb178fc77025f26669d8428baa69066074d3c700e4a1535bc24e67b13686",
-        "1e1d64781a8b70b8c884bd2ddd5373d9bbdccae68584f17bcd8a49340061f84a"
+        "1e1d64781a8b70b8c884bd2ddd5373d9bbdccae68584f17bcd8a49340061f84a",
+        "3001009ea496a7b4168d1ae3e99018669e6abbfd4cb0d9ff49b04edf8e1a898a"
       ]
     },
     {
@@ -122,32 +125,34 @@
     },
     {
       "path": "operator/monitoring_native.py",
-      "bytes": 9431,
-      "sha256": "d297c0b17358653f8af979277f5b6fee381447ca9b517f7a3e9b41e572cf6e47",
+      "bytes": 9632,
+      "sha256": "3f0d199f044445c45b72fde84bc356bac33e97ff7e45189d6cda0112456a47dd",
       "predecessor_sha256": [
         "f1db205c2240b65d15fbe6d44c357459b31caa82d348dc9b8a058135e6a91c75",
         "6e988dbba4730c08af0afe3fb242fa01ed407e6a801163965a12672d279a7d60",
         "6f5ce1a12ee537c5963c198b99f3142055c7778f96df8d5b6aceae726e7a96c9",
-        "3386288f6b86715e6bd941e94d85bea2637721e063599d90f4779dfc73c17ffd"
+        "3386288f6b86715e6bd941e94d85bea2637721e063599d90f4779dfc73c17ffd",
+        "d297c0b17358653f8af979277f5b6fee381447ca9b517f7a3e9b41e572cf6e47"
       ]
     },
     {
       "path": "operator/extensions/monitoring.json",
-      "bytes": 1876,
-      "sha256": "9b2dc0414555cf1666b4998a5d3d22faa9d551eb18174337c6cd31b625bb2bfc",
+      "bytes": 2017,
+      "sha256": "0c97b6dd758697849acc96a2f7b1fa42c2a702962569929e6b43fb798e498d35",
       "predecessor_sha256": [
         "dd42f8a79612669422d6d1d3ddf91bff8f8d017d90eb60c2f601252e8627ced8",
         "8f562aeab5eb007c0bfbb1e9eb54274817d7d0cd093935f7a27647fe42fc007c",
         "224aa0281aa1047e804bcf7dcf6d34451ca9bb59cd5a18e06ff4dfdcc7b405b4",
         "6f126ec8362be17ee17f70780f6d2b8ebc98b5f22fa03118f8100ff4cae0d3bf",
         "f78a7bf1b38e057b04b65f03badbc89576930a152b4d3af7271803ec0500dd5c",
-        "2f6b3291ae2c1c6c64cd62a53c75e55d5f1cca4659f018e590252b9c32d44d61"
+        "2f6b3291ae2c1c6c64cd62a53c75e55d5f1cca4659f018e590252b9c32d44d61",
+        "9b2dc0414555cf1666b4998a5d3d22faa9d551eb18174337c6cd31b625bb2bfc"
       ]
     },
     {
       "path": "operator/web/monitoring.mjs",
-      "bytes": 8438,
-      "sha256": "61806854947e01183f0e160a6ae808346c9b794b5b6ac7210372ae97ab7ffe49",
+      "bytes": 8855,
+      "sha256": "3e25982a207cb20a4493dee22cab03ec399b8c59941beb89b9c78408dfb17deb",
       "predecessor_sha256": [
         "4997a2652034fae1708455f742b72b68dcc7d3a405c0ff303c7c69828b6ab9ea",
         "1728c22d5b2c9ffaf572b9cea8d9f9dcc4a3e28edd81c5125d7af9d227b124be",
@@ -155,7 +160,8 @@
         "c65c0081e94a1500850fc8e8f5f798bc8b63ed7e3bc57deab91784e8a5054f44",
         "0a76feed9d9bd4ac929fa8e9ad0f28f95205fa705c9f6314ef79e3f095e4b895",
         "f24ec9690b5aefc8e85c9792a55ef311e4933371688d83ce4f5f108d1ea32919",
-        "dd73d9da22fe3b9b1199dc9c3f824401b98b4fa94bbd10d180698e8a4c50084a"
+        "dd73d9da22fe3b9b1199dc9c3f824401b98b4fa94bbd10d180698e8a4c50084a",
+        "61806854947e01183f0e160a6ae808346c9b794b5b6ac7210372ae97ab7ffe49"
       ]
     },
     {
@@ -176,8 +182,8 @@
     },
     {
       "path": "integrations/monitoring/source_adoption.json",
-      "bytes": 25880,
-      "sha256": "53b7ff0e49b95bee66cf537625ff6b941851ffe386d3165b672353f6dae94a5c",
+      "bytes": 31753,
+      "sha256": "7f1e2886a331d75ce1def4c5d4a0a91a551573ad72931efeddd3933c42e214e8",
       "predecessor_sha256": [
         "830e35b5d5b8929ef6ea238935b96bd7148c1224fab04802a89c9b52234f98a7",
         "785ffefbacf24579a9d6d138797ea50874e42a9ce75b7db5282c24f36d42be19",
@@ -186,7 +192,10 @@
         "f089667e84cfd0c188ba9b88b70b4eba254dbd0ad7515a1732e7669a159cc518",
         "f369e85122676c48e5a44ba171ce37b4e883e49927dfe24314c6f38c19d0750c",
         "9a6b8beb001af96487838b62d21a064ffd14e1fb8be7160981338adf80d27b9c",
-        "c8fa5a27fe68a5eb17863f52cd9b13e87b8625a0960c480ae8490469a54533b7"
+        "c8fa5a27fe68a5eb17863f52cd9b13e87b8625a0960c480ae8490469a54533b7",
+        "53b7ff0e49b95bee66cf537625ff6b941851ffe386d3165b672353f6dae94a5c",
+        "f410679ab2882516ecfb31e90778bd136984ab08518d35d7f903c3945c0d2550",
+        "4b2afe0f7086c3fdee29f8962b4197dbbb32915ecd702e055be726b23ad5513a"
       ]
     },
     {
@@ -551,6 +560,92 @@
       "bytes": 507,
       "sha256": "93df7b6ee47e9f3ad1d5d83b629bff6c0a0fd2b9c464e474bdba3fcdd5f70a88",
       "predecessor_sha256": []
+    },
+    {
+      "path": "docs/MONITORING_EXPORT_STREAMING.md",
+      "bytes": 3798,
+      "sha256": "c525f42f13267bdcc20eaf4cc87d1a7a6c1d62504e2b983fcdc4d3cf4eff3341",
+      "predecessor_sha256": []
+    },
+    {
+      "path": "docs/MONITORING_FIELDWORK_RETURN.md",
+      "bytes": 6261,
+      "sha256": "98b23e599548d4c919f727f8cb44b43e3672463652b1efe2f9c85952937e58a5",
+      "predecessor_sha256": []
+    },
+    {
+      "path": "integration/component_fragments/monitoring-budget-comparison.json",
+      "bytes": 801,
+      "sha256": "964daaf5c02aac67b6642cb976cad23e038cd491c3f16b4263f89e695596c1d2",
+      "predecessor_sha256": []
+    },
+    {
+      "path": "model/MONITORING_BUDGET_COMPARISON.md",
+      "bytes": 6508,
+      "sha256": "0de09d942e2e60832b61489ab8da0edbc49769dc025fee51eaeefabab6aa8790",
+      "predecessor_sha256": []
+    },
+    {
+      "path": "model/monitoring_field_return.py",
+      "bytes": 24812,
+      "sha256": "d9019900577dfb9ae9311e6086b3d2c175871c80055f5dec874e840c3455876b",
+      "predecessor_sha256": []
+    },
+    {
+      "path": "model/monitoring_frontier_comparison.py",
+      "bytes": 25919,
+      "sha256": "1d12423cefad54a458f063c6a20d534b95a75d6587715fad654caae6c793a51b",
+      "predecessor_sha256": []
+    },
+    {
+      "path": "operator/MONITORING_BUDGET_CHOICES.md",
+      "bytes": 6953,
+      "sha256": "774b203ed4a533b1ecac8029927478b17858a45fb7f8faad6040e2609304ceab",
+      "predecessor_sha256": []
+    },
+    {
+      "path": "operator/web/monitoring-frontiers.css",
+      "bytes": 1484,
+      "sha256": "5e171a30eba7511e8c163c25e3a88209fcc7a07aa2ee5c07a5769260165cde59",
+      "predecessor_sha256": []
+    },
+    {
+      "path": "operator/web/monitoring-frontiers.mjs",
+      "bytes": 24139,
+      "sha256": "827fbf9f1985b373aebac8d441eb31640a14c85bfe12ddfdc3676113b9d3cfc0",
+      "predecessor_sha256": []
+    },
+    {
+      "path": "operator/web/monitoring_field_return.mjs",
+      "bytes": 10523,
+      "sha256": "5a203e3ca27b97e5b10fbfc8659bd6b573c1a001537446861fb982398e48b2b7",
+      "predecessor_sha256": []
+    },
+    {
+      "path": "source_tools/receive_monitoring_fieldwork.py",
+      "bytes": 8230,
+      "sha256": "0013adef7cece77ff1c043bb06420a143d50b786686e79ab8de0cde565266eac",
+      "predecessor_sha256": []
+    },
+    {
+      "path": "source_tools/return_monitoring_fieldwork.py",
+      "bytes": 2717,
+      "sha256": "e5d55b67011c1e9b28ce3e74f0a0ec6eb38d7c8bd512938869087081a242f0be",
+      "predecessor_sha256": []
+    },
+    {
+      "path": "integrations/monitoring/PREDECESSORS.json",
+      "bytes": 16267,
+      "sha256": "bed954a59d000b22ae24bb71f2a23359975d1099031aeb3b8d54106e9542c91f",
+      "predecessor_sha256": [
+        "9fef2b526d6fd30ffcb226cfef642c53f9cbabd01dc47a2923dadbbe62a6e9d2"
+      ]
+    },
+    {
+      "path": "integrations/monitoring/current_application_files.json",
+      "bytes": 4239,
+      "sha256": "57adcfadab949fdf637f6eb231cdbf05ac2a346d6be265441217c05e224b3439",
+      "predecessor_sha256": []
     }
   ],
   "requires": [
@@ -645,5 +740,11 @@
     "source_schema": "upstate.monitoring-observed-source/v2",
     "guide": "model/MONITORING_OBSERVED_CONTEXT.md",
     "component_fragment": "integration/component_fragments/monitoring-observed-station-scope.json"
+  },
+  "saved_budget_comparison": {
+    "source_publication": "a92980a492604e6cb7684d13c84afdbbdbefb1d9",
+    "source_collection": "monitoring_frontier_comparisons",
+    "guide": "model/MONITORING_BUDGET_COMPARISON.md",
+    "component_fragment": "integration/component_fragments/monitoring-budget-comparison.json"
   }
 }

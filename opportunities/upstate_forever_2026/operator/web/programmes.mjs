@@ -322,6 +322,7 @@ export function attachProgrammes(context) {
       actionButton('run-selected', 'Run selected cases', record.id, nativeActive ? 'disabled' : '') +
       actionButton('pause', record.pause_requested ? 'Pause requested' : 'Pause after current run', record.id, canPause ? '' : 'disabled') +
       actionButton('report', 'Build result catalogue', record.id, nativeActive ? 'disabled' : '') +
+      actionButton('study-export', 'Export native study', record.id, nativeActive ? 'disabled' : '') +
       actionButton('selection', 'Download selections', record.id) + actionButton('clone', 'Copy selections', record.id) +
       (task ? actionButton('task', 'Inspect active operation', task.id) : '') + '</div>' +
       '<p class="note">Resume reuses the original run identities and completed native stages. Selecting cases limits this request; the saved programme retains every case.</p>' +
@@ -330,7 +331,7 @@ export function attachProgrammes(context) {
       '<section class="programme-output"><header class="section-header"><div><h3>Result catalogue</h3><p>Open the original quantities, units, geographic coverage and result files retained for these runs.</p></div>' +
       actionButton('open-report', 'Open saved catalogue', record.id, report || files.length ? '' : 'disabled') + '</header>' +
       (files.length ? fileList(files) : '<p class="note">Build the catalogue after a run finishes. Completed cases can be reported while other cases remain in the programme.</p>') + '</section>' +
-      interactionProgrammeHTML(record) + ensembleCandidatesHTML(record) +
+      interactionProgrammeHTML(record) + studyDeliveriesHTML(record) + ensembleCandidatesHTML(record) +
       '<details class="technical" data-programme-details="' + escapeHTML('selection:' + record.id) + '"><summary>Complete saved selections and provenance</summary><pre class="json-view">' +
       escapeHTML(JSON.stringify(record.selection, null, 2)) + '</pre></details></section>';
   }
@@ -939,6 +940,139 @@ export function attachProgrammes(context) {
         });
       });
   }
+  function studyDeliveriesHTML(value) {
+    const rows = Object.values(value?.deliveries || {});
+    if (!rows.length) return '';
+    return '<section class="programme-output"><h3>Saved maps and reports</h3>' +
+      table(['Study', 'Edition', 'State', 'Open'], rows.map(row =>
+        '<tr><td>' + escapeHTML(row.selection?.native_study?.title || row.selection?.title || 'Saved map delivery') +
+        (row.error?.message ? '<p class="error">' + escapeHTML(row.error.message) + '</p>' : '') +
+        '</td><td>' + escapeHTML(row.selection?.delivery_mode === 'native_study' ? 'Native study' : 'Regional RFP') +
+        '</td><td>' + stateBadge(row.state) + '</td><td>' +
+        (row.state === 'complete' && row.delivery_id ? actionButton('delivery', 'Maps and report', row.delivery_id) : 'Open the retained operation to continue') +
+        '</td></tr>')) + '</section>';
+  }
+
+  async function studyExportForm(programmeId) {
+    const requestedWorkspace = workspaceKey();
+    const current = await api(query('detail', {programme_id: programmeId}));
+    if (requestedWorkspace !== workspaceKey()) return;
+    const rows = asArray(current.runs);
+    const complete = row => row.state === 'complete' && nativeModels(row.native_selection?.models || row.models).length === 2;
+    const baselines = rows.filter(row => complete(row) && row.scenario_kind === 'baseline');
+    const alternativesFor = key => {
+      const base = baselines.find(row => row.key === key);
+      return rows.filter(row => complete(row) && row.scenario_kind === 'landcover' &&
+        row.profile_id === base?.profile_id && row.run_id !== base?.run_id);
+    };
+    const preferred = baselines.find(row => row.key === current.baseline_run && alternativesFor(row.key).length)
+      || baselines.find(row => alternativesFor(row.key).length);
+    if (!preferred) {
+      detail('Complete the native study cases',
+        '<p>Select one completed original-land-cover baseline and at least one completed land-cover alternative under the same parameter profile. Both cases need NDR and SDR on this programme’s retained grid.</p>' +
+        '<p>The study export reuses those original model outputs and includes current nutrient and sediment exports, combined export priority, and future nutrient and sediment changes.</p>',
+        {kind: 'programme-study-inputs', id: programmeId});
+      return;
+    }
+    let form, formRoot, revision = 0, previewSerial = 0;
+    const field = name => form.elements.namedItem(name);
+    const isCurrent = version => requestedWorkspace === workspaceKey() && version === revision &&
+      formRoot?.isConnected && document.querySelector('#operation-form') === form;
+    const readSelection = () => {
+      const future = [...formRoot.querySelectorAll('[name="study_future"]:checked')].map(node => node.value);
+      if (!future.length) throw new Error('Select at least one completed land-cover alternative.');
+      const selection = {
+        delivery_mode: 'native_study',
+        native_study: {title: field('study_title').value.trim(), purpose: field('study_purpose').value.trim()},
+        baseline_run: field('study_baseline').value, scenario_runs: future,
+        contact: {name: field('study_contact_name').value.trim(),
+          organization: field('study_contact_org').value.trim(), email: field('study_contact_email').value.trim()},
+      };
+      const reference = field('study_reference').value.trim();
+      if (reference) selection.native_study.reference = reference;
+      if (!selection.native_study.title || !selection.native_study.purpose)
+        throw new Error('Name the study and explain its purpose and input assumptions.');
+      return selection;
+    };
+    const invalidate = () => {
+      revision += 1;
+      formRoot.querySelector('[data-study-preview]').textContent = 'Review the current study selections before export.';
+    };
+    const futureChoices = () => {
+      const candidates = alternativesFor(field('study_baseline').value);
+      const holder = formRoot.querySelector('[data-study-alternatives]');
+      holder.innerHTML = candidates.length ? candidates.map(row =>
+        '<label><input type="checkbox" name="study_future" value="' + escapeHTML(row.key) + '" checked> ' +
+        escapeHTML(row.title || row.key) + ' <small class="mono">' + escapeHTML(short(row.run_id)) + '</small></label>').join('') :
+        '<p>Select a baseline with completed same-profile land-cover alternatives.</p>';
+    };
+    const review = async () => {
+      const selection = readSelection(), version = revision, serial = ++previewSerial;
+      const target = formRoot.querySelector('[data-study-preview]');
+      target.textContent = 'Checking the original completed runs and native-study export…';
+      try {
+        const result = await api('/api/programmes/delivery-preview', {method: 'POST',
+          body: {workspace: requestedWorkspace, programme_id: programmeId, selection}});
+        if (!isCurrent(version) || serial !== previewSerial || canonical(selection) !== canonical(readSelection())) return null;
+        target.innerHTML = '<div class="notice"><strong>' +
+          escapeHTML(result.ready ? 'Ready to export the selected native study' : 'Complete the selected native calculations') +
+          '</strong><p>' + escapeHTML(result.scenario_runs.length) + ' land-cover alternative(s). Required map families: ' +
+          escapeHTML(asArray(result.required_map_families).map(name => name.replaceAll('_', ' ')).join('; ')) +
+          '.</p><p>Annual nitrogen and phosphorus remain in kilograms; sediment remains in metric tonnes. Change maps use alternative minus baseline on paired valid cells.</p></div>';
+        return result;
+      } catch (error) {
+        if (!isCurrent(version) || serial !== previewSerial) return null;
+        target.textContent = error.message || String(error);
+        throw error;
+      }
+    };
+    openForm('Export native study',
+      'Build maps, the scientific report and the original study source package from completed model cases.',
+      '<div class="programme-form" data-study-form><div class="form-grid">' +
+      '<label>Study title<input name="study_title" required value="' + escapeHTML(current.title) + '"></label>' +
+      '<label>Completed baseline<select name="study_baseline" required>' +
+      baselines.filter(row => alternativesFor(row.key).length).map(row => '<option value="' + escapeHTML(row.key) + '"' +
+        (row.key === preferred.key ? ' selected' : '') + '>' + escapeHTML(row.title || row.key) + '</option>').join('') +
+      '</select></label></div><label>Purpose, input assumptions and interpretation<textarea name="study_purpose" rows="3" required>' +
+      escapeHTML(current.selection?.description || '') + '</textarea></label>' +
+      '<label>Source or teaching reference<input name="study_reference" value="' +
+      escapeHTML(current.source_reference || current.selection?.source_reference || '') + '"></label>' +
+      '<fieldset><legend>Completed land-cover alternatives</legend><div data-study-alternatives></div></fieldset>' +
+      '<details><summary>Metadata contact, if applicable</summary><div class="form-grid">' +
+      '<label>Name<input name="study_contact_name"></label><label>Organization<input name="study_contact_org"></label>' +
+      '<label>Email<input name="study_contact_email" type="email"></label></div></details>' +
+      '<p class="note">This native-study edition provides five model-derived map families and retains the original grid, parameter table, scenario edits and runtime. Label simulated inputs in the study title and purpose when this is a teaching case. Additional source-water or designation maps use separately selected source records.</p>' +
+      '<button type="button" data-study-review>Review study export</button><div data-study-preview role="status" aria-live="polite"></div></div>',
+      'Build maps and report', async () => {
+        const selection = readSelection(), version = revision;
+        const result = await review();
+        if (!result || !isCurrent(version) || canonical(selection) !== canonical(readSelection()))
+          throw new Error('The study selection changed; review it and export again.');
+        if (!result.ready) throw new Error('Complete the selected baseline and alternatives before export.');
+        return submitAction('compute.programme.delivery', {programme_id: programmeId, selection});
+      }, () => {
+        form = document.querySelector('#operation-form');
+        formRoot = form.querySelector('[data-study-form]');
+        futureChoices();
+        formRoot.addEventListener('input', invalidate);
+        formRoot.addEventListener('change', event => {
+          if (event.target.name === 'study_baseline') futureChoices();
+          invalidate();
+        });
+        formRoot.querySelector('[data-study-review]').addEventListener('click', async event => {
+          const button = event.currentTarget;
+          button.disabled = true;
+          try { await review(); } catch (error) {
+            if (formRoot?.isConnected && document.querySelector('#operation-form') === form &&
+                requestedWorkspace === workspaceKey())
+              formRoot.querySelector('[data-study-preview]').textContent = error.message || String(error);
+          }
+          finally { if (button.isConnected) button.disabled = false; }
+        });
+        invalidate();
+      });
+  }
+
   async function dispatchLocal(action, value) {
     clearError();
     if (action === 'refresh') return refreshRecord();
@@ -960,6 +1094,8 @@ export function attachProgrammes(context) {
     if (action === 'task') return showTask(value);
     if (action === 'selection') return downloadJSON(record.selection, 'programme-' + short(record.id) + '.json');
     if (action === 'open-report') return showReport(value);
+    if (action === 'study-export') return studyExportForm(value);
+    if (action === 'delivery') return openItem('deliveries', value);
     if (action === 'report') return sendAction('compute.programme.report', {programme_id: value});
     if (action === 'run') return sendAction('compute.programme.run', {programme_id: value});
     if (action === 'run-selected') {
@@ -982,6 +1118,7 @@ export function attachProgrammes(context) {
     if (button.dataset.action === 'programme-open') return open(button.dataset.id);
     if (button.dataset.action === 'programme-create') return createForm();
     if (button.dataset.action === 'programme-import') return importForm();
+    if (button.dataset.action === 'programme-delivery') return openItem('deliveries', button.dataset.id);
     if (button.dataset.action === 'programme-interaction') return fromInteraction(button.dataset.id);
   }
   function taskActions(task) {
@@ -991,12 +1128,15 @@ export function attachProgrammes(context) {
     return '<div class="notice"><strong>' + escapeHTML(row?.title || 'Saved run programme') + '</strong><p>' +
       escapeHTML(row ? labelState(row.state) + ' · ' + countLine(row) : 'The original programme retains each native result and its continuation state.') +
       '</p><button type="button" data-action="programme-open" data-id="' + escapeHTML(id) + '">Open run programme</button>'+
+      (task.action === 'compute.programme.delivery' && task.result?.delivery_id ?
+        '<button type="button" data-action="programme-delivery" data-id="' + escapeHTML(task.result.delivery_id) + '">Open maps and report</button>' : '')+
       (task.experiment?.experiment_id?'<button type="button" data-action="experiment-show" data-id="'+
         escapeHTML(task.experiment.experiment_id)+'">Open experiment results</button>':'')+
       ((task.programme_report_error||task.experiment?.report_error)?'<p class="error">'+
         escapeHTML(task.programme_report_error||task.experiment.report_error)+'</p>':'')+'</div>';
   }
   function completionMessage(task) {
+    if (task.action === 'compute.programme.delivery' && task.result?.delivery_id) return 'Maps, scientific report and original study source package are ready.';
     if (task.action !== 'compute.programme.run' && task.action !== 'compute.programme.pair-completion') return '';
     if (task.action === 'compute.programme.pair-completion' && !task.payload?.run) return 'Matching calculation programme saved.';
     const result = task.result || {}, counts = result.counts || {};

@@ -19,6 +19,22 @@ from pathlib import Path
 import tempfile
 
 FILES = (
+    "model/field_deployment.py",
+    "model/monitoring_packet.py",
+    "model/monitoring_common.py",
+    "operator/field_deployment.py",
+    "operator/extensions/field-deployment.json",
+    "operator/web/implementation_deployment.mjs",
+    "docs/FIELD_CREW_DEPLOYMENT.md",
+    "model/scientific_briefing.py",
+    "model/scientific_report_editions.py",
+    "model/scientific_report_review.py",
+    "operator/web/reviews.mjs",
+    "source_tools/prepare_scientific_briefing.py",
+    "operator/source_report_editions.py",
+    "operator/source_reports.py",
+    "operator/extensions/source-reports.json",
+    "docs/SCIENTIFIC_REPORT_BRIEFING.md",
     "model/scientific_report.py",
     "model/observed_report_render.py",
     "model/implementation_qc.py",
@@ -39,6 +55,7 @@ FILES = (
     "observations/eighteenmile_2023/wqp_20261013/field-intake/lab-request.json",
     "model/implementation_schema.py",
     "model/implementation.py",
+    "model/implementation_reconciliation.py",
     "model/implementation_report_source.py",
     "operator/implementation_report_source.py",
     "operator/extensions/implementation-report-source.json",
@@ -67,6 +84,7 @@ FILES = (
     "operator/extensions/implementation.json",
     "operator/extensions/implementation-outcomes.json",
     "operator/web/implementation.mjs",
+    "operator/web/implementation_reconciliation.mjs",
     "operator/web/implementation_lab.mjs",
     "operator/web/implementation_briefing.mjs",
     "operator/web/implementation_dispatch.mjs",
@@ -88,6 +106,9 @@ FILES = (
 OFFLINE_FILE = "operator/web/implementation_workbench.html"
 OFFLINE_BUILDER = "build_implementation_offline.py"
 OPTIONAL_FILES = (
+    "source_tools/receive_scientific_report_review.py",
+    "source_tools/RECEIVE_SCIENTIFIC_REPORT_REVIEW.md",
+    "model/SCIENTIFIC_REPORT_REVIEW.md",
     "model/IMPLEMENTATION_QC.md",
     "observations/eighteenmile_2023/wqp_20261013/field-intake/README.md",
     "observations/eighteenmile_2023/wqp_20261013/field-intake/LABORATORY_CYCLE.md",
@@ -99,9 +120,11 @@ OPTIONAL_FILES = (
     "docs/IMPLEMENTATION_METHOD_CONTEXT.md",
     "docs/IMPLEMENTATION_LAB_RESULTS.md",
     "docs/IMPLEMENTATION_LAB_DISPATCH.md",
+    "docs/IMPLEMENTATION_LAB_METHOD_DEFINITIONS.md",
     "docs/IMPLEMENTATION_EVIDENCE_INTEGRATION.md",
     "docs/IMPLEMENTATION_DISPATCH_REPORT.md",
     "docs/IMPLEMENTATION_SOURCE_REPORTS.md",
+    "docs/IMPLEMENTATION_RECONCILIATION.md",
     "docs/IMPLEMENTATION_PLAN_REPORT_SOURCE.md",
     "docs/OBSERVED_REPORT_RENDERING.md",
     "docs/IMPLEMENTATION_RESULTS_REVIEW.md",
@@ -118,6 +141,41 @@ ERROR_JOIN = (
     "    if implementation_detail is not None:\n"
     "        return implementation_detail\n"
 )
+
+
+def patch_evidence_csp(source):
+    """Allow verified local image Blobs in the actual HTML response only."""
+    tree = ast.parse(source, filename="operator/server.py")
+    targets = []
+    for function in ast.walk(tree):
+        if not isinstance(function, ast.FunctionDef) or function.name != "do_GET":
+            continue
+        for call in ast.walk(function):
+            if (isinstance(call, ast.Call) and isinstance(call.func, ast.Attribute)
+                    and call.func.attr == "send_header" and len(call.args) >= 2
+                    and isinstance(call.args[0], ast.Constant)
+                    and call.args[0].value == "Content-Security-Policy"
+                    and isinstance(call.args[1], ast.Constant)
+                    and isinstance(call.args[1].value, str)):
+                policy = call.args[1].value
+                if any(part.strip().startswith("img-src ") for part in policy.split(";")):
+                    targets.append(call.args[1])
+    if len(targets) != 1:
+        raise ValueError("Locate the current single HTML response image CSP before joining evidence previews.")
+    node = targets[0]
+    directives = node.value.split(";")
+    index = next(i for i, part in enumerate(directives) if part.strip().startswith("img-src "))
+    if "blob:" in directives[index].split():
+        return source
+    directives[index] = directives[index].rstrip() + " blob:"
+    replacement = repr(";".join(directives)).encode("utf-8")
+    lines = source.encode("utf-8").splitlines(keepends=True)
+    start = sum(len(line) for line in lines[:node.lineno - 1]) + node.col_offset
+    end = sum(len(line) for line in lines[:node.end_lineno - 1]) + node.end_col_offset
+    raw = source.encode("utf-8")
+    result = (raw[:start] + replacement + raw[end:]).decode("utf-8")
+    ast.parse(result, filename="operator/server.py")
+    return result
 
 
 def sha(data):
@@ -183,6 +241,23 @@ def patch_error(source):
         source = source.replace(anchor, anchor + ERROR_IMPORT, 1)
     ast.parse(source, filename="operator/server.py")
     return source
+
+
+def patch_scientific_review_host(source):
+    """Compose the saved-report handoff without replacing the original app."""
+    if "const sourceReports=attachSourceReports({" not in source:
+        return source
+    if "prepareCustomerReview:value=>customerReviews.prepareScientificReportReview(value)" in source:
+        return source
+    anchor = " showTask,refresh,openBackup:()=>backupForm(),\n openStudy:selection=>"
+    replacement = (
+        " showTask,refresh,openBackup:()=>backupForm(),\n"
+        " prepareCustomerReview:value=>customerReviews.prepareScientificReportReview(value),\n"
+        " openStudy:selection=>"
+    )
+    if source.count(anchor) != 1 or "const customerReviews=attachCustomerReviews(" not in source:
+        raise ValueError("Compose the saved scientific report review hook with this original application")
+    return source.replace(anchor, replacement, 1)
 
 
 def host_installed(application, server, app):
@@ -332,7 +407,10 @@ def run(application, source_root, *, dry_run=False, expected_preimages=None):
             app_text = host.patch_app(app_text)
             original["operator/web/app.mjs"] = app_before
             pending["operator/web/app.mjs"] = app_text.encode("utf-8")
-        server_text = patch_error(server_text)
+        app_text = patch_scientific_review_host(app_text)
+        original["operator/web/app.mjs"] = app_before
+        pending["operator/web/app.mjs"] = app_text.encode("utf-8")
+        server_text = patch_evidence_csp(patch_error(server_text))
         original["operator/server.py"] = server_before
         pending["operator/server.py"] = server_text.encode("utf-8")
 

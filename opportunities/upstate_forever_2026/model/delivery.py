@@ -16,6 +16,7 @@ from .source_lineage import LINEAGE_VERSION
 from .delivery_archive import package_archive
 from . import receiving_water_delivery, scientific_report, observed_context, delivery_datasets
 from . import scenario_analysis_delivery as analysis_delivery
+from . import scenario_treatment_report
 from .robust_decisions.eco_robust import decision_delivery
 from .client_economics import (CLIENT_REPORT_EDITION, bind_economic,
                                retain_economic, scientific_sections)
@@ -24,8 +25,8 @@ NDR_GUIDE = "https://storage.googleapis.com/releases.naturalcapitalproject.org/i
 SDR_GUIDE = "https://storage.googleapis.com/releases.naturalcapitalproject.org/invest/3.20.0/userguide/en/sdr.html"
 OVERLAY_LABELS = (("drinking_water", "Drinking-water source areas"),
                   ("high_quality_waters", "Designated high-quality waters"))
-DELIVERY_EDITION = "2026-10-13-integrated-native-decision-report-13"
-DELIVERY_FORMAT_VERSION = "retained-stage-version-decision-client-report-13"
+DELIVERY_EDITION = "2026-10-13-integrated-native-treatment-report-14"
+DELIVERY_FORMAT_VERSION = "retained-stage-version-treatment-client-report-14"
 
 def _copy(source, target, expected=None):
     target.parent.mkdir(parents=True, exist_ok=True)
@@ -821,6 +822,9 @@ def build(workspace, selection):
                     observation_results=observation_results,
                     receptor_inventory=state.get("receptor_inventory"),
                 )
+                sections.extend(scenario_treatment_report.sections(
+                    summary, baseline_run_id=baseline["id"],
+                    alternative_run_ids=[run["id"] for run in alternatives]))
                 if study_mode:
                     sections = [("Land-cover alternatives" if heading == "Future conservation and development scenarios" else heading, blocks)
                                 for heading, blocks in sections]

@@ -126,39 +126,85 @@ def _issue(code, field, message):
     return {"code": code, "field": field, "message": message}
 
 
+def _collection(fields, profile):
+    """Parse only the selected source's date formats; retain the original text."""
+    raw = fields.get("collected_at", "")
+    result = {"original": raw, "parsed_local": None, "source_timezone": fields.get("timezone", ""),
+              "offset_present": False, "time_precision": "unknown", "midnight_may_mean_unknown": False}
+    if not raw:
+        return result, []
+    parsed = None
+    try:
+        parsed = dt.datetime.fromisoformat(raw.replace("Z", "+00:00"))
+    except ValueError:
+        pass
+    selected = profile.get("collection_formats", [])
+    if not isinstance(selected, list):
+        raise ValueError("The installed collection_formats must be a list")
+    formats = list(selected)
+    if profile.get("collection_datetime_format") == "MM/DD/YYYY HH:MM":
+        formats.append("%m/%d/%Y %H:%M")
+    for pattern in formats:
+        if parsed is not None:
+            break
+        if not isinstance(pattern, str):
+            raise ValueError("The installed collection format must be text")
+        try:
+            parsed = dt.datetime.strptime(raw, pattern)
+        except ValueError:
+            pass
+    if parsed is None:
+        return result, [_issue("collection_time", "collected_at",
+                               "Review the original collection date/time against this selected source profile")]
+    result["parsed_local"] = parsed.isoformat()
+    result["offset_present"] = parsed.utcoffset() is not None
+    has_time = bool(re.search(r"(?:T|\s)\d{1,2}:\d{2}", raw))
+    result["time_precision"] = "reported_time" if has_time else "date_only"
+    issues = []
+    if not result["offset_present"] and not result["source_timezone"]:
+        issues.append(_issue("collection_timezone", "timezone",
+                             "Record or explicitly review the source collection timezone; no UTC offset was inferred"))
+    if not has_time:
+        issues.append(_issue("collection_time_precision", "collected_at",
+                             "The original value supplies a date only; preserve the missing collection time"))
+    if (profile.get("detection_contract") == "ceden_2_chemistry" and has_time
+            and parsed.hour == 0 and parsed.minute == 0):
+        result["midnight_may_mean_unknown"] = True
+        issues.append(_issue("collection_midnight", "collected_at",
+                             "CEDEN 2.0 00:00 may mean unknown collection time; retain a source-backed decision"))
+    return result, issues
+
+
 def assess(fields, profile):
-    """Preserve detection semantics. Values and bounds remain decimal text."""
+    """Preserve original numeric text and profile-specific detection semantics."""
     issues = []
     for name in ("station_id", "collected_at", "parameter", "method", "matrix", "unit"):
         if not fields.get(name):
             issues.append(_issue("missing_" + name, name, "Supply or review the original " + name))
-    collected = fields.get("collected_at", "")
-    if collected:
-        try:
-            parsed = dt.datetime.fromisoformat(collected.replace("Z", "+00:00"))
-            if parsed.tzinfo is None and not fields.get("timezone"):
-                issues.append(_issue("collection_timezone", "timezone", "Record the original collection timezone"))
-        except ValueError:
-            issues.append(_issue("collection_time", "collected_at",
-                                 "Map the collection date/time to ISO 8601 without changing its timezone"))
+    collection, time_issues = _collection(fields, profile)
+    issues.extend(time_issues)
     if fields.get("weather") and fields["weather"].lower() not in ("wet", "dry", "unknown"):
         issues.append(_issue("weather_class", "weather", "Review the source wet/dry event classification"))
     value = fields.get("value", "").strip()
     detected = fields.get("detected", "").strip().upper()
     qualifier = fields.get("qualifier", "").strip().upper()
+    ceden2 = profile.get("detection_contract") == "ceden_2_chemistry"
+    qa_tokens = {part.strip().upper() for part in fields.get("qa_code", "").split(",") if part.strip()}
+    dnq = "DNQ" in qa_tokens if ceden2 else qualifier == "DNQ"
     number, bound, bound_value = _decimal(value), "", None
     match = re.fullmatch(r"\s*(<=|>=|<|>)\s*(.+?)\s*", value)
     if match:
         bound, bound_value = match.group(1), _decimal(match.group(2))
-        if bound_value is None:
-            issues.append(_issue("bound_value", "value", "Original censor bound is not a finite number"))
+        if bound_value is None or bound_value < 0:
+            issues.append(_issue("bound_value", "value", "Original censor bound is not a finite nonnegative concentration"))
     nondetect = detected == "N" or qualifier in ("ND", "U", "NONDETECT", "NON-DETECT")
     censoring = "less_than" if bound in ("<", "<=") else "greater_than" if bound else (
-        "nondetect" if nondetect else "detected_not_quantified" if qualifier == "DNQ" else "estimated" if qualifier == "J" else
+        "nondetect" if nondetect else "detected_not_quantified" if dnq else "estimated" if qualifier == "J" else
         "quantified" if number is not None else "unquantified")
     if detected and detected not in ("Y", "N"):
         issues.append(_issue("detected_flag", "detected", "Review the source detection flag"))
-    ceden2 = profile.get("detection_contract") == "ceden_2_chemistry"
+    if ceden2 and not detected:
+        issues.append(_issue("ceden2_detection_required", "detected", "CEDEN 2.0 requires the original Y/N detection flag"))
     if ceden2 and detected == "N" and value:
         issues.append(_issue("ceden2_nondetect_result", "value",
                              "CEDEN 2.0 nondetects require a blank Result; retain and review this source value"))
@@ -171,18 +217,47 @@ def assess(fields, profile):
     if number is not None and number < 0:
         issues.append(_issue("negative_result", "value", "Review the negative result or source sentinel"))
     limits = {}
+    documented_bacteria = {"E. coli", "Coliform, Total", "Coliform, Fecal", "Enterococcus"}
+    selected_bacteria = set(profile.get("indicator_bacteria_analytes", [])) & documented_bacteria
     for name in ("mdl", "rl"):
         raw = fields.get(name, "").strip()
         num = _decimal(raw) if raw else None
-        sentinel = (ceden2 and name == "mdl" and raw == "-88" and
-                    fields.get("parameter") in profile.get("indicator_bacteria_analytes", []))
-        limits[name] = {"original": raw, "numeric": str(num) if num is not None and not sentinel else None,
+        sentinel = (ceden2 and name == "mdl" and num == Decimal(-88) and
+                    fields.get("parameter") in selected_bacteria)
+        usable = num is not None and num >= 0 and not sentinel
+        limits[name] = {"original": raw, "numeric": str(num) if usable else None,
                         "sentinel": "indicator_bacteria_not_applicable" if sentinel else None}
         if raw and (num is None or (num < 0 and not sentinel)):
             issues.append(_issue("invalid_" + name, name, "Review the original detection/reporting limit or sentinel"))
+        if ceden2 and not raw:
+            issues.append(_issue("missing_" + name, name, "CEDEN 2.0 requires the original detection/reporting limit"))
+        if ceden2 and num is not None and num == 0:
+            issues.append(_issue("nonpositive_" + name, name, "Review the nonpositive CEDEN 2.0 detection/reporting limit"))
     mdl, rl = (_decimal(limits[key]["numeric"]) for key in ("mdl", "rl"))
-    if mdl is not None and rl is not None and mdl > rl:
-        issues.append(_issue("limit_order", "mdl", "Method detection limit exceeds the reporting limit"))
+    if mdl is not None and rl is not None and (mdl >= rl if ceden2 else mdl > rl):
+        issues.append(_issue("limit_order", "mdl", "Review detection and reporting limits; CEDEN 2.0 requires MRL greater than MDL"))
+    if ceden2:
+        if qualifier == "DNQ" and not dnq:
+            issues.append(_issue("ceden2_dnq_field", "qa_code",
+                                 "CEDEN 2.0 DNQ belongs in the original QACode; review this separately mapped qualifier"))
+        positive_limits = mdl is not None and rl is not None and 0 < mdl < rl
+        between = positive_limits and number is not None and mdl < number < rl
+        if between and (not dnq or detected != "Y"):
+            issues.append(_issue("ceden2_estimated_dnq", "qa_code",
+                                 "A result between positive MDL and MRL requires Y and DNQ in the original QACode"))
+        if dnq and (detected != "Y" or number is None or bound or
+                    positive_limits and not between):
+            issues.append(_issue("ceden2_dnq_conflict", "qa_code",
+                                 "Review DNQ against the original numeric result, detection flag and positive MDL/MRL"))
+        if dnq and not positive_limits:
+            issues.append(_issue("ceden2_dnq_limits", "qa_code",
+                                 "DNQ needs a reviewed limit basis; an unknown/sentinel MDL is not a numeric censor bound"))
+        if number is not None and mdl is not None and mdl > 0 and number <= mdl:
+            issues.append(_issue("ceden2_result_mdl", "value",
+                                 "Review the result at or below MDL against the original detection and laboratory decision"))
+        if number is not None and rl is not None and rl > 0 and number == rl:
+            issues.append(_issue("ceden2_reporting_boundary", "value",
+                                 "Retain the laboratory's explicit decision for a result exactly at MRL"))
     if qualifier and qualifier not in ("ND", "U", "NONDETECT", "NON-DETECT", "DNQ", "J", "="):
         issues.append(_issue("source_qualifier", "qualifier", "Review the source result qualifier"))
     if fields.get("qa_code") or fields.get("qa_note"):
@@ -192,9 +267,11 @@ def assess(fields, profile):
             coordinate = _decimal(fields[name])
             if coordinate is None or not Decimal(low) <= coordinate <= Decimal(high):
                 issues.append(_issue("invalid_" + name, name, "Review the original coordinate"))
-    return {"censoring": censoring, "numeric_value": str(number) if number is not None and censoring in ("quantified", "estimated") else None,
-            "bound_operator": bound or None, "bound_value": str(bound_value) if bound_value is not None else None,
-            "limits": limits, "issues": issues}
+    return {"censoring": censoring,
+            "numeric_value": str(number) if number is not None and number >= 0 and censoring in ("quantified", "estimated") else None,
+            "bound_operator": bound or None,
+            "bound_value": str(bound_value) if bound_value is not None and bound_value >= 0 else None,
+            "limits": limits, "collection": collection, "issues": issues}
 
 
 def _raw_fields(original, mapping):
@@ -209,6 +286,7 @@ def intake(workspace, payload):
     choices = sum(bool(payload.get(key)) for key in ("observation_id", "csv_base64", "source_collection_id"))
     if choices != 1:
         raise ValueError("Select one original observation, registered source, or CSV upload")
+    provenance = {}
     title = _text(payload.get("title", ""), "batch title", required=True)
     source_uri = _text(payload.get("source_uri", ""), "original source URI", required=True)
     if payload.get("observation_id"):
@@ -221,6 +299,8 @@ def intake(workspace, payload):
         try:
             if payload.get("source_collection_id"):
                 original_path, _ = workspace.source_file(payload["source_collection_id"], payload["source_id"])
+                provenance = {"gwma_source_collection_id": payload["source_collection_id"],
+                              "gwma_source_id": payload["source_id"]}
             else:
                 encoded = payload["csv_base64"]
                 if not isinstance(encoded, str) or len(encoded) > (MAX_UPLOAD + 2) // 3 * 4:
@@ -243,10 +323,18 @@ def intake(workspace, payload):
             observed = observations.ingest(workspace, original_path, {
                 "title": title, "source_uri": source_uri, "columns": mapped,
                 "constants": context_constants, "value_basis": "original_context",
-                "observation_kind": "pathogen_study", "time_support": "original_sample"})
+                "observation_kind": "pathogen_study", "time_support": "original_sample", **provenance})
         finally:
             if temporary:
                 temporary.cleanup()
+    provenance = {key: observed.get("metadata", {}).get(key) for key in
+                  ("gwma_source_collection_id", "gwma_source_id")}
+    if any(provenance.values()):
+        if not all(provenance.values()):
+            raise ValueError("The original observation has incomplete registered-source provenance")
+        _, entry = workspace.source_file(provenance["gwma_source_collection_id"], provenance["gwma_source_id"])
+        if entry["body"]["sha256"] != observed["original"]["sha256"]:
+            raise ValueError("The registered source differs from the original observation")
     headers = observed["columns"]
     missing = sorted(set(mapping["columns"].values()) - set(headers))
     if missing:
@@ -263,6 +351,8 @@ def intake(workspace, payload):
     return _save(workspace, "batch", {"title": title, "study_id": study["id"],
                  "mapping_id": mapping["id"], "observation_id": observed["id"],
                  "source_uri": source_uri, "original": observed["original"],
+                 "source_collection_id": provenance.get("gwma_source_collection_id"),
+                 "source_id": provenance.get("gwma_source_id"),
                  "row_count": len(rows), "issue_count": sum(bool(row["assessment"]["issues"]) for row in rows),
                  "rows": rows})
 
@@ -283,6 +373,7 @@ def save_review(workspace, payload):
         raise ValueError("Supply a list of row decisions")
     seen = set()
     for change in changes:
+        change = _object(change, "row decision")
         key = change.get("row_id")
         if key not in known or key in seen:
             raise ValueError("Review each selected original row once")
@@ -392,9 +483,15 @@ def save_plan(workspace, payload):
         dependencies = task.get("depends_on", [])
         if not isinstance(dependencies, list) or any(key not in task_ids for key in dependencies):
             raise ValueError("Task dependencies must name this plan's task IDs")
-        duration = _decimal(task.get("duration_months", ""))
-        if duration is None or duration < 0:
-            raise ValueError("Give every task a nonnegative duration in months")
+        supplied_duration = task.get("duration_months", "")
+        if supplied_duration is None:
+            basis = _text(task.get("duration_basis", ""), "unagreed task duration basis")
+            if not basis and task.get("duration_status") != "to_be_agreed":
+                raise ValueError("An unagreed task duration needs its explicit basis or to_be_agreed status")
+        else:
+            duration = _decimal(supplied_duration)
+            if duration is None or duration < 0:
+                raise ValueError("Give a nonnegative task duration or an explicit unagreed duration")
         edges[task["id"]] = dependencies
     visiting, done = set(), set()
     def visit(key):
@@ -419,9 +516,30 @@ def save_plan(workspace, payload):
             raise ValueError("Study decisions use open, resolved or deferred status")
         if decision["status"] == "resolved" and (not decision.get("owner") or not decision.get("note")):
             raise ValueError("Resolved study decisions retain the named owner and decision")
+    sources = payload.get("sources", [])
+    if not isinstance(sources, list) or any(not isinstance(source, dict) for source in sources):
+        raise ValueError("Workplan sources must be complete source-reference objects")
+    from urllib.parse import urlsplit
+    for source in sources:
+        _text(source.get("title", ""), "workplan source title", required=True)
+        uri = _text(source.get("url", ""), "workplan source URL", required=True)
+        parsed = urlsplit(uri)
+        if parsed.scheme not in ("http", "https") or not parsed.netloc:
+            raise ValueError("Retain the workplan source's complete HTTP(S) URL")
+        if source.get("retained_sha256") and not re.fullmatch(r"[0-9a-f]{64}", source["retained_sha256"]):
+            raise ValueError("Retain the exact complete workplan source SHA256")
+    context = dict(_object(payload.get("template_context", {}), "source template context"))
+    for key in ("watersheds", "phase", "phases", "scope", "authorization"):
+        if key in payload:
+            context[key] = payload[key]
+    template_schema = payload.get("template_schema", "")
+    if str(payload.get("schema", "")).startswith("upstate.gwma-workplan-template/"):
+        template_schema = payload["schema"]
+    _text(template_schema, "original template schema")
     return _save(workspace, "plan", {"study_id": study["id"],
                  "title": _text(payload.get("title", ""), "plan title", required=True),
                  "owners": _object(payload.get("owners", {}), "plan owners"),
+                 "sources": sources, "template_schema": template_schema, "template_context": context,
                  "decisions": decisions, "tasks": tasks, "scenarios": scenarios})
 
 
@@ -451,7 +569,11 @@ def _analytical(row, contract):
                               ("mdl_numeric", evaluation["limits"]["mdl"]["numeric"]),
                               ("rl_numeric", evaluation["limits"]["rl"]["numeric"])):
             if value is not None:
-                base[target] = str(Decimal(value) * factor)
+                # The allowed factors are exact powers of ten. Shift the Decimal
+                # tuple instead of rounding a long original through the default context.
+                original = Decimal(value).as_tuple()
+                base[target] = str(Decimal((original.sign, original.digits,
+                                             original.exponent + factor.adjusted())))
     return base
 
 
@@ -491,17 +613,47 @@ def _appendix(study, batches, contract, plan, counts):
               'The original operator workspace archive carries editable records for reopening.</p></html>').encode("utf-8")
 
 
+def _registered_sources(workspace, batch):
+    """Carry the complete original collection, including raw API pages and sidecars."""
+    collection_id, source_id = batch.get("source_collection_id"), batch.get("source_id")
+    if not collection_id and not source_id:
+        return None, {}
+    if not collection_id or not source_id:
+        raise ValueError("Retained batch has incomplete registered-source provenance")
+    collection = workspace._get("sources", collection_id)
+    _, selected = workspace.source_file(collection_id, source_id)
+    if (selected["body"]["sha256"] != batch["original"]["sha256"]
+            or selected["body"]["bytes"] != batch["original"]["bytes"]):
+        raise ValueError("Registered source differs from the retained original batch")
+    originals = {}
+    for entry in collection["entries"]:
+        workspace.source_file(collection_id, entry["id"])
+        for body in [entry["body"], *entry.get("companions", [])]:
+            path = relative_file(workspace.root, body["object"])
+            if path.stat().st_size != body["bytes"] or file_digest(path) != body["sha256"]:
+                raise ValueError("A complete registered-source member changed")
+            originals["source-collections/" + collection_id + "/objects/" + body["sha256"]] = path
+    manifest = collection["original_manifest"]
+    path = relative_file(workspace.root, manifest["object"])
+    if path.stat().st_size != manifest["bytes"] or file_digest(path) != manifest["sha256"]:
+        raise ValueError("Original registered-source manifest changed")
+    originals["source-collections/" + collection_id + "/original-manifest.json"] = path
+    return collection, originals
+
+
 def build_handover(workspace, payload):
     study = _study(workspace, payload)
     selections = payload.get("batch_reviews", [])
     if not isinstance(selections, list) or not selections:
         raise ValueError("Select the study batches and their exact review editions")
+    if any(not isinstance(row, dict) for row in selections):
+        raise ValueError("Select batch/review objects")
     if len({row.get("batch_id") for row in selections}) != len(selections):
         raise ValueError("Select each batch once")
     contract = item(workspace, "contract", payload["contract_id"]) if payload.get("contract_id") else None
     plan = item(workspace, "plan", payload["plan_id"]) if payload.get("plan_id") else None
     _same_study(study, *[record for record in (contract, plan) if record])
-    batch_records, all_rows, records, originals = [], [], {}, {}
+    batch_records, all_rows, records, originals, registered = [], [], {}, {}, {}
     records[KINDS["study"] + "/" + study["id"] + ".json"] = canonical(
         {key: value for key, value in study.items() if key != "id"}) + b"\n"
     def record(kind, value):
@@ -520,6 +672,11 @@ def build_handover(workspace, payload):
         if file_digest(original) != source_hash or original.stat().st_size != batch["original"]["bytes"]:
             raise ValueError("The original retained source changed")
         originals[source_hash] = original
+        collection, source_files = _registered_sources(workspace, batch)
+        registered.update(source_files)
+        if collection:
+            records["sources/" + collection["id"] + ".json"] = canonical(
+                {key: data for key, data in collection.items() if key != "id"}) + b"\n"
         batch_records.append(batch)
         record("batch", batch)
         record("mapping", item(workspace, "mapping", batch["mapping_id"]))
@@ -536,6 +693,9 @@ def build_handover(workspace, payload):
                 if review["id"] in seen_reviews:
                     raise ValueError("Review history contains a cycle")
                 seen_reviews.add(review["id"])
+                _same_study(study, review)
+                if review["batch_id"] != batch["id"]:
+                    raise ValueError("Review history changed its original batch")
                 record("review", review)
                 review = item(workspace, "review", review["previous_review_id"]) if review.get("previous_review_id") else None
         all_rows.extend(resolved_rows(workspace, batch["id"], selected.get("review_id")))
@@ -551,8 +711,6 @@ def build_handover(workspace, payload):
             "contract_id": contract["id"] if contract else None, "plan_id": plan["id"] if plan else None,
             "counts": counts}
     # Content-derived directory permits exact retries and complete workspace moves.
-    edition = digest(body)
-    directory = workspace.root / "gwma-exports" / edition
     files = {**records, "analytical/all-observations.csv": _csv(analytical),
              "analytical/model-inputs.csv": _csv(
                  [row for row in analytical if row["analytical_status"] == "ready"],
@@ -572,16 +730,32 @@ def build_handover(workspace, payload):
                  "Original CSVs are named by their unchanged SHA256. Model inputs retain censor bounds and explicit "
                  "unit contracts; all-observations.csv also contains pending, excluded and unmapped rows. "
                  "This package carries complete record bodies and reviewer history.\n").encode("utf-8")}
-    manifest = {"schema": "upstate.gwma-handover-files/v1", "edition": edition, **body,
-                "files": []}
+    manifest = {"schema": "upstate.gwma-handover-files/v2", **body, "files": []}
     import hashlib
     for name, content in sorted(files.items()):
         manifest["files"].append({"path": name, "bytes": len(content), "sha256": hashlib.sha256(content).hexdigest()})
     for checksum, path in sorted(originals.items()):
         manifest["files"].append({"path": "originals/" + checksum + ".csv", "bytes": path.stat().st_size, "sha256": checksum})
+    for name, path in sorted(registered.items()):
+        manifest["files"].append({"path": name, "bytes": path.stat().st_size, "sha256": file_digest(path)})
+    # Bind the edition to every actual emitted member, including the current
+    # scientific interpretation. An upgraded assessment gets a distinct edition.
+    edition = digest(manifest)
+    manifest["edition"] = edition
     files["manifest.json"] = canonical(manifest) + b"\n"
+    directory = workspace.root / "gwma-exports" / edition
     directory.mkdir(parents=True, exist_ok=True)
     archive = directory / "GWMA_Study_Handover.zip"
+    if archive.exists():
+        if archive.is_symlink() or not archive.is_file():
+            raise ValueError("The retained study archive must be an ordinary file")
+        retained = {**body, "edition": edition,
+                    "archive": {"path": archive.relative_to(workspace.root).as_posix(),
+                                "bytes": archive.stat().st_size, "sha256": file_digest(archive)}}
+        # Reuse the fully verified original container. A receiving host may have
+        # another zlib version while every original member and edition agrees.
+        _verify_handover(workspace, retained)
+        return _save(workspace, "handover", retained)
     # Fixed member metadata yields the same bytes when retrying the same edition.
     buffer = io.BytesIO()
     with zipfile.ZipFile(buffer, "w", compression=zipfile.ZIP_DEFLATED, compresslevel=6) as output:
@@ -593,6 +767,10 @@ def build_handover(workspace, payload):
             info = zipfile.ZipInfo("originals/" + checksum + ".csv", (1980, 1, 1, 0, 0, 0))
             info.compress_type = zipfile.ZIP_DEFLATED
             output.writestr(info, path.read_bytes())
+        for name, path in sorted(registered.items()):
+            info = zipfile.ZipInfo(name, (1980, 1, 1, 0, 0, 0))
+            info.compress_type = zipfile.ZIP_DEFLATED
+            output.writestr(info, path.read_bytes())
     atomic_bytes(archive, buffer.getvalue(), immutable=True)
     return _save(workspace, "handover", {**body, "edition": edition,
                  "archive": {"path": archive.relative_to(workspace.root).as_posix(),
@@ -600,11 +778,13 @@ def build_handover(workspace, payload):
 
 
 def catalog(workspace):
-    result = {"fields": list(FIELDS), "profiles": profiles()}
+    template = Path(__file__).with_name("gwma_workplan_template.json")
+    result = {"fields": list(FIELDS), "profiles": profiles(),
+              "plan_template": json.loads(template.read_text(encoding="utf-8")) if template.exists() else {}}
     for kind, folder in KINDS.items():
         result[PLURALS[kind]] = [{key: value[key] for key in
                               ("id", "title", "study_id", "mapping_id", "observation_id",
-                               "batch_id", "reviewer", "row_count", "issue_count", "counts")
+                               "source_collection_id", "source_id", "batch_id", "reviewer", "row_count", "issue_count", "counts")
                               if key in value} for value in workspace._list(folder)]
     return result
 
@@ -614,8 +794,171 @@ def overview(workspace):
             for name, folder in KINDS.items()}
 
 
+def _verify_batch(workspace, batch):
+    study = item(workspace, "study", batch["study_id"])
+    mapping = item(workspace, "mapping", batch["mapping_id"])
+    _same_study(study, batch, mapping)
+    observed = workspace._get("observations", batch["observation_id"])
+    if observed["original"] != batch["original"]:
+        raise ValueError("Received GWMA batch changed its original observation source")
+    original = relative_file(workspace.root, batch["original"]["object"])
+    if (file_digest(original) != batch["original"]["sha256"]
+            or original.stat().st_size != batch["original"]["bytes"]):
+        raise ValueError("Received GWMA original CSV changed")
+    table = csv.DictReader(io.StringIO(original.read_text(encoding="utf-8-sig")))
+    if table.fieldnames != observed["columns"]:
+        raise ValueError("Received GWMA original column order changed")
+    source_rows = list(table)
+    if (len(source_rows) != len(observed["rows"]) or len(source_rows) != batch["row_count"]
+            or len(batch["rows"]) != batch["row_count"]):
+        raise ValueError("Received GWMA batch lost its original observation rows")
+    missing = set(mapping["columns"].values()) - set(observed["columns"])
+    if missing:
+        raise ValueError("Received GWMA mapping names absent source columns")
+    for ordinal, (raw, source, row) in enumerate(zip(source_rows, observed["rows"], batch["rows"]), 1):
+        expected_id = digest({"source_sha256": batch["original"]["sha256"], "record": ordinal})
+        if (raw != source["original"] or row["row_id"] != expected_id
+                or row["source_record"] != ordinal or row["source_line"] != source["line"]
+                or row["fields"] != _raw_fields(raw, mapping)):
+            raise ValueError("Received GWMA row changed its original source/mapping identity")
+    if batch["issue_count"] != sum(bool(row["assessment"]["issues"]) for row in batch["rows"]):
+        raise ValueError("Received GWMA issue count changed")
+    _registered_sources(workspace, batch)
+    return mapping, observed
+
+
+def _verify_review(workspace, review):
+    batch = item(workspace, "batch", review["batch_id"])
+    if batch["study_id"] != review["study_id"]:
+        raise ValueError("Received GWMA review changed study")
+    known = {row["row_id"] for row in batch["rows"]}
+    seen = set()
+    for decision in review["decisions"]:
+        key = decision["row_id"]
+        if key not in known or key in seen or decision["disposition"] not in ("accepted", "excluded", "pending"):
+            raise ValueError("Received GWMA review changed its original row decisions")
+        seen.add(key)
+        _strings(decision["overrides"], "received row corrections")
+        _text(decision["reviewer"], "received reviewer", required=True)
+        _text(decision["reason"], "received review reason", required=decision["disposition"] != "pending")
+    if review.get("previous_review_id"):
+        previous = item(workspace, "review", review["previous_review_id"])
+        if previous["batch_id"] != batch["id"] or previous["study_id"] != review["study_id"]:
+            raise ValueError("Received GWMA reviewer history changed batch")
+
+
+def _verify_handover(workspace, value):
+    archive = relative_file(workspace.root, value["archive"]["path"])
+    if archive.stat().st_size != value["archive"]["bytes"] or file_digest(archive) != value["archive"]["sha256"]:
+        raise ValueError("Received GWMA analytical handover changed")
+    study = item(workspace, "study", value["study_id"])
+    expected_records = {}
+    sources, registered = {}, {}
+    expected_rows = {}
+    def record(kind, selected):
+        if kind != "study":
+            _same_study(study, selected)
+        path = KINDS[kind] + "/" + selected["id"] + ".json"
+        expected_records[path] = canonical({key: data for key, data in selected.items() if key != "id"}) + b"\n"
+    record("study", study)
+    selected_objects = {}
+    for kind in ("contract", "plan"):
+        selected = item(workspace, kind, value[kind + "_id"]) if value.get(kind + "_id") else None
+        selected_objects[kind] = selected
+        if selected:
+            record(kind, selected)
+    for selected in value["batch_reviews"]:
+        batch = item(workspace, "batch", selected["batch_id"])
+        record("batch", batch)
+        mapping, observed = _verify_batch(workspace, batch)
+        record("mapping", mapping)
+        collection, source_files = _registered_sources(workspace, batch)
+        registered.update(source_files)
+        if collection:
+            expected_records["sources/" + collection["id"] + ".json"] = canonical(
+                {key: data for key, data in collection.items() if key != "id"}) + b"\n"
+        expected_records["observations/" + observed["id"] + ".json"] = canonical(
+            {key: data for key, data in observed.items() if key != "id"}) + b"\n"
+        source_sha = batch["original"]["sha256"]
+        if source_sha in sources:
+            raise ValueError("Received handover double-counts an original source")
+        sources[source_sha] = batch["original"]
+        for row in batch["rows"]:
+            expected_rows[(batch["id"], row["row_id"])] = (source_sha, mapping["id"], str(row["source_record"]))
+        review_id, seen = selected.get("review_id"), set()
+        while review_id:
+            if review_id in seen:
+                raise ValueError("Received GWMA reviewer history contains a cycle")
+            seen.add(review_id)
+            review = item(workspace, "review", review_id)
+            if review["batch_id"] != batch["id"]:
+                raise ValueError("Received handover reviewer history changed batch")
+            _verify_review(workspace, review)
+            record("review", review)
+            review_id = review.get("previous_review_id")
+    import hashlib
+    with zipfile.ZipFile(archive) as zipped:
+        names = zipped.namelist()
+        if len(names) != len(set(names)) or any(
+                name.startswith("/") or "\\" in name or any(p in ("", ".", "..") for p in name.split("/"))
+                for name in names):
+            raise ValueError("Received GWMA handover has ambiguous member paths")
+        manifest = json.loads(zipped.read("manifest.json"))
+        members = manifest["files"]
+        paths = [member["path"] for member in members]
+        if len(paths) != len(set(paths)) or set(names) != set(paths) | {"manifest.json"}:
+            raise ValueError("Received GWMA handover manifest is incomplete")
+        for member in members:
+            content = zipped.read(member["path"])
+            if len(content) != member["bytes"] or hashlib.sha256(content).hexdigest() != member["sha256"]:
+                raise ValueError("Received GWMA handover member changed: " + member["path"])
+        for key in ("title", "study_id", "batch_reviews", "contract_id", "plan_id", "counts", "edition"):
+            if manifest.get(key) != value.get(key):
+                raise ValueError("Received GWMA handover changed its selected " + key)
+        if manifest["schema"] == "upstate.gwma-handover-files/v2":
+            if digest({key: data for key, data in manifest.items() if key != "edition"}) != value["edition"]:
+                raise ValueError("Received GWMA handover changed its complete output edition")
+        elif manifest["schema"] != "upstate.gwma-handover-files/v1":
+            raise ValueError("Unsupported GWMA handover manifest")
+        for name, expected in expected_records.items():
+            if zipped.read(name) != expected:
+                raise ValueError("Received GWMA handover lost original record history: " + name)
+        if {name for name in names if name.startswith("source-collections/")} != set(registered):
+            raise ValueError("Received GWMA handover lost complete registered-source provenance")
+        for name, path in registered.items():
+            if zipped.read(name) != path.read_bytes():
+                raise ValueError("Received GWMA registered-source member changed: " + name)
+        source_members = {name for name in names if name.startswith("originals/")}
+        if source_members != {"originals/" + key + ".csv" for key in sources}:
+            raise ValueError("Received GWMA handover lost an original source file")
+        for checksum, original in sources.items():
+            body = zipped.read("originals/" + checksum + ".csv")
+            if len(body) != original["bytes"] or hashlib.sha256(body).hexdigest() != checksum:
+                raise ValueError("Received GWMA handover changed original source bytes")
+        for name, selected in (("study/study.json", study), ("study/contract.json", selected_objects["contract"]),
+                               ("study/workplan.json", selected_objects["plan"])):
+            if json.loads(zipped.read(name)) != selected:
+                raise ValueError("Received GWMA handover changed the selected study records")
+        analytical = list(csv.DictReader(io.StringIO(zipped.read("analytical/all-observations.csv").decode("utf-8"))))
+        incoming = [(row["batch_id"], row["row_id"]) for row in analytical]
+        if len(incoming) != len(set(incoming)) or set(incoming) != set(expected_rows):
+            raise ValueError("Received GWMA analytical handover lost or duplicated original rows")
+        for row in analytical:
+            if (row["source_sha256"], row["mapping_id"], row["source_record"]) != expected_rows[(row["batch_id"], row["row_id"])]:
+                raise ValueError("Received GWMA analytical row changed source lineage")
+        expected_counts = {"source_files": len(sources), "rows": len(analytical)}
+        for status in ("ready", "needs_review", "excluded", "contract_unmapped"):
+            expected_counts[status] = sum(row["analytical_status"] == status for row in analytical)
+        if expected_counts != value["counts"] or sum(expected_counts[key] for key in
+                ("ready", "needs_review", "excluded", "contract_unmapped")) != len(analytical):
+            raise ValueError("Received GWMA handover changed full-scope analytical dispositions")
+        model_inputs = list(csv.DictReader(io.StringIO(zipped.read("analytical/model-inputs.csv").decode("utf-8"))))
+        if model_inputs != [row for row in analytical if row["analytical_status"] == "ready"]:
+            raise ValueError("Received GWMA model input lost its exact reviewed selection")
+
+
 def verify_all(workspace):
-    """Receiving verification resolves original references, rows and archive bytes."""
+    """Resolve complete scientific record lineage and every archived member."""
     count = 0
     for kind, folder in KINDS.items():
         for value in workspace._list(folder):
@@ -623,23 +966,9 @@ def verify_all(workspace):
             if kind != "study":
                 item(workspace, "study", value["study_id"])
             if kind == "batch":
-                item(workspace, "mapping", value["mapping_id"])
-                original = relative_file(workspace.root, value["original"]["object"])
-                if file_digest(original) != value["original"]["sha256"]:
-                    raise ValueError("Received GWMA original CSV changed")
-                observed = workspace._get("observations", value["observation_id"])
-                if observed["original"]["sha256"] != value["original"]["sha256"] or len(observed["rows"]) != value["row_count"]:
-                    raise ValueError("Received GWMA batch lost its original observation rows")
+                _verify_batch(workspace, value)
             elif kind == "review":
-                batch = item(workspace, "batch", value["batch_id"])
-                if batch["study_id"] != value["study_id"]:
-                    raise ValueError("Received GWMA review changed study")
-                if value.get("previous_review_id"):
-                    previous = item(workspace, "review", value["previous_review_id"])
-                    if previous["batch_id"] != batch["id"]:
-                        raise ValueError("Received GWMA reviewer history changed batch")
+                _verify_review(workspace, value)
             elif kind == "handover":
-                archive = relative_file(workspace.root, value["archive"]["path"])
-                if archive.stat().st_size != value["archive"]["bytes"] or file_digest(archive) != value["archive"]["sha256"]:
-                    raise ValueError("Received GWMA analytical handover changed")
+                _verify_handover(workspace, value)
     return {"gwma_records": count}

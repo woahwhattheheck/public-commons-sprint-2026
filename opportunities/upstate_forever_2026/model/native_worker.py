@@ -97,6 +97,13 @@ def run_request(request_path):
                 or any(row["native_selection"] != request["selection"] for row in bindings)):
             raise ValueError("The worker run differs from its original programme binding")
 
+    study_context = request.get("study_context")
+    if study_context:
+        from .parameter_studies import native_case_context
+        checked = native_case_context(workspace, identifier(study_context["study_id"]), run_id)
+        if checked != study_context:
+            raise ValueError("The native worker differs from its original saved parameter case")
+
     stopped = threading.Event()
     identity = process_identity()
     if not identity or identity["process_group"] != os.getpid():

@@ -142,7 +142,7 @@ export function createWatershedContextDesk(host) {
   let catalog = null, saved = null, selectedId = '', focusHuc = '';
   let savedExport = null, selectedExportId = '', selectedHucs = [], selectionRequest = 0, catalogRequest = 0;
   let lastTaskSignature = '', busy = false, errorText = '', reportRequest = 0;
-  let sourceChoice = 0, networkChoice = '';
+  let sourceChoice = 0, networkChoice = '', includeMicrobial = true;
   let filters = emptyFilters();
   const receivingTasks = new Map();
   const currentWorkspace = () => host.getState()?.workspace_key ?? host.getWorkspace?.() ?? null;
@@ -239,7 +239,8 @@ export function createWatershedContextDesk(host) {
     return '<section class="wc-task-list" aria-label="Regional operations">' + tasks.map(task =>
       '<button type="button" data-wc-task="' + esc(task.id) + '">' +
       esc(task.action === 'watershed.context.export' ? 'Export watershed selection' :
-        task.action === 'watershed.context.receive' ? 'Receive completed regional run' : 'Build regional context') +
+        task.action === 'watershed.context.receive' ? 'Receive completed regional run' :
+        task.action === 'watershed.context.monitoring' ? 'Prepare utility monitoring' : 'Build regional context') +
       ' · ' + esc(human(task.state)) + '</button>').join('') + '</section>';
   }
   function sourceHtml() {
@@ -273,6 +274,27 @@ export function createWatershedContextDesk(host) {
         return option(record.id, label, selectedExportId);
       }).join('') + '</select>');
   }
+  function utilityMonitoringHtml() {
+    if (!savedExport?.utility_selection) return '';
+    const prepared = list(catalog?.utility_monitoring).filter(row => row.export_id === savedExport.id);
+    return '<section class="wc-coverage"><h3>Prepare monitoring for this utility</h3>' +
+      '<p>Use these exact whole-HUC planning units as the target area in Monitoring design. ' +
+      'The complete original domain graph remains available; candidate sites are restricted to this utility selection. ' +
+      'Enter the actual budget, costs, dates and crew assumptions in the existing design form.</p>' +
+      '<label><input type="checkbox" name="wc-monitoring-stations"' +
+      (includeMicrobial ? ' checked' : '') + '> Include the original utility microbial station locations</label>' +
+      '<p class="wc-note">This uses the retained original 217-HUC polygon source. Station coordinates preserve their WGS84/NAD83 datums; ' +
+      'historical samples do not automatically establish existing programme coverage or verified outlet placement.</p>' +
+      '<button type="button" data-wc-monitoring-prepare' + (busy ? ' disabled' : '') + '>Prepare utility monitoring network</button>' +
+      prepared.map(row => '<section><h4>' + esc(row.title) + '</h4><p>' +
+        esc(number(row.summary?.in_scope_catchments)) + ' candidate HUC12s · ' +
+        esc(number(row.network_summary?.catchments)) + ' original graph HUC12s · ' +
+        esc(number(row.network_summary?.stations)) + ' retained stations · ' +
+        esc(number(row.station_assignment_issues?.length || 0)) + ' station assignments to review</p>' +
+        '<button type="button" data-wc-monitoring-open="' + esc(row.network_id) + '">Design a monitoring campaign</button> ' +
+        '<button type="button" data-wc-monitoring-files="' + esc(row.id) + '">Open preparation and original-source files</button>' +
+        '</section>').join('') + '</section>';
+  }
   function selectionDownloads() {
     if (!savedExport) return '';
     return '<section class="wc-downloads"><h2>Saved watershed selection</h2>' +
@@ -281,7 +303,7 @@ export function createWatershedContextDesk(host) {
       ' retained in this selection. Additional table filters refine the view; these downloads contain the complete saved selection.</p>' +
       (savedExport.files?.['watershed-selection-brief.html']
         ? '<p class="wc-note">Open the HTML planning brief to review or print this selection. The Markdown brief and original JSON and CSV are also available below.</p>' : '') +
-      downloadsHtml(savedExport._downloads) +
+      downloadsHtml(savedExport._downloads) + utilityMonitoringHtml() +
       '<details><summary>Selected HUC12s and saved report</summary><pre>' +
       esc(pretty({huc12s:selectedHucs, report_id:savedExport.report_id,
         report_sha256:savedExport.report_sha256, source_fingerprint:savedExport.source_fingerprint})) +
@@ -605,6 +627,43 @@ export function createWatershedContextDesk(host) {
     const button = event.target.closest('button');
     if (!button || !root?.contains(button)) return;
     try {
+      if (button.hasAttribute('data-wc-monitoring-prepare')) {
+        if (busy) return;
+        const key = workspace, sourceExport = savedExport?.id, version = epoch;
+        if (!sourceExport || !savedExport?.utility_selection)
+          throw new Error('Open a saved original utility selection.');
+        busy = true; render();
+        try {
+          if (currentWorkspace() !== key) throw new Error('Return to the selected utility project.');
+          await host.submitAction('watershed.context.monitoring', {
+            export_id:sourceExport, include_microbial:includeMicrobial});
+          await host.refresh?.({force:true});
+          if (guard(version, key)) await refresh();
+        } finally { busy = false; if (guard(version, key)) render(); }
+        return;
+      }
+      if (button.dataset.wcMonitoringOpen) {
+        if (typeof host.openDesk !== 'function') throw new Error('Open Monitoring design and select the saved network.');
+        return await host.openDesk('monitoring', 'openNetwork', {
+          network_id:button.dataset.wcMonitoringOpen, workspace_key:workspace});
+      }
+      if (button.dataset.wcMonitoringFiles) {
+        const version = epoch, key = workspace;
+        const record = await read('monitoring', {monitoring_id:button.dataset.wcMonitoringFiles});
+        if (!guard(version, key)) return;
+        const section = root.querySelector('[data-wc-monitoring-result]');
+        if (section) section.remove();
+        const container = document.createElement('section');
+        container.className = 'wc-coverage'; container.setAttribute('data-wc-monitoring-result', '');
+        container.innerHTML = '<h3>Retained utility monitoring preparation</h3><p>' + esc(record.method.description) +
+          '</p>' + downloadsHtml(record._downloads) +
+          '<details><summary>Original geography, stations and network scope</summary><pre>' +
+          esc(pretty({method:record.method, summary:record.summary, stations:record.station_assignment_issues,
+                     network_id:record.network_id, receiving_plan_id:record.receiving_plan_id})) + '</pre></details>';
+        root.querySelector('.wc-downloads')?.append(container);
+        container.scrollIntoView({block:'nearest'});
+        return;
+      }
       if (button.hasAttribute('data-wc-refresh')) return refresh();
       if (button.hasAttribute('data-wc-build')) return await build();
       if (button.hasAttribute('data-wc-receive')) {
@@ -661,6 +720,7 @@ export function createWatershedContextDesk(host) {
       receive(file).catch(fail);
       return;
     }
+    if (key === 'monitoring-stations') { includeMicrobial = event.target.checked; return; }
     if (key === 'source') { sourceChoice = Number(event.target.value); return; }
     if (key === 'network') { networkChoice = event.target.value; return; }
     if (key in filters) { filters[key] = event.target.value; remember(); renderRows(); }

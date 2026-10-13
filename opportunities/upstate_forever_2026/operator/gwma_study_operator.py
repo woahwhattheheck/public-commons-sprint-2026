@@ -27,7 +27,10 @@ def read(operator, workspace_key, operation, payload):
 def invoke(operator, workspace_key, action, payload):
     if action not in ACTIONS:
         raise ValueError("Choose an existing GWMA study action")
-    return ACTIONS[action](operator.ws(workspace_key), payload)
+    value = ACTIONS[action](operator.ws(workspace_key), payload)
+    return {key: value[key] for key in ("id", "title", "study_id", "mapping_id",
+            "observation_id", "batch_id", "row_count", "issue_count", "counts", "archive")
+            if key in value}
 
 
 def overview(operator, workspace_key):

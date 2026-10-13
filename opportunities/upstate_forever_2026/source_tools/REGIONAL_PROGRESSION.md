@@ -198,3 +198,29 @@ The continuation adds an operator of existing components. Scientific equations, 
 ## Complete application source
 
 The maintained application component catalogue explicitly includes this continuation, its original browser drivers and launcher, and supervised native worker modules in the guided journey closure. Build the current complete application through that catalogue. The original portable Workspace capture includes installed source families and verifies every retained member when restored; a profile-only source packet remains scoped to its published profile check.
+
+
+## Include the original saved budget comparison
+
+Add `--monitoring-comparison-selection BUDGET_SELECTION.json` when this complete receiving course already includes either the original Monitoring opening or a restored native Monitoring selection. The option forwards the exact frozen file to the maintained browser's `--comparison-selection` option.
+
+For the original completed b9d5 scientific project, use the actual saved frontier:
+
+```json
+{
+  "schema": "upstate.monitoring-budget-browser-selection/v1",
+  "frontier_id": "2c1c770ffb1b00c85995a58ad93823407a628052b7b2b01d58aeced5387d12e5",
+  "context_ids": [],
+  "title": "Regional 217-catchment monitoring budget choices"
+}
+```
+
+Omit `baseline_plan_id` to select that frontier's first original plan, or supply an exact member of its ordered plan inventory. The separately created six-search-area campaign can have a different native plan ID. It remains the selected campaign for the original course. Optional `context_ids` attach at most one saved observed context per exact frontier plan.
+
+The progression retains the input's original path and byte hash in its request document and freezes it under the receiving output before browser dispatch. The maintained browser operates the saved frontier, previews and saves the comparison through its existing queue, downloads the original source/report packet, and reopens the exact comparison in a fresh browser and independently restored Workspace. It returns to the original campaign before the original campaign export stages.
+
+Completed-browser adoption now checks the exact optional input hash and parsed selection, then opens the actual saved comparison through the native verifier. Its original network, frontier, baseline, title and selected source contexts must match the receiving request. Existing operation/task resumes remain on the original records.
+
+Commands that omit this option preserve their earlier request documents, browser arguments and input identity. Adding a comparison to an already completed or running course changes the requested work: use a new receiving output for that expanded intent. Do not rewrite an in-flight original request.
+
+The original Monitoring source feature and optional browser continuation are required in the receiving application (PR3521 and PR3561). The standalone direct Monitoring browser remains suitable when only the saved campaign/comparison course is requested; this option is for an already selected complete regional progression.

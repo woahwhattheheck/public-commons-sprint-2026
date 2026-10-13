@@ -73,3 +73,11 @@ The existing source reader preserves all 78 original NarrowResult columns and ex
 ## Station geography and ordered scientific delivery
 
 The maintained scientific source now includes `RL_NATIVE_RECEIVING.md`. Its original `import_rl18151.py` can build the saved Station Geography edition and compose the RL report into an existing ordered delivery request. Those operations reuse the source owner's original observation editions and station coordinates. Open the retained receiving guide for the exact `--station-output`, `--build-station` and delivery-selection options. Published studies retains this guide, importer and complete updated report closure alongside the same 498-result cohort.
+
+## Original sampling-support edition
+
+The cumulative scientific source from PR3502 supplies the original sampling explorer, its machine-readable result, all three CSV exports and the complete 50-file source family. Import the installed cohort again to retain that source edition in the same Workspace; existing saved editions and review selections keep their original identities.
+
+The retained-report menu exposes both **RL-18151 original lake observations — offline inspector** and **RL-18151 sampling support — original results and activities**. The sampling explorer keeps original versus compatible cohorts, result versus activity weighting, every leave-one-activity-out selection and the programme/month calendar. Its 2019–2023 coverage gap stays visible. It uses the source-owned calculations and exact original ResultIdentifiers; the native observation table remains the same 498 records and 40 activities.
+
+Both HTML entrypoints retain the complete original source family, including the source recipe, metadata joins and original 16 response bodies. Choose either retained report for its exact selected-report ZIP, or export the complete study and Workspace. Reopening retains the original relative links and each native source selector. The second entrypoint is optional when opening an older scientific source edition, preserving the original inspector's behavior.

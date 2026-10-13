@@ -135,7 +135,8 @@
         "source_tools/application_assembly.py",
         "source_tools/application_components.py",
         "source_tools/install_cumulative_application.py",
-        "model/scientific_figures.py"
+        "model/scientific_figures.py",
+        "model/scientific_tables.py"
       ],
       "requires": []
     },
@@ -768,10 +769,15 @@
     "gis-projects": {
       "title": "gis projects",
       "paths": [
-        "operator/extensions/gis-projects.json"
+        "operator/extensions/gis-projects.json",
+        "model/gis_workspace.py",
+        "model/GIS_PROJECTS.md",
+        "operator/web/gis-projects.mjs",
+        "operator/web/delivery_inspection.mjs"
       ],
       "requires": [
-        "core"
+        "core",
+        "delivery-datasets"
       ]
     },
     "guided-journey": {
@@ -5436,6 +5442,32 @@
         "delivery-inspection"
       ],
       "source_reference": "ES-20261013-DELIVERY-DATASETS: exact retained physical exports, signed comparison rasters and selected priorities in the original atlas index and portable delivery."
+    },
+    "scientific-report-review": {
+      "title": "Saved scientific reports, discussion packages and customer review",
+      "paths": [
+        "model/scientific_report_editions.py",
+        "model/scientific_report_review.py",
+        "model/SCIENTIFIC_REPORT_REVIEW.md",
+        "model/observed_report_render.py",
+        "model/scientific_briefing.py",
+        "operator/source_reports.py",
+        "operator/source_report_editions.py",
+        "operator/extensions/source-reports.json",
+        "operator/web/source_reports.mjs",
+        "operator/web/source_reports.css",
+        "operator/web/source_report_editions.mjs",
+        "operator/web/observed_reports.mjs",
+        "source_tools/prepare_scientific_briefing.py",
+        "docs/SCIENTIFIC_REPORT_BRIEFING.md",
+        "docs/OBSERVED_REPORT_RENDERING.md",
+        "source_tools/receive_scientific_report_review.py",
+        "source_tools/RECEIVE_SCIENTIFIC_REPORT_REVIEW.md"
+      ],
+      "requires": [
+        "eco13",
+        "observed-context"
+      ]
     }
   }
 }

@@ -162,9 +162,11 @@ def _catalog(operator, workspace_key):
         spec = grids.get(grid_id, {}).get("spec", {})
         experiment["network_source_reference"] = source_lookup.get(
             (spec.get("source_collection_id"), spec.get("model_domain", {}).get("source_id")))
+    from model.receptor_report_maps import capability as report_map_capability
     return {"workspace_key": workspace_key, "workspace_id": workspace.project["id"],
             "title": workspace.project["title"], "experiments": experiment_rows,
             "experiment_available": experiment_available,
+            "report_map_capability": report_map_capability(),
             "receptor_profiles": _profiles(), "runs": runs, "network_sources": network_sources,
             **saved}
 
