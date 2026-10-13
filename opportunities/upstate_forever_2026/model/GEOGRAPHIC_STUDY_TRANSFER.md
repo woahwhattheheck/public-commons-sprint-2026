@@ -39,6 +39,13 @@ analysis controls so the recipient can continue the same work.
 Completed historical course result editions, original reports and quantitative
 archives remain present where retained. Their frozen archives keep their exact
 original identity even if a current editable analysis has subsequently advanced.
+The selected-study reader checks each captured paired-report signature against
+its original quantitative ZIP. It uses that archive's complete member inventory
+and exact original analysis/report JSON, while independently retaining current
+editable reports and any later spatial-review additions. Archive checks read
+only the directory, manifest and two JSON records; original raster payloads stay
+inside their hash-bound quantitative archive. An interrupted report with no
+published archive still requires its original live report signature.
 No pending case is marked completed by this exporter, and no full-course
 completion requirement is imposed merely to export a completed reference report.
 
