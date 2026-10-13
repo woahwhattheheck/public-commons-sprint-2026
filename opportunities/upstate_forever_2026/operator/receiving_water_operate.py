@@ -55,6 +55,27 @@ def original_preparation(path):
 
 
 
+def original_saved_plan(workspace_path, key):
+    """Open an immutable saved plan in the actual received scientific Workspace."""
+    if workspace_path is None:
+        raise ValueError("Supply the actual --workspace with --plan-id")
+    workspace = Workspace(workspace_path.expanduser().resolve(strict=True))
+    key = identifier(key)
+    path = workspace.root / "receiving-water-plans" / key / "plan.json"
+    before = record(path)
+    plan = receiving_waters.inspect_plan(workspace, key)
+    if plan["state"] != "complete":
+        raise ValueError("Select a complete original saved receiving-water plan")
+    after = record(path)
+    if before != after:
+        raise ValueError("The original saved plan changed while opening the browser course")
+    source = {
+        "file": after, "id": plan["id"], "record_sha256": plan["record_sha256"],
+        "project_id": workspace.project["id"],
+    }
+    return workspace, plan, source
+
+
 def original_geographic_context(path, workspace_path, relationship):
     """Resolve the actual producer context without recasting its input schema."""
     if workspace_path is None:
@@ -105,6 +126,7 @@ def original_geographic_context(path, workspace_path, relationship):
 
 def operate(args):
     geographic_input = None
+    saved_plan_input = None
     if getattr(args, "geographic_context", None):
         relationship = args.relationship or "published_protection"
         workspace, plan, geographic_input, scopes = original_geographic_context(
@@ -115,6 +137,11 @@ def operate(args):
             if supplied is not None and supplied != value:
                 raise ValueError("The explicit " + key + " differs from the selected original geographic context")
             setattr(args, key, value)
+        preparation = None
+    elif getattr(args, "plan_id", None):
+        if getattr(args, "relationship", None):
+            raise ValueError("--relationship is used with --geographic-context")
+        workspace, plan, saved_plan_input = original_saved_plan(args.workspace, args.plan_id)
         preparation = None
     else:
         if getattr(args, "workspace", None) or getattr(args, "relationship", None):
@@ -173,6 +200,8 @@ def operate(args):
         source_paths += ("model/geographic_receiving_context.py",
                          "model/receiving_water_report_source.py",
                          "model/receiving_waters.py")
+    if saved_plan_input:
+        source_paths += ("model/receiving_waters.py",)
     source_paths = tuple(dict.fromkeys(source_paths))
     sources = [{"name": name, **record(APP / name)} for name in source_paths]
     identity = {
@@ -182,6 +211,7 @@ def operate(args):
         **({"scope_analysis_id": args.scope_analysis_id} if args.scope_analysis_id else {}),
         "preparation": preparation, "operator_state": str(state),
         **({"geographic_context": geographic_input} if geographic_input else {}),
+        **({"saved_plan": saved_plan_input} if saved_plan_input else {}),
         "application_identity": digest([
             {key: row[key] for key in ("name", "bytes", "sha256")} for row in sources
         ]),
@@ -318,10 +348,11 @@ def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     selection = parser.add_mutually_exclusive_group(required=True)
     selection.add_argument("--preparation", type=Path)
+    selection.add_argument("--plan-id", help="Exact complete Receiving plan retained in --workspace")
     selection.add_argument("--geographic-context", type=Path,
                            help="Exact completed geographic-receiving context.json")
     parser.add_argument("--workspace", type=Path,
-                        help="Original Workspace for --geographic-context")
+                        help="Actual original or restored Workspace for --plan-id or --geographic-context")
     parser.add_argument("--relationship", choices=("upstream_huc", "published_protection"),
                         help="Original relationship in the geographic context; default published_protection")
     parser.add_argument("--output-dir", type=Path, required=True)
