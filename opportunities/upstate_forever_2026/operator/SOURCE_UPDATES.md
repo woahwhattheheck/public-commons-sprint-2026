@@ -89,7 +89,7 @@ A receiving session should retain its application root, startup command, install
 
 ### Concurrent use in the shared application
 
-Source comparisons retain their exact source choices. Changing editions or source mappings while a comparison is loading discards the superseded response; saving checks the current choices again. Plan details track the selected plan and its retained progress timestamp, so idle application refreshes reuse the displayed details while changed progress reloads them. Workspace changes and closed desks discard their outstanding responses. An aborted mount from an earlier workspace cannot replace the newly opened desk with an old error.
+Source comparisons retain their exact source choices. Changing editions or source mappings while a comparison is loading discards the superseded response; saving checks the current choices again. Plan details track the selected plan and its retained progress timestamp, so idle application refreshes reuse the displayed details while changed progress reloads them. Workspace changes and closed desks discard their outstanding state, catalogue, plan and error responses. The standalone page waits for its selected workspace and source catalogue together before displaying them. Refresh requests arriving during a load are coalesced and then completed for the current selection, including an explicit refresh; a delayed response cannot reopen the previous workspace. An aborted mount from an earlier workspace cannot replace the newly opened desk with an old error.
 
 ## Existing source refresh plans
 
@@ -134,6 +134,13 @@ plan and HTML/CSV reports, and reopening the saved plan in a fresh browser.
 With `--transfer`, it downloads the ordinary complete archive, verifies its
 native ticket, restores that exact ZIP through the original form, and opens the
 same immutable update and progress in the independent receiving workspace.
+It also opens the original standalone bookmark, delays one actual response from
+the earlier workspace, selects the actual restored workspace, and then releases
+that original response. The selected workspace, saved preference and plan must
+remain on the receiving study. This interaction uses the real operator response
+and real restored workspace; it does not create another native case. Desktop and
+phone screenshots of the standalone receiving view are retained for the same
+producing-peer visual inspection.
 
 The maintained driver opens and refreshes the populated plan at desktop and
 390-pixel phone widths, then downloads its HTML/CSV report and original plan
