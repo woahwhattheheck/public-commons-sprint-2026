@@ -66,7 +66,7 @@ def retained_geometry(workspace, manifest=None, source_id=None):
                     raise ValueError("The original WBD source needs its native format, CRS and decoded hash")
                 if selected_id == WBD_SOURCE and entry["body"]["sha256"] != WBD_SHA:
                     continue
-                path, entry = workspace.source_file(collection["id"], source_id)
+                path, entry = workspace.source_file(collection["id"], selected_id)
                 return collection, path, entry
     if manifest is not None:
         raise ValueError("The geometry manifest needs the selected native WBD source entry")
