@@ -522,3 +522,10 @@ completed `ensemble.scientific-source` task return that same handoff. Preparing
 or opening this handoff does not start another model run or rerun calibration.
 The receiving Sources controller remains the single owner of the draft,
 preview, queued report, saved edition, export and reopening workflow.
+
+
+## Saved native designs as scientific sources
+
+The complete native design report course is in [NATIVE_STUDY_SCIENTIFIC_REPORT.md](NATIVE_STUDY_SCIENTIFIC_REPORT.md). In Scenario sensitivity, open the actual saved design and choose **Prepare scientific study report**, then **Compose retained study report**. The original same-profile land-cover contrasts and baseline parameter contrasts become a typed source with exact support groups, original physical figures, complete numeric CSV/JSON and source companions. Annual observations are optional for this design report; the original saved-calibration scientific report remains its own source.
+
+Headless continuation: `python -B -m model.ensemble_consumers_cli --workspace ACTUAL_WORKSPACE study-source --ensemble-id ACTUAL_DESIGN`. The existing native engine and queue retain ownership of all model results. Use `study-selection` to append this prepared source to a current ordered report selection. Complete Workspace backup remains the transfer for original model rasters, spatial inputs and native continuation.

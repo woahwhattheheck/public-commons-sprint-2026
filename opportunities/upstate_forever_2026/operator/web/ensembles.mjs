@@ -476,6 +476,23 @@ export function attachEnsembles(context) {
     });
   }
 
+  async function studyScientificReport(selection={}) {
+    const workspace=currentWorkspace(), version=++designVersion;
+    if(selection.workspace_key && selection.workspace_key!==workspace)
+      throw Error('Open this saved native study in its original workspace.');
+    const value=await api(endpoint('/api/ensembles/study-source',{ensemble_id:selection.ensemble_id}));
+    if(workspace!==currentWorkspace() || version!==designVersion)return;
+    const prepared=value.scientific_report_selection;
+    if(value.workspace_key!==workspace || prepared?.workspace_key!==workspace ||
+        !Array.isArray(prepared.sources) || !prepared.sources.length)
+      throw Error('Prepare the original native study scientific source before opening its composer.');
+    await refresh({force:true});
+    if(workspace!==currentWorkspace() || version!==designVersion)return;
+    return openScientificReport({workspace_key:workspace,
+      sources:prepared.sources.map(row=>({source_collection_id:row.source_collection_id,source_id:row.source_id})),
+      title:prepared.title});
+  }
+
   async function scientificDelivery(selection={}) {
     const workspace=currentWorkspace(), version=++designVersion;
     if(selection.workspace_key && selection.workspace_key!==workspace)
@@ -741,6 +758,7 @@ export function attachEnsembles(context) {
       button('inspect','Refresh results',id)+
       (item.state!=='complete'?button('run',item.state==='prepared'?'Run saved design':'Continue saved design',id):'')+
       button('report','Generate report and exports',id)+
+      button('study-source','Prepare scientific study report',id)+
       button('consumer-decision','Physical decisions',id)+
       button('consumer-calibration','Evaluate annual loads',id)+'</div>'+
       '<div class="cards">'+[
@@ -771,6 +789,19 @@ export function attachEnsembles(context) {
       content+='<div class="notice">The downloadable report needs to be refreshed. '+
         'Choose Generate report and exports to include the current study results.</div>';
     content+=downloadsHTML(result.downloads);
+    content+='<h3 class="subheading">Scientific study source and figures</h3>'+
+      '<p>The saved design can publish its original land-cover and parameter contrasts, exact support groups, '+
+      'coefficient sources and figures into the ordered scientific report composer.</p>';
+    if(result.study_source?.source?.source){
+      const published=result.study_source.source;
+      content+='<p>Saved source: '+escapeHTML(label(published.state))+
+        ' · '+numeric(published.landcover_pairs)+' land-cover rows · '+numeric(published.parameter_pairs)+
+        ' parameter rows · '+numeric(published.figure_count)+' figures.</p>'+
+        (published.source_state==='stale'?'<div class="notice">This retained source describes an earlier study state. '+
+          'Prepare scientific study report to create the current edition, or compose the retained edition below.</div>':'')+
+        button('study-compose','Compose retained study report',id)+downloadsHTML(result.study_source.downloads);
+    }else content+='<p class="note">Complete at least one paired native contrast, then choose Prepare scientific study report. '+
+      'The existing action freezes actual report data and does not start another model run.</p>';
     content+='<h3 class="subheading">Calibration and decision results</h3>'+consumerRows(result.consumers);
     content+='<h3 class="subheading">Original runs and scientific choices</h3>'+
       table(['Parameter case','Scenario','Role','State',''],(item.members||[]).flatMap(member=>
@@ -801,6 +832,12 @@ export function attachEnsembles(context) {
       toast('The saved scientific report is queued. Reopen this result for PDF, original sources and Compose scientific report.');
       return task;
     }
+    if(action==='study-source') {
+      const task=await submitAction('ensemble.study-source',{ensemble_id:id});
+      toast('The original native study report is queued. Reopen the study for its scientific source, figures and exports.');
+      return task;
+    }
+    if(action==='study-compose')return studyScientificReport({ensemble_id:id});
     if(action==='scientific-compose')return scientificReport({consumer_id:id});
     if(action==='scientific-delivery')return scientificDelivery({consumer_id:id});
     if(action==='flow-prepare'){
@@ -833,5 +870,5 @@ export function attachEnsembles(context) {
     }
     throw Error('Choose an available scenario-sensitivity action.');
   }
-  return {mount,update,detach,dispatch,prepare:newDesign,annualReference:openAnnualReference,scientificReport,scientificDelivery};
+  return {mount,update,detach,dispatch,prepare:newDesign,annualReference:openAnnualReference,scientificReport,scientificDelivery,studyScientificReport};
 }

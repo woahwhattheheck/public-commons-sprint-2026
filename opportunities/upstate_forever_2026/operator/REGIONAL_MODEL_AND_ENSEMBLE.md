@@ -991,14 +991,17 @@ the entrypoints; no separate plotting operation or Workspace is needed.
 
 ### Complete source installation
 
-The current inventory contains 274 paths in 14 full families. The study consumer
-has 16 files, Gauge support 11, source/profile comparison 12, regional reporting 96,
+The current inventory contains 299 paths in 14 full families. The study consumer
+has 23 files, Gauge support 14, source/profile comparison 12, regional reporting 110,
 and original native land-cover receiving 13. Gauge support includes its original
 receiving recovery guide; land-cover receiving includes the maintained PNG replay.
 The regional family includes the original utility-observation manifest and all
 its physical companions, plus the native utility-source receiver's own input
 manifest, original topology result and original USGS topology network. Its
 regional context, coverage and utility profile remain the same selected originals.
+The complete regional family also retains the maintained utility Monitoring
+opening, source briefing, their declared source helpers and complete original
+microbial source edition, including its station geometry and original summaries.
 
 Compose these full families with the current `integration/application_components.json`
 and its retained `integration/component_fragments/` declarations. The owned
@@ -1219,3 +1222,82 @@ The full operator guides provide the detailed source interpretation and existing
 command-line entrypoints:
 [Saved-study consumers](../model/ENSEMBLE_CONSUMERS.md) and
 [Gauge support](GAUGE_SUPPORT.md).
+
+
+## 24. Carry native parameter studies and Gauge analyses into editable reports
+
+### Prepare the saved native study
+
+Open **Scenario sensitivity**, select the existing design and choose **Prepare
+scientific study report**. The application reads its original completed paired
+contrasts, freezes the current numerical release and creates the ordinary typed
+scientific source. Its tables retain baseline and alternative physical masses,
+parameter choices, exact common-valid geographic support, original source
+coefficients and the state of every selected native run. The available vector
+figures include their full plotted-coordinate CSV and original record pointers.
+
+Reopen **Scientific study source and figures**, then choose **Compose retained
+study report**. Preview and save through the existing Scientific reports desk.
+A completed contrast is sufficient; unfinished members remain visible. When the
+same design advances, preparing the source again retains another report edition.
+The earlier report continues to refer to its original saved results.
+
+The command-line entrypoint uses the actual saved design ID:
+
+```sh
+"$UPSTATE_PYTHON" -B -m model.ensemble_consumers_cli \
+  --workspace "$UPSTATE_WORKSPACE" study-source \
+  --ensemble-id "$UPSTATE_ENSEMBLE_ID"
+```
+
+Nitrogen and phosphorus retain kg/year; sediment retains tonnes/year. A range
+across selected parameter cases describes those completed cases on an identical
+common-valid mask. The report keeps each scenario, constituent, physical unit and
+mask separate, along with full-valid totals and any excluded or incomplete rows.
+See [Native study scientific reports](../model/NATIVE_STUDY_SCIENTIFIC_REPORT.md)
+for the complete figures, source inputs and actual producer API.
+
+### Export the selected report with its editable study
+
+Select the saved scientific report in **Study transfer**, preview its original
+dependencies, and export through the ordinary Workspace archive transport. A
+native-ensemble report brings its exact saved design, parameter profiles, grids,
+scenarios, source collections, original native runs and paired comparisons. The
+source captures the report's original run states; a later unrelated completed
+stage can coexist with that retained report when its original compared artifacts
+remain identical. The existing current-comparison checks continue to apply to
+independently selected comparisons.
+
+A selected Gauge report brings its saved Gauge support edition, Station
+Geography, regional report, original geographic and daily-flow sources, retained
+maps and complete native packages. The selected whole-catchment, indexed split
+or coordinate-delineated support remains the original scientific method.
+
+Restore the exported study into a separate destination, open its saved scientific
+report, and reopen the associated native design or Gauge analysis. Reports
+imported from a different project retain their complete contained source history
+with their original project identity. The two full guides cover source and
+receiving details: [Native study transfer](../model/ENSEMBLE_STUDY_TRANSFER.md)
+and [Gauge study transfer](../model/GAUGE_STUDY_TRANSFER.md).
+
+The current complete families include both shared transfer modules, both
+producer-specific helpers, their guides and ordinary component fragments. Install
+the matched Study transfer and Scientific reports dependencies with these source
+families. The declared components preserve every peer extension in the existing
+application catalogue.
+
+### Continue the actual regional source operations
+
+The annual-reference/assessment family includes its eight original source files
+and the maintained `source_tools/operate_annual_assessment_context.py` receiver.
+Its existing command imports the native manifest, prepares the geographic study
+and report, and retains the actual selected-source archive and independent
+reopen. Continue the same regional Workspace using its real domain selection.
+
+Regional soil capture now accepts `--page-workers 2` to overlap at most two
+original polygon-page requests. Original page IDs, request SQL, response caches
+and ordered SQLite ingestion remain attached to the same operation. The default
+remains one worker. On failure, the receiver preserves completed page caches,
+stops admission of later pages and rolls back the incomplete tile so its normal
+resume can continue. Preparation still uses the corrected original land-cover
+raster and native source geometry described in section21.
