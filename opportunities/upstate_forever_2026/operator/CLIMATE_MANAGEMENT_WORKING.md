@@ -32,6 +32,10 @@ The saved design does not freeze a mutable latest-report pointer or a case's run
 
 The selected Study visitor includes every ancestor working revision, each referenced original forcing family through its existing visitor, all planned source editions and native inputs, original reporting-source companions, and whichever scientific outputs were captured by the original family's transfer rules. Existing capture-time receipts and original owner locks remain authoritative. A later unrelated report or receipt is not discovered during replay. A working Study may contain pending native cases; receiving preserves them without dispatching a solver.
 
+## Compare two saved designs
+
+The same desk now offers **Compare saved working designs** for exact before/after revisions, including unfinished choices and explicit branches. Save a readable HTML/CSV/JSON/ZIP handover and export its complete editable Study without a scientific calculation. See [Compare and hand over saved Management designs](CLIMATE_MANAGEMENT_DESIGN_COMPARISON.md) for original APIs, alignment semantics and the same receiving course.
+
 ## Native CLI and original Operator API
 
 Use the same complete application and existing Workspace. No command creates a replacement Workspace:

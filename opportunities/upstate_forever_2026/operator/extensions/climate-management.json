@@ -2,20 +2,22 @@
   "schema": "upstate.operator-extension/v1",
   "id": "climate-management",
   "title": "Management across forcing",
-  "version": "2.1.0",
+  "version": "2.2.0",
   "order": 52,
   "assets": [
     "climate_management.mjs",
     "climate_management.css",
     "climate_management_explorer.mjs",
-    "climate_management_working.mjs"
+    "climate_management_working.mjs",
+    "climate_management_working_comparison.mjs"
   ],
   "backend": {
     "module": "climate_management",
     "actions": [
       "climate-management.build",
       "climate-management.working.save",
-      "climate-management.working.export"
+      "climate-management.working.export",
+      "climate-management.working.compare"
     ],
     "invoke": {
       "handler": "invoke",
@@ -94,6 +96,48 @@
           "operation",
           "payload"
         ]
+      },
+      {
+        "methods": [
+          "GET"
+        ],
+        "path": "/api/climate-management/working-comparison-catalog",
+        "operation": "working-comparison-catalog",
+        "handler": "read",
+        "args": [
+          "operator",
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "POST"
+        ],
+        "path": "/api/climate-management/working-comparison-preview",
+        "operation": "working-comparison-preview",
+        "handler": "read",
+        "args": [
+          "operator",
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "GET"
+        ],
+        "path": "/api/climate-management/working-comparison",
+        "operation": "working-comparison",
+        "handler": "read",
+        "args": [
+          "operator",
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
       }
     ],
     "items": [
@@ -111,6 +155,17 @@
       {
         "kind": "climate-management-working",
         "operation": "working-view",
+        "handler": "read",
+        "args": [
+          "operator",
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "kind": "climate-management-working-comparisons",
+        "operation": "working-comparison",
         "handler": "read",
         "args": [
           "operator",

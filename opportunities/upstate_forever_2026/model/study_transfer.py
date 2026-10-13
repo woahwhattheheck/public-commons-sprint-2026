@@ -41,6 +41,7 @@ from . import parameter_study_transfer as parameter_transfer
 from . import parameter_working_transfer as working_transfer
 from . import climate_working_transfer as climate_working_transfer
 from . import climate_management_working_transfer as management_working_transfer
+from . import climate_management_working_comparison_transfer as management_working_comparison_transfer
 from . import ensemble_study_transfer as ensemble_transfer, gauge_study_transfer as gauge_transfer
 from . import community_study_transfer as community_transfer
 from . import conservation_study_transfer as conservation_transfer
@@ -55,7 +56,7 @@ from . import chemistry_study_transfer as chemistry_transfer
 SELECTION_SCHEMA = "upstate.study-selection/v1"
 PLAN_SCHEMA = "upstate.study-transfer-plan/v1"
 RECEIPT_SCHEMA = "upstate.study-transfer/v1"
-ROOT_KINDS = ("experiment-diagnostics", "experiments", "parameter-studies", "parameter-working", "climate-working", "climate-management-working", "runs", "robust-decisions",
+ROOT_KINDS = ("experiment-diagnostics", "experiments", "parameter-studies", "parameter-working", "climate-working", "climate-management-working", "climate-management-working-comparisons", "runs", "robust-decisions",
               "receiving-water-plans", "receiving-water-analyses",
               "spatial-reviews", "spatial-exports",
               *monitoring_transfer.ROOT_KINDS, *report_editions.ROOT_KINDS,
@@ -64,7 +65,7 @@ ROOT_KINDS = ("experiment-diagnostics", "experiments", "parameter-studies", "par
               *report_changes_transfer.ROOT_KINDS, *control_transfer.ROOT_KINDS, *forcing_transfer.ROOT_KINDS, *joint_transfer.ROOT_KINDS, *terrain_transfer.ROOT_KINDS, *climate_management_transfer.ROOT_KINDS,
               *management_transfer.ROOT_KINDS, *calibration_native.ROOT_KINDS, *disturbance_transfer.ROOT_KINDS,
               *workbook_return_transfer.ROOT_KINDS)
-IMMUTABLE_KINDS = ("parameter-working", "climate-working", "climate-management-working", "sources", "profiles", "scenarios", "observations",
+IMMUTABLE_KINDS = ("parameter-working", "climate-working", "climate-management-working", "climate-management-working-comparisons", "sources", "profiles", "scenarios", "observations",
                    "observation-comparisons", *delivery_transfer.IMMUTABLE_KINDS,
                    *monitoring_transfer.IMMUTABLE_KINDS, *calibration_transfer.IMMUTABLE_KINDS,
                    *community_transfer.IMMUTABLE_KINDS, *customer_review_transfer.IMMUTABLE_KINDS, *terrain_transfer.IMMUTABLE_KINDS,
@@ -93,6 +94,7 @@ LABELS = {
     "parameter-working": "Parameter working designs",
     "climate-working": "Climate forcing working designs",
     "climate-management-working": "Climate management working designs",
+    "climate-management-working-comparisons": "Saved Management design comparisons",
     "runs": "Native runs", "robust-decisions": "Decision studies",
     "profiles": "Parameter profiles", "scenarios": "Land-cover scenarios",
     "sources": "Source collections", "grids": "Prepared grids",
@@ -561,6 +563,8 @@ class _Closure:
             pass
         elif management_working_transfer.visit(self, kind, key, value, reason):
             pass
+        elif management_working_comparison_transfer.visit(self, kind, key, value, reason):
+            pass
         elif parameter_transfer.visit(self, kind, key, value, reason):
             pass
         elif calibration_transfer.visit(self, kind, key, value, reason):
@@ -746,6 +750,7 @@ class _Closure:
             "parameter_working": working_transfer.receipt(self),
             "climate_working": climate_working_transfer.receipt(self),
             "climate_management_working": management_working_transfer.receipt(self),
+            "management_working_comparisons": management_working_comparison_transfer.receipt(self),
             "monitoring_history": monitoring_transfer.receipt(self),
             "scientific_report_sources": report_transfer.receipt(self),
             "scientific_report_editions": report_editions.receipt(self),
@@ -1037,6 +1042,8 @@ def export_study(workspace, destination, selection, *, progress=None, investigat
             identity["parameter_working"] = working_transfer.receipt(closure)
         if getattr(closure, "climate_working_records", {}):
             identity["climate_working"] = climate_working_transfer.receipt(closure)
+        if getattr(closure, "management_working_comparison_records", {}):
+            identity["management_working_comparisons"] = management_working_comparison_transfer.receipt(closure)
         if getattr(closure, "climate_management_working_records", {}):
             identity["climate_management_working"] = management_working_transfer.receipt(closure)
         if closure.joint_parameter_records:
@@ -1167,6 +1174,7 @@ def verify_received_studies(workspace, *, joint_only=False):
         working_transfer.verify_receipt(closure, receipt["identity"].get("parameter_working", []))
         climate_working_transfer.verify_receipt(closure, receipt["identity"].get("climate_working", []))
         management_working_transfer.verify_receipt(closure, receipt["identity"].get("climate_management_working", []))
+        management_working_comparison_transfer.verify_receipt(closure, receipt["identity"].get("management_working_comparisons", []))
         forcing_transfer.verify_receipt(closure, receipt["identity"].get("climate_forcing_studies", []))
         climate_management_transfer.verify_receipt(closure, receipt["identity"].get("climate_management_records", []))
         management_transfer.verify_receipt(closure, receipt["identity"].get("management_case_studies", []))
@@ -1227,6 +1235,11 @@ def catalog(workspace, *, kind=None, query="", offset=0, limit=200):
             continue
         if selected_kind == "climate-working":
             for row in climate_working_transfer.catalogue(workspace):
+                if not query or query in canonical(row).decode("utf-8").casefold():
+                    rows.append(row)
+            continue
+        if selected_kind == management_working_comparison_transfer.KIND:
+            for row in management_working_comparison_transfer.catalogue(workspace):
                 if not query or query in canonical(row).decode("utf-8").casefold():
                     rows.append(row)
             continue
