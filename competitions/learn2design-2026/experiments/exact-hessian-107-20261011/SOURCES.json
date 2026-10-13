@@ -323,6 +323,178 @@
           }
         ]
       }
+    },
+    {
+      "id": "mapped-batch-identity-d76c",
+      "class": "MappedBatchedCorpusPortfolioD76C",
+      "submission": "mapped-batch-d76c/submission.py",
+      "submission_bytes": 21639,
+      "submission_sha256": "69d6888711aa4b3aa8602a3f457548e4dabec57e52cf9125c1c791c9d9fb35c3",
+      "requirements": "mapped-batch-d76c/requirements.txt",
+      "requirements_sha256": "189ce1f45d8b650463612e8cdad59c719f8f9f3bf7c418c79a18290229efff80",
+      "source_owner": "D76C additive composition of original batched portfolio, DBA55 donor bank and ROOT110 public property map; original sources remain unchanged.",
+      "invocation": {
+        "companions": [
+          {
+            "module": "l2d_coordmap",
+            "path": "coordinate-map-110/l2d_coordmap.py",
+            "sha256": "19e0117794f92debec27a7ea1c93f6ceb01b6cfb5cb08872bed68895d774d031"
+          },
+          {
+            "module": "elite_archive",
+            "path": "batch-portfolio-d76c/elite_archive.py",
+            "sha256": "cd8e43ed2227e9107d2398d9cd3353b286d371b7ad1fc2c663b0cf352ba44953"
+          },
+          {
+            "module": "warmstart",
+            "path": "batch-portfolio-d76c/warmstart.py",
+            "sha256": "e603d6192c73741dbbf5f54ad8fa379ec06936fb6aabd21cd12cdec8bc86e204"
+          },
+          {
+            "module": "mapped_geometry",
+            "path": "mapped-batch-d76c/mapped_geometry.py",
+            "sha256": "caea2b803e0063d0969d72f5acf10f7483678ef6164ab074306817ae0c783f3a"
+          },
+          {
+            "module": "mapped_update",
+            "path": "mapped-batch-d76c/mapped_update.py",
+            "sha256": "4e2bcba37a68d6e512df2d80830e475829ab763600022ccf0a5511dada8e9c4c"
+          }
+        ],
+        "assets": [
+          {
+            "name": "warmstart_bank.npz",
+            "path": "batch-portfolio-d76c/warmstart_bank.npz",
+            "bytes": 2170687,
+            "sha256": "609a69e08ef1c9ec3460e3f012e7f1b52bb6a29c232c198a63415409d2ab7d39"
+          }
+        ],
+        "optimize_kwargs": {
+          "batch_size": 8,
+          "corpus_starts": true,
+          "coordinate_map": "identity"
+        },
+        "diagnostic_expectations": [
+          {
+            "path": [
+              "batch_size"
+            ],
+            "equals": 8
+          },
+          {
+            "path": [
+              "backend"
+            ],
+            "equals": "gpu"
+          },
+          {
+            "path": [
+              "corpus_starts"
+            ],
+            "equals": true
+          },
+          {
+            "path": [
+              "coordinate_map",
+              "requested"
+            ],
+            "equals": "identity"
+          },
+          {
+            "path": [
+              "coordinate_map",
+              "status"
+            ],
+            "equals": "identity"
+          }
+        ]
+      }
+    },
+    {
+      "id": "mapped-batch-property-v1-d76c",
+      "class": "MappedBatchedCorpusPortfolioD76C",
+      "submission": "mapped-batch-d76c/submission.py",
+      "submission_bytes": 21639,
+      "submission_sha256": "69d6888711aa4b3aa8602a3f457548e4dabec57e52cf9125c1c791c9d9fb35c3",
+      "requirements": "mapped-batch-d76c/requirements.txt",
+      "requirements_sha256": "189ce1f45d8b650463612e8cdad59c719f8f9f3bf7c418c79a18290229efff80",
+      "source_owner": "D76C additive composition of original batched portfolio, DBA55 donor bank and ROOT110 public property map; original sources remain unchanged.",
+      "invocation": {
+        "companions": [
+          {
+            "module": "l2d_coordmap",
+            "path": "coordinate-map-110/l2d_coordmap.py",
+            "sha256": "19e0117794f92debec27a7ea1c93f6ceb01b6cfb5cb08872bed68895d774d031"
+          },
+          {
+            "module": "elite_archive",
+            "path": "batch-portfolio-d76c/elite_archive.py",
+            "sha256": "cd8e43ed2227e9107d2398d9cd3353b286d371b7ad1fc2c663b0cf352ba44953"
+          },
+          {
+            "module": "warmstart",
+            "path": "batch-portfolio-d76c/warmstart.py",
+            "sha256": "e603d6192c73741dbbf5f54ad8fa379ec06936fb6aabd21cd12cdec8bc86e204"
+          },
+          {
+            "module": "mapped_geometry",
+            "path": "mapped-batch-d76c/mapped_geometry.py",
+            "sha256": "caea2b803e0063d0969d72f5acf10f7483678ef6164ab074306817ae0c783f3a"
+          },
+          {
+            "module": "mapped_update",
+            "path": "mapped-batch-d76c/mapped_update.py",
+            "sha256": "4e2bcba37a68d6e512df2d80830e475829ab763600022ccf0a5511dada8e9c4c"
+          }
+        ],
+        "assets": [
+          {
+            "name": "warmstart_bank.npz",
+            "path": "batch-portfolio-d76c/warmstart_bank.npz",
+            "bytes": 2170687,
+            "sha256": "609a69e08ef1c9ec3460e3f012e7f1b52bb6a29c232c198a63415409d2ab7d39"
+          }
+        ],
+        "optimize_kwargs": {
+          "batch_size": 8,
+          "corpus_starts": true,
+          "coordinate_map": "l2d_property_v1"
+        },
+        "diagnostic_expectations": [
+          {
+            "path": [
+              "batch_size"
+            ],
+            "equals": 8
+          },
+          {
+            "path": [
+              "backend"
+            ],
+            "equals": "gpu"
+          },
+          {
+            "path": [
+              "corpus_starts"
+            ],
+            "equals": true
+          },
+          {
+            "path": [
+              "coordinate_map",
+              "requested"
+            ],
+            "equals": "l2d_property_v1"
+          },
+          {
+            "path": [
+              "coordinate_map",
+              "status"
+            ],
+            "equals": "mapped"
+          }
+        ]
+      }
     }
   ],
   "native_runner": {

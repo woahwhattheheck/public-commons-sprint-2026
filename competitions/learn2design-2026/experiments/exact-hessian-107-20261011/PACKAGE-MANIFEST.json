@@ -96,6 +96,36 @@
       "sha256": "0c0ffd4da1a9a55406c29dd3d0de0cac05a481dd853ff2a256b420325f46c9d0"
     },
     {
+      "path": "mapped-batch-d76c/mapped_geometry.py",
+      "bytes": 4044,
+      "sha256": "caea2b803e0063d0969d72f5acf10f7483678ef6164ab074306817ae0c783f3a"
+    },
+    {
+      "path": "mapped-batch-d76c/mapped_update.py",
+      "bytes": 1211,
+      "sha256": "4e2bcba37a68d6e512df2d80830e475829ab763600022ccf0a5511dada8e9c4c"
+    },
+    {
+      "path": "mapped-batch-d76c/README.md",
+      "bytes": 16458,
+      "sha256": "c546036975ff5185ea0ddcb5c73baedb8e8a7d769cd56c63bc713d6d61b70735"
+    },
+    {
+      "path": "mapped-batch-d76c/requirements.txt",
+      "bytes": 39,
+      "sha256": "189ce1f45d8b650463612e8cdad59c719f8f9f3bf7c418c79a18290229efff80"
+    },
+    {
+      "path": "mapped-batch-d76c/SOURCE_MAP.json",
+      "bytes": 3372,
+      "sha256": "3af3f10c9e16a526c84c1b3995dbb94f777b922237edda2a1f284c8b20d3659d"
+    },
+    {
+      "path": "mapped-batch-d76c/submission.py",
+      "bytes": 21639,
+      "sha256": "69d6888711aa4b3aa8602a3f457548e4dabec57e52cf9125c1c791c9d9fb35c3"
+    },
+    {
       "path": "official/LICENSE",
       "bytes": 1082,
       "sha256": "771bcaa19984a241c697fa0f8df8e8d6d9dd94e5f8dcae09fee7dfafe7635f72"
@@ -152,8 +182,8 @@
     },
     {
       "path": "RUN_PLAN.json",
-      "bytes": 8075,
-      "sha256": "0395383c6b07798440704dc2b4449eff9fb5f3e2d728b46e5d742e6262d7fc1e"
+      "bytes": 12121,
+      "sha256": "b706b0259858179a432dc287c7c75ed09079e2da6069bf3cfd83d98c70eb3128"
     },
     {
       "path": "runner/invocation.py",
@@ -187,8 +217,8 @@
     },
     {
       "path": "SOURCES.json",
-      "bytes": 16600,
-      "sha256": "b881c1f8f3c3b42f390bb5fc8df71ee00b30e18bdd48574c76ec6b8f453aaa72"
+      "bytes": 22307,
+      "sha256": "426e046659c0ba39510d5b0a9792b665b14fe6da9070babc7a1a95db982b90de"
     },
     {
       "path": "submission-zips/099.zip",
@@ -211,9 +241,11 @@
       "sha256": "205b7a3778e163cab1673a20dd4f3202dcad53be46be9575bed2431e7df59150"
     }
   ],
-  "revision": 7,
+  "revision": 8,
   "coordinate_map_entrypoint": "coordinate-map-110/submission.py",
   "invocation_adapter": "runner/invocation.py",
   "batch_entrypoint": "batch-portfolio-d76c/submission.py",
-  "batch_guide": "batch-portfolio-d76c/README.md"
+  "batch_guide": "batch-portfolio-d76c/README.md",
+  "mapped_batch_entrypoint": "mapped-batch-d76c/submission.py",
+  "mapped_batch_guide": "mapped-batch-d76c/README.md"
 }
