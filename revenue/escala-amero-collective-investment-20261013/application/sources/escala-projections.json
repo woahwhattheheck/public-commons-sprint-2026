@@ -1,0 +1,357 @@
+{
+  "schema": "amero.original-operation-projections.v1",
+  "provider": "escala",
+  "originalSha256": "e4b370b19eb1e0bb64378885d2f2c59d63b83270e9bace634b549db98693beb2",
+  "compiledSha256": "93c32967e21859ff929c02af40d9deda6b0283c3898107e4ad88828fc0e29a47",
+  "sourceCommit": "ca9ae6256fdbf7786e20b4c2b2926ce179468944",
+  "actions": {
+    "GET /health": {
+      "id": "escala.health.get",
+      "kind": "escala-health",
+      "projections": [
+        {
+          "pointer": "",
+          "id": "health"
+        }
+      ],
+      "pagination": null,
+      "mock": true,
+      "dispatchable": true,
+      "sourceImplementation": "https://github.com/escala-dev/collective-investment-api/tree/ca9ae6256fdbf7786e20b4c2b2926ce179468944"
+    },
+    "POST /v1/communities": {
+      "id": "escala.community.create",
+      "kind": "escala-community",
+      "projections": [
+        {
+          "pointer": "",
+          "idPointer": "/communityId"
+        }
+      ],
+      "pagination": null,
+      "mock": true,
+      "dispatchable": true,
+      "sourceImplementation": "https://github.com/escala-dev/collective-investment-api/tree/ca9ae6256fdbf7786e20b4c2b2926ce179468944"
+    },
+    "POST /v1/communities/{communityId}/invite": {
+      "id": "escala.community.invite",
+      "kind": "escala-invitation",
+      "projections": [
+        {
+          "pointer": "",
+          "idPointer": "/inviteId"
+        }
+      ],
+      "pagination": null,
+      "mock": true,
+      "dispatchable": true,
+      "sourceImplementation": "https://github.com/escala-dev/collective-investment-api/tree/ca9ae6256fdbf7786e20b4c2b2926ce179468944"
+    },
+    "POST /v1/funds": {
+      "id": "escala.fund.create",
+      "kind": "escala-fund",
+      "projections": [
+        {
+          "pointer": "",
+          "idPointer": "/fundId"
+        }
+      ],
+      "pagination": null,
+      "mock": true,
+      "dispatchable": true,
+      "sourceImplementation": "https://github.com/escala-dev/collective-investment-api/tree/ca9ae6256fdbf7786e20b4c2b2926ce179468944"
+    },
+    "GET /v1/funds/{fundId}/contributions": {
+      "id": "escala.fund.contributions",
+      "kind": "escala-contribution",
+      "projections": [
+        {
+          "pointer": "",
+          "kind": "escala-fund",
+          "idPointer": "/fundId"
+        },
+        {
+          "pointer": "/contributions",
+          "many": true,
+          "idPointer": "/contributionId"
+        }
+      ],
+      "pagination": null,
+      "mock": true,
+      "dispatchable": true,
+      "sourceImplementation": "https://github.com/escala-dev/collective-investment-api/tree/ca9ae6256fdbf7786e20b4c2b2926ce179468944"
+    },
+    "POST /v1/tokens/mint": {
+      "id": "escala.tokens.mint",
+      "kind": "escala-token-mint",
+      "projections": [
+        {
+          "pointer": "",
+          "idPointer": "/mintId"
+        }
+      ],
+      "pagination": null,
+      "mock": true,
+      "dispatchable": true,
+      "sourceImplementation": "https://github.com/escala-dev/collective-investment-api/tree/ca9ae6256fdbf7786e20b4c2b2926ce179468944"
+    },
+    "GET /v1/tokens/{walletId}": {
+      "id": "escala.tokens.get",
+      "kind": "escala-token-balance",
+      "projections": [
+        {
+          "pointer": "",
+          "idPointer": "/walletId"
+        }
+      ],
+      "pagination": null,
+      "mock": true,
+      "dispatchable": true,
+      "sourceImplementation": "https://github.com/escala-dev/collective-investment-api/tree/ca9ae6256fdbf7786e20b4c2b2926ce179468944"
+    },
+    "POST /v1/proposals/{proposalId}/proposals": {
+      "id": "escala.proposal.create",
+      "kind": "escala-proposal",
+      "projections": [
+        {
+          "pointer": "",
+          "idPointer": "/proposalId"
+        }
+      ],
+      "pagination": null,
+      "mock": true,
+      "dispatchable": true,
+      "sourceImplementation": "https://github.com/escala-dev/collective-investment-api/tree/ca9ae6256fdbf7786e20b4c2b2926ce179468944"
+    },
+    "POST /v1/proposals/{proposalId}/votes": {
+      "id": "escala.proposal.vote",
+      "kind": "escala-vote",
+      "projections": [
+        {
+          "pointer": "",
+          "idPointer": "/voteId"
+        }
+      ],
+      "pagination": null,
+      "mock": true,
+      "dispatchable": true,
+      "sourceImplementation": "https://github.com/escala-dev/collective-investment-api/tree/ca9ae6256fdbf7786e20b4c2b2926ce179468944",
+      "schemaCorrections": {
+        "vote": {
+          "type": [
+            "string",
+            "boolean"
+          ],
+          "enum": [
+            "yes",
+            "no",
+            "abstain",
+            true,
+            false
+          ],
+          "description": "The Swagger marks type string but gives literal boolean enum; current mock router passes the body without validation. Preserve the operator's exact choice."
+        }
+      }
+    },
+    "POST /v1/proposals/{proposalId}/delegate": {
+      "id": "escala.proposal.delegate",
+      "kind": "escala-delegation",
+      "projections": [
+        {
+          "pointer": "",
+          "idPointer": "/delegateId"
+        }
+      ],
+      "pagination": null,
+      "mock": true,
+      "dispatchable": true,
+      "sourceImplementation": "https://github.com/escala-dev/collective-investment-api/tree/ca9ae6256fdbf7786e20b4c2b2926ce179468944"
+    },
+    "GET /v1/proposals/{proposalId}/tally": {
+      "id": "escala.proposal.tally",
+      "kind": "escala-tally",
+      "projections": [
+        {
+          "pointer": "",
+          "idPointer": "/proposalId"
+        }
+      ],
+      "pagination": null,
+      "mock": true,
+      "dispatchable": true,
+      "sourceImplementation": "https://github.com/escala-dev/collective-investment-api/tree/ca9ae6256fdbf7786e20b4c2b2926ce179468944"
+    },
+    "POST /v1/proposals/{proposalId}/milestones": {
+      "id": "escala.milestone.create",
+      "kind": "escala-milestone",
+      "projections": [
+        {
+          "pointer": "",
+          "idPointer": "/milestoneId"
+        }
+      ],
+      "pagination": null,
+      "mock": true,
+      "dispatchable": true,
+      "sourceImplementation": "https://github.com/escala-dev/collective-investment-api/tree/ca9ae6256fdbf7786e20b4c2b2926ce179468944"
+    },
+    "GET /v1/proposals/{proposalId}/disbursements": {
+      "id": "escala.proposal.disbursements",
+      "kind": "escala-disbursement",
+      "projections": [
+        {
+          "pointer": "/disbursements",
+          "many": true,
+          "idPointer": "/disbursementId"
+        }
+      ],
+      "pagination": null,
+      "mock": true,
+      "dispatchable": true,
+      "sourceImplementation": "https://github.com/escala-dev/collective-investment-api/tree/ca9ae6256fdbf7786e20b4c2b2926ce179468944"
+    },
+    "POST /v1/milestones/{milestoneId}/evidence": {
+      "id": "escala.milestone.evidence",
+      "kind": "escala-evidence",
+      "projections": [
+        {
+          "pointer": "",
+          "idPointer": "/evidenceId"
+        }
+      ],
+      "pagination": null,
+      "mock": true,
+      "dispatchable": true,
+      "sourceImplementation": "https://github.com/escala-dev/collective-investment-api/tree/ca9ae6256fdbf7786e20b4c2b2926ce179468944"
+    },
+    "GET /v1/milestones/{milestoneId}/attestations": {
+      "id": "escala.milestone.attestations",
+      "kind": "escala-attestation",
+      "projections": [
+        {
+          "pointer": "/attestations",
+          "many": true,
+          "idPointer": "/attestationId"
+        }
+      ],
+      "pagination": null,
+      "mock": true,
+      "dispatchable": true,
+      "sourceImplementation": "https://github.com/escala-dev/collective-investment-api/tree/ca9ae6256fdbf7786e20b4c2b2926ce179468944"
+    },
+    "POST /v1/oracles/attest": {
+      "id": "escala.oracle.attest",
+      "kind": "escala-attestation",
+      "projections": [
+        {
+          "pointer": "",
+          "idPointer": "/attestationId"
+        }
+      ],
+      "pagination": null,
+      "mock": true,
+      "dispatchable": true,
+      "sourceImplementation": "https://github.com/escala-dev/collective-investment-api/tree/ca9ae6256fdbf7786e20b4c2b2926ce179468944"
+    },
+    "POST /v1/disbursements/request": {
+      "id": "escala.disbursement.request",
+      "kind": "escala-disbursement-request",
+      "projections": [
+        {
+          "pointer": "",
+          "idPointer": "/disbursementRequestId"
+        }
+      ],
+      "pagination": null,
+      "mock": true,
+      "dispatchable": true,
+      "sourceImplementation": "https://github.com/escala-dev/collective-investment-api/tree/ca9ae6256fdbf7786e20b4c2b2926ce179468944"
+    },
+    "POST /v1/disbursements/{disbursementRequestId}/execute": {
+      "id": "escala.disbursement.execute",
+      "kind": "escala-disbursement",
+      "projections": [
+        {
+          "pointer": "",
+          "idPointer": "/disbursementId"
+        }
+      ],
+      "pagination": null,
+      "mock": true,
+      "dispatchable": true,
+      "sourceImplementation": "https://github.com/escala-dev/collective-investment-api/tree/ca9ae6256fdbf7786e20b4c2b2926ce179468944"
+    },
+    "GET /v1/audit/events": {
+      "id": "escala.audit.events",
+      "kind": "escala-audit-event",
+      "projections": [
+        {
+          "pointer": "/events",
+          "many": true,
+          "idPointer": "/eventId"
+        }
+      ],
+      "pagination": null,
+      "mock": true,
+      "dispatchable": true,
+      "sourceImplementation": "https://github.com/escala-dev/collective-investment-api/tree/ca9ae6256fdbf7786e20b4c2b2926ce179468944",
+      "parameterCorrections": {
+        "remove": [
+          "proposalId"
+        ],
+        "add": [
+          {
+            "name": "projectId",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Exact current Express router parameter; original Swagger names proposalId."
+          }
+        ]
+      }
+    },
+    "GET /v1/dashboards/community/{communityId}": {
+      "id": "escala.dashboard.get",
+      "kind": "escala-dashboard",
+      "projections": [
+        {
+          "pointer": "",
+          "idPointer": "/communityId"
+        }
+      ],
+      "pagination": null,
+      "mock": true,
+      "dispatchable": true,
+      "sourceImplementation": "https://github.com/escala-dev/collective-investment-api/tree/ca9ae6256fdbf7786e20b4c2b2926ce179468944"
+    },
+    "POST /v1/webhooks/moneygram/settlement": {
+      "id": "escala.webhook.moneygram",
+      "kind": "escala-moneygram-event",
+      "projections": [
+        {
+          "pointer": "",
+          "contentIdentity": true
+        }
+      ],
+      "pagination": null,
+      "mock": true,
+      "dispatchable": false,
+      "sourceImplementation": "https://github.com/escala-dev/collective-investment-api/tree/ca9ae6256fdbf7786e20b4c2b2926ce179468944"
+    },
+    "POST /v1/webhooks/sdp/status": {
+      "id": "escala.webhook.sdp",
+      "kind": "escala-sdp-event",
+      "projections": [
+        {
+          "pointer": "",
+          "contentIdentity": true
+        }
+      ],
+      "pagination": null,
+      "mock": true,
+      "dispatchable": false,
+      "sourceImplementation": "https://github.com/escala-dev/collective-investment-api/tree/ca9ae6256fdbf7786e20b4c2b2926ce179468944"
+    }
+  }
+}
