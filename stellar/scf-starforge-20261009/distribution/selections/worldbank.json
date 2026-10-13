@@ -70,7 +70,8 @@
     "merchant-console",
     "worldbank-programmes",
     "grant-workspace",
-    "merchant-provider-grant-workspaces"
+    "merchant-provider-grant-workspaces",
+    "operator-discovery"
   ],
   "components": [
     "stellar/scf-starforge-20261009/distribution",
