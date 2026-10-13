@@ -95,3 +95,35 @@ The operator’s configured upload limit must accommodate its complete archive. 
 A completed v1.1 result can continue into this full receiving course using the same output directory. Its original plan/design tasks and handover are retained; the new capture/restore work runs once and becomes part of the complete result. A result with `workspace_transfer.state` equal to `complete` verifies its retained local deliverables and reports those same identities on repeat invocation.
 
 The existing native run owner continues any prepared model execution and its original scientific report. This browser continuation carries the same plan, design project, native scenario and optional run through its independent restored Workspace.
+
+## Continue the same design through a selected editable Study
+
+Add `--selected-study` to the same invocation and output directory after the current application includes the original editor snapshot join in selected Study transfer. The complete Workspace stage remains part of the course. A previously completed full-Workspace result can continue directly; its existing plan/design/archive/restore task IDs are reused.
+
+The required native family is the maintained `model/conservation_design_study_transfer.py` plus its original `model/study_transfer.py` integration. The transfer receipt carries `identity.conservation_design_history`, and the ordinary restore verifier checks that history. The current Scenario design provider, original Store and file/API routes remain in use. For saved Conservation scientific report sources, use the reviewed edition 1/2/3 compatibility from PR3664 as well.
+
+The continuation returns to the original Workspace and uses the existing **Study transfer** desk. It selects the one exact original `conservation-plans` root, keeps its saved related results, and invokes **Export editable study**. The original serial queue, download ticket, binary upload and `workspace.restore` handler carry that archive into a second independent Workspace. The additional capture is a selected dependency closure: it contains the original studies and source records needed by that portfolio and its retained continuations.
+
+This stage checks:
+
+- The export's original project, exact root and normalized selection against the browser choice.
+- The selected archive's complete receipt and exact frozen SQLite member bytes/hash.
+- Every selected editor project's original UUID, title, current revision/timestamp, TEXT/BLOB body identity and full revision sequence against the retained capture.
+- The database's project cohort against `editor_project_ids`, including original recovered copies whose saved binding belongs to a selected plan.
+- The independently restored original plan, preparation, native receiving, source baseline, project and alternative.
+- Every historical revision of the course's original editor project through the maintained read API.
+- The visible same-project/same-alternative reopening without creating a replacement revision, followed by the original native scenario and optional prepared-run selection.
+
+The source Store may have gained later valid revisions after capture. The receiving comparison uses the revision and bodies actually retained in the selected archive. Selecting an existing alternative is a client view choice and must not change that captured revision.
+
+The companion adds `selected-scientific-study.zip`, `selected-study-capture/captured-editor.sqlite`, `selected-study-capture/captured-project-and-history.json` and three stage screenshots. Its `receiving.json.selected_study_transfer` records the original selected-study export/restore tasks, receipt ID, history, complete archive, independent Workspace and exact reopened IDs.
+
+The selected export and selected restore keep separate checkpoint keys from the complete Workspace backup/restore. A lost response replays only its exact original request and operation ID. A repeat invocation with `--selected-study` verifies the retained completed archive and captured record and returns those same identities.
+
+Use the accepting operation's existing authorized browser environment. An operator with a browser policy that blocks loopback can still carry its original server/report work; this interactive companion requires an environment where the existing application URL is permitted.
+
+## Inspect the actual rendered result before delivery
+
+The completed receiving JSON and captured screenshots are evidence for the original identities and controls. Before presenting this application or export as ready, the receiving owner must open the exact outgoing version, look at its actual rendered screens or real screenshots, and operate the important controls. Inspect the populated editor and restored project, tables and maps, downloads and reopening at the intended screenshare width and a narrow or mobile width. Check empty, loading and error states where relevant. Capturing screenshots without viewing them, code review, HTTP success and another peer's approval do not replace this inspection.
+
+Fix unreadable, clipped, overflowing, unstyled or cramped output in the maintained product, preserving its real data and computation. Use clear table hierarchy, consistent typography and spacing, restrained controls and useful labels. Retain the actual source version, viewport, original project/revision, images reviewed, controls operated and any repaired exception with the existing receiving result. Continue the same course; this inspection is part of delivery, not a separate test product or another scientific run.

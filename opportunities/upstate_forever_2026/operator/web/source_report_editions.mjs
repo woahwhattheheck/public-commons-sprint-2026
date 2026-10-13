@@ -17,6 +17,8 @@ export function orderedReportSources(catalog, selected) {
   });
 }
 
+export const SCIENTIFIC_REPORT_SOURCE_SELECTION = 'replace-v1';
+
 export function attachScientificReportEditions(host) {
   let panel=null,workspace=null,generation=0,revision=0,detailGeneration=0,active=false;
   let sources=[],editions=[],selected=[],title='',contact={name:'',organization:'',email:''};
@@ -290,15 +292,24 @@ export function attachScientificReportEditions(host) {
       throw Error('Open the prepared report sources in their original Workspace.');
     if(!Array.isArray(value.sources)||!value.sources.length)
       throw Error('Choose one or more original prepared report sources.');
+    const selectionMode=value.selection_mode??'append';
+    if(!['append','replace'].includes(selectionMode))throw Error('Choose a supported scientific report source selection mode.');
     if(busy||pending)throw Error('Finish or recover the retained scientific report request before adding more sources.');
-    const ws=workspace,turn=generation;
+    const ws=workspace,turn=generation,version=revision;
     await refresh();
     if(!valid(ws,turn))throw Error('The Workspace changed before its report sources opened.');
     if(busy||pending)throw Error('Finish or recover the retained scientific report request before adding more sources.');
+    if(selectionMode==='replace'&&revision!==version)
+      throw Error('The report draft changed before its prepared sources opened. Open the prepared selection again.');
     const incoming=orderedReportSources(sources,value.sources).map(choice);
-    const seen=new Set(selected.map(key));
-    for(const row of incoming){if(!seen.has(key(row))){selected.push(row);seen.add(key(row));}}
-    if(!title.trim()&&typeof value.title==='string')title=value.title;
+    if(selectionMode==='replace'){
+      selected=incoming;
+      title=typeof value.title==='string'?value.title:'';
+    }else{
+      const seen=new Set(selected.map(key));
+      for(const row of incoming){if(!seen.has(key(row))){selected.push(row);seen.add(key(row));}}
+      if(!title.trim()&&typeof value.title==='string')title=value.title;
+    }
     changed();error='';render();
     panel.scrollIntoView({block:'start'});
     panel.querySelector('[data-scientific-report-action="preview"]').focus?.();
