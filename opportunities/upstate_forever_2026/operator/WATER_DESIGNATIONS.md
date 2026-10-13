@@ -27,7 +27,7 @@ Selecting ORW gives 332 features and approximately 131.521 km in the publisher's
 
 R.61-69 lists the Chattooga ORW reach from the North Carolina line to Opossum Creek, followed by FW to the Tugaloo. It lists the Chauga ORW reach from its headwaters to one mile above U.S. Route 76, followed by FW to the Tugaloo. Its notation in parentheses after ORW or ONRW records the previous class. Its sp annotation records site-specific standards.
 
-Use exact source values when selecting. The legal-source crosswalk and source-review desk explain class meaning and retain the associated legal context. The current shared crosswalk source is v1.1.0 from F0C9JF1PWQG, paired with source-review v1.2.0 from F0C9JF3QZ3J. It handles SFH and attached sp notation and binds each layer to its native OID and retained publisher metadata.
+Use exact source values when selecting. The legal-source crosswalk and source-review desk explain class meaning and retain the associated legal context. The current shared crosswalk is source_tools/high_quality_water_crosswalk.py v1.1.0, paired with source-review v1.3.0 in operator/water_source_review.py and operator/WATER_SOURCE_REVIEW.md. It handles SFH and attached sp notation and binds each layer to its native OID and retained publisher metadata.
 
 ## Source editions and geometry
 
@@ -39,7 +39,7 @@ For drinking-water overlays, select an actual protection-area polygon source. In
 
 ## Run the captured native workflow
 
-Materialize this source bank beneath the current original application root. It supplies fourteen complete files; the shared extension host and original Workspace remain the application dependencies.
+Materialize this source bank beneath the current original application root. It supplies the native designation desk, its source data, the designation adapter, and receiving-to-delivery workflows; the shared extension host and original Workspace remain the application dependencies.
 
 Run from the application root with the same Python environment used by the original GIS operator:
 
@@ -62,7 +62,7 @@ The retained data file is chattooga_chauga_classified_water.geojson, SHA-256 eec
 
 Extension ID: water-designations. Descriptor: operator/extensions/water-designations.json. Frontend factory: createWaterDesignationsExtension. Backend module: operator/water_designations.py, imported as the flat module water_designations by the extension host. Native implementation: model/water_designations.py.
 
-On an application with the maintained ECSA shared extension host, materialize the fourteen release files beneath that application root, then launch the original operator. The current complete host source is the 25-file bank in the original Eco coordination thread (Drive file 15Hbqz3vXjiJAzp7ue7bhoka4BVgrByD6), including the nested-GIS route update. The earlier f293 Git source establishes the original host contract.
+On an application with the maintained ECSA shared extension host, materialize the release files beneath that application root, then launch the original operator. The maintained complete host source is published in the original Eco coordination thread (Drive file 15Hbqz3vXjiJAzp7ue7bhoka4BVgrByD6), including the nested-GIS route update. The earlier f293 Git source establishes the original host contract.
 
 ```bash
 python -B operator/server.py \
@@ -89,3 +89,28 @@ Use-in-delivery calls the original host openDelivery with overlays keyed by the 
 - R.61-68, Water Classifications and Standards: https://des.sc.gov/sites/des/files/Library/Regulations/R.61-68.pdf
 - Captured native service: https://gis.des.sc.gov/gisserver/rest/services/water/Water_Classifications/MapServer/0
 - Shared extension host source: https://github.com/woahwhattheheck/public-commons-sprint-2026/tree/f293e68f7f490346280419ae447748ef95ec76a3/opportunities/upstate_forever_2026
+
+## Move saved selections into a model delivery
+
+Applying a desk selection updates both its map overlay and the corresponding report source binding. High-quality waters use `HIGH_QUALITY_WATERS`, drinking-water protection areas use `SOURCE_WATER_PROTECTION_AREAS`, and protected lands use `PROTECTED_LANDS`. Each binding retains the saved selection ID, original source hash, rule reference, and selected source identity.
+
+The river example can run in its own receiving Workspace. To include that choice together with the combined four-polygon utility choice in an existing complete model delivery, run the following command from this application. Use the actual paths returned by the river and public-water receiving workflows.
+
+```bash
+python source_tools/prepare_designation_delivery.py \
+  --workspace /path/to/existing-model-workspace \
+  --delivery /path/to/current-complete-delivery-selection.json \
+  --source-manifest /path/to/river-output/intake/sources.json \
+  --selection /path/to/river-workspace/water-designations/SELECTED_ID/selection.json \
+  --selection /path/to/utility-output/both-utilities.selection.json \
+  --output /path/to/designation-delivery \
+  --build-delivery
+```
+
+The command imports the original river source into the model Workspace, rebinds the saved choice to that actual collection, and uses the native desk save/reopen/apply APIs. The utility choice must refer to the public-water preparation in that same model Workspace; a choice from another Workspace can also be accompanied by its original `sources.json` manifest using a second `--source-manifest`.
+
+Receiving resolves the original delivery source table against the actual completed baseline and grid. It checks that the selected source ID, selected-source file hash, saved selection ID, and complete overlay choice appear in the report lineage, and keeps the other source roles, overlays, baseline, scenario selections, and delivery settings intact. Its `delivery-selection.json` can be passed directly to the existing delivery engine. The accompanying `delivery-source-records.json` contains the actual report source rows. With `--build-delivery`, the same command creates the maps and package through `Workspace.build_delivery`.
+
+When several choices have the same purpose, the last one is the final map selection for that purpose. For the two utilities together, choose `both-utilities.selection.json`, which contains all four published protection polygons.
+
+The delivery renderer also reads the actual selected map overlays into its source table. The optional protected-lands map overlay appears as `PROTECTED_LANDS_OVERLAY`, alongside the separately selected `PROTECTED_LANDS` analysis source, so both editions remain visible when those choices differ.

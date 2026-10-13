@@ -16,6 +16,11 @@ _ASSETS = {
     "/reconciliation/app.js": ("app.js", "text/javascript;charset=utf-8"),
     "/reconciliation/style.css": ("style.css", "text/css;charset=utf-8"),
     "/reconciliation/OPERATING.md": ("OPERATING.md", "text/plain;charset=utf-8"),
+    "/reconciliation/carry-forward": ("carry-forward.html", "text/html;charset=utf-8"),
+    "/carry-forward": ("carry-forward.html", "text/html;charset=utf-8"),
+    "/reconciliation/carry-forward.js": ("carry-forward.js", "text/javascript;charset=utf-8"),
+    "/reconciliation/carry-forward.css": ("carry-forward.css", "text/css;charset=utf-8"),
+    "/reconciliation/PRIOR_DECISIONS.md": ("PRIOR_DECISIONS.md", "text/plain;charset=utf-8"),
 }
 
 
@@ -25,7 +30,7 @@ def asset(path):
         return None
     name, mime = selected
     root = Path(__file__).parent
-    selected = root / name if name == "OPERATING.md" else root / "public" / name
+    selected = root / name if name in {"OPERATING.md", "PRIOR_DECISIONS.md"} else root / "public" / name
     return read(selected, 2 * 1024 * 1024), mime
 
 
@@ -70,6 +75,19 @@ def get(operator, path, parameters):
         if filter_name in values:
             options[filter_name] = values[filter_name]
         return native.catalog(kind, **options)
+    if len(parts) == 1 and parts[0] in {"carry-reviews", "carry-applications"}:
+        values = _parameters(parameters, ("offset", "limit", "target_run_id"))
+        return native.carry_catalog("reviews" if parts[0] == "carry-reviews" else "applications",
+                                    target_run_id=values.get("target_run_id"), **_paging(values))
+    if len(parts) == 2 and parts[0] in {"carry-reviews", "carry-applications"}:
+        _parameters(parameters, ())
+        return native.carry_record("reviews" if parts[0] == "carry-reviews" else "applications", parts[1])
+    if len(parts) == 3 and parts[0] == "carry-reviews" and parts[2] == "candidates":
+        values = _parameters(parameters, ("offset", "limit", "state", "kind"))
+        return native.carry_candidates(parts[1], state=values.get("state"), kind=values.get("kind"), **_paging(values))
+    if len(parts) == 4 and parts[0] == "carry-reviews" and parts[2] == "candidates":
+        _parameters(parameters, ())
+        return native.carry_candidate(parts[1], _number(parts[3]))
     if len(parts) == 2 and parts[0] == "pairs":
         values = _parameters(parameters, ("revision",))
         return native.pair(parts[1], _number(values["revision"]) if "revision" in values else None)
@@ -131,7 +149,7 @@ def perform(operator, path, body):
     if parts == ["normalization-preview"]:
         fields(body, ("definition", "side", "column_name"), ("offset", "limit"))
         return native.normalization_preview(**body)
-    if len(parts) == 1 and parts[0] in {"pairs", "run", "decision", "report"}:
+    if len(parts) == 1 and parts[0] in {"pairs", "run", "decision", "report", "carry-review", "carry-apply"}:
         return native.perform(parts[0], body)
     if len(parts) == 3 and parts[0] == "requests" and parts[2] == "resume":
         fields(body, ("workspace_id",))

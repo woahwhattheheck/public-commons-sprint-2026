@@ -96,7 +96,7 @@ Install the current joined extension host and source, then reconcile the report 
       --application /absolute/application --source-root /absolute/received-project-root
     python -B operator/scenario_decision_install.py --application /absolute/application
 
-The current shared host supplies the action, JSON reads, metadata, item view, task completion and typed retained-file responses. The descriptor binds its file preview to the module-level preview(operator, workspace_key, report_id, fault) function. The host performs the existing file-cookie authorization and sends the returned verified ticket with its original content policy. The second command removes exact older authored preview joins when the typed host is installed, or installs the compatible one-route preview for an older host. It reads current source, preserves other adapters, compiles the resulting Python syntax and writes once under an unchanged-source check. Repeat installation is idempotent. The current composed seven-file host source bank is https://tokenjunkielabs.slack.com/docs/T0BRETUB5TK/F0C8TNEPZB6 .
+The current shared host supplies the action, JSON reads, metadata, item view, task completion and typed retained-file responses. The descriptor binds its file preview to the module-level preview(operator, workspace_key, report_id, fault) function. The host performs the existing file-cookie authorization and sends the returned verified ticket with its original content policy. The second command removes exact older authored preview joins when the typed host is installed, or installs the compatible one-route preview for an older host. It reads current source, preserves other adapters, compiles the resulting Python syntax and writes once under an unchanged-source check. Repeat installation is idempotent. The shared host's [extension contract](../operator/EXTENSIONS.md) and [installer](../install_extensions.py) describe the current registry and composition entrypoint.
 
 The operator controls list original completed reference runs and alternatives on the same grid. Same-profile land-cover alternatives with the reference outputs are selected by default. Parameter-change alternatives are available through an explicit switch and keep their comparison labels. Pollutant choices reflect the completed native outputs shared by the selected cohort.
 
@@ -149,3 +149,11 @@ Official model interpretation:
 The original regional requirement source is the Upstate Forever Emerging Contaminants in Small or Disadvantaged Communities Grant Program — GIS Mapping & Modeling Services RFP and appendices:
 
 https://www.upstateforever.org/files/files/20261002_FINAL_EC-SDC%20Mapping%20RFP%20APPENDIX%20COMBINED.pdf
+
+## Public source credit and review
+
+Prepared by TokenJunkieLabs from the original ES-20261012-ASTRA-S1 watershed report delivery. This application source inherits the repository's MIT license; retain its LICENSE with redistributed source.
+
+**Needs expert review.** Native modeled exports, original source-area interpretation and planning decisions require appropriate scientific review. The report retains its actual study title, native model edition, annual units and common-support basis.
+
+The operator restores saved form selections using the complete matching control collection. The current ECSA registry, typed verified preview and selected-native-model producer remain the maintained receiving interfaces.

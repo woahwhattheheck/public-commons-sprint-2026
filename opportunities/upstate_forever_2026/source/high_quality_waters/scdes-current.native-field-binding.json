@@ -1,0 +1,344 @@
+{
+  "schema": "upstate.classified-water-bindings/v1",
+  "title": "SC DES SCHydroClass/2 captured Upper Savannah field binding",
+  "binding_source": {
+    "source_id": "scdes-classified-streams-upper-savannah-20261012",
+    "source_dictionary_path": "source/water_context/20261012/source-dictionary.json",
+    "source_dictionary_sha256": "d6f6f883dd90f091747d82ed4cc6bdbdcadb214d50c86769cda781b899c2296b",
+    "retained_selection_path": "source/high_quality_waters/scdes-schydroclass-20261012.retained-selection.json",
+    "county_abbreviations": {
+      "source_url": "https://des.sc.gov/sites/des/files/Library/Regulations/R.61-69.pdf",
+      "source_pdf_page": 5,
+      "source_printed_page": 2,
+      "source_line_start": 82,
+      "source_line_end": 127,
+      "retained_text_path": "source/high_quality_waters/r61-69-current.fulltext.txt",
+      "retained_text_sha256": "4488edcba67f6054ac553530e70fb4f5f7064a05452757de560e62ba09f964d2",
+      "records": 46
+    }
+  },
+  "layers": {
+    "scdes-classified-75805b84d89a256d": {
+      "class_field": "H2OCLASS",
+      "name_field": "HYDNAME",
+      "county_field": "Cnty_Name",
+      "county_values": {
+        "Abbeville": "Abvl",
+        "Aiken": "Aikn",
+        "Allendale": "Aldl",
+        "Anderson": "Andn",
+        "Bamberg": "Bmbg",
+        "Barnwell": "Brwl",
+        "Beaufort": "Bfrt",
+        "Berkeley": "Bkly",
+        "Calhoun": "Clhn",
+        "Charleston": "Chtn",
+        "Cherokee": "Chke",
+        "Chester": "Cstr",
+        "Chesterfield": "Cfld",
+        "Clarendon": "Clrn",
+        "Colleton": "Cltn",
+        "Darlington": "Drln",
+        "Dillon": "Diln",
+        "Dorchester": "Dchr",
+        "Edgefield": "Efld",
+        "Fairfield": "Ffld",
+        "Florence": "Flrn",
+        "Georgetown": "Gtwn",
+        "Greenville": "Gnvl",
+        "Greenwood": "Gnwd",
+        "Hampton": "Hmpt",
+        "Horry": "Hory",
+        "Jasper": "Jspr",
+        "Kershaw": "Krsh",
+        "Lancaster": "Lctr",
+        "Laurens": "Lrns",
+        "Lee": "Lee",
+        "Lexington": "Lxtn",
+        "McCormick": "Mcmk",
+        "Marion": "Marn",
+        "Marlboro": "Mrlb",
+        "Newberry": "Nbry",
+        "Oconee": "Ocne",
+        "Orangeburg": "Orbg",
+        "Pickens": "Pkns",
+        "Richland": "Rlnd",
+        "Saluda": "Slda",
+        "Spartanburg": "Spbg",
+        "Sumter": "Smtr",
+        "Union": "Unin",
+        "Williamsburg": "Wmbg",
+        "York": "York"
+      },
+      "status": "current",
+      "vintage": "2026-10-12 native source capture; publisher edit date not supplied",
+      "data_status": "provisional",
+      "catalogue_source_id": "scdes-classified-streams-upper-savannah-20261012",
+      "source_metadata": {
+        "catalogue_entry": {
+          "title": "SCDES classified streams — Upper Savannah capture",
+          "layer_url": "https://gis.des.sc.gov/gisserver/rest/services/water/SCHydroClass/MapServer/2",
+          "discovery_url": "https://gis.des.sc.gov/stormwater/js/a_settings.js",
+          "source_crs": "EPSG:3857",
+          "object_id": "OBJECTID",
+          "classification": "H2OCLASS",
+          "publisher_huc12": "HUC_12",
+          "waterbody_name": "HYDNAME",
+          "county": "Cnty_Name",
+          "basin": "Basin",
+          "main_stem": "MainStem",
+          "source_geometry_length": "Shape_Length",
+          "geometry_type": "esriGeometryPolyline",
+          "field_metadata": [
+            {
+              "name": "OBJECTID",
+              "type": "esriFieldTypeOID",
+              "alias": "OBJECTID_1",
+              "domain": null
+            },
+            {
+              "name": "Shape",
+              "type": "esriFieldTypeGeometry",
+              "alias": "Shape",
+              "domain": null
+            },
+            {
+              "name": "OBJECTID_1",
+              "type": "esriFieldTypeInteger",
+              "alias": "OBJECTID",
+              "domain": null
+            },
+            {
+              "name": "HYDNAME",
+              "type": "esriFieldTypeString",
+              "alias": "HYDNAME",
+              "length": 65,
+              "domain": null
+            },
+            {
+              "name": "HYDTYPE",
+              "type": "esriFieldTypeString",
+              "alias": "HYDTYPE",
+              "length": 35,
+              "domain": null
+            },
+            {
+              "name": "H2OCLASS",
+              "type": "esriFieldTypeString",
+              "alias": "H2OCLASS",
+              "length": 6,
+              "domain": null
+            },
+            {
+              "name": "HUCODE14",
+              "type": "esriFieldTypeString",
+              "alias": "HUCODE14",
+              "length": 14,
+              "domain": null
+            },
+            {
+              "name": "HUC_12",
+              "type": "esriFieldTypeString",
+              "alias": "HUC_12",
+              "length": 12,
+              "domain": null
+            },
+            {
+              "name": "Cnty_Name",
+              "type": "esriFieldTypeString",
+              "alias": "Cnty_Name",
+              "length": 15,
+              "domain": null
+            },
+            {
+              "name": "Basin",
+              "type": "esriFieldTypeString",
+              "alias": "Basin",
+              "length": 25,
+              "domain": null
+            },
+            {
+              "name": "MainStem",
+              "type": "esriFieldTypeString",
+              "alias": "MainStem",
+              "length": 50,
+              "domain": null
+            },
+            {
+              "name": "Navigable",
+              "type": "esriFieldTypeString",
+              "alias": "Navigable",
+              "length": 20,
+              "domain": null
+            },
+            {
+              "name": "Shape_Length",
+              "type": "esriFieldTypeDouble",
+              "alias": "Shape_Length",
+              "domain": null
+            }
+          ],
+          "spatial_reference": {
+            "wkid": 102100,
+            "latestWkid": 3857,
+            "xyTolerance": 0.001,
+            "zTolerance": 0.001,
+            "mTolerance": 0.001,
+            "falseX": -20037700,
+            "falseY": -30241100,
+            "xyUnits": 10000,
+            "falseZ": -100000,
+            "zUnits": 10000,
+            "falseM": -100000,
+            "mUnits": 10000
+          },
+          "service_item_id": "7753636703eb4198acd31591bfb61dc4",
+          "editing_info": null,
+          "editing_info_note": "The retrieved layer metadata does not publish editingInfo.",
+          "capture_filter": "(HUC_12 LIKE '03060101%' OR HUC_12 LIKE '03060102%' OR HUC_12 LIKE '03060103%') AND H2OCLASS IN ('ORW','ONRW','TN','TPGT','TPT')",
+          "capture_query": "https://gis.des.sc.gov/gisserver/rest/services/water/SCHydroClass/MapServer/2/query?where=(HUC_12%20LIKE%20'03060101%25'%20OR%20HUC_12%20LIKE%20'03060102%25'%20OR%20HUC_12%20LIKE%20'03060103%25')%20AND%20H2OCLASS%20IN%20('ORW'%2C'ONRW'%2C'TN'%2C'TPGT'%2C'TPT')&outFields=*&returnGeometry=true&orderByFields=OBJECTID&resultRecordCount=2000&f=pjson",
+          "captured_feature_count": 1886,
+          "class_counts": {
+            "ORW": 1040,
+            "TN": 247,
+            "TPGT": 599
+          },
+          "capture_source_huc_count": 19,
+          "designation_status": "Publisher labels mapped classification provisional; adopted R.61-69 is the named-reach reference.",
+          "role": "HIGH_QUALITY_WATERS",
+          "sample_feature": {
+            "attributes": {
+              "OBJECTID": 218303,
+              "OBJECTID_1": null,
+              "HYDNAME": "SAVANNAH RIVER",
+              "HYDTYPE": "STREAM/LEFT BANK",
+              "H2OCLASS": "TPGT",
+              "HUCODE14": "03060103030010",
+              "HUC_12": "030601030405",
+              "Cnty_Name": " ",
+              "Basin": "Savannah",
+              "MainStem": "MainStem",
+              "Navigable": "Navigable",
+              "Shape_Length": 11.073050052898047
+            },
+            "geometry": {
+              "paths": [
+                [
+                  [
+                    -9216842.5437,
+                    4074720.182400003
+                  ],
+                  [
+                    -9216831.7644,
+                    4074717.6488000005
+                  ]
+                ]
+              ]
+            }
+          }
+        },
+        "retained_selection": {
+          "schema": "upstate.retained-classified-water-selection/v1",
+          "source_id": "scdes-classified-streams-upper-savannah-20261012",
+          "layer_url": "https://gis.des.sc.gov/gisserver/rest/services/water/SCHydroClass/MapServer/2",
+          "service_item_id": "7753636703eb4198acd31591bfb61dc4",
+          "source_title": "SCDES classified streams — Upper Savannah capture",
+          "data_status": "provisional",
+          "original_capture_date": "2026-10-12",
+          "source_dictionary_path": "source/water_context/20261012/source-dictionary.json",
+          "source_dictionary_sha256": "d6f6f883dd90f091747d82ed4cc6bdbdcadb214d50c86769cda781b899c2296b",
+          "metadata_sha256": "6b2e4b063d9e4af73c724853c7097fd0bf960be0d97f89493d9cca866d9e54c4",
+          "expected_feature_count": 1886,
+          "expected_class_counts": {
+            "ORW": 1040,
+            "TN": 247,
+            "TPGT": 599
+          },
+          "expected_publisher_huc_count": 19,
+          "class_field": "H2OCLASS",
+          "huc_field": "HUC_12",
+          "included_huc_prefixes": [
+            "03060101",
+            "03060102",
+            "03060103"
+          ],
+          "included_class_codes": [
+            "ORW",
+            "ONRW",
+            "TN",
+            "TPGT",
+            "TPT"
+          ],
+          "selection_where": "(HUC_12 LIKE '03060101%' OR HUC_12 LIKE '03060102%' OR HUC_12 LIKE '03060103%') AND H2OCLASS IN ('ORW','ONRW','TN','TPGT','TPT')",
+          "query_uri": "https://gis.des.sc.gov/gisserver/rest/services/water/SCHydroClass/MapServer/2/query?where=(HUC_12%20LIKE%20'03060101%25'%20OR%20HUC_12%20LIKE%20'03060102%25'%20OR%20HUC_12%20LIKE%20'03060103%25')%20AND%20H2OCLASS%20IN%20('ORW'%2C'ONRW'%2C'TN'%2C'TPGT'%2C'TPT')&outFields=*&returnGeometry=true&orderByFields=OBJECTID&resultRecordCount=2000&f=pjson",
+          "geometry_response_bytes": 4978867,
+          "geometry_response_count": 1,
+          "original_metadata_reference": "scdes-classified-waters-layer-metadata.json",
+          "original_geometry_reference": "scdes-classified-streams-upper-savannah-original-esri.json",
+          "original_attributes_reference": "scdes-classified-streams-upper-savannah-attributes.json",
+          "original_attribute_page_references": [
+            "scdes-classified-reaches-attributes-0.json",
+            "scdes-classified-reaches-attributes-500.json",
+            "scdes-classified-reaches-attributes-1000.json",
+            "scdes-classified-reaches-attributes-1500.json"
+          ],
+          "source_geometry_type": "esriGeometryPolyline",
+          "source_spatial_reference": {
+            "wkid": 102100,
+            "latestWkid": 3857,
+            "xyTolerance": 0.001,
+            "zTolerance": 0.001,
+            "mTolerance": 0.001,
+            "falseX": -20037700,
+            "falseY": -30241100,
+            "xyUnits": 10000,
+            "falseZ": -100000,
+            "zUnits": 10000,
+            "falseM": -100000,
+            "mUnits": 10000
+          },
+          "oid_field": "OBJECTID",
+          "oid_field_type": "esriFieldTypeOID",
+          "oid_field_alias": "OBJECTID_1",
+          "similarly_named_attribute": {
+            "name": "OBJECTID_1",
+            "type": "esriFieldTypeInteger",
+            "alias": "OBJECTID",
+            "nullable": true
+          },
+          "source_scope_note": "This edition preselects five class codes and three publisher HUC8 prefixes. Spatial intersections with retained current WBD polygons establish reporting and HUC membership. Features outside this capture selection are not evaluated.",
+          "geometry_interpretation": "Native polyline features include stream segments, banks and shorelines. Feature count is not a count of unique named water bodies or a centerline length. Source Shape_Length is in the publisher Web Mercator representation; derived analytical lengths use the retained project's EPSG:26917.",
+          "legal_reference": {
+            "registry_path": "source/high_quality_waters/r61-69-current.selected-reaches.json",
+            "registry_sha256": "a55388d8edfceb587d7d37b5e9a20f43a1f44d37f6ecd70001806528bbc767f1",
+            "edition_id": "sc-r61-69-2023",
+            "legal_edition_status": "current",
+            "association": "Named legal reach descriptions retain their own extent; automatic name/class/county matches are candidates."
+          },
+          "retained_source_metadata": {
+            "editing_info": null,
+            "editing_info_note": "The retrieved layer metadata does not publish editingInfo.",
+            "discovery_url": "https://gis.des.sc.gov/stormwater/js/a_settings.js",
+            "designation_status": "Publisher labels mapped classification provisional; adopted R.61-69 is the named-reach reference."
+          }
+        },
+        "previous_catalogue_context": {
+          "source_id": "scdes-water-classification-provisional-20261012",
+          "layer_url": "https://gis.des.sc.gov/gisserver/rest/services/water/Water_Classifications/MapServer/0",
+          "relationship": "Earlier discovery reference; separate layer identity from this retained SCHydroClass/2 edition."
+        },
+        "legal_reference": {
+          "registry_path": "source/high_quality_waters/r61-69-current.selected-reaches.json",
+          "registry_sha256": "a55388d8edfceb587d7d37b5e9a20f43a1f44d37f6ecd70001806528bbc767f1",
+          "edition_id": "sc-r61-69-2023",
+          "legal_edition_status": "current",
+          "association": "Named legal reach descriptions retain their own extent; automatic name/class/county matches are candidates."
+        },
+        "native_identity_note": "Use metadata field type esriFieldTypeOID: OBJECTID. Its display alias is OBJECTID_1. The separate OBJECTID_1 integer attribute is nullable and is not the native feature key.",
+        "publisher_huc_note": "Preserve HUC_12 as a source attribute; crosswalk HUC12 is assigned by intersection with retained native WBD polygons.",
+        "coverage_note": "This edition preselects five class codes and three publisher HUC8 prefixes. Spatial intersections with retained current WBD polygons establish reporting and HUC membership. Features outside this capture selection are not evaluated.",
+        "geometry_interpretation": "Native polyline features include stream segments, banks and shorelines. Feature count is not a count of unique named water bodies or a centerline length. Source Shape_Length is in the publisher Web Mercator representation; derived analytical lengths use the retained project's EPSG:26917."
+      }
+    }
+  }
+}

@@ -16,8 +16,10 @@ APPLICATION_FILES = ("README.md", "audit.py", "raster_checks.py", "package_deliv
                      "delivery_snapshot.py", "handoff_view.py", "focused_check.py",
                      "install_extensions.py", "install_experiments.py", "install_terrain.py",
                      "receive_application_source.py", "requirements-terrain.txt",
-                     "terrain-source-manifest.json", "START_HERE.md", "TERRAIN_STATIC.md")
-APPLICATION_DIRECTORIES = ("model", "operator", "source_tools", "source")
+                     "terrain-source-manifest.json", "START_HERE.md", "TERRAIN_STATIC.md",
+                     "environment.yml", "PROGRAMMES.md", "PAIRED_ENSEMBLES.md",
+                     "install_programmes.py", "requirements-paired-ensemble.txt")
+APPLICATION_DIRECTORIES = ("model", "operator", "source_tools", "source", "ecsa_runs")
 MAX_MANIFEST = 64 * 1024 * 1024
 
 def member_name(value):
@@ -88,6 +90,8 @@ def backup(workspace, destination, *, include_intermediates=True, include_delive
     try:
         with contextlib.ExitStack() as stack:
             stack.enter_context(held(root / ".workspace.lock", blocking=False))
+            for path in sorted((root / "experiments").glob("*/.experiment.lock")):
+                stack.enter_context(held(path, blocking=False))
             for path in sorted((root / "runs").glob("*/.run.lock")):
                 stack.enter_context(held(path, blocking=False))
             for path in sorted((root / "grids").glob("*/.grid.lock")):

@@ -127,6 +127,7 @@ export type DecisionOutcome = 'OPEN' | 'ACCEPTED_DIFFERENCE' | 'REQUIRES_CORRECT
 export interface ReconciliationDecision {
   run_id: NativeId; sequence: number; subject: DecisionSubject; outcome: DecisionOutcome;
   actor: string; reason: string; created_at: string; request_id: RequestId;
+  carried_from?: CarriedDecision;
 }
 export interface ReconciliationReport {
   schema: string; report_id: NativeId; run_id: NativeId; pair_id: NativeId;
@@ -134,13 +135,14 @@ export interface ReconciliationReport {
   review: ReconciliationReview; summary: RunSummary;
   source_edition: NativeId; target_edition: NativeId; before_run_id: NativeId | null;
   scope_comparison: Record<string,unknown> | null;
-  queries: Array<{kind: 'rows' | 'groups' | 'fields' | 'normalizations' | 'decisions' | 'changes';
+  decision_carry_forward?: DecisionCarryLineage;
+  queries: Array<{kind: 'rows' | 'groups' | 'fields' | 'normalizations' | 'decisions' | 'changes' | 'decision_carry';
     query_id: NativeId; revision: number; sql: string; parameters: unknown; parameters_text: string;
     [key: string]: unknown}>;
   views_at_creation: Array<{name: string; edition_id: NativeId; revision: number}>; created_at: string;
 }
 export interface ReconciliationRequest {
-  request_id: RequestId; kind: 'pairs' | 'run' | 'decision' | 'report';
+  request_id: RequestId; kind: 'pairs' | 'run' | 'decision' | 'report' | 'carry-review' | 'carry-apply';
   body: Record<string, unknown>; state: 'PREPARED' | 'RUNNING' | 'INTERRUPTED' | 'COMPLETE';
   created_at: string; updated_at?: string; error?: string; result?: unknown;
 }
@@ -148,7 +150,7 @@ export interface ExportManifest {
   schema: 'stellar-forge.duckdb-reconciliation.v1.export';
   export_id: NativeId; report_id: NativeId; report_digest: string;
   request_id: RequestId; workspace_id: string; complete: true; state: 'COMPLETE';
-  comparison_rules?: NumericRules; normalizations?: Normalizations;
+  comparison_rules?: NumericRules; normalizations?: Normalizations; decision_carry_forward?: DecisionCarryLineage;
   files: Array<{name: string; bytes: number; sha256: string; [key: string]: unknown}>;
   queries: Array<{kind: string; query_id: NativeId; revision: number; export_id: NativeId;
     directory: string; rows: number}>;
@@ -156,6 +158,55 @@ export interface ExportManifest {
   [key: string]: unknown;
 }
 export function parseReconciliationManifest(bytes: Uint8Array, exportId: NativeId): ExportManifest;
+export type CarryState = 'ELIGIBLE' | 'PRIOR_OPEN' | 'POLICY_CHANGED' | 'GROUP_MISSING' |
+  'VALUES_CHANGED' | 'ROW_MISSING' | 'ROW_AMBIGUOUS' | 'TARGET_REVIEWED';
+export interface CarriedDecision {
+  schema: 'stellar-forge.duckdb-reconciliation.decision-carry.v1.decision';
+  application_id: NativeId; review_id: NativeId; review_sha256: string; candidate_id: number;
+  source_report_id: NativeId; source_report_sha256: string; source_run_id: NativeId;
+  source_sequence: number; source_subject: DecisionSubject; source_decision_sha256: string;
+  source_actor: string; scope_basis: string; carry_reason: string;
+}
+export interface CarryCandidate {
+  candidate_id: number; kind: 'group' | 'row'; state: CarryState; reasons: string[];
+  source_subject: DecisionSubject; target_subject: DecisionSubject | null;
+  source_decision: ReconciliationDecision; target_decision: ReconciliationDecision | null;
+  source_run_id: NativeId; target_run_id: NativeId;
+  checks: {policy_compatible: boolean; identity_match: boolean; canonical_values_equal: boolean | null;
+    original_values_equal: boolean | null; unique_row_match: boolean | null};
+  row_occurrences?: {source: number | null; target: number | null};
+  row_group?: {source: number | null; target: number | null; basis: 'COMPLETE_GROUP_AND_UNIQUE_ROW' | 'UNRESOLVED_KEY_ROW_ONLY'};
+}
+export interface CarryReview {
+  schema: 'stellar-forge.duckdb-reconciliation.decision-carry.v1.review';
+  review_id: NativeId; review_sha256: string; workspace_id: string; pair_id: NativeId;
+  source_report_id: NativeId; source_report_sha256: string; source_run_id: NativeId; source_report_revision: number;
+  target_run_id: NativeId; target_review_revision: number;
+  source_review: ReconciliationReview; target_review: ReconciliationReview; scope_basis: string;
+  policy: {compatible: boolean; checks: Array<{name: string; equal: boolean; basis: string}>;
+    blocking_reasons: string[]; capture_changes: Record<string, unknown>; content_basis: string};
+  summary: {total: number; eligible: number; states: Record<CarryState, number>};
+  candidates_sha256: string; created_at: string;
+}
+export interface CarryApplication {
+  schema: 'stellar-forge.duckdb-reconciliation.decision-carry.v1.application';
+  application_id: NativeId; workspace_id: string; review_id: NativeId; review_sha256: string;
+  source_report_id: NativeId; source_report_sha256: string; source_run_id: NativeId; target_run_id: NativeId;
+  prior_review_revision: number; review_revision: number; selected_candidate_ids: number[];
+  applied: Array<{candidate_id: number; subject: DecisionSubject; sequence: number; outcome: DecisionOutcome}>;
+  actor: string; reason: string; created_at: string;
+}
+export interface DecisionCarryLineage {
+  schema: 'stellar-forge.duckdb-reconciliation.decision-carry.v1.lineage';
+  applied_here: NativeId[];
+  applications: Array<{application_id: NativeId; sha256: string; review_id: NativeId; source_report_id: NativeId;
+    target_run_id: NativeId; prior_review_revision: number; review_revision: number; applied_count: number}>;
+  reviews: Array<{review_id: NativeId; sha256: string; review_sha256: string; source_report_id: NativeId;
+    target_run_id: NativeId; target_review_revision: number; candidates_sha256: string}>;
+  reports: Array<{report_id: NativeId; sha256: string; run_id: NativeId; review_revision: number;
+    source_edition: NativeId; target_edition: NativeId}>;
+  source_editions: NativeId[]; meaning: string;
+}
 export interface ReconciliationClient {
   readonly workspace: string; readonly workspaceId: string; readonly endpoint: string;
   status(): Promise<{schema: string; workspace_id: string; feature_schema?: string;
@@ -188,6 +239,17 @@ export interface ReconciliationClient {
   saveReport(request: {request_id: RequestId; run_id: NativeId; expected_revision: number;
     before_run_id?: NativeId}): Promise<ReconciliationReport>;
   changes(reportId: NativeId, options?: PageOptions): Promise<NativeGrid>;
+  prepareCarry(request: {request_id: RequestId; source_report_id: NativeId; target_run_id: NativeId;
+    expected_revision: number; scope_basis: string}): Promise<CarryReview>;
+  carryReviews(options?: PageOptions & {target_run_id?: NativeId}): Promise<Catalog<'reviews',CarryReview>>;
+  carryReview(reviewId: NativeId): Promise<CarryReview>;
+  carryCandidates(reviewId: NativeId, options?: PageOptions & {state?: CarryState; kind?: 'group' | 'row'}):
+    Promise<Catalog<'candidates',CarryCandidate> & {review_id: NativeId}>;
+  carryCandidate(reviewId: NativeId, candidateId: number): Promise<CarryCandidate>;
+  applyCarry(request: {request_id: RequestId; review_id: NativeId; review_sha256: string;
+    expected_revision: number; candidate_ids: number[]; actor: string; reason: string}): Promise<CarryApplication>;
+  carryApplications(options?: PageOptions & {target_run_id?: NativeId}): Promise<Catalog<'applications',CarryApplication>>;
+  carryApplication(applicationId: NativeId): Promise<CarryApplication>;
   operations(options?: PageOptions): Promise<Catalog<'operations',ReconciliationRequest>>;
   request(requestId: RequestId): Promise<ReconciliationRequest>;
   resume(requestId: RequestId): Promise<unknown>;

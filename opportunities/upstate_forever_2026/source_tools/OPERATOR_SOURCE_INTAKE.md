@@ -1,15 +1,226 @@
-# Receive original climate sources through the running operator
+# Prepare original regional sources through the running operator
 
-This command completes the original PRISM and NOAA source intake using the
-application's existing HTTP API, task queue, preparation helpers and Workspace.
-It prepares both numeric sources, checks their retained original inputs,
-composes the selected source edition and imports that edition. Its final JSON
-contains the real preparation task IDs, composition task ID, source collection
-ID, source units, native raster metadata and retained source selections.
+The client has two execution modes over the application's existing HTTP API,
+source preparation helpers, task queue and Workspace. The original `run`
+command receives the retained PRISM and NOAA originals. The `plan` command
+executes a complete source plan, resolves dependencies to the source IDs
+actually returned by the operator, adopts existing preparations, and composes
+one imported source edition.
 
-The command is a standalone Python 3.10+ client. It uses the standard library
-and connects to the already-running operator. Native GIS work runs in the
-operator's current interpreter and original worker queue.
+The command is a standalone Python 3.10+ client using the standard library.
+Native GIS work runs in the operator's existing interpreter and worker queue.
+Both modes follow the original task IDs through completion and retain a local
+JSON record for continuation.
+
+## Execute a complete source plan
+
+Run the catalogue command against the accepting operator to obtain its exact
+Workspace key, registered roots, methods, source selectors, prepared task IDs
+and source collections. Catalogue output includes the installed method input
+and option contracts, so a plan can be assembled from the actual application.
+
+```bash
+python -B source_tools/operator_source_intake.py catalog \
+  --operator-url http://127.0.0.1:8765 \
+  --study-title "THE EXISTING STUDY TITLE"
+```
+
+Supply the current capability through the existing
+`UPSTATE_OPERATOR_CAPABILITY` environment variable or the documented
+owner-only capability file. Keep the operator's capability out of the plan.
+
+A source plan is a JSON object with schema
+`upstate.operator-source-plan/v1`. Its `steps` are original
+`source.prepare` operations. The method names are the IDs from the
+catalogue: currently `nlcd`, `prism`, `erosivity`,
+`dem` and `soil`. The plan's selected existing source
+collections and registered manifests join its completed preparations in the
+final `source.compose` request.
+
+### Bind a real dependency
+
+A dependent input uses `{"from_step": "landcover"}`. After the
+land-cover preparation finishes, the client reads its actual
+`source_collection_id` and `source_id`, reopens that
+collection, and supplies the native
+`{"collection_id": "…", "source_id": "…"}` selector to the
+dependent method. It checks the numeric source role and original raster body
+before submitting the dependent request.
+
+New preparations used by later steps import their output directly. A reused
+preparation that was completed without importing receives one ordinary
+`source.compose` import through the existing queue. The final
+composition selects each prepared task bank once. Intermediate imports serve
+the dependency binding and are not added a second time to the final source
+edition.
+
+For example, a plan can receive the existing national land-cover archive,
+prepare terrain on its actual numeric reference grid, reuse the climate
+preparations that have already completed, and include the existing regional
+soil/source manifest. The soil acquisition already owned by another operation
+continues independently; select its retained collection or manifest when ready.
+
+The following example shows the dependency structure. Set its root paths,
+filenames, source edition and retained identifiers from the accepting
+operator's catalogue and existing source results before executing it.
+
+```json
+{
+  "schema": "upstate.operator-source-plan/v1",
+  "title": "Upper Savannah original regional source edition",
+  "roots": {
+    "originals": "/path/to/registered/originals",
+    "domain": "/path/to/registered/domain"
+  },
+  "steps": [
+    {
+      "id": "landcover",
+      "method": "nlcd",
+      "inputs": {
+        "archive": {
+          "root": "originals",
+          "path": "Annual_NLCD_LndCov_2025_CU_C1V2.zip"
+        },
+        "transfer": {
+          "root": "originals",
+          "path": "source-transfer.json"
+        },
+        "domain": {
+          "root": "domain",
+          "path": "model-domain.esri.json"
+        }
+      },
+      "options": {
+        "read_mode": "archive",
+        "expected_features": 217,
+        "buffer_m": 1000
+      }
+    },
+    {
+      "id": "terrain",
+      "method": "dem",
+      "inputs": {
+        "reference": {"from_step": "landcover"},
+        "domain": {
+          "root": "domain",
+          "path": "model-domain.esri.json"
+        }
+      },
+      "options": {
+        "vintage": "THE SOURCE EDITION IN THE RETAINED METADATA",
+        "tile_size": 2048,
+        "workers": 1,
+        "buffer_m": 1000
+      }
+    }
+  ],
+  "source_collection_ids": [],
+  "registered_ids": []
+}
+```
+
+The example's 217-feature domain and 1000 metre buffer match the existing
+Upper Savannah operation. The original source helper still verifies the
+selected geometry and applies its own domain, grid, unit and native-data
+contracts. The client passes those actual method options through unchanged.
+
+To adopt a completed preparation, replace the corresponding new-preparation
+step with a step containing its actual original task ID:
+
+```json
+{
+  "id": "landcover",
+  "method": "nlcd",
+  "reuse_task_id": "THE ACTUAL 64-CHARACTER PREPARATION TASK ID"
+}
+```
+
+A reused step retains its original inputs and options. It can be a prerequisite
+for other steps, or simply contribute its original bank to the final edition.
+An active reused task is followed in place; a failed or interrupted original
+task is resumed through its native resume route. The existing explicit
+`--resume-cancelled` choice also applies to cancelled reused tasks.
+
+```bash
+python -B source_tools/operator_source_intake.py plan \
+  --operator-url http://127.0.0.1:8765 \
+  --study-title "THE EXISTING STUDY TITLE" \
+  --plan /path/to/upper-savannah-source-plan.json \
+  --operation-id ECO12-REGIONAL-SOURCE-PLAN-20261013 \
+  --output /path/to/retained/upper-savannah-source-plan-result.json
+```
+
+`--plan-root NAME=REGISTERED_ROOT` changes one existing named root
+for the accepting machine without editing the saved plan file. The value must
+identify one exact root from that operator's catalogue. The effective root
+selection is retained in the result, together with the plan and its resolved
+native requests.
+
+`--include-collection` and `--include-manifest` can add
+existing source editions to the plan's own selected arrays. They use the same
+exact catalogue identifiers as the climate command. A plan may have no new
+steps and compose only existing collections/manifests.
+
+### Select original inputs
+
+Each input accepts one of the following selectors.
+
+| Selection | Fields |
+| --- | --- |
+| Named plan root | `root`, `path` |
+| Existing registered root | `root_id`, `path` |
+| Imported source | `collection_id`, `source_id`, optional `companion_path` |
+| Existing upload | `upload_id` |
+| Bundled original reference | `builtin_id` |
+| Completed prerequisite | `from_step`, optional exact `source_id` and `companion_path` |
+
+Fields omitted from a method's inputs continue to use its installed defaults.
+For example, current NLCD metadata, NOAA metadata, USDA interpretation metadata
+and USGS metadata use the original bundled reference selectors when declared
+by the method. The source helper owns the actual receipt and file validation.
+
+A step can also declare `expected_inputs` to check selected originals
+against specific retained byte counts and SHA256 values. Use the input's
+method field name as the key and an object with exactly `bytes` and
+`sha256`. After the native preparation, the client reads the
+original selection document and compares the retained main member for each
+declared input. It then reads the original numeric source entry and verifies
+the same raster body in the completed imported edition.
+
+### Continue and restore
+
+Use the same plan, effective roots, operation prefix and result file to
+continue an interrupted observation. The result records resolved requests
+before they are sent; a lost HTTP response is reconciled against the
+operator's retained task. Completed preparations are reused and dependency
+selectors retain their actual imported source identities.
+
+The complete source-plan release also updates
+`operator/source_preparation.py`: its existing result route now
+attaches the same workspace-bound original document tickets as the task view.
+This makes the retained selection, source manifest and native entry readable
+after a Workspace restore even when the former queue task is absent. The
+client adopts that complete prepared bank through the normal result and
+composition routes. Restored composition records are checked against the
+original resolved request before reuse.
+
+The same native task continues to own acquisition and processing errors.
+After resolving its reported source or helper issue, rerun the same command.
+Only genuinely changed input selections need their own operation prefix and
+result file.
+
+The plan result records each logical step's original task ID, source ID, role,
+units, source edition, imported prerequisite collection and original raster
+identity, followed by the final composition task and source collection IDs.
+Open that collection in the existing source desk or select it for the current
+regional model preparation.
+
+## Retained PRISM and NOAA command
+
+The original climate command continues to prepare both numeric sources,
+check its pinned retained inputs, compose the selected edition and import it.
+Its command arguments and default operation identity remain compatible with
+the original release.
 
 ## Installed source
 
@@ -18,10 +229,10 @@ Place these complete files under the current application:
 - source_tools/operator_source_intake.py
 - source_tools/OPERATOR_SOURCE_INTAKE.md
 
-The source preparation backend and routes must be installed. The complete
-ECO12 integrated release is F0C8RSDBVMX; its final backend is
-operator/source_preparation.py, 60,959 bytes, SHA256
-9226020ab55543a0678f6047f6f440d3c9b094f51220116071ec1573313ffd0f.
+The source preparation backend and routes must be installed. The original
+ECO12 integrated release is F0C8RSDBVMX. Install the current complete source-plan
+release over that application to receive the plan command and restored-result
+document tickets; it includes the full current operator/source_preparation.py.
 
 Both supported integrations expose the same original routes:
 

@@ -25,7 +25,7 @@ R.61-69 Section E defines class abbreviations, Section F explains prior classes 
 
 For the practical Chattooga/Chauga case, the rule changes at Opossum Creek on the Chattooga and one mile above US Route 76 on the Chauga. The retained 377-feature named-river capture has 332 ORW and 45 FW features. Its native identity field is OBJECTID_1; the active SCHydroClass/MapServer/2 regional source uses OBJECTID. Each source edition keeps its own identity binding.
 
-The named-river case exercises the editor. The regional classified-water preparation uses the separate, complete 1,886-feature source covering the retained 217-HUC12 domain. Existing source owners have already joined that source to the model domain. Native Basin or county attributes can be blank; spatial and HUC selections provide the relevant coverage.
+The named-river case exercises the editor. The regional classified-water preparation uses the separate, complete 1,886-feature source covering the retained 217-HUC12 domain. Its full-domain publisher-HUC inventory matches all 1,886 retained object/class/HUC triples. The native crosswalk supplies the geometric intersections. Native Basin or county attributes can be blank; spatial and HUC selections provide the relevant coverage.
 
 ## Save the actual ARJWS and Pioneer protection areas
 
@@ -80,9 +80,9 @@ To deliver critical contributing-land priorities, carry the prepared receiving-w
 ## Exact receiving inputs
 
 - Desk component: current unified water-designations source, including model/water_designations.py.
-- Existing source component: source_tools/prepare_public_water.py and source/water_context/20261012/public-water from F0C8RU4SK7B.
-- Original four-polygon input: F0C8PU00UM8; 2,389,556 bytes; SHA256 ddac0feb1c704ca5e95336e21961e08beede1f83b6b820423dffa5a63bd8e285; native EPSG:26917.
+- Existing source component: source_tools/prepare_public_water.py and source/water_context/20261012/public-water.
+- Original four-polygon input: scdes-arjws-prwd-source-water-protection-original.json; 2,389,556 bytes; SHA256 ddac0feb1c704ca5e95336e21961e08beede1f83b6b820423dffa5a63bd8e285; native EPSG:26917.
 - Original named-river case: source/water-designations-case in this complete release; GeoJSON SHA256 eecab9bc33f02ab393c178297d966b35e9c372887b5fd23eaf00cc85817fbcea.
-- Existing regional classified-receiver bridge: F0C8MU9RP1U; shared classification crosswalk v1.1.0 F0C9JF1PWQG, paired with source-review v1.2.0 F0C9JF3QZ3J.
+- Existing regional classified-receiver preparation and source_tools/designation_crosswalk.py; shared classification crosswalk v1.1.0 and source-review v1.3.0, documented in source_tools/WATER_DESIGNATION_APPLICABILITY.md and operator/WATER_SOURCE_REVIEW.md.
 
 These source-specific inputs let the equipped native receiver continue its existing four-receptor run directly into operator selections and the saved delivery.
