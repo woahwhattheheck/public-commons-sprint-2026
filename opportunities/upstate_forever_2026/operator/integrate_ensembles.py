@@ -82,10 +82,39 @@ JOINS = json.loads(r'''{
     ]
   ]
 }''')
-REQUIRED = ("model/model_selection.py", "model/ensembles.py", "model/ensemble_cli.py", "model/ensemble_report.py",
-            "operator/ensemble_service.py", "operator/web/ensembles.mjs",
-            "operator/extensions/ensembles.json", "operator/extension_registry.py",
-            "operator/web/extension_host.mjs", "install_extensions.py")
+# The source bank composes these complete owned files with the existing native
+# model/report components. Check their Python grammar before touching shared joins.
+REQUIRED = (
+    "model/model_selection.py",
+    "model/ensembles.py",
+    "model/ensemble_cli.py",
+    "model/ensemble_operations.py",
+    "model/ensemble_report.py",
+    "model/ensemble_consumers.py",
+    "model/ensemble_consumers_cli.py",
+    "model/ensemble_references.py",
+    "model/ensemble_flow_support.py",
+    "model/ensemble_scientific_source.py",
+    "model/ensemble_scientific_figures.py",
+    "model/ensemble_study_source.py",
+    "model/ensemble_study_transfer.py",
+    "model/decision_analysis.py",
+    "model/observed_context.py",
+    "model/scientific_report.py",
+    "model/scientific_figures.py",
+    "model/scientific_report_study_transfer.py",
+    "model/study_transfer.py",
+    "model/ENSEMBLE_CONSUMERS.md",
+    "model/NATIVE_STUDY_SCIENTIFIC_REPORT.md",
+    "model/ENSEMBLE_STUDY_TRANSFER.md",
+    "operator/ensemble_service.py",
+    "operator/web/ensembles.mjs",
+    "operator/extensions/ensembles.json",
+    "operator/extension_registry.py",
+    "operator/web/extension_host.mjs",
+    "integration/component_fragments/ensemble-scientific-report-composer.json",
+    "install_extensions.py",
+)
 
 def sha(data):
     return hashlib.sha256(data).hexdigest()

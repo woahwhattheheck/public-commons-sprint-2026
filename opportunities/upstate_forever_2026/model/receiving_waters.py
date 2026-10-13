@@ -20,6 +20,7 @@ from .common import (
     finite, held, identifier, now, read_json, verify_file,
 )
 from . import rasters
+from . import receiving_water_accounting as accounting
 
 METHOD_VERSION = "upstate.receiving-water-priorities/1"
 PLAN_SCHEMA = "upstate.receiving-water-plan/v1"
@@ -841,12 +842,13 @@ def _raster_writer(stack, path, grid, *, units, kind, mask=False):
 
 
 def _compute_geometry(directory, grid, geometry, baseline_bands, alternative_bands,
-                      normalization, *, progress=None):
+                      normalization, *, progress=None, mask_recipe=None):
     import numpy as np
     import rasterio
     pollutants = tuple(baseline_bands)
     started = time.monotonic()
-    geometry_id = digest({"crs": grid["crs"], "wkb": geometry.wkb_hex})
+    geometry_id = accounting.geometry_identity(grid, geometry, mask_recipe)
+    extent = mask_recipe["parent"] if mask_recipe is not None else geometry
     output_root = directory / "geographies" / geometry_id
     paths, units, kinds = {}, {}, {}
     selected_count, completed_windows = 0, 0
@@ -886,8 +888,8 @@ def _compute_geometry(directory, grid, geometry, baseline_bands, alternative_ban
             for pollutant in pollutants:
                 writer(prefix + pollutant + "_change", run_id + "-" + pollutant + "-change.tif",
                        rasters.MASS_UNITS[pollutant], "signed alternative minus baseline")
-        for window in _grid_windows(grid, geometry):
-            inside = _inside(grid, geometry, window)
+        for window in (() if extent.is_empty else _grid_windows(grid, extent)):
+            inside = accounting.inside(grid, geometry, window, mask_recipe)
             if not np.any(inside):
                 continue
             selected_count += int(np.count_nonzero(inside))
@@ -1008,6 +1010,8 @@ def _summary_rows(subjects, baseline_id, scope):
         common = {
             "subject_kind": subject["kind"], "subject_id": subject["id"],
             "title": subject["title"], "family": subject["family"],
+            "accounting_group_id": subject.get("accounting_group_id", ""),
+            "accounting_role": subject.get("accounting_role", ""),
             "relationship": subject["relationship_precision"],
             "quantity_scope": scope, "contribution_area_ha": subject["contribution_area_ha"],
             "selected_pixel_area_ha": subject["metrics"]["selected_pixel_area_ha"],
@@ -1047,7 +1051,8 @@ def _write_summary(directory, subjects, geometries, crs, baseline_id, scope):
     from shapely.geometry import mapping, MultiPolygon
     csv_path, gpkg_path = directory / "water-quantities.csv", directory / "receiving-waters.gpkg"
     fields = (
-        "subject_kind", "subject_id", "title", "family", "relationship", "quantity_scope",
+        "subject_kind", "subject_id", "title", "family", "accounting_group_id", "accounting_role",
+        "relationship", "quantity_scope",
         "contribution_area_ha", "selected_pixel_area_ha", "selected_cells", "run_id",
         "reference_run_id", "quantity", "statistic", "sum", "units", "valid_cells", "coverage_fraction",
     )
@@ -1060,6 +1065,7 @@ def _write_summary(directory, subjects, geometries, crs, baseline_id, scope):
         gpkg_path, "w", driver="GPKG", layer="receiving_waters", crs_wkt=crs.to_wkt(),
         schema={"geometry": "MultiPolygon", "properties": {
             "subject_id": "str", "kind": "str", "title": "str", "family": "str",
+            "accounting_group_id": "str", "accounting_role": "str",
             "relation": "str", "area_ha": "float", "nitrogen_kg_year": "float",
             "phosphorus_kg_year": "float", "sediment_t_year": "float",
             "priority_mean": "float", "coverage": "float", "detail": "str",
@@ -1075,6 +1081,8 @@ def _write_summary(directory, subjects, geometries, crs, baseline_id, scope):
                 "geometry": mapping(geometry), "properties": {
                     "subject_id": subject["id"], "kind": subject["kind"],
                     "title": subject["title"], "family": subject["family"],
+                    "accounting_group_id": subject.get("accounting_group_id", ""),
+                    "accounting_role": subject.get("accounting_role", ""),
                     "relation": subject["relationship_precision"],
                     "area_ha": geometry.area / 10000,
                     "nitrogen_kg_year": metrics["baseline_physical"].get("nitrogen_export", {}).get("sum"),
@@ -1153,7 +1161,8 @@ def analyze(workspace, selection, *, progress=None):
     """Build distinct water-specific priorities from original completed model runs.
 
     Input fields: plan_id, baseline_run_id, alternative_run_ids (optional),
-    quantity_scope ('reporting' or 'model_domain'), weights, normalization.
+    quantity_scope ('reporting' or 'model_domain'), weights, normalization,
+    and optional accounting.groups with original parent/upstream/reservoir IDs.
     No native model execution is started by this operation.
     """
     from pyproj import CRS
@@ -1186,8 +1195,10 @@ def analyze(workspace, selection, *, progress=None):
     domain = rasters.polygon_union(domain_rows)
     definitions, subject_geometries = [], []
     family_parts = defaultdict(list)
+    source_geometries = {}
     for receptor in plan["receptors"]:
         whole_geometry = _load_contribution(workspace, plan, receptor, crs)
+        source_geometries[receptor["id"]] = whole_geometry
         geometry = whole_geometry.intersection(domain)
         if not geometry.is_empty and geometry.area > 0:
             geometry = _polygon(geometry, "Receiving-water/domain intersection")
@@ -1223,8 +1234,16 @@ def analyze(workspace, selection, *, progress=None):
             "receptor_ids": [row["id"] for row in plan["receptors"] if row["family"] == family],
         })
         subject_geometries.append(geometry)
+    mask_recipes = [None] * len(definitions)
+    accounting_groups, accounting_definitions, accounting_geometries, accounting_masks = accounting.compile_groups(
+        plan, source_geometries, domain, selection,
+    )
+    definitions.extend(accounting_definitions)
+    subject_geometries.extend(accounting_geometries)
+    mask_recipes.extend(accounting_masks)
     identity = {
         "method_version": METHOD_VERSION, "implementation_sha256": file_digest(__file__),
+        "accounting_implementation_sha256": file_digest(accounting.__file__),
         "project_id": workspace.project["id"], "selection": selection,
         "plan_record_sha256": plan["record_sha256"], "grid_id": prepared_grid["id"],
         "pollutants": pollutants,
@@ -1275,8 +1294,8 @@ def analyze(workspace, selection, *, progress=None):
                     state["normalization"] = _normalization(baseline_bands, grid, domain, selection)
                     checkpoints.write("normalization")
                 cache, subjects = {}, []
-                for position, (definition, geometry) in enumerate(zip(definitions, subject_geometries)):
-                    geometry_id = digest({"crs": grid["crs"], "wkb": geometry.wkb_hex})
+                for position, (definition, geometry, mask_recipe) in enumerate(zip(definitions, subject_geometries, mask_recipes)):
+                    geometry_id = accounting.geometry_identity(grid, geometry, mask_recipe)
                     summary_path = directory / "geographies" / geometry_id / "summary.json"
                     if geometry_id in cache:
                         metrics = cache[geometry_id]
@@ -1295,21 +1314,13 @@ def analyze(workspace, selection, *, progress=None):
                         checkpoints.geometry["restored"] += 1
                         checkpoints.geometry["summary_read_seconds"] += time.monotonic() - checkpoint_started
                     else:
-                        if geometry.is_empty:
-                            metrics = {
-                                "geometry_id": geometry_id, "files": {}, "selected_cells": 0,
-                                "selected_pixel_area_ha": 0.0,
-                                "baseline_physical": {
-                                    p: _final_stats(_empty_stats(), 0, units=rasters.MASS_UNITS[p], mass=True)
-                                    for p in pollutants
-                                },
-                                "current_priority": _final_stats(_empty_stats(), 0, units="dimensionless"),
-                                "alternatives": {}, "elapsed_seconds": 0.0, "completed_windows": 0,
-                            }
+                        extent = mask_recipe["parent"] if mask_recipe is not None else geometry
+                        if extent.is_empty:
+                            metrics = accounting.empty_metrics(geometry_id, pollutants, alternative_bands)
                         else:
                             metrics = _compute_geometry(
                                 directory, grid, geometry, baseline_bands, alternative_bands,
-                                state["normalization"], progress=progress,
+                                state["normalization"], progress=progress, mask_recipe=mask_recipe,
                             )
                         checkpoint = {
                             "analysis_id": key, "geometry_id": geometry_id, "metrics": metrics,
@@ -1330,6 +1341,8 @@ def analyze(workspace, selection, *, progress=None):
                         progress({"phase": "receiving_water_subject", "analysis_id": key,
                                   "subject_id": definition["id"], "subject_kind": definition["kind"],
                                   "completed_subjects": position + 1, "total_subjects": len(definitions)})
+            state["accounting"] = accounting.summarize(accounting_groups, subjects, baseline["id"])
+            state["files"].update(accounting.export(directory, state["accounting"]))
             state["files"].update(_write_summary(
                 directory, subjects, subject_geometries, crs, baseline["id"], scope,
             ))
@@ -1345,6 +1358,8 @@ def analyze(workspace, selection, *, progress=None):
                     "avoided_export_priority": "Positive baseline-minus-alternative components using fixed baseline caps",
                     "overlap": "Per-receptor totals may overlap; use the family_union subject for unduplicated land totals",
                     "relationship": "Each receptor retains its exact HUC-scale, published-area or geometric-context method",
+                    "accounting": "Selected nested domains use disjoint parent-mask partitions; physical values remain land export entering streams.",
+                    "reservoirs": "Selected above-reservoir exports remain separate; reservoir throughput is unmodelled.",
                 },
             )
             return checkpoints.write("complete", len(subjects))

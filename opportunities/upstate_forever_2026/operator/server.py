@@ -1235,7 +1235,9 @@ class Handler(BaseHTTPRequestHandler):
                 parameter_study_reads = {"/api/parameter-studies/" + name: name for name in PARAMETER_STUDY_READS}
                 if url.path in parameter_study_reads:
                     return self.send_json(200, self.app.parameter_studies.read(workspace, parameter_study_reads[url.path],
-                        {name: one(name) for name in ("baseline_run_id", "id", "area_id", "pollutant", "offset", "limit")}))
+                        {name: one(name) for name in ("baseline_run_id", "id", "area_id", "pollutant", "offset", "limit",
+                                                     "run_id", "attempt_id", "stream", "log_offset",
+                                                     "expected_attempt_id", "history_offset")}))
                 experiment_reads = {"/api/experiments/" + name: name for name in EXPERIMENT_READS}
                 if url.path in experiment_reads:
                     return self.send_json(200, self.app.experiments.read(workspace, experiment_reads[url.path],

@@ -20,11 +20,12 @@ def main(argv=None):
                         help="Existing original scientific Workspace")
     parser.add_argument("--output", type=Path, help="Optional result JSON outside the Workspace")
     commands = parser.add_subparsers(dest="command", required=True)
-    prepare = commands.add_parser("prepare", help="Retain one saved design or exact campaign revision")
+    prepare = commands.add_parser("prepare", help="Retain one saved design, campaign revision or budget comparison")
     group = prepare.add_mutually_exclusive_group(required=True)
     group.add_argument("--selection", type=Path, help="Complete selection JSON")
     group.add_argument("--plan-id")
     group.add_argument("--campaign-id")
+    group.add_argument("--comparison-id")
     prepare.add_argument("--expected-revision-id")
     prepare.add_argument("--title")
     prepare.add_argument("--delivery-id", help="Append this source to an existing saved delivery selection")
@@ -38,7 +39,7 @@ def main(argv=None):
         raise ValueError("Place the receiving result outside the scientific Workspace")
     if args.command == "prepare":
         extras = {key: getattr(args, key) for key in
-                  ("plan_id", "campaign_id", "expected_revision_id", "title", "delivery_id")
+                  ("plan_id", "campaign_id", "comparison_id", "expected_revision_id", "title", "delivery_id")
                   if getattr(args, key) is not None}
         if args.selection:
             if extras:

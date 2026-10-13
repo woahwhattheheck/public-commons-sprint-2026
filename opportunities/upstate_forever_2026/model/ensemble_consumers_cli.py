@@ -7,7 +7,7 @@ import sys
 
 from .common import read_json
 from .workspace import Workspace
-from . import ensemble_consumers as consumers, ensemble_references, ensemble_flow_support, ensemble_scientific_source
+from . import ensemble_consumers as consumers, ensemble_references, ensemble_flow_support, ensemble_scientific_source, ensemble_study_source
 
 
 def parser():
@@ -74,6 +74,15 @@ def parser():
     source_selection.add_argument("--consumer-id", required=True)
     source_selection.add_argument("--selection", help="Existing ordered delivery selection JSON")
     source_selection.add_argument("--output", help="Write the composed selection to this path")
+    study_source = commands.add_parser("study-source",
+        help="Publish the original native design contrasts, figures and complete numeric sources")
+    study_source.add_argument("--ensemble-id", required=True)
+    study_source.add_argument("--source-only", action="store_true")
+    study_selection = commands.add_parser("study-selection",
+        help="Append the retained native study source to an existing ordered scientific selection")
+    study_selection.add_argument("--ensemble-id", required=True)
+    study_selection.add_argument("--selection", help="Existing ordered report selection JSON")
+    study_selection.add_argument("--output", help="Save this selected source order without overwriting another selection")
     return top
 
 
@@ -81,7 +90,19 @@ def main(argv=None):
     args = parser().parse_args(argv)
     try:
         workspace = Workspace(args.workspace)
-        if args.command == "scientific-source":
+        if args.command == "study-source":
+            result = ensemble_study_source.prepare(workspace, args.ensemble_id, render=not args.source_only)
+        elif args.command == "study-selection":
+            retained = ensemble_study_source.latest(workspace, args.ensemble_id, verify=True)
+            if not retained or not retained.get("source"):
+                raise ValueError("Prepare the saved native study source first")
+            result = ensemble_scientific_source.delivery_selection(retained["source"],
+                read_json(args.selection) if args.selection else None)
+            if args.output:
+                from pathlib import Path
+                from .common import atomic_json
+                atomic_json(Path(args.output), result, immutable=True)
+        elif args.command == "scientific-source":
             result = ensemble_scientific_source.prepare(workspace, args.consumer_id,
                                                        render=not args.source_only)
         elif args.command == "scientific-selection":

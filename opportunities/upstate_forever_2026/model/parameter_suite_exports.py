@@ -94,7 +94,6 @@ class SuiteExports:
         self.implementation = file_digest(Path(__file__))
         self.records = {}
         self.result_rows = {}
-        self.retired = []
         self.counts = {"study_reuse_hits": 0, "study_refreshes": 0,
                        "files_verified": 0, "logical_bytes_verified": 0,
                        "obsolete_copies_removed": 0, "obsolete_logical_bytes_removed": 0}
@@ -123,36 +122,68 @@ class SuiteExports:
         except (OSError, ValueError):
             return False
 
-    def _remove_obsolete_copies(self, previous, key, current):
-        """Remove only unchanged, previously verified copies owned by this suite."""
+    def _cleanup_candidates(self, previous, key, current):
+        """Carry only owned obsolete copies across checkpoint replacement."""
         if (not isinstance(previous, dict)
                 or previous.get("schema") not in (SCHEMA, LEGACY_SCHEMA)
                 or previous.get("suite_id") != self.suite_id
                 or previous.get("workspace_id") != self.workspace.project["id"]
                 or previous.get("study_id") != key):
-            return
+            return []
         retained = {item["path"] for item in current.values()}
-        prefix = "studies/" + key + "/"
-        seen = set()
+        candidates = list(previous.get("pending_cleanup") or [])
         for name, item in previous.get("artifacts", {}).items():
-            path = item.get("path", "")
-            if (path in retained or path in seen or not path.startswith(prefix)):
+            candidates.append({
+                "descriptor": item,
+                "identity": previous.get("verified_local_identities", {}).get(name),
+            })
+        selected = {}
+        prefix = "studies/" + key + "/"
+        for candidate in candidates:
+            if not isinstance(candidate, dict):
                 continue
-            seen.add(path)
-            expected_identity = previous.get("verified_local_identities", {}).get(name)
+            item, identity = candidate.get("descriptor"), candidate.get("identity")
+            if not isinstance(item, dict) or not isinstance(identity, list) or len(identity) != 5:
+                continue
+            path = item.get("path")
+            if (not isinstance(path, str) or not path.startswith(prefix)
+                    or path in retained):
+                continue
+            selected.setdefault(path, {"descriptor": deepcopy(item), "identity": list(identity)})
+        return [selected[path] for path in sorted(selected)]
+
+    def _remove_obsolete_copies(self, candidates, key, current):
+        """Retire verified owned copies; keep transient failures for the next try."""
+        retained = {item["path"] for item in current.values()}
+        pending = []
+        for candidate in candidates:
+            item, expected_identity = candidate["descriptor"], candidate["identity"]
+            path = item["path"]
+            if path in retained or not path.startswith("studies/" + key + "/"):
+                continue
             try:
-                candidate = destination_file(self.directory, path)
-                if _identity(candidate) != expected_identity:
+                target = destination_file(self.directory, path)
+                if _identity(target) != expected_identity:
+                    # A locally edited or replaced copy belongs to its current
+                    # author. Discharge our cleanup claim without deleting it.
                     continue
-                # Verify again before removal; a changed copy remains untouched.
                 verify_file(self.directory, item)
-                if _identity(candidate) != expected_identity:
+                if _identity(target) != expected_identity:
                     continue
-                candidate.unlink()
-            except (OSError, ValueError):
+                target.unlink()
+            except FileNotFoundError:
+                # A previous attempt may have unlinked it before saving the
+                # acknowledgement; this is an idempotent completed retirement.
+                continue
+            except OSError:
+                pending.append(candidate)
+                continue
+            except ValueError:
+                # A changed or invalid local body is retained for its owner.
                 continue
             self.counts["obsolete_copies_removed"] += 1
             self.counts["obsolete_logical_bytes_removed"] += item["bytes"]
+        return pending
 
     def retain(self, item):
         """Return the saved study's current checkpoint, exports and original rows."""
@@ -191,6 +222,7 @@ class SuiteExports:
                 "source_record_sha256": source_record, "source_artifacts": originals,
                 "artifacts": exported, "verified_local_identities": identities,
                 "layout": layout, "verified_at": now(), "transfer": transfer,
+                "pending_cleanup": self._cleanup_candidates(previous, key, exported),
                 "verification": "Original SHA256 and length checked during independent copy; "
                                 "unchanged local body identities are reused for interim reports.",
             }
@@ -198,9 +230,9 @@ class SuiteExports:
             self.counts["study_refreshes"] += 1
             self.counts["files_verified"] += transfer["files"]
             self.counts["logical_bytes_verified"] += transfer["bytes"]
-            # The suite index and manifest must be published before removing
-            # any old body that their preceding edition may still reference.
-            self.retired.append((previous, key))
+            # Pending retirements are part of this durable checkpoint. The
+            # preceding published suite remains usable until prune is called
+            # after the new suite index, manifest and requested ZIP succeed.
         self.records[key] = record
         descriptor = record["artifacts"].get("results")
         rows = []
@@ -216,10 +248,25 @@ class SuiteExports:
         return current, deepcopy(record["artifacts"]), rows
 
     def prune(self):
-        """Retire unchanged old copies after the new suite publication succeeds."""
-        for previous, key in self.retired:
-            self._remove_obsolete_copies(previous, key, self.records[key]["artifacts"])
-        self.retired.clear()
+        """Finish durable cleanup only after the new suite publication succeeds."""
+        for key, record in list(self.records.items()):
+            candidates = self._cleanup_candidates(record, key, record["artifacts"])
+            if candidates:
+                pending = self._remove_obsolete_copies(candidates, key, record["artifacts"])
+                if pending != record.get("pending_cleanup"):
+                    updated = {**record, "pending_cleanup": pending}
+                    checkpoint = destination_file(
+                        self.directory, "studies/" + key + "/export-checkpoint.json")
+                    atomic_json(checkpoint, updated)
+                    self.records[key] = updated
+        # Older quantitative generations are needed only until the replacement
+        # publication is complete; never accumulate them across retries.
+        active = {
+            (key, item["sha256"], item["bytes"])
+            for key, record in self.records.items()
+            for item in [record["artifacts"].get("results")] if item
+        }
+        self.result_rows = {key: rows for key, rows in self.result_rows.items() if key in active}
 
     def layout(self, key):
         return deepcopy(self.records[identifier(key)]["layout"])

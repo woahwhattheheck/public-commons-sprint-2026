@@ -97,6 +97,21 @@ def _row_id(row):
                    "row_number":row["row_number"],
                    "record_pointer":reference.get("record_pointer") or reference.get("original_record_pointer")})
 
+def _geographic_context(binding):
+    """Recognize the producer's explicitly typed location context without guessing columns."""
+    source = binding.get("source_metadata") or {}
+    metadata = source.get("metadata") or {}
+    return isinstance(metadata, dict) and (
+        metadata.get("schema") == "upstate.station-wbd-source-context/v1"
+        or metadata.get("source_role") == "station_location_context")
+
+
+def _require_assessment_inventory(binding):
+    if _geographic_context(binding):
+        raise ValueError("This retained source describes station locations and watershed context. "
+                         "Select an original assessment inventory with cause and use records.")
+
+
 def _source_assessment(binding):
     if binding["source_sha256"] == KNOWN_ASSESSMENT_SHA:
         return _copy(KNOWN_ASSESSMENT), list(KNOWN_ASSESSMENT)
@@ -117,6 +132,7 @@ def _summary_assessment(inventories):
 
 def _normalize_inventory(study, value):
     table, binding = _table_record(study, value)
+    _require_assessment_inventory(binding)
     fields = value.get("fields")
     allowed = {"watershed","cause","use","county","support","assessment_edition","assessment_title",
                "assessment_status","assessment_vintage","assessment_reference"}
@@ -140,6 +156,7 @@ def _normalize_inventory(study, value):
 def _selected_rows(study, selection, bindings):
     records = {}
     for inventory,binding in zip(selection["inventories"],bindings):
+        _require_assessment_inventory(binding)
         fields = inventory["fields"]
         for row in _rows(study,inventory["table"]):
             original = row["original"]
@@ -195,11 +212,18 @@ def _selected_rows(study, selection, bindings):
 
 def options(workspace, geography_id, table=None):
     study = geography.inspect(workspace, geography_id, include_result=True)
-    tables = []
+    tables, geographic_context_tables = [], []
     for reference in study["selection"].get("site_tables", []):
         binding = next(row for row in study["sources"] if _key(row) == _key(reference))
         records = _rows(study, reference)
         fields = sorted({key for row in records for key in row["original"]})
+        if _geographic_context(binding):
+            geographic_context_tables.append({
+                "reference": _source_ref(reference), "title": binding.get("title"),
+                "uri": binding.get("uri"), "vintage": binding["source_metadata"].get("vintage"),
+                "source_sha256": binding["source_sha256"], "row_count": len(records),
+                "fields": fields})
+            continue
         values = {key: sorted({_field(row["original"].get(key)) for row in records}) for key in fields}
         aliases={"watershed":("publisher_huc12","huc12"),"cause":("cause_code","cause_raw","cause"),
                  "use":("use","impaired_use"),"county":("county",),"support":("use_support",),
@@ -231,7 +255,7 @@ def options(workspace, geography_id, table=None):
                            "source_sha256": binding["source_sha256"],
                            "id_field": reference.get("id_field")})
     return {"geography_id": study["id"], "title": study["title"], "tables": tables,
-            "watershed_sources": watersheds}
+            "watershed_sources": watersheds, "geographic_context_tables": geographic_context_tables}
 
 def catalog(workspace):
     from . import conservation

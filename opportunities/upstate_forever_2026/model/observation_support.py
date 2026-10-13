@@ -173,3 +173,130 @@ def context_record(row, metadata=None):
         "comparison_issues": list(dict.fromkeys([*row.get("issues", []),
                                                   *comparison_issues(row, metadata)])),
     }
+
+
+REFERENCE_BASIS_VERSION = "upstate.annual-reference-basis/v1"
+REFERENCE_METHOD_SOURCE = "https://pubs.usgs.gov/publication/wri004191"
+_REFERENCE_CODES = {
+    "00600": ("nitrogen", "Total nitrogen", "total_nitrogen"),
+    "00665": ("phosphorus", "Total phosphorus", "total_phosphorus"),
+    "00530": ("sediment", "Total suspended solids (TSS)", "tss"),
+    "80154": ("sediment", "Suspended-sediment concentration (SSC) based load", "ssc"),
+}
+_REFERENCE_ALIASES = {
+    "tn": "00600", "total nitrogen": "00600",
+    "tp": "00665", "total phosphorus": "00665",
+    "tss": "00530", "total suspended solids": "00530",
+    "ssc": "80154", "suspended sediment": "80154",
+    "suspended sediment concentration": "80154",
+}
+
+
+def reference_basis(row, metadata=None):
+    """Describe retained constituent evidence without changing admission or mass."""
+    metadata = metadata or {}
+    evidence = []
+    def read(value, path):
+        value = detail(value)
+        if not isinstance(value, dict):
+            return
+        for field in ("parameter_code", "series", "source_constituent", "species"):
+            token = value.get(field)
+            if token in (None, ""):
+                continue
+            key = species_key(token)
+            code = (str(token).strip().zfill(5) if re.fullmatch(r"[0-9]{1,5}", str(token).strip())
+                    else _REFERENCE_ALIASES.get(key))
+            if code in _REFERENCE_CODES:
+                evidence.append({"field": path + field, "original_value": token, "parameter_code": code})
+        for field in ("row", "original_attributes"):
+            original = value.get(field)
+            if isinstance(original, dict) and original.get("CONSTITUEN") not in (None, ""):
+                token = original["CONSTITUEN"]
+                code = _REFERENCE_ALIASES.get(species_key(token))
+                if code:
+                    evidence.append({"field": path + field + ".CONSTITUEN",
+                                     "original_value": token, "parameter_code": code})
+    read(row, "")
+    read(metadata, "metadata.")
+    sources = detail(row.get("source_records"))
+    sources = sources if isinstance(sources, list) else [sources]
+    for index, source in enumerate(sources):
+        read(source, "source_records[" + str(index) + "].")
+    codes = sorted({item["parameter_code"] for item in evidence})
+    parameter = row.get("parameter")
+    constituents = [{"parameter_code": code, "parameter": _REFERENCE_CODES[code][0],
+                     "label": _REFERENCE_CODES[code][1], "basis": _REFERENCE_CODES[code][2]}
+                    for code in codes]
+    inconsistent = any(item["parameter"] != parameter for item in constituents)
+    status = ("conflicting_parameter" if inconsistent else
+              "mixed_source_constituents" if len(codes) > 1 else
+              "declared_original_constituent" if codes else "not_declared")
+    label = "; ".join(item["label"] + " [" + item["parameter_code"] + "]" for item in constituents)
+    if not label:
+        label = source_species(row, metadata) or str(parameter or "Unspecified constituent")
+    notes = []
+    if "00530" in codes:
+        notes.append("The annual reference is derived from TSS measurements. TSS and whole-sample SSC "
+                     "are different analytical bases and are not interchangeable; a residual against "
+                     "native sediment export also reflects that source-method difference.")
+    if "80154" in codes:
+        notes.append("The annual reference is derived from suspended-sediment measurements. Retain its "
+                     "sampling and estimator support when interpreting native hillslope delivery to streams.")
+    if "00530" in codes or "80154" in codes:
+        notes.append("Original annual values and any published TSS_CONV field remain unchanged. "
+                     "This report does not apply an inferred TSS-to-SSC or outlet-transport conversion.")
+    if status == "mixed_source_constituents":
+        notes.append("This retained reference combines more than one declared constituent basis. "
+                     "Its original aggregate remains visible; it is not relabeled as one analytical method.")
+    elif inconsistent:
+        notes.append("The retained constituent evidence differs from the selected native parameter; "
+                     "inspect the original source fields alongside the unchanged comparison.")
+    elif not codes and parameter == "sediment":
+        notes.append("The retained fields do not identify a specific TSS or SSC analytical basis.")
+    return {"schema": REFERENCE_BASIS_VERSION, "parameter": parameter, "status": status,
+            "label": label, "parameter_codes": codes, "constituents": constituents,
+            "source_fields": evidence, "interpretation": " ".join(notes),
+            "method_references": [REFERENCE_METHOD_SOURCE] if any(c in codes for c in ("00530", "80154")) else [],
+            "quantity_transformation": "none; retained annual quantities and comparison eligibility are unchanged"}
+
+
+def reference_basis_rows(rows, metadata=None):
+    """One source-aware description per original comparison/reference unit."""
+    result = []
+    for row in rows:
+        basis = reference_basis(row, metadata)
+        result.append({
+            "reference_id": row.get("unit_id") or row.get("id") or row.get("observation_id"),
+            "parameter": row.get("parameter"), "catchment_id": row.get("catchment_id"),
+            "station_id": row.get("station_id"), "observation_record_ids": row.get("observation_record_ids"),
+            "period_start": row.get("period_start"), "period_end": row.get("period_end"),
+            "reference_label": basis["label"], "parameter_codes": basis["parameter_codes"],
+            "reference_status": basis["status"], "interpretation": basis["interpretation"],
+            "source_fields": basis["source_fields"], "method_references": basis["method_references"],
+        })
+    return result
+
+
+def reference_basis_blocks(rows, metadata=None):
+    """Readable report blocks from the same retained reference descriptions."""
+    summaries = {}
+    for row in reference_basis_rows(rows, metadata):
+        key = (row["parameter"], row["reference_label"], row["reference_status"])
+        item = summaries.setdefault(key, {**row, "records": 0})
+        item["records"] += 1
+    if not summaries:
+        return []
+    blocks = [
+        "Original reference constituents. Annual mass units do not make different analytical "
+        "methods equivalent. The source labels below accompany the retained comparisons and their "
+        "existing objective; source values, admitted rows and native results keep their identities.",
+        {"kind": "table", "columns": ["Native parameter", "Original reference basis", "Retained rows", "Interpretation"],
+         "rows": [[str(item["parameter"]), item["reference_label"], str(item["records"]),
+                   item["interpretation"] or "Original constituent identity retained."]
+                  for item in summaries.values()]},
+    ]
+    if any(item["method_references"] for item in summaries.values()):
+        blocks.append("Source-method reference: USGS, Comparability of suspended-sediment concentration "
+                      "and total suspended solids data (2000), " + REFERENCE_METHOD_SOURCE + ".")
+    return blocks

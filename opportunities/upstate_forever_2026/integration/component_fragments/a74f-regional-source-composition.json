@@ -1,7 +1,7 @@
 {
   "schema": "upstate.application-component-fragment/v1",
   "id": "a74f-regional-source-composition",
-  "source_reference": "https://github.com/woahwhattheheck/public-commons-sprint-2026/pull/3374",
+  "source_reference": "https://github.com/woahwhattheheck/public-commons-sprint-2026/tree/work/upstate-native-study-a74f-20261013",
   "extend_components": {
     "core": {
       "paths": [
@@ -70,7 +70,8 @@
         "source/annual-reference-assessment-20261013/assessment-native-huc-context.json",
         "source/annual-reference-assessment-20261013/assessment-native-huc-records.csv",
         "source/annual-reference-assessment-20261013/assessment-native-huc-stations.csv",
-        "source/annual-reference-assessment-20261013/sources.json"
+        "source/annual-reference-assessment-20261013/sources.json",
+        "source_tools/operate_annual_assessment_context.py"
       ],
       "source_manifests": [
         "source/annual-reference-assessment-20261013/sources.json"
@@ -85,7 +86,8 @@
         "source/annual-reference-assessment-20261013/assessment-native-huc-context.json",
         "source/annual-reference-assessment-20261013/assessment-native-huc-records.csv",
         "source/annual-reference-assessment-20261013/assessment-native-huc-stations.csv",
-        "source/annual-reference-assessment-20261013/sources.json"
+        "source/annual-reference-assessment-20261013/sources.json",
+        "source_tools/operate_annual_assessment_context.py"
       ],
       "source_manifests": [
         "source/annual-reference-assessment-20261013/sources.json"

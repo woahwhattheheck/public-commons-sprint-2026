@@ -44,7 +44,7 @@ report = monitoring_report_source.prepare(workspace, {
 })
 ~~~
 
-Supply exactly one of plan_id or campaign_id. A campaign requires expected_revision_id; a plan does not accept it. Title and delivery_id are optional. Omit delivery_id when no existing delivery is selected.
+Supply exactly one of plan_id, campaign_id or comparison_id. A campaign requires expected_revision_id; a plan or saved comparison does not accept it. Title and delivery_id are optional. Omit delivery_id when no existing delivery is selected.
 
 The callable prepare(workspace, selection, *, progress=None) returns the immutable record plus a delivery selection:
 
@@ -146,3 +146,46 @@ A completed native ZIP is recovered if execution stops before the report checkpo
 ZIP validation covers every member and rejects duplicate/nonportable names. Extraction preserves full bytes and rejects changes to retained files. Source import verifies the original recipe and every companion. Ordinary full workspace transfer already recursively includes this folder, source objects and application code; the maintained capture lock supplies consistency.
 
 Dependencies are the existing Monitoring scientific environment and pyproj for the original geometry map. The complete Monitoring descriptor, report-source consumer and export APIs must be installed together. Source preparation does not call the optimizer or create another Workspace.
+
+## Saved budget comparison in the same scientific report
+
+Open and save the comparison in **Monitoring → Saved budget choices**, then choose that exact saved comparison in the existing scientific-report panel. The same queued `monitoring.report.prepare` action accepts:
+
+~~~python
+report = monitoring_report_source.prepare(workspace, {
+    "comparison_id": actual_saved_comparison_id,
+    "title": "Regional monitoring budget choices",
+    "delivery_id": optional_existing_delivery_id
+})
+~~~
+
+The original native entrypoint also accepts:
+
+~~~bash
+python -B model/monitoring_report_cli.py --workspace ACTUAL_WORKSPACE \
+  --output OUTSIDE_WORKSPACE/result.json prepare \
+  --comparison-id ACTUAL_COMPARISON_ID --title "Regional monitoring budget choices"
+~~~
+
+The returned report record uses the original report store, source collection, authenticated downloads and ordered scientific-delivery selection. Its `summary` contains `comparison_id`, `frontier_id`, `network_id`, `baseline_plan_id`, ordered `plan_ids`, `plan_count`, selected `context_ids`, original `weight_basis`, complete comparison `rows`, catchment/station counts and retained receiving-water bridge IDs.
+
+The report displays every original budget outcome, exact currency and integer-cent cost, source-weight coverage, baseline delta, added/removed/retained search areas and complete saved calendar. Feasible plans include maps rendered from the original native polygons and source-station coordinates. Infeasible or interrupted outcomes retain their actual status and unavailable numerical results.
+
+Each selected observed context retains its exact source edition and period, explicit station mapping, flow scope and historical campaign revision. The report links the complete context HTML and JSON; all original context tables and source bodies travel as report companions. Source-station counts within selected catchments describe search-area support. The saved campaign remains the authority for actual field bindings.
+
+The complete original comparison ZIP and every member are retained, hashed and streamed into the report source. Inspection reopens the saved native comparison, frontier, network, every original plan and selected context, then compares the captured complete records. The existing report-source verifier and full Workspace backup/restore carry this same editable project. The comparison producer never recalculates the optimizer, alters a plan or advances a campaign.
+
+### Report members
+
+| Member | Contents |
+|---|---|
+| `native-monitoring-comparison.zip` | Original complete comparison export with its own manifest. |
+| `native-comparison/` | Every original packet member, including source bodies, observed reports and exact plans. |
+| `maps/<plan-id>.svg` | Map of each feasible plan using original source polygons and station points. |
+| `comparison-records.json` | Exact comparison, frontier, network, plan and context identities. |
+| `receiving-water/` | Existing same-domain water-study provenance and original files, when applicable. |
+| `report-source.json` | Typed original scientific-report sections and links. |
+
+The unchanged original plan/campaign report path remains available. Older saved reports are inspected using their retained source editions. The new comparison helper's full source digest participates in the preparation identity, so a formatter change produces its own report edition.
+
+For this report kind, the scientific composer uses the prepared per-plan observed sections. It preserves every nested original companion while skipping its separate single-published-study concentration inference, which cannot combine distinct study editions into one source. Other original report kinds retain their current enrichment behavior.

@@ -238,11 +238,13 @@ class IntelligenceFeature:
         self.operator.science_investigation_diagnostics = diagnostic
         return diagnostic
 
-    def _diagnostic_view(self, workspace, diagnostic_id):
+    def _diagnostic_view(self, workspace, diagnostic_id, report_sha256=None):
         diagnostic = self._diagnostics()
         if diagnostic is None:
             raise IntelligenceError("Install the current Scientific interpretation source.", 503)
-        result = dict(diagnostic.operator_report(workspace, diagnostic_id))
+        result = dict(diagnostic.report_revision(workspace, diagnostic_id, report_sha256)
+                      if report_sha256 is not None
+                      else diagnostic.operator_report(workspace, diagnostic_id))
         dataset_id = "es26:" + diagnostic_id + ":report_json"
         descriptor = result.get("artifacts", {}).get("report_json") or {}
         source_sha256 = descriptor.get("sha256")
@@ -429,7 +431,10 @@ class IntelligenceFeature:
                         "experiment_id": payload.get("experiment_id")
                             if task.get("action") == "experiment.run" else None}
             if operation == "diagnostic":
-                return self._diagnostic_view(workspace, identifier(value.get("diagnostic_id")))
+                return self._diagnostic_view(
+                    workspace, identifier(value.get("diagnostic_id")),
+                    report_sha256=value.get("report_sha256"),
+                )
             if operation == "experiment":
                 def page_number(name, default, minimum, maximum=None):
                     supplied = value.get(name, default)
