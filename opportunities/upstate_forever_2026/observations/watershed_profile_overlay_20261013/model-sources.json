@@ -1,0 +1,98 @@
+{
+  "schema": "upstate.sources/v1",
+  "title": "Original Upper Savannah watersheds: land cover and observation profiles",
+  "entries": [
+    {
+      "id": "upstate-watershed-profile-overlay-4050c8d1ee36d860",
+      "title": "Original Upper Savannah watersheds: land cover and observation profiles",
+      "kind": "vector",
+      "role": "LANDCOVER_OBSERVATION_PROFILES",
+      "uri": "https://chatgpt.com/api/library/files/libfile_de55b59d398481919d9bd098b3fb5e77/download",
+      "vintage": "Original WBD domain captured 2026-10-12; Annual NLCD 2023 and 2025; draft 2026 assessment context",
+      "source_crs": "EPSG:3857",
+      "path": "watershed-profiles.geojson",
+      "bytes": 9713953,
+      "sha256": "4050c8d1ee36d8608437f496995f46fb5ee94dd6f4d3ea5368cc2c57fdb04b42",
+      "metadata": {
+        "feature_count": 217,
+        "vertex_count": 273049,
+        "identifier_field": "huc12",
+        "label_field": "name",
+        "profile_join_key": "huc12",
+        "original_domain_source_id": "upstate-wbd-upstream-domain-20261012",
+        "original_domain_sha256": "2300d9b32a513d70503222a5d2e782e032107297214036a58e8b444a312169af",
+        "profile_source_sha256": "9e999756fb01b84a4d88784dae5030e0658d5eef922e771825c5a40a6b925d62",
+        "numeric_fields": [
+          "agriculture_area_2023_ha",
+          "agriculture_area_2025_ha",
+          "agriculture_gross_gain_ha",
+          "agriculture_gross_loss_ha",
+          "agriculture_net_change_ha",
+          "area_ha",
+          "changed_class_area_ha",
+          "changed_class_cells",
+          "changed_class_percent",
+          "developed_area_2023_ha",
+          "developed_area_2025_ha",
+          "developed_gross_gain_ha",
+          "developed_gross_loss_ha",
+          "developed_net_change_ha",
+          "draft2026_assessment_station_count",
+          "forest_area_2023_ha",
+          "forest_area_2025_ha",
+          "forest_gross_gain_ha",
+          "forest_gross_loss_ha",
+          "forest_net_change_ha",
+          "local_gauge_count",
+          "local_observed_flow_gauge_count",
+          "original_coordinate_variant_count",
+          "selected_cells",
+          "wetlands_area_2023_ha",
+          "wetlands_area_2025_ha",
+          "wetlands_gross_gain_ha",
+          "wetlands_gross_loss_ha",
+          "wetlands_net_change_ha"
+        ],
+        "map_fields_file": "map-fields.json",
+        "geometry_method": "Each original Esri feature contains exactly one closed ring; the same coordinates are retained as one GeoJSON Polygon, with explicit original EPSG:3857."
+      },
+      "companions": [
+        {
+          "path": "original-domain.esri.json",
+          "bytes": 11220042,
+          "sha256": "2300d9b32a513d70503222a5d2e782e032107297214036a58e8b444a312169af"
+        },
+        {
+          "path": "watershed-profiles.csv",
+          "bytes": 115090,
+          "sha256": "9e999756fb01b84a4d88784dae5030e0658d5eef922e771825c5a40a6b925d62"
+        },
+        {
+          "path": "overlay_core.mjs",
+          "bytes": 2808,
+          "sha256": "ef8bc9257254a91fc4b5b2aa1a22bbafc2aa993f9923e5a1a0d0e38d55814f60"
+        },
+        {
+          "path": "rebuild.mjs",
+          "bytes": 1883,
+          "sha256": "7cf6a9b9f5c313121e1e2c5152374a7ae34f73191ad9f798bf4b2316c6728c71"
+        },
+        {
+          "path": "overlay-binding.json",
+          "bytes": 6555,
+          "sha256": "6b447617b2a54b5c7db67d123fe419a83ddd05be6746687e875855ba916e04fc"
+        },
+        {
+          "path": "map-fields.json",
+          "bytes": 6180,
+          "sha256": "b6318bb915f60d9e46d4162b57f85f0868d2bab4e08c4baed594322b2419f3a5"
+        },
+        {
+          "path": "README.md",
+          "bytes": 3211,
+          "sha256": "5158078fc09cebb18e7d2ac0c8ae501e6e006c3981dba78c472f3b3158ce06d0"
+        }
+      ]
+    }
+  ]
+}

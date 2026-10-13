@@ -1,0 +1,269 @@
+{
+  "schema": "upstate.watershed-map-fields/v1",
+  "source_id": "upstate-watershed-profile-overlay-4050c8d1ee36d860",
+  "label_field": "name",
+  "identifier_field": "huc12",
+  "themes": [
+    {
+      "id": "developed-2025",
+      "title": "Developed classes in 2025",
+      "field": "developed_area_2025_ha",
+      "units": "ha"
+    },
+    {
+      "id": "developed-net-change",
+      "title": "Developed class net change, 2023–2025",
+      "field": "developed_net_change_ha",
+      "units": "ha"
+    },
+    {
+      "id": "forest-gross-loss",
+      "title": "Forest class gross loss, 2023–2025",
+      "field": "forest_gross_loss_ha",
+      "units": "ha"
+    },
+    {
+      "id": "agriculture-net-change",
+      "title": "Agriculture class net change, 2023–2025",
+      "field": "agriculture_net_change_ha",
+      "units": "ha"
+    },
+    {
+      "id": "all-class-change",
+      "title": "Native cells changing class, 2023–2025",
+      "field": "changed_class_percent",
+      "units": "percent"
+    },
+    {
+      "id": "draft-assessments",
+      "title": "Draft 2026 assessment stations located in the HUC",
+      "field": "draft2026_assessment_station_count",
+      "units": "count"
+    },
+    {
+      "id": "local-observed-flow",
+      "title": "Observed-flow gauge points located in the HUC",
+      "field": "local_observed_flow_gauge_count",
+      "units": "count"
+    }
+  ],
+  "fields": [
+    {
+      "name": "huc12",
+      "type": "string",
+      "units": null
+    },
+    {
+      "name": "name",
+      "type": "string",
+      "units": null
+    },
+    {
+      "name": "states",
+      "type": "string",
+      "units": null
+    },
+    {
+      "name": "area_ha",
+      "type": "number",
+      "units": "ha"
+    },
+    {
+      "name": "selected_cells",
+      "type": "number",
+      "units": "count"
+    },
+    {
+      "name": "changed_class_cells",
+      "type": "number",
+      "units": "count"
+    },
+    {
+      "name": "changed_class_area_ha",
+      "type": "number",
+      "units": "ha"
+    },
+    {
+      "name": "changed_class_percent",
+      "type": "number",
+      "units": "percent"
+    },
+    {
+      "name": "developed_area_2023_ha",
+      "type": "number",
+      "units": "ha"
+    },
+    {
+      "name": "developed_area_2025_ha",
+      "type": "number",
+      "units": "ha"
+    },
+    {
+      "name": "developed_net_change_ha",
+      "type": "number",
+      "units": "ha"
+    },
+    {
+      "name": "developed_gross_gain_ha",
+      "type": "number",
+      "units": "ha"
+    },
+    {
+      "name": "developed_gross_loss_ha",
+      "type": "number",
+      "units": "ha"
+    },
+    {
+      "name": "forest_area_2023_ha",
+      "type": "number",
+      "units": "ha"
+    },
+    {
+      "name": "forest_area_2025_ha",
+      "type": "number",
+      "units": "ha"
+    },
+    {
+      "name": "forest_net_change_ha",
+      "type": "number",
+      "units": "ha"
+    },
+    {
+      "name": "forest_gross_gain_ha",
+      "type": "number",
+      "units": "ha"
+    },
+    {
+      "name": "forest_gross_loss_ha",
+      "type": "number",
+      "units": "ha"
+    },
+    {
+      "name": "agriculture_area_2023_ha",
+      "type": "number",
+      "units": "ha"
+    },
+    {
+      "name": "agriculture_area_2025_ha",
+      "type": "number",
+      "units": "ha"
+    },
+    {
+      "name": "agriculture_net_change_ha",
+      "type": "number",
+      "units": "ha"
+    },
+    {
+      "name": "agriculture_gross_gain_ha",
+      "type": "number",
+      "units": "ha"
+    },
+    {
+      "name": "agriculture_gross_loss_ha",
+      "type": "number",
+      "units": "ha"
+    },
+    {
+      "name": "wetlands_area_2023_ha",
+      "type": "number",
+      "units": "ha"
+    },
+    {
+      "name": "wetlands_area_2025_ha",
+      "type": "number",
+      "units": "ha"
+    },
+    {
+      "name": "wetlands_net_change_ha",
+      "type": "number",
+      "units": "ha"
+    },
+    {
+      "name": "wetlands_gross_gain_ha",
+      "type": "number",
+      "units": "ha"
+    },
+    {
+      "name": "wetlands_gross_loss_ha",
+      "type": "number",
+      "units": "ha"
+    },
+    {
+      "name": "draft2026_assessment_station_count",
+      "type": "number",
+      "units": "count"
+    },
+    {
+      "name": "draft2026_assessment_station_ids",
+      "type": "string",
+      "units": null
+    },
+    {
+      "name": "draft2026_listed_causes",
+      "type": "string",
+      "units": null
+    },
+    {
+      "name": "draft2026_nutrient_listed_station_ids",
+      "type": "string",
+      "units": null
+    },
+    {
+      "name": "draft2026_priority1_station_ids",
+      "type": "string",
+      "units": null
+    },
+    {
+      "name": "local_gauge_count",
+      "type": "number",
+      "units": "count"
+    },
+    {
+      "name": "local_gauge_ids",
+      "type": "string",
+      "units": null
+    },
+    {
+      "name": "local_observed_flow_gauge_count",
+      "type": "number",
+      "units": "count"
+    },
+    {
+      "name": "local_observed_flow_gauge_ids",
+      "type": "string",
+      "units": null
+    },
+    {
+      "name": "local_observed_stage_only_gauge_ids",
+      "type": "string",
+      "units": null
+    },
+    {
+      "name": "local_inventory_only_gauge_ids",
+      "type": "string",
+      "units": null
+    },
+    {
+      "name": "retained_outfall_ids",
+      "type": "string",
+      "units": null
+    },
+    {
+      "name": "retained_lake_study_station_ids",
+      "type": "string",
+      "units": null
+    },
+    {
+      "name": "original_coordinate_variant_count",
+      "type": "number",
+      "units": "count"
+    }
+  ],
+  "interpretation": {
+    "area": "Original native pixel-centre hectares within the original HUC12 polygon; not fractional boundary hectares.",
+    "class_change": "Changes between Annual NLCD product classifications; cause and classification accuracy are not inferred.",
+    "assessment": "Counts of retained draft 2026 listed-station coordinate memberships, not watershed-wide water-quality classifications.",
+    "flow": "Counts of actual gauge points physically in the HUC12, not proof that each point's drainage basin covers the whole HUC.",
+    "arrays": "Original identity and cause lists remain JSON-encoded scalar strings for GIS attribute tables."
+  }
+}
