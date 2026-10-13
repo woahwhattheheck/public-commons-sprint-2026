@@ -68,7 +68,7 @@ The optional utility_upstream_union rows use the retained source/receptor-profil
 | ARJWS — Six and Twenty focus watersheds | 030601010703; 030601010704 | 6, 12, 16 |
 | PRWD — Tugaloo and Choestoea focus watersheds | 030601020502; 030601020507 | 6, 14, 16 |
 
-The kernel uses each anchor's already-retained Receiving upstream_huc_ids relationship and contribution geometry, then deduplicates their union for that utility. The explicit relationship is profile_upstream_huc_union, separately evaluated in model_domain and reporting scopes. It is a profile-anchored upstream HUC planning union, not an intake-delineated catchment or a substitute for published protection areas. The exact profile file is retained in the allocation artifact and identity.
+The kernel retains each anchor's original Receiving upstream_huc_ids relationship and takes the Boolean OR of its exact original contribution-mask rasters for that utility. Each selected native-grid pixel is counted once, including mask boundary cells. A union of the retained contribution geometries is used only for display and is not substituted for the authoritative raster-mask union. The explicit relationship is profile_upstream_huc_union, separately evaluated in model_domain and reporting scopes. It is a profile-anchored upstream HUC planning union, not an intake-delineated catchment or a substitute for published protection areas. The exact profile bytes are retained as original-utility-profile.json and in the allocation identity; their original file descriptor is verified before copying.
 
 These union rows have original categorical allocation and three-run native-validity/support counts. They do not have pairwise mass totals unless an actual matching original Receiving union analysis supplies those results. No pairwise totals are copied or summed from the overlapping member anchors, and common support counts are not represented as a native load calculation.
 
@@ -120,6 +120,7 @@ The kernel writes the original numerical/geographic products before rendering:
 | figures/allocation-figure-members.json | Exact figure input identity and byte/SHA descriptors |
 | original-prepared.json | Original geographic preparation, retained by the kernel |
 | original-context-selection.json | Original Receiving context selection, retained by the kernel |
+| original-utility-profile.json | Exact verified utility-focus profile bytes and original issuer/anchor references |
 | report-source.json / sources.json | Original observed-report recipe and source-import manifest |
 
 The renderer API is:

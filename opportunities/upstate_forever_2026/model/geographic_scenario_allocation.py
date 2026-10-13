@@ -208,7 +208,7 @@ def _utility_unions(workspace, context, domains, crs, definitions):
                      for row in original_regions if row["mask"] is not None}
             clipped = geometry.intersection(domain)
             definitions.append({
-                "id": "utility-" + identifier(utility.lower()) + "-" + scope,
+                "id": "utility-" + digest({"utility_id": utility, "profile_receptor_id": original["id"]}) + "-" + scope,
                 "title": original["title"], "kind": "utility_upstream_union",
                 "relationship": "profile_upstream_huc_union", "quantity_scope": scope,
                 "analysis_id": None, "subject_id": None,
