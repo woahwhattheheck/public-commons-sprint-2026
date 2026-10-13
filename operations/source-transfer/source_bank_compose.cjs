@@ -38,7 +38,14 @@ function createSourceBankComposer({identity}) {
     for(const raw of composition.delta_paths){const p=path(raw);if(deltas.has(p)||!members.has(p))throw Error('Duplicate or absent selected delta: '+p);deltas.add(p);}
     const patches=new Map();
     if(composition.patches!==undefined&&!Array.isArray(composition.patches))throw Error('composition.patches must be an array');
-    for(const patch of composition.patches||[]) {
+    for(const rawPatch of composition.patches||[]) {
+      object(rawPatch,'patch');
+      if(!Array.isArray(rawPatch.edits))throw Error('Patch edits must be an array');
+      const patch={...rawPatch,edits:rawPatch.edits.map(e=>{
+        object(e,'edit');
+        if(e.old!==undefined&&e.before!==undefined&&e.old!==e.before||e.new!==undefined&&e.after!==undefined&&e.new!==e.after)throw Error('Conflicting literal edit aliases');
+        return {old:e.old??e.before,new:e.new??e.after};
+      })};
       object(patch,'patch');const p=path(patch.path);
       if(patches.has(p)||!deltas.has(p))throw Error('Patch must name one selected delta: '+p);
       digest(patch.preimage_sha256,p+' preimage');digest(patch.postimage_sha256,p+' postimage');
