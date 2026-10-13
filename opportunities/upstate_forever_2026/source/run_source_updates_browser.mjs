@@ -89,7 +89,7 @@ async function inspectView(name,width){
    })};
  });
  await shot(name);
- await record('Inspected populated source update at '+width+' pixels',{plan_id:selectedPlan.id,layout});
+ await record('Captured populated source update for visual review at '+width+' pixels',{plan_id:selectedPlan.id,layout});
 }
 async function readPlan(workspace,id){
  return json(await page.request.get(origin+'/api/source-refresh/plan?'+new URLSearchParams({workspace,id}),{headers:{Authorization:'Bearer '+capability}}),'Retained source update');
