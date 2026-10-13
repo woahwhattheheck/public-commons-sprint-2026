@@ -431,13 +431,56 @@ export function attachEnsembles(context) {
       html+='<p>Avoided export is baseline minus alternative. Positive values mean lower modeled export. '+
         'The original decision report includes its shared geographic support, units and supplied costs.</p>';
     }
+    html+=annualReferenceHTML(plan.annual_reference);
     html+=downloadsHTML(value.downloads);
     html+='<details class="technical"><summary>Original handoff, pending members and scientific source identities</summary><pre class="json-view">'+
       escapeHTML(JSON.stringify({plan,result},null,2))+'</pre></details>';
     detail(plan.selection.title||'Saved scientific result',html,{kind:'ensemble-consumer',id});
   }
 
-  async function consumerForm(id, mode) {
+
+  function annualReferenceHTML(reference) {
+    if(!reference)return '';
+    const summary=reference.summary||{};
+    return '<section class="section"><h3>Original annual-load reference</h3><p><strong>'+
+      escapeHTML(summary.title||reference.title)+'</strong> · '+escapeHTML(reference.source_edition)+
+      ' · '+numeric(summary.admitted_count)+' admitted records</p><p>'+
+      escapeHTML(summary.annualization_method||'')+'</p>'+
+      table(['Constituent','Original unit','Comparison unit','Source period (end exclusive)','Original method','Records','Published SE'],
+        (summary.period_method_groups||[]).map(row=>'<tr>'+cell(row.parameter)+cell(row.original_unit)+
+          cell(row.comparison_unit)+cell(row.period_start+' → '+row.period_end_exclusive)+cell(row.method)+
+          cell(row.records)+cell(row.published_standard_error_records)+'</tr>'))+
+      '<p>Original catchments: '+escapeHTML((summary.catchment_ids||[]).join(', '))+
+      '. Source-recommended temporal weighting: '+escapeHTML(summary.recommended_temporal_weighting)+'.</p>'+
+      (summary.source_notes||[]).map(note=>'<p class="note">'+escapeHTML(note)+'</p>').join('')+
+      '<details><summary>Original source and support identities</summary><pre class="json-view">'+
+      escapeHTML(JSON.stringify({source_uri:summary.source_uri,release:summary.release,
+        import_id:reference.import_id,observation_id:reference.binding?.observation_id,
+        catchments:reference.binding?.catchments,catchment_source:reference.catchment_source,
+        original_preparation_id:reference.original_preparation_id},null,2))+'</pre></details></section>';
+  }
+
+  async function openAnnualReference(selection={}) {
+    const workspace=currentWorkspace(),version=++designVersion;
+    if(selection.workspace_key && selection.workspace_key!==workspace)
+      throw Error('Open the original annual import in its receiving workspace.');
+    const data=await api(endpoint('/api/ensembles/annual-references'));
+    if(workspace!==currentWorkspace() || version!==designVersion)return;
+    const reference=(data.imports||[]).find(row=>row.import_id===selection.annual_import_id);
+    if(!reference)throw Error('Choose a completed original annual-reference import in this workspace.');
+    const rows=(data.ensembles||[]).map(row=>'<tr>'+cell(row.title)+cell(label(row.state))+
+      cell(row.member_count)+cell(row.completed_runs+' / '+row.run_count)+
+      '<td>'+button('inspect','Open study',row.id)+
+      '<button type="button" data-action="ensemble-design-consumer-calibration" data-id="'+escapeHTML(row.id)+
+      '" data-annual-import="'+escapeHTML(reference.import_id)+'">Evaluate this study</button></td></tr>');
+    detail('Choose the saved scientific study',annualReferenceHTML(reference)+
+      '<h3>Saved native parameter studies</h3><p>Choose the existing study whose completed baseline profiles you will evaluate against this original annual source. The next form selects its actual candidate profiles and outputs.</p>'+
+      (rows.length?table(['Study','State','Profiles','Completed runs',''],rows):
+        '<p>No saved scientific study is retained yet. Create its source profiles and native study in this same workspace.</p>'),
+      {kind:'annual-reference',id:reference.import_id});
+  }
+
+  async function consumerForm(id, mode, prefill={}) {
     const workspace=currentWorkspace(), version=++designVersion;
     const data=await api(endpoint('/api/ensembles/consumers',{ensemble_id:id}));
     if(workspace!==currentWorkspace() || version!==designVersion)return;
@@ -456,7 +499,12 @@ export function attachEnsembles(context) {
     const scope=study.expected_artifacts.filter(name=>ready.every(row=>
       (mode==='decision'?row.common_outputs:row.baseline_outputs).includes(name)));
     const scenarios=(data.scenarios||[]).filter(row=>study.scenario_ids.includes(row.id));
-    const referenceChoices=(data.reference_selections||[]).map(row=>({id:row.id,title:row.title}));
+    const annualImports=data.annual_references?.imports||[];
+    if(prefill.annual_import_id && !annualImports.some(row=>row.import_id===prefill.annual_import_id))
+      throw Error('The original annual import is unavailable in this workspace.');
+    const referenceChoices=[
+      ...annualImports.map(row=>({id:'annual:'+row.import_id,title:'Imported source · '+row.title+' · '+row.source_edition})),
+      ...(data.reference_selections||[]).map(row=>({id:'plan:'+row.id,title:'Saved evaluation · '+row.title}))];
     let content='<div class="form-grid">'+
       '<div class="full"><p>'+escapeHTML(study.title)+'. '+numeric(ready.length)+' usable profiles from '+
       numeric(study.planned_member_count)+' planned; unfinished runs retain their saved states.</p></div>'+
@@ -474,7 +522,8 @@ export function attachEnsembles(context) {
       content+='<div class="full">'+field('Reuse an original annual-reference selection',
         '<select name="consumer_saved_references"><option value="">Select observations and catchments below</option>'+
         referenceChoices.map(row=>'<option value="'+escapeHTML(row.id)+'">'+escapeHTML(row.title)+'</option>').join('')+'</select>',
-        'Existing selections retain their original objectives, record filters, spatial groups, periods and holdout choices.')+'</div>'+
+        'Imported sources preserve their exact observation and catchment binding. Saved evaluations retain their objectives, spatial groups and holdout choices.')+'</div>'+
+        '<div class="full" id="ensemble-annual-reference-summary"></div>'+
         field('Retained annual-load observations',select('consumer_observations',data.observations||[],'Choose an original annual-load edition'))+
         field('Original catchment source','<select name="consumer_catchments" required><option value="">Choose retained polygon geography</option>'+
           (data.catchment_sources||[]).map((row,index)=>'<option value="'+index+'">'+escapeHTML(row.title+' · '+row.id+' · '+short(row.collection_id))+'</option>').join('')+'</select>')+
@@ -512,8 +561,13 @@ export function attachEnsembles(context) {
         } else {
           const saved=selected.elements.namedItem('consumer_saved_references').value;
           let reference;
-          if(saved) {
-            const retained=(data.reference_selections||[]).find(row=>row.id===saved);
+          if(saved.startsWith('annual:')) {
+            const retained=annualImports.find(row=>row.import_id===saved.slice(7));
+            if(!retained)throw Error('Reopen the original annual-reference import.');
+            payload.reference_import_id=retained.import_id;
+            payload.reference_options={...parse('consumer_reference_options'),title};
+          } else if(saved.startsWith('plan:')) {
+            const retained=(data.reference_selections||[]).find(row=>row.id===saved.slice(5));
             if(!retained)throw Error('Reopen the original annual-reference selection.');
             reference=JSON.parse(JSON.stringify(retained.selection));
           } else {
@@ -526,7 +580,7 @@ export function attachEnsembles(context) {
               source_collection_id:source.collection_id,source_id:source.id,id_field:fieldName,
               ...(source.layer?{layer:source.layer}:{})}};
           }
-          payload.reference_selection={...reference,...parse('consumer_reference_options'),title};
+          if(!payload.reference_import_id)payload.reference_selection={...reference,...parse('consumer_reference_options'),title};
           const raw=selected.elements.namedItem('consumer_standard_errors').value;
           if(raw!=='') {
             const value=Number(raw);
@@ -545,16 +599,21 @@ export function attachEnsembles(context) {
         if(mode==='decision' && ready.some(row=>row.profile_id===first))selected.elements.namedItem('consumer_reference').value=first;
         if(mode==='calibration') {
           const choice=selected.elements.namedItem('consumer_saved_references');
-          choice.addEventListener('change',()=>{
+          const showReference=()=>{
             const saved=!!choice.value;
             for(const name of ['consumer_observations','consumer_catchments','consumer_id_field']){
               selected.elements.namedItem(name).disabled=saved;
               selected.elements.namedItem(name).required=!saved;
             }
-            const retained=(data.reference_selections||[]).find(row=>row.id===choice.value);
+            const retained=(data.reference_selections||[]).find(row=>choice.value==='plan:'+row.id);
+            const annual=annualImports.find(row=>choice.value==='annual:'+row.import_id);
             const box=selected.elements.namedItem('consumer_reference_options');
             box.value=retained?JSON.stringify(retained.selection,null,2):'{}';
-          });
+            selected.querySelector('#ensemble-annual-reference-summary').innerHTML=annualReferenceHTML(annual);
+          };
+          choice.addEventListener('change',showReference);
+          if(prefill.annual_import_id)choice.value='annual:'+prefill.annual_import_id;
+          showReference();
         }
       });
   }
@@ -621,7 +680,7 @@ export function attachEnsembles(context) {
     if(action==='reload')return root?mount(root):undefined;
     if(action==='inspect')return inspect(id);
     if(action==='consumer-decision')return consumerForm(id,'decision');
-    if(action==='consumer-calibration')return consumerForm(id,'calibration');
+    if(action==='consumer-calibration')return consumerForm(id,'calibration',{annual_import_id:node.dataset.annualImport});
     if(action==='consumer-open')return openConsumer(id);
     if(action==='consumer-resume')return submitAction('ensemble.consumer.resume',{consumer_id:id});
     if(action==='preview')return preview();
@@ -646,5 +705,5 @@ export function attachEnsembles(context) {
     }
     throw Error('Choose an available scenario-sensitivity action.');
   }
-  return {mount,update,detach,dispatch,prepare:newDesign};
+  return {mount,update,detach,dispatch,prepare:newDesign,annualReference:openAnnualReference};
 }
