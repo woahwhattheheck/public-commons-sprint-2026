@@ -1,0 +1,52 @@
+{
+  "title": "Upper Savannah 217-watershed report — geographic support and scientific handover review",
+  "purpose": "Review the completed Upper Savannah land-cover, utility geography and observation-context report for use in an engineering workshare discussion. Assess whether its source classifications, spatial support, utility unions and dated observation context are clear, reproducible and useful for selecting the next scientific work. Record specific corrections or questions against the retained report and its original source files.",
+  "requirements": [
+    {
+      "id": "spatial-support",
+      "title": "Keep the report's classified footprint and geographic scopes explicit",
+      "detail": "Report pages 1 and 3: assess the 217-HUC12 domain, 20,949,527 common cell centres and 1,885,457.43 ha of paired classified support. Retain the distinction between the full upstream contributing domain, South Carolina reporting mask, four issuer focus HUC12s, whole-HUC12 utility planning unions, intake-point catchments and utility service areas. Identify any map, label or denominator that merges these different scopes."
+    },
+    {
+      "id": "class-accounting",
+      "title": "Reconcile the original class transitions with readable group balances",
+      "detail": "Report pages 1, 4 and 6: review 1,089,063 changed cells, 98,015.67 ha and 5.1985% of common classified support against the retained 55,552 class-transition rows and 1,736 watershed/group balances. Distinguish all 16 original classes from the eight displayed groups; transitions among forest classes can change class without crossing the forest group. Keep gross gain, gross loss and net change visible. Developed includes class 21 open space, and classification differences do not date management events."
+    },
+    {
+      "id": "utility-unions",
+      "title": "Preserve unique upstream memberships and their correct native-area denominator",
+      "detail": "Report page 3 and utility-context.json / utility-scope-summary.csv: review ARJWS's two focus anchors, four-HUC12 upstream union and 42,799.77 ha of native classified area; review PRWD's two anchors, 32-HUC12 union and 256,297.14 ha. Trace each union through the original directed ToHUC links. Check the reported repeated areas removed from per-anchor sums: 7,740.90 ha for ARJWS and 9,940.68 ha for PRWD. Retain native classified area separately from vector polygon area and preserve the four original anchor records."
+    },
+    {
+      "id": "observation-support",
+      "title": "Retain dated observations and local point categories without implying coverage",
+      "detail": "Report pages 1–3 and 6: review all 197 original coordinate variants, including 183 within the classification domain and 14 outside. Retain 87 South Carolina 2026 draft assessment sites in 49 HUC12s and 22 unique gauges with retained flow observations in 21 HUC12s. Check the local category counts of 5 both, 44 assessment only, 16 flow gauge only and 152 neither. Preserve coordinate alternatives while deduplicating physical gauges within a HUC12; local point membership does not establish whole-catchment observation coverage or absence of impairment."
+    },
+    {
+      "id": "original-geography",
+      "title": "Retain original source geography where identifiers or study membership differ",
+      "detail": "Report pages 2 and 4: retain leading-zero HUC identifiers, current official WBD point query, listed HUC, draft/July TMDL HUC, agency GIS HUC and published study geography as separate original fields. Review RS-06190's current/listed HUC12 030601030602 versus draft/July TMDL HUC 030601030502. Preserve SV-840 in its original five-site study cohort while showing its current open-lake coordinate in Upper Seneca River HUC12 030601010803, outside study HUC10 0306010106. Request an explicit correction wherever a view silently substitutes one geography for another."
+    },
+    {
+      "id": "scientific-interpretation",
+      "title": "Connect each decision question to the right scientific evidence",
+      "detail": "Report pages 3–4: assess the stated descriptive ordering of ten draft-assessment HUC12s by developed-class net gain. Keep that ordering separate from pollution ranking or causal attribution. Retain separate assessment meanings for nitrogen, phosphorus, turbidity, E. coli, biological condition, pH, metals and fish-tissue PCB. Identify the source-period measurement or model output needed for a proposed comparison. The current report is observed classification and source context; the separately executed native NDR/SDR scenario report must retain its own modeled assumptions, matched support, N/P kg/year and sediment tonnes/year delivered to streams."
+    },
+    {
+      "id": "figures-and-working-files",
+      "title": "Make the scientific report usable with its complete original working files",
+      "detail": "Report pages 5–9 and the complete report archive: open the PDF, original HTML, structured report, figures, 217 watershed profiles, 1,736 group balances, all class transitions, all original-location identities, utility summaries, connectivity and original source definition. Check readable numeric values and units, complete headings and figure captions, source links and full-size figures on desktop and narrow screens. Record any broken link, omitted member or visual defect against its exact file or report section."
+    },
+    {
+      "id": "editable-review-continuation",
+      "title": "Continue the same authored review and scientific context after handover",
+      "detail": "Use the existing Customer reviews workflow to retain questions and requested corrections, export the complete review, transfer the selected editable Study and reopen the original report and review in the received Workspace. Confirm the captured feedback remains available alongside later responses and that original source identities and scientific edition remain traceable. Identify the first concrete source, reporting or scenario change that the prime can direct next; retain the prime's scientific method, interpretation and client decisions."
+    }
+  ],
+  "notes": [
+    "Prepared against the actual completed nine-page Upper_Savannah_217_Scientific_Report_20261013.pdf (49,471 bytes), source role OBSERVED_CONTEXT, retained source upstate-landcover-observation-report-c18ec10b060c. The questions describe the contents of that retained report.",
+    "Original project dc92b8b9-6eda-4362-b12d-3cf2ef6c9007; completed capture 358596b0262c49afbde125293ee699e43374857d07d01e238bad24eae2b46e42; original render operation observed-report-16a897c91483a2c23ee5. The capture preview supplies the full capture SHA256 and saved-edition ID for the receiving invocation.",
+    "Each requirement is an authored review question. Retain responses through the original review engine and keep any supplied reviewer identity, decision and creation time with the actual returned response.",
+    "Owner direction: opportunities/upstate_forever_2026/CURRENT_OWNER_DIRECTION.md v2026-10-13.3. The actual RFP 30 m baseline, realistic riparian alternative and matched-control native work continues under its existing owners; this review reuses the completed observed-source report."
+  ]
+}
