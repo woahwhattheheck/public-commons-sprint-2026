@@ -435,6 +435,21 @@ def operate_locked(args, output):
          fieldwork_plan_id=campaign["plan_id"], fieldwork=campaign)
     atomic_json(output / "fieldwork-campaign.json", campaign)
 
+    from model import simulated_qc_comparison
+    qc_comparison = phase("field_qc_comparison", lambda:
+        simulated_qc_comparison.continue_comparison(ws, campaign["operation_id"]))
+    if (qc_comparison["phase"] != "complete"
+            or qc_comparison["field_operation_id"] != campaign["operation_id"]
+            or qc_comparison["plan_id"] != campaign["plan_id"]
+            or qc_comparison["original_project_id"] != ws.project["id"]):
+        raise ValueError("Complete the original field case's retained QC comparison")
+    previous_comparison = receipt.get("qc_comparison")
+    if (previous_comparison is not None
+            and previous_comparison.get("browser_choice") != qc_comparison["browser_choice"]):
+        raise ValueError("Preserve the original QC comparison before selecting another case edition")
+    save(qc_comparison=qc_comparison)
+    atomic_json(output / "field-qc-comparison.json", qc_comparison)
+
     from model.simulated_customer_review import continue_review, export_review_case
     customer = phase("customer_review_ready", lambda: continue_review(
         ws, campaign["operation_id"], through="ready"))
@@ -528,6 +543,8 @@ def operate_locked(args, output):
     }
     delivery_selection = native_process_report.attach(ws, process_report["id"], delivery_selection)
     delivery_selection = attach_to_delivery(ws, campaign["operation_id"], delivery_selection)
+    delivery_selection = simulated_qc_comparison.attach_to_delivery(
+        ws, qc_comparison["operation_id"], delivery_selection)
     delivery_selection = attach_study_source(study_source["source"], delivery_selection)
     atomic_json(output / "delivery-selection.json", delivery_selection)
     delivery = phase("mapped_delivery", lambda: ws.build_delivery(delivery_selection))
@@ -623,6 +640,8 @@ def operate_locked(args, output):
         "selected_study_transfer_id": selected_transfer["id"],
         "receiving_source_sha256": sha256(APP / "source_tools" / "simulated_headwaters_receiving.py"),
     }
+    archive_selection = simulated_qc_comparison.attach_to_archive(
+        ws, qc_comparison["operation_id"], archive_selection)
     edition_suffix = hashlib.sha256(json.dumps(
         archive_selection, sort_keys=True, separators=(",", ":")).encode("utf-8")).hexdigest()[:16]
     edition_id = delivery["id"] + "-" + edition_suffix
@@ -641,6 +660,9 @@ def operate_locked(args, output):
         "workspace/compute-programmes/" + programme["programme_id"] + "/progress.json",
         *["workspace/" + item["path"] for item in programme["files"]],
         "application/model/simulated_customer_review.py",
+        "application/model/simulated_qc_comparison.py",
+        *["workspace/" + item["path"] for item in qc_comparison["retained_files"]],
+        "workspace/sources/" + qc_comparison["report_source"]["source_collection_id"] + ".json",
         "workspace/workspace.json",
         *["workspace/runs/" + run["id"] + "/run.json" for run in runs],
         "workspace/deliveries/" + delivery["id"] + "/delivery-state.json",
@@ -718,6 +740,11 @@ def operate_locked(args, output):
     received_campaign = inspect_campaign(reopened, campaign["operation_id"])
     if received_campaign["phase"] != "closeout" or received_campaign["plan_id"] != campaign["plan_id"]:
         raise ValueError("Reopen the original completed field campaign with this scientific project")
+    received_qc_comparison = simulated_qc_comparison.inspect_comparison(
+        reopened, qc_comparison["operation_id"])
+    if received_qc_comparison != qc_comparison:
+        raise ValueError("Reopen the same complete original field/QC comparison")
+    save(received_qc_comparison=received_qc_comparison)
     from model.ensembles import Ensembles
     received_ensemble = Ensembles(reopened).inspect(parameter_plan["ensemble_id"])
     if (received_ensemble["grid_id"] != receipt["grid_id"]
@@ -745,6 +772,8 @@ def operate_locked(args, output):
              "source_operation_id": scientific_study["source_operation_id"],
              "expected": scientific_study},
             {"kind": "scientific_report", "expected": scientific_report},
+            {"kind": "field_qc_comparison", "operation_id": qc_comparison["operation_id"],
+             "expected": qc_comparison["browser_choice"]},
             {"kind": "field_campaign", "operation_id": campaign["operation_id"],
              "expected": {"phase": "closeout", "plan_id": campaign["plan_id"],
                           "original_project_id": ws.project["id"],

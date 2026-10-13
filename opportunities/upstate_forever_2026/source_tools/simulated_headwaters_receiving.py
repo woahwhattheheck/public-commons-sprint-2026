@@ -706,6 +706,33 @@ def _sources(ws, files, key):
         files.file(ws.root, {**descriptor, "path": descriptor["object"]})
 
 
+def _field_qc_comparison(ws, files, check, receipt, delivery):
+    """Read the original comparison and scientific binding in the restored process."""
+    from model import observed_context, simulated_qc_comparison
+    from model.common import identifier
+    key = identifier(check["operation_id"])
+    captured = receipt.get("qc_comparison")
+    if (not isinstance(captured, dict) or captured.get("operation_id") != key
+            or captured.get("field_operation_id") != receipt["fieldwork_operation_id"]
+            or captured.get("plan_id") != receipt["fieldwork_plan_id"]
+            or captured.get("original_project_id") != ws.project["id"]):
+        raise ValueError("Retain the original same-case QC comparison receipt")
+    files.descriptors(ws.root, captured["retained_files"])
+    result = simulated_qc_comparison.inspect_comparison(ws, key)
+    if (result != captured or result["phase"] != "complete"
+            or result["browser_choice"] != check.get("expected")):
+        raise ValueError("Receiving changed the retained field/QC comparison")
+    source = result["report_source"]
+    _sources(ws, files, source["source_collection_id"])
+    selected = observed_context.source_choices(delivery["selection"])
+    if not any(all(row.get(name) == source[name] for name in (
+            "source_collection_id", "source_id")) for row in selected):
+        raise ValueError("The received mapped delivery omits its original QC comparison source")
+    observed_context.bind(ws, result["delivery_selection"])
+    return {"kind": "field_qc_comparison", "operation_id": key,
+            "inspection": result}
+
+
 def _customer_review(ws, files, check, receipt):
     """Use the restored application for the exact saved customer case and packages."""
     from model.simulated_customer_review import inspect_export, inspect_review, receive_review_case, STEPS
@@ -925,6 +952,8 @@ def _inspect(request):
             extra.append(_programme(ws, files, check, receipt))
         elif check.get("kind") == "customer_review":
             extra.append(_customer_review(ws, files, check, receipt))
+        elif check.get("kind") == "field_qc_comparison":
+            extra.append(_field_qc_comparison(ws, files, check, receipt, delivery))
         elif check.get("kind") == "field_campaign":
             from model.simulated_fieldwork import inspect_campaign
             result = inspect_campaign(ws, check["operation_id"])
