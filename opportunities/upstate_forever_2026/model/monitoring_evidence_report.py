@@ -308,24 +308,67 @@ def _conservation(native):
     optimization = decision.get("optimization")
     if optimization:
         request = optimization["request"]
+        objective = request.get("objective", {})
+        weights = request.get("weights", {})
+        constraints = request.get("constraints", {})
+        filters = request.get("filters", {})
+        historical = optimization.get("detail_availability") == "historical_reference_only"
         result += _table("Authored land-decision settings retained with this sampling question", [
-            ("Analysis ID", optimization["id"]), ("Objective", request.get("objective")),
-            ("Original selected weights", request.get("weights")),
-            ("Planning constraints", request.get("constraints")),
+            ("Saved analysis title", request.get("title")),
+            ("Decision purpose", request.get("purpose")),
+            ("Objective kind", objective.get("kind")),
+            ("Quantity basis", objective.get("basis")),
+            ("Selected original alternative", objective.get("scenario_run_id")),
+            ("Selected matched family", objective.get("family_id")),
+            ("Original selected weights", weights),
+            ("Budget limit, USD", constraints.get("budget_usd") if constraints.get("budget_usd") is not None
+             else "No budget limit selected"),
+            ("Area limit, hectares", constraints.get("area_ha") if constraints.get("area_ha") is not None
+             else "No area limit selected"),
+            ("Area-limit basis", constraints.get("area_basis")),
+            ("Planning-unit count limit", constraints.get("max_count") if constraints.get("max_count") is not None
+             else "No count limit selected"),
+            ("Minimum objective coverage fraction", filters.get("min_coverage_fraction")),
+            ("Maximum protected fraction", filters.get("max_protected_fraction")),
+            ("Source-water selection", filters.get("source_water")),
+            ("High-quality-water selection", filters.get("high_quality_water")),
+            ("Selected candidate universe", filters.get("include_ids") or "All original candidates before the other filters"),
+            ("Excluded unit IDs", filters.get("exclude_ids")),
+            ("Include otherwise ineligible units", request.get("include_ineligible")),
+            ("Selected solver", request.get("solver")),
+            ("Saved analysis detail", "Historical saved-decision reference" if historical
+             else "Complete original analysis retained"),
+            ("Analysis ID", optimization["id"]),
         ])
-        for criterion in request.get("objective", {}).get("criteria", []):
-            result += _table("Authored criterion: " + str(criterion.get("id", criterion.get("kind"))), [
-                ("Quantity kind", criterion.get("kind")), ("Original quantity axis", criterion.get("axis")),
-                ("Weight", request.get("weights", {}).get(criterion["id"])), ("Matched family", criterion.get("family_id")),
+        if historical:
+            result += ("<p>" + _esc(optimization.get("detail_reason"))
+                       + ". The original selected request, engine, normalization and saved solver result "
+                         "remain in the decision reference below.</p>")
+        for criterion in objective.get("criteria", []):
+            result += _table("Authored criterion: " + str(criterion.get("label", criterion["id"])), [
+                ("Criterion ID", criterion["id"]),
+                ("Quantity kind", criterion.get("kind")),
+                ("Quantity basis", criterion.get("basis")),
+                ("Original quantity axis", criterion.get("axis")),
+                ("Weight", weights.get(criterion["id"])),
+                ("Available in this original decision", criterion.get("available")),
+                ("Matched family", criterion.get("family_id")),
                 ("Alternative run", criterion.get("scenario_run_id")),
                 ("Source attribute", criterion.get("field")),
                 ("Original criterion units", criterion.get("unit")),
                 ("Preference direction", criterion.get("direction")),
             ])
+        result += ("<p>Each selected weight belongs to its named quantity or criterion and the "
+                   "saved normalization. Geographic filters, budget, area and count limits describe "
+                   "the original land decision. The Sampling target retains its separately authored "
+                   "station, cohort and calendar.</p>")
         result += ("<p>Preference weights and deterministic case-selection frequencies "
                    "describe the saved land decision. They are not measured uncertainty, "
                    "sampling power or a calculated benefit of a future field visit.</p>")
-        result += _detail("Original priority request, fixed normalization and complete case results", optimization)
+        result += _detail(
+            "Original historical decision reference" if historical else
+            "Original priority request, fixed normalization and complete case results",
+            optimization)
     result += _detail("Selected original planning-unit rows (overlapping rows are not additive)",
                       decision["selected_units"])
     return result
