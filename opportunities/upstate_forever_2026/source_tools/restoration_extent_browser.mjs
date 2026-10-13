@@ -17,12 +17,27 @@ async function verify(item){const body=await fs.readFile(path.join(out,item.path
 let prior;try{prior=JSON.parse(await fs.readFile(path.join(out,'result.json'),'utf8'));}catch(e){if(e.code!=='ENOENT')throw e;}
 if(prior){if(prior.state!=='complete'||prior.selection_sha256!==selectionSHA)throw Error('This browser output belongs to another original selected study.');for(const file of prior.files)await verify(file);process.stdout.write(JSON.stringify(prior)+'\n');process.exit(0);}
 const ownerPath=path.join(out,'.browser-owner.json');let owner;
+const profilePath=path.resolve(args.profile),browserExecutable=await fs.realpath(args.browser);
+async function actualProfileBrowsers(){
+ const rows=[];
+ for(const name of await fs.readdir('/proc')){
+  if(!/^\d+$/.test(name))continue;
+  try{
+   const identity=await proc(name);if(!identity||identity.state==='Z')continue;
+   const argv=(await fs.readFile('/proc/'+name+'/cmdline')).toString('utf8').split('\0').filter(Boolean);
+   const flag=argv.indexOf('--user-data-dir'),selected=argv.includes('--user-data-dir='+profilePath)||(flag>=0&&argv[flag+1]===profilePath);
+   if(selected&&await fs.realpath('/proc/'+name+'/exe')===browserExecutable)rows.push({...identity,argv,profile:profilePath,executable:browserExecutable});
+  }catch(e){if(!['ENOENT','ESRCH','EACCES'].includes(e.code))throw e;}
+ }
+ return rows;
+}
 async function proc(pid){try{const text=await fs.readFile('/proc/'+pid+'/stat','utf8'),fields=text.slice(text.lastIndexOf(')')+2).split(' ');return {pid:Number(pid),state:fields[0],pgid:Number(fields[2]),start_ticks:fields[19]};}catch(e){if(e.code==='ENOENT'||e.code==='ESRCH')return null;throw e;}}
 try{
  const old=JSON.parse(await fs.readFile(ownerPath,'utf8'));
  if(old.selection_sha256!==selectionSHA||!Number.isInteger(old.pid)||!old.start_ticks)throw Error('Retain the exact original browser owner identity.');
  const live=await proc(old.pid);if(live&&live.start_ticks===old.start_ticks&&live.state!=='Z')throw Error('The original browser is still alive.');
  if(!live||live.start_ticks===old.start_ticks)for(const name of await fs.readdir('/proc'))if(/^\d+$/.test(name)){const member=await proc(name);if(member&&member.pgid===old.pid&&member.state!=='Z')throw Error('The original browser process group still owns this continuation.');}
+ if((await actualProfileBrowsers()).length)throw Error('The exact original detached Chromium still owns this private profile; reconcile it through the original course.');
  await fs.rename(ownerPath,path.join(out,attempt+'-retired-owner.json'));
 }catch(e){if(e.code!=='ENOENT')throw e;}
 try{owner=await fs.open(ownerPath,'wx',0o600);}catch(e){throw Error('The existing browser course has an owner file. Reconcile that exact original process before continuation: '+e.message);}
@@ -31,7 +46,15 @@ await owner.writeFile(JSON.stringify({pid:process.pid,start_ticks:self.start_tic
 let chromium;
 let context=null,closePromise=null,interrupted=false,routeError=null,closed=false;
 const files=[],observations=[],errors=[];
-async function close(){if(!context){closed=true;return;}if(closePromise)return closePromise;closePromise=(async()=>{if(context)await context.close();closed=true;})();return closePromise;}
+async function close(){
+ if(!context){closed=true;return;}if(closePromise)return closePromise;
+ closePromise=(async()=>{
+  await context.close();
+  const until=Date.now()+10000;
+  while((await actualProfileBrowsers()).length){if(Date.now()>=until)throw Error('The owned detached Chromium has not exited.');await new Promise(resolve=>setTimeout(resolve,100));}
+  closed=true;
+ })();return closePromise;
+}
 const signal=()=>{interrupted=true;if(context)void close().catch(e=>errors.push('Browser close: '+e.message));};
 process.on('SIGTERM',signal);process.on('SIGINT',signal);
 async function capture(page,name){
@@ -129,6 +152,9 @@ try{
   executablePath:path.resolve(args.browser),headless:true,acceptDownloads:true,
   viewport:{width:1440,height:1000},timeout:10000,args:['--no-sandbox','--disable-dev-shm-usage']});
  if(interrupted)throw Error('Original browser startup was interrupted.');
+ const actualBrowsers=await actualProfileBrowsers();
+ if(!actualBrowsers.length)throw Error('The actual owned Chromium executable/profile identity is unavailable.');
+ await fs.writeFile(path.join(path.dirname(profilePath),attempt+'-chromium-processes.json'),JSON.stringify({selection_sha256:selectionSHA,browsers:actualBrowsers},null,2)+'\n',{flag:'wx',mode:0o600});
  const author=JSON.parse(await fs.readFile(args['author-connection'],'utf8'));
  const receiver=JSON.parse(await fs.readFile(args['receiver-connection'],'utf8'));
  for(const c of [author,receiver]){

@@ -67,6 +67,59 @@ def group_alive(record):
             return True
     return False
 
+def profile_browsers(profile, executable):
+    profile, executable = str(Path(profile).resolve()), str(Path(executable).resolve())
+    rows = []
+    for folder in Path("/proc").iterdir():
+        if not folder.name.isdigit():
+            continue
+        try:
+            actual = process_identity(int(folder.name))
+            if not actual or actual["state"] == "Z":
+                continue
+            argv = actual["argv"]
+            selected = "--user-data-dir=" + profile in argv
+            if not selected and "--user-data-dir" in argv:
+                index = argv.index("--user-data-dir")
+                selected = index + 1 < len(argv) and argv[index + 1] == profile
+            if selected and str((folder / "exe").resolve(strict=True)) == executable:
+                rows.append({**actual, "executable": executable, "profile": profile})
+        except (FileNotFoundError, ProcessLookupError, PermissionError):
+            continue
+    return rows
+
+def reconcile_profile_browsers(output, records):
+    selections = {}
+    for row in records:
+        command = row["argv"]
+        if "--profile" not in command or "--browser" not in command:
+            raise ValueError("The owned original browser lacks its exact executable/profile selection.")
+        profile = Path(command[command.index("--profile") + 1]).resolve()
+        executable = Path(command[command.index("--browser") + 1]).resolve()
+        if not profile.is_relative_to((output / "private").resolve()):
+            raise ValueError("The original browser profile leaves this owned private continuation.")
+        selections[str(profile)] = str(executable)
+    for profile, executable in selections.items():
+        observed = profile_browsers(profile, executable)
+        if not observed:
+            continue
+        # Playwright can detach Chromium from Node's group. Retain the actual
+        # executable/profile/argv/PID/start identity before gently closing it.
+        keep(output / "private" / ("detached-browser-" + uuid.uuid4().hex + ".json"),
+             {"schema": "upstate.restoration-detached-browser/v1", "observed": observed})
+        for row in observed:
+            current = process_identity(row["pid"])
+            if current and current["start_ticks"] == row["start_ticks"] and current["argv"] == row["argv"]:
+                try:
+                    os.kill(row["pid"], signal.SIGTERM)
+                except ProcessLookupError:
+                    pass
+        deadline = time.monotonic() + 30
+        while profile_browsers(profile, executable):
+            if time.monotonic() >= deadline:
+                raise ValueError("The exact original private Chromium is still closing; preserve its state.")
+            time.sleep(.1)
+
 def reconcile_children(output, binding):
     folder = output / "private" / "children"
     rows = [read_json(path) for path in sorted(folder.glob("*.json"))] if folder.exists() else []
@@ -76,6 +129,7 @@ def reconcile_children(output, binding):
     browsers = [row for row in rows if row["role"] == "browser"]
     if any(owned_process(row) or group_alive(row) for row in browsers):
         raise ValueError("The original owned browser or its process group is still alive; retain that run.")
+    reconcile_profile_browsers(output, browsers)
     for row in rows:
         if row["role"] != "receiver" or not owned_process(row):
             continue
