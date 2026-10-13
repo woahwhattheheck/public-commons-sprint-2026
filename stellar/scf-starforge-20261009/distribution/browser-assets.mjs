@@ -53,19 +53,64 @@ export async function readBrowserAssets(manifestUrl) {
     [path, { url: new URL(file, root), type }]));
 }
 
-// readSource must return bytes from the same immutable source selection. Server,
-// manifest and every mapped file remain ordinary, separately hashed source files.
+// Browser declarations can live in a contribution whose commands were not
+// selected. Read only this declared dependency when its original server enters
+// the source closure; never enable the donor's other product registrations.
+export function browserAssetDeclarations({ base, contributions = [] }) {
+  const candidates = new Map();
+  const add = (source, entries, owner) => {
+    if (!Array.isArray(entries)) return;
+    for (const entry of entries) {
+      if (!entry || typeof entry !== 'object' || Array.isArray(entry) ||
+          typeof entry.server !== 'string') continue;
+      const rows = candidates.get(entry.server) ?? [];
+      rows.push({ source, entry, owner }); candidates.set(entry.server, rows);
+    }
+  };
+  add('stellar/scf-starforge-20261009/distribution/distribution.json',
+    base?.browserAssets, base);
+  for (const { path, data } of contributions) add(path, data?.browserAssets, data);
+  return {
+    forServer(server) {
+      const rows = candidates.get(server) ?? [];
+      let manifest;
+      for (const row of rows) {
+        if (!row.owner || !['stellar-forge.merchant-distribution.v1',
+          'stellar-forge.merchant-distribution-contribution.v1'].includes(row.owner.schema))
+          throw new TypeError('Invalid browser declaration owner: ' + row.source);
+        const entry = row.entry;
+        if (Object.keys(entry).some(key => !['server', 'manifest'].includes(key)))
+          throw new TypeError('Invalid browser asset registration: ' + row.source);
+        repositoryFile(entry.server, 'server');
+        repositoryFile(entry.manifest, 'manifest');
+        if (manifest !== undefined && manifest !== entry.manifest)
+          throw new TypeError('Conflicting browser asset declarations for ' + server);
+        manifest = entry.manifest;
+      }
+      return rows.map(({ source, entry }) => ({ source, ...entry }));
+    },
+    servers: [...candidates.keys()],
+  };
+}
+
+// readSource returns original bytes from one immutable source snapshot. Adding
+// a registration may add a NEW served context to an already loaded file. The
+// caller must revisit its requests when revision changes; file identity alone
+// does not exhaust the browser graph.
 export function createBrowserAssetIndex(registrations, readSource) {
   if (!Array.isArray(registrations) || typeof readSource !== 'function')
     throw new TypeError('Browser assets require registrations and a source reader');
-  const servers = new Set(), files = new Set(), contexts = new Map();
-  for (const registration of registrations) {
+  const servers = new Map(), files = new Set(), contexts = new Map();
+  let revision = 0;
+  function register(registration) {
     if (!registration || typeof registration !== 'object' || Array.isArray(registration))
       throw new TypeError('Invalid browser asset registration');
     const server = repositoryFile(registration.server, 'server');
     const manifest = repositoryFile(registration.manifest, 'manifest');
-    if (servers.has(server)) throw new TypeError('Duplicate browser asset server: ' + server);
-    servers.add(server);
+    if (servers.has(server)) {
+      if (servers.get(server) !== manifest) throw new TypeError('Conflicting browser asset server: ' + server);
+      return false;
+    }
     readSource(server);
     const spec = parseBrowserAssets(readSource(manifest));
     const routes = new Map(spec.routes.map(([path, { file }]) =>
@@ -76,9 +121,17 @@ export function createBrowserAssetIndex(registrations, readSource) {
       entries.push({ server, manifest, route, routes });
       contexts.set(file, entries);
     }
+    servers.set(server, manifest); revision++;
+    return true;
+  }
+  for (const registration of registrations) {
+    if (!register(registration)) throw new TypeError('Duplicate browser asset server: ' + registration.server);
   }
   return {
-    files: [...files],
+    register,
+    get revision() { return revision; },
+    get files() { return [...files]; },
+    hasContext(path) { return contexts.has(path); },
     resolve(importer, request) {
       const entries = contexts.get(importer);
       if (!entries || !request.startsWith('.') && !request.startsWith('/')) return null;
