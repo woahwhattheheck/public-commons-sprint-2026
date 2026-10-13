@@ -117,7 +117,11 @@ export async function attachConservationDesk(host) {
     collections:['sources','profiles','scenarios','grids','runs','experiments'],
     prefixes:['conservation.','experiment.'],
     openActions:['conservation-open-study','conservation-open-plan',
-      'conservation-use-criteria','conservation-new-parcel-study']
+      'conservation-use-criteria','conservation-new-parcel-study',
+      'conservation-new-source-capture','conservation-open-source-capture',
+      'conservation-criteria-from-sources','conservation-resume-sources',
+      'conservation-resume-criteria','conservation-optimization-open-preview',
+      'conservation-optimization-open-analysis','conservation-new-experiment']
   });
 }
 

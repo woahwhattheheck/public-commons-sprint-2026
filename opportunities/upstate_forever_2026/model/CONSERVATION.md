@@ -22,7 +22,7 @@ A study specification uses these fields:
 
 ## Scoring and purpose
 
-score.basis chooses context, current_export, scenario_reduction or disturbance_increase. score.scale chooses total or per_hectare for physical quantities.
+score.basis chooses context, current_export, scenario_reduction, disturbance_increase or published_method. score.scale chooses total or per_hectare for physical quantities. Published practice scores use total points and retain their original method, category, criterion contributions and prerequisite.
 
 Current export is a modeled present-load inventory. Scenario reduction uses the positive part of baseline minus alternative. Disturbance increase uses the positive part of alternative minus baseline and supports the critical-protection question. Each scenario score selects one actual alternative_run_id; signed physical deltas remain separately available for all alternatives.
 
@@ -146,3 +146,17 @@ scenario. Additional profiles must support the selected models, original
 land-cover classes and all scenario replacement codes. The existing experiment
 queue executes the actual native cases and reopens their results. The full
 contract is in `CONSERVATION_EXPERIMENTS.md`.
+
+## Original parcel criteria, closed acreage bounds and report editions
+
+For parcel studies, `source_tools.parcel_criteria.prepare` derives a retained criterion table from the selected original source layers. New operations default to `settings.spatial_criteria_basis="whole_original_parcel"`: hydric soils, sensitive riparian area, stream lengths and the other spatial parcel criteria use the complete original parcel. An explicit `"reporting_parcel"` selection records the reporting-boundary adaptation. Full parcel size and protected-land interpretation retain their own original geometry; land-cover and floodplain-development choices remain independently recorded. Native export and portfolio mass still use their original reporting support.
+
+The table binds its exact parcel source, native ID/layer/filter, reporting boundary or native grid, original source bodies, `geometry_context` and `metric_geometry`. Reusing it in a point study checks that geometry identity. Equal parcel ID text from another source edition cannot silently reuse a different area's measurements. See [the geometry contract](../source_tools/PARCEL_CRITERIA_GEOMETRY.md) and [source builder](../source_tools/PARCEL_CRITERIA.md).
+
+A hydric or sensitive-riparian acreage interval has closed lower and upper endpoints. The lower endpoint is the positively mapped area; the upper endpoint adds the part of the selected parcel geometry unresolved by actual source certainty coverage. Fully hydric and fully nonhydric map units can establish certainty under the default hydric interpretation; mixed or unknown units keep unresolved area. The canonical acreage remains null while the interval is nondegenerate. A criterion receives exact points when every value in that interval receives the same published contribution. The practice total still requires all contributions to be determined and its prerequisite to be true.
+
+The source rules are Lake Keowee Watershed Plan (2020), Table 31 and Appendix D: sensitive riparian acreage on printed page 139, hydric acreage on page 140 and full parcel size on page 142. The published sensitive-riparian footprint combines the retained variable riparian layer with the surface-water buffer. An observed component contributes a lower limit while a missing component remains part of the upper limit. [Original plan](https://www.des.sc.gov/sites/des/files/Documents/BOW/WaterQuality/WPLakeKeowee.pdf). See [acreage intervals](../source_tools/PARCEL_CRITERIA_INTERVALS.md) for exact data and scoring fields.
+
+Original soils and one-percent floodplain acquisition is available through `source_tools.soil_floodplain_sources`. A selected study queries its reporting geometry together with full original selected-parcel extensions. The capture reuses compatible original soil geometry, retains each source family independently, imports the original and criterion editions, and returns `parcel_criteria_selection` for the existing builder. Original HTTP bodies, component attributes, native IDs, query geometry and certainty coverage stay with those editions. See [source acquisition](../source_tools/SOIL_FLOODPLAIN_SOURCES.md).
+
+The existing export command now creates a presentation edition over verified saved candidates, geometries and selected plan IDs. It keeps the original study and plan artifacts intact. HTML, CSV and GeoPackage expose full and reporting acreage, prerequisite state, exact or bounded points, criterion geometry and source references. Supplemental criterion/value tables, original criterion bytes and a source register accompany `presentation.json`; its file descriptors are bound by the ordinary portable export manifest. Reopening an export reads the original measurements and saved decision. [Report contract](CONSERVATION_REPORTS.md).

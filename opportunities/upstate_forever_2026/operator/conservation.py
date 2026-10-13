@@ -15,8 +15,9 @@ class Conservation:
         "conservation.prepare", "conservation.build",
         "conservation.plan.save", "conservation.export", "conservation.scenario.create",
         "conservation.criteria.prepare", "conservation.experiment.prepare",
+        "conservation.sources.capture",
     })
-    READS = frozenset({"overview", "study", "plan"})
+    READS = frozenset({"overview", "study", "plan", "source-capture"})
 
     def __init__(self, operator, fault):
         self.operator = operator
@@ -79,6 +80,8 @@ class Conservation:
             result["scenario_bridges"] = conservation_scenarios.list_scenarios(ws)
             from source_tools import parcel_criteria
             result["criteria_operations"] = parcel_criteria.overview(ws)["operations"]
+            from source_tools import soil_floodplain_sources
+            result["source_acquisitions"] = soil_floodplain_sources.overview(ws)["operations"]
             existing = ws.overview()
             result["available"] = {
                 "invest_version": INVEST_VERSION,
@@ -102,6 +105,12 @@ class Conservation:
                 ],
             }
             return result
+        if operation == "source-capture":
+            from source_tools import soil_floodplain_sources
+            result = soil_floodplain_sources.inspect(ws, self._identifier(value, "operation_id"))
+            decorated = self.decorate_task({"action": "conservation.sources.capture",
+                                            "workspace": workspace, "result": result})
+            return {**result, "_downloads": decorated.get("_downloads", [])}
         if operation == "study":
             return model.inspect(ws, self._identifier(value, "study_id"),
                                  include_candidates=True)
@@ -114,8 +123,28 @@ class Conservation:
                              "Unknown conservation action.", status=404)
         ws = self.operator.ws(task["workspace"])
         value = self._mapping(task.get("payload"))
+        if action == "conservation.sources.capture":
+            from source_tools import soil_floodplain_sources
+            selected = (self._identifier(value, "operation_id") if value.get("operation_id")
+                        else self._mapping(value.get("spec", value), "Original source acquisition"))
+            return soil_floodplain_sources.capture(ws, selected, retry_failed=True)
         if action == "conservation.criteria.prepare":
             from source_tools import parcel_criteria
+            if value.get("source_operation_id"):
+                from source_tools import soil_floodplain_sources
+                original = soil_floodplain_sources.inspect(
+                    ws, self._identifier(value, "source_operation_id"))
+                selected = original.get("parcel_criteria_selection")
+                if not isinstance(selected, dict):
+                    raise self.Fault("conservation_source_acquisition_pending",
+                                     "Complete an original source family for this parcel study before preparing its criteria.")
+                if value.get("settings") is not None:
+                    settings = self._mapping(value["settings"], "Criterion geometry settings")
+                    if set(settings) - {"spatial_criteria_basis"}:
+                        raise self.Fault("conservation_criteria_settings",
+                                         "Choose the source criterion geometry for this preparation.")
+                    selected = {**selected, "settings": {**selected.get("settings", {}), **settings}}
+                return parcel_criteria.prepare(ws, selected)
             selected = (self._identifier(value, "operation_id") if value.get("operation_id")
                         else self._mapping(value.get("spec", value), "Parcel criteria"))
             return parcel_criteria.prepare(ws, selected)
